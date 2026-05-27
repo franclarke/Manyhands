@@ -1,0 +1,56 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "MH ManyHands Visual orchestration workspace" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]: MH
+        - generic [ref=e7]:
+          - generic [ref=e8]: ManyHands
+          - generic [ref=e9]: Visual orchestration workspace
+      - navigation [ref=e10]:
+        - link "Home" [ref=e11] [cursor=pointer]:
+          - /url: /
+        - link "Build" [ref=e12] [cursor=pointer]:
+          - /url: /build
+        - link "Lab" [ref=e13] [cursor=pointer]:
+          - /url: /lab
+        - link "Replay" [ref=e14] [cursor=pointer]:
+          - /url: /replay
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - heading "ManyHands is a visual orchestration workspace for multi-agent software development." [level=1] [ref=e18]
+        - paragraph [ref=e19]: This web foundation exposes the deterministic core through real API routes first. The current app starts with Lab Mode and benchmark reports before introducing DAG canvas, live mock execution, real runners or agents.
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - generic [ref=e22]: Build Mode
+          - heading "Plan software work visually" [level=2] [ref=e23]
+          - paragraph [ref=e24]: The future build path starts with a developer goal and turns it into an inspectable task DAG.
+        - generic [ref=e25]:
+          - generic [ref=e26]: Lab Mode
+          - heading "Evaluate orchestration strategies" [level=2] [ref=e27]
+          - paragraph [ref=e28]: The current working slice runs deterministic mock benchmarks through the existing core.
+        - generic [ref=e29]:
+          - generic [ref=e30]: Replay Mode
+          - heading "Inspect reproducible evidence" [level=2] [ref=e31]
+          - paragraph [ref=e32]: Replay will load snapshots and reports for debugging, demos and thesis review.
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - heading "Current deterministic core" [level=2] [ref=e36]
+            - paragraph [ref=e37]: TaskGraph, AgentTaskContract, repository index, static conflict signals, conflict risk, scheduler, mock runner, scope validation, snapshots, evaluator and benchmark reports.
+          - link "Open Lab benchmarks" [ref=e38] [cursor=pointer]:
+            - /url: /lab/benchmarks
+        - generic [ref=e39]:
+          - generic [ref=e40]: Describe goal
+          - generic [ref=e41]: Generate DAG
+          - generic [ref=e42]: Approve plan
+          - generic [ref=e43]: Run ready tasks
+          - generic [ref=e44]: Gate conflicts
+          - generic [ref=e45]: Export evidence
+      - generic [ref=e46]:
+        - heading "Next product steps" [level=2] [ref=e47]
+        - generic [ref=e48]:
+          - paragraph [ref=e49]: DAG Canvas read-only from RunSnapshot.
+          - paragraph [ref=e50]: Live mock execution UX with visible batches and trace events.
+          - paragraph [ref=e51]: Real worktree runner and agent adapter later, behind explicit boundaries.

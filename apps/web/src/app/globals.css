@@ -1,0 +1,213 @@
+@import url("https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+
+  /* Type */
+  --font-serif: "Newsreader", "Source Serif 4", "Tiempos Text", Georgia, serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Berkeley Mono", "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Dark — warm graphite */
+  --background: #1A1915;
+  --bg: #1A1915;
+  --bg-1: #1F1E1A;
+  --panel: #232220;
+  --surface: #232220;
+  --surface-2: #2B2A27;
+  --surface-3: #34322E;
+  --border: #3A3833;
+  --border-soft: #2F2D29;
+  --text: #EDEAE0;
+  --text-2: #A39E92;
+  --text-3: #6B6862;
+  --muted: #A39E92;
+  --subtle: #6B6862;
+
+  /* Accents */
+  --coral: #CC785C;
+  --coral-hi: #D98E73;
+  --coral-glow: rgba(204, 120, 92, 0.32);
+  --selected: #5B7A99;
+
+  /* Semantic */
+  --running: #CC785C;
+  --ready: #C9A45C;
+  --done: #6B8E6B;
+  --error: #C25B54;
+  --conflict: #B8804A;
+  --blocked: #6B6862;
+  --gated: #C9A45C;
+  --planned: #6B6862;
+
+  /* Risk */
+  --risk-low: #6B8E6B;
+  --risk-medium: #C9A45C;
+  --risk-high: #C25B54;
+  --risk-blocking: #B8804A;
+
+  /* Aliases kept for compatibility */
+  --accent: var(--coral);
+  --accent-strong: var(--coral-hi);
+  --warning: var(--ready);
+  --danger: var(--error);
+
+  /* Shadow / radius */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 9px;
+  --r-xl: 14px;
+  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 6px 16px rgba(0, 0, 0, 0.35);
+  --shadow-sheet: 0 -8px 32px rgba(0, 0, 0, 0.45);
+}
+
+/* Light variant available via .light scope */
+.light {
+  color-scheme: light;
+  --background: #F5F3EC;
+  --bg: #F5F3EC;
+  --bg-1: #EFECE3;
+  --panel: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-2: #FAF8F2;
+  --surface-3: #F1EDE3;
+  --border: #D4CFC7;
+  --border-soft: #E5E1D7;
+  --text: #29261b;
+  --text-2: #6B665A;
+  --text-3: #948E80;
+  --muted: #6B665A;
+  --subtle: #948E80;
+
+  --coral: #C26749;
+  --coral-hi: #D17A5B;
+  --coral-glow: rgba(194, 103, 73, 0.20);
+  --selected: #4C6B8A;
+
+  --running: #C26749;
+  --ready: #B68A38;
+  --done: #5E7F5E;
+  --error: #B14A43;
+  --conflict: #A6703A;
+  --blocked: #948E80;
+  --gated: #B68A38;
+  --planned: #948E80;
+
+  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 1px 2px rgba(60, 50, 40, 0.06), 0 6px 16px rgba(60, 50, 40, 0.08);
+  --shadow-sheet: 0 -8px 32px rgba(60, 50, 40, 0.12);
+}
+
+* { box-sizing: border-box; }
+
+html {
+  min-height: 100%;
+  background: var(--bg);
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  background:
+    radial-gradient(circle at 12% -10%, rgba(204, 120, 92, 0.08), transparent 36rem),
+    linear-gradient(180deg, #1A1915 0%, #1A1915 60%, #15140f 100%);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; }
+::selection { background: rgba(204, 120, 92, 0.28); }
+
+.mh-shell { min-height: 100vh; }
+
+.mh-container {
+  width: min(1180px, calc(100vw - 32px));
+  margin: 0 auto;
+}
+
+.mh-card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lift);
+}
+
+.mh-mono {
+  font-family: var(--font-mono);
+}
+
+.mh-serif {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.mh-fullbleed {
+  width: min(1640px, calc(100vw - 32px));
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Phase column label (used inside canvas world overlay) */
+.phase-label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* Coral pulse for running nodes */
+@keyframes coralPulse {
+  0%, 100% { box-shadow: 0 0 0 1px var(--coral), 0 0 14px 1px rgba(204, 120, 92, 0.45); }
+  50%      { box-shadow: 0 0 0 1px var(--coral), 0 0 22px 4px rgba(204, 120, 92, 0.30); }
+}
+.coral-pulse { animation: coralPulse 2.2s ease-in-out infinite; }
+
+@keyframes dashMarch { to { stroke-dashoffset: -16; } }
+.edge-flow { stroke-dasharray: 4 6; animation: dashMarch 1.2s linear infinite; }
+
+/* xyflow theme overrides */
+.react-flow__attribution { display: none; }
+.react-flow__controls {
+  border-radius: var(--r-md) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-lift);
+  background: var(--surface) !important;
+  overflow: hidden;
+}
+.react-flow__controls-button {
+  background: var(--surface) !important;
+  border-bottom: 1px solid var(--border-soft) !important;
+  color: var(--text-2) !important;
+  fill: var(--text-2) !important;
+  width: 26px !important;
+  height: 26px !important;
+}
+.react-flow__controls-button:hover {
+  background: var(--surface-2) !important;
+  color: var(--text) !important;
+  fill: var(--text) !important;
+}
+.react-flow__minimap {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.react-flow__minimap-node { stroke: var(--border) !important; }
+.react-flow__edge-text {
+  font-family: var(--font-mono) !important;
+  fill: var(--text-2) !important;
+}
+.react-flow__node:focus,
+.react-flow__node:focus-visible { outline: none; }
+
+/* Compact scrollbar */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }

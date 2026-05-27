@@ -1,0 +1,37 @@
+{
+  "id": "quote-approval-flow",
+  "title": "Quote approval flow",
+  "description": "Allow a customer to approve or reject a quote from a controlled public approval link.",
+  "repositoryPath": "examples/repos/aprobado-lite",
+  "targetStack": ["TypeScript", "React", "Node"],
+  "constraints": [
+    "The approval link is a fixture and does not send real notifications.",
+    "No payment or invoice infrastructure is modified.",
+    "Public responses must be explicit success or error states."
+  ],
+  "acceptanceCriteria": [
+    "A quote can expose a public approval token.",
+    "A customer can approve a quote through the public flow.",
+    "A customer can reject a quote with a reason.",
+    "The system records the approval decision.",
+    "The public surface shows clear success and error states.",
+    "Focused tests cover approve, reject and invalid token cases."
+  ],
+  "tags": ["quotes", "approval", "public-link"],
+  "expectedModules": [
+    "src/quotes/approval/approval-token.ts",
+    "src/quotes/approval/approval-service.ts",
+    "src/components/quotes/quote-approval-panel.tsx",
+    "tests/quotes/quote-approval-flow.test.ts"
+  ],
+  "expectedRiskAreas": [
+    "public approval token lifecycle",
+    "quote status transitions",
+    "public customer UI"
+  ],
+  "expectedConflictNotes": [
+    "Approval service and UI share the public decision contract.",
+    "Tests depend on token and status transition semantics."
+  ],
+  "fixtureVersion": "0.1.0"
+}

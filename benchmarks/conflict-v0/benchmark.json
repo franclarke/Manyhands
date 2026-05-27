@@ -1,0 +1,91 @@
+{
+  "id": "conflict-v0",
+  "version": "0.1.0",
+  "name": "ManyHands Controlled Conflict Benchmark v0",
+  "description": "Deterministic fixtures designed to provoke high, blocking and scope-violation signals for B2/B3/B4 comparison.",
+  "repositoryFixture": "examples/repos/aprobado-lite",
+  "features": [
+    {
+      "id": "shared-schema-conflict",
+      "path": "features/shared-schema-conflict.json",
+      "fixtureVersion": "0.1.0"
+    },
+    {
+      "id": "public-api-contract-conflict",
+      "path": "features/public-api-contract-conflict.json",
+      "fixtureVersion": "0.1.0"
+    },
+    {
+      "id": "shared-auth-session-conflict",
+      "path": "features/shared-auth-session-conflict.json",
+      "fixtureVersion": "0.1.0"
+    },
+    {
+      "id": "shared-test-fixture-conflict",
+      "path": "features/shared-test-fixture-conflict.json",
+      "fixtureVersion": "0.1.0"
+    },
+    {
+      "id": "scope-violation-simulated",
+      "path": "features/scope-violation-simulated.json",
+      "fixtureVersion": "0.1.0"
+    }
+  ],
+  "configurations": [
+    {
+      "id": "B0",
+      "name": "single_task_mock",
+      "description": "Structural single-task baseline with no observable decomposition.",
+      "decompositionMode": "single",
+      "schedulerPolicy": "sequential_dag",
+      "staticSignals": false,
+      "repositoryIndex": false,
+      "humanGate": false
+    },
+    {
+      "id": "B1",
+      "name": "decomposed_sequential",
+      "description": "Balanced decomposition executed with sequential DAG scheduling.",
+      "decompositionMode": "balanced",
+      "schedulerPolicy": "sequential_dag",
+      "staticSignals": false,
+      "repositoryIndex": false,
+      "humanGate": false
+    },
+    {
+      "id": "B2",
+      "name": "decomposed_parallel_naive",
+      "description": "Balanced decomposition scheduled by DAG readiness without risk awareness.",
+      "decompositionMode": "balanced",
+      "schedulerPolicy": "parallel_naive",
+      "staticSignals": false,
+      "repositoryIndex": false,
+      "humanGate": false
+    },
+    {
+      "id": "B3",
+      "name": "decomposed_risk_aware",
+      "description": "Balanced decomposition with repository index, static signals and risk-aware scheduling.",
+      "decompositionMode": "balanced",
+      "schedulerPolicy": "risk_aware",
+      "staticSignals": true,
+      "repositoryIndex": true,
+      "humanGate": false
+    },
+    {
+      "id": "B4",
+      "name": "human_gated_mock",
+      "description": "Balanced decomposition with static conflict signals, risk-aware scheduling and deterministic mock human gate decisions.",
+      "decompositionMode": "balanced",
+      "schedulerPolicy": "risk_aware",
+      "staticSignals": true,
+      "repositoryIndex": true,
+      "humanGate": true
+    }
+  ],
+  "metadata": {
+    "schemaVersion": "manyhands.benchmark-manifest.v1",
+    "deterministic": true,
+    "createdFor": "mock_structural_evaluation"
+  }
+}

@@ -1,0 +1,657 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type {
+  AgentTaskContract,
+  MockPlanningFlowResult,
+  RunSnapshot,
+  TaskGraph
+} from "@manyhands/core";
+import { projectRunRecordToSnapshot } from "@/lib/live-graph";
+import { buildInspectorView, toRunGraphViewModel } from "@/lib/graph-view-model";
+import { PATCH } from "@/app/api/runs/[id]/nodes/[taskId]/route";
+import { POST as POST_REGEN } from "@/app/api/runs/[id]/nodes/[taskId]/regen/route";
+import { POST as POST_INTEGRATOR } from "@/app/api/runs/[id]/integrator/route";
+import { POST as POST_SERIALIZE } from "@/app/api/runs/[id]/serialize/route";
+import {
+  appendPatch,
+  applyPatches,
+  applyPatchesUpTo,
+  getRunRepository,
+  resetRunRepositoryForTests,
+  type RunPatch,
+  type RunRecord
+} from "@/lib/server/runs";
+
+const now = "2026-05-26T00:00:00.000Z";
+let tempDir: string;
+let previousRunsDir: string | undefined;
+
+beforeEach(async () => {
+  tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-edit-runs-"));
+  previousRunsDir = process.env.MANYHANDS_RUNS_DIR;
+  process.env.MANYHANDS_RUNS_DIR = path.join(tempDir, "runs");
+  resetRunRepositoryForTests();
+});
+
+afterEach(async () => {
+  if (previousRunsDir === undefined) {
+    delete process.env.MANYHANDS_RUNS_DIR;
+  } else {
+    process.env.MANYHANDS_RUNS_DIR = previousRunsDir;
+  }
+  resetRunRepositoryForTests();
+  await rm(tempDir, { recursive: true, force: true });
+});
+
+describe("editable control plane vertical slice", () => {
+  it("appends and replays node patches without mutating the base snapshot", () => {
+    const run = makeRun();
+    const snapshot = projectRunRecordToSnapshot(run, { applyPatches: false });
+    expect(snapshot).not.toBeNull();
+
+    const renamed: RunPatch = {
+      id: "patch-1",
+      type: "NODE_RENAMED",
+      actor: "human",
+      createdAt: now,
+      taskId: "task-1",
+      title: "Edited title"
+    };
+    const manual: RunPatch = {
+      id: "patch-2",
+      type: "NODE_MARKED_MANUAL",
+      actor: "human",
+      createdAt: now,
+      taskId: "task-1",
+      manual: true
+    };
+
+    const withPatch = appendPatch(appendPatch(run, renamed), manual);
+    expect(withPatch.patches).toHaveLength(2);
+
+    const patched = applyPatches(snapshot!, withPatch.patches);
+    expect(patched.graphSnapshot.nodes["task-1"]?.title).toBe("Edited title");
+    expect(patched.graphSnapshot.nodes["task-1"]?.metadata?.authoredBy).toBe("human");
+    expect(snapshot!.graphSnapshot.nodes["task-1"]?.title).toBe("Original title");
+
+    const firstOnly = applyPatchesUpTo(snapshot!, withPatch.patches, "patch-1");
+    expect(firstOnly.graphSnapshot.nodes["task-1"]?.title).toBe("Edited title");
+    expect(firstOnly.graphSnapshot.nodes["task-1"]?.metadata?.authoredBy).toBe("ai");
+  });
+
+  it("PATCH node writes patches, appends trace events, and invalidates approval", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun({ status: "approved", approvedAt: now }));
+
+    const response = await PATCH(
+      new Request("http://manyhands.test/api", {
+        method: "PATCH",
+        body: JSON.stringify({
+          title: "Edited task",
+          objective: "Edited objective",
+          allowedPaths: ["src/edited.ts"],
+          acceptanceCriteria: ["Edited criterion"],
+          manual: true
+        }),
+        headers: { "content-type": "application/json" }
+      }),
+      { params: Promise.resolve({ id: "run-1", taskId: "task-1" }) }
+    );
+
+    expect(response.status).toBe(200);
+    const saved = await repo.get("run-1");
+    expect(saved.status).toBe("needs_review");
+    expect(saved.approvedAt).toBeUndefined();
+    expect(saved.patches.map((patch) => (patch as RunPatch).type)).toEqual([
+      "NODE_RENAMED",
+      "NODE_OBJECTIVE_EDITED",
+      "NODE_PATHS_EDITED",
+      "NODE_ACCEPTANCE_EDITED",
+      "NODE_MARKED_MANUAL"
+    ]);
+
+    const planning = saved.planning as MockPlanningFlowResult;
+    const patchTraceEvents = planning.traces.filter(
+      (event) => event.type === "dag_patch_appended" && event.payload.patchId !== undefined
+    );
+    expect(patchTraceEvents).toHaveLength(5);
+    expect(patchTraceEvents[0]?.taskId).toBe("task-1");
+  });
+
+  it("does not persist when a patch would leave the DAG invalid", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun({ status: "approved", approvedAt: now }));
+
+    const response = await PATCH(
+      new Request("http://manyhands.test/api", {
+        method: "PATCH",
+        body: JSON.stringify({ allowedPaths: [] }),
+        headers: { "content-type": "application/json" }
+      }),
+      { params: Promise.resolve({ id: "run-1", taskId: "task-1" }) }
+    );
+
+    expect(response.status).toBe(409);
+    const saved = await repo.get("run-1");
+    expect(saved.status).toBe("approved");
+    expect(saved.patches).toHaveLength(0);
+    expect((saved.planning as MockPlanningFlowResult).traces).toHaveLength(0);
+  });
+
+  it("projects patches into the graph view model and inspector", () => {
+    const patches: RunPatch[] = [
+      {
+        id: "patch-title",
+        type: "NODE_RENAMED",
+        actor: "human",
+        createdAt: now,
+        taskId: "task-1",
+        title: "Patched title"
+      },
+      {
+        id: "patch-objective",
+        type: "NODE_OBJECTIVE_EDITED",
+        actor: "human",
+        createdAt: now,
+        taskId: "task-1",
+        objective: "Patched objective"
+      },
+      {
+        id: "patch-paths",
+        type: "NODE_PATHS_EDITED",
+        actor: "human",
+        createdAt: now,
+        taskId: "task-1",
+        allowedPaths: ["src/patched.ts"],
+        forbiddenPaths: ["src/forbidden.ts"]
+      },
+      {
+        id: "patch-acceptance",
+        type: "NODE_ACCEPTANCE_EDITED",
+        actor: "human",
+        createdAt: now,
+        taskId: "task-1",
+        acceptanceCriteria: ["Patched acceptance"]
+      },
+      {
+        id: "patch-manual",
+        type: "NODE_MARKED_MANUAL",
+        actor: "human",
+        createdAt: now,
+        taskId: "task-1",
+        manual: true
+      }
+    ];
+    const run = makeRun({ patches });
+    const snapshot = projectRunRecordToSnapshot(run);
+    expect(snapshot).not.toBeNull();
+
+    const graph = toRunGraphViewModel(snapshot as RunSnapshot);
+    const node = graph.nodes.find((entry) => entry.id === "task-1");
+    expect(node?.title).toBe("Patched title");
+    expect(node?.manual).toBe(true);
+    expect(node?.authoredBy).toBe("human");
+
+    const inspector = buildInspectorView(snapshot as RunSnapshot, "task-1");
+    expect(inspector?.title).toBe("Patched title");
+    expect(inspector?.contract?.objective).toBe("Patched objective");
+    expect(inspector?.contract?.allowedPaths).toEqual(["src/patched.ts"]);
+    expect(inspector?.contract?.forbiddenPaths).toEqual(["src/forbidden.ts"]);
+    expect(inspector?.contract?.acceptanceCriteria).toEqual(["Patched acceptance"]);
+    expect(inspector?.manual).toBe(true);
+  });
+
+  it("replays subtree regeneration, integrator creation, and serialization patches", () => {
+    const base = projectRunRecordToSnapshot(makeRun(), { applyPatches: false });
+    expect(base).not.toBeNull();
+    const regeneratedContract = makeContract({
+      taskId: "task-1",
+      objective: "Regenerated objective",
+      allowedPaths: ["src/regenerated.ts"],
+      changedFiles: ["src/regenerated.ts"],
+      acceptance: ["Regenerated acceptance"]
+    });
+    const integratorContract = makeContract({
+      taskId: "integrator-task-1-task-2",
+      objective: "Integrate both task outputs",
+      allowedPaths: ["src/integration/**"],
+      changedFiles: ["src/integration/notes.md"],
+      acceptance: ["Integrated output is coherent."]
+    });
+    const patches: RunPatch[] = [
+      {
+        id: "patch-regen",
+        type: "SUBTREE_REGENERATED",
+        actor: "human",
+        createdAt: now,
+        taskId: "task-1",
+        removedTaskIds: ["task-1"],
+        nodes: {
+          "task-1": {
+            id: "task-1",
+            parentId: "root",
+            kind: "leaf",
+            title: "Regenerated task",
+            intent: "Regenerated objective",
+            status: "planned",
+            granularity: "fine",
+            depth: 1,
+            childrenIds: [],
+            contract: regeneratedContract,
+            metadata: { authoredBy: "ai" }
+          }
+        },
+        dependencies: [],
+        contracts: [regeneratedContract]
+      },
+      {
+        id: "patch-integrator",
+        type: "INTEGRATOR_NODE_CREATED",
+        actor: "human",
+        createdAt: now,
+        taskId: "integrator-task-1-task-2",
+        node: {
+          id: "integrator-task-1-task-2",
+          parentId: "root",
+          kind: "leaf",
+          title: "Integration task",
+          intent: "Integrate both task outputs",
+          status: "planned",
+          granularity: "fine",
+          depth: 1,
+          childrenIds: [],
+          contract: integratorContract,
+          metadata: {
+            authoredBy: "human",
+            integrator: true,
+            integratesTaskIds: ["task-1", "task-2"],
+            integrationReason: "Shared files need review."
+          }
+        },
+        contract: integratorContract,
+        dependencies: [
+          {
+            fromTaskId: "task-1",
+            toTaskId: "integrator-task-1-task-2",
+            type: "logical",
+            inferred: false,
+            rationale: "Integrator consumes task output."
+          },
+          {
+            fromTaskId: "task-2",
+            toTaskId: "integrator-task-1-task-2",
+            type: "logical",
+            inferred: false,
+            rationale: "Integrator consumes task output."
+          }
+        ]
+      },
+      {
+        id: "patch-serialize",
+        type: "TASKS_SERIALIZED",
+        actor: "human",
+        createdAt: now,
+        fromTaskId: "task-1",
+        toTaskId: "task-2",
+        rationale: "Task 2 should wait for task 1."
+      }
+    ];
+
+    const patched = applyPatches(base!, patches);
+    expect(patched.graphSnapshot.nodes["task-1"]?.title).toBe("Regenerated task");
+    expect(patched.graphSnapshot.nodes.root?.childrenIds).toContain("integrator-task-1-task-2");
+    expect(patched.graphSnapshot.nodes["integrator-task-1-task-2"]?.metadata?.integrator).toBe(true);
+    expect(patched.graphSnapshot.dependencies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fromTaskId: "task-1", toTaskId: "task-2" }),
+        expect.objectContaining({ fromTaskId: "task-1", toTaskId: "integrator-task-1-task-2" }),
+        expect.objectContaining({ fromTaskId: "task-2", toTaskId: "integrator-task-1-task-2" })
+      ])
+    );
+  });
+
+  it("POST serialize appends a guided dependency patch and trace", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun({ status: "approved", approvedAt: now }));
+
+    const response = await POST_SERIALIZE(
+      jsonRequest({ fromTaskId: "task-1", toTaskId: "task-3", rationale: "Shared state." }),
+      { params: Promise.resolve({ id: "run-1" }) }
+    );
+
+    expect(response.status).toBe(200);
+    const saved = await repo.get("run-1");
+    expect(saved.status).toBe("needs_review");
+    expect(saved.patches).toHaveLength(1);
+    expect((saved.patches[0] as RunPatch).type).toBe("TASKS_SERIALIZED");
+    const snapshot = projectRunRecordToSnapshot(saved);
+    expect(snapshot?.graphSnapshot.dependencies).toEqual(
+      expect.arrayContaining([expect.objectContaining({ fromTaskId: "task-1", toTaskId: "task-3" })])
+    );
+    expect((saved.planning as MockPlanningFlowResult).traces.some((event) => event.type === "dag_patch_appended")).toBe(true);
+  });
+
+  it("POST serialize rejects cycles and duplicate dependencies without persisting", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun());
+
+    const duplicate = await POST_SERIALIZE(
+      jsonRequest({ fromTaskId: "task-1", toTaskId: "task-2" }),
+      { params: Promise.resolve({ id: "run-1" }) }
+    );
+    expect(duplicate.status).toBe(409);
+
+    const cycle = await POST_SERIALIZE(
+      jsonRequest({ fromTaskId: "task-3", toTaskId: "task-1" }),
+      { params: Promise.resolve({ id: "run-1" }) }
+    );
+    expect(cycle.status).toBe(409);
+
+    const saved = await repo.get("run-1");
+    expect(saved.patches).toHaveLength(0);
+  });
+
+  it("POST integrator creates an integrator node with metadata and visible view-model marker", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun({ status: "approved", approvedAt: now }));
+
+    const response = await POST_INTEGRATOR(
+      jsonRequest({
+        taskIds: ["task-1", "task-2"],
+        reason: "Shared schema paths need explicit integration.",
+        title: "Schema integration"
+      }),
+      { params: Promise.resolve({ id: "run-1" }) }
+    );
+
+    expect(response.status).toBe(200);
+    const saved = await repo.get("run-1");
+    expect(saved.status).toBe("needs_review");
+    const patch = saved.patches[0] as RunPatch;
+    expect(patch.type).toBe("INTEGRATOR_NODE_CREATED");
+    if (patch.type !== "INTEGRATOR_NODE_CREATED") return;
+    expect(patch.node.metadata?.integrator).toBe(true);
+    expect(patch.node.metadata?.integratesTaskIds).toEqual(["task-1", "task-2"]);
+
+    const snapshot = projectRunRecordToSnapshot(saved);
+    expect(snapshot).not.toBeNull();
+    const graph = toRunGraphViewModel(snapshot as RunSnapshot);
+    const integrator = graph.nodes.find((node) => node.id === patch.taskId);
+    expect(integrator?.integrator).toBe(true);
+    expect(integrator?.manual).toBe(true);
+    expect(snapshot?.graphSnapshot.nodes.root?.childrenIds).toContain(patch.taskId);
+  });
+
+  it("POST regen replaces only the requested subtree, preserves the task id, and traces the patch", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun({ status: "approved", approvedAt: now }));
+
+    const response = await POST_REGEN(
+      jsonRequest({ granularity: "coarse" }),
+      { params: Promise.resolve({ id: "run-1", taskId: "task-1" }) }
+    );
+
+    expect(response.status).toBe(200);
+    const saved = await repo.get("run-1");
+    expect(saved.status).toBe("needs_review");
+    expect(saved.approvedAt).toBeUndefined();
+    const patch = saved.patches[0] as RunPatch;
+    expect(patch.type).toBe("SUBTREE_REGENERATED");
+    if (patch.type !== "SUBTREE_REGENERATED") return;
+    expect(patch.taskId).toBe("task-1");
+    expect(Object.keys(patch.nodes)).toContain("task-1");
+    expect(patch.removedTaskIds).toContain("task-1");
+
+    const snapshot = projectRunRecordToSnapshot(saved);
+    expect(snapshot?.graphSnapshot.nodes["task-1"]).toBeDefined();
+    expect(snapshot?.graphSnapshot.nodes["task-2"]).toBeDefined();
+    expect(snapshot?.graphSnapshot.nodes["task-3"]).toBeDefined();
+    expect((saved.planning as MockPlanningFlowResult).traces.some((event) => event.type === "dag_patch_appended")).toBe(true);
+  });
+
+  it("POST regen does not persist when the regenerated graft leaves the DAG invalid", async () => {
+    const repo = getRunRepository();
+    const planning = makePlanning();
+    planning.decomposition.graph.nodes["task-1"] = {
+      ...planning.decomposition.graph.nodes["task-1"]!,
+      parentId: "task-2"
+    };
+    await repo.save(makeRun({ status: "approved", approvedAt: now, planning }));
+
+    const response = await POST_REGEN(
+      jsonRequest({ granularity: "balanced" }),
+      { params: Promise.resolve({ id: "run-1", taskId: "task-1" }) }
+    );
+
+    expect(response.status).toBe(409);
+    const saved = await repo.get("run-1");
+    expect(saved.status).toBe("approved");
+    expect(saved.patches).toHaveLength(0);
+    expect((saved.planning as MockPlanningFlowResult).traces).toHaveLength(0);
+  });
+});
+
+function makeRun(overrides: Partial<RunRecord> = {}): RunRecord {
+  return {
+    runId: "run-1",
+    workspaceId: "ws-1",
+    scenarioId: "passwordless-login",
+    granularity: "balanced",
+    model: "claude-opus-4.7",
+    userPrompt: "Build a feature",
+    title: "Build a feature",
+    status: "needs_review",
+    createdAt: now,
+    updatedAt: now,
+    planning: makePlanning(),
+    patches: [],
+    ...overrides
+  };
+}
+
+function makePlanning(): MockPlanningFlowResult {
+  const contract = makeContract();
+  const contractTwo = makeContract({
+    taskId: "task-2",
+    objective: "Second objective",
+    allowedPaths: ["src/second.ts"],
+    changedFiles: ["src/second.ts"],
+    acceptance: ["Second criterion"]
+  });
+  const contractThree = makeContract({
+    taskId: "task-3",
+    objective: "Third objective",
+    allowedPaths: ["src/third.ts"],
+    changedFiles: ["src/third.ts"],
+    acceptance: ["Third criterion"]
+  });
+  const graph: TaskGraph = {
+    id: "graph-1",
+    planId: "plan-1",
+    repo: "manyhands",
+    baseBranch: "main",
+    baseCommit: "base",
+    featureRequest: "Build a feature",
+    rootId: "root",
+    createdAt: now,
+    nodes: {
+      root: {
+        id: "root",
+        parentId: null,
+        kind: "composite",
+        title: "Root",
+        intent: "Coordinate the feature",
+        status: "planned",
+        granularity: "medium",
+        depth: 0,
+        childrenIds: ["task-1", "task-2", "task-3"]
+      },
+      "task-1": {
+        id: "task-1",
+        parentId: "root",
+        kind: "leaf",
+        title: "Original title",
+        intent: "Original objective",
+        status: "planned",
+        granularity: "fine",
+        depth: 1,
+        childrenIds: [],
+        contract,
+        metadata: { authoredBy: "ai" }
+      },
+      "task-2": {
+        id: "task-2",
+        parentId: "root",
+        kind: "leaf",
+        title: "Second task",
+        intent: "Second objective",
+        status: "planned",
+        granularity: "fine",
+        depth: 1,
+        childrenIds: [],
+        contract: contractTwo,
+        metadata: { authoredBy: "ai" }
+      },
+      "task-3": {
+        id: "task-3",
+        parentId: "root",
+        kind: "leaf",
+        title: "Third task",
+        intent: "Third objective",
+        status: "planned",
+        granularity: "fine",
+        depth: 1,
+        childrenIds: [],
+        contract: contractThree,
+        metadata: { authoredBy: "ai" }
+      }
+    },
+    dependencies: [
+      {
+        fromTaskId: "task-1",
+        toTaskId: "task-2",
+        type: "logical",
+        inferred: false,
+        rationale: "Existing order."
+      },
+      {
+        fromTaskId: "task-2",
+        toTaskId: "task-3",
+        type: "logical",
+        inferred: false,
+        rationale: "Existing order."
+      }
+    ]
+  };
+
+  return {
+    summary: {
+      runId: "planning-run",
+      featureId: "feature-1",
+      mode: "balanced",
+      schedulerPolicy: "risk_aware",
+      taskCount: 2,
+      leafCount: 3,
+      dependencyCount: 2,
+      contractCount: 3,
+      riskPredictionCount: 0,
+      staticConflictSignalCount: 0,
+      batchCount: 0,
+      batches: [],
+      traceEventCount: 0,
+      validationIssues: []
+    },
+    decomposition: {
+      feature: {
+        id: "feature-1",
+        title: "Feature",
+        description: "Build a feature",
+        targetStack: [],
+        constraints: [],
+        acceptanceCriteria: ["Original criterion"]
+      },
+      graph,
+      contracts: [contract, contractTwo, contractThree],
+      metadata: {
+        mode: "balanced",
+        generatedAt: now,
+        decomposer: "test",
+        deterministic: true
+      },
+      validation: {
+        graphValid: true,
+        contractValid: true,
+        issues: []
+      }
+    },
+    riskMatrix: [],
+    staticConflictSignals: [],
+    schedule: {
+      policy: "risk_aware",
+      batches: [],
+      blocked: [],
+      explanations: []
+    },
+    traces: []
+  };
+}
+
+function makeContract(overrides: {
+  taskId?: string;
+  objective?: string;
+  allowedPaths?: string[];
+  changedFiles?: string[];
+  acceptance?: string[];
+} = {}): AgentTaskContract {
+  const taskId = overrides.taskId ?? "task-1";
+  const objective = overrides.objective ?? "Original objective";
+  const allowedPaths = overrides.allowedPaths ?? ["src/original.ts"];
+  const changedFiles = overrides.changedFiles ?? ["src/original.ts"];
+  const acceptance = overrides.acceptance ?? ["Original criterion"];
+  return {
+    taskId,
+    objective,
+    context: {
+      typeSignatures: [],
+      referenceSnippets: [],
+      conventions: [],
+      upstreamArtifacts: []
+    },
+    allowed: {
+      paths: allowedPaths
+    },
+    forbidden: {
+      paths: []
+    },
+    relevantSymbols: [],
+    dependencies: [],
+    acceptance: [
+      {
+        kind: "custom",
+        description: acceptance[0] ?? "Criterion"
+      }
+    ],
+    validationCommands: [],
+    expectedOutput: {
+      changedFiles,
+      producedSymbols: [],
+      consumedSymbols: []
+    },
+    limits: {
+      maxDurationMs: 1000,
+      maxCostUsd: 0
+    },
+    knownRisks: [],
+    definitionOfDone: acceptance[0] ?? "Criterion"
+  };
+}
+
+function jsonRequest(body: unknown): Request {
+  return new Request("http://manyhands.test/api", {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: { "content-type": "application/json" }
+  });
+}

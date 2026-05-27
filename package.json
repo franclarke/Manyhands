@@ -1,0 +1,42 @@
+{
+  "name": "manyhands",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ManyHands monorepo: domain-first coordination primitives for LLM coding agents.",
+  "packageManager": "pnpm@7.29.3",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm build:packages",
+    "build:packages": "pnpm -r --filter \"./packages/*\" build",
+    "web:dev": "pnpm build:packages && pnpm --filter @manyhands/web dev",
+    "web:build": "pnpm build:packages && pnpm --filter @manyhands/web build",
+    "web:typecheck": "pnpm build:packages && pnpm --filter @manyhands/web typecheck",
+    "web:lint": "pnpm --filter @manyhands/web lint",
+    "demo:plan": "pnpm build && node packages/core/dist/cli/mock-planning-run.js",
+    "demo:execute:mock": "pnpm build && node packages/core/dist/cli/mock-execution-run.js",
+    "demo:index:repo": "pnpm build && node packages/core/dist/cli/repository-index.js",
+    "demo:compare:granularity": "pnpm build && node packages/core/dist/cli/granularity-comparison.js",
+    "demo:benchmark:mock": "pnpm build && node packages/core/dist/cli/benchmark-mock.js",
+    "demo:benchmark:conflicts": "pnpm build && node packages/core/dist/cli/benchmark-mock.js --manifest benchmarks/conflict-v0/benchmark.json",
+    "runs:list": "pnpm build && node packages/core/dist/cli/runs.js list",
+    "runs:show": "pnpm build && node packages/core/dist/cli/runs.js show",
+    "runs:import": "pnpm build && node packages/core/dist/cli/runs.js import",
+    "runs:export": "pnpm build && node packages/core/dist/cli/runs.js export",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint . --ignore-pattern apps/web/** --max-warnings=0"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

@@ -1,0 +1,138 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import type { projectRunRecordToSnapshot } from "@/lib/live-graph";
+import {
+  RunLifecycleError,
+  RunNotFoundError,
+  RunValidationError,
+  assertTaskExists,
+  buildPatch,
+  loadEditableRunContext,
+  persistRunPatches,
+  type RunPatch
+} from "@/lib/server/runs";
+import { toRunResponse } from "@/lib/server/runs/presenter";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+interface RouteContext {
+  params: Promise<{ id: string; taskId: string }>;
+}
+
+const EditableStringSchema = z.string().trim().min(1);
+
+const NodeEditRequestSchema = z.object({
+  title: EditableStringSchema.max(160).optional(),
+  objective: EditableStringSchema.max(4000).optional(),
+  allowedPaths: z.array(EditableStringSchema.max(500)).optional(),
+  forbiddenPaths: z.array(EditableStringSchema.max(500)).optional(),
+  acceptanceCriteria: z.array(EditableStringSchema.max(500)).optional(),
+  manual: z.boolean().optional()
+}).strict();
+
+type NodeEditRequest = z.infer<typeof NodeEditRequestSchema>;
+
+export async function PATCH(request: Request, context: RouteContext): Promise<NextResponse> {
+  const { id, taskId } = await context.params;
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Body must be valid JSON" }, { status: 400 });
+  }
+
+  try {
+    const parsed = NodeEditRequestSchema.safeParse(payload);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      throw new RunValidationError(issue?.message ?? "Invalid node edit request");
+    }
+
+    const { run, baseSnapshot, currentSnapshot } = await loadEditableRunContext(id);
+    assertTaskExists(currentSnapshot, taskId);
+    const node = currentSnapshot.graphSnapshot.nodes[taskId];
+
+    const patches = buildNodeEditPatches({
+      input: parsed.data,
+      taskId,
+      currentNode: node!,
+      currentContracts: currentSnapshot.contracts
+    });
+    if (patches.length === 0) {
+      throw new RunValidationError("No editable fields were supplied");
+    }
+
+    const saved = await persistRunPatches({ run, baseSnapshot, patches });
+
+    return NextResponse.json(toRunResponse(saved));
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+function buildNodeEditPatches(input: {
+  input: NodeEditRequest;
+  taskId: string;
+  currentNode: NonNullable<ReturnType<typeof projectRunRecordToSnapshot>>["graphSnapshot"]["nodes"][string];
+  currentContracts: NonNullable<ReturnType<typeof projectRunRecordToSnapshot>>["contracts"];
+}): RunPatch[] {
+  const { taskId, currentNode, currentContracts } = input;
+  const request = input.input;
+  const now = new Date().toISOString();
+  const patches: RunPatch[] = [];
+  const contract = currentNode.contract ?? currentContracts.find((entry) => entry.taskId === taskId);
+
+  if (request.title !== undefined) {
+    patches.push(buildPatch("NODE_RENAMED", { taskId, title: request.title }, { createdAt: now }));
+  }
+  if (request.objective !== undefined) {
+    patches.push(buildPatch("NODE_OBJECTIVE_EDITED", { taskId, objective: request.objective }, { createdAt: now }));
+  }
+  if (request.allowedPaths !== undefined || request.forbiddenPaths !== undefined) {
+    patches.push(
+      buildPatch(
+        "NODE_PATHS_EDITED",
+        {
+          taskId,
+          allowedPaths: request.allowedPaths ?? contract?.allowed.paths ?? [],
+          forbiddenPaths: request.forbiddenPaths ?? contract?.forbidden.paths ?? []
+        },
+        { createdAt: now }
+      )
+    );
+  }
+  if (request.acceptanceCriteria !== undefined) {
+    patches.push(
+      buildPatch(
+        "NODE_ACCEPTANCE_EDITED",
+        {
+          taskId,
+          acceptanceCriteria: request.acceptanceCriteria
+        },
+        { createdAt: now }
+      )
+    );
+  }
+  if (request.manual !== undefined) {
+    patches.push(buildPatch("NODE_MARKED_MANUAL", { taskId, manual: request.manual }, { createdAt: now }));
+  }
+
+  return patches;
+}
+
+function errorResponse(error: unknown): NextResponse {
+  if (error instanceof RunNotFoundError) {
+    return NextResponse.json({ error: error.message }, { status: 404 });
+  }
+  if (error instanceof RunValidationError) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  if (error instanceof RunLifecycleError) {
+    return NextResponse.json({ error: error.message }, { status: 409 });
+  }
+  return NextResponse.json(
+    { error: error instanceof Error ? error.message : String(error) },
+    { status: 500 }
+  );
+}

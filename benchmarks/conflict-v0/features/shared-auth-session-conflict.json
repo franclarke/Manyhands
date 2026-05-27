@@ -1,0 +1,37 @@
+{
+  "id": "shared-auth-session-conflict",
+  "title": "Shared auth session conflict",
+  "description": "Two tasks touch the same auth session boundary and shared auth symbols.",
+  "repositoryPath": "examples/repos/aprobado-lite",
+  "targetStack": ["TypeScript", "React", "Node"],
+  "constraints": [
+    "This is a controlled conflict fixture.",
+    "No real authentication provider is invoked.",
+    "The session conflict is based on declared task metadata."
+  ],
+  "acceptanceCriteria": [
+    "One task changes session state semantics.",
+    "Another task bridges tokens to session creation.",
+    "Both tasks reference shared auth symbols.",
+    "The risk matrix contains high risk evidence.",
+    "Naive parallel scheduling can group the pair.",
+    "Risk-aware scheduling avoids the high-risk grouping."
+  ],
+  "tags": ["conflict", "auth", "session"],
+  "expectedModules": [
+    "src/auth/session/passwordless-session.ts",
+    "src/auth/session/passwordless-session.ts"
+  ],
+  "expectedRiskAreas": [
+    "shared session contract",
+    "auth boundary"
+  ],
+  "expectedConflictNotes": [
+    "Both tasks modify the same auth session fixture."
+  ],
+  "controlledScenarios": ["shared_auth_session_conflict"],
+  "expectedMockOutcomes": {
+    "gateRequired": 1
+  },
+  "fixtureVersion": "0.1.0"
+}

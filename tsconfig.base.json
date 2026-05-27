@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@manyhands/shared": ["packages/shared/src/index.ts"],
+      "@manyhands/scope-validation": ["packages/scope-validation/src/index.ts"],
+      "@manyhands/decomposer": ["packages/decomposer/src/index.ts"],
+      "@manyhands/contracts": ["packages/contracts/src/index.ts"],
+      "@manyhands/task-graph": ["packages/task-graph/src/index.ts"],
+      "@manyhands/conflict-risk": ["packages/conflict-risk/src/index.ts"],
+      "@manyhands/scheduler": ["packages/scheduler/src/index.ts"],
+      "@manyhands/repository-index": ["packages/repository-index/src/index.ts"],
+      "@manyhands/run-store": ["packages/run-store/src/index.ts"],
+      "@manyhands/trace-store": ["packages/trace-store/src/index.ts"],
+      "@manyhands/worktree-runner": ["packages/worktree-runner/src/index.ts"],
+      "@manyhands/core": ["packages/core/src/index.ts"],
+      "@manyhands/evaluator": ["packages/evaluator/src/index.ts"]
+    }
+  }
+}

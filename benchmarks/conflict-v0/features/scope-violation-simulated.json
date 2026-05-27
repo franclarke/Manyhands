@@ -1,0 +1,50 @@
+{
+  "id": "scope-violation-simulated",
+  "title": "Scope violation simulated",
+  "description": "A mock runner override simulates an out-of-scope change to validate reporting of failures.",
+  "repositoryPath": "examples/repos/aprobado-lite",
+  "targetStack": ["TypeScript", "React", "Node"],
+  "constraints": [
+    "This is a controlled scope violation fixture.",
+    "No real forbidden file is created.",
+    "The failure is produced only by mock runner metadata."
+  ],
+  "acceptanceCriteria": [
+    "The planned task stays inside an allowed UI scope.",
+    "The mock runner reports a forbidden infrastructure path.",
+    "Scope validation marks the task invalid.",
+    "The run summary records a failed task.",
+    "The benchmark report includes scope violation warnings.",
+    "The result remains deterministic."
+  ],
+  "tags": ["conflict", "scope", "failure"],
+  "expectedModules": [
+    "src/components/auth/magic-link-form.tsx",
+    "tests/auth/passwordless-login.test.ts"
+  ],
+  "expectedRiskAreas": [
+    "forbidden path touch",
+    "scope validation"
+  ],
+  "expectedConflictNotes": [
+    "The mock runner override touches infra/secrets.ts to force a scope violation."
+  ],
+  "controlledScenarios": ["scope_violation_simulated"],
+  "mockRunOverrides": {
+    "scope-violation-simulated:balanced:scope-escape": {
+      "changedFiles": [
+        "src/components/auth/magic-link-form.tsx",
+        "infra/secrets.ts"
+      ],
+      "reportedSymbols": ["MagicLinkRequestForm"],
+      "executedValidationCommands": ["pnpm test"],
+      "fail": true,
+      "reason": "simulated forbidden path"
+    }
+  },
+  "expectedMockOutcomes": {
+    "scopeViolations": 1,
+    "failedTasks": 1
+  },
+  "fixtureVersion": "0.1.0"
+}

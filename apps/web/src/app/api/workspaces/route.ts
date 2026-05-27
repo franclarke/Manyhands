@@ -1,0 +1,50 @@
+import { NextResponse } from "next/server";
+import {
+  WorkspaceConflictError,
+  WorkspaceNotFoundError,
+  WorkspaceValidationError,
+  getWorkspaceRepository
+} from "@/lib/server/workspaces";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export async function GET(): Promise<NextResponse> {
+  try {
+    const workspaces = await getWorkspaceRepository().list();
+    return NextResponse.json({ workspaces });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+export async function POST(request: Request): Promise<NextResponse> {
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Body must be valid JSON" }, { status: 400 });
+  }
+  try {
+    const workspace = await getWorkspaceRepository().create(payload);
+    return NextResponse.json({ workspace }, { status: 201 });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+function errorResponse(error: unknown): NextResponse {
+  if (error instanceof WorkspaceNotFoundError) {
+    return NextResponse.json({ error: error.message }, { status: 404 });
+  }
+  if (error instanceof WorkspaceValidationError) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  if (error instanceof WorkspaceConflictError) {
+    return NextResponse.json({ error: error.message }, { status: 409 });
+  }
+  return NextResponse.json(
+    { error: error instanceof Error ? error.message : String(error) },
+    { status: 500 }
+  );
+}
