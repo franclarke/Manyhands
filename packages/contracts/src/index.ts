@@ -79,6 +79,27 @@ export const ExpectedOutputSchema = z.object({
 
 export type ExpectedOutput = z.infer<typeof ExpectedOutputSchema>;
 
+// ── V2: Execution Core schemas ──────────────────────────────────
+
+export const ExecutionValidationCommandSchema = z.object({
+  command: NonEmptyStringSchema,
+  args: z.array(z.string()).default([]),
+  timeoutMs: z.number().int().positive().default(60_000),
+  cwd: z.union([z.literal("worktree"), z.literal("repo-root")]).default("worktree")
+});
+
+export type ExecutionValidationCommand = z.infer<typeof ExecutionValidationCommandSchema>;
+
+export const ExecutionScopeSchema = z.object({
+  implementationPaths: z.array(NonEmptyStringSchema).default([]),
+  testPaths: z.array(NonEmptyStringSchema).default([]),
+  configPaths: z.array(NonEmptyStringSchema).default([])
+});
+
+export type ExecutionScope = z.infer<typeof ExecutionScopeSchema>;
+
+// ── Agent task contract ─────────────────────────────────────────
+
 export const AgentTaskContractSchema = z.object({
   taskId: EntityIdSchema,
   objective: NonEmptyStringSchema,
@@ -95,7 +116,14 @@ export const AgentTaskContractSchema = z.object({
     maxCostUsd: z.number().nonnegative()
   }),
   knownRisks: z.array(NonEmptyStringSchema).default([]),
-  definitionOfDone: NonEmptyStringSchema
+  definitionOfDone: NonEmptyStringSchema,
+
+  // V2 — Execution Core fields (optional, backward-compatible)
+  executionScope: ExecutionScopeSchema.optional(),
+  forbiddenPaths: z.array(NonEmptyStringSchema).optional(),
+  leafValidationCommands: z.array(ExecutionValidationCommandSchema).optional(),
+  parentValidationCommands: z.array(ExecutionValidationCommandSchema).optional(),
+  runValidationCommands: z.array(ExecutionValidationCommandSchema).optional()
 });
 
 export type AgentTaskContract = z.infer<typeof AgentTaskContractSchema>;
