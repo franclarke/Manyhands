@@ -6,9 +6,9 @@ import { matchesAnyGlob } from "./glob";
 export interface ScopeCheckParams {
   changedFiles: string[];
   /** Allowed path categories. If omitted, every non-forbidden file is allowed. */
-  executionScope?: ExecutionScope;
+  executionScope?: ExecutionScope | undefined;
   /** Globs always prohibited regardless of scope. Deny wins (ADR-0023). */
-  forbiddenPaths?: string[];
+  forbiddenPaths?: string[] | undefined;
 }
 
 /**

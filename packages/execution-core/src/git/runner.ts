@@ -37,6 +37,10 @@ export interface GitRunner {
   diffCachedNameOnly(cwd: string): Promise<string[]>;
   diffCachedNumstat(cwd: string): Promise<number>;
 
+  diffRange(params: { cwd: string; from: string; to: string }): Promise<string>;
+  diffRangeNameOnly(params: { cwd: string; from: string; to: string }): Promise<string[]>;
+  diffRangeNumstat(params: { cwd: string; from: string; to: string }): Promise<number>;
+
   cherryPick(params: { cwd: string; commitSha: string }): Promise<CherryPickOutcome>;
   cherryPickAbort(cwd: string): Promise<void>;
 }
@@ -109,28 +113,29 @@ export class SimpleGitRunner implements GitRunner {
   }
 
   async diffCachedNameOnly(cwd: string): Promise<string[]> {
-    const out = await this.client(cwd).diff(["--cached", "--name-only"]);
-    return out
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
+    return splitLines(await this.client(cwd).diff(["--cached", "--name-only"]));
   }
 
   async diffCachedNumstat(cwd: string): Promise<number> {
-    const out = await this.client(cwd).diff(["--cached", "--numstat"]);
-    let total = 0;
-    for (const line of out.split("\n")) {
-      const [added, deleted] = line.trim().split(/\s+/u);
-      const addedNum = Number.parseInt(added ?? "", 10);
-      const deletedNum = Number.parseInt(deleted ?? "", 10);
-      if (Number.isFinite(addedNum)) {
-        total += addedNum;
-      }
-      if (Number.isFinite(deletedNum)) {
-        total += deletedNum;
-      }
-    }
-    return total;
+    return sumNumstat(await this.client(cwd).diff(["--cached", "--numstat"]));
+  }
+
+  async diffRange(params: { cwd: string; from: string; to: string }): Promise<string> {
+    return this.client(params.cwd).diff([`${params.from}..${params.to}`]);
+  }
+
+  async diffRangeNameOnly(params: { cwd: string; from: string; to: string }): Promise<string[]> {
+    const out = await this.client(params.cwd).diff([
+      `${params.from}..${params.to}`,
+      "--name-only"
+    ]);
+    return splitLines(out);
+  }
+
+  async diffRangeNumstat(params: { cwd: string; from: string; to: string }): Promise<number> {
+    return sumNumstat(
+      await this.client(params.cwd).diff([`${params.from}..${params.to}`, "--numstat"])
+    );
   }
 
   async cherryPick(params: { cwd: string; commitSha: string }): Promise<CherryPickOutcome> {
@@ -150,10 +155,29 @@ export class SimpleGitRunner implements GitRunner {
   }
 
   private async unmergedFiles(cwd: string): Promise<string[]> {
-    const out = await this.client(cwd).diff(["--name-only", "--diff-filter=U"]);
-    return out
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
+    return splitLines(await this.client(cwd).diff(["--name-only", "--diff-filter=U"]));
   }
+}
+
+function splitLines(output: string): string[] {
+  return output
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+function sumNumstat(output: string): number {
+  let total = 0;
+  for (const line of output.split("\n")) {
+    const [added, deleted] = line.trim().split(/\s+/u);
+    const addedNum = Number.parseInt(added ?? "", 10);
+    const deletedNum = Number.parseInt(deleted ?? "", 10);
+    if (Number.isFinite(addedNum)) {
+      total += addedNum;
+    }
+    if (Number.isFinite(deletedNum)) {
+      total += deletedNum;
+    }
+  }
+  return total;
 }

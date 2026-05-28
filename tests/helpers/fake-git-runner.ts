@@ -13,6 +13,9 @@ export interface FakeGitRunnerConfig {
   diffCached?: string;
   diffCachedNameOnly?: string[];
   diffCachedNumstat?: number;
+  diffRange?: string;
+  diffRangeNameOnly?: string[];
+  diffRangeNumstat?: number;
   /** Dequeued one per cherryPick() call; defaults to a clean success. */
   cherryPickOutcomes?: CherryPickOutcome[];
   /** Operations that should throw when invoked. */
@@ -104,6 +107,21 @@ export class FakeGitRunner implements GitRunner {
   async diffCachedNumstat(cwd: string): Promise<number> {
     this.record("diffCachedNumstat", { cwd });
     return this.config.diffCachedNumstat ?? 0;
+  }
+
+  async diffRange(params: { cwd: string; from: string; to: string }): Promise<string> {
+    this.record("diffRange", { ...params });
+    return this.config.diffRange ?? "";
+  }
+
+  async diffRangeNameOnly(params: { cwd: string; from: string; to: string }): Promise<string[]> {
+    this.record("diffRangeNameOnly", { ...params });
+    return this.config.diffRangeNameOnly ?? [];
+  }
+
+  async diffRangeNumstat(params: { cwd: string; from: string; to: string }): Promise<number> {
+    this.record("diffRangeNumstat", { ...params });
+    return this.config.diffRangeNumstat ?? 0;
   }
 
   async cherryPick(params: { cwd: string; commitSha: string }): Promise<CherryPickOutcome> {

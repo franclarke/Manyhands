@@ -8,3 +8,4 @@ export * from "./codex/types";
 export * from "./codex/mock";
 export * from "./scope/glob";
 export * from "./scope/checker";
+export * from "./result/recorder";
