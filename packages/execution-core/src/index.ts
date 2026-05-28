@@ -12,3 +12,4 @@ export * from "./scope/checker";
 export * from "./result/recorder";
 export * from "./validation/runner";
 export * from "./integration/agent";
+export * from "./scheduler/batch";
