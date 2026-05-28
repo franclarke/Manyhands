@@ -10,10 +10,51 @@ import {
 } from "@/lib/server/runs/event-bus";
 import {
   runExecutionPipeline,
-  runPlanningPipeline
+  runPlanningPipeline,
+  type ExecutionEngine
 } from "@/lib/server/runs/runner";
 import { JsonRunRecordStore } from "@/lib/server/runs/repository";
 import { resetRunRepositoryForTests } from "@/lib/server/runs/store";
+import type { AgentExecutionResult, GranularityVector, RunExecutionResult } from "@manyhands/execution-core";
+
+/** Deterministic execution engine double: returns a canned successful run. */
+function stubEngine(result: RunExecutionResult): ExecutionEngine {
+  return { run: async () => result };
+}
+
+function successLeaf(taskId: string): AgentExecutionResult {
+  return {
+    taskId,
+    status: "success",
+    baseHead: "BASE",
+    currentHead: `${taskId}_SHA`,
+    agentCommittedUnexpectedly: false,
+    diff: "",
+    changedFiles: [`src/${taskId}.ts`],
+    commitSha: `${taskId}_SHA`,
+    scopeCheck: { passed: true, violations: [] },
+    codexExitCode: 0,
+    codexDurationMs: 10,
+    codexTimedOut: false
+  };
+}
+
+const STUB_VECTOR: GranularityVector = {
+  depth: 1,
+  leafCount: 1,
+  compositeCount: 1,
+  avgLeafDepth: 1,
+  maxLeafDepth: 1,
+  dependencyCount: 0,
+  avgAcceptanceCriteriaPerLeaf: 0,
+  integrationSuccessRate: 1,
+  leafSuccessRate: 1,
+  conflictRate: 0,
+  totalDurationMs: 0,
+  linesChanged: 0,
+  unexpectedCommitCount: 0,
+  scopeViolationCount: 0
+};
 
 const runIdBase = "test-run";
 
@@ -103,7 +144,15 @@ describe("RunRunner", () => {
       events.push(event.kind);
     });
 
-    await runExecutionPipeline(runId, { intervalMs: 0 });
+    const engine = stubEngine({
+      runId,
+      status: "completed",
+      leafResults: [successLeaf("leaf-a")],
+      integrationResults: [],
+      granularityVector: STUB_VECTOR,
+      totalDurationMs: 0
+    });
+    await runExecutionPipeline(runId, { intervalMs: 0, engine });
     unsubscribe();
 
     expect(events).toContain("agent.run.started");
