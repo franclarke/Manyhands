@@ -1,5 +1,6 @@
-// @manyhands/execution-core — types, errors, and schemas for the execution pipeline.
-// Etapa 0: scaffold only. Implementation lands in later etapas.
+// @manyhands/execution-core — types, errors, and the execution pipeline.
 
 export * from "./types";
 export * from "./errors";
+export * from "./git/runner";
+export * from "./worktree/manager";
