@@ -140,6 +140,20 @@ importers:
       '@manyhands/shared': link:../shared
       zod: 3.25.76
 
+  packages/execution-core:
+    specifiers:
+      '@manyhands/contracts': workspace:*
+      '@manyhands/shared': workspace:*
+      '@manyhands/task-graph': workspace:*
+      '@manyhands/trace-store': workspace:*
+      zod: ^3.23.8
+    dependencies:
+      '@manyhands/contracts': link:../contracts
+      '@manyhands/shared': link:../shared
+      '@manyhands/task-graph': link:../task-graph
+      '@manyhands/trace-store': link:../trace-store
+      zod: 3.25.76
+
   packages/repository-index:
     specifiers:
       '@manyhands/shared': workspace:*

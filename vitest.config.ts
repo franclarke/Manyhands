@@ -19,6 +19,7 @@ export default defineConfig({
       "@manyhands/worktree-runner": path.resolve(root, "packages/worktree-runner/src/index.ts"),
       "@manyhands/core": path.resolve(root, "packages/core/src/index.ts"),
       "@manyhands/evaluator": path.resolve(root, "packages/evaluator/src/index.ts"),
+      "@manyhands/execution-core": path.resolve(root, "packages/execution-core/src/index.ts"),
       "@/": `${path.resolve(root, "apps/web/src")}/`
     }
   },
