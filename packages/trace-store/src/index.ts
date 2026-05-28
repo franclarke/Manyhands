@@ -35,7 +35,25 @@ export const TraceEventTypeSchema = z.union([
   z.literal("task_failed"),
   z.literal("validation_completed"),
   z.literal("human_review_requested"),
-  z.literal("dag_patch_appended")
+  z.literal("dag_patch_appended"),
+
+  // Execution Core events
+  z.literal("worktree_created"),
+  z.literal("agent_started"),
+  z.literal("codex_started"),
+  z.literal("codex_completed"),
+  z.literal("unexpected_commit_detected"),
+  z.literal("scope_check_failed"),
+  z.literal("validation_started"),
+  z.literal("agent_committed"),
+  z.literal("integration_started"),
+  z.literal("cherry_pick_attempted"),
+  z.literal("cherry_pick_conflict"),
+  z.literal("codex_repair_started"),
+  z.literal("integration_completed"),
+  z.literal("batch_started"),
+  z.literal("batch_completed"),
+  z.literal("run_completed")
 ]);
 
 export type TraceEventType = z.infer<typeof TraceEventTypeSchema>;
