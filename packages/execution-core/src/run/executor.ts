@@ -270,6 +270,12 @@ export class RunExecutor {
         baseCommit: graph.baseCommit
       });
       args.worktrees.push(worktree);
+      this.traceStore.append({
+        type: "worktree_created",
+        actor: "system",
+        taskId: composite.id,
+        payload: { path: worktree.path, branch: worktree.branch }
+      });
 
       const contract = composite.contract;
       const result = await this.integrationAgent.integrate({
