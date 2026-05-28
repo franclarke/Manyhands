@@ -21,6 +21,7 @@
     "@manyhands/shared": "workspace:*",
     "@manyhands/task-graph": "workspace:*",
     "@manyhands/contracts": "workspace:*",
+    "@manyhands/scheduler": "workspace:*",
     "@manyhands/trace-store": "workspace:*",
     "simple-git": "^3.27.0",
     "zod": "^3.23.8"

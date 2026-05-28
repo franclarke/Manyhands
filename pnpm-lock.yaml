@@ -143,6 +143,7 @@ importers:
   packages/execution-core:
     specifiers:
       '@manyhands/contracts': workspace:*
+      '@manyhands/scheduler': workspace:*
       '@manyhands/shared': workspace:*
       '@manyhands/task-graph': workspace:*
       '@manyhands/trace-store': workspace:*
@@ -150,6 +151,7 @@ importers:
       zod: ^3.23.8
     dependencies:
       '@manyhands/contracts': link:../contracts
+      '@manyhands/scheduler': link:../scheduler
       '@manyhands/shared': link:../shared
       '@manyhands/task-graph': link:../task-graph
       '@manyhands/trace-store': link:../trace-store
