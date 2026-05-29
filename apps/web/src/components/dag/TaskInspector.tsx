@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { InspectorView } from "@/lib/graph-view-model";
+import { useEffect, useState } from "react";
+import type { InspectorIntegration, InspectorView } from "@/lib/graph-view-model";
 import { nodeUiStatus } from "@/lib/status";
-import type { RunPhase } from "@/lib/run-phase";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import type { RunPhase } from "@/lib/run-phase";
 
 interface TaskInspectorProps {
   view: InspectorView | null;
@@ -80,9 +80,21 @@ const textareaStyle: React.CSSProperties = {
   fontFamily: "var(--font-sans)"
 };
 
-export function TaskInspector({ view, onClose, editableRunId, onEdited }: TaskInspectorProps): React.ReactElement {
+export function TaskInspector({ view, onClose, phase, editableRunId, onEdited }: TaskInspectorProps): React.ReactElement {
   const [tab, setTab] = useState<TabId>("overview");
   const [isEditing, setIsEditing] = useState(false);
+  const selectedId = view?.taskId;
+
+  // Reset to the phase-appropriate default tab when the selected node (or phase)
+  // changes — so a leaf opens on Contract while a composite opens on Integration.
+  useEffect(() => {
+    if (view === null) {
+      return;
+    }
+    setTab(defaultTab(view, tabsForView(view), phase));
+    // Keyed on identity (taskId) + phase, not the view object (new each render).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, phase]);
 
   if (view === null) {
     return (
@@ -117,6 +129,8 @@ export function TaskInspector({ view, onClose, editableRunId, onEdited }: TaskIn
     );
   }
 
+  const tabs = tabsForView(view);
+
   return (
     <>
       <aside
@@ -149,27 +163,27 @@ export function TaskInspector({ view, onClose, editableRunId, onEdited }: TaskIn
             flexShrink: 0
           }}
         >
-          {TABS.map((spec) => (
+          {tabs.map((id) => (
             <button
-              key={spec.id}
+              key={id}
               type="button"
               role="tab"
-              aria-selected={tab === spec.id}
-              onClick={() => setTab(spec.id)}
+              aria-selected={tab === id}
+              onClick={() => setTab(id)}
               style={{
                 height: 34,
                 padding: "0 10px",
                 border: "none",
                 background: "transparent",
-                borderBottom: tab === spec.id ? "1px solid var(--copper)" : "1px solid transparent",
-                color: tab === spec.id ? "var(--text)" : "var(--text-2)",
-                fontWeight: tab === spec.id ? 600 : 500,
+                borderBottom: tab === id ? "1px solid var(--copper)" : "1px solid transparent",
+                color: tab === id ? "var(--text)" : "var(--text-2)",
+                fontWeight: tab === id ? 600 : 500,
                 fontSize: 12,
                 cursor: "pointer",
                 whiteSpace: "nowrap"
               }}
             >
-              {spec.label}
+              {TAB_LABEL[id]}
             </button>
           ))}
         </div>
@@ -179,6 +193,7 @@ export function TaskInspector({ view, onClose, editableRunId, onEdited }: TaskIn
           {tab === "contract" && <ContractTab view={view} />}
           {tab === "execution" && <ExecutionTab view={view} />}
           {tab === "validation" && <ValidationTab view={view} />}
+          {tab === "integration" && <IntegrationTab view={view} />}
           {tab === "trace" && <TraceTab view={view} />}
         </div>
       </aside>
@@ -218,7 +233,7 @@ function InspectorHeader({
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-        <StatusSignal status={view.status} />
+        <StatusBadge status={nodeUiStatus(view.status, { integrator: view.integrator })} />
         <div style={{ display: "flex", gap: 6 }}>
           {onEdit !== undefined ? (
             <button type="button" onClick={onEdit} style={smallButtonStyle}>
@@ -344,9 +359,12 @@ function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
   if (runResult === undefined) {
     const ready = view.status === "ready" || view.status === "approved";
     return (
-      <EmptyHint>
-        {ready ? "Ready to run in isolated worktree." : "No Codex execution yet."}
-      </EmptyHint>
+      <EmptyState
+        compact
+        tone="pending"
+        title={ready ? "Ready to run" : "No execution yet"}
+        description="Diff, changed files, validation and cost (AgentExecutionResult) are recorded once the node runs in its isolated worktree."
+      />
     );
   }
 
@@ -359,6 +377,7 @@ function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
             { label: "Worktree", value: runResult.worktree, mono: true },
             { label: "Branch", value: runResult.branch, mono: true },
             { label: "Duration", value: `${runResult.durationMs}ms`, mono: true },
+            { label: "Cost", value: `$${runResult.costUsd.toFixed(4)}`, mono: true },
             { label: "Changed files", value: String(runResult.changedFiles.length), mono: true },
             { label: "Scope violations", value: String(runResult.scopeViolations.length), mono: true }
           ]}
@@ -367,6 +386,11 @@ function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
       <Section title="Changed files">
         <MonoList items={runResult.changedFiles} empty="none" />
       </Section>
+      {runResult.scopeViolations.length > 0 ? (
+        <Section title="Scope violations">
+          <MonoList items={runResult.scopeViolations} empty="none" />
+        </Section>
+      ) : null}
       {runResult.diff !== undefined ? (
         <Section title="Diff summary">
           <pre
@@ -432,6 +456,94 @@ function ValidationTab({ view }: { view: InspectorView }): React.ReactElement {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function IntegrationTab({ view }: { view: InspectorView }): React.ReactElement {
+  const integration = view.integration;
+  if (integration === undefined) {
+    return (
+      <EmptyHint>Only composite / integrator nodes integrate child work. Inspect one to see its integration.</EmptyHint>
+    );
+  }
+
+  const executed = integration.children.filter((child) => child.executed).length;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <Section title="Integration">
+        <KvGrid
+          rows={[
+            { label: "Composite", value: integration.compositeTaskId, mono: true },
+            { label: "Children", value: String(integration.children.length), mono: true },
+            { label: "Executed", value: `${executed}/${integration.children.length}`, mono: true }
+          ]}
+        />
+      </Section>
+      <Section title="Child results">
+        {integration.children.length === 0 ? (
+          <EmptyHint>This node has no child tasks.</EmptyHint>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {integration.children.map((child) => (
+              <div
+                key={child.taskId}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "7px 0",
+                  borderBottom: "1px solid var(--rule-soft)"
+                }}
+              >
+                <StatusBadge status={nodeUiStatus(child.status)} />
+                <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-2)", flex: 1, wordBreak: "break-all" }}>
+                  {child.taskId}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+      <Section title="Cherry-pick / conflicts / repair">
+        {integration.result === undefined ? (
+          <EmptyState
+            compact
+            tone="pending"
+            title="Integration evidence pending"
+            description="Cherry-pick order, conflicts and Codex-repair details (IntegrationResult) are produced by the execution core (Etapa 1)."
+          />
+        ) : (
+          <IntegrationResultDetail result={integration.result} />
+        )}
+      </Section>
+    </div>
+  );
+}
+
+function IntegrationResultDetail({
+  result
+}: {
+  result: NonNullable<InspectorIntegration["result"]>;
+}): React.ReactElement {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <KvGrid
+        rows={[
+          { label: "Status", value: result.status.replace(/_/g, " "), mono: false },
+          { label: "Repair attempted", value: result.repairAttempted ? "yes" : "no", mono: false },
+          { label: "Commit", value: result.integrationCommitSha ?? "-", mono: true }
+        ]}
+      />
+      {result.conflictDetails !== undefined ? (
+        <div>
+          <h4 className="mh-coord" style={{ margin: "0 0 6px", color: "var(--copper)" }}>
+            Conflicting files
+          </h4>
+          <MonoList items={result.conflictDetails.files} empty="none" />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -768,15 +880,6 @@ function EmptyHint({ children }: { children: React.ReactNode }): React.ReactElem
 
 function Prose({ children }: { children: React.ReactNode }): React.ReactElement {
   return <p style={{ margin: 0, fontSize: 12.5, color: "var(--text)", lineHeight: 1.6 }}>{children}</p>;
-}
-
-function StatusSignal({ status }: { status: GraphNodeStatus }): React.ReactElement {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "var(--text-2)", fontSize: 11.5 }}>
-      <span className="mh-dot" style={{ color: graphStatusColor(status) }} />
-      {status.replace("_", " ")}
-    </span>
-  );
 }
 
 function Tag({

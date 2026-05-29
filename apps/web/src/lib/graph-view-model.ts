@@ -1,4 +1,5 @@
 import type { RunSnapshot } from "@manyhands/core";
+import type { IntegrationResult } from "@manyhands/execution-core";
 
 export type GraphEdgeKind = "dependency" | "risk" | "gate" | "unknown";
 
@@ -148,6 +149,25 @@ export interface InspectorRunResult {
   diff?: string;
 }
 
+export interface InspectorIntegrationChild {
+  taskId: string;
+  title: string;
+  status: GraphNodeStatus;
+  /** True when the child already has a recorded agent run result. */
+  executed: boolean;
+}
+
+export interface InspectorIntegration {
+  compositeTaskId: string;
+  children: InspectorIntegrationChild[];
+  /**
+   * Real cherry-pick / conflict / Codex-repair evidence. Produced by the
+   * execution core (Etapa 1); `undefined` today → the Integration tab renders an
+   * explicit pending state instead of inventing data.
+   */
+  result?: IntegrationResult;
+}
+
 export interface InspectorView {
   taskId: string;
   title: string;
@@ -161,6 +181,7 @@ export interface InspectorView {
   traceEvents: InspectorTraceEvent[];
   validation?: InspectorValidation;
   runResult?: InspectorRunResult;
+  integration?: InspectorIntegration;
   blockedReason?: string;
   gateRequired: boolean;
   authoredBy?: "ai" | "human";
@@ -460,6 +481,32 @@ export function buildInspectorView(snapshot: RunSnapshot, taskId: string): Inspe
 
   if (blocked !== undefined) {
     inspector.blockedReason = blocked.reason;
+  }
+
+  const isComposite = node.kind === "composite" || node.metadata?.integrator === true;
+  if (isComposite) {
+    const children: InspectorIntegrationChild[] = node.childrenIds.map((childId) => {
+      const child = snapshot.graphSnapshot.nodes[childId];
+      const childStatus = statusForNode(
+        snapshot,
+        childId,
+        child?.status ?? "planned",
+        resultsByTaskId,
+        blockedByTaskId
+      );
+      return {
+        taskId: childId,
+        title: child?.title ?? childId,
+        status: childStatus,
+        executed: resultsByTaskId.has(childId)
+      };
+    });
+    // `result` is intentionally omitted: IntegrationResult is produced by the
+    // execution core (Etapa 1). Until then the Integration tab shows a pending state.
+    inspector.integration = {
+      compositeTaskId: taskId,
+      children
+    };
   }
 
   return inspector;

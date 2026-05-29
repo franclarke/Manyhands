@@ -17,6 +17,9 @@ import {
   type GraphFilterState
 } from "@/lib/graph-filters";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { derivePhase } from "@/lib/run-phase";
+import { buildRunSummary } from "@/lib/run-summary";
+import { RunSummaryPanel } from "./RunSummaryPanel";
 import { DagCanvas } from "./DagCanvas";
 import { GraphToolbar } from "./GraphToolbar";
 import { MethodologyBanner } from "./MethodologyBanner";
@@ -93,6 +96,9 @@ export function DagWorkspace({
   );
   const canvasHighlights = highlightTaskIds ?? matched;
 
+  const phase = runStatus !== undefined ? derivePhase(runStatus, graph) : undefined;
+  const summary = useMemo(() => (phase === "done" ? buildRunSummary(snapshot) : null), [phase, snapshot]);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {showMethodologyBanner ? <MethodologyBanner /> : null}
@@ -108,6 +114,7 @@ export function DagWorkspace({
         matchedCount={matched?.size ?? graph.summary.taskCount}
       />
       {actionSlot}
+      {summary !== null ? <RunSummaryPanel summary={summary} /> : null}
       <SegmentedControl
         ariaLabel="Run view"
         options={VIEW_OPTIONS}
@@ -168,6 +175,7 @@ export function DagWorkspace({
         <TaskInspector
           view={inspector}
           onClose={() => setSelectedTaskId(null)}
+          {...(phase !== undefined ? { phase } : {})}
           {...(editableRunId !== undefined ? { editableRunId } : {})}
           {...(onEdited !== undefined ? { onEdited } : {})}
         />
