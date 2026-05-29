@@ -18,3 +18,17 @@ export class RunLifecycleError extends Error {
     this.name = "RunLifecycleError";
   }
 }
+
+/**
+ * Raised when a run is executed with the default engine but has no target
+ * repository configured. The message is actionable (D3: never fail silently).
+ */
+export class RepoNotConfiguredError extends Error {
+  constructor(runId: string) {
+    super(
+      `Run ${runId} has no target repository configured. ` +
+        "Set a fixture repoSpec (e.g. task-manager-api) before executing."
+    );
+    this.name = "RepoNotConfiguredError";
+  }
+}
