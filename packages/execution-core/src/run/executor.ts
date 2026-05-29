@@ -385,10 +385,33 @@ export class RunExecutor {
 }
 
 function buildLeafInstructions(node: TaskNode): string {
-  const lines = [node.prompt ?? node.goal];
-  if (node.acceptanceCriteria && node.acceptanceCriteria.length > 0) {
-    lines.push("", "Acceptance criteria:", ...node.acceptanceCriteria.map((c) => `- ${c}`));
+  const contract = node.contract;
+  const lines = [contract?.objective ?? node.prompt ?? node.goal];
+
+  const acceptance = node.acceptanceCriteria ?? [];
+  if (acceptance.length > 0) {
+    lines.push("", "Acceptance criteria:", ...acceptance.map((c) => `- ${c}`));
   }
+
+  // Communicate the exact scope the orchestrator will enforce after the run, so
+  // the agent knows what it may and must not touch (mirrors the ScopeChecker).
+  if (contract?.executionScope) {
+    const allowed = [
+      ...contract.executionScope.implementationPaths,
+      ...contract.executionScope.testPaths,
+      ...contract.executionScope.configPaths
+    ];
+    if (allowed.length > 0) {
+      lines.push("", "You may only modify files matching:", ...allowed.map((p) => `- ${p}`));
+    }
+  }
+  if (contract?.forbiddenPaths && contract.forbiddenPaths.length > 0) {
+    lines.push("", "You must NOT modify:", ...contract.forbiddenPaths.map((p) => `- ${p}`));
+  }
+  if (contract?.definitionOfDone) {
+    lines.push("", `Definition of done: ${contract.definitionOfDone}`);
+  }
+
   lines.push("", "Do not commit — the orchestrator will commit your changes.");
   return lines.join("\n");
 }

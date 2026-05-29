@@ -36,7 +36,28 @@ function rootContractWithRunValidation(): AgentTaskContract {
   });
 }
 
-function graphWith(leafIds: string[], rootContract?: AgentTaskContract): TaskGraph {
+/** Minimal leaf contract carrying execution scope + forbidden paths + DoD. */
+function leafContract(allowed: string[], forbidden: string[] = []): AgentTaskContract {
+  return AgentTaskContractSchema.parse({
+    taskId: "leaf",
+    objective: "Implement the slice.",
+    context: { typeSignatures: [], referenceSnippets: [], conventions: [], upstreamArtifacts: [] },
+    allowed: { paths: allowed },
+    forbidden: { paths: forbidden },
+    acceptance: [{ kind: "custom", description: "Slice works." }],
+    expectedOutput: { changedFiles: [], producedSymbols: [], consumedSymbols: [], diffShapeHint: "n/a" },
+    limits: { maxDurationMs: 60_000, maxCostUsd: 0 },
+    definitionOfDone: "Slice is complete and in scope.",
+    executionScope: { implementationPaths: allowed, testPaths: [], configPaths: [] },
+    forbiddenPaths: forbidden
+  });
+}
+
+function graphWith(
+  leafIds: string[],
+  rootContract?: AgentTaskContract,
+  leafContractFor?: AgentTaskContract
+): TaskGraph {
   return {
     id: "graph-1",
     planId: RUN_ID,
@@ -75,7 +96,8 @@ function graphWith(leafIds: string[], rootContract?: AgentTaskContract): TaskGra
             depth: 1,
             childrenIds: [],
             dependencies: [],
-            acceptanceCriteria: ["criterion one"]
+            acceptanceCriteria: ["criterion one"],
+            ...(leafContractFor ? { contract: leafContractFor } : {})
           }
         ])
       )
@@ -225,5 +247,58 @@ describe("RunExecutor", () => {
     // Every clean was attempted (2 leaves + 1 integration) and each failure traced.
     expect(git.calls.filter((call) => call.op === "worktreeRemove")).toHaveLength(3);
     expect(traceStore.findByType("worktree_clean_failed")).toHaveLength(3);
+  });
+
+  it("enforces the contract's executionScope: an out-of-scope change fails the run (Etapa A)", async () => {
+    // Codex 'changed' a file outside the allowed scope.
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/secrets/leak.ts b/secrets/leak.ts\n+leak",
+      diffCachedNameOnly: ["secrets/leak.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const executor = makeExecutor(git, new InMemoryTraceStore());
+
+    const result = await executor.run({
+      graph: graphWith(["a"], undefined, leafContract(["src/**"])),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.leafResults[0]?.status).toBe("scope_violation");
+    expect(result.leafResults[0]?.scopeCheck.violations).toEqual(["secrets/leak.ts"]);
+    // Scope violations must not be committed.
+    expect(git.opsInvoked()).not.toContain("commit");
+  });
+
+  it("includes scope and definition-of-done in the leaf instructions (Etapa A)", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const prompts: string[] = [];
+    const executor = new RunExecutor({
+      git,
+      codex: new MockCodexCliExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: REPO_ROOT,
+      writeInstructions: async (_path, content) => {
+        prompts.push(content);
+      }
+    });
+
+    await executor.run({
+      graph: graphWith(["a"], undefined, leafContract(["src/**"], ["secrets/**"])),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    const leafPrompt = prompts[0] ?? "";
+    expect(leafPrompt).toContain("You may only modify");
+    expect(leafPrompt).toContain("src/**");
+    expect(leafPrompt).toContain("You must NOT modify");
+    expect(leafPrompt).toContain("secrets/**");
+    expect(leafPrompt).toContain("Definition of done");
   });
 });
