@@ -4,6 +4,7 @@ import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { describe, expect, it } from "vitest";
 import {
   ExecutionConfigSchema,
+  FileSystemContextPacker,
   MockCodexCliExecutor,
   RunExecutor,
   type ValidationRunContext,
@@ -37,7 +38,7 @@ function rootContractWithRunValidation(): AgentTaskContract {
 }
 
 /** Minimal leaf contract carrying execution scope + forbidden paths + DoD. */
-function leafContract(allowed: string[], forbidden: string[] = []): AgentTaskContract {
+function leafContract(allowed: string[], forbidden: string[] = [], changedFiles: string[] = []): AgentTaskContract {
   return AgentTaskContractSchema.parse({
     taskId: "leaf",
     objective: "Implement the slice.",
@@ -45,7 +46,7 @@ function leafContract(allowed: string[], forbidden: string[] = []): AgentTaskCon
     allowed: { paths: allowed },
     forbidden: { paths: forbidden },
     acceptance: [{ kind: "custom", description: "Slice works." }],
-    expectedOutput: { changedFiles: [], producedSymbols: [], consumedSymbols: [], diffShapeHint: "n/a" },
+    expectedOutput: { changedFiles, producedSymbols: [], consumedSymbols: [], diffShapeHint: "n/a" },
     limits: { maxDurationMs: 60_000, maxCostUsd: 0 },
     definitionOfDone: "Slice is complete and in scope.",
     executionScope: { implementationPaths: allowed, testPaths: [], configPaths: [] },
@@ -300,5 +301,39 @@ describe("RunExecutor", () => {
     expect(leafPrompt).toContain("You must NOT modify");
     expect(leafPrompt).toContain("secrets/**");
     expect(leafPrompt).toContain("Definition of done");
+  });
+
+  it("injects worktree file context into the leaf prompt (Etapa B)", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const prompts: string[] = [];
+    const traceStore = new InMemoryTraceStore();
+    const executor = new RunExecutor({
+      git,
+      codex: new MockCodexCliExecutor(),
+      traceStore,
+      repoRoot: REPO_ROOT,
+      // Deterministic packer: no disk, returns known content for the target file.
+      contextPacker: new FileSystemContextPacker({
+        readFile: async (p) => (p.endsWith("x.ts") ? "export const current = 1;" : Promise.reject(new Error("missing")))
+      }),
+      writeInstructions: async (_path, content) => {
+        prompts.push(content);
+      }
+    });
+
+    await executor.run({
+      graph: graphWith(["a"], undefined, leafContract(["src/**"], [], ["src/x.ts"])),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    const leafPrompt = prompts[0] ?? "";
+    expect(leafPrompt).toContain("Current contents of the files you will work on");
+    expect(leafPrompt).toContain("export const current = 1;");
+    expect(traceStore.findByType("context_packed")).toHaveLength(1);
   });
 });

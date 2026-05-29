@@ -10,6 +10,7 @@ import type { TraceStore } from "@manyhands/trace-store";
 
 import type { CodexExecutor } from "../codex/types";
 import type { GitRunner } from "../git/runner";
+import { FileSystemContextPacker, type ContextPacker } from "../context/packer";
 import { RunExecutionError } from "../errors";
 import { computeGranularityVector } from "../granularity/vector";
 import { assertExecutableGraph } from "./graph-guards";
@@ -37,6 +38,8 @@ export interface RunExecutorDeps {
   integrationAgent?: IntegrationAgent;
   validationRunner?: ValidationRunner;
   batchScheduler?: BatchScheduler;
+  /** Packs target-file context into leaf instructions. Injectable for tests. */
+  contextPacker?: ContextPacker;
   /** Writes the leaf/repair instructions file. Injectable for tests. */
   writeInstructions?: (path: string, content: string) => Promise<void>;
   clock?: () => number;
@@ -81,6 +84,7 @@ export class RunExecutor {
   private readonly integrationAgent: IntegrationAgent;
   private readonly validationRunner: ValidationRunner;
   private readonly batchScheduler: BatchScheduler;
+  private readonly contextPacker: ContextPacker;
   private readonly writeInstructions: (path: string, content: string) => Promise<void>;
   private readonly clock: () => number;
 
@@ -105,6 +109,7 @@ export class RunExecutor {
       });
     this.batchScheduler =
       deps.batchScheduler ?? new BatchScheduler({ traceStore: deps.traceStore });
+    this.contextPacker = deps.contextPacker ?? new FileSystemContextPacker();
     this.writeInstructions = deps.writeInstructions ?? ((path, content) => writeFile(path, content, "utf8"));
     this.clock = deps.clock ?? (() => Date.now());
   }
@@ -226,8 +231,19 @@ export class RunExecutor {
       payload: { path: worktree.path, branch: worktree.branch }
     });
 
+    const context = await this.contextPacker.pack({
+      worktreePath: worktree.path,
+      files: node.contract?.expectedOutput.changedFiles ?? []
+    });
+    this.traceStore.append({
+      type: "context_packed",
+      actor: "system",
+      taskId: node.id,
+      payload: { includedFiles: context.includedFiles, totalBytes: context.totalBytes }
+    });
+
     const instructionFilePath = join(tmpdir(), `mh-${runId}-${node.id}.txt`);
-    await this.writeInstructions(instructionFilePath, buildLeafInstructions(node));
+    await this.writeInstructions(instructionFilePath, buildLeafInstructions(node, context.section));
 
     this.traceStore.append({ type: "codex_started", actor: "system", taskId: node.id, payload: {} });
     const codexOutcome = await this.codex.execute({
@@ -384,7 +400,7 @@ export class RunExecutor {
   }
 }
 
-function buildLeafInstructions(node: TaskNode): string {
+function buildLeafInstructions(node: TaskNode, contextSection?: string): string {
   const contract = node.contract;
   const lines = [contract?.objective ?? node.prompt ?? node.goal];
 
@@ -410,6 +426,10 @@ function buildLeafInstructions(node: TaskNode): string {
   }
   if (contract?.definitionOfDone) {
     lines.push("", `Definition of done: ${contract.definitionOfDone}`);
+  }
+
+  if (contextSection && contextSection.length > 0) {
+    lines.push("", contextSection);
   }
 
   lines.push("", "Do not commit — the orchestrator will commit your changes.");
