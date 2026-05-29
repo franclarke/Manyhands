@@ -1,4 +1,24 @@
 import type { BenchmarkManifest, BenchmarkReport, EvaluationConfiguration } from "@manyhands/evaluator";
+import type { GranularityVector } from "@manyhands/execution-core";
+
+/** Per-leaf receipt: auditable evidence of what one subagent did. */
+export interface ExecutionLeafReceipt {
+  taskId: string;
+  status: string;
+  changedFiles: number;
+  commitSha?: string;
+  scopePassed: boolean;
+  durationMs: number;
+  costUsd?: number;
+}
+
+export interface ExecutionSummary {
+  status: "completed" | "failed";
+  totalDurationMs: number;
+  granularityVector: GranularityVector;
+  leaves: ExecutionLeafReceipt[];
+  integrations: Array<{ compositeTaskId: string; status: string }>;
+}
 
 export interface BenchmarkSummary {
   id: string;
@@ -155,5 +175,6 @@ export interface RunResponse {
       generatedAt: string;
       usage?: { inputTokens: number; outputTokens: number; costUsd?: number };
     };
+    execution?: ExecutionSummary;
   };
 }
