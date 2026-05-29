@@ -67,12 +67,23 @@ export function RunSummaryPanel({ summary }: RunSummaryPanelProps): React.ReactE
       </Group>
 
       <Group label="integration">
-        <EmptyState
-          compact
-          tone="pending"
-          title="Integration metrics pending"
-          description="Integration success rate and conflict rate are derived from IntegrationResult, produced by the execution core (Etapa 1)."
-        />
+        {post.integrationPending ? (
+          <EmptyState
+            compact
+            tone="pending"
+            title="Integration metrics pending"
+            description="Integration success rate and conflict rate are derived from IntegrationResult, produced by the execution core (Etapa 1)."
+          />
+        ) : (
+          <Row>
+            <MetricStat value={pct(post.integrationSuccessRate)} label="integration success" />
+            <MetricStat
+              value={pct(post.conflictRate)}
+              label="conflict rate"
+              muted={(post.conflictRate ?? 0) === 0}
+            />
+          </Row>
+        )}
       </Group>
     </section>
   );

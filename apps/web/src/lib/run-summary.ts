@@ -1,5 +1,5 @@
 import type { RunSnapshot } from "@manyhands/core";
-import type { GranularityVector } from "@manyhands/execution-core";
+import type { GranularityVector, RunExecutionResult } from "@manyhands/execution-core";
 
 /**
  * Run Summary (done phase). Two halves, kept honest:
@@ -34,8 +34,12 @@ export interface RunSummaryPost {
   totalCostUsd?: number;
   changedFilesCount?: number;
   scopeViolationCount?: number;
-  /** Integration metrics (integration/conflict rates) need the execution core. */
+  /** True until the execution core produces IntegrationResults (Lab/mock runs). */
   integrationPending: boolean;
+  /** Integration success rate (0-1), present once the execution core ran. */
+  integrationSuccessRate?: number;
+  /** Conflict rate (0-1) across integrated leaf pairs, from the execution core. */
+  conflictRate?: number;
 }
 
 export interface RunSummary {
@@ -50,7 +54,13 @@ function mean(values: number[]): number {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
-export function buildRunSummary(snapshot: RunSnapshot): RunSummary {
+/**
+ * Builds the run summary. When `execution` (a real-engine RunExecutionResult)
+ * is provided it is the source of truth — including integration metrics, so
+ * `integrationPending` is cleared. Without it, the summary falls back to the
+ * Lab-mode snapshot (`agentRunResults`), with integration left pending.
+ */
+export function buildRunSummary(snapshot: RunSnapshot, execution?: RunExecutionResult): RunSummary {
   const nodes = Object.values(snapshot.graphSnapshot.nodes);
   const leaves = nodes.filter((node) => node.kind === "leaf");
   const leafDepths = leaves.map((leaf) => leaf.depth);
@@ -70,6 +80,11 @@ export function buildRunSummary(snapshot: RunSnapshot): RunSummary {
     dependencyCount: snapshot.graphSnapshot.dependencies.length,
     avgAcceptanceCriteriaPerLeaf: mean(acceptanceCounts)
   };
+
+  // Real execution core result wins: it carries integration metrics too.
+  if (execution !== undefined) {
+    return { pre: preFromVector(execution.granularityVector), post: postFromExecution(execution) };
+  }
 
   const results = snapshot.agentRunResults;
   const executed = results.length > 0;
@@ -91,4 +106,33 @@ export function buildRunSummary(snapshot: RunSnapshot): RunSummary {
   }
 
   return { pre, post };
+}
+
+function preFromVector(vector: GranularityVector): RunSummaryPre {
+  return {
+    depth: vector.depth,
+    leafCount: vector.leafCount,
+    compositeCount: vector.compositeCount,
+    avgLeafDepth: vector.avgLeafDepth,
+    maxLeafDepth: vector.maxLeafDepth,
+    dependencyCount: vector.dependencyCount,
+    avgAcceptanceCriteriaPerLeaf: vector.avgAcceptanceCriteriaPerLeaf
+  };
+}
+
+function postFromExecution(execution: RunExecutionResult): RunSummaryPost {
+  const vector = execution.granularityVector;
+  const post: RunSummaryPost = {
+    executed: execution.leafResults.length > 0,
+    leafSuccessRate: vector.leafSuccessRate,
+    totalDurationMs: vector.totalDurationMs,
+    changedFilesCount: execution.leafResults.reduce((sum, leaf) => sum + leaf.changedFiles.length, 0),
+    scopeViolationCount: vector.scopeViolationCount,
+    integrationPending: false,
+    integrationSuccessRate: vector.integrationSuccessRate,
+    conflictRate: vector.conflictRate
+  };
+  if (vector.testsPassedRate !== undefined) post.testsPassedRate = vector.testsPassedRate;
+  if (vector.totalCostUsd !== undefined) post.totalCostUsd = vector.totalCostUsd;
+  return post;
 }

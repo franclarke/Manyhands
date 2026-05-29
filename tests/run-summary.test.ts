@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { runBenchmarkMockFlow, type RunSnapshot } from "@manyhands/core";
 import { buildRunSummary } from "@/lib/run-summary";
+import type { GranularityVector, RunExecutionResult } from "@manyhands/execution-core";
 
 describe("run-summary", () => {
   let snapshot: RunSnapshot;
@@ -57,5 +58,55 @@ describe("run-summary", () => {
     expect(post.executed).toBe(false);
     expect(post.integrationPending).toBe(true);
     expect(post.totalCostUsd).toBeUndefined();
+  });
+
+  it("uses the real execution core result when provided (integration no longer pending)", () => {
+    const vector: GranularityVector = {
+      depth: 1,
+      leafCount: 2,
+      compositeCount: 1,
+      avgLeafDepth: 1,
+      maxLeafDepth: 1,
+      dependencyCount: 0,
+      avgAcceptanceCriteriaPerLeaf: 1,
+      integrationSuccessRate: 1,
+      leafSuccessRate: 0.5,
+      conflictRate: 0,
+      totalDurationMs: 4242,
+      linesChanged: 6,
+      unexpectedCommitCount: 0,
+      scopeViolationCount: 1
+    };
+    const execution: RunExecutionResult = {
+      runId: "r1",
+      status: "failed",
+      leafResults: [
+        {
+          taskId: "a", status: "success", baseHead: "B", currentHead: "S", agentCommittedUnexpectedly: false,
+          diff: "d", changedFiles: ["src/a.ts"], commitSha: "S", scopeCheck: { passed: true, violations: [] },
+          codexExitCode: 0, codexDurationMs: 1, codexTimedOut: false
+        },
+        {
+          taskId: "b", status: "scope_violation", baseHead: "B", currentHead: "B", agentCommittedUnexpectedly: false,
+          diff: "d", changedFiles: ["secrets/x"], scopeCheck: { passed: false, violations: ["secrets/x"] },
+          codexExitCode: 0, codexDurationMs: 1, codexTimedOut: false
+        }
+      ],
+      integrationResults: [],
+      granularityVector: vector,
+      totalDurationMs: 4242
+    };
+
+    const { pre, post } = buildRunSummary(snapshot, execution);
+
+    expect(pre.leafCount).toBe(2);
+    expect(post.executed).toBe(true);
+    expect(post.integrationPending).toBe(false);
+    expect(post.integrationSuccessRate).toBe(1);
+    expect(post.conflictRate).toBe(0);
+    expect(post.leafSuccessRate).toBe(0.5);
+    expect(post.totalDurationMs).toBe(4242);
+    expect(post.changedFilesCount).toBe(2);
+    expect(post.scopeViolationCount).toBe(1);
   });
 });
