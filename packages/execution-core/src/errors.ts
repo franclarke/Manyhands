@@ -180,3 +180,35 @@ export class UnexpectedCommitError extends ExecutionCoreError {
     return err instanceof UnexpectedCommitError;
   }
 }
+
+// ── Run execution (orchestrator-level) ──────────────────────────
+
+export type RunExecutionPhase =
+  | "validate"
+  | "schedule"
+  | "leaf"
+  | "integration"
+  | "validation"
+  | "cleanup";
+
+/**
+ * Raised by the orchestrator when a run cannot proceed: a malformed graph
+ * (phase "validate"), an unschedulable task (phase "schedule"), etc. Leaf,
+ * scope, and validation *outcomes* are reported as results — not thrown — so
+ * this error is reserved for genuinely exceptional, run-aborting conditions.
+ */
+export class RunExecutionError extends ExecutionCoreError {
+  public readonly phase: RunExecutionPhase;
+  public readonly runId: string | undefined;
+
+  constructor(message: string, phase: RunExecutionPhase, runId?: string, cause?: unknown) {
+    super(message, "RUN_EXECUTION_ERROR", cause);
+    this.name = "RunExecutionError";
+    this.phase = phase;
+    this.runId = runId;
+  }
+
+  static override is(err: unknown): err is RunExecutionError {
+    return err instanceof RunExecutionError;
+  }
+}

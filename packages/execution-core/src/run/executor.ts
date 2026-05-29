@@ -11,6 +11,7 @@ import type { TraceStore } from "@manyhands/trace-store";
 import type { CodexExecutor } from "../codex/types";
 import type { GitRunner } from "../git/runner";
 import { computeGranularityVector } from "../granularity/vector";
+import { assertExecutableGraph } from "./graph-guards";
 import { IntegrationAgent } from "../integration/agent";
 import { ResultRecorder } from "../result/recorder";
 import { BatchScheduler } from "../scheduler/batch";
@@ -110,6 +111,10 @@ export class RunExecutor {
   async run(params: RunExecutionParams): Promise<RunExecutionResult> {
     const { graph, config } = params;
     const runId = params.runId ?? graph.planId;
+
+    // I7: reject a malformed graph before creating any worktree.
+    assertExecutableGraph(graph);
+
     const startMs = this.clock();
 
     // Worktrees are declared before the try so the finally can always clean
