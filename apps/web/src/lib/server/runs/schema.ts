@@ -1,4 +1,5 @@
 import { ExecutionConfigSchema } from "@manyhands/execution-core";
+import { TraceEventSchema } from "@manyhands/trace-store";
 import { z } from "zod";
 
 import { RepoSpecSchema } from "./repo-provisioner";
@@ -109,6 +110,8 @@ export const RunRecordSchema = z.object({
   provisioned: ProvisionedRepoRecordSchema.optional(),
   /** Optional per-run overrides; defaults applied from execution-core at runtime. */
   executionConfig: ExecutionConfigInputSchema.optional(),
+  /** Trace events emitted by the execution engine, persisted as run evidence. */
+  executionTraces: z.array(TraceEventSchema).optional(),
   /** Append-only edit log. Sprint 2 of Fase C consumes this; reserved here for compatibility. */
   patches: z.array(z.unknown()).default([])
 });

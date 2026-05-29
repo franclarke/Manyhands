@@ -19,7 +19,7 @@ import {
   type RunExecutionResult
 } from "@manyhands/execution-core";
 import type { TaskGraph } from "@manyhands/task-graph";
-import { InMemoryTraceStore } from "@manyhands/trace-store";
+import { InMemoryTraceStore, type TraceStore } from "@manyhands/trace-store";
 import { resolveRepoRoot } from "../repo-root";
 import { RepoNotConfiguredError } from "./errors";
 import {
@@ -74,6 +74,8 @@ export interface ExecutionRunnerOptions {
   engine?: ExecutionEngine;
   /** Injectable for tests; default copies a benchmark fixture into a per-run dir. */
   provisioner?: RepoProvisioner;
+  /** Injectable for tests; receives the engine's trace events to persist as evidence. */
+  traceStore?: TraceStore;
 }
 
 /**
@@ -82,7 +84,8 @@ export interface ExecutionRunnerOptions {
  * `input.provisioned`; the engine stays a pure executor. Without a provisioned
  * repo it fails clearly (D3) — the graph's mock baseCommit is never executable.
  */
-function createDefaultExecutionEngine(): ExecutionEngine {
+function createDefaultExecutionEngine(deps: { traceStore?: TraceStore } = {}): ExecutionEngine {
+  const traceStore = deps.traceStore ?? new InMemoryTraceStore();
   return {
     async run(input) {
       if (input.provisioned === undefined) {
@@ -92,7 +95,7 @@ function createDefaultExecutionEngine(): ExecutionEngine {
       const executor = new RunExecutor({
         git: new SimpleGitRunner(),
         codex: new CodexCliExecutor(),
-        traceStore: new InMemoryTraceStore(),
+        traceStore,
         repoRoot
       });
       return executor.run({
@@ -504,7 +507,11 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
 
     const graph = await resolveExecutionGraph(run);
     const usingDefaultEngine = options.engine === undefined;
-    const engine = options.engine ?? createDefaultExecutionEngine();
+    // The pipeline owns the trace store so the engine's events can be persisted
+    // as run evidence (they would otherwise die with the in-process engine).
+    const traceStore = options.traceStore ?? (usingDefaultEngine ? new InMemoryTraceStore() : undefined);
+    const engine =
+      options.engine ?? createDefaultExecutionEngine(traceStore !== undefined ? { traceStore } : {});
 
     // Provision a real repo when one is configured; persist it as a run artifact.
     let provisioned: ProvisionedRepo | undefined;
@@ -557,10 +564,12 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       await sleep(interval / 2);
     }
 
+    const executionTraces = traceStore?.list();
     run = await getRunRepository().get(runId);
     if (result.status === "completed") {
       await transitionTo(run, "completed", {
         execution: result,
+        ...(executionTraces !== undefined ? { executionTraces } : {}),
         completedAt: new Date().toISOString()
       });
     } else {
@@ -568,6 +577,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
         ...run,
         status: "failed",
         execution: result,
+        ...(executionTraces !== undefined ? { executionTraces } : {}),
         errorMessage: describeExecutionFailure(result)
       });
       publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });

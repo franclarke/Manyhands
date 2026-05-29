@@ -11,6 +11,7 @@ import type { RepoProvisioner } from "@/lib/server/runs/repo-provisioner";
 import { JsonRunRecordStore } from "@/lib/server/runs/repository";
 import { resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import type { GranularityVector, RunExecutionResult } from "@manyhands/execution-core";
+import { InMemoryTraceStore } from "@manyhands/trace-store";
 
 const STUB_VECTOR: GranularityVector = {
   depth: 1,
@@ -133,5 +134,36 @@ describe("runExecutionPipeline provisioning", () => {
     expect(finalRun.status).toBe("completed");
     expect(finalRun.provisioned?.baseCommit).toBe(BASE_COMMIT);
     expect(finalRun.provisioned?.baseBranch).toBe("main");
+  }, 30000);
+
+  it("persists the engine's trace events on the run record (Etapa D)", async () => {
+    const runId = "run-traces";
+    const store = await saveApprovedRun(runId, {
+      repoSpec: { kind: "fixture", fixtureId: "task-manager-api" }
+    });
+
+    // Pipeline-owned trace store; the stub engine appends to it like the real engine.
+    const traceStore = new InMemoryTraceStore();
+    const engine: ExecutionEngine = {
+      run: async () => {
+        traceStore.append({ type: "agent_started", actor: "system", taskId: "leaf-a", payload: {} });
+        traceStore.append({ type: "run_completed", actor: "system", payload: { runId } });
+        return completedResult(runId);
+      }
+    };
+
+    await runExecutionPipeline(runId, {
+      intervalMs: 0,
+      engine,
+      traceStore,
+      provisioner: fakeProvisioner()
+    });
+
+    const finalRun = await store.get(runId);
+    expect(finalRun.executionTraces).toBeDefined();
+    expect(finalRun.executionTraces?.map((event) => event.type)).toEqual([
+      "agent_started",
+      "run_completed"
+    ]);
   }, 30000);
 });
