@@ -1,42 +1,8 @@
-import type { ExecutionSummary, RunPreview, RunResponse } from "@/lib/api-types";
+import type { RunPreview, RunResponse } from "@/lib/api-types";
 import type { Workspace } from "@/lib/api-types";
+import { isExecutionResult, toExecutionSummary } from "@/lib/execution-summary";
 import type { MockExecutionFlowResult, MockPlanningFlowResult } from "@manyhands/core";
-import type { RunExecutionResult } from "@manyhands/execution-core";
 import type { RunRecord } from "./schema";
-
-/** Narrows the opaque `run.execution` to a real-engine RunExecutionResult. */
-function isExecutionResult(value: unknown): value is RunExecutionResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "granularityVector" in value &&
-    Array.isArray((value as { leafResults?: unknown }).leafResults)
-  );
-}
-
-function toExecutionSummary(result: RunExecutionResult): ExecutionSummary {
-  return {
-    status: result.status,
-    totalDurationMs: result.totalDurationMs,
-    granularityVector: result.granularityVector,
-    leaves: result.leafResults.map((leaf) => {
-      const receipt: ExecutionSummary["leaves"][number] = {
-        taskId: leaf.taskId,
-        status: leaf.status,
-        changedFiles: leaf.changedFiles.length,
-        scopePassed: leaf.scopeCheck.passed,
-        durationMs: leaf.codexDurationMs
-      };
-      if (leaf.commitSha !== undefined) receipt.commitSha = leaf.commitSha;
-      if (leaf.costUsd !== undefined) receipt.costUsd = leaf.costUsd;
-      return receipt;
-    }),
-    integrations: result.integrationResults.map((integration) => ({
-      compositeTaskId: integration.compositeTaskId,
-      status: integration.status
-    }))
-  };
-}
 
 export function toRunResponse(run: RunRecord): RunResponse {
   const payload: RunResponse["run"] = {
