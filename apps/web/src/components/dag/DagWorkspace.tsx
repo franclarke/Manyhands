@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import type { RunSnapshot } from "@manyhands/core";
+import type { RunExecutionResult } from "@manyhands/execution-core";
 import {
   buildInspectorView,
   type RunGraphViewModel
@@ -58,6 +59,8 @@ interface DagWorkspaceProps {
   timelineRun?: TimelineRunInput;
   conflicts?: ConflictListItem[];
   conflictError?: string;
+  /** Real execution-core result; when present the summary shows real evidence. */
+  execution?: RunExecutionResult;
 }
 
 export function DagWorkspace({
@@ -75,7 +78,8 @@ export function DagWorkspace({
   patches = [],
   timelineRun,
   conflicts = [],
-  conflictError
+  conflictError,
+  execution
 }: DagWorkspaceProps): React.ReactElement {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [highlightTaskIds, setHighlightTaskIds] = useState<ReadonlySet<string> | null>(null);
@@ -97,7 +101,10 @@ export function DagWorkspace({
   const canvasHighlights = highlightTaskIds ?? matched;
 
   const phase = runStatus !== undefined ? derivePhase(runStatus, graph) : undefined;
-  const summary = useMemo(() => (phase === "done" ? buildRunSummary(snapshot) : null), [phase, snapshot]);
+  const summary = useMemo(
+    () => (phase === "done" ? buildRunSummary(snapshot, execution) : null),
+    [phase, snapshot, execution]
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>

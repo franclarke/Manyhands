@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { RunSnapshot } from "@manyhands/core";
+import type { RunExecutionResult } from "@manyhands/execution-core";
 import type { RunStatusKey } from "@/lib/api-types";
 import type { RunGraphViewModel } from "@/lib/graph-view-model";
 import { toRunGraphViewModel } from "@/lib/graph-view-model";
@@ -29,6 +30,8 @@ interface RunCanvasShellProps {
   timelineRun?: TimelineRunInput;
   conflicts?: ConflictListItem[];
   conflictError?: string;
+  /** Real execution-core result (persisted runs); drives the evidence summary. */
+  execution?: RunExecutionResult;
   /** When the persisted run is still generating, only nodes whose IDs appear in
    *  the cumulative SSE event log are shown. */
   visibleTaskIds?: ReadonlySet<string> | null;
@@ -104,6 +107,7 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
       {...(props.timelineRun !== undefined ? { timelineRun: props.timelineRun } : {})}
       conflicts={props.conflicts ?? []}
       {...(props.conflictError !== undefined ? { conflictError: props.conflictError } : {})}
+      {...(props.execution !== undefined ? { execution: props.execution } : {})}
     />
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import type { RunSnapshot } from "@manyhands/core";
+import type { RunExecutionResult } from "@manyhands/execution-core";
 import { useRouter } from "next/navigation";
 import type { RunStatusKey } from "@/lib/api-types";
 import type { ConflictListItem } from "@/lib/conflict-view-model";
@@ -20,6 +21,7 @@ interface RunCanvasBindingProps {
   timelineRun: TimelineRunInput;
   conflicts: ConflictListItem[];
   conflictError?: string;
+  execution?: RunExecutionResult;
 }
 
 export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactElement {
@@ -41,6 +43,7 @@ export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactEleme
       timelineRun={props.timelineRun}
       conflicts={props.conflicts}
       {...(props.conflictError !== undefined ? { conflictError: props.conflictError } : {})}
+      {...(props.execution !== undefined ? { execution: props.execution } : {})}
       actionSlot={
         <RunActionBar
           runId={props.runId}

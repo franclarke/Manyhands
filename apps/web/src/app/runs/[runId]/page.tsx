@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { deriveConflictList } from "@/lib/conflict-view-model";
+import { isExecutionResult } from "@/lib/execution-summary";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import { findScenario } from "@/lib/scenarios";
 import {
@@ -64,6 +65,7 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
         }}
         conflicts={conflictState.conflicts}
         {...(conflictState.error !== undefined ? { conflictError: conflictState.error } : {})}
+        {...(isExecutionResult(run.execution) ? { execution: run.execution } : {})}
         headerSlot={
           <RunHeader
             run={run}
