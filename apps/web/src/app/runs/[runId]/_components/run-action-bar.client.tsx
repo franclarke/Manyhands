@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { RunStatusKey } from "@/lib/api-types";
+import { Button } from "@/components/ui/button";
 
 interface RunActionBarProps {
   runId: string;
@@ -52,34 +53,34 @@ export function RunActionBar({ runId, status, readyTaskCount }: RunActionBarProp
       }}
     >
       {status === "generating" ? (
-        <SecondaryButton busy={busy === "pause"} onClick={() => void call("pause")}>
+        <Button variant="ghost" busy={busy === "pause"} onClick={() => void call("pause")}>
           Pause planning
-        </SecondaryButton>
+        </Button>
       ) : null}
       {status === "paused" ? (
-        <PrimaryButton busy={busy === "resume"} onClick={() => void call("resume")}>
+        <Button variant="primary" busy={busy === "resume"} onClick={() => void call("resume")}>
           Resume
-        </PrimaryButton>
+        </Button>
       ) : null}
       {status === "needs_review" ? (
-        <PrimaryButton busy={busy === "approve-plan"} onClick={() => void call("approve-plan")}>
+        <Button variant="primary" busy={busy === "approve-plan"} onClick={() => void call("approve-plan")}>
           Approve DAG
-        </PrimaryButton>
+        </Button>
       ) : null}
       {status === "approved" ? (
-        <PrimaryButton busy={busy === "run"} onClick={() => void call("run")}>
+        <Button variant="primary" busy={busy === "run"} onClick={() => void call("run")}>
           Run with Codex / {readyTaskCount} ready
-        </PrimaryButton>
+        </Button>
       ) : null}
       {status === "running" ? (
-        <SecondaryButton busy={busy === "pause"} onClick={() => void call("pause")}>
+        <Button variant="ghost" busy={busy === "pause"} onClick={() => void call("pause")}>
           Pause execution
-        </SecondaryButton>
+        </Button>
       ) : null}
       {status === "interrupted" || status === "failed" ? (
-        <PrimaryButton busy={busy === "restart"} onClick={() => void call("restart")}>
+        <Button variant="primary" busy={busy === "restart"} onClick={() => void call("restart")}>
           Restart
-        </PrimaryButton>
+        </Button>
       ) : null}
       <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
         lifecycle / {status.replace("_", " ")}
@@ -91,64 +92,5 @@ export function RunActionBar({ runId, status, readyTaskCount }: RunActionBarProp
         </span>
       ) : null}
     </div>
-  );
-}
-
-function PrimaryButton({
-  children,
-  busy,
-  onClick
-}: {
-  children: React.ReactNode;
-  busy: boolean;
-  onClick: () => void;
-}): React.ReactElement {
-  return (
-    <button
-      type="button"
-      disabled={busy}
-      onClick={onClick}
-      style={{
-        padding: "7px 13px",
-        border: "1px solid var(--copper)",
-        background: "var(--copper)",
-        color: "#14110e",
-        borderRadius: "var(--r-lg)",
-        fontSize: 12.5,
-        fontWeight: 600,
-        cursor: busy ? "not-allowed" : "pointer"
-      }}
-    >
-      {busy ? "Working..." : children}
-    </button>
-  );
-}
-
-function SecondaryButton({
-  children,
-  busy,
-  onClick
-}: {
-  children: React.ReactNode;
-  busy: boolean;
-  onClick: () => void;
-}): React.ReactElement {
-  return (
-    <button
-      type="button"
-      disabled={busy}
-      onClick={onClick}
-      style={{
-        padding: "6px 11px",
-        border: "1px solid var(--rule)",
-        background: "transparent",
-        color: "var(--text-2)",
-        borderRadius: "var(--r-md)",
-        fontSize: 12,
-        cursor: busy ? "not-allowed" : "pointer"
-      }}
-    >
-      {busy ? "Working..." : children}
-    </button>
   );
 }

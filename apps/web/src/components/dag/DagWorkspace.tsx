@@ -7,6 +7,7 @@ import {
   buildInspectorView,
   type RunGraphViewModel
 } from "@/lib/graph-view-model";
+import type { RunStatusKey } from "@/lib/api-types";
 import type { ConflictListItem } from "@/lib/conflict-view-model";
 import type { TimelineRunInput } from "@/lib/run-timeline";
 import {
@@ -15,14 +16,24 @@ import {
   visibleNodeIds,
   type GraphFilterState
 } from "@/lib/graph-filters";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { DagCanvas } from "./DagCanvas";
 import { GraphToolbar } from "./GraphToolbar";
 import { MethodologyBanner } from "./MethodologyBanner";
 import { RiskLegend } from "./RiskLegend";
 import { RunBoard } from "./run-board.client";
+import { RunPhaseBar } from "./RunPhaseBar";
 import { TaskInspector } from "./TaskInspector";
 import { ConflictBottomSheet } from "./conflict-bottom-sheet.client";
 import { RunTimeline } from "./run-timeline.client";
+
+type ViewMode = "canvas" | "timeline" | "board";
+
+const VIEW_OPTIONS: ReadonlyArray<{ value: ViewMode; label: string }> = [
+  { value: "canvas", label: "canvas" },
+  { value: "timeline", label: "timeline" },
+  { value: "board", label: "board" }
+];
 
 interface DagWorkspaceProps {
   snapshot: RunSnapshot;
@@ -36,6 +47,8 @@ interface DagWorkspaceProps {
   headerSlot?: ReactNode;
   /** Optional action bar shown above the canvas (Approve / Run / Pause CTAs). */
   actionSlot?: ReactNode;
+  /** Live run status for persisted runs — drives the phase-aware chrome. */
+  runStatus?: RunStatusKey;
   editableRunId?: string;
   onEdited?: () => void;
   patches?: readonly unknown[];
@@ -53,6 +66,7 @@ export function DagWorkspace({
   showMethodologyBanner = true,
   headerSlot,
   actionSlot,
+  runStatus,
   editableRunId,
   onEdited,
   patches = [],
@@ -63,7 +77,7 @@ export function DagWorkspace({
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [highlightTaskIds, setHighlightTaskIds] = useState<ReadonlySet<string> | null>(null);
   const [filters, setFilters] = useState<GraphFilterState>(EMPTY_FILTERS);
-  const [viewMode, setViewMode] = useState<"canvas" | "timeline" | "board">("canvas");
+  const [viewMode, setViewMode] = useState<ViewMode>("canvas");
 
   const inspector = useMemo(() => {
     if (selectedTaskId === null) {
@@ -83,6 +97,7 @@ export function DagWorkspace({
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {showMethodologyBanner ? <MethodologyBanner /> : null}
       {headerSlot}
+      {runStatus !== undefined ? <RunPhaseBar status={runStatus} graph={graph} /> : null}
       <GraphToolbar
         graph={graph}
         benchmarkLabel={benchmarkLabel}
@@ -93,7 +108,12 @@ export function DagWorkspace({
         matchedCount={matched?.size ?? graph.summary.taskCount}
       />
       {actionSlot}
-      <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
+      <SegmentedControl
+        ariaLabel="Run view"
+        options={VIEW_OPTIONS}
+        value={viewMode}
+        onChange={setViewMode}
+      />
       {viewMode === "timeline" && timelineRun !== undefined ? (
         <RunTimeline run={timelineRun} snapshot={snapshot} patches={patches} />
       ) : viewMode === "board" ? (
@@ -153,52 +173,6 @@ export function DagWorkspace({
         />
       </div>
       )}
-    </div>
-  );
-}
-
-function ViewToggle({
-  viewMode,
-  onViewModeChange
-}: {
-  viewMode: "canvas" | "timeline" | "board";
-  onViewModeChange: (mode: "canvas" | "timeline" | "board") => void;
-}): React.ReactElement {
-  return (
-    <div
-      role="tablist"
-      aria-label="Run view"
-      style={{
-        alignSelf: "flex-start",
-        display: "inline-flex",
-        border: "1px solid var(--rule)",
-        background: "transparent",
-        borderRadius: 6,
-        padding: 2
-      }}
-    >
-      {(["canvas", "timeline", "board"] as const).map((mode) => (
-        <button
-          key={mode}
-          type="button"
-          role="tab"
-          aria-selected={viewMode === mode}
-          onClick={() => onViewModeChange(mode)}
-          style={{
-            border: "none",
-            background: viewMode === mode ? "rgba(229,222,204,0.06)" : "transparent",
-            color: viewMode === mode ? "var(--text)" : "var(--text-2)",
-            borderRadius: 4,
-            padding: "6px 11px",
-            fontFamily: "var(--font-mono)",
-            fontSize: 11.5,
-            cursor: "pointer",
-            textTransform: "capitalize"
-          }}
-        >
-          {mode}
-        </button>
-      ))}
     </div>
   );
 }

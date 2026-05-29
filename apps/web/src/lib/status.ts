@@ -1,0 +1,245 @@
+import type { RunStatusKey } from "@/lib/api-types";
+import type { GraphNodeStatus, GraphRiskLevel } from "@/lib/graph-view-model";
+
+/**
+ * Single source of truth for status → color mapping.
+ *
+ * Two vocabularies live here on purpose:
+ *
+ * 1. Domain colors (`GRAPH_STATUS_COLOR`, `RISK_COLOR`): keyed by the canonical
+ *    `GraphNodeStatus` / `GraphRiskLevel` enums. These replace the per-component
+ *    `STATUS_COLOR`/`RISK_COLOR` maps that used to be duplicated across
+ *    `TaskNodeCard`, `TaskInspector`, `run-board` and `DagCanvas`. Values are
+ *    identical to the previous ones — no visual change.
+ *
+ * 2. UX presentation status (`UiStatus`, `STATUS_META`): the collapsed,
+ *    user-facing state vocabulary (idle / planning / pending / running / …) that
+ *    new components (badges, phase chrome, summary) consume. It is derived from
+ *    the canonical run/node statuses via `nodeUiStatus` / `runUiStatus`; it never
+ *    replaces the canonical domain enums (D1–D10 untouched).
+ */
+
+// ── 1. Domain colors (canonical node/risk status → CSS var) ──────────────────
+
+export const GRAPH_STATUS_COLOR: Record<GraphNodeStatus, string> = {
+  planned: "var(--planned)",
+  ready: "var(--ready)",
+  running: "var(--running)",
+  gated: "var(--gated)",
+  done: "var(--done)",
+  failed: "var(--error)",
+  blocked: "var(--blocked)",
+  generating: "var(--running)",
+  needs_review: "var(--ready)",
+  approved: "var(--done)",
+  integrated: "var(--copper)"
+};
+
+export const RISK_COLOR: Record<GraphRiskLevel, string> = {
+  low: "var(--risk-low)",
+  medium: "var(--risk-medium)",
+  high: "var(--risk-high)",
+  blocking: "var(--risk-blocking)"
+};
+
+export function graphStatusColor(status: GraphNodeStatus): string {
+  return GRAPH_STATUS_COLOR[status];
+}
+
+export function riskColor(level: GraphRiskLevel): string {
+  return RISK_COLOR[level];
+}
+
+/** Run-level status color — single source (replaces duplicated run STATUS_COLOR maps). */
+export const RUN_STATUS_COLOR: Record<RunStatusKey, string> = {
+  created: "var(--planned)",
+  generating: "var(--running)",
+  paused: "var(--ready)",
+  needs_review: "var(--ready)",
+  approved: "var(--done)",
+  running: "var(--running)",
+  completed: "var(--done)",
+  failed: "var(--error)",
+  interrupted: "var(--ready)"
+};
+
+export function runStatusColor(status: RunStatusKey): string {
+  return RUN_STATUS_COLOR[status];
+}
+
+// ── 2. UX presentation status (UiStatus + semantic tokens) ───────────────────
+
+export type UiStatus =
+  | "idle"
+  | "planning"
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "blocked"
+  | "needs_review"
+  | "integrating"
+  | "conflict"
+  | "skipped";
+
+export interface StatusMeta {
+  /** Human-facing label. */
+  label: string;
+  /** Foreground/accent color token (`--status-*-fg`). */
+  fg: string;
+  /** Tinted background token (`--status-*-bg`). */
+  bg: string;
+  /** Tinted border token (`--status-*-border`). */
+  border: string;
+  /** Whether the state should animate (running / integrating). */
+  pulse: boolean;
+}
+
+export const STATUS_META: Record<UiStatus, StatusMeta> = {
+  idle: {
+    label: "Idle",
+    fg: "var(--status-idle-fg)",
+    bg: "var(--status-idle-bg)",
+    border: "var(--status-idle-border)",
+    pulse: false
+  },
+  planning: {
+    label: "Planning",
+    fg: "var(--status-planning-fg)",
+    bg: "var(--status-planning-bg)",
+    border: "var(--status-planning-border)",
+    pulse: true
+  },
+  pending: {
+    label: "Pending",
+    fg: "var(--status-pending-fg)",
+    bg: "var(--status-pending-bg)",
+    border: "var(--status-pending-border)",
+    pulse: false
+  },
+  running: {
+    label: "Running",
+    fg: "var(--status-running-fg)",
+    bg: "var(--status-running-bg)",
+    border: "var(--status-running-border)",
+    pulse: true
+  },
+  completed: {
+    label: "Completed",
+    fg: "var(--status-completed-fg)",
+    bg: "var(--status-completed-bg)",
+    border: "var(--status-completed-border)",
+    pulse: false
+  },
+  failed: {
+    label: "Failed",
+    fg: "var(--status-failed-fg)",
+    bg: "var(--status-failed-bg)",
+    border: "var(--status-failed-border)",
+    pulse: false
+  },
+  blocked: {
+    label: "Blocked",
+    fg: "var(--status-blocked-fg)",
+    bg: "var(--status-blocked-bg)",
+    border: "var(--status-blocked-border)",
+    pulse: false
+  },
+  needs_review: {
+    label: "Needs review",
+    fg: "var(--status-review-fg)",
+    bg: "var(--status-review-bg)",
+    border: "var(--status-review-border)",
+    pulse: false
+  },
+  integrating: {
+    label: "Integrating",
+    fg: "var(--status-integrating-fg)",
+    bg: "var(--status-integrating-bg)",
+    border: "var(--status-integrating-border)",
+    pulse: true
+  },
+  conflict: {
+    label: "Conflict",
+    fg: "var(--status-conflict-fg)",
+    bg: "var(--status-conflict-bg)",
+    border: "var(--status-conflict-border)",
+    pulse: false
+  },
+  skipped: {
+    label: "Skipped",
+    fg: "var(--status-skipped-fg)",
+    bg: "var(--status-skipped-bg)",
+    border: "var(--status-skipped-border)",
+    pulse: false
+  }
+};
+
+export interface NodeUiStatusContext {
+  /** Node is an integration/integrator node. */
+  integrator?: boolean;
+  /** Node currently has an unresolved integration conflict. */
+  conflict?: boolean;
+}
+
+/** Map a canonical node status (+ context) to the UX-facing `UiStatus`. */
+export function nodeUiStatus(status: GraphNodeStatus, ctx: NodeUiStatusContext = {}): UiStatus {
+  if (ctx.conflict === true) {
+    return "conflict";
+  }
+
+  const active = status === "running" || status === "generating";
+  if (ctx.integrator === true && active) {
+    return "integrating";
+  }
+
+  switch (status) {
+    case "planned":
+    case "ready":
+      return "pending";
+    case "running":
+    case "generating":
+      return "running";
+    case "gated":
+    case "needs_review":
+      return "needs_review";
+    case "blocked":
+      return "blocked";
+    case "failed":
+      return "failed";
+    case "done":
+    case "approved":
+    case "integrated":
+      return "completed";
+    default:
+      return "pending";
+  }
+}
+
+/** Map a run-level status to the UX-facing `UiStatus` (for run badge / chrome). */
+export function runUiStatus(status: RunStatusKey): UiStatus {
+  switch (status) {
+    case "created":
+      return "idle";
+    case "generating":
+      return "planning";
+    case "needs_review":
+    case "approved":
+      return "needs_review";
+    case "paused":
+    case "running":
+      return "running";
+    case "completed":
+      return "completed";
+    case "failed":
+      return "failed";
+    case "interrupted":
+      return "skipped";
+    default:
+      return "idle";
+  }
+}
+
+export function statusMeta(status: UiStatus): StatusMeta {
+  return STATUS_META[status];
+}

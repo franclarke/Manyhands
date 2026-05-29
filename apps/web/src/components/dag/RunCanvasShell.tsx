@@ -97,6 +97,7 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
       showMethodologyBanner={showMethodologyBanner}
       headerSlot={props.headerSlot}
       actionSlot={props.actionSlot}
+      {...(source.kind === "persisted-run" ? { runStatus: source.initialStatus } : {})}
       {...(props.editableRunId !== undefined ? { editableRunId: props.editableRunId } : {})}
       {...(props.onEdited !== undefined ? { onEdited: props.onEdited } : {})}
       patches={props.patches ?? []}

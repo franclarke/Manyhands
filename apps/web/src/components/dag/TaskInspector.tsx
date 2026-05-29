@@ -1,38 +1,55 @@
 "use client";
 
-import { useState } from "react";
-import type { GraphNodeStatus, InspectorView } from "@/lib/graph-view-model";
+import { useMemo, useState } from "react";
+import type { InspectorView } from "@/lib/graph-view-model";
+import { nodeUiStatus } from "@/lib/status";
+import type { RunPhase } from "@/lib/run-phase";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface TaskInspectorProps {
   view: InspectorView | null;
   onClose: () => void;
+  /** Run phase drives the default tab + which tabs are relevant. */
+  phase?: RunPhase;
   editableRunId?: string;
   onEdited?: () => void;
 }
 
-type TabId = "overview" | "contract" | "execution" | "validation" | "trace";
+type TabId = "overview" | "contract" | "execution" | "validation" | "integration" | "trace";
 
-const TABS: Array<{ id: TabId; label: string }> = [
-  { id: "overview", label: "Overview" },
-  { id: "contract", label: "Contract" },
-  { id: "execution", label: "Execution" },
-  { id: "validation", label: "Validation" },
-  { id: "trace", label: "Trace" }
-];
-
-const STATUS_COLOR: Record<GraphNodeStatus, string> = {
-  planned: "var(--planned)",
-  ready: "var(--ready)",
-  running: "var(--running)",
-  gated: "var(--gated)",
-  done: "var(--done)",
-  failed: "var(--error)",
-  blocked: "var(--blocked)",
-  generating: "var(--running)",
-  needs_review: "var(--ready)",
-  approved: "var(--done)",
-  integrated: "var(--copper)"
+const TAB_LABEL: Record<TabId, string> = {
+  overview: "Overview",
+  contract: "Contract",
+  execution: "Execution",
+  validation: "Validation",
+  integration: "Integration",
+  trace: "Trace"
 };
+
+/**
+ * Tabs relevant to a node, by kind. Composite / integrator nodes integrate
+ * child work (no leaf contract of their own) so they expose an Integration tab
+ * instead of Contract / Execution / Validation.
+ */
+function tabsForView(view: InspectorView): TabId[] {
+  const isComposite = view.integrator || view.kind === "composite" || view.kind === "integration";
+  if (isComposite) {
+    return ["overview", "integration", "trace"];
+  }
+  return ["overview", "contract", "execution", "validation", "trace"];
+}
+
+/** Default tab for a node given the run phase + what data it carries. */
+function defaultTab(view: InspectorView, tabs: TabId[], phase: RunPhase | undefined): TabId {
+  const has = (id: TabId): boolean => tabs.includes(id);
+  if ((phase === "executing" || phase === "integrating" || phase === "done")) {
+    if (has("integration")) return "integration";
+    if (view.runResult !== undefined && has("execution")) return "execution";
+  }
+  if (phase === "planning" && has("contract")) return "contract";
+  return "overview";
+}
 
 const smallButtonStyle: React.CSSProperties = {
   background: "transparent",
@@ -756,7 +773,7 @@ function Prose({ children }: { children: React.ReactNode }): React.ReactElement 
 function StatusSignal({ status }: { status: GraphNodeStatus }): React.ReactElement {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "var(--text-2)", fontSize: 11.5 }}>
-      <span className="mh-dot" style={{ color: STATUS_COLOR[status] }} />
+      <span className="mh-dot" style={{ color: graphStatusColor(status) }} />
       {status.replace("_", " ")}
     </span>
   );

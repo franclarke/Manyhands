@@ -2,28 +2,15 @@
 
 import { useMemo } from "react";
 import type { RunSnapshot } from "@manyhands/core";
-import { toRunGraphViewModel, type GraphNodeStatus, type GraphNodeView } from "@/lib/graph-view-model";
+import { toRunGraphViewModel, type GraphNodeView } from "@/lib/graph-view-model";
 import { mergeRunTimeline, type TimelineRunInput } from "@/lib/run-timeline";
+import { graphStatusColor } from "@/lib/status";
 
 interface RunTimelineProps {
   run: TimelineRunInput;
   snapshot: RunSnapshot;
   patches: readonly unknown[];
 }
-
-const STATUS_COLOR: Record<GraphNodeStatus, string> = {
-  planned: "var(--planned)",
-  ready: "var(--ready)",
-  running: "var(--running)",
-  gated: "var(--gated)",
-  done: "var(--done)",
-  failed: "var(--error)",
-  blocked: "var(--blocked)",
-  generating: "var(--running)",
-  needs_review: "var(--ready)",
-  approved: "var(--done)",
-  integrated: "var(--copper)"
-};
 
 export function RunTimeline({ run, snapshot, patches }: RunTimelineProps): React.ReactElement {
   const graph = useMemo(() => toRunGraphViewModel(snapshot), [snapshot]);
@@ -169,7 +156,7 @@ function PhaseRow({ depth, count }: { depth: number; count: number }): React.Rea
 
 function NodeRow({ node, index }: { node: GraphNodeView; index: number }): React.ReactElement {
   const depth = node.depth ?? 0;
-  const color = STATUS_COLOR[node.status];
+  const color = graphStatusColor(node.status);
   const filled = node.status === "done" || node.status === "running" || node.status === "generating";
   const blocked = node.status === "blocked" || node.status === "gated";
   return (

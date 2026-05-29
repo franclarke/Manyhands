@@ -1,21 +1,10 @@
 import Link from "next/link";
-import type { RunGranularityKey, RunPreview, RunStatusKey } from "@/lib/api-types";
+import type { RunGranularityKey, RunPreview } from "@/lib/api-types";
+import { runStatusColor } from "@/lib/status";
 
 interface RecentRunsStripProps {
   runs: RunPreview[];
 }
-
-const STATUS_COLOR: Record<RunStatusKey, string> = {
-  created: "var(--planned)",
-  generating: "var(--running)",
-  paused: "var(--ready)",
-  needs_review: "var(--ready)",
-  approved: "var(--done)",
-  running: "var(--running)",
-  completed: "var(--done)",
-  failed: "var(--error)",
-  interrupted: "var(--ready)"
-};
 
 const GRANULARITY_LABEL: Record<RunGranularityKey, string> = {
   auto: "Auto",
@@ -112,7 +101,7 @@ function RecentRunRow({ run }: { run: RunPreview }): React.ReactElement {
         {mode}
       </span>
       <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--text-2)", fontSize: 11 }}>
-        <span className="mh-dot" style={{ color: STATUS_COLOR[run.status] }} />
+        <span className="mh-dot" style={{ color: runStatusColor(run.status) }} />
         {run.status.replace("_", " ")}
       </span>
       <span className="mh-mono" style={{ minWidth: 92, textAlign: "right", fontSize: 10.5, color: "var(--text-3)" }}>

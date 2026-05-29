@@ -1,6 +1,8 @@
 import type { Workspace } from "@/lib/api-types";
 import type { DecompositionScenario } from "@/lib/scenarios";
 import type { RunRecord, RunStatus } from "@/lib/server/runs/schema";
+import { runUiStatus } from "@/lib/status";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 interface RunHeaderProps {
   run: RunRecord;
@@ -9,18 +11,6 @@ interface RunHeaderProps {
   liveStatus: RunStatus;
   summary: { nodes: number; leaves: number; depth: number; ready: number } | null;
 }
-
-const STATUS_COLOR: Record<RunStatus, string> = {
-  created: "var(--planned)",
-  generating: "var(--running)",
-  paused: "var(--ready)",
-  needs_review: "var(--ready)",
-  approved: "var(--done)",
-  running: "var(--running)",
-  completed: "var(--done)",
-  failed: "var(--error)",
-  interrupted: "var(--ready)"
-};
 
 export function RunHeader({
   run,
@@ -70,10 +60,7 @@ export function RunHeader({
           <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-2)" }}>
             {granularityLabel(run.granularity)}
           </span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--text-2)" }}>
-            <span className="mh-dot" style={{ color: STATUS_COLOR[liveStatus] }} />
-            {liveStatus.replace("_", " ")}
-          </span>
+          <StatusBadge status={runUiStatus(liveStatus)} label={liveStatus.replace("_", " ")} />
         </div>
         {run.userPrompt.length > 0 ? (
           <p

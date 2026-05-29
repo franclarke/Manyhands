@@ -1,68 +1,194 @@
 @import url("https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
-:root {
-  color-scheme: dark;
+/* ============================================================================
+   Token system — three layers (theme via [data-theme])
+   1. Primitives  (--cu-*, scales)   : raw palette + type/space. Theme-agnostic.
+                                        Do NOT consume directly in components.
+   2. Semantic    (--color-*)         : intent-based. Components consume these.
+   3. State       (--status-*)        : single source for run/node status colors.
+                                        Consumed via lib/status.ts (STATUS_META).
+   Legacy aliases (--bg, --text, --running, …) are kept so existing components
+   keep working unchanged. New code should prefer the semantic/state tokens.
+   ========================================================================== */
 
+:root {
+  /* ── Fonts (theme-agnostic) ───────────────────────────────────── */
   --font-serif: "Newsreader", "Source Serif 4", "Tiempos Text", Georgia, serif;
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "Berkeley Mono", "IBM Plex Mono", ui-monospace, monospace;
 
-  --background: #0f1012;
-  --bg: #0f1012;
-  --bg-1: #131416;
-  --panel: #181a1c;
-  --surface: #181a1c;
-  --surface-2: #1f2124;
-  --surface-3: #262a2d;
-  --border: rgba(229, 222, 204, 0.10);
-  --border-soft: rgba(229, 222, 204, 0.045);
-  --rule: rgba(229, 222, 204, 0.045);
-  --rule-soft: rgba(229, 222, 204, 0.025);
-  --rule-strong: rgba(229, 222, 204, 0.16);
+  /* ── Type scale (font-size) ───────────────────────────────────── */
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 14px;
+  --fs-md: 16px;
+  --fs-lg: 20px;
+  --fs-xl: 28px;
+  --fs-2xl: 40px;
 
-  --text: #e5decc;
-  --text-2: #8e8675;
-  --text-3: #5a5346;
-  --text-4: #3a3528;
-  --muted: var(--text-2);
-  --subtle: var(--text-3);
+  /* ── Spacing scale (4px base) ─────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
 
-  --copper: #b47148;
-  --copper-hi: #c98654;
-  --copper-deep: #8e5631;
-  --copper-glow: rgba(180, 113, 72, 0.22);
-  --selected: #9ba9b8;
-
-  --coral: var(--copper);
-  --coral-hi: var(--copper-hi);
-  --coral-glow: var(--copper-glow);
-  --running: #6f8aa8;
-  --ready: #b89c5a;
-  --done: #7a9778;
-  --error: #b26a60;
-  --failed: var(--error);
-  --conflict: #b89c5a;
-  --blocked: #44403a;
-  --gated: #b89c5a;
-  --planned: #5a5346;
-
-  --risk-low: #7a9778;
-  --risk-medium: #b89c5a;
-  --risk-high: #b26a60;
-  --risk-blocking: #b47148;
-
-  --accent: var(--copper);
-  --accent-strong: var(--copper-hi);
-  --warning: var(--ready);
-  --danger: var(--error);
-
+  /* ── Radius & elevation (theme-agnostic) ──────────────────────── */
   --r-sm: 2px;
   --r-md: 4px;
   --r-lg: 6px;
   --r-xl: 8px;
   --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.018) inset, 0 6px 18px rgba(0, 0, 0, 0.28);
   --shadow-sheet: 0 -10px 28px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Dark theme (default). `:root` fallback keeps dark active even with no
+      data-theme attribute; [data-theme="dark"] is the explicit form.
+      Light mode (etapa G) adds a parallel [data-theme="light"] block. ───── */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* 1 ── Primitives: raw palette ─────────────────────────────────── */
+  --cu-bg: #0f1012;
+  --cu-bg-1: #131416;
+  --cu-surface: #181a1c;
+  --cu-surface-2: #1f2124;
+  --cu-surface-3: #262a2d;
+  --cu-ink: #e5decc;       /* warm beige — primary text */
+  --cu-ink-2: #8e8675;     /* muted text */
+  --cu-ink-3: #7d7560;     /* subtle text (lifted from #5a5346 for AA contrast) */
+  --cu-ink-4: #4d4738;     /* faint text / separators (lifted from #3a3528) */
+  --cu-copper: #b47148;
+  --cu-copper-hi: #c98654;
+  --cu-copper-deep: #8e5631;
+  --cu-slate: #6f8aa8;     /* running / generating */
+  --cu-ochre: #b89c5a;     /* ready / gated / needs_review / risk-medium */
+  --cu-sage: #7a9778;      /* done / risk-low */
+  --cu-rust: #b26a60;      /* failed / error / conflict / risk-high */
+  --cu-dim: #44403a;       /* blocked */
+  --cu-stone: #5a5346;     /* planned */
+
+  /* 2 ── Semantic tokens (consume these in components) ───────────── */
+  --color-bg: var(--cu-bg);
+  --color-bg-subtle: var(--cu-bg-1);
+  --color-surface: var(--cu-surface);
+  --color-surface-raised: var(--cu-surface-2);
+  --color-surface-overlay: var(--cu-surface-3);
+  --color-border: rgba(229, 222, 204, 0.10);
+  --color-border-soft: rgba(229, 222, 204, 0.045);
+  --color-border-strong: rgba(229, 222, 204, 0.16);
+  --color-text: var(--cu-ink);
+  --color-text-muted: var(--cu-ink-2);
+  --color-text-subtle: var(--cu-ink-3);
+  --color-text-faint: var(--cu-ink-4);
+  --color-accent: var(--cu-copper);
+  --color-accent-hover: var(--cu-copper-hi);
+  --color-accent-deep: var(--cu-copper-deep);
+  --color-accent-glow: rgba(180, 113, 72, 0.22);
+  --color-selected: #9ba9b8;
+  --color-focus: var(--cu-copper);
+
+  /* 3 ── State tokens: single source for status colors (UiStatus) ──
+         Each status has fg (strong), bg (tint), border (tint). See §4.9. */
+  --status-idle-fg: var(--cu-ink-2);
+  --status-idle-bg: rgba(142, 134, 117, 0.08);
+  --status-idle-border: rgba(142, 134, 117, 0.30);
+
+  --status-planning-fg: var(--cu-copper-hi);
+  --status-planning-bg: rgba(180, 113, 72, 0.10);
+  --status-planning-border: rgba(180, 113, 72, 0.42);
+
+  --status-pending-fg: var(--cu-ink-3);
+  --status-pending-bg: rgba(125, 117, 96, 0.08);
+  --status-pending-border: rgba(125, 117, 96, 0.30);
+
+  --status-running-fg: var(--cu-slate);
+  --status-running-bg: rgba(111, 138, 168, 0.10);
+  --status-running-border: rgba(111, 138, 168, 0.45);
+
+  --status-completed-fg: var(--cu-sage);
+  --status-completed-bg: rgba(122, 151, 120, 0.10);
+  --status-completed-border: rgba(122, 151, 120, 0.45);
+
+  --status-failed-fg: var(--cu-rust);
+  --status-failed-bg: rgba(178, 106, 96, 0.10);
+  --status-failed-border: rgba(178, 106, 96, 0.45);
+
+  --status-blocked-fg: #8b8474;
+  --status-blocked-bg: rgba(68, 64, 58, 0.45);
+  --status-blocked-border: rgba(139, 132, 116, 0.30);
+
+  --status-review-fg: var(--cu-ochre);
+  --status-review-bg: rgba(184, 156, 90, 0.10);
+  --status-review-border: rgba(184, 156, 90, 0.45);
+
+  --status-integrating-fg: var(--cu-copper);
+  --status-integrating-bg: rgba(180, 113, 72, 0.12);
+  --status-integrating-border: rgba(180, 113, 72, 0.50);
+
+  --status-conflict-fg: var(--cu-rust);
+  --status-conflict-bg: rgba(178, 106, 96, 0.12);
+  --status-conflict-border: rgba(178, 106, 96, 0.55);
+
+  --status-skipped-fg: var(--cu-ink-3);
+  --status-skipped-bg: rgba(125, 117, 96, 0.06);
+  --status-skipped-border: rgba(125, 117, 96, 0.24);
+
+  /* ── Legacy aliases (kept for back-compat; map onto the layers above) ─ */
+  --background: var(--color-bg);
+  --bg: var(--color-bg);
+  --bg-1: var(--color-bg-subtle);
+  --panel: var(--color-surface);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-raised);
+  --surface-3: var(--color-surface-overlay);
+  --border-soft: var(--color-border-soft);
+  --rule: var(--color-border-soft);
+  --rule-soft: rgba(229, 222, 204, 0.025);
+  --rule-strong: var(--color-border-strong);
+
+  --text: var(--color-text);
+  --text-2: var(--color-text-muted);
+  --text-3: var(--color-text-subtle);
+  --text-4: var(--color-text-faint);
+  --muted: var(--color-text-muted);
+  --subtle: var(--color-text-subtle);
+
+  --copper: var(--cu-copper);
+  --copper-hi: var(--cu-copper-hi);
+  --copper-deep: var(--cu-copper-deep);
+  --copper-glow: var(--color-accent-glow);
+  --selected: var(--color-selected);
+
+  --coral: var(--cu-copper);
+  --coral-hi: var(--cu-copper-hi);
+  --coral-glow: var(--color-accent-glow);
+  --running: var(--cu-slate);
+  --ready: var(--cu-ochre);
+  --done: var(--cu-sage);
+  --error: var(--cu-rust);
+  --failed: var(--cu-rust);
+  --conflict: var(--cu-ochre);
+  --blocked: var(--cu-dim);
+  --gated: var(--cu-ochre);
+  --planned: var(--cu-stone);
+
+  --risk-low: var(--cu-sage);
+  --risk-medium: var(--cu-ochre);
+  --risk-high: var(--cu-rust);
+  --risk-blocking: var(--cu-copper);
+
+  --accent: var(--cu-copper);
+  --accent-strong: var(--cu-copper-hi);
+  --warning: var(--cu-ochre);
+  --danger: var(--cu-rust);
+
+  --border: rgba(229, 222, 204, 0.10);
 }
 
 * { box-sizing: border-box; }

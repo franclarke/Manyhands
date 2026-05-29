@@ -17,9 +17,9 @@ import { layoutByDepth, type PhaseColumn } from "@/lib/dag-layout";
 import type {
   GraphEdgeView,
   GraphNodeView,
-  GraphRiskLevel,
   RunGraphViewModel
 } from "@/lib/graph-view-model";
+import { riskColor } from "@/lib/status";
 import { TaskNodeCard, type TaskNodeData } from "./TaskNodeCard";
 
 interface DagCanvasProps {
@@ -32,13 +32,6 @@ interface DagCanvasProps {
 const nodeTypes: NodeTypes = {
   taskCard: TaskNodeCard,
   phaseHeader: PhaseHeaderNode
-};
-
-const RISK_EDGE_COLOR: Record<GraphRiskLevel, string> = {
-  low:      "var(--risk-low)",
-  medium:   "var(--risk-medium)",
-  high:     "var(--risk-high)",
-  blocking: "var(--risk-blocking)"
 };
 
 export function DagCanvas(props: DagCanvasProps): React.ReactElement {
@@ -247,7 +240,7 @@ function toFlowEdge(
 
   const baseStyle: { stroke: string; strokeWidth: number; strokeDasharray?: string } = (() => {
     if (edge.kind === "risk") {
-      const color = edge.riskLevel ? RISK_EDGE_COLOR[edge.riskLevel] : "var(--risk-high)";
+      const color = edge.riskLevel ? riskColor(edge.riskLevel) : "var(--risk-high)";
       return {
         stroke: color,
         strokeWidth: edge.acknowledged === true ? 1 : edge.riskLevel === "blocking" ? 1.8 : 1.4,

@@ -3,6 +3,7 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { GraphNodeStatus, GraphRiskLevel } from "@/lib/graph-view-model";
+import { graphStatusColor, riskColor } from "@/lib/status";
 
 export interface TaskNodeData {
   title: string;
@@ -25,36 +26,15 @@ export interface TaskNodeData {
   [key: string]: unknown;
 }
 
-const STATUS_COLOR: Record<GraphNodeStatus, string> = {
-  planned: "var(--planned)",
-  ready: "var(--ready)",
-  running: "var(--running)",
-  gated: "var(--gated)",
-  done: "var(--done)",
-  failed: "var(--error)",
-  blocked: "var(--blocked)",
-  generating: "var(--running)",
-  needs_review: "var(--ready)",
-  approved: "var(--done)",
-  integrated: "var(--copper)"
-};
-
-const RISK_COLOR: Record<GraphRiskLevel, string> = {
-  low: "var(--risk-low)",
-  medium: "var(--risk-medium)",
-  high: "var(--risk-high)",
-  blocking: "var(--risk-blocking)"
-};
-
 function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
   const node = data as TaskNodeData;
-  const statusColor = STATUS_COLOR[node.status];
+  const statusColor = graphStatusColor(node.status);
   const isRunning = node.status === "running" || node.status === "generating";
   const selectedShadow = "0 0 0 1px var(--copper), 0 0 0 4px rgba(180, 113, 72, 0.12)";
   const borderColor = selected
     ? "transparent"
     : node.riskLevel !== undefined && (node.riskLevel === "high" || node.riskLevel === "blocking")
-      ? RISK_COLOR[node.riskLevel]
+      ? riskColor(node.riskLevel)
       : "var(--rule)";
 
   return (
@@ -145,7 +125,7 @@ function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
         {node.riskLevel !== undefined || node.gateRequired || node.integrator ? (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
             {node.riskLevel !== undefined ? (
-              <Signal color={RISK_COLOR[node.riskLevel]} label={`risk ${node.riskLevel}`} />
+              <Signal color={riskColor(node.riskLevel)} label={`risk ${node.riskLevel}`} />
             ) : null}
             {node.gateRequired ? <Signal color="var(--gated)" label="gate" /> : null}
             {node.integrator ? <Signal color="var(--copper)" label="integration" /> : null}

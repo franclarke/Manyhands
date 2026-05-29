@@ -1,6 +1,7 @@
 "use client";
 
 import type { GraphNodeStatus, GraphNodeView, RunGraphViewModel } from "@/lib/graph-view-model";
+import { graphStatusColor } from "@/lib/status";
 
 interface RunBoardProps {
   graph: RunGraphViewModel;
@@ -23,20 +24,6 @@ const COLUMNS: BoardColumn[] = [
   { id: "done", label: "Done", color: "var(--done)", statuses: ["done"] },
   { id: "integrated", label: "Integrated", color: "var(--copper)", statuses: ["integrated"] }
 ];
-
-const STATUS_COLOR: Record<GraphNodeStatus, string> = {
-  planned: "var(--planned)",
-  ready: "var(--ready)",
-  running: "var(--running)",
-  gated: "var(--gated)",
-  done: "var(--done)",
-  failed: "var(--error)",
-  blocked: "var(--blocked)",
-  generating: "var(--running)",
-  needs_review: "var(--ready)",
-  approved: "var(--done)",
-  integrated: "var(--copper)"
-};
 
 export function RunBoard({ graph, selectedTaskId, onSelectTask }: RunBoardProps): React.ReactElement {
   return (
@@ -135,7 +122,7 @@ function BoardCard({
         <TypeGlyph kind={node.kind} />
         <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-2)" }}>{node.id}</span>
         <span style={{ flex: 1 }} />
-        <span className="mh-dot" style={{ width: 5, height: 5, color: STATUS_COLOR[node.status] }} />
+        <span className="mh-dot" style={{ width: 5, height: 5, color: graphStatusColor(node.status) }} />
       </div>
       <div className="mh-serif" style={{ fontSize: 13.5, color: "var(--text)", marginTop: 8, lineHeight: 1.25 }}>
         {node.title}
