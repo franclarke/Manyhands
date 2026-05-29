@@ -22,7 +22,13 @@ Integration uses **cherry-pick** of child commits onto the parent's branch:
    - Invoke Codex with a repair prompt containing: the conflicting diff, the parent branch context, and the child's intent/goal.
    - Codex produces a resolution. The orchestrator validates scope and runs parent validation.
    - Success → `codex_repair_success`. Failure → `codex_repair_failed`.
-   - Maximum 1 repair attempt per conflict. No recursive retries.
+   - **Maximum 1 repair attempt per integration** (not per conflict). The first
+     conflicting child triggers the single repair; if a *later* child also
+     conflicts, the integration fails fast as `codex_repair_failed` without a
+     second repair. No recursive retries. (Implementation: the `repairAttempted`
+     flag in `IntegrationAgent.integrate` is integration-scoped. Locked by the
+     test "attempts only one repair per integration" in
+     `tests/execution-core-integration.test.ts`.)
 
 3. **Integration result**:
    - All children cherry-picked cleanly → `success`.
