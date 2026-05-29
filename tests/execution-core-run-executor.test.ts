@@ -1,10 +1,14 @@
+import { AgentTaskContractSchema, type AgentTaskContract } from "@manyhands/contracts";
 import type { TaskGraph } from "@manyhands/task-graph";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { describe, expect, it } from "vitest";
 import {
   ExecutionConfigSchema,
   MockCodexCliExecutor,
-  RunExecutor
+  RunExecutor,
+  type ValidationRunContext,
+  type ValidationRunner,
+  type ValidationRunResult
 } from "@manyhands/execution-core";
 
 import { FakeGitRunner } from "./helpers/fake-git-runner";
@@ -16,7 +20,23 @@ function leafWorktreePath(taskId: string): string {
   return `${REPO_ROOT}/.manyhands/worktrees/${RUN_ID}/${taskId}`;
 }
 
-function graphWith(leafIds: string[]): TaskGraph {
+/** Minimal contract carrying a single run-level validation command. */
+function rootContractWithRunValidation(): AgentTaskContract {
+  return AgentTaskContractSchema.parse({
+    taskId: "root",
+    objective: "Coordinate.",
+    context: { typeSignatures: [], referenceSnippets: [], conventions: [], upstreamArtifacts: [] },
+    allowed: { paths: ["**"] },
+    forbidden: { paths: [] },
+    acceptance: [{ kind: "custom", description: "Integrated build passes." }],
+    expectedOutput: { changedFiles: [], producedSymbols: [], consumedSymbols: [], diffShapeHint: "n/a" },
+    limits: { maxDurationMs: 60_000, maxCostUsd: 0 },
+    definitionOfDone: "Done.",
+    runValidationCommands: [{ command: "pnpm", args: ["test"], timeoutMs: 60_000, cwd: "worktree" }]
+  });
+}
+
+function graphWith(leafIds: string[], rootContract?: AgentTaskContract): TaskGraph {
   return {
     id: "graph-1",
     planId: RUN_ID,
@@ -38,7 +58,8 @@ function graphWith(leafIds: string[]): TaskGraph {
         granularity: "medium",
         depth: 0,
         childrenIds: leafIds,
-        dependencies: []
+        dependencies: [],
+        ...(rootContract ? { contract: rootContract } : {})
       },
       ...Object.fromEntries(
         leafIds.map((taskId) => [
@@ -151,6 +172,40 @@ describe("RunExecutor", () => {
     const removes = git.calls.filter((call) => call.op === "worktreeRemove");
     expect(removes).toHaveLength(1);
     expect(removes[0]?.args.worktreePath).toBe(leafWorktreePath("a"));
+  });
+
+  it("runs run-level validation against the root integration worktree (I6)", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/x b/x\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const captured: ValidationRunContext[] = [];
+    const validationRunner: ValidationRunner = {
+      run: async (_commands, ctx): Promise<ValidationRunResult> => {
+        captured.push(ctx);
+        return { passed: true, output: "", exitCode: 0 };
+      }
+    };
+    const executor = new RunExecutor({
+      git,
+      codex: new MockCodexCliExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: REPO_ROOT,
+      validationRunner,
+      writeInstructions: async () => {}
+    });
+
+    const result = await executor.run({
+      graph: graphWith(["a", "b"], rootContractWithRunValidation()),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    expect(result.status).toBe("completed");
+    expect(captured).toHaveLength(1);
+    // The integrated tree lives in the root composite's integration worktree.
+    expect(captured[0]?.worktreePath).toBe(leafWorktreePath("root"));
   });
 
   it("keeps cleaning and preserves the result when a worktree clean fails (I8)", async () => {

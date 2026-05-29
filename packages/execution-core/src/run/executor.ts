@@ -149,7 +149,10 @@ export class RunExecutor {
         worktrees
       });
 
-      const validationResult = await this.runRunValidation(graph, worktrees[0]?.path ?? this.repoRoot);
+      const validationResult = await this.runRunValidation(
+        graph,
+        this.resolveRunValidationCwd(graph, worktrees)
+      );
 
       const totalDurationMs = this.clock() - startMs;
       const status = this.deriveStatus(leafResults, integrationResults, validationResult);
@@ -305,6 +308,20 @@ export class RunExecutor {
     }
 
     return integrationResults;
+  }
+
+  /**
+   * Run-level validation must execute against the fully-integrated tree — the
+   * root composite's integration worktree (I6), not an arbitrary leaf. Falls
+   * back to the first leaf's worktree (single-leaf runs with no composite) or
+   * the repo root. Note: in Etapa 2A nothing is merged back to repoRoot, so the
+   * repoRoot fallback only sees the base tree.
+   */
+  private resolveRunValidationCwd(graph: TaskGraph, worktrees: WorktreeRecord[]): string {
+    const rootIntegration = worktrees.find(
+      (worktree) => worktree.kind === "integration" && worktree.taskId === graph.rootId
+    );
+    return rootIntegration?.path ?? worktrees[0]?.path ?? this.repoRoot;
   }
 
   private async runRunValidation(
