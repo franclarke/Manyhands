@@ -112,75 +112,79 @@ export class RunExecutor {
     const runId = params.runId ?? graph.planId;
     const startMs = this.clock();
 
-    const plan = scheduleTasks({
-      graph,
-      contracts: {},
-      riskMatrix: [],
-      maxParallel: config.maxParallel,
-      policy: params.policy ?? "parallel_naive"
-    });
-
+    // Worktrees are declared before the try so the finally can always clean
+    // them — even if a leaf/integration/validation step throws (I1).
     const worktrees: WorktreeRecord[] = [];
-    const leafResultMap = await this.batchScheduler.runBatches({
-      batches: plan.batches.map((batch) => ({ id: batch.id, taskIds: batch.taskIds })),
-      runTask: async (taskId) => {
-        const node = graph.nodes[taskId];
-        if (!node) {
-          throw new Error(`Scheduled task ${taskId} is not in the graph`);
+    try {
+      const plan = scheduleTasks({
+        graph,
+        contracts: {},
+        riskMatrix: [],
+        maxParallel: config.maxParallel,
+        policy: params.policy ?? "parallel_naive"
+      });
+
+      const leafResultMap = await this.batchScheduler.runBatches({
+        batches: plan.batches.map((batch) => ({ id: batch.id, taskIds: batch.taskIds })),
+        runTask: async (taskId) => {
+          const node = graph.nodes[taskId];
+          if (!node) {
+            throw new Error(`Scheduled task ${taskId} is not in the graph`);
+          }
+          return this.executeLeaf({ graph, node, runId, config, model: params.model, worktrees });
         }
-        return this.executeLeaf({ graph, node, runId, config, model: params.model, worktrees });
-      }
-    });
+      });
 
-    const leafResults = plan.batches
-      .flatMap((batch) => batch.taskIds)
-      .map((taskId) => leafResultMap.get(taskId))
-      .filter((result): result is AgentExecutionResult => result !== undefined);
+      const leafResults = plan.batches
+        .flatMap((batch) => batch.taskIds)
+        .map((taskId) => leafResultMap.get(taskId))
+        .filter((result): result is AgentExecutionResult => result !== undefined);
 
-    const integrationResults = await this.integrateBottomUp({
-      graph,
-      runId,
-      config,
-      model: params.model,
-      leafResults,
-      worktrees
-    });
+      const integrationResults = await this.integrateBottomUp({
+        graph,
+        runId,
+        config,
+        model: params.model,
+        leafResults,
+        worktrees
+      });
 
-    const validationResult = await this.runRunValidation(graph, worktrees[0]?.path ?? this.repoRoot);
+      const validationResult = await this.runRunValidation(graph, worktrees[0]?.path ?? this.repoRoot);
 
-    await this.cleanupWorktrees(worktrees);
+      const totalDurationMs = this.clock() - startMs;
+      const status = this.deriveStatus(leafResults, integrationResults, validationResult);
 
-    const totalDurationMs = this.clock() - startMs;
-    const status = this.deriveStatus(leafResults, integrationResults, validationResult);
+      this.traceStore.append({
+        type: "run_completed",
+        actor: "system",
+        payload: {
+          runId,
+          status,
+          leafCount: leafResults.length,
+          integrationCount: integrationResults.length,
+          durationMs: totalDurationMs
+        }
+      });
 
-    this.traceStore.append({
-      type: "run_completed",
-      actor: "system",
-      payload: {
+      const granularityVector = computeGranularityVector({
+        graph,
+        leafResults,
+        integrationResults,
+        totalDurationMs
+      });
+
+      return {
         runId,
         status,
-        leafCount: leafResults.length,
-        integrationCount: integrationResults.length,
-        durationMs: totalDurationMs
-      }
-    });
-
-    const granularityVector = computeGranularityVector({
-      graph,
-      leafResults,
-      integrationResults,
-      totalDurationMs
-    });
-
-    return {
-      runId,
-      status,
-      leafResults,
-      integrationResults,
-      granularityVector,
-      ...(validationResult ? { validationResult } : {}),
-      totalDurationMs
-    };
+        leafResults,
+        integrationResults,
+        granularityVector,
+        ...(validationResult ? { validationResult } : {}),
+        totalDurationMs
+      };
+    } finally {
+      await this.cleanupWorktrees(worktrees);
+    }
   }
 
   private async executeLeaf(args: {
@@ -321,7 +325,21 @@ export class RunExecutor {
 
   private async cleanupWorktrees(worktrees: WorktreeRecord[]): Promise<void> {
     for (const worktree of worktrees) {
-      await this.worktreeManager.clean(worktree);
+      try {
+        await this.worktreeManager.clean(worktree);
+      } catch (error) {
+        // I8: a cleanup failure must never mask the run result. Record it on the
+        // trace and keep cleaning the rest (best-effort).
+        this.traceStore.append({
+          type: "worktree_clean_failed",
+          actor: "system",
+          taskId: worktree.taskId,
+          payload: {
+            path: worktree.path,
+            message: error instanceof Error ? error.message : String(error)
+          }
+        });
+      }
     }
   }
 

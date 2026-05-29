@@ -133,4 +133,42 @@ describe("RunExecutor", () => {
     expect(result.status).toBe("failed");
     expect(result.leafResults.every((r) => r.status === "empty_diff")).toBe(true);
   });
+
+  it("cleans the worktree it created even when the run throws mid-execution (I1)", async () => {
+    // commit() throws after the worktree is created, so the run aborts with the
+    // worktree already tracked — the finally block must still clean it.
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/x b/x\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      failOperations: { commit: new Error("boom") }
+    });
+    const executor = makeExecutor(git, new InMemoryTraceStore());
+
+    await expect(
+      executor.run({ graph: graphWith(["a"]), config, model: "gpt-5-codex" })
+    ).rejects.toThrow("boom");
+
+    const removes = git.calls.filter((call) => call.op === "worktreeRemove");
+    expect(removes).toHaveLength(1);
+    expect(removes[0]?.args.worktreePath).toBe(leafWorktreePath("a"));
+  });
+
+  it("keeps cleaning and preserves the result when a worktree clean fails (I8)", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/x b/x\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA",
+      failOperations: { worktreeRemove: new Error("rm failed") }
+    });
+    const traceStore = new InMemoryTraceStore();
+    const executor = makeExecutor(git, traceStore);
+
+    // Must NOT throw — cleanup failures are recorded, not propagated.
+    const result = await executor.run({ graph: graphWith(["a", "b"]), config, model: "gpt-5-codex" });
+
+    expect(result.status).toBe("completed");
+    // Every clean was attempted (2 leaves + 1 integration) and each failure traced.
+    expect(git.calls.filter((call) => call.op === "worktreeRemove")).toHaveLength(3);
+    expect(traceStore.findByType("worktree_clean_failed")).toHaveLength(3);
+  });
 });

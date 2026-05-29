@@ -39,6 +39,7 @@ export const TraceEventTypeSchema = z.union([
 
   // Execution Core events
   z.literal("worktree_created"),
+  z.literal("worktree_clean_failed"),
   z.literal("agent_started"),
   z.literal("codex_started"),
   z.literal("codex_completed"),
