@@ -41,6 +41,16 @@ describe("MockDecomposer", () => {
     expect(validateTaskGraph(result.graph)).toEqual([]);
   });
 
+  it("derives V2 executionScope and forbiddenPaths on leaf contracts", async () => {
+    const result = await decompose("balanced");
+    const leaves = getLeafNodes(result.graph);
+    expect(leaves.length).toBeGreaterThan(0);
+    for (const leaf of leaves) {
+      expect(leaf.contract?.executionScope?.implementationPaths.length ?? 0).toBeGreaterThan(0);
+      expect(Array.isArray(leaf.contract?.forbiddenPaths)).toBe(true);
+    }
+  });
+
   it("gives each leaf exactly one matching AgentTaskContract", async () => {
     const result = await decompose("balanced");
     const leaves = getLeafNodes(result.graph);

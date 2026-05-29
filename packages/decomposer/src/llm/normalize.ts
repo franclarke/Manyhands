@@ -7,6 +7,7 @@ import type {
   TaskNode,
   TaskGranularityLevel
 } from "@manyhands/task-graph";
+import { executionScopeFromAllowed } from "../scope";
 import {
   DecomposerLlmError
 } from "./errors";
@@ -162,6 +163,10 @@ function buildContract(feature: FeatureRequest, llmNode: {
     },
     allowed: { paths: allowedPaths },
     forbidden: { paths: llmNode.forbiddenPaths },
+    // V2 execution-time scope, derived from the same resolved paths so the
+    // executor's ScopeChecker actually enforces (allowedPaths is non-empty here).
+    executionScope: executionScopeFromAllowed(allowedPaths),
+    forbiddenPaths: llmNode.forbiddenPaths,
     relevantSymbols: [],
     dependencies: [],
     acceptance: acceptance.length > 0 ? acceptance : [{ kind: "custom", description: `Complete: ${llmNode.title}` }],

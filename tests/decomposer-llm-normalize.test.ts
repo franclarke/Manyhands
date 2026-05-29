@@ -92,4 +92,53 @@ describe("normalizeLlmDecomposition", () => {
     const issues = validateTaskGraph(result.graph);
     expect(issues).toEqual([]);
   });
+
+  it("derives V2 executionScope and forbiddenPaths on leaf contracts", () => {
+    const result = normalizeLlmDecomposition({
+      feature: {
+        id: "login",
+        title: "Add login",
+        description: "Passwordless login feature",
+        targetStack: [],
+        constraints: [],
+        acceptanceCriteria: ["Magic link works"]
+      },
+      output: validOutput,
+      mode: "balanced",
+      generatedAt: "2026-05-26T00:00:00.000Z",
+      decomposerLabel: "anthropic:test",
+      baseBranch: "main",
+      baseCommit: "test-commit",
+      repo: "test-repo"
+    });
+
+    const magicLink = result.contracts.find((c) => c.taskId === "magic-link");
+    expect(magicLink?.executionScope?.implementationPaths).toEqual(["src/auth/**"]);
+    expect(magicLink?.forbiddenPaths).toEqual(["src/db/migrations/**"]);
+  });
+
+  it("falls back to a non-empty implementationPaths when the LLM gives no allowedPaths", () => {
+    const output = DecomposerLlmOutputSchema.parse({
+      title: "x",
+      summary: "x",
+      nodes: [
+        { id: "root", parentId: null, title: "x", goal: "x", kind: "composite", depth: 0 },
+        { id: "only", parentId: "root", title: "y", goal: "y", kind: "leaf", depth: 1, acceptanceCriteria: ["done"] }
+      ],
+      dependencies: []
+    });
+    const result = normalizeLlmDecomposition({
+      feature: { id: "f", title: "f", description: "f", targetStack: [], constraints: [], acceptanceCriteria: ["a"] },
+      output,
+      mode: "balanced",
+      generatedAt: "2026-05-26T00:00:00.000Z",
+      decomposerLabel: "anthropic:test",
+      baseBranch: "main",
+      baseCommit: "c",
+      repo: "r"
+    });
+    const leaf = result.contracts.find((c) => c.taskId === "only");
+    // Empty allowedPaths must NOT yield an empty scope (that would reject everything).
+    expect(leaf?.executionScope?.implementationPaths.length).toBeGreaterThan(0);
+  });
 });

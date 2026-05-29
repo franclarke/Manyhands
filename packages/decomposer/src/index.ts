@@ -14,6 +14,7 @@ import {
   type TaskGraph,
   type TaskNode
 } from "@manyhands/task-graph";
+import { executionScopeFromAllowed } from "./scope";
 import { z } from "zod";
 
 export const FeatureRequestSchema = z.object({
@@ -470,6 +471,10 @@ function buildContract(
         "deploy/**": "Deployment changes are outside the mock planning scope."
       }
     },
+    // V2 execution-time scope, derived from the same paths so the executor's
+    // ScopeChecker enforces (leaf.allowedPaths is non-empty).
+    executionScope: executionScopeFromAllowed(leaf.allowedPaths),
+    forbiddenPaths: leaf.forbiddenPaths ?? ["**/.env*", "infra/**", "deploy/**"],
     relevantSymbols,
     dependencies: [],
     acceptance,
