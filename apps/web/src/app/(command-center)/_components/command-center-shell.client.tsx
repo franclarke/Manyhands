@@ -9,6 +9,7 @@ import { TaskPrompt } from "./task-prompt.client";
 import { WorkspacePicker } from "./workspace-picker.client";
 import { toGranularityMode, type GranularityLevel } from "@/lib/granularity";
 import { findScenario } from "@/lib/scenarios";
+import { EXECUTABLE_FIXTURES } from "@/lib/executable-fixtures";
 
 const PROMPT_STORAGE_KEY = "manyhands:lastPrompt";
 
@@ -29,6 +30,7 @@ export function CommandCenterShell({
   const initialWorkspaceId = workspaces[0]?.id ?? "";
   const [workspaceId, setWorkspaceId] = useState<string>(initialWorkspaceId);
   const [scenarioId, setScenarioId] = useState<string>(getDefaultScenarioId());
+  const [repoFixtureId, setRepoFixtureId] = useState<string>("");
   const [granularity, setGranularity] = useState<GranularityLevel>(initialGranularity);
   const [mode, setMode] = useState<RunMode>("planning");
   const [modelId] = useState<string>(initialModelId);
@@ -71,7 +73,14 @@ export function CommandCenterShell({
     setSubmitting(true);
     setErrorMessage(null);
     try {
-      const body: Record<string, string> = {
+      const body: {
+        workspaceId: string;
+        granularity: string;
+        model: string;
+        userPrompt: string;
+        scenarioId?: string;
+        repoSpec?: { kind: "fixture"; fixtureId: string };
+      } = {
         workspaceId: selectedWorkspace.id,
         granularity: granularityMode,
         model: modelId,
@@ -79,6 +88,9 @@ export function CommandCenterShell({
       };
       if (scenario !== undefined) {
         body.scenarioId = scenario.id;
+      }
+      if (repoFixtureId.length > 0) {
+        body.repoSpec = { kind: "fixture", fixtureId: repoFixtureId };
       }
       const response = await fetch("/api/runs", {
         method: "POST",
@@ -166,6 +178,35 @@ export function CommandCenterShell({
         <ModeSelector value={mode} onChange={setMode} />
         <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
           Codex execution appears after the DAG is approved.
+        </span>
+      </ControlRow>
+
+      <ControlRow label="Target repo" hint="real execution fixture">
+        <select
+          value={repoFixtureId}
+          onChange={(event) => setRepoFixtureId(event.target.value)}
+          className="mh-mono"
+          style={{
+            height: 32,
+            padding: "0 10px",
+            border: "1px solid var(--rule)",
+            background: "rgba(229,222,204,0.035)",
+            color: "var(--text)",
+            borderRadius: "var(--r-md)",
+            fontSize: 12.5
+          }}
+        >
+          <option value="">none — plan only (mock)</option>
+          {EXECUTABLE_FIXTURES.map((fixture) => (
+            <option key={fixture.id} value={fixture.id}>
+              {fixture.label}
+            </option>
+          ))}
+        </select>
+        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
+          {repoFixtureId.length > 0
+            ? EXECUTABLE_FIXTURES.find((f) => f.id === repoFixtureId)?.description
+            : "Select a fixture to enable real Codex execution."}
         </span>
       </ControlRow>
 
