@@ -60,7 +60,7 @@ export function buildDecomposerPrompt(inputs: PromptInputs): { system: string; u
   const system = SYSTEM_PROMPT.replace("{{outputSchema}}", OUTPUT_SCHEMA_LITERAL);
 
   const user = [
-    "## User intent (free text from developer)",
+    "## User goal (free text from developer)",
     "",
     inputs.userPrompt.length > 0 ? inputs.userPrompt : "(empty prompt; use workspace hints to propose a small generic feature)",
     "",
@@ -114,7 +114,7 @@ const OUTPUT_SCHEMA_LITERAL = `{
       "kind": "composite | leaf",
       "depth": 0,
       "title": "string",
-      "intent": "string",
+      "goal": "string",
       "objective": "string (optional)",
       "allowedPaths": ["string", "..."],
       "forbiddenPaths": ["string", "..."],
@@ -135,7 +135,7 @@ const OUTPUT_SCHEMA_LITERAL = `{
 const SYSTEM_PROMPT = [
   "You are a senior software engineer acting as a planning agent inside ManyHands, a multi-agent orchestration tool.",
   "",
-  "Your job: decompose a free-text developer intent into a hierarchical DAG of atomic tasks that smaller subagents can implement in isolation.",
+  "Your job: decompose a free-text developer goal into a hierarchical DAG of atomic tasks that smaller subagents can implement in isolation.",
   "",
   "Rules:",
   "- Produce a tree of composite + leaf nodes. Leaves are the unit of subagent work.",

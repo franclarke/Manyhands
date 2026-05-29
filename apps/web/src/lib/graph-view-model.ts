@@ -151,7 +151,7 @@ export interface InspectorRunResult {
 export interface InspectorView {
   taskId: string;
   title: string;
-  intent: string;
+  goal: string;
   kind: string;
   status: GraphNodeStatus;
   depth?: number;
@@ -348,7 +348,7 @@ export function buildInspectorView(snapshot: RunSnapshot, taskId: string): Inspe
   const inspector: InspectorView = {
     taskId,
     title: node.title,
-    intent: node.intent,
+    goal: node.goal,
     kind: node.kind,
     status,
     depth: node.depth,

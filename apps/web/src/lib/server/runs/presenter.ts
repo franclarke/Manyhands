@@ -7,7 +7,6 @@ export function toRunResponse(run: RunRecord): RunResponse {
   const payload: RunResponse["run"] = {
     runId: run.runId,
     workspaceId: run.workspaceId,
-    scenarioId: run.scenarioId,
     granularity: run.granularity,
     model: run.model,
     userPrompt: run.userPrompt,
@@ -16,6 +15,7 @@ export function toRunResponse(run: RunRecord): RunResponse {
     createdAt: run.createdAt,
     updatedAt: run.updatedAt
   };
+  if (run.scenarioId !== undefined) payload.scenarioId = run.scenarioId;
   if (run.pausedDuring !== undefined) payload.pausedDuring = run.pausedDuring;
   if (run.interruptedDuring !== undefined) payload.interruptedDuring = run.interruptedDuring;
   if (run.errorMessage !== undefined) payload.errorMessage = run.errorMessage;

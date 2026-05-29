@@ -25,57 +25,52 @@ export interface TaskNodeData {
   [key: string]: unknown;
 }
 
-interface StatusStyle {
-  dot: string;
-  label: string;
-  border: string;
-}
-
-const STATUS_COLOR: Record<GraphNodeStatus, StatusStyle> = {
-  planned:      { dot: "var(--planned)",  label: "var(--text-2)",   border: "var(--border)" },
-  ready:        { dot: "var(--ready)",    label: "var(--ready)",    border: "rgba(201,164,92,0.55)" },
-  running:      { dot: "var(--running)",  label: "var(--coral-hi)", border: "var(--coral)" },
-  gated:        { dot: "var(--gated)",    label: "var(--gated)",    border: "rgba(201,164,92,0.55)" },
-  done:         { dot: "var(--done)",     label: "var(--done)",     border: "rgba(107,142,107,0.55)" },
-  failed:       { dot: "var(--error)",    label: "var(--error)",    border: "rgba(194,91,84,0.65)" },
-  blocked:      { dot: "var(--blocked)",  label: "var(--blocked)",  border: "var(--border)" },
-  generating:   { dot: "var(--coral)",    label: "var(--coral-hi)", border: "var(--coral)" },
-  needs_review: { dot: "var(--ready)",    label: "var(--ready)",    border: "rgba(201,164,92,0.55)" },
-  approved:     { dot: "var(--done)",     label: "var(--done)",     border: "rgba(107,142,107,0.55)" },
-  integrated:   { dot: "var(--done)",     label: "var(--done)",     border: "rgba(107,142,107,0.65)" }
+const STATUS_COLOR: Record<GraphNodeStatus, string> = {
+  planned: "var(--planned)",
+  ready: "var(--ready)",
+  running: "var(--running)",
+  gated: "var(--gated)",
+  done: "var(--done)",
+  failed: "var(--error)",
+  blocked: "var(--blocked)",
+  generating: "var(--running)",
+  needs_review: "var(--ready)",
+  approved: "var(--done)",
+  integrated: "var(--copper)"
 };
 
-const RISK_BORDER: Record<GraphRiskLevel, string> = {
-  low:      "rgba(107,142,107,0.45)",
-  medium:   "rgba(201,164,92,0.55)",
-  high:     "rgba(194,91,84,0.55)",
-  blocking: "rgba(184,128,74,0.65)"
+const RISK_COLOR: Record<GraphRiskLevel, string> = {
+  low: "var(--risk-low)",
+  medium: "var(--risk-medium)",
+  high: "var(--risk-high)",
+  blocking: "var(--risk-blocking)"
 };
 
 function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
   const node = data as TaskNodeData;
-  const statusStyle = STATUS_COLOR[node.status];
+  const statusColor = STATUS_COLOR[node.status];
   const isRunning = node.status === "running" || node.status === "generating";
-  const isConflict = node.riskLevel === "blocking" || node.riskLevel === "high";
-  const borderColor = isConflict ? RISK_BORDER[node.riskLevel ?? "high"] : statusStyle.border;
-
-  const baseShadow = selected
-    ? "0 0 0 1.5px var(--selected), 0 0 0 5px rgba(91,122,153,0.20), 0 4px 14px rgba(0,0,0,0.30)"
-    : "0 1px 0 rgba(255,255,255,0.02) inset, 0 1px 4px rgba(0,0,0,0.20)";
+  const selectedShadow = "0 0 0 1px var(--copper), 0 0 0 4px rgba(180, 113, 72, 0.12)";
+  const borderColor = selected
+    ? "transparent"
+    : node.riskLevel !== undefined && (node.riskLevel === "high" || node.riskLevel === "blocking")
+      ? RISK_COLOR[node.riskLevel]
+      : "var(--rule)";
 
   return (
     <div
       className={isRunning ? "coral-pulse" : undefined}
       style={{
-        width: 264,
-        background: "var(--surface)",
+        width: 248,
+        background: selected ? "rgba(180,113,72,0.04)" : "var(--bg-1)",
         border: `1px solid ${borderColor}`,
-        borderRadius: 9,
-        padding: "10px 12px 11px",
-        boxShadow: baseShadow,
+        borderRadius: 6,
+        boxShadow: selected ? selectedShadow : "none",
         color: "var(--text)",
         fontFamily: "var(--font-sans)",
-        position: "relative"
+        position: "relative",
+        overflow: "hidden",
+        opacity: node.status === "blocked" ? 0.72 : 1
       }}
     >
       <Handle
@@ -89,235 +84,132 @@ function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
         style={{ background: "var(--text-3)", width: 5, height: 5, border: "none" }}
       />
 
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            className="mh-serif"
-            style={{
-              fontSize: 14.5,
-              lineHeight: 1.25,
-              color: "var(--text)",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden"
-            }}
-          >
-            {node.title}
-          </div>
-          <div
-            style={{
-              marginTop: 4,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontFamily: "var(--font-mono)",
-              fontSize: 10.5,
-              color: "var(--text-3)",
-              minWidth: 0
-            }}
-          >
-            <span
-              style={{
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                maxWidth: 170
-              }}
-              title={node.taskId}
-            >
-              {node.taskId}
-            </span>
-            <span style={{ color: "var(--text-3)" }}>·</span>
-            <span style={{ color: "var(--text-3)" }}>{node.kind}</span>
-          </div>
-        </div>
-        <StatusPill status={node.status} style={statusStyle} />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "7px 10px",
+          borderBottom: "1px solid var(--rule-soft)"
+        }}
+      >
+        <TypeGlyph kind={node.kind} />
+        <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-2)" }}>
+          {node.taskId}
+        </span>
+        <span className="mh-mono" style={{ fontSize: 10, color: "var(--text-3)" }}>
+          / {node.kind}
+        </span>
+        <span style={{ flex: 1 }} />
+        <span className="mh-dot" style={{ color: statusColor }} />
       </div>
 
-      <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
-        {node.riskLevel ? (
-          <MetaTag
-            color={RISK_BORDER[node.riskLevel]}
-            label={`risk · ${node.riskLevel}`}
-          />
-        ) : null}
-        {node.gateRequired ? (
-          <MetaTag color="var(--gated)" label="gate required" />
-        ) : null}
-        {node.integrator ? (
-          <MetaTag color="var(--selected)" label="integrator" />
-        ) : null}
-        {node.authoredBy !== undefined ? (
-          <MetaTag
-            color={node.manual ? "var(--coral)" : "var(--text-3)"}
-            label={node.manual ? "manual" : "ai"}
-          />
-        ) : null}
-      </div>
-
-      {(node.expectedFilesCount ?? 0) > 0 ? (
+      <div style={{ padding: "10px 12px 12px" }}>
         <div
+          className="mh-serif"
           style={{
-            marginTop: 8,
-            padding: "7px 8px",
-            background: "var(--bg-1)",
-            border: "1px solid var(--border-soft)",
-            borderRadius: 5
-          }}
-        >
-          {(node.expectedFilesPreview ?? []).slice(0, 2).map((file, idx) => (
-            <div
-              key={`${file}-${idx}`}
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: 10.5,
-                lineHeight: 1.5,
-                color: "var(--text-2)",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                display: "flex",
-                alignItems: "center",
-                gap: 5
-              }}
-              title={file}
-            >
-              <span style={{ color: "var(--text-3)" }}>—</span>
-              {file}
-            </div>
-          ))}
-          {(node.expectedFilesCount ?? 0) > 2 ? (
-            <div
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: 10,
-                color: "var(--text-3)"
-              }}
-            >
-              + {(node.expectedFilesCount ?? 0) - 2} more
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {node.blockedReason ? (
-        <div
-          style={{
-            marginTop: 8,
-            padding: "6px 8px",
-            background: "rgba(194,91,84,0.06)",
-            border: "1px solid rgba(194,91,84,0.30)",
-            borderRadius: 5,
-            fontSize: 11,
-            color: "var(--error)",
+            fontSize: 15,
+            lineHeight: 1.22,
+            color: "var(--text)",
             display: "-webkit-box",
             WebkitLineClamp: 2,
             WebkitBoxOrient: "vertical",
             overflow: "hidden"
           }}
         >
-          {node.blockedReason}
+          {node.title}
         </div>
-      ) : null}
 
-      <div
-        style={{
-          marginTop: 8,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          fontFamily: "var(--font-mono)",
-          fontSize: 10.5,
-          color: "var(--text-3)"
-        }}
-      >
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 9, minHeight: 16 }}>
+          <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
+            {(node.expectedFilesCount ?? 0) > 0
+              ? `${node.expectedFilesCount} path${node.expectedFilesCount === 1 ? "" : "s"}`
+              : "no paths"}
+          </span>
           {(node.dependencyCount ?? 0) > 0 ? (
-            <span title="dependencies">↳ {node.dependencyCount}</span>
+            <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
+              deps {node.dependencyCount}
+            </span>
           ) : null}
           {(node.traceCount ?? 0) > 0 ? (
-            <span title="trace events">◆ {node.traceCount}</span>
+            <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
+              trace {node.traceCount}
+            </span>
           ) : null}
-          {(node.dependencyCount ?? 0) === 0 && (node.traceCount ?? 0) === 0 ? (
-            <span>—</span>
-          ) : null}
-        </span>
-        <span>
-          {node.durationMs !== undefined ? formatDuration(node.durationMs) : "—"}
-          {node.costUsd !== undefined ? ` · ${formatCost(node.costUsd)}` : ""}
-        </span>
+          <span style={{ flex: 1 }} />
+          <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-2)" }}>
+            {node.status.replace("_", " ")}
+          </span>
+        </div>
+
+        {node.riskLevel !== undefined || node.gateRequired || node.integrator ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+            {node.riskLevel !== undefined ? (
+              <Signal color={RISK_COLOR[node.riskLevel]} label={`risk ${node.riskLevel}`} />
+            ) : null}
+            {node.gateRequired ? <Signal color="var(--gated)" label="gate" /> : null}
+            {node.integrator ? <Signal color="var(--copper)" label="integration" /> : null}
+          </div>
+        ) : null}
+
+        {node.blockedReason ? (
+          <div
+            style={{
+              marginTop: 8,
+              fontSize: 11,
+              color: "var(--error)",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden"
+            }}
+          >
+            {node.blockedReason}
+          </div>
+        ) : null}
       </div>
     </div>
   );
 }
 
-function StatusPill({
-  status,
-  style
-}: {
-  status: GraphNodeStatus;
-  style: StatusStyle;
-}): React.ReactElement {
+function TypeGlyph({ kind }: { kind: string }): React.ReactElement {
+  const letter = kind === "composite"
+    ? "C"
+    : kind === "leaf"
+      ? "L"
+      : kind === "integration"
+        ? "I"
+        : kind === "validation"
+          ? "V"
+          : kind.slice(0, 1).toUpperCase();
   return (
     <span
+      className="mh-mono"
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: 5,
-        height: 20,
-        padding: "0 7px",
-        borderRadius: 999,
-        border: `1px solid ${style.border}`,
-        background: `color-mix(in oklab, ${style.dot} 12%, var(--surface))`,
-        color: style.label,
-        fontSize: 10.5,
-        fontWeight: 500,
-        letterSpacing: 0.3,
-        whiteSpace: "nowrap"
+        justifyContent: "center",
+        width: 14,
+        height: 14,
+        borderRadius: 2,
+        border: "1px solid var(--rule-strong)",
+        color: kind === "leaf" ? "var(--copper)" : "var(--text-2)",
+        fontSize: 9,
+        lineHeight: 1
       }}
     >
-      <span
-        aria-hidden
-        style={{ width: 6, height: 6, borderRadius: 999, background: style.dot }}
-      />
-      {status}
+      {letter}
     </span>
   );
 }
 
-function MetaTag({ color, label }: { color: string; label: string }): React.ReactElement {
+function Signal({ color, label }: { color: string; label: string }): React.ReactElement {
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        padding: "1px 7px",
-        borderRadius: 999,
-        border: `1px solid ${color}`,
-        background: `color-mix(in oklab, ${color} 12%, transparent)`,
-        color,
-        fontSize: 10,
-        letterSpacing: 0.4,
-        textTransform: "uppercase",
-        fontFamily: "var(--font-mono)"
-      }}
-    >
-      {label}
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color, fontSize: 10.5 }}>
+      <span className="mh-dot" style={{ width: 5, height: 5 }} />
+      <span className="mh-mono">{label}</span>
     </span>
   );
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
-}
-
-function formatCost(usd: number): string {
-  if (usd === 0) return "$0";
-  if (usd < 0.01) return `$${usd.toFixed(4)}`;
-  return `$${usd.toFixed(3)}`;
 }
 
 export const TaskNodeCard = memo(TaskNodeCardImpl);

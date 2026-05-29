@@ -1,49 +1,10 @@
-interface LegendItem {
-  label: string;
-  swatch: React.ReactNode;
+import type { RunGraphViewModel } from "@/lib/graph-view-model";
+
+interface RiskLegendProps {
+  graph: RunGraphViewModel;
 }
 
-function Swatch({ color, dashed }: { color: string; dashed?: boolean }): React.ReactElement {
-  return (
-    <span
-      aria-hidden
-      style={{
-        display: "inline-block",
-        width: 28,
-        height: 0,
-        borderTop: `2px ${dashed ? "dashed" : "solid"} ${color}`
-      }}
-    />
-  );
-}
-
-function Dot({ color }: { color: string }): React.ReactElement {
-  return (
-    <span
-      aria-hidden
-      style={{
-        display: "inline-block",
-        width: 9,
-        height: 9,
-        borderRadius: 999,
-        background: color
-      }}
-    />
-  );
-}
-
-const ITEMS: LegendItem[] = [
-  { label: "Dependency edge", swatch: <Swatch color="var(--text-3)" /> },
-  { label: "Risk edge", swatch: <Swatch color="var(--risk-high)" dashed /> },
-  { label: "Gate edge", swatch: <Swatch color="var(--gated)" dashed /> },
-  { label: "Risk · low",      swatch: <Dot color="var(--risk-low)" /> },
-  { label: "Risk · medium",   swatch: <Dot color="var(--risk-medium)" /> },
-  { label: "Risk · high",     swatch: <Dot color="var(--risk-high)" /> },
-  { label: "Risk · blocking", swatch: <Dot color="var(--risk-blocking)" /> },
-  { label: "Gate required",   swatch: <Dot color="var(--gated)" /> }
-];
-
-export function RiskLegend(): React.ReactElement {
+export function RiskLegend({ graph }: RiskLegendProps): React.ReactElement {
   return (
     <div
       style={{
@@ -51,48 +12,47 @@ export function RiskLegend(): React.ReactElement {
         bottom: 14,
         left: 14,
         zIndex: 5,
-        padding: "10px 14px",
-        background: "rgba(35,34,32,0.92)",
-        border: "1px solid var(--border)",
-        borderRadius: "var(--r-md)",
-        backdropFilter: "blur(6px)"
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        padding: "8px 12px",
+        background: "rgba(15,16,18,0.78)",
+        border: "1px solid var(--rule)",
+        borderRadius: "var(--r-lg)",
+        backdropFilter: "blur(10px)",
+        fontSize: 11,
+        color: "var(--text-2)"
       }}
     >
-      <div
-        style={{
-          fontSize: 10,
-          letterSpacing: "0.18em",
-          textTransform: "uppercase",
-          color: "var(--text-3)",
-          marginBottom: 8,
-          fontFamily: "var(--font-mono)"
-        }}
-      >
-        Legend
-      </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "6px 20px"
-        }}
-      >
-        {ITEMS.map((item) => (
-          <div
-            key={item.label}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              fontSize: 11,
-              color: "var(--text-2)"
-            }}
-          >
-            {item.swatch}
-            <span>{item.label}</span>
-          </div>
-        ))}
-      </div>
+      <span className="mh-coord">distribution</span>
+      <LegendDot color="var(--planned)" label="planned" value={graph.status.planned} />
+      <LegendDot color="var(--ready)" label="ready" value={graph.status.ready + graph.status.approved} />
+      <LegendDot color="var(--running)" label="running" value={graph.status.running + graph.status.generating} />
+      <LegendDot color="var(--done)" label="done" value={graph.status.done + graph.status.integrated} />
+      <LegendDot color="var(--blocked)" label="blocked" value={graph.status.blocked + graph.status.gated} />
+      {graph.summary.riskCount > 0 ? (
+        <LegendDot color="var(--risk-high)" label="risk" value={graph.summary.riskCount} />
+      ) : null}
     </div>
+  );
+}
+
+function LegendDot({
+  color,
+  label,
+  value
+}: {
+  color: string;
+  label: string;
+  value: number;
+}): React.ReactElement {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+      <span className="mh-dot" style={{ color }} />
+      <span>{label}</span>
+      <span className="mh-mono" style={{ color: value === 0 ? "var(--text-3)" : "var(--text)" }}>
+        {value}
+      </span>
+    </span>
   );
 }

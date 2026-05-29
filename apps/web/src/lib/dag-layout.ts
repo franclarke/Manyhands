@@ -29,11 +29,11 @@ export interface LayoutOptions {
 }
 
 const DEFAULTS = {
-  columnWidth: 320,
-  rowHeight: 184,
+  columnWidth: 304,
+  rowHeight: 164,
   topPadding: 64,
   leftPadding: 80,
-  nodeWidth: 264
+  nodeWidth: 248
 };
 
 const STATUS_ORDER = [

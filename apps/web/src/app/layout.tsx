@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>): React.ReactElement {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body>
         <div className="mh-shell">
           <AppNav />

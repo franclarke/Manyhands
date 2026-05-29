@@ -95,7 +95,7 @@ interface PatchTaskNode {
   parentId: string | null;
   kind: string;
   title: string;
-  intent: string;
+  goal: string;
   status: string;
   granularity: string;
   depth: number;
@@ -202,7 +202,7 @@ function applyPatchToContext(context: PatchContext, patch: RunPatch): void {
       return;
     case "NODE_OBJECTIVE_EDITED":
       updateNode(context, patch.taskId, (node) => {
-        const next = { ...node, intent: patch.objective };
+        const next = { ...node, goal: patch.objective };
         if (node.contract !== undefined) {
           next.contract = { ...node.contract, objective: patch.objective };
         }

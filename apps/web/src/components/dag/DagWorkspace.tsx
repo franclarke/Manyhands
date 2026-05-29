@@ -19,6 +19,7 @@ import { DagCanvas } from "./DagCanvas";
 import { GraphToolbar } from "./GraphToolbar";
 import { MethodologyBanner } from "./MethodologyBanner";
 import { RiskLegend } from "./RiskLegend";
+import { RunBoard } from "./run-board.client";
 import { TaskInspector } from "./TaskInspector";
 import { ConflictBottomSheet } from "./conflict-bottom-sheet.client";
 import { RunTimeline } from "./run-timeline.client";
@@ -62,7 +63,7 @@ export function DagWorkspace({
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [highlightTaskIds, setHighlightTaskIds] = useState<ReadonlySet<string> | null>(null);
   const [filters, setFilters] = useState<GraphFilterState>(EMPTY_FILTERS);
-  const [viewMode, setViewMode] = useState<"canvas" | "timeline">("canvas");
+  const [viewMode, setViewMode] = useState<"canvas" | "timeline" | "board">("canvas");
 
   const inspector = useMemo(() => {
     if (selectedTaskId === null) {
@@ -95,19 +96,26 @@ export function DagWorkspace({
       <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
       {viewMode === "timeline" && timelineRun !== undefined ? (
         <RunTimeline run={timelineRun} snapshot={snapshot} patches={patches} />
+      ) : viewMode === "board" ? (
+        <RunBoard
+          graph={graph}
+          selectedTaskId={selectedTaskId}
+          onSelectTask={setSelectedTaskId}
+        />
       ) : (
       <div style={{ display: "flex", gap: 14, alignItems: "stretch" }}>
         <div
+          className="mh-tick-frame"
           style={{
             position: "relative",
-            flex: 1,
+            flex: "1 1 0",
             minWidth: 0,
             height: 760,
-            border: "1px solid var(--border)",
-            background: "var(--bg-1)",
+            border: "1px solid var(--rule)",
+            background: "var(--bg)",
             borderRadius: "var(--r-lg)",
             overflow: "hidden",
-            boxShadow: "var(--shadow-lift)"
+            boxShadow: "none"
           }}
         >
           <ReactFlowProvider>
@@ -123,7 +131,7 @@ export function DagWorkspace({
               }}
             />
           </ReactFlowProvider>
-          <RiskLegend />
+          <RiskLegend graph={graph} />
           {editableRunId !== undefined ? (
             <ConflictBottomSheet
               runId={editableRunId}
@@ -153,8 +161,8 @@ function ViewToggle({
   viewMode,
   onViewModeChange
 }: {
-  viewMode: "canvas" | "timeline";
-  onViewModeChange: (mode: "canvas" | "timeline") => void;
+  viewMode: "canvas" | "timeline" | "board";
+  onViewModeChange: (mode: "canvas" | "timeline" | "board") => void;
 }): React.ReactElement {
   return (
     <div
@@ -163,13 +171,13 @@ function ViewToggle({
       style={{
         alignSelf: "flex-start",
         display: "inline-flex",
-        border: "1px solid var(--border)",
-        background: "var(--surface)",
+        border: "1px solid var(--rule)",
+        background: "transparent",
         borderRadius: 6,
-        overflow: "hidden"
+        padding: 2
       }}
     >
-      {(["canvas", "timeline"] as const).map((mode) => (
+      {(["canvas", "timeline", "board"] as const).map((mode) => (
         <button
           key={mode}
           type="button"
@@ -178,10 +186,10 @@ function ViewToggle({
           onClick={() => onViewModeChange(mode)}
           style={{
             border: "none",
-            borderRight: mode === "canvas" ? "1px solid var(--border)" : "none",
-            background: viewMode === mode ? "var(--surface-2)" : "transparent",
+            background: viewMode === mode ? "rgba(229,222,204,0.06)" : "transparent",
             color: viewMode === mode ? "var(--text)" : "var(--text-2)",
-            padding: "7px 12px",
+            borderRadius: 4,
+            padding: "6px 11px",
             fontFamily: "var(--font-mono)",
             fontSize: 11.5,
             cursor: "pointer",

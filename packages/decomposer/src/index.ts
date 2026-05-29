@@ -1,4 +1,4 @@
-import {
+﻿import {
   AgentTaskContractSchema,
   type AcceptanceCriterion,
   type AgentTaskContract,
@@ -79,7 +79,7 @@ interface LeafTemplate {
   id: string;
   parentId: string;
   title: string;
-  intent: string;
+  goal: string;
   objective: string;
   allowedPaths: string[];
   forbiddenPaths?: string[];
@@ -95,7 +95,7 @@ interface LeafTemplate {
 interface AreaTemplate {
   id: string;
   title: string;
-  intent: string;
+  goal: string;
 }
 
 interface ModeTemplate {
@@ -141,11 +141,12 @@ export class MockDecomposer implements Decomposer {
         parentId: null,
         kind: "composite",
         title: feature.title,
-        intent: feature.description,
+        goal: feature.description,
         status: "planned",
         granularity,
         depth: 0,
-        childrenIds: template.areas.map((area) => taskId(feature.id, mode, area.id))
+        childrenIds: template.areas.map((area) => taskId(feature.id, mode, area.id)),
+        dependencies: []
       }
     };
 
@@ -156,13 +157,14 @@ export class MockDecomposer implements Decomposer {
         parentId: rootId,
         kind: "composite",
         title: area.title,
-        intent: area.intent,
+        goal: area.goal,
         status: "planned",
         granularity,
         depth: 1,
         childrenIds: template.leaves
           .filter((leaf) => leaf.parentId === area.id)
-          .map((leaf) => taskId(feature.id, mode, leaf.id))
+          .map((leaf) => taskId(feature.id, mode, leaf.id)),
+        dependencies: []
       };
     }
 
@@ -180,11 +182,12 @@ export class MockDecomposer implements Decomposer {
         parentId,
         kind: "leaf",
         title: leaf.title,
-        intent: leaf.intent,
+        goal: leaf.goal,
         status: "planned",
         granularity,
         depth: 2,
         childrenIds: [],
+        dependencies: [],
         contract
       };
     }
@@ -296,11 +299,12 @@ function buildDecompositionFromTemplate(input: {
       parentId: null,
       kind: "composite",
       title: input.feature.title,
-      intent: input.feature.description,
+      goal: input.feature.description,
       status: "planned",
       granularity,
       depth: 0,
-      childrenIds: input.template.areas.map((area) => taskId(input.feature.id, input.mode, area.id))
+      childrenIds: input.template.areas.map((area) => taskId(input.feature.id, input.mode, area.id)),
+      dependencies: []
     }
   };
 
@@ -311,13 +315,14 @@ function buildDecompositionFromTemplate(input: {
       parentId: rootId,
       kind: "composite",
       title: area.title,
-      intent: area.intent,
+      goal: area.goal,
       status: "planned",
       granularity,
       depth: 1,
       childrenIds: input.template.leaves
         .filter((leaf) => leaf.parentId === area.id)
-        .map((leaf) => taskId(input.feature.id, input.mode, leaf.id))
+        .map((leaf) => taskId(input.feature.id, input.mode, leaf.id)),
+      dependencies: []
     };
   }
 
@@ -335,11 +340,12 @@ function buildDecompositionFromTemplate(input: {
       parentId,
       kind: "leaf",
       title: leaf.title,
-      intent: leaf.intent,
+      goal: leaf.goal,
       status: "planned",
       granularity,
       depth: 2,
       childrenIds: [],
+      dependencies: [],
       contract
     };
   }
@@ -496,15 +502,14 @@ function singleTaskTemplate(feature: FeatureRequest, metadata: FeaturePlanningMe
       {
         id: "baseline",
         title: "Single Task Baseline",
-        intent: "Represent the whole feature as one structural mock task."
+        goal: "Represent the whole feature as one structural mock task."
       }
     ],
     leaves: [
       {
         id: "single-task",
         parentId: "baseline",
-        title: "Single Task Mock Implementation",
-        intent: "Plan the entire feature as one broad baseline task without observable internal decomposition.",
+        title: "Single Task Mock Implementation",goal: "Plan the entire feature as one broad baseline task without observable internal decomposition.",
         objective: `Implement the full ${feature.title} fixture as one deterministic mock baseline task.`,
         allowedPaths: scopePatternsForFiles(files),
         changedFiles: files,
@@ -555,8 +560,7 @@ function metadataCoarseTemplate(feature: FeatureRequest, metadata: FeaturePlanni
     {
       id: "domain-and-backend",
       parentId: "domain",
-      title: "Domain And Backend Slice",
-      intent: `Model and implement the backend behavior for ${feature.title}.`,
+      title: "Domain And Backend Slice",goal: `Model and implement the backend behavior for ${feature.title}.`,
       objective: `Plan domain and backend changes for ${feature.title}.`,
       allowedPaths: scopePatternsForFiles(domainAndBackend),
       changedFiles: domainAndBackend,
@@ -568,8 +572,7 @@ function metadataCoarseTemplate(feature: FeatureRequest, metadata: FeaturePlanni
     {
       id: "ui-and-tests",
       parentId: "quality",
-      title: "UI And Test Slice",
-      intent: `Add user-visible behavior and tests for ${feature.title}.`,
+      title: "UI And Test Slice",goal: `Add user-visible behavior and tests for ${feature.title}.`,
       objective: `Plan UI feedback and focused tests for ${feature.title}.`,
       allowedPaths: scopePatternsForFiles([...uiFiles, ...testFiles]),
       changedFiles: [...uiFiles, ...testFiles],
@@ -606,8 +609,7 @@ function metadataBalancedTemplate(feature: FeatureRequest, metadata: FeaturePlan
       {
         id: "domain-model",
         parentId: "domain",
-        title: "Domain Model",
-        intent: `Define the data and type surface for ${feature.title}.`,
+        title: "Domain Model",goal: `Define the data and type surface for ${feature.title}.`,
         objective: `Plan domain model changes for ${feature.title}.`,
         allowedPaths: scopePatternsForFiles(domainFiles),
         changedFiles: domainFiles,
@@ -619,8 +621,7 @@ function metadataBalancedTemplate(feature: FeatureRequest, metadata: FeaturePlan
       {
         id: "backend-action",
         parentId: "backend",
-        title: "Backend Action",
-        intent: `Implement backend workflow behavior for ${feature.title}.`,
+        title: "Backend Action",goal: `Implement backend workflow behavior for ${feature.title}.`,
         objective: `Plan backend action changes for ${feature.title}.`,
         allowedPaths: scopePatternsForFiles(backendFiles),
         changedFiles: backendFiles,
@@ -633,8 +634,7 @@ function metadataBalancedTemplate(feature: FeatureRequest, metadata: FeaturePlan
       {
         id: "ui-surface",
         parentId: "ui",
-        title: "UI Surface",
-        intent: `Expose ${feature.title} through the user-facing surface.`,
+        title: "UI Surface",goal: `Expose ${feature.title} through the user-facing surface.`,
         objective: `Plan UI changes for ${feature.title}.`,
         allowedPaths: scopePatternsForFiles(uiFiles),
         changedFiles: uiFiles,
@@ -647,8 +647,7 @@ function metadataBalancedTemplate(feature: FeatureRequest, metadata: FeaturePlan
       {
         id: "feature-tests",
         parentId: "quality",
-        title: "Feature Tests",
-        intent: `Cover ${feature.title} with deterministic fixture tests.`,
+        title: "Feature Tests",goal: `Cover ${feature.title} with deterministic fixture tests.`,
         objective: `Plan test coverage for ${feature.title}.`,
         allowedPaths: scopePatternsForFiles(testFiles),
         changedFiles: testFiles,
@@ -837,8 +836,7 @@ function controlledLeaf(
   const leaf: LeafTemplate = {
     id: input.id,
     parentId: input.parentId,
-    title: input.title,
-    intent: `Exercise a controlled conflict for ${feature.title}.`,
+    title: input.title,goal: `Exercise a controlled conflict for ${feature.title}.`,
     objective: `Represent the ${input.title} conflict scenario deterministically.`,
     allowedPaths: scopePatternsForFiles([input.file]),
     changedFiles: [input.file],
@@ -875,8 +873,7 @@ function metadataFineTemplate(feature: FeatureRequest, metadata: FeaturePlanning
     const leaf: LeafTemplate = {
       id: localId,
       parentId,
-      title: titleFromFile(file),
-      intent: `Plan the ${file} slice for ${feature.title}.`,
+      title: titleFromFile(file),goal: `Plan the ${file} slice for ${feature.title}.`,
       objective: `Create the deterministic fine-grained mock task for ${file}.`,
       allowedPaths: scopePatternsForFiles([file]),
       changedFiles: [file],
@@ -922,23 +919,19 @@ function metadataAreas(): AreaTemplate[] {
   return [
     {
       id: "domain",
-      title: "Domain And Data",
-      intent: "Model data, types and shared domain contracts."
+      title: "Domain And Data",goal: "Model data, types and shared domain contracts."
     },
     {
       id: "backend",
-      title: "Backend Workflow",
-      intent: "Implement deterministic backend actions or services."
+      title: "Backend Workflow",goal: "Implement deterministic backend actions or services."
     },
     {
       id: "ui",
-      title: "User Surface",
-      intent: "Represent UI, public pages and feedback surfaces."
+      title: "User Surface",goal: "Represent UI, public pages and feedback surfaces."
     },
     {
       id: "quality",
-      title: "Tests And Quality",
-      intent: "Represent focused test coverage and quality checks."
+      title: "Tests And Quality",goal: "Represent focused test coverage and quality checks."
     }
   ];
 }
@@ -1096,18 +1089,15 @@ function commonAreas(): AreaTemplate[] {
   return [
     {
       id: "ui",
-      title: "User Experience",
-      intent: "Design the user-facing request and callback feedback surfaces."
+      title: "User Experience",goal: "Design the user-facing request and callback feedback surfaces."
     },
     {
       id: "backend",
-      title: "Auth Backend",
-      intent: "Model, generate, persist and validate magic link tokens."
+      title: "Auth Backend",goal: "Model, generate, persist and validate magic link tokens."
     },
     {
       id: "quality",
-      title: "Quality And Documentation",
-      intent: "Protect the flow with focused tests and implementation notes."
+      title: "Quality And Documentation",goal: "Protect the flow with focused tests and implementation notes."
     }
   ];
 }
@@ -1119,8 +1109,7 @@ function coarseTemplate(): ModeTemplate {
       {
         id: "auth-backend",
         parentId: "backend",
-        title: "Auth Backend Slice",
-        intent: "Implement the backend primitives for issuing and validating passwordless login tokens.",
+        title: "Auth Backend Slice",goal: "Implement the backend primitives for issuing and validating passwordless login tokens.",
         objective: "Create the backend magic-link token generation, persistence and callback validation slice.",
         allowedPaths: ["src/auth/magic-link/**", "src/auth/session/**"],
         changedFiles: ["src/auth/magic-link/index.ts", "src/auth/session/index.ts"],
@@ -1135,8 +1124,7 @@ function coarseTemplate(): ModeTemplate {
       {
         id: "login-ui",
         parentId: "ui",
-        title: "Login UI Slice",
-        intent: "Implement the request form and callback feedback for passwordless login.",
+        title: "Login UI Slice",goal: "Implement the request form and callback feedback for passwordless login.",
         objective: "Add the login request surface and feedback states for success, pending and error outcomes.",
         allowedPaths: ["src/app/login/**", "src/components/auth/**"],
         changedFiles: ["src/app/login/page.tsx", "src/components/auth/magic-link-form.tsx"],
@@ -1150,8 +1138,7 @@ function coarseTemplate(): ModeTemplate {
       {
         id: "auth-tests",
         parentId: "quality",
-        title: "Auth Flow Tests",
-        intent: "Cover the passwordless login flow with focused tests.",
+        title: "Auth Flow Tests",goal: "Cover the passwordless login flow with focused tests.",
         objective: "Add minimal tests for token generation, expiry, callback validation and UI feedback.",
         allowedPaths: ["tests/auth/**", "src/auth/**/*.test.ts", "src/app/login/**/*.test.tsx"],
         changedFiles: ["tests/auth/passwordless-login.test.ts"],
@@ -1179,8 +1166,7 @@ function balancedTemplate(): ModeTemplate {
       {
         id: "token-model",
         parentId: "backend",
-        title: "Token Model",
-        intent: "Define the token shape, expiry semantics and one-use state.",
+        title: "Token Model",goal: "Define the token shape, expiry semantics and one-use state.",
         objective: "Introduce the magic link token model and typed token store contract.",
         allowedPaths: ["src/auth/magic-link/**"],
         changedFiles: ["src/auth/magic-link/token-store.ts"],
@@ -1194,8 +1180,7 @@ function balancedTemplate(): ModeTemplate {
       {
         id: "request-action",
         parentId: "backend",
-        title: "Request Action",
-        intent: "Handle a login request and create a magic link token.",
+        title: "Request Action",goal: "Handle a login request and create a magic link token.",
         objective: "Add the action or endpoint that accepts an email and creates a one-use token.",
         allowedPaths: ["src/auth/magic-link/**", "src/app/api/auth/magic-link/**"],
         changedFiles: ["src/auth/magic-link/request-action.ts", "src/auth/magic-link/token-store.ts"],
@@ -1211,8 +1196,7 @@ function balancedTemplate(): ModeTemplate {
       {
         id: "email-link",
         parentId: "backend",
-        title: "Email Link Builder",
-        intent: "Build the callback URL and email payload for the token.",
+        title: "Email Link Builder",goal: "Build the callback URL and email payload for the token.",
         objective: "Create the magic link URL builder without adding a real email provider.",
         allowedPaths: ["src/auth/magic-link/**"],
         changedFiles: ["src/auth/magic-link/email-link.ts"],
@@ -1227,8 +1211,7 @@ function balancedTemplate(): ModeTemplate {
       {
         id: "callback-validation",
         parentId: "backend",
-        title: "Callback Validation",
-        intent: "Validate a callback token and reject invalid states.",
+        title: "Callback Validation",goal: "Validate a callback token and reject invalid states.",
         objective: "Implement the callback validator for valid, expired and already consumed tokens.",
         allowedPaths: ["src/auth/magic-link/**", "src/app/auth/callback/**"],
         changedFiles: ["src/auth/magic-link/callback-validation.ts", "src/auth/magic-link/token-store.ts"],
@@ -1244,8 +1227,7 @@ function balancedTemplate(): ModeTemplate {
       {
         id: "session-bridge",
         parentId: "backend",
-        title: "Session Bridge",
-        intent: "Create an authenticated session after successful token validation.",
+        title: "Session Bridge",goal: "Create an authenticated session after successful token validation.",
         objective: "Connect successful magic link validation to session creation.",
         allowedPaths: ["src/auth/session/**", "src/auth/magic-link/**"],
         changedFiles: ["src/auth/session/passwordless-session.ts"],
@@ -1260,8 +1242,7 @@ function balancedTemplate(): ModeTemplate {
       {
         id: "login-ui",
         parentId: "ui",
-        title: "Login UI",
-        intent: "Expose the magic link request flow to the user.",
+        title: "Login UI",goal: "Expose the magic link request flow to the user.",
         objective: "Add the login form and user feedback states for requesting a magic link.",
         allowedPaths: ["src/app/login/**", "src/components/auth/**"],
         changedFiles: ["src/app/login/page.tsx", "src/components/auth/magic-link-form.tsx"],
@@ -1276,8 +1257,7 @@ function balancedTemplate(): ModeTemplate {
       {
         id: "auth-tests",
         parentId: "quality",
-        title: "Auth Tests",
-        intent: "Add tests for the planned passwordless login behavior.",
+        title: "Auth Tests",goal: "Add tests for the planned passwordless login behavior.",
         objective: "Cover token creation, expiry, callback validation, session creation and UI feedback.",
         allowedPaths: ["tests/auth/**", "src/auth/**/*.test.ts", "src/app/login/**/*.test.tsx"],
         changedFiles: ["tests/auth/passwordless-login.test.ts"],
@@ -1321,8 +1301,7 @@ function fineTemplate(): ModeTemplate {
       {
         id: "token-schema",
         parentId: "backend",
-        title: "Token Schema",
-        intent: "Define the magic link token data contract.",
+        title: "Token Schema",goal: "Define the magic link token data contract.",
         objective: "Introduce the token shape and validation helpers.",
         allowedPaths: ["src/auth/magic-link/**"],
         changedFiles: ["src/auth/magic-link/token-schema.ts"],
@@ -1333,8 +1312,7 @@ function fineTemplate(): ModeTemplate {
       {
         id: "token-generator",
         parentId: "backend",
-        title: "Token Generator",
-        intent: "Generate opaque one-use token values.",
+        title: "Token Generator",goal: "Generate opaque one-use token values.",
         objective: "Create the deterministic contract for generating magic link token values.",
         allowedPaths: ["src/auth/magic-link/**"],
         changedFiles: ["src/auth/magic-link/token-generator.ts"],
@@ -1346,8 +1324,7 @@ function fineTemplate(): ModeTemplate {
       {
         id: "token-persistence",
         parentId: "backend",
-        title: "Token Persistence",
-        intent: "Persist and consume magic link tokens.",
+        title: "Token Persistence",goal: "Persist and consume magic link tokens.",
         objective: "Implement the token store contract for create, lookup and consume operations.",
         allowedPaths: ["src/auth/magic-link/**"],
         changedFiles: ["src/auth/magic-link/token-store.ts"],
@@ -1359,8 +1336,7 @@ function fineTemplate(): ModeTemplate {
       {
         id: "request-action",
         parentId: "backend",
-        title: "Request Action",
-        intent: "Accept a user email and issue a magic link token.",
+        title: "Request Action",goal: "Accept a user email and issue a magic link token.",
         objective: "Add the request action without sending a real email.",
         allowedPaths: ["src/app/api/auth/magic-link/**", "src/auth/magic-link/**"],
         changedFiles: ["src/app/api/auth/magic-link/request.ts"],
@@ -1372,8 +1348,7 @@ function fineTemplate(): ModeTemplate {
       {
         id: "email-link",
         parentId: "backend",
-        title: "Email Link",
-        intent: "Build the callback link from the issued token.",
+        title: "Email Link",goal: "Build the callback link from the issued token.",
         objective: "Create a provider-free email link builder.",
         allowedPaths: ["src/auth/magic-link/**"],
         changedFiles: ["src/auth/magic-link/email-link.ts"],
@@ -1385,8 +1360,7 @@ function fineTemplate(): ModeTemplate {
       {
         id: "callback-route",
         parentId: "backend",
-        title: "Callback Route",
-        intent: "Handle a magic link callback request.",
+        title: "Callback Route",goal: "Handle a magic link callback request.",
         objective: "Add callback routing that delegates token validation and feedback state.",
         allowedPaths: ["src/app/auth/callback/**", "src/auth/magic-link/**"],
         changedFiles: ["src/app/auth/callback/route.ts"],
@@ -1398,8 +1372,7 @@ function fineTemplate(): ModeTemplate {
       {
         id: "session-bridge",
         parentId: "backend",
-        title: "Session Bridge",
-        intent: "Create a session after callback success.",
+        title: "Session Bridge",goal: "Create a session after callback success.",
         objective: "Bridge callback success to session creation.",
         allowedPaths: ["src/auth/session/**", "src/auth/magic-link/**"],
         changedFiles: ["src/auth/session/passwordless-session.ts"],
@@ -1411,8 +1384,7 @@ function fineTemplate(): ModeTemplate {
       {
         id: "ui-form",
         parentId: "ui",
-        title: "Request Form",
-        intent: "Let the user request a login link.",
+        title: "Request Form",goal: "Let the user request a login link.",
         objective: "Add the login form for entering an email address.",
         allowedPaths: ["src/app/login/**", "src/components/auth/**"],
         changedFiles: ["src/components/auth/magic-link-form.tsx"],
@@ -1424,8 +1396,7 @@ function fineTemplate(): ModeTemplate {
       {
         id: "ui-feedback",
         parentId: "ui",
-        title: "Feedback States",
-        intent: "Show success and error outcomes.",
+        title: "Feedback States",goal: "Show success and error outcomes.",
         objective: "Add user-facing feedback states for request and callback outcomes.",
         allowedPaths: ["src/app/login/**", "src/components/auth/**"],
         changedFiles: ["src/components/auth/magic-link-feedback.tsx"],
@@ -1437,8 +1408,7 @@ function fineTemplate(): ModeTemplate {
       {
         id: "auth-tests",
         parentId: "quality",
-        title: "Fine Auth Tests",
-        intent: "Test the fine-grained passwordless flow.",
+        title: "Fine Auth Tests",goal: "Test the fine-grained passwordless flow.",
         objective: "Add focused tests for generated token behavior, callbacks, sessions and UI feedback.",
         allowedPaths: ["tests/auth/**", "src/auth/**/*.test.ts", "src/app/login/**/*.test.tsx"],
         changedFiles: ["tests/auth/passwordless-login.test.ts"],
@@ -1497,11 +1467,11 @@ function dependency(
   };
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // LLM-driven decomposer (Fase C). The real client lives in `llm/*`; we
 // re-export the public surface here so consumers can `import { AnthropicDecomposer }`
 // from `@manyhands/decomposer` without reaching into the subpath.
-// ────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export {
   AnthropicDecomposer

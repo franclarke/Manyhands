@@ -42,6 +42,7 @@ export type RunStatus = (typeof RUN_STATUS_VALUES)[number];
 export const RunStatusSchema = z.enum(RUN_STATUS_VALUES);
 
 export const GranularityModeSchema = z.union([
+  z.literal("auto"),
   z.literal("coarse"),
   z.literal("balanced"),
   z.literal("fine")
@@ -80,7 +81,7 @@ export type RunDecompositionMetadata = z.infer<typeof RunDecompositionMetadataSc
 export const RunRecordSchema = z.object({
   runId: z.string().min(1),
   workspaceId: z.string().min(1),
-  scenarioId: z.string().min(1),
+  scenarioId: z.string().min(1).optional(),
   granularity: GranularityModeSchema,
   model: z.string().min(1),
   userPrompt: z.string().max(4000),

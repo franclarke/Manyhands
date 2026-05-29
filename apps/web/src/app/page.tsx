@@ -18,43 +18,32 @@ export default async function HomePage(): Promise<React.ReactElement> {
 
   return (
     <div>
-      <section style={{ marginBottom: 26 }}>
-        <p
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            color: "var(--coral)",
-            margin: 0,
-            marginBottom: 14
-          }}
-        >
-          Command center
+      <section style={{ margin: "52px auto 30px", maxWidth: 760 }}>
+        <p className="mh-coord" style={{ margin: 0, marginBottom: 14, color: "var(--copper)" }}>
+          alpha / command center
         </p>
         <h1
           className="mh-serif"
           style={{
-            fontSize: 40,
-            lineHeight: 1.1,
+            fontSize: 46,
+            lineHeight: 1.06,
             color: "var(--text)",
-            margin: 0,
-            maxWidth: 820
+            margin: 0
           }}
         >
-          Describí qué querés construir.
+          Orchestrate a software task.
         </h1>
         <p
           style={{
             marginTop: 14,
-            maxWidth: 720,
             fontSize: 15,
             lineHeight: 1.6,
             color: "var(--text-2)"
           }}
         >
-          ManyHands descompone la tarea en un DAG de subtareas delegables, ejecuta subagentes acotados por nodo
-          y consolida los cambios de forma auditable. Elegí workspace, scenario y granularidad antes de arrancar.
+          Decompose work into a DAG of agent tasks. Prepare leaf work for isolated Codex
+          worktrees, inspect the contract, then compare granularities without pretending the
+          MVP is a cloud platform.
         </p>
       </section>
 

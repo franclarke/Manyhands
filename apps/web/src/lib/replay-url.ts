@@ -1,4 +1,4 @@
-import { toDecompositionMode, type GranularityLevel } from "./granularity";
+import { toGranularityMode, type GranularityLevel } from "./granularity";
 
 export interface ReplayDemoLinkInput {
   workspaceId: string;
@@ -16,7 +16,7 @@ export function buildReplayDemoUrl(input: ReplayDemoLinkInput): string {
     benchmark: input.benchmark ?? DEFAULT_BENCHMARK,
     config: input.config ?? DEFAULT_CONFIG,
     workspace: input.workspaceId,
-    granularity: toDecompositionMode(input.granularity)
+    granularity: toGranularityMode(input.granularity)
   });
   if (input.model !== undefined && input.model.length > 0) {
     params.set("model", input.model);

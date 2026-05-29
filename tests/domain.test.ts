@@ -88,11 +88,12 @@ function makeGraph(
         parentId: null,
         kind: "composite",
         title: "Root",
-        intent: "Coordinate leaf tasks.",
+        goal: "Coordinate leaf tasks.",
         status: "planned",
         granularity: "medium",
         depth: 0,
-        childrenIds: leafIds
+        childrenIds: leafIds,
+        dependencies: []
       },
       ...Object.fromEntries(
         leafIds.map((taskId) => [
@@ -102,11 +103,12 @@ function makeGraph(
             parentId: "root",
             kind: "leaf" as const,
             title: taskId,
-            intent: `Do ${taskId}.`,
+            goal: `Do ${taskId}.`,
             status: statuses[taskId] ?? "planned",
             granularity: "fine" as const,
             depth: 1,
             childrenIds: [],
+            dependencies: [],
             contract: contracts[taskId]
           }
         ])

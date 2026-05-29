@@ -204,13 +204,14 @@ describe("run timeline", () => {
         node: {
           id: "integrator-1",
           parentId: "root",
-          kind: "leaf",
+          kind: "integrator",
           title: "Integrator",
-          intent: "Integrate",
+          goal: "Integrate",
           status: "planned",
           granularity: "fine",
           depth: 1,
           childrenIds: [],
+          dependencies: [],
           metadata: { integratesTaskIds: ["task-1", "task-2"] }
         },
         dependencies: []
@@ -354,22 +355,24 @@ function makePlanning(input: {
         parentId: null,
         kind: "composite",
         title: "Root",
-        intent: "Coordinate",
+        goal: "Coordinate",
         status: "planned",
         granularity: "medium",
         depth: 0,
-        childrenIds: ["task-1", "task-2"]
+        childrenIds: ["task-1", "task-2"],
+        dependencies: []
       },
       "task-1": {
         id: "task-1",
         parentId: "root",
         kind: "leaf",
         title: "Task one",
-        intent: contractOne.objective,
+        goal: contractOne.objective,
         status: "planned",
         granularity: "fine",
         depth: 1,
         childrenIds: [],
+        dependencies: [],
         contract: contractOne,
         metadata: { authoredBy: "ai" }
       },
@@ -378,11 +381,12 @@ function makePlanning(input: {
         parentId: "root",
         kind: "leaf",
         title: "Task two",
-        intent: contractTwo.objective,
+        goal: contractTwo.objective,
         status: "planned",
         granularity: "fine",
         depth: 1,
         childrenIds: [],
+        dependencies: [],
         contract: contractTwo,
         metadata: { authoredBy: "ai" }
       }

@@ -13,7 +13,7 @@ export const DecomposerLlmNodeSchema = z.object({
     .regex(/^[a-z][a-z0-9_-]*$/, "id must be lowercase, start with a letter, and contain only [a-z0-9_-]"),
   parentId: z.string().nullable(),
   title: z.string().min(1).max(160),
-  intent: z.string().min(1).max(600),
+  goal: z.string().min(1).max(600),
   kind: z.union([z.literal("composite"), z.literal("leaf")]),
   depth: z.number().int().min(0).max(10),
   objective: z.string().max(800).optional(),

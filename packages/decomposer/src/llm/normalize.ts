@@ -55,16 +55,18 @@ export function normalizeLlmDecomposition(input: {
 
   for (const llmNode of input.output.nodes) {
     const children = childrenByParent.get(llmNode.id) ?? [];
+    const nodeKind = llmNode.parentId === null ? "root" as const : llmNode.kind;
     const node: TaskNode = {
       id: llmNode.id,
       parentId: llmNode.parentId,
-      kind: llmNode.kind,
+      kind: nodeKind,
       title: llmNode.title,
-      intent: llmNode.intent,
+      goal: llmNode.goal,
       status: "planned",
       granularity,
       depth: llmNode.depth,
       childrenIds: children,
+      dependencies: [],
       metadata: {
         authoredBy: "ai"
       }
@@ -132,7 +134,7 @@ function granularityForMode(mode: DecompositionMode): TaskGranularityLevel {
 function buildContract(feature: FeatureRequest, llmNode: {
   id: string;
   title: string;
-  intent: string;
+  goal: string;
   objective?: string | undefined;
   allowedPaths: string[];
   forbiddenPaths: string[];
@@ -148,7 +150,7 @@ function buildContract(feature: FeatureRequest, llmNode: {
     : [feature.repositoryPath ?? "src/**"];
   const objective = llmNode.objective !== undefined && llmNode.objective.length > 0
     ? llmNode.objective
-    : llmNode.intent;
+    : llmNode.goal;
   return {
     taskId: llmNode.id,
     objective,

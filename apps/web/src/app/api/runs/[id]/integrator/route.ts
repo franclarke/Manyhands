@@ -70,13 +70,14 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     const node: TaskNode = {
       id: taskId,
       parentId,
-      kind: "leaf",
+      kind: "integrator",
       title,
-      intent: objective,
+      goal: objective,
       status: "planned",
       granularity: "fine",
       depth: parent.depth + 1,
       childrenIds: [],
+      dependencies: [],
       contract,
       metadata: {
         authoredBy: "human",

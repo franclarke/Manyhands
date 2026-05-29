@@ -1,19 +1,20 @@
 "use client";
 
 import { useId } from "react";
-import type { DecompositionMode } from "@manyhands/core";
+import type { GranularityMode } from "@/lib/server/runs/schema";
 import { SCENARIOS, getScenario } from "@/lib/scenarios";
 
 interface ScenarioPickerProps {
   value: string;
   onChange: (scenarioId: string) => void;
-  granularity: DecompositionMode;
+  granularity: GranularityMode;
 }
 
 export function ScenarioPicker({ value, onChange, granularity }: ScenarioPickerProps): React.ReactElement {
   const labelId = useId();
   const scenario = SCENARIOS.find((entry) => entry.id === value) ?? SCENARIOS[0]!;
-  const supports = scenario.supportedGranularities.includes(granularity);
+  // "auto" resolves to "balanced" at runtime, so consider it always supported.
+  const supports = granularity === "auto" || scenario.supportedGranularities.includes(granularity);
 
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>

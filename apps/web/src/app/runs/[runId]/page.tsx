@@ -33,10 +33,11 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
 
   const workspaces = await getWorkspaceRepository().list();
   const workspace = workspaces.find((entry) => entry.id === run.workspaceId) ?? null;
-  const scenario = findScenario(run.scenarioId) ?? null;
+  const scenario = run.scenarioId !== undefined ? findScenario(run.scenarioId) ?? null : null;
   const snapshot = projectRunRecordToSnapshot(run);
   const patches = parseRunPatches(run.patches);
   const conflictState = conflictStateFor(snapshot, patches);
+  const runSummary = snapshotSummary(snapshot);
   const readyTaskCount =
     run.planning !== undefined
       ? (run.planning as MockPlanningFlowResult).summary.leafCount
@@ -48,7 +49,7 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
         runId={run.runId}
         initialStatus={run.status}
         snapshot={snapshot}
-        benchmarkLabel={scenario?.benchmarkId ?? run.scenarioId}
+        benchmarkLabel={scenario?.benchmarkId ?? run.scenarioId ?? "prompt"}
         configLabel={`granularity · ${run.granularity}`}
         readyTaskCount={readyTaskCount}
         patches={patches}
@@ -64,11 +65,30 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
         conflicts={conflictState.conflicts}
         {...(conflictState.error !== undefined ? { conflictError: conflictState.error } : {})}
         headerSlot={
-          <RunHeader run={run} workspace={workspace} scenario={scenario} liveStatus={run.status} />
+          <RunHeader
+            run={run}
+            workspace={workspace}
+            scenario={scenario}
+            liveStatus={run.status}
+            summary={runSummary}
+          />
         }
       />
     </div>
   );
+}
+
+function snapshotSummary(
+  snapshot: ReturnType<typeof projectRunRecordToSnapshot>
+): { nodes: number; leaves: number; depth: number; ready: number } | null {
+  if (snapshot === null) return null;
+  const nodes = Object.values(snapshot.graphSnapshot.nodes);
+  return {
+    nodes: nodes.length,
+    leaves: nodes.filter((node) => node.kind === "leaf").length,
+    depth: Math.max(0, ...nodes.map((node) => node.depth)),
+    ready: nodes.filter((node) => node.status === "ready").length
+  };
 }
 
 function conflictStateFor(

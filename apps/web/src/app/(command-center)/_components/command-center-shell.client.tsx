@@ -4,14 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorResponse, RunResponse, Workspace } from "@/lib/api-types";
 import { GranularitySelector } from "./granularity-selector.client";
-import { ModelPicker } from "./model-picker.client";
 import { ScenarioPicker, getDefaultScenarioId } from "./scenario-picker.client";
 import { TaskPrompt } from "./task-prompt.client";
 import { WorkspacePicker } from "./workspace-picker.client";
-import { toDecompositionMode, type GranularityLevel } from "@/lib/granularity";
+import { toGranularityMode, type GranularityLevel } from "@/lib/granularity";
 import { findScenario } from "@/lib/scenarios";
 
 const PROMPT_STORAGE_KEY = "manyhands:lastPrompt";
+
+type RunMode = "planning" | "mock" | "execution-ready";
 
 interface CommandCenterShellProps {
   workspaces: Workspace[];
@@ -29,7 +30,8 @@ export function CommandCenterShell({
   const [workspaceId, setWorkspaceId] = useState<string>(initialWorkspaceId);
   const [scenarioId, setScenarioId] = useState<string>(getDefaultScenarioId());
   const [granularity, setGranularity] = useState<GranularityLevel>(initialGranularity);
-  const [modelId, setModelId] = useState<string>(initialModelId);
+  const [mode, setMode] = useState<RunMode>("planning");
+  const [modelId] = useState<string>(initialModelId);
   const [prompt, setPrompt] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -56,26 +58,32 @@ export function CommandCenterShell({
     [workspaces, workspaceId]
   );
 
-  const scenario = findScenario(scenarioId);
-  const decompositionMode = toDecompositionMode(granularity);
-  const granularitySupported = scenario?.supportedGranularities.includes(decompositionMode) ?? true;
-  const canStart = selectedWorkspace !== null && scenario !== undefined && granularitySupported && !submitting;
+  const scenario = scenarioId.length > 0 ? findScenario(scenarioId) : undefined;
+  const granularityMode = toGranularityMode(granularity);
+  const granularitySupported = scenario !== undefined
+    ? granularityMode === "auto" || scenario.supportedGranularities.includes(granularityMode)
+    : true;
+  const hasPrompt = prompt.trim().length > 0;
+  const canStart = selectedWorkspace !== null && hasPrompt && granularitySupported && !submitting;
 
   async function handleStart(): Promise<void> {
-    if (selectedWorkspace === null || scenario === undefined) return;
+    if (selectedWorkspace === null) return;
     setSubmitting(true);
     setErrorMessage(null);
     try {
+      const body: Record<string, string> = {
+        workspaceId: selectedWorkspace.id,
+        granularity: granularityMode,
+        model: modelId,
+        userPrompt: prompt.trim()
+      };
+      if (scenario !== undefined) {
+        body.scenarioId = scenario.id;
+      }
       const response = await fetch("/api/runs", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          workspaceId: selectedWorkspace.id,
-          scenarioId: scenario.id,
-          granularity: decompositionMode,
-          model: modelId,
-          userPrompt: prompt.trim()
-        })
+        body: JSON.stringify(body)
       });
       const payload = (await response.json()) as RunResponse | ApiErrorResponse;
       if (!response.ok) {
@@ -96,9 +104,11 @@ export function CommandCenterShell({
     return (
       <div
         style={{
+          maxWidth: 760,
+          margin: "0 auto",
           padding: 24,
-          border: "1px dashed var(--border)",
-          background: "var(--bg-1)",
+          border: "1px dashed var(--rule-strong)",
+          background: "rgba(229,222,204,0.018)",
           borderRadius: "var(--r-lg)",
           color: "var(--text-2)"
         }}
@@ -107,7 +117,7 @@ export function CommandCenterShell({
           No workspaces yet.
         </p>
         <p style={{ marginTop: 8, fontSize: 13, lineHeight: 1.5 }}>
-          Create one to get started.
+          Create one before generating a DAG.
         </p>
       </div>
     );
@@ -115,46 +125,16 @@ export function CommandCenterShell({
 
   return (
     <section
+      className="mh-tick-frame"
       style={{
-        border: "1px solid var(--border)",
-        background: "var(--surface)",
-        borderRadius: "var(--r-lg)",
-        padding: 22,
-        boxShadow: "var(--shadow-lift)",
+        maxWidth: 760,
+        margin: "0 auto",
+        padding: "14px 0 0",
         display: "flex",
         flexDirection: "column",
         gap: 18
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 12,
-          alignItems: "center",
-          justifyContent: "space-between"
-        }}
-      >
-        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <WorkspacePicker
-            workspaces={workspaces}
-            value={workspaceId}
-            onChange={setWorkspaceId}
-          />
-          <ModelPicker value={modelId} onChange={setModelId} />
-        </div>
-        <span
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            color: "var(--text-3)",
-            letterSpacing: 0.4
-          }}
-        >
-          fase B · scenario determines the deterministic plan
-        </span>
-      </div>
-
       <TaskPrompt
         value={prompt}
         onChange={setPrompt}
@@ -164,14 +144,39 @@ export function CommandCenterShell({
         disabled={!canStart}
       />
 
+      <div style={{ height: 1, background: "var(--rule)", marginTop: -2 }} />
+
+      <ControlRow label="Workspace">
+        <WorkspacePicker
+          workspaces={workspaces}
+          value={workspaceId}
+          onChange={setWorkspaceId}
+        />
+        <span className="mh-coord" style={{ opacity: 0.5 }}>branch</span>
+        <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
+          {selectedWorkspace?.defaultBranch ?? "main"}
+        </span>
+      </ControlRow>
+
+      <ControlRow label="Granularity" hint="planner depth">
+        <GranularitySelector value={granularity} onChange={setGranularity} />
+      </ControlRow>
+
+      <ControlRow label="Mode" hint="what this run will do">
+        <ModeSelector value={mode} onChange={setMode} />
+        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
+          Codex execution appears after the DAG is approved.
+        </span>
+      </ControlRow>
+
       {errorMessage !== null ? (
         <div
           role="alert"
           style={{
-            border: "1px solid rgba(194,91,84,0.55)",
-            background: "rgba(194,91,84,0.10)",
+            border: "1px solid rgba(178,106,96,0.45)",
+            background: "rgba(178,106,96,0.08)",
             color: "var(--error)",
-            padding: "8px 12px",
+            padding: "8px 10px",
             borderRadius: "var(--r-md)",
             fontSize: 12.5
           }}
@@ -180,47 +185,174 @@ export function CommandCenterShell({
         </div>
       ) : null}
 
-      <GranularitySelector value={granularity} onChange={setGranularity} />
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
+        <button
+          type="button"
+          disabled={!canStart}
+          onClick={() => {
+            void handleStart();
+          }}
+          style={{
+            height: 38,
+            padding: "0 16px",
+            border: `1px solid ${canStart ? "var(--copper)" : "var(--rule)"}`,
+            background: canStart ? "var(--copper)" : "rgba(229,222,204,0.035)",
+            color: canStart ? "#14110e" : "var(--text-3)",
+            borderRadius: "var(--r-lg)",
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: canStart ? "pointer" : "not-allowed"
+          }}
+        >
+          {submitting ? "Generating DAG..." : "Generate DAG"}
+        </button>
+        <button
+          type="button"
+          disabled
+          title="Available after Codex CLI execution is connected."
+          style={{
+            height: 34,
+            padding: "0 12px",
+            border: "1px solid var(--rule)",
+            background: "transparent",
+            color: "var(--text-3)",
+            borderRadius: "var(--r-md)",
+            fontSize: 12,
+            cursor: "not-allowed"
+          }}
+        >
+          Run with Codex / future
+        </button>
+        <span style={{ flex: 1 }} />
+        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
+          Ctrl+Enter also generates
+        </span>
+      </div>
 
       <AdvancedSection>
         <ScenarioPicker
           value={scenarioId}
           onChange={setScenarioId}
-          granularity={decompositionMode}
+          granularity={granularityMode}
         />
       </AdvancedSection>
     </section>
   );
 }
 
+function ControlRow({
+  label,
+  hint,
+  children
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 18,
+        padding: "10px 0",
+        borderBottom: "1px solid var(--rule-soft)"
+      }}
+    >
+      <div style={{ width: 124, flex: "0 0 124px" }}>
+        <div className="mh-coord">{label}</div>
+        {hint !== undefined ? (
+          <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 4 }}>
+            {hint}
+          </div>
+        ) : null}
+      </div>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ModeSelector({
+  value,
+  onChange
+}: {
+  value: RunMode;
+  onChange: (value: RunMode) => void;
+}): React.ReactElement {
+  const options: Array<{ id: RunMode; label: string }> = [
+    { id: "planning", label: "Planning" },
+    { id: "mock", label: "Mock" },
+    { id: "execution-ready", label: "Execution-ready" }
+  ];
+
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Run mode"
+      style={{
+        display: "inline-flex",
+        padding: 2,
+        border: "1px solid var(--rule)",
+        borderRadius: 7
+      }}
+    >
+      {options.map((option) => {
+        const active = value === option.id;
+        return (
+          <button
+            key={option.id}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(option.id)}
+            style={{
+              height: 26,
+              border: "none",
+              background: active ? "rgba(229,222,204,0.06)" : "transparent",
+              color: active ? "var(--text)" : "var(--text-2)",
+              borderRadius: 5,
+              padding: "0 10px",
+              fontSize: 12,
+              cursor: "pointer"
+            }}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function AdvancedSection({ children }: { children: React.ReactNode }): React.ReactElement {
   const [open, setOpen] = useState(false);
   return (
-    <div>
+    <div style={{ marginTop: 2 }}>
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         style={{
           background: "transparent",
           border: "none",
-          color: "var(--coral)",
+          color: "var(--text-3)",
           cursor: "pointer",
           padding: 0,
-          fontSize: 12,
-          fontFamily: "var(--font-mono)",
-          letterSpacing: 0.4
+          fontSize: 11,
+          fontFamily: "var(--font-mono)"
         }}
       >
-        {open ? "▾ Advanced" : "▸ Advanced (scenario picker, reproducible plans)"}
+        {open ? "Hide research fixture" : "Research fixture / deterministic mock"}
       </button>
       {open ? (
         <div
           style={{
             marginTop: 10,
             padding: 12,
-            border: "1px dashed var(--border)",
+            border: "1px dashed var(--rule-strong)",
             borderRadius: "var(--r-md)",
-            background: "var(--bg-1)",
+            background: "rgba(229,222,204,0.018)",
             display: "flex",
             flexDirection: "column",
             gap: 10
@@ -234,9 +366,8 @@ function AdvancedSection({ children }: { children: React.ReactNode }): React.Rea
               lineHeight: 1.5
             }}
           >
-            En esta fase, el escenario seleccionado determina el plan determinístico de fallback.
-            Cuando hay <code>ANTHROPIC_API_KEY</code>, el LLM decomposer genera el árbol a partir del prompt;
-            el escenario se mantiene como fixture base. Tu prompt queda guardado como objetivo del run.
+            Fixtures keep thesis demos reproducible. Prompt-only runs require a live
+            decomposer key; fixture-backed runs stay clearly marked as mock.
           </p>
           {children}
         </div>

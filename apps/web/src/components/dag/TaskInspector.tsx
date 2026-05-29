@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { InspectorView } from "@/lib/graph-view-model";
+import type { GraphNodeStatus, InspectorView } from "@/lib/graph-view-model";
 
 interface TaskInspectorProps {
   view: InspectorView | null;
@@ -10,20 +10,36 @@ interface TaskInspectorProps {
   onEdited?: () => void;
 }
 
-type TabId = "overview" | "contract" | "risks" | "trace" | "validation" | "diff";
+type TabId = "overview" | "contract" | "execution" | "validation" | "trace";
 
-interface TabSpec {
-  id: TabId;
-  label: string;
-  count?: number;
-}
+const TABS: Array<{ id: TabId; label: string }> = [
+  { id: "overview", label: "Overview" },
+  { id: "contract", label: "Contract" },
+  { id: "execution", label: "Execution" },
+  { id: "validation", label: "Validation" },
+  { id: "trace", label: "Trace" }
+];
 
-const smallHeaderButtonStyle: React.CSSProperties = {
+const STATUS_COLOR: Record<GraphNodeStatus, string> = {
+  planned: "var(--planned)",
+  ready: "var(--ready)",
+  running: "var(--running)",
+  gated: "var(--gated)",
+  done: "var(--done)",
+  failed: "var(--error)",
+  blocked: "var(--blocked)",
+  generating: "var(--running)",
+  needs_review: "var(--ready)",
+  approved: "var(--done)",
+  integrated: "var(--copper)"
+};
+
+const smallButtonStyle: React.CSSProperties = {
   background: "transparent",
-  border: "1px solid var(--border)",
+  border: "1px solid var(--rule)",
   color: "var(--text-2)",
   fontSize: 11,
-  padding: "2px 8px",
+  padding: "3px 8px",
   cursor: "pointer",
   borderRadius: 4,
   fontFamily: "var(--font-mono)"
@@ -31,7 +47,7 @@ const smallHeaderButtonStyle: React.CSSProperties = {
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  border: "1px solid var(--border)",
+  border: "1px solid var(--rule)",
   background: "var(--bg-1)",
   color: "var(--text)",
   borderRadius: 5,
@@ -47,27 +63,6 @@ const textareaStyle: React.CSSProperties = {
   fontFamily: "var(--font-sans)"
 };
 
-const secondaryButtonStyle: React.CSSProperties = {
-  border: "1px solid var(--border)",
-  background: "transparent",
-  color: "var(--text-2)",
-  borderRadius: 5,
-  padding: "7px 11px",
-  cursor: "pointer",
-  fontSize: 12
-};
-
-const primaryButtonStyle: React.CSSProperties = {
-  border: "1px solid var(--coral)",
-  background: "rgba(204,120,92,0.14)",
-  color: "var(--coral-hi)",
-  borderRadius: 5,
-  padding: "7px 12px",
-  cursor: "pointer",
-  fontSize: 12,
-  fontWeight: 600
-};
-
 export function TaskInspector({ view, onClose, editableRunId, onEdited }: TaskInspectorProps): React.ReactElement {
   const [tab, setTab] = useState<TabId>("overview");
   const [isEditing, setIsEditing] = useState(false);
@@ -75,12 +70,13 @@ export function TaskInspector({ view, onClose, editableRunId, onEdited }: TaskIn
   if (view === null) {
     return (
       <aside
+        className="mh-tick-frame"
         style={{
-          width: 380,
-          minWidth: 380,
+          width: 390,
+          minWidth: 390,
           height: 760,
-          border: "1px solid var(--border)",
-          background: "var(--surface)",
+          border: "1px solid var(--rule)",
+          background: "rgba(19,20,22,0.74)",
           borderRadius: "var(--r-lg)",
           padding: 24,
           display: "flex",
@@ -89,133 +85,98 @@ export function TaskInspector({ view, onClose, editableRunId, onEdited }: TaskIn
           color: "var(--text-3)",
           fontSize: 13,
           textAlign: "center",
-          lineHeight: 1.6,
-          boxShadow: "var(--shadow-lift)"
+          lineHeight: 1.6
         }}
       >
         <div>
-          <div
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 11,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-              color: "var(--text-3)",
-              marginBottom: 10
-            }}
-          >
+          <div className="mh-coord" style={{ marginBottom: 10 }}>
             inspector
           </div>
           <p className="mh-serif" style={{ margin: 0, fontSize: 17, color: "var(--text-2)" }}>
-            Select a node to inspect its contract, risk evidence, trace events and mock diff.
+            Select a node to inspect its contract, execution state, validation and trace.
           </p>
         </div>
       </aside>
     );
   }
 
-  const tabs: TabSpec[] = [
-    { id: "overview",   label: "Overview" },
-    { id: "contract",   label: "Contract",   ...(view.contract ? {} : { count: 0 }) },
-    { id: "risks",      label: "Risks",      count: view.riskEvidence.length + view.staticSignals.length },
-    { id: "trace",      label: "Trace",      count: view.traceEvents.length },
-    { id: "validation", label: "Validation", count: view.validation?.checks.length ?? 0 },
-    { id: "diff",       label: "Diff",       count: view.runResult?.diff !== undefined ? 1 : 0 }
-  ];
-
   return (
     <>
-    <aside
-      style={{
-        width: 380,
-        minWidth: 380,
-        height: 760,
-        border: "1px solid var(--border)",
-        background: "var(--surface)",
-        borderRadius: "var(--r-lg)",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        boxShadow: "var(--shadow-lift)"
-      }}
-    >
-      <InspectorHeader
-        view={view}
-        onClose={onClose}
-        {...(editableRunId !== undefined ? { onEdit: () => setIsEditing(true) } : {})}
-      />
-
-      <div
-        role="tablist"
+      <aside
         style={{
+          width: 390,
+          minWidth: 390,
+          height: 760,
+          border: "1px solid var(--rule)",
+          background: "rgba(19,20,22,0.82)",
+          borderRadius: "var(--r-lg)",
           display: "flex",
-          gap: 0,
-          background: "var(--bg-1)",
-          borderBottom: "1px solid var(--border)",
-          padding: "0 6px",
-          overflowX: "auto",
-          flexShrink: 0
+          flexDirection: "column",
+          overflow: "hidden"
         }}
       >
-        {tabs.map((spec) => (
-          <button
-            key={spec.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === spec.id}
-            onClick={() => setTab(spec.id)}
-            style={{
-              height: 34,
-              padding: "0 10px",
-              border: "none",
-              background: "transparent",
-              borderBottom: tab === spec.id ? "2px solid var(--coral)" : "2px solid transparent",
-              color: tab === spec.id ? "var(--text)" : "var(--text-2)",
-              fontWeight: tab === spec.id ? 600 : 500,
-              fontSize: 12,
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              whiteSpace: "nowrap"
-            }}
-          >
-            {spec.label}
-            {spec.count !== undefined ? (
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 10.5,
-                  color: "var(--text-3)"
-                }}
-              >
-                {spec.count}
-              </span>
-            ) : null}
-          </button>
-        ))}
-      </div>
+        <InspectorHeader
+          view={view}
+          onClose={onClose}
+          {...(editableRunId !== undefined ? { onEdit: () => setIsEditing(true) } : {})}
+        />
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px 24px" }}>
-        {tab === "overview" && <OverviewTab view={view} />}
-        {tab === "contract" && <ContractTab view={view} />}
-        {tab === "risks" && <RisksTab view={view} />}
-        {tab === "trace" && <TraceTab view={view} />}
-        {tab === "validation" && <ValidationTab view={view} />}
-        {tab === "diff" && <DiffTab view={view} />}
-      </div>
-    </aside>
-    {editableRunId !== undefined && isEditing ? (
-      <TaskEditDialog
-        runId={editableRunId}
-        view={view}
-        onCancel={() => setIsEditing(false)}
-        onSaved={() => {
-          setIsEditing(false);
-          onEdited?.();
-        }}
-      />
-    ) : null}
+        <div
+          role="tablist"
+          style={{
+            display: "flex",
+            gap: 0,
+            borderBottom: "1px solid var(--rule)",
+            padding: "0 8px",
+            overflowX: "auto",
+            flexShrink: 0
+          }}
+        >
+          {TABS.map((spec) => (
+            <button
+              key={spec.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === spec.id}
+              onClick={() => setTab(spec.id)}
+              style={{
+                height: 34,
+                padding: "0 10px",
+                border: "none",
+                background: "transparent",
+                borderBottom: tab === spec.id ? "1px solid var(--copper)" : "1px solid transparent",
+                color: tab === spec.id ? "var(--text)" : "var(--text-2)",
+                fontWeight: tab === spec.id ? 600 : 500,
+                fontSize: 12,
+                cursor: "pointer",
+                whiteSpace: "nowrap"
+              }}
+            >
+              {spec.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px 24px" }}>
+          {tab === "overview" && <OverviewTab view={view} />}
+          {tab === "contract" && <ContractTab view={view} />}
+          {tab === "execution" && <ExecutionTab view={view} />}
+          {tab === "validation" && <ValidationTab view={view} />}
+          {tab === "trace" && <TraceTab view={view} />}
+        </div>
+      </aside>
+
+      {editableRunId !== undefined && isEditing ? (
+        <TaskEditDialog
+          runId={editableRunId}
+          view={view}
+          onCancel={() => setIsEditing(false)}
+          onSaved={() => {
+            setIsEditing(false);
+            onEdited?.();
+          }}
+        />
+      ) : null}
     </>
   );
 }
@@ -229,111 +190,262 @@ function InspectorHeader({
   onClose: () => void;
   onEdit?: () => void;
 }): React.ReactElement {
-  const isRunning = view.status === "running";
   return (
     <header
       style={{
         padding: "14px 18px 12px",
-        borderBottom: "1px solid var(--border)",
-        background: "var(--surface)",
+        borderBottom: "1px solid var(--rule)",
         display: "flex",
         flexDirection: "column",
         gap: 8
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <StatusPill status={view.status} />
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 10.5,
-              color: "var(--text-3)"
-            }}
-          >
-            depth {view.depth ?? 0} · {view.kind}
-          </span>
-        </div>
+        <StatusSignal status={view.status} />
         <div style={{ display: "flex", gap: 6 }}>
           {onEdit !== undefined ? (
-            <button type="button" onClick={onEdit} style={smallHeaderButtonStyle}>
+            <button type="button" onClick={onEdit} style={smallButtonStyle}>
               Edit
             </button>
           ) : null}
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close inspector"
-            style={smallHeaderButtonStyle}
-          >
-            ✕
+          <button type="button" onClick={onClose} aria-label="Close inspector" style={smallButtonStyle}>
+            Close
           </button>
         </div>
       </div>
-      <h3
-        className="mh-serif"
-        style={{
-          margin: 0,
-          fontSize: 19,
-          color: "var(--text)",
-          lineHeight: 1.25,
-          letterSpacing: "-0.01em"
-        }}
-      >
+      <h3 className="mh-serif" style={{ margin: 0, fontSize: 19, color: "var(--text)", lineHeight: 1.25 }}>
         {view.title}
       </h3>
-      <div
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 11,
-          color: "var(--text-2)",
-          wordBreak: "break-all"
-        }}
-        title={view.taskId}
-      >
-        task_id <span style={{ color: "var(--text)" }}>{view.taskId}</span>
+      <div className="mh-mono" style={{ fontSize: 11, color: "var(--text-2)", wordBreak: "break-all" }}>
+        {view.taskId} / depth {view.depth ?? 0} / {view.kind}
       </div>
-      {view.gateRequired ? (
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "3px 8px",
-            border: "1px solid rgba(201,164,92,0.55)",
-            background: "rgba(201,164,92,0.10)",
-            color: "var(--gated)",
-            fontSize: 11,
-            borderRadius: 999,
-            alignSelf: "flex-start",
-            fontFamily: "var(--font-mono)",
-            letterSpacing: 0.4
-          }}
-        >
-          gate required
-        </div>
-      ) : null}
-      {isRunning ? (
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "3px 8px",
-            border: "1px solid var(--coral)",
-            background: "rgba(204,120,92,0.10)",
-            color: "var(--coral-hi)",
-            fontSize: 11,
-            borderRadius: 999,
-            alignSelf: "flex-start",
-            fontFamily: "var(--font-mono)"
-          }}
-          className="coral-pulse"
-        >
-          running · mock
-        </div>
-      ) : null}
     </header>
+  );
+}
+
+function OverviewTab({ view }: { view: InspectorView }): React.ReactElement {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <Section title="Goal">
+        <Prose>{view.goal}</Prose>
+      </Section>
+      <Section title="Overview">
+        <KvGrid
+          rows={[
+            { label: "Status", value: view.status.replace("_", " "), mono: false },
+            { label: "Node type", value: view.kind, mono: false },
+            { label: "Depth", value: String(view.depth ?? 0), mono: true },
+            { label: "Dependencies", value: String(view.contract?.dependencies.length ?? 0), mono: true },
+            { label: "Gate", value: view.gateRequired ? "required" : "-", mono: false },
+            { label: "Mode", value: view.runResult !== undefined ? "executed" : "planning/mock", mono: false }
+          ]}
+        />
+      </Section>
+      <Section title="Coordination signals">
+        {view.riskEvidence.length === 0 && view.staticSignals.length === 0 ? (
+          <EmptyHint>No conflict signals reference this task.</EmptyHint>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {view.riskEvidence.slice(0, 3).map((entry, idx) => (
+              <Card key={`${entry.pairTaskId}-${idx}`}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                  <Tag tone={entry.level === "blocking" || entry.level === "high" ? "danger" : "warning"}>
+                    {entry.level}
+                  </Tag>
+                  <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
+                    with {entry.pairTaskId}
+                  </span>
+                </div>
+                <Prose>{entry.explanation}</Prose>
+              </Card>
+            ))}
+            {view.staticSignals.slice(0, 2).map((signal) => (
+              <Card key={signal.id}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
+                  <Tag tone={signal.severity === "blocking" || signal.severity === "high" ? "danger" : "warning"}>
+                    {signal.severity}
+                  </Tag>
+                  <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
+                    {signal.type}
+                  </span>
+                </div>
+                <Prose>{signal.detail}</Prose>
+              </Card>
+            ))}
+          </div>
+        )}
+      </Section>
+      {view.blockedReason ? (
+        <Section title="Blocked">
+          <div style={{ color: "var(--error)", fontSize: 12.5, lineHeight: 1.55 }}>
+            {view.blockedReason}
+          </div>
+        </Section>
+      ) : null}
+    </div>
+  );
+}
+
+function ContractTab({ view }: { view: InspectorView }): React.ReactElement {
+  if (view.contract === undefined) {
+    return <EmptyHint>This composite node has no leaf contract. Inspect a leaf child for scope rules.</EmptyHint>;
+  }
+
+  const contract = view.contract;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <Section title="Objective">
+        <Prose>{contract.objective}</Prose>
+      </Section>
+      <Section title="Allowed implementation paths">
+        <MonoList items={contract.allowedPaths} empty="none declared" />
+      </Section>
+      <Section title="Forbidden paths">
+        <MonoList items={contract.forbiddenPaths} empty="none declared" />
+      </Section>
+      <Section title="Acceptance criteria">
+        <ProseList items={contract.acceptanceCriteria} empty="none declared" />
+      </Section>
+      <Section title="Validation commands">
+        <Prose>{contract.definitionOfDone}</Prose>
+      </Section>
+      <Section title="Expected files">
+        <MonoList items={contract.expectedFiles} empty="none declared" />
+      </Section>
+      <Section title="Symbols touched">
+        <MonoList
+          items={[...contract.producedSymbols.map((item) => `+ ${item}`), ...contract.consumedSymbols.map((item) => `~ ${item}`)]}
+          empty="none declared"
+        />
+      </Section>
+    </div>
+  );
+}
+
+function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
+  const runResult = view.runResult;
+  if (runResult === undefined) {
+    const ready = view.status === "ready" || view.status === "approved";
+    return (
+      <EmptyHint>
+        {ready ? "Ready to run in isolated worktree." : "No Codex execution yet."}
+      </EmptyHint>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <Section title="Execution result">
+        <KvGrid
+          rows={[
+            { label: "Success", value: runResult.success ? "yes" : "no", mono: false },
+            { label: "Worktree", value: runResult.worktree, mono: true },
+            { label: "Branch", value: runResult.branch, mono: true },
+            { label: "Duration", value: `${runResult.durationMs}ms`, mono: true },
+            { label: "Changed files", value: String(runResult.changedFiles.length), mono: true },
+            { label: "Scope violations", value: String(runResult.scopeViolations.length), mono: true }
+          ]}
+        />
+      </Section>
+      <Section title="Changed files">
+        <MonoList items={runResult.changedFiles} empty="none" />
+      </Section>
+      {runResult.diff !== undefined ? (
+        <Section title="Diff summary">
+          <pre
+            style={{
+              margin: 0,
+              padding: 12,
+              background: "var(--bg-1)",
+              border: "1px solid var(--rule)",
+              borderRadius: "var(--r-md)",
+              color: "var(--text-2)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              lineHeight: 1.55,
+              overflowX: "auto",
+              maxHeight: 320,
+              whiteSpace: "pre"
+            }}
+          >
+            {runResult.diff}
+          </pre>
+        </Section>
+      ) : null}
+    </div>
+  );
+}
+
+function ValidationTab({ view }: { view: InspectorView }): React.ReactElement {
+  const validation = view.validation;
+  if (validation === undefined) {
+    return <EmptyHint>No validation result recorded for this task.</EmptyHint>;
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <Tag tone={validation.passed ? "accent" : "danger"}>{validation.passed ? "passed" : "failed"}</Tag>
+        <Tag>{validation.checks.length} checks</Tag>
+      </div>
+      {validation.checks.length === 0 ? (
+        <EmptyHint>No validation checks recorded.</EmptyHint>
+      ) : (
+        <div style={{ fontSize: 12, lineHeight: 1.55 }}>
+          {validation.checks.map((check, idx) => (
+            <div
+              key={`${check.kind}-${idx}`}
+              style={{
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+                padding: "7px 0",
+                borderBottom: "1px solid var(--rule-soft)"
+              }}
+            >
+              <span className="mh-dot" style={{ color: check.passed ? "var(--done)" : "var(--error)" }} />
+              <span className="mh-mono" style={{ color: "var(--text)", minWidth: 82 }}>
+                {check.kind}
+              </span>
+              <span style={{ color: "var(--text-2)", flex: 1 }}>{check.summary}</span>
+              <span className="mh-mono" style={{ color: "var(--text-3)" }}>
+                {check.durationMs}ms
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TraceTab({ view }: { view: InspectorView }): React.ReactElement {
+  if (view.traceEvents.length === 0) {
+    return <EmptyHint>No trace events recorded for this task.</EmptyHint>;
+  }
+
+  return (
+    <Section title={`Events / ${view.traceEvents.length}`}>
+      <div className="mh-mono" style={{ fontSize: 11, lineHeight: 1.55, color: "var(--text-2)" }}>
+        {view.traceEvents.map((event) => (
+          <details
+            key={event.id}
+            style={{
+              padding: "7px 0",
+              borderBottom: "1px solid var(--rule-soft)"
+            }}
+          >
+            <summary style={{ cursor: "pointer", color: "var(--text)" }}>
+              {event.timestamp.split("T")[1]?.slice(0, 8) ?? event.timestamp} / {event.type}
+            </summary>
+            <div style={{ marginTop: 5, color: "var(--text-3)" }}>
+              actor: {event.actor}
+              {event.summary !== undefined ? ` / ${event.summary}` : ""}
+            </div>
+          </details>
+        ))}
+      </div>
+    </Section>
   );
 }
 
@@ -349,14 +461,12 @@ function TaskEditDialog({
   onSaved: () => void;
 }): React.ReactElement {
   const contract = view.contract;
-  const initialObjective = contract?.objective ?? view.intent;
+  const initialObjective = contract?.objective ?? view.goal;
   const [title, setTitle] = useState(view.title);
   const [objective, setObjective] = useState(initialObjective);
   const [allowedPaths, setAllowedPaths] = useState(textFromLines(contract?.allowedPaths ?? []));
   const [forbiddenPaths, setForbiddenPaths] = useState(textFromLines(contract?.forbiddenPaths ?? []));
-  const [acceptanceCriteria, setAcceptanceCriteria] = useState(
-    textFromLines(contract?.acceptanceCriteria ?? [])
-  );
+  const [acceptanceCriteria, setAcceptanceCriteria] = useState(textFromLines(contract?.acceptanceCriteria ?? []));
   const [manual, setManual] = useState(view.manual);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -381,12 +491,8 @@ function TaskEditDialog({
 
     if (nextTitle !== view.title) body.title = nextTitle;
     if (nextObjective !== initialObjective) body.objective = nextObjective;
-    if (contract !== undefined && !arraysEqual(nextAllowedPaths, contract.allowedPaths)) {
-      body.allowedPaths = nextAllowedPaths;
-    }
-    if (contract !== undefined && !arraysEqual(nextForbiddenPaths, contract.forbiddenPaths)) {
-      body.forbiddenPaths = nextForbiddenPaths;
-    }
+    if (contract !== undefined && !arraysEqual(nextAllowedPaths, contract.allowedPaths)) body.allowedPaths = nextAllowedPaths;
+    if (contract !== undefined && !arraysEqual(nextForbiddenPaths, contract.forbiddenPaths)) body.forbiddenPaths = nextForbiddenPaths;
     if (contract !== undefined && !arraysEqual(nextAcceptanceCriteria, contract.acceptanceCriteria)) {
       body.acceptanceCriteria = nextAcceptanceCriteria;
     }
@@ -426,7 +532,7 @@ function TaskEditDialog({
         position: "fixed",
         inset: 0,
         zIndex: 50,
-        background: "rgba(12,12,10,0.58)",
+        background: "rgba(8,8,7,0.62)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -440,7 +546,7 @@ function TaskEditDialog({
           maxWidth: "min(560px, calc(100vw - 32px))",
           maxHeight: "calc(100vh - 48px)",
           overflowY: "auto",
-          border: "1px solid var(--border)",
+          border: "1px solid var(--rule)",
           background: "var(--surface)",
           borderRadius: "var(--r-lg)",
           boxShadow: "var(--shadow-lift)",
@@ -452,25 +558,12 @@ function TaskEditDialog({
       >
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
           <div>
-            <div
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: 10.5,
-                color: "var(--text-3)",
-                textTransform: "uppercase",
-                letterSpacing: "0.16em"
-              }}
-            >
-              edit task
-            </div>
-            <div
-              className="mh-serif"
-              style={{ marginTop: 3, color: "var(--text)", fontSize: 20, lineHeight: 1.2 }}
-            >
+            <div className="mh-coord">edit node</div>
+            <div className="mh-serif" style={{ marginTop: 3, color: "var(--text)", fontSize: 20, lineHeight: 1.2 }}>
               {view.taskId}
             </div>
           </div>
-          <button type="button" onClick={onCancel} style={smallHeaderButtonStyle}>
+          <button type="button" onClick={onCancel} style={smallButtonStyle}>
             Close
           </button>
         </div>
@@ -478,67 +571,34 @@ function TaskEditDialog({
         <DialogField label="Title">
           <input value={title} onChange={(event) => setTitle(event.target.value)} style={inputStyle} />
         </DialogField>
-
-        <DialogField label="Objective / intent">
-          <textarea
-            value={objective}
-            onChange={(event) => setObjective(event.target.value)}
-            rows={4}
-            style={textareaStyle}
-          />
+        <DialogField label="Objective / goal">
+          <textarea value={objective} onChange={(event) => setObjective(event.target.value)} rows={4} style={textareaStyle} />
         </DialogField>
 
         {contract !== undefined ? (
           <>
             <DialogField label="Allowed paths">
-              <textarea
-                value={allowedPaths}
-                onChange={(event) => setAllowedPaths(event.target.value)}
-                rows={4}
-                style={textareaStyle}
-              />
+              <textarea value={allowedPaths} onChange={(event) => setAllowedPaths(event.target.value)} rows={4} style={textareaStyle} />
             </DialogField>
             <DialogField label="Forbidden paths">
-              <textarea
-                value={forbiddenPaths}
-                onChange={(event) => setForbiddenPaths(event.target.value)}
-                rows={3}
-                style={textareaStyle}
-              />
+              <textarea value={forbiddenPaths} onChange={(event) => setForbiddenPaths(event.target.value)} rows={3} style={textareaStyle} />
             </DialogField>
             <DialogField label="Acceptance criteria">
-              <textarea
-                value={acceptanceCriteria}
-                onChange={(event) => setAcceptanceCriteria(event.target.value)}
-                rows={4}
-                style={textareaStyle}
-              />
+              <textarea value={acceptanceCriteria} onChange={(event) => setAcceptanceCriteria(event.target.value)} rows={4} style={textareaStyle} />
             </DialogField>
           </>
         ) : null}
 
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            color: "var(--text-2)",
-            fontSize: 12.5
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={manual}
-            onChange={(event) => setManual(event.target.checked)}
-          />
+        <label style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-2)", fontSize: 12.5 }}>
+          <input type="checkbox" checked={manual} onChange={(event) => setManual(event.target.checked)} />
           Manual task
         </label>
 
         {error !== null ? (
           <div
             style={{
-              border: "1px solid rgba(194,91,84,0.35)",
-              background: "rgba(194,91,84,0.08)",
+              border: "1px solid rgba(178,106,96,0.35)",
+              background: "rgba(178,106,96,0.08)",
               color: "var(--error)",
               borderRadius: "var(--r-md)",
               padding: "9px 10px",
@@ -563,426 +623,10 @@ function TaskEditDialog({
   );
 }
 
-function DialogField({
-  label,
-  children
-}: {
-  label: string;
-  children: React.ReactNode;
-}): React.ReactElement {
-  return (
-    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span
-        style={{
-          color: "var(--text-3)",
-          fontFamily: "var(--font-mono)",
-          fontSize: 10.5,
-          textTransform: "uppercase",
-          letterSpacing: "0.14em"
-        }}
-      >
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function linesFromText(value: string): string[] {
-  return value
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-}
-
-function textFromLines(lines: readonly string[]): string {
-  return lines.join("\n");
-}
-
-function arraysEqual(left: readonly string[], right: readonly string[]): boolean {
-  if (left.length !== right.length) {
-    return false;
-  }
-  return left.every((value, index) => value === right[index]);
-}
-
-async function errorMessageFromResponse(response: Response): Promise<string> {
-  try {
-    const payload = await response.json() as { error?: unknown };
-    if (typeof payload.error === "string" && payload.error.length > 0) {
-      return payload.error;
-    }
-  } catch {
-    // fall through to the status text
-  }
-  return response.statusText || `Request failed with ${response.status}`;
-}
-
-function OverviewTab({ view }: { view: InspectorView }): React.ReactElement {
-  const runResult = view.runResult;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Section title="Summary">
-        <KvGrid
-          rows={[
-            { label: "Status", value: view.status, mono: false },
-            { label: "Kind", value: view.kind, mono: false },
-            { label: "Depth", value: String(view.depth ?? 0), mono: true },
-            { label: "Risk", value: highestRisk(view) ?? "none", mono: false },
-            { label: "Gate", value: view.gateRequired ? "required" : "—", mono: false },
-            { label: "Author", value: view.authoredBy ?? "unknown", mono: false },
-            { label: "Manual", value: view.manual ? "yes" : "no", mono: false },
-            { label: "Dependencies", value: String(view.contract?.dependencies.length ?? 0), mono: true },
-            { label: "Risk pairs", value: String(view.riskEvidence.length), mono: true },
-            { label: "Static signals", value: String(view.staticSignals.length), mono: true },
-            { label: "Trace events", value: String(view.traceEvents.length), mono: true }
-          ]}
-        />
-      </Section>
-
-      {runResult ? (
-        <Section title="Mock execution">
-          <KvGrid
-            rows={[
-              { label: "Success", value: runResult.success ? "yes" : "no", mono: false },
-              { label: "Worktree", value: runResult.worktree, mono: true },
-              { label: "Branch", value: runResult.branch, mono: true },
-              { label: "Duration", value: `${runResult.durationMs}ms`, mono: true },
-              { label: "Cost", value: `$${runResult.costUsd.toFixed(3)}`, mono: true },
-              { label: "Changed files", value: String(runResult.changedFiles.length), mono: true },
-              { label: "Scope violations", value: String(runResult.scopeViolations.length), mono: true }
-            ]}
-          />
-        </Section>
-      ) : (
-        <EmptyHint>
-          No mock execution result. Task may be composite, blocked, or not yet executed.
-        </EmptyHint>
-      )}
-
-      {view.blockedReason ? (
-        <Section title="Blocked">
-          <div style={{ color: "var(--error)", fontSize: 12.5, lineHeight: 1.55 }}>
-            {view.blockedReason}
-          </div>
-        </Section>
-      ) : null}
-    </div>
-  );
-}
-
-function ContractTab({ view }: { view: InspectorView }): React.ReactElement {
-  if (view.contract === undefined) {
-    return (
-      <EmptyHint>
-        This node does not carry an <span style={{ fontFamily: "var(--font-mono)" }}>AgentTaskContract</span> — likely a composite parent. Inspect a leaf child for contract details.
-      </EmptyHint>
-    );
-  }
-
-  const contract = view.contract;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Section title="Objective">
-        <Prose>{contract.objective}</Prose>
-      </Section>
-      <Section title="Definition of done">
-        <Prose>{contract.definitionOfDone}</Prose>
-      </Section>
-      <Section title={`Acceptance criteria · ${contract.acceptanceCriteria.length}`}>
-        <ProseList items={contract.acceptanceCriteria} empty="none declared" />
-      </Section>
-      <Section title="Limits">
-        <KvGrid
-          rows={[
-            { label: "Max duration", value: `${contract.maxDurationMs}ms`, mono: true },
-            { label: "Max cost", value: `$${contract.maxCostUsd.toFixed(3)}`, mono: true }
-          ]}
-        />
-      </Section>
-      <Section title={`Allowed paths · ${contract.allowedPaths.length}`}>
-        <MonoList items={contract.allowedPaths} empty="none declared" />
-      </Section>
-      <Section title={`Forbidden paths · ${contract.forbiddenPaths.length}`}>
-        <MonoList items={contract.forbiddenPaths} empty="none declared" />
-      </Section>
-      <Section title={`Expected files · ${contract.expectedFiles.length}`}>
-        <MonoList items={contract.expectedFiles} empty="none" />
-      </Section>
-      <Section title={`Produced symbols · ${contract.producedSymbols.length}`}>
-        <MonoList items={contract.producedSymbols} empty="none" />
-      </Section>
-      <Section title={`Consumed symbols · ${contract.consumedSymbols.length}`}>
-        <MonoList items={contract.consumedSymbols} empty="none" />
-      </Section>
-      <Section title={`Dependencies · ${contract.dependencies.length}`}>
-        <MonoList items={contract.dependencies} empty="none" />
-      </Section>
-      <Section title={`Known risks · ${contract.knownRisks.length}`}>
-        <ProseList items={contract.knownRisks} empty="none declared" />
-      </Section>
-    </div>
-  );
-}
-
-function RisksTab({ view }: { view: InspectorView }): React.ReactElement {
-  if (view.riskEvidence.length === 0 && view.staticSignals.length === 0) {
-    return <EmptyHint>No conflict predictions or static signals reference this task.</EmptyHint>;
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Section title={`Risk evidence · ${view.riskEvidence.length}`}>
-        {view.riskEvidence.length === 0 ? (
-          <EmptyHint>No conflict predictions involve this task.</EmptyHint>
-        ) : (
-          view.riskEvidence.map((entry, idx) => (
-            <Card key={`${entry.pairTaskId}-${idx}`}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: 6,
-                  gap: 8
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: 10.5,
-                    color: "var(--coral)",
-                    wordBreak: "break-all"
-                  }}
-                >
-                  {entry.pairTaskId}
-                </span>
-                <Tag
-                  tone={entry.level === "blocking" || entry.level === "high" ? "danger" : "warning"}
-                >
-                  {entry.level} · {entry.recommendation}
-                </Tag>
-              </div>
-              <Prose>{entry.explanation}</Prose>
-              {entry.sharedFiles.length > 0 ? (
-                <div style={{ marginTop: 8 }}>
-                  <Caption>shared files</Caption>
-                  <MonoList items={entry.sharedFiles} empty="—" />
-                </div>
-              ) : null}
-              {entry.sharedSymbols.length > 0 ? (
-                <div style={{ marginTop: 8 }}>
-                  <Caption>shared symbols</Caption>
-                  <MonoList items={entry.sharedSymbols} empty="—" />
-                </div>
-              ) : null}
-            </Card>
-          ))
-        )}
-      </Section>
-
-      <Section title={`Static signals · ${view.staticSignals.length}`}>
-        {view.staticSignals.length === 0 ? (
-          <EmptyHint>No static conflict signals reference this task.</EmptyHint>
-        ) : (
-          view.staticSignals.map((signal) => (
-            <Card key={signal.id}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: 10.5,
-                    color: "var(--text)"
-                  }}
-                >
-                  {signal.type}
-                </span>
-                <Tag
-                  tone={signal.severity === "blocking" || signal.severity === "high" ? "danger" : "warning"}
-                >
-                  {signal.severity}
-                </Tag>
-              </div>
-              <Prose>{signal.detail}</Prose>
-              {signal.pairTaskId ? (
-                <div
-                  style={{
-                    marginTop: 6,
-                    fontSize: 10.5,
-                    color: "var(--text-3)",
-                    fontFamily: "var(--font-mono)"
-                  }}
-                >
-                  pair · {signal.pairTaskId}
-                </div>
-              ) : null}
-            </Card>
-          ))
-        )}
-      </Section>
-    </div>
-  );
-}
-
-function TraceTab({ view }: { view: InspectorView }): React.ReactElement {
-  if (view.traceEvents.length === 0) {
-    return <EmptyHint>No trace events recorded for this task.</EmptyHint>;
-  }
-
-  return (
-    <Section title={`Events · ${view.traceEvents.length}`}>
-      <div
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 11,
-          lineHeight: 1.55,
-          color: "var(--text-2)"
-        }}
-      >
-        {view.traceEvents.map((event) => (
-          <div
-            key={event.id}
-            style={{
-              padding: "6px 0",
-              borderBottom: "1px dashed var(--border-soft)"
-            }}
-          >
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ color: "var(--text-3)" }}>
-                {event.timestamp.split("T")[1]?.slice(0, 8) ?? event.timestamp}
-              </span>
-              <span style={{ color: "var(--text)" }}>{event.type}</span>
-              <span style={{ marginLeft: "auto", color: "var(--text-3)" }}>{event.actor}</span>
-            </div>
-            {event.summary ? (
-              <div style={{ color: "var(--text-2)", marginTop: 2 }}>{event.summary}</div>
-            ) : null}
-          </div>
-        ))}
-      </div>
-    </Section>
-  );
-}
-
-function ValidationTab({ view }: { view: InspectorView }): React.ReactElement {
-  const validation = view.validation;
-  if (validation === undefined) {
-    return <EmptyHint>No validation result recorded for this task.</EmptyHint>;
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        <Tag tone={validation.passed ? "accent" : "danger"}>
-          {validation.passed ? "passed" : "failed"}
-        </Tag>
-        <Tag>{validation.checks.length} checks</Tag>
-        <Tag tone="default">mock validation</Tag>
-      </div>
-      {validation.checks.length === 0 ? (
-        <EmptyHint>No validation checks recorded.</EmptyHint>
-      ) : (
-        <div style={{ fontSize: 12, lineHeight: 1.55 }}>
-          {validation.checks.map((check, idx) => (
-            <div
-              key={`${check.kind}-${idx}`}
-              style={{
-                display: "flex",
-                gap: 8,
-                alignItems: "center",
-                padding: "6px 0",
-                borderBottom: "1px dashed var(--border-soft)"
-              }}
-            >
-              <span
-                aria-hidden
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: 999,
-                  background: check.passed ? "var(--done)" : "var(--error)"
-                }}
-              />
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  color: "var(--text)",
-                  minWidth: 80
-                }}
-              >
-                {check.kind}
-              </span>
-              <span style={{ color: "var(--text-2)", flex: 1 }}>{check.summary}</span>
-              <span
-                style={{
-                  color: "var(--text-3)",
-                  fontFamily: "var(--font-mono)"
-                }}
-              >
-                {check.durationMs}ms
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DiffTab({ view }: { view: InspectorView }): React.ReactElement {
-  const runResult = view.runResult;
-  if (runResult === undefined) {
-    return <EmptyHint>No mock execution result. There is no diff to display.</EmptyHint>;
-  }
-  if (runResult.diff === undefined) {
-    return (
-      <EmptyHint>
-        Mock execution recorded no diff payload.{" "}
-        <span style={{ fontFamily: "var(--font-mono)" }}>changedFiles</span>:{" "}
-        {runResult.changedFiles.length === 0 ? "none" : runResult.changedFiles.length}.
-      </EmptyHint>
-    );
-  }
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <Tag tone="warning">simulated diff · not from real execution</Tag>
-      <pre
-        style={{
-          margin: 0,
-          padding: 12,
-          background: "var(--bg-1)",
-          border: "1px solid var(--border-soft)",
-          borderRadius: "var(--r-md)",
-          color: "var(--text-2)",
-          fontFamily: "var(--font-mono)",
-          fontSize: 11,
-          lineHeight: 1.55,
-          overflowX: "auto",
-          maxHeight: 480,
-          whiteSpace: "pre"
-        }}
-      >
-        {runResult.diff}
-      </pre>
-    </div>
-  );
-}
-
 function Section({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <h4
-        style={{
-          margin: 0,
-          fontSize: 10.5,
-          fontWeight: 600,
-          letterSpacing: "0.18em",
-          textTransform: "uppercase",
-          color: "var(--coral)",
-          fontFamily: "var(--font-mono)"
-        }}
-      >
+      <h4 className="mh-coord" style={{ margin: 0, color: "var(--copper)" }}>
         {title}
       </h4>
       <div>{children}</div>
@@ -996,19 +640,9 @@ function KvGrid({
   rows: Array<{ label: string; value: string; mono?: boolean }>;
 }): React.ReactElement {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: "6px 18px",
-        fontSize: 12
-      }}
-    >
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px 18px", fontSize: 12 }}>
       {rows.map((row) => (
-        <div
-          key={row.label}
-          style={{ display: "flex", justifyContent: "space-between", gap: 8, minWidth: 0 }}
-        >
+        <div key={row.label} style={{ display: "flex", justifyContent: "space-between", gap: 8, minWidth: 0 }}>
           <span style={{ color: "var(--text-3)" }}>{row.label}</span>
           <span
             style={{
@@ -1031,9 +665,7 @@ function KvGrid({
 function MonoList({ items, empty }: { items: string[]; empty: string }): React.ReactElement {
   const [showAll, setShowAll] = useState(false);
   if (items.length === 0) {
-    return (
-      <div style={{ fontSize: 11.5, color: "var(--text-3)", fontStyle: "italic" }}>{empty}</div>
-    );
+    return <div style={{ fontSize: 11.5, color: "var(--text-3)", fontStyle: "italic" }}>{empty}</div>;
   }
   const limit = 8;
   const displayed = showAll ? items : items.slice(0, limit);
@@ -1066,7 +698,7 @@ function MonoList({ items, empty }: { items: string[]; empty: string }): React.R
             border: "none",
             padding: 0,
             cursor: "pointer",
-            color: "var(--coral)",
+            color: "var(--copper)",
             fontSize: 11,
             fontFamily: "var(--font-mono)"
           }}
@@ -1083,15 +715,7 @@ function ProseList({ items, empty }: { items: string[]; empty: string }): React.
     return <div style={{ fontSize: 11.5, color: "var(--text-3)", fontStyle: "italic" }}>{empty}</div>;
   }
   return (
-    <ul
-      style={{
-        margin: 0,
-        paddingLeft: 16,
-        fontSize: 12,
-        color: "var(--text-2)",
-        lineHeight: 1.55
-      }}
-    >
+    <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--text-2)", lineHeight: 1.55 }}>
       {items.map((item, idx) => (
         <li key={`${item}-${idx}`}>{item}</li>
       ))}
@@ -1101,15 +725,7 @@ function ProseList({ items, empty }: { items: string[]; empty: string }): React.
 
 function Card({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
-    <div
-      style={{
-        border: "1px solid var(--border-soft)",
-        background: "var(--bg-1)",
-        padding: "10px 12px",
-        marginBottom: 8,
-        borderRadius: "var(--r-md)"
-      }}
-    >
+    <div style={{ border: "1px solid var(--rule)", background: "var(--bg-1)", padding: "10px 12px", borderRadius: "var(--r-md)" }}>
       {children}
     </div>
   );
@@ -1123,8 +739,7 @@ function EmptyHint({ children }: { children: React.ReactNode }): React.ReactElem
         color: "var(--text-3)",
         fontStyle: "italic",
         padding: "10px 12px",
-        border: "1px dashed var(--border-soft)",
-        background: "var(--bg-1)",
+        border: "1px dashed var(--rule)",
         borderRadius: "var(--r-md)",
         lineHeight: 1.5
       }}
@@ -1135,65 +750,14 @@ function EmptyHint({ children }: { children: React.ReactNode }): React.ReactElem
 }
 
 function Prose({ children }: { children: React.ReactNode }): React.ReactElement {
-  return (
-    <p
-      style={{
-        margin: 0,
-        fontSize: 12.5,
-        color: "var(--text)",
-        lineHeight: 1.6
-      }}
-    >
-      {children}
-    </p>
-  );
+  return <p style={{ margin: 0, fontSize: 12.5, color: "var(--text)", lineHeight: 1.6 }}>{children}</p>;
 }
 
-function Caption({ children }: { children: React.ReactNode }): React.ReactElement {
+function StatusSignal({ status }: { status: GraphNodeStatus }): React.ReactElement {
   return (
-    <div
-      style={{
-        fontSize: 10,
-        color: "var(--text-3)",
-        letterSpacing: 0.6,
-        textTransform: "uppercase",
-        marginBottom: 3,
-        fontFamily: "var(--font-mono)"
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function StatusPill({ status }: { status: string }): React.ReactElement {
-  const map: Record<string, { fg: string; border: string; bg: string }> = {
-    planned: { fg: "var(--text-2)", border: "var(--border)", bg: "var(--surface-2)" },
-    ready:   { fg: "var(--ready)",  border: "rgba(201,164,92,0.55)", bg: "rgba(201,164,92,0.10)" },
-    running: { fg: "var(--coral)",  border: "var(--coral)", bg: "rgba(204,120,92,0.10)" },
-    gated:   { fg: "var(--gated)",  border: "rgba(201,164,92,0.55)", bg: "rgba(201,164,92,0.10)" },
-    done:    { fg: "var(--done)",   border: "rgba(107,142,107,0.55)", bg: "rgba(107,142,107,0.10)" },
-    failed:  { fg: "var(--error)",  border: "rgba(194,91,84,0.55)",  bg: "rgba(194,91,84,0.10)" },
-    blocked: { fg: "var(--blocked)", border: "var(--border)", bg: "var(--surface-2)" }
-  };
-  const tone = map[status] ?? map.planned!;
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        padding: "2px 8px",
-        borderRadius: 999,
-        border: `1px solid ${tone.border}`,
-        background: tone.bg,
-        color: tone.fg,
-        fontSize: 10.5,
-        fontWeight: 500
-      }}
-    >
-      <span aria-hidden style={{ width: 6, height: 6, borderRadius: 999, background: tone.fg }} />
-      {status}
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 7, color: "var(--text-2)", fontSize: 11.5 }}>
+      <span className="mh-dot" style={{ color: STATUS_COLOR[status] }} />
+      {status.replace("_", " ")}
     </span>
   );
 }
@@ -1205,41 +769,90 @@ function Tag({
   children: React.ReactNode;
   tone?: "default" | "accent" | "warning" | "danger";
 }): React.ReactElement {
-  const palette: Record<NonNullable<typeof tone>, { fg: string; bg: string; border: string }> = {
-    default: { fg: "var(--text-2)", bg: "var(--surface-2)", border: "var(--border)" },
-    accent:  { fg: "var(--coral)",  bg: "rgba(204,120,92,0.10)", border: "rgba(204,120,92,0.45)" },
-    warning: { fg: "var(--ready)",  bg: "rgba(201,164,92,0.10)", border: "rgba(201,164,92,0.55)" },
-    danger:  { fg: "var(--error)",  bg: "rgba(194,91,84,0.10)",  border: "rgba(194,91,84,0.55)" }
+  const palette: Record<NonNullable<typeof tone>, string> = {
+    default: "var(--text-2)",
+    accent: "var(--done)",
+    warning: "var(--ready)",
+    danger: "var(--error)"
   };
-  const color = palette[tone];
   return (
     <span
+      className="mh-mono"
       style={{
         display: "inline-flex",
         alignItems: "center",
-        padding: "2px 8px",
-        borderRadius: 999,
+        gap: 5,
         fontSize: 10.5,
-        letterSpacing: 0.4,
-        textTransform: "uppercase",
-        border: `1px solid ${color.border}`,
-        background: color.bg,
-        color: color.fg,
-        fontFamily: "var(--font-mono)"
+        color: palette[tone],
+        textTransform: "uppercase"
       }}
     >
+      <span className="mh-dot" style={{ width: 5, height: 5 }} />
       {children}
     </span>
   );
 }
 
-function highestRisk(view: InspectorView): string | undefined {
-  const ranks = { low: 0, medium: 1, high: 2, blocking: 3 } as const;
-  let best: keyof typeof ranks | undefined;
-  for (const entry of view.riskEvidence) {
-    if (best === undefined || ranks[entry.level] > ranks[best]) {
-      best = entry.level;
+function DialogField({
+  label,
+  children
+}: {
+  label: string;
+  children: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span className="mh-coord">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+const secondaryButtonStyle: React.CSSProperties = {
+  border: "1px solid var(--rule)",
+  background: "transparent",
+  color: "var(--text-2)",
+  borderRadius: 5,
+  padding: "7px 11px",
+  cursor: "pointer",
+  fontSize: 12
+};
+
+const primaryButtonStyle: React.CSSProperties = {
+  border: "1px solid var(--copper)",
+  background: "rgba(180,113,72,0.14)",
+  color: "var(--copper-hi)",
+  borderRadius: 5,
+  padding: "7px 12px",
+  cursor: "pointer",
+  fontSize: 12,
+  fontWeight: 600
+};
+
+function linesFromText(value: string): string[] {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+function textFromLines(lines: readonly string[]): string {
+  return lines.join("\n");
+}
+
+function arraysEqual(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((value, index) => value === right[index]);
+}
+
+async function errorMessageFromResponse(response: Response): Promise<string> {
+  try {
+    const payload = await response.json() as { error?: unknown };
+    if (typeof payload.error === "string" && payload.error.length > 0) {
+      return payload.error;
     }
+  } catch {
+    // fall through to the status text
   }
-  return best;
+  return response.statusText || `Request failed with ${response.status}`;
 }

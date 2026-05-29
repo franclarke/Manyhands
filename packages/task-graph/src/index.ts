@@ -16,11 +16,17 @@ export const TaskNodeStatusSchema = z.union([
 
 export type TaskNodeStatus = z.infer<typeof TaskNodeStatusSchema>;
 
-export const TaskNodeKindSchema = z.union([z.literal("composite"), z.literal("leaf")]);
+export const TaskNodeKindSchema = z.union([
+  z.literal("root"),
+  z.literal("composite"),
+  z.literal("leaf"),
+  z.literal("integrator")
+]);
 
 export type TaskNodeKind = z.infer<typeof TaskNodeKindSchema>;
 
 export const TaskGranularityLevelSchema = z.union([
+  z.literal("auto"),
   z.literal("coarse"),
   z.literal("medium"),
   z.literal("fine")
@@ -78,11 +84,15 @@ export const TaskNodeSchema = z.object({
   parentId: EntityIdSchema.nullable(),
   kind: TaskNodeKindSchema,
   title: NonEmptyStringSchema,
-  intent: NonEmptyStringSchema,
+  goal: NonEmptyStringSchema,
   status: TaskNodeStatusSchema,
   granularity: TaskGranularityLevelSchema,
   depth: z.number().int().nonnegative(),
   childrenIds: z.array(EntityIdSchema).default([]),
+  dependencies: z.array(EntityIdSchema).default([]),
+  prompt: NonEmptyStringSchema.optional(),
+  acceptanceCriteria: z.array(NonEmptyStringSchema).optional(),
+  output: z.record(z.unknown()).optional(),
   contract: AgentTaskContractSchema.optional(),
   worktree: NonEmptyStringSchema.optional(),
   agentId: NonEmptyStringSchema.optional(),
@@ -114,15 +124,18 @@ export type TaskGraph = Omit<z.infer<typeof TaskGraphSchema>, "nodes"> & {
 export const TaskValidationIssueCodeSchema = z.union([
   z.literal("schema_invalid"),
   z.literal("missing_root"),
+  z.literal("multiple_roots"),
   z.literal("cycle_detected"),
   z.literal("leaf_without_contract"),
   z.literal("empty_scope"),
   z.literal("dangling_dependency"),
+  z.literal("dependency_sync_divergence"),
   z.literal("max_depth_exceeded"),
   z.literal("non_atomic_leaf"),
   z.literal("orphan_node"),
   z.literal("parent_child_mismatch"),
-  z.literal("invalid_node_kind")
+  z.literal("invalid_node_kind"),
+  z.literal("invalid_integrator")
 ]);
 
 export type TaskValidationIssueCode = z.infer<typeof TaskValidationIssueCodeSchema>;
@@ -181,6 +194,26 @@ export function validateTaskGraph(
     });
   }
 
+  const rootKindNodes = Object.values(graph.nodes).filter((n) => n.kind === "root");
+  if (rootKindNodes.length > 1) {
+    issues.push({
+      code: "multiple_roots",
+      message: `graph has ${rootKindNodes.length} root-kind nodes, expected at most 1`,
+      severity: "error"
+    });
+  }
+
+  if (root && root.kind === "root" && root.parentId !== null) {
+    issues.push({
+      code: "invalid_node_kind",
+      taskId: root.id,
+      message: `root-kind node ${root.id} must have parentId === null`,
+      severity: "error"
+    });
+  }
+
+  const incomingDeps = buildIncomingDependencyIndex(graph);
+
   for (const node of Object.values(graph.nodes)) {
     if (options.maxDepth !== undefined && node.depth > options.maxDepth) {
       issues.push({
@@ -191,33 +224,48 @@ export function validateTaskGraph(
       });
     }
 
-    if (node.kind === "leaf" && node.childrenIds.length > 0) {
+    if ((node.kind === "leaf" || node.kind === "integrator") && node.childrenIds.length > 0) {
       issues.push({
         code: "invalid_node_kind",
         taskId: node.id,
-        message: `leaf node ${node.id} must not declare children`,
+        message: `${node.kind} node ${node.id} must not declare children`,
         severity: "error"
       });
     }
 
-    if (node.kind === "composite" && node.childrenIds.length === 0) {
+    if ((node.kind === "composite" || node.kind === "root") && node.childrenIds.length === 0) {
       issues.push({
         code: "invalid_node_kind",
         taskId: node.id,
-        message: `composite node ${node.id} must declare at least one child`,
+        message: `${node.kind} node ${node.id} must declare at least one child`,
         severity: "error"
       });
+    }
+
+    if (node.kind === "integrator") {
+      const integratesTaskIds = node.metadata?.integratesTaskIds;
+      if (!Array.isArray(integratesTaskIds) || integratesTaskIds.length === 0) {
+        issues.push({
+          code: "invalid_integrator",
+          taskId: node.id,
+          message: `integrator node ${node.id} must specify integratesTaskIds in metadata`,
+          severity: "warning"
+        });
+      }
     }
 
     if (node.kind === "leaf") {
-      if (!node.contract) {
+      const hasGoal = node.prompt !== undefined || node.contract?.objective !== undefined;
+      if (!hasGoal) {
         issues.push({
           code: "leaf_without_contract",
           taskId: node.id,
-          message: `leaf node ${node.id} does not have an agent task contract`,
-          severity: "error"
+          message: `leaf node ${node.id} has neither prompt nor contract.objective`,
+          severity: "warning"
         });
-      } else {
+      }
+
+      if (node.contract) {
         const contract = AgentTaskContractSchema.safeParse(node.contract);
 
         if (!contract.success) {
@@ -237,7 +285,7 @@ export function validateTaskGraph(
             });
           }
 
-          if (contract.data.acceptance.length === 0) {
+          if (contract.data.acceptance.length === 0 && (node.acceptanceCriteria === undefined || node.acceptanceCriteria.length === 0)) {
             issues.push({
               code: "non_atomic_leaf",
               taskId: node.id,
@@ -245,6 +293,20 @@ export function validateTaskGraph(
               severity: "error"
             });
           }
+        }
+      }
+    }
+
+    if (node.dependencies.length > 0) {
+      const canonicalIncoming = new Set(incomingDeps.get(node.id) ?? []);
+      for (const depId of node.dependencies) {
+        if (!canonicalIncoming.has(depId)) {
+          issues.push({
+            code: "dependency_sync_divergence",
+            taskId: node.id,
+            message: `node ${node.id} lists dependency ${depId} not found in graph.dependencies`,
+            severity: "warning"
+          });
         }
       }
     }
@@ -396,7 +458,7 @@ export function getTaskReadiness(
 ): TaskReadiness {
   const node = graph.nodes[taskId];
 
-  if (!node || node.kind !== "leaf") {
+  if (!node || (node.kind !== "leaf" && node.kind !== "integrator")) {
     return {
       taskId,
       isReady: false,
@@ -428,7 +490,7 @@ export function aggregateTaskStatus(graph: TaskGraph, taskId: string): TaskNodeS
     throw new Error(`unknown task ${taskId}`);
   }
 
-  if (node.kind === "leaf") {
+  if (node.kind === "leaf" || node.kind === "integrator") {
     return node.status;
   }
 
@@ -463,6 +525,82 @@ export function aggregateTaskStatus(graph: TaskGraph, taskId: string): TaskNodeS
   }
 
   return "planned";
+}
+
+// ---------------------------------------------------------------------------
+// Public helpers: graph queries & dependency management
+// ---------------------------------------------------------------------------
+
+export function getRootNode(graph: TaskGraph): TaskNode | undefined {
+  return graph.nodes[graph.rootId];
+}
+
+export function getExecutableNodes(graph: TaskGraph): TaskNode[] {
+  return Object.values(graph.nodes).filter(
+    (node) => node.kind === "leaf" || node.kind === "integrator"
+  );
+}
+
+export function addDependency(
+  graph: TaskGraph,
+  dep: TaskDependency
+): TaskGraph {
+  const target = graph.nodes[dep.toTaskId];
+  if (!target) return graph;
+
+  const alreadyExists = graph.dependencies.some(
+    (d) => d.fromTaskId === dep.fromTaskId && d.toTaskId === dep.toTaskId
+  );
+  if (alreadyExists) return graph;
+
+  graph.dependencies.push(dep);
+
+  if (!target.dependencies.includes(dep.fromTaskId)) {
+    target.dependencies.push(dep.fromTaskId);
+  }
+
+  return graph;
+}
+
+export function removeDependency(
+  graph: TaskGraph,
+  fromTaskId: string,
+  toTaskId: string
+): TaskGraph {
+  graph.dependencies = graph.dependencies.filter(
+    (d) => !(d.fromTaskId === fromTaskId && d.toTaskId === toTaskId)
+  );
+
+  const target = graph.nodes[toTaskId];
+  if (target) {
+    target.dependencies = target.dependencies.filter((id) => id !== fromTaskId);
+  }
+
+  return graph;
+}
+
+export function syncNodeDependencies(graph: TaskGraph): void {
+  const incoming = buildIncomingDependencyIndex(graph);
+
+  for (const node of Object.values(graph.nodes)) {
+    node.dependencies = incoming.get(node.id) ?? [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+function buildIncomingDependencyIndex(graph: TaskGraph): Map<string, string[]> {
+  const index = new Map<string, string[]>();
+
+  for (const dep of graph.dependencies) {
+    const list = index.get(dep.toTaskId) ?? [];
+    list.push(dep.fromTaskId);
+    index.set(dep.toTaskId, list);
+  }
+
+  return index;
 }
 
 function buildAdjacency(graph: TaskGraph): Map<string, string[]> {

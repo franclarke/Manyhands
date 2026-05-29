@@ -1,15 +1,17 @@
-import type { DecompositionMode } from "@manyhands/core";
+import type { GranularityMode } from "@/lib/server/runs/schema";
 
-export const GRANULARITY_LEVELS = ["baja", "media", "alta"] as const;
+export const GRANULARITY_LEVELS = ["automatica", "baja", "media", "alta"] as const;
 export type GranularityLevel = (typeof GRANULARITY_LEVELS)[number];
 
-export const GRANULARITY_TO_MODE: Record<GranularityLevel, DecompositionMode> = {
+export const GRANULARITY_TO_MODE: Record<GranularityLevel, GranularityMode> = {
+  automatica: "auto",
   baja: "coarse",
   media: "balanced",
   alta: "fine"
 };
 
-export const GRANULARITY_FROM_MODE: Record<DecompositionMode, GranularityLevel> = {
+export const GRANULARITY_FROM_MODE: Record<GranularityMode, GranularityLevel> = {
+  auto: "automatica",
   coarse: "baja",
   balanced: "media",
   fine: "alta"
@@ -21,25 +23,29 @@ export interface GranularityDescription {
 }
 
 export const GRANULARITY_DESCRIPTIONS: Record<GranularityLevel, GranularityDescription> = {
+  automatica: {
+    headline: "Auto",
+    helper: "Let the planner choose depth for the task."
+  },
   baja: {
-    headline: "Pocos nodos grandes",
-    helper: "Árbol superficial. Útil para spikes, validaciones rápidas o tareas atómicas."
+    headline: "G3 coarse",
+    helper: "Few larger nodes. Less coordination overhead, less parallelism."
   },
   media: {
-    headline: "Balance",
-    helper: "Profundidad y delegabilidad razonables. Default recomendado."
+    headline: "G6 balanced",
+    helper: "Moderate depth for thesis demos and most feature work."
   },
   alta: {
-    headline: "Muchos nodos atómicos",
-    helper: "Descomposición profunda. Más subagentes paralelos, más overhead de coordinación."
+    headline: "G9 fine",
+    helper: "Many atomic nodes. More parallelism, more integration surface."
   }
 };
 
-export function toDecompositionMode(level: GranularityLevel): DecompositionMode {
+export function toGranularityMode(level: GranularityLevel): GranularityMode {
   return GRANULARITY_TO_MODE[level];
 }
 
-export function fromDecompositionMode(mode: DecompositionMode): GranularityLevel {
+export function fromGranularityMode(mode: GranularityMode): GranularityLevel {
   return GRANULARITY_FROM_MODE[mode];
 }
 

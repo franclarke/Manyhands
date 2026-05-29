@@ -7,185 +7,152 @@ interface RunHeaderProps {
   workspace: Workspace | null;
   scenario: DecompositionScenario | null;
   liveStatus: RunStatus;
+  summary: { nodes: number; leaves: number; depth: number; ready: number } | null;
 }
 
-function providerBadge(run: RunRecord): { label: string; tone: "accent" | "warning" } | null {
-  const decomposition = run.decomposition;
-  if (decomposition === undefined) return null;
-  if (decomposition.provider === "anthropic" && !decomposition.fallbackUsed) {
-    return { label: `LLM · ${decomposition.model}`, tone: "accent" };
-  }
-  const reason = decomposition.fallbackReason ?? "unknown";
-  return { label: `fallback · ${reason}`, tone: "warning" };
-}
-
-const STATUS_TONE: Record<RunStatus, { fg: string; bg: string; border: string; label: string }> = {
-  created:      { fg: "var(--text-2)",  bg: "var(--surface-2)",        border: "var(--border)",          label: "created" },
-  generating:   { fg: "var(--coral)",   bg: "rgba(204,120,92,0.10)",  border: "rgba(204,120,92,0.55)",  label: "generating" },
-  paused:       { fg: "var(--ready)",   bg: "rgba(201,164,92,0.10)",  border: "rgba(201,164,92,0.55)",  label: "paused" },
-  needs_review: { fg: "var(--ready)",   bg: "rgba(201,164,92,0.10)",  border: "rgba(201,164,92,0.55)",  label: "needs review" },
-  approved:     { fg: "var(--done)",    bg: "rgba(107,142,107,0.10)", border: "rgba(107,142,107,0.55)", label: "approved" },
-  running:      { fg: "var(--coral)",   bg: "rgba(204,120,92,0.10)",  border: "rgba(204,120,92,0.55)",  label: "running" },
-  completed:    { fg: "var(--done)",    bg: "rgba(107,142,107,0.10)", border: "rgba(107,142,107,0.55)", label: "completed" },
-  failed:       { fg: "var(--error)",   bg: "rgba(194,91,84,0.10)",   border: "rgba(194,91,84,0.55)",   label: "failed" },
-  interrupted:  { fg: "var(--ready)",   bg: "rgba(201,164,92,0.10)",  border: "rgba(201,164,92,0.55)",  label: "interrupted" }
+const STATUS_COLOR: Record<RunStatus, string> = {
+  created: "var(--planned)",
+  generating: "var(--running)",
+  paused: "var(--ready)",
+  needs_review: "var(--ready)",
+  approved: "var(--done)",
+  running: "var(--running)",
+  completed: "var(--done)",
+  failed: "var(--error)",
+  interrupted: "var(--ready)"
 };
 
-export function RunHeader({ run, workspace, scenario, liveStatus }: RunHeaderProps): React.ReactElement {
-  const tone = STATUS_TONE[liveStatus];
-  const badge = providerBadge(run);
+export function RunHeader({
+  run,
+  workspace,
+  scenario,
+  liveStatus,
+  summary
+}: RunHeaderProps): React.ReactElement {
+  const mode = modeLabel(run, scenario);
+  const metrics = summary ?? { nodes: 0, leaves: 0, depth: 0, ready: 0 };
   return (
     <section
       style={{
-        border: "1px solid var(--border)",
-        background: "var(--surface)",
-        borderRadius: "var(--r-lg)",
-        padding: 18,
+        padding: "12px 4px 6px",
         display: "flex",
-        flexDirection: "column",
-        gap: 10,
-        boxShadow: "var(--shadow-lift)"
+        alignItems: "flex-end",
+        gap: 28,
+        borderBottom: "1px solid var(--rule)",
+        marginBottom: 2
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <Pill tone="accent">Run</Pill>
-        <span style={{ color: "var(--text-3)" }}>/</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-2)" }}>
-          {workspace?.name ?? run.workspaceId}
-        </span>
-        <span style={{ color: "var(--text-3)" }}>/</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-2)" }}>
-          {scenario?.name ?? run.scenarioId}
-        </span>
-        <span style={{ color: "var(--text-3)" }}>/</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-2)" }}>
-          {run.granularity}
-        </span>
-        <span style={{ flex: 1 }} />
-        {badge !== null ? (
-          <span
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 7, flexWrap: "wrap" }}>
+          <span className="mh-coord">run / alpha 01</span>
+          <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
+            {run.runId.slice(0, 8)}
+          </span>
+          <span style={{ color: "var(--text-4)" }}>/</span>
+          <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-2)" }}>
+            {workspace?.name ?? run.workspaceId}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+          <h1
+            className="mh-serif"
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              padding: "3px 9px",
-              fontSize: 10.5,
-              fontFamily: "var(--font-mono)",
-              color: badge.tone === "accent" ? "var(--coral)" : "var(--ready)",
-              background: badge.tone === "accent" ? "rgba(204,120,92,0.10)" : "rgba(201,164,92,0.10)",
-              border: `1px solid ${badge.tone === "accent" ? "rgba(204,120,92,0.45)" : "rgba(201,164,92,0.45)"}`,
-              borderRadius: 999,
-              letterSpacing: 0.4
+              margin: 0,
+              fontSize: 23,
+              color: "var(--text)",
+              lineHeight: 1.12,
+              maxWidth: 760
             }}
           >
-            {badge.label}
+            {run.title || scenario?.name || "Run"}
+          </h1>
+          <ModeSignal label={mode} />
+          <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-2)" }}>
+            {granularityLabel(run.granularity)}
           </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--text-2)" }}>
+            <span className="mh-dot" style={{ color: STATUS_COLOR[liveStatus] }} />
+            {liveStatus.replace("_", " ")}
+          </span>
+        </div>
+        {run.userPrompt.length > 0 ? (
+          <p
+            style={{
+              margin: "8px 0 0",
+              maxWidth: 880,
+              fontSize: 12.5,
+              color: "var(--text-2)",
+              lineHeight: 1.5
+            }}
+          >
+            {run.userPrompt}
+          </p>
         ) : null}
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "3px 10px",
-            border: `1px solid ${tone.border}`,
-            background: tone.bg,
-            color: tone.fg,
-            borderRadius: 999,
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            letterSpacing: 0.4
-          }}
-        >
-          <span aria-hidden style={{ width: 6, height: 6, borderRadius: 999, background: tone.fg }} />
-          {tone.label}
-        </span>
-      </div>
-      <h1
-        className="mh-serif"
-        style={{
-          margin: 0,
-          fontSize: 24,
-          color: "var(--text)",
-          lineHeight: 1.2,
-          letterSpacing: "-0.01em"
-        }}
-      >
-        {run.title || scenario?.name || "Run"}
-      </h1>
-      {run.userPrompt.length > 0 ? (
-        <p
-          style={{
-            margin: 0,
-            fontSize: 13,
-            color: "var(--text-2)",
-            lineHeight: 1.5
-          }}
-        >
-          {run.userPrompt}
+        <p className="mh-mono" style={{ margin: "7px 0 0", fontSize: 10.5, color: "var(--text-3)" }}>
+          updated {formatDate(run.updatedAt)} / {scenario !== null ? "fixture-backed mock data" : "prompt-backed plan"}
         </p>
-      ) : null}
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          flexWrap: "wrap",
-          fontFamily: "var(--font-mono)",
-          fontSize: 11,
-          color: "var(--text-3)"
-        }}
-      >
-        <span>
-          <span style={{ color: "var(--text-3)" }}>run</span>{" "}
-          <span style={{ color: "var(--text-2)" }}>{run.runId.slice(0, 8)}</span>
-        </span>
-        <span>
-          <span style={{ color: "var(--text-3)" }}>model</span>{" "}
-          <span style={{ color: "var(--text-2)" }}>{run.model}</span>
-        </span>
-        <span>
-          <span style={{ color: "var(--text-3)" }}>created</span>{" "}
-          <span style={{ color: "var(--text-2)" }}>{formatDate(run.createdAt)}</span>
-        </span>
-        {run.errorMessage !== undefined ? (
-          <span style={{ color: "var(--error)" }}>{run.errorMessage}</span>
-        ) : null}
       </div>
-      <p
-        style={{
-          margin: 0,
-          marginTop: 4,
-          fontSize: 11.5,
-          color: "var(--text-3)",
-          lineHeight: 1.5
-        }}
-      >
-        En esta fase, el escenario seleccionado determina el plan determinístico. Tu prompt queda
-        guardado como objetivo del run.
-      </p>
+
+      <div style={{ display: "flex", gap: 24, alignItems: "flex-end" }}>
+        <Metric label="nodes" value={metrics.nodes} />
+        <Metric label="leaves" value={metrics.leaves} />
+        <Metric label="depth" value={metrics.depth} />
+        <Metric label="ready" value={metrics.ready} color="var(--ready)" />
+      </div>
     </section>
   );
 }
 
-function Pill({ children, tone }: { children: React.ReactNode; tone: "accent" }): React.ReactElement {
-  void tone;
+function Metric({ label, value, color }: { label: string; value: number; color?: string }): React.ReactElement {
+  return (
+    <div style={{ textAlign: "right", minWidth: 38 }}>
+      <div className="mh-mono" style={{ fontSize: 22, color: color ?? "var(--text)", lineHeight: 1 }}>
+        {value}
+      </div>
+      <div className="mh-coord" style={{ marginTop: 5 }}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
+function ModeSignal({ label }: { label: string }): React.ReactElement {
   return (
     <span
+      className="mh-mono"
       style={{
         display: "inline-flex",
         alignItems: "center",
-        padding: "3px 8px",
-        fontSize: 11,
-        fontFamily: "var(--font-mono)",
-        color: "var(--coral)",
-        background: "rgba(204,120,92,0.10)",
-        border: "1px solid rgba(204,120,92,0.45)",
+        gap: 6,
+        height: 22,
+        padding: "0 8px",
+        border: "1px solid var(--rule-strong)",
         borderRadius: 999,
-        letterSpacing: 0.5,
+        color: "var(--copper)",
+        fontSize: 10.5,
         textTransform: "uppercase"
       }}
     >
-      {children}
+      <span className="mh-dot" style={{ width: 5, height: 5 }} />
+      {label}
     </span>
   );
+}
+
+function modeLabel(run: RunRecord, scenario: DecompositionScenario | null): string {
+  if (scenario !== null) return "mock run";
+  if (run.status === "approved") return "execution-ready";
+  if (run.status === "running" || run.status === "completed" || run.startedAt !== undefined) {
+    return "real execution";
+  }
+  return "planning mode";
+}
+
+function granularityLabel(value: RunRecord["granularity"]): string {
+  if (value === "auto") return "Auto";
+  if (value === "coarse") return "G3 coarse";
+  if (value === "balanced") return "G6 balanced";
+  return "G9 fine";
 }
 
 function formatDate(iso: string): string {

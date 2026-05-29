@@ -53,21 +53,22 @@ export function ConflictBottomSheet({
         onClick={() => setOpen(true)}
         style={{
           position: "absolute",
-          left: 14,
+          right: 14,
           bottom: 14,
           zIndex: 5,
-          border: "1px solid var(--border)",
-          background: "var(--surface)",
-          color: activeCount > 0 ? "var(--coral-hi)" : "var(--text-2)",
+          border: "1px solid var(--rule)",
+          background: "rgba(15,16,18,0.78)",
+          color: activeCount > 0 ? "var(--ready)" : "var(--text-2)",
           borderRadius: 6,
           padding: "7px 11px",
           fontSize: 12,
           fontFamily: "var(--font-mono)",
           cursor: "pointer",
-          boxShadow: "var(--shadow-lift)"
+          boxShadow: "none",
+          backdropFilter: "blur(10px)"
         }}
       >
-        Conflicts {activeCount}
+        Conflict review / {activeCount}
       </button>
       {open ? (
         <div
@@ -116,7 +117,7 @@ export function ConflictBottomSheet({
                     letterSpacing: "0.16em"
                   }}
                 >
-                  coordination
+                  advanced coordination
                 </div>
                 <h3 className="mh-serif" style={{ margin: 0, color: "var(--text)", fontSize: 20 }}>
                   Conflict review
@@ -185,7 +186,7 @@ export function ConflictBottomSheet({
                             onClick={() => void runAction("integrator", conflict)}
                             style={primaryButtonStyle}
                           >
-                            Create integrator
+                            Create integration task
                           </button>
                           <button
                             type="button"

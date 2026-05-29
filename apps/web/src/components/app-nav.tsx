@@ -4,10 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/workspaces", label: "Workspaces" },
-  { href: "/lab", label: "Lab" },
-  { href: "/replay", label: "Replay" }
+  { href: "/", label: "Command" },
+  { href: "/lab", label: "Experiments" },
+  { href: "/workspaces", label: "Workspaces" }
 ];
 
 export function AppNav(): React.ReactElement {
@@ -16,50 +15,25 @@ export function AppNav(): React.ReactElement {
   return (
     <header
       style={{
-        borderBottom: "1px solid var(--border)",
-        background: "rgba(26, 25, 21, 0.86)",
-        backdropFilter: "blur(8px)"
+        borderBottom: "1px solid var(--rule)",
+        background: "rgba(15, 16, 18, 0.82)",
+        backdropFilter: "blur(10px)"
       }}
     >
-      <div className="mh-container flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <span
-            aria-hidden
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 32,
-              height: 32,
-              borderRadius: 6,
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-              color: "var(--coral)"
-            }}
-          >
-            <svg width={16} height={16} viewBox="0 0 14 14">
-              <circle cx="3" cy="3" r="1.5" fill="currentColor" />
-              <circle cx="11" cy="3" r="1.5" fill="currentColor" />
-              <circle cx="7" cy="9" r="1.5" fill="currentColor" />
-              <circle cx="11" cy="13" r="1.2" fill="currentColor" opacity="0.55" />
-              <line x1="3.5" y1="4" x2="6.5" y2="8" stroke="currentColor" strokeWidth="1.1" />
-              <line x1="10.5" y1="4" x2="7.5" y2="8" stroke="currentColor" strokeWidth="1.1" />
-              <line x1="8" y1="10" x2="10.5" y2="12.5" stroke="currentColor" strokeWidth="1.1" opacity="0.55" />
-            </svg>
-          </span>
-          <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.15 }}>
-            <span
-              className="mh-serif"
-              style={{ fontSize: 17, color: "var(--text)" }}
-            >
+      <div className="mh-container flex h-[58px] items-center justify-between gap-5">
+        <Link href="/" className="flex min-w-0 items-center gap-3">
+          <ManyHandsMark />
+          <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.1, minWidth: 0 }}>
+            <span className="mh-serif" style={{ fontSize: 17, color: "var(--text)" }}>
               ManyHands
             </span>
-            <span style={{ fontSize: 11, color: "var(--text-3)", fontFamily: "var(--font-mono)" }}>
-              visual orchestration workspace
+            <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
+              orchestration lab
             </span>
           </span>
         </Link>
-        <nav className="flex flex-wrap gap-1.5">
+
+        <nav className="flex flex-wrap items-center gap-1.5">
           {navItems.map((item) => {
             const active = item.href === "/"
               ? pathname === "/"
@@ -70,13 +44,13 @@ export function AppNav(): React.ReactElement {
                 key={item.href}
                 href={item.href}
                 style={{
-                  padding: "7px 12px",
-                  fontSize: 13,
-                  borderRadius: 6,
-                  border: `1px solid ${active ? "var(--coral)" : "var(--border)"}`,
-                  background: active ? "rgba(204,120,92,0.10)" : "var(--surface)",
-                  color: active ? "var(--coral-hi)" : "var(--text-2)",
-                  transition: "background 150ms ease-out, border-color 150ms ease-out"
+                  padding: "6px 9px",
+                  fontSize: 12,
+                  borderRadius: 4,
+                  border: "1px solid transparent",
+                  background: active ? "rgba(229,222,204,0.045)" : "transparent",
+                  color: active ? "var(--text)" : "var(--text-2)",
+                  transition: "background 150ms ease-out, color 150ms ease-out"
                 }}
               >
                 {item.label}
@@ -86,5 +60,32 @@ export function AppNav(): React.ReactElement {
         </nav>
       </div>
     </header>
+  );
+}
+
+function ManyHandsMark(): React.ReactElement {
+  return (
+    <span
+      aria-hidden
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 30,
+        height: 30,
+        borderRadius: 5,
+        background: "rgba(229,222,204,0.035)",
+        border: "1px solid var(--rule)",
+        color: "var(--copper)"
+      }}
+    >
+      <svg width={17} height={17} viewBox="0 0 18 18" fill="none">
+        <path d="M9 2.5v4.2M9 6.7 4.5 11M9 6.7l4.5 4.3" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+        <circle cx="9" cy="2.5" r="1.6" fill="currentColor" />
+        <circle cx="4.5" cy="11" r="1.6" fill="currentColor" />
+        <circle cx="13.5" cy="11" r="1.6" fill="currentColor" />
+        <path d="M4.5 12.6v2.2M13.5 12.6v2.2" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" opacity="0.55" />
+      </svg>
+    </span>
   );
 }

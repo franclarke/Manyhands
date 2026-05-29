@@ -59,7 +59,8 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     assertTaskExists(currentSnapshot, taskId);
     const node = currentSnapshot.graphSnapshot.nodes[taskId]!;
     const contract = currentSnapshot.contracts.find((entry) => entry.taskId === taskId) ?? node.contract;
-    const mode = parsed.data.granularity ?? run.granularity;
+    const runGranularity = run.granularity === "auto" ? "balanced" : run.granularity;
+    const mode = parsed.data.granularity ?? runGranularity;
     const feature = buildFeatureRequest({
       taskId,
       node,
@@ -149,14 +150,14 @@ function buildFeatureRequest(input: {
   return {
     id: `regen-${safeId(input.taskId)}`,
     title: `Regenerate ${input.node.title}`,
-    description: input.contract?.objective ?? input.node.intent,
+    description: input.contract?.objective ?? input.node.goal,
     repositoryPath: input.snapshot.graphSnapshot.repo,
     targetStack: [],
     constraints: [
       `Preserve the external task id ${input.taskId}.`,
       ...(input.contract?.knownRisks ?? [])
     ],
-    acceptanceCriteria: acceptanceCriteria.length > 0 ? acceptanceCriteria : [input.node.intent]
+    acceptanceCriteria: acceptanceCriteria.length > 0 ? acceptanceCriteria : [input.node.goal]
   };
 }
 

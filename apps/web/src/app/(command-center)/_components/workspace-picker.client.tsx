@@ -14,35 +14,13 @@ export function WorkspacePicker({ workspaces, value, onChange }: WorkspacePicker
   const labelId = useId();
 
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-      <label
-        htmlFor={labelId}
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 10.5,
-          letterSpacing: 0.6,
-          textTransform: "uppercase",
-          color: "var(--text-3)"
-        }}
-      >
-        Workspace
-      </label>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
       <select
         id={labelId}
+        aria-label="Workspace"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        style={{
-          height: 30,
-          padding: "0 28px 0 10px",
-          border: "1px solid var(--border)",
-          background: "var(--bg-1)",
-          color: "var(--text)",
-          borderRadius: 6,
-          fontSize: 13,
-          fontFamily: "var(--font-sans)",
-          appearance: "none",
-          cursor: "pointer"
-        }}
+        className="mh-select"
       >
         {workspaces.map((workspace) => (
           <option key={workspace.id} value={workspace.id}>
@@ -52,15 +30,14 @@ export function WorkspacePicker({ workspaces, value, onChange }: WorkspacePicker
       </select>
       <Link
         href="/workspaces"
+        className="mh-mono"
         style={{
           fontSize: 11,
-          fontFamily: "var(--font-mono)",
-          color: "var(--coral)",
-          padding: "0 6px",
+          color: "var(--text-3)",
           whiteSpace: "nowrap"
         }}
       >
-        manage →
+        manage
       </Link>
     </div>
   );

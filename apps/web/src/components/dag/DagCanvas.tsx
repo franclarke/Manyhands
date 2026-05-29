@@ -83,7 +83,7 @@ export function DagCanvas(props: DagCanvasProps): React.ReactElement {
       onPaneClick={() => onSelectTask(null)}
       style={{ background: "transparent", width: "100%", height: "100%" }}
     >
-      <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="rgba(237,234,224,0.05)" />
+      <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(229,222,204,0.045)" />
       <MiniMap
         pannable
         zoomable
@@ -170,14 +170,6 @@ function toTaskData(node: GraphNodeView, dependencyCount: number): TaskNodeData 
     data.expectedFilesPreview = node.expectedFiles.slice(0, 4);
   }
 
-  if (node.durationMs !== undefined) {
-    data.durationMs = node.durationMs;
-  }
-
-  if (node.costUsd !== undefined) {
-    data.costUsd = node.costUsd;
-  }
-
   if (node.blockedReason !== undefined) {
     data.blockedReason = node.blockedReason;
   }
@@ -207,7 +199,7 @@ function PhaseHeaderNode({ data }: NodeProps): React.ReactElement {
   return (
     <div
       style={{
-        width: 264,
+        width: 248,
         display: "flex",
         alignItems: "center",
         gap: 10,
@@ -222,7 +214,7 @@ function PhaseHeaderNode({ data }: NodeProps): React.ReactElement {
           fontSize: 10.5,
           letterSpacing: "0.18em",
           textTransform: "uppercase",
-          color: "var(--text-2)",
+          color: "var(--copper)",
           whiteSpace: "nowrap"
         }}
       >
@@ -270,8 +262,8 @@ function toFlowEdge(
       };
     }
     return {
-      stroke: "var(--text-3)",
-      strokeWidth: 1.2
+      stroke: "var(--text-4)",
+      strokeWidth: 1.1
     };
   })();
 

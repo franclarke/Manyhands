@@ -93,7 +93,7 @@ export type RunStatusKey =
   | "failed"
   | "interrupted";
 
-export type RunGranularityKey = "coarse" | "balanced" | "fine";
+export type RunGranularityKey = "auto" | "coarse" | "balanced" | "fine";
 
 export interface RunPreview {
   id: string;
@@ -101,7 +101,7 @@ export interface RunPreview {
   workspaceName?: string | undefined;
   title: string;
   userPrompt: string;
-  scenarioId: string;
+  scenarioId?: string | undefined;
   status: RunStatusKey;
   granularity: RunGranularityKey;
   model: string;
@@ -120,7 +120,7 @@ export interface RunsListResponse {
 
 export interface RunCreateRequest {
   workspaceId: string;
-  scenarioId: string;
+  scenarioId?: string;
   granularity: RunGranularityKey;
   model: string;
   userPrompt?: string;
@@ -130,7 +130,7 @@ export interface RunResponse {
   run: {
     runId: string;
     workspaceId: string;
-    scenarioId: string;
+    scenarioId?: string;
     granularity: RunGranularityKey;
     model: string;
     userPrompt: string;

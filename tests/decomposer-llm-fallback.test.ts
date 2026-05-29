@@ -30,7 +30,7 @@ describe("AnthropicDecomposer", () => {
           id: "root",
           parentId: null,
           title: "Add login",
-          intent: "Implement passwordless login",
+          goal: "Implement passwordless login",
           kind: "composite",
           depth: 0,
           allowedPaths: ["src/**"],
@@ -42,7 +42,7 @@ describe("AnthropicDecomposer", () => {
           id: "magic-link",
           parentId: "root",
           title: "Magic link issuance",
-          intent: "Issue tokens",
+          goal: "Issue tokens",
           kind: "leaf",
           depth: 1,
           allowedPaths: ["src/auth/**"],
@@ -54,7 +54,7 @@ describe("AnthropicDecomposer", () => {
           id: "session",
           parentId: "root",
           title: "Session lifecycle",
-          intent: "Cookies after redemption",
+          goal: "Cookies after redemption",
           kind: "leaf",
           depth: 1,
           allowedPaths: ["src/auth/**"],
@@ -118,9 +118,9 @@ describe("AnthropicDecomposer", () => {
       assumptions: [],
       risks: [],
       nodes: [
-        { id: "root", parentId: null, title: "root", intent: "x", kind: "composite", depth: 0, allowedPaths: [], forbiddenPaths: [], expectedFiles: [], acceptanceCriteria: [] },
-        { id: "a", parentId: "root", title: "a", intent: "x", kind: "leaf", depth: 1, allowedPaths: [], forbiddenPaths: [], expectedFiles: [], acceptanceCriteria: ["x"] },
-        { id: "b", parentId: "root", title: "b", intent: "x", kind: "leaf", depth: 1, allowedPaths: [], forbiddenPaths: [], expectedFiles: [], acceptanceCriteria: ["x"] }
+        { id: "root", parentId: null, title: "root", goal: "x", kind: "composite", depth: 0, allowedPaths: [], forbiddenPaths: [], expectedFiles: [], acceptanceCriteria: [] },
+        { id: "a", parentId: "root", title: "a", goal: "x", kind: "leaf", depth: 1, allowedPaths: [], forbiddenPaths: [], expectedFiles: [], acceptanceCriteria: ["x"] },
+        { id: "b", parentId: "root", title: "b", goal: "x", kind: "leaf", depth: 1, allowedPaths: [], forbiddenPaths: [], expectedFiles: [], acceptanceCriteria: ["x"] }
       ],
       dependencies: [
         { fromTaskId: "a", toTaskId: "b", type: "logical" },
