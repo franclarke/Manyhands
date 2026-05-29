@@ -10,6 +10,7 @@ import type { TraceStore } from "@manyhands/trace-store";
 
 import type { CodexExecutor } from "../codex/types";
 import type { GitRunner } from "../git/runner";
+import { RunExecutionError } from "../errors";
 import { computeGranularityVector } from "../granularity/vector";
 import { assertExecutableGraph } from "./graph-guards";
 import { IntegrationAgent } from "../integration/agent";
@@ -134,7 +135,11 @@ export class RunExecutor {
         runTask: async (taskId) => {
           const node = graph.nodes[taskId];
           if (!node) {
-            throw new Error(`Scheduled task ${taskId} is not in the graph`);
+            throw new RunExecutionError(
+              `Scheduled task "${taskId}" is not in the graph.`,
+              "schedule",
+              runId
+            );
           }
           return this.executeLeaf({ graph, node, runId, config, model: params.model, worktrees });
         }

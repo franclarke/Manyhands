@@ -7,7 +7,33 @@ import {
   ExecutionValidationError,
   IntegrationError,
   UnexpectedCommitError,
+  RunExecutionError,
 } from "@manyhands/execution-core";
+
+describe("RunExecutionError", () => {
+  it("carries phase and runId and is an ExecutionCoreError", () => {
+    const err = new RunExecutionError("bad graph", "validate", "run-1");
+    expect(err.name).toBe("RunExecutionError");
+    expect(err.code).toBe("RUN_EXECUTION_ERROR");
+    expect(err.phase).toBe("validate");
+    expect(err.runId).toBe("run-1");
+    expect(ExecutionCoreError.is(err)).toBe(true);
+    expect(RunExecutionError.is(err)).toBe(true);
+  });
+
+  it("allows an undefined runId and an optional cause", () => {
+    const cause = new Error("root");
+    const err = new RunExecutionError("unschedulable", "schedule", undefined, cause);
+    expect(err.runId).toBeUndefined();
+    expect(err.cause).toBe(cause);
+  });
+
+  it("is not confused with sibling error classes", () => {
+    const err = new RunExecutionError("x", "leaf");
+    expect(WorktreeError.is(err)).toBe(false);
+    expect(RunExecutionError.is(new WorktreeError("x", "t", "create"))).toBe(false);
+  });
+});
 
 // ── Base class ─────────────────────────────────────────────────
 
