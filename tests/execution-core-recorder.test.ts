@@ -89,6 +89,20 @@ describe("ResultRecorder", () => {
     expect(git.calls).toHaveLength(0);
   });
 
+  it("reports codex_error on a non-zero exit without inspecting git", async () => {
+    const git = new FakeGitRunner();
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+
+    const result = await recorder.record({
+      worktree: WORKTREE,
+      codexOutcome: { ...okOutcome(), exitCode: 1 }
+    });
+
+    expect(result.status).toBe("codex_error");
+    expect(result.commitSha).toBeUndefined();
+    expect(git.calls).toHaveLength(0);
+  });
+
   it("rejects an unexpected agent commit under the default reject policy", async () => {
     const git = new FakeGitRunner({ heads: { [WORKTREE.path]: "AGENT_SHA" } });
     const traceStore = new InMemoryTraceStore();

@@ -158,6 +158,64 @@ describe("IntegrationAgent", () => {
     expect(git.opsInvoked()).not.toContain("commit");
   });
 
+  it("fails with codex_repair_failed when the repair Codex run errors", async () => {
+    const git = new FakeGitRunner({
+      heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
+      cherryPickOutcomes: [{ ok: false, conflictFiles: ["src/b.ts"], output: "CONFLICT" }]
+    });
+    const agent = new IntegrationAgent({
+      git,
+      codex: new MockCodexCliExecutor({ defaultBehavior: { exitCode: 1 } }),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: "/repo"
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("b", "SHA_B")],
+      repair
+    });
+
+    expect(result.status).toBe("codex_repair_failed");
+    expect(result.repairResult?.status).toBe("codex_error");
+    expect(git.opsInvoked()).toContain("cherryPickAbort");
+    expect(git.opsInvoked()).not.toContain("commit");
+  });
+
+  it("attempts only one repair per integration: a second conflict fails fast (ADR-0025)", async () => {
+    const git = new FakeGitRunner({
+      heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
+      cherryPickOutcomes: [
+        { ok: false, conflictFiles: ["src/a.ts"], output: "CONFLICT_A" },
+        { ok: false, conflictFiles: ["src/b.ts"], output: "CONFLICT_B" }
+      ],
+      diffCachedNameOnly: ["src/a.ts"],
+      diffCached: "resolved",
+      commitSha: "REPAIR_SHA"
+    });
+    const traceStore = new InMemoryTraceStore();
+    const agent = new IntegrationAgent({
+      git,
+      codex: new MockCodexCliExecutor(),
+      traceStore,
+      repoRoot: "/repo"
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("a", "SHA_A"), child("b", "SHA_B")],
+      repair
+    });
+
+    expect(result.status).toBe("codex_repair_failed");
+    expect(result.repairAttempted).toBe(true);
+    // First conflict was repaired (one abort); the second was not retried.
+    expect(git.opsInvoked().filter((op) => op === "cherryPickAbort")).toHaveLength(1);
+    expect(traceStore.findByType("cherry_pick_conflict")).toHaveLength(2);
+  });
+
   it("reports validation_failed when parent validation does not pass", async () => {
     const git = new FakeGitRunner({ heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" } });
     const validationRunner = new FakeValidationRunner({ passed: false, output: "tests failed", exitCode: 1 });

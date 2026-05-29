@@ -21,6 +21,20 @@ describe("BatchScheduler", () => {
     expect(traceStore.findByType("batch_completed")).toHaveLength(2);
   });
 
+  it("propagates a task failure and does not hang", async () => {
+    const scheduler = new BatchScheduler({ traceStore: new InMemoryTraceStore() });
+
+    await expect(
+      scheduler.runBatches({
+        batches: [{ id: "batch-1", taskIds: ["a", "b"] }],
+        runTask: async (taskId) => {
+          if (taskId === "a") throw new Error("task a blew up");
+          return taskId;
+        }
+      })
+    ).rejects.toThrow("task a blew up");
+  });
+
   it("never exceeds maxParallel concurrent tasks within a batch", async () => {
     const scheduler = new BatchScheduler({ traceStore: new InMemoryTraceStore(), maxParallel: 2 });
     let active = 0;
