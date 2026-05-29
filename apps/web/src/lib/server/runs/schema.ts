@@ -1,6 +1,29 @@
+import { ExecutionConfigSchema } from "@manyhands/execution-core";
 import { z } from "zod";
 
+import { RepoSpecSchema } from "./repo-provisioner";
+
 export const RUN_FILE_VERSION = 1;
+
+/**
+ * Partial execution-config overrides stored on a run. Defaults live in
+ * execution-core's `ExecutionConfigSchema` and are applied at engine-build
+ * time via `ExecutionConfigSchema.parse(input ?? {})`, so we never duplicate
+ * them here.
+ */
+export const ExecutionConfigInputSchema = ExecutionConfigSchema.partial();
+
+export type ExecutionConfigInput = z.infer<typeof ExecutionConfigInputSchema>;
+
+/** Serializable record of the repo a run was provisioned against (artifact). */
+export const ProvisionedRepoRecordSchema = z.object({
+  repoRoot: z.string().min(1),
+  baseBranch: z.string().min(1),
+  baseCommit: z.string().min(1),
+  provisionedAt: z.string().datetime()
+});
+
+export type ProvisionedRepoRecord = z.infer<typeof ProvisionedRepoRecordSchema>;
 
 export const RUN_STATUS_VALUES = [
   "created",
@@ -79,6 +102,12 @@ export const RunRecordSchema = z.object({
   planning: z.unknown().optional(),
   execution: z.unknown().optional(),
   decomposition: RunDecompositionMetadataSchema.optional(),
+  /** Target repo for real execution (C17 / Etapa 2A). Absent = mock-only run. */
+  repoSpec: RepoSpecSchema.optional(),
+  /** Filled by the runner once the repo is provisioned, before execution. */
+  provisioned: ProvisionedRepoRecordSchema.optional(),
+  /** Optional per-run overrides; defaults applied from execution-core at runtime. */
+  executionConfig: ExecutionConfigInputSchema.optional(),
   /** Append-only edit log. Sprint 2 of Fase C consumes this; reserved here for compatibility. */
   patches: z.array(z.unknown()).default([])
 });
@@ -97,7 +126,9 @@ export const RunCreateRequestSchema = z.object({
   scenarioId: z.string().min(1).optional(),
   granularity: GranularityModeSchema,
   model: z.string().min(1),
-  userPrompt: z.string().trim().max(4000).default("")
+  userPrompt: z.string().trim().max(4000).default(""),
+  /** Optional target repo for real execution. Absent = mock-only run. */
+  repoSpec: RepoSpecSchema.optional()
 });
 
 export type RunCreateRequest = z.infer<typeof RunCreateRequestSchema>;
