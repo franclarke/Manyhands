@@ -1,7 +1,42 @@
-import type { RunPreview, RunResponse } from "@/lib/api-types";
+import type { ExecutionSummary, RunPreview, RunResponse } from "@/lib/api-types";
 import type { Workspace } from "@/lib/api-types";
 import type { MockExecutionFlowResult, MockPlanningFlowResult } from "@manyhands/core";
+import type { RunExecutionResult } from "@manyhands/execution-core";
 import type { RunRecord } from "./schema";
+
+/** Narrows the opaque `run.execution` to a real-engine RunExecutionResult. */
+function isExecutionResult(value: unknown): value is RunExecutionResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "granularityVector" in value &&
+    Array.isArray((value as { leafResults?: unknown }).leafResults)
+  );
+}
+
+function toExecutionSummary(result: RunExecutionResult): ExecutionSummary {
+  return {
+    status: result.status,
+    totalDurationMs: result.totalDurationMs,
+    granularityVector: result.granularityVector,
+    leaves: result.leafResults.map((leaf) => {
+      const receipt: ExecutionSummary["leaves"][number] = {
+        taskId: leaf.taskId,
+        status: leaf.status,
+        changedFiles: leaf.changedFiles.length,
+        scopePassed: leaf.scopeCheck.passed,
+        durationMs: leaf.codexDurationMs
+      };
+      if (leaf.commitSha !== undefined) receipt.commitSha = leaf.commitSha;
+      if (leaf.costUsd !== undefined) receipt.costUsd = leaf.costUsd;
+      return receipt;
+    }),
+    integrations: result.integrationResults.map((integration) => ({
+      compositeTaskId: integration.compositeTaskId,
+      status: integration.status
+    }))
+  };
+}
 
 export function toRunResponse(run: RunRecord): RunResponse {
   const payload: RunResponse["run"] = {
@@ -43,6 +78,9 @@ export function toRunResponse(run: RunRecord): RunResponse {
     }
     payload.decomposition = decompositionPayload;
   }
+  if (isExecutionResult(run.execution)) {
+    payload.execution = toExecutionSummary(run.execution);
+  }
   return { run: payload };
 }
 
@@ -71,8 +109,17 @@ export function toRunPreview(run: RunRecord, workspaces: ReadonlyMap<string, Wor
     preview.nodeCount = planning.summary.taskCount;
   }
 
-  const execution = run.execution as MockExecutionFlowResult | undefined;
-  if (execution !== undefined) {
+  if (isExecutionResult(run.execution)) {
+    // Real execution engine (RunExecutionResult).
+    preview.agentCount = run.execution.leafResults.length;
+    if (planning !== undefined) {
+      preview.conflictCount = planning.riskMatrix.filter(
+        (entry) => entry.level === "blocking" || entry.level === "high"
+      ).length;
+    }
+  } else if ((run.execution as MockExecutionFlowResult | undefined) !== undefined) {
+    // Legacy Lab-mode execution snapshot.
+    const execution = run.execution as MockExecutionFlowResult;
     preview.agentCount = execution.results.length;
     preview.conflictCount = execution.planning.riskMatrix.filter(
       (entry) => entry.level === "blocking" || entry.level === "high"
