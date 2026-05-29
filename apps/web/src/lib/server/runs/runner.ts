@@ -21,6 +21,12 @@ import {
 import type { TaskGraph } from "@manyhands/task-graph";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { resolveRepoRoot } from "../repo-root";
+import { RepoNotConfiguredError } from "./errors";
+import {
+  createFixtureRepoProvisioner,
+  type ProvisionedRepo,
+  type RepoProvisioner
+} from "./repo-provisioner";
 import { publishRunEvent } from "./event-bus";
 import { assertTransition } from "./lifecycle";
 import { markRunnerActive, markRunnerInactive } from "./runner-state";
@@ -28,7 +34,7 @@ import { getRunRepository } from "./store";
 import { getWorkspaceRepository } from "../workspaces";
 import { pickDecomposer, type DecomposerSelection } from "@/lib/decomposer-policy";
 import type { RunEvent, RiskLevelKey } from "./events";
-import type { RunDecompositionMetadata, RunRecord, RunStatus } from "./schema";
+import type { ExecutionConfigInput, RunDecompositionMetadata, RunRecord, RunStatus } from "./schema";
 import { findScenario, type DecompositionScenario } from "@/lib/scenarios";
 
 const PLANNING_EVENT_INTERVAL_MS = 110;
@@ -53,6 +59,10 @@ export interface ExecutionEngineInput {
   graph: TaskGraph;
   model: string;
   runId: string;
+  /** Real repo provisioned for this run (C17). Required by the default engine. */
+  provisioned?: ProvisionedRepo;
+  /** Optional per-run config overrides; defaults applied by the engine. */
+  executionConfig?: ExecutionConfigInput;
 }
 
 export interface ExecutionEngine {
@@ -62,26 +72,33 @@ export interface ExecutionEngine {
 export interface ExecutionRunnerOptions {
   intervalMs?: number;
   engine?: ExecutionEngine;
+  /** Injectable for tests; default copies a benchmark fixture into a per-run dir. */
+  provisioner?: RepoProvisioner;
 }
 
 /**
  * Builds the real execution engine: a RunExecutor wired to simple-git and the
- * Codex CLI, rooted at the resolved repo. Requires an executable git repo whose
- * commits match the graph's baseCommit — until a repo-provisioning layer exists
- * (deferred), this path fails clearly for mock-graph runs.
+ * Codex CLI, rooted at the provisioned repo. The pipeline provisions and passes
+ * `input.provisioned`; the engine stays a pure executor. Without a provisioned
+ * repo it fails clearly (D3) — the graph's mock baseCommit is never executable.
  */
 function createDefaultExecutionEngine(): ExecutionEngine {
   return {
     async run(input) {
+      if (input.provisioned === undefined) {
+        throw new RepoNotConfiguredError(input.runId);
+      }
+      const { repoRoot, baseBranch, baseCommit } = input.provisioned;
       const executor = new RunExecutor({
         git: new SimpleGitRunner(),
         codex: new CodexCliExecutor(),
         traceStore: new InMemoryTraceStore(),
-        repoRoot: resolveRepoRoot()
+        repoRoot
       });
       return executor.run({
-        graph: input.graph,
-        config: ExecutionConfigSchema.parse({}),
+        // Execution resolves the real base over the graph's mock values.
+        graph: { ...input.graph, repo: repoRoot, baseBranch, baseCommit },
+        config: ExecutionConfigSchema.parse(input.executionConfig ?? {}),
         model: input.model,
         runId: input.runId
       });
@@ -486,8 +503,35 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     }
 
     const graph = await resolveExecutionGraph(run);
+    const usingDefaultEngine = options.engine === undefined;
     const engine = options.engine ?? createDefaultExecutionEngine();
-    const result = await engine.run({ graph, model: run.model, runId: run.runId });
+
+    // Provision a real repo when one is configured; persist it as a run artifact.
+    let provisioned: ProvisionedRepo | undefined;
+    if (run.repoSpec !== undefined) {
+      const provisioner = options.provisioner ?? createFixtureRepoProvisioner();
+      provisioned = await provisioner.provision({ spec: run.repoSpec, runId: run.runId });
+      run = await getRunRepository().save({
+        ...run,
+        provisioned: {
+          repoRoot: provisioned.repoRoot,
+          baseBranch: provisioned.baseBranch,
+          baseCommit: provisioned.baseCommit,
+          provisionedAt: new Date().toISOString()
+        }
+      });
+    } else if (usingDefaultEngine) {
+      // D3: no silent mock execution. The default engine needs a real repo.
+      throw new RepoNotConfiguredError(run.runId);
+    }
+
+    const result = await engine.run({
+      graph,
+      model: run.model,
+      runId: run.runId,
+      ...(provisioned !== undefined ? { provisioned } : {}),
+      ...(run.executionConfig !== undefined ? { executionConfig: run.executionConfig } : {})
+    });
 
     const interval = options.intervalMs ?? EXECUTION_EVENT_INTERVAL_MS;
     for (const leaf of result.leafResults) {
