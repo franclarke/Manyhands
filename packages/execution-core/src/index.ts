@@ -14,5 +14,6 @@ export * from "./validation/runner";
 export * from "./integration/agent";
 export * from "./scheduler/batch";
 export * from "./granularity/vector";
+export * from "./context/packer";
 export * from "./run/graph-guards";
 export * from "./run/executor";
