@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -17,6 +17,7 @@ import {
   createFixtureRepoProvisioner,
   type ProvisionedRepo
 } from "@/lib/server/runs/repo-provisioner";
+import { rmWithRetry } from "@/lib/server/runs/fs-retry";
 
 /**
  * Opt-in smoke test: proves ManyHands runs OUTSIDE the mock — real `codex exec`
@@ -94,7 +95,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   if (!E2E) return;
-  await rm(workRoot, { recursive: true, force: true });
+  await rmWithRetry(workRoot);
 });
 
 describe.skipIf(!E2E)("RunExecutor real run (opt-in, real codex exec)", () => {

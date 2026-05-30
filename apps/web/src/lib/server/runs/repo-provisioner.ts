@@ -1,10 +1,11 @@
 import { execFile } from "node:child_process";
-import { access, cp, mkdir, rm } from "node:fs/promises";
+import { access, cp, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
 
 import { resolveManyhandsPath, resolveRepoRoot } from "../repo-root";
+import { rmWithRetry } from "./fs-retry";
 
 const execFileAsync = promisify(execFile);
 
@@ -96,12 +97,12 @@ export function createFixtureRepoProvisioner(
 
       const repoRoot = path.join(workRoot, runId, "repo");
       const cleanup = async (): Promise<void> => {
-        await rm(path.join(workRoot, runId), { recursive: true, force: true });
+        await rmWithRetry(path.join(workRoot, runId));
       };
 
       try {
         // Fresh per-run copy: clear any stale directory first.
-        await rm(repoRoot, { recursive: true, force: true });
+        await rmWithRetry(repoRoot);
         await mkdir(repoRoot, { recursive: true });
         await cp(source, repoRoot, {
           recursive: true,
