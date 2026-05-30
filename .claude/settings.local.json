@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/franc/Documents/Manyhands/**)",
+      "Bash(codex --version)",
+      "Bash(codex --help)",
+      "Bash(codex exec *)",
+      "PowerShell(git -C \"C:\\\\Users\\\\franc\\\\Documents\\\\Manyhands\" log --oneline -5 HEAD)",
+      "PowerShell(git -C \"C:\\\\Users\\\\franc\\\\Documents\\\\Manyhands\" branch -a)",
+      "PowerShell(git -C \"C:\\\\Users\\\\franc\\\\Documents\\\\Manyhands\" remote -v)",
+      "PowerShell(git -C \"C:\\\\Users\\\\franc\\\\Documents\\\\Manyhands\" reflog -8)",
+      "PowerShell(\"---BRANCHES---\")",
+      "PowerShell(\"---REMOTE---\")",
+      "PowerShell(\"---REFLOG---\")",
+      "Bash(git -c safe.directory='*' ls-files)",
+      "Bash(echo \"END rc=$?\")",
+      "Bash(command -v codex)",
+      "Bash(echo \"codex-rc=$?\")",
+      "Bash(npm ls *)",
+      "Bash(where.exe codex *)",
+      "PowerShell(Write-Output \"=== Get-Command codex ===\"; try { Get-Command codex -ErrorAction Stop | Select-Object Name,CommandType,Source,Version | Format-List | Out-String } catch { \"codex NOT found via Get-Command\" }; Write-Output \"=== version ===\"; try { \\(& codex --version\\) 2>$null } catch { \"version call failed: $\\($_.Exception.Message\\)\" })"
+    ]
+  }
+}
