@@ -60,6 +60,19 @@ export function WorkspaceFormDialog({
     setValue(initial ?? EMPTY);
   }, [initial]);
 
+  function openFolderPicker(): void {
+    void browseLocal(value.repoPath, setBrowser);
+  }
+
+  function closeFolderPicker(): void {
+    setBrowser({ open: false, loading: false });
+  }
+
+  function selectFolder(dir: string): void {
+    setValue((current) => ({ ...current, repoPath: dir }));
+    closeFolderPicker();
+  }
+
   function handleSubmit(event: React.FormEvent): void {
     event.preventDefault();
     if (value.name.trim().length === 0) return;
@@ -194,40 +207,27 @@ export function WorkspaceFormDialog({
                 lineHeight: 1.5
               }}
             >
-              Repo path is the local git folder ManyHands will plan, execute, integrate, and patch after approval. Commands and paths guide Codex and validation.
+              Repo folder is the local git root ManyHands will plan, execute, integrate, and patch after approval. Use the modal to browse your filesystem and pick the repository root.
             </p>
-            <Field label="Repo path (absolute or relative)">
+            <Field label="Repo folder">
               <div style={{ display: "flex", gap: 8, width: "100%" }}>
                 <input
                   value={value.repoPath}
-                  onChange={(event) => setValue((v) => ({ ...v, repoPath: event.target.value }))}
-                  placeholder="/Users/me/code/my-repo"
+                  readOnly
+                  placeholder="Select a folder from the modal"
                   maxLength={400}
-                  style={{ ...inputStyle, flex: 1 }}
+                  style={{ ...inputStyle, flex: 1, cursor: "default" }}
                 />
                 <button
                   type="button"
-                  onClick={() => {
-                    void browseLocal(value.repoPath, setBrowser);
-                  }}
+                  onClick={openFolderPicker}
+                  disabled={busy}
                   style={secondaryButtonStyle}
                 >
-                  Browse
+                  {value.repoPath !== "" ? "Change folder" : "Select folder"}
                 </button>
               </div>
             </Field>
-            {browser.open ? (
-              <LocalFolderBrowser
-                state={browser}
-                onBrowse={(dir) => {
-                  void browseLocal(dir, setBrowser);
-                }}
-                onSelect={(dir) => {
-                  setValue((v) => ({ ...v, repoPath: dir }));
-                  setBrowser({ open: false, loading: false });
-                }}
-              />
-            ) : null}
             <Field label="Package manager">
               <select
                 value={value.packageManager}
@@ -277,6 +277,17 @@ export function WorkspaceFormDialog({
               />
             </Field>
           </div>
+        ) : null}
+
+        {browser.open ? (
+          <FolderPickerModal
+            state={browser}
+            onClose={closeFolderPicker}
+            onBrowse={(dir) => {
+              void browseLocal(dir, setBrowser);
+            }}
+            onSelect={selectFolder}
+          />
         ) : null}
 
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
@@ -352,7 +363,7 @@ interface LocalBrowserState {
   cwd?: string;
   parent?: string;
   entries?: LocalBrowserEntry[];
-  git?: { repoRoot: string; branch: string; head: string; dirty: boolean };
+  git?: { repoRoot: string; branch: string; head?: string; dirty: boolean };
   error?: string;
 }
 
@@ -372,14 +383,104 @@ async function browseLocal(
     if (!response.ok) {
       throw new Error(payload.error ?? `Browse failed with ${response.status}`);
     }
-    setBrowser({ ...payload, open: true, loading: false });
+    setBrowser((current) => (current.open ? { ...payload, open: true, loading: false } : current));
   } catch (error) {
-    setBrowser({
-      open: true,
-      loading: false,
-      error: error instanceof Error ? error.message : String(error)
-    });
+    setBrowser((current) =>
+      current.open
+        ? {
+            ...current,
+            open: true,
+            loading: false,
+            error: error instanceof Error ? error.message : String(error)
+          }
+        : current
+    );
   }
+}
+
+function FolderPickerModal({
+  state,
+  onBrowse,
+  onClose,
+  onSelect
+}: {
+  state: LocalBrowserState;
+  onBrowse: (dir: string) => void;
+  onClose: () => void;
+  onSelect: (dir: string) => void;
+}): React.ReactElement {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 70,
+        background: "rgba(26,25,21,0.88)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        overflowY: "auto"
+      }}
+    >
+      <div
+        onClick={(event) => event.stopPropagation()}
+        style={{
+          width: "min(760px, 100%)",
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--r-lg)",
+          padding: 20,
+          boxShadow: "0 28px 80px rgba(0,0,0,0.55)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+          maxHeight: "calc(100vh - 48px)"
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
+          <div>
+            <p
+              style={{
+                margin: 0,
+                marginBottom: 6,
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: "var(--coral)"
+              }}
+            >
+              Select repository folder
+            </p>
+            <h3 className="mh-serif" style={{ margin: 0, fontSize: 22, color: "var(--text)" }}>
+              {state.cwd ?? "Local folders"}
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              ...secondaryButtonStyle,
+              padding: "7px 12px"
+            }}
+          >
+            Close
+          </button>
+        </div>
+
+        <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: "var(--text-3)" }}>
+          Navigate the local filesystem and choose the git repository root. When the current folder is a git repo,
+          you can pick it directly from here.
+        </p>
+
+        <LocalFolderBrowser state={state} onBrowse={onBrowse} onSelect={onSelect} />
+      </div>
+    </div>
+  );
 }
 
 function LocalFolderBrowser({
@@ -408,8 +509,8 @@ function LocalFolderBrowser({
           {state.loading ? "Loading..." : state.cwd ?? "Local folders"}
         </span>
         {state.git !== undefined ? (
-          <button type="button" onClick={() => onSelect(state.git!.repoRoot)} style={secondaryButtonStyle}>
-            Select git repo
+          <button type="button" onClick={() => onSelect(state.git!.repoRoot)} style={selectButtonStyle}>
+            Select current repo
           </button>
         ) : null}
       </div>
@@ -423,10 +524,17 @@ function LocalFolderBrowser({
       ) : null}
       <div style={{ display: "grid", gap: 4, maxHeight: 180, overflow: "auto" }}>
         {(state.entries ?? []).map((entry) => (
-          <button key={entry.path} type="button" onClick={() => onBrowse(entry.path)} style={folderButtonStyle}>
-            <span>{entry.name}</span>
-            {entry.isGitRepo ? <span style={{ color: "var(--ready)" }}>git</span> : null}
-          </button>
+          <div key={entry.path} style={folderRowStyle}>
+            <button type="button" onClick={() => onBrowse(entry.path)} style={folderButtonStyle}>
+              <span>{entry.name}</span>
+              {entry.isGitRepo ? <span style={{ color: "var(--ready)" }}>git</span> : null}
+            </button>
+            {entry.isGitRepo ? (
+              <button type="button" onClick={() => onSelect(entry.path)} style={selectButtonStyle}>
+                Select
+              </button>
+            ) : null}
+          </div>
         ))}
       </div>
     </div>
@@ -434,6 +542,7 @@ function LocalFolderBrowser({
 }
 
 const folderButtonStyle: React.CSSProperties = {
+  flex: 1,
   display: "flex",
   justifyContent: "space-between",
   gap: 8,
@@ -444,6 +553,23 @@ const folderButtonStyle: React.CSSProperties = {
   padding: "6px 8px",
   fontSize: 12,
   cursor: "pointer"
+};
+
+const folderRowStyle: React.CSSProperties = {
+  display: "flex",
+  gap: 8,
+  alignItems: "stretch"
+};
+
+const selectButtonStyle: React.CSSProperties = {
+  border: "1px solid var(--coral)",
+  background: "rgba(194, 91, 84, 0.10)",
+  color: "var(--text)",
+  borderRadius: 5,
+  padding: "0 10px",
+  fontSize: 12,
+  cursor: "pointer",
+  whiteSpace: "nowrap"
 };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }): React.ReactElement {

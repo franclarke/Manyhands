@@ -6,6 +6,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createFixtureRepoProvisioner,
+  createDefaultRepoProvisioner,
   RepoProvisionError
 } from "@/lib/server/runs/repo-provisioner";
 import { rmWithRetry } from "@/lib/server/runs/fs-retry";
@@ -93,4 +94,19 @@ describe("createFixtureRepoProvisioner", () => {
       provisioner.provision({ spec: { kind: "fixture", fixtureId: "missing" }, runId: "run-1" })
     ).rejects.toBeInstanceOf(RepoProvisionError);
   });
+
+  it("rejects local repos that do not have an initial commit", async () => {
+    const repoRoot = path.join(tempDir, "local-repo");
+    await mkdir(repoRoot, { recursive: true });
+    git(repoRoot, "init", "-b", "main");
+
+    const provisioner = createDefaultRepoProvisioner({ benchmarksRoot, workRoot });
+    await expect(
+      provisioner.provision({ spec: { kind: "localPath", path: repoRoot }, runId: "run-1" })
+    ).rejects.toThrow("Create an initial commit before running ManyHands");
+  });
 });
+
+function git(cwd: string, ...args: string[]): string {
+  return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+}

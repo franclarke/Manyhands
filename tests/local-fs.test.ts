@@ -24,6 +24,27 @@ describe("local filesystem workspace helpers", () => {
     }
   });
 
+  it("detects git repositories without commits", async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-local-fs-"));
+    try {
+      const repoRoot = path.join(tempDir, "repo");
+      await mkdir(repoRoot, { recursive: true });
+      git(repoRoot, "init", "-b", "main");
+
+      const info = await inspectLocalGitRepo(repoRoot);
+      expect(info.repoRoot).toBe(path.resolve(repoRoot));
+      expect(info.branch).toBe("main");
+      expect(info.head).toBeUndefined();
+      expect(info.dirty).toBe(false);
+
+      const listing = await browseLocalDirectories(repoRoot);
+      expect(listing.git?.repoRoot).toBe(path.resolve(repoRoot));
+      expect(listing.git?.head).toBeUndefined();
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it("rejects paths outside a git repository", async () => {
     const tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-local-fs-"));
     try {

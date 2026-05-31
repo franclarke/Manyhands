@@ -1,123 +1,194 @@
 # ManyHands
 
-ManyHands es un producto de tesis para orquestacion visual de agentes LLM en desarrollo de software. Convierte un objetivo de producto en un DAG jerarquico, asigna contratos atomicos a las hojas, ejecuta trabajo aislado o deterministico, y conserva trazas y artefactos para explicar cada decision.
+ManyHands es una aplicación y plataforma experimental para orquestar agentes LLM en tareas de desarrollo de software. Parte de una feature escrita en lenguaje natural, la descompone en un DAG jerárquico de subtareas, asigna contratos de trabajo a las hojas, ejecuta esas hojas de forma aislada y luego integra los resultados de abajo hacia arriba.
 
-La tesis estudia si una arquitectura basada en descomposicion recursiva, ejecucion paralela aislada y scheduling consciente de conflictos mejora la coordinacion, la trazabilidad y la robustez frente a estrategias monoliticas o paralelas naive.
+El proyecto nace como tesis de Ingeniería en Sistemas. La pregunta central es si existe una granularidad óptima de descomposición que mejore la calidad, coordinación y trazabilidad del trabajo producido por agentes LLM paralelos.
 
 ```mermaid
 flowchart LR
-  A[Feature en lenguaje natural] --> B[DAG recursivo + contratos]
-  B --> C[Web app: Command Center, Runs, Replay, Lab]
-  C --> D[Core deterministico + trazas + snapshots]
-  D --> E[Benchmarks B0-B4 y granularidades G3/G6/G9]
-  E --> F[Evidencia para la tesis]
+  A["Feature en lenguaje natural"] --> B["Descomposición recursiva"]
+  B --> C["DAG + contratos atómicos"]
+  C --> D["Ejecución aislada en worktrees"]
+  D --> E["Integración bottom-up"]
+  E --> F["Trazas, métricas y evidencia"]
 ```
 
-## Producto actual
+## Qué problema resuelve
 
-La cara visible del proyecto hoy es una web app sobre el core de dominio del monorepo. El objetivo no es solo generar planes, sino hacer visible el sistema de orquestacion completo para que un developer pueda inspeccionar, ejecutar y comparar evidencia.
+Los agentes de código actuales pueden ser muy capaces, pero tienden a fallar cuando una tarea crece en tamaño, ambigüedad o superficie de conflicto. ManyHands explora una hipótesis concreta: en lugar de pedirle a un único agente que haga todo, un orquestador puede dividir el trabajo en subtareas más pequeñas, ejecutar esas subtareas con aislamiento explícito y medir qué tan bien se recomponen los resultados.
 
-Las superficies principales son:
+El objetivo no es crear otro agente de código. ManyHands es el sistema que coordina agentes: decide qué trabajo existe, qué dependencias hay entre partes, qué archivos puede tocar cada agente, cuándo se puede ejecutar en paralelo, qué conflictos se esperan y cómo se registra la evidencia de cada paso.
 
-- Command Center (`/`): entrada prompt-first para describir una feature y crear una run.
-- Workspaces (`/workspaces`): configuracion de repos y contexto de planificacion.
-- Runs (`/runs/[runId]`): DAG, inspector, trazas, validaciones y lifecycle de la ejecucion.
-- Replay (`/replay/demo`): canvas read-only sobre snapshots deterministas.
-- Lab Mode (`/lab`): benchmarks, reports y comparacion de granularidad.
+## Cómo funciona
 
-El producto usa el mismo modelo para demo, inspeccion y evidencia de tesis. Lab Mode no es la identidad completa del sistema; es el laboratorio controlado que permite comparar estrategias sin mezclar la varianza del modelo con la varianza de la arquitectura.
+El flujo principal del producto es:
 
-## Tesis
+1. El usuario describe una feature desde la web app.
+2. El decomposer genera un grafo de tareas con nodos `root`, `integrator` y hojas ejecutables.
+3. Cada hoja recibe un `AgentTaskContract` con objetivo, criterios de aceptación, scope permitido, paths prohibidos y comandos de validación.
+4. El scheduler agrupa hojas listas para ejecutar respetando dependencias y, más adelante, señales de riesgo de conflicto.
+5. El execution core crea worktrees, invoca Codex CLI para cada hoja, captura `git diff HEAD` como fuente de verdad y valida scope.
+6. El orquestador hace commits, integra resultados con cherry-pick y registra trazas, métricas y artefactos.
 
-La tesis trata a ManyHands como un artefacto de investigacion, no como un simple benchmark runner. El foco esta en evaluar si descomponer una tarea de software en subproblemas atomicos, ejecutar hojas en aislamiento y recomponer resultados bottom-up produce mejor coordinacion que una ejecucion monolitica o naive.
+El diseño separa deliberadamente tres capas: planificación, ejecución e investigación. La aplicación puede mostrar el DAG y el estado de una run; el core puede ejecutar y validar; el laboratorio puede comparar estrategias bajo condiciones controladas.
 
-Pregunta de investigacion:
+## La aplicación
 
-> ¿Puede una arquitectura basada en descomposicion recursiva, ejecucion paralela aislada y scheduling consciente de conflictos mejorar la coordinacion, la trazabilidad y la robustez de agentes LLM de software frente a estrategias monoliticas o paralelas naive?
+La cara visible de ManyHands es una web app en Next.js orientada a inspección y control de runs.
 
-La evidencia se separa por etapas:
+Superficies principales:
 
-- Evidencia estructural: forma del DAG, profundidad, cantidad de hojas y dependencias.
-- Evidencia de ejecucion: batches, conflictos, integraciones, validaciones y diffs.
-- Evidencia de producto: claridad del flujo visual, inspeccion y trazabilidad.
+- `/`: Command Center para crear runs desde un prompt.
+- `/workspaces`: configuración de repositorios y contexto de planificación.
+- `/runs/[runId]`: vista canónica de una run, con DAG, inspector, lifecycle y eventos SSE.
+- `/replay/demo`: replay determinista de snapshots para demos y regresión visual.
+- `/lab`: laboratorio de benchmarks y comparación de estrategias.
+
+El canvas del DAG usa `@xyflow/react` (React Flow). No es "React Canvas": es un grafo interactivo basado en componentes React, con nodos, edges, minimap, filtros e inspector.
+
+## La tesis
+
+ManyHands también es un artefacto académico. La tesis evalúa una arquitectura de orquestación para agentes LLM de software, con foco en granularidad, paralelismo, aislamiento y trazabilidad.
+
+Pregunta de investigación:
+
+> ¿Puede una arquitectura basada en descomposición recursiva, ejecución paralela aislada y scheduling consciente de conflictos mejorar la coordinación, la trazabilidad y la robustez de agentes LLM de software frente a estrategias monolíticas o paralelas naive?
+
+La comparación se organiza alrededor de dos dimensiones:
+
+- Estrategia de ejecución: single agent, DAG secuencial, paralelo naive, paralelo con integración y paralelo risk-aware.
+- Granularidad: aproximadamente 3, 6 o 9 hojas ejecutables por feature.
 
 Baselines experimentales:
 
-- B0 - single agent
-- B1 - sequential DAG
-- B2 - parallel naive
-- B3 - parallel + integration
-- B4 - parallel + risk-aware scheduling + integration
+- `B0`: single agent.
+- `B1`: sequential DAG.
+- `B2`: parallel naive.
+- `B3`: parallel + IntegrationAgent.
+- `B4`: parallel + risk-aware + IntegrationAgent.
 
 Targets de granularidad:
 
-- G3 - aproximadamente 3 hojas
-- G6 - aproximadamente 6 hojas
-- G9 - aproximadamente 9 hojas
+- `G3`: alrededor de 3 hojas.
+- `G6`: alrededor de 6 hojas.
+- `G9`: alrededor de 9 hojas.
 
-La metrica de comparacion vive en `GranularityVector` y combina señales pre y post ejecucion: profundidad del arbol, cantidad de hojas, tasa de integracion, tasa de conflicto, duracion total, costo, tests aprobados, cambios realizados y desviaciones de scope.
+La métrica central es `GranularityVector`, que combina señales previas a la ejecución, como profundidad del DAG, cantidad de hojas y dependencias, con señales posteriores, como tasa de éxito de integración, tasa de conflicto, duración, tests aprobados, líneas cambiadas, commits inesperados y violaciones de scope.
+
+## Estado actual
+
+ManyHands ya tiene una base funcional de producto y de core:
+
+- modelo de grafo con nodos `root`, `integrator` y hojas;
+- generación de runs desde prompt en la web app;
+- decomposer LLM con validación estricta y fallback determinista solo para Lab Mode;
+- persistencia JSON de workspaces y runs;
+- SSE para eventos progresivos de run;
+- canvas DAG read-only compartido entre producto y replay;
+- paquetes de dominio para grafos, contratos, scheduling, trazas, snapshots y evaluación;
+- package `@manyhands/execution-core` con schemas, errores y contratos de ejecución;
+- trace events de ejecución preparados para worktrees, Codex, validación, integración y batches;
+- fixture `benchmarks/task-manager-api` para experimentos de granularidad.
+
+El siguiente tramo de desarrollo es Execution Core v0.1: implementar `WorktreeManager`, ejecutores de Codex, scope checking, result recording, IntegrationAgent, BatchScheduler, RunExecutor y el wiring completo con la web app.
 
 ## Arquitectura del monorepo
 
 ```txt
-apps/web/                 Next.js web app
-packages/task-graph/      DAG, validacion, estados
-packages/contracts/       contratos de tarea y validaciones
-packages/decomposer/      descomposicion recursiva y mocks
-packages/scheduler/       politicas de batching
-packages/run-store/       snapshots y patches
-packages/trace-store/     trazas de planificacion y ejecucion
-packages/evaluator/       metricas y reportes experimentales
-packages/execution-core/  contratos y scaffolding de ejecucion real
-packages/conflict-risk/    señales estaticas de conflicto
-packages/scope-validation/ enforcement de scope
-packages/repository-index/ indexado estructural del repositorio
-packages/shared/          schemas y helpers compartidos
-packages/core/            barrel de compatibilidad heredada
+apps/
+  web/                  Next.js App Router UI
+
+packages/
+  task-graph/           DAG, nodos, validación y dependencias
+  contracts/            contratos de tareas y comandos de validación
+  decomposer/           descomposición LLM y determinista
+  scheduler/            políticas sequential, naive y risk-aware
+  run-store/            snapshots, patches y persistencia de runs
+  trace-store/          eventos de planificación y ejecución
+  execution-core/       contratos, errores y ejecución real en desarrollo
+  conflict-risk/        señales de riesgo de conflicto
+  scope-validation/     validación de scope para resultados
+  repository-index/     índice estructural del repositorio
+  evaluator/            métricas y reportes experimentales
+  shared/               schemas y helpers compartidos
+  core/                 barrel de compatibilidad heredada
+
+benchmarks/
+  task-manager-api/     fixture Express para experimentos
+
+docs/
+  adr/                  decisiones de arquitectura
+  development/          arquitectura, roadmap y plan de tesis
 ```
 
-La direccion de dependencia buscada es:
+La dirección de dependencia buscada es:
 
 ```txt
-apps -> core -> domain packages -> shared
+apps -> packages específicos -> shared
 ```
 
-Para mas contexto de arquitectura y roadmap, ver:
+`@manyhands/core` existe como barrel de compatibilidad, pero el desarrollo nuevo debe depender de paquetes específicos.
 
-- `docs/development/architecture.md`
-- `docs/development/web-app-roadmap.md`
-- `docs/development/ui-vision.md`
-- `docs/development/thesis-plan.md`
-- `docs/adr/0012-product-vision-and-roadmap-realignment.md`
-- `docs/design/decomposer-composer-redesign.md`
+## Principios de diseño
 
-## Estado actual
+- `graph.dependencies` es la fuente canónica de dependencias; `node.dependencies` es un shortcut sincronizado.
+- El campo canónico de intención de tarea es `goal`.
+- Codex CLI (`codex exec`) es el executor de subagentes.
+- `git diff HEAD` es la fuente de verdad del resultado de un agente.
+- El orquestador hace commit; los agentes no deben commitear.
+- El sandbox por defecto es `workspace-write`; `danger-full-access` requiere opt-in explícito.
+- La integración se hace con cherry-pick de commits hijo sobre rama padre.
+- El límite por defecto es `maxParallel = 3`.
+- Los timeouts por defecto son 5 minutos por hoja y 10 minutos para integración.
 
-Hoy el proyecto ya tiene:
+## Stack
 
-- un core deterministico para grafos, contratos, scheduling, snapshots y trazas;
-- una app web funcional para Command Center, Workspaces, Replay y Lab Mode;
-- reportes y fixtures de benchmark para comparar configuraciones de forma reproducible;
-- la base de ejecucion real preparada para worktrees, scope checks, integration y metricas.
+- TypeScript
+- pnpm workspaces
+- Next.js 15
+- React 19
+- Tailwind CSS 4
+- Zod
+- Vitest
+- tsup
+- `@xyflow/react` para el DAG canvas
+- Codex CLI para ejecución real de subagentes
 
-Lo que sigue es profundizar la capa de ejecucion real y el flujo agente a agente sin perder la separacion entre producto y evidencia de tesis.
-
-## Comandos utiles
+## Primeros pasos
 
 ```bash
 pnpm install
-
-# Desarrollo
+pnpm build
 pnpm web:dev
+```
 
-# Validacion
+La web app corre por defecto en `http://localhost:3000`.
+
+## Comandos útiles
+
+```bash
+# Tests
 pnpm test
+
+# Typecheck de packages
 pnpm typecheck
+
+# Typecheck de execution-core
+pnpm -F @manyhands/execution-core typecheck
+
+# Typecheck de la web app
 pnpm web:typecheck
-pnpm web:lint
+
+# Build de packages
 pnpm build
 
-# Laboratorio y demos
+# Desarrollo web
+pnpm web:dev
+```
+
+Comandos de laboratorio y demos:
+
+```bash
 pnpm demo:plan
 pnpm demo:execute:mock
 pnpm demo:index:repo
@@ -126,11 +197,17 @@ pnpm demo:benchmark:mock
 pnpm demo:benchmark:conflicts
 ```
 
-## Documentacion clave
+## Documentación clave
 
-- `docs/development/thesis-plan.md` - framing academico y separacion de evidencias
-- `docs/development/web-app-roadmap.md` - roadmap de la app web
-- `docs/development/ui-vision.md` - modelo de interaccion y canvas
-- `docs/development/architecture.md` - arquitectura actual del producto
-- `docs/adr/0012-product-vision-and-roadmap-realignment.md` - decision de realinear el roadmap hacia el producto visual
-- `docs/design/decomposer-composer-redesign.md` - redisenio del Decomposer y del Composer
+- [`docs/development/architecture.md`](docs/development/architecture.md): arquitectura del producto y paquetes.
+- [`docs/development/thesis-plan.md`](docs/development/thesis-plan.md): framing académico y separación de evidencia.
+- [`docs/development/web-app-roadmap.md`](docs/development/web-app-roadmap.md): roadmap de la web app.
+- [`docs/development/ui-vision.md`](docs/development/ui-vision.md): dirección visual e interacción.
+- [`docs/adr/`](docs/adr/): decisiones de arquitectura.
+- [`apps/web/README.md`](apps/web/README.md): detalles de rutas, APIs y canvas web.
+
+## Alcance y límites
+
+ManyHands está en desarrollo activo. La capa de planificación, visualización, persistencia de runs y laboratorio determinista ya existe. La ejecución real con worktrees, Codex CLI, commits orquestados e integración bottom-up está en proceso de implementación.
+
+Los resultados mock del laboratorio sirven para validar estructura, reproducibilidad y trazabilidad. No deben interpretarse como evidencia empírica final de calidad de código producida por agentes reales. Esa evidencia requiere las etapas posteriores de ejecución real y pilotos controlados con agentes.

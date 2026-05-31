@@ -5,6 +5,9 @@ import {
   RecursiveDecomposer,
   type AnthropicDecomposerResult,
   type Decomposer,
+  type RecursiveStepCompletedEvent,
+  type RecursiveStepListener,
+  type RecursiveStepStartedEvent,
   type WorkspaceHints
 } from "@manyhands/core";
 import type { Workspace } from "@/lib/api-types";
@@ -29,6 +32,8 @@ export interface PickDecomposerInput {
   model: string;
   /** Skip the LLM regardless of env (used by Lab compare for reproducibility). */
   forceFallback?: boolean;
+  onStepStarted?: RecursiveStepListener<RecursiveStepStartedEvent>;
+  onStepCompleted?: RecursiveStepListener<RecursiveStepCompletedEvent>;
 }
 
 const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-5";
@@ -78,6 +83,8 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
       apiKey,
       model,
       userPrompt: input.userPrompt,
+      ...(input.onStepStarted !== undefined ? { onStepStarted: input.onStepStarted } : {}),
+      ...(input.onStepCompleted !== undefined ? { onStepCompleted: input.onStepCompleted } : {}),
       ...(workspaceHints !== undefined ? { workspaceHints } : {})
     });
     return {
@@ -93,6 +100,8 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
     cwd: input.workspace?.repoPath ?? process.cwd(),
     model,
     userPrompt: input.userPrompt,
+    ...(input.onStepStarted !== undefined ? { onStepStarted: input.onStepStarted } : {}),
+    ...(input.onStepCompleted !== undefined ? { onStepCompleted: input.onStepCompleted } : {}),
     ...(workspaceHints !== undefined ? { workspaceHints } : {})
   });
   return {

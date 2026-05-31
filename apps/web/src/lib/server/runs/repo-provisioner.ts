@@ -144,6 +144,12 @@ export function createDefaultRepoProvisioner(
         return fixture.provision(input);
       }
       const info = await inspectLocalGitRepo(input.spec.path);
+      if (info.head === undefined) {
+        throw new RepoProvisionError(
+          input.spec,
+          `Local git repo has no commits yet: ${info.repoRoot}. Create an initial commit before running ManyHands.`
+        );
+      }
       return {
         repoRoot: info.repoRoot,
         baseBranch: info.branch,

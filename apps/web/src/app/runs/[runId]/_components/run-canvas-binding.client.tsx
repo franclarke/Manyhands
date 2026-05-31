@@ -22,11 +22,12 @@ interface RunCanvasBindingProps {
   conflicts: ConflictListItem[];
   conflictError?: string;
   execution?: RunExecutionResult;
+  errorMessage?: string;
 }
 
 export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactElement {
   const router = useRouter();
-  const { status, visibleTaskIds } = useLiveRun(props.runId, props.initialStatus);
+  const { status, visibleTaskIds, livePlanNodes } = useLiveRun(props.runId, props.initialStatus);
 
   return (
     <RunCanvasShell
@@ -44,6 +45,7 @@ export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactEleme
       conflicts={props.conflicts}
       {...(props.conflictError !== undefined ? { conflictError: props.conflictError } : {})}
       {...(props.execution !== undefined ? { execution: props.execution } : {})}
+      {...(props.errorMessage !== undefined ? { errorMessage: props.errorMessage } : {})}
       actionSlot={
         <RunActionBar
           runId={props.runId}
@@ -52,6 +54,7 @@ export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactEleme
         />
       }
       visibleTaskIds={visibleTaskIds}
+      livePlanNodes={livePlanNodes}
     />
   );
 }

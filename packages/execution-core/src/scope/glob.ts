@@ -16,8 +16,17 @@ export function globToRegExp(pattern: string): RegExp {
     const next = pattern[index + 1];
 
     if (char === "*" && next === "*") {
-      source += ".*";
-      index += 1;
+      // A `**/` segment matches zero or more directories, so `src/**/*.ts`
+      // must also match `src/x.ts` (no intermediate dir). Consume the trailing
+      // slash here and make it optional. A bare `**` (end or not followed by
+      // `/`) still matches across separators.
+      if (pattern[index + 2] === "/") {
+        source += "(?:.*/)?";
+        index += 2;
+      } else {
+        source += ".*";
+        index += 1;
+      }
     } else if (char === "*") {
       source += "[^/]*";
     } else {

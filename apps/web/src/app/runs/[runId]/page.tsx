@@ -69,6 +69,7 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
         conflicts={conflictState.conflicts}
         {...(conflictState.error !== undefined ? { conflictError: conflictState.error } : {})}
         {...(isExecutionResult(run.execution) ? { execution: run.execution } : {})}
+        {...(run.errorMessage !== undefined && run.errorMessage.length > 0 ? { errorMessage: run.errorMessage } : {})}
         headerSlot={
           <RunHeader
             run={run}

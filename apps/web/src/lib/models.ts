@@ -10,7 +10,7 @@ export const MODEL_OPTIONS: ReadonlyArray<ModelOption> = [
   { id: "gpt-5.5", label: "GPT-5.5", provider: "Codex CLI" }
 ];
 
-export const DEFAULT_MODEL_ID = "gpt-5";
+export const DEFAULT_MODEL_ID = "gpt-5.5";
 
 export function findModel(id: string): ModelOption | undefined {
   return MODEL_OPTIONS.find((option) => option.id === id);

@@ -6,7 +6,13 @@ import { join } from "node:path";
 import type { Decomposer, DecompositionOptions, DecompositionResult, FeatureRequest } from "../../index";
 import type { AnthropicLike } from "../anthropic-decomposer";
 import { DecomposerLlmError } from "../errors";
-import { RecursiveDecomposer, type RecursiveDecomposerOptions } from "./recursive-decomposer";
+import {
+  RecursiveDecomposer,
+  type RecursiveDecomposerOptions,
+  type RecursiveStepCompletedEvent,
+  type RecursiveStepListener,
+  type RecursiveStepStartedEvent
+} from "./recursive-decomposer";
 import { RECURSIVE_DECOMPOSER_PROMPT_VERSION, type Aggressiveness } from "./step-prompt";
 
 type SpawnFn = (
@@ -21,10 +27,13 @@ export interface CodexRecursiveDecomposerOptions {
   cwd: string;
   binaryPath?: string;
   timeoutMs?: number;
+  reasoningEffort?: string;
   workspaceHints?: string;
   aggressiveness?: Aggressiveness;
   depthBudget?: number;
   promptTemplateVersion?: string;
+  onStepStarted?: RecursiveStepListener<RecursiveStepStartedEvent>;
+  onStepCompleted?: RecursiveStepListener<RecursiveStepCompletedEvent>;
   spawn?: SpawnFn;
   readFile?: (filePath: string) => Promise<string>;
   writeFile?: (filePath: string, content: string) => Promise<void>;
@@ -33,9 +42,9 @@ export interface CodexRecursiveDecomposerOptions {
 }
 
 const DEFAULT_TIMEOUT_MS = 120_000;
+const DEFAULT_REASONING_EFFORT = "low";
 const SPAWN_FAILURE_EXIT_CODE = 127;
 const TIMEOUT_EXIT_CODE = 124;
-const OUTPUT_SCHEMA_FILE = "manyhands-recursive-step.schema.json";
 
 /**
  * Recursive decomposer backed by local `codex exec`, not a hosted LLM API.
@@ -61,6 +70,7 @@ export class CodexRecursiveDecomposer implements Decomposer {
     };
     if (options.binaryPath !== undefined) clientOptions.binaryPath = options.binaryPath;
     if (options.timeoutMs !== undefined) clientOptions.timeoutMs = options.timeoutMs;
+    if (options.reasoningEffort !== undefined) clientOptions.reasoningEffort = options.reasoningEffort;
     if (options.spawn !== undefined) clientOptions.spawn = options.spawn;
     if (options.readFile !== undefined) clientOptions.readFile = options.readFile;
     if (options.writeFile !== undefined) clientOptions.writeFile = options.writeFile;
@@ -77,6 +87,8 @@ export class CodexRecursiveDecomposer implements Decomposer {
     if (options.workspaceHints !== undefined) recursiveOptions.workspaceHints = options.workspaceHints;
     if (options.aggressiveness !== undefined) recursiveOptions.aggressiveness = options.aggressiveness;
     if (options.depthBudget !== undefined) recursiveOptions.depthBudget = options.depthBudget;
+    if (options.onStepStarted !== undefined) recursiveOptions.onStepStarted = options.onStepStarted;
+    if (options.onStepCompleted !== undefined) recursiveOptions.onStepCompleted = options.onStepCompleted;
     this.inner = new RecursiveDecomposer(recursiveOptions);
   }
 
@@ -90,6 +102,7 @@ interface CodexStepClientOptions {
   cwd: string;
   binaryPath?: string;
   timeoutMs?: number;
+  reasoningEffort?: string;
   spawn?: SpawnFn;
   readFile?: (filePath: string) => Promise<string>;
   writeFile?: (filePath: string, content: string) => Promise<void>;
@@ -103,6 +116,7 @@ class CodexStepClient implements AnthropicLike {
   private readonly cwd: string;
   private readonly binaryPath: string;
   private readonly timeoutMs: number;
+  private readonly reasoningEffort: string;
   private readonly spawnFn: SpawnFn;
   private readonly readFileFn: (filePath: string) => Promise<string>;
   private readonly writeFileFn: (filePath: string, content: string) => Promise<void>;
@@ -114,6 +128,7 @@ class CodexStepClient implements AnthropicLike {
     this.cwd = options.cwd;
     this.binaryPath = options.binaryPath ?? process.env.MANYHANDS_CODEX_BIN ?? "codex";
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    this.reasoningEffort = resolveReasoningEffort(options.reasoningEffort);
     this.spawnFn = options.spawn ?? spawn;
     this.readFileFn = options.readFile ?? ((filePath) => readFile(filePath, "utf8"));
     this.writeFileFn = options.writeFile ?? ((filePath, content) => writeFile(filePath, content, "utf8"));
@@ -135,10 +150,12 @@ class CodexStepClient implements AnthropicLike {
   }
 
   private async runCodex(prompt: string): Promise<string> {
-    const schemaPath = join(this.tmpDir, OUTPUT_SCHEMA_FILE);
     const outputPath = join(this.tmpDir, `manyhands-codex-step-${process.pid}-${Date.now()}.json`);
-    await this.writeFileFn(schemaPath, JSON.stringify(CODEX_STEP_JSON_SCHEMA, null, 2));
 
+    // --output-schema is intentionally omitted: the OpenAI API rejects oneOf at the root
+    // of a response_format schema, which breaks ChatGPT-account Codex sessions. The prompt
+    // already specifies the exact JSON shape; DecomposeStepOutputSchema.safeParse validates
+    // the parsed output application-side.
     const args = [
       "exec",
       "--sandbox",
@@ -148,11 +165,14 @@ class CodexStepClient implements AnthropicLike {
       "--ephemeral",
       "-C",
       this.cwd,
-      "--output-schema",
-      schemaPath,
       "--output-last-message",
       outputPath
     ];
+    if (this.reasoningEffort.length > 0) {
+      // Planning is a structured local decision, not implementation. Keep it fast
+      // unless a benchmark explicitly overrides the effort.
+      args.push("-c", `model_reasoning_effort=${this.reasoningEffort}`);
+    }
 
     const outcome = await spawnCodex({
       binaryPath: this.binaryPath,
@@ -254,95 +274,11 @@ function spawnCodex(input: SpawnCodexInput): Promise<SpawnCodexOutcome> {
   });
 }
 
-const CODEX_STEP_JSON_SCHEMA = {
-  $schema: "https://json-schema.org/draft/2020-12/schema",
-  type: "object",
-  oneOf: [
-    {
-      additionalProperties: false,
-      required: ["decision", "reasoning", "allowedPaths", "forbiddenPaths", "expectedFiles", "acceptanceCriteria"],
-      properties: {
-        decision: { const: "atomic" },
-        reasoning: { type: "string", minLength: 1, maxLength: 800 },
-        allowedPaths: { type: "array", maxItems: 60, items: { type: "string", minLength: 1 } },
-        forbiddenPaths: { type: "array", maxItems: 60, items: { type: "string", minLength: 1 } },
-        expectedFiles: { type: "array", maxItems: 60, items: { type: "string", minLength: 1 } },
-        acceptanceCriteria: {
-          type: "array",
-          minItems: 1,
-          maxItems: 20,
-          items: { type: "string", minLength: 1, maxLength: 400 }
-        }
-      }
-    },
-    {
-      additionalProperties: false,
-      required: ["decision", "reasoning", "sharedInterfaces", "children", "dependencies", "parentValidationCommands"],
-      properties: {
-        decision: { const: "decompose" },
-        reasoning: { type: "string", minLength: 1, maxLength: 800 },
-        sharedInterfaces: {
-          type: "array",
-          maxItems: 40,
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["id", "kind", "signature", "description"],
-            properties: {
-              id: { type: "string", pattern: "^[A-Za-z][A-Za-z0-9_]*$", minLength: 1, maxLength: 80 },
-              kind: { enum: ["type", "function", "module"] },
-              signature: { type: "string", minLength: 1, maxLength: 2000 },
-              description: { type: "string", minLength: 1, maxLength: 600 }
-            }
-          }
-        },
-        children: {
-          type: "array",
-          minItems: 2,
-          maxItems: 12,
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["id", "title", "goal", "consumes", "produces"],
-            properties: {
-              id: { type: "string", pattern: "^[a-z][a-z0-9_-]*$", minLength: 1, maxLength: 80 },
-              title: { type: "string", minLength: 1, maxLength: 160 },
-              goal: { type: "string", minLength: 1, maxLength: 600 },
-              kind: { enum: ["composite", "leaf"] },
-              consumes: { type: "array", maxItems: 40, items: { type: "string", minLength: 1 } },
-              produces: { type: "array", maxItems: 40, items: { type: "string", minLength: 1 } }
-            }
-          }
-        },
-        dependencies: {
-          type: "array",
-          maxItems: 60,
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["fromTaskId", "toTaskId", "type"],
-            properties: {
-              fromTaskId: { type: "string", minLength: 1 },
-              toTaskId: { type: "string", minLength: 1 },
-              type: { enum: ["contractual", "structural", "logical"] },
-              rationale: { type: "string", maxLength: 400 }
-            }
-          }
-        },
-        parentValidationCommands: {
-          type: "array",
-          maxItems: 20,
-          items: {
-            type: "object",
-            additionalProperties: false,
-            required: ["command", "args"],
-            properties: {
-              command: { type: "string", minLength: 1, maxLength: 200 },
-              args: { type: "array", maxItems: 40, items: { type: "string" } }
-            }
-          }
-        }
-      }
-    }
-  ]
-};
+function resolveReasoningEffort(override: string | undefined): string {
+  return (
+    override ??
+    process.env.MANYHANDS_CODEX_PLANNING_REASONING ??
+    process.env.MANYHANDS_CODEX_REASONING ??
+    DEFAULT_REASONING_EFFORT
+  ).trim();
+}

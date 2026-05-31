@@ -59,4 +59,21 @@ describe("ScopeChecker", () => {
 
     expect(result.passed).toBe(true);
   });
+
+  it("matches a top-level file against a `dir/**/*.ext` glob (zero intermediate dirs)", () => {
+    // Regression: `src/**/*.ts` previously required an intermediate directory,
+    // so a leaf that produced exactly `src/bookStore.ts` was wrongly flagged as
+    // a scope violation, which failed integration. `**/` must match zero dirs.
+    const result = checker.check({
+      changedFiles: ["src/bookStore.ts", "src/nested/util.ts", "tests/books.test.ts"],
+      executionScope: {
+        implementationPaths: ["src/**/*.ts"],
+        testPaths: ["tests/**/*.test.ts"],
+        configPaths: []
+      }
+    });
+
+    expect(result.violations).toEqual([]);
+    expect(result.passed).toBe(true);
+  });
 });

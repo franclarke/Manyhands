@@ -64,6 +64,35 @@ describe("RecursiveDecomposer — atomic root (single-agent shape)", () => {
     expect(result.contracts).toHaveLength(1);
     expect(leaves[0]?.contract?.executionScope?.implementationPaths).toEqual(["src/**"]);
   });
+
+  it("emits recursive planning step lifecycle events", async () => {
+    const events: string[] = [];
+    const client = scriptedClient([
+      {
+        match: "Evaluate arithmetic expression strings",
+        response: {
+          decision: "atomic",
+          reasoning: "small enough for one agent at low aggressiveness",
+          allowedPaths: ["src/**"],
+          forbiddenPaths: [],
+          expectedFiles: ["src/calculate.ts"],
+          acceptanceCriteria: ["calculate returns the numeric value of an expression"]
+        }
+      }
+    ]);
+    const decomposer = new RecursiveDecomposer({
+      client,
+      model: "test-model",
+      userPrompt: "build a calculator",
+      aggressiveness: "low",
+      onStepStarted: (event) => events.push(`start:${event.nodeId}:${event.depth}`),
+      onStepCompleted: (event) => events.push(`done:${event.nodeId}:${event.decision}:${event.childIds.length}`)
+    });
+
+    await decomposer.decompose(FEATURE);
+
+    expect(events).toEqual(["start:root:0", "done:root:atomic:0"]);
+  });
 });
 
 describe("RecursiveDecomposer — decompose with shared interfaces", () => {

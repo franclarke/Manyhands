@@ -2,6 +2,8 @@ import type { RunStatus } from "./schema";
 
 export type RunEventKind =
   | "status.changed"
+  | "planning.node.started"
+  | "planning.node.completed"
   | "node.added"
   | "edge.added"
   | "risk.added"
@@ -23,6 +25,21 @@ export interface RunEventBase {
 export interface StatusChangedEvent extends RunEventBase {
   kind: "status.changed";
   status: RunStatus;
+}
+
+export interface PlanningNodeStartedEvent extends RunEventBase {
+  kind: "planning.node.started";
+  nodeId: string;
+  parentId?: string;
+  title: string;
+  depth: number;
+}
+
+export interface PlanningNodeCompletedEvent extends RunEventBase {
+  kind: "planning.node.completed";
+  nodeId: string;
+  decision: "atomic" | "decompose";
+  childIds: string[];
 }
 
 export interface NodeAddedEvent extends RunEventBase {
@@ -73,6 +90,8 @@ export interface HeartbeatEvent extends RunEventBase {
 
 export type RunEvent =
   | StatusChangedEvent
+  | PlanningNodeStartedEvent
+  | PlanningNodeCompletedEvent
   | NodeAddedEvent
   | EdgeAddedEvent
   | RiskAddedEvent

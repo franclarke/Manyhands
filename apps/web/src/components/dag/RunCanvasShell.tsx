@@ -35,6 +35,20 @@ interface RunCanvasShellProps {
   /** When the persisted run is still generating, only nodes whose IDs appear in
    *  the cumulative SSE event log are shown. */
   visibleTaskIds?: ReadonlySet<string> | null;
+  /** Draft recursive-planning nodes emitted before the final snapshot exists. */
+  livePlanNodes?: readonly LivePlanNode[];
+  /** Set when the run failed; shown prominently in the null-graph fallback area. */
+  errorMessage?: string;
+}
+
+export interface LivePlanNode {
+  id: string;
+  parentId: string | null;
+  title: string;
+  depth: number;
+  state: "active" | "complete";
+  decision?: "atomic" | "decompose";
+  childCount?: number;
 }
 
 export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
@@ -66,24 +80,58 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
   }, [snapshot, visibleTaskIds]);
 
   if (graph === null || derivedSnapshot === null) {
+    const isFailed = source.kind === "persisted-run" && source.initialStatus === "failed";
+    const isGenerating = source.kind === "persisted-run" && source.initialStatus === "generating";
+    const isCreated = source.kind === "persisted-run" && source.initialStatus === "created";
+    const livePlanNodes = props.livePlanNodes ?? [];
+    const statusMessage = isGenerating
+      ? "Esperando descomposición…"
+      : isCreated
+        ? "Inicializando run…"
+        : isFailed
+          ? "La generación del plan falló."
+          : "No hay snapshot disponible todavía.";
     return (
-      <div
-        style={{
-          padding: 48,
-          border: "1px dashed var(--border)",
-          background: "var(--bg-1)",
-          borderRadius: "var(--r-lg)",
-          color: "var(--text-3)",
-          fontFamily: "var(--font-mono)",
-          fontSize: 12,
-          textAlign: "center"
-        }}
-      >
-        {source.kind === "persisted-run" && source.initialStatus === "generating"
-          ? "Esperando descomposición…"
-          : source.kind === "persisted-run" && source.initialStatus === "created"
-            ? "Inicializando run…"
-            : "No hay snapshot disponible todavía."}
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {props.headerSlot != null ? props.headerSlot : null}
+        <div
+          style={{
+            padding: 36,
+            border: `1px ${isFailed ? "solid" : "dashed"} ${isFailed ? "var(--error, #c25b54)" : "var(--border)"}`,
+            background: isFailed ? "rgba(194,91,84,0.06)" : "var(--bg-1)",
+            borderRadius: "var(--r-lg)",
+            color: isFailed ? "var(--error, #c25b54)" : "var(--text-3)",
+            fontFamily: "var(--font-mono)",
+            fontSize: 12,
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            alignItems: "flex-start"
+          }}
+        >
+          <span>{statusMessage}</span>
+          {isFailed && props.errorMessage != null && props.errorMessage.length > 0 ? (
+            <pre
+              style={{
+                margin: 0,
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                fontSize: 11,
+                color: "var(--text-2)",
+                background: "rgba(0,0,0,0.25)",
+                borderRadius: "var(--r-md)",
+                padding: "10px 14px",
+                maxHeight: 260,
+                overflowY: "auto",
+                width: "100%",
+                boxSizing: "border-box"
+              }}
+            >
+              {props.errorMessage}
+            </pre>
+          ) : null}
+          {livePlanNodes.length > 0 ? <LivePlanningTree nodes={livePlanNodes} /> : null}
+        </div>
       </div>
     );
   }
@@ -115,7 +163,10 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
 interface UseLiveRunResult {
   status: RunStatusKey;
   visibleTaskIds: ReadonlySet<string> | null;
+  livePlanNodes: readonly LivePlanNode[];
 }
+
+const LIVE_REFRESH_MS = 5_000;
 
 /**
  * Client hook that subscribes to a persisted run's SSE stream, accumulates
@@ -126,7 +177,17 @@ export function useLiveRun(runId: string, initialStatus: RunStatusKey): UseLiveR
   const router = useRouter();
   const [status, setStatus] = useState<RunStatusKey>(initialStatus);
   const [visible, setVisible] = useState<Set<string>>(new Set());
+  const [livePlanNodes, setLivePlanNodes] = useState<Map<string, LivePlanNode>>(new Map());
   const eventSourceRef = useRef<EventSource | null>(null);
+
+  useEffect(() => {
+    setStatus(initialStatus);
+  }, [initialStatus]);
+
+  useEffect(() => {
+    setVisible(new Set());
+    setLivePlanNodes(new Map());
+  }, [runId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -135,13 +196,59 @@ export function useLiveRun(runId: string, initialStatus: RunStatusKey): UseLiveR
     eventSourceRef.current = es;
     es.onmessage = (raw) => {
       try {
-        const event = JSON.parse(raw.data) as { kind: string; status?: RunStatusKey; taskId?: string };
+        const event = JSON.parse(raw.data) as {
+          kind: string;
+          status?: RunStatusKey;
+          taskId?: string;
+          nodeId?: string;
+          parentId?: string;
+          title?: string;
+          depth?: number;
+          decision?: "atomic" | "decompose";
+          childIds?: string[];
+        };
         if (event.kind === "node.added" && typeof event.taskId === "string") {
           const taskId = event.taskId;
           setVisible((current) => {
             if (current.has(taskId)) return current;
             const next = new Set(current);
             next.add(taskId);
+            return next;
+          });
+        } else if (
+          event.kind === "planning.node.started" &&
+          typeof event.nodeId === "string" &&
+          typeof event.title === "string" &&
+          typeof event.depth === "number"
+        ) {
+          setLivePlanNodes((current) => {
+            const next = new Map(current);
+            next.set(event.nodeId!, {
+              id: event.nodeId!,
+              parentId: event.parentId ?? null,
+              title: event.title!,
+              depth: event.depth!,
+              state: "active"
+            });
+            return next;
+          });
+        } else if (
+          event.kind === "planning.node.completed" &&
+          typeof event.nodeId === "string" &&
+          (event.decision === "atomic" || event.decision === "decompose")
+        ) {
+          const decision = event.decision;
+          const childCount = event.childIds?.length ?? 0;
+          setLivePlanNodes((current) => {
+            const existing = current.get(event.nodeId!);
+            if (existing === undefined) return current;
+            const next = new Map(current);
+            next.set(event.nodeId!, {
+              ...existing,
+              state: "complete",
+              decision,
+              childCount
+            });
             return next;
           });
         } else if (event.kind === "status.changed" && event.status !== undefined) {
@@ -161,6 +268,14 @@ export function useLiveRun(runId: string, initialStatus: RunStatusKey): UseLiveR
   }, [runId, router]);
 
   useEffect(() => {
+    if (!isLiveRunStatus(status)) return;
+    const interval = window.setInterval(() => {
+      router.refresh();
+    }, LIVE_REFRESH_MS);
+    return () => window.clearInterval(interval);
+  }, [router, status]);
+
+  useEffect(() => {
     if (status === "needs_review" || status === "approved" || status === "completed" || status === "failed") {
       setVisible((current) => (current.size === 0 ? current : new Set()));
     }
@@ -168,6 +283,58 @@ export function useLiveRun(runId: string, initialStatus: RunStatusKey): UseLiveR
 
   return {
     status,
-    visibleTaskIds: status === "generating" ? visible : null
+    visibleTaskIds: status === "generating" ? visible : null,
+    livePlanNodes: Array.from(livePlanNodes.values()).sort(
+      (left, right) => left.depth - right.depth || left.id.localeCompare(right.id)
+    )
   };
+}
+
+function isLiveRunStatus(status: RunStatusKey): boolean {
+  return status === "created" || status === "generating" || status === "running" || status === "paused";
+}
+
+function LivePlanningTree({ nodes }: { nodes: readonly LivePlanNode[] }): React.ReactElement {
+  return (
+    <div
+      style={{
+        width: "100%",
+        display: "grid",
+        gap: 8,
+        marginTop: 4
+      }}
+    >
+      {nodes.map((node) => (
+        <div
+          key={node.id}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) auto",
+            gap: 10,
+            alignItems: "center",
+            marginLeft: node.depth * 18,
+            padding: "9px 11px",
+            border: "1px solid var(--border-soft)",
+            background: node.state === "active" ? "rgba(244,195,106,0.08)" : "rgba(119,215,200,0.05)",
+            borderRadius: "var(--r-md)",
+            color: "var(--text-2)"
+          }}
+        >
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {node.title}
+          </span>
+          <span
+            className="mh-mono"
+            style={{
+              color: node.state === "active" ? "var(--copper)" : "var(--text-3)",
+              fontSize: 10.5,
+              whiteSpace: "nowrap"
+            }}
+          >
+            {node.state === "active" ? "thinking" : node.decision ?? "done"}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
 }

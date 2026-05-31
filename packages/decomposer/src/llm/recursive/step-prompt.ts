@@ -103,7 +103,7 @@ const OUTPUT_SCHEMA_LITERAL = `// One of these two shapes (discriminated by "dec
   ],
   "dependencies": [
     { "fromTaskId": "childId", "toTaskId": "childId", "type": "contractual | structural | logical", "rationale": "string (optional)" }
-  ],
+  ],  // default to [] unless real execution order is required
   "parentValidationCommands": [
     { "command": "npm", "args": ["test"] }
   ]
@@ -136,7 +136,13 @@ const SYSTEM_PROMPT = [
   "  them with REAL signatures so each child can be built independently against the same seam.",
   "- Each child declares which interface ids it `consumes` (built by siblings/ancestors) and which",
   "  it `produces` (exposes for others). This is what lets the children run in parallel safely.",
-  "- Add `dependencies` only when execution order truly matters.",
+  "- `consumes`/`produces` are interface contracts, not execution dependencies. A child can build",
+  "  against a shared interface without waiting for another child to finish.",
+  "- Default `dependencies` to [] for siblings. Add one only when the target child truly cannot",
+  "  start until the source child's concrete files or side effects already exist in the worktree",
+  "  (for example: generated schema before codegen, migration before repository wiring).",
+  "- Do not create dependency chains just because UI consumes state/types, tests use production",
+  "  code, or multiple leaves touch related concepts. Those are normal parallel leaves.",
   "- Add `parentValidationCommands` that verify the integrated children honour the seams",
   "  (typically the project's test command).",
   "",

@@ -205,6 +205,8 @@ function startHeartbeat(runId: string): () => void {
   let stopped = false;
   const tick = async (): Promise<void> => {
     while (!stopped) {
+      await sleep(HEARTBEAT_INTERVAL_MS);
+      if (stopped) return;
       try {
         const repo = getRunRepository();
         const current = await repo.get(runId);
@@ -212,7 +214,6 @@ function startHeartbeat(runId: string): () => void {
       } catch {
         // best-effort; sweeper will handle persistent failures
       }
-      await sleep(HEARTBEAT_INTERVAL_MS);
     }
   };
   void tick();
@@ -254,6 +255,25 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
     const selection = pickDecomposer({
       userPrompt: run.userPrompt,
       model: run.model,
+      onStepStarted: (event) => {
+        publishEvent(run.runId, {
+          kind: "planning.node.started",
+          nodeId: event.nodeId,
+          ...(event.parentId !== null ? { parentId: event.parentId } : {}),
+          title: event.title,
+          depth: event.depth,
+          at: new Date().toISOString()
+        });
+      },
+      onStepCompleted: (event) => {
+        publishEvent(run.runId, {
+          kind: "planning.node.completed",
+          nodeId: event.nodeId,
+          decision: event.decision,
+          childIds: event.childIds,
+          at: new Date().toISOString()
+        });
+      },
       ...(workspace !== null ? { workspace } : {})
     });
 

@@ -56,6 +56,24 @@ export interface RecursiveDecomposerOptions {
   depthBudget?: number;
   workspaceHints?: string;
   promptTemplateVersion?: string;
+  onStepStarted?: RecursiveStepListener<RecursiveStepStartedEvent>;
+  onStepCompleted?: RecursiveStepListener<RecursiveStepCompletedEvent>;
+}
+
+export type RecursiveStepListener<T> = (event: T) => void | Promise<void>;
+
+export interface RecursiveStepStartedEvent {
+  nodeId: string;
+  parentId: string | null;
+  title: string;
+  goal: string;
+  depth: number;
+  depthBudget: number;
+}
+
+export interface RecursiveStepCompletedEvent extends RecursiveStepStartedEvent {
+  decision: DecomposeStepOutput["decision"];
+  childIds: string[];
 }
 
 interface ExpandContext {
@@ -102,6 +120,8 @@ export class RecursiveDecomposer implements Decomposer {
   private readonly aggressivenessOverride?: Aggressiveness;
   private readonly depthBudget: number;
   private readonly workspaceHints?: string;
+  private readonly onStepStarted?: RecursiveStepListener<RecursiveStepStartedEvent>;
+  private readonly onStepCompleted?: RecursiveStepListener<RecursiveStepCompletedEvent>;
   public readonly promptTemplateVersion: string;
 
   constructor(options: RecursiveDecomposerOptions) {
@@ -118,6 +138,12 @@ export class RecursiveDecomposer implements Decomposer {
     this.depthBudget = options.depthBudget ?? DEFAULT_DEPTH_BUDGET;
     if (options.workspaceHints !== undefined) {
       this.workspaceHints = options.workspaceHints;
+    }
+    if (options.onStepStarted !== undefined) {
+      this.onStepStarted = options.onStepStarted;
+    }
+    if (options.onStepCompleted !== undefined) {
+      this.onStepCompleted = options.onStepCompleted;
     }
     this.promptTemplateVersion = options.promptTemplateVersion ?? RECURSIVE_DECOMPOSER_PROMPT_VERSION;
   }
@@ -199,8 +225,10 @@ export class RecursiveDecomposer implements Decomposer {
     accum: Accumulator,
     aggressiveness: Aggressiveness
   ): Promise<string[]> {
+    this.emitStepStarted(ctx);
     const step = await this.callStep(ctx, aggressiveness);
     accum.callCount += 1;
+    this.emitStepCompleted(ctx, step);
 
     const forcedAtomic = ctx.depthBudget <= 0;
 
@@ -397,7 +425,7 @@ export class RecursiveDecomposer implements Decomposer {
       });
     } catch (error) {
       throw new DecomposerLlmError(
-        `Anthropic request failed during recursive step for "${ctx.nodeId}": ${error instanceof Error ? error.message : String(error)}`,
+        `Recursive decomposer request failed during step "${ctx.nodeId}": ${error instanceof Error ? error.message : String(error)}`,
         error,
         "request"
       );
@@ -428,6 +456,30 @@ export class RecursiveDecomposer implements Decomposer {
       );
     }
     return result.data;
+  }
+
+  private emitStepStarted(ctx: ExpandContext): void {
+    void emitBestEffort(this.onStepStarted, {
+      nodeId: ctx.nodeId,
+      parentId: ctx.parentId,
+      title: ctx.title,
+      goal: ctx.goal,
+      depth: ctx.depth,
+      depthBudget: ctx.depthBudget
+    });
+  }
+
+  private emitStepCompleted(ctx: ExpandContext, step: DecomposeStepOutput): void {
+    void emitBestEffort(this.onStepCompleted, {
+      nodeId: ctx.nodeId,
+      parentId: ctx.parentId,
+      title: ctx.title,
+      goal: ctx.goal,
+      depth: ctx.depth,
+      depthBudget: ctx.depthBudget,
+      decision: step.decision,
+      childIds: step.decision === "decompose" ? step.children.map((child) => child.id) : []
+    });
   }
 }
 
@@ -580,4 +632,16 @@ function extractJson(text: string): string | null {
     }
   }
   return null;
+}
+
+async function emitBestEffort<T>(
+  listener: RecursiveStepListener<T> | undefined,
+  event: T
+): Promise<void> {
+  if (listener === undefined) return;
+  try {
+    await listener(event);
+  } catch {
+    // Live planning telemetry must never fail graph generation.
+  }
 }

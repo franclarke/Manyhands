@@ -1510,7 +1510,12 @@ export { executionScopeFromAllowed } from "./scope";
 
 // ── Recursive interface-aware decomposer (thesis Artifact 1) ──────
 export { RecursiveDecomposer } from "./llm/recursive/recursive-decomposer";
-export type { RecursiveDecomposerOptions } from "./llm/recursive/recursive-decomposer";
+export type {
+  RecursiveDecomposerOptions,
+  RecursiveStepCompletedEvent,
+  RecursiveStepListener,
+  RecursiveStepStartedEvent
+} from "./llm/recursive/recursive-decomposer";
 export { CodexRecursiveDecomposer } from "./llm/recursive/codex-recursive-decomposer";
 export type { CodexRecursiveDecomposerOptions } from "./llm/recursive/codex-recursive-decomposer";
 export {
