@@ -1506,3 +1506,23 @@ export { runDecomposerGuards } from "./llm/guards";
 export type { GuardOptions } from "./llm/guards";
 export { normalizeLlmDecomposition } from "./llm/normalize";
 export { DecomposerLlmError, isDecomposerLlmError } from "./llm/errors";
+export { executionScopeFromAllowed } from "./scope";
+
+// ── Recursive interface-aware decomposer (thesis Artifact 1) ──────
+export { RecursiveDecomposer } from "./llm/recursive/recursive-decomposer";
+export type { RecursiveDecomposerOptions } from "./llm/recursive/recursive-decomposer";
+export {
+  RECURSIVE_DECOMPOSER_PROMPT_VERSION,
+  buildStepPrompt
+} from "./llm/recursive/step-prompt";
+export type { Aggressiveness, StepPromptInputs } from "./llm/recursive/step-prompt";
+export {
+  DecomposeStepOutputSchema,
+  StepInterfaceSchema
+} from "./llm/recursive/step-schema";
+export type {
+  DecomposeStepOutput,
+  StepInterface,
+  AtomicStep,
+  DecomposeStep
+} from "./llm/recursive/step-schema";
