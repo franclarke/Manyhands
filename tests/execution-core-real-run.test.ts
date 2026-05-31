@@ -105,7 +105,12 @@ describe.skipIf(!E2E)("RunExecutor real run (opt-in, real codex exec)", () => {
   });
 
   it("runs a real leaf, produces a non-empty diff, and commits it", async () => {
-    await execFileAsync("codex", ["--version"]); // fail fast if the binary is missing
+    // Resolve the codex binary the same way CodexCliExecutor does. On Windows
+    // the npm shim is `codex.cmd`, which execFile only finds through a shell.
+    const codexBin = process.env.MANYHANDS_CODEX_BIN ?? "codex";
+    await execFileAsync(codexBin, ["--version"], {
+      shell: process.platform === "win32"
+    }); // fail fast if the binary is missing
 
     const traceStore = new InMemoryTraceStore();
     const executor = new RunExecutor({
@@ -118,7 +123,9 @@ describe.skipIf(!E2E)("RunExecutor real run (opt-in, real codex exec)", () => {
     const result = await executor.run({
       graph: graph(),
       config: ExecutionConfigSchema.parse({}),
-      model: "gpt-5-codex",
+      // ChatGPT-account auth (no API key) rejects gpt-5-codex; use the account's
+      // supported model. Overridable so other auth modes can pick another.
+      model: process.env.MANYHANDS_CODEX_MODEL ?? "gpt-5.5",
       runId: RUN_ID
     });
 
@@ -132,5 +139,8 @@ describe.skipIf(!E2E)("RunExecutor real run (opt-in, real codex exec)", () => {
     expect(traceStore.findByType("worktree_created").length).toBeGreaterThan(0);
     expect(traceStore.findByType("agent_committed").length).toBeGreaterThan(0);
     expect(traceStore.findByType("run_completed")).toHaveLength(1);
-  }, 300_000);
+    // Test budget sits above the leaf timeout (D10 = 300s) so a leaf-level
+    // timeout is handled by the pipeline instead of colliding with vitest's.
+    // With MANYHANDS_CODEX_REASONING=low a real leaf finishes in ~60–90s.
+  }, 600_000);
 });

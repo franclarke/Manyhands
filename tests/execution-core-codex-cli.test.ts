@@ -25,27 +25,37 @@ function optionsFor(cwd: string): CodexCliExecutorOptions {
   };
 }
 
-/** Minimal ChildProcess double: an EventEmitter with piped stdout/stderr. */
+/** Minimal ChildProcess double: an EventEmitter with piped stdio. */
 function fakeChild() {
   const child = new EventEmitter() as EventEmitter & {
     stdout: PassThrough;
     stderr: PassThrough;
+    stdin: PassThrough;
     kill: (signal?: string) => boolean;
   };
   child.stdout = new PassThrough();
   child.stderr = new PassThrough();
+  child.stdin = new PassThrough();
   child.kill = () => true;
   return child;
 }
 
+/** Default deps for injected-spawn tests: fake child + in-memory instructions. */
+function depsFor(child: ReturnType<typeof fakeChild>) {
+  return {
+    spawn: () => child as never,
+    readInstructions: async () => "do the thing",
+    // Keep tests platform-independent: never shell out to taskkill.
+    useShell: false
+  };
+}
+
 describe("buildCodexArgs", () => {
-  it("threads instructions file, sandbox, and model in order", () => {
+  it("threads sandbox and model in order (prompt goes over stdin, not a flag)", () => {
     const options = { ...optionsFor("/repo"), bypassApprovals: false };
     const args = buildCodexArgs(options);
     expect(args).toEqual([
       "exec",
-      "--instructions-file",
-      options.instructionFilePath,
       "--sandbox",
       "workspace-write",
       "--model",
@@ -53,9 +63,19 @@ describe("buildCodexArgs", () => {
     ]);
   });
 
-  it("appends non-interactive approval flag when bypassApprovals is set", () => {
+  it("never passes a --instructions-file flag (codex exec reads stdin)", () => {
     const args = buildCodexArgs(optionsFor("/repo"));
-    expect(args.slice(-2)).toEqual(["--ask-for-approval", "never"]);
+    expect(args).not.toContain("--instructions-file");
+  });
+
+  it("never emits --ask-for-approval (codex exec is non-interactive by design)", () => {
+    // bypassApprovals is a no-op at the arg layer: `codex exec` has no approval
+    // flag and rejects the whole invocation if one is passed (codex-cli 0.135.0).
+    const withBypass = buildCodexArgs(optionsFor("/repo"));
+    const withoutBypass = buildCodexArgs({ ...optionsFor("/repo"), bypassApprovals: false });
+    expect(withBypass).not.toContain("--ask-for-approval");
+    expect(withoutBypass).not.toContain("--ask-for-approval");
+    expect(withBypass).toEqual(withoutBypass);
   });
 
   it("honours danger-full-access sandbox mode", () => {
@@ -67,9 +87,7 @@ describe("buildCodexArgs", () => {
 describe("CodexCliExecutor (injected spawn)", () => {
   it("captures stdout/stderr and the exit code on clean close", async () => {
     const child = fakeChild();
-    const executor = new CodexCliExecutor({
-      spawn: () => child as never
-    });
+    const executor = new CodexCliExecutor(depsFor(child));
 
     const promise = executor.execute(optionsFor("/repo"));
     child.stdout.emit("data", Buffer.from("done\n"));
@@ -85,7 +103,7 @@ describe("CodexCliExecutor (injected spawn)", () => {
 
   it("reports a non-zero exit code", async () => {
     const child = fakeChild();
-    const executor = new CodexCliExecutor({ spawn: () => child as never });
+    const executor = new CodexCliExecutor(depsFor(child));
 
     const promise = executor.execute(optionsFor("/repo"));
     child.emit("close", 1);
@@ -97,7 +115,7 @@ describe("CodexCliExecutor (injected spawn)", () => {
 
   it("surfaces a spawn error as a non-zero exit outcome", async () => {
     const child = fakeChild();
-    const executor = new CodexCliExecutor({ spawn: () => child as never });
+    const executor = new CodexCliExecutor(depsFor(child));
 
     const promise = executor.execute(optionsFor("/repo"));
     child.emit("error", new Error("spawn codex ENOENT"));
@@ -114,7 +132,7 @@ describe("CodexCliExecutor (injected spawn)", () => {
       killed = true;
       return true;
     };
-    const executor = new CodexCliExecutor({ spawn: () => child as never });
+    const executor = new CodexCliExecutor(depsFor(child));
 
     const outcome = await executor.execute({ ...optionsFor("/repo"), timeoutMs: 5 });
     expect(outcome.timedOut).toBe(true);
