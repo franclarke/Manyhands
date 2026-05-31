@@ -51,7 +51,7 @@ function depsFor(child: ReturnType<typeof fakeChild>) {
 }
 
 describe("buildCodexArgs", () => {
-  it("threads sandbox and model in order (prompt goes over stdin, not a flag)", () => {
+  it("threads sandbox and model in order, with --ephemeral (prompt goes over stdin, not a flag)", () => {
     const options = { ...optionsFor("/repo"), bypassApprovals: false };
     const args = buildCodexArgs(options);
     expect(args).toEqual([
@@ -59,7 +59,8 @@ describe("buildCodexArgs", () => {
       "--sandbox",
       "workspace-write",
       "--model",
-      "gpt-5-codex"
+      "gpt-5-codex",
+      "--ephemeral"
     ]);
   });
 

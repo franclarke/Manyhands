@@ -62,18 +62,24 @@ function graph(): TaskGraph {
         id: "impl-crud",
         parentId: "root",
         kind: "leaf",
-        title: "Implement PUT and DELETE",
+        title: "Implement updateTask and deleteTask in the model",
         goal:
-          "In src/routes/tasks.ts, implement PUT /tasks/:id (update an existing task) " +
-          "and DELETE /tasks/:id (remove a task), replacing the 404 stubs.",
+          "In src/models/task.ts, implement the `updateTask(id, input)` function " +
+          "(find the task by id, apply the UpdateTaskInput fields, update `updatedAt`, " +
+          "persist, and return the updated task; return undefined if not found) and the " +
+          "`deleteTask(id)` function (remove the task from the Map and return true; " +
+          "return false if not found). Both currently return stubs and cause PUT/DELETE " +
+          "HTTP routes to always respond with 404.",
         status: "planned",
         granularity: "fine",
         depth: 1,
         childrenIds: [],
         dependencies: [],
         acceptanceCriteria: [
-          "PUT /tasks/:id updates a task and returns it",
-          "DELETE /tasks/:id removes a task and returns 204"
+          "updateTask(id, input) finds the task, merges UpdateTaskInput fields, refreshes updatedAt, and returns the updated task",
+          "updateTask(id, input) returns undefined when the task id does not exist",
+          "deleteTask(id) removes the task from the store and returns true",
+          "deleteTask(id) returns false when the task id does not exist"
         ]
       }
     }
@@ -131,6 +137,18 @@ describe.skipIf(!E2E)("RunExecutor real run (opt-in, real codex exec)", () => {
 
     const leaf = result.leafResults.find((entry) => entry.taskId === "impl-crud");
     expect(leaf).toBeDefined();
+
+    // Diagnostic: surface status/exit code on failure so we can pinpoint the
+    // root cause without a second round-trip (diff empty vs. codex_error vs.
+    // scope_violation are very different failure modes).
+    if (!leaf || leaf.diff.length === 0 || !leaf.commitSha) {
+      console.error("[smoke] leaf status:", leaf?.status);
+      console.error("[smoke] codex exit:", leaf?.codexExitCode, "timedOut:", leaf?.codexTimedOut);
+      console.error("[smoke] scope:", JSON.stringify(leaf?.scopeCheck));
+      console.error("[smoke] diff (first 500):", leaf?.diff.slice(0, 500));
+      console.error("[smoke] run status:", result.status);
+    }
+
     // Real execution: Codex changed files and the orchestrator committed them (D5/D6).
     expect(leaf?.diff.length ?? 0).toBeGreaterThan(0);
     expect(leaf?.commitSha).toBeDefined();

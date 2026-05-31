@@ -21,7 +21,14 @@ const SPAWN_FAILURE_EXIT_CODE = 127;
  * only for interface symmetry with the mock. Verified against codex-cli 0.135.0.
  */
 export function buildCodexArgs(options: CodexCliExecutorOptions): string[] {
-  const args = ["exec", "--sandbox", options.sandboxMode, "--model", options.model];
+  const args = [
+    "exec",
+    "--sandbox", options.sandboxMode,
+    "--model", options.model,
+    // Each leaf is a single isolated task; no need to persist a session.
+    // Prevents cross-run contamination and session file accumulation.
+    "--ephemeral"
+  ];
   // Reasoning effort is a fixed experimental condition set once per matrix run,
   // not a per-leaf variable — so it is sourced from the environment, not the
   // options schema. codex-cli defaults to `xhigh`, which can push a single leaf
