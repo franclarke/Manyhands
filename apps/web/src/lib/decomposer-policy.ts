@@ -1,6 +1,7 @@
 import {
   AnthropicDecomposer,
   MetadataDrivenMockDecomposer,
+  RecursiveDecomposer,
   type AnthropicDecomposerResult,
   type Decomposer,
   type WorkspaceHints
@@ -46,22 +47,53 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   }
 
   const model = pickAnthropicModel(input.model);
-  const decomposer = new AnthropicDecomposer({
+  const hints = toWorkspaceHints(input.workspace);
+
+  // The recursive interface-aware decomposer is the product default (thesis
+  // Artifact 1). The single-pass AnthropicDecomposer is kept as the experiment
+  // baseline, selectable via MANYHANDS_DECOMPOSER=single-pass.
+  if (process.env.MANYHANDS_DECOMPOSER === "single-pass") {
+    const decomposer = new AnthropicDecomposer({
+      apiKey,
+      model,
+      userPrompt: input.userPrompt,
+      ...(hints !== undefined ? { workspaceHints: hints } : {})
+    });
+    return {
+      decomposer,
+      provider: "anthropic",
+      model,
+      promptTemplateVersion: decomposer.promptTemplateVersion,
+      getAnthropicTelemetry: () => decomposer.getLastResponse()
+    };
+  }
+
+  const recursive = new RecursiveDecomposer({
     apiKey,
     model,
     userPrompt: input.userPrompt,
-    ...(toWorkspaceHints(input.workspace) !== undefined
-      ? { workspaceHints: toWorkspaceHints(input.workspace)! }
-      : {})
+    ...(hints !== undefined ? { workspaceHints: formatWorkspaceHints(hints) } : {})
   });
-
   return {
-    decomposer,
+    decomposer: recursive,
     provider: "anthropic",
     model,
-    promptTemplateVersion: decomposer.promptTemplateVersion,
-    getAnthropicTelemetry: () => decomposer.getLastResponse()
+    promptTemplateVersion: recursive.promptTemplateVersion
   };
+}
+
+/** Renders structured workspace hints into the plain-text block the recursive prompt expects. */
+function formatWorkspaceHints(hints: WorkspaceHints): string {
+  const lines = [`- name: ${hints.name}`];
+  if (hints.repoPath !== undefined) lines.push(`- repoPath: ${hints.repoPath}`);
+  if (hints.packageManager !== undefined) lines.push(`- packageManager: ${hints.packageManager}`);
+  if (hints.defaultBranch !== undefined) lines.push(`- defaultBranch: ${hints.defaultBranch}`);
+  if (hints.allowedPaths !== undefined && hints.allowedPaths.length > 0) {
+    lines.push(`- allowedPaths: ${hints.allowedPaths.slice(0, 12).join(", ")}`);
+  }
+  if (hints.testCommand !== undefined) lines.push(`- testCommand: ${hints.testCommand}`);
+  if (hints.buildCommand !== undefined) lines.push(`- buildCommand: ${hints.buildCommand}`);
+  return lines.join("\n");
 }
 
 function buildFallbackSelection(
