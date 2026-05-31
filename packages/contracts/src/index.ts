@@ -98,6 +98,35 @@ export const ExecutionScopeSchema = z.object({
 
 export type ExecutionScope = z.infer<typeof ExecutionScopeSchema>;
 
+// ── Interface contracts (shared seams between sibling tasks) ─────
+//
+// The "seam" a recursive-decomposition step defines between the children of a
+// composite. Making seams explicit is what lets parallel leaves be built in
+// isolation and still compose: each leaf receives the exact signatures it
+// consumes (produced by siblings/ancestors) and must expose the ones it
+// produces. See docs/design/decomposer-composer-redesign.md.
+
+export const InterfaceContractKindSchema = z.union([
+  z.literal("type"),
+  z.literal("function"),
+  z.literal("module")
+]);
+
+export type InterfaceContractKind = z.infer<typeof InterfaceContractKindSchema>;
+
+export const InterfaceContractSchema = z.object({
+  /** Stable identifier referenced by children's consumes/produces (e.g. "TaskStore"). */
+  id: NonEmptyStringSchema,
+  kind: InterfaceContractKindSchema,
+  /** The real TS signature/definition, not just the name. */
+  signature: NonEmptyStringSchema,
+  description: NonEmptyStringSchema,
+  /** Which decomposition node defined this seam (traceability). */
+  definedAtNodeId: NonEmptyStringSchema.optional()
+});
+
+export type InterfaceContract = z.infer<typeof InterfaceContractSchema>;
+
 // ── Agent task contract ─────────────────────────────────────────
 
 export const AgentTaskContractSchema = z.object({
@@ -123,7 +152,13 @@ export const AgentTaskContractSchema = z.object({
   forbiddenPaths: z.array(NonEmptyStringSchema).optional(),
   leafValidationCommands: z.array(ExecutionValidationCommandSchema).optional(),
   parentValidationCommands: z.array(ExecutionValidationCommandSchema).optional(),
-  runValidationCommands: z.array(ExecutionValidationCommandSchema).optional()
+  runValidationCommands: z.array(ExecutionValidationCommandSchema).optional(),
+
+  // V2 — Interface seams (recursive-decomposition design, optional)
+  /** Seams this leaf must build against (produced by siblings/ancestors). */
+  consumedInterfaces: z.array(InterfaceContractSchema).optional(),
+  /** Seams this leaf must expose for siblings/descendants to consume. */
+  producedInterfaces: z.array(InterfaceContractSchema).optional()
 });
 
 export type AgentTaskContract = z.infer<typeof AgentTaskContractSchema>;
