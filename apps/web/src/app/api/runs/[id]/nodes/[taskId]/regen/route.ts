@@ -111,6 +111,7 @@ async function runRegenerationPlanning(input: {
   const selection = pickDecomposer({
     userPrompt: `${input.userPrompt}\n\nRegenerate subtree ${input.taskId}: ${input.feature.description}`,
     model: input.model,
+    forceFallback: true,
     ...(input.workspace !== undefined ? { workspace: input.workspace } : {})
   });
   const baseOptions = {

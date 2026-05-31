@@ -1,5 +1,6 @@
 import {
   AnthropicDecomposer,
+  CodexRecursiveDecomposer,
   MetadataDrivenMockDecomposer,
   RecursiveDecomposer,
   type AnthropicDecomposerResult,
@@ -14,7 +15,7 @@ import type { Workspace } from "@/lib/api-types";
  */
 export interface DecomposerSelection {
   decomposer: Decomposer;
-  provider: "anthropic" | "deterministic";
+  provider: "anthropic" | "codex" | "deterministic";
   model: string;
   promptTemplateVersion?: string;
   fallbackReason?: "no_api_key" | "forced_by_env" | "forced_by_caller";
@@ -42,17 +43,17 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   if (forceFallbackEnv) {
     return buildFallbackSelection(input, "forced_by_env");
   }
-  if (apiKey === undefined || apiKey.length === 0) {
-    return buildFallbackSelection(input, "no_api_key");
-  }
-
-  const model = pickAnthropicModel(input.model);
   const hints = toWorkspaceHints(input.workspace);
+  const workspaceHints = hints !== undefined ? formatWorkspaceHints(hints) : undefined;
 
   // The recursive interface-aware decomposer is the product default (thesis
-  // Artifact 1). The single-pass AnthropicDecomposer is kept as the experiment
-  // baseline, selectable via MANYHANDS_DECOMPOSER=single-pass.
+  // Artifact 1). For local-first product runs, the step model is Codex CLI.
+  // Anthropic single-pass/recursive modes are kept only as explicit baselines.
   if (process.env.MANYHANDS_DECOMPOSER === "single-pass") {
+    if (apiKey === undefined || apiKey.length === 0) {
+      return buildFallbackSelection(input, "no_api_key");
+    }
+    const model = pickAnthropicModel(input.model);
     const decomposer = new AnthropicDecomposer({
       apiKey,
       model,
@@ -68,15 +69,35 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
     };
   }
 
-  const recursive = new RecursiveDecomposer({
-    apiKey,
+  if (process.env.MANYHANDS_DECOMPOSER === "anthropic-recursive") {
+    if (apiKey === undefined || apiKey.length === 0) {
+      return buildFallbackSelection(input, "no_api_key");
+    }
+    const model = pickAnthropicModel(input.model);
+    const recursive = new RecursiveDecomposer({
+      apiKey,
+      model,
+      userPrompt: input.userPrompt,
+      ...(workspaceHints !== undefined ? { workspaceHints } : {})
+    });
+    return {
+      decomposer: recursive,
+      provider: "anthropic",
+      model,
+      promptTemplateVersion: recursive.promptTemplateVersion
+    };
+  }
+
+  const model = input.model;
+  const recursive = new CodexRecursiveDecomposer({
+    cwd: input.workspace?.repoPath ?? process.cwd(),
     model,
     userPrompt: input.userPrompt,
-    ...(hints !== undefined ? { workspaceHints: formatWorkspaceHints(hints) } : {})
+    ...(workspaceHints !== undefined ? { workspaceHints } : {})
   });
   return {
     decomposer: recursive,
-    provider: "anthropic",
+    provider: "codex",
     model,
     promptTemplateVersion: recursive.promptTemplateVersion
   };

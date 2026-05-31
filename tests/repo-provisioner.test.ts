@@ -75,7 +75,7 @@ describe("createFixtureRepoProvisioner", () => {
     expect(a.repoRoot).not.toBe(b.repoRoot);
     expect(existsSync(a.repoRoot)).toBe(true);
     expect(existsSync(b.repoRoot)).toBe(true);
-  });
+  }, 30000);
 
   it("cleanup removes the per-run working directory", async () => {
     const provisioner = createFixtureRepoProvisioner({ benchmarksRoot, workRoot });

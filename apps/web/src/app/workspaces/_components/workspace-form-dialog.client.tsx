@@ -43,6 +43,7 @@ export function WorkspaceFormDialog({
   onSubmit
 }: WorkspaceFormDialogProps): React.ReactElement {
   const [value, setValue] = useState<WorkspaceFormValue>(initial ?? EMPTY);
+  const [browser, setBrowser] = useState<LocalBrowserState>({ open: false, loading: false });
   const [showAdvanced, setShowAdvanced] = useState<boolean>(() => {
     if (initial === null) return false;
     return Boolean(
@@ -193,19 +194,40 @@ export function WorkspaceFormDialog({
                 lineHeight: 1.5
               }}
             >
-              Estos campos no se ejecutan todavía. Se usan únicamente como hints
-              para guiar al LLM decomposer (paths, comandos, manager). Worktrees
-              y ejecución real llegan en Fase D.
+              Repo path is the local git folder ManyHands will plan, execute, integrate, and patch after approval. Commands and paths guide Codex and validation.
             </p>
             <Field label="Repo path (absolute or relative)">
-              <input
-                value={value.repoPath}
-                onChange={(event) => setValue((v) => ({ ...v, repoPath: event.target.value }))}
-                placeholder="/Users/me/code/my-repo"
-                maxLength={400}
-                style={inputStyle}
-              />
+              <div style={{ display: "flex", gap: 8, width: "100%" }}>
+                <input
+                  value={value.repoPath}
+                  onChange={(event) => setValue((v) => ({ ...v, repoPath: event.target.value }))}
+                  placeholder="/Users/me/code/my-repo"
+                  maxLength={400}
+                  style={{ ...inputStyle, flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    void browseLocal(value.repoPath, setBrowser);
+                  }}
+                  style={secondaryButtonStyle}
+                >
+                  Browse
+                </button>
+              </div>
             </Field>
+            {browser.open ? (
+              <LocalFolderBrowser
+                state={browser}
+                onBrowse={(dir) => {
+                  void browseLocal(dir, setBrowser);
+                }}
+                onSelect={(dir) => {
+                  setValue((v) => ({ ...v, repoPath: dir }));
+                  setBrowser({ open: false, loading: false });
+                }}
+              />
+            ) : null}
             <Field label="Package manager">
               <select
                 value={value.packageManager}
@@ -306,6 +328,122 @@ const inputStyle: React.CSSProperties = {
   fontSize: 13,
   fontFamily: "var(--font-sans)",
   outline: "none"
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  padding: "0 10px",
+  border: "1px solid var(--border)",
+  background: "transparent",
+  color: "var(--text-2)",
+  borderRadius: 6,
+  fontSize: 12,
+  cursor: "pointer"
+};
+
+interface LocalBrowserEntry {
+  name: string;
+  path: string;
+  isGitRepo: boolean;
+}
+
+interface LocalBrowserState {
+  open: boolean;
+  loading: boolean;
+  cwd?: string;
+  parent?: string;
+  entries?: LocalBrowserEntry[];
+  git?: { repoRoot: string; branch: string; head: string; dirty: boolean };
+  error?: string;
+}
+
+async function browseLocal(
+  dir: string,
+  setBrowser: React.Dispatch<React.SetStateAction<LocalBrowserState>>
+): Promise<void> {
+  setBrowser((current) => {
+    const next: LocalBrowserState = { ...current, open: true, loading: true };
+    delete next.error;
+    return next;
+  });
+  try {
+    const query = dir.trim().length > 0 ? `?path=${encodeURIComponent(dir.trim())}` : "";
+    const response = await fetch(`/api/local-fs/browse${query}`);
+    const payload = (await response.json()) as LocalBrowserState & { error?: string };
+    if (!response.ok) {
+      throw new Error(payload.error ?? `Browse failed with ${response.status}`);
+    }
+    setBrowser({ ...payload, open: true, loading: false });
+  } catch (error) {
+    setBrowser({
+      open: true,
+      loading: false,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
+function LocalFolderBrowser({
+  state,
+  onBrowse,
+  onSelect
+}: {
+  state: LocalBrowserState;
+  onBrowse: (dir: string) => void;
+  onSelect: (dir: string) => void;
+}): React.ReactElement {
+  return (
+    <div
+      style={{
+        border: "1px solid var(--border)",
+        borderRadius: "var(--r-md)",
+        background: "rgba(15,16,18,0.72)",
+        padding: 10,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8
+      }}
+    >
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-2)" }}>
+          {state.loading ? "Loading..." : state.cwd ?? "Local folders"}
+        </span>
+        {state.git !== undefined ? (
+          <button type="button" onClick={() => onSelect(state.git!.repoRoot)} style={secondaryButtonStyle}>
+            Select git repo
+          </button>
+        ) : null}
+      </div>
+      {state.error !== undefined ? (
+        <span style={{ color: "var(--error)", fontSize: 12 }}>{state.error}</span>
+      ) : null}
+      {state.parent !== undefined ? (
+        <button type="button" onClick={() => onBrowse(state.parent!)} style={folderButtonStyle}>
+          ..
+        </button>
+      ) : null}
+      <div style={{ display: "grid", gap: 4, maxHeight: 180, overflow: "auto" }}>
+        {(state.entries ?? []).map((entry) => (
+          <button key={entry.path} type="button" onClick={() => onBrowse(entry.path)} style={folderButtonStyle}>
+            <span>{entry.name}</span>
+            {entry.isGitRepo ? <span style={{ color: "var(--ready)" }}>git</span> : null}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const folderButtonStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 8,
+  border: "1px solid var(--rule-soft)",
+  background: "rgba(229,222,204,0.025)",
+  color: "var(--text)",
+  borderRadius: 5,
+  padding: "6px 8px",
+  fontSize: 12,
+  cursor: "pointer"
 };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }): React.ReactElement {

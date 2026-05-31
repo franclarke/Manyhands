@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorResponse, RunResponse, Workspace } from "@/lib/api-types";
 import { GranularitySelector } from "./granularity-selector.client";
-import { ScenarioPicker, getDefaultScenarioId } from "./scenario-picker.client";
+import { ModelPicker } from "./model-picker.client";
+import { ScenarioPicker } from "./scenario-picker.client";
 import { TaskPrompt } from "./task-prompt.client";
 import { WorkspacePicker } from "./workspace-picker.client";
 import { toGranularityMode, type GranularityLevel } from "@/lib/granularity";
 import { findScenario } from "@/lib/scenarios";
-import { EXECUTABLE_FIXTURES } from "@/lib/executable-fixtures";
 
 const PROMPT_STORAGE_KEY = "manyhands:lastPrompt";
 
@@ -33,10 +33,9 @@ export function CommandCenterShell({
   const router = useRouter();
   const initialWorkspaceId = workspaces[0]?.id ?? "";
   const [workspaceId, setWorkspaceId] = useState<string>(initialWorkspaceId);
-  const [scenarioId, setScenarioId] = useState<string>(getDefaultScenarioId());
-  const [repoFixtureId, setRepoFixtureId] = useState<string>("");
+  const [scenarioId, setScenarioId] = useState<string>("");
   const [granularity, setGranularity] = useState<GranularityLevel>(initialGranularity);
-  const [modelId] = useState<string>(initialModelId);
+  const [modelId, setModelId] = useState<string>(initialModelId);
   const [prompt, setPrompt] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -69,10 +68,15 @@ export function CommandCenterShell({
     ? granularityMode === "auto" || scenario.supportedGranularities.includes(granularityMode)
     : true;
   const hasPrompt = prompt.trim().length > 0;
-  const canStart = selectedWorkspace !== null && hasPrompt && granularitySupported && !submitting;
-  const executionMode = repoFixtureId.length > 0
-    ? "Codex execution after approval"
-    : "Plan and review task graph";
+  const hasLocalRepo = selectedWorkspace?.repoPath !== undefined && selectedWorkspace.repoPath.length > 0;
+  const canStart =
+    selectedWorkspace !== null &&
+    hasPrompt &&
+    granularitySupported &&
+    (scenario !== undefined || hasLocalRepo) &&
+    modelId.trim().length > 0 &&
+    !submitting;
+  const executionMode = scenario !== undefined ? "Lab planning fixture" : "Local Codex execution";
 
   async function handleStart(): Promise<void> {
     if (selectedWorkspace === null) return;
@@ -85,7 +89,7 @@ export function CommandCenterShell({
         model: string;
         userPrompt: string;
         scenarioId?: string;
-        repoSpec?: { kind: "fixture"; fixtureId: string };
+        repoSpec?: { kind: "localPath"; path: string };
       } = {
         workspaceId: selectedWorkspace.id,
         granularity: granularityMode,
@@ -95,8 +99,8 @@ export function CommandCenterShell({
       if (scenario !== undefined) {
         body.scenarioId = scenario.id;
       }
-      if (repoFixtureId.length > 0) {
-        body.repoSpec = { kind: "fixture", fixtureId: repoFixtureId };
+      if (scenario === undefined && selectedWorkspace.repoPath !== undefined) {
+        body.repoSpec = { kind: "localPath", path: selectedWorkspace.repoPath };
       }
       const response = await fetch("/api/runs", {
         method: "POST",
@@ -202,6 +206,9 @@ export function CommandCenterShell({
               {selectedWorkspace?.defaultBranch ?? "main"}
             </span>
           </ConfigField>
+          <ConfigField label="Model">
+            <ModelPicker value={modelId} onChange={setModelId} />
+          </ConfigField>
           <ConfigField label="Execution mode">
             <span style={{ fontSize: 12.5, color: "var(--text)" }}>{executionMode}</span>
           </ConfigField>
@@ -219,24 +226,15 @@ export function CommandCenterShell({
           }}
         >
           <ConfigField label="Target repo">
-            <select
-              value={repoFixtureId}
-              onChange={(event) => setRepoFixtureId(event.target.value)}
-              style={selectStyle}
-            >
-              <option value="">Current workspace planning only</option>
-              {EXECUTABLE_FIXTURES.map((fixture) => (
-                <option key={fixture.id} value={fixture.id}>
-                  {fixture.label}
-                </option>
-              ))}
-            </select>
+            <span className="mh-mono" style={{ fontSize: 11.5, color: hasLocalRepo ? "var(--text)" : "var(--error)" }}>
+              {selectedWorkspace?.repoPath ?? "Configure a local git folder in this workspace"}
+            </span>
           </ConfigField>
           <ConfigField label="Run evidence">
             <span style={{ fontSize: 12, color: "var(--text-2)", lineHeight: 1.45 }}>
-              {repoFixtureId.length > 0
-                ? EXECUTABLE_FIXTURES.find((fixture) => fixture.id === repoFixtureId)?.description
-                : "Generate a task graph first. Agents run only after human plan approval."}
+              {scenario !== undefined
+                ? "Lab scenario selected; planning stays deterministic for replay."
+                : "Codex plans locally, agents run after approval, and the final patch is applied on success."}
             </span>
           </ConfigField>
         </div>
@@ -281,6 +279,10 @@ export function CommandCenterShell({
           {!granularitySupported ? (
             <span className="mh-mono" style={{ color: "var(--error)", fontSize: 11 }}>
               Selected lab scenario does not support this granularity.
+            </span>
+          ) : scenario === undefined && !hasLocalRepo ? (
+            <span className="mh-mono" style={{ color: "var(--error)", fontSize: 11 }}>
+              Configure a local git folder on the selected workspace.
             </span>
           ) : (
             <span style={{ color: "var(--text-3)", fontSize: 12 }}>
@@ -377,15 +379,3 @@ function AdvancedSection({ children }: { children: React.ReactNode }): React.Rea
     </div>
   );
 }
-
-const selectStyle: React.CSSProperties = {
-  width: "100%",
-  minWidth: 0,
-  height: 34,
-  padding: "0 10px",
-  border: "1px solid var(--rule)",
-  background: "rgba(15,16,18,0.64)",
-  color: "var(--text)",
-  borderRadius: "var(--r-md)",
-  fontSize: 12.5
-};

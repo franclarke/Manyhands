@@ -10,6 +10,7 @@ interface ModelPickerProps {
 
 export function ModelPicker({ value, onChange }: ModelPickerProps): React.ReactElement {
   const labelId = useId();
+  const listId = `${labelId}-options`;
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
       <label
@@ -24,31 +25,30 @@ export function ModelPicker({ value, onChange }: ModelPickerProps): React.ReactE
       >
         Model
       </label>
-      <select
+      <input
         id={labelId}
+        list={listId}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         style={{
           height: 30,
-          padding: "0 28px 0 10px",
+          width: 150,
+          padding: "0 10px",
           border: "1px solid var(--border)",
           background: "var(--bg-1)",
           color: "var(--text)",
           borderRadius: 6,
           fontSize: 13,
-          fontFamily: "var(--font-sans)",
-          appearance: "none",
-          cursor: "pointer"
+          fontFamily: "var(--font-sans)"
         }}
-      >
+      />
+      <datalist id={listId}>
         {MODEL_OPTIONS.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.label}
-          </option>
+          <option key={option.id} value={option.id} label={`${option.label} (${option.provider})`} />
         ))}
-      </select>
+      </datalist>
       <span
-        title="Selection is cosmetic in Fase A — no real provider adapters yet."
+        title="This model id is passed directly to Codex CLI."
         style={{
           fontSize: 9.5,
           fontFamily: "var(--font-mono)",
@@ -61,7 +61,7 @@ export function ModelPicker({ value, onChange }: ModelPickerProps): React.ReactE
           textTransform: "uppercase"
         }}
       >
-        preview
+        codex
       </span>
     </div>
   );

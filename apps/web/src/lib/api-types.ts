@@ -144,6 +144,7 @@ export interface RunCreateRequest {
   granularity: RunGranularityKey;
   model: string;
   userPrompt?: string;
+  repoSpec?: { kind: "fixture"; fixtureId: string } | { kind: "localPath"; path: string };
 }
 
 export interface RunResponse {
@@ -165,8 +166,13 @@ export interface RunResponse {
     startedAt?: string;
     completedAt?: string;
     heartbeatAt?: string;
+    finalCommitSha?: string;
+    appliedToRepoPath?: string;
+    appliedAt?: string;
+    baseCommit?: string;
+    integrationCommitSha?: string;
     decomposition?: {
-      provider: "anthropic" | "deterministic";
+      provider: "anthropic" | "codex" | "deterministic";
       model: string;
       promptTemplateVersion?: string;
       fallbackUsed: boolean;

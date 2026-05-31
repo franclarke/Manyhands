@@ -91,7 +91,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       scenarioName = scenario.name;
     }
 
-    await getWorkspaceRepository().get(parsed.data.workspaceId); // throws WorkspaceNotFoundError → 404
+    const workspace = await getWorkspaceRepository().get(parsed.data.workspaceId); // throws WorkspaceNotFoundError → 404
 
     const now = new Date().toISOString();
     const runId = randomUUID();
@@ -111,7 +111,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       runId,
       workspaceId: parsed.data.workspaceId,
       ...(scenarioId !== undefined ? { scenarioId } : {}),
-      ...(parsed.data.repoSpec !== undefined ? { repoSpec: parsed.data.repoSpec } : {}),
+      ...(parsed.data.repoSpec !== undefined
+        ? { repoSpec: parsed.data.repoSpec }
+        : scenarioId === undefined && workspace.repoPath !== undefined
+          ? { repoSpec: { kind: "localPath" as const, path: workspace.repoPath } }
+          : {}),
       granularity: parsed.data.granularity,
       model: parsed.data.model,
       userPrompt,

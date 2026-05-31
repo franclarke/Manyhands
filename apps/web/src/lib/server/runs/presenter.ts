@@ -24,6 +24,11 @@ export function toRunResponse(run: RunRecord): RunResponse {
   if (run.startedAt !== undefined) payload.startedAt = run.startedAt;
   if (run.completedAt !== undefined) payload.completedAt = run.completedAt;
   if (run.heartbeatAt !== undefined) payload.heartbeatAt = run.heartbeatAt;
+  if (run.finalCommitSha !== undefined) payload.finalCommitSha = run.finalCommitSha;
+  if (run.appliedToRepoPath !== undefined) payload.appliedToRepoPath = run.appliedToRepoPath;
+  if (run.appliedAt !== undefined) payload.appliedAt = run.appliedAt;
+  if (run.baseCommit !== undefined) payload.baseCommit = run.baseCommit;
+  if (run.integrationCommitSha !== undefined) payload.integrationCommitSha = run.integrationCommitSha;
   if (run.decomposition !== undefined) {
     const decompositionPayload: NonNullable<RunResponse["run"]["decomposition"]> = {
       provider: run.decomposition.provider,

@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 import { z } from "zod";
 
 import { resolveManyhandsPath, resolveRepoRoot } from "../repo-root";
+import { inspectLocalGitRepo } from "../workspaces/repo-validation";
 import { rmWithRetry } from "./fs-retry";
 
 const execFileAsync = promisify(execFile);
@@ -18,10 +19,16 @@ const execFileAsync = promisify(execFile);
  * Crosses a boundary (persisted on the RunRecord, may arrive from the API),
  * so it is a Zod schema, not a bare interface.
  */
-export const RepoSpecSchema = z.object({
-  kind: z.literal("fixture"),
-  fixtureId: z.string().min(1)
-});
+export const RepoSpecSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("fixture"),
+    fixtureId: z.string().min(1)
+  }),
+  z.object({
+    kind: z.literal("localPath"),
+    path: z.string().min(1)
+  })
+]);
 
 export type RepoSpec = z.infer<typeof RepoSpecSchema>;
 
@@ -92,6 +99,9 @@ export function createFixtureRepoProvisioner(
 
   return {
     async provision({ spec, runId }): Promise<ProvisionedRepo> {
+      if (spec.kind !== "fixture") {
+        throw new RepoProvisionError(spec, "Fixture provisioner only supports fixture repo specs.");
+      }
       const source = path.join(benchmarksRoot, spec.fixtureId);
       await assertFixtureExists(spec, source);
 
@@ -123,7 +133,28 @@ export function createFixtureRepoProvisioner(
   };
 }
 
-async function assertFixtureExists(spec: RepoSpec, source: string): Promise<void> {
+/** Provisions either a benchmark fixture copy or an existing local git repo. */
+export function createDefaultRepoProvisioner(
+  options: FixtureProvisionerOptions = {}
+): RepoProvisioner {
+  const fixture = createFixtureRepoProvisioner(options);
+  return {
+    async provision(input): Promise<ProvisionedRepo> {
+      if (input.spec.kind === "fixture") {
+        return fixture.provision(input);
+      }
+      const info = await inspectLocalGitRepo(input.spec.path);
+      return {
+        repoRoot: info.repoRoot,
+        baseBranch: info.branch,
+        baseCommit: info.head,
+        cleanup: async () => undefined
+      };
+    }
+  };
+}
+
+async function assertFixtureExists(spec: Extract<RepoSpec, { kind: "fixture" }>, source: string): Promise<void> {
   try {
     await access(source);
   } catch (error) {

@@ -1,4 +1,5 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -166,4 +167,94 @@ describe("runExecutionPipeline provisioning", () => {
       "run_completed"
     ]);
   }, 30000);
+
+  it("applies the final integrated patch back to a local repo", async () => {
+    const runId = "run-local-apply";
+    const repoRoot = path.join(tempDir, "local-repo");
+    await initRepo(repoRoot);
+    const baseCommit = git(repoRoot, "rev-parse", "HEAD");
+    const store = await saveApprovedRun(runId, {
+      scenarioId: undefined,
+      repoSpec: { kind: "localPath", path: repoRoot },
+      planning: { decomposition: { graph: minimalGraph(baseCommit, repoRoot) } }
+    });
+
+    const engine: ExecutionEngine = {
+      run: async (input) => {
+        await writeFile(path.join(repoRoot, "src", "feature.ts"), "export const feature = true;\n");
+        git(repoRoot, "add", "-A");
+        git(repoRoot, "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "integrated");
+        const integrationCommit = git(repoRoot, "rev-parse", "HEAD");
+        git(repoRoot, "reset", "--hard", input.provisioned!.baseCommit);
+        return {
+          runId,
+          status: "completed",
+          leafResults: [],
+          integrationResults: [
+            {
+              compositeTaskId: "root",
+              status: "success",
+              childResults: [],
+              integrationCommitSha: integrationCommit,
+              repairAttempted: false
+            }
+          ],
+          granularityVector: STUB_VECTOR,
+          totalDurationMs: 1
+        };
+      }
+    };
+
+    await runExecutionPipeline(runId, { intervalMs: 0, engine });
+
+    const finalRun = await store.get(runId);
+    expect(finalRun.status).toBe("completed");
+    expect(finalRun.finalPatch).toContain("feature.ts");
+    expect(finalRun.integrationCommitSha).toMatch(/^[0-9a-f]{40}$/);
+    expect(finalRun.finalCommitSha).toBe(git(repoRoot, "rev-parse", "HEAD"));
+    expect(git(repoRoot, "status", "--porcelain")).toBe("");
+  }, 30000);
 });
+
+async function initRepo(repoRoot: string): Promise<void> {
+  await mkdir(path.join(repoRoot, "src"), { recursive: true });
+  await writeFile(path.join(repoRoot, "src", "index.ts"), "export const base = true;\n");
+  git(repoRoot, "init", "-b", "main");
+  git(repoRoot, "config", "user.name", "Test");
+  git(repoRoot, "config", "user.email", "test@example.com");
+  git(repoRoot, "config", "commit.gpgsign", "false");
+  git(repoRoot, "add", "-A");
+  git(repoRoot, "commit", "-m", "base");
+}
+
+function git(cwd: string, ...args: string[]): string {
+  return execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
+}
+
+function minimalGraph(baseCommit: string, repoRoot: string): unknown {
+  return {
+    id: "graph",
+    planId: "plan",
+    repo: repoRoot,
+    baseBranch: "main",
+    baseCommit,
+    featureRequest: "local",
+    rootId: "root",
+    createdAt: "2026-05-26T00:00:00.000Z",
+    dependencies: [],
+    nodes: {
+      root: {
+        id: "root",
+        parentId: null,
+        kind: "root",
+        title: "Root",
+        goal: "Apply local feature",
+        status: "planned",
+        granularity: "medium",
+        depth: 0,
+        childrenIds: [],
+        dependencies: []
+      }
+    }
+  };
+}

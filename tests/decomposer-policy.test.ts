@@ -14,13 +14,15 @@ afterEach(() => {
 });
 
 describe("pickDecomposer", () => {
-  it("falls back to deterministic when no API key is present", () => {
+  it("selects Codex recursive by default without API keys", () => {
     const selection = pickDecomposer({
       userPrompt: "anything",
-      model: "claude-test"
+      model: "gpt-5",
+      workspace: { id: "ws", slug: "ws", name: "WS", repoPath: "C:/repo", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }
     });
-    expect(selection.provider).toBe("deterministic");
-    expect(selection.fallbackReason).toBe("no_api_key");
+    expect(selection.provider).toBe("codex");
+    expect(selection.model).toBe("gpt-5");
+    expect(selection.promptTemplateVersion).toContain("recursive-decomposer");
   });
 
   it("falls back when MANYHANDS_FORCE_FALLBACK=1", () => {
@@ -45,8 +47,9 @@ describe("pickDecomposer", () => {
     expect(selection.fallbackReason).toBe("forced_by_caller");
   });
 
-  it("selects the recursive decomposer by default when an API key is present", () => {
+  it("keeps Anthropic recursive as an explicit baseline", () => {
     process.env.ANTHROPIC_API_KEY = "sk-test";
+    process.env.MANYHANDS_DECOMPOSER = "anthropic-recursive";
     const selection = pickDecomposer({
       userPrompt: "anything",
       model: "claude-test"

@@ -5,6 +5,7 @@ import {
   WorkspaceValidationError,
   getWorkspaceRepository
 } from "@/lib/server/workspaces";
+import { normalizeRepoPath } from "@/lib/server/workspaces/repo-validation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,11 +33,22 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Ne
     return NextResponse.json({ error: "Body must be valid JSON" }, { status: 400 });
   }
   try {
-    const workspace = await getWorkspaceRepository().update(id, payload);
+    const workspace = await getWorkspaceRepository().update(id, await normalizeWorkspacePayload(payload));
     return NextResponse.json({ workspace });
   } catch (error) {
     return errorResponse(error);
   }
+}
+
+async function normalizeWorkspacePayload(payload: unknown): Promise<unknown> {
+  if (typeof payload !== "object" || payload === null || !("repoPath" in payload)) {
+    return payload;
+  }
+  const record = payload as Record<string, unknown>;
+  if (typeof record.repoPath !== "string" || record.repoPath.trim().length === 0) {
+    return payload;
+  }
+  return { ...record, repoPath: await normalizeRepoPath(record.repoPath) };
 }
 
 export async function DELETE(_request: Request, context: RouteContext): Promise<NextResponse> {

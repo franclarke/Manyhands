@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { execFile } from "node:child_process";
 import path from "node:path";
+import { promisify } from "node:util";
 import {
   loadBenchmarkManifest,
   loadFeatureFixture,
@@ -23,7 +25,7 @@ import { InMemoryTraceStore, type TraceStore } from "@manyhands/trace-store";
 import { resolveRepoRoot } from "../repo-root";
 import { RepoNotConfiguredError } from "./errors";
 import {
-  createFixtureRepoProvisioner,
+  createDefaultRepoProvisioner,
   type ProvisionedRepo,
   type RepoProvisioner
 } from "./repo-provisioner";
@@ -36,11 +38,13 @@ import { pickDecomposer, type DecomposerSelection } from "@/lib/decomposer-polic
 import type { RunEvent, RiskLevelKey } from "./events";
 import type { ExecutionConfigInput, RunDecompositionMetadata, RunRecord, RunStatus } from "./schema";
 import { findScenario, type DecompositionScenario } from "@/lib/scenarios";
+import type { Workspace } from "@/lib/api-types";
 
 const PLANNING_EVENT_INTERVAL_MS = 110;
 const EXECUTION_EVENT_INTERVAL_MS = 220;
 const PAUSE_POLL_MS = 80;
 const HEARTBEAT_INTERVAL_MS = 4_000;
+const execFileAsync = promisify(execFile);
 
 // Re-export for the SSE endpoint to detect orphaned runs.
 export { isRunnerActive } from "./runner-state";
@@ -135,16 +139,35 @@ async function loadScenarioBundle(scenario: DecompositionScenario): Promise<Benc
  * depending on a benchmark scenario fixture. Used in the prompt-only path
  * (no scenarioId).
  */
-function buildFeatureRequestFromPrompt(userPrompt: string, _workspaceId: string): FeatureRequest {
+function buildFeatureRequestFromPrompt(userPrompt: string, workspace: Workspace): FeatureRequest {
   const title = userPrompt.slice(0, 120) || "Untitled feature";
   return {
     id: `feature-${randomUUID().slice(0, 8)}`,
     title,
     description: userPrompt,
+    repositoryPath: workspace.repoPath,
     targetStack: [],
-    constraints: [],
+    constraints: [
+      `Implement inside the local git repository at ${workspace.repoPath}.`,
+      ...(workspace.allowedPaths?.length ? [`Prefer these paths: ${workspace.allowedPaths.join(", ")}`] : []),
+      ...(workspace.testCommand ? [`Use this test command when relevant: ${workspace.testCommand}`] : []),
+      ...(workspace.buildCommand ? [`Use this build command when relevant: ${workspace.buildCommand}`] : [])
+    ],
     acceptanceCriteria: ["Feature meets the requirements described in the prompt"]
   };
+}
+
+function requireExecutableWorkspace(workspace: Workspace | null, workspaceId: string): Workspace {
+  if (workspace === null) {
+    throw new Error(`Workspace ${workspaceId} was not found.`);
+  }
+  if (workspace.repoPath === undefined || workspace.repoPath.length === 0) {
+    throw new Error(
+      `Workspace "${workspace.name}" has no local repo path configured. ` +
+        "Select a local git folder before generating a product run."
+    );
+  }
+  return workspace;
 }
 
 /**
@@ -249,7 +272,8 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
       decomposition = result.decomposition;
     } else {
       // ── Prompt-only path: LLM required, no silent fallback ──
-      const feature = buildFeatureRequestFromPrompt(run.userPrompt, run.workspaceId);
+      const executableWorkspace = requireExecutableWorkspace(workspace, run.workspaceId);
+      const feature = buildFeatureRequestFromPrompt(run.userPrompt, executableWorkspace);
       const result = await runPromptOnlyPlanning({ selection, feature, run });
       planning = result.planning;
       decomposition = result.decomposition;
@@ -343,18 +367,18 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
     runLabel: `${run.runId}:planning`
   };
 
-  if (selection.provider !== "anthropic") {
+  if (selection.provider === "deterministic") {
     // D3: no API key → fail with actionable message instead of silent fallback.
     const reason = selection.fallbackReason ?? "no_api_key";
     const messages: Record<string, string> = {
       no_api_key:
-        "Graph generation requires an API key. Configure ANTHROPIC_API_KEY in your environment or select a scenario for mock mode.",
+        "Graph generation requires Codex CLI in product mode. Select a local git workspace or select a scenario for mock mode.",
       forced_by_env:
-        "MANYHANDS_FORCE_FALLBACK is set, but prompt-only runs require a live LLM. Unset MANYHANDS_FORCE_FALLBACK=1 or select a scenario for mock mode.",
+        "MANYHANDS_FORCE_FALLBACK is set, but prompt-only runs require Codex CLI. Unset MANYHANDS_FORCE_FALLBACK=1 or select a scenario for mock mode.",
       forced_by_caller:
-        "Deterministic mode was explicitly requested, but prompt-only runs require a live LLM. Select a scenario for mock mode."
+        "Deterministic mode was explicitly requested, but prompt-only runs require Codex CLI. Select a scenario for mock mode."
     };
-    throw new Error(messages[reason] ?? `LLM decomposer unavailable: ${reason}`);
+    throw new Error(messages[reason] ?? `Codex decomposer unavailable: ${reason}`);
   }
 
   try {
@@ -364,7 +388,7 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
     });
     const telemetry = selection.getAnthropicTelemetry?.() ?? null;
     const decomposition: RunDecompositionMetadata = {
-      provider: "anthropic",
+      provider: selection.provider,
       model: selection.model,
       fallbackUsed: false,
       validationErrors: [],
@@ -382,7 +406,7 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error(
       `Graph generation failed: ${detail}. ` +
-        "Retry, switch to a different model, or verify your ANTHROPIC_API_KEY."
+        "Retry, switch to a different Codex model, or verify that Codex CLI is installed and authenticated."
     );
   }
 }
@@ -422,7 +446,7 @@ async function runPlanningWithFallback(input: ScenarioPlanningInput): Promise<Pl
       });
       const telemetry = selection.getAnthropicTelemetry?.() ?? null;
       const decomposition: RunDecompositionMetadata = {
-        provider: "anthropic",
+        provider: selection.provider,
         model: selection.model,
         fallbackUsed: false,
         validationErrors: [],
@@ -516,7 +540,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     // Provision a real repo when one is configured; persist it as a run artifact.
     let provisioned: ProvisionedRepo | undefined;
     if (run.repoSpec !== undefined) {
-      const provisioner = options.provisioner ?? createFixtureRepoProvisioner();
+      const provisioner = options.provisioner ?? createDefaultRepoProvisioner();
       provisioned = await provisioner.provision({ spec: run.repoSpec, runId: run.runId });
       run = await getRunRepository().save({
         ...run,
@@ -539,6 +563,10 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       ...(provisioned !== undefined ? { provisioned } : {}),
       ...(run.executionConfig !== undefined ? { executionConfig: run.executionConfig } : {})
     });
+    const finalApplication =
+      result.status === "completed" && provisioned !== undefined
+        ? await applyFinalPatch({ graph, result, provisioned, runId: run.runId })
+        : undefined;
 
     const interval = options.intervalMs ?? EXECUTION_EVENT_INTERVAL_MS;
     for (const leaf of result.leafResults) {
@@ -570,6 +598,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       await transitionTo(run, "completed", {
         execution: result,
         ...(executionTraces !== undefined ? { executionTraces } : {}),
+        ...(finalApplication !== undefined ? finalApplication : {}),
         completedAt: new Date().toISOString()
       });
     } else {
@@ -631,6 +660,99 @@ function describeExecutionFailure(result: RunExecutionResult): string {
     return `Execution failed: ${failedLeaves.length} leaf task(s) did not succeed: ${detail}.`;
   }
   return "Execution failed during integration or run-level validation.";
+}
+
+interface FinalApplicationRecord {
+  finalPatch: string;
+  finalCommitSha: string;
+  appliedToRepoPath: string;
+  appliedAt: string;
+  baseCommit: string;
+  integrationCommitSha: string;
+}
+
+async function applyFinalPatch(input: {
+  graph: TaskGraph;
+  result: RunExecutionResult;
+  provisioned: ProvisionedRepo;
+  runId: string;
+}): Promise<FinalApplicationRecord | undefined> {
+  const integrationCommitSha = resolveFinalCommit(input.graph, input.result);
+  if (integrationCommitSha === undefined) {
+    return undefined;
+  }
+
+  const repoRoot = input.provisioned.repoRoot;
+  const currentHead = await git(repoRoot, ["rev-parse", "HEAD"]);
+  if (currentHead !== input.provisioned.baseCommit) {
+    throw new Error(
+      `Cannot apply final patch because the target repo moved from ${input.provisioned.baseCommit} to ${currentHead}.`
+    );
+  }
+  const status = await git(repoRoot, ["status", "--porcelain"]);
+  if (status.length > 0) {
+    throw new Error("Cannot apply final patch because the target repo has uncommitted changes.");
+  }
+
+  const finalPatch = await gitRaw(repoRoot, ["diff", `${input.provisioned.baseCommit}..${integrationCommitSha}`]);
+  if (finalPatch.trim().length === 0) {
+    throw new Error("Execution completed but the final integrated patch is empty.");
+  }
+
+  await gitWithStdin(repoRoot, ["apply", "--index", "-"], finalPatch);
+  const finalCommitSha = await git(repoRoot, [
+    "-c",
+    "user.name=ManyHands",
+    "-c",
+    "user.email=manyhands@local",
+    "commit",
+    "-m",
+    `mh: apply run ${input.runId}`
+  ]).then(() => git(repoRoot, ["rev-parse", "HEAD"]));
+
+  return {
+    finalPatch,
+    finalCommitSha,
+    appliedToRepoPath: repoRoot,
+    appliedAt: new Date().toISOString(),
+    baseCommit: input.provisioned.baseCommit,
+    integrationCommitSha
+  };
+}
+
+function resolveFinalCommit(graph: TaskGraph, result: RunExecutionResult): string | undefined {
+  const rootIntegration = result.integrationResults.find(
+    (entry) => entry.compositeTaskId === graph.rootId
+  );
+  if (rootIntegration?.integrationCommitSha !== undefined) {
+    return rootIntegration.integrationCommitSha;
+  }
+  if (result.integrationResults.length > 0) {
+    return result.integrationResults.at(-1)?.integrationCommitSha;
+  }
+  if (result.leafResults.length === 1) {
+    return result.leafResults[0]?.commitSha;
+  }
+  return undefined;
+}
+
+async function git(cwd: string, args: string[]): Promise<string> {
+  return (await gitRaw(cwd, args)).trim();
+}
+
+async function gitRaw(cwd: string, args: string[]): Promise<string> {
+  const { stdout } = await execFileAsync("git", args, { cwd, maxBuffer: 20 * 1024 * 1024 });
+  return stdout;
+}
+
+function gitWithStdin(cwd: string, args: string[], stdin: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = execFile("git", args, { cwd, maxBuffer: 20 * 1024 * 1024 }, (error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+    child.stdin?.end(stdin);
+  });
 }
 
 function publishEvent(runId: string, event: RunEvent): void {

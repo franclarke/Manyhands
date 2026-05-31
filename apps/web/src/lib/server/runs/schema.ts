@@ -52,7 +52,7 @@ export const GranularityModeSchema = z.union([
 export type GranularityMode = z.infer<typeof GranularityModeSchema>;
 
 export const RunDecompositionMetadataSchema = z.object({
-  provider: z.union([z.literal("anthropic"), z.literal("deterministic")]),
+  provider: z.union([z.literal("anthropic"), z.literal("codex"), z.literal("deterministic")]),
   model: z.string().min(1),
   promptTemplateVersion: z.string().min(1).optional(),
   rawResponse: z.string().optional(),
@@ -108,6 +108,13 @@ export const RunRecordSchema = z.object({
   repoSpec: RepoSpecSchema.optional(),
   /** Filled by the runner once the repo is provisioned, before execution. */
   provisioned: ProvisionedRepoRecordSchema.optional(),
+  /** Final integrated patch applied back to the selected repo after successful execution. */
+  finalPatch: z.string().optional(),
+  finalCommitSha: z.string().min(1).optional(),
+  appliedToRepoPath: z.string().min(1).optional(),
+  appliedAt: z.string().datetime().optional(),
+  baseCommit: z.string().min(1).optional(),
+  integrationCommitSha: z.string().min(1).optional(),
   /** Optional per-run overrides; defaults applied from execution-core at runtime. */
   executionConfig: ExecutionConfigInputSchema.optional(),
   /** Trace events emitted by the execution engine, persisted as run evidence. */
