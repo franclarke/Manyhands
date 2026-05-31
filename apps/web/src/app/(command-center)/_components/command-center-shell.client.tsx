@@ -13,7 +13,11 @@ import { EXECUTABLE_FIXTURES } from "@/lib/executable-fixtures";
 
 const PROMPT_STORAGE_KEY = "manyhands:lastPrompt";
 
-type RunMode = "planning" | "mock" | "execution-ready";
+const EXAMPLE_PROMPTS = [
+  "Add passwordless login with magic links, tests, and session handling.",
+  "Refactor the task API validation and update the failing tests.",
+  "Implement DELETE /tasks/:id with persistence, errors, and coverage."
+] as const;
 
 interface CommandCenterShellProps {
   workspaces: Workspace[];
@@ -32,7 +36,6 @@ export function CommandCenterShell({
   const [scenarioId, setScenarioId] = useState<string>(getDefaultScenarioId());
   const [repoFixtureId, setRepoFixtureId] = useState<string>("");
   const [granularity, setGranularity] = useState<GranularityLevel>(initialGranularity);
-  const [mode, setMode] = useState<RunMode>("planning");
   const [modelId] = useState<string>(initialModelId);
   const [prompt, setPrompt] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
@@ -67,6 +70,9 @@ export function CommandCenterShell({
     : true;
   const hasPrompt = prompt.trim().length > 0;
   const canStart = selectedWorkspace !== null && hasPrompt && granularitySupported && !submitting;
+  const executionMode = repoFixtureId.length > 0
+    ? "Codex execution after approval"
+    : "Plan and review task graph";
 
   async function handleStart(): Promise<void> {
     if (selectedWorkspace === null) return;
@@ -116,7 +122,7 @@ export function CommandCenterShell({
     return (
       <div
         style={{
-          maxWidth: 760,
+          maxWidth: 980,
           margin: "0 auto",
           padding: 24,
           border: "1px dashed var(--rule-strong)",
@@ -129,7 +135,7 @@ export function CommandCenterShell({
           No workspaces yet.
         </p>
         <p style={{ marginTop: 8, fontSize: 13, lineHeight: 1.5 }}>
-          Create one before generating a DAG.
+          Create a workspace before generating a task graph.
         </p>
       </div>
     );
@@ -137,14 +143,12 @@ export function CommandCenterShell({
 
   return (
     <section
-      className="mh-tick-frame"
       style={{
-        maxWidth: 760,
+        maxWidth: 980,
         margin: "0 auto",
-        padding: "14px 0 0",
         display: "flex",
         flexDirection: "column",
-        gap: 18
+        gap: 16
       }}
     >
       <TaskPrompt
@@ -154,216 +158,174 @@ export function CommandCenterShell({
           void handleStart();
         }}
         disabled={!canStart}
+        examples={EXAMPLE_PROMPTS}
       />
 
-      <div style={{ height: 1, background: "var(--rule)", marginTop: -2 }} />
-
-      <ControlRow label="Workspace">
-        <WorkspacePicker
-          workspaces={workspaces}
-          value={workspaceId}
-          onChange={setWorkspaceId}
-        />
-        <span className="mh-coord" style={{ opacity: 0.5 }}>branch</span>
-        <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
-          {selectedWorkspace?.defaultBranch ?? "main"}
-        </span>
-      </ControlRow>
-
-      <ControlRow label="Granularity" hint="planner depth">
-        <GranularitySelector value={granularity} onChange={setGranularity} />
-      </ControlRow>
-
-      <ControlRow label="Mode" hint="what this run will do">
-        <ModeSelector value={mode} onChange={setMode} />
-        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
-          Codex execution appears after the DAG is approved.
-        </span>
-      </ControlRow>
-
-      <ControlRow label="Target repo" hint="real execution fixture">
-        <select
-          value={repoFixtureId}
-          onChange={(event) => setRepoFixtureId(event.target.value)}
-          className="mh-mono"
-          style={{
-            height: 32,
-            padding: "0 10px",
-            border: "1px solid var(--rule)",
-            background: "rgba(229,222,204,0.035)",
-            color: "var(--text)",
-            borderRadius: "var(--r-md)",
-            fontSize: 12.5
-          }}
-        >
-          <option value="">none — plan only (mock)</option>
-          {EXECUTABLE_FIXTURES.map((fixture) => (
-            <option key={fixture.id} value={fixture.id}>
-              {fixture.label}
-            </option>
-          ))}
-        </select>
-        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
-          {repoFixtureId.length > 0
-            ? EXECUTABLE_FIXTURES.find((f) => f.id === repoFixtureId)?.description
-            : "Select a fixture to enable real Codex execution."}
-        </span>
-      </ControlRow>
-
-      {errorMessage !== null ? (
-        <div
-          role="alert"
-          style={{
-            border: "1px solid rgba(178,106,96,0.45)",
-            background: "rgba(178,106,96,0.08)",
-            color: "var(--error)",
-            padding: "8px 10px",
-            borderRadius: "var(--r-md)",
-            fontSize: 12.5
-          }}
-        >
-          {errorMessage}
+      <div
+        className="mh-tick-frame"
+        style={{
+          border: "1px solid var(--rule)",
+          background: "rgba(19,20,22,0.72)",
+          borderRadius: "var(--r-xl)",
+          padding: 18,
+          display: "flex",
+          flexDirection: "column",
+          gap: 16
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span className="mh-coord" style={{ color: "var(--copper)" }}>
+            Run configuration
+          </span>
+          <div style={{ height: 1, flex: 1, background: "var(--rule)" }} />
+          <span className="mh-mono" style={{ color: "var(--text-3)", fontSize: 10.5 }}>
+            {executionMode}
+          </span>
         </div>
-      ) : null}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
-        <button
-          type="button"
-          disabled={!canStart}
-          onClick={() => {
-            void handleStart();
-          }}
+        <div
           style={{
-            height: 38,
-            padding: "0 16px",
-            border: `1px solid ${canStart ? "var(--copper)" : "var(--rule)"}`,
-            background: canStart ? "var(--copper)" : "rgba(229,222,204,0.035)",
-            color: canStart ? "#14110e" : "var(--text-3)",
-            borderRadius: "var(--r-lg)",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: canStart ? "pointer" : "not-allowed"
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+            gap: 12
           }}
         >
-          {submitting ? "Generating DAG..." : "Generate DAG"}
-        </button>
-        <button
-          type="button"
-          disabled
-          title="Available after Codex CLI execution is connected."
+          <ConfigField label="Workspace">
+            <WorkspacePicker
+              workspaces={workspaces}
+              value={workspaceId}
+              onChange={setWorkspaceId}
+            />
+          </ConfigField>
+          <ConfigField label="Branch">
+            <span className="mh-mono" style={{ fontSize: 12, color: "var(--text)" }}>
+              {selectedWorkspace?.defaultBranch ?? "main"}
+            </span>
+          </ConfigField>
+          <ConfigField label="Execution mode">
+            <span style={{ fontSize: 12.5, color: "var(--text)" }}>{executionMode}</span>
+          </ConfigField>
+        </div>
+
+        <ConfigField label="Granularity">
+          <GranularitySelector value={granularity} onChange={setGranularity} />
+        </ConfigField>
+
+        <div
           style={{
-            height: 34,
-            padding: "0 12px",
-            border: "1px solid var(--rule)",
-            background: "transparent",
-            color: "var(--text-3)",
-            borderRadius: "var(--r-md)",
-            fontSize: 12,
-            cursor: "not-allowed"
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 12
           }}
         >
-          Run with Codex / future
-        </button>
-        <span style={{ flex: 1 }} />
-        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
-          Ctrl+Enter also generates
-        </span>
+          <ConfigField label="Target repo">
+            <select
+              value={repoFixtureId}
+              onChange={(event) => setRepoFixtureId(event.target.value)}
+              style={selectStyle}
+            >
+              <option value="">Current workspace planning only</option>
+              {EXECUTABLE_FIXTURES.map((fixture) => (
+                <option key={fixture.id} value={fixture.id}>
+                  {fixture.label}
+                </option>
+              ))}
+            </select>
+          </ConfigField>
+          <ConfigField label="Run evidence">
+            <span style={{ fontSize: 12, color: "var(--text-2)", lineHeight: 1.45 }}>
+              {repoFixtureId.length > 0
+                ? EXECUTABLE_FIXTURES.find((fixture) => fixture.id === repoFixtureId)?.description
+                : "Generate a task graph first. Agents run only after human plan approval."}
+            </span>
+          </ConfigField>
+        </div>
+
+        {errorMessage !== null ? (
+          <div
+            role="alert"
+            style={{
+              border: "1px solid var(--status-failed-border)",
+              background: "var(--status-failed-bg)",
+              color: "var(--status-failed-fg)",
+              padding: "9px 11px",
+              borderRadius: "var(--r-md)",
+              fontSize: 12.5
+            }}
+          >
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            disabled={!canStart}
+            onClick={() => {
+              void handleStart();
+            }}
+            style={{
+              height: 42,
+              padding: "0 18px",
+              border: `1px solid ${canStart ? "var(--copper)" : "var(--rule)"}`,
+              background: canStart ? "var(--copper)" : "rgba(229,222,204,0.035)",
+              color: canStart ? "#14110e" : "var(--text-3)",
+              borderRadius: "var(--r-lg)",
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: canStart ? "pointer" : "not-allowed"
+            }}
+          >
+            {submitting ? "Generating task graph..." : "Generate task graph"}
+          </button>
+          {!granularitySupported ? (
+            <span className="mh-mono" style={{ color: "var(--error)", fontSize: 11 }}>
+              Selected lab scenario does not support this granularity.
+            </span>
+          ) : (
+            <span style={{ color: "var(--text-3)", fontSize: 12 }}>
+              ManyHands will decompose this prompt into executable node contracts.
+            </span>
+          )}
+        </div>
+
+        <AdvancedSection>
+          <ScenarioPicker
+            value={scenarioId}
+            onChange={setScenarioId}
+            granularity={granularityMode}
+          />
+        </AdvancedSection>
       </div>
-
-      <AdvancedSection>
-        <ScenarioPicker
-          value={scenarioId}
-          onChange={setScenarioId}
-          granularity={granularityMode}
-        />
-      </AdvancedSection>
     </section>
   );
 }
 
-function ControlRow({
+function ConfigField({
   label,
-  hint,
   children
 }: {
   label: string;
-  hint?: string;
   children: React.ReactNode;
 }): React.ReactElement {
   return (
-    <div
+    <label
       style={{
+        minWidth: 0,
         display: "flex",
-        alignItems: "center",
-        gap: 18,
-        padding: "10px 0",
-        borderBottom: "1px solid var(--rule-soft)"
+        flexDirection: "column",
+        gap: 7,
+        border: "1px solid var(--rule-soft)",
+        background: "rgba(229,222,204,0.018)",
+        borderRadius: "var(--r-lg)",
+        padding: "10px 11px"
       }}
     >
-      <div style={{ width: 124, flex: "0 0 124px" }}>
-        <div className="mh-coord">{label}</div>
-        {hint !== undefined ? (
-          <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 4 }}>
-            {hint}
-          </div>
-        ) : null}
-      </div>
-      <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+      <span className="mh-coord">{label}</span>
+      <span style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         {children}
-      </div>
-    </div>
-  );
-}
-
-function ModeSelector({
-  value,
-  onChange
-}: {
-  value: RunMode;
-  onChange: (value: RunMode) => void;
-}): React.ReactElement {
-  const options: Array<{ id: RunMode; label: string }> = [
-    { id: "planning", label: "Planning" },
-    { id: "mock", label: "Mock" },
-    { id: "execution-ready", label: "Execution-ready" }
-  ];
-
-  return (
-    <div
-      role="radiogroup"
-      aria-label="Run mode"
-      style={{
-        display: "inline-flex",
-        padding: 2,
-        border: "1px solid var(--rule)",
-        borderRadius: 7
-      }}
-    >
-      {options.map((option) => {
-        const active = value === option.id;
-        return (
-          <button
-            key={option.id}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(option.id)}
-            style={{
-              height: 26,
-              border: "none",
-              background: active ? "rgba(229,222,204,0.06)" : "transparent",
-              color: active ? "var(--text)" : "var(--text-2)",
-              borderRadius: 5,
-              padding: "0 10px",
-              fontSize: 12,
-              cursor: "pointer"
-            }}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
+      </span>
+    </label>
   );
 }
 
@@ -384,7 +346,7 @@ function AdvancedSection({ children }: { children: React.ReactNode }): React.Rea
           fontFamily: "var(--font-mono)"
         }}
       >
-        {open ? "Hide research fixture" : "Research fixture / deterministic mock"}
+        {open ? "Hide lab fixture" : "Lab fixture options"}
       </button>
       {open ? (
         <div
@@ -407,8 +369,7 @@ function AdvancedSection({ children }: { children: React.ReactNode }): React.Rea
               lineHeight: 1.5
             }}
           >
-            Fixtures keep thesis demos reproducible. Prompt-only runs require a live
-            decomposer key; fixture-backed runs stay clearly marked as mock.
+            Lab fixtures keep thesis demos reproducible. Prompt-only runs use the live planner.
           </p>
           {children}
         </div>
@@ -416,3 +377,15 @@ function AdvancedSection({ children }: { children: React.ReactNode }): React.Rea
     </div>
   );
 }
+
+const selectStyle: React.CSSProperties = {
+  width: "100%",
+  minWidth: 0,
+  height: 34,
+  padding: "0 10px",
+  border: "1px solid var(--rule)",
+  background: "rgba(15,16,18,0.64)",
+  color: "var(--text)",
+  borderRadius: "var(--r-md)",
+  fontSize: 12.5
+};

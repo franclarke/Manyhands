@@ -25,14 +25,14 @@ export const GRAPH_STATUS_COLOR: Record<GraphNodeStatus, string> = {
   planned: "var(--planned)",
   ready: "var(--ready)",
   running: "var(--running)",
-  gated: "var(--gated)",
+  gated: "var(--status-review-fg)",
   done: "var(--done)",
   failed: "var(--error)",
-  blocked: "var(--blocked)",
+  blocked: "var(--status-blocked-fg)",
   generating: "var(--running)",
-  needs_review: "var(--ready)",
-  approved: "var(--done)",
-  integrated: "var(--copper)"
+  needs_review: "var(--status-review-fg)",
+  approved: "var(--ready)",
+  integrated: "var(--status-integrated-fg)"
 };
 
 export const RISK_COLOR: Record<GraphRiskLevel, string> = {
@@ -73,12 +73,14 @@ export type UiStatus =
   | "idle"
   | "planning"
   | "pending"
+  | "ready"
   | "running"
   | "completed"
   | "failed"
   | "blocked"
   | "needs_review"
   | "integrating"
+  | "integrated"
   | "conflict"
   | "skipped";
 
@@ -115,6 +117,13 @@ export const STATUS_META: Record<UiStatus, StatusMeta> = {
     fg: "var(--status-pending-fg)",
     bg: "var(--status-pending-bg)",
     border: "var(--status-pending-border)",
+    pulse: false
+  },
+  ready: {
+    label: "Ready",
+    fg: "var(--status-ready-fg)",
+    bg: "var(--status-ready-bg)",
+    border: "var(--status-ready-border)",
     pulse: false
   },
   running: {
@@ -159,6 +168,13 @@ export const STATUS_META: Record<UiStatus, StatusMeta> = {
     border: "var(--status-integrating-border)",
     pulse: true
   },
+  integrated: {
+    label: "Integrated",
+    fg: "var(--status-integrated-fg)",
+    bg: "var(--status-integrated-bg)",
+    border: "var(--status-integrated-border)",
+    pulse: false
+  },
   conflict: {
     label: "Conflict",
     fg: "var(--status-conflict-fg)",
@@ -195,8 +211,10 @@ export function nodeUiStatus(status: GraphNodeStatus, ctx: NodeUiStatusContext =
 
   switch (status) {
     case "planned":
-    case "ready":
       return "pending";
+    case "ready":
+    case "approved":
+      return "ready";
     case "running":
     case "generating":
       return "running";
@@ -208,9 +226,9 @@ export function nodeUiStatus(status: GraphNodeStatus, ctx: NodeUiStatusContext =
     case "failed":
       return "failed";
     case "done":
-    case "approved":
-    case "integrated":
       return "completed";
+    case "integrated":
+      return "integrated";
     default:
       return "pending";
   }
@@ -224,8 +242,9 @@ export function runUiStatus(status: RunStatusKey): UiStatus {
     case "generating":
       return "planning";
     case "needs_review":
-    case "approved":
       return "needs_review";
+    case "approved":
+      return "ready";
     case "paused":
     case "running":
       return "running";

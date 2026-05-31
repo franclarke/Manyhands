@@ -66,11 +66,15 @@
   --cu-copper: #b47148;
   --cu-copper-hi: #c98654;
   --cu-copper-deep: #8e5631;
-  --cu-slate: #6f8aa8;     /* running / generating */
-  --cu-ochre: #b89c5a;     /* ready / gated / needs_review / risk-medium */
-  --cu-sage: #7a9778;      /* done / risk-low */
-  --cu-rust: #b26a60;      /* failed / error / conflict / risk-high */
-  --cu-dim: #44403a;       /* blocked */
+  --cu-slate: #6f8aa8;
+  --cu-cyan: #62b6cb;      /* running / generating */
+  --cu-blue: #7fa6d8;      /* ready */
+  --cu-ochre: #c2a15a;     /* blocked / warning / risk-medium */
+  --cu-violet: #a88bd6;    /* needs review */
+  --cu-sage: #79a978;      /* completed / risk-low */
+  --cu-green-strong: #98c379; /* integrated */
+  --cu-rust: #d47668;      /* failed / error / conflict / risk-high */
+  --cu-dim: #686154;       /* blocked surfaces */
   --cu-stone: #5a5346;     /* planned */
 
   /* 2 ── Semantic tokens (consume these in components) ───────────── */
@@ -107,9 +111,13 @@
   --status-pending-bg: rgba(125, 117, 96, 0.08);
   --status-pending-border: rgba(125, 117, 96, 0.30);
 
-  --status-running-fg: var(--cu-slate);
-  --status-running-bg: rgba(111, 138, 168, 0.10);
-  --status-running-border: rgba(111, 138, 168, 0.45);
+  --status-ready-fg: var(--cu-blue);
+  --status-ready-bg: rgba(127, 166, 216, 0.11);
+  --status-ready-border: rgba(127, 166, 216, 0.46);
+
+  --status-running-fg: var(--cu-cyan);
+  --status-running-bg: rgba(98, 182, 203, 0.11);
+  --status-running-border: rgba(98, 182, 203, 0.48);
 
   --status-completed-fg: var(--cu-sage);
   --status-completed-bg: rgba(122, 151, 120, 0.10);
@@ -119,17 +127,21 @@
   --status-failed-bg: rgba(178, 106, 96, 0.10);
   --status-failed-border: rgba(178, 106, 96, 0.45);
 
-  --status-blocked-fg: #8b8474;
-  --status-blocked-bg: rgba(68, 64, 58, 0.45);
-  --status-blocked-border: rgba(139, 132, 116, 0.30);
+  --status-blocked-fg: var(--cu-ochre);
+  --status-blocked-bg: rgba(194, 161, 90, 0.10);
+  --status-blocked-border: rgba(194, 161, 90, 0.42);
 
-  --status-review-fg: var(--cu-ochre);
-  --status-review-bg: rgba(184, 156, 90, 0.10);
-  --status-review-border: rgba(184, 156, 90, 0.45);
+  --status-review-fg: var(--cu-violet);
+  --status-review-bg: rgba(168, 139, 214, 0.11);
+  --status-review-border: rgba(168, 139, 214, 0.48);
 
   --status-integrating-fg: var(--cu-copper);
   --status-integrating-bg: rgba(180, 113, 72, 0.12);
   --status-integrating-border: rgba(180, 113, 72, 0.50);
+
+  --status-integrated-fg: var(--cu-green-strong);
+  --status-integrated-bg: rgba(152, 195, 121, 0.14);
+  --status-integrated-border: rgba(152, 195, 121, 0.62);
 
   --status-conflict-fg: var(--cu-rust);
   --status-conflict-bg: rgba(178, 106, 96, 0.12);
@@ -168,8 +180,8 @@
   --coral: var(--cu-copper);
   --coral-hi: var(--cu-copper-hi);
   --coral-glow: var(--color-accent-glow);
-  --running: var(--cu-slate);
-  --ready: var(--cu-ochre);
+  --running: var(--cu-cyan);
+  --ready: var(--cu-blue);
   --done: var(--cu-sage);
   --error: var(--cu-rust);
   --failed: var(--cu-rust);
@@ -360,6 +372,28 @@ textarea:focus-visible {
 }
 .react-flow__node:focus,
 .react-flow__node:focus-visible { outline: none; }
+
+@media (max-width: 900px) {
+  .mh-fullbleed {
+    width: min(100vw - 20px, 720px);
+  }
+
+  .dag-workspace-shell {
+    flex-direction: column;
+  }
+
+  .dag-canvas-frame {
+    height: 620px !important;
+    min-height: 620px !important;
+  }
+
+  .task-inspector-panel {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 560px !important;
+  }
+}
 
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb { background: rgba(229, 222, 204, 0.08); border-radius: 4px; }

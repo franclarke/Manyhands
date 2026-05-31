@@ -17,6 +17,7 @@ import {
   visibleNodeIds,
   type GraphFilterState
 } from "@/lib/graph-filters";
+import { selectionRelations } from "@/lib/run-presentation";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { derivePhase } from "@/lib/run-phase";
 import { buildRunSummary } from "@/lib/run-summary";
@@ -98,7 +99,8 @@ export function DagWorkspace({
     () => (isFiltered ? visibleNodeIds(graph.nodes, filters) : null),
     [graph.nodes, filters, isFiltered]
   );
-  const canvasHighlights = highlightTaskIds ?? matched;
+  const relations = useMemo(() => selectionRelations(graph, selectedTaskId), [graph, selectedTaskId]);
+  const canvasHighlights = highlightTaskIds ?? relations?.related ?? matched;
 
   const phase = runStatus !== undefined ? derivePhase(runStatus, graph) : undefined;
   const summary = useMemo(
@@ -121,7 +123,6 @@ export function DagWorkspace({
         matchedCount={matched?.size ?? graph.summary.taskCount}
       />
       {actionSlot}
-      {summary !== null ? <RunSummaryPanel summary={summary} /> : null}
       <SegmentedControl
         ariaLabel="Run view"
         options={VIEW_OPTIONS}
@@ -129,7 +130,13 @@ export function DagWorkspace({
         onChange={setViewMode}
       />
       {viewMode === "timeline" && timelineRun !== undefined ? (
-        <RunTimeline run={timelineRun} snapshot={snapshot} patches={patches} />
+        <RunTimeline
+          run={timelineRun}
+          snapshot={snapshot}
+          patches={patches}
+          selectedTaskId={selectedTaskId}
+          onSelectTask={setSelectedTaskId}
+        />
       ) : viewMode === "board" ? (
         <RunBoard
           graph={graph}
@@ -137,14 +144,15 @@ export function DagWorkspace({
           onSelectTask={setSelectedTaskId}
         />
       ) : (
-      <div style={{ display: "flex", gap: 14, alignItems: "stretch" }}>
+      <div className="dag-workspace-shell" style={{ display: "flex", gap: 14, alignItems: "stretch" }}>
         <div
-          className="mh-tick-frame"
+          className="mh-tick-frame dag-canvas-frame"
           style={{
             position: "relative",
             flex: "1 1 0",
             minWidth: 0,
-            height: 760,
+            height: "min(820px, calc(100vh - 280px))",
+            minHeight: 680,
             border: "1px solid var(--rule)",
             background: "var(--bg)",
             borderRadius: "var(--r-lg)",
@@ -157,6 +165,7 @@ export function DagWorkspace({
               graph={graph}
               selectedTaskId={selectedTaskId}
               highlightTaskIds={canvasHighlights}
+              selectionRelations={relations}
               onSelectTask={(taskId) => {
                 setSelectedTaskId(taskId);
                 if (taskId === null) {
@@ -188,6 +197,7 @@ export function DagWorkspace({
         />
       </div>
       )}
+      {summary !== null ? <RunSummaryPanel summary={summary} /> : null}
     </div>
   );
 }

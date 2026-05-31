@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { RunSnapshot } from "@manyhands/core";
 import { toRunGraphViewModel, type GraphNodeView } from "@/lib/graph-view-model";
 import { mergeRunTimeline, type TimelineRunInput } from "@/lib/run-timeline";
@@ -10,11 +10,20 @@ interface RunTimelineProps {
   run: TimelineRunInput;
   snapshot: RunSnapshot;
   patches: readonly unknown[];
+  selectedTaskId: string | null;
+  onSelectTask: (taskId: string) => void;
 }
 
-export function RunTimeline({ run, snapshot, patches }: RunTimelineProps): React.ReactElement {
+type EventFilter = "all" | "errors" | "retries" | "node";
+
+export function RunTimeline({ run, snapshot, patches, selectedTaskId, onSelectTask }: RunTimelineProps): React.ReactElement {
+  const [filter, setFilter] = useState<EventFilter>("all");
   const graph = useMemo(() => toRunGraphViewModel(snapshot), [snapshot]);
   const entries = useMemo(() => mergeRunTimeline({ run, snapshot, patches }), [run, snapshot, patches]);
+  const visibleEntries = useMemo(
+    () => entries.filter((entry) => entryMatchesFilter(entry, filter, selectedTaskId)),
+    [entries, filter, selectedTaskId]
+  );
   const rows = useMemo(() => timelineRows(graph.nodes), [graph.nodes]);
   const maxDepth = Math.max(0, ...graph.nodes.map((node) => node.depth ?? 0));
   const hasExecution = snapshot.agentRunResults.length > 0;
@@ -61,32 +70,44 @@ export function RunTimeline({ run, snapshot, patches }: RunTimelineProps): React
             row.kind === "phase" ? (
               <PhaseRow key={`phase-${row.depth}`} depth={row.depth} count={row.count} />
             ) : (
-              <NodeRow key={row.node.id} node={row.node} index={row.index} />
+              <NodeRow
+                key={row.node.id}
+                node={row.node}
+                index={row.index}
+                selected={selectedTaskId === row.node.id}
+                onSelect={() => onSelectTask(row.node.id)}
+              />
             )
           )}
         </div>
       </div>
 
       <div style={{ padding: "12px 18px 18px", overflowY: "auto", maxHeight: 230 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
           <span className="mh-coord">event stream</span>
           <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
-          <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>{entries.length} events</span>
+          <TimelineFilter value={filter} onChange={setFilter} selectedTaskId={selectedTaskId} />
+          <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>{visibleEntries.length} events</span>
         </div>
-        {entries.length === 0 ? (
+        {visibleEntries.length === 0 ? (
           <div style={{ color: "var(--text-3)", fontSize: 12.5 }}>
             No timeline events have been recorded for this run yet.
           </div>
         ) : (
-          entries.slice(0, 12).map((entry) => (
+          visibleEntries.slice(0, 18).map((entry) => (
             <article
               key={entry.id}
+              onClick={() => {
+                const taskId = entry.taskIds[0];
+                if (taskId !== undefined) onSelectTask(taskId);
+              }}
               style={{
                 display: "grid",
                 gridTemplateColumns: "132px 1fr",
                 gap: 14,
                 padding: "8px 0",
-                borderBottom: "1px solid var(--rule-soft)"
+                borderBottom: "1px solid var(--rule-soft)",
+                cursor: entry.taskIds.length > 0 ? "pointer" : "default"
               }}
             >
               <div className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
@@ -154,13 +175,38 @@ function PhaseRow({ depth, count }: { depth: number; count: number }): React.Rea
   );
 }
 
-function NodeRow({ node, index }: { node: GraphNodeView; index: number }): React.ReactElement {
+function NodeRow({
+  node,
+  index,
+  selected,
+  onSelect
+}: {
+  node: GraphNodeView;
+  index: number;
+  selected: boolean;
+  onSelect: () => void;
+}): React.ReactElement {
   const depth = node.depth ?? 0;
   const color = graphStatusColor(node.status);
   const filled = node.status === "done" || node.status === "running" || node.status === "generating";
   const blocked = node.status === "blocked" || node.status === "gated";
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", height: 34, borderBottom: "1px solid var(--rule-soft)" }}>
+    <button
+      type="button"
+      onClick={onSelect}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "220px 1fr",
+        height: 34,
+        width: "100%",
+        border: "none",
+        borderBottom: "1px solid var(--rule-soft)",
+        background: selected ? "rgba(180,113,72,0.08)" : "transparent",
+        padding: 0,
+        textAlign: "left",
+        cursor: "pointer"
+      }}
+    >
       <div style={{ borderRight: "1px solid var(--rule)", padding: "8px 14px 0 28px" }}>
         <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
           lane {String(index + 1).padStart(2, "0")}
@@ -192,8 +238,63 @@ function NodeRow({ node, index }: { node: GraphNodeView; index: number }): React
           </span>
         </div>
       </div>
+    </button>
+  );
+}
+
+function TimelineFilter({
+  value,
+  onChange,
+  selectedTaskId
+}: {
+  value: EventFilter;
+  onChange: (value: EventFilter) => void;
+  selectedTaskId: string | null;
+}): React.ReactElement {
+  const options: Array<{ id: EventFilter; label: string; disabled?: boolean }> = [
+    { id: "all", label: "All" },
+    { id: "errors", label: "Errors" },
+    { id: "retries", label: "Retries" },
+    { id: "node", label: "Selected node", disabled: selectedTaskId === null }
+  ];
+  return (
+    <div style={{ display: "inline-flex", gap: 4 }}>
+      {options.map((option) => {
+        const active = value === option.id;
+        return (
+          <button
+            key={option.id}
+            type="button"
+            disabled={option.disabled}
+            onClick={() => onChange(option.id)}
+            style={{
+              border: `1px solid ${active ? "var(--copper)" : "var(--rule)"}`,
+              background: active ? "rgba(180,113,72,0.10)" : "transparent",
+              color: option.disabled ? "var(--text-4)" : active ? "var(--text)" : "var(--text-2)",
+              borderRadius: "var(--r-md)",
+              padding: "4px 7px",
+              cursor: option.disabled ? "not-allowed" : "pointer",
+              fontSize: 11
+            }}
+          >
+            {option.label}
+          </button>
+        );
+      })}
     </div>
   );
+}
+
+function entryMatchesFilter(
+  entry: ReturnType<typeof mergeRunTimeline>[number],
+  filter: EventFilter,
+  selectedTaskId: string | null
+): boolean {
+  if (filter === "all") return true;
+  const haystack = `${entry.type} ${entry.title} ${entry.summary ?? ""}`.toLowerCase();
+  if (filter === "errors") return /fail|error|conflict|violation/.test(haystack);
+  if (filter === "retries") return /retry|rerun|restart/.test(haystack);
+  return selectedTaskId !== null && entry.taskIds.includes(selectedTaskId);
 }
 
 type TimelineRow =

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { InspectorIntegration, InspectorView } from "@/lib/graph-view-model";
 import { nodeUiStatus } from "@/lib/status";
+import { canNodeRunNow, nodeActionHint, nodeKindLabel, riskLabel } from "@/lib/run-presentation";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { RunPhase } from "@/lib/run-phase";
@@ -16,35 +17,26 @@ interface TaskInspectorProps {
   onEdited?: () => void;
 }
 
-type TabId = "overview" | "contract" | "execution" | "validation" | "integration" | "trace";
+type TabId = "overview" | "contract" | "execution" | "validation" | "trace" | "review";
 
 const TAB_LABEL: Record<TabId, string> = {
   overview: "Overview",
   contract: "Contract",
   execution: "Execution",
   validation: "Validation",
-  integration: "Integration",
-  trace: "Trace"
+  trace: "Trace",
+  review: "Review"
 };
 
-/**
- * Tabs relevant to a node, by kind. Composite / integrator nodes integrate
- * child work (no leaf contract of their own) so they expose an Integration tab
- * instead of Contract / Execution / Validation.
- */
-function tabsForView(view: InspectorView): TabId[] {
-  const isComposite = view.integrator || view.kind === "composite" || view.kind === "integration";
-  if (isComposite) {
-    return ["overview", "integration", "trace"];
-  }
-  return ["overview", "contract", "execution", "validation", "trace"];
+function tabsForView(): TabId[] {
+  return ["overview", "contract", "execution", "validation", "trace", "review"];
 }
 
 /** Default tab for a node given the run phase + what data it carries. */
 function defaultTab(view: InspectorView, tabs: TabId[], phase: RunPhase | undefined): TabId {
   const has = (id: TabId): boolean => tabs.includes(id);
   if ((phase === "executing" || phase === "integrating" || phase === "done")) {
-    if (has("integration")) return "integration";
+    if (phase === "done" && has("review")) return "review";
     if (view.runResult !== undefined && has("execution")) return "execution";
   }
   if (phase === "planning" && has("contract")) return "contract";
@@ -91,7 +83,7 @@ export function TaskInspector({ view, onClose, phase, editableRunId, onEdited }:
     if (view === null) {
       return;
     }
-    setTab(defaultTab(view, tabsForView(view), phase));
+    setTab(defaultTab(view, tabsForView(), phase));
     // Keyed on identity (taskId) + phase, not the view object (new each render).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, phase]);
@@ -103,7 +95,8 @@ export function TaskInspector({ view, onClose, phase, editableRunId, onEdited }:
         style={{
           width: 390,
           minWidth: 390,
-          height: 760,
+          height: "min(820px, calc(100vh - 280px))",
+          minHeight: 680,
           border: "1px solid var(--rule)",
           background: "rgba(19,20,22,0.74)",
           borderRadius: "var(--r-lg)",
@@ -129,15 +122,17 @@ export function TaskInspector({ view, onClose, phase, editableRunId, onEdited }:
     );
   }
 
-  const tabs = tabsForView(view);
+  const tabs = tabsForView();
 
   return (
     <>
       <aside
+        className="task-inspector-panel"
         style={{
           width: 390,
           minWidth: 390,
-          height: 760,
+          height: "min(820px, calc(100vh - 280px))",
+          minHeight: 680,
           border: "1px solid var(--rule)",
           background: "rgba(19,20,22,0.82)",
           borderRadius: "var(--r-lg)",
@@ -156,10 +151,10 @@ export function TaskInspector({ view, onClose, phase, editableRunId, onEdited }:
           role="tablist"
           style={{
             display: "flex",
-            gap: 0,
+            gap: 4,
+            flexWrap: "wrap",
             borderBottom: "1px solid var(--rule)",
-            padding: "0 8px",
-            overflowX: "auto",
+            padding: "8px",
             flexShrink: 0
           }}
         >
@@ -171,14 +166,16 @@ export function TaskInspector({ view, onClose, phase, editableRunId, onEdited }:
               aria-selected={tab === id}
               onClick={() => setTab(id)}
               style={{
-                height: 34,
-                padding: "0 10px",
-                border: "none",
+                flex: "1 1 31%",
+                height: 28,
+                padding: "0 6px",
+                border: "1px solid var(--rule)",
                 background: "transparent",
-                borderBottom: tab === id ? "1px solid var(--copper)" : "1px solid transparent",
+                borderColor: tab === id ? "var(--copper)" : "var(--rule)",
+                borderRadius: 4,
                 color: tab === id ? "var(--text)" : "var(--text-2)",
                 fontWeight: tab === id ? 600 : 500,
-                fontSize: 12,
+                fontSize: 11.5,
                 cursor: "pointer",
                 whiteSpace: "nowrap"
               }}
@@ -193,8 +190,8 @@ export function TaskInspector({ view, onClose, phase, editableRunId, onEdited }:
           {tab === "contract" && <ContractTab view={view} />}
           {tab === "execution" && <ExecutionTab view={view} />}
           {tab === "validation" && <ValidationTab view={view} />}
-          {tab === "integration" && <IntegrationTab view={view} />}
           {tab === "trace" && <TraceTab view={view} />}
+          {tab === "review" && <ReviewTab view={view} />}
         </div>
       </aside>
 
@@ -222,18 +219,25 @@ function InspectorHeader({
   onClose: () => void;
   onEdit?: () => void;
 }): React.ReactElement {
+  const risk = view.riskEvidence[0]?.level;
   return (
     <header
       style={{
-        padding: "14px 18px 12px",
+        padding: "15px 18px 14px",
         borderBottom: "1px solid var(--rule)",
         display: "flex",
         flexDirection: "column",
-        gap: 8
+        gap: 10
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-        <StatusBadge status={nodeUiStatus(view.status, { integrator: view.integrator })} />
+        <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+          <StatusBadge status={nodeUiStatus(view.status, { integrator: view.integrator })} />
+          <Tag>{nodeKindLabel(view.kind)}</Tag>
+          <Tag tone={risk === "high" || risk === "blocking" ? "danger" : risk !== undefined ? "warning" : "default"}>
+            {riskLabel(risk)}
+          </Tag>
+        </div>
         <div style={{ display: "flex", gap: 6 }}>
           {onEdit !== undefined ? (
             <button type="button" onClick={onEdit} style={smallButtonStyle}>
@@ -245,33 +249,79 @@ function InspectorHeader({
           </button>
         </div>
       </div>
-      <h3 className="mh-serif" style={{ margin: 0, fontSize: 19, color: "var(--text)", lineHeight: 1.25 }}>
+      <h3 style={{ margin: 0, fontSize: 20, color: "var(--text)", lineHeight: 1.25, fontWeight: 700 }}>
         {view.title}
       </h3>
-      <div className="mh-mono" style={{ fontSize: 11, color: "var(--text-2)", wordBreak: "break-all" }}>
-        {view.taskId} / depth {view.depth ?? 0} / {view.kind}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px 12px" }}>
+        <HeaderMeta label="Depth" value={String(view.depth ?? 0)} mono />
+        <HeaderMeta label="Agent" value={view.manual ? "Human" : view.integrator ? "Integration agent" : "Codex CLI"} />
+        <HeaderMeta label="Node id" value={view.taskId} mono />
+        <HeaderMeta label="Primary action" value={nodeActionHint(view)} />
       </div>
     </header>
   );
 }
 
+function HeaderMeta({ label, value, mono }: { label: string; value: string; mono?: boolean }): React.ReactElement {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div className="mh-coord" style={{ fontSize: 8.5 }}>{label}</div>
+      <div
+        style={{
+          marginTop: 3,
+          color: "var(--text-2)",
+          fontSize: 11.5,
+          fontFamily: mono ? "var(--font-mono)" : "var(--font-sans)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap"
+        }}
+        title={value}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function OverviewTab({ view }: { view: InspectorView }): React.ReactElement {
+  const dependencies = view.contract?.dependencies ?? [];
+  const expectedOutput = view.contract?.expectedFiles.length
+    ? `${view.contract.expectedFiles.length} expected file${view.contract.expectedFiles.length === 1 ? "" : "s"}`
+    : view.runResult !== undefined
+      ? `${view.runResult.changedFiles.length} changed file${view.runResult.changedFiles.length === 1 ? "" : "s"}`
+      : "No expected files declared";
+  const risk = view.riskEvidence[0]?.level;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Section title="Goal">
         <Prose>{view.goal}</Prose>
       </Section>
-      <Section title="Overview">
+      <Section title="Why this node exists">
+        <Prose>
+          {view.kind === "composite"
+            ? "Groups related child nodes so their work can be reviewed and integrated together."
+            : view.integrator
+              ? "Integrates child outputs and resolves coordination work for this branch of the graph."
+              : "Defines one executable unit of software work with scope, acceptance criteria and validation evidence."}
+        </Prose>
+      </Section>
+      <Section title="Run readiness">
         <KvGrid
           rows={[
             { label: "Status", value: view.status.replace("_", " "), mono: false },
             { label: "Node type", value: view.kind, mono: false },
             { label: "Depth", value: String(view.depth ?? 0), mono: true },
-            { label: "Dependencies", value: String(view.contract?.dependencies.length ?? 0), mono: true },
-            { label: "Gate", value: view.gateRequired ? "required" : "-", mono: false },
-            { label: "Mode", value: view.runResult !== undefined ? "executed" : "planning/mock", mono: false }
+            { label: "Dependencies", value: String(dependencies.length), mono: true },
+            { label: "Can run now", value: canNodeRunNow(view) ? "yes" : "no", mono: false },
+            { label: "Expected output", value: expectedOutput, mono: false },
+            { label: "Risk", value: riskLabel(risk), mono: false },
+            { label: "Gate", value: view.gateRequired ? "required" : "-", mono: false }
           ]}
         />
+      </Section>
+      <Section title="Dependencies">
+        <MonoList items={dependencies} empty="No declared dependencies." />
       </Section>
       <Section title="Coordination signals">
         {view.riskEvidence.length === 0 && view.staticSignals.length === 0 ? (
@@ -327,28 +377,40 @@ function ContractTab({ view }: { view: InspectorView }): React.ReactElement {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Section title="Objective">
-        <Prose>{contract.objective}</Prose>
+        <Card>
+          <Prose>{contract.objective}</Prose>
+        </Card>
       </Section>
-      <Section title="Allowed implementation paths">
+      <Section title="Allowed paths">
         <MonoList items={contract.allowedPaths} empty="none declared" />
       </Section>
       <Section title="Forbidden paths">
-        <MonoList items={contract.forbiddenPaths} empty="none declared" />
+        {contract.forbiddenPaths.length === 0 ? (
+          <EmptyHint>No forbidden paths declared.</EmptyHint>
+        ) : (
+          <div
+            style={{
+              border: "1px solid var(--status-failed-border)",
+              background: "var(--status-failed-bg)",
+              borderRadius: "var(--r-md)",
+              padding: "10px 12px"
+            }}
+          >
+            <MonoList items={contract.forbiddenPaths} empty="none declared" />
+          </div>
+        )}
       </Section>
       <Section title="Acceptance criteria">
-        <ProseList items={contract.acceptanceCriteria} empty="none declared" />
+        <Checklist items={contract.acceptanceCriteria} empty="none declared" />
       </Section>
-      <Section title="Validation commands">
+      <Section title="Definition of done">
         <Prose>{contract.definitionOfDone}</Prose>
       </Section>
       <Section title="Expected files">
         <MonoList items={contract.expectedFiles} empty="none declared" />
       </Section>
-      <Section title="Symbols touched">
-        <MonoList
-          items={[...contract.producedSymbols.map((item) => `+ ${item}`), ...contract.consumedSymbols.map((item) => `~ ${item}`)]}
-          empty="none declared"
-        />
+      <Section title="Dependencies">
+        <LinkedNodeList items={contract.dependencies} empty="none declared" />
       </Section>
     </div>
   );
@@ -363,16 +425,18 @@ function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
         compact
         tone="pending"
         title={ready ? "Ready to run" : "No execution yet"}
-        description="Diff, changed files, validation and cost (AgentExecutionResult) are recorded once the node runs in its isolated worktree."
+        description="Agent, logs, changed files, validation, errors and duration appear after the node runs in its isolated worktree."
       />
     );
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Section title="Execution result">
+      <Section title="Agent run">
         <KvGrid
           rows={[
+            { label: "Agent", value: view.integrator ? "Integration agent" : "Codex CLI", mono: false },
+            { label: "Current step", value: nodeActionHint(view), mono: false },
             { label: "Success", value: runResult.success ? "yes" : "no", mono: false },
             { label: "Worktree", value: runResult.worktree, mono: true },
             { label: "Branch", value: runResult.branch, mono: true },
@@ -387,10 +451,13 @@ function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
         <MonoList items={runResult.changedFiles} empty="none" />
       </Section>
       {runResult.scopeViolations.length > 0 ? (
-        <Section title="Scope violations">
+        <Section title="Errors">
           <MonoList items={runResult.scopeViolations} empty="none" />
         </Section>
       ) : null}
+      <Section title="Tool calls and live logs">
+        <EmptyHint>Detailed tool-call and live-log streams are not recorded for this node yet.</EmptyHint>
+      </Section>
       {runResult.diff !== undefined ? (
         <Section title="Diff summary">
           <pre
@@ -460,68 +527,6 @@ function ValidationTab({ view }: { view: InspectorView }): React.ReactElement {
   );
 }
 
-function IntegrationTab({ view }: { view: InspectorView }): React.ReactElement {
-  const integration = view.integration;
-  if (integration === undefined) {
-    return (
-      <EmptyHint>Only composite / integrator nodes integrate child work. Inspect one to see its integration.</EmptyHint>
-    );
-  }
-
-  const executed = integration.children.filter((child) => child.executed).length;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Section title="Integration">
-        <KvGrid
-          rows={[
-            { label: "Composite", value: integration.compositeTaskId, mono: true },
-            { label: "Children", value: String(integration.children.length), mono: true },
-            { label: "Executed", value: `${executed}/${integration.children.length}`, mono: true }
-          ]}
-        />
-      </Section>
-      <Section title="Child results">
-        {integration.children.length === 0 ? (
-          <EmptyHint>This node has no child tasks.</EmptyHint>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {integration.children.map((child) => (
-              <div
-                key={child.taskId}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "7px 0",
-                  borderBottom: "1px solid var(--rule-soft)"
-                }}
-              >
-                <StatusBadge status={nodeUiStatus(child.status)} />
-                <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-2)", flex: 1, wordBreak: "break-all" }}>
-                  {child.taskId}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </Section>
-      <Section title="Cherry-pick / conflicts / repair">
-        {integration.result === undefined ? (
-          <EmptyState
-            compact
-            tone="pending"
-            title="Integration evidence pending"
-            description="Cherry-pick order, conflicts and Codex-repair details (IntegrationResult) are produced by the execution core (Etapa 1)."
-          />
-        ) : (
-          <IntegrationResultDetail result={integration.result} />
-        )}
-      </Section>
-    </div>
-  );
-}
-
 function IntegrationResultDetail({
   result
 }: {
@@ -544,6 +549,117 @@ function IntegrationResultDetail({
           <MonoList items={result.conflictDetails.files} empty="none" />
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function ReviewTab({ view }: { view: InspectorView }): React.ReactElement {
+  const result = view.runResult;
+  const integration = view.integration;
+  const hasEvidence = result !== undefined || integration !== undefined || view.riskEvidence.length > 0;
+
+  if (!hasEvidence) {
+    return (
+      <EmptyState
+        compact
+        tone="pending"
+        title="Review evidence pending"
+        description="Summary, diff, tests and integration evidence appear here after the node runs or integrates child work."
+      />
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <Section title="Summary">
+        <Prose>
+          {result !== undefined
+            ? result.success
+              ? `Node completed with ${result.changedFiles.length} changed file${result.changedFiles.length === 1 ? "" : "s"}.`
+              : `Node failed with ${result.scopeViolations.length} scope issue${result.scopeViolations.length === 1 ? "" : "s"}.`
+            : integration !== undefined
+              ? `Integration review for ${integration.children.length} child node${integration.children.length === 1 ? "" : "s"}.`
+              : "Review the coordination signals before approving this node."}
+        </Prose>
+      </Section>
+
+      {integration !== undefined ? (
+        <Section title="Integration evidence">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <KvGrid
+              rows={[
+                { label: "Composite", value: integration.compositeTaskId, mono: true },
+                { label: "Children", value: String(integration.children.length), mono: true },
+                { label: "Executed", value: `${integration.children.filter((child) => child.executed).length}/${integration.children.length}`, mono: true }
+              ]}
+            />
+            {integration.result === undefined ? (
+              <EmptyHint>Cherry-pick, conflict and repair evidence is produced by the execution core.</EmptyHint>
+            ) : (
+              <IntegrationResultDetail result={integration.result} />
+            )}
+          </div>
+        </Section>
+      ) : null}
+
+      {result?.diff !== undefined ? (
+        <Section title="Diff">
+          <pre
+            style={{
+              margin: 0,
+              padding: 12,
+              background: "var(--bg-1)",
+              border: "1px solid var(--rule)",
+              borderRadius: "var(--r-md)",
+              color: "var(--text-2)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              lineHeight: 1.55,
+              overflowX: "auto",
+              maxHeight: 260,
+              whiteSpace: "pre"
+            }}
+          >
+            {result.diff}
+          </pre>
+        </Section>
+      ) : null}
+
+      <Section title="Tests">
+        {view.validation === undefined ? (
+          <EmptyHint>No validation result recorded.</EmptyHint>
+        ) : (
+          <ValidationTab view={view} />
+        )}
+      </Section>
+
+      <Section title="Risks">
+        {view.riskEvidence.length === 0 ? (
+          <EmptyHint>No risk evidence references this node.</EmptyHint>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {view.riskEvidence.slice(0, 3).map((risk, idx) => (
+              <Card key={`${risk.pairTaskId}-${idx}`}>
+                <Tag tone={risk.level === "high" || risk.level === "blocking" ? "danger" : "warning"}>
+                  {risk.level}
+                </Tag>
+                <Prose>{risk.explanation}</Prose>
+              </Card>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      <Section title="Review actions">
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <ReviewButton label="Approve output" />
+          <ReviewButton label="Rerun node" />
+          <ReviewButton label="Request changes" />
+        </div>
+        <p style={{ margin: "8px 0 0", color: "var(--text-3)", fontSize: 11.5, lineHeight: 1.45 }}>
+          Per-node review actions are shown for workflow clarity; backend actions are not connected in this MVP.
+        </p>
+      </Section>
     </div>
   );
 }
@@ -839,16 +955,55 @@ function MonoList({ items, empty }: { items: string[]; empty: string }): React.R
   );
 }
 
-function ProseList({ items, empty }: { items: string[]; empty: string }): React.ReactElement {
+function Checklist({ items, empty }: { items: string[]; empty: string }): React.ReactElement {
   if (items.length === 0) {
     return <div style={{ fontSize: 11.5, color: "var(--text-3)", fontStyle: "italic" }}>{empty}</div>;
   }
   return (
-    <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--text-2)", lineHeight: 1.55 }}>
+    <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", fontSize: 12, color: "var(--text-2)", lineHeight: 1.55 }}>
       {items.map((item, idx) => (
-        <li key={`${item}-${idx}`}>{item}</li>
+        <li key={`${item}-${idx}`} style={{ display: "flex", gap: 8, padding: "4px 0" }}>
+          <span
+            aria-hidden
+            style={{
+              width: 12,
+              height: 12,
+              border: "1px solid var(--rule-strong)",
+              borderRadius: 3,
+              marginTop: 3,
+              flex: "0 0 auto"
+            }}
+          />
+          <span>{item}</span>
+        </li>
       ))}
     </ul>
+  );
+}
+
+function LinkedNodeList({ items, empty }: { items: string[]; empty: string }): React.ReactElement {
+  if (items.length === 0) {
+    return <div style={{ fontSize: 11.5, color: "var(--text-3)", fontStyle: "italic" }}>{empty}</div>;
+  }
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      {items.map((item) => (
+        <span
+          key={item}
+          className="mh-mono"
+          style={{
+            border: "1px solid var(--rule)",
+            background: "rgba(229,222,204,0.025)",
+            color: "var(--text-2)",
+            borderRadius: "var(--r-md)",
+            padding: "4px 7px",
+            fontSize: 11
+          }}
+        >
+          {item}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -910,6 +1065,28 @@ function Tag({
       <span className="mh-dot" style={{ width: 5, height: 5 }} />
       {children}
     </span>
+  );
+}
+
+function ReviewButton({ label }: { label: string }): React.ReactElement {
+  return (
+    <button
+      type="button"
+      disabled
+      title="Per-node review actions are not connected in this MVP."
+      style={{
+        border: "1px solid var(--rule)",
+        background: "rgba(229,222,204,0.025)",
+        color: "var(--text-3)",
+        borderRadius: "var(--r-md)",
+        padding: "7px 10px",
+        cursor: "not-allowed",
+        fontSize: 12,
+        opacity: 0.72
+      }}
+    >
+      {label}
+    </button>
   );
 }
 

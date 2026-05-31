@@ -12,9 +12,8 @@ interface ScenarioPickerProps {
 
 export function ScenarioPicker({ value, onChange, granularity }: ScenarioPickerProps): React.ReactElement {
   const labelId = useId();
-  const scenario = SCENARIOS.find((entry) => entry.id === value) ?? SCENARIOS[0]!;
-  // "auto" resolves to "balanced" at runtime, so consider it always supported.
-  const supports = granularity === "auto" || scenario.supportedGranularities.includes(granularity);
+  const scenario = value.length > 0 ? SCENARIOS.find((entry) => entry.id === value) : undefined;
+  const supports = scenario === undefined || granularity === "auto" || scenario.supportedGranularities.includes(granularity);
 
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -47,15 +46,16 @@ export function ScenarioPicker({ value, onChange, granularity }: ScenarioPickerP
           cursor: "pointer"
         }}
       >
+        <option value="">Prompt-only planner</option>
         {SCENARIOS.map((entry) => (
           <option key={entry.id} value={entry.id}>
-            {entry.name} · {entry.benchmarkId}
+            {entry.name} / {entry.benchmarkId}
           </option>
         ))}
       </select>
       {!supports ? (
         <span
-          title={`Scenario ${scenario.id} does not support granularity ${granularity}.`}
+          title={`Scenario ${scenario?.id ?? "unknown"} does not support granularity ${granularity}.`}
           style={{
             fontSize: 10.5,
             fontFamily: "var(--font-mono)",
@@ -80,7 +80,7 @@ export function ScenarioPicker({ value, onChange, granularity }: ScenarioPickerP
             whiteSpace: "nowrap"
           }}
         >
-          {scenario.description}
+          {scenario?.description ?? "Use the live planner for the prompt above."}
         </span>
       )}
     </div>
@@ -88,7 +88,7 @@ export function ScenarioPicker({ value, onChange, granularity }: ScenarioPickerP
 }
 
 export function getDefaultScenarioId(): string {
-  return SCENARIOS[0]!.id;
+  return "";
 }
 
 export { getScenario };

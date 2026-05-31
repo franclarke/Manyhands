@@ -18,38 +18,38 @@ export default async function HomePage(): Promise<React.ReactElement> {
 
   return (
     <div>
-      <section style={{ margin: "52px auto 30px", maxWidth: 760 }}>
+      <section style={{ margin: "48px auto 26px", maxWidth: 980 }}>
         <p className="mh-coord" style={{ margin: 0, marginBottom: 14, color: "var(--copper)" }}>
-          alpha / command center
+          command center
         </p>
         <h1
           className="mh-serif"
           style={{
-            fontSize: 46,
+            fontSize: 50,
             lineHeight: 1.06,
             color: "var(--text)",
             margin: 0
           }}
         >
-          Orchestrate a software task.
+          Orchestrate software work with agent task graphs.
         </h1>
         <p
           style={{
             marginTop: 14,
-            fontSize: 15,
+            maxWidth: 760,
+            fontSize: 16,
             lineHeight: 1.6,
             color: "var(--text-2)"
           }}
         >
-          Decompose work into a DAG of agent tasks. Prepare leaf work for isolated Codex
-          worktrees, inspect the contract, then compare granularities without pretending the
-          MVP is a cloud platform.
+          Describe a feature, bugfix, or refactor. ManyHands plans the work, splits it into
+          executable nodes, and lets you run agents with human review.
         </p>
       </section>
 
       <CommandCenterShell
         workspaces={workspaces}
-        initialGranularity="media"
+        initialGranularity="automatica"
         initialModelId={DEFAULT_MODEL_ID}
       />
 

@@ -64,12 +64,12 @@ export function RunActionBar({ runId, status, readyTaskCount }: RunActionBarProp
       ) : null}
       {status === "needs_review" ? (
         <Button variant="primary" busy={busy === "approve-plan"} onClick={() => void call("approve-plan")}>
-          Approve DAG
+          Approve plan
         </Button>
       ) : null}
       {status === "approved" ? (
         <Button variant="primary" busy={busy === "run"} onClick={() => void call("run")}>
-          Run with Codex / {readyTaskCount} ready
+          Run ready nodes ({readyTaskCount})
         </Button>
       ) : null}
       {status === "running" ? (
@@ -83,7 +83,7 @@ export function RunActionBar({ runId, status, readyTaskCount }: RunActionBarProp
         </Button>
       ) : null}
       <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
-        lifecycle / {status.replace("_", " ")}
+        next action / {status.replace("_", " ")}
       </span>
       <span style={{ flex: 1 }} />
       {errorMessage !== null ? (

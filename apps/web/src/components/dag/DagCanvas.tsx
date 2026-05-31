@@ -20,12 +20,18 @@ import type {
   RunGraphViewModel
 } from "@/lib/graph-view-model";
 import { riskColor } from "@/lib/status";
+import {
+  edgeIsRelated,
+  nodeActionHint,
+  type SelectionRelations
+} from "@/lib/run-presentation";
 import { TaskNodeCard, type TaskNodeData } from "./TaskNodeCard";
 
 interface DagCanvasProps {
   graph: RunGraphViewModel;
   selectedTaskId: string | null;
   highlightTaskIds: ReadonlySet<string> | null;
+  selectionRelations: SelectionRelations | null;
   onSelectTask: (taskId: string | null) => void;
 }
 
@@ -35,7 +41,7 @@ const nodeTypes: NodeTypes = {
 };
 
 export function DagCanvas(props: DagCanvasProps): React.ReactElement {
-  const { graph, selectedTaskId, highlightTaskIds, onSelectTask } = props;
+  const { graph, selectedTaskId, highlightTaskIds, selectionRelations, onSelectTask } = props;
 
   const dependencyCountByTaskId = useMemo(() => {
     const counts = new Map<string, number>();
@@ -49,8 +55,8 @@ export function DagCanvas(props: DagCanvasProps): React.ReactElement {
   }, [graph.edges]);
 
   const { nodes, edges } = useMemo(
-    () => buildFlow(graph, selectedTaskId, highlightTaskIds, dependencyCountByTaskId),
-    [graph, selectedTaskId, highlightTaskIds, dependencyCountByTaskId]
+    () => buildFlow(graph, selectedTaskId, highlightTaskIds, selectionRelations, dependencyCountByTaskId),
+    [graph, selectedTaskId, highlightTaskIds, selectionRelations, dependencyCountByTaskId]
   );
 
   return (
@@ -94,10 +100,12 @@ function buildFlow(
   graph: RunGraphViewModel,
   selectedTaskId: string | null,
   highlightTaskIds: ReadonlySet<string> | null,
+  selectionRelations: SelectionRelations | null,
   dependencyCountByTaskId: ReadonlyMap<string, number>
 ): { nodes: Node[]; edges: Edge[] } {
   const layout = layoutByDepth(graph.nodes);
   const isFiltered = highlightTaskIds !== null;
+  const nodeStatusById = new Map(graph.nodes.map((node) => [node.id, node.status]));
 
   const headerNodes: Node[] = layout.columns.map((column) => ({
     id: `phase-${column.depth}`,
@@ -113,7 +121,11 @@ function buildFlow(
   const taskNodes: Node[] = graph.nodes.map((node) => {
     const position = layout.positions.get(node.id) ?? { x: 0, y: 0, id: node.id };
     const dimmed = isFiltered && highlightTaskIds!.size > 0 && !highlightTaskIds!.has(node.id);
-    const data = toTaskData(node, dependencyCountByTaskId.get(node.id) ?? 0);
+    const data = toTaskData(
+      node,
+      dependencyCountByTaskId.get(node.id) ?? 0,
+      relationForNode(node.id, selectionRelations)
+    );
 
     return {
       id: node.id,
@@ -132,23 +144,33 @@ function buildFlow(
   });
 
   const edges: Edge[] = graph.edges.map((edge) =>
-    toFlowEdge(edge, selectedTaskId, highlightTaskIds, isFiltered)
+    toFlowEdge(edge, selectedTaskId, highlightTaskIds, selectionRelations, isFiltered, nodeStatusById)
   );
 
   return { nodes: [...headerNodes, ...taskNodes], edges };
 }
 
-function toTaskData(node: GraphNodeView, dependencyCount: number): TaskNodeData {
+function toTaskData(
+  node: GraphNodeView,
+  dependencyCount: number,
+  relationship: TaskNodeData["relationship"]
+): TaskNodeData {
   const data: TaskNodeData = {
     title: node.title,
+    description: node.description,
     taskId: node.id,
     kind: node.kind,
     status: node.status,
     gateRequired: node.gateRequired === true,
     manual: node.manual === true,
     integrator: node.integrator === true,
-    dependencyCount
+    dependencyCount,
+    actionHint: nodeActionHint(node)
   };
+
+  if (relationship !== undefined) {
+    data.relationship = relationship;
+  }
 
   if (node.authoredBy !== undefined) {
     data.authoredBy = node.authoredBy;
@@ -232,11 +254,17 @@ function toFlowEdge(
   edge: GraphEdgeView,
   selectedTaskId: string | null,
   highlightTaskIds: ReadonlySet<string> | null,
-  isFiltered: boolean
+  selectionRelations: SelectionRelations | null,
+  isFiltered: boolean,
+  nodeStatusById: ReadonlyMap<string, GraphNodeView["status"]>
 ): Edge {
   const isSelected = selectedTaskId !== null && (edge.source === selectedTaskId || edge.target === selectedTaskId);
+  const isRelated = edgeIsRelated(edge, selectionRelations);
   const dimmed = isFiltered && highlightTaskIds!.size > 0 &&
     !(highlightTaskIds!.has(edge.source) && highlightTaskIds!.has(edge.target));
+  const sourceStatus = nodeStatusById.get(edge.source);
+  const targetStatus = nodeStatusById.get(edge.target);
+  const completed = isCompletedStatus(sourceStatus) && isCompletedStatus(targetStatus);
 
   const baseStyle: { stroke: string; strokeWidth: number; strokeDasharray?: string } = (() => {
     if (edge.kind === "risk") {
@@ -249,9 +277,15 @@ function toFlowEdge(
     }
     if (edge.kind === "gate") {
       return {
-        stroke: "var(--gated)",
+        stroke: "var(--status-blocked-fg)",
         strokeWidth: 1.4,
         strokeDasharray: "6 3"
+      };
+    }
+    if (completed) {
+      return {
+        stroke: "var(--status-integrated-fg)",
+        strokeWidth: 1.25
       };
     }
     return {
@@ -262,6 +296,8 @@ function toFlowEdge(
 
   if (isSelected) {
     baseStyle.strokeWidth += 0.6;
+  } else if (isRelated) {
+    baseStyle.strokeWidth += 0.35;
   }
 
   const result: Edge = {
@@ -272,7 +308,7 @@ function toFlowEdge(
     animated: edge.acknowledged !== true && edge.kind === "risk" && (edge.riskLevel === "blocking" || edge.riskLevel === "high"),
     style: {
       ...baseStyle,
-      opacity: edge.acknowledged === true ? 0.24 : dimmed ? 0.14 : isSelected ? 1 : 0.7
+      opacity: edge.acknowledged === true ? 0.24 : dimmed ? 0.14 : isSelected || isRelated ? 1 : 0.62
     }
   };
 
@@ -284,6 +320,19 @@ function toFlowEdge(
   }
 
   return result;
+}
+
+function relationForNode(taskId: string, relations: SelectionRelations | null): TaskNodeData["relationship"] {
+  if (relations === null) return undefined;
+  if (relations.selectedTaskId === taskId) return "selected";
+  if (relations.ancestors.has(taskId)) return "ancestor";
+  if (relations.dependencies.has(taskId)) return "dependency";
+  if (relations.children.has(taskId)) return "child";
+  return undefined;
+}
+
+function isCompletedStatus(status: GraphNodeView["status"] | undefined): boolean {
+  return status === "done" || status === "approved" || status === "integrated";
 }
 
 function miniMapNodeColor(data: TaskNodeData, type?: string): string {

@@ -115,6 +115,27 @@ describe("graph-view-model", () => {
         expect(b?.riskLevel).toBeDefined();
       }
     });
+
+    it("falls back to the node title for legacy snapshots without goal or objective", () => {
+      const legacySnapshot = structuredClone(mockSnapshot) as RunSnapshot;
+      const firstTaskId = Object.keys(legacySnapshot.graphSnapshot.nodes)[0];
+      expect(firstTaskId).toBeDefined();
+      if (firstTaskId === undefined) return;
+
+      const node = legacySnapshot.graphSnapshot.nodes[firstTaskId] as Record<string, unknown>;
+      node.goal = undefined;
+      node.title = "Legacy title fallback";
+
+      const contract = legacySnapshot.contracts.find((entry) => entry.taskId === firstTaskId);
+      if (contract !== undefined) {
+        (contract as Record<string, unknown>).objective = undefined;
+      }
+
+      const graph = toRunGraphViewModel(legacySnapshot);
+      expect(graph.nodes.find((entry) => entry.id === firstTaskId)?.description).toBe(
+        "Legacy title fallback"
+      );
+    });
   });
 
   describe("buildInspectorView", () => {

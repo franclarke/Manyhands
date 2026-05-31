@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   GRANULARITY_FROM_MODE,
+  GRANULARITY_DISPLAY_OPTIONS,
   GRANULARITY_LEVELS,
   GRANULARITY_TO_MODE,
   fromGranularityMode,
+  granularityImpactForLevel,
+  granularityLabelForMode,
   isGranularityLevel,
   toGranularityMode
 } from "@/lib/granularity";
@@ -38,5 +41,18 @@ describe("granularity mapping", () => {
     expect(isGranularityLevel("ultra")).toBe(false);
     expect(isGranularityLevel(42)).toBe(false);
     expect(isGranularityLevel(null)).toBe(false);
+  });
+
+  it("exposes product-facing labels without changing backend modes", () => {
+    expect(granularityLabelForMode("coarse")).toBe("Low");
+    expect(granularityLabelForMode("balanced")).toBe("Medium");
+    expect(granularityLabelForMode("fine")).toBe("High");
+    expect(granularityImpactForLevel("alta")).toContain("parallel batches");
+  });
+
+  it("shows Max as a disabled display-only option", () => {
+    const max = GRANULARITY_DISPLAY_OPTIONS.find((option) => option.id === "max");
+    expect(max?.disabled).toBe(true);
+    expect(isGranularityLevel("max")).toBe(false);
   });
 });

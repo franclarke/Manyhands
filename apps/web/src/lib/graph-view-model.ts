@@ -21,6 +21,7 @@ export type GraphRiskLevel = "low" | "medium" | "high" | "blocking";
 export interface GraphNodeView {
   id: string;
   title: string;
+  description: string;
   kind: string;
   status: GraphNodeStatus;
   phase?: string;
@@ -233,6 +234,7 @@ export function toRunGraphViewModel(snapshot: RunSnapshot): RunGraphViewModel {
       const view: GraphNodeView = {
         id: node.id,
         title: node.title,
+        description: descriptionForNode(node, contract),
         kind: node.kind,
         status,
         phase: `depth-${node.depth}`,
@@ -351,6 +353,25 @@ export function toRunGraphViewModel(snapshot: RunSnapshot): RunGraphViewModel {
   return result;
 }
 
+function descriptionForNode(
+  node: RunSnapshot["graphSnapshot"]["nodes"][string],
+  contract: RunSnapshot["contracts"][number] | undefined
+): string {
+  const objective = compactText(contract?.objective);
+  if (objective.length > 0) {
+    return objective;
+  }
+  const goal = compactText(node.goal);
+  if (goal.length > 0) {
+    return goal;
+  }
+  return compactText(node.title);
+}
+
+function compactText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 export function buildInspectorView(snapshot: RunSnapshot, taskId: string): InspectorView | null {
   const node = snapshot.graphSnapshot.nodes[taskId];
 
@@ -369,7 +390,7 @@ export function buildInspectorView(snapshot: RunSnapshot, taskId: string): Inspe
   const inspector: InspectorView = {
     taskId,
     title: node.title,
-    goal: node.goal,
+    goal: descriptionForNode(node, contract),
     kind: node.kind,
     status,
     depth: node.depth,

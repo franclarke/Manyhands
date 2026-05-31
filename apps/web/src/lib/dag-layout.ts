@@ -29,8 +29,8 @@ export interface LayoutOptions {
 }
 
 const DEFAULTS = {
-  columnWidth: 304,
-  rowHeight: 164,
+  columnWidth: 326,
+  rowHeight: 218,
   topPadding: 64,
   leftPadding: 80,
   nodeWidth: 248

@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import { deriveConflictList } from "@/lib/conflict-view-model";
 import { isExecutionResult } from "@/lib/execution-summary";
+import { toRunGraphViewModel } from "@/lib/graph-view-model";
+import { granularityLabelForMode } from "@/lib/granularity";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
+import { operationalMetrics } from "@/lib/run-presentation";
 import { findScenario } from "@/lib/scenarios";
 import {
   RunNotFoundError,
@@ -51,7 +54,7 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
         initialStatus={run.status}
         snapshot={snapshot}
         benchmarkLabel={scenario?.benchmarkId ?? run.scenarioId ?? "prompt"}
-        configLabel={`granularity · ${run.granularity}`}
+        configLabel={`granularity / ${granularityLabelForMode(run.granularity)}`}
         readyTaskCount={readyTaskCount}
         patches={patches}
         timelineRun={{
@@ -82,14 +85,15 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
 
 function snapshotSummary(
   snapshot: ReturnType<typeof projectRunRecordToSnapshot>
-): { nodes: number; leaves: number; depth: number; ready: number } | null {
+): { nodes: number; leaves: number; depth: number; metrics: ReturnType<typeof operationalMetrics> } | null {
   if (snapshot === null) return null;
+  const graph = toRunGraphViewModel(snapshot);
   const nodes = Object.values(snapshot.graphSnapshot.nodes);
   return {
     nodes: nodes.length,
     leaves: nodes.filter((node) => node.kind === "leaf").length,
     depth: Math.max(0, ...nodes.map((node) => node.depth)),
-    ready: nodes.filter((node) => node.status === "ready").length
+    metrics: operationalMetrics(graph)
   };
 }
 

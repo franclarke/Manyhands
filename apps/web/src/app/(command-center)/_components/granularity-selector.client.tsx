@@ -1,8 +1,9 @@
 "use client";
 
 import {
-  GRANULARITY_DESCRIPTIONS,
-  GRANULARITY_LEVELS,
+  GRANULARITY_DISPLAY_OPTIONS,
+  granularityImpactForLevel,
+  isGranularityLevel,
   type GranularityLevel
 } from "@/lib/granularity";
 
@@ -11,63 +12,73 @@ interface GranularitySelectorProps {
   onChange: (value: GranularityLevel) => void;
 }
 
-const LABELS: Record<GranularityLevel, { label: string; coord: string }> = {
-  automatica: { label: "Auto", coord: "system" },
-  baja: { label: "G3", coord: "coarse" },
-  media: { label: "G6", coord: "balanced" },
-  alta: { label: "G9", coord: "fine" }
-};
-
 export function GranularitySelector({ value, onChange }: GranularitySelectorProps): React.ReactElement {
-  const description = GRANULARITY_DESCRIPTIONS[value];
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
       <div
         role="radiogroup"
         aria-label="Granularity"
         style={{
-          display: "inline-flex",
-          padding: 2,
-          border: "1px solid var(--rule)",
-          borderRadius: 7
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(116px, 1fr))",
+          gap: 8,
+          width: "100%"
         }}
       >
-        {GRANULARITY_LEVELS.map((level) => {
-          const active = value === level;
-          const label = LABELS[level];
+        {GRANULARITY_DISPLAY_OPTIONS.map((option) => {
+          const active = value === option.id;
+          const level = isGranularityLevel(option.id) ? option.id : null;
+          const selectable = level !== null && option.disabled !== true;
           return (
             <button
-              key={level}
+              key={option.id}
               type="button"
               role="radio"
               aria-checked={active}
-              onClick={() => onChange(level)}
-              title={description.helper}
+              aria-disabled={!selectable}
+              onClick={() => {
+                if (selectable && level !== null) onChange(level);
+              }}
+              title={option.disabledReason ?? option.detail}
               style={{
-                height: 26,
-                border: "none",
-                background: active ? "rgba(229,222,204,0.06)" : "transparent",
-                color: active ? "var(--text)" : "var(--text-2)",
-                borderRadius: 5,
-                padding: "0 10px",
-                fontSize: 12,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6
+                minHeight: 68,
+                border: `1px solid ${active ? "var(--copper)" : "var(--rule)"}`,
+                background: active ? "rgba(180,113,72,0.10)" : "rgba(229,222,204,0.022)",
+                color: option.disabled ? "var(--text-4)" : active ? "var(--text)" : "var(--text-2)",
+                borderRadius: "var(--r-lg)",
+                padding: "10px 11px",
+                cursor: selectable ? "pointer" : "not-allowed",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 6,
+                textAlign: "left",
+                opacity: option.disabled ? 0.55 : 1
               }}
             >
-              <span>{label.label}</span>
-              <span className="mh-mono" style={{ fontSize: 9.5, color: active ? "var(--copper)" : "var(--text-3)" }}>
-                {label.coord}
+              <span style={{ fontSize: 14, fontWeight: 700, color: active ? "var(--copper-hi)" : "inherit" }}>
+                {option.label}
+              </span>
+              <span style={{ fontSize: 11.5, lineHeight: 1.35 }}>
+                {option.detail}
               </span>
             </button>
           );
         })}
       </div>
-      <span style={{ fontSize: 12, color: "var(--text-2)" }}>
-        <strong style={{ color: "var(--text)" }}>{description.headline}</strong>
-      </span>
-    </>
+      <div
+        style={{
+          border: "1px solid var(--rule)",
+          background: "rgba(15,16,18,0.42)",
+          borderRadius: "var(--r-md)",
+          padding: "8px 10px",
+          color: "var(--text-2)",
+          fontSize: 12.5
+        }}
+      >
+        {granularityImpactForLevel(value)}
+      </div>
+    </div>
   );
 }

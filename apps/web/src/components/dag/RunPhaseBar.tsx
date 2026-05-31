@@ -2,25 +2,26 @@
 
 import type { RunStatusKey } from "@/lib/api-types";
 import type { RunGraphViewModel } from "@/lib/graph-view-model";
-import { derivePhase, runProgress, RUN_PHASES, RUN_PHASE_LABEL, type RunPhase } from "@/lib/run-phase";
+import { runProgress } from "@/lib/run-phase";
 
 interface RunPhaseBarProps {
   status: RunStatusKey;
   graph: RunGraphViewModel;
 }
 
-/**
- * Phase-aware header band for the Run Workspace. Shows the run's lifecycle as a
- * stepper (Planning → Executing → Integrating → Done) and, once work is moving,
- * an aggregate progress read-out — so the user understands "where" the run is
- * and "how far" without reading logs.
- */
+const DISPLAY_STEPS = [
+  "Plan generated",
+  "Review plan",
+  "Execute agents",
+  "Review outputs",
+  "Integrate"
+] as const;
+
 export function RunPhaseBar({ status, graph }: RunPhaseBarProps): React.ReactElement {
-  const phase = derivePhase(status, graph);
+  const activeIndex = activeStepIndex(status);
   const failed = status === "failed";
   const progress = runProgress(graph);
-  const currentIndex = RUN_PHASES.indexOf(phase);
-  const showProgress = phase === "executing" || phase === "integrating" || phase === "done";
+  const showProgress = status === "running" || status === "completed" || status === "failed";
 
   return (
     <div
@@ -29,32 +30,32 @@ export function RunPhaseBar({ status, graph }: RunPhaseBarProps): React.ReactEle
         alignItems: "center",
         gap: 16,
         flexWrap: "wrap",
-        border: "1px solid var(--color-border)",
-        background: "var(--color-bg-subtle)",
+        border: "1px solid var(--rule)",
+        background: "rgba(19,20,22,0.70)",
         borderRadius: "var(--r-lg)",
-        padding: "9px 14px"
+        padding: "10px 14px"
       }}
     >
-      <div role="list" aria-label="Run phase" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-        {RUN_PHASES.map((p, index) => (
+      <div role="list" aria-label="Run phase" style={{ display: "inline-flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+        {DISPLAY_STEPS.map((step, index) => (
           <PhaseStep
-            key={p}
-            phase={p}
-            state={stepState(index, currentIndex, failed)}
-            showArrow={index < RUN_PHASES.length - 1}
+            key={step}
+            label={step}
+            state={stepState(index, activeIndex, failed)}
+            showArrow={index < DISPLAY_STEPS.length - 1}
           />
         ))}
       </div>
 
       {showProgress ? (
         <>
-          <div style={{ flex: 1, minWidth: 120, display: "flex", flexDirection: "column", gap: 5 }}>
+          <div style={{ flex: 1, minWidth: 140, display: "flex", flexDirection: "column", gap: 5 }}>
             <div
               aria-hidden
               style={{
-                height: 3,
+                height: 4,
                 borderRadius: 2,
-                background: "var(--color-border)",
+                background: "var(--rule)",
                 overflow: "hidden"
               }}
             >
@@ -62,22 +63,22 @@ export function RunPhaseBar({ status, graph }: RunPhaseBarProps): React.ReactEle
                 style={{
                   width: `${Math.round(progress.ratio * 100)}%`,
                   height: "100%",
-                  background: failed ? "var(--status-failed-fg)" : "var(--status-completed-fg)",
+                  background: failed ? "var(--status-failed-fg)" : "var(--status-integrated-fg)",
                   transition: "width 240ms ease"
                 }}
               />
             </div>
           </div>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-            <Count value={progress.completed} total={progress.total} label="done" />
-            {progress.running > 0 ? <Count value={progress.running} label="running" /> : null}
-            {progress.review > 0 ? <Count value={progress.review} label="review" /> : null}
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <Count value={progress.completed} total={progress.total} label="completed" />
+            {progress.running > 0 ? <Count value={progress.running} label="running" tone="running" /> : null}
+            {progress.review > 0 ? <Count value={progress.review} label="review" tone="review" /> : null}
             {progress.failed > 0 ? <Count value={progress.failed} label="failed" tone="failed" /> : null}
           </div>
         </>
       ) : (
-        <span className="mh-mono" style={{ fontSize: 11, color: "var(--color-text-subtle)" }}>
-          {progress.total} {progress.total === 1 ? "task" : "tasks"} planned
+        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
+          {progress.total} {progress.total === 1 ? "node" : "nodes"} in the task graph
         </span>
       )}
     </div>
@@ -86,6 +87,25 @@ export function RunPhaseBar({ status, graph }: RunPhaseBarProps): React.ReactEle
 
 type StepState = "done" | "active" | "failed" | "upcoming";
 
+function activeStepIndex(status: RunStatusKey): number {
+  switch (status) {
+    case "created":
+    case "generating":
+      return 0;
+    case "needs_review":
+      return 1;
+    case "approved":
+    case "running":
+    case "paused":
+    case "interrupted":
+      return 2;
+    case "completed":
+      return 4;
+    case "failed":
+      return 3;
+  }
+}
+
 function stepState(index: number, currentIndex: number, failed: boolean): StepState {
   if (index < currentIndex) return "done";
   if (index === currentIndex) return failed ? "failed" : "active";
@@ -93,42 +113,42 @@ function stepState(index: number, currentIndex: number, failed: boolean): StepSt
 }
 
 function PhaseStep({
-  phase,
+  label,
   state,
   showArrow
 }: {
-  phase: RunPhase;
+  label: string;
   state: StepState;
   showArrow: boolean;
 }): React.ReactElement {
   const color =
     state === "active"
-      ? "var(--color-accent)"
+      ? "var(--copper-hi)"
       : state === "done"
-        ? "var(--status-completed-fg)"
+        ? "var(--status-integrated-fg)"
         : state === "failed"
           ? "var(--status-failed-fg)"
-          : "var(--color-text-subtle)";
+          : "var(--text-3)";
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }} role="listitem">
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }} role="listitem">
       <span
-        className={state === "active" ? "mh-mono coral-pulse" : "mh-mono"}
+        className={state === "active" ? "coral-pulse" : undefined}
         style={{
-          fontSize: 11,
-          letterSpacing: 0.04,
+          fontSize: 11.5,
           color,
-          fontWeight: state === "active" ? 600 : 400,
-          padding: "2px 8px",
+          fontWeight: state === "active" ? 700 : 500,
+          padding: "4px 8px",
           borderRadius: 999,
-          border: `1px solid ${state === "upcoming" ? "transparent" : "var(--color-border)"}`,
-          background: state === "active" ? "var(--status-planning-bg)" : "transparent"
+          border: `1px solid ${state === "upcoming" ? "transparent" : "var(--rule)"}`,
+          background: state === "active" ? "rgba(180,113,72,0.10)" : "transparent",
+          whiteSpace: "nowrap"
         }}
       >
-        {RUN_PHASE_LABEL[phase]}
+        {label}
       </span>
       {showArrow ? (
-        <span aria-hidden style={{ color: "var(--color-text-faint)", fontSize: 11 }}>
-          ›
+        <span aria-hidden style={{ color: "var(--text-4)", fontSize: 12 }}>
+          &gt;
         </span>
       ) : null}
     </span>
@@ -144,16 +164,21 @@ function Count({
   value: number;
   total?: number;
   label: string;
-  tone?: "failed";
+  tone?: "running" | "review" | "failed";
 }): React.ReactElement {
+  const color =
+    tone === "running"
+      ? "var(--status-running-fg)"
+      : tone === "review"
+        ? "var(--status-review-fg)"
+        : tone === "failed"
+          ? "var(--status-failed-fg)"
+          : "var(--text)";
   return (
     <span style={{ display: "inline-flex", alignItems: "baseline", gap: 5 }}>
-      <span
-        className="mh-mono"
-        style={{ fontSize: 13, color: tone === "failed" ? "var(--status-failed-fg)" : "var(--color-text)" }}
-      >
+      <span className="mh-mono" style={{ fontSize: 13, color }}>
         {value}
-        {total !== undefined ? <span style={{ color: "var(--color-text-subtle)" }}>/{total}</span> : null}
+        {total !== undefined ? <span style={{ color: "var(--text-3)" }}>/{total}</span> : null}
       </span>
       <span className="mh-coord">{label}</span>
     </span>

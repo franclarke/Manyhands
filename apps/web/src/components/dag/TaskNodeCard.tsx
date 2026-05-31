@@ -3,10 +3,13 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { GraphNodeStatus, GraphRiskLevel } from "@/lib/graph-view-model";
-import { graphStatusColor, riskColor } from "@/lib/status";
+import { nodeUiStatus, riskColor } from "@/lib/status";
+import { nodeKindLabel, riskLabel } from "@/lib/run-presentation";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export interface TaskNodeData {
   title: string;
+  description: string;
   taskId: string;
   kind: string;
   status: GraphNodeStatus;
@@ -23,34 +26,36 @@ export interface TaskNodeData {
   integrator?: boolean;
   selected?: boolean;
   blockedReason?: string;
+  actionHint?: string;
+  relationship?: "selected" | "ancestor" | "dependency" | "child";
   [key: string]: unknown;
 }
 
 function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
   const node = data as TaskNodeData;
-  const statusColor = graphStatusColor(node.status);
   const isRunning = node.status === "running" || node.status === "generating";
-  const selectedShadow = "0 0 0 1px var(--copper), 0 0 0 4px rgba(180, 113, 72, 0.12)";
-  const borderColor = selected
-    ? "transparent"
-    : node.riskLevel !== undefined && (node.riskLevel === "high" || node.riskLevel === "blocking")
-      ? riskColor(node.riskLevel)
-      : "var(--rule)";
+  const selectedShadow = "0 0 0 1px var(--copper), 0 0 0 4px rgba(180, 113, 72, 0.14)";
+  const relationshipColor = relationshipAccent(node.relationship);
+  const riskBorder = node.riskLevel === "high" || node.riskLevel === "blocking"
+    ? riskColor(node.riskLevel)
+    : undefined;
+  const borderColor = selected ? "transparent" : relationshipColor ?? riskBorder ?? "var(--rule)";
 
   return (
     <div
       className={isRunning ? "coral-pulse" : undefined}
       style={{
         width: 248,
-        background: selected ? "rgba(180,113,72,0.04)" : "var(--bg-1)",
+        minHeight: 150,
+        background: selected ? "rgba(180,113,72,0.06)" : "rgba(24,26,28,0.96)",
         border: `1px solid ${borderColor}`,
-        borderRadius: 6,
-        boxShadow: selected ? selectedShadow : "none",
+        borderRadius: 7,
+        boxShadow: selected ? selectedShadow : relationshipColor !== undefined ? "0 0 0 3px rgba(229,222,204,0.045)" : "none",
         color: "var(--text)",
         fontFamily: "var(--font-sans)",
         position: "relative",
         overflow: "hidden",
-        opacity: node.status === "blocked" ? 0.72 : 1
+        opacity: node.status === "blocked" ? 0.78 : 1
       }}
     >
       <Handle
@@ -64,80 +69,88 @@ function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
         style={{ background: "var(--text-3)", width: 5, height: 5, border: "none" }}
       />
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "7px 10px",
-          borderBottom: "1px solid var(--rule-soft)"
-        }}
-      >
-        <TypeGlyph kind={node.kind} />
-        <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-2)" }}>
-          {node.taskId}
-        </span>
-        <span className="mh-mono" style={{ fontSize: 10, color: "var(--text-3)" }}>
-          / {node.kind}
-        </span>
-        <span style={{ flex: 1 }} />
-        <span className="mh-dot" style={{ color: statusColor }} />
-      </div>
+      <div style={{ padding: "11px 12px 12px", display: "flex", flexDirection: "column", gap: 9 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+          <TypeBadge kind={node.kind} />
+          <StatusBadge status={nodeUiStatus(node.status, { integrator: node.integrator === true })} />
+        </div>
 
-      <div style={{ padding: "10px 12px 12px" }}>
+        <div>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: 15.5,
+              lineHeight: 1.22,
+              color: "var(--text)",
+              fontWeight: 700,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden"
+            }}
+          >
+            {node.title}
+          </h3>
+          <p
+            style={{
+              margin: "6px 0 0",
+              color: "var(--text-2)",
+              fontSize: 11.5,
+              lineHeight: 1.4,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden"
+            }}
+          >
+            {node.description}
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <MiniMetric label="deps" value={String(node.dependencyCount ?? 0)} />
+          <MiniMetric label="paths" value={String(node.expectedFilesCount ?? 0)} />
+          {node.traceCount !== undefined && node.traceCount > 0 ? (
+            <MiniMetric label="trace" value={String(node.traceCount)} />
+          ) : null}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+          {node.riskLevel !== undefined ? (
+            <RiskBadge level={node.riskLevel} />
+          ) : (
+            <span className="mh-mono" style={{ color: "var(--text-3)", fontSize: 10.5 }}>
+              Risk none
+            </span>
+          )}
+          {node.integrator ? <Signal color="var(--copper-hi)" label="integration" /> : null}
+          {node.gateRequired ? <Signal color="var(--status-review-fg)" label="review gate" /> : null}
+        </div>
+
         <div
-          className="mh-serif"
           style={{
-            fontSize: 15,
-            lineHeight: 1.22,
-            color: "var(--text)",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden"
+            borderTop: "1px solid var(--rule-soft)",
+            paddingTop: 8,
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 8,
+            alignItems: "center"
           }}
         >
-          {node.title}
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 9, minHeight: 16 }}>
-          <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
-            {(node.expectedFilesCount ?? 0) > 0
-              ? `${node.expectedFilesCount} path${node.expectedFilesCount === 1 ? "" : "s"}`
-              : "no paths"}
+          <span className="mh-mono" style={{ color: "var(--text-3)", fontSize: 10.5, overflow: "hidden", textOverflow: "ellipsis" }}>
+            {node.taskId}
           </span>
-          {(node.dependencyCount ?? 0) > 0 ? (
-            <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
-              deps {node.dependencyCount}
-            </span>
-          ) : null}
-          {(node.traceCount ?? 0) > 0 ? (
-            <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
-              trace {node.traceCount}
-            </span>
-          ) : null}
-          <span style={{ flex: 1 }} />
-          <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-2)" }}>
-            {node.status.replace("_", " ")}
+          <span style={{ color: "var(--text)", fontSize: 11.5, fontWeight: 600, whiteSpace: "nowrap" }}>
+            {node.actionHint ?? "Review contract"}
           </span>
         </div>
-
-        {node.riskLevel !== undefined || node.gateRequired || node.integrator ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-            {node.riskLevel !== undefined ? (
-              <Signal color={riskColor(node.riskLevel)} label={`risk ${node.riskLevel}`} />
-            ) : null}
-            {node.gateRequired ? <Signal color="var(--gated)" label="gate" /> : null}
-            {node.integrator ? <Signal color="var(--copper)" label="integration" /> : null}
-          </div>
-        ) : null}
 
         {node.blockedReason ? (
           <div
             style={{
-              marginTop: 8,
+              color: "var(--status-blocked-fg)",
               fontSize: 11,
-              color: "var(--error)",
+              lineHeight: 1.35,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
@@ -152,33 +165,60 @@ function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
   );
 }
 
-function TypeGlyph({ kind }: { kind: string }): React.ReactElement {
-  const letter = kind === "composite"
-    ? "C"
-    : kind === "leaf"
-      ? "L"
-      : kind === "integration"
-        ? "I"
-        : kind === "validation"
-          ? "V"
-          : kind.slice(0, 1).toUpperCase();
+function TypeBadge({ kind }: { kind: string }): React.ReactElement {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        height: 23,
+        padding: "0 8px",
+        borderRadius: 999,
+        border: "1px solid var(--rule-strong)",
+        color: kind === "leaf" ? "var(--copper-hi)" : "var(--text-2)",
+        background: "rgba(229,222,204,0.025)",
+        fontSize: 11,
+        fontWeight: 700,
+        whiteSpace: "nowrap"
+      }}
+    >
+      {nodeKindLabel(kind)}
+    </span>
+  );
+}
+
+function MiniMetric({ label, value }: { label: string; value: string }): React.ReactElement {
+  return (
+    <span
+      className="mh-mono"
+      style={{
+        display: "inline-flex",
+        alignItems: "baseline",
+        gap: 4,
+        color: "var(--text-2)",
+        fontSize: 10.5
+      }}
+    >
+      <strong style={{ color: "var(--text)" }}>{value}</strong>
+      {label}
+    </span>
+  );
+}
+
+function RiskBadge({ level }: { level: GraphRiskLevel }): React.ReactElement {
   return (
     <span
       className="mh-mono"
       style={{
         display: "inline-flex",
         alignItems: "center",
-        justifyContent: "center",
-        width: 14,
-        height: 14,
-        borderRadius: 2,
-        border: "1px solid var(--rule-strong)",
-        color: kind === "leaf" ? "var(--copper)" : "var(--text-2)",
-        fontSize: 9,
-        lineHeight: 1
+        gap: 5,
+        color: riskColor(level),
+        fontSize: 10.5
       }}
     >
-      {letter}
+      <span className="mh-dot" style={{ width: 5, height: 5 }} />
+      {riskLabel(level)}
     </span>
   );
 }
@@ -190,6 +230,21 @@ function Signal({ color, label }: { color: string; label: string }): React.React
       <span className="mh-mono">{label}</span>
     </span>
   );
+}
+
+function relationshipAccent(relationship: TaskNodeData["relationship"]): string | undefined {
+  switch (relationship) {
+    case "selected":
+      return "var(--copper)";
+    case "ancestor":
+      return "var(--status-integrated-fg)";
+    case "dependency":
+      return "var(--status-ready-fg)";
+    case "child":
+      return "var(--status-review-fg)";
+    default:
+      return undefined;
+  }
 }
 
 export const TaskNodeCard = memo(TaskNodeCardImpl);

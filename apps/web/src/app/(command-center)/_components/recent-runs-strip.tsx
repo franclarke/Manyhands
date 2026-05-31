@@ -1,21 +1,16 @@
 import Link from "next/link";
-import type { RunGranularityKey, RunPreview } from "@/lib/api-types";
-import { runStatusColor } from "@/lib/status";
+import type { RunPreview } from "@/lib/api-types";
+import { granularityLabelForMode } from "@/lib/granularity";
+import { runUiStatus } from "@/lib/status";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 interface RecentRunsStripProps {
   runs: RunPreview[];
 }
 
-const GRANULARITY_LABEL: Record<RunGranularityKey, string> = {
-  auto: "Auto",
-  coarse: "G3",
-  balanced: "G6",
-  fine: "G9"
-};
-
 export function RecentRunsStrip({ runs }: RecentRunsStripProps): React.ReactElement {
   return (
-    <section style={{ maxWidth: 760, margin: "88px auto 0" }}>
+    <section style={{ maxWidth: 980, margin: "64px auto 0" }}>
       <Header />
       {runs.length === 0 ? (
         <div
@@ -28,12 +23,18 @@ export function RecentRunsStrip({ runs }: RecentRunsStripProps): React.ReactElem
             lineHeight: 1.6
           }}
         >
-          No recent runs yet. Describe a software task above and generate the first DAG.
+          No recent runs yet. Describe a software task above and generate the first task graph.
         </div>
       ) : (
-        <div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: 12
+          }}
+        >
           {runs.map((run) => (
-            <RecentRunRow key={run.id} run={run} />
+            <RecentRunCard key={run.id} run={run} />
           ))}
         </div>
       )}
@@ -48,71 +49,128 @@ function Header(): React.ReactElement {
         display: "flex",
         alignItems: "center",
         gap: 14,
-        marginBottom: 10
+        marginBottom: 12
       }}
     >
-      <span className="mh-coord">beta / recent runs</span>
+      <span className="mh-coord">recent runs</span>
       <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
       <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
-        persisted locally
+        local run history
       </span>
     </div>
   );
 }
 
-function RecentRunRow({ run }: { run: RunPreview }): React.ReactElement {
-  const mode = run.scenarioId !== undefined ? "mock" : "planning";
+function RecentRunCard({ run }: { run: RunPreview }): React.ReactElement {
+  const repo = run.workspaceName ?? run.workspaceId.slice(0, 8);
   return (
     <Link
       href={run.href}
-      aria-label={`Open ${run.title}`}
+      aria-label={`Open graph for ${run.title}`}
       style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) auto auto auto auto",
-        gap: 18,
-        alignItems: "center",
-        padding: "14px 0",
-        borderBottom: "1px solid var(--rule-soft)"
+        minHeight: 172,
+        border: "1px solid var(--rule)",
+        background: "rgba(19,20,22,0.74)",
+        borderRadius: "var(--r-lg)",
+        padding: 15,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12
       }}
     >
-      <span style={{ minWidth: 0 }}>
-        <span
-          className="mh-serif"
-          style={{
-            display: "block",
-            fontSize: 15,
-            color: "var(--text)",
-            lineHeight: 1.25,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap"
-          }}
-        >
-          {run.title}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+        <div style={{ minWidth: 0 }}>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 15,
+              color: "var(--text)",
+              lineHeight: 1.28,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden"
+            }}
+          >
+            {run.title}
+          </h2>
+          <div className="mh-mono" style={{ marginTop: 6, fontSize: 10.5, color: "var(--text-3)" }}>
+            {repo}
+          </div>
+        </div>
+        <StatusBadge status={runUiStatus(run.status)} label={run.status.replace("_", " ")} />
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "8px 12px",
+          marginTop: "auto"
+        }}
+      >
+        <Meta label="Granularity" value={granularityLabelForMode(run.granularity)} />
+        <Meta label="Nodes" value={run.nodeCount !== undefined ? String(run.nodeCount) : "-"} />
+        <Meta label="Progress" value={progressLabel(run)} />
+        <Meta label="Date" value={formatTimestamp(run.updatedAt)} />
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          paddingTop: 2
+        }}
+      >
+        <span style={{ color: "var(--text-3)", fontSize: 12 }}>
+          {run.scenarioId !== undefined ? "Lab fixture" : "Prompt run"}
         </span>
-        <span className="mh-mono" style={{ display: "block", marginTop: 4, fontSize: 10.5, color: "var(--text-3)" }}>
-          {run.workspaceName ?? run.workspaceId.slice(0, 8)}
+        <span style={{ color: "var(--copper-hi)", fontSize: 12, fontWeight: 700 }}>
+          Open graph
         </span>
-      </span>
-      <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-2)" }}>
-        {GRANULARITY_LABEL[run.granularity]}
-      </span>
-      <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-2)" }}>
-        {mode}
-      </span>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--text-2)", fontSize: 11 }}>
-        <span className="mh-dot" style={{ color: runStatusColor(run.status) }} />
-        {run.status.replace("_", " ")}
-      </span>
-      <span className="mh-mono" style={{ minWidth: 92, textAlign: "right", fontSize: 10.5, color: "var(--text-3)" }}>
-        {formatTimestamp(run.updatedAt)}
-      </span>
+      </div>
     </Link>
   );
+}
+
+function Meta({ label, value }: { label: string; value: string }): React.ReactElement {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div className="mh-coord" style={{ fontSize: 9.5 }}>{label}</div>
+      <div
+        style={{
+          marginTop: 3,
+          color: "var(--text)",
+          fontSize: 12,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap"
+        }}
+        title={value}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function progressLabel(run: RunPreview): string {
+  if (run.status === "completed") return "Integrated";
+  if (run.status === "failed") return "Failed";
+  if (run.status === "needs_review") return "Plan review";
+  if (run.status === "approved") return "Ready to run";
+  if (run.status === "running") {
+    const agents = run.agentCount ?? 0;
+    const nodes = run.nodeCount ?? 0;
+    return nodes > 0 ? `${agents}/${nodes} agents` : "Agents running";
+  }
+  if (run.status === "generating") return "Planning";
+  return run.nodeCount !== undefined ? `${run.nodeCount} nodes planned` : "Graph pending";
 }
 
 function formatTimestamp(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  return date.toISOString().slice(0, 16).replace("T", " ");
+  return date.toISOString().slice(0, 10);
 }
