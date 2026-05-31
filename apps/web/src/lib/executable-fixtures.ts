@@ -12,8 +12,14 @@ export interface ExecutableFixture {
 
 export const EXECUTABLE_FIXTURES: ReadonlyArray<ExecutableFixture> = [
   {
+    id: "expression-calculator",
+    label: "Expression Calculator",
+    description:
+      "Arithmetic expression evaluator (tokenize→parse→evaluate). Rich seams between stages; only the public contract is fixed — the decomposer designs the internal interfaces."
+  },
+  {
     id: "task-manager-api",
     label: "Task Manager API",
-    description: "Express REST API with PUT/DELETE stubs to complete."
+    description: "Express REST API with PUT/DELETE stubs to complete (pipeline smoke fixture)."
   }
 ];
