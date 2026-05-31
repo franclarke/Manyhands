@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { ExecutionScope, ExecutionValidationCommand } from "@manyhands/contracts";
+import type { ExecutionScope, ExecutionValidationCommand, InterfaceContract } from "@manyhands/contracts";
 import type { TraceStore } from "@manyhands/trace-store";
 
 import type { CodexExecutor } from "../codex/types";
@@ -28,6 +28,8 @@ export interface IntegrationAgentDeps {
   repoRoot: string;
   validationRunner?: ValidationRunner;
   scopeChecker?: ScopeChecker;
+  /** Writes the repair instructions file. Injectable for tests. */
+  writeInstructions?: (path: string, content: string) => Promise<void>;
   now?: () => string;
 }
 
@@ -36,6 +38,14 @@ export interface IntegrationRepairConfig {
   sandboxMode: SandboxMode;
   timeoutMs: number;
   bypassApprovals?: boolean;
+}
+
+/** What a child task set out to do — feeds the Composer's semantic repair. */
+export interface ChildIntent {
+  taskId: string;
+  goal: string;
+  consumes: string[];
+  produces: string[];
 }
 
 export interface IntegrationParams {
@@ -48,6 +58,13 @@ export interface IntegrationParams {
   parentValidationCommands?: ExecutionValidationCommand[];
   executionScope?: ExecutionScope;
   forbiddenPaths?: string[];
+  // ── Contract-aware composition (thesis Artifact 2) ──
+  /** The composite's goal — what the integrated children must collectively achieve. */
+  parentGoal?: string;
+  /** Canonical seams defined when this composite was decomposed (source of truth for repair). */
+  sharedInterfaces?: InterfaceContract[];
+  /** Per-child intent, keyed by taskId, so repair knows WHY each change exists. */
+  childIntents?: ChildIntent[];
 }
 
 /**
@@ -62,6 +79,7 @@ export class IntegrationAgent {
   private readonly repoRoot: string;
   private readonly validationRunner: ValidationRunner;
   private readonly scopeChecker: ScopeChecker;
+  private readonly writeInstructions: (path: string, content: string) => Promise<void>;
 
   constructor(deps: IntegrationAgentDeps) {
     this.git = deps.git;
@@ -70,6 +88,7 @@ export class IntegrationAgent {
     this.repoRoot = deps.repoRoot;
     this.validationRunner = deps.validationRunner ?? new ChildProcessValidationRunner();
     this.scopeChecker = deps.scopeChecker ?? new ScopeChecker();
+    this.writeInstructions = deps.writeInstructions ?? ((path, content) => writeFile(path, content, "utf8"));
   }
 
   async integrate(params: IntegrationParams): Promise<IntegrationResult> {
@@ -177,10 +196,9 @@ export class IntegrationAgent {
       tmpdir(),
       `mh-repair-${params.compositeTaskId}-${child.taskId}.txt`
     );
-    await writeFile(
+    await this.writeInstructions(
       instructionFilePath,
-      this.buildRepairPrompt(child, conflict),
-      "utf8"
+      this.buildRepairPrompt(params, child, conflict)
     );
 
     const codexOutcome = await this.codex.execute({
@@ -257,13 +275,45 @@ export class IntegrationAgent {
     });
   }
 
+  /**
+   * Contract-aware repair prompt (thesis Artifact 2). Unlike a syntactic merge
+   * resolver, this gives Codex the WHY: the parent's goal, the canonical shared
+   * interfaces the children must honour, and each conflicting child's intent. A
+   * cherry-pick conflict here is a violation of the shared seam, resolved by
+   * reference to the canonical contract rather than guessed from the diff text.
+   */
   private buildRepairPrompt(
+    params: IntegrationParams,
     child: AgentExecutionResult,
     conflict: { conflictFiles: string[]; output: string }
   ): string {
-    return [
-      "You are resolving a git cherry-pick conflict during automated integration.",
-      `The change from task "${child.taskId}" conflicts with the parent branch.`,
+    const lines: string[] = [
+      "You are resolving a git cherry-pick conflict during automated integration of a composite task.",
+      `The change from task "${child.taskId}" conflicts with the already-integrated parent branch.`
+    ];
+
+    if (params.parentGoal) {
+      lines.push("", `Parent goal (what the integrated children must collectively achieve):`, params.parentGoal);
+    }
+
+    const seams = params.sharedInterfaces ?? [];
+    if (seams.length > 0) {
+      lines.push(
+        "",
+        "Canonical shared interfaces — the source of truth for the seams between these children.",
+        "Your resolution MUST honour these signatures exactly:",
+        ...seams.map((i) => `- ${i.id} (${i.kind}): ${i.signature}\n  ${i.description}`)
+      );
+    }
+
+    const intent = params.childIntents?.find((entry) => entry.taskId === child.taskId);
+    if (intent) {
+      lines.push("", `This change implements task "${child.taskId}": ${intent.goal}`);
+      if (intent.produces.length > 0) lines.push(`It produces: ${intent.produces.join(", ")}.`);
+      if (intent.consumes.length > 0) lines.push(`It consumes: ${intent.consumes.join(", ")}.`);
+    }
+
+    lines.push(
       "",
       "Conflicting files:",
       ...conflict.conflictFiles.map((file) => `- ${file}`),
@@ -271,10 +321,11 @@ export class IntegrationAgent {
       "Cherry-pick output:",
       conflict.output,
       "",
-      "Resolve the conflict by editing the files so both the parent branch's",
-      "intent and this task's change are preserved. Do not commit — the",
-      "orchestrator will commit your resolution."
-    ].join("\n");
+      "Resolve the conflict by editing the files so the result satisfies the parent goal and",
+      "honours the canonical interfaces above. Do not commit — the orchestrator will commit your",
+      "resolution."
+    );
+    return lines.join("\n");
   }
 
   private buildRepairResult(

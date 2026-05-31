@@ -131,6 +131,53 @@ describe("IntegrationAgent", () => {
     expect(traceStore.findByType("codex_repair_started")).toHaveLength(1);
   });
 
+  it("repair prompt carries parent goal, canonical seams, and child intent (Artifact 2)", async () => {
+    const git = new FakeGitRunner({
+      heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
+      cherryPickOutcomes: [{ ok: false, conflictFiles: ["src/parser.ts"], output: "CONFLICT" }],
+      diffCachedNameOnly: ["src/parser.ts"],
+      diffCached: "resolved patch",
+      commitSha: "REPAIR_SHA"
+    });
+    const prompts: string[] = [];
+    const agent = new IntegrationAgent({
+      git,
+      codex: new MockCodexCliExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: "/repo",
+      writeInstructions: async (_path, content) => {
+        prompts.push(content);
+      }
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("parse", "SHA_PARSE")],
+      repair,
+      parentGoal: "Evaluate arithmetic expression strings",
+      sharedInterfaces: [
+        {
+          id: "Ast",
+          kind: "type",
+          signature: "type Ast = number | { op: string; args: Ast[] }",
+          description: "parsed expression tree",
+          definedAtNodeId: "root"
+        }
+      ],
+      childIntents: [
+        { taskId: "parse", goal: "Build an AST from tokens", consumes: ["Token"], produces: ["Ast"] }
+      ]
+    });
+
+    expect(result.status).toBe("codex_repair_success");
+    const prompt = prompts[0] ?? "";
+    expect(prompt).toContain("Evaluate arithmetic expression strings");
+    expect(prompt).toContain("type Ast = number");
+    expect(prompt).toContain("Build an AST from tokens");
+    expect(prompt).toContain("It produces: Ast.");
+  });
+
   it("fails with codex_repair_failed when the repair leaves out-of-scope files", async () => {
     const git = new FakeGitRunner({
       heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },

@@ -311,11 +311,27 @@ export class RunExecutor {
       });
 
       const contract = composite.contract;
+      // Contract-aware composition (Artifact 2): hand the Composer the parent goal,
+      // the canonical seams defined at this composite, and each child's intent so
+      // conflict repair resolves by reference to the contract, not the diff text.
+      const sharedInterfaces = contract?.producedInterfaces;
+      const childIntents = composite.childrenIds
+        .map((childId) => graph.nodes[childId])
+        .filter((child): child is TaskNode => child !== undefined)
+        .map((child) => ({
+          taskId: child.id,
+          goal: child.goal,
+          consumes: child.contract?.consumedInterfaces?.map((i) => i.id) ?? [],
+          produces: child.contract?.producedInterfaces?.map((i) => i.id) ?? []
+        }));
       const result = await this.integrationAgent.integrate({
         compositeTaskId: composite.id,
         worktree,
         childResults,
         repair: { model, sandboxMode: config.sandboxMode, timeoutMs: config.integrationTimeoutMs },
+        parentGoal: composite.goal,
+        childIntents,
+        ...(sharedInterfaces ? { sharedInterfaces } : {}),
         ...(contract?.parentValidationCommands
           ? { parentValidationCommands: contract.parentValidationCommands }
           : {}),
