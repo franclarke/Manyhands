@@ -303,6 +303,55 @@ describe("RunExecutor", () => {
     expect(leafPrompt).toContain("Definition of done");
   });
 
+  it("injects consumed and produced interface seams into the leaf prompt", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff",
+      diffCachedNameOnly: ["src/parser.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const prompts: string[] = [];
+    const contract = AgentTaskContractSchema.parse({
+      taskId: "leaf",
+      objective: "Build the parser",
+      context: { typeSignatures: [], referenceSnippets: [], conventions: [], upstreamArtifacts: [] },
+      allowed: { paths: ["src/**"] },
+      forbidden: { paths: [] },
+      acceptance: [{ kind: "custom", description: "parses" }],
+      expectedOutput: { changedFiles: ["src/parser.ts"], producedSymbols: [], consumedSymbols: [] },
+      limits: { maxDurationMs: 60_000, maxCostUsd: 0 },
+      definitionOfDone: "parser works",
+      executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] },
+      forbiddenPaths: [],
+      consumedInterfaces: [
+        { id: "Token", kind: "type", signature: "type Token = { kind: string }", description: "lexical token", definedAtNodeId: "root" }
+      ],
+      producedInterfaces: [
+        { id: "Ast", kind: "type", signature: "type Ast = number | { op: string }", description: "parsed tree", definedAtNodeId: "root" }
+      ]
+    });
+    const executor = new RunExecutor({
+      git,
+      codex: new MockCodexCliExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: REPO_ROOT,
+      writeInstructions: async (_path, content) => {
+        prompts.push(content);
+      }
+    });
+
+    await executor.run({
+      graph: graphWith(["a"], undefined, contract),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    const leafPrompt = prompts[0] ?? "";
+    expect(leafPrompt).toContain("Build EXACTLY against these signatures");
+    expect(leafPrompt).toContain("type Token = { kind: string }");
+    expect(leafPrompt).toContain("MUST expose these interfaces");
+    expect(leafPrompt).toContain("type Ast = number");
+  });
+
   it("injects worktree file context into the leaf prompt (Etapa B)", async () => {
     const git = new FakeGitRunner({
       diffCached: "diff",

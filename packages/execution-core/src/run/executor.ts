@@ -424,6 +424,28 @@ function buildLeafInstructions(node: TaskNode, contextSection?: string): string 
   if (contract?.forbiddenPaths && contract.forbiddenPaths.length > 0) {
     lines.push("", "You must NOT modify:", ...contract.forbiddenPaths.map((p) => `- ${p}`));
   }
+  // Seams: the exact interfaces this leaf must build against (produced by
+  // sibling/ancestor tasks) and the ones it must expose. This is what lets
+  // parallel leaves compose without colliding — they share a fixed contract
+  // instead of each inventing its own. See the decomposer/composer redesign.
+  const consumed = contract?.consumedInterfaces ?? [];
+  if (consumed.length > 0) {
+    lines.push(
+      "",
+      "Other tasks are producing these interfaces. Build EXACTLY against these signatures;",
+      "do not invent your own version:",
+      ...consumed.map((i) => `- ${i.id} (${i.kind}): ${i.signature}\n  ${i.description}`)
+    );
+  }
+  const produced = contract?.producedInterfaces ?? [];
+  if (produced.length > 0) {
+    lines.push(
+      "",
+      "Your work MUST expose these interfaces exactly as specified, because other tasks depend on them:",
+      ...produced.map((i) => `- ${i.id} (${i.kind}): ${i.signature}\n  ${i.description}`)
+    );
+  }
+
   if (contract?.definitionOfDone) {
     lines.push("", `Definition of done: ${contract.definitionOfDone}`);
   }
