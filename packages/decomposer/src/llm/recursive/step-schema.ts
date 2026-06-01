@@ -74,11 +74,21 @@ const DecomposeStepSchema = z.object({
   parentValidationCommands: z.array(StepValidationCommandSchema).max(20).default([])
 });
 
+const QuestionStepSchema = z.object({
+  decision: z.literal("question"),
+  reasoning: z.string().min(1).max(800),
+  question: z.string().min(1).max(500),
+  options: z.array(z.string().min(1).max(100)).min(2).max(10)
+});
+
 export const DecomposeStepOutputSchema = z.discriminatedUnion("decision", [
   AtomicStepSchema,
-  DecomposeStepSchema
+  DecomposeStepSchema,
+  QuestionStepSchema
 ]);
 
 export type DecomposeStepOutput = z.infer<typeof DecomposeStepOutputSchema>;
 export type AtomicStep = z.infer<typeof AtomicStepSchema>;
 export type DecomposeStep = z.infer<typeof DecomposeStepSchema>;
+export type QuestionStep = z.infer<typeof QuestionStepSchema>;
+

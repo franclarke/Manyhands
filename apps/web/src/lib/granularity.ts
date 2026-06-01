@@ -26,19 +26,19 @@ export interface GranularityDescription {
 export const GRANULARITY_DESCRIPTIONS: Record<GranularityLevel, GranularityDescription> = {
   automatica: {
     headline: "Auto",
-    helper: "Recommended. The planner chooses a decomposition depth for the task."
+    helper: "Recommended. The planner decides how far to split each branch by its complexity."
   },
   baja: {
     headline: "Low",
-    helper: "Fewer larger tasks. Less coordination overhead, less parallelism."
+    helper: "Low pressure to split: only divide tasks that are clearly composite."
   },
   media: {
     headline: "Medium",
-    helper: "Balanced decomposition for most feature work."
+    helper: "Balanced: split until each leaf is a reasonably executable unit."
   },
   alta: {
     headline: "High",
-    helper: "More focused subtasks. More parallelism, more integration surface."
+    helper: "Aggressive: keep splitting until every leaf is small, concrete and verifiable."
   }
 };
 
@@ -57,32 +57,32 @@ export const GRANULARITY_DISPLAY_OPTIONS: readonly GranularityDisplayOption[] = 
     id: "automatica",
     label: "Auto",
     detail: "recommended",
-    impact: "Expected: planner-selected nodes · adaptive levels · review effort depends on task",
+    impact: "The planner decides per task how far to split. Branch depth follows complexity.",
     recommended: true
   },
   {
     id: "baja",
     label: "Low",
-    detail: "fewer larger tasks",
-    impact: "Expected: ~4 nodes · 1-2 levels · fewer parallel batches"
+    detail: "shallow decomposition",
+    impact: "Low pressure to split: only clearly-composite tasks are divided. Larger leaves."
   },
   {
     id: "media",
     label: "Medium",
     detail: "balanced decomposition",
-    impact: "Expected: ~7 nodes · 2 levels · balanced review and execution"
+    impact: "Splits until each leaf is a reasonably executable unit. Branches may differ in depth."
   },
   {
     id: "alta",
     label: "High",
-    detail: "more focused subtasks",
-    impact: "Expected: ~9 nodes · 2-3 levels · parallel batches likely"
+    detail: "aggressive decomposition",
+    impact: "Keeps splitting until leaves are small, concrete and verifiable. Deeper where complex."
   },
   {
     id: "max",
     label: "Max",
-    detail: "deep decomposition, more review",
-    impact: "Expected: deeper graph · more review · not available in this MVP",
+    detail: "maximum aggressiveness",
+    impact: "Most aggressive splitting — reserved for a later backend mode, not available in this MVP.",
     disabled: true,
     disabledReason: "Max is reserved for a later backend granularity mode."
   }

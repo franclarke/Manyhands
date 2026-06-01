@@ -1,15 +1,15 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+﻿import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  MockCodexCliExecutor,
-  type CodexCliExecutorOptions
+  MockAgentExecutor,
+  type AgentExecutorOptions
 } from "@manyhands/execution-core";
 
 let workDir: string;
 
-function optionsFor(cwd: string): CodexCliExecutorOptions {
+function optionsFor(cwd: string): AgentExecutorOptions {
   return {
     cwd,
     instructionFilePath: join(cwd, "instructions.txt"),
@@ -28,9 +28,9 @@ afterEach(async () => {
   await rm(workDir, { recursive: true, force: true });
 });
 
-describe("MockCodexCliExecutor", () => {
+describe("MockAgentExecutor", () => {
   it("writes configured files into the worktree", async () => {
-    const executor = new MockCodexCliExecutor({
+    const executor = new MockAgentExecutor({
       behaviors: {
         [workDir]: {
           filesToWrite: { "src/routes/tasks.ts": "export const updated = true;\n" }
@@ -48,7 +48,7 @@ describe("MockCodexCliExecutor", () => {
   });
 
   it("returns the default empty behavior when no entry matches", async () => {
-    const executor = new MockCodexCliExecutor();
+    const executor = new MockAgentExecutor();
 
     const outcome = await executor.execute(optionsFor(workDir));
 
@@ -57,7 +57,7 @@ describe("MockCodexCliExecutor", () => {
   });
 
   it("honours configured exit code, timeout, and token/cost metrics", async () => {
-    const executor = new MockCodexCliExecutor({
+    const executor = new MockAgentExecutor({
       behaviors: {
         [workDir]: {
           exitCode: 124,
@@ -84,7 +84,7 @@ describe("MockCodexCliExecutor", () => {
 
   it("invokes the committer when commitUnexpectedly is set", async () => {
     const committed: string[] = [];
-    const executor = new MockCodexCliExecutor({
+    const executor = new MockAgentExecutor({
       behaviors: { [workDir]: { commitUnexpectedly: true } },
       committer: async (cwd) => {
         committed.push(cwd);
@@ -97,7 +97,7 @@ describe("MockCodexCliExecutor", () => {
   });
 
   it("throws if commitUnexpectedly is set without a committer", async () => {
-    const executor = new MockCodexCliExecutor({
+    const executor = new MockAgentExecutor({
       behaviors: { [workDir]: { commitUnexpectedly: true } }
     });
 

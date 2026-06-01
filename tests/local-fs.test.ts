@@ -22,7 +22,7 @@ describe("local filesystem workspace helpers", () => {
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }
-  });
+  }, 10000);
 
   it("detects git repositories without commits", async () => {
     const tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-local-fs-"));

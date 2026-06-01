@@ -170,7 +170,11 @@ Schemas nuevos en `packages/contracts/src/index.ts`:
 - B3 — Parallel + IntegrationAgent
 - B4 — Parallel + risk-aware + IntegrationAgent
 
-**Granularity targets:** G3 (~3 leaves), G6 (~6 leaves), G9 (~9 leaves)
+**Niveles de agresividad:** `coarse` (baja presión a dividir), `balanced` (default), `fine` (alta presión).
+La granularidad NO fija profundidad ni cantidad de nodos — controla cuánto se sigue dividiendo cada rama,
+por nodo, según si la tarea ya es simple/concreta/ejecutable/verificable. El árbol resultante es asimétrico.
+G3/G6/G9 (~3/6/9 leaves) son **etiquetas de resultados observados** en benchmarks para agrupar corridas,
+no objetivos de forma que el decomposer deba alcanzar.
 
 **GranularityVector (métricas):**
 ```typescript

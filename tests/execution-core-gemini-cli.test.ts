@@ -7,18 +7,18 @@ import { PassThrough } from "node:stream";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  CodexCliExecutor,
-  buildCodexArgs,
-  type CodexCliExecutorOptions
+  GeminiCliExecutor,
+  buildGeminiArgs,
+  type AgentExecutorOptions
 } from "@manyhands/execution-core";
 
 const execFileAsync = promisify(execFile);
 
-function optionsFor(cwd: string): CodexCliExecutorOptions {
+function optionsFor(cwd: string): AgentExecutorOptions {
   return {
     cwd,
     instructionFilePath: join(cwd, "instructions.txt"),
-    model: "gpt-5-codex",
+    model: "gemini-2.5-pro",
     timeoutMs: 300_000,
     sandboxMode: "workspace-write",
     bypassApprovals: true
@@ -50,45 +50,46 @@ function depsFor(child: ReturnType<typeof fakeChild>) {
   };
 }
 
-describe("buildCodexArgs", () => {
-  it("threads sandbox and model in order, with --ephemeral (prompt goes over stdin, not a flag)", () => {
-    const options = { ...optionsFor("/repo"), bypassApprovals: false };
-    const args = buildCodexArgs(options);
+describe("buildGeminiArgs", () => {
+  it("threads the model and headless flags; the prompt goes over stdin (-p is only the trigger)", () => {
+    const args = buildGeminiArgs(optionsFor("/repo"));
     expect(args).toEqual([
-      "exec",
-      "--sandbox",
-      "workspace-write",
       "--model",
-      "gpt-5-codex",
-      "--ephemeral"
+      "gemini-2.5-pro",
+      "--approval-mode",
+      "yolo",
+      "--skip-trust",
+      "-o",
+      "text",
+      "-p",
+      "Follow-instructions-on-stdin"
     ]);
   });
 
-  it("never passes a --instructions-file flag (codex exec reads stdin)", () => {
-    const args = buildCodexArgs(optionsFor("/repo"));
-    expect(args).not.toContain("--instructions-file");
+  it("auto-approves tool calls so a headless run never blocks on a prompt", () => {
+    const args = buildGeminiArgs(optionsFor("/repo"));
+    const idx = args.indexOf("--approval-mode");
+    expect(idx).toBeGreaterThanOrEqual(0);
+    expect(args[idx + 1]).toBe("yolo");
+    expect(args).toContain("--skip-trust");
   });
 
-  it("never emits --ask-for-approval (codex exec is non-interactive by design)", () => {
-    // bypassApprovals is a no-op at the arg layer: `codex exec` has no approval
-    // flag and rejects the whole invocation if one is passed (codex-cli 0.135.0).
-    const withBypass = buildCodexArgs(optionsFor("/repo"));
-    const withoutBypass = buildCodexArgs({ ...optionsFor("/repo"), bypassApprovals: false });
-    expect(withBypass).not.toContain("--ask-for-approval");
-    expect(withoutBypass).not.toContain("--ask-for-approval");
-    expect(withBypass).toEqual(withoutBypass);
+  it("maps danger-full-access to the same auto-approve mode (Gemini has no OS sandbox tier)", () => {
+    const args = buildGeminiArgs({ ...optionsFor("/repo"), sandboxMode: "danger-full-access" });
+    const idx = args.indexOf("--approval-mode");
+    expect(args[idx + 1]).toBe("yolo");
   });
 
-  it("honours danger-full-access sandbox mode", () => {
-    const args = buildCodexArgs({ ...optionsFor("/repo"), sandboxMode: "danger-full-access" });
-    expect(args).toContain("danger-full-access");
+  it("never passes the instruction text as an argument (it is piped over stdin)", () => {
+    const args = buildGeminiArgs(optionsFor("/repo"));
+    expect(args).not.toContain("/repo/instructions.txt");
   });
 });
 
-describe("CodexCliExecutor (injected spawn)", () => {
+describe("GeminiCliExecutor (injected spawn)", () => {
   it("captures stdout/stderr and the exit code on clean close", async () => {
     const child = fakeChild();
-    const executor = new CodexCliExecutor(depsFor(child));
+    const executor = new GeminiCliExecutor(depsFor(child));
 
     const promise = executor.execute(optionsFor("/repo"));
     child.stdout.emit("data", Buffer.from("done\n"));
@@ -104,7 +105,7 @@ describe("CodexCliExecutor (injected spawn)", () => {
 
   it("reports a non-zero exit code", async () => {
     const child = fakeChild();
-    const executor = new CodexCliExecutor(depsFor(child));
+    const executor = new GeminiCliExecutor(depsFor(child));
 
     const promise = executor.execute(optionsFor("/repo"));
     child.emit("close", 1);
@@ -114,12 +115,12 @@ describe("CodexCliExecutor (injected spawn)", () => {
     expect(outcome.timedOut).toBe(false);
   });
 
-  it("surfaces a spawn error as a non-zero exit outcome", async () => {
+  it("surfaces a spawn error as a non-zero exit outcome with the cause on stderr", async () => {
     const child = fakeChild();
-    const executor = new CodexCliExecutor(depsFor(child));
+    const executor = new GeminiCliExecutor(depsFor(child));
 
     const promise = executor.execute(optionsFor("/repo"));
-    child.emit("error", new Error("spawn codex ENOENT"));
+    child.emit("error", new Error("spawn gemini ENOENT"));
 
     const outcome = await promise;
     expect(outcome.exitCode).toBe(127);
@@ -133,7 +134,7 @@ describe("CodexCliExecutor (injected spawn)", () => {
       killed = true;
       return true;
     };
-    const executor = new CodexCliExecutor(depsFor(child));
+    const executor = new GeminiCliExecutor(depsFor(child));
 
     const outcome = await executor.execute({ ...optionsFor("/repo"), timeoutMs: 5 });
     expect(outcome.timedOut).toBe(true);
@@ -142,14 +143,14 @@ describe("CodexCliExecutor (injected spawn)", () => {
   });
 });
 
-// Opt-in E2E: only runs with MANYHANDS_E2E_CODEX=1 and a real `codex` on PATH.
-const E2E = process.env.MANYHANDS_E2E_CODEX === "1";
+// Opt-in E2E: only runs with MANYHANDS_E2E_GEMINI=1 and a real `gemini` on PATH.
+const E2E = process.env.MANYHANDS_E2E_GEMINI === "1";
 
-describe.skipIf(!E2E)("CodexCliExecutor (real codex exec, opt-in)", () => {
+describe.skipIf(!E2E)("GeminiCliExecutor (real gemini, opt-in)", () => {
   let workDir: string;
 
   beforeEach(async () => {
-    workDir = await mkdtemp(join(tmpdir(), "mh-codex-e2e-"));
+    workDir = await mkdtemp(join(tmpdir(), "mh-gemini-e2e-"));
     await writeFile(
       join(workDir, "instructions.txt"),
       "Create a file named hello.txt containing the text 'hello'.\n",
@@ -161,9 +162,9 @@ describe.skipIf(!E2E)("CodexCliExecutor (real codex exec, opt-in)", () => {
     await rm(workDir, { recursive: true, force: true });
   });
 
-  it("invokes the real codex binary and returns an outcome", async () => {
-    await execFileAsync("codex", ["--version"]);
-    const executor = new CodexCliExecutor();
+  it("invokes the real gemini binary and returns an outcome", async () => {
+    await execFileAsync("gemini", ["--version"]);
+    const executor = new GeminiCliExecutor();
     const outcome = await executor.execute({
       ...optionsFor(workDir),
       timeoutMs: 120_000

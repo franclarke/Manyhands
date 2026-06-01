@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import {
   ExecutionCoreError,
   WorktreeError,
-  CodexExecutionError,
+  AgentExecutionError,
   ScopeViolationError,
   ExecutionValidationError,
   IntegrationError,
@@ -35,7 +35,7 @@ describe("RunExecutionError", () => {
   });
 });
 
-// ── Base class ─────────────────────────────────────────────────
+// â”€â”€ Base class â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("ExecutionCoreError", () => {
   it("constructs with message and code", () => {
@@ -70,7 +70,7 @@ describe("ExecutionCoreError", () => {
   });
 });
 
-// ── WorktreeError ──────────────────────────────────────────────
+// â”€â”€ WorktreeError â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("WorktreeError", () => {
   it("constructs with all fields", () => {
@@ -107,13 +107,13 @@ describe("WorktreeError", () => {
   });
 });
 
-// ── CodexExecutionError ────────────────────────────────────────
+// â”€â”€ AgentExecutionError â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-describe("CodexExecutionError", () => {
+describe("AgentExecutionError", () => {
   it("constructs with all fields", () => {
-    const err = new CodexExecutionError("codex crashed", "task-3", 1, false, 12000);
-    expect(err.code).toBe("CODEX_EXECUTION_ERROR");
-    expect(err.name).toBe("CodexExecutionError");
+    const err = new AgentExecutionError("codex crashed", "task-3", 1, false, 12000);
+    expect(err.code).toBe("AGENT_EXECUTION_ERROR");
+    expect(err.name).toBe("AgentExecutionError");
     expect(err.taskId).toBe("task-3");
     expect(err.exitCode).toBe(1);
     expect(err.timedOut).toBe(false);
@@ -121,26 +121,26 @@ describe("CodexExecutionError", () => {
   });
 
   it("records timeout scenario", () => {
-    const err = new CodexExecutionError("timeout", "task-4", 124, true, 300000);
+    const err = new AgentExecutionError("timeout", "task-4", 124, true, 300000);
     expect(err.timedOut).toBe(true);
     expect(err.exitCode).toBe(124);
     expect(err.durationMs).toBe(300000);
   });
 
   it("type guard works correctly", () => {
-    const err = new CodexExecutionError("x", "t", 1, false, 100);
-    expect(CodexExecutionError.is(err)).toBe(true);
-    expect(CodexExecutionError.is(new ExecutionCoreError("x", "X"))).toBe(false);
-    expect(CodexExecutionError.is(null)).toBe(false);
+    const err = new AgentExecutionError("x", "t", 1, false, 100);
+    expect(AgentExecutionError.is(err)).toBe(true);
+    expect(AgentExecutionError.is(new ExecutionCoreError("x", "X"))).toBe(false);
+    expect(AgentExecutionError.is(null)).toBe(false);
   });
 
   it("inherits from ExecutionCoreError", () => {
-    const err = new CodexExecutionError("x", "t", 1, false, 100);
+    const err = new AgentExecutionError("x", "t", 1, false, 100);
     expect(err).toBeInstanceOf(ExecutionCoreError);
   });
 });
 
-// ── ScopeViolationError ────────────────────────────────────────
+// â”€â”€ ScopeViolationError â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("ScopeViolationError", () => {
   it("constructs with violations list", () => {
@@ -164,7 +164,7 @@ describe("ScopeViolationError", () => {
   });
 });
 
-// ── ExecutionValidationError ───────────────────────────────────
+// â”€â”€ ExecutionValidationError â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("ExecutionValidationError", () => {
   it("constructs with all fields", () => {
@@ -182,7 +182,7 @@ describe("ExecutionValidationError", () => {
   it("type guard works correctly", () => {
     const err = new ExecutionValidationError("x", "t", "cmd", 1, "out");
     expect(ExecutionValidationError.is(err)).toBe(true);
-    expect(ExecutionValidationError.is(new CodexExecutionError("x", "t", 1, false, 100))).toBe(false);
+    expect(ExecutionValidationError.is(new AgentExecutionError("x", "t", 1, false, 100))).toBe(false);
   });
 
   it("inherits from ExecutionCoreError", () => {
@@ -191,7 +191,7 @@ describe("ExecutionValidationError", () => {
   });
 });
 
-// ── IntegrationError ───────────────────────────────────────────
+// â”€â”€ IntegrationError â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("IntegrationError", () => {
   it("constructs with all fields", () => {
@@ -224,7 +224,7 @@ describe("IntegrationError", () => {
   });
 });
 
-// ── UnexpectedCommitError ──────────────────────────────────────
+// â”€â”€ UnexpectedCommitError â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("UnexpectedCommitError", () => {
   it("constructs with reject policy", () => {
@@ -260,13 +260,13 @@ describe("UnexpectedCommitError", () => {
   });
 });
 
-// ── Cross-cutting ──────────────────────────────────────────────
+// â”€â”€ Cross-cutting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("Error hierarchy cross-cutting", () => {
   it("all subclasses are instanceof ExecutionCoreError", () => {
     const errors = [
       new WorktreeError("x", "t", "create"),
-      new CodexExecutionError("x", "t", 1, false, 100),
+      new AgentExecutionError("x", "t", 1, false, 100),
       new ScopeViolationError("x", "t", []),
       new ExecutionValidationError("x", "t", "cmd", 1, "out"),
       new IntegrationError("x", "c", [], "cherry_pick"),
@@ -281,7 +281,7 @@ describe("Error hierarchy cross-cutting", () => {
   it("each subclass has a unique error code", () => {
     const codes = [
       new WorktreeError("x", "t", "create").code,
-      new CodexExecutionError("x", "t", 1, false, 100).code,
+      new AgentExecutionError("x", "t", 1, false, 100).code,
       new ScopeViolationError("x", "t", []).code,
       new ExecutionValidationError("x", "t", "cmd", 1, "out").code,
       new IntegrationError("x", "c", [], "cherry_pick").code,
@@ -293,7 +293,7 @@ describe("Error hierarchy cross-cutting", () => {
   it("type guards are mutually exclusive for sibling classes", () => {
     const err = new WorktreeError("x", "t", "create");
     expect(WorktreeError.is(err)).toBe(true);
-    expect(CodexExecutionError.is(err)).toBe(false);
+    expect(AgentExecutionError.is(err)).toBe(false);
     expect(ScopeViolationError.is(err)).toBe(false);
     expect(ExecutionValidationError.is(err)).toBe(false);
     expect(IntegrationError.is(err)).toBe(false);

@@ -51,9 +51,9 @@ export class WorktreeError extends ExecutionCoreError {
   }
 }
 
-// ── Codex execution ─────────────────────────────────────────────
+// ── Agent execution ─────────────────────────────────────────────
 
-export class CodexExecutionError extends ExecutionCoreError {
+export class AgentExecutionError extends ExecutionCoreError {
   public readonly taskId: string;
   public readonly exitCode: number;
   public readonly timedOut: boolean;
@@ -67,16 +67,16 @@ export class CodexExecutionError extends ExecutionCoreError {
     durationMs: number,
     cause?: unknown
   ) {
-    super(message, "CODEX_EXECUTION_ERROR", cause);
-    this.name = "CodexExecutionError";
+    super(message, "AGENT_EXECUTION_ERROR", cause);
+    this.name = "AgentExecutionError";
     this.taskId = taskId;
     this.exitCode = exitCode;
     this.timedOut = timedOut;
     this.durationMs = durationMs;
   }
 
-  static override is(err: unknown): err is CodexExecutionError {
-    return err instanceof CodexExecutionError;
+  static override is(err: unknown): err is AgentExecutionError {
+    return err instanceof AgentExecutionError;
   }
 }
 

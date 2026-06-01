@@ -14,6 +14,7 @@ import { PATCH } from "@/app/api/runs/[id]/nodes/[taskId]/route";
 import { POST as POST_REGEN } from "@/app/api/runs/[id]/nodes/[taskId]/regen/route";
 import { POST as POST_INTEGRATOR } from "@/app/api/runs/[id]/integrator/route";
 import { POST as POST_SERIALIZE } from "@/app/api/runs/[id]/serialize/route";
+import { DELETE as DELETE_DEPENDENCY } from "@/app/api/runs/[id]/dependencies/route";
 import {
   appendPatch,
   applyPatches,
@@ -297,6 +298,15 @@ describe("editable control plane vertical slice", () => {
         fromTaskId: "task-1",
         toTaskId: "task-2",
         rationale: "Task 2 should wait for task 1."
+      },
+      {
+        id: "patch-remove-dependency",
+        type: "DEPENDENCY_REMOVED",
+        actor: "human",
+        createdAt: now,
+        fromTaskId: "task-2",
+        toTaskId: "task-3",
+        rationale: "They can run independently."
       }
     ];
 
@@ -311,6 +321,12 @@ describe("editable control plane vertical slice", () => {
         expect.objectContaining({ fromTaskId: "task-2", toTaskId: "integrator-task-1-task-2" })
       ])
     );
+    expect(patched.graphSnapshot.dependencies).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ fromTaskId: "task-2", toTaskId: "task-3" })])
+    );
+    expect(patched.graphSnapshot.nodes["task-2"]?.dependencies).toContain("task-1");
+    expect(patched.graphSnapshot.nodes["task-3"]?.dependencies).not.toContain("task-2");
+    expect(patched.graphSnapshot.nodes["integrator-task-1-task-2"]?.dependencies).toEqual(["task-1", "task-2"]);
   });
 
   it("POST serialize appends a guided dependency patch and trace", async () => {
@@ -331,6 +347,7 @@ describe("editable control plane vertical slice", () => {
     expect(snapshot?.graphSnapshot.dependencies).toEqual(
       expect.arrayContaining([expect.objectContaining({ fromTaskId: "task-1", toTaskId: "task-3" })])
     );
+    expect(snapshot?.graphSnapshot.nodes["task-3"]?.dependencies).toContain("task-1");
     expect((saved.planning as MockPlanningFlowResult).traces.some((event) => event.type === "dag_patch_appended")).toBe(true);
   });
 
@@ -350,6 +367,42 @@ describe("editable control plane vertical slice", () => {
     );
     expect(cycle.status).toBe(409);
 
+    const saved = await repo.get("run-1");
+    expect(saved.patches).toHaveLength(0);
+  });
+
+  it("DELETE dependency removes a dependency patch, syncs node shortcut, and invalidates approval", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun({ status: "approved", approvedAt: now }));
+
+    const response = await DELETE_DEPENDENCY(
+      jsonRequest({ fromTaskId: "task-1", toTaskId: "task-2", rationale: "Can run in parallel." }),
+      { params: Promise.resolve({ id: "run-1" }) }
+    );
+
+    expect(response.status).toBe(200);
+    const saved = await repo.get("run-1");
+    expect(saved.status).toBe("needs_review");
+    expect(saved.approvedAt).toBeUndefined();
+    expect((saved.patches[0] as RunPatch).type).toBe("DEPENDENCY_REMOVED");
+
+    const snapshot = projectRunRecordToSnapshot(saved);
+    expect(snapshot?.graphSnapshot.dependencies).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ fromTaskId: "task-1", toTaskId: "task-2" })])
+    );
+    expect(snapshot?.graphSnapshot.nodes["task-2"]?.dependencies).not.toContain("task-1");
+  });
+
+  it("DELETE dependency rejects missing dependencies without persisting", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun());
+
+    const response = await DELETE_DEPENDENCY(
+      jsonRequest({ fromTaskId: "task-3", toTaskId: "task-1" }),
+      { params: Promise.resolve({ id: "run-1" }) }
+    );
+
+    expect(response.status).toBe(409);
     const saved = await repo.get("run-1");
     expect(saved.patches).toHaveLength(0);
   });
@@ -383,6 +436,7 @@ describe("editable control plane vertical slice", () => {
     expect(integrator?.integrator).toBe(true);
     expect(integrator?.manual).toBe(true);
     expect(snapshot?.graphSnapshot.nodes.root?.childrenIds).toContain(patch.taskId);
+    expect(snapshot?.graphSnapshot.nodes[patch.taskId]?.dependencies).toEqual(["task-1", "task-2"]);
   });
 
   it("POST regen replaces only the requested subtree, preserves the task id, and traces the patch", async () => {
@@ -660,3 +714,73 @@ function jsonRequest(body: unknown): Request {
     headers: { "content-type": "application/json" }
   });
 }
+
+describe("projectRunRecordToSnapshot — real execution results", () => {
+  function leaf(taskId: string, status: string, extra: Record<string, unknown> = {}) {
+    return {
+      taskId,
+      status,
+      baseHead: "base",
+      currentHead: status === "success" ? "commit" : "base",
+      agentCommittedUnexpectedly: false,
+      diff: status === "success" ? "diff --git a/x b/x" : "",
+      changedFiles: status === "success" ? ["src/original.ts"] : [],
+      scopeCheck: { passed: true, violations: [] },
+      executorExitCode: status === "success" ? 0 : 1,
+      executorDurationMs: 1234,
+      executorTimedOut: false,
+      ...extra
+    };
+  }
+
+  function makeFailedRun(): RunRecord {
+    return makeRun({
+      status: "failed",
+      execution: {
+        runId: "run-1",
+        status: "failed",
+        leafResults: [
+          leaf("task-1", "success", { commitSha: "abc123" }),
+          leaf("task-2", "executor_error", {
+            stderrTail: "Error: Quota exceeded for quota metric 'GenerateContent requests'."
+          })
+        ],
+        integrationResults: [],
+        granularityVector: {},
+        totalDurationMs: 4000
+      } as unknown as RunRecord["execution"],
+      executionTraces: [
+        { id: "t1", type: "executor_started", actor: "system", taskId: "task-2", timestamp: now, payload: {} },
+        { id: "t2", type: "executor_completed", actor: "system", taskId: "task-2", timestamp: now, payload: { exitCode: 1, timedOut: false } }
+      ] as unknown as RunRecord["executionTraces"]
+    });
+  }
+
+  it("projects leaf results into agentRunResults with per-node pass/fail", () => {
+    const snapshot = projectRunRecordToSnapshot(makeFailedRun());
+    expect(snapshot).not.toBeNull();
+    expect(snapshot!.agentRunResults).toHaveLength(2);
+    expect(snapshot!.metadata.deterministic).toBe(false);
+
+    const task1 = buildInspectorView(snapshot!, "task-1");
+    const task2 = buildInspectorView(snapshot!, "task-2");
+    expect(task1?.status).toBe("done");
+    expect(task2?.status).toBe("failed");
+  });
+
+  it("surfaces the executor stderr as the failure cause in the inspector", () => {
+    const snapshot = projectRunRecordToSnapshot(makeFailedRun());
+    const task2 = buildInspectorView(snapshot!, "task-2");
+    expect(task2?.runResult?.success).toBe(false);
+    expect(task2?.runResult?.resultStatus).toBe("executor_error");
+    expect(task2?.runResult?.errorOutput).toContain("Quota exceeded");
+  });
+
+  it("merges persisted execution traces so the trace tab is populated per task", () => {
+    const snapshot = projectRunRecordToSnapshot(makeFailedRun());
+    const task2 = buildInspectorView(snapshot!, "task-2");
+    const types = task2?.traceEvents.map((event) => event.type) ?? [];
+    expect(types).toContain("executor_started");
+    expect(types).toContain("executor_completed");
+  });
+});

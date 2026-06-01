@@ -1,11 +1,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import type { CodexCliExecutorOptions } from "../types";
-import type { CodexExecutor, CodexRunOutcome } from "./types";
+import type { AgentExecutorOptions } from "../types";
+import type { AgentExecutor, ExecutorRunOutcome } from "./types";
 
-/** Deterministic script for what a mocked Codex run should do in a worktree. */
-export interface MockCodexBehavior {
+/** Deterministic script for what a mocked agent run should do in a worktree. */
+export interface MockAgentBehavior {
   /** Files to write into the worktree (relative path -> content). Simulates the diff. */
   filesToWrite?: Record<string, string>;
   exitCode?: number;
@@ -13,40 +13,40 @@ export interface MockCodexBehavior {
   durationMs?: number;
   stdout?: string;
   stderr?: string;
-  /** Simulate Codex committing on its own (D6 violation). Requires `committer`. */
+  /** Simulate the agent committing on its own (D6 violation). Requires `committer`. */
   commitUnexpectedly?: boolean;
   tokensIn?: number;
   tokensOut?: number;
   costUsd?: number;
 }
 
-export interface MockCodexCliExecutorDeps {
+export interface MockAgentExecutorDeps {
   /** Behaviors keyed by worktree path (`options.cwd`). */
-  behaviors?: Record<string, MockCodexBehavior>;
+  behaviors?: Record<string, MockAgentBehavior>;
   /** Behavior used when no entry matches. Default: empty diff, exit 0. */
-  defaultBehavior?: MockCodexBehavior;
+  defaultBehavior?: MockAgentBehavior;
   /** Invoked when a behavior sets `commitUnexpectedly`, to make a real commit in E2E. */
   committer?: (cwd: string) => Promise<void>;
 }
 
 /**
- * Deterministic CodexExecutor double. Instead of invoking `codex exec`, it
+ * Deterministic AgentExecutor double. Instead of invoking the Gemini CLI, it
  * writes the configured files into the worktree so the downstream ResultRecorder
  * observes a real `git diff`. Covers the full test suite (D-E2).
  */
-export class MockCodexCliExecutor implements CodexExecutor {
-  readonly calls: CodexCliExecutorOptions[] = [];
-  private readonly behaviors: Record<string, MockCodexBehavior>;
-  private readonly defaultBehavior: MockCodexBehavior;
+export class MockAgentExecutor implements AgentExecutor {
+  readonly calls: AgentExecutorOptions[] = [];
+  private readonly behaviors: Record<string, MockAgentBehavior>;
+  private readonly defaultBehavior: MockAgentBehavior;
   private readonly committer: ((cwd: string) => Promise<void>) | undefined;
 
-  constructor(deps: MockCodexCliExecutorDeps = {}) {
+  constructor(deps: MockAgentExecutorDeps = {}) {
     this.behaviors = deps.behaviors ?? {};
     this.defaultBehavior = deps.defaultBehavior ?? {};
     this.committer = deps.committer;
   }
 
-  async execute(options: CodexCliExecutorOptions): Promise<CodexRunOutcome> {
+  async execute(options: AgentExecutorOptions): Promise<ExecutorRunOutcome> {
     this.calls.push(options);
     const start = Date.now();
     const behavior = this.behaviors[options.cwd] ?? this.defaultBehavior;
@@ -59,12 +59,12 @@ export class MockCodexCliExecutor implements CodexExecutor {
 
     if (behavior.commitUnexpectedly) {
       if (!this.committer) {
-        throw new Error("MockCodexBehavior.commitUnexpectedly requires a committer dependency");
+        throw new Error("MockAgentBehavior.commitUnexpectedly requires a committer dependency");
       }
       await this.committer(options.cwd);
     }
 
-    const outcome: CodexRunOutcome = {
+    const outcome: ExecutorRunOutcome = {
       exitCode: behavior.exitCode ?? 0,
       stdout: behavior.stdout ?? "",
       stderr: behavior.stderr ?? "",

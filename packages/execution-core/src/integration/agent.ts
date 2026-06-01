@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { ExecutionScope, ExecutionValidationCommand, InterfaceContract } from "@manyhands/contracts";
 import type { TraceStore } from "@manyhands/trace-store";
 
-import type { CodexExecutor } from "../codex/types";
+import type { AgentExecutor } from "../executor/types";
 import type { GitRunner } from "../git/runner";
 import { ScopeChecker } from "../scope/checker";
 import type { SandboxMode } from "../types";
@@ -23,7 +23,7 @@ import { ChildProcessValidationRunner } from "../validation/runner";
 
 export interface IntegrationAgentDeps {
   git: GitRunner;
-  codex: CodexExecutor;
+  executor: AgentExecutor;
   traceStore: TraceStore;
   repoRoot: string;
   validationRunner?: ValidationRunner;
@@ -69,12 +69,12 @@ export interface IntegrationParams {
 
 /**
  * Integrates completed children into the parent branch via cherry-pick, with a
- * single Codex repair attempt per conflict (D8 / ADR-0025). git diff stays the
+ * single agent repair attempt per conflict (D8 / ADR-0025). git diff stays the
  * source of truth (D5) and the orchestrator — never the agent — commits (D6).
  */
 export class IntegrationAgent {
   private readonly git: GitRunner;
-  private readonly codex: CodexExecutor;
+  private readonly executor: AgentExecutor;
   private readonly traceStore: TraceStore;
   private readonly repoRoot: string;
   private readonly validationRunner: ValidationRunner;
@@ -83,7 +83,7 @@ export class IntegrationAgent {
 
   constructor(deps: IntegrationAgentDeps) {
     this.git = deps.git;
-    this.codex = deps.codex;
+    this.executor = deps.executor;
     this.traceStore = deps.traceStore;
     this.repoRoot = deps.repoRoot;
     this.validationRunner = deps.validationRunner ?? new ChildProcessValidationRunner();
@@ -141,7 +141,7 @@ export class IntegrationAgent {
       });
 
       if (repairAttempted) {
-        return this.finalize(params, "codex_repair_failed", {
+        return this.finalize(params, "executor_repair_failed", {
           repairAttempted: true,
           repairResult,
           conflictDetails: { files: outcome.conflictFiles, cherryPickOutput: outcome.output }
@@ -152,7 +152,7 @@ export class IntegrationAgent {
       const repair = await this.attemptRepair(params, child, outcome);
       repairResult = repair.result;
       if (!repair.ok) {
-        return this.finalize(params, "codex_repair_failed", {
+        return this.finalize(params, "executor_repair_failed", {
           repairAttempted: true,
           repairResult,
           conflictDetails: { files: outcome.conflictFiles, cherryPickOutput: outcome.output }
@@ -168,7 +168,7 @@ export class IntegrationAgent {
     }
 
     const integrationCommitSha = await this.git.head(worktree.path);
-    const status: IntegrationStatus = anyRepairSucceeded ? "codex_repair_success" : "success";
+    const status: IntegrationStatus = anyRepairSucceeded ? "executor_repair_success" : "success";
     return this.finalize(params, status, {
       repairAttempted,
       repairResult,
@@ -185,7 +185,7 @@ export class IntegrationAgent {
     await this.git.cherryPickAbort(worktree.path);
 
     this.traceStore.append({
-      type: "codex_repair_started",
+      type: "executor_repair_started",
       actor: "system",
       taskId: params.compositeTaskId,
       payload: { childTaskId: child.taskId, files: conflict.conflictFiles }
@@ -201,7 +201,7 @@ export class IntegrationAgent {
       this.buildRepairPrompt(params, child, conflict)
     );
 
-    const codexOutcome = await this.codex.execute({
+    const executorOutcome = await this.executor.execute({
       cwd: worktree.path,
       instructionFilePath,
       model: params.repair.model,
@@ -210,10 +210,10 @@ export class IntegrationAgent {
       bypassApprovals: params.repair.bypassApprovals ?? true
     });
 
-    if (codexOutcome.timedOut || codexOutcome.exitCode !== 0) {
+    if (executorOutcome.timedOut || executorOutcome.exitCode !== 0) {
       return {
         ok: false,
-        result: this.buildRepairResult(child.taskId, "codex_error", baseHead, baseHead, codexOutcome)
+        result: this.buildRepairResult(child.taskId, "executor_error", baseHead, baseHead, executorOutcome)
       };
     }
 
@@ -234,7 +234,7 @@ export class IntegrationAgent {
           "scope_violation",
           baseHead,
           baseHead,
-          codexOutcome,
+          executorOutcome,
           { diff, changedFiles, scopeCheck }
         )
       };
@@ -247,7 +247,7 @@ export class IntegrationAgent {
 
     return {
       ok: true,
-      result: this.buildRepairResult(child.taskId, "success", baseHead, commitSha, codexOutcome, {
+      result: this.buildRepairResult(child.taskId, "success", baseHead, commitSha, executorOutcome, {
         diff,
         changedFiles,
         scopeCheck,
@@ -277,7 +277,7 @@ export class IntegrationAgent {
 
   /**
    * Contract-aware repair prompt (thesis Artifact 2). Unlike a syntactic merge
-   * resolver, this gives Codex the WHY: the parent's goal, the canonical shared
+   * resolver, this gives the agent the WHY: the parent's goal, the canonical shared
    * interfaces the children must honour, and each conflicting child's intent. A
    * cherry-pick conflict here is a violation of the shared seam, resolved by
    * reference to the canonical contract rather than guessed from the diff text.
@@ -333,7 +333,7 @@ export class IntegrationAgent {
     status: AgentExecutionResult["status"],
     baseHead: string,
     currentHead: string,
-    codexOutcome: { exitCode: number; durationMs: number; timedOut: boolean; tokensIn?: number; tokensOut?: number; costUsd?: number },
+    executorOutcome: { exitCode: number; durationMs: number; timedOut: boolean; stdout?: string; stderr?: string; tokensIn?: number; tokensOut?: number; costUsd?: number },
     extra?: {
       diff?: string;
       changedFiles?: string[];
@@ -351,12 +351,14 @@ export class IntegrationAgent {
       changedFiles: extra?.changedFiles ?? [],
       commitSha: extra?.commitSha,
       scopeCheck: extra?.scopeCheck ?? { passed: true, violations: [] },
-      codexExitCode: codexOutcome.exitCode,
-      codexDurationMs: codexOutcome.durationMs,
-      codexTimedOut: codexOutcome.timedOut,
-      tokensIn: codexOutcome.tokensIn,
-      tokensOut: codexOutcome.tokensOut,
-      costUsd: codexOutcome.costUsd
+      executorExitCode: executorOutcome.exitCode,
+      executorDurationMs: executorOutcome.durationMs,
+      executorTimedOut: executorOutcome.timedOut,
+      stderrTail: executorOutcome.stderr,
+      stdoutTail: executorOutcome.stdout,
+      tokensIn: executorOutcome.tokensIn,
+      tokensOut: executorOutcome.tokensOut,
+      costUsd: executorOutcome.costUsd
     });
   }
 

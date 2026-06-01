@@ -27,7 +27,7 @@ export function toExecutionSummary(result: RunExecutionResult): ExecutionSummary
         status: leaf.status,
         changedFiles: leaf.changedFiles.length,
         scopePassed: leaf.scopeCheck.passed,
-        durationMs: leaf.codexDurationMs
+        durationMs: leaf.executorDurationMs
       };
       if (leaf.commitSha !== undefined) receipt.commitSha = leaf.commitSha;
       if (leaf.costUsd !== undefined) receipt.costUsd = leaf.costUsd;

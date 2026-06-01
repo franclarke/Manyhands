@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+﻿import { existsSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -8,7 +8,7 @@ import type { TaskGraph } from "@manyhands/task-graph";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  CodexCliExecutor,
+  GeminiCliExecutor,
   ExecutionConfigSchema,
   RunExecutor,
   SimpleGitRunner
@@ -20,12 +20,12 @@ import {
 import { rmWithRetry } from "@/lib/server/runs/fs-retry";
 
 /**
- * Opt-in smoke test: proves ManyHands runs OUTSIDE the mock — real `codex exec`
- * against a real provisioned repo. Gated by MANYHANDS_E2E_CODEX=1 so the normal
+ * Opt-in smoke test: proves ManyHands runs OUTSIDE the mock â€” real `codex exec`
+ * against a real provisioned repo. Gated by MANYHANDS_E2E_GEMINI=1 so the normal
  * suite never depends on the Codex binary or network. Asserts diff + commit
- * only (no npm install / npm test — that is Etapa 2A.2).
+ * only (no npm install / npm test â€” that is Etapa 2A.2).
  */
-const E2E = process.env.MANYHANDS_E2E_CODEX === "1";
+const E2E = process.env.MANYHANDS_E2E_GEMINI === "1";
 const execFileAsync = promisify(execFile);
 
 const RUN_ID = "run-real-smoke";
@@ -111,7 +111,7 @@ describe.skipIf(!E2E)("RunExecutor real run (opt-in, real codex exec)", () => {
   });
 
   it("runs a real leaf, produces a non-empty diff, and commits it", async () => {
-    // Resolve the codex binary the same way CodexCliExecutor does. On Windows
+    // Resolve the codex binary the same way GeminiCliExecutor does. On Windows
     // the npm shim is `codex.cmd`, which execFile only finds through a shell.
     const codexBin = process.env.MANYHANDS_CODEX_BIN ?? "codex";
     await execFileAsync(codexBin, ["--version"], {
@@ -121,7 +121,7 @@ describe.skipIf(!E2E)("RunExecutor real run (opt-in, real codex exec)", () => {
     const traceStore = new InMemoryTraceStore();
     const executor = new RunExecutor({
       git: new SimpleGitRunner(),
-      codex: new CodexCliExecutor(),
+      executor: new GeminiCliExecutor(),
       traceStore,
       repoRoot: provisioned.repoRoot
     });
@@ -139,11 +139,11 @@ describe.skipIf(!E2E)("RunExecutor real run (opt-in, real codex exec)", () => {
     expect(leaf).toBeDefined();
 
     // Diagnostic: surface status/exit code on failure so we can pinpoint the
-    // root cause without a second round-trip (diff empty vs. codex_error vs.
+    // root cause without a second round-trip (diff empty vs. executor_error vs.
     // scope_violation are very different failure modes).
     if (!leaf || leaf.diff.length === 0 || !leaf.commitSha) {
       console.error("[smoke] leaf status:", leaf?.status);
-      console.error("[smoke] codex exit:", leaf?.codexExitCode, "timedOut:", leaf?.codexTimedOut);
+      console.error("[smoke] codex exit:", leaf?.executorExitCode, "timedOut:", leaf?.executorTimedOut);
       console.error("[smoke] scope:", JSON.stringify(leaf?.scopeCheck));
       console.error("[smoke] diff (first 500):", leaf?.diff.slice(0, 500));
       console.error("[smoke] run status:", result.status);
@@ -159,6 +159,6 @@ describe.skipIf(!E2E)("RunExecutor real run (opt-in, real codex exec)", () => {
     expect(traceStore.findByType("run_completed")).toHaveLength(1);
     // Test budget sits above the leaf timeout (D10 = 300s) so a leaf-level
     // timeout is handled by the pipeline instead of colliding with vitest's.
-    // With MANYHANDS_CODEX_REASONING=low a real leaf finishes in ~60–90s.
+    // With MANYHANDS_CODEX_REASONING=low a real leaf finishes in ~60â€“90s.
   }, 600_000);
 });

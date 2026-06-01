@@ -1,11 +1,11 @@
-import type { CodexCliExecutorOptions } from "../types";
+import type { AgentExecutorOptions } from "../types";
 
 /**
- * Raw outcome of a single Codex CLI invocation. The orchestrator never trusts
- * stdout to determine *what changed* (D5 — git diff is the source of truth);
- * these fields are diagnostics plus the exit signal.
+ * Raw outcome of a single agent-executor (Gemini CLI) invocation. The
+ * orchestrator never trusts stdout to determine *what changed* (D5 — git diff is
+ * the source of truth); these fields are diagnostics plus the exit signal.
  */
-export interface CodexRunOutcome {
+export interface ExecutorRunOutcome {
   exitCode: number;
   stdout: string;
   stderr: string;
@@ -17,10 +17,10 @@ export interface CodexRunOutcome {
 }
 
 /**
- * The single agent-executor seam (D4). Both the deterministic mock and the real
- * `codex exec` wrapper implement this, so the pipeline depends on the interface
+ * The single agent-executor seam. Both the deterministic mock and the real
+ * Gemini CLI wrapper implement this, so the pipeline depends on the interface
  * and tests can inject a mock.
  */
-export interface CodexExecutor {
-  execute(options: CodexCliExecutorOptions): Promise<CodexRunOutcome>;
+export interface AgentExecutor {
+  execute(options: AgentExecutorOptions): Promise<ExecutorRunOutcome>;
 }

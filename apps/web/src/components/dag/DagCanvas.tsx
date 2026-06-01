@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Background,
   BackgroundVariant,
   Controls,
   MiniMap,
+  Panel,
   ReactFlow,
+  useReactFlow,
   type Edge,
   type Node,
   type NodeProps,
@@ -40,8 +42,14 @@ const nodeTypes: NodeTypes = {
   phaseHeader: PhaseHeaderNode
 };
 
+const FIT_VIEW_OPTIONS = { padding: 0.18, includeHiddenNodes: false } as const;
+/** Zoom level applied when focusing/centering a single node — close enough to read the card. */
+const FOCUS_ZOOM = 1.1;
+
 export function DagCanvas(props: DagCanvasProps): React.ReactElement {
   const { graph, selectedTaskId, highlightTaskIds, selectionRelations, onSelectTask } = props;
+  const { fitView, setCenter, getNode } = useReactFlow();
+  const [minimapVisible, setMinimapVisible] = useState(true);
 
   const dependencyCountByTaskId = useMemo(() => {
     const counts = new Map<string, number>();
@@ -59,13 +67,36 @@ export function DagCanvas(props: DagCanvasProps): React.ReactElement {
     [graph, selectedTaskId, highlightTaskIds, selectionRelations, dependencyCountByTaskId]
   );
 
+  /** Center the viewport on a node by id (used by double-click + Focus control). */
+  const centerOnNode = useCallback(
+    (taskId: string) => {
+      const node = getNode(taskId);
+      if (node === undefined) return;
+      const width = node.measured?.width ?? node.width ?? 248;
+      const height = node.measured?.height ?? node.height ?? 150;
+      void setCenter(node.position.x + width / 2, node.position.y + height / 2, {
+        zoom: FOCUS_ZOOM,
+        duration: 320
+      });
+    },
+    [getNode, setCenter]
+  );
+
+  const handleFitView = useCallback(() => {
+    void fitView(FIT_VIEW_OPTIONS);
+  }, [fitView]);
+
+  const handleFocusSelected = useCallback(() => {
+    if (selectedTaskId !== null) centerOnNode(selectedTaskId);
+  }, [centerOnNode, selectedTaskId]);
+
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
       fitView
-      fitViewOptions={{ padding: 0.18, includeHiddenNodes: false }}
+      fitViewOptions={FIT_VIEW_OPTIONS}
       proOptions={{ hideAttribution: true }}
       minZoom={0.25}
       maxZoom={1.6}
@@ -79,20 +110,127 @@ export function DagCanvas(props: DagCanvasProps): React.ReactElement {
           onSelectTask(node.id);
         }
       }}
+      onNodeDoubleClick={(_event, node) => {
+        if (node.type === "taskCard") {
+          onSelectTask(node.id);
+          centerOnNode(node.id);
+        }
+      }}
       onPaneClick={() => onSelectTask(null)}
       style={{ background: "transparent", width: "100%", height: "100%" }}
     >
       <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(229,222,204,0.045)" />
-      <MiniMap
-        pannable
-        zoomable
-        maskColor="rgba(26,25,21,0.65)"
-        nodeColor={(node) => miniMapNodeColor(node.data as TaskNodeData, node.type)}
-        nodeStrokeColor="var(--border)"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+      <CanvasControls
+        minimapVisible={minimapVisible}
+        hasSelection={selectedTaskId !== null}
+        onFitView={handleFitView}
+        onFocusSelected={handleFocusSelected}
+        onToggleMinimap={() => setMinimapVisible((value) => !value)}
       />
+      {minimapVisible ? (
+        <MiniMap
+          pannable
+          zoomable
+          maskColor="rgba(26,25,21,0.65)"
+          nodeColor={(node) => miniMapNodeColor(node.data as TaskNodeData, node.type)}
+          nodeStrokeColor="var(--border)"
+          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        />
+      ) : null}
       <Controls showInteractive={false} />
     </ReactFlow>
+  );
+}
+
+interface CanvasControlsProps {
+  minimapVisible: boolean;
+  hasSelection: boolean;
+  onFitView: () => void;
+  onFocusSelected: () => void;
+  onToggleMinimap: () => void;
+}
+
+/**
+ * Product-specific camera toolbar (P8). Sits in the top-right of the canvas and
+ * complements React Flow's default zoom `<Controls>` with orchestration-tool
+ * affordances: fit the whole graph, focus the selected node, and hide the
+ * minimap for dense graphs. Pure viewport actions — never mutates the graph.
+ */
+function CanvasControls({
+  minimapVisible,
+  hasSelection,
+  onFitView,
+  onFocusSelected,
+  onToggleMinimap
+}: CanvasControlsProps): React.ReactElement {
+  return (
+    <Panel position="top-right" style={{ margin: 10 }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          padding: 6,
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--r-md)",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.28)"
+        }}
+      >
+        <CanvasControlButton label="Fit" title="Fit the whole graph in view" onClick={onFitView} />
+        <CanvasControlButton
+          label="Focus"
+          title={hasSelection ? "Center the selected node" : "Select a node to focus it"}
+          onClick={onFocusSelected}
+          disabled={!hasSelection}
+        />
+        <CanvasControlButton
+          label={minimapVisible ? "Minimap on" : "Minimap off"}
+          title="Toggle the minimap"
+          onClick={onToggleMinimap}
+          active={minimapVisible}
+        />
+      </div>
+    </Panel>
+  );
+}
+
+function CanvasControlButton({
+  label,
+  title,
+  onClick,
+  disabled = false,
+  active = false
+}: {
+  label: string;
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+  active?: boolean;
+}): React.ReactElement {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        height: 26,
+        padding: "0 9px",
+        border: `1px solid ${active ? "var(--copper)" : "var(--rule)"}`,
+        background: active ? "rgba(180,113,72,0.12)" : "transparent",
+        color: disabled ? "var(--text-4)" : active ? "var(--copper-hi)" : "var(--text-2)",
+        borderRadius: 5,
+        fontSize: 11,
+        fontFamily: "var(--font-mono)",
+        letterSpacing: 0.3,
+        cursor: disabled ? "not-allowed" : "pointer",
+        whiteSpace: "nowrap"
+      }}
+    >
+      {label}
+    </button>
   );
 }
 

@@ -1,11 +1,11 @@
-import { AgentTaskContractSchema, type AgentTaskContract } from "@manyhands/contracts";
+﻿import { AgentTaskContractSchema, type AgentTaskContract } from "@manyhands/contracts";
 import type { TaskGraph } from "@manyhands/task-graph";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { describe, expect, it } from "vitest";
 import {
   ExecutionConfigSchema,
   FileSystemContextPacker,
-  MockCodexCliExecutor,
+  MockAgentExecutor,
   RunExecutor,
   type ValidationRunContext,
   type ValidationRunner,
@@ -109,7 +109,7 @@ function graphWith(
 function makeExecutor(git: FakeGitRunner, traceStore: InMemoryTraceStore): RunExecutor {
   return new RunExecutor({
     git,
-    codex: new MockCodexCliExecutor(),
+    executor: new MockAgentExecutor(),
     traceStore,
     repoRoot: REPO_ROOT,
     // No-op so the unit test never touches the real filesystem.
@@ -156,7 +156,7 @@ describe("RunExecutor", () => {
 
     await executor.run({ graph: graphWith(["a", "b"]), config, model: "gpt-5-codex" });
 
-    // 2 leaves + 1 integration worktree → 3 removes, after cherry-picks.
+    // 2 leaves + 1 integration worktree â†’ 3 removes, after cherry-picks.
     const removes = git.calls.filter((call) => call.op === "worktreeRemove");
     expect(removes).toHaveLength(3);
     const lastCherryPick = git.opsInvoked().lastIndexOf("cherryPick");
@@ -180,7 +180,7 @@ describe("RunExecutor", () => {
 
   it("cleans the worktree it created even when the run throws mid-execution (I1)", async () => {
     // commit() throws after the worktree is created, so the run aborts with the
-    // worktree already tracked — the finally block must still clean it.
+    // worktree already tracked â€” the finally block must still clean it.
     const git = new FakeGitRunner({
       diffCached: "diff --git a/x b/x\n+added",
       diffCachedNameOnly: ["src/x.ts"],
@@ -212,7 +212,7 @@ describe("RunExecutor", () => {
     };
     const executor = new RunExecutor({
       git,
-      codex: new MockCodexCliExecutor(),
+      executor: new MockAgentExecutor(),
       traceStore: new InMemoryTraceStore(),
       repoRoot: REPO_ROOT,
       validationRunner,
@@ -241,7 +241,7 @@ describe("RunExecutor", () => {
     const traceStore = new InMemoryTraceStore();
     const executor = makeExecutor(git, traceStore);
 
-    // Must NOT throw — cleanup failures are recorded, not propagated.
+    // Must NOT throw â€” cleanup failures are recorded, not propagated.
     const result = await executor.run({ graph: graphWith(["a", "b"]), config, model: "gpt-5-codex" });
 
     expect(result.status).toBe("completed");
@@ -281,7 +281,7 @@ describe("RunExecutor", () => {
     const prompts: string[] = [];
     const executor = new RunExecutor({
       git,
-      codex: new MockCodexCliExecutor(),
+      executor: new MockAgentExecutor(),
       traceStore: new InMemoryTraceStore(),
       repoRoot: REPO_ROOT,
       writeInstructions: async (_path, content) => {
@@ -331,7 +331,7 @@ describe("RunExecutor", () => {
     });
     const executor = new RunExecutor({
       git,
-      codex: new MockCodexCliExecutor(),
+      executor: new MockAgentExecutor(),
       traceStore: new InMemoryTraceStore(),
       repoRoot: REPO_ROOT,
       writeInstructions: async (_path, content) => {
@@ -362,7 +362,7 @@ describe("RunExecutor", () => {
     const traceStore = new InMemoryTraceStore();
     const executor = new RunExecutor({
       git,
-      codex: new MockCodexCliExecutor(),
+      executor: new MockAgentExecutor(),
       traceStore,
       repoRoot: REPO_ROOT,
       // Deterministic packer: no disk, returns known content for the target file.

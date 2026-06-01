@@ -52,7 +52,7 @@ export default async function LabPage(): Promise<React.ReactElement> {
         <span className="mh-coord" style={{ color: "var(--copper)" }}>experiments / log</span>
         <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
         <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
-          Codex CLI measurements appear only after execution
+          Gemini CLI measurements appear only after execution
         </span>
       </div>
 

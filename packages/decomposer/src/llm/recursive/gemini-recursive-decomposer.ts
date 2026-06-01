@@ -1,7 +1,4 @@
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 
 import type { Decomposer, DecompositionOptions, DecompositionResult, FeatureRequest } from "../../index";
 import type { AnthropicLike } from "../anthropic-decomposer";
@@ -21,13 +18,12 @@ type SpawnFn = (
   options: SpawnOptions
 ) => ChildProcess;
 
-export interface CodexRecursiveDecomposerOptions {
+export interface GeminiRecursiveDecomposerOptions {
   model: string;
   userPrompt: string;
   cwd: string;
   binaryPath?: string;
   timeoutMs?: number;
-  reasoningEffort?: string;
   workspaceHints?: string;
   aggressiveness?: Aggressiveness;
   depthBudget?: number;
@@ -35,48 +31,52 @@ export interface CodexRecursiveDecomposerOptions {
   onStepStarted?: RecursiveStepListener<RecursiveStepStartedEvent>;
   onStepCompleted?: RecursiveStepListener<RecursiveStepCompletedEvent>;
   spawn?: SpawnFn;
-  readFile?: (filePath: string) => Promise<string>;
-  writeFile?: (filePath: string, content: string) => Promise<void>;
-  tmpDir?: string;
   useShell?: boolean;
+  onCliOutput?: (data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void;
 }
 
 const DEFAULT_TIMEOUT_MS = 120_000;
-const DEFAULT_REASONING_EFFORT = "low";
 const SPAWN_FAILURE_EXIT_CODE = 127;
 const TIMEOUT_EXIT_CODE = 124;
 
 /**
- * Recursive decomposer backed by local `codex exec`, not a hosted LLM API.
+ * Short directive passed via `-p`. Gemini CLI only enters non-interactive
+ * (headless) mode when `--prompt` has a non-empty value; that value is appended
+ * to stdin. We feed the full planning prompt over stdin and use this as the
+ * trigger. Verified against gemini-cli 0.44.1.
+ */
+const STDIN_DIRECTIVE = "Follow-planning-instructions-on-stdin";
+
+/**
+ * Recursive decomposer backed by the local Gemini CLI, not a hosted LLM API
+ * (replaces the Codex-backed decomposer).
  *
  * The existing RecursiveDecomposer already owns the graph-building recursion,
  * validation, and interface wiring. This adapter only replaces its step client:
- * each "is this node atomic?" decision is delegated to Codex CLI with
- * `--sandbox read-only`, `--ephemeral`, and an output schema.
+ * each "is this node atomic?" decision is delegated to the Gemini CLI in
+ * read-only planning mode (`--approval-mode plan`), so it can inspect the repo
+ * but never modify it.
  */
-export class CodexRecursiveDecomposer implements Decomposer {
+export class GeminiRecursiveDecomposer implements Decomposer {
   private readonly inner: RecursiveDecomposer;
   public readonly model: string;
   public readonly promptTemplateVersion: string;
 
-  constructor(options: CodexRecursiveDecomposerOptions) {
+  constructor(options: GeminiRecursiveDecomposerOptions) {
     this.model = options.model;
     this.promptTemplateVersion =
-      options.promptTemplateVersion ?? `${RECURSIVE_DECOMPOSER_PROMPT_VERSION}.codex`;
+      options.promptTemplateVersion ?? `${RECURSIVE_DECOMPOSER_PROMPT_VERSION}.gemini`;
 
-    const clientOptions: CodexStepClientOptions = {
+    const clientOptions: GeminiStepClientOptions = {
       model: options.model,
       cwd: options.cwd
     };
     if (options.binaryPath !== undefined) clientOptions.binaryPath = options.binaryPath;
     if (options.timeoutMs !== undefined) clientOptions.timeoutMs = options.timeoutMs;
-    if (options.reasoningEffort !== undefined) clientOptions.reasoningEffort = options.reasoningEffort;
     if (options.spawn !== undefined) clientOptions.spawn = options.spawn;
-    if (options.readFile !== undefined) clientOptions.readFile = options.readFile;
-    if (options.writeFile !== undefined) clientOptions.writeFile = options.writeFile;
-    if (options.tmpDir !== undefined) clientOptions.tmpDir = options.tmpDir;
     if (options.useShell !== undefined) clientOptions.useShell = options.useShell;
-    const client = new CodexStepClient(clientOptions);
+    if (options.onCliOutput !== undefined) clientOptions.onCliOutput = options.onCliOutput;
+    const client = new GeminiStepClient(clientOptions);
 
     const recursiveOptions: RecursiveDecomposerOptions = {
       client,
@@ -97,119 +97,101 @@ export class CodexRecursiveDecomposer implements Decomposer {
   }
 }
 
-interface CodexStepClientOptions {
+interface GeminiStepClientOptions {
   model: string;
   cwd: string;
   binaryPath?: string;
   timeoutMs?: number;
-  reasoningEffort?: string;
   spawn?: SpawnFn;
-  readFile?: (filePath: string) => Promise<string>;
-  writeFile?: (filePath: string, content: string) => Promise<void>;
-  tmpDir?: string;
   useShell?: boolean;
+  onCliOutput?: (data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void;
 }
 
-class CodexStepClient implements AnthropicLike {
+class GeminiStepClient implements AnthropicLike {
   readonly messages: AnthropicLike["messages"];
   private readonly model: string;
   private readonly cwd: string;
   private readonly binaryPath: string;
   private readonly timeoutMs: number;
-  private readonly reasoningEffort: string;
   private readonly spawnFn: SpawnFn;
-  private readonly readFileFn: (filePath: string) => Promise<string>;
-  private readonly writeFileFn: (filePath: string, content: string) => Promise<void>;
-  private readonly tmpDir: string;
   private readonly useShell: boolean;
+  private readonly onCliOutput?: (data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void;
 
-  constructor(options: CodexStepClientOptions) {
+  constructor(options: GeminiStepClientOptions) {
     this.model = options.model;
     this.cwd = options.cwd;
-    this.binaryPath = options.binaryPath ?? process.env.MANYHANDS_CODEX_BIN ?? "codex";
+    this.binaryPath = options.binaryPath ?? process.env.MANYHANDS_GEMINI_BIN ?? "gemini";
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    this.reasoningEffort = resolveReasoningEffort(options.reasoningEffort);
     this.spawnFn = options.spawn ?? spawn;
-    this.readFileFn = options.readFile ?? ((filePath) => readFile(filePath, "utf8"));
-    this.writeFileFn = options.writeFile ?? ((filePath, content) => writeFile(filePath, content, "utf8"));
-    this.tmpDir = options.tmpDir ?? tmpdir();
     this.useShell = options.useShell ?? process.platform === "win32";
+    this.onCliOutput = options.onCliOutput;
     this.messages = {
-      create: async (args) => {
+      create: async (args: any) => {
         const prompt = [
           "## System",
           args.system,
           "",
           "## User",
-          args.messages.map((message) => message.content).join("\n\n")
+          args.messages.map((message: any) => message.content).join("\n\n")
         ].join("\n");
-        const text = await this.runCodex(prompt);
+        const text = await this.runGemini(prompt, args.nodeId);
         return { content: [{ type: "text", text }] };
       }
     };
   }
 
-  private async runCodex(prompt: string): Promise<string> {
-    const outputPath = join(this.tmpDir, `manyhands-codex-step-${process.pid}-${Date.now()}.json`);
-
-    // --output-schema is intentionally omitted: the OpenAI API rejects oneOf at the root
-    // of a response_format schema, which breaks ChatGPT-account Codex sessions. The prompt
-    // already specifies the exact JSON shape; DecomposeStepOutputSchema.safeParse validates
+  private async runGemini(prompt: string, nodeId?: string): Promise<string> {
+    // `--approval-mode plan` is Gemini's read-only mode: the planner may inspect
+    // the repo (mounted via the spawn cwd) but cannot modify it. The prompt
+    // already specifies the exact JSON shape; DecomposeStepOutputSchema validates
     // the parsed output application-side.
     const args = [
-      "exec",
-      "--sandbox",
-      "read-only",
       "--model",
       this.model,
-      "--ephemeral",
-      "-C",
-      this.cwd,
-      "--output-last-message",
-      outputPath
+      "--approval-mode",
+      "plan",
+      "--skip-trust",
+      "-o",
+      "text",
+      "-p",
+      STDIN_DIRECTIVE
     ];
-    if (this.reasoningEffort.length > 0) {
-      // Planning is a structured local decision, not implementation. Keep it fast
-      // unless a benchmark explicitly overrides the effort.
-      args.push("-c", `model_reasoning_effort=${this.reasoningEffort}`);
-    }
 
-    const outcome = await spawnCodex({
+    const outcome = await spawnGemini({
       binaryPath: this.binaryPath,
       args,
       cwd: this.cwd,
       prompt,
       timeoutMs: this.timeoutMs,
       spawnFn: this.spawnFn,
-      useShell: this.useShell
+      useShell: this.useShell,
+      onChunk: (chunk, stream) => {
+        if (this.onCliOutput !== undefined && nodeId !== undefined) {
+          this.onCliOutput({ nodeId, chunk, stream });
+        }
+      }
     });
 
     if (outcome.timedOut) {
       throw new DecomposerLlmError(
-        `Codex recursive planning timed out after ${this.timeoutMs}ms`,
+        `Gemini recursive planning timed out after ${this.timeoutMs}ms`,
         undefined,
         "request"
       );
     }
     if (outcome.exitCode !== 0) {
       throw new DecomposerLlmError(
-        `Codex recursive planning failed with exit code ${outcome.exitCode}: ${outcome.stderr || outcome.stdout}`,
+        `Gemini recursive planning failed with exit code ${outcome.exitCode}: ${outcome.stderr || outcome.stdout}`,
         undefined,
         "request"
       );
     }
 
-    try {
-      const last = await this.readFileFn(outputPath);
-      if (last.trim().length > 0) return last.trim();
-    } catch {
-      // Older/fake Codex runners may only return stdout; fall through.
-    }
     return outcome.stdout.trim();
   }
 }
 
-interface SpawnCodexInput {
+interface SpawnGeminiInput {
   binaryPath: string;
   args: string[];
   cwd: string;
@@ -217,16 +199,17 @@ interface SpawnCodexInput {
   timeoutMs: number;
   spawnFn: SpawnFn;
   useShell: boolean;
+  onChunk?: (chunk: string, stream: "stdout" | "stderr") => void;
 }
 
-interface SpawnCodexOutcome {
+interface SpawnGeminiOutcome {
   exitCode: number;
   stdout: string;
   stderr: string;
   timedOut: boolean;
 }
 
-function spawnCodex(input: SpawnCodexInput): Promise<SpawnCodexOutcome> {
+function spawnGemini(input: SpawnGeminiInput): Promise<SpawnGeminiOutcome> {
   return new Promise((resolve) => {
     const child = input.spawnFn(input.binaryPath, input.args, {
       cwd: input.cwd,
@@ -239,7 +222,7 @@ function spawnCodex(input: SpawnCodexInput): Promise<SpawnCodexOutcome> {
     let stderr = "";
     let settled = false;
 
-    const finish = (outcome: SpawnCodexOutcome): void => {
+    const finish = (outcome: SpawnGeminiOutcome): void => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
@@ -252,10 +235,14 @@ function spawnCodex(input: SpawnCodexInput): Promise<SpawnCodexOutcome> {
     }, input.timeoutMs);
 
     child.stdout?.on("data", (chunk: Buffer) => {
-      stdout += chunk.toString("utf8");
+      const text = chunk.toString("utf8");
+      stdout += text;
+      input.onChunk?.(text, "stdout");
     });
     child.stderr?.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString("utf8");
+      const text = chunk.toString("utf8");
+      stderr += text;
+      input.onChunk?.(text, "stderr");
     });
     child.on("error", (error: Error) => {
       finish({
@@ -272,13 +259,4 @@ function spawnCodex(input: SpawnCodexInput): Promise<SpawnCodexOutcome> {
     child.stdin?.on("error", () => undefined);
     child.stdin?.end(input.prompt);
   });
-}
-
-function resolveReasoningEffort(override: string | undefined): string {
-  return (
-    override ??
-    process.env.MANYHANDS_CODEX_PLANNING_REASONING ??
-    process.env.MANYHANDS_CODEX_REASONING ??
-    DEFAULT_REASONING_EFFORT
-  ).trim();
 }

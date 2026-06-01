@@ -7,6 +7,7 @@ import {
   loadFeatureFixture,
   MetadataDrivenMockDecomposer,
   isDecomposerLlmError,
+  isDecomposerQuestionError,
   runMockPlanningFlow,
   type Decomposer,
   type FeatureRequest,
@@ -14,7 +15,7 @@ import {
 } from "@manyhands/core";
 import type { BenchmarkManifest } from "@manyhands/evaluator";
 import {
-  CodexCliExecutor,
+  GeminiCliExecutor,
   ExecutionConfigSchema,
   RunExecutor,
   SimpleGitRunner,
@@ -24,6 +25,7 @@ import type { TaskGraph } from "@manyhands/task-graph";
 import { InMemoryTraceStore, type TraceStore } from "@manyhands/trace-store";
 import { resolveRepoRoot } from "../repo-root";
 import { RepoNotConfiguredError } from "./errors";
+import { runPreflight } from "./preflight";
 import {
   createDefaultRepoProvisioner,
   type ProvisionedRepo,
@@ -84,7 +86,7 @@ export interface ExecutionRunnerOptions {
 
 /**
  * Builds the real execution engine: a RunExecutor wired to simple-git and the
- * Codex CLI, rooted at the provisioned repo. The pipeline provisions and passes
+ * Gemini CLI, rooted at the provisioned repo. The pipeline provisions and passes
  * `input.provisioned`; the engine stays a pure executor. Without a provisioned
  * repo it fails clearly (D3) — the graph's mock baseCommit is never executable.
  */
@@ -96,13 +98,13 @@ function createDefaultExecutionEngine(deps: { traceStore?: TraceStore } = {}): E
         throw new RepoNotConfiguredError(input.runId);
       }
       const { repoRoot, baseBranch, baseCommit } = input.provisioned;
-      const executor = new RunExecutor({
+      const runExecutor = new RunExecutor({
         git: new SimpleGitRunner(),
-        codex: new CodexCliExecutor(),
+        executor: new GeminiCliExecutor(),
         traceStore,
         repoRoot
       });
-      return executor.run({
+      return runExecutor.run({
         // Execution resolves the real base over the graph's mock values.
         graph: { ...input.graph, repo: repoRoot, baseBranch, baseCommit },
         config: ExecutionConfigSchema.parse(input.executionConfig ?? {}),
@@ -274,6 +276,15 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
           at: new Date().toISOString()
         });
       },
+      onCliOutput: (event) => {
+        publishEvent(run.runId, {
+          kind: "planning.cli.output",
+          nodeId: event.nodeId,
+          chunk: event.chunk,
+          stream: event.stream,
+          at: new Date().toISOString()
+        });
+      },
       ...(workspace !== null ? { workspace } : {})
     });
 
@@ -340,15 +351,44 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
     run = await getRunRepository().get(runId);
     await transitionTo(run, "needs_review");
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const run = await getRunRepository().get(runId).catch(() => null);
-    if (run !== null) {
-      await getRunRepository().save({ ...run, status: "failed", errorMessage: message });
-      publishRunEvent(runId, {
-        kind: "status.changed",
-        status: "failed",
-        at: new Date().toISOString()
-      });
+    if (isDecomposerQuestionError(error)) {
+      const run = await getRunRepository().get(runId).catch(() => null);
+      if (run !== null) {
+        await getRunRepository().save({
+          ...run,
+          status: "paused",
+          pausedDuring: "generating",
+          pendingQuestion: {
+            nodeId: error.nodeId,
+            question: error.question,
+            options: error.options
+          },
+          planningStepCache: error.stepCache
+        });
+        publishRunEvent(runId, {
+          kind: "status.changed",
+          status: "paused",
+          at: new Date().toISOString()
+        });
+        publishEvent(runId, {
+          kind: "planning.question",
+          nodeId: error.nodeId,
+          question: error.question,
+          options: error.options,
+          at: new Date().toISOString()
+        });
+      }
+    } else {
+      const message = error instanceof Error ? error.message : String(error);
+      const run = await getRunRepository().get(runId).catch(() => null);
+      if (run !== null) {
+        await getRunRepository().save({ ...run, status: "failed", errorMessage: message });
+        publishRunEvent(runId, {
+          kind: "status.changed",
+          status: "failed",
+          at: new Date().toISOString()
+        });
+      }
     }
   } finally {
     stopHeartbeat();
@@ -384,7 +424,9 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
     feature,
     mode,
     schedulerPolicy: "risk_aware" as const,
-    runLabel: `${run.runId}:planning`
+    runLabel: `${run.runId}:planning`,
+    questionAnswers: run.questionAnswers,
+    stepCache: run.planningStepCache
   };
 
   if (selection.provider === "deterministic") {
@@ -392,13 +434,13 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
     const reason = selection.fallbackReason ?? "no_api_key";
     const messages: Record<string, string> = {
       no_api_key:
-        "Graph generation requires Codex CLI in product mode. Select a local git workspace or select a scenario for mock mode.",
+        "Graph generation requires Gemini CLI in product mode. Select a local git workspace or select a scenario for mock mode.",
       forced_by_env:
-        "MANYHANDS_FORCE_FALLBACK is set, but prompt-only runs require Codex CLI. Unset MANYHANDS_FORCE_FALLBACK=1 or select a scenario for mock mode.",
+        "MANYHANDS_FORCE_FALLBACK is set, but prompt-only runs require Gemini CLI. Unset MANYHANDS_FORCE_FALLBACK=1 or select a scenario for mock mode.",
       forced_by_caller:
-        "Deterministic mode was explicitly requested, but prompt-only runs require Codex CLI. Select a scenario for mock mode."
+        "Deterministic mode was explicitly requested, but prompt-only runs require Gemini CLI. Select a scenario for mock mode."
     };
-    throw new Error(messages[reason] ?? `Codex decomposer unavailable: ${reason}`);
+    throw new Error(messages[reason] ?? `Gemini decomposer unavailable: ${reason}`);
   }
 
   try {
@@ -426,7 +468,7 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
     const detail = error instanceof Error ? error.message : String(error);
     throw new Error(
       `Graph generation failed: ${detail}. ` +
-        "Retry, switch to a different Codex model, or verify that Codex CLI is installed and authenticated."
+        "Retry, switch to a different Gemini model, or verify that Gemini CLI is installed and authenticated."
     );
   }
 }
@@ -455,7 +497,9 @@ async function runPlanningWithFallback(input: ScenarioPlanningInput): Promise<Pl
     fixturePath: bundle.featurePath,
     mode,
     schedulerPolicy: "risk_aware" as const,
-    runLabel: `${run.runId}:planning`
+    runLabel: `${run.runId}:planning`,
+    questionAnswers: run.questionAnswers,
+    stepCache: run.planningStepCache
   };
 
   if (selection.provider === "anthropic") {
@@ -574,6 +618,14 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     } else if (usingDefaultEngine) {
       // D3: no silent mock execution. The default engine needs a real repo.
       throw new RepoNotConfiguredError(run.runId);
+    }
+
+    // Blocking preflight before the real Gemini engine: CLI present, credentials
+    // available, repo clean, base branch valid. A failure here surfaces an
+    // actionable cause instead of a surprise mid-run crash. Injected engines
+    // (tests / mock) skip this — they never shell out to Gemini.
+    if (usingDefaultEngine && provisioned !== undefined) {
+      await runPreflight({ repoRoot: provisioned.repoRoot, baseBranch: provisioned.baseBranch });
     }
 
     const result = await engine.run({

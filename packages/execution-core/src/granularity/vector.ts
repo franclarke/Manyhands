@@ -19,7 +19,7 @@ export interface ComputeGranularityVectorParams {
   estimatedTokensPerLeaf?: number;
 }
 
-const INTEGRATION_SUCCESS = new Set(["success", "codex_repair_success"]);
+const INTEGRATION_SUCCESS = new Set(["success", "executor_repair_success"]);
 
 /**
  * Computes the experiment's GranularityVector: pre-execution DAG-structure

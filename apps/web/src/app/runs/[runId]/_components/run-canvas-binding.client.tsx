@@ -5,6 +5,7 @@ import type { RunExecutionResult } from "@manyhands/execution-core";
 import { useRouter } from "next/navigation";
 import type { RunStatusKey } from "@/lib/api-types";
 import type { ConflictListItem } from "@/lib/conflict-view-model";
+import type { PlanReviewSummary } from "@/lib/plan-review";
 import type { TimelineRunInput } from "@/lib/run-timeline";
 import { RunCanvasShell, useLiveRun } from "@/components/dag/RunCanvasShell";
 import { RunActionBar } from "./run-action-bar.client";
@@ -16,6 +17,7 @@ interface RunCanvasBindingProps {
   benchmarkLabel: string;
   configLabel: string;
   readyTaskCount: number;
+  planReview: PlanReviewSummary | null;
   headerSlot: React.ReactNode;
   patches: readonly unknown[];
   timelineRun: TimelineRunInput;
@@ -23,11 +25,16 @@ interface RunCanvasBindingProps {
   conflictError?: string;
   execution?: RunExecutionResult;
   errorMessage?: string;
+  initialPendingQuestion: { nodeId: string; question: string; options: string[] } | null;
 }
 
 export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactElement {
   const router = useRouter();
-  const { status, visibleTaskIds, livePlanNodes } = useLiveRun(props.runId, props.initialStatus);
+  const { status, visibleTaskIds, livePlanNodes, pendingQuestion, cliLogs } = useLiveRun(
+    props.runId,
+    props.initialStatus,
+    props.initialPendingQuestion
+  );
 
   return (
     <RunCanvasShell
@@ -35,7 +42,7 @@ export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactEleme
       snapshot={props.snapshot}
       benchmarkLabel={props.benchmarkLabel}
       configLabel={props.configLabel}
-      mode="Build"
+      mode="Run"
       showMethodologyBanner={false}
       headerSlot={props.headerSlot}
       editableRunId={props.runId}
@@ -51,10 +58,13 @@ export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactEleme
           runId={props.runId}
           status={status}
           readyTaskCount={props.readyTaskCount}
+          planReview={props.planReview}
         />
       }
       visibleTaskIds={visibleTaskIds}
       livePlanNodes={livePlanNodes}
+      pendingQuestion={pendingQuestion}
+      cliLogs={cliLogs}
     />
   );
 }

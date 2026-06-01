@@ -7,6 +7,10 @@ import { canNodeRunNow, nodeActionHint, nodeKindLabel, riskLabel } from "@/lib/r
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { RunPhase } from "@/lib/run-phase";
+import { ContractTab as ContractTabPanel } from "./ContractTab";
+import { TaskDependencyDialog as TaskDependencyDialogPanel } from "./TaskDependencyDialog";
+import { TaskEditDialog as TaskEditDialogPanel } from "./TaskEditDialog";
+import { TaskRegenerateDialog as TaskRegenerateDialogPanel } from "./TaskRegenerateDialog";
 
 interface TaskInspectorProps {
   view: InspectorView | null;
@@ -15,6 +19,8 @@ interface TaskInspectorProps {
   phase?: RunPhase;
   editableRunId?: string;
   onEdited?: () => void;
+  availableNodes?: Array<{ id: string; title: string }>;
+  dependencyEdges?: Array<{ source: string; target: string; label?: string }>;
 }
 
 type TabId = "overview" | "contract" | "execution" | "validation" | "trace" | "review";
@@ -54,27 +60,19 @@ const smallButtonStyle: React.CSSProperties = {
   fontFamily: "var(--font-mono)"
 };
 
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  border: "1px solid var(--rule)",
-  background: "var(--bg-1)",
-  color: "var(--text)",
-  borderRadius: 5,
-  padding: "9px 10px",
-  fontSize: 13,
-  outline: "none"
-};
-
-const textareaStyle: React.CSSProperties = {
-  ...inputStyle,
-  resize: "vertical",
-  lineHeight: 1.45,
-  fontFamily: "var(--font-sans)"
-};
-
-export function TaskInspector({ view, onClose, phase, editableRunId, onEdited }: TaskInspectorProps): React.ReactElement {
+export function TaskInspector({
+  view,
+  onClose,
+  phase,
+  editableRunId,
+  onEdited,
+  availableNodes = [],
+  dependencyEdges = []
+}: TaskInspectorProps): React.ReactElement {
   const [tab, setTab] = useState<TabId>("overview");
   const [isEditing, setIsEditing] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isManagingDependencies, setIsManagingDependencies] = useState(false);
   const selectedId = view?.taskId;
 
   // Reset to the phase-appropriate default tab when the selected node (or phase)
@@ -144,7 +142,13 @@ export function TaskInspector({ view, onClose, phase, editableRunId, onEdited }:
         <InspectorHeader
           view={view}
           onClose={onClose}
-          {...(editableRunId !== undefined ? { onEdit: () => setIsEditing(true) } : {})}
+          {...(editableRunId !== undefined
+            ? {
+                onEdit: () => setIsEditing(true),
+                onRegenerate: () => setIsRegenerating(true),
+                onDependencies: () => setIsManagingDependencies(true)
+              }
+            : {})}
         />
 
         <div
@@ -187,7 +191,7 @@ export function TaskInspector({ view, onClose, phase, editableRunId, onEdited }:
 
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 18px 24px" }}>
           {tab === "overview" && <OverviewTab view={view} />}
-          {tab === "contract" && <ContractTab view={view} />}
+          {tab === "contract" && <ContractTabPanel view={view} />}
           {tab === "execution" && <ExecutionTab view={view} />}
           {tab === "validation" && <ValidationTab view={view} />}
           {tab === "trace" && <TraceTab view={view} />}
@@ -196,12 +200,36 @@ export function TaskInspector({ view, onClose, phase, editableRunId, onEdited }:
       </aside>
 
       {editableRunId !== undefined && isEditing ? (
-        <TaskEditDialog
+        <TaskEditDialogPanel
           runId={editableRunId}
           view={view}
           onCancel={() => setIsEditing(false)}
           onSaved={() => {
             setIsEditing(false);
+            onEdited?.();
+          }}
+        />
+      ) : null}
+      {editableRunId !== undefined && isRegenerating ? (
+        <TaskRegenerateDialogPanel
+          runId={editableRunId}
+          view={view}
+          onCancel={() => setIsRegenerating(false)}
+          onSaved={() => {
+            setIsRegenerating(false);
+            onEdited?.();
+          }}
+        />
+      ) : null}
+      {editableRunId !== undefined && isManagingDependencies ? (
+        <TaskDependencyDialogPanel
+          runId={editableRunId}
+          view={view}
+          availableNodes={availableNodes}
+          dependencyEdges={dependencyEdges}
+          onCancel={() => setIsManagingDependencies(false)}
+          onSaved={() => {
+            setIsManagingDependencies(false);
             onEdited?.();
           }}
         />
@@ -213,11 +241,15 @@ export function TaskInspector({ view, onClose, phase, editableRunId, onEdited }:
 function InspectorHeader({
   view,
   onClose,
-  onEdit
+  onEdit,
+  onRegenerate,
+  onDependencies
 }: {
   view: InspectorView;
   onClose: () => void;
   onEdit?: () => void;
+  onRegenerate?: () => void;
+  onDependencies?: () => void;
 }): React.ReactElement {
   const risk = view.riskEvidence[0]?.level;
   return (
@@ -241,7 +273,17 @@ function InspectorHeader({
         <div style={{ display: "flex", gap: 6 }}>
           {onEdit !== undefined ? (
             <button type="button" onClick={onEdit} style={smallButtonStyle}>
-              Edit
+              Edit contract
+            </button>
+          ) : null}
+          {onRegenerate !== undefined ? (
+            <button type="button" onClick={onRegenerate} style={smallButtonStyle}>
+              Regenerate subtree
+            </button>
+          ) : null}
+          {onDependencies !== undefined ? (
+            <button type="button" onClick={onDependencies} style={smallButtonStyle}>
+              Dependencies
             </button>
           ) : null}
           <button type="button" onClick={onClose} aria-label="Close inspector" style={smallButtonStyle}>
@@ -254,7 +296,7 @@ function InspectorHeader({
       </h3>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px 12px" }}>
         <HeaderMeta label="Depth" value={String(view.depth ?? 0)} mono />
-        <HeaderMeta label="Agent" value={view.manual ? "Human" : view.integrator ? "Integration agent" : "Codex CLI"} />
+        <HeaderMeta label="Agent" value={view.manual ? "Human" : view.integrator ? "Integration agent" : "Gemini CLI"} />
         <HeaderMeta label="Node id" value={view.taskId} mono />
         <HeaderMeta label="Primary action" value={nodeActionHint(view)} />
       </div>
@@ -368,54 +410,6 @@ function OverviewTab({ view }: { view: InspectorView }): React.ReactElement {
   );
 }
 
-function ContractTab({ view }: { view: InspectorView }): React.ReactElement {
-  if (view.contract === undefined) {
-    return <EmptyHint>This composite node has no leaf contract. Inspect a leaf child for scope rules.</EmptyHint>;
-  }
-
-  const contract = view.contract;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Section title="Objective">
-        <Card>
-          <Prose>{contract.objective}</Prose>
-        </Card>
-      </Section>
-      <Section title="Allowed paths">
-        <MonoList items={contract.allowedPaths} empty="none declared" />
-      </Section>
-      <Section title="Forbidden paths">
-        {contract.forbiddenPaths.length === 0 ? (
-          <EmptyHint>No forbidden paths declared.</EmptyHint>
-        ) : (
-          <div
-            style={{
-              border: "1px solid var(--status-failed-border)",
-              background: "var(--status-failed-bg)",
-              borderRadius: "var(--r-md)",
-              padding: "10px 12px"
-            }}
-          >
-            <MonoList items={contract.forbiddenPaths} empty="none declared" />
-          </div>
-        )}
-      </Section>
-      <Section title="Acceptance criteria">
-        <Checklist items={contract.acceptanceCriteria} empty="none declared" />
-      </Section>
-      <Section title="Definition of done">
-        <Prose>{contract.definitionOfDone}</Prose>
-      </Section>
-      <Section title="Expected files">
-        <MonoList items={contract.expectedFiles} empty="none declared" />
-      </Section>
-      <Section title="Dependencies">
-        <LinkedNodeList items={contract.dependencies} empty="none declared" />
-      </Section>
-    </div>
-  );
-}
-
 function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
   const runResult = view.runResult;
   if (runResult === undefined) {
@@ -435,9 +429,12 @@ function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
       <Section title="Agent run">
         <KvGrid
           rows={[
-            { label: "Agent", value: view.integrator ? "Integration agent" : "Codex CLI", mono: false },
+            { label: "Agent", value: view.integrator ? "Integration agent" : "Gemini CLI", mono: false },
             { label: "Current step", value: nodeActionHint(view), mono: false },
             { label: "Success", value: runResult.success ? "yes" : "no", mono: false },
+            ...(runResult.resultStatus !== undefined
+              ? [{ label: "Result", value: runResult.resultStatus, mono: true as const }]
+              : []),
             { label: "Worktree", value: runResult.worktree, mono: true },
             { label: "Branch", value: runResult.branch, mono: true },
             { label: "Duration", value: `${runResult.durationMs}ms`, mono: true },
@@ -447,6 +444,28 @@ function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
           ]}
         />
       </Section>
+      {!runResult.success && runResult.errorOutput !== undefined ? (
+        <Section title="Failure cause">
+          <pre
+            style={{
+              margin: 0,
+              padding: 12,
+              background: "var(--bg-1)",
+              border: "1px solid var(--danger, var(--rule))",
+              borderRadius: "var(--r-md)",
+              color: "var(--text-2)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              lineHeight: 1.55,
+              overflowX: "auto",
+              maxHeight: 240,
+              whiteSpace: "pre-wrap"
+            }}
+          >
+            {runResult.errorOutput}
+          </pre>
+        </Section>
+      ) : null}
       <Section title="Changed files">
         <MonoList items={runResult.changedFiles} empty="none" />
       </Section>
@@ -694,180 +713,6 @@ function TraceTab({ view }: { view: InspectorView }): React.ReactElement {
   );
 }
 
-function TaskEditDialog({
-  runId,
-  view,
-  onCancel,
-  onSaved
-}: {
-  runId: string;
-  view: InspectorView;
-  onCancel: () => void;
-  onSaved: () => void;
-}): React.ReactElement {
-  const contract = view.contract;
-  const initialObjective = contract?.objective ?? view.goal;
-  const [title, setTitle] = useState(view.title);
-  const [objective, setObjective] = useState(initialObjective);
-  const [allowedPaths, setAllowedPaths] = useState(textFromLines(contract?.allowedPaths ?? []));
-  const [forbiddenPaths, setForbiddenPaths] = useState(textFromLines(contract?.forbiddenPaths ?? []));
-  const [acceptanceCriteria, setAcceptanceCriteria] = useState(textFromLines(contract?.acceptanceCriteria ?? []));
-  const [manual, setManual] = useState(view.manual);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
-    setError(null);
-
-    const body: {
-      title?: string;
-      objective?: string;
-      allowedPaths?: string[];
-      forbiddenPaths?: string[];
-      acceptanceCriteria?: string[];
-      manual?: boolean;
-    } = {};
-    const nextTitle = title.trim();
-    const nextObjective = objective.trim();
-    const nextAllowedPaths = linesFromText(allowedPaths);
-    const nextForbiddenPaths = linesFromText(forbiddenPaths);
-    const nextAcceptanceCriteria = linesFromText(acceptanceCriteria);
-
-    if (nextTitle !== view.title) body.title = nextTitle;
-    if (nextObjective !== initialObjective) body.objective = nextObjective;
-    if (contract !== undefined && !arraysEqual(nextAllowedPaths, contract.allowedPaths)) body.allowedPaths = nextAllowedPaths;
-    if (contract !== undefined && !arraysEqual(nextForbiddenPaths, contract.forbiddenPaths)) body.forbiddenPaths = nextForbiddenPaths;
-    if (contract !== undefined && !arraysEqual(nextAcceptanceCriteria, contract.acceptanceCriteria)) {
-      body.acceptanceCriteria = nextAcceptanceCriteria;
-    }
-    if (manual !== view.manual) body.manual = manual;
-
-    if (Object.keys(body).length === 0) {
-      setError("No changes to save.");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const response = await fetch(
-        `/api/runs/${encodeURIComponent(runId)}/nodes/${encodeURIComponent(view.taskId)}`,
-        {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(body)
-        }
-      );
-      if (!response.ok) {
-        setError(await errorMessageFromResponse(response));
-        return;
-      }
-      onSaved();
-    } catch (fetchError) {
-      setError(fetchError instanceof Error ? fetchError.message : String(fetchError));
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  return (
-    <div
-      role="presentation"
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 50,
-        background: "rgba(8,8,7,0.62)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 24
-      }}
-    >
-      <form
-        onSubmit={submit}
-        style={{
-          width: 560,
-          maxWidth: "min(560px, calc(100vw - 32px))",
-          maxHeight: "calc(100vh - 48px)",
-          overflowY: "auto",
-          border: "1px solid var(--rule)",
-          background: "var(--surface)",
-          borderRadius: "var(--r-lg)",
-          boxShadow: "var(--shadow-lift)",
-          padding: 18,
-          display: "flex",
-          flexDirection: "column",
-          gap: 14
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-          <div>
-            <div className="mh-coord">edit node</div>
-            <div className="mh-serif" style={{ marginTop: 3, color: "var(--text)", fontSize: 20, lineHeight: 1.2 }}>
-              {view.taskId}
-            </div>
-          </div>
-          <button type="button" onClick={onCancel} style={smallButtonStyle}>
-            Close
-          </button>
-        </div>
-
-        <DialogField label="Title">
-          <input value={title} onChange={(event) => setTitle(event.target.value)} style={inputStyle} />
-        </DialogField>
-        <DialogField label="Objective / goal">
-          <textarea value={objective} onChange={(event) => setObjective(event.target.value)} rows={4} style={textareaStyle} />
-        </DialogField>
-
-        {contract !== undefined ? (
-          <>
-            <DialogField label="Allowed paths">
-              <textarea value={allowedPaths} onChange={(event) => setAllowedPaths(event.target.value)} rows={4} style={textareaStyle} />
-            </DialogField>
-            <DialogField label="Forbidden paths">
-              <textarea value={forbiddenPaths} onChange={(event) => setForbiddenPaths(event.target.value)} rows={3} style={textareaStyle} />
-            </DialogField>
-            <DialogField label="Acceptance criteria">
-              <textarea value={acceptanceCriteria} onChange={(event) => setAcceptanceCriteria(event.target.value)} rows={4} style={textareaStyle} />
-            </DialogField>
-          </>
-        ) : null}
-
-        <label style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-2)", fontSize: 12.5 }}>
-          <input type="checkbox" checked={manual} onChange={(event) => setManual(event.target.checked)} />
-          Manual task
-        </label>
-
-        {error !== null ? (
-          <div
-            style={{
-              border: "1px solid rgba(178,106,96,0.35)",
-              background: "rgba(178,106,96,0.08)",
-              color: "var(--error)",
-              borderRadius: "var(--r-md)",
-              padding: "9px 10px",
-              fontSize: 12,
-              lineHeight: 1.45
-            }}
-          >
-            {error}
-          </div>
-        ) : null}
-
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <button type="button" onClick={onCancel} style={secondaryButtonStyle}>
-            Cancel
-          </button>
-          <button type="submit" disabled={isSaving} style={primaryButtonStyle}>
-            {isSaving ? "Saving..." : "Save"}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
 function Section({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -955,58 +800,6 @@ function MonoList({ items, empty }: { items: string[]; empty: string }): React.R
   );
 }
 
-function Checklist({ items, empty }: { items: string[]; empty: string }): React.ReactElement {
-  if (items.length === 0) {
-    return <div style={{ fontSize: 11.5, color: "var(--text-3)", fontStyle: "italic" }}>{empty}</div>;
-  }
-  return (
-    <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", fontSize: 12, color: "var(--text-2)", lineHeight: 1.55 }}>
-      {items.map((item, idx) => (
-        <li key={`${item}-${idx}`} style={{ display: "flex", gap: 8, padding: "4px 0" }}>
-          <span
-            aria-hidden
-            style={{
-              width: 12,
-              height: 12,
-              border: "1px solid var(--rule-strong)",
-              borderRadius: 3,
-              marginTop: 3,
-              flex: "0 0 auto"
-            }}
-          />
-          <span>{item}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function LinkedNodeList({ items, empty }: { items: string[]; empty: string }): React.ReactElement {
-  if (items.length === 0) {
-    return <div style={{ fontSize: 11.5, color: "var(--text-3)", fontStyle: "italic" }}>{empty}</div>;
-  }
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-      {items.map((item) => (
-        <span
-          key={item}
-          className="mh-mono"
-          style={{
-            border: "1px solid var(--rule)",
-            background: "rgba(229,222,204,0.025)",
-            color: "var(--text-2)",
-            borderRadius: "var(--r-md)",
-            padding: "4px 7px",
-            fontSize: 11
-          }}
-        >
-          {item}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 function Card({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <div style={{ border: "1px solid var(--rule)", background: "var(--bg-1)", padding: "10px 12px", borderRadius: "var(--r-md)" }}>
@@ -1090,66 +883,3 @@ function ReviewButton({ label }: { label: string }): React.ReactElement {
   );
 }
 
-function DialogField({
-  label,
-  children
-}: {
-  label: string;
-  children: React.ReactNode;
-}): React.ReactElement {
-  return (
-    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <span className="mh-coord">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-const secondaryButtonStyle: React.CSSProperties = {
-  border: "1px solid var(--rule)",
-  background: "transparent",
-  color: "var(--text-2)",
-  borderRadius: 5,
-  padding: "7px 11px",
-  cursor: "pointer",
-  fontSize: 12
-};
-
-const primaryButtonStyle: React.CSSProperties = {
-  border: "1px solid var(--copper)",
-  background: "rgba(180,113,72,0.14)",
-  color: "var(--copper-hi)",
-  borderRadius: 5,
-  padding: "7px 12px",
-  cursor: "pointer",
-  fontSize: 12,
-  fontWeight: 600
-};
-
-function linesFromText(value: string): string[] {
-  return value
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-}
-
-function textFromLines(lines: readonly string[]): string {
-  return lines.join("\n");
-}
-
-function arraysEqual(left: readonly string[], right: readonly string[]): boolean {
-  if (left.length !== right.length) return false;
-  return left.every((value, index) => value === right[index]);
-}
-
-async function errorMessageFromResponse(response: Response): Promise<string> {
-  try {
-    const payload = await response.json() as { error?: unknown };
-    if (typeof payload.error === "string" && payload.error.length > 0) {
-      return payload.error;
-    }
-  } catch {
-    // fall through to the status text
-  }
-  return response.statusText || `Request failed with ${response.status}`;
-}

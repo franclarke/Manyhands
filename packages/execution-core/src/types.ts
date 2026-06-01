@@ -8,7 +8,7 @@ export const AgentResultStatusSchema = z.union([
   z.literal("empty_diff"),
   z.literal("scope_violation"),
   z.literal("validation_failed"),
-  z.literal("codex_error"),
+  z.literal("executor_error"),
   z.literal("timeout"),
   z.literal("agent_committed_unexpectedly"),
   z.literal("internal_error")
@@ -79,9 +79,14 @@ export const AgentExecutionResultSchema = z.object({
   commitSha: NonEmptyStringSchema.optional(),
   scopeCheck: ScopeCheckResultSchema,
   validationResult: ValidationRunResultSchema.optional(),
-  codexExitCode: z.number().int(),
-  codexDurationMs: z.number().int().nonnegative(),
-  codexTimedOut: z.boolean(),
+  executorExitCode: z.number().int(),
+  executorDurationMs: z.number().int().nonnegative(),
+  executorTimedOut: z.boolean(),
+  // Truncated tails of the executor's stdout/stderr, kept as the actionable cause
+  // when a run fails (e.g. Gemini quota/auth errors). git diff is still the source
+  // of truth for what changed (D5); these are diagnostics surfaced to the UI.
+  stderrTail: z.string().optional(),
+  stdoutTail: z.string().optional(),
   tokensIn: z.number().int().nonnegative().optional(),
   tokensOut: z.number().int().nonnegative().optional(),
   costUsd: z.number().nonnegative().optional()
@@ -94,8 +99,8 @@ export type AgentExecutionResult = z.infer<typeof AgentExecutionResultSchema>;
 export const IntegrationStatusSchema = z.union([
   z.literal("success"),
   z.literal("cherry_pick_conflict"),
-  z.literal("codex_repair_success"),
-  z.literal("codex_repair_failed"),
+  z.literal("executor_repair_success"),
+  z.literal("executor_repair_failed"),
   z.literal("validation_failed"),
   z.literal("child_failed"),
   z.literal("internal_error")
@@ -122,8 +127,12 @@ export const IntegrationResultSchema = z.object({
 
 export type IntegrationResult = z.infer<typeof IntegrationResultSchema>;
 
-// ── Codex CLI executor options ──────────────────────────────────
+// ── Agent executor options ──────────────────────────────────────
 
+// Retained from the Codex era for interface symmetry. With the Gemini CLI there
+// is no `workspace-write`/`danger-full-access` OS sandbox; the executor maps this
+// to Gemini's approval mode and the real confinement comes from the isolated git
+// worktree plus the ScopeChecker (see GeminiCliExecutor / ADR on the swap).
 export const SandboxModeSchema = z.union([
   z.literal("workspace-write"),
   z.literal("danger-full-access")
@@ -131,7 +140,7 @@ export const SandboxModeSchema = z.union([
 
 export type SandboxMode = z.infer<typeof SandboxModeSchema>;
 
-export const CodexCliExecutorOptionsSchema = z.object({
+export const AgentExecutorOptionsSchema = z.object({
   cwd: NonEmptyStringSchema,
   instructionFilePath: NonEmptyStringSchema,
   model: NonEmptyStringSchema,
@@ -141,7 +150,7 @@ export const CodexCliExecutorOptionsSchema = z.object({
   env: z.record(z.string()).optional()
 });
 
-export type CodexCliExecutorOptions = z.infer<typeof CodexCliExecutorOptionsSchema>;
+export type AgentExecutorOptions = z.infer<typeof AgentExecutorOptionsSchema>;
 
 // ── Execution config ────────────────────────────────────────────
 

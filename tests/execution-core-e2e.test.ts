@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+﻿import { execFileSync } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -8,7 +8,7 @@ import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   ExecutionConfigSchema,
-  MockCodexCliExecutor,
+  MockAgentExecutor,
   RunExecutor,
   SimpleGitRunner
 } from "@manyhands/execution-core";
@@ -99,7 +99,7 @@ describe("RunExecutor E2E (real git + MockCodex)", () => {
     const traceStore = new InMemoryTraceStore();
     const executor = new RunExecutor({
       git: new SimpleGitRunner(),
-      codex: new MockCodexCliExecutor({ behaviors }),
+      executor: new MockAgentExecutor({ behaviors }),
       traceStore,
       repoRoot
     });

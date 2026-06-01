@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { isExecutionResult, toExecutionSummary } from "@/lib/execution-summary";
 import type { GranularityVector, RunExecutionResult } from "@manyhands/execution-core";
 
@@ -33,9 +33,9 @@ const RESULT: RunExecutionResult = {
       changedFiles: ["src/a.ts"],
       commitSha: "SHA",
       scopeCheck: { passed: true, violations: [] },
-      codexExitCode: 0,
-      codexDurationMs: 5,
-      codexTimedOut: false
+      executorExitCode: 0,
+      executorDurationMs: 5,
+      executorTimedOut: false
     }
   ],
   integrationResults: [],

@@ -1,10 +1,10 @@
-import type { TaskGraph } from "@manyhands/task-graph";
+﻿import type { TaskGraph } from "@manyhands/task-graph";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { describe, expect, it } from "vitest";
 import {
   assertExecutableGraph,
   ExecutionConfigSchema,
-  MockCodexCliExecutor,
+  MockAgentExecutor,
   RunExecutionError,
   RunExecutor
 } from "@manyhands/execution-core";
@@ -84,7 +84,7 @@ describe("assertExecutableGraph", () => {
     const git = new FakeGitRunner();
     const executor = new RunExecutor({
       git,
-      codex: new MockCodexCliExecutor(),
+      executor: new MockAgentExecutor(),
       traceStore: new InMemoryTraceStore(),
       repoRoot: "/repo",
       writeInstructions: async () => {}

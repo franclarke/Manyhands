@@ -4,6 +4,7 @@ import { isExecutionResult } from "@/lib/execution-summary";
 import { toRunGraphViewModel } from "@/lib/graph-view-model";
 import { granularityLabelForMode } from "@/lib/granularity";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
+import { buildPlanReviewSummary } from "@/lib/plan-review";
 import { operationalMetrics } from "@/lib/run-presentation";
 import { findScenario } from "@/lib/scenarios";
 import {
@@ -42,6 +43,7 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
   const patches = parseRunPatches(run.patches);
   const conflictState = conflictStateFor(snapshot, patches);
   const runSummary = snapshotSummary(snapshot);
+  const planReview = buildPlanReviewSummary(snapshot, patches);
   const readyTaskCount =
     run.planning !== undefined
       ? (run.planning as MockPlanningFlowResult).summary.leafCount
@@ -56,6 +58,7 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
         benchmarkLabel={scenario?.benchmarkId ?? run.scenarioId ?? "prompt"}
         configLabel={`granularity / ${granularityLabelForMode(run.granularity)}`}
         readyTaskCount={readyTaskCount}
+        planReview={planReview}
         patches={patches}
         timelineRun={{
           runId: run.runId,
@@ -70,6 +73,7 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
         {...(conflictState.error !== undefined ? { conflictError: conflictState.error } : {})}
         {...(isExecutionResult(run.execution) ? { execution: run.execution } : {})}
         {...(run.errorMessage !== undefined && run.errorMessage.length > 0 ? { errorMessage: run.errorMessage } : {})}
+        initialPendingQuestion={run.pendingQuestion ?? null}
         headerSlot={
           <RunHeader
             run={run}

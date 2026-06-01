@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+﻿import { beforeAll, describe, expect, it } from "vitest";
 import { runBenchmarkMockFlow, type RunSnapshot } from "@manyhands/core";
 import { buildRunSummary } from "@/lib/run-summary";
 import type { GranularityVector, RunExecutionResult } from "@manyhands/execution-core";
@@ -84,12 +84,12 @@ describe("run-summary", () => {
         {
           taskId: "a", status: "success", baseHead: "B", currentHead: "S", agentCommittedUnexpectedly: false,
           diff: "d", changedFiles: ["src/a.ts"], commitSha: "S", scopeCheck: { passed: true, violations: [] },
-          codexExitCode: 0, codexDurationMs: 1, codexTimedOut: false
+          executorExitCode: 0, executorDurationMs: 1, executorTimedOut: false
         },
         {
           taskId: "b", status: "scope_violation", baseHead: "B", currentHead: "B", agentCommittedUnexpectedly: false,
           diff: "d", changedFiles: ["secrets/x"], scopeCheck: { passed: false, violations: ["secrets/x"] },
-          codexExitCode: 0, codexDurationMs: 1, codexTimedOut: false
+          executorExitCode: 0, executorDurationMs: 1, executorTimedOut: false
         }
       ],
       integrationResults: [],

@@ -12,7 +12,7 @@ interface GraphToolbarProps {
   graph: RunGraphViewModel;
   benchmarkLabel: string;
   configLabel: string;
-  mode: "Replay" | "Lab" | "Build";
+  mode: "Replay" | "Lab" | "Run";
   filters: GraphFilterState;
   onFiltersChange: (next: GraphFilterState) => void;
   matchedCount: number;
@@ -137,7 +137,7 @@ export function GraphToolbar({
   );
 }
 
-function ModeBadge({ mode, deterministic }: { mode: "Replay" | "Lab" | "Build"; deterministic: boolean }): React.ReactElement {
+function ModeBadge({ mode, deterministic }: { mode: "Replay" | "Lab" | "Run"; deterministic: boolean }): React.ReactElement {
   return (
     <span
       className="mh-mono"

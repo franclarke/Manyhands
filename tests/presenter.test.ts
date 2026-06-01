@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { toRunPreview, toRunResponse } from "@/lib/server/runs/presenter";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import type { GranularityVector, RunExecutionResult } from "@manyhands/execution-core";
@@ -34,9 +34,9 @@ const EXECUTION: RunExecutionResult = {
       changedFiles: ["src/a.ts", "src/b.ts"],
       commitSha: "SHA_A",
       scopeCheck: { passed: true, violations: [] },
-      codexExitCode: 0,
-      codexDurationMs: 500,
-      codexTimedOut: false,
+      executorExitCode: 0,
+      executorDurationMs: 500,
+      executorTimedOut: false,
       costUsd: 0.02
     }
   ],
@@ -63,7 +63,7 @@ function baseRun(overrides: Partial<RunRecord> = {}): RunRecord {
   };
 }
 
-describe("presenter — execution summary", () => {
+describe("presenter â€” execution summary", () => {
   it("exposes the execution summary, granularity vector, and per-leaf receipts", () => {
     const { run } = toRunResponse(baseRun({ execution: EXECUTION }));
 

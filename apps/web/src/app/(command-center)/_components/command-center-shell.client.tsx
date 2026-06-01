@@ -31,7 +31,13 @@ export function CommandCenterShell({
   initialModelId
 }: CommandCenterShellProps): React.ReactElement {
   const router = useRouter();
-  const initialWorkspaceId = workspaces[0]?.id ?? "";
+  // Prefer the first executable workspace (one with a local repo) so the main
+  // flow doesn't start blocked on a repo-less default. Falls back to the first
+  // workspace when none has a repoPath (the UI then explains why Start is gated).
+  const initialWorkspaceId =
+    workspaces.find((entry) => entry.repoPath !== undefined && entry.repoPath.length > 0)?.id ??
+    workspaces[0]?.id ??
+    "";
   const [workspaceId, setWorkspaceId] = useState<string>(initialWorkspaceId);
   const [scenarioId, setScenarioId] = useState<string>("");
   const [granularity, setGranularity] = useState<GranularityLevel>(initialGranularity);
@@ -76,7 +82,7 @@ export function CommandCenterShell({
     (scenario !== undefined || hasLocalRepo) &&
     modelId.trim().length > 0 &&
     !submitting;
-  const executionMode = scenario !== undefined ? "Lab planning fixture" : "Local Codex execution";
+  const executionMode = scenario !== undefined ? "Lab planning fixture" : "Local Gemini execution";
 
   async function handleStart(): Promise<void> {
     if (selectedWorkspace === null) return;
@@ -234,7 +240,7 @@ export function CommandCenterShell({
             <span style={{ fontSize: 12, color: "var(--text-2)", lineHeight: 1.45 }}>
               {scenario !== undefined
                 ? "Lab scenario selected; planning stays deterministic for replay."
-                : "Codex plans locally, agents run after approval, and the final patch is applied on success."}
+                : "Gemini plans locally, agents run after approval, and the final patch is applied on success."}
             </span>
           </ConfigField>
         </div>
@@ -282,7 +288,9 @@ export function CommandCenterShell({
             </span>
           ) : scenario === undefined && !hasLocalRepo ? (
             <span className="mh-mono" style={{ color: "var(--error)", fontSize: 11 }}>
-              Configure a local git folder on the selected workspace.
+              {selectedWorkspace !== null
+                ? `Workspace "${selectedWorkspace.name}" has no local git repo. Configure one, pick a workspace that has one, or select a lab scenario.`
+                : "Select a workspace with a local git repo, or pick a lab scenario."}
             </span>
           ) : (
             <span style={{ color: "var(--text-3)", fontSize: 12 }}>

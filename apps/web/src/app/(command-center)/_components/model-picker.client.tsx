@@ -48,7 +48,7 @@ export function ModelPicker({ value, onChange }: ModelPickerProps): React.ReactE
         ))}
       </datalist>
       <span
-        title="This model id is passed directly to Codex CLI."
+        title="This model id is passed directly to the Gemini CLI."
         style={{
           fontSize: 9.5,
           fontFamily: "var(--font-mono)",
@@ -61,7 +61,7 @@ export function ModelPicker({ value, onChange }: ModelPickerProps): React.ReactE
           textTransform: "uppercase"
         }}
       >
-        codex
+        gemini
       </span>
     </div>
   );

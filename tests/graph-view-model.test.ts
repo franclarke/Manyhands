@@ -158,6 +158,80 @@ describe("graph-view-model", () => {
       expect(view!.contract!.allowedPaths.length).toBeGreaterThan(0);
     });
 
+    it("exposes optional execution-core V2 contract fields", () => {
+      const snapshot = structuredClone(mockSnapshot) as RunSnapshot;
+      const contract = snapshot.contracts[0];
+      expect(contract).toBeDefined();
+      if (contract === undefined) return;
+
+      contract.executionScope = {
+        implementationPaths: ["src/**/*.ts"],
+        testPaths: ["tests/**/*.test.ts"],
+        configPaths: ["package.json"]
+      };
+      contract.forbiddenPaths = ["dist/**"];
+      contract.leafValidationCommands = [
+        { command: "pnpm", args: ["test"], timeoutMs: 60_000, cwd: "worktree" }
+      ];
+      contract.parentValidationCommands = [
+        { command: "pnpm", args: ["build"], timeoutMs: 120_000, cwd: "repo-root" }
+      ];
+      contract.runValidationCommands = [
+        { command: "pnpm", args: ["typecheck"], timeoutMs: 120_000, cwd: "repo-root" }
+      ];
+      contract.consumedInterfaces = [
+        {
+          id: "TaskStore",
+          kind: "type",
+          signature: "interface TaskStore {}",
+          description: "Store consumed by this task.",
+          definedAtNodeId: "root"
+        }
+      ];
+      contract.producedInterfaces = [
+        {
+          id: "TaskService",
+          kind: "function",
+          signature: "function createTask(): Task",
+          description: "Service produced by this task."
+        }
+      ];
+
+      const view = buildInspectorView(snapshot, contract.taskId);
+
+      expect(view?.contract?.executionScope?.implementationPaths).toEqual(["src/**/*.ts"]);
+      expect(view?.contract?.explicitForbiddenPaths).toEqual(["dist/**"]);
+      expect(view?.contract?.leafValidationCommands?.[0]?.command).toBe("pnpm");
+      expect(view?.contract?.parentValidationCommands?.[0]?.cwd).toBe("repo-root");
+      expect(view?.contract?.runValidationCommands?.[0]?.args).toEqual(["typecheck"]);
+      expect(view?.contract?.consumedInterfaces[0]?.id).toBe("TaskStore");
+      expect(view?.contract?.producedInterfaces[0]?.id).toBe("TaskService");
+    });
+
+    it("keeps V2 inspector contract fields empty for legacy contracts", () => {
+      const legacySnapshot = structuredClone(conflictSnapshot) as RunSnapshot;
+      for (const contract of legacySnapshot.contracts) {
+        delete contract.executionScope;
+        delete contract.forbiddenPaths;
+        delete contract.leafValidationCommands;
+        delete contract.parentValidationCommands;
+        delete contract.runValidationCommands;
+        delete contract.consumedInterfaces;
+        delete contract.producedInterfaces;
+      }
+      const legacyGraph = toRunGraphViewModel(legacySnapshot);
+      const leafNode = legacyGraph.nodes.find((node) => node.kind === "leaf");
+      expect(leafNode).toBeDefined();
+      if (!leafNode) return;
+
+      const view = buildInspectorView(legacySnapshot, leafNode.id);
+
+      expect(view?.contract?.executionScope).toBeUndefined();
+      expect(view?.contract?.leafValidationCommands).toBeUndefined();
+      expect(view?.contract?.consumedInterfaces).toEqual([]);
+      expect(view?.contract?.producedInterfaces).toEqual([]);
+    });
+
     it("returns trace events filtered to the task", () => {
       const taskWithTrace = conflictSnapshot.traceEvents.find((event) => event.taskId !== undefined);
       expect(taskWithTrace?.taskId).toBeDefined();

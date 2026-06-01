@@ -59,7 +59,7 @@ export function RunTimeline({ run, snapshot, patches, selectedTaskId, onSelectTa
           </h3>
         </div>
         <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
-          {hasExecution ? "recorded execution" : "mock/planning trace"} / units arbitrary
+          {hasExecution ? "recorded execution" : "planning trace"} / units arbitrary
         </span>
       </header>
 

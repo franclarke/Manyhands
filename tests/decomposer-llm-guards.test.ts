@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   DecomposerLlmError,
-  GRANULARITY_PROFILES,
   runDecomposerGuards,
   type DecomposerLlmOutput
 } from "@manyhands/decomposer";
@@ -70,39 +69,39 @@ function makeOutput(overrides: Partial<DecomposerLlmOutput> = {}): DecomposerLlm
 describe("runDecomposerGuards", () => {
   it("accepts a valid balanced output", () => {
     expect(() =>
-      runDecomposerGuards(makeOutput(), { granularity: "balanced" })
+      runDecomposerGuards(makeOutput())
     ).not.toThrow();
   });
 
   it("rejects duplicate node ids", () => {
     const output = makeOutput();
     output.nodes[2]!.id = "child-1";
-    expect(() => runDecomposerGuards(output, { granularity: "balanced" })).toThrowError(DecomposerLlmError);
+    expect(() => runDecomposerGuards(output)).toThrowError(DecomposerLlmError);
   });
 
   it("rejects multiple roots", () => {
     const output = makeOutput();
     output.nodes[1]!.parentId = null;
     output.nodes[1]!.depth = 0;
-    expect(() => runDecomposerGuards(output, { granularity: "balanced" })).toThrowError(DecomposerLlmError);
+    expect(() => runDecomposerGuards(output)).toThrowError(DecomposerLlmError);
   });
 
   it("rejects nodes whose parent is missing", () => {
     const output = makeOutput();
     output.nodes[1]!.parentId = "ghost";
-    expect(() => runDecomposerGuards(output, { granularity: "balanced" })).toThrowError(DecomposerLlmError);
+    expect(() => runDecomposerGuards(output)).toThrowError(DecomposerLlmError);
   });
 
   it("rejects depth that does not match parent depth + 1", () => {
     const output = makeOutput();
     output.nodes[1]!.depth = 3;
-    expect(() => runDecomposerGuards(output, { granularity: "balanced" })).toThrowError(DecomposerLlmError);
+    expect(() => runDecomposerGuards(output)).toThrowError(DecomposerLlmError);
   });
 
   it("rejects leaf nodes without acceptance criteria", () => {
     const output = makeOutput();
     output.nodes[1]!.acceptanceCriteria = [];
-    expect(() => runDecomposerGuards(output, { granularity: "balanced" })).toThrowError(DecomposerLlmError);
+    expect(() => runDecomposerGuards(output)).toThrowError(DecomposerLlmError);
   });
 
   it("rejects dependency cycles", () => {
@@ -112,89 +111,62 @@ describe("runDecomposerGuards", () => {
       { fromTaskId: "child-2", toTaskId: "child-3", type: "logical" },
       { fromTaskId: "child-3", toTaskId: "child-1", type: "logical" }
     ];
-    expect(() => runDecomposerGuards(output, { granularity: "balanced" })).toThrowError(/cycle/);
+    expect(() => runDecomposerGuards(output)).toThrowError(/cycle/);
   });
 
   it("rejects self-loop dependencies", () => {
     const output = makeOutput();
     output.dependencies = [{ fromTaskId: "child-1", toTaskId: "child-1", type: "logical" }];
-    expect(() => runDecomposerGuards(output, { granularity: "balanced" })).toThrowError(/self-loop/);
+    expect(() => runDecomposerGuards(output)).toThrowError(/self-loop/);
   });
 
-  it("rejects node counts above the granularity cap", () => {
-    const profile = GRANULARITY_PROFILES.coarse;
-    const tooMany = makeOutput();
-    while (tooMany.nodes.length <= profile.maxNodes) {
-      const id = `extra-${tooMany.nodes.length}`;
-      tooMany.nodes.push({
-        id,
-        parentId: "root",
-        title: "Extra",
-        goal: "Extra",
-        kind: "leaf",
-        depth: 1,
-        allowedPaths: [],
-        forbiddenPaths: [],
-        expectedFiles: [],
-        acceptanceCriteria: ["Done"]
-      });
-    }
-    expect(() => runDecomposerGuards(tooMany, { granularity: "coarse" })).toThrowError(/exceeds/);
-  });
-
-  it("rejects depth above the granularity cap", () => {
+  it("accepts an asymmetric tree: one branch atomic at depth 1, a sibling nested to depth 4", () => {
+    // Granularity is aggressiveness, not a depth cap. A shallow branch and a deep
+    // branch must coexist in the same plan without being rejected.
     const output = makeOutput({
       nodes: [
-        {
-          id: "root",
-          parentId: null,
-          title: "Root",
-          goal: "Root",
-          kind: "composite",
-          depth: 0,
-          allowedPaths: [],
-          forbiddenPaths: [],
-          expectedFiles: [],
-          acceptanceCriteria: []
-        },
-        {
-          id: "a",
-          parentId: "root",
-          title: "a",
-          goal: "a",
-          kind: "composite",
-          depth: 1,
-          allowedPaths: [],
-          forbiddenPaths: [],
-          expectedFiles: [],
-          acceptanceCriteria: []
-        },
-        {
-          id: "b",
-          parentId: "a",
-          title: "b",
-          goal: "b",
-          kind: "composite",
-          depth: 2,
-          allowedPaths: [],
-          forbiddenPaths: [],
-          expectedFiles: [],
-          acceptanceCriteria: []
-        },
-        {
-          id: "c",
-          parentId: "b",
-          title: "c",
-          goal: "c",
-          kind: "leaf",
-          depth: 3,
-          allowedPaths: [],
-          forbiddenPaths: [],
-          expectedFiles: [],
-          acceptanceCriteria: ["done"]
-        }
+        node("root", null, 0, "composite"),
+        // shallow branch: atomic immediately
+        leaf("shallow", "root", 1),
+        // deep branch: composite chain down to depth 4
+        node("a", "root", 1, "composite"),
+        node("b", "a", 2, "composite"),
+        node("c", "b", 3, "composite"),
+        leaf("d", "c", 4)
       ]
     });
-    expect(() => runDecomposerGuards(output, { granularity: "coarse" })).toThrowError(/exceeds/);
+    expect(() => runDecomposerGuards(output)).not.toThrow();
+  });
+
+  it("rejects an output above the anti-runaway node safety rail", () => {
+    const tooMany = makeOutput();
+    while (tooMany.nodes.length <= 200) {
+      tooMany.nodes.push(leaf(`extra-${tooMany.nodes.length}`, "root", 1));
+    }
+    expect(() => runDecomposerGuards(tooMany)).toThrowError(/safety rail/);
   });
 });
+
+function node(
+  id: string,
+  parentId: string | null,
+  depth: number,
+  kind: "composite" | "leaf"
+): DecomposerLlmOutput["nodes"][number] {
+  return {
+    id,
+    parentId,
+    title: id,
+    goal: id,
+    kind,
+    depth,
+    allowedPaths: [],
+    forbiddenPaths: [],
+    expectedFiles: [],
+    acceptanceCriteria: kind === "leaf" ? ["done"] : []
+  };
+}
+
+function leaf(id: string, parentId: string, depth: number): DecomposerLlmOutput["nodes"][number] {
+  return node(id, parentId, depth, "leaf");
+}

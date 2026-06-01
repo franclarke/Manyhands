@@ -134,7 +134,7 @@ export class AnthropicDecomposer implements Decomposer {
       );
     }
 
-    runDecomposerGuards(schemaResult.data, { granularity: mode });
+    runDecomposerGuards(schemaResult.data);
 
     const generatedAt = parsedOptions.generatedAt ?? new Date().toISOString();
     const result = normalizeLlmDecomposition({

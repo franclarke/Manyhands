@@ -1,6 +1,6 @@
 import type { StepInterface } from "./step-schema";
 
-export const RECURSIVE_DECOMPOSER_PROMPT_VERSION = "manyhands.recursive-decomposer-prompt.v1";
+export const RECURSIVE_DECOMPOSER_PROMPT_VERSION = "manyhands.recursive-decomposer-prompt.v2";
 
 export type Aggressiveness = "low" | "medium" | "high";
 
@@ -13,17 +13,33 @@ export interface StepPromptInputs {
   aggressiveness: Aggressiveness;
   /** Seams already defined by ancestors that this node may consume. */
   inheritedInterfaces: StepInterface[];
-  /** Recursion levels still allowed below this node (0 forces atomic). */
-  depthRemaining: number;
+  /**
+   * True only when the recursion safety rail has been reached and the node MUST
+   * be returned atomic. This is an anti-runaway guard, NOT a planning signal:
+   * the model never sees a target depth or a "levels remaining" count, so it
+   * cannot steer toward a uniform tree shape. The stop criterion is local
+   * atomicity, not depth.
+   */
+  atDepthLimit: boolean;
   /** Optional repo/stack hints to ground path and interface decisions. */
   workspaceHints?: string;
+  /** Optional question previously asked to the user on this node. */
+  userQuestion?: string;
+  /** Optional response provided by the user to the previous question. */
+  userAnswer?: string;
 }
 
-/** Per-level meaning of "a single cohesive unit" — the only knob aggressiveness turns. */
+/**
+ * Per-level meaning of "a single cohesive unit" — the only knob aggressiveness
+ * turns. It sets how much pressure there is to keep splitting, i.e. how small a
+ * leaf must be before the node is considered atomic. It does NOT set depth or
+ * node count: a branch keeps splitting until its leaves reach this size, so
+ * complex branches go deeper than simple ones and the tree is asymmetric.
+ */
 const COHESIVE_UNIT: Record<Aggressiveness, string> = {
-  low: "a whole module or file (a group of related functions that ship together)",
-  medium: "a small group of closely-related functions",
-  high: "a single function"
+  low: "a whole module or file (a group of related functions that ship together). Low pressure to split: only decompose nodes that are clearly composite.",
+  medium: "a small group of closely-related functions. Balanced pressure: split until each leaf is a reasonably executable unit.",
+  high: "a single function or a tightly-scoped pair of functions. High pressure: keep splitting until every leaf is small, concrete, assignable and verifiable."
 };
 
 export function buildStepPrompt(inputs: StepPromptInputs): { system: string; user: string } {
@@ -45,9 +61,26 @@ export function buildStepPrompt(inputs: StepPromptInputs): { system: string; use
     "",
     `- level: \`${inputs.aggressiveness}\``,
     `- At this level, "a single cohesive unit" means: **${COHESIVE_UNIT[inputs.aggressiveness]}**.`,
-    `- recursion levels remaining below this node: **${inputs.depthRemaining}** ` +
-      `${inputs.depthRemaining === 0 ? "(you MUST return decision=\"atomic\")" : ""}`,
+    "- Decide locally: split only if this node is NOT yet a single cohesive unit at the level above.",
+    "  Do not aim for any particular tree depth or node count — sibling branches may end at different",
+    "  depths, and that is expected.",
+    ...(inputs.atDepthLimit
+      ? [
+          "- NOTE: a recursion safety limit has been reached for this branch. Return",
+          "  `decision: \"atomic\"` now even if you would otherwise split."
+        ]
+      : []),
     "",
+    ...(inputs.userQuestion !== undefined && inputs.userAnswer !== undefined
+      ? [
+          "## User feedback on this node",
+          "",
+          `- You previously asked: "${inputs.userQuestion}"`,
+          `- The user responded: "${inputs.userAnswer}"`,
+          "- Use this feedback to resolve the ambiguity and make your final decision (do NOT output a question decision again for this node).",
+          ""
+        ]
+      : []),
     "## Interfaces already in scope (you may have children consume these)",
     "",
     interfacesBlock,
@@ -67,7 +100,7 @@ export function buildStepPrompt(inputs: StepPromptInputs): { system: string; use
   return { system, user };
 }
 
-const OUTPUT_SCHEMA_LITERAL = `// One of these two shapes (discriminated by "decision"):
+const OUTPUT_SCHEMA_LITERAL = `// One of these three shapes (discriminated by "decision"):
 
 // ATOMIC — the node is a single implementable unit:
 {
@@ -107,6 +140,14 @@ const OUTPUT_SCHEMA_LITERAL = `// One of these two shapes (discriminated by "dec
   "parentValidationCommands": [
     { "command": "npm", "args": ["test"] }
   ]
+}
+
+// QUESTION — ask a clarifying question before deciding (only for true ambiguity or design forks):
+{
+  "decision": "question",
+  "reasoning": "string (why you need clarification)",
+  "question": "string (clear, direct multiple-choice question to the user)",
+  "options": ["option 1 string", "option 2 string", "..."] // 2 to 10 options
 }`;
 
 const SYSTEM_PROMPT = [
@@ -114,7 +155,8 @@ const SYSTEM_PROMPT = [
   "",
   "You judge ONE node at a time. Your decision: is this node a single implementable unit",
   "(`atomic`), or must it be split into children that smaller subagents implement in isolation",
-  "(`decompose`)?",
+  "(`decompose`)? Or, if there is a major architectural/scope ambiguity or a design fork that",
+  "you must resolve before deciding, you can ask the user a clarifying question (`question`).",
   "",
   "## Atomicity rubric — a node is ATOMIC when ALL of these hold:",
   "1. It maps to a single cohesive unit of implementation (the size of that unit is set by the",
@@ -130,6 +172,12 @@ const SYSTEM_PROMPT = [
   "A leaf is NEVER smaller than a single coherent function. Do not split a single function into",
   "sub-steps (e.g. 'validate input' + 'run logic' + 'return'). That would create artificial",
   "coordination and conflicts. If the smallest sensible unit is one function, the node is atomic.",
+  "",
+  "## Clarifying questions to the user:",
+  "Use `decision: \"question\"` very sparingly, only when you face true design forks or ambiguity",
+  "(such as choice of library, state management strategy, database vs localStorage persistency) that",
+  "significantly alters the graph decomposition structure. State your query clearly as a",
+  "multiple-choice question with 2 to 10 options in `options`.",
   "",
   "## When you decompose — design the seams:",
   "- `sharedInterfaces` are the contracts (types, function signatures) the children share. Define",
@@ -149,6 +197,12 @@ const SYSTEM_PROMPT = [
   "## Lowering variance:",
   "Reason locally about THIS node only. Do not plan the whole tree — you will be asked about each",
   "child separately. Keep ids stable and descriptive.",
+  "",
+  "## Tree shape:",
+  "The stop criterion is local atomicity, never a target depth or node count. A simple branch may",
+  "be atomic immediately (depth 1) while a complex sibling keeps splitting several levels deeper.",
+  "An asymmetric, irregular tree that mirrors real complexity is the correct outcome — do not try to",
+  "balance branches or hit a uniform depth.",
   "",
   "The output is consumed by a strict JSON validator. Any deviation breaks planning.",
   "",

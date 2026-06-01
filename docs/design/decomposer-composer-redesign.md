@@ -25,6 +25,13 @@ El sistema que existía antes de este rediseño funcionaba así:
    *profundidad máxima* en el prompt (`GRANULARITY_PROFILES`: coarse = 3-8 nodos / depth ≤2, fine =
    9-18 nodos / depth ≤4).
 
+   > **Actualización posterior.** Esos objetivos de cantidad/profundidad se eliminaron: la
+   > granularidad ahora es un control de **agresividad de descomposición**, no una forma fija de
+   > árbol. `GRANULARITY_PROFILES` describe el *tamaño de unidad cohesiva* y la *presión a dividir*
+   > por nivel; `runDecomposerGuards` ya no impone caps de profundidad ni de cantidad (solo un rail
+   > anti-runaway). El árbol resultante es asimétrico: cada rama llega a la profundidad que su
+   > complejidad justifica. Aplica a ambos decomposers (recursivo y single-pass baseline).
+
 2. **Contratos con scope adivinado en planning.** El LLM emitía `allowedPaths`, `forbiddenPaths`,
    `expectedFiles` y `acceptanceCriteria` por hoja — todo **antes** de que existiera un repo real.
    Los símbolos `producedSymbols` / `consumedSymbols` existían en el contrato pero **no se usaban

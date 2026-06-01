@@ -15,6 +15,18 @@ interface GranularitySelectorProps {
 export function GranularitySelector({ value, onChange }: GranularitySelectorProps): React.ReactElement {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 12,
+          lineHeight: 1.5,
+          color: "var(--text-3)"
+        }}
+      >
+        Sets how aggressively the planner keeps splitting — decided per task, not a fixed depth or
+        node count. Each branch divides until its work is concrete and verifiable, so the resulting
+        tree is asymmetric: simple branches stay shallow, complex ones go deeper.
+      </p>
       <div
         role="radiogroup"
         aria-label="Granularity"

@@ -207,7 +207,7 @@ function ModeSignal({ label }: { label: string }): React.ReactElement {
 
 function modeLabel(run: RunRecord, scenario: DecompositionScenario | null): string {
   if (scenario !== null) return "Lab fixture";
-  if (run.repoSpec !== undefined || run.provisioned !== undefined) return "Codex execution after approval";
+  if (run.repoSpec !== undefined || run.provisioned !== undefined) return "Gemini execution after approval";
   return "Plan and review";
 }
 

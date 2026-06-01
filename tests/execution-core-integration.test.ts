@@ -1,9 +1,9 @@
-import type { ExecutionValidationCommand } from "@manyhands/contracts";
+﻿import type { ExecutionValidationCommand } from "@manyhands/contracts";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { describe, expect, it } from "vitest";
 import {
   IntegrationAgent,
-  MockCodexCliExecutor,
+  MockAgentExecutor,
   type AgentExecutionResult,
   type ValidationRunContext,
   type ValidationRunResult,
@@ -35,9 +35,9 @@ function child(taskId: string, commitSha: string, status: AgentExecutionResult["
     changedFiles: [`src/${taskId}.ts`],
     commitSha,
     scopeCheck: { passed: true, violations: [] },
-    codexExitCode: 0,
-    codexDurationMs: 100,
-    codexTimedOut: false
+    executorExitCode: 0,
+    executorDurationMs: 100,
+    executorTimedOut: false
   };
 }
 
@@ -58,7 +58,7 @@ describe("IntegrationAgent", () => {
     const traceStore = new InMemoryTraceStore();
     const agent = new IntegrationAgent({
       git,
-      codex: new MockCodexCliExecutor(),
+      executor: new MockAgentExecutor(),
       traceStore,
       repoRoot: "/repo"
     });
@@ -81,7 +81,7 @@ describe("IntegrationAgent", () => {
     const git = new FakeGitRunner();
     const agent = new IntegrationAgent({
       git,
-      codex: new MockCodexCliExecutor(),
+      executor: new MockAgentExecutor(),
       traceStore: new InMemoryTraceStore(),
       repoRoot: "/repo"
     });
@@ -97,7 +97,7 @@ describe("IntegrationAgent", () => {
     expect(git.opsInvoked()).not.toContain("cherryPick");
   });
 
-  it("repairs a conflict via Codex and reports codex_repair_success", async () => {
+  it("repairs a conflict via Codex and reports executor_repair_success", async () => {
     const git = new FakeGitRunner({
       heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
       cherryPickOutcomes: [
@@ -111,7 +111,7 @@ describe("IntegrationAgent", () => {
     const traceStore = new InMemoryTraceStore();
     const agent = new IntegrationAgent({
       git,
-      codex: new MockCodexCliExecutor(),
+      executor: new MockAgentExecutor(),
       traceStore,
       repoRoot: "/repo"
     });
@@ -123,12 +123,12 @@ describe("IntegrationAgent", () => {
       repair
     });
 
-    expect(result.status).toBe("codex_repair_success");
+    expect(result.status).toBe("executor_repair_success");
     expect(result.repairAttempted).toBe(true);
     expect(result.repairResult?.status).toBe("success");
     expect(git.opsInvoked()).toContain("cherryPickAbort");
     expect(traceStore.findByType("cherry_pick_conflict")).toHaveLength(1);
-    expect(traceStore.findByType("codex_repair_started")).toHaveLength(1);
+    expect(traceStore.findByType("executor_repair_started")).toHaveLength(1);
   });
 
   it("repair prompt carries parent goal, canonical seams, and child intent (Artifact 2)", async () => {
@@ -142,7 +142,7 @@ describe("IntegrationAgent", () => {
     const prompts: string[] = [];
     const agent = new IntegrationAgent({
       git,
-      codex: new MockCodexCliExecutor(),
+      executor: new MockAgentExecutor(),
       traceStore: new InMemoryTraceStore(),
       repoRoot: "/repo",
       writeInstructions: async (_path, content) => {
@@ -170,7 +170,7 @@ describe("IntegrationAgent", () => {
       ]
     });
 
-    expect(result.status).toBe("codex_repair_success");
+    expect(result.status).toBe("executor_repair_success");
     const prompt = prompts[0] ?? "";
     expect(prompt).toContain("Evaluate arithmetic expression strings");
     expect(prompt).toContain("type Ast = number");
@@ -178,7 +178,7 @@ describe("IntegrationAgent", () => {
     expect(prompt).toContain("It produces: Ast.");
   });
 
-  it("fails with codex_repair_failed when the repair leaves out-of-scope files", async () => {
+  it("fails with executor_repair_failed when the repair leaves out-of-scope files", async () => {
     const git = new FakeGitRunner({
       heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
       cherryPickOutcomes: [{ ok: false, conflictFiles: ["src/b.ts"], output: "CONFLICT" }],
@@ -187,7 +187,7 @@ describe("IntegrationAgent", () => {
     });
     const agent = new IntegrationAgent({
       git,
-      codex: new MockCodexCliExecutor(),
+      executor: new MockAgentExecutor(),
       traceStore: new InMemoryTraceStore(),
       repoRoot: "/repo"
     });
@@ -200,19 +200,19 @@ describe("IntegrationAgent", () => {
       executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] }
     });
 
-    expect(result.status).toBe("codex_repair_failed");
+    expect(result.status).toBe("executor_repair_failed");
     expect(result.repairResult?.status).toBe("scope_violation");
     expect(git.opsInvoked()).not.toContain("commit");
   });
 
-  it("fails with codex_repair_failed when the repair Codex run errors", async () => {
+  it("fails with executor_repair_failed when the repair Codex run errors", async () => {
     const git = new FakeGitRunner({
       heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
       cherryPickOutcomes: [{ ok: false, conflictFiles: ["src/b.ts"], output: "CONFLICT" }]
     });
     const agent = new IntegrationAgent({
       git,
-      codex: new MockCodexCliExecutor({ defaultBehavior: { exitCode: 1 } }),
+      executor: new MockAgentExecutor({ defaultBehavior: { exitCode: 1 } }),
       traceStore: new InMemoryTraceStore(),
       repoRoot: "/repo"
     });
@@ -224,8 +224,8 @@ describe("IntegrationAgent", () => {
       repair
     });
 
-    expect(result.status).toBe("codex_repair_failed");
-    expect(result.repairResult?.status).toBe("codex_error");
+    expect(result.status).toBe("executor_repair_failed");
+    expect(result.repairResult?.status).toBe("executor_error");
     expect(git.opsInvoked()).toContain("cherryPickAbort");
     expect(git.opsInvoked()).not.toContain("commit");
   });
@@ -244,7 +244,7 @@ describe("IntegrationAgent", () => {
     const traceStore = new InMemoryTraceStore();
     const agent = new IntegrationAgent({
       git,
-      codex: new MockCodexCliExecutor(),
+      executor: new MockAgentExecutor(),
       traceStore,
       repoRoot: "/repo"
     });
@@ -256,7 +256,7 @@ describe("IntegrationAgent", () => {
       repair
     });
 
-    expect(result.status).toBe("codex_repair_failed");
+    expect(result.status).toBe("executor_repair_failed");
     expect(result.repairAttempted).toBe(true);
     // First conflict was repaired (one abort); the second was not retried.
     expect(git.opsInvoked().filter((op) => op === "cherryPickAbort")).toHaveLength(1);
@@ -268,7 +268,7 @@ describe("IntegrationAgent", () => {
     const validationRunner = new FakeValidationRunner({ passed: false, output: "tests failed", exitCode: 1 });
     const agent = new IntegrationAgent({
       git,
-      codex: new MockCodexCliExecutor(),
+      executor: new MockAgentExecutor(),
       traceStore: new InMemoryTraceStore(),
       repoRoot: "/repo",
       validationRunner

@@ -52,7 +52,13 @@ export const GranularityModeSchema = z.union([
 export type GranularityMode = z.infer<typeof GranularityModeSchema>;
 
 export const RunDecompositionMetadataSchema = z.object({
-  provider: z.union([z.literal("anthropic"), z.literal("codex"), z.literal("deterministic")]),
+  provider: z.union([
+    z.literal("anthropic"),
+    z.literal("gemini"),
+    // "codex" retained so RunRecords persisted before the Gemini swap still load.
+    z.literal("codex"),
+    z.literal("deterministic")
+  ]),
   model: z.string().min(1),
   promptTemplateVersion: z.string().min(1).optional(),
   rawResponse: z.string().optional(),
@@ -120,7 +126,16 @@ export const RunRecordSchema = z.object({
   /** Trace events emitted by the execution engine, persisted as run evidence. */
   executionTraces: z.array(TraceEventSchema).optional(),
   /** Append-only edit log. Sprint 2 of Fase C consumes this; reserved here for compatibility. */
-  patches: z.array(z.unknown()).default([])
+  patches: z.array(z.unknown()).default([]),
+  pendingQuestion: z
+    .object({
+      nodeId: z.string().min(1),
+      question: z.string().min(1),
+      options: z.array(z.string().min(1)).min(2).max(10)
+    })
+    .optional(),
+  questionAnswers: z.record(z.string()).optional(),
+  planningStepCache: z.record(z.any()).optional()
 });
 
 export type RunRecord = z.infer<typeof RunRecordSchema>;

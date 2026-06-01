@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+﻿import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -33,9 +33,9 @@ function successLeaf(taskId: string): AgentExecutionResult {
     changedFiles: [`src/${taskId}.ts`],
     commitSha: `${taskId}_SHA`,
     scopeCheck: { passed: true, violations: [] },
-    codexExitCode: 0,
-    codexDurationMs: 10,
-    codexTimedOut: false
+    executorExitCode: 0,
+    executorDurationMs: 10,
+    executorTimedOut: false
   };
 }
 

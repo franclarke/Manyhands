@@ -45,7 +45,7 @@ interface DagWorkspaceProps {
   graph: RunGraphViewModel;
   benchmarkLabel: string;
   configLabel: string;
-  mode?: "Replay" | "Lab" | "Build";
+  mode?: "Replay" | "Lab" | "Run";
   /** When false, the deterministic-mock methodology banner is omitted (e.g. real persisted runs). */
   showMethodologyBanner?: boolean;
   /** Optional banner / lifecycle hint shown above the toolbar (persisted runs render `RunHeader` here). */
@@ -151,6 +151,10 @@ export function DagWorkspace({
             position: "relative",
             flex: "1 1 0",
             minWidth: 0,
+            // Explicit width so React Flow's first measurement never sees a 0-width
+            // flex container (the "parent container needs a width and a height"
+            // warning); flex-basis: 0 still drives the actual sizing in the row.
+            width: "100%",
             height: "min(820px, calc(100vh - 280px))",
             minHeight: 680,
             border: "1px solid var(--rule)",
@@ -194,6 +198,14 @@ export function DagWorkspace({
           {...(phase !== undefined ? { phase } : {})}
           {...(editableRunId !== undefined ? { editableRunId } : {})}
           {...(onEdited !== undefined ? { onEdited } : {})}
+          availableNodes={graph.nodes.map((node) => ({ id: node.id, title: node.title }))}
+          dependencyEdges={graph.edges
+            .filter((edge) => edge.kind === "dependency")
+            .map((edge) => ({
+              source: edge.source,
+              target: edge.target,
+              ...(edge.label !== undefined ? { label: edge.label } : {})
+            }))}
         />
       </div>
       )}

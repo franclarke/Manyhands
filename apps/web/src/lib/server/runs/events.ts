@@ -13,6 +13,8 @@ export type RunEventKind =
   | "validation.completed"
   | "replay.start"
   | "replay.end"
+  | "planning.cli.output"
+  | "planning.question"
   | "heartbeat";
 
 export type RiskLevelKey = "low" | "medium" | "high" | "blocking";
@@ -84,6 +86,20 @@ export interface ReplayBoundaryEvent extends RunEventBase {
   kind: "replay.start" | "replay.end";
 }
 
+export interface PlanningCliOutputEvent extends RunEventBase {
+  kind: "planning.cli.output";
+  nodeId: string;
+  chunk: string;
+  stream: "stdout" | "stderr";
+}
+
+export interface PlanningQuestionEvent extends RunEventBase {
+  kind: "planning.question";
+  nodeId: string;
+  question: string;
+  options: string[];
+}
+
 export interface HeartbeatEvent extends RunEventBase {
   kind: "heartbeat";
 }
@@ -100,6 +116,8 @@ export type RunEvent =
   | AgentRunCompletedEvent
   | ValidationCompletedEvent
   | ReplayBoundaryEvent
+  | PlanningCliOutputEvent
+  | PlanningQuestionEvent
   | HeartbeatEvent;
 
 export function serializeForSse(event: RunEvent): string {

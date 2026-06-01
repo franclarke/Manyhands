@@ -1,4 +1,4 @@
-import type { TaskGraph } from "@manyhands/task-graph";
+﻿import type { TaskGraph } from "@manyhands/task-graph";
 import { describe, expect, it } from "vitest";
 import {
   computeGranularityVector,
@@ -63,9 +63,9 @@ function leafResult(taskId: string, overrides: Partial<AgentExecutionResult> = {
     changedFiles: [`src/${taskId}.ts`],
     commitSha: `${taskId}_SHA`,
     scopeCheck: { passed: true, violations: [] },
-    codexExitCode: 0,
-    codexDurationMs: 100,
-    codexTimedOut: false,
+    executorExitCode: 0,
+    executorDurationMs: 100,
+    executorTimedOut: false,
     ...overrides
   };
 }
@@ -122,7 +122,7 @@ describe("computeGranularityVector", () => {
   it("treats integrations with conflicts and reports integration success rate", () => {
     const integration: IntegrationResult = {
       compositeTaskId: "root",
-      status: "codex_repair_success",
+      status: "executor_repair_success",
       childResults: [leafResult("a"), leafResult("b")],
       integrationCommitSha: "INT_SHA",
       repairAttempted: true

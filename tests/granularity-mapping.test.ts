@@ -47,7 +47,7 @@ describe("granularity mapping", () => {
     expect(granularityLabelForMode("coarse")).toBe("Low");
     expect(granularityLabelForMode("balanced")).toBe("Medium");
     expect(granularityLabelForMode("fine")).toBe("High");
-    expect(granularityImpactForLevel("alta")).toContain("parallel batches");
+    expect(granularityImpactForLevel("alta")).toContain("splitting");
   });
 
   it("shows Max as a disabled display-only option", () => {

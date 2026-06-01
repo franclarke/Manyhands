@@ -1,6 +1,6 @@
 import {
   AnthropicDecomposer,
-  CodexRecursiveDecomposer,
+  GeminiRecursiveDecomposer,
   MetadataDrivenMockDecomposer,
   RecursiveDecomposer,
   type AnthropicDecomposerResult,
@@ -18,7 +18,7 @@ import type { Workspace } from "@/lib/api-types";
  */
 export interface DecomposerSelection {
   decomposer: Decomposer;
-  provider: "anthropic" | "codex" | "deterministic";
+  provider: "anthropic" | "gemini" | "deterministic";
   model: string;
   promptTemplateVersion?: string;
   fallbackReason?: "no_api_key" | "forced_by_env" | "forced_by_caller";
@@ -34,6 +34,7 @@ export interface PickDecomposerInput {
   forceFallback?: boolean;
   onStepStarted?: RecursiveStepListener<RecursiveStepStartedEvent>;
   onStepCompleted?: RecursiveStepListener<RecursiveStepCompletedEvent>;
+  onCliOutput?: (data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void;
 }
 
 const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-5";
@@ -52,7 +53,7 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   const workspaceHints = hints !== undefined ? formatWorkspaceHints(hints) : undefined;
 
   // The recursive interface-aware decomposer is the product default (thesis
-  // Artifact 1). For local-first product runs, the step model is Codex CLI.
+  // Artifact 1). For local-first product runs, the step model is the Gemini CLI.
   // Anthropic single-pass/recursive modes are kept only as explicit baselines.
   if (process.env.MANYHANDS_DECOMPOSER === "single-pass") {
     if (apiKey === undefined || apiKey.length === 0) {
@@ -96,17 +97,18 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   }
 
   const model = input.model;
-  const recursive = new CodexRecursiveDecomposer({
+  const recursive = new GeminiRecursiveDecomposer({
     cwd: input.workspace?.repoPath ?? process.cwd(),
     model,
     userPrompt: input.userPrompt,
     ...(input.onStepStarted !== undefined ? { onStepStarted: input.onStepStarted } : {}),
     ...(input.onStepCompleted !== undefined ? { onStepCompleted: input.onStepCompleted } : {}),
-    ...(workspaceHints !== undefined ? { workspaceHints } : {})
+    ...(workspaceHints !== undefined ? { workspaceHints } : {}),
+    ...(input.onCliOutput !== undefined ? { onCliOutput: input.onCliOutput } : {})
   });
   return {
     decomposer: recursive,
-    provider: "codex",
+    provider: "gemini",
     model,
     promptTemplateVersion: recursive.promptTemplateVersion
   };

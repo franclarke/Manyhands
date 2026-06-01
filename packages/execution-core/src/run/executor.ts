@@ -8,7 +8,7 @@ import { nowIso } from "@manyhands/shared";
 import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
 
-import type { CodexExecutor } from "../codex/types";
+import type { AgentExecutor } from "../executor/types";
 import type { GitRunner } from "../git/runner";
 import { FileSystemContextPacker, type ContextPacker } from "../context/packer";
 import { RunExecutionError } from "../errors";
@@ -30,7 +30,7 @@ import { WorktreeManager } from "../worktree/manager";
 
 export interface RunExecutorDeps {
   git: GitRunner;
-  codex: CodexExecutor;
+  executor: AgentExecutor;
   traceStore: TraceStore;
   repoRoot: string;
   worktreeManager?: WorktreeManager;
@@ -64,11 +64,12 @@ export interface RunExecutionResult {
   totalDurationMs: number;
 }
 
-const INTEGRATION_SUCCESS = new Set(["success", "codex_repair_success"]);
+const INTEGRATION_SUCCESS = new Set(["success", "executor_repair_success"]);
 
 /**
- * Top-level orchestrator (D4-D10). Schedules leaves into batches, runs each in
- * an isolated worktree via Codex, records the git-diff result (D5) and commits
+ * Top-level orchestrator (D5-D10). Schedules leaves into batches, runs each in
+ * an isolated worktree via the agent executor (Gemini CLI), records the git-diff
+ * result (D5) and commits
  * on the orchestrator's behalf (D6), integrates children bottom-up via
  * cherry-pick (D8), runs run-level validation, and emits run_completed plus the
  * experiment's GranularityVector. Leaf worktrees are kept until after
@@ -76,7 +77,7 @@ const INTEGRATION_SUCCESS = new Set(["success", "codex_repair_success"]);
  */
 export class RunExecutor {
   private readonly git: GitRunner;
-  private readonly codex: CodexExecutor;
+  private readonly executor: AgentExecutor;
   private readonly traceStore: TraceStore;
   private readonly repoRoot: string;
   private readonly worktreeManager: WorktreeManager;
@@ -90,7 +91,7 @@ export class RunExecutor {
 
   constructor(deps: RunExecutorDeps) {
     this.git = deps.git;
-    this.codex = deps.codex;
+    this.executor = deps.executor;
     this.traceStore = deps.traceStore;
     this.repoRoot = deps.repoRoot;
     this.worktreeManager =
@@ -102,7 +103,7 @@ export class RunExecutor {
       deps.integrationAgent ??
       new IntegrationAgent({
         git: deps.git,
-        codex: deps.codex,
+        executor: deps.executor,
         traceStore: deps.traceStore,
         repoRoot: deps.repoRoot,
         validationRunner: this.validationRunner
@@ -245,8 +246,8 @@ export class RunExecutor {
     const instructionFilePath = join(tmpdir(), `mh-${runId}-${node.id}.txt`);
     await this.writeInstructions(instructionFilePath, buildLeafInstructions(node, context.section));
 
-    this.traceStore.append({ type: "codex_started", actor: "system", taskId: node.id, payload: {} });
-    const codexOutcome = await this.codex.execute({
+    this.traceStore.append({ type: "executor_started", actor: "system", taskId: node.id, payload: {} });
+    const executorOutcome = await this.executor.execute({
       cwd: worktree.path,
       instructionFilePath,
       model,
@@ -255,16 +256,16 @@ export class RunExecutor {
       bypassApprovals: true
     });
     this.traceStore.append({
-      type: "codex_completed",
+      type: "executor_completed",
       actor: "system",
       taskId: node.id,
-      payload: { exitCode: codexOutcome.exitCode, timedOut: codexOutcome.timedOut }
+      payload: { exitCode: executorOutcome.exitCode, timedOut: executorOutcome.timedOut }
     });
 
     const contract = node.contract;
     return this.resultRecorder.record({
       worktree,
-      codexOutcome,
+      executorOutcome,
       unexpectedCommitPolicy: config.unexpectedCommitPolicy,
       commitMessage: `mh: ${node.id}`,
       ...(contract?.executionScope ? { executionScope: contract.executionScope } : {}),
@@ -494,8 +495,8 @@ function syntheticCompositeResult(
     changedFiles: [],
     commitSha,
     scopeCheck: { passed: true, violations: [] },
-    codexExitCode: 0,
-    codexDurationMs: 0,
-    codexTimedOut: false
+    executorExitCode: 0,
+    executorDurationMs: 0,
+    executorTimedOut: false
   };
 }

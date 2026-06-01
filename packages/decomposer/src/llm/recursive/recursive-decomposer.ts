@@ -25,7 +25,7 @@ import {
   type FeatureRequest
 } from "../../index";
 import type { AnthropicLike } from "../anthropic-decomposer";
-import { DecomposerLlmError } from "../errors";
+import { DecomposerLlmError, DecomposerQuestionError } from "../errors";
 import {
   RECURSIVE_DECOMPOSER_PROMPT_VERSION,
   buildStepPrompt,
@@ -98,6 +98,8 @@ interface Accumulator {
   feature: FeatureRequest;
   granularity: TaskGranularityLevel;
   callCount: number;
+  questionAnswers?: Record<string, string>;
+  stepCache?: Record<string, any>;
 }
 
 /**
@@ -161,7 +163,9 @@ export class RecursiveDecomposer implements Decomposer {
       dependencies: [],
       feature,
       granularity: aggressivenessToGranularity(aggressiveness),
-      callCount: 0
+      callCount: 0,
+      questionAnswers: options.questionAnswers,
+      stepCache: options.stepCache ? { ...options.stepCache } : {}
     };
 
     await this.expand(
@@ -219,16 +223,28 @@ export class RecursiveDecomposer implements Decomposer {
     };
   }
 
-  /** Expands one node, mutating the accumulator. Returns the globs its subtree covers. */
   private async expand(
     ctx: ExpandContext,
     accum: Accumulator,
     aggressiveness: Aggressiveness
   ): Promise<string[]> {
     this.emitStepStarted(ctx);
-    const step = await this.callStep(ctx, aggressiveness);
+    const step = await this.callStep(ctx, aggressiveness, accum);
     accum.callCount += 1;
     this.emitStepCompleted(ctx, step);
+
+    if (step.decision === "question") {
+      if (accum.stepCache !== undefined) {
+        accum.stepCache[ctx.nodeId] = step;
+      }
+      throw new DecomposerQuestionError(
+        ctx.nodeId,
+        step.question,
+        step.options,
+        accum.stepCache ?? {},
+        step.reasoning
+      );
+    }
 
     const forcedAtomic = ctx.depthBudget <= 0;
 
@@ -405,14 +421,34 @@ export class RecursiveDecomposer implements Decomposer {
     return allowedPaths;
   }
 
-  private async callStep(ctx: ExpandContext, aggressiveness: Aggressiveness): Promise<DecomposeStepOutput> {
+  private async callStep(
+    ctx: ExpandContext,
+    aggressiveness: Aggressiveness,
+    accum: Accumulator
+  ): Promise<DecomposeStepOutput> {
+    const cacheKey = ctx.nodeId;
+    const cachedStep = accum.stepCache?.[cacheKey];
+    const answer = accum.questionAnswers?.[cacheKey];
+
+    if (cachedStep !== undefined && cachedStep.decision !== "question") {
+      return cachedStep;
+    }
+
+    const hasUserAnswer = cachedStep !== undefined && cachedStep.decision === "question" && answer !== undefined;
+
     const { system, user } = buildStepPrompt({
       title: ctx.title,
       goal: ctx.goal,
       aggressiveness,
       inheritedInterfaces: ctx.inheritedInterfaces.map(toStepInterface),
-      depthRemaining: ctx.depthBudget,
-      ...(this.workspaceHints !== undefined ? { workspaceHints: this.workspaceHints } : {})
+      atDepthLimit: ctx.depthBudget <= 0,
+      ...(this.workspaceHints !== undefined ? { workspaceHints: this.workspaceHints } : {}),
+      ...(hasUserAnswer
+        ? {
+            userQuestion: cachedStep.question,
+            userAnswer: answer
+          }
+        : {})
     });
 
     let response;
@@ -421,8 +457,9 @@ export class RecursiveDecomposer implements Decomposer {
         model: this.model,
         max_tokens: this.maxTokens,
         system: `${system}\n\n## Overall feature goal (for context)\n${this.userPrompt}`,
-        messages: [{ role: "user", content: user }]
-      });
+        messages: [{ role: "user", content: user }],
+        nodeId: ctx.nodeId
+      } as any);
     } catch (error) {
       throw new DecomposerLlmError(
         `Recursive decomposer request failed during step "${ctx.nodeId}": ${error instanceof Error ? error.message : String(error)}`,

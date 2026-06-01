@@ -1,4 +1,4 @@
-import { InMemoryTraceStore } from "@manyhands/trace-store";
+﻿import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { describe, expect, it } from "vitest";
 import { ResultRecorder, type WorktreeRecord } from "@manyhands/execution-core";
 
@@ -32,7 +32,7 @@ describe("ResultRecorder", () => {
 
     const result = await recorder.record({
       worktree: WORKTREE,
-      codexOutcome: okOutcome(),
+      executorOutcome: okOutcome(),
       executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] }
     });
 
@@ -48,7 +48,7 @@ describe("ResultRecorder", () => {
     const git = new FakeGitRunner({ heads: { [WORKTREE.path]: "BASE_SHA" }, diffCachedNameOnly: [] });
     const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
 
-    const result = await recorder.record({ worktree: WORKTREE, codexOutcome: okOutcome() });
+    const result = await recorder.record({ worktree: WORKTREE, executorOutcome: okOutcome() });
 
     expect(result.status).toBe("empty_diff");
     expect(result.commitSha).toBeUndefined();
@@ -66,7 +66,7 @@ describe("ResultRecorder", () => {
 
     const result = await recorder.record({
       worktree: WORKTREE,
-      codexOutcome: okOutcome(),
+      executorOutcome: okOutcome(),
       executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] }
     });
 
@@ -82,25 +82,45 @@ describe("ResultRecorder", () => {
 
     const result = await recorder.record({
       worktree: WORKTREE,
-      codexOutcome: { ...okOutcome(), timedOut: true, exitCode: 124 }
+      executorOutcome: { ...okOutcome(), timedOut: true, exitCode: 124 }
     });
 
     expect(result.status).toBe("timeout");
     expect(git.calls).toHaveLength(0);
   });
 
-  it("reports codex_error on a non-zero exit without inspecting git", async () => {
+  it("reports executor_error on a non-zero exit without inspecting git", async () => {
     const git = new FakeGitRunner();
     const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
 
     const result = await recorder.record({
       worktree: WORKTREE,
-      codexOutcome: { ...okOutcome(), exitCode: 1 }
+      executorOutcome: { ...okOutcome(), exitCode: 1 }
     });
 
-    expect(result.status).toBe("codex_error");
+    expect(result.status).toBe("executor_error");
     expect(result.commitSha).toBeUndefined();
     expect(git.calls).toHaveLength(0);
+  });
+
+  it("preserves the executor stderr/stdout tails as the actionable cause on failure", async () => {
+    const git = new FakeGitRunner();
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+
+    const result = await recorder.record({
+      worktree: WORKTREE,
+      executorOutcome: {
+        ...okOutcome(),
+        exitCode: 1,
+        stderr: "Error: Quota exceeded for quota metric 'GenerateContent requests'.",
+        stdout: "starting gemini..."
+      }
+    });
+
+    expect(result.status).toBe("executor_error");
+    expect(result.stderrTail).toContain("Quota exceeded");
+    expect(result.stdoutTail).toBe("starting gemini...");
+    expect(result.executorExitCode).toBe(1);
   });
 
   it("rejects an unexpected agent commit under the default reject policy", async () => {
@@ -108,7 +128,7 @@ describe("ResultRecorder", () => {
     const traceStore = new InMemoryTraceStore();
     const recorder = new ResultRecorder({ git, traceStore });
 
-    const result = await recorder.record({ worktree: WORKTREE, codexOutcome: okOutcome() });
+    const result = await recorder.record({ worktree: WORKTREE, executorOutcome: okOutcome() });
 
     expect(result.status).toBe("agent_committed_unexpectedly");
     expect(result.agentCommittedUnexpectedly).toBe(true);
@@ -127,7 +147,7 @@ describe("ResultRecorder", () => {
 
     const result = await recorder.record({
       worktree: WORKTREE,
-      codexOutcome: okOutcome(),
+      executorOutcome: okOutcome(),
       unexpectedCommitPolicy: "accept",
       executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] }
     });

@@ -1,34 +1,30 @@
 import { DecomposerLlmError } from "./errors";
-import { GRANULARITY_PROFILES } from "./prompt-template";
 import type { DecomposerLlmOutput } from "./output-schema";
-import type { DecompositionMode } from "../index";
-
-export interface GuardOptions {
-  granularity: DecompositionMode;
-  /** Relax the upper bound on node count by this factor (default 1.0). */
-  upperFactor?: number;
-}
 
 /**
- * Hard guards applied to an LLM output before normalization. Any failure throws
+ * Anti-runaway safety rail. Granularity is an aggressiveness control, not a
+ * count target, so there is no per-level node cap — but a single LLM response
+ * with thousands of nodes is a malformed output, not a valid plan. This bound
+ * only catches that, it never shapes the tree.
+ */
+const MAX_NODES_SAFETY_RAIL = 200;
+
+/**
+ * Hard guards applied to an LLM output before normalization. They check
+ * structural validity only (single root, valid parents, depth consistency,
+ * acyclic dependencies, leaf acceptance) plus an anti-runaway node cap — never
+ * a granularity-derived depth or count target, so branches may reach different
+ * depths and the tree may be asymmetric. Any failure throws
  * `DecomposerLlmError(stage: "validate")` so the caller can transparently fall
  * back to the deterministic decomposer.
  */
-export function runDecomposerGuards(output: DecomposerLlmOutput, options: GuardOptions): void {
-  const profile = GRANULARITY_PROFILES[options.granularity];
-  const upperFactor = options.upperFactor ?? 1.0;
-  const maxNodes = Math.ceil(profile.maxNodes * upperFactor);
-
-  if (output.nodes.length < Math.max(1, profile.minNodes - 1)) {
-    throw new DecomposerLlmError(
-      `node count ${output.nodes.length} is below the ${options.granularity} target ${profile.minNodes}`,
-      undefined,
-      "validate"
-    );
+export function runDecomposerGuards(output: DecomposerLlmOutput): void {
+  if (output.nodes.length === 0) {
+    throw new DecomposerLlmError("decomposition produced no nodes", undefined, "validate");
   }
-  if (output.nodes.length > maxNodes) {
+  if (output.nodes.length > MAX_NODES_SAFETY_RAIL) {
     throw new DecomposerLlmError(
-      `node count ${output.nodes.length} exceeds the ${options.granularity} cap ${maxNodes}`,
+      `node count ${output.nodes.length} exceeds the safety rail of ${MAX_NODES_SAFETY_RAIL}`,
       undefined,
       "validate"
     );
@@ -67,18 +63,9 @@ export function runDecomposerGuards(output: DecomposerLlmOutput, options: GuardO
     }
   }
 
-  // 4. Depth respects the granularity cap
-  for (const node of output.nodes) {
-    if (node.depth > profile.maxDepth) {
-      throw new DecomposerLlmError(
-        `node ${node.id} depth ${node.depth} exceeds ${options.granularity} cap ${profile.maxDepth}`,
-        undefined,
-        "validate"
-      );
-    }
-  }
-
-  // 5. parent-child depth consistency
+  // 4. parent-child depth consistency (structural: depth must equal parent + 1).
+  //    There is intentionally no granularity depth cap — branches may reach any
+  //    depth the task complexity warrants.
   const byId = new Map(output.nodes.map((node) => [node.id, node]));
   for (const node of output.nodes) {
     if (node.parentId !== null) {

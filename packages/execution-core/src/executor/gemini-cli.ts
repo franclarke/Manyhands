@@ -1,45 +1,51 @@
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
-import type { CodexCliExecutorOptions } from "../types";
-import type { CodexExecutor, CodexRunOutcome } from "./types";
+import type { AgentExecutorOptions, SandboxMode } from "../types";
+import type { AgentExecutor, ExecutorRunOutcome } from "./types";
 
 /** Conventional exit codes used when the process never produced its own. */
 const TIMEOUT_EXIT_CODE = 124;
 const SPAWN_FAILURE_EXIT_CODE = 127;
 
 /**
- * Builds the `codex exec` argument vector from the executor options. Pure and
- * synchronous so it can be unit-tested without spawning a process (ADR-0019).
- *
- * The prompt is NOT an argument — `codex exec` reads its instructions from
- * stdin (the CLI has no `--instructions-file` flag). `codex exec` is already
- * non-interactive by design, so there is NO `--ask-for-approval` flag here
- * (that belongs to the interactive `codex` command; passing it to `exec` makes
- * the CLI reject the whole invocation). Autonomy is bounded solely by
- * `--sandbox`; `bypassApprovals` is therefore a no-op at the arg layer and kept
- * only for interface symmetry with the mock. Verified against codex-cli 0.135.0.
+ * Short directive passed via `-p`. Gemini CLI enters non-interactive (headless)
+ * mode only when `--prompt` has a non-empty value, and that value is *appended*
+ * to whatever arrives on stdin. We feed the full leaf/repair instructions over
+ * stdin (no arg-length limit) and use this directive as the headless trigger.
  */
-export function buildCodexArgs(options: CodexCliExecutorOptions): string[] {
-  const args = [
-    "exec",
-    "--sandbox", options.sandboxMode,
+const STDIN_DIRECTIVE = "Follow-instructions-on-stdin";
+
+/**
+ * Maps the legacy Codex SandboxMode to a Gemini approval mode. Gemini has no
+ * `workspace-write`/`danger-full-access` OS sandbox; `yolo` auto-approves every
+ * tool call so the agent can edit files and run commands inside the worktree
+ * without prompting (which would hang a headless run). Real confinement comes
+ * from the isolated git worktree + the ScopeChecker, not from Gemini.
+ */
+function approvalModeFor(_sandboxMode: SandboxMode): string {
+  return "yolo";
+}
+
+/**
+ * Builds the `gemini` argument vector. Pure and synchronous so it can be
+ * unit-tested without spawning a process. The prompt is NOT an argument — it is
+ * piped over stdin; `-p` carries only the short headless-trigger directive.
+ * Verified against gemini-cli 0.44.1:
+ *   --model <m>            model selection
+ *   --approval-mode yolo   auto-approve all tool calls (headless autonomy)
+ *   --skip-trust           trust this fresh worktree for the session (no prompt)
+ *   -o text                stable, parse-free output
+ *   -p <directive>         non-empty value required to enter headless mode
+ */
+export function buildGeminiArgs(options: AgentExecutorOptions): string[] {
+  return [
     "--model", options.model,
-    // Each leaf is a single isolated task; no need to persist a session.
-    // Prevents cross-run contamination and session file accumulation.
-    "--ephemeral"
+    "--approval-mode", approvalModeFor(options.sandboxMode),
+    "--skip-trust",
+    "-o", "text",
+    "-p", STDIN_DIRECTIVE
   ];
-  // Reasoning effort is a fixed experimental condition set once per matrix run,
-  // not a per-leaf variable — so it is sourced from the environment, not the
-  // options schema. codex-cli defaults to `xhigh`, which can push a single leaf
-  // past the D10 timeout (>300s); `low`/`medium` brings the same task to ~60s,
-  // which is what makes the B0–B4 × G3/G6/G9 matrix tractable. `-c key=value`
-  // is codex's config-override flag (verified against 0.135.0).
-  const effort = process.env.MANYHANDS_CODEX_REASONING;
-  if (effort) {
-    args.push("-c", `model_reasoning_effort=${effort}`);
-  }
-  return args;
 }
 
 type SpawnFn = (
@@ -48,12 +54,12 @@ type SpawnFn = (
   options: SpawnOptions
 ) => ChildProcess;
 
-export interface CodexCliExecutorDeps {
+export interface GeminiCliExecutorDeps {
   /**
-   * Codex CLI binary. Defaults to `$MANYHANDS_CODEX_BIN` when set, else `codex`
-   * on `$PATH`. On Windows the npm shim is `codex.cmd`, which lives in the npm
-   * global prefix and is often absent from a non-interactive shell's PATH —
-   * point the env var at the absolute `.cmd` path in that case.
+   * Gemini CLI binary. Defaults to `$MANYHANDS_GEMINI_BIN` when set, else
+   * `gemini` on `$PATH`. On Windows the npm shim is `gemini.ps1`/`gemini.cmd`,
+   * which lives in the npm global prefix and is often absent from a
+   * non-interactive shell's PATH — point the env var at the absolute path then.
    */
   binaryPath?: string;
   /** Injectable spawn for tests. Defaults to node:child_process spawn. */
@@ -61,41 +67,41 @@ export interface CodexCliExecutorDeps {
   /** Injectable instructions reader for tests. Defaults to fs.readFile (utf8). */
   readInstructions?: (filePath: string) => Promise<string>;
   /**
-   * Run through a shell. Required on Windows so a `.cmd` shim resolves; defaults
-   * to true on win32, false elsewhere. Injectable so unit tests stay
+   * Run through a shell. Required on Windows so a `.cmd`/`.ps1` shim resolves;
+   * defaults to true on win32, false elsewhere. Injectable so unit tests stay
    * platform-independent.
    */
   useShell?: boolean;
 }
 
 /**
- * Real CodexExecutor backed by `codex exec` (D4 — the only agent executor).
+ * Real AgentExecutor backed by the Gemini CLI (replaces the Codex executor).
  * Reads the instruction file written by the orchestrator, spawns the CLI in the
  * worktree piping those instructions to stdin, enforces a hard timeout (D10),
- * and returns a CodexRunOutcome. The orchestrator never trusts stdout to decide
- * what changed (D5); these fields are diagnostics plus the exit signal.
+ * and returns an ExecutorRunOutcome. The orchestrator never trusts stdout to
+ * decide what changed (D5); these fields are diagnostics plus the exit signal.
  * Process-level failures (binary missing, spawn error, unreadable instructions)
  * surface as a non-zero exit outcome so the seam stays total and the
- * ResultRecorder maps them to `codex_error`.
+ * ResultRecorder maps them to `executor_error` (keeping stderr as the cause).
  */
-export class CodexCliExecutor implements CodexExecutor {
+export class GeminiCliExecutor implements AgentExecutor {
   private readonly binaryPath: string;
   private readonly spawnFn: SpawnFn;
   private readonly readInstructions: (filePath: string) => Promise<string>;
   private readonly useShell: boolean;
 
-  constructor(deps: CodexCliExecutorDeps = {}) {
-    this.binaryPath = deps.binaryPath ?? process.env.MANYHANDS_CODEX_BIN ?? "codex";
+  constructor(deps: GeminiCliExecutorDeps = {}) {
+    this.binaryPath = deps.binaryPath ?? process.env.MANYHANDS_GEMINI_BIN ?? "gemini";
     this.spawnFn = deps.spawn ?? spawn;
     this.readInstructions = deps.readInstructions ?? ((filePath) => readFile(filePath, "utf8"));
     this.useShell = deps.useShell ?? process.platform === "win32";
   }
 
-  execute(options: CodexCliExecutorOptions): Promise<CodexRunOutcome> {
-    const args = buildCodexArgs(options);
+  execute(options: AgentExecutorOptions): Promise<ExecutorRunOutcome> {
+    const args = buildGeminiArgs(options);
     const start = Date.now();
 
-    return new Promise<CodexRunOutcome>((resolve) => {
+    return new Promise<ExecutorRunOutcome>((resolve) => {
       const child = this.spawnFn(this.binaryPath, args, {
         cwd: options.cwd,
         env: { ...process.env, ...(options.env ?? {}) },
@@ -107,7 +113,7 @@ export class CodexCliExecutor implements CodexExecutor {
       let stderr = "";
       let settled = false;
 
-      const finish = (outcome: CodexRunOutcome): void => {
+      const finish = (outcome: ExecutorRunOutcome): void => {
         if (settled) {
           return;
         }
@@ -155,7 +161,7 @@ export class CodexCliExecutor implements CodexExecutor {
       });
 
       // Listeners are attached synchronously above; only then read the
-      // instruction file and feed it over stdin so codex starts working.
+      // instruction file and feed it over stdin so gemini starts working.
       // Guard EPIPE: the child may exit before we finish writing.
       this.readInstructions(options.instructionFilePath).then(
         (prompt) => {
@@ -178,10 +184,10 @@ export class CodexCliExecutor implements CodexExecutor {
 }
 
 /**
- * Kills the Codex process and its descendants. On Windows a shelled `.cmd` runs
- * under cmd.exe, so `child.kill` only reaches the shell — `taskkill /T /F`
- * tears down the whole tree. Falls back to SIGKILL when there is no PID (e.g.
- * an injected fake child in tests) or off Windows.
+ * Kills the Gemini process and its descendants. On Windows a shelled `.cmd`/
+ * `.ps1` runs under cmd.exe, so `child.kill` only reaches the shell —
+ * `taskkill /T /F` tears down the whole tree. Falls back to SIGKILL when there
+ * is no PID (e.g. an injected fake child in tests) or off Windows.
  */
 function killProcessTree(child: ChildProcess, spawnFn: SpawnFn): void {
   if (process.platform === "win32" && typeof child.pid === "number") {

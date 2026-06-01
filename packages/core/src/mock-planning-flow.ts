@@ -45,6 +45,8 @@ export interface MockPlanningFlowOptions {
   repositoryIndex?: RepositoryIndex;
   schedulerPolicy?: SchedulingPolicy;
   runLabel?: string;
+  questionAnswers?: Record<string, string>;
+  stepCache?: Record<string, any>;
 }
 
 export interface PlanningRunSummary {
@@ -113,12 +115,12 @@ export async function runMockPlanningFlow(
 
     const decomposition = await decomposer.decompose(
       feature,
-      options.generatedAt === undefined
-        ? { mode }
-        : {
-            mode,
-            generatedAt: options.generatedAt
-          }
+      {
+        mode,
+        generatedAt: options.generatedAt,
+        questionAnswers: options.questionAnswers,
+        stepCache: options.stepCache
+      }
     );
     const graphIssues = validateTaskGraph(decomposition.graph).map((issue) => `${issue.code}: ${issue.message}`);
     const contractIssues = decomposition.contracts.flatMap((contract) => {

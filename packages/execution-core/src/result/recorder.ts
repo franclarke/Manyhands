@@ -1,7 +1,7 @@
 import type { ExecutionScope } from "@manyhands/contracts";
 import type { TraceStore } from "@manyhands/trace-store";
 
-import type { CodexRunOutcome } from "../codex/types";
+import type { ExecutorRunOutcome } from "../executor/types";
 import type { GitRunner } from "../git/runner";
 import { ScopeChecker } from "../scope/checker";
 import {
@@ -21,15 +21,25 @@ export interface ResultRecorderDeps {
 
 export interface RecordParams {
   worktree: WorktreeRecord;
-  codexOutcome: CodexRunOutcome;
+  executorOutcome: ExecutorRunOutcome;
   executionScope?: ExecutionScope;
   forbiddenPaths?: string[];
   unexpectedCommitPolicy?: UnexpectedCommitPolicy;
   commitMessage?: string;
 }
 
+/** Keep the last N chars of executor output as the actionable failure cause. */
+const OUTPUT_TAIL_LIMIT = 4_000;
+
+function tail(text: string | undefined): string | undefined {
+  if (text === undefined || text.length === 0) {
+    return undefined;
+  }
+  return text.length > OUTPUT_TAIL_LIMIT ? text.slice(-OUTPUT_TAIL_LIMIT) : text;
+}
+
 /**
- * Inspects a worktree after a Codex run and produces the authoritative
+ * Inspects a worktree after an agent run and produces the authoritative
  * AgentExecutionResult. `git diff` is the only source of truth (D5); the
  * orchestrator — not the agent — performs the commit on success (D6).
  */
@@ -45,7 +55,7 @@ export class ResultRecorder {
   }
 
   async record(params: RecordParams): Promise<AgentExecutionResult> {
-    const { worktree, codexOutcome } = params;
+    const { worktree, executorOutcome } = params;
     const taskId = worktree.taskId;
     const baseHead = worktree.baseCommit;
     const policy: UnexpectedCommitPolicy = params.unexpectedCommitPolicy ?? "reject";
@@ -53,22 +63,27 @@ export class ResultRecorder {
     const base = {
       taskId,
       baseHead,
-      codexExitCode: codexOutcome.exitCode,
-      codexDurationMs: codexOutcome.durationMs,
-      codexTimedOut: codexOutcome.timedOut,
-      tokensIn: codexOutcome.tokensIn,
-      tokensOut: codexOutcome.tokensOut,
-      costUsd: codexOutcome.costUsd
+      executorExitCode: executorOutcome.exitCode,
+      executorDurationMs: executorOutcome.durationMs,
+      executorTimedOut: executorOutcome.timedOut,
+      // Always carry the executor's output tails so the UI can show the cause of
+      // a failure (e.g. Gemini quota/auth). Harmless on success.
+      stderrTail: tail(executorOutcome.stderr),
+      stdoutTail: tail(executorOutcome.stdout),
+      tokensIn: executorOutcome.tokensIn,
+      tokensOut: executorOutcome.tokensOut,
+      costUsd: executorOutcome.costUsd
     };
 
     const passedScope: ScopeCheckResult = { passed: true, violations: [] };
 
-    // 1. Codex-level failures short-circuit before any git inspection.
-    if (codexOutcome.timedOut) {
+    // 1. Executor-level failures short-circuit before any git inspection. The
+    // stderr/stdout tails in `base` preserve the actionable cause.
+    if (executorOutcome.timedOut) {
       return this.finalize({ ...base, status: "timeout", currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
     }
-    if (codexOutcome.exitCode !== 0) {
-      return this.finalize({ ...base, status: "codex_error", currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
+    if (executorOutcome.exitCode !== 0) {
+      return this.finalize({ ...base, status: "executor_error", currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
     }
 
     // 2. Did the agent commit on its own? (D6 / ADR-0021)
@@ -161,9 +176,11 @@ export class ResultRecorder {
     changedFiles: string[];
     commitSha?: string | undefined;
     scopeCheck: ScopeCheckResult;
-    codexExitCode: number;
-    codexDurationMs: number;
-    codexTimedOut: boolean;
+    executorExitCode: number;
+    executorDurationMs: number;
+    executorTimedOut: boolean;
+    stderrTail?: string | undefined;
+    stdoutTail?: string | undefined;
     tokensIn?: number | undefined;
     tokensOut?: number | undefined;
     costUsd?: number | undefined;
@@ -178,9 +195,11 @@ export class ResultRecorder {
       changedFiles: input.changedFiles,
       commitSha: input.commitSha,
       scopeCheck: input.scopeCheck,
-      codexExitCode: input.codexExitCode,
-      codexDurationMs: input.codexDurationMs,
-      codexTimedOut: input.codexTimedOut,
+      executorExitCode: input.executorExitCode,
+      executorDurationMs: input.executorDurationMs,
+      executorTimedOut: input.executorTimedOut,
+      stderrTail: input.stderrTail,
+      stdoutTail: input.stdoutTail,
       tokensIn: input.tokensIn,
       tokensOut: input.tokensOut,
       costUsd: input.costUsd

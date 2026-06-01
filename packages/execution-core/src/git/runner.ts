@@ -2,7 +2,7 @@ import { simpleGit, type SimpleGit } from "simple-git";
 
 /**
  * Outcome of a cherry-pick attempt. `ok: false` carries the conflicting files
- * so the IntegrationAgent can hand them to Codex as a semantic repair task.
+ * so the IntegrationAgent can hand them to the agent as a semantic repair task.
  */
 export interface CherryPickOutcome {
   ok: boolean;
@@ -15,7 +15,7 @@ export interface CherryPickOutcome {
  * SimpleGitRunner (real) and a FakeGitRunner in tests, so worktree/result/
  * integration logic can be exercised without touching disk or a real repo.
  *
- * D4 mandates Codex CLI for the *agent*; git plumbing runs directly.
+ * The agent executor (Gemini CLI) handles the *agent*; git plumbing runs directly.
  */
 export interface GitRunner {
   worktreeAdd(params: {

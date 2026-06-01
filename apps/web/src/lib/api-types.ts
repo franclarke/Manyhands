@@ -172,7 +172,7 @@ export interface RunResponse {
     baseCommit?: string;
     integrationCommitSha?: string;
     decomposition?: {
-      provider: "anthropic" | "codex" | "deterministic";
+      provider: "anthropic" | "gemini" | "codex" | "deterministic";
       model: string;
       promptTemplateVersion?: string;
       fallbackUsed: boolean;

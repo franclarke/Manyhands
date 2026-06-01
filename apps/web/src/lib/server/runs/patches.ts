@@ -8,6 +8,7 @@ import {
   type TaskDependency
 } from "@manyhands/core";
 import type { MockExecutionFlowResult, MockPlanningFlowResult, RunSnapshot } from "@manyhands/core";
+import { addDependency, removeDependency, syncNodeDependencies, type TaskGraph } from "@manyhands/task-graph";
 import type { RunRecord } from "./schema";
 
 const PatchActorSchema = z.union([z.literal("human"), z.literal("system")]);
@@ -63,6 +64,12 @@ export const RunPatchSchema = z.discriminatedUnion("type", [
   }),
   PatchBaseSchema.extend({
     type: z.literal("TASKS_SERIALIZED"),
+    fromTaskId: z.string().min(1),
+    toTaskId: z.string().min(1),
+    rationale: z.string().min(1).max(1000).optional()
+  }),
+  PatchBaseSchema.extend({
+    type: z.literal("DEPENDENCY_REMOVED"),
     fromTaskId: z.string().min(1),
     toTaskId: z.string().min(1),
     rationale: z.string().min(1).max(1000).optional()
@@ -245,16 +252,24 @@ function applyPatchToContext(context: PatchContext, patch: RunPatch): void {
           contract: patch.contract
         };
       }
-      context.graph.dependencies.push(...patch.dependencies);
+      for (const dependency of patch.dependencies) {
+        addGraphDependency(context, dependency);
+      }
+      syncGraphDependencies(context);
       return;
     case "TASKS_SERIALIZED":
-      context.graph.dependencies.push({
+      addGraphDependency(context, {
         fromTaskId: patch.fromTaskId,
         toTaskId: patch.toTaskId,
         type: "logical",
         inferred: false,
         ...(patch.rationale !== undefined ? { rationale: patch.rationale } : {})
       });
+      syncGraphDependencies(context);
+      return;
+    case "DEPENDENCY_REMOVED":
+      removeGraphDependency(context, patch.fromTaskId, patch.toTaskId);
+      syncGraphDependencies(context);
       return;
     case "RISK_ACKNOWLEDGED":
       applyRiskAcknowledged(context, patch);
@@ -284,7 +299,9 @@ function applySubtreeRegenerated(
   for (const node of Object.values(patch.nodes)) {
     attachNodeToParent(context, node.id, node.parentId);
   }
-  context.graph.dependencies.push(...patch.dependencies);
+  for (const dependency of patch.dependencies) {
+    addGraphDependency(context, dependency);
+  }
   for (const contract of patch.contracts) {
     upsertContract(context, contract);
     const node = context.graph.nodes[contract.taskId];
@@ -292,6 +309,19 @@ function applySubtreeRegenerated(
       context.graph.nodes[contract.taskId] = { ...node, contract };
     }
   }
+  syncGraphDependencies(context);
+}
+
+function addGraphDependency(context: PatchContext, dependency: TaskDependency): void {
+  addDependency(context.graph as unknown as TaskGraph, dependency);
+}
+
+function removeGraphDependency(context: PatchContext, fromTaskId: string, toTaskId: string): void {
+  removeDependency(context.graph as unknown as TaskGraph, fromTaskId, toTaskId);
+}
+
+function syncGraphDependencies(context: PatchContext): void {
+  syncNodeDependencies(context.graph as unknown as TaskGraph);
 }
 
 function attachNodeToParent(context: PatchContext, taskId: string, parentId: string | null): void {

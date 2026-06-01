@@ -1,4 +1,4 @@
-﻿import {
+import {
   AgentTaskContractSchema,
   type AcceptanceCriterion,
   type AgentTaskContract,
@@ -42,8 +42,11 @@ export const DecompositionOptionsSchema = z.object({
   generatedAt: IsoTimestampSchema.optional(),
   baseBranch: NonEmptyStringSchema.default("main"),
   baseCommit: NonEmptyStringSchema.default("mock-base-commit"),
-  repo: NonEmptyStringSchema.optional()
+  repo: NonEmptyStringSchema.optional(),
+  questionAnswers: z.record(z.string()).optional(),
+  stepCache: z.record(z.any()).optional()
 });
+
 
 export type DecompositionOptions = z.input<typeof DecompositionOptionsSchema>;
 
@@ -1503,9 +1506,13 @@ export type {
   DecomposerLlmOutput
 } from "./llm/output-schema";
 export { runDecomposerGuards } from "./llm/guards";
-export type { GuardOptions } from "./llm/guards";
 export { normalizeLlmDecomposition } from "./llm/normalize";
-export { DecomposerLlmError, isDecomposerLlmError } from "./llm/errors";
+export {
+  DecomposerLlmError,
+  isDecomposerLlmError,
+  DecomposerQuestionError,
+  isDecomposerQuestionError
+} from "./llm/errors";
 export { executionScopeFromAllowed } from "./scope";
 
 // ── Recursive interface-aware decomposer (thesis Artifact 1) ──────
@@ -1516,8 +1523,8 @@ export type {
   RecursiveStepListener,
   RecursiveStepStartedEvent
 } from "./llm/recursive/recursive-decomposer";
-export { CodexRecursiveDecomposer } from "./llm/recursive/codex-recursive-decomposer";
-export type { CodexRecursiveDecomposerOptions } from "./llm/recursive/codex-recursive-decomposer";
+export { GeminiRecursiveDecomposer } from "./llm/recursive/gemini-recursive-decomposer";
+export type { GeminiRecursiveDecomposerOptions } from "./llm/recursive/gemini-recursive-decomposer";
 export {
   RECURSIVE_DECOMPOSER_PROMPT_VERSION,
   buildStepPrompt

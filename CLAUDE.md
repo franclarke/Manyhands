@@ -62,11 +62,11 @@ El siguiente trabajo es implementar los componentes funcionales del pipeline de 
 | D1 | `graph.dependencies` es canónico. `node.dependencies` es shortcut sincronizado. Mutación via helpers (`addDependency`, `removeDependency`, `syncNodeDependencies`). |
 | D2 | Campo canónico es `goal` (no `intent`). Aplicado globalmente en Fase 0. Si aparece `intent` en fixtures legacy, normalizar en el parser, nunca persistir. |
 | D3 | Sin `scenarioId` + LLM falla → run FALLA. Error message: "Graph generation requires an API key..." o "Graph generation failed: {detail}. Retry, switch model, or configure API key." Sin fallback silencioso. El `MetadataDrivenMockDecomposer` solo se usa cuando hay `scenarioId` (Lab Mode). |
-| D4 | **Codex CLI** (`codex exec`) es el único executor de subagentes. No Claude Code SDK, no `child_process.exec` directo sin el wrapper. |
-| D5 | `git diff HEAD` es la fuente de verdad del resultado. No stdout de Codex, no logs. |
-| D6 | **El orquestador hace commit.** Codex nunca debe hacer commit. Si Codex hace commit (`agentCommittedUnexpectedly: true`), política configurable: `reject` (default) o `accept`. |
-| D7 | Sandbox default: `workspace-write`. `danger-full-access` requiere opt-in explícito del usuario + confirmación. Nunca como default. |
-| D8 | Integración: **cherry-pick** de commits hijo sobre rama padre. Si hay conflicto de cherry-pick → Codex como reparador semántico (prompt con contexto del conflicto). Codex repair falla → `IntegrationStatus: codex_repair_failed`. |
+| D4 | **Gemini CLI** (`gemini`, headless `-p` + prompt por stdin) es el único executor de subagentes Y el step-model del decomposer recursivo. Reemplazó a Codex CLI (junio 2026). No Claude Code SDK, no `child_process.exec` directo sin el wrapper (`GeminiCliExecutor` / `GeminiRecursiveDecomposer`). El seam es provider-agnóstico: interfaz `AgentExecutor`, status `executor_error`, trace events `executor_started/completed/repair_started`, campos `executorExitCode/DurationMs/TimedOut`, error `AgentExecutionError`. Binario via `MANYHANDS_GEMINI_BIN` (default `gemini`). |
+| D5 | `git diff HEAD` es la fuente de verdad del resultado. No stdout del agente, no logs. (El stderr/stdout truncado SÍ se persiste como `stderrTail/stdoutTail` para diagnóstico de fallos en UI, pero nunca para determinar qué cambió.) |
+| D6 | **El orquestador hace commit.** El agente (Gemini) nunca debe hacer commit. Si el agente hace commit (`agentCommittedUnexpectedly: true`), política configurable: `reject` (default) o `accept`. |
+| D7 | `SandboxMode` (`workspace-write`/`danger-full-access`) se conserva en el contrato por simetría, pero Gemini CLI NO tiene un sandbox de SO equivalente: el `GeminiCliExecutor` mapea ambos a `--approval-mode yolo` (auto-aprueba tool calls para no colgar en headless) y el aislamiento real lo dan el **git worktree aislado + el ScopeChecker**, no el CLI. El decomposer corre en `--approval-mode plan` (read-only). |
+| D8 | Integración: **cherry-pick** de commits hijo sobre rama padre. Si hay conflicto de cherry-pick → el agente (Gemini) como reparador semántico (prompt con contexto del conflicto). Repair falla → `IntegrationStatus: executor_repair_failed`. Éxito de repair → `executor_repair_success`. |
 | D9 | `maxParallel = 3` hojas en paralelo por batch (configurable, default 3). Límite de worktrees simultáneos. |
 | D10 | Timeouts: hoja `timeoutMs = 300_000` (5 min), integración `timeoutMs = 600_000` (10 min). Configurables por contrato. |
 
@@ -111,7 +111,7 @@ Todos los tipos están implementados en `packages/execution-core/src/types.ts` c
 | `ConflictDetailSchema` | `{ files[], cherryPickOutput }` |
 | `IntegrationResultSchema` | Resultado completo de integración cherry-pick |
 | `SandboxModeSchema` | `"workspace-write" \| "danger-full-access"` |
-| `CodexCliExecutorOptionsSchema` | Opciones de invocación de Codex CLI |
+| `AgentExecutorOptionsSchema` | Opciones de invocación del agente (Gemini CLI) |
 | `ExecutionConfigSchema` | Config con defaults: maxParallel=3, leafTimeout=300s, etc. |
 | `GranularityVectorSchema` | 17 campos (9 pre + 8 post), rates validados 0-1 |
 
@@ -120,7 +120,7 @@ Todos los tipos están implementados en `packages/execution-core/src/types.ts` c
 ```
 ExecutionCoreError (base, code: string, static is() type guard)
 ├── WorktreeError          { taskId, worktreePath?, operation: "create"|"clean"|"detect" }
-├── CodexExecutionError    { taskId, exitCode, timedOut, durationMs }
+├── AgentExecutionError    { taskId, exitCode, timedOut, durationMs }  (code AGENT_EXECUTION_ERROR)
 ├── ScopeViolationError    { taskId, violations: string[] }
 ├── ExecutionValidationError { taskId, command, exitCode, output }
 ├── IntegrationError       { compositeTaskId, childTaskIds, phase: "cherry_pick"|"repair"|"validation" }
@@ -132,7 +132,7 @@ ExecutionCoreError (base, code: string, static is() type guard)
 ## TraceEvent Types para Execution (ya implementados)
 
 16 trace events agregados al union en `packages/trace-store/src/index.ts`:
-`worktree_created`, `agent_started`, `codex_started`, `codex_completed`, `unexpected_commit_detected`, `scope_check_failed`, `validation_started`, `agent_committed`, `integration_started`, `cherry_pick_attempted`, `cherry_pick_conflict`, `codex_repair_started`, `integration_completed`, `batch_started`, `batch_completed`, `run_completed`
+`worktree_created`, `agent_started`, `executor_started`, `executor_completed`, `unexpected_commit_detected`, `scope_check_failed`, `validation_started`, `agent_committed`, `integration_started`, `cherry_pick_attempted`, `cherry_pick_conflict`, `executor_repair_started`, `integration_completed`, `batch_started`, `batch_completed`, `run_completed`
 
 ---
 
@@ -170,7 +170,11 @@ Schemas nuevos en `packages/contracts/src/index.ts`:
 - B3 — Parallel + IntegrationAgent
 - B4 — Parallel + risk-aware + IntegrationAgent
 
-**Granularity targets:** G3 (~3 leaves), G6 (~6 leaves), G9 (~9 leaves)
+**Niveles de agresividad:** `coarse` (baja presión a dividir), `balanced` (default), `fine` (alta presión).
+La granularidad NO fija profundidad ni cantidad de nodos — controla cuánto se sigue dividiendo cada rama,
+por nodo, según si la tarea ya es simple/concreta/ejecutable/verificable. El árbol resultante es asimétrico.
+G3/G6/G9 (~3/6/9 leaves) son **etiquetas de resultados observados** en benchmarks para agrupar corridas,
+no objetivos de forma que el decomposer deba alcanzar.
 
 **GranularityVector (métricas):**
 ```typescript
@@ -203,12 +207,12 @@ interface GranularityVector {
 ## Reglas para Claude
 
 1. **No renegociar decisiones D1-D10.** Si algo parece en tensión, señalarlo sin cambiar la decisión.
-2. **Codex CLI es mandatorio.** No sugerir alternativas (subprocess directo, otros CLIs) sin preguntarle a Francisco.
-3. **Git diff como verdad.** Nunca confiar en stdout de Codex para determinar qué cambió.
-4. **El orquestador hace commit.** Nunca hacer que Codex haga commit (bypassApprovals: true ayuda pero no garantiza).
+2. **Gemini CLI es mandatorio** (ejecución + planning). No sugerir alternativas (subprocess directo, otros CLIs, Codex) sin preguntarle a Francisco.
+3. **Git diff como verdad.** Nunca confiar en stdout del agente para determinar qué cambió (sí se persiste `stderrTail` para diagnóstico).
+4. **El orquestador hace commit.** Nunca hacer que el agente (Gemini) haga commit (`--approval-mode yolo` no lo garantiza; por eso existe la política `reject`).
 5. **Error claro sobre fallback silencioso** (D3). Si falta API key en prompt-only path → error accionable, no grafo genérico.
 6. **Tests como safety net.** Antes de cualquier cambio en packages core (`task-graph`, `contracts`, `decomposer`), verificar que `pnpm test` pasa. Después también.
-7. **295 tests deben pasar siempre.** Si un cambio rompe tests, arreglarlo en la misma sesión.
+7. **La suite de tests debe pasar siempre** (~446 al jun-2026, antes 295). Si un cambio rompe tests, arreglarlo en la misma sesión.
 8. **Lab Mode es secundario.** Los escenarios determinísticos, benchmarks y replay son infraestructura de tesis, no el flujo principal de usuario.
 9. **`@manyhands/core` está deprecado.** Nuevas dependencias van a packages específicos, no al barrel.
 10. **Comunicación en español.** Francisco prefiere respuestas en español excepto para código y términos técnicos.

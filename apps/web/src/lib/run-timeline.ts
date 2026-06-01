@@ -152,6 +152,7 @@ function taskIdsForPatch(patch: RunPatch): string[] {
       return [...taskIds];
     }
     case "TASKS_SERIALIZED":
+    case "DEPENDENCY_REMOVED":
       return [patch.fromTaskId, patch.toTaskId];
     case "RISK_ACKNOWLEDGED":
       return [...patch.taskIds];
@@ -176,6 +177,8 @@ function titleForPatch(patch: RunPatch): string {
       return "Integrator node created";
     case "TASKS_SERIALIZED":
       return "Tasks serialized";
+    case "DEPENDENCY_REMOVED":
+      return "Dependency removed";
     case "RISK_ACKNOWLEDGED":
       return "Risk acknowledged";
   }
@@ -196,6 +199,7 @@ function summarizePatch(patch: RunPatch): string | undefined {
     case "INTEGRATOR_NODE_CREATED":
       return patch.node.title;
     case "TASKS_SERIALIZED":
+    case "DEPENDENCY_REMOVED":
       return patch.rationale;
     case "RISK_ACKNOWLEDGED":
       return patch.reason;

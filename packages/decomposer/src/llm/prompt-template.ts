@@ -20,33 +20,37 @@ export interface WorkspaceHints {
 
 interface GranularityProfile {
   label: string;
-  description: string;
-  minNodes: number;
-  maxNodes: number;
-  maxDepth: number;
+  /** How aggressively to keep splitting — the pressure to decompose, not a shape. */
+  aggressiveness: string;
+  /** Size of the smallest sensible leaf ("a single cohesive unit") at this level. */
+  cohesiveUnit: string;
 }
 
+/**
+ * Granularity is an aggressiveness control, not a depth/count target. Each level
+ * only sets how small a leaf must become before a node is considered atomic; the
+ * planner then splits each branch independently until its leaves reach that size.
+ * Different branches reach different depths — the tree is expected to be
+ * asymmetric. No level fixes a node count or a maximum depth.
+ */
 export const GRANULARITY_PROFILES: Record<DecompositionMode, GranularityProfile> = {
   coarse: {
     label: "coarse",
-    description: "Few large tasks; surface-level breakdown; good for spikes and quick checks.",
-    minNodes: 3,
-    maxNodes: 8,
-    maxDepth: 2
+    aggressiveness:
+      "Low pressure to split. Decompose only nodes that are clearly composite; leave naturally cohesive work as a single leaf.",
+    cohesiveUnit: "a whole module or file (a group of related functions that ship together)"
   },
   balanced: {
     label: "balanced",
-    description: "Default delegability/clarity tradeoff. Mix of composites and leaves.",
-    minNodes: 5,
-    maxNodes: 12,
-    maxDepth: 3
+    aggressiveness:
+      "Balanced pressure. Split tasks and subtasks as needed until each leaf is a reasonably executable unit.",
+    cohesiveUnit: "a small group of closely-related functions"
   },
   fine: {
     label: "fine",
-    description: "Many atomic leaves; high parallelism potential; more coordination overhead.",
-    minNodes: 9,
-    maxNodes: 18,
-    maxDepth: 4
+    aggressiveness:
+      "High pressure to split. Keep decomposing until every leaf is small, concrete, assignable and verifiable.",
+    cohesiveUnit: "a single function or a tightly-scoped pair of functions"
   }
 };
 
@@ -64,12 +68,15 @@ export function buildDecomposerPrompt(inputs: PromptInputs): { system: string; u
     "",
     inputs.userPrompt.length > 0 ? inputs.userPrompt : "(empty prompt; use workspace hints to propose a small generic feature)",
     "",
-    "## Target granularity",
+    "## Decomposition aggressiveness",
     "",
     `- level: \`${profile.label}\``,
-    `- description: ${profile.description}`,
-    `- node count target: between **${profile.minNodes}** and **${profile.maxNodes}** nodes total`,
-    `- depth target: at most **${profile.maxDepth}** (root has depth 0)`,
+    `- ${profile.aggressiveness}`,
+    `- A leaf is "a single cohesive unit" = ${profile.cohesiveUnit}. Keep splitting a branch until its`,
+    "  leaves reach that size, then stop.",
+    "- Decide per task by complexity: a simple branch may be a single leaf while a complex one nests",
+    "  several levels deeper. Do NOT aim for a fixed node count or a uniform depth — an asymmetric,",
+    "  irregular tree that mirrors real complexity is the correct outcome.",
     "",
     "## Workspace hints",
     "",

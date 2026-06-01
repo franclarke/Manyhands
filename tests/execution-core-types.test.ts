@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import {
   AgentResultStatusSchema,
   WorktreeKindSchema,
@@ -11,7 +11,7 @@ import {
   ConflictDetailSchema,
   IntegrationResultSchema,
   SandboxModeSchema,
-  CodexCliExecutorOptionsSchema,
+  AgentExecutorOptionsSchema,
   UnexpectedCommitPolicySchema,
   ExecutionConfigSchema,
   GranularityVectorSchema,
@@ -22,12 +22,12 @@ import {
   type GranularityVector,
 } from "@manyhands/execution-core";
 
-// ── Enum-like unions ────────────────────────────────────────────
+// â”€â”€ Enum-like unions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("AgentResultStatusSchema", () => {
   const valid: AgentResultStatus[] = [
     "success", "empty_diff", "scope_violation", "validation_failed",
-    "codex_error", "timeout", "agent_committed_unexpectedly", "internal_error",
+    "executor_error", "timeout", "agent_committed_unexpectedly", "internal_error",
   ];
 
   it.each(valid)("accepts '%s'", (status) => {
@@ -61,8 +61,8 @@ describe("WorktreeStatusSchema", () => {
 describe("IntegrationStatusSchema", () => {
   it("accepts all valid statuses", () => {
     for (const s of [
-      "success", "cherry_pick_conflict", "codex_repair_success",
-      "codex_repair_failed", "validation_failed", "child_failed", "internal_error",
+      "success", "cherry_pick_conflict", "executor_repair_success",
+      "executor_repair_failed", "validation_failed", "child_failed", "internal_error",
     ]) {
       expect(IntegrationStatusSchema.parse(s)).toBe(s);
     }
@@ -83,7 +83,7 @@ describe("UnexpectedCommitPolicySchema", () => {
   });
 });
 
-// ── Object schemas ──────────────────────────────────────────────
+// â”€â”€ Object schemas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("WorktreeRecordSchema", () => {
   const valid: WorktreeRecord = {
@@ -144,9 +144,9 @@ describe("AgentExecutionResultSchema", () => {
     diff: "diff --git a/src/index.ts b/src/index.ts\n...",
     changedFiles: ["src/index.ts"],
     scopeCheck: { passed: true, violations: [] },
-    codexExitCode: 0,
-    codexDurationMs: 12000,
-    codexTimedOut: false,
+    executorExitCode: 0,
+    executorDurationMs: 12000,
+    executorTimedOut: false,
   };
 
   it("parses a minimal valid result", () => {
@@ -203,9 +203,9 @@ describe("IntegrationResultSchema", () => {
   });
 });
 
-describe("CodexCliExecutorOptionsSchema", () => {
+describe("AgentExecutorOptionsSchema", () => {
   it("parses valid options", () => {
-    const parsed = CodexCliExecutorOptionsSchema.parse({
+    const parsed = AgentExecutorOptionsSchema.parse({
       cwd: "/tmp/worktrees/task-1",
       instructionFilePath: "/tmp/instructions/task-1.md",
       model: "claude-sonnet-4-5",
@@ -217,7 +217,7 @@ describe("CodexCliExecutorOptionsSchema", () => {
   });
 
   it("accepts optional env", () => {
-    const parsed = CodexCliExecutorOptionsSchema.parse({
+    const parsed = AgentExecutorOptionsSchema.parse({
       cwd: "/tmp/wt",
       instructionFilePath: "/tmp/inst.md",
       model: "claude-sonnet-4-5",
@@ -230,7 +230,7 @@ describe("CodexCliExecutorOptionsSchema", () => {
   });
 });
 
-// ── Config with defaults ────────────────────────────────────────
+// â”€â”€ Config with defaults â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("ExecutionConfigSchema", () => {
   it("applies all defaults", () => {
@@ -259,7 +259,7 @@ describe("ExecutionConfigSchema", () => {
   });
 });
 
-// ── GranularityVector ───────────────────────────────────────────
+// â”€â”€ GranularityVector â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("GranularityVectorSchema", () => {
   const valid: GranularityVector = {

@@ -91,16 +91,54 @@ export interface InspectorContract {
   objective: string;
   definitionOfDone: string;
   acceptanceCriteria: string[];
+  validationCommands: Array<{
+    kind: string;
+    command?: string;
+    timeoutMs?: number;
+    blocking: boolean;
+  }>;
   allowedPaths: string[];
   forbiddenPaths: string[];
+  executionScope?: {
+    implementationPaths: string[];
+    testPaths: string[];
+    configPaths: string[];
+  };
+  explicitForbiddenPaths?: string[];
+  leafValidationCommands?: InspectorExecutionValidationCommand[];
+  parentValidationCommands?: InspectorExecutionValidationCommand[];
+  runValidationCommands?: InspectorExecutionValidationCommand[];
   expectedFiles: string[];
   producedSymbols: string[];
   consumedSymbols: string[];
   relevantSymbols: string[];
+  context: {
+    typeSignatures: string[];
+    referenceSnippets: Array<{ path: string; content: string }>;
+    conventions: string[];
+    upstreamArtifacts: string[];
+  };
+  consumedInterfaces: InspectorInterfaceContract[];
+  producedInterfaces: InspectorInterfaceContract[];
   dependencies: string[];
   knownRisks: string[];
   maxDurationMs: number;
   maxCostUsd: number;
+}
+
+export interface InspectorExecutionValidationCommand {
+  command: string;
+  args: string[];
+  timeoutMs: number;
+  cwd: "worktree" | "repo-root";
+}
+
+export interface InspectorInterfaceContract {
+  id: string;
+  kind: string;
+  signature: string;
+  description: string;
+  definedAtNodeId?: string;
 }
 
 export interface InspectorRiskEvidence {
@@ -148,6 +186,10 @@ export interface InspectorRunResult {
   durationMs: number;
   costUsd: number;
   diff?: string;
+  /** Result status from the execution core (e.g. "executor_error", "timeout"). */
+  resultStatus?: string;
+  /** Truncated executor stderr — the actionable cause shown when a leaf fails. */
+  errorOutput?: string;
 }
 
 export interface InspectorIntegrationChild {
@@ -162,7 +204,7 @@ export interface InspectorIntegration {
   compositeTaskId: string;
   children: InspectorIntegrationChild[];
   /**
-   * Real cherry-pick / conflict / Codex-repair evidence. Produced by the
+   * Real cherry-pick / conflict / agent-repair evidence. Produced by the
    * execution core (Etapa 1); `undefined` today → the Integration tab renders an
    * explicit pending state instead of inventing data.
    */
@@ -461,12 +503,48 @@ export function buildInspectorView(snapshot: RunSnapshot, taskId: string): Inspe
       objective: contract.objective,
       definitionOfDone: contract.definitionOfDone,
       acceptanceCriteria: contract.acceptance.map((entry) => entry.description),
+      validationCommands: contract.validationCommands.map((command) => ({
+        kind: command.kind,
+        ...(command.command !== undefined ? { command: command.command } : {}),
+        ...(command.timeoutMs !== undefined ? { timeoutMs: command.timeoutMs } : {}),
+        blocking: command.blocking
+      })),
       allowedPaths: [...contract.allowed.paths],
       forbiddenPaths: [...contract.forbidden.paths],
+      ...(contract.executionScope !== undefined
+        ? {
+            executionScope: {
+              implementationPaths: [...contract.executionScope.implementationPaths],
+              testPaths: [...contract.executionScope.testPaths],
+              configPaths: [...contract.executionScope.configPaths]
+            }
+          }
+        : {}),
+      ...(contract.forbiddenPaths !== undefined ? { explicitForbiddenPaths: [...contract.forbiddenPaths] } : {}),
+      ...(contract.leafValidationCommands !== undefined
+        ? { leafValidationCommands: contract.leafValidationCommands.map(toInspectorExecutionValidationCommand) }
+        : {}),
+      ...(contract.parentValidationCommands !== undefined
+        ? { parentValidationCommands: contract.parentValidationCommands.map(toInspectorExecutionValidationCommand) }
+        : {}),
+      ...(contract.runValidationCommands !== undefined
+        ? { runValidationCommands: contract.runValidationCommands.map(toInspectorExecutionValidationCommand) }
+        : {}),
       expectedFiles: [...contract.expectedOutput.changedFiles],
       producedSymbols: [...contract.expectedOutput.producedSymbols],
       consumedSymbols: [...contract.expectedOutput.consumedSymbols],
       relevantSymbols: [...contract.relevantSymbols],
+      context: {
+        typeSignatures: [...contract.context.typeSignatures],
+        referenceSnippets: contract.context.referenceSnippets.map((snippet) => ({
+          path: snippet.path,
+          content: snippet.content
+        })),
+        conventions: [...contract.context.conventions],
+        upstreamArtifacts: [...contract.context.upstreamArtifacts]
+      },
+      consumedInterfaces: (contract.consumedInterfaces ?? []).map(toInspectorInterfaceContract),
+      producedInterfaces: (contract.producedInterfaces ?? []).map(toInspectorInterfaceContract),
       dependencies: [...contract.dependencies],
       knownRisks: [...contract.knownRisks],
       maxDurationMs: contract.limits.maxDurationMs,
@@ -487,6 +565,16 @@ export function buildInspectorView(snapshot: RunSnapshot, taskId: string): Inspe
 
     if (result.diff !== "") {
       inspector.runResult.diff = result.diff;
+    }
+
+    // Surface the execution-core status + stderr tail so a failed leaf shows the
+    // actionable cause (e.g. a Gemini quota/auth error) instead of a bare flag.
+    const resultStatus = result.metadata?.status;
+    if (typeof resultStatus === "string") {
+      inspector.runResult.resultStatus = resultStatus;
+    }
+    if (!result.success && result.stderr.length > 0) {
+      inspector.runResult.errorOutput = result.stderr;
     }
 
     inspector.validation = {
@@ -742,4 +830,30 @@ function isRiskLevel(value: unknown): value is GraphRiskLevel {
 function acknowledgedRisk(prediction: RunSnapshot["riskPredictions"][number]): boolean {
   const value = (prediction as { acknowledged?: unknown }).acknowledged;
   return value === true;
+}
+
+function toInspectorExecutionValidationCommand(
+  command: NonNullable<RunSnapshot["contracts"][number]["leafValidationCommands"]>[number]
+): InspectorExecutionValidationCommand {
+  return {
+    command: command.command,
+    args: [...command.args],
+    timeoutMs: command.timeoutMs,
+    cwd: command.cwd
+  };
+}
+
+function toInspectorInterfaceContract(
+  contract: NonNullable<RunSnapshot["contracts"][number]["consumedInterfaces"]>[number]
+): InspectorInterfaceContract {
+  const view: InspectorInterfaceContract = {
+    id: contract.id,
+    kind: contract.kind,
+    signature: contract.signature,
+    description: contract.description
+  };
+  if (contract.definedAtNodeId !== undefined) {
+    view.definedAtNodeId = contract.definedAtNodeId;
+  }
+  return view;
 }
