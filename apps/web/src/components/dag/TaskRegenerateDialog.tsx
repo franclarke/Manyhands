@@ -67,7 +67,7 @@ export function TaskRegenerateDialog({
       </div>
       <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <p style={{ margin: 0, color: "var(--text-2)", fontSize: 12.5, lineHeight: 1.55 }}>
-          Replace this node's subtree with a freshly generated graft. The task id is preserved and approval is invalidated.
+          Replace this node&apos;s subtree with a freshly generated graft. The task id is preserved and approval is invalidated.
         </p>
         <DialogField label="Granularity">
           <select

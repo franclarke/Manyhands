@@ -34,12 +34,19 @@ export interface TaskNodeData {
 function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
   const node = data as TaskNodeData;
   const isRunning = node.status === "running" || node.status === "generating";
+  const isReady = node.status === "ready" || node.status === "approved";
   const selectedShadow = "0 0 0 1px var(--copper), 0 0 0 4px rgba(180, 113, 72, 0.14)";
   const relationshipColor = relationshipAccent(node.relationship);
   const riskBorder = node.riskLevel === "high" || node.riskLevel === "blocking"
     ? riskColor(node.riskLevel)
     : undefined;
-  const borderColor = selected ? "transparent" : relationshipColor ?? riskBorder ?? "var(--rule)";
+  const readyBorder = isReady ? "var(--status-ready-border)" : undefined;
+  const borderColor = selected ? "transparent" : relationshipColor ?? riskBorder ?? readyBorder ?? "var(--rule)";
+  const restingShadow = relationshipColor !== undefined
+    ? "0 0 0 3px rgba(229,222,204,0.045)"
+    : isReady
+      ? "0 0 0 3px rgba(127,166,216,0.10)"
+      : "none";
 
   return (
     <div
@@ -47,10 +54,14 @@ function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
       style={{
         width: 248,
         minHeight: 150,
-        background: selected ? "rgba(180,113,72,0.06)" : "rgba(24,26,28,0.96)",
+        background: selected
+          ? "rgba(180,113,72,0.06)"
+          : isReady
+            ? "linear-gradient(180deg, rgba(127,166,216,0.10), rgba(24,26,28,0.96) 34%)"
+            : "rgba(24,26,28,0.96)",
         border: `1px solid ${borderColor}`,
         borderRadius: 7,
-        boxShadow: selected ? selectedShadow : relationshipColor !== undefined ? "0 0 0 3px rgba(229,222,204,0.045)" : "none",
+        boxShadow: selected ? selectedShadow : restingShadow,
         color: "var(--text)",
         fontFamily: "var(--font-sans)",
         position: "relative",
@@ -125,6 +136,7 @@ function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
           )}
           {node.integrator ? <Signal color="var(--copper-hi)" label="integration" /> : null}
           {node.gateRequired ? <Signal color="var(--status-review-fg)" label="review gate" /> : null}
+          {isReady ? <Signal color="var(--status-ready-fg)" label="ready now" /> : null}
         </div>
 
         <div

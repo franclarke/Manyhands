@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { RecursiveDecomposer } from "@manyhands/decomposer";
 import type { AnthropicLike } from "@manyhands/decomposer";
 import type { FeatureRequest } from "@manyhands/decomposer";
@@ -67,6 +67,7 @@ describe("RecursiveDecomposer — atomic root (single-agent shape)", () => {
 
   it("emits recursive planning step lifecycle events", async () => {
     const events: string[] = [];
+    const completedChildren: string[][] = [];
     const client = scriptedClient([
       {
         match: "Evaluate arithmetic expression strings",
@@ -86,12 +87,16 @@ describe("RecursiveDecomposer — atomic root (single-agent shape)", () => {
       userPrompt: "build a calculator",
       aggressiveness: "low",
       onStepStarted: (event) => events.push(`start:${event.nodeId}:${event.depth}`),
-      onStepCompleted: (event) => events.push(`done:${event.nodeId}:${event.decision}:${event.childIds.length}`)
+      onStepCompleted: (event) => {
+        events.push(`done:${event.nodeId}:${event.decision}:${event.childIds.length}`);
+        completedChildren.push(event.children.map((child) => child.nodeId));
+      }
     });
 
     await decomposer.decompose(FEATURE);
 
     expect(events).toEqual(["start:root:0", "done:root:atomic:0"]);
+    expect(completedChildren).toEqual([[]]);
   });
 });
 
@@ -155,6 +160,251 @@ describe("RecursiveDecomposer — decompose with shared interfaces", () => {
     expect(result.graph.nodes.root?.contract?.parentValidationCommands?.[0]?.command).toBe("npm");
     expect(result.graph.nodes.root?.contract?.parentValidationCommands?.[0]?.args).toEqual(["test"]);
   });
+
+  it("retries a step schema failure with feedback that includes the invalid value", async () => {
+    const rootPrompts: string[] = [];
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const client: AnthropicLike = {
+      messages: {
+        async create(args) {
+          const content = args.messages[0]?.content ?? "";
+          if (content.includes("Evaluate arithmetic expression strings")) {
+            rootPrompts.push(content);
+            if (rootPrompts.length === 1) {
+              return {
+                content: [
+                  {
+                    type: "text",
+                    text: JSON.stringify({
+                      decision: "decompose",
+                      reasoning: "split the renderer into focused pieces",
+                      sharedInterfaces: [
+                        {
+                          id: "TaskViewModel",
+                          kind: "type",
+                          signature: "type TaskViewModel = { id: string; title: string }",
+                          description: "task shape rendered by the board"
+                        }
+                      ],
+                      children: [
+                        {
+                          id: "render-columns",
+                          title: "Render columns",
+                          goal: "Render task status columns",
+                          consumes: ["TaskViewModel"],
+                          produces: []
+                        },
+                        {
+                          id: "render-card-list",
+                          title: "Render card list",
+                          goal: "Render task cards within a column",
+                          consumes: ["TaskViewModel"],
+                          produces: []
+                        },
+                        {
+                          id: "Task Cards",
+                          title: "Render task cards",
+                          goal: "Render individual task cards",
+                          consumes: ["TaskViewModel"],
+                          produces: []
+                        }
+                      ],
+                      dependencies: [],
+                      parentValidationCommands: [{ command: "npm", args: ["test"] }]
+                    })
+                  }
+                ]
+              };
+            }
+
+            expect(content).toContain("children.2.id");
+            expect(content).toContain("\"Task Cards\"");
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    decision: "decompose",
+                    reasoning: "split the renderer into focused pieces",
+                    sharedInterfaces: [
+                      {
+                        id: "TaskViewModel",
+                        kind: "type",
+                        signature: "type TaskViewModel = { id: string; title: string }",
+                        description: "task shape rendered by the board"
+                      }
+                    ],
+                    children: [
+                      {
+                        id: "render-columns",
+                        title: "Render columns",
+                        goal: "Render task status columns",
+                        consumes: ["TaskViewModel"],
+                        produces: []
+                      },
+                      {
+                        id: "render-card-list",
+                        title: "Render card list",
+                        goal: "Render task cards within a column",
+                        consumes: ["TaskViewModel"],
+                        produces: []
+                      },
+                      {
+                        id: "task-cards",
+                        title: "Render task cards",
+                        goal: "Render individual task cards",
+                        consumes: ["TaskViewModel"],
+                        produces: []
+                      }
+                    ],
+                    dependencies: [],
+                    parentValidationCommands: [{ command: "npm", args: ["test"] }]
+                  })
+                }
+              ]
+            };
+          }
+
+          if (content.includes("Render task status columns")) {
+            return { content: [{ type: "text", text: JSON.stringify(atomic(["src/columns.ts"])) }] };
+          }
+          if (content.includes("Render task cards within a column")) {
+            return { content: [{ type: "text", text: JSON.stringify(atomic(["src/card-list.ts"])) }] };
+          }
+          if (content.includes("Render individual task cards")) {
+            return { content: [{ type: "text", text: JSON.stringify(atomic(["src/task-card.ts"])) }] };
+          }
+
+          throw new Error(`no scripted response matched prompt:\n${content}`);
+        }
+      }
+    };
+
+    const decomposer = new RecursiveDecomposer({
+      client,
+      model: "test-model",
+      userPrompt: "build a calculator",
+      aggressiveness: "high"
+    });
+
+    try {
+      const result = await decomposer.decompose(FEATURE);
+
+      expect(rootPrompts).toHaveLength(2);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('(received "Task Cards")'));
+      expect(result.graph.nodes["task-cards"]).toBeDefined();
+      expect(result.graph.nodes["Task Cards"]).toBeUndefined();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("expands sibling child steps concurrently by default", async () => {
+    let activeChildCalls = 0;
+    let maxActiveChildCalls = 0;
+    const client: AnthropicLike = {
+      messages: {
+        async create(args) {
+          const content = args.messages[0]?.content ?? "";
+          if (content.includes("Evaluate arithmetic expression strings")) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    decision: "decompose",
+                    reasoning: "two independent slices",
+                    sharedInterfaces: [],
+                    children: [
+                      { id: "first-child", title: "First child", goal: "Implement first child", consumes: [], produces: [] },
+                      { id: "second-child", title: "Second child", goal: "Implement second child", consumes: [], produces: [] }
+                    ],
+                    dependencies: [],
+                    parentValidationCommands: []
+                  })
+                }
+              ]
+            };
+          }
+
+          if (content.includes("Implement first child") || content.includes("Implement second child")) {
+            activeChildCalls += 1;
+            maxActiveChildCalls = Math.max(maxActiveChildCalls, activeChildCalls);
+            await sleep(25);
+            activeChildCalls -= 1;
+            return { content: [{ type: "text", text: JSON.stringify(atomic(["src/child.ts"])) }] };
+          }
+
+          throw new Error(`unexpected prompt:\n${content}`);
+        }
+      }
+    };
+
+    const decomposer = new RecursiveDecomposer({
+      client,
+      model: "test-model",
+      userPrompt: "build a calculator",
+      aggressiveness: "high"
+    });
+
+    await decomposer.decompose(FEATURE);
+
+    expect(maxActiveChildCalls).toBe(2);
+  });
+
+  it("honors maxParallelSteps when expanding siblings", async () => {
+    let activeChildCalls = 0;
+    let maxActiveChildCalls = 0;
+    const client: AnthropicLike = {
+      messages: {
+        async create(args) {
+          const content = args.messages[0]?.content ?? "";
+          if (content.includes("Evaluate arithmetic expression strings")) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({
+                    decision: "decompose",
+                    reasoning: "two independent slices",
+                    sharedInterfaces: [],
+                    children: [
+                      { id: "first-child", title: "First child", goal: "Implement first child", consumes: [], produces: [] },
+                      { id: "second-child", title: "Second child", goal: "Implement second child", consumes: [], produces: [] }
+                    ],
+                    dependencies: [],
+                    parentValidationCommands: []
+                  })
+                }
+              ]
+            };
+          }
+
+          if (content.includes("Implement first child") || content.includes("Implement second child")) {
+            activeChildCalls += 1;
+            maxActiveChildCalls = Math.max(maxActiveChildCalls, activeChildCalls);
+            await sleep(10);
+            activeChildCalls -= 1;
+            return { content: [{ type: "text", text: JSON.stringify(atomic(["src/child.ts"])) }] };
+          }
+
+          throw new Error(`unexpected prompt:\n${content}`);
+        }
+      }
+    };
+
+    const decomposer = new RecursiveDecomposer({
+      client,
+      model: "test-model",
+      userPrompt: "build a calculator",
+      aggressiveness: "high",
+      maxParallelSteps: 1
+    });
+
+    await decomposer.decompose(FEATURE);
+
+    expect(maxActiveChildCalls).toBe(1);
+  });
 });
 
 function atomic(expectedFiles: string[]): unknown {
@@ -166,4 +416,8 @@ function atomic(expectedFiles: string[]): unknown {
     expectedFiles,
     acceptanceCriteria: ["the module behaves per its contract"]
   };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

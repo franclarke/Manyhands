@@ -5,6 +5,7 @@ import type { RunSnapshot } from "@manyhands/core";
 import { toRunGraphViewModel, type GraphNodeView } from "@/lib/graph-view-model";
 import { mergeRunTimeline, type TimelineRunInput } from "@/lib/run-timeline";
 import { graphStatusColor } from "@/lib/status";
+import { SegmentedControl, type SegmentedOption } from "@/components/ui/segmented-control";
 
 interface RunTimelineProps {
   run: TimelineRunInput;
@@ -251,38 +252,19 @@ function TimelineFilter({
   onChange: (value: EventFilter) => void;
   selectedTaskId: string | null;
 }): React.ReactElement {
-  const options: Array<{ id: EventFilter; label: string; disabled?: boolean }> = [
-    { id: "all", label: "All" },
-    { id: "errors", label: "Errors" },
-    { id: "retries", label: "Retries" },
-    { id: "node", label: "Selected node", disabled: selectedTaskId === null }
+  const options: ReadonlyArray<SegmentedOption<EventFilter>> = [
+    { value: "all", label: "All" },
+    { value: "errors", label: "Errors" },
+    { value: "retries", label: "Retries" },
+    {
+      value: "node",
+      label: "Selected node",
+      ...(selectedTaskId === null
+        ? { disabled: true, title: "Select a node to filter its events" }
+        : {})
+    }
   ];
-  return (
-    <div style={{ display: "inline-flex", gap: 4 }}>
-      {options.map((option) => {
-        const active = value === option.id;
-        return (
-          <button
-            key={option.id}
-            type="button"
-            disabled={option.disabled}
-            onClick={() => onChange(option.id)}
-            style={{
-              border: `1px solid ${active ? "var(--copper)" : "var(--rule)"}`,
-              background: active ? "rgba(180,113,72,0.10)" : "transparent",
-              color: option.disabled ? "var(--text-4)" : active ? "var(--text)" : "var(--text-2)",
-              borderRadius: "var(--r-md)",
-              padding: "4px 7px",
-              cursor: option.disabled ? "not-allowed" : "pointer",
-              fontSize: 11
-            }}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
+  return <SegmentedControl ariaLabel="Event filter" options={options} value={value} onChange={onChange} />;
 }
 
 function entryMatchesFilter(

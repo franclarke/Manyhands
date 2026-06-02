@@ -7,15 +7,23 @@ import type { PlanReviewSummary } from "@/lib/plan-review";
 import { planReviewApprovalState } from "@/lib/plan-review-actions";
 import { Button } from "@/components/ui/button";
 import { ModalDialog } from "@/components/ui/modal-dialog";
+import { OPEN_CONFLICT_REVIEW_EVENT } from "@/components/dag/conflict-bottom-sheet.client";
 
 interface RunActionBarProps {
   runId: string;
   status: RunStatusKey;
   readyTaskCount: number;
+  activeConflictCount: number;
   planReview: PlanReviewSummary | null;
 }
 
-export function RunActionBar({ runId, status, readyTaskCount, planReview }: RunActionBarProps): React.ReactElement | null {
+export function RunActionBar({
+  runId,
+  status,
+  readyTaskCount,
+  activeConflictCount,
+  planReview
+}: RunActionBarProps): React.ReactElement | null {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -62,6 +70,10 @@ export function RunActionBar({ runId, status, readyTaskCount, planReview }: RunA
     }
   }
 
+  function openConflictReview(): void {
+    window.dispatchEvent(new Event(OPEN_CONFLICT_REVIEW_EVENT));
+  }
+
   if (status === "completed") {
     return null;
   }
@@ -103,6 +115,11 @@ export function RunActionBar({ runId, status, readyTaskCount, planReview }: RunA
           }}
         >
           Approve plan
+        </Button>
+      ) : null}
+      {activeConflictCount > 0 && (status === "needs_review" || status === "approved") ? (
+        <Button variant="ghost" onClick={openConflictReview}>
+          Resolve conflicts ({activeConflictCount})
         </Button>
       ) : null}
       {status === "approved" ? (

@@ -38,7 +38,7 @@ import { getRunRepository } from "./store";
 import { getWorkspaceRepository } from "../workspaces";
 import { pickDecomposer, type DecomposerSelection } from "@/lib/decomposer-policy";
 import type { RunEvent, RiskLevelKey } from "./events";
-import type { ExecutionConfigInput, RunDecompositionMetadata, RunRecord, RunStatus } from "./schema";
+import type { ExecutionConfigInput, PlanningLiveNode, RunDecompositionMetadata, RunRecord, RunStatus } from "./schema";
 import { findScenario, type DecompositionScenario } from "@/lib/scenarios";
 import type { Workspace } from "@/lib/api-types";
 
@@ -182,6 +182,7 @@ function resolveDecompositionMode(mode: RunRecord["granularity"]): "coarse" | "b
 }
 
 async function transitionTo(run: RunRecord, status: RunStatus, extra: Partial<RunRecord> = {}): Promise<RunRecord> {
+  console.log(`[Runner] Run ${run.runId}: Transición de estado de "${run.status}" a "${status}"`);
   assertTransition(run.status, status);
   const next: RunRecord = { ...run, ...extra, status };
   const saved = await getRunRepository().save(next);
@@ -243,6 +244,7 @@ function startHeartbeat(runId: string): () => void {
  * Transitions: created/interrupted → generating → needs_review (or failed).
  */
 export async function runPlanningPipeline(runId: string, options: PlanningRunnerOptions = {}): Promise<void> {
+  console.log(`[Runner] Iniciando pipeline de planificación para el run: ${runId}`);
   markRunnerActive(runId);
   const stopHeartbeat = startHeartbeat(runId);
   try {
@@ -253,28 +255,69 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
       });
     }
 
+    const livePlanningNodes = new Map<string, PlanningLiveNode>(
+      (run.livePlanningNodes ?? []).map((node) => [node.id, node])
+    );
     const workspace = await getWorkspaceRepository().get(run.workspaceId).catch(() => null);
     const selection = pickDecomposer({
       userPrompt: run.userPrompt,
       model: run.model,
-      onStepStarted: (event) => {
+      onStepStarted: async (event) => {
+        livePlanningNodes.set(event.nodeId, {
+          ...livePlanningNodes.get(event.nodeId),
+          id: event.nodeId,
+          parentId: event.parentId,
+          title: event.title,
+          goal: event.goal,
+          depth: event.depth,
+          state: "active"
+        });
         publishEvent(run.runId, {
           kind: "planning.node.started",
           nodeId: event.nodeId,
           ...(event.parentId !== null ? { parentId: event.parentId } : {}),
           title: event.title,
+          goal: event.goal,
           depth: event.depth,
           at: new Date().toISOString()
         });
+        await persistLivePlanningNodes(run.runId, livePlanningNodes);
       },
-      onStepCompleted: (event) => {
+      onStepCompleted: async (event) => {
+        const existing = livePlanningNodes.get(event.nodeId);
+        livePlanningNodes.set(event.nodeId, {
+          ...(existing ?? {
+            id: event.nodeId,
+            parentId: event.parentId,
+            title: event.title,
+            goal: event.goal,
+            depth: event.depth
+          }),
+          state: "complete",
+          decision: event.decision,
+          childCount: event.childIds.length,
+          childIds: event.childIds
+        });
+        for (const child of event.children) {
+          livePlanningNodes.set(child.nodeId, {
+            ...livePlanningNodes.get(child.nodeId),
+            id: child.nodeId,
+            parentId: child.parentId,
+            title: child.title,
+            goal: child.goal,
+            depth: child.depth,
+            state: livePlanningNodes.get(child.nodeId)?.state ?? "pending"
+          });
+        }
         publishEvent(run.runId, {
           kind: "planning.node.completed",
           nodeId: event.nodeId,
           decision: event.decision,
           childIds: event.childIds,
+          childNodes: event.children,
           at: new Date().toISOString()
         });
+        await persistLivePlanningNodes(run.runId, livePlanningNodes);
       },
       onCliOutput: (event) => {
         publishEvent(run.runId, {
@@ -287,6 +330,8 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
       },
       ...(workspace !== null ? { workspace } : {})
     });
+
+    console.log(`[Runner] Decomposer seleccionado: provider="${selection.provider}", model="${selection.model}"`);
 
     let planning: MockPlanningFlowResult;
     let decomposition: RunDecompositionMetadata;
@@ -349,9 +394,12 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
     }
 
     run = await getRunRepository().get(runId);
+    console.log(`[Runner] Planificación completada con éxito para el run: ${runId}`);
     await transitionTo(run, "needs_review");
   } catch (error) {
+    console.error(`[Runner] FALLÓ la generación del plan para el run "${runId}":`, error);
     if (isDecomposerQuestionError(error)) {
+      console.log(`[Runner] Planificación pausada en el nodo "${error.nodeId}" para interactuar con el usuario.`);
       const run = await getRunRepository().get(runId).catch(() => null);
       if (run !== null) {
         await getRunRepository().save({
@@ -829,4 +877,20 @@ function gitWithStdin(cwd: string, args: string[], stdin: string): Promise<void>
 
 function publishEvent(runId: string, event: RunEvent): void {
   publishRunEvent(runId, event);
+}
+
+async function persistLivePlanningNodes(
+  runId: string,
+  nodes: ReadonlyMap<string, PlanningLiveNode>
+): Promise<void> {
+  const current = await getRunRepository().get(runId).catch(() => null);
+  if (current === null) {
+    return;
+  }
+  await getRunRepository().save({
+    ...current,
+    livePlanningNodes: Array.from(nodes.values()).sort(
+      (left, right) => left.depth - right.depth || left.id.localeCompare(right.id)
+    )
+  });
 }

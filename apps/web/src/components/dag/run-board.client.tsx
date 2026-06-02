@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import type { GraphNodeStatus, GraphNodeView, RunGraphViewModel } from "@/lib/graph-view-model";
 import { nodeUiStatus } from "@/lib/status";
 import { nodeActionHint, nodeKindLabel, riskLabel } from "@/lib/run-presentation";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { Signal } from "@/components/ui/signal";
 
 interface RunBoardProps {
   graph: RunGraphViewModel;
@@ -127,9 +127,11 @@ function BoardCard({
         color: "var(--text)"
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-        <StatusBadge status={nodeUiStatus(node.status, { integrator: node.integrator === true })} />
-        <span style={{ color: "var(--text-2)", fontSize: 11 }}>{nodeKindLabel(node.kind)}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+        <Signal status={nodeUiStatus(node.status, { integrator: node.integrator === true })} />
+        <span className="mh-mono" style={{ color: "var(--text-3)", fontSize: 10.5 }}>
+          {nodeKindLabel(node.kind)}
+        </span>
       </div>
       <div style={{ fontSize: 13.5, color: "var(--text)", marginTop: 9, lineHeight: 1.28, fontWeight: 700 }}>
         {node.title}

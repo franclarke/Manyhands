@@ -45,8 +45,8 @@ export interface MockPlanningFlowOptions {
   repositoryIndex?: RepositoryIndex;
   schedulerPolicy?: SchedulingPolicy;
   runLabel?: string;
-  questionAnswers?: Record<string, string>;
-  stepCache?: Record<string, any>;
+  questionAnswers?: Record<string, string> | undefined;
+  stepCache?: Record<string, any> | undefined;
 }
 
 export interface PlanningRunSummary {

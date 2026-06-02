@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiErrorResponse, RunResponse, Workspace } from "@/lib/api-types";
+import { Button } from "@/components/ui/button";
+import { ControlRow } from "@/components/ui/control-row";
 import { GranularitySelector } from "./granularity-selector.client";
 import { ModelPicker } from "./model-picker.client";
 import { ScenarioPicker } from "./scenario-picker.client";
@@ -12,6 +14,7 @@ import { toGranularityMode, type GranularityLevel } from "@/lib/granularity";
 import { findScenario } from "@/lib/scenarios";
 
 const PROMPT_STORAGE_KEY = "manyhands:lastPrompt";
+const COLUMN_WIDTH = 880;
 
 const EXAMPLE_PROMPTS = [
   "Add passwordless login with magic links, tests, and session handling.",
@@ -132,7 +135,7 @@ export function CommandCenterShell({
     return (
       <div
         style={{
-          maxWidth: 980,
+          maxWidth: COLUMN_WIDTH,
           margin: "0 auto",
           padding: 24,
           border: "1px dashed var(--rule-strong)",
@@ -154,11 +157,11 @@ export function CommandCenterShell({
   return (
     <section
       style={{
-        maxWidth: 980,
+        maxWidth: COLUMN_WIDTH,
         margin: "0 auto",
         display: "flex",
         flexDirection: "column",
-        gap: 16
+        gap: 24
       }}
     >
       <TaskPrompt
@@ -171,171 +174,187 @@ export function CommandCenterShell({
         examples={EXAMPLE_PROMPTS}
       />
 
-      <div
-        className="mh-tick-frame"
-        style={{
-          border: "1px solid var(--rule)",
-          background: "rgba(19,20,22,0.72)",
-          borderRadius: "var(--r-xl)",
-          padding: 18,
-          display: "flex",
-          flexDirection: "column",
-          gap: 16
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ height: 1, background: "var(--rule)" }} />
+
+      {/* Run configuration — inline rows, separation by spacing not boxes. */}
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 2 }}>
           <span className="mh-coord" style={{ color: "var(--copper)" }}>
             Run configuration
           </span>
-          <div style={{ height: 1, flex: 1, background: "var(--rule)" }} />
+          <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
           <span className="mh-mono" style={{ color: "var(--text-3)", fontSize: 10.5 }}>
             {executionMode}
           </span>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
-            gap: 12
-          }}
-        >
-          <ConfigField label="Workspace">
-            <WorkspacePicker
-              workspaces={workspaces}
-              value={workspaceId}
-              onChange={setWorkspaceId}
-            />
-          </ConfigField>
-          <ConfigField label="Branch">
-            <span className="mh-mono" style={{ fontSize: 12, color: "var(--text)" }}>
+        <ControlRow label="Workspace">
+          <WorkspacePicker workspaces={workspaces} value={workspaceId} onChange={setWorkspaceId} />
+          <span className="mh-mono" style={{ color: "var(--text-4)", padding: "0 2px" }}>
+            ·
+          </span>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              color: "var(--text-3)",
+              fontSize: 12
+            }}
+          >
+            <BranchGlyph />
+            <span className="mh-mono" style={{ fontSize: 12 }}>
               {selectedWorkspace?.defaultBranch ?? "main"}
             </span>
-          </ConfigField>
-          <ConfigField label="Model">
-            <ModelPicker value={modelId} onChange={setModelId} />
-          </ConfigField>
-          <ConfigField label="Execution mode">
-            <span style={{ fontSize: 12.5, color: "var(--text)" }}>{executionMode}</span>
-          </ConfigField>
-        </div>
+          </span>
+        </ControlRow>
 
-        <ConfigField label="Granularity">
+        <ControlRow label="Target repo">
+          <span
+            className="mh-mono"
+            style={{
+              fontSize: 11.5,
+              color: hasLocalRepo ? "var(--text-2)" : "var(--error)",
+              wordBreak: "break-all"
+            }}
+          >
+            {selectedWorkspace?.repoPath ?? "Configure a local git folder in this workspace"}
+          </span>
+        </ControlRow>
+
+        <ControlRow label="Model">
+          <ModelPicker value={modelId} onChange={setModelId} />
+        </ControlRow>
+
+        <ControlRow
+          label="Granularity"
+          hint="how deep the planner decomposes — decided per task, not a fixed depth"
+          last
+        >
           <GranularitySelector value={granularity} onChange={setGranularity} />
-        </ConfigField>
+        </ControlRow>
+      </div>
 
+      {errorMessage !== null ? (
         <div
+          role="alert"
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: 12
+            border: "1px solid var(--status-failed-border)",
+            background: "var(--status-failed-bg)",
+            color: "var(--status-failed-fg)",
+            padding: "9px 11px",
+            borderRadius: "var(--r-md)",
+            fontSize: 12.5
           }}
         >
-          <ConfigField label="Target repo">
-            <span className="mh-mono" style={{ fontSize: 11.5, color: hasLocalRepo ? "var(--text)" : "var(--error)" }}>
-              {selectedWorkspace?.repoPath ?? "Configure a local git folder in this workspace"}
-            </span>
-          </ConfigField>
-          <ConfigField label="Run evidence">
-            <span style={{ fontSize: 12, color: "var(--text-2)", lineHeight: 1.45 }}>
-              {scenario !== undefined
-                ? "Lab scenario selected; planning stays deterministic for replay."
-                : "Gemini plans locally, agents run after approval, and the final patch is applied on success."}
-            </span>
-          </ConfigField>
+          {errorMessage}
         </div>
+      ) : null}
 
-        {errorMessage !== null ? (
-          <div
-            role="alert"
-            style={{
-              border: "1px solid var(--status-failed-border)",
-              background: "var(--status-failed-bg)",
-              color: "var(--status-failed-fg)",
-              padding: "9px 11px",
-              borderRadius: "var(--r-md)",
-              fontSize: 12.5
-            }}
-          >
-            {errorMessage}
-          </div>
-        ) : null}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+        <Button
+          variant="primary"
+          size="md"
+          disabled={!canStart}
+          busy={submitting}
+          busyLabel="Generating task graph…"
+          onClick={() => {
+            void handleStart();
+          }}
+          style={{ height: 42, padding: "0 18px", fontSize: 14, fontWeight: 700, borderRadius: "var(--r-lg)" }}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 9 }}>
+            Generate task graph
+            <span
+              aria-hidden
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                fontFamily: "var(--font-mono)",
+                fontSize: 10,
+                lineHeight: 1,
+                padding: "2px 5px",
+                borderRadius: 3,
+                background: "rgba(0,0,0,0.18)",
+                color: "rgba(0,0,0,0.6)"
+              }}
+            >
+              ⌘↵
+            </span>
+          </span>
+        </Button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            disabled={!canStart}
-            onClick={() => {
-              void handleStart();
-            }}
-            style={{
-              height: 42,
-              padding: "0 18px",
-              border: `1px solid ${canStart ? "var(--copper)" : "var(--rule)"}`,
-              background: canStart ? "var(--copper)" : "rgba(229,222,204,0.035)",
-              color: canStart ? "#14110e" : "var(--text-3)",
-              borderRadius: "var(--r-lg)",
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: canStart ? "pointer" : "not-allowed"
-            }}
-          >
-            {submitting ? "Generating task graph..." : "Generate task graph"}
-          </button>
-          {!granularitySupported ? (
-            <span className="mh-mono" style={{ color: "var(--error)", fontSize: 11 }}>
-              Selected lab scenario does not support this granularity.
-            </span>
-          ) : scenario === undefined && !hasLocalRepo ? (
-            <span className="mh-mono" style={{ color: "var(--error)", fontSize: 11 }}>
-              {selectedWorkspace !== null
-                ? `Workspace "${selectedWorkspace.name}" has no local git repo. Configure one, pick a workspace that has one, or select a lab scenario.`
-                : "Select a workspace with a local git repo, or pick a lab scenario."}
-            </span>
-          ) : (
-            <span style={{ color: "var(--text-3)", fontSize: 12 }}>
-              ManyHands will decompose this prompt into executable node contracts.
-            </span>
-          )}
-        </div>
-
-        <AdvancedSection>
-          <ScenarioPicker
-            value={scenarioId}
-            onChange={setScenarioId}
-            granularity={granularityMode}
-          />
-        </AdvancedSection>
+        <ActionHint
+          granularitySupported={granularitySupported}
+          scenarioSelected={scenario !== undefined}
+          hasLocalRepo={hasLocalRepo}
+          workspaceName={selectedWorkspace?.name ?? null}
+        />
       </div>
+
+      <AdvancedSection>
+        <ScenarioPicker value={scenarioId} onChange={setScenarioId} granularity={granularityMode} />
+      </AdvancedSection>
     </section>
   );
 }
 
-function ConfigField({
-  label,
-  children
+function ActionHint({
+  granularitySupported,
+  scenarioSelected,
+  hasLocalRepo,
+  workspaceName
 }: {
-  label: string;
-  children: React.ReactNode;
+  granularitySupported: boolean;
+  scenarioSelected: boolean;
+  hasLocalRepo: boolean;
+  workspaceName: string | null;
 }): React.ReactElement {
-  return (
-    <label
-      style={{
-        minWidth: 0,
-        display: "flex",
-        flexDirection: "column",
-        gap: 7,
-        border: "1px solid var(--rule-soft)",
-        background: "rgba(229,222,204,0.018)",
-        borderRadius: "var(--r-lg)",
-        padding: "10px 11px"
-      }}
-    >
-      <span className="mh-coord">{label}</span>
-      <span style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        {children}
+  if (!granularitySupported) {
+    return (
+      <span className="mh-mono" style={{ color: "var(--error)", fontSize: 11 }}>
+        Selected lab scenario does not support this granularity.
       </span>
-    </label>
+    );
+  }
+  if (!scenarioSelected && !hasLocalRepo) {
+    return (
+      <span className="mh-mono" style={{ color: "var(--error)", fontSize: 11, lineHeight: 1.4 }}>
+        {workspaceName !== null
+          ? `Workspace "${workspaceName}" has no local git repo. Configure one, pick a workspace that has one, or select a lab scenario.`
+          : "Select a workspace with a local git repo, or pick a lab scenario."}
+      </span>
+    );
+  }
+  return (
+    <span style={{ color: "var(--text-3)", fontSize: 12.5, lineHeight: 1.45, maxWidth: 460 }}>
+      {scenarioSelected
+        ? "Lab scenario selected — planning stays deterministic for replay."
+        : "Gemini plans locally, agents run after approval, and the final patch is applied on success."}
+    </span>
+  );
+}
+
+function BranchGlyph(): React.ReactElement {
+  return (
+    <svg
+      width={11}
+      height={11}
+      viewBox="0 0 18 18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ flex: "0 0 auto" }}
+      aria-hidden
+    >
+      <line x1="6" y1="3" x2="6" y2="15" />
+      <circle cx="6" cy="3" r="1.6" />
+      <circle cx="6" cy="15" r="1.6" />
+      <circle cx="12" cy="9" r="1.6" />
+      <path d="M12 7.4V6c0-1.6-1.4-3-3-3H7.5" />
+    </svg>
   );
 }
 

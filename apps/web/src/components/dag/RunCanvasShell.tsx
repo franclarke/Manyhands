@@ -47,25 +47,63 @@ export interface LivePlanNode {
   id: string;
   parentId: string | null;
   title: string;
+  goal?: string | undefined;
   depth: number;
-  state: "active" | "complete";
-  decision?: "atomic" | "decompose";
-  childCount?: number;
+  state: "pending" | "active" | "complete";
+  decision?: "atomic" | "decompose" | "question" | undefined;
+  childCount?: number | undefined;
+  childIds?: readonly string[] | undefined;
+}
+
+interface LivePlanChildNode {
+  nodeId: string;
+  parentId: string;
+  title: string;
+  goal: string;
+  depth: number;
 }
 
 export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
   const { snapshot, source, visibleTaskIds } = props;
+  const router = useRouter();
+  const livePlanNodes = props.livePlanNodes ?? [];
+  const livePlanSnapshot = useMemo(
+    () =>
+      snapshot === null && livePlanNodes.length > 0
+        ? buildLivePlanningSnapshot({
+            nodes: livePlanNodes,
+            source,
+            benchmarkLabel: props.benchmarkLabel,
+            configLabel: props.configLabel
+          })
+        : null,
+    [snapshot, livePlanNodes, source, props.benchmarkLabel, props.configLabel]
+  );
+  const effectiveSnapshot = snapshot ?? livePlanSnapshot;
+  const effectiveVisibleTaskIds = useMemo(() => {
+    if (snapshot === null || visibleTaskIds === null || visibleTaskIds === undefined) {
+      return null;
+    }
+    if (livePlanNodes.length === 0) {
+      return visibleTaskIds;
+    }
+    const merged = new Set(visibleTaskIds);
+    for (const node of livePlanNodes) {
+      merged.add(node.id);
+    }
+    return merged;
+  }, [snapshot, visibleTaskIds, livePlanNodes]);
   const { graph, derivedSnapshot } = useMemo(() => {
-    if (snapshot === null) {
+    if (effectiveSnapshot === null) {
       return { graph: null, derivedSnapshot: null };
     }
-    const fullGraph = toRunGraphViewModel(snapshot);
-    if (visibleTaskIds === null || visibleTaskIds === undefined) {
-      return { graph: fullGraph, derivedSnapshot: snapshot };
+    const fullGraph = toRunGraphViewModel(effectiveSnapshot);
+    if (effectiveVisibleTaskIds === null || effectiveVisibleTaskIds === undefined) {
+      return { graph: fullGraph, derivedSnapshot: effectiveSnapshot };
     }
-    const filteredNodes = fullGraph.nodes.filter((node) => visibleTaskIds.has(node.id));
+    const filteredNodes = fullGraph.nodes.filter((node) => effectiveVisibleTaskIds.has(node.id));
     const filteredEdges = fullGraph.edges.filter(
-      (edge) => visibleTaskIds.has(edge.source) && visibleTaskIds.has(edge.target)
+      (edge) => effectiveVisibleTaskIds.has(edge.source) && effectiveVisibleTaskIds.has(edge.target)
     );
     const partial: RunGraphViewModel = {
       ...fullGraph,
@@ -78,15 +116,14 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
         riskCount: filteredEdges.filter((edge) => edge.kind === "risk").length
       }
     };
-    return { graph: partial, derivedSnapshot: snapshot };
-  }, [snapshot, visibleTaskIds]);
+    return { graph: partial, derivedSnapshot: effectiveSnapshot };
+  }, [effectiveSnapshot, effectiveVisibleTaskIds]);
 
   if (graph === null || derivedSnapshot === null) {
     const isFailed = source.kind === "persisted-run" && source.initialStatus === "failed";
     const isGenerating = source.kind === "persisted-run" && source.initialStatus === "generating";
     const isCreated = source.kind === "persisted-run" && source.initialStatus === "created";
     const isPaused = source.kind === "persisted-run" && source.initialStatus === "paused";
-    const livePlanNodes = props.livePlanNodes ?? [];
     const statusMessage = isGenerating
       ? "Esperando descomposición…"
       : isCreated
@@ -96,8 +133,6 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
           : isFailed
             ? "La generación del plan falló."
             : "No hay snapshot disponible todavía.";
-    const router = useRouter();
-
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {props.headerSlot != null ? props.headerSlot : null}
@@ -162,24 +197,196 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
   const showMethodologyBanner = props.showMethodologyBanner ?? source.kind === "deterministic-replay";
 
   return (
-    <DagWorkspace
-      snapshot={derivedSnapshot}
-      graph={graph}
-      benchmarkLabel={props.benchmarkLabel}
-      configLabel={props.configLabel}
-      mode={props.mode ?? "Replay"}
-      showMethodologyBanner={showMethodologyBanner}
-      headerSlot={props.headerSlot}
-      actionSlot={props.actionSlot}
-      {...(source.kind === "persisted-run" ? { runStatus: source.initialStatus } : {})}
-      {...(props.editableRunId !== undefined ? { editableRunId: props.editableRunId } : {})}
-      {...(props.onEdited !== undefined ? { onEdited: props.onEdited } : {})}
-      patches={props.patches ?? []}
-      {...(props.timelineRun !== undefined ? { timelineRun: props.timelineRun } : {})}
-      conflicts={props.conflicts ?? []}
-      {...(props.conflictError !== undefined ? { conflictError: props.conflictError } : {})}
-      {...(props.execution !== undefined ? { execution: props.execution } : {})}
-    />
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <DagWorkspace
+        snapshot={derivedSnapshot}
+        graph={graph}
+        benchmarkLabel={props.benchmarkLabel}
+        configLabel={props.configLabel}
+        mode={props.mode ?? "Replay"}
+        showMethodologyBanner={showMethodologyBanner}
+        headerSlot={props.headerSlot}
+        actionSlot={props.actionSlot}
+        {...(source.kind === "persisted-run" ? { runStatus: source.initialStatus } : {})}
+        {...(props.editableRunId !== undefined ? { editableRunId: props.editableRunId } : {})}
+        {...(props.onEdited !== undefined ? { onEdited: props.onEdited } : {})}
+        patches={props.patches ?? []}
+        {...(props.timelineRun !== undefined ? { timelineRun: props.timelineRun } : {})}
+        conflicts={props.conflicts ?? []}
+        {...(props.conflictError !== undefined ? { conflictError: props.conflictError } : {})}
+        {...(props.execution !== undefined ? { execution: props.execution } : {})}
+      />
+      {source.kind === "persisted-run" ? (
+        <LivePlanningPanels
+          runId={source.runId}
+          pendingQuestion={props.pendingQuestion ?? null}
+          cliLogs={props.cliLogs ?? []}
+          onAnswered={() => router.refresh()}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function buildLivePlanningSnapshot(input: {
+  nodes: readonly LivePlanNode[];
+  source: RunCanvasSource;
+  benchmarkLabel: string;
+  configLabel: string;
+}): RunSnapshot | null {
+  const root = input.nodes.find((node) => node.parentId === null) ?? input.nodes[0];
+  if (root === undefined) {
+    return null;
+  }
+
+  const runId = input.source.kind === "persisted-run" ? input.source.runId : "live-planning";
+  const childrenByParent = new Map<string, string[]>();
+  for (const node of input.nodes) {
+    if (node.parentId === null) continue;
+    const children = childrenByParent.get(node.parentId) ?? [];
+    children.push(node.id);
+    childrenByParent.set(node.parentId, children);
+  }
+
+  const graphNodes = Object.fromEntries(
+    input.nodes.map((node) => {
+      const childIds = uniqueStrings([...(node.childIds ?? []), ...(childrenByParent.get(node.id) ?? [])]);
+      return [
+        node.id,
+        {
+          id: node.id,
+          parentId: node.parentId,
+          kind: liveNodeKind(node),
+          title: node.title,
+          goal: node.goal ?? node.title,
+          status: node.state === "active" ? "running" : "planned",
+          granularity: "auto",
+          depth: node.depth,
+          childrenIds: childIds,
+          dependencies: [],
+          metadata: {
+            authoredBy: "ai",
+            livePlanningState: node.state,
+            ...(node.decision !== undefined ? { planningDecision: node.decision } : {})
+          }
+        }
+      ];
+    })
+  );
+
+  return {
+    runId,
+    featureId: `${runId}:live-plan`,
+    status: "planned",
+    decompositionMode: "balanced",
+    featureRequest: {
+      id: `${runId}:live-feature`,
+      title: input.benchmarkLabel,
+      description: input.configLabel,
+      targetStack: [],
+      constraints: [],
+      acceptanceCriteria: ["Planning is still generating."]
+    },
+    graphSnapshot: {
+      id: `${runId}:live-graph`,
+      planId: `${runId}:live-plan`,
+      repo: "live-planning",
+      baseBranch: "planning",
+      baseCommit: "pending",
+      featureRequest: input.benchmarkLabel,
+      nodes: graphNodes,
+      dependencies: [],
+      rootId: root.id,
+      createdAt: "1970-01-01T00:00:00.000Z"
+    },
+    contracts: [],
+    riskPredictions: [],
+    staticConflictSignals: [],
+    scheduledBatches: [],
+    blockedTasks: [],
+    agentRunResults: [],
+    scopeValidationResults: [],
+    traceEvents: [],
+    summary: {
+      runId,
+      featureId: `${runId}:live-feature`,
+      mode: "balanced",
+      schedulerPolicy: "risk_aware",
+      taskCount: input.nodes.length,
+      leafCount: input.nodes.filter((node) => node.decision === "atomic").length,
+      dependencyCount: 0,
+      contractCount: 0,
+      riskPredictionCount: 0,
+      staticConflictSignalCount: 0,
+      batchCount: 0,
+      batches: [],
+      traceEventCount: 0,
+      validationIssues: []
+    },
+    metadata: {
+      schemaVersion: "manyhands.run-snapshot.v1",
+      createdAt: "1970-01-01T00:00:00.000Z",
+      deterministic: false
+    }
+  } as RunSnapshot;
+}
+
+function liveNodeKind(node: LivePlanNode): "root" | "composite" | "leaf" {
+  if (node.parentId === null) return "root";
+  if (node.decision === "atomic") return "leaf";
+  return "composite";
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  return Array.from(new Set(values));
+}
+
+function isLivePlanChildNode(value: unknown): value is LivePlanChildNode {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const candidate = value as Partial<LivePlanChildNode>;
+  return (
+    typeof candidate.nodeId === "string" &&
+    typeof candidate.parentId === "string" &&
+    typeof candidate.title === "string" &&
+    typeof candidate.goal === "string" &&
+    typeof candidate.depth === "number"
+  );
+}
+
+function livePlanNodeMap(nodes: readonly LivePlanNode[]): Map<string, LivePlanNode> {
+  return new Map(nodes.map((node) => [node.id, node]));
+}
+
+function LivePlanningPanels({
+  runId,
+  pendingQuestion,
+  cliLogs,
+  onAnswered
+}: {
+  runId: string;
+  pendingQuestion: { nodeId: string; question: string; options: string[] } | null;
+  cliLogs: readonly LivePlanCliLog[];
+  onAnswered: () => void;
+}): React.ReactElement | null {
+  if (pendingQuestion === null && cliLogs.length === 0) {
+    return null;
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {pendingQuestion !== null ? (
+        <QuestionCard
+          runId={runId}
+          nodeId={pendingQuestion.nodeId}
+          question={pendingQuestion.question}
+          options={pendingQuestion.options}
+          onAnswered={onAnswered}
+        />
+      ) : null}
+      {cliLogs.length > 0 ? <PlanningConsole logs={cliLogs} /> : null}
+    </div>
   );
 }
 
@@ -208,12 +415,15 @@ const LIVE_REFRESH_MS = 5_000;
 export function useLiveRun(
   runId: string,
   initialStatus: RunStatusKey,
-  initialPendingQuestion: { nodeId: string; question: string; options: string[] } | null = null
+  initialPendingQuestion: { nodeId: string; question: string; options: string[] } | null = null,
+  initialLivePlanNodes: readonly LivePlanNode[] = []
 ): UseLiveRunResult {
   const router = useRouter();
   const [status, setStatus] = useState<RunStatusKey>(initialStatus);
   const [visible, setVisible] = useState<Set<string>>(new Set());
-  const [livePlanNodes, setLivePlanNodes] = useState<Map<string, LivePlanNode>>(new Map());
+  const [livePlanNodes, setLivePlanNodes] = useState<Map<string, LivePlanNode>>(
+    () => livePlanNodeMap(initialLivePlanNodes)
+  );
   const [pendingQuestion, setPendingQuestion] = useState<{ nodeId: string; question: string; options: string[] } | null>(
     initialPendingQuestion
   );
@@ -230,9 +440,20 @@ export function useLiveRun(
 
   useEffect(() => {
     setVisible(new Set());
-    setLivePlanNodes(new Map());
+    setLivePlanNodes(livePlanNodeMap(initialLivePlanNodes));
     setCliLogs([]);
   }, [runId]);
+
+  useEffect(() => {
+    if (initialLivePlanNodes.length === 0) return;
+    setLivePlanNodes((current) => {
+      const next = new Map(current);
+      for (const node of initialLivePlanNodes) {
+        next.set(node.id, { ...next.get(node.id), ...node });
+      }
+      return next;
+    });
+  }, [initialLivePlanNodes]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -248,9 +469,11 @@ export function useLiveRun(
           nodeId?: string;
           parentId?: string;
           title?: string;
+          goal?: string;
           depth?: number;
           decision?: "atomic" | "decompose" | "question";
           childIds?: string[];
+          childNodes?: LivePlanChildNode[];
           chunk?: string;
           stream?: "stdout" | "stderr";
           question?: string;
@@ -274,9 +497,11 @@ export function useLiveRun(
           setLivePlanNodes((current) => {
             const next = new Map(current);
             next.set(event.nodeId!, {
+              ...next.get(event.nodeId!),
               id: event.nodeId!,
               parentId: event.parentId ?? null,
               title: event.title!,
+              goal: event.goal ?? event.title!,
               depth: event.depth!,
               state: "active"
             });
@@ -289,6 +514,8 @@ export function useLiveRun(
         ) {
           const decision = event.decision;
           const childCount = event.childIds?.length ?? 0;
+          const childIds = event.childIds ?? [];
+          const childNodes = Array.isArray(event.childNodes) ? event.childNodes.filter(isLivePlanChildNode) : [];
           setLivePlanNodes((current) => {
             const existing = current.get(event.nodeId!);
             if (existing === undefined) return current;
@@ -297,8 +524,21 @@ export function useLiveRun(
               ...existing,
               state: "complete",
               decision,
-              childCount
+              childCount,
+              childIds
             });
+            for (const child of childNodes) {
+              const existingChild = next.get(child.nodeId);
+              next.set(child.nodeId, {
+                ...existingChild,
+                id: child.nodeId,
+                parentId: child.parentId,
+                title: child.title,
+                goal: child.goal,
+                depth: child.depth,
+                state: existingChild?.state ?? "pending"
+              });
+            }
             return next;
           });
         } else if (event.kind === "planning.cli.output" && typeof event.chunk === "string" && typeof event.nodeId === "string") {
@@ -388,7 +628,12 @@ function LivePlanningTree({ nodes }: { nodes: readonly LivePlanNode[] }): React.
             marginLeft: node.depth * 18,
             padding: "9px 11px",
             border: "1px solid var(--border-soft)",
-            background: node.state === "active" ? "rgba(244,195,106,0.08)" : "rgba(119,215,200,0.05)",
+            background:
+              node.state === "active"
+                ? "rgba(244,195,106,0.08)"
+                : node.state === "pending"
+                  ? "rgba(229,222,204,0.035)"
+                  : "rgba(119,215,200,0.05)",
             borderRadius: "var(--r-md)",
             color: "var(--text-2)"
           }}
@@ -404,7 +649,7 @@ function LivePlanningTree({ nodes }: { nodes: readonly LivePlanNode[] }): React.
               whiteSpace: "nowrap"
             }}
           >
-            {node.state === "active" ? "thinking" : node.decision ?? "done"}
+            {node.state === "active" ? "thinking" : node.state === "pending" ? "queued" : node.decision ?? "done"}
           </span>
         </div>
       ))}

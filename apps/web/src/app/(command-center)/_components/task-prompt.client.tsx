@@ -10,7 +10,13 @@ interface TaskPromptProps {
   examples?: readonly string[];
 }
 
-export function TaskPrompt({ value, onChange, onSubmit, disabled, examples = [] }: TaskPromptProps): React.ReactElement {
+export function TaskPrompt({
+  value,
+  onChange,
+  onSubmit,
+  disabled,
+  examples = []
+}: TaskPromptProps): React.ReactElement {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>): void {
@@ -20,26 +26,13 @@ export function TaskPrompt({ value, onChange, onSubmit, disabled, examples = [] 
     }
   }
 
+  const showExamples = examples.length > 0 && value.trim().length === 0;
+
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        border: "1px solid var(--rule-strong)",
-        background: "linear-gradient(180deg, rgba(229,222,204,0.045), rgba(229,222,204,0.018))",
-        borderRadius: "var(--r-xl)",
-        padding: 18
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-        <label className="mh-coord" htmlFor="manyhands-task-prompt" style={{ color: "var(--copper)" }}>
-          Command input
-        </label>
-        <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
-          Ctrl+Enter to generate
-        </span>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <label htmlFor="manyhands-task-prompt" className="mh-coord" style={{ color: "var(--copper)" }}>
+        Task
+      </label>
       <textarea
         id="manyhands-task-prompt"
         ref={textareaRef}
@@ -48,7 +41,7 @@ export function TaskPrompt({ value, onChange, onSubmit, disabled, examples = [] 
         onKeyDown={handleKeyDown}
         rows={6}
         spellCheck={false}
-        placeholder="Example: Add passwordless login with magic links, tests, and session handling."
+        placeholder="Describe the task — what should the system build, refactor, or migrate?"
         style={{
           width: "100%",
           padding: 0,
@@ -57,28 +50,36 @@ export function TaskPrompt({ value, onChange, onSubmit, disabled, examples = [] 
           color: "var(--text)",
           borderRadius: 0,
           fontFamily: "var(--font-sans)",
-          fontSize: 18,
+          fontSize: 17.5,
           lineHeight: 1.55,
+          letterSpacing: "-0.003em",
           resize: "vertical",
           outline: "none",
-          minHeight: 178
+          minHeight: 168
         }}
       />
-      {examples.length > 0 ? (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      {showExamples ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+          <span className="mh-coord" style={{ marginRight: 2 }}>
+            try
+          </span>
           {examples.map((example) => (
             <button
               key={example}
               type="button"
               onClick={() => onChange(example)}
+              className="mh-example-chip"
               style={{
                 border: "1px solid var(--rule)",
-                background: "rgba(15,16,18,0.54)",
+                background: "transparent",
                 color: "var(--text-2)",
                 borderRadius: "var(--r-md)",
-                padding: "6px 9px",
+                padding: "6px 10px",
                 fontSize: 12,
-                cursor: "pointer"
+                lineHeight: 1.3,
+                textAlign: "left",
+                cursor: "pointer",
+                transition: "border-color 150ms ease-out, color 150ms ease-out"
               }}
             >
               {example}

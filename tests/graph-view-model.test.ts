@@ -76,15 +76,45 @@ describe("graph-view-model", () => {
     });
 
     it("derives status counts that sum to the task count", () => {
-      const total =
-        conflictGraph.status.planned +
-        conflictGraph.status.ready +
-        conflictGraph.status.running +
-        conflictGraph.status.gated +
-        conflictGraph.status.done +
-        conflictGraph.status.failed +
-        conflictGraph.status.blocked;
+      const total = Object.values(conflictGraph.status).reduce((sum, count) => sum + count, 0);
       expect(total).toBe(conflictGraph.summary.taskCount);
+    });
+
+    it("marks executable nodes ready when their dependencies are satisfied", () => {
+      const snapshot = structuredClone(mockSnapshot) as RunSnapshot;
+      const leaves = Object.values(snapshot.graphSnapshot.nodes)
+        .filter((node) => node.kind === "leaf")
+        .slice(0, 2);
+      const first = leaves[0];
+      const second = leaves[1];
+      expect(first).toBeDefined();
+      expect(second).toBeDefined();
+      if (first === undefined || second === undefined) return;
+
+      snapshot.agentRunResults = [];
+      snapshot.blockedTasks = [];
+      snapshot.graphSnapshot.dependencies = [
+        {
+          fromTaskId: first.id,
+          toTaskId: second.id,
+          type: "logical",
+          inferred: false,
+          rationale: "Second task waits for the first."
+        }
+      ];
+      for (const node of Object.values(snapshot.graphSnapshot.nodes)) {
+        node.status = "planned";
+        node.dependencies = node.id === second.id ? [first.id] : [];
+      }
+
+      const pendingGraph = toRunGraphViewModel(snapshot);
+      expect(pendingGraph.nodes.find((node) => node.id === first.id)?.status).toBe("ready");
+      expect(pendingGraph.nodes.find((node) => node.id === second.id)?.status).toBe("planned");
+
+      snapshot.graphSnapshot.nodes[first.id]!.status = "done";
+
+      const unblockedGraph = toRunGraphViewModel(snapshot);
+      expect(unblockedGraph.nodes.find((node) => node.id === second.id)?.status).toBe("ready");
     });
 
     it("normalizes legacy TaskNodeStatus values into the UI palette", () => {

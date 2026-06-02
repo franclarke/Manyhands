@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -42,7 +42,7 @@ const nodeTypes: NodeTypes = {
   phaseHeader: PhaseHeaderNode
 };
 
-const FIT_VIEW_OPTIONS = { padding: 0.18, includeHiddenNodes: false } as const;
+const FIT_VIEW_OPTIONS = { padding: 0.12, includeHiddenNodes: false } as const;
 /** Zoom level applied when focusing/centering a single node — close enough to read the card. */
 const FOCUS_ZOOM = 1.1;
 
@@ -66,6 +66,10 @@ export function DagCanvas(props: DagCanvasProps): React.ReactElement {
     () => buildFlow(graph, selectedTaskId, highlightTaskIds, selectionRelations, dependencyCountByTaskId),
     [graph, selectedTaskId, highlightTaskIds, selectionRelations, dependencyCountByTaskId]
   );
+
+  useEffect(() => {
+    void fitView(FIT_VIEW_OPTIONS);
+  }, [fitView, nodes.length]);
 
   /** Center the viewport on a node by id (used by double-click + Focus control). */
   const centerOnNode = useCallback(
@@ -98,7 +102,7 @@ export function DagCanvas(props: DagCanvasProps): React.ReactElement {
       fitView
       fitViewOptions={FIT_VIEW_OPTIONS}
       proOptions={{ hideAttribution: true }}
-      minZoom={0.25}
+      minZoom={0.45}
       maxZoom={1.6}
       nodesDraggable={false}
       nodesConnectable={false}
@@ -281,11 +285,12 @@ function buildFlow(
     };
   });
 
+  const hierarchyEdges = buildHierarchyEdges(graph.nodes, selectedTaskId, highlightTaskIds, selectionRelations, isFiltered);
   const edges: Edge[] = graph.edges.map((edge) =>
     toFlowEdge(edge, selectedTaskId, highlightTaskIds, selectionRelations, isFiltered, nodeStatusById)
   );
 
-  return { nodes: [...headerNodes, ...taskNodes], edges };
+  return { nodes: [...headerNodes, ...taskNodes], edges: [...hierarchyEdges, ...edges] };
 }
 
 function toTaskData(
@@ -345,6 +350,46 @@ function phaseHeaderData(column: PhaseColumn): PhaseHeaderData {
     label: column.label,
     count: column.nodeCount
   };
+}
+
+function buildHierarchyEdges(
+  nodes: readonly GraphNodeView[],
+  selectedTaskId: string | null,
+  highlightTaskIds: ReadonlySet<string> | null,
+  selectionRelations: SelectionRelations | null,
+  isFiltered: boolean
+): Edge[] {
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  return nodes
+    .filter((node) => node.parentId !== null && node.parentId !== undefined && nodeIds.has(node.parentId))
+    .map((node) => {
+      const parentId = node.parentId as string;
+      const isSelected = selectedTaskId !== null && (selectedTaskId === parentId || selectedTaskId === node.id);
+      const isRelated =
+        selectionRelations !== null &&
+        selectionRelations.related.has(parentId) &&
+        selectionRelations.related.has(node.id);
+      const dimmed =
+        isFiltered &&
+        highlightTaskIds !== null &&
+        highlightTaskIds.size > 0 &&
+        !(highlightTaskIds.has(parentId) && highlightTaskIds.has(node.id));
+
+      return {
+        id: `hierarchy:${parentId}:${node.id}`,
+        source: parentId,
+        target: node.id,
+        type: "smoothstep",
+        selectable: false,
+        focusable: false,
+        style: {
+          stroke: isSelected || isRelated ? "var(--status-review-fg)" : "rgba(229,222,204,0.24)",
+          strokeWidth: isSelected || isRelated ? 1.7 : 1.15,
+          opacity: dimmed ? 0.12 : isSelected || isRelated ? 0.82 : 0.38
+        },
+        zIndex: 0
+      } satisfies Edge;
+    });
 }
 
 function PhaseHeaderNode({ data }: NodeProps): React.ReactElement {
@@ -449,13 +494,6 @@ function toFlowEdge(
       opacity: edge.acknowledged === true ? 0.24 : dimmed ? 0.14 : isSelected || isRelated ? 1 : 0.62
     }
   };
-
-  if (edge.label !== undefined && edge.kind !== "dependency") {
-    result.label = edge.label;
-    result.labelStyle = { fill: "var(--text-2)", fontSize: 10, fontFamily: "var(--font-mono)" };
-    result.labelBgStyle = { fill: "var(--bg-1)", fillOpacity: 0.85 };
-    result.labelBgPadding = [4, 2];
-  }
 
   return result;
 }

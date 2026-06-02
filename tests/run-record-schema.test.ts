@@ -30,6 +30,36 @@ describe("run-record schema", () => {
     expect(RunRecordSchema.safeParse({ ...baseRun, status: "foo" }).success).toBe(false);
   });
 
+  it("accepts persisted live planning nodes while a graph is still generating", () => {
+    const parsed = RunRecordSchema.safeParse({
+      ...baseRun,
+      status: "generating",
+      livePlanningNodes: [
+        {
+          id: "root",
+          parentId: null,
+          title: "Plan feature",
+          goal: "Plan the feature",
+          depth: 0,
+          state: "active"
+        },
+        {
+          id: "ui-slice",
+          parentId: "root",
+          title: "UI slice",
+          goal: "Plan UI work",
+          depth: 1,
+          state: "pending",
+          decision: "atomic",
+          childCount: 0,
+          childIds: []
+        }
+      ]
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
   it("RunStatusSchema enumerates the 9 lifecycle values", () => {
     // Fase C added the `interrupted` status for orphaned runs.
     expect(RUN_STATUS_VALUES.length).toBe(9);

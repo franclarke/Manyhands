@@ -13,20 +13,9 @@ export function ModelPicker({ value, onChange }: ModelPickerProps): React.ReactE
   const listId = `${labelId}-options`;
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-      <label
-        htmlFor={labelId}
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 10.5,
-          letterSpacing: 0.6,
-          textTransform: "uppercase",
-          color: "var(--text-3)"
-        }}
-      >
-        Model
-      </label>
       <input
         id={labelId}
+        aria-label="Model"
         list={listId}
         value={value}
         onChange={(event) => onChange(event.target.value)}

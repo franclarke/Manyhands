@@ -85,6 +85,20 @@ export const RunDecompositionMetadataSchema = z.object({
 
 export type RunDecompositionMetadata = z.infer<typeof RunDecompositionMetadataSchema>;
 
+export const PlanningLiveNodeSchema = z.object({
+  id: z.string().min(1),
+  parentId: z.string().min(1).nullable(),
+  title: z.string().min(1),
+  goal: z.string().min(1).optional(),
+  depth: z.number().int().nonnegative(),
+  state: z.union([z.literal("pending"), z.literal("active"), z.literal("complete")]),
+  decision: z.union([z.literal("atomic"), z.literal("decompose"), z.literal("question")]).optional(),
+  childCount: z.number().int().nonnegative().optional(),
+  childIds: z.array(z.string().min(1)).optional()
+});
+
+export type PlanningLiveNode = z.infer<typeof PlanningLiveNodeSchema>;
+
 export const RunRecordSchema = z.object({
   runId: z.string().min(1),
   workspaceId: z.string().min(1),
@@ -134,6 +148,8 @@ export const RunRecordSchema = z.object({
       options: z.array(z.string().min(1)).min(2).max(10)
     })
     .optional(),
+  /** Progressive recursive-planning nodes persisted while the final graph is still being generated. */
+  livePlanningNodes: z.array(PlanningLiveNodeSchema).optional(),
   questionAnswers: z.record(z.string()).optional(),
   planningStepCache: z.record(z.any()).optional()
 });

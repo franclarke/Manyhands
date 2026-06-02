@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { RunGranularityKey, RunStatusKey } from "@/lib/api-types";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
+import { runUiStatus } from "@/lib/status";
 import { getRunRepository } from "@/lib/server/runs";
 import type { RunRecord } from "@/lib/server/runs/schema";
+import { Signal } from "@/components/ui/signal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,7 +66,7 @@ export default async function LabPage(): Promise<React.ReactElement> {
         explicit instead of filling the notebook with invented cloud data.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14, marginTop: 28 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14, marginTop: 28 }}>
         {ROWS.map((row) => {
           const run = latestByGranularity.get(row.mode);
           const metrics = run !== undefined ? metricsFor(run) : null;
@@ -166,42 +168,44 @@ function NotebookTable({
   ];
 
   return (
-    <div style={{ border: "1px solid var(--rule)", borderRadius: 6, overflow: "hidden" }}>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.4fr 1fr 1fr 1fr",
-          padding: "10px 16px",
-          borderBottom: "1px solid var(--rule)",
-          background: "rgba(229,222,204,0.025)"
-        }}
-      >
-        <span className="mh-coord">metric</span>
-        {ROWS.map((row) => (
-          <span key={row.id} className="mh-coord" style={{ textAlign: "center" }}>
-            {row.id} / {row.label}
-          </span>
-        ))}
-      </div>
-      {tableRows.map((values) => (
+    <div style={{ overflowX: "auto" }}>
+      <div style={{ border: "1px solid var(--rule)", borderRadius: 6, overflow: "hidden", minWidth: 520 }}>
         <div
-          key={values[0]}
           style={{
             display: "grid",
             gridTemplateColumns: "1.4fr 1fr 1fr 1fr",
             padding: "10px 16px",
-            borderBottom: "1px solid var(--rule-soft)",
-            alignItems: "center"
+            borderBottom: "1px solid var(--rule)",
+            background: "rgba(229,222,204,0.025)"
           }}
         >
-          <span style={{ fontSize: 13, color: "var(--text-2)" }}>{values[0]}</span>
-          {values.slice(1).map((value, index) => (
-            <span key={index} className="mh-mono" style={{ fontSize: 13, textAlign: "center", color: value === "-" ? "var(--text-3)" : "var(--text)" }}>
-              {value}
+          <span className="mh-coord">metric</span>
+          {ROWS.map((row) => (
+            <span key={row.id} className="mh-coord" style={{ textAlign: "center" }}>
+              {row.id} / {row.label}
             </span>
           ))}
         </div>
-      ))}
+        {tableRows.map((values) => (
+          <div
+            key={values[0]}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.4fr 1fr 1fr 1fr",
+              padding: "10px 16px",
+              borderBottom: "1px solid var(--rule-soft)",
+              alignItems: "center"
+            }}
+          >
+            <span style={{ fontSize: 13, color: "var(--text-2)" }}>{values[0]}</span>
+            {values.slice(1).map((value, index) => (
+              <span key={index} className="mh-mono" style={{ fontSize: 13, textAlign: "center", color: value === "-" ? "var(--text-3)" : "var(--text)" }}>
+                {value}
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -219,19 +223,7 @@ function Status({ status }: { status: RunStatusKey | undefined }): React.ReactEl
   if (status === undefined) {
     return <span style={{ color: "var(--text-3)", fontSize: 11 }}>no measurement</span>;
   }
-  const color = status === "completed"
-    ? "var(--done)"
-    : status === "failed"
-      ? "var(--error)"
-      : status === "running" || status === "generating"
-        ? "var(--running)"
-        : "var(--ready)";
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--text-2)", fontSize: 11 }}>
-      <span className="mh-dot" style={{ color }} />
-      {status.replace("_", " ")}
-    </span>
-  );
+  return <Signal status={runUiStatus(status)} label={status.replace(/_/g, " ")} />;
 }
 
 function metricsFor(run: RunRecord): {

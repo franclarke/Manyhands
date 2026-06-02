@@ -209,6 +209,20 @@ export function DagWorkspace({
         />
       </div>
       )}
+      {editableRunId !== undefined && viewMode !== "canvas" ? (
+        <ConflictBottomSheet
+          runId={editableRunId}
+          conflicts={conflicts}
+          {...(conflictError !== undefined ? { error: conflictError } : {})}
+          showTrigger={false}
+          onChanged={() => onEdited?.()}
+          onOpenNodes={(taskIds) => {
+            setViewMode("canvas");
+            setSelectedTaskId(taskIds[0]);
+            setHighlightTaskIds(new Set(taskIds));
+          }}
+        />
+      ) : null}
       {summary !== null ? <RunSummaryPanel summary={summary} /> : null}
     </div>
   );

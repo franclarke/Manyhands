@@ -1519,6 +1519,7 @@ export { executionScopeFromAllowed } from "./scope";
 export { RecursiveDecomposer } from "./llm/recursive/recursive-decomposer";
 export type {
   RecursiveDecomposerOptions,
+  RecursiveStepChildEvent,
   RecursiveStepCompletedEvent,
   RecursiveStepListener,
   RecursiveStepStartedEvent

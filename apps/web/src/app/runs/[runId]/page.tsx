@@ -5,7 +5,7 @@ import { toRunGraphViewModel } from "@/lib/graph-view-model";
 import { granularityLabelForMode } from "@/lib/granularity";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import { buildPlanReviewSummary } from "@/lib/plan-review";
-import { operationalMetrics } from "@/lib/run-presentation";
+import { canNodeRunNow, operationalMetrics } from "@/lib/run-presentation";
 import { findScenario } from "@/lib/scenarios";
 import {
   RunNotFoundError,
@@ -13,7 +13,6 @@ import {
   parseRunPatches
 } from "@/lib/server/runs";
 import { getWorkspaceRepository } from "@/lib/server/workspaces";
-import type { MockPlanningFlowResult } from "@manyhands/core";
 import { RunCanvasBinding } from "./_components/run-canvas-binding.client";
 import { RunHeader } from "./_components/run-header";
 
@@ -42,12 +41,11 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
   const snapshot = projectRunRecordToSnapshot(run);
   const patches = parseRunPatches(run.patches);
   const conflictState = conflictStateFor(snapshot, patches);
-  const runSummary = snapshotSummary(snapshot);
+  const graph = snapshot !== null ? toRunGraphViewModel(snapshot) : null;
+  const runSummary = snapshotSummary(snapshot, graph);
   const planReview = buildPlanReviewSummary(snapshot, patches);
-  const readyTaskCount =
-    run.planning !== undefined
-      ? (run.planning as MockPlanningFlowResult).summary.leafCount
-      : 0;
+  const readyTaskCount = graph?.nodes.filter((node) => canNodeRunNow(node)).length ?? 0;
+  const activeConflictCount = conflictState.conflicts.filter((conflict) => !conflict.acknowledged).length;
 
   return (
     <div className="mh-fullbleed">
@@ -58,6 +56,7 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
         benchmarkLabel={scenario?.benchmarkId ?? run.scenarioId ?? "prompt"}
         configLabel={`granularity / ${granularityLabelForMode(run.granularity)}`}
         readyTaskCount={readyTaskCount}
+        activeConflictCount={activeConflictCount}
         planReview={planReview}
         patches={patches}
         timelineRun={{
@@ -74,6 +73,7 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
         {...(isExecutionResult(run.execution) ? { execution: run.execution } : {})}
         {...(run.errorMessage !== undefined && run.errorMessage.length > 0 ? { errorMessage: run.errorMessage } : {})}
         initialPendingQuestion={run.pendingQuestion ?? null}
+        initialLivePlanNodes={run.livePlanningNodes ?? []}
         headerSlot={
           <RunHeader
             run={run}
@@ -89,10 +89,10 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
 }
 
 function snapshotSummary(
-  snapshot: ReturnType<typeof projectRunRecordToSnapshot>
+  snapshot: ReturnType<typeof projectRunRecordToSnapshot>,
+  graph: ReturnType<typeof toRunGraphViewModel> | null
 ): { nodes: number; leaves: number; depth: number; metrics: ReturnType<typeof operationalMetrics> } | null {
-  if (snapshot === null) return null;
-  const graph = toRunGraphViewModel(snapshot);
+  if (snapshot === null || graph === null) return null;
   const nodes = Object.values(snapshot.graphSnapshot.nodes);
   return {
     nodes: nodes.length,

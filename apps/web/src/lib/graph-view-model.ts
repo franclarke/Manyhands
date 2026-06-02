@@ -679,6 +679,7 @@ function statusForNode(
   }
 
   const node = snapshot.graphSnapshot.nodes[taskId];
+  const normalized = normalizeStatus(fallbackStatus);
 
   if (node?.kind === "composite") {
     const childStatuses = node.childrenIds.map((childId) =>
@@ -706,9 +707,58 @@ function statusForNode(
     if (childStatuses.some((status) => status === "blocked")) {
       return "blocked";
     }
+
+    return normalized;
   }
 
-  return normalizeStatus(fallbackStatus);
+  if (isExecutableNode(node) && normalized === "planned" && dependenciesAreSatisfied(snapshot, taskId, resultsByTaskId)) {
+    return "ready";
+  }
+
+  return normalized;
+}
+
+function isExecutableNode(node: RunSnapshot["graphSnapshot"]["nodes"][string] | undefined): boolean {
+  return node?.kind === "leaf" || node?.kind === "integrator" || node?.metadata?.integrator === true;
+}
+
+function dependenciesAreSatisfied(
+  snapshot: RunSnapshot,
+  taskId: string,
+  resultsByTaskId: ReadonlyMap<string, RunSnapshot["agentRunResults"][number]>
+): boolean {
+  const incoming = snapshot.graphSnapshot.dependencies.filter((dependency) => dependency.toTaskId === taskId);
+  if (incoming.length === 0) {
+    return true;
+  }
+  return incoming.every((dependency) => dependencyIsSatisfied(snapshot, dependency.fromTaskId, resultsByTaskId));
+}
+
+function dependencyIsSatisfied(
+  snapshot: RunSnapshot,
+  taskId: string,
+  resultsByTaskId: ReadonlyMap<string, RunSnapshot["agentRunResults"][number]>
+): boolean {
+  const result = resultsByTaskId.get(taskId);
+  if (result !== undefined) {
+    return result.success;
+  }
+
+  const node = snapshot.graphSnapshot.nodes[taskId];
+  if (node === undefined) {
+    return false;
+  }
+
+  const status = normalizeStatus(node.status);
+  if (status === "done" || status === "integrated") {
+    return true;
+  }
+
+  if (node.kind !== "composite" || node.childrenIds.length === 0) {
+    return false;
+  }
+
+  return node.childrenIds.every((childId) => dependencyIsSatisfied(snapshot, childId, resultsByTaskId));
 }
 
 function normalizeStatus(status: string): GraphNodeStatus {

@@ -7,7 +7,7 @@ import type { RunStatusKey } from "@/lib/api-types";
 import type { ConflictListItem } from "@/lib/conflict-view-model";
 import type { PlanReviewSummary } from "@/lib/plan-review";
 import type { TimelineRunInput } from "@/lib/run-timeline";
-import { RunCanvasShell, useLiveRun } from "@/components/dag/RunCanvasShell";
+import { RunCanvasShell, useLiveRun, type LivePlanNode } from "@/components/dag/RunCanvasShell";
 import { RunActionBar } from "./run-action-bar.client";
 
 interface RunCanvasBindingProps {
@@ -17,6 +17,7 @@ interface RunCanvasBindingProps {
   benchmarkLabel: string;
   configLabel: string;
   readyTaskCount: number;
+  activeConflictCount: number;
   planReview: PlanReviewSummary | null;
   headerSlot: React.ReactNode;
   patches: readonly unknown[];
@@ -26,6 +27,7 @@ interface RunCanvasBindingProps {
   execution?: RunExecutionResult;
   errorMessage?: string;
   initialPendingQuestion: { nodeId: string; question: string; options: string[] } | null;
+  initialLivePlanNodes?: readonly LivePlanNode[];
 }
 
 export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactElement {
@@ -33,7 +35,8 @@ export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactEleme
   const { status, visibleTaskIds, livePlanNodes, pendingQuestion, cliLogs } = useLiveRun(
     props.runId,
     props.initialStatus,
-    props.initialPendingQuestion
+    props.initialPendingQuestion,
+    props.initialLivePlanNodes ?? []
   );
 
   return (
@@ -58,6 +61,7 @@ export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactEleme
           runId={props.runId}
           status={status}
           readyTaskCount={props.readyTaskCount}
+          activeConflictCount={props.activeConflictCount}
           planReview={props.planReview}
         />
       }

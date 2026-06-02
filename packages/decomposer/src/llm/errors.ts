@@ -29,14 +29,14 @@ export class DecomposerQuestionError extends Error {
   public readonly question: string;
   public readonly options: string[];
   public readonly stepCache: Record<string, any>;
-  public readonly reasoning?: string;
+  public readonly reasoning?: string | undefined;
 
   constructor(
     nodeId: string,
     question: string,
     options: string[],
     stepCache: Record<string, any>,
-    reasoning?: string
+    reasoning?: string | undefined
   ) {
     super(`Clarification needed for node ${nodeId}: ${question}`);
     this.name = "DecomposerQuestionError";

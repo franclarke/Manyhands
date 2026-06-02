@@ -12,6 +12,7 @@ import {
   type TaskGranularityLevel,
   type TaskNode
 } from "@manyhands/task-graph";
+import type { ZodError, ZodIssue } from "zod";
 
 import { executionScopeFromAllowed } from "../../scope";
 import {
@@ -39,8 +40,10 @@ import {
 
 const DEFAULT_DEPTH_BUDGET = 5;
 const DEFAULT_MAX_TOKENS = 4000;
+const DEFAULT_MAX_PARALLEL_STEPS = 3;
 const DEFAULT_MAX_DURATION_MS = 30 * 60 * 1000;
 const DEFAULT_MAX_COST_USD = 1.5;
+const STEP_SCHEMA_RETRY_COUNT = 1;
 const ROOT_ID = "root";
 
 export interface RecursiveDecomposerOptions {
@@ -54,6 +57,8 @@ export interface RecursiveDecomposerOptions {
   aggressiveness?: Aggressiveness;
   /** Safety rail against runaway recursion (NOT the experimental variable). */
   depthBudget?: number;
+  /** Maximum recursive child planning calls that may run at once. Defaults to 3. */
+  maxParallelSteps?: number;
   workspaceHints?: string;
   promptTemplateVersion?: string;
   onStepStarted?: RecursiveStepListener<RecursiveStepStartedEvent>;
@@ -74,6 +79,16 @@ export interface RecursiveStepStartedEvent {
 export interface RecursiveStepCompletedEvent extends RecursiveStepStartedEvent {
   decision: DecomposeStepOutput["decision"];
   childIds: string[];
+  children: RecursiveStepChildEvent[];
+}
+
+export interface RecursiveStepChildEvent {
+  nodeId: string;
+  parentId: string;
+  title: string;
+  goal: string;
+  depth: number;
+  depthBudget: number;
 }
 
 interface ExpandContext {
@@ -98,8 +113,9 @@ interface Accumulator {
   feature: FeatureRequest;
   granularity: TaskGranularityLevel;
   callCount: number;
-  questionAnswers?: Record<string, string>;
-  stepCache?: Record<string, any>;
+  reservedNodeIds: Set<string>;
+  questionAnswers?: Record<string, string> | undefined;
+  stepCache?: Record<string, any> | undefined;
 }
 
 /**
@@ -121,6 +137,7 @@ export class RecursiveDecomposer implements Decomposer {
   private readonly userPrompt: string;
   private readonly aggressivenessOverride?: Aggressiveness;
   private readonly depthBudget: number;
+  private readonly maxParallelSteps: number;
   private readonly workspaceHints?: string;
   private readonly onStepStarted?: RecursiveStepListener<RecursiveStepStartedEvent>;
   private readonly onStepCompleted?: RecursiveStepListener<RecursiveStepCompletedEvent>;
@@ -138,6 +155,7 @@ export class RecursiveDecomposer implements Decomposer {
       this.aggressivenessOverride = options.aggressiveness;
     }
     this.depthBudget = options.depthBudget ?? DEFAULT_DEPTH_BUDGET;
+    this.maxParallelSteps = normalizeParallelism(options.maxParallelSteps);
     if (options.workspaceHints !== undefined) {
       this.workspaceHints = options.workspaceHints;
     }
@@ -164,6 +182,7 @@ export class RecursiveDecomposer implements Decomposer {
       feature,
       granularity: aggressivenessToGranularity(aggressiveness),
       callCount: 0,
+      reservedNodeIds: new Set([ROOT_ID]),
       questionAnswers: options.questionAnswers,
       stepCache: options.stepCache ? { ...options.stepCache } : {}
     };
@@ -228,10 +247,10 @@ export class RecursiveDecomposer implements Decomposer {
     accum: Accumulator,
     aggressiveness: Aggressiveness
   ): Promise<string[]> {
-    this.emitStepStarted(ctx);
+    await this.emitStepStarted(ctx);
     const step = await this.callStep(ctx, aggressiveness, accum);
     accum.callCount += 1;
-    this.emitStepCompleted(ctx, step);
+    await this.emitStepCompleted(ctx, step);
 
     if (step.decision === "question") {
       if (accum.stepCache !== undefined) {
@@ -259,7 +278,8 @@ export class RecursiveDecomposer implements Decomposer {
     );
     const pool = [...ctx.inheritedInterfaces, ...newInterfaces];
 
-    const childIds: string[] = [];
+    const childIds = step.children.map((child) => child.id);
+    reserveNodeIds(accum, childIds);
     const coveredPaths: string[] = [];
 
     // Register THIS node (root or composite) before recursing so children resolve their parent.
@@ -278,16 +298,8 @@ export class RecursiveDecomposer implements Decomposer {
     };
     accum.nodes[ctx.nodeId] = selfNode;
 
-    for (const child of step.children) {
-      if (accum.nodes[child.id] !== undefined) {
-        throw new DecomposerLlmError(
-          `Duplicate node id "${child.id}" produced during recursive decomposition`,
-          undefined,
-          "normalize"
-        );
-      }
-      childIds.push(child.id);
-      const childCovered = await this.expand(
+    const childResults = await mapWithConcurrency(step.children, this.maxParallelSteps, (child) =>
+      this.expand(
         {
           nodeId: child.id,
           parentId: ctx.nodeId,
@@ -302,7 +314,9 @@ export class RecursiveDecomposer implements Decomposer {
         },
         accum,
         aggressiveness
-      );
+      )
+    );
+    for (const childCovered of childResults) {
       coveredPaths.push(...childCovered);
     }
 
@@ -348,6 +362,7 @@ export class RecursiveDecomposer implements Decomposer {
     if (ctx.isRoot) {
       // The whole feature is a single unit (single-agent baseline): root → one leaf.
       const leafId = `${ROOT_ID}-impl`;
+      reserveNodeIds(accum, [leafId]);
       accum.nodes[ROOT_ID] = {
         id: ROOT_ID,
         parentId: null,
@@ -451,52 +466,62 @@ export class RecursiveDecomposer implements Decomposer {
         : {})
     });
 
-    let response;
-    try {
-      response = await this.client.messages.create({
-        model: this.model,
-        max_tokens: this.maxTokens,
-        system: `${system}\n\n## Overall feature goal (for context)\n${this.userPrompt}`,
-        messages: [{ role: "user", content: user }],
-        nodeId: ctx.nodeId
-      } as any);
-    } catch (error) {
-      throw new DecomposerLlmError(
-        `Recursive decomposer request failed during step "${ctx.nodeId}": ${error instanceof Error ? error.message : String(error)}`,
-        error,
-        "request"
-      );
+    const stepSystem = `${system}\n\n## Overall feature goal (for context)\n${this.userPrompt}`;
+    let stepUser = user;
+
+    for (let attempt = 0; attempt <= STEP_SCHEMA_RETRY_COUNT; attempt += 1) {
+      let response;
+      try {
+        response = await this.client.messages.create({
+          model: this.model,
+          max_tokens: this.maxTokens,
+          system: stepSystem,
+          messages: [{ role: "user", content: stepUser }],
+          nodeId: ctx.nodeId
+        } as any);
+      } catch (error) {
+        throw new DecomposerLlmError(
+          `Recursive decomposer request failed during step "${ctx.nodeId}": ${error instanceof Error ? error.message : String(error)}`,
+          error,
+          "request"
+        );
+      }
+
+      const text = extractText(response.content);
+      const json = extractJson(text);
+      if (json === null) {
+        throw new DecomposerLlmError(`No JSON object in step response for "${ctx.nodeId}"`, undefined, "parse");
+      }
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(json);
+      } catch (error) {
+        throw new DecomposerLlmError(
+          `Failed to JSON.parse step output for "${ctx.nodeId}": ${error instanceof Error ? error.message : String(error)}`,
+          error,
+          "parse"
+        );
+      }
+      const result = DecomposeStepOutputSchema.safeParse(parsed);
+      if (result.success) {
+        return result.data;
+      }
+
+      const detail = describeStepSchemaFailure(ctx.nodeId, parsed, result.error);
+      if (attempt < STEP_SCHEMA_RETRY_COUNT) {
+        console.warn(`[RecursiveDecomposer] ${detail}. Retrying step with schema feedback.`);
+        stepUser = appendStepSchemaFeedback(user, detail);
+        continue;
+      }
+
+      throw new DecomposerLlmError(detail, result.error, "validate");
     }
 
-    const text = extractText(response.content);
-    const json = extractJson(text);
-    if (json === null) {
-      throw new DecomposerLlmError(`No JSON object in step response for "${ctx.nodeId}"`, undefined, "parse");
-    }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(json);
-    } catch (error) {
-      throw new DecomposerLlmError(
-        `Failed to JSON.parse step output for "${ctx.nodeId}": ${error instanceof Error ? error.message : String(error)}`,
-        error,
-        "parse"
-      );
-    }
-    const result = DecomposeStepOutputSchema.safeParse(parsed);
-    if (!result.success) {
-      const first = result.error.issues[0];
-      throw new DecomposerLlmError(
-        `Step schema validation failed for "${ctx.nodeId}": ${first?.path.join(".") ?? "?"} — ${first?.message ?? "unknown"}`,
-        result.error,
-        "validate"
-      );
-    }
-    return result.data;
+    throw new DecomposerLlmError(`Step schema validation failed for "${ctx.nodeId}"`, undefined, "validate");
   }
 
-  private emitStepStarted(ctx: ExpandContext): void {
-    void emitBestEffort(this.onStepStarted, {
+  private emitStepStarted(ctx: ExpandContext): Promise<void> {
+    return emitBestEffort(this.onStepStarted, {
       nodeId: ctx.nodeId,
       parentId: ctx.parentId,
       title: ctx.title,
@@ -506,8 +531,8 @@ export class RecursiveDecomposer implements Decomposer {
     });
   }
 
-  private emitStepCompleted(ctx: ExpandContext, step: DecomposeStepOutput): void {
-    void emitBestEffort(this.onStepCompleted, {
+  private emitStepCompleted(ctx: ExpandContext, step: DecomposeStepOutput): Promise<void> {
+    return emitBestEffort(this.onStepCompleted, {
       nodeId: ctx.nodeId,
       parentId: ctx.parentId,
       title: ctx.title,
@@ -515,8 +540,148 @@ export class RecursiveDecomposer implements Decomposer {
       depth: ctx.depth,
       depthBudget: ctx.depthBudget,
       decision: step.decision,
-      childIds: step.decision === "decompose" ? step.children.map((child) => child.id) : []
+      childIds: step.decision === "decompose" ? step.children.map((child) => child.id) : [],
+      children:
+        step.decision === "decompose"
+          ? step.children.map((child) => ({
+              nodeId: child.id,
+              parentId: ctx.nodeId,
+              title: child.title,
+              goal: child.goal,
+              depth: ctx.depth + 1,
+              depthBudget: Math.max(0, ctx.depthBudget - 1)
+            }))
+          : []
     });
+  }
+}
+
+function normalizeParallelism(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) {
+    return DEFAULT_MAX_PARALLEL_STEPS;
+  }
+  return Math.max(1, Math.floor(value));
+}
+
+function reserveNodeIds(accum: Accumulator, nodeIds: readonly string[]): void {
+  for (const nodeId of nodeIds) {
+    if (accum.reservedNodeIds.has(nodeId) || accum.nodes[nodeId] !== undefined) {
+      throw new DecomposerLlmError(
+        `Duplicate node id "${nodeId}" produced during recursive decomposition`,
+        undefined,
+        "normalize"
+      );
+    }
+  }
+  for (const nodeId of nodeIds) {
+    accum.reservedNodeIds.add(nodeId);
+  }
+}
+
+function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  limit: number,
+  mapper: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  if (items.length === 0) {
+    return Promise.resolve([]);
+  }
+
+  return new Promise((resolve, reject) => {
+    const results: R[] = new Array(items.length);
+    let nextIndex = 0;
+    let active = 0;
+    let completed = 0;
+    let failed = false;
+    let firstError: unknown;
+
+    const launch = (): void => {
+      if (failed && active === 0) {
+        reject(firstError);
+        return;
+      }
+      if (completed === items.length) {
+        resolve(results);
+        return;
+      }
+
+      while (!failed && active < limit && nextIndex < items.length) {
+        const index = nextIndex;
+        const item = items[index] as T;
+        nextIndex += 1;
+        active += 1;
+        void mapper(item, index)
+          .then((result) => {
+            results[index] = result;
+          })
+          .catch((error) => {
+            if (!failed) {
+              failed = true;
+              firstError = error;
+            }
+          })
+          .finally(() => {
+            active -= 1;
+            completed += 1;
+            launch();
+          });
+      }
+    };
+
+    launch();
+  });
+}
+
+function describeStepSchemaFailure(nodeId: string, parsed: unknown, error: ZodError): string {
+  const first = error.issues[0];
+  const path = first?.path.join(".") ?? "?";
+  const message = first?.message ?? "unknown";
+  const received = first !== undefined ? formatRejectedValue(valueAtPath(parsed, first.path)) : undefined;
+  const suffix = received !== undefined ? ` (received ${received})` : "";
+  return `Step schema validation failed for "${nodeId}": ${path} - ${message}${suffix}`;
+}
+
+function appendStepSchemaFeedback(userPrompt: string, detail: string): string {
+  return [
+    userPrompt,
+    "",
+    "## Previous JSON was rejected",
+    "",
+    `- ${detail}`,
+    "",
+    "Return a corrected JSON object for the same node.",
+    "Preserve the same decomposition unless a field must change to satisfy the schema.",
+    "For child ids, use lowercase kebab-case matching `^[a-z][a-z0-9_-]*$`.",
+    "Return only JSON. No prose, no markdown, no backticks."
+  ].join("\n");
+}
+
+function valueAtPath(value: unknown, path: ZodIssue["path"]): unknown {
+  let current = value;
+  for (const segment of path) {
+    if (current === null || typeof current !== "object") {
+      return undefined;
+    }
+    if (typeof segment === "number") {
+      if (!Array.isArray(current)) {
+        return undefined;
+      }
+      current = current[segment];
+    } else {
+      current = (current as Record<string, unknown>)[segment];
+    }
+  }
+  return current;
+}
+
+function formatRejectedValue(value: unknown): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
   }
 }
 
@@ -645,7 +810,7 @@ function extractText(blocks: Array<{ type: string; text?: string }>): string {
     .trim();
 }
 
-function extractJson(text: string): string | null {
+export function extractJson(text: string): string | null {
   if (text.startsWith("{") && text.endsWith("}")) return text;
   let depth = 0;
   let start = -1;

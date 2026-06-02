@@ -329,6 +329,58 @@ textarea:focus-visible {
   cursor: pointer;
 }
 
+/* Keycap — for inline keyboard hints (⌘↵, Ctrl+Enter, …). */
+.mh-kbd {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 5px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: rgba(229, 222, 204, 0.04);
+  color: var(--text-2);
+}
+
+/* Inline control rows stack their label above the control on narrow viewports. */
+@media (max-width: 640px) {
+  .mh-control-row {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 8px;
+  }
+  .mh-control-row__label {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    padding-top: 0 !important;
+  }
+}
+
+/* Command-center example chips. */
+.mh-example-chip:hover {
+  border-color: var(--rule-strong) !important;
+  color: var(--text) !important;
+}
+
+/* Recent-run list rows — quiet hover, stacks its metadata on small screens. */
+.mh-recent-row {
+  transition: background 150ms ease-out;
+}
+.mh-recent-row:hover {
+  background: rgba(229, 222, 204, 0.03);
+}
+@media (max-width: 560px) {
+  .mh-recent-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .mh-recent-row__meta {
+    justify-content: flex-start !important;
+    gap: 16px !important;
+  }
+}
+
 @keyframes pulseSoft {
   0%, 100% { box-shadow: 0 0 0 1px var(--running), 0 0 12px 0 rgba(111, 138, 168, 0.20); }
   50% { box-shadow: 0 0 0 1px var(--running), 0 0 18px 2px rgba(111, 138, 168, 0.12); }

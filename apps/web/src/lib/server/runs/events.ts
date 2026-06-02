@@ -34,14 +34,24 @@ export interface PlanningNodeStartedEvent extends RunEventBase {
   nodeId: string;
   parentId?: string;
   title: string;
+  goal: string;
+  depth: number;
+}
+
+export interface PlanningNodeChildDraft {
+  nodeId: string;
+  parentId: string;
+  title: string;
+  goal: string;
   depth: number;
 }
 
 export interface PlanningNodeCompletedEvent extends RunEventBase {
   kind: "planning.node.completed";
   nodeId: string;
-  decision: "atomic" | "decompose";
+  decision: "atomic" | "decompose" | "question";
   childIds: string[];
+  childNodes?: PlanningNodeChildDraft[];
 }
 
 export interface NodeAddedEvent extends RunEventBase {

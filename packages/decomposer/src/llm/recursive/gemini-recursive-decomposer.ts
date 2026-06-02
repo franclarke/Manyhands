@@ -5,6 +5,7 @@ import type { AnthropicLike } from "../anthropic-decomposer";
 import { DecomposerLlmError } from "../errors";
 import {
   RecursiveDecomposer,
+  extractJson,
   type RecursiveDecomposerOptions,
   type RecursiveStepCompletedEvent,
   type RecursiveStepListener,
@@ -27,6 +28,7 @@ export interface GeminiRecursiveDecomposerOptions {
   workspaceHints?: string;
   aggressiveness?: Aggressiveness;
   depthBudget?: number;
+  maxParallelSteps?: number;
   promptTemplateVersion?: string;
   onStepStarted?: RecursiveStepListener<RecursiveStepStartedEvent>;
   onStepCompleted?: RecursiveStepListener<RecursiveStepCompletedEvent>;
@@ -87,6 +89,7 @@ export class GeminiRecursiveDecomposer implements Decomposer {
     if (options.workspaceHints !== undefined) recursiveOptions.workspaceHints = options.workspaceHints;
     if (options.aggressiveness !== undefined) recursiveOptions.aggressiveness = options.aggressiveness;
     if (options.depthBudget !== undefined) recursiveOptions.depthBudget = options.depthBudget;
+    if (options.maxParallelSteps !== undefined) recursiveOptions.maxParallelSteps = options.maxParallelSteps;
     if (options.onStepStarted !== undefined) recursiveOptions.onStepStarted = options.onStepStarted;
     if (options.onStepCompleted !== undefined) recursiveOptions.onStepCompleted = options.onStepCompleted;
     this.inner = new RecursiveDecomposer(recursiveOptions);
@@ -104,7 +107,7 @@ interface GeminiStepClientOptions {
   timeoutMs?: number;
   spawn?: SpawnFn;
   useShell?: boolean;
-  onCliOutput?: (data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void;
+  onCliOutput?: ((data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void) | undefined;
 }
 
 class GeminiStepClient implements AnthropicLike {
@@ -115,7 +118,7 @@ class GeminiStepClient implements AnthropicLike {
   private readonly timeoutMs: number;
   private readonly spawnFn: SpawnFn;
   private readonly useShell: boolean;
-  private readonly onCliOutput?: (data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void;
+  private readonly onCliOutput?: ((data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void) | undefined;
 
   constructor(options: GeminiStepClientOptions) {
     this.model = options.model;
@@ -127,9 +130,14 @@ class GeminiStepClient implements AnthropicLike {
     this.onCliOutput = options.onCliOutput;
     this.messages = {
       create: async (args: any) => {
+        const systemPrompt = [
+          "CRITICAL: Do NOT call any tools. Do not search for files, do not read files, do not run grep, and do not execute any commands. All required context is fully provided in the prompt text.",
+          "Analyze the input text locally and return strictly the JSON matching the schema.",
+          args.system
+        ].join("\n\n");
         const prompt = [
           "## System",
-          args.system,
+          systemPrompt,
           "",
           "## User",
           args.messages.map((message: any) => message.content).join("\n\n")
@@ -152,10 +160,13 @@ class GeminiStepClient implements AnthropicLike {
       "plan",
       "--skip-trust",
       "-o",
-      "text",
+      "json",
       "-p",
       STDIN_DIRECTIVE
     ];
+
+    console.log(`[Gemini CLI] Spawning: ${this.binaryPath} ${args.join(" ")} (nodeId: ${nodeId ?? "unknown"})`);
+    const start = Date.now();
 
     const outcome = await spawnGemini({
       binaryPath: this.binaryPath,
@@ -172,7 +183,10 @@ class GeminiStepClient implements AnthropicLike {
       }
     });
 
+    const elapsed = Date.now() - start;
+
     if (outcome.timedOut) {
+      console.error(`[Gemini CLI] TIMEOUT tras ${this.timeoutMs}ms para el nodo "${nodeId ?? "unknown"}"`);
       throw new DecomposerLlmError(
         `Gemini recursive planning timed out after ${this.timeoutMs}ms`,
         undefined,
@@ -180,6 +194,7 @@ class GeminiStepClient implements AnthropicLike {
       );
     }
     if (outcome.exitCode !== 0) {
+      console.error(`[Gemini CLI] FALLÓ con código ${outcome.exitCode} para el nodo "${nodeId ?? "unknown"}". Stderr:\n${outcome.stderr || "(sin stderr)"}\nStdout:\n${outcome.stdout || "(sin stdout)"}`);
       throw new DecomposerLlmError(
         `Gemini recursive planning failed with exit code ${outcome.exitCode}: ${outcome.stderr || outcome.stdout}`,
         undefined,
@@ -187,7 +202,36 @@ class GeminiStepClient implements AnthropicLike {
       );
     }
 
-    return outcome.stdout.trim();
+    console.log(`[Gemini CLI] Completado para el nodo "${nodeId ?? "unknown"}" en ${elapsed}ms`);
+
+    const cliJson = extractJson(outcome.stdout);
+    if (cliJson === null) {
+      console.error(`[Gemini CLI] ERROR: No se encontró objeto JSON en stdout para el nodo "${nodeId ?? "unknown"}". Raw output:\n${outcome.stdout}`);
+      throw new DecomposerLlmError(
+        `No JSON object found in Gemini CLI stdout for node "${nodeId ?? "?"}". Raw output was:\n${outcome.stdout}`,
+        undefined,
+        "parse"
+      );
+    }
+
+    try {
+      const parsedCli = JSON.parse(cliJson);
+      if (typeof parsedCli.response === "string") {
+        return parsedCli.response;
+      }
+      if (parsedCli.decision !== undefined) {
+        return cliJson;
+      }
+      console.error(`[Gemini CLI] ERROR: El JSON devuelto no tiene la propiedad 'response' ni 'decision'. parsed:`, parsedCli);
+      throw new Error("Missing 'response' field in Gemini CLI JSON output");
+    } catch (err) {
+      console.error(`[Gemini CLI] ERROR al parsear salida para el nodo "${nodeId ?? "unknown"}":`, err);
+      throw new DecomposerLlmError(
+        `Failed to parse Gemini CLI JSON output for node "${nodeId ?? "?"}": ${err instanceof Error ? err.message : String(err)}\nRaw output was:\n${outcome.stdout}`,
+        undefined,
+        "parse"
+      );
+    }
   }
 }
 

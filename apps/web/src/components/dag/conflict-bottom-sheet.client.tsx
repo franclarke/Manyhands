@@ -1,22 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ConflictListItem } from "@/lib/conflict-view-model";
 
 interface ConflictBottomSheetProps {
   runId: string;
   conflicts: ConflictListItem[];
   error?: string;
+  showTrigger?: boolean;
   onChanged: () => void;
   onOpenNodes: (taskIds: [string, string]) => void;
 }
 
 type ConflictAction = "integrator" | "serialize" | "acknowledge";
 
+export const OPEN_CONFLICT_REVIEW_EVENT = "manyhands:open-conflict-review";
+
 export function ConflictBottomSheet({
   runId,
   conflicts,
   error,
+  showTrigger = true,
   onChanged,
   onOpenNodes
 }: ConflictBottomSheetProps): React.ReactElement {
@@ -24,6 +28,15 @@ export function ConflictBottomSheet({
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const activeCount = conflicts.filter((conflict) => !conflict.acknowledged).length;
+
+  useEffect(() => {
+    function openConflictReview(): void {
+      setOpen(true);
+    }
+
+    window.addEventListener(OPEN_CONFLICT_REVIEW_EVENT, openConflictReview);
+    return () => window.removeEventListener(OPEN_CONFLICT_REVIEW_EVENT, openConflictReview);
+  }, []);
 
   async function runAction(action: ConflictAction, conflict: ConflictListItem): Promise<void> {
     setBusy(`${action}:${conflict.pairKey}`);
@@ -48,28 +61,30 @@ export function ConflictBottomSheet({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        style={{
-          position: "absolute",
-          right: 14,
-          bottom: 14,
-          zIndex: 5,
-          border: "1px solid var(--rule)",
-          background: "rgba(15,16,18,0.78)",
-          color: activeCount > 0 ? "var(--ready)" : "var(--text-2)",
-          borderRadius: 6,
-          padding: "7px 11px",
-          fontSize: 12,
-          fontFamily: "var(--font-mono)",
-          cursor: "pointer",
-          boxShadow: "none",
-          backdropFilter: "blur(10px)"
-        }}
-      >
-        Conflict review / {activeCount}
-      </button>
+      {showTrigger ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          style={{
+            position: "absolute",
+            right: 14,
+            bottom: 14,
+            zIndex: 5,
+            border: "1px solid var(--rule)",
+            background: "rgba(15,16,18,0.78)",
+            color: activeCount > 0 ? "var(--ready)" : "var(--text-2)",
+            borderRadius: 6,
+            padding: "7px 11px",
+            fontSize: 12,
+            fontFamily: "var(--font-mono)",
+            cursor: "pointer",
+            boxShadow: "none",
+            backdropFilter: "blur(10px)"
+          }}
+        >
+          Resolve conflicts / {activeCount}
+        </button>
+      ) : null}
       {open ? (
         <div
           role="dialog"

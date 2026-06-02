@@ -51,6 +51,7 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   }
   const hints = toWorkspaceHints(input.workspace);
   const workspaceHints = hints !== undefined ? formatWorkspaceHints(hints) : undefined;
+  const maxParallelSteps = planningMaxParallelFromEnv();
 
   // The recursive interface-aware decomposer is the product default (thesis
   // Artifact 1). For local-first product runs, the step model is the Gemini CLI.
@@ -84,6 +85,7 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
       apiKey,
       model,
       userPrompt: input.userPrompt,
+      ...(maxParallelSteps !== undefined ? { maxParallelSteps } : {}),
       ...(input.onStepStarted !== undefined ? { onStepStarted: input.onStepStarted } : {}),
       ...(input.onStepCompleted !== undefined ? { onStepCompleted: input.onStepCompleted } : {}),
       ...(workspaceHints !== undefined ? { workspaceHints } : {})
@@ -101,6 +103,7 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
     cwd: input.workspace?.repoPath ?? process.cwd(),
     model,
     userPrompt: input.userPrompt,
+    ...(maxParallelSteps !== undefined ? { maxParallelSteps } : {}),
     ...(input.onStepStarted !== undefined ? { onStepStarted: input.onStepStarted } : {}),
     ...(input.onStepCompleted !== undefined ? { onStepCompleted: input.onStepCompleted } : {}),
     ...(workspaceHints !== undefined ? { workspaceHints } : {}),
@@ -145,6 +148,15 @@ function pickAnthropicModel(requested: string): string {
     return requested;
   }
   return DEFAULT_ANTHROPIC_MODEL;
+}
+
+function planningMaxParallelFromEnv(): number | undefined {
+  const raw = process.env.MANYHANDS_PLANNING_MAX_PARALLEL;
+  if (raw === undefined || raw.trim().length === 0) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 function toWorkspaceHints(workspace: Workspace | undefined): WorkspaceHints | undefined {
