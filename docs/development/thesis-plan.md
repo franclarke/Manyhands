@@ -55,56 +55,60 @@ Limits: no real agents, no real worktrees, no real tests and no final empirical 
 
 ### Stage 2 - Visual Orchestration Validation
 
-Status: next.
+Status: **implemented** (June 2026).
 
 Includes:
 
-- web UI;
+- web UI (Next.js App Router);
 - API layer over core;
-- DAG canvas;
-- report viewer;
+- DAG canvas with React Flow (`@xyflow/react`);
 - run snapshot viewer;
-- observability through inspector and trace view;
-- reproducible demo.
+- observability through inspector and trace view (SSE);
+- reproducible demo via `/replay/demo`;
+- Lab Mode UI for benchmark runs.
 
 Purpose: show that the artifact is understandable and usable as an orchestration workspace, not only as a CLI benchmark.
 
-Limits: still mock execution unless later stages are complete.
+Limits: the demo can use mock execution (Lab Mode) or real execution (Build Mode with Gemini).
 
 ### Stage 3 - Real Execution Slice
 
-Status: future.
+Status: **implemented** (execution-core v0.1, June 2026).
 
 Includes:
 
-- real git worktrees;
-- dummy or deterministic runner;
-- real branches;
-- real diffs;
-- real validation commands;
-- scope validation over real changed files.
+- real git worktrees (`WorktreeManager`);
+- real agent executor (`GeminiCliExecutor` + `MockAgentExecutor` for tests);
+- real branches and diffs (`git diff HEAD` as truth);
+- real validation commands (`ValidationRunner`);
+- scope validation over real changed files (`ScopeChecker`);
+- bottom-up integration with cherry-pick (`IntegrationAgent`);
+- `GranularityVector` (17 metrics) persisted per run.
 
-Purpose: prove that the architecture can supervise real repository effects before introducing LLM variance.
+Purpose: prove that the architecture can supervise real repository effects. Achieved.
 
-Limits: no LLM agent required.
+Limits: provisioning is fixture-only (`createFixtureRepoProvisioner`). Local repos: deferred.
 
 ### Stage 4 - Agentic Execution Pilot
 
-Status: future.
+Status: **in progress** — pipeline is wired with Gemini CLI; empirical experiments pending.
 
-Includes:
+Includes (completed):
 
-- one real agent adapter;
-- one or a few atomic leaf tasks;
-- controlled repository;
-- diff capture;
-- validation;
-- traceability;
-- explicit cost and non-determinism warnings.
+- `GeminiCliExecutor` as the real agent adapter;
+- atomic leaf task execution on benchmark fixtures;
+- diff capture, scope validation, validation commands, traceability;
+- `GranularityVector` structure for capturing results.
 
-Purpose: provide a small exploratory bridge from the artifact to real agent behavior.
+Pending (the thesis gap):
 
-Limits: not a broad benchmark and not enough for universal claims.
+- running the full experiment matrix (B0-B4 × low/medium/high aggressiveness) on real fixtures with Gemini;
+- collecting real `GranularityVector` post-execution data;
+- analyzing `integrationSuccessRate`, `conflictRate`, `testsPassedRate` with real agents.
+
+Purpose: provide empirical evidence for the thesis claims about decomposition granularity.
+
+Limits: non-determinism of LLM agents means multiple runs are needed per configuration. Cost and duration are real constraints.
 
 ### Stage 5 - Final Analysis
 

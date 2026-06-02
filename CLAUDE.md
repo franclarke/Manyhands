@@ -1,57 +1,35 @@
 # ManyHands — Contexto para Claude
 
-> Este archivo es la fuente de verdad para continuar el desarrollo en sesiones nuevas.
 > Francisco es el único desarrollador. Comunicación en español. Decisiones ya cerradas no se renegocian.
+> Para síntesis de decisiones: [`docs/DECISIONS.md`](docs/DECISIONS.md).
+> Para narrativa del proyecto: [`docs/thesis/project-evolution.md`](docs/thesis/project-evolution.md).
 
 ---
 
 ## Qué es ManyHands
 
-Sistema de orquestación de agentes LLM para desarrollo de software. Toma una feature en lenguaje natural, la descompone en un DAG jerárquico (recursivo), ejecuta las hojas en git worktrees aislados con **Codex CLI** (`codex exec`), anticipa conflictos entre hojas concurrentes, integra resultados de abajo hacia arriba con cherry-pick.
+Sistema de orquestación de agentes LLM para desarrollo de software. Toma una feature en lenguaje natural, la descompone recursivamente en un DAG jerárquico con costuras de interfaz explícitas (`sharedInterface`), ejecuta las hojas en git worktrees aislados con **Gemini CLI** (`gemini`, headless), e integra resultados de abajo hacia arriba con cherry-pick.
 
-**Contexto académico:** Tesis de Ingeniería en Sistemas. Pregunta de investigación: ¿existe una granularidad óptima de descomposición DAG que maximiza la calidad del output de agentes LLM paralelos?
+**Contexto académico:** Tesis de Ingeniería en Sistemas. Pregunta: ¿existe una granularidad óptima de descomposición DAG que maximiza la calidad del output de agentes LLM paralelos?
 
 **No es:** un agente de código, un RAG system, una herramienta de memoria organizacional, ni un plugin de IDE.
 
 ---
 
-## Estado Actual (post Etapa 0 — Execution Core scaffold)
+## Estado Actual
 
-### Tests y builds
-- `pnpm test` → 295/295 passing
-- `pnpm -F @manyhands/execution-core typecheck` → 0 errores
-- `pnpm build` → 14 packages OK
-- `pnpm web:typecheck` → 0 errores
+### Verificación rápida
+```bash
+pnpm test                  # 455 passing, 3 skipped
+pnpm -F @manyhands/execution-core typecheck  # 0 errores
+pnpm build                 # packages OK
+pnpm web:typecheck         # 0 errores
+```
 
-### Fases completadas
-- **Fase 0** — Modelo de nodos: `root`, `integrator` kinds; `goal` (reemplaza `intent`); `auto` granularity; validación por kind; `prompt`, `acceptanceCriteria`, `output`, `dependencies` en TaskNode
-- **Fase 1** — Prompt-only runs: `POST /api/runs` sin `scenarioId`; `buildFeatureRequestFromPrompt()`; D3 enforced (sin fallback silencioso en prompt-only path)
-- **Etapa 0 — Execution Core scaffold** (7 commits):
-  - Package `@manyhands/execution-core` con `tsup` build (ESM + CJS + DTS)
-  - 14 Zod schemas en `src/types.ts`: `AgentResultStatusSchema`, `WorktreeRecordSchema`, `AgentExecutionResultSchema`, `IntegrationResultSchema`, `ExecutionConfigSchema`, `GranularityVectorSchema`, etc.
-  - 7 error classes en `src/errors.ts`: `ExecutionCoreError` base + 6 subclases con type guards y structured context
-  - 16 trace event types agregados a `trace-store` (`worktree_created` → `run_completed`)
-  - Contract V2: `ExecutionValidationCommandSchema`, `ExecutionScopeSchema`, 5 campos opcionales en `AgentTaskContractSchema`
-  - ADRs 18-26 documentando decisiones D4-D10 y diseño de ejecución
-  - Benchmark fixture `benchmarks/task-manager-api/` (Express REST API con tests)
-  - 67 tests nuevos: 35 para schemas, 32 para error hierarchy
-
-### Próximo: Execution Core v0.1 (Etapa 1 — Implementación)
-
-El siguiente trabajo es implementar los componentes funcionales del pipeline de ejecución:
-
-**Orden de implementación (commits 8-18):**
-8. `WorktreeManager` (create, clean, detect unexpected commits)
-9. `MockCodexCliExecutor` (test double determinístico)
-10. `ScopeChecker` (file overlap, path validation)
-11. `ResultRecorder` (git diff, patch + trace persistence)
-12. `CodexCliExecutor` real (codex exec wrapper)
-13. `IntegrationAgent` (cherry-pick + codex repair fallback)
-14. `BatchScheduler` (maxParallel=3, concurrency control)
-15. `RunExecutor` (orquestador top-level)
-16. `GranularityVector` (métricas de experimento)
-17. Wire en web app: `runner.ts` + SSE events + API routes
-18. Tests de integración E2E con MockCodexCliExecutor
+### Banderas ⚠️
+- **Migración Codex→Gemini sin commitear** — el código en disco ya es Gemini CLI; el último commit de execution-core todavía dice "Codex CLI". Commitear antes de continuar.
+- **Sin evidencia empírica** — el pipeline con Gemini está cableado y los tests E2E pasan, pero los experimentos de granularidad (B0-B4 × low/medium/high con Gemini reales) no se corrieron. Solo existe validación estructural con mock.
+- **`packages/calculator/`** — artefacto untracked trivial (smoke test), eliminar o gitignorar.
 
 ---
 
@@ -59,222 +37,91 @@ El siguiente trabajo es implementar los componentes funcionales del pipeline de 
 
 | ID | Decisión |
 |----|----------|
-| D1 | `graph.dependencies` es canónico. `node.dependencies` es shortcut sincronizado. Mutación via helpers (`addDependency`, `removeDependency`, `syncNodeDependencies`). |
-| D2 | Campo canónico es `goal` (no `intent`). Aplicado globalmente en Fase 0. Si aparece `intent` en fixtures legacy, normalizar en el parser, nunca persistir. |
-| D3 | Sin `scenarioId` + LLM falla → run FALLA. Error message: "Graph generation requires an API key..." o "Graph generation failed: {detail}. Retry, switch model, or configure API key." Sin fallback silencioso. El `MetadataDrivenMockDecomposer` solo se usa cuando hay `scenarioId` (Lab Mode). |
-| D4 | **Gemini CLI** (`gemini`, headless `-p` + prompt por stdin) es el único executor de subagentes Y el step-model del decomposer recursivo. Reemplazó a Codex CLI (junio 2026). No Claude Code SDK, no `child_process.exec` directo sin el wrapper (`GeminiCliExecutor` / `GeminiRecursiveDecomposer`). El seam es provider-agnóstico: interfaz `AgentExecutor`, status `executor_error`, trace events `executor_started/completed/repair_started`, campos `executorExitCode/DurationMs/TimedOut`, error `AgentExecutionError`. Binario via `MANYHANDS_GEMINI_BIN` (default `gemini`). |
-| D5 | `git diff HEAD` es la fuente de verdad del resultado. No stdout del agente, no logs. (El stderr/stdout truncado SÍ se persiste como `stderrTail/stdoutTail` para diagnóstico de fallos en UI, pero nunca para determinar qué cambió.) |
-| D6 | **El orquestador hace commit.** El agente (Gemini) nunca debe hacer commit. Si el agente hace commit (`agentCommittedUnexpectedly: true`), política configurable: `reject` (default) o `accept`. |
-| D7 | `SandboxMode` (`workspace-write`/`danger-full-access`) se conserva en el contrato por simetría, pero Gemini CLI NO tiene un sandbox de SO equivalente: el `GeminiCliExecutor` mapea ambos a `--approval-mode yolo` (auto-aprueba tool calls para no colgar en headless) y el aislamiento real lo dan el **git worktree aislado + el ScopeChecker**, no el CLI. El decomposer corre en `--approval-mode plan` (read-only). |
-| D8 | Integración: **cherry-pick** de commits hijo sobre rama padre. Si hay conflicto de cherry-pick → el agente (Gemini) como reparador semántico (prompt con contexto del conflicto). Repair falla → `IntegrationStatus: executor_repair_failed`. Éxito de repair → `executor_repair_success`. |
-| D9 | `maxParallel = 3` hojas en paralelo por batch (configurable, default 3). Límite de worktrees simultáneos. |
-| D10 | Timeouts: hoja `timeoutMs = 300_000` (5 min), integración `timeoutMs = 600_000` (10 min). Configurables por contrato. |
+| D1 | `graph.dependencies` es canónico. `node.dependencies` es shortcut sincronizado. Mutación via `addDependency`, `removeDependency`, `syncNodeDependencies`. |
+| D2 | Campo canónico es `goal` (no `intent`). Si aparece `intent` en fixtures legacy, normalizar en el parser. |
+| D3 | Sin `scenarioId` + LLM falla → run FALLA con error accionable. Sin fallback silencioso. `MetadataDrivenMockDecomposer` solo con `scenarioId` (Lab Mode). |
+| D4 | **Gemini CLI** (`gemini`, headless, stdin) es el único executor de subagentes Y el step-model del decomposer. No Claude Code SDK, no subprocess directo, no otros CLIs. Seam provider-agnóstico: interfaz `AgentExecutor`. Binario: `MANYHANDS_GEMINI_BIN` (default `gemini`). |
+| D5 | `git diff HEAD` es la fuente de verdad del resultado. No stdout del agente. `stderrTail`/`stdoutTail` se persisten solo para diagnóstico. |
+| D6 | **El orquestador hace commit.** El agente nunca debe commitear. Si commitea, política `reject` (default) o `accept`. |
+| D7 | Aislamiento real = git worktree aislado + `ScopeChecker`. `SandboxMode` del contrato se mapea a `--approval-mode yolo`. Decomposer corre en `--approval-mode plan`. |
+| D8 | Integración: cherry-pick + repair semántico con Gemini (máx. 1 intento). Repair incluye: goal del padre, `sharedInterface` canónico, intención de cada hijo. |
+| D9 | `maxParallel = 3` hojas en paralelo (configurable). |
+| D10 | Timeouts: hoja 300 s, integración 600 s (configurables por contrato). |
 
 ---
 
 ## Arquitectura de Paquetes
 
-```
-packages/
-  shared/         KEEP — sin cambios
-  task-graph/     KEEP + REWORK — core del MVP, ya actualizado (Fase 0)
-  contracts/      KEEP + REWORK — simplificar campos, agregar V2 fields
-  decomposer/     KEEP — funcional, ya actualizado (Fase 0)
-  scheduler/      KEEP — sequential_dag, parallel_naive, risk_aware
-  run-store/      KEEP — RunSnapshot, patches
-  trace-store/    KEEP + extended — 16 execution trace event types agregados (50 total)
-  execution-core/ CREATED — scaffold completo: types, errors, barrel. Falta implementación
-  conflict-risk/  DEFER — no en path crítico MVP
-  scope-validation/ DEFER
-  worktree-runner/  DEFER (legacy mock, reference only)
-  repository-index/ DEFER
-  evaluator/      DEFER (tesis infraestructura, Lab Mode)
-  core/           DEPRECATED — barrel de compat
-```
+| Package | Estado | Notas |
+|---------|--------|-------|
+| `task-graph` | ACTIVO | TaskNode, TaskGraph, validación |
+| `contracts` | ACTIVO | AgentTaskContract V1+V2, InterfaceContract |
+| `decomposer` | ACTIVO | GeminiRecursive (default) + baselines |
+| `execution-core` | ACTIVO | Pipeline completo de ejecución real |
+| `scheduler` | ACTIVO | sequential, naive, risk-aware |
+| `run-store` | ACTIVO | RunSnapshot, patches |
+| `trace-store` | ACTIVO | 50+ trace event types |
+| `shared` | ACTIVO | — |
+| `conflict-risk` | DEFER | — |
+| `scope-validation` | DEFER | Reemplazado por ScopeChecker |
+| `worktree-runner` | DEFER | Mock legacy |
+| `repository-index` | DEFER | — |
+| `evaluator` | DEFER | Lab Mode |
+| `core` | DEPRECATED | Barrel de compat; no usar |
 
 ---
 
-## Tipos de Execution Core (implementados como Zod schemas)
+## Archivos Clave
 
-Todos los tipos están implementados en `packages/execution-core/src/types.ts` como Zod schemas con tipos TypeScript inferidos. Los schemas canónicos son:
-
-| Schema | Descripción |
-|--------|-------------|
-| `AgentResultStatusSchema` | Union de 8 literals: `success`, `empty_diff`, `scope_violation`, etc. |
-| `WorktreeKindSchema` | `"leaf" \| "integration"` |
-| `WorktreeStatusSchema` | `"pending" \| "active" \| "committed" \| "cleaned" \| "error"` |
-| `WorktreeRecordSchema` | Registro completo por worktree (taskId, runId, kind, path, branch, etc.) |
-| `ScopeCheckResultSchema` | `{ passed, violations[] }` — defaults `violations` a `[]` |
-| `ValidationRunResultSchema` | `{ passed, output, exitCode }` |
-| `AgentExecutionResultSchema` | Resultado completo por hoja (14 campos, 5 opcionales) |
-| `IntegrationStatusSchema` | Union de 7 literals para resultado de integración |
-| `ConflictDetailSchema` | `{ files[], cherryPickOutput }` |
-| `IntegrationResultSchema` | Resultado completo de integración cherry-pick |
-| `SandboxModeSchema` | `"workspace-write" \| "danger-full-access"` |
-| `AgentExecutorOptionsSchema` | Opciones de invocación del agente (Gemini CLI) |
-| `ExecutionConfigSchema` | Config con defaults: maxParallel=3, leafTimeout=300s, etc. |
-| `GranularityVectorSchema` | 17 campos (9 pre + 8 post), rates validados 0-1 |
-
-### Error hierarchy (`src/errors.ts`)
-
-```
-ExecutionCoreError (base, code: string, static is() type guard)
-├── WorktreeError          { taskId, worktreePath?, operation: "create"|"clean"|"detect" }
-├── AgentExecutionError    { taskId, exitCode, timedOut, durationMs }  (code AGENT_EXECUTION_ERROR)
-├── ScopeViolationError    { taskId, violations: string[] }
-├── ExecutionValidationError { taskId, command, exitCode, output }
-├── IntegrationError       { compositeTaskId, childTaskIds, phase: "cherry_pick"|"repair"|"validation" }
-└── UnexpectedCommitError  { taskId, commitSha, policy: "reject"|"accept" }
-```
-
----
-
-## TraceEvent Types para Execution (ya implementados)
-
-16 trace events agregados al union en `packages/trace-store/src/index.ts`:
-`worktree_created`, `agent_started`, `executor_started`, `executor_completed`, `unexpected_commit_detected`, `scope_check_failed`, `validation_started`, `agent_committed`, `integration_started`, `cherry_pick_attempted`, `cherry_pick_conflict`, `executor_repair_started`, `integration_completed`, `batch_started`, `batch_completed`, `run_completed`
-
----
-
-## AgentTaskContract V2 (ya implementado en contracts)
-
-Schemas nuevos en `packages/contracts/src/index.ts`:
-- `ExecutionValidationCommandSchema` — `{ command, args[], timeoutMs (default 60_000), cwd: "worktree"|"repo-root" }`
-- `ExecutionScopeSchema` — `{ implementationPaths[], testPaths[], configPaths[] }`
-
-5 campos opcionales agregados a `AgentTaskContractSchema`:
-- `executionScope?: ExecutionScopeSchema` — globs de paths permitidos por categoría
-- `forbiddenPaths?: string[]` — globs siempre prohibidos
-- `leafValidationCommands?: ExecutionValidationCommandSchema[]` — validación por hoja
-- `parentValidationCommands?: ExecutionValidationCommandSchema[]` — al completar composite
-- `runValidationCommands?: ExecutionValidationCommandSchema[]` — al completar run
-
----
-
-## Benchmark Fixture (ya creada)
-
-`benchmarks/task-manager-api/` — Express REST API standalone (NO workspace member):
-- GET /health, GET /tasks, GET /tasks/:id, POST /tasks → implementados
-- PUT /tasks/:id, DELETE /tasks/:id → stubs (retornan 404 siempre)
-- Tests con Vitest + supertest: GET/POST pasan, PUT/DELETE fallan por diseño
-- Los agentes completan la implementación durante experimentos de granularidad
-
----
-
-## Experimentos de Granularidad
-
-**Baselines:**
-- B0 — Single agent (sin descomposición)
-- B1 — Sequential DAG (una hoja a la vez)
-- B2 — Parallel naive (todas en paralelo)
-- B3 — Parallel + IntegrationAgent
-- B4 — Parallel + risk-aware + IntegrationAgent
-
-**Niveles de agresividad:** `coarse` (baja presión a dividir), `balanced` (default), `fine` (alta presión).
-La granularidad NO fija profundidad ni cantidad de nodos — controla cuánto se sigue dividiendo cada rama,
-por nodo, según si la tarea ya es simple/concreta/ejecutable/verificable. El árbol resultante es asimétrico.
-G3/G6/G9 (~3/6/9 leaves) son **etiquetas de resultados observados** en benchmarks para agrupar corridas,
-no objetivos de forma que el decomposer deba alcanzar.
-
-**GranularityVector (métricas):**
-```typescript
-interface GranularityVector {
-  // Pre-execution (estructura DAG)
-  depth: number;
-  leafCount: number;
-  compositeCount: number;
-  avgLeafDepth: number;
-  maxLeafDepth: number;
-  dependencyCount: number;
-  avgAcceptanceCriteriaPerLeaf: number;
-  estimatedTokensPerLeaf?: number;  // heuristic
-
-  // Post-execution (resultados)
-  integrationSuccessRate: number;     // 0-1
-  leafSuccessRate: number;            // 0-1
-  conflictRate: number;               // leaf pairs with conflicts / total pairs
-  totalDurationMs: number;
-  totalCostUsd?: number;
-  testsPassedRate?: number;           // 0-1, si hay validation commands
-  linesChanged: number;
-  unexpectedCommitCount: number;
-  scopeViolationCount: number;
-}
-```
+| Archivo | Descripción |
+|---------|-------------|
+| `packages/task-graph/src/index.ts` | TaskNode, TaskGraph, topo sort |
+| `packages/contracts/src/index.ts` | AgentTaskContract + InterfaceContract |
+| `packages/decomposer/src/llm/recursive/` | GeminiRecursiveDecomposer (Artifact 1) |
+| `packages/execution-core/src/run/executor.ts` | RunExecutor — orquestador top-level |
+| `packages/execution-core/src/executor/gemini-cli.ts` | GeminiCliExecutor |
+| `packages/execution-core/src/integration/agent.ts` | IntegrationAgent / Composer (Artifact 2) |
+| `packages/execution-core/src/types.ts` | Zod schemas de ejecución |
+| `packages/execution-core/src/errors.ts` | Jerarquía de error classes |
+| `apps/web/src/lib/server/runs/runner.ts` | Planning + execution pipeline (motor real) |
+| `apps/web/src/lib/decomposer-policy.ts` | `pickDecomposer()` — Gemini por default |
+| `apps/web/src/lib/server/runs/schema.ts` | RunRecord schema (Zod) |
+| `apps/web/src/lib/graph-view-model.ts` | RunGraphViewModel, InspectorView |
+| `benchmarks/expression-calculator/` | Fixture con costuras reales (tesis) |
+| `benchmarks/task-manager-api/` | Fixture REST API |
+| `docs/DECISIONS.md` | Síntesis de todos los ADRs y decisiones |
+| `docs/thesis/project-evolution.md` | Narrativa del proyecto para la tesis |
+| `docs/design/decomposer-composer-redesign.md` | Diseño detallado de los dos artifacts |
+| `docs/adr/` | 29 ADRs (registro histórico) |
 
 ---
 
 ## Reglas para Claude
 
-1. **No renegociar decisiones D1-D10.** Si algo parece en tensión, señalarlo sin cambiar la decisión.
-2. **Gemini CLI es mandatorio** (ejecución + planning). No sugerir alternativas (subprocess directo, otros CLIs, Codex) sin preguntarle a Francisco.
-3. **Git diff como verdad.** Nunca confiar en stdout del agente para determinar qué cambió (sí se persiste `stderrTail` para diagnóstico).
-4. **El orquestador hace commit.** Nunca hacer que el agente (Gemini) haga commit (`--approval-mode yolo` no lo garantiza; por eso existe la política `reject`).
-5. **Error claro sobre fallback silencioso** (D3). Si falta API key en prompt-only path → error accionable, no grafo genérico.
-6. **Tests como safety net.** Antes de cualquier cambio en packages core (`task-graph`, `contracts`, `decomposer`), verificar que `pnpm test` pasa. Después también.
-7. **La suite de tests debe pasar siempre** (~446 al jun-2026, antes 295). Si un cambio rompe tests, arreglarlo en la misma sesión.
-8. **Lab Mode es secundario.** Los escenarios determinísticos, benchmarks y replay son infraestructura de tesis, no el flujo principal de usuario.
-9. **`@manyhands/core` está deprecado.** Nuevas dependencias van a packages específicos, no al barrel.
-10. **Comunicación en español.** Francisco prefiere respuestas en español excepto para código y términos técnicos.
+1. **No renegociar D1-D10.** Si algo parece en tensión, señalarlo sin cambiar la decisión.
+2. **Gemini CLI es mandatorio** (ejecución + planning). No sugerir alternativas sin consultar a Francisco.
+3. **Git diff como verdad.** Nunca confiar en stdout del agente para determinar cambios.
+4. **El orquestador hace commit.** Nunca generar código que haga que Gemini commitee.
+5. **Error claro sobre fallback silencioso** (D3). Si falta API key → error accionable, no grafo genérico.
+6. **Tests como safety net.** `pnpm test` antes y después de cambios en packages core.
+7. **La suite debe pasar siempre** (455 + 3 skipped). Si un cambio rompe tests, arreglarlo en la misma sesión.
+8. **Lab Mode es secundario.** Los escenarios determinísticos son infraestructura de tesis, no el flujo principal.
+9. **`@manyhands/core` está deprecado.** Nuevas dependencias van a packages específicos.
+10. **Comunicación en español.**
 
 ---
 
 ## Comandos de Verificación Rápida
 
 ```bash
-pnpm test                  # 295 tests (todos los packages)
-pnpm typecheck             # packages (errores pre-existentes en tests con @/ aliases)
-pnpm -F @manyhands/execution-core typecheck  # execution-core aislado
-pnpm web:typecheck         # web app
-pnpm build                 # compilación de 14 packages
-pnpm web:dev               # dev server en localhost:3000
+pnpm test                  # 455 passing + 3 skipped
+pnpm -F @manyhands/execution-core typecheck
+pnpm web:typecheck
+pnpm build
+pnpm web:dev               # localhost:3000
 
-# Verificar que el flujo principal funciona:
-# 1. Ir a localhost:3000
-# 2. Crear run con prompt (sin scenarioId)
-# 3. Verificar que llega a needs_review con grafo generado
-# 4. Editar nodo, regenerar subárbol
-# 5. Aprobar plan
-```
-
----
-
-## Archivos Clave para Continuar
-
-| Archivo | Descripción |
-|---------|-------------|
-| `packages/task-graph/src/index.ts` | TaskNode, TaskGraph, validación, topo sort |
-| `packages/contracts/src/index.ts` | AgentTaskContract |
-| `packages/decomposer/src/` | AnthropicDecomposer, guards, normalize |
-| `apps/web/src/lib/server/runs/runner.ts` | Planning + execution pipeline |
-| `apps/web/src/lib/server/runs/schema.ts` | RunRecord schema (Zod) |
-| `apps/web/src/lib/server/runs/patches.ts` | Patch types y aplicación |
-| `apps/web/src/lib/server/runs/lifecycle.ts` | State machine del run |
-| `apps/web/src/app/api/runs/route.ts` | POST /api/runs |
-| `apps/web/src/lib/graph-view-model.ts` | RunGraphViewModel, InspectorView |
-| `packages/execution-core/src/types.ts` | 14 Zod schemas de ejecución |
-| `packages/execution-core/src/errors.ts` | Jerarquía de 7 error classes |
-| `docs/adr/` | 26 ADRs con decisiones de diseño (0001-0026) |
-| `benchmarks/task-manager-api/` | Fixture Express API para experimentos |
-| `tests/execution-core-types.test.ts` | 35 tests de schemas Zod |
-| `tests/execution-core-errors.test.ts` | 32 tests de error hierarchy |
-| `ManyHands_KB_Codex.md` | Knowledge base completa para agentes |
-
----
-
-## Próxima Sesión: Empezar Etapa 1 — Implementación
-
-```
-Objetivo: Implementar los componentes funcionales del pipeline de ejecución.
-
-Paso 1: pnpm test (verificar 295 tests passing)
-Paso 2: WorktreeManager — create/clean worktrees, detect unexpected commits
-Paso 3: MockCodexCliExecutor — test double determinístico para pipeline tests
-Paso 4: ScopeChecker — validación de changedFiles vs allowed/forbidden paths
-Paso 5: ResultRecorder — git diff → patch + trace persistence
-Paso 6: CodexCliExecutor real — wrapper de codex exec
-Paso 7: IntegrationAgent — cherry-pick + Codex repair fallback
-Paso 8: BatchScheduler — maxParallel=3, concurrency control
-Paso 9: RunExecutor — orquestador top-level
-Paso 10: Wire en web app + tests E2E
+# Variables de entorno:
+# MANYHANDS_GEMINI_BIN        ruta al binario gemini (default: gemini)
+# MANYHANDS_DECOMPOSER        single-pass | anthropic-recursive (baselines opt-in)
+# MANYHANDS_FORCE_FALLBACK=1  fuerza MetadataDrivenMockDecomposer (Lab)
 ```

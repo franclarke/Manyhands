@@ -1,220 +1,92 @@
 # Architecture
 
-ManyHands is being shaped as a visual orchestration workspace for multi-agent software development. The current implementation is the deterministic core and Lab Mode foundation; the next architecture layer is a web app and API that consume this core directly.
+ManyHands is a visual orchestration workspace for multi-agent software development. Takes a feature in natural language, decomposes it recursively into a hierarchical DAG, executes leaf tasks in isolated git worktrees with Gemini CLI, and integrates results bottom-up with cherry-pick.
 
 ## Product Architecture
 
-Target product architecture:
-
-```txt
-Web/Desktop UI
-  -> API layer
-  -> Core orchestration
-  -> Runner adapters
-  -> Repository/worktree layer
-  -> Trace/evaluation layer
+```
+Web App (Next.js App Router)
+  → API routes
+  → Core orchestration (RunExecutor)
+  → Agent executor (GeminiCliExecutor)
+  → Git / worktree layer (WorktreeManager, SimpleGitRunner)
+  → Trace / evaluation layer (trace-store, run-store)
 ```
 
-The web app should not reimplement orchestration logic. It should call API routes backed by existing package APIs and display validated core artifacts: `TaskGraph`, `AgentTaskContract`, risk matrices, schedules, `RunSnapshot` and `BenchmarkReport`.
+The web app does not reimplement orchestration logic. It calls API routes backed by existing package APIs and displays validated core artifacts: `TaskGraph`, `AgentTaskContract`, `RunRecord`, `GranularityVector`.
 
-Desktop remains a future packaging mode, not a separate architecture today. A future desktop app would mainly add local filesystem, git and subprocess permissions around the same core abstractions.
+## Execution Pipeline
 
-## Lab Architecture
-
-Current Lab Mode architecture:
-
-```txt
-BenchmarkManifest
-  -> mock flows
-  -> RunSnapshot
-  -> Evaluator
-  -> BenchmarkReport
 ```
-
-Lab Mode exists to compare orchestration configurations under deterministic conditions:
-
-- B0 `single_task_mock`;
-- B1 `decomposed_sequential`;
-- B2 `decomposed_parallel_naive`;
-- B3 `decomposed_risk_aware`;
-- B4 `human_gated_mock`.
-
-It is intentionally structural and mock-only. It validates graph shape, scheduling behavior, risk evidence, traceability and reporting before real agents are introduced.
-
-## Current Core Flow
-
-```txt
-TaskGraph
-  -> AgentTaskContract
-  -> RepositoryIndex
-  -> StaticConflictSignals
-  -> ConflictRisk
-  -> Scheduler
-  -> MockWorktreeRunner
-  -> ScopeValidation
-  -> RunSnapshot
-  -> Evaluator
-  -> BenchmarkReport
+Feature prompt (user)
+  → GeminiRecursiveDecomposer     (recursive interface-aware decomposition)
+  → TaskGraph + AgentTaskContracts + sharedInterfaces
+  → RunExecutor (orchestrator)
+      → BatchScheduler             (maxParallel=3, respects graph dependencies)
+      → WorktreeManager.create()   (isolated git worktree per leaf)
+      → FileSystemContextPacker    (files + consumedInterfaces → prompt)
+      → GeminiCliExecutor          (gemini -p <prompt> --approval-mode yolo)
+      → ScopeChecker               (git diff --name-only vs allowed/forbidden paths)
+      → ValidationRunner           (leafValidationCommands)
+      → ResultRecorder             (git diff HEAD → patch + trace events)
+      → git commit (orchestrator)
+      → WorktreeManager.clean()
+  → IntegrationAgent (bottom-up, per composite)
+      → git cherry-pick (topological order)
+      → Gemini semantic repair on conflict (max 1 attempt)
+        - context: parent goal + sharedInterface + child intents
+      → ValidationRunner           (parentValidationCommands)
+  → GranularityVector              (17 metrics: 9 pre-execution + 8 post-execution)
+  → RunRecord (persisted as JSON)
 ```
 
 ## Package Boundaries
 
-- `shared`: small schemas and deterministic helpers.
-- `contracts`: task contracts, context packs, validation commands, acceptance criteria and agent run results.
-- `task-graph`: task nodes, dependencies, graph validation, DAG cycle detection, orphan detection, readiness and state aggregation.
-- `conflict-risk`: pairwise risk predictions using contract metadata and optional static evidence.
-- `repository-index`: deterministic TypeScript repository index for files, symbols, imports and exports.
-- `scheduler`: batch generation for sequential, naive parallel and risk-aware execution.
-- `scope-validation`: pure contract scope enforcement for mock and future real runners.
-- `trace-store`: trace event interface and in-memory store.
-- `run-store`: versioned run snapshot schema, JSON persistence and deterministic hashes.
-- `worktree-runner`: adapter boundary for future real agents; currently includes a deterministic mock runner.
-- `evaluator`: structural/mock metrics, methodological warnings, granularity comparison reports and benchmark aggregate reports over run snapshots.
-- `core`: convenience exports and deterministic orchestration flows for planning, execution, granularity comparison and mock benchmark comparison.
-- `apps/web`: Next.js web app foundation with product shell, Lab Mode pages and API routes over the existing core.
+Dependency direction: `apps → specific packages → shared`. Never import from `apps` inside packages. Never add new dependencies to `@manyhands/core` (deprecated barrel).
 
-The web app also contains UI-facing view models under `apps/web/src/lib`. These mappers translate core artifacts into component props without changing core schemas. The first example is `graph-view-model.ts`, which maps a `RunSnapshot` to graph nodes, dependency/risk/gate edges and summary counts for the future read-only DAG canvas.
+| Package | Responsibility | Status |
+|---------|---------------|--------|
+| `task-graph` | TaskNode, TaskGraph, DAG validation, topo sort | Active |
+| `contracts` | AgentTaskContract V1+V2, InterfaceContract, ExecutionScope | Active |
+| `decomposer` | GeminiRecursiveDecomposer (default), Anthropic baselines | Active |
+| `execution-core` | Full real-execution pipeline | Active |
+| `scheduler` | sequential_dag, parallel_naive, risk_aware policies | Active |
+| `run-store` | RunSnapshot, patches, JSON persistence | Active |
+| `trace-store` | TraceEvent union (50+ types, planning + execution) | Active |
+| `shared` | EntityId, IsoTimestamp, NonEmptyString | Active |
+| `conflict-risk` | Pairwise conflict risk prediction | Deferred |
+| `scope-validation` | Legacy scope enforcement, replaced by ScopeChecker | Deferred |
+| `worktree-runner` | Legacy deterministic mock runner | Deferred (reference only) |
+| `repository-index` | Structural TypeScript repo index | Deferred |
+| `evaluator` | Metrics and benchmark reports for Lab Mode | Deferred |
+| `core` | Compatibility barrel | Deprecated |
 
-## Dependency Direction
+## Thesis Artifacts
 
-The dependency direction remains:
+**Artifact 1 — Interface-Aware Recursive Decomposer** (`packages/decomposer/src/llm/recursive/`):
+`GeminiRecursiveDecomposer` decomposes each node with a single LLM call that decides `atomic` (leaf) or `decompose` (composite + sharedInterface). When decomposing, it produces TypeScript type and function signatures that the child nodes must honor. The `FileSystemContextPacker` injects `consumedInterfaces` into each leaf's prompt, fixing the inter-agent seam before dispatching agents in parallel.
 
-```txt
-apps -> core -> domain packages -> shared
-```
+**Artifact 2 — Contract-Aware Composer** (`packages/execution-core/src/integration/agent.ts`):
+`IntegrationAgent` does cherry-pick and, on conflict, invokes Gemini with full semantic context: parent goal, canonical `sharedInterface`, each child's intent and diff. Repair resolves by reference to the contract, not by guessing the merge. If `parentValidationCommands` exist, the Composer runs them against the integrated worktree to verify the seam is correct.
 
-Domain packages must not import from `apps`. The web/API layer should depend on stable package boundaries and should avoid UI-specific schema forks unless a view model is clearly separated from core schemas.
+## Decomposer Policy
 
-For the current implementation, `contracts` is independent from `task-graph` because an `AgentTaskContract` only needs a `taskId`. `task-graph` imports the contract schema to validate leaf nodes with embedded contracts. This avoids a package cycle and keeps the contract model reusable by future runners.
+Configurable via `MANYHANDS_DECOMPOSER` env var:
+
+| Value | Decomposer | Requirement |
+|-------|-----------|-------------|
+| (default) | `GeminiRecursiveDecomposer` | `MANYHANDS_GEMINI_BIN` (default: `gemini`) |
+| `single-pass` | `AnthropicSinglePassDecomposer` | `ANTHROPIC_API_KEY` |
+| `anthropic-recursive` | `AnthropicRecursiveDecomposer` | `ANTHROPIC_API_KEY` |
+| `MANYHANDS_FORCE_FALLBACK=1` | `MetadataDrivenMockDecomposer` | Lab Mode only |
 
 ## Runtime Design
 
-Everything implemented so far is pure, in-memory or explicit JSON artifact persistence. `InMemoryTraceStore` stores events in process memory for tests and orchestration. `JsonRunStore` persists complete run snapshots only when a command explicitly exports or saves a run.
+- **Persistence:** JSON for workspaces and runs. SQLite deferred.
+- **SSE:** execution events streamed to the web UI in real time via `/api/runs/[runId]/events`.
+- **Repos:** fixture-only provisioning (`createFixtureRepoProvisioner`, ADR-0027). Local real repos: deferred.
+- **Tests:** 455 passing + 3 skipped. `MockAgentExecutor` enables pipeline testing without invoking Gemini.
 
-The current runtime does not perform filesystem worktree operations, create git branches, run subprocesses, call LLMs, use network APIs or write database records.
+## Lab Mode
 
-The future runtime should introduce effects in this order:
-
-1. API routes over existing deterministic flows.
-2. Live mock execution state for the web app.
-3. Real git worktree lifecycle with a deterministic command runner.
-4. Real validation commands and diff capture.
-5. Agent adapters behind explicit feature flags.
-6. Bottom-up integration.
-
-## Run Persistence
-
-Phase 4 stores complete `RunSnapshot` artifacts instead of only event streams. A snapshot includes the feature request, graph, contracts, risk matrix, schedule, simulated run results, scope validations, traces, summary, schema version and deterministic hashes.
-
-SQLite remains deferred. The JSON store establishes the durable artifact contract first and can be replaced by a future SQLite adapter when the product needs queryable run history, dashboards across many runs or richer evaluation workflows.
-
-## Evaluation
-
-Evaluator v0 consumes `RunSnapshot` artifacts and derives structural/mock metrics for graph shape, contracts, conflict risk, scheduling, simulated execution, traceability and coordination overhead.
-
-The granularity comparison harness runs `coarse`, `balanced` and `fine` decompositions over the passwordless-login fixture and emits a versioned `EvaluationReport`.
-
-The mock benchmark harness runs five controlled features and configurations B0-B3. The conflict benchmark adds controlled conflict scenarios and B4 `human_gated_mock`, which records deterministic gate decisions over high and blocking risk signals. Benchmark runs emit versioned `BenchmarkReport` artifacts with aggregate metrics by configuration.
-
-Evaluator and benchmark reports do not execute agents, run target repository tests, merge code or claim real code quality results.
-
-## Conflict Risk Model
-
-The current predictor is deterministic. Without a repository index it uses declared contract metadata:
-
-- exact expected file overlap;
-- allowed or expected path overlap;
-- shared relevant symbols;
-- producer-consumer artifact relationships;
-- critical paths such as config, schema, migrations and shared types;
-- shared test fixtures.
-
-Levels are `low`, `medium`, `high` and `blocking`. The scheduler serializes high-risk pairs and treats blocking pairs as requiring review or serialization.
-
-When a `RepositoryIndex` is provided, ManyHands derives static conflict signals from TypeScript AST structure and adds them as auditable evidence. The indexer is structural v0 only; it does not run a typechecker or perform semantic analysis.
-
-## Scheduling
-
-The scheduler produces full execution batches over pending leaf tasks, simulating completion batch by batch. It respects declared graph dependencies and `maxParallel`.
-
-- `sequential_dag`: one ready task per batch.
-- `parallel_naive`: all ready tasks up to `maxParallel`, ignoring risk.
-- `risk_aware`: greedy batching that avoids high or blocking risk pairs.
-
-B4 does not add a scheduler policy. It applies a deterministic human-gate wrapper over `risk_aware`, recording simulated gate decisions and serializing blocking work after mock review.
-
-## Current Implementation Status
-
-Already implemented:
-
-- deterministic core models;
-- mock decomposition;
-- task contracts;
-- repository index v0;
-- static conflict signals;
-- risk-aware scheduling;
-- deterministic mock execution;
-- scope validation;
-- run snapshots;
-- evaluator and benchmark reports;
-- mock-v0 and conflict-v0 benchmarks;
-- B0-B4 including B4 human-gated mock.
-
-Currently simulated:
-
-- worktree sessions;
-- branches;
-- diffs;
-- validation results;
-- execution duration and cost;
-- human-gate decisions;
-- benchmark outcomes.
-
-Missing for product:
-
-- DAG canvas;
-- run snapshot viewer;
-- persisted report browser;
-- live mock execution UX;
-- conflict and gate visualization;
-- polished desktop-like interaction model.
-
-Partially implemented for product:
-
-- web app shell;
-- API-backed benchmark listing;
-- API-backed benchmark execution;
-- benchmark report summary UI.
-- demo `RunSnapshot` endpoint for `conflict-v0` / B4;
-- placeholder `/replay/demo` route and graph view-model handoff.
-
-Missing for real execution:
-
-- real git worktrees;
-- real branches;
-- real subprocess or command runner;
-- real validation command execution;
-- real diff capture;
-- bottom-up integration engine;
-- real merge/conflict handling.
-
-Missing for real agents:
-
-- adapter hardening;
-- contract-to-prompt mapping;
-- Claude Code/Codex/Aider adapter;
-- credential and cost guardrails;
-- controlled pilot runs;
-- empirical evaluation over real outputs.
-
-## Out Of Scope For The Current Core
-
-- production UI;
-- recursive LLM decomposer;
-- real agent execution;
-- real worktrees;
-- bottom-up integration;
-- SQLite trace persistence;
-- real human review;
-- TypeScript semantic analysis with a full typechecker;
-- empirical quality claims.
+Lab Mode runs deterministic benchmarks using `MetadataDrivenMockDecomposer` and preloaded fixtures (`mock-v0`, `conflict-v0`, `benchmarks/`). It validates graph shape, scheduling behavior, traceability, and contract structure without LLM variance. Lab Mode results are structural evidence, not empirical evidence of real agent code quality.

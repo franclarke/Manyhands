@@ -50,7 +50,7 @@ Product Mode, also called Build Mode in the UI, is the main product mode.
 
 The user describes a feature or app goal. ManyHands generates a DAG, exposes the plan visually, schedules executable leaves, supervises isolated runners and eventually integrates results into the parent objective.
 
-Near-term Build Mode will still use mock execution, but it must use real core APIs and real snapshots. The UI should make the future real-agent workflow credible without claiming that agents already exist.
+Build Mode uses real execution: `GeminiCliExecutor` on provisioned fixture repos, with SSE events, real diffs, scope checks, validation, and bottom-up integration. The UI reflects real run state.
 
 ### Lab Mode
 
@@ -84,21 +84,11 @@ A future desktop app could run closer to the developer's local environment:
 
 The current architecture should keep this option open by preserving clean boundaries between UI, API/core, runners and repository effects.
 
-### Future Real Agent Mode
+### Real Agent Mode
 
-Real Agent Mode is the future execution mode where leaf tasks are delegated to an LLM coding agent through an adapter.
+Real Agent Mode is implemented: leaf tasks are delegated to Gemini CLI (`GeminiCliExecutor`) via the provider-agnostic `AgentExecutor` interface. The pipeline covers diff capture, scope validation, validation commands, commit orchestration, and bottom-up integration.
 
-It requires:
-
-- hardened `AgentRunner` interface;
-- `AgentTaskContract -> prompt` mapping;
-- provider-specific adapter behind a feature flag;
-- diff capture;
-- validation results;
-- cost and token metadata where available;
-- strict warnings about non-determinism.
-
-This mode should start with one-task and small multi-leaf pilots before any benchmark claims.
+What remains: running the full experiment matrix (B0-B4 × low/medium/high granularity) on real fixtures to collect empirical `GranularityVector` data. The infrastructure exists; the experiments have not been run yet.
 
 ## What ManyHands Is Not
 

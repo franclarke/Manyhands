@@ -27,7 +27,7 @@ El flujo principal del producto es:
 2. El decomposer genera un grafo de tareas con nodos `root`, `integrator` y hojas ejecutables.
 3. Cada hoja recibe un `AgentTaskContract` con objetivo, criterios de aceptación, scope permitido, paths prohibidos y comandos de validación.
 4. El scheduler agrupa hojas listas para ejecutar respetando dependencias y, más adelante, señales de riesgo de conflicto.
-5. El execution core crea worktrees, invoca Codex CLI para cada hoja, captura `git diff HEAD` como fuente de verdad y valida scope.
+5. El execution core crea worktrees, invoca Gemini CLI (`gemini`, headless) para cada hoja, captura `git diff HEAD` como fuente de verdad y valida scope.
 6. El orquestador hace commits, integra resultados con cherry-pick y registra trazas, métricas y artefactos.
 
 El diseño separa deliberadamente tres capas: planificación, ejecución e investigación. La aplicación puede mostrar el DAG y el estado de una run; el core puede ejecutar y validar; el laboratorio puede comparar estrategias bajo condiciones controladas.
@@ -77,20 +77,18 @@ La métrica central es `GranularityVector`, que combina señales previas a la ej
 
 ## Estado actual
 
-ManyHands ya tiene una base funcional de producto y de core:
+ManyHands ya tiene una base funcional de producto, core de ejecución y los dos artefactos de tesis:
 
 - modelo de grafo con nodos `root`, `integrator` y hojas;
 - generación de runs desde prompt en la web app;
-- decomposer LLM con validación estricta y fallback determinista solo para Lab Mode;
-- persistencia JSON de workspaces y runs;
-- SSE para eventos progresivos de run;
-- canvas DAG read-only compartido entre producto y replay;
-- paquetes de dominio para grafos, contratos, scheduling, trazas, snapshots y evaluación;
-- package `@manyhands/execution-core` con schemas, errores y contratos de ejecución;
-- trace events de ejecución preparados para worktrees, Codex, validación, integración y batches;
-- fixture `benchmarks/task-manager-api` para experimentos de granularidad.
+- **decomposer recursivo interface-aware** (`GeminiRecursiveDecomposer`) como default del producto, con baselines Anthropic opt-in y fallback determinista para Lab Mode;
+- **composer contract-aware** que inyecta los seams de interfaz en las instrucciones de cada hoja;
+- **execution core completo** (`@manyhands/execution-core`): `WorktreeManager`, `GeminiCliExecutor` (+ mock determinístico), `ScopeChecker`, `ResultRecorder`, `ValidationRunner`, `IntegrationAgent` (cherry-pick + reparación con Gemini), `BatchScheduler`, `GranularityVector` y `RunExecutor`;
+- web app cableada al motor real (`RunExecutor` + `GeminiCliExecutor`) sobre un repo fixture provisionado, con SSE de ejecución y paneles de evidencia (execution summary + granularity vector);
+- persistencia JSON de workspaces y runs; canvas DAG read-only compartido entre producto y replay;
+- fixtures de benchmark (`task-manager-api`, `expression-calculator`) para experimentos de granularidad.
 
-El siguiente tramo de desarrollo es Execution Core v0.1: implementar `WorktreeManager`, ejecutores de Codex, scope checking, result recording, IntegrationAgent, BatchScheduler, RunExecutor y el wiring completo con la web app.
+El siguiente tramo de desarrollo es **la evidencia empírica**: correr la matriz de baselines (B0-B4) y granularidades (G3/G6/G9) con agentes Gemini reales sobre las fixtures y analizar el `GranularityVector` resultante. Hasta ahora la validación es estructural (mock + E2E), no empírica.
 
 ## Arquitectura del monorepo
 
@@ -133,10 +131,10 @@ apps -> packages específicos -> shared
 
 - `graph.dependencies` es la fuente canónica de dependencias; `node.dependencies` es un shortcut sincronizado.
 - El campo canónico de intención de tarea es `goal`.
-- Codex CLI (`codex exec`) es el executor de subagentes.
-- `git diff HEAD` es la fuente de verdad del resultado de un agente.
+- Gemini CLI (`gemini`, headless) es el executor de subagentes y el step-model del decomposer recursivo.
+- `git diff HEAD` es la fuente de verdad del resultado de un agente (el stdout/stderr solo se persiste como diagnóstico).
 - El orquestador hace commit; los agentes no deben commitear.
-- El sandbox por defecto es `workspace-write`; `danger-full-access` requiere opt-in explícito.
+- El aislamiento real lo dan el git worktree aislado + el `ScopeChecker`; el `SandboxMode` del contrato se mapea a `--approval-mode yolo` en Gemini headless.
 - La integración se hace con cherry-pick de commits hijo sobre rama padre.
 - El límite por defecto es `maxParallel = 3`.
 - Los timeouts por defecto son 5 minutos por hoja y 10 minutos para integración.
@@ -152,7 +150,7 @@ apps -> packages específicos -> shared
 - Vitest
 - tsup
 - `@xyflow/react` para el DAG canvas
-- Codex CLI para ejecución real de subagentes
+- Gemini CLI (`gemini`) para planificación recursiva y ejecución real de subagentes
 
 ## Primeros pasos
 
@@ -208,6 +206,6 @@ pnpm demo:benchmark:conflicts
 
 ## Alcance y límites
 
-ManyHands está en desarrollo activo. La capa de planificación, visualización, persistencia de runs y laboratorio determinista ya existe. La ejecución real con worktrees, Codex CLI, commits orquestados e integración bottom-up está en proceso de implementación.
+ManyHands está en desarrollo activo. La capa de planificación, visualización, persistencia de runs, laboratorio determinista y el pipeline de ejecución real (worktrees, Gemini CLI, commits orquestados e integración bottom-up) ya existen y están cableados de punta a punta.
 
-Los resultados mock del laboratorio sirven para validar estructura, reproducibilidad y trazabilidad. No deben interpretarse como evidencia empírica final de calidad de código producida por agentes reales. Esa evidencia requiere las etapas posteriores de ejecución real y pilotos controlados con agentes.
+Lo que aún no existe es la **evidencia empírica**: los experimentos de granularidad con agentes Gemini reales todavía no se corrieron. Los resultados mock del laboratorio sirven para validar estructura, reproducibilidad y trazabilidad, pero no deben interpretarse como evidencia final de calidad de código producida por agentes reales. Esa evidencia requiere correr la matriz de baselines y granularidades sobre las fixtures y analizar el `GranularityVector` resultante.
