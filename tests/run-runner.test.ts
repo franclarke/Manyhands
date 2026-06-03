@@ -10,6 +10,7 @@ import {
 } from "@/lib/server/runs/event-bus";
 import {
   runExecutionPipeline,
+  runPlanningPipeline,
   type ExecutionEngine
 } from "@/lib/server/runs/runner";
 import { JsonRunRecordStore } from "@/lib/server/runs/repository";
@@ -164,5 +165,41 @@ describe("RunRunner", () => {
     expect(events).toContain("agent.run.completed");
     const finalRun = await store.get(runId);
     expect(finalRun.status).toBe("completed");
+  }, 30000);
+
+  it("applies an injected titler to the run record during planning", async () => {
+    const runId = `${runIdBase}-titler`;
+    const store = new JsonRunRecordStore({ directory: runsDir });
+    await store.save({
+      runId,
+      workspaceId: "ws-1",
+      granularity: "balanced",
+      model: "claude-opus-4.7",
+      userPrompt: "Construí una mini-app de hábitos con persistencia local.",
+      title: "Construí una mini-app de hábitos con persistencia local.",
+      status: "created",
+      createdAt: "2026-05-26T00:00:00.000Z",
+      updatedAt: "2026-05-26T00:00:00.000Z",
+      patches: []
+    });
+
+    const events: string[] = [];
+    const unsubscribe = subscribeRunEvents(runId, (event) => {
+      events.push(event.kind);
+    });
+
+    // The titler runs first and persists synchronously. Decomposition then fails
+    // (no Gemini / no workspace in the test env) and the run ends `failed`, but
+    // the title/summary were already written — that is what we assert.
+    await runPlanningPipeline(runId, {
+      intervalMs: 0,
+      titler: async () => ({ title: "Habit counter", summary: "Mini-app de hábitos con persistencia local." })
+    }).catch(() => undefined);
+    unsubscribe();
+
+    const finalRun = await store.get(runId);
+    expect(finalRun.title).toBe("Habit counter");
+    expect(finalRun.summary).toBe("Mini-app de hábitos con persistencia local.");
+    expect(events).toContain("title.updated");
   }, 30000);
 });
