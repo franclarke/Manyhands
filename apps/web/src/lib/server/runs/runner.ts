@@ -113,11 +113,11 @@ function createDefaultExecutionEngine(deps: { traceStore?: TraceStore } = {}): E
 /**
  * Build a FeatureRequest from the user's natural-language prompt.
  */
-function buildFeatureRequestFromPrompt(userPrompt: string, workspace: Workspace): FeatureRequest {
-  const title = userPrompt.slice(0, 120) || "Untitled feature";
+export function buildFeatureRequestFromPrompt(userPrompt: string, workspace: Workspace, title?: string): FeatureRequest {
+  const representativeTitle = title || userPrompt.slice(0, 120) || "Untitled feature";
   return {
     id: `feature-${randomUUID().slice(0, 8)}`,
-    title,
+    title: representativeTitle,
     description: userPrompt,
     repositoryPath: workspace.repoPath,
     targetStack: [],
@@ -355,7 +355,7 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
 
     // Prompt-only path: LLM required, no silent fallback (D3).
     const executableWorkspace = requireExecutableWorkspace(workspace, run.workspaceId);
-    const feature = buildFeatureRequestFromPrompt(run.userPrompt, executableWorkspace);
+    const feature = buildFeatureRequestFromPrompt(run.userPrompt, executableWorkspace, run.title);
     const { planning, decomposition } = await runPromptOnlyPlanning({ selection, feature, run });
 
     // Persist planning + decomposition metadata before dispatching SSE events so
@@ -627,6 +627,24 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
         kind: "validation.completed",
         taskId: leaf.taskId,
         passed: leaf.status === "success",
+        at: new Date().toISOString()
+      });
+      await sleep(interval / 2);
+    }
+
+    for (const integration of result.integrationResults) {
+      await waitWhilePaused(runId, "running");
+      publishEvent(runId, {
+        kind: "agent.run.started",
+        taskId: integration.compositeTaskId,
+        at: new Date().toISOString()
+      });
+      await sleep(interval / 2);
+      const success = integration.status === "success" || integration.status === "executor_repair_success";
+      publishEvent(runId, {
+        kind: "agent.run.completed",
+        taskId: integration.compositeTaskId,
+        success,
         at: new Date().toISOString()
       });
       await sleep(interval / 2);

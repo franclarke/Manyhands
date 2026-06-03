@@ -20,8 +20,8 @@ export default async function HomePage(): Promise<React.ReactElement> {
 
   return (
     <div>
-      <section style={{ margin: "40px auto 30px", maxWidth: PAGE_WIDTH }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
+      <section style={{ margin: "24px auto 16px", maxWidth: PAGE_WIDTH }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
           <span className="mh-coord" style={{ color: "var(--copper)", margin: 0 }}>
             command center
           </span>
@@ -30,9 +30,9 @@ export default async function HomePage(): Promise<React.ReactElement> {
         <h1
           className="mh-serif"
           style={{
-            fontSize: 44,
-            lineHeight: 1.05,
-            letterSpacing: "-0.022em",
+            fontSize: 32,
+            lineHeight: 1.1,
+            letterSpacing: "-0.02em",
             color: "var(--text)",
             margin: 0
           }}
@@ -41,10 +41,10 @@ export default async function HomePage(): Promise<React.ReactElement> {
         </h1>
         <p
           style={{
-            marginTop: 14,
+            marginTop: 6,
             maxWidth: 600,
-            fontSize: 15,
-            lineHeight: 1.6,
+            fontSize: 14,
+            lineHeight: 1.5,
             color: "var(--text-2)"
           }}
         >
@@ -61,36 +61,6 @@ export default async function HomePage(): Promise<React.ReactElement> {
         />
         <RecentRunsStrip runs={previews} compact />
       </div>
-
-      <CommandFooter />
     </div>
-  );
-}
-
-function CommandFooter(): React.ReactElement {
-  return (
-    <footer
-      style={{
-        maxWidth: PAGE_WIDTH,
-        margin: "56px auto 8px",
-        paddingTop: 14,
-        borderTop: "1px solid var(--rule-soft)",
-        display: "flex",
-        alignItems: "center",
-        gap: 16,
-        flexWrap: "wrap",
-        fontFamily: "var(--font-mono)",
-        fontSize: 12,
-        letterSpacing: "0.02em",
-        color: "var(--text-2)"
-      }}
-    >
-      <span>ManyHands · research preview</span>
-      <span>Agents run locally via Gemini CLI</span>
-      <span style={{ flex: 1 }} />
-      <span>
-        <span style={{ color: "var(--text-2)" }}>⌘↵</span> generate
-      </span>
-    </footer>
   );
 }

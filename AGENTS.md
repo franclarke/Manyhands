@@ -30,7 +30,7 @@ Academic context: Engineering thesis. The research question's final wording is o
 | D6 | **The orchestrator commits.** Agents must never commit. If an agent commits unexpectedly, policy: `reject` (default) or `accept`. |
 | D7 | Real isolation comes from the git worktree + `ScopeChecker`, not the CLI mode. `--approval-mode yolo` for leaf execution; `--approval-mode plan` for the decomposer. |
 | D8 | Integration via cherry-pick + Gemini semantic repair on conflict (max 1 attempt). Repair context: parent goal, canonical `sharedInterface`, each child's intent and diff. |
-| D9 | `maxParallel = 3` leaves per batch (configurable via `ExecutionConfig`). |
+| D9 | `maxParallel = 6` leaves per batch (configurable via `ExecutionConfig`). |
 | D10 | Timeouts: leaf 300 s, integration 600 s (configurable per contract). |
 
 ---

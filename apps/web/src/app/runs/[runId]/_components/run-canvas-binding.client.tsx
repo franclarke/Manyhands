@@ -32,7 +32,7 @@ interface RunCanvasBindingProps {
 
 export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactElement {
   const router = useRouter();
-  const { status, visibleTaskIds, livePlanNodes, pendingQuestion, cliLogs } = useLiveRun(
+  const { status, visibleTaskIds, livePlanNodes, pendingQuestion, cliLogs, nodeStatusOverrides } = useLiveRun(
     props.runId,
     props.initialStatus,
     props.initialPendingQuestion,
@@ -69,6 +69,7 @@ export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactEleme
       livePlanNodes={livePlanNodes}
       pendingQuestion={pendingQuestion}
       cliLogs={cliLogs}
+      nodeStatusOverrides={nodeStatusOverrides}
     />
   );
 }

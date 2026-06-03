@@ -162,7 +162,7 @@ export const UnexpectedCommitPolicySchema = z.union([
 export type UnexpectedCommitPolicy = z.infer<typeof UnexpectedCommitPolicySchema>;
 
 export const ExecutionConfigSchema = z.object({
-  maxParallel: z.number().int().positive().default(3),
+  maxParallel: z.number().int().positive().default(6),
   leafTimeoutMs: z.number().int().positive().default(300_000),
   integrationTimeoutMs: z.number().int().positive().default(600_000),
   sandboxMode: SandboxModeSchema.default("workspace-write"),

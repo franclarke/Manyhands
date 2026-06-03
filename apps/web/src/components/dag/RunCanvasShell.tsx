@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { RunSnapshot } from "@manyhands/core";
 import type { RunExecutionResult } from "@manyhands/execution-core";
 import type { RunStatusKey } from "@/lib/api-types";
-import type { RunGraphViewModel } from "@/lib/graph-view-model";
+import type { RunGraphViewModel, GraphNodeStatus } from "@/lib/graph-view-model";
 import { toRunGraphViewModel } from "@/lib/graph-view-model";
 import type { ConflictListItem } from "@/lib/conflict-view-model";
 import type { TimelineRunInput } from "@/lib/run-timeline";
@@ -42,6 +42,7 @@ interface RunCanvasShellProps {
   errorMessage?: string;
   pendingQuestion?: { nodeId: string; question: string; options: string[] } | null;
   cliLogs?: readonly LivePlanCliLog[];
+  nodeStatusOverrides?: ReadonlyMap<string, GraphNodeStatus>;
 }
 
 export interface LivePlanNode {
@@ -70,7 +71,7 @@ interface LivePlanChildNode {
 }
 
 export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
-  const { snapshot, source, visibleTaskIds } = props;
+  const { snapshot, source, visibleTaskIds, nodeStatusOverrides } = props;
   const router = useRouter();
   const livePlanNodes = useMemo(() => props.livePlanNodes ?? EMPTY_LIVE_PLAN_NODES, [props.livePlanNodes]);
   const livePlanSnapshot = useMemo(
@@ -104,10 +105,25 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
       return { graph: null, derivedSnapshot: null };
     }
     const fullGraph = toRunGraphViewModel(effectiveSnapshot);
-    if (effectiveVisibleTaskIds === null || effectiveVisibleTaskIds === undefined) {
-      return { graph: fullGraph, derivedSnapshot: effectiveSnapshot };
+
+    let overridenGraph = fullGraph;
+    if (nodeStatusOverrides !== undefined && nodeStatusOverrides.size > 0) {
+      overridenGraph = {
+        ...fullGraph,
+        nodes: fullGraph.nodes.map((node) => {
+          const overridenStatus = nodeStatusOverrides.get(node.id);
+          if (overridenStatus !== undefined) {
+            return { ...node, status: overridenStatus };
+          }
+          return node;
+        })
+      };
     }
-    const filteredNodes = fullGraph.nodes.filter((node) => effectiveVisibleTaskIds.has(node.id));
+
+    if (effectiveVisibleTaskIds === null || effectiveVisibleTaskIds === undefined) {
+      return { graph: overridenGraph, derivedSnapshot: effectiveSnapshot };
+    }
+    const filteredNodes = overridenGraph.nodes.filter((node) => effectiveVisibleTaskIds.has(node.id));
     const filteredEdges = fullGraph.edges.filter(
       (edge) => effectiveVisibleTaskIds.has(edge.source) && effectiveVisibleTaskIds.has(edge.target)
     );
@@ -123,7 +139,7 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
       }
     };
     return { graph: partial, derivedSnapshot: effectiveSnapshot };
-  }, [effectiveSnapshot, effectiveVisibleTaskIds]);
+  }, [effectiveSnapshot, effectiveVisibleTaskIds, nodeStatusOverrides]);
 
   if (graph === null || derivedSnapshot === null) {
     const isFailed = source.kind === "persisted-run" && source.initialStatus === "failed";
@@ -267,7 +283,11 @@ function buildLivePlanningSnapshot(input: {
           kind: liveNodeKind(node),
           title: node.title,
           goal: node.goal ?? node.title,
-          status: node.state === "active" ? "running" : "planned",
+          status: (node.state === "active" || node.state === "generating" || node.state === "retrying")
+            ? "generating"
+            : node.state === "failed"
+              ? "failed"
+              : "planned",
           granularity: "auto",
           depth: node.depth,
           childrenIds: childIds,
@@ -424,6 +444,7 @@ interface UseLiveRunResult {
   livePlanNodes: readonly LivePlanNode[];
   pendingQuestion: { nodeId: string; question: string; options: string[] } | null;
   cliLogs: readonly LivePlanCliLog[];
+  nodeStatusOverrides: ReadonlyMap<string, GraphNodeStatus>;
 }
 
 const LIVE_REFRESH_MS = 5_000;
@@ -450,6 +471,9 @@ export function useLiveRun(
     initialPendingQuestion
   );
   const [cliLogs, setCliLogs] = useState<LivePlanCliLog[]>([]);
+  const [nodeStatusOverrides, setNodeStatusOverrides] = useState<Map<string, GraphNodeStatus>>(
+    () => new Map()
+  );
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -464,6 +488,7 @@ export function useLiveRun(
     setVisible(new Set());
     setLivePlanNodes(livePlanNodeMap(initialLivePlanNodes));
     setCliLogs([]);
+    setNodeStatusOverrides(new Map());
   }, [runId, initialLivePlanNodes]);
 
   useEffect(() => {
@@ -506,9 +531,29 @@ export function useLiveRun(
           stream?: "stdout" | "stderr";
           question?: string;
           options?: string[];
+          success?: boolean;
+          passed?: boolean;
           at?: string;
         };
-        if (event.kind === "node.added" && typeof event.taskId === "string") {
+        if (event.kind === "agent.run.started" && typeof event.taskId === "string") {
+          setNodeStatusOverrides((current) => {
+            const next = new Map(current);
+            next.set(event.taskId!, "running");
+            return next;
+          });
+        } else if (event.kind === "agent.run.completed" && typeof event.taskId === "string") {
+          setNodeStatusOverrides((current) => {
+            const next = new Map(current);
+            next.set(event.taskId!, event.success ? "done" : "failed");
+            return next;
+          });
+        } else if (event.kind === "validation.completed" && typeof event.taskId === "string") {
+          setNodeStatusOverrides((current) => {
+            const next = new Map(current);
+            next.set(event.taskId!, event.passed ? "done" : "failed");
+            return next;
+          });
+        } else if (event.kind === "node.added" && typeof event.taskId === "string") {
           const taskId = event.taskId;
           setVisible((current) => {
             if (current.has(taskId)) return current;
@@ -657,7 +702,8 @@ export function useLiveRun(
       (left, right) => left.depth - right.depth || left.id.localeCompare(right.id)
     ),
     pendingQuestion,
-    cliLogs
+    cliLogs,
+    nodeStatusOverrides
   };
 }
 

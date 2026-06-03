@@ -46,7 +46,7 @@ pnpm web:typecheck         # 0 errores
 | D6 | **El orquestador hace commit.** El agente nunca debe commitear. Si commitea, política `reject` (default) o `accept`. |
 | D7 | Aislamiento real = git worktree aislado + `ScopeChecker`. `SandboxMode` del contrato se mapea a `--approval-mode yolo`. Decomposer corre en `--approval-mode plan`. |
 | D8 | Integración: cherry-pick + repair semántico con Gemini (máx. 1 intento). Repair incluye: goal del padre, `sharedInterface` canónico, intención de cada hijo. |
-| D9 | `maxParallel = 3` hojas en paralelo (configurable). |
+| D9 | `maxParallel = 6` hojas en paralelo (configurable). |
 | D10 | Timeouts: hoja 300 s, integración 600 s (configurables por contrato). |
 
 ---

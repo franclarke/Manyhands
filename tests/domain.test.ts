@@ -326,7 +326,7 @@ describe("Scheduler", () => {
       graph,
       contracts,
       riskMatrix: [highRisk],
-      maxParallel: 3,
+      maxParallel: 6,
       policy: "risk_aware"
     });
 

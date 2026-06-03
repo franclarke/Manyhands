@@ -11,6 +11,7 @@ import {
 import {
   runExecutionPipeline,
   runPlanningPipeline,
+  buildFeatureRequestFromPrompt,
   type ExecutionEngine
 } from "@/lib/server/runs/runner";
 import { JsonRunRecordStore } from "@/lib/server/runs/repository";
@@ -145,24 +146,40 @@ describe("RunRunner", () => {
       patches: []
     });
 
-    const events: string[] = [];
+    const events: any[] = [];
     const unsubscribe = subscribeRunEvents(runId, (event) => {
-      events.push(event.kind);
+      events.push(event);
     });
 
     const engine = stubEngine({
       runId,
       status: "completed",
       leafResults: [successLeaf("leaf-a")],
-      integrationResults: [],
+      integrationResults: [
+        {
+          compositeTaskId: "composite-a",
+          status: "success",
+          childResults: [],
+          repairAttempted: false
+        }
+      ],
       granularityVector: STUB_VECTOR,
       totalDurationMs: 0
     });
     await runExecutionPipeline(runId, { intervalMs: 0, engine });
     unsubscribe();
 
-    expect(events).toContain("agent.run.started");
-    expect(events).toContain("agent.run.completed");
+    const eventKinds = events.map(e => e.kind);
+    expect(eventKinds).toContain("agent.run.started");
+    expect(eventKinds).toContain("agent.run.completed");
+
+    const startedEvents = events.filter(e => e.kind === "agent.run.started");
+    const completedEvents = events.filter(e => e.kind === "agent.run.completed");
+
+    expect(startedEvents.map(e => e.taskId)).toContain("leaf-a");
+    expect(startedEvents.map(e => e.taskId)).toContain("composite-a");
+    expect(completedEvents.map(e => e.taskId)).toContain("leaf-a");
+    expect(completedEvents.map(e => e.taskId)).toContain("composite-a");
     const finalRun = await store.get(runId);
     expect(finalRun.status).toBe("completed");
   }, 30000);
@@ -202,4 +219,26 @@ describe("RunRunner", () => {
     expect(finalRun.summary).toBe("Mini-app de hábitos con persistencia local.");
     expect(events).toContain("title.updated");
   }, 30000);
+
+  it("builds feature request with a clean representative title when provided", () => {
+    const mockWorkspace = {
+      id: "ws-1",
+      name: "Workspace 1",
+      repoPath: "/path/to/repo",
+      allowedPaths: ["src/**/*"],
+      createdAt: "2026-05-26T00:00:00.000Z",
+      updatedAt: "2026-05-26T00:00:00.000Z"
+    };
+
+    const prompt = "build a cool calculator app that parses strings and evaluates them";
+    
+    // Test with custom title
+    const requestWithTitle = buildFeatureRequestFromPrompt(prompt, mockWorkspace, "Calculator App");
+    expect(requestWithTitle.title).toBe("Calculator App");
+    expect(requestWithTitle.description).toBe(prompt);
+
+    // Test fallback (no custom title provided)
+    const requestWithoutTitle = buildFeatureRequestFromPrompt(prompt, mockWorkspace);
+    expect(requestWithoutTitle.title).toBe(prompt.slice(0, 120));
+  });
 });

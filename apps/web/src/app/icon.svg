@@ -1,1 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#080b10"/><rect width="44" height="44" x="10" y="10" fill="#101824" stroke="#77d7c8" stroke-width="2"/><path fill="#a7f3e7" d="M18 42V22h5l9 11 9-11h5v20h-6V31l-8 10-8-10v11h-6Z"/></svg>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ManyHands icon">
+  <rect width="1024" height="1024" fill="#FFFFFF"/>
+
+  <!-- ManyHands — compact diagonal orchestration mark -->
+  <g transform="rotate(-28 512 512)">
+    <g stroke="#0F1012" stroke-width="52" stroke-linecap="round" stroke-linejoin="round">
+      <!-- parallel orchestration paths -->
+      <path d="M88 512H284"/>
+      <path d="M284 512C344 512 362 270 438 270H586C662 270 680 512 740 512"/>
+      <path d="M284 512H740"/>
+      <path d="M284 512C344 512 362 754 438 754H586C662 754 680 512 740 512"/>
+      <path d="M740 512H936"/>
+    </g>
+
+    <!-- nodes -->
+    <g fill="#FFFFFF" stroke-width="52">
+      <circle cx="88" cy="512" r="44" stroke="#0F1012"/>
+      <circle cx="512" cy="270" r="44" stroke="#0F1012"/>
+      <circle cx="512" cy="512" r="44" stroke="#0F1012"/>
+      <circle cx="512" cy="754" r="44" stroke="#0F1012"/>
+      <circle cx="936" cy="512" r="44" stroke="#D08A5A"/>
+    </g>
+  </g>
+</svg>

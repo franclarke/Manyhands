@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   AgentResultStatusSchema,
   WorktreeKindSchema,
@@ -235,7 +235,7 @@ describe("AgentExecutorOptionsSchema", () => {
 describe("ExecutionConfigSchema", () => {
   it("applies all defaults", () => {
     const parsed = ExecutionConfigSchema.parse({});
-    expect(parsed.maxParallel).toBe(3);
+    expect(parsed.maxParallel).toBe(6);
     expect(parsed.leafTimeoutMs).toBe(300_000);
     expect(parsed.integrationTimeoutMs).toBe(600_000);
     expect(parsed.sandboxMode).toBe("workspace-write");

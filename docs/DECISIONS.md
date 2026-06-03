@@ -81,7 +81,7 @@
 
 ## Scheduling y Timeouts
 
-**Decisión (D9):** `maxParallel = 3` hojas en paralelo por batch. Configurable vía `ExecutionConfig`.
+**Decisión (D9):** `maxParallel = 6` hojas en paralelo por batch. Configurable vía `ExecutionConfig`.
 
 **Decisión (D10):** Timeouts por defecto: hoja `300_000 ms` (5 min), integración `600_000 ms` (10 min). Configurables por contrato.
 

@@ -94,30 +94,23 @@ export function TaskInspector({
       <aside
         className="mh-tick-frame"
         style={{
-          width: 390,
-          minWidth: 390,
-          height: "min(820px, calc(100vh - 280px))",
-          minHeight: 680,
+          width: "100%",
           border: "1px solid var(--rule)",
           background: "rgba(19,20,22,0.82)",
           borderRadius: "var(--r-lg)",
-          padding: 24,
+          padding: "16px 24px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           color: "var(--text-2)",
           fontSize: 14,
-          textAlign: "center",
-          lineHeight: 1.6
+          textAlign: "center"
         }}
       >
         <div>
-          <div className="mh-coord" style={{ marginBottom: 10 }}>
-            inspector
-          </div>
-          <p className="mh-serif" style={{ margin: 0, fontSize: 18, color: "var(--text)" }}>
-            Select a node to inspect its contract, execution state, validation and trace.
-          </p>
+          <span className="mh-serif" style={{ fontSize: 15, color: "var(--text)" }}>
+            Select a node in the graph to inspect its details (contract, execution state, validation, trace).
+          </span>
         </div>
       </aside>
     );
@@ -130,10 +123,8 @@ export function TaskInspector({
       <aside
         className="task-inspector-panel"
         style={{
-          width: 390,
-          minWidth: 390,
-          height: "min(820px, calc(100vh - 280px))",
-          minHeight: 680,
+          width: "100%",
+          maxHeight: 650,
           border: "1px solid var(--rule)",
           background: "rgba(19,20,22,0.88)",
           borderRadius: "var(--r-lg)",
@@ -158,11 +149,11 @@ export function TaskInspector({
           role="tablist"
           style={{
             display: "flex",
-            gap: 4,
-            flexWrap: "wrap",
+            gap: 8,
             borderBottom: "1px solid var(--rule)",
-            padding: "8px",
-            flexShrink: 0
+            padding: "8px 18px",
+            flexShrink: 0,
+            overflowX: "auto"
           }}
         >
           {tabs.map((id) => (
@@ -173,9 +164,8 @@ export function TaskInspector({
               aria-selected={tab === id}
               onClick={() => setTab(id)}
               style={{
-                flex: "1 1 31%",
-                minHeight: 36,
-                padding: "0 6px",
+                padding: "0 16px",
+                height: 34,
                 border: "1px solid var(--rule-control)",
                 background: "transparent",
                 borderColor: tab === id ? "var(--copper)" : "var(--rule-control)",
@@ -273,7 +263,7 @@ function InspectorHeader({
         gap: 10
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
           <StatusBadge status={nodeUiStatus(view.status, { integrator: view.integrator })} />
           <Tag>{nodeKindLabel(view.kind)}</Tag>
@@ -281,7 +271,7 @@ function InspectorHeader({
             {riskLabel(risk)}
           </Tag>
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {onEdit !== undefined ? (
             <button type="button" onClick={onEdit} style={smallButtonStyle}>
               Edit contract
@@ -305,7 +295,7 @@ function InspectorHeader({
       <h3 style={{ margin: 0, fontSize: 20, color: "var(--text)", lineHeight: 1.25, fontWeight: 700 }}>
         {view.title}
       </h3>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px 12px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "7px 12px" }}>
         <HeaderMeta label="Depth" value={String(view.depth ?? 0)} mono />
         <HeaderMeta label="Agent" value={agentLabel} />
         <HeaderMeta label="Node id" value={view.taskId} mono />
@@ -346,7 +336,7 @@ function OverviewTab({ view }: { view: InspectorView }): React.ReactElement {
       : "No expected files declared";
   const risk = view.riskEvidence[0]?.level;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
       <Section title="Goal">
         <Prose>{view.goal}</Prose>
       </Section>
@@ -436,31 +426,45 @@ function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Section title="Agent run">
-        <KvGrid
-          rows={[
-            { label: "Agent", value: view.executorOverride?.model ?? (view.integrator ? "Integration agent" : "Gemini CLI"), mono: false },
-            { label: "Current step", value: nodeActionHint(view), mono: false },
-            { label: "Success", value: runResult.success ? "yes" : "no", mono: false },
-            ...(runResult.resultStatus !== undefined
-              ? [{ label: "Result", value: runResult.resultStatus, mono: true as const }]
-              : []),
-            { label: "Worktree", value: runResult.worktree, mono: true },
-            { label: "Branch", value: runResult.branch, mono: true },
-            { label: "Duration", value: `${runResult.durationMs}ms`, mono: true },
-            {
-              label: "Usage",
-              value: runResult.usageUnavailable
-                ? "unavailable"
-                : `$${(runResult.costUsd ?? 0).toFixed(4)} / ${runResult.tokensIn ?? 0} in / ${runResult.tokensOut ?? 0} out`,
-              mono: true
-            },
-            { label: "Changed files", value: String(runResult.changedFiles.length), mono: true },
-            { label: "Scope violations", value: String(runResult.scopeViolations.length), mono: true }
-          ]}
-        />
-      </Section>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+        <Section title="Agent run">
+          <KvGrid
+            rows={[
+              { label: "Agent", value: view.executorOverride?.model ?? (view.integrator ? "Integration agent" : "Gemini CLI"), mono: false },
+              { label: "Current step", value: nodeActionHint(view), mono: false },
+              { label: "Success", value: runResult.success ? "yes" : "no", mono: false },
+              ...(runResult.resultStatus !== undefined
+                ? [{ label: "Result", value: runResult.resultStatus, mono: true as const }]
+                : []),
+              { label: "Worktree", value: runResult.worktree, mono: true },
+              { label: "Branch", value: runResult.branch, mono: true },
+              { label: "Duration", value: `${runResult.durationMs}ms`, mono: true },
+              {
+                label: "Usage",
+                value: runResult.usageUnavailable
+                  ? "unavailable"
+                  : `$${(runResult.costUsd ?? 0).toFixed(4)} / ${runResult.tokensIn ?? 0} in / ${runResult.tokensOut ?? 0} out`,
+                mono: true
+              },
+              { label: "Changed files", value: String(runResult.changedFiles.length), mono: true },
+              { label: "Scope violations", value: String(runResult.scopeViolations.length), mono: true }
+            ]}
+          />
+        </Section>
+        <Section title="Changed files">
+          <MonoList items={runResult.changedFiles} empty="none" />
+        </Section>
+        {runResult.scopeViolations.length > 0 ? (
+          <Section title="Errors">
+            <MonoList items={runResult.scopeViolations} empty="none" />
+          </Section>
+        ) : null}
+        <Section title="Tool calls and live logs">
+          <EmptyHint>Detailed tool-call and live-log streams are not recorded for this node yet.</EmptyHint>
+        </Section>
+      </div>
+
       {!runResult.success && runResult.errorOutput !== undefined ? (
         <Section title="Failure cause">
           <pre
@@ -483,17 +487,7 @@ function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
           </pre>
         </Section>
       ) : null}
-      <Section title="Changed files">
-        <MonoList items={runResult.changedFiles} empty="none" />
-      </Section>
-      {runResult.scopeViolations.length > 0 ? (
-        <Section title="Errors">
-          <MonoList items={runResult.scopeViolations} empty="none" />
-        </Section>
-      ) : null}
-      <Section title="Tool calls and live logs">
-        <EmptyHint>Detailed tool-call and live-log streams are not recorded for this node yet.</EmptyHint>
-      </Section>
+
       {runResult.diff !== undefined ? (
         <Section title="Diff summary">
           <pre
@@ -606,37 +600,75 @@ function ReviewTab({ view }: { view: InspectorView }): React.ReactElement {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Section title="Summary">
-        <Prose>
-          {result !== undefined
-            ? result.success
-              ? `Node completed with ${result.changedFiles.length} changed file${result.changedFiles.length === 1 ? "" : "s"}.`
-              : `Node failed with ${result.scopeViolations.length} scope issue${result.scopeViolations.length === 1 ? "" : "s"}.`
-            : integration !== undefined
-              ? `Integration review for ${integration.children.length} child node${integration.children.length === 1 ? "" : "s"}.`
-              : "Review the coordination signals before approving this node."}
-        </Prose>
-      </Section>
-
-      {integration !== undefined ? (
-        <Section title="Integration evidence">
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <KvGrid
-              rows={[
-                { label: "Composite", value: integration.compositeTaskId, mono: true },
-                { label: "Children", value: String(integration.children.length), mono: true },
-                { label: "Executed", value: `${integration.children.filter((child) => child.executed).length}/${integration.children.length}`, mono: true }
-              ]}
-            />
-            {integration.result === undefined ? (
-              <EmptyHint>Cherry-pick, conflict and repair evidence is produced by the execution core.</EmptyHint>
-            ) : (
-              <IntegrationResultDetail result={integration.result} />
-            )}
-          </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+        <Section title="Summary">
+          <Prose>
+            {result !== undefined
+              ? result.success
+                ? `Node completed with ${result.changedFiles.length} changed file${result.changedFiles.length === 1 ? "" : "s"}.`
+                : `Node failed with ${result.scopeViolations.length} scope issue${result.scopeViolations.length === 1 ? "" : "s"}.`
+              : integration !== undefined
+                ? `Integration review for ${integration.children.length} child node${integration.children.length === 1 ? "" : "s"}.`
+                : "Review the coordination signals before approving this node."}
+          </Prose>
         </Section>
-      ) : null}
+
+        {integration !== undefined ? (
+          <Section title="Integration evidence">
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <KvGrid
+                rows={[
+                  { label: "Composite", value: integration.compositeTaskId, mono: true },
+                  { label: "Children", value: String(integration.children.length), mono: true },
+                  { label: "Executed", value: `${integration.children.filter((child) => child.executed).length}/${integration.children.length}`, mono: true }
+                ]}
+              />
+              {integration.result === undefined ? (
+                <EmptyHint>Cherry-pick, conflict and repair evidence is produced by the execution core.</EmptyHint>
+              ) : (
+                <IntegrationResultDetail result={integration.result} />
+              )}
+            </div>
+          </Section>
+        ) : null}
+
+        <Section title="Tests">
+          {view.validation === undefined ? (
+            <EmptyHint>No validation result recorded.</EmptyHint>
+          ) : (
+            <ValidationTab view={view} />
+          )}
+        </Section>
+
+        <Section title="Risks">
+          {view.riskEvidence.length === 0 ? (
+            <EmptyHint>No risk evidence references this node.</EmptyHint>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {view.riskEvidence.slice(0, 3).map((risk, idx) => (
+                <Card key={`${risk.pairTaskId}-${idx}`}>
+                  <Tag tone={risk.level === "high" || risk.level === "blocking" ? "danger" : "warning"}>
+                    {risk.level}
+                  </Tag>
+                  <Prose>{risk.explanation}</Prose>
+                </Card>
+              ))}
+            </div>
+          )}
+        </Section>
+
+        <Section title="Review actions">
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <ReviewButton label="Approve output" />
+            <ReviewButton label="Rerun node" />
+            <ReviewButton label="Request changes" />
+          </div>
+          <p style={{ margin: "8px 0 0", color: "var(--text-3)", fontSize: 11.5, lineHeight: 1.45 }}>
+            Per-node review actions are shown for workflow clarity; backend actions are not connected in this MVP.
+          </p>
+        </Section>
+      </div>
 
       {result?.diff !== undefined ? (
         <Section title="Diff">
@@ -660,42 +692,6 @@ function ReviewTab({ view }: { view: InspectorView }): React.ReactElement {
           </pre>
         </Section>
       ) : null}
-
-      <Section title="Tests">
-        {view.validation === undefined ? (
-          <EmptyHint>No validation result recorded.</EmptyHint>
-        ) : (
-          <ValidationTab view={view} />
-        )}
-      </Section>
-
-      <Section title="Risks">
-        {view.riskEvidence.length === 0 ? (
-          <EmptyHint>No risk evidence references this node.</EmptyHint>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {view.riskEvidence.slice(0, 3).map((risk, idx) => (
-              <Card key={`${risk.pairTaskId}-${idx}`}>
-                <Tag tone={risk.level === "high" || risk.level === "blocking" ? "danger" : "warning"}>
-                  {risk.level}
-                </Tag>
-                <Prose>{risk.explanation}</Prose>
-              </Card>
-            ))}
-          </div>
-        )}
-      </Section>
-
-      <Section title="Review actions">
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <ReviewButton label="Approve output" />
-          <ReviewButton label="Rerun node" />
-          <ReviewButton label="Request changes" />
-        </div>
-        <p style={{ margin: "8px 0 0", color: "var(--text-3)", fontSize: 11.5, lineHeight: 1.45 }}>
-          Per-node review actions are shown for workflow clarity; backend actions are not connected in this MVP.
-        </p>
-      </Section>
     </div>
   );
 }
@@ -707,7 +703,7 @@ function TraceTab({ view }: { view: InspectorView }): React.ReactElement {
 
   return (
     <Section title={`Events / ${view.traceEvents.length}`}>
-      <div className="mh-mono" style={{ fontSize: 11, lineHeight: 1.55, color: "var(--text-2)" }}>
+      <div className="mh-mono" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 10, fontSize: 11, lineHeight: 1.55, color: "var(--text-2)" }}>
         {view.traceEvents.map((event) => (
           <details
             key={event.id}
@@ -745,7 +741,7 @@ function KvGrid({
   rows
 }: {
   rows: Array<{ label: string; value: string; mono?: boolean }>;
-}): React.ReactElement {
+}) : React.ReactElement {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px 18px", fontSize: 12 }}>
       {rows.map((row) => (
@@ -899,4 +895,3 @@ function ReviewButton({ label }: { label: string }): React.ReactElement {
     </button>
   );
 }
-
