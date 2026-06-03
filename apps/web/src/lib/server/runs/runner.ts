@@ -293,15 +293,10 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
 
     console.log(`[Runner] Decomposer seleccionado: provider="${selection.provider}", model="${selection.model}"`);
 
-    let planning: MockPlanningFlowResult;
-    let decomposition: RunDecompositionMetadata;
-
     // Prompt-only path: LLM required, no silent fallback (D3).
     const executableWorkspace = requireExecutableWorkspace(workspace, run.workspaceId);
     const feature = buildFeatureRequestFromPrompt(run.userPrompt, executableWorkspace);
-    const result = await runPromptOnlyPlanning({ selection, feature, run });
-    planning = result.planning;
-    decomposition = result.decomposition;
+    const { planning, decomposition } = await runPromptOnlyPlanning({ selection, feature, run });
 
     // Persist planning + decomposition metadata before dispatching SSE events so
     // refreshes during `generating` already have a snapshot to project.
