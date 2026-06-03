@@ -64,7 +64,7 @@ export function RunHeader({
           >
             {run.title || "Untitled run"}
           </h1>
-          {run.userPrompt.length > 0 ? (
+          {(run.summary ?? run.userPrompt).length > 0 ? (
             <p
               style={{
                 margin: "9px 0 0",
@@ -74,7 +74,7 @@ export function RunHeader({
                 lineHeight: 1.55
               }}
             >
-              {run.userPrompt}
+              {run.summary ?? run.userPrompt}
             </p>
           ) : null}
         </div>

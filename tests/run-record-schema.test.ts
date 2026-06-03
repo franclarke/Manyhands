@@ -29,6 +29,16 @@ describe("run-record schema", () => {
     expect(RunRecordSchema.safeParse({ ...baseRun, status: "foo" }).success).toBe(false);
   });
 
+  it("accepts an optional LLM-generated summary", () => {
+    const parsed = RunRecordSchema.safeParse({ ...baseRun, summary: "Una mini-app de hábitos con persistencia local." });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects a summary over 400 chars", () => {
+    const parsed = RunRecordSchema.safeParse({ ...baseRun, summary: "x".repeat(401) });
+    expect(parsed.success).toBe(false);
+  });
+
   it("accepts persisted live planning nodes while a graph is still generating", () => {
     const parsed = RunRecordSchema.safeParse({
       ...baseRun,

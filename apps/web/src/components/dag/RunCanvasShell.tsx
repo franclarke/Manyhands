@@ -567,6 +567,9 @@ export function useLiveRun(
             setPendingQuestion(null);
           }
           router.refresh();
+        } else if (event.kind === "title.updated") {
+          // Title/summary are server-rendered in the header; re-fetch to show them.
+          router.refresh();
         }
       } catch {
         // ignore malformed payloads

@@ -2,6 +2,7 @@ import type { RunStatus } from "./schema";
 
 export type RunEventKind =
   | "status.changed"
+  | "title.updated"
   | "planning.node.started"
   | "planning.node.completed"
   | "node.added"
@@ -27,6 +28,12 @@ export interface RunEventBase {
 export interface StatusChangedEvent extends RunEventBase {
   kind: "status.changed";
   status: RunStatus;
+}
+
+export interface TitleUpdatedEvent extends RunEventBase {
+  kind: "title.updated";
+  title: string;
+  summary: string;
 }
 
 export interface PlanningNodeStartedEvent extends RunEventBase {
@@ -116,6 +123,7 @@ export interface HeartbeatEvent extends RunEventBase {
 
 export type RunEvent =
   | StatusChangedEvent
+  | TitleUpdatedEvent
   | PlanningNodeStartedEvent
   | PlanningNodeCompletedEvent
   | NodeAddedEvent

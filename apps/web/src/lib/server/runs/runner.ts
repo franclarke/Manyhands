@@ -24,6 +24,7 @@ import {
   type RepoProvisioner
 } from "./repo-provisioner";
 import { publishRunEvent } from "./event-bus";
+import { generateRunTitle, type RunTitle } from "./run-titler";
 import { assertTransition } from "./lifecycle";
 import { markRunnerActive, markRunnerInactive } from "./runner-state";
 import { getRunRepository } from "./store";
@@ -44,6 +45,8 @@ export { isRunnerActive } from "./runner-state";
 
 export interface PlanningRunnerOptions {
   intervalMs?: number;
+  /** Injectable for tests; defaults to the real Gemini-backed titler. */
+  titler?: (input: { userPrompt: string; model: string }) => Promise<RunTitle>;
 }
 
 /**
@@ -213,6 +216,28 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
       run = await transitionTo(run, "generating", {
         startedAt: run.startedAt ?? new Date().toISOString()
       });
+    }
+
+    // Generate a clean title + summary before decomposition so the workspace
+    // header reads well while the graph is still generating. Cosmetic: a titler
+    // failure must NOT fail the run (this is presentation, not D3).
+    if (run.summary === undefined) {
+      const titleFn = options.titler ?? ((input) => generateRunTitle(input));
+      const runTitle = await titleFn({ userPrompt: run.userPrompt, model: run.model }).catch((error) => {
+        console.warn(
+          `[Runner] Titler skipped for run ${run.runId}: ${error instanceof Error ? error.message : String(error)}`
+        );
+        return null;
+      });
+      if (runTitle !== null) {
+        run = await getRunRepository().save({ ...run, title: runTitle.title, summary: runTitle.summary });
+        publishRunEvent(run.runId, {
+          kind: "title.updated",
+          title: runTitle.title,
+          summary: runTitle.summary,
+          at: new Date().toISOString()
+        });
+      }
     }
 
     const livePlanningNodes = new Map<string, PlanningLiveNode>(
