@@ -68,9 +68,9 @@ Esta traducción existe para separar las preocupaciones: los schemas del core es
 
 `GraphNodeStatus` cubre todos los estados posibles: `planned`, `ready`, `running`, `gated`, `done`, `failed`, `blocked`, `generating`, `needs_review`, `approved`, `integrated`.
 
-### Lab Mode (`/lab`)
+### Lab Mode
 
-El Lab Mode es la superficie de experimentos determinísticos. Usa el `MetadataDrivenMockDecomposer` con fixtures precargadas (`mock-v0`, `conflict-v0`) para correr runs sin invocar Gemini. Los resultados son reproducibles y sirven para validar la estructura del pipeline, el comportamiento del scheduler, y la trazabilidad — no la calidad del código producido por agentes reales.
+El Lab Mode determinístico original (`/lab`, `/replay/demo`, scenarios sobre `mock-v0`/`conflict-v0`) se eliminó en junio 2026. Cuando la formulación de la tesis se cierre, se diseñará un Lab nuevo desde cero adaptado al producto actual. Por ahora la web app expone un único flujo: prompt-only con Gemini real sobre un repo local.
 
 ### Workspaces (`/workspaces`)
 

@@ -42,7 +42,7 @@ Feature prompt (user)
 
 ## Package Boundaries
 
-Dependency direction: `apps → specific packages → shared`. Never import from `apps` inside packages. Never add new dependencies to `@manyhands/core` (deprecated barrel).
+Dependency direction: `apps → specific packages → shared`. Never import from `apps` inside packages. `@manyhands/core` is a legacy barrel still consumed by `apps/web` for shared types and the mock-planning flow; do not add new dependencies to it.
 
 | Package | Responsibility | Status |
 |---------|---------------|--------|
@@ -52,14 +52,13 @@ Dependency direction: `apps → specific packages → shared`. Never import from
 | `execution-core` | Full real-execution pipeline | Active |
 | `scheduler` | sequential_dag, parallel_naive, risk_aware policies | Active |
 | `run-store` | RunSnapshot, patches, JSON persistence | Active |
-| `trace-store` | TraceEvent union (50+ types, planning + execution) | Active |
+| `trace-store` | TraceEvent (planning + execution) | Active |
+| `conflict-risk` | Pairwise conflict risk prediction (consumed by the UI) | Active |
+| `repository-index` | Structural TypeScript repo index (feeds conflict-risk) | Active |
 | `shared` | EntityId, IsoTimestamp, NonEmptyString | Active |
-| `conflict-risk` | Pairwise conflict risk prediction | Deferred |
-| `scope-validation` | Legacy scope enforcement, replaced by ScopeChecker | Deferred |
-| `worktree-runner` | Legacy deterministic mock runner | Deferred (reference only) |
-| `repository-index` | Structural TypeScript repo index | Deferred |
-| `evaluator` | Metrics and benchmark reports for Lab Mode | Deferred |
-| `core` | Compatibility barrel | Deprecated |
+| `core` | Legacy barrel consumed by apps/web | Legacy |
+
+The Lab Mode packages (`scope-validation`, `worktree-runner`, `evaluator`) and the `calculator` smoke-test artefact were removed in the June 2026 cleanup.
 
 ## Thesis Artifacts
 
@@ -78,15 +77,14 @@ Configurable via `MANYHANDS_DECOMPOSER` env var:
 | (default) | `GeminiRecursiveDecomposer` | `MANYHANDS_GEMINI_BIN` (default: `gemini`) |
 | `single-pass` | `AnthropicSinglePassDecomposer` | `ANTHROPIC_API_KEY` |
 | `anthropic-recursive` | `AnthropicRecursiveDecomposer` | `ANTHROPIC_API_KEY` |
-| `MANYHANDS_FORCE_FALLBACK=1` | `MetadataDrivenMockDecomposer` | Lab Mode only |
 
 ## Runtime Design
 
 - **Persistence:** JSON for workspaces and runs. SQLite deferred.
 - **SSE:** execution events streamed to the web UI in real time via `/api/runs/[runId]/events`.
-- **Repos:** fixture-only provisioning (`createFixtureRepoProvisioner`, ADR-0027). Local real repos: deferred.
-- **Tests:** 455 passing + 3 skipped. `MockAgentExecutor` enables pipeline testing without invoking Gemini.
+- **Repos:** supports both fixture provisioning (`createFixtureRepoProvisioner`, ADR-0027) and local git folders (`createDefaultRepoProvisioner` with `kind: "localPath"`).
+- **Tests:** 344 passing + 3 skipped. `MockAgentExecutor` enables pipeline testing without invoking Gemini.
 
 ## Lab Mode
 
-Lab Mode runs deterministic benchmarks using `MetadataDrivenMockDecomposer` and preloaded fixtures (`mock-v0`, `conflict-v0`, `benchmarks/`). It validates graph shape, scheduling behavior, traceability, and contract structure without LLM variance. Lab Mode results are structural evidence, not empirical evidence of real agent code quality.
+The original deterministic Lab Mode (`mock-v0`/`conflict-v0` fixtures, `MetadataDrivenMockDecomposer`, `/lab`/`/replay` routes) was removed in June 2026. A new Lab will be designed from scratch when the thesis formulation is finalized and the product is ready.
