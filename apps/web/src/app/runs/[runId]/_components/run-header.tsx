@@ -1,7 +1,6 @@
 import type { Workspace } from "@/lib/api-types";
 import { granularityDetailForMode, granularityLabelForMode } from "@/lib/granularity";
 import type { OperationalMetrics } from "@/lib/run-presentation";
-import type { DecompositionScenario } from "@/lib/scenarios";
 import type { RunRecord, RunStatus } from "@/lib/server/runs/schema";
 import { runUiStatus } from "@/lib/status";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -11,7 +10,6 @@ type MetricTone = "ready" | "running" | "blocked" | "review" | "failed" | "integ
 interface RunHeaderProps {
   run: RunRecord;
   workspace: Workspace | null;
-  scenario: DecompositionScenario | null;
   liveStatus: RunStatus;
   summary: {
     nodes: number;
@@ -24,11 +22,10 @@ interface RunHeaderProps {
 export function RunHeader({
   run,
   workspace,
-  scenario,
   liveStatus,
   summary
 }: RunHeaderProps): React.ReactElement {
-  const mode = modeLabel(run, scenario);
+  const mode = modeLabel(run);
   const metrics = summary?.metrics ?? emptyMetrics();
   const branch = workspace?.defaultBranch ?? run.provisioned?.baseBranch ?? "main";
   const repo = workspace?.repoPath ?? workspace?.name ?? run.workspaceId;
@@ -65,7 +62,7 @@ export function RunHeader({
               maxWidth: 980
             }}
           >
-            {run.title || scenario?.name || "Untitled run"}
+            {run.title || "Untitled run"}
           </h1>
           {run.userPrompt.length > 0 ? (
             <p
@@ -200,8 +197,7 @@ function ModeSignal({ label }: { label: string }): React.ReactElement {
   );
 }
 
-function modeLabel(run: RunRecord, scenario: DecompositionScenario | null): string {
-  if (scenario !== null) return "Lab fixture";
+function modeLabel(run: RunRecord): string {
   if (run.repoSpec !== undefined || run.provisioned !== undefined) return "Gemini execution after approval";
   return "Plan and review";
 }

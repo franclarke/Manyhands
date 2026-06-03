@@ -95,7 +95,7 @@
 
 **Decisión (D2):** Campo canónico de intención de tarea es `goal` (nunca `intent`). Si aparece `intent` en fixtures legacy, normalizar en el parser, nunca persistir.
 
-**Decisión (D3):** Sin `scenarioId` + LLM falla → run FALLA con error accionable. Sin fallback silencioso al grafo genérico. `MetadataDrivenMockDecomposer` solo cuando hay `scenarioId` (Lab Mode).
+**Decisión (D3):** LLM falla → run FALLA con error accionable. Sin fallback silencioso. Tras la limpieza de Lab Mode (junio 2026) ya no existe el path determinístico con `scenarioId`/`MetadataDrivenMockDecomposer`: el único path de planning es prompt-only con Gemini.
 
 ---
 
@@ -108,9 +108,8 @@
 | (default) | `GeminiRecursiveDecomposer` | `MANYHANDS_GEMINI_BIN` |
 | `single-pass` | `AnthropicSinglePassDecomposer` | `ANTHROPIC_API_KEY` |
 | `anthropic-recursive` | `AnthropicRecursiveDecomposer` | `ANTHROPIC_API_KEY` |
-| (`MANYHANDS_FORCE_FALLBACK=1`) | `MetadataDrivenMockDecomposer` | Lab Mode only |
 
-**Granularidad:** `low|medium|high` sesga el umbral de atomicidad por nodo, no fija profundidad ni cantidad de nodos. El árbol resultante es asimétrico; cada rama llega a la profundidad que su complejidad justifica. G3/G6/G9 son etiquetas observadas en experimentos, no objetivos de forma.
+**Granularidad:** `low|medium|high` sesga el umbral de atomicidad por nodo, no fija profundidad ni cantidad de nodos. El árbol resultante es asimétrico; cada rama llega a la profundidad que su complejidad justifica. La metodología anterior (`G3/G6/G9` como targets de cantidad de hojas, derivada del Lab Mode determinístico) fue abandonada junto con el Lab.
 
 **sharedInterface:** Cada paso de descomposición genera costuras TypeScript entre hijos paralelos. El `ContextPacker` las inyecta en el prompt de cada hoja. Esto es Artifact 1 de tesis.
 
@@ -130,11 +129,10 @@
 | `execution-core` | ACTIVO | Pipeline completo implementado |
 | `scheduler` | ACTIVO | sequential, naive, risk-aware |
 | `run-store` | ACTIVO | RunSnapshot, patches, JSON persistence |
-| `trace-store` | ACTIVO | 50+ trace event types |
+| `trace-store` | ACTIVO | TraceEvent (planning + execution) |
+| `conflict-risk` | ACTIVO | Predicción de conflictos entre hojas (consumido por la UI) |
+| `repository-index` | ACTIVO | Índice estructural del repo (alimenta `conflict-risk`) |
 | `shared` | ACTIVO | Sin cambios |
-| `conflict-risk` | DEFER | No en path crítico |
-| `scope-validation` | DEFER | Reemplazado por ScopeChecker en execution-core |
-| `worktree-runner` | DEFER | Mock legacy, solo referencia |
-| `repository-index` | DEFER | Índice estructural del repo |
-| `evaluator` | DEFER | Lab Mode, infraestructura de tesis |
-| `core` | DEPRECATED | Barrel de compat; no usar para dependencias nuevas |
+| `core` | LEGACY | Barrel consumido por `apps/web` para tipos; no usar para código nuevo |
+
+**Eliminados en la limpieza de Lab Mode (junio 2026):** `scope-validation` (reemplazado por `ScopeChecker` en `execution-core`), `worktree-runner` (mock legacy), `evaluator` (Lab Mode), `calculator` (artefacto trivial).

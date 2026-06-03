@@ -32,7 +32,8 @@ import {
   type TraceStore
 } from "@manyhands/trace-store";
 import { AgentTaskContractSchema } from "@manyhands/contracts";
-import { loadFeatureFixture } from "./fixtures";
+import { readFile } from "node:fs/promises";
+import { FeatureRequestSchema } from "@manyhands/decomposer";
 
 export interface MockPlanningFlowOptions {
   feature?: FeatureRequest;
@@ -346,5 +347,7 @@ async function loadFixtureFromOptions(options: MockPlanningFlowOptions): Promise
     throw new Error("runMockPlanningFlow requires either feature or fixturePath");
   }
 
-  return loadFeatureFixture(options.fixturePath);
+  const raw = await readFile(options.fixturePath, "utf8");
+  const parsed: unknown = JSON.parse(raw);
+  return FeatureRequestSchema.parse(parsed);
 }

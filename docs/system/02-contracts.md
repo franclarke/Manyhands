@@ -77,6 +77,6 @@ El mecanismo es simple pero poderoso: dos hojas que trabajan en paralelo no se c
 
 ## Decisiones de diseño
 
-La separación entre campos V1 (planning) y V2 (execution) fue deliberada para mantener backward compatibility. Los campos V2 son todos opcionales — un contrato generado en Lab Mode con el mock decomposer sigue siendo válido sin ellos.
+La separación entre campos V1 (planning) y V2 (execution) fue deliberada para mantener backward compatibility cuando la ejecución real entró en escena. Los campos V2 siguen siendo opcionales — un contrato generado solo para revisión humana del plan, sin ejecutar, es válido sin ellos.
 
 El `InterfaceContract` reemplazó los campos decorativos `producedSymbols`/`consumedSymbols` que existían en el diseño original pero nunca se usaban semánticamente. Pasar de listas de nombres a definiciones de firma reales es lo que hace que las costuras sean efectivas: el agente no solo sabe *qué* debe implementar, sino *cómo* debe verse.

@@ -24,7 +24,6 @@ function makeRun(overrides: Record<string, unknown> = {}): import("@/lib/server/
   const base: import("@/lib/server/runs/schema").RunRecord = {
     runId: "run-stale",
     workspaceId: "ws-1",
-    scenarioId: "passwordless-login",
     granularity: "balanced",
     model: "claude-test",
     userPrompt: "",

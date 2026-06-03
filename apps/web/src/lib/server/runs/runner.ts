@@ -1,19 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
-import path from "node:path";
 import { promisify } from "node:util";
 import {
-  loadBenchmarkManifest,
-  loadFeatureFixture,
-  MetadataDrivenMockDecomposer,
-  isDecomposerLlmError,
   isDecomposerQuestionError,
   runMockPlanningFlow,
-  type Decomposer,
   type FeatureRequest,
   type MockPlanningFlowResult
 } from "@manyhands/core";
-import type { BenchmarkManifest } from "@manyhands/evaluator";
 import {
   GeminiCliExecutor,
   ExecutionConfigSchema,
@@ -23,7 +16,6 @@ import {
 } from "@manyhands/execution-core";
 import type { TaskGraph } from "@manyhands/task-graph";
 import { InMemoryTraceStore, type TraceStore } from "@manyhands/trace-store";
-import { resolveRepoRoot } from "../repo-root";
 import { RepoNotConfiguredError } from "./errors";
 import { runPreflight } from "./preflight";
 import {
@@ -39,7 +31,6 @@ import { getWorkspaceRepository } from "../workspaces";
 import { pickDecomposer, type DecomposerSelection } from "@/lib/decomposer-policy";
 import type { RunEvent, RiskLevelKey } from "./events";
 import type { ExecutionConfigInput, PlanningLiveNode, RunDecompositionMetadata, RunRecord, RunStatus } from "./schema";
-import { findScenario, type DecompositionScenario } from "@/lib/scenarios";
 import type { Workspace } from "@/lib/api-types";
 
 const PLANNING_EVENT_INTERVAL_MS = 110;
@@ -115,31 +106,8 @@ function createDefaultExecutionEngine(deps: { traceStore?: TraceStore } = {}): E
   };
 }
 
-interface BenchmarkBundle {
-  manifest: BenchmarkManifest;
-  feature: FeatureRequest;
-  featurePath: string;
-}
-
-async function loadScenarioBundle(scenario: DecompositionScenario): Promise<BenchmarkBundle> {
-  const repoRoot = resolveRepoRoot();
-  const manifestPath = path.resolve(repoRoot, "benchmarks", scenario.benchmarkId, "benchmark.json");
-  const manifest = await loadBenchmarkManifest(manifestPath);
-  const featureRef = manifest.features.find((entry) => entry.id === scenario.featureId);
-  if (featureRef === undefined) {
-    throw new Error(
-      `Scenario ${scenario.id} points to feature ${scenario.featureId} not present in ${manifestPath}`
-    );
-  }
-  const featurePath = path.resolve(path.dirname(manifestPath), featureRef.path);
-  const feature = await loadFeatureFixture(featurePath);
-  return { manifest, feature, featurePath };
-}
-
 /**
- * Build a FeatureRequest from the user's natural-language prompt, without
- * depending on a benchmark scenario fixture. Used in the prompt-only path
- * (no scenarioId).
+ * Build a FeatureRequest from the user's natural-language prompt.
  */
 function buildFeatureRequestFromPrompt(userPrompt: string, workspace: Workspace): FeatureRequest {
   const title = userPrompt.slice(0, 120) || "Untitled feature";
@@ -228,18 +196,10 @@ function startHeartbeat(runId: string): () => void {
 /**
  * Run the planning pipeline for a given run.
  *
- * Two paths:
- *
- * **Scenario path** (scenarioId present): loads the benchmark fixture, uses
- * the LLM decomposer when an API key is available and falls back
- * transparently to the deterministic MetadataDrivenMockDecomposer on any
- * failure.
- *
- * **Prompt-only path** (no scenarioId): builds a FeatureRequest from the
- * user's natural-language prompt and delegates exclusively to the LLM
- * decomposer. If the LLM is unavailable (no API key, network error, schema
- * validation failure) the run **fails with a clear, actionable error** — no
- * silent deterministic fallback (design decision D3).
+ * Builds a FeatureRequest from the user's natural-language prompt and
+ * delegates to the Gemini decomposer (D4). If the LLM is unavailable (no
+ * binary, network error, schema validation failure) the run **fails with a
+ * clear, actionable error** — no silent deterministic fallback (D3).
  *
  * Transitions: created/interrupted → generating → needs_review (or failed).
  */
@@ -336,24 +296,12 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
     let planning: MockPlanningFlowResult;
     let decomposition: RunDecompositionMetadata;
 
-    if (run.scenarioId !== undefined && run.scenarioId.length > 0) {
-      // ── Scenario path: benchmark fixture + deterministic fallback ──
-      const scenario = findScenario(run.scenarioId);
-      if (scenario === undefined) {
-        throw new Error(`Unknown scenario: ${run.scenarioId}`);
-      }
-      const bundle = await loadScenarioBundle(scenario);
-      const result = await runPlanningWithFallback({ selection, bundle, run });
-      planning = result.planning;
-      decomposition = result.decomposition;
-    } else {
-      // ── Prompt-only path: LLM required, no silent fallback ──
-      const executableWorkspace = requireExecutableWorkspace(workspace, run.workspaceId);
-      const feature = buildFeatureRequestFromPrompt(run.userPrompt, executableWorkspace);
-      const result = await runPromptOnlyPlanning({ selection, feature, run });
-      planning = result.planning;
-      decomposition = result.decomposition;
-    }
+    // Prompt-only path: LLM required, no silent fallback (D3).
+    const executableWorkspace = requireExecutableWorkspace(workspace, run.workspaceId);
+    const feature = buildFeatureRequestFromPrompt(run.userPrompt, executableWorkspace);
+    const result = await runPromptOnlyPlanning({ selection, feature, run });
+    planning = result.planning;
+    decomposition = result.decomposition;
 
     // Persist planning + decomposition metadata before dispatching SSE events so
     // refreshes during `generating` already have a snapshot to project.
@@ -445,7 +393,7 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Prompt-only planning (no scenario, no deterministic fallback — D3)
+// Prompt-only planning (D3: LLM required, no silent fallback)
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface PromptOnlyPlanningInput {
@@ -478,15 +426,15 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
   };
 
   if (selection.provider === "deterministic") {
-    // D3: no API key → fail with actionable message instead of silent fallback.
+    // D3: no LLM available → fail with actionable message instead of silent fallback.
     const reason = selection.fallbackReason ?? "no_api_key";
     const messages: Record<string, string> = {
       no_api_key:
-        "Graph generation requires Gemini CLI in product mode. Select a local git workspace or select a scenario for mock mode.",
+        "Graph generation requires Gemini CLI. Install it and ensure it is on PATH (or set MANYHANDS_GEMINI_BIN).",
       forced_by_env:
-        "MANYHANDS_FORCE_FALLBACK is set, but prompt-only runs require Gemini CLI. Unset MANYHANDS_FORCE_FALLBACK=1 or select a scenario for mock mode.",
+        "MANYHANDS_FORCE_FALLBACK is set, but runs require the Gemini decomposer. Unset MANYHANDS_FORCE_FALLBACK to continue.",
       forced_by_caller:
-        "Deterministic mode was explicitly requested, but prompt-only runs require Gemini CLI. Select a scenario for mock mode."
+        "Deterministic mode was explicitly requested, but runs require the Gemini decomposer."
     };
     throw new Error(messages[reason] ?? `Gemini decomposer unavailable: ${reason}`);
   }
@@ -521,114 +469,13 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Scenario-based planning (benchmark fixture + deterministic fallback)
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface ScenarioPlanningInput {
-  selection: DecomposerSelection;
-  bundle: BenchmarkBundle;
-  run: RunRecord;
-}
-
 /**
- * Plan from a benchmark scenario fixture. Falls back transparently to the
- * deterministic MetadataDrivenMockDecomposer when the LLM is unavailable or
- * errors — this is intentional for Lab Mode / benchmark flows where
- * reproducibility matters.
- */
-async function runPlanningWithFallback(input: ScenarioPlanningInput): Promise<PlanningResult> {
-  const { selection, bundle, run } = input;
-  const mode = resolveDecompositionMode(run.granularity);
-  const baseOptions = {
-    feature: bundle.feature,
-    fixturePath: bundle.featurePath,
-    mode,
-    schedulerPolicy: "risk_aware" as const,
-    runLabel: `${run.runId}:planning`,
-    questionAnswers: run.questionAnswers,
-    stepCache: run.planningStepCache
-  };
-
-  if (selection.provider === "anthropic") {
-    try {
-      const planning = await runMockPlanningFlow({
-        ...baseOptions,
-        decomposer: selection.decomposer
-      });
-      const telemetry = selection.getAnthropicTelemetry?.() ?? null;
-      const decomposition: RunDecompositionMetadata = {
-        provider: selection.provider,
-        model: selection.model,
-        fallbackUsed: false,
-        validationErrors: [],
-        generatedAt: new Date().toISOString()
-      };
-      if (selection.promptTemplateVersion !== undefined) {
-        decomposition.promptTemplateVersion = selection.promptTemplateVersion;
-      }
-      if (telemetry?.usage !== undefined) decomposition.usage = telemetry.usage;
-      if (telemetry?.rawResponse !== undefined) decomposition.rawResponse = telemetry.rawResponse;
-      if (telemetry?.parsedOutput !== undefined) decomposition.parsedOutput = telemetry.parsedOutput;
-      return { planning, decomposition };
-    } catch (error) {
-      // Transparent fallback. Capture the LLM cause for later inspection.
-      const validationErrors: string[] = [];
-      if (isDecomposerLlmError(error)) {
-        const stage = (error as { stage?: string }).stage ?? "unknown";
-        const message = error instanceof Error ? error.message : String(error);
-        validationErrors.push(`${stage}: ${message}`);
-      } else if (error instanceof Error) {
-        validationErrors.push(error.message);
-      } else {
-        validationErrors.push(String(error));
-      }
-      const fallback = await runDeterministicPlanning(baseOptions);
-      const decomposition: RunDecompositionMetadata = {
-        provider: "deterministic",
-        model: selection.model,
-        fallbackUsed: true,
-        fallbackReason: "llm_failed",
-        validationErrors,
-        generatedAt: new Date().toISOString()
-      };
-      return { planning: fallback, decomposition };
-    }
-  }
-
-  const planning = await runDeterministicPlanning(baseOptions);
-  const decomposition: RunDecompositionMetadata = {
-    provider: "deterministic",
-    model: selection.model,
-    fallbackUsed: true,
-    ...(selection.fallbackReason !== undefined ? { fallbackReason: selection.fallbackReason } : {}),
-    validationErrors: [],
-    generatedAt: new Date().toISOString()
-  };
-  return { planning, decomposition };
-}
-
-async function runDeterministicPlanning(baseOptions: {
-  feature: FeatureRequest;
-  fixturePath: string;
-  mode: "coarse" | "balanced" | "fine";
-  schedulerPolicy: "risk_aware";
-  runLabel: string;
-}): Promise<MockPlanningFlowResult> {
-  const decomposer: Decomposer = new MetadataDrivenMockDecomposer();
-  return runMockPlanningFlow({
-    ...baseOptions,
-    decomposer
-  });
-}
-
-/**
- * Execute an approved run through the real execution pipeline (C17).
+ * Execute an approved run through the real execution pipeline.
  *
- * Resolves the TaskGraph (from persisted planning, or by deterministically
- * decomposing the scenario fixture), hands it to the injected ExecutionEngine
- * (default: real RunExecutor over git + Codex), then maps the per-leaf results
- * to agent.run / validation SSE events and persists the RunExecutionResult.
+ * Resolves the TaskGraph from the persisted planning artifact, hands it to
+ * the injected ExecutionEngine (default: real RunExecutor over git + Gemini),
+ * then maps the per-leaf results to agent.run / validation SSE events and
+ * persists the RunExecutionResult.
  *
  * Transitions: approved → running → completed/failed.
  */
@@ -749,26 +596,11 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
 }
 
 /**
- * Resolve the TaskGraph to execute. Prefers the graph persisted during
- * planning; for scenario runs without persisted planning (e.g. Lab Mode),
- * deterministically decomposes the benchmark fixture to obtain one.
+ * Resolve the TaskGraph to execute from the persisted planning artifact.
  */
 async function resolveExecutionGraph(run: RunRecord): Promise<TaskGraph> {
   if (run.planning !== undefined && run.planning !== null) {
     return (run.planning as MockPlanningFlowResult).decomposition.graph;
-  }
-  if (run.scenarioId !== undefined && run.scenarioId.length > 0) {
-    const scenario = findScenario(run.scenarioId);
-    if (scenario === undefined) throw new Error(`Unknown scenario: ${run.scenarioId}`);
-    const bundle = await loadScenarioBundle(scenario);
-    const planning = await runDeterministicPlanning({
-      feature: bundle.feature,
-      fixturePath: bundle.featurePath,
-      mode: resolveDecompositionMode(run.granularity),
-      schedulerPolicy: "risk_aware",
-      runLabel: `${run.runId}:execution`
-    });
-    return planning.decomposition.graph;
   }
   throw new Error("Cannot execute a run without a generated plan. Run planning first.");
 }

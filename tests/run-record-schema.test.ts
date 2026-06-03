@@ -11,7 +11,6 @@ import {
 const baseRun = {
   runId: "abc",
   workspaceId: "ws-1",
-  scenarioId: "passwordless-login",
   granularity: "balanced" as const,
   model: "claude-opus-4.7",
   userPrompt: "Add login",
@@ -61,7 +60,6 @@ describe("run-record schema", () => {
   });
 
   it("RunStatusSchema enumerates the 9 lifecycle values", () => {
-    // Fase C added the `interrupted` status for orphaned runs.
     expect(RUN_STATUS_VALUES.length).toBe(9);
     for (const status of RUN_STATUS_VALUES) {
       expect(RunStatusSchema.safeParse(status).success).toBe(true);
@@ -77,18 +75,17 @@ describe("run-record schema", () => {
     ).toBe(false);
   });
 
-  it("RunCreateRequestSchema requires workspaceId and scenarioId", () => {
+  it("RunCreateRequestSchema requires workspaceId", () => {
     const valid = RunCreateRequestSchema.safeParse({
       workspaceId: "ws-1",
-      scenarioId: "passwordless-login",
       granularity: "balanced",
       model: "claude-opus-4.7"
     });
     expect(valid.success).toBe(true);
 
+    // Missing workspaceId → rejected.
     expect(
       RunCreateRequestSchema.safeParse({
-        scenarioId: "x",
         granularity: "balanced",
         model: "m"
       }).success
@@ -98,7 +95,6 @@ describe("run-record schema", () => {
   it("RunCreateRequestSchema defaults userPrompt to empty string", () => {
     const parsed = RunCreateRequestSchema.parse({
       workspaceId: "ws-1",
-      scenarioId: "passwordless-login",
       granularity: "balanced",
       model: "claude-opus-4.7"
     });
@@ -109,7 +105,6 @@ describe("run-record schema", () => {
     expect(
       RunCreateRequestSchema.safeParse({
         workspaceId: "ws-1",
-        scenarioId: "x",
         granularity: "ultra",
         model: "m"
       }).success

@@ -1,4 +1,3 @@
-import type { BenchmarkManifest, BenchmarkReport, EvaluationConfiguration } from "@manyhands/evaluator";
 import type { GranularityVector } from "@manyhands/execution-core";
 
 /** Per-leaf receipt: auditable evidence of what one subagent did. */
@@ -18,33 +17,6 @@ export interface ExecutionSummary {
   granularityVector: GranularityVector;
   leaves: ExecutionLeafReceipt[];
   integrations: Array<{ compositeTaskId: string; status: string }>;
-}
-
-export interface BenchmarkSummary {
-  id: string;
-  name: string;
-  description?: string;
-  manifestPath: string;
-  configurations: EvaluationConfiguration[];
-  featureCount: number;
-}
-
-export interface BenchmarksListResponse {
-  benchmarks: BenchmarkSummary[];
-}
-
-export interface BenchmarkDetailResponse {
-  benchmark: BenchmarkSummary;
-  manifest: BenchmarkManifest;
-}
-
-export interface BenchmarkRunRequest {
-  config?: EvaluationConfiguration;
-}
-
-export interface BenchmarkRunResponse {
-  benchmark: BenchmarkSummary;
-  report: BenchmarkReport;
 }
 
 export interface ApiErrorResponse {
@@ -121,7 +93,6 @@ export interface RunPreview {
   workspaceName?: string | undefined;
   title: string;
   userPrompt: string;
-  scenarioId?: string | undefined;
   status: RunStatusKey;
   granularity: RunGranularityKey;
   model: string;
@@ -140,7 +111,6 @@ export interface RunsListResponse {
 
 export interface RunCreateRequest {
   workspaceId: string;
-  scenarioId?: string;
   granularity: RunGranularityKey;
   model: string;
   userPrompt?: string;
@@ -151,7 +121,6 @@ export interface RunResponse {
   run: {
     runId: string;
     workspaceId: string;
-    scenarioId?: string;
     granularity: RunGranularityKey;
     model: string;
     userPrompt: string;

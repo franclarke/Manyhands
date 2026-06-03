@@ -1,8 +1,0 @@
-{
-  "name": "aprobado-lite",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "echo deterministic fixture only"
-  }
-}

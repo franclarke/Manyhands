@@ -7,11 +7,9 @@ import { Button } from "@/components/ui/button";
 import { ControlRow } from "@/components/ui/control-row";
 import { GranularitySelector } from "./granularity-selector.client";
 import { ModelPicker } from "./model-picker.client";
-import { ScenarioPicker } from "./scenario-picker.client";
 import { TaskPrompt } from "./task-prompt.client";
 import { WorkspacePicker } from "./workspace-picker.client";
 import { toGranularityMode, type GranularityLevel } from "@/lib/granularity";
-import { findScenario } from "@/lib/scenarios";
 
 const PROMPT_STORAGE_KEY = "manyhands:lastPrompt";
 const EXAMPLE_PROMPTS = [
@@ -40,7 +38,6 @@ export function CommandCenterShell({
     workspaces[0]?.id ??
     "";
   const [workspaceId, setWorkspaceId] = useState<string>(initialWorkspaceId);
-  const [scenarioId, setScenarioId] = useState<string>("");
   const [granularity, setGranularity] = useState<GranularityLevel>(initialGranularity);
   const [modelId, setModelId] = useState<string>(initialModelId);
   const [prompt, setPrompt] = useState<string>("");
@@ -69,21 +66,15 @@ export function CommandCenterShell({
     [workspaces, workspaceId]
   );
 
-  const scenario = scenarioId.length > 0 ? findScenario(scenarioId) : undefined;
   const granularityMode = toGranularityMode(granularity);
-  const granularitySupported = scenario !== undefined
-    ? granularityMode === "auto" || scenario.supportedGranularities.includes(granularityMode)
-    : true;
   const hasPrompt = prompt.trim().length > 0;
   const hasLocalRepo = selectedWorkspace?.repoPath !== undefined && selectedWorkspace.repoPath.length > 0;
   const canStart =
     selectedWorkspace !== null &&
     hasPrompt &&
-    granularitySupported &&
-    (scenario !== undefined || hasLocalRepo) &&
+    hasLocalRepo &&
     modelId.trim().length > 0 &&
     !submitting;
-  const executionMode = scenario !== undefined ? "Lab planning fixture" : "Local Gemini execution";
 
   async function handleStart(): Promise<void> {
     if (selectedWorkspace === null) return;
@@ -95,7 +86,6 @@ export function CommandCenterShell({
         granularity: string;
         model: string;
         userPrompt: string;
-        scenarioId?: string;
         repoSpec?: { kind: "localPath"; path: string };
       } = {
         workspaceId: selectedWorkspace.id,
@@ -103,10 +93,7 @@ export function CommandCenterShell({
         model: modelId,
         userPrompt: prompt.trim()
       };
-      if (scenario !== undefined) {
-        body.scenarioId = scenario.id;
-      }
-      if (scenario === undefined && selectedWorkspace.repoPath !== undefined) {
+      if (selectedWorkspace.repoPath !== undefined) {
         body.repoSpec = { kind: "localPath", path: selectedWorkspace.repoPath };
       }
       const response = await fetch("/api/runs", {
@@ -181,7 +168,7 @@ export function CommandCenterShell({
           </span>
           <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
           <span className="mh-mono" style={{ color: "var(--text-2)", fontSize: 12 }}>
-            {executionMode}
+            Local Gemini execution
           </span>
         </div>
 
@@ -225,7 +212,7 @@ export function CommandCenterShell({
 
         <ControlRow
           label="Granularity"
-          hint="how deep the planner decomposes — decided per task, not a fixed depth"
+          hint="how aggressively the planner decomposes — decided per task, not a fixed depth"
           last
         >
           <GranularitySelector value={granularity} onChange={setGranularity} />
@@ -281,53 +268,31 @@ export function CommandCenterShell({
           </span>
         </Button>
 
-        <ActionHint
-          granularitySupported={granularitySupported}
-          scenarioSelected={scenario !== undefined}
-          hasLocalRepo={hasLocalRepo}
-          workspaceName={selectedWorkspace?.name ?? null}
-        />
+        <ActionHint hasLocalRepo={hasLocalRepo} workspaceName={selectedWorkspace?.name ?? null} />
       </div>
-
-      <AdvancedSection>
-        <ScenarioPicker value={scenarioId} onChange={setScenarioId} granularity={granularityMode} />
-      </AdvancedSection>
     </section>
   );
 }
 
 function ActionHint({
-  granularitySupported,
-  scenarioSelected,
   hasLocalRepo,
   workspaceName
 }: {
-  granularitySupported: boolean;
-  scenarioSelected: boolean;
   hasLocalRepo: boolean;
   workspaceName: string | null;
 }): React.ReactElement {
-  if (!granularitySupported) {
-    return (
-      <span className="mh-mono" style={{ color: "var(--error)", fontSize: 12.5 }}>
-        Selected lab scenario does not support this granularity.
-      </span>
-    );
-  }
-  if (!scenarioSelected && !hasLocalRepo) {
+  if (!hasLocalRepo) {
     return (
       <span className="mh-mono" style={{ color: "var(--error)", fontSize: 12.5, lineHeight: 1.45 }}>
         {workspaceName !== null
-          ? `Workspace "${workspaceName}" has no local git repo. Configure one, pick a workspace that has one, or select a lab scenario.`
-          : "Select a workspace with a local git repo, or pick a lab scenario."}
+          ? `Workspace "${workspaceName}" has no local git repo. Configure one or pick a workspace that has one.`
+          : "Select a workspace with a local git repo."}
       </span>
     );
   }
   return (
     <span style={{ color: "var(--text-2)", fontSize: 13, lineHeight: 1.5, maxWidth: 520 }}>
-      {scenarioSelected
-        ? "Lab scenario selected - planning stays deterministic for replay."
-        : "Gemini plans locally, agents run after approval, and the final patch is applied on success."}
+      Gemini plans locally, agents run after approval, and the final patch is applied on success.
     </span>
   );
 }
@@ -352,55 +317,5 @@ function BranchGlyph(): React.ReactElement {
       <circle cx="12" cy="9" r="1.6" />
       <path d="M12 7.4V6c0-1.6-1.4-3-3-3H7.5" />
     </svg>
-  );
-}
-
-function AdvancedSection({ children }: { children: React.ReactNode }): React.ReactElement {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ marginTop: 2 }}>
-      <button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        style={{
-          background: "transparent",
-          border: "none",
-          color: "var(--text-2)",
-          cursor: "pointer",
-          minHeight: 36,
-          padding: "0 2px",
-          fontSize: 12,
-          fontFamily: "var(--font-mono)"
-        }}
-      >
-        {open ? "Hide lab fixture" : "Lab fixture options"}
-      </button>
-      {open ? (
-        <div
-          style={{
-            marginTop: 10,
-            padding: 12,
-            border: "1px dashed var(--rule-strong)",
-            borderRadius: "var(--r-md)",
-            background: "rgba(241,234,216,0.035)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 10
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              fontSize: 12.5,
-              color: "var(--text-2)",
-              lineHeight: 1.5
-            }}
-          >
-            Lab fixtures keep thesis demos reproducible. Prompt-only runs use the live planner.
-          </p>
-          {children}
-        </div>
-      ) : null}
-    </div>
   );
 }

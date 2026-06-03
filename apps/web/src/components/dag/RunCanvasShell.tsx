@@ -18,7 +18,7 @@ export type RunCanvasSource =
 interface RunCanvasShellProps {
   source: RunCanvasSource;
   snapshot: RunSnapshot | null;
-  benchmarkLabel: string;
+  benchmarkLabel?: string;
   configLabel: string;
   mode?: "Replay" | "Lab" | "Run";
   showMethodologyBanner?: boolean;
@@ -73,7 +73,7 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
         ? buildLivePlanningSnapshot({
             nodes: livePlanNodes,
             source,
-            benchmarkLabel: props.benchmarkLabel,
+            benchmarkLabel: props.benchmarkLabel ?? "Run",
             configLabel: props.configLabel
           })
         : null,
@@ -201,7 +201,7 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
       <DagWorkspace
         snapshot={derivedSnapshot}
         graph={graph}
-        benchmarkLabel={props.benchmarkLabel}
+        benchmarkLabel={props.benchmarkLabel ?? "Run"}
         configLabel={props.configLabel}
         mode={props.mode ?? "Replay"}
         showMethodologyBanner={showMethodologyBanner}

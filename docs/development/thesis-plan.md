@@ -35,21 +35,13 @@ naive parallel strategies?
 
 ## Evaluation Path
 
-### Stage 1 - Mock Structural Evaluation
+### Stage 1 - Mock Structural Evaluation (removed)
 
-Status: implemented.
+Status: implemented and then **removed in June 2026**.
 
-Includes:
+This stage was originally backed by the deterministic Lab Mode (`mock-v0`/`conflict-v0` fixtures, B0-B4 configurations, structural metrics over `RunSnapshot`s). It validated that the architecture could produce reproducible comparisons of graph shape, scheduling behaviour, risk evidence and traceability before real agents existed.
 
-- B0-B4 configurations;
-- `mock-v0`;
-- `conflict-v0`;
-- structural metrics;
-- run snapshots;
-- benchmark reports;
-- methodological warnings.
-
-Purpose: validate that the architecture can produce reproducible comparisons of graph shape, scheduling behavior, risk evidence, gate decisions and traceability.
+When the executable Gemini pipeline came online, the deterministic Lab no longer fit the product surface; its UI (`/lab`, `/replay`) and packages (`evaluator`, `worktree-runner`, `scope-validation`, `mock-v0`/`conflict-v0` fixtures, the `demo:*` CLIs) were removed. A redesigned Lab built on `GranularityVector` and the executable fixtures (`benchmarks/expression-calculator/`, `benchmarks/task-manager-api/`) is on the roadmap but not yet designed.
 
 Limits: no real agents, no real worktrees, no real tests and no final empirical evidence.
 
@@ -62,14 +54,12 @@ Includes:
 - web UI (Next.js App Router);
 - API layer over core;
 - DAG canvas with React Flow (`@xyflow/react`);
-- run snapshot viewer;
-- observability through inspector and trace view (SSE);
-- reproducible demo via `/replay/demo`;
-- Lab Mode UI for benchmark runs.
+- run workspace with inspector (contract, scope, interfaces, diff, traces) and live trace view (SSE);
+- prompt-only run creation against a local git repo.
 
-Purpose: show that the artifact is understandable and usable as an orchestration workspace, not only as a CLI benchmark.
+Purpose: show that the artifact is understandable and usable as an orchestration workspace, not only as a CLI tool.
 
-Limits: the demo can use mock execution (Lab Mode) or real execution (Build Mode with Gemini).
+Limits: the `/lab` and `/replay/demo` surfaces that previously hosted the deterministic demo were removed in the June 2026 cleanup; a redesigned Lab will return later.
 
 ### Stage 3 - Real Execution Slice
 
@@ -87,7 +77,7 @@ Includes:
 
 Purpose: prove that the architecture can supervise real repository effects. Achieved.
 
-Limits: provisioning is fixture-only (`createFixtureRepoProvisioner`). Local repos: deferred.
+Limits: provisioning supports both benchmark fixtures (`createFixtureRepoProvisioner`) and local git folders (`createDefaultRepoProvisioner` with `kind: "localPath"`).
 
 ### Stage 4 - Agentic Execution Pilot
 

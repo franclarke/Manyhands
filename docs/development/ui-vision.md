@@ -1,5 +1,7 @@
 # UI Vision
 
+> **Historical note (June 2026):** parts of this document describe surfaces that no longer exist — `/replay/demo`, Lab Mode UI, `MethodologyBanner`, benchmark comparison views. These were removed when the deterministic Lab Mode was retired. The general design language (warm technical palette, DAG canvas, inspector) is still the active direction; the surfaces have shrunk to Command Center + Run workspace until a redesigned Lab returns.
+
 ## UI Goal
 
 ManyHands should provide a visual workspace where the user can see the execution DAG, task states, dependencies, conflicts, batches and traces. The interface should make multi-agent orchestration understandable at a glance while preserving detailed inspection for each task.

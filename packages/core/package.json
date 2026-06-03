@@ -14,20 +14,17 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts src/cli/mock-planning-run.ts src/cli/mock-execution-run.ts src/cli/runs.ts src/cli/repository-index.ts src/cli/granularity-comparison.ts src/cli/benchmark-mock.ts --format esm,cjs --dts --clean",
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@manyhands/conflict-risk": "workspace:*",
     "@manyhands/contracts": "workspace:*",
     "@manyhands/decomposer": "workspace:*",
-    "@manyhands/evaluator": "workspace:*",
     "@manyhands/repository-index": "workspace:*",
     "@manyhands/run-store": "workspace:*",
     "@manyhands/scheduler": "workspace:*",
-    "@manyhands/scope-validation": "workspace:*",
     "@manyhands/task-graph": "workspace:*",
-    "@manyhands/trace-store": "workspace:*",
-    "@manyhands/worktree-runner": "workspace:*"
+    "@manyhands/trace-store": "workspace:*"
   }
 }

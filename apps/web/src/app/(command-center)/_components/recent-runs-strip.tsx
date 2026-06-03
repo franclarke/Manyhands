@@ -56,8 +56,7 @@ function Header({ compact }: { compact: boolean }): React.ReactElement {
 
 function RecentRunRow({ run, compact }: { run: RunPreview; compact: boolean }): React.ReactElement {
   const repo = run.workspaceName ?? run.workspaceId.slice(0, 8);
-  const source = run.scenarioId !== undefined ? "Lab fixture" : "Prompt run";
-  const meta = [repo, run.nodeCount !== undefined ? `${run.nodeCount} nodes` : null, source]
+  const meta = [repo, run.nodeCount !== undefined ? `${run.nodeCount} nodes` : null]
     .filter((part): part is string => part !== null)
     .join("  ·  ");
 

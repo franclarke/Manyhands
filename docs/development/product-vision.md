@@ -52,21 +52,9 @@ The user describes a feature or app goal. ManyHands generates a DAG, exposes the
 
 Build Mode uses real execution: `GeminiCliExecutor` on provisioned fixture repos, with SSE events, real diffs, scope checks, validation, and bottom-up integration. The UI reflects real run state.
 
-### Lab Mode
+### Lab Mode (removed; new Lab to be designed later)
 
-Lab Mode is the thesis and evaluation mode.
-
-It runs benchmarks, compares configurations B0-B4, exports snapshots, generates reports and makes orchestration strategies reproducible. Lab Mode currently uses deterministic mock fixtures and methodological warnings.
-
-Lab Mode validates the architecture before real agents are introduced. It should not be described as final empirical evidence.
-
-### Replay Mode
-
-Replay Mode is the demo and debugging mode.
-
-It loads saved `RunSnapshot` and `BenchmarkReport` artifacts, visualizes the DAG, shows trace events, explains scheduling decisions and lets a viewer inspect why a run behaved the way it did.
-
-Replay Mode is especially useful for defense demos because it removes live execution risk while preserving evidence.
+The original deterministic Lab Mode — benchmarks over `mock-v0`/`conflict-v0`, B0-B4 configurations, scenario picker, `/replay/demo` snapshots — was removed in June 2026. The metrics framework (`GranularityVector`, trace events) and the executable fixtures (`benchmarks/expression-calculator/`, `benchmarks/task-manager-api/`) are still in the repo and ready to drive a redesigned Lab once the thesis formulation is finalized.
 
 ### Future Desktop Mode
 
