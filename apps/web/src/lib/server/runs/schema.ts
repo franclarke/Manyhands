@@ -106,6 +106,8 @@ export const RunRecordSchema = z.object({
   model: z.string().min(1),
   userPrompt: z.string().max(4000),
   title: z.string().min(1).max(160),
+  /** LLM-generated one-paragraph description. Falls back to userPrompt in the UI. */
+  summary: z.string().max(400).optional(),
   status: RunStatusSchema,
   pausedDuring: z.union([z.literal("generating"), z.literal("running")]).optional(),
   /** Phase from which the run was interrupted (server restart, stale heartbeat). */
