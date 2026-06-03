@@ -66,7 +66,7 @@ interface LivePlanChildNode {
 export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
   const { snapshot, source, visibleTaskIds } = props;
   const router = useRouter();
-  const livePlanNodes = props.livePlanNodes ?? [];
+  const livePlanNodes = useMemo(() => props.livePlanNodes ?? EMPTY_LIVE_PLAN_NODES, [props.livePlanNodes]);
   const livePlanSnapshot = useMemo(
     () =>
       snapshot === null && livePlanNodes.length > 0
@@ -214,6 +214,7 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
         {...(props.timelineRun !== undefined ? { timelineRun: props.timelineRun } : {})}
         conflicts={props.conflicts ?? []}
         {...(props.conflictError !== undefined ? { conflictError: props.conflictError } : {})}
+        {...(props.errorMessage !== undefined ? { errorMessage: props.errorMessage } : {})}
         {...(props.execution !== undefined ? { execution: props.execution } : {})}
       />
       {source.kind === "persisted-run" ? (
@@ -406,6 +407,7 @@ interface UseLiveRunResult {
 }
 
 const LIVE_REFRESH_MS = 5_000;
+const EMPTY_LIVE_PLAN_NODES: readonly LivePlanNode[] = [];
 
 /**
  * Client hook that subscribes to a persisted run's SSE stream, accumulates
@@ -416,7 +418,7 @@ export function useLiveRun(
   runId: string,
   initialStatus: RunStatusKey,
   initialPendingQuestion: { nodeId: string; question: string; options: string[] } | null = null,
-  initialLivePlanNodes: readonly LivePlanNode[] = []
+  initialLivePlanNodes: readonly LivePlanNode[] = EMPTY_LIVE_PLAN_NODES
 ): UseLiveRunResult {
   const router = useRouter();
   const [status, setStatus] = useState<RunStatusKey>(initialStatus);
@@ -442,7 +444,7 @@ export function useLiveRun(
     setVisible(new Set());
     setLivePlanNodes(livePlanNodeMap(initialLivePlanNodes));
     setCliLogs([]);
-  }, [runId]);
+  }, [runId, initialLivePlanNodes]);
 
   useEffect(() => {
     if (initialLivePlanNodes.length === 0) return;
@@ -632,7 +634,7 @@ function LivePlanningTree({ nodes }: { nodes: readonly LivePlanNode[] }): React.
               node.state === "active"
                 ? "rgba(244,195,106,0.08)"
                 : node.state === "pending"
-                  ? "rgba(229,222,204,0.035)"
+                  ? "rgba(241,234,216,0.055)"
                   : "rgba(119,215,200,0.05)",
             borderRadius: "var(--r-md)",
             color: "var(--text-2)"

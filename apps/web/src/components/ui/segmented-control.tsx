@@ -36,10 +36,10 @@ export function SegmentedControl<T extends string>({
         alignSelf: fluid ? "stretch" : "flex-start",
         display: fluid ? "flex" : "inline-flex",
         width: fluid ? "100%" : undefined,
-        border: "1px solid var(--color-border)",
-        background: "transparent",
+        border: "1px solid var(--color-border-control)",
+        background: "rgba(241,234,216,0.035)",
         borderRadius: "var(--r-lg)",
-        padding: 2
+        padding: 3
       }}
     >
       {options.map((option) => {
@@ -60,16 +60,17 @@ export function SegmentedControl<T extends string>({
             style={{
               flex: fluid ? 1 : undefined,
               border: "none",
-              background: active ? "rgba(229,222,204,0.06)" : "transparent",
+              minHeight: 34,
+              background: active ? "rgba(241,234,216,0.11)" : "transparent",
               color: disabled
                 ? "var(--color-text-faint)"
                 : active
                   ? "var(--color-text)"
                   : "var(--color-text-muted)",
               borderRadius: "var(--r-md)",
-              padding: "6px 11px",
+              padding: "0 12px",
               fontFamily: "var(--font-mono)",
-              fontSize: 11.5,
+              fontSize: 12,
               cursor: disabled ? "not-allowed" : "pointer",
               opacity: disabled ? 0.5 : 1,
               textTransform: "capitalize",

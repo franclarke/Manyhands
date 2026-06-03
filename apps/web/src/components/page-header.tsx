@@ -15,7 +15,7 @@ export function PageHeader({
         <p
           style={{
             fontFamily: "var(--font-mono)",
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: "0.18em",
             textTransform: "uppercase",
             color: "var(--coral)",

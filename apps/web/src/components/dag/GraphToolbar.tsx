@@ -69,11 +69,11 @@ export function GraphToolbar({
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flexWrap: "wrap" }}>
         <ModeBadge mode={mode} deterministic={graph.deterministic} />
-        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
+        <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
           {benchmarkLabel}
         </span>
         <span style={{ color: "var(--text-4)" }}>/</span>
-        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-2)" }}>
+        <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
           {configLabel}
         </span>
         <span style={{ color: "var(--text-4)" }}>/</span>
@@ -84,17 +84,12 @@ export function GraphToolbar({
 
       <span style={{ flex: 1 }} />
 
-      <SummaryMetric label="nodes" value={graph.summary.taskCount} />
-      <SummaryMetric label="leaves" value={graph.summary.leafCount} />
-      <SummaryMetric label="depth" value={maxDepth(graph)} />
-      <SummaryMetric label="ready" value={graph.status.ready} color="var(--ready)" />
-
       <SearchInput
         value={filters.text}
         onChange={(value) => onFiltersChange({ ...filters, text: value })}
       />
 
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap", maxWidth: "100%" }}>
         <FilterButton active={empty} label="All" onClick={clear} />
         <FilterButton
           active={setEquals(filters.statuses, ["ready"])}
@@ -129,7 +124,7 @@ export function GraphToolbar({
       </div>
 
       {!empty ? (
-        <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
+        <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
           {matchedCount}/{graph.summary.taskCount} visible
         </span>
       ) : null}
@@ -145,27 +140,18 @@ function ModeBadge({ mode, deterministic }: { mode: "Replay" | "Lab" | "Run"; de
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
-        height: 22,
+        minHeight: 28,
         padding: "0 8px",
         borderRadius: 999,
         border: "1px solid var(--rule-strong)",
         color: "var(--copper)",
-        fontSize: 10.5,
+        fontSize: 12,
         textTransform: "uppercase"
       }}
     >
       <span className="mh-dot" style={{ width: 5, height: 5 }} />
       {mode}
       {deterministic ? " / mock" : ""}
-    </span>
-  );
-}
-
-function SummaryMetric({ label, value, color }: { label: string; value: number; color?: string }): React.ReactElement {
-  return (
-    <span style={{ display: "inline-flex", alignItems: "baseline", gap: 5 }}>
-      <span className="mh-mono" style={{ fontSize: 15, color: color ?? "var(--text)" }}>{value}</span>
-      <span className="mh-coord" style={{ fontSize: 9 }}>{label}</span>
     </span>
   );
 }
@@ -183,26 +169,28 @@ function SearchInput({
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
-        padding: "0 8px",
-        border: "1px solid var(--rule)",
+        padding: "0 10px",
+        border: "1px solid var(--rule-control)",
         borderRadius: 5,
-        height: 28
+        minHeight: 36,
+        background: "rgba(241,234,216,0.035)"
       }}
     >
-      <span style={{ color: "var(--text-3)", fontSize: 12 }}>search</span>
+      <span style={{ color: "var(--text-2)", fontSize: 12 }}>search</span>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder="node, path, title"
         spellCheck={false}
         style={{
-          width: 150,
+          width: 220,
+          minHeight: 34,
           border: "none",
           background: "transparent",
           color: "var(--text)",
           fontFamily: "var(--font-mono)",
-          fontSize: 11.5,
-          outline: "none"
+          fontSize: 12.5,
+          lineHeight: 1.35
         }}
       />
     </div>
@@ -228,13 +216,13 @@ function FilterButton({
         display: "inline-flex",
         alignItems: "center",
         gap: 6,
-        height: 26,
-        padding: "0 8px",
-        border: `1px solid ${active ? color : "var(--rule)"}`,
-        background: active ? "rgba(229,222,204,0.045)" : "transparent",
+        minHeight: 36,
+        padding: "0 10px",
+        border: `1px solid ${active ? color : "var(--rule-control)"}`,
+        background: active ? "rgba(241,234,216,0.10)" : "rgba(241,234,216,0.025)",
         color: active ? "var(--text)" : "var(--text-2)",
         borderRadius: 5,
-        fontSize: 11.5,
+        fontSize: 12,
         cursor: "pointer"
       }}
     >
@@ -248,6 +236,3 @@ function setEquals<T extends string>(set: ReadonlySet<T>, values: T[]): boolean 
   return set.size === values.length && values.every((value) => set.has(value));
 }
 
-function maxDepth(graph: RunGraphViewModel): number {
-  return Math.max(0, ...graph.nodes.map((node) => node.depth ?? 0));
-}

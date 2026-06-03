@@ -46,7 +46,7 @@ export function RunBoard({ graph, selectedTaskId, onSelectTask }: RunBoardProps)
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <span className="mh-coord" style={{ color: "var(--copper)" }}>board</span>
         <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
-        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
+        <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
           grouped by node status
         </span>
       </div>
@@ -64,7 +64,7 @@ export function RunBoard({ graph, selectedTaskId, onSelectTask }: RunBoardProps)
             <div key={column.id}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 4px 10px" }}>
                 <span style={{ fontSize: 12, color: "var(--text)", fontWeight: 700 }}>{column.label}</span>
-                <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>{nodes.length}</span>
+                <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>{nodes.length}</span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {nodes.length === 0 ? (
@@ -75,7 +75,7 @@ export function RunBoard({ graph, selectedTaskId, onSelectTask }: RunBoardProps)
                       borderRadius: 5,
                       color: "var(--text-3)",
                       textAlign: "center",
-                      fontSize: 11,
+                      fontSize: 12,
                       lineHeight: 1.45
                     }}
                   >
@@ -129,20 +129,20 @@ function BoardCard({
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
         <Signal status={nodeUiStatus(node.status, { integrator: node.integrator === true })} />
-        <span className="mh-mono" style={{ color: "var(--text-3)", fontSize: 10.5 }}>
+        <span className="mh-mono" style={{ color: "var(--text-2)", fontSize: 12 }}>
           {nodeKindLabel(node.kind)}
         </span>
       </div>
       <div style={{ fontSize: 13.5, color: "var(--text)", marginTop: 9, lineHeight: 1.28, fontWeight: 700 }}>
         {node.title}
       </div>
-      <div style={{ color: "var(--text-2)", marginTop: 6, fontSize: 11.5, lineHeight: 1.35 }}>
+      <div style={{ color: "var(--text-2)", marginTop: 6, fontSize: 12.5, lineHeight: 1.4 }}>
         {node.description}
       </div>
-      <div className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)", marginTop: 8 }}>
+      <div className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)", marginTop: 8 }}>
         deps {dependencyCount} / paths {node.expectedFiles?.length ?? 0} / {riskLabel(node.riskLevel)}
       </div>
-      <div style={{ marginTop: 8, color: "var(--copper-hi)", fontSize: 11.5, fontWeight: 700 }}>
+      <div style={{ marginTop: 8, color: "var(--copper-hi)", fontSize: 12.5, fontWeight: 700 }}>
         {nodeActionHint(node)}
       </div>
     </button>

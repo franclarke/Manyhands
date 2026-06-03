@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "contrast:check": "node scripts/contrast-check.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0"
   },

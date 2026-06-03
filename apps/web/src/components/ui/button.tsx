@@ -19,9 +19,9 @@ const VARIANT_STYLE: Record<ButtonVariant, React.CSSProperties> = {
     fontWeight: 600
   },
   ghost: {
-    border: "1px solid var(--color-border)",
-    background: "transparent",
-    color: "var(--color-text-muted)",
+    border: "1px solid var(--color-border-control)",
+    background: "rgba(241,234,216,0.035)",
+    color: "var(--color-text)",
     fontWeight: 500
   },
   danger: {
@@ -33,8 +33,8 @@ const VARIANT_STYLE: Record<ButtonVariant, React.CSSProperties> = {
 };
 
 const SIZE_STYLE: Record<ButtonSize, React.CSSProperties> = {
-  sm: { padding: "6px 11px", fontSize: 12, borderRadius: "var(--r-md)" },
-  md: { padding: "7px 13px", fontSize: 12.5, borderRadius: "var(--r-lg)" }
+  sm: { minHeight: 36, padding: "0 13px", fontSize: 13, borderRadius: "var(--r-md)" },
+  md: { minHeight: 40, padding: "0 16px", fontSize: 13.5, borderRadius: "var(--r-lg)" }
 };
 
 /**
@@ -64,6 +64,7 @@ export function Button({
         opacity: disabled === true && !busy ? 0.55 : 1,
         fontFamily: "var(--font-sans)",
         whiteSpace: "nowrap",
+        transition: "background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out",
         ...style
       }}
     >

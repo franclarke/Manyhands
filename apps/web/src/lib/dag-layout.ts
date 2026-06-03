@@ -30,12 +30,12 @@ export interface LayoutOptions {
 }
 
 const DEFAULTS = {
-  columnWidth: 326,
-  rowHeight: 172,
+  columnWidth: 374,
+  rowHeight: 202,
   subtreeGap: 34,
   topPadding: 64,
   leftPadding: 80,
-  nodeWidth: 248
+  nodeWidth: 292
 };
 
 const STATUS_ORDER = [

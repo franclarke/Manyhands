@@ -46,7 +46,7 @@ export function ControlRow({
       >
         <div className="mh-coord">{label}</div>
         {hint !== undefined ? (
-          <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 4, lineHeight: 1.4 }}>
+          <div style={{ fontSize: 12, color: "var(--text-2)", marginTop: 5, lineHeight: 1.45 }}>
             {hint}
           </div>
         ) : null}

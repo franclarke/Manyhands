@@ -16,11 +16,11 @@ export function RiskLegend({ graph }: RiskLegendProps): React.ReactElement {
         alignItems: "center",
         gap: 14,
         padding: "8px 12px",
-        background: "rgba(15,16,18,0.78)",
-        border: "1px solid var(--rule)",
+        background: "rgba(15,16,18,0.86)",
+        border: "1px solid var(--rule-control)",
         borderRadius: "var(--r-lg)",
         backdropFilter: "blur(10px)",
-        fontSize: 11,
+        fontSize: 12,
         color: "var(--text-2)"
       }}
     >
@@ -50,7 +50,7 @@ function LegendDot({
     <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
       <span className="mh-dot" style={{ color }} />
       <span>{label}</span>
-      <span className="mh-mono" style={{ color: value === 0 ? "var(--text-3)" : "var(--text)" }}>
+      <span className="mh-mono" style={{ color: value === 0 ? "var(--text-2)" : "var(--text)" }}>
         {value}
       </span>
     </span>

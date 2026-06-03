@@ -40,7 +40,7 @@ export function StatusPill({
         gap: 6,
         padding: "3px 9px",
         borderRadius: 999,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 500,
         letterSpacing: 0.02,
         border: `1px solid ${color.border}`,

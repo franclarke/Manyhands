@@ -31,7 +31,7 @@ export function RunPhaseBar({ status, graph }: RunPhaseBarProps): React.ReactEle
         gap: 16,
         flexWrap: "wrap",
         border: "1px solid var(--rule)",
-        background: "rgba(19,20,22,0.70)",
+        background: "rgba(19,20,22,0.82)",
         borderRadius: "var(--r-lg)",
         padding: "10px 14px"
       }}
@@ -77,7 +77,7 @@ export function RunPhaseBar({ status, graph }: RunPhaseBarProps): React.ReactEle
           </div>
         </>
       ) : (
-        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
+        <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
           {progress.total} {progress.total === 1 ? "node" : "nodes"} in the task graph
         </span>
       )}
@@ -128,16 +128,16 @@ function PhaseStep({
         ? "var(--status-integrated-fg)"
         : state === "failed"
           ? "var(--status-failed-fg)"
-          : "var(--text-3)";
+          : "var(--text-2)";
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }} role="listitem">
       <span
         className={state === "active" ? "coral-pulse" : undefined}
         style={{
-          fontSize: 11.5,
+          fontSize: 12,
           color,
           fontWeight: state === "active" ? 700 : 500,
-          padding: "4px 8px",
+          padding: "5px 9px",
           borderRadius: 999,
           border: `1px solid ${state === "upcoming" ? "transparent" : "var(--rule)"}`,
           background: state === "active" ? "rgba(180,113,72,0.10)" : "transparent",
@@ -178,7 +178,7 @@ function Count({
     <span style={{ display: "inline-flex", alignItems: "baseline", gap: 5 }}>
       <span className="mh-mono" style={{ fontSize: 13, color }}>
         {value}
-        {total !== undefined ? <span style={{ color: "var(--text-3)" }}>/{total}</span> : null}
+        {total !== undefined ? <span style={{ color: "var(--text-2)" }}>/{total}</span> : null}
       </span>
       <span className="mh-coord">{label}</span>
     </span>

@@ -50,11 +50,12 @@ function defaultTab(view: InspectorView, tabs: TabId[], phase: RunPhase | undefi
 }
 
 const smallButtonStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "1px solid var(--rule)",
-  color: "var(--text-2)",
-  fontSize: 11,
-  padding: "3px 8px",
+  background: "rgba(241,234,216,0.035)",
+  border: "1px solid var(--rule-control)",
+  color: "var(--text)",
+  fontSize: 12,
+  minHeight: 34,
+  padding: "0 10px",
   cursor: "pointer",
   borderRadius: 4,
   fontFamily: "var(--font-mono)"
@@ -96,14 +97,14 @@ export function TaskInspector({
           height: "min(820px, calc(100vh - 280px))",
           minHeight: 680,
           border: "1px solid var(--rule)",
-          background: "rgba(19,20,22,0.74)",
+          background: "rgba(19,20,22,0.82)",
           borderRadius: "var(--r-lg)",
           padding: 24,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "var(--text-3)",
-          fontSize: 13,
+          color: "var(--text-2)",
+          fontSize: 14,
           textAlign: "center",
           lineHeight: 1.6
         }}
@@ -112,7 +113,7 @@ export function TaskInspector({
           <div className="mh-coord" style={{ marginBottom: 10 }}>
             inspector
           </div>
-          <p className="mh-serif" style={{ margin: 0, fontSize: 17, color: "var(--text-2)" }}>
+          <p className="mh-serif" style={{ margin: 0, fontSize: 18, color: "var(--text)" }}>
             Select a node to inspect its contract, execution state, validation and trace.
           </p>
         </div>
@@ -132,7 +133,7 @@ export function TaskInspector({
           height: "min(820px, calc(100vh - 280px))",
           minHeight: 680,
           border: "1px solid var(--rule)",
-          background: "rgba(19,20,22,0.82)",
+          background: "rgba(19,20,22,0.88)",
           borderRadius: "var(--r-lg)",
           display: "flex",
           flexDirection: "column",
@@ -171,15 +172,15 @@ export function TaskInspector({
               onClick={() => setTab(id)}
               style={{
                 flex: "1 1 31%",
-                height: 28,
+                minHeight: 36,
                 padding: "0 6px",
-                border: "1px solid var(--rule)",
+                border: "1px solid var(--rule-control)",
                 background: "transparent",
-                borderColor: tab === id ? "var(--copper)" : "var(--rule)",
+                borderColor: tab === id ? "var(--copper)" : "var(--rule-control)",
                 borderRadius: 4,
                 color: tab === id ? "var(--text)" : "var(--text-2)",
                 fontWeight: tab === id ? 600 : 500,
-                fontSize: 11.5,
+                fontSize: 12,
                 cursor: "pointer",
                 whiteSpace: "nowrap"
               }}
@@ -869,7 +870,7 @@ function ReviewButton({ label }: { label: string }): React.ReactElement {
       title="Per-node review actions are not connected in this MVP."
       style={{
         border: "1px solid var(--rule)",
-        background: "rgba(229,222,204,0.025)",
+        background: "rgba(241,234,216,0.045)",
         color: "var(--text-3)",
         borderRadius: "var(--r-md)",
         padding: "7px 10px",

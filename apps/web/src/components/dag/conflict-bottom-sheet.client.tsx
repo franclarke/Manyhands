@@ -126,8 +126,8 @@ export function ConflictBottomSheet({
                 <div
                   style={{
                     fontFamily: "var(--font-mono)",
-                    fontSize: 10.5,
-                    color: "var(--text-3)",
+                    fontSize: 12,
+                    color: "var(--text-2)",
                     textTransform: "uppercase",
                     letterSpacing: "0.16em"
                   }}
@@ -172,7 +172,7 @@ export function ConflictBottomSheet({
                           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                             <RiskTag level={conflict.level} />
                             {conflict.acknowledged ? <MutedTag>Acknowledged</MutedTag> : null}
-                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-3)" }}>
+                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-2)" }}>
                               {conflict.pairKey}
                             </span>
                           </div>
@@ -186,7 +186,7 @@ export function ConflictBottomSheet({
                           <MetaLine label="shared paths" values={conflict.sharedPaths} />
                           <MetaLine label="shared symbols" values={conflict.sharedSymbols} />
                           {conflict.acknowledgedReason !== undefined ? (
-                            <p style={{ margin: "6px 0 0", color: "var(--text-3)", fontSize: 11.5 }}>
+                            <p style={{ margin: "6px 0 0", color: "var(--text-2)", fontSize: 12.5 }}>
                               accepted: {conflict.acknowledgedReason}
                             </p>
                           ) : null}
@@ -274,7 +274,7 @@ function bodyFor(action: ConflictAction, conflict: ConflictListItem): Record<str
 function MetaLine({ label, values }: { label: string; values: string[] }): React.ReactElement | null {
   if (values.length === 0) return null;
   return (
-    <div style={{ marginTop: 6, fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--text-3)" }}>
+    <div style={{ marginTop: 6, fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-2)" }}>
       {label}: <span style={{ color: "var(--text-2)" }}>{values.slice(0, 4).join(", ")}</span>
       {values.length > 4 ? ` +${values.length - 4}` : ""}
     </div>
@@ -321,7 +321,7 @@ const tagStyle: React.CSSProperties = {
   borderRadius: 999,
   padding: "2px 7px",
   fontFamily: "var(--font-mono)",
-  fontSize: 10.5,
+  fontSize: 12,
   textTransform: "uppercase"
 };
 

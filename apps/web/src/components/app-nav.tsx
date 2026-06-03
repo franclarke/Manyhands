@@ -27,7 +27,7 @@ export function AppNav(): React.ReactElement {
             <span className="mh-serif" style={{ fontSize: 17, color: "var(--text)" }}>
               ManyHands
             </span>
-            <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
+            <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
               orchestration lab
             </span>
           </span>
@@ -44,11 +44,11 @@ export function AppNav(): React.ReactElement {
                 key={item.href}
                 href={item.href}
                 style={{
-                  padding: "6px 9px",
-                  fontSize: 12,
+                  padding: "8px 11px",
+                  fontSize: 13,
                   borderRadius: 4,
                   border: "1px solid transparent",
-                  background: active ? "rgba(229,222,204,0.045)" : "transparent",
+                  background: active ? "rgba(241,234,216,0.08)" : "transparent",
                   color: active ? "var(--text)" : "var(--text-2)",
                   transition: "background 150ms ease-out, color 150ms ease-out"
                 }}
@@ -74,7 +74,7 @@ function ManyHandsMark(): React.ReactElement {
         width: 30,
         height: 30,
         borderRadius: 5,
-        background: "rgba(229,222,204,0.035)",
+        background: "rgba(241,234,216,0.055)",
         border: "1px solid var(--rule)",
         color: "var(--copper)"
       }}

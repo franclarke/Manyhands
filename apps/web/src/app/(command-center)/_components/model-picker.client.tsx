@@ -20,14 +20,14 @@ export function ModelPicker({ value, onChange }: ModelPickerProps): React.ReactE
         value={value}
         onChange={(event) => onChange(event.target.value)}
         style={{
-          height: 30,
-          width: 150,
-          padding: "0 10px",
-          border: "1px solid var(--border)",
-          background: "var(--bg-1)",
+          minHeight: 36,
+          width: 190,
+          padding: "0 12px",
+          border: "1px solid var(--rule-control)",
+          background: "var(--surface)",
           color: "var(--text)",
           borderRadius: 6,
-          fontSize: 13,
+          fontSize: 13.5,
           fontFamily: "var(--font-sans)"
         }}
       />
@@ -39,14 +39,14 @@ export function ModelPicker({ value, onChange }: ModelPickerProps): React.ReactE
       <span
         title="This model id is passed directly to the Gemini CLI."
         style={{
-          fontSize: 9.5,
+          fontSize: 10.5,
           fontFamily: "var(--font-mono)",
           letterSpacing: 0.4,
-          padding: "2px 6px",
+          padding: "4px 7px",
           borderRadius: 4,
-          color: "var(--ready)",
-          background: "rgba(201,164,92,0.10)",
-          border: "1px solid rgba(201,164,92,0.40)",
+          color: "var(--status-ready-fg)",
+          background: "var(--status-ready-bg)",
+          border: "1px solid var(--status-ready-border)",
           textTransform: "uppercase"
         }}
       >

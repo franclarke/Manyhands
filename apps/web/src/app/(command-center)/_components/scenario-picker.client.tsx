@@ -21,10 +21,10 @@ export function ScenarioPicker({ value, onChange, granularity }: ScenarioPickerP
         htmlFor={labelId}
         style={{
           fontFamily: "var(--font-mono)",
-          fontSize: 10.5,
-          letterSpacing: 0.6,
+          fontSize: 11,
+          letterSpacing: 0.5,
           textTransform: "uppercase",
-          color: "var(--text-3)"
+          color: "var(--text-2)"
         }}
       >
         Scenario
@@ -34,10 +34,10 @@ export function ScenarioPicker({ value, onChange, granularity }: ScenarioPickerP
         value={value}
         onChange={(event) => onChange(event.target.value)}
         style={{
-          height: 30,
+          minHeight: 36,
           padding: "0 28px 0 10px",
-          border: "1px solid var(--border)",
-          background: "var(--bg-1)",
+          border: "1px solid var(--rule-control)",
+          background: "var(--surface)",
           color: "var(--text)",
           borderRadius: 6,
           fontSize: 13,
@@ -57,7 +57,7 @@ export function ScenarioPicker({ value, onChange, granularity }: ScenarioPickerP
         <span
           title={`Scenario ${scenario?.id ?? "unknown"} does not support granularity ${granularity}.`}
           style={{
-            fontSize: 10.5,
+            fontSize: 12,
             fontFamily: "var(--font-mono)",
             color: "var(--error)",
             background: "rgba(194,91,84,0.10)",
@@ -71,8 +71,8 @@ export function ScenarioPicker({ value, onChange, granularity }: ScenarioPickerP
       ) : (
         <span
           style={{
-            fontSize: 11,
-            color: "var(--text-3)",
+            fontSize: 12.5,
+            color: "var(--text-2)",
             fontFamily: "var(--font-sans)",
             maxWidth: 320,
             overflow: "hidden",

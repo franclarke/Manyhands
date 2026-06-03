@@ -35,9 +35,9 @@ export function EmptyState({
         textAlign: "center",
         gap: 6,
         padding: compact ? "16px 14px" : "40px 24px",
-        border: "1px dashed var(--color-border)",
+        border: "1px dashed var(--color-border-strong)",
         borderRadius: "var(--r-lg)",
-        background: "var(--color-bg-subtle)"
+        background: "rgba(241,234,216,0.035)"
       }}
     >
       {tone === "pending" ? (
@@ -50,12 +50,12 @@ export function EmptyState({
       ) : null}
       <span
         className="mh-serif"
-        style={{ fontSize: compact ? 14 : 16, color: "var(--color-text)" }}
+        style={{ fontSize: compact ? 15 : 17, color: "var(--color-text)" }}
       >
         {title}
       </span>
       {description !== undefined ? (
-        <span style={{ fontSize: 12.5, color: "var(--color-text-subtle)", maxWidth: 360, lineHeight: 1.45 }}>
+        <span style={{ fontSize: 13, color: "var(--color-text-muted)", maxWidth: 380, lineHeight: 1.5 }}>
           {description}
         </span>
       ) : null}

@@ -59,7 +59,7 @@ export function RunTimeline({ run, snapshot, patches, selectedTaskId, onSelectTa
             Oscilloscope
           </h3>
         </div>
-        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
+        <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
           {hasExecution ? "recorded execution" : "planning trace"} / units arbitrary
         </span>
       </header>
@@ -88,10 +88,10 @@ export function RunTimeline({ run, snapshot, patches, selectedTaskId, onSelectTa
           <span className="mh-coord">event stream</span>
           <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
           <TimelineFilter value={filter} onChange={setFilter} selectedTaskId={selectedTaskId} />
-          <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>{visibleEntries.length} events</span>
+          <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>{visibleEntries.length} events</span>
         </div>
         {visibleEntries.length === 0 ? (
-          <div style={{ color: "var(--text-3)", fontSize: 12.5 }}>
+          <div style={{ color: "var(--text-2)", fontSize: 13 }}>
             No timeline events have been recorded for this run yet.
           </div>
         ) : (
@@ -111,7 +111,7 @@ export function RunTimeline({ run, snapshot, patches, selectedTaskId, onSelectTa
                 cursor: entry.taskIds.length > 0 ? "pointer" : "default"
               }}
             >
-              <div className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
+              <div className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
                 <div>{formatTimestamp(entry.timestamp)}</div>
                 <div style={{ marginTop: 3, color: entry.actor === "human" ? "var(--copper)" : "var(--text-2)" }}>
                   {entry.actor}
@@ -119,7 +119,7 @@ export function RunTimeline({ run, snapshot, patches, selectedTaskId, onSelectTa
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <span className="mh-mono" style={{ color: "var(--text)", fontSize: 11 }}>
+                  <span className="mh-mono" style={{ color: "var(--text)", fontSize: 12 }}>
                     {entry.kind}
                   </span>
                   <span style={{ color: "var(--text)", fontSize: 12.5, fontWeight: 600 }}>
@@ -150,7 +150,7 @@ function Ruler({ maxDepth }: { maxDepth: number }): React.ReactElement {
         {Array.from({ length: maxDepth + 2 }).map((_, depth) => (
           <div key={depth} style={{ position: "absolute", left: depth * 190, top: 0, bottom: 0 }}>
             <div style={{ width: 1, height: "100%", background: "var(--rule-soft)" }} />
-            <span className="mh-mono" style={{ position: "absolute", top: 9, left: 6, fontSize: 10, color: "var(--text-3)" }}>
+            <span className="mh-mono" style={{ position: "absolute", top: 9, left: 6, fontSize: 11, color: "var(--text-2)" }}>
               d{depth}
             </span>
           </div>
@@ -165,7 +165,7 @@ function PhaseRow({ depth, count }: { depth: number; count: number }): React.Rea
     <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", minHeight: 24, borderBottom: "1px solid var(--rule-soft)" }}>
       <div style={{ borderRight: "1px solid var(--rule)", padding: "5px 14px" }}>
         <span className="mh-coord" style={{ color: "var(--copper)" }}>phase {depth}</span>
-        <span className="mh-mono" style={{ marginLeft: 8, fontSize: 10, color: "var(--text-3)" }}>{count} tasks</span>
+        <span className="mh-mono" style={{ marginLeft: 8, fontSize: 11.5, color: "var(--text-2)" }}>{count} tasks</span>
       </div>
       <div
         style={{
@@ -209,7 +209,7 @@ function NodeRow({
       }}
     >
       <div style={{ borderRight: "1px solid var(--rule)", padding: "8px 14px 0 28px" }}>
-        <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
+        <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
           lane {String(index + 1).padStart(2, "0")}
         </span>
       </div>
@@ -221,7 +221,7 @@ function NodeRow({
             left: depth * 190 + 12,
             top: 6,
             width: 220,
-            height: 22,
+            minHeight: 28,
             borderRadius: 3,
             background: filled ? `${color}22` : "transparent",
             border: `1px ${blocked || node.status === "planned" ? "dashed" : "solid"} ${color}`,
@@ -234,7 +234,7 @@ function NodeRow({
             whiteSpace: "nowrap"
           }}
         >
-          <span className="mh-mono" style={{ fontSize: 10.5, color: filled ? "var(--text)" : color }}>
+          <span className="mh-mono" style={{ fontSize: 12, color: filled ? "var(--text)" : color }}>
             {node.id} / {node.status.replace("_", " ")}
           </span>
         </div>
