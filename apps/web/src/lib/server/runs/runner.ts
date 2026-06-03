@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import {
+  isDecomposerLlmError,
   isDecomposerQuestionError,
   runMockPlanningFlow,
   type FeatureRequest,
@@ -304,6 +305,40 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
         });
         await persistLivePlanningNodes(run.runId, livePlanningNodes);
       },
+      onStepStatus: async (event) => {
+        const existing = livePlanningNodes.get(event.nodeId);
+        livePlanningNodes.set(event.nodeId, {
+          ...(existing ?? {
+            id: event.nodeId,
+            parentId: event.parentId,
+            title: event.title,
+            goal: event.goal,
+            depth: event.depth
+          }),
+          state: event.state,
+          ...(event.attempt !== undefined ? { attempt: event.attempt } : {}),
+          ...(event.maxAttempts !== undefined ? { maxAttempts: event.maxAttempts } : {}),
+          ...(event.durationMs !== undefined ? { durationMs: event.durationMs } : {}),
+          ...(event.error?.kind !== undefined ? { errorKind: event.error.kind } : {}),
+          ...(event.error?.message !== undefined ? { errorMessage: event.error.message } : {})
+        });
+        publishEvent(run.runId, {
+          kind: "planning.node.status",
+          nodeId: event.nodeId,
+          ...(event.parentId !== null ? { parentId: event.parentId } : {}),
+          title: event.title,
+          goal: event.goal,
+          depth: event.depth,
+          state: event.state,
+          ...(event.attempt !== undefined ? { attempt: event.attempt } : {}),
+          ...(event.maxAttempts !== undefined ? { maxAttempts: event.maxAttempts } : {}),
+          ...(event.durationMs !== undefined ? { durationMs: event.durationMs } : {}),
+          ...(event.error?.kind !== undefined ? { errorKind: event.error.kind } : {}),
+          ...(event.error?.message !== undefined ? { errorMessage: event.error.message } : {}),
+          at: new Date().toISOString()
+        });
+        await persistLivePlanningNodes(run.runId, livePlanningNodes);
+      },
       onCliOutput: (event) => {
         publishEvent(run.runId, {
           kind: "planning.cli.output",
@@ -481,12 +516,30 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
     return { planning, decomposition };
   } catch (error) {
     // D3: LLM failed → propagate with actionable message. No fallback.
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = describePlanningFailure(error);
     throw new Error(
       `Graph generation failed: ${detail}. ` +
         "Retry, switch to a different Gemini model, or verify that Gemini CLI is installed and authenticated."
     );
   }
+}
+
+function describePlanningFailure(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!isDecomposerLlmError(error) || error.details === undefined) {
+    return message;
+  }
+  const detail = error.details;
+  const parts = [
+    message,
+    `kind=${detail.kind}`,
+    `stage=${detail.stage}`,
+    ...(detail.nodeId !== undefined ? [`node=${detail.nodeId}`] : []),
+    ...(detail.attempt !== undefined && detail.maxAttempts !== undefined
+      ? [`attempt=${detail.attempt}/${detail.maxAttempts}`]
+      : [])
+  ];
+  return parts.join(" | ");
 }
 
 /**

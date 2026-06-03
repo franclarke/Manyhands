@@ -12,6 +12,7 @@ import {
   type RunPatch
 } from "@/lib/server/runs";
 import { toRunResponse } from "@/lib/server/runs/presenter";
+import { findModel, normalizeExecutorOverride } from "@/lib/models";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,7 +29,14 @@ const NodeEditRequestSchema = z.object({
   allowedPaths: z.array(EditableStringSchema.max(500)).optional(),
   forbiddenPaths: z.array(EditableStringSchema.max(500)).optional(),
   acceptanceCriteria: z.array(EditableStringSchema.max(500)).optional(),
-  manual: z.boolean().optional()
+  manual: z.boolean().optional(),
+  executorOverride: z
+    .object({
+      executorId: z.literal("gemini-cli"),
+      model: EditableStringSchema.max(120)
+    })
+    .nullable()
+    .optional()
 }).strict();
 
 type NodeEditRequest = z.infer<typeof NodeEditRequestSchema>;
@@ -52,6 +60,12 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Ne
     const { run, baseSnapshot, currentSnapshot } = await loadEditableRunContext(id);
     assertTaskExists(currentSnapshot, taskId);
     const node = currentSnapshot.graphSnapshot.nodes[taskId];
+    if (parsed.data.executorOverride !== undefined && parsed.data.executorOverride !== null) {
+      const model = findModel(parsed.data.executorOverride.model);
+      if (model === undefined || model.executorId !== parsed.data.executorOverride.executorId) {
+        throw new RunValidationError(`Unknown Gemini model "${parsed.data.executorOverride.model}"`);
+      }
+    }
 
     const patches = buildNodeEditPatches({
       input: parsed.data,
@@ -116,6 +130,16 @@ function buildNodeEditPatches(input: {
   }
   if (request.manual !== undefined) {
     patches.push(buildPatch("NODE_MARKED_MANUAL", { taskId, manual: request.manual }, { createdAt: now }));
+  }
+  if (request.executorOverride !== undefined) {
+    const current = normalizeExecutorOverride(currentNode.metadata?.executorOverride) ?? null;
+    const next = request.executorOverride;
+    if (
+      current?.executorId !== next?.executorId ||
+      current?.model !== next?.model
+    ) {
+      patches.push(buildPatch("NODE_EXECUTOR_EDITED", { taskId, executorOverride: next }, { createdAt: now }));
+    }
   }
 
   return patches;

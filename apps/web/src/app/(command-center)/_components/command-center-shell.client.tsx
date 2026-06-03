@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ApiErrorResponse, RunResponse, Workspace } from "@/lib/api-types";
+import type { ApiErrorResponse, ProviderReadiness, ProviderReadinessResponse, RunResponse, Workspace } from "@/lib/api-types";
 import { Button } from "@/components/ui/button";
 import { ControlRow } from "@/components/ui/control-row";
 import { GranularitySelector } from "./granularity-selector.client";
@@ -43,6 +43,9 @@ export function CommandCenterShell({
   const [prompt, setPrompt] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [readiness, setReadiness] = useState<ProviderReadiness | null>(null);
+  const [readinessLoading, setReadinessLoading] = useState(false);
+  const [readinessError, setReadinessError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -60,6 +63,41 @@ export function CommandCenterShell({
       window.sessionStorage.setItem(PROMPT_STORAGE_KEY, prompt);
     }
   }, [prompt]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadReadiness(): Promise<void> {
+      if (workspaceId.length === 0) {
+        setReadiness(null);
+        return;
+      }
+      setReadinessLoading(true);
+      setReadinessError(null);
+      try {
+        const response = await fetch(`/api/providers/readiness?workspaceId=${encodeURIComponent(workspaceId)}`);
+        const payload = (await response.json()) as ProviderReadinessResponse | ApiErrorResponse;
+        if (!response.ok) {
+          throw new Error("error" in payload ? payload.error : `Request failed with ${response.status}`);
+        }
+        if (!cancelled) {
+          setReadiness((payload as ProviderReadinessResponse).providers[0] ?? null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setReadiness(null);
+          setReadinessError(error instanceof Error ? error.message : String(error));
+        }
+      } finally {
+        if (!cancelled) {
+          setReadinessLoading(false);
+        }
+      }
+    }
+    void loadReadiness();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId]);
 
   const selectedWorkspace = useMemo(
     () => workspaces.find((entry) => entry.id === workspaceId) ?? workspaces[0] ?? null,
@@ -210,6 +248,14 @@ export function CommandCenterShell({
           <ModelPicker value={modelId} onChange={setModelId} />
         </ControlRow>
 
+        <ControlRow label="Gemini readiness">
+          <ProviderReadinessPanel
+            readiness={readiness}
+            loading={readinessLoading}
+            error={readinessError}
+          />
+        </ControlRow>
+
         <ControlRow
           label="Granularity"
           hint="how aggressively the planner decomposes — decided per task, not a fixed depth"
@@ -271,6 +317,76 @@ export function CommandCenterShell({
         <ActionHint hasLocalRepo={hasLocalRepo} workspaceName={selectedWorkspace?.name ?? null} />
       </div>
     </section>
+  );
+}
+
+function ProviderReadinessPanel({
+  readiness,
+  loading,
+  error
+}: {
+  readiness: ProviderReadiness | null;
+  loading: boolean;
+  error: string | null;
+}): React.ReactElement {
+  if (loading) {
+    return <span className="mh-mono" style={{ color: "var(--text-2)", fontSize: 12 }}>checking...</span>;
+  }
+  if (error !== null) {
+    return <span className="mh-mono" style={{ color: "var(--error)", fontSize: 12 }}>{error}</span>;
+  }
+  if (readiness === null) {
+    return <span className="mh-mono" style={{ color: "var(--text-3)", fontSize: 12 }}>not checked</span>;
+  }
+
+  const tone = readiness.status === "ready" ? "ready" : readiness.status === "warning" ? "warning" : "error";
+  const color = tone === "ready" ? "var(--status-ready-fg)" : tone === "warning" ? "var(--ready)" : "var(--error)";
+  const background = tone === "ready" ? "var(--status-ready-bg)" : "rgba(224,185,111,0.08)";
+  const border = tone === "ready" ? "var(--status-ready-border)" : "var(--rule-control)";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span
+          className="mh-mono"
+          style={{
+            color,
+            background,
+            border: `1px solid ${border}`,
+            borderRadius: 4,
+            padding: "3px 7px",
+            fontSize: 11,
+            textTransform: "uppercase"
+          }}
+        >
+          {readiness.status}
+        </span>
+        <span className="mh-mono" style={{ color: "var(--text-2)", fontSize: 12 }}>
+          {readiness.binaryPath}
+          {readiness.version !== undefined ? ` / ${readiness.version}` : ""}
+        </span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {readiness.checks.map((check) => (
+          <div key={check.id} style={{ display: "flex", gap: 7, alignItems: "baseline", minWidth: 0 }}>
+            <span
+              className="mh-dot"
+              style={{
+                color: check.status === "pass" ? "var(--done)" : check.status === "warning" ? "var(--ready)" : "var(--error)",
+                width: 6,
+                height: 6,
+                flex: "0 0 auto"
+              }}
+            />
+            <span className="mh-mono" style={{ color: "var(--text-3)", fontSize: 11, minWidth: 82 }}>
+              {check.label}
+            </span>
+            <span style={{ color: "var(--text-2)", fontSize: 12, lineHeight: 1.35, wordBreak: "break-word" }}>
+              {check.message}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

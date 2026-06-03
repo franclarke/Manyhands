@@ -25,6 +25,7 @@ interface RunCanvasShellProps {
   headerSlot?: ReactNode;
   actionSlot?: ReactNode;
   editableRunId?: string;
+  defaultModelId?: string;
   onEdited?: () => void;
   patches?: readonly unknown[];
   timelineRun?: TimelineRunInput;
@@ -49,10 +50,15 @@ export interface LivePlanNode {
   title: string;
   goal?: string | undefined;
   depth: number;
-  state: "pending" | "active" | "complete";
+  state: "pending" | "active" | "complete" | "generating" | "generated" | "failed" | "retrying" | "fallback";
   decision?: "atomic" | "decompose" | "question" | undefined;
   childCount?: number | undefined;
   childIds?: readonly string[] | undefined;
+  attempt?: number | undefined;
+  maxAttempts?: number | undefined;
+  durationMs?: number | undefined;
+  errorKind?: string | undefined;
+  errorMessage?: string | undefined;
 }
 
 interface LivePlanChildNode {
@@ -209,6 +215,7 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
         actionSlot={props.actionSlot}
         {...(source.kind === "persisted-run" ? { runStatus: source.initialStatus } : {})}
         {...(props.editableRunId !== undefined ? { editableRunId: props.editableRunId } : {})}
+        {...(props.defaultModelId !== undefined ? { defaultModelId: props.defaultModelId } : {})}
         {...(props.onEdited !== undefined ? { onEdited: props.onEdited } : {})}
         patches={props.patches ?? []}
         {...(props.timelineRun !== undefined ? { timelineRun: props.timelineRun } : {})}
@@ -342,6 +349,19 @@ function uniqueStrings(values: readonly string[]): string[] {
   return Array.from(new Set(values));
 }
 
+function isLivePlanState(value: unknown): value is LivePlanNode["state"] {
+  return (
+    value === "pending" ||
+    value === "active" ||
+    value === "complete" ||
+    value === "generating" ||
+    value === "generated" ||
+    value === "failed" ||
+    value === "retrying" ||
+    value === "fallback"
+  );
+}
+
 function isLivePlanChildNode(value: unknown): value is LivePlanChildNode {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -473,9 +493,15 @@ export function useLiveRun(
           title?: string;
           goal?: string;
           depth?: number;
+          state?: LivePlanNode["state"];
           decision?: "atomic" | "decompose" | "question";
           childIds?: string[];
           childNodes?: LivePlanChildNode[];
+          attempt?: number;
+          maxAttempts?: number;
+          durationMs?: number;
+          errorKind?: string;
+          errorMessage?: string;
           chunk?: string;
           stream?: "stdout" | "stderr";
           question?: string;
@@ -506,6 +532,33 @@ export function useLiveRun(
               goal: event.goal ?? event.title!,
               depth: event.depth!,
               state: "active"
+            });
+            return next;
+          });
+        } else if (
+          event.kind === "planning.node.status" &&
+          typeof event.nodeId === "string" &&
+          typeof event.title === "string" &&
+          typeof event.depth === "number" &&
+          isLivePlanState(event.state)
+        ) {
+          setLivePlanNodes((current) => {
+            const next = new Map(current);
+            const existing = next.get(event.nodeId!);
+            next.set(event.nodeId!, {
+              ...(existing ?? {
+                id: event.nodeId!,
+                parentId: event.parentId ?? null,
+                title: event.title!,
+                goal: event.goal ?? event.title!,
+                depth: event.depth!
+              }),
+              state: event.state!,
+              ...(typeof event.attempt === "number" ? { attempt: event.attempt } : {}),
+              ...(typeof event.maxAttempts === "number" ? { maxAttempts: event.maxAttempts } : {}),
+              ...(typeof event.durationMs === "number" ? { durationMs: event.durationMs } : {}),
+              ...(typeof event.errorKind === "string" ? { errorKind: event.errorKind } : {}),
+              ...(typeof event.errorMessage === "string" ? { errorMessage: event.errorMessage } : {})
             });
             return next;
           });
@@ -634,11 +687,13 @@ function LivePlanningTree({ nodes }: { nodes: readonly LivePlanNode[] }): React.
             padding: "9px 11px",
             border: "1px solid var(--border-soft)",
             background:
-              node.state === "active"
+              node.state === "active" || node.state === "generating" || node.state === "retrying"
                 ? "rgba(244,195,106,0.08)"
                 : node.state === "pending"
                   ? "rgba(241,234,216,0.055)"
-                  : "rgba(119,215,200,0.05)",
+                  : node.state === "failed"
+                    ? "rgba(217,83,79,0.08)"
+                    : "rgba(119,215,200,0.05)",
             borderRadius: "var(--r-md)",
             color: "var(--text-2)"
           }}
@@ -649,17 +704,33 @@ function LivePlanningTree({ nodes }: { nodes: readonly LivePlanNode[] }): React.
           <span
             className="mh-mono"
             style={{
-              color: node.state === "active" ? "var(--copper)" : "var(--text-3)",
+              color:
+                node.state === "active" || node.state === "generating" || node.state === "retrying"
+                  ? "var(--copper)"
+                  : "var(--text-3)",
               fontSize: 10.5,
               whiteSpace: "nowrap"
             }}
           >
-            {node.state === "active" ? "thinking" : node.state === "pending" ? "queued" : node.decision ?? "done"}
+            {livePlanStateLabel(node)}
           </span>
         </div>
       ))}
     </div>
   );
+}
+
+function livePlanStateLabel(node: LivePlanNode): string {
+  if (node.state === "active" || node.state === "generating") return "thinking";
+  if (node.state === "pending") return "queued";
+  if (node.state === "retrying") {
+    return node.attempt !== undefined && node.maxAttempts !== undefined
+      ? `retry ${node.attempt}/${node.maxAttempts}`
+      : "retrying";
+  }
+  if (node.state === "failed") return "failed";
+  if (node.state === "fallback") return "fallback";
+  return node.decision ?? "done";
 }
 
 function QuestionCard({

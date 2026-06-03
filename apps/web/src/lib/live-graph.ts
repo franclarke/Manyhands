@@ -89,6 +89,8 @@ function leafToAgentRunResult(
   runId: string,
   leaf: RealLeafResult
 ): RunSnapshot["agentRunResults"][number] {
+  const usageUnavailable =
+    leaf.tokensIn === undefined && leaf.tokensOut === undefined && leaf.costUsd === undefined;
   return {
     taskId: leaf.taskId,
     worktree: `.manyhands/worktrees/${runId}/${leaf.taskId}`,
@@ -110,7 +112,8 @@ function leafToAgentRunResult(
     metadata: {
       status: leaf.status,
       executorExitCode: leaf.executorExitCode,
-      executorTimedOut: leaf.executorTimedOut
+      executorTimedOut: leaf.executorTimedOut,
+      usageUnavailable
     },
     ...(leaf.commitSha !== undefined ? { commitHash: leaf.commitSha } : {})
   } as RunSnapshot["agentRunResults"][number];

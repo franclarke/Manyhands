@@ -467,3 +467,12 @@ textarea:focus-visible {
 *::-webkit-scrollbar-thumb { background: rgba(241, 234, 216, 0.12); border-radius: 4px; }
 *::-webkit-scrollbar-thumb:hover { background: rgba(241, 234, 216, 0.20); }
 *::-webkit-scrollbar-track { background: transparent; }
+
+/* Native Fullscreen API: the canvas frame fills the screen */
+.dag-canvas-frame:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border: none !important;
+  border-radius: 0 !important;
+  background: var(--bg) !important;
+}

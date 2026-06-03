@@ -118,6 +118,30 @@ export interface RunCreateRequest {
   repoSpec?: { kind: "fixture"; fixtureId: string } | { kind: "localPath"; path: string };
 }
 
+export type ProviderReadinessStatus = "ready" | "warning" | "error";
+export type ProviderReadinessCheckStatus = "pass" | "warning" | "fail";
+
+export interface ProviderReadinessCheck {
+  id: "cli" | "auth" | "repo_path" | "repo_clean" | "branch" | "quota";
+  status: ProviderReadinessCheckStatus;
+  label: string;
+  message: string;
+}
+
+export interface ProviderReadiness {
+  executorId: "gemini-cli";
+  label: string;
+  status: ProviderReadinessStatus;
+  binaryPath: string;
+  version?: string;
+  quota: "unknown";
+  checks: ProviderReadinessCheck[];
+}
+
+export interface ProviderReadinessResponse {
+  providers: ProviderReadiness[];
+}
+
 export interface RunResponse {
   run: {
     runId: string;

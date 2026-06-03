@@ -188,7 +188,12 @@ export class IntegrationAgent {
       type: "executor_repair_started",
       actor: "system",
       taskId: params.compositeTaskId,
-      payload: { childTaskId: child.taskId, files: conflict.conflictFiles }
+      payload: {
+        executorId: "gemini-cli",
+        model: params.repair.model,
+        childTaskId: child.taskId,
+        files: conflict.conflictFiles
+      }
     });
 
     const baseHead = await this.git.head(worktree.path);

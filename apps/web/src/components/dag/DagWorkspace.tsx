@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import type { RunSnapshot } from "@manyhands/core";
 import type { RunExecutionResult } from "@manyhands/execution-core";
@@ -58,6 +58,7 @@ interface DagWorkspaceProps {
   /** Live run status for persisted runs — drives the phase-aware chrome. */
   runStatus?: RunStatusKey;
   editableRunId?: string;
+  defaultModelId?: string;
   onEdited?: () => void;
   patches?: readonly unknown[];
   timelineRun?: TimelineRunInput;
@@ -79,6 +80,7 @@ export function DagWorkspace({
   actionSlot,
   runStatus,
   editableRunId,
+  defaultModelId = "gemini-2.5-pro",
   onEdited,
   patches = [],
   timelineRun,
@@ -91,6 +93,17 @@ export function DagWorkspace({
   const [highlightTaskIds, setHighlightTaskIds] = useState<ReadonlySet<string> | null>(null);
   const [filters, setFilters] = useState<GraphFilterState>(EMPTY_FILTERS);
   const [viewMode, setViewMode] = useState<ViewMode>(runStatus !== undefined ? "overview" : "canvas");
+  const canvasFrameRef = useRef<HTMLDivElement>(null);
+
+  const toggleFullscreen = useCallback(() => {
+    const el = canvasFrameRef.current;
+    if (el === null) return;
+    if (document.fullscreenElement === el) {
+      void document.exitFullscreen();
+    } else {
+      void el.requestFullscreen();
+    }
+  }, []);
 
   const inspector = useMemo(() => {
     if (selectedTaskId === null) {
@@ -160,14 +173,12 @@ export function DagWorkspace({
       ) : (
       <div className="dag-workspace-shell" style={{ display: "flex", gap: 14, alignItems: "stretch" }}>
         <div
+          ref={canvasFrameRef}
           className="mh-tick-frame dag-canvas-frame"
           style={{
             position: "relative",
             flex: "1 1 0",
             minWidth: 0,
-            // Explicit width so React Flow's first measurement never sees a 0-width
-            // flex container (the "parent container needs a width and a height"
-            // warning); flex-basis: 0 still drives the actual sizing in the row.
             width: "100%",
             height: "min(820px, calc(100vh - 280px))",
             minHeight: 680,
@@ -190,6 +201,7 @@ export function DagWorkspace({
                   setHighlightTaskIds(null);
                 }
               }}
+              onToggleFullscreen={toggleFullscreen}
             />
           </ReactFlowProvider>
           <RiskLegend graph={graph} />
@@ -211,6 +223,7 @@ export function DagWorkspace({
           onClose={() => setSelectedTaskId(null)}
           {...(phase !== undefined ? { phase } : {})}
           {...(editableRunId !== undefined ? { editableRunId } : {})}
+          defaultModelId={defaultModelId}
           {...(onEdited !== undefined ? { onEdited } : {})}
           availableNodes={graph.nodes.map((node) => ({ id: node.id, title: node.title }))}
           dependencyEdges={graph.edges

@@ -8,6 +8,7 @@ import {
   type RecursiveStepCompletedEvent,
   type RecursiveStepListener,
   type RecursiveStepStartedEvent,
+  type RecursiveStepStatusEvent,
   type WorkspaceHints
 } from "@manyhands/core";
 import type { Workspace } from "@/lib/api-types";
@@ -34,6 +35,7 @@ export interface PickDecomposerInput {
   forceFallback?: boolean;
   onStepStarted?: RecursiveStepListener<RecursiveStepStartedEvent>;
   onStepCompleted?: RecursiveStepListener<RecursiveStepCompletedEvent>;
+  onStepStatus?: RecursiveStepListener<RecursiveStepStatusEvent>;
   onCliOutput?: (data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void;
 }
 
@@ -52,6 +54,8 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   const hints = toWorkspaceHints(input.workspace);
   const workspaceHints = hints !== undefined ? formatWorkspaceHints(hints) : undefined;
   const maxParallelSteps = planningMaxParallelFromEnv();
+  const maxStepAttempts = positiveIntegerFromEnv("MANYHANDS_PLANNING_MAX_STEP_ATTEMPTS");
+  const stepTimeoutMs = positiveIntegerFromEnv("MANYHANDS_PLANNING_STEP_TIMEOUT_MS");
 
   // The recursive interface-aware decomposer is the product default (thesis
   // Artifact 1). For local-first product runs, the step model is the Gemini CLI.
@@ -86,8 +90,10 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
       model,
       userPrompt: input.userPrompt,
       ...(maxParallelSteps !== undefined ? { maxParallelSteps } : {}),
+      ...(maxStepAttempts !== undefined ? { maxStepAttempts } : {}),
       ...(input.onStepStarted !== undefined ? { onStepStarted: input.onStepStarted } : {}),
       ...(input.onStepCompleted !== undefined ? { onStepCompleted: input.onStepCompleted } : {}),
+      ...(input.onStepStatus !== undefined ? { onStepStatus: input.onStepStatus } : {}),
       ...(workspaceHints !== undefined ? { workspaceHints } : {})
     });
     return {
@@ -103,9 +109,12 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
     cwd: input.workspace?.repoPath ?? process.cwd(),
     model,
     userPrompt: input.userPrompt,
+    ...(stepTimeoutMs !== undefined ? { timeoutMs: stepTimeoutMs } : {}),
     ...(maxParallelSteps !== undefined ? { maxParallelSteps } : {}),
+    ...(maxStepAttempts !== undefined ? { maxStepAttempts } : {}),
     ...(input.onStepStarted !== undefined ? { onStepStarted: input.onStepStarted } : {}),
     ...(input.onStepCompleted !== undefined ? { onStepCompleted: input.onStepCompleted } : {}),
+    ...(input.onStepStatus !== undefined ? { onStepStatus: input.onStepStatus } : {}),
     ...(workspaceHints !== undefined ? { workspaceHints } : {}),
     ...(input.onCliOutput !== undefined ? { onCliOutput: input.onCliOutput } : {})
   });
@@ -151,7 +160,11 @@ function pickAnthropicModel(requested: string): string {
 }
 
 function planningMaxParallelFromEnv(): number | undefined {
-  const raw = process.env.MANYHANDS_PLANNING_MAX_PARALLEL;
+  return positiveIntegerFromEnv("MANYHANDS_PLANNING_MAX_PARALLEL");
+}
+
+function positiveIntegerFromEnv(name: string): number | undefined {
+  const raw = process.env[name];
   if (raw === undefined || raw.trim().length === 0) {
     return undefined;
   }

@@ -1,5 +1,7 @@
 import type { RunSnapshot } from "@manyhands/core";
 import type { IntegrationResult } from "@manyhands/execution-core";
+import type { ExecutorOverride } from "@/lib/models";
+import { normalizeExecutorOverride } from "@/lib/models";
 
 export type GraphEdgeKind = "dependency" | "risk" | "gate" | "unknown";
 
@@ -37,6 +39,7 @@ export interface GraphNodeView {
   authoredBy?: "ai" | "human";
   manual?: boolean;
   integrator?: boolean;
+  executorOverride?: ExecutorOverride;
 }
 
 export interface GraphEdgeView {
@@ -184,7 +187,10 @@ export interface InspectorRunResult {
   changedFiles: string[];
   scopeViolations: string[];
   durationMs: number;
-  costUsd: number;
+  costUsd?: number;
+  tokensIn?: number;
+  tokensOut?: number;
+  usageUnavailable: boolean;
   diff?: string;
   /** Result status from the execution core (e.g. "executor_error", "timeout"). */
   resultStatus?: string;
@@ -230,6 +236,7 @@ export interface InspectorView {
   authoredBy?: "ai" | "human";
   manual: boolean;
   integrator: boolean;
+  executorOverride?: ExecutorOverride;
 }
 
 type RiskLevel = RunSnapshot["riskPredictions"][number]["level"];
@@ -286,6 +293,10 @@ export function toRunGraphViewModel(snapshot: RunSnapshot): RunGraphViewModel {
         manual: authoredByForNode(node) === "human",
         integrator: node.metadata?.integrator === true
       };
+      const executorOverride = normalizeExecutorOverride(node.metadata?.executorOverride);
+      if (executorOverride !== undefined) {
+        view.executorOverride = executorOverride;
+      }
       const authoredBy = authoredByForNode(node);
       if (authoredBy !== undefined) {
         view.authoredBy = authoredBy;
@@ -309,7 +320,10 @@ export function toRunGraphViewModel(snapshot: RunSnapshot): RunGraphViewModel {
       }
 
       if (result?.metrics?.costUsd !== undefined) {
-        view.costUsd = result.metrics.costUsd;
+        const usageUnavailable = result.metadata?.usageUnavailable === true;
+        if (!usageUnavailable) {
+          view.costUsd = result.metrics.costUsd;
+        }
       }
 
       const traceCount = traceCountByTaskId.get(node.id);
@@ -493,6 +507,10 @@ export function buildInspectorView(snapshot: RunSnapshot, taskId: string): Inspe
     manual: authoredByForNode(node) === "human",
     integrator: node.metadata?.integrator === true
   };
+  const executorOverride = normalizeExecutorOverride(node.metadata?.executorOverride);
+  if (executorOverride !== undefined) {
+    inspector.executorOverride = executorOverride;
+  }
   const authoredBy = authoredByForNode(node);
   if (authoredBy !== undefined) {
     inspector.authoredBy = authoredBy;
@@ -560,8 +578,13 @@ export function buildInspectorView(snapshot: RunSnapshot, taskId: string): Inspe
       changedFiles: [...result.changedFiles],
       scopeViolations: [...result.scopeViolations],
       durationMs: result.metrics.durationMs,
-      costUsd: result.metrics.costUsd
+      usageUnavailable: result.metadata?.usageUnavailable === true
     };
+    if (result.metadata?.usageUnavailable !== true) {
+      inspector.runResult.costUsd = result.metrics.costUsd;
+      inspector.runResult.tokensIn = result.metrics.tokensIn;
+      inspector.runResult.tokensOut = result.metrics.tokensOut;
+    }
 
     if (result.diff !== "") {
       inspector.runResult.diff = result.diff;

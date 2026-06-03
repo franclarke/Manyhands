@@ -91,10 +91,24 @@ export const PlanningLiveNodeSchema = z.object({
   title: z.string().min(1),
   goal: z.string().min(1).optional(),
   depth: z.number().int().nonnegative(),
-  state: z.union([z.literal("pending"), z.literal("active"), z.literal("complete")]),
+  state: z.union([
+    z.literal("pending"),
+    z.literal("active"),
+    z.literal("complete"),
+    z.literal("generating"),
+    z.literal("generated"),
+    z.literal("failed"),
+    z.literal("retrying"),
+    z.literal("fallback")
+  ]),
   decision: z.union([z.literal("atomic"), z.literal("decompose"), z.literal("question")]).optional(),
   childCount: z.number().int().nonnegative().optional(),
-  childIds: z.array(z.string().min(1)).optional()
+  childIds: z.array(z.string().min(1)).optional(),
+  attempt: z.number().int().positive().optional(),
+  maxAttempts: z.number().int().positive().optional(),
+  durationMs: z.number().int().nonnegative().optional(),
+  errorKind: z.string().min(1).optional(),
+  errorMessage: z.string().min(1).optional()
 });
 
 export type PlanningLiveNode = z.infer<typeof PlanningLiveNodeSchema>;

@@ -1511,7 +1511,15 @@ export {
   DecomposerLlmError,
   isDecomposerLlmError,
   DecomposerQuestionError,
-  isDecomposerQuestionError
+  isDecomposerQuestionError,
+  classifyGraphGenerationError,
+  isRecoverableGraphGenerationKind
+} from "./llm/errors";
+export type {
+  DecomposerLlmStage,
+  GraphGenerationErrorContext,
+  GraphGenerationErrorDetails,
+  GraphGenerationErrorKind
 } from "./llm/errors";
 export { executionScopeFromAllowed } from "./scope";
 
@@ -1521,8 +1529,10 @@ export type {
   RecursiveDecomposerOptions,
   RecursiveStepChildEvent,
   RecursiveStepCompletedEvent,
+  RecursiveStepPlanningState,
   RecursiveStepListener,
-  RecursiveStepStartedEvent
+  RecursiveStepStartedEvent,
+  RecursiveStepStatusEvent
 } from "./llm/recursive/recursive-decomposer";
 export { GeminiRecursiveDecomposer } from "./llm/recursive/gemini-recursive-decomposer";
 export type { GeminiRecursiveDecomposerOptions } from "./llm/recursive/gemini-recursive-decomposer";

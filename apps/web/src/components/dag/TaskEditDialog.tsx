@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { InspectorView } from "@/lib/graph-view-model";
+import { MODEL_OPTIONS } from "@/lib/models";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import {
   DialogActions,
@@ -16,11 +17,13 @@ import {
 export function TaskEditDialog({
   runId,
   view,
+  defaultModelId,
   onCancel,
   onSaved
 }: {
   runId: string;
   view: InspectorView;
+  defaultModelId: string;
   onCancel: () => void;
   onSaved: () => void;
 }): React.ReactElement {
@@ -32,6 +35,8 @@ export function TaskEditDialog({
   const [forbiddenPaths, setForbiddenPaths] = useState(textFromLines(contract?.forbiddenPaths ?? []));
   const [acceptanceCriteria, setAcceptanceCriteria] = useState(textFromLines(contract?.acceptanceCriteria ?? []));
   const [manual, setManual] = useState(view.manual);
+  const supportsExecutorOverride = view.kind === "leaf" || view.kind === "composite" || view.kind === "root";
+  const [executorModel, setExecutorModel] = useState(view.executorOverride?.model ?? defaultModelId);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +51,7 @@ export function TaskEditDialog({
       forbiddenPaths?: string[];
       acceptanceCriteria?: string[];
       manual?: boolean;
+      executorOverride?: { executorId: "gemini-cli"; model: string } | null;
     } = {};
     const nextTitle = title.trim();
     const nextObjective = objective.trim();
@@ -61,6 +67,13 @@ export function TaskEditDialog({
       body.acceptanceCriteria = nextAcceptanceCriteria;
     }
     if (manual !== view.manual) body.manual = manual;
+    if (supportsExecutorOverride) {
+      const nextExecutorOverride =
+        executorModel === defaultModelId ? null : { executorId: "gemini-cli" as const, model: executorModel };
+      if (!executorOverrideEqual(nextExecutorOverride, view.executorOverride ?? null)) {
+        body.executorOverride = nextExecutorOverride;
+      }
+    }
 
     if (Object.keys(body).length === 0) {
       setError("No changes to save.");
@@ -130,6 +143,23 @@ export function TaskEditDialog({
           Manual task
         </label>
 
+        {supportsExecutorOverride ? (
+          <DialogField label={view.kind === "leaf" ? "Execution model" : "Composer repair model"}>
+            <select
+              value={executorModel}
+              onChange={(event) => setExecutorModel(event.target.value)}
+              style={inputStyle}
+            >
+              <option value={defaultModelId}>Run default ({defaultModelId})</option>
+              {MODEL_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label} ({option.provider})
+                </option>
+              ))}
+            </select>
+          </DialogField>
+        ) : null}
+
         <DialogError message={error} />
         <DialogActions
           onCancel={onCancel}
@@ -155,4 +185,11 @@ function textFromLines(lines: readonly string[]): string {
 function arraysEqual(left: readonly string[], right: readonly string[]): boolean {
   if (left.length !== right.length) return false;
   return left.every((value, index) => value === right[index]);
+}
+
+function executorOverrideEqual(
+  left: { executorId: "gemini-cli"; model: string } | null,
+  right: { executorId: "gemini-cli"; model: string } | null
+): boolean {
+  return left?.executorId === right?.executorId && left?.model === right?.model;
 }

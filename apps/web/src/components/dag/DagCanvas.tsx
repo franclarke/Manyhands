@@ -36,6 +36,7 @@ interface DagCanvasProps {
   highlightTaskIds: ReadonlySet<string> | null;
   selectionRelations: SelectionRelations | null;
   onSelectTask: (taskId: string | null) => void;
+  onToggleFullscreen?: () => void;
 }
 
 const nodeTypes: NodeTypes = {
@@ -52,9 +53,24 @@ const EDGE_CONTEXT = "rgba(215,155,114,0.88)";
 const EDGE_RELATED = "rgba(185,173,152,0.70)";
 
 export function DagCanvas(props: DagCanvasProps): React.ReactElement {
-  const { graph, selectedTaskId, highlightTaskIds, selectionRelations, onSelectTask } = props;
+  const { graph, selectedTaskId, highlightTaskIds, selectionRelations, onSelectTask, onToggleFullscreen } = props;
   const { fitView, setCenter, getNode } = useReactFlow();
   const [minimapVisible, setMinimapVisible] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Listen for native fullscreenchange to re-fit the view and update button icon
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const active = document.fullscreenElement !== null;
+      setIsFullscreen(active);
+      // Give the browser a frame to settle the new dimensions
+      requestAnimationFrame(() => {
+        void fitView(FIT_VIEW_OPTIONS);
+      });
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [fitView]);
 
   const dependencyCountByTaskId = useMemo(() => {
     const counts = new Map<string, number>();
@@ -132,9 +148,11 @@ export function DagCanvas(props: DagCanvasProps): React.ReactElement {
       <CanvasControls
         minimapVisible={minimapVisible}
         hasSelection={selectedTaskId !== null}
+        isFullscreen={isFullscreen}
         onFitView={handleFitView}
         onFocusSelected={handleFocusSelected}
         onToggleMinimap={() => setMinimapVisible((value) => !value)}
+        {...(onToggleFullscreen !== undefined ? { onToggleFullscreen } : {})}
       />
       {minimapVisible ? (
         <MiniMap
@@ -154,23 +172,27 @@ export function DagCanvas(props: DagCanvasProps): React.ReactElement {
 interface CanvasControlsProps {
   minimapVisible: boolean;
   hasSelection: boolean;
+  isFullscreen: boolean;
   onFitView: () => void;
   onFocusSelected: () => void;
   onToggleMinimap: () => void;
+  onToggleFullscreen?: () => void;
 }
 
 /**
  * Product-specific camera toolbar (P8). Sits in the top-right of the canvas and
  * complements React Flow's default zoom `<Controls>` with orchestration-tool
- * affordances: fit the whole graph, focus the selected node, and hide the
- * minimap for dense graphs. Pure viewport actions — never mutates the graph.
+ * affordances: fit the whole graph, focus the selected node, hide the
+ * minimap for dense graphs, and toggle fullscreen. Pure viewport actions — never mutates the graph.
  */
 function CanvasControls({
   minimapVisible,
   hasSelection,
+  isFullscreen,
   onFitView,
   onFocusSelected,
-  onToggleMinimap
+  onToggleMinimap,
+  onToggleFullscreen
 }: CanvasControlsProps): React.ReactElement {
   return (
     <Panel position="top-right" style={{ margin: 10 }}>
@@ -198,6 +220,36 @@ function CanvasControls({
           onClick={onToggleMinimap}
           active={minimapVisible}
         />
+        {onToggleFullscreen !== undefined ? (
+          <button
+            type="button"
+            onClick={onToggleFullscreen}
+            title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: 36,
+              width: 36,
+              padding: 0,
+              border: "1px solid var(--rule-control)",
+              background: "rgba(241,234,216,0.035)",
+              color: "var(--text-2)",
+              borderRadius: 5,
+              cursor: "pointer"
+            }}
+          >
+            {isFullscreen ? (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 1H1v4M9 1h4v4M5 13H1V9M9 13h4V9" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9" />
+              </svg>
+            )}
+          </button>
+        ) : null}
       </div>
     </Panel>
   );

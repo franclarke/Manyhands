@@ -137,6 +137,7 @@ function taskIdsForPatch(patch: RunPatch): string[] {
     case "NODE_PATHS_EDITED":
     case "NODE_ACCEPTANCE_EDITED":
     case "NODE_MARKED_MANUAL":
+    case "NODE_EXECUTOR_EDITED":
     case "SUBTREE_REGENERATED":
       return [patch.taskId];
     case "INTEGRATOR_NODE_CREATED": {
@@ -171,6 +172,8 @@ function titleForPatch(patch: RunPatch): string {
       return "Acceptance criteria edited";
     case "NODE_MARKED_MANUAL":
       return patch.manual ? "Node marked manual" : "Node marked AI-generated";
+    case "NODE_EXECUTOR_EDITED":
+      return patch.executorOverride === null ? "Node model reset" : "Node model edited";
     case "SUBTREE_REGENERATED":
       return "Subtree regenerated";
     case "INTEGRATOR_NODE_CREATED":
@@ -194,6 +197,10 @@ function summarizePatch(patch: RunPatch): string | undefined {
       return `${patch.allowedPaths.length} allowed paths, ${patch.forbiddenPaths.length} forbidden paths`;
     case "NODE_ACCEPTANCE_EDITED":
       return `${patch.acceptanceCriteria.length} acceptance criteria`;
+    case "NODE_EXECUTOR_EDITED":
+      return patch.executorOverride === null
+        ? "Uses run default model"
+        : `${patch.executorOverride.executorId} / ${patch.executorOverride.model}`;
     case "SUBTREE_REGENERATED":
       return `${patch.removedTaskIds.length} removed, ${Object.keys(patch.nodes).length} inserted`;
     case "INTEGRATOR_NODE_CREATED":

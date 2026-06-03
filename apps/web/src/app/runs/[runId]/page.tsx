@@ -50,6 +50,7 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
       <RunCanvasBinding
         runId={run.runId}
         initialStatus={run.status}
+        defaultModelId={run.model}
         snapshot={snapshot}
         configLabel={`granularity / ${granularityLabelForMode(run.granularity)}`}
         readyTaskCount={readyTaskCount}

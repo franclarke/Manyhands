@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runPreflight, PreflightError, type PreflightDeps } from "@/lib/server/runs/preflight";
+import { inspectGeminiReadiness, type GeminiReadinessDeps } from "@/lib/server/providers/readiness";
 
 const OK_DEPS: Required<Pick<PreflightDeps, "checkCli" | "hasCredentials" | "gitPorcelain" | "branchExists">> = {
   checkCli: async () => true,
@@ -61,3 +62,77 @@ describe("runPreflight", () => {
     expect(porcelainCalled).toBe(false);
   });
 });
+
+const READINESS_DEPS: Required<GeminiReadinessDeps> = {
+  checkCli: async () => ({ ok: true, version: "gemini 0.44.1" }),
+  hasCredentials: () => true,
+  gitPorcelain: async () => "",
+  branchExists: async () => true
+};
+
+describe("inspectGeminiReadiness", () => {
+  it("reports ready when CLI, auth, repo, and branch checks pass", async () => {
+    const readiness = await inspectGeminiReadiness(
+      workspace({ repoPath: "C:/repo", defaultBranch: "main" }),
+      READINESS_DEPS
+    );
+
+    expect(readiness.status).toBe("ready");
+    expect(readiness.version).toBe("gemini 0.44.1");
+    expect(readiness.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "cli", status: "pass" }),
+        expect.objectContaining({ id: "auth", status: "pass" }),
+        expect.objectContaining({ id: "repo_clean", status: "pass" }),
+        expect.objectContaining({ id: "branch", status: "pass" }),
+        expect.objectContaining({ id: "quota", status: "warning" })
+      ])
+    );
+  });
+
+  it("reports error when the Gemini binary is missing", async () => {
+    const readiness = await inspectGeminiReadiness(
+      workspace({ repoPath: "C:/repo" }),
+      { ...READINESS_DEPS, checkCli: async () => ({ ok: false }) }
+    );
+
+    expect(readiness.status).toBe("error");
+    expect(readiness.checks.find((check) => check.id === "cli")?.message).toContain("not found");
+  });
+
+  it("reports error when credentials are missing", async () => {
+    const readiness = await inspectGeminiReadiness(
+      workspace({ repoPath: "C:/repo" }),
+      { ...READINESS_DEPS, hasCredentials: () => false }
+    );
+
+    expect(readiness.status).toBe("error");
+    expect(readiness.checks.find((check) => check.id === "auth")?.status).toBe("fail");
+  });
+
+  it("reports warnings for dirty repos and missing branches", async () => {
+    const readiness = await inspectGeminiReadiness(
+      workspace({ repoPath: "C:/repo", defaultBranch: "main" }),
+      {
+        ...READINESS_DEPS,
+        gitPorcelain: async () => " M src/index.ts\n",
+        branchExists: async () => false
+      }
+    );
+
+    expect(readiness.status).toBe("warning");
+    expect(readiness.checks.find((check) => check.id === "repo_clean")?.status).toBe("warning");
+    expect(readiness.checks.find((check) => check.id === "branch")?.status).toBe("warning");
+  });
+});
+
+function workspace(overrides: { repoPath?: string; defaultBranch?: string }) {
+  return {
+    id: "ws-1",
+    slug: "workspace",
+    name: "Workspace",
+    createdAt: "2026-06-03T00:00:00.000Z",
+    updatedAt: "2026-06-03T00:00:00.000Z",
+    ...overrides
+  };
+}

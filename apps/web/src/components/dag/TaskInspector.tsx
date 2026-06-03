@@ -18,6 +18,7 @@ interface TaskInspectorProps {
   /** Run phase drives the default tab + which tabs are relevant. */
   phase?: RunPhase;
   editableRunId?: string;
+  defaultModelId?: string;
   onEdited?: () => void;
   availableNodes?: Array<{ id: string; title: string }>;
   dependencyEdges?: Array<{ source: string; target: string; label?: string }>;
@@ -66,6 +67,7 @@ export function TaskInspector({
   onClose,
   phase,
   editableRunId,
+  defaultModelId = "gemini-2.5-pro",
   onEdited,
   availableNodes = [],
   dependencyEdges = []
@@ -204,6 +206,7 @@ export function TaskInspector({
         <TaskEditDialogPanel
           runId={editableRunId}
           view={view}
+          defaultModelId={defaultModelId}
           onCancel={() => setIsEditing(false)}
           onSaved={() => {
             setIsEditing(false);
@@ -253,6 +256,13 @@ function InspectorHeader({
   onDependencies?: () => void;
 }): React.ReactElement {
   const risk = view.riskEvidence[0]?.level;
+  const agentLabel = view.executorOverride !== undefined
+    ? `Gemini CLI / ${view.executorOverride.model}`
+    : view.manual
+      ? "Human"
+      : view.integrator
+        ? "Integration agent"
+        : "Gemini CLI";
   return (
     <header
       style={{
@@ -297,7 +307,7 @@ function InspectorHeader({
       </h3>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px 12px" }}>
         <HeaderMeta label="Depth" value={String(view.depth ?? 0)} mono />
-        <HeaderMeta label="Agent" value={view.manual ? "Human" : view.integrator ? "Integration agent" : "Gemini CLI"} />
+        <HeaderMeta label="Agent" value={agentLabel} />
         <HeaderMeta label="Node id" value={view.taskId} mono />
         <HeaderMeta label="Primary action" value={nodeActionHint(view)} />
       </div>
@@ -430,7 +440,7 @@ function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
       <Section title="Agent run">
         <KvGrid
           rows={[
-            { label: "Agent", value: view.integrator ? "Integration agent" : "Gemini CLI", mono: false },
+            { label: "Agent", value: view.executorOverride?.model ?? (view.integrator ? "Integration agent" : "Gemini CLI"), mono: false },
             { label: "Current step", value: nodeActionHint(view), mono: false },
             { label: "Success", value: runResult.success ? "yes" : "no", mono: false },
             ...(runResult.resultStatus !== undefined
@@ -439,7 +449,13 @@ function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
             { label: "Worktree", value: runResult.worktree, mono: true },
             { label: "Branch", value: runResult.branch, mono: true },
             { label: "Duration", value: `${runResult.durationMs}ms`, mono: true },
-            { label: "Cost", value: `$${runResult.costUsd.toFixed(4)}`, mono: true },
+            {
+              label: "Usage",
+              value: runResult.usageUnavailable
+                ? "unavailable"
+                : `$${(runResult.costUsd ?? 0).toFixed(4)} / ${runResult.tokensIn ?? 0} in / ${runResult.tokensOut ?? 0} out`,
+              mono: true
+            },
             { label: "Changed files", value: String(runResult.changedFiles.length), mono: true },
             { label: "Scope violations", value: String(runResult.scopeViolations.length), mono: true }
           ]}

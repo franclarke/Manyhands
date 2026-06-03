@@ -68,13 +68,25 @@ describe("editable control plane vertical slice", () => {
       taskId: "task-1",
       manual: true
     };
+    const executor: RunPatch = {
+      id: "patch-3",
+      type: "NODE_EXECUTOR_EDITED",
+      actor: "human",
+      createdAt: now,
+      taskId: "task-1",
+      executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-flash" }
+    };
 
-    const withPatch = appendPatch(appendPatch(run, renamed), manual);
-    expect(withPatch.patches).toHaveLength(2);
+    const withPatch = appendPatch(appendPatch(appendPatch(run, renamed), manual), executor);
+    expect(withPatch.patches).toHaveLength(3);
 
     const patched = applyPatches(snapshot!, withPatch.patches);
     expect(patched.graphSnapshot.nodes["task-1"]?.title).toBe("Edited title");
     expect(patched.graphSnapshot.nodes["task-1"]?.metadata?.authoredBy).toBe("human");
+    expect(patched.graphSnapshot.nodes["task-1"]?.metadata?.executorOverride).toEqual({
+      executorId: "gemini-cli",
+      model: "gemini-2.5-flash"
+    });
     expect(snapshot!.graphSnapshot.nodes["task-1"]?.title).toBe("Original title");
 
     const firstOnly = applyPatchesUpTo(snapshot!, withPatch.patches, "patch-1");
@@ -94,7 +106,8 @@ describe("editable control plane vertical slice", () => {
           objective: "Edited objective",
           allowedPaths: ["src/edited.ts"],
           acceptanceCriteria: ["Edited criterion"],
-          manual: true
+          manual: true,
+          executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-flash" }
         }),
         headers: { "content-type": "application/json" }
       }),
@@ -110,15 +123,50 @@ describe("editable control plane vertical slice", () => {
       "NODE_OBJECTIVE_EDITED",
       "NODE_PATHS_EDITED",
       "NODE_ACCEPTANCE_EDITED",
-      "NODE_MARKED_MANUAL"
+      "NODE_MARKED_MANUAL",
+      "NODE_EXECUTOR_EDITED"
     ]);
 
     const planning = saved.planning as MockPlanningFlowResult;
     const patchTraceEvents = planning.traces.filter(
       (event) => event.type === "dag_patch_appended" && event.payload.patchId !== undefined
     );
-    expect(patchTraceEvents).toHaveLength(5);
+    expect(patchTraceEvents).toHaveLength(6);
     expect(patchTraceEvents[0]?.taskId).toBe("task-1");
+  });
+
+  it("PATCH node clears an executor override back to the run default", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun({
+      patches: [
+        {
+          id: "patch-existing-executor",
+          type: "NODE_EXECUTOR_EDITED",
+          actor: "human",
+          createdAt: now,
+          taskId: "task-1",
+          executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-flash" }
+        }
+      ]
+    }));
+
+    const response = await PATCH(
+      new Request("http://manyhands.test/api", {
+        method: "PATCH",
+        body: JSON.stringify({ executorOverride: null }),
+        headers: { "content-type": "application/json" }
+      }),
+      { params: Promise.resolve({ id: "run-1", taskId: "task-1" }) }
+    );
+
+    expect(response.status).toBe(200);
+    const saved = await repo.get("run-1");
+    expect(saved.patches.at(-1)).toMatchObject({
+      type: "NODE_EXECUTOR_EDITED",
+      executorOverride: null
+    });
+    const snapshot = projectRunRecordToSnapshot(saved);
+    expect(snapshot?.graphSnapshot.nodes["task-1"]?.metadata?.executorOverride).toBeUndefined();
   });
 
   it("does not persist when a patch would leave the DAG invalid", async () => {
@@ -183,6 +231,14 @@ describe("editable control plane vertical slice", () => {
         createdAt: now,
         taskId: "task-1",
         manual: true
+      },
+      {
+        id: "patch-executor",
+        type: "NODE_EXECUTOR_EDITED",
+        actor: "human",
+        createdAt: now,
+        taskId: "task-1",
+        executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-flash" }
       }
     ];
     const run = makeRun({ patches });
@@ -194,6 +250,7 @@ describe("editable control plane vertical slice", () => {
     expect(node?.title).toBe("Patched title");
     expect(node?.manual).toBe(true);
     expect(node?.authoredBy).toBe("human");
+    expect(node?.executorOverride?.model).toBe("gemini-2.5-flash");
 
     const inspector = buildInspectorView(snapshot as RunSnapshot, "task-1");
     expect(inspector?.title).toBe("Patched title");
@@ -202,6 +259,7 @@ describe("editable control plane vertical slice", () => {
     expect(inspector?.contract?.forbiddenPaths).toEqual(["src/forbidden.ts"]);
     expect(inspector?.contract?.acceptanceCriteria).toEqual(["Patched acceptance"]);
     expect(inspector?.manual).toBe(true);
+    expect(inspector?.executorOverride?.model).toBe("gemini-2.5-flash");
   });
 
   it("replays subtree regeneration, integrator creation, and serialization patches", () => {

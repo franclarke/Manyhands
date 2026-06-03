@@ -4,6 +4,7 @@ export type RunEventKind =
   | "status.changed"
   | "title.updated"
   | "planning.node.started"
+  | "planning.node.status"
   | "planning.node.completed"
   | "node.added"
   | "edge.added"
@@ -43,6 +44,31 @@ export interface PlanningNodeStartedEvent extends RunEventBase {
   title: string;
   goal: string;
   depth: number;
+}
+
+export type PlanningNodeState =
+  | "pending"
+  | "active"
+  | "complete"
+  | "generating"
+  | "generated"
+  | "failed"
+  | "retrying"
+  | "fallback";
+
+export interface PlanningNodeStatusEvent extends RunEventBase {
+  kind: "planning.node.status";
+  nodeId: string;
+  parentId?: string;
+  title: string;
+  goal: string;
+  depth: number;
+  state: PlanningNodeState;
+  attempt?: number;
+  maxAttempts?: number;
+  durationMs?: number;
+  errorKind?: string;
+  errorMessage?: string;
 }
 
 export interface PlanningNodeChildDraft {
@@ -125,6 +151,7 @@ export type RunEvent =
   | StatusChangedEvent
   | TitleUpdatedEvent
   | PlanningNodeStartedEvent
+  | PlanningNodeStatusEvent
   | PlanningNodeCompletedEvent
   | NodeAddedEvent
   | EdgeAddedEvent

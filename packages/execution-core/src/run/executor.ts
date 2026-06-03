@@ -65,6 +65,20 @@ export interface RunExecutionResult {
 }
 
 const INTEGRATION_SUCCESS = new Set(["success", "executor_repair_success"]);
+const GEMINI_EXECUTOR_ID = "gemini-cli";
+
+export interface ResolvedExecutorModel {
+  executorId: typeof GEMINI_EXECUTOR_ID;
+  model: string;
+}
+
+export function resolveExecutorModel(node: TaskNode, defaultModel: string): ResolvedExecutorModel {
+  const override = node.metadata?.executorOverride;
+  if (isGeminiExecutorOverride(override)) {
+    return { executorId: GEMINI_EXECUTOR_ID, model: override.model };
+  }
+  return { executorId: GEMINI_EXECUTOR_ID, model: defaultModel };
+}
 
 /**
  * Top-level orchestrator (D5-D10). Schedules leaves into batches, runs each in
@@ -215,6 +229,7 @@ export class RunExecutor {
     worktrees: WorktreeRecord[];
   }): Promise<AgentExecutionResult> {
     const { node, runId, config, model } = args;
+    const executorModel = resolveExecutorModel(node, model);
 
     this.traceStore.append({ type: "agent_started", actor: "system", taskId: node.id, payload: {} });
 
@@ -246,11 +261,16 @@ export class RunExecutor {
     const instructionFilePath = join(tmpdir(), `mh-${runId}-${node.id}.txt`);
     await this.writeInstructions(instructionFilePath, buildLeafInstructions(node, context.section));
 
-    this.traceStore.append({ type: "executor_started", actor: "system", taskId: node.id, payload: {} });
+    this.traceStore.append({
+      type: "executor_started",
+      actor: "system",
+      taskId: node.id,
+      payload: { executorId: executorModel.executorId, model: executorModel.model }
+    });
     const executorOutcome = await this.executor.execute({
       cwd: worktree.path,
       instructionFilePath,
-      model,
+      model: executorModel.model,
       timeoutMs: config.leafTimeoutMs,
       sandboxMode: config.sandboxMode,
       bypassApprovals: true
@@ -259,7 +279,12 @@ export class RunExecutor {
       type: "executor_completed",
       actor: "system",
       taskId: node.id,
-      payload: { exitCode: executorOutcome.exitCode, timedOut: executorOutcome.timedOut }
+      payload: {
+        executorId: executorModel.executorId,
+        model: executorModel.model,
+        exitCode: executorOutcome.exitCode,
+        timedOut: executorOutcome.timedOut
+      }
     });
 
     const contract = node.contract;
@@ -312,6 +337,7 @@ export class RunExecutor {
       });
 
       const contract = composite.contract;
+      const repairModel = resolveExecutorModel(composite, model);
       // Contract-aware composition (Artifact 2): hand the Composer the parent goal,
       // the canonical seams defined at this composite, and each child's intent so
       // conflict repair resolves by reference to the contract, not the diff text.
@@ -329,7 +355,7 @@ export class RunExecutor {
         compositeTaskId: composite.id,
         worktree,
         childResults,
-        repair: { model, sandboxMode: config.sandboxMode, timeoutMs: config.integrationTimeoutMs },
+        repair: { model: repairModel.model, sandboxMode: config.sandboxMode, timeoutMs: config.integrationTimeoutMs },
         parentGoal: composite.goal,
         childIntents,
         ...(sharedInterfaces ? { sharedInterfaces } : {}),
@@ -486,6 +512,18 @@ function buildLeafInstructions(node: TaskNode, contextSection?: string): string 
 function collectRunValidationCommands(graph: TaskGraph): ExecutionValidationCommand[] {
   const root = graph.nodes[graph.rootId];
   return root?.contract?.runValidationCommands ?? [];
+}
+
+function isGeminiExecutorOverride(value: unknown): value is { executorId: typeof GEMINI_EXECUTOR_ID; model: string } {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const candidate = value as { executorId?: unknown; model?: unknown };
+  return (
+    candidate.executorId === GEMINI_EXECUTOR_ID &&
+    typeof candidate.model === "string" &&
+    candidate.model.trim().length > 0
+  );
 }
 
 function syntheticCompositeResult(

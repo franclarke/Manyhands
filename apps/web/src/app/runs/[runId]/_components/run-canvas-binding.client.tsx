@@ -13,6 +13,7 @@ import { RunActionBar } from "./run-action-bar.client";
 interface RunCanvasBindingProps {
   runId: string;
   initialStatus: RunStatusKey;
+  defaultModelId: string;
   snapshot: RunSnapshot | null;
   configLabel: string;
   readyTaskCount: number;
@@ -47,6 +48,7 @@ export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactEleme
       showMethodologyBanner={false}
       headerSlot={props.headerSlot}
       editableRunId={props.runId}
+      defaultModelId={props.defaultModelId}
       onEdited={() => router.refresh()}
       patches={props.patches}
       timelineRun={props.timelineRun}

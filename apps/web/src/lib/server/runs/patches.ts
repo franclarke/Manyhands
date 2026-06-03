@@ -47,6 +47,16 @@ export const RunPatchSchema = z.discriminatedUnion("type", [
     manual: z.boolean()
   }),
   PatchBaseSchema.extend({
+    type: z.literal("NODE_EXECUTOR_EDITED"),
+    taskId: z.string().min(1),
+    executorOverride: z
+      .object({
+        executorId: z.literal("gemini-cli"),
+        model: z.string().min(1)
+      })
+      .nullable()
+  }),
+  PatchBaseSchema.extend({
     type: z.literal("SUBTREE_REGENERATED"),
     taskId: z.string().min(1),
     granularity: z.union([z.literal("coarse"), z.literal("balanced"), z.literal("fine")]).optional(),
@@ -238,6 +248,17 @@ function applyPatchToContext(context: PatchContext, patch: RunPatch): void {
           authoredBy: patch.manual ? "human" : "ai"
         }
       }));
+      return;
+    case "NODE_EXECUTOR_EDITED":
+      updateNode(context, patch.taskId, (node) => {
+        const metadata = { ...(node.metadata ?? {}) };
+        if (patch.executorOverride === null) {
+          delete metadata.executorOverride;
+        } else {
+          metadata.executorOverride = patch.executorOverride;
+        }
+        return { ...node, metadata };
+      });
       return;
     case "SUBTREE_REGENERATED":
       applySubtreeRegenerated(context, patch);

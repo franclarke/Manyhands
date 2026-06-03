@@ -6,6 +6,7 @@ import {
   ExecutionConfigSchema,
   FileSystemContextPacker,
   MockAgentExecutor,
+  resolveExecutorModel,
   RunExecutor,
   type ValidationRunContext,
   type ValidationRunner,
@@ -210,6 +211,76 @@ describe("RunExecutor", () => {
     expect(result.granularityVector.leafSuccessRate).toBe(1);
     expect(result.granularityVector.integrationSuccessRate).toBe(1);
     expect(traceStore.findByType("run_completed")).toHaveLength(1);
+  });
+
+  it("resolves executor models from node metadata with run-model fallback", () => {
+    const graph = graphWith(["a"]);
+    const leaf = graph.nodes.a!;
+    expect(resolveExecutorModel(leaf, "gemini-2.5-pro")).toEqual({
+      executorId: "gemini-cli",
+      model: "gemini-2.5-pro"
+    });
+    leaf.metadata = { executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-flash" } };
+    expect(resolveExecutorModel(leaf, "gemini-2.5-pro")).toEqual({
+      executorId: "gemini-cli",
+      model: "gemini-2.5-flash"
+    });
+  });
+
+  it("uses per-node model overrides for leaves and composite repair", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/x b/x\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "SHA",
+      cherryPickOutcomes: [
+        { ok: false, conflictFiles: ["src/x.ts"], output: "conflict" },
+        { ok: true, conflictFiles: [], output: "" }
+      ]
+    });
+    const agent = new MockAgentExecutor();
+    const traceStore = new InMemoryTraceStore();
+    const graph = graphWith(["a", "b"]);
+    graph.nodes.a = {
+      ...graph.nodes.a!,
+      metadata: { executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-flash" } }
+    };
+    graph.nodes.root = {
+      ...graph.nodes.root!,
+      metadata: { executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-pro" } }
+    };
+    const executor = new RunExecutor({
+      git,
+      executor: agent,
+      traceStore,
+      repoRoot: REPO_ROOT,
+      writeInstructions: async () => {}
+    });
+
+    await executor.run({
+      graph,
+      config,
+      model: "gemini-default"
+    });
+
+    expect(agent.calls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ cwd: leafWorktreePath("a"), model: "gemini-2.5-flash" }),
+        expect.objectContaining({ cwd: leafWorktreePath("b"), model: "gemini-default" }),
+        expect.objectContaining({ cwd: leafWorktreePath("root"), model: "gemini-2.5-pro" })
+      ])
+    );
+    expect(traceStore.findByType("executor_started")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          taskId: "a",
+          payload: expect.objectContaining({ executorId: "gemini-cli", model: "gemini-2.5-flash" })
+        })
+      ])
+    );
+    expect(traceStore.findByType("executor_repair_started")[0]?.payload).toMatchObject({
+      executorId: "gemini-cli",
+      model: "gemini-2.5-pro"
+    });
   });
 
   it("cleans every worktree it created after integration", async () => {
