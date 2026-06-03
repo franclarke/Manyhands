@@ -93,6 +93,7 @@ export interface RunPreview {
   workspaceName?: string | undefined;
   title: string;
   userPrompt: string;
+  summary?: string | undefined;
   status: RunStatusKey;
   granularity: RunGranularityKey;
   model: string;
@@ -124,6 +125,7 @@ export interface RunResponse {
     granularity: RunGranularityKey;
     model: string;
     userPrompt: string;
+    summary?: string;
     title: string;
     status: RunStatusKey;
     pausedDuring?: "generating" | "running";

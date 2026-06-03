@@ -24,6 +24,7 @@ import {
   type RepoProvisioner
 } from "./repo-provisioner";
 import { publishRunEvent } from "./event-bus";
+import { generateRunTitle, type RunTitle } from "./run-titler";
 import { assertTransition } from "./lifecycle";
 import { markRunnerActive, markRunnerInactive } from "./runner-state";
 import { getRunRepository } from "./store";
@@ -44,6 +45,8 @@ export { isRunnerActive } from "./runner-state";
 
 export interface PlanningRunnerOptions {
   intervalMs?: number;
+  /** Injectable for tests; defaults to the real Gemini-backed titler. */
+  titler?: (input: { userPrompt: string; model: string }) => Promise<RunTitle>;
 }
 
 /**
@@ -215,6 +218,28 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
       });
     }
 
+    // Generate a clean title + summary before decomposition so the workspace
+    // header reads well while the graph is still generating. Cosmetic: a titler
+    // failure must NOT fail the run (this is presentation, not D3).
+    if (run.summary === undefined) {
+      const titleFn = options.titler ?? ((input) => generateRunTitle(input));
+      const runTitle = await titleFn({ userPrompt: run.userPrompt, model: run.model }).catch((error) => {
+        console.warn(
+          `[Runner] Titler skipped for run ${run.runId}: ${error instanceof Error ? error.message : String(error)}`
+        );
+        return null;
+      });
+      if (runTitle !== null) {
+        run = await getRunRepository().save({ ...run, title: runTitle.title, summary: runTitle.summary });
+        publishRunEvent(run.runId, {
+          kind: "title.updated",
+          title: runTitle.title,
+          summary: runTitle.summary,
+          at: new Date().toISOString()
+        });
+      }
+    }
+
     const livePlanningNodes = new Map<string, PlanningLiveNode>(
       (run.livePlanningNodes ?? []).map((node) => [node.id, node])
     );
@@ -293,15 +318,10 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
 
     console.log(`[Runner] Decomposer seleccionado: provider="${selection.provider}", model="${selection.model}"`);
 
-    let planning: MockPlanningFlowResult;
-    let decomposition: RunDecompositionMetadata;
-
     // Prompt-only path: LLM required, no silent fallback (D3).
     const executableWorkspace = requireExecutableWorkspace(workspace, run.workspaceId);
     const feature = buildFeatureRequestFromPrompt(run.userPrompt, executableWorkspace);
-    const result = await runPromptOnlyPlanning({ selection, feature, run });
-    planning = result.planning;
-    decomposition = result.decomposition;
+    const { planning, decomposition } = await runPromptOnlyPlanning({ selection, feature, run });
 
     // Persist planning + decomposition metadata before dispatching SSE events so
     // refreshes during `generating` already have a snapshot to project.

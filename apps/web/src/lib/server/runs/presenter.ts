@@ -16,6 +16,7 @@ export function toRunResponse(run: RunRecord): RunResponse {
     createdAt: run.createdAt,
     updatedAt: run.updatedAt
   };
+  if (run.summary !== undefined) payload.summary = run.summary;
   if (run.pausedDuring !== undefined) payload.pausedDuring = run.pausedDuring;
   if (run.interruptedDuring !== undefined) payload.interruptedDuring = run.interruptedDuring;
   if (run.errorMessage !== undefined) payload.errorMessage = run.errorMessage;
@@ -60,6 +61,7 @@ export function toRunPreview(run: RunRecord, workspaces: ReadonlyMap<string, Wor
     workspaceId: run.workspaceId,
     title: run.title,
     userPrompt: run.userPrompt,
+    summary: run.summary,
     status: run.status,
     granularity: run.granularity,
     model: run.model,
