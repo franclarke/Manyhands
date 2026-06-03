@@ -29,7 +29,6 @@ function makeRun(overrides: Partial<RunRecord> = {}): RunRecord {
   return {
     runId: "run-1",
     workspaceId: "ws-1",
-    scenarioId: "passwordless-login",
     granularity: "balanced",
     model: "claude-opus-4.7",
     userPrompt: "Add login",

@@ -60,19 +60,58 @@ function fakeProvisioner(): RepoProvisioner {
 let tempDir: string;
 let runsDir: string;
 
+/**
+ * Minimal planning artifact so `resolveExecutionGraph()` succeeds. Tests
+ * inject a stub engine, so the contents are never exercised by a real
+ * RunExecutor — only the shape matters.
+ */
+function stubPlanning(): unknown {
+  return {
+    decomposition: {
+      graph: {
+        id: "g1",
+        planId: "p1",
+        repo: "stub",
+        baseBranch: "main",
+        baseCommit: "0".repeat(40),
+        featureRequest: "stub",
+        nodes: {
+          "leaf-a": {
+            id: "leaf-a",
+            kind: "leaf",
+            parentId: null,
+            title: "leaf-a",
+            goal: "leaf-a",
+            status: "planned",
+            granularity: "auto",
+            depth: 0,
+            childrenIds: [],
+            dependencies: [],
+            metadata: { authoredBy: "ai" }
+          }
+        },
+        dependencies: [],
+        rootId: "leaf-a",
+        createdAt: "2026-05-26T00:00:00.000Z"
+      }
+    }
+  };
+}
+
 async function saveApprovedRun(runId: string, extra: Record<string, unknown> = {}): Promise<JsonRunRecordStore> {
   const store = new JsonRunRecordStore({ directory: runsDir });
   await store.save({
     runId,
     workspaceId: "ws-1",
-    scenarioId: "passwordless-login",
     granularity: "balanced",
     model: "claude-opus-4.7",
-    userPrompt: "",
+    userPrompt: "Add a feature",
     title: "test",
     status: "approved",
     createdAt: "2026-05-26T00:00:00.000Z",
     updatedAt: "2026-05-26T00:00:00.000Z",
+    planning: stubPlanning(),
+    patches: [],
     ...extra
   });
   return store;
@@ -82,13 +121,11 @@ beforeEach(async () => {
   tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-provisioning-"));
   runsDir = path.join(tempDir, "runs");
   process.env.MANYHANDS_RUNS_DIR = runsDir;
-  process.env.MANYHANDS_REPO_ROOT = path.resolve(__dirname, "..");
   resetRunRepositoryForTests();
 });
 
 afterEach(async () => {
   delete process.env.MANYHANDS_RUNS_DIR;
-  delete process.env.MANYHANDS_REPO_ROOT;
   resetRunRepositoryForTests();
   await rm(tempDir, { recursive: true, force: true });
 });
@@ -174,7 +211,6 @@ describe("runExecutionPipeline provisioning", () => {
     await initRepo(repoRoot);
     const baseCommit = git(repoRoot, "rev-parse", "HEAD");
     const store = await saveApprovedRun(runId, {
-      scenarioId: undefined,
       repoSpec: { kind: "localPath", path: repoRoot },
       planning: { decomposition: { graph: minimalGraph(baseCommit, repoRoot) } }
     });
