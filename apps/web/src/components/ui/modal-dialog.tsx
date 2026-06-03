@@ -114,15 +114,14 @@ export function ModalDialog({
           maxWidth: `min(${width}px, calc(100vw - 32px))`,
           maxHeight: "calc(100vh - 48px)",
           overflowY: "auto",
-          border: "1px solid var(--rule)",
+          border: "1px solid var(--rule-control)",
           background: "var(--surface)",
           borderRadius: "var(--r-lg)",
           boxShadow: "var(--shadow-lift)",
           padding: 18,
           display: "flex",
           flexDirection: "column",
-          gap: 14,
-          outline: "none"
+          gap: 14
         }}
       >
         {children}

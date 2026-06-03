@@ -111,8 +111,8 @@ export function WorkspaceList({ workspaces }: WorkspaceListProps): React.ReactEl
         <span
           style={{
             fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            color: "var(--text-3)",
+            fontSize: 12,
+            color: "var(--text-2)",
             letterSpacing: 0.4
           }}
         >
@@ -122,7 +122,8 @@ export function WorkspaceList({ workspaces }: WorkspaceListProps): React.ReactEl
           type="button"
           onClick={() => setDialog({ mode: "create" })}
           style={{
-            padding: "7px 14px",
+            minHeight: 38,
+            padding: "0 14px",
             border: "1px solid var(--coral)",
             background: "var(--coral)",
             color: "#1A1915",
@@ -189,8 +190,8 @@ export function WorkspaceList({ workspaces }: WorkspaceListProps): React.ReactEl
             <div
               style={{
                 fontFamily: "var(--font-mono)",
-                fontSize: 11,
-                color: "var(--text-3)"
+                fontSize: 12,
+                color: "var(--text-2)"
               }}
             >
               slug · {workspace.slug}
@@ -200,15 +201,15 @@ export function WorkspaceList({ workspaces }: WorkspaceListProps): React.ReactEl
                 {workspace.description}
               </p>
             ) : (
-              <p style={{ margin: 0, fontSize: 12, color: "var(--text-3)", fontStyle: "italic" }}>
+              <p style={{ margin: 0, fontSize: 12.5, color: "var(--text-2)", fontStyle: "italic" }}>
                 No description.
               </p>
             )}
             <div
               style={{
                 fontFamily: "var(--font-mono)",
-                fontSize: 10.5,
-                color: "var(--text-3)",
+                fontSize: 12,
+                color: "var(--text-2)",
                 display: "flex",
                 justifyContent: "space-between"
               }}
@@ -222,10 +223,11 @@ export function WorkspaceList({ workspaces }: WorkspaceListProps): React.ReactEl
                 onClick={() => setDialog({ mode: "edit", workspace })}
                 disabled={busy !== null}
                 style={{
-                  padding: "5px 10px",
-                  border: "1px solid var(--border)",
+                  minHeight: 36,
+                  padding: "0 11px",
+                  border: "1px solid var(--rule-control)",
                   background: "var(--surface-2)",
-                  color: "var(--text-2)",
+                  color: "var(--text)",
                   borderRadius: 5,
                   fontSize: 12,
                   cursor: busy !== null ? "not-allowed" : "pointer"
@@ -241,10 +243,11 @@ export function WorkspaceList({ workspaces }: WorkspaceListProps): React.ReactEl
                 disabled={busy !== null || workspaces.length <= 1}
                 title={workspaces.length <= 1 ? "Cannot delete the last workspace" : undefined}
                 style={{
-                  padding: "5px 10px",
+                  minHeight: 36,
+                  padding: "0 11px",
                   border: "1px solid rgba(194,91,84,0.45)",
                   background: "transparent",
-                  color: workspaces.length <= 1 ? "var(--text-3)" : "var(--error)",
+                  color: workspaces.length <= 1 ? "var(--text-2)" : "var(--error)",
                   borderRadius: 5,
                   fontSize: 12,
                   cursor: busy !== null || workspaces.length <= 1 ? "not-allowed" : "pointer"

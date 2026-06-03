@@ -33,17 +33,19 @@ export interface TaskNodeData {
 
 function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
   const node = data as TaskNodeData;
+  const expanded = selected === true;
   const isRunning = node.status === "running" || node.status === "generating";
   const isReady = node.status === "ready" || node.status === "approved";
   const selectedShadow = "0 0 0 1px var(--copper), 0 0 0 4px rgba(180, 113, 72, 0.14)";
   const relationshipColor = relationshipAccent(node.relationship);
+  const handleVisible = selected === true || relationshipColor !== undefined;
   const riskBorder = node.riskLevel === "high" || node.riskLevel === "blocking"
     ? riskColor(node.riskLevel)
     : undefined;
   const readyBorder = isReady ? "var(--status-ready-border)" : undefined;
   const borderColor = selected ? "transparent" : relationshipColor ?? riskBorder ?? readyBorder ?? "var(--rule)";
   const restingShadow = relationshipColor !== undefined
-    ? "0 0 0 3px rgba(229,222,204,0.045)"
+    ? "0 0 0 3px rgba(241,234,216,0.060)"
     : isReady
       ? "0 0 0 3px rgba(127,166,216,0.10)"
       : "none";
@@ -52,8 +54,8 @@ function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
     <div
       className={isRunning ? "coral-pulse" : undefined}
       style={{
-        width: 248,
-        minHeight: 150,
+        width: 292,
+        minHeight: expanded ? 202 : 136,
         background: selected
           ? "rgba(180,113,72,0.06)"
           : isReady
@@ -72,15 +74,27 @@ function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
       <Handle
         type="target"
         position={Position.Left}
-        style={{ background: "var(--text-3)", width: 5, height: 5, border: "none" }}
+        style={{
+          background: selected === true ? "var(--copper-hi)" : relationshipColor ?? "transparent",
+          width: 6,
+          height: 6,
+          border: "none",
+          opacity: handleVisible ? 0.86 : 0
+        }}
       />
       <Handle
         type="source"
         position={Position.Right}
-        style={{ background: "var(--text-3)", width: 5, height: 5, border: "none" }}
+        style={{
+          background: selected === true ? "var(--copper-hi)" : relationshipColor ?? "transparent",
+          width: 6,
+          height: 6,
+          border: "none",
+          opacity: handleVisible ? 0.86 : 0
+        }}
       />
 
-      <div style={{ padding: "11px 12px 12px", display: "flex", flexDirection: "column", gap: 9 }}>
+      <div style={{ padding: "12px 13px 13px", display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
           <TypeBadge kind={node.kind} />
           <StatusBadge status={nodeUiStatus(node.status, { integrator: node.integrator === true })} />
@@ -90,7 +104,7 @@ function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
           <h3
             style={{
               margin: 0,
-              fontSize: 15.5,
+              fontSize: 16,
               lineHeight: 1.22,
               color: "var(--text)",
               fontWeight: 700,
@@ -102,35 +116,39 @@ function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
           >
             {node.title}
           </h3>
-          <p
-            style={{
-              margin: "6px 0 0",
-              color: "var(--text-2)",
-              fontSize: 11.5,
-              lineHeight: 1.4,
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden"
-            }}
-          >
-            {node.description}
-          </p>
-        </div>
-
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <MiniMetric label="deps" value={String(node.dependencyCount ?? 0)} />
-          <MiniMetric label="paths" value={String(node.expectedFilesCount ?? 0)} />
-          {node.traceCount !== undefined && node.traceCount > 0 ? (
-            <MiniMetric label="trace" value={String(node.traceCount)} />
+          {expanded ? (
+            <p
+              style={{
+                margin: "7px 0 0",
+                color: "var(--text-2)",
+                fontSize: 12.5,
+                lineHeight: 1.45,
+                display: "-webkit-box",
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden"
+              }}
+            >
+              {node.description}
+            </p>
           ) : null}
         </div>
+
+        {expanded ? (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <MiniMetric label="deps" value={String(node.dependencyCount ?? 0)} />
+            <MiniMetric label="paths" value={String(node.expectedFilesCount ?? 0)} />
+            {node.traceCount !== undefined && node.traceCount > 0 ? (
+              <MiniMetric label="trace" value={String(node.traceCount)} />
+            ) : null}
+          </div>
+        ) : null}
 
         <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
           {node.riskLevel !== undefined ? (
             <RiskBadge level={node.riskLevel} />
           ) : (
-            <span className="mh-mono" style={{ color: "var(--text-3)", fontSize: 10.5 }}>
+            <span className="mh-mono" style={{ color: "var(--text-2)", fontSize: 11.5 }}>
               Risk none
             </span>
           )}
@@ -149,10 +167,10 @@ function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
             alignItems: "center"
           }}
         >
-          <span className="mh-mono" style={{ color: "var(--text-3)", fontSize: 10.5, overflow: "hidden", textOverflow: "ellipsis" }}>
+          <span className="mh-mono" style={{ color: "var(--text-2)", fontSize: 11.5, overflow: "hidden", textOverflow: "ellipsis" }}>
             {node.taskId}
           </span>
-          <span style={{ color: "var(--text)", fontSize: 11.5, fontWeight: 600, whiteSpace: "nowrap" }}>
+          <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
             {node.actionHint ?? "Review contract"}
           </span>
         </div>
@@ -161,7 +179,7 @@ function TaskNodeCardImpl({ data, selected }: NodeProps): React.ReactElement {
           <div
             style={{
               color: "var(--status-blocked-fg)",
-              fontSize: 11,
+              fontSize: 12,
               lineHeight: 1.35,
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -183,13 +201,13 @@ function TypeBadge({ kind }: { kind: string }): React.ReactElement {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        height: 23,
-        padding: "0 8px",
+        minHeight: 26,
+        padding: "0 9px",
         borderRadius: 999,
         border: "1px solid var(--rule-strong)",
         color: kind === "leaf" ? "var(--copper-hi)" : "var(--text-2)",
-        background: "rgba(229,222,204,0.025)",
-        fontSize: 11,
+        background: "rgba(241,234,216,0.045)",
+        fontSize: 12,
         fontWeight: 700,
         whiteSpace: "nowrap"
       }}
@@ -208,7 +226,7 @@ function MiniMetric({ label, value }: { label: string; value: string }): React.R
         alignItems: "baseline",
         gap: 4,
         color: "var(--text-2)",
-        fontSize: 10.5
+        fontSize: 11.5
       }}
     >
       <strong style={{ color: "var(--text)" }}>{value}</strong>
@@ -226,7 +244,7 @@ function RiskBadge({ level }: { level: GraphRiskLevel }): React.ReactElement {
         alignItems: "center",
         gap: 5,
         color: riskColor(level),
-        fontSize: 10.5
+        fontSize: 11.5
       }}
     >
       <span className="mh-dot" style={{ width: 5, height: 5 }} />
@@ -237,7 +255,7 @@ function RiskBadge({ level }: { level: GraphRiskLevel }): React.ReactElement {
 
 function Signal({ color, label }: { color: string; label: string }): React.ReactElement {
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color, fontSize: 10.5 }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, color, fontSize: 11.5 }}>
       <span className="mh-dot" style={{ width: 5, height: 5 }} />
       <span className="mh-mono">{label}</span>
     </span>

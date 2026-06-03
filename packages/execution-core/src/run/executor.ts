@@ -347,6 +347,14 @@ export class RunExecutor {
           composite.id,
           syntheticCompositeResult(composite.id, graph.baseCommit, result.integrationCommitSha)
         );
+      } else {
+        // Preserve failed composite state for ancestors. Without a synthetic
+        // failed result, a parent with only failed composite children sees an
+        // empty childResults array and may incorrectly proceed to validation.
+        resultByTask.set(
+          composite.id,
+          syntheticFailedCompositeResult(composite.id, graph.baseCommit)
+        );
       }
     }
 
@@ -498,5 +506,25 @@ function syntheticCompositeResult(
     executorExitCode: 0,
     executorDurationMs: 0,
     executorTimedOut: false
+  };
+}
+
+function syntheticFailedCompositeResult(
+  taskId: string,
+  baseHead: string
+): AgentExecutionResult {
+  return {
+    taskId,
+    status: "internal_error",
+    baseHead,
+    currentHead: baseHead,
+    agentCommittedUnexpectedly: false,
+    diff: "",
+    changedFiles: [],
+    scopeCheck: { passed: true, violations: [] },
+    executorExitCode: 1,
+    executorDurationMs: 0,
+    executorTimedOut: false,
+    stderrTail: "Composite integration failed before producing an integration commit."
   };
 }

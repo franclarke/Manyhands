@@ -44,18 +44,18 @@ export function TaskPrompt({
         placeholder="Describe the task — what should the system build, refactor, or migrate?"
         style={{
           width: "100%",
-          padding: 0,
-          border: "none",
-          background: "transparent",
+          padding: "14px 16px",
+          border: "1px solid var(--rule-control)",
+          background: "rgba(24,26,28,0.78)",
           color: "var(--text)",
-          borderRadius: 0,
+          borderRadius: "var(--r-lg)",
           fontFamily: "var(--font-sans)",
           fontSize: 17.5,
           lineHeight: 1.55,
-          letterSpacing: "-0.003em",
+          letterSpacing: 0,
           resize: "vertical",
-          outline: "none",
-          minHeight: 168
+          minHeight: 188,
+          boxShadow: "0 1px 0 rgba(255,255,255,0.025) inset"
         }}
       />
       {showExamples ? (
@@ -71,11 +71,12 @@ export function TaskPrompt({
               className="mh-example-chip"
               style={{
                 border: "1px solid var(--rule)",
-                background: "transparent",
-                color: "var(--text-2)",
+                background: "rgba(241,234,216,0.035)",
+                color: "var(--text)",
                 borderRadius: "var(--r-md)",
-                padding: "6px 10px",
-                fontSize: 12,
+                minHeight: 36,
+                padding: "7px 11px",
+                fontSize: 12.5,
                 lineHeight: 1.3,
                 textAlign: "left",
                 cursor: "pointer",

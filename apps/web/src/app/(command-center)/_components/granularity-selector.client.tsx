@@ -41,7 +41,7 @@ export function GranularitySelector({ value, onChange }: GranularitySelectorProp
           margin: 0,
           fontSize: 12,
           lineHeight: 1.5,
-          color: "var(--text-3)",
+          color: "var(--text-2)",
           maxWidth: 520
         }}
       >

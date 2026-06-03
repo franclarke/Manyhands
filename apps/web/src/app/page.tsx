@@ -8,7 +8,7 @@ import { getWorkspaceRepository } from "@/lib/server/workspaces";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const COLUMN_WIDTH = 880;
+const PAGE_WIDTH = 1240;
 
 export default async function HomePage(): Promise<React.ReactElement> {
   const [workspaces, runs] = await Promise.all([
@@ -20,7 +20,7 @@ export default async function HomePage(): Promise<React.ReactElement> {
 
   return (
     <div>
-      <section style={{ margin: "40px auto 30px", maxWidth: COLUMN_WIDTH }}>
+      <section style={{ margin: "40px auto 30px", maxWidth: PAGE_WIDTH }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
           <span className="mh-coord" style={{ color: "var(--copper)", margin: 0 }}>
             command center
@@ -53,13 +53,14 @@ export default async function HomePage(): Promise<React.ReactElement> {
         </p>
       </section>
 
-      <CommandCenterShell
-        workspaces={workspaces}
-        initialGranularity="automatica"
-        initialModelId={DEFAULT_MODEL_ID}
-      />
-
-      <RecentRunsStrip runs={previews} />
+      <div className="command-center-grid" style={{ maxWidth: PAGE_WIDTH, margin: "0 auto" }}>
+        <CommandCenterShell
+          workspaces={workspaces}
+          initialGranularity="automatica"
+          initialModelId={DEFAULT_MODEL_ID}
+        />
+        <RecentRunsStrip runs={previews} compact />
+      </div>
 
       <CommandFooter />
     </div>
@@ -70,7 +71,7 @@ function CommandFooter(): React.ReactElement {
   return (
     <footer
       style={{
-        maxWidth: 880,
+        maxWidth: PAGE_WIDTH,
         margin: "56px auto 8px",
         paddingTop: 14,
         borderTop: "1px solid var(--rule-soft)",
@@ -79,9 +80,9 @@ function CommandFooter(): React.ReactElement {
         gap: 16,
         flexWrap: "wrap",
         fontFamily: "var(--font-mono)",
-        fontSize: 10.5,
+        fontSize: 12,
         letterSpacing: "0.02em",
-        color: "var(--text-3)"
+        color: "var(--text-2)"
       }}
     >
       <span>ManyHands · research preview</span>

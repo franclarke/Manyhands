@@ -19,9 +19,9 @@
   --font-mono: "JetBrains Mono", "Berkeley Mono", "IBM Plex Mono", ui-monospace, monospace;
 
   /* ── Type scale (font-size) ───────────────────────────────────── */
-  --fs-xs: 11px;
-  --fs-sm: 12px;
-  --fs-base: 14px;
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 15px;
   --fs-md: 16px;
   --fs-lg: 20px;
   --fs-xl: 28px;
@@ -59,21 +59,21 @@
   --cu-surface: #181a1c;
   --cu-surface-2: #1f2124;
   --cu-surface-3: #262a2d;
-  --cu-ink: #e5decc;       /* warm beige — primary text */
-  --cu-ink-2: #8e8675;     /* muted text */
-  --cu-ink-3: #7d7560;     /* subtle text (lifted from #5a5346 for AA contrast) */
-  --cu-ink-4: #4d4738;     /* faint text / separators (lifted from #3a3528) */
-  --cu-copper: #b47148;
-  --cu-copper-hi: #c98654;
+  --cu-ink: #f1ead8;       /* warm beige - primary text (AA+ on all dark surfaces) */
+  --cu-ink-2: #b9ad98;     /* muted text - functional copy */
+  --cu-ink-3: #a99d88;     /* subtle text - labels and metadata */
+  --cu-ink-4: #776f60;     /* faint text - decoration / disabled only */
+  --cu-copper: #d08a5a;
+  --cu-copper-hi: #d79b72;
   --cu-copper-deep: #8e5631;
   --cu-slate: #6f8aa8;
-  --cu-cyan: #62b6cb;      /* running / generating */
-  --cu-blue: #7fa6d8;      /* ready */
-  --cu-ochre: #c2a15a;     /* blocked / warning / risk-medium */
-  --cu-violet: #a88bd6;    /* needs review */
-  --cu-sage: #79a978;      /* completed / risk-low */
-  --cu-green-strong: #98c379; /* integrated */
-  --cu-rust: #d47668;      /* failed / error / conflict / risk-high */
+  --cu-cyan: #6bc7db;      /* running / generating */
+  --cu-blue: #8fb4e8;      /* ready */
+  --cu-ochre: #d1b36a;     /* blocked / warning / risk-medium */
+  --cu-violet: #b89dea;    /* needs review */
+  --cu-sage: #8fbd8a;      /* completed / risk-low */
+  --cu-green-strong: #a9d68a; /* integrated */
+  --cu-rust: #e08478;      /* failed / error / conflict / risk-high */
   --cu-dim: #686154;       /* blocked surfaces */
   --cu-stone: #5a5346;     /* planned */
 
@@ -83,9 +83,10 @@
   --color-surface: var(--cu-surface);
   --color-surface-raised: var(--cu-surface-2);
   --color-surface-overlay: var(--cu-surface-3);
-  --color-border: rgba(229, 222, 204, 0.10);
-  --color-border-soft: rgba(229, 222, 204, 0.045);
-  --color-border-strong: rgba(229, 222, 204, 0.16);
+  --color-border: rgba(241, 234, 216, 0.16);
+  --color-border-soft: rgba(241, 234, 216, 0.075);
+  --color-border-strong: rgba(241, 234, 216, 0.26);
+  --color-border-control: rgba(241, 234, 216, 0.38);
   --color-text: var(--cu-ink);
   --color-text-muted: var(--cu-ink-2);
   --color-text-subtle: var(--cu-ink-3);
@@ -93,63 +94,63 @@
   --color-accent: var(--cu-copper);
   --color-accent-hover: var(--cu-copper-hi);
   --color-accent-deep: var(--cu-copper-deep);
-  --color-accent-glow: rgba(180, 113, 72, 0.22);
+  --color-accent-glow: rgba(208, 138, 90, 0.24);
   --color-selected: #9ba9b8;
   --color-focus: var(--cu-copper);
 
   /* 3 ── State tokens: single source for status colors (UiStatus) ──
          Each status has fg (strong), bg (tint), border (tint). See §4.9. */
   --status-idle-fg: var(--cu-ink-2);
-  --status-idle-bg: rgba(142, 134, 117, 0.08);
-  --status-idle-border: rgba(142, 134, 117, 0.30);
+  --status-idle-bg: rgba(185, 173, 152, 0.10);
+  --status-idle-border: rgba(185, 173, 152, 0.38);
 
   --status-planning-fg: var(--cu-copper-hi);
-  --status-planning-bg: rgba(180, 113, 72, 0.10);
-  --status-planning-border: rgba(180, 113, 72, 0.42);
+  --status-planning-bg: rgba(208, 138, 90, 0.12);
+  --status-planning-border: rgba(208, 138, 90, 0.50);
 
   --status-pending-fg: var(--cu-ink-3);
-  --status-pending-bg: rgba(125, 117, 96, 0.08);
-  --status-pending-border: rgba(125, 117, 96, 0.30);
+  --status-pending-bg: rgba(169, 157, 136, 0.09);
+  --status-pending-border: rgba(169, 157, 136, 0.34);
 
   --status-ready-fg: var(--cu-blue);
-  --status-ready-bg: rgba(127, 166, 216, 0.11);
-  --status-ready-border: rgba(127, 166, 216, 0.46);
+  --status-ready-bg: rgba(143, 180, 232, 0.12);
+  --status-ready-border: rgba(143, 180, 232, 0.52);
 
   --status-running-fg: var(--cu-cyan);
-  --status-running-bg: rgba(98, 182, 203, 0.11);
-  --status-running-border: rgba(98, 182, 203, 0.48);
+  --status-running-bg: rgba(107, 199, 219, 0.12);
+  --status-running-border: rgba(107, 199, 219, 0.54);
 
   --status-completed-fg: var(--cu-sage);
-  --status-completed-bg: rgba(122, 151, 120, 0.10);
-  --status-completed-border: rgba(122, 151, 120, 0.45);
+  --status-completed-bg: rgba(143, 189, 138, 0.12);
+  --status-completed-border: rgba(143, 189, 138, 0.50);
 
   --status-failed-fg: var(--cu-rust);
-  --status-failed-bg: rgba(178, 106, 96, 0.10);
-  --status-failed-border: rgba(178, 106, 96, 0.45);
+  --status-failed-bg: rgba(224, 132, 120, 0.12);
+  --status-failed-border: rgba(224, 132, 120, 0.52);
 
   --status-blocked-fg: var(--cu-ochre);
-  --status-blocked-bg: rgba(194, 161, 90, 0.10);
-  --status-blocked-border: rgba(194, 161, 90, 0.42);
+  --status-blocked-bg: rgba(209, 179, 106, 0.12);
+  --status-blocked-border: rgba(209, 179, 106, 0.50);
 
   --status-review-fg: var(--cu-violet);
-  --status-review-bg: rgba(168, 139, 214, 0.11);
-  --status-review-border: rgba(168, 139, 214, 0.48);
+  --status-review-bg: rgba(184, 157, 234, 0.12);
+  --status-review-border: rgba(184, 157, 234, 0.52);
 
   --status-integrating-fg: var(--cu-copper);
-  --status-integrating-bg: rgba(180, 113, 72, 0.12);
-  --status-integrating-border: rgba(180, 113, 72, 0.50);
+  --status-integrating-bg: rgba(208, 138, 90, 0.14);
+  --status-integrating-border: rgba(208, 138, 90, 0.54);
 
   --status-integrated-fg: var(--cu-green-strong);
-  --status-integrated-bg: rgba(152, 195, 121, 0.14);
-  --status-integrated-border: rgba(152, 195, 121, 0.62);
+  --status-integrated-bg: rgba(169, 214, 138, 0.14);
+  --status-integrated-border: rgba(169, 214, 138, 0.62);
 
   --status-conflict-fg: var(--cu-rust);
-  --status-conflict-bg: rgba(178, 106, 96, 0.12);
-  --status-conflict-border: rgba(178, 106, 96, 0.55);
+  --status-conflict-bg: rgba(224, 132, 120, 0.13);
+  --status-conflict-border: rgba(224, 132, 120, 0.58);
 
   --status-skipped-fg: var(--cu-ink-3);
-  --status-skipped-bg: rgba(125, 117, 96, 0.06);
-  --status-skipped-border: rgba(125, 117, 96, 0.24);
+  --status-skipped-bg: rgba(169, 157, 136, 0.08);
+  --status-skipped-border: rgba(169, 157, 136, 0.30);
 
   /* ── Legacy aliases (kept for back-compat; map onto the layers above) ─ */
   --background: var(--color-bg);
@@ -161,8 +162,9 @@
   --surface-3: var(--color-surface-overlay);
   --border-soft: var(--color-border-soft);
   --rule: var(--color-border-soft);
-  --rule-soft: rgba(229, 222, 204, 0.025);
+  --rule-soft: rgba(241, 234, 216, 0.045);
   --rule-strong: var(--color-border-strong);
+  --rule-control: var(--color-border-control);
 
   --text: var(--color-text);
   --text-2: var(--color-text-muted);
@@ -200,7 +202,7 @@
   --warning: var(--cu-ochre);
   --danger: var(--cu-rust);
 
-  --border: rgba(229, 222, 204, 0.10);
+  --border: var(--color-border);
 }
 
 * { box-sizing: border-box; }
@@ -215,8 +217,8 @@ body {
   min-height: 100%;
   margin: 0;
   background:
-    linear-gradient(rgba(229, 222, 204, 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(229, 222, 204, 0.014) 1px, transparent 1px),
+    linear-gradient(rgba(241, 234, 216, 0.010) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(241, 234, 216, 0.008) 1px, transparent 1px),
     linear-gradient(180deg, #0f1012 0%, #101113 54%, #0b0c0e 100%);
   background-size: 28px 28px, 28px 28px, auto;
   color: var(--text);
@@ -234,7 +236,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 1px solid var(--copper);
+  outline: 2px solid var(--color-focus);
   outline-offset: 3px;
 }
 ::selection { background: rgba(180, 113, 72, 0.28); }
@@ -273,10 +275,10 @@ textarea:focus-visible {
 .mh-coord,
 .phase-label {
   font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.18em;
+  font-size: 11px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--text-3);
+  color: var(--text-2);
 }
 
 .mh-dot {
@@ -318,13 +320,13 @@ textarea:focus-visible {
 }
 
 .mh-select {
-  height: 28px;
-  padding: 0 24px 0 8px;
-  border: 1px solid var(--rule);
-  background: transparent;
-  color: var(--text-2);
+  min-height: 36px;
+  padding: 0 28px 0 10px;
+  border: 1px solid var(--rule-control);
+  background: var(--surface);
+  color: var(--text);
   border-radius: var(--r-md);
-  font-size: 12px;
+  font-size: 13px;
   appearance: none;
   cursor: pointer;
 }
@@ -334,12 +336,12 @@ textarea:focus-visible {
   display: inline-flex;
   align-items: center;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
-  padding: 2px 5px;
-  border: 1px solid var(--rule);
+  padding: 3px 6px;
+  border: 1px solid var(--rule-control);
   border-radius: 3px;
-  background: rgba(229, 222, 204, 0.04);
+  background: rgba(241, 234, 216, 0.08);
   color: var(--text-2);
 }
 
@@ -359,7 +361,7 @@ textarea:focus-visible {
 
 /* Command-center example chips. */
 .mh-example-chip:hover {
-  border-color: var(--rule-strong) !important;
+  border-color: var(--rule-control) !important;
   color: var(--text) !important;
 }
 
@@ -368,7 +370,7 @@ textarea:focus-visible {
   transition: background 150ms ease-out;
 }
 .mh-recent-row:hover {
-  background: rgba(229, 222, 204, 0.03);
+  background: rgba(241, 234, 216, 0.045);
 }
 @media (max-width: 560px) {
   .mh-recent-row {
@@ -393,7 +395,7 @@ textarea:focus-visible {
 .react-flow__attribution { display: none; }
 .react-flow__controls {
   border-radius: var(--r-md) !important;
-  border: 1px solid var(--rule) !important;
+  border: 1px solid var(--rule-control) !important;
   box-shadow: none;
   background: rgba(24, 26, 28, 0.84) !important;
   overflow: hidden;
@@ -403,17 +405,17 @@ textarea:focus-visible {
   border-bottom: 1px solid var(--rule-soft) !important;
   color: var(--text-2) !important;
   fill: var(--text-2) !important;
-  width: 26px !important;
-  height: 26px !important;
+  width: 36px !important;
+  height: 36px !important;
 }
 .react-flow__controls-button:hover {
-  background: rgba(229, 222, 204, 0.04) !important;
+  background: rgba(241, 234, 216, 0.08) !important;
   color: var(--text) !important;
   fill: var(--text) !important;
 }
 .react-flow__minimap {
   background: rgba(19, 20, 22, 0.9) !important;
-  border: 1px solid var(--rule) !important;
+  border: 1px solid var(--rule-control) !important;
   border-radius: var(--r-md);
   overflow: hidden;
 }
@@ -422,8 +424,17 @@ textarea:focus-visible {
   font-family: var(--font-mono) !important;
   fill: var(--text-2) !important;
 }
-.react-flow__node:focus,
-.react-flow__node:focus-visible { outline: none; }
+.react-flow__node:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 4px;
+}
+
+.command-center-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 820px) minmax(320px, 380px);
+  gap: 36px;
+  align-items: start;
+}
 
 @media (max-width: 900px) {
   .mh-fullbleed {
@@ -445,9 +456,14 @@ textarea:focus-visible {
     height: auto !important;
     min-height: 560px !important;
   }
+
+  .command-center-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
 }
 
 *::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background: rgba(229, 222, 204, 0.08); border-radius: 4px; }
-*::-webkit-scrollbar-thumb:hover { background: rgba(229, 222, 204, 0.14); }
+*::-webkit-scrollbar-thumb { background: rgba(241, 234, 216, 0.12); border-radius: 4px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(241, 234, 216, 0.20); }
 *::-webkit-scrollbar-track { background: transparent; }

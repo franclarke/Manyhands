@@ -36,7 +36,7 @@ export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactEleme
     props.runId,
     props.initialStatus,
     props.initialPendingQuestion,
-    props.initialLivePlanNodes ?? []
+    props.initialLivePlanNodes
   );
 
   return (

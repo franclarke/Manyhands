@@ -7,12 +7,22 @@ import { Signal } from "@/components/ui/signal";
 
 interface RecentRunsStripProps {
   runs: RunPreview[];
+  compact?: boolean;
 }
 
-export function RecentRunsStrip({ runs }: RecentRunsStripProps): React.ReactElement {
+export function RecentRunsStrip({ runs, compact = false }: RecentRunsStripProps): React.ReactElement {
   return (
-    <section style={{ maxWidth: 880, margin: "72px auto 0" }}>
-      <Header />
+    <section
+      style={{
+        maxWidth: compact ? "none" : 880,
+        margin: compact ? 0 : "72px auto 0",
+        border: compact ? "1px solid var(--rule)" : "none",
+        background: compact ? "rgba(24,26,28,0.62)" : "transparent",
+        borderRadius: compact ? "var(--r-lg)" : 0,
+        padding: compact ? 16 : 0
+      }}
+    >
+      <Header compact={compact} />
       {runs.length === 0 ? (
         <EmptyState
           title="No runs yet"
@@ -20,9 +30,9 @@ export function RecentRunsStrip({ runs }: RecentRunsStripProps): React.ReactElem
           compact
         />
       ) : (
-        <div role="list">
+        <div role="list" style={{ display: "flex", flexDirection: "column", gap: compact ? 4 : 0 }}>
           {runs.map((run) => (
-            <RecentRunRow key={run.id} run={run} />
+            <RecentRunRow key={run.id} run={run} compact={compact} />
           ))}
         </div>
       )}
@@ -30,19 +40,21 @@ export function RecentRunsStrip({ runs }: RecentRunsStripProps): React.ReactElem
   );
 }
 
-function Header(): React.ReactElement {
+function Header({ compact }: { compact: boolean }): React.ReactElement {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 8 }}>
-      <span className="mh-coord">recent runs</span>
+    <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: compact ? 12 : 8 }}>
+      <span className="mh-coord" style={{ color: compact ? "var(--copper-hi)" : undefined }}>
+        recent runs
+      </span>
       <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
-      <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
+      <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
         local run history
       </span>
     </div>
   );
 }
 
-function RecentRunRow({ run }: { run: RunPreview }): React.ReactElement {
+function RecentRunRow({ run, compact }: { run: RunPreview; compact: boolean }): React.ReactElement {
   const repo = run.workspaceName ?? run.workspaceId.slice(0, 8);
   const source = run.scenarioId !== undefined ? "Lab fixture" : "Prompt run";
   const meta = [repo, run.nodeCount !== undefined ? `${run.nodeCount} nodes` : null, source]
@@ -57,10 +69,10 @@ function RecentRunRow({ run }: { run: RunPreview }): React.ReactElement {
       className="mh-recent-row"
       style={{
         display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) auto",
+        gridTemplateColumns: compact ? "1fr" : "minmax(0, 1fr) auto",
         alignItems: "center",
-        gap: 16,
-        padding: "14px 12px",
+        gap: compact ? 8 : 16,
+        padding: compact ? "12px 10px" : "14px 12px",
         borderBottom: "1px solid var(--rule-soft)",
         borderRadius: "var(--r-md)"
       }}
@@ -69,7 +81,7 @@ function RecentRunRow({ run }: { run: RunPreview }): React.ReactElement {
         <div
           className="mh-serif"
           style={{
-            fontSize: 15,
+            fontSize: compact ? 14 : 15,
             color: "var(--text)",
             letterSpacing: "-0.003em",
             overflow: "hidden",
@@ -83,8 +95,8 @@ function RecentRunRow({ run }: { run: RunPreview }): React.ReactElement {
           className="mh-mono"
           style={{
             marginTop: 4,
-            fontSize: 11,
-            color: "var(--text-3)",
+            fontSize: 12,
+            color: "var(--text-2)",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap"
@@ -99,16 +111,16 @@ function RecentRunRow({ run }: { run: RunPreview }): React.ReactElement {
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "flex-end",
-          gap: 20,
+          justifyContent: compact ? "space-between" : "flex-end",
+          gap: compact ? 12 : 20,
           flexShrink: 0
         }}
       >
-        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-2)" }}>
+        <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
           {granularityLabelForMode(run.granularity)}
         </span>
         <Signal status={runUiStatus(run.status)} label={run.status.replace(/_/g, " ")} />
-        <span style={{ fontSize: 11, color: "var(--text-3)", minWidth: 66, textAlign: "right" }}>
+        <span style={{ fontSize: 12, color: "var(--text-2)", minWidth: 72, textAlign: "right" }}>
           {formatTimestamp(run.updatedAt)}
         </span>
       </div>

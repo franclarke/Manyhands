@@ -14,8 +14,6 @@ import { toGranularityMode, type GranularityLevel } from "@/lib/granularity";
 import { findScenario } from "@/lib/scenarios";
 
 const PROMPT_STORAGE_KEY = "manyhands:lastPrompt";
-const COLUMN_WIDTH = 880;
-
 const EXAMPLE_PROMPTS = [
   "Add passwordless login with magic links, tests, and session handling.",
   "Refactor the task API validation and update the failing tests.",
@@ -135,11 +133,11 @@ export function CommandCenterShell({
     return (
       <div
         style={{
-          maxWidth: COLUMN_WIDTH,
+          maxWidth: "100%",
           margin: "0 auto",
           padding: 24,
           border: "1px dashed var(--rule-strong)",
-          background: "rgba(229,222,204,0.018)",
+          background: "rgba(241,234,216,0.035)",
           borderRadius: "var(--r-lg)",
           color: "var(--text-2)"
         }}
@@ -157,11 +155,10 @@ export function CommandCenterShell({
   return (
     <section
       style={{
-        maxWidth: COLUMN_WIDTH,
-        margin: "0 auto",
+        maxWidth: "100%",
         display: "flex",
         flexDirection: "column",
-        gap: 24
+        gap: 22
       }}
     >
       <TaskPrompt
@@ -183,14 +180,14 @@ export function CommandCenterShell({
             Run configuration
           </span>
           <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
-          <span className="mh-mono" style={{ color: "var(--text-3)", fontSize: 10.5 }}>
+          <span className="mh-mono" style={{ color: "var(--text-2)", fontSize: 12 }}>
             {executionMode}
           </span>
         </div>
 
         <ControlRow label="Workspace">
           <WorkspacePicker workspaces={workspaces} value={workspaceId} onChange={setWorkspaceId} />
-          <span className="mh-mono" style={{ color: "var(--text-4)", padding: "0 2px" }}>
+          <span className="mh-mono" style={{ color: "var(--text-4)", padding: "0 2px" }} aria-hidden>
             ·
           </span>
           <span
@@ -198,7 +195,7 @@ export function CommandCenterShell({
               display: "inline-flex",
               alignItems: "center",
               gap: 5,
-              color: "var(--text-3)",
+              color: "var(--text-2)",
               fontSize: 12
             }}
           >
@@ -213,7 +210,7 @@ export function CommandCenterShell({
           <span
             className="mh-mono"
             style={{
-              fontSize: 11.5,
+              fontSize: 12.5,
               color: hasLocalRepo ? "var(--text-2)" : "var(--error)",
               wordBreak: "break-all"
             }}
@@ -271,7 +268,7 @@ export function CommandCenterShell({
                 display: "inline-flex",
                 alignItems: "center",
                 fontFamily: "var(--font-mono)",
-                fontSize: 10,
+                fontSize: 11,
                 lineHeight: 1,
                 padding: "2px 5px",
                 borderRadius: 3,
@@ -312,14 +309,14 @@ function ActionHint({
 }): React.ReactElement {
   if (!granularitySupported) {
     return (
-      <span className="mh-mono" style={{ color: "var(--error)", fontSize: 11 }}>
+      <span className="mh-mono" style={{ color: "var(--error)", fontSize: 12.5 }}>
         Selected lab scenario does not support this granularity.
       </span>
     );
   }
   if (!scenarioSelected && !hasLocalRepo) {
     return (
-      <span className="mh-mono" style={{ color: "var(--error)", fontSize: 11, lineHeight: 1.4 }}>
+      <span className="mh-mono" style={{ color: "var(--error)", fontSize: 12.5, lineHeight: 1.45 }}>
         {workspaceName !== null
           ? `Workspace "${workspaceName}" has no local git repo. Configure one, pick a workspace that has one, or select a lab scenario.`
           : "Select a workspace with a local git repo, or pick a lab scenario."}
@@ -327,9 +324,9 @@ function ActionHint({
     );
   }
   return (
-    <span style={{ color: "var(--text-3)", fontSize: 12.5, lineHeight: 1.45, maxWidth: 460 }}>
+    <span style={{ color: "var(--text-2)", fontSize: 13, lineHeight: 1.5, maxWidth: 520 }}>
       {scenarioSelected
-        ? "Lab scenario selected — planning stays deterministic for replay."
+        ? "Lab scenario selected - planning stays deterministic for replay."
         : "Gemini plans locally, agents run after approval, and the final patch is applied on success."}
     </span>
   );
@@ -368,10 +365,11 @@ function AdvancedSection({ children }: { children: React.ReactNode }): React.Rea
         style={{
           background: "transparent",
           border: "none",
-          color: "var(--text-3)",
+          color: "var(--text-2)",
           cursor: "pointer",
-          padding: 0,
-          fontSize: 11,
+          minHeight: 36,
+          padding: "0 2px",
+          fontSize: 12,
           fontFamily: "var(--font-mono)"
         }}
       >
@@ -384,7 +382,7 @@ function AdvancedSection({ children }: { children: React.ReactNode }): React.Rea
             padding: 12,
             border: "1px dashed var(--rule-strong)",
             borderRadius: "var(--r-md)",
-            background: "rgba(229,222,204,0.018)",
+            background: "rgba(241,234,216,0.035)",
             display: "flex",
             flexDirection: "column",
             gap: 10
@@ -393,8 +391,8 @@ function AdvancedSection({ children }: { children: React.ReactNode }): React.Rea
           <p
             style={{
               margin: 0,
-              fontSize: 11.5,
-              color: "var(--text-3)",
+              fontSize: 12.5,
+              color: "var(--text-2)",
               lineHeight: 1.5
             }}
           >

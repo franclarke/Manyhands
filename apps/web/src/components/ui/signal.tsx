@@ -22,7 +22,8 @@ export function Signal({ status, label, size = 6 }: SignalProps): React.ReactEle
         display: "inline-flex",
         alignItems: "center",
         gap: 7,
-        fontSize: 11.5,
+        fontSize: 12,
+        fontWeight: 600,
         color: meta.fg,
         whiteSpace: "nowrap"
       }}

@@ -5,10 +5,11 @@ import type { InspectorView } from "@/lib/graph-view-model";
 
 export const smallButtonStyle: React.CSSProperties = {
   background: "transparent",
-  border: "1px solid var(--rule)",
-  color: "var(--text-2)",
-  fontSize: 11,
-  padding: "3px 8px",
+  border: "1px solid var(--rule-control)",
+  color: "var(--text)",
+  fontSize: 12,
+  minHeight: 34,
+  padding: "0 10px",
   cursor: "pointer",
   borderRadius: 4,
   fontFamily: "var(--font-mono)"
@@ -16,13 +17,12 @@ export const smallButtonStyle: React.CSSProperties = {
 
 export const inputStyle: React.CSSProperties = {
   width: "100%",
-  border: "1px solid var(--rule)",
-  background: "var(--bg-1)",
+  border: "1px solid var(--rule-control)",
+  background: "var(--surface)",
   color: "var(--text)",
   borderRadius: 5,
   padding: "9px 10px",
-  fontSize: 13,
-  outline: "none"
+  fontSize: 13
 };
 
 export const textareaStyle: React.CSSProperties = {
@@ -33,13 +33,14 @@ export const textareaStyle: React.CSSProperties = {
 };
 
 export const secondaryButtonStyle: React.CSSProperties = {
-  border: "1px solid var(--rule)",
-  background: "transparent",
-  color: "var(--text-2)",
+  border: "1px solid var(--rule-control)",
+  background: "rgba(241,234,216,0.035)",
+  color: "var(--text)",
   borderRadius: 5,
-  padding: "7px 11px",
+  minHeight: 36,
+  padding: "0 12px",
   cursor: "pointer",
-  fontSize: 12
+  fontSize: 12.5
 };
 
 export const primaryButtonStyle: React.CSSProperties = {
@@ -47,9 +48,10 @@ export const primaryButtonStyle: React.CSSProperties = {
   background: "rgba(180,113,72,0.14)",
   color: "var(--copper-hi)",
   borderRadius: 5,
-  padding: "7px 12px",
+  minHeight: 36,
+  padding: "0 13px",
   cursor: "pointer",
-  fontSize: 12,
+  fontSize: 12.5,
   fontWeight: 600
 };
 
@@ -178,7 +180,7 @@ export function LinkedNodeList({ items, empty }: { items: string[]; empty: strin
           className="mh-mono"
           style={{
             border: "1px solid var(--rule)",
-            background: "rgba(229,222,204,0.025)",
+            background: "rgba(241,234,216,0.045)",
             color: "var(--text-2)",
             borderRadius: "var(--r-md)",
             padding: "4px 7px",

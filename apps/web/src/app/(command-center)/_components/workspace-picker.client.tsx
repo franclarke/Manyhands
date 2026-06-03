@@ -32,8 +32,12 @@ export function WorkspacePicker({ workspaces, value, onChange }: WorkspacePicker
         href="/workspaces"
         className="mh-mono"
         style={{
-          fontSize: 11,
-          color: "var(--text-3)",
+          display: "inline-flex",
+          alignItems: "center",
+          minHeight: 36,
+          padding: "0 4px",
+          fontSize: 12,
+          color: "var(--text-2)",
           whiteSpace: "nowrap"
         }}
       >

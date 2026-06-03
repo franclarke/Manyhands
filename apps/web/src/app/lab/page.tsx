@@ -53,7 +53,7 @@ export default async function LabPage(): Promise<React.ReactElement> {
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
         <span className="mh-coord" style={{ color: "var(--copper)" }}>experiments / log</span>
         <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
-        <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
+        <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
           Gemini CLI measurements appear only after execution
         </span>
       </div>
@@ -78,7 +78,7 @@ export default async function LabPage(): Promise<React.ReactElement> {
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
           <span className="mh-coord">measurements</span>
           <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
-          <span style={{ fontSize: 11, color: "var(--text-3)" }}>latest local runs</span>
+          <span style={{ fontSize: 12, color: "var(--text-2)" }}>latest local runs</span>
         </div>
         <NotebookTable rows={ROWS.map((row) => ({ row, run: latestByGranularity.get(row.mode) }))} />
       </div>
@@ -141,11 +141,22 @@ function GranularityCard({
       <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <Status status={run?.status} />
         {run !== undefined ? (
-          <Link className="mh-mono" href={`/runs/${run.runId}`} style={{ fontSize: 11, color: "var(--copper)" }}>
+          <Link
+            className="mh-mono"
+            href={`/runs/${run.runId}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              minHeight: 36,
+              padding: "0 4px",
+              fontSize: 12,
+              color: "var(--copper-hi)"
+            }}
+          >
             Open run
           </Link>
         ) : (
-          <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>no run</span>
+          <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>no run</span>
         )}
       </div>
     </article>
@@ -176,7 +187,7 @@ function NotebookTable({
             gridTemplateColumns: "1.4fr 1fr 1fr 1fr",
             padding: "10px 16px",
             borderBottom: "1px solid var(--rule)",
-            background: "rgba(229,222,204,0.025)"
+            background: "rgba(241,234,216,0.045)"
           }}
         >
           <span className="mh-coord">metric</span>
@@ -221,7 +232,7 @@ function KV({ k, v }: { k: string; v: string | number }): React.ReactElement {
 
 function Status({ status }: { status: RunStatusKey | undefined }): React.ReactElement {
   if (status === undefined) {
-    return <span style={{ color: "var(--text-3)", fontSize: 11 }}>no measurement</span>;
+    return <span style={{ color: "var(--text-2)", fontSize: 12 }}>no measurement</span>;
   }
   return <Signal status={runUiStatus(status)} label={status.replace(/_/g, " ")} />;
 }

@@ -27,7 +27,9 @@ export function MetricStat({
       >
         {value}
       </span>
-      <span className="mh-coord">{label}</span>
+      <span className="mh-coord" style={{ color: muted ? "var(--color-text-subtle)" : "var(--color-text-muted)" }}>
+        {label}
+      </span>
     </div>
   );
 }

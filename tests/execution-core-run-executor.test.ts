@@ -106,6 +106,72 @@ function graphWith(
   };
 }
 
+function nestedCompositeGraph(): TaskGraph {
+  return {
+    id: "graph-nested",
+    planId: RUN_ID,
+    repo: "repo",
+    baseBranch: "main",
+    baseCommit: "BASE",
+    featureRequest: "Build it.",
+    rootId: "root",
+    createdAt: "2026-05-28T00:00:00.000Z",
+    dependencies: [],
+    nodes: {
+      root: {
+        id: "root",
+        parentId: null,
+        kind: "composite",
+        title: "Root",
+        goal: "Coordinate all branches.",
+        status: "planned",
+        granularity: "medium",
+        depth: 0,
+        childrenIds: ["child-composite"],
+        dependencies: []
+      },
+      "child-composite": {
+        id: "child-composite",
+        parentId: "root",
+        kind: "composite",
+        title: "Child composite",
+        goal: "Coordinate child leaves.",
+        status: "planned",
+        granularity: "medium",
+        depth: 1,
+        childrenIds: ["a", "b"],
+        dependencies: []
+      },
+      a: {
+        id: "a",
+        parentId: "child-composite",
+        kind: "leaf",
+        title: "a",
+        goal: "Do a.",
+        status: "planned",
+        granularity: "fine",
+        depth: 2,
+        childrenIds: [],
+        dependencies: [],
+        acceptanceCriteria: ["criterion one"]
+      },
+      b: {
+        id: "b",
+        parentId: "child-composite",
+        kind: "leaf",
+        title: "b",
+        goal: "Do b.",
+        status: "planned",
+        granularity: "fine",
+        depth: 2,
+        childrenIds: [],
+        dependencies: [],
+        acceptanceCriteria: ["criterion one"]
+      }
+    }
+  };
+}
+
 function makeExecutor(git: FakeGitRunner, traceStore: InMemoryTraceStore): RunExecutor {
   return new RunExecutor({
     git,
@@ -176,6 +242,28 @@ describe("RunExecutor", () => {
 
     expect(result.status).toBe("failed");
     expect(result.leafResults.every((r) => r.status === "empty_diff")).toBe(true);
+  });
+
+  it("propagates failed composite integration to ancestor composites", async () => {
+    const git = new FakeGitRunner({ diffCachedNameOnly: [] });
+    const executor = makeExecutor(git, new InMemoryTraceStore());
+
+    const result = await executor.run({
+      graph: nestedCompositeGraph(),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.integrationResults).toHaveLength(2);
+    expect(result.integrationResults.map((entry) => entry.compositeTaskId)).toEqual([
+      "child-composite",
+      "root"
+    ]);
+    expect(result.integrationResults.map((entry) => entry.status)).toEqual([
+      "child_failed",
+      "child_failed"
+    ]);
   });
 
   it("cleans the worktree it created even when the run throws mid-execution (I1)", async () => {

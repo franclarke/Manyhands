@@ -37,7 +37,7 @@ export function RunHeader({
     <section
       style={{
         border: "1px solid var(--rule)",
-        background: "linear-gradient(180deg, rgba(229,222,204,0.035), rgba(19,20,22,0.76))",
+        background: "linear-gradient(180deg, rgba(241,234,216,0.055), rgba(19,20,22,0.82))",
         borderRadius: "var(--r-xl)",
         padding: "18px 20px",
         display: "flex",
@@ -51,7 +51,7 @@ export function RunHeader({
             <span className="mh-coord" style={{ color: "var(--copper)" }}>
               run workspace
             </span>
-            <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
+            <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
               {run.runId.slice(0, 8)}
             </span>
             <StatusBadge status={runUiStatus(liveStatus)} label={liveStatus.replace("_", " ")} />
@@ -59,7 +59,7 @@ export function RunHeader({
           <h1
             style={{
               margin: 0,
-              fontSize: 26,
+              fontSize: 28,
               color: "var(--text)",
               lineHeight: 1.15,
               maxWidth: 980
@@ -83,7 +83,7 @@ export function RunHeader({
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 7, alignItems: "flex-end" }}>
           <ModeSignal label={mode} />
-          <span className="mh-mono" style={{ fontSize: 10.5, color: "var(--text-3)" }}>
+          <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
             updated {formatDate(run.updatedAt)}
           </span>
         </div>
@@ -106,19 +106,14 @@ export function RunHeader({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(86px, 1fr))",
-          gap: 8
+          gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
+          gap: 10
         }}
       >
         <Metric label="Total nodes" value={metrics.totalNodes} />
         <Metric label="Ready" value={metrics.ready} tone="ready" />
-        <Metric label="Running" value={metrics.running} tone="running" />
-        <Metric label="Blocked" value={metrics.blocked} tone="blocked" />
-        <Metric label="Needs review" value={metrics.needsReview} tone="review" />
-        <Metric label="Failed" value={metrics.failed} tone="failed" />
-        <Metric label="Integrated" value={metrics.integrated} tone="integrated" />
         <Metric label="High risk" value={metrics.highRisk} tone="failed" />
-        <Metric label="Parallel batches" value={metrics.parallelBatches} />
+        <Metric label="Failed" value={metrics.failed} tone="failed" />
       </div>
     </section>
   );
@@ -167,17 +162,17 @@ function Metric({
   return (
     <div
       style={{
-        border: "1px solid var(--rule-soft)",
-        background: "rgba(15,16,18,0.38)",
+        border: "1px solid var(--rule)",
+        background: "rgba(15,16,18,0.42)",
         borderRadius: "var(--r-md)",
         padding: "8px 9px",
         minWidth: 0
       }}
     >
-      <div className="mh-mono" style={{ fontSize: 20, color, lineHeight: 1 }}>
+      <div className="mh-mono" style={{ fontSize: 24, color, lineHeight: 1 }}>
         {value}
       </div>
-      <div className="mh-coord" style={{ marginTop: 6, fontSize: 8.5, whiteSpace: "normal" }}>
+      <div className="mh-coord" style={{ marginTop: 7, fontSize: 11, whiteSpace: "normal" }}>
         {label}
       </div>
     </div>
@@ -190,12 +185,12 @@ function ModeSignal({ label }: { label: string }): React.ReactElement {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        height: 24,
+        minHeight: 28,
         padding: "0 9px",
         border: "1px solid var(--rule-strong)",
         borderRadius: 999,
         color: "var(--copper-hi)",
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 700,
         whiteSpace: "nowrap"
       }}

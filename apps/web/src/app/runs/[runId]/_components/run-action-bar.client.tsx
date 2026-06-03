@@ -82,7 +82,7 @@ export function RunActionBar({
     <div
       style={{
         border: "1px solid var(--rule)",
-        background: "rgba(229,222,204,0.018)",
+        background: "rgba(241,234,216,0.035)",
         borderRadius: "var(--r-md)",
         padding: "8px 10px",
         display: "flex",
@@ -137,7 +137,7 @@ export function RunActionBar({
           Restart
         </Button>
       ) : null}
-      <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)" }}>
+      <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
         next action / {status.replace("_", " ")}
       </span>
       <span style={{ flex: 1 }} />
@@ -240,7 +240,7 @@ function PlanReviewModal({
                     <div style={{ color: "var(--text)", fontSize: 12.5, fontWeight: 700 }}>
                       {issue.title}{issue.taskId !== undefined ? ` / ${issue.taskId}` : ""}
                     </div>
-                    <div style={{ color: "var(--text-3)", fontSize: 12, lineHeight: 1.45 }}>{issue.detail}</div>
+                    <div style={{ color: "var(--text-2)", fontSize: 12.5, lineHeight: 1.5 }}>{issue.detail}</div>
                   </div>
                 </div>
               ))}
@@ -301,7 +301,7 @@ function ReviewMetric({ label, value }: { label: string; value: number }): React
 function ReviewRow({ label, value }: { label: string; value: string }): React.ReactElement {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-      <span style={{ color: "var(--text-3)" }}>{label}</span>
+      <span style={{ color: "var(--text-2)" }}>{label}</span>
       <span className="mh-mono" style={{ color: "var(--text)" }}>{value}</span>
     </div>
   );
@@ -316,22 +316,24 @@ function PatchTag({ label, value }: { label: string; value: number }): React.Rea
 }
 
 const secondaryButtonStyle: React.CSSProperties = {
-  border: "1px solid var(--rule)",
-  background: "transparent",
-  color: "var(--text-2)",
+  border: "1px solid var(--rule-control)",
+  background: "rgba(241,234,216,0.035)",
+  color: "var(--text)",
   borderRadius: 5,
-  padding: "7px 11px",
+  minHeight: 36,
+  padding: "0 12px",
   cursor: "pointer",
-  fontSize: 12
+  fontSize: 12.5
 };
 
 const primaryButtonStyle: React.CSSProperties = {
   border: "1px solid var(--copper)",
-  background: "rgba(180,113,72,0.14)",
+  background: "rgba(208,138,90,0.16)",
   color: "var(--copper-hi)",
   borderRadius: 5,
-  padding: "7px 12px",
+  minHeight: 36,
+  padding: "0 13px",
   cursor: "pointer",
-  fontSize: 12,
+  fontSize: 12.5,
   fontWeight: 600
 };

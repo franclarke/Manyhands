@@ -331,23 +331,22 @@ export function WorkspaceFormDialog({
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  padding: "8px 10px",
-  border: "1px solid var(--border)",
-  background: "var(--bg-1)",
+  padding: "9px 11px",
+  border: "1px solid var(--rule-control)",
+  background: "var(--surface)",
   color: "var(--text)",
   borderRadius: 6,
   fontSize: 13,
-  fontFamily: "var(--font-sans)",
-  outline: "none"
+  fontFamily: "var(--font-sans)"
 };
 
 const secondaryButtonStyle: React.CSSProperties = {
   padding: "0 10px",
-  border: "1px solid var(--border)",
-  background: "transparent",
-  color: "var(--text-2)",
+  border: "1px solid var(--rule-control)",
+  background: "rgba(241,234,216,0.035)",
+  color: "var(--text)",
   borderRadius: 6,
-  fontSize: 12,
+  fontSize: 12.5,
   cursor: "pointer"
 };
 
@@ -547,7 +546,7 @@ const folderButtonStyle: React.CSSProperties = {
   justifyContent: "space-between",
   gap: 8,
   border: "1px solid var(--rule-soft)",
-  background: "rgba(229,222,204,0.025)",
+  background: "rgba(241,234,216,0.045)",
   color: "var(--text)",
   borderRadius: 5,
   padding: "6px 8px",
@@ -578,7 +577,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span
         style={{
           fontFamily: "var(--font-mono)",
-          fontSize: 10.5,
+          fontSize: 12,
           letterSpacing: 0.4,
           textTransform: "uppercase",
           color: "var(--text-3)"

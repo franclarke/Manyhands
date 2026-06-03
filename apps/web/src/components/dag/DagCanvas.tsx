@@ -10,6 +10,7 @@ import {
   ReactFlow,
   useReactFlow,
   type Edge,
+  MarkerType,
   type Node,
   type NodeProps,
   type NodeTypes
@@ -45,6 +46,10 @@ const nodeTypes: NodeTypes = {
 const FIT_VIEW_OPTIONS = { padding: 0.12, includeHiddenNodes: false } as const;
 /** Zoom level applied when focusing/centering a single node — close enough to read the card. */
 const FOCUS_ZOOM = 1.1;
+const EDGE_MUTED = "rgba(241,234,216,0.18)";
+const TREE_EDGE = "rgba(185,173,152,0.50)";
+const EDGE_CONTEXT = "rgba(215,155,114,0.88)";
+const EDGE_RELATED = "rgba(185,173,152,0.70)";
 
 export function DagCanvas(props: DagCanvasProps): React.ReactElement {
   const { graph, selectedTaskId, highlightTaskIds, selectionRelations, onSelectTask } = props;
@@ -76,8 +81,8 @@ export function DagCanvas(props: DagCanvasProps): React.ReactElement {
     (taskId: string) => {
       const node = getNode(taskId);
       if (node === undefined) return;
-      const width = node.measured?.width ?? node.width ?? 248;
-      const height = node.measured?.height ?? node.height ?? 150;
+      const width = node.measured?.width ?? node.width ?? 292;
+      const height = node.measured?.height ?? node.height ?? 160;
       void setCenter(node.position.x + width / 2, node.position.y + height / 2, {
         zoom: FOCUS_ZOOM,
         duration: 320
@@ -123,7 +128,7 @@ export function DagCanvas(props: DagCanvasProps): React.ReactElement {
       onPaneClick={() => onSelectTask(null)}
       style={{ background: "transparent", width: "100%", height: "100%" }}
     >
-      <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(229,222,204,0.045)" />
+      <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(241,234,216,0.035)" />
       <CanvasControls
         minimapVisible={minimapVisible}
         hasSelection={selectedTaskId !== null}
@@ -220,13 +225,13 @@ function CanvasControlButton({
       style={{
         display: "inline-flex",
         alignItems: "center",
-        height: 26,
-        padding: "0 9px",
-        border: `1px solid ${active ? "var(--copper)" : "var(--rule)"}`,
-        background: active ? "rgba(180,113,72,0.12)" : "transparent",
+        minHeight: 36,
+        padding: "0 11px",
+        border: `1px solid ${active ? "var(--copper)" : "var(--rule-control)"}`,
+        background: active ? "rgba(208,138,90,0.14)" : "rgba(241,234,216,0.035)",
         color: disabled ? "var(--text-4)" : active ? "var(--copper-hi)" : "var(--text-2)",
         borderRadius: 5,
-        fontSize: 11,
+        fontSize: 12,
         fontFamily: "var(--font-mono)",
         letterSpacing: 0.3,
         cursor: disabled ? "not-allowed" : "pointer",
@@ -247,7 +252,6 @@ function buildFlow(
 ): { nodes: Node[]; edges: Edge[] } {
   const layout = layoutByDepth(graph.nodes);
   const isFiltered = highlightTaskIds !== null;
-  const nodeStatusById = new Map(graph.nodes.map((node) => [node.id, node.status]));
 
   const headerNodes: Node[] = layout.columns.map((column) => ({
     id: `phase-${column.depth}`,
@@ -287,7 +291,7 @@ function buildFlow(
 
   const hierarchyEdges = buildHierarchyEdges(graph.nodes, selectedTaskId, highlightTaskIds, selectionRelations, isFiltered);
   const edges: Edge[] = graph.edges.map((edge) =>
-    toFlowEdge(edge, selectedTaskId, highlightTaskIds, selectionRelations, isFiltered, nodeStatusById)
+    toFlowEdge(edge, selectedTaskId, highlightTaskIds, selectionRelations, isFiltered)
   );
 
   return { nodes: [...headerNodes, ...taskNodes], edges: [...hierarchyEdges, ...edges] };
@@ -369,6 +373,7 @@ function buildHierarchyEdges(
         selectionRelations !== null &&
         selectionRelations.related.has(parentId) &&
         selectionRelations.related.has(node.id);
+      const contextual = isSelected || isRelated;
       const dimmed =
         isFiltered &&
         highlightTaskIds !== null &&
@@ -382,12 +387,23 @@ function buildHierarchyEdges(
         type: "smoothstep",
         selectable: false,
         focusable: false,
+        ...(contextual
+          ? {
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                color: isSelected ? EDGE_CONTEXT : EDGE_RELATED,
+                width: 12,
+                height: 12
+              }
+            }
+          : {}),
         style: {
-          stroke: isSelected || isRelated ? "var(--status-review-fg)" : "rgba(229,222,204,0.24)",
-          strokeWidth: isSelected || isRelated ? 1.7 : 1.15,
-          opacity: dimmed ? 0.12 : isSelected || isRelated ? 0.82 : 0.38
+          stroke: contextual ? (isSelected ? EDGE_CONTEXT : EDGE_RELATED) : TREE_EDGE,
+          strokeWidth: isSelected ? 1.6 : 1.08,
+          strokeLinecap: "round",
+          opacity: dimmed ? 0.12 : contextual ? 0.78 : 0.66
         },
-        zIndex: 0
+        zIndex: contextual ? 2 : 0
       } satisfies Edge;
     });
 }
@@ -397,11 +413,11 @@ function PhaseHeaderNode({ data }: NodeProps): React.ReactElement {
   return (
     <div
       style={{
-        width: 248,
+        width: 292,
         display: "flex",
         alignItems: "center",
         gap: 10,
-        color: "var(--text-3)",
+        color: "var(--text-2)",
         userSelect: "none"
       }}
     >
@@ -409,8 +425,8 @@ function PhaseHeaderNode({ data }: NodeProps): React.ReactElement {
         className="phase-label"
         style={{
           fontFamily: "var(--font-mono)",
-          fontSize: 10.5,
-          letterSpacing: "0.18em",
+          fontSize: 11,
+          letterSpacing: "0.14em",
           textTransform: "uppercase",
           color: "var(--copper)",
           whiteSpace: "nowrap"
@@ -421,8 +437,8 @@ function PhaseHeaderNode({ data }: NodeProps): React.ReactElement {
       <span
         style={{
           fontFamily: "var(--font-mono)",
-          fontSize: 10,
-          color: "var(--text-3)",
+          fontSize: 11,
+          color: "var(--text-2)",
           whiteSpace: "nowrap"
         }}
       >
@@ -438,61 +454,58 @@ function toFlowEdge(
   selectedTaskId: string | null,
   highlightTaskIds: ReadonlySet<string> | null,
   selectionRelations: SelectionRelations | null,
-  isFiltered: boolean,
-  nodeStatusById: ReadonlyMap<string, GraphNodeView["status"]>
+  isFiltered: boolean
 ): Edge {
   const isSelected = selectedTaskId !== null && (edge.source === selectedTaskId || edge.target === selectedTaskId);
   const isRelated = edgeIsRelated(edge, selectionRelations);
   const dimmed = isFiltered && highlightTaskIds!.size > 0 &&
     !(highlightTaskIds!.has(edge.source) && highlightTaskIds!.has(edge.target));
-  const sourceStatus = nodeStatusById.get(edge.source);
-  const targetStatus = nodeStatusById.get(edge.target);
-  const completed = isCompletedStatus(sourceStatus) && isCompletedStatus(targetStatus);
+  const contextual = isSelected || isRelated;
 
   const baseStyle: { stroke: string; strokeWidth: number; strokeDasharray?: string } = (() => {
     if (edge.kind === "risk") {
       const color = edge.riskLevel ? riskColor(edge.riskLevel) : "var(--risk-high)";
       return {
-        stroke: color,
-        strokeWidth: edge.acknowledged === true ? 1 : edge.riskLevel === "blocking" ? 1.8 : 1.4,
-        strokeDasharray: edge.acknowledged === true ? "2 6" : "5 4"
+        stroke: contextual ? color : EDGE_MUTED,
+        strokeWidth: contextual ? (edge.riskLevel === "blocking" ? 1.8 : 1.45) : 0.9,
+        strokeDasharray: edge.acknowledged === true ? "2 7" : "4 6"
       };
     }
     if (edge.kind === "gate") {
       return {
-        stroke: "var(--status-blocked-fg)",
-        strokeWidth: 1.4,
-        strokeDasharray: "6 3"
-      };
-    }
-    if (completed) {
-      return {
-        stroke: "var(--status-integrated-fg)",
-        strokeWidth: 1.25
+        stroke: contextual ? "var(--status-blocked-fg)" : EDGE_MUTED,
+        strokeWidth: contextual ? 1.45 : 0.9,
+        strokeDasharray: "4 6"
       };
     }
     return {
-      stroke: "var(--text-4)",
-      strokeWidth: 1.1
+      stroke: contextual ? (isSelected ? EDGE_CONTEXT : EDGE_RELATED) : EDGE_MUTED,
+      strokeWidth: contextual ? (isSelected ? 1.55 : 1.2) : 0.9
     };
   })();
-
-  if (isSelected) {
-    baseStyle.strokeWidth += 0.6;
-  } else if (isRelated) {
-    baseStyle.strokeWidth += 0.35;
-  }
 
   const result: Edge = {
     id: edge.id,
     source: edge.source,
     target: edge.target,
     type: "smoothstep",
-    animated: edge.acknowledged !== true && edge.kind === "risk" && (edge.riskLevel === "blocking" || edge.riskLevel === "high"),
+    hidden: !contextual && !isFiltered,
+    animated: false,
+    ...(contextual
+      ? {
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: baseStyle.stroke,
+            width: 14,
+            height: 14
+          }
+        }
+      : {}),
     style: {
       ...baseStyle,
-      opacity: edge.acknowledged === true ? 0.24 : dimmed ? 0.14 : isSelected || isRelated ? 1 : 0.62
-    }
+      opacity: edge.acknowledged === true ? 0.2 : dimmed ? 0.08 : contextual ? 0.92 : 0.18
+    },
+    zIndex: contextual ? 3 : 0
   };
 
   return result;
@@ -505,10 +518,6 @@ function relationForNode(taskId: string, relations: SelectionRelations | null): 
   if (relations.dependencies.has(taskId)) return "dependency";
   if (relations.children.has(taskId)) return "child";
   return undefined;
-}
-
-function isCompletedStatus(status: GraphNodeView["status"] | undefined): boolean {
-  return status === "done" || status === "approved" || status === "integrated";
 }
 
 function miniMapNodeColor(data: TaskNodeData, type?: string): string {
