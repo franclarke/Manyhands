@@ -14,7 +14,6 @@ interface RunCanvasBindingProps {
   runId: string;
   initialStatus: RunStatusKey;
   snapshot: RunSnapshot | null;
-  benchmarkLabel: string;
   configLabel: string;
   readyTaskCount: number;
   activeConflictCount: number;
@@ -43,7 +42,6 @@ export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactEleme
     <RunCanvasShell
       source={{ kind: "persisted-run", runId: props.runId, initialStatus: status }}
       snapshot={props.snapshot}
-      benchmarkLabel={props.benchmarkLabel}
       configLabel={props.configLabel}
       mode="Run"
       showMethodologyBanner={false}

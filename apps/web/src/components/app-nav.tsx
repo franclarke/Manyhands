@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { href: "/", label: "Command" },
-  { href: "/lab", label: "Experiments" },
   { href: "/workspaces", label: "Workspaces" }
 ];
 
@@ -28,7 +27,7 @@ export function AppNav(): React.ReactElement {
               ManyHands
             </span>
             <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
-              orchestration lab
+              agent orchestration
             </span>
           </span>
         </Link>

@@ -6,7 +6,6 @@ import { granularityLabelForMode } from "@/lib/granularity";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import { buildPlanReviewSummary } from "@/lib/plan-review";
 import { canNodeRunNow, operationalMetrics } from "@/lib/run-presentation";
-import { findScenario } from "@/lib/scenarios";
 import {
   RunNotFoundError,
   getRunRepository,
@@ -37,7 +36,6 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
 
   const workspaces = await getWorkspaceRepository().list();
   const workspace = workspaces.find((entry) => entry.id === run.workspaceId) ?? null;
-  const scenario = run.scenarioId !== undefined ? findScenario(run.scenarioId) ?? null : null;
   const snapshot = projectRunRecordToSnapshot(run);
   const patches = parseRunPatches(run.patches);
   const conflictState = conflictStateFor(snapshot, patches);
@@ -53,7 +51,6 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
         runId={run.runId}
         initialStatus={run.status}
         snapshot={snapshot}
-        benchmarkLabel={scenario?.benchmarkId ?? run.scenarioId ?? "prompt"}
         configLabel={`granularity / ${granularityLabelForMode(run.granularity)}`}
         readyTaskCount={readyTaskCount}
         activeConflictCount={activeConflictCount}
@@ -78,7 +75,6 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
           <RunHeader
             run={run}
             workspace={workspace}
-            scenario={scenario}
             liveStatus={run.status}
             summary={runSummary}
           />

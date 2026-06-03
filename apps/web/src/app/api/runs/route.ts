@@ -13,7 +13,6 @@ import {
   type RunStatus
 } from "@/lib/server/runs";
 import { toRunPreview, toRunResponse } from "@/lib/server/runs/presenter";
-import { findScenario } from "@/lib/scenarios";
 import {
   WorkspaceNotFoundError,
   getWorkspaceRepository
@@ -72,24 +71,6 @@ export async function POST(request: Request): Promise<NextResponse> {
       const issue = parsed.error.issues[0];
       throw new RunValidationError(issue?.message ?? "Invalid run create request");
     }
-    // Prompt-only path: scenarioId is optional. When present, validate it.
-    // When absent, the runner builds a FeatureRequest from the user prompt.
-    const scenarioId = parsed.data.scenarioId;
-    let scenarioName: string | undefined;
-
-    if (scenarioId !== undefined) {
-      const scenario = findScenario(scenarioId);
-      if (scenario === undefined) {
-        throw new RunValidationError(`Unknown scenarioId: ${scenarioId}`);
-      }
-      // "auto" resolves to "balanced" at runtime, so skip scenario granularity validation.
-      if (parsed.data.granularity !== "auto" && !scenario.supportedGranularities.includes(parsed.data.granularity)) {
-        throw new RunValidationError(
-          `Scenario ${scenario.id} does not support granularity ${parsed.data.granularity}`
-        );
-      }
-      scenarioName = scenario.name;
-    }
 
     const workspace = await getWorkspaceRepository().get(parsed.data.workspaceId); // throws WorkspaceNotFoundError → 404
 
@@ -97,23 +78,17 @@ export async function POST(request: Request): Promise<NextResponse> {
     const runId = randomUUID();
     const userPrompt = parsed.data.userPrompt ?? "";
 
-    // Prompt-only runs require a non-empty prompt.
-    if (scenarioId === undefined && userPrompt.trim().length === 0) {
-      throw new RunValidationError(
-        "A user prompt is required when no scenario is selected."
-      );
+    if (userPrompt.trim().length === 0) {
+      throw new RunValidationError("A user prompt is required to create a run.");
     }
 
-    const title = userPrompt.length > 0
-      ? userPrompt.slice(0, 120)
-      : scenarioName ?? "Untitled run";
+    const title = userPrompt.slice(0, 120);
     const record: RunRecord = {
       runId,
       workspaceId: parsed.data.workspaceId,
-      ...(scenarioId !== undefined ? { scenarioId } : {}),
       ...(parsed.data.repoSpec !== undefined
         ? { repoSpec: parsed.data.repoSpec }
-        : scenarioId === undefined && workspace.repoPath !== undefined
+        : workspace.repoPath !== undefined
           ? { repoSpec: { kind: "localPath" as const, path: workspace.repoPath } }
           : {}),
       granularity: parsed.data.granularity,

@@ -102,7 +102,6 @@ export type PlanningLiveNode = z.infer<typeof PlanningLiveNodeSchema>;
 export const RunRecordSchema = z.object({
   runId: z.string().min(1),
   workspaceId: z.string().min(1),
-  scenarioId: z.string().min(1).optional(),
   granularity: GranularityModeSchema,
   model: z.string().min(1),
   userPrompt: z.string().max(4000),
@@ -119,12 +118,13 @@ export const RunRecordSchema = z.object({
   completedAt: z.string().datetime().optional(),
   /** Updated by the runner every few seconds while planning or executing. */
   heartbeatAt: z.string().datetime().optional(),
-  // Opaque payloads from @manyhands/core. We do not re-validate the full nested shape
-  // to avoid coupling apps/web to internal core schemas.
+  // Opaque payloads produced by the planning and execution pipelines. The full
+  // nested shape is not re-validated here to keep apps/web decoupled from the
+  // internal schemas of @manyhands/decomposer and @manyhands/execution-core.
   planning: z.unknown().optional(),
   execution: z.unknown().optional(),
   decomposition: RunDecompositionMetadataSchema.optional(),
-  /** Target repo for real execution (C17 / Etapa 2A). Absent = mock-only run. */
+  /** Target repo for real execution. */
   repoSpec: RepoSpecSchema.optional(),
   /** Filled by the runner once the repo is provisioned, before execution. */
   provisioned: ProvisionedRepoRecordSchema.optional(),
@@ -165,11 +165,10 @@ export type RunFile = z.infer<typeof RunFileSchema>;
 
 export const RunCreateRequestSchema = z.object({
   workspaceId: z.string().min(1),
-  scenarioId: z.string().min(1).optional(),
   granularity: GranularityModeSchema,
   model: z.string().min(1),
   userPrompt: z.string().trim().max(4000).default(""),
-  /** Optional target repo for real execution. Absent = mock-only run. */
+  /** Target repo for real execution. */
   repoSpec: RepoSpecSchema.optional()
 });
 

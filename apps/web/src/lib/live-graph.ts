@@ -136,10 +136,10 @@ function buildPlanningSnapshot(run: RunRecord, planning: MockPlanningFlowResult)
     metadata: {
       schemaVersion: "manyhands.run-snapshot.v1",
       createdAt: run.createdAt,
-      // Only lab/scenario runs and the deterministic fallback are "mock". Real
-      // prompt runs (Gemini/Anthropic planning) are not — so the toolbar badge
-      // doesn't tag a real run with "/ mock".
-      deterministic: run.scenarioId !== undefined || run.decomposition?.provider === "deterministic"
+      // Only the deterministic fallback is "mock". Real prompt runs
+      // (Gemini/Anthropic planning) are not — so the toolbar badge doesn't
+      // tag a real run with "/ mock".
+      deterministic: run.decomposition?.provider === "deterministic"
     }
   } as RunSnapshot;
 }
