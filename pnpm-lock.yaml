@@ -27,7 +27,6 @@ importers:
     specifiers:
       '@manyhands/conflict-risk': workspace:*
       '@manyhands/core': workspace:*
-      '@manyhands/evaluator': workspace:*
       '@manyhands/execution-core': workspace:*
       '@manyhands/task-graph': workspace:*
       '@manyhands/trace-store': workspace:*
@@ -50,7 +49,6 @@ importers:
     dependencies:
       '@manyhands/conflict-risk': link:../../packages/conflict-risk
       '@manyhands/core': link:../../packages/core
-      '@manyhands/evaluator': link:../../packages/evaluator
       '@manyhands/execution-core': link:../../packages/execution-core
       '@manyhands/task-graph': link:../../packages/task-graph
       '@manyhands/trace-store': link:../../packages/trace-store
@@ -97,26 +95,20 @@ importers:
       '@manyhands/conflict-risk': workspace:*
       '@manyhands/contracts': workspace:*
       '@manyhands/decomposer': workspace:*
-      '@manyhands/evaluator': workspace:*
       '@manyhands/repository-index': workspace:*
       '@manyhands/run-store': workspace:*
       '@manyhands/scheduler': workspace:*
-      '@manyhands/scope-validation': workspace:*
       '@manyhands/task-graph': workspace:*
       '@manyhands/trace-store': workspace:*
-      '@manyhands/worktree-runner': workspace:*
     dependencies:
       '@manyhands/conflict-risk': link:../conflict-risk
       '@manyhands/contracts': link:../contracts
       '@manyhands/decomposer': link:../decomposer
-      '@manyhands/evaluator': link:../evaluator
       '@manyhands/repository-index': link:../repository-index
       '@manyhands/run-store': link:../run-store
       '@manyhands/scheduler': link:../scheduler
-      '@manyhands/scope-validation': link:../scope-validation
       '@manyhands/task-graph': link:../task-graph
       '@manyhands/trace-store': link:../trace-store
-      '@manyhands/worktree-runner': link:../worktree-runner
 
   packages/decomposer:
     specifiers:
@@ -130,20 +122,6 @@ importers:
       '@manyhands/contracts': link:../contracts
       '@manyhands/shared': link:../shared
       '@manyhands/task-graph': link:../task-graph
-      zod: 3.25.76
-
-  packages/evaluator:
-    specifiers:
-      '@manyhands/decomposer': workspace:*
-      '@manyhands/run-store': workspace:*
-      '@manyhands/scheduler': workspace:*
-      '@manyhands/shared': workspace:*
-      zod: ^3.23.8
-    dependencies:
-      '@manyhands/decomposer': link:../decomposer
-      '@manyhands/run-store': link:../run-store
-      '@manyhands/scheduler': link:../scheduler
-      '@manyhands/shared': link:../shared
       zod: 3.25.76
 
   packages/execution-core:
@@ -181,7 +159,6 @@ importers:
       '@manyhands/decomposer': workspace:*
       '@manyhands/repository-index': workspace:*
       '@manyhands/scheduler': workspace:*
-      '@manyhands/scope-validation': workspace:*
       '@manyhands/shared': workspace:*
       '@manyhands/task-graph': workspace:*
       '@manyhands/trace-store': workspace:*
@@ -192,7 +169,6 @@ importers:
       '@manyhands/decomposer': link:../decomposer
       '@manyhands/repository-index': link:../repository-index
       '@manyhands/scheduler': link:../scheduler
-      '@manyhands/scope-validation': link:../scope-validation
       '@manyhands/shared': link:../shared
       '@manyhands/task-graph': link:../task-graph
       '@manyhands/trace-store': link:../trace-store
@@ -208,16 +184,6 @@ importers:
       '@manyhands/conflict-risk': link:../conflict-risk
       '@manyhands/contracts': link:../contracts
       '@manyhands/task-graph': link:../task-graph
-      zod: 3.25.76
-
-  packages/scope-validation:
-    specifiers:
-      '@manyhands/contracts': workspace:*
-      '@manyhands/shared': workspace:*
-      zod: ^3.23.8
-    dependencies:
-      '@manyhands/contracts': link:../contracts
-      '@manyhands/shared': link:../shared
       zod: 3.25.76
 
   packages/shared:
@@ -243,16 +209,6 @@ importers:
     dependencies:
       '@manyhands/shared': link:../shared
       zod: 3.25.76
-
-  packages/worktree-runner:
-    specifiers:
-      '@manyhands/contracts': workspace:*
-      '@manyhands/scope-validation': workspace:*
-      '@manyhands/shared': workspace:*
-    dependencies:
-      '@manyhands/contracts': link:../contracts
-      '@manyhands/scope-validation': link:../scope-validation
-      '@manyhands/shared': link:../shared
 
 packages:
 

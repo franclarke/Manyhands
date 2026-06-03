@@ -23,7 +23,6 @@
     "@manyhands/decomposer": "workspace:*",
     "@manyhands/repository-index": "workspace:*",
     "@manyhands/scheduler": "workspace:*",
-    "@manyhands/scope-validation": "workspace:*",
     "@manyhands/shared": "workspace:*",
     "@manyhands/task-graph": "workspace:*",
     "@manyhands/trace-store": "workspace:*",

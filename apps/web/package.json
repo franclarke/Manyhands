@@ -14,7 +14,6 @@
   "dependencies": {
     "@manyhands/conflict-risk": "workspace:*",
     "@manyhands/core": "workspace:*",
-    "@manyhands/evaluator": "workspace:*",
     "@manyhands/execution-core": "workspace:*",
     "@manyhands/task-graph": "workspace:*",
     "@manyhands/trace-store": "workspace:*",

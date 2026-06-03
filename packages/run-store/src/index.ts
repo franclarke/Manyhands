@@ -6,7 +6,6 @@ import { AgentRunResultSchema, AgentTaskContractSchema } from "@manyhands/contra
 import { DecompositionModeSchema, FeatureRequestSchema } from "@manyhands/decomposer";
 import { RepositoryIndexSummarySchema } from "@manyhands/repository-index";
 import { BlockedTaskSchema, ExecutionBatchSchema } from "@manyhands/scheduler";
-import { ScopeValidationResultSchema } from "@manyhands/scope-validation";
 import { EntityIdSchema, IsoTimestampSchema, nowIso } from "@manyhands/shared";
 import { TaskGraphSchema } from "@manyhands/task-graph";
 import {
@@ -21,6 +20,20 @@ import { z } from "zod";
 
 export const RUN_SNAPSHOT_SCHEMA_VERSION = "manyhands.run-snapshot.v1";
 export const DEFAULT_RUN_STORE_DIRECTORY = ".manyhands/runs";
+
+/**
+ * Per-leaf scope-validation outcome. Inlined here (previously sourced from
+ * @manyhands/scope-validation, now removed) so the snapshot schema can still
+ * round-trip legacy Lab-mode runs that included these entries. New runs use
+ * `ScopeCheckResult` from @manyhands/execution-core instead.
+ */
+export const ScopeValidationResultSchema = z.object({
+  taskId: EntityIdSchema,
+  passed: z.boolean(),
+  violations: z.array(z.string()).default([])
+});
+
+export type ScopeValidationResult = z.infer<typeof ScopeValidationResultSchema>;
 
 export const RunStatusSchema = z.union([
   z.literal("planned"),
