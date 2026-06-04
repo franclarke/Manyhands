@@ -5,6 +5,7 @@ import {
   RunValidationError,
   canRestart,
   getRunRepository,
+  restartResumesExecution,
   runExecutionPipeline,
   runPlanningPipeline
 } from "@/lib/server/runs";
@@ -25,24 +26,35 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
     if (!canRestart(run.status)) {
       throw new RunLifecycleError(`Cannot restart from status ${run.status}`);
     }
-    // Decide which pipeline to kick based on how the run was interrupted.
-    // Planning is the default; execution restart is reserved for runs that had
-    // already been approved before crashing.
-    const shouldResumeExecution = run.interruptedDuring === "running" && run.planning !== undefined;
-    if (shouldResumeExecution) {
-      // The execution pipeline transitions "approved" → "running"; we need
-      // "interrupted" → "running" instead. Persist approved metadata if missing
-      // and bridge through the lifecycle step.
+    // Decide which pipeline to kick from the run's recorded phase. A run that was
+    // already approved (and has a plan) resumes EXECUTION; otherwise we restart
+    // PLANNING. Both branches reset to a status the target pipeline can transition
+    // from and clear the stale failure so the next attempt starts clean.
+    if (restartResumesExecution(run)) {
+      // The execution pipeline transitions "approved" → "running". Persist approved
+      // metadata if missing and bridge through the lifecycle step.
       const approved = await repo.save({
         ...run,
         status: "approved",
+        errorMessage: undefined,
+        failedDuring: undefined,
         ...(run.approvedAt === undefined ? { approvedAt: new Date().toISOString() } : {})
       });
       void runExecutionPipeline(approved.runId).catch(() => undefined);
       return NextResponse.json(toRunResponse(await repo.get(id)));
     }
-    void runPlanningPipeline(run.runId).catch(() => undefined);
-    return NextResponse.json(toRunResponse(run));
+    // The planning pipeline only transitions "created"/"interrupted" → "generating",
+    // so a run that *failed* during planning must be reset to "interrupted" first —
+    // otherwise it stays "failed" and the final transition to "needs_review" throws.
+    const reset = await repo.save({
+      ...run,
+      status: "interrupted",
+      interruptedDuring: "generating",
+      errorMessage: undefined,
+      failedDuring: undefined
+    });
+    void runPlanningPipeline(reset.runId).catch(() => undefined);
+    return NextResponse.json(toRunResponse(reset));
   } catch (error) {
     return errorResponse(error);
   }

@@ -8,6 +8,7 @@ import type { RunStatusKey } from "@/lib/api-types";
 import type { RunGraphViewModel, GraphNodeStatus } from "@/lib/graph-view-model";
 import { toRunGraphViewModel } from "@/lib/graph-view-model";
 import type { ConflictListItem } from "@/lib/conflict-view-model";
+import type { RunFailurePhase } from "@/lib/run-phase";
 import type { TimelineRunInput } from "@/lib/run-timeline";
 import { DagWorkspace } from "./DagWorkspace";
 
@@ -40,6 +41,8 @@ interface RunCanvasShellProps {
   livePlanNodes?: readonly LivePlanNode[];
   /** Set when the run failed; shown prominently in the null-graph fallback area. */
   errorMessage?: string;
+  /** When the run failed, which phase broke — drives the phase bar's failed step. */
+  failedPhase?: RunFailurePhase;
   pendingQuestion?: { nodeId: string; question: string; options: string[] } | null;
   cliLogs?: readonly LivePlanCliLog[];
   nodeStatusOverrides?: ReadonlyMap<string, GraphNodeStatus>;
@@ -239,6 +242,7 @@ export function RunCanvasShell(props: RunCanvasShellProps): React.ReactElement {
         {...(props.conflictError !== undefined ? { conflictError: props.conflictError } : {})}
         {...(props.errorMessage !== undefined ? { errorMessage: props.errorMessage } : {})}
         {...(props.execution !== undefined ? { execution: props.execution } : {})}
+        {...(props.failedPhase !== undefined ? { failedPhase: props.failedPhase } : {})}
       />
       {source.kind === "persisted-run" ? (
         <LivePlanningPanels
