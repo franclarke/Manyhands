@@ -11,6 +11,7 @@ import type { TraceStore } from "@manyhands/trace-store";
 import type { AgentExecutor } from "../executor/types";
 import type { GitRunner } from "../git/runner";
 import { FileSystemContextPacker, type ContextPacker } from "../context/packer";
+import { execError, execLog, execWarn } from "../logging/log";
 import { RunExecutionError } from "../errors";
 import { computeGranularityVector } from "../granularity/vector";
 import { assertExecutableGraph } from "./graph-guards";
@@ -135,8 +136,29 @@ export class RunExecutor {
     const { graph, config } = params;
     const runId = params.runId ?? graph.planId;
 
+    const leafCount = Object.values(graph.nodes).filter((node) => node.kind === "leaf").length;
+    const compositeCount = Object.values(graph.nodes).filter(
+      (node) => node.kind !== "leaf" && node.childrenIds.length > 0
+    ).length;
+    execLog("run", "run started", {
+      runId,
+      leaves: leafCount,
+      composites: compositeCount,
+      maxParallel: config.maxParallel,
+      baseCommit: graph.baseCommit,
+      repoRoot: this.repoRoot
+    });
+
     // I7: reject a malformed graph before creating any worktree.
-    assertExecutableGraph(graph);
+    try {
+      assertExecutableGraph(graph);
+    } catch (error) {
+      execError("run", "graph rejected before execution (not executable)", {
+        runId,
+        message: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
 
     const startMs = this.clock();
 
@@ -190,6 +212,26 @@ export class RunExecutor {
       const totalDurationMs = this.clock() - startMs;
       const status = this.deriveStatus(leafResults, integrationResults, validationResult);
 
+      const failedLeaves = leafResults.filter((result) => result.status !== "success");
+      const failedIntegrations = integrationResults.filter(
+        (result) => !INTEGRATION_SUCCESS.has(result.status)
+      );
+      const logRunDone = status === "completed" ? execLog : execWarn;
+      logRunDone("run", `run ${status}`, {
+        runId,
+        status,
+        durationMs: totalDurationMs,
+        leaves: `${leafResults.length - failedLeaves.length}/${leafResults.length} ok`,
+        integrations: `${integrationResults.length - failedIntegrations.length}/${integrationResults.length} ok`,
+        validation: validationResult ? (validationResult.passed ? "passed" : "failed") : "none",
+        ...(failedLeaves.length > 0
+          ? { failedLeaves: failedLeaves.map((leaf) => `${leaf.taskId}:${leaf.status}`) }
+          : {}),
+        ...(failedIntegrations.length > 0
+          ? { failedIntegrations: failedIntegrations.map((entry) => `${entry.compositeTaskId}:${entry.status}`) }
+          : {})
+      });
+
       this.traceStore.append({
         type: "run_completed",
         actor: "system",
@@ -234,14 +276,34 @@ export class RunExecutor {
     const { node, runId, config, model } = args;
     const executorModel = resolveExecutorModel(node, model);
 
+    execLog("leaf", "dispatching leaf", {
+      task: node.id,
+      runId,
+      model: executorModel.model,
+      depth: node.depth
+    });
+
     this.traceStore.append({ type: "agent_started", actor: "system", taskId: node.id, payload: {} });
 
-    const worktree = await this.worktreeManager.create({
-      taskId: node.id,
-      runId,
-      kind: "leaf",
-      baseCommit: args.graph.baseCommit
-    });
+    let worktree: WorktreeRecord;
+    try {
+      worktree = await this.worktreeManager.create({
+        taskId: node.id,
+        runId,
+        kind: "leaf",
+        baseCommit: args.graph.baseCommit
+      });
+    } catch (error) {
+      // A worktree-creation failure throws and aborts the whole batch/run via the
+      // scheduler — log which leaf and why before it propagates.
+      execError("leaf", "leaf aborted: worktree creation failed", {
+        task: node.id,
+        runId,
+        baseCommit: args.graph.baseCommit,
+        message: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
     args.worktrees.push(worktree);
     this.traceStore.append({
       type: "worktree_created",
@@ -249,6 +311,33 @@ export class RunExecutor {
       taskId: node.id,
       payload: { path: worktree.path, branch: worktree.branch }
     });
+
+    try {
+      return await this.executeLeafInWorktree({ ...args, worktree, executorModel });
+    } catch (error) {
+      // Context packing, instruction writing, the executor seam and result
+      // recording should all be total — a throw here is unexpected. Log it
+      // against the task before it aborts the run.
+      execError("leaf", "leaf aborted: unexpected error during execution", {
+        task: node.id,
+        runId,
+        message: error instanceof Error ? error.message : String(error)
+      });
+      throw error;
+    }
+  }
+
+  private async executeLeafInWorktree(args: {
+    graph: TaskGraph;
+    node: TaskNode;
+    runId: string;
+    config: ExecutionConfig;
+    model: string;
+    worktrees: WorktreeRecord[];
+    worktree: WorktreeRecord;
+    executorModel: ResolvedExecutorModel;
+  }): Promise<AgentExecutionResult> {
+    const { node, runId, config, worktree, executorModel } = args;
 
     const context = await this.contextPacker.pack({
       worktreePath: worktree.path,
@@ -319,6 +408,13 @@ export class RunExecutor {
       .filter((node) => node.kind !== "leaf" && node.childrenIds.length > 0)
       .sort((a, b) => b.depth - a.depth);
 
+    if (composites.length > 0) {
+      execLog("integrate", "integrating composites bottom-up", {
+        runId,
+        composites: composites.length
+      });
+    }
+
     const integrationResults: IntegrationResult[] = [];
 
     for (const composite of composites) {
@@ -326,12 +422,28 @@ export class RunExecutor {
         .map((childId) => resultByTask.get(childId))
         .filter((result): result is AgentExecutionResult => result !== undefined);
 
-      const worktree = await this.worktreeManager.create({
-        taskId: composite.id,
-        runId,
-        kind: "integration",
-        baseCommit: graph.baseCommit
+      execLog("integrate", "integrating composite", {
+        task: composite.id,
+        depth: composite.depth,
+        children: `${childResults.length}/${composite.childrenIds.length} resolved`
       });
+
+      let worktree: WorktreeRecord;
+      try {
+        worktree = await this.worktreeManager.create({
+          taskId: composite.id,
+          runId,
+          kind: "integration",
+          baseCommit: graph.baseCommit
+        });
+      } catch (error) {
+        execError("integrate", "composite aborted: integration worktree creation failed", {
+          task: composite.id,
+          runId,
+          message: error instanceof Error ? error.message : String(error)
+        });
+        throw error;
+      }
       args.worktrees.push(worktree);
       this.traceStore.append({
         type: "worktree_created",
@@ -371,6 +483,22 @@ export class RunExecutor {
         ...(contract?.forbiddenPaths ? { forbiddenPaths: contract.forbiddenPaths } : {})
       });
       integrationResults.push(result);
+
+      if (INTEGRATION_SUCCESS.has(result.status)) {
+        execLog("integrate", "composite integrated", {
+          task: composite.id,
+          status: result.status,
+          commitSha: result.integrationCommitSha,
+          repaired: result.repairAttempted
+        });
+      } else {
+        execWarn("integrate", "composite integration failed", {
+          task: composite.id,
+          status: result.status,
+          repaired: result.repairAttempted,
+          ...(result.conflictDetails ? { conflictFiles: result.conflictDetails.files } : {})
+        });
+      }
 
       // A successfully integrated composite becomes a child for its own parent.
       if (INTEGRATION_SUCCESS.has(result.status) && result.integrationCommitSha) {
@@ -414,12 +542,26 @@ export class RunExecutor {
     if (commands.length === 0) {
       return undefined;
     }
+    execLog("validate", "running run-level validation", {
+      commands: commands.length,
+      cwd: worktreePath
+    });
     this.traceStore.append({
       type: "validation_started",
       actor: "system",
       payload: { scope: "run", commandCount: commands.length }
     });
-    return this.validationRunner.run(commands, { worktreePath, repoRoot: this.repoRoot });
+    const result = await this.validationRunner.run(commands, { worktreePath, repoRoot: this.repoRoot });
+    if (result.passed) {
+      execLog("validate", "run-level validation passed", { commands: commands.length });
+    } else {
+      execWarn("validate", "run-level validation failed", {
+        commands: commands.length,
+        exitCode: result.exitCode,
+        output: result.output
+      });
+    }
+    return result;
   }
 
   private async cleanupWorktrees(worktrees: WorktreeRecord[]): Promise<void> {
@@ -429,6 +571,11 @@ export class RunExecutor {
       } catch (error) {
         // I8: a cleanup failure must never mask the run result. Record it on the
         // trace and keep cleaning the rest (best-effort).
+        execWarn("cleanup", "worktree cleanup failed (best-effort, ignored)", {
+          task: worktree.taskId,
+          path: worktree.path,
+          message: error instanceof Error ? error.message : String(error)
+        });
         this.traceStore.append({
           type: "worktree_clean_failed",
           actor: "system",

@@ -1,5 +1,7 @@
 import type { TraceStore } from "@manyhands/trace-store";
 
+import { execLog } from "../logging/log";
+
 export interface ExecutionBatchInput {
   id: string;
   taskIds: string[];
@@ -39,7 +41,14 @@ export class BatchScheduler {
   async runBatches<T>(params: RunBatchesParams<T>): Promise<Map<string, T>> {
     const results = new Map<string, T>();
 
-    for (const batch of params.batches) {
+    const totalBatches = params.batches.length;
+    for (const [index, batch] of params.batches.entries()) {
+      execLog("batch", "batch started", {
+        batch: `${index + 1}/${totalBatches}`,
+        id: batch.id,
+        tasks: batch.taskIds,
+        concurrency: Math.min(this.maxParallel, batch.taskIds.length)
+      });
       this.traceStore.append({
         type: "batch_started",
         actor: "system",
@@ -51,6 +60,12 @@ export class BatchScheduler {
         results.set(taskId, await params.runTask(taskId));
       });
 
+      execLog("batch", "batch completed", {
+        batch: `${index + 1}/${totalBatches}`,
+        id: batch.id,
+        tasks: batch.taskIds.length,
+        durationMs: this.now() - start
+      });
       this.traceStore.append({
         type: "batch_completed",
         actor: "system",

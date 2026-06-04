@@ -1,5 +1,6 @@
 // @manyhands/execution-core — types, errors, and the execution pipeline.
 
+export * from "./logging/log";
 export * from "./types";
 export * from "./errors";
 export * from "./git/runner";
