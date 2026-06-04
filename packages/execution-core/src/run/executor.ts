@@ -14,7 +14,7 @@ import { FileSystemContextPacker, type ContextPacker } from "../context/packer";
 import { RunExecutionError } from "../errors";
 import { computeGranularityVector } from "../granularity/vector";
 import { assertExecutableGraph } from "./graph-guards";
-import { IntegrationAgent } from "../integration/agent";
+import { IntegrationAgent, type PredictedConflictHint } from "../integration/agent";
 import { ResultRecorder } from "../result/recorder";
 import { BatchScheduler } from "../scheduler/batch";
 import {
@@ -52,6 +52,8 @@ export interface RunExecutionParams {
   model: string;
   runId?: string;
   policy?: SchedulingPolicy;
+  /** Conflicts predicted at planning time; threaded into the conflict-aware composer. */
+  predictedConflicts?: PredictedConflictHint[];
 }
 
 export interface RunExecutionResult {
@@ -176,7 +178,8 @@ export class RunExecutor {
         config,
         model: params.model,
         leafResults,
-        worktrees
+        worktrees,
+        predictedConflicts: params.predictedConflicts ?? []
       });
 
       const validationResult = await this.runRunValidation(
@@ -305,6 +308,7 @@ export class RunExecutor {
     model: string;
     leafResults: AgentExecutionResult[];
     worktrees: WorktreeRecord[];
+    predictedConflicts: PredictedConflictHint[];
   }): Promise<IntegrationResult[]> {
     const { graph, runId, config, model } = args;
     const resultByTask = new Map<string, AgentExecutionResult>(
@@ -358,6 +362,7 @@ export class RunExecutor {
         repair: { model: repairModel.model, sandboxMode: config.sandboxMode, timeoutMs: config.integrationTimeoutMs },
         parentGoal: composite.goal,
         childIntents,
+        ...(args.predictedConflicts.length > 0 ? { predictedConflicts: args.predictedConflicts } : {}),
         ...(sharedInterfaces ? { sharedInterfaces } : {}),
         ...(contract?.parentValidationCommands
           ? { parentValidationCommands: contract.parentValidationCommands }
