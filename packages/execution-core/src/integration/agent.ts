@@ -48,6 +48,20 @@ export interface ChildIntent {
   produces: string[];
 }
 
+/**
+ * A conflict predicted at planning time (conflict-risk). Threaded into the
+ * Composer so a cherry-pick conflict is repaired WITH the foresight that
+ * produced it — the colliding files were flagged, and why — instead of blind.
+ */
+export interface PredictedConflictHint {
+  taskAId: string;
+  taskBId: string;
+  level: "low" | "medium" | "high" | "blocking";
+  sharedFiles: string[];
+  sharedSymbols: string[];
+  explanation: string;
+}
+
 export interface IntegrationParams {
   compositeTaskId: string;
   /** Integration worktree on the parent branch; children are cherry-picked here. */
@@ -65,6 +79,8 @@ export interface IntegrationParams {
   sharedInterfaces?: InterfaceContract[];
   /** Per-child intent, keyed by taskId, so repair knows WHY each change exists. */
   childIntents?: ChildIntent[];
+  /** Conflicts predicted at planning time; repair surfaces the ones whose files collide. */
+  predictedConflicts?: PredictedConflictHint[];
 }
 
 /**
@@ -316,6 +332,23 @@ export class IntegrationAgent {
       lines.push("", `This change implements task "${child.taskId}": ${intent.goal}`);
       if (intent.produces.length > 0) lines.push(`It produces: ${intent.produces.join(", ")}.`);
       if (intent.consumes.length > 0) lines.push(`It consumes: ${intent.consumes.join(", ")}.`);
+    }
+
+    // Plan-time foresight (Pieza 2): surface predictions whose shared files overlap
+    // the files now colliding, so the agent reconciles by the predicted cause.
+    const hints = (params.predictedConflicts ?? []).filter((hint) =>
+      hint.sharedFiles.some((file) => conflict.conflictFiles.includes(file))
+    );
+    if (hints.length > 0) {
+      lines.push(
+        "",
+        "These collisions were predicted at planning time for the files now in conflict.",
+        "Use the predicted cause to reconcile, not a guess from the diff text:",
+        ...hints.map((hint) => {
+          const symbols = hint.sharedSymbols.length > 0 ? ` [shared symbols: ${hint.sharedSymbols.join(", ")}]` : "";
+          return `- ${hint.taskAId} ↔ ${hint.taskBId} (${hint.level}): ${hint.explanation}${symbols}`;
+        })
+      );
     }
 
     lines.push(

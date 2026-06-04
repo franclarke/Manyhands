@@ -13,6 +13,7 @@ import {
   ExecutionConfigSchema,
   RunExecutor,
   SimpleGitRunner,
+  type PredictedConflictHint,
   type RunExecutionResult
 } from "@manyhands/execution-core";
 import type { TaskGraph } from "@manyhands/task-graph";
@@ -31,6 +32,8 @@ import { markRunnerActive, markRunnerInactive } from "./runner-state";
 import { getRunRepository } from "./store";
 import { getWorkspaceRepository } from "../workspaces";
 import { pickDecomposer, type DecomposerSelection } from "@/lib/decomposer-policy";
+import { projectRunRecordToSnapshot } from "@/lib/live-graph";
+import { deriveConflictList } from "@/lib/conflict-view-model";
 import type { RunEvent, RiskLevelKey } from "./events";
 import type { ExecutionConfigInput, PlanningLiveNode, RunDecompositionMetadata, RunRecord, RunStatus } from "./schema";
 import type { Workspace } from "@/lib/api-types";
@@ -64,6 +67,8 @@ export interface ExecutionEngineInput {
   provisioned?: ProvisionedRepo;
   /** Optional per-run config overrides; defaults applied by the engine. */
   executionConfig?: ExecutionConfigInput;
+  /** Conflicts predicted at planning time; feed the conflict-aware composer (D8). */
+  predictedConflicts?: PredictedConflictHint[];
 }
 
 export interface ExecutionEngine {
@@ -104,7 +109,8 @@ function createDefaultExecutionEngine(deps: { traceStore?: TraceStore } = {}): E
         graph: { ...input.graph, repo: repoRoot, baseBranch, baseCommit },
         config: ExecutionConfigSchema.parse(input.executionConfig ?? {}),
         model: input.model,
-        runId: input.runId
+        runId: input.runId,
+        ...(input.predictedConflicts !== undefined ? { predictedConflicts: input.predictedConflicts } : {})
       });
     }
   };
@@ -433,7 +439,12 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
       const message = error instanceof Error ? error.message : String(error);
       const run = await getRunRepository().get(runId).catch(() => null);
       if (run !== null) {
-        await getRunRepository().save({ ...run, status: "failed", errorMessage: message });
+        await getRunRepository().save({
+          ...run,
+          status: "failed",
+          failedDuring: "generating",
+          errorMessage: message
+        });
         publishRunEvent(runId, {
           kind: "status.changed",
           status: "failed",
@@ -596,12 +607,14 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       await runPreflight({ repoRoot: provisioned.repoRoot, baseBranch: provisioned.baseBranch });
     }
 
+    const predictedConflicts = derivePredictedConflicts(run);
     const result = await engine.run({
       graph,
       model: run.model,
       runId: run.runId,
       ...(provisioned !== undefined ? { provisioned } : {}),
-      ...(run.executionConfig !== undefined ? { executionConfig: run.executionConfig } : {})
+      ...(run.executionConfig !== undefined ? { executionConfig: run.executionConfig } : {}),
+      ...(predictedConflicts.length > 0 ? { predictedConflicts } : {})
     });
     const finalApplication =
       result.status === "completed" && provisioned !== undefined
@@ -663,6 +676,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       await getRunRepository().save({
         ...run,
         status: "failed",
+        failedDuring: "running",
         execution: result,
         ...(executionTraces !== undefined ? { executionTraces } : {}),
         errorMessage: describeExecutionFailure(result)
@@ -673,7 +687,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     const message = error instanceof Error ? error.message : String(error);
     const run = await getRunRepository().get(runId).catch(() => null);
     if (run !== null) {
-      await getRunRepository().save({ ...run, status: "failed", errorMessage: message });
+      await getRunRepository().save({ ...run, status: "failed", failedDuring: "running", errorMessage: message });
       publishRunEvent(runId, {
         kind: "status.changed",
         status: "failed",
@@ -683,6 +697,38 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
   } finally {
     stopHeartbeat();
     markRunnerInactive(runId);
+  }
+}
+
+/**
+ * Build the predicted-conflict hints that feed the conflict-aware composer (Pieza 2).
+ * Reuses the exact computation the UI shows (deriveConflictList) so foresight at
+ * planning time and repair at integration time stay consistent. Includes every
+ * actionable pair — even acknowledged ones, since acknowledgement is precisely the
+ * decision to let the composer reconcile them.
+ */
+function derivePredictedConflicts(run: RunRecord): PredictedConflictHint[] {
+  // Best-effort foresight: a malformed/partial snapshot must never break the run.
+  try {
+    const snapshot = projectRunRecordToSnapshot(run);
+    if (snapshot === null) {
+      return [];
+    }
+    return deriveConflictList(snapshot, run.patches ?? [])
+      .filter((conflict) => conflict.level === "medium" || conflict.level === "high" || conflict.level === "blocking")
+      .map((conflict) => ({
+        taskAId: conflict.taskAId,
+        taskBId: conflict.taskBId,
+        level: conflict.level,
+        sharedFiles: conflict.sharedFiles,
+        sharedSymbols: conflict.sharedSymbols,
+        explanation: conflict.reason
+      }));
+  } catch (error) {
+    console.warn(
+      `[Runner] Predicted-conflict derivation skipped for run ${run.runId}: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return [];
   }
 }
 
