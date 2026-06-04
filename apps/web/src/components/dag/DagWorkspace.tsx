@@ -19,7 +19,7 @@ import {
 } from "@/lib/graph-filters";
 import { selectionRelations } from "@/lib/run-presentation";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { derivePhase } from "@/lib/run-phase";
+import { derivePhase, type RunFailurePhase } from "@/lib/run-phase";
 import { buildRunSummary } from "@/lib/run-summary";
 import { RunSummaryPanel } from "./RunSummaryPanel";
 import { DagCanvas } from "./DagCanvas";
@@ -59,6 +59,7 @@ interface DagWorkspaceProps {
   conflictError?: string;
   errorMessage?: string;
   execution?: RunExecutionResult;
+  failedPhase?: RunFailurePhase;
 }
 
 export function DagWorkspace({
@@ -79,7 +80,8 @@ export function DagWorkspace({
   conflicts = [],
   conflictError,
   errorMessage,
-  execution
+  execution,
+  failedPhase
 }: DagWorkspaceProps): React.ReactElement {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [highlightTaskIds, setHighlightTaskIds] = useState<ReadonlySet<string> | null>(null);
@@ -122,7 +124,9 @@ export function DagWorkspace({
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {showMethodologyBanner ? <MethodologyBanner /> : null}
       {headerSlot}
-      {runStatus !== undefined ? <RunPhaseBar status={runStatus} graph={graph} /> : null}
+      {runStatus !== undefined ? (
+        <RunPhaseBar status={runStatus} graph={graph} {...(failedPhase !== undefined ? { failedPhase } : {})} />
+      ) : null}
       <GraphToolbar
         graph={graph}
         benchmarkLabel={benchmarkLabel}

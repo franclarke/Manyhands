@@ -5,6 +5,7 @@ import type { RunExecutionResult } from "@manyhands/execution-core";
 import { useRouter } from "next/navigation";
 import type { RunStatusKey } from "@/lib/api-types";
 import type { ConflictListItem } from "@/lib/conflict-view-model";
+import type { RunFailurePhase } from "@/lib/run-phase";
 import type { PlanReviewSummary } from "@/lib/plan-review";
 import type { TimelineRunInput } from "@/lib/run-timeline";
 import { RunCanvasShell, useLiveRun, type LivePlanNode } from "@/components/dag/RunCanvasShell";
@@ -26,6 +27,7 @@ interface RunCanvasBindingProps {
   conflictError?: string;
   execution?: RunExecutionResult;
   errorMessage?: string;
+  failedPhase?: RunFailurePhase;
   initialPendingQuestion: { nodeId: string; question: string; options: string[] } | null;
   initialLivePlanNodes?: readonly LivePlanNode[];
 }
@@ -56,6 +58,7 @@ export function RunCanvasBinding(props: RunCanvasBindingProps): React.ReactEleme
       {...(props.conflictError !== undefined ? { conflictError: props.conflictError } : {})}
       {...(props.execution !== undefined ? { execution: props.execution } : {})}
       {...(props.errorMessage !== undefined ? { errorMessage: props.errorMessage } : {})}
+      {...(props.failedPhase !== undefined ? { failedPhase: props.failedPhase } : {})}
       actionSlot={
         <RunActionBar
           runId={props.runId}

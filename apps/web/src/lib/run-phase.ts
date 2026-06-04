@@ -8,6 +8,47 @@ import type { RunGraphViewModel } from "@/lib/graph-view-model";
  */
 export type RunPhase = "planning" | "executing" | "integrating" | "done";
 
+/** Which pipeline a failure occurred in, used to mark the right phase-bar step. */
+export type RunFailurePhase = "planning" | "execution";
+
+/** Linear steps shown in the run phase bar. */
+export const RUN_PHASE_STEPS = [
+  "Plan generated",
+  "Review plan",
+  "Execute agents",
+  "Review outputs",
+  "Integrate"
+] as const;
+
+/**
+ * Index of the active (or failed) step within {@link RUN_PHASE_STEPS}.
+ *
+ * For a failed run, `failedPhase` disambiguates WHERE it broke so the bar marks
+ * the real step: an execution failure (e.g. repo provisioning) stops at
+ * "Execute agents", a planning failure at "Plan generated". Without that signal
+ * we fall back to "Review outputs" to preserve the previous behavior.
+ */
+export function runPhaseStepIndex(status: RunStatusKey, failedPhase?: RunFailurePhase): number {
+  switch (status) {
+    case "created":
+    case "generating":
+      return 0;
+    case "needs_review":
+      return 1;
+    case "approved":
+    case "running":
+    case "paused":
+    case "interrupted":
+      return 2;
+    case "completed":
+      return 4;
+    case "failed":
+      return failedPhase === "execution" ? 2 : failedPhase === "planning" ? 0 : 3;
+    default:
+      return 0;
+  }
+}
+
 export const RUN_PHASES: readonly RunPhase[] = ["planning", "executing", "integrating", "done"];
 
 export const RUN_PHASE_LABEL: Record<RunPhase, string> = {
