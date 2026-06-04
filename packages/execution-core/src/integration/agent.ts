@@ -7,6 +7,7 @@ import type { TraceStore } from "@manyhands/trace-store";
 
 import type { AgentExecutor } from "../executor/types";
 import type { GitRunner } from "../git/runner";
+import { execError, execLog, execWarn } from "../logging/log";
 import { ScopeChecker } from "../scope/checker";
 import type { SandboxMode } from "../types";
 import {
@@ -48,6 +49,20 @@ export interface ChildIntent {
   produces: string[];
 }
 
+/**
+ * A conflict predicted at planning time (conflict-risk). Threaded into the
+ * Composer so a cherry-pick conflict is repaired WITH the foresight that
+ * produced it — the colliding files were flagged, and why — instead of blind.
+ */
+export interface PredictedConflictHint {
+  taskAId: string;
+  taskBId: string;
+  level: "low" | "medium" | "high" | "blocking";
+  sharedFiles: string[];
+  sharedSymbols: string[];
+  explanation: string;
+}
+
 export interface IntegrationParams {
   compositeTaskId: string;
   /** Integration worktree on the parent branch; children are cherry-picked here. */
@@ -65,6 +80,8 @@ export interface IntegrationParams {
   sharedInterfaces?: InterfaceContract[];
   /** Per-child intent, keyed by taskId, so repair knows WHY each change exists. */
   childIntents?: ChildIntent[];
+  /** Conflicts predicted at planning time; repair surfaces the ones whose files collide. */
+  predictedConflicts?: PredictedConflictHint[];
 }
 
 /**
@@ -105,6 +122,11 @@ export class IntegrationAgent {
     // Any non-successful child means we never start integration (ADR-0025).
     const failedChild = childResults.find((child) => child.status !== "success");
     if (failedChild) {
+      execWarn("integrate", "skipping integration: a child task failed", {
+        task: compositeTaskId,
+        failedChild: failedChild.taskId,
+        childStatus: failedChild.status
+      });
       return this.finalize(params, "child_failed", { repairAttempted: false });
     }
 
@@ -133,6 +155,11 @@ export class IntegrationAgent {
       }
 
       // Conflict: one repair attempt only.
+      execWarn("integrate", "cherry-pick conflict", {
+        task: compositeTaskId,
+        child: child.taskId,
+        files: outcome.conflictFiles
+      });
       this.traceStore.append({
         type: "cherry_pick_conflict",
         actor: "system",
@@ -141,6 +168,11 @@ export class IntegrationAgent {
       });
 
       if (repairAttempted) {
+        execWarn("integrate", "integration failed: second conflict (only one repair allowed)", {
+          task: compositeTaskId,
+          child: child.taskId,
+          files: outcome.conflictFiles
+        });
         return this.finalize(params, "executor_repair_failed", {
           repairAttempted: true,
           repairResult,
@@ -149,21 +181,41 @@ export class IntegrationAgent {
       }
       repairAttempted = true;
 
+      execLog("integrate", "attempting agent repair of conflict", {
+        task: compositeTaskId,
+        child: child.taskId,
+        model: params.repair.model
+      });
       const repair = await this.attemptRepair(params, child, outcome);
       repairResult = repair.result;
       if (!repair.ok) {
+        execError("integrate", "integration failed: agent repair did not resolve conflict", {
+          task: compositeTaskId,
+          child: child.taskId,
+          repairStatus: repair.result.status,
+          stderrTail: repair.result.stderrTail
+        });
         return this.finalize(params, "executor_repair_failed", {
           repairAttempted: true,
           repairResult,
           conflictDetails: { files: outcome.conflictFiles, cherryPickOutput: outcome.output }
         });
       }
+      execLog("integrate", "agent repair resolved conflict", {
+        task: compositeTaskId,
+        child: child.taskId
+      });
       anyRepairSucceeded = true;
     }
 
     // Parent validation runs once over the fully-integrated branch.
     const validation = await this.runParentValidation(params);
     if (validation && !validation.passed) {
+      execWarn("integrate", "integration failed: parent validation failed", {
+        task: compositeTaskId,
+        exitCode: validation.exitCode,
+        output: validation.output
+      });
       return this.finalize(params, "validation_failed", { repairAttempted, repairResult });
     }
 
@@ -316,6 +368,23 @@ export class IntegrationAgent {
       lines.push("", `This change implements task "${child.taskId}": ${intent.goal}`);
       if (intent.produces.length > 0) lines.push(`It produces: ${intent.produces.join(", ")}.`);
       if (intent.consumes.length > 0) lines.push(`It consumes: ${intent.consumes.join(", ")}.`);
+    }
+
+    // Plan-time foresight (Pieza 2): surface predictions whose shared files overlap
+    // the files now colliding, so the agent reconciles by the predicted cause.
+    const hints = (params.predictedConflicts ?? []).filter((hint) =>
+      hint.sharedFiles.some((file) => conflict.conflictFiles.includes(file))
+    );
+    if (hints.length > 0) {
+      lines.push(
+        "",
+        "These collisions were predicted at planning time for the files now in conflict.",
+        "Use the predicted cause to reconcile, not a guess from the diff text:",
+        ...hints.map((hint) => {
+          const symbols = hint.sharedSymbols.length > 0 ? ` [shared symbols: ${hint.sharedSymbols.join(", ")}]` : "";
+          return `- ${hint.taskAId} ↔ ${hint.taskBId} (${hint.level}): ${hint.explanation}${symbols}`;
+        })
+      );
     }
 
     lines.push(

@@ -1,6 +1,8 @@
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import { basename } from "node:path";
 
+import { execError, execLog, execWarn } from "../logging/log";
 import type { AgentExecutorOptions, SandboxMode } from "../types";
 import type { AgentExecutor, ExecutorRunOutcome } from "./types";
 
@@ -100,6 +102,19 @@ export class GeminiCliExecutor implements AgentExecutor {
   execute(options: AgentExecutorOptions): Promise<ExecutorRunOutcome> {
     const args = buildGeminiArgs(options);
     const start = Date.now();
+    // The worktree dir is named after the taskId, so its basename correlates
+    // every log line back to the leaf/integration task that spawned it.
+    const task = basename(options.cwd);
+
+    execLog("gemini", "spawning agent", {
+      task,
+      binary: this.binaryPath,
+      model: options.model,
+      approvalMode: approvalModeFor(options.sandboxMode),
+      timeoutMs: options.timeoutMs,
+      shell: this.useShell,
+      cwd: options.cwd
+    });
 
     return new Promise<ExecutorRunOutcome>((resolve) => {
       const child = this.spawnFn(this.binaryPath, args, {
@@ -123,6 +138,12 @@ export class GeminiCliExecutor implements AgentExecutor {
       };
 
       const timer = setTimeout(() => {
+        execWarn("gemini", "agent timed out — killing process tree", {
+          task,
+          timeoutMs: options.timeoutMs,
+          durationMs: Date.now() - start,
+          stderrTail: tailText(stderr)
+        });
         killProcessTree(child, this.spawnFn);
         finish({
           exitCode: TIMEOUT_EXIT_CODE,
@@ -141,6 +162,15 @@ export class GeminiCliExecutor implements AgentExecutor {
       });
 
       child.on("error", (error: Error) => {
+        // Most common real failure: binary missing / not on PATH (ENOENT). This
+        // is exactly the "executes no funcionan" symptom — surface it loudly.
+        execError("gemini", "spawn failed — agent never started", {
+          task,
+          binary: this.binaryPath,
+          code: (error as NodeJS.ErrnoException).code,
+          message: error.message,
+          hint: "Verifica MANYHANDS_GEMINI_BIN / que `gemini` esté en PATH"
+        });
         finish({
           exitCode: SPAWN_FAILURE_EXIT_CODE,
           stdout,
@@ -151,12 +181,26 @@ export class GeminiCliExecutor implements AgentExecutor {
       });
 
       child.on("close", (code) => {
+        const durationMs = Date.now() - start;
+        if (settled) {
+          return;
+        }
+        if (code === 0) {
+          execLog("gemini", "agent exited cleanly", { task, exitCode: 0, durationMs });
+        } else {
+          execWarn("gemini", "agent exited non-zero", {
+            task,
+            exitCode: code ?? SPAWN_FAILURE_EXIT_CODE,
+            durationMs,
+            stderrTail: tailText(stderr)
+          });
+        }
         finish({
           exitCode: code ?? SPAWN_FAILURE_EXIT_CODE,
           stdout,
           stderr,
           timedOut: false,
-          durationMs: Date.now() - start
+          durationMs
         });
       });
 
@@ -169,6 +213,11 @@ export class GeminiCliExecutor implements AgentExecutor {
           child.stdin?.end(prompt);
         },
         (error: Error) => {
+          execError("gemini", "failed to read instruction file", {
+            task,
+            path: options.instructionFilePath,
+            message: error.message
+          });
           killProcessTree(child, this.spawnFn);
           finish({
             exitCode: SPAWN_FAILURE_EXIT_CODE,
@@ -181,6 +230,16 @@ export class GeminiCliExecutor implements AgentExecutor {
       );
     });
   }
+}
+
+/** Last slice of executor output — the actionable cause to print in a log line. */
+function tailText(text: string): string | undefined {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) {
+    return undefined;
+  }
+  const LIMIT = 1_000;
+  return trimmed.length > LIMIT ? trimmed.slice(-LIMIT) : trimmed;
 }
 
 /**

@@ -44,6 +44,15 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
   const planReview = buildPlanReviewSummary(snapshot, patches);
   const readyTaskCount = graph?.nodes.filter((node) => canNodeRunNow(node)).length ?? 0;
   const activeConflictCount = conflictState.conflicts.filter((conflict) => !conflict.acknowledged).length;
+  // Disambiguate WHERE a failed run broke so the phase bar marks the real step.
+  // Prefer the explicit phase; fall back to approval (only set once execution is
+  // reachable) for records persisted before `failedDuring` existed.
+  const failedPhase =
+    run.status === "failed"
+      ? run.failedDuring === "running" || (run.failedDuring === undefined && run.approvedAt !== undefined)
+        ? "execution"
+        : "planning"
+      : undefined;
 
   return (
     <div className="mh-fullbleed">
@@ -70,6 +79,7 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
         {...(conflictState.error !== undefined ? { conflictError: conflictState.error } : {})}
         {...(isExecutionResult(run.execution) ? { execution: run.execution } : {})}
         {...(run.errorMessage !== undefined && run.errorMessage.length > 0 ? { errorMessage: run.errorMessage } : {})}
+        {...(failedPhase !== undefined ? { failedPhase } : {})}
         initialPendingQuestion={run.pendingQuestion ?? null}
         initialLivePlanNodes={run.livePlanningNodes ?? []}
         headerSlot={
