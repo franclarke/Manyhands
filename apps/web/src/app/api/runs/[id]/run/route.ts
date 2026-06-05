@@ -7,6 +7,7 @@ import {
   getRunRepository,
   runExecutionPipeline
 } from "@/lib/server/runs";
+import { publishRunEvent } from "@/lib/server/runs/event-bus";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
@@ -22,8 +23,14 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
     const repo = getRunRepository();
     const run = await repo.get(id);
     assertTransition(run.status, "running");
-    void runExecutionPipeline(run.runId).catch(() => undefined);
-    return NextResponse.json(toRunResponse(await repo.get(id)));
+    const saved = await repo.save({
+      ...run,
+      status: "running",
+      startedAt: run.startedAt ?? new Date().toISOString()
+    });
+    publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: saved.updatedAt });
+    void runExecutionPipeline(saved.runId).catch(() => undefined);
+    return NextResponse.json(toRunResponse(saved));
   } catch (error) {
     return errorResponse(error);
   }

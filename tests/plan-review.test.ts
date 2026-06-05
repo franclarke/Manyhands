@@ -115,7 +115,27 @@ describe("plan-review", () => {
 
     expect(planReviewApprovalState(clean!)).toEqual({ label: "Approve plan", disabled: false });
     expect(planReviewApprovalState(warnings!)).toEqual({ label: "Approve with warnings", disabled: false });
-    expect(planReviewApprovalState(errors)).toEqual({ label: "Resolve errors before approval", disabled: true });
+    // Block with override: errors no longer hard-disable the gate (the confirm
+    // acknowledges them server-side).
+    expect(planReviewApprovalState(errors)).toEqual({ label: "Approve despite errors", disabled: false });
+  });
+
+  it("raises a blocking error for a consumed seam with no producer", () => {
+    const summary = buildPlanReviewSummary(
+      makeSnapshot({
+        contracts: [
+          {
+            ...makeContract(),
+            consumedInterfaces: [
+              { id: "TaskStore", kind: "function", signature: "createTaskStore(): TaskStore", description: "seam" }
+            ]
+          } as AgentTaskContract
+        ]
+      })
+    );
+
+    expect(summary?.status).toBe("errors");
+    expect(summary?.issues.some((issue) => issue.kind === "seam" && issue.severity === "error")).toBe(true);
   });
 });
 

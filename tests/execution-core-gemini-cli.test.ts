@@ -141,6 +141,43 @@ describe("GeminiCliExecutor (injected spawn)", () => {
     expect(outcome.exitCode).toBe(124);
     expect(killed).toBe(true);
   });
+
+  it("kills the process and returns an aborted outcome when the signal fires", async () => {
+    const child = fakeChild();
+    let killed = false;
+    child.kill = () => {
+      killed = true;
+      return true;
+    };
+    const controller = new AbortController();
+    const executor = new GeminiCliExecutor(depsFor(child));
+
+    const promise = executor.execute({ ...optionsFor("/repo"), signal: controller.signal });
+    controller.abort();
+
+    const outcome = await promise;
+    expect(killed).toBe(true);
+    expect(outcome.exitCode).toBe(130);
+    expect(outcome.timedOut).toBe(false);
+  });
+
+  it("returns an aborted outcome without spawning when already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    let spawned = false;
+    const executor = new GeminiCliExecutor({
+      spawn: () => {
+        spawned = true;
+        return fakeChild() as never;
+      },
+      readInstructions: async () => "x",
+      useShell: false
+    });
+
+    const outcome = await executor.execute({ ...optionsFor("/repo"), signal: controller.signal });
+    expect(spawned).toBe(false);
+    expect(outcome.exitCode).toBe(130);
+  });
 });
 
 // Opt-in E2E: only runs with MANYHANDS_E2E_GEMINI=1 and a real `gemini` on PATH.

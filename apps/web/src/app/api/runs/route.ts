@@ -17,6 +17,7 @@ import {
   WorkspaceNotFoundError,
   getWorkspaceRepository
 } from "@/lib/server/workspaces";
+import { findModelForSelection, type ExecutorSelection } from "@/lib/models";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,6 +58,16 @@ function parseStatusFilter(raw: string): RunStatus[] {
     .filter((entry) => entry.length > 0 && allowed.has(entry)) as RunStatus[];
 }
 
+function validateExecutionSelection(selection: ExecutorSelection | undefined): void {
+  if (selection === undefined) {
+    return;
+  }
+  const model = findModelForSelection(selection);
+  if (model === undefined || !model.enabled) {
+    throw new RunValidationError(`Unsupported executor/model selection "${selection.executorId}/${selection.model}"`);
+  }
+}
+
 export async function POST(request: Request): Promise<NextResponse> {
   let payload: unknown;
   try {
@@ -73,6 +84,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const workspace = await getWorkspaceRepository().get(parsed.data.workspaceId); // throws WorkspaceNotFoundError → 404
+
+    validateExecutionSelection(parsed.data.defaultExecutionSelection);
+    validateExecutionSelection(parsed.data.defaultRepairSelection);
 
     const now = new Date().toISOString();
     const runId = randomUUID();
@@ -93,6 +107,9 @@ export async function POST(request: Request): Promise<NextResponse> {
           : {}),
       granularity: parsed.data.granularity,
       model: parsed.data.model,
+      planningModel: parsed.data.planningModel ?? parsed.data.model,
+      defaultExecutionSelection: parsed.data.defaultExecutionSelection,
+      defaultRepairSelection: parsed.data.defaultRepairSelection,
       userPrompt,
       title,
       status: "created",

@@ -30,7 +30,7 @@ export function RunActionBar({
   const [reviewErrorMessage, setReviewErrorMessage] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
 
-  async function call(action: "approve-plan" | "run" | "pause" | "resume" | "restart"): Promise<void> {
+  async function call(action: "approve-plan" | "run" | "pause" | "resume" | "restart" | "cancel"): Promise<void> {
     setErrorMessage(null);
     setBusy(action);
     try {
@@ -54,8 +54,12 @@ export function RunActionBar({
     setReviewErrorMessage(null);
     setBusy("approve-plan");
     try {
+      // From the review gate the user has seen the issues, so acknowledge any
+      // blocking critic errors when forcing approval.
       const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/approve-plan`, {
-        method: "POST"
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ acknowledgeCriticErrors: true })
       });
       if (!response.ok) {
         const payload = (await response.json().catch(() => ({}))) as { error?: string };
@@ -130,6 +134,11 @@ export function RunActionBar({
       {status === "running" ? (
         <Button variant="ghost" busy={busy === "pause"} onClick={() => void call("pause")}>
           Pause execution
+        </Button>
+      ) : null}
+      {status === "generating" || status === "running" || status === "paused" ? (
+        <Button variant="ghost" busy={busy === "cancel"} onClick={() => void call("cancel")}>
+          Stop
         </Button>
       ) : null}
       {status === "interrupted" || status === "failed" ? (

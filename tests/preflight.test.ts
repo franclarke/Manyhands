@@ -67,7 +67,8 @@ const READINESS_DEPS: Required<GeminiReadinessDeps> = {
   checkCli: async () => ({ ok: true, version: "gemini 0.44.1" }),
   hasCredentials: () => true,
   gitPorcelain: async () => "",
-  branchExists: async () => true
+  branchExists: async () => true,
+  detectCommands: async () => ({ packageManager: "pnpm", test: "pnpm run test" })
 };
 
 describe("inspectGeminiReadiness", () => {

@@ -7,9 +7,11 @@ export interface PlanReviewApprovalState {
 
 export function planReviewApprovalState(summary: PlanReviewSummary): PlanReviewApprovalState {
   if (summary.status === "errors") {
+    // Block with override: the user can force approval after reviewing the
+    // errors in the gate (the confirm acknowledges them server-side).
     return {
-      label: "Resolve errors before approval",
-      disabled: true
+      label: "Approve despite errors",
+      disabled: false
     };
   }
   if (summary.status === "warnings") {

@@ -3,6 +3,15 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import {
+  GEMINI_EXECUTOR_ID,
+  normalizeExecutorSelection,
+  resolveLegacyModelSelection,
+  getExecutorDescriptor,
+  type ExecutorId,
+  type ExecutorSelection
+} from "@manyhands/execution-core";
+import type { TaskGraph } from "@manyhands/task-graph";
 
 const execFileAsync = promisify(execFile);
 
@@ -26,8 +35,12 @@ export class PreflightError extends Error {
 export interface PreflightInput {
   repoRoot: string;
   baseBranch: string;
-  /** Gemini CLI binary; defaults to $MANYHANDS_GEMINI_BIN or `gemini`. */
+  /** Legacy binary override; defaults to the selected executor descriptor. */
   binaryPath?: string;
+  legacyModel?: string;
+  graph?: TaskGraph;
+  defaultExecutionSelection?: ExecutorSelection;
+  defaultRepairSelection?: ExecutorSelection;
 }
 
 /** Injectable checks so the pipeline can be unit-tested without spawning. */
@@ -39,7 +52,7 @@ export interface PreflightDeps {
 }
 
 /**
- * Blocking preflight run before the real Gemini execution engine. The first
+ * Blocking preflight run before the real execution engine. The first
  * failing check short-circuits with a PreflightError; the runner persists that
  * message on the run so it projects in the UI like any other execution failure.
  */
@@ -52,25 +65,29 @@ export async function runPreflight(input: PreflightInput, deps: PreflightDeps = 
     );
   }
 
-  // 2. The Gemini CLI must be installed and resolvable.
-  const binaryPath = input.binaryPath ?? process.env.MANYHANDS_GEMINI_BIN ?? "gemini";
-  const cliOk = await (deps.checkCli ?? defaultCheckCli)(binaryPath);
-  if (!cliOk) {
-    throw new PreflightError(
-      "cli",
-      "Gemini CLI not found. Install it (npm i -g @google/gemini-cli) or set MANYHANDS_GEMINI_BIN to the binary path."
-    );
-  }
+  // 2-3. Every selected CLI must be installed and authenticated. Auth stays a
+  // cheap local/session check; quota probing would spend a model call.
+  for (const executorId of collectExecutorIds(input)) {
+    const descriptor = getExecutorDescriptor(executorId);
+    if (!descriptor.enabled) {
+      throw new PreflightError("cli", `Executor "${executorId}" is disabled in this build.`);
+    }
+    const binaryPath =
+      input.binaryPath ??
+      process.env[descriptor.binaryEnvVar] ??
+      descriptor.defaultBinary;
+    const cliOk = await (deps.checkCli ?? defaultCheckCli)(binaryPath);
+    if (!cliOk) {
+      throw new PreflightError(
+        "cli",
+        `${descriptor.label} not found. Install it or set ${descriptor.binaryEnvVar} to the binary path.`
+      );
+    }
 
-  // 3. Lightweight auth/quota check: credentials must be present (env key or a
-  // cached OAuth session). A real quota probe would cost a call; presence is the
-  // cheap signal that catches the common "never logged in" failure.
-  const authed = (deps.hasCredentials ?? defaultHasCredentials)();
-  if (!authed) {
-    throw new PreflightError(
-      "auth",
-      "Gemini CLI has no credentials. Run `gemini` once to authenticate, or set GEMINI_API_KEY."
-    );
+    const authed = (deps.hasCredentials ?? (() => defaultHasCredentials(executorId)))();
+    if (!authed) {
+      throw new PreflightError("auth", authMessageFor(executorId));
+    }
   }
 
   // 4. The repo must be clean so the orchestrator's git diff is the sole source
@@ -106,7 +123,28 @@ async function defaultCheckCli(binaryPath: string): Promise<boolean> {
   }
 }
 
-function defaultHasCredentials(): boolean {
+function collectExecutorIds(input: PreflightInput): ExecutorId[] {
+  const fallback = input.defaultExecutionSelection ?? resolveLegacyModelSelection(input.legacyModel);
+  const selected = new Set<ExecutorId>([
+    fallback.executorId,
+    (input.defaultRepairSelection ?? fallback).executorId
+  ]);
+  for (const node of Object.values(input.graph?.nodes ?? {})) {
+    const metadata = node.metadata as { executorSelection?: unknown; executorOverride?: unknown } | undefined;
+    const selection =
+      normalizeExecutorSelection(metadata?.executorSelection) ??
+      normalizeExecutorSelection(metadata?.executorOverride);
+    if (selection !== undefined) {
+      selected.add(selection.executorId);
+    }
+  }
+  return Array.from(selected);
+}
+
+function defaultHasCredentials(executorId: ExecutorId): boolean {
+  if (executorId !== GEMINI_EXECUTOR_ID) {
+    return Boolean(process.env.ANTHROPIC_API_KEY) || existsSync(join(homedir(), ".claude.json"));
+  }
   if (
     process.env.GEMINI_API_KEY ||
     process.env.GOOGLE_API_KEY ||
@@ -119,6 +157,13 @@ function defaultHasCredentials(): boolean {
     existsSync(join(geminiHome, "oauth_creds.json")) ||
     existsSync(join(geminiHome, "google_accounts.json"))
   );
+}
+
+function authMessageFor(executorId: ExecutorId): string {
+  if (executorId === GEMINI_EXECUTOR_ID) {
+    return "Gemini CLI has no credentials. Run `gemini` once to authenticate, or set GEMINI_API_KEY.";
+  }
+  return "Claude Code CLI has no credentials. Run `claude` once to authenticate, or set ANTHROPIC_API_KEY.";
 }
 
 async function defaultGitPorcelain(repoRoot: string): Promise<string> {

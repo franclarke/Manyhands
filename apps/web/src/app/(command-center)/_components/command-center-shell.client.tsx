@@ -2,12 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ApiErrorResponse, ProviderReadiness, ProviderReadinessResponse, RunResponse, Workspace } from "@/lib/api-types";
+import type {
+  ApiErrorResponse,
+  ProviderReadiness,
+  ProviderReadinessResponse,
+  RunResponse,
+  Workspace,
+  WorkspaceCreateRequest
+} from "@/lib/api-types";
 import { Button } from "@/components/ui/button";
 import { ModelPicker } from "./model-picker.client";
 import { WorkspacePicker } from "./workspace-picker.client";
 import { WorkspaceFormDialog, type WorkspaceFormValue } from "./workspace-form-dialog.client";
 import { toGranularityMode, isGranularityLevel, GRANULARITY_DISPLAY_OPTIONS, type GranularityLevel } from "@/lib/granularity";
+import type { ExecutorSelection } from "@/lib/api-types";
 
 const PROMPT_STORAGE_KEY = "manyhands:lastPrompt";
 const EXAMPLE_PROMPTS = [
@@ -55,6 +63,8 @@ export function CommandCenterShell({
 
   const [granularity, setGranularity] = useState<GranularityLevel>(initialGranularity);
   const [modelId, setModelId] = useState<string>(initialModelId);
+  const [defaultExecutionSelection, setDefaultExecutionSelection] = useState<string>(`gemini-cli/${initialModelId}`);
+  const [defaultRepairSelection, setDefaultRepairSelection] = useState<string>(`gemini-cli/${initialModelId}`);
   const [prompt, setPrompt] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -131,6 +141,8 @@ export function CommandCenterShell({
     hasPrompt &&
     hasLocalRepo &&
     modelId.trim().length > 0 &&
+    defaultExecutionSelection.trim().length > 0 &&
+    defaultRepairSelection.trim().length > 0 &&
     !submitting;
 
   async function handleStart(): Promise<void> {
@@ -142,12 +154,18 @@ export function CommandCenterShell({
         workspaceId: string;
         granularity: string;
         model: string;
+        planningModel?: string;
+        defaultExecutionSelection?: ExecutorSelection;
+        defaultRepairSelection?: ExecutorSelection;
         userPrompt: string;
         repoSpec?: { kind: "localPath"; path: string };
       } = {
         workspaceId: selectedWorkspace.id,
         granularity: granularityMode,
         model: modelId,
+        planningModel: modelId,
+        defaultExecutionSelection: parseSelection(defaultExecutionSelection),
+        defaultRepairSelection: parseSelection(defaultRepairSelection),
         userPrompt: prompt.trim()
       };
       if (selectedWorkspace.repoPath !== undefined) {
@@ -185,8 +203,8 @@ export function CommandCenterShell({
     setErrorMessage(null);
     setWorkspaceBusy(true);
 
-    const collectOptionalFields = (val: WorkspaceFormValue) => {
-      const out: any = {};
+    const collectOptionalFields = (val: WorkspaceFormValue): Omit<WorkspaceCreateRequest, "name"> => {
+      const out: Omit<WorkspaceCreateRequest, "name"> = {};
       if (val.color !== "") out.color = val.color;
       if (val.repoPath !== "") out.repoPath = val.repoPath;
       if (val.packageManager !== "") out.packageManager = val.packageManager;
@@ -242,8 +260,8 @@ export function CommandCenterShell({
       }
       setWorkspaceFormOpen("closed");
       router.refresh();
-    } catch (err: any) {
-      setErrorMessage(err.message || String(err));
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : String(err));
     } finally {
       setWorkspaceBusy(false);
     }
@@ -269,8 +287,8 @@ export function CommandCenterShell({
         setWorkspaceId("");
       }
       router.refresh();
-    } catch (err: any) {
-      setErrorMessage(err.message || String(err));
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : String(err));
     } finally {
       setWorkspaceBusy(false);
     }
@@ -465,9 +483,9 @@ export function CommandCenterShell({
             {/* Model Select */}
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                model:
+                planning:
               </span>
-              <ModelPicker value={modelId} onChange={setModelId} />
+              <ModelPicker value={modelId} onChange={setModelId} capability="planning" width={150} />
               <span
                 className={readinessLoading ? "coral-pulse" : ""}
                 title={readinessTooltip}
@@ -485,6 +503,36 @@ export function CommandCenterShell({
             </div>
 
             {/* Separator */}
+            <span style={{ color: "rgba(241, 234, 216, 0.1)", userSelect: "none" }} aria-hidden>|</span>
+
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                execution:
+              </span>
+              <ModelPicker
+                value={defaultExecutionSelection}
+                onChange={setDefaultExecutionSelection}
+                capability="execution"
+                selectionMode="executor-selection"
+                width={185}
+              />
+            </div>
+
+            <span style={{ color: "rgba(241, 234, 216, 0.1)", userSelect: "none" }} aria-hidden>|</span>
+
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                repair:
+              </span>
+              <ModelPicker
+                value={defaultRepairSelection}
+                onChange={setDefaultRepairSelection}
+                capability="repair"
+                selectionMode="executor-selection"
+                width={185}
+              />
+            </div>
+
             <span style={{ color: "rgba(241, 234, 216, 0.1)", userSelect: "none" }} aria-hidden>|</span>
 
             {/* Aggressiveness Select */}
@@ -667,6 +715,11 @@ async function readError(response: Response): Promise<string> {
   } catch {
     return `Request failed with ${response.status}`;
   }
+}
+
+function parseSelection(value: string): ExecutorSelection {
+  const [executorId, ...modelParts] = value.split("/");
+  return { executorId: executorId as ExecutorSelection["executorId"], model: modelParts.join("/") };
 }
 
 // Icons and Glyphs

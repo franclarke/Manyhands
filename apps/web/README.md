@@ -1,3 +1,5 @@
+> **Note:** This is a fixture repository for the ManyHands project. It is used for testing and development purposes.
+
 # ManyHands Web
 
 `apps/web` is the Phase 10 web app foundation for ManyHands.

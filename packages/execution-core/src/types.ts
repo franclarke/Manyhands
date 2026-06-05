@@ -53,7 +53,14 @@ export type WorktreeRecord = z.infer<typeof WorktreeRecordSchema>;
 
 export const ScopeCheckResultSchema = z.object({
   passed: z.boolean(),
-  violations: z.array(NonEmptyStringSchema).default([])
+  // Hard violations: files matching a forbidden glob. These are terminal — they
+  // fail the leaf/repair (deny wins, ADR-0023).
+  violations: z.array(NonEmptyStringSchema).default([]),
+  // Advisory: files outside the allow-list but not forbidden. The allow-list is
+  // an LLM-guessed hint for a layout that may not exist yet, so an out-of-scope
+  // file is recorded for visibility but does NOT fail the run. Real collisions
+  // surface at cherry-pick, where the composer repairs.
+  outOfScope: z.array(NonEmptyStringSchema).default([])
 });
 
 export type ScopeCheckResult = z.infer<typeof ScopeCheckResultSchema>;
@@ -89,7 +96,12 @@ export const AgentExecutionResultSchema = z.object({
   stdoutTail: z.string().optional(),
   tokensIn: z.number().int().nonnegative().optional(),
   tokensOut: z.number().int().nonnegative().optional(),
-  costUsd: z.number().nonnegative().optional()
+  costUsd: z.number().nonnegative().optional(),
+  usageSource: z.union([
+    z.literal("reported"),
+    z.literal("estimated"),
+    z.literal("unavailable")
+  ]).optional()
 });
 
 export type AgentExecutionResult = z.infer<typeof AgentExecutionResultSchema>;
@@ -115,6 +127,20 @@ export const ConflictDetailSchema = z.object({
 
 export type ConflictDetail = z.infer<typeof ConflictDetailSchema>;
 
+/**
+ * Deterministic compatibility signal computed before cherry-pick. Surfaces
+ * likely textual conflicts and unfulfilled seams so the single repair attempt
+ * is spent with a precise diagnosis instead of guessing from the diff text.
+ */
+export const PreMergeFindingSchema = z.object({
+  severity: z.union([z.literal("warning"), z.literal("info")]),
+  code: z.string(),
+  message: z.string(),
+  files: z.array(z.string()).default([])
+});
+
+export type PreMergeFinding = z.infer<typeof PreMergeFindingSchema>;
+
 export const IntegrationResultSchema = z.object({
   compositeTaskId: EntityIdSchema,
   status: IntegrationStatusSchema,
@@ -122,7 +148,11 @@ export const IntegrationResultSchema = z.object({
   integrationCommitSha: NonEmptyStringSchema.optional(),
   conflictDetails: ConflictDetailSchema.optional(),
   repairAttempted: z.boolean(),
-  repairResult: AgentExecutionResultSchema.optional()
+  repairResult: AgentExecutionResultSchema.optional(),
+  /** Deterministic pre-merge compatibility findings (Fase 3.1). */
+  preMergeFindings: z.array(PreMergeFindingSchema).default([]),
+  /** Parent validation outcome, persisted for diagnostics/UI (Fase 3.3). */
+  parentValidation: ValidationRunResultSchema.optional()
 });
 
 export type IntegrationResult = z.infer<typeof IntegrationResultSchema>;
@@ -147,7 +177,9 @@ export const AgentExecutorOptionsSchema = z.object({
   timeoutMs: z.number().int().positive(),
   sandboxMode: SandboxModeSchema,
   bypassApprovals: z.boolean(),
-  env: z.record(z.string()).optional()
+  env: z.record(z.string()).optional(),
+  /** Run-level cancellation: aborts the spawned process tree. Not serialized. */
+  signal: z.instanceof(AbortSignal).optional()
 });
 
 export type AgentExecutorOptions = z.infer<typeof AgentExecutorOptionsSchema>;
@@ -166,7 +198,9 @@ export const ExecutionConfigSchema = z.object({
   leafTimeoutMs: z.number().int().positive().default(300_000),
   integrationTimeoutMs: z.number().int().positive().default(600_000),
   sandboxMode: SandboxModeSchema.default("workspace-write"),
-  unexpectedCommitPolicy: UnexpectedCommitPolicySchema.default("reject")
+  unexpectedCommitPolicy: UnexpectedCommitPolicySchema.default("reject"),
+  /** Optional wall-clock ceiling for the whole run; the orchestrator interrupts past it. */
+  maxWallClockMs: z.number().int().positive().optional()
 });
 
 export type ExecutionConfig = z.infer<typeof ExecutionConfigSchema>;

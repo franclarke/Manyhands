@@ -18,8 +18,8 @@ export function AppNav(): React.ReactElement {
           <Image
             src={logotipo}
             alt="ManyHands Logo"
+            width={155}
             height={24}
-            style={{ width: "auto", height: "24px" }}
             priority
           />
         </Link>

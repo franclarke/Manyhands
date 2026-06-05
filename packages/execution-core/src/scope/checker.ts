@@ -13,8 +13,16 @@ export interface ScopeCheckParams {
 
 /**
  * Validates the files an agent changed against the contract's allowed scope and
- * the run-level forbidden paths. Deny wins: a file matching both an allowed and
- * a forbidden glob is a violation (ADR-0023).
+ * the run-level forbidden paths. Two enforcement tiers:
+ *
+ * - **Forbidden paths (deny-list)** are a hard boundary: a file matching a
+ *   forbidden glob is a terminal `violation` (deny wins — ADR-0023).
+ * - **Allowed paths (allow-list)** are advisory: the decomposer guesses these
+ *   globs for a layout that often does not exist yet (greenfield scaffolding),
+ *   and a second, independent agent picks the real files. A changed file outside
+ *   the allow-list but not forbidden is recorded in `outOfScope` for visibility
+ *   but does NOT fail the run — the real isolation is the per-leaf git worktree,
+ *   and real collisions surface at cherry-pick where the composer repairs.
  */
 export class ScopeChecker {
   check(params: ScopeCheckParams): ScopeCheckResult {
@@ -28,6 +36,7 @@ export class ScopeChecker {
       : undefined;
 
     const violations: string[] = [];
+    const outOfScope: string[] = [];
 
     for (const file of params.changedFiles) {
       if (matchesAnyGlob(file, forbidden)) {
@@ -35,13 +44,14 @@ export class ScopeChecker {
         continue;
       }
       if (allowed !== undefined && !matchesAnyGlob(file, allowed)) {
-        violations.push(file);
+        outOfScope.push(file);
       }
     }
 
     return ScopeCheckResultSchema.parse({
       passed: violations.length === 0,
-      violations
+      violations,
+      outOfScope
     });
   }
 }

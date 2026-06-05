@@ -42,7 +42,7 @@ export function RunHeader({
         gap: 16
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
+      <div className="run-header-main" style={{ display: "flex", justifyContent: "space-between", gap: 18, alignItems: "flex-start" }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
             <span className="mh-coord" style={{ color: "var(--copper)" }}>
@@ -54,6 +54,7 @@ export function RunHeader({
             <StatusBadge status={runUiStatus(liveStatus)} label={liveStatus.replace("_", " ")} />
           </div>
           <h1
+            className="run-header-title"
             style={{
               margin: 0,
               fontSize: 28,
@@ -78,7 +79,7 @@ export function RunHeader({
             </p>
           ) : null}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 7, alignItems: "flex-end" }}>
+        <div className="run-header-meta" style={{ display: "flex", flexDirection: "column", gap: 7, alignItems: "flex-end" }}>
           <ModeSignal label={mode} />
           <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
             updated {formatDate(run.updatedAt)}
@@ -112,8 +113,63 @@ export function RunHeader({
         <Metric label="High risk" value={metrics.highRisk} tone="failed" />
         <Metric label="Failed" value={metrics.failed} tone="failed" />
       </div>
+
+      {run.execution !== undefined || run.finalApplicationStatus !== undefined ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid var(--rule-soft)", paddingTop: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <span className="mh-coord" style={{ color: "var(--copper)" }}>run receipt</span>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <ExportLink runId={run.runId} format="md" label="Markdown" />
+              <ExportLink runId={run.runId} format="json" label="JSON" />
+              {run.finalPatch !== undefined ? <ExportLink runId={run.runId} format="patch" label="Patch" /> : null}
+            </div>
+          </div>
+          {run.finalApplicationStatus !== undefined ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
+              <Info label="Final outcome" value={finalOutcomeLabel(run.finalApplicationStatus)} />
+              {run.finalBranchName !== undefined ? <Info label="Final branch" value={run.finalBranchName} mono /> : null}
+              {run.finalCommitSha !== undefined ? <Info label="Final commit" value={run.finalCommitSha.slice(0, 10)} mono /> : null}
+            </div>
+          ) : null}
+          {run.finalApplicationStatus !== undefined && run.finalApplicationStatus !== "applied" && run.finalApplicationMessage !== undefined ? (
+            <p style={{ margin: 0, fontSize: 12, color: "var(--text-2)", lineHeight: 1.5 }}>{run.finalApplicationMessage}</p>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
+}
+
+function ExportLink({ runId, format, label }: { runId: string; format: string; label: string }): React.ReactElement {
+  return (
+    <a
+      href={`/api/runs/${encodeURIComponent(runId)}/export?format=${format}`}
+      download
+      style={{
+        border: "1px solid var(--rule-control)",
+        background: "rgba(241,234,216,0.045)",
+        color: "var(--text)",
+        borderRadius: "var(--r-md)",
+        padding: "5px 10px",
+        fontSize: 12,
+        textDecoration: "none",
+        fontFamily: "var(--font-mono)"
+      }}
+    >
+      {label}
+    </a>
+  );
+}
+
+function finalOutcomeLabel(status: "applied" | "exported_patch" | "failed"): string {
+  switch (status) {
+    case "applied":
+      return "Applied to new branch";
+    case "exported_patch":
+      return "Patch exported";
+    case "failed":
+      return "Application failed";
+  }
 }
 
 function Info({

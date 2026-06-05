@@ -547,6 +547,7 @@ export function useLiveRun(
             next.set(event.taskId!, event.success ? "done" : "failed");
             return next;
           });
+          router.refresh();
         } else if (event.kind === "validation.completed" && typeof event.taskId === "string") {
           setNodeStatusOverrides((current) => {
             const next = new Map(current);

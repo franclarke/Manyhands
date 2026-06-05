@@ -55,7 +55,7 @@ describe("ResultRecorder", () => {
     expect(git.opsInvoked()).not.toContain("commit");
   });
 
-  it("reports scope_violation and does not commit when a file is out of scope", async () => {
+  it("reports scope_violation and does not commit when a file hits a forbidden path", async () => {
     const git = new FakeGitRunner({
       heads: { [WORKTREE.path]: "BASE_SHA" },
       diffCachedNameOnly: ["src/routes/tasks.ts", "secrets/key.pem"],
@@ -67,13 +67,40 @@ describe("ResultRecorder", () => {
     const result = await recorder.record({
       worktree: WORKTREE,
       executorOutcome: okOutcome(),
-      executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] }
+      executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] },
+      forbiddenPaths: ["secrets/**"]
     });
 
     expect(result.status).toBe("scope_violation");
     expect(result.scopeCheck.violations).toEqual(["secrets/key.pem"]);
     expect(git.opsInvoked()).not.toContain("commit");
     expect(traceStore.findByType("scope_check_failed")).toHaveLength(1);
+  });
+
+  it("commits and succeeds when an out-of-allow-list file is only advisory (not forbidden)", async () => {
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: ["src/routes/tasks.ts", "index.html"],
+      diffCached: "patch",
+      commitSha: "LEAF_SHA"
+    });
+    const traceStore = new InMemoryTraceStore();
+    const recorder = new ResultRecorder({ git, traceStore });
+
+    const result = await recorder.record({
+      worktree: WORKTREE,
+      executorOutcome: okOutcome(),
+      executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] }
+    });
+
+    // The allow-list is advisory: an out-of-lane file is recorded but the leaf
+    // still commits and succeeds, so one guessed glob can't fail the run.
+    expect(result.status).toBe("success");
+    expect(result.scopeCheck.violations).toEqual([]);
+    expect(result.scopeCheck.outOfScope).toEqual(["index.html"]);
+    expect(git.opsInvoked()).toContain("commit");
+    expect(traceStore.findByType("scope_check_failed")).toHaveLength(0);
+    expect(traceStore.findByType("scope_advisory")).toHaveLength(1);
   });
 
   it("reports timeout without inspecting git", async () => {

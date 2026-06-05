@@ -3,12 +3,13 @@
 > Síntesis de ADRs y decisiones cerradas. LLM-first: directivo, escaneable, sin narrativa.
 > Para el storytelling del proyecto, ver `docs/thesis/project-evolution.md`.
 > Para el detalle completo de cada decisión, ver `docs/adr/` (ADR-0001 a ADR-0029).
+> **Capa de orquestación + experiencia:** el rediseño agent-first vigente vive en `docs/design/` (modelo operativo congelado A–P + plan por PRs). No renegocia las decisiones de abajo; es la capa de UI/estado por encima de ellas.
 
 ---
 
 ## Executor de Agentes
 
-**Decisión (D4):** Gemini CLI (`gemini`, headless) es el único executor de subagentes y el step-model del decomposer recursivo. Binario configurable vía `MANYHANDS_GEMINI_BIN` (default `gemini`). Reemplazó a Codex CLI en junio 2026.
+**Decisión (D4, actualizada por ADR-0030):** Gemini CLI (`gemini`, headless) sigue siendo el executor default y el step-model default del decomposer recursivo. La ejecución de nodos ahora pasa por un registry de executors agentic que deben implementar `AgentExecutor`, correr headless en worktree, no commitear, respetar timeout y dejar que `git diff HEAD` sea la única fuente de verdad. Binario Gemini configurable vía `MANYHANDS_GEMINI_BIN` (default `gemini`).
 
 **Invocación:**
 - Hojas: `gemini -p <prompt>` con el prompt enviado por stdin, `--approval-mode yolo` (auto-aprueba tool calls para no bloquear en headless)

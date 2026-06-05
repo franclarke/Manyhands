@@ -205,6 +205,74 @@ describe("runExecutionPipeline provisioning", () => {
     ]);
   }, 30000);
 
+  it("respects a cancellation that lands while the engine is running", async () => {
+    const runId = "run-cancelled";
+    const store = await saveApprovedRun(runId, {
+      repoSpec: { kind: "fixture", fixtureId: "task-manager-api" }
+    });
+
+    const engine: ExecutionEngine = {
+      run: async () => {
+        // The user hits Stop while the engine is mid-run.
+        const current = await store.get(runId);
+        await store.save({
+          ...current,
+          status: "interrupted",
+          interruptedDuring: "running",
+          errorMessage: "interrupted: cancelled by user"
+        });
+        return completedResult(runId);
+      }
+    };
+
+    await runExecutionPipeline(runId, { intervalMs: 0, engine, provisioner: fakeProvisioner() });
+
+    const finalRun = await store.get(runId);
+    // The cancellation is respected — not overridden by completed, no final apply.
+    expect(finalRun.status).toBe("interrupted");
+    expect(finalRun.finalCommitSha).toBeUndefined();
+    expect(finalRun.finalBranchName).toBeUndefined();
+    // The partial execution result is still persisted for diagnostics.
+    expect(finalRun.execution).toBeDefined();
+  }, 30000);
+
+  it("interrupts and aborts the engine when the wall-clock budget is exceeded", async () => {
+    const runId = "run-budget";
+    const store = await saveApprovedRun(runId, {
+      repoSpec: { kind: "fixture", fixtureId: "task-manager-api" },
+      executionConfig: { maxWallClockMs: 50 }
+    });
+
+    let sawAbort = false;
+    const engine: ExecutionEngine = {
+      run: async (input) => {
+        // Behave like a real engine: keep "working" until aborted, then unwind.
+        await new Promise<void>((resolve) => {
+          if (input.signal?.aborted === true) {
+            resolve();
+            return;
+          }
+          input.signal?.addEventListener(
+            "abort",
+            () => {
+              sawAbort = true;
+              resolve();
+            },
+            { once: true }
+          );
+        });
+        return completedResult(runId);
+      }
+    };
+
+    await runExecutionPipeline(runId, { intervalMs: 0, engine, provisioner: fakeProvisioner() });
+
+    const finalRun = await store.get(runId);
+    expect(sawAbort).toBe(true);
+    expect(finalRun.status).toBe("interrupted");
+    expect(finalRun.errorMessage).toContain("budget");
+  }, 30000);
+
   it("applies the final integrated patch back to a local repo", async () => {
     const runId = "run-local-apply";
     const repoRoot = path.join(tempDir, "local-repo");
@@ -245,9 +313,15 @@ describe("runExecutionPipeline provisioning", () => {
 
     const finalRun = await store.get(runId);
     expect(finalRun.status).toBe("completed");
+    expect(finalRun.finalApplicationStatus).toBe("applied");
     expect(finalRun.finalPatch).toContain("feature.ts");
     expect(finalRun.integrationCommitSha).toMatch(/^[0-9a-f]{40}$/);
-    expect(finalRun.finalCommitSha).toBe(git(repoRoot, "rev-parse", "HEAD"));
+    // The result lands on a fresh manyhands/run-* branch, not the user's branch.
+    expect(finalRun.finalBranchName).toMatch(/^manyhands\/run-/);
+    expect(git(repoRoot, "rev-parse", finalRun.finalBranchName!)).toBe(finalRun.finalCommitSha);
+    // The user's branch and working tree are left exactly as the engine left them.
+    expect(git(repoRoot, "rev-parse", "--abbrev-ref", "HEAD")).toBe("main");
+    expect(git(repoRoot, "rev-parse", "HEAD")).toBe(baseCommit);
     expect(git(repoRoot, "status", "--porcelain")).toBe("");
   }, 30000);
 });

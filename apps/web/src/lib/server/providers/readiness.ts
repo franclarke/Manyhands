@@ -4,8 +4,19 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
+import {
+  CLAUDE_CODE_EXECUTOR_ID,
+  EXECUTOR_DESCRIPTORS,
+  GEMINI_EXECUTOR_ID,
+  type ExecutorDescriptor,
+  type ExecutorId
+} from "@manyhands/execution-core";
 import type { Workspace } from "@/lib/api-types";
-import { GEMINI_EXECUTOR_ID } from "@/lib/models";
+import {
+  detectWorkspaceCommands,
+  hasDetectedCommands,
+  type DetectedCommands
+} from "./command-detection";
 
 const execFileAsync = promisify(execFile);
 
@@ -13,14 +24,14 @@ export type ProviderReadinessStatus = "ready" | "warning" | "error";
 export type ProviderReadinessCheckStatus = "pass" | "warning" | "fail";
 
 export interface ProviderReadinessCheck {
-  id: "cli" | "auth" | "repo_path" | "repo_clean" | "branch" | "quota";
+  id: "enabled" | "cli" | "auth" | "repo_path" | "repo_clean" | "branch" | "commands" | "quota";
   status: ProviderReadinessCheckStatus;
   label: string;
   message: string;
 }
 
 export interface ProviderReadiness {
-  executorId: typeof GEMINI_EXECUTOR_ID;
+  executorId: ExecutorId;
   label: string;
   status: ProviderReadinessStatus;
   binaryPath: string;
@@ -29,94 +40,93 @@ export interface ProviderReadiness {
   checks: ProviderReadinessCheck[];
 }
 
-export interface GeminiReadinessDeps {
+export interface ProviderReadinessDeps {
   checkCli?: (binaryPath: string) => Promise<{ ok: boolean; version?: string }>;
-  hasCredentials?: () => boolean;
+  hasCredentials?: (executorId: ExecutorId) => boolean;
   gitPorcelain?: (repoRoot: string) => Promise<string>;
   branchExists?: (repoRoot: string, branch: string) => Promise<boolean>;
+  detectCommands?: (repoPath: string) => Promise<DetectedCommands>;
+}
+
+export async function inspectProvidersReadiness(
+  workspace: Workspace | null,
+  deps: ProviderReadinessDeps = {}
+): Promise<ProviderReadiness[]> {
+  const workspaceChecks = await inspectWorkspace(workspace, deps);
+  return Promise.all(
+    EXECUTOR_DESCRIPTORS.map((descriptor) => inspectExecutor(descriptor, workspaceChecks, deps))
+  );
 }
 
 export async function inspectGeminiReadiness(
   workspace: Workspace | null,
-  deps: GeminiReadinessDeps = {}
+  deps: ProviderReadinessDeps = {}
 ): Promise<ProviderReadiness> {
-  const binaryPath = process.env.MANYHANDS_GEMINI_BIN ?? "gemini";
+  const providers = await inspectProvidersReadiness(workspace, deps);
+  return providers.find((provider) => provider.executorId === GEMINI_EXECUTOR_ID) ?? providers[0]!;
+}
+
+async function inspectExecutor(
+  descriptor: ExecutorDescriptor,
+  workspaceChecks: ProviderReadinessCheck[],
+  deps: ProviderReadinessDeps
+): Promise<ProviderReadiness> {
+  const binaryPath = process.env[descriptor.binaryEnvVar] ?? descriptor.defaultBinary;
   const checks: ProviderReadinessCheck[] = [];
+
+  if (!descriptor.enabled) {
+    checks.push({
+      id: "enabled",
+      status: "warning",
+      label: "Enabled",
+      message: "Registered for future use, disabled in this build."
+    });
+    checks.push({
+      id: "quota",
+      status: "warning",
+      label: "Quota",
+      message: "Unavailable while executor is disabled."
+    });
+    return {
+      executorId: descriptor.id,
+      label: descriptor.label,
+      status: "warning",
+      binaryPath,
+      quota: "unknown",
+      checks
+    };
+  }
 
   const cli = await (deps.checkCli ?? defaultCheckCli)(binaryPath);
   checks.push({
     id: "cli",
     status: cli.ok ? "pass" : "fail",
-    label: "Gemini CLI",
+    label: descriptor.label,
     message: cli.ok
       ? `Detected${cli.version !== undefined ? `: ${cli.version}` : "."}`
-      : "Gemini CLI not found. Install it or set MANYHANDS_GEMINI_BIN."
+      : `${descriptor.label} not found. Install it or set ${descriptor.binaryEnvVar}.`
   });
 
-  const authed = (deps.hasCredentials ?? defaultHasCredentials)();
+  const authed = (deps.hasCredentials ?? defaultHasCredentials)(descriptor.id);
   checks.push({
     id: "auth",
     status: authed ? "pass" : "fail",
     label: "Authentication",
-    message: authed
-      ? "Credentials found."
-      : "Gemini CLI has no credentials. Run gemini once to authenticate, or set GEMINI_API_KEY."
+    message: authed ? "Credentials found." : authMessageFor(descriptor.id)
   });
 
-  const repoPath = workspace?.repoPath;
-  if (repoPath === undefined || repoPath.trim().length === 0) {
-    checks.push({
-      id: "repo_path",
-      status: "warning",
-      label: "Repository",
-      message: "This workspace has no local git repo configured."
-    });
-  } else {
-    checks.push({
-      id: "repo_path",
-      status: "pass",
-      label: "Repository",
-      message: repoPath
-    });
-
-    const porcelain = await safeGitPorcelain(repoPath, deps.gitPorcelain ?? defaultGitPorcelain);
-    checks.push({
-      id: "repo_clean",
-      status: porcelain.ok && porcelain.output.trim().length === 0 ? "pass" : "warning",
-      label: "Repo clean",
-      message: porcelain.ok
-        ? porcelain.output.trim().length === 0
-          ? "No uncommitted changes detected."
-          : "Repository has uncommitted changes; execution preflight will block."
-        : porcelain.message
-    });
-
-    const branch = workspace?.defaultBranch ?? "main";
-    const exists = await safeBranchExists(repoPath, branch, deps.branchExists ?? defaultBranchExists);
-    checks.push({
-      id: "branch",
-      status: exists.ok && exists.exists ? "pass" : "warning",
-      label: "Base branch",
-      message: exists.ok
-        ? exists.exists
-          ? `Branch "${branch}" resolves.`
-          : `Branch "${branch}" does not resolve.`
-        : exists.message
-    });
-  }
-
+  checks.push(...workspaceChecks);
   checks.push({
     id: "quota",
     status: "warning",
     label: "Quota",
-    message: "Unknown without spending a live Gemini request."
+    message: "Unknown without spending a live model request."
   });
 
-  const status = deriveStatus(checks);
   const readiness: ProviderReadiness = {
-    executorId: GEMINI_EXECUTOR_ID,
-    label: "Gemini CLI",
-    status,
+    executorId: descriptor.id,
+    label: descriptor.label,
+    status: deriveStatus(checks),
     binaryPath,
     quota: "unknown",
     checks
@@ -125,11 +135,85 @@ export async function inspectGeminiReadiness(
   return readiness;
 }
 
+async function inspectWorkspace(
+  workspace: Workspace | null,
+  deps: ProviderReadinessDeps
+): Promise<ProviderReadinessCheck[]> {
+  const checks: ProviderReadinessCheck[] = [];
+  const repoPath = workspace?.repoPath;
+  if (repoPath === undefined || repoPath.trim().length === 0) {
+    checks.push({
+      id: "repo_path",
+      status: "warning",
+      label: "Repository",
+      message: "This workspace has no local git repo configured."
+    });
+    return checks;
+  }
+
+  checks.push({
+    id: "repo_path",
+    status: "pass",
+    label: "Repository",
+    message: repoPath
+  });
+
+  const porcelain = await safeGitPorcelain(repoPath, deps.gitPorcelain ?? defaultGitPorcelain);
+  checks.push({
+    id: "repo_clean",
+    status: porcelain.ok && porcelain.output.trim().length === 0 ? "pass" : "warning",
+    label: "Repo clean",
+    message: porcelain.ok
+      ? porcelain.output.trim().length === 0
+        ? "No uncommitted changes detected."
+        : "Repository has uncommitted changes; execution preflight will block."
+      : porcelain.message
+  });
+
+  const branch = workspace?.defaultBranch ?? "main";
+  const exists = await safeBranchExists(repoPath, branch, deps.branchExists ?? defaultBranchExists);
+  checks.push({
+    id: "branch",
+    status: exists.ok && exists.exists ? "pass" : "warning",
+    label: "Base branch",
+    message: exists.ok
+      ? exists.exists
+        ? `Branch "${branch}" resolves.`
+        : `Branch "${branch}" does not resolve.`
+      : exists.message
+  });
+
+  const commands = await (deps.detectCommands ?? detectWorkspaceCommands)(repoPath).catch(() => ({
+    packageManager: "unknown" as const
+  }));
+  const summary = describeDetectedCommands(commands);
+  checks.push({
+    id: "commands",
+    status: hasDetectedCommands(commands) ? "pass" : "warning",
+    label: "Commands",
+    message: summary
+  });
+  return checks;
+}
+
+function describeDetectedCommands(commands: DetectedCommands): string {
+  const parts: string[] = [];
+  if (commands.test !== undefined) parts.push(`test: ${commands.test}`);
+  if (commands.build !== undefined) parts.push(`build: ${commands.build}`);
+  if (commands.typecheck !== undefined) parts.push(`typecheck: ${commands.typecheck}`);
+  if (commands.lint !== undefined) parts.push(`lint: ${commands.lint}`);
+  return parts.length > 0
+    ? parts.join(" · ")
+    : "No test/build scripts detected in package.json; validation will rely on contract commands.";
+}
+
 function deriveStatus(checks: readonly ProviderReadinessCheck[]): ProviderReadinessStatus {
   if (checks.some((check) => check.status === "fail")) {
     return "error";
   }
-  if (checks.some((check) => check.id !== "quota" && check.status === "warning")) {
+  // `quota` and `commands` are informational — a missing build script shouldn't
+  // mark a provider "not ready"; validation can still rely on contract commands.
+  if (checks.some((check) => check.id !== "quota" && check.id !== "commands" && check.status === "warning")) {
     return "warning";
   }
   return "ready";
@@ -148,19 +232,30 @@ async function defaultCheckCli(binaryPath: string): Promise<{ ok: boolean; versi
   }
 }
 
-function defaultHasCredentials(): boolean {
-  if (
-    process.env.GEMINI_API_KEY ||
-    process.env.GOOGLE_API_KEY ||
-    process.env.GOOGLE_GENAI_USE_GCA
-  ) {
-    return true;
+function defaultHasCredentials(executorId: ExecutorId): boolean {
+  if (executorId === GEMINI_EXECUTOR_ID) {
+    return Boolean(
+      process.env.GEMINI_API_KEY ||
+      process.env.GOOGLE_API_KEY ||
+      process.env.GOOGLE_GENAI_USE_GCA ||
+      existsSync(join(homedir(), ".gemini", "oauth_creds.json")) ||
+      existsSync(join(homedir(), ".gemini", "google_accounts.json"))
+    );
   }
-  const geminiHome = join(homedir(), ".gemini");
-  return (
-    existsSync(join(geminiHome, "oauth_creds.json")) ||
-    existsSync(join(geminiHome, "google_accounts.json"))
-  );
+  if (executorId === CLAUDE_CODE_EXECUTOR_ID) {
+    return Boolean(process.env.ANTHROPIC_API_KEY || existsSync(join(homedir(), ".claude.json")));
+  }
+  return false;
+}
+
+function authMessageFor(executorId: ExecutorId): string {
+  if (executorId === GEMINI_EXECUTOR_ID) {
+    return "Gemini CLI has no credentials. Run gemini once to authenticate, or set GEMINI_API_KEY.";
+  }
+  if (executorId === CLAUDE_CODE_EXECUTOR_ID) {
+    return "Claude Code CLI has no credentials. Run claude once to authenticate, or set ANTHROPIC_API_KEY.";
+  }
+  return "Authentication check unavailable for this disabled executor.";
 }
 
 async function defaultGitPorcelain(repoRoot: string): Promise<string> {

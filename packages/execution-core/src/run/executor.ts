@@ -8,7 +8,15 @@ import { nowIso } from "@manyhands/shared";
 import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
 
+import { FixedAgentExecutorFactory, type AgentExecutorFactory } from "../executor/factory";
 import type { AgentExecutor } from "../executor/types";
+import {
+  GEMINI_EXECUTOR_ID,
+  normalizeExecutorSelection,
+  resolveLegacyModelSelection,
+  usageSourceForSelection,
+  type ExecutorSelection
+} from "../executor/registry";
 import type { GitRunner } from "../git/runner";
 import { FileSystemContextPacker, type ContextPacker } from "../context/packer";
 import { RunExecutionError } from "../errors";
@@ -30,7 +38,8 @@ import { WorktreeManager } from "../worktree/manager";
 
 export interface RunExecutorDeps {
   git: GitRunner;
-  executor: AgentExecutor;
+  executor?: AgentExecutor;
+  executorFactory?: AgentExecutorFactory;
   traceStore: TraceStore;
   repoRoot: string;
   worktreeManager?: WorktreeManager;
@@ -50,9 +59,29 @@ export interface RunExecutionParams {
   graph: TaskGraph;
   config: ExecutionConfig;
   model: string;
+  defaultExecutionSelection?: ExecutorSelection;
+  defaultRepairSelection?: ExecutorSelection;
   runId?: string;
   policy?: SchedulingPolicy;
+  /** Run-level cancellation: aborts in-flight executors and stops scheduling. */
+  signal?: AbortSignal;
+  /** Awaited at each batch boundary (pause hold); resolves to continue. */
+  onBatchBoundary?: () => Promise<void>;
 }
+
+export interface RunNodeExecutionParams {
+  graph: TaskGraph;
+  config: ExecutionConfig;
+  model: string;
+  taskId: string;
+  runId?: string;
+  childResults?: AgentExecutionResult[];
+  cleanupWorktrees?: boolean;
+}
+
+export type RunNodeExecutionResult =
+  | { kind: "leaf"; result: AgentExecutionResult; worktrees: WorktreeRecord[] }
+  | { kind: "integration"; result: IntegrationResult; worktrees: WorktreeRecord[] };
 
 export interface RunExecutionResult {
   runId: string;
@@ -65,19 +94,18 @@ export interface RunExecutionResult {
 }
 
 const INTEGRATION_SUCCESS = new Set(["success", "executor_repair_success"]);
-const GEMINI_EXECUTOR_ID = "gemini-cli";
 
-export interface ResolvedExecutorModel {
-  executorId: typeof GEMINI_EXECUTOR_ID;
-  model: string;
+export function resolveExecutorSelection(node: TaskNode, defaultSelection: ExecutorSelection): ExecutorSelection {
+  const metadata = node.metadata as { executorSelection?: unknown; executorOverride?: unknown } | undefined;
+  return (
+    normalizeExecutorSelection(metadata?.executorSelection) ??
+    normalizeExecutorSelection(metadata?.executorOverride) ??
+    defaultSelection
+  );
 }
 
-export function resolveExecutorModel(node: TaskNode, defaultModel: string): ResolvedExecutorModel {
-  const override = node.metadata?.executorOverride;
-  if (isGeminiExecutorOverride(override)) {
-    return { executorId: GEMINI_EXECUTOR_ID, model: override.model };
-  }
-  return { executorId: GEMINI_EXECUTOR_ID, model: defaultModel };
+export function resolveExecutorModel(node: TaskNode, defaultModel: string): ExecutorSelection {
+  return resolveExecutorSelection(node, { executorId: GEMINI_EXECUTOR_ID, model: defaultModel });
 }
 
 /**
@@ -91,7 +119,7 @@ export function resolveExecutorModel(node: TaskNode, defaultModel: string): Reso
  */
 export class RunExecutor {
   private readonly git: GitRunner;
-  private readonly executor: AgentExecutor;
+  private readonly executorFactory: AgentExecutorFactory;
   private readonly traceStore: TraceStore;
   private readonly repoRoot: string;
   private readonly worktreeManager: WorktreeManager;
@@ -105,7 +133,8 @@ export class RunExecutor {
 
   constructor(deps: RunExecutorDeps) {
     this.git = deps.git;
-    this.executor = deps.executor;
+    this.executorFactory =
+      deps.executorFactory ?? new FixedAgentExecutorFactory(requireExecutor(deps.executor));
     this.traceStore = deps.traceStore;
     this.repoRoot = deps.repoRoot;
     this.worktreeManager =
@@ -117,7 +146,7 @@ export class RunExecutor {
       deps.integrationAgent ??
       new IntegrationAgent({
         git: deps.git,
-        executor: deps.executor,
+        executorFactory: this.executorFactory,
         traceStore: deps.traceStore,
         repoRoot: deps.repoRoot,
         validationRunner: this.validationRunner
@@ -132,6 +161,9 @@ export class RunExecutor {
   async run(params: RunExecutionParams): Promise<RunExecutionResult> {
     const { graph, config } = params;
     const runId = params.runId ?? graph.planId;
+    console.log(
+      `[RunExecutor] Start run=${runId} graph=${graph.id} root=${graph.rootId} nodes=${Object.keys(graph.nodes).length}`
+    );
 
     // I7: reject a malformed graph before creating any worktree.
     assertExecutableGraph(graph);
@@ -149,9 +181,14 @@ export class RunExecutor {
         maxParallel: config.maxParallel,
         policy: params.policy ?? "parallel_naive"
       });
+      console.log(
+        `[RunExecutor] Schedule run=${runId} batches=${plan.batches.length} tasks=${formatTaskList(plan.batches.flatMap((batch) => batch.taskIds))} blocked=${plan.blocked.length}`
+      );
 
       const leafResultMap = await this.batchScheduler.runBatches({
         batches: plan.batches.map((batch) => ({ id: batch.id, taskIds: batch.taskIds })),
+        ...(params.signal !== undefined ? { signal: params.signal } : {}),
+        ...(params.onBatchBoundary !== undefined ? { onBatchBoundary: params.onBatchBoundary } : {}),
         runTask: async (taskId) => {
           const node = graph.nodes[taskId];
           if (!node) {
@@ -161,7 +198,15 @@ export class RunExecutor {
               runId
             );
           }
-          return this.executeLeaf({ graph, node, runId, config, model: params.model, worktrees });
+          return this.executeLeaf({
+            graph,
+            node,
+            runId,
+            config,
+            defaultSelection: params.defaultExecutionSelection ?? resolveLegacyModelSelection(params.model),
+            worktrees,
+            ...(params.signal !== undefined ? { signal: params.signal } : {})
+          });
         }
       });
 
@@ -169,23 +214,58 @@ export class RunExecutor {
         .flatMap((batch) => batch.taskIds)
         .map((taskId) => leafResultMap.get(taskId))
         .filter((result): result is AgentExecutionResult => result !== undefined);
+      console.log(
+        `[RunExecutor] Leaf phase complete run=${runId} results=${leafResults.length}/${plan.batches.flatMap((batch) => batch.taskIds).length} statuses=${formatResultStatuses(leafResults)}`
+      );
+
+      // Cancellation: if the run was aborted during leaf execution, skip
+      // integration + validation and return the partial result. The web runner's
+      // cooperative guard already marks the run `interrupted`.
+      if (params.signal?.aborted === true) {
+        const abortedDurationMs = this.clock() - startMs;
+        this.traceStore.append({
+          type: "run_completed",
+          actor: "system",
+          payload: { runId, status: "failed", leafCount: leafResults.length, integrationCount: 0, durationMs: abortedDurationMs }
+        });
+        return {
+          runId,
+          status: "failed",
+          leafResults,
+          integrationResults: [],
+          granularityVector: computeGranularityVector({ graph, leafResults, integrationResults: [], totalDurationMs: abortedDurationMs }),
+          totalDurationMs: abortedDurationMs
+        };
+      }
 
       const integrationResults = await this.integrateBottomUp({
         graph,
         runId,
         config,
-        model: params.model,
+        defaultSelection: params.defaultRepairSelection ?? params.defaultExecutionSelection ?? resolveLegacyModelSelection(params.model),
         leafResults,
-        worktrees
+        worktrees,
+        ...(params.signal !== undefined ? { signal: params.signal } : {})
       });
+      console.log(
+        `[RunExecutor] Integration phase complete run=${runId} results=${integrationResults.length} statuses=${formatIntegrationStatuses(integrationResults)}`
+      );
 
       const validationResult = await this.runRunValidation(
         graph,
         this.resolveRunValidationCwd(graph, worktrees)
       );
+      if (validationResult !== undefined) {
+        console.log(
+          `[RunExecutor] Run validation complete run=${runId} passed=${validationResult.passed} exitCode=${validationResult.exitCode}`
+        );
+      }
 
       const totalDurationMs = this.clock() - startMs;
       const status = this.deriveStatus(leafResults, integrationResults, validationResult);
+      console.log(
+        `[RunExecutor] Complete run=${runId} status=${status} leaves=${leafResults.length} integrations=${integrationResults.length} durationMs=${totalDurationMs}`
+      );
 
       this.traceStore.append({
         type: "run_completed",
@@ -220,16 +300,120 @@ export class RunExecutor {
     }
   }
 
+  async runNode(params: RunNodeExecutionParams): Promise<RunNodeExecutionResult> {
+    const { graph, config, taskId } = params;
+    const runId = params.runId ?? graph.planId;
+
+    assertExecutableGraph(graph);
+
+    const node = graph.nodes[taskId];
+    if (!node) {
+      throw new RunExecutionError(`Task "${taskId}" is not in the graph.`, "schedule", runId);
+    }
+
+    const worktrees: WorktreeRecord[] = [];
+    try {
+      if (node.kind === "leaf") {
+        const result = await this.executeLeaf({
+          graph,
+          node,
+          runId,
+          config,
+          defaultSelection: resolveLegacyModelSelection(params.model),
+          worktrees
+        });
+        return { kind: "leaf", result, worktrees };
+      }
+
+      if (node.childrenIds.length === 0) {
+        throw new RunExecutionError(
+          `Composite task "${taskId}" has no children to integrate.`,
+          "integration",
+          runId
+        );
+      }
+
+      const providedChildren = new Map((params.childResults ?? []).map((result) => [result.taskId, result]));
+      const childResults = node.childrenIds
+        .map((childId) => providedChildren.get(childId))
+        .filter((result): result is AgentExecutionResult => result !== undefined);
+
+      if (childResults.length !== node.childrenIds.length) {
+        const missing = node.childrenIds.filter((childId) => !providedChildren.has(childId));
+        throw new RunExecutionError(
+          `Composite task "${taskId}" cannot integrate until all children have results. Missing: ${missing.join(", ")}.`,
+          "integration",
+          runId
+        );
+      }
+
+      const worktree = await this.worktreeManager.create({
+        taskId: node.id,
+        runId,
+        kind: "integration",
+        baseCommit: graph.baseCommit
+      });
+      worktrees.push(worktree);
+      this.traceStore.append({
+        type: "worktree_created",
+        actor: "system",
+        taskId: node.id,
+        payload: { path: worktree.path, branch: worktree.branch }
+      });
+
+      const contract = node.contract;
+      const repairSelection = resolveExecutorSelection(node, resolveLegacyModelSelection(params.model));
+      const sharedInterfaces = contract?.producedInterfaces;
+      const childIntents = node.childrenIds
+        .map((childId) => graph.nodes[childId])
+        .filter((child): child is TaskNode => child !== undefined)
+        .map((child) => ({
+          taskId: child.id,
+          goal: child.goal,
+          consumes: child.contract?.consumedInterfaces?.map((i) => i.id) ?? [],
+          produces: child.contract?.producedInterfaces?.map((i) => i.id) ?? []
+        }));
+
+      const result = await this.integrationAgent.integrate({
+        compositeTaskId: node.id,
+        worktree,
+        childResults,
+        repair: {
+          selection: repairSelection,
+          sandboxMode: config.sandboxMode,
+          timeoutMs: config.integrationTimeoutMs
+        },
+        parentGoal: node.goal,
+        childIntents,
+        ...(sharedInterfaces ? { sharedInterfaces } : {}),
+        ...(contract?.parentValidationCommands
+          ? { parentValidationCommands: contract.parentValidationCommands }
+          : {}),
+        ...(contract?.executionScope ? { executionScope: contract.executionScope } : {}),
+        ...(contract?.forbiddenPaths ? { forbiddenPaths: contract.forbiddenPaths } : {})
+      });
+
+      return { kind: "integration", result, worktrees };
+    } finally {
+      if (params.cleanupWorktrees === true) {
+        await this.cleanupWorktrees(worktrees);
+      }
+    }
+  }
+
   private async executeLeaf(args: {
     graph: TaskGraph;
     node: TaskNode;
     runId: string;
     config: ExecutionConfig;
-    model: string;
+    defaultSelection: ExecutorSelection;
     worktrees: WorktreeRecord[];
+    signal?: AbortSignal;
   }): Promise<AgentExecutionResult> {
-    const { node, runId, config, model } = args;
-    const executorModel = resolveExecutorModel(node, model);
+    const { node, runId, config } = args;
+    const executorSelection = resolveExecutorSelection(node, args.defaultSelection);
+    const usageSource = usageSourceForSelection(executorSelection);
+    const executor = this.executorFactory.create(executorSelection);
 
     this.traceStore.append({ type: "agent_started", actor: "system", taskId: node.id, payload: {} });
 
@@ -265,23 +449,29 @@ export class RunExecutor {
       type: "executor_started",
       actor: "system",
       taskId: node.id,
-      payload: { executorId: executorModel.executorId, model: executorModel.model }
+      payload: {
+        executorId: executorSelection.executorId,
+        model: executorSelection.model,
+        usageSource
+      }
     });
-    const executorOutcome = await this.executor.execute({
+    const executorOutcome = await executor.execute({
       cwd: worktree.path,
       instructionFilePath,
-      model: executorModel.model,
+      model: executorSelection.model,
       timeoutMs: config.leafTimeoutMs,
       sandboxMode: config.sandboxMode,
-      bypassApprovals: true
+      bypassApprovals: true,
+      ...(args.signal !== undefined ? { signal: args.signal } : {})
     });
     this.traceStore.append({
       type: "executor_completed",
       actor: "system",
       taskId: node.id,
       payload: {
-        executorId: executorModel.executorId,
-        model: executorModel.model,
+        executorId: executorSelection.executorId,
+        model: executorSelection.model,
+        usageSource,
         exitCode: executorOutcome.exitCode,
         timedOut: executorOutcome.timedOut
       }
@@ -294,7 +484,8 @@ export class RunExecutor {
       unexpectedCommitPolicy: config.unexpectedCommitPolicy,
       commitMessage: `mh: ${node.id}`,
       ...(contract?.executionScope ? { executionScope: contract.executionScope } : {}),
-      ...(contract?.forbiddenPaths ? { forbiddenPaths: contract.forbiddenPaths } : {})
+      ...(contract?.forbiddenPaths ? { forbiddenPaths: contract.forbiddenPaths } : {}),
+      usageSource
     });
   }
 
@@ -302,11 +493,12 @@ export class RunExecutor {
     graph: TaskGraph;
     runId: string;
     config: ExecutionConfig;
-    model: string;
+    defaultSelection: ExecutorSelection;
     leafResults: AgentExecutionResult[];
     worktrees: WorktreeRecord[];
+    signal?: AbortSignal;
   }): Promise<IntegrationResult[]> {
-    const { graph, runId, config, model } = args;
+    const { graph, runId, config } = args;
     const resultByTask = new Map<string, AgentExecutionResult>(
       args.leafResults.map((result) => [result.taskId, result])
     );
@@ -314,13 +506,53 @@ export class RunExecutor {
     const composites = Object.values(graph.nodes)
       .filter((node) => node.kind !== "leaf" && node.childrenIds.length > 0)
       .sort((a, b) => b.depth - a.depth);
+    console.log(
+      `[RunExecutor] Integrate bottom-up run=${runId} composites=${formatTaskList(composites.map((node) => node.id))}`
+    );
 
     const integrationResults: IntegrationResult[] = [];
 
     for (const composite of composites) {
+      console.log(
+        `[RunExecutor] Integrating composite=${composite.id} children=${formatTaskList(composite.childrenIds)}`
+      );
       const childResults = composite.childrenIds
         .map((childId) => resultByTask.get(childId))
         .filter((result): result is AgentExecutionResult => result !== undefined);
+      const missingChildIds = composite.childrenIds.filter((childId) => !resultByTask.has(childId));
+
+      if (missingChildIds.length > 0) {
+        console.warn(
+          `[RunExecutor] Missing child results composite=${composite.id} present=${formatResultStatuses(childResults)} missing=${formatTaskList(missingChildIds)}`
+        );
+        const result: IntegrationResult = {
+          compositeTaskId: composite.id,
+          status: "child_failed",
+          childResults: [
+            ...childResults,
+            ...missingChildIds.map((childId) =>
+              syntheticMissingChildResult(childId, graph.baseCommit, composite.id)
+            )
+          ],
+          repairAttempted: false,
+          preMergeFindings: []
+        };
+        this.traceStore.append({
+          type: "integration_started",
+          actor: "system",
+          taskId: composite.id,
+          payload: { childTaskIds: childResults.map((child) => child.taskId), missingChildIds }
+        });
+        this.traceStore.append({
+          type: "integration_completed",
+          actor: "system",
+          taskId: composite.id,
+          payload: { status: result.status, missingChildIds }
+        });
+        integrationResults.push(result);
+        resultByTask.set(composite.id, syntheticFailedCompositeResult(composite.id, graph.baseCommit));
+        continue;
+      }
 
       const worktree = await this.worktreeManager.create({
         taskId: composite.id,
@@ -337,7 +569,7 @@ export class RunExecutor {
       });
 
       const contract = composite.contract;
-      const repairModel = resolveExecutorModel(composite, model);
+      const repairSelection = resolveExecutorSelection(composite, args.defaultSelection);
       // Contract-aware composition (Artifact 2): hand the Composer the parent goal,
       // the canonical seams defined at this composite, and each child's intent so
       // conflict repair resolves by reference to the contract, not the diff text.
@@ -355,7 +587,11 @@ export class RunExecutor {
         compositeTaskId: composite.id,
         worktree,
         childResults,
-        repair: { model: repairModel.model, sandboxMode: config.sandboxMode, timeoutMs: config.integrationTimeoutMs },
+        repair: {
+          selection: repairSelection,
+          sandboxMode: config.sandboxMode,
+          timeoutMs: config.integrationTimeoutMs
+        },
         parentGoal: composite.goal,
         childIntents,
         ...(sharedInterfaces ? { sharedInterfaces } : {}),
@@ -363,9 +599,13 @@ export class RunExecutor {
           ? { parentValidationCommands: contract.parentValidationCommands }
           : {}),
         ...(contract?.executionScope ? { executionScope: contract.executionScope } : {}),
-        ...(contract?.forbiddenPaths ? { forbiddenPaths: contract.forbiddenPaths } : {})
+        ...(contract?.forbiddenPaths ? { forbiddenPaths: contract.forbiddenPaths } : {}),
+        ...(args.signal !== undefined ? { signal: args.signal } : {})
       });
       integrationResults.push(result);
+      console.log(
+        `[RunExecutor] Integrated composite=${composite.id} status=${result.status} commit=${result.integrationCommitSha ?? "(none)"} children=${formatTaskList(result.childResults.map((child) => child.taskId))}`
+      );
 
       // A successfully integrated composite becomes a child for its own parent.
       if (INTEGRATION_SUCCESS.has(result.status) && result.integrationCommitSha) {
@@ -460,8 +700,10 @@ function buildLeafInstructions(node: TaskNode, contextSection?: string): string 
     lines.push("", "Acceptance criteria:", ...acceptance.map((c) => `- ${c}`));
   }
 
-  // Communicate the exact scope the orchestrator will enforce after the run, so
-  // the agent knows what it may and must not touch (mirrors the ScopeChecker).
+  // Communicate scope as guidance, not a hard cage. The allow-list is a hint for
+  // where this task's work belongs; touching another file when the task genuinely
+  // needs it is fine (the orchestrator only hard-blocks forbidden paths). This
+  // keeps a greenfield scaffold from self-limiting into an empty diff.
   if (contract?.executionScope) {
     const allowed = [
       ...contract.executionScope.implementationPaths,
@@ -469,11 +711,15 @@ function buildLeafInstructions(node: TaskNode, contextSection?: string): string 
       ...contract.executionScope.configPaths
     ];
     if (allowed.length > 0) {
-      lines.push("", "You may only modify files matching:", ...allowed.map((p) => `- ${p}`));
+      lines.push(
+        "",
+        "Your work belongs primarily in files matching (stay here unless the task truly needs more):",
+        ...allowed.map((p) => `- ${p}`)
+      );
     }
   }
   if (contract?.forbiddenPaths && contract.forbiddenPaths.length > 0) {
-    lines.push("", "You must NOT modify:", ...contract.forbiddenPaths.map((p) => `- ${p}`));
+    lines.push("", "You must NOT modify (hard rule):", ...contract.forbiddenPaths.map((p) => `- ${p}`));
   }
   // Seams: the exact interfaces this leaf must build against (produced by
   // sibling/ancestor tasks) and the ones it must expose. This is what lets
@@ -514,16 +760,11 @@ function collectRunValidationCommands(graph: TaskGraph): ExecutionValidationComm
   return root?.contract?.runValidationCommands ?? [];
 }
 
-function isGeminiExecutorOverride(value: unknown): value is { executorId: typeof GEMINI_EXECUTOR_ID; model: string } {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
+function requireExecutor(executor: AgentExecutor | undefined): AgentExecutor {
+  if (executor === undefined) {
+    throw new Error("RunExecutor requires an executor or executorFactory.");
   }
-  const candidate = value as { executorId?: unknown; model?: unknown };
-  return (
-    candidate.executorId === GEMINI_EXECUTOR_ID &&
-    typeof candidate.model === "string" &&
-    candidate.model.trim().length > 0
-  );
+  return executor;
 }
 
 function syntheticCompositeResult(
@@ -540,7 +781,7 @@ function syntheticCompositeResult(
     diff: "",
     changedFiles: [],
     commitSha,
-    scopeCheck: { passed: true, violations: [] },
+    scopeCheck: { passed: true, violations: [], outOfScope: [] },
     executorExitCode: 0,
     executorDurationMs: 0,
     executorTimedOut: false
@@ -559,10 +800,53 @@ function syntheticFailedCompositeResult(
     agentCommittedUnexpectedly: false,
     diff: "",
     changedFiles: [],
-    scopeCheck: { passed: true, violations: [] },
+    scopeCheck: { passed: true, violations: [], outOfScope: [] },
     executorExitCode: 1,
     executorDurationMs: 0,
     executorTimedOut: false,
     stderrTail: "Composite integration failed before producing an integration commit."
   };
+}
+
+function syntheticMissingChildResult(
+  taskId: string,
+  baseHead: string,
+  compositeTaskId: string
+): AgentExecutionResult {
+  return {
+    taskId,
+    status: "internal_error",
+    baseHead,
+    currentHead: baseHead,
+    agentCommittedUnexpectedly: false,
+    diff: "",
+    changedFiles: [],
+    scopeCheck: { passed: true, violations: [], outOfScope: [] },
+    executorExitCode: 1,
+    executorDurationMs: 0,
+    executorTimedOut: false,
+    stderrTail: `Task "${taskId}" did not produce a result before integrating "${compositeTaskId}".`
+  };
+}
+
+function formatTaskList(taskIds: readonly string[]): string {
+  if (taskIds.length === 0) {
+    return "(none)";
+  }
+  const rendered = taskIds.join(",");
+  return rendered.length > 500 ? `${rendered.slice(0, 500)}...` : rendered;
+}
+
+function formatResultStatuses(results: readonly AgentExecutionResult[]): string {
+  if (results.length === 0) {
+    return "(none)";
+  }
+  return formatTaskList(results.map((result) => `${result.taskId}:${result.status}`));
+}
+
+function formatIntegrationStatuses(results: readonly IntegrationResult[]): string {
+  if (results.length === 0) {
+    return "(none)";
+  }
+  return formatTaskList(results.map((result) => `${result.compositeTaskId}:${result.status}`));
 }

@@ -14,6 +14,7 @@ import {
   buildFeatureRequestFromPrompt,
   type ExecutionEngine
 } from "@/lib/server/runs/runner";
+import { POST as POST_RUN } from "@/app/api/runs/[id]/run/route";
 import { JsonRunRecordStore } from "@/lib/server/runs/repository";
 import { resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import type { AgentExecutionResult, GranularityVector, RunExecutionResult } from "@manyhands/execution-core";
@@ -38,6 +39,25 @@ function successLeaf(taskId: string): AgentExecutionResult {
     executorDurationMs: 10,
     executorTimedOut: false
   };
+}
+
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+async function waitFor(condition: () => boolean): Promise<void> {
+  const deadline = Date.now() + 1_000;
+  while (Date.now() < deadline) {
+    if (condition()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  throw new Error("Timed out waiting for condition.");
 }
 
 const STUB_VECTOR: GranularityVector = {
@@ -114,6 +134,7 @@ afterEach(async () => {
   delete process.env.MANYHANDS_RUNS_DIR;
   resetRunRepositoryForTests();
   clearRunEventHistory(`${runIdBase}-execution`);
+  clearRunEventHistory(`${runIdBase}-live-start`);
   await rm(tempDir, { recursive: true, force: true });
 });
 
@@ -182,6 +203,89 @@ describe("RunRunner", () => {
     expect(completedEvents.map(e => e.taskId)).toContain("composite-a");
     const finalRun = await store.get(runId);
     expect(finalRun.status).toBe("completed");
+  }, 30000);
+
+  it("streams agent start events from execution traces before the engine finishes", async () => {
+    const runId = `${runIdBase}-live-start`;
+    const store = new JsonRunRecordStore({ directory: runsDir });
+    await store.save({
+      runId,
+      workspaceId: "ws-1",
+      granularity: "balanced",
+      model: "gemini-2.5-pro",
+      userPrompt: "Add a feature",
+      title: "test",
+      status: "approved",
+      createdAt: "2026-05-26T00:00:00.000Z",
+      updatedAt: "2026-05-26T00:00:00.000Z",
+      planning: stubPlanningArtifact("leaf-a"),
+      patches: []
+    });
+
+    const events: any[] = [];
+    const unsubscribe = subscribeRunEvents(runId, (event) => {
+      events.push(event);
+    });
+    const releaseEngine = deferred();
+    let engineFinished = false;
+
+    const engine: ExecutionEngine = {
+      run: async (input) => {
+        input.traceStore?.append({ type: "agent_started", actor: "system", taskId: "leaf-a", payload: {} });
+        await releaseEngine.promise;
+        engineFinished = true;
+        return {
+          runId,
+          status: "completed",
+          leafResults: [successLeaf("leaf-a")],
+          integrationResults: [],
+          granularityVector: STUB_VECTOR,
+          totalDurationMs: 1
+        };
+      }
+    };
+
+    const pipeline = runExecutionPipeline(runId, { intervalMs: 0, engine });
+
+    await waitFor(() => events.some((event) => event.kind === "agent.run.started" && event.taskId === "leaf-a"));
+    expect(engineFinished).toBe(false);
+
+    releaseEngine.resolve();
+    await pipeline;
+    unsubscribe();
+
+    expect(events.filter((event) => event.kind === "agent.run.started" && event.taskId === "leaf-a")).toHaveLength(1);
+    expect(events.some((event) => event.kind === "agent.run.completed" && event.taskId === "leaf-a")).toBe(true);
+    const finalRun = await store.get(runId);
+    expect(finalRun.status).toBe("completed");
+    expect(finalRun.executionTraces?.map((event) => event.type)).toEqual(["agent_started"]);
+  }, 30000);
+
+  it("run endpoint persists running before returning to the client", async () => {
+    const runId = `${runIdBase}-route-run`;
+    const store = new JsonRunRecordStore({ directory: runsDir });
+    await store.save({
+      runId,
+      workspaceId: "ws-1",
+      granularity: "balanced",
+      model: "gemini-2.5-pro",
+      userPrompt: "Add a feature",
+      title: "test",
+      status: "approved",
+      createdAt: "2026-05-26T00:00:00.000Z",
+      updatedAt: "2026-05-26T00:00:00.000Z",
+      planning: stubPlanningArtifact("leaf-a"),
+      patches: []
+    });
+
+    const response = await POST_RUN(new Request("http://manyhands.test/api/runs/run/route", { method: "POST" }), {
+      params: Promise.resolve({ id: runId })
+    });
+    const payload = (await response.json()) as { run: { status: string; startedAt?: string } };
+
+    expect(response.status).toBe(200);
+    expect(payload.run.status).toBe("running");
+    expect(payload.run.startedAt).toBeDefined();
   }, 30000);
 
   it("applies an injected titler to the run record during planning", async () => {

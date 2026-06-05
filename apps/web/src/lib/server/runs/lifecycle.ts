@@ -9,8 +9,9 @@ const ALLOWED_TRANSITIONS: Record<RunStatus, ReadonlyArray<RunStatus>> = {
   approved: ["running", "needs_review", "failed"],
   running: ["paused", "completed", "interrupted", "failed"],
   interrupted: ["generating", "running", "failed"],
-  completed: [],
-  failed: []
+  // Re-open (review actions): let the user re-run a node after a finished run.
+  completed: ["approved"],
+  failed: ["approved"]
 };
 
 export function assertTransition(from: RunStatus, to: RunStatus): void {

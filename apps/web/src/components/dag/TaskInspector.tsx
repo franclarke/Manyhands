@@ -76,6 +76,8 @@ export function TaskInspector({
   const [isEditing, setIsEditing] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isManagingDependencies, setIsManagingDependencies] = useState(false);
+  const [isExecutingNode, setIsExecutingNode] = useState(false);
+  const [executeError, setExecuteError] = useState<string | null>(null);
   const selectedId = view?.taskId;
 
   // Reset to the phase-appropriate default tab when the selected node (or phase)
@@ -85,6 +87,7 @@ export function TaskInspector({
       return;
     }
     setTab(defaultTab(view, tabsForView(), phase));
+    setExecuteError(null);
     // Keyed on identity (taskId) + phase, not the view object (new each render).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, phase]);
@@ -117,6 +120,30 @@ export function TaskInspector({
   }
 
   const tabs = tabsForView();
+  const canExecute = editableRunId !== undefined && canNodeRunNow(view);
+
+  async function executeSelectedNode(): Promise<void> {
+    if (editableRunId === undefined || view === null) {
+      return;
+    }
+    setIsExecutingNode(true);
+    setExecuteError(null);
+    try {
+      const response = await fetch(
+        `/api/runs/${encodeURIComponent(editableRunId)}/nodes/${encodeURIComponent(view.taskId)}/run`,
+        { method: "POST" }
+      );
+      const payload = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? `Request failed with ${response.status}`);
+      }
+      onEdited?.();
+    } catch (error) {
+      setExecuteError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsExecutingNode(false);
+    }
+  }
 
   return (
     <>
@@ -136,6 +163,11 @@ export function TaskInspector({
         <InspectorHeader
           view={view}
           onClose={onClose}
+          canExecute={canExecute}
+          executing={isExecutingNode}
+          onExecute={() => {
+            void executeSelectedNode();
+          }}
           {...(editableRunId !== undefined
             ? {
                 onEdit: () => setIsEditing(true),
@@ -144,6 +176,20 @@ export function TaskInspector({
               }
             : {})}
         />
+        {executeError !== null ? (
+          <div
+            style={{
+              padding: "9px 18px",
+              borderBottom: "1px solid var(--status-failed-border)",
+              background: "var(--status-failed-bg)",
+              color: "var(--status-failed-fg)",
+              fontSize: 12,
+              lineHeight: 1.45
+            }}
+          >
+            {executeError}
+          </div>
+        ) : null}
 
         <div
           role="tablist"
@@ -188,7 +234,13 @@ export function TaskInspector({
           {tab === "execution" && <ExecutionTab view={view} />}
           {tab === "validation" && <ValidationTab view={view} />}
           {tab === "trace" && <TraceTab view={view} />}
-          {tab === "review" && <ReviewTab view={view} />}
+          {tab === "review" && (
+            <ReviewTab
+              view={view}
+              {...(editableRunId !== undefined ? { editableRunId } : {})}
+              {...(onEdited ? { onEdited } : {})}
+            />
+          )}
         </div>
       </aside>
 
@@ -235,12 +287,18 @@ export function TaskInspector({
 function InspectorHeader({
   view,
   onClose,
+  canExecute,
+  executing,
+  onExecute,
   onEdit,
   onRegenerate,
   onDependencies
 }: {
   view: InspectorView;
   onClose: () => void;
+  canExecute: boolean;
+  executing: boolean;
+  onExecute: () => void;
   onEdit?: () => void;
   onRegenerate?: () => void;
   onDependencies?: () => void;
@@ -272,6 +330,22 @@ function InspectorHeader({
           </Tag>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {canExecute ? (
+            <button
+              type="button"
+              onClick={onExecute}
+              disabled={executing}
+              style={{
+                ...smallButtonStyle,
+                borderColor: "var(--status-ready-border)",
+                color: "var(--status-ready-fg)",
+                opacity: executing ? 0.7 : 1,
+                cursor: executing ? "wait" : "pointer"
+              }}
+            >
+              {executing ? "Starting..." : view.kind === "leaf" ? "Execute node" : "Integrate children"}
+            </button>
+          ) : null}
           {onEdit !== undefined ? (
             <button type="button" onClick={onEdit} style={smallButtonStyle}>
               Edit contract
@@ -443,8 +517,8 @@ function ExecutionTab({ view }: { view: InspectorView }): React.ReactElement {
               {
                 label: "Usage",
                 value: runResult.usageUnavailable
-                  ? "unavailable"
-                  : `$${(runResult.costUsd ?? 0).toFixed(4)} / ${runResult.tokensIn ?? 0} in / ${runResult.tokensOut ?? 0} out`,
+                  ? "Usage unavailable"
+                  : formatUsage(runResult),
                 mono: true
               },
               { label: "Changed files", value: String(runResult.changedFiles.length), mono: true },
@@ -579,11 +653,61 @@ function IntegrationResultDetail({
           <MonoList items={result.conflictDetails.files} empty="none" />
         </div>
       ) : null}
+      {result.preMergeFindings !== undefined && result.preMergeFindings.length > 0 ? (
+        <div>
+          <h4 className="mh-coord" style={{ margin: "0 0 6px", color: "var(--copper)" }}>
+            Pre-merge diagnosis
+          </h4>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {result.preMergeFindings.map((finding, index) => (
+              <div key={`${finding.code}-${index}`} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <Tag tone={finding.severity === "warning" ? "warning" : "default"}>{finding.severity}</Tag>
+                <Prose>
+                  {finding.message}
+                  {finding.files.length > 0 ? ` (${finding.files.join(", ")})` : ""}
+                </Prose>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {result.repairResult !== undefined ? (
+        <div>
+          <h4 className="mh-coord" style={{ margin: "0 0 6px", color: "var(--copper)" }}>
+            Repair ({result.repairResult.status.replace(/_/g, " ")})
+          </h4>
+          {result.repairResult.diff.trim().length > 0 ? (
+            <DiffBlock diff={result.repairResult.diff} />
+          ) : (
+            <EmptyHint>No repair diff recorded.</EmptyHint>
+          )}
+        </div>
+      ) : null}
+      {result.parentValidation !== undefined ? (
+        <div>
+          <h4 className="mh-coord" style={{ margin: "0 0 6px", color: "var(--copper)" }}>
+            Parent validation ({result.parentValidation.passed ? "passed" : "failed"})
+          </h4>
+          {result.parentValidation.output.trim().length > 0 ? (
+            <DiffBlock diff={result.parentValidation.output} />
+          ) : (
+            <EmptyHint>No validation output recorded.</EmptyHint>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function ReviewTab({ view }: { view: InspectorView }): React.ReactElement {
+function ReviewTab({
+  view,
+  editableRunId,
+  onEdited
+}: {
+  view: InspectorView;
+  editableRunId?: string;
+  onEdited?: () => void;
+}): React.ReactElement {
   const result = view.runResult;
   const integration = view.integration;
   const hasEvidence = result !== undefined || integration !== undefined || view.riskEvidence.length > 0;
@@ -659,14 +783,20 @@ function ReviewTab({ view }: { view: InspectorView }): React.ReactElement {
         </Section>
 
         <Section title="Review actions">
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <ReviewButton label="Approve output" />
-            <ReviewButton label="Rerun node" />
-            <ReviewButton label="Request changes" />
-          </div>
-          <p style={{ margin: "8px 0 0", color: "var(--text-3)", fontSize: 11.5, lineHeight: 1.45 }}>
-            Per-node review actions are shown for workflow clarity; backend actions are not connected in this MVP.
-          </p>
+          {editableRunId !== undefined ? (
+            <ReviewActions runId={editableRunId} taskId={view.taskId} {...(onEdited ? { onEdited } : {})} />
+          ) : (
+            <>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <ReviewButton label="Approve output" />
+                <ReviewButton label="Rerun node" />
+                <ReviewButton label="Request changes" />
+              </div>
+              <p style={{ margin: "8px 0 0", color: "var(--text-3)", fontSize: 11.5, lineHeight: 1.45 }}>
+                Per-node review actions become available once a run is editable.
+              </p>
+            </>
+          )}
         </Section>
       </div>
 
@@ -762,6 +892,29 @@ function KvGrid({
         </div>
       ))}
     </div>
+  );
+}
+
+function DiffBlock({ diff }: { diff: string }): React.ReactElement {
+  return (
+    <pre
+      style={{
+        margin: 0,
+        padding: 12,
+        background: "var(--bg-1)",
+        border: "1px solid var(--rule)",
+        borderRadius: "var(--r-md)",
+        color: "var(--text-2)",
+        fontFamily: "var(--font-mono)",
+        fontSize: 11,
+        lineHeight: 1.55,
+        overflowX: "auto",
+        maxHeight: 220,
+        whiteSpace: "pre"
+      }}
+    >
+      {diff}
+    </pre>
   );
 }
 
@@ -874,6 +1027,21 @@ function Tag({
   );
 }
 
+function formatUsage(runResult: {
+  costUsd?: number;
+  tokensIn?: number;
+  tokensOut?: number;
+}): string {
+  const parts: string[] = [];
+  if (runResult.costUsd !== undefined) {
+    parts.push(`$${runResult.costUsd.toFixed(4)}`);
+  }
+  if (runResult.tokensIn !== undefined || runResult.tokensOut !== undefined) {
+    parts.push(`${runResult.tokensIn ?? 0} in / ${runResult.tokensOut ?? 0} out`);
+  }
+  return parts.length > 0 ? parts.join(" / ") : "Usage unavailable";
+}
+
 function ReviewButton({ label }: { label: string }): React.ReactElement {
   return (
     <button
@@ -892,6 +1060,115 @@ function ReviewButton({ label }: { label: string }): React.ReactElement {
       }}
     >
       {label}
+    </button>
+  );
+}
+
+type ReviewActionId = "approve" | "request_changes" | "rerun";
+
+/**
+ * Connected per-node review actions for the manual execution workflow. Approve
+ * marks the output reviewed; Rerun resets the node (and its downstream closure)
+ * and re-executes it; Request changes captures feedback and resets the node.
+ */
+function ReviewActions({
+  runId,
+  taskId,
+  onEdited
+}: {
+  runId: string;
+  taskId: string;
+  onEdited?: () => void;
+}): React.ReactElement {
+  const [busy, setBusy] = useState<ReviewActionId | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function runAction(action: ReviewActionId): Promise<void> {
+    setError(null);
+    setNotice(null);
+    let feedback: string | undefined;
+    if (action === "request_changes") {
+      const input = typeof window !== "undefined" ? window.prompt("What should change about this node?") : null;
+      if (input === null) {
+        return; // user cancelled
+      }
+      feedback = input.trim().length > 0 ? input.trim() : undefined;
+    }
+    setBusy(action);
+    try {
+      const response = await fetch(
+        `/api/runs/${encodeURIComponent(runId)}/nodes/${encodeURIComponent(taskId)}/review`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action, ...(feedback !== undefined ? { feedback } : {}) })
+        }
+      );
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? `Request failed with ${response.status}`);
+      }
+      setNotice(
+        action === "approve"
+          ? "Output approved."
+          : action === "rerun"
+            ? "Node reset — re-running."
+            : "Changes requested — node reset."
+      );
+      onEdited?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <ReviewActionButton label="Approve output" onClick={() => void runAction("approve")} busy={busy === "approve"} disabled={busy !== null} />
+        <ReviewActionButton label="Rerun node" onClick={() => void runAction("rerun")} busy={busy === "rerun"} disabled={busy !== null} />
+        <ReviewActionButton label="Request changes" onClick={() => void runAction("request_changes")} busy={busy === "request_changes"} disabled={busy !== null} />
+      </div>
+      {notice !== null ? (
+        <p style={{ margin: 0, color: "var(--text-3)", fontSize: 11.5, lineHeight: 1.45 }}>{notice}</p>
+      ) : null}
+      {error !== null ? (
+        <p style={{ margin: 0, color: "var(--danger, #d9777b)", fontSize: 11.5, lineHeight: 1.45 }}>{error}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function ReviewActionButton({
+  label,
+  onClick,
+  busy,
+  disabled
+}: {
+  label: string;
+  onClick: () => void;
+  busy: boolean;
+  disabled: boolean;
+}): React.ReactElement {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        border: "1px solid var(--rule)",
+        background: "rgba(241,234,216,0.045)",
+        color: "var(--text)",
+        borderRadius: "var(--r-md)",
+        padding: "7px 10px",
+        cursor: disabled ? "not-allowed" : "pointer",
+        fontSize: 12,
+        opacity: disabled ? 0.7 : 1
+      }}
+    >
+      {busy ? "…" : label}
     </button>
   );
 }

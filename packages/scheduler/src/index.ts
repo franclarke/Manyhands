@@ -144,7 +144,7 @@ const blockedStatuses = new Set<TaskNodeStatus>(["failed", "conflict", "running"
 
 export function scheduleTasks(input: SchedulerInput): SchedulerPlan {
   const maxParallel = Math.max(1, input.maxParallel);
-  const leafIds = orderedExecutableLeafIds(input.graph);
+  const leafIds = orderedExecutableTaskIds(input.graph);
   const resolved = new Set(
     leafIds.filter((taskId) => resolvedStatuses.has(input.graph.nodes[taskId]?.status ?? "planned"))
   );
@@ -329,8 +329,11 @@ export function applyHumanGateToSchedule(input: {
   });
 }
 
-function orderedExecutableLeafIds(graph: TaskGraph): string[] {
-  return getTopologicalOrder(graph).filter((taskId) => graph.nodes[taskId]?.kind === "leaf");
+function orderedExecutableTaskIds(graph: TaskGraph): string[] {
+  return getTopologicalOrder(graph).filter((taskId) => {
+    const kind = graph.nodes[taskId]?.kind;
+    return kind === "leaf" || kind === "integrator";
+  });
 }
 
 function decisionForPrediction(

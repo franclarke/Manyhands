@@ -432,8 +432,29 @@ textarea:focus-visible {
 .command-center-grid {
   display: grid;
   grid-template-columns: minmax(0, 820px) minmax(320px, 380px);
+  width: min(100%, calc(100vw - 24px));
   gap: 36px;
   align-items: start;
+}
+
+.command-center-grid > * {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .run-header-main {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .run-header-meta {
+    align-items: flex-start !important;
+  }
+
+  .run-header-title {
+    font-size: 24px !important;
+  }
 }
 
 @media (max-width: 900px) {
@@ -459,6 +480,7 @@ textarea:focus-visible {
 
   .command-center-grid {
     grid-template-columns: 1fr;
+    width: calc(100vw - 24px);
     gap: 28px;
   }
 }

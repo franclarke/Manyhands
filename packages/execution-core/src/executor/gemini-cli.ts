@@ -1,12 +1,9 @@
-import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
+import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
 import type { AgentExecutorOptions, SandboxMode } from "../types";
 import type { AgentExecutor, ExecutorRunOutcome } from "./types";
-
-/** Conventional exit codes used when the process never produced its own. */
-const TIMEOUT_EXIT_CODE = 124;
-const SPAWN_FAILURE_EXIT_CODE = 127;
+import { spawnExecutorProcess, type SpawnFn } from "./process";
 
 /**
  * Short directive passed via `-p`. Gemini CLI enters non-interactive (headless)
@@ -47,12 +44,6 @@ export function buildGeminiArgs(options: AgentExecutorOptions): string[] {
     "-p", STDIN_DIRECTIVE
   ];
 }
-
-type SpawnFn = (
-  command: string,
-  args: readonly string[],
-  options: SpawnOptions
-) => ChildProcess;
 
 export interface GeminiCliExecutorDeps {
   /**
@@ -98,105 +89,17 @@ export class GeminiCliExecutor implements AgentExecutor {
   }
 
   execute(options: AgentExecutorOptions): Promise<ExecutorRunOutcome> {
-    const args = buildGeminiArgs(options);
-    const start = Date.now();
-
-    return new Promise<ExecutorRunOutcome>((resolve) => {
-      const child = this.spawnFn(this.binaryPath, args, {
-        cwd: options.cwd,
-        env: { ...process.env, ...(options.env ?? {}) },
-        stdio: ["pipe", "pipe", "pipe"],
-        shell: this.useShell
-      });
-
-      let stdout = "";
-      let stderr = "";
-      let settled = false;
-
-      const finish = (outcome: ExecutorRunOutcome): void => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        clearTimeout(timer);
-        resolve(outcome);
-      };
-
-      const timer = setTimeout(() => {
-        killProcessTree(child, this.spawnFn);
-        finish({
-          exitCode: TIMEOUT_EXIT_CODE,
-          stdout,
-          stderr,
-          timedOut: true,
-          durationMs: Date.now() - start
-        });
-      }, options.timeoutMs);
-
-      child.stdout?.on("data", (chunk: Buffer) => {
-        stdout += chunk.toString("utf8");
-      });
-      child.stderr?.on("data", (chunk: Buffer) => {
-        stderr += chunk.toString("utf8");
-      });
-
-      child.on("error", (error: Error) => {
-        finish({
-          exitCode: SPAWN_FAILURE_EXIT_CODE,
-          stdout,
-          stderr: stderr + (stderr ? "\n" : "") + error.message,
-          timedOut: false,
-          durationMs: Date.now() - start
-        });
-      });
-
-      child.on("close", (code) => {
-        finish({
-          exitCode: code ?? SPAWN_FAILURE_EXIT_CODE,
-          stdout,
-          stderr,
-          timedOut: false,
-          durationMs: Date.now() - start
-        });
-      });
-
-      // Listeners are attached synchronously above; only then read the
-      // instruction file and feed it over stdin so gemini starts working.
-      // Guard EPIPE: the child may exit before we finish writing.
-      this.readInstructions(options.instructionFilePath).then(
-        (prompt) => {
-          child.stdin?.on("error", () => undefined);
-          child.stdin?.end(prompt);
-        },
-        (error: Error) => {
-          killProcessTree(child, this.spawnFn);
-          finish({
-            exitCode: SPAWN_FAILURE_EXIT_CODE,
-            stdout,
-            stderr: `${stderr}${stderr ? "\n" : ""}failed to read instructions: ${error.message}`,
-            timedOut: false,
-            durationMs: Date.now() - start
-          });
-        }
-      );
+    return spawnExecutorProcess({
+      binaryPath: this.binaryPath,
+      args: buildGeminiArgs(options),
+      cwd: options.cwd,
+      env: options.env,
+      useShell: this.useShell,
+      timeoutMs: options.timeoutMs,
+      signal: options.signal,
+      spawnFn: this.spawnFn,
+      readInstructions: this.readInstructions,
+      instructionFilePath: options.instructionFilePath
     });
   }
-}
-
-/**
- * Kills the Gemini process and its descendants. On Windows a shelled `.cmd`/
- * `.ps1` runs under cmd.exe, so `child.kill` only reaches the shell —
- * `taskkill /T /F` tears down the whole tree. Falls back to SIGKILL when there
- * is no PID (e.g. an injected fake child in tests) or off Windows.
- */
-function killProcessTree(child: ChildProcess, spawnFn: SpawnFn): void {
-  if (process.platform === "win32" && typeof child.pid === "number") {
-    try {
-      spawnFn("taskkill", ["/pid", String(child.pid), "/t", "/f"], { stdio: "ignore" });
-      return;
-    } catch {
-      // Fall through to a best-effort signal.
-    }
-  }
-  child.kill("SIGKILL");
 }

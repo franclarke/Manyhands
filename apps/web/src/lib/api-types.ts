@@ -1,4 +1,5 @@
 import type { GranularityVector } from "@manyhands/execution-core";
+import type { PlanCriticResult, SeamCriticResult } from "@/lib/critic-types";
 
 /** Per-leaf receipt: auditable evidence of what one subagent did. */
 export interface ExecutionLeafReceipt {
@@ -86,6 +87,12 @@ export type RunStatusKey =
   | "interrupted";
 
 export type RunGranularityKey = "auto" | "coarse" | "balanced" | "fine";
+export type ExecutorId = "gemini-cli" | "claude-code-cli" | "codex-cli" | "opencode-cli";
+
+export interface ExecutorSelection {
+  executorId: ExecutorId;
+  model: string;
+}
 
 export interface RunPreview {
   id: string;
@@ -114,6 +121,9 @@ export interface RunCreateRequest {
   workspaceId: string;
   granularity: RunGranularityKey;
   model: string;
+  planningModel?: string | undefined;
+  defaultExecutionSelection?: ExecutorSelection | undefined;
+  defaultRepairSelection?: ExecutorSelection | undefined;
   userPrompt?: string;
   repoSpec?: { kind: "fixture"; fixtureId: string } | { kind: "localPath"; path: string };
 }
@@ -122,14 +132,14 @@ export type ProviderReadinessStatus = "ready" | "warning" | "error";
 export type ProviderReadinessCheckStatus = "pass" | "warning" | "fail";
 
 export interface ProviderReadinessCheck {
-  id: "cli" | "auth" | "repo_path" | "repo_clean" | "branch" | "quota";
+  id: "cli" | "auth" | "repo_path" | "repo_clean" | "branch" | "quota" | "enabled";
   status: ProviderReadinessCheckStatus;
   label: string;
   message: string;
 }
 
 export interface ProviderReadiness {
-  executorId: "gemini-cli";
+  executorId: ExecutorId;
   label: string;
   status: ProviderReadinessStatus;
   binaryPath: string;
@@ -148,6 +158,9 @@ export interface RunResponse {
     workspaceId: string;
     granularity: RunGranularityKey;
     model: string;
+    planningModel?: string;
+    defaultExecutionSelection?: ExecutorSelection;
+    defaultRepairSelection?: ExecutorSelection;
     userPrompt: string;
     summary?: string;
     title: string;
@@ -161,11 +174,28 @@ export interface RunResponse {
     startedAt?: string;
     completedAt?: string;
     heartbeatAt?: string;
+    finalApplicationStatus?: "applied" | "exported_patch" | "failed";
+    finalBranchName?: string;
     finalCommitSha?: string;
     appliedToRepoPath?: string;
     appliedAt?: string;
+    exportedPatchPath?: string;
+    finalApplicationMessage?: string;
     baseCommit?: string;
     integrationCommitSha?: string;
+    nodeReviews?: Record<
+      string,
+      { status: "approved" | "changes_requested"; feedback?: string | undefined; at: string }
+    >;
+    planningCritic?: PlanCriticResult;
+    seamCritic?: SeamCriticResult;
+    repositoryGrounding?: {
+      repositoryId: string;
+      fileCount: number;
+      symbolCount: number;
+      indexHash: string;
+      indexedAt?: string | undefined;
+    };
     decomposition?: {
       provider: "anthropic" | "gemini" | "codex" | "deterministic";
       model: string;

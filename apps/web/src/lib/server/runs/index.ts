@@ -8,6 +8,7 @@ export * from "./events";
 export * from "./event-bus";
 export * from "./runner";
 export * from "./runner-state";
+export * from "./run-abort-registry";
 export * from "./interrupted";
 export * from "./patches";
 export * from "./editing";

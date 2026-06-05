@@ -16,6 +16,9 @@ export function toRunResponse(run: RunRecord): RunResponse {
     createdAt: run.createdAt,
     updatedAt: run.updatedAt
   };
+  if (run.planningModel !== undefined) payload.planningModel = run.planningModel;
+  if (run.defaultExecutionSelection !== undefined) payload.defaultExecutionSelection = run.defaultExecutionSelection;
+  if (run.defaultRepairSelection !== undefined) payload.defaultRepairSelection = run.defaultRepairSelection;
   if (run.summary !== undefined) payload.summary = run.summary;
   if (run.pausedDuring !== undefined) payload.pausedDuring = run.pausedDuring;
   if (run.interruptedDuring !== undefined) payload.interruptedDuring = run.interruptedDuring;
@@ -24,11 +27,19 @@ export function toRunResponse(run: RunRecord): RunResponse {
   if (run.startedAt !== undefined) payload.startedAt = run.startedAt;
   if (run.completedAt !== undefined) payload.completedAt = run.completedAt;
   if (run.heartbeatAt !== undefined) payload.heartbeatAt = run.heartbeatAt;
+  if (run.finalApplicationStatus !== undefined) payload.finalApplicationStatus = run.finalApplicationStatus;
+  if (run.finalBranchName !== undefined) payload.finalBranchName = run.finalBranchName;
   if (run.finalCommitSha !== undefined) payload.finalCommitSha = run.finalCommitSha;
   if (run.appliedToRepoPath !== undefined) payload.appliedToRepoPath = run.appliedToRepoPath;
   if (run.appliedAt !== undefined) payload.appliedAt = run.appliedAt;
+  if (run.exportedPatchPath !== undefined) payload.exportedPatchPath = run.exportedPatchPath;
+  if (run.finalApplicationMessage !== undefined) payload.finalApplicationMessage = run.finalApplicationMessage;
   if (run.baseCommit !== undefined) payload.baseCommit = run.baseCommit;
   if (run.integrationCommitSha !== undefined) payload.integrationCommitSha = run.integrationCommitSha;
+  if (run.nodeReviews !== undefined) payload.nodeReviews = run.nodeReviews;
+  if (run.planningCritic !== undefined) payload.planningCritic = run.planningCritic;
+  if (run.seamCritic !== undefined) payload.seamCritic = run.seamCritic;
+  if (run.repositoryGrounding !== undefined) payload.repositoryGrounding = run.repositoryGrounding;
   if (run.decomposition !== undefined) {
     const decompositionPayload: NonNullable<RunResponse["run"]["decomposition"]> = {
       provider: run.decomposition.provider,

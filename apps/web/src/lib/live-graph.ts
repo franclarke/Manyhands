@@ -9,6 +9,7 @@ import type { RunRecord, RunStatus } from "@/lib/server/runs/schema";
 /** Minimal shape of a real execution-core RunExecutionResult (opaque in the record). */
 interface RealExecutionResult {
   leafResults?: ReadonlyArray<RealLeafResult>;
+  integrationResults?: ReadonlyArray<RealIntegrationResult>;
 }
 
 interface RealLeafResult {
@@ -17,7 +18,7 @@ interface RealLeafResult {
   diff: string;
   changedFiles: string[];
   commitSha?: string;
-  scopeCheck: { passed: boolean; violations: string[] };
+  scopeCheck: { passed: boolean; violations: string[]; outOfScope?: string[] };
   validationResult?: { passed: boolean };
   executorDurationMs: number;
   executorExitCode: number;
@@ -27,6 +28,14 @@ interface RealLeafResult {
   tokensIn?: number;
   tokensOut?: number;
   costUsd?: number;
+}
+
+interface RealIntegrationResult {
+  compositeTaskId: string;
+  status: string;
+  childResults: RealLeafResult[];
+  integrationCommitSha?: string;
+  repairAttempted: boolean;
 }
 
 /**
@@ -76,10 +85,14 @@ function buildExecutionSnapshot(
   const agentRunResults = (execution.leafResults ?? []).map((leaf) =>
     leafToAgentRunResult(run.runId, leaf)
   );
+  const integrationRunResults = (execution.integrationResults ?? []).map((integration) =>
+    integrationToAgentRunResult(run.runId, integration)
+  );
   const executionTraces = (run.executionTraces ?? []) as RunSnapshot["traceEvents"];
   return {
     ...base,
-    agentRunResults: agentRunResults as RunSnapshot["agentRunResults"],
+    agentRunResults: [...agentRunResults, ...integrationRunResults] as RunSnapshot["agentRunResults"],
+    ...(execution.integrationResults !== undefined ? { integrationResults: execution.integrationResults } : {}),
     traceEvents: [...base.traceEvents, ...executionTraces],
     metadata: { ...base.metadata, deterministic: false }
   } as RunSnapshot;
@@ -117,6 +130,43 @@ function leafToAgentRunResult(
     },
     ...(leaf.commitSha !== undefined ? { commitHash: leaf.commitSha } : {})
   } as RunSnapshot["agentRunResults"][number];
+}
+
+function integrationToAgentRunResult(
+  runId: string,
+  integration: RealIntegrationResult
+): RunSnapshot["agentRunResults"][number] {
+  const success = integration.status === "success" || integration.status === "executor_repair_success";
+  const changedFiles = uniqueStrings(integration.childResults.flatMap((child) => child.changedFiles ?? []));
+  return {
+    taskId: integration.compositeTaskId,
+    worktree: `.manyhands/worktrees/${runId}/${integration.compositeTaskId}`,
+    branch: `mh/${runId}/${integration.compositeTaskId}`,
+    success,
+    diff: "",
+    changedFiles,
+    validation: { checks: [], passed: success },
+    scopeViolations: [],
+    stdout: "",
+    stderr: "",
+    reportedSymbols: [],
+    metrics: {
+      durationMs: 0,
+      costUsd: 0,
+      tokensIn: 0,
+      tokensOut: 0
+    },
+    metadata: {
+      status: integration.status,
+      repairAttempted: integration.repairAttempted,
+      usageUnavailable: true
+    },
+    ...(integration.integrationCommitSha !== undefined ? { commitHash: integration.integrationCommitSha } : {})
+  } as RunSnapshot["agentRunResults"][number];
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  return [...new Set(values)];
 }
 
 function buildPlanningSnapshot(run: RunRecord, planning: MockPlanningFlowResult): RunSnapshot {

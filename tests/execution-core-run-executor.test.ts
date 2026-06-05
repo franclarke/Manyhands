@@ -409,11 +409,34 @@ describe("RunExecutor", () => {
     expect(traceStore.findByType("worktree_clean_failed")).toHaveLength(3);
   });
 
-  it("enforces the contract's executionScope: an out-of-scope change fails the run (Etapa A)", async () => {
-    // Codex 'changed' a file outside the allowed scope.
+  it("enforces forbidden paths: a forbidden change fails the run (Etapa A)", async () => {
+    // The agent 'changed' a forbidden file. Forbidden paths are the hard boundary.
     const git = new FakeGitRunner({
       diffCached: "diff --git a/secrets/leak.ts b/secrets/leak.ts\n+leak",
       diffCachedNameOnly: ["secrets/leak.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const executor = makeExecutor(git, new InMemoryTraceStore());
+
+    const result = await executor.run({
+      graph: graphWith(["a"], undefined, leafContract(["src/**"], ["secrets/**"])),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.leafResults[0]?.status).toBe("scope_violation");
+    expect(result.leafResults[0]?.scopeCheck.violations).toEqual(["secrets/leak.ts"]);
+    // Scope violations must not be committed.
+    expect(git.opsInvoked()).not.toContain("commit");
+  });
+
+  it("treats an out-of-allow-list (but not forbidden) change as advisory: the run still completes", async () => {
+    // The allow-list is an LLM guess; a file outside it that is not forbidden must
+    // not fail the run. It commits and is recorded in scopeCheck.outOfScope.
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/index.html b/index.html\n+ui",
+      diffCachedNameOnly: ["index.html"],
       commitSha: "LEAF_SHA"
     });
     const executor = makeExecutor(git, new InMemoryTraceStore());
@@ -424,11 +447,11 @@ describe("RunExecutor", () => {
       model: "gpt-5-codex"
     });
 
-    expect(result.status).toBe("failed");
-    expect(result.leafResults[0]?.status).toBe("scope_violation");
-    expect(result.leafResults[0]?.scopeCheck.violations).toEqual(["secrets/leak.ts"]);
-    // Scope violations must not be committed.
-    expect(git.opsInvoked()).not.toContain("commit");
+    expect(result.status).toBe("completed");
+    expect(result.leafResults[0]?.status).toBe("success");
+    expect(result.leafResults[0]?.scopeCheck.violations).toEqual([]);
+    expect(result.leafResults[0]?.scopeCheck.outOfScope).toEqual(["index.html"]);
+    expect(git.opsInvoked()).toContain("commit");
   });
 
   it("includes scope and definition-of-done in the leaf instructions (Etapa A)", async () => {
@@ -455,7 +478,7 @@ describe("RunExecutor", () => {
     });
 
     const leafPrompt = prompts[0] ?? "";
-    expect(leafPrompt).toContain("You may only modify");
+    expect(leafPrompt).toContain("Your work belongs primarily in files matching");
     expect(leafPrompt).toContain("src/**");
     expect(leafPrompt).toContain("You must NOT modify");
     expect(leafPrompt).toContain("secrets/**");

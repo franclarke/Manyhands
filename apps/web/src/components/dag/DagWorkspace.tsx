@@ -78,7 +78,7 @@ export function DagWorkspace({
   timelineRun,
   conflicts = [],
   conflictError,
-  errorMessage,
+  errorMessage: _errorMessage,
   execution
 }: DagWorkspaceProps): React.ReactElement {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);

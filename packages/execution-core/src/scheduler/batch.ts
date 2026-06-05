@@ -17,6 +17,10 @@ export interface RunBatchesParams<T> {
   batches: ExecutionBatchInput[];
   /** Runs a single task (leaf) and resolves with its result. */
   runTask: (taskId: string) => Promise<T>;
+  /** Run-level cancellation: stop scheduling further batches/tasks when aborted. */
+  signal?: AbortSignal;
+  /** Awaited before each batch (pause hold); resolves to continue. */
+  onBatchBoundary?: () => Promise<void>;
 }
 
 /**
@@ -40,6 +44,13 @@ export class BatchScheduler {
     const results = new Map<string, T>();
 
     for (const batch of params.batches) {
+      // Batch boundary: hold here while paused, then stop if cancelled. Lets the
+      // in-flight batch drain (pause) and prevents starting new work (cancel).
+      await params.onBatchBoundary?.();
+      if (params.signal?.aborted === true) {
+        break;
+      }
+
       this.traceStore.append({
         type: "batch_started",
         actor: "system",
@@ -47,9 +58,13 @@ export class BatchScheduler {
       });
       const start = this.now();
 
-      await this.runWithConcurrency(batch.taskIds, async (taskId) => {
-        results.set(taskId, await params.runTask(taskId));
-      });
+      await this.runWithConcurrency(
+        batch.taskIds,
+        async (taskId) => {
+          results.set(taskId, await params.runTask(taskId));
+        },
+        params.signal
+      );
 
       this.traceStore.append({
         type: "batch_completed",
@@ -63,11 +78,15 @@ export class BatchScheduler {
 
   private async runWithConcurrency(
     taskIds: string[],
-    worker: (taskId: string) => Promise<void>
+    worker: (taskId: string) => Promise<void>,
+    signal?: AbortSignal
   ): Promise<void> {
     let cursor = 0;
     const runNext = async (): Promise<void> => {
       while (cursor < taskIds.length) {
+        if (signal?.aborted === true) {
+          return;
+        }
         const index = cursor;
         cursor += 1;
         const taskId = taskIds[index];

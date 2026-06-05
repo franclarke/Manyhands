@@ -63,7 +63,7 @@ export function mergeRunTimeline(input: {
     entries.push(withOrder(patchEntry(patch), order++));
   }
 
-  return entries
+  const sorted = entries
     .sort((left, right) => {
       const byTime = Date.parse(left.timestamp) - Date.parse(right.timestamp);
       if (byTime !== 0 && !Number.isNaN(byTime)) {
@@ -72,6 +72,8 @@ export function mergeRunTimeline(input: {
       return left.order - right.order;
     })
     .map(({ order: _order, ...entry }) => entry);
+
+  return withUniqueEntryIds(sorted);
 }
 
 function statusEntry(type: string, timestamp: string, title: string): RunTimelineEntry {
@@ -157,6 +159,8 @@ function taskIdsForPatch(patch: RunPatch): string[] {
       return [patch.fromTaskId, patch.toTaskId];
     case "RISK_ACKNOWLEDGED":
       return [...patch.taskIds];
+    default:
+      return [];
   }
 }
 
@@ -184,6 +188,8 @@ function titleForPatch(patch: RunPatch): string {
       return "Dependency removed";
     case "RISK_ACKNOWLEDGED":
       return "Risk acknowledged";
+    default:
+      return humanizeType(patch.type);
   }
 }
 
@@ -211,6 +217,8 @@ function summarizePatch(patch: RunPatch): string | undefined {
     case "RISK_ACKNOWLEDGED":
       return patch.reason;
     case "NODE_MARKED_MANUAL":
+      return undefined;
+    default:
       return undefined;
   }
 }
@@ -247,6 +255,21 @@ function stringArrayPayload(event: TraceEvent, key: string): string[] {
 
 function withOrder<T extends RunTimelineEntry>(entry: T, order: number): T & { order: number } {
   return { ...entry, order };
+}
+
+function withUniqueEntryIds(entries: RunTimelineEntry[]): RunTimelineEntry[] {
+  const seen = new Map<string, number>();
+  return entries.map((entry) => {
+    const count = seen.get(entry.id) ?? 0;
+    seen.set(entry.id, count + 1);
+    if (count === 0) {
+      return entry;
+    }
+    return {
+      ...entry,
+      id: `${entry.id}#${count + 1}`
+    };
+  });
 }
 
 function runPatchesFromUnknown(values: readonly unknown[]): RunPatch[] {

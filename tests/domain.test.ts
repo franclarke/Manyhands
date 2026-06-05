@@ -296,6 +296,34 @@ describe("Scheduler", () => {
     expect(plan.blocked).toEqual([]);
   });
 
+  it("schedules integrator nodes as executable work after their dependencies", () => {
+    const contracts = {
+      a: makeContract("a"),
+      join: makeContract("join")
+    };
+    const graph = makeGraph(contracts, [
+      {
+        fromTaskId: "a",
+        toTaskId: "join",
+        type: "logical",
+        inferred: false
+      }
+    ]);
+    graph.nodes.join!.kind = "integrator";
+    graph.nodes.join!.metadata = { integrator: true, integratesTaskIds: ["a"] };
+
+    const plan = scheduleTasks({
+      graph,
+      contracts,
+      riskMatrix: buildTaskPairRiskMatrix({ contracts }),
+      maxParallel: 2,
+      policy: "parallel_naive"
+    });
+
+    expect(plan.batches.map((batch) => batch.taskIds)).toEqual([["a"], ["join"]]);
+    expect(plan.blocked).toEqual([]);
+  });
+
   it("generates risk-aware batches that avoid high-risk pairs", () => {
     const contracts = {
       a: makeContract("a"),

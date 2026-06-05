@@ -8,6 +8,7 @@ import {
   type TaskDependency
 } from "@manyhands/core";
 import type { MockExecutionFlowResult, MockPlanningFlowResult, RunSnapshot } from "@manyhands/core";
+import { EXECUTOR_IDS } from "@manyhands/execution-core";
 import { addDependency, removeDependency, syncNodeDependencies, type TaskGraph } from "@manyhands/task-graph";
 import type { RunRecord } from "./schema";
 
@@ -51,7 +52,17 @@ export const RunPatchSchema = z.discriminatedUnion("type", [
     taskId: z.string().min(1),
     executorOverride: z
       .object({
-        executorId: z.literal("gemini-cli"),
+        executorId: z.enum(EXECUTOR_IDS),
+        model: z.string().min(1)
+      })
+      .nullable()
+  }),
+  PatchBaseSchema.extend({
+    type: z.literal("NODE_EXECUTOR_SELECTION_EDITED"),
+    taskId: z.string().min(1),
+    executorSelection: z
+      .object({
+        executorId: z.enum(EXECUTOR_IDS),
         model: z.string().min(1)
       })
       .nullable()
@@ -256,6 +267,18 @@ function applyPatchToContext(context: PatchContext, patch: RunPatch): void {
           delete metadata.executorOverride;
         } else {
           metadata.executorOverride = patch.executorOverride;
+        }
+        return { ...node, metadata };
+      });
+      return;
+    case "NODE_EXECUTOR_SELECTION_EDITED":
+      updateNode(context, patch.taskId, (node) => {
+        const metadata = { ...(node.metadata ?? {}) };
+        delete metadata.executorOverride;
+        if (patch.executorSelection === null) {
+          delete metadata.executorSelection;
+        } else {
+          metadata.executorSelection = patch.executorSelection;
         }
         return { ...node, metadata };
       });

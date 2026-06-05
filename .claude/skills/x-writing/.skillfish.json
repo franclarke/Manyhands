@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "x-writing",
+  "owner": "richtabor",
+  "repo": "agent-skills",
+  "path": "skills/x-writing",
+  "branch": "main",
+  "sha": "a71afa13cf7c0f81ecec8ff2fea15dfb6edec929",
+  "source": "manual"
+}

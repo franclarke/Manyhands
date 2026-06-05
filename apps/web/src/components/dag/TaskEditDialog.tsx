@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { InspectorView } from "@/lib/graph-view-model";
-import { MODEL_OPTIONS } from "@/lib/models";
+import { MODEL_OPTIONS, type ExecutorSelection } from "@/lib/models";
 import { ModalDialog } from "@/components/ui/modal-dialog";
 import {
   DialogActions,
@@ -36,7 +36,7 @@ export function TaskEditDialog({
   const [acceptanceCriteria, setAcceptanceCriteria] = useState(textFromLines(contract?.acceptanceCriteria ?? []));
   const [manual, setManual] = useState(view.manual);
   const supportsExecutorOverride = view.kind === "leaf" || view.kind === "composite" || view.kind === "root";
-  const [executorModel, setExecutorModel] = useState(view.executorOverride?.model ?? defaultModelId);
+  const [executorSelection, setExecutorSelection] = useState(selectionValue(view.executorOverride));
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +51,7 @@ export function TaskEditDialog({
       forbiddenPaths?: string[];
       acceptanceCriteria?: string[];
       manual?: boolean;
-      executorOverride?: { executorId: "gemini-cli"; model: string } | null;
+      executorSelection?: ExecutorSelection | null;
     } = {};
     const nextTitle = title.trim();
     const nextObjective = objective.trim();
@@ -68,10 +68,9 @@ export function TaskEditDialog({
     }
     if (manual !== view.manual) body.manual = manual;
     if (supportsExecutorOverride) {
-      const nextExecutorOverride =
-        executorModel === defaultModelId ? null : { executorId: "gemini-cli" as const, model: executorModel };
-      if (!executorOverrideEqual(nextExecutorOverride, view.executorOverride ?? null)) {
-        body.executorOverride = nextExecutorOverride;
+      const nextExecutorSelection = parseSelectionValue(executorSelection);
+      if (!executorSelectionEqual(nextExecutorSelection, view.executorOverride ?? null)) {
+        body.executorSelection = nextExecutorSelection;
       }
     }
 
@@ -146,13 +145,13 @@ export function TaskEditDialog({
         {supportsExecutorOverride ? (
           <DialogField label={view.kind === "leaf" ? "Execution model" : "Composer repair model"}>
             <select
-              value={executorModel}
-              onChange={(event) => setExecutorModel(event.target.value)}
+              value={executorSelection}
+              onChange={(event) => setExecutorSelection(event.target.value)}
               style={inputStyle}
             >
-              <option value={defaultModelId}>Run default ({defaultModelId})</option>
-              {MODEL_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
+              <option value="__default">Run default ({defaultModelId})</option>
+              {MODEL_OPTIONS.filter((option) => option.enabled).map((option) => (
+                <option key={`${option.executorId}/${option.id}`} value={`${option.executorId}/${option.id}`}>
                   {option.label} ({option.provider})
                 </option>
               ))}
@@ -187,9 +186,21 @@ function arraysEqual(left: readonly string[], right: readonly string[]): boolean
   return left.every((value, index) => value === right[index]);
 }
 
-function executorOverrideEqual(
-  left: { executorId: "gemini-cli"; model: string } | null,
-  right: { executorId: "gemini-cli"; model: string } | null
+function selectionValue(selection: ExecutorSelection | undefined): string {
+  return selection === undefined ? "__default" : `${selection.executorId}/${selection.model}`;
+}
+
+function parseSelectionValue(value: string): ExecutorSelection | null {
+  if (value === "__default") {
+    return null;
+  }
+  const [executorId, ...modelParts] = value.split("/");
+  return { executorId: executorId as ExecutorSelection["executorId"], model: modelParts.join("/") };
+}
+
+function executorSelectionEqual(
+  left: ExecutorSelection | null,
+  right: ExecutorSelection | null
 ): boolean {
   return left?.executorId === right?.executorId && left?.model === right?.model;
 }

@@ -178,7 +178,7 @@ describe("IntegrationAgent", () => {
     expect(prompt).toContain("It produces: Ast.");
   });
 
-  it("fails with executor_repair_failed when the repair leaves out-of-scope files", async () => {
+  it("fails with executor_repair_failed when the repair touches a forbidden path", async () => {
     const git = new FakeGitRunner({
       heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
       cherryPickOutcomes: [{ ok: false, conflictFiles: ["src/b.ts"], output: "CONFLICT" }],
@@ -197,7 +197,8 @@ describe("IntegrationAgent", () => {
       worktree: INTEGRATION_WORKTREE,
       childResults: [child("b", "SHA_B")],
       repair,
-      executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] }
+      executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] },
+      forbiddenPaths: ["secrets/**"]
     });
 
     expect(result.status).toBe("executor_repair_failed");

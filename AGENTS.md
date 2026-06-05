@@ -5,6 +5,7 @@
 > Communication with Francisco: Spanish. Code and technical terms: English.
 > For decision rationale: `docs/DECISIONS.md`. For project narrative: `docs/thesis/project-evolution.md`.
 > For a walk-through of every system component: `docs/system/`.
+> **Agent-first redesign (UI + orchestration layer) in progress — source of truth: `docs/design/`** (executable PR plan in `docs/design/implementation-plan.md`). It conceptually supersedes the current plan-centric UI; the code is not yet rewritten. It does not renegotiate D1–D10.
 
 ---
 
@@ -68,6 +69,7 @@ Dependency direction: `apps → specific packages → shared`. Never import from
 7. Test suite must always pass (344 passing + 3 skipped as of June 2026). Fix failures in the same session — do not leave them.
 8. Do not reintroduce Lab Mode. If something seems to need a deterministic benchmark, replay route, or scenario picker, stop and surface it instead of bringing back `mock-v0`/`conflict-v0`/`/lab`/`/replay`. A new Lab will be designed from scratch later.
 9. `@manyhands/core` is legacy. Use specific packages for all new dependencies.
+10. UI / orchestration work follows `docs/design/` (agent-first redesign). Do not expand legacy: `nodeStatusOverrides`, the three paired views (canvas/board/timeline as equal modes), or raw CLI console as a primary surface. Node execution state is **derived** from the event model (reducer + selectors), never set imperatively. Implement via the PR plan (`docs/design/implementation-plan.md`), fixture-first, no big-bang.
 
 ---
 
@@ -112,5 +114,6 @@ Environment variables:
 - [`docs/system/`](docs/system/) — component-by-component walkthrough of how the system works
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — synthesized decisions reference (LLM-first)
 - [`docs/thesis/project-evolution.md`](docs/thesis/project-evolution.md) — project narrative and architectural history
+- [`docs/design/`](docs/design/) — **agent-first redesign** (current direction for the UI + orchestration layer): vision, frozen operative model (A–P), interaction model, components, golden fixtures, and the PR-by-PR implementation plan
 - [`docs/design/decomposer-composer-redesign.md`](docs/design/decomposer-composer-redesign.md) — detailed design of the two thesis artifacts
 - [`docs/adr/`](docs/adr/) — 29 ADRs with full decision rationale

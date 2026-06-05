@@ -20,17 +20,22 @@ describe("ScopeChecker", () => {
     expect(result.violations).toEqual([]);
   });
 
-  it("flags files outside the allowed scope", () => {
+  it("reports files outside the allowed scope as advisory, not a hard violation", () => {
+    // Allow-list is advisory (the decomposer guesses paths for a layout that may
+    // not exist yet). A file outside the allow-list but not forbidden must NOT
+    // fail the leaf — collisions surface later at cherry-pick, where the composer
+    // repairs. Only forbidden paths are terminal.
     const result = checker.check({
       changedFiles: ["src/auth/login.ts", "src/billing/charge.ts"],
       executionScope: scope
     });
 
-    expect(result.passed).toBe(false);
-    expect(result.violations).toEqual(["src/billing/charge.ts"]);
+    expect(result.passed).toBe(true);
+    expect(result.violations).toEqual([]);
+    expect(result.outOfScope).toEqual(["src/billing/charge.ts"]);
   });
 
-  it("treats forbidden paths as violations even when otherwise allowed (deny wins)", () => {
+  it("treats forbidden paths as hard violations even when otherwise allowed (deny wins)", () => {
     const result = checker.check({
       changedFiles: ["src/auth/secrets.env"],
       executionScope: { implementationPaths: ["src/auth/**"], testPaths: [], configPaths: [] },
@@ -39,6 +44,7 @@ describe("ScopeChecker", () => {
 
     expect(result.passed).toBe(false);
     expect(result.violations).toEqual(["src/auth/secrets.env"]);
+    expect(result.outOfScope).toEqual([]);
   });
 
   it("allows everything except forbidden when no executionScope is given", () => {
@@ -49,6 +55,18 @@ describe("ScopeChecker", () => {
 
     expect(result.passed).toBe(false);
     expect(result.violations).toEqual(["secrets/key.pem"]);
+  });
+
+  it("a forbidden hit stays a hard violation while a sibling out-of-scope file is only advisory", () => {
+    const result = checker.check({
+      changedFiles: ["src/billing/charge.ts", "src/auth/secrets.env"],
+      executionScope: scope,
+      forbiddenPaths: ["**/*.env"]
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.violations).toEqual(["src/auth/secrets.env"]);
+    expect(result.outOfScope).toEqual(["src/billing/charge.ts"]);
   });
 
   it("normalizes backslash paths before matching", () => {

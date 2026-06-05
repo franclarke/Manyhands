@@ -4,6 +4,7 @@
 > Para síntesis de decisiones: [`docs/DECISIONS.md`](docs/DECISIONS.md).
 > Para narrativa del proyecto: [`docs/thesis/project-evolution.md`](docs/thesis/project-evolution.md).
 > Para entender cada componente del sistema: [`docs/system/`](docs/system/).
+> **Rediseño agent-first (capa UI + orquestación) en curso — fuente de verdad: [`docs/design/`](docs/design/)** (plan ejecutable en [`docs/design/implementation-plan.md`](docs/design/implementation-plan.md)). Supersede conceptualmente la UI plan-céntrica actual; el código todavía no se reescribió. No renegocia D1–D10.
 
 ---
 
@@ -31,6 +32,7 @@ pnpm web:typecheck         # 0 errores
 - **Sin evidencia empírica** — el pipeline con Gemini está cableado y los tests E2E pasan, pero no se corrió ninguna matriz de experimentos con agentes Gemini reales sobre las fixtures vigentes.
 - **Lab Mode eliminado** — `mock-v0`, `conflict-v0`, `scenarios`, las UI `/lab` y `/replay`, las CLIs `demo:*`, y los packages `evaluator`/`scope-validation`/`worktree-runner` se eliminaron en la limpieza de junio 2026. El nuevo Lab se diseñará desde cero cuando el producto esté listo.
 - **Metodología experimental en revisión** — la matriz B0-B4 quedó como referencia conceptual, pero no está implementada y va a redefinirse cuando se diseñe el Lab nuevo.
+- **Rediseño agent-first congelado en diseño, no en código** — el modelo operativo (event log + reducer + selectores + seams + verify-loop + freshness) está documentado y congelado (refinamientos A–P) en [`docs/design/`](docs/design/), validado por dos stress tests. La UI actual (canvas/board/timeline pares, `nodeStatusOverrides`, consola CLI cruda) sigue viva pero es **legacy conceptual**: no expandirla. Migración por PRs 01–14 en [`docs/design/implementation-plan.md`](docs/design/implementation-plan.md).
 
 ---
 
@@ -100,7 +102,7 @@ pnpm web:typecheck         # 0 errores
 ## Reglas para Claude
 
 1. **No renegociar D1-D10.** Si algo parece en tensión, señalarlo sin cambiar la decisión.
-2. **Gemini CLI es mandatorio** (ejecución + planning). No sugerir alternativas sin consultar a Francisco.
+2. **Gemini CLI es el default** (ejecución + planning) y el único executor con capacidad de planning. La ejecución/repair de nodos pasa por un registry de executors configurable (ADR-0030): Claude Code CLI está disponible como alterno opt-in. No agregar executors nuevos ni cambiar el default sin consultar a Francisco.
 3. **Git diff como verdad.** Nunca confiar en stdout del agente para determinar cambios.
 4. **El orquestador hace commit.** Nunca generar código que haga que Gemini commitee.
 5. **Error claro sobre fallback silencioso** (D3). Si falta Gemini → error accionable, no grafo genérico.
@@ -109,6 +111,7 @@ pnpm web:typecheck         # 0 errores
 8. **No reintroducir Lab Mode.** Si una idea requiere un benchmark determinista o un replay de snapshot, el nuevo Lab se va a diseñar desde cero cuando el producto esté listo. No reintroducir mock-v0/conflict-v0/scenarios.
 9. **`@manyhands/core` es legacy.** Nuevas dependencias van a packages específicos.
 10. **Comunicación en español.**
+11. **UI/orquestación = seguir [`docs/design/`](docs/design/).** Para trabajo de la capa de experiencia/orquestación, el diseño agent-first es la dirección vigente. No expandir legacy: `nodeStatusOverrides`, las tres vistas pares (canvas/board/timeline como modos iguales), ni la consola CLI cruda como superficie primaria. El estado de nodo se **deriva** del modelo de eventos (reducer + selectores), nunca se setea imperativamente. Implementar siguiendo el plan por PRs ([`implementation-plan.md`](docs/design/implementation-plan.md)), fixture-first y sin big-bang.
 
 ---
 

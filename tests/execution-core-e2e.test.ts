@@ -1,5 +1,5 @@
 ﻿import { execFileSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -8,6 +8,8 @@ import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   ExecutionConfigSchema,
+  type AgentExecutionResult,
+  type BatchScheduler,
   MockAgentExecutor,
   RunExecutor,
   SimpleGitRunner
@@ -144,4 +146,91 @@ describe("RunExecutor E2E (real git + MockCodex)", () => {
     expect(tree).toContain("src/b.ts");
     expect(tree).toContain("src/c.ts");
   }, 60_000);
+
+  it("runs integrator nodes as executable tasks before parent integration", async () => {
+    const behaviors = {
+      [leafPath("a")]: { filesToWrite: { "src/a.ts": "export const a = 1;\n" } },
+      [leafPath("join")]: { filesToWrite: { "src/join.ts": "export const joined = true;\n" } }
+    };
+    const graph = graphWith(["a", "join"]);
+    graph.dependencies.push({
+      fromTaskId: "a",
+      toTaskId: "join",
+      type: "logical",
+      inferred: false
+    });
+    graph.nodes.join!.kind = "integrator";
+    graph.nodes.join!.metadata = { integrator: true, integratesTaskIds: ["a"] };
+
+    const traceStore = new InMemoryTraceStore();
+    const executor = new RunExecutor({
+      git: new SimpleGitRunner(),
+      executor: new MockAgentExecutor({ behaviors }),
+      traceStore,
+      repoRoot
+    });
+
+    const result = await executor.run({
+      graph,
+      config: ExecutionConfigSchema.parse({}),
+      model: "gpt-5-codex",
+      runId: RUN_ID
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.leafResults.map((leaf) => leaf.taskId).sort()).toEqual(["a", "join"]);
+    expect(traceStore.findByType("agent_started").map((event) => event.taskId)).toEqual(
+      expect.arrayContaining(["a", "join"])
+    );
+  }, 60_000);
+
+  it("fails parent integration when a scheduled child never produced a result", async () => {
+    await mkdir(path.join(repoRoot, "src"), { recursive: true });
+    await writeFile(path.join(repoRoot, "src/a.ts"), "export const a = 1;\n");
+    git(["add", "-A"]);
+    git(["commit", "-m", "leaf a"]);
+    const leafCommit = git(["rev-parse", "HEAD"]);
+
+    const partialScheduler = {
+      async runBatches() {
+        return new Map<string, AgentExecutionResult>([["a", committedLeafResult("a", leafCommit)]]);
+      }
+    } as unknown as BatchScheduler;
+    const traceStore = new InMemoryTraceStore();
+    const executor = new RunExecutor({
+      git: new SimpleGitRunner(),
+      executor: new MockAgentExecutor(),
+      traceStore,
+      repoRoot,
+      batchScheduler: partialScheduler
+    });
+
+    const result = await executor.run({
+      graph: graphWith(["a", "b"]),
+      config: ExecutionConfigSchema.parse({}),
+      model: "gpt-5-codex",
+      runId: RUN_ID
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.integrationResults[0]?.status).toBe("child_failed");
+    expect(result.integrationResults[0]?.childResults.map((child) => child.taskId).sort()).toEqual(["a", "b"]);
+  }, 60_000);
 });
+
+function committedLeafResult(taskId: string, commitSha: string): AgentExecutionResult {
+  return {
+    taskId,
+    status: "success",
+    baseHead: baseCommit,
+    currentHead: commitSha,
+    agentCommittedUnexpectedly: false,
+    diff: "",
+    changedFiles: [`src/${taskId}.ts`],
+    commitSha,
+    scopeCheck: { passed: true, violations: [] },
+    executorExitCode: 0,
+    executorDurationMs: 1,
+    executorTimedOut: false
+  };
+}

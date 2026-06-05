@@ -31,6 +31,8 @@ export interface PickDecomposerInput {
   workspace?: Workspace;
   userPrompt: string;
   model: string;
+  /** Repository symbol-topology digest appended to the prompt grounding (Fase 2.1). */
+  groundingDigest?: string;
   /** Skip the LLM regardless of env (used by Lab compare for reproducibility). */
   forceFallback?: boolean;
   onStepStarted?: RecursiveStepListener<RecursiveStepStartedEvent>;
@@ -52,7 +54,7 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
     return buildFallbackSelection(input, "forced_by_env");
   }
   const hints = toWorkspaceHints(input.workspace);
-  const workspaceHints = hints !== undefined ? formatWorkspaceHints(hints) : undefined;
+  const workspaceHints = formatWorkspaceHintsWithGrounding(hints, input.groundingDigest);
   const maxParallelSteps = planningMaxParallelFromEnv();
   const maxStepAttempts = positiveIntegerFromEnv("MANYHANDS_PLANNING_MAX_STEP_ATTEMPTS");
   const stepTimeoutMs = positiveIntegerFromEnv("MANYHANDS_PLANNING_STEP_TIMEOUT_MS");
@@ -124,6 +126,17 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
     model,
     promptTemplateVersion: recursive.promptTemplateVersion
   };
+}
+
+/** Combines the workspace hints block with the repository grounding digest (Fase 2.1). */
+function formatWorkspaceHintsWithGrounding(
+  hints: WorkspaceHints | undefined,
+  groundingDigest: string | undefined
+): string | undefined {
+  const parts: string[] = [];
+  if (hints !== undefined) parts.push(formatWorkspaceHints(hints));
+  if (groundingDigest !== undefined && groundingDigest.trim().length > 0) parts.push(groundingDigest);
+  return parts.length > 0 ? parts.join("\n\n") : undefined;
 }
 
 /** Renders structured workspace hints into the plain-text block the recursive prompt expects. */

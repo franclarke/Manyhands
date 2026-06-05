@@ -217,6 +217,10 @@ export interface InspectorIntegration {
   result?: IntegrationResult;
 }
 
+interface SnapshotWithIntegrationResults extends RunSnapshot {
+  integrationResults?: IntegrationResult[];
+}
+
 export interface InspectorView {
   taskId: string;
   title: string;
@@ -293,7 +297,9 @@ export function toRunGraphViewModel(snapshot: RunSnapshot): RunGraphViewModel {
         manual: authoredByForNode(node) === "human",
         integrator: node.metadata?.integrator === true
       };
-      const executorOverride = normalizeExecutorOverride(node.metadata?.executorOverride);
+      const executorOverride =
+        normalizeExecutorOverride(node.metadata?.executorSelection) ??
+        normalizeExecutorOverride(node.metadata?.executorOverride);
       if (executorOverride !== undefined) {
         view.executorOverride = executorOverride;
       }
@@ -437,6 +443,9 @@ export function buildInspectorView(snapshot: RunSnapshot, taskId: string): Inspe
 
   const contract = snapshot.contracts.find((entry) => entry.taskId === taskId) ?? node.contract;
   const result = snapshot.agentRunResults.find((entry) => entry.taskId === taskId);
+  const integrationResult = (snapshot as SnapshotWithIntegrationResults).integrationResults?.find(
+    (entry) => entry.compositeTaskId === taskId
+  );
   const blocked = snapshot.blockedTasks.find((entry) => entry.taskId === taskId);
   const resultsByTaskId = new Map(snapshot.agentRunResults.map((entry) => [entry.taskId, entry]));
   const blockedByTaskId = new Map(snapshot.blockedTasks.map((entry) => [entry.taskId, entry]));
@@ -507,7 +516,9 @@ export function buildInspectorView(snapshot: RunSnapshot, taskId: string): Inspe
     manual: authoredByForNode(node) === "human",
     integrator: node.metadata?.integrator === true
   };
-  const executorOverride = normalizeExecutorOverride(node.metadata?.executorOverride);
+  const executorOverride =
+    normalizeExecutorOverride(node.metadata?.executorSelection) ??
+    normalizeExecutorOverride(node.metadata?.executorOverride);
   if (executorOverride !== undefined) {
     inspector.executorOverride = executorOverride;
   }
@@ -517,6 +528,10 @@ export function buildInspectorView(snapshot: RunSnapshot, taskId: string): Inspe
   }
 
   if (contract !== undefined) {
+    const canonicalForbiddenPaths = uniqueStrings(contract.forbidden.paths);
+    const explicitForbiddenPaths = uniqueStrings(contract.forbiddenPaths ?? []).filter(
+      (path) => !canonicalForbiddenPaths.includes(path)
+    );
     inspector.contract = {
       objective: contract.objective,
       definitionOfDone: contract.definitionOfDone,
@@ -528,7 +543,7 @@ export function buildInspectorView(snapshot: RunSnapshot, taskId: string): Inspe
         blocking: command.blocking
       })),
       allowedPaths: [...contract.allowed.paths],
-      forbiddenPaths: [...contract.forbidden.paths],
+      forbiddenPaths: canonicalForbiddenPaths,
       ...(contract.executionScope !== undefined
         ? {
             executionScope: {
@@ -538,7 +553,7 @@ export function buildInspectorView(snapshot: RunSnapshot, taskId: string): Inspe
             }
           }
         : {}),
-      ...(contract.forbiddenPaths !== undefined ? { explicitForbiddenPaths: [...contract.forbiddenPaths] } : {}),
+      ...(explicitForbiddenPaths.length > 0 ? { explicitForbiddenPaths } : {}),
       ...(contract.leafValidationCommands !== undefined
         ? { leafValidationCommands: contract.leafValidationCommands.map(toInspectorExecutionValidationCommand) }
         : {}),
@@ -633,11 +648,10 @@ export function buildInspectorView(snapshot: RunSnapshot, taskId: string): Inspe
         executed: resultsByTaskId.has(childId)
       };
     });
-    // `result` is intentionally omitted: IntegrationResult is produced by the
-    // execution core (Etapa 1). Until then the Integration tab shows a pending state.
     inspector.integration = {
       compositeTaskId: taskId,
-      children
+      children,
+      ...(integrationResult !== undefined ? { result: integrationResult } : {})
     };
   }
 
@@ -716,7 +730,7 @@ function statusForNode(
     );
 
     if (childStatuses.length > 0 && childStatuses.every((status) => status === "done")) {
-      return "done";
+      return "ready";
     }
 
     if (childStatuses.some((status) => status === "failed")) {
@@ -889,6 +903,10 @@ function asStringArray(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
     : [];
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  return [...new Set(values)];
 }
 
 function authoredByForNode(node: RunSnapshot["graphSnapshot"]["nodes"][string]): "ai" | "human" | undefined {

@@ -12,7 +12,7 @@ import {
   type RunPatch
 } from "@/lib/server/runs";
 import { toRunResponse } from "@/lib/server/runs/presenter";
-import { findModel, normalizeExecutorOverride } from "@/lib/models";
+import { findModelForSelection, normalizeExecutorOverride, type ExecutorSelection } from "@/lib/models";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +33,13 @@ const NodeEditRequestSchema = z.object({
   executorOverride: z
     .object({
       executorId: z.literal("gemini-cli"),
+      model: EditableStringSchema.max(120)
+    })
+    .nullable()
+    .optional(),
+  executorSelection: z
+    .object({
+      executorId: z.enum(["gemini-cli", "claude-code-cli", "codex-cli", "opencode-cli"]),
       model: EditableStringSchema.max(120)
     })
     .nullable()
@@ -60,12 +67,8 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Ne
     const { run, baseSnapshot, currentSnapshot } = await loadEditableRunContext(id);
     assertTaskExists(currentSnapshot, taskId);
     const node = currentSnapshot.graphSnapshot.nodes[taskId];
-    if (parsed.data.executorOverride !== undefined && parsed.data.executorOverride !== null) {
-      const model = findModel(parsed.data.executorOverride.model);
-      if (model === undefined || model.executorId !== parsed.data.executorOverride.executorId) {
-        throw new RunValidationError(`Unknown Gemini model "${parsed.data.executorOverride.model}"`);
-      }
-    }
+    validateNodeSelection(parsed.data.executorSelection);
+    validateNodeSelection(parsed.data.executorOverride);
 
     const patches = buildNodeEditPatches({
       input: parsed.data,
@@ -141,8 +144,31 @@ function buildNodeEditPatches(input: {
       patches.push(buildPatch("NODE_EXECUTOR_EDITED", { taskId, executorOverride: next }, { createdAt: now }));
     }
   }
+  if (request.executorSelection !== undefined) {
+    const current =
+      normalizeExecutorOverride(currentNode.metadata?.executorSelection) ??
+      normalizeExecutorOverride(currentNode.metadata?.executorOverride) ??
+      null;
+    const next = request.executorSelection;
+    if (
+      current?.executorId !== next?.executorId ||
+      current?.model !== next?.model
+    ) {
+      patches.push(buildPatch("NODE_EXECUTOR_SELECTION_EDITED", { taskId, executorSelection: next }, { createdAt: now }));
+    }
+  }
 
   return patches;
+}
+
+function validateNodeSelection(selection: ExecutorSelection | null | undefined): void {
+  if (selection === undefined || selection === null) {
+    return;
+  }
+  const model = findModelForSelection(selection);
+  if (model === undefined || !model.enabled) {
+    throw new RunValidationError(`Unsupported executor/model selection "${selection.executorId}/${selection.model}"`);
+  }
 }
 
 function errorResponse(error: unknown): NextResponse {

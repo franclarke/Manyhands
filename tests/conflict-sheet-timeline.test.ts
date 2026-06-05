@@ -174,6 +174,32 @@ describe("run timeline", () => {
     expect(timeline.some((entry) => entry.id === "trace-patch-serialize")).toBe(false);
   });
 
+  it("keeps timeline entry ids unique when trace event ids repeat across phases", () => {
+    const run = makeRun({
+      planning: makePlanning({
+        traces: [
+          traceEvent({
+            id: "trace-1",
+            type: "feature_loaded",
+            timestamp: "2026-05-27T00:01:00.000Z"
+          }),
+          traceEvent({
+            id: "trace-1",
+            type: "batch_started",
+            timestamp: "2026-05-27T00:02:00.000Z",
+            taskId: "task-1"
+          })
+        ]
+      })
+    });
+
+    const timeline = mergeRunTimeline({ run, snapshot: snapshotFrom(run), patches: [] });
+    const ids = timeline.map((entry) => entry.id);
+
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toContain("trace-1");
+  });
+
   it("extracts affected tasks for editable control-plane patches", () => {
     const patches: RunPatch[] = [
       {

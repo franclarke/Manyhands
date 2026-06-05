@@ -45,6 +45,8 @@ La narrativa completa de la evolución del proyecto (incluyendo decisiones que y
 
 El pipeline está cableado de punta a punta y los dos artifacts están implementados. Lo que aún **no existe** es la evidencia empírica: el sistema funciona con mocks/E2E estructurales, pero la matriz de experimentos con agentes Gemini reales sobre las fixtures todavía no se corrió. La metodología experimental original (`G3/G6/G9` como targets de profundidad de árbol y `mock-v0`/`conflict-v0` como benchmarks deterministas) fue abandonada — la granularidad se redefinió como **agresividad de descomposición** (`low | medium | high`) que sesga el umbral de atomicidad por nodo, no la forma del árbol. El diseño del nuevo Lab está pendiente.
 
+> **Rediseño agent-first en curso (capa UI + orquestación).** La dirección vigente para la experiencia y la orquestación está en [`docs/design/`](docs/design/): una sala de control agent-first sobre un event log append-only + estado derivado (reducer + selectores), con costuras como contratos, verify-loop y freshness. La UI actual descrita arriba (DAG viewer con vistas canvas/board/timeline pares, consola CLI cruda) es **legacy conceptual**: se mantiene mientras se migra por PRs ([`docs/design/implementation-plan.md`](docs/design/implementation-plan.md)) y no debe expandirse. No renegocia D1–D10.
+
 ### Verificación rápida
 
 ```bash
@@ -112,6 +114,7 @@ Para ejecutar runs reales hace falta tener Gemini CLI instalado y en `PATH` (o c
 
 | Documento | Para qué sirve |
 |-----------|----------------|
+| [`docs/design/`](docs/design/) | **Rediseño agent-first (dirección vigente de UI + orquestación)** — visión, modelo operativo congelado, fixtures golden y plan de implementación por PRs |
 | [`docs/system/`](docs/system/) | **Cómo funciona cada componente del sistema** — punto de entrada recomendado para alguien que llega nuevo al proyecto |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Síntesis LLM-first de decisiones de arquitectura cerradas |
 | [`docs/thesis/project-evolution.md`](docs/thesis/project-evolution.md) | Narrativa completa de cómo evolucionó el proyecto |

@@ -30,7 +30,10 @@ const LEGAL: ReadonlyArray<[RunStatus, RunStatus]> = [
   ["running", "failed"],
   ["interrupted", "generating"],
   ["interrupted", "running"],
-  ["interrupted", "failed"]
+  ["interrupted", "failed"],
+  // Re-open a finished run for post-completion review actions (Fase C).
+  ["completed", "approved"],
+  ["failed", "approved"]
 ];
 
 describe("run lifecycle", () => {

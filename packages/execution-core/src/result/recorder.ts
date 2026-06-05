@@ -26,6 +26,7 @@ export interface RecordParams {
   forbiddenPaths?: string[];
   unexpectedCommitPolicy?: UnexpectedCommitPolicy;
   commitMessage?: string;
+  usageSource?: "reported" | "estimated" | "unavailable";
 }
 
 /** Keep the last N chars of executor output as the actionable failure cause. */
@@ -72,10 +73,11 @@ export class ResultRecorder {
       stdoutTail: tail(executorOutcome.stdout),
       tokensIn: executorOutcome.tokensIn,
       tokensOut: executorOutcome.tokensOut,
-      costUsd: executorOutcome.costUsd
+      costUsd: executorOutcome.costUsd,
+      usageSource: params.usageSource
     };
 
-    const passedScope: ScopeCheckResult = { passed: true, violations: [] };
+    const passedScope: ScopeCheckResult = { passed: true, violations: [], outOfScope: [] };
 
     // 1. Executor-level failures short-circuit before any git inspection. The
     // stderr/stdout tails in `base` preserve the actionable cause.
@@ -120,6 +122,7 @@ export class ResultRecorder {
         this.appendScopeFailure(taskId, scopeCheck.violations);
         return this.finalize({ ...base, status: "scope_violation", currentHead: head, agentCommittedUnexpectedly: true, diff, changedFiles, scopeCheck });
       }
+      this.appendScopeAdvisory(taskId, scopeCheck.outOfScope);
       return this.finalize({ ...base, status: "success", currentHead: head, agentCommittedUnexpectedly: true, diff, changedFiles, commitSha: head, scopeCheck });
     }
 
@@ -154,6 +157,7 @@ export class ResultRecorder {
       payload: { commitSha, changedFiles }
     });
 
+    this.appendScopeAdvisory(taskId, scopeCheck.outOfScope);
     return this.finalize({ ...base, status: "success", currentHead: commitSha, diff, changedFiles, commitSha, scopeCheck });
   }
 
@@ -163,6 +167,23 @@ export class ResultRecorder {
       actor: "system",
       taskId,
       payload: { violations }
+    });
+  }
+
+  /**
+   * Records files the agent touched outside its (LLM-guessed) allow-list. This is
+   * advisory only — the leaf still succeeds and commits. It exists so an
+   * out-of-lane change stays visible in the timeline and can feed conflict-risk.
+   */
+  private appendScopeAdvisory(taskId: string, outOfScope: string[]): void {
+    if (outOfScope.length === 0) {
+      return;
+    }
+    this.traceStore.append({
+      type: "scope_advisory",
+      actor: "system",
+      taskId,
+      payload: { outOfScope }
     });
   }
 
@@ -184,6 +205,7 @@ export class ResultRecorder {
     tokensIn?: number | undefined;
     tokensOut?: number | undefined;
     costUsd?: number | undefined;
+    usageSource?: "reported" | "estimated" | "unavailable" | undefined;
   }): AgentExecutionResult {
     return AgentExecutionResultSchema.parse({
       taskId: input.taskId,
@@ -202,7 +224,8 @@ export class ResultRecorder {
       stdoutTail: input.stdoutTail,
       tokensIn: input.tokensIn,
       tokensOut: input.tokensOut,
-      costUsd: input.costUsd
+      costUsd: input.costUsd,
+      usageSource: input.usageSource
     });
   }
 }

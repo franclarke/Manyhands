@@ -262,6 +262,22 @@ describe("editable control plane vertical slice", () => {
     expect(inspector?.executorOverride?.model).toBe("gemini-2.5-flash");
   });
 
+  it("does not duplicate canonical and legacy forbidden paths in inspector view", () => {
+    const run = makeRun();
+    const contract = run.planning.decomposition.contracts.find((entry) => entry.taskId === "task-1");
+    expect(contract).toBeDefined();
+
+    contract!.forbidden.paths = ["src/**", "package.json"];
+    contract!.forbiddenPaths = ["src/**", "package.json", ".git/**"];
+
+    const snapshot = projectRunRecordToSnapshot(run);
+    expect(snapshot).not.toBeNull();
+
+    const inspector = buildInspectorView(snapshot as RunSnapshot, "task-1");
+    expect(inspector?.contract?.forbiddenPaths).toEqual(["src/**", "package.json"]);
+    expect(inspector?.contract?.explicitForbiddenPaths).toEqual([".git/**"]);
+  });
+
   it("replays subtree regeneration, integrator creation, and serialization patches", () => {
     const base = projectRunRecordToSnapshot(makeRun(), { applyPatches: false });
     expect(base).not.toBeNull();

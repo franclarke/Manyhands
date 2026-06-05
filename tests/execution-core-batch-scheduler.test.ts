@@ -53,6 +53,59 @@ describe("BatchScheduler", () => {
     expect(peak).toBeLessThanOrEqual(2);
   });
 
+  it("stops scheduling further batches once the signal aborts", async () => {
+    const controller = new AbortController();
+    const scheduler = new BatchScheduler({ traceStore: new InMemoryTraceStore() });
+    const ran: string[] = [];
+
+    const results = await scheduler.runBatches({
+      batches: [
+        { id: "b1", taskIds: ["a"] },
+        { id: "b2", taskIds: ["b"] }
+      ],
+      signal: controller.signal,
+      runTask: async (taskId) => {
+        ran.push(taskId);
+        controller.abort();
+        return taskId;
+      }
+    });
+
+    expect(ran).toEqual(["a"]);
+    expect(results.has("b")).toBe(false);
+  });
+
+  it("holds at the batch boundary until onBatchBoundary resolves (pause)", async () => {
+    const scheduler = new BatchScheduler({ traceStore: new InMemoryTraceStore() });
+    const order: string[] = [];
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const runPromise = scheduler.runBatches({
+      batches: [
+        { id: "b1", taskIds: ["a"] },
+        { id: "b2", taskIds: ["b"] }
+      ],
+      onBatchBoundary: async () => {
+        if (order.includes("a")) {
+          await gate; // hold before the second batch until released
+        }
+      },
+      runTask: async (taskId) => {
+        order.push(taskId);
+      }
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(order).toEqual(["a"]); // held before b2
+
+    release();
+    await runPromise;
+    expect(order).toEqual(["a", "b"]);
+  });
+
   it("completes a later batch only after the earlier batch finishes", async () => {
     const scheduler = new BatchScheduler({ traceStore: new InMemoryTraceStore() });
     const order: string[] = [];

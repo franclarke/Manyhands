@@ -1,10 +1,11 @@
-import { validateTaskGraph, type RunSnapshot, type TaskGraph } from "@manyhands/core";
+import { validateTaskGraph, type AgentTaskContract, type RunSnapshot, type TaskGraph } from "@manyhands/core";
+import { runSeamCritic } from "@/lib/plan-critic";
 
 export type PlanReviewStatus = "clean" | "warnings" | "errors";
 
 export interface PlanReviewIssue {
   severity: "warning" | "error";
-  kind: "graph" | "contract" | "risk";
+  kind: "graph" | "contract" | "risk" | "seam";
   taskId?: string;
   title: string;
   detail: string;
@@ -121,6 +122,25 @@ export function buildPlanReviewSummary(
         detail: `${leaf.title} does not declare expected changed files.`
       });
     }
+  }
+
+  // Seam consistency (Fase 2.3): every consumed seam needs a producer with a
+  // matching, concrete signature. Reuses the deterministic SeamCritic.
+  const seamResult = runSeamCritic({
+    graph: snapshot.graphSnapshot as unknown as TaskGraph,
+    contracts: snapshot.contracts as unknown as AgentTaskContract[]
+  });
+  for (const finding of seamResult.findings) {
+    if (finding.severity === "info") {
+      continue;
+    }
+    issues.push({
+      severity: finding.severity,
+      kind: "seam",
+      ...(finding.taskId !== undefined ? { taskId: finding.taskId } : {}),
+      title: finding.code.replace(/_/g, " "),
+      detail: finding.suggestion !== undefined ? `${finding.message} ${finding.suggestion}` : finding.message
+    });
   }
 
   const highRiskPredictions = snapshot.riskPredictions.filter(

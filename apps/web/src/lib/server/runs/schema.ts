@@ -1,4 +1,4 @@
-import { ExecutionConfigSchema } from "@manyhands/execution-core";
+import { EXECUTOR_IDS, ExecutionConfigSchema } from "@manyhands/execution-core";
 import { TraceEventSchema } from "@manyhands/trace-store";
 import { z } from "zod";
 
@@ -15,6 +15,13 @@ export const RUN_FILE_VERSION = 1;
 export const ExecutionConfigInputSchema = ExecutionConfigSchema.partial();
 
 export type ExecutionConfigInput = z.infer<typeof ExecutionConfigInputSchema>;
+
+export const ExecutorSelectionSchema = z.object({
+  executorId: z.enum(EXECUTOR_IDS),
+  model: z.string().min(1)
+});
+
+export type ExecutorSelectionInput = z.infer<typeof ExecutorSelectionSchema>;
 
 /** Serializable record of the repo a run was provisioned against (artifact). */
 export const ProvisionedRepoRecordSchema = z.object({
@@ -113,11 +120,63 @@ export const PlanningLiveNodeSchema = z.object({
 
 export type PlanningLiveNode = z.infer<typeof PlanningLiveNodeSchema>;
 
+/** Finding emitted by a deterministic plan critic (PlanCritic / SeamCritic). */
+export const CriticFindingSchema = z.object({
+  severity: z.enum(["error", "warning", "info"]),
+  code: z.string(),
+  taskId: z.string().optional(),
+  message: z.string(),
+  suggestion: z.string().optional()
+});
+
+export const CriticStatusSchema = z.enum(["clean", "warnings", "errors"]);
+
+/** Deterministic graph/contract quality critic over the generated plan. */
+export const PlanCriticResultSchema = z.object({
+  status: CriticStatusSchema,
+  findings: z.array(CriticFindingSchema),
+  generatedAt: z.string()
+});
+
+/** Deterministic seam-consistency critic over consumed/produced interfaces. */
+export const SeamCriticResultSchema = z.object({
+  status: CriticStatusSchema,
+  seamCount: z.number().int().nonnegative(),
+  findings: z.array(CriticFindingSchema),
+  generatedAt: z.string()
+});
+
+/** Compact summary of the repository index used to ground planning. */
+export const RepositoryGroundingSummarySchema = z.object({
+  repositoryId: z.string(),
+  fileCount: z.number().int().nonnegative(),
+  symbolCount: z.number().int().nonnegative(),
+  indexHash: z.string(),
+  indexedAt: z.string().optional()
+});
+
+export type CriticFinding = z.infer<typeof CriticFindingSchema>;
+export type PlanCriticResult = z.infer<typeof PlanCriticResultSchema>;
+export type SeamCriticResult = z.infer<typeof SeamCriticResultSchema>;
+export type RepositoryGroundingSummary = z.infer<typeof RepositoryGroundingSummarySchema>;
+
+/** Human review verdict on a single node's output during manual execution. */
+export const NodeReviewSchema = z.object({
+  status: z.enum(["approved", "changes_requested"]),
+  feedback: z.string().max(4000).optional(),
+  at: z.string().datetime()
+});
+
+export type NodeReview = z.infer<typeof NodeReviewSchema>;
+
 export const RunRecordSchema = z.object({
   runId: z.string().min(1),
   workspaceId: z.string().min(1),
   granularity: GranularityModeSchema,
   model: z.string().min(1),
+  planningModel: z.string().min(1).optional(),
+  defaultExecutionSelection: ExecutorSelectionSchema.optional(),
+  defaultRepairSelection: ExecutorSelectionSchema.optional(),
   userPrompt: z.string().max(4000),
   title: z.string().min(1).max(160),
   /** LLM-generated one-paragraph description. Falls back to userPrompt in the UI. */
@@ -146,9 +205,17 @@ export const RunRecordSchema = z.object({
   provisioned: ProvisionedRepoRecordSchema.optional(),
   /** Final integrated patch applied back to the selected repo after successful execution. */
   finalPatch: z.string().optional(),
+  /** Outcome of writing the result back: applied to a branch, exported, or failed. */
+  finalApplicationStatus: z.enum(["applied", "exported_patch", "failed"]).optional(),
+  /** Branch created from baseCommit holding the applied result (e.g. manyhands/run-...). */
+  finalBranchName: z.string().min(1).optional(),
   finalCommitSha: z.string().min(1).optional(),
   appliedToRepoPath: z.string().min(1).optional(),
   appliedAt: z.string().datetime().optional(),
+  /** Path on disk where the patch was written when it could not be applied to a branch. */
+  exportedPatchPath: z.string().min(1).optional(),
+  /** Human-readable detail when application was exported or failed. */
+  finalApplicationMessage: z.string().optional(),
   baseCommit: z.string().min(1).optional(),
   integrationCommitSha: z.string().min(1).optional(),
   /** Optional per-run overrides; defaults applied from execution-core at runtime. */
@@ -167,7 +234,15 @@ export const RunRecordSchema = z.object({
   /** Progressive recursive-planning nodes persisted while the final graph is still being generated. */
   livePlanningNodes: z.array(PlanningLiveNodeSchema).optional(),
   questionAnswers: z.record(z.string()).optional(),
-  planningStepCache: z.record(z.any()).optional()
+  planningStepCache: z.record(z.any()).optional(),
+  /** Per-node human review verdicts (Approve output / Request changes), keyed by taskId. */
+  nodeReviews: z.record(NodeReviewSchema).optional(),
+  /** Deterministic plan-quality critic, computed after planning (Fase 2). */
+  planningCritic: PlanCriticResultSchema.optional(),
+  /** Deterministic seam-consistency critic, computed after planning (Fase 2). */
+  seamCritic: SeamCriticResultSchema.optional(),
+  /** Repository index summary used to ground the planner (Fase 2). */
+  repositoryGrounding: RepositoryGroundingSummarySchema.optional()
 });
 
 export type RunRecord = z.infer<typeof RunRecordSchema>;
@@ -183,6 +258,9 @@ export const RunCreateRequestSchema = z.object({
   workspaceId: z.string().min(1),
   granularity: GranularityModeSchema,
   model: z.string().min(1),
+  planningModel: z.string().min(1).optional(),
+  defaultExecutionSelection: ExecutorSelectionSchema.optional(),
+  defaultRepairSelection: ExecutorSelectionSchema.optional(),
   userPrompt: z.string().trim().max(4000).default(""),
   /** Target repo for real execution. */
   repoSpec: RepoSpecSchema.optional()
