@@ -156,6 +156,12 @@ export interface Node {
   /** For a producer leaf: the seam revision its latest result produces
    *  (from `node.verify.passed.produces`). */
   producedRevision?: SeamRevisionRef;
+  /**
+   * Files the node's latest successful result changed (from `node.verify.passed`).
+   * Recorded data (not derived); undefined until the first success. Surfaced by the
+   * focus view-model as on-demand depth — never used to decide a node's display.
+   */
+  changedFiles?: string[];
 }
 
 // ── Seam ───────────────────────────────────────────────────────────────────

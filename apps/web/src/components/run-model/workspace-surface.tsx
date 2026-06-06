@@ -19,6 +19,7 @@ import type {
   WorkspaceWave
 } from "@/lib/run-model/workspace-view";
 import type { ProtoConflictRow } from "@/lib/run-model/proto-view";
+import { EVIDENCE_FOCUS_TARGET, type FocusTarget } from "@/lib/run-model/focus-view";
 
 const MODE_LABEL: Record<WorkspaceView["mode"], string> = {
   framing: "Encuadre",
@@ -50,19 +51,27 @@ const DISPLAY_COLOR: Record<WorkspaceNode["display"], string> = {
 
 export function WorkspaceSurface({
   view,
-  selectedNodeId,
-  onSelect
+  selectedTarget,
+  onFocus
 }: {
   view: WorkspaceView;
-  selectedNodeId?: string | null;
-  onSelect?: (nodeId: string) => void;
+  selectedTarget?: FocusTarget | null;
+  onFocus?: (target: FocusTarget) => void;
 }): React.ReactElement {
+  const selectedNodeId = selectedTarget?.kind === "node" ? selectedTarget.id : null;
+  const selectedSeamId = selectedTarget?.kind === "seam" ? selectedTarget.id : null;
+  const selectedConflictId = selectedTarget?.kind === "conflict" ? selectedTarget.id : null;
+  const evidenceSelected = selectedTarget?.kind === "evidence";
   return (
     <section style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <ModeBanner mode={view.mode} />
 
       {view.emphasis.showEvidenceProtagonist && view.evidence !== null ? (
-        <EvidenceBlock evidence={view.evidence} />
+        <EvidenceBlock
+          evidence={view.evidence}
+          selected={evidenceSelected}
+          {...(onFocus !== undefined ? { onFocus } : {})}
+        />
       ) : null}
 
       {view.emphasis.showApprovePlanCallout ? (
@@ -78,15 +87,25 @@ export function WorkspaceSurface({
 
       <NodeColumns
         view={view}
-        {...(selectedNodeId !== undefined ? { selectedNodeId } : {})}
-        {...(onSelect !== undefined ? { onSelect } : {})}
+        selectedNodeId={selectedNodeId}
+        {...(onFocus !== undefined ? { onFocus } : {})}
       />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <SeamSection seams={view.seams} highlightFrozen={view.emphasis.showSeamsFrozen} />
+        <SeamSection
+          seams={view.seams}
+          highlightFrozen={view.emphasis.showSeamsFrozen}
+          selectedSeamId={selectedSeamId}
+          {...(onFocus !== undefined ? { onFocus } : {})}
+        />
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {view.emphasis.showWaves ? <WaveSection waves={view.waves} /> : null}
-          <ConflictSection conflicts={view.conflicts} emphasized={view.emphasis.showConflicts} />
+          <ConflictSection
+            conflicts={view.conflicts}
+            emphasized={view.emphasis.showConflicts}
+            selectedConflictId={selectedConflictId}
+            {...(onFocus !== undefined ? { onFocus } : {})}
+          />
         </div>
       </div>
     </section>
@@ -125,11 +144,11 @@ function ModeBanner({ mode }: { mode: WorkspaceView["mode"] }): React.ReactEleme
 function NodeColumns({
   view,
   selectedNodeId,
-  onSelect
+  onFocus
 }: {
   view: WorkspaceView;
   selectedNodeId?: string | null;
-  onSelect?: (nodeId: string) => void;
+  onFocus?: (target: FocusTarget) => void;
 }): React.ReactElement {
   if (view.columns.length === 0) {
     return (
@@ -158,7 +177,7 @@ function NodeColumns({
               key={node.id}
               node={node}
               selected={selectedNodeId === node.id}
-              {...(onSelect !== undefined ? { onSelect } : {})}
+              {...(onFocus !== undefined ? { onFocus } : {})}
             />
           ))}
         </div>
@@ -170,27 +189,28 @@ function NodeColumns({
 function WorkspaceNodeCard({
   node,
   selected,
-  onSelect
+  onFocus
 }: {
   node: WorkspaceNode;
   selected: boolean;
-  onSelect?: (nodeId: string) => void;
+  onFocus?: (target: FocusTarget) => void;
 }): React.ReactElement {
   const color = DISPLAY_COLOR[node.display];
-  const borderColor = node.hasActiveConflict
-    ? "var(--error, #cf5b5b)"
-    : selected
-      ? "var(--copper, #d08a5a)"
+  const borderColor = selected
+    ? "var(--copper, #d08a5a)"
+    : node.hasActiveConflict
+      ? "var(--error, #cf5b5b)"
       : node.isAffectedByPendingAmendment
         ? "var(--gated, #d0953a)"
         : "var(--border, rgba(241,234,216,0.12))";
   return (
     <button
       type="button"
-      onClick={onSelect !== undefined ? () => onSelect(node.id) : undefined}
+      aria-pressed={selected}
+      onClick={onFocus !== undefined ? () => onFocus({ kind: "node", id: node.id }) : undefined}
       style={{
         textAlign: "left",
-        cursor: onSelect !== undefined ? "pointer" : "default",
+        cursor: onFocus !== undefined ? "pointer" : "default",
         display: "flex",
         flexDirection: "column",
         gap: 6,
@@ -248,7 +268,17 @@ function WorkspaceNodeCard({
   );
 }
 
-function SeamSection({ seams, highlightFrozen }: { seams: WorkspaceSeam[]; highlightFrozen: boolean }): React.ReactElement {
+function SeamSection({
+  seams,
+  highlightFrozen,
+  selectedSeamId,
+  onFocus
+}: {
+  seams: WorkspaceSeam[];
+  highlightFrozen: boolean;
+  selectedSeamId?: string | null;
+  onFocus?: (target: FocusTarget) => void;
+}): React.ReactElement {
   return (
     <SectionPanel title={highlightFrozen ? "Costuras (congelando)" : "Costuras (seams)"}>
       {seams.length === 0 ? (
@@ -256,29 +286,34 @@ function SeamSection({ seams, highlightFrozen }: { seams: WorkspaceSeam[]; highl
       ) : (
         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
           {seams.map((seam) => (
-            <li key={seam.id} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                <SeamStateDot state={seam.state} />
-                <strong style={{ color: "var(--text-1, #f1ead8)", fontSize: 13 }}>{seam.id}</strong>
+            <li key={seam.id}>
+              <SelectableRow
+                selected={selectedSeamId === seam.id}
+                {...(onFocus !== undefined ? { onClick: () => onFocus({ kind: "seam", id: seam.id }) } : {})}
+              >
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  <SeamStateDot state={seam.state} />
+                  <strong style={{ color: "var(--text-1, #f1ead8)", fontSize: 13 }}>{seam.id}</strong>
+                  <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "var(--text-3, #9a927f)" }}>
+                    rev {seam.revision} · {seam.state}
+                    {seam.lastChangeKind !== undefined ? ` (${seam.lastChangeKind})` : ""}
+                  </span>
+                </div>
                 <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "var(--text-3, #9a927f)" }}>
-                  rev {seam.revision} · {seam.state}
-                  {seam.lastChangeKind !== undefined ? ` (${seam.lastChangeKind})` : ""}
+                  {seam.producerNodeId} → {seam.consumerNodeIds.join(", ") || "—"}
                 </span>
-              </div>
-              <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "var(--text-3, #9a927f)" }}>
-                {seam.producerNodeId} → {seam.consumerNodeIds.join(", ") || "—"}
-              </span>
-              <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "var(--text-2, #cfc7b4)", wordBreak: "break-word" }}>
-                {seam.signatureSummary}
-              </span>
-              {seam.contractSummary !== undefined ? (
-                <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "var(--copper, #d08a5a)" }}>
-                  contrato: {seam.contractSummary}
+                <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "var(--text-2, #cfc7b4)", wordBreak: "break-word" }}>
+                  {seam.signatureSummary}
                 </span>
-              ) : null}
-              {seam.affectedNodeIds.length > 0 ? (
-                <span style={{ fontSize: 11, color: "var(--gated, #d0953a)" }}>afecta: {seam.affectedNodeIds.join(", ")}</span>
-              ) : null}
+                {seam.contractSummary !== undefined ? (
+                  <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "var(--copper, #d08a5a)" }}>
+                    contrato: {seam.contractSummary}
+                  </span>
+                ) : null}
+                {seam.affectedNodeIds.length > 0 ? (
+                  <span style={{ fontSize: 11, color: "var(--gated, #d0953a)" }}>afecta: {seam.affectedNodeIds.join(", ")}</span>
+                ) : null}
+              </SelectableRow>
             </li>
           ))}
         </ul>
@@ -308,7 +343,17 @@ function WaveSection({ waves }: { waves: WorkspaceWave[] }): React.ReactElement 
   );
 }
 
-function ConflictSection({ conflicts, emphasized }: { conflicts: ProtoConflictRow[]; emphasized: boolean }): React.ReactElement {
+function ConflictSection({
+  conflicts,
+  emphasized,
+  selectedConflictId,
+  onFocus
+}: {
+  conflicts: ProtoConflictRow[];
+  emphasized: boolean;
+  selectedConflictId?: string | null;
+  onFocus?: (target: FocusTarget) => void;
+}): React.ReactElement {
   const accent = emphasized && conflicts.length > 0 ? "var(--error, #cf5b5b)" : undefined;
   return (
     <SectionPanel title="Conflictos activos" {...(accent !== undefined ? { accent } : {})}>
@@ -317,11 +362,18 @@ function ConflictSection({ conflicts, emphasized }: { conflicts: ProtoConflictRo
       ) : (
         <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
           {conflicts.map((conflict) => (
-            <li key={conflict.id} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", fontSize: 12, color: "var(--text-2, #cfc7b4)" }}>
-              <Tag text={conflict.dimension} color="var(--error, #cf5b5b)" strong />
-              <span>{conflict.status}</span>
-              <span style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--text-3, #9a927f)" }}>{conflict.nodeIds.join(", ")}</span>
-              <span style={{ color: "var(--text-3, #9a927f)" }}>{conflict.autoResolvable ? "auto-resolvable" : "requiere humano"}</span>
+            <li key={conflict.id}>
+              <SelectableRow
+                selected={selectedConflictId === conflict.id}
+                {...(onFocus !== undefined ? { onClick: () => onFocus({ kind: "conflict", id: conflict.id }) } : {})}
+              >
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", fontSize: 12, color: "var(--text-2, #cfc7b4)" }}>
+                  <Tag text={conflict.dimension} color="var(--error, #cf5b5b)" strong />
+                  <span>{conflict.status}</span>
+                  <span style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--text-3, #9a927f)" }}>{conflict.nodeIds.join(", ")}</span>
+                  <span style={{ color: "var(--text-3, #9a927f)" }}>{conflict.autoResolvable ? "auto-resolvable" : "requiere humano"}</span>
+                </div>
+              </SelectableRow>
             </li>
           ))}
         </ul>
@@ -330,13 +382,21 @@ function ConflictSection({ conflicts, emphasized }: { conflicts: ProtoConflictRo
   );
 }
 
-function EvidenceBlock({ evidence }: { evidence: WorkspaceEvidence }): React.ReactElement {
+function EvidenceBlock({
+  evidence,
+  selected = false,
+  onFocus
+}: {
+  evidence: WorkspaceEvidence;
+  selected?: boolean;
+  onFocus?: (target: FocusTarget) => void;
+}): React.ReactElement {
   return (
     <div
       style={{
         padding: "14px 16px",
         background: "rgba(107,191,115,0.06)",
-        border: "1px solid rgba(107,191,115,0.32)",
+        border: `1px solid ${selected ? "var(--copper, #d08a5a)" : "rgba(107,191,115,0.32)"}`,
         borderRadius: "var(--r-md, 8px)",
         display: "flex",
         flexDirection: "column",
@@ -368,11 +428,66 @@ function EvidenceBlock({ evidence }: { evidence: WorkspaceEvidence }): React.Rea
           ))}
         </div>
       ) : null}
+      {onFocus !== undefined ? (
+        <button
+          type="button"
+          onClick={() => onFocus(EVIDENCE_FOCUS_TARGET)}
+          style={{
+            alignSelf: "flex-start",
+            marginTop: 2,
+            minHeight: 30,
+            padding: "0 12px",
+            borderRadius: 6,
+            border: "1px solid var(--done, #6bbf73)",
+            background: "rgba(107,191,115,0.12)",
+            color: "var(--done, #6bbf73)",
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: 12,
+            cursor: "pointer"
+          }}
+        >
+          Inspeccionar evidencia →
+        </button>
+      ) : null}
     </div>
   );
 }
 
 // ── Small shared bits ───────────────────────────────────────────────────────────
+
+/**
+ * A list row that becomes a focusable button when `onClick` is provided (selection
+ * affordance), and a plain container otherwise. Highlights when `selected`.
+ */
+function SelectableRow({
+  selected,
+  onClick,
+  children
+}: {
+  selected: boolean;
+  onClick?: () => void;
+  children: React.ReactNode;
+}): React.ReactElement {
+  const base: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+    width: "100%",
+    textAlign: "left",
+    padding: "6px 8px",
+    borderRadius: 6,
+    border: `1px solid ${selected ? "var(--copper, #d08a5a)" : "transparent"}`,
+    background: selected ? "rgba(208,138,90,0.10)" : "transparent"
+  };
+  if (onClick === undefined) {
+    return <div style={base}>{children}</div>;
+  }
+  return (
+    <button type="button" aria-pressed={selected} onClick={onClick} style={{ ...base, cursor: "pointer" }}>
+      {children}
+    </button>
+  );
+}
 
 function Callout({ tone, text }: { tone: "action" | "warn"; text: string }): React.ReactElement {
   const color = tone === "warn" ? "var(--gated, #d0953a)" : "var(--copper, #d08a5a)";

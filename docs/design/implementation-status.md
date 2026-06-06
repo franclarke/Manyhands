@@ -1,6 +1,21 @@
 # Estado de implementación — rediseño agent-first
 
-> Estado **vivo** (auditoría 2026-06-05). Complementa [`implementation-plan.md`](implementation-plan.md) (el *plan*) con el **estado real** tras ejecutar PR01–PR09. Es la fuente de verdad de "qué está hecho, qué falta, qué cambió". No introduce features; documenta.
+> Estado **vivo** (act. 2026-06-06). Complementa [`implementation-plan.md`](implementation-plan.md) (el *plan*) con el **estado real** tras ejecutar PR01–PR09 **+ PR-U1**. Es la fuente de verdad de "qué está hecho, qué falta, qué cambió". No introduce features; documenta.
+
+---
+
+## 0. PR-U1 ejecutado (2026-06-06)
+
+**PR-U1 — Fixture-First Control Room: Focus + Evidence + Hardening** está **ejecutado**. Resumen de lo que aterrizó (todo aditivo, fixture-first, sin tocar backend/SSE/`/runs/[runId]`):
+
+- **Foco polimórfico** — `apps/web/src/lib/run-model/focus-view.ts` (view-model puro): `RunModel + FocusTarget → FocusView` discriminado por `node / seam / conflict / decision / evidence`, con estado seguro `missing` para targets ausentes/futuros. Compone `selectWorkspaceView` + selectores; no duplica dominio. Incluye `parseFocusTarget`/`formatFocusTarget` y `EVIDENCE_FOCUS_TARGET`.
+- **Panel de foco** — `apps/web/src/components/run-model/focus-panel.tsx` (presentacional): recibe `FocusView`, renderiza las 5 variantes + `missing`, on-demand, con cross-links navegables y artefactos **solo por ref** (sin viewer real).
+- **Selección + deep-link** — la superficie y el canal emiten `FocusTarget`; estado de foco **local** en `proto-run-view.client.tsx` (no muta el modelo, no pausa el playback). Deep-link `/runs/proto/<fixture>?focus=<kind>:<id>` vía `history.replaceState` (sin router re-render / Suspense); seed leído por la ruta.
+- **Evidencia más protagonista** — `EvidenceBlock` con afordancia "Inspeccionar evidencia →"; el focus de evidencia expone `reExecuted/reIntegrated/preserved`, `invalidationTrace` y la relación con `approve_merge`.
+- **Hardening** — `tests/run-model-focus-view.test.ts` (18), `tests/run-model-invariants.test.ts` (21, consolida stale≠done/≠failed, obsolete, pureza, no-throw), nuevo fixture **`golden-execution-failed`** (fallo terminal, H4), y ampliación de `run-model-workspace-view`. Se persiste `Node.changedFiles` (aditivo) para el foco de nodo.
+- **Verificación:** `pnpm web:typecheck` ✅ · `pnpm test` **728 passing + 3 skipped** ✅ · capa run-model **282 tests / 10 archivos**.
+
+**Reencuadres:** PR10 queda **subsumido** (foco nuevo en `components/run-model/`, sin tocar el `TaskInspector` legacy); PR14 **adelantado en su parte fixture** (evidencia navegable por ref). **Backend/SSE real (PR11–13) sigue pendiente.** `/runs/proto` es ahora la demo fixture-first más completa.
 
 ---
 
@@ -28,13 +43,13 @@
 | 07 Canal de decisiones | ✅ completado | 5 `kind`; vacío=éxito; resolución por fast-forward del fixture | `run-model-decision-channel` (12) | `run-model/decision-channel-view.ts`, `components/run-model/decision-channel.tsx` | resolver = avanzar a `decision.resolved` existente (sin eventos inventados) |
 | 08 Superficie phase-adaptive | ✅ completado | View-model + superficie que madura por fase | `run-model-workspace-view` (15) | `run-model/workspace-view.ts`, `components/run-model/workspace-surface.tsx` | **superficie propia por columnas** (no `DagCanvas`, no board/timeline pares) |
 | 09 Signo vital | ✅ completado | `NodeVital` (build/tests/retry, repair, obsolete, blocked, conflict, amendment) | `run-model-node-vitals` (14) | `run-model/workspace-view.ts`, `workspace-surface.tsx` | `repairActive` heurístico; `isAffectedByPendingAmendment` refinado (propuesta && !invalidado) |
-| 10 Foco polimórfico | ⏳ pendiente | — | — | (objetivo) foco nodo/seam/conflicto/decisión/evidencia | **reencuadre:** NO evolucionar `TaskInspector` legacy; foco **nuevo** fixture-first |
+| 10 Foco polimórfico | ✅ (vía PR-U1) | foco nuevo node/seam/conflict/decision/evidence + deep-link; legacy intacto | `run-model-focus-view` (18) + `run-model-invariants` (21) | `run-model/focus-view.ts`, `components/run-model/focus-panel.tsx` | **reencuadrado:** foco **nuevo** en `components/run-model/`, no se tocó `TaskInspector` |
 | 11 SSE adapter | ⏳ pendiente | — | — | `run-model/sse-adapter.ts` (nuevo); rename `RunEvent`→`StreamEvent` | toca legacy; elimina `nodeStatusOverrides` |
 | 12 Run real | ⏳ pendiente | — | — | `/runs/[runId]`, `RunCanvasShell` | depende de PR11 |
 | 13 Decision facade | ⏳ pendiente | — | — | `/api/runs/[id]/decisions/[decisionId]` | depende de PR07+PR11 |
-| 14 Evidencia | 🟡 parcial (fixture) | La superficie ya muestra evidencia en Disposition (`EvidenceBlock` con `invalidationTrace`); falta el panel real sobre `selectEvidence` en run real | cubierto por proto-render/workspace-view | `components/run-model/workspace-surface.tsx` (parte fixture) | parte fixture adelantada dentro de PR08/09 |
+| 14 Evidencia | 🟡 parcial (fixture, ampliada en PR-U1) | `EvidenceBlock` con afordancia de foco + focus de evidencia navegable (tests/diff/narrativa/`invalidationTrace`/`reExecuted·reIntegrated·preserved`/`approve_merge`), todo por ref. Falta el panel sobre run real (depende de PR11+) | focus-view (7,8) + workspace-view | `components/run-model/focus-panel.tsx`, `workspace-surface.tsx`, `run-model/focus-view.ts` | parte fixture adelantada; backend real pendiente |
 
-Conteo run-model por archivo: types 9 · fixtures 58 · reducer 47 · selectores 40 · proto-render 23 · decision-channel 12 · workspace-view 15 · node-vitals 14 = **218**.
+Conteo run-model (tras PR-U1): **282 tests en 10 archivos** (los 8 de PR01–09 + `run-model-focus-view` (18) + `run-model-invariants` (21); el resto crecieron al sumar el 6° fixture `golden-execution-failed` a sus `it.each(ALL)`). Suite total: **728 passing + 3 skipped**.
 
 ---
 
@@ -83,13 +98,13 @@ Ningún hallazgo es **alto** ni **bloqueante**. No se detectaron bugs funcionale
 
 ## 5. Gaps detectados
 
-- **G1 — Foco/inspector on-demand ausente:** no hay forma de profundizar en un nodo/seam/conflicto/decisión/evidencia. Es la "información profunda on-demand" del diseño. → PR10 / PR-U1.
-- **G2 — Evidencia no es plena protagonista:** hay `EvidenceBlock` en Disposition, pero no una superficie de evidencia con diff/narrativa/trace navegables (mock por ref). → PR14 (parte fixture) / PR-U1.
-- **G3 — Sin navegación/selección:** la selección de nodo existe (`selectedNodeId`) pero no abre nada ni se refleja en URL (deep-link). → PR-U1.
-- **G4 — Path "failed" sin fixture:** ver H4.
-- **G5 — Archivo de invariantes nombrado pero inexistente:** ver H5.
+- **G1 — Foco/inspector on-demand ausente:** ✅ **resuelto (PR-U1)** — `focus-view.ts` + `focus-panel.tsx` dan profundidad on-demand para node/seam/conflict/decision/evidence.
+- **G2 — Evidencia no es plena protagonista:** ✅ **resuelto en modo fixture (PR-U1)** — evidencia navegable por ref (diff/narrativa/trace/`reExecuted·reIntegrated·preserved`/`approve_merge`). Falta el panel sobre run real (PR11+).
+- **G3 — Sin navegación/selección:** ✅ **resuelto (PR-U1)** — selección polimórfica + deep-link `?focus=<kind>:<id>` que no pausa el playback.
+- **G4 — Path "failed" sin fixture:** ✅ **resuelto (PR-U1)** — nuevo `golden-execution-failed` (fallo terminal) ejercita el display `failed` y health `failing`.
+- **G5 — Archivo de invariantes nombrado pero inexistente:** ✅ **resuelto (PR-U1)** — `tests/run-model-invariants.test.ts` consolida los invariantes cross-cutting.
 
-Ninguno bloquea avanzar; todos son "completar la experiencia fixture-first".
+Todos los gaps de la experiencia fixture-first quedaron cerrados por PR-U1; lo que resta es backend/SSE real (PR11+).
 
 ---
 

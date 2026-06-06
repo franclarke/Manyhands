@@ -134,7 +134,8 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
         consumes: existing?.consumes ?? [],
         execution: existing?.execution ?? { kind: "idle" },
         ...(existing?.builtAgainst !== undefined ? { builtAgainst: existing.builtAgainst } : {}),
-        ...(existing?.producedRevision !== undefined ? { producedRevision: existing.producedRevision } : {})
+        ...(existing?.producedRevision !== undefined ? { producedRevision: existing.producedRevision } : {}),
+        ...(existing?.changedFiles !== undefined ? { changedFiles: existing.changedFiles } : {})
       };
       return withNode(model, node);
     }
@@ -224,7 +225,8 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
       const updated: Node = {
         ...node,
         execution: { kind: "integrated", commit: p.commit },
-        builtAgainst: [...p.builtAgainst]
+        builtAgainst: [...p.builtAgainst],
+        changedFiles: [...p.changedFiles]
       };
       if (p.produces !== undefined) updated.producedRevision = p.produces;
       return withNode(model, updated);

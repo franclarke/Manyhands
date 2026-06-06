@@ -16,20 +16,41 @@
  * Layout (PR 08): persistent frame · decision channel · phase-adaptive surface ·
  * playback controls · optional model-debug panel. The surface is the protagonist.
  */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { GOLDEN_FIXTURES, type GoldenFixtureName } from "@/lib/run-model/fixtures";
 import { selectWorkspaceView } from "@/lib/run-model/workspace-view";
 import { buildDecisionChannelView, findDecisionResolutionEvent } from "@/lib/run-model/decision-channel-view";
+import { buildFocusView, formatFocusTarget, parseFocusTarget, type FocusTarget } from "@/lib/run-model/focus-view";
 import { useFixturePlayback } from "./use-fixture-playback";
 import { RunFrame } from "./run-frame";
 import { DecisionChannel } from "./decision-channel";
 import { WorkspaceSurface } from "./workspace-surface";
+import { FocusPanel } from "./focus-panel";
 import { ProtoDebugPanel } from "./proto-debug-panel";
 
-export function ProtoRunView({ fixtureName }: { fixtureName: GoldenFixtureName }): React.ReactElement {
+export function ProtoRunView({
+  fixtureName,
+  initialFocus
+}: {
+  fixtureName: GoldenFixtureName;
+  /** Deep-link seed parsed from `?focus=<kind>:<id>` by the route (may be invalid). */
+  initialFocus?: string;
+}): React.ReactElement {
   const fixture = GOLDEN_FIXTURES[fixtureName];
   const playback = useFixturePlayback(fixture);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  // Focus is purely LOCAL UI state — it never mutates the model and never pauses
+  // playback (that lives in the player hook). Seeded once from the deep-link.
+  const [focus, setFocus] = useState<FocusTarget | null>(() => parseFocusTarget(initialFocus));
+
+  // Deep-link: reflect the current focus in the URL without a router re-render
+  // (history.replaceState keeps playback running and avoids a Suspense boundary).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (focus === null) url.searchParams.delete("focus");
+    else url.searchParams.set("focus", formatFocusTarget(focus));
+    window.history.replaceState(window.history.state, "", url.toString());
+  }, [focus]);
 
   const lastEvent = playback.lastEvent;
   const view = useMemo(
@@ -55,37 +76,58 @@ export function ProtoRunView({ fixtureName }: { fixtureName: GoldenFixtureName }
   );
   const onResolve = useCallback((id: string) => void playback.resolveDecision(id), [playback.resolveDecision]);
 
+  // Focus is recomputed on every model change, so the panel tracks the live run:
+  // if the focused object disappears or is not-yet-present it degrades to a safe
+  // `missing` view rather than vanishing or crashing.
+  const focusView = useMemo(() => (focus !== null ? buildFocusView(playback.model, focus) : null), [playback.model, focus]);
+  const focusDecision = useCallback((id: string) => setFocus({ kind: "decision", id }), []);
+  const clearFocus = useCallback(() => setFocus(null), []);
+
   return (
     <div
       style={{
         display: "flex",
-        flexDirection: "column",
         gap: 16,
         padding: 20,
-        maxWidth: 1200,
+        maxWidth: focusView !== null ? 1560 : 1200,
         margin: "0 auto",
-        minHeight: "100vh"
+        minHeight: "100vh",
+        alignItems: "flex-start"
       }}
     >
-      <RunFrame frame={view.frame} />
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
+        <RunFrame frame={view.frame} />
 
-      <DecisionChannel view={channel} resolvableIds={resolvableIds} onResolve={onResolve} />
+        <DecisionChannel
+          view={channel}
+          resolvableIds={resolvableIds}
+          onResolve={onResolve}
+          onFocus={focusDecision}
+          focusedDecisionId={focus?.kind === "decision" ? focus.id : null}
+        />
 
-      <PlaybackControls
-        fixtureName={fixtureName}
-        index={playback.index}
-        total={playback.total}
-        playing={playback.playing}
-        done={playback.done}
-        onPlay={playback.play}
-        onPause={playback.pause}
-        onStep={playback.step}
-        onRestart={playback.restart}
-      />
+        <PlaybackControls
+          fixtureName={fixtureName}
+          index={playback.index}
+          total={playback.total}
+          playing={playback.playing}
+          done={playback.done}
+          onPlay={playback.play}
+          onPause={playback.pause}
+          onStep={playback.step}
+          onRestart={playback.restart}
+        />
 
-      <WorkspaceSurface view={view} selectedNodeId={selectedNodeId} onSelect={setSelectedNodeId} />
+        <WorkspaceSurface view={view} selectedTarget={focus} onFocus={setFocus} />
 
-      <ProtoDebugPanel debug={view.debug} />
+        <ProtoDebugPanel debug={view.debug} />
+      </div>
+
+      {focusView !== null ? (
+        <div style={{ width: 380, flex: "0 0 380px" }}>
+          <FocusPanel view={focusView} onClose={clearFocus} onFocus={setFocus} />
+        </div>
+      ) : null}
     </div>
   );
 }

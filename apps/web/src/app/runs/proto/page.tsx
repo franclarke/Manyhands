@@ -10,7 +10,8 @@ const DESCRIPTIONS: Record<GoldenFixtureName, string> = {
   "golden-planning-question": "El planner pregunta (clarify); un subárbol espera, el resto sigue.",
   "golden-verify-auto-repair": "Falla de verificación reparada sola — sin atención humana.",
   "golden-behavioral-conflict": "Conflicto de comportamiento que sobrevive al congelado; enmienda de contrato.",
-  "golden-seam-amendment-blast-radius": "Enmienda de firma que invalida consumidores río abajo (blast radius)."
+  "golden-seam-amendment-blast-radius": "Enmienda de firma que invalida consumidores río abajo (blast radius).",
+  "golden-execution-failed": "Falla terminal de un leaf tras agotar el repair autónomo; el run termina en error."
 };
 
 export default function ProtoIndexPage(): React.ReactElement {

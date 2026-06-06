@@ -3,6 +3,7 @@ import {
   GOLDEN_FIXTURES,
   GOLDEN_FIXTURE_NAMES,
   goldenBehavioralConflict,
+  goldenExecutionFailed,
   goldenHappyPath,
   goldenPlanningQuestion,
   goldenSeamAmendmentBlastRadius,
@@ -21,19 +22,21 @@ function payload(event: RunEvent): Record<string, unknown> {
 }
 
 describe("golden fixtures — discovery & structure", () => {
-  it("1. exports the five golden fixtures from the index", () => {
+  it("1. exports the six golden fixtures from the index", () => {
     expect(GOLDEN_FIXTURE_NAMES).toEqual([
       "golden-happy-path",
       "golden-planning-question",
       "golden-verify-auto-repair",
       "golden-behavioral-conflict",
-      "golden-seam-amendment-blast-radius"
+      "golden-seam-amendment-blast-radius",
+      "golden-execution-failed"
     ]);
     expect(goldenHappyPath).toBeDefined();
     expect(goldenPlanningQuestion).toBeDefined();
     expect(goldenVerifyAutoRepair).toBeDefined();
     expect(goldenBehavioralConflict).toBeDefined();
     expect(goldenSeamAmendmentBlastRadius).toBeDefined();
+    expect(goldenExecutionFailed).toBeDefined();
   });
 
   it.each(ALL)("2. %s has a runId", (_name, fx) => {

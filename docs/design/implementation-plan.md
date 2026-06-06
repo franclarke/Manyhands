@@ -4,7 +4,7 @@
 >
 > Principio rector de la migración: **no big-bang.** El sistema actual sigue funcionando mientras se construye el nuevo modelo en paralelo (fixture-first), y recién al final se conecta al stream real vía un adaptador.
 
-> **Estado de ejecución (auditoría 2026-06-05):** PR01–PR09 ✅ completados (fixture-first, aditivos; suite **644 passing + 3 skipped**, de los cuales **218** son de la capa run-model). PR10–PR14 ⏳ pendientes. El estado real, la matriz PR01–14, los hallazgos técnicos y la recomendación de próximo PR viven en **[`implementation-status.md`](implementation-status.md)**. Próximo paso recomendado: **PR-U1 (Ultracode)** — foco polimórfico + evidencia + hardening fixture-first (reencuadra PR10).
+> **Estado de ejecución (2026-06-06):** PR01–PR09 ✅ + **PR-U1 ✅ ejecutado** (foco polimórfico + evidencia + hardening, fixture-first; reencuadra PR10 y adelanta la parte fixture de PR14). Suite **728 passing + 3 skipped**, de los cuales **282** son de la capa run-model (10 archivos). PR11–PR14 (backend/SSE real) ⏳ pendientes. El estado real, la matriz PR01–14, los hallazgos técnicos y la recomendación de próximo PR viven en **[`implementation-status.md`](implementation-status.md)**. Próximo paso recomendado: **PR11 (SSE adapter)** — primer toque a backend, con flag de rollback.
 
 ---
 

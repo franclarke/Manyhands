@@ -2,7 +2,7 @@
 
 > Estado: **baseline de diseño** (2026-06-05). Estos documentos son la fuente de verdad para reconstruir ManyHands hacia un sistema agent-first. El plan de ejecución por PRs ya está escrito: ver [`implementation-plan.md`](implementation-plan.md).
 >
-> **Implementación en curso (fixture-first):** PR01–PR09 ✅ completados; el prototipo agent-first vive en `/runs/proto/<fixture>` (sin backend). Backend/SSE real (PR11+) todavía pendiente. Estado real, matriz PR01–14 y recomendación de próximo PR (**PR-U1 Ultracode**): ver [`implementation-status.md`](implementation-status.md).
+> **Implementación en curso (fixture-first):** PR01–PR09 ✅ + **PR-U1 ✅** (foco polimórfico + evidencia + hardening). El prototipo agent-first vive en `/runs/proto/<fixture>` — la demo fixture-first más completa, ahora con foco on-demand (node/seam/conflict/decision/evidence) y deep-link `?focus=<kind>:<id>`, sin backend. Backend/SSE real (PR11+) todavía pendiente. Estado real, matriz PR01–14 y próximo paso: ver [`implementation-status.md`](implementation-status.md).
 
 Esta carpeta nace de una serie de discusiones de diseño y dos *stress tests* del modelo operativo. Reemplaza conceptualmente la dirección anterior (UI plan-céntrica / dashboard-like) por una **sala de control continua** para orquestar múltiples coding agents trabajando en paralelo sobre un DAG vivo.
 

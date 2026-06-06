@@ -17,11 +17,16 @@ import type {
 export function DecisionChannel({
   view,
   resolvableIds,
-  onResolve
+  onResolve,
+  onFocus,
+  focusedDecisionId
 }: {
   view: DecisionChannelView;
   resolvableIds: ReadonlySet<string>;
   onResolve: (decisionId: string) => void;
+  /** Opens the focus panel for a decision (does not resolve it, does not pause playback). */
+  onFocus?: (decisionId: string) => void;
+  focusedDecisionId?: string | null;
 }): React.ReactElement {
   return (
     <section
@@ -72,6 +77,8 @@ export function DecisionChannel({
               item={item}
               resolvable={resolvableIds.has(item.id)}
               onResolve={onResolve}
+              selected={focusedDecisionId === item.id}
+              {...(onFocus !== undefined ? { onFocus } : {})}
             />
           ))}
         </ul>
@@ -83,11 +90,15 @@ export function DecisionChannel({
 function DecisionCard({
   item,
   resolvable,
-  onResolve
+  onResolve,
+  onFocus,
+  selected = false
 }: {
   item: DecisionChannelItem;
   resolvable: boolean;
   onResolve: (decisionId: string) => void;
+  onFocus?: (decisionId: string) => void;
+  selected?: boolean;
 }): React.ReactElement {
   const accent = item.blocking ? "var(--gated, #d0953a)" : "var(--border, rgba(241,234,216,0.2))";
   return (
@@ -98,7 +109,7 @@ function DecisionCard({
         gap: 8,
         padding: "10px 12px",
         background: "rgba(241,234,216,0.02)",
-        border: "1px solid var(--border, rgba(241,234,216,0.12))",
+        border: `1px solid ${selected ? "var(--copper, #d08a5a)" : "var(--border, rgba(241,234,216,0.12))"}`,
         borderLeft: `3px solid ${accent}`,
         borderRadius: 6
       }}
@@ -136,6 +147,26 @@ function DecisionCard({
         >
           {item.primaryActionLabel}
         </button>
+        {onFocus !== undefined ? (
+          <button
+            type="button"
+            onClick={() => onFocus(item.id)}
+            aria-pressed={selected}
+            style={{
+              minHeight: 32,
+              padding: "0 12px",
+              borderRadius: 6,
+              border: `1px solid ${selected ? "var(--copper, #d08a5a)" : "var(--rule-control, rgba(241,234,216,0.2))"}`,
+              background: selected ? "rgba(208,138,90,0.12)" : "rgba(241,234,216,0.035)",
+              color: "var(--text-2, #cfc7b4)",
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: 12,
+              cursor: "pointer"
+            }}
+          >
+            Inspeccionar
+          </button>
+        ) : null}
         {!resolvable ? (
           <span style={{ fontSize: 11, color: "var(--text-3, #9a927f)" }}>
             Sin resolución en este fixture

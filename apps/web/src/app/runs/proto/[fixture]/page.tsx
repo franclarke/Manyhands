@@ -15,13 +15,22 @@ import { ProtoRunView } from "@/components/run-model/proto-run-view.client";
 
 interface ProtoFixturePageProps {
   params: Promise<{ fixture: string }>;
+  /** `?focus=<kind>:<id>` deep-link seed (validated client-side by `parseFocusTarget`). */
+  searchParams: Promise<{ focus?: string | string[] }>;
 }
 
-export default async function ProtoFixturePage({ params }: ProtoFixturePageProps): Promise<React.ReactElement> {
+export default async function ProtoFixturePage({ params, searchParams }: ProtoFixturePageProps): Promise<React.ReactElement> {
   const { fixture } = await params;
+  const { focus } = await searchParams;
   const names: string[] = GOLDEN_FIXTURE_NAMES;
   if (!names.includes(fixture)) {
     notFound();
   }
-  return <ProtoRunView fixtureName={fixture as GoldenFixtureName} />;
+  const initialFocus = typeof focus === "string" ? focus : undefined;
+  return (
+    <ProtoRunView
+      fixtureName={fixture as GoldenFixtureName}
+      {...(initialFocus !== undefined ? { initialFocus } : {})}
+    />
+  );
 }

@@ -13,6 +13,7 @@ import {
   GOLDEN_FIXTURES,
   GOLDEN_FIXTURE_NAMES,
   goldenBehavioralConflict,
+  goldenExecutionFailed,
   goldenHappyPath,
   goldenSeamAmendmentBlastRadius,
   goldenVerifyAutoRepair
@@ -169,5 +170,32 @@ describe("workspace-view — invariant", () => {
     const stale = view.nodes.filter((n) => n.freshness === "stale");
     expect(stale.length).toBeGreaterThan(0);
     for (const node of stale) expect(node.display).not.toBe("done");
+  });
+});
+
+// ── golden-execution-failed (PR-U1 hardening, H4) ─────────────────────────────────
+
+describe("workspace-view — golden-execution-failed", () => {
+  it("11. terminal failure: failed node, health failing, sibling done, no human attention", () => {
+    const view = selectWorkspaceView(reduceFixture(goldenExecutionFailed));
+    expect(view.health).toBe("failing");
+    const validate = view.nodes.find((n) => n.id === "n-validate")!;
+    expect(validate.display).toBe("failed");
+    expect(validate.vital.status).toBe("failed");
+    expect(view.nodes.find((n) => n.id === "n-parse")!.display).toBe("done");
+    // Autonomous repair (node.repair.started) never escalates to the human.
+    expect(view.frame.attention).toEqual([]);
+    // A failed run never reaches Disposition: no evidence protagonist.
+    expect(view.evidence).toBeNull();
+    expect(view.emphasis.showEvidenceProtagonist).toBe(false);
+  });
+
+  it("11b. while autonomously repairing, the failing leaf stays supervision/working (not attention)", () => {
+    const m = reduceUpToSeq(goldenExecutionFailed, seqOf(goldenExecutionFailed, (e) => e.type === "node.repair.started"));
+    const view = selectWorkspaceView(m);
+    const validate = view.nodes.find((n) => n.id === "n-validate")!;
+    expect(["running", "verifying"]).toContain(validate.display);
+    expect(view.mode).toBe("supervision");
+    expect(view.frame.attention).toEqual([]);
   });
 });
