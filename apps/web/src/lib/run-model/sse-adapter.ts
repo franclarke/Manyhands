@@ -23,7 +23,12 @@
  * also ignores unknowns, so dropping here keeps the envelope clean).
  *
  * Mapping (documented; the marked ones are reviewable judgement calls):
- *   planning.node.started|status      → plan.node.proposed (role: root if no parent, else leaf)
+ *   planning.node.started             → plan.node.proposed (role: root if no parent, else leaf)
+ *   planning.node.status              → plan.node.status (graph-generation telemetry:
+ *                                       retrying/failed/fallback/generated; transient
+ *                                       generating/active/pending dropped). PR-N1: this
+ *                                       preserves the engine's D3 failure telemetry that
+ *                                       PR11 was collapsing into a plain proposed node.
  *   planning.node.completed(children) → plan.node.proposed per childNode
  *   planning.question                 → decision.raised { clarify }
  *   gate.required                     → decision.raised { approve_plan }   ⚠ assumption
@@ -42,6 +47,7 @@ import type { RunEvent as StreamEvent } from "@/lib/server/runs/events";
 import type {
   Actor,
   NodeRole,
+  PlanningState,
   RunEvent,
   RunEventPayloads,
   RunEventType
@@ -67,13 +73,34 @@ function roleFor(parentId: string | undefined): NodeRole {
 }
 
 /**
+ * Map the legacy planning lifecycle (`PlanningNodeState`) to the agent-first
+ * `PlanningState`, or `null` for transient states the model does not record.
+ * `complete` maps to `generated` (planned cleanly, clearing any prior retry).
+ */
+function toPlanningState(legacy: string): PlanningState | null {
+  switch (legacy) {
+    case "retrying":
+      return "retrying";
+    case "failed":
+      return "failed";
+    case "fallback":
+      return "fallback";
+    case "generated":
+    case "complete":
+      return "generated";
+    // generating / active / pending: transient, no concern → dropped.
+    default:
+      return null;
+  }
+}
+
+/**
  * Map ONE legacy stream event to zero, one, or many envelope events (seq-less).
  * Exported for unit testing the per-kind mapping in isolation.
  */
 export function adaptStreamEvent(event: StreamEvent): MappedEvent[] {
   switch (event.kind) {
-    case "planning.node.started":
-    case "planning.node.status": {
+    case "planning.node.started": {
       return [
         mk("system", event.at, "plan.node.proposed", {
           nodeId: event.nodeId,
@@ -82,6 +109,24 @@ export function adaptStreamEvent(event: StreamEvent): MappedEvent[] {
           title: event.title,
           goal: event.goal,
           depth: event.depth
+        })
+      ];
+    }
+
+    case "planning.node.status": {
+      const state = toPlanningState(event.state);
+      // Transient/no-op lifecycle states (generating/active/pending) carry no concern;
+      // the node already exists via planning.node.started, so we drop them as noise.
+      if (state === null) return [];
+      return [
+        mk("system", event.at, "plan.node.status", {
+          nodeId: event.nodeId,
+          state,
+          ...(event.attempt !== undefined ? { attempt: event.attempt } : {}),
+          ...(event.maxAttempts !== undefined ? { maxAttempts: event.maxAttempts } : {}),
+          ...(event.durationMs !== undefined ? { durationMs: event.durationMs } : {}),
+          ...(event.errorKind !== undefined ? { errorKind: event.errorKind } : {}),
+          ...(event.errorMessage !== undefined ? { errorMessage: event.errorMessage } : {})
         })
       ];
     }

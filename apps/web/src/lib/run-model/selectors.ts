@@ -28,6 +28,8 @@ import type {
   Node,
   NodeDisplay,
   NodeId,
+  NodePlanningStatus,
+  PlanningHealth,
   RenderableNodeState,
   RunHealth,
   RunModel,
@@ -81,6 +83,44 @@ export function selectHealth(model: RunModel): RunHealth {
   if (hasWorking) return "working";
 
   return "settled";
+}
+
+// ── Planning health (graph-generation telemetry — orthogonal to execution) ─────
+
+/** The latest planning telemetry recorded for a node, or null if it planned cleanly. */
+export function selectNodePlanning(model: RunModel, nodeId: NodeId): NodePlanningStatus | null {
+  return model.nodes.get(nodeId)?.planning ?? null;
+}
+
+/**
+ * Which nodes the planner had to retry / fall back / failed to plan. DERIVED from
+ * each node's recorded `planning` axis; it is diagnostic only and deliberately does
+ * NOT feed `selectAttention` — autonomous planning retries/repair are not human
+ * attention. `generating` is normal in-flight and is not reported as a concern.
+ */
+export function selectPlanningHealth(model: RunModel): PlanningHealth {
+  const retrying: NodeId[] = [];
+  const fallback: NodeId[] = [];
+  const failed: NodeId[] = [];
+  for (const node of model.nodes.values()) {
+    switch (node.planning?.state) {
+      case "retrying":
+        retrying.push(node.id);
+        break;
+      case "fallback":
+        fallback.push(node.id);
+        break;
+      case "failed":
+        failed.push(node.id);
+        break;
+      default:
+        break;
+    }
+  }
+  retrying.sort();
+  fallback.sort();
+  failed.sort();
+  return { retrying, fallback, failed, clean: retrying.length === 0 && fallback.length === 0 && failed.length === 0 };
 }
 
 // ── Wavefront ─────────────────────────────────────────────────────────────────

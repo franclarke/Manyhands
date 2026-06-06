@@ -34,6 +34,24 @@
 
 ---
 
+## 0c. PR-N1 — Observabilidad de planning / fidelidad del puente (2026-06-06)
+
+**Problema:** el motor (`packages/decomposer`) ya produce telemetría robusta de generación de grafo —retry+backoff, fallback opt-in D3-safe, timeout 120 s, errores clasificados (`GraphGenerationErrorDetails`)— y la emite por SSE como `planning.node.status{state: retrying|failed|fallback}`. **Pero el adapter de PR11 la descartaba**: colapsaba `planning.node.status` a un `plan.node.proposed` normal, así que un nodo que reintentó o cayó a fallback se veía idéntico a una propuesta limpia. La trazabilidad de fallos (item de robustez) se perdía justo en el puente.
+
+**Qué aterrizó (aditivo, fixture-first, sin backend ni rewire):**
+- **Eje de planning ortogonal** — nuevo evento v1 forward-compat `plan.node.status` (payload `state/attempt/maxAttempts/durationMs/errorKind/errorMessage`) y campo recordado `Node.planning` (`run-model/types.ts`). `PlanningState = generating|generated|retrying|failed|fallback`. **NO toca `ExecutionState` ni `display`** (un nodo `fallback` es un leaf propuesto normal; planning es un eje aparte, como `freshness`).
+- **Reducer** — `plan.node.status` setea `node.planning`; `plan.node.proposed` preserva `planning` en re-propuestas; un estado de recuperación (`generated`) sobreescribe un `retrying` previo.
+- **Selector** — `selectPlanningHealth(model)` → `{ retrying, fallback, failed, clean }` y `selectNodePlanning(model, id)`. Diagnóstico puro: **NO** alimenta `selectAttention` ni el canal de decisiones (retry/repair de planning es autónomo, no atención humana).
+- **Adapter** — `planning.node.status` → `plan.node.status` fiel (retrying/failed/fallback/generated; transitorios generating/active/pending descartados). `planning.node.started` sigue → `plan.node.proposed` (sin regresión).
+- **Superficie** — `focus-view.ts` expone `planning` en el foco de nodo; `focus-panel.tsx` lo renderiza (línea "Planning: <state> · intento n/m · errorKind").
+- **Fixture** — `golden-planning-fallback` (7°): `n-parse` reintenta y se recupera (limpio); `n-eval` cae a fallback (degradado pero usable). Pasa todos los invariantes cross-cutting.
+- **Tests** — `tests/run-model-planning-health.test.ts` (12: reducer/selector/ortogonalidad/no-en-canal/round-trip/foco) + `run-model-sse-adapter` extendido (12→17). 
+- **Verificación:** `pnpm web:typecheck` ✅ · `pnpm test` **783 passing + 3 skipped** ✅.
+
+**Por qué importa:** cierra la grieta entre "el motor lo produce" y "el modelo nuevo lo representa", y **de-riesga el rewire gated** (PR-N2): cuando el run real se conecte al modelo, los fallos/fallback de planning serán visibles en vez de enmascararse como propuestas sanas. Extensión aditiva del modelo congelado (nuevo `type`, forward-compat) — no renegocia D1–D10 ni los refinamientos A–P.
+
+---
+
 ## 1. Resumen ejecutivo
 
 - **PR01–PR09 completados**, fixture-first, de forma **puramente aditiva**: todo el rediseño vive en `apps/web/src/lib/run-model/`, `apps/web/src/components/run-model/`, `apps/web/src/app/runs/proto/` y `tests/run-model-*`. **El flujo legacy no fue tocado por el rediseño.**

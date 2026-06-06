@@ -44,6 +44,7 @@ import type {
   IsoTimestamp,
   NodeDisplay,
   NodeId,
+  NodePlanningStatus,
   NodeRole,
   RunModel,
   SeamId,
@@ -132,6 +133,8 @@ export interface NodeFocusView {
   builtAgainst: SeamRevisionRef[];
   producedRevision?: SeamRevisionRef;
   changedFiles: string[];
+  /** Graph-generation telemetry (retry/fallback/failed) — orthogonal to `display`. */
+  planning?: NodePlanningStatus;
   commit?: string;
   isInWavefront: boolean;
   isBlocked: boolean;
@@ -336,6 +339,7 @@ function buildNodeFocus(model: RunModel, ws: WorkspaceNode, id: NodeId): NodeFoc
     builtAgainst: entity?.builtAgainst !== undefined ? [...entity.builtAgainst] : [],
     ...(entity?.producedRevision !== undefined ? { producedRevision: entity.producedRevision } : {}),
     changedFiles: entity?.changedFiles !== undefined ? [...entity.changedFiles] : [],
+    ...(entity?.planning !== undefined ? { planning: { ...entity.planning } } : {}),
     ...(commit !== undefined ? { commit } : {}),
     isInWavefront: ws.isInWavefront,
     isBlocked: ws.isBlocked,

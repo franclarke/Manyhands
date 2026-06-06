@@ -35,9 +35,11 @@ import type {
   Node,
   NodeExecutionFailedPayload,
   NodeExecutionStartedPayload,
+  NodePlanningStatus,
   NodeVerifyIterationPayload,
   NodeVerifyPassedPayload,
   PlanNodeProposedPayload,
+  PlanNodeStatusPayload,
   PlanSeamProposedPayload,
   Run,
   RunContextResolvedPayload,
@@ -135,9 +137,24 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
         execution: existing?.execution ?? { kind: "idle" },
         ...(existing?.builtAgainst !== undefined ? { builtAgainst: existing.builtAgainst } : {}),
         ...(existing?.producedRevision !== undefined ? { producedRevision: existing.producedRevision } : {}),
-        ...(existing?.changedFiles !== undefined ? { changedFiles: existing.changedFiles } : {})
+        ...(existing?.changedFiles !== undefined ? { changedFiles: existing.changedFiles } : {}),
+        ...(existing?.planning !== undefined ? { planning: existing.planning } : {})
       };
       return withNode(model, node);
+    }
+    case "plan.node.status": {
+      const p = read<PlanNodeStatusPayload>(event);
+      const node = ensureNode(model, p.nodeId);
+      const planning: NodePlanningStatus = {
+        state: p.state,
+        ...(p.attempt !== undefined ? { attempt: p.attempt } : {}),
+        ...(p.maxAttempts !== undefined ? { maxAttempts: p.maxAttempts } : {}),
+        ...(p.durationMs !== undefined ? { durationMs: p.durationMs } : {}),
+        ...(p.errorKind !== undefined ? { errorKind: p.errorKind } : {}),
+        ...(p.errorMessage !== undefined ? { errorMessage: p.errorMessage } : {})
+      };
+      // Planning telemetry is an ORTHOGONAL record: it never touches `execution`.
+      return withNode(model, { ...node, planning });
     }
     case "plan.seam.proposed": {
       const p = read<PlanSeamProposedPayload>(event);

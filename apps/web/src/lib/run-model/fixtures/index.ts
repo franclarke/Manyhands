@@ -10,6 +10,7 @@ import { goldenVerifyAutoRepair } from "./golden-verify-auto-repair";
 import { goldenBehavioralConflict } from "./golden-behavioral-conflict";
 import { goldenSeamAmendmentBlastRadius } from "./golden-seam-amendment-blast-radius";
 import { goldenExecutionFailed } from "./golden-execution-failed";
+import { goldenPlanningFallback } from "./golden-planning-fallback";
 
 export {
   goldenHappyPath,
@@ -17,7 +18,8 @@ export {
   goldenVerifyAutoRepair,
   goldenBehavioralConflict,
   goldenSeamAmendmentBlastRadius,
-  goldenExecutionFailed
+  goldenExecutionFailed,
+  goldenPlanningFallback
 };
 
 /** Discover fixtures by name. */
@@ -27,7 +29,8 @@ export const GOLDEN_FIXTURES = {
   "golden-verify-auto-repair": goldenVerifyAutoRepair,
   "golden-behavioral-conflict": goldenBehavioralConflict,
   "golden-seam-amendment-blast-radius": goldenSeamAmendmentBlastRadius,
-  "golden-execution-failed": goldenExecutionFailed
+  "golden-execution-failed": goldenExecutionFailed,
+  "golden-planning-fallback": goldenPlanningFallback
 } satisfies Record<string, RunFixture>;
 
 export type GoldenFixtureName = keyof typeof GOLDEN_FIXTURES;

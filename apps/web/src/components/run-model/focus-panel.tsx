@@ -22,6 +22,7 @@ import type {
   NodeFocusView,
   SeamFocusView
 } from "@/lib/run-model/focus-view";
+import type { NodePlanningStatus } from "@/lib/run-model/types";
 
 export function FocusPanel({
   view,
@@ -161,6 +162,7 @@ function NodeBody({ view, onFocus }: { view: NodeFocusView; onFocus?: ((t: Focus
       {view.producedRevision !== undefined ? (
         <Field label="Produce rev." value={`${view.producedRevision.seamId}@${view.producedRevision.revision}`} mono />
       ) : null}
+      {view.planning !== undefined ? <Field label="Planning" value={formatPlanning(view.planning)} mono /> : null}
 
       {view.produces.length > 0 ? (
         <ChipRow label="Produce costuras">
@@ -303,6 +305,14 @@ function DecisionBody({ view, onFocus }: { view: DecisionFocusView; onFocus?: ((
       ) : null}
     </Stack>
   );
+}
+
+function formatPlanning(planning: NodePlanningStatus): string {
+  const attempts = planning.attempt !== undefined
+    ? ` · intento ${planning.attempt}${planning.maxAttempts !== undefined ? `/${planning.maxAttempts}` : ""}`
+    : "";
+  const error = planning.errorKind !== undefined ? ` · ${planning.errorKind}` : "";
+  return `${planning.state}${attempts}${error}`;
 }
 
 function formatChoice(choice: DecisionFocusView["choice"]): string {
