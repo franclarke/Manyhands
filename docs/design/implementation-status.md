@@ -15,7 +15,22 @@
 - **Hardening** — `tests/run-model-focus-view.test.ts` (18), `tests/run-model-invariants.test.ts` (21, consolida stale≠done/≠failed, obsolete, pureza, no-throw), nuevo fixture **`golden-execution-failed`** (fallo terminal, H4), y ampliación de `run-model-workspace-view`. Se persiste `Node.changedFiles` (aditivo) para el foco de nodo.
 - **Verificación:** `pnpm web:typecheck` ✅ · `pnpm test` **728 passing + 3 skipped** ✅ · capa run-model **282 tests / 10 archivos**.
 
-**Reencuadres:** PR10 queda **subsumido** (foco nuevo en `components/run-model/`, sin tocar el `TaskInspector` legacy); PR14 **adelantado en su parte fixture** (evidencia navegable por ref). **Backend/SSE real (PR11–13) sigue pendiente.** `/runs/proto` es ahora la demo fixture-first más completa.
+**Reencuadres:** PR10 queda **subsumido** (foco nuevo en `components/run-model/`, sin tocar el `TaskInspector` legacy); PR14 **adelantado en su parte fixture** (evidencia navegable por ref). `/runs/proto` es ahora la demo fixture-first más completa.
+
+---
+
+## 0b. PR11 — mitad aditiva ejecutada (2026-06-06)
+
+**PR11 — Adaptador SSE → RunEvent** entró por su **mitad aditiva y verificable**:
+
+- `apps/web/src/lib/run-model/sse-adapter.ts` (puro): `adaptStreamEvent` / `adaptStreamHistory` mapean el stream **legacy** (`server/runs/events.ts`, aliased como `StreamEvent` para esquivar la colisión `RunEvent` **sin** renombrar legacy) → envelope `RunEvent[]`, listo para el mismo `runStore`+reducer+selectores que ya manejan los fixtures.
+- Mapeo: `planning.node.*`→`plan.node.proposed`; `planning.question`→`decision.raised{clarify}`; `gate.required`→`decision.raised{approve_plan}` (⚠ assumption); `agent.run.started`→`node.execution.started`; `agent.run.completed`→`node.verify.passed|node.execution.failed`; ruido (status/title/heartbeat/replay/cli/node.added/edge.added/risk.added/validation.completed) **descartado**. `seq` 1-based sobre la salida (mapeo no 1:1).
+- Tests: `tests/run-model-sse-adapter.test.ts` (12) — mapeo por kind, pureza, y **round-trip** `adapt→reduce→project` (el run real renderiza por el modelo nuevo: nodos running/done/failed, gate clarify en el canal).
+- Verificación: `pnpm web:typecheck` ✅ · `pnpm test` **740 passing + 3 skipped** ✅.
+
+**Coarseness (por diseño):** el stream legacy es planning + ejecución gruesa; **no** emite seams/scope/waves/verify-loop/conflicts/amendments/evidence, así que el modelo puenteado es degradado (sin freshness/obsolete/seam/conflict) hasta que el backend emita `RunEvent` nativos. **Judgement calls a revisar:** `gate.required`→`approve_plan` y el descarte de `validation.completed` (redundante con `agent.run.completed` en el runner actual).
+
+**Gated (NO ejecutado):** la **mitad de rewire** de PR11 — `RunCanvasShell`/`useLiveRun` consumiendo `runStore`+adapter y la **remoción de `nodeStatusOverrides`** + rename legacy `RunEvent`→`StreamEvent`. Toca legacy, es **no verificable sin un run Gemini real**, y necesita **flag de rollback**. Es el próximo corte.
 
 ---
 
