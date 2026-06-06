@@ -21,10 +21,13 @@
  *  - Selectors tolerate partial/truncated runs and absent `builtAgainst`.
  */
 import type {
+  CompositeIntegration,
   Conflict,
   Decision,
   Evidence,
   Freshness,
+  GranularityMetrics,
+  IntegrationState,
   Node,
   NodeDisplay,
   NodeId,
@@ -164,6 +167,37 @@ export function selectConflicts(model: RunModel): Conflict[] {
 
 export function selectEvidence(model: RunModel): Evidence | null {
   return model.evidence ?? null;
+}
+
+// ── Granularity metrics (Disposition — the thesis instrument) ───────────────────
+
+/** The run's granularity metrics, or null until `run.metrics.ready`. Pure passthrough. */
+export function selectGranularityMetrics(model: RunModel): GranularityMetrics | null {
+  return model.metrics ?? null;
+}
+
+// ── Integration progress (Reconciliation — derived, no new backend event) ───────
+
+/**
+ * Per-composite reconciliation progress, derived from node state alone:
+ * `integrated`/`failed` from the composite's execution; `ready` when every direct
+ * child is integrated but the composite is not yet (integration imminent / running);
+ * `pending` otherwise. Bottom-up: a child composite counts as done once integrated.
+ */
+export function selectIntegrationProgress(model: RunModel): CompositeIntegration[] {
+  return [...model.nodes.values()]
+    .filter((n) => n.role === "composite" || n.role === "root")
+    .map((c) => {
+      const children = childrenOf(model, c.id);
+      const totalChildCount = children.length;
+      const doneChildCount = children.filter((ch) => ch.execution.kind === "integrated").length;
+      let state: IntegrationState;
+      if (c.execution.kind === "integrated") state = "integrated";
+      else if (c.execution.kind === "failed") state = "failed";
+      else if (totalChildCount > 0 && doneChildCount === totalChildCount) state = "ready";
+      else state = "pending";
+      return { id: c.id, state, childIds: children.map((ch) => ch.id), doneChildCount, totalChildCount };
+    });
 }
 
 // ── Freshness & invalidation ────────────────────────────────────────────────────

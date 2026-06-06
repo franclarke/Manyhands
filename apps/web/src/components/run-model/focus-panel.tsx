@@ -22,7 +22,7 @@ import type {
   NodeFocusView,
   SeamFocusView
 } from "@/lib/run-model/focus-view";
-import type { NodePlanningStatus } from "@/lib/run-model/types";
+import type { GranularityMetrics, NodePlanningStatus } from "@/lib/run-model/types";
 
 export function FocusPanel({
   view,
@@ -307,6 +307,20 @@ function DecisionBody({ view, onFocus }: { view: DecisionFocusView; onFocus?: ((
   );
 }
 
+function formatMetrics(m: GranularityMetrics): string {
+  const pct = (r: number): string => `${Math.round(r * 100)}%`;
+  return [
+    `prof ${m.depth}`,
+    `hojas ${m.leafCount}`,
+    `composites ${m.compositeCount}`,
+    `éxito-hoja ${pct(m.leafSuccessRate)}`,
+    `éxito-int ${pct(m.integrationSuccessRate)}`,
+    `conflicto ${pct(m.conflictRate)}`,
+    `líneas ${m.linesChanged}`,
+    `${Math.round(m.totalDurationMs / 1000)}s`
+  ].join(" · ");
+}
+
 function formatPlanning(planning: NodePlanningStatus): string {
   const attempts = planning.attempt !== undefined
     ? ` · intento ${planning.attempt}${planning.maxAttempts !== undefined ? `/${planning.maxAttempts}` : ""}`
@@ -332,6 +346,7 @@ function EvidenceBody({ view, onFocus }: { view: EvidenceFocusView; onFocus?: ((
       <Field label="Commit" value={view.integrationCommit} mono />
       <RefLine refItem={view.aggregateDiffRef} />
       <RefLine refItem={view.narrativeRef} />
+      {view.metrics !== undefined ? <Field label="Métricas" value={formatMetrics(view.metrics)} mono /> : null}
       {view.invalidationTrace !== undefined && view.invalidationTrace.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <span style={labelStyle}>Traza de invalidación</span>

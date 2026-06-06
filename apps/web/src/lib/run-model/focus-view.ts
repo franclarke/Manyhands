@@ -40,6 +40,7 @@ import type {
   DecisionKind,
   DecisionStatus,
   Freshness,
+  GranularityMetrics,
   InvalidationTraceEntry,
   IsoTimestamp,
   NodeDisplay,
@@ -248,6 +249,8 @@ export interface EvidenceFocusView {
   reIntegrated: NodeId[];
   preserved: NodeId[];
   approveMergeDecision?: { id: DecisionId; status: DecisionStatus };
+  /** Granularity metrics once available (Disposition / thesis instrument). */
+  metrics?: GranularityMetrics;
   /** Copy of the final acceptance moment (fixture-first; no real merge). */
   acceptanceCopy: string;
 }
@@ -477,6 +480,7 @@ function buildEvidenceFocus(model: RunModel, evidence: WorkspaceEvidence): Evide
     reIntegrated: flatten((e) => e.reIntegrated),
     preserved: flatten((e) => e.preserved),
     ...(approveMerge !== undefined ? { approveMergeDecision: { id: approveMerge.id, status: approveMerge.status } } : {}),
+    ...(model.metrics !== undefined ? { metrics: { ...model.metrics } } : {}),
     acceptanceCopy: accepted
       ? `Resultado aceptado · ${evidence.tests.pass}/${evidence.tests.total} tests · commit ${evidence.integrationCommit}.`
       : `Resultado listo para revisión · ${evidence.tests.pass}/${evidence.tests.total} tests · commit ${evidence.integrationCommit}.`

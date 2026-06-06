@@ -351,6 +351,39 @@ export interface Evidence {
   invalidationTrace?: InvalidationTraceEntry[];
 }
 
+// ── Granularity metrics (the thesis instrument — Disposition) ───────────────────
+
+/**
+ * The run's `GranularityVector` made visible in the agent-first model. Mirrors the
+ * field names of `computeGranularityVector` (packages/execution-core/granularity)
+ * EXACTLY so wiring the real backend later is a mechanical assignment — this module
+ * stays pure and does NOT import execution-core. 9 pre-execution (DAG structure) +
+ * 8 post-execution (outcomes); `estimatedTokensPerLeaf`/`totalCostUsd`/
+ * `testsPassedRate` are optional. Rates are 0–1. Recorded data (from
+ * `run.metrics.ready`); never derived, never gates the run.
+ */
+export interface GranularityMetrics {
+  // pre-execution — DAG structure
+  depth: number;
+  leafCount: number;
+  compositeCount: number;
+  avgLeafDepth: number;
+  maxLeafDepth: number;
+  dependencyCount: number;
+  avgAcceptanceCriteriaPerLeaf: number;
+  estimatedTokensPerLeaf?: number;
+  // post-execution — outcomes
+  integrationSuccessRate: number;
+  leafSuccessRate: number;
+  conflictRate: number;
+  totalDurationMs: number;
+  linesChanged: number;
+  unexpectedCommitCount: number;
+  scopeViolationCount: number;
+  totalCostUsd?: number;
+  testsPassedRate?: number;
+}
+
 // ── Derived view types (prepared for the selector layer, PR 05) ────────────────
 
 export type Freshness = "fresh" | "stale";
@@ -366,6 +399,21 @@ export type RunPhase =
 
 /** Overall run health (derived by `selectHealth`). */
 export type RunHealth = "failing" | "attention" | "working" | "settled";
+
+/**
+ * Per-composite reconciliation progress (derived by `selectIntegrationProgress`):
+ * `integrated`/`failed` from the composite's execution; `ready` when every child is
+ * integrated but the composite is not yet (integration imminent / in progress);
+ * `pending` otherwise. Derived from existing node state — needs no new backend event.
+ */
+export type IntegrationState = "pending" | "ready" | "integrated" | "failed";
+export interface CompositeIntegration {
+  id: NodeId;
+  state: IntegrationState;
+  childIds: NodeId[];
+  doneChildCount: number;
+  totalChildCount: number;
+}
 
 /**
  * Derived summary of graph-generation robustness (by `selectPlanningHealth`).
@@ -417,6 +465,8 @@ export interface RunModel {
   decisions: Map<DecisionId, Decision>;
   amendments: Map<AmendmentId, Amendment>;
   evidence?: Evidence;
+  /** The run's granularity metrics (from `run.metrics.ready`); a fold cache, not derived. */
+  metrics?: GranularityMetrics;
   /** Last applied `seq` (idempotency / append-only cursor). */
   cursor: number;
 }
@@ -594,6 +644,9 @@ export interface RunEvidenceReadyPayload {
   integrationCommit: string;
   invalidationTrace?: InvalidationTraceEntry[];
 }
+export interface RunMetricsReadyPayload {
+  metrics: GranularityMetrics;
+}
 export interface RunCompletedPayload {
   status: RunOutcome;
 }
@@ -651,6 +704,7 @@ export interface RunEventPayloads {
   "integration.completed": IntegrationCompletedPayload;
   // Disposition
   "run.evidence.ready": RunEvidenceReadyPayload;
+  "run.metrics.ready": RunMetricsReadyPayload;
   "run.completed": RunCompletedPayload;
   // Cross-cutting (human decisions)
   "decision.raised": DecisionRaisedPayload;
@@ -695,6 +749,7 @@ export const RUN_EVENT_TYPES = [
   "integration.validated",
   "integration.completed",
   "run.evidence.ready",
+  "run.metrics.ready",
   "run.completed",
   "decision.raised",
   "decision.resolved"

@@ -21,10 +21,13 @@ import {
   type ProtoViewOptions
 } from "./proto-view";
 import { formatDecisionKind } from "./decision-channel-view";
+import { selectGranularityMetrics, selectIntegrationProgress } from "./selectors";
 import type {
   AmendmentChangeKind,
   BuildStatus,
+  CompositeIntegration,
   Freshness,
+  GranularityMetrics,
   InvalidationTraceEntry,
   Node,
   NodeDisplay,
@@ -146,8 +149,10 @@ export interface WorkspaceEmphasis {
   showWaves: boolean;
   showWavefront: boolean;
   showConflicts: boolean;
+  showIntegrationProgress: boolean;
   showBlastPreview: boolean;
   showEvidenceProtagonist: boolean;
+  showMetrics: boolean;
 }
 
 export interface WorkspaceView {
@@ -170,6 +175,10 @@ export interface WorkspaceView {
   pendingReexecution: NodeId[];
   blastPreview: WorkspaceBlastPreview;
   evidence: WorkspaceEvidence | null;
+  /** Per-composite reconciliation progress (Reconciliation depth). */
+  integration: CompositeIntegration[];
+  /** Granularity metrics once `run.metrics.ready` arrives (Disposition / thesis). */
+  metrics: GranularityMetrics | null;
   emphasis: WorkspaceEmphasis;
 }
 
@@ -455,6 +464,9 @@ export function selectWorkspaceView(model: RunModel, options: ProtoViewOptions =
     nodeIds: affectedByPendingAmendment
   };
 
+  const integration = selectIntegrationProgress(model);
+  const metrics = selectGranularityMetrics(model);
+
   const hasPendingApprovePlan = proto.frame.attention.some((a) => a.kind === "approve_plan");
   const emphasis: WorkspaceEmphasis = {
     showApprovePlanCallout: mode === "proposal" && hasPendingApprovePlan,
@@ -462,8 +474,10 @@ export function selectWorkspaceView(model: RunModel, options: ProtoViewOptions =
     showWaves: (mode === "foundation" || mode === "supervision") && waves.length > 0,
     showWavefront: mode === "supervision",
     showConflicts: mode === "reconciliation" && proto.conflicts.length > 0,
+    showIntegrationProgress: mode === "reconciliation" && integration.length > 0,
     showBlastPreview: blastPreview.active,
-    showEvidenceProtagonist: mode === "disposition" && evidence !== null
+    showEvidenceProtagonist: mode === "disposition" && evidence !== null,
+    showMetrics: mode === "disposition" && metrics !== null
   };
 
   return {
@@ -486,6 +500,8 @@ export function selectWorkspaceView(model: RunModel, options: ProtoViewOptions =
     pendingReexecution: proto.debug.pendingReexecution,
     blastPreview,
     evidence,
+    integration,
+    metrics,
     emphasis
   };
 }

@@ -52,6 +52,33 @@
 
 ---
 
+## 0d. Roadmap Ultracode — reorganización por eje de verificabilidad (2026-06-06)
+
+Reemplaza el roadmap lineal PR-N2..PR-N9. **Principio:** una corrida Ultracode (sesión larga autónoma) rinde donde el "done" es **binario y automatizable** (typecheck + vitest + suite sobre fixtures), y es una trampa de falso-verde donde el valor real **solo se ve en un run Gemini vivo + browser**. Por eso el trabajo se agrupa por **eje de verificabilidad**, no por feature, y se **invierte el orden clásico**: se profundiza **toda** la superficie fixture-first en el carril autónomo, y el run real se enchufa al final sobre una UI ya completa.
+
+| Bloque | Carril | Reemplaza | Verificación |
+|---|---|---|---|
+| **U-A — Reconciliation & Disposition depth** | autónomo (Ultracode) | N6 + N7 | tests cerrados ✅ |
+| **U-B — Inspector & Audit depth** | autónomo (Ultracode) | N4 + N5(view-model) | tests cerrados ✅ |
+| **G-1 — Rewire gated del run real** (`MANYHANDS_RUN_MODEL` flag; `nodeStatusOverrides` rollback) | gated (humano) | N2 | tests + **run Gemini real + browser** ⚠️ |
+| **G-2 — Emisión nativa del envelope** (runner emite `RunEvent`; rename legacy→`StreamEvent`) | gated (humano) | N3 | contrato (tests) + **run real** ⚠️ |
+| ~~E2E reproducible / grafos congelados~~ | **pospuesto** | N8 | requiere reformular la tesis (standby) |
+| Doc-drift (`docs/system/04,06,07,09,10`) | trivial | — | revisión manual (plegar en G-2) |
+
+**Molde de una unidad Ultracode:** (1) brief autocontenido (arranca en frío); (2) fixture-first (si no se prueba con golden, no es carril autónomo); (3) plan de subtareas interno; (4) gate de salida duro (`web:typecheck` + `pnpm test` verdes, invariantes cross-cutting); (5) aditivo / sin big-bang (rollback = revertir commit); (6) commit lógico + reporte.
+
+**Secuencia:** carril autónomo `U-A → U-B` (independientes entre sí y de los gated); carril gated `G-1 → G-2` al final. **No** meter G-1/G-2 en una corrida autónoma (terminarían verdes sin renderizar un run vivo).
+
+**U-A ✅ ejecutado (2026-06-06)** — profundidad de **disposition** + **reconciliation**, fixture-first:
+- **Métricas (disposition):** `GranularityMetrics` en `types.ts` (espeja los 15+2 campos de `computeGranularityVector` **exacto**, sin importar execution-core → cableado backend futuro es mecánico) + evento v1 forward-compat `run.metrics.ready` + `RunModel.metrics` (fold cache). `selectGranularityMetrics`. Superficie: `MetricsBlock` en disposition + `EvidenceFocusView.metrics`. Fixture: `run.metrics.ready` añadido a `golden-happy-path`.
+- **Progreso de integración (reconciliation):** `selectIntegrationProgress(model)` → por composite `{state: pending|ready|integrated|failed, doneChildCount/total}`, **derivado de node state existente sin evento backend nuevo**. Superficie: `IntegrationSection` + `emphasis.showIntegrationProgress/showMetrics`.
+- **Tests:** `tests/run-model-disposition.test.ts` (10). **Verificación:** `pnpm web:typecheck` ✅ · `pnpm test` **793 passing + 3 skipped** ✅.
+- **No tocado (frontera dura respetada):** emisión backend nativa, run real, endpoints, rewire, `nodeStatusOverrides`. La reconciliación ya estaba derivada (conflictos en `workspace-view`); no se inventaron eventos de composer-repair (necesitarían backend).
+
+**Próximo:** **U-B** (Inspector & Audit depth) — carril autónomo; luego **G-1/G-2** (gated, run real).
+
+---
+
 ## 1. Resumen ejecutivo
 
 - **PR01–PR09 completados**, fixture-first, de forma **puramente aditiva**: todo el rediseño vive en `apps/web/src/lib/run-model/`, `apps/web/src/components/run-model/`, `apps/web/src/app/runs/proto/` y `tests/run-model-*`. **El flujo legacy no fue tocado por el rediseño.**

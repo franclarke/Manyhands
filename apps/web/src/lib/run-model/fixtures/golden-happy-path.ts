@@ -83,5 +83,28 @@ export const goldenHappyPath = fixture(RUN_ID, [
   }),
   ev("system", "decision.raised", { decisionId: "d-merge", kind: "approve_merge", blocking: true, context: { diffRef: "blob://golden-happy-path/diff" } }),
   ev("human", "decision.resolved", { decisionId: "d-merge", choice: { action: "accept" }, actor: "human" }),
-  ev("system", "run.completed", { status: "success" })
+  ev("system", "run.completed", { status: "success" }),
+
+  // Granularity metrics (the thesis instrument) — computed at run end.
+  ev("system", "run.metrics.ready", {
+    metrics: {
+      depth: 1,
+      leafCount: 3,
+      compositeCount: 1,
+      avgLeafDepth: 1,
+      maxLeafDepth: 1,
+      dependencyCount: 0,
+      avgAcceptanceCriteriaPerLeaf: 2,
+      estimatedTokensPerLeaf: 1800,
+      integrationSuccessRate: 1,
+      leafSuccessRate: 1,
+      conflictRate: 0,
+      totalDurationMs: 42000,
+      linesChanged: 120,
+      unexpectedCommitCount: 0,
+      scopeViolationCount: 0,
+      totalCostUsd: 0.12,
+      testsPassedRate: 1
+    }
+  })
 ]);

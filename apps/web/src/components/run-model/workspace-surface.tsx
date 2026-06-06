@@ -20,6 +20,7 @@ import type {
 } from "@/lib/run-model/workspace-view";
 import type { ProtoConflictRow } from "@/lib/run-model/proto-view";
 import { EVIDENCE_FOCUS_TARGET, type FocusTarget } from "@/lib/run-model/focus-view";
+import type { CompositeIntegration, GranularityMetrics } from "@/lib/run-model/types";
 
 const MODE_LABEL: Record<WorkspaceView["mode"], string> = {
   framing: "Encuadre",
@@ -74,6 +75,8 @@ export function WorkspaceSurface({
         />
       ) : null}
 
+      {view.emphasis.showMetrics && view.metrics !== null ? <MetricsBlock metrics={view.metrics} /> : null}
+
       {view.emphasis.showApprovePlanCallout ? (
         <Callout tone="action" text="El plan está propuesto como hipótesis. Aprobalo en el canal para comenzar." />
       ) : null}
@@ -100,6 +103,7 @@ export function WorkspaceSurface({
         />
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {view.emphasis.showWaves ? <WaveSection waves={view.waves} /> : null}
+          {view.emphasis.showIntegrationProgress ? <IntegrationSection integration={view.integration} /> : null}
           <ConflictSection
             conflicts={view.conflicts}
             emphasized={view.emphasis.showConflicts}
@@ -449,6 +453,86 @@ function EvidenceBlock({
           Inspeccionar evidencia →
         </button>
       ) : null}
+    </div>
+  );
+}
+
+// ── Reconciliation: per-composite integration progress ─────────────────────────
+
+const INTEGRATION_COLOR: Record<CompositeIntegration["state"], string> = {
+  pending: "var(--text-3, #9a927f)",
+  ready: "var(--copper, #d08a5a)",
+  integrated: "var(--done, #6bbf73)",
+  failed: "var(--error, #cf5b5b)"
+};
+
+function IntegrationSection({ integration }: { integration: CompositeIntegration[] }): React.ReactElement {
+  return (
+    <SectionPanel title="Integración">
+      {integration.length === 0 ? (
+        <Muted text="Sin composites para integrar." />
+      ) : (
+        <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+          {integration.map((c) => (
+            <li key={c.id} style={{ display: "flex", gap: 8, alignItems: "baseline", fontFamily: "var(--font-mono, monospace)", fontSize: 12 }}>
+              <Tag text={c.state} color={INTEGRATION_COLOR[c.state]} strong />
+              <span style={{ color: "var(--text-2, #cfc7b4)" }}>{c.id}</span>
+              <span style={{ color: "var(--text-3, #9a927f)" }}>
+                {c.doneChildCount}/{c.totalChildCount} hijos
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </SectionPanel>
+  );
+}
+
+// ── Disposition: granularity metrics (thesis instrument) ────────────────────────
+
+function MetricsBlock({ metrics }: { metrics: GranularityMetrics }): React.ReactElement {
+  const pct = (r: number): string => `${Math.round(r * 100)}%`;
+  const rows: Array<[string, string]> = [
+    ["profundidad", String(metrics.depth)],
+    ["hojas", String(metrics.leafCount)],
+    ["composites", String(metrics.compositeCount)],
+    ["prof. media hoja", metrics.avgLeafDepth.toFixed(1)],
+    ["deps", String(metrics.dependencyCount)],
+    ["AC / hoja", metrics.avgAcceptanceCriteriaPerLeaf.toFixed(1)],
+    ["éxito hojas", pct(metrics.leafSuccessRate)],
+    ["éxito integración", pct(metrics.integrationSuccessRate)],
+    ["conflicto", pct(metrics.conflictRate)],
+    ["líneas", String(metrics.linesChanged)],
+    ["duración", `${Math.round(metrics.totalDurationMs / 1000)}s`],
+    ["scope viol.", String(metrics.scopeViolationCount)],
+    ["commits inesp.", String(metrics.unexpectedCommitCount)]
+  ];
+  if (metrics.testsPassedRate !== undefined) rows.push(["tests pasados", pct(metrics.testsPassedRate)]);
+  if (metrics.estimatedTokensPerLeaf !== undefined) rows.push(["tokens / hoja", String(metrics.estimatedTokensPerLeaf)]);
+  if (metrics.totalCostUsd !== undefined) rows.push(["costo", `$${metrics.totalCostUsd.toFixed(2)}`]);
+  return (
+    <div
+      style={{
+        padding: "14px 16px",
+        background: "rgba(208,138,90,0.06)",
+        border: "1px solid rgba(208,138,90,0.28)",
+        borderRadius: "var(--r-md, 8px)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10
+      }}
+    >
+      <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--copper, #d08a5a)" }}>
+        Métricas de granularidad
+      </span>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "4px 14px" }}>
+        {rows.map(([k, v]) => (
+          <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontFamily: "var(--font-mono, monospace)", fontSize: 11.5 }}>
+            <span style={{ color: "var(--text-3, #9a927f)" }}>{k}</span>
+            <strong style={{ color: "var(--text-1, #f1ead8)" }}>{v}</strong>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

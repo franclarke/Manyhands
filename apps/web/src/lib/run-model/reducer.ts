@@ -46,6 +46,7 @@ import type {
   RunCreatedPayload,
   RunEvent,
   RunEvidenceReadyPayload,
+  RunMetricsReadyPayload,
   RunModel,
   ScopeDerivedPayload,
   Seam,
@@ -367,6 +368,11 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
         ...(p.invalidationTrace !== undefined ? { invalidationTrace: p.invalidationTrace } : {})
       };
       return { ...model, evidence };
+    }
+    case "run.metrics.ready": {
+      const p = read<RunMetricsReadyPayload>(event);
+      // Recorded fold cache (like evidence); never derived, never gates the run.
+      return { ...model, metrics: { ...p.metrics } };
     }
 
     // ── Forward-compat: unknown / v2 events are acknowledged, not applied ──
