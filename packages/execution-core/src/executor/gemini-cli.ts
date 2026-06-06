@@ -67,13 +67,15 @@ export interface GeminiCliExecutorDeps {
 
 /**
  * Real AgentExecutor backed by the Gemini CLI (replaces the Codex executor).
- * Reads the instruction file written by the orchestrator, spawns the CLI in the
- * worktree piping those instructions to stdin, enforces a hard timeout (D10),
- * and returns an ExecutorRunOutcome. The orchestrator never trusts stdout to
- * decide what changed (D5); these fields are diagnostics plus the exit signal.
- * Process-level failures (binary missing, spawn error, unreadable instructions)
- * surface as a non-zero exit outcome so the seam stays total and the
- * ResultRecorder maps them to `executor_error` (keeping stderr as the cause).
+ * Delegates the process mechanics to the shared `spawnExecutorProcess` driver
+ * (also used by the Claude Code executor): it reads the instruction file written
+ * by the orchestrator, spawns the CLI in the worktree piping those instructions
+ * to stdin, enforces a hard timeout (D10), and tears down the process tree on
+ * timeout or abort. The orchestrator never trusts stdout to decide what changed
+ * (D5); these fields are diagnostics plus the exit signal. Process-level failures
+ * (binary missing, spawn error, unreadable instructions) surface as a non-zero
+ * exit outcome so the seam stays total and the ResultRecorder maps them to
+ * `executor_error` (keeping stderr as the cause).
  */
 export class GeminiCliExecutor implements AgentExecutor {
   private readonly binaryPath: string;

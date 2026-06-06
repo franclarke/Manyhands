@@ -30,7 +30,9 @@ export function RunActionBar({
   const [reviewErrorMessage, setReviewErrorMessage] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
 
-  async function call(action: "approve-plan" | "run" | "pause" | "resume" | "restart" | "cancel"): Promise<void> {
+  async function call(
+    action: "approve-plan" | "run" | "pause" | "resume" | "restart" | "cancel" | "auto-resolve"
+  ): Promise<void> {
     setErrorMessage(null);
     setBusy(action);
     try {
@@ -122,9 +124,14 @@ export function RunActionBar({
         </Button>
       ) : null}
       {activeConflictCount > 0 && (status === "needs_review" || status === "approved") ? (
-        <Button variant="ghost" onClick={openConflictReview}>
-          Resolve conflicts ({activeConflictCount})
-        </Button>
+        <>
+          <Button variant="primary" busy={busy === "auto-resolve"} onClick={() => void call("auto-resolve")}>
+            Auto-resolve conflicts ({activeConflictCount})
+          </Button>
+          <Button variant="ghost" onClick={openConflictReview}>
+            Review conflicts ({activeConflictCount})
+          </Button>
+        </>
       ) : null}
       {status === "approved" ? (
         <Button variant="primary" busy={busy === "run"} onClick={() => void call("run")}>

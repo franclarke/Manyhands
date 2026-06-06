@@ -1,6 +1,7 @@
 import type { ExecutionScope } from "@manyhands/contracts";
 import type { TraceStore } from "@manyhands/trace-store";
 
+import { execError, execLog, execWarn } from "../logging/log";
 import type { ExecutorRunOutcome } from "../executor/types";
 import type { GitRunner } from "../git/runner";
 import { ScopeChecker } from "../scope/checker";
@@ -82,9 +83,20 @@ export class ResultRecorder {
     // 1. Executor-level failures short-circuit before any git inspection. The
     // stderr/stdout tails in `base` preserve the actionable cause.
     if (executorOutcome.timedOut) {
+      execWarn("result", "leaf failed: executor timed out", {
+        task: taskId,
+        durationMs: executorOutcome.durationMs,
+        stderrTail: base.stderrTail
+      });
       return this.finalize({ ...base, status: "timeout", currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
     }
     if (executorOutcome.exitCode !== 0) {
+      execError("result", "leaf failed: executor exited non-zero", {
+        task: taskId,
+        exitCode: executorOutcome.exitCode,
+        durationMs: executorOutcome.durationMs,
+        stderrTail: base.stderrTail ?? base.stdoutTail
+      });
       return this.finalize({ ...base, status: "executor_error", currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
     }
 
@@ -99,6 +111,10 @@ export class ResultRecorder {
       });
 
       if (policy === "reject") {
+        execWarn("result", "leaf failed: agent committed unexpectedly (policy=reject)", {
+          task: taskId,
+          commitSha: head
+        });
         return this.finalize({
           ...base,
           status: "agent_committed_unexpectedly",
@@ -120,9 +136,18 @@ export class ResultRecorder {
       });
       if (!scopeCheck.passed) {
         this.appendScopeFailure(taskId, scopeCheck.violations);
+        execWarn("result", "leaf failed: scope violation (agent-committed range)", {
+          task: taskId,
+          violations: scopeCheck.violations
+        });
         return this.finalize({ ...base, status: "scope_violation", currentHead: head, agentCommittedUnexpectedly: true, diff, changedFiles, scopeCheck });
       }
       this.appendScopeAdvisory(taskId, scopeCheck.outOfScope);
+      execLog("result", "leaf succeeded (kept agent commit, policy=accept)", {
+        task: taskId,
+        commitSha: head,
+        changedFiles: changedFiles.length
+      });
       return this.finalize({ ...base, status: "success", currentHead: head, agentCommittedUnexpectedly: true, diff, changedFiles, commitSha: head, scopeCheck });
     }
 
@@ -131,6 +156,13 @@ export class ResultRecorder {
     const changedFiles = await this.git.diffCachedNameOnly(worktree.path);
 
     if (changedFiles.length === 0) {
+      // Exit 0 but nothing changed: the agent ran yet produced no diff — a very
+      // common "execute did nothing" case worth surfacing with its output tail.
+      execWarn("result", "leaf failed: agent produced no changes (empty diff)", {
+        task: taskId,
+        durationMs: executorOutcome.durationMs,
+        stdoutTail: base.stdoutTail ?? base.stderrTail
+      });
       return this.finalize({ ...base, status: "empty_diff", currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
     }
 
@@ -143,6 +175,11 @@ export class ResultRecorder {
 
     if (!scopeCheck.passed) {
       this.appendScopeFailure(taskId, scopeCheck.violations);
+      execWarn("result", "leaf failed: scope violation", {
+        task: taskId,
+        changedFiles: changedFiles.length,
+        violations: scopeCheck.violations
+      });
       return this.finalize({ ...base, status: "scope_violation", currentHead: baseHead, diff, changedFiles, scopeCheck });
     }
 
@@ -155,6 +192,12 @@ export class ResultRecorder {
       actor: "system",
       taskId,
       payload: { commitSha, changedFiles }
+    });
+    execLog("result", "leaf succeeded (orchestrator committed)", {
+      task: taskId,
+      commitSha,
+      changedFiles: changedFiles.length,
+      durationMs: executorOutcome.durationMs
     });
 
     this.appendScopeAdvisory(taskId, scopeCheck.outOfScope);

@@ -1,6 +1,7 @@
 import { nowIso } from "@manyhands/shared";
 
 import { WorktreeError } from "../errors";
+import { execError, execLog } from "../logging/log";
 import type { GitRunner } from "../git/runner";
 import { WorktreeRecordSchema, type WorktreeKind, type WorktreeRecord } from "../types";
 
@@ -54,6 +55,16 @@ export class WorktreeManager {
         baseCommit: params.baseCommit
       });
     } catch (error) {
+      // Surface git's real stderr (invalid ref, path exists, locked index…) — the
+      // WorktreeError wrapper only carries a generic message.
+      execError("worktree", "git worktree add failed", {
+        task: params.taskId,
+        kind: params.kind,
+        path,
+        branch,
+        baseCommit: params.baseCommit,
+        cause: error instanceof Error ? error.message : String(error)
+      });
       throw new WorktreeError(
         `Failed to create worktree for task ${params.taskId}`,
         params.taskId,
@@ -62,6 +73,13 @@ export class WorktreeManager {
         error
       );
     }
+
+    execLog("worktree", "worktree created", {
+      task: params.taskId,
+      kind: params.kind,
+      branch,
+      baseCommit: params.baseCommit
+    });
 
     return WorktreeRecordSchema.parse({
       taskId: params.taskId,
@@ -84,6 +102,12 @@ export class WorktreeManager {
       });
       await this.git.branchDelete({ repoRoot: this.repoRoot, branch: record.branch, force: true });
     } catch (error) {
+      execError("worktree", "git worktree remove/branch delete failed", {
+        task: record.taskId,
+        path: record.path,
+        branch: record.branch,
+        cause: error instanceof Error ? error.message : String(error)
+      });
       throw new WorktreeError(
         `Failed to clean worktree for task ${record.taskId}`,
         record.taskId,

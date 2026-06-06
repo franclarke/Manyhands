@@ -13,6 +13,7 @@ import {
 } from "../executor/registry";
 import type { AgentExecutor } from "../executor/types";
 import type { GitRunner } from "../git/runner";
+import { execError, execLog, execWarn } from "../logging/log";
 import { ScopeChecker } from "../scope/checker";
 import type { SandboxMode } from "../types";
 import {
@@ -58,6 +59,20 @@ export interface ChildIntent {
   produces: string[];
 }
 
+/**
+ * A conflict predicted at planning time (conflict-risk). Threaded into the
+ * Composer so a cherry-pick conflict is repaired WITH the foresight that
+ * produced it — the colliding files were flagged, and why — instead of blind.
+ */
+export interface PredictedConflictHint {
+  taskAId: string;
+  taskBId: string;
+  level: "low" | "medium" | "high" | "blocking";
+  sharedFiles: string[];
+  sharedSymbols: string[];
+  explanation: string;
+}
+
 export interface IntegrationParams {
   compositeTaskId: string;
   /** Integration worktree on the parent branch; children are cherry-picked here. */
@@ -77,6 +92,8 @@ export interface IntegrationParams {
   childIntents?: ChildIntent[];
   /** Run-level cancellation: aborts the repair executor's process tree. */
   signal?: AbortSignal;
+  /** Conflicts predicted at planning time; repair surfaces the ones whose files collide. */
+  predictedConflicts?: PredictedConflictHint[];
 }
 
 /**
@@ -121,9 +138,11 @@ export class IntegrationAgent {
     // Any non-successful child means we never start integration (ADR-0025).
     const failedChild = childResults.find((child) => child.status !== "success");
     if (failedChild) {
-      console.warn(
-        `[IntegrationAgent] Abort composite=${compositeTaskId}: child=${failedChild.taskId} status=${failedChild.status}`
-      );
+      execWarn("integrate", "skipping integration: a child task failed", {
+        task: compositeTaskId,
+        failedChild: failedChild.taskId,
+        childStatus: failedChild.status
+      });
       return this.finalize(params, "child_failed", { repairAttempted: false });
     }
 
@@ -170,6 +189,11 @@ export class IntegrationAgent {
         `[IntegrationAgent] Cherry-pick conflict composite=${compositeTaskId} child=${child.taskId} files=${formatIdList(outcome.conflictFiles)} output=${tailForLog(outcome.output)}`
       );
       // Conflict: one repair attempt only.
+      execWarn("integrate", "cherry-pick conflict", {
+        task: compositeTaskId,
+        child: child.taskId,
+        files: outcome.conflictFiles
+      });
       this.traceStore.append({
         type: "cherry_pick_conflict",
         actor: "system",
@@ -178,9 +202,11 @@ export class IntegrationAgent {
       });
 
       if (repairAttempted) {
-        console.error(
-          `[IntegrationAgent] Repair already attempted; failing composite=${compositeTaskId} child=${child.taskId}`
-        );
+        execWarn("integrate", "integration failed: second conflict (only one repair allowed)", {
+          task: compositeTaskId,
+          child: child.taskId,
+          files: outcome.conflictFiles
+        });
         return this.finalize(params, "executor_repair_failed", {
           repairAttempted: true,
           repairResult,
@@ -190,12 +216,20 @@ export class IntegrationAgent {
       }
       repairAttempted = true;
 
+      execLog("integrate", "attempting agent repair of conflict", {
+        task: compositeTaskId,
+        child: child.taskId,
+        model: params.repair.model
+      });
       const repair = await this.attemptRepair(params, child, outcome, preMergeFindings);
       repairResult = repair.result;
       if (!repair.ok) {
-        console.error(
-          `[IntegrationAgent] Repair failed composite=${compositeTaskId} child=${child.taskId} status=${repair.result.status} exitCode=${repair.result.executorExitCode} stderr=${tailForLog(repair.result.stderrTail ?? "")}`
-        );
+        execError("integrate", "integration failed: agent repair did not resolve conflict", {
+          task: compositeTaskId,
+          child: child.taskId,
+          repairStatus: repair.result.status,
+          stderrTail: repair.result.stderrTail
+        });
         return this.finalize(params, "executor_repair_failed", {
           repairAttempted: true,
           repairResult,
@@ -203,18 +237,21 @@ export class IntegrationAgent {
           preMergeFindings
         });
       }
-      console.log(
-        `[IntegrationAgent] Repair ok composite=${compositeTaskId} child=${child.taskId} commit=${repair.result.commitSha ?? "(none)"}`
-      );
+      execLog("integrate", "agent repair resolved conflict", {
+        task: compositeTaskId,
+        child: child.taskId
+      });
       anyRepairSucceeded = true;
     }
 
     // Parent validation runs once over the fully-integrated branch.
     const validation = await this.runParentValidation(params);
     if (validation && !validation.passed) {
-      console.warn(
-        `[IntegrationAgent] Parent validation failed composite=${compositeTaskId} exitCode=${validation.exitCode} output=${tailForLog(validation.output)}`
-      );
+      execWarn("integrate", "integration failed: parent validation failed", {
+        task: compositeTaskId,
+        exitCode: validation.exitCode,
+        output: validation.output
+      });
       return this.finalize(params, "validation_failed", {
         repairAttempted,
         repairResult,
@@ -432,6 +469,23 @@ export class IntegrationAgent {
         const fileSuffix = finding.files.length > 0 ? ` (${finding.files.join(", ")})` : "";
         lines.push(`- [${finding.severity}] ${finding.message}${fileSuffix}`);
       }
+    }
+
+    // Plan-time foresight (Pieza 2): surface predictions whose shared files overlap
+    // the files now colliding, so the agent reconciles by the predicted cause.
+    const hints = (params.predictedConflicts ?? []).filter((hint) =>
+      hint.sharedFiles.some((file) => conflict.conflictFiles.includes(file))
+    );
+    if (hints.length > 0) {
+      lines.push(
+        "",
+        "These collisions were predicted at planning time for the files now in conflict.",
+        "Use the predicted cause to reconcile, not a guess from the diff text:",
+        ...hints.map((hint) => {
+          const symbols = hint.sharedSymbols.length > 0 ? ` [shared symbols: ${hint.sharedSymbols.join(", ")}]` : "";
+          return `- ${hint.taskAId} ↔ ${hint.taskBId} (${hint.level}): ${hint.explanation}${symbols}`;
+        })
+      );
     }
 
     const validationCommands = params.parentValidationCommands ?? [];

@@ -31,6 +31,35 @@ export function canRestart(status: RunStatus): boolean {
   return status === "interrupted" || status === "failed";
 }
 
+/** Minimal run shape the restart route needs to choose which pipeline to resume. */
+export interface RestartContext {
+  approvedAt?: string | undefined;
+  planning?: unknown;
+  failedDuring?: "generating" | "running" | undefined;
+  interruptedDuring?: "generating" | "running" | undefined;
+}
+
+/**
+ * A restart resumes EXECUTION (not planning) when the run already reached
+ * approval with a generated plan, or its last failure/interruption happened
+ * during execution. Otherwise it restarts planning.
+ *
+ * Without a plan there is nothing to execute, so we always restart planning —
+ * even if `approvedAt` lingers from a prior cycle. This is the signal that was
+ * missing before: a run that *failed during execution* (e.g. repo provisioning)
+ * never recorded its phase, so restart wrongly re-ran planning.
+ */
+export function restartResumesExecution(run: RestartContext): boolean {
+  if (run.planning === undefined) {
+    return false;
+  }
+  return (
+    run.approvedAt !== undefined ||
+    run.failedDuring === "running" ||
+    run.interruptedDuring === "running"
+  );
+}
+
 export function isTerminalStatus(status: RunStatus): boolean {
   return status === "completed" || status === "failed";
 }

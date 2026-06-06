@@ -16,6 +16,7 @@ import {
   computeGranularityVector,
   type AgentExecutionResult,
   type IntegrationResult,
+  type PredictedConflictHint,
   type RunNodeExecutionResult,
   type RunExecutionResult
 } from "@manyhands/execution-core";
@@ -40,6 +41,8 @@ import { pickDecomposer, type DecomposerSelection } from "@/lib/decomposer-polic
 import { runPlanCritic, runSeamCritic } from "@/lib/plan-critic";
 import { detectWorkspaceCommands } from "../providers/command-detection";
 import { buildRepositoryGrounding } from "./repo-index-cache";
+import { projectRunRecordToSnapshot } from "@/lib/live-graph";
+import { deriveConflictList } from "@/lib/conflict-view-model";
 import type { RunEvent, RiskLevelKey } from "./events";
 import type {
   ExecutionConfigInput,
@@ -88,6 +91,8 @@ export interface ExecutionEngineInput {
   signal?: AbortSignal;
   /** Awaited at each batch boundary (pause hold); resolves to continue. */
   onBatchBoundary?: () => Promise<void>;
+  /** Conflicts predicted at planning time; feed the conflict-aware composer (D8). */
+  predictedConflicts?: PredictedConflictHint[];
 }
 
 export interface ExecutionEngine {
@@ -190,7 +195,8 @@ function createDefaultExecutionEngine(deps: { traceStore?: TraceStore } = {}): E
         ...(input.defaultRepairSelection !== undefined ? { defaultRepairSelection: input.defaultRepairSelection } : {}),
         runId: input.runId,
         ...(input.signal !== undefined ? { signal: input.signal } : {}),
-        ...(input.onBatchBoundary !== undefined ? { onBatchBoundary: input.onBatchBoundary } : {})
+        ...(input.onBatchBoundary !== undefined ? { onBatchBoundary: input.onBatchBoundary } : {}),
+        ...(input.predictedConflicts !== undefined ? { predictedConflicts: input.predictedConflicts } : {})
       });
     }
   };
@@ -587,7 +593,12 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
       const message = error instanceof Error ? error.message : String(error);
       const run = await getRunRepository().get(runId).catch(() => null);
       if (run !== null) {
-        await getRunRepository().save({ ...run, status: "failed", errorMessage: message });
+        await getRunRepository().save({
+          ...run,
+          status: "failed",
+          failedDuring: "generating",
+          errorMessage: message
+        });
         publishRunEvent(runId, {
           kind: "status.changed",
           status: "failed",
@@ -776,6 +787,10 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       });
     } else if (usingDefaultEngine) {
       // D3: no silent mock execution. The default engine needs a real repo.
+      console.error(
+        `[Runner] El run ${runId} no tiene repoSpec configurado y el engine real requiere un repo. ` +
+          "Configurá un workspace con un repo git local."
+      );
       throw new RepoNotConfiguredError(run.runId);
     }
 
@@ -798,7 +813,10 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       console.log(`[Runner] Preflight ok for run ${runId}`);
     }
 
-    console.log(`[Runner] Engine run start for run ${runId}`);
+    const predictedConflicts = derivePredictedConflicts(run);
+    console.log(
+      `[Runner] Engine run start for run ${runId} (predicted conflicts=${predictedConflicts.length})`
+    );
     const result = await engine.run({
       graph,
       model: run.model,
@@ -811,7 +829,8 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       signal: abortController.signal,
       onBatchBoundary: () => waitWhilePaused(runId, "running"),
       ...(provisioned !== undefined ? { provisioned } : {}),
-      ...(run.executionConfig !== undefined ? { executionConfig: run.executionConfig } : {})
+      ...(run.executionConfig !== undefined ? { executionConfig: run.executionConfig } : {}),
+      ...(predictedConflicts.length > 0 ? { predictedConflicts } : {})
     });
     console.log(
       `[Runner] Engine run complete for run ${runId}: status=${result.status}, leaves=${result.leafResults.length}, integrations=${result.integrationResults.length}`
@@ -904,6 +923,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       await getRunRepository().save({
         ...run,
         status: "failed",
+        failedDuring: "running",
         execution: result,
         ...(executionTraces.length > 0 ? { executionTraces } : {}),
         errorMessage: describeExecutionFailure(result)
@@ -911,11 +931,12 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
     }
   } catch (error) {
+    console.error(`[Runner] FALLÓ la ejecución del run "${runId}":`, error);
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[Runner] Execution pipeline failed for run "${runId}":`, error);
     const run = await getRunRepository().get(runId).catch(() => null);
     if (run !== null) {
-      await getRunRepository().save({ ...run, status: "failed", errorMessage: message });
+      await getRunRepository().save({ ...run, status: "failed", failedDuring: "running", errorMessage: message });
       publishRunEvent(runId, {
         kind: "status.changed",
         status: "failed",
@@ -1096,6 +1117,38 @@ export async function assertManualNodeExecutionReady(run: RunRecord, taskId: str
   const readiness = manualReadinessForTask(graph, taskId, executionResultsFromRun(run));
   if (!readiness.ready) {
     throw new RunLifecycleError(readiness.reason);
+  }
+}
+
+/**
+ * Build the predicted-conflict hints that feed the conflict-aware composer (Pieza 2).
+ * Reuses the exact computation the UI shows (deriveConflictList) so foresight at
+ * planning time and repair at integration time stay consistent. Includes every
+ * actionable pair — even acknowledged ones, since acknowledgement is precisely the
+ * decision to let the composer reconcile them.
+ */
+function derivePredictedConflicts(run: RunRecord): PredictedConflictHint[] {
+  // Best-effort foresight: a malformed/partial snapshot must never break the run.
+  try {
+    const snapshot = projectRunRecordToSnapshot(run);
+    if (snapshot === null) {
+      return [];
+    }
+    return deriveConflictList(snapshot, run.patches ?? [])
+      .filter((conflict) => conflict.level === "medium" || conflict.level === "high" || conflict.level === "blocking")
+      .map((conflict) => ({
+        taskAId: conflict.taskAId,
+        taskBId: conflict.taskBId,
+        level: conflict.level,
+        sharedFiles: conflict.sharedFiles,
+        sharedSymbols: conflict.sharedSymbols,
+        explanation: conflict.reason
+      }));
+  } catch (error) {
+    console.warn(
+      `[Runner] Predicted-conflict derivation skipped for run ${run.runId}: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return [];
   }
 }
 

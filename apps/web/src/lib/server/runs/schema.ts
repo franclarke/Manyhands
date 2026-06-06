@@ -185,6 +185,9 @@ export const RunRecordSchema = z.object({
   pausedDuring: z.union([z.literal("generating"), z.literal("running")]).optional(),
   /** Phase from which the run was interrupted (server restart, stale heartbeat). */
   interruptedDuring: z.union([z.literal("generating"), z.literal("running")]).optional(),
+  /** Phase in which the run failed. Lets restart resume the right pipeline and
+   *  the phase bar mark the real step instead of always blaming "Review outputs". */
+  failedDuring: z.union([z.literal("generating"), z.literal("running")]).optional(),
   errorMessage: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

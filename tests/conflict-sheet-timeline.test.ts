@@ -266,7 +266,7 @@ describe("run timeline", () => {
 });
 
 describe("risk acknowledgement endpoint", () => {
-  it("appends a risk acknowledgement patch and trace while invalidating approval", async () => {
+  it("appends a risk acknowledgement patch and trace while preserving approval", async () => {
     const repo = getRunRepository();
     await repo.save(makeRun({ status: "approved", approvedAt: now }));
 
@@ -277,8 +277,10 @@ describe("risk acknowledgement endpoint", () => {
 
     expect(response.status).toBe(200);
     const saved = await repo.get("run-1");
-    expect(saved.status).toBe("needs_review");
-    expect(saved.approvedAt).toBeUndefined();
+    // A risk acknowledgement is advisory — it records a decision without mutating
+    // the DAG, so approval survives (enables approve → auto-resolve → run).
+    expect(saved.status).toBe("approved");
+    expect(saved.approvedAt).toBe(now);
     expect(saved.patches).toHaveLength(1);
     expect(saved.patches[0]).toMatchObject({
       type: "RISK_ACKNOWLEDGED",

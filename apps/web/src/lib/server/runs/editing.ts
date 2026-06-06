@@ -66,10 +66,15 @@ export async function persistRunPatches(input: {
 
   const withPatches = input.patches.reduce((run, patch) => appendPatch(run, patch), input.run);
   const withTraces = appendPatchTraceEvents(withPatches, input.patches);
-  const nextRun = invalidateApprovalIfNeeded({
+  // Advisory patches (risk acknowledgements) record a decision without mutating
+  // the DAG, so they must NOT revoke plan approval — that is what lets
+  // "approve → auto-resolve conflicts → run" proceed without a re-review bounce.
+  const advisoryOnly = input.patches.every((patch) => patch.type === "RISK_ACKNOWLEDGED");
+  const stamped = {
     ...withTraces,
     updatedAt: input.patches[input.patches.length - 1]?.createdAt ?? new Date().toISOString()
-  });
+  };
+  const nextRun = advisoryOnly ? stamped : invalidateApprovalIfNeeded(stamped);
   const saved = await getRunRepository().save(nextRun);
 
   if (input.run.status !== saved.status) {

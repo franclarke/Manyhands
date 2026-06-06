@@ -2,23 +2,19 @@
 
 import type { RunStatusKey } from "@/lib/api-types";
 import type { RunGraphViewModel } from "@/lib/graph-view-model";
-import { runProgress } from "@/lib/run-phase";
+import { runProgress, runPhaseStepIndex, RUN_PHASE_STEPS, type RunFailurePhase } from "@/lib/run-phase";
 
 interface RunPhaseBarProps {
   status: RunStatusKey;
   graph: RunGraphViewModel;
+  /** When `status` is "failed", which phase broke — marks the real step. */
+  failedPhase?: RunFailurePhase;
 }
 
-const DISPLAY_STEPS = [
-  "Plan generated",
-  "Review plan",
-  "Execute agents",
-  "Review outputs",
-  "Integrate"
-] as const;
+const DISPLAY_STEPS = RUN_PHASE_STEPS;
 
-export function RunPhaseBar({ status, graph }: RunPhaseBarProps): React.ReactElement {
-  const activeIndex = activeStepIndex(status);
+export function RunPhaseBar({ status, graph, failedPhase }: RunPhaseBarProps): React.ReactElement {
+  const activeIndex = runPhaseStepIndex(status, failedPhase);
   const failed = status === "failed";
   const progress = runProgress(graph);
   const showProgress = status === "running" || status === "completed" || status === "failed";
@@ -86,25 +82,6 @@ export function RunPhaseBar({ status, graph }: RunPhaseBarProps): React.ReactEle
 }
 
 type StepState = "done" | "active" | "failed" | "upcoming";
-
-function activeStepIndex(status: RunStatusKey): number {
-  switch (status) {
-    case "created":
-    case "generating":
-      return 0;
-    case "needs_review":
-      return 1;
-    case "approved":
-    case "running":
-    case "paused":
-    case "interrupted":
-      return 2;
-    case "completed":
-      return 4;
-    case "failed":
-      return 3;
-  }
-}
 
 function stepState(index: number, currentIndex: number, failed: boolean): StepState {
   if (index < currentIndex) return "done";
