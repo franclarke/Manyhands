@@ -4,7 +4,6 @@ import { join } from "node:path";
 
 import type { ExecutionValidationCommand } from "@manyhands/contracts";
 import { scheduleTasks, type SchedulingPolicy } from "@manyhands/scheduler";
-import { nowIso } from "@manyhands/shared";
 import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
 
@@ -164,9 +163,6 @@ export class RunExecutor {
   async run(params: RunExecutionParams): Promise<RunExecutionResult> {
     const { graph, config } = params;
     const runId = params.runId ?? graph.planId;
-    console.log(
-      `[RunExecutor] Start run=${runId} graph=${graph.id} root=${graph.rootId} nodes=${Object.keys(graph.nodes).length}`
-    );
 
     const leafCount = Object.values(graph.nodes).filter((node) => node.kind === "leaf").length;
     const compositeCount = Object.values(graph.nodes).filter(
@@ -174,6 +170,9 @@ export class RunExecutor {
     ).length;
     execLog("run", "run started", {
       runId,
+      graph: graph.id,
+      root: graph.rootId,
+      nodes: Object.keys(graph.nodes).length,
       leaves: leafCount,
       composites: compositeCount,
       maxParallel: config.maxParallel,
@@ -205,9 +204,12 @@ export class RunExecutor {
         maxParallel: config.maxParallel,
         policy: params.policy ?? "parallel_naive"
       });
-      console.log(
-        `[RunExecutor] Schedule run=${runId} batches=${plan.batches.length} tasks=${formatTaskList(plan.batches.flatMap((batch) => batch.taskIds))} blocked=${plan.blocked.length}`
-      );
+      execLog("run", "scheduled", {
+        runId,
+        batches: plan.batches.length,
+        tasks: formatTaskList(plan.batches.flatMap((batch) => batch.taskIds)),
+        blocked: plan.blocked.length
+      });
 
       const leafResultMap = await this.batchScheduler.runBatches({
         batches: plan.batches.map((batch) => ({ id: batch.id, taskIds: batch.taskIds })),
@@ -238,9 +240,11 @@ export class RunExecutor {
         .flatMap((batch) => batch.taskIds)
         .map((taskId) => leafResultMap.get(taskId))
         .filter((result): result is AgentExecutionResult => result !== undefined);
-      console.log(
-        `[RunExecutor] Leaf phase complete run=${runId} results=${leafResults.length}/${plan.batches.flatMap((batch) => batch.taskIds).length} statuses=${formatResultStatuses(leafResults)}`
-      );
+      execLog("run", "leaf phase complete", {
+        runId,
+        results: `${leafResults.length}/${plan.batches.flatMap((batch) => batch.taskIds).length}`,
+        statuses: formatResultStatuses(leafResults)
+      });
 
       // Cancellation: if the run was aborted during leaf execution, skip
       // integration + validation and return the partial result. The web runner's
@@ -272,25 +276,20 @@ export class RunExecutor {
         predictedConflicts: params.predictedConflicts ?? [],
         ...(params.signal !== undefined ? { signal: params.signal } : {})
       });
-      console.log(
-        `[RunExecutor] Integration phase complete run=${runId} results=${integrationResults.length} statuses=${formatIntegrationStatuses(integrationResults)}`
-      );
+      execLog("run", "integration phase complete", {
+        runId,
+        results: integrationResults.length,
+        statuses: formatIntegrationStatuses(integrationResults)
+      });
 
       const validationResult = await this.runRunValidation(
         graph,
-        this.resolveRunValidationCwd(graph, worktrees)
+        this.resolveRunValidationCwd(graph, worktrees),
+        runId
       );
-      if (validationResult !== undefined) {
-        console.log(
-          `[RunExecutor] Run validation complete run=${runId} passed=${validationResult.passed} exitCode=${validationResult.exitCode}`
-        );
-      }
 
       const totalDurationMs = this.clock() - startMs;
       const status = this.deriveStatus(leafResults, integrationResults, validationResult);
-      console.log(
-        `[RunExecutor] Complete run=${runId} status=${status} leaves=${leafResults.length} integrations=${integrationResults.length} durationMs=${totalDurationMs}`
-      );
 
       const failedLeaves = leafResults.filter((result) => result.status !== "success");
       const failedIntegrations = integrationResults.filter(
@@ -602,32 +601,28 @@ export class RunExecutor {
     const composites = Object.values(graph.nodes)
       .filter((node) => node.kind !== "leaf" && node.childrenIds.length > 0)
       .sort((a, b) => b.depth - a.depth);
-    console.log(
-      `[RunExecutor] Integrate bottom-up run=${runId} composites=${formatTaskList(composites.map((node) => node.id))}`
-    );
-
     if (composites.length > 0) {
       execLog("integrate", "integrating composites bottom-up", {
         runId,
-        composites: composites.length
+        composites: composites.length,
+        tasks: formatTaskList(composites.map((node) => node.id))
       });
     }
 
     const integrationResults: IntegrationResult[] = [];
 
     for (const composite of composites) {
-      console.log(
-        `[RunExecutor] Integrating composite=${composite.id} children=${formatTaskList(composite.childrenIds)}`
-      );
       const childResults = composite.childrenIds
         .map((childId) => resultByTask.get(childId))
         .filter((result): result is AgentExecutionResult => result !== undefined);
       const missingChildIds = composite.childrenIds.filter((childId) => !resultByTask.has(childId));
 
       if (missingChildIds.length > 0) {
-        console.warn(
-          `[RunExecutor] Missing child results composite=${composite.id} present=${formatResultStatuses(childResults)} missing=${formatTaskList(missingChildIds)}`
-        );
+        execWarn("integrate", "missing child results — marking composite child_failed", {
+          task: composite.id,
+          present: formatResultStatuses(childResults),
+          missing: formatTaskList(missingChildIds)
+        });
         const result: IntegrationResult = {
           compositeTaskId: composite.id,
           status: "child_failed",
@@ -660,7 +655,8 @@ export class RunExecutor {
       execLog("integrate", "integrating composite", {
         task: composite.id,
         depth: composite.depth,
-        children: `${childResults.length}/${composite.childrenIds.length} resolved`
+        children: `${childResults.length}/${composite.childrenIds.length} resolved`,
+        childIds: formatTaskList(composite.childrenIds)
       });
 
       let worktree: WorktreeRecord;
@@ -723,22 +719,21 @@ export class RunExecutor {
         ...(args.signal !== undefined ? { signal: args.signal } : {})
       });
       integrationResults.push(result);
-      console.log(
-        `[RunExecutor] Integrated composite=${composite.id} status=${result.status} commit=${result.integrationCommitSha ?? "(none)"} children=${formatTaskList(result.childResults.map((child) => child.taskId))}`
-      );
 
       if (INTEGRATION_SUCCESS.has(result.status)) {
         execLog("integrate", "composite integrated", {
           task: composite.id,
           status: result.status,
           commitSha: result.integrationCommitSha,
-          repaired: result.repairAttempted
+          repaired: result.repairAttempted,
+          children: formatTaskList(result.childResults.map((child) => child.taskId))
         });
       } else {
         execWarn("integrate", "composite integration failed", {
           task: composite.id,
           status: result.status,
           repaired: result.repairAttempted,
+          children: formatTaskList(result.childResults.map((child) => child.taskId)),
           ...(result.conflictDetails ? { conflictFiles: result.conflictDetails.files } : {})
         });
       }
@@ -779,13 +774,15 @@ export class RunExecutor {
 
   private async runRunValidation(
     graph: TaskGraph,
-    worktreePath: string
+    worktreePath: string,
+    runId: string
   ): Promise<ValidationRunResult | undefined> {
     const commands = collectRunValidationCommands(graph);
     if (commands.length === 0) {
       return undefined;
     }
     execLog("validate", "running run-level validation", {
+      runId,
       commands: commands.length,
       cwd: worktreePath
     });
@@ -796,9 +793,10 @@ export class RunExecutor {
     });
     const result = await this.validationRunner.run(commands, { worktreePath, repoRoot: this.repoRoot });
     if (result.passed) {
-      execLog("validate", "run-level validation passed", { commands: commands.length });
+      execLog("validate", "run-level validation passed", { runId, commands: commands.length });
     } else {
       execWarn("validate", "run-level validation failed", {
+        runId,
         commands: commands.length,
         exitCode: result.exitCode,
         output: result.output

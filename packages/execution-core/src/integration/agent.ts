@@ -124,9 +124,11 @@ export class IntegrationAgent {
   async integrate(params: IntegrationParams): Promise<IntegrationResult> {
     const { compositeTaskId, worktree, childResults } = params;
     const childTaskIds = childResults.map((child) => child.taskId);
-    console.log(
-      `[IntegrationAgent] Start composite=${compositeTaskId} children=${formatIdList(childTaskIds)} worktree=${worktree.path}`
-    );
+    execLog("integrate", "integration started", {
+      task: compositeTaskId,
+      children: childTaskIds,
+      worktree: worktree.path
+    });
 
     this.traceStore.append({
       type: "integration_started",
@@ -160,15 +162,19 @@ export class IntegrationAgent {
 
     for (const child of childResults) {
       if (!child.commitSha) {
-        console.warn(
-          `[IntegrationAgent] Skip child without commit composite=${compositeTaskId} child=${child.taskId} status=${child.status}`
-        );
+        execWarn("integrate", "skipping child without commit", {
+          task: compositeTaskId,
+          child: child.taskId,
+          childStatus: child.status
+        });
         continue;
       }
 
-      console.log(
-        `[IntegrationAgent] Cherry-pick start composite=${compositeTaskId} child=${child.taskId} commit=${child.commitSha}`
-      );
+      execLog("integrate", "cherry-pick start", {
+        task: compositeTaskId,
+        child: child.taskId,
+        commit: child.commitSha
+      });
       this.traceStore.append({
         type: "cherry_pick_attempted",
         actor: "system",
@@ -181,18 +187,16 @@ export class IntegrationAgent {
         commitSha: child.commitSha
       });
       if (outcome.ok) {
-        console.log(`[IntegrationAgent] Cherry-pick ok composite=${compositeTaskId} child=${child.taskId}`);
+        execLog("integrate", "cherry-pick ok", { task: compositeTaskId, child: child.taskId });
         continue;
       }
 
-      console.warn(
-        `[IntegrationAgent] Cherry-pick conflict composite=${compositeTaskId} child=${child.taskId} files=${formatIdList(outcome.conflictFiles)} output=${tailForLog(outcome.output)}`
-      );
       // Conflict: one repair attempt only.
       execWarn("integrate", "cherry-pick conflict", {
         task: compositeTaskId,
         child: child.taskId,
-        files: outcome.conflictFiles
+        files: outcome.conflictFiles,
+        output: outcome.output
       });
       this.traceStore.append({
         type: "cherry_pick_conflict",
@@ -228,6 +232,8 @@ export class IntegrationAgent {
           task: compositeTaskId,
           child: child.taskId,
           repairStatus: repair.result.status,
+          exitCode: repair.result.executorExitCode,
+          timedOut: repair.result.executorTimedOut,
           stderrTail: repair.result.stderrTail
         });
         return this.finalize(params, "executor_repair_failed", {
@@ -262,9 +268,13 @@ export class IntegrationAgent {
 
     const integrationCommitSha = await this.git.head(worktree.path);
     const status: IntegrationStatus = anyRepairSucceeded ? "executor_repair_success" : "success";
-    console.log(
-      `[IntegrationAgent] Complete composite=${compositeTaskId} status=${status} integrationCommit=${integrationCommitSha} repairAttempted=${repairAttempted} preMergeFindings=${preMergeFindings.length}`
-    );
+    execLog("integrate", "integration complete", {
+      task: compositeTaskId,
+      status,
+      integrationCommit: integrationCommitSha,
+      repairAttempted,
+      preMergeFindings: preMergeFindings.length
+    });
     return this.finalize(params, status, {
       repairAttempted,
       repairResult,
@@ -284,9 +294,14 @@ export class IntegrationAgent {
     await this.git.cherryPickAbort(worktree.path);
     const selection = resolveRepairSelection(params.repair);
     const usageSource = usageSourceForSelection(selection);
-    console.log(
-      `[IntegrationAgent] Repair start composite=${params.compositeTaskId} child=${child.taskId} executor=${selection.executorId} model=${selection.model} files=${formatIdList(conflict.conflictFiles)} findings=${preMergeFindings.length}`
-    );
+    execLog("integrate", "repair executor start", {
+      task: params.compositeTaskId,
+      child: child.taskId,
+      executor: selection.executorId,
+      model: selection.model,
+      files: conflict.conflictFiles,
+      findings: preMergeFindings.length
+    });
 
     this.traceStore.append({
       type: "executor_repair_started",
@@ -324,9 +339,6 @@ export class IntegrationAgent {
     const outcomeWithUsage = { ...executorOutcome, usageSource };
 
     if (executorOutcome.timedOut || executorOutcome.exitCode !== 0) {
-      console.error(
-        `[IntegrationAgent] Repair executor failed composite=${params.compositeTaskId} child=${child.taskId} exitCode=${executorOutcome.exitCode} timedOut=${executorOutcome.timedOut} stderr=${tailForLog(executorOutcome.stderr)}`
-      );
       return {
         ok: false,
         result: this.buildRepairResult(child.taskId, "executor_error", baseHead, baseHead, outcomeWithUsage)
@@ -336,9 +348,11 @@ export class IntegrationAgent {
     await this.git.addAll(worktree.path);
     const changedFiles = await this.git.diffCachedNameOnly(worktree.path);
     const diff = await this.git.diffCached(worktree.path);
-    console.log(
-      `[IntegrationAgent] Repair diff composite=${params.compositeTaskId} child=${child.taskId} changedFiles=${formatIdList(changedFiles)}`
-    );
+    execLog("integrate", "repair produced diff", {
+      task: params.compositeTaskId,
+      child: child.taskId,
+      changedFiles
+    });
 
     const scopeCheck = this.scopeChecker.check({
       changedFiles,
@@ -346,9 +360,11 @@ export class IntegrationAgent {
       forbiddenPaths: params.forbiddenPaths
     });
     if (!scopeCheck.passed) {
-      console.warn(
-        `[IntegrationAgent] Repair scope failed composite=${params.compositeTaskId} child=${child.taskId} violations=${formatIdList(scopeCheck.violations)}`
-      );
+      execWarn("integrate", "repair scope violation", {
+        task: params.compositeTaskId,
+        child: child.taskId,
+        violations: scopeCheck.violations
+      });
       return {
         ok: false,
         result: this.buildRepairResult(
@@ -366,9 +382,11 @@ export class IntegrationAgent {
       cwd: worktree.path,
       message: `mh-integrate: ${params.compositeTaskId} <- ${child.taskId}`
     });
-    console.log(
-      `[IntegrationAgent] Repair commit composite=${params.compositeTaskId} child=${child.taskId} commit=${commitSha}`
-    );
+    execLog("integrate", "repair committed", {
+      task: params.compositeTaskId,
+      child: child.taskId,
+      commit: commitSha
+    });
 
     return {
       ok: true,
@@ -394,17 +412,23 @@ export class IntegrationAgent {
       taskId: params.compositeTaskId,
       payload: { scope: "parent", commandCount: commands.length }
     });
-    console.log(
-      `[IntegrationAgent] Parent validation start composite=${params.compositeTaskId} commandCount=${commands.length}`
-    );
+    execLog("integrate", "parent validation start", {
+      task: params.compositeTaskId,
+      commands: commands.length
+    });
     const result = await this.validationRunner.run(commands, {
       worktreePath: params.worktree.path,
       repoRoot: this.repoRoot
     });
-    const level = result.passed ? "log" : "warn";
-    console[level](
-      `[IntegrationAgent] Parent validation complete composite=${params.compositeTaskId} passed=${result.passed} exitCode=${result.exitCode} output=${tailForLog(result.output)}`
-    );
+    // A failing parent validation is logged by the caller as the integration
+    // outcome ("integration failed: parent validation failed"); only the passing
+    // case needs its own line here.
+    if (result.passed) {
+      execLog("integrate", "parent validation passed", {
+        task: params.compositeTaskId,
+        exitCode: result.exitCode
+      });
+    }
     return result;
   }
 
@@ -593,16 +617,4 @@ function requireExecutor(executor: AgentExecutor | undefined): AgentExecutor {
 
 function resolveRepairSelection(repair: IntegrationRepairConfig): ExecutorSelection {
   return repair.selection ?? resolveLegacyModelSelection(repair.model);
-}
-
-function formatIdList(values: readonly string[]): string {
-  return values.length === 0 ? "(none)" : values.join(",");
-}
-
-function tailForLog(value: string | undefined): string {
-  if (value === undefined || value.length === 0) {
-    return "(empty)";
-  }
-  const normalized = value.replace(/\s+/g, " ").trim();
-  return normalized.length > 500 ? normalized.slice(-500) : normalized;
 }

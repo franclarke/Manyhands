@@ -101,7 +101,8 @@ export class GeminiCliExecutor implements AgentExecutor {
       signal: options.signal,
       spawnFn: this.spawnFn,
       readInstructions: this.readInstructions,
-      instructionFilePath: options.instructionFilePath
+      instructionFilePath: options.instructionFilePath,
+      logScope: "gemini"
     });
   }
 }

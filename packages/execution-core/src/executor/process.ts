@@ -1,5 +1,7 @@
 import type { ChildProcess, SpawnOptions } from "node:child_process";
+import { basename } from "node:path";
 
+import { execError, execLog, execWarn } from "../logging/log";
 import type { ExecutorRunOutcome } from "./types";
 
 export type SpawnFn = (
@@ -42,6 +44,14 @@ export interface SpawnExecutorParams {
   spawnFn: SpawnFn;
   readInstructions: (filePath: string) => Promise<string>;
   instructionFilePath: string;
+  /**
+   * When set, the driver emits structured spawn-lifecycle logs under this scope
+   * ("spawning agent", "agent timed out", "spawn failed", "agent exited"). This is
+   * high-value for diagnosing "the executor never ran" failures (ENOENT, missing
+   * binary). Left undefined the driver stays silent. The worktree dir is named
+   * after the taskId, so its basename correlates every line back to the task.
+   */
+  logScope?: string | undefined;
 }
 
 /**
@@ -54,9 +64,10 @@ export interface SpawnExecutorParams {
  * (D5) — these fields are diagnostics plus the exit signal.
  */
 export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<ExecutorRunOutcome> {
-  const { spawnFn, binaryPath, args, cwd, env, useShell, timeoutMs, signal, readInstructions, instructionFilePath } =
+  const { spawnFn, binaryPath, args, cwd, env, useShell, timeoutMs, signal, readInstructions, instructionFilePath, logScope } =
     params;
   const start = Date.now();
+  const task = basename(cwd);
 
   return new Promise<ExecutorRunOutcome>((resolve) => {
     if (signal?.aborted === true) {
@@ -68,6 +79,17 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
         durationMs: 0
       });
       return;
+    }
+
+    if (logScope !== undefined) {
+      execLog(logScope, "spawning agent", {
+        task,
+        binary: binaryPath,
+        args,
+        timeoutMs,
+        shell: useShell,
+        cwd
+      });
     }
 
     const child = spawnFn(binaryPath, args, {
@@ -103,6 +125,14 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
     };
 
     const timer = setTimeout(() => {
+      if (logScope !== undefined) {
+        execWarn(logScope, "agent timed out — killing process tree", {
+          task,
+          timeoutMs,
+          durationMs: Date.now() - start,
+          stderrTail: stderr
+        });
+      }
       killProcessTree(child, spawnFn);
       finish({
         exitCode: TIMEOUT_EXIT_CODE,
@@ -123,6 +153,17 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
     });
 
     child.on("error", (error: Error) => {
+      // Most common real failure: binary missing / not on PATH (ENOENT). This is
+      // exactly the "executor never ran" symptom — surface it loudly.
+      if (logScope !== undefined && !settled) {
+        execError(logScope, "spawn failed — agent never started", {
+          task,
+          binary: binaryPath,
+          code: (error as NodeJS.ErrnoException).code,
+          message: error.message,
+          hint: "binary not found — check it is on PATH / the executor's *_BIN env var"
+        });
+      }
       finish({
         exitCode: SPAWN_FAILURE_EXIT_CODE,
         stdout,
@@ -133,6 +174,21 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
     });
 
     child.on("close", (code) => {
+      // Only log when this close is what settles the run — after a timeout/abort
+      // the process still emits close, but that outcome is already decided.
+      if (logScope !== undefined && !settled) {
+        const durationMs = Date.now() - start;
+        if (code === 0) {
+          execLog(logScope, "agent exited cleanly", { task, exitCode: 0, durationMs });
+        } else {
+          execWarn(logScope, "agent exited non-zero", {
+            task,
+            exitCode: code ?? SPAWN_FAILURE_EXIT_CODE,
+            durationMs,
+            stderrTail: stderr
+          });
+        }
+      }
       finish({
         exitCode: code ?? SPAWN_FAILURE_EXIT_CODE,
         stdout,
@@ -151,6 +207,13 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
         child.stdin?.end(prompt);
       },
       (error: Error) => {
+        if (logScope !== undefined && !settled) {
+          execError(logScope, "failed to read instruction file", {
+            task,
+            path: instructionFilePath,
+            message: error.message
+          });
+        }
         killProcessTree(child, spawnFn);
         finish({
           exitCode: SPAWN_FAILURE_EXIT_CODE,
