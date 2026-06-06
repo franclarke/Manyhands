@@ -21,11 +21,13 @@ import { GOLDEN_FIXTURES, type GoldenFixtureName } from "@/lib/run-model/fixture
 import { selectWorkspaceView } from "@/lib/run-model/workspace-view";
 import { buildDecisionChannelView, findDecisionResolutionEvent } from "@/lib/run-model/decision-channel-view";
 import { buildFocusView, formatFocusTarget, parseFocusTarget, type FocusTarget } from "@/lib/run-model/focus-view";
+import { buildTimelineView } from "@/lib/run-model/timeline-view";
 import { useFixturePlayback } from "./use-fixture-playback";
 import { RunFrame } from "./run-frame";
 import { DecisionChannel } from "./decision-channel";
 import { WorkspaceSurface } from "./workspace-surface";
 import { FocusPanel } from "./focus-panel";
+import { Timeline } from "./timeline";
 import { ProtoDebugPanel } from "./proto-debug-panel";
 
 export function ProtoRunView({
@@ -80,6 +82,8 @@ export function ProtoRunView({
   // if the focused object disappears or is not-yet-present it degrades to a safe
   // `missing` view rather than vanishing or crashing.
   const focusView = useMemo(() => (focus !== null ? buildFocusView(playback.model, focus) : null), [playback.model, focus]);
+  // The audit trail is the projection of the raw log applied so far (secondary lens).
+  const timeline = useMemo(() => buildTimelineView(fixture.events.slice(0, playback.index)), [fixture, playback.index]);
   const focusDecision = useCallback((id: string) => setFocus({ kind: "decision", id }), []);
   const clearFocus = useCallback(() => setFocus(null), []);
 
@@ -119,6 +123,8 @@ export function ProtoRunView({
         />
 
         <WorkspaceSurface view={view} selectedTarget={focus} onFocus={setFocus} />
+
+        <Timeline view={timeline} focusedNodeId={focus?.kind === "node" ? focus.id : null} />
 
         <ProtoDebugPanel debug={view.debug} />
       </div>

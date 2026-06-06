@@ -75,7 +75,12 @@ Reemplaza el roadmap lineal PR-N2..PR-N9. **Principio:** una corrida Ultracode (
 - **Tests:** `tests/run-model-disposition.test.ts` (10). **Verificación:** `pnpm web:typecheck` ✅ · `pnpm test` **793 passing + 3 skipped** ✅.
 - **No tocado (frontera dura respetada):** emisión backend nativa, run real, endpoints, rewire, `nodeStatusOverrides`. La reconciliación ya estaba derivada (conflictos en `workspace-view`); no se inventaron eventos de composer-repair (necesitarían backend).
 
-**Próximo:** **U-B** (Inspector & Audit depth) — carril autónomo; luego **G-1/G-2** (gated, run real).
+**U-B ✅ ejecutado (2026-06-06)** — Inspector & Audit depth, fixture-first:
+- **Timeline / audit-trail:** `timeline-view.ts` → `buildTimelineView(events, {nodeId?})` proyecta el **event log crudo** (no el `RunModel`) en una traza cronológica tipada (categoría payload-free + título/detalle/tono/nodeId por evento; eventos desconocidos igual aparecen = audit forward-compat; incluye planning health de PR-N1 y métricas de U-A). Componente `timeline.tsx` como **lente secundario** (colapsable) en `proto-run-view`, con highlight/filtrado del nodo en foco (per-node audit). Sirve también para el run real vía el adapter (mismo `RunEvent[]`).
+- **Inspector depth:** el foco de nodo ya era profundo (scope + refs diff/log `available:false` + planning + vital); U-B agrega la **historia por nodo** vía el timeline filtrado. El contrato/validación pleno sobre run real depende de endpoints `*Ref` → **gated (G-1/G-2)**, fuera del carril autónomo.
+- **Tests:** `tests/run-model-timeline.test.ts` (10). **Verificación:** `pnpm web:typecheck` ✅ · `pnpm test` **803 passing + 3 skipped** ✅.
+
+**Próximo (todo pendiente → handoff a Codex 5.5):** **G-1** (rewire gated), **G-2** (emisión nativa + rename legacy), doc-drift, y los cierres de inspector real / composer repair que dependen de backend. Ver `docs/design/HANDOFF-codex.md`.
 
 ---
 
