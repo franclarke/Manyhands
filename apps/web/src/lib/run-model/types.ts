@@ -162,6 +162,38 @@ export interface Node {
    * focus view-model as on-demand depth — never used to decide a node's display.
    */
   changedFiles?: string[];
+  /**
+   * Latest planning (graph-generation) telemetry for this node, from `plan.node.status`.
+   * An ORTHOGONAL axis (like `freshness`): it records HOW the planner arrived at the
+   * node (clean / retried / fell back / failed), NOT the node's execution lifecycle.
+   * It must NEVER drive `execution`/`display` (a `fallback` node is still a normal
+   * proposed leaf to execute) and a planning retry is autonomous — never human
+   * attention. Recorded data; undefined when the planner produced the node cleanly
+   * on the first attempt (the common case). See `selectPlanningHealth` (PR 05).
+   */
+  planning?: NodePlanningStatus;
+}
+
+// ── Planning health (graph-generation telemetry — orthogonal to execution) ──────
+
+/**
+ * Lifecycle of a single recursive planning step, mirroring the engine's
+ * `RecursiveStepPlanningState` (`packages/decomposer`). `retrying`/`failed`/
+ * `fallback` are the CONCERNS the agent-first model surfaces; `generating`
+ * (in-flight) and `generated` (planned cleanly, possibly after a recovered retry)
+ * are normal and read as clean by `selectPlanningHealth`.
+ */
+export type PlanningState = "generating" | "generated" | "retrying" | "failed" | "fallback";
+
+export interface NodePlanningStatus {
+  state: PlanningState;
+  /** 1-based attempt index when the state was recorded. */
+  attempt?: number;
+  maxAttempts?: number;
+  durationMs?: number;
+  /** Classified failure kind from `GraphGenerationErrorDetails` (e.g. `missing_json`). */
+  errorKind?: string;
+  errorMessage?: string;
 }
 
 // ── Seam ───────────────────────────────────────────────────────────────────
@@ -335,6 +367,20 @@ export type RunPhase =
 /** Overall run health (derived by `selectHealth`). */
 export type RunHealth = "failing" | "attention" | "working" | "settled";
 
+/**
+ * Derived summary of graph-generation robustness (by `selectPlanningHealth`).
+ * Reports which nodes the planner had to retry / fall back / failed to plan.
+ * `clean` means no node carries a non-`generating` planning concern. This is a
+ * diagnostic / audit axis — it never gates the run and never enters the decision
+ * channel (planning retries/repair are autonomous, not human attention).
+ */
+export interface PlanningHealth {
+  retrying: NodeId[];
+  fallback: NodeId[];
+  failed: NodeId[];
+  clean: boolean;
+}
+
 /** The single conceptual state the UI paints a node with (derived). */
 export type NodeDisplay =
   | "idle"
@@ -398,6 +444,15 @@ export interface PlanNodeProposedPayload {
   title: string;
   goal: string;
   depth: number;
+}
+export interface PlanNodeStatusPayload {
+  nodeId: NodeId;
+  state: PlanningState;
+  attempt?: number;
+  maxAttempts?: number;
+  durationMs?: number;
+  errorKind?: string;
+  errorMessage?: string;
 }
 export interface PlanSeamProposedPayload {
   seamId: SeamId;
@@ -566,6 +621,7 @@ export interface RunEventPayloads {
   // Proposal
   "plan.started": EmptyPayload;
   "plan.node.proposed": PlanNodeProposedPayload;
+  "plan.node.status": PlanNodeStatusPayload;
   "plan.seam.proposed": PlanSeamProposedPayload;
   "plan.ready": PlanReadyPayload;
   // Foundation
@@ -613,6 +669,7 @@ export const RUN_EVENT_TYPES = [
   "run.context.resolved",
   "plan.started",
   "plan.node.proposed",
+  "plan.node.status",
   "plan.seam.proposed",
   "plan.ready",
   "grounding.started",

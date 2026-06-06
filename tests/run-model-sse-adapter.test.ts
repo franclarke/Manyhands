@@ -107,6 +107,47 @@ describe("sse-adapter — per-kind mapping", () => {
   });
 });
 
+describe("sse-adapter — planning.node.status fidelity (PR-N1)", () => {
+  const status = (state: string, extra: Record<string, unknown> = {}): StreamEvent =>
+    ({ kind: "planning.node.status", at: AT, nodeId: "n", title: "N", goal: "g", depth: 1, state, ...extra } as StreamEvent);
+
+  it("12. retrying → plan.node.status carrying attempt/error telemetry (was collapsed by PR11)", () => {
+    const mapped = adaptStreamEvent(status("retrying", { attempt: 1, maxAttempts: 3, durationMs: 1200, errorKind: "missing_json", errorMessage: "No JSON object found" }));
+    expect(mapped).toHaveLength(1);
+    expect(mapped[0]!.type).toBe("plan.node.status");
+    expect(mapped[0]!.payload).toMatchObject({
+      nodeId: "n",
+      state: "retrying",
+      attempt: 1,
+      maxAttempts: 3,
+      durationMs: 1200,
+      errorKind: "missing_json",
+      errorMessage: "No JSON object found"
+    });
+  });
+
+  it("13. failed and fallback map 1:1 with their state", () => {
+    expect(adaptStreamEvent(status("failed", { errorKind: "provider_timeout" }))[0]!.payload).toMatchObject({ state: "failed", errorKind: "provider_timeout" });
+    expect(adaptStreamEvent(status("fallback", { attempt: 3 }))[0]!.payload).toMatchObject({ state: "fallback", attempt: 3 });
+  });
+
+  it("14. generated / complete normalize to generated (clears a prior retry)", () => {
+    expect(adaptStreamEvent(status("generated"))[0]!.payload).toMatchObject({ state: "generated" });
+    expect(adaptStreamEvent(status("complete"))[0]!.payload).toMatchObject({ state: "generated" });
+  });
+
+  it("15. transient lifecycle states (generating/active/pending) are dropped as noise", () => {
+    for (const s of ["generating", "active", "pending"]) {
+      expect(adaptStreamEvent(status(s))).toEqual([]);
+    }
+  });
+
+  it("16. planning.node.started still maps to plan.node.proposed (no regression)", () => {
+    const mapped = adaptStreamEvent({ kind: "planning.node.started", at: AT, nodeId: "n", parentId: "root", title: "N", goal: "g", depth: 1 });
+    expect(mapped[0]!.type).toBe("plan.node.proposed");
+  });
+});
+
 describe("sse-adapter — whole-history mapping", () => {
   it("7. assigns strictly increasing seq over the output and drops noise", () => {
     const envelope = adaptStreamHistory(HISTORY, "run-x");
