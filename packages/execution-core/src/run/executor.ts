@@ -572,7 +572,7 @@ export class RunExecutor {
     });
 
     const contract = node.contract;
-    return this.resultRecorder.record({
+    const recorded = await this.resultRecorder.record({
       worktree,
       executorOutcome,
       unexpectedCommitPolicy: config.unexpectedCommitPolicy,
@@ -581,6 +581,53 @@ export class RunExecutor {
       ...(contract?.forbiddenPaths ? { forbiddenPaths: contract.forbiddenPaths } : {}),
       usageSource
     });
+    return this.runLeafValidation({ node, worktree, result: recorded, runId });
+  }
+
+  private async runLeafValidation(args: {
+    node: TaskNode;
+    worktree: WorktreeRecord;
+    result: AgentExecutionResult;
+    runId: string;
+  }): Promise<AgentExecutionResult> {
+    const commands = args.node.contract?.leafValidationCommands ?? [];
+    if (args.result.status !== "success" || commands.length === 0) {
+      return args.result;
+    }
+
+    this.traceStore.append({
+      type: "validation_started",
+      actor: "system",
+      taskId: args.node.id,
+      payload: { scope: "leaf", commandCount: commands.length }
+    });
+    const validationResult = await this.validationRunner.run(commands, {
+      worktreePath: args.worktree.path,
+      repoRoot: this.repoRoot
+    });
+    this.traceStore.append({
+      type: "validation_completed",
+      actor: "system",
+      taskId: args.node.id,
+      payload: {
+        scope: "leaf",
+        passed: validationResult.passed,
+        exitCode: validationResult.exitCode,
+        commandCount: commands.length
+      }
+    });
+
+    if (validationResult.passed) {
+      return { ...args.result, validationResult };
+    }
+
+    execWarn("leaf", "leaf validation failed", {
+      task: args.node.id,
+      runId: args.runId,
+      exitCode: validationResult.exitCode,
+      output: validationResult.output
+    });
+    return { ...args.result, status: "validation_failed", validationResult };
   }
 
   private async integrateBottomUp(args: {

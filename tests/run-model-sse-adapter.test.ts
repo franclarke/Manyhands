@@ -14,7 +14,7 @@ import { selectRenderableNodeState } from "@/lib/run-model/selectors";
 import { selectWorkspaceView } from "@/lib/run-model/workspace-view";
 import { buildDecisionChannelView } from "@/lib/run-model/decision-channel-view";
 import { buildFocusView } from "@/lib/run-model/focus-view";
-import type { RunEvent as StreamEvent } from "@/lib/server/runs/events";
+import type { StreamEvent } from "@/lib/server/runs/events";
 import type { RunConfig, RunModel } from "@/lib/run-model/types";
 
 const AT = "2026-06-06T00:00:00.000Z";
@@ -90,9 +90,24 @@ describe("sse-adapter — per-kind mapping", () => {
     expect(adaptStreamEvent({ kind: "agent.run.completed", at: AT, taskId: "n", success: false })[0]!.type).toBe("node.execution.failed");
   });
 
-  it("6. noise events (status/title/heartbeat/replay/cli/node.added/edge.added/risk.added/validation) are dropped", () => {
+  it("6. status.changed maps approval lifecycle into decisions/outcome", () => {
+    expect(adaptStreamEvent({ kind: "status.changed", at: AT, status: "needs_review" })[0]!.payload).toMatchObject({
+      decisionId: "approve_plan",
+      kind: "approve_plan"
+    });
+    expect(adaptStreamEvent({ kind: "status.changed", at: AT, status: "approved" })[0]!.payload).toMatchObject({
+      decisionId: "approve_plan",
+      choice: { action: "approve" }
+    });
+    expect(adaptStreamEvent({ kind: "status.changed", at: AT, status: "completed" }).map((event) => event.type)).toEqual([
+      "decision.resolved",
+      "run.completed"
+    ]);
+  });
+
+  it("6b. noise events (generating status/title/heartbeat/replay/cli/node.added/edge.added/risk.added/validation) are dropped", () => {
     const noise: StreamEvent[] = [
-      { kind: "status.changed", at: AT, status: "running" },
+      { kind: "status.changed", at: AT, status: "generating" },
       { kind: "title.updated", at: AT, title: "t", summary: "s" },
       { kind: "heartbeat", at: AT },
       { kind: "replay.start", at: AT },

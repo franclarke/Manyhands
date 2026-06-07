@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import {
   RunNotFoundError,
-  getRunEventHistory,
+  ensureRunModelEventLogForRun,
   getRunRepository,
-  serializeForSse,
-  subscribeRunEvents,
-  type StreamEvent
+  serializeRunModelForSse,
+  subscribeRunModelEvents
 } from "@/lib/server/runs";
+import type { RunEvent } from "@/lib/run-model/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,10 +17,14 @@ interface RouteContext {
 
 const HEARTBEAT_MS = 15_000;
 
-export async function GET(_request: Request, context: RouteContext): Promise<Response> {
+export async function GET(request: Request, context: RouteContext): Promise<Response> {
   const { id } = await context.params;
+  const after = readAfter(request.url);
+  let history: RunEvent[];
+
   try {
-    await getRunRepository().get(id);
+    const run = await getRunRepository().get(id);
+    history = await ensureRunModelEventLogForRun(run);
   } catch (error) {
     if (error instanceof RunNotFoundError) {
       return NextResponse.json({ error: error.message }, { status: 404 });
@@ -37,25 +41,23 @@ export async function GET(_request: Request, context: RouteContext): Promise<Res
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
-      function write(event: StreamEvent): void {
+      function write(event: RunEvent): void {
+        if (event.seq <= after) return;
         try {
-          controller.enqueue(encoder.encode(serializeForSse(event)));
+          controller.enqueue(encoder.encode(serializeRunModelForSse(event)));
         } catch {
           // controller closed; ignore
         }
       }
 
-      // Replay boundary + historical events from the in-process bus so reconnects
-      // (and late subscribers) catch up on the live progressive state.
-      write({ kind: "replay.start", at: new Date().toISOString() });
-      for (const historical of getRunEventHistory(id)) {
-        write(historical);
-      }
-      write({ kind: "replay.end", at: new Date().toISOString() });
-
-      unsubscribe = subscribeRunEvents(id, (event) => write(event));
+      for (const event of history) write(event);
+      unsubscribe = subscribeRunModelEvents(id, write);
       heartbeat = setInterval(() => {
-        write({ kind: "heartbeat", at: new Date().toISOString() });
+        try {
+          controller.enqueue(encoder.encode(`: heartbeat ${new Date().toISOString()}\n\n`));
+        } catch {
+          // controller closed; ignore
+        }
       }, HEARTBEAT_MS);
     },
     cancel() {
@@ -72,4 +74,11 @@ export async function GET(_request: Request, context: RouteContext): Promise<Res
       "x-accel-buffering": "no"
     }
   });
+}
+
+function readAfter(url: string): number {
+  const raw = new URL(url).searchParams.get("after");
+  if (raw === null) return 0;
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }

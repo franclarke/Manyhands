@@ -43,7 +43,7 @@
  * monotonic for the reducer (`seq <= cursor` idempotency). `at` is carried from the
  * source event; `actor` is `agent` for agent.* and `system` otherwise.
  */
-import type { RunEvent as StreamEvent } from "@/lib/server/runs/events";
+import type { StreamEvent } from "@/lib/server/runs/events";
 import type {
   Actor,
   NodeRole,
@@ -100,6 +100,37 @@ function toPlanningState(legacy: string): PlanningState | null {
  */
 export function adaptStreamEvent(event: StreamEvent): MappedEvent[] {
   switch (event.kind) {
+    case "status.changed": {
+      const out: MappedEvent[] = [];
+      if (event.status === "needs_review") {
+        out.push(
+          mk("system", event.at, "decision.raised", {
+            decisionId: "approve_plan",
+            kind: "approve_plan",
+            blocking: true,
+            context: { nodeIds: [] }
+          })
+        );
+      }
+      if (event.status === "approved" || event.status === "running" || event.status === "completed") {
+        out.push(
+          mk("human", event.at, "decision.resolved", {
+            decisionId: "approve_plan",
+            choice: { action: "approve" },
+            actor: "human"
+          })
+        );
+      }
+      if (event.status === "completed" || event.status === "failed" || event.status === "interrupted") {
+        out.push(
+          mk("system", event.at, "run.completed", {
+            status: event.status === "completed" ? "success" : event.status
+          })
+        );
+      }
+      return out;
+    }
+
     case "planning.node.started": {
       return [
         mk("system", event.at, "plan.node.proposed", {
@@ -201,7 +232,6 @@ export function adaptStreamEvent(event: StreamEvent): MappedEvent[] {
     // Dropped (derived phase / run identity / no model data / redundant). The reducer
     // ignores unknowns too, but dropping keeps the bridged envelope clean.
     case "validation.completed":
-    case "status.changed":
     case "title.updated":
     case "node.added":
     case "edge.added":

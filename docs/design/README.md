@@ -1,5 +1,13 @@
 # Rediseño agent-first de ManyHands — documentación de diseño
 
+> **Actualización 2026-06-07.** Agent-first ya es el camino principal de
+> `/runs/[runId]`; el legacy queda como rollback `?model=legacy`. El backend web
+> tiene stream nativo `GET /api/runs/[id]/run-events`, decision facade
+> `POST /api/runs/[id]/decisions/[decisionId]`, artifact resolver
+> `GET /api/runs/[id]/artifacts?ref=...`, y un log JSONL append-only de
+> `RunEvent` por run. Ver estado real y pendientes en
+> [`implementation-status.md`](implementation-status.md#0e-cierre-agent-first-v1-ejecutado-2026-06-07).
+
 > Estado: **baseline de diseño** (2026-06-05). Estos documentos son la fuente de verdad para reconstruir ManyHands hacia un sistema agent-first. El plan de ejecución por PRs ya está escrito: ver [`implementation-plan.md`](implementation-plan.md).
 >
 > **Implementación en curso (fixture-first):** PR01–PR09 ✅ + **PR-U1 ✅** (foco polimórfico + evidencia + hardening). El prototipo agent-first vive en `/runs/proto/<fixture>` — la demo fixture-first más completa, ahora con foco on-demand (node/seam/conflict/decision/evidence) y deep-link `?focus=<kind>:<id>`, sin backend. Backend/SSE real (PR11+) todavía pendiente. Estado real, matriz PR01–14 y próximo paso: ver [`implementation-status.md`](implementation-status.md).

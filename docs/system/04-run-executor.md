@@ -2,6 +2,14 @@
 
 **Archivos fuente:** `packages/execution-core/src/run/executor.ts`
 
+> **Actualizacion 2026-06-06.** Este capitulo describe el rol correcto del
+> `RunExecutor`, pero algunos detalles operativos cambiaron:
+> `ExecutionConfig.maxParallel` ahora default = **6** (D9), no 3; la ejecucion
+> usa Gemini CLI por el seam `AgentExecutor` (D4); y la web agent-first ya no
+> debe inferir estado de nodo desde la UI legacy, sino desde eventos -> reducer ->
+> selectores. Desde 2026-06-07, el runner tambien publica `RunEvent` nativos para
+> `/api/runs/[id]/run-events`.
+
 ---
 
 ## Qué es
@@ -48,11 +56,16 @@ Dentro del batch, cada hoja sigue estos pasos secuenciales:
 WorktreeManager.create()
   → FileSystemContextPacker.pack()
   → GeminiCliExecutor.execute()
-  → ScopeChecker.check()              ← si falla: status = scope_violation
-  → ValidationRunner.run()            ← si falla: status = validation_failed
+  → ScopeChecker.check()              ← forbidden: status = scope_violation
   → ResultRecorder.commit()           ← si diff vacío: status = empty_diff
+  → ValidationRunner.run()            ← si falla: status = validation_failed
   → WorktreeManager.clean()
 ```
+
+`ResultRecorder` sigue siendo la frontera D5/D6: el diff viene de git y el
+commit lo hace el orquestador. La validación de hoja corre después de registrar
+el diff/commit de la hoja; si falla, la hoja queda `validation_failed` y no
+participa de integración bottom-up.
 
 Si cualquier paso falla, el estado de la hoja refleja el motivo, pero el batch puede continuar con las otras hojas en paralelo (el error de una hoja no aborta el batch, a menos que sea un error fatal de infraestructura).
 

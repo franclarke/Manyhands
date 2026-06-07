@@ -84,13 +84,13 @@ describe("focus-view — node focus", () => {
     expect(ui.consumes.map((s) => s.id)).toContain("seam-counter");
   });
 
-  it("2b. node focus exposes diff/log refs as placeholders (no real artifact in v1)", () => {
+  it("2b. node focus exposes resolvable diff/log artifact refs", () => {
     const view = buildFocusView(reduceFixture(goldenHappyPath), { kind: "node", id: "n-store" });
     if (view.kind !== "node") throw new Error("expected node focus");
     expect(view.refs.length).toBeGreaterThanOrEqual(2);
     for (const ref of view.refs) {
-      expect(ref.available).toBe(false);
-      expect(ref.ref).toMatch(/:\/\//);
+      expect(ref.available).toBe(true);
+      expect(ref.ref).toMatch(/:\/\/runs\/.+\/node\/n-store/);
     }
   });
 });

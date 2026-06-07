@@ -2,6 +2,20 @@
 
 **Archivos fuente:** `packages/execution-core/src/integration/agent.ts`
 
+> **Actualizacion 2026-06-06.** El Composer ya es conflict-aware: el runner le
+> pasa `PredictedConflictHint[]` derivados de la vista de conflictos plan-time, y
+> `IntegrationResult` persiste `preMergeFindings`, `conflictDetails`,
+> `repairAttempted`, `repairResult` y `parentValidation`. La UI agent-first puede
+> proyectar conflictos/integracion desde esos resultados persistidos, pero los
+> eventos nativos finos de repair (`integration.cherrypick`,
+> `conflict.repair.started`, etc.) siguen reservados hasta que el motor los emita.
+
+> **Actualizacion 2026-06-07.** El runner publica eventos nativos de alto nivel
+> para la sala agent-first: `integration.started`, `integration.validated`,
+> `integration.completed`, `conflict.detected` y `conflict.resolved` cuando esos
+> datos existen en `IntegrationResult` o `TraceEvent`. La telemetria fina del
+> repair semantico sigue pendiente de emision directa desde el motor.
+
 ---
 
 ## Qué es

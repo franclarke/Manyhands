@@ -1,5 +1,15 @@
 # HANDOFF — Finalizar el rediseño agent-first (para Codex 5.5)
 
+> **Actualización 2026-06-07.** G-1/G-2 ya no están pendientes como unidades
+> separadas: `/runs/[runId]` abre agent-first por defecto, `?model=legacy` es el
+> rollback, existe SSE nativo `/api/runs/[id]/run-events`, decision facade
+> `/api/runs/[id]/decisions/[decisionId]`, artifact resolver
+> `/api/runs/[id]/artifacts?ref=...`, log JSONL append-only y mapper
+> `TraceEvent -> RunEvent`. Lo que sigue pendiente es el frontier profundo:
+> `GroundingAgent` Gemini con walking skeleton/extractor TS-JS, verify-loop
+> multi-iteración, scheduler por seams/scopes derivados y re-run acotado de
+> amendments.
+
 > **Propósito.** Sos el agente que termina el rediseño agent-first de ManyHands. Este documento es **autocontenido**: con él (más el repo) podés implementar **todo lo que falta** sin contexto previo. Está escrito el 2026-06-06 tras cerrar PR-N1, U-A y U-B.
 >
 > **Cómo usarlo:** leé las secciones 0–4 una vez (reglas + estado + arquitectura), después tomá las unidades pendientes de la §5 **en orden** (`G-1 → G-2 → cierres backend → doc-drift`). Cada unidad trae objetivo, archivos, enfoque, gotchas, verificación, aceptación y rollback. No reimplementes lo ya hecho.
@@ -12,7 +22,8 @@
 
 1. **Decisiones D1–D10 cerradas** — ver [`CLAUDE.md`](../../CLAUDE.md) y [`docs/DECISIONS.md`](../DECISIONS.md). Las que más te tocan:
    - **D3:** si el LLM falla → el run **falla con error accionable**. Sin fallback silencioso.
-   - **D4:** **Gemini CLI** es el único executor de planning; ejecución/repair vía registry (ADR-0030, Claude Code CLI opt-in). No agregar executors ni cambiar el default.
+   - **D4:** **Gemini CLI** (`gemini`, headless, stdin) es el único executor de
+     planning, ejecución y repair. No agregar executors ni cambiar el default.
    - **D5:** `git diff HEAD` es la verdad, no el stdout del agente.
    - **D6:** el orquestador commitea; el agente nunca.
 2. **El modelo operativo está CONGELADO** — [`docs/design/run-operative-model.md`](run-operative-model.md) (refinamientos A–P). Podés **extenderlo de forma aditiva** (nuevos `type` de evento forward-compat, como hicimos con `plan.node.status` y `run.metrics.ready`), pero **no** cambiar las entidades/invariantes congelados.
@@ -70,6 +81,12 @@ RunEvent[] (fixtures o adapter sobre SSE legacy)
 ---
 
 ## 3. El roadmap que estás terminando (carriles)
+
+**Estado 2026-06-07:** el carril gated que conectaba el run real al modelo
+agent-first ya se ejecutó como v1. La lista histórica de abajo queda como
+registro de contexto, no como instrucciones pendientes. Para trabajo nuevo, usar
+[`implementation-status.md`](implementation-status.md#0e-cierre-agent-first-v1-ejecutado-2026-06-07)
+como fuente viva.
 
 Ver §0d de [`implementation-status.md`](implementation-status.md). Resumen:
 

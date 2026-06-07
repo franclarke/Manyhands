@@ -11,8 +11,11 @@ import {
   getRunRepository,
   parseRunPatches
 } from "@/lib/server/runs";
+import { buildRunModelSeed } from "@/lib/server/runs/run-model-projection";
+import { ensureRunModelEventLogForRun } from "@/lib/server/runs/run-model-event-log";
 import { getWorkspaceRepository } from "@/lib/server/workspaces";
 import { RunCanvasBinding } from "./_components/run-canvas-binding.client";
+import { RunModelView } from "./_components/run-model-view.client";
 import { RunHeader } from "./_components/run-header";
 
 export const runtime = "nodejs";
@@ -20,10 +23,12 @@ export const dynamic = "force-dynamic";
 
 interface RunPageProps {
   params: Promise<{ runId: string }>;
+  searchParams: Promise<{ model?: string }>;
 }
 
-export default async function RunPage({ params }: RunPageProps): Promise<React.ReactElement> {
+export default async function RunPage({ params, searchParams }: RunPageProps): Promise<React.ReactElement> {
   const { runId } = await params;
+  const { model: modelFlag } = await searchParams;
   let run;
   try {
     run = await getRunRepository().get(runId);
@@ -32,6 +37,17 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
       notFound();
     }
     throw error;
+  }
+
+  // Agent-first is the default run workspace. The legacy canvas remains available
+  // as a short-lived rollback via `?model=legacy`.
+  if (modelFlag !== "legacy") {
+    const initialEvents = await ensureRunModelEventLogForRun(run);
+    return (
+      <div className="mh-fullbleed">
+        <RunModelView seed={buildRunModelSeed(run)} initialEvents={initialEvents} />
+      </div>
+    );
   }
 
   const workspaces = await getWorkspaceRepository().list();

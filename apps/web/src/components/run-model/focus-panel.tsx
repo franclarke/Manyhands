@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Focus panel (PR-U1) — the on-demand deep inspector.
  *
@@ -6,11 +8,11 @@
  * state. It never receives the raw `RunModel`, never derives domain state, and
  * never pauses playback (the parent keeps playing while this is open).
  *
- * Artifacts (diff / log / diagnosis / narrative) are shown as REFERENCES only
- * ("Artefacto referenciado: <ref>"); there is no real viewer yet (PR14+). Cross
- * links (a produced seam, an associated decision, the approve_merge gate) call
- * `onFocus` so the human can navigate depth without leaving the control room.
+ * Artifacts (diff / log / diagnosis / narrative) resolve lazily through the
+ * run artifact endpoint. Cross links call `onFocus` so the human can navigate
+ * depth without leaving the control room.
  */
+import { useEffect, useState } from "react";
 import type {
   ConflictFocusView,
   DecisionFocusView,
@@ -456,10 +458,7 @@ function RefLine({ refItem }: { refItem: FocusRef }): React.ReactElement {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "minmax(110px, auto) 1fr", gap: "2px 12px", alignItems: "baseline" }}>
       <span style={labelStyle}>{refItem.label}</span>
-      <span style={monoValueStyle}>
-        {refItem.available ? "" : "Artefacto referenciado: "}
-        {refItem.ref}
-      </span>
+      <ArtifactViewer refItem={refItem} />
     </div>
   );
 }
@@ -473,6 +472,90 @@ function RefList({ refs }: { refs: FocusRef[] }): React.ReactElement | null {
       ))}
     </div>
   );
+}
+
+interface ArtifactPayload {
+  ref: string;
+  kind: string;
+  title: string;
+  content: string;
+  language?: string;
+}
+
+function ArtifactViewer({ refItem }: { refItem: FocusRef }): React.ReactElement {
+  const [payload, setPayload] = useState<ArtifactPayload | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const runId = runIdFromRef(refItem.ref);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPayload(null);
+    setError(null);
+    if (!refItem.available || runId === null) return;
+    void fetch(`/api/runs/${encodeURIComponent(runId)}/artifacts?ref=${encodeURIComponent(refItem.ref)}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error((await response.json().catch(() => ({})) as { error?: string }).error ?? response.statusText);
+        return response.json() as Promise<ArtifactPayload>;
+      })
+      .then((artifact) => {
+        if (!cancelled) setPayload(artifact);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refItem.available, refItem.ref, runId]);
+
+  if (!refItem.available || runId === null) {
+    return <span style={monoValueStyle}>Artefacto referenciado: {refItem.ref}</span>;
+  }
+
+  if (error !== null) {
+    return (
+      <span style={{ ...monoValueStyle, color: "var(--gated, #d0953a)" }}>
+        {refItem.ref} · {error}
+      </span>
+    );
+  }
+
+  if (payload === null) {
+    return <span style={monoValueStyle}>{refItem.ref} · cargando...</span>;
+  }
+
+  return (
+    <details style={{ gridColumn: "2 / 3" }}>
+      <summary style={{ ...monoValueStyle, cursor: "pointer" }}>{payload.title}</summary>
+      <pre
+        style={{
+          margin: "6px 0 0",
+          maxHeight: 260,
+          overflow: "auto",
+          padding: "8px 10px",
+          borderRadius: 6,
+          border: "1px solid var(--border, rgba(241,234,216,0.12))",
+          background: "rgba(0,0,0,0.22)",
+          color: "var(--text-2, #cfc7b4)",
+          fontFamily: "var(--font-mono, monospace)",
+          fontSize: 11,
+          whiteSpace: "pre-wrap"
+        }}
+      >
+        {payload.content}
+      </pre>
+    </details>
+  );
+}
+
+function runIdFromRef(ref: string): string | null {
+  try {
+    const url = new URL(ref);
+    const parts = [url.hostname, ...url.pathname.split("/").filter((part) => part.length > 0)];
+    return parts[0] === "runs" && parts[1] !== undefined ? parts[1] : null;
+  } catch {
+    return null;
+  }
 }
 
 function Note({ text, tone = "neutral" }: { text: string; tone?: "neutral" | "warn" | "success" }): React.ReactElement {

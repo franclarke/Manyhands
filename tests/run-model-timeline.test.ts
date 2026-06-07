@@ -10,7 +10,7 @@ import { buildTimelineView, timelineCategoryOf } from "@/lib/run-model/timeline-
 import { adaptStreamHistory } from "@/lib/run-model/sse-adapter";
 import { goldenHappyPath, goldenPlanningFallback } from "@/lib/run-model/fixtures";
 import type { RunEvent } from "@/lib/run-model/types";
-import type { RunEvent as StreamEvent } from "@/lib/server/runs/events";
+import type { StreamEvent } from "@/lib/server/runs/events";
 
 describe("timeline — category mapping", () => {
   it("1. maps types to stable, payload-free categories", () => {

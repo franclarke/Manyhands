@@ -55,6 +55,30 @@ function leafContract(allowed: string[], forbidden: string[] = [], changedFiles:
   });
 }
 
+function leafContractWithValidation(): AgentTaskContract {
+  return AgentTaskContractSchema.parse({
+    taskId: "leaf",
+    objective: "Implement the slice.",
+    context: { typeSignatures: [], referenceSnippets: [], conventions: [], upstreamArtifacts: [] },
+    allowed: { paths: ["src/**"] },
+    forbidden: { paths: [] },
+    acceptance: [{ kind: "custom", description: "Slice works." }],
+    expectedOutput: {
+      changedFiles: ["src/x.ts"],
+      producedSymbols: [],
+      consumedSymbols: [],
+      diffShapeHint: "n/a"
+    },
+    limits: { maxDurationMs: 60_000, maxCostUsd: 0 },
+    definitionOfDone: "Slice is complete and verified.",
+    executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] },
+    forbiddenPaths: [],
+    leafValidationCommands: [
+      { command: "pnpm", args: ["test", "--", "src/x.test.ts"], timeoutMs: 30_000, cwd: "worktree" }
+    ]
+  });
+}
+
 function graphWith(
   leafIds: string[],
   rootContract?: AgentTaskContract,
@@ -388,6 +412,56 @@ describe("RunExecutor", () => {
     expect(captured).toHaveLength(1);
     // The integrated tree lives in the root composite's integration worktree.
     expect(captured[0]?.worktreePath).toBe(leafWorktreePath("root"));
+  });
+
+  it("treats failed leaf validation as the leaf result, even after a valid diff", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/src/x.ts b/src/x.ts\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const captured: ValidationRunContext[] = [];
+    const validationRunner: ValidationRunner = {
+      run: async (_commands, ctx): Promise<ValidationRunResult> => {
+        captured.push(ctx);
+        return { passed: false, output: "unit test failed", exitCode: 1 };
+      }
+    };
+    const traceStore = new InMemoryTraceStore();
+    const executor = new RunExecutor({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore,
+      repoRoot: REPO_ROOT,
+      validationRunner,
+      writeInstructions: async () => {}
+    });
+
+    const result = await executor.run({
+      graph: graphWith(["a"], undefined, leafContractWithValidation()),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.leafResults[0]?.status).toBe("validation_failed");
+    expect(result.leafResults[0]?.validationResult).toMatchObject({
+      passed: false,
+      output: "unit test failed",
+      exitCode: 1
+    });
+    expect(captured).toHaveLength(1);
+    expect(captured[0]?.worktreePath).toBe(leafWorktreePath("a"));
+    expect(traceStore.findByType("validation_started")[0]?.payload).toMatchObject({
+      scope: "leaf",
+      commandCount: 1
+    });
+    expect(traceStore.findByType("validation_completed")[0]?.payload).toMatchObject({
+      scope: "leaf",
+      passed: false,
+      exitCode: 1,
+      commandCount: 1
+    });
   });
 
   it("keeps cleaning and preserves the result when a worktree clean fails (I8)", async () => {

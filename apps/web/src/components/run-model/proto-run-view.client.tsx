@@ -1,51 +1,27 @@
 "use client";
 
-/**
- * Proto run view (PR 06 → PR 08) — the orchestrator client component for the
- * fixture prototype. It is the ONLY place that wires the model together:
- *   runStore (via useFixturePlayback) → workspace/decision view-models → children.
- *
- * Architecture rules honoured:
- *  - Consumes the model exclusively through `runStore` + reducer + selectors
- *    (composed by `selectWorkspaceView` / `buildDecisionChannelView`).
- *  - Never mutates the `RunModel`; never stores derived state. The only local UI
- *    state is playback (in the hook) and the visual selection below.
- *  - Children paint from the view-models; none of them derive or read raw nodes,
- *    and none read `execution.kind` for visual state.
- *
- * Layout (PR 08): persistent frame · decision channel · phase-adaptive surface ·
- * playback controls · optional model-debug panel. The surface is the protagonist.
- */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GOLDEN_FIXTURES, type GoldenFixtureName } from "@/lib/run-model/fixtures";
-import { selectWorkspaceView } from "@/lib/run-model/workspace-view";
-import { buildDecisionChannelView, findDecisionResolutionEvent } from "@/lib/run-model/decision-channel-view";
-import { buildFocusView, formatFocusTarget, parseFocusTarget, type FocusTarget } from "@/lib/run-model/focus-view";
+import { EVIDENCE_FOCUS_TARGET, buildFocusView, formatFocusTarget, parseFocusTarget, type FocusTarget } from "@/lib/run-model/focus-view";
+import { selectMinimalWorkspaceView } from "@/lib/run-model/minimal-workspace-view";
 import { buildTimelineView } from "@/lib/run-model/timeline-view";
-import { useFixturePlayback } from "./use-fixture-playback";
-import { RunFrame } from "./run-frame";
-import { DecisionChannel } from "./decision-channel";
-import { WorkspaceSurface } from "./workspace-surface";
+import { MinimalRunGraphCanvas } from "./minimal-run-graph";
 import { FocusPanel } from "./focus-panel";
 import { Timeline } from "./timeline";
-import { ProtoDebugPanel } from "./proto-debug-panel";
+import { useFixturePlayback } from "./use-fixture-playback";
 
 export function ProtoRunView({
   fixtureName,
   initialFocus
 }: {
   fixtureName: GoldenFixtureName;
-  /** Deep-link seed parsed from `?focus=<kind>:<id>` by the route (may be invalid). */
   initialFocus?: string;
 }): React.ReactElement {
   const fixture = GOLDEN_FIXTURES[fixtureName];
   const playback = useFixturePlayback(fixture);
-  // Focus is purely LOCAL UI state — it never mutates the model and never pauses
-  // playback (that lives in the player hook). Seeded once from the deep-link.
   const [focus, setFocus] = useState<FocusTarget | null>(() => parseFocusTarget(initialFocus));
+  const [activityOpen, setActivityOpen] = useState(false);
 
-  // Deep-link: reflect the current focus in the URL without a router re-render
-  // (history.replaceState keeps playback running and avoids a Suspense boundary).
   useEffect(() => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
@@ -54,66 +30,48 @@ export function ProtoRunView({
     window.history.replaceState(window.history.state, "", url.toString());
   }, [focus]);
 
-  const lastEvent = playback.lastEvent;
-  const view = useMemo(
-    () =>
-      selectWorkspaceView(playback.model, {
-        fixtureName,
-        ...(lastEvent !== null ? { lastEvent: { type: lastEvent.type, seq: lastEvent.seq } } : {})
-      }),
-    [playback.model, fixtureName, lastEvent]
-  );
-
-  const channel = useMemo(() => buildDecisionChannelView(playback.model), [playback.model]);
-  // Resolvability is a fixture concern (is there a `decision.resolved` ahead?),
-  // computed with the pure helper — not derived inside the channel component.
-  const resolvableIds = useMemo(
-    () =>
-      new Set(
-        channel.items
-          .filter((it) => findDecisionResolutionEvent(fixture.events, playback.index, it.id) !== null)
-          .map((it) => it.id)
-      ),
-    [channel, fixture, playback.index]
-  );
-  const onResolve = useCallback((id: string) => void playback.resolveDecision(id), [playback.resolveDecision]);
-
-  // Focus is recomputed on every model change, so the panel tracks the live run:
-  // if the focused object disappears or is not-yet-present it degrades to a safe
-  // `missing` view rather than vanishing or crashing.
+  const view = useMemo(() => selectMinimalWorkspaceView(playback.model), [playback.model]);
   const focusView = useMemo(() => (focus !== null ? buildFocusView(playback.model, focus) : null), [playback.model, focus]);
-  // The audit trail is the projection of the raw log applied so far (secondary lens).
   const timeline = useMemo(() => buildTimelineView(fixture.events.slice(0, playback.index)), [fixture, playback.index]);
-  const focusDecision = useCallback((id: string) => setFocus({ kind: "decision", id }), []);
-  const clearFocus = useCallback(() => setFocus(null), []);
+  const resolveDecision = playback.resolveDecision;
+  const onResolve = useCallback((id: string) => void resolveDecision(id), [resolveDecision]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        gap: 16,
-        padding: 20,
-        maxWidth: focusView !== null ? 1560 : 1200,
-        margin: "0 auto",
-        minHeight: "100vh",
-        alignItems: "flex-start"
-      }}
-    >
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
-        <RunFrame frame={view.frame} />
+    <div className={focusView !== null ? "mh-run-page mh-run-page-with-focus" : "mh-run-page"}>
+      <div className="mh-run-main">
+        <header className="mh-run-hero">
+          <div>
+            <span className="mh-run-stage">Fixture · {stageLabel(view.stage)}</span>
+            <h1>{view.title}</h1>
+            <p>{view.statusLine}</p>
+          </div>
+          <div className="mh-run-hero-side">
+            <span className={playback.playing ? "mh-live mh-live-on" : "mh-live"}>
+              {playback.playing ? "playing" : playback.done ? "done" : "paused"}
+            </span>
+            <span>{fixtureName} · event {playback.index}/{playback.total}</span>
+          </div>
+        </header>
 
-        <DecisionChannel
-          view={channel}
-          resolvableIds={resolvableIds}
-          onResolve={onResolve}
-          onFocus={focusDecision}
-          focusedDecisionId={focus?.kind === "decision" ? focus.id : null}
-        />
+        {view.primaryAttention !== null ? (
+          <section className={view.primaryAttention.blocking ? "mh-decision-banner mh-decision-banner-blocking" : "mh-decision-banner"}>
+            <div>
+              <span>{view.primaryAttention.blocking ? "Needs your call" : "For review"}</span>
+              <strong>{view.primaryAttention.label}</strong>
+              <p>{view.primaryAttention.summary}</p>
+            </div>
+            <div className="mh-decision-actions">
+              <button type="button" className="mh-secondary-action" onClick={() => setFocus({ kind: "decision", id: view.primaryAttention!.id })}>
+                Inspect
+              </button>
+              <button type="button" className="mh-primary-action" onClick={() => onResolve(view.primaryAttention!.id)}>
+                {view.primaryAttention.primaryActionLabel}
+              </button>
+            </div>
+          </section>
+        ) : null}
 
         <PlaybackControls
-          fixtureName={fixtureName}
-          index={playback.index}
-          total={playback.total}
           playing={playback.playing}
           done={playback.done}
           onPlay={playback.play}
@@ -122,26 +80,44 @@ export function ProtoRunView({
           onRestart={playback.restart}
         />
 
-        <WorkspaceSurface view={view} selectedTarget={focus} onFocus={setFocus} />
+        {view.reviewEvidence !== null && view.stage === "review" ? (
+          <section className="mh-review-strip">
+            <div>
+              <span>Evidence</span>
+              <strong>Tests {view.reviewEvidence.tests.pass}/{view.reviewEvidence.tests.total}</strong>
+              <p>Integrated at {view.reviewEvidence.integrationCommit}. The graph stays available for context.</p>
+            </div>
+            <button type="button" className="mh-secondary-action" onClick={() => setFocus(EVIDENCE_FOCUS_TARGET)}>
+              Open evidence
+            </button>
+          </section>
+        ) : null}
 
-        <Timeline view={timeline} focusedNodeId={focus?.kind === "node" ? focus.id : null} />
+        <MinimalRunGraphCanvas graph={view.graph} stage={view.stage} selectedTarget={focus} onFocus={setFocus} />
 
-        <ProtoDebugPanel debug={view.debug} />
+        <section className={activityOpen ? "mh-activity mh-activity-open" : "mh-activity"}>
+          <button type="button" onClick={() => setActivityOpen((open) => !open)} className="mh-activity-toggle">
+            <span>Activity</span>
+            <small>{playback.index} applied events</small>
+          </button>
+          {activityOpen ? (
+            <div className="mh-activity-body">
+              <Timeline view={timeline} focusedNodeId={focus?.kind === "node" ? focus.id : null} />
+            </div>
+          ) : null}
+        </section>
       </div>
 
       {focusView !== null ? (
-        <div style={{ width: 380, flex: "0 0 380px" }}>
-          <FocusPanel view={focusView} onClose={clearFocus} onFocus={setFocus} />
-        </div>
+        <aside className="mh-run-focus" aria-label="Run detail inspector">
+          <FocusPanel view={focusView} onClose={() => setFocus(null)} onFocus={setFocus} />
+        </aside>
       ) : null}
     </div>
   );
 }
 
 function PlaybackControls({
-  fixtureName,
-  index,
-  total,
   playing,
   done,
   onPlay,
@@ -149,9 +125,6 @@ function PlaybackControls({
   onStep,
   onRestart
 }: {
-  fixtureName: string;
-  index: number;
-  total: number;
   playing: boolean;
   done: boolean;
   onPlay: () => void;
@@ -160,64 +133,30 @@ function PlaybackControls({
   onRestart: () => void;
 }): React.ReactElement {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "8px 12px",
-        background: "var(--surface, #1a1915)",
-        border: "1px solid var(--border, rgba(241,234,216,0.12))",
-        borderRadius: "var(--r-md, 8px)"
-      }}
-    >
-      <Btn label={playing ? "Pausar" : "Reproducir"} onClick={playing ? onPause : onPlay} disabled={done && !playing} primary />
-      <Btn label="Paso" onClick={onStep} disabled={done} />
-      <Btn label="Reiniciar" onClick={onRestart} />
-      <span
-        style={{
-          marginLeft: "auto",
-          fontFamily: "var(--font-mono, monospace)",
-          fontSize: 12,
-          color: "var(--text-3, #9a927f)"
-        }}
-      >
-        {fixtureName} · evento {index}/{total}
-        {done ? " · fin" : ""}
-      </span>
-    </div>
+    <nav className="mh-playback" aria-label="Fixture playback controls">
+      <button type="button" className="mh-primary-action" onClick={playing ? onPause : onPlay} disabled={done && !playing}>
+        {playing ? "Pause" : "Play"}
+      </button>
+      <button type="button" className="mh-secondary-action" onClick={onStep} disabled={done}>
+        Step
+      </button>
+      <button type="button" className="mh-secondary-action" onClick={onRestart}>
+        Restart
+      </button>
+    </nav>
   );
 }
 
-function Btn({
-  label,
-  onClick,
-  disabled = false,
-  primary = false
-}: {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  primary?: boolean;
-}): React.ReactElement {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        minHeight: 32,
-        padding: "0 12px",
-        borderRadius: 6,
-        border: `1px solid ${primary ? "var(--copper, #d08a5a)" : "var(--rule-control, rgba(241,234,216,0.2))"}`,
-        background: primary ? "rgba(208,138,90,0.14)" : "rgba(241,234,216,0.035)",
-        color: disabled ? "var(--text-4, #6f6857)" : primary ? "var(--copper-hi, #e0a070)" : "var(--text-2, #cfc7b4)",
-        fontFamily: "var(--font-mono, monospace)",
-        fontSize: 12,
-        cursor: disabled ? "not-allowed" : "pointer"
-      }}
-    >
-      {label}
-    </button>
-  );
+function stageLabel(stage: string): string {
+  switch (stage) {
+    case "intent":
+      return "Intent";
+    case "proposal":
+      return "Plan";
+    case "review":
+      return "Review";
+    case "running":
+    default:
+      return "Run";
+  }
 }
