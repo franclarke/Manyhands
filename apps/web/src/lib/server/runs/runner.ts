@@ -31,6 +31,11 @@ import {
   type RepoProvisioner
 } from "./repo-provisioner";
 import { publishRunEvent } from "./event-bus";
+import {
+  ensureRunModelEventLogForRun,
+  publishRunModelEvent
+} from "./run-model-event-log";
+import { runModelEventsFromTrace } from "./run-model-trace-adapter";
 import { generateRunTitle, type RunTitle } from "./run-titler";
 import { assertTransition } from "./lifecycle";
 import { markRunnerActive, markRunnerInactive } from "./runner-state";
@@ -43,7 +48,7 @@ import { detectWorkspaceCommands } from "../providers/command-detection";
 import { buildRepositoryGrounding } from "./repo-index-cache";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import { deriveConflictList } from "@/lib/conflict-view-model";
-import type { RunEvent, RiskLevelKey } from "./events";
+import type { RiskLevelKey, StreamEvent } from "./events";
 import type {
   ExecutionConfigInput,
   NodeReview,
@@ -111,15 +116,20 @@ export interface ExecutionRunnerOptions {
 class LiveExecutionTraceStore implements TraceStore {
   private readonly delegate: TraceStore;
   private readonly runId: string;
+  private readonly defaultModel: string;
   private readonly startedTaskIds = new Set<string>();
 
-  constructor(delegate: TraceStore, runId: string) {
+  constructor(delegate: TraceStore, runId: string, defaultModel: string) {
     this.delegate = delegate;
     this.runId = runId;
+    this.defaultModel = defaultModel;
   }
 
   append(event: TraceEventInput): TraceEvent {
     const traceEvent = this.delegate.append(event);
+    for (const runEvent of runModelEventsFromTrace(traceEvent, { runId: this.runId, defaultModel: this.defaultModel })) {
+      publishRunModelEvent(this.runId, runEvent);
+    }
     this.publishLiveEvent(traceEvent);
     return traceEvent;
   }
@@ -763,7 +773,14 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     const usingDefaultEngine = options.engine === undefined;
     // The pipeline owns the trace store so engine events can be streamed to the
     // canvas while the run is still active, then persisted as evidence.
-    const traceStore = new LiveExecutionTraceStore(options.traceStore ?? new InMemoryTraceStore(), run.runId);
+    await ensureRunModelEventLogForRun(run);
+    publishFoundationEvents(run, graph);
+
+    const traceStore = new LiveExecutionTraceStore(
+      options.traceStore ?? new InMemoryTraceStore(),
+      run.runId,
+      run.defaultExecutionSelection?.model ?? run.model
+    );
     const engine =
       options.engine ?? createDefaultExecutionEngine({ traceStore });
 
@@ -909,6 +926,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     }
 
     const executionTraces = traceStore.list();
+    publishRunModelEventsFromExecutionResult(run, graph, result, finalApplication);
     run = await getRunRepository().get(runId);
     if (result.status === "completed") {
       console.log(`[Runner] Persisting completed run ${runId}`);
@@ -1129,6 +1147,9 @@ export async function assertManualNodeExecutionReady(run: RunRecord, taskId: str
  */
 function derivePredictedConflicts(run: RunRecord): PredictedConflictHint[] {
   // Best-effort foresight: a malformed/partial snapshot must never break the run.
+  if (!hasProjectableConflictSnapshotInput(run)) {
+    return [];
+  }
   try {
     const snapshot = projectRunRecordToSnapshot(run);
     if (snapshot === null) {
@@ -1150,6 +1171,267 @@ function derivePredictedConflicts(run: RunRecord): PredictedConflictHint[] {
     );
     return [];
   }
+}
+
+function hasProjectableConflictSnapshotInput(run: RunRecord): boolean {
+  const execution = run.execution;
+  if (isPlainRecord(execution) && execution.snapshot !== undefined) return true;
+  return hasProjectablePlanningShape(run.planning);
+}
+
+function hasProjectablePlanningShape(value: unknown): boolean {
+  if (!isPlainRecord(value)) return false;
+  const decomposition = asPlainRecord(value.decomposition);
+  const feature = asPlainRecord(decomposition?.feature);
+  const graph = asPlainRecord(decomposition?.graph);
+  const summary = asPlainRecord(value.summary);
+  const schedule = asPlainRecord(value.schedule);
+  return (
+    typeof feature?.id === "string" &&
+    typeof graph?.rootId === "string" &&
+    isPlainRecord(graph.nodes) &&
+    Array.isArray(decomposition?.contracts) &&
+    typeof summary?.mode === "string" &&
+    Array.isArray(schedule?.batches)
+  );
+}
+
+function asPlainRecord(value: unknown): Record<string, unknown> | undefined {
+  return isPlainRecord(value) ? value : undefined;
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function publishFoundationEvents(run: RunRecord, graph: TaskGraph): void {
+  const now = new Date().toISOString();
+  publishRunModelEvent(run.runId, { actor: "system", at: now, type: "grounding.started", payload: {} });
+
+  for (const node of Object.values(graph.nodes)) {
+    for (const iface of node.contract?.producedInterfaces ?? []) {
+      publishRunModelEvent(run.runId, {
+        actor: "system",
+        at: now,
+        type: "seam.frozen",
+        payload: {
+          seamId: iface.id,
+          revision: 1,
+          frozenSignature: iface.signature,
+          extractedFrom: `contract:${node.id}`
+        }
+      });
+    }
+  }
+
+  publishRunModelEvent(run.runId, {
+    actor: "system",
+    at: now,
+    type: "grounding.completed",
+    payload: { skeletonCommit: run.provisioned?.baseCommit ?? graph.baseCommit }
+  });
+}
+
+function publishRunModelEventsFromExecutionResult(
+  run: RunRecord,
+  graph: TaskGraph,
+  result: RunExecutionResult,
+  finalApplication: Partial<RunRecord> | undefined
+): void {
+  const now = new Date().toISOString();
+
+  for (const leaf of result.leafResults) {
+    if (leaf.status === "success") {
+      publishRunModelEvent(run.runId, {
+        actor: "agent",
+        at: now,
+        type: "node.verify.passed",
+        payload: {
+          nodeId: leaf.taskId,
+          commit: leaf.commitSha ?? leaf.currentHead,
+          changedFiles: [...leaf.changedFiles],
+          builtAgainst: consumedRevisionRefs(graph, leaf.taskId),
+          ...(producedRevisionRef(graph, leaf.taskId) !== undefined
+            ? { produces: producedRevisionRef(graph, leaf.taskId)! }
+            : {})
+        }
+      });
+    } else {
+      publishRunModelEvent(run.runId, {
+        actor: "agent",
+        at: now,
+        type: "node.execution.failed",
+        payload: { nodeId: leaf.taskId, cause: leafFailureCause(leaf) }
+      });
+    }
+  }
+
+  for (const integration of result.integrationResults) {
+    const childNodeIds = integration.childResults.map((child) => child.taskId);
+    publishRunModelEvent(run.runId, {
+      actor: "system",
+      at: now,
+      type: "integration.started",
+      payload: { compositeNodeId: integration.compositeTaskId, childNodeIds }
+    });
+
+    if (integration.conflictDetails !== undefined) {
+      const conflictId = `integration:${integration.compositeTaskId}:conflict`;
+      const resolved = INTEGRATION_SUCCESS.has(integration.status);
+      publishRunModelEvent(run.runId, {
+        actor: "system",
+        at: now,
+        type: "conflict.detected",
+        payload: {
+          conflictId,
+          dimension: "textual",
+          status: resolved ? "resolved" : "detected",
+          nodeIds: childNodeIds,
+          files: [...integration.conflictDetails.files],
+          autoResolvable: integration.repairAttempted,
+          diagnosisRef: `diagnosis://runs/${run.runId}/integration/${integration.compositeTaskId}`
+        }
+      });
+      if (resolved) {
+        publishRunModelEvent(run.runId, {
+          actor: "system",
+          at: now,
+          type: "conflict.resolved",
+          payload: { conflictId, by: "system", resolutionId: integration.status }
+        });
+      } else {
+        publishRunModelEvent(run.runId, {
+          actor: "system",
+          at: now,
+          type: "decision.raised",
+          payload: {
+            decisionId: `resolve_conflict:${integration.compositeTaskId}`,
+            kind: "resolve_conflict",
+            blocking: true,
+            context: { nodeIds: childNodeIds, conflictId }
+          }
+        });
+      }
+    }
+
+    const validation = integration.parentValidation;
+    const integrationPassed = INTEGRATION_SUCCESS.has(integration.status);
+    publishRunModelEvent(run.runId, {
+      actor: "system",
+      at: now,
+      type: "integration.validated",
+      payload: {
+        compositeNodeId: integration.compositeTaskId,
+        testsPass: validation !== undefined ? (validation.passed ? 1 : 0) : 0,
+        testsTotal: validation !== undefined ? 1 : 0,
+        passed: validation !== undefined ? validation.passed : integrationPassed,
+        builtAgainst: consumedRevisionRefs(graph, integration.compositeTaskId)
+      }
+    });
+    publishRunModelEvent(run.runId, {
+      actor: "system",
+      at: now,
+      type: "integration.completed",
+      payload: {
+        compositeNodeId: integration.compositeTaskId,
+        commit: integration.integrationCommitSha ?? graph.baseCommit,
+        status: integrationPassed ? "success" : integration.status
+      }
+    });
+  }
+
+  if (result.status === "completed") {
+    const integrationCommit =
+      finalApplication?.finalCommitSha ??
+      finalApplication?.integrationCommitSha ??
+      result.integrationResults.at(-1)?.integrationCommitSha ??
+      result.leafResults.at(-1)?.commitSha ??
+      graph.baseCommit;
+    publishRunModelEvent(run.runId, {
+      actor: "system",
+      at: now,
+      type: "run.evidence.ready",
+      payload: {
+        aggregateDiffRef: `diff://runs/${run.runId}/final`,
+        tests: testsFor(result),
+        narrativeRef: `narrative://runs/${run.runId}/receipt`,
+        integrationCommit
+      }
+    });
+    publishRunModelEvent(run.runId, {
+      actor: "system",
+      at: now,
+      type: "decision.raised",
+      payload: {
+        decisionId: "approve_merge",
+        kind: "approve_merge",
+        blocking: true,
+        context: { diffRef: `diff://runs/${run.runId}/final` }
+      }
+    });
+  }
+
+  publishRunModelEvent(run.runId, {
+    actor: "system",
+    at: now,
+    type: "run.metrics.ready",
+    payload: { metrics: metricsFromVector(result.granularityVector) }
+  });
+  publishRunModelEvent(run.runId, {
+    actor: "system",
+    at: now,
+    type: "run.completed",
+    payload: { status: result.status === "completed" ? "success" : "failed" }
+  });
+}
+
+function consumedRevisionRefs(graph: TaskGraph, taskId: string): Array<{ seamId: string; revision: number }> {
+  const node = graph.nodes[taskId];
+  return (node?.contract?.consumedInterfaces ?? []).map((iface) => ({ seamId: iface.id, revision: 1 }));
+}
+
+function producedRevisionRef(graph: TaskGraph, taskId: string): { seamId: string; revision: number } | undefined {
+  const iface = graph.nodes[taskId]?.contract?.producedInterfaces?.[0];
+  return iface !== undefined ? { seamId: iface.id, revision: 1 } : undefined;
+}
+
+function leafFailureCause(leaf: AgentExecutionResult): string {
+  if (leaf.executorTimedOut) return `${leaf.status}: timed out`;
+  const stderr = leaf.stderrTail?.trim();
+  if (stderr !== undefined && stderr.length > 0) return `${leaf.status}: ${stderr}`;
+  return `${leaf.status}: executor exit ${leaf.executorExitCode}`;
+}
+
+function testsFor(result: RunExecutionResult): { pass: number; total: number } {
+  if (result.validationResult !== undefined) {
+    return { pass: result.validationResult.passed ? 1 : 0, total: 1 };
+  }
+  const checks = result.leafResults
+    .map((leaf) => leaf.validationResult)
+    .filter((validation): validation is NonNullable<AgentExecutionResult["validationResult"]> => validation !== undefined);
+  return { pass: checks.filter((validation) => validation.passed).length, total: checks.length };
+}
+
+function metricsFromVector(vector: RunExecutionResult["granularityVector"]) {
+  return {
+    depth: vector.depth,
+    leafCount: vector.leafCount,
+    compositeCount: vector.compositeCount,
+    avgLeafDepth: vector.avgLeafDepth,
+    maxLeafDepth: vector.maxLeafDepth,
+    dependencyCount: vector.dependencyCount,
+    avgAcceptanceCriteriaPerLeaf: vector.avgAcceptanceCriteriaPerLeaf,
+    ...(vector.estimatedTokensPerLeaf !== undefined ? { estimatedTokensPerLeaf: vector.estimatedTokensPerLeaf } : {}),
+    integrationSuccessRate: vector.integrationSuccessRate,
+    leafSuccessRate: vector.leafSuccessRate,
+    conflictRate: vector.conflictRate,
+    totalDurationMs: vector.totalDurationMs,
+    linesChanged: vector.linesChanged,
+    unexpectedCommitCount: vector.unexpectedCommitCount,
+    scopeViolationCount: vector.scopeViolationCount,
+    ...(vector.totalCostUsd !== undefined ? { totalCostUsd: vector.totalCostUsd } : {}),
+    ...(vector.testsPassedRate !== undefined ? { testsPassedRate: vector.testsPassedRate } : {})
+  };
 }
 
 /**
@@ -1486,7 +1768,7 @@ function describeExecutionFailure(result: RunExecutionResult): string {
   return "Execution failed during integration or run-level validation.";
 }
 
-function publishEvent(runId: string, event: RunEvent): void {
+function publishEvent(runId: string, event: StreamEvent): void {
   publishRunEvent(runId, event);
 }
 

@@ -9,7 +9,7 @@ export function AppNav(): React.ReactElement {
     <header
       style={{
         borderBottom: "1px solid var(--rule)",
-        background: "rgba(15, 16, 18, 0.82)",
+        background: "color-mix(in srgb, var(--bg) 86%, transparent)",
         backdropFilter: "blur(10px)"
       }}
     >

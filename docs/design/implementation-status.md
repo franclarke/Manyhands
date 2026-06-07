@@ -1,5 +1,53 @@
 # Estado de implementación — rediseño agent-first
 
+> **Actualización 2026-06-07.** El path agent-first ya es el default en
+> `/runs/[runId]`. El legacy queda solo como rollback temporal con
+> `?model=legacy`. El run real ahora consume un stream nativo
+> `/api/runs/[id]/run-events` respaldado por un log JSONL append-only por run;
+> `/api/runs/[id]/events` queda como SSE legacy. La UI nueva usa el reducer y
+> selectores del run model, no `nodeStatusOverrides`.
+
+## 0e. Cierre Agent-First V1 Ejecutado (2026-06-07)
+
+Esta iteración convierte el rediseño de prototipo/flag a camino principal:
+
+- **Default agent-first:** `/runs/[runId]` renderiza `RunModelView` por defecto.
+  `?model=legacy` mantiene el canvas legacy como rollback temporal.
+- **RunEvent nativo:** nuevo endpoint `GET /api/runs/[id]/run-events`, con replay
+  por `seq` y suscripción live. El log nativo vive como sidecar JSONL por run y
+  se inicializa desde `RunRecord` solo para runs viejos o incompletos.
+- **Decision facade:** nuevo `POST /api/runs/[id]/decisions/[decisionId]` para
+  `approve_plan`, `clarify`, `resolve_conflict`, `approve_amendment` y
+  `approve_merge`. Los endpoints legacy siguen disponibles para rollback.
+- **Artifacts lazy:** nuevo `GET /api/runs/[id]/artifacts?ref=...` para resolver
+  refs de diff, log, evidence/receipt, contract/seam e integration diagnosis.
+  El panel de foco ya resuelve refs reales bajo demanda.
+- **Runner -> run model:** el runner publica eventos nativos desde dos fuentes:
+  proyección de plan/foundation y adaptación `TraceEvent -> RunEvent` para waves,
+  node execution, verify, conflicts e integration. La deduplicación snapshot+tail
+  se hace por `seq`.
+- **Foundation visible:** se emiten `grounding.started`, `seam.frozen`,
+  `grounding.completed` y waves planificadas desde contratos reales del plan.
+  Importante: esto es **contract-grounding/foundation visibility**, no todavía un
+  `GroundingAgent` Gemini que escriba walking skeleton con extractor TS/JS pleno.
+- **Validation como verdad de leaf:** `leafValidationCommands` se ejecutan tras
+  registrar el resultado de la hoja. Si fallan, la hoja queda
+  `validation_failed` y no integra, aunque haya producido un diff válido. D5/D6
+  siguen intactas: el diff viene de git y el commit lo hace el orquestador.
+- **Command Center intent-first:** los controles de modelos/aggressiveness pasan
+  a advanced settings colapsado; el prompt y readiness son la superficie primaria.
+
+Pendientes honestos del frontier completo:
+
+- `GroundingAgent` agéntico real con walking skeleton, ownership de archivos
+  compartidos y extractor TS/JS verificable.
+- Verify-loop multi-iteración build/test/fix; hoy hay validación de hoja como
+  gate de verdad, pero no reintentos automáticos de fix hasta verde.
+- Scheduler de waves basado en scopes derivados y seams draft/frozen reales; hoy
+  se mapean batches a waves y se exponen seams congelados desde contratos.
+- Amendments con invalidación/re-run acotado de consumidores; hoy existe el
+  facade/evento de decisión y aplicación, no el re-execution engine completo.
+
 > Estado **vivo** (act. 2026-06-06). Complementa [`implementation-plan.md`](implementation-plan.md) (el *plan*) con el **estado real** tras ejecutar PR01–PR09 **+ PR-U1**. Es la fuente de verdad de "qué está hecho, qué falta, qué cambió". No introduce features; documenta.
 
 ---
@@ -80,7 +128,19 @@ Reemplaza el roadmap lineal PR-N2..PR-N9. **Principio:** una corrida Ultracode (
 - **Inspector depth:** el foco de nodo ya era profundo (scope + refs diff/log `available:false` + planning + vital); U-B agrega la **historia por nodo** vía el timeline filtrado. El contrato/validación pleno sobre run real depende de endpoints `*Ref` → **gated (G-1/G-2)**, fuera del carril autónomo.
 - **Tests:** `tests/run-model-timeline.test.ts` (10). **Verificación:** `pnpm web:typecheck` ✅ · `pnpm test` **803 passing + 3 skipped** ✅.
 
-**Próximo (todo pendiente → handoff a Codex 5.5):** **G-1** (rewire gated), **G-2** (emisión nativa + rename legacy), doc-drift, y los cierres de inspector real / composer repair que dependen de backend. Ver `docs/design/HANDOFF-codex.md`.
+**G-1 ✅ ejecutado y cerrado para persistidos (gated, 2026-06-06)** — el run real renderiza por el modelo agent-first detrás de flag `?model=new`; el legacy queda **intacto y por default** (rollback = sacar el flag):
+- `use-live-run-model.ts`: hook que consume el SSE real (`/api/runs/[id]/events`, `StreamEvent`s) y recomputa el modelo vía `adaptStreamHistory` + reducer, con baseline opcional de eventos persistidos. Núcleo puro `buildLiveRunModel(streamEvents, seed, initialEvents)` (node-testable). Recompute-from-scratch por tick (estable; `seq` no driftea).
+- `app/runs/[runId]/_components/run-model-view.client.tsx`: reusa `RunFrame`/`DecisionChannel`/`WorkspaceSurface`/`Timeline`/`FocusPanel`. **Cero `nodeStatusOverrides`**. Resuelve `approve_plan`→`/approve-plan` y `clarify`→`/answer`; el resto de gates quedan read-only en el path nuevo (operar desde el legacy hasta el facade de G-2).
+- `app/runs/[runId]/page.tsx`: branch por `?model=new` + seed `Run` y `initialEvents` desde el `RunRecord`.
+- `server/runs/run-model-projection.ts`: proyección server-side `RunRecord → RunEvent[]` para recargas/persistidos sin depender del bus SSE efímero. Lee snapshot/contratos/scope, `livePlanningNodes`, resultados de ejecución/integración, `granularityVector`, evidencia final por refs, y conflictos de integración persistidos cuando existen. No inventa señales que el motor no produce.
+- Tests: `tests/run-model-live.test.ts` (5) + `tests/run-model-record-projection.test.ts` (3). **Verificación:** `pnpm vitest run tests/run-model-live.test.ts tests/run-model-record-projection.test.ts tests/run-model-sse-adapter.test.ts` ✅ · `pnpm web:typecheck` ✅ · browser sobre run persistido `a642234e-d4af-4b4c-a69c-b2f404b34a1a?model=new` ✅.
+
+**G-2 ✅ parcial v1 (2026-06-06)** — colisión de nombres eliminada y puente enriquecido sin big-bang nativo:
+- `server/runs/events.ts`: el stream legacy ahora exporta `StreamEvent`/`StreamEventKind`/`StreamEventBase`; el envelope agent-first conserva el nombre `RunEvent`.
+- `event-bus`, SSE route, runner, adapter, hook live y tests consumen `StreamEvent` directamente (sin alias `RunEvent as StreamEvent`).
+- `sse-adapter.ts`: `status.changed(needs_review)` levanta `approve_plan`, `status.changed(approved/running/completed)` lo resuelve, y `completed/failed/interrupted` emite `run.completed`. El adapter sigue siendo el traductor único v1; emisión 100% nativa queda reservada hasta que `execution-core` emita señales finas de composer/repair.
+
+**Pendiente honesto:** run Gemini vivo nuevo + browser para verificar el path completo contra ejecución real (el browser persistido ya monta); endpoints reales de inspector (`diff/log/contract` on-demand); eventos nativos finos de composer repair cuando el motor los produzca; decision facade unificado. Doc-drift de `docs/system/04,06,07,09,10` marcado el 2026-06-06.
 
 ---
 
@@ -109,10 +169,10 @@ Reemplaza el roadmap lineal PR-N2..PR-N9. **Principio:** una corrida Ultracode (
 | 08 Superficie phase-adaptive | ✅ completado | View-model + superficie que madura por fase | `run-model-workspace-view` (15) | `run-model/workspace-view.ts`, `components/run-model/workspace-surface.tsx` | **superficie propia por columnas** (no `DagCanvas`, no board/timeline pares) |
 | 09 Signo vital | ✅ completado | `NodeVital` (build/tests/retry, repair, obsolete, blocked, conflict, amendment) | `run-model-node-vitals` (14) | `run-model/workspace-view.ts`, `workspace-surface.tsx` | `repairActive` heurístico; `isAffectedByPendingAmendment` refinado (propuesta && !invalidado) |
 | 10 Foco polimórfico | ✅ (vía PR-U1) | foco nuevo node/seam/conflict/decision/evidence + deep-link; legacy intacto | `run-model-focus-view` (18) + `run-model-invariants` (21) | `run-model/focus-view.ts`, `components/run-model/focus-panel.tsx` | **reencuadrado:** foco **nuevo** en `components/run-model/`, no se tocó `TaskInspector` |
-| 11 SSE adapter | ⏳ pendiente | — | — | `run-model/sse-adapter.ts` (nuevo); rename `RunEvent`→`StreamEvent` | toca legacy; elimina `nodeStatusOverrides` |
-| 12 Run real | ⏳ pendiente | — | — | `/runs/[runId]`, `RunCanvasShell` | depende de PR11 |
+| 11 SSE adapter / stream rename | ✅ ejecutado (v1) | `StreamEvent` legacy renombrado; adapter traduce status approval/outcome + planning/execution gruesa | `run-model-sse-adapter` (18) | `server/runs/events.ts`, `event-bus.ts`, `sse-adapter.ts`, `use-live-run-model.ts` | emisión nativa fina diferida hasta señales del motor |
+| 12 Run real | ✅ gated | `/runs/[runId]?model=new` usa seed + `RunRecord→RunEvent[]` baseline + SSE live; legacy default intacto | `run-model-live` (5) + `run-model-record-projection` (3) + browser persistido | `/runs/[runId]`, `run-model-projection.ts`, `run-model-view.client.tsx` | pendiente run Gemini vivo nuevo |
 | 13 Decision facade | ⏳ pendiente | — | — | `/api/runs/[id]/decisions/[decisionId]` | depende de PR07+PR11 |
-| 14 Evidencia | 🟡 parcial (fixture, ampliada en PR-U1) | `EvidenceBlock` con afordancia de foco + focus de evidencia navegable (tests/diff/narrativa/`invalidationTrace`/`reExecuted·reIntegrated·preserved`/`approve_merge`), todo por ref. Falta el panel sobre run real (depende de PR11+) | focus-view (7,8) + workspace-view | `components/run-model/focus-panel.tsx`, `workspace-surface.tsx`, `run-model/focus-view.ts` | parte fixture adelantada; backend real pendiente |
+| 14 Evidencia | 🟡 parcial (fixture + persisted refs) | fixture completo + run real proyecta evidencia final por refs (`diff://`, `narrative://`) y métricas desde `granularityVector` | focus-view/workspace-view + record-projection | `components/run-model/focus-panel.tsx`, `workspace-surface.tsx`, `run-model-projection.ts` | viewers/endpoints reales de diff/log/contract pendientes |
 
 Conteo run-model (tras PR-U1): **282 tests en 10 archivos** (los 8 de PR01–09 + `run-model-focus-view` (18) + `run-model-invariants` (21); el resto crecieron al sumar el 6° fixture `golden-execution-failed` a sus `it.each(ALL)`). Suite total: **728 passing + 3 skipped**.
 

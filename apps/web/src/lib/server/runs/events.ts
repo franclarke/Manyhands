@@ -1,6 +1,6 @@
 import type { RunStatus } from "./schema";
 
-export type RunEventKind =
+export type StreamEventKind =
   | "status.changed"
   | "title.updated"
   | "planning.node.started"
@@ -21,23 +21,23 @@ export type RunEventKind =
 
 export type RiskLevelKey = "low" | "medium" | "high" | "blocking";
 
-export interface RunEventBase {
-  kind: RunEventKind;
+export interface StreamEventBase {
+  kind: StreamEventKind;
   at: string;
 }
 
-export interface StatusChangedEvent extends RunEventBase {
+export interface StatusChangedEvent extends StreamEventBase {
   kind: "status.changed";
   status: RunStatus;
 }
 
-export interface TitleUpdatedEvent extends RunEventBase {
+export interface TitleUpdatedEvent extends StreamEventBase {
   kind: "title.updated";
   title: string;
   summary: string;
 }
 
-export interface PlanningNodeStartedEvent extends RunEventBase {
+export interface PlanningNodeStartedEvent extends StreamEventBase {
   kind: "planning.node.started";
   nodeId: string;
   parentId?: string;
@@ -56,7 +56,7 @@ export type PlanningNodeState =
   | "retrying"
   | "fallback";
 
-export interface PlanningNodeStatusEvent extends RunEventBase {
+export interface PlanningNodeStatusEvent extends StreamEventBase {
   kind: "planning.node.status";
   nodeId: string;
   parentId?: string;
@@ -79,7 +79,7 @@ export interface PlanningNodeChildDraft {
   depth: number;
 }
 
-export interface PlanningNodeCompletedEvent extends RunEventBase {
+export interface PlanningNodeCompletedEvent extends StreamEventBase {
   kind: "planning.node.completed";
   nodeId: string;
   decision: "atomic" | "decompose" | "question";
@@ -87,67 +87,67 @@ export interface PlanningNodeCompletedEvent extends RunEventBase {
   childNodes?: PlanningNodeChildDraft[];
 }
 
-export interface NodeAddedEvent extends RunEventBase {
+export interface NodeAddedEvent extends StreamEventBase {
   kind: "node.added";
   taskId: string;
 }
 
-export interface EdgeAddedEvent extends RunEventBase {
+export interface EdgeAddedEvent extends StreamEventBase {
   kind: "edge.added";
   edgeId: string;
 }
 
-export interface RiskAddedEvent extends RunEventBase {
+export interface RiskAddedEvent extends StreamEventBase {
   kind: "risk.added";
   pairKey: string;
   level: RiskLevelKey;
 }
 
-export interface GateRequiredEvent extends RunEventBase {
+export interface GateRequiredEvent extends StreamEventBase {
   kind: "gate.required";
   taskIds: string[];
 }
 
-export interface AgentRunStartedEvent extends RunEventBase {
+export interface AgentRunStartedEvent extends StreamEventBase {
   kind: "agent.run.started";
   taskId: string;
 }
 
-export interface AgentRunCompletedEvent extends RunEventBase {
+export interface AgentRunCompletedEvent extends StreamEventBase {
   kind: "agent.run.completed";
   taskId: string;
   success: boolean;
 }
 
-export interface ValidationCompletedEvent extends RunEventBase {
+export interface ValidationCompletedEvent extends StreamEventBase {
   kind: "validation.completed";
   taskId: string;
   passed: boolean;
 }
 
-export interface ReplayBoundaryEvent extends RunEventBase {
+export interface ReplayBoundaryEvent extends StreamEventBase {
   kind: "replay.start" | "replay.end";
 }
 
-export interface PlanningCliOutputEvent extends RunEventBase {
+export interface PlanningCliOutputEvent extends StreamEventBase {
   kind: "planning.cli.output";
   nodeId: string;
   chunk: string;
   stream: "stdout" | "stderr";
 }
 
-export interface PlanningQuestionEvent extends RunEventBase {
+export interface PlanningQuestionEvent extends StreamEventBase {
   kind: "planning.question";
   nodeId: string;
   question: string;
   options: string[];
 }
 
-export interface HeartbeatEvent extends RunEventBase {
+export interface HeartbeatEvent extends StreamEventBase {
   kind: "heartbeat";
 }
 
-export type RunEvent =
+export type StreamEvent =
   | StatusChangedEvent
   | TitleUpdatedEvent
   | PlanningNodeStartedEvent
@@ -165,6 +165,6 @@ export type RunEvent =
   | PlanningQuestionEvent
   | HeartbeatEvent;
 
-export function serializeForSse(event: RunEvent): string {
+export function serializeForSse(event: StreamEvent): string {
   return `data: ${JSON.stringify(event)}\n\n`;
 }

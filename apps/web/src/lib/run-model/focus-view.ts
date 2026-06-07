@@ -351,8 +351,8 @@ function buildNodeFocus(model: RunModel, ws: WorkspaceNode, id: NodeId): NodeFoc
     isAffectedByPendingAmendment: ws.isAffectedByPendingAmendment,
     hasActiveConflict: ws.hasActiveConflict,
     refs: [
-      { label: "Diff del nodo", ref: `diff://${runId}/node/${ws.id}`, available: false },
-      { label: "Log del agente", ref: `log://${runId}/node/${ws.id}`, available: false }
+      { label: "Diff del nodo", ref: `diff://runs/${runId}/node/${ws.id}`, available: true },
+      { label: "Log del agente", ref: `log://runs/${runId}/node/${ws.id}`, available: true }
     ]
   };
 }

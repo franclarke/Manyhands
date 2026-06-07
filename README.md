@@ -8,6 +8,10 @@ No es un agente de código. Es la capa que coordina agentes: decide qué trabajo
 
 ![Run workspace: DAG interactivo con inspector](docs/img/img2.png)
 
+> **Actualización 2026-06-07.** El rediseño agent-first ya es el camino default
+> de `/runs/[runId]`. La UI legacy queda como rollback temporal con
+> `?model=legacy`. La fuente viva del rediseño está en [`docs/design/`](docs/design/).
+
 ---
 
 ## El producto
@@ -16,15 +20,24 @@ La cara visible es una web app en Next.js orientada a inspección y control de r
 
 - **`/`** — Command Center: describir la feature, elegir workspace (repo local), modelo y nivel de granularidad.
 - **`/workspaces`** — configurar los repositorios locales donde ManyHands va a ejecutar.
-- **`/runs/[runId]`** — vista canónica del run con DAG interactivo, inspector de nodos (contrato, scope, costuras, diff, trazas), timeline y board.
+- **`/runs/[runId]`** — sala de control agent-first del run: canal de decisiones,
+  superficie viva del DAG, foco on-demand, timeline secundaria y evidencia final.
+  El legacy canvas/board/timeline queda disponible con `?model=legacy`.
 
 El flujo principal:
 
 1. El usuario describe la feature y crea el run.
 2. El **`GeminiRecursiveDecomposer`** genera el DAG con un `sharedInterface` por nivel de descomposición (las firmas TypeScript que los hijos paralelos deben respetar).
 3. El usuario revisa el plan en la web app — puede editar nodos, regenerar subárboles, ajustar dependencias — y lo aprueba.
-4. El **`RunExecutor`** despacha hojas en batches (default `maxParallel = 3`), cada una en su propio `git worktree`.
-5. Por hoja: el **`FileSystemContextPacker`** arma el prompt con los archivos relevantes y las interfaces consumidas; **`GeminiCliExecutor`** invoca Gemini headless (`--approval-mode yolo`); el **`ScopeChecker`** valida que el agente no salió de su scope; el **`ResultRecorder`** captura `git diff HEAD` y el orquestador hace el commit.
+4. El **`RunExecutor`** despacha hojas en batches/waves (default
+   `maxParallel = 6`), cada una en su propio `git worktree`.
+5. Por hoja: el **`FileSystemContextPacker`** arma el prompt con los archivos
+   relevantes y las interfaces consumidas; **`GeminiCliExecutor`** invoca Gemini
+   headless (`--approval-mode yolo`); el **`ScopeChecker`** hard-falla
+   `forbiddenPaths` y registra out-of-scope advisory; el **`ResultRecorder`**
+   captura `git diff HEAD` y el orquestador hace el commit; luego
+   `leafValidationCommands` pueden marcar la hoja como `validation_failed` y
+   bloquear su integración.
 6. El **`IntegrationAgent`** integra los hijos de cada composite con cherry-pick. Si hay conflicto, hace un repair semántico con Gemini que recibe el goal del padre, el `sharedInterface` canónico y la intención de cada hijo.
 7. Al final del run, se computa el **`GranularityVector`** (17 métricas: 9 pre-ejecución sobre la estructura del DAG, 8 post-ejecución sobre los resultados).
 
@@ -45,12 +58,17 @@ La narrativa completa de la evolución del proyecto (incluyendo decisiones que y
 
 El pipeline está cableado de punta a punta y los dos artifacts están implementados. Lo que aún **no existe** es la evidencia empírica: el sistema funciona con mocks/E2E estructurales, pero la matriz de experimentos con agentes Gemini reales sobre las fixtures todavía no se corrió. La metodología experimental original (`G3/G6/G9` como targets de profundidad de árbol y `mock-v0`/`conflict-v0` como benchmarks deterministas) fue abandonada — la granularidad se redefinió como **agresividad de descomposición** (`low | medium | high`) que sesga el umbral de atomicidad por nodo, no la forma del árbol. El diseño del nuevo Lab está pendiente.
 
-> **Rediseño agent-first en curso (capa UI + orquestación).** La dirección vigente para la experiencia y la orquestación está en [`docs/design/`](docs/design/): una sala de control agent-first sobre un event log append-only + estado derivado (reducer + selectores), con costuras como contratos, verify-loop y freshness. La UI actual descrita arriba (DAG viewer con vistas canvas/board/timeline pares, consola CLI cruda) es **legacy conceptual**: se mantiene mientras se migra por PRs ([`docs/design/implementation-plan.md`](docs/design/implementation-plan.md)) y no debe expandirse. No renegocia D1–D10.
+> **Rediseño agent-first (capa UI + orquestación).** La dirección vigente para la
+> experiencia y la orquestación está en [`docs/design/`](docs/design/): una sala
+> de control agent-first sobre un event log append-only + estado derivado
+> (reducer + selectores), con costuras como contratos, verify-loop/foundation
+> visible y freshness. La UI legacy (DAG viewer con vistas canvas/board/timeline
+> pares, consola CLI cruda) no debe expandirse. No renegocia D1–D10.
 
 ### Verificación rápida
 
 ```bash
-pnpm test          # 344 passing, 3 skipped
+pnpm test          # suite completa
 pnpm build         # todos los packages
 pnpm web:typecheck # 0 errores
 ```

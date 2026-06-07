@@ -6,6 +6,8 @@ export * from "./repository";
 export * from "./store";
 export * from "./events";
 export * from "./event-bus";
+export * from "./run-model-event-bus";
+export * from "./run-model-event-log";
 export * from "./runner";
 export * from "./runner-state";
 export * from "./run-abort-registry";

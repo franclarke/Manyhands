@@ -1,6 +1,19 @@
 # Web App
 
+> **Actualización 2026-06-07.** `/runs/[runId]` ya abre la sala de control
+> agent-first por defecto. El legacy descrito en parte de este capítulo queda
+> disponible solo con `?model=legacy`. El camino nuevo consume
+> `GET /api/runs/[id]/run-events` (SSE nativo `RunEvent`), reduce el event log con
+> `run-model/reducer.ts`, deriva estado con selectores, resuelve decisiones con
+> `POST /api/runs/[id]/decisions/[decisionId]` y carga artefactos lazy con
+> `GET /api/runs/[id]/artifacts?ref=...`.
+
 **Archivos fuente:** `apps/web/src/`, `apps/web/src/lib/server/runs/runner.ts`, `apps/web/src/lib/graph-view-model.ts`
+
+> **Actualizacion 2026-06-06.** Este capitulo describe la UI legacy. La fuente de
+> verdad conceptual actual para UI/orquestacion es `docs/design/`. No expandir
+> `RunGraphViewModel`, vistas canvas/board/timeline como modos pares,
+> `nodeStatusOverrides`, ni consola CLI cruda como superficie primaria.
 
 ---
 
@@ -32,7 +45,15 @@ Internamente, esto dispara `POST /api/runs` que en el servidor:
 
 ### Run workspace (`/runs/[runId]`)
 
-La vista central de un run activo. Tiene tres sub-vistas que el usuario puede alternar:
+La vista default es agent-first: un marco de run persistente, canal de
+decisiones, superficie phase-adaptive del DAG, panel de foco y timeline como
+lectura secundaria. El estado de ejecución se deriva del `RunEvent` log; no hay
+overrides imperativos por nodo.
+
+El workspace legacy sigue disponible con `?model=legacy` durante el rollback
+temporal. Lo siguiente describe ese legacy.
+
+La vista legacy de un run activo tiene tres sub-vistas que el usuario puede alternar:
 
 **DAG canvas:** el grafo interactivo construido sobre `@xyflow/react` (React Flow). Cada nodo es un componente React (`TaskNodeCard`) que muestra el título, tipo (root/integrator/leaf), estado actual, y opcionalmente el costo y duración. Los edges representan dependencias. Al seleccionar un nodo, el inspector lateral muestra el contrato completo: goal, acceptance criteria, scope, interfaces producidas y consumidas, diff, resultado de validación, y trazas de ejecución.
 
@@ -52,11 +73,24 @@ Solo cuando el run avanza a `approved` el servidor despacha la ejecución real c
 
 ### SSE: ejecución en tiempo real
 
-Durante la ejecución, el cliente mantiene una conexión `EventSource` al endpoint `/api/runs/[runId]/events`. El servidor hace polling del `RunRecord` cada 220ms y envía los patches como eventos SSE.
+Durante la ejecución agent-first, el cliente mantiene una conexión `EventSource`
+al endpoint `/api/runs/[runId]/run-events`. El servidor reenvía eventos
+`RunEvent` nativos desde el log append-only del run, con replay por cursor
+`seq`. El cliente reduce esos eventos con `run-model/reducer.ts` y deriva fase,
+salud, wavefront, decisiones y foco con selectores.
 
-Cada evento es un `RunPatch` — una actualización parcial del `RunRecord` que el cliente aplica sobre su estado local. El cliente no recibe el RunRecord completo en cada tick; solo los cambios. Esto mantiene el tráfico bajo mientras el run progresa.
+El endpoint `/api/runs/[runId]/events` sigue existiendo para la UI legacy. Ese
+camino usa `StreamEvent` y puede apoyarse en polling/proyección del `RunRecord`.
+No debe ser el transporte de nuevas superficies agent-first.
 
-Cuando el run termina (con éxito o fallo), el servidor envía un evento final y cierra el stream.
+Cada evento agent-first es un envelope `RunEvent` con `seq`, `at`, `runId`,
+`actor`, `type` y `payload`. Los artefactos pesados no viajan embebidos: llegan
+como refs (`diff://`, `log://`, `contract://`, `diagnosis://`,
+`narrative://`) y se resuelven bajo demanda con el artifact resolver.
+
+Cuando el run termina (con éxito o fallo), el servidor publica `run.completed`
+en el log nativo y la vista de Disposition prioriza evidence, tests, conflicts
+resueltos y métricas.
 
 ### RunGraphViewModel: la capa de traducción
 
@@ -82,12 +116,22 @@ Configuración de repositorios. Un workspace define el repositorio destino y las
 
 **El servidor expone:**
 - `POST /api/runs` — crear un run (planning)
-- `POST /api/runs/[runId]/approve` — aprobar el plan y disparar ejecución
-- `GET /api/runs/[runId]/events` — stream SSE de eventos del run
+- `GET /api/runs/[runId]/run-events` — stream SSE nativo `RunEvent` para la UI
+  agent-first
+- `GET /api/runs/[runId]/events` — stream SSE legacy (`StreamEvent`) para rollback
+- `POST /api/runs/[runId]/decisions/[decisionId]` — resolver gates humanos
+  unificados (`approve_plan`, `clarify`, `resolve_conflict`,
+  `approve_amendment`, `approve_merge`)
+- `GET /api/runs/[runId]/artifacts?ref=...` — resolver refs lazy de diff, log,
+  contract, conflict diagnosis y evidence
+- `POST /api/runs/[runId]/approve` — aprobar el plan en el flujo legacy
 - `PATCH /api/runs/[runId]/nodes/[nodeId]` — editar un nodo
 - `POST /api/runs/[runId]/nodes/[nodeId]/regenerate` — regenerar subárbol
 
-**El cliente consume:** `RunRecord` del store JSON, traducido a `GraphNodeView[]`/`GraphEdgeView[]` por el `RunGraphViewModel`.
+**El cliente agent-first consume:** `RunEvent[]` nativo + seed mínimo del
+`RunRecord`, traducido por reducer/selectores a view-models. **El cliente
+legacy consume:** `RunRecord` del store JSON, traducido a
+`GraphNodeView[]`/`GraphEdgeView[]` por el `RunGraphViewModel`.
 
 ---
 

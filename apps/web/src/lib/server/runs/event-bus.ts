@@ -1,11 +1,11 @@
 import { EventEmitter } from "node:events";
-import type { RunEvent } from "./events";
+import type { StreamEvent } from "./events";
 
-type Listener = (event: RunEvent) => void;
+type Listener = (event: StreamEvent) => void;
 
 interface BusState {
   emitter: EventEmitter;
-  history: RunEvent[];
+  history: StreamEvent[];
 }
 
 const HISTORY_LIMIT = 2000;
@@ -22,7 +22,7 @@ function getBus(runId: string): BusState {
   return state;
 }
 
-export function publishRunEvent(runId: string, event: RunEvent): void {
+export function publishRunEvent(runId: string, event: StreamEvent): void {
   const state = getBus(runId);
   state.history.push(event);
   if (state.history.length > HISTORY_LIMIT) {
@@ -31,7 +31,7 @@ export function publishRunEvent(runId: string, event: RunEvent): void {
   state.emitter.emit("event", event);
 }
 
-export function getRunEventHistory(runId: string): RunEvent[] {
+export function getRunEventHistory(runId: string): StreamEvent[] {
   return buses.get(runId)?.history.slice() ?? [];
 }
 

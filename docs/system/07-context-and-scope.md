@@ -2,6 +2,12 @@
 
 **Archivos fuente:** `packages/execution-core/src/context/packer.ts`, `packages/execution-core/src/scope/checker.ts`, `packages/execution-core/src/scope/glob.ts`
 
+> **Actualizacion 2026-06-06.** La politica real de scope ya no es "deny wins"
+> para todo lo fuera del allow-list. `forbiddenPaths` sigue siendo hard-fail; los
+> paths fuera de `executionScope` pero no prohibidos se registran como
+> `outOfScope` advisory para visibilidad. Esto mantiene el aislamiento real en el
+> worktree + ScopeChecker sin matar runs por allow-lists estimadas por el LLM.
+
 ---
 
 ## Qué son
@@ -57,9 +63,15 @@ Verificar que el conjunto de archivos que el agente modificó (según `git diff 
 
 2. **Aplica deny wins:** si un archivo matchea un glob de `forbiddenPaths`, es una violación — sin importar que también matchee un glob permitido. Los paths prohibidos siempre ganan sobre los permitidos. Esto existe porque `forbiddenPaths` suelen incluir cosas como `*.env`, directorios de configuración sensibles, o archivos que definen el contrato global del sistema (un cambio ahí rompería todo).
 
-3. **Retorna** `{ passed: boolean, violations: string[] }`. Si `passed` es `false`, `violations` lista exactamente qué archivos estaban fuera de scope.
+3. **Retorna** `{ passed: boolean, violations: string[], outOfScope: string[] }`.
+   Si `passed` es `false`, `violations` lista archivos prohibidos que bloquean
+   el commit. Los archivos fuera del allow-list pero no prohibidos se registran
+   en `outOfScope` como señal advisory: quedan visibles para auditoría, pero no
+   fallan la hoja por sí solos.
 
-Si el check falla, el `ResultRecorder` descarta el resultado de la hoja sin commitear — el worktree simplemente se limpia. El estado de la hoja queda en `scope_violation`.
+Si el check falla por `forbiddenPaths`, el `ResultRecorder` descarta el resultado
+de la hoja sin commitear — el worktree simplemente se limpia. El estado de la
+hoja queda en `scope_violation`.
 
 ### Por qué tres categorías y no un solo glob
 

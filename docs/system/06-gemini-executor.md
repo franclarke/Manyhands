@@ -2,6 +2,11 @@
 
 **Archivos fuente:** `packages/execution-core/src/executor/gemini-cli.ts`, `packages/execution-core/src/executor/mock.ts`, `packages/execution-core/src/executor/types.ts`
 
+> **Actualizacion 2026-06-06.** El default productivo sigue siendo Gemini CLI,
+> y D4 sigue cerrado: Gemini CLI (`gemini`, headless, stdin) es el unico executor
+> de planning, ejecucion y repair. El seam provider-agnostico es la interfaz
+> `AgentExecutor`; no agregar ejecutores ni cambiar el default sin discutir D4.
+
 ---
 
 ## Qué es

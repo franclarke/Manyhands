@@ -71,6 +71,7 @@ export function CommandCenterShell({
   const [readiness, setReadiness] = useState<ProviderReadiness | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
   const [readinessError, setReadinessError] = useState<string | null>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // Workspace Dialog Management State
   const [workspaceFormOpen, setWorkspaceFormOpen] = useState<"closed" | "create" | "edit">("closed");
@@ -316,11 +317,11 @@ export function CommandCenterShell({
     return (
       <div
         style={{
-          maxWidth: "100%",
+          maxWidth: 720,
           margin: "0 auto",
           padding: 24,
           border: "1px dashed var(--rule-strong)",
-          background: "rgba(241,234,216,0.035)",
+          background: "var(--surface)",
           borderRadius: "var(--r-lg)",
           color: "var(--text-2)",
           display: "flex",
@@ -361,14 +362,34 @@ export function CommandCenterShell({
   return (
     <section
       style={{
-        maxWidth: "100%",
+        maxWidth: 980,
+        margin: "0 auto",
         display: "flex",
         flexDirection: "column",
-        gap: 12
+        gap: 18
       }}
     >
+      <div style={{ display: "grid", gap: 10, padding: "10px 2px 2px" }}>
+        <span className="mh-mono" style={{ color: "var(--accent)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+          ManyHands
+        </span>
+        <h1
+          className="mh-serif"
+          style={{
+            margin: 0,
+            maxWidth: 760,
+            color: "var(--text)",
+            fontSize: "clamp(38px, 6vw, 72px)",
+            fontWeight: 500,
+            lineHeight: 0.94,
+            textWrap: "balance"
+          }}
+        >
+          Describe the change. Review the graph. Let the agents work.
+        </h1>
+      </div>
       {/* Workspace Selection & branch bar */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 2 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: -4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
           <FolderIcon style={{ color: "var(--text-3)", opacity: 0.7, flexShrink: 0 }} />
           {workspaces.length > 0 && (
@@ -441,13 +462,13 @@ export function CommandCenterShell({
       <div
         style={{
           border: "1px solid var(--rule-control)",
-          background: "rgba(24,26,28,0.78)",
-          borderRadius: "var(--r-lg)",
-          padding: "12px 14px 10px",
+          background: "var(--surface)",
+          borderRadius: "var(--r-xl)",
+          padding: "22px 24px 18px",
           display: "flex",
           flexDirection: "column",
-          gap: 10,
-          boxShadow: "0 1px 0 rgba(255,255,255,0.025) inset"
+          gap: 16,
+          boxShadow: "var(--shadow-lift)"
         }}
       >
         <textarea
@@ -455,31 +476,74 @@ export function CommandCenterShell({
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={handleKeyDown}
-          rows={5}
+          rows={7}
           spellCheck={false}
-          placeholder="Describe the task — what should the system build, refactor, or migrate?"
+          placeholder="What should the system build, refactor, or migrate?"
           style={{
             width: "100%",
             border: "none",
             background: "transparent",
             color: "var(--text)",
-            fontFamily: "var(--font-sans)",
-            fontSize: 16,
-            lineHeight: 1.5,
+            fontFamily: "var(--font-serif)",
+            fontSize: "clamp(24px, 3vw, 38px)",
+            lineHeight: 1.08,
             outline: "none",
             resize: "vertical",
-            minHeight: 110,
+            minHeight: 210,
             padding: 0
           }}
         />
 
         {/* Separator inside card */}
-        <div style={{ height: 1, background: "var(--rule-soft)", margin: "0 -14px" }} />
+        <div style={{ height: 1, background: "var(--rule)", margin: "0 -24px" }} />
 
         {/* Bottom Action Bar */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
+            <span
+              className="mh-mono"
+              title={readinessTooltip}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 7,
+                fontSize: 11,
+                color: "var(--text-3)"
+              }}
+            >
+              <span
+                className={readinessLoading ? "coral-pulse" : ""}
+                style={{
+                  display: "inline-block",
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  backgroundColor: readinessColor
+                }}
+              />
+              {hasLocalRepo ? "repo ready" : "repo missing"} · Gemini {readiness?.status ?? "unknown"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((open) => !open)}
+              className="mh-mono"
+              style={{
+                minHeight: 30,
+                padding: "0 10px",
+                borderRadius: 6,
+                border: "1px solid var(--rule-control)",
+                background: advancedOpen ? "color-mix(in srgb, var(--accent) 10%, var(--surface))" : "transparent",
+                color: advancedOpen ? "var(--accent)" : "var(--text-3)",
+                fontSize: 11,
+                cursor: "pointer"
+              }}
+            >
+              {advancedOpen ? "Hide advanced" : "Advanced settings"}
+            </button>
+          </div>
+
           {/* Config options */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ display: advancedOpen ? "flex" : "none", alignItems: "center", gap: 14, flexWrap: "wrap", width: "100%" }}>
             {/* Model Select */}
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -503,7 +567,7 @@ export function CommandCenterShell({
             </div>
 
             {/* Separator */}
-            <span style={{ color: "rgba(241, 234, 216, 0.1)", userSelect: "none" }} aria-hidden>|</span>
+            <span style={{ color: "var(--rule-control)", userSelect: "none" }} aria-hidden>|</span>
 
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -518,7 +582,7 @@ export function CommandCenterShell({
               />
             </div>
 
-            <span style={{ color: "rgba(241, 234, 216, 0.1)", userSelect: "none" }} aria-hidden>|</span>
+            <span style={{ color: "var(--rule-control)", userSelect: "none" }} aria-hidden>|</span>
 
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
               <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -533,7 +597,7 @@ export function CommandCenterShell({
               />
             </div>
 
-            <span style={{ color: "rgba(241, 234, 216, 0.1)", userSelect: "none" }} aria-hidden>|</span>
+            <span style={{ color: "var(--rule-control)", userSelect: "none" }} aria-hidden>|</span>
 
             {/* Aggressiveness Select */}
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
@@ -583,7 +647,7 @@ export function CommandCenterShell({
             }}
           >
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              Generate
+              Plan run
               <span
                 aria-hidden
                 style={{
@@ -594,8 +658,8 @@ export function CommandCenterShell({
                   lineHeight: 1,
                   padding: "1px 4px",
                   borderRadius: 2,
-                  background: "rgba(0,0,0,0.15)",
-                  color: "rgba(0,0,0,0.5)"
+                  background: "rgba(255,255,255,0.24)",
+                  color: "rgba(255,255,255,0.72)"
                 }}
               >
                 ⌘↵
@@ -619,7 +683,7 @@ export function CommandCenterShell({
               className="mh-example-chip"
               style={{
                 border: "1px solid var(--rule-soft)",
-                background: "rgba(241,234,216,0.015)",
+                background: "transparent",
                 color: "var(--text-2)",
                 borderRadius: "var(--r-md)",
                 minHeight: 28,
