@@ -13,22 +13,32 @@ export type { RunState, RunStateUpdate } from "./state.js";
 
 export { JsonFileCheckpointSaver } from "./checkpointer.js";
 
-export { buildPlanningGraph, resumePlanningGraph } from "./graphs/planning-graph.js";
+export {
+  buildPlanningGraph,
+  planningThreadId,
+  PLANNING_THREAD_SUFFIX
+} from "./graphs/planning-graph.js";
 export type { PlanningGraphConfig } from "./graphs/planning-graph.js";
 
 export { buildExecutionGraph, executionRecursionLimit } from "./graphs/execution-graph.js";
 export type { ExecutionGraphConfig } from "./graphs/execution-graph.js";
 
 export {
-  initializePlanningNode,
-  makeDecomposeNode,
-  makeCriticNode
+  makeDecomposePlanNode,
+  questionGateNode,
+  makeCriticReviewNode,
+  approvalGateNode,
+  routeAfterDecompose
 } from "./nodes/planning-nodes.js";
 export type {
-  DecomposeNodeDeps,
-  CriticNodeDeps,
-  DecomposeTaskResult,
-  CriticResult
+  PlanningGraphDeps,
+  DecomposePlanInput,
+  DecomposePlanResult,
+  PlanCritique,
+  PlanCritiqueFinding,
+  PlanningQuestionInterrupt,
+  PlanApprovalInterrupt,
+  PlanningResumeDecision
 } from "./nodes/planning-nodes.js";
 
 export {

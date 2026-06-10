@@ -19,7 +19,7 @@ import {
   RunValidationError,
   assertTransition,
   getRunRepository,
-  runPlanningPipeline,
+  resumePlanningPipeline,
   resumeExecutionPipeline
 } from "@/lib/server/runs";
 import {
@@ -75,7 +75,10 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       delete next.pendingQuestion;
       const saved = await repo.save(next);
       publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: new Date().toISOString() });
-      void runPlanningPipeline(id).catch((error) =>
+      // Native resume: the answer travels as Command({ resume }) into the
+      // suspended planning questionGate (legacy runs without a planning
+      // checkpoint fall back to re-running the pipeline).
+      void resumePlanningPipeline(id, { answer }).catch((error) =>
         console.error(`[Resume] Planning resume failed for run ${id}:`, error)
       );
       return NextResponse.json(toRunResponse(saved));

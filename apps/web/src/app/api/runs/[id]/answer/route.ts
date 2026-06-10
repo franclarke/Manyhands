@@ -5,7 +5,7 @@ import {
   RunNotFoundError,
   RunValidationError,
   getRunRepository,
-  runPlanningPipeline
+  resumePlanningPipeline
 } from "@/lib/server/runs";
 import { publishRunEvent } from "@/lib/server/runs/event-bus";
 import { toRunResponse } from "@/lib/server/runs/presenter";
@@ -64,7 +64,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     const saved = await repo.save(nextRun);
     publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: new Date().toISOString() });
 
-    void runPlanningPipeline(saved.runId).catch(() => undefined);
+    // Native resume: the answer travels as Command({ resume }) into the
+    // suspended planning questionGate.
+    void resumePlanningPipeline(saved.runId, { answer }).catch(() => undefined);
 
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {

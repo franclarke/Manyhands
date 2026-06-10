@@ -1,80 +1,70 @@
 /**
- * Planning StateGraph for the ManyHands LangGraph orchestrator.
+ * Planning StateGraph for the ManyHands LangGraph orchestrator (v2).
  *
  * Topology:
- *   [Start] → initState → decomposeNode ← (resume after answer) ← [QuestionInterrupt]
- *                              │
- *                    (planningQueue empty)
- *                              ↓
- *                          criticNode → [ApprovePlanInterrupt]
- *                              │
- *                         (approved)
- *                              ↓
- *                          [END: status=approved]
+ *   START → decomposePlan ─[routeAfterDecompose]→ questionGate | criticReview
+ *   questionGate → decomposePlan        (answer merged, decomposer continues
+ *                                        from its step cache)
+ *   criticReview → approvalGate → END   (approve → status "approved",
+ *                                        reject → status "needs_review")
  *
- * Design: docs/design/langgraph-orchestrator-design.md §4
+ * The expensive decomposer node never interrupts; both HITL points are cheap
+ * gate nodes resumed natively with Command({ resume }) — identical to the
+ * execution graph's leaf/conflict gates, so checkpoints are never hand-edited.
  */
-import { StateGraph, END, START } from "@langchain/langgraph";
+import { END, START, StateGraph } from "@langchain/langgraph";
 import { MemorySaver } from "@langchain/langgraph";
+import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint";
 import { RunStateAnnotation } from "../state.js";
 import {
-  initializePlanningNode,
-  makeDecomposeNode,
-  makeCriticNode,
-  type DecomposeNodeDeps,
-  type CriticNodeDeps
+  approvalGateNode,
+  makeCriticReviewNode,
+  makeDecomposePlanNode,
+  questionGateNode,
+  routeAfterDecompose,
+  type PlanningGraphDeps
 } from "../nodes/planning-nodes.js";
-import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint";
+
+export type {
+  DecomposePlanInput,
+  DecomposePlanResult,
+  PlanApprovalInterrupt,
+  PlanCritique,
+  PlanCritiqueFinding,
+  PlanningGraphDeps,
+  PlanningQuestionInterrupt,
+  PlanningResumeDecision
+} from "../nodes/planning-nodes.js";
 
 export interface PlanningGraphConfig {
-  decomposeDeps: DecomposeNodeDeps;
-  criticDeps: CriticNodeDeps;
+  deps: PlanningGraphDeps;
+  /** Production callers inject JsonFileCheckpointSaver; tests default to memory. */
   checkpointer?: BaseCheckpointSaver;
 }
 
 /**
- * Build the planning sub-graph.
- *
- * Uses MemorySaver by default (for tests); production callers should inject
- * JsonFileCheckpointSaver.
+ * Planning threads live next to the execution thread (thread_id = runId) but
+ * never collide with it. The suffix is filesystem-safe on every platform.
  */
-export function buildPlanningGraph(config: PlanningGraphConfig) {
-  const decomposeNode = makeDecomposeNode(config.decomposeDeps);
-  const criticNode = makeCriticNode(config.criticDeps);
+export const PLANNING_THREAD_SUFFIX = "__planning";
 
+export function planningThreadId(runId: string): string {
+  return `${runId}${PLANNING_THREAD_SUFFIX}`;
+}
+
+export function buildPlanningGraph(config: PlanningGraphConfig) {
   const checkpointer = config.checkpointer ?? new MemorySaver();
 
   const graph = new StateGraph(RunStateAnnotation)
-    .addNode("initState", initializePlanningNode)
-    .addNode("decomposeNode", decomposeNode)
-    .addNode("criticNode", criticNode)
-    // Routing
-    .addEdge(START, "initState")
-    .addEdge("initState", "decomposeNode")
-    .addConditionalEdges("decomposeNode", (state) => {
-      // If planning queue is empty → critic; otherwise loop back to keep decomposing
-      if (state.planningQueue.length === 0) {
-        return "criticNode";
-      }
-      return "decomposeNode";
-    })
-    .addEdge("criticNode", END);
+    .addNode("decomposePlan", makeDecomposePlanNode(config.deps))
+    .addNode("questionGate", questionGateNode)
+    .addNode("criticReview", makeCriticReviewNode(config.deps))
+    .addNode("approvalGate", approvalGateNode)
+    .addEdge(START, "decomposePlan")
+    .addConditionalEdges("decomposePlan", routeAfterDecompose, ["questionGate", "criticReview"])
+    .addEdge("questionGate", "decomposePlan")
+    .addEdge("criticReview", "approvalGate")
+    .addEdge("approvalGate", END);
 
-  return graph.compile({ checkpointer, interruptBefore: [] });
-}
-
-/**
- * Resume a paused planning graph with a user answer.
- * Called by /api/runs/[id]/resume after the user submits their answer.
- */
-export async function resumePlanningGraph(params: {
-  graph: ReturnType<typeof buildPlanningGraph>;
-  threadId: string;
-  userAnswers: Record<string, string>;
-}) {
-  const config = { configurable: { thread_id: params.threadId } };
-  return params.graph.stream(
-    { userAnswers: params.userAnswers },
-    { ...config, streamMode: "updates" }
-  );
+  return graph.compile({ checkpointer });
 }

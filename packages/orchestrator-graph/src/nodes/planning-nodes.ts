@@ -1,197 +1,185 @@
 /**
- * Planning nodes for the ManyHands LangGraph orchestrator.
+ * Planning nodes for the ManyHands LangGraph orchestrator (v2).
  *
- * These nodes handle the recursive decomposition phase:
- *   - initializePlanningNode: seeds the planning queue from the root prompt
- *   - decomposeNode: wraps GeminiRecursiveDecomposer, interrupts on questions
- *   - criticNode: runs plan/seam critics, interrupts for plan approval
+ * Pattern (mirrors the execution graph): the expensive node (decomposePlan)
+ * NEVER interrupts — it returns data. HITL lives in cheap, pure gate nodes
+ * whose first statement is interrupt(), so resuming re-runs only the gate:
  *
- * Design: docs/design/langgraph-orchestrator-design.md §4
- * Invariants: D3 (no silent LLM fallback), D4 (Gemini CLI only)
+ *   decomposePlan  — drives the recursive decomposer (resumable via its step
+ *                    cache); a clarifying question comes back as data.
+ *   questionGate   — interrupt({type:"planning_question"}); the resume value
+ *                    is the user's answer, merged into userAnswers.
+ *   criticReview   — deterministic plan/seam critics over the finished graph.
+ *   approvalGate   — interrupt({type:"plan_approval"}); approve → "approved".
  */
 import { interrupt } from "@langchain/langgraph";
+import type { TaskGraph } from "@manyhands/task-graph";
 import type { RunState, RunStateUpdate } from "../state.js";
 
-// ─── initializePlanningNode ────────────────────────────────────────────────
+// ─── Interrupt payloads and resume decisions ───────────────────────────────
 
-/**
- * Seeds the planning queue with the root task ID (or a synthetic root) so
- * decomposeNode has a starting point. Called once when the run transitions
- * from "created" to "planning".
- */
-export function initializePlanningNode(state: RunState): RunStateUpdate {
-  return {
-    status: "planning",
-    planningQueue: ["__root__"],
-    planningStepCache: {}
-  };
+export interface PlanningQuestionInterrupt {
+  type: "planning_question";
+  runId: string;
+  nodeId: string;
+  question: string;
+  options: string[];
 }
 
-// ─── decomposeNode ─────────────────────────────────────────────────────────
-
-export interface DecomposeNodeDeps {
-  /**
-   * Decompose a single task node.
-   * Returns either a "decompose" decision (with children) or a "question"
-   * decision (requesting human clarification).
-   */
-  decomposeTask: (params: {
-    nodeId: string;
-    userPrompt: string;
-    workspaceId: string;
-    repoPath: string;
-    stepCache: Record<string, unknown>;
-    planningQueue: string[];
-  }) => Promise<DecomposeTaskResult>;
+export interface PlanApprovalInterrupt {
+  type: "plan_approval";
+  runId: string;
+  critique: PlanCritique | null;
 }
 
-export type DecomposeTaskResult =
+export type PlanningResumeDecision = { answer: string } | { action: "approve" | "reject" };
+
+// ─── Critique model ────────────────────────────────────────────────────────
+
+export interface PlanCritiqueFinding {
+  severity: string;
+  message: string;
+  source: "plan" | "seam";
+  code?: string;
+}
+
+export interface PlanCritique {
+  findings: PlanCritiqueFinding[];
+  errorCount: number;
+}
+
+// ─── Dependencies ──────────────────────────────────────────────────────────
+
+export interface DecomposePlanInput {
+  runId: string;
+  userPrompt: string;
+  workspaceId: string;
+  repoPath: string;
+  /** Opaque resumable state of the recursive decomposer. */
+  stepCache: Record<string, unknown>;
+  /** Answers the human has given to clarifying questions, keyed by node id. */
+  userAnswers: Record<string, string>;
+}
+
+export type DecomposePlanResult =
+  | { kind: "complete"; graph: TaskGraph }
   | {
-      decision: "decompose";
-      childIds: string[];
-      updatedCache: Record<string, unknown>;
-      updatedQueue: string[];
-      graphPatch: unknown;
-    }
-  | {
-      decision: "question";
+      kind: "question";
       nodeId: string;
       question: string;
       options: string[];
+      stepCache: Record<string, unknown>;
     };
 
-/**
- * Iterates the planning queue. For each node:
- * - "decompose" → appends children to queue and updates graph
- * - "question"  → writes pending question and calls interrupt() for HITL
- *
- * Completes when the planning queue is empty.
- * Invariant D3: if decomposer fails with LLM error, node re-throws (run fails).
- */
-export function makeDecomposeNode(deps: DecomposeNodeDeps) {
-  return async function decomposeNode(state: RunState): Promise<RunStateUpdate> {
-    // If there's a pending question awaiting a user answer, resume decomposition
-    // using the stored answer from userAnswers.
-    if (state.pendingQuestion !== null && state.pendingQuestion !== undefined) {
-      const { nodeId } = state.pendingQuestion;
-      const answer = state.userAnswers[nodeId];
-      if (answer === undefined) {
-        // Still awaiting answer — interrupt again
-        interrupt({
-          type: "planning_question",
-          nodeId,
-          question: state.pendingQuestion.question,
-          options: state.pendingQuestion.options
-        });
-        return {};
-      }
-      // Answer received — clear pendingQuestion and continue decomposing
-      return {
-        pendingQuestion: null,
-        planningStepCache: {
-          ...state.planningStepCache,
-          [`answer:${nodeId}`]: answer
-        }
-      };
-    }
+export interface PlanningGraphDeps {
+  /**
+   * Run the decomposer until it either finishes the whole tree or needs a
+   * human answer. Must be total: LLM/provider failures throw (D3 — the run
+   * fails loudly), but a clarifying question is DATA, not an exception.
+   */
+  decomposePlan(input: DecomposePlanInput): Promise<DecomposePlanResult>;
+  /** Deterministic plan/seam critics over the completed graph. */
+  runCritics(input: { runId: string; graph: TaskGraph }): Promise<PlanCritique>;
+}
 
-    // No pending question — process the next node in the queue
-    const queue = [...state.planningQueue];
-    if (queue.length === 0) {
-      // Planning complete
-      return { planningQueue: [] };
-    }
+// ─── decomposePlan ─────────────────────────────────────────────────────────
 
-    const [nodeId, ...remainingQueue] = queue;
-    if (nodeId === undefined) {
-      return { planningQueue: remainingQueue };
-    }
-
-    const result = await deps.decomposeTask({
-      nodeId,
+export function makeDecomposePlanNode(deps: PlanningGraphDeps) {
+  return async function decomposePlan(state: RunState): Promise<RunStateUpdate> {
+    const result = await deps.decomposePlan({
+      runId: state.runId,
       userPrompt: state.userPrompt,
       workspaceId: state.workspaceId,
       repoPath: state.repoPath,
-      stepCache: state.planningStepCache,
-      planningQueue: remainingQueue
+      stepCache: state.planningStepCache ?? {},
+      userAnswers: state.userAnswers ?? {}
     });
 
-    if (result.decision === "question") {
-      // HITL: suspend the graph and wait for user input
-      const { nodeId: qNodeId, question, options } = result;
-
-      // Write question to state before interrupting so the frontend can read it
-      const update: RunStateUpdate = {
-        pendingQuestion: { nodeId: qNodeId, question, options },
-        planningQueue: queue // Keep current queue intact for resume
+    if (result.kind === "question") {
+      return {
+        status: "planning",
+        pendingQuestion: {
+          nodeId: result.nodeId,
+          question: result.question,
+          options: result.options
+        },
+        planningStepCache: result.stepCache
       };
-
-      // Interrupt suspends execution — frontend calls /resume with the answer
-      interrupt({
-        type: "planning_question",
-        nodeId: qNodeId,
-        question,
-        options
-      });
-
-      return update;
     }
 
-    // "decompose" decision — update queue and graph state
     return {
-      planningQueue: result.updatedQueue,
-      planningStepCache: result.updatedCache,
-      taskGraph: result.graphPatch as any
+      status: "planning",
+      taskGraph: result.graph,
+      pendingQuestion: null
     };
   };
 }
 
-// ─── criticNode ────────────────────────────────────────────────────────────
-
-export interface CriticNodeDeps {
-  runPlanCritic: (params: { graph: NonNullable<RunState["taskGraph"]> }) => Promise<CriticResult>;
-  runSeamCritic: (params: { graph: NonNullable<RunState["taskGraph"]> }) => Promise<CriticResult>;
+/** Conditional edge after decomposePlan: question pending → gate, else critics. */
+export function routeAfterDecompose(state: RunState): "questionGate" | "criticReview" {
+  return state.pendingQuestion !== null && state.pendingQuestion !== undefined
+    ? "questionGate"
+    : "criticReview";
 }
 
-export interface CriticResult {
-  status: "clean" | "warnings" | "errors";
-  findings: Array<{ severity: string; message: string; code?: string }>;
-}
+// ─── questionGate ──────────────────────────────────────────────────────────
 
 /**
- * Runs deterministic quality critics against the completed plan.
- * After critics finish, interrupts for human plan approval.
- * The frontend shows critic findings alongside the DAG for the user to review.
+ * Pure HITL gate for decomposer questions. interrupt() is the first statement,
+ * so resuming re-runs only this function — never the decomposer itself.
  */
-export function makeCriticNode(deps: CriticNodeDeps) {
-  return async function criticNode(state: RunState): Promise<RunStateUpdate> {
-    if (state.taskGraph === null) {
-      throw new Error("criticNode: taskGraph is null — planningQueue should have produced a graph");
-    }
+export function questionGateNode(state: RunState): RunStateUpdate {
+  const pending = state.pendingQuestion;
+  if (pending === null || pending === undefined) {
+    return {};
+  }
 
-    const [planCritic, seamCritic] = await Promise.all([
-      deps.runPlanCritic({ graph: state.taskGraph }),
-      deps.runSeamCritic({ graph: state.taskGraph })
-    ]);
+  const decision = interrupt({
+    type: "planning_question",
+    runId: state.runId,
+    nodeId: pending.nodeId,
+    question: pending.question,
+    options: pending.options
+  } satisfies PlanningQuestionInterrupt) as PlanningResumeDecision;
 
-    const allFindings = [
-      ...planCritic.findings.map((f) => ({ ...f, source: "plan" as const })),
-      ...seamCritic.findings.map((f) => ({ ...f, source: "seam" as const }))
-    ];
+  if (!("answer" in decision) || typeof decision.answer !== "string" || decision.answer.length === 0) {
+    throw new Error('questionGate: resume value must be { answer: "<user answer>" }.');
+  }
 
-    // HITL: interrupt for plan approval. The frontend renders the DAG + findings
-    // and the user clicks "Approve" or makes changes.
-    interrupt({
-      type: "plan_approval",
-      planCritic: { status: planCritic.status, findings: allFindings.filter((f) => f.source === "plan") },
-      seamCritic: { status: seamCritic.status, findings: allFindings.filter((f) => f.source === "seam") },
-      totalFindings: allFindings.length,
-      errorCount: allFindings.filter((f) => f.severity === "error").length
-    });
-
-    // Control returns here after user approves
-    return {
-      status: "approved"
-    };
+  return {
+    pendingQuestion: null,
+    userAnswers: { [pending.nodeId]: decision.answer }
   };
+}
+
+// ─── criticReview ──────────────────────────────────────────────────────────
+
+export function makeCriticReviewNode(deps: PlanningGraphDeps) {
+  return async function criticReview(state: RunState): Promise<RunStateUpdate> {
+    if (state.taskGraph === null) {
+      throw new Error("criticReview: planning finished without a task graph.");
+    }
+    const critique = await deps.runCritics({ runId: state.runId, graph: state.taskGraph });
+    return { planCritique: critique };
+  };
+}
+
+// ─── approvalGate ──────────────────────────────────────────────────────────
+
+/**
+ * Pure HITL gate for plan approval. The resume value decides the terminal
+ * planning status: approve → "approved" (execution may start), reject →
+ * "needs_review" (the human keeps editing / restarts planning).
+ */
+export function approvalGateNode(state: RunState): RunStateUpdate {
+  const decision = interrupt({
+    type: "plan_approval",
+    runId: state.runId,
+    critique: state.planCritique ?? null
+  } satisfies PlanApprovalInterrupt) as PlanningResumeDecision;
+
+  if ("action" in decision && decision.action === "approve") {
+    return { status: "approved" };
+  }
+  return { status: "needs_review" };
 }

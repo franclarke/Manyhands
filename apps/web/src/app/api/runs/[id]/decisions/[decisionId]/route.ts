@@ -16,9 +16,10 @@ import {
   parseRunPatches,
   publishRunEvent,
   publishRunModelEvent,
+  hasPlanningCheckpoint,
   resumeExecutionPipeline,
-  runExecutionPipeline,
-  runPlanningPipeline
+  resumePlanningPipeline,
+  runExecutionPipeline
 } from "@/lib/server/runs";
 import {
   clearExecutionPause,
@@ -93,8 +94,15 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         }
       }
       assertTransition(run.status, "approved");
-      run = await repo.save({ ...run, status: "approved", approvedAt: now });
-      publishRunEvent(run.runId, { kind: "status.changed", status: run.status, at: now });
+      if (await hasPlanningCheckpoint(run.runId)) {
+        // Native approval: Command({ resume: { action: "approve" } }) into the
+        // suspended approvalGate; the pipeline projects "approved".
+        await resumePlanningPipeline(run.runId, { action: "approve" });
+        run = await repo.get(run.runId);
+      } else {
+        run = await repo.save({ ...run, status: "approved", approvedAt: now });
+        publishRunEvent(run.runId, { kind: "status.changed", status: run.status, at: now });
+      }
       // Resolving the approval gate IS the go-ahead in the agent-first model (there
       // is no separate "run" affordance). Start execution; the pipeline transitions
       // "approved" → "running" itself (mirrors the restart route).
@@ -143,7 +151,8 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       delete nextRun.pendingQuestion;
       run = await repo.save(nextRun);
       publishRunEvent(run.runId, { kind: "status.changed", status: run.status, at: now });
-      void runPlanningPipeline(run.runId).catch(() => undefined);
+      // Native resume into the suspended planning questionGate.
+      void resumePlanningPipeline(run.runId, { answer: choice.answer }).catch(() => undefined);
     }
 
     publishRunModelEvent(run.runId, {

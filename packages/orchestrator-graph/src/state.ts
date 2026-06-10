@@ -43,9 +43,15 @@ export const RunStateAnnotation = Annotation.Root({
   // don't structurally collide with Command's own `graph?: string` property.
   taskGraph: Annotation<TaskGraph | null>(),
 
-  // Queues and caching for decomposition
-  planningQueue: Annotation<string[]>(),
+  // Resumable decomposer state (opaque step cache keyed by node id).
   planningStepCache: Annotation<Record<string, unknown>>(),
+
+  // Deterministic critic verdict over the finished plan (set by criticReview,
+  // surfaced in the approval gate's interrupt payload).
+  planCritique: Annotation<{
+    findings: Array<{ severity: string; message: string; source: "plan" | "seam"; code?: string }>;
+    errorCount: number;
+  } | null>(),
 
   // Accumulated execution results — identity merge so retries replace failures
   leafResults: Annotation<AgentExecutionResult[]>({

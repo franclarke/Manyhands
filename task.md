@@ -17,9 +17,9 @@ Objetivo: orquestador end-to-end funcional. Sistemas que instruyen, evalúan y c
 - [x] 2.4 Escalación de tier en repair (attempt ≥ 1)
 
 ## Fase 3 — Planning sobre LangGraph (HITL nativo)
-- [ ] 3.1 Planning StateGraph v2 (gates baratos: questionGate/approvalGate, critics in-loop)
-- [ ] 3.2 planning-host.ts en apps/web (deps + eventos vivos + checkpointer)
-- [ ] 3.3 Rewire planning-pipeline/resume/approve-plan; eliminar DecomposerQuestionError flow
+- [x] 3.1 Planning StateGraph v2 (decomposePlan caro sin interrupt; questionGate/approvalGate baratos)
+- [x] 3.2 planning-host.ts en apps/web (deps + eventos vivos + JsonFileCheckpointSaver `__planning`)
+- [x] 3.3 Rewire planning-pipeline/resume/answer/decisions/approve-plan/restart; DecomposerQuestionError muere en el seam
 
 ## Fase 4 — Re-decomposición selectiva
 - [ ] 4.1 replanSubtree: invalidación + splice del subárbol + re-plan scoped

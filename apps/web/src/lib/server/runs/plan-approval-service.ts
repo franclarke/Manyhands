@@ -8,6 +8,8 @@ import type { RunRecord } from "@/lib/server/runs/schema";
 import { publishRunEvent } from "@/lib/server/runs/event-bus";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import { buildPlanReviewSummary } from "@/lib/plan-review";
+import { hasPlanningCheckpoint } from "./planning-host";
+import { resumePlanningPipeline } from "./planning-pipeline";
 
 export async function processPlanApproval(id: string, acknowledge: boolean): Promise<RunRecord> {
   const repo = getRunRepository();
@@ -32,6 +34,15 @@ export async function processPlanApproval(id: string, acknowledge: boolean): Pro
   }
 
   assertTransition(run.status, "approved");
+
+  // Native path: the approval is a Command({ resume }) into the suspended
+  // approvalGate; the pipeline projects END(status=approved) onto the record.
+  if (await hasPlanningCheckpoint(id)) {
+    await resumePlanningPipeline(id, { action: "approve" });
+    return repo.get(id);
+  }
+
+  // Legacy runs without a planning thread: direct transition.
   const now = new Date().toISOString();
   const saved = await repo.save({ ...run, status: "approved", approvedAt: now });
   publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: now });

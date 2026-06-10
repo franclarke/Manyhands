@@ -5,6 +5,7 @@ import {
   RunValidationError,
   canRestart,
   getRunRepository,
+  resetPlanningThread,
   restartResumesExecution,
   runExecutionPipeline,
   runPlanningPipeline
@@ -53,6 +54,9 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
       errorMessage: undefined,
       failedDuring: undefined
     });
+    // Restart plans from scratch: drop the suspended planning thread so the
+    // graph re-enters at START instead of resuming a stale gate.
+    await resetPlanningThread(reset.runId);
     void runPlanningPipeline(reset.runId).catch(() => undefined);
     return NextResponse.json(toRunResponse(reset));
   } catch (error) {
