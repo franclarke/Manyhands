@@ -15,20 +15,23 @@ Tu objetivo no es solo analizar, sino ejecutar una refactorización e implementa
 
 ---
 
-## 2. Contexto de ManyHands e Invariantes D1-D10
+## 2. Contexto de ManyHands e Invariantes D1-D10 (Directrices Editables)
 
 ManyHands es un orquestador que descompone features recursivamente en un DAG (`TaskGraph`) usando Gemini, ejecuta las tareas en worktrees aislados en paralelo y las integra bottom-up usando cherry-picks y reparación semántica.
 
-Durante tu auditoría y refactorización, debes respetar de forma innegociable las siguientes decisiones de diseño vigentes:
+> [!IMPORTANT]
+> Las siguientes invariantes D1-D10 son **directrices de partida completamente editables**. Como agente senior de frontera, tienes plena libertad de rediseñar, simplificar o eliminar cualquiera de ellas (como el aislamiento de commits en D6 o la configuración de decomposer en D4) si encuentras que restringen la orquestación en LangGraph.js o impiden lograr una arquitectura más limpia.
+
+En particular, debes tener en cuenta las siguientes directivas actualizadas:
 - **D1**: `graph.dependencies` es el modelo canónico. Mutaciones de dependencias solo vía `addDependency`/`removeDependency`/`syncNodeDependencies`.
 - **D2**: El campo canónico de la intención de un nodo de tarea es `goal`, nunca `intent`.
-- **D3**: Si el LLM falla, el run falla de inmediato con un error útil y accionable. No se permiten fallbacks silenciosos.
-- **D4**: Gemini CLI (`gemini`, headless, stdin) es el único executor e-flight de subagentes y planning. Se inyecta mediante la interfaz `AgentExecutor`.
+- **D3**: **Tolerancia a fallos de LLM**: Se permite implementar reintentos con backoff exponencial para caídas transitorias de API antes de abortar o pausar la planificación/ejecución.
+- **D4**: Gemini CLI (`gemini`, headless, stdin) es el único executor e-flight de subagentes por defecto. Se inyecta mediante la interfaz `AgentExecutor`.
 - **D5**: `git diff HEAD` es la única fuente de verdad para el resultado de un agente. No confíes en su stdout para determinar qué cambió.
-- **D6**: El orquestador commitea; los agentes nunca. Si un agente genera un commit inesperado, se rechaza.
+- **D6**: El orquestador commitea; los agentes nunca por defecto. Si un agente genera un commit inesperado en su worktree, la política es configurable.
 - **D7**: El aislamiento real proviene del git worktree aislado + `ScopeChecker` de límites de archivos. El CLI de subagentes corre en `--approval-mode yolo`.
 - **D8**: Integración bottom-up vía cherry-pick + reparación semántica asistida por LLM en caso de conflictos (máx. 1 intento automático).
-- **D9**: `maxParallel = 6` hojas en ejecución paralela concurrentes (configurable en `ExecutionConfig`).
+- **D9**: **Paralelismo por Wavefront (Sin límites artificiales)**: Se ejecuta de forma concurrente todo el lote de tareas hoja listas del frente de onda de dependencias simultáneamente (se elimina la restricción de `maxParallel = 6`).
 - **D10**: Timeouts: hoja 300 s, integración 600 s (configurables en contratos).
 
 ---

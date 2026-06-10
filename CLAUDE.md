@@ -19,19 +19,22 @@
 
 ---
 
-## 2. Invariantes del Sistema (NO Modificar sin Consultar)
+## 2. Invariantes del Sistema (Directrices Editables)
+
+> [!NOTE]
+> Las siguientes invariantes D1–D10 representan las decisiones iniciales del proyecto. Como agente de código senior, tienes **plena libertad de editarlas, simplificarlas o eliminarlas** si detectas que entran en conflicto con una arquitectura más limpia, limitan el paralelismo o restringen la autonomía del motor en LangGraph.js.
 
 | ID | Invariante |
 |----|------------|
 | **D1** | `graph.dependencies` es el modelo canónico. Mutation solo vía `addDependency`/`removeDependency`/`syncNodeDependencies`. |
 | **D2** | El campo canónico de la intención de un nodo de tarea es `goal`, nunca `intent`. |
-| **D3** | Si el LLM falla, el run falla de inmediato con un error útil y accionable. No se permiten fallbacks silenciosos ni planificaciones genéricas. |
-| **D4** | **Gemini CLI** (`gemini`, headless, stdin) es el único executor e-flight de subagentes y planning. Se inyecta mediante la interfaz `AgentExecutor`. Claude Code CLI está disponible como alternativo opt-in (ADR-0030). |
+| **D3** | Tolerancia a fallos transitorios de LLM. Se permite implementar reintentos con backoff exponencial antes de abortar o pausar. |
+| **D4** | **Gemini CLI** (`gemini`, headless, stdin) es el único executor e-flight por defecto. Se inyecta mediante la interfaz `AgentExecutor`. Claude Code CLI está disponible como alternativo opt-in (ADR-0030). |
 | **D5** | `git diff HEAD` es la única fuente de verdad para el resultado de un agente. No confíes en su stdout para determinar qué cambió. |
 | **D6** | **El orquestador commitea; los agentes nunca.** Si un agente genera un commit inesperado en su worktree, la política por defecto es `reject`. |
 | **D7** | El aislamiento real proviene del git worktree aislado + `ScopeChecker` de límites de archivos. El CLI de subagentes corre en `--approval-mode yolo`. |
 | **D8** | Integración bottom-up vía cherry-pick + reparación semántica asistida por LLM en caso de conflictos (máx. 1 intento automático). |
-| **D9** | `maxParallel = 6` hojas en ejecución paralela concurrentes (configurable en `ExecutionConfig`). |
+| **D9** | **Paralelismo por Wavefront (Sin tope artificial)**. Se ejecuta simultáneamente todo el lote de hojas candidatas disponibles del frente de onda de dependencias. |
 | **D10**| Timeouts: hoja 300 s, integración 600 s (configurables individualmente en contratos). |
 
 ---
