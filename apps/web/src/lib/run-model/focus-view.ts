@@ -47,6 +47,7 @@ import type {
   NodeId,
   NodePlanningStatus,
   NodeRole,
+  RunEvent,
   RunModel,
   SeamId,
   SeamRevisionRef,
@@ -114,6 +115,18 @@ export interface FocusNodeSummary {
   title: string;
 }
 
+export interface NodeConsoleLine {
+  seq: number;
+  at: IsoTimestamp;
+  stream: "stdout" | "stderr";
+  chunk: string;
+}
+
+export interface NodeConsoleView {
+  lines: NodeConsoleLine[];
+  truncated: boolean;
+}
+
 // ── FocusView (discriminated union) ──────────────────────────────────────────────
 
 export interface NodeFocusView {
@@ -143,6 +156,8 @@ export interface NodeFocusView {
   isPendingReexecution: boolean;
   isAffectedByPendingAmendment: boolean;
   hasActiveConflict: boolean;
+  /** Visible Gemini/process output for this node, derived from raw `node.cli.output` events. */
+  console: NodeConsoleView;
   refs: FocusRef[];
 }
 
@@ -311,7 +326,11 @@ function seamParallelismNote(seam: WorkspaceSeam, producerTitle: string | undefi
 
 // ── Builders ─────────────────────────────────────────────────────────────────────
 
-function buildNodeFocus(model: RunModel, ws: WorkspaceNode, id: NodeId): NodeFocusView {
+export interface FocusBuildOptions {
+  events?: readonly RunEvent[];
+}
+
+function buildNodeFocus(model: RunModel, ws: WorkspaceNode, id: NodeId, options: FocusBuildOptions = {}): NodeFocusView {
   const entity = model.nodes.get(id);
   const seamSummary = (seamId: SeamId): FocusSeamSummary => {
     const seam = model.seams.get(seamId);
@@ -323,6 +342,22 @@ function buildNodeFocus(model: RunModel, ws: WorkspaceNode, id: NodeId): NodeFoc
   const parentEntity = ws.parentId !== null ? model.nodes.get(ws.parentId) : undefined;
   const commit = entity?.execution.kind === "integrated" ? entity.execution.commit : undefined;
   const runId = model.run.id;
+
+  // Per-node diff/log only resolve once execution recorded a leaf result. For a
+  // node that hasn't executed (planning / idle / blocked) there is nothing to fetch,
+  // so we omit the refs instead of surfacing a 404 "Artifact not found".
+  const hasNodeArtifacts =
+    commit !== undefined ||
+    (entity?.changedFiles?.length ?? 0) > 0 ||
+    ws.display === "failed" ||
+    ws.display === "done" ||
+    ws.display === "obsolete";
+  const nodeRefs: FocusRef[] = hasNodeArtifacts
+    ? [
+        { label: "Diff del nodo", ref: `diff://runs/${runId}/node/${ws.id}`, available: true },
+        { label: "Log del agente", ref: `log://runs/${runId}/node/${ws.id}`, available: true }
+      ]
+    : [];
 
   return {
     kind: "node",
@@ -350,11 +385,25 @@ function buildNodeFocus(model: RunModel, ws: WorkspaceNode, id: NodeId): NodeFoc
     isPendingReexecution: ws.isPendingReexecution,
     isAffectedByPendingAmendment: ws.isAffectedByPendingAmendment,
     hasActiveConflict: ws.hasActiveConflict,
-    refs: [
-      { label: "Diff del nodo", ref: `diff://runs/${runId}/node/${ws.id}`, available: true },
-      { label: "Log del agente", ref: `log://runs/${runId}/node/${ws.id}`, available: true }
-    ]
+    console: buildNodeConsole(options.events ?? [], id),
+    refs: nodeRefs
   };
+}
+
+function buildNodeConsole(events: readonly RunEvent[], nodeId: NodeId): NodeConsoleView {
+  const all = events
+    .filter((event) => event.type === "node.cli.output" && event.payload.nodeId === nodeId)
+    .map((event): NodeConsoleLine => {
+      const stream = event.payload.stream === "stderr" ? "stderr" : "stdout";
+      return {
+        seq: event.seq,
+        at: event.at,
+        stream,
+        chunk: typeof event.payload.chunk === "string" ? event.payload.chunk : String(event.payload.chunk ?? "")
+      };
+    });
+  const maxLines = 200;
+  return { lines: all.slice(-maxLines), truncated: all.length > maxLines };
 }
 
 function buildSeamFocus(model: RunModel, ws: WorkspaceSeam, id: SeamId): SeamFocusView {
@@ -498,14 +547,14 @@ function missing(target: FocusTarget, message: string): MissingFocusView {
  * A target absent from the current cut returns a `missing` view so deep-links are
  * safe before the entity appears (and after it is, if the id is wrong).
  */
-export function buildFocusView(model: RunModel, target: FocusTarget): FocusView {
+export function buildFocusView(model: RunModel, target: FocusTarget, options: FocusBuildOptions = {}): FocusView {
   switch (target.kind) {
     case "node": {
       const ws = selectWorkspaceView(model).nodes.find((n) => n.id === target.id);
       if (ws === undefined) {
         return missing(target, `El nodo "${target.id}" todavía no existe en este corte del run.`);
       }
-      return buildNodeFocus(model, ws, target.id);
+      return buildNodeFocus(model, ws, target.id, options);
     }
     case "seam": {
       const ws = selectWorkspaceView(model).seams.find((s) => s.id === target.id);

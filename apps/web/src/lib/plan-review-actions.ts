@@ -5,6 +5,11 @@ export interface PlanReviewApprovalState {
   disabled: boolean;
 }
 
+export interface PlanReviewGateState {
+  shouldOpenGate: boolean;
+  acknowledgeCriticErrorsOnConfirm: boolean;
+}
+
 export function planReviewApprovalState(summary: PlanReviewSummary): PlanReviewApprovalState {
   if (summary.status === "errors") {
     // Block with override: the user can force approval after reviewing the
@@ -23,5 +28,12 @@ export function planReviewApprovalState(summary: PlanReviewSummary): PlanReviewA
   return {
     label: "Approve plan",
     disabled: false
+  };
+}
+
+export function planReviewGateState(summary: PlanReviewSummary | null): PlanReviewGateState {
+  return {
+    shouldOpenGate: summary !== null,
+    acknowledgeCriticErrorsOnConfirm: (summary?.issueCounts.errors ?? 0) > 0
   };
 }

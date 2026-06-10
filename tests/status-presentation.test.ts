@@ -18,7 +18,7 @@ describe("status presentation", () => {
   });
 
   it("defines labels for ready and integrated states", () => {
-    expect(statusMeta("ready").label).toBe("Ready");
-    expect(statusMeta("integrated").label).toBe("Integrated");
+    expect(statusMeta("ready").label).toBe("Listo");
+    expect(statusMeta("integrated").label).toBe("Integrado");
   });
 });

@@ -111,7 +111,12 @@ describe("IntegrationAgent", () => {
     const traceStore = new InMemoryTraceStore();
     const agent = new IntegrationAgent({
       git,
-      executor: new MockAgentExecutor(),
+      executor: new MockAgentExecutor({
+        defaultBehavior: {
+          stdout: "repair thinking\n",
+          stderr: "repair warning\n"
+        }
+      }),
       traceStore,
       repoRoot: "/repo"
     });
@@ -129,6 +134,18 @@ describe("IntegrationAgent", () => {
     expect(git.opsInvoked()).toContain("cherryPickAbort");
     expect(traceStore.findByType("cherry_pick_conflict")).toHaveLength(1);
     expect(traceStore.findByType("executor_repair_started")).toHaveLength(1);
+    expect(traceStore.findByType("executor_output")).toEqual([
+      expect.objectContaining({
+        actor: "agent",
+        taskId: "composite-1",
+        payload: { stream: "stdout", chunk: "repair thinking\n", repairChildTaskId: "b" }
+      }),
+      expect.objectContaining({
+        actor: "agent",
+        taskId: "composite-1",
+        payload: { stream: "stderr", chunk: "repair warning\n", repairChildTaskId: "b" }
+      })
+    ]);
   });
 
   it("repair prompt carries parent goal, canonical seams, and child intent (Artifact 2)", async () => {

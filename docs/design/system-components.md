@@ -131,16 +131,17 @@ Tres familias: **(A) columna vertebral de datos**, **(B) proyecciones de UI**, *
 - **Produce:** `RunEvent` para el reducer (la misma forma que C1).
 - **NO debe:** introducir campos que no existirían en vivo (salvo `playback` de timing, que se descarta).
 
-### C3 · Backend event emitter
-- **Responsabilidad:** emitir `RunEvent` nativos desde el motor de ejecución real.
-- **Estado:** **parcial**. Hoy emite eventos de planning/ejecución que C1 adapta. Los eventos de Foundation (grounding/seams), verify-loop e invalidación son **nuevos** y dependen de capacidades backend aún **pendientes**.
-- **NO debe:** emitir estado derivado (solo hechos); ni embeber artefactos pesados (refs).
+### C3 · LangGraph StateGraph (Backend engine)
+- **Responsabilidad:** Coordinar el flujo de ejecución completo del run utilizando una máquina de estados formal. Emite eventos a través del adaptador de trazas e implementa las interrupciones nativas (`interrupt()`) para la atención conversacional.
+- **Estado:** **Propuesto (Prototipo LangGraph.js)**. Reemplaza al loop secuencial `RunExecutor` por un flujo estructurado en nodos y edges con soporte para paralelismo dinámico (Map-Reduce Send) y reintentos automáticos.
+- **NO debe:** Manipular directamente los worktrees de git ni el Gemini CLI sin pasar a través de las primitivas de ejecución y Git correspondientes del dominio.
 
-### C4 · Trace / evidence store
-- **Responsabilidad:** almacenar el event log append-only, el snapshot materializado, y los artefactos pesados (diff/log/diagnosis) referenciados por `*Ref`.
-- **Consume:** `RunEvent` del emitter.
-- **Produce:** el log para reconstruir el `RunModel`; resuelve refs on-demand.
-- **NO debe:** ser una segunda fuente de verdad: el snapshot es un fold cacheado, no un estado editable aparte.
+### C4 · Checkpointer & Trace Store (Persistencia y Evidencia)
+- **Responsabilidad:** Almacenar de forma inmutable el historial de checkpoints (el State inmutable) de LangGraph en archivos JSON locales en el disco (`JsonFileCheckpointSaver`). Resuelve de forma síncrona el estado para Next.js en la carga inicial y soporta la bifurcación (fork) no destructiva para la UI de time-travel.
+- **Consume:** Actualizaciones de estado y checkpoints emitidos por el motor del grafo.
+- **Produce:** El log de ejecución inmutable y el snapshot inicial del run.
+- **NO debe:** Permitir mutaciones arbitrarias del estado fuera de los canales declarados en la anotación `RunStateAnnotation`.
+
 
 ---
 

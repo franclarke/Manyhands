@@ -24,7 +24,7 @@ interface InterfaceContractLike {
   signature: string;
 }
 
-interface AgentTaskContractLike {
+export interface AgentTaskContractLike {
   taskId: string;
   allowed: { paths: string[] };
   executionScope?: {
@@ -382,7 +382,7 @@ function scopePathsFor(contract: AgentTaskContractLike | undefined): string[] {
 
 type SeamDraft = RunEventPayloads["plan.seam.proposed"];
 
-function seamDraftsFromContracts(contracts: readonly AgentTaskContractLike[]): SeamDraft[] {
+export function seamDraftsFromContracts(contracts: readonly AgentTaskContractLike[]): SeamDraft[] {
   const produced = new Map<string, { iface: InterfaceContractLike; producerNodeId: string }>();
   const consumers = new Map<string, string[]>();
 

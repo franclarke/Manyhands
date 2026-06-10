@@ -147,8 +147,15 @@ function Body({ view, onFocus }: { view: FocusView; onFocus?: ((t: FocusTarget) 
 // ── Node ──────────────────────────────────────────────────────────────────────────
 
 function NodeBody({ view, onFocus }: { view: NodeFocusView; onFocus?: ((t: FocusTarget) => void) | undefined }): React.ReactElement {
+  const showConsole =
+    view.console.lines.length > 0 ||
+    view.vital.status === "running" ||
+    view.vital.status === "verifying" ||
+    view.vital.status === "repairing";
+
   return (
     <Stack>
+      {showConsole ? <NodeConsole view={view} /> : null}
       <Field label="Estado" value={`${view.display} · ${view.freshness}`} strong />
       <Field label="Signo vital" value={`${view.vital.label}${view.vital.detail !== undefined ? ` — ${view.vital.detail}` : ""}`} />
       {view.vital.verificationSummary !== undefined ? <Field label="Verificación" value={view.vital.verificationSummary} mono /> : null}
@@ -199,6 +206,48 @@ function NodeBody({ view, onFocus }: { view: NodeFocusView; onFocus?: ((t: Focus
 }
 
 // ── Seam ──────────────────────────────────────────────────────────────────────────
+
+function NodeConsole({ view }: { view: NodeFocusView }): React.ReactElement {
+  return (
+    <section
+      aria-label="Consola del agente"
+      style={{
+        display: "grid",
+        gap: 10,
+        padding: "10px 12px",
+        borderRadius: 6,
+        border: "1px solid rgba(241,234,216,0.16)",
+        background: "rgba(0,0,0,0.24)"
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+        <span style={labelStyle}>Consola en vivo</span>
+        <span style={{ ...monoValueStyle, fontSize: 10.5 }}>
+          {view.console.lines.length} chunks{view.console.truncated ? " · ultimos 200" : ""}
+        </span>
+      </div>
+      {view.console.lines.length === 0 ? (
+        <span style={monoValueStyle}>Esperando output visible de Gemini...</span>
+      ) : (
+        <pre
+          style={{
+            margin: 0,
+            maxHeight: 300,
+            overflow: "auto",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            color: "var(--text-2, #cfc7b4)",
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: 11,
+            lineHeight: 1.45
+          }}
+        >
+          {view.console.lines.map((line) => `[${line.stream}] ${line.chunk}`).join("")}
+        </pre>
+      )}
+    </section>
+  );
+}
 
 function SeamBody({ view, onFocus }: { view: SeamFocusView; onFocus?: ((t: FocusTarget) => void) | undefined }): React.ReactElement {
   return (
@@ -513,9 +562,10 @@ function ArtifactViewer({ refItem }: { refItem: FocusRef }): React.ReactElement 
   }
 
   if (error !== null) {
+    const notFound = /not found|404/i.test(error);
     return (
-      <span style={{ ...monoValueStyle, color: "var(--gated, #d0953a)" }}>
-        {refItem.ref} · {error}
+      <span style={{ ...(notFound ? valueStyle : monoValueStyle), color: notFound ? "var(--text-3, #9a927f)" : "var(--gated, #d0953a)" }}>
+        {notFound ? "Sin artefacto disponible todavía." : `${refItem.label}: ${error}`}
       </span>
     );
   }

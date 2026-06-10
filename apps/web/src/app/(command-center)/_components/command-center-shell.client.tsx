@@ -19,9 +19,9 @@ import type { ExecutorSelection } from "@/lib/api-types";
 
 const PROMPT_STORAGE_KEY = "manyhands:lastPrompt";
 const EXAMPLE_PROMPTS = [
-  "Add passwordless login with magic links, tests, and session handling.",
-  "Refactor the task API validation and update the failing tests.",
-  "Implement DELETE /tasks/:id with persistence, errors, and coverage."
+  "Agregá login sin contraseña con magic links, tests y manejo de sesión.",
+  "Refactorizá la validación de la API de tareas y arreglá los tests que fallan.",
+  "Implementá DELETE /tasks/:id con persistencia, errores y cobertura."
 ] as const;
 
 interface CommandCenterShellProps {
@@ -270,7 +270,7 @@ export function CommandCenterShell({
 
   async function handleWorkspaceDelete(): Promise<void> {
     if (!selectedWorkspace) return;
-    if (!confirm(`Delete workspace "${selectedWorkspace.name}"?`)) return;
+    if (!confirm(`¿Eliminar el workspace "${selectedWorkspace.name}"?`)) return;
     setErrorMessage(null);
     setWorkspaceBusy(true);
     try {
@@ -296,22 +296,16 @@ export function CommandCenterShell({
   }
 
   const readinessTooltip = useMemo(() => {
-    if (readinessLoading) return "Checking Gemini CLI status...";
-    if (readinessError) return `Error checking readiness: ${readinessError}`;
-    if (!readiness) return "Readiness status unknown";
+    if (readinessLoading) return "Verificando el estado de Gemini CLI…";
+    if (readinessError) return `Error al verificar el estado: ${readinessError}`;
+    if (!readiness) return "Estado de Gemini CLI desconocido";
     const checksStr = readiness.checks
-      .map((check) => `• [${check.status === "pass" ? "PASS" : check.status.toUpperCase()}] ${check.label}: ${check.message}`)
+      .map((check) => `• [${check.status === "pass" ? "OK" : check.status.toUpperCase()}] ${check.label}: ${check.message}`)
       .join("\n");
-    return `Gemini CLI Status: ${readiness.status.toUpperCase()}\nPath: ${readiness.binaryPath || "unknown"}\nVersion: ${readiness.version || "unknown"}\n\nChecks:\n${checksStr}`;
+    return `Gemini CLI: ${readiness.status.toUpperCase()}\nRuta: ${readiness.binaryPath || "desconocida"}\nVersión: ${readiness.version || "desconocida"}\n\nChecks:\n${checksStr}`;
   }, [readiness, readinessLoading, readinessError]);
 
-  const readinessColor = useMemo(() => {
-    if (readinessLoading) return "var(--text-3)";
-    if (readinessError !== null || readiness?.status === "error") return "var(--error)";
-    if (readiness?.status === "warning") return "var(--warning)";
-    if (readiness?.status === "ready") return "var(--done)";
-    return "var(--text-3)";
-  }, [readiness, readinessLoading, readinessError]);
+
 
   if (workspaces.length === 0 && workspaceFormOpen === "closed") {
     return (
@@ -331,10 +325,10 @@ export function CommandCenterShell({
       >
         <div>
           <p className="mh-serif" style={{ fontSize: 20, color: "var(--text)", margin: 0 }}>
-            No workspaces yet.
+            Todavía no hay workspaces.
           </p>
           <p style={{ marginTop: 8, fontSize: 13, lineHeight: 1.5 }}>
-            Create a workspace before generating a task graph.
+            Creá un workspace —apuntado a un repo git local— antes de generar un grafo de tareas.
           </p>
         </div>
         <button
@@ -353,7 +347,7 @@ export function CommandCenterShell({
             cursor: "pointer"
           }}
         >
-          + Create workspace
+          + Crear workspace
         </button>
       </div>
     );
@@ -369,28 +363,15 @@ export function CommandCenterShell({
         gap: 18
       }}
     >
-      <div style={{ display: "grid", gap: 10, padding: "10px 2px 2px" }}>
-        <span className="mh-mono" style={{ color: "var(--accent)", fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-          ManyHands
+      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "2px 2px 0" }}>
+        <span className="mh-coord" style={{ color: "var(--copper)", margin: 0 }}>
+          nuevo run
         </span>
-        <h1
-          className="mh-serif"
-          style={{
-            margin: 0,
-            maxWidth: 760,
-            color: "var(--text)",
-            fontSize: "clamp(38px, 6vw, 72px)",
-            fontWeight: 500,
-            lineHeight: 0.94,
-            textWrap: "balance"
-          }}
-        >
-          Describe the change. Review the graph. Let the agents work.
-        </h1>
+        <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
       </div>
       {/* Workspace Selection & branch bar */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: -4 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, rowGap: 8, flexWrap: "wrap", marginBottom: -4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: "1 1 auto" }}>
           <FolderIcon style={{ color: "var(--text-3)", opacity: 0.7, flexShrink: 0 }} />
           {workspaces.length > 0 && (
             <WorkspacePicker workspaces={workspaces} value={workspaceId} onChange={setWorkspaceId} />
@@ -400,7 +381,7 @@ export function CommandCenterShell({
           <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
             <button
               type="button"
-              title="Add Workspace"
+              title="Agregar workspace"
               onClick={() => setWorkspaceFormOpen("create")}
               style={actionIconButtonStyle}
             >
@@ -410,7 +391,7 @@ export function CommandCenterShell({
               <>
                 <button
                   type="button"
-                  title="Edit Selected Workspace"
+                  title="Editar workspace seleccionado"
                   onClick={() => setWorkspaceFormOpen("edit")}
                   style={actionIconButtonStyle}
                 >
@@ -418,7 +399,7 @@ export function CommandCenterShell({
                 </button>
                 <button
                   type="button"
-                  title="Delete Selected Workspace"
+                  title="Eliminar workspace seleccionado"
                   disabled={workspaces.length <= 1 || workspaceBusy}
                   onClick={handleWorkspaceDelete}
                   style={{
@@ -440,6 +421,7 @@ export function CommandCenterShell({
               style={{
                 color: "var(--text-3)",
                 fontSize: 11,
+                maxWidth: 200,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -461,13 +443,13 @@ export function CommandCenterShell({
       {/* Main Task Input Card */}
       <div
         style={{
-          border: "1px solid var(--rule-control)",
-          background: "var(--surface)",
+          border: "1px solid var(--color-border-strong)",
+          background: "var(--color-surface)",
           borderRadius: "var(--r-xl)",
-          padding: "22px 24px 18px",
+          padding: "16px 20px 14px",
           display: "flex",
           flexDirection: "column",
-          gap: 16,
+          gap: 12,
           boxShadow: "var(--shadow-lift)"
         }}
       >
@@ -476,102 +458,106 @@ export function CommandCenterShell({
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={handleKeyDown}
-          rows={7}
+          rows={5}
           spellCheck={false}
-          placeholder="What should the system build, refactor, or migrate?"
+          placeholder="Describí los cambios o la funcionalidad a construir (ej: agregar autenticación, refactorizar validación, crear endpoint...)"
           style={{
             width: "100%",
             border: "none",
             background: "transparent",
-            color: "var(--text)",
-            fontFamily: "var(--font-serif)",
-            fontSize: "clamp(24px, 3vw, 38px)",
-            lineHeight: 1.08,
+            color: "var(--color-text)",
+            fontFamily: "var(--font-sans)",
+            fontSize: "14px",
+            lineHeight: "1.6",
             outline: "none",
             resize: "vertical",
-            minHeight: 210,
+            minHeight: 120,
             padding: 0
           }}
         />
 
         {/* Separator inside card */}
-        <div style={{ height: 1, background: "var(--rule)", margin: "0 -24px" }} />
+        <div style={{ height: 1, background: "var(--color-border-soft)", margin: "0 -20px" }} />
 
         {/* Bottom Action Bar */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
-            <span
-              className="mh-mono"
-              title={readinessTooltip}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 7,
-                fontSize: 11,
-                color: "var(--text-3)"
-              }}
-            >
+            {hasLocalRepo ? (
               <span
-                className={readinessLoading ? "coral-pulse" : ""}
+                className="mh-mono cursor-help"
+                title={readinessTooltip}
                 style={{
-                  display: "inline-block",
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  backgroundColor: readinessColor
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: "var(--status-completed-fg)",
+                  background: "var(--status-completed-bg)",
+                  border: "1px solid var(--status-completed-border)",
+                  padding: "3px 8px",
+                  borderRadius: 999
                 }}
-              />
-              {hasLocalRepo ? "repo ready" : "repo missing"} · Gemini {readiness?.status ?? "unknown"}
-            </span>
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--status-completed-fg)] animate-pulse" />
+                Workspace listo · Gemini {readinessLabel(readiness?.status)}
+              </span>
+            ) : (
+              <span
+                className="mh-mono cursor-help"
+                title={readinessTooltip}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: "var(--status-failed-fg)",
+                  background: "var(--status-failed-bg)",
+                  border: "1px solid var(--status-failed-border)",
+                  padding: "3px 8px",
+                  borderRadius: 999
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--status-failed-fg)]" />
+                Falta repo local
+              </span>
+            )}
             <button
               type="button"
               onClick={() => setAdvancedOpen((open) => !open)}
               className="mh-mono"
               style={{
-                minHeight: 30,
+                minHeight: 28,
                 padding: "0 10px",
                 borderRadius: 6,
-                border: "1px solid var(--rule-control)",
-                background: advancedOpen ? "color-mix(in srgb, var(--accent) 10%, var(--surface))" : "transparent",
-                color: advancedOpen ? "var(--accent)" : "var(--text-3)",
+                border: "1px solid var(--color-border-strong)",
+                background: advancedOpen ? "var(--color-surface-raised)" : "transparent",
+                color: "var(--color-text-muted)",
                 fontSize: 11,
-                cursor: "pointer"
+                cursor: "pointer",
+                transition: "all 150ms ease"
               }}
             >
-              {advancedOpen ? "Hide advanced" : "Advanced settings"}
+              {advancedOpen ? "Ocultar opciones" : "Opciones avanzadas"}
             </button>
           </div>
 
           {/* Config options */}
-          <div style={{ display: advancedOpen ? "flex" : "none", alignItems: "center", gap: 14, flexWrap: "wrap", width: "100%" }}>
+          <div style={{ display: advancedOpen ? "flex" : "none", alignItems: "center", gap: 14, flexWrap: "wrap", width: "100%", paddingTop: 6 }}>
             {/* Model Select */}
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                planning:
+              <span className="mh-mono text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+                planificación:
               </span>
               <ModelPicker value={modelId} onChange={setModelId} capability="planning" width={150} />
-              <span
-                className={readinessLoading ? "coral-pulse" : ""}
-                title={readinessTooltip}
-                style={{
-                  display: "inline-block",
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  backgroundColor: readinessColor,
-                  cursor: "help",
-                  flexShrink: 0,
-                  marginLeft: 2
-                }}
-              />
             </div>
 
-            {/* Separator */}
-            <span style={{ color: "var(--rule-control)", userSelect: "none" }} aria-hidden>|</span>
+            <span style={{ color: "var(--color-border)", userSelect: "none" }} aria-hidden>|</span>
 
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                execution:
+              <span className="mh-mono text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+                ejecución:
               </span>
               <ModelPicker
                 value={defaultExecutionSelection}
@@ -582,11 +568,11 @@ export function CommandCenterShell({
               />
             </div>
 
-            <span style={{ color: "var(--rule-control)", userSelect: "none" }} aria-hidden>|</span>
+            <span style={{ color: "var(--color-border)", userSelect: "none" }} aria-hidden>|</span>
 
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                repair:
+              <span className="mh-mono text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+                reparación:
               </span>
               <ModelPicker
                 value={defaultRepairSelection}
@@ -597,15 +583,15 @@ export function CommandCenterShell({
               />
             </div>
 
-            <span style={{ color: "var(--rule-control)", userSelect: "none" }} aria-hidden>|</span>
+            <span style={{ color: "var(--color-border)", userSelect: "none" }} aria-hidden>|</span>
 
             {/* Aggressiveness Select */}
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                aggressiveness:
+              <span className="mh-mono text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
+                agresividad:
               </span>
               <select
-                aria-label="Decomposition Aggressiveness"
+                aria-label="Agresividad de descomposición"
                 value={granularity}
                 onChange={(event) => {
                   const val = event.target.value;
@@ -643,11 +629,14 @@ export function CommandCenterShell({
               padding: "0 14px",
               fontSize: 13,
               fontWeight: 600,
-              borderRadius: 6
+              borderRadius: 6,
+              background: canStart ? "var(--copper)" : "var(--color-text-faint)",
+              borderColor: canStart ? "var(--copper)" : "var(--color-border)",
+              color: canStart ? "#FFF" : "var(--color-text-muted)"
             }}
           >
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              Plan run
+              Generar plan
               <span
                 aria-hidden
                 style={{
@@ -658,8 +647,8 @@ export function CommandCenterShell({
                   lineHeight: 1,
                   padding: "1px 4px",
                   borderRadius: 2,
-                  background: "rgba(255,255,255,0.24)",
-                  color: "rgba(255,255,255,0.72)"
+                  background: canStart ? "rgba(255,255,255,0.2)" : "transparent",
+                  color: canStart ? "rgba(255,255,255,0.8)" : "var(--color-text-muted)"
                 }}
               >
                 ⌘↵
@@ -673,7 +662,7 @@ export function CommandCenterShell({
       {prompt.trim().length === 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 2 }}>
           <span className="mh-coord" style={{ fontSize: 10, color: "var(--text-3)", opacity: 0.8 }}>
-            try:
+            probá:
           </span>
           {EXAMPLE_PROMPTS.map((example) => (
             <button
@@ -730,7 +719,7 @@ export function CommandCenterShell({
             marginTop: 4
           }}
         >
-          Workspace &quot;{selectedWorkspace.name}&quot; has no local git repo. Configure one using the Edit button.
+El workspace &quot;{selectedWorkspace.name}&quot; no tiene un repo git local. Configurá uno con el botón de editar.
         </div>
       )}
 
@@ -746,6 +735,19 @@ export function CommandCenterShell({
       ) : null}
     </section>
   );
+}
+
+function readinessLabel(status: ProviderReadiness["status"] | undefined): string {
+  switch (status) {
+    case "ready":
+      return "listo";
+    case "warning":
+      return "con avisos";
+    case "error":
+      return "con error";
+    default:
+      return "desconocido";
+  }
 }
 
 function getCompactPath(path: string): string {

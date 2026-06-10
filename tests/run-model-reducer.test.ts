@@ -97,7 +97,24 @@ describe("reducer — general", () => {
     expect(reduceRunEvent(base, stale)).toBe(base);
   });
 
-  it.each(ALL)("7. %s model has no derived fields", (_name, fx) => {
+  it("7. node.cli.output advances the cursor without changing entity state", () => {
+    const base = reduceFixture(goldenHappyPath);
+    const output: RunEvent = {
+      seq: base.cursor + 1,
+      at: "2026-06-08T00:00:00.000Z",
+      runId: goldenHappyPath.runId,
+      actor: "agent",
+      type: "node.cli.output",
+      payload: { nodeId: "n-store", stream: "stdout", chunk: "visible output\n" }
+    };
+    const next = reduceRunEvent(base, output);
+    expect(next.cursor).toBe(base.cursor + 1);
+    expect(next.nodes).toBe(base.nodes);
+    expect(next.seams).toBe(base.seams);
+    expect(next.evidence).toBe(base.evidence);
+  });
+
+  it.each(ALL)("8. %s model has no derived fields", (_name, fx) => {
     const keys = Object.keys(reduceFixture(fx));
     for (const forbidden of ["phase", "health", "wavefront", "attention", "freshness", "invalidatedNodes", "affectedByAmendment", "renderableNodeState"]) {
       expect(keys).not.toContain(forbidden);

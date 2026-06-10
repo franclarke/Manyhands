@@ -197,10 +197,10 @@ function nestedCompositeGraph(): TaskGraph {
   };
 }
 
-function makeExecutor(git: FakeGitRunner, traceStore: InMemoryTraceStore): RunExecutor {
+function makeExecutor(git: FakeGitRunner, traceStore: InMemoryTraceStore, agent = new MockAgentExecutor()): RunExecutor {
   return new RunExecutor({
     git,
-    executor: new MockAgentExecutor(),
+    executor: agent,
     traceStore,
     repoRoot: REPO_ROOT,
     // No-op so the unit test never touches the real filesystem.
@@ -235,6 +235,42 @@ describe("RunExecutor", () => {
     expect(result.granularityVector.leafSuccessRate).toBe(1);
     expect(result.granularityVector.integrationSuccessRate).toBe(1);
     expect(traceStore.findByType("run_completed")).toHaveLength(1);
+  });
+
+  it("traces live executor stdout/stderr chunks for the running node", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/x b/x\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const traceStore = new InMemoryTraceStore();
+    const agent = new MockAgentExecutor({
+      defaultBehavior: {
+        stdout: "thinking visibly\n",
+        stderr: "warning visibly\n"
+      }
+    });
+    const executor = makeExecutor(git, traceStore, agent);
+
+    const result = await executor.run({
+      graph: graphWith(["a"]),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    expect(result.status).toBe("completed");
+    expect(traceStore.findByType("executor_output")).toEqual([
+      expect.objectContaining({
+        actor: "agent",
+        taskId: "a",
+        payload: { stream: "stdout", chunk: "thinking visibly\n" }
+      }),
+      expect.objectContaining({
+        actor: "agent",
+        taskId: "a",
+        payload: { stream: "stderr", chunk: "warning visibly\n" }
+      })
+    ]);
   });
 
   it("resolves executor models from node metadata with run-model fallback", () => {

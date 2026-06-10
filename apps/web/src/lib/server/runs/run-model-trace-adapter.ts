@@ -66,6 +66,20 @@ export function runModelEventsFromTrace(
         }
       ];
     }
+    case "executor_output": {
+      if (taskId === undefined) return [];
+      const chunk = stringValue(payload.chunk);
+      if (chunk === undefined) return [];
+      const stream = stringValue(payload.stream) === "stderr" ? "stderr" : "stdout";
+      return [
+        {
+          actor: "agent",
+          at,
+          type: "node.cli.output",
+          payload: { nodeId: taskId, stream, chunk }
+        }
+      ];
+    }
     case "executor_completed": {
       if (taskId === undefined) return [];
       const timedOut = payload.timedOut === true;

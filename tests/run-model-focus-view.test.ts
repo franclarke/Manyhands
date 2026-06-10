@@ -93,6 +93,35 @@ describe("focus-view — node focus", () => {
       expect(ref.ref).toMatch(/:\/\/runs\/.+\/node\/n-store/);
     }
   });
+
+  it("2c. derives live node console from raw node.cli.output events", () => {
+    const events: RunEvent[] = [
+      ...goldenHappyPath.events,
+      {
+        seq: 10_001,
+        at: "2026-06-08T00:00:00.000Z",
+        runId: goldenHappyPath.runId,
+        actor: "agent",
+        type: "node.cli.output",
+        payload: { nodeId: "n-store", stream: "stdout", chunk: "Thinking visibly\n" }
+      },
+      {
+        seq: 10_002,
+        at: "2026-06-08T00:00:01.000Z",
+        runId: goldenHappyPath.runId,
+        actor: "agent",
+        type: "node.cli.output",
+        payload: { nodeId: "n-store", stream: "stderr", chunk: "Warning\n" }
+      }
+    ];
+
+    const view = buildFocusView(reduceFixture(goldenHappyPath), { kind: "node", id: "n-store" }, { events });
+    if (view.kind !== "node") throw new Error("expected node focus");
+    expect(view.console.lines).toEqual([
+      expect.objectContaining({ stream: "stdout", chunk: "Thinking visibly\n" }),
+      expect.objectContaining({ stream: "stderr", chunk: "Warning\n" })
+    ]);
+  });
 });
 
 // ── 3. Seam focus ─────────────────────────────────────────────────────────────────

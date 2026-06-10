@@ -1,5 +1,9 @@
+import { join } from "node:path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { resolveRunsDirectory } from "@/lib/server/runs/repository";
+import { AmendmentsEngine, type RunExecutionResult, computeGranularityVector } from "@manyhands/execution-core";
+import { JsonFileCheckpointSaver } from "@manyhands/orchestrator-graph";
 import { createInitialRunModel, reduceRunEvents } from "@/lib/run-model/reducer";
 import type { Decision, DecisionChoice, RunEvent } from "@/lib/run-model/types";
 import { buildDecisionChannelView } from "@/lib/run-model/decision-channel-view";
@@ -15,6 +19,7 @@ import {
   parseRunPatches,
   publishRunEvent,
   publishRunModelEvent,
+  runExecutionPipeline,
   runPlanningPipeline
 } from "@/lib/server/runs";
 import type { RunRecord } from "@/lib/server/runs/schema";
@@ -81,6 +86,10 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       assertTransition(run.status, "approved");
       run = await repo.save({ ...run, status: "approved", approvedAt: now });
       publishRunEvent(run.runId, { kind: "status.changed", status: run.status, at: now });
+      // Resolving the approval gate IS the go-ahead in the agent-first model (there
+      // is no separate "run" affordance). Start execution; the pipeline transitions
+      // "approved" → "running" itself (mirrors the restart route).
+      void runExecutionPipeline(run.runId).catch(() => undefined);
     }
 
     if (decision.kind === "clarify") {
@@ -135,6 +144,63 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         type: "amendment.applied",
         payload: { amendmentId: decision.context.amendmentId }
       });
+
+      const model = reduceRunEvents(createInitialRunModel(buildRunModelSeed(run)), events);
+      const amendment = model.amendments.get(decision.context.amendmentId);
+      const seamId = amendment?.detail?.seamId || decision.context.amendmentId;
+
+      const amendmentsEngine = new AmendmentsEngine();
+      const graph = await resolveExecutionGraph(run);
+      const existing = executionResultsFromRun(run);
+      const provisioned = provisionedFromRecord(run.provisioned);
+
+      if (provisioned !== undefined) {
+        const invalidation = await amendmentsEngine.amendSeam({
+          repoRoot: provisioned.repoRoot,
+          runId: run.runId,
+          graph,
+          seamId,
+          leafResults: existing.leafResults,
+          integrationResults: existing.integrationResults
+        });
+
+        const totalDurationMs =
+          invalidation.leafResults.reduce((sum, r) => sum + r.executorDurationMs, 0) +
+          invalidation.integrationResults.reduce((sum, r) => sum + integrationDurationMs(r), 0);
+
+        const updatedExecution: RunExecutionResult = {
+          runId: run.runId,
+          status: "failed",
+          leafResults: invalidation.leafResults,
+          integrationResults: invalidation.integrationResults,
+          totalDurationMs,
+          granularityVector: computeGranularityVector({
+            graph,
+            leafResults: invalidation.leafResults,
+            integrationResults: invalidation.integrationResults,
+            totalDurationMs
+          })
+        };
+
+        const checkpointer = new JsonFileCheckpointSaver(join(resolveRunsDirectory(), "checkpoints"));
+        const config = { configurable: { thread_id: run.runId } };
+        const tuple = await checkpointer.getTuple(config);
+        if (tuple !== undefined) {
+          const checkpoint = tuple.checkpoint;
+          checkpoint.channel_values.leafResults = invalidation.leafResults;
+          checkpoint.channel_values.integrationResults = invalidation.integrationResults;
+          checkpoint.channel_values.currentBatchIndex = 0;
+          await checkpointer.put(config, checkpoint, tuple.metadata ?? { source: "update", step: 0, parents: {} }, {});
+        }
+
+        run = await repo.save({
+          ...run,
+          execution: updatedExecution,
+          status: "running"
+        });
+
+        void runExecutionPipeline(run.runId).catch(() => undefined);
+      }
     }
 
     return NextResponse.json({ ...toRunResponse(run), decisionId: decision.id, choice });
@@ -204,4 +270,35 @@ function errorResponse(error: unknown): NextResponse {
     { error: error instanceof Error ? error.message : String(error) },
     { status: 500 }
   );
+}
+
+async function resolveExecutionGraph(run: RunRecord) {
+  if (run.planning !== undefined && run.planning !== null) {
+    return (run.planning as any).decomposition.graph;
+  }
+  throw new Error("Cannot execute a run without a generated plan. Run planning first.");
+}
+
+function provisionedFromRecord(record: RunRecord["provisioned"]) {
+  if (record === undefined) {
+    return undefined;
+  }
+  return {
+    repoRoot: record.repoRoot,
+    baseBranch: record.baseBranch,
+    baseCommit: record.baseCommit,
+    cleanup: async () => undefined
+  };
+}
+
+function executionResultsFromRun(run: RunRecord) {
+  const execution = run.execution as any;
+  return {
+    leafResults: Array.isArray(execution?.leafResults) ? [...execution.leafResults] : [],
+    integrationResults: Array.isArray(execution?.integrationResults) ? [...execution.integrationResults] : []
+  };
+}
+
+function integrationDurationMs(result: any): number {
+  return result.repairResult?.executorDurationMs ?? 0;
 }

@@ -45,7 +45,7 @@ export function EmptyState({
           className="mh-coord"
           style={{ color: accent }}
         >
-          pending · execution core
+          pendiente · execution core
         </span>
       ) : null}
       <span

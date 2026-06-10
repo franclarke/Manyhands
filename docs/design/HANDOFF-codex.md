@@ -1,20 +1,13 @@
-# HANDOFF — Finalizar el rediseño agent-first (para Codex 5.5)
+# HANDOFF — Refactorización del Backend Orquestador con LangGraph (para Codex 5.5 / AI Agents)
 
-> **Actualización 2026-06-07.** G-1/G-2 ya no están pendientes como unidades
-> separadas: `/runs/[runId]` abre agent-first por defecto, `?model=legacy` es el
-> rollback, existe SSE nativo `/api/runs/[id]/run-events`, decision facade
-> `/api/runs/[id]/decisions/[decisionId]`, artifact resolver
-> `/api/runs/[id]/artifacts?ref=...`, log JSONL append-only y mapper
-> `TraceEvent -> RunEvent`. Lo que sigue pendiente es el frontier profundo:
-> `GroundingAgent` Gemini con walking skeleton/extractor TS-JS, verify-loop
-> multi-iteración, scheduler por seams/scopes derivados y re-run acotado de
-> amendments.
+> **Actualización 2026-06-08.** El rediseño agent-first del frontend ya está completado y conectado por defecto a `/runs/[runId]` (usando el adaptador SSE temporal). La nueva frontera de desarrollo consiste en **refactorizar y rediseñar el backend orquestador utilizando LangGraph.js**, reemplazando la lógica secuencial y el replay-cache por una máquina de estados formalizada con checkpoints nativos en disco y time-travel.
 
-> **Propósito.** Sos el agente que termina el rediseño agent-first de ManyHands. Este documento es **autocontenido**: con él (más el repo) podés implementar **todo lo que falta** sin contexto previo. Está escrito el 2026-06-06 tras cerrar PR-N1, U-A y U-B.
+> **Propósito.** Sos el agente que implementa la orquestación con LangGraph en ManyHands. Este documento es **autocontenido**: con él, la especificación en `docs/design/langgraph-orchestrator-design.md` y el código del repo, podés implementar el prototipo de LangGraph sin contexto previo.
 >
-> **Cómo usarlo:** leé las secciones 0–4 una vez (reglas + estado + arquitectura), después tomá las unidades pendientes de la §5 **en orden** (`G-1 → G-2 → cierres backend → doc-drift`). Cada unidad trae objetivo, archivos, enfoque, gotchas, verificación, aceptación y rollback. No reimplementes lo ya hecho.
+> **Cómo usarlo:** leé las secciones 0–4 una vez (reglas + estado + arquitectura), después tomá las unidades pendientes de la §5 **en orden** (`PR-LG1 → PR-LG2 → PR-LG3 → PR-LG4`). Cada unidad trae objetivo, enfoque y verificación.
 >
 > **Idioma:** Francisco trabaja en español; comunicá en español. Comentarios de código en inglés (seguí el estilo del repo).
+
 
 ---
 
@@ -118,97 +111,62 @@ Tests del rediseño = entorno **node**, sin jsdom/RTL: testeás los **view-model
 
 ---
 
-## 5. Unidades pendientes (implementá en este orden)
+## 5. Unidades de Trabajo Pendientes (Fase LangGraph Orchestrator)
 
-### G-1 — Rewire gated del run real `gated-risky` · `core-refactor`
+El objetivo de esta fase es refactorizar la orquestación de ManyHands utilizando **LangGraph.js**, alineándolo con el diseño técnico detallado en [langgraph-orchestrator-design.md](file:///c:/Users/franc/Documents/Manyhands/docs/design/langgraph-orchestrator-design.md).
 
-**Objetivo.** Hacer que la página del run real (`/runs/[runId]`) renderice a través del **modelo nuevo** (runStore + reducer + selectores + adapter + componentes de `components/run-model/`) en vez del legacy `useLiveRun` + `nodeStatusOverrides`, **detrás de un flag** que permite volver al legacy (rollback).
+### PR-LG1 — Paquete de Grafos e Infraestructura de Checkpoint
+- **Objetivo**: Crear el entorno de desarrollo para LangGraph en el monorepo e implementar la persistencia en disco de checkpoints JSON.
+- **Archivos probables**:
+  - `packages/` (nuevo paquete `@manyhands/orchestrator-graph`).
+  - Nuevo checkpointer local `JsonFileCheckpointSaver` (implementa `BaseCheckpointSaver`).
+  - `tsconfig.json` y configuraciones del workspace de pnpm.
+- **Enfoque**:
+  1. Instalar `@langchain/langgraph` y `@langchain/core`.
+  2. Implementar `JsonFileCheckpointSaver` para escribir y recuperar archivos JSON bajo el directorio de runs configurado en `store.ts` (`mh-<runId>/latest.json` y `mh-<runId>/<checkpointId>.json`).
+- **Verificación**: Tests unitarios que escriban y lean un checkpoint completo sin errores de tipado.
 
-**Problema que resuelve.** Hoy el run real usa una reducción ad-hoc dentro de `useLiveRun` (en `RunCanvasShell`) que setea `nodeStatusOverrides` (segunda fuente de verdad, 3 colores imperativos). El rediseño ya tiene todo para renderizar mejor; falta enchufarlo.
+### PR-LG2 — Planificación Interactiva en LangGraph (Decomposer-HITL)
+- **Objetivo**: Migrar el loop de planificación recursiva de `GeminiRecursiveDecomposer` a LangGraph.js, usando interrupciones nativas para preguntas y aprobaciones.
+- **Archivos probables**:
+  - `@manyhands/orchestrator-graph` (nodos del StateGraph: `initializePlanningNode`, `decomposeNode` y `criticNode`).
+  - `apps/web/src/lib/server/runs/runner.ts` (API route `/api/runs/[id]/resume`).
+- **Enfoque**:
+  1. Definir `RunStateAnnotation`.
+  2. Mapear las decisiones del tipo `question` del decomposer a una interrupción nativa `interrupt()`.
+  3. Al dispararse la interrupción, guardar el estado, actualizar el status del run a `"paused"` y emitir el evento `decision.raised`.
+  4. Exponer `/resume` para escribir la respuesta en el canal `userAnswers` e invoca a `graph.resume(answer)`.
+- **Verificación**: Tests de integración usando `MemorySaver` y `vitest` que simulen respuestas del usuario en la planificación y verifiquen que el grafo se reanuda desde el paso suspendido.
 
-**Archivos probables.**
-- `apps/web/src/components/dag/RunCanvasShell.tsx` (contiene `useLiveRun`, la reducción ad-hoc y `nodeStatusOverrides`).
-- `apps/web/src/app/runs/[runId]/page.tsx` (página del run real).
-- `apps/web/src/app/api/runs/[id]/events/route.ts` (transporte SSE — **no** lo reemplaces, solo lo consumís).
-- Nuevo: un hook `apps/web/src/components/run-model/use-live-run-model.ts` (análogo a `use-fixture-playback.ts` pero alimentado por SSE).
-- Reusá tal cual: `WorkspaceSurface`, `DecisionChannel`, `RunFrame`, `FocusPanel`, `Timeline`, `selectWorkspaceView`, `buildDecisionChannelView`, `buildFocusView`, `buildTimelineView`.
+### PR-LG3 — Concurrencia Paralela (Map-Reduce) y Reparación Bottom-Up
+- **Objetivo**: Ejecutar los lotes en paralelo usando la primitiva `Send` de LangGraph, e implementar el arbitraje de conflictos y reintentos.
+- **Archivos probables**:
+  - Nodos del StateGraph: `executeLeafNode`, `integrateCompositeNode` y `runValidationNode`.
+  - Integración con `WorktreeManager`, `GeminiCliExecutor` e `IntegrationAgent` (Composer).
+- **Enfoque**:
+  1. El programador genera la lista de tareas en un lote. Para cada tarea, se despacha un `Send("executeLeafNode", { taskId })` ejecutándolas en paralelo.
+  2. Cada tarea hoja inicializa su worktree bajo un directorio aislado (`mh-{runId}-{nodeId}`).
+  3. Si fallan los tests de la tarea hoja, realizar 1 reintento automático de reparación con Gemini CLI. Si este falla, lanzar un `interrupt()` para pedir directrices.
+  4. Si ocurre un conflicto semántico de fusión al integrar, invocar al Composer (reparación semántica). Si falla, lanzar `interrupt()` con los detalles del conflicto para resolución del usuario en el chat.
+- **Verificación**: Pruebas unitarias simulando fallos de tests y conflictos de cherry-pick, y comprobando la interrupción del grafo.
 
-**Enfoque recomendado.**
-1. **Flag.** `MANYHANDS_RUN_MODEL` (env público `NEXT_PUBLIC_MANYHANDS_RUN_MODEL=1`) **o** query param `?model=new`. Default OFF (legacy intacto = rollback).
-2. **Hook live.** `use-live-run-model.ts`: abre `EventSource` a `/api/runs/[id]/events`, acumula el historial **legacy** (`StreamEvent[]`) que llega, y en cada tick recomputa el modelo:
-   ```ts
-   const envelope = adaptStreamHistory(legacyHistorySoFar, runId);
-   const model = reduceRunEvents(createInitialRunModel(seed), envelope);
-   ```
-   **GOTCHA crítico de `seq`:** `adaptStreamEvent` es por-evento sin `seq`; `adaptStreamHistory` asigna `seq` 1-based sobre **toda** la salida. El mapeo **no es 1:1** (`planning.node.completed` se abre en N). Por eso **NO** mantengas un seq incremental por-evento a mano. **Recomputá `adaptStreamHistory(historiaCompleta)` y `reduceRunEvents(initial, …)` desde cero en cada tick** — es determinista (mismos seq estables) y barato a esta escala. (Si querés optimizar luego, el reducer es idempotente por `seq`, pero re-feed parcial es frágil porque los seq se recalculan; quedate con el recompute completo para v1.)
-3. **Seed del `Run`.** `createInitialRunModel({ id: runId, intent, workspaceId, config })` — sacá `intent/workspaceId/config` del `RunRecord` (server). El adapter ya emite `plan.*`/`node.*`/`decision.*`; identidad/config viene del record, no del log.
-4. **Render.** Cuando el flag está ON, montá `proto-run-view`-like: `RunFrame` + `DecisionChannel` + `WorkspaceSurface` + `Timeline` + `FocusPanel`, todo desde los selectores/view-models. Cuando está OFF, el `RunCanvasShell` legacy queda igual.
-5. **Decisiones reales.** El canal de decisiones en fixtures resuelve avanzando el fixture. En el run real, resolver un gate debe pegarle a los endpoints existentes (approve-plan / answer / node review). Para G-1 podés **dejar la resolución conectada a los endpoints legacy directamente** (sin facade); el "Decision facade" unificado (`/api/runs/[id]/decisions/[decisionId]`) es un nice-to-have que podés diferir o incluir.
-6. **Eliminar `nodeStatusOverrides`** en el path nuevo (no en el legacy todavía). El objetivo final es borrarlo; en G-1 dejá el legacy como rollback y el nuevo sin overrides.
+### PR-LG4 — Viaje en el Tiempo (Forking) y Sincronización en Next.js
+- **Objetivo**: Conectar Next.js Server Components para cargar el estado del checkpoint y exponer la bifurcación no destructiva (Time-travel).
+- **Archivos probables**:
+  - `apps/web/src/app/runs/[runId]/page.tsx`
+  - `apps/web/src/app/api/runs/[id]/fork/route.ts` (nuevo endpoint).
+- **Enfoque**:
+  1. Durante la carga de página, Next.js Server Components lee directamente el último checkpoint de LangGraph mediante `graph.getState(...)` para pintar el DAG.
+  2. Implementar la operación `/api/runs/[id]/fork` que clona un checkpoint anterior, crea un nuevo registro `RunRecord` con un nuevo ID, y lanza un nuevo StateGraph de LangGraph.
+- **Verificación**: Probar manualmente en el navegador cargando runs existentes, visualizando el DAG completo de inmediato y forkeando una rama fallida.
 
-**Tests.** Regresión pura (sin browser): tomá un historial legacy realista (podés grabar uno o construirlo como `StreamEvent[]`) → `adaptStreamHistory` → `reduceRunEvents` → asertá que los selectores producen el estado esperado (nodos running/done/failed, gates, planning health). Esto YA está parcialmente cubierto en `tests/run-model-sse-adapter.test.ts` y `tests/run-model-planning-health.test.ts` — ampliá si hace falta.
-
-**Verificación manual OBLIGATORIA (esto NO lo cubren los tests).** El valor real —renderizar un run vivo— solo se prueba con un **run Gemini real + browser**:
-- `pnpm web:dev`, crear un run real (necesitás `gemini` en PATH o `MANYHANDS_GEMINI_BIN`), aprobar el plan, y verificar con el flag ON que la superficie nueva renderiza el run de punta a punta (planning → ejecución → integración → evidencia) y que con el flag OFF el legacy sigue intacto.
-- Usá las tools `preview_*` (NO "Claude in Chrome") para levantar el dev server y verificar: `preview_start`, `preview_snapshot`, `preview_console_logs`, `preview_screenshot`.
-
-**Aceptación.** Con flag ON, un run real renderiza vía selectores (cero `nodeStatusOverrides` en el path nuevo); con flag OFF, paridad legacy intacta; suite verde; typecheck limpio.
-
-**Rollback.** Flag OFF = legacy. Revertir el commit si hace falta.
-
-**Riesgos.** Romper el run real (por eso el flag); drift de `seq` (por eso recompute completo); SSE reconnection/heartbeats (el stream legacy emite `heartbeat` y `replay.*` — el adapter ya los descarta).
-
----
-
-### G-2 — Emisión nativa del envelope + rename legacy `gated-risky` · `core-refactor`
-
-**Objetivo.** Reducir la dependencia del adapter lossy: (a) renombrar el tipo legacy `RunEvent` → `StreamEvent` en el backend para matar la colisión de nombres; (b) que el runner emita el **envelope nuevo** para lo que el motor ya produce; (c) abrir la puerta a eventos nativos más ricos (grounding/seam/verify-iteration/integration/conflict/amendment) a medida que el motor los soporte.
-
-**Problema que resuelve.** Hoy conviven **dos modelos de evento**: el legacy `RunEvent` (unión por `kind`, plano) en `server/runs/events.ts` y el envelope nuevo `RunEvent` (`run-model/types.ts`). El adapter puentea pero **pierde fidelidad** (el stream legacy es planning + ejecución gruesa; no emite seams/scope/waves/verify-loop/conflicts/amendments nativos).
-
-**Archivos probables.**
-- `apps/web/src/lib/server/runs/events.ts` — rename del tipo `RunEvent` → `StreamEvent` (mecánico; los tests atrapan rupturas). ~5 consumidores: `events.ts`, `event-bus.ts`, `index.ts`, `runner.ts`, `app/api/runs/[id]/events/route.ts`.
-- `apps/web/src/lib/server/runs/runner.ts` — donde se emiten los eventos del run (planning vía `onStepStatus/onStepCompleted`, ejecución, integración). Acá emitís el envelope nativo o un punto de mapeo único.
-- Motor: `packages/execution-core/src/run/executor.ts`, `packages/execution-core/src/integration/agent.ts` (TraceEvents → eventos del envelope; ojo, **no rompas** los TraceEvents existentes que alimentan otras cosas).
-
-**Enfoque.**
-1. **Rename primero** (`RunEvent` legacy → `StreamEvent`), commit aislado, suite verde. El adapter ya importa `import type { RunEvent as StreamEvent }` — quedará consistente.
-2. **Punto de emisión único.** Decidí si el runner emite envelope directo o si el adapter sigue siendo el único traductor. Recomendado para v1: **mantené el adapter** como traductor y enriquecé el **stream legacy** con los datos que el motor ya tiene pero no emite (p.ej. `validation.completed` ya existe; agregá lo que falte para que el adapter pueda mapear más). Emisión 100% nativa del envelope es v2.
-3. **Eventos ricos = trabajo de motor.** `grounding.*`, `seam.frozen`, `node.verify.iteration`, `amendment.*`, `conflict.detected/resolved` nativos requieren que `execution-core` los produzca. Hoy el motor emite TraceEvents (`agent_started`, `cherry_pick_conflict`, etc.). Mapealos a eventos del envelope donde haya correspondencia; lo que no exista, **degradá** (el modelo nuevo ya tolera ausencias). No inventes datos que el motor no produce (violaría D5/honestidad).
-
-**Tests.** Contrato de emisión: para cada señal del motor (o del runner), el evento del envelope resultante es el esperado. Rename: la suite entera atrapa rupturas.
-
-**Verificación.** Tests + un run real (igual que G-1).
-
-**Aceptación.** Colisión de nombres eliminada; el run real (con flag de G-1) muestra más fidelidad (idealmente conflictos/integración nativos); suite verde.
-
-**Rollback.** El rename es mecánico/reversible; la emisión nativa va detrás del mismo flag de G-1.
-
----
-
-### Cierres dependientes de backend (parte de / después de G-2)
-
-Estos cierran la profundidad que el carril autónomo dejó "por ref" porque necesitan backend:
-
-- **Inspector real de nodo.** El foco de nodo (`focus-view.ts` / `focus-panel.tsx`) ya muestra scope, planning, vital, y refs `diff://…` / `log://…` con `available:false`. **Falta:** (a) **contrato** (objective / acceptance criteria / validationCommands) — vive en `AgentTaskContract` (`packages/contracts`), exponerlo vía endpoint o incluirlo en el adapter/seed; (b) **diff / stdout-stderr tail reales** — endpoints `GET /api/runs/[id]/nodes/[nodeId]/diff` y `.../log` que el panel resuelve on-demand (cambiar `available:false` → fetch real). Recordá D5: el diff viene de `git diff HEAD`, persistido en el `RunRecord`/result, no del stdout del agente.
-- **Composer / integration visibility.** U-A ya derivó `selectIntegrationProgress` + conflictos. **Falta:** el repair del composer (cherry-pick → repair semántico) como evento visible. Los tipos `conflict.repair.started`, `integration.cherrypick`, `integration.diagnosis.started` ya están **reservados como v2** en `run-model/types.ts` (`RUN_EVENT_TYPES_V2`). Cuando el motor (`execution-core/src/integration/agent.ts`) emita estas señales, mapealas (adapter o nativo) y agregales payload v1; la superficie de reconciliación ya está lista para mostrarlas.
-
----
-
-### Doc-drift `trivial` (plegar acá o en G-2)
-
-Los `docs/system/` describen realidad **legacy/desactualizada** en varios módulos. Reconciliá o marcá como superado por `docs/design/`:
-- `04-run-executor.md`: dice batches "hasta 3"; D9 = `maxParallel 6`. No menciona el registry de executors (ADR-0030).
-- `06-gemini-executor.md`: no menciona el registry / Claude Code CLI opt-in (ADR-0030).
-- `07-context-and-scope.md`: dice scope "deny wins" / hard-fail; la implementación real es **advisory** (`outOfScope`), solo forbidden hard-falla. D7/ADR-0023 quedaron stale (ver memoria del proyecto / `implementation-status` previo).
-- `09-composer.md`: no refleja el conflict-aware resolver (auto-resolve plan-time, jun-2026).
-- `10-web-app.md`: describe la UI **legacy** (canvas/board/timeline + `RunGraphViewModel` + `nodeStatusOverrides` + polling 220ms) como objetivo → está conceptualmente **superado** por `docs/design/`. Marcalo.
-
----
-
-### Pospuesto (NO implementar sin Francisco)
-
-- **N8 — E2E reproducible / matriz de tesis B0–B4 / grafos congelados.** La tesis está en **standby** (sin evidencia empírica; Lab Mode eliminado; metodología en revisión — ver banner en `CLAUDE.md`). Es trabajo de **decisión metodológica humana**, no de código. No lo fuerces.
+### Doc-drift `trivial` (plegar en PR-LG1)
+Los `docs/system/` describen realidad legacy/desactualizada en varios módulos. Márcalos como superados por `docs/design/langgraph-orchestrator-design.md` y `docs/design/run-operative-model.md`:
+- `04-run-executor.md`: desactualizado respecto a maxParallel 6 y el executor registry.
+- `06-gemini-executor.md`: desactualizado respecto al registry y Claude Code.
+- `07-context-and-scope.md`: desactualizado respecto a scopes advisory.
+- `09-composer.md`: no refleja el resolvedor automático.
+- `10-web-app.md`: describe la UI legacy y el polling de 220ms.
 
 ---
 
@@ -217,7 +175,7 @@ Los `docs/system/` describen realidad **legacy/desactualizada** en varios módul
 1. Leé el código antes de tocar (los view-models/selectores tienen comentarios de diseño).
 2. Plan de subtareas (usá tu task list).
 3. Cambios aditivos; respetá la frontera de la unidad (no mezcles concerns).
-4. Si tocás eventos legacy, alias claro para evitar colisión `RunEvent` (ya hay precedente: `import type { RunEvent as StreamEvent }`).
+4. Si tocás eventos legacy, alias claro para evitar colisión `RunEvent` (ya hay precedente: `import type { RunEvent as StreamEvent` = `StreamEvent`).
 5. Si afecta el run real → **flag de rollback**.
 6. Tests (puros donde se pueda; manual + browser para G-1).
 7. Actualizá `docs/design/implementation-status.md` (sección de tu unidad) — es el estado vivo.
@@ -262,5 +220,5 @@ Los `docs/system/` describen realidad **legacy/desactualizada** en varios módul
 1. `git log --oneline -8` y leer `docs/design/implementation-status.md` §0d (roadmap) + §0c (PR-N1) — 5 min.
 2. Confirmar verde de base: `pnpm web:typecheck` y `pnpm test` (esperá 803 passing + 3 skipped).
 3. Abrir `/runs/proto/golden-happy-path` con `pnpm web:dev` para ver la superficie objetivo (métricas + timeline + foco) — es lo que el run real debe alcanzar.
-4. Arrancar **G-1** con flag de rollback. No tocar el legacy salvo para aislarlo detrás del flag.
+4. Arrancar **PR-LG1** con flag de rollback. No tocar el legacy salvo para aislarlo detrás del flag.
 5. Preguntar a Francisco antes de: pushear, cambiar defaults de executor (D4), o tocar la matriz de tesis (N8).

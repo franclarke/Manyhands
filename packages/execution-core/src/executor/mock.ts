@@ -64,6 +64,13 @@ export class MockAgentExecutor implements AgentExecutor {
       await this.committer(options.cwd);
     }
 
+    if (behavior.stdout !== undefined && behavior.stdout.length > 0) {
+      options.onOutput?.({ stream: "stdout", chunk: behavior.stdout });
+    }
+    if (behavior.stderr !== undefined && behavior.stderr.length > 0) {
+      options.onOutput?.({ stream: "stderr", chunk: behavior.stderr });
+    }
+
     const outcome: ExecutorRunOutcome = {
       exitCode: behavior.exitCode ?? 0,
       stdout: behavior.stdout ?? "",

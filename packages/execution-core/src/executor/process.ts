@@ -2,6 +2,7 @@ import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { basename } from "node:path";
 
 import { execError, execLog, execWarn } from "../logging/log";
+import type { ExecutorOutputChunk } from "../types";
 import type { ExecutorRunOutcome } from "./types";
 
 export type SpawnFn = (
@@ -52,6 +53,8 @@ export interface SpawnExecutorParams {
    * after the taskId, so its basename correlates every line back to the task.
    */
   logScope?: string | undefined;
+  /** Emits raw stdout/stderr chunks as they arrive. Diagnostics only; D5 stays git-diff based. */
+  onOutput?: ((chunk: ExecutorOutputChunk) => void) | undefined;
 }
 
 /**
@@ -64,8 +67,20 @@ export interface SpawnExecutorParams {
  * (D5) — these fields are diagnostics plus the exit signal.
  */
 export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<ExecutorRunOutcome> {
-  const { spawnFn, binaryPath, args, cwd, env, useShell, timeoutMs, signal, readInstructions, instructionFilePath, logScope } =
-    params;
+  const {
+    spawnFn,
+    binaryPath,
+    args,
+    cwd,
+    env,
+    useShell,
+    timeoutMs,
+    signal,
+    readInstructions,
+    instructionFilePath,
+    logScope,
+    onOutput
+  } = params;
   const start = Date.now();
   const task = basename(cwd);
 
@@ -146,10 +161,14 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
     signal?.addEventListener("abort", onAbort, { once: true });
 
     child.stdout?.on("data", (chunk: Buffer) => {
-      stdout += chunk.toString("utf8");
+      const text = chunk.toString("utf8");
+      stdout += text;
+      onOutput?.({ stream: "stdout", chunk: text });
     });
     child.stderr?.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString("utf8");
+      const text = chunk.toString("utf8");
+      stderr += text;
+      onOutput?.({ stream: "stderr", chunk: text });
     });
 
     child.on("error", (error: Error) => {

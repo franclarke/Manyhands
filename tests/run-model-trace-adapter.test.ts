@@ -88,6 +88,26 @@ describe("run-model trace adapter", () => {
     });
   });
 
+  it("maps executor stdout/stderr chunks to native node console output events", () => {
+    const mapped = runModelEventsFromTrace(
+      trace({
+        type: "executor_output",
+        taskId: "leaf-a",
+        payload: { stream: "stderr", chunk: "visible warning\n" }
+      }),
+      CONTEXT
+    );
+
+    expect(mapped).toEqual([
+      {
+        actor: "agent",
+        at: AT,
+        type: "node.cli.output",
+        payload: { nodeId: "leaf-a", stream: "stderr", chunk: "visible warning\n" }
+      }
+    ]);
+  });
+
   it("maps cherry-pick conflicts to typed conflict events with diagnosis refs", () => {
     const mapped = runModelEventsFromTrace(
       trace({

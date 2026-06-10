@@ -1,0 +1,55 @@
+diff --git a/dist/core/react-dispatcher.js b/dist/core/react-dispatcher.js
+index 1821e30e3cb572a41930abdf503ba5bab474cb09..9d9605923fd18cfae4a3d96b8c08173013285b2f 100644
+--- a/dist/core/react-dispatcher.js
++++ b/dist/core/react-dispatcher.js
+@@ -23,7 +23,7 @@ const tapDispatcher = {
+ 	use,
+ 	useMemoCache
+ };
+-const internals = React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE ?? React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
++const internals = React['__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE'] ?? React['__CLIENT_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED'] ?? React['__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED'];
+ const slot = internals == null ? null : "H" in internals ? {
+ 	get current() {
+ 		return internals.H;
+diff --git a/dist/react-shim/index.js b/dist/react-shim/index.js
+index 3601a13f2d5e9251ab64132b19fd0110aeebf8e9..cb1f660b3ed6ce7309af363c4f3723f6f6127c77 100644
+--- a/dist/react-shim/index.js
++++ b/dist/react-shim/index.js
+@@ -19,7 +19,7 @@ const useMemo = (factory, deps) => inTap() ? useMemo$2(factory, deps) : React.us
+ const useCallback = (callback, deps) => inTap() ? useCallback$1(callback, deps) : React.useCallback(callback, deps);
+ const useEffect = (effect, deps) => inTap() ? useEffect$1(effect, deps) : React.useEffect(effect, deps);
+ const useLayoutEffect = (effect, deps) => inTap() ? useEffect$1(effect, deps) : React.useLayoutEffect(effect, deps);
+-const useEffectEvent = (callback) => inTap() ? useEffectEvent$1(callback) : React.useEffectEvent(callback);
++const useEffectEvent = (callback) => inTap() ? useEffectEvent$1(callback) : (React['useEffectEvent'] || React['experimental_useEffectEvent'] || ((fn) => fn))(callback);
+ const use = (usable) => isResourceContext(usable) ? useResourceContext(usable) : React.use(usable);
+ const useContext = (context) => isResourceContext(context) ? useResourceContext(context) : React.useContext(context);
+ //#endregion
+diff --git a/src/core/react-dispatcher.ts b/src/core/react-dispatcher.ts
+index 169f071f5d8f4153c1fd246f0e1e30168619193d..408a41ada6674356bd75759233de8f8df9d108c6 100644
+--- a/src/core/react-dispatcher.ts
++++ b/src/core/react-dispatcher.ts
+@@ -32,8 +32,9 @@ const tapDispatcher = {
+ // the client internals object; React 18 as `ReactCurrentDispatcher.current`.
+ const internals =
+   (React as any)
+-    .__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE ??
+-  (React as any).__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
++    ['__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE'] ??
++  (React as any)['__CLIENT_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED'] ??
++  (React as any)['__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED'];
+ 
+ const slot: { current: unknown } | null =
+   internals == null
+diff --git a/src/react-shim/index.ts b/src/react-shim/index.ts
+index 159c7c43929092f3f1627cb0d825b2e15e04b110..278f4b06a29fddffd7cad8acabe9bedbbaf4255c 100644
+--- a/src/react-shim/index.ts
++++ b/src/react-shim/index.ts
+@@ -48,7 +48,7 @@ export const useLayoutEffect = (effect: any, deps?: any) =>
+   inTap() ? hooks.useEffect(effect, deps) : React.useLayoutEffect(effect, deps);
+ 
+ export const useEffectEvent = (callback: any) =>
+-  inTap() ? hooks.useEffectEvent(callback) : React.useEffectEvent(callback);
++  inTap() ? hooks.useEffectEvent(callback) : (React as any)['useEffectEvent'](callback);
+ 
+ // `use(usable)` reads tap resource context when handed a tap context (routed by
+ // its brand, not by ambient render state), and falls back to React's `use`

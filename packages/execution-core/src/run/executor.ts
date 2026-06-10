@@ -556,7 +556,15 @@ export class RunExecutor {
       timeoutMs: config.leafTimeoutMs,
       sandboxMode: config.sandboxMode,
       bypassApprovals: true,
-      ...(args.signal !== undefined ? { signal: args.signal } : {})
+      ...(args.signal !== undefined ? { signal: args.signal } : {}),
+      onOutput: (chunk) => {
+        this.traceStore.append({
+          type: "executor_output",
+          actor: "agent",
+          taskId: node.id,
+          payload: chunk
+        });
+      }
     });
     this.traceStore.append({
       type: "executor_completed",

@@ -583,6 +583,11 @@ export interface NodeExecutionFailedPayload {
   nodeId: NodeId;
   cause: string;
 }
+export interface NodeCliOutputPayload {
+  nodeId: NodeId;
+  stream: "stdout" | "stderr";
+  chunk: string;
+}
 
 export interface AmendmentProposedPayload {
   amendmentId: AmendmentId;
@@ -692,6 +697,7 @@ export interface RunEventPayloads {
   "node.verify.failed": NodeVerifyFailedPayload;
   "node.repair.started": NodeRepairStartedPayload;
   "node.execution.failed": NodeExecutionFailedPayload;
+  "node.cli.output": NodeCliOutputPayload;
   "wave.closed": WaveClosedPayload;
   "amendment.proposed": AmendmentProposedPayload;
   "seam.amended": SeamAmendedPayload;
@@ -739,6 +745,7 @@ export const RUN_EVENT_TYPES = [
   "node.verify.failed",
   "node.repair.started",
   "node.execution.failed",
+  "node.cli.output",
   "wave.closed",
   "amendment.proposed",
   "seam.amended",
@@ -763,7 +770,6 @@ export const RUN_EVENT_TYPES_V2 = [
   "plan.node.thinking",
   "plan.cli.output",
   "node.blocked",
-  "node.cli.output",
   "integration.cherrypick",
   "conflict.repair.started",
   "integration.diagnosis.started",

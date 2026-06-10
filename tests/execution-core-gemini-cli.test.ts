@@ -103,6 +103,23 @@ describe("GeminiCliExecutor (injected spawn)", () => {
     expect(outcome.timedOut).toBe(false);
   });
 
+  it("invokes onOutput for stdout/stderr chunks as they arrive", async () => {
+    const child = fakeChild();
+    const executor = new GeminiCliExecutor(depsFor(child));
+    const chunks: Array<{ stream: "stdout" | "stderr"; chunk: string }> = [];
+
+    const promise = executor.execute({ ...optionsFor("/repo"), onOutput: (chunk) => chunks.push(chunk) });
+    child.stdout.emit("data", Buffer.from("thinking\n"));
+    child.stderr.emit("data", Buffer.from("warning\n"));
+    child.emit("close", 0);
+
+    await promise;
+    expect(chunks).toEqual([
+      { stream: "stdout", chunk: "thinking\n" },
+      { stream: "stderr", chunk: "warning\n" }
+    ]);
+  });
+
   it("reports a non-zero exit code", async () => {
     const child = fakeChild();
     const executor = new GeminiCliExecutor(depsFor(child));

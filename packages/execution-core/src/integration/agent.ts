@@ -334,7 +334,15 @@ export class IntegrationAgent {
       timeoutMs: params.repair.timeoutMs,
       sandboxMode: params.repair.sandboxMode,
       bypassApprovals: params.repair.bypassApprovals ?? true,
-      ...(params.signal !== undefined ? { signal: params.signal } : {})
+      ...(params.signal !== undefined ? { signal: params.signal } : {}),
+      onOutput: (chunk) => {
+        this.traceStore.append({
+          type: "executor_output",
+          actor: "agent",
+          taskId: params.compositeTaskId,
+          payload: { ...chunk, repairChildTaskId: child.taskId }
+        });
+      }
     });
     const outcomeWithUsage = { ...executorOutcome, usageSource };
 

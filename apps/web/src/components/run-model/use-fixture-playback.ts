@@ -73,7 +73,12 @@ export function useFixturePlayback(
   }, [fixture, autoplay]);
 
   // Re-subscribe whenever the store instance is replaced (restart / fixture swap).
+  // `version` is an intentional dependency: it forces these callbacks to get a new
+  // identity when `storeRef.current` is swapped, so `useSyncExternalStore` re-subscribes
+  // to the new store. The bodies read the ref, not `version`, so eslint can't see this.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const subscribe = useCallback((cb: () => void) => storeRef.current.subscribe(cb), [version]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const getSnapshot = useCallback(() => storeRef.current.getSnapshot(), [version]);
   const model = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 

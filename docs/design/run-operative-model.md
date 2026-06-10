@@ -17,6 +17,14 @@
 
 Consecuencia operativa: **fixtures y stream SSE comparten la misma forma** (arrays de `RunEvent`), procesados por el mismo reducer puro. Ver [`golden-fixtures.md`](golden-fixtures.md).
 
+### 0.1. Mapeo de Persistencia y Estados a LangGraph
+La integración de **LangGraph** para la orquestación del backend formaliza y automatiza este principio rector:
+1. **El historial de Checkpoints es el Event Log**: Cada paso (nodo) completado en el grafo de LangGraph genera una entrada inmutable (checkpoint) en el `JsonFileCheckpointSaver`. El histórico de estos checkpoints representa de forma nativa el historial de eventos (`RunEvent[]`).
+2. **El estado del canal (State) es el Snapshot**: El estado compartido del grafo (`RunStateAnnotation`) contiene la materialización acumulada del plan, resultados de tareas e interrupciones. Sigue actuando como un caché de estado rápido que Next.js puede consultar directamente al cargar la página, garantizando coherencia instantánea.
+3. **Las decisiones (Gates) e interrupciones**: Las decisiones humanas bloqueantes se modelan como llamadas nativas a `interrupt()` de LangGraph. El flujo del orquestador se congela en disco, levantando un gate conversacional (`decision.raised`) y liberándose únicamente cuando el usuario envía una respuesta, invocando a `graph.resume()`.
+4. **Time-travel limpio (Forking)**: Dado que cada paso del motor de LangGraph se almacena en el checkpointer de forma inmutable, bifurcar un run (fork) a partir de un estado pasado no requiere deshacer cambios manualmente en Git o re-correr reducciones complejas: LangGraph clona el checkpoint seleccionado en un nuevo registro en disco de forma segura.
+
+
 ---
 
 ## 1. `RunEvent` — envelope

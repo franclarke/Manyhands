@@ -50,6 +50,7 @@ export type WorkspaceSurfaceMode = RunPhase;
 /** Compact vital-sign status — a refinement of `display` (e.g. verifying→repairing). */
 export type VitalStatus =
   | "idle"
+  | "planning"
   | "running"
   | "verifying"
   | "repairing"
@@ -206,6 +207,8 @@ function vitalStatusOf(display: NodeDisplay, isBlocked: boolean, repairActive: b
 
 function vitalLabelOf(status: VitalStatus, role: NodeRole): string {
   switch (status) {
+    case "planning":
+      return "Generando";
     case "running":
       return "Ejecutando";
     case "verifying":
@@ -224,6 +227,48 @@ function vitalLabelOf(status: VitalStatus, role: NodeRole): string {
     default:
       return "En espera";
   }
+}
+
+function planningVitalOf(entity: Node | undefined): NodeVital | null {
+  const planning = entity?.planning;
+  if (planning === undefined) return null;
+
+  let label: string;
+  let detail: string | undefined;
+  switch (planning.state) {
+    case "generating":
+      label = "Generando";
+      detail = planning.maxAttempts !== undefined ? `intento 1/${planning.maxAttempts}` : undefined;
+      break;
+    case "retrying":
+      label = "Reintentando planning";
+      detail =
+        planning.attempt !== undefined && planning.maxAttempts !== undefined
+          ? `intento ${planning.attempt}/${planning.maxAttempts}`
+          : planning.errorKind;
+      break;
+    case "generated":
+      label = "Planificado";
+      detail = planning.durationMs !== undefined ? `${planning.durationMs} ms` : undefined;
+      break;
+    case "fallback":
+      label = "Generado con fallback";
+      detail = planning.errorKind;
+      break;
+    case "failed":
+      label = "Fallo al planificar";
+      detail = planning.errorMessage ?? planning.errorKind;
+      break;
+    default:
+      return null;
+  }
+
+  return {
+    status: "planning",
+    label,
+    repairActive: false,
+    ...(detail !== undefined ? { detail } : {})
+  };
 }
 
 function buildVerificationSummary(verify: VerifyLoop): string {
@@ -298,6 +343,7 @@ export function selectWorkspaceView(model: RunModel, options: ProtoViewOptions =
       row.display === "verifying" &&
       verify !== undefined &&
       (verify.build === "fail" || verify.testsPass < verify.testsTotal);
+    const planningVital = row.display === "idle" ? planningVitalOf(entity) : null;
     const status = vitalStatusOf(row.display, isBlocked, repairActive);
     const anc = entity !== undefined ? executionAncillary(entity) : {};
     const verificationSummary = verify !== undefined ? buildVerificationSummary(verify) : undefined;
@@ -345,7 +391,7 @@ export function selectWorkspaceView(model: RunModel, options: ProtoViewOptions =
         break;
     }
 
-    const vital: NodeVital = {
+    const vital: NodeVital = planningVital ?? {
       status,
       label: vitalLabelOf(status, row.role),
       repairActive,

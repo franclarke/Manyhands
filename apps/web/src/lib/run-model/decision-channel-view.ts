@@ -108,7 +108,7 @@ const KIND_LABEL: Record<DecisionKind, string> = {
 const PRIMARY_ACTION: Record<DecisionKind, string> = {
   approve_plan: "Aprobar plan",
   clarify: "Responder",
-  resolve_conflict: "Aplicar resolución fixtureada",
+  resolve_conflict: "Resolver conflicto",
   approve_amendment: "Aprobar enmienda",
   approve_merge: "Aceptar resultado"
 };

@@ -62,7 +62,8 @@ export class ClaudeCodeCliExecutor implements AgentExecutor {
       spawnFn: this.spawnFn,
       readInstructions: this.readInstructions,
       instructionFilePath: options.instructionFilePath,
-      logScope: "claude"
+      logScope: "claude",
+      onOutput: options.onOutput
     });
   }
 }

@@ -1,22 +1,30 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { EVIDENCE_FOCUS_TARGET, buildFocusView, type FocusTarget } from "@/lib/run-model/focus-view";
+import { buildFocusView, type FocusTarget } from "@/lib/run-model/focus-view";
 import { selectMinimalWorkspaceView } from "@/lib/run-model/minimal-workspace-view";
-import { buildTimelineView } from "@/lib/run-model/timeline-view";
-import type { DecisionChoice, Run, RunEvent } from "@/lib/run-model/types";
+import type { Run, RunEvent, RunModel, Node } from "@/lib/run-model/types";
 import { FocusPanel } from "@/components/run-model/focus-panel";
-import { MinimalRunGraphCanvas } from "@/components/run-model/minimal-run-graph";
-import { Timeline } from "@/components/run-model/timeline";
 import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
+import { ChatRuntimeProvider } from "@/components/chat/assistant-provider";
+import { ChatThread } from "@/components/chat/thread";
+import { ArtifactTabs } from "./artifact-tabs.client";
+import { Play } from "lucide-react";
 
-export function RunModelView({ seed, initialEvents }: { seed: Run; initialEvents: RunEvent[] }): React.ReactElement {
-  const { model, events, connected, streamCount } = useLiveRunModel(seed, initialEvents);
+export function RunModelView({
+  seed,
+  initialEvents,
+  workspaceName
+}: {
+  seed: Run;
+  initialEvents: RunEvent[];
+  workspaceName?: string | undefined;
+}): React.ReactElement {
+  const { model, events, connected } = useLiveRunModel(seed, initialEvents);
   const [focus, setFocus] = useState<FocusTarget | null>(null);
-  const [activityOpen, setActivityOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"dag" | "plan" | "conflicts" | "execution" | "files" | "evaluation">("dag");
 
   const view = useMemo(() => selectMinimalWorkspaceView(model), [model]);
-  const timeline = useMemo(() => buildTimelineView(events), [events]);
   const focusView = useMemo(() => (focus !== null ? buildFocusView(model, focus) : null), [model, focus]);
 
   const onResolve = useCallback(
@@ -34,187 +42,138 @@ export function RunModelView({ seed, initialEvents }: { seed: Run; initialEvents
   );
 
   return (
-    <div className={focusView !== null ? "mh-run-page mh-run-page-with-focus" : "mh-run-page"}>
-      <div className="mh-run-main">
-        <RunHero
-          title={view.title}
-          intent={seed.intent}
-          stage={view.stage}
-          statusLine={view.statusLine}
-          connected={connected}
+    <ChatRuntimeProvider events={events} onUserMessage={async () => {}}>
+      <div className="flex flex-col w-full h-screen bg-[var(--color-bg)] overflow-hidden font-sans">
+        {/* Compact Header */}
+        <CompactRunHeader
+          runId={seed.id}
+          view={view}
+          model={model}
+          _connected={connected}
+          onResolve={onResolve}
+          workspaceName={workspaceName}
         />
 
-        {view.primaryAttention !== null ? (
-          <DecisionBanner
-            item={view.primaryAttention}
-            pendingCount={view.pendingAttentionCount}
-            onResolve={onResolve}
-            onInspect={(id) => setFocus({ kind: "decision", id })}
-          />
-        ) : null}
+        {/* 2-Pane Content View */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Conversational Chat (Middle) */}
+          <div className="w-[420px] flex-shrink-0 flex flex-col relative z-10 border-r border-[var(--color-border)]">
+            <ChatThread runId={seed.id} model={model} setActiveTab={setActiveTab} />
+          </div>
 
-        {view.reviewEvidence !== null && view.stage === "review" ? (
-          <ReviewEvidence
-            evidence={view.reviewEvidence}
-            onInspect={() => setFocus(EVIDENCE_FOCUS_TARGET)}
-          />
-        ) : null}
+          {/* Tabbed Artifact Panel (Right) */}
+          <div className="flex-1 flex relative bg-white min-w-0">
+            <ArtifactTabs
+              model={model}
+              view={view}
+              focus={focus}
+              onFocus={setFocus}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
 
-        <MinimalRunGraphCanvas
-          graph={view.graph}
-          stage={view.stage}
-          selectedTarget={focus}
-          onFocus={setFocus}
-        />
-
-        <ActivityDrawer
-          open={activityOpen}
-          onToggle={() => setActivityOpen((open) => !open)}
-          eventCount={events.length}
-          streamCount={streamCount}
-          focusedNodeId={focus?.kind === "node" ? focus.id : null}
-        >
-          <Timeline view={timeline} focusedNodeId={focus?.kind === "node" ? focus.id : null} />
-        </ActivityDrawer>
+            {/* Slide-out Inspector Focus Panel */}
+            {focusView !== null && (
+              <div className="w-[380px] h-full flex-shrink-0 border-l border-[var(--color-border)] bg-white shadow-[-12px_0_24px_rgba(0,0,0,0.03)] overflow-y-auto relative z-20">
+                <FocusPanel
+                  view={focusView}
+                  onClose={() => setFocus(null)}
+                  onFocus={setFocus}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-
-      {focusView !== null ? (
-        <aside className="mh-run-focus" aria-label="Run detail inspector">
-          <FocusPanel view={focusView} onClose={() => setFocus(null)} onFocus={setFocus} />
-        </aside>
-      ) : null}
-    </div>
+    </ChatRuntimeProvider>
   );
 }
 
-function RunHero({
-  title,
-  intent,
-  stage,
-  statusLine,
-  connected
+function CompactRunHeader({
+  runId,
+  view,
+  model,
+  _connected,
+  onResolve,
+  workspaceName
 }: {
-  title: string;
-  intent: string;
-  stage: string;
-  statusLine: string;
-  connected: boolean;
+  runId: string;
+  view: ReturnType<typeof selectMinimalWorkspaceView>;
+  model: RunModel;
+  _connected: boolean;
+  onResolve: (id: string) => void;
+  workspaceName?: string | undefined;
 }): React.ReactElement {
+  const nodesCount = model.nodes.size;
+  const conflictsCount = model.conflicts.size;
+  const runningCount = Array.from(model.nodes.values()).filter((n: Node) => n.execution.kind === "running").length;
+
   return (
-    <header className="mh-run-hero">
-      <div>
-        <span className="mh-run-stage">{stageLabel(stage)}</span>
-        <h1>{title}</h1>
-        <p>{statusLine}</p>
+    <header className="flex items-center justify-between px-6 border-b border-[var(--color-border)] bg-[var(--color-surface)] h-12 select-none">
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="mh-mono text-xs font-semibold px-2 py-0.5 bg-[var(--color-bg-subtle)] rounded text-[var(--color-text-muted)]">
+          Run {runId.slice(0, 8)}
+        </span>
+        <span className="text-sm font-semibold text-[var(--color-text)] truncate max-w-sm" title={view.title}>
+          {view.title}
+        </span>
+        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-semibold font-mono border ${
+          view.stage === "review"
+            ? "bg-[var(--status-review-bg)] text-[var(--status-review-fg)] border-[var(--status-review-border)]"
+            : view.stage === "proposal"
+              ? "bg-[var(--status-planning-bg)] text-[var(--status-planning-fg)] border-[var(--status-planning-border)]"
+              : view.stage === "running"
+                ? "bg-[var(--status-running-bg)] text-[var(--status-running-fg)] border-[var(--status-running-border)] animate-pulse"
+                : "bg-[var(--status-pending-bg)] text-[var(--status-pending-fg)] border-[var(--status-pending-border)]"
+        }`}>
+          {view.stage}
+        </span>
       </div>
-      <div className="mh-run-hero-side">
-        <span className={connected ? "mh-live mh-live-on" : "mh-live"}>{connected ? "live" : "offline"}</span>
-        <span>{compactIntent(intent)}</span>
+
+      <div className="flex items-center gap-5 text-xs text-[var(--color-text-muted)]">
+        <span className="hidden md:inline">
+          Workspace: <strong className="text-[var(--color-text)]">{workspaceName ?? model.run.workspaceId.slice(0, 8)}</strong>
+        </span>
+        <span className="hidden lg:inline">
+          Granularidad: <strong className="text-[var(--color-text)]">{model.run.config.aggressiveness}</strong>
+        </span>
+        <div className="flex items-center gap-3">
+          <span>Tareas: <strong className="text-[var(--color-text)]">{nodesCount}</strong></span>
+          <span>Conflictos: <strong className="text-[var(--color-text)]">{conflictsCount}</strong></span>
+          {runningCount > 0 && (
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--status-running-fg)] animate-pulse" />
+              Ejecutando: <strong className="text-[var(--color-text)]">{runningCount}</strong>
+            </span>
+          )}
+        </div>
+
+        {/* Primary Contextual Action in Header */}
+        {view.primaryAttention !== null ? (
+          <button
+            onClick={() => onResolve(view.primaryAttention!.id)}
+            className="h-8 px-3 bg-[var(--color-accent)] hover:opacity-90 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5 transition cursor-pointer"
+          >
+            <Play className="w-3.5 h-3.5" />
+            {view.primaryAttention.primaryActionLabel}
+          </button>
+        ) : view.stage === "review" && view.reviewEvidence ? (
+          <a
+            href={`/api/runs/${runId}/export?format=patch`}
+            download
+            className="h-8 px-3 bg-[var(--color-accent)] hover:opacity-90 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5 transition text-none hover:text-white"
+          >
+            Descargar Cambios
+          </a>
+        ) : null}
       </div>
     </header>
   );
 }
 
-function DecisionBanner({
-  item,
-  pendingCount,
-  onResolve,
-  onInspect
-}: {
-  item: NonNullable<ReturnType<typeof selectMinimalWorkspaceView>["primaryAttention"]>;
-  pendingCount: number;
-  onResolve: (id: string) => void;
-  onInspect: (id: string) => void;
-}): React.ReactElement {
-  return (
-    <section className={item.blocking ? "mh-decision-banner mh-decision-banner-blocking" : "mh-decision-banner"}>
-      <div>
-        <span>{item.blocking ? "Needs your call" : "For review"}</span>
-        <strong>{item.label}</strong>
-        <p>{item.summary}</p>
-      </div>
-      <div className="mh-decision-actions">
-        {pendingCount > 1 ? <small>{pendingCount} pending</small> : null}
-        <button type="button" className="mh-secondary-action" onClick={() => onInspect(item.id)}>
-          Inspect
-        </button>
-        <button type="button" className="mh-primary-action" onClick={() => onResolve(item.id)}>
-          {item.primaryActionLabel}
-        </button>
-      </div>
-    </section>
-  );
-}
-
-function ReviewEvidence({
-  evidence,
-  onInspect
-}: {
-  evidence: NonNullable<ReturnType<typeof selectMinimalWorkspaceView>["reviewEvidence"]>;
-  onInspect: () => void;
-}): React.ReactElement {
-  return (
-    <section className="mh-review-strip">
-      <div>
-        <span>Evidence</span>
-        <strong>Tests {evidence.tests.pass}/{evidence.tests.total}</strong>
-        <p>Integrated at {evidence.integrationCommit}. The graph stays available for context.</p>
-      </div>
-      <button type="button" className="mh-secondary-action" onClick={onInspect}>
-        Open evidence
-      </button>
-    </section>
-  );
-}
-
-function ActivityDrawer({
-  open,
-  onToggle,
-  eventCount,
-  streamCount,
-  focusedNodeId: _focusedNodeId,
-  children
-}: {
-  open: boolean;
-  onToggle: () => void;
-  eventCount: number;
-  streamCount: number;
-  focusedNodeId: string | null;
-  children: React.ReactNode;
-}): React.ReactElement {
-  return (
-    <section className={open ? "mh-activity mh-activity-open" : "mh-activity"}>
-      <button type="button" onClick={onToggle} className="mh-activity-toggle">
-        <span>Activity</span>
-        <small>{eventCount} events · {streamCount} streamed</small>
-      </button>
-      {open ? <div className="mh-activity-body">{children}</div> : null}
-    </section>
-  );
-}
-
-function defaultChoiceFor(kind: string, options: readonly string[] | undefined): DecisionChoice {
+function defaultChoiceFor(kind: string, options: readonly string[] | undefined) {
   if (kind === "clarify") return { answer: options?.[0] ?? "" };
   if (kind === "resolve_conflict") return { resolutionId: "human-selected" };
   if (kind === "approve_merge") return { action: "accept" };
   return { action: "approve" };
-}
-
-function stageLabel(stage: string): string {
-  switch (stage) {
-    case "intent":
-      return "Intent";
-    case "proposal":
-      return "Plan";
-    case "review":
-      return "Review";
-    case "running":
-    default:
-      return "Run";
-  }
-}
-
-function compactIntent(intent: string): string {
-  if (intent.length <= 96) return intent;
-  return `${intent.slice(0, 93)}...`;
 }

@@ -36,6 +36,40 @@ function pl(e: RunEvent): Record<string, unknown> {
 }
 
 describe("minimal-workspace-view", () => {
+  it("keeps an empty proposal graph canvas-ready before the first node arrives", () => {
+    const view = selectMinimalWorkspaceView(initialFor("empty-run"));
+    expect(view.stage).toBe("intent");
+    expect(view.graph.nodes).toEqual([]);
+    expect(view.graph.edges).toEqual([]);
+  });
+
+  it("projects generating planning nodes as planning vitals", () => {
+    const events: RunEvent[] = [
+      {
+        seq: 1,
+        at: "2026-06-08T00:00:00.000Z",
+        runId: "live-planning",
+        actor: "system",
+        type: "plan.node.proposed",
+        payload: { nodeId: "root", parentId: null, role: "root", title: "Root", goal: "Plan", depth: 0 }
+      },
+      {
+        seq: 2,
+        at: "2026-06-08T00:00:01.000Z",
+        runId: "live-planning",
+        actor: "system",
+        type: "plan.node.status",
+        payload: { nodeId: "root", state: "generating", maxAttempts: 3 }
+      }
+    ];
+    const view = selectMinimalWorkspaceView(reduceRunEvents(initialFor("live-planning"), events));
+
+    expect(view.graph.nodes).toHaveLength(1);
+    expect(view.graph.nodes[0]?.vital.status).toBe("planning");
+    expect(view.graph.nodes[0]?.vital.label).toBe("Generando");
+    expect(view.graph.nodes[0]?.vital.detail).toBe("intento 1/3");
+  });
+
   it("maps approve-plan proposal to a graph-first plan stage with one primary decision", () => {
     const model = reduceUpToSeq(
       goldenHappyPath,

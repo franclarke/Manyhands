@@ -170,6 +170,20 @@ export const SandboxModeSchema = z.union([
 
 export type SandboxMode = z.infer<typeof SandboxModeSchema>;
 
+export const ExecutorOutputStreamSchema = z.union([
+  z.literal("stdout"),
+  z.literal("stderr")
+]);
+
+export type ExecutorOutputStream = z.infer<typeof ExecutorOutputStreamSchema>;
+
+export const ExecutorOutputChunkSchema = z.object({
+  stream: ExecutorOutputStreamSchema,
+  chunk: z.string()
+});
+
+export type ExecutorOutputChunk = z.infer<typeof ExecutorOutputChunkSchema>;
+
 export const AgentExecutorOptionsSchema = z.object({
   cwd: NonEmptyStringSchema,
   instructionFilePath: NonEmptyStringSchema,
@@ -179,7 +193,9 @@ export const AgentExecutorOptionsSchema = z.object({
   bypassApprovals: z.boolean(),
   env: z.record(z.string()).optional(),
   /** Run-level cancellation: aborts the spawned process tree. Not serialized. */
-  signal: z.instanceof(AbortSignal).optional()
+  signal: z.instanceof(AbortSignal).optional(),
+  /** Live stdout/stderr diagnostics from the executor process. Not serialized. */
+  onOutput: z.custom<(chunk: ExecutorOutputChunk) => void>((value) => typeof value === "function").optional()
 });
 
 export type AgentExecutorOptions = z.infer<typeof AgentExecutorOptionsSchema>;

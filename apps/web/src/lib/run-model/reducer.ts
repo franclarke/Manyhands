@@ -263,6 +263,11 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
     }
 
     // ── Amendment / seam evolution ──
+    case "node.cli.output":
+      // Live console output is an audit/detail artifact. It is intentionally not
+      // folded into the entity model; consumers derive console views from the
+      // raw event log so D5 stays intact (git diff remains the change source).
+      return model;
     case "amendment.proposed": {
       const p = read<AmendmentProposedPayload>(event);
       return withAmendment(model, {

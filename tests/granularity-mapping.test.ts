@@ -44,10 +44,10 @@ describe("granularity mapping", () => {
   });
 
   it("exposes product-facing labels without changing backend modes", () => {
-    expect(granularityLabelForMode("coarse")).toBe("Low");
-    expect(granularityLabelForMode("balanced")).toBe("Medium");
-    expect(granularityLabelForMode("fine")).toBe("High");
-    expect(granularityImpactForLevel("alta")).toContain("splitting");
+    expect(granularityLabelForMode("coarse")).toBe("Baja");
+    expect(granularityLabelForMode("balanced")).toBe("Media");
+    expect(granularityLabelForMode("fine")).toBe("Alta");
+    expect(granularityImpactForLevel("alta")).toContain("dividiendo");
   });
 
   it("shows Max as a disabled display-only option", () => {

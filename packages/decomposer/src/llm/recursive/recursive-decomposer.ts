@@ -146,12 +146,13 @@ interface ExpandContext {
   isRoot: boolean;
 }
 
-interface StepResolution {
+export interface StepResolution {
   step: DecomposeStepOutput;
   attemptCount: number;
   state: Extract<RecursiveStepPlanningState, "generated" | "fallback">;
   error?: GraphGenerationErrorDetails | undefined;
 }
+
 
 interface Accumulator {
   nodes: Record<string, TaskNode>;
@@ -312,6 +313,161 @@ export class RecursiveDecomposer implements Decomposer {
       metadata,
       validation: { graphValid: true, contractValid: true, issues: [] }
     };
+  }
+
+  /**
+   * Run a single step of the recursive decomposer for a specific node context.
+   */
+  public async executeStep(
+    ctx: {
+      nodeId: string;
+      parentId: string | null;
+      title: string;
+      goal: string;
+      depth: number;
+      depthBudget: number;
+      inheritedInterfaces: InterfaceContract[];
+      consumes: string[];
+      produces: string[];
+      isRoot: boolean;
+    },
+    aggressiveness: Aggressiveness,
+    accum: {
+      stepCache?: Record<string, any>;
+      questionAnswers?: Record<string, string>;
+      callCount: number;
+    }
+  ): Promise<StepResolution> {
+    return this.callStep(ctx, aggressiveness, accum as Accumulator);
+  }
+
+  /**
+   * Reconstructs the TaskGraph and AgentTaskContracts from a stepCache.
+   */
+  public reconstructGraph(
+    feature: FeatureRequest,
+    stepCache: Record<string, any>,
+    questionAnswers?: Record<string, string>,
+    repoSpec?: { repo: string; baseBranch?: string; baseCommit?: string; createdAt?: string }
+  ): { graph: TaskGraph; contracts: AgentTaskContract[] } {
+    const aggressiveness = this.aggressivenessOverride ?? "medium";
+    const accum: Accumulator = {
+      nodes: {},
+      contracts: [],
+      dependencies: [],
+      feature,
+      granularity: aggressivenessToGranularity(aggressiveness),
+      callCount: 0,
+      reservedNodeIds: new Set([ROOT_ID]),
+      questionAnswers,
+      stepCache
+    };
+
+    const traverse = (ctx: ExpandContext) => {
+      const step = stepCache[ctx.nodeId];
+      if (!step) {
+        // Not yet decomposed/atomic — materialize as a planned leaf placeholder
+        this.materializeAtomic(ctx, accum, undefined);
+        return;
+      }
+
+      if (step.decision === "question") {
+        // Materialize as planned leaf placeholder since it's waiting for clarification
+        this.materializeAtomic(ctx, accum, undefined);
+        return;
+      }
+
+      if (step.decision === "atomic") {
+        this.materializeAtomic(ctx, accum, step);
+        return;
+      }
+
+      // decision === "decompose"
+      const newInterfaces = step.sharedInterfaces.map((iface: any) =>
+        toInterfaceContract(iface, ctx.nodeId)
+      );
+      const pool = [...ctx.inheritedInterfaces, ...newInterfaces];
+      const childIds = step.children.map((child: any) => child.id);
+      
+      // Register self node
+      const selfNode: TaskNode = {
+        id: ctx.nodeId,
+        parentId: ctx.parentId,
+        kind: ctx.isRoot ? "root" : "composite",
+        title: ctx.title,
+        goal: ctx.goal,
+        status: "planned",
+        granularity: accum.granularity,
+        depth: ctx.depth,
+        childrenIds: childIds,
+        dependencies: [],
+        metadata: { authoredBy: "ai" }
+      };
+      accum.nodes[ctx.nodeId] = selfNode;
+
+      for (const child of step.children) {
+        traverse({
+          nodeId: child.id,
+          parentId: ctx.nodeId,
+          title: child.title,
+          goal: child.goal,
+          depth: ctx.depth + 1,
+          depthBudget: ctx.depthBudget - 1,
+          inheritedInterfaces: pool,
+          consumes: child.consumes || [],
+          produces: child.produces || [],
+          isRoot: false
+        });
+      }
+
+      for (const dep of step.dependencies) {
+        accum.dependencies.push({
+          fromTaskId: dep.fromTaskId,
+          toTaskId: dep.toTaskId,
+          type: dep.type,
+          inferred: false,
+          ...(dep.rationale !== undefined ? { rationale: dep.rationale } : {})
+        });
+      }
+
+      const compositeScope = step.children.flatMap((c: any) => c.allowedPaths || []);
+      selfNode.contract = buildCompositeContract({
+        taskId: ctx.nodeId,
+        title: ctx.title,
+        goal: ctx.goal,
+        coveredPaths: compositeScope.length > 0 ? compositeScope : ["src/**", "tests/**"],
+        sharedInterfaces: newInterfaces,
+        parentValidationCommands: step.parentValidationCommands.map(toExecutionValidationCommand)
+      });
+    };
+
+    traverse({
+      nodeId: ROOT_ID,
+      parentId: null,
+      title: feature.title,
+      goal: feature.description,
+      depth: 0,
+      depthBudget: this.depthBudget,
+      inheritedInterfaces: [],
+      consumes: [],
+      produces: [],
+      isRoot: true
+    });
+
+    const graph: TaskGraph = {
+      id: `${feature.id}:${aggressiveness}:graph`,
+      planId: `${feature.id}:${aggressiveness}:plan`,
+      repo: repoSpec?.repo ?? feature.repositoryPath ?? "manyhands-workspace",
+      baseBranch: repoSpec?.baseBranch ?? "main",
+      baseCommit: repoSpec?.baseCommit ?? "base-commit-placeholder",
+      featureRequest: feature.title,
+      nodes: accum.nodes,
+      dependencies: accum.dependencies,
+      rootId: ROOT_ID,
+      createdAt: repoSpec?.createdAt ?? new Date().toISOString()
+    };
+
+    return { graph, contracts: accum.contracts };
   }
 
   private async expand(

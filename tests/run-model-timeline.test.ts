@@ -94,4 +94,27 @@ describe("timeline — robustness", () => {
     expect(view.count).toBe(3);
     expect(view.entries.map((e) => e.type)).toEqual(["plan.node.proposed", "node.execution.started", "node.verify.passed"]);
   });
+
+  it("11. surfaces node console chunks as per-node supervision audit", () => {
+    const events: RunEvent[] = [
+      {
+        seq: 1,
+        at: "2026-06-08T00:00:00.000Z",
+        runId: "run-x",
+        actor: "agent",
+        type: "node.cli.output",
+        payload: { nodeId: "leaf-a", stream: "stderr", chunk: "visible warning\n" }
+      }
+    ];
+    const view = buildTimelineView(events, { nodeId: "leaf-a" });
+
+    expect(view.entries[0]).toMatchObject({
+      type: "node.cli.output",
+      category: "supervision",
+      title: "Consola stderr",
+      detail: "visible warning",
+      nodeId: "leaf-a",
+      tone: "warn"
+    });
+  });
 });

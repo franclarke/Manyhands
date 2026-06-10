@@ -17,7 +17,7 @@ export function RecentRunsStrip({ runs, compact = false }: RecentRunsStripProps)
         maxWidth: compact ? "none" : 880,
         margin: compact ? 0 : "72px auto 0",
         border: compact ? "1px solid var(--rule)" : "none",
-        background: compact ? "rgba(24,26,28,0.62)" : "transparent",
+        background: compact ? "color-mix(in srgb, var(--surface) 68%, transparent)" : "transparent",
         borderRadius: compact ? "var(--r-lg)" : 0,
         padding: compact ? 16 : 0
       }}
@@ -25,8 +25,8 @@ export function RecentRunsStrip({ runs, compact = false }: RecentRunsStripProps)
       <Header compact={compact} />
       {runs.length === 0 ? (
         <EmptyState
-          title="No runs yet"
-          description="Describe a software task above and generate the first task graph to see it here."
+          title="Todavía no hay runs"
+          description="Describí una tarea arriba y generá el primer grafo para verlo acá."
           compact
         />
       ) : (
@@ -44,11 +44,11 @@ function Header({ compact }: { compact: boolean }): React.ReactElement {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: compact ? 12 : 8 }}>
       <span className="mh-coord" style={{ color: compact ? "var(--copper-hi)" : undefined }}>
-        recent runs
+        runs recientes
       </span>
       <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
       <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
-        local run history
+        historial local
       </span>
     </div>
   );
@@ -56,7 +56,7 @@ function Header({ compact }: { compact: boolean }): React.ReactElement {
 
 function RecentRunRow({ run, compact }: { run: RunPreview; compact: boolean }): React.ReactElement {
   const repo = run.workspaceName ?? run.workspaceId.slice(0, 8);
-  const meta = [repo, run.nodeCount !== undefined ? `${run.nodeCount} nodes` : null]
+  const meta = [repo, run.nodeCount !== undefined ? `${run.nodeCount} nodos` : null]
     .filter((part): part is string => part !== null)
     .join("  ·  ");
 
@@ -118,7 +118,7 @@ function RecentRunRow({ run, compact }: { run: RunPreview; compact: boolean }): 
         <span className="mh-mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
           {granularityLabelForMode(run.granularity)}
         </span>
-        <Signal status={runUiStatus(run.status)} label={run.status.replace(/_/g, " ")} />
+        <Signal status={runUiStatus(run.status)} />
         <span style={{ fontSize: 12, color: "var(--text-2)", minWidth: 72, textAlign: "right" }}>
           {formatTimestamp(run.updatedAt)}
         </span>

@@ -317,3 +317,16 @@ Completar la **experiencia fixture-first de punta a punta** en una iteración la
 - **R2 — Entanglement con legacy en PR10/11/12.** `TaskInspector`/`RunCanvasShell` tienen trabajo legacy no commiteado. Mitigación: PR10 reencuadrado (foco nuevo, no evolucionar legacy); PR11/12 recién después, con flag de rollback.
 - **R3 — Crecer la UI antes del modelo.** Mitigación: foco también se deriva de un view-model puro (`focus-view.ts`); el componente solo pinta.
 - **R4 — Demo sin backend genera expectativa de "está listo".** Mitigación: el copy del prototipo deja claro que es fixture-first; SSE real es PR11+.
+
+---
+
+## 10. Próxima Etapa: Transición al Backend Orquestador Nativo en LangGraph (2026-06-08)
+
+Tras consolidar la experiencia del frontend en el path agent-first `/runs/[runId]` a través del puente adaptador SSE temporal (PR11/PR12), la arquitectura evoluciona hacia un backend orquestador nativo implementado con **LangGraph.js** y persistido mediante checkpoints JSON en disco.
+
+### Cambios Clave en el Estado del Sistema:
+1.  **De Adaptador SSE a Estado Nativo**: El hook de ejecución en el cliente ya no tendrá que reducir un flujo plano de eventos heredados (`StreamEvent`). En su lugar, consultará directamente el último checkpoint de LangGraph durante la carga de Next.js Server Components.
+2.  **Manejo de Interrupciones en Caliente**: Las decisiones bloqueantes (`approve_plan`, `clarify` y `resolve_conflict`) se resuelven de forma unificada suspendiendo el motor con `interrupt()` y reanudándolo a través de un endpoint común `/api/runs/[id]/resume`.
+3.  **Time-Travel Real (Forking)**: Habilitado nativamente gracias al historial de checkpoints en el checkpointer. La UI del canvas y chat disparará llamadas a `/api/runs/[id]/fork` que crearán nuevos registros no destructivos en la base de datos para comparar las ejecuciones paralelamente (crucial para las hipótesis de tesis).
+4.  **Auto-reparación y Escalado a Humano**: Los fallos en tests de tareas hoja intentarán una auto-reparación antes de suspenderse y presentarse como tarjetas interactivas de decisión en el chat conversacional.
+

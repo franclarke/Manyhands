@@ -17,13 +17,14 @@ export default defineConfig({
       "@manyhands/trace-store": path.resolve(root, "packages/trace-store/src/index.ts"),
       "@manyhands/core": path.resolve(root, "packages/core/src/index.ts"),
       "@manyhands/execution-core": path.resolve(root, "packages/execution-core/src/index.ts"),
+      "@manyhands/orchestrator-graph": path.resolve(root, "packages/orchestrator-graph/src/index.ts"),
       "@": path.resolve(root, "apps/web/src"),
       "@/": `${path.resolve(root, "apps/web/src")}/`
     }
   },
   test: {
     environment: "node",
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/**/*.test.ts", "packages/orchestrator-graph/src/**/*.test.ts"],
     // Git-heavy tests (worktrees, real git) are slow under parallel load on
     // Windows; give them headroom and one retry to absorb transient file locks.
     testTimeout: 30_000,

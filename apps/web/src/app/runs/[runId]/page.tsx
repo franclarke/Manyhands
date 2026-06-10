@@ -42,10 +42,18 @@ export default async function RunPage({ params, searchParams }: RunPageProps): P
   // Agent-first is the default run workspace. The legacy canvas remains available
   // as a short-lived rollback via `?model=legacy`.
   if (modelFlag !== "legacy") {
-    const initialEvents = await ensureRunModelEventLogForRun(run);
+    const [initialEvents, workspaces] = await Promise.all([
+      ensureRunModelEventLogForRun(run),
+      getWorkspaceRepository().list()
+    ]);
+    const workspace = workspaces.find((entry) => entry.id === run.workspaceId) ?? null;
     return (
       <div className="mh-fullbleed">
-        <RunModelView seed={buildRunModelSeed(run)} initialEvents={initialEvents} />
+        <RunModelView
+          seed={buildRunModelSeed(run)}
+          initialEvents={initialEvents}
+          workspaceName={workspace?.name ?? undefined}
+        />
       </div>
     );
   }

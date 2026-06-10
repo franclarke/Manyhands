@@ -228,6 +228,20 @@ describe("AgentExecutorOptionsSchema", () => {
     });
     expect(parsed.env).toEqual({ ANTHROPIC_API_KEY: "sk-test" });
   });
+
+  it("accepts an optional live output callback", () => {
+    const onOutput = (): void => undefined;
+    const parsed = AgentExecutorOptionsSchema.parse({
+      cwd: "/tmp/wt",
+      instructionFilePath: "/tmp/inst.md",
+      model: "gemini-2.5-pro",
+      timeoutMs: 300_000,
+      sandboxMode: "workspace-write",
+      bypassApprovals: true,
+      onOutput
+    });
+    expect(parsed.onOutput).toBe(onOutput);
+  });
 });
 
 // â”€â”€ Config with defaults â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

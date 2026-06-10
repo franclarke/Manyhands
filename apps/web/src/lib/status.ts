@@ -99,91 +99,91 @@ export interface StatusMeta {
 
 export const STATUS_META: Record<UiStatus, StatusMeta> = {
   idle: {
-    label: "Idle",
+    label: "Inactivo",
     fg: "var(--status-idle-fg)",
     bg: "var(--status-idle-bg)",
     border: "var(--status-idle-border)",
     pulse: false
   },
   planning: {
-    label: "Planning",
+    label: "Planificando",
     fg: "var(--status-planning-fg)",
     bg: "var(--status-planning-bg)",
     border: "var(--status-planning-border)",
     pulse: true
   },
   pending: {
-    label: "Pending",
+    label: "Pendiente",
     fg: "var(--status-pending-fg)",
     bg: "var(--status-pending-bg)",
     border: "var(--status-pending-border)",
     pulse: false
   },
   ready: {
-    label: "Ready",
+    label: "Listo",
     fg: "var(--status-ready-fg)",
     bg: "var(--status-ready-bg)",
     border: "var(--status-ready-border)",
     pulse: false
   },
   running: {
-    label: "Running",
+    label: "Ejecutando",
     fg: "var(--status-running-fg)",
     bg: "var(--status-running-bg)",
     border: "var(--status-running-border)",
     pulse: true
   },
   completed: {
-    label: "Completed",
+    label: "Completado",
     fg: "var(--status-completed-fg)",
     bg: "var(--status-completed-bg)",
     border: "var(--status-completed-border)",
     pulse: false
   },
   failed: {
-    label: "Failed",
+    label: "Fallido",
     fg: "var(--status-failed-fg)",
     bg: "var(--status-failed-bg)",
     border: "var(--status-failed-border)",
     pulse: false
   },
   blocked: {
-    label: "Blocked",
+    label: "Bloqueado",
     fg: "var(--status-blocked-fg)",
     bg: "var(--status-blocked-bg)",
     border: "var(--status-blocked-border)",
     pulse: false
   },
   needs_review: {
-    label: "Needs review",
+    label: "Para revisar",
     fg: "var(--status-review-fg)",
     bg: "var(--status-review-bg)",
     border: "var(--status-review-border)",
     pulse: false
   },
   integrating: {
-    label: "Integrating",
+    label: "Integrando",
     fg: "var(--status-integrating-fg)",
     bg: "var(--status-integrating-bg)",
     border: "var(--status-integrating-border)",
     pulse: true
   },
   integrated: {
-    label: "Integrated",
+    label: "Integrado",
     fg: "var(--status-integrated-fg)",
     bg: "var(--status-integrated-bg)",
     border: "var(--status-integrated-border)",
     pulse: false
   },
   conflict: {
-    label: "Conflict",
+    label: "Conflicto",
     fg: "var(--status-conflict-fg)",
     bg: "var(--status-conflict-bg)",
     border: "var(--status-conflict-border)",
     pulse: false
   },
   skipped: {
-    label: "Skipped",
+    label: "Omitido",
     fg: "var(--status-skipped-fg)",
     bg: "var(--status-skipped-bg)",
     border: "var(--status-skipped-border)",

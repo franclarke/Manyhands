@@ -82,6 +82,29 @@ describe("JsonRunRecordStore", () => {
     expect((await repo.list({ limit: 1 })).length).toBe(1);
   });
 
+  it("update merges against the latest record so concurrent writers cannot clobber a field", async () => {
+    await repo.save(makeRun({ runId: "r" }));
+
+    // Two updates touching DIFFERENT fields run concurrently. Each re-reads inside
+    // the per-id lock, so both survive — modeling the heartbeat / planning-save race
+    // where a stale `{ ...current }` would otherwise drop `planning`.
+    await Promise.all([
+      repo.update("r", (current) => ({
+        ...current,
+        planning: { decomposition: { graph: { rootId: "root", nodes: {}, dependencies: [] } } }
+      })),
+      repo.update("r", (current) => ({ ...current, heartbeatAt: "2026-05-26T00:09:00.000Z" }))
+    ]);
+
+    const got = await repo.get("r");
+    expect((got.planning as { decomposition: { graph: { rootId: string } } }).decomposition.graph.rootId).toBe("root");
+    expect(got.heartbeatAt).toBe("2026-05-26T00:09:00.000Z");
+  });
+
+  it("update throws RunNotFoundError when the run is missing", async () => {
+    await expect(repo.update("missing", (current) => current)).rejects.toBeInstanceOf(RunNotFoundError);
+  });
+
   it("save updates updatedAt via injected clock", async () => {
     const first = await repo.save(makeRun());
     const second = await repo.save({ ...first, status: "generating" });

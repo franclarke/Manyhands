@@ -104,6 +104,14 @@ export class GeminiRecursiveDecomposer implements Decomposer {
   decompose(input: FeatureRequest, options?: DecompositionOptions): Promise<DecompositionResult> {
     return this.inner.decompose(input, options);
   }
+
+  executeStep(ctx: any, aggressiveness: any, accum: any) {
+    return this.inner.executeStep(ctx, aggressiveness, accum);
+  }
+
+  reconstructGraph(feature: any, stepCache: any, questionAnswers?: any, repoSpec?: any) {
+    return this.inner.reconstructGraph(feature, stepCache, questionAnswers, repoSpec);
+  }
 }
 
 interface GeminiStepClientOptions {

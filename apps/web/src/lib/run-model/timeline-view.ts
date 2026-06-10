@@ -127,6 +127,17 @@ function describe(event: RunEvent): Mapped {
     case "node.execution.failed":
       return { title: "Ejecución falló", detail: str(p.cause), ...(str(p.nodeId) !== undefined ? { nodeId: str(p.nodeId) } : {}), tone: "bad" };
 
+    case "node.cli.output": {
+      const stream = str(p.stream) ?? "stdout";
+      const chunk = str(p.chunk);
+      return {
+        title: `Consola ${stream}`,
+        detail: chunk !== undefined ? compactChunk(chunk) : undefined,
+        ...(str(p.nodeId) !== undefined ? { nodeId: str(p.nodeId) } : {}),
+        tone: stream === "stderr" ? "warn" : "info"
+      };
+    }
+
     case "amendment.proposed":
       return { title: "Enmienda propuesta", detail: `${str(p.changeKind) ?? "?"} · afecta ${Array.isArray(p.affects) ? (p.affects as string[]).length : 0}`, ...(str(p.nodeId) !== undefined ? { nodeId: str(p.nodeId) } : {}), tone: "warn" };
     case "seam.amended":
@@ -162,6 +173,11 @@ function describe(event: RunEvent): Mapped {
     default:
       return { title: event.type, tone: "info" };
   }
+}
+
+function compactChunk(chunk: string): string {
+  const oneLine = chunk.replace(/\s+/g, " ").trim();
+  return oneLine.length <= 120 ? oneLine : `${oneLine.slice(0, 117)}...`;
 }
 
 /**

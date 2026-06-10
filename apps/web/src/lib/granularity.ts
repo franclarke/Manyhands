@@ -26,19 +26,19 @@ export interface GranularityDescription {
 export const GRANULARITY_DESCRIPTIONS: Record<GranularityLevel, GranularityDescription> = {
   automatica: {
     headline: "Auto",
-    helper: "Recommended. The planner decides how far to split each branch by its complexity."
+    helper: "Recomendada. El planner decide cuánto dividir cada rama según su complejidad."
   },
   baja: {
-    headline: "Low",
-    helper: "Low pressure to split: only divide tasks that are clearly composite."
+    headline: "Baja",
+    helper: "Poca presión por dividir: solo separa las tareas claramente compuestas."
   },
   media: {
-    headline: "Medium",
-    helper: "Balanced: split until each leaf is a reasonably executable unit."
+    headline: "Media",
+    helper: "Balanceada: divide hasta que cada hoja sea una unidad razonablemente ejecutable."
   },
   alta: {
-    headline: "High",
-    helper: "Aggressive: keep splitting until every leaf is small, concrete and verifiable."
+    headline: "Alta",
+    helper: "Agresiva: sigue dividiendo hasta que cada hoja sea chica, concreta y verificable."
   }
 };
 
@@ -56,35 +56,35 @@ export const GRANULARITY_DISPLAY_OPTIONS: readonly GranularityDisplayOption[] = 
   {
     id: "automatica",
     label: "Auto",
-    detail: "recommended",
-    impact: "The planner decides per task how far to split. Branch depth follows complexity.",
+    detail: "recomendada",
+    impact: "El planner decide por tarea cuánto dividir. La profundidad de cada rama sigue a su complejidad.",
     recommended: true
   },
   {
     id: "baja",
-    label: "Low",
-    detail: "shallow decomposition",
-    impact: "Low pressure to split: only clearly-composite tasks are divided. Larger leaves."
+    label: "Baja",
+    detail: "descomposición superficial",
+    impact: "Poca presión por dividir: solo se separan las tareas claramente compuestas. Hojas más grandes."
   },
   {
     id: "media",
-    label: "Medium",
-    detail: "balanced decomposition",
-    impact: "Splits until each leaf is a reasonably executable unit. Branches may differ in depth."
+    label: "Media",
+    detail: "descomposición balanceada",
+    impact: "Divide hasta que cada hoja sea una unidad razonablemente ejecutable. Las ramas pueden variar en profundidad."
   },
   {
     id: "alta",
-    label: "High",
-    detail: "aggressive decomposition",
-    impact: "Keeps splitting until leaves are small, concrete and verifiable. Deeper where complex."
+    label: "Alta",
+    detail: "descomposición agresiva",
+    impact: "Sigue dividiendo hasta que las hojas sean chicas, concretas y verificables. Más profunda donde hay complejidad."
   },
   {
     id: "max",
-    label: "Max",
-    detail: "maximum aggressiveness",
-    impact: "Most aggressive splitting — reserved for a later backend mode, not available in this MVP.",
+    label: "Máx",
+    detail: "agresividad máxima",
+    impact: "La división más agresiva — reservada para un modo de backend posterior, no disponible en este MVP.",
     disabled: true,
-    disabledReason: "Max is reserved for a later backend granularity mode."
+    disabledReason: "Máx queda reservada para un modo de granularidad de backend posterior."
   }
 ];
 

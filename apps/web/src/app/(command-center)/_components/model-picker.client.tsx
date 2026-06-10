@@ -23,7 +23,7 @@ export function ModelPicker({
   );
   return (
     <select
-      aria-label="Model"
+      aria-label="Modelo"
       value={value}
       onChange={(event) => onChange(event.target.value)}
       className="mh-select"

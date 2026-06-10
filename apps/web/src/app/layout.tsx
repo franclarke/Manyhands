@@ -1,25 +1,42 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AppNav } from "@/components/app-nav";
+import { AppSidebar } from "@/components/app-sidebar";
+import { getWorkspaceRepository } from "@/lib/server/workspaces";
+import { getRunRepository } from "@/lib/server/runs";
+import { toRunPreview } from "@/lib/server/runs/presenter";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "ManyHands",
-  description: "Visual orchestration workspace for multi-agent software development."
+  description: "Orquestación de subagentes: descomponé una tarea en un DAG, ejecutá las hojas en paralelo e integrá los resultados."
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode;
-}>): React.ReactElement {
+}>): Promise<React.ReactElement> {
+  const [workspaces, runs] = await Promise.all([
+    getWorkspaceRepository().list(),
+    getRunRepository().list({ limit: 10 })
+  ]);
+  
+  const wsById = new Map(workspaces.map((entry) => [entry.id, entry]));
+  const previews = runs.map((run) => toRunPreview(run, wsById));
+
   return (
-    <html lang="en" data-theme="light" data-scroll-behavior="smooth">
+    <html lang="es" data-theme="light" data-scroll-behavior="smooth">
       <body>
-        <div className="mh-shell">
-          <AppNav />
-          <main className="mh-container py-8 md:py-10">{children}</main>
+        <div className="flex h-screen w-screen bg-[var(--color-bg)] text-[var(--color-text)] overflow-hidden">
+          <AppSidebar workspaces={workspaces} recentRuns={previews} />
+          <main className="flex-1 overflow-y-auto min-w-0 flex flex-col relative">
+            {children}
+          </main>
         </div>
       </body>
     </html>
   );
 }
+

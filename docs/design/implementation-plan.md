@@ -431,3 +431,36 @@ El prototipo (06–10) puede demostrarse **antes** de tocar una línea de backen
 - [ ] **Siguiente PR recomendado: PR-U1 (Ultracode)** — foco polimórfico + evidencia + hardening fixture-first; reencuadra PR10 (foco nuevo, no evolucionar el `TaskInspector` legacy). Detalle en [`implementation-status.md`](implementation-status.md) §8.
 
 > La implementación avanzó por **PR01→PR09** manteniendo la suite verde y sin big-bang. El próximo corte natural es **PR-U1** (cerrar la experiencia fixture-first) antes de tocar SSE/backend (PR11+).
+
+---
+
+## 12. Fase de Integración de LangGraph (Backend Orchestrator)
+
+Para formalizar la orquestación del backend e integrarla con el nuevo diseño del frontend, se añade una fase de desarrollo dedicada en los siguientes PRs secuenciales:
+
+### PR-LG1 — Paquete de Grafos e Infraestructura de Checkpoint
+- **Objetivo**: Crear el entorno de desarrollo para LangGraph.js y definir el almacenamiento persistente en disco.
+- **Áreas**: `packages/` (nuevo `@manyhands/orchestrator-graph`), `JsonFileCheckpointSaver` class, configuraciones del monorepo.
+- **Acciones**: Instalar dependencias `@langchain/langgraph` e implementar el checkpointer JSON local para guardar estados junto a los runs en `store.ts`.
+- **Tests**: Validar serialización y deserialización de estados en disco sin fugas de memoria.
+
+### PR-LG2 — Planificación Interactiva en LangGraph (Decomposer-HITL)
+- **Objetivo**: Migrar el loop recursivo del decomposer a LangGraph usando interrupciones nativas para preguntas y aprobaciones.
+- **Áreas**: `@manyhands/orchestrator-graph` (nodos de planning), `runner.ts` (API route `/api/runs/[id]/resume`).
+- **Acciones**: Reemplazar excepciones por `interrupt()` nativos en la toma de decisiones `question`. El frontend reanuda el grafo enviando la respuesta a `/resume` que invoca a `graph.resume()`.
+- **Tests**: Validar que la planificación se detiene ante preguntas aclaratorias y se reanuda correctamente manteniendo el mismo hilo histórico.
+
+### PR-LG3 — Concurrencia Paralela (Map-Reduce) y Re-ejecución
+- **Objetivo**: Implementar la ejecución paralela y la integración bottom-up de forma controlada en nodos de LangGraph.
+- **Áreas**: Nodos de ejecución (`executeLeafNode`), integración (`integrateCompositeNode`), y validación (`validateLeafNode`).
+- **Acciones**:
+  - Usar la primitiva `Send` de LangGraph para despachar en paralelo cada tarea hoja de un batch en su propio nodo.
+  - Implementar la detención mediante `interrupt()` ante fallos de tests (tras un intento fallido de auto-reparación) y conflictos de merge irreparables en los nodos superiores.
+- **Tests**: Simular fallos de validación y comprobar el comportamiento de pausa y auto-reparación.
+
+### PR-LG4 — Viaje en el Tiempo (Forking) y Carga de Checkpoints
+- **Objetivo**: Conectar el canvas interactivo y el chat para permitir la depuración por viaje en el tiempo y cargas rápidas de página.
+- **Áreas**: API route `/api/runs/[id]/fork`, Server Components en `app/runs/[runId]/page.tsx`.
+- **Acciones**: Exponer endpoint para clonar el checkpoint de LangGraph e inicializar un nuevo run en disco (no destructivo). Cambiar Next.js para leer el checkpoint inicial del motor en lugar de reconstruir el log en memoria.
+- **Tests**: Integración E2E en local comprobando que el canvas monta y bifurca correctamente.
+

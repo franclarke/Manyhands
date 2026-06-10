@@ -47,22 +47,22 @@ export function ProtoRunView({
           </div>
           <div className="mh-run-hero-side">
             <span className={playback.playing ? "mh-live mh-live-on" : "mh-live"}>
-              {playback.playing ? "playing" : playback.done ? "done" : "paused"}
+              {playback.playing ? "reproduciendo" : playback.done ? "fin" : "en pausa"}
             </span>
-            <span>{fixtureName} · event {playback.index}/{playback.total}</span>
+            <span>{fixtureName} · evento {playback.index}/{playback.total}</span>
           </div>
         </header>
 
         {view.primaryAttention !== null ? (
           <section className={view.primaryAttention.blocking ? "mh-decision-banner mh-decision-banner-blocking" : "mh-decision-banner"}>
             <div>
-              <span>{view.primaryAttention.blocking ? "Needs your call" : "For review"}</span>
+              <span>{view.primaryAttention.blocking ? "Necesita tu decisión" : "Para revisar"}</span>
               <strong>{view.primaryAttention.label}</strong>
               <p>{view.primaryAttention.summary}</p>
             </div>
             <div className="mh-decision-actions">
               <button type="button" className="mh-secondary-action" onClick={() => setFocus({ kind: "decision", id: view.primaryAttention!.id })}>
-                Inspect
+                Inspeccionar
               </button>
               <button type="button" className="mh-primary-action" onClick={() => onResolve(view.primaryAttention!.id)}>
                 {view.primaryAttention.primaryActionLabel}
@@ -83,12 +83,12 @@ export function ProtoRunView({
         {view.reviewEvidence !== null && view.stage === "review" ? (
           <section className="mh-review-strip">
             <div>
-              <span>Evidence</span>
+              <span>Evidencia</span>
               <strong>Tests {view.reviewEvidence.tests.pass}/{view.reviewEvidence.tests.total}</strong>
-              <p>Integrated at {view.reviewEvidence.integrationCommit}. The graph stays available for context.</p>
+              <p>Integrado en {view.reviewEvidence.integrationCommit}. El grafo queda disponible como contexto.</p>
             </div>
             <button type="button" className="mh-secondary-action" onClick={() => setFocus(EVIDENCE_FOCUS_TARGET)}>
-              Open evidence
+              Abrir evidencia
             </button>
           </section>
         ) : null}
@@ -97,8 +97,8 @@ export function ProtoRunView({
 
         <section className={activityOpen ? "mh-activity mh-activity-open" : "mh-activity"}>
           <button type="button" onClick={() => setActivityOpen((open) => !open)} className="mh-activity-toggle">
-            <span>Activity</span>
-            <small>{playback.index} applied events</small>
+            <span>Actividad</span>
+            <small>{playback.index} eventos aplicados</small>
           </button>
           {activityOpen ? (
             <div className="mh-activity-body">
@@ -135,13 +135,13 @@ function PlaybackControls({
   return (
     <nav className="mh-playback" aria-label="Fixture playback controls">
       <button type="button" className="mh-primary-action" onClick={playing ? onPause : onPlay} disabled={done && !playing}>
-        {playing ? "Pause" : "Play"}
+        {playing ? "Pausar" : "Reproducir"}
       </button>
       <button type="button" className="mh-secondary-action" onClick={onStep} disabled={done}>
-        Step
+        Paso
       </button>
       <button type="button" className="mh-secondary-action" onClick={onRestart}>
-        Restart
+        Reiniciar
       </button>
     </nav>
   );
@@ -150,13 +150,13 @@ function PlaybackControls({
 function stageLabel(stage: string): string {
   switch (stage) {
     case "intent":
-      return "Intent";
+      return "Intención";
     case "proposal":
       return "Plan";
     case "review":
-      return "Review";
+      return "Revisión";
     case "running":
     default:
-      return "Run";
+      return "Ejecución";
   }
 }

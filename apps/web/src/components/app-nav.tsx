@@ -13,7 +13,7 @@ export function AppNav(): React.ReactElement {
         backdropFilter: "blur(10px)"
       }}
     >
-      <div className="mh-container flex h-[58px] items-center justify-center">
+      <div className="mh-container flex h-[58px] items-center justify-between">
         <Link href="/" className="flex items-center">
           <Image
             src={logotipo}
@@ -23,6 +23,11 @@ export function AppNav(): React.ReactElement {
             priority
           />
         </Link>
+        <nav>
+          <Link href="/counter" className="text-sm font-medium hover:underline">
+            Counter
+          </Link>
+        </nav>
       </div>
     </header>
   );

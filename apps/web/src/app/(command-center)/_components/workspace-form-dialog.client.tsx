@@ -133,14 +133,14 @@ export function WorkspaceFormDialog({
               marginBottom: 6
             }}
           >
-            {mode === "create" ? "Create workspace" : "Edit workspace"}
+            {mode === "create" ? "Crear workspace" : "Editar workspace"}
           </p>
           <h2 className="mh-serif" style={{ margin: 0, fontSize: 20, color: "var(--text)" }}>
             {mode === "create" ? "Nuevo workspace" : value.name || "Workspace"}
           </h2>
         </header>
 
-        <Field label="Name">
+        <Field label="Nombre">
           <input
             value={value.name}
             onChange={(event) => setValue((v) => ({ ...v, name: event.target.value }))}
@@ -150,7 +150,7 @@ export function WorkspaceFormDialog({
             style={inputStyle}
           />
         </Field>
-        <Field label="Description (optional)">
+        <Field label="Descripción (opcional)">
           <textarea
             value={value.description}
             onChange={(event) => setValue((v) => ({ ...v, description: event.target.value }))}
@@ -159,7 +159,7 @@ export function WorkspaceFormDialog({
             style={{ ...inputStyle, resize: "vertical" as const, minHeight: 70 }}
           />
         </Field>
-        <Field label="Accent color (optional, hex)">
+        <Field label="Color de acento (opcional, hex)">
           <input
             value={value.color}
             onChange={(event) => setValue((v) => ({ ...v, color: event.target.value }))}
@@ -184,7 +184,7 @@ export function WorkspaceFormDialog({
             letterSpacing: 0.4
           }}
         >
-          {showAdvanced ? "▾ Hide workspace hints" : "▸ Workspace hints (optional, used by LLM decomposer)"}
+          {showAdvanced ? "▾ Ocultar pistas del workspace" : "▸ Pistas del workspace (opcional, las usa el decomposer)"}
         </button>
 
         {showAdvanced ? (
@@ -207,14 +207,14 @@ export function WorkspaceFormDialog({
                 lineHeight: 1.5
               }}
             >
-              Repo folder is the local git root ManyHands will plan, execute, integrate, and patch after approval. Use the modal to browse your filesystem and pick the repository root.
+              La carpeta del repo es la raíz git local que ManyHands va a planificar, ejecutar, integrar y parchar tras la aprobación. Usá el explorador para navegar tu filesystem y elegir la raíz del repositorio.
             </p>
-            <Field label="Repo folder">
+            <Field label="Carpeta del repo">
               <div style={{ display: "flex", gap: 8, width: "100%" }}>
                 <input
                   value={value.repoPath}
                   readOnly
-                  placeholder="Select a folder from the modal"
+                  placeholder="Elegí una carpeta desde el explorador"
                   maxLength={400}
                   style={{ ...inputStyle, flex: 1, cursor: "default" }}
                 />
@@ -224,24 +224,24 @@ export function WorkspaceFormDialog({
                   disabled={busy}
                   style={secondaryButtonStyle}
                 >
-                  {value.repoPath !== "" ? "Change folder" : "Select folder"}
+                  {value.repoPath !== "" ? "Cambiar carpeta" : "Elegir carpeta"}
                 </button>
               </div>
             </Field>
-            <Field label="Package manager">
+            <Field label="Gestor de paquetes">
               <select
                 value={value.packageManager}
                 onChange={(event) => setValue((v) => ({ ...v, packageManager: event.target.value as PackageManagerKey | "" }))}
                 style={inputStyle}
               >
-                <option value="">(unset)</option>
+                <option value="">(sin definir)</option>
                 <option value="pnpm">pnpm</option>
                 <option value="npm">npm</option>
                 <option value="yarn">yarn</option>
                 <option value="bun">bun</option>
               </select>
             </Field>
-            <Field label="Default branch">
+            <Field label="Branch por defecto">
               <input
                 value={value.defaultBranch}
                 onChange={(event) => setValue((v) => ({ ...v, defaultBranch: event.target.value }))}
@@ -250,7 +250,7 @@ export function WorkspaceFormDialog({
                 style={inputStyle}
               />
             </Field>
-            <Field label="Allowed paths (comma-separated)">
+            <Field label="Rutas permitidas (separadas por coma)">
               <input
                 value={value.allowedPaths}
                 onChange={(event) => setValue((v) => ({ ...v, allowedPaths: event.target.value }))}
@@ -258,7 +258,7 @@ export function WorkspaceFormDialog({
                 style={inputStyle}
               />
             </Field>
-            <Field label="Test command">
+            <Field label="Comando de test">
               <input
                 value={value.testCommand}
                 onChange={(event) => setValue((v) => ({ ...v, testCommand: event.target.value }))}
@@ -267,7 +267,7 @@ export function WorkspaceFormDialog({
                 style={inputStyle}
               />
             </Field>
-            <Field label="Build command">
+            <Field label="Comando de build">
               <input
                 value={value.buildCommand}
                 onChange={(event) => setValue((v) => ({ ...v, buildCommand: event.target.value }))}
@@ -305,7 +305,7 @@ export function WorkspaceFormDialog({
               cursor: busy ? "not-allowed" : "pointer"
             }}
           >
-            Cancel
+            Cancelar
           </button>
           <button
             type="submit"
@@ -321,7 +321,7 @@ export function WorkspaceFormDialog({
               cursor: busy ? "not-allowed" : "pointer"
             }}
           >
-            {busy ? "Saving…" : mode === "create" ? "Create" : "Save"}
+            {busy ? "Guardando…" : mode === "create" ? "Crear" : "Guardar"}
           </button>
         </div>
       </form>
@@ -453,10 +453,10 @@ function FolderPickerModal({
                 color: "var(--coral)"
               }}
             >
-              Select repository folder
+              Elegir carpeta del repositorio
             </p>
             <h3 className="mh-serif" style={{ margin: 0, fontSize: 22, color: "var(--text)" }}>
-              {state.cwd ?? "Local folders"}
+              {state.cwd ?? "Carpetas locales"}
             </h3>
           </div>
           <button
@@ -467,13 +467,13 @@ function FolderPickerModal({
               padding: "7px 12px"
             }}
           >
-            Close
+            Cerrar
           </button>
         </div>
 
         <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.5, color: "var(--text-3)" }}>
-          Navigate the local filesystem and choose the git repository root. When the current folder is a git repo,
-          you can pick it directly from here.
+          Navegá el filesystem local y elegí la raíz del repositorio git. Si la carpeta actual ya es un repo git,
+          podés elegirla directamente desde acá.
         </p>
 
         <LocalFolderBrowser state={state} onBrowse={onBrowse} onSelect={onSelect} />
@@ -505,11 +505,11 @@ function LocalFolderBrowser({
     >
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <span className="mh-mono" style={{ fontSize: 11, color: "var(--text-2)" }}>
-          {state.loading ? "Loading..." : state.cwd ?? "Local folders"}
+          {state.loading ? "Cargando…" : state.cwd ?? "Carpetas locales"}
         </span>
         {state.git !== undefined ? (
           <button type="button" onClick={() => onSelect(state.git!.repoRoot)} style={selectButtonStyle}>
-            Select current repo
+            Elegir este repo
           </button>
         ) : null}
       </div>
@@ -530,7 +530,7 @@ function LocalFolderBrowser({
             </button>
             {entry.isGitRepo ? (
               <button type="button" onClick={() => onSelect(entry.path)} style={selectButtonStyle}>
-                Select
+                Elegir
               </button>
             ) : null}
           </div>

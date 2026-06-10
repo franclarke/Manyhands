@@ -43,6 +43,7 @@ export const TraceEventTypeSchema = z.union([
   z.literal("context_packed"),
   z.literal("agent_started"),
   z.literal("executor_started"),
+  z.literal("executor_output"),
   z.literal("executor_completed"),
   z.literal("unexpected_commit_detected"),
   z.literal("scope_check_failed"),
