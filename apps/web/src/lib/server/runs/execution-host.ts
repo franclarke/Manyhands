@@ -15,11 +15,15 @@ import { join } from "node:path";
 import { Command } from "@langchain/langgraph";
 import {
   ChildProcessValidationRunner,
+  ComplexityRoutingPolicy,
   DefaultAgentExecutorFactory,
   ExecutionConfigSchema,
   RunExecutor,
   SimpleGitRunner,
+  probeExecutorAvailability,
   type AgentExecutionResult,
+  type ExecutorId,
+  type ExecutorRouter,
   type IntegrationResult,
   type PredictedConflictHint
 } from "@manyhands/execution-core";
@@ -108,6 +112,9 @@ function riskMatrixFromRun(run: RunRecord): TaskPairRiskMatrix {
   return Array.isArray(planning?.riskMatrix) ? planning.riskMatrix : [];
 }
 
+/** Process-wide cache: which executor CLIs are installed (probed lazily once). */
+let availableExecutors: Promise<Set<ExecutorId>> | undefined;
+
 /**
  * Build the compiled execution graph for a run. Deps are reconstructed from
  * the persisted RunRecord (graph, provisioned repo, config) — never from
@@ -128,15 +135,29 @@ export function buildExecutionHost(
   const riskMatrix = riskMatrixFromRun(run);
   const traceStoreFactory = options.traceStoreFactory ?? (() => new InMemoryTraceStore());
 
-  const makeRunExecutor = (sink: TraceStore) =>
+  const makeRunExecutor = (sink: TraceStore, router?: ExecutorRouter) =>
     new RunExecutor({
       git: new SimpleGitRunner(),
       executorFactory: new DefaultAgentExecutorFactory(),
       traceStore: sink,
-      repoRoot: provisioned.repoRoot
+      repoRoot: provisioned.repoRoot,
+      ...(router !== undefined ? { router } : {})
     });
 
   const executionConfigFor = (current: RunRecord) => ExecutionConfigSchema.parse(current.executionConfig ?? {});
+
+  /**
+   * Complexity router over the CLIs actually installed on this machine. The
+   * availability probe runs once per process; a gemini-only box degrades to
+   * gemini lanes instead of failing leaves with ENOENT.
+   */
+  const routerFor = async (current: RunRecord): Promise<ExecutorRouter | undefined> => {
+    if (executionConfigFor(current).routing === "fixed") {
+      return undefined;
+    }
+    availableExecutors ??= probeExecutorAvailability();
+    return new ComplexityRoutingPolicy({ available: await availableExecutors });
+  };
 
   const persistNodeResult = async (
     graph: TaskGraph,
@@ -161,7 +182,7 @@ export function buildExecutionHost(
   const executeLeaf = async (params: LeafExecutionInput): Promise<{ result: AgentExecutionResult }> => {
     const current = await getRunRepository().get(runId);
     const traceStore = traceStoreFactory();
-    const runExecutor = makeRunExecutor(traceStore);
+    const runExecutor = makeRunExecutor(traceStore, await routerFor(current));
 
     const nodeResult = await runExecutor.runNode({
       graph: taskGraph,
@@ -196,7 +217,7 @@ export function buildExecutionHost(
   ): Promise<{ result: AgentExecutionResult } | null> => {
     const current = await getRunRepository().get(runId);
     const traceStore = traceStoreFactory();
-    const runExecutor = makeRunExecutor(traceStore);
+    const runExecutor = makeRunExecutor(traceStore, await routerFor(current));
 
     const { result, worktree } = await runExecutor.repairLeaf({
       graph: taskGraph,

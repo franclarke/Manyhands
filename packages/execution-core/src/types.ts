@@ -227,6 +227,12 @@ export const ExecutionConfigSchema = z.object({
   leafTimeoutMs: z.number().int().positive().default(300_000),
   integrationTimeoutMs: z.number().int().positive().default(600_000),
   unexpectedCommitPolicy: UnexpectedCommitPolicySchema.default("reject"),
+  /**
+   * Executor selection mode: "complexity" routes each node to an executor tier
+   * by its complexity score (degrading to whatever CLIs are installed);
+   * "fixed" always uses the run-level selection.
+   */
+  routing: z.union([z.literal("complexity"), z.literal("fixed")]).default("complexity"),
   /** Optional wall-clock ceiling for the whole run; the orchestrator interrupts past it. */
   maxWallClockMs: z.number().int().positive().optional()
 });

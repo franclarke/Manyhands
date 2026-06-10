@@ -10,6 +10,8 @@ import type { TraceStore } from "@manyhands/trace-store";
 import { FixedAgentExecutorFactory, type AgentExecutorFactory } from "../executor/factory";
 import { AGENT_STATUS_PROTOCOL_INSTRUCTIONS } from "../executor/status-channel";
 import type { AgentExecutor } from "../executor/types";
+import { countDependents } from "../routing/complexity";
+import { resolveRoutedSelection, type ExecutorRouter } from "../routing/policy";
 import {
   GEMINI_EXECUTOR_ID,
   normalizeExecutorSelection,
@@ -50,6 +52,12 @@ export interface RunExecutorDeps {
   batchScheduler?: BatchScheduler;
   /** Packs target-file context into leaf instructions. Injectable for tests. */
   contextPacker?: ContextPacker;
+  /**
+   * Complexity-based executor router. When set, node selection follows:
+   * explicit node metadata → router decision → run-level default. Repairs
+   * route with attempt ≥ 1 so the tier escalates to a stronger agent.
+   */
+  router?: ExecutorRouter;
   /** Writes the leaf/repair instructions file. Injectable for tests. */
   writeInstructions?: (path: string, content: string) => Promise<void>;
   clock?: () => number;
@@ -133,6 +141,7 @@ export class RunExecutor {
   private readonly validationRunner: ValidationRunner;
   private readonly batchScheduler: BatchScheduler;
   private readonly contextPacker: ContextPacker;
+  private readonly router: ExecutorRouter | undefined;
   private readonly writeInstructions: (path: string, content: string) => Promise<void>;
   private readonly clock: () => number;
 
@@ -159,6 +168,7 @@ export class RunExecutor {
     this.batchScheduler =
       deps.batchScheduler ?? new BatchScheduler({ traceStore: deps.traceStore });
     this.contextPacker = deps.contextPacker ?? new FileSystemContextPacker();
+    this.router = deps.router;
     this.writeInstructions = deps.writeInstructions ?? ((path, content) => writeFile(path, content, "utf8"));
     this.clock = deps.clock ?? (() => Date.now());
   }
@@ -473,7 +483,15 @@ export class RunExecutor {
       throw new RunExecutionError(`Task "${taskId}" is not executable (kind=${node.kind}).`, "leaf", runId);
     }
 
-    const selection = resolveExecutorSelection(node, resolveLegacyModelSelection(params.model));
+    const repairDependents = countDependents(graph, node.id);
+    const selection = resolveRoutedSelection({
+      node,
+      dependents: repairDependents,
+      defaultSelection: resolveLegacyModelSelection(params.model),
+      router: this.router,
+      attempt: 1
+    });
+    this.traceRoutingDecision(node, repairDependents, selection, 1);
     const usageSource = usageSourceForSelection(selection);
     const executor = this.executorFactory.create(selection);
     const worktree = this.worktreeManager.recordFor({
@@ -548,7 +566,14 @@ export class RunExecutor {
     signal?: AbortSignal;
   }): Promise<AgentExecutionResult> {
     const { node, runId } = args;
-    const executorSelection = resolveExecutorSelection(node, args.defaultSelection);
+    const dependents = countDependents(args.graph, node.id);
+    const executorSelection = resolveRoutedSelection({
+      node,
+      dependents,
+      defaultSelection: args.defaultSelection,
+      router: this.router
+    });
+    this.traceRoutingDecision(node, dependents, executorSelection, 0);
     const usageSource = usageSourceForSelection(executorSelection);
     const executor = this.executorFactory.create(executorSelection);
 
@@ -692,6 +717,44 @@ export class RunExecutor {
       usageSource
     });
     return this.runLeafValidation({ node, worktree, result: recorded, runId });
+  }
+
+  /**
+   * Record why the router picked this executor (tier, score, signals) so the
+   * decision is auditable in the run trace. No-op without a router or when an
+   * explicit per-node override won.
+   */
+  private traceRoutingDecision(
+    node: TaskNode,
+    dependents: number,
+    selection: ExecutorSelection,
+    attempt: number
+  ): void {
+    if (this.router === undefined) {
+      return;
+    }
+    const decision = this.router.describe({ node, dependents, attempt });
+    if (
+      decision.selection.executorId !== selection.executorId ||
+      decision.selection.model !== selection.model
+    ) {
+      // An explicit metadata override beat the router; nothing to explain.
+      return;
+    }
+    this.traceStore.append({
+      type: "executor_routed",
+      actor: "system",
+      taskId: node.id,
+      payload: {
+        executorId: selection.executorId,
+        model: selection.model,
+        tier: decision.tier,
+        score: decision.complexity.score,
+        signals: decision.complexity.signals,
+        degraded: decision.degraded,
+        attempt
+      }
+    });
   }
 
   private async runLeafValidation(args: {

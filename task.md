@@ -11,10 +11,10 @@ Objetivo: orquestador end-to-end funcional. Sistemas que instruyen, evalúan y c
 - [x] 1.6 Canal send-to-user: MH_STATUS por stdout + onAgentStatus + trace agent_status
 
 ## Fase 2 — Enrutamiento inteligente por complejidad
-- [ ] 2.1 scoreNodeComplexity (features deterministas del DAG/contrato)
-- [ ] 2.2 ExecutorRoutingPolicy (tiers → ranked selections, fallback por disponibilidad)
-- [ ] 2.3 Disponibilidad de binarios (probe) + wiring en RunExecutor/host
-- [ ] 2.4 Escalación de tier en repair
+- [x] 2.1 scoreNodeComplexity (features deterministas del DAG/contrato + señales auditables)
+- [x] 2.2 ComplexityRoutingPolicy (tiers → ranked selections, fallback por disponibilidad)
+- [x] 2.3 probeExecutorAvailability + wiring en RunExecutor/host (config.routing, traza executor_routed)
+- [x] 2.4 Escalación de tier en repair (attempt ≥ 1)
 
 ## Fase 3 — Planning sobre LangGraph (HITL nativo)
 - [ ] 3.1 Planning StateGraph v2 (gates baratos: questionGate/approvalGate, critics in-loop)
