@@ -142,6 +142,87 @@ export const HumanGateResultSchema = z.object({
 const resolvedStatuses = new Set<TaskNodeStatus>(["done", "merged"]);
 const blockedStatuses = new Set<TaskNodeStatus>(["failed", "conflict", "running", "validating"]);
 
+// ── Scope-aware wave selection (adaptive wavefront) ──────────────
+//
+// Given the dynamic execution frontier (tasks whose dependencies are already
+// satisfied), pick the subset that is safe to run concurrently:
+//  - pairs predicted as high/blocking conflict risk are never co-scheduled;
+//  - tasks whose declared file scopes (executionScope globs) overlap are
+//    serialized so parallel agents don't collide on the same files;
+//  - tasks without a declared scope carry no scope constraint (free
+//    parallelism, D9) but still honour the risk matrix.
+
+export interface ScopeAwareWaveInput {
+  graph: TaskGraph;
+  /** Frontier candidates, dependency-ready, in stable priority order. */
+  candidates: readonly string[];
+  riskMatrix?: TaskPairRiskMatrix;
+  /** Optional hard cap on wave width; omitted = unbounded (D9). */
+  maxParallel?: number;
+}
+
+export function selectScopeAwareWave(input: ScopeAwareWaveInput): string[] {
+  const cap = input.maxParallel !== undefined ? Math.max(1, input.maxParallel) : Number.POSITIVE_INFINITY;
+  const riskMatrix = input.riskMatrix ?? [];
+  const scopes = new Map<string, string[][]>(
+    input.candidates.map((taskId) => [taskId, scopeSignature(input.graph, taskId)])
+  );
+
+  const selected: string[] = [];
+  for (const taskId of input.candidates) {
+    if (selected.length >= cap) break;
+    const compatible = selected.every(
+      (other) =>
+        !isHighRiskPair(riskMatrix, taskId, other) &&
+        !scopesOverlap(scopes.get(taskId) ?? [], scopes.get(other) ?? [])
+    );
+    if (compatible) {
+      selected.push(taskId);
+    }
+  }
+
+  // The frontier is never starved: the first candidate always forms a wave.
+  return selected.length > 0 ? selected : input.candidates.slice(0, 1);
+}
+
+/** Segment lists for every path pattern the task declared as its write scope. */
+function scopeSignature(graph: TaskGraph, taskId: string): string[][] {
+  const scope = graph.nodes[taskId]?.contract?.executionScope;
+  if (scope === undefined) return [];
+  return [...scope.implementationPaths, ...scope.testPaths, ...scope.configPaths].map(literalSegments);
+}
+
+/**
+ * Complete literal path segments before the first glob construct. A glob char
+ * mid-segment drops that partial segment (conservative: "src/auth*" → ["src"]),
+ * so overlap detection errs toward serialization, never toward collisions.
+ */
+function literalSegments(pattern: string): string[] {
+  const segments: string[] = [];
+  for (const segment of pattern.replace(/\\/g, "/").split("/")) {
+    if (segment.length === 0 || segment === ".") continue;
+    if (/[*?[{]/.test(segment)) break;
+    segments.push(segment);
+  }
+  return segments;
+}
+
+function scopesOverlap(a: string[][], b: string[][]): boolean {
+  if (a.length === 0 || b.length === 0) return false;
+  return a.some((left) => b.some((right) => onePrefixesOther(left, right)));
+}
+
+function onePrefixesOther(left: string[], right: string[]): boolean {
+  const shorter = left.length <= right.length ? left : right;
+  const longer = left.length <= right.length ? right : left;
+  return shorter.every((segment, index) => segment === longer[index]);
+}
+
+function isHighRiskPair(riskMatrix: TaskPairRiskMatrix, a: string, b: string): boolean {
+  const risk = findRiskPrediction(riskMatrix, a, b);
+  return risk?.level === "high" || risk?.level === "blocking";
+}
+
 export function scheduleTasks(input: SchedulerInput): SchedulerPlan {
   const maxParallel = Math.max(1, input.maxParallel);
   const leafIds = orderedExecutableTaskIds(input.graph);
