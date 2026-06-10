@@ -1551,3 +1551,5 @@ export type {
   AtomicStep,
   DecomposeStep
 } from "./llm/recursive/step-schema";
+
+export * from "./mocks/mock-decomposer";

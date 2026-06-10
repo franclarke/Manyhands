@@ -95,17 +95,17 @@ export function ChatThread({ runId, model, setActiveTab }: ChatThreadProps): Rea
       {/* Header */}
       <div className="px-5 py-3 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] z-10">
         <h2 className="text-[13px] font-semibold tracking-tight text-[var(--color-text)] flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-[var(--color-accent)]" />
-          Canal de Control Conversacional
+          <Sparkles className="w-4 h-4 text-[var(--color-text-subtle)]" />
+          Comandos
         </h2>
-        <span className="flex items-center gap-1 text-[9px] font-mono text-[var(--color-text-subtle)] bg-[var(--color-bg-subtle)] border border-[var(--color-border)] px-1.5 py-0.5 rounded uppercase tracking-wide">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        <span className="flex items-center gap-1 text-[9px] font-mono text-[var(--status-completed-fg)] bg-[var(--status-completed-bg)] border border-[var(--status-completed-border)] px-1.5 py-0.5 rounded uppercase tracking-wide">
+          <div className="w-1.5 h-1.5 rounded-full bg-[var(--status-completed-fg)] animate-pulse" />
           Conectado
         </span>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-4 bg-[var(--color-bg)]">
+      <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4 bg-[var(--color-bg)]">
         {messages.map((message) => {
           const isAssistant = message.role === "assistant";
           const textContent = message.content.map((c) => (c.type === "text" ? c.text : "")).join(" ");
@@ -118,7 +118,7 @@ export function ChatThread({ runId, model, setActiveTab }: ChatThreadProps): Rea
             // User message: right-aligned blue bubble
             return (
               <div key={message.id} className="flex justify-end w-full animate-fade-in">
-                <div className="max-w-[75%] p-3 px-4 rounded-[18px_18px_4px_18px] bg-[var(--color-accent)] text-white shadow-sm">
+                <div className="max-w-[82%] p-3 px-4 rounded-lg bg-[var(--color-accent)] text-[var(--color-accent-contrast)]">
                   <Markdown text={textContent} isUser={true} />
                 </div>
               </div>
@@ -128,7 +128,7 @@ export function ChatThread({ runId, model, setActiveTab }: ChatThreadProps): Rea
           // Assistant message: left-aligned bubble with dot indicator
           return (
             <div key={message.id} className="flex gap-2.5 items-start max-w-[85%] animate-fade-in">
-              <div className="w-5 h-5 rounded-full bg-[var(--color-bg-subtle)] border border-[var(--color-border)] flex items-center justify-center flex-shrink-0 mt-1">
+              <div className="w-5 h-5 rounded-md bg-[var(--color-bg-subtle)] border border-[var(--color-border)] flex items-center justify-center flex-shrink-0 mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)]" />
               </div>
               <div className="flex-1 min-w-0">
@@ -144,7 +144,7 @@ export function ChatThread({ runId, model, setActiveTab }: ChatThreadProps): Rea
                   <ConflictCard text={textContent} onTabChange={setActiveTab} />
                 ) : (
                   <div
-                    className={`p-3 px-4 rounded-[18px_18px_18px_4px] border text-sm leading-relaxed shadow-sm ${
+                    className={`p-3 px-4 rounded-lg border text-sm leading-relaxed ${
                       isSystemInfo
                         ? "bg-[var(--color-bg-subtle)] border-[var(--color-border-strong)] text-[var(--color-text-muted)] font-medium"
                         : "bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text)]"
@@ -161,8 +161,8 @@ export function ChatThread({ runId, model, setActiveTab }: ChatThreadProps): Rea
         {/* If plan is waiting for approval, show the PlanApprovalCard inline */}
         {isPlanPending && (
           <div className="flex gap-2.5 items-start max-w-[85%] animate-fade-in">
-            <div className="w-5 h-5 rounded-full bg-[var(--color-bg-subtle)] border border-[var(--color-border)] flex items-center justify-center flex-shrink-0 mt-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            <div className="w-5 h-5 rounded-md bg-[var(--color-bg-subtle)] border border-[var(--color-border)] flex items-center justify-center flex-shrink-0 mt-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--status-planning-fg)] animate-pulse" />
             </div>
             <div className="flex-1 min-w-0">
               <PlanApprovalCard
@@ -179,14 +179,14 @@ export function ChatThread({ runId, model, setActiveTab }: ChatThreadProps): Rea
       </div>
 
       {/* Input */}
-      <div className="p-4 bg-[var(--color-surface)] border-t border-[var(--color-border)] shadow-[0_-4px_12px_rgba(0,0,0,0.01)]">
-        <div className="relative flex items-center bg-[var(--color-surface)] border border-[var(--color-border-control)] shadow-[0_2px_8px_rgba(0,0,0,0.01)] rounded-xl overflow-hidden focus-within:border-[var(--color-accent)] focus-within:shadow-[0_4px_12px_rgba(0,0,0,0.02)] transition-all">
+      <div className="p-4 bg-[var(--color-surface)] border-t border-[var(--color-border)]">
+        <div className="relative flex items-center bg-[var(--color-surface)] border border-[var(--color-border-control)] rounded-lg overflow-hidden focus-within:border-[var(--color-accent)] transition-all">
           <input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Preguntá sobre la tarea o ingresá instrucciones..."
+            placeholder="Preguntá o indicá un cambio..."
             className="w-full bg-transparent pl-4 pr-12 py-3 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] focus:outline-none"
           />
           <button
@@ -194,7 +194,7 @@ export function ChatThread({ runId, model, setActiveTab }: ChatThreadProps): Rea
             disabled={inputText.trim().length === 0}
             className={`absolute right-2 p-1.5 rounded-lg transition-colors ${
               inputText.trim().length > 0
-                ? "bg-[var(--color-accent)] text-white hover:opacity-90"
+                ? "bg-[var(--color-accent)] text-[var(--color-accent-contrast)] hover:bg-[var(--color-accent-hover)]"
                 : "bg-[var(--color-bg-subtle)] text-[var(--color-text-faint)] cursor-not-allowed"
             }`}
           >
@@ -267,7 +267,7 @@ function PlanApprovalCard({
         <button
           onClick={onApprove}
           disabled={approving}
-          className="w-full h-9 bg-[var(--color-accent)] hover:opacity-90 disabled:bg-[var(--color-bg-subtle)] disabled:text-[var(--color-text-faint)] text-white text-xs font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer"
+          className="w-full h-9 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] disabled:bg-[var(--color-bg-subtle)] disabled:text-[var(--color-text-faint)] text-[var(--color-accent-contrast)] text-xs font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer"
         >
           {approving ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -332,7 +332,7 @@ function DecisionCard({
           <button
             onClick={() => onApprove(pendingDecision.id)}
             disabled={busy !== null}
-            className="flex-1 h-8 bg-[var(--color-accent)] hover:opacity-90 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer"
+            className="flex-1 h-8 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-[var(--color-accent-contrast)] text-xs font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer"
           >
             {busy === pendingDecision.id ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -402,7 +402,7 @@ function Markdown({ text, isUser }: { text: string; isUser?: boolean }): React.R
           return (
             <ul key={pIdx} className="list-disc pl-4 space-y-1 my-1">
               {lines.map((line, lIdx) => (
-                <li key={lIdx} className={`text-xs leading-normal ${isUser ? "text-white/90" : "text-[var(--color-text-muted)]"}`}>
+                <li key={lIdx} className={`text-xs leading-normal ${isUser ? "text-[var(--color-accent-contrast)] opacity-90" : "text-[var(--color-text-muted)]"}`}>
                   {renderInline(line.trim().replace(/^[-*]\s+/, ""), isUser)}
                 </li>
               ))}
@@ -411,7 +411,7 @@ function Markdown({ text, isUser }: { text: string; isUser?: boolean }): React.R
         }
 
         return (
-          <p key={pIdx} className={`text-xs leading-relaxed ${isUser ? "text-white/95" : "text-[var(--color-text)]"}`}>
+          <p key={pIdx} className={`text-xs leading-relaxed ${isUser ? "text-[var(--color-accent-contrast)]" : "text-[var(--color-text)]"}`}>
             {lines.map((line, lIdx) => (
               <span key={lIdx} className="block">
                 {renderInline(line, isUser)}
@@ -432,7 +432,7 @@ function renderInline(text: string, isUser?: boolean): React.ReactNode[] {
   split.forEach((part, idx) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       parts.push(
-        <strong key={idx} className={`font-semibold ${isUser ? "text-white" : "text-[var(--color-text)]"}`}>
+        <strong key={idx} className={`font-semibold ${isUser ? "text-[var(--color-accent-contrast)]" : "text-[var(--color-text)]"}`}>
           {part.slice(2, -2)}
         </strong>
       );
@@ -440,8 +440,8 @@ function renderInline(text: string, isUser?: boolean): React.ReactNode[] {
       parts.push(
         <code key={idx} className={`font-mono text-[10.5px] px-1.5 py-0.5 rounded font-medium border ${
           isUser
-            ? "bg-white/10 border-white/20 text-white"
-            : "bg-[var(--color-bg-subtle)] border-[var(--color-border)] text-amber-800"
+            ? "bg-[color-mix(in_srgb,var(--color-accent-contrast)_12%,transparent)] border-[color-mix(in_srgb,var(--color-accent-contrast)_22%,transparent)] text-[var(--color-accent-contrast)]"
+            : "bg-[var(--color-bg-subtle)] border-[var(--color-border)] text-[var(--color-accent-hover)]"
         }`}>
           {part.slice(1, -1)}
         </code>
@@ -453,4 +453,3 @@ function renderInline(text: string, isUser?: boolean): React.ReactNode[] {
 
   return parts;
 }
-

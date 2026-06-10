@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
-import type { AgentExecutorOptions, SandboxMode } from "../types";
+import type { AgentExecutorOptions } from "../types";
 import type { AgentExecutor, ExecutorRunOutcome } from "./types";
 import { spawnExecutorProcess, type SpawnFn } from "./process";
 
@@ -12,17 +12,6 @@ import { spawnExecutorProcess, type SpawnFn } from "./process";
  * stdin (no arg-length limit) and use this directive as the headless trigger.
  */
 const STDIN_DIRECTIVE = "Follow-instructions-on-stdin";
-
-/**
- * Maps the legacy Codex SandboxMode to a Gemini approval mode. Gemini has no
- * `workspace-write`/`danger-full-access` OS sandbox; `yolo` auto-approves every
- * tool call so the agent can edit files and run commands inside the worktree
- * without prompting (which would hang a headless run). Real confinement comes
- * from the isolated git worktree + the ScopeChecker, not from Gemini.
- */
-function approvalModeFor(_sandboxMode: SandboxMode): string {
-  return "yolo";
-}
 
 /**
  * Builds the `gemini` argument vector. Pure and synchronous so it can be
@@ -38,7 +27,7 @@ function approvalModeFor(_sandboxMode: SandboxMode): string {
 export function buildGeminiArgs(options: AgentExecutorOptions): string[] {
   return [
     "--model", options.model,
-    "--approval-mode", approvalModeFor(options.sandboxMode),
+    "--approval-mode", "yolo",
     "--skip-trust",
     "-o", "text",
     "-p", STDIN_DIRECTIVE

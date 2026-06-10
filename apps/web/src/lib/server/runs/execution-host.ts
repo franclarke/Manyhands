@@ -367,6 +367,7 @@ export async function driveExecution(
   // the generated generics are narrower than the runtime contract.
   const stream = await host.graph.stream(input as never, { ...host.threadConfig, streamMode: "updates" });
   for await (const _chunk of stream) {
+    void _chunk;
     // Updates are persisted by the deps themselves; the stream is consumed to
     // drive the graph to its next suspension point.
   }

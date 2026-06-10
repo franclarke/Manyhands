@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;450;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
 /* ============================================================================
@@ -14,8 +14,8 @@
 
 :root {
   /* ── Fonts (theme-agnostic) ───────────────────────────────────── */
-  --font-serif: var(--font-sans);
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: "Newsreader", Georgia, serif;
+  --font-sans: "Geist", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", "Berkeley Mono", "IBM Plex Mono", ui-monospace, monospace;
 
   /* ── Type scale (font-size) ───────────────────────────────────── */
@@ -53,7 +53,10 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  /* 1 ── Primitives: raw palette ─────────────────────────────────── */
+  /* 1 ── Primitives: raw palette ("ember on graphite") ─────────────
+         Ember (molten orange, OKLCH hue ~55) is the ONLY brand hue and is
+         reserved for live activity + primary action. No cyans/light blues
+         anywhere in the system (anti-reference, see PRODUCT.md). */
   --cu-bg: #0f1012;
   --cu-bg-1: #131416;
   --cu-surface: #181a1c;
@@ -63,14 +66,11 @@
   --cu-ink-2: #b9ad98;     /* muted text - functional copy */
   --cu-ink-3: #a99d88;     /* subtle text - labels and metadata */
   --cu-ink-4: #776f60;     /* faint text - decoration / disabled only */
-  --cu-copper: #d08a5a;
-  --cu-copper-hi: #d79b72;
-  --cu-copper-deep: #8e5631;
-  --cu-slate: #6f8aa8;
-  --cu-cyan: #6bc7db;      /* running / generating */
-  --cu-blue: #8fb4e8;      /* ready */
+  --cu-ember: oklch(0.74 0.145 55);       /* brand / live activity */
+  --cu-ember-hi: oklch(0.79 0.15 57);     /* hover / highlight */
+  --cu-ember-deep: oklch(0.55 0.13 50);   /* deep borders / emphasis */
   --cu-ochre: #d1b36a;     /* blocked / warning / risk-medium */
-  --cu-violet: #b89dea;    /* needs review */
+  --cu-violet: #b89dea;    /* needs review (HITL) */
   --cu-sage: #8fbd8a;      /* completed / risk-low */
   --cu-green-strong: #a9d68a; /* integrated */
   --cu-rust: #e08478;      /* failed / error / conflict / risk-high */
@@ -91,34 +91,38 @@
   --color-text-muted: var(--cu-ink-2);
   --color-text-subtle: var(--cu-ink-3);
   --color-text-faint: var(--cu-ink-4);
-  --color-accent: var(--cu-copper);
-  --color-accent-hover: var(--cu-copper-hi);
-  --color-accent-deep: var(--cu-copper-deep);
-  --color-accent-glow: rgba(208, 138, 90, 0.24);
-  --color-selected: #9ba9b8;
-  --color-focus: var(--cu-copper);
+  --color-accent: var(--cu-ember);
+  --color-accent-hover: var(--cu-ember-hi);
+  --color-accent-deep: var(--cu-ember-deep);
+  /* Text/icon color ON an accent-filled surface (ember is too light for white). */
+  --color-accent-contrast: #201409;
+  --color-accent-glow: color-mix(in srgb, var(--cu-ember) 24%, transparent);
+  --color-selected: var(--cu-ink-3);
+  --color-focus: var(--cu-ember);
 
   /* 3 ── State tokens: single source for status colors (UiStatus) ──
-         Each status has fg (strong), bg (tint), border (tint). See §4.9. */
+         Each status has fg (strong), bg (tint), border (tint).
+         Live axis (planning/running/integrating) = ember; ready is a strong
+         warm neutral; amber = waiting/invalidated; red = real failure only. */
   --status-idle-fg: var(--cu-ink-2);
   --status-idle-bg: rgba(185, 173, 152, 0.10);
   --status-idle-border: rgba(185, 173, 152, 0.38);
 
-  --status-planning-fg: var(--cu-copper-hi);
-  --status-planning-bg: rgba(208, 138, 90, 0.12);
-  --status-planning-border: rgba(208, 138, 90, 0.50);
+  --status-planning-fg: var(--cu-ember-hi);
+  --status-planning-bg: color-mix(in srgb, var(--cu-ember) 11%, transparent);
+  --status-planning-border: color-mix(in srgb, var(--cu-ember) 45%, transparent);
 
   --status-pending-fg: var(--cu-ink-3);
   --status-pending-bg: rgba(169, 157, 136, 0.09);
   --status-pending-border: rgba(169, 157, 136, 0.34);
 
-  --status-ready-fg: var(--cu-blue);
-  --status-ready-bg: rgba(143, 180, 232, 0.12);
-  --status-ready-border: rgba(143, 180, 232, 0.52);
+  --status-ready-fg: var(--cu-ink);
+  --status-ready-bg: rgba(241, 234, 216, 0.08);
+  --status-ready-border: rgba(241, 234, 216, 0.46);
 
-  --status-running-fg: var(--cu-cyan);
-  --status-running-bg: rgba(107, 199, 219, 0.12);
-  --status-running-border: rgba(107, 199, 219, 0.54);
+  --status-running-fg: var(--cu-ember-hi);
+  --status-running-bg: color-mix(in srgb, var(--cu-ember) 13%, transparent);
+  --status-running-border: color-mix(in srgb, var(--cu-ember) 54%, transparent);
 
   --status-completed-fg: var(--cu-sage);
   --status-completed-bg: rgba(143, 189, 138, 0.12);
@@ -136,9 +140,9 @@
   --status-review-bg: rgba(184, 157, 234, 0.12);
   --status-review-border: rgba(184, 157, 234, 0.52);
 
-  --status-integrating-fg: var(--cu-copper);
-  --status-integrating-bg: rgba(208, 138, 90, 0.14);
-  --status-integrating-border: rgba(208, 138, 90, 0.54);
+  --status-integrating-fg: var(--cu-ember);
+  --status-integrating-bg: color-mix(in srgb, var(--cu-ember) 15%, transparent);
+  --status-integrating-border: color-mix(in srgb, var(--cu-ember) 56%, transparent);
 
   --status-integrated-fg: var(--cu-green-strong);
   --status-integrated-bg: rgba(169, 214, 138, 0.14);
@@ -174,17 +178,17 @@
   --muted: var(--color-text-muted);
   --subtle: var(--color-text-subtle);
 
-  --copper: var(--cu-copper);
-  --copper-hi: var(--cu-copper-hi);
-  --copper-deep: var(--cu-copper-deep);
+  --copper: var(--cu-ember);
+  --copper-hi: var(--cu-ember-hi);
+  --copper-deep: var(--cu-ember-deep);
   --copper-glow: var(--color-accent-glow);
   --selected: var(--color-selected);
 
-  --coral: var(--cu-copper);
-  --coral-hi: var(--cu-copper-hi);
+  --coral: var(--cu-ember);
+  --coral-hi: var(--cu-ember-hi);
   --coral-glow: var(--color-accent-glow);
-  --running: var(--cu-cyan);
-  --ready: var(--cu-blue);
+  --running: var(--cu-ember);
+  --ready: var(--cu-ink-2);
   --done: var(--cu-sage);
   --error: var(--cu-rust);
   --failed: var(--cu-rust);
@@ -196,110 +200,114 @@
   --risk-low: var(--cu-sage);
   --risk-medium: var(--cu-ochre);
   --risk-high: var(--cu-rust);
-  --risk-blocking: var(--cu-copper);
+  --risk-blocking: var(--cu-ember);
 
-  --accent: var(--cu-copper);
-  --accent-strong: var(--cu-copper-hi);
+  --accent: var(--cu-ember);
+  --accent-strong: var(--cu-ember-hi);
   --warning: var(--cu-ochre);
   --danger: var(--cu-rust);
 
   --border: var(--color-border);
   --mh-graph-edge: rgba(241, 234, 216, 0.20);
-  --mh-graph-seam: rgba(208, 138, 90, 0.62);
+  --mh-graph-seam: color-mix(in srgb, var(--cu-ember) 62%, transparent);
+  --mh-graph-dots: rgba(241, 234, 216, 0.055);
 
   /* Body, Scrollbars & Branch lines */
   --body-bg: linear-gradient(rgba(241, 234, 216, 0.012) 1px, transparent 1px),
              linear-gradient(90deg, rgba(241, 234, 216, 0.012) 1px, transparent 1px),
-             radial-gradient(circle at 50% -10%, rgba(208, 138, 90, 0.04), transparent 38%),
+             radial-gradient(circle at 50% -10%, color-mix(in srgb, var(--cu-ember) 4%, transparent), transparent 38%),
              linear-gradient(180deg, var(--bg) 0%, var(--bg-1) 100%);
   --scrollbar-thumb: rgba(241, 234, 216, 0.12);
   --scrollbar-thumb-hover: rgba(241, 234, 216, 0.20);
 
+  /* Branch lanes: warm vocabulary only (no cyans). Deep terracotta (5) is
+     kept far from --cu-rust so lanes never read as "failed". */
   --mh-branch-root: var(--color-text-faint);
-  --mh-branch-1: var(--cu-copper);
-  --mh-branch-2: var(--cu-cyan);
-  --mh-branch-3: var(--cu-blue);
-  --mh-branch-4: var(--cu-violet);
-  --mh-branch-5: var(--cu-sage);
-  --mh-branch-6: var(--cu-ochre);
+  --mh-branch-1: var(--cu-ember);
+  --mh-branch-2: var(--cu-violet);
+  --mh-branch-3: var(--cu-sage);
+  --mh-branch-4: var(--cu-ochre);
+  --mh-branch-5: oklch(0.62 0.08 35);
+  --mh-branch-6: #8d8474;
 }
 
 [data-theme="light"] {
   color-scheme: light;
 
-  --cu-bg: #FAFAFA;
-  --cu-bg-1: #F5F5F5;
+  /* Neutral paper (chroma ~0) with the same ember soul. Same semantic map
+     as dark; foregrounds darkened for AA on white. No cyans. */
+  --cu-bg: #FBFBFA;
+  --cu-bg-1: #F7F6F3;
   --cu-surface: #FFFFFF;
-  --cu-surface-2: #F5F5F5;
-  --cu-surface-3: #EBEBEB;
-  --cu-ink: #0F172A;
-  --cu-ink-2: #475569;
-  --cu-ink-3: #64748B;
-  --cu-ink-4: #94A3B8;
-  --cu-copper: #C27848;
-  --cu-copper-hi: #9F582B;
-  --cu-copper-deep: #66391F;
-  --cu-slate: #64748B;
-  --cu-cyan: #0284C7;
-  --cu-blue: #2563EB;
-  --cu-ochre: #D97706;
-  --cu-violet: #7C3AED;
-  --cu-sage: #16A34A;
-  --cu-green-strong: #15803D;
-  --cu-rust: #DC2626;
-  --cu-dim: #94A3B8;
-  --cu-stone: #64748B;
+  --cu-surface-2: #F9F9F8;
+  --cu-surface-3: #F1F0ED;
+  --cu-ink: #1B1916;
+  --cu-ink-2: #4B4A46;
+  --cu-ink-3: #6E6C67;
+  --cu-ink-4: #A8A7A1;
+  --cu-ember: oklch(0.54 0.145 45);       /* brand / live (AA with white text) */
+  --cu-ember-hi: oklch(0.49 0.145 45);    /* hover (darken on light) */
+  --cu-ember-deep: oklch(0.44 0.13 45);
+  --cu-ochre: #8A5C00;     /* blocked / warning */
+  --cu-violet: #5F4B8B;    /* needs review */
+  --cu-sage: #346538;      /* completed */
+  --cu-green-strong: #245629; /* integrated */
+  --cu-rust: #9F2F2D;      /* failed / conflict */
+  --cu-dim: #A8A7A1;
+  --cu-stone: #787774;
 
   --color-bg: var(--cu-bg);
   --color-bg-subtle: var(--cu-bg-1);
   --color-surface: var(--cu-surface);
   --color-surface-raised: var(--cu-surface-2);
   --color-surface-overlay: var(--cu-surface-3);
-  --color-border: rgba(15, 23, 42, 0.10);
-  --color-border-soft: rgba(15, 23, 42, 0.05);
-  --color-border-strong: rgba(15, 23, 42, 0.16);
-  --color-border-control: rgba(15, 23, 42, 0.45);
+  --color-border: #EAEAEA;
+  --color-border-soft: rgba(17, 17, 17, 0.06);
+  --color-border-strong: rgba(17, 17, 17, 0.12);
+  /* 0.47 alpha ⇒ ≥3:1 blended against every light surface (WCAG 1.4.11). */
+  --color-border-control: rgba(17, 17, 17, 0.47);
   --color-text: var(--cu-ink);
   --color-text-muted: var(--cu-ink-2);
   --color-text-subtle: var(--cu-ink-3);
   --color-text-faint: var(--cu-ink-4);
-  --color-accent: #2563EB;
-  --color-accent-hover: #1D4ED8;
-  --color-accent-deep: #1E3A8A;
-  --color-accent-glow: rgba(37, 99, 235, 0.08);
-  --color-selected: #94A3B8;
+  --color-accent: var(--cu-ember);
+  --color-accent-hover: var(--cu-ember-hi);
+  --color-accent-deep: var(--cu-ember-deep);
+  --color-accent-contrast: #FFFFFF;
+  --color-accent-glow: color-mix(in srgb, var(--cu-ember) 14%, transparent);
+  --color-selected: #D8D8D4;
   --color-focus: var(--color-accent);
 
   --status-idle-fg: var(--cu-ink-2);
-  --status-idle-bg: rgba(71, 85, 105, 0.08);
-  --status-idle-border: rgba(71, 85, 105, 0.24);
-  --status-planning-fg: var(--cu-copper);
-  --status-planning-bg: rgba(194, 120, 72, 0.10);
-  --status-planning-border: rgba(194, 120, 72, 0.30);
+  --status-idle-bg: #F7F6F3;
+  --status-idle-border: #EAEAEA;
+  --status-planning-fg: var(--cu-ember);
+  --status-planning-bg: color-mix(in srgb, var(--cu-ember) 7%, white);
+  --status-planning-border: color-mix(in srgb, var(--cu-ember) 30%, white);
   --status-pending-fg: var(--cu-ink-3);
-  --status-pending-bg: rgba(100, 116, 139, 0.08);
-  --status-pending-border: rgba(100, 116, 139, 0.25);
-  --status-ready-fg: var(--cu-blue);
-  --status-ready-bg: rgba(37, 99, 235, 0.10);
-  --status-ready-border: rgba(37, 99, 235, 0.30);
-  --status-running-fg: var(--cu-cyan);
-  --status-running-bg: rgba(2, 132, 199, 0.10);
-  --status-running-border: rgba(2, 132, 199, 0.32);
+  --status-pending-bg: rgba(110, 108, 103, 0.08);
+  --status-pending-border: rgba(110, 108, 103, 0.25);
+  --status-ready-fg: var(--cu-ink);
+  --status-ready-bg: rgba(27, 25, 22, 0.05);
+  --status-ready-border: rgba(27, 25, 22, 0.28);
+  --status-running-fg: var(--cu-ember);
+  --status-running-bg: color-mix(in srgb, var(--cu-ember) 9%, white);
+  --status-running-border: color-mix(in srgb, var(--cu-ember) 36%, white);
   --status-completed-fg: var(--cu-sage);
-  --status-completed-bg: rgba(22, 163, 74, 0.10);
-  --status-completed-border: rgba(22, 163, 74, 0.30);
+  --status-completed-bg: #EDF3EC;
+  --status-completed-border: #D2E3D0;
   --status-failed-fg: var(--cu-rust);
-  --status-failed-bg: rgba(220, 38, 38, 0.10);
-  --status-failed-border: rgba(220, 38, 38, 0.32);
+  --status-failed-bg: #FDEBEC;
+  --status-failed-border: #F3C7C8;
   --status-blocked-fg: var(--cu-ochre);
-  --status-blocked-bg: rgba(217, 119, 6, 0.10);
-  --status-blocked-border: rgba(217, 119, 6, 0.32);
+  --status-blocked-bg: #FBF3DB;
+  --status-blocked-border: #EADDAF;
   --status-review-fg: var(--cu-violet);
-  --status-review-bg: rgba(124, 58, 237, 0.10);
-  --status-review-border: rgba(124, 58, 237, 0.30);
-  --status-integrating-fg: var(--cu-copper);
-  --status-integrating-bg: rgba(194, 120, 72, 0.11);
-  --status-integrating-border: rgba(194, 120, 72, 0.34);
+  --status-review-bg: #F1EDF7;
+  --status-review-border: #DDD3EF;
+  --status-integrating-fg: var(--cu-ember);
+  --status-integrating-bg: color-mix(in srgb, var(--cu-ember) 11%, white);
+  --status-integrating-border: color-mix(in srgb, var(--cu-ember) 34%, white);
   --status-integrated-fg: var(--cu-green-strong);
   --status-integrated-bg: rgba(21, 128, 61, 0.11);
   --status-integrated-border: rgba(21, 128, 61, 0.34);
@@ -307,8 +315,8 @@
   --status-conflict-bg: rgba(220, 38, 38, 0.11);
   --status-conflict-border: rgba(220, 38, 38, 0.35);
   --status-skipped-fg: var(--cu-ink-3);
-  --status-skipped-bg: rgba(100, 116, 139, 0.07);
-  --status-skipped-border: rgba(100, 116, 139, 0.22);
+  --status-skipped-bg: rgba(110, 108, 103, 0.07);
+  --status-skipped-border: rgba(110, 108, 103, 0.22);
 
   --background: var(--color-bg);
   --bg: var(--color-bg);
@@ -319,7 +327,7 @@
   --surface-3: var(--color-surface-overlay);
   --border-soft: var(--color-border-soft);
   --rule: var(--color-border-soft);
-  --rule-soft: rgba(15, 23, 42, 0.05);
+  --rule-soft: rgba(17, 17, 17, 0.06);
   --rule-strong: var(--color-border-strong);
   --rule-control: var(--color-border-control);
   --text: var(--color-text);
@@ -328,16 +336,16 @@
   --text-4: var(--color-text-faint);
   --muted: var(--color-text-muted);
   --subtle: var(--color-text-subtle);
-  --copper: var(--cu-copper);
-  --copper-hi: var(--cu-copper-hi);
-  --copper-deep: var(--cu-copper-deep);
+  --copper: var(--cu-ember);
+  --copper-hi: var(--cu-ember-hi);
+  --copper-deep: var(--cu-ember-deep);
   --copper-glow: var(--color-accent-glow);
   --selected: var(--color-selected);
-  --coral: var(--cu-copper);
-  --coral-hi: var(--cu-copper-hi);
+  --coral: var(--cu-ember);
+  --coral-hi: var(--cu-ember-hi);
   --coral-glow: var(--color-accent-glow);
-  --running: var(--cu-cyan);
-  --ready: var(--cu-blue);
+  --running: var(--cu-ember);
+  --ready: var(--cu-ink-2);
   --done: var(--cu-sage);
   --error: var(--cu-rust);
   --failed: var(--cu-rust);
@@ -348,17 +356,17 @@
   --risk-low: var(--cu-sage);
   --risk-medium: var(--cu-ochre);
   --risk-high: var(--cu-rust);
-  --risk-blocking: var(--cu-copper);
+  --risk-blocking: var(--cu-ember);
   --accent: var(--color-accent);
   --accent-strong: var(--color-accent-hover);
   --warning: var(--cu-ochre);
   --danger: var(--cu-rust);
   --border: var(--color-border);
-  --shadow-lift: 0 4px 20px rgba(0, 0, 0, 0.02), 0 1px 2px rgba(0, 0, 0, 0.01);
-  --shadow-sheet: 0 16px 48px rgba(0, 0, 0, 0.04), 0 1px 4px rgba(0, 0, 0, 0.01);
-  --mh-graph-edge: rgba(15, 23, 42, 0.10);
-  --mh-graph-seam: rgba(37, 99, 235, 0.25);
-  --mh-graph-dots: rgba(15, 23, 42, 0.06);
+  --shadow-lift: 0 1px 2px rgba(17, 17, 17, 0.025);
+  --shadow-sheet: 0 16px 48px rgba(17, 17, 17, 0.045), 0 1px 4px rgba(17, 17, 17, 0.02);
+  --mh-graph-edge: rgba(17, 17, 17, 0.10);
+  --mh-graph-seam: color-mix(in srgb, var(--cu-ember) 38%, transparent);
+  --mh-graph-dots: rgba(17, 17, 17, 0.055);
 
   --mh-grid-line: rgba(15, 23, 42, 0.02);
   --mh-glow: rgba(255, 255, 255, 0.8);
@@ -366,16 +374,16 @@
 
   /* Body, Scrollbars & Branch lines */
   --body-bg: var(--color-bg);
-  --scrollbar-thumb: rgba(15, 23, 42, 0.12);
-  --scrollbar-thumb-hover: rgba(15, 23, 42, 0.22);
+  --scrollbar-thumb: rgba(17, 17, 17, 0.12);
+  --scrollbar-thumb-hover: rgba(17, 17, 17, 0.22);
 
   --mh-branch-root: var(--color-text-faint);
-  --mh-branch-1: #EA580C;
-  --mh-branch-2: #0284C7;
-  --mh-branch-3: #2563EB;
-  --mh-branch-4: #7C3AED;
-  --mh-branch-5: #16A34A;
-  --mh-branch-6: #CA8A04;
+  --mh-branch-1: #9F582B;
+  --mh-branch-2: #5F4B8B;
+  --mh-branch-3: #346538;
+  --mh-branch-4: #8A5C00;
+  --mh-branch-5: #7A4435;
+  --mh-branch-6: #787774;
 }
 
 body {
@@ -401,7 +409,7 @@ textarea:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 3px;
 }
-::selection { background: rgba(180, 113, 72, 0.28); }
+::selection { background: color-mix(in srgb, var(--color-accent) 28%, transparent); }
 
 .mh-shell { min-height: 100vh; }
 
@@ -414,7 +422,7 @@ textarea:focus-visible {
   border: 1px solid var(--rule);
   background: var(--surface);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-lift);
+  box-shadow: none;
 }
 
 .mh-mono {
@@ -612,7 +620,7 @@ textarea:focus-visible {
   width: 100%;
   height: min(760px, calc(100dvh - 220px));
   overflow: hidden;
-  border-radius: var(--r-xl);
+  border-radius: 8px;
   background: var(--surface);
 }
 
@@ -620,6 +628,59 @@ textarea:focus-visible {
   display: grid;
   place-items: center;
   color: var(--text-3);
+}
+
+.mh-run-graph-planning-state {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.mh-planning-root-node {
+  width: min(360px, calc(100% - 40px));
+  border: 1px solid var(--status-planning-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface));
+  padding: 18px 20px;
+  color: var(--color-text);
+}
+
+.mh-planning-root-node strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 15px;
+}
+
+.mh-planning-root-node p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.mh-planning-steps {
+  position: absolute;
+  top: calc(50% + 92px);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: min(520px, calc(100% - 40px));
+}
+
+.mh-planning-steps span {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-subtle);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 4px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .mh-min-node {
@@ -631,14 +692,14 @@ textarea:focus-visible {
   border-left: 2px solid var(--branch, var(--text-4));
   border-radius: var(--r-lg);
   background: var(--surface);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  box-shadow: none;
   color: var(--text);
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, opacity 180ms ease, filter 180ms ease;
 }
 
 .mh-min-node:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(17, 17, 17, 0.04);
 }
 
 .mh-min-node-muted {
@@ -647,7 +708,7 @@ textarea:focus-visible {
 
 .mh-min-node-selected {
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 13%, transparent), 0 12px 32px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 9%, transparent);
 }
 
 .mh-min-node-wave {
@@ -913,7 +974,7 @@ textarea:focus-visible {
   padding: 3px 6px;
   border: 1px solid var(--rule-control);
   border-radius: 3px;
-  background: rgba(241, 234, 216, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   color: var(--text-2);
 }
 
@@ -942,7 +1003,7 @@ textarea:focus-visible {
   transition: background 150ms ease-out;
 }
 .mh-recent-row:hover {
-  background: rgba(241, 234, 216, 0.045);
+  background: color-mix(in srgb, var(--color-text) 4.5%, transparent);
 }
 @media (max-width: 560px) {
   .mh-recent-row {
@@ -956,8 +1017,8 @@ textarea:focus-visible {
 }
 
 @keyframes pulseSoft {
-  0%, 100% { box-shadow: 0 0 0 1px var(--running), 0 0 12px 0 rgba(111, 138, 168, 0.20); }
-  50% { box-shadow: 0 0 0 1px var(--running), 0 0 18px 2px rgba(111, 138, 168, 0.12); }
+  0%, 100% { box-shadow: 0 0 0 1px var(--running), 0 0 12px 0 color-mix(in srgb, var(--running) 20%, transparent); }
+  50% { box-shadow: 0 0 0 1px var(--running), 0 0 18px 2px color-mix(in srgb, var(--running) 12%, transparent); }
 }
 .coral-pulse { animation: pulseSoft 2.6s ease-in-out infinite; }
 
@@ -969,7 +1030,7 @@ textarea:focus-visible {
   border-radius: var(--r-md) !important;
   border: 1px solid var(--rule-control) !important;
   box-shadow: none;
-  background: rgba(24, 26, 28, 0.84) !important;
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent) !important;
   overflow: hidden;
 }
 .react-flow__controls-button {
@@ -986,7 +1047,7 @@ textarea:focus-visible {
   fill: var(--text) !important;
 }
 .react-flow__minimap {
-  background: rgba(19, 20, 22, 0.9) !important;
+  background: color-mix(in srgb, var(--color-bg-subtle) 90%, transparent) !important;
   border: 1px solid var(--rule-control) !important;
   border-radius: var(--r-md);
   overflow: hidden;
@@ -1094,6 +1155,60 @@ textarea:focus-visible {
   to { opacity: 1; transform: none; }
 }
 .mh-panel-enter { animation: mh-slide-in-right 180ms ease-out both; }
+
+/* ── Live graph generation (skeleton system) ─────────────────────────
+   The plan streams in (`plan.node.proposed`); the graph projects it with
+   no jumps:
+   - `.mh-skel-node`: ghost child shown while a parent is still expanding
+     (planning.state generating/retrying). Same footprint as `.mh-min-node`
+     so materialization never reflows the layout.
+   - `.mh-min-node-enter`: a just-proposed node materializes — fade-up +
+     an ember settle ring that decays to neutral.
+   - `.react-flow__node` transform transition: tidy-layout repositions glide
+     instead of teleporting as siblings stream in. Safe because nodes are
+     not draggable in this canvas. */
+.mh-run-graph .react-flow__node {
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mh-skel-node {
+  width: 200px;
+  min-height: 76px;
+  padding: 10px 12px;
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 45%, var(--rule-control));
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--color-accent) 3%, var(--surface));
+  animation: mh-skel-in 240ms ease-out both;
+}
+
+.mh-skel-node-bar {
+  height: 9px;
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--color-text) 9%, transparent);
+  background-image: linear-gradient(100deg, transparent 25%, var(--color-accent-glow) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: mh-shimmer 1.8s linear infinite;
+}
+
+.mh-skel-node-bar + .mh-skel-node-bar { margin-top: 8px; }
+
+@keyframes mh-skel-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes mh-node-settle {
+  0% { opacity: 0; transform: translateY(6px); box-shadow: 0 0 0 4px var(--color-accent-glow); }
+  45% { opacity: 1; transform: none; box-shadow: 0 0 0 4px var(--color-accent-glow); }
+  100% { opacity: 1; transform: none; box-shadow: 0 0 0 0 transparent; }
+}
+.mh-min-node-enter { animation: mh-node-settle 520ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* A node whose OWN decomposition is still being generated. */
+.mh-min-node-expanding { border-style: dashed; }
+
 @media (prefers-reduced-motion: reduce) {
-  .mh-working, .mh-panel-enter { animation: none; }
+  .mh-working, .mh-panel-enter, .mh-skel-node, .mh-skel-node-bar, .mh-min-node-enter,
+  .coral-pulse, .edge-flow, .mh-min-node-wave { animation: none; }
+  .mh-run-graph .react-flow__node { transition: none; }
 }

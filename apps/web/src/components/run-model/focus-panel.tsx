@@ -189,7 +189,7 @@ function NodeBody({ view, onFocus }: { view: NodeFocusView; onFocus?: ((t: Focus
       ) : null}
 
       <ChipRow label="Banderas">
-        {view.isInWavefront ? <Chip text="wavefront" color="var(--running, #5a9bd0)" /> : null}
+        {view.isInWavefront ? <Chip text="wavefront" color="var(--running)" /> : null}
         {view.isBlocked ? <Chip text="bloqueado" color="var(--blocked, #b08a4a)" /> : null}
         {view.isInvalidated ? <Chip text="obsoleto" color="var(--gated, #d0953a)" /> : null}
         {view.isPendingReexecution ? <Chip text="re-ejecución pendiente" color="var(--gated, #d0953a)" /> : null}

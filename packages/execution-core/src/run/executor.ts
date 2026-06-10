@@ -426,7 +426,6 @@ export class RunExecutor {
         childResults,
         repair: {
           selection: repairSelection,
-          sandboxMode: config.sandboxMode,
           timeoutMs: config.integrationTimeoutMs
         },
         parentGoal: node.goal,
@@ -501,7 +500,6 @@ export class RunExecutor {
       instructionFilePath,
       model: selection.model,
       timeoutMs: config.leafTimeoutMs,
-      sandboxMode: config.sandboxMode,
       bypassApprovals: true,
       onOutput: (chunk) => {
         this.traceStore.append({ type: "executor_output", actor: "agent", taskId: node.id, payload: chunk });
@@ -645,7 +643,6 @@ export class RunExecutor {
       instructionFilePath,
       model: executorSelection.model,
       timeoutMs: config.leafTimeoutMs,
-      sandboxMode: config.sandboxMode,
       bypassApprovals: true,
       ...(args.signal !== undefined ? { signal: args.signal } : {}),
       onOutput: (chunk) => {
@@ -850,7 +847,6 @@ export class RunExecutor {
         childResults,
         repair: {
           selection: repairSelection,
-          sandboxMode: config.sandboxMode,
           timeoutMs: config.integrationTimeoutMs
         },
         parentGoal: composite.goal,

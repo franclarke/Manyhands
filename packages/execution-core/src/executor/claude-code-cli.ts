@@ -1,17 +1,17 @@
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
-import type { AgentExecutorOptions, SandboxMode } from "../types";
+import type { AgentExecutorOptions } from "../types";
 import type { AgentExecutor, ExecutorRunOutcome } from "./types";
 import { spawnExecutorProcess, type SpawnFn } from "./process";
 
 const STDIN_DIRECTIVE = "Follow the instructions provided on stdin.";
 
-function permissionArgsFor(sandboxMode: SandboxMode, bypassApprovals: boolean): string[] {
+function permissionArgsFor(bypassApprovals: boolean): string[] {
   if (bypassApprovals) {
     return ["--dangerously-skip-permissions"];
   }
-  return ["--permission-mode", sandboxMode === "danger-full-access" ? "bypassPermissions" : "acceptEdits"];
+  return ["--permission-mode", "acceptEdits"];
 }
 
 export function buildClaudeCodeArgs(options: AgentExecutorOptions): string[] {
@@ -22,7 +22,7 @@ export function buildClaudeCodeArgs(options: AgentExecutorOptions): string[] {
     options.model,
     "--output-format",
     "text",
-    ...permissionArgsFor(options.sandboxMode, options.bypassApprovals)
+    ...permissionArgsFor(options.bypassApprovals)
   ];
 }
 

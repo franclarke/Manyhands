@@ -10,7 +10,6 @@ import {
   IntegrationStatusSchema,
   ConflictDetailSchema,
   IntegrationResultSchema,
-  SandboxModeSchema,
   AgentExecutorOptionsSchema,
   UnexpectedCommitPolicySchema,
   ExecutionConfigSchema,
@@ -66,13 +65,6 @@ describe("IntegrationStatusSchema", () => {
     ]) {
       expect(IntegrationStatusSchema.parse(s)).toBe(s);
     }
-  });
-});
-
-describe("SandboxModeSchema", () => {
-  it("accepts workspace-write and danger-full-access", () => {
-    expect(SandboxModeSchema.parse("workspace-write")).toBe("workspace-write");
-    expect(SandboxModeSchema.parse("danger-full-access")).toBe("danger-full-access");
   });
 });
 
@@ -210,7 +202,6 @@ describe("AgentExecutorOptionsSchema", () => {
       instructionFilePath: "/tmp/instructions/task-1.md",
       model: "claude-sonnet-4-5",
       timeoutMs: 300_000,
-      sandboxMode: "workspace-write",
       bypassApprovals: true,
     });
     expect(parsed.env).toBeUndefined();
@@ -222,7 +213,6 @@ describe("AgentExecutorOptionsSchema", () => {
       instructionFilePath: "/tmp/inst.md",
       model: "claude-sonnet-4-5",
       timeoutMs: 300_000,
-      sandboxMode: "workspace-write",
       bypassApprovals: true,
       env: { ANTHROPIC_API_KEY: "sk-test" },
     });
@@ -236,7 +226,6 @@ describe("AgentExecutorOptionsSchema", () => {
       instructionFilePath: "/tmp/inst.md",
       model: "gemini-2.5-pro",
       timeoutMs: 300_000,
-      sandboxMode: "workspace-write",
       bypassApprovals: true,
       onOutput
     });
@@ -252,18 +241,15 @@ describe("ExecutionConfigSchema", () => {
     expect(parsed.maxParallel).toBe(6);
     expect(parsed.leafTimeoutMs).toBe(300_000);
     expect(parsed.integrationTimeoutMs).toBe(600_000);
-    expect(parsed.sandboxMode).toBe("workspace-write");
     expect(parsed.unexpectedCommitPolicy).toBe("reject");
   });
 
   it("allows override", () => {
     const parsed = ExecutionConfigSchema.parse({
       maxParallel: 5,
-      sandboxMode: "danger-full-access",
       unexpectedCommitPolicy: "accept",
     });
     expect(parsed.maxParallel).toBe(5);
-    expect(parsed.sandboxMode).toBe("danger-full-access");
     expect(parsed.unexpectedCommitPolicy).toBe("accept");
   });
 

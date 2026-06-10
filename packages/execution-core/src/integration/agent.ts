@@ -15,7 +15,7 @@ import type { AgentExecutor } from "../executor/types";
 import type { GitRunner } from "../git/runner";
 import { execError, execLog, execWarn } from "../logging/log";
 import { ScopeChecker } from "../scope/checker";
-import type { SandboxMode } from "../types";
+
 import {
   AgentExecutionResultSchema,
   IntegrationResultSchema,
@@ -49,7 +49,6 @@ export interface IntegrationAgentDeps {
 export interface IntegrationRepairConfig {
   selection?: ExecutorSelection;
   model?: string;
-  sandboxMode: SandboxMode;
   timeoutMs: number;
   bypassApprovals?: boolean;
 }
@@ -353,7 +352,6 @@ export class IntegrationAgent {
         instructionFilePath,
         model: selection.model,
         timeoutMs: params.repair.timeoutMs,
-        sandboxMode: params.repair.sandboxMode,
         bypassApprovals: params.repair.bypassApprovals ?? true,
         ...(params.signal !== undefined ? { signal: params.signal } : {}),
         onOutput: (chunk) => {

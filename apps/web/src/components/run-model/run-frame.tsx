@@ -25,10 +25,10 @@ const HEALTH_LABEL: Record<ProtoFrame["health"], string> = {
 };
 
 const HEALTH_COLOR: Record<ProtoFrame["health"], string> = {
-  failing: "var(--error, #cf5b5b)",
-  attention: "var(--gated, #d0953a)",
-  working: "var(--running, #5a9bd0)",
-  settled: "var(--done, #6bbf73)"
+  failing: "var(--error)",
+  attention: "var(--gated)",
+  working: "var(--running)",
+  settled: "var(--done)"
 };
 
 export function RunFrame({ frame }: { frame: ProtoFrame }): React.ReactElement {

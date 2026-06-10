@@ -27,7 +27,16 @@ export default async function RootLayout({
   const previews = runs.map((run) => toRunPreview(run, wsById));
 
   return (
-    <html lang="es" data-theme="light" data-scroll-behavior="smooth">
+    <html lang="es" data-theme="dark" data-scroll-behavior="smooth" suppressHydrationWarning>
+      <head>
+        {/* Apply the persisted theme before first paint (default: dark). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'try{var t=localStorage.getItem("mh-theme");if(t==="light"||t==="dark"){document.documentElement.dataset.theme=t;}}catch(e){}'
+          }}
+        />
+      </head>
       <body>
         <div className="flex h-screen w-screen bg-[var(--color-bg)] text-[var(--color-text)] overflow-hidden">
           <AppSidebar workspaces={workspaces} recentRuns={previews} />

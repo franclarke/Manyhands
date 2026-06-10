@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Workspace, RunPreview } from "@/lib/api-types";
 import { runUiStatus, STATUS_META } from "@/lib/status";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Plus,
   Folder,
@@ -28,7 +29,7 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
       style={{
         width: 240,
         flexShrink: 0,
-        background: "var(--cu-surface-2)",
+        background: "var(--color-bg-subtle)",
         borderRight: "1px solid var(--color-border)",
         display: "flex",
         flexDirection: "column",
@@ -42,7 +43,7 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
       {/* Brand Header */}
       <div
         style={{
-          padding: "16px 20px",
+          padding: "18px 20px",
           display: "flex",
           alignItems: "center",
           gap: 10,
@@ -58,13 +59,13 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            color: "#FFF"
+            color: "var(--color-accent-contrast)"
           }}
         >
           <Flame className="w-4 h-4" />
         </div>
         <span
-          className="mh-serif font-semibold text-lg"
+          className="font-semibold text-lg"
           style={{ letterSpacing: "-0.01em", color: "var(--text)" }}
         >
           ManyHands
@@ -72,17 +73,18 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
         <span
           className="mh-mono text-[9px] px-1.5 py-0.5 rounded"
           style={{
-            background: "var(--color-border-strong)",
+            background: "var(--color-surface)",
             color: "var(--text-3)",
             marginLeft: "auto"
           }}
         >
           v0.4
         </span>
+        <ThemeToggle />
       </div>
 
       {/* Primary Action */}
-      <div style={{ padding: "16px 20px" }}>
+      <div style={{ padding: "16px 20px 12px" }}>
         <Link href="/" passHref style={{ textDecoration: "none" }}>
           <button
             type="button"
@@ -90,9 +92,9 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
               width: "100%",
               height: 38,
               background: "var(--color-accent)",
-              border: "none",
-              color: "#FFF",
-              borderRadius: 8,
+              border: "1px solid var(--color-accent)",
+              color: "var(--color-accent-contrast)",
+              borderRadius: 6,
               fontWeight: 600,
               fontSize: 13,
               display: "flex",
@@ -100,7 +102,7 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
               justifyContent: "center",
               gap: 8,
               cursor: "pointer",
-              boxShadow: "var(--shadow-lift)"
+              boxShadow: "none"
             }}
           >
             <Plus className="w-4 h-4" />
@@ -139,7 +141,7 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
       </div>
 
       {/* Workspaces Section */}
-      <div style={{ marginTop: 24, padding: "0 20px" }}>
+      <div style={{ marginTop: 22, padding: "0 20px" }}>
         <h3
           className="mh-mono"
           style={{
@@ -171,10 +173,10 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
             >
               <div
                 style={{
-                  width: 8,
-                  height: 8,
+                  width: 6,
+                  height: 6,
                   borderRadius: "50%",
-                  backgroundColor: workspace.color || "var(--copper)"
+                  backgroundColor: "var(--color-text-subtle)"
                 }}
               />
               <span style={{ fontWeight: 500 }} title={workspace.repoPath}>
@@ -193,7 +195,7 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
       {/* Recent Runs Section */}
       <div
         style={{
-          marginTop: 24,
+          marginTop: 22,
           flex: 1,
           display: "flex",
           flexDirection: "column",
@@ -238,38 +240,47 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
               >
                 <div
                   style={{
-                    padding: "10px 12px 10px 10px",
-                    borderRadius: "var(--r-lg)",
+                    padding: "10px 10px",
+                    borderRadius: 8,
                     background: isActive ? "var(--color-surface)" : "transparent",
                     border: "1px solid",
-                    borderColor: isActive ? "var(--color-border-strong)" : "transparent",
-                    borderLeft: isActive ? "3px solid var(--color-accent)" : "1px solid transparent",
+                    borderColor: isActive ? "var(--color-border)" : "transparent",
+                    borderLeft: isActive ? "2px solid var(--color-accent)" : "1px solid transparent",
                     display: "flex",
                     flexDirection: "column",
                     gap: 6,
                     cursor: "pointer",
                     transition: "all 150ms ease",
-                    boxShadow: isActive ? "var(--shadow-lift)" : "none"
+                    boxShadow: "none"
                   }}
                   className={`group ${!isActive ? "hover:bg-[var(--cu-surface-3)]" : ""}`}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                    <StatusDot status={run.status} />
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8, minWidth: 0 }}>
                     <span
                       style={{
                         fontWeight: isActive ? 600 : 500,
                         fontSize: 12.5,
                         color: "var(--color-text)",
                         overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        lineHeight: 1.25,
                         flex: 1
                       }}
                     >
                       {run.title || run.userPrompt.slice(0, 32)}
                     </span>
                     {run.conflictCount !== undefined && run.conflictCount > 0 && (
-                      <span className="flex items-center gap-0.5 text-[10px] text-red-600 font-semibold font-mono bg-red-50 border border-red-100 px-1.2 rounded">
+                      <span
+                        className="flex items-center gap-0.5 text-[10px] font-semibold font-mono rounded border"
+                        style={{
+                          color: "var(--status-failed-fg)",
+                          background: "var(--status-failed-bg)",
+                          borderColor: "var(--status-failed-border)",
+                          padding: "1px 5px"
+                        }}
+                      >
                         <AlertOctagon className="w-2.5 h-2.5" />
                         {run.conflictCount}
                       </span>
@@ -282,11 +293,14 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
                       alignItems: "center",
                       fontSize: 10,
                       color: "var(--color-text-subtle)",
-                      paddingLeft: 14
+                      paddingLeft: 0
                     }}
                   >
-                    <span className="font-mono tracking-tight font-medium bg-gray-100/80 px-1 py-0.5 rounded text-gray-600 truncate max-w-[120px]" title={run.workspaceName}>
-                      {run.workspaceName}
+                    <span className="inline-flex items-center gap-1.5 min-w-0">
+                      <StatusDot status={run.status} />
+                      <span className="mh-mono truncate max-w-[110px]" title={run.workspaceName}>
+                        {run.workspaceName}
+                      </span>
                     </span>
                     <span className="mh-mono text-[9.5px]">
                       {formatRecency(run.updatedAt)}

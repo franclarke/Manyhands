@@ -15,12 +15,12 @@ const VARIANT_STYLE: Record<ButtonVariant, React.CSSProperties> = {
   primary: {
     border: "1px solid var(--color-accent)",
     background: "var(--color-accent)",
-    color: "#14110e",
+    color: "var(--color-accent-contrast)",
     fontWeight: 600
   },
   ghost: {
     border: "1px solid var(--color-border-control)",
-    background: "rgba(241,234,216,0.035)",
+    background: "color-mix(in srgb, var(--color-text) 3.5%, transparent)",
     color: "var(--color-text)",
     fontWeight: 500
   },

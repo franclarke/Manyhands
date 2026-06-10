@@ -159,16 +159,7 @@ export type IntegrationResult = z.infer<typeof IntegrationResultSchema>;
 
 // ── Agent executor options ──────────────────────────────────────
 
-// Retained from the Codex era for interface symmetry. With the Gemini CLI there
-// is no `workspace-write`/`danger-full-access` OS sandbox; the executor maps this
-// to Gemini's approval mode and the real confinement comes from the isolated git
-// worktree plus the ScopeChecker (see GeminiCliExecutor / ADR on the swap).
-export const SandboxModeSchema = z.union([
-  z.literal("workspace-write"),
-  z.literal("danger-full-access")
-]);
 
-export type SandboxMode = z.infer<typeof SandboxModeSchema>;
 
 export const ExecutorOutputStreamSchema = z.union([
   z.literal("stdout"),
@@ -189,7 +180,6 @@ export const AgentExecutorOptionsSchema = z.object({
   instructionFilePath: NonEmptyStringSchema,
   model: NonEmptyStringSchema,
   timeoutMs: z.number().int().positive(),
-  sandboxMode: SandboxModeSchema,
   bypassApprovals: z.boolean(),
   env: z.record(z.string()).optional(),
   /** Run-level cancellation: aborts the spawned process tree. Not serialized. */
@@ -213,7 +203,6 @@ export const ExecutionConfigSchema = z.object({
   maxParallel: z.number().int().positive().default(6),
   leafTimeoutMs: z.number().int().positive().default(300_000),
   integrationTimeoutMs: z.number().int().positive().default(600_000),
-  sandboxMode: SandboxModeSchema.default("workspace-write"),
   unexpectedCommitPolicy: UnexpectedCommitPolicySchema.default("reject"),
   /** Optional wall-clock ceiling for the whole run; the orchestrator interrupts past it. */
   maxWallClockMs: z.number().int().positive().optional()

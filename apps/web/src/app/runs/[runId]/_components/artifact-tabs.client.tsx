@@ -48,16 +48,16 @@ export function ArtifactTabs({
 
 
   const tabs: Array<{ id: TabKey; label: string; icon: React.ReactNode }> = [
-    { id: "dag", label: "DAG", icon: <Network className="w-4 h-4" /> },
+    { id: "dag", label: "Trabajo", icon: <Network className="w-4 h-4" /> },
     { id: "plan", label: "Plan", icon: <FileText className="w-4 h-4" /> },
     {
       id: "conflicts",
-      label: `Conflictos (${model.conflicts.size})`,
+      label: `Riesgos (${model.conflicts.size})`,
       icon: <AlertOctagon className="w-4 h-4" />
     },
-    { id: "execution", label: "Ejecución", icon: <Terminal className="w-4 h-4" /> },
-    { id: "files", label: "Archivos & Diffs", icon: <FileDiff className="w-4 h-4" /> },
-    { id: "evaluation", label: "Evaluación", icon: <Award className="w-4 h-4" /> }
+    { id: "execution", label: "Eventos", icon: <Terminal className="w-4 h-4" /> },
+    { id: "files", label: "Diffs", icon: <FileDiff className="w-4 h-4" /> },
+    { id: "evaluation", label: "Evidencia", icon: <Award className="w-4 h-4" /> }
   ];
 
   return (
@@ -69,9 +69,13 @@ export function ArtifactTabs({
           background: "var(--cu-surface)",
           display: "flex",
           padding: "0 16px",
-          alignItems: "center"
+          alignItems: "center",
+          gap: 4
         }}
       >
+        <span className="mh-mono mr-2 text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-faint)]">
+          Lentes
+        </span>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -82,10 +86,10 @@ export function ArtifactTabs({
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                padding: "12px 16px",
-                fontSize: 13,
+                padding: "12px 12px",
+                fontSize: 12.5,
                 fontWeight: isActive ? 600 : 500,
-                color: isActive ? "var(--color-accent)" : "var(--color-text-subtle)",
+                color: isActive ? "var(--color-text)" : "var(--color-text-subtle)",
                 borderBottom: isActive ? "2px solid var(--color-accent)" : "2px solid transparent",
                 cursor: "pointer",
                 background: "transparent",
@@ -128,15 +132,22 @@ export function ArtifactTabs({
                 </p>
               </div>
 
+              {model.nodes.size === 0 ? (
+                <EmptyLensPanel
+                  title="El plan todavia se esta formando"
+                  detail="Cuando llegue el primer nodo, esta vista mostrara la descomposicion, las hojas ejecutables y las costuras entre agentes."
+                />
+              ) : (
+                <>
               <div className="grid grid-cols-2 gap-4">
                 <PlanMetricCard
-                  icon={<FolderTree className="w-5 h-5 text-indigo-600" />}
+                  icon={<FolderTree className="w-5 h-5" />}
                   label="Total de tareas"
                   value={model.nodes.size}
                   description="Nodos del grafo jerárquico"
                 />
                 <PlanMetricCard
-                  icon={<Code className="w-5 h-5 text-emerald-600" />}
+                  icon={<Code className="w-5 h-5" />}
                   label="Tareas ejecutable (Hojas)"
                   value={nodesArray.filter((n) => n.role === "leaf").length}
                   description="Trabajo atómico en paralelo"
@@ -175,6 +186,8 @@ export function ArtifactTabs({
                   </div>
                 )}
               </div>
+                </>
+              )}
             </div>
           )}
 
@@ -188,8 +201,8 @@ export function ArtifactTabs({
               </div>
 
               {model.conflicts.size === 0 ? (
-                <div className="p-12 text-center border border-dashed border-[var(--color-border)] rounded-xl">
-                  <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+                <div className="p-12 text-center border border-dashed border-[var(--color-border)] rounded-lg bg-[var(--color-surface)]">
+                  <CheckCircle className="w-12 h-12 text-[var(--status-completed-fg)] mx-auto mb-4" />
                   <h3 className="text-base font-semibold text-[var(--color-text)]">Workspace Limpio</h3>
                   <p className="text-sm text-[var(--color-text-faint)] mt-1">
                     No se han detectado conflictos textuales o estructurales significativos en esta descomposición.
@@ -200,7 +213,7 @@ export function ArtifactTabs({
                   {Array.from(model.conflicts.values()).map((conflict) => (
                     <div
                       key={conflict.id}
-                      className="p-4 border border-[var(--color-border)] bg-[var(--color-surface)] rounded-xl shadow-sm space-y-3"
+                      className="p-4 border border-[var(--color-border)] bg-[var(--color-surface)] rounded-lg space-y-3"
                     >
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-mono font-semibold text-[var(--status-blocked-fg)] bg-[var(--status-blocked-bg)] border border-[var(--status-blocked-border)] px-2 py-0.5 rounded">
@@ -251,7 +264,7 @@ export function ArtifactTabs({
               </div>
 
               {/* Renders the folded event logs */}
-              <div className="border border-[var(--color-border)] rounded-xl overflow-hidden bg-[var(--color-surface)]">
+              <div className="border border-[var(--color-border)] rounded-lg overflow-hidden bg-[var(--color-surface)]">
                 <div className="px-4 py-3 bg-[var(--cu-surface-2)] border-b border-[var(--color-border)] flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-subtle)] font-mono">
                     Eventos del Sistema
@@ -318,14 +331,14 @@ export function ArtifactTabs({
                     </div>
                     <a
                       href={`/api/runs/${model.run.id}/export?format=patch`}
-                      className="px-3 py-1.5 bg-[var(--color-accent)] hover:opacity-90 text-white text-xs font-semibold rounded-lg shadow transition"
+                      className="px-3 py-1.5 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-[var(--color-accent-contrast)] text-xs font-semibold rounded-md transition"
                     >
                       Descargar Patch (.patch)
                     </a>
                   </div>
                 </div>
               ) : (
-                <div className="p-12 text-center border border-dashed border-[var(--color-border)] rounded-xl">
+                <div className="p-12 text-center border border-dashed border-[var(--color-border)] rounded-lg bg-[var(--color-surface)]">
                   <FileDiff className="w-12 h-12 text-[var(--color-text-faint)] mx-auto mb-4" />
                   <h3 className="text-base font-semibold text-[var(--color-text)]">Sin cambios aplicados</h3>
                   <p className="text-sm text-[var(--color-text-faint)] mt-1">
@@ -345,25 +358,32 @@ export function ArtifactTabs({
                 </p>
               </div>
 
+              {model.metrics === undefined && model.evidence === undefined ? (
+                <EmptyLensPanel
+                  title="La evidencia aparece al finalizar"
+                  detail="Cuando el run llegue a disposicion, ManyHands mostrara tests, diff agregado, duracion, costo y metricas de tesis."
+                />
+              ) : (
+                <>
               <div className="grid grid-cols-3 gap-4">
                 <MetricStatCard
-                  icon={<Clock className="w-4 h-4 text-indigo-500" />}
+                  icon={<Clock className="w-4 h-4" />}
                   label="Tiempo total"
                   value={model.metrics ? `${Math.round(model.metrics.totalDurationMs / 1000)}s` : "—"}
                 />
                 <MetricStatCard
-                  icon={<Code className="w-4 h-4 text-emerald-500" />}
+                  icon={<Code className="w-4 h-4" />}
                   label="Líneas modificadas"
                   value={model.metrics ? model.metrics.linesChanged : "—"}
                 />
                 <MetricStatCard
-                  icon={<DollarSign className="w-4 h-4 text-amber-500" />}
+                  icon={<DollarSign className="w-4 h-4" />}
                   label="Costo Estimado"
                   value={model.metrics?.totalCostUsd ? `$${model.metrics.totalCostUsd.toFixed(4)}` : "—"}
                 />
               </div>
 
-              <div className="border border-[var(--color-border)] rounded-xl p-5 bg-[var(--color-surface)] space-y-4">
+              <div className="border border-[var(--color-border)] rounded-lg p-5 bg-[var(--color-surface)] space-y-4">
                 <h3 className="text-sm font-semibold text-[var(--color-text)]">Métricas de la Descomposición (Tesis)</h3>
                 <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-xs text-[var(--color-text-muted)]">
                   <div className="flex justify-between border-b border-[var(--color-border)] pb-2">
@@ -390,6 +410,8 @@ export function ArtifactTabs({
                   </div>
                 </div>
               </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -410,8 +432,8 @@ function PlanMetricCard({
   description: string;
 }): React.ReactElement {
   return (
-    <div className="flex gap-4 p-4 border border-[var(--color-border)] bg-[var(--color-surface)] rounded-xl shadow-sm">
-      <div className="w-10 h-10 rounded-lg bg-[var(--color-bg-subtle)] flex items-center justify-center flex-shrink-0">
+    <div className="flex gap-4 p-4 border border-[var(--color-border)] bg-[var(--color-surface)] rounded-lg">
+      <div className="w-10 h-10 rounded-md bg-[var(--color-bg-subtle)] flex items-center justify-center flex-shrink-0 text-[var(--color-text-muted)]">
         {icon}
       </div>
       <div>
@@ -433,12 +455,24 @@ function MetricStatCard({
   value: string | number;
 }): React.ReactElement {
   return (
-    <div className="p-4 border border-[var(--color-border)] bg-[var(--color-surface)] rounded-xl shadow-sm text-center">
-      <div className="w-8 h-8 rounded-full bg-[var(--color-bg-subtle)] flex items-center justify-center mx-auto mb-2">
+    <div className="p-4 border border-[var(--color-border)] bg-[var(--color-surface)] rounded-lg text-center">
+      <div className="w-8 h-8 rounded-md bg-[var(--color-bg-subtle)] flex items-center justify-center mx-auto mb-2 text-[var(--color-text-muted)]">
         {icon}
       </div>
       <span className="text-xs text-[var(--color-text-subtle)] font-medium block">{label}</span>
       <strong className="text-xl font-bold text-[var(--color-text)] mt-1 block">{value}</strong>
+    </div>
+  );
+}
+
+function EmptyLensPanel({ title, detail }: { title: string; detail: string }): React.ReactElement {
+  return (
+    <div className="border border-dashed border-[var(--color-border)] rounded-lg bg-[var(--color-surface)] p-8">
+      <span className="mh-mono text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-faint)]">
+        Sin datos todavia
+      </span>
+      <h3 className="mt-3 text-base font-semibold text-[var(--color-text)]">{title}</h3>
+      <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--color-text-muted)]">{detail}</p>
     </div>
   );
 }

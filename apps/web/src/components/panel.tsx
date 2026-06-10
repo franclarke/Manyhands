@@ -24,11 +24,11 @@ export function StatusPill({
 }: StatusPillProps): React.ReactElement {
   const palette: Record<NonNullable<StatusPillProps["tone"]>, { fg: string; bg: string; border: string }> = {
     default: { fg: "var(--text-2)", bg: "var(--surface-2)", border: "var(--border)" },
-    accent:  { fg: "var(--coral)",  bg: "rgba(204,120,92,0.10)", border: "rgba(204,120,92,0.45)" },
-    warning: { fg: "var(--ready)",  bg: "rgba(201,164,92,0.10)", border: "rgba(201,164,92,0.45)" },
-    danger:  { fg: "var(--error)",  bg: "rgba(194,91,84,0.10)",  border: "rgba(194,91,84,0.45)" },
-    done:    { fg: "var(--done)",   bg: "rgba(107,142,107,0.10)", border: "rgba(107,142,107,0.45)" },
-    info:    { fg: "var(--selected)", bg: "rgba(91,122,153,0.10)", border: "rgba(91,122,153,0.45)" }
+    accent:  { fg: "var(--status-planning-fg)", bg: "var(--status-planning-bg)", border: "var(--status-planning-border)" },
+    warning: { fg: "var(--status-blocked-fg)",  bg: "var(--status-blocked-bg)",  border: "var(--status-blocked-border)" },
+    danger:  { fg: "var(--status-failed-fg)",   bg: "var(--status-failed-bg)",   border: "var(--status-failed-border)" },
+    done:    { fg: "var(--status-completed-fg)", bg: "var(--status-completed-bg)", border: "var(--status-completed-border)" },
+    info:    { fg: "var(--status-pending-fg)",  bg: "var(--status-pending-bg)",  border: "var(--status-pending-border)" }
   };
   const color = palette[tone];
 

@@ -3,14 +3,9 @@ import {
   RunLifecycleError,
   RunNotFoundError,
   RunValidationError,
-  assertTransition,
-  getRunRepository,
-  parseRunPatches
 } from "@/lib/server/runs";
-import { publishRunEvent } from "@/lib/server/runs/event-bus";
 import { toRunResponse } from "@/lib/server/runs/presenter";
-import { projectRunRecordToSnapshot } from "@/lib/live-graph";
-import { buildPlanReviewSummary } from "@/lib/plan-review";
+import { processPlanApproval } from "@/lib/server/runs/plan-approval-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,31 +19,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
   const acknowledge = await readAcknowledge(request);
 
   try {
-    const repo = getRunRepository();
-    const run = await repo.get(id);
-
-    // Quality gate (Fase B): block approval on reliable critic errors — graph
-    // validation errors + orphan consumed seams — unless the user explicitly
-    // acknowledged them in the plan review gate. Recomputed from the snapshot so
-    // it matches what the modal shows (and reflects post-planning edits).
-    if (!acknowledge) {
-      const summary = buildPlanReviewSummary(projectRunRecordToSnapshot(run), parseRunPatches(run.patches));
-      if (summary !== null && summary.issueCounts.errors > 0) {
-        const detail = summary.issues
-          .filter((issue) => issue.severity === "error")
-          .map((issue) => issue.title)
-          .join(", ");
-        throw new RunLifecycleError(
-          `Plan has ${summary.issueCounts.errors} blocking error(s): ${detail}. ` +
-            "Resolve them, or approve explicitly from the plan review gate."
-        );
-      }
-    }
-
-    assertTransition(run.status, "approved");
-    const now = new Date().toISOString();
-    const saved = await repo.save({ ...run, status: "approved", approvedAt: now });
-    publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: now });
+    const saved = await processPlanApproval(id, acknowledge);
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {
     return errorResponse(error);

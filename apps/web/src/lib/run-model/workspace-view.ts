@@ -33,6 +33,7 @@ import type {
   NodeDisplay,
   NodeId,
   NodeRole,
+  PlanningState,
   RunHealth,
   RunModel,
   RunPhase,
@@ -62,6 +63,10 @@ export type VitalStatus =
 export interface NodeVital {
   status: VitalStatus;
   label: string;
+  /** Raw planning lifecycle while the node is in planning. `generating`/`retrying`
+      means its decomposition is still streaming in — the graph renders a skeleton
+      child under it until the proposed children arrive. */
+  planningState?: PlanningState;
   /** Secondary line: agent·model / commit / cause / reason / verification summary. */
   detail?: string;
   buildStatus?: BuildStatus;
@@ -266,6 +271,7 @@ function planningVitalOf(entity: Node | undefined): NodeVital | null {
   return {
     status: "planning",
     label,
+    planningState: planning.state,
     repairActive: false,
     ...(detail !== undefined ? { detail } : {})
   };

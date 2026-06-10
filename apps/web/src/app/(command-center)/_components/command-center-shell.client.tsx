@@ -137,10 +137,21 @@ export function CommandCenterShell({
   const granularityMode = toGranularityMode(granularity);
   const hasPrompt = prompt.trim().length > 0;
   const hasLocalRepo = selectedWorkspace?.repoPath !== undefined && selectedWorkspace.repoPath.length > 0;
+  const hasUsableGemini = readiness?.status === "ready" || readiness?.status === "warning";
+  const startBlockReason = startBlockReasonFor({
+    selectedWorkspace,
+    hasPrompt,
+    hasLocalRepo,
+    readiness,
+    readinessLoading,
+    readinessError
+  });
+  const readinessCallout = readinessCalloutFor({ hasLocalRepo, readiness, readinessLoading, readinessError });
   const canStart =
     selectedWorkspace !== null &&
     hasPrompt &&
     hasLocalRepo &&
+    hasUsableGemini &&
     modelId.trim().length > 0 &&
     defaultExecutionSelection.trim().length > 0 &&
     defaultRepairSelection.trim().length > 0 &&
@@ -445,12 +456,12 @@ export function CommandCenterShell({
         style={{
           border: "1px solid var(--color-border-strong)",
           background: "var(--color-surface)",
-          borderRadius: "var(--r-xl)",
+          borderRadius: 8,
           padding: "16px 20px 14px",
           display: "flex",
           flexDirection: "column",
           gap: 12,
-          boxShadow: "var(--shadow-lift)"
+          boxShadow: "none"
         }}
       >
         <textarea
@@ -492,14 +503,17 @@ export function CommandCenterShell({
                   gap: 6,
                   fontSize: 11,
                   fontWeight: 500,
-                  color: "var(--status-completed-fg)",
-                  background: "var(--status-completed-bg)",
-                  border: "1px solid var(--status-completed-border)",
+                  color: readinessTone(readiness?.status, hasLocalRepo).fg,
+                  background: readinessTone(readiness?.status, hasLocalRepo).bg,
+                  border: `1px solid ${readinessTone(readiness?.status, hasLocalRepo).border}`,
                   padding: "3px 8px",
                   borderRadius: 999
                 }}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--status-completed-fg)] animate-pulse" />
+                <span
+                  className={readiness?.status === "ready" ? "w-1.5 h-1.5 rounded-full animate-pulse" : "w-1.5 h-1.5 rounded-full"}
+                  style={{ background: readinessTone(readiness?.status, hasLocalRepo).fg }}
+                />
                 Workspace listo · Gemini {readinessLabel(readiness?.status)}
               </span>
             ) : (
@@ -630,13 +644,13 @@ export function CommandCenterShell({
               fontSize: 13,
               fontWeight: 600,
               borderRadius: 6,
-              background: canStart ? "var(--copper)" : "var(--color-text-faint)",
-              borderColor: canStart ? "var(--copper)" : "var(--color-border)",
+              background: canStart ? "var(--color-accent)" : "var(--color-surface-raised)",
+              borderColor: canStart ? "var(--color-accent)" : "var(--color-border)",
               color: canStart ? "#FFF" : "var(--color-text-muted)"
             }}
           >
             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              Generar plan
+              {startBlockReason ?? "Generar plan"}
               <span
                 aria-hidden
                 style={{
@@ -657,6 +671,10 @@ export function CommandCenterShell({
           </Button>
         </div>
       </div>
+
+      {readinessCallout !== null ? (
+        <ReadinessCallout message={readinessCallout} />
+      ) : null}
 
       {/* Examples chips (only if prompt is empty) */}
       {prompt.trim().length === 0 && (
@@ -735,6 +753,105 @@ El workspace &quot;{selectedWorkspace.name}&quot; no tiene un repo git local. Co
       ) : null}
     </section>
   );
+}
+
+function startBlockReasonFor({
+  selectedWorkspace,
+  hasPrompt,
+  hasLocalRepo,
+  readiness,
+  readinessLoading,
+  readinessError
+}: {
+  selectedWorkspace: Workspace | null;
+  hasPrompt: boolean;
+  hasLocalRepo: boolean;
+  readiness: ProviderReadiness | null;
+  readinessLoading: boolean;
+  readinessError: string | null;
+}): string | null {
+  if (selectedWorkspace === null) return "Elegir workspace";
+  if (!hasPrompt) return "Describir tarea";
+  if (!hasLocalRepo) return "Configurar repo";
+  if (readinessLoading) return "Verificando Gemini";
+  if (readinessError !== null || readiness === null) return "Verificar Gemini";
+  if (readiness.status === "error") return "Configurar Gemini";
+  return null;
+}
+
+function readinessCalloutFor({
+  hasLocalRepo,
+  readiness,
+  readinessLoading,
+  readinessError
+}: {
+  hasLocalRepo: boolean;
+  readiness: ProviderReadiness | null;
+  readinessLoading: boolean;
+  readinessError: string | null;
+}): string | null {
+  if (!hasLocalRepo) {
+    return "Este workspace necesita un repo git local antes de generar un plan.";
+  }
+  if (readinessLoading) return null;
+  if (readinessError !== null) {
+    return `No se pudo verificar Gemini CLI: ${readinessError}`;
+  }
+  if (readiness === null) {
+    return "Gemini CLI todavia no fue verificado. ManyHands necesita Gemini para planificar y ejecutar.";
+  }
+  if (readiness.status === "error") {
+    const failing = readiness.checks.find((check) => check.status === "fail");
+    return failing?.message ?? "Gemini CLI no esta listo. Instalalo, autenticalo o configura MANYHANDS_GEMINI_BIN.";
+  }
+  if (readiness.status === "warning") {
+    const warning = readiness.checks.find((check) => check.status === "warning");
+    return warning?.message ?? "Gemini CLI esta disponible, pero hay avisos de entorno para revisar.";
+  }
+  return null;
+}
+
+function ReadinessCallout({ message }: { message: string }): React.ReactElement {
+  return (
+    <div
+      style={{
+        border: "1px solid var(--status-blocked-border)",
+        background: "var(--status-blocked-bg)",
+        color: "var(--status-blocked-fg)",
+        padding: "10px 12px",
+        borderRadius: 8,
+        fontSize: 12,
+        lineHeight: 1.5
+      }}
+    >
+      {message}
+    </div>
+  );
+}
+
+function readinessTone(
+  status: ProviderReadiness["status"] | undefined,
+  hasLocalRepo: boolean
+): { fg: string; bg: string; border: string } {
+  if (!hasLocalRepo || status === "error") {
+    return {
+      fg: "var(--status-failed-fg)",
+      bg: "var(--status-failed-bg)",
+      border: "var(--status-failed-border)"
+    };
+  }
+  if (status === "warning" || status === undefined) {
+    return {
+      fg: "var(--status-blocked-fg)",
+      bg: "var(--status-blocked-bg)",
+      border: "var(--status-blocked-border)"
+    };
+  }
+  return {
+    fg: "var(--status-completed-fg)",
+    bg: "var(--status-completed-bg)",
+    border: "var(--status-completed-border)"
+  };
 }
 
 function readinessLabel(status: ProviderReadiness["status"] | undefined): string {

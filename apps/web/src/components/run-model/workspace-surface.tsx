@@ -43,8 +43,8 @@ const MODE_DESC: Record<WorkspaceView["mode"], string> = {
 const DISPLAY_COLOR: Record<WorkspaceNode["display"], string> = {
   idle: "var(--text-3, #9a927f)",
   blocked: "var(--blocked, #b08a4a)",
-  running: "var(--running, #5a9bd0)",
-  verifying: "var(--running, #5a9bd0)",
+  running: "var(--running)",
+  verifying: "var(--running)",
   done: "var(--done, #6bbf73)",
   failed: "var(--error, #cf5b5b)",
   obsolete: "var(--gated, #d0953a)"
@@ -253,7 +253,7 @@ function WorkspaceNodeCard({
 
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
         <Tag text={`${node.role} · d${node.depth}`} />
-        {node.isInWavefront ? <Tag text="wavefront" color="var(--running, #5a9bd0)" /> : null}
+        {node.isInWavefront ? <Tag text="wavefront" color="var(--running)" /> : null}
         {node.isBlocked ? <Tag text="bloqueado" color="var(--blocked, #b08a4a)" /> : null}
         {node.display === "obsolete" ? <Tag text="obsoleto" color="var(--gated, #d0953a)" /> : null}
         {node.isPendingReexecution ? <Tag text="re-ejecución" color="var(--gated, #d0953a)" /> : null}

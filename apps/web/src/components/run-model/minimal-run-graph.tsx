@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -38,11 +38,22 @@ interface MinimalGraphNodeData {
   onPath: boolean;
   /** A node is focused elsewhere and this one is off that path → recede. */
   dimmed: boolean;
+  /** Just streamed in (`plan.node.proposed`) — materialize with a settle pulse. */
+  isNew: boolean;
+  /** Its own decomposition is still being generated (children pending). */
+  expanding: boolean;
+  [key: string]: unknown;
+}
+
+interface SkeletonGraphNodeData {
+  dimmed: boolean;
   [key: string]: unknown;
 }
 
 const X_GAP = 296;
 const Y_GAP = 150;
+/** Synthetic placeholder shown under a parent whose children are still streaming. */
+const GHOST_PREFIX = "ghost:";
 const BRANCH_VARS = [
   "var(--mh-branch-1)",
   "var(--mh-branch-2)",
@@ -52,8 +63,18 @@ const BRANCH_VARS = [
   "var(--mh-branch-6)"
 ];
 
+function isGhostId(id: string): boolean {
+  return id.startsWith(GHOST_PREFIX);
+}
+
+/** The decomposer is still generating this node's children. */
+function isExpanding(node: WorkspaceNode): boolean {
+  return node.vital.planningState === "generating" || node.vital.planningState === "retrying";
+}
+
 const nodeTypes: NodeTypes = {
-  minimalTask: MinimalTaskNode
+  minimalTask: MinimalTaskNode,
+  skeletonTask: SkeletonTaskNode
 };
 
 export function MinimalRunGraphCanvas(props: MinimalRunGraphProps): React.ReactElement {
@@ -104,7 +125,18 @@ function MinimalRunGraphInner({
   onFocus
 }: MinimalRunGraphProps): React.ReactElement {
   const selectedNodeId = selectedTarget?.kind === "node" ? selectedTarget.id : null;
-  const flow = useMemo(() => buildFlow(graph, stage, selectedNodeId), [graph, stage, selectedNodeId]);
+  // Ids already on canvas — anything beyond this set just streamed in and
+  // materializes with the settle entrance instead of popping.
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const flow = useMemo(
+    () => buildFlow(graph, stage, selectedNodeId, seenIdsRef.current),
+    [graph, stage, selectedNodeId]
+  );
+  useEffect(() => {
+    for (const node of flow.nodes) {
+      if (!isGhostId(node.id)) seenIdsRef.current.add(node.id);
+    }
+  }, [flow]);
   return (
     <section className="mh-run-graph" aria-label="Grafo de tareas del run">
       <ReactFlow
@@ -121,20 +153,35 @@ function MinimalRunGraphInner({
         panOnDrag
         selectionOnDrag={false}
         proOptions={{ hideAttribution: true }}
-        onNodeClick={(_event, node) => onFocus({ kind: "node", id: node.id })}
+        onNodeClick={(_event, node) => {
+          if (isGhostId(node.id)) return;
+          onFocus({ kind: "node", id: node.id });
+        }}
         onPaneClick={() => undefined}
       >
         <Background variant={BackgroundVariant.Dots} gap={28} size={1} color="var(--mh-graph-dots)" />
         <CanvasControls />
         <FitViewOnGrowth count={flow.nodes.length} />
-        {graph.nodes.length === 0 ? (
-          <div className="mh-run-graph-planning-chip" aria-live="polite">
-            <span className="mh-live mh-live-on">planificando</span>
-            <small>Esperando primer nodo</small>
-          </div>
-        ) : null}
+        {graph.nodes.length === 0 ? <PlanningEmptyState /> : null}
       </ReactFlow>
     </section>
+  );
+}
+
+function PlanningEmptyState(): React.ReactElement {
+  return (
+    <div className="mh-run-graph-planning-state" aria-live="polite">
+      <div className="mh-planning-root-node">
+        <span className="mh-live mh-live-on">Planning</span>
+        <strong>Construyendo el grafo</strong>
+        <p>ManyHands esta resolviendo el contexto del repo y esperando el primer nodo del plan.</p>
+      </div>
+      <div className="mh-planning-steps" aria-label="Estado de planning">
+        <span>Contexto del workspace</span>
+        <span>Primer nodo</span>
+        <span>Costuras candidatas</span>
+      </div>
+    </div>
   );
 }
 
@@ -153,11 +200,28 @@ function FitViewOnGrowth({ count }: { count: number }): null {
 function buildFlow(
   graph: MinimalRunGraph,
   stage: ProductStage,
-  selectedNodeId: string | null
-): { nodes: Node<MinimalGraphNodeData>[]; edges: Edge[] } {
+  selectedNodeId: string | null,
+  seenIds: ReadonlySet<string>
+): { nodes: Node<MinimalGraphNodeData | SkeletonGraphNodeData>[]; edges: Edge[] } {
   const byId = new Map(graph.nodes.map((node) => [node.id, node]));
+
+  // Ghost children: while a parent's decomposition streams in, a skeleton node
+  // reserves its place so the arriving children glide in instead of popping.
+  const ghosts: WorkspaceNode[] = graph.nodes.filter(isExpanding).map((parent) => ({
+    ...parent,
+    id: `${GHOST_PREFIX}${parent.id}`,
+    parentId: parent.id,
+    role: "leaf",
+    depth: parent.depth + 1,
+    title: "",
+    produces: [],
+    consumes: []
+  }));
+  const allNodes = [...graph.nodes, ...ghosts];
+  for (const ghost of ghosts) byId.set(ghost.id, ghost);
+
   const childrenOf = new Map<string, WorkspaceNode[]>();
-  for (const node of graph.nodes) {
+  for (const node of allNodes) {
     if (node.parentId !== null && byId.has(node.parentId)) {
       const bucket = childrenOf.get(node.parentId) ?? [];
       bucket.push(node);
@@ -165,11 +229,17 @@ function buildFlow(
     }
   }
   for (const bucket of childrenOf.values()) {
-    bucket.sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
+    // Ghosts sit after their real siblings: the "next child" materializes below.
+    bucket.sort((a, b) => {
+      const ghostOrder = Number(isGhostId(a.id)) - Number(isGhostId(b.id));
+      return ghostOrder || a.title.localeCompare(b.title) || a.id.localeCompare(b.id);
+    });
   }
 
   // Branch identity: the top-level ancestor (a direct child of the root) owns a
   // colour; the root is neutral; descendants inherit their branch's colour.
+  // Ghosts are EXCLUDED from key assignment so lane colours never shift when a
+  // placeholder appears or resolves.
   const branchOf = (node: WorkspaceNode): string | null => {
     let cur: WorkspaceNode = node;
     while (cur.parentId !== null) {
@@ -183,7 +253,10 @@ function buildFlow(
   const branchColorFor = (node: WorkspaceNode): string => {
     const key = branchOf(node);
     if (key === null) return "var(--mh-branch-root)";
-    return BRANCH_VARS[branchKeys.indexOf(key) % BRANCH_VARS.length]!;
+    if (isGhostId(key)) return "var(--color-accent)";
+    const index = branchKeys.indexOf(key);
+    if (index === -1) return "var(--color-accent)";
+    return BRANCH_VARS[index % BRANCH_VARS.length]!;
   };
 
   // Tidy layout: a DFS that packs each subtree into a contiguous vertical band and
@@ -204,7 +277,7 @@ function buildFlow(
     pos.set(node.id, { x: node.depth * X_GAP, y });
     return y;
   };
-  const roots = graph.nodes
+  const roots = allNodes
     .filter((node) => node.parentId === null || !byId.has(node.parentId))
     .sort((a, b) => a.title.localeCompare(b.title));
   for (const root of roots) place(root);
@@ -220,25 +293,42 @@ function buildFlow(
   }
   const hasSelection = selectedNodeId !== null;
 
-  const flowNodes: Node<MinimalGraphNodeData>[] = graph.nodes.map((node) => ({
-    id: node.id,
-    type: "minimalTask",
-    position: pos.get(node.id) ?? { x: node.depth * X_GAP, y: 0 },
-    data: {
-      node,
-      stage,
-      selected: selectedNodeId === node.id,
-      branch: branchColorFor(node),
-      onPath: pathSet.has(node.id),
-      dimmed: hasSelection && !pathSet.has(node.id)
+  const flowNodes: Node<MinimalGraphNodeData | SkeletonGraphNodeData>[] = allNodes.map((node) => {
+    const position = pos.get(node.id) ?? { x: node.depth * X_GAP, y: 0 };
+    if (isGhostId(node.id)) {
+      return {
+        id: node.id,
+        type: "skeletonTask",
+        position,
+        selectable: false,
+        focusable: false,
+        data: { dimmed: hasSelection }
+      };
     }
-  }));
+    return {
+      id: node.id,
+      type: "minimalTask",
+      position,
+      data: {
+        node,
+        stage,
+        selected: selectedNodeId === node.id,
+        branch: branchColorFor(node),
+        onPath: pathSet.has(node.id),
+        dimmed: hasSelection && !pathSet.has(node.id),
+        isNew: !seenIds.has(node.id),
+        expanding: isExpanding(node)
+      }
+    };
+  });
 
   const flowEdges: Edge[] = graph.edges.map((edge) => {
     const isDependency = edge.kind === "dependency";
     const target = byId.get(edge.target);
     const onPath = !isDependency && pathSet.has(edge.source) && pathSet.has(edge.target);
     const dimmed = hasSelection && !onPath;
+    // Hierarchy edges into a still-expanding subtree march with the stream.
+    const streaming = !isDependency && target !== undefined && isExpanding(target);
     const branchColor = target !== undefined ? branchColorFor(target) : "var(--mh-graph-edge)";
     const stroke = isDependency ? "var(--mh-graph-seam)" : branchColor;
     return {
@@ -247,16 +337,33 @@ function buildFlow(
       target: edge.target,
       type: "smoothstep",
       animated: onPath,
+      ...(streaming ? { className: "edge-flow" } : {}),
       markerEnd: { type: MarkerType.ArrowClosed, width: 13, height: 13, color: stroke },
       style: {
         stroke,
         strokeWidth: onPath ? 2.4 : isDependency ? 1.6 : 1.4,
-        strokeDasharray: isDependency ? "4 5" : undefined,
+        strokeDasharray: isDependency ? "4 5" : streaming ? "4 6" : undefined,
         opacity: dimmed ? 0.16 : isDependency ? 0.85 : 0.6,
         transition: "opacity 200ms ease, stroke-width 200ms ease"
       }
     };
   });
+
+  // Parent → ghost: the stream itself, drawn as a marching dashed ember edge.
+  for (const ghost of ghosts) {
+    flowEdges.push({
+      id: `ghost-edge:${ghost.parentId}`,
+      source: ghost.parentId!,
+      target: ghost.id,
+      type: "smoothstep",
+      className: "edge-flow",
+      style: {
+        stroke: "var(--mh-graph-seam)",
+        strokeWidth: 1.6,
+        opacity: hasSelection ? 0.3 : 0.9
+      }
+    });
+  }
 
   return { nodes: flowNodes, edges: flowEdges };
 }
@@ -273,8 +380,34 @@ const STATUS_DOT: Record<VitalStatus, string> = {
   failed: "var(--error)"
 };
 
+function SkeletonTaskNode({ data }: NodeProps<Node<SkeletonGraphNodeData>>): React.ReactElement {
+  return (
+    <div
+      className="mh-skel-node"
+      style={{ opacity: data.dimmed ? 0.3 : 1 }}
+      aria-label="Generando la próxima subtarea"
+      aria-busy
+    >
+      <Handle type="target" position={Position.Left} className="mh-min-node-handle" />
+      <Handle type="source" position={Position.Right} className="mh-min-node-handle" />
+      <div className="mh-min-node-top">
+        <span
+          className="mh-min-node-dot coral-pulse"
+          style={{ background: "var(--color-accent)", opacity: 1 }}
+          aria-hidden
+        />
+        <span className="mh-min-node-role" style={{ color: "var(--color-accent)" }}>
+          generando…
+        </span>
+      </div>
+      <div className="mh-skel-node-bar" style={{ width: "78%", marginTop: 12 }} aria-hidden />
+      <div className="mh-skel-node-bar" style={{ width: "52%" }} aria-hidden />
+    </div>
+  );
+}
+
 function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React.ReactElement {
-  const { node, selected, branch, onPath, dimmed } = data;
+  const { node, selected, branch, onPath, dimmed, isNew, expanding } = data;
   const status = node.vital.status;
   const hasProgress = node.vital.testProgress !== undefined;
   const dotColor = STATUS_DOT[status];
@@ -286,7 +419,9 @@ function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React
         "mh-min-node",
         node.isInWavefront ? "mh-min-node-wave" : "",
         selected ? "mh-min-node-selected" : "",
-        onPath && !selected ? "mh-min-node-onpath" : ""
+        onPath && !selected ? "mh-min-node-onpath" : "",
+        isNew ? "mh-min-node-enter" : "",
+        expanding ? "mh-min-node-expanding" : ""
       ]
         .filter(Boolean)
         .join(" ")}

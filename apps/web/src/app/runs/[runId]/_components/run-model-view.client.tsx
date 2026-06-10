@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { buildFocusView, type FocusTarget } from "@/lib/run-model/focus-view";
 import { selectMinimalWorkspaceView } from "@/lib/run-model/minimal-workspace-view";
 import type { Run, RunEvent, RunModel, Node } from "@/lib/run-model/types";
@@ -11,7 +11,6 @@ import { ChatThread } from "@/components/chat/thread";
 import { Group, Panel, useDefaultLayout } from "react-resizable-panels";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { ArtifactTabs } from "./artifact-tabs.client";
-import { Play } from "lucide-react";
 
 export function RunModelView({
   seed,
@@ -33,20 +32,6 @@ export function RunModelView({
   const panelIds = focusView !== null ? ["chat", "artifacts", "focus"] : ["chat", "artifacts"];
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({ id: "mh-run-workspace", panelIds });
 
-  const onResolve = useCallback(
-    (id: string) => {
-      const decision = model.decisions.get(id);
-      if (decision === undefined) return;
-      const choice = defaultChoiceFor(decision.kind, decision.context.options);
-      void fetch(`/api/runs/${encodeURIComponent(seed.id)}/decisions/${encodeURIComponent(id)}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ choice })
-      });
-    },
-    [model, seed.id]
-  );
-
   return (
     <ChatRuntimeProvider events={events} onUserMessage={async () => {}}>
       <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--color-bg)] font-sans">
@@ -56,7 +41,6 @@ export function RunModelView({
           view={view}
           model={model}
           _connected={connected}
-          onResolve={onResolve}
           workspaceName={workspaceName}
         />
 
@@ -111,14 +95,12 @@ function CompactRunHeader({
   view,
   model,
   _connected,
-  onResolve,
   workspaceName
 }: {
   runId: string;
   view: ReturnType<typeof selectMinimalWorkspaceView>;
   model: RunModel;
   _connected: boolean;
-  onResolve: (id: string) => void;
   workspaceName?: string | undefined;
 }): React.ReactElement {
   const nodesCount = model.nodes.size;
@@ -165,20 +147,18 @@ function CompactRunHeader({
           )}
         </div>
 
-        {/* Primary Contextual Action in Header */}
+        {/* The chat thread is the single decision channel; the header only
+            SIGNALS a pending gate instead of duplicating its action. */}
         {view.primaryAttention !== null ? (
-          <button
-            onClick={() => onResolve(view.primaryAttention!.id)}
-            className="h-8 px-3 bg-[var(--color-accent)] hover:opacity-90 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5 transition cursor-pointer"
-          >
-            <Play className="w-3.5 h-3.5" />
-            {view.primaryAttention.primaryActionLabel}
-          </button>
+          <span className="h-8 px-3 rounded-lg text-xs font-semibold flex items-center gap-2 bg-[var(--status-review-bg)] text-[var(--status-review-fg)] border border-[var(--status-review-border)]">
+            <span className="w-2 h-2 rounded-full bg-[var(--status-review-fg)] animate-pulse" />
+            {view.primaryAttention.label}
+          </span>
         ) : view.stage === "review" && view.reviewEvidence ? (
           <a
             href={`/api/runs/${runId}/export?format=patch`}
             download
-            className="h-8 px-3 bg-[var(--color-accent)] hover:opacity-90 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5 transition text-none hover:text-white"
+            className="h-8 px-3 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-[var(--color-accent-contrast)] rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5 transition text-none hover:text-[var(--color-accent-contrast)]"
           >
             Descargar Cambios
           </a>
@@ -188,9 +168,3 @@ function CompactRunHeader({
   );
 }
 
-function defaultChoiceFor(kind: string, options: readonly string[] | undefined) {
-  if (kind === "clarify") return { answer: options?.[0] ?? "" };
-  if (kind === "resolve_conflict") return { resolutionId: "human-selected" };
-  if (kind === "approve_merge") return { action: "accept" };
-  return { action: "approve" };
-}

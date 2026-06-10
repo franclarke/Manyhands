@@ -141,7 +141,6 @@ export class GroundingAgent {
       instructionFilePath,
       model: params.model,
       timeoutMs: this.executorTimeoutMs,
-      sandboxMode: "workspace-write",
       bypassApprovals: true
     });
 
