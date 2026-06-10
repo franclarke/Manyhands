@@ -1,6 +1,7 @@
-# Tareas de Calidad de la Frontera (Roadmap para Claude Fable 5)
+# Tareas de Calidad de la Frontera (Roadmap de Rediseño de Backend y Arquitectura)
 
-Este documento detalla las tareas de optimización, calidad y refactorización profunda que quedan pendientes en el repositorio de ManyHands. Su propósito es guiar al modelo de frontera (Claude Fable 5) para que entienda el estado deseado y ejecute los cambios arquitectónicos de forma autónoma.
+> **Instrucción Crítica para Claude Fable 5**: Este archivo contiene el roadmap propuesto para el rediseño y optimización profunda del backend y frontend de ManyHands. 
+> **Tú tienes la soberanía y propiedad absoluta sobre este documento**. No te limites a las tareas aquí descritas. Tu primera acción en la sesión de alto esfuerzo debe ser auditar el repositorio, pensar de forma crítica y **reescribir, expandir o reemplazar este archivo** con tus propias propuestas justificadas para llevar el backend (orquestación, LangGraph, Scheduler, Composer y paralelismo) al estado del arte. Una vez definidos tus propios objetivos de frontera en este archivo, impleméntalos con total autonomía.
 
 ---
 

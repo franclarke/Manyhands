@@ -26,32 +26,25 @@ ManyHands se encuentra en una etapa de refactorización activa para convertirse 
 
 ## 3. Guías de Auditoría y Tareas Pendientes
 
-Debes trabajar siguiendo este workflow ordenado:
+Debes trabajar siguiendo este workflow ordenado, priorizando la arquitectura del backend y asegurando una limpieza total del repositorio:
 
-### Paso 1: Entender el Repositorio y la Arquitectura Agéntica
-- Lee y analiza el código fuente de los paquetes core (`packages/orchestrator-graph/`, `packages/execution-core/`) y la app Next.js (`apps/web/`).
-- Evalúa si el StateGraph de **LangGraph.js** (`planning-graph.ts` y `execution-graph.ts`) se está usando de forma idiomática, robusta y moderna. Mejora el diseño del StateGraph para gestionar con limpieza los checkpoints persistidos en disco (`JsonFileCheckpointSaver`), las interrupciones HITL nativas mediante `interrupt()`, las bifurcaciones de viaje en el tiempo (`/fork`) y la reanudación (`/resume`).
-- Revisa el roadmap del proyecto en `docs/design/future-frontier-tasks.md` y analiza cómo abordar las tareas de:
-  - **Type Extractor Pleno para el GroundingAgent**: Scaffolding robusto que compile estrictamente en TypeScript.
-  - **Scheduler de Waves Adaptativo Basado en Scopes**: Paralelización inteligente basada en el solapamiento de scopes.
-  - **Composer Avanzado con Validación de AST**: Prevención de código malformado post-repair mediante validación sintáctica.
+### Paso 1: Auditoría y Autodefinición de Tareas de Frontera (Foco en Backend)
+- **El backend es el núcleo y prioridad del sistema**: La calidad de ManyHands reside en su arquitectura de ejecución, el motor de orquestación de LangGraph.js (`orchestrator-graph`), el Scheduler, la robustez de los git worktrees, el Composer de fusión bottom-up y la fiabilidad de los checkpoints.
+- Lee y analiza a fondo todo el código fuente de los paquetes core (`packages/`) y la aplicación Next.js (`apps/web/`).
+- **No te limites a las tareas propuestas previamente**. Tu primera tarea autónoma es pensar críticamente cómo llevar la arquitectura de backend y orquestación a la frontera tecnológica.
+- **Edita el archivo `docs/design/future-frontier-tasks.md`**: Reescribe o expande este archivo con tus propias propuestas justificadas de diseño de backend (por ejemplo: Type Extractor dinámico, schedulers avanzados sin race conditions, control de transacciones de checkpoints, mitigaciones avanzadas en la reparación del Composer).
+- Evalúa y rediseña el StateGraph de **LangGraph.js** (`planning-graph.ts` y `execution-graph.ts`) para que sea robusto, moderno y gestione checkpoints persistidos en disco (`JsonFileCheckpointSaver`), interrupciones HITL nativas (`interrupt()`), time-travel (/fork) y reanudación (/resume) de forma impecable.
 
-### Paso 2: Auditoría y Rediseño de UI/UX (Sala de Control Profesional)
-- La interfaz debe alcanzar una calidad visual y de interacción top (minimalista, elegante, fluida y responsive) similar a ChatGPT, Claude, Perplexity o Hermes Agent.
-- **Audita, instala (usando `pnpm` en `apps/web/`) y aplica de forma idiomática y consistente**:
-  - `assistant-ui` (para el chat y visualización de hilos agénticos).
-  - `Agent Elements` y `Vercel AI Elements` (para componentes visuales del pipeline de agentes).
-  - `react-resizable-panels` (para layouts profesionales multipanel redimensionables con suavidad).
-  - `shadcn/ui` y `Radix UI` (para componentes accesibles y consistentes).
-  - `Tailwind CSS` (v4.0.0+) (para un sistema de diseño consistente con paletas de color HSL sofisticadas, tipografía moderna, spacing fluido y soporte completo para dark mode).
-- Audita el sistema de diseño completo: tokens, layout responsivo multipanel, estados de interacción de botones, canvas, inspector, timelines, y vistas de chat.
-- **Elimina completamente el código muerto legacy** (como `nodeStatusOverrides` o el canvas ineficiente si no se usa) para consolidar el event-model reducer de la UI agent-first.
+### Paso 2: Limpieza de UI/UX y Eliminación de Código Muerto (Frontend Minimalista)
+- La interfaz visual debe ser limpia, minimalista y extremadamente ágil para la supervisión en tiempo real (sala de control continua).
+- **Política de Cero Código Deprecado / Legacy**: Elimina físicamente cualquier archivo, componente o ruta de la UI vieja (por ejemplo, el canvas legacy con React Flow si queda en desuso, toggles de rollback, o variables de estado redundantes como `nodeStatusOverrides` y hooks obsoletos como `useLiveRun`). No dejes deudas técnicas ni código deprecado en el repositorio.
+- Audita e instala idiomáticamente en `apps/web/package.json` las librerías frontend requeridas para una interfaz premium: `assistant-ui` para los chats agénticos, `react-resizable-panels` para layouts multipanel fluidos, `shadcn/ui`, `Radix UI` y `Tailwind CSS` (v4.0.0+).
 
 ### Paso 3: Rediseño e Implementación Autónoma
-- Una vez que comprendas por completo el estado del repositorio y definas tu diseño mentalmente, **procede directamente a implementar los cambios y refactorizaciones** de mayor impacto en una sola pasada larga, con total autonomía y sin requerir planes ni aprobaciones previas de ningún tipo.
-- Asegura que el código final compile de manera limpia y estricta:
-  - `pnpm web:typecheck` e `typecheck` en execution-core deben dar 0 errores.
-- Mantén la suite de tests 100% verde (`pnpm test` -> 847 tests vigentes). Escribe nuevos tests para las clases o componentes que agregues o modifiques.
+- Una vez que hayas editado `future-frontier-tasks.md` con tu diseño y comprendas por completo el estado del repositorio, **procede directamente a implementar los cambios y refactorizaciones** de mayor impacto en una sola pasada larga, con total autonomía y sin requerir planes ni aprobaciones previas de ningún tipo.
+- Garantiza la integridad total de la suite de software:
+  - Todo el código final debe compilar sin errores en TypeScript (`pnpm web:typecheck` y el check de `execution-core` deben dar 0 errores).
+  - Mantén la suite de tests 100% verde (`pnpm test` -> 847 tests vigentes). Si refactorizas lógica interna, actualiza o añade los tests correspondientes para blindar la estabilidad del backend.
 
 ### Paso 4: Validación y Documentación Final
 - Escribe un reporte exhaustivo en un archivo `walkthrough.md` en la raíz del repositorio, detallando de forma clara qué cambiaste, los motivos de tus decisiones técnicas, los resultados de tus pruebas y qué puntos quedaron pendientes para continuar más adelante.

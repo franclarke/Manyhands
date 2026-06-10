@@ -97,13 +97,16 @@ Para dar una tarea por completada, debes asegurar los siguientes pasos:
 2. **Suite de Tests**:
    - Todos los tests de la suite (`pnpm test`) deben estar en verde (847 tests exitosos).
    - Escribe tests unitarios o de integración en `tests/` para cualquier nueva funcionalidad introducida.
-3. **Auditoría de UI/UX**:
-   - La interfaz debe funcionar de manera fluida en el navegador.
-   - Comprueba la accesibilidad Radix y que no haya roturas en layouts responsivos de `react-resizable-panels`.
-4. **Validación de Invariantes**:
+3. **Limpieza Absoluta (Cero Código Legacy / Deprecado)**:
+   - Elimina físicamente cualquier archivo, componente, toggle o flag viejo que sea reemplazado o quede obsoleto con tu nuevo diseño de frontera. La base de código final debe quedar 100% limpia y libre de deudas técnicas o rollbacks.
+4. **Priorización del Backend**:
+   - La verificación del backend (LangGraph, Scheduler, Composer, base de datos de checkpoints y concurrencia) tiene el mayor peso en la evaluación del software. Asegura que estas piezas tengan máxima robustez y cobertura de tests.
+5. **Auditoría de UI/UX**:
+   - La interfaz debe ser limpia, minimalista y funcionar fluidamente sin roturas en layouts responsivos de `react-resizable-panels`.
+6. **Validación de Invariantes**:
    - Corre la verificación de invariantes en `tests/run-model-invariants.test.ts`.
-5. **Documentación**:
-   - Actualiza los documentos afectados en `docs/system/` o `docs/design/` para reflejar la realidad técnica de tus cambios.
+7. **Documentación**:
+   - Actualiza los documentos afectados en `docs/system/` o `docs/design/` para reflejar la realidad técnica de tus cambios. Escribe el reporte de cambios en `walkthrough.md`.
 
 ---
 
@@ -111,6 +114,7 @@ Para dar una tarea por completada, debes asegurar los siguientes pasos:
 
 Cuando operes en modo de alto esfuerzo en esta sesión:
 - **Autonomía Absoluta de Ejecución**: Se promueve la toma de decisiones independiente. Diseña el enfoque mentalmente e implementa directamente los cambios en código sin requerir propuestas ni aprobaciones humanas intermedias. No debes detenerte a proponer planes de trabajo en el chat ni esperar validaciones externas para comenzar a programar.
+- **Autodefinición del Roadmap**: Eres responsable de diseñar el camino a la frontera. Tu primer paso debe ser auditar el software y reescribir/editar el archivo `docs/design/future-frontier-tasks.md` con tus propias propuestas justificadas de backend, arquitectura y optimización del sistema, para luego proceder a implementarlas.
 - **Paso a Paso Controlado**: Escribe y edita archivos de forma modular. Realiza typechecks y ejecuta tests incrementalmente. No disperses los cambios en múltiples partes del monorepo sin verificar la estabilidad del código.
 - **Rastreo de TODOs**: Utiliza `task.md` para marcar tu progreso localmente con `[ ]`, `[/]`, y `[x]`.
 - **Commits de Checkpoint**: Registra checkpoints funcionales con commits locales y la firma de coautoría adecuada:
