@@ -19,23 +19,12 @@
 
 ---
 
-## 2. Invariantes del Sistema (Directrices Editables)
+## 2. Autonomía de Diseño y Decisiones de Frontera
 
-> [!NOTE]
-> Las siguientes invariantes D1–D10 representan las decisiones iniciales del proyecto. Como agente de código senior, tienes **plena libertad de editarlas, simplificarlas o eliminarlas** si detectas que entran en conflicto con una arquitectura más limpia, limitan el paralelismo o restringen la autonomía del motor en LangGraph.js.
-
-| ID | Invariante |
-|----|------------|
-| **D1** | `graph.dependencies` es el modelo canónico. Mutation solo vía `addDependency`/`removeDependency`/`syncNodeDependencies`. |
-| **D2** | El campo canónico de la intención de un nodo de tarea es `goal`, nunca `intent`. |
-| **D3** | Tolerancia a fallos transitorios de LLM. Se permite implementar reintentos con backoff exponencial antes de abortar o pausar. |
-| **D4** | **Gemini CLI** (`gemini`, headless, stdin) es el único executor e-flight por defecto. Se inyecta mediante la interfaz `AgentExecutor`. Claude Code CLI está disponible como alternativo opt-in (ADR-0030). |
-| **D5** | `git diff HEAD` es la única fuente de verdad para el resultado de un agente. No confíes en su stdout para determinar qué cambió. |
-| **D6** | **El orquestador commitea; los agentes nunca.** Si un agente genera un commit inesperado en su worktree, la política por defecto es `reject`. |
-| **D7** | El aislamiento real proviene del git worktree aislado + `ScopeChecker` de límites de archivos. El CLI de subagentes corre en `--approval-mode yolo`. |
-| **D8** | Integración bottom-up vía cherry-pick + reparación semántica asistida por LLM en caso de conflictos (máx. 1 intento automático). |
-| **D9** | **Paralelismo por Wavefront (Sin tope artificial)**. Se ejecuta simultáneamente todo el lote de hojas candidatas disponibles del frente de onda de dependencias. |
-| **D10**| Timeouts: hoja 300 s, integración 600 s (configurables individualmente en contratos). |
+ManyHands se encuentra en una etapa de refactorización activa para convertirse en un software de desarrollo agéntico completamente de frontera. Como agente senior de desarrollo:
+- Tienes **autonomía absoluta y plena libertad de diseño** sobre toda la arquitectura (LangGraph.js, paralelismo, flujo de interrupciones, scaffolding de interfaces y políticas de fusión git).
+- No hay restricciones inalterables. Si consideras que el comportamiento actual del sistema tiene deudas técnicas, malas abstracciones o acoplamientos innecesarios, tienes autorización para refactorizar o reescribir dichos componentes de forma segura.
+- Las decisiones y reglas anteriores (Invariantes D1-D10) se han trasladado a la sección final [9. Referencia de Decisiones de Diseño Anteriores (Historial del Legado)](#9-referencia-de-decisiones-de-diseño-anteriores-historial-del-legado) únicamente como mapa conceptual para comprender por qué el código preexistente funciona como funciona, pero no representan restricciones vigentes para tu refactorización.
 
 ---
 
@@ -128,3 +117,22 @@ Cuando operes en modo de alto esfuerzo en esta sesión:
   ```bash
   git commit -m "feat/refactor(modulo): descripcion de la mejora" -m "Co-Authored-By: Claude Fable 5 <claude@anthropic.com>"
   ```
+
+---
+
+## 9. Referencia de Decisiones de Diseño Anteriores (Historial del Legado)
+
+Las siguientes invariantes D1-D10 sirvieron como cimiento conceptual durante las fases tempranas del desarrollo. **No son restricciones vigentes**, sino contexto histórico para que comprendas la estructura del código heredado que vas a auditar:
+
+| ID | Decisión de Diseño Histórica | Contexto y Rol del Legado |
+|----|------------------------------|---------------------------|
+| **D1** | `graph.dependencies` es el modelo canónico. | Evita dobles fuentes de verdad en dependencias del DAG. |
+| **D2** | El campo canónico de la intención de tarea es `goal`, nunca `intent`. | Normalización semántica de campos. |
+| **D3** | Tolerancia a fallos de LLM (reintentos con backoff). | Diseñado para mitigar fallos transitorios en el proveedor. |
+| **D4** | Gemini CLI como executor e-flight por defecto. | Acoplado al `AgentExecutor` configurable (ADR-0030). |
+| **D5** | `git diff HEAD` es la fuente de verdad del resultado. | Evita depender del stdout para determinar los cambios. |
+| **D6** | El orquestador commitea; los agentes nunca. | Garantiza el aislamiento de la rama base antes de la fusión. |
+| **D7** | Aislamiento real por git worktree + `ScopeChecker`. | Mantiene entornos de ejecución paralelos estancos. |
+| **D8** | Integración bottom-up con Composer cherry-pick + repair. | Algoritmo de resolución semántica de conflictos de fusión. |
+| **D9** | Paralelismo libre por Wavefront sin topes artificiales. | Maximiza la concurrencia a través del StateGraph de LangGraph. |
+| **D10**| Timeouts configurables por contrato. | Evita bloqueos indefinidos en subprocesos o colas. |
