@@ -18,12 +18,14 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@manyhands/contracts": "workspace:*",
+    "@manyhands/repository-index": "workspace:^0.1.0",
+    "@manyhands/scheduler": "workspace:*",
     "@manyhands/shared": "workspace:*",
     "@manyhands/task-graph": "workspace:*",
-    "@manyhands/contracts": "workspace:*",
-    "@manyhands/scheduler": "workspace:*",
     "@manyhands/trace-store": "workspace:*",
     "simple-git": "^3.27.0",
+    "typescript": "^5.7.2",
     "zod": "^3.23.8"
   }
 }

@@ -157,19 +157,23 @@ importers:
   packages/execution-core:
     specifiers:
       '@manyhands/contracts': workspace:*
+      '@manyhands/repository-index': workspace:^0.1.0
       '@manyhands/scheduler': workspace:*
       '@manyhands/shared': workspace:*
       '@manyhands/task-graph': workspace:*
       '@manyhands/trace-store': workspace:*
       simple-git: ^3.27.0
+      typescript: ^5.7.2
       zod: ^3.23.8
     dependencies:
       '@manyhands/contracts': link:../contracts
+      '@manyhands/repository-index': link:../repository-index
       '@manyhands/scheduler': link:../scheduler
       '@manyhands/shared': link:../shared
       '@manyhands/task-graph': link:../task-graph
       '@manyhands/trace-store': link:../trace-store
       simple-git: 3.36.0
+      typescript: 5.9.3
       zod: 3.25.76
 
   packages/orchestrator-graph:

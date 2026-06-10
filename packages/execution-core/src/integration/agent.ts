@@ -27,6 +27,7 @@ import {
   type WorktreeRecord
 } from "../types";
 import { computePreMergeFindings } from "./pre-merge";
+import { checkRepairedFiles, describeSyntaxFindings, type SyntaxCheckResult } from "./syntax-check";
 import type { ValidationRunner } from "../validation/runner";
 import { ChildProcessValidationRunner } from "../validation/runner";
 
@@ -40,6 +41,8 @@ export interface IntegrationAgentDeps {
   scopeChecker?: ScopeChecker;
   /** Writes the repair instructions file. Injectable for tests. */
   writeInstructions?: (path: string, content: string) => Promise<void>;
+  /** Post-repair syntactic validation. Injectable for tests. */
+  checkSyntax?: (params: { worktreePath: string; files: readonly string[] }) => Promise<SyntaxCheckResult>;
   now?: () => string;
 }
 
@@ -109,6 +112,10 @@ export class IntegrationAgent {
   private readonly validationRunner: ValidationRunner;
   private readonly scopeChecker: ScopeChecker;
   private readonly writeInstructions: (path: string, content: string) => Promise<void>;
+  private readonly checkSyntax: (params: {
+    worktreePath: string;
+    files: readonly string[];
+  }) => Promise<SyntaxCheckResult>;
 
   constructor(deps: IntegrationAgentDeps) {
     this.git = deps.git;
@@ -119,6 +126,7 @@ export class IntegrationAgent {
     this.validationRunner = deps.validationRunner ?? new ChildProcessValidationRunner();
     this.scopeChecker = deps.scopeChecker ?? new ScopeChecker();
     this.writeInstructions = deps.writeInstructions ?? ((path, content) => writeFile(path, content, "utf8"));
+    this.checkSyntax = deps.checkSyntax ?? checkRepairedFiles;
   }
 
   async integrate(params: IntegrationParams): Promise<IntegrationResult> {
@@ -284,6 +292,13 @@ export class IntegrationAgent {
     });
   }
 
+  /**
+   * Repair a cherry-pick conflict with up to MAX_REPAIR_PASSES executor passes.
+   * After each pass the repaired files must clear scope AND syntactic
+   * validation (conflict markers + TS parse diagnostics); syntax findings are
+   * re-injected verbatim into the next pass's prompt as compiler feedback, so
+   * the agent self-corrects instead of the run committing malformed code.
+   */
   private async attemptRepair(
     params: IntegrationParams,
     child: AgentExecutionResult,
@@ -303,108 +318,149 @@ export class IntegrationAgent {
       findings: preMergeFindings.length
     });
 
-    this.traceStore.append({
-      type: "executor_repair_started",
-      actor: "system",
-      taskId: params.compositeTaskId,
-      payload: {
-        executorId: selection.executorId,
-        model: selection.model,
-        usageSource,
-        childTaskId: child.taskId,
-        files: conflict.conflictFiles
-      }
-    });
-
     const baseHead = await this.git.head(worktree.path);
     const instructionFilePath = join(
       tmpdir(),
       `mh-repair-${params.compositeTaskId}-${child.taskId}.txt`
     );
-    await this.writeInstructions(
-      instructionFilePath,
-      this.buildRepairPrompt(params, child, conflict, preMergeFindings)
-    );
-
     const executor = this.executorFactory.create(selection);
-    const executorOutcome = await executor.execute({
-      cwd: worktree.path,
-      instructionFilePath,
-      model: selection.model,
-      timeoutMs: params.repair.timeoutMs,
-      sandboxMode: params.repair.sandboxMode,
-      bypassApprovals: params.repair.bypassApprovals ?? true,
-      ...(params.signal !== undefined ? { signal: params.signal } : {}),
-      onOutput: (chunk) => {
-        this.traceStore.append({
-          type: "executor_output",
-          actor: "agent",
-          taskId: params.compositeTaskId,
-          payload: { ...chunk, repairChildTaskId: child.taskId }
-        });
+
+    const MAX_REPAIR_PASSES = 2;
+    let syntaxFeedback: string | undefined;
+
+    for (let pass = 1; pass <= MAX_REPAIR_PASSES; pass++) {
+      this.traceStore.append({
+        type: "executor_repair_started",
+        actor: "system",
+        taskId: params.compositeTaskId,
+        payload: {
+          executorId: selection.executorId,
+          model: selection.model,
+          usageSource,
+          childTaskId: child.taskId,
+          files: conflict.conflictFiles,
+          pass
+        }
+      });
+
+      await this.writeInstructions(
+        instructionFilePath,
+        this.buildRepairPrompt(params, child, conflict, preMergeFindings, syntaxFeedback)
+      );
+
+      const executorOutcome = await executor.execute({
+        cwd: worktree.path,
+        instructionFilePath,
+        model: selection.model,
+        timeoutMs: params.repair.timeoutMs,
+        sandboxMode: params.repair.sandboxMode,
+        bypassApprovals: params.repair.bypassApprovals ?? true,
+        ...(params.signal !== undefined ? { signal: params.signal } : {}),
+        onOutput: (chunk) => {
+          this.traceStore.append({
+            type: "executor_output",
+            actor: "agent",
+            taskId: params.compositeTaskId,
+            payload: { ...chunk, repairChildTaskId: child.taskId }
+          });
+        }
+      });
+      const outcomeWithUsage = { ...executorOutcome, usageSource };
+
+      if (executorOutcome.timedOut || executorOutcome.exitCode !== 0) {
+        return {
+          ok: false,
+          result: this.buildRepairResult(child.taskId, "executor_error", baseHead, baseHead, outcomeWithUsage)
+        };
       }
-    });
-    const outcomeWithUsage = { ...executorOutcome, usageSource };
 
-    if (executorOutcome.timedOut || executorOutcome.exitCode !== 0) {
-      return {
-        ok: false,
-        result: this.buildRepairResult(child.taskId, "executor_error", baseHead, baseHead, outcomeWithUsage)
-      };
-    }
-
-    await this.git.addAll(worktree.path);
-    const changedFiles = await this.git.diffCachedNameOnly(worktree.path);
-    const diff = await this.git.diffCached(worktree.path);
-    execLog("integrate", "repair produced diff", {
-      task: params.compositeTaskId,
-      child: child.taskId,
-      changedFiles
-    });
-
-    const scopeCheck = this.scopeChecker.check({
-      changedFiles,
-      executionScope: params.executionScope,
-      forbiddenPaths: params.forbiddenPaths
-    });
-    if (!scopeCheck.passed) {
-      execWarn("integrate", "repair scope violation", {
+      await this.git.addAll(worktree.path);
+      const changedFiles = await this.git.diffCachedNameOnly(worktree.path);
+      const diff = await this.git.diffCached(worktree.path);
+      execLog("integrate", "repair produced diff", {
         task: params.compositeTaskId,
         child: child.taskId,
-        violations: scopeCheck.violations
+        changedFiles,
+        pass
       });
+
+      const scopeCheck = this.scopeChecker.check({
+        changedFiles,
+        executionScope: params.executionScope,
+        forbiddenPaths: params.forbiddenPaths
+      });
+      if (!scopeCheck.passed) {
+        execWarn("integrate", "repair scope violation", {
+          task: params.compositeTaskId,
+          child: child.taskId,
+          violations: scopeCheck.violations
+        });
+        return {
+          ok: false,
+          result: this.buildRepairResult(
+            child.taskId,
+            "scope_violation",
+            baseHead,
+            baseHead,
+            outcomeWithUsage,
+            { diff, changedFiles, scopeCheck }
+          )
+        };
+      }
+
+      const syntax = await this.checkSyntax({ worktreePath: worktree.path, files: changedFiles });
+      if (!syntax.passed) {
+        syntaxFeedback = describeSyntaxFindings(syntax.findings);
+        execWarn("integrate", "repair produced malformed code", {
+          task: params.compositeTaskId,
+          child: child.taskId,
+          pass,
+          findings: syntax.findings.length
+        });
+        this.traceStore.append({
+          type: "repair_syntax_rejected",
+          actor: "system",
+          taskId: params.compositeTaskId,
+          payload: { childTaskId: child.taskId, pass, findings: syntax.findings }
+        });
+        if (pass < MAX_REPAIR_PASSES) {
+          continue;
+        }
+        return {
+          ok: false,
+          result: this.buildRepairResult(
+            child.taskId,
+            "validation_failed",
+            baseHead,
+            baseHead,
+            outcomeWithUsage,
+            { diff, changedFiles, scopeCheck }
+          )
+        };
+      }
+
+      const commitSha = await this.git.commit({
+        cwd: worktree.path,
+        message: `mh-integrate: ${params.compositeTaskId} <- ${child.taskId}`
+      });
+      execLog("integrate", "repair committed", {
+        task: params.compositeTaskId,
+        child: child.taskId,
+        commit: commitSha
+      });
+
       return {
-        ok: false,
-        result: this.buildRepairResult(
-          child.taskId,
-          "scope_violation",
-          baseHead,
-          baseHead,
-          outcomeWithUsage,
-          { diff, changedFiles, scopeCheck }
-        )
+        ok: true,
+        result: this.buildRepairResult(child.taskId, "success", baseHead, commitSha, outcomeWithUsage, {
+          diff,
+          changedFiles,
+          scopeCheck,
+          commitSha
+        })
       };
     }
 
-    const commitSha = await this.git.commit({
-      cwd: worktree.path,
-      message: `mh-integrate: ${params.compositeTaskId} <- ${child.taskId}`
-    });
-    execLog("integrate", "repair committed", {
-      task: params.compositeTaskId,
-      child: child.taskId,
-      commit: commitSha
-    });
-
-    return {
-      ok: true,
-      result: this.buildRepairResult(child.taskId, "success", baseHead, commitSha, outcomeWithUsage, {
-        diff,
-        changedFiles,
-        scopeCheck,
-        commitSha
-      })
-    };
+    throw new Error("attemptRepair: unreachable — repair pass loop exited without a result");
   }
 
   private async runParentValidation(
@@ -451,12 +507,22 @@ export class IntegrationAgent {
     params: IntegrationParams,
     child: AgentExecutionResult,
     conflict: { conflictFiles: string[]; output: string },
-    preMergeFindings: PreMergeFinding[]
+    preMergeFindings: PreMergeFinding[],
+    syntaxFeedback?: string
   ): string {
     const lines: string[] = [
       "You are resolving a git cherry-pick conflict during automated integration of a composite task.",
       `The change from task "${child.taskId}" conflicts with the already-integrated parent branch.`
     ];
+
+    if (syntaxFeedback !== undefined) {
+      lines.push(
+        "",
+        "IMPORTANT — your previous resolution attempt produced syntactically invalid code.",
+        "The TypeScript compiler reported these exact problems; fix every one of them this time:",
+        syntaxFeedback
+      );
+    }
 
     if (params.parentGoal) {
       lines.push("", `Parent goal (what the integrated children must collectively achieve):`, params.parentGoal);

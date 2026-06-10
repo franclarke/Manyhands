@@ -333,6 +333,81 @@ describe("IntegrationAgent", () => {
     expect(traceStore.findByType("cherry_pick_conflict")).toHaveLength(2);
   });
 
+  it("re-prompts with compiler feedback when the repair is syntactically malformed, then succeeds (AST gate)", async () => {
+    const git = new FakeGitRunner({
+      heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
+      cherryPickOutcomes: [{ ok: false, conflictFiles: ["src/b.ts"], output: "CONFLICT" }],
+      diffCachedNameOnly: ["src/b.ts"],
+      diffCached: "resolved patch",
+      commitSha: "REPAIR_SHA"
+    });
+    const prompts: string[] = [];
+    const syntaxResults = [
+      { passed: false, findings: [{ file: "src/b.ts:3:1", message: "'}' expected." }] },
+      { passed: true, findings: [] }
+    ];
+    const traceStore = new InMemoryTraceStore();
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore,
+      repoRoot: "/repo",
+      writeInstructions: async (_path, content) => {
+        prompts.push(content);
+      },
+      checkSyntax: async () => syntaxResults.shift() ?? { passed: true, findings: [] }
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("b", "SHA_B")],
+      repair
+    });
+
+    expect(result.status).toBe("executor_repair_success");
+    expect(prompts).toHaveLength(2);
+    expect(prompts[0]).not.toContain("syntactically invalid");
+    expect(prompts[1]).toContain("syntactically invalid");
+    expect(prompts[1]).toContain("'}' expected.");
+    expect(traceStore.findByType("repair_syntax_rejected")).toHaveLength(1);
+    expect(traceStore.findByType("executor_repair_started")).toHaveLength(2);
+  });
+
+  it("fails the repair when both passes produce malformed code", async () => {
+    const git = new FakeGitRunner({
+      heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
+      cherryPickOutcomes: [{ ok: false, conflictFiles: ["src/b.ts"], output: "CONFLICT" }],
+      diffCachedNameOnly: ["src/b.ts"],
+      diffCached: "still broken",
+      commitSha: "REPAIR_SHA"
+    });
+    const traceStore = new InMemoryTraceStore();
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore,
+      repoRoot: "/repo",
+      checkSyntax: async () => ({
+        passed: false,
+        findings: [{ file: "src/b.ts", message: "unresolved git conflict markers (<<<<<<< / ======= / >>>>>>>) remain" }]
+      })
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("b", "SHA_B")],
+      repair
+    });
+
+    expect(result.status).toBe("executor_repair_failed");
+    expect(result.repairResult?.status).toBe("validation_failed");
+    expect(traceStore.findByType("repair_syntax_rejected")).toHaveLength(2);
+    // Malformed code is never committed.
+    expect(git.opsInvoked()).not.toContain("commit");
+  });
+
   it("reports validation_failed when parent validation does not pass", async () => {
     const git = new FakeGitRunner({ heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" } });
     const validationRunner = new FakeValidationRunner({ passed: false, output: "tests failed", exitCode: 1 });

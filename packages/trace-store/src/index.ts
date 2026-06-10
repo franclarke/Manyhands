@@ -54,6 +54,7 @@ export const TraceEventTypeSchema = z.union([
   z.literal("cherry_pick_attempted"),
   z.literal("cherry_pick_conflict"),
   z.literal("executor_repair_started"),
+  z.literal("repair_syntax_rejected"),
   z.literal("integration_completed"),
   z.literal("batch_started"),
   z.literal("batch_completed"),
