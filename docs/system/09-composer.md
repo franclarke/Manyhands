@@ -10,13 +10,10 @@
 > eventos nativos finos de repair (`integration.cherrypick`,
 > `conflict.repair.started`, etc.) siguen reservados hasta que el motor los emita.
 
-> **Actualizacion 2026-06-07.** El runner publica eventos nativos de alto nivel
-> para la sala agent-first: `integration.started`, `integration.validated`,
-> `integration.completed`, `conflict.detected` y `conflict.resolved` cuando esos
-> datos existen en `IntegrationResult` o `TraceEvent`. La telemetria fina del
-> repair semantico sigue pendiente de emision directa desde el motor.
+> **Actualización 2026-06-10.** La integración de composites se realiza ahora dentro de los nodos correspondientes de LangGraph.js (`integrateCompositeNode`). Si el cherry-pick falla y el repair semántico automático (Composer) no logra resolver el conflicto en un intento, el StateGraph lanza un `interrupt()` nativo. Esto suspende el hilo, guarda la información de conflicto en el checkpoint y delega la decisión al Canal de Decisiones de la UI.
 
 ---
+
 
 ## Qué es
 
@@ -79,9 +76,9 @@ El Composer hace máximo un intento de repair por integración (ADR-0025). Si el
 
 **Produce:** `IntegrationResult` con `{ status, childResults, conflictDetails?, repairResult? }`.
 
-**Lo invoca:** `RunExecutor` en el loop de integración bottom-up, cuando todas las hojas de un composite terminaron.
+**Lo invoca:** El StateGraph de LangGraph.js en el nodo de integración composite (`integrateCompositeNode`) cuando todos sus nodos hijos han sido completados en el StateGraph.
 
-**Depende de:** `SimpleGitRunner` (para cherry-pick), `GeminiCliExecutor` (para el repair semántico), `ValidationRunner` (para parentValidationCommands), `TraceStore` (para los eventos de integración).
+**Depende de:** `SimpleGitRunner` (para cherry-pick), `GeminiCliExecutor` (para el repair semántico), `ValidationRunner` (para parentValidationCommands), `TraceStore` (para eventos de integración), y el checkpointer de LangGraph para interrupciones en caso de fallas de resolución.
 
 ---
 

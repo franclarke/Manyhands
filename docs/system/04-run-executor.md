@@ -1,104 +1,76 @@
 # RunExecutor
 
-**Archivos fuente:** `packages/execution-core/src/run/executor.ts`
+**Archivos fuente:** `packages/execution-core/src/run/executor.ts`, `packages/orchestrator-graph/src/`, `packages/execution-core/src/run/grounding-agent.ts`, `packages/execution-core/src/run/amendments-engine.ts`, `apps/web/src/lib/server/runs/runner.ts`
 
-> **Actualizacion 2026-06-06.** Este capitulo describe el rol correcto del
-> `RunExecutor`, pero algunos detalles operativos cambiaron:
-> `ExecutionConfig.maxParallel` ahora default = **6** (D9), no 3; la ejecucion
-> usa Gemini CLI por el seam `AgentExecutor` (D4); y la web agent-first ya no
-> debe inferir estado de nodo desde la UI legacy, sino desde eventos -> reducer ->
-> selectores. Desde 2026-06-07, el runner tambien publica `RunEvent` nativos para
-> `/api/runs/[id]/run-events`.
+> **Actualización 2026-06-10.** La ejecución de los runs y la orquestación general se han migrado de un loop secuencial ad-hoc a una arquitectura de máquina de estados formalizada usando **LangGraph.js** (`buildExecutionGraph`). El estado se persiste en disco como checkpoints JSON mediante `JsonFileCheckpointSaver`. El `RunExecutor` original ahora funciona como el motor de bajo nivel para resolver la ejecución y validación de nodos individuales de manera aislada, mientras que LangGraph gestiona la concurrencia en paralelo y el Human-in-the-Loop (HITL) mediante interrupciones nativas `interrupt()`.
 
 ---
 
 ## Qué es
 
-El `RunExecutor` es el orquestador top-level de la ejecución. Toma un `TaskGraph` aprobado y coordina todos los demás componentes del sistema para llevarlo a término: forma batches de hojas, las ejecuta en paralelo, recoge los resultados, integra los composites de abajo hacia arriba, y al final computa el `GranularityVector` del run.
+El `executionGraph` compilado con LangGraph.js es el orquestador formal de la ejecución. Toma el `TaskGraph` aprobado, coordina la inicialización de firmas (Grounding), despacha las tareas hoja en paralelo respetando dependencias, ejecuta integraciones recursivas bottom-up, y computa el `GranularityVector` al finalizar.
 
 ---
 
 ## Responsabilidad
 
-El `RunExecutor` no sabe cómo ejecutar agentes, ni cómo hacer git, ni cómo validar scope — cada una de esas responsabilidades vive en un componente específico. Lo que sí sabe el RunExecutor es *en qué orden* y *con qué dependencias* se coordinan esos componentes. Es el director de orquesta: decide qué pasa cuándo y qué hacer con cada resultado.
+La orquestación de LangGraph no implementa directamente git ni LLM CLI, sino que define el flujo del grafo de ejecución como una serie de transiciones puras basadas en el estado del run (`RunStateAnnotation`), inyectando dependencias como `executeLeaf`, `repairLeaf`, `integrateComposite` y `validateRun` desde `runner.ts`.
 
 ---
 
 ## Cómo funciona
 
-### Construcción
+### Inicialización y Grounding (Caminos de Costura)
 
-El `RunExecutor` se construye con sus dependencias inyectadas: un `SimpleGitRunner`, un `AgentExecutor` (en producción el `GeminiCliExecutor`; en tests el `MockAgentExecutor`), y un `TraceStore`. A partir de ellos construye internamente:
+Antes de ejecutar las tareas del grafo, el orquestador invoca al `GroundingAgent` (`packages/execution-core/src/run/grounding-agent.ts`). Este agente analiza las interfaces especificadas en los contratos (`producedInterfaces`) y genera un **walking skeleton** (esqueleto básico con firmas de funciones, imports y archivos vacíos) en un commit inicial en la base del repositorio. Esto garantiza que todos los archivos requeridos existan con las firmas correctas y que las hojas que se ejecutarán en paralelo puedan compilar y testear contra estas costuras desde el primer momento.
 
-- `WorktreeManager` — para crear y limpiar worktrees
-- `ResultRecorder` — para capturar diffs y commitear
-- `IntegrationAgent` — para cherry-pick y repair semántico
-- `ChildProcessValidationRunner` — para ejecutar comandos de validación
-- `BatchScheduler` — para agrupar hojas respetando dependencias
-- `FileSystemContextPacker` — para armar el prompt de cada hoja
+### El flujo del StateGraph y Concurrencia
 
-### El loop principal
+El `executionGraph` utiliza una estructura de Map-Reduce nativa:
+1. **Planificación de batches**: El nodo de planificación calcula el wavefront actual (tareas que no tienen dependencias pendientes).
+2. **Despacho Paralelo**: Por cada tarea hoja lista en el batch actual, se despacha dinámicamente un nodo de ejecución independiente mediante la primitiva `Send("executeLeafNode", { taskId })` de LangGraph.
+3. **Ejecución Aislada**: Cada nodo de ejecución inicializa su worktree git aislado (`mh-{runId}-{nodeId}`) y corre `gemini --approval-mode yolo` a través de `RunExecutor.runNode()`.
 
-El método `run()` ejecuta el siguiente ciclo hasta que el grafo completa o falla:
+### El Verify-Loop (Auto-Repair)
 
-1. **Obtener el orden topológico** del `TaskGraph`.
-2. **Preguntar al `BatchScheduler`** cuáles hojas están listas para ejecutar en este momento.
-3. **Lanzar todas las hojas del batch en paralelo** (`Promise.all`) — cada una pasa por su propio ciclo: crear worktree → empaquetar contexto → ejecutar agente → validar scope → commitear resultado → limpiar worktree.
-4. **Recoger resultados.** Cada hoja retorna un `AgentExecutionResult` con su status (`success`, `scope_violation`, `validation_failed`, `empty_diff`, etc.).
-5. **Verificar si algún composite puede integrarse ahora** — cuando todas las hojas de un `integrator` completaron, el RunExecutor invoca `IntegrationAgent.integrate()` para ese composite.
-6. **Repetir** con las hojas que quedaron pendientes.
+Si la validación de tests de una tarea hoja falla en su ejecución inicial, el nodo no falla de inmediato ni pide atención humana. En su lugar, entra en el **Verify-Loop (Auto-Repair)** de hasta **3 reintentos automáticos** (haciendo 4 ejecuciones en total por hoja):
+- Llama a Gemini CLI inyectando el código erróneo y el output de error detallado del build/test.
+- Realiza el fix iterativamente sobre el mismo worktree para conservar el historial.
+- Si el test pasa dentro de los 3 reintentos, el nodo se marca como completado y se publica `node.verify.passed`.
+- Si se agotan los 3 intentos sin éxito, se lanza un `interrupt({ type: "leaf_validation_failed", taskId })` nativo de LangGraph. El StateGraph se suspende, guarda su checkpoint en disco, cambia el estado del run en la base de datos a `paused` y emite una decisión en la UI para la intervención del usuario.
 
-### El ciclo de vida de una hoja
+### Integración y Composición Bottom-Up
 
-Dentro del batch, cada hoja sigue estos pasos secuenciales:
+Cuando todos los hijos de un composite terminan, LangGraph ejecuta el nodo de integración correspondiente llamando al Composer (`IntegrationAgent`).
+- Si el cherry-pick genera conflictos, se aplica reparación semántica basada en `sharedInterface` (1 intento).
+- Si el repair falla, se genera una interrupción nativa `interrupt({ type: "merge_conflict", compositeTaskId })` que suspende el grafo para la resolución manual del usuario.
 
-```
-WorktreeManager.create()
-  → FileSystemContextPacker.pack()
-  → GeminiCliExecutor.execute()
-  → ScopeChecker.check()              ← forbidden: status = scope_violation
-  → ResultRecorder.commit()           ← si diff vacío: status = empty_diff
-  → ValidationRunner.run()            ← si falla: status = validation_failed
-  → WorktreeManager.clean()
-```
+### Amendments y Invalidación en Cascada (Amending Seams)
 
-`ResultRecorder` sigue siendo la frontera D5/D6: el diff viene de git y el
-commit lo hace el orquestador. La validación de hoja corre después de registrar
-el diff/commit de la hoja; si falla, la hoja queda `validation_failed` y no
-participa de integración bottom-up.
+Si el usuario enmienda en caliente la firma de un seam (interfaz) de un nodo ya integrado, o resuelve un conflicto de manera manual que afecta a las dependencias, el motor de enmiendas (`packages/execution-core/src/run/amendments-engine.ts`) entra en acción:
+- Analiza la costura modificada e identifica todos los nodos descendientes (consumidores) en cascada.
+- Marca estos nodos dependientes como `obsolete` en el event log (los registros históricos y evidencias se mantienen como obsoletos, respetando el principio "Obsoleto !== Fallo").
+- Realiza un restablecimiento git de sus branches/worktrees.
+- Invalida los checkpoints futuros y programa el wavefront de re-ejecución del sub-grafo afectado en el scheduler para volver a ejecutarlos en base a las nuevas firmas enmendadas.
 
-Si cualquier paso falla, el estado de la hoja refleja el motivo, pero el batch puede continuar con las otras hojas en paralelo (el error de una hoja no aborta el batch, a menos que sea un error fatal de infraestructura).
+### Trazas y Checkpoints
 
-### Integración bottom-up
-
-Cuando todas las hojas de un `integrator` completan (con cualquier resultado), el RunExecutor invoca al `IntegrationAgent`. Este proceso es recursivo: un composite de nivel 2 puede integrarse solo cuando todos sus composites hijos de nivel 1 ya integraron. El grafo se "sube" de hojas hacia root.
-
-Si la integración de un composite falla (`executor_repair_failed`), ese composite se marca como fallido, lo que bloquea la integración de sus ancestros. El run termina con fallo parcial.
-
-### Trazas
-
-En cada etapa el RunExecutor emite `TraceEvent`s al `TraceStore`: `batch_started`, `worktree_created`, `agent_started`, `executor_started`, `executor_completed`, `scope_check_failed`, `validation_started`, `agent_committed`, `integration_started`, `cherry_pick_attempted`, `cherry_pick_conflict`, `integration_completed`, `batch_completed`, `run_completed`.
-
-Estos eventos son la fuente de la timeline en la web app y el audit trail del run.
-
-### GranularityVector
-
-Al terminar la run (con éxito o con fallo parcial), `computeGranularityVector()` toma el `TaskGraph` y todos los `AgentExecutionResult` y produce el vector de 17 métricas que captura la granularidad y el desempeño. Este vector se persiste como parte del `RunRecord`.
+Todas las transiciones de nodos, salidas de CLI, iteraciones del verify-loop e inicios/cierres de integraciones publican eventos en el `LiveExecutionTraceStore`, el cual alimenta en tiempo real la UI a través del SSE nativo `RunEvent`.
+El checkpointer JSON (`JsonFileCheckpointSaver`) guarda una instantánea exacta del StateGraph en cada paso del flujo. Esto permite recargar instantáneamente el DAG completo desde disco en Next.js Server Components, y habilita el time-travel (viaje en el tiempo/forking) copiando un checkpoint anterior e inicializando un nuevo hilo de ejecución.
 
 ---
 
 ## Interfaces
 
-**Recibe:** `TaskGraph` (aprobado), `runId`, `repoRoot`, y un `ExecutionConfig` con defaults configurables (maxParallel, timeouts, policy de commits inesperados).
+**Recibe:** `RunStateAnnotation` (estado del grafo), `JsonFileCheckpointSaver` para disco y el canal de decisiones para interactuar.
 
-**Produce:** un `RunRecord` con el resultado de cada hoja, el resultado de cada integración, el `GranularityVector`, y el estado final del run.
+**Produce:** `RunExecutionResult` estructurado con la validación de run completa, la rama final aplicada en el repositorio, y el `GranularityVector` de métricas de la tesis.
 
-**Depende de:** `WorktreeManager`, `GeminiCliExecutor` (o mock), `ScopeChecker`, `ResultRecorder`, `ValidationRunner`, `IntegrationAgent`, `BatchScheduler`, `FileSystemContextPacker`, `TraceStore`.
+**Depende de:** `JsonFileCheckpointSaver`, `GroundingAgent`, `RunExecutor`, `IntegrationAgent`, `amendments-engine.ts`, `LiveExecutionTraceStore`.
 
 ---
 
 ## Decisiones de diseño
 
-El `RunExecutor` no implementa la lógica de ninguno de sus sub-componentes — solo los coordina. Esta separación permite testear el pipeline completo con `MockAgentExecutor` sin invocar Gemini real, y permite cambiar el executor (por ejemplo, a otro CLI) sin tocar la lógica de orquestación.
+La migración a LangGraph.js formaliza el ciclo de vida del orquestador y elimina bugs de sincronización y dobles fuentes de verdad. La persistencia de checkpoints basada en archivos JSON es ligera, fácil de leer y testear, y proporciona la base matemática para clonar ejecuciones y contrastar el impacto de la granularidad de manera reproducible.
 
-La integración bottom-up ocurre dentro del loop principal del RunExecutor (no en un paso separado posterior) porque en grafos profundos un composite puede integrarse antes de que las hojas del siguiente nivel estén listas — hay paralelismo potencial entre la integración de un subárbol y la ejecución de otro.

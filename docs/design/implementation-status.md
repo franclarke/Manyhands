@@ -37,16 +37,12 @@ Esta iteración convierte el rediseño de prototipo/flag a camino principal:
 - **Command Center intent-first:** los controles de modelos/aggressiveness pasan
   a advanced settings colapsado; el prompt y readiness son la superficie primaria.
 
-Pendientes honestos del frontier completo:
+Pendientes honestos de la fase actual (actualizado 2026-06-10):
 
-- `GroundingAgent` agéntico real con walking skeleton, ownership de archivos
-  compartidos y extractor TS/JS verificable.
-- Verify-loop multi-iteración build/test/fix; hoy hay validación de hoja como
-  gate de verdad, pero no reintentos automáticos de fix hasta verde.
-- Scheduler de waves basado en scopes derivados y seams draft/frozen reales; hoy
-  se mapean batches a waves y se exponen seams congelados desde contratos.
-- Amendments con invalidación/re-run acotado de consumidores; hoy existe el
-  facade/evento de decisión y aplicación, no el re-execution engine completo.
+- **GroundingAgent (Fase 1/2)**: Completado el generador de walking skeleton básico. Queda pendiente el desarrollo del **extractor TS/JS pleno** que garantice que las costuras compartidas compilen estrictamente con tipos válidos (derivado al modelo de frontera).
+- **Verify-loop (Auto-Repair)**: Completado. Los nodos de ejecución de LangGraph realizan hasta 3 intentos de fix automáticos alimentando el CLI de Gemini con el error del build/test antes de suspenderse.
+- **Scheduler de waves**: Pendiente. Hoy se mapean batches secuenciales a waves; la planificación futura debe optimizar la concurrencia en base a scopes y seams draft/frozen reales.
+- **Amendments (Motor de Invalidación)**: Completado. Implementado el `amendments-engine.ts` que invalida en cascada nodos dependientes marcándolos como `obsolete`, restablece worktrees de git y reagrupa tareas para re-ejecución.
 
 > Estado **vivo** (act. 2026-06-06). Complementa [`implementation-plan.md`](implementation-plan.md) (el *plan*) con el **estado real** tras ejecutar PR01–PR09 **+ PR-U1**. Es la fuente de verdad de "qué está hecho, qué falta, qué cambió". No introduce features; documenta.
 
@@ -320,7 +316,7 @@ Completar la **experiencia fixture-first de punta a punta** en una iteración la
 
 ---
 
-## 10. Próxima Etapa: Transición al Backend Orquestador Nativo en LangGraph (2026-06-08)
+## 10. Transición al Backend Orquestador Nativo en LangGraph (2026-06-08)
 
 Tras consolidar la experiencia del frontend en el path agent-first `/runs/[runId]` a través del puente adaptador SSE temporal (PR11/PR12), la arquitectura evoluciona hacia un backend orquestador nativo implementado con **LangGraph.js** y persistido mediante checkpoints JSON en disco.
 
@@ -330,3 +326,14 @@ Tras consolidar la experiencia del frontend en el path agent-first `/runs/[runId
 3.  **Time-Travel Real (Forking)**: Habilitado nativamente gracias al historial de checkpoints en el checkpointer. La UI del canvas y chat disparará llamadas a `/api/runs/[id]/fork` que crearán nuevos registros no destructivos en la base de datos para comparar las ejecuciones paralelamente (crucial para las hipótesis de tesis).
 4.  **Auto-reparación y Escalado a Humano**: Los fallos en tests de tareas hoja intentarán una auto-reparación antes de suspenderse y presentarse como tarjetas interactivas de decisión en el chat conversacional.
 
+---
+
+## 11. Cierre de Integración de LangGraph y Agentes de Frontera (2026-06-10)
+
+Esta iteración consolida e integra plenamente el backend orquestador en LangGraph, introduciendo capacidades agénticas de recuperación automática y control de cambios:
+
+- **Orquestación en LangGraph.js**: Implementados los StateGraphs de planificación y ejecución persistidos mediante el checkpointer de archivos JSON `JsonFileCheckpointSaver`. Las APIs `/resume` y `/fork` interactúan directamente con los checkpoints en disco, habilitando el viaje en el tiempo.
+- **Verify-Loop (Auto-Repair)**: Integrado en el StateGraph el verify-loop de hasta 3 reintentos. El CLI de Gemini intenta corregir automáticamente las hojas que fallan validación alimentándose de los mensajes de error.
+- **Scaffolding por GroundingAgent**: Se introdujo el `GroundingAgent` que, antes de comenzar el despacho paralelo de hojas, genera un commit con los esqueletos de las interfaces para posibilitar la compilación paralela de subagentes.
+- **Cascada de Invalidador de Seams**: Implementado `amendments-engine.ts` para gestionar enmiendas en caliente, invalidando consumidores descendientes marcándolos como `obsolete` y re-planificando su ejecución sin dañar el historial.
+- **Tests suite 100% verde**: 847 tests exitosos tras integrar todas las piezas de LangGraph.

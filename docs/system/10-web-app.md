@@ -69,74 +69,49 @@ Cuando el run está en `needs_review`, el usuario puede:
 - Regenerar el subárbol de un nodo (nueva llamada al Decomposer)
 - Aprobar el plan completo
 
-Solo cuando el run avanza a `approved` el servidor despacha la ejecución real con el `RunExecutor`.
+Solo cuando el run avanza a `approved` el servidor despacha la ejecución ### SSE y Eventos en Tiempo Real
 
-### SSE: ejecución en tiempo real
+Durante la ejecución, el cliente mantiene una conexión `EventSource` al endpoint nativo `/api/runs/[runId]/run-events`. El servidor lee y empuja en vivo los eventos `RunEvent` del log append-only persistido en formato JSONL para el run. El cliente reduce esta historia localmente usando `run-model/reducer.ts` y proyecta el DAG completo, wavefront, y estado actual a través de selectores puros. Esto evita cualquier tipo de polling y hace que la UI sea reactiva a la orquestación.
 
-Durante la ejecución agent-first, el cliente mantiene una conexión `EventSource`
-al endpoint `/api/runs/[runId]/run-events`. El servidor reenvía eventos
-`RunEvent` nativos desde el log append-only del run, con replay por cursor
-`seq`. El cliente reduce esos eventos con `run-model/reducer.ts` y deriva fase,
-salud, wavefront, decisiones y foco con selectores.
+### Integración con Checkpoints de LangGraph
 
-El endpoint `/api/runs/[runId]/events` sigue existiendo para la UI legacy. Ese
-camino usa `StreamEvent` y puede apoyarse en polling/proyección del `RunRecord`.
-No debe ser el transporte de nuevas superficies agent-first.
+En lugar de reconstruir el estado de la UI haciendo polling del `RunRecord` o deduciendo eventos de manera imperativa, la web app aprovecha los checkpoints JSON generados por `JsonFileCheckpointSaver`:
+- **Carga de Página Directa**: Durante la renderización inicial del Next.js Server Component de la ruta `/runs/[runId]`, el servidor consulta el último checkpoint del StateGraph con `graph.getState()` y pinta el DAG completo con paridad absoluta e inmediata.
+- **Time-Travel (Viaje en el Tiempo / Forking)**: El endpoint `/api/runs/[runId]/fork` permite al usuario seleccionar cualquier checkpoint anterior en la timeline (una decisión previa o un batch anterior), clonar dicho checkpoint JSON bajo un nuevo hilo del motor, crear un registro `RunRecord` no destructivo y arrancar una ejecución alternativa para comparar resultados.
 
-Cada evento agent-first es un envelope `RunEvent` con `seq`, `at`, `runId`,
-`actor`, `type` y `payload`. Los artefactos pesados no viajan embebidos: llegan
-como refs (`diff://`, `log://`, `contract://`, `diagnosis://`,
-`narrative://`) y se resuelven bajo demanda con el artifact resolver.
+### El Canal de Decisiones y Respuestas HITL
 
-Cuando el run termina (con éxito o fallo), el servidor publica `run.completed`
-en el log nativo y la vista de Disposition prioriza evidence, tests, conflicts
-resueltos y métricas.
+Las interrupciones `interrupt()` del StateGraph suspenden el motor y se proyectan en el Canal de Decisiones de la UI. Cuando el usuario responde a una pregunta o resuelve un conflicto en la interfaz, la web app realiza una llamada a `POST /api/runs/[runId]/resume`, la cual inyecta la decisión en el StateGraph y ejecuta `graph.resume()` para continuar el hilo de ejecución interrumpido.
 
-### RunGraphViewModel: la capa de traducción
+### Panel de Foco Polimórfico
 
-El `RunGraphViewModel` es la capa de view-model que traduce un `RunRecord` del core (con su `TaskGraph`, `TraceEvent[]` y `AgentExecutionResult[]`) a los tipos que necesita el canvas (`GraphNodeView[]`, `GraphEdgeView[]`, `GraphStatusCounts`).
-
-Esta traducción existe para separar las preocupaciones: los schemas del core están optimizados para la lógica de orquestación, no para la presentación. El view-model toma decisiones de presentación — qué color tiene un nodo en estado `running`, qué texto mostrar en un edge de tipo `risk`, cómo agregar los conteos de estado — sin contaminar los schemas del core con conceptos de UI.
-
-`GraphNodeView` incluye: id, title, kind, status, phase, depth, riskLevel, durationMs, costUsd, traceCount, y si el nodo es un integrator o tiene gate requerido.
-
-`GraphNodeStatus` cubre todos los estados posibles: `planned`, `ready`, `running`, `gated`, `done`, `failed`, `blocked`, `generating`, `needs_review`, `approved`, `integrated`.
+El antiguo inspector de tareas (`TaskInspector`) ha sido reemplazado por un **Panel de Foco Polimórfico** (`components/run-model/focus-panel.tsx`). Este panel se activa al seleccionar cualquier entidad del espacio de trabajo (nodo, seam/costura, conflicto, decisión o evidencia) y resuelve de forma asíncrona y perezosa (lazy-load) la información profunda relacionada (`diff://`, `log://`, `contract://`, etc.) sin interrumpir el flujo visual del DAG ni mutar el modelo.
 
 ### Lab Mode
 
-El Lab Mode determinístico original (`/lab`, `/replay/demo`, scenarios sobre `mock-v0`/`conflict-v0`) se eliminó en junio 2026. Cuando la formulación de la tesis se cierre, se diseñará un Lab nuevo desde cero adaptado al producto actual. Por ahora la web app expone un único flujo: prompt-only con Gemini real sobre un repo local.
+El Lab Mode determinístico original (`/lab`, `/replay/demo`) se eliminó por completo en junio 2026. La plataforma ahora expone exclusivamente ejecuciones basadas en Gemini CLI real sobre repositorios locales, midiendo el impacto de la granularidad de descomposición de manera real.
 
 ### Workspaces (`/workspaces`)
 
-Configuración de repositorios. Un workspace define el repositorio destino y las instrucciones de contexto de planificación. El workspace se usa cuando se crea un run para provisionar el repo fixture correspondiente.
+Configuración de repositorios. Un workspace define el repositorio destino y las instrucciones de contexto de planificación. El workspace se usa cuando se crea un run para provisionar el repo correspondiente.
 
 ---
 
 ## Interfaces
 
 **El servidor expone:**
-- `POST /api/runs` — crear un run (planning)
-- `GET /api/runs/[runId]/run-events` — stream SSE nativo `RunEvent` para la UI
-  agent-first
-- `GET /api/runs/[runId]/events` — stream SSE legacy (`StreamEvent`) para rollback
-- `POST /api/runs/[runId]/decisions/[decisionId]` — resolver gates humanos
-  unificados (`approve_plan`, `clarify`, `resolve_conflict`,
-  `approve_amendment`, `approve_merge`)
-- `GET /api/runs/[runId]/artifacts?ref=...` — resolver refs lazy de diff, log,
-  contract, conflict diagnosis y evidence
-- `POST /api/runs/[runId]/approve` — aprobar el plan en el flujo legacy
-- `PATCH /api/runs/[runId]/nodes/[nodeId]` — editar un nodo
-- `POST /api/runs/[runId]/nodes/[nodeId]/regenerate` — regenerar subárbol
-
-**El cliente agent-first consume:** `RunEvent[]` nativo + seed mínimo del
-`RunRecord`, traducido por reducer/selectores a view-models. **El cliente
-legacy consume:** `RunRecord` del store JSON, traducido a
-`GraphNodeView[]`/`GraphEdgeView[]` por el `RunGraphViewModel`.
+- `POST /api/runs` — Crear un run e iniciar la planificación interactiva.
+- `GET /api/runs/[runId]/run-events` — Stream SSE nativo `RunEvent` para la UI agent-first.
+- `POST /api/runs/[runId]/resume` — Escribe la respuesta HITL y reanuda el StateGraph de LangGraph.
+- `POST /api/runs/[runId]/fork` — Bifurca un run a partir de un checkpoint histórico.
+- `POST /api/runs/[runId]/decisions/[decisionId]` — Fachada para resolver decisiones interactivas (aprobación de plan, preguntas de decomposer, conflictos de merge).
+- `GET /api/runs/[runId]/artifacts?ref=...` — Resuelve referencias lazy de diffs, logs y contratos para el Panel de Foco.
+- `PATCH /api/runs/[runId]/nodes/[nodeId]` — Editar instrucciones de un nodo de planificación.
 
 ---
 
 ## Decisiones de diseño
 
-El DAG canvas usa React Flow (`@xyflow/react`) en vez de un canvas de píxeles porque los nodos son componentes React — pueden tener estado, pueden recibir props en tiempo real, y pueden incluir cualquier UI dentro de ellos. Un canvas de píxeles requeriría re-renderizar todo el grafo manualmente ante cada cambio de estado; React Flow lo hace de forma incremental.
+El renderizado del DAG utiliza columnas adaptadas a la profundidad del grafo derivadas puramente de selectores, eliminando el componente pesado React Flow para la vista agent-first principal, lo que simplifica la interactividad.
 
-El SSE polling (cada 220ms) en vez de WebSockets es un trade-off deliberado: SSE es unidireccional (servidor → cliente), más simple de implementar con Next.js App Router, y suficiente para la frecuencia de actualizaciones de un run. WebSockets sería más adecuado si el cliente necesitara enviar eventos frecuentes al servidor durante la ejecución, lo que hoy no es el caso.
+La separación entre el StateGraph persistible y la web app mediante API REST limpia permite que el servidor y el cliente se mantengan sincronizados sin acoplamiento temporal: el cliente es una proyección pura del log de eventos y los checkpoints del motor, y el viaje en el tiempo se resuelve duplicando hilos en la base de datos de manera atómica.

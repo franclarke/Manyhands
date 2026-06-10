@@ -11,63 +11,77 @@
 
 ManyHands toma una feature descrita en lenguaje natural y la ejecuta con múltiples agentes LLM trabajando en paralelo. Para lograrlo, primero convierte la descripción en un plan de trabajo estructurado (un DAG jerárquico de tareas), luego ejecuta cada tarea atómica en su propio entorno de git aislado, y finalmente integra los resultados de abajo hacia arriba.
 
-El sistema tiene dos dimensiones simultáneas: es un producto visual (una web app donde el usuario puede ver el DAG, aprobar el plan y monitorear la ejecución en tiempo real) y es un artefacto de investigación (una plataforma para medir cómo la granularidad de descomposición afecta la calidad del output de agentes LLM paralelos).
-
----
-
-## El flujo completo
+El sistema tiene dos dimensiones simultáneas: es un producto visual (una web app donde el usuario puede ver el DAG, aprobar el plan y monitorear la ejecución en tiempo real) y es un artefacto de investigación (una plataforma para medir cómo la granularidad de descomposición afecta la calidad del output de agentes LLM p## El flujo completo
 
 ```
 Feature (lenguaje natural, desde la web app)
         │
         ▼
 ┌─────────────────────────────────────────────────────────┐
-│  GeminiRecursiveDecomposer                               │
-│  Transforma la feature en un DAG jerárquico de tareas.  │
-│  Cada paso de descomposición produce los hijos +        │
-│  las costuras de interfaz (sharedInterface) que         │
-│  los hijos paralelos deben respetar.                    │
+│  planningGraph (LangGraph.js)                           │
+│  Orquesta la descomposición recursiva de la feature     │
+│  mediante GeminiRecursiveDecomposer.                    │
+│  - Produce TaskGraph jerárquico + contratos.            │
+│  - HITL: Si Gemini requiere aclaraciones, se lanza un   │
+│    interrupt() y se pausa en "decision.raised".          │
 └───────────────────────────┬─────────────────────────────┘
                             │  TaskGraph + AgentTaskContracts
                             ▼
-                   [Usuario revisa y aprueba el plan]
+                   [Usuario aprueba el plan]
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────┐
-│  RunExecutor  —  orquestador top-level                  │
+│  executionGraph (LangGraph.js)                          │
+│  Orquesta la ejecución paralela y la integración.       │
 │                                                         │
-│   ┌─── BatchScheduler ────────────────────────────┐    │
-│   │  Agrupa hojas "listas" en batches de hasta 3  │    │
-│   │  respetando dependencias del grafo.            │    │
-│   └────────────────────┬──────────────────────────┘    │
-│                        │  por cada hoja, en paralelo    │
-│                        ▼                               │
-│   ┌─── WorktreeManager ───────────────────────────┐    │
-│   │  Crea un git worktree aislado para la tarea.  │    │
-│   │  Cada hoja parte del mismo baseCommit.        │    │
+│   ┌─── GroundingAgent ────────────────────────────┐    │
+│   │  Genera el walking skeleton (firmas vacías)   │    │
+│   │  de las interfaces en un commit inicial para  │    │
+│   │  que el código compile en paralelo.           │    │
 │   └────────────────────┬──────────────────────────┘    │
 │                        ▼                               │
-│   ┌─── FileSystemContextPacker ───────────────────┐    │
-│   │  Lee archivos del worktree + interfaces        │    │
-│   │  consumidas del contrato → arma el prompt.    │    │
+│   ┌─── Map-Reduce (Send) ─────────────────────────┐    │
+│   │  Despacha en paralelo cada lote de hojas en   │    │
+│   │  nodos independientes de LangGraph.           │    │
 │   └────────────────────┬──────────────────────────┘    │
 │                        ▼                               │
-│   ┌─── GeminiCliExecutor ─────────────────────────┐    │
-│   │  Invoca `gemini --approval-mode yolo` con el  │    │
-│   │  prompt por stdin. El agente trabaja en su    │    │
-│   │  worktree aislado.                            │    │
+│   ┌─── WorktreeManager & GeminiCliExecutor ───────┐    │
+│   │  Crea un worktree de git aislado. Llama a     │    │
+│   │  Gemini CLI para implementar la tarea.        │    │
 │   └────────────────────┬──────────────────────────┘    │
 │                        ▼                               │
-│   ┌─── ScopeChecker ──────────────────────────────┐    │
-│   │  Valida que el agente solo tocó los archivos  │    │
-│   │  permitidos por su contrato. Deny wins.       │    │
+│   ┌─── Verify-Loop (Auto-Fix) ────────────────────┐    │
+│   │  Si los tests fallan, realiza hasta 3         │    │
+│   │  reintentos automáticos de reparación.        │    │
+│   │  HITL: Si agota los 3 reintentos, se lanza   │    │
+│   │  un interrupt() para soporte humano.          │    │
 │   └────────────────────┬──────────────────────────┘    │
 │                        ▼                               │
-│   ┌─── ResultRecorder ────────────────────────────┐    │
-│   │  Captura `git diff HEAD` como verdad. Si      │    │
-│   │  todo pasó, el orquestador hace el commit.    │    │
+│   ┌─── Integration (Composer) ────────────────────┐    │
+│   │  Cherry-pick de cada hijo en el composite.    │    │
+│   │  - Si hay conflicto: repair semántico LLM.    │    │
+│   │  - HITL: Si el repair falla, interrupt()      │    │
+│   │    para resolverlo en la sala de control.     │    │
 │   └────────────────────┬──────────────────────────┘    │
 │                        ▼                               │
+│   ┌─── Run Validation & GranularityVector ────────┐    │
+│   │  Ejecuta la validación general y calcula las  │    │
+│   │  17 métricas del GranularityVector final.     │    │
+│   └───────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+           RunRecord (persistido en JSON)
+          Checkpoints (JsonFileCheckpointSaver)
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────┐
+│  Web App (Sala de Control Agent-First)                  │
+│  Visualiza el StateGraph, expone el inspector de        │
+│  nodos, interactúa vía /resume y /fork (viaje en       │
+│  el tiempo) con los checkpoints persistidos.            │
+└─────────────────────────────────────────────────────────┘
+```�                               │
 │   ┌─── WorktreeManager.clean() ───────────────────┐    │
 │   │  Elimina el worktree del filesystem.          │    │
 │   └───────────────────────────────────────────────┘    │
