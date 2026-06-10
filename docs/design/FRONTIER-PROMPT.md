@@ -47,15 +47,14 @@ Debes trabajar siguiendo este workflow ordenado:
 - Audita el sistema de diseño completo: tokens, layout responsivo multipanel, estados de interacción de botones, canvas, inspector, timelines, y vistas de chat.
 - **Elimina completamente el código muerto legacy** (como `nodeStatusOverrides` o el canvas ineficiente si no se usa) para consolidar el event-model reducer de la UI agent-first.
 
-### Paso 3: Proponer el Plan de Implementación
-Antes de codificar, diseña tu propuesta detallada y escríbela en `implementation_plan.md` en el directorio de artefactos para que el usuario pueda validarla.
-
-### Paso 4: Implementación y Validación
-- Ejecuta las refactorizaciones y mejoras más importantes de una sola pasada larga y sólida.
+### Paso 3: Rediseño e Implementación Autónoma
+- Una vez que comprendas por completo el estado del repositorio y definas tu diseño mentalmente, **procede directamente a implementar los cambios y refactorizaciones** de mayor impacto en una sola pasada larga, con total autonomía y sin requerir planes ni aprobaciones previas de ningún tipo.
 - Asegura que el código final compile de manera limpia y estricta:
-  - `pnpm web:typecheck` e `typecheck` en execution-core no deben arrojar errores.
-- Mantén la suite de tests 100% verde (`pnpm test` -> 847 tests vigentes). Escribe nuevos tests para las features añadidas.
-- Documenta en un archivo `walkthrough.md` qué cambió, por qué, qué quedó pendiente y los siguientes pasos recomendados.
+  - `pnpm web:typecheck` e `typecheck` en execution-core deben dar 0 errores.
+- Mantén la suite de tests 100% verde (`pnpm test` -> 847 tests vigentes). Escribe nuevos tests para las clases o componentes que agregues o modifiques.
+
+### Paso 4: Validación y Documentación Final
+- Escribe un reporte exhaustivo en un archivo `walkthrough.md` en la raíz del repositorio, detallando de forma clara qué cambiaste, los motivos de tus decisiones técnicas, los resultados de tus pruebas y qué puntos quedaron pendientes para continuar más adelante.
 
 ---
 
@@ -65,7 +64,7 @@ Antes de codificar, diseña tu propuesta detallada y escríbela en `implementati
 - `docs/system/`: Documentación paso a paso de cada componente del orquestador.
 - `docs/design/`: Diseños conceptuales, modelos de eventos de la UI y estados del run.
 
-Comienza por confirmar que has leído estas instrucciones y el archivo `CLAUDE.md`. Describe brevemente tu análisis del estado actual del repositorio, destaca la deuda técnica o debilidad de UI/UX más prioritaria que detectes en tu primera inspección, y presenta tu propuesta de plan en el chat para iniciar el trabajo.
+Comienza por confirmar que has leído estas instrucciones y el archivo `CLAUDE.md`. Describe brevemente tu análisis inicial del estado del repositorio, destaca la deuda técnica o debilidad de UI/UX más prioritaria que detectes en tu primera inspección, e inicia directamente la refactorización e implementación autónoma de las mejoras más importantes, sin detenerte a proponer planes de trabajo intermedios ni solicitar aprobación. Tu meta es entregar el software de frontera implementado y documentado en su totalidad al final de tu ejecución.
 
 ---
 

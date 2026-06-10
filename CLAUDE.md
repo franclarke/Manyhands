@@ -74,7 +74,7 @@ Audita su instalación en `apps/web/package.json` y utilízalas de forma consist
 ## 5. Guías de Integración y Trabajo con LangGraph
 
 - **State y Checkpoints**: El StateGraph utiliza checkpoints almacenados en `.manyhands/checkpoints/<runId>/`. Al modificar el StateGraph, asegura que la serialización JSON de `JsonFileCheckpointSaver` no se rompa.
-- **HITL (Human-in-the-Loop)**: Utiliza `interrupt()` nativo de LangGraph en los nodos de planificación (ante preguntas del decomposer o aprobación de plan) y de ejecución (ante conflictos insalvables de merge o agotamiento de los 3 reintentos automáticos del verify-loop).
+- **HITL (Human-in-the-Loop)**: Utiliza `interrupt()` nativo de LangGraph en el flujo de ejecución (ante preguntas aclaratorias del decomposer o conflictos insalvables de merge / agotamiento de reintentos del verify-loop). Se minimiza la intervención humana a decisiones de alto impacto arquitectónico, permitiendo que el sistema decida de manera autónoma en el resto de los flujos.
 - **Time-Travel (Forking)**: El forking clona el checkpoint JSON de un `thread_id` a un nuevo `runId` en la base de datos de manera no destructiva, inicializando un nuevo StateGraph a partir del estado de ese checkpoint.
 
 ---
@@ -110,10 +110,10 @@ Para dar una tarea por completada, debes asegurar los siguientes pasos:
 ## 8. Guía para Sesiones de Alto Esfuerzo (High-Effort / Long Execution)
 
 Cuando operes en modo de alto esfuerzo en esta sesión:
-- **Plan de Trabajo Primero**: Si la tarea es compleja, crea o actualiza `implementation_plan.md` en el directorio de artefactos de Gemini y espera la aprobación.
-- **Paso a Paso Controlado**: Escribe archivos modularmente. Realiza typechecks e integra incrementalmente. No modifiques múltiples partes del sistema a la vez de forma desordenada.
-- **Rastreo de TODOs**: Utiliza `task.md` para marcar tu progreso con `[ ]`, `[/]`, y `[x]`.
-- **Commits de Checkpoint**: Haz commits locales de checkpoints funcionales con la firma de coautoría adecuada:
+- **Autonomía Absoluta de Ejecución**: Se promueve la toma de decisiones independiente. Diseña el enfoque mentalmente e implementa directamente los cambios en código sin requerir propuestas ni aprobaciones humanas intermedias. No debes detenerte a proponer planes de trabajo en el chat ni esperar validaciones externas para comenzar a programar.
+- **Paso a Paso Controlado**: Escribe y edita archivos de forma modular. Realiza typechecks y ejecuta tests incrementalmente. No disperses los cambios en múltiples partes del monorepo sin verificar la estabilidad del código.
+- **Rastreo de TODOs**: Utiliza `task.md` para marcar tu progreso localmente con `[ ]`, `[/]`, y `[x]`.
+- **Commits de Checkpoint**: Registra checkpoints funcionales con commits locales y la firma de coautoría adecuada:
   ```bash
   git commit -m "feat/refactor(modulo): descripcion de la mejora" -m "Co-Authored-By: Claude Fable 5 <claude@anthropic.com>"
   ```
