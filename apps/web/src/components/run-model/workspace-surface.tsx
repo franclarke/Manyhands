@@ -7,7 +7,7 @@
  * paint state is `view.nodes[i].display` (from `selectRenderableNodeState`), never
  * `execution.kind`, so `integrated + stale` shows as "obsolete", never "done".
  *
- * No React Flow / `DagCanvas`: that needs the legacy `RunGraphViewModel` whose
+ * No full React Flow canvas here: the legacy graph view model
  * `status` can't express `obsolete`. A column-by-depth surface stays faithful to
  * the operative model and testable; reconciling the real canvas is future work.
  */

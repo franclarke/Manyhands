@@ -9,7 +9,6 @@ import type {
   TaskGraph
 } from "@manyhands/core";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
-import { buildInspectorView, toRunGraphViewModel } from "@/lib/graph-view-model";
 import { PATCH } from "@/app/api/runs/[id]/nodes/[taskId]/route";
 import { POST as POST_REGEN } from "@/app/api/runs/[id]/nodes/[taskId]/regen/route";
 import { POST as POST_INTEGRATOR } from "@/app/api/runs/[id]/integrator/route";
@@ -245,37 +244,18 @@ describe("editable control plane vertical slice", () => {
     const snapshot = projectRunRecordToSnapshot(run);
     expect(snapshot).not.toBeNull();
 
-    const graph = toRunGraphViewModel(snapshot as RunSnapshot);
-    const node = graph.nodes.find((entry) => entry.id === "task-1");
+    const node = (snapshot as RunSnapshot).graphSnapshot.nodes["task-1"];
     expect(node?.title).toBe("Patched title");
-    expect(node?.manual).toBe(true);
-    expect(node?.authoredBy).toBe("human");
-    expect(node?.executorOverride?.model).toBe("gemini-2.5-flash");
+    expect(node?.metadata?.authoredBy).toBe("human");
+    expect((node?.metadata?.executorOverride as { model?: string } | undefined)?.model).toBe(
+      "gemini-2.5-flash"
+    );
 
-    const inspector = buildInspectorView(snapshot as RunSnapshot, "task-1");
-    expect(inspector?.title).toBe("Patched title");
-    expect(inspector?.contract?.objective).toBe("Patched objective");
-    expect(inspector?.contract?.allowedPaths).toEqual(["src/patched.ts"]);
-    expect(inspector?.contract?.forbiddenPaths).toEqual(["src/forbidden.ts"]);
-    expect(inspector?.contract?.acceptanceCriteria).toEqual(["Patched acceptance"]);
-    expect(inspector?.manual).toBe(true);
-    expect(inspector?.executorOverride?.model).toBe("gemini-2.5-flash");
-  });
-
-  it("does not duplicate canonical and legacy forbidden paths in inspector view", () => {
-    const run = makeRun();
-    const contract = run.planning.decomposition.contracts.find((entry) => entry.taskId === "task-1");
-    expect(contract).toBeDefined();
-
-    contract!.forbidden.paths = ["src/**", "package.json"];
-    contract!.forbiddenPaths = ["src/**", "package.json", ".git/**"];
-
-    const snapshot = projectRunRecordToSnapshot(run);
-    expect(snapshot).not.toBeNull();
-
-    const inspector = buildInspectorView(snapshot as RunSnapshot, "task-1");
-    expect(inspector?.contract?.forbiddenPaths).toEqual(["src/**", "package.json"]);
-    expect(inspector?.contract?.explicitForbiddenPaths).toEqual([".git/**"]);
+    const contract = (snapshot as RunSnapshot).contracts.find((entry) => entry.taskId === "task-1");
+    expect(contract?.objective).toBe("Patched objective");
+    expect(contract?.allowed.paths).toEqual(["src/patched.ts"]);
+    expect(contract?.forbidden.paths).toEqual(["src/forbidden.ts"]);
+    expect(contract?.acceptance.map((entry) => entry.description)).toEqual(["Patched acceptance"]);
   });
 
   it("replays subtree regeneration, integrator creation, and serialization patches", () => {
@@ -505,10 +485,9 @@ describe("editable control plane vertical slice", () => {
 
     const snapshot = projectRunRecordToSnapshot(saved);
     expect(snapshot).not.toBeNull();
-    const graph = toRunGraphViewModel(snapshot as RunSnapshot);
-    const integrator = graph.nodes.find((node) => node.id === patch.taskId);
-    expect(integrator?.integrator).toBe(true);
-    expect(integrator?.manual).toBe(true);
+    const integratorNode = snapshot?.graphSnapshot.nodes[patch.taskId];
+    expect(integratorNode?.metadata?.integrator).toBe(true);
+    expect(integratorNode?.metadata?.authoredBy).toBe("human");
     expect(snapshot?.graphSnapshot.nodes.root?.childrenIds).toContain(patch.taskId);
     expect(snapshot?.graphSnapshot.nodes[patch.taskId]?.dependencies).toEqual(["task-1", "task-2"]);
   });
@@ -835,24 +814,24 @@ describe("projectRunRecordToSnapshot — real execution results", () => {
     expect(snapshot!.agentRunResults).toHaveLength(2);
     expect(snapshot!.metadata.deterministic).toBe(false);
 
-    const task1 = buildInspectorView(snapshot!, "task-1");
-    const task2 = buildInspectorView(snapshot!, "task-2");
-    expect(task1?.status).toBe("done");
-    expect(task2?.status).toBe("failed");
+    const byTask = new Map(snapshot!.agentRunResults.map((result) => [result.taskId, result]));
+    expect(byTask.get("task-1")?.success).toBe(true);
+    expect(byTask.get("task-2")?.success).toBe(false);
   });
 
   it("surfaces the executor stderr as the failure cause in the inspector", () => {
     const snapshot = projectRunRecordToSnapshot(makeFailedRun());
-    const task2 = buildInspectorView(snapshot!, "task-2");
-    expect(task2?.runResult?.success).toBe(false);
-    expect(task2?.runResult?.resultStatus).toBe("executor_error");
-    expect(task2?.runResult?.errorOutput).toContain("Quota exceeded");
+    const task2 = snapshot!.agentRunResults.find((result) => result.taskId === "task-2");
+    expect(task2?.success).toBe(false);
+    expect((task2?.metadata as { status?: string } | undefined)?.status).toBe("executor_error");
+    expect(task2?.stderr).toContain("Quota exceeded");
   });
 
   it("merges persisted execution traces so the trace tab is populated per task", () => {
     const snapshot = projectRunRecordToSnapshot(makeFailedRun());
-    const task2 = buildInspectorView(snapshot!, "task-2");
-    const types = task2?.traceEvents.map((event) => event.type) ?? [];
+    const types = snapshot!.traceEvents
+      .filter((event) => event.taskId === "task-2")
+      .map((event) => event.type);
     expect(types).toContain("executor_started");
     expect(types).toContain("executor_completed");
   });

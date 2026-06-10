@@ -6,7 +6,6 @@
  * The real run workspace consumes `/api/runs/[id]/run-events`, an SSE stream of
  * native agent-first `RunEvent` envelopes. The legacy `/events` stream remains
  * available for rollback, but this path no longer adapts `StreamEvent`s and never
- * feeds `nodeStatusOverrides`.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createInitialRunModel, reduceRunEvents } from "@/lib/run-model/reducer";

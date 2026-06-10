@@ -1,5 +1,19 @@
 import type { RunStatusKey } from "@/lib/api-types";
-import type { GraphNodeStatus, GraphRiskLevel } from "@/lib/graph-view-model";
+// Status vocabularies for run graph projections (formerly graph-view-model).
+export type GraphNodeStatus =
+  | "planned"
+  | "ready"
+  | "running"
+  | "gated"
+  | "done"
+  | "failed"
+  | "blocked"
+  | "generating"
+  | "needs_review"
+  | "approved"
+  | "integrated";
+
+export type GraphRiskLevel = "low" | "medium" | "high" | "blocking";
 
 /**
  * Single source of truth for status → color mapping.
@@ -9,7 +23,7 @@ import type { GraphNodeStatus, GraphRiskLevel } from "@/lib/graph-view-model";
  * 1. Domain colors (`GRAPH_STATUS_COLOR`, `RISK_COLOR`): keyed by the canonical
  *    `GraphNodeStatus` / `GraphRiskLevel` enums. These replace the per-component
  *    `STATUS_COLOR`/`RISK_COLOR` maps that used to be duplicated across
- *    `TaskNodeCard`, `TaskInspector`, `run-board` and `DagCanvas`. Values are
+ *    the run views. Values are
  *    identical to the previous ones — no visual change.
  *
  * 2. UX presentation status (`UiStatus`, `STATUS_META`): the collapsed,

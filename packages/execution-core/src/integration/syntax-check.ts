@@ -26,7 +26,16 @@ export interface SyntaxCheckResult {
 }
 
 const PARSEABLE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"]);
-const CONFLICT_MARKER = /^(<{7}|={7}|>{7})(\s|$)/m;
+const CONFLICT_OPEN = /^(<{7}|>{7})(\s|$)/m;
+const CONFLICT_SEPARATOR = /^={7}(\s|$)/m;
+
+/**
+ * A lone `=======` line is a valid Markdown setext heading; only treat it as a
+ * conflict marker when an open/close marker is also present in the file.
+ */
+function hasConflictMarkers(content: string): boolean {
+  return CONFLICT_OPEN.test(content) || (CONFLICT_SEPARATOR.test(content) && /^<{7}|^>{7}/m.test(content));
+}
 
 /**
  * Validate a set of repaired files (paths relative to worktreePath).
@@ -49,7 +58,7 @@ export async function checkRepairedFiles(params: {
       continue;
     }
 
-    if (CONFLICT_MARKER.test(content)) {
+    if (hasConflictMarkers(content)) {
       findings.push({ file, message: "unresolved git conflict markers (<<<<<<< / ======= / >>>>>>>) remain" });
       continue;
     }

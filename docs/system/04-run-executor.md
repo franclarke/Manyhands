@@ -14,7 +14,7 @@ El `executionGraph` compilado con LangGraph.js es el orquestador formal de la ej
 
 ## Responsabilidad
 
-La orquestación de LangGraph no implementa directamente git ni LLM CLI, sino que define el flujo del grafo de ejecución como una serie de transiciones puras basadas en el estado del run (`RunStateAnnotation`), inyectando dependencias como `executeLeaf`, `repairLeaf`, `integrateComposite` y `validateRun` desde `runner.ts`.
+La orquestación de LangGraph no implementa directamente git ni LLM CLI, sino que define el flujo del grafo de ejecución como una serie de transiciones puras basadas en el estado del run (`RunStateAnnotation`), inyectando dependencias como `executeLeaf`, `repairLeaf`, `integrateComposite`, `validateRun` y `selectWave` desde `apps/web/src/lib/server/runs/execution-host.ts` (reconstruidas siempre desde el RunRecord persistido, para que start y resume cableen idéntico tras un reinicio).
 
 ---
 
@@ -24,26 +24,48 @@ La orquestación de LangGraph no implementa directamente git ni LLM CLI, sino qu
 
 Antes de ejecutar las tareas del grafo, el orquestador invoca al `GroundingAgent` (`packages/execution-core/src/run/grounding-agent.ts`). Este agente analiza las interfaces especificadas en los contratos (`producedInterfaces`) y genera un **walking skeleton** (esqueleto básico con firmas de funciones, imports y archivos vacíos) en un commit inicial en la base del repositorio. Esto garantiza que todos los archivos requeridos existan con las firmas correctas y que las hojas que se ejecutarán en paralelo puedan compilar y testear contra estas costuras desde el primer momento.
 
-### El flujo del StateGraph y Concurrencia
+### El flujo del StateGraph y Concurrencia (wavefront dinámico)
 
-El `executionGraph` utiliza una estructura de Map-Reduce nativa:
-1. **Planificación de batches**: El nodo de planificación calcula el wavefront actual (tareas que no tienen dependencias pendientes).
-2. **Despacho Paralelo**: Por cada tarea hoja lista en el batch actual, se despacha dinámicamente un nodo de ejecución independiente mediante la primitiva `Send("executeLeafNode", { taskId })` de LangGraph.
-3. **Ejecución Aislada**: Cada nodo de ejecución inicializa su worktree git aislado (`mh-{runId}-{nodeId}`) y corre `gemini --approval-mode yolo` a través de `RunExecutor.runNode()`.
+El `executionGraph` usa map-reduce nativo SIN lista de batches precomputada:
+1. **Frontera por superstep**: el conditional edge `routeFrontier` computa en cada
+   superstep las tareas ejecutables (sin resultado y con dependencias resueltas)
+   y delega la selección de la wave en `selectScopeAwareWave`
+   (`@manyhands/scheduler`): scopes que solapan y pares high/blocking de la
+   riskMatrix se serializan; el resto corre en paralelo (D9).
+2. **Despacho paralelo**: la frontera seleccionada se despacha como
+   `Send("executeLeaf", …)` — los Sends salen exclusivamente de conditional
+   edges (patrón válido de LangGraph 1.x) y convergen en la barrera `waveJoin`.
+3. **Ejecución aislada**: cada Send corre `RunExecutor.runNode()` en su worktree
+   git aislado (`.manyhands/worktrees/<runId>/<taskId>`).
+4. **Reducers por identidad**: `leafResults`/`integrationResults` mergean por
+   taskId, de modo que un retry reemplaza el resultado fallido.
 
 ### El Verify-Loop (Auto-Repair)
 
 Si la validación de tests de una tarea hoja falla en su ejecución inicial, el nodo no falla de inmediato ni pide atención humana. En su lugar, entra en el **Verify-Loop (Auto-Repair)** de hasta **3 reintentos automáticos** (haciendo 4 ejecuciones en total por hoja):
-- Llama a Gemini CLI inyectando el código erróneo y el output de error detallado del build/test.
-- Realiza el fix iterativamente sobre el mismo worktree para conservar el historial.
-- Si el test pasa dentro de los 3 reintentos, el nodo se marca como completado y se publica `node.verify.passed`.
-- Si se agotan los 3 intentos sin éxito, se lanza un `interrupt({ type: "leaf_validation_failed", taskId })` nativo de LangGraph. El StateGraph se suspende, guarda su checkpoint en disco, cambia el estado del run en la base de datos a `paused` y emite una decisión en la UI para la intervención del usuario.
+- `RunExecutor.repairLeaf()` re-entra al worktree existente de la hoja
+  (`WorktreeManager.recordFor`), inyecta el output exacto del fallo de
+  validación y conserva el historial.
+- Si la validación pasa dentro del presupuesto de auto-repair, el nodo queda
+  completado y se publica `node.verify.passed`.
+- Si el presupuesto se agota, el resultado fallido entra al estado y el gate
+  puro `leafGate` lanza `interrupt({ type: "leaf_validation_failed" })`. Como el
+  interrupt vive en un nodo barato (no en el nodo de ejecución), reanudar con
+  `Command({ resume })` NO re-ejecuta el executor: `retry_repair` re-despacha la
+  hoja, `accept_failing` desbloquea la integración (el run termina `failed` de
+  forma honesta) y `abort_run` cierra el run.
 
 ### Integración y Composición Bottom-Up
 
-Cuando todos los hijos de un composite terminan, LangGraph ejecuta el nodo de integración correspondiente llamando al Composer (`IntegrationAgent`).
-- Si el cherry-pick genera conflictos, se aplica reparación semántica basada en `sharedInterface` (1 intento).
-- Si el repair falla, se genera una interrupción nativa `interrupt({ type: "merge_conflict", compositeTaskId })` que suspende el grafo para la resolución manual del usuario.
+`integrateNextComposite` integra exactamente UN composite por superstep (cada
+commit de integración queda checkpointeado — resume y time-travel granulares),
+llamando al Composer (`IntegrationAgent`).
+- Si el cherry-pick genera conflictos, se aplica reparación semántica basada en
+  `sharedInterface`, con gate sintáctico AST y reintento con feedback de
+  compilador (ver capítulo 09).
+- Si el repair falla, el gate puro `conflictGate` lanza
+  `interrupt({ type: "merge_conflict", compositeTaskId })`; la decisión vuelve
+  por `Command({ resume })` (`accept_conflict` | `abort_run`).
 
 ### Amendments y Invalidación en Cascada (Amending Seams)
 

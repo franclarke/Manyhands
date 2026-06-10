@@ -5,7 +5,7 @@
  */
 export default function RunLoading(): React.ReactElement {
   return (
-    <div className="mh-fullbleed" aria-busy="true" aria-label="Cargando run">
+    <div className="mh-workspace-frame" aria-busy="true" aria-label="Cargando run">
       <div className="mh-run-page">
         <div className="mh-run-main">
           <header className="mh-run-hero">

@@ -15,7 +15,7 @@
  *    presenter never reads `node.execution.kind`. `integrated + stale` → "obsolete".
  *  - Empty attention is success ("nada requiere tu atención"), never a void.
  *  - No persisted derived state: this is recomputed from the model on every call;
- *    nothing here is stored back on the model (no parallel `nodeStatusOverrides`).
+ *    nothing here is stored back on the model.
  *
  * Static node/seam facts (title, role, depth, parentId, seam name/producer) are
  * read straight from the entities — those are identity, not visual STATE; the

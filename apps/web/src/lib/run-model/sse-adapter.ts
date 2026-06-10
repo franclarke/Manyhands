@@ -10,7 +10,7 @@
  *
  * PURE: no React, no SSE transport, no backend. Input is a plain array (e.g. from
  * `getRunEventHistory(runId)`); output is a plain `RunEvent[]`. Wiring this into
- * `RunCanvasShell`/`useLiveRun` (and removing `nodeStatusOverrides`) is the
+ * the legacy canvas (now removed) was the
  * SEPARATE, gated half of PR 11 — it touches legacy and needs a rollback flag.
  *
  * ── Coarseness (by design) ──────────────────────────────────────────────────

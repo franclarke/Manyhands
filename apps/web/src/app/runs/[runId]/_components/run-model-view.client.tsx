@@ -8,6 +8,8 @@ import { FocusPanel } from "@/components/run-model/focus-panel";
 import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
 import { ChatRuntimeProvider } from "@/components/chat/assistant-provider";
 import { ChatThread } from "@/components/chat/thread";
+import { Group, Panel, useDefaultLayout } from "react-resizable-panels";
+import { ResizeHandle } from "@/components/ui/resize-handle";
 import { ArtifactTabs } from "./artifact-tabs.client";
 import { Play } from "lucide-react";
 
@@ -27,6 +29,10 @@ export function RunModelView({
   const view = useMemo(() => selectMinimalWorkspaceView(model), [model]);
   const focusView = useMemo(() => (focus !== null ? buildFocusView(model, focus) : null), [model, focus]);
 
+  // Persisted, per-arrangement panel layout (with/without the focus panel).
+  const panelIds = focusView !== null ? ["chat", "artifacts", "focus"] : ["chat", "artifacts"];
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({ id: "mh-run-workspace", panelIds });
+
   const onResolve = useCallback(
     (id: string) => {
       const decision = model.decisions.get(id);
@@ -43,7 +49,7 @@ export function RunModelView({
 
   return (
     <ChatRuntimeProvider events={events} onUserMessage={async () => {}}>
-      <div className="flex flex-col w-full h-screen bg-[var(--color-bg)] overflow-hidden font-sans">
+      <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--color-bg)] font-sans">
         {/* Compact Header */}
         <CompactRunHeader
           runId={seed.id}
@@ -54,15 +60,19 @@ export function RunModelView({
           workspaceName={workspaceName}
         />
 
-        {/* 2-Pane Content View */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Conversational Chat (Middle) */}
-          <div className="w-[420px] flex-shrink-0 flex flex-col relative z-10 border-r border-[var(--color-border)]">
+        {/* Resizable multipanel workspace: chat | artifacts | focus.
+            Layout persists per panel arrangement via autoSaveId. */}
+        <Group
+          orientation="horizontal"
+          defaultLayout={defaultLayout}
+          onLayoutChanged={onLayoutChanged}
+          className="flex-1 overflow-hidden"
+        >
+          <Panel id="chat" defaultSize="30%" minSize="240px" maxSize="48%" className="relative z-10 flex h-full min-w-0 flex-col">
             <ChatThread runId={seed.id} model={model} setActiveTab={setActiveTab} />
-          </div>
-
-          {/* Tabbed Artifact Panel (Right) */}
-          <div className="flex-1 flex relative bg-white min-w-0">
+          </Panel>
+          <ResizeHandle />
+          <Panel id="artifacts" minSize="30%" className="flex h-full min-w-0 bg-[var(--color-bg)]">
             <ArtifactTabs
               model={model}
               view={view}
@@ -71,19 +81,26 @@ export function RunModelView({
               activeTab={activeTab}
               onTabChange={setActiveTab}
             />
-
-            {/* Slide-out Inspector Focus Panel */}
-            {focusView !== null && (
-              <div className="w-[380px] h-full flex-shrink-0 border-l border-[var(--color-border)] bg-white shadow-[-12px_0_24px_rgba(0,0,0,0.03)] overflow-y-auto relative z-20">
+          </Panel>
+          {focusView !== null && (
+            <>
+              <ResizeHandle />
+              <Panel
+                id="focus"
+                defaultSize="26%"
+                minSize="280px"
+                maxSize="44%"
+                className="mh-panel-enter relative z-20 h-full overflow-y-auto bg-[var(--color-surface)] shadow-[-12px_0_24px_rgba(0,0,0,0.18)]"
+              >
                 <FocusPanel
                   view={focusView}
                   onClose={() => setFocus(null)}
                   onFocus={setFocus}
                 />
-              </div>
-            )}
-          </div>
-        </div>
+              </Panel>
+            </>
+          )}
+        </Group>
       </div>
     </ChatRuntimeProvider>
   );
@@ -123,7 +140,7 @@ function CompactRunHeader({
             : view.stage === "proposal"
               ? "bg-[var(--status-planning-bg)] text-[var(--status-planning-fg)] border-[var(--status-planning-border)]"
               : view.stage === "running"
-                ? "bg-[var(--status-running-bg)] text-[var(--status-running-fg)] border-[var(--status-running-border)] animate-pulse"
+                ? "bg-[var(--status-running-bg)] text-[var(--status-running-fg)] border-[var(--status-running-border)] mh-working"
                 : "bg-[var(--status-pending-bg)] text-[var(--status-pending-fg)] border-[var(--status-pending-border)]"
         }`}>
           {view.stage}

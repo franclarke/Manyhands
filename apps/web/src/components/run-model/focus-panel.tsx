@@ -39,16 +39,13 @@ export function FocusPanel({
     <aside
       aria-label="Panel de foco"
       style={{
-        position: "sticky",
-        top: 16,
         display: "flex",
         flexDirection: "column",
         gap: 12,
+        minHeight: "100%",
         padding: "14px 16px",
         background: "var(--surface, #1a1915)",
-        border: "1px solid var(--copper, #d08a5a)",
-        borderRadius: "var(--r-md, 8px)",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.3)"
+        borderLeft: "2px solid var(--copper, #d08a5a)"
       }}
     >
       <Header view={view} onClose={onClose} />
@@ -69,21 +66,20 @@ const KIND_LABEL: Record<FocusView["kind"], string> = {
 function Header({ view, onClose }: { view: FocusView; onClose: () => void }): React.ReactElement {
   const title = headerTitle(view);
   return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-      <span
-        style={{
-          fontFamily: "var(--font-mono, monospace)",
-          fontSize: 11,
-          letterSpacing: "0.14em",
-          textTransform: "uppercase",
-          color: "var(--copper, #d08a5a)"
-        }}
-      >
-        Foco · {KIND_LABEL[view.kind]}
-      </span>
-      <strong style={{ fontSize: 15, color: "var(--text-1, #f1ead8)", flex: 1, minWidth: 0, wordBreak: "break-word" }}>
-        {title}
-      </strong>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        <span
+          style={{
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: 11,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            whiteSpace: "nowrap",
+            color: "var(--copper, #d08a5a)"
+          }}
+        >
+          Foco · {KIND_LABEL[view.kind]}
+        </span>
       <button
         type="button"
         onClick={onClose}
@@ -102,6 +98,10 @@ function Header({ view, onClose }: { view: FocusView; onClose: () => void }): Re
       >
         Cerrar ✕
       </button>
+      </div>
+      <strong style={{ fontSize: 15, lineHeight: 1.35, color: "var(--text-1, #f1ead8)", overflowWrap: "break-word" }}>
+        {title}
+      </strong>
     </div>
   );
 }

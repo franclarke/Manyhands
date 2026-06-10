@@ -60,6 +60,12 @@ describe("checkRepairedFiles", () => {
     expect(result.passed).toBe(true);
   });
 
+  it("does not flag a lone setext-style ======= line in Markdown", async () => {
+    await write("NOTES.md", "Titulo\n=======\n\nContenido normal.\n");
+    const result = await checkRepairedFiles({ worktreePath: dir, files: ["NOTES.md"] });
+    expect(result.passed).toBe(true);
+  });
+
   it("does not parse non-code files beyond the marker scan", async () => {
     await write("data.json", "{ definitely: not valid json }");
     const result = await checkRepairedFiles({ worktreePath: dir, files: ["data.json"] });

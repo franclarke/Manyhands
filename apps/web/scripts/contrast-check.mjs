@@ -5,9 +5,14 @@ import { dirname, join } from "node:path";
 const here = dirname(fileURLToPath(import.meta.url));
 const css = readFileSync(join(here, "..", "src", "app", "globals.css"), "utf8");
 
+// First definition wins: the dark block declares the canonical values these
+// dark `--cu-*` surfaces are checked against; the light theme block that
+// follows must not overwrite them.
 const vars = new Map();
 for (const match of css.matchAll(/--([\w-]+):\s*([^;]+);/g)) {
-  vars.set(match[1], match[2].trim());
+  if (!vars.has(match[1])) {
+    vars.set(match[1], match[2].trim());
+  }
 }
 
 const surfaces = ["cu-bg", "cu-surface", "cu-surface-2", "cu-surface-3"];

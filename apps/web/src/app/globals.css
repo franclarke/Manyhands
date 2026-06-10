@@ -86,7 +86,7 @@
   --color-border: rgba(241, 234, 216, 0.16);
   --color-border-soft: rgba(241, 234, 216, 0.075);
   --color-border-strong: rgba(241, 234, 216, 0.26);
-  --color-border-control: rgba(241, 234, 216, 0.38);
+  --color-border-control: rgba(241, 234, 216, 0.50);
   --color-text: var(--cu-ink);
   --color-text-muted: var(--cu-ink-2);
   --color-text-subtle: var(--cu-ink-3);
@@ -167,6 +167,7 @@
   --rule-control: var(--color-border-control);
 
   --text: var(--color-text);
+  --text-1: var(--color-text);
   --text-2: var(--color-text-muted);
   --text-3: var(--color-text-subtle);
   --text-4: var(--color-text-faint);
@@ -257,7 +258,7 @@
   --color-border: rgba(15, 23, 42, 0.10);
   --color-border-soft: rgba(15, 23, 42, 0.05);
   --color-border-strong: rgba(15, 23, 42, 0.16);
-  --color-border-control: rgba(15, 23, 42, 0.18);
+  --color-border-control: rgba(15, 23, 42, 0.45);
   --color-text: var(--cu-ink);
   --color-text-muted: var(--cu-ink-2);
   --color-text-subtle: var(--cu-ink-3);
@@ -833,10 +834,14 @@ textarea:focus-visible {
   letter-spacing: 0;
 }
 
-.mh-fullbleed {
-  width: min(1640px, calc(100vw - 32px));
-  margin-left: 50%;
-  transform: translateX(-50%);
+/* Workspace frame: fills the app shell's main column. (The old viewport
+   breakout hack died with the legacy canvas.) */
+.mh-workspace-frame {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
 }
 
 .mh-coord,
@@ -1025,9 +1030,6 @@ textarea:focus-visible {
 }
 
 @media (max-width: 900px) {
-  .mh-fullbleed {
-    width: min(100vw - 20px, 720px);
-  }
 
   .dag-workspace-shell {
     flex-direction: column;
@@ -1072,4 +1074,26 @@ textarea:focus-visible {
   border: none !important;
   border-radius: 0 !important;
   background: var(--bg) !important;
+}
+
+/* ── Orchestrator micro-animations (F5) ──────────────────────────────
+   `mh-working`: subtle copper shimmer for thinking/executing chrome.
+   `mh-panel-enter`: entrance for the focus inspector panel.
+   Both collapse to static under prefers-reduced-motion. */
+@keyframes mh-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.mh-working {
+  background-image: linear-gradient(100deg, transparent 25%, var(--color-accent-glow) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: mh-shimmer 2.4s linear infinite;
+}
+@keyframes mh-slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: none; }
+}
+.mh-panel-enter { animation: mh-slide-in-right 180ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .mh-working, .mh-panel-enter { animation: none; }
 }

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { AgentTaskContract, RunSnapshot, TaskGraph } from "@manyhands/core";
-import { planReviewApprovalState, planReviewGateState } from "@/lib/plan-review-actions";
 import { buildPlanReviewSummary } from "@/lib/plan-review";
 import type { RunPatch } from "@/lib/server/runs";
 
@@ -98,47 +97,6 @@ describe("plan-review", () => {
       dependenciesRemoved: 1,
       integratorsAdded: 1,
       riskAcknowledgements: 1
-    });
-  });
-
-  it("derives approval CTA state from review status", () => {
-    const clean = buildPlanReviewSummary(makeSnapshot());
-    const warnings = buildPlanReviewSummary(
-      makeSnapshot({
-        contracts: [makeContract({ allowedPaths: [] })]
-      })
-    );
-    const errors = {
-      ...clean!,
-      status: "errors" as const
-    };
-
-    expect(planReviewApprovalState(clean!)).toEqual({ label: "Approve plan", disabled: false });
-    expect(planReviewApprovalState(warnings!)).toEqual({ label: "Approve with warnings", disabled: false });
-    // Block with override: errors no longer hard-disable the gate (the confirm
-    // acknowledges them server-side).
-    expect(planReviewApprovalState(errors)).toEqual({ label: "Approve despite errors", disabled: false });
-  });
-
-  it("opens a review gate and only acknowledges critic errors when errors exist", () => {
-    const clean = buildPlanReviewSummary(makeSnapshot());
-    const errors = {
-      ...clean!,
-      status: "errors" as const,
-      issueCounts: { errors: 2, warnings: 0 }
-    };
-
-    expect(planReviewGateState(null)).toEqual({
-      shouldOpenGate: false,
-      acknowledgeCriticErrorsOnConfirm: false
-    });
-    expect(planReviewGateState(clean!)).toEqual({
-      shouldOpenGate: true,
-      acknowledgeCriticErrorsOnConfirm: false
-    });
-    expect(planReviewGateState(errors)).toEqual({
-      shouldOpenGate: true,
-      acknowledgeCriticErrorsOnConfirm: true
     });
   });
 

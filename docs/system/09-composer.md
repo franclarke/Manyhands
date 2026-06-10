@@ -10,7 +10,7 @@
 > eventos nativos finos de repair (`integration.cherrypick`,
 > `conflict.repair.started`, etc.) siguen reservados hasta que el motor los emita.
 
-> **Actualización 2026-06-10.** La integración de composites se realiza ahora dentro de los nodos correspondientes de LangGraph.js (`integrateCompositeNode`). Si el cherry-pick falla y el repair semántico automático (Composer) no logra resolver el conflicto en un intento, el StateGraph lanza un `interrupt()` nativo. Esto suspende el hilo, guarda la información de conflicto en el checkpoint y delega la decisión al Canal de Decisiones de la UI.
+> **Actualización 2026-06-10.** La integración de composites corre dentro del StateGraph (`integrateNextComposite`, un composite por superstep). El repair semántico incorpora un **gate sintáctico AST** (`integration/syntax-check.ts`): tras cada pasada del executor se escanean marcadores de conflicto y se parsean los archivos TS/JS reparados con el compilador de TypeScript; si el código está malformado, el error exacto del compilador se re-inyecta en una segunda pasada (máx. 2). Código malformado **nunca se commitea**. Si el repair falla definitivamente, el gate `conflictGate` lanza `interrupt()` nativo y la decisión vuelve por `Command({ resume })` desde el Canal de Decisiones.
 
 ---
 
