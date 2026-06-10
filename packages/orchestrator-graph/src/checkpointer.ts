@@ -20,11 +20,18 @@ import type {
   CheckpointTuple,
   CheckpointListOptions,
   ChannelVersions,
-  PendingWrite
+  PendingWrite,
+  CheckpointPendingWrite
 } from "@langchain/langgraph-checkpoint";
 import type { RunnableConfig } from "@langchain/core/runnables";
 import { join } from "node:path";
 import { writeFile, readFile, mkdir, readdir } from "node:fs/promises";
+
+interface PersistedWrite {
+  taskId: string;
+  channel: string;
+  value: unknown;
+}
 
 export class JsonFileCheckpointSaver extends BaseCheckpointSaver {
   private readonly directory: string;
@@ -50,15 +57,31 @@ export class JsonFileCheckpointSaver extends BaseCheckpointSaver {
         config: RunnableConfig;
         parentConfig?: RunnableConfig;
       };
+      const pendingWrites = await this.readPendingWrites(threadId, parsed.checkpoint.id);
       return {
         checkpoint: parsed.checkpoint,
         metadata: parsed.metadata,
         config: parsed.config,
+        ...(pendingWrites.length > 0 ? { pendingWrites } : {}),
         ...(parsed.parentConfig !== undefined ? { parentConfig: parsed.parentConfig } : {})
       };
     } catch {
       return undefined;
     }
+  }
+
+  private async readPendingWrites(threadId: string, checkpointId: string): Promise<CheckpointPendingWrite[]> {
+    try {
+      const content = await readFile(this.writesPath(threadId, checkpointId), "utf-8");
+      const parsed = JSON.parse(content) as PersistedWrite[];
+      return parsed.map((write) => [write.taskId, write.channel, write.value]);
+    } catch {
+      return [];
+    }
+  }
+
+  private writesPath(threadId: string, checkpointId: string): string {
+    return join(this.directory, threadId, `${checkpointId}.writes.json`);
   }
 
   async *list(
@@ -129,16 +152,31 @@ export class JsonFileCheckpointSaver extends BaseCheckpointSaver {
     };
   }
 
+  /**
+   * Persist pending writes for the checkpoint's in-flight superstep. Required
+   * for cross-process HITL resume: the interrupt marker and the outputs of
+   * sibling parallel tasks that finished before the interrupt live here, so a
+   * Command({ resume }) from a fresh process replays nothing.
+   */
   async putWrites(
     config: RunnableConfig,
     writes: PendingWrite[],
     taskId: string
   ): Promise<void> {
-    // Pending writes are ephemeral; we don't need to persist them separately
-    // since the full checkpoint is written on each put() call.
-    void config;
-    void writes;
-    void taskId;
+    const threadId = config.configurable?.["thread_id"] as string | undefined;
+    const checkpointId = config.configurable?.["checkpoint_id"] as string | undefined;
+    if (!threadId || !checkpointId) {
+      throw new Error("JsonFileCheckpointSaver.putWrites: missing thread_id or checkpoint_id");
+    }
+
+    const existing = await this.readPendingWrites(threadId, checkpointId);
+    const merged: PersistedWrite[] = [
+      ...existing.map(([writeTaskId, channel, value]) => ({ taskId: writeTaskId, channel, value })),
+      ...writes.map(([channel, value]) => ({ taskId, channel: String(channel), value }))
+    ];
+
+    await mkdir(join(this.directory, threadId), { recursive: true });
+    await writeFile(this.writesPath(threadId, checkpointId), JSON.stringify(merged, null, 2), "utf-8");
   }
 
   async deleteThread(threadId: string): Promise<void> {

@@ -1,56 +1,158 @@
-# Tareas de Calidad de la Frontera (Roadmap de Rediseño de Backend y Arquitectura)
+# Frontier Roadmap — Backend Orchestration & Control Room (owned by Claude Fable 5)
 
-> **Instrucción Crítica para Claude Fable 5**: Este archivo contiene el roadmap propuesto para el rediseño y optimización profunda del backend y frontend de ManyHands. 
-> **Tú tienes la soberanía y propiedad absoluta sobre este documento**. No te limites a las tareas aquí descritas. Tu primera acción en la sesión de alto esfuerzo debe ser auditar el repositorio, pensar de forma crítica y **reescribir, expandir o reemplazar este archivo** con tus propias propuestas justificadas para llevar el backend (orquestación, LangGraph, Scheduler, Composer y paralelismo) al estado del arte. Una vez definidos tus propios objetivos de frontera en este archivo, impleméntalos con total autonomía.
-
----
-
-## 1. Type Extractor Pleno para el GroundingAgent
-
-### Contexto Actual
-El `GroundingAgent` (`packages/execution-core/src/run/grounding-agent.ts`) genera un walking skeleton básico (archivos vacíos, imports mínimos y firmas vacías) a partir de los contratos del plan aprobado. Esto permite que el código compile, pero el scaffolding es ingenuo en cuanto a firmas complejas y dependencias de tipos externos.
-
-### Objetivo de la Tarea
-Desarrollar un **Extractor de Tipos Pleno (Type Extractor)** que:
-- Analice el AST (Abstract Syntax Tree) de TypeScript del repositorio antes de generar el skeleton.
-- Extraiga con precisión las dependencias de tipos externas, tipos exportados, interfaces y enums de los archivos que las hojas consumirán.
-- Scaffoldee archivos con firmas TypeScript sintácticamente perfectas y tipos robustos (incluyendo generic parameters y type constraints) para garantizar que las implementaciones paralelas no tengan problemas de compilación mutua en strict mode.
+> Reescrito el 2026-06-10 tras la auditoría de alto esfuerzo. Este documento reemplaza
+> el roadmap anterior. Cada tarea incluye el hallazgo que la justifica, el diseño
+> elegido y su estado. Estado: `[x]` hecho · `[/]` en curso · `[ ]` pendiente.
 
 ---
 
-## 2. Scheduler de Waves Adaptativo Basado en Scopes
+## Hallazgos de la auditoría (2026-06-10)
 
-### Contexto Actual
-El programador en LangGraph se apoya en un scheduler que agrupa tareas de manera secuencial u horizontal en batches de tamaño fijo (maxParallel = 6), sin un entendimiento profundo del solapamiento de archivos o dependencias semánticas entre hojas del mismo nivel.
-
-### Objetivo de la Tarea
-Implementar un planificador adaptativo que:
-- Analice el scope de archivos asignados a cada tarea hoja (`executionScope` y `producedInterfaces`).
-- Calcule el solapamiento de archivos entre tareas candidatas a ejecutarse en paralelo (blast radius de colisiones).
-- Agrupe las tareas en **Waves de Ejecución disjuntas**:
-  - Hojas que tocan archivos o módulos completamente independientes se ejecutan simultáneamente.
-  - Hojas con riesgos de solapamiento semántico o conflictos previstos en la matriz se programan secuencialmente en micro-batches o con prioridad dependiente.
-- Optimice dinámicamente el paralelismo maximizando la concurrencia real y reduciendo los conflictos de cherry-pick a nivel de integración.
+1. **El StateGraph de ejecución estaba roto en producción.** `executeBatchNode`
+   retornaba `Send[]` directamente desde un nodo; LangGraph 1.x lo rechaza con
+   `InvalidUpdateError` ("Expected node to return an object or an array containing
+   at least one Command object"). Verificado empíricamente con una sonda contra la
+   librería instalada. Además, `currentBatchIndex` nunca se incrementaba tras
+   despachar un batch (loop infinito latente) y el grafo de ejecución no tenía
+   ningún test.
+2. **El resume HITL no era nativo.** `/api/runs/[id]/resume` mutaba a mano el JSON
+   del checkpoint (`channel_values.userAnswers`) y relanzaba el pipeline con
+   `stream(null)`. Con `interrupt()` nativo eso re-ejecuta el nodo completo (re-corre
+   Gemini) y vuelve a interrumpir: el run quedaba pausado para siempre. Los payloads
+   de decisión que la UI ya enviaba (`action: retry_repair | accept_failing |
+   accept_conflict`) se descartaban.
+3. **Interrupts dentro de nodos caros.** `interrupt()` vivía dentro de
+   `executeLeafNode` (tras ejecutar el executor) y dentro del loop de integración
+   de un único nodo `integrateComposite` monolítico — re-ejecutar en resume
+   significaba repetir trabajo de agente y cherry-picks sobre worktrees sucios.
+4. **El scheduler de riesgo estaba desconectado.** El host LangGraph llamaba a
+   `scheduleTasks` con `riskMatrix: []`, `contracts: {}` y política
+   `parallel_naive`: toda la inteligencia risk-aware existente era letra muerta.
+5. **`runner.ts` era un god-file de 2.382 líneas** que duplicaba dentro de la web
+   app lógica de dominio de `execution-core` (el repair de hojas reconstruía a mano
+   worktrees, recorder, validación) y mezclaba planificación, ejecución, proyección
+   de eventos y revisión de nodos.
+6. **UI legacy viva detrás de `?model=legacy`** (DagCanvas/React Flow, TaskInspector,
+   kanban, timeline) coexistiendo con la sala agent-first, contra la política de
+   cero código legacy.
+7. El Composer no validaba sintácticamente el resultado del repair (podía commitear
+   archivos con marcadores de conflicto), y el GroundingAgent dependía 100% del LLM
+   para el walking skeleton (sin garantía de que compile).
 
 ---
 
-## 3. Composer Avanzado con Validación de AST
+## 1. Execution StateGraph idiomático: wavefront dinámico + gates de decisión `[x]`
 
-### Contexto Actual
-El Composer (`IntegrationAgent` en `packages/execution-core/src/integration/agent.ts`) realiza cherry-picks recursivos de las ramas de hojas. Si ocurre un conflicto de fusion, ejecuta un repair semántico (1 intento con Gemini) usando el contrato y la interfaz como contexto, y luego corre la validación de comandos del composite.
+**Diseño.** Se reescribe el grafo de ejecución con el patrón map-reduce nativo:
 
-### Objetivo de la Tarea
-Fortalecer el Composer agregando:
-- **Validación Sintáctica Post-Repair**: Analizar sintácticamente el código del archivo en conflicto reparado mediante un parser AST rápido (p.ej. `tsc` programático o un parser TS ligero) para certificar que el modelo no generó código malformado antes de intentar commitear.
-- **Estrategia Multi-Intento con Feedback de Compilador**: Si la validación sintáctica o de tipos del repair falla, re-inyectar el error exacto del compilador de TS al Composer en un loop de hasta 2 intentos para que se auto-corrija, en lugar de rendirse de inmediato en HITL.
+```
+START → prepare → [routeFrontier]
+executeLeaf → waveJoin → [routeFrontier]
+leafGate (interrupt) → Command(goto: Send(executeLeaf) | waveJoin)
+[routeFrontier] → integrateNextComposite → [routeIntegration]
+conflictGate (interrupt) → [routeIntegration]
+[routeIntegration] → runValidation → END
+```
+
+- **Wavefront dinámico (sin `currentBatchIndex`)**: `routeFrontier` es un
+  conditional edge que computa la frontera ejecutable (hojas sin resultado cuyas
+  dependencias están resueltas) y despacha `Send`s — el único lugar válido para
+  Sends. La selección de la wave delega en el scheduler scope-aware (tarea 2).
+- **Reducers por identidad**: `leafResults` e `integrationResults` se fusionan por
+  `taskId`/`compositeTaskId` (last-wins), de modo que un retry reemplaza el
+  resultado fallido en lugar de acumular duplicados.
+- **Gates baratos para HITL**: `leafGate` y `conflictGate` son nodos puros cuyo
+  primer statement es `interrupt()`. Re-ejecutarlos en resume es gratis. El valor
+  de resume es la decisión tipada de la UI (`retry_repair`, `accept_failing`,
+  `accept_conflict`, `abort_run`).
+- **Integración incremental**: `integrateNextComposite` integra exactamente un
+  composite por superstep, de modo que cada composite integrado queda checkpointeado
+  (mejor time-travel y resume sin repetir cherry-picks).
+- Suite de tests del grafo completo con deps falsas: paralelismo, waves
+  encadenadas, retry vía gate, accept-failing, conflicto de integración, resume
+  desde checkpoint en disco.
+
+## 2. Scheduler adaptativo basado en scopes (wavefront disjunto) `[x]`
+
+**Diseño.** Nueva función pura `selectScopeAwareWave` en `@manyhands/scheduler`:
+- Firma de scope por tarea: `contract.executionScope.allowedPaths` +
+  `producedInterfaces[].id` (rutas de archivo).
+- Solapamiento conservador de globs por prefijo literal (`src/auth/**` vs
+  `src/auth/login.ts` → solapan; `src/auth/**` vs `src/billing/**` → disjuntos).
+- Pares con riesgo `high`/`blocking` en la matriz de conflictos se serializan
+  siempre (la matriz por fin se conecta al host de ejecución).
+- Greedy en orden topológico: una tarea entra a la wave si no solapa scope ni
+  riesgo con las ya seleccionadas; `maxParallel` es opcional (D9: sin tope
+  artificial por defecto).
+- El host LangGraph pasa la `riskMatrix` real del planning (antes: `[]`).
+
+## 3. Composer con validación AST y reintento con feedback de compilador `[x]`
+
+**Diseño.** `integration/syntax-check.ts` en `execution-core`:
+- Tras cada repair y antes de commitear: scan de marcadores de conflicto en todos
+  los archivos cambiados + diagnóstico sintáctico de TypeScript
+  (`ts.createSourceFile` → parse diagnostics) para `.ts/.tsx/.mts/.cts/.js/.jsx`.
+- Si el repair produjo código malformado, se re-inyecta el error exacto al
+  executor en un segundo intento (máx. 2 por conflicto); si persiste, la
+  integración falla con `executor_repair_failed` y el detalle del diagnóstico.
+
+## 4. Type Extractor pleno para el GroundingAgent `[x]`
+
+**Diseño.** `run/skeleton-scaffolder.ts` en `execution-core`:
+- Scaffolding **determinista** de los `InterfaceContract` cuyo `id` es una ruta
+  `.ts/.tsx`: se generan candidatos (`signature` literal, `export ${signature}`,
+  firma de función con cuerpo `throw new Error("Not implemented")`) y se acepta el
+  primero que parsea limpio con el compilador de TypeScript.
+- **Extracción de tipos del repo**: los identificadores tipo-referencia de la firma
+  se resuelven contra los exports reales del repositorio (scan AST de los archivos
+  fuente) y se emiten imports relativos correctos.
+- El LLM queda como fallback únicamente para contratos que no se pueden scaffoldear
+  de forma determinista; todo archivo creado se valida sintácticamente antes del
+  commit del esqueleto (D6).
+
+## 5. Resume/fork nativos de LangGraph `[x]`
+
+- `/api/runs/[id]/resume` distingue planning (flujo de preguntas existente) de
+  ejecución: para ejecución construye el host compartido y reanuda con
+  `new Command({ resume: decision })` — cero mutación manual de checkpoints.
+- Decisiones tipadas (`ResumeDecision`) compartidas entre la UI y el host.
+- `/fork` sigue clonando checkpoints inmutables (sin cambios de fondo).
+
+## 6. Descomposición del runner god-file `[x]`
+
+- `apps/web/src/lib/server/runs/execution-host.ts`: construcción del grafo
+  compilado + deps (executeLeaf/repairLeaf/integrateComposite/validateRun) y el
+  loop de streaming/interrupt-handling, compartido por start y resume.
+- El repair de hojas se movió a `execution-core` (`RunExecutor.repairLeaf`),
+  eliminando la duplicación de worktree/recorder/validación dentro de la web app.
+- `runner.ts` queda como pipeline de planificación + façade fina de ejecución.
+
+## 7. Eliminación de la UI legacy `[x]`
+
+- Borrados el flag `?model=legacy`, `RunCanvasBinding`, `DagCanvas`,
+  `DagWorkspace`, `RunCanvasShell`, `TaskInspector` y todos los componentes/hooks
+  solo alcanzables desde esa ruta (incl. `useLiveRun`, `nodeStatusOverrides`).
+- `projectRunRecordToSnapshot` y `deriveConflictList` sobreviven como librerías de
+  dominio (las usa el runner para los predicted conflicts del Composer).
+
+## 8. Sala de control multipanel `[x]`
+
+- `react-resizable-panels` instalado e integrado en la superficie agent-first
+  (workspace ⇄ panel de foco redimensionables, con persistencia de layout).
 
 ---
 
-## 4. Refactorización Completa de Vistas Legacy de la Web App
+## Próximas fronteras (pendientes, en orden de valor)
 
-### Contexto Actual
-El frontend cuenta con la sala de control agent-first por defecto detrás del event-model reductor en la ruta `/runs/[runId]`, pero aún existen componentes legados (`DagCanvas` con React Flow, `TaskInspector` legacy, y polling ineficiente) que persisten detrás del flag de rollback `?model=legacy`.
-
-### Objetivo de la Tarea
-- **Eliminación del Código Muerto Legacy**: Borrar de forma segura todas las dependencias y archivos asociados con la UI vieja de canvas, kanban board y timelines, eliminando el hook `useLiveRun` acoplado y la dependencia ineficiente de `nodeStatusOverrides`.
-- **Visor de Evidencia Enriquecido**: Reemplazar los enlaces lazy de solo-ref en el Panel de Foco por visores nativos interactivos (diffs colapsables, logs formateados de terminal con resaltado de sintaxis, trazas de invalidación dinámicas) consumiendo directamente los endpoints `/api/runs/[id]/artifacts?ref=...`.
+- `[ ]` **Planning sobre LangGraph**: portar el pipeline de planificación al
+  planning StateGraph (hoy el grafo existe y está testeado, pero producción corre
+  el flujo event-driven con `DecomposerQuestionError`). Requiere streaming de
+  eventos por nodo desde dentro del grafo (custom stream mode) sin perder los
+  eventos vivos `plan.node.proposed`.
+- `[ ]` **Kill duro de subprocesos** al abortar un run (hoy es cooperativo).
+- `[ ]` **Visor de evidencia enriquecido** en el panel de foco (diffs colapsables,
+  logs con resaltado) sobre `GET /api/runs/[id]/artifacts?ref=...`.
+- `[ ]` **Re-decomposición selectiva** post-amendment: reinyectar nodos `obsolete`
+  en la frontera de ejecución sin re-planificar el árbol entero.
+- `[ ]` **Presupuesto de tokens por wave** con corte adaptativo (budget guard a
+  nivel de scheduler, no solo wall-clock).

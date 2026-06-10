@@ -1,329 +1,534 @@
 /**
  * Execution nodes for the ManyHands LangGraph orchestrator.
  *
- * These nodes handle the execution phase:
- *   - scheduleBatchesNode: topological sort → batch list
- *   - executeLeafNode: runs Gemini CLI in isolated worktree (D4, D5, D6)
- *   - integrateCompositeNode: cherry-pick bottom-up + Composer repair (D8)
- *   - runValidationNode: final run-level validation
+ * Topology contract (see graphs/execution-graph.ts):
  *
- * Design: docs/design/langgraph-orchestrator-design.md §4
- * Invariants: D4 (Gemini CLI only), D5 (git diff HEAD), D6 (orchestrator commits)
+ *   START → prepare → waveJoin ─[routeFrontier]→ Send(executeLeaf)* | leafGate | integrationJoin
+ *   executeLeaf → waveJoin
+ *   leafGate ─Command→ Send(executeLeaf) | waveJoin | END
+ *   integrationJoin ─[routeIntegration]→ integrateNextComposite | conflictGate | runValidation
+ *   integrateNextComposite → integrationJoin
+ *   conflictGate ─Command→ integrationJoin | END
+ *   runValidation → END
+ *
+ * Design principles:
+ *  - Sends are dispatched ONLY from conditional edges (the valid LangGraph
+ *    pattern); nodes never return raw Send arrays.
+ *  - The execution frontier is computed dynamically per superstep (wavefront):
+ *    no precomputed batch list, no batch index to advance.
+ *  - interrupt() lives ONLY in cheap, side-effect-free gate nodes, so resuming
+ *    with Command({ resume }) never re-runs an agent executor or a cherry-pick.
+ *  - integrateNextComposite integrates exactly ONE composite per superstep so
+ *    every integration commit lands in its own checkpoint (granular time-travel).
  */
-import { interrupt, Send } from "@langchain/langgraph";
+import { Command, END, interrupt, Send } from "@langchain/langgraph";
 import type { RunState, RunStateUpdate } from "../state.js";
 import type { AgentExecutionResult, IntegrationResult } from "@manyhands/execution-core";
+import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 
-// ─── scheduleBatchesNode ───────────────────────────────────────────────────
+const INTEGRATION_SUCCESS = new Set(["success", "executor_repair_success"]);
 
-export interface ScheduleBatchesNodeDeps {
-  scheduleTasks: (params: {
-    graph: NonNullable<RunState["graph"]>;
-    maxParallel?: number;
-  }) => Array<{ taskIds: string[] }>;
+// ─── Resume decisions (shared contract with the web UI) ────────────────────
+
+/** Decision payload accepted by the leaf validation gate. */
+export type LeafGateDecision =
+  | { action: "retry_repair"; taskId?: string }
+  | { action: "accept_failing"; taskId?: string }
+  | { action: "abort_run" };
+
+/** Decision payload accepted by the integration conflict gate. */
+export type ConflictGateDecision =
+  | { action: "accept_conflict"; compositeTaskId?: string }
+  | { action: "abort_run" };
+
+export type ResumeDecision = LeafGateDecision | ConflictGateDecision;
+
+/** Interrupt payload raised when a leaf keeps failing after auto-repair. */
+export interface LeafValidationInterrupt {
+  type: "leaf_validation_failed";
+  runId: string;
+  taskId: string;
+  validationOutput: string;
+  autoRepairAttempted: boolean;
 }
 
-/**
- * Converts the task graph into an ordered list of batches for parallel execution.
- * Each batch contains task IDs that can run concurrently.
- */
-export function makeScheduleBatchesNode(deps: ScheduleBatchesNodeDeps) {
-  return function scheduleBatchesNode(state: RunState): RunStateUpdate {
-    if (state.graph === null) {
-      throw new Error("scheduleBatchesNode: graph is null");
-    }
-
-    const batchPlan = deps.scheduleTasks({ graph: state.graph });
-    const batches = batchPlan.map((batch) => batch.taskIds);
-
-    return {
-      batches,
-      currentBatchIndex: 0,
-      status: "running"
-    };
-  };
+/** Interrupt payload raised when integration fails beyond Composer repair. */
+export interface MergeConflictInterrupt {
+  type: "merge_conflict";
+  compositeTaskId: string;
+  status: string;
+  conflictDetails?: { files: string[]; diff: string };
 }
 
-// ─── executeBatchNode ──────────────────────────────────────────────────────
-
-/**
- * Dispatches the current batch of tasks in parallel using LangGraph's Send pattern.
- * Each task runs as an independent `executeLeafNode` invocation.
- *
- * This is the entry point for map-reduce parallel execution (D9: maxParallel=6).
- */
-export function executeBatchNode(state: RunState): Send[] | RunStateUpdate {
-  const { batches, currentBatchIndex } = state;
-  const batch = batches[currentBatchIndex];
-
-  if (batch === undefined || batch.length === 0) {
-    // No more batches — done with leaf execution
-    return { currentBatchIndex: currentBatchIndex + 1 };
+function parseDecision(value: unknown, gate: "leafGate" | "conflictGate"): { action: string } & Record<string, unknown> {
+  if (typeof value === "object" && value !== null && typeof (value as { action?: unknown }).action === "string") {
+    return value as { action: string };
   }
-
-  // Dispatch each task in the batch as a parallel Send
-  return batch.map((taskId) =>
-    new Send("executeLeafNode", {
-      runId: state.runId,
-      taskId,
-      graph: state.graph,
-      repoPath: state.repoPath
-    })
+  throw new Error(
+    `${gate}: invalid resume decision ${JSON.stringify(value)}. Expected { action: string, ... }.`
   );
 }
 
-// ─── executeLeafNode ───────────────────────────────────────────────────────
+// ─── Graph queries (pure helpers over RunState) ────────────────────────────
+
+function requireGraph(state: RunState, node: string): TaskGraph {
+  if (state.taskGraph === null) {
+    throw new Error(`${node}: taskGraph is null`);
+  }
+  return state.taskGraph;
+}
+
+function executableNodes(graph: TaskGraph): TaskNode[] {
+  return Object.values(graph.nodes).filter((node) => node.kind === "leaf" || node.kind === "integrator");
+}
+
+function leafResultFor(state: RunState, taskId: string): AgentExecutionResult | undefined {
+  return state.leafResults.find((result) => result.taskId === taskId);
+}
+
+function leafSucceeded(state: RunState, taskId: string): boolean {
+  return leafResultFor(state, taskId)?.status === "success";
+}
+
+function leafSettled(state: RunState, taskId: string): boolean {
+  if (leafSucceeded(state, taskId)) return true;
+  return leafResultFor(state, taskId) !== undefined && state.acceptedLeafFailures.includes(taskId);
+}
+
+/** Failed executable tasks the human has not yet ruled on. */
+function unhandledLeafFailures(state: RunState): AgentExecutionResult[] {
+  return state.leafResults.filter(
+    (result) => result.status !== "success" && !state.acceptedLeafFailures.includes(result.taskId)
+  );
+}
+
+/** Executable tasks with no result whose dependencies are all successful. */
+function executionFrontier(state: RunState, graph: TaskGraph): string[] {
+  return executableNodes(graph)
+    .filter((node) => leafResultFor(state, node.id) === undefined)
+    .filter((node) =>
+      graph.dependencies
+        .filter((dependency) => dependency.toTaskId === node.id)
+        .every((dependency) => dependencySatisfied(state, graph, dependency.fromTaskId))
+    )
+    .map((node) => node.id)
+    .sort();
+}
+
+/**
+ * A dependency is satisfied when its producer finished successfully — either
+ * as an executable task or, for composite producers, via integration.
+ */
+function dependencySatisfied(state: RunState, graph: TaskGraph, fromTaskId: string): boolean {
+  const producer = graph.nodes[fromTaskId];
+  if (producer === undefined) return true;
+  if (producer.kind === "leaf" || producer.kind === "integrator") {
+    return leafSucceeded(state, fromTaskId);
+  }
+  const integration = state.integrationResults.find((result) => result.compositeTaskId === fromTaskId);
+  return integration !== undefined && INTEGRATION_SUCCESS.has(integration.status);
+}
+
+function unhandledIntegrationFailures(state: RunState): IntegrationResult[] {
+  return state.integrationResults.filter(
+    (result) =>
+      !INTEGRATION_SUCCESS.has(result.status) && !state.acceptedIntegrationFailures.includes(result.compositeTaskId)
+  );
+}
+
+/**
+ * Deepest composite whose children all have settled results and which has not
+ * been integrated yet. Bottom-up order is guaranteed by the depth sort.
+ */
+function nextIntegrableComposite(state: RunState, graph: TaskGraph): TaskNode | undefined {
+  return Object.values(graph.nodes)
+    .filter((node) => (node.kind === "composite" || node.kind === "root") && node.childrenIds.length > 0)
+    .filter((node) => !state.integrationResults.some((result) => result.compositeTaskId === node.id))
+    .filter((node) => node.childrenIds.every((childId) => childSettled(state, graph, childId)))
+    .sort((a, b) => b.depth - a.depth || a.id.localeCompare(b.id))[0];
+}
+
+function childSettled(state: RunState, graph: TaskGraph, childId: string): boolean {
+  const child = graph.nodes[childId];
+  if (child === undefined) return true;
+  if (child.kind === "leaf" || child.kind === "integrator") {
+    return leafSettled(state, childId);
+  }
+  const integration = state.integrationResults.find((result) => result.compositeTaskId === childId);
+  if (integration === undefined) return false;
+  return (
+    INTEGRATION_SUCCESS.has(integration.status) || state.acceptedIntegrationFailures.includes(childId)
+  );
+}
+
+// ─── prepare ───────────────────────────────────────────────────────────────
+
+/** Entry node: asserts the plan exists and flips the run into "running". */
+export function prepareExecutionNode(state: RunState): RunStateUpdate {
+  requireGraph(state, "prepareExecutionNode");
+  return { status: "running", errorMessage: null };
+}
+
+// ─── waveJoin / integrationJoin (superstep barriers) ───────────────────────
+
+/**
+ * No-op barrier nodes. All parallel executeLeaf Sends converge here, so the
+ * frontier router runs exactly once per superstep (LangGraph dedupes a node
+ * activated by several parents within one step).
+ */
+export function waveJoinNode(): RunStateUpdate {
+  return {};
+}
+
+export function integrationJoinNode(): RunStateUpdate {
+  return {};
+}
+
+// ─── routeFrontier (conditional edge) ──────────────────────────────────────
+
+export interface FrontierRouterDeps {
+  /**
+   * Adaptive wave selection: picks the subset of frontier candidates safe to
+   * run concurrently (scope overlap / conflict risk aware). Returning an empty
+   * array is treated as "no constraint" and the full frontier is dispatched.
+   */
+  selectWave?: (params: { graph: TaskGraph; candidates: string[] }) => string[];
+}
+
+/**
+ * Frontier router: dispatches the next wave of executable tasks as parallel
+ * Sends, detours to the leaf gate while failures await a human decision, and
+ * hands over to the integration loop once no executable work remains.
+ */
+export function makeRouteFrontier(deps: FrontierRouterDeps = {}) {
+  return function routeFrontier(state: RunState): Send[] | "leafGate" | "integrationJoin" {
+    const graph = requireGraph(state, "routeFrontier");
+
+    if (unhandledLeafFailures(state).length > 0) {
+      return "leafGate";
+    }
+
+    const candidates = executionFrontier(state, graph);
+    if (candidates.length === 0) {
+      return "integrationJoin";
+    }
+
+    const selected = deps.selectWave?.({ graph, candidates }) ?? candidates;
+    const wave = selected.length > 0 ? selected.filter((id) => candidates.includes(id)) : candidates;
+    const effective = wave.length > 0 ? wave : candidates;
+
+    return effective.map(
+      (taskId) =>
+        new Send("executeLeaf", {
+          runId: state.runId,
+          taskId,
+          graph,
+          repoPath: state.repoPath
+        } satisfies LeafExecutionInput)
+    );
+  };
+}
+
+// ─── executeLeaf ───────────────────────────────────────────────────────────
 
 export interface LeafExecutionInput {
   runId: string;
   taskId: string;
-  graph: NonNullable<RunState["graph"]>;
+  graph: TaskGraph;
   repoPath: string;
 }
 
 export interface ExecuteLeafNodeDeps {
+  /** Execute a single executable task in its isolated worktree (D6/D7). */
+  executeLeaf: (params: LeafExecutionInput) => Promise<{ result: AgentExecutionResult }>;
   /**
-   * Execute a single leaf task using Gemini CLI in an isolated worktree.
-   * Worktree must be named `mh-{runId}-{taskId}` (D6: orchestrator commits).
+   * Attempt an auto-repair pass after a failed validation. Returns null when
+   * repair is unavailable; otherwise the repaired result.
    */
-  executeLeaf: (params: LeafExecutionInput) => Promise<{
-    result: AgentExecutionResult;
-    validationPassed: boolean;
-    validationOutput?: string;
-  }>;
+  repairLeaf?: (
+    params: LeafExecutionInput & { validationOutput: string }
+  ) => Promise<{ result: AgentExecutionResult } | null>;
+  /** Auto-repair budget per execution attempt (default 2). */
+  maxRepairAttempts?: number;
+}
 
-  /**
-   * Attempt auto-repair using Gemini CLI on validation failure.
-   * Returns null if repair was not attempted or failed.
-   */
-  repairLeaf: (params: LeafExecutionInput & { validationOutput: string }) => Promise<{
-    result: AgentExecutionResult;
-    validationPassed: boolean;
-  } | null>;
+function validationOutputOf(result: AgentExecutionResult): string {
+  return result.validationResult?.output ?? result.stderrTail ?? "";
 }
 
 /**
- * Runs a single leaf task. If validation fails, attempts 1 auto-repair.
- * If repair also fails, interrupts for human direction (D3).
- * Invariants: D4 (Gemini CLI), D5 (git diff HEAD), D6 (orchestrator commits).
+ * Runs one executable task; on validation failure, spends the auto-repair
+ * budget. Never interrupts — failed results flow into state and the cheap
+ * leafGate raises the human decision.
  */
 export function makeExecuteLeafNode(deps: ExecuteLeafNodeDeps) {
+  const maxRepairAttempts = Math.max(0, deps.maxRepairAttempts ?? 2);
+
   return async function executeLeafNode(input: LeafExecutionInput): Promise<RunStateUpdate> {
-    const { runId, taskId, graph, repoPath } = input;
-
-    // Execute the leaf task
-    const execution = await deps.executeLeaf({ runId, taskId, graph, repoPath });
-
-    if (execution.validationPassed) {
-      return {
-        leafResults: [execution.result]
-      };
-    }
-
-    // Validation failed — attempt up to 3 auto-repair iterations
-    const maxRepairAttempts = 3;
-    let repairCount = 0;
+    const execution = await deps.executeLeaf(input);
     let lastResult = execution.result;
-    let lastValidationOutput = execution.validationOutput ?? "";
-    let lastRepairResult = null;
 
-    while (repairCount < maxRepairAttempts) {
-      repairCount++;
-      const repairResult = await deps.repairLeaf({
-        runId,
-        taskId,
-        graph,
-        repoPath,
-        validationOutput: lastValidationOutput
-      });
-
-      if (repairResult !== null) {
-        lastRepairResult = repairResult;
-        lastResult = repairResult.result;
-        lastValidationOutput = repairResult.result.validationResult?.output ?? "";
-        if (repairResult.validationPassed) {
-          // Auto-repair succeeded
-          return {
-            leafResults: [repairResult.result]
-          };
-        }
-      } else {
-        // No further repair attempted
-        break;
-      }
+    let attempts = 0;
+    while (lastResult.status !== "success" && attempts < maxRepairAttempts && deps.repairLeaf !== undefined) {
+      attempts += 1;
+      const repaired = await deps.repairLeaf({ ...input, validationOutput: validationOutputOf(lastResult) });
+      if (repaired === null) break;
+      lastResult = repaired.result;
     }
 
-    // Auto-repair failed or not attempted — interrupt for human direction
-    interrupt({
-      type: "leaf_validation_failed",
-      runId,
-      taskId,
-      validationOutput: lastValidationOutput,
-      autoRepairAttempted: repairCount > 0 && lastRepairResult !== null,
-      autoRepairResult: lastResult
-    });
-
-    // After resume: accept the failing result or a user-provided fix
-    return {
-      leafResults: [lastResult]
-    };
+    return { leafResults: [lastResult] };
   };
 }
 
-// ─── integrateCompositeNode ────────────────────────────────────────────────
+// ─── leafGate ──────────────────────────────────────────────────────────────
+
+/**
+ * Pure HITL gate for failed executable tasks. interrupt() is the first
+ * statement, so resuming re-runs only this function — no executor work.
+ * Handles one failure per visit; the frontier router brings it back while
+ * unhandled failures remain.
+ */
+export function leafGateNode(state: RunState): Command<unknown, RunStateUpdate> {
+  const failure = unhandledLeafFailures(state)[0];
+  if (failure === undefined) {
+    return new Command<unknown, RunStateUpdate>({ goto: "waveJoin" });
+  }
+
+  const decision = parseDecision(
+    interrupt({
+      type: "leaf_validation_failed",
+      runId: state.runId,
+      taskId: failure.taskId,
+      validationOutput: validationOutputOf(failure),
+      autoRepairAttempted: true
+    } satisfies LeafValidationInterrupt),
+    "leafGate"
+  );
+
+  switch (decision.action) {
+    case "retry_repair": {
+      const graph = requireGraph(state, "leafGate");
+      return new Command<unknown, RunStateUpdate>({
+        goto: [
+          new Send("executeLeaf", {
+            runId: state.runId,
+            taskId: failure.taskId,
+            graph,
+            repoPath: state.repoPath
+          } satisfies LeafExecutionInput)
+        ]
+      });
+    }
+    case "accept_failing":
+      return new Command<unknown, RunStateUpdate>({
+        update: { acceptedLeafFailures: [failure.taskId] },
+        goto: "waveJoin"
+      });
+    case "abort_run":
+      return new Command<unknown, RunStateUpdate>({
+        update: {
+          status: "failed",
+          errorMessage: `Run aborted by user at leaf gate (task ${failure.taskId}).`
+        },
+        goto: END
+      });
+    default:
+      throw new Error(`leafGate: unsupported action "${decision.action}".`);
+  }
+}
+
+// ─── routeIntegration (conditional edge) ───────────────────────────────────
+
+/**
+ * Integration loop router: surfaces unresolved integration failures to the
+ * conflict gate, feeds the next ready composite to the integrator, and exits
+ * into run-level validation when nothing integrable remains.
+ */
+export function routeIntegration(
+  state: RunState
+): "conflictGate" | "integrateNextComposite" | "runValidation" {
+  const graph = requireGraph(state, "routeIntegration");
+
+  if (unhandledIntegrationFailures(state).length > 0) {
+    return "conflictGate";
+  }
+  if (nextIntegrableComposite(state, graph) !== undefined) {
+    return "integrateNextComposite";
+  }
+  return "runValidation";
+}
+
+// ─── integrateNextComposite ────────────────────────────────────────────────
 
 export interface IntegrateCompositeNodeDeps {
   /**
-   * Integrate children bottom-up using git cherry-pick.
-   * If conflict: attempts 1 Composer repair (D8).
+   * Integrate one composite bottom-up via git cherry-pick + Composer repair
+   * (D8). Child results are passed in dependency order.
    */
   integrateComposite: (params: {
     compositeTaskId: string;
     runId: string;
-    graph: NonNullable<RunState["graph"]>;
+    graph: TaskGraph;
     repoPath: string;
     childResults: AgentExecutionResult[];
   }) => Promise<IntegrationResult & { conflictDetails?: { files: string[]; diff: string } }>;
 }
 
 /**
- * Fuses children's git branches bottom-up via cherry-pick.
- * Attempts 1 Composer semantic repair on conflict (D8).
- * If repair fails, interrupts for user conflict resolution.
+ * Integrates exactly one composite per superstep so each integration commit
+ * is checkpointed individually (granular resume + time-travel forking).
  */
-export function makeIntegrateCompositeNode(deps: IntegrateCompositeNodeDeps) {
-  return async function integrateCompositeNode(state: RunState): Promise<RunStateUpdate> {
-    if (state.graph === null) {
-      throw new Error("integrateCompositeNode: graph is null");
+export function makeIntegrateNextCompositeNode(deps: IntegrateCompositeNodeDeps) {
+  return async function integrateNextCompositeNode(state: RunState): Promise<RunStateUpdate> {
+    const graph = requireGraph(state, "integrateNextComposite");
+    const composite = nextIntegrableComposite(state, graph);
+    if (composite === undefined) {
+      return {};
     }
 
-    const { runId, repoPath, leafResults, integrationResults } = state;
-    const graph = state.graph;
+    const childResults = composite.childrenIds
+      .map((childId) => settledResultFor(state, graph, childId))
+      .filter((result): result is AgentExecutionResult => result !== undefined);
 
-    // Find composites that need integration, bottom-up (deepest first)
-    const composites = Object.values(graph.nodes)
-      .filter((node) => node.kind !== "leaf" && node.childrenIds.length > 0)
-      .sort((a, b) => b.depth - a.depth);
+    const result = await deps.integrateComposite({
+      compositeTaskId: composite.id,
+      runId: state.runId,
+      graph,
+      repoPath: state.repoPath,
+      childResults
+    });
 
-    const newIntegrationResults: IntegrationResult[] = [];
-    const resultByTask = new Map<string, AgentExecutionResult>(
-      leafResults.map((r) => [r.taskId, r])
-    );
-
-    // Also include previous integration results as synthetic leaf results for parent composites
-    for (const ir of integrationResults) {
-      if (ir.integrationCommitSha !== undefined) {
-        resultByTask.set(ir.compositeTaskId, {
-          taskId: ir.compositeTaskId,
-          status: "success",
-          baseHead: ir.integrationCommitSha,
-          currentHead: ir.integrationCommitSha,
-          agentCommittedUnexpectedly: false,
-          diff: "",
-          changedFiles: [],
-          commitSha: ir.integrationCommitSha,
-          scopeCheck: { passed: true, violations: [], outOfScope: [] },
-          executorExitCode: 0,
-          executorDurationMs: 0,
-          executorTimedOut: false,
-          stderrTail: "",
-          stdoutTail: ""
-        } satisfies AgentExecutionResult);
-      }
-    }
-
-    for (const composite of composites) {
-      // Skip if already integrated
-      if (integrationResults.some((ir) => ir.compositeTaskId === composite.id)) {
-        continue;
-      }
-
-      const childResults = composite.childrenIds
-        .map((childId) => resultByTask.get(childId))
-        .filter((r): r is AgentExecutionResult => r !== undefined);
-
-      if (childResults.length !== composite.childrenIds.length) {
-        // Missing child results — skip this composite for now
-        continue;
-      }
-
-      const result = await deps.integrateComposite({
-        compositeTaskId: composite.id,
-        runId,
-        graph,
-        repoPath,
-        childResults
-      });
-
-      newIntegrationResults.push(result);
-
-      const INTEGRATION_SUCCESS = new Set(["success", "executor_repair_success"]);
-      if (!INTEGRATION_SUCCESS.has(result.status)) {
-        // Integration failed even after auto-repair — interrupt for human
-        interrupt({
-          type: "merge_conflict",
-          compositeTaskId: composite.id,
-          status: result.status,
-          conflictDetails: result.conflictDetails
-        });
-      }
-
-      if (result.integrationCommitSha !== undefined) {
-        resultByTask.set(composite.id, {
-          taskId: composite.id,
-          status: "success",
-          baseHead: result.integrationCommitSha,
-          currentHead: result.integrationCommitSha,
-          agentCommittedUnexpectedly: false,
-          diff: "",
-          changedFiles: [],
-          commitSha: result.integrationCommitSha,
-          scopeCheck: { passed: true, violations: [], outOfScope: [] },
-          executorExitCode: 0,
-          executorDurationMs: 0,
-          executorTimedOut: false,
-          stderrTail: "",
-          stdoutTail: ""
-        } satisfies AgentExecutionResult);
-      }
-    }
-
-    return {
-      integrationResults: newIntegrationResults
-    };
+    return { integrationResults: [result] };
   };
 }
 
-// ─── runValidationNode ─────────────────────────────────────────────────────
+/**
+ * Result a parent composite consumes for a settled child: the child's own
+ * execution result, or a synthetic success carrying the integration commit
+ * when the child is itself an integrated composite.
+ */
+function settledResultFor(
+  state: RunState,
+  graph: TaskGraph,
+  childId: string
+): AgentExecutionResult | undefined {
+  const child = graph.nodes[childId];
+  if (child === undefined) return undefined;
+
+  if (child.kind === "leaf" || child.kind === "integrator") {
+    return leafResultFor(state, childId);
+  }
+
+  const integration = state.integrationResults.find((result) => result.compositeTaskId === childId);
+  if (integration?.integrationCommitSha === undefined) return undefined;
+  return syntheticCompositeResult(childId, integration.integrationCommitSha);
+}
+
+function syntheticCompositeResult(taskId: string, commitSha: string): AgentExecutionResult {
+  return {
+    taskId,
+    status: "success",
+    baseHead: commitSha,
+    currentHead: commitSha,
+    agentCommittedUnexpectedly: false,
+    diff: "",
+    changedFiles: [],
+    commitSha,
+    scopeCheck: { passed: true, violations: [], outOfScope: [] },
+    executorExitCode: 0,
+    executorDurationMs: 0,
+    executorTimedOut: false,
+    stderrTail: "",
+    stdoutTail: ""
+  } satisfies AgentExecutionResult;
+}
+
+// ─── conflictGate ──────────────────────────────────────────────────────────
+
+/**
+ * Pure HITL gate for integration failures the Composer could not repair.
+ * Mirrors leafGate: interrupt-first, one failure per visit.
+ */
+export function conflictGateNode(state: RunState): Command<unknown, RunStateUpdate> {
+  const failure = unhandledIntegrationFailures(state)[0];
+  if (failure === undefined) {
+    return new Command<unknown, RunStateUpdate>({ goto: "integrationJoin" });
+  }
+
+  const decision = parseDecision(
+    interrupt({
+      type: "merge_conflict",
+      compositeTaskId: failure.compositeTaskId,
+      status: failure.status,
+      ...(failure.conflictDetails !== undefined
+        ? {
+            conflictDetails: {
+              files: [...failure.conflictDetails.files],
+              diff: failure.conflictDetails.cherryPickOutput
+            }
+          }
+        : {})
+    } satisfies MergeConflictInterrupt),
+    "conflictGate"
+  );
+
+  switch (decision.action) {
+    case "accept_conflict":
+      return new Command<unknown, RunStateUpdate>({
+        update: { acceptedIntegrationFailures: [failure.compositeTaskId] },
+        goto: "integrationJoin"
+      });
+    case "abort_run":
+      return new Command<unknown, RunStateUpdate>({
+        update: {
+          status: "failed",
+          errorMessage: `Run aborted by user at conflict gate (composite ${failure.compositeTaskId}).`
+        },
+        goto: END
+      });
+    default:
+      throw new Error(`conflictGate: unsupported action "${decision.action}".`);
+  }
+}
+
+// ─── runValidation ─────────────────────────────────────────────────────────
 
 export interface RunValidationNodeDeps {
   validateRun: (params: {
     runId: string;
-    graph: NonNullable<RunState["graph"]>;
+    graph: TaskGraph;
     repoPath: string;
+    leafResults: AgentExecutionResult[];
     integrationResults: IntegrationResult[];
   }) => Promise<{ passed: boolean; output?: string }>;
 }
 
-/**
- * Runs final run-level validation after all integration is complete.
- */
+/** Final run-level validation once execution + integration settle. */
 export function makeRunValidationNode(deps: RunValidationNodeDeps) {
   return async function runValidationNode(state: RunState): Promise<RunStateUpdate> {
-    if (state.graph === null) {
-      throw new Error("runValidationNode: graph is null");
-    }
+    const graph = requireGraph(state, "runValidationNode");
+
+    const accepted =
+      state.acceptedLeafFailures.length > 0 || state.acceptedIntegrationFailures.length > 0;
 
     const validation = await deps.validateRun({
       runId: state.runId,
-      graph: state.graph,
+      graph,
       repoPath: state.repoPath,
+      leafResults: state.leafResults,
       integrationResults: state.integrationResults
     });
 
+    const passed = validation.passed && !accepted;
     return {
-      status: validation.passed ? "completed" : "failed",
-      ...(validation.passed ? {} : { errorMessage: validation.output ?? "Run validation failed" })
+      status: passed ? "completed" : "failed",
+      ...(passed
+        ? {}
+        : {
+            errorMessage: accepted
+              ? "Run finished with human-accepted failures."
+              : validation.output ?? "Run validation failed"
+          })
     };
   };
 }

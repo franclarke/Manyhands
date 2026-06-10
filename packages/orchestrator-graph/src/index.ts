@@ -16,7 +16,7 @@ export { JsonFileCheckpointSaver } from "./checkpointer.js";
 export { buildPlanningGraph, resumePlanningGraph } from "./graphs/planning-graph.js";
 export type { PlanningGraphConfig } from "./graphs/planning-graph.js";
 
-export { buildExecutionGraph } from "./graphs/execution-graph.js";
+export { buildExecutionGraph, executionRecursionLimit } from "./graphs/execution-graph.js";
 export type { ExecutionGraphConfig } from "./graphs/execution-graph.js";
 
 export {
@@ -32,16 +32,26 @@ export type {
 } from "./nodes/planning-nodes.js";
 
 export {
-  makeScheduleBatchesNode,
-  executeBatchNode,
+  prepareExecutionNode,
+  waveJoinNode,
+  integrationJoinNode,
+  makeRouteFrontier,
   makeExecuteLeafNode,
-  makeIntegrateCompositeNode,
+  leafGateNode,
+  routeIntegration,
+  makeIntegrateNextCompositeNode,
+  conflictGateNode,
   makeRunValidationNode
 } from "./nodes/execution-nodes.js";
 export type {
-  ScheduleBatchesNodeDeps,
+  FrontierRouterDeps,
   ExecuteLeafNodeDeps,
   IntegrateCompositeNodeDeps,
   RunValidationNodeDeps,
-  LeafExecutionInput
+  LeafExecutionInput,
+  LeafGateDecision,
+  ConflictGateDecision,
+  ResumeDecision,
+  LeafValidationInterrupt,
+  MergeConflictInterrupt
 } from "./nodes/execution-nodes.js";

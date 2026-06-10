@@ -1,82 +1,94 @@
 /**
  * Execution StateGraph for the ManyHands LangGraph orchestrator.
  *
- * Topology:
- *   [Start] → scheduleBatches → executeBatch (Send → parallel executeLeafNode)
- *                │                    ↑
- *           (batch loop)              │ (map-reduce)
- *                │                   ↓
- *           (all batches done) → integrateComposite → runValidation → [END]
+ * Topology (dynamic wavefront map-reduce, D9):
  *
- * Parallel execution uses LangGraph's Send pattern (D9: maxParallel=6).
- * HITL interrupts on leaf validation failure (after 1 auto-repair attempt)
- * and on unresolvable merge conflicts (D8).
+ *   START → prepare → waveJoin ─[routeFrontier]→ Send(executeLeaf)* | leafGate | integrationJoin
+ *   executeLeaf → waveJoin                       (parallel fan-in barrier)
+ *   leafGate ─Command→ Send(executeLeaf) | waveJoin | END
+ *   integrationJoin ─[routeIntegration]→ integrateNextComposite | conflictGate | runValidation
+ *   integrateNextComposite → integrationJoin     (one composite per superstep)
+ *   conflictGate ─Command→ integrationJoin | END
+ *   runValidation → END
  *
- * Design: docs/design/langgraph-orchestrator-design.md §4
+ * Sends are dispatched exclusively from conditional edges; HITL interrupts
+ * live exclusively in the pure gate nodes, resumable with Command({ resume }).
+ *
+ * Design: docs/design/future-frontier-tasks.md §1
  */
-import { StateGraph, END, START, Send } from "@langchain/langgraph";
-import { MemorySaver } from "@langchain/langgraph";
-import { RunStateAnnotation } from "../state.js";
+import { StateGraph, END, START, MemorySaver } from "@langchain/langgraph";
+import { RunStateAnnotation, type RunState } from "../state.js";
 import {
-  makeScheduleBatchesNode,
-  executeBatchNode,
+  conflictGateNode,
+  integrationJoinNode,
+  leafGateNode,
   makeExecuteLeafNode,
-  makeIntegrateCompositeNode,
+  makeIntegrateNextCompositeNode,
+  makeRouteFrontier,
   makeRunValidationNode,
-  type ScheduleBatchesNodeDeps,
+  prepareExecutionNode,
+  routeIntegration,
+  waveJoinNode,
   type ExecuteLeafNodeDeps,
+  type FrontierRouterDeps,
   type IntegrateCompositeNodeDeps,
-  type RunValidationNodeDeps,
-  type LeafExecutionInput
+  type LeafExecutionInput,
+  type RunValidationNodeDeps
 } from "../nodes/execution-nodes.js";
 import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint";
 
 export interface ExecutionGraphConfig {
-  scheduleDeps: ScheduleBatchesNodeDeps;
   leafDeps: ExecuteLeafNodeDeps;
   integrateDeps: IntegrateCompositeNodeDeps;
   validationDeps: RunValidationNodeDeps;
+  frontierDeps?: FrontierRouterDeps;
   checkpointer?: BaseCheckpointSaver;
 }
 
 /**
- * Build the execution sub-graph.
- *
- * The executeBatchNode uses Send to dispatch leaf tasks in parallel.
- * Each executeLeafNode runs independently and returns its result to the
- * parent graph via the leafResults reducer channel.
+ * Build the execution graph. Uses MemorySaver by default (tests); production
+ * callers inject JsonFileCheckpointSaver so checkpoints survive the process.
  */
 export function buildExecutionGraph(config: ExecutionGraphConfig) {
-  const scheduleBatchesNode = makeScheduleBatchesNode(config.scheduleDeps);
   const executeLeafNode = makeExecuteLeafNode(config.leafDeps);
-  const integrateCompositeNode = makeIntegrateCompositeNode(config.integrateDeps);
+  const integrateNextCompositeNode = makeIntegrateNextCompositeNode(config.integrateDeps);
   const runValidationNode = makeRunValidationNode(config.validationDeps);
+  const routeFrontier = makeRouteFrontier(config.frontierDeps ?? {});
 
   const checkpointer = config.checkpointer ?? new MemorySaver();
 
   const graph = new StateGraph(RunStateAnnotation)
-    .addNode("scheduleBatches", scheduleBatchesNode)
-    // executeBatch dispatches Send() for each leaf task
-    .addNode("executeBatch", executeBatchNode)
-    // executeLeafNode runs as a parallel sub-task per Send
-    .addNode("executeLeafNode", async (input: LeafExecutionInput) => executeLeafNode(input))
-    .addNode("integrateComposite", integrateCompositeNode)
+    .addNode("prepare", prepareExecutionNode)
+    .addNode("waveJoin", waveJoinNode)
+    .addNode("executeLeaf", async (input: LeafExecutionInput) => executeLeafNode(input))
+    .addNode("leafGate", leafGateNode, { ends: ["executeLeaf", "waveJoin", END] })
+    .addNode("integrationJoin", integrationJoinNode)
+    .addNode("integrateNextComposite", integrateNextCompositeNode)
+    .addNode("conflictGate", conflictGateNode, { ends: ["integrationJoin", END] })
     .addNode("runValidation", runValidationNode)
-    // Routing
-    .addEdge(START, "scheduleBatches")
-    .addEdge("scheduleBatches", "executeBatch")
-    // After all parallel leaf tasks complete → integrate
-    .addConditionalEdges("executeBatch", (state) => {
-      const allBatchesDone = state.currentBatchIndex >= state.batches.length;
-      if (allBatchesDone) {
-        return "integrateComposite";
-      }
-      return "executeBatch";
-    })
-    // executeLeafNode results fan back in via the reducer; then advance batch
-    .addEdge("executeLeafNode", "executeBatch")
-    .addEdge("integrateComposite", "runValidation")
+    .addEdge(START, "prepare")
+    .addEdge("prepare", "waveJoin")
+    .addConditionalEdges("waveJoin", routeFrontier, ["executeLeaf", "leafGate", "integrationJoin"])
+    .addEdge("executeLeaf", "waveJoin")
+    .addConditionalEdges("integrationJoin", routeIntegration, [
+      "conflictGate",
+      "integrateNextComposite",
+      "runValidation"
+    ])
+    .addEdge("integrateNextComposite", "integrationJoin")
     .addEdge("runValidation", END);
 
-  return graph.compile({ checkpointer, interruptBefore: [] });
+  return graph.compile({ checkpointer });
+}
+
+/**
+ * Recursion budget for a run: each executable task costs ~2 supersteps
+ * (dispatch + join), each composite 2 (integrate + join), plus gates and
+ * fixed overhead. Generous headroom avoids spurious GraphRecursionError on
+ * deep DAGs without masking real livelock (which no longer exists — the
+ * frontier strictly shrinks).
+ */
+export function executionRecursionLimit(state: Pick<RunState, "taskGraph">): number {
+  const nodeCount = state.taskGraph === null ? 0 : Object.keys(state.taskGraph.nodes).length;
+  return Math.max(64, nodeCount * 8 + 32);
 }

@@ -5,11 +5,32 @@
  * that represents the full orchestrator state across planning, execution,
  * and integration phases.
  *
+ * Execution results use identity-merge reducers (last write per task wins) so
+ * a retried leaf REPLACES its failed result instead of accumulating duplicates.
+ *
  * Design: docs/design/langgraph-orchestrator-design.md §3
  */
 import { Annotation } from "@langchain/langgraph";
 import type { TaskGraph } from "@manyhands/task-graph";
 import type { AgentExecutionResult, IntegrationResult } from "@manyhands/execution-core";
+
+/** Merge two result arrays by identity key; incoming entries replace existing ones. */
+function mergeById<T>(keyOf: (item: T) => string): (existing: T[], incoming: T[]) => T[] {
+  return (existing, incoming) => {
+    if (incoming.length === 0) return existing;
+    const merged = new Map(existing.map((item) => [keyOf(item), item]));
+    for (const item of incoming) {
+      merged.set(keyOf(item), item);
+    }
+    return [...merged.values()];
+  };
+}
+
+/** Set-union reducer for accepted-failure id lists. */
+function unionIds(existing: string[], incoming: string[]): string[] {
+  if (incoming.length === 0) return existing;
+  return [...new Set([...existing, ...incoming])];
+}
 
 export const RunStateAnnotation = Annotation.Root({
   runId: Annotation<string>(),
@@ -17,28 +38,37 @@ export const RunStateAnnotation = Annotation.Root({
   workspaceId: Annotation<string>(),
   repoPath: Annotation<string>(),
 
-  // The dynamically generated TaskGraph (software DAG)
-  graph: Annotation<TaskGraph | null>(),
+  // The dynamically generated TaskGraph (software DAG).
+  // Named taskGraph (not `graph`) so Command instances returned by gate nodes
+  // don't structurally collide with Command's own `graph?: string` property.
+  taskGraph: Annotation<TaskGraph | null>(),
 
   // Queues and caching for decomposition
   planningQueue: Annotation<string[]>(),
   planningStepCache: Annotation<Record<string, unknown>>(),
 
-  // Execution scheduler state
-  currentBatchIndex: Annotation<number>(),
-  batches: Annotation<string[][]>(), // array of batches containing task IDs
-
-  // Accumulated results — reducer merges incoming arrays
+  // Accumulated execution results — identity merge so retries replace failures
   leafResults: Annotation<AgentExecutionResult[]>({
-    reducer: (x, y) => x.concat(y),
+    reducer: mergeById((result) => result.taskId),
     default: () => []
   }),
   integrationResults: Annotation<IntegrationResult[]>({
-    reducer: (x, y) => x.concat(y),
+    reducer: mergeById((result) => result.compositeTaskId),
     default: () => []
   }),
 
-  // Human-in-the-loop variables
+  // Failures the human explicitly accepted via the leaf/conflict gates.
+  // Accepting unblocks the frontier; the run still finishes as "failed".
+  acceptedLeafFailures: Annotation<string[]>({
+    reducer: unionIds,
+    default: () => []
+  }),
+  acceptedIntegrationFailures: Annotation<string[]>({
+    reducer: unionIds,
+    default: () => []
+  }),
+
+  // Human-in-the-loop variables (planning phase)
   pendingQuestion: Annotation<{ nodeId: string; question: string; options: string[] } | null>(),
   userAnswers: Annotation<Record<string, string>>({
     reducer: (x, y) => ({ ...x, ...y }),

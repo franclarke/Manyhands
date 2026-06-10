@@ -22,8 +22,7 @@ function makeCheckpoint(id: string): Checkpoint {
     ts: new Date().toISOString(),
     channel_values: { status: "planning", runId: "test-run" },
     channel_versions: {},
-    versions_seen: {},
-    pending_sends: []
+    versions_seen: {}
   };
 }
 
@@ -31,7 +30,6 @@ function makeMetadata(): CheckpointMetadata {
   return {
     source: "loop",
     step: 1,
-    writes: null,
     parents: {}
   };
 }
@@ -68,7 +66,7 @@ describe("JsonFileCheckpointSaver", () => {
     const metadata = makeMetadata();
     const config = makeConfig("thread-1");
 
-    const returnedConfig = await saver.put(config, checkpoint, metadata);
+    const returnedConfig = await saver.put(config, checkpoint, metadata, {});
 
     expect(returnedConfig.configurable?.["thread_id"]).toBe("thread-1");
     expect(returnedConfig.configurable?.["checkpoint_id"]).toBe("cp-001");
@@ -77,7 +75,7 @@ describe("JsonFileCheckpointSaver", () => {
     const tuple = await saver.getTuple(makeConfig("thread-1"));
     expect(tuple).toBeDefined();
     expect(tuple!.checkpoint.id).toBe("cp-001");
-    expect(tuple!.metadata.step).toBe(1);
+    expect(tuple!.metadata?.step).toBe(1);
   });
 
   it("reads a specific checkpoint by ID", async () => {
@@ -85,8 +83,8 @@ describe("JsonFileCheckpointSaver", () => {
     const cp2 = makeCheckpoint("cp-002");
     const config = makeConfig("thread-2");
 
-    await saver.put(config, cp1, makeMetadata());
-    await saver.put(config, cp2, makeMetadata());
+    await saver.put(config, cp1, makeMetadata(), {});
+    await saver.put(config, cp2, makeMetadata(), {});
 
     // Read specific checkpoint
     const tuple = await saver.getTuple(makeConfig("thread-2", "cp-001"));
@@ -96,9 +94,9 @@ describe("JsonFileCheckpointSaver", () => {
 
   it("latest.json always reflects the most recent checkpoint", async () => {
     const config = makeConfig("thread-3");
-    await saver.put(config, makeCheckpoint("cp-001"), makeMetadata());
-    await saver.put(config, makeCheckpoint("cp-002"), makeMetadata());
-    await saver.put(config, makeCheckpoint("cp-003"), makeMetadata());
+    await saver.put(config, makeCheckpoint("cp-001"), makeMetadata(), {});
+    await saver.put(config, makeCheckpoint("cp-002"), makeMetadata(), {});
+    await saver.put(config, makeCheckpoint("cp-003"), makeMetadata(), {});
 
     const latest = await saver.getTuple(makeConfig("thread-3"));
     expect(latest!.checkpoint.id).toBe("cp-003");
@@ -106,9 +104,9 @@ describe("JsonFileCheckpointSaver", () => {
 
   it("lists checkpoints in reverse chronological order", async () => {
     const config = makeConfig("thread-4");
-    await saver.put(config, makeCheckpoint("cp-aaa"), makeMetadata());
-    await saver.put(config, makeCheckpoint("cp-bbb"), makeMetadata());
-    await saver.put(config, makeCheckpoint("cp-ccc"), makeMetadata());
+    await saver.put(config, makeCheckpoint("cp-aaa"), makeMetadata(), {});
+    await saver.put(config, makeCheckpoint("cp-bbb"), makeMetadata(), {});
+    await saver.put(config, makeCheckpoint("cp-ccc"), makeMetadata(), {});
 
     const tuples: string[] = [];
     for await (const tuple of saver.list(makeConfig("thread-4"))) {
@@ -130,6 +128,20 @@ describe("JsonFileCheckpointSaver", () => {
     expect(tuples).toHaveLength(0);
   });
 
+  it("persists pending writes and surfaces them on getTuple", async () => {
+    const config = makeConfig("thread-w");
+    const checkpoint = makeCheckpoint("cp-w1");
+    const returned = await saver.put(config, checkpoint, makeMetadata(), {});
+
+    await saver.putWrites(returned, [["leafResults", [{ taskId: "t1", status: "success" }]]], "task-abc");
+    await saver.putWrites(returned, [["__interrupt__", { value: { type: "leaf_validation_failed" } }]], "task-def");
+
+    const tuple = await saver.getTuple(makeConfig("thread-w"));
+    expect(tuple?.pendingWrites).toHaveLength(2);
+    expect(tuple?.pendingWrites?.[0]).toEqual(["task-abc", "leafResults", [{ taskId: "t1", status: "success" }]]);
+    expect(tuple?.pendingWrites?.[1]?.[0]).toBe("task-def");
+  });
+
   it("stores and preserves channel_values", async () => {
     const checkpoint = makeCheckpoint("cp-data");
     checkpoint.channel_values = {
@@ -138,7 +150,7 @@ describe("JsonFileCheckpointSaver", () => {
       leafResults: [{ taskId: "task-1", status: "success" }]
     };
 
-    await saver.put(makeConfig("thread-5"), checkpoint, makeMetadata());
+    await saver.put(makeConfig("thread-5"), checkpoint, makeMetadata(), {});
     const tuple = await saver.getTuple(makeConfig("thread-5"));
 
     expect(tuple!.checkpoint.channel_values["status"]).toBe("running");

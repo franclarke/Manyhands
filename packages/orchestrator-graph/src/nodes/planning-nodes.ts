@@ -141,7 +141,7 @@ export function makeDecomposeNode(deps: DecomposeNodeDeps) {
     return {
       planningQueue: result.updatedQueue,
       planningStepCache: result.updatedCache,
-      graph: result.graphPatch as any
+      taskGraph: result.graphPatch as any
     };
   };
 }
@@ -149,8 +149,8 @@ export function makeDecomposeNode(deps: DecomposeNodeDeps) {
 // ─── criticNode ────────────────────────────────────────────────────────────
 
 export interface CriticNodeDeps {
-  runPlanCritic: (params: { graph: NonNullable<RunState["graph"]> }) => Promise<CriticResult>;
-  runSeamCritic: (params: { graph: NonNullable<RunState["graph"]> }) => Promise<CriticResult>;
+  runPlanCritic: (params: { graph: NonNullable<RunState["taskGraph"]> }) => Promise<CriticResult>;
+  runSeamCritic: (params: { graph: NonNullable<RunState["taskGraph"]> }) => Promise<CriticResult>;
 }
 
 export interface CriticResult {
@@ -165,13 +165,13 @@ export interface CriticResult {
  */
 export function makeCriticNode(deps: CriticNodeDeps) {
   return async function criticNode(state: RunState): Promise<RunStateUpdate> {
-    if (state.graph === null) {
-      throw new Error("criticNode: graph is null — planningQueue should have produced a graph");
+    if (state.taskGraph === null) {
+      throw new Error("criticNode: taskGraph is null — planningQueue should have produced a graph");
     }
 
     const [planCritic, seamCritic] = await Promise.all([
-      deps.runPlanCritic({ graph: state.graph }),
-      deps.runSeamCritic({ graph: state.graph })
+      deps.runPlanCritic({ graph: state.taskGraph }),
+      deps.runSeamCritic({ graph: state.taskGraph })
     ]);
 
     const allFindings = [
