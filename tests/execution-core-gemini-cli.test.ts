@@ -7,22 +7,29 @@ import { PassThrough } from "node:stream";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-  GeminiCliExecutor,
+  CliAgentExecutor,
+  GEMINI_PROFILE,
   buildGeminiArgs,
-  type AgentExecutorOptions
+  parseGeminiOutcome,
+  type AgentExecutorOptions,
+  type ExecutorRunOutcome
 } from "@manyhands/execution-core";
 
 const execFileAsync = promisify(execFile);
 
-function optionsFor(cwd: string): AgentExecutorOptions {
+function optionsFor(cwd: string, overrides: Partial<AgentExecutorOptions> = {}): AgentExecutorOptions {
   return {
     cwd,
     instructionFilePath: join(cwd, "instructions.txt"),
     model: "gemini-2.5-pro",
     timeoutMs: 300_000,
-    sandboxMode: "workspace-write",
-    bypassApprovals: true
+    bypassApprovals: true,
+    ...overrides
   };
+}
+
+function outcome(partial: Partial<ExecutorRunOutcome>): ExecutorRunOutcome {
+  return { exitCode: 0, stdout: "", stderr: "", timedOut: false, durationMs: 5, ...partial };
 }
 
 /** Minimal ChildProcess double: an EventEmitter with piped stdio. */
@@ -51,33 +58,18 @@ function depsFor(child: ReturnType<typeof fakeChild>) {
 }
 
 describe("buildGeminiArgs", () => {
-  it("threads the model and headless flags; the prompt goes over stdin (-p is only the trigger)", () => {
-    const args = buildGeminiArgs(optionsFor("/repo"));
-    expect(args).toEqual([
+  it("uses yolo approval, structured JSON output, and the stdin directive", () => {
+    expect(buildGeminiArgs(optionsFor("/repo"))).toEqual([
       "--model",
       "gemini-2.5-pro",
       "--approval-mode",
       "yolo",
       "--skip-trust",
       "-o",
-      "text",
+      "json",
       "-p",
       "Follow-instructions-on-stdin"
     ]);
-  });
-
-  it("auto-approves tool calls so a headless run never blocks on a prompt", () => {
-    const args = buildGeminiArgs(optionsFor("/repo"));
-    const idx = args.indexOf("--approval-mode");
-    expect(idx).toBeGreaterThanOrEqual(0);
-    expect(args[idx + 1]).toBe("yolo");
-    expect(args).toContain("--skip-trust");
-  });
-
-  it("maps danger-full-access to the same auto-approve mode (Gemini has no OS sandbox tier)", () => {
-    const args = buildGeminiArgs({ ...optionsFor("/repo"), sandboxMode: "danger-full-access" });
-    const idx = args.indexOf("--approval-mode");
-    expect(args[idx + 1]).toBe("yolo");
   });
 
   it("never passes the instruction text as an argument (it is piped over stdin)", () => {
@@ -86,29 +78,84 @@ describe("buildGeminiArgs", () => {
   });
 });
 
-describe("GeminiCliExecutor (injected spawn)", () => {
-  it("captures stdout/stderr and the exit code on clean close", async () => {
+describe("parseGeminiOutcome", () => {
+  it("extracts the response text and reported token usage from JSON stats", () => {
+    const stdout = JSON.stringify({
+      response: "All files updated.",
+      stats: {
+        models: {
+          "gemini-2.5-pro": { tokens: { prompt: 900, candidates: 180, total: 1080 } }
+        }
+      }
+    });
+
+    const parsed = parseGeminiOutcome(outcome({ stdout }));
+
+    expect(parsed.stdout).toBe("All files updated.");
+    expect(parsed.tokensIn).toBe(900);
+    expect(parsed.tokensOut).toBe(180);
+  });
+
+  it("sums usage across models when several were involved", () => {
+    const stdout = JSON.stringify({
+      response: "done",
+      stats: {
+        models: {
+          "gemini-2.5-pro": { tokens: { prompt: 100, candidates: 20 } },
+          "gemini-2.5-flash": { tokens: { prompt: 40, candidates: 10 } }
+        }
+      }
+    });
+
+    const parsed = parseGeminiOutcome(outcome({ stdout }));
+
+    expect(parsed.tokensIn).toBe(140);
+    expect(parsed.tokensOut).toBe(30);
+  });
+
+  it("surfaces a structured error payload on stderr", () => {
+    const stdout = JSON.stringify({ error: { type: "ApiError", message: "quota exceeded", code: 429 } });
+
+    const parsed = parseGeminiOutcome(outcome({ stdout, exitCode: 1 }));
+
+    expect(parsed.stderr).toContain("quota exceeded");
+  });
+
+  it("passes non-JSON output through untouched", () => {
+    const raw = outcome({ stdout: "plain text response" });
+    expect(parseGeminiOutcome(raw)).toEqual(raw);
+  });
+});
+
+describe("CliAgentExecutor with the Gemini profile (injected spawn)", () => {
+  it("captures stdout/stderr, exit code, and parses structured output", async () => {
     const child = fakeChild();
-    const executor = new GeminiCliExecutor(depsFor(child));
+    const executor = new CliAgentExecutor(GEMINI_PROFILE, depsFor(child));
 
     const promise = executor.execute(optionsFor("/repo"));
-    child.stdout.emit("data", Buffer.from("done\n"));
-    child.stderr.emit("data", Buffer.from("warn\n"));
+    child.stdout.emit(
+      "data",
+      Buffer.from(
+        JSON.stringify({ response: "ok", stats: { models: { m: { tokens: { prompt: 7, candidates: 3 } } } } })
+      )
+    );
     child.emit("close", 0);
 
-    const outcome = await promise;
-    expect(outcome.exitCode).toBe(0);
-    expect(outcome.stdout).toBe("done\n");
-    expect(outcome.stderr).toBe("warn\n");
-    expect(outcome.timedOut).toBe(false);
+    await expect(promise).resolves.toMatchObject({
+      exitCode: 0,
+      stdout: "ok",
+      tokensIn: 7,
+      tokensOut: 3,
+      timedOut: false
+    });
   });
 
   it("invokes onOutput for stdout/stderr chunks as they arrive", async () => {
     const child = fakeChild();
-    const executor = new GeminiCliExecutor(depsFor(child));
+    const executor = new CliAgentExecutor(GEMINI_PROFILE, depsFor(child));
     const chunks: Array<{ stream: "stdout" | "stderr"; chunk: string }> = [];
 
-    const promise = executor.execute({ ...optionsFor("/repo"), onOutput: (chunk) => chunks.push(chunk) });
+    const promise = executor.execute(optionsFor("/repo", { onOutput: (chunk) => chunks.push(chunk) }));
     child.stdout.emit("data", Buffer.from("thinking\n"));
     child.stderr.emit("data", Buffer.from("warning\n"));
     child.emit("close", 0);
@@ -120,28 +167,38 @@ describe("GeminiCliExecutor (injected spawn)", () => {
     ]);
   });
 
-  it("reports a non-zero exit code", async () => {
+  it("reports agent MH_STATUS lines through onAgentStatus while preserving raw output", async () => {
     const child = fakeChild();
-    const executor = new GeminiCliExecutor(depsFor(child));
+    const executor = new CliAgentExecutor(GEMINI_PROFILE, depsFor(child));
+    const statuses: Array<{ message: string }> = [];
+    const chunks: string[] = [];
 
-    const promise = executor.execute(optionsFor("/repo"));
-    child.emit("close", 1);
+    const promise = executor.execute(
+      optionsFor("/repo", {
+        onAgentStatus: (status) => statuses.push(status),
+        onOutput: (chunk) => chunks.push(chunk.chunk)
+      })
+    );
+    child.stdout.emit("data", Buffer.from('MH_STATUS {"message":"scaffolding types"}\n'));
+    child.stdout.emit("data", Buffer.from("regular output\n"));
+    child.emit("close", 0);
+    await promise;
 
-    const outcome = await promise;
-    expect(outcome.exitCode).toBe(1);
-    expect(outcome.timedOut).toBe(false);
+    expect(statuses).toEqual([{ message: "scaffolding types" }]);
+    expect(chunks.join("")).toContain("MH_STATUS");
+    expect(chunks.join("")).toContain("regular output");
   });
 
   it("surfaces a spawn error as a non-zero exit outcome with the cause on stderr", async () => {
     const child = fakeChild();
-    const executor = new GeminiCliExecutor(depsFor(child));
+    const executor = new CliAgentExecutor(GEMINI_PROFILE, depsFor(child));
 
     const promise = executor.execute(optionsFor("/repo"));
     child.emit("error", new Error("spawn gemini ENOENT"));
 
-    const outcome = await promise;
-    expect(outcome.exitCode).toBe(127);
-    expect(outcome.stderr).toContain("ENOENT");
+    const result = await promise;
+    expect(result.exitCode).toBe(127);
+    expect(result.stderr).toContain("ENOENT");
   });
 
   it("kills the process and flags timedOut when the timeout elapses", async () => {
@@ -151,11 +208,11 @@ describe("GeminiCliExecutor (injected spawn)", () => {
       killed = true;
       return true;
     };
-    const executor = new GeminiCliExecutor(depsFor(child));
+    const executor = new CliAgentExecutor(GEMINI_PROFILE, depsFor(child));
 
-    const outcome = await executor.execute({ ...optionsFor("/repo"), timeoutMs: 5 });
-    expect(outcome.timedOut).toBe(true);
-    expect(outcome.exitCode).toBe(124);
+    const result = await executor.execute(optionsFor("/repo", { timeoutMs: 5 }));
+    expect(result.timedOut).toBe(true);
+    expect(result.exitCode).toBe(124);
     expect(killed).toBe(true);
   });
 
@@ -167,22 +224,22 @@ describe("GeminiCliExecutor (injected spawn)", () => {
       return true;
     };
     const controller = new AbortController();
-    const executor = new GeminiCliExecutor(depsFor(child));
+    const executor = new CliAgentExecutor(GEMINI_PROFILE, depsFor(child));
 
-    const promise = executor.execute({ ...optionsFor("/repo"), signal: controller.signal });
+    const promise = executor.execute(optionsFor("/repo", { signal: controller.signal }));
     controller.abort();
 
-    const outcome = await promise;
+    const result = await promise;
     expect(killed).toBe(true);
-    expect(outcome.exitCode).toBe(130);
-    expect(outcome.timedOut).toBe(false);
+    expect(result.exitCode).toBe(130);
+    expect(result.timedOut).toBe(false);
   });
 
   it("returns an aborted outcome without spawning when already aborted", async () => {
     const controller = new AbortController();
     controller.abort();
     let spawned = false;
-    const executor = new GeminiCliExecutor({
+    const executor = new CliAgentExecutor(GEMINI_PROFILE, {
       spawn: () => {
         spawned = true;
         return fakeChild() as never;
@@ -191,16 +248,16 @@ describe("GeminiCliExecutor (injected spawn)", () => {
       useShell: false
     });
 
-    const outcome = await executor.execute({ ...optionsFor("/repo"), signal: controller.signal });
+    const result = await executor.execute(optionsFor("/repo", { signal: controller.signal }));
     expect(spawned).toBe(false);
-    expect(outcome.exitCode).toBe(130);
+    expect(result.exitCode).toBe(130);
   });
 });
 
 // Opt-in E2E: only runs with MANYHANDS_E2E_GEMINI=1 and a real `gemini` on PATH.
 const E2E = process.env.MANYHANDS_E2E_GEMINI === "1";
 
-describe.skipIf(!E2E)("GeminiCliExecutor (real gemini, opt-in)", () => {
+describe.skipIf(!E2E)("Gemini executor (real gemini, opt-in)", () => {
   let workDir: string;
 
   beforeEach(async () => {
@@ -218,12 +275,12 @@ describe.skipIf(!E2E)("GeminiCliExecutor (real gemini, opt-in)", () => {
 
   it("invokes the real gemini binary and returns an outcome", async () => {
     await execFileAsync("gemini", ["--version"]);
-    const executor = new GeminiCliExecutor();
-    const outcome = await executor.execute({
+    const executor = new CliAgentExecutor(GEMINI_PROFILE);
+    const result = await executor.execute({
       ...optionsFor(workDir),
       timeoutMs: 120_000
     });
-    expect(typeof outcome.exitCode).toBe("number");
-    expect(outcome.timedOut).toBe(false);
+    expect(typeof result.exitCode).toBe("number");
+    expect(result.timedOut).toBe(false);
   });
 });

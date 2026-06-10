@@ -1,0 +1,106 @@
+import { EventEmitter } from "node:events";
+import { join } from "node:path";
+import { PassThrough } from "node:stream";
+import { describe, expect, it } from "vitest";
+import {
+  CODEX_EXECUTOR_ID,
+  CODEX_PROFILE,
+  CliAgentExecutor,
+  buildCodexArgs,
+  getExecutorDescriptor,
+  type AgentExecutorOptions
+} from "@manyhands/execution-core";
+
+function optionsFor(cwd: string, overrides: Partial<AgentExecutorOptions> = {}): AgentExecutorOptions {
+  return {
+    cwd,
+    instructionFilePath: join(cwd, "instructions.txt"),
+    model: "gpt-5-codex",
+    timeoutMs: 300_000,
+    bypassApprovals: false,
+    ...overrides
+  };
+}
+
+function fakeChild() {
+  const child = new EventEmitter() as EventEmitter & {
+    stdout: PassThrough;
+    stderr: PassThrough;
+    stdin: PassThrough;
+    kill: (signal?: string) => boolean;
+  };
+  child.stdout = new PassThrough();
+  child.stderr = new PassThrough();
+  child.stdin = new PassThrough();
+  child.kill = () => true;
+  return child;
+}
+
+function depsFor(child: ReturnType<typeof fakeChild>) {
+  return {
+    spawn: () => child as never,
+    readInstructions: async () => "do the thing",
+    useShell: false
+  };
+}
+
+describe("buildCodexArgs", () => {
+  it("runs codex exec headless with a writable sandbox and stdin prompt", () => {
+    expect(buildCodexArgs(optionsFor("/repo"))).toEqual([
+      "exec",
+      "--model",
+      "gpt-5-codex",
+      "--sandbox",
+      "workspace-write",
+      "--skip-git-repo-check",
+      "-"
+    ]);
+  });
+
+  it("swaps the sandbox for full bypass when approvals are bypassed", () => {
+    expect(buildCodexArgs(optionsFor("/repo", { bypassApprovals: true }))).toEqual([
+      "exec",
+      "--model",
+      "gpt-5-codex",
+      "--dangerously-bypass-approvals-and-sandbox",
+      "--skip-git-repo-check",
+      "-"
+    ]);
+  });
+});
+
+describe("Codex executor registry entry", () => {
+  it("is enabled with gpt-5-codex as default model", () => {
+    const descriptor = getExecutorDescriptor(CODEX_EXECUTOR_ID);
+    expect(descriptor.enabled).toBe(true);
+    expect(descriptor.defaultModel).toBe("gpt-5-codex");
+    expect(descriptor.binaryEnvVar).toBe("MANYHANDS_CODEX_BIN");
+  });
+});
+
+describe("CliAgentExecutor with the Codex profile (injected spawn)", () => {
+  it("captures stdout/stderr and exit code", async () => {
+    const child = fakeChild();
+    const executor = new CliAgentExecutor(CODEX_PROFILE, depsFor(child));
+
+    const promise = executor.execute(optionsFor("/repo"));
+    child.stdout.emit("data", Buffer.from("implemented\n"));
+    child.emit("close", 0);
+
+    await expect(promise).resolves.toMatchObject({
+      exitCode: 0,
+      stdout: "implemented\n",
+      timedOut: false
+    });
+  });
+
+  it("surfaces spawn errors as non-zero outcomes", async () => {
+    const child = fakeChild();
+    const executor = new CliAgentExecutor(CODEX_PROFILE, depsFor(child));
+
+    const promise = executor.execute(optionsFor("/repo"));
+    child.emit("error", new Error("spawn codex ENOENT"));
+
+    await expect(promise).resolves.toMatchObject({ exitCode: 127, timedOut: false });
+  });
+});

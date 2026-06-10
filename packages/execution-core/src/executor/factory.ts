@@ -1,22 +1,24 @@
-import { ClaudeCodeCliExecutor, type ClaudeCodeCliExecutorDeps } from "./claude-code-cli";
-import { GeminiCliExecutor, type GeminiCliExecutorDeps } from "./gemini-cli";
-import {
-  CLAUDE_CODE_EXECUTOR_ID,
-  GEMINI_EXECUTOR_ID,
-  getExecutorDescriptor,
-  type ExecutorId,
-  type ExecutorSelection
-} from "./registry";
+import { CliAgentExecutor, type CliExecutorDeps, type CliExecutorProfile } from "./cli-executor";
+import { CLAUDE_CODE_PROFILE } from "./profiles/claude-code";
+import { CODEX_PROFILE } from "./profiles/codex";
+import { GEMINI_PROFILE } from "./profiles/gemini";
+import { getExecutorDescriptor, type ExecutorId, type ExecutorSelection } from "./registry";
 import type { AgentExecutor } from "./types";
 
 export interface AgentExecutorFactory {
   create(selection: ExecutorSelection): AgentExecutor;
 }
 
-export interface DefaultAgentExecutorFactoryDeps {
-  gemini?: GeminiCliExecutorDeps;
-  claude?: ClaudeCodeCliExecutorDeps;
-}
+/**
+ * Profile registry: the data that makes the factory generic. Adding a CLI is a
+ * profile + a registry descriptor — never a code change in the factory itself.
+ */
+const CLI_PROFILES: ReadonlyMap<ExecutorId, CliExecutorProfile> = new Map(
+  [GEMINI_PROFILE, CLAUDE_CODE_PROFILE, CODEX_PROFILE].map((profile) => [profile.id, profile])
+);
+
+/** Per-executor dependency overrides (binary path, injected spawn for tests). */
+export type DefaultAgentExecutorFactoryDeps = Partial<Record<ExecutorId, CliExecutorDeps>>;
 
 export class DefaultAgentExecutorFactory implements AgentExecutorFactory {
   private readonly deps: DefaultAgentExecutorFactoryDeps;
@@ -37,20 +39,14 @@ export class DefaultAgentExecutorFactory implements AgentExecutorFactory {
       return cached;
     }
 
-    const executor = this.build(selection.executorId);
+    const profile = CLI_PROFILES.get(selection.executorId);
+    if (profile === undefined) {
+      throw new Error(`Executor "${selection.executorId}" has no CLI profile implemented.`);
+    }
+
+    const executor = new CliAgentExecutor(profile, this.deps[selection.executorId] ?? {});
     this.cache.set(selection.executorId, executor);
     return executor;
-  }
-
-  private build(executorId: ExecutorId): AgentExecutor {
-    switch (executorId) {
-      case GEMINI_EXECUTOR_ID:
-        return new GeminiCliExecutor(this.deps.gemini);
-      case CLAUDE_CODE_EXECUTOR_ID:
-        return new ClaudeCodeCliExecutor(this.deps.claude);
-      default:
-        throw new Error(`Executor "${executorId}" is not implemented.`);
-    }
   }
 }
 

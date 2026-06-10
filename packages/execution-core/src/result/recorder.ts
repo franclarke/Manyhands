@@ -2,6 +2,7 @@ import type { ExecutionScope } from "@manyhands/contracts";
 import type { TraceStore } from "@manyhands/trace-store";
 
 import { execError, execLog, execWarn } from "../logging/log";
+import { classifyExecutorFailure } from "../executor/failure";
 import type { ExecutorRunOutcome } from "../executor/types";
 import type { GitRunner } from "../git/runner";
 import { ScopeChecker } from "../scope/checker";
@@ -62,6 +63,14 @@ export class ResultRecorder {
     const baseHead = worktree.baseCommit;
     const policy: UnexpectedCommitPolicy = params.unexpectedCommitPolicy ?? "reject";
 
+    // When the CLI reported real usage in its structured output, that beats the
+    // registry's static declaration — the numbers came from the provider.
+    const reportedUsage =
+      executorOutcome.tokensIn !== undefined ||
+      executorOutcome.tokensOut !== undefined ||
+      executorOutcome.costUsd !== undefined;
+    const failureDiagnosis = classifyExecutorFailure(executorOutcome);
+
     const base = {
       taskId,
       baseHead,
@@ -72,10 +81,13 @@ export class ResultRecorder {
       // a failure (e.g. Gemini quota/auth). Harmless on success.
       stderrTail: tail(executorOutcome.stderr),
       stdoutTail: tail(executorOutcome.stdout),
+      ...(failureDiagnosis !== undefined
+        ? { failureKind: failureDiagnosis.kind, failureHint: failureDiagnosis.hint }
+        : {}),
       tokensIn: executorOutcome.tokensIn,
       tokensOut: executorOutcome.tokensOut,
       costUsd: executorOutcome.costUsd,
-      usageSource: params.usageSource
+      usageSource: reportedUsage ? ("reported" as const) : params.usageSource
     };
 
     const passedScope: ScopeCheckResult = { passed: true, violations: [], outOfScope: [] };
@@ -245,6 +257,8 @@ export class ResultRecorder {
     executorTimedOut: boolean;
     stderrTail?: string | undefined;
     stdoutTail?: string | undefined;
+    failureKind?: AgentExecutionResult["failureKind"] | undefined;
+    failureHint?: string | undefined;
     tokensIn?: number | undefined;
     tokensOut?: number | undefined;
     costUsd?: number | undefined;
@@ -265,6 +279,8 @@ export class ResultRecorder {
       executorTimedOut: input.executorTimedOut,
       stderrTail: input.stderrTail,
       stdoutTail: input.stdoutTail,
+      failureKind: input.failureKind,
+      failureHint: input.failureHint,
       tokensIn: input.tokensIn,
       tokensOut: input.tokensOut,
       costUsd: input.costUsd,

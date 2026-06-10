@@ -2,10 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   CLAUDE_CODE_EXECUTOR_ID,
   CODEX_EXECUTOR_ID,
+  CliAgentExecutor,
   DefaultAgentExecutorFactory,
   EXECUTOR_DESCRIPTORS,
-  GeminiCliExecutor,
-  ClaudeCodeCliExecutor,
   normalizeExecutorSelection,
   resolveLegacyModelSelection,
   usageSourceForSelection
@@ -31,22 +30,25 @@ describe("execution-core executor registry", () => {
       "opencode-cli"
     ]);
     expect(EXECUTOR_DESCRIPTORS.find((descriptor) => descriptor.id === CLAUDE_CODE_EXECUTOR_ID)?.enabled).toBe(true);
-    expect(EXECUTOR_DESCRIPTORS.find((descriptor) => descriptor.id === CODEX_EXECUTOR_ID)?.enabled).toBe(false);
+    expect(EXECUTOR_DESCRIPTORS.find((descriptor) => descriptor.id === CODEX_EXECUTOR_ID)?.enabled).toBe(true);
+    expect(EXECUTOR_DESCRIPTORS.find((descriptor) => descriptor.id === "opencode-cli")?.enabled).toBe(false);
   });
 
   it("constructs enabled adapters and rejects disabled executors", () => {
     const factory = new DefaultAgentExecutorFactory({
-      gemini: { binaryPath: "gemini-test" },
-      claude: { binaryPath: "claude-test" }
+      "gemini-cli": { binaryPath: "gemini-test" },
+      "claude-code-cli": { binaryPath: "claude-test" }
     });
 
-    expect(factory.create({ executorId: "gemini-cli", model: "gemini-2.5-pro" })).toBeInstanceOf(GeminiCliExecutor);
-    expect(factory.create({ executorId: "claude-code-cli", model: "sonnet" })).toBeInstanceOf(ClaudeCodeCliExecutor);
-    expect(() => factory.create({ executorId: "codex-cli", model: "gpt-5-codex" })).toThrow(/disabled/u);
+    expect(factory.create({ executorId: "gemini-cli", model: "gemini-2.5-pro" })).toBeInstanceOf(CliAgentExecutor);
+    expect(factory.create({ executorId: "claude-code-cli", model: "sonnet" })).toBeInstanceOf(CliAgentExecutor);
+    expect(factory.create({ executorId: "codex-cli", model: "gpt-5-codex" })).toBeInstanceOf(CliAgentExecutor);
+    expect(() => factory.create({ executorId: "opencode-cli", model: "opencode-default" })).toThrow(/disabled/u);
   });
 
-  it("marks CLI usage as unavailable unless an adapter reports it", () => {
-    expect(usageSourceForSelection({ executorId: "gemini-cli", model: "gemini-2.5-pro" })).toBe("unavailable");
-    expect(usageSourceForSelection({ executorId: "claude-code-cli", model: "sonnet" })).toBe("unavailable");
+  it("reports structured usage for CLIs with JSON output and unavailable for the rest", () => {
+    expect(usageSourceForSelection({ executorId: "gemini-cli", model: "gemini-2.5-pro" })).toBe("reported");
+    expect(usageSourceForSelection({ executorId: "claude-code-cli", model: "sonnet" })).toBe("reported");
+    expect(usageSourceForSelection({ executorId: "codex-cli", model: "gpt-5-codex" })).toBe("unavailable");
   });
 });

@@ -51,20 +51,21 @@ export const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
     defaultBinary: "gemini",
     enabled: true,
     capabilities: GEMINI_CAPABILITIES,
-    usageSource: "unavailable",
+    // `-o json` carries per-model token stats; the profile parser extracts them.
+    usageSource: "reported",
     defaultModel: "gemini-2.5-pro",
     models: [
       {
         id: "gemini-2.5-pro",
         label: "Gemini 2.5 Pro",
         capabilities: GEMINI_CAPABILITIES,
-        usageSource: "unavailable"
+        usageSource: "reported"
       },
       {
         id: "gemini-2.5-flash",
         label: "Gemini 2.5 Flash",
         capabilities: GEMINI_CAPABILITIES,
-        usageSource: "unavailable"
+        usageSource: "reported"
       }
     ]
   },
@@ -76,20 +77,27 @@ export const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
     defaultBinary: "claude",
     enabled: true,
     capabilities: AGENTIC_CAPABILITIES,
-    usageSource: "unavailable",
+    // `--output-format json` reports exact usage and cost per run.
+    usageSource: "reported",
     defaultModel: "sonnet",
     models: [
+      {
+        id: "haiku",
+        label: "Claude Haiku",
+        capabilities: AGENTIC_CAPABILITIES,
+        usageSource: "reported"
+      },
       {
         id: "sonnet",
         label: "Claude Sonnet",
         capabilities: AGENTIC_CAPABILITIES,
-        usageSource: "unavailable"
+        usageSource: "reported"
       },
       {
         id: "opus",
         label: "Claude Opus",
         capabilities: AGENTIC_CAPABILITIES,
-        usageSource: "unavailable"
+        usageSource: "reported"
       }
     ]
   },
@@ -99,7 +107,7 @@ export const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
     provider: "OpenAI",
     binaryEnvVar: "MANYHANDS_CODEX_BIN",
     defaultBinary: "codex",
-    enabled: false,
+    enabled: true,
     capabilities: AGENTIC_CAPABILITIES,
     usageSource: "unavailable",
     defaultModel: "gpt-5-codex",
@@ -107,6 +115,12 @@ export const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
       {
         id: "gpt-5-codex",
         label: "GPT-5 Codex",
+        capabilities: AGENTIC_CAPABILITIES,
+        usageSource: "unavailable"
+      },
+      {
+        id: "gpt-5",
+        label: "GPT-5",
         capabilities: AGENTIC_CAPABILITIES,
         usageSource: "unavailable"
       }

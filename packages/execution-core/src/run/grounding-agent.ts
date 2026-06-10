@@ -14,7 +14,8 @@
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdir, writeFile } from "node:fs/promises";
-import { GeminiCliExecutor } from "../executor/gemini-cli.js";
+import { CliAgentExecutor } from "../executor/cli-executor.js";
+import { GEMINI_PROFILE } from "../executor/profiles/gemini.js";
 import type { AgentExecutor } from "../executor/types.js";
 import { SimpleGitRunner } from "../git/runner.js";
 import type { GitRunner } from "../git/runner.js";
@@ -49,7 +50,7 @@ export class GroundingAgent {
   private readonly executorTimeoutMs: number;
 
   constructor(deps: GroundingAgentDeps = {}) {
-    this.executor = deps.executor ?? new GeminiCliExecutor();
+    this.executor = deps.executor ?? new CliAgentExecutor(GEMINI_PROFILE);
     this.git = deps.git ?? new SimpleGitRunner();
     this.buildExportIndex = deps.buildExportIndex ?? buildRepositoryExportIndex;
     this.executorTimeoutMs = deps.executorTimeoutMs ?? 300_000;

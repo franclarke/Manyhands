@@ -94,6 +94,20 @@ export const AgentExecutionResultSchema = z.object({
   // of truth for what changed (D5); these are diagnostics surfaced to the UI.
   stderrTail: z.string().optional(),
   stdoutTail: z.string().optional(),
+  /** Provider-agnostic classification of an executor failure (timeout/auth/quota/...). */
+  failureKind: z
+    .union([
+      z.literal("timeout"),
+      z.literal("aborted"),
+      z.literal("binary_missing"),
+      z.literal("auth"),
+      z.literal("quota"),
+      z.literal("model_not_found"),
+      z.literal("unknown")
+    ])
+    .optional(),
+  /** Actionable hint matching failureKind, surfaced in traces and the UI. */
+  failureHint: z.string().optional(),
   tokensIn: z.number().int().nonnegative().optional(),
   tokensOut: z.number().int().nonnegative().optional(),
   costUsd: z.number().nonnegative().optional(),
@@ -185,7 +199,16 @@ export const AgentExecutorOptionsSchema = z.object({
   /** Run-level cancellation: aborts the spawned process tree. Not serialized. */
   signal: z.instanceof(AbortSignal).optional(),
   /** Live stdout/stderr diagnostics from the executor process. Not serialized. */
-  onOutput: z.custom<(chunk: ExecutorOutputChunk) => void>((value) => typeof value === "function").optional()
+  onOutput: z.custom<(chunk: ExecutorOutputChunk) => void>((value) => typeof value === "function").optional(),
+  /**
+   * Send-to-user channel: structured progress reports the agent emits over the
+   * MH_STATUS stdout protocol while it works. Not serialized.
+   */
+  onAgentStatus: z
+    .custom<(status: import("./executor/status-channel").AgentStatusUpdate) => void>(
+      (value) => typeof value === "function"
+    )
+    .optional()
 });
 
 export type AgentExecutorOptions = z.infer<typeof AgentExecutorOptionsSchema>;

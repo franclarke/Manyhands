@@ -8,6 +8,7 @@ import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
 
 import { FixedAgentExecutorFactory, type AgentExecutorFactory } from "../executor/factory";
+import { AGENT_STATUS_PROTOCOL_INSTRUCTIONS } from "../executor/status-channel";
 import type { AgentExecutor } from "../executor/types";
 import {
   GEMINI_EXECUTOR_ID,
@@ -503,6 +504,9 @@ export class RunExecutor {
       bypassApprovals: true,
       onOutput: (chunk) => {
         this.traceStore.append({ type: "executor_output", actor: "agent", taskId: node.id, payload: chunk });
+      },
+      onAgentStatus: (status) => {
+        this.traceStore.append({ type: "agent_status", actor: "agent", taskId: node.id, payload: { ...status } });
       }
     });
 
@@ -651,6 +655,16 @@ export class RunExecutor {
           actor: "agent",
           taskId: node.id,
           payload: chunk
+        });
+      },
+      // Send-to-user channel: structured MH_STATUS progress reports become
+      // first-class trace events the UI streams live.
+      onAgentStatus: (status) => {
+        this.traceStore.append({
+          type: "agent_status",
+          actor: "agent",
+          taskId: node.id,
+          payload: { ...status }
         });
       }
     });
@@ -1016,7 +1030,7 @@ function buildLeafRepairInstructions(node: TaskNode, validationOutput: string): 
   return lines.join("\n");
 }
 
-function buildLeafInstructions(node: TaskNode, contextSection?: string): string {
+export function buildLeafInstructions(node: TaskNode, contextSection?: string): string {
   const contract = node.contract;
   const lines = [contract?.objective ?? node.prompt ?? node.goal];
 
@@ -1076,6 +1090,7 @@ function buildLeafInstructions(node: TaskNode, contextSection?: string): string 
     lines.push("", contextSection);
   }
 
+  lines.push("", AGENT_STATUS_PROTOCOL_INSTRUCTIONS);
   lines.push("", "Do not commit — the orchestrator will commit your changes.");
   return lines.join("\n");
 }

@@ -19,6 +19,65 @@ function okOutcome() {
   return { exitCode: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1000 };
 }
 
+describe("ResultRecorder usage and failure diagnosis", () => {
+  it("upgrades usageSource to reported when the executor outcome carries real usage", async () => {
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: ["src/a.ts"],
+      diffCached: "patch",
+      commitSha: "SHA"
+    });
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+
+    const result = await recorder.record({
+      worktree: WORKTREE,
+      executorOutcome: { ...okOutcome(), tokensIn: 120, tokensOut: 30, costUsd: 0.02 },
+      usageSource: "unavailable"
+    });
+
+    expect(result.usageSource).toBe("reported");
+    expect(result.tokensIn).toBe(120);
+  });
+
+  it("keeps the declared usageSource when the outcome reports nothing", async () => {
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: ["src/a.ts"],
+      diffCached: "patch",
+      commitSha: "SHA"
+    });
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+
+    const result = await recorder.record({
+      worktree: WORKTREE,
+      executorOutcome: okOutcome(),
+      usageSource: "unavailable"
+    });
+
+    expect(result.usageSource).toBe("unavailable");
+  });
+
+  it("attaches a failure diagnosis when the executor fails with a recognizable cause", async () => {
+    const git = new FakeGitRunner({ heads: { [WORKTREE.path]: "BASE_SHA" }, diffCachedNameOnly: [] });
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+
+    const result = await recorder.record({
+      worktree: WORKTREE,
+      executorOutcome: {
+        exitCode: 1,
+        stdout: "",
+        stderr: "429 RESOURCE_EXHAUSTED: quota exceeded",
+        timedOut: false,
+        durationMs: 50
+      }
+    });
+
+    expect(result.status).toBe("executor_error");
+    expect(result.failureKind).toBe("quota");
+    expect(result.failureHint).toMatch(/executor|quota|model/i);
+  });
+});
+
 describe("ResultRecorder", () => {
   it("commits and reports success when changes are in scope", async () => {
     const git = new FakeGitRunner({
