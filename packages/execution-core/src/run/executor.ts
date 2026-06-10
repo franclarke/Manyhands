@@ -79,6 +79,8 @@ export interface RunNodeExecutionParams {
   runId?: string;
   childResults?: AgentExecutionResult[];
   cleanupWorktrees?: boolean;
+  /** Plan-time conflict foresight, threaded into the Composer's repair prompt. */
+  predictedConflicts?: PredictedConflictHint[];
 }
 
 export type RunNodeExecutionResult =
@@ -434,7 +436,8 @@ export class RunExecutor {
           ? { parentValidationCommands: contract.parentValidationCommands }
           : {}),
         ...(contract?.executionScope ? { executionScope: contract.executionScope } : {}),
-        ...(contract?.forbiddenPaths ? { forbiddenPaths: contract.forbiddenPaths } : {})
+        ...(contract?.forbiddenPaths ? { forbiddenPaths: contract.forbiddenPaths } : {}),
+        ...(params.predictedConflicts !== undefined ? { predictedConflicts: params.predictedConflicts } : {})
       });
 
       return { kind: "integration", result, worktrees };
@@ -443,6 +446,94 @@ export class RunExecutor {
         await this.cleanupWorktrees(worktrees);
       }
     }
+  }
+
+  /**
+   * Repair a previously-executed leaf in its existing worktree: feeds the
+   * validation failure back to the agent executor, records the new diff (D5),
+   * commits on the orchestrator's behalf (D6) and re-runs leaf validation.
+   * This is the auto-repair seam the execution graph's leaf deps call — the
+   * web layer never assembles worktrees/recorders by hand.
+   */
+  async repairLeaf(params: {
+    graph: TaskGraph;
+    config: ExecutionConfig;
+    model: string;
+    taskId: string;
+    runId?: string;
+    validationOutput: string;
+  }): Promise<{ result: AgentExecutionResult; worktree: WorktreeRecord }> {
+    const { graph, config, taskId } = params;
+    const runId = params.runId ?? graph.planId;
+    const node = graph.nodes[taskId];
+    if (!node) {
+      throw new RunExecutionError(`Task "${taskId}" is not in the graph.`, "leaf", runId);
+    }
+    if (node.kind !== "leaf" && node.kind !== "integrator") {
+      throw new RunExecutionError(`Task "${taskId}" is not executable (kind=${node.kind}).`, "leaf", runId);
+    }
+
+    const selection = resolveExecutorSelection(node, resolveLegacyModelSelection(params.model));
+    const usageSource = usageSourceForSelection(selection);
+    const executor = this.executorFactory.create(selection);
+    const worktree = this.worktreeManager.recordFor({
+      taskId: node.id,
+      runId,
+      kind: "leaf",
+      baseCommit: graph.baseCommit
+    });
+
+    const instructionFilePath = join(tmpdir(), `mh-repair-${runId}-${node.id}.txt`);
+    await this.writeInstructions(
+      instructionFilePath,
+      buildLeafRepairInstructions(node, params.validationOutput)
+    );
+
+    this.traceStore.append({
+      type: "executor_repair_started",
+      actor: "system",
+      taskId: node.id,
+      payload: { executorId: selection.executorId, model: selection.model, usageSource }
+    });
+
+    const executorOutcome = await executor.execute({
+      cwd: worktree.path,
+      instructionFilePath,
+      model: selection.model,
+      timeoutMs: config.leafTimeoutMs,
+      sandboxMode: config.sandboxMode,
+      bypassApprovals: true,
+      onOutput: (chunk) => {
+        this.traceStore.append({ type: "executor_output", actor: "agent", taskId: node.id, payload: chunk });
+      }
+    });
+
+    this.traceStore.append({
+      type: "executor_completed",
+      actor: "system",
+      taskId: node.id,
+      payload: {
+        executorId: selection.executorId,
+        model: selection.model,
+        usageSource,
+        exitCode: executorOutcome.exitCode,
+        timedOut: executorOutcome.timedOut
+      }
+    });
+
+    const contract = node.contract;
+    const recorded = await this.resultRecorder.record({
+      worktree,
+      executorOutcome,
+      unexpectedCommitPolicy: config.unexpectedCommitPolicy,
+      commitMessage: `mh-repair: ${node.id}`,
+      ...(contract?.executionScope ? { executionScope: contract.executionScope } : {}),
+      ...(contract?.forbiddenPaths ? { forbiddenPaths: contract.forbiddenPaths } : {}),
+      usageSource
+    });
+
+    const result = await this.runLeafValidation({ node, worktree, result: recorded, runId });
+    return { result, worktree };
   }
 
   private async executeLeaf(args: {
@@ -897,6 +988,36 @@ export class RunExecutor {
     const validationOk = validationResult ? validationResult.passed : true;
     return leavesOk && integrationsOk && validationOk ? "completed" : "failed";
   }
+}
+
+/** Repair prompt: original objective + acceptance criteria + the exact failure. */
+function buildLeafRepairInstructions(node: TaskNode, validationOutput: string): string {
+  const lines = [
+    `Your previous implementation of the task "${node.title}" failed validation.`,
+    "",
+    "ORIGINAL TASK OBJECTIVE:",
+    node.contract?.objective ?? node.prompt ?? node.goal,
+    ""
+  ];
+
+  const acceptance = node.acceptanceCriteria ?? [];
+  if (acceptance.length > 0) {
+    lines.push("Acceptance criteria:", ...acceptance.map((criterion) => `- ${criterion}`), "");
+  }
+
+  lines.push(
+    "VALIDATION FAILURE OUTPUT:",
+    "```",
+    validationOutput,
+    "```",
+    "",
+    "Fix the implementation. Do not revert previous correct work; build upon it to address the",
+    "failures listed above.",
+    "",
+    "Do not commit — the orchestrator will commit your changes."
+  );
+
+  return lines.join("\n");
 }
 
 function buildLeafInstructions(node: TaskNode, contextSection?: string): string {

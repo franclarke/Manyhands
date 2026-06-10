@@ -234,6 +234,20 @@ export const RunRecordSchema = z.object({
       options: z.array(z.string().min(1)).min(2).max(10)
     })
     .optional(),
+  /**
+   * Typed execution-gate interrupt awaiting a human decision (LangGraph HITL).
+   * Set alongside pendingQuestion (the human-readable projection) while the
+   * execution graph is suspended; cleared on resume.
+   */
+  pendingDecision: z
+    .object({
+      gate: z.union([z.literal("leaf_validation_failed"), z.literal("merge_conflict")]),
+      taskId: z.string().min(1),
+      validationOutput: z.string().optional(),
+      conflictFiles: z.array(z.string().min(1)).optional(),
+      integrationStatus: z.string().optional()
+    })
+    .optional(),
   /** Progressive recursive-planning nodes persisted while the final graph is still being generated. */
   livePlanningNodes: z.array(PlanningLiveNodeSchema).optional(),
   questionAnswers: z.record(z.string()).optional(),

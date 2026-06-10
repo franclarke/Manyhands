@@ -93,6 +93,24 @@ export class WorktreeManager {
     });
   }
 
+  /**
+   * Record referencing a worktree created earlier in this run (same layout as
+   * create() without touching git) — used by leaf repair, which re-enters the
+   * task's existing worktree instead of provisioning a fresh one.
+   */
+  recordFor(params: CreateWorktreeParams): WorktreeRecord {
+    return WorktreeRecordSchema.parse({
+      taskId: params.taskId,
+      runId: params.runId,
+      kind: params.kind,
+      path: `${this.worktreesRoot}/${params.runId}/${params.taskId}`,
+      branch: `mh/${params.runId}/${params.taskId}`,
+      baseCommit: params.baseCommit,
+      status: "active",
+      createdAt: this.now()
+    });
+  }
+
   async clean(record: WorktreeRecord): Promise<WorktreeRecord> {
     try {
       await this.git.worktreeRemove({

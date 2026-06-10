@@ -371,7 +371,7 @@ export interface IntegrateCompositeNodeDeps {
     graph: TaskGraph;
     repoPath: string;
     childResults: AgentExecutionResult[];
-  }) => Promise<IntegrationResult & { conflictDetails?: { files: string[]; diff: string } }>;
+  }) => Promise<IntegrationResult>;
 }
 
 /**

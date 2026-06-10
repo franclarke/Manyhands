@@ -1,7 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import {
   isDecomposerLlmError,
   isDecomposerQuestionError,
@@ -16,33 +13,40 @@ import {
   ExecutionConfigSchema,
   RunExecutor,
   SimpleGitRunner,
-  computeGranularityVector,
   type AgentExecutionResult,
-  type IntegrationResult,
   type PredictedConflictHint,
   type RunNodeExecutionResult,
   type RunExecutionResult,
-  GroundingAgent,
-  resolveExecutorSelection,
-  resolveLegacyModelSelection,
-  usageSourceForSelection,
-  ResultRecorder,
-  ChildProcessValidationRunner,
-  type ValidationRunner,
-  type WorktreeRecord
+  GroundingAgent
 } from "@manyhands/execution-core";
-import { scheduleTasks } from "@manyhands/scheduler";
-import {
-  RunStateAnnotation,
-  JsonFileCheckpointSaver,
-  buildExecutionGraph,
-  type LeafExecutionInput
-} from "@manyhands/orchestrator-graph";
-import { resolveRunsDirectory } from "@/lib/server/runs/repository";
-import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
-import { InMemoryTraceStore, type TraceEvent, type TraceEventInput, type TraceEventType, type TraceStore } from "@manyhands/trace-store";
+import type { ResumeDecision } from "@manyhands/orchestrator-graph";
+import type { TaskGraph } from "@manyhands/task-graph";
+import { InMemoryTraceStore, type TraceStore } from "@manyhands/trace-store";
 import { RepoNotConfiguredError, RunLifecycleError, RunValidationError } from "./errors";
+import {
+  buildExecutionHost,
+  driveExecution,
+  hasExecutionCheckpoint,
+  persistExecutionPause,
+  resumeCommand,
+  type ExecutionDriveOutcome
+} from "./execution-host";
+import {
+  INTEGRATION_SUCCESS,
+  buildExecutionArtifact,
+  computeInvalidatedTasks,
+  executionResultsFromRun,
+  integrationDurationMs,
+  manualReadinessForTask,
+  mergeNodeExecutionResult,
+  provisionedFromRecord,
+  resolveExecutionGraph
+} from "./execution-state";
 import { applyFinalPatch } from "./final-apply";
+import { LiveExecutionTraceStore } from "./live-trace-store";
+
+export { computeInvalidatedTasks } from "./execution-state";
+export type { ExecutionResults } from "./execution-state";
 import { runPreflight } from "./preflight";
 import {
   createDefaultRepoProvisioner,
@@ -82,7 +86,6 @@ const PLANNING_EVENT_INTERVAL_MS = 110;
 const EXECUTION_EVENT_INTERVAL_MS = 220;
 const PAUSE_POLL_MS = 80;
 const HEARTBEAT_INTERVAL_MS = 4_000;
-const INTEGRATION_SUCCESS = new Set(["success", "executor_repair_success"]);
 
 // Re-export for the SSE endpoint to detect orphaned runs.
 export { isRunnerActive } from "./runner-state";
@@ -130,105 +133,6 @@ export interface ExecutionRunnerOptions {
   provisioner?: RepoProvisioner;
   /** Injectable for tests; receives the engine's trace events to persist as evidence. */
   traceStore?: TraceStore;
-}
-
-class LiveExecutionTraceStore implements TraceStore {
-  private readonly delegate: TraceStore;
-  private readonly runId: string;
-  private readonly defaultModel: string;
-  private readonly startedTaskIds = new Set<string>();
-
-  constructor(delegate: TraceStore, runId: string, defaultModel: string) {
-    this.delegate = delegate;
-    this.runId = runId;
-    this.defaultModel = defaultModel;
-  }
-
-  append(event: TraceEventInput): TraceEvent {
-    const traceEvent = this.delegate.append(event);
-    for (const runEvent of runModelEventsFromTrace(traceEvent, { runId: this.runId, defaultModel: this.defaultModel })) {
-      publishRunModelEvent(this.runId, runEvent);
-    }
-    this.publishLiveEvent(traceEvent);
-    return traceEvent;
-  }
-
-  list(): TraceEvent[] {
-    return this.delegate.list();
-  }
-
-  findByType(type: TraceEventType): TraceEvent[] {
-    return this.delegate.findByType(type);
-  }
-
-  findByTask(taskId: string): TraceEvent[] {
-    return this.delegate.findByTask(taskId);
-  }
-
-  clear(): void {
-    this.startedTaskIds.clear();
-    this.delegate.clear();
-  }
-
-  hasPublishedStart(taskId: string): boolean {
-    return this.startedTaskIds.has(taskId);
-  }
-
-  private publishLiveEvent(event: TraceEvent): void {
-    if (event.taskId === undefined) {
-      return;
-    }
-
-    if (event.type === "agent_started" || event.type === "integration_started") {
-      if (this.startedTaskIds.has(event.taskId)) {
-        return;
-      }
-      this.startedTaskIds.add(event.taskId);
-      publishEvent(this.runId, {
-        kind: "agent.run.started",
-        taskId: event.taskId,
-        at: event.timestamp
-      });
-    }
-  }
-}
-
-/**
- * Builds the real execution engine: a RunExecutor wired to simple-git and the
- * Gemini CLI, rooted at the provisioned repo. The pipeline provisions and passes
- * `input.provisioned`; the engine stays a pure executor. Without a provisioned
- * repo it fails clearly (D3) — the graph's mock baseCommit is never executable.
- */
-function createDefaultExecutionEngine(deps: { traceStore?: TraceStore } = {}): ExecutionEngine {
-  const traceStore = deps.traceStore ?? new InMemoryTraceStore();
-  return {
-    async run(input) {
-      if (input.provisioned === undefined) {
-        throw new RepoNotConfiguredError(input.runId);
-      }
-      const { repoRoot, baseBranch, baseCommit } = input.provisioned;
-      const runExecutor = new RunExecutor({
-        git: new SimpleGitRunner(),
-        executorFactory: new DefaultAgentExecutorFactory(),
-        traceStore,
-        repoRoot
-      });
-      return runExecutor.run({
-        // Execution resolves the real base over the graph's mock values.
-        graph: { ...input.graph, repo: repoRoot, baseBranch, baseCommit },
-        config: ExecutionConfigSchema.parse(input.executionConfig ?? {}),
-        model: input.model,
-        ...(input.defaultExecutionSelection !== undefined
-          ? { defaultExecutionSelection: input.defaultExecutionSelection }
-          : {}),
-        ...(input.defaultRepairSelection !== undefined ? { defaultRepairSelection: input.defaultRepairSelection } : {}),
-        runId: input.runId,
-        ...(input.signal !== undefined ? { signal: input.signal } : {}),
-        ...(input.onBatchBoundary !== undefined ? { onBatchBoundary: input.onBatchBoundary } : {}),
-        ...(input.predictedConflicts !== undefined ? { predictedConflicts: input.predictedConflicts } : {})
-      });
-    }
-  };
 }
 
 async function runNodeWithDefaultEngine(input: {
@@ -756,64 +660,6 @@ function describePlanningFailure(error: unknown): string {
   return parts.join(" | ");
 }
 
-function buildRepairInstructions(
-  node: TaskNode,
-  validationOutput: string,
-  previousResult: any
-): string {
-  const lines = [
-    `Your previous implementation of the task "${node.title}" failed validation.`,
-    "",
-    "ORIGINAL TASK OBJECTIVE:",
-    node.contract?.objective ?? node.prompt ?? node.goal,
-    ""
-  ];
-
-  const acceptance = node.acceptanceCriteria ?? [];
-  if (acceptance.length > 0) {
-    lines.push("Acceptance criteria:", ...acceptance.map((c) => `- ${c}`), "");
-  }
-
-  lines.push(
-    "VALIDATION FAILURE OUTPUT:",
-    "```",
-    validationOutput,
-    "```",
-    "",
-    "Please fix the implementation. Do not revert previous correct work; build upon it to fix the issues listed in the validation output above.",
-    "",
-    "Do not commit — the orchestrator will commit your changes."
-  );
-
-  return lines.join("\n");
-}
-
-function collectRunValidationCommands(graph: TaskGraph) {
-  const root = graph.nodes[graph.rootId];
-  return root?.contract?.runValidationCommands ?? [];
-}
-
-async function runRunValidation(
-  graph: TaskGraph,
-  worktreePath: string,
-  runId: string,
-  repoRoot: string,
-  traceStore: LiveExecutionTraceStore
-) {
-  const commands = collectRunValidationCommands(graph);
-  if (commands.length === 0) {
-    return undefined;
-  }
-  const validationRunner = new ChildProcessValidationRunner();
-  traceStore.append({
-    type: "validation_started" as any,
-    actor: "system",
-    payload: { scope: "run", commandCount: commands.length }
-  });
-  const result = await validationRunner.run(commands, { worktreePath, repoRoot });
-  return result;
-}
-
 export async function runExecutionPipeline(runId: string, options: ExecutionRunnerOptions = {}): Promise<void> {
   console.log(`[Runner] Starting execution pipeline for run: ${runId}`);
   markRunnerActive(runId);
@@ -985,565 +831,92 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       console.log(`[Runner] Preflight ok for run ${runId}`);
     }
 
-    publishRunModelEvent(run.runId, { actor: "system", at: new Date().toISOString(), type: "grounding.started", payload: {} });
-
-    const nowStr = new Date().toISOString();
-    for (const node of Object.values(graph.nodes)) {
-      for (const iface of node.contract?.producedInterfaces ?? []) {
-        publishRunModelEvent(run.runId, {
-          actor: "system",
-          at: nowStr,
-          type: "seam.frozen",
-          payload: {
-            seamId: iface.id,
-            revision: 1,
-            frozenSignature: iface.signature,
-            extractedFrom: `contract:${node.id}`
-          }
-        });
-      }
-    }
-
-    const groundingAgent = new GroundingAgent();
-    const skeletonCommit = await groundingAgent.run({
-      repoRoot: provisioned!.repoRoot,
-      graph,
-      model: run.model,
-      runId: run.runId
-    });
-
-    provisioned!.baseCommit = skeletonCommit;
-
-    publishRunModelEvent(run.runId, {
-      actor: "system",
-      at: new Date().toISOString(),
-      type: "grounding.completed",
-      payload: { skeletonCommit }
-    });
-
-    const scheduleTasksDep = (params: { graph: TaskGraph }) => {
-      const plan = scheduleTasks({
-        graph: params.graph,
-        contracts: {},
-        riskMatrix: [],
-        maxParallel: run.executionConfig?.maxParallel ?? 6,
-        policy: (run.planning as any)?.schedulerPolicy ?? "parallel_naive"
-      });
-      return plan.batches;
-    };
-
-    const executeLeaf = async (params: LeafExecutionInput) => {
-      const currentRun = await getRunRepository().get(runId);
-      const node = params.graph.nodes[params.taskId];
-      if (!node) {
-        throw new Error(`Leaf task ${params.taskId} not found in graph`);
-      }
-
-      const traceStore = new LiveExecutionTraceStore(
-        options.traceStore ?? new InMemoryTraceStore(),
-        runId,
-        currentRun.defaultExecutionSelection?.model ?? currentRun.model
-      );
-
-      const nodeResult = await runNodeWithDefaultEngine({
-        graph: params.graph,
-        model: currentRun.model,
-        taskId: params.taskId,
-        runId,
-        provisioned: provisioned!,
-        executionConfig: currentRun.executionConfig ?? {},
-        traceStore
-      });
-
-      if (nodeResult.kind !== "leaf") {
-        throw new Error(`Expected leaf result, got composite for node ${params.taskId}`);
-      }
-
-      const result = nodeResult.result as AgentExecutionResult;
-
-      publishEvent(runId, {
-        kind: "agent.run.completed",
-        taskId: params.taskId,
-        success: result.status === "success",
-        at: new Date().toISOString()
-      });
-      publishEvent(runId, {
-        kind: "validation.completed",
-        taskId: params.taskId,
-        passed: result.status === "success",
-        at: new Date().toISOString()
-      });
-
-      await getRunRepository().update(runId, (current) => {
-        const existing = executionResultsFromRun(current);
-        const merged = mergeNodeExecutionResult({
-          runId,
-          graph: params.graph,
-          existing,
-          nodeResult
-        });
-        return {
-          ...current,
-          execution: merged,
-          executionTraces: [...(current.executionTraces ?? []), ...traceStore.list()]
-        };
-      });
-
-      const outcome = {
-        result,
-        validationPassed: result.status === "success"
-      };
-      if (result.validationResult?.output !== undefined) {
-        Object.assign(outcome, { validationOutput: result.validationResult.output });
-      }
-      return outcome;
-    };
-
-    const repairLeaf = async (params: LeafExecutionInput & { validationOutput: string }) => {
-      const currentRun = await getRunRepository().get(runId);
-      const node = params.graph.nodes[params.taskId];
-      if (!node) {
-        throw new Error(`Leaf task ${params.taskId} not found in graph`);
-      }
-
-      const existingResults = executionResultsFromRun(currentRun);
-      const previousResult = existingResults.leafResults.find(r => r.taskId === params.taskId);
-      if (!previousResult) {
-        return null;
-      }
-
-      const traceStore = new LiveExecutionTraceStore(
-        options.traceStore ?? new InMemoryTraceStore(),
-        runId,
-        currentRun.defaultExecutionSelection?.model ?? currentRun.model
-      );
-
-      const git = new SimpleGitRunner();
-      const resultRecorder = new ResultRecorder({ git, traceStore });
-      const validationRunner = new ChildProcessValidationRunner();
-      const executorSelection = resolveExecutorSelection(node, resolveLegacyModelSelection(currentRun.model));
-      const usageSource = usageSourceForSelection(executorSelection);
-      const executorFactory = new DefaultAgentExecutorFactory();
-      const executor = executorFactory.create(executorSelection);
-      const worktree: WorktreeRecord = {
-        taskId: params.taskId,
-        runId,
-        kind: "leaf",
-        path: join(provisioned!.repoRoot, ".manyhands", "worktrees", runId, params.taskId),
-        branch: `mh/${runId}/${params.taskId}`,
-        baseCommit: params.graph.baseCommit,
-        status: "active",
-        createdAt: new Date().toISOString()
-      };
-
-      const instructionFilePath = join(tmpdir(), `mh-repair-${runId}-${params.taskId}.txt`);
-      const repairInstructions = buildRepairInstructions(node, params.validationOutput, previousResult);
-      await writeFile(instructionFilePath, repairInstructions, "utf8");
-
-      traceStore.append({
-        type: "executor_repair_started" as any,
+    // First start of this thread: freeze the seams, scaffold the walking
+    // skeleton (GroundingAgent) and persist the skeleton commit as the base
+    // every leaf branches from. A resumed/restarted thread skips grounding.
+    const alreadyStarted = await hasExecutionCheckpoint(runId);
+    if (!alreadyStarted) {
+      publishRunModelEvent(run.runId, {
         actor: "system",
-        taskId: params.taskId,
-        payload: {
-          executorId: executorSelection.executorId,
-          model: executorSelection.model,
-          usageSource
-        }
+        at: new Date().toISOString(),
+        type: "grounding.started",
+        payload: {}
       });
-
-      const executorOutcome = await executor.execute({
-        cwd: worktree.path,
-        instructionFilePath,
-        model: executorSelection.model,
-        timeoutMs: currentRun.executionConfig?.leafTimeoutMs ?? 300_000,
-        sandboxMode: currentRun.executionConfig?.sandboxMode ?? "workspace-write",
-        bypassApprovals: true,
-        onOutput: (chunk) => {
-          traceStore.append({
-            type: "executor_output",
-            actor: "agent",
-            taskId: params.taskId,
-            payload: chunk
+      const nowStr = new Date().toISOString();
+      for (const node of Object.values(graph.nodes)) {
+        for (const iface of node.contract?.producedInterfaces ?? []) {
+          publishRunModelEvent(run.runId, {
+            actor: "system",
+            at: nowStr,
+            type: "seam.frozen",
+            payload: {
+              seamId: iface.id,
+              revision: 1,
+              frozenSignature: iface.signature,
+              extractedFrom: `contract:${node.id}`
+            }
           });
         }
+      }
+
+      const groundingAgent = new GroundingAgent();
+      const skeletonCommit = await groundingAgent.run({
+        repoRoot: provisioned!.repoRoot,
+        graph,
+        model: run.model,
+        runId: run.runId
+      });
+      provisioned!.baseCommit = skeletonCommit;
+      run = await getRunRepository().save({
+        ...run,
+        provisioned: {
+          repoRoot: provisioned!.repoRoot,
+          baseBranch: provisioned!.baseBranch,
+          baseCommit: skeletonCommit,
+          provisionedAt: run.provisioned?.provisionedAt ?? new Date().toISOString()
+        }
       });
 
-      traceStore.append({
-        type: "executor_completed",
+      publishRunModelEvent(run.runId, {
         actor: "system",
-        taskId: params.taskId,
-        payload: {
-          executorId: executorSelection.executorId,
-          model: executorSelection.model,
-          usageSource,
-          exitCode: executorOutcome.exitCode,
-          timedOut: executorOutcome.timedOut
-        }
+        at: new Date().toISOString(),
+        type: "grounding.completed",
+        payload: { skeletonCommit }
       });
+    }
 
-      const recorded = await resultRecorder.record({
-        worktree,
-        executorOutcome,
-        unexpectedCommitPolicy: currentRun.executionConfig?.unexpectedCommitPolicy ?? "reject",
-        commitMessage: `mh-repair: ${params.taskId}`,
-        ...(node.contract?.executionScope ? { executionScope: node.contract.executionScope } : {}),
-        ...(node.contract?.forbiddenPaths ? { forbiddenPaths: node.contract.forbiddenPaths } : {}),
-        usageSource
-      });
-
-      const commands = node.contract?.leafValidationCommands ?? [];
-      let finalResult = recorded;
-      let passed = recorded.status === "success";
-      if (passed && commands.length > 0) {
-        traceStore.append({
-          type: "validation_started",
-          actor: "system",
-          taskId: params.taskId,
-          payload: { scope: "leaf", commandCount: commands.length }
-        });
-        const validationResult = await validationRunner.run(commands, {
-          worktreePath: worktree.path,
-          repoRoot: provisioned!.repoRoot
-        });
-        traceStore.append({
-          type: "validation_completed",
-          actor: "system",
-          taskId: params.taskId,
-          payload: {
-            scope: "leaf",
-            passed: validationResult.passed,
-            exitCode: validationResult.exitCode,
-            commandCount: commands.length
-          }
-        });
-
-        passed = validationResult.passed;
-        finalResult = passed
-          ? { ...recorded, validationResult }
-          : { ...recorded, status: "validation_failed", validationResult };
-      }
-
-      const nodeResult: RunNodeExecutionResult = { kind: "leaf", result: finalResult, worktrees: [worktree] };
-      await getRunRepository().update(runId, (current) => {
-        const existing = executionResultsFromRun(current);
-        const merged = mergeNodeExecutionResult({
-          runId,
-          graph: params.graph,
-          existing,
-          nodeResult
-        });
-        return {
-          ...current,
-          execution: merged,
-          executionTraces: [...(current.executionTraces ?? []), ...traceStore.list()]
-        };
-      });
-
-      publishEvent(runId, {
-        kind: "agent.run.completed",
-        taskId: params.taskId,
-        success: passed,
-        at: new Date().toISOString()
-      });
-      publishEvent(runId, {
-        kind: "validation.completed",
-        taskId: params.taskId,
-        passed: passed,
-        at: new Date().toISOString()
-      });
-
-      const outcome = {
-        result: finalResult,
-        validationPassed: passed
-      };
-      if (finalResult.validationResult?.output !== undefined) {
-        Object.assign(outcome, { validationOutput: finalResult.validationResult.output });
-      }
-      return outcome;
-    };
-
-    const integrateComposite = async (params: {
-      compositeTaskId: string;
-      runId: string;
-      graph: TaskGraph;
-      repoPath: string;
-      childResults: AgentExecutionResult[];
-    }) => {
-      const currentRun = await getRunRepository().get(runId);
-      const traceStore = new LiveExecutionTraceStore(
-        options.traceStore ?? new InMemoryTraceStore(),
-        runId,
-        currentRun.defaultExecutionSelection?.model ?? currentRun.model
-      );
-
-      const nodeResult = await runNodeWithDefaultEngine({
-        graph: params.graph,
-        model: currentRun.model,
-        taskId: params.compositeTaskId,
-        runId,
-        provisioned: provisioned!,
-        executionConfig: currentRun.executionConfig ?? {},
-        childResults: params.childResults,
-        traceStore
-      });
-
-      if (nodeResult.kind !== "integration") {
-        throw new Error(`Expected integration result, got leaf for composite ${params.compositeTaskId}`);
-      }
-
-      const result = nodeResult.result as IntegrationResult;
-
-      const success = result.status === "success" || result.status === "executor_repair_success";
-      publishEvent(runId, {
-        kind: "agent.run.completed",
-        taskId: params.compositeTaskId,
-        success,
-        at: new Date().toISOString()
-      });
-
-      await getRunRepository().update(runId, (current) => {
-        const existing = executionResultsFromRun(current);
-        const merged = mergeNodeExecutionResult({
-          runId,
-          graph: params.graph,
-          existing,
-          nodeResult
-        });
-        return {
-          ...current,
-          execution: merged,
-          executionTraces: [...(current.executionTraces ?? []), ...traceStore.list()]
-        };
-      });
-
-      const mappedResult = {
-        status: result.status,
-        compositeTaskId: result.compositeTaskId,
-        childResults: result.childResults,
-        repairAttempted: result.repairAttempted,
-        preMergeFindings: result.preMergeFindings ?? [],
-        ...(result.integrationCommitSha !== undefined ? { integrationCommitSha: result.integrationCommitSha } : {}),
-        ...(result.repairResult !== undefined ? { repairResult: result.repairResult } : {}),
-        ...(result.conflictDetails
-          ? {
-              conflictDetails: {
-                files: result.conflictDetails.files,
-                diff: result.conflictDetails.cherryPickOutput,
-                cherryPickOutput: result.conflictDetails.cherryPickOutput
-              }
-            }
-          : {}),
-        ...(result.parentValidation
-          ? {
-              parentValidation: {
-                passed: result.parentValidation.passed,
-                output: result.parentValidation.output,
-                exitCode: result.parentValidation.exitCode
-              }
-            }
-          : {})
-      };
-
-      return mappedResult;
-    };
-
-    const validateRun = async (params: {
-      runId: string;
-      graph: TaskGraph;
-      repoPath: string;
-      integrationResults: IntegrationResult[];
-    }) => {
-      const currentRun = await getRunRepository().get(runId);
-      const existing = executionResultsFromRun(currentRun);
-
-      const totalDurationMs =
-        existing.leafResults.reduce((sum, r) => sum + r.executorDurationMs, 0) +
-        existing.integrationResults.reduce((sum, r) => sum + integrationDurationMs(r), 0);
-
-      const result: RunExecutionResult = {
-        runId,
-        status:
-          existing.leafResults.every((r) => r.status === "success") &&
-          existing.integrationResults.every((r) => INTEGRATION_SUCCESS.has(r.status))
-            ? "completed"
-            : "failed",
-        leafResults: existing.leafResults,
-        integrationResults: existing.integrationResults,
-        totalDurationMs,
-        granularityVector: computeGranularityVector({
-          graph,
-          leafResults: existing.leafResults,
-          integrationResults: existing.integrationResults,
-          totalDurationMs
-        })
-      };
-
-      const finalApplication =
-        result.status === "completed" && provisioned !== undefined
-          ? await (async () => {
-              console.log(`[Runner] Final apply start for run ${runId}`);
-              const applied = await applyFinalPatch({ graph, result, provisioned: provisioned!, runId, slug: currentRun.title });
-              console.log(
-                `[Runner] Final apply complete for run ${runId}: status=${applied?.finalApplicationStatus ?? "(none)"} branch=${applied?.finalBranchName ?? "(none)"} commit=${applied?.finalCommitSha ?? "(none)"}`
-              );
-              return applied;
-            })()
-          : undefined;
-
-      let passed = result.status === "completed";
-      let output = "";
-
-      if (passed && provisioned !== undefined) {
-        const worktreePath = join(provisioned.repoRoot, ".manyhands", "worktrees", runId, graph.rootId);
-        const commands = collectRunValidationCommands(graph);
-        if (commands.length > 0) {
-          const traceStore = new LiveExecutionTraceStore(
-            options.traceStore ?? new InMemoryTraceStore(),
-            runId,
-            currentRun.defaultExecutionSelection?.model ?? currentRun.model
-          );
-          const runValidationResult = await runRunValidation(
-            graph,
-            worktreePath,
-            runId,
-            provisioned.repoRoot,
-            traceStore
-          );
-          if (runValidationResult !== undefined) {
-            passed = runValidationResult.passed;
-            output = runValidationResult.output;
-            result.validationResult = runValidationResult;
-            
-            // Persist the run-level validation traces
-            await getRunRepository().update(runId, (current) => ({
-              ...current,
-              executionTraces: [...(current.executionTraces ?? []), ...traceStore.list()]
-            }));
-          }
-        }
-      }
-
-      publishRunModelEventsFromExecutionResult(currentRun, graph, result, finalApplication);
-
-      await getRunRepository().update(runId, (current) => ({
-        ...current,
-        ...(finalApplication !== undefined ? finalApplication : {})
-      }));
-
-      return { passed, output };
-    };
-
-    const runsDirectory = resolveRunsDirectory();
-    const checkpointsDirectory = join(runsDirectory, "checkpoints");
-    const checkpointer = new JsonFileCheckpointSaver(checkpointsDirectory);
-
-    const compiledGraph = buildExecutionGraph({
-      scheduleDeps: { scheduleTasks: scheduleTasksDep },
-      leafDeps: { executeLeaf, repairLeaf },
-      integrateDeps: { integrateComposite },
-      validationDeps: { validateRun },
-      checkpointer
+    const host = buildExecutionHost(run, provisioned!, {
+      traceStoreFactory: () =>
+        new LiveExecutionTraceStore(options.traceStore ?? new InMemoryTraceStore(), runId, run.model),
+      predictedConflicts: derivePredictedConflicts(run)
     });
 
-    const threadConfig = { configurable: { thread_id: runId } };
-    const latestState = await checkpointer.getTuple(threadConfig);
-
+    // Seed surviving results (e.g. after a seam amendment filtered the
+    // execution artifact and reset the thread) so the frontier only
+    // re-dispatches invalidated tasks.
+    const seed = executionResultsFromRun(run);
     const initialState = {
       runId,
       userPrompt: run.userPrompt,
       workspaceId: run.workspaceId,
       repoPath: provisioned!.repoRoot,
-      graph,
+      taskGraph: host.taskGraph,
       planningQueue: [],
       planningStepCache: {},
-      currentBatchIndex: 0,
-      batches: [],
-      leafResults: [],
-      integrationResults: [],
+      leafResults: seed.leafResults,
+      integrationResults: seed.integrationResults,
+      acceptedLeafFailures: [],
+      acceptedIntegrationFailures: [],
       pendingQuestion: null,
       userAnswers: {},
       status: "running" as const,
       errorMessage: null
     };
 
-    let stream;
-    if (latestState !== undefined) {
-      stream = await compiledGraph.stream(null, threadConfig);
-    } else {
-      stream = await compiledGraph.stream(initialState, threadConfig);
-    }
-
-    for await (const chunk of stream) {
-      console.log(`[Runner] Execution stream chunk:`, chunk);
-    }
-
-    const finalState = await compiledGraph.getState(threadConfig);
-    const finalValues = finalState.values;
-
-    if (finalState.tasks && finalState.tasks.length > 0) {
-      const task = finalState.tasks[0];
-      if (task !== undefined && task.interrupts && task.interrupts.length > 0) {
-        const interruptVal = task.interrupts[0]?.value;
-        if (interruptVal !== undefined) {
-          if (interruptVal.type === "leaf_validation_failed") {
-            console.log(`[Runner] Execution paused due to validation failure on leaf node: ${interruptVal.taskId}`);
-            await getRunRepository().update(runId, (current) => ({
-              ...current,
-              status: "paused",
-              pausedDuring: "running",
-              pendingQuestion: {
-                nodeId: interruptVal.taskId,
-                question: `Validation failed for leaf node ${interruptVal.taskId}. Do you want to try manual repair or accept current implementation?`,
-                options: ["Manual Fix", "Accept Fail"]
-              }
-            }));
-            publishRunEvent(runId, {
-              kind: "status.changed",
-              status: "paused",
-              at: new Date().toISOString()
-            });
-            return;
-          } else if (interruptVal.type === "merge_conflict") {
-            console.log(`[Runner] Execution paused due to merge conflict on composite node: ${interruptVal.compositeTaskId}`);
-            await getRunRepository().update(runId, (current) => ({
-              ...current,
-              status: "paused",
-              pausedDuring: "running",
-              pendingQuestion: {
-                nodeId: interruptVal.compositeTaskId,
-                question: `Merge conflict on composite node ${interruptVal.compositeTaskId}. Please choose resolution:`,
-                options: ["Keep Left", "Keep Right", "Manual Resolve"]
-              }
-            }));
-            publishRunEvent(runId, {
-              kind: "status.changed",
-              status: "paused",
-              at: new Date().toISOString()
-            });
-            return;
-          }
-        }
-      }
-    }
-
-    const currentRun = await getRunRepository().get(runId);
-    if (finalValues?.status === "completed") {
-      console.log(`[Runner] Persisting completed run ${runId}`);
-      await transitionTo(currentRun, "completed", {
-        completedAt: new Date().toISOString()
-      });
-    } else {
-      console.warn(`[Runner] Persisting failed run ${runId}`);
-      await getRunRepository().save({
-        ...currentRun,
-        status: "failed",
-        failedDuring: "running",
-        errorMessage: finalValues?.errorMessage ?? "Execution failed during run-level validation."
-      });
-      publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
-    }
+    const outcome = await driveExecution(host, alreadyStarted ? null : initialState);
+    await settleExecutionOutcome(runId, host, outcome, provisioned!, options);
   } catch (error) {
-    console.error(`[Runner] FALLÓ la ejecución del run "${runId}":`, error);
+    console.error(`[Runner] FALLO la ejecucion del run "${runId}":`, error);
     const message = error instanceof Error ? error.message : String(error);
     const run = await getRunRepository().get(runId).catch(() => null);
     if (run !== null) {
@@ -1563,6 +936,138 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     disposeRunAbort(runId);
     stopHeartbeat();
     markRunnerInactive(runId);
+  }
+}
+
+/**
+ * Resume a paused execution natively: delivers the human gate decision to
+ * the suspended LangGraph thread via Command({ resume }) - no checkpoint
+ * surgery - and settles the run exactly like the initial start.
+ */
+export async function resumeExecutionPipeline(
+  runId: string,
+  decision: ResumeDecision,
+  options: ExecutionRunnerOptions = {}
+): Promise<void> {
+  console.log(`[Runner] Resuming execution for run ${runId} with decision:`, decision);
+  markRunnerActive(runId);
+  const stopHeartbeat = startHeartbeat(runId);
+  let stopBudgetWatchdog: () => void = () => undefined;
+  try {
+    const run = await getRunRepository().get(runId);
+    const provisioned = provisionedFromRecord(run.provisioned);
+    if (provisioned === undefined) {
+      throw new RepoNotConfiguredError(runId);
+    }
+
+    createRunAbort(runId);
+    stopBudgetWatchdog = startBudgetWatchdog(runId, run.executionConfig?.maxWallClockMs);
+
+    const host = buildExecutionHost(run, provisioned, {
+      traceStoreFactory: () =>
+        new LiveExecutionTraceStore(options.traceStore ?? new InMemoryTraceStore(), runId, run.model),
+      predictedConflicts: derivePredictedConflicts(run)
+    });
+
+    const outcome = await driveExecution(host, resumeCommand(decision));
+    await settleExecutionOutcome(runId, host, outcome, provisioned, options);
+  } catch (error) {
+    console.error(`[Runner] FALLO el resume de ejecucion del run "${runId}":`, error);
+    const message = error instanceof Error ? error.message : String(error);
+    const run = await getRunRepository().get(runId).catch(() => null);
+    if (run !== null && run.status !== "interrupted") {
+      await getRunRepository().save({ ...run, status: "failed", failedDuring: "running", errorMessage: message });
+      publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
+    }
+  } finally {
+    stopBudgetWatchdog();
+    disposeRunAbort(runId);
+    stopHeartbeat();
+    markRunnerInactive(runId);
+  }
+}
+
+/**
+ * Shared epilogue for start/resume: persists the pause projection when the
+ * graph suspended on a gate, otherwise finalizes the run (final apply,
+ * run-model events, terminal status).
+ */
+async function settleExecutionOutcome(
+  runId: string,
+  host: ReturnType<typeof buildExecutionHost>,
+  outcome: ExecutionDriveOutcome,
+  provisioned: ProvisionedRepo,
+  _options: ExecutionRunnerOptions
+): Promise<void> {
+  if (outcome.kind === "paused") {
+    console.log(`[Runner] Execution paused at ${outcome.gate.gate} gate (task ${outcome.gate.taskId}).`);
+    await persistExecutionPause(runId, outcome.gate);
+    return;
+  }
+
+  const currentRun = await getRunRepository().get(runId);
+  if (currentRun.status === "interrupted") {
+    console.log(`[Runner] Run ${runId} interrupted; keeping partial execution.`);
+    return;
+  }
+
+  const existing = executionResultsFromRun(currentRun);
+  const artifact = buildExecutionArtifact(runId, host.taskGraph, existing.leafResults, existing.integrationResults);
+  if (artifact === undefined) {
+    await getRunRepository().save({
+      ...currentRun,
+      status: "failed",
+      failedDuring: "running",
+      errorMessage: outcome.errorMessage ?? "Execution produced no results."
+    });
+    publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
+    return;
+  }
+
+  const persistedValidation = (currentRun.execution as Partial<RunExecutionResult> | undefined)?.validationResult;
+  const result: RunExecutionResult = {
+    ...artifact,
+    status: outcome.status,
+    ...(persistedValidation !== undefined ? { validationResult: persistedValidation } : {})
+  };
+
+  const finalApplication =
+    outcome.status === "completed"
+      ? await (async () => {
+          console.log(`[Runner] Final apply start for run ${runId}`);
+          const applied = await applyFinalPatch({
+            graph: host.taskGraph,
+            result,
+            provisioned,
+            runId,
+            slug: currentRun.title
+          });
+          console.log(
+            `[Runner] Final apply complete for run ${runId}: status=${applied?.finalApplicationStatus ?? "(none)"} branch=${applied?.finalBranchName ?? "(none)"} commit=${applied?.finalCommitSha ?? "(none)"}`
+          );
+          return applied;
+        })()
+      : undefined;
+
+  publishRunModelEventsFromExecutionResult(currentRun, host.taskGraph, result, finalApplication);
+
+  if (outcome.status === "completed") {
+    console.log(`[Runner] Persisting completed run ${runId}`);
+    await transitionTo(currentRun, "completed", {
+      execution: result,
+      ...(finalApplication !== undefined ? finalApplication : {}),
+      completedAt: new Date().toISOString()
+    });
+  } else {
+    console.warn(`[Runner] Persisting failed run ${runId}`);
+    await getRunRepository().save({
+      ...currentRun,
+      status: "failed",
+      failedDuring: "running",
+      execution: result,
+      errorMessage: outcome.errorMessage ?? describeExecutionFailure(result)
+    });
+    publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
   }
 }
 
@@ -2026,226 +1531,6 @@ function metricsFromVector(vector: RunExecutionResult["granularityVector"]) {
   };
 }
 
-/**
- * Resolve the TaskGraph to execute from the persisted planning artifact.
- */
-async function resolveExecutionGraph(run: RunRecord): Promise<TaskGraph> {
-  if (run.planning !== undefined && run.planning !== null) {
-    return (run.planning as MockPlanningFlowResult).decomposition.graph;
-  }
-  throw new Error("Cannot execute a run without a generated plan. Run planning first.");
-}
-
-function provisionedFromRecord(record: RunRecord["provisioned"]): ProvisionedRepo | undefined {
-  if (record === undefined) {
-    return undefined;
-  }
-  return {
-    repoRoot: record.repoRoot,
-    baseBranch: record.baseBranch,
-    baseCommit: record.baseCommit,
-    cleanup: async () => undefined
-  };
-}
-
-function executionResultsFromRun(run: RunRecord): {
-  leafResults: AgentExecutionResult[];
-  integrationResults: IntegrationResult[];
-} {
-  const execution = run.execution as Partial<RunExecutionResult> | undefined;
-  return {
-    leafResults: Array.isArray(execution?.leafResults) ? [...execution.leafResults] : [],
-    integrationResults: Array.isArray(execution?.integrationResults) ? [...execution.integrationResults] : []
-  };
-}
-
-function manualReadinessForTask(
-  graph: TaskGraph,
-  taskId: string,
-  existing: { leafResults: AgentExecutionResult[]; integrationResults: IntegrationResult[] }
-):
-  | { ready: true; childResults?: AgentExecutionResult[] }
-  | { ready: false; reason: string } {
-  const node = graph.nodes[taskId];
-  if (node === undefined) {
-    return { ready: false, reason: `Task "${taskId}" is not in the graph.` };
-  }
-
-  if (node.status === "blocked" || node.status === "running" || node.status === "validating") {
-    return { ready: false, reason: `Task "${taskId}" is ${node.status} and cannot be executed manually.` };
-  }
-
-  if (!dependenciesAreImplemented(graph, taskId, existing)) {
-    return { ready: false, reason: `Task "${taskId}" still has incomplete dependencies.` };
-  }
-
-  if (node.kind === "leaf") {
-    const existingLeaf = existing.leafResults.find((result) => result.taskId === taskId);
-    if (existingLeaf !== undefined) {
-      return { ready: false, reason: `Leaf task "${taskId}" already has an execution result.` };
-    }
-    return { ready: true };
-  }
-
-  const existingIntegration = existing.integrationResults.find((result) => result.compositeTaskId === taskId);
-  if (existingIntegration !== undefined) {
-    return { ready: false, reason: `Composite task "${taskId}" already has an integration result.` };
-  }
-
-  if (node.childrenIds.length === 0) {
-    return { ready: false, reason: `Composite task "${taskId}" has no children to integrate.` };
-  }
-
-  const childResults = node.childrenIds.map((childId) => implementedResultForTask(graph, childId, existing));
-  const missing = node.childrenIds.filter((_, index) => childResults[index] === undefined);
-  if (missing.length > 0) {
-    return {
-      ready: false,
-      reason: `Composite task "${taskId}" cannot run until these children are implemented: ${missing.join(", ")}.`
-    };
-  }
-
-  return {
-    ready: true,
-    childResults: childResults.filter((result): result is AgentExecutionResult => result !== undefined)
-  };
-}
-
-function dependenciesAreImplemented(
-  graph: TaskGraph,
-  taskId: string,
-  existing: { leafResults: AgentExecutionResult[]; integrationResults: IntegrationResult[] }
-): boolean {
-  const incoming = graph.dependencies.filter((dependency) => dependency.toTaskId === taskId);
-  return incoming.every((dependency) => implementedResultForTask(graph, dependency.fromTaskId, existing) !== undefined);
-}
-
-function implementedResultForTask(
-  graph: TaskGraph,
-  taskId: string,
-  existing: { leafResults: AgentExecutionResult[]; integrationResults: IntegrationResult[] }
-): AgentExecutionResult | undefined {
-  const leaf = existing.leafResults.find((result) => result.taskId === taskId);
-  if (leaf !== undefined) {
-    return leaf.status === "success" && leaf.commitSha !== undefined ? leaf : undefined;
-  }
-
-  const integration = existing.integrationResults.find((result) => result.compositeTaskId === taskId);
-  if (
-    integration !== undefined &&
-    INTEGRATION_SUCCESS.has(integration.status) &&
-    integration.integrationCommitSha !== undefined
-  ) {
-    return syntheticManualCompositeResult(taskId, graph.baseCommit, integration.integrationCommitSha);
-  }
-
-  return undefined;
-}
-
-function mergeNodeExecutionResult(input: {
-  runId: string;
-  graph: TaskGraph;
-  existing: { leafResults: AgentExecutionResult[]; integrationResults: IntegrationResult[] };
-  nodeResult: RunNodeExecutionResult;
-}): RunExecutionResult {
-  let leafResults = input.existing.leafResults;
-  let integrationResults = input.existing.integrationResults;
-
-  if (input.nodeResult.kind === "leaf") {
-    const result = input.nodeResult.result as AgentExecutionResult;
-    leafResults = [...input.existing.leafResults.filter((entry) => entry.taskId !== result.taskId), result];
-  } else {
-    const result = input.nodeResult.result as IntegrationResult;
-    integrationResults = [
-      ...input.existing.integrationResults.filter((entry) => entry.compositeTaskId !== result.compositeTaskId),
-      result
-    ];
-  }
-
-  const totalDurationMs =
-    leafResults.reduce((sum, result) => sum + result.executorDurationMs, 0) +
-    integrationResults.reduce((sum, result) => sum + integrationDurationMs(result), 0);
-  const status =
-    leafResults.every((result) => result.status === "success") &&
-    integrationResults.every((result) => INTEGRATION_SUCCESS.has(result.status))
-      ? "completed"
-      : "failed";
-
-  return {
-    runId: input.runId,
-    status,
-    leafResults,
-    integrationResults,
-    granularityVector: computeGranularityVector({
-      graph: input.graph,
-      leafResults,
-      integrationResults,
-      totalDurationMs
-    }),
-    totalDurationMs
-  };
-}
-
-function integrationDurationMs(result: IntegrationResult): number {
-  return result.repairResult?.executorDurationMs ?? 0;
-}
-
-/**
- * Set of tasks whose execution results become stale when `taskId` is reset: the
- * node itself, everything that transitively depends on it (dependency edges),
- * and every ancestor composite that integrated any of them. Re-running a node
- * must invalidate this whole closure so downstream results aren't left dangling.
- */
-export function computeInvalidatedTasks(graph: TaskGraph, taskId: string): Set<string> {
-  const invalid = new Set<string>();
-  const queue = [taskId];
-  while (queue.length > 0) {
-    const id = queue.pop()!;
-    if (invalid.has(id)) {
-      continue;
-    }
-    invalid.add(id);
-    for (const dependency of graph.dependencies) {
-      if (dependency.fromTaskId === id && !invalid.has(dependency.toTaskId)) {
-        queue.push(dependency.toTaskId);
-      }
-    }
-    const parentId = graph.nodes[id]?.parentId;
-    if (parentId !== null && parentId !== undefined && !invalid.has(parentId)) {
-      queue.push(parentId);
-    }
-  }
-  return invalid;
-}
-
-/** Rebuilds the persisted execution artifact from a (possibly reduced) result set. */
-function buildExecutionArtifact(
-  runId: string,
-  graph: TaskGraph,
-  leafResults: AgentExecutionResult[],
-  integrationResults: IntegrationResult[]
-): RunExecutionResult | undefined {
-  if (leafResults.length === 0 && integrationResults.length === 0) {
-    return undefined;
-  }
-  const totalDurationMs =
-    leafResults.reduce((sum, result) => sum + result.executorDurationMs, 0) +
-    integrationResults.reduce((sum, result) => sum + integrationDurationMs(result), 0);
-  const status =
-    leafResults.every((result) => result.status === "success") &&
-    integrationResults.every((result) => INTEGRATION_SUCCESS.has(result.status))
-      ? "completed"
-      : "failed";
-  return {
-    runId,
-    status,
-    leafResults,
-    integrationResults,
-    granularityVector: computeGranularityVector({ graph, leafResults, integrationResults, totalDurationMs }),
-    totalDurationMs
-  };
-}
-
 export type NodeReviewAction = "approve" | "request_changes" | "rerun";
 
 /**
@@ -2266,7 +1551,7 @@ export async function reviewNode(
 ): Promise<RunRecord> {
   const repo = getRunRepository();
   let run = await repo.get(runId);
-  const graph = await resolveExecutionGraph(run);
+  const graph = resolveExecutionGraph(run);
   if (graph.nodes[taskId] === undefined) {
     throw new RunValidationError(`Task "${taskId}" is not in the graph.`);
   }
@@ -2328,27 +1613,6 @@ export async function reviewNode(
   }
 
   return run;
-}
-
-function syntheticManualCompositeResult(
-  taskId: string,
-  baseHead: string,
-  commitSha: string
-): AgentExecutionResult {
-  return {
-    taskId,
-    status: "success",
-    baseHead,
-    currentHead: commitSha,
-    agentCommittedUnexpectedly: false,
-    diff: "",
-    changedFiles: [],
-    commitSha,
-    scopeCheck: { passed: true, violations: [], outOfScope: [] },
-    executorExitCode: 0,
-    executorDurationMs: 0,
-    executorTimedOut: false
-  };
 }
 
 function describeExecutionFailure(result: RunExecutionResult): string {

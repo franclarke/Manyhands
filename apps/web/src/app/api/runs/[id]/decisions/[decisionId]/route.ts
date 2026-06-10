@@ -1,9 +1,6 @@
-import { join } from "node:path";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { resolveRunsDirectory } from "@/lib/server/runs/repository";
 import { AmendmentsEngine, type RunExecutionResult, computeGranularityVector } from "@manyhands/execution-core";
-import { JsonFileCheckpointSaver } from "@manyhands/orchestrator-graph";
 import { createInitialRunModel, reduceRunEvents } from "@/lib/run-model/reducer";
 import type { Decision, DecisionChoice, RunEvent } from "@/lib/run-model/types";
 import { buildDecisionChannelView } from "@/lib/run-model/decision-channel-view";
@@ -19,9 +16,21 @@ import {
   parseRunPatches,
   publishRunEvent,
   publishRunModelEvent,
+  resumeExecutionPipeline,
   runExecutionPipeline,
   runPlanningPipeline
 } from "@/lib/server/runs";
+import {
+  clearExecutionPause,
+  decisionFromAnswer,
+  resetExecutionThread
+} from "@/lib/server/runs/execution-host";
+import {
+  executionResultsFromRun,
+  integrationDurationMs,
+  provisionedFromRecord,
+  resolveExecutionGraph
+} from "@/lib/server/runs/execution-state";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import { buildRunModelSeed } from "@/lib/server/runs/run-model-projection";
 import { toRunResponse } from "@/lib/server/runs/presenter";
@@ -96,6 +105,27 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       if (!("answer" in choice)) {
         throw new RunValidationError("clarify requires { answer }");
       }
+
+      // Execution-gate clarifications resume the suspended LangGraph thread
+      // natively (Command({ resume })) instead of the planning pipeline.
+      if (run.status === "paused" && run.pausedDuring === "running" && run.pendingDecision !== undefined) {
+        const resumeDecision = decisionFromAnswer(run.pendingDecision.gate, choice.answer);
+        if (resumeDecision === null) {
+          throw new RunValidationError(
+            `"${choice.answer}" is not a valid option for the ${run.pendingDecision.gate} gate.`
+          );
+        }
+        run = await clearExecutionPause(run.runId, "running");
+        publishRunModelEvent(run.runId, {
+          actor: "human",
+          at: now,
+          type: "decision.resolved",
+          payload: { decisionId: decision.id, choice, actor: "human" }
+        });
+        void resumeExecutionPipeline(run.runId, resumeDecision).catch(() => undefined);
+        return NextResponse.json({ ...toRunResponse(run), decisionId: decision.id, choice });
+      }
+
       if (run.status !== "paused" || run.pausedDuring !== "generating" || !run.pendingQuestion) {
         throw new RunLifecycleError("Run is not currently waiting for a planning question response");
       }
@@ -182,16 +212,10 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
           })
         };
 
-        const checkpointer = new JsonFileCheckpointSaver(join(resolveRunsDirectory(), "checkpoints"));
-        const config = { configurable: { thread_id: run.runId } };
-        const tuple = await checkpointer.getTuple(config);
-        if (tuple !== undefined) {
-          const checkpoint = tuple.checkpoint;
-          checkpoint.channel_values.leafResults = invalidation.leafResults;
-          checkpoint.channel_values.integrationResults = invalidation.integrationResults;
-          checkpoint.channel_values.currentBatchIndex = 0;
-          await checkpointer.put(config, checkpoint, tuple.metadata ?? { source: "update", step: 0, parents: {} }, {});
-        }
+        // Restart the execution thread from scratch; the pipeline seeds the
+        // surviving (non-invalidated) results from the filtered artifact, so
+        // only the invalidated closure re-enters the frontier.
+        await resetExecutionThread(run.runId);
 
         run = await repo.save({
           ...run,
@@ -270,35 +294,4 @@ function errorResponse(error: unknown): NextResponse {
     { error: error instanceof Error ? error.message : String(error) },
     { status: 500 }
   );
-}
-
-async function resolveExecutionGraph(run: RunRecord) {
-  if (run.planning !== undefined && run.planning !== null) {
-    return (run.planning as any).decomposition.graph;
-  }
-  throw new Error("Cannot execute a run without a generated plan. Run planning first.");
-}
-
-function provisionedFromRecord(record: RunRecord["provisioned"]) {
-  if (record === undefined) {
-    return undefined;
-  }
-  return {
-    repoRoot: record.repoRoot,
-    baseBranch: record.baseBranch,
-    baseCommit: record.baseCommit,
-    cleanup: async () => undefined
-  };
-}
-
-function executionResultsFromRun(run: RunRecord) {
-  const execution = run.execution as any;
-  return {
-    leafResults: Array.isArray(execution?.leafResults) ? [...execution.leafResults] : [],
-    integrationResults: Array.isArray(execution?.integrationResults) ? [...execution.integrationResults] : []
-  };
-}
-
-function integrationDurationMs(result: any): number {
-  return result.repairResult?.executorDurationMs ?? 0;
 }
