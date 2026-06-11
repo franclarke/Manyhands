@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import {
-  RunLifecycleError,
-  RunNotFoundError,
-  RunValidationError,
-  canRestart,
+  claimRunMutation,
   getRunRepository,
   resetPlanningThread,
   restartResumesExecution,
   runExecutionPipeline,
   runPlanningPipeline
 } from "@/lib/server/runs";
+import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
@@ -22,54 +20,53 @@ interface RouteContext {
 export async function POST(_request: Request, context: RouteContext): Promise<NextResponse> {
   const { id } = await context.params;
   try {
-    const repo = getRunRepository();
-    const run = await repo.get(id);
-    if (!canRestart(run.status)) {
-      throw new RunLifecycleError(`Cannot restart from status ${run.status}`);
+    // Claim the restart atomically (INV-4): only `interrupted`/`failed` runs are
+    // restartable, an in-process runner blocks the claim, and the mutator moves
+    // the run OUT of a restartable status — so a concurrent second restart gets
+    // a deterministic 409 instead of kicking a duplicate pipeline.
+    let resumesExecution = false;
+    const claimed = await claimRunMutation(
+      id,
+      { status: ["interrupted", "failed"], rejectActiveRunner: true },
+      (current) => {
+        resumesExecution = restartResumesExecution(current);
+        const now = new Date().toISOString();
+        if (resumesExecution) {
+          // The execution pipeline transitions "approved" → "running". Persist
+          // approved metadata if missing and bridge through the lifecycle step.
+          return {
+            ...current,
+            status: "approved" as const,
+            errorMessage: undefined,
+            failedDuring: undefined,
+            approvedAt: current.approvedAt ?? now
+          };
+        }
+        // Restart planning from the top. Jump straight to "generating" (the
+        // pipeline's own transition target) so the run leaves the restartable
+        // statuses within the claim itself.
+        return {
+          ...current,
+          status: "generating" as const,
+          interruptedDuring: undefined,
+          errorMessage: undefined,
+          failedDuring: undefined,
+          startedAt: current.startedAt ?? now
+        };
+      }
+    );
+
+    if (resumesExecution) {
+      void runExecutionPipeline(claimed.runId).catch(() => undefined);
+      return NextResponse.json(toRunResponse(await getRunRepository().get(id)));
     }
-    // Decide which pipeline to kick from the run's recorded phase. A run that was
-    // already approved (and has a plan) resumes EXECUTION; otherwise we restart
-    // PLANNING. Both branches reset to a status the target pipeline can transition
-    // from and clear the stale failure so the next attempt starts clean.
-    if (restartResumesExecution(run)) {
-      // The execution pipeline transitions "approved" → "running". Persist approved
-      // metadata if missing and bridge through the lifecycle step.
-      const approved = await repo.save({
-        ...run,
-        status: "approved",
-        errorMessage: undefined,
-        failedDuring: undefined,
-        ...(run.approvedAt === undefined ? { approvedAt: new Date().toISOString() } : {})
-      });
-      void runExecutionPipeline(approved.runId).catch(() => undefined);
-      return NextResponse.json(toRunResponse(await repo.get(id)));
-    }
-    // The planning pipeline only transitions "created"/"interrupted" → "generating",
-    // so a run that *failed* during planning must be reset to "interrupted" first —
-    // otherwise it stays "failed" and the final transition to "needs_review" throws.
-    const reset = await repo.save({
-      ...run,
-      status: "interrupted",
-      interruptedDuring: "generating",
-      errorMessage: undefined,
-      failedDuring: undefined
-    });
+
     // Restart plans from scratch: drop the suspended planning thread so the
     // graph re-enters at START instead of resuming a stale gate.
-    await resetPlanningThread(reset.runId);
-    void runPlanningPipeline(reset.runId).catch(() => undefined);
-    return NextResponse.json(toRunResponse(reset));
+    await resetPlanningThread(claimed.runId);
+    void runPlanningPipeline(claimed.runId).catch(() => undefined);
+    return NextResponse.json(toRunResponse(claimed));
   } catch (error) {
-    return errorResponse(error);
+    return runErrorResponse(error);
   }
-}
-
-function errorResponse(error: unknown): NextResponse {
-  if (error instanceof RunNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
-  if (error instanceof RunValidationError) return NextResponse.json({ error: error.message }, { status: 400 });
-  if (error instanceof RunLifecycleError) return NextResponse.json({ error: error.message }, { status: 409 });
-  return NextResponse.json(
-    { error: error instanceof Error ? error.message : String(error) },
-    { status: 500 }
-  );
 }

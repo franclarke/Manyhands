@@ -112,6 +112,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       defaultRepairSelection: parsed.data.defaultRepairSelection,
       userPrompt,
       title,
+      version: 0,
       status: "created",
       createdAt: now,
       updatedAt: now,

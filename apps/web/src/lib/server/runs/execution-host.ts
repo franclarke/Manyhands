@@ -11,6 +11,7 @@
  * (resumeExecutionPipeline → Command({ resume })) go through driveExecution,
  * so checkpoints are never hand-edited.
  */
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { Command } from "@langchain/langgraph";
 import {
@@ -51,6 +52,7 @@ import {
   resolveExecutionGraph
 } from "./execution-state";
 import { getRunRepository } from "./store";
+import { claimRunMutation } from "./mutation-guard";
 import type { ProvisionedRepo } from "./repo-provisioner";
 import type { RunRecord } from "./schema";
 
@@ -436,19 +438,28 @@ export async function driveExecution(
 function gateFromInterrupt(
   interrupt: LeafValidationInterrupt | MergeConflictInterrupt
 ): NonNullable<RunRecord["pendingDecision"]> {
+  // Unique per suspension: a resume carrying this id can only resolve THIS
+  // interruption (INV-4). A re-suspension of the same task mints a fresh id,
+  // so decisions aimed at the previous gate 409 instead of resolving it.
   if (interrupt.type === "leaf_validation_failed") {
     return {
       gate: "leaf_validation_failed",
+      gateId: mintGateId("leaf_validation_failed", interrupt.taskId),
       taskId: interrupt.taskId,
       validationOutput: interrupt.validationOutput
     };
   }
   return {
     gate: "merge_conflict",
+    gateId: mintGateId("merge_conflict", interrupt.compositeTaskId),
     taskId: interrupt.compositeTaskId,
     ...(interrupt.conflictDetails !== undefined ? { conflictFiles: interrupt.conflictDetails.files } : {}),
     integrationStatus: interrupt.status
   };
+}
+
+function mintGateId(gate: string, taskId: string): string {
+  return `${gate}:${taskId}:${randomUUID().slice(0, 8)}`;
 }
 
 /** Persist a gate pause: status, typed decision, and the projected question. */
@@ -485,16 +496,32 @@ export async function persistExecutionPause(
   });
 }
 
-/** Clear the gate projection when a resume decision is accepted. */
-export async function clearExecutionPause(runId: string, target: "running"): Promise<RunRecord> {
-  const repo = getRunRepository();
-  const updated = await repo.update(runId, (current) => {
-    const next = { ...current, status: target } as RunRecord;
-    delete next.pausedDuring;
-    delete next.pendingDecision;
-    delete next.pendingQuestion;
-    return next;
-  });
+/**
+ * Claim and clear the gate projection when a resume decision is accepted.
+ * The claim verifies — inside the per-run write lock — that the gate is still
+ * pending (and matches `expectedGateId` when the caller has one), then clears
+ * it atomically so a concurrent duplicate decision gets a deterministic 409.
+ */
+export async function clearExecutionPause(
+  runId: string,
+  target: "running",
+  expectedGateId?: string
+): Promise<RunRecord> {
+  const updated = await claimRunMutation(
+    runId,
+    {
+      status: ["paused"],
+      pausedDuring: "running",
+      pendingDecisionGateId: expectedGateId ?? "any"
+    },
+    (current) => {
+      const next = { ...current, status: target } as RunRecord;
+      delete next.pausedDuring;
+      delete next.pendingDecision;
+      delete next.pendingQuestion;
+      return next;
+    }
+  );
   publishRunEvent(runId, { kind: "status.changed", status: target, at: new Date().toISOString() });
   return updated;
 }

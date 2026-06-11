@@ -28,6 +28,7 @@ function makeRun(overrides: Record<string, unknown> = {}): import("@/lib/server/
     model: "claude-test",
     userPrompt: "",
     title: "stale",
+    version: 0,
     status: "generating",
     createdAt: "2026-05-26T00:00:00.000Z",
     updatedAt: "2026-05-26T00:00:00.000Z",

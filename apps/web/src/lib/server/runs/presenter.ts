@@ -13,9 +13,11 @@ export function toRunResponse(run: RunRecord): RunResponse {
     userPrompt: run.userPrompt,
     title: run.title,
     status: run.status,
+    version: run.version,
     createdAt: run.createdAt,
     updatedAt: run.updatedAt
   };
+  if (run.pendingDecision !== undefined) payload.pendingDecision = run.pendingDecision;
   if (run.planningModel !== undefined) payload.planningModel = run.planningModel;
   if (run.defaultExecutionSelection !== undefined) payload.defaultExecutionSelection = run.defaultExecutionSelection;
   if (run.defaultRepairSelection !== undefined) payload.defaultRepairSelection = run.defaultRepairSelection;

@@ -1,3 +1,44 @@
+# Walkthrough — Sesión 2026-06-11 (Robustez E2E, PR-1: mutaciones idempotentes)
+
+> PR-1 del plan de robustez U1–U8 (diseño completo en
+> [`docs/design/future-frontier-tasks.md`](docs/design/future-frontier-tasks.md) §13).
+> Invariante cerrado: **INV-4 — toda decisión HITL es idempotente**.
+
+## Qué se hizo
+
+1. **`RunRecord.version`**: contador monotónico propiedad del repositorio. `save` lo
+   lee del disco DENTRO del write-lock per-run (un snapshot viejo nunca lo regresa);
+   `update` usa el registro fresco. Token de concurrencia optimista para la API.
+2. **`pendingDecision.gateId`**: id único acuñado por cada suspensión en
+   `gateFromInterrupt` (execution-host). Re-suspender la misma tarea acuña uno nuevo:
+   una pestaña vieja no puede resolver un gate re-acuñado.
+3. **`mutation-guard.ts` (nuevo)**: `claimRunMutation(runId, expectation, mutate)` —
+   re-verifica status/pausedDuring/gateId/pregunta/versión/runner-activo contra el
+   registro fresco dentro del lock, y el mutador consume el claim (limpia el gate,
+   transiciona). El perdedor de la carrera recibe `RunMutationConflictError` → 409
+   estructurado `{ error, conflict: { currentStatus, currentVersion } }`.
+4. **Las 5 rutas de mutación reclaman antes de despachar pipelines**: `resume` (3
+   ramas), `restart` (consume el status restartable + rechaza runner activo),
+   `answer`, `approve-plan` y `decisions` (que ahora reusa `processPlanApproval` en
+   vez de duplicarlo). `processPlanApproval` reclama `approved` ANTES del resume
+   nativo: exactamente un caller entrega `Command({resume})` al approvalGate. La
+   aprobación de amendments usa version-CAS para no sembrar el pipeline dos veces.
+5. **API/UI**: `RunResponse` expone `version` + `pendingDecision` (con `gateId`);
+   las rutas aceptan `{ gateId, expectedVersion }` opcionales. `route-errors.ts`
+   unifica el mapeo de errores (dedup de 5 copias). El chat trata el 409
+   estructurado como info ("ya fue resuelta") — el modelo se auto-corrige por SSE.
+
+## Verificación
+
+- `pnpm web:typecheck`, `pnpm -F @manyhands/execution-core typecheck`, `pnpm typecheck` (raíz) ✅
+- `pnpm test` ✅ — **939 passed / 3 skipped** (baseline 925; +14 nuevos)
+- Nuevos: `tests/mutation-concurrency.test.ts` (9 — claims, N concurrentes → exactamente
+  1 ganador, gateId stale, versión stale, runner activo) y
+  `tests/resume-route-concurrency.test.ts` (5 — INV-4 contra los route handlers reales:
+  dobles POSTs a resume/answer/restart → un 200 y un 409 estructurado).
+
+---
+
 # Walkthrough — Sesión 2026-06-11 (UI/UX Professionalization Pass)
 
 > PR: pase de profesionalización UI/UX del flujo core de ManyHands.

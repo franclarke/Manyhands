@@ -56,6 +56,7 @@ function baseRun(overrides: Partial<RunRecord> = {}): RunRecord {
     model: "gpt-5-codex",
     userPrompt: "Build it.",
     title: "Build it.",
+    version: 0,
     status: "completed",
     createdAt: "2026-05-29T00:00:00.000Z",
     updatedAt: "2026-05-29T00:01:00.000Z",

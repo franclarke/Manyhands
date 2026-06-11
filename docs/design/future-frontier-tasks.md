@@ -186,6 +186,46 @@ el wavefront sembrado con supervivientes. Gate option `replan_subtree` en el lea
 
 ---
 
+## 13. Mutaciones idempotentes: versionado optimista + claims HITL `[x]` — 2026-06-11
+
+**Hallazgo.** Ninguna ruta de mutación (`resume`, `restart`, `answer`, `approve-plan`,
+`decisions`) tenía guard de concurrencia: dos POSTs concurrentes con la misma decisión
+ganaban ambos (doble `Command({resume})`, doble pipeline). `RunRecord` no tenía
+versión y los gates no tenían identidad, así que una pestaña vieja podía resolver
+un gate re-acuñado.
+
+**Diseño.** PR-1 del plan de robustez U1–U8 (INV-4):
+- `RunRecord.version`: contador monotónico propiedad del repositorio (bump en cada
+  `save`/`update`, leído del disco dentro del write-lock — nunca regresa).
+- `pendingDecision.gateId`: id único por suspensión, acuñado en `gateFromInterrupt`;
+  re-suspender la misma tarea acuña uno nuevo, así las decisiones apuntadas al gate
+  anterior conflictúan en lugar de resolverlo.
+- `claimRunMutation(runId, expectation, mutate)` (`mutation-guard.ts`): re-verifica la
+  expectativa (status / pausedDuring / gateId / nodeId de pregunta / versión / runner
+  activo) contra el registro FRESCO dentro del write-lock per-run, y el mutador
+  consume el claim (limpia el gate, transiciona el status) — el segundo claimant
+  idéntico falla su propia expectativa → `RunMutationConflictError` → **409
+  estructurado** `{ error, conflict: { currentStatus, currentVersion } }`.
+- Las 5 rutas reclaman antes de despachar el pipeline async; `processPlanApproval`
+  reclama `approved` ANTES del resume nativo (exactamente un caller entrega el
+  Command al approvalGate). `restart` además rechaza con runner in-process activo.
+- API expone `version` + `pendingDecision` (con `gateId`); los clientes pueden anclar
+  con `{ gateId, expectedVersion }`. La UI trata el 409 estructurado como info
+  ("ya fue resuelta") — el modelo se auto-corrige por SSE.
+- Tests: `tests/mutation-concurrency.test.ts` (claims, N concurrentes → 1 ganador) y
+  `tests/resume-route-concurrency.test.ts` (INV-4 en el seam HTTP real).
+
+---
+
+## Plan de robustez E2E (U1–U8) — secuencia aprobada 2026-06-11
+
+PR-1 `[x]` (§13) → PR-2 cancel real con kill verificado + GC → PR-3 reconciliador de
+mundo físico + checkpoints corruptos detectados → PR-4 lock por repo + preflight →
+PR-5 fallas recuperables → gates (planning degradado, replan-question) → PR-6
+presupuesto tokens/costo por wave → PR-7 SSE Last-Event-ID + replay testeado →
+PR-8 visor de evidencia. Detalle completo en el plan de sesión
+(invariantes INV-1…INV-7, criterios de aceptación y estrategia de tests por PR).
+
 ## Próximas fronteras (pendientes, en orden de valor)
 
 - `[ ]` **Kill duro de subprocesos** al abortar un run (hoy es cooperativo +

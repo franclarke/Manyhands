@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  RunLifecycleError,
-  RunNotFoundError,
-  RunValidationError,
-  getRunRepository,
-  resumePlanningPipeline
-} from "@/lib/server/runs";
+import { RunValidationError, claimRunMutation, resumePlanningPipeline } from "@/lib/server/runs";
 import { publishRunEvent } from "@/lib/server/runs/event-bus";
+import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
@@ -19,7 +14,8 @@ interface RouteContext {
 
 const AnswerRequestSchema = z.object({
   nodeId: z.string().min(1),
-  answer: z.string().min(1)
+  answer: z.string().min(1),
+  expectedVersion: z.number().int().nonnegative().optional()
 }).strict();
 
 export async function POST(request: Request, context: RouteContext): Promise<NextResponse> {
@@ -38,30 +34,30 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       const issue = parsed.error.issues[0];
       throw new RunValidationError(issue?.message ?? "Invalid answer request");
     }
+    const { nodeId, answer, expectedVersion } = parsed.data;
 
-    const repo = getRunRepository();
-    const run = await repo.get(id);
-
-    if (run.status !== "paused" || run.pausedDuring !== "generating" || !run.pendingQuestion) {
-      throw new RunLifecycleError("Run is not currently waiting for a planning question response");
-    }
-
-    const { nodeId, answer } = parsed.data;
-
-    if (run.pendingQuestion.nodeId !== nodeId) {
-      throw new RunValidationError("Node ID does not match the pending question");
-    }
-
-    const updatedAnswers = { ...(run.questionAnswers ?? {}), [nodeId]: answer };
-    const nextRun = {
-      ...run,
-      status: "generating" as const,
-      questionAnswers: updatedAnswers
-    } as typeof run;
-    delete nextRun.pausedDuring;
-    delete nextRun.pendingQuestion;
-
-    const saved = await repo.save(nextRun);
+    // Atomic claim (INV-4): the pending question must still match `nodeId`
+    // inside the write lock, and the mutator consumes it — a duplicate answer
+    // (double-click, second tab) gets a deterministic 409.
+    const saved = await claimRunMutation(
+      id,
+      {
+        status: ["paused"],
+        pausedDuring: "generating",
+        pendingQuestionNodeId: nodeId,
+        ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
+      },
+      (current) => {
+        const next = {
+          ...current,
+          status: "generating" as const,
+          questionAnswers: { ...(current.questionAnswers ?? {}), [nodeId]: answer }
+        } as typeof current;
+        delete next.pausedDuring;
+        delete next.pendingQuestion;
+        return next;
+      }
+    );
     publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: new Date().toISOString() });
 
     // Native resume: the answer travels as Command({ resume }) into the
@@ -70,16 +66,6 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
 
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {
-    return errorResponse(error);
+    return runErrorResponse(error);
   }
-}
-
-function errorResponse(error: unknown): NextResponse {
-  if (error instanceof RunNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
-  if (error instanceof RunValidationError) return NextResponse.json({ error: error.message }, { status: 400 });
-  if (error instanceof RunLifecycleError) return NextResponse.json({ error: error.message }, { status: 409 });
-  return NextResponse.json(
-    { error: error instanceof Error ? error.message : String(error) },
-    { status: 500 }
-  );
 }

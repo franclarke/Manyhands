@@ -590,7 +590,12 @@ function renderInline(text: string, isUser?: boolean): React.ReactNode[] {
 
 async function readApiError(response: Response): Promise<string> {
   try {
-    const payload = (await response.json()) as { error?: string };
+    const payload = (await response.json()) as { error?: string; conflict?: { currentStatus?: string } };
+    // Structured mutation conflict (409): another request already resolved this
+    // decision. The model self-heals via SSE, so phrase it as info, not failure.
+    if (response.status === 409 && payload.conflict !== undefined) {
+      return "Esta decisión ya fue resuelta (por otra pestaña o una acción previa). El estado se actualizó.";
+    }
     return payload.error ?? `La acción falló (${response.status}).`;
   } catch {
     return `La acción falló (${response.status}).`;

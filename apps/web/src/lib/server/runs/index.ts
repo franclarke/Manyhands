@@ -10,6 +10,7 @@ export * from "./run-model-event-bus";
 export * from "./run-model-event-log";
 export * from "./runner";
 export * from "./runner-state";
+export * from "./mutation-guard";
 export * from "./run-abort-registry";
 export * from "./interrupted";
 export * from "./patches";

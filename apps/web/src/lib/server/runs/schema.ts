@@ -181,6 +181,13 @@ export const RunRecordSchema = z.object({
   title: z.string().min(1).max(160),
   /** LLM-generated one-paragraph description. Falls back to userPrompt in the UI. */
   summary: z.string().max(400).optional(),
+  /**
+   * Monotonic write counter, bumped by the repository on every persisted write.
+   * Optimistic-concurrency token for HITL mutations: clients echo it back and
+   * `claimRunMutation` rejects stale claims with 409. Defaults to 0 so records
+   * persisted before this field load unchanged.
+   */
+  version: z.number().int().nonnegative().default(0),
   status: RunStatusSchema,
   pausedDuring: z.union([z.literal("generating"), z.literal("running")]).optional(),
   /** Phase from which the run was interrupted (server restart, stale heartbeat). */
@@ -242,6 +249,13 @@ export const RunRecordSchema = z.object({
   pendingDecision: z
     .object({
       gate: z.union([z.literal("leaf_validation_failed"), z.literal("merge_conflict")]),
+      /**
+       * Unique id for THIS suspension, minted when the pause is persisted.
+       * Resumes that carry a gateId only match this exact interruption, so a
+       * stale tab can never resolve a newer gate. Optional: legacy pauses
+       * persisted before the field resume by state expectations alone.
+       */
+      gateId: z.string().min(1).optional(),
       taskId: z.string().min(1),
       validationOutput: z.string().optional(),
       conflictFiles: z.array(z.string().min(1)).optional(),

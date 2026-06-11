@@ -94,6 +94,7 @@ function makeRun(overrides: Partial<RunRecord> = {}): RunRecord {
     model: "gemini-2.5-flash",
     userPrompt: "Feature",
     title: "Feature",
+    version: 0,
     status: "created",
     createdAt: AT,
     updatedAt: AT,

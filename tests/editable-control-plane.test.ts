@@ -550,6 +550,7 @@ function makeRun(overrides: Partial<RunRecord> = {}): RunRecord {
     model: "claude-opus-4.7",
     userPrompt: "Build a feature",
     title: "Build a feature",
+    version: 0,
     status: "needs_review",
     createdAt: now,
     updatedAt: now,

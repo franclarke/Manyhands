@@ -82,6 +82,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       model: sourceRun.model,
       userPrompt: sourceRun.userPrompt,
       title: `[Fork] ${sourceRun.title}`,
+      version: 0,
       status: "created",
       createdAt: now,
       updatedAt: now,

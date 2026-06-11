@@ -20,6 +20,24 @@ export class RunLifecycleError extends Error {
 }
 
 /**
+ * Raised when a run mutation (HITL decision, resume, restart, approval) finds
+ * the run in a different state than the caller expected: another request won
+ * the race, the gate was already resolved, or the record version moved on.
+ * Subclasses RunLifecycleError so every route's 409 mapping applies; carries
+ * the current state so the client can reconcile instead of retrying blindly.
+ */
+export class RunMutationConflictError extends RunLifecycleError {
+  constructor(
+    message: string,
+    readonly currentStatus: string,
+    readonly currentVersion: number
+  ) {
+    super(message);
+    this.name = "RunMutationConflictError";
+  }
+}
+
+/**
  * Raised when a run is executed with the default engine but has no target
  * repository configured. The message is actionable (D3: never fail silently).
  */

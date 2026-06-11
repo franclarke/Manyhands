@@ -1,31 +1,38 @@
-# UltraCode Session — Frontier Implementation (2026-06-10)
+# Robustez E2E (U1–U8) — Plan aprobado 2026-06-11
 
-Objetivo: orquestador end-to-end funcional. Sistemas que instruyen, evalúan y corrigen agentes automáticamente.
+Objetivo: flujo `created → preflight → planning → review → execution → integration → completed`
+y todos sus caminos alternativos correctos, recuperables y auditables.
+Invariantes INV-1…INV-7 y diseño por PR: `docs/design/future-frontier-tasks.md`
+(§13 y sección "Plan de robustez E2E").
 
-## Fase 1 — execution-core: multi-executor + send-to-user + auto-corrección
-- [x] 1.1 Registry/adaptadores data-driven (CliAgentExecutor + perfiles; factory sin switch)
-- [x] 1.2 Clasificador de errores de executor (failure.ts) + failureKind/Hint en resultados
-- [x] 1.3 Rediseño Gemini CLI executor (-o json: response + token stats, errores estructurados)
-- [x] 1.4 Claude CLI executor: --output-format json (usage/cost reportados)
-- [x] 1.5 Codex CLI executor funcional (codex exec headless) + habilitado en registry
-- [x] 1.6 Canal send-to-user: MH_STATUS por stdout + onAgentStatus + trace agent_status
+## PR-1 — Mutaciones seguras (U0, INV-4) `[x]`
+- [x] `RunRecord.version` monotónico (repo-owned, bump dentro del write-lock)
+- [x] `pendingDecision.gateId` acuñado por suspensión (`gateFromInterrupt`)
+- [x] `mutation-guard.ts`: `claimRunMutation` + `RunMutationConflictError` (409 estructurado)
+- [x] Rutas con claim: resume / restart / answer / approve-plan / decisions
+- [x] `processPlanApproval` reclama `approved` antes del resume nativo
+- [x] `restart` rechaza con runner in-process activo
+- [x] API expone `version` + `pendingDecision`; UI trata el 409 estructurado como info
+- [x] Tests: `mutation-concurrency.test.ts` (9) + `resume-route-concurrency.test.ts` (5)
+- [x] Typechecks (web, execution-core, raíz) + suite completa verde (939/3 skipped)
 
-## Fase 2 — Enrutamiento inteligente por complejidad
-- [x] 2.1 scoreNodeComplexity (features deterministas del DAG/contrato + señales auditables)
-- [x] 2.2 ComplexityRoutingPolicy (tiers → ranked selections, fallback por disponibilidad)
-- [x] 2.3 probeExecutorAvailability + wiring en RunExecutor/host (config.routing, traza executor_routed)
-- [x] 2.4 Escalación de tier en repair (attempt ≥ 1)
+## PR-2 — Cancelación real con kill verificado y GC (U1, INV-2) `[ ]`
+- [ ] POSIX process-group kill (`detached` + `kill(-pid)`); win32 ya usa `taskkill /t /f`
+- [ ] Verificación post-kill con reintento y traza `process.kill.escalated`
+- [ ] `LiveProcessRegistry` por runId; cancel espera la verificación antes de responder
+- [ ] Loop del host abort-aware (corta el stream entre chunks; checkpoint del último superstep queda)
+- [ ] GC de worktrees del run cancelado + `git worktree prune` + traza `cancel.gc.completed`
+- [ ] Tests: kill-verify (proceso que ignora señales), cancel mid-wave (mtime scan), reanudable post-cancel
 
-## Fase 3 — Planning sobre LangGraph (HITL nativo)
-- [x] 3.1 Planning StateGraph v2 (decomposePlan caro sin interrupt; questionGate/approvalGate baratos)
-- [x] 3.2 planning-host.ts en apps/web (deps + eventos vivos + JsonFileCheckpointSaver `__planning`)
-- [x] 3.3 Rewire planning-pipeline/resume/answer/decisions/approve-plan/restart; DecomposerQuestionError muere en el seam
+## PR-3 — Reconciliador de mundo físico + checkpoints corruptos (U3, INV-3) `[ ]`
+- [ ] `world-reconciler.ts`: inventario físico (worktrees/branches/locks/baseCommit) vs lógico (checkpoint), resolución por hoja (casos a–d)
+- [ ] `ReconciliationReport` → RunEvent `world.reconciled`; invalidados fuera del seed del wavefront
+- [ ] Checkpointer: ENOENT ≠ corrupto; fallback al checkpoint anterior válido + `checkpoint.degraded` / `checkpoint.lost`
+- [ ] Wiring en execution-pipeline (resume) y restart route
+- [ ] Tests: crash-recovery con git real, corrupción de `latest.json`, branch borrada → re-ejecución
 
-## Fase 4 — Re-decomposición selectiva
-- [x] 4.1 graftSubtree (task-graph) + invalidateTask/closure (AmendmentsEngine) + replan-service (web)
-- [x] 4.2 Gate option "replan_subtree" en leafGate + resume/decisions routes (out-of-band del Command resume)
-
-## Fase 5 — Calidad
-- [x] 5.1 pnpm typecheck (raíz, exit 0 — incluía 40 errores latentes preexistentes en fixtures, reparados) + pnpm web:typecheck + pnpm build + pnpm test (925 passed / 3 skipped)
-- [x] 5.2 Docs: implementacion-frontera.md + future-frontier-tasks.md + walkthrough.md
-- [x] 5.3 Commits de checkpoint (b3b798d, 411adc5, 5a5f2f2, 9cf6439 + final)
+## PR-4 — Lock por repo + preflight endurecido (U7) `[ ]`
+## PR-5 — Fallas recuperables → gates: planning degradado + replan-question (U2, U6, INV-5) `[ ]`
+## PR-6 — Presupuesto tokens/costo por wave con budgetGate (U5) `[ ]`
+## PR-7 — SSE Last-Event-ID + backoff + replay testeado (U8, INV-7) `[ ]`
+## PR-8 — Visor de evidencia usable (U4) `[ ]`

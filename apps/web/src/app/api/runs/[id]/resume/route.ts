@@ -7,17 +7,21 @@
  *     resumeExecutionPipeline — checkpoints are never edited by hand.
  *     Accepted payloads: { action: "retry_repair" | "accept_failing" |
  *     "accept_conflict" | "abort_run" } or { answer: <gate option label> }.
- *  2. Planning question: stores the answer and re-runs the planning pipeline
- *     (the decomposer resumes from its step cache).
+ *  2. Planning question: stores the answer and resumes the planning graph.
  *  3. Plain un-pause (no payload): flips paused → generating/running for the
  *     cooperative engine pause.
+ *
+ * Every mode claims the run via `claimRunMutation` (INV-4): the expectation is
+ * re-checked inside the per-run write lock and the claim consumes the pending
+ * gate/question, so a concurrent duplicate request gets a deterministic 409.
+ * Clients may pin the exact interruption with { gateId } and guard against
+ * stale state with { expectedVersion }.
  */
 import { NextResponse } from "next/server";
 import {
-  RunLifecycleError,
-  RunNotFoundError,
+  RunMutationConflictError,
   RunValidationError,
-  assertTransition,
+  claimRunMutation,
   getRunRepository,
   resumePlanningPipeline,
   resumeExecutionPipeline
@@ -30,7 +34,9 @@ import {
 } from "@/lib/server/runs/execution-host";
 import { replanSubtree } from "@/lib/server/runs/replan-service";
 import { publishRunEvent } from "@/lib/server/runs/event-bus";
+import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
+import type { RunRecord } from "@/lib/server/runs/schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,8 +49,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
   const { id } = await context.params;
   try {
     const payload = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-    const repo = getRunRepository();
-    const run = await repo.get(id);
+    const expectedGateId = typeof payload?.gateId === "string" ? payload.gateId : undefined;
+    const expectedVersion = typeof payload?.expectedVersion === "number" ? payload.expectedVersion : undefined;
+    const run = await getRunRepository().get(id);
 
     // 1) Execution gate resume — native Command({ resume }).
     if (run.status === "paused" && run.pausedDuring === "running" && run.pendingDecision !== undefined) {
@@ -53,7 +60,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       if (isReplanRequest(payload)) {
         const failedTaskId = run.pendingDecision.taskId;
         const reason = run.pendingDecision.validationOutput ?? "leaf failed irrecoverably";
-        const saved = await clearExecutionPause(id, "running");
+        const saved = await clearExecutionPause(id, "running", expectedGateId);
         void replanSubtree(id, failedTaskId, reason).catch((error) =>
           console.error(`[Resume] Replan failed for run ${id}:`, error)
         );
@@ -66,7 +73,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
           "Execution resume requires { action: retry_repair | replan_subtree | accept_failing | accept_conflict | abort_run }."
         );
       }
-      const saved = await clearExecutionPause(id, "running");
+      const saved = await clearExecutionPause(id, "running", expectedGateId);
       void resumeExecutionPipeline(id, decision).catch((error) =>
         console.error(`[Resume] Execution resume failed for run ${id}:`, error)
       );
@@ -74,44 +81,67 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     }
 
     // 2) Planning question resume.
-    const answer = planningAnswerFrom(payload, run.pendingQuestion?.nodeId);
-    if (answer !== null) {
-      if (run.status !== "paused" || run.pausedDuring !== "generating" || run.pendingQuestion === undefined) {
-        throw new RunLifecycleError("Run is not waiting for a planning answer.");
-      }
-      const nodeId = run.pendingQuestion.nodeId;
-      const next = {
-        ...run,
-        status: "generating" as const,
-        questionAnswers: { ...(run.questionAnswers ?? {}), [nodeId]: answer }
-      };
-      delete next.pausedDuring;
-      delete next.pendingQuestion;
-      const saved = await repo.save(next);
+    const planningAnswer = planningAnswerFrom(payload, run.pendingQuestion?.nodeId);
+    if (planningAnswer !== null) {
+      const saved = await claimRunMutation(
+        id,
+        {
+          status: ["paused"],
+          pausedDuring: "generating",
+          pendingQuestionNodeId: planningAnswer.nodeId ?? "any",
+          ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
+        },
+        (current) => {
+          const nodeId = current.pendingQuestion?.nodeId as string;
+          const next = {
+            ...current,
+            status: "generating" as const,
+            questionAnswers: { ...(current.questionAnswers ?? {}), [nodeId]: planningAnswer.answer }
+          };
+          delete next.pausedDuring;
+          delete next.pendingQuestion;
+          return next;
+        }
+      );
       publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: new Date().toISOString() });
       // Native resume: the answer travels as Command({ resume }) into the
       // suspended planning questionGate (legacy runs without a planning
       // checkpoint fall back to re-running the pipeline).
-      void resumePlanningPipeline(id, { answer }).catch((error) =>
+      void resumePlanningPipeline(id, { answer: planningAnswer.answer }).catch((error) =>
         console.error(`[Resume] Planning resume failed for run ${id}:`, error)
       );
       return NextResponse.json(toRunResponse(saved));
     }
 
     // 3) Plain un-pause (cooperative engine pause).
-    if (run.status !== "paused" || run.pausedDuring === undefined) {
-      throw new RunLifecycleError(`Cannot resume from status ${run.status}`);
-    }
-    const target = run.pausedDuring === "generating" ? "generating" : "running";
-    assertTransition(run.status, target);
-    const now = new Date().toISOString();
-    const next = { ...run, status: target } as typeof run;
-    delete next.pausedDuring;
-    const saved = await repo.save(next);
-    publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: now });
+    const saved = await claimRunMutation(
+      id,
+      { status: ["paused"], ...(expectedVersion !== undefined ? { version: expectedVersion } : {}) },
+      (current) => {
+        if (current.pendingDecision !== undefined || current.pendingQuestion !== undefined) {
+          throw new RunMutationConflictError(
+            `Run ${id} is suspended on a gate; resuming requires a decision payload.`,
+            current.status,
+            current.version
+          );
+        }
+        if (current.pausedDuring === undefined) {
+          throw new RunMutationConflictError(
+            `Run ${id} is paused without a recorded phase; cannot un-pause.`,
+            current.status,
+            current.version
+          );
+        }
+        const target = current.pausedDuring === "generating" ? ("generating" as const) : ("running" as const);
+        const next = { ...current, status: target } as RunRecord;
+        delete next.pausedDuring;
+        return next;
+      }
+    );
+    publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: new Date().toISOString() });
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {
-    return errorResponse(error);
+    return runErrorResponse(error);
   }
 }
 
@@ -125,24 +155,23 @@ function executionDecisionFrom(
   return null;
 }
 
-function planningAnswerFrom(payload: Record<string, unknown> | null, nodeId: string | undefined): string | null {
+interface PlanningAnswer {
+  answer: string;
+  /** Set when the payload addressed a specific question node; pins the claim. */
+  nodeId?: string;
+}
+
+function planningAnswerFrom(
+  payload: Record<string, unknown> | null,
+  nodeId: string | undefined
+): PlanningAnswer | null {
   if (payload === null) return null;
-  if (typeof payload.answer === "string" && payload.answer.length > 0) return payload.answer;
-  if (typeof payload.choice === "string" && payload.choice.length > 0) return payload.choice;
+  if (typeof payload.answer === "string" && payload.answer.length > 0) return { answer: payload.answer };
+  if (typeof payload.choice === "string" && payload.choice.length > 0) return { answer: payload.choice };
   const userAnswers = payload.userAnswers;
   if (nodeId !== undefined && typeof userAnswers === "object" && userAnswers !== null) {
     const candidate = (userAnswers as Record<string, unknown>)[nodeId];
-    if (typeof candidate === "string" && candidate.length > 0) return candidate;
+    if (typeof candidate === "string" && candidate.length > 0) return { answer: candidate, nodeId };
   }
   return null;
-}
-
-function errorResponse(error: unknown): NextResponse {
-  if (error instanceof RunNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
-  if (error instanceof RunValidationError) return NextResponse.json({ error: error.message }, { status: 400 });
-  if (error instanceof RunLifecycleError) return NextResponse.json({ error: error.message }, { status: 409 });
-  return NextResponse.json(
-    { error: error instanceof Error ? error.message : String(error) },
-    { status: 500 }
-  );
 }

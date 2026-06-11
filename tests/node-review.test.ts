@@ -50,6 +50,7 @@ describe("reviewNode", () => {
       model: "gemini-2.5-pro",
       userPrompt: "Add a feature",
       title: "test",
+      version: 0,
       status: status as never,
       createdAt: "2026-05-26T00:00:00.000Z",
       updatedAt: "2026-05-26T00:00:00.000Z",

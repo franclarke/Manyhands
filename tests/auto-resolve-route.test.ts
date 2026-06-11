@@ -85,6 +85,7 @@ function makeConflictingRun(overrides: Partial<RunRecord> = {}): RunRecord {
     model: "gemini-2.5-flash",
     userPrompt: "Build a feature",
     title: "Build a feature",
+    version: 0,
     status: "needs_review",
     createdAt: now,
     updatedAt: now,

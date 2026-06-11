@@ -1,17 +1,18 @@
-import {
-  RunLifecycleError,
-  assertTransition,
-  getRunRepository,
-  parseRunPatches,
-} from "@/lib/server/runs";
+import { RunLifecycleError, parseRunPatches } from "@/lib/server/runs";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import { publishRunEvent } from "@/lib/server/runs/event-bus";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import { buildPlanReviewSummary } from "@/lib/plan-review";
+import { getRunRepository } from "./store";
+import { claimRunMutation } from "./mutation-guard";
 import { hasPlanningCheckpoint } from "./planning-host";
 import { resumePlanningPipeline } from "./planning-pipeline";
 
-export async function processPlanApproval(id: string, acknowledge: boolean): Promise<RunRecord> {
+export async function processPlanApproval(
+  id: string,
+  acknowledge: boolean,
+  expectedVersion?: number
+): Promise<RunRecord> {
   const repo = getRunRepository();
   const run = await repo.get(id);
 
@@ -33,18 +34,30 @@ export async function processPlanApproval(id: string, acknowledge: boolean): Pro
     }
   }
 
-  assertTransition(run.status, "approved");
+  // Claim the approval atomically (INV-4) BEFORE resuming the planning graph:
+  // the mutator moves the run to "approved", so a concurrent duplicate approval
+  // finds no approvable status and gets a deterministic 409 — exactly one
+  // caller ever delivers Command({ resume }) into the approvalGate.
+  const now = new Date().toISOString();
+  const claimed = await claimRunMutation(
+    id,
+    {
+      // Mirrors the lifecycle transitions into "approved": the review gate plus
+      // the re-open paths (re-run a node after a finished run).
+      status: ["needs_review", "completed", "failed"],
+      ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
+    },
+    (current) => ({ ...current, status: "approved" as const, approvedAt: current.approvedAt ?? now })
+  );
+  publishRunEvent(claimed.runId, { kind: "status.changed", status: claimed.status, at: now });
 
-  // Native path: the approval is a Command({ resume }) into the suspended
-  // approvalGate; the pipeline projects END(status=approved) onto the record.
+  // Native path: deliver the approval as Command({ resume }) into the suspended
+  // approvalGate; the pipeline re-projects END(status=approved) onto the record
+  // (idempotent over the claim above). Legacy runs without a planning thread
+  // already hold the final state from the claim.
   if (await hasPlanningCheckpoint(id)) {
     await resumePlanningPipeline(id, { action: "approve" });
     return repo.get(id);
   }
-
-  // Legacy runs without a planning thread: direct transition.
-  const now = new Date().toISOString();
-  const saved = await repo.save({ ...run, status: "approved", approvedAt: now });
-  publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: now });
-  return saved;
+  return claimed;
 }

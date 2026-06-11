@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  RunLifecycleError,
-  RunNotFoundError,
-  RunValidationError,
-} from "@/lib/server/runs";
+import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 import { processPlanApproval } from "@/lib/server/runs/plan-approval-service";
 
@@ -16,31 +12,24 @@ interface RouteContext {
 
 export async function POST(request: Request, context: RouteContext): Promise<NextResponse> {
   const { id } = await context.params;
-  const acknowledge = await readAcknowledge(request);
+  const { acknowledge, expectedVersion } = await readBody(request);
 
   try {
-    const saved = await processPlanApproval(id, acknowledge);
+    const saved = await processPlanApproval(id, acknowledge, expectedVersion);
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {
-    return errorResponse(error);
+    return runErrorResponse(error);
   }
 }
 
-async function readAcknowledge(request: Request): Promise<boolean> {
+async function readBody(request: Request): Promise<{ acknowledge: boolean; expectedVersion?: number }> {
   try {
-    const body = (await request.json()) as { acknowledgeCriticErrors?: unknown };
-    return body.acknowledgeCriticErrors === true;
+    const body = (await request.json()) as { acknowledgeCriticErrors?: unknown; expectedVersion?: unknown };
+    return {
+      acknowledge: body.acknowledgeCriticErrors === true,
+      ...(typeof body.expectedVersion === "number" ? { expectedVersion: body.expectedVersion } : {})
+    };
   } catch {
-    return false;
+    return { acknowledge: false };
   }
-}
-
-function errorResponse(error: unknown): NextResponse {
-  if (error instanceof RunNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
-  if (error instanceof RunValidationError) return NextResponse.json({ error: error.message }, { status: 400 });
-  if (error instanceof RunLifecycleError) return NextResponse.json({ error: error.message }, { status: 409 });
-  return NextResponse.json(
-    { error: error instanceof Error ? error.message : String(error) },
-    { status: 500 }
-  );
 }

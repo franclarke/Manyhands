@@ -87,8 +87,16 @@ export class JsonRunRecordStore implements RunRepository {
 
   async save(run: RunRecord): Promise<RunRecord> {
     return this.withLock(run.runId, async () => {
+      // `version` is repository-owned: monotonic per persisted write, taken from
+      // the record on disk (not the caller's possibly stale snapshot) so it never
+      // regresses even under last-wins saves.
+      const diskVersion = await this.get(run.runId).then(
+        (current) => current.version,
+        () => undefined
+      );
       const parsed = RunRecordSchema.parse({
         ...run,
+        version: Math.max(diskVersion ?? 0, run.version ?? 0) + 1,
         updatedAt: this.clock()
       });
       const file: RunFile = { version: RUN_FILE_VERSION, run: parsed };
@@ -104,6 +112,7 @@ export class JsonRunRecordStore implements RunRepository {
       const current = await this.get(runId);
       const parsed = RunRecordSchema.parse({
         ...mutator(current),
+        version: current.version + 1,
         updatedAt: this.clock()
       });
       const file: RunFile = { version: RUN_FILE_VERSION, run: parsed };

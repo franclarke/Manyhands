@@ -107,6 +107,7 @@ async function saveApprovedRun(runId: string, extra: Record<string, unknown> = {
     model: "claude-opus-4.7",
     userPrompt: "Add a feature",
     title: "test",
+    version: 0,
     status: "approved",
     createdAt: "2026-05-26T00:00:00.000Z",
     updatedAt: "2026-05-26T00:00:00.000Z",

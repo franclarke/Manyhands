@@ -165,6 +165,17 @@ export interface RunResponse {
     summary?: string;
     title: string;
     status: RunStatusKey;
+    /** Monotonic write counter; echo back as `expectedVersion` for optimistic mutations. */
+    version: number;
+    /** Suspended execution gate awaiting a decision; echo `gateId` back on resume. */
+    pendingDecision?: {
+      gate: "leaf_validation_failed" | "merge_conflict";
+      gateId?: string | undefined;
+      taskId: string;
+      validationOutput?: string | undefined;
+      conflictFiles?: string[] | undefined;
+      integrationStatus?: string | undefined;
+    };
     pausedDuring?: "generating" | "running";
     interruptedDuring?: "generating" | "running";
     errorMessage?: string;

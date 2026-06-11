@@ -4,23 +4,21 @@ import { AmendmentsEngine, type RunExecutionResult, computeGranularityVector } f
 import { createInitialRunModel, reduceRunEvents } from "@/lib/run-model/reducer";
 import type { Decision, DecisionChoice, RunEvent } from "@/lib/run-model/types";
 import { buildDecisionChannelView } from "@/lib/run-model/decision-channel-view";
-import { buildPlanReviewSummary } from "@/lib/plan-review";
-import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import {
   RunLifecycleError,
   RunNotFoundError,
   RunValidationError,
-  assertTransition,
+  claimRunMutation,
   ensureRunModelEventLogForRun,
   getRunRepository,
-  parseRunPatches,
   publishRunEvent,
   publishRunModelEvent,
-  hasPlanningCheckpoint,
   resumeExecutionPipeline,
   resumePlanningPipeline,
   runExecutionPipeline
 } from "@/lib/server/runs";
+import { processPlanApproval } from "@/lib/server/runs/plan-approval-service";
+import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import {
   clearExecutionPause,
   decisionFromAnswer,
@@ -66,7 +64,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     }
     body = parsed.data;
   } catch (error) {
-    if (error instanceof RunValidationError) return errorResponse(error);
+    if (error instanceof RunValidationError) return runErrorResponse(error);
     return NextResponse.json({ error: "Body must be valid JSON" }, { status: 400 });
   }
 
@@ -82,29 +80,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       if (!("action" in choice) || choice.action !== "approve") {
         throw new RunValidationError("approve_plan only supports { action: 'approve' }");
       }
-      if (body.acknowledgeCriticErrors !== true) {
-        const summary = buildPlanReviewSummary(projectRunRecordToSnapshot(run), parseRunPatches(run.patches));
-        if (summary !== null && summary.issueCounts.errors > 0) {
-          const detail = summary.issues
-            .filter((issue) => issue.severity === "error")
-            .map((issue) => issue.title)
-            .join(", ");
-          throw new RunLifecycleError(
-            `Plan has ${summary.issueCounts.errors} blocking error(s): ${detail}. ` +
-              "Resolve them, or approve explicitly from the plan review gate."
-          );
-        }
-      }
-      assertTransition(run.status, "approved");
-      if (await hasPlanningCheckpoint(run.runId)) {
-        // Native approval: Command({ resume: { action: "approve" } }) into the
-        // suspended approvalGate; the pipeline projects "approved".
-        await resumePlanningPipeline(run.runId, { action: "approve" });
-        run = await repo.get(run.runId);
-      } else {
-        run = await repo.save({ ...run, status: "approved", approvedAt: now });
-        publishRunEvent(run.runId, { kind: "status.changed", status: run.status, at: now });
-      }
+      // Claims the approval atomically (INV-4) and resumes the suspended
+      // approvalGate natively; a concurrent duplicate approval gets a 409.
+      run = await processPlanApproval(run.runId, body.acknowledgeCriticErrors === true);
       // Resolving the approval gate IS the go-ahead in the agent-first model (there
       // is no separate "run" affordance). Start execution; the pipeline transitions
       // "approved" → "running" itself (mirrors the restart route).
@@ -119,11 +97,14 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       // Execution-gate clarifications resume the suspended LangGraph thread
       // natively (Command({ resume })) instead of the planning pipeline.
       if (run.status === "paused" && run.pausedDuring === "running" && run.pendingDecision !== undefined) {
+        // Pin the claim to the exact suspension we read: if the gate was
+        // resolved or re-minted meanwhile, the clear below 409s (INV-4).
+        const expectedGateId = run.pendingDecision.gateId;
         // Selective re-decomposition: rebuild the failed subtree out-of-band.
         if (isReplanRequest({ answer: choice.answer })) {
           const failedTaskId = run.pendingDecision.taskId;
           const reason = run.pendingDecision.validationOutput ?? "leaf failed irrecoverably";
-          run = await clearExecutionPause(run.runId, "running");
+          run = await clearExecutionPause(run.runId, "running", expectedGateId);
           publishRunModelEvent(run.runId, {
             actor: "human",
             at: now,
@@ -140,7 +121,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
             `"${choice.answer}" is not a valid option for the ${run.pendingDecision.gate} gate.`
           );
         }
-        run = await clearExecutionPause(run.runId, "running");
+        run = await clearExecutionPause(run.runId, "running", expectedGateId);
         publishRunModelEvent(run.runId, {
           actor: "human",
           at: now,
@@ -151,25 +132,31 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         return NextResponse.json({ ...toRunResponse(run), decisionId: decision.id, choice });
       }
 
-      if (run.status !== "paused" || run.pausedDuring !== "generating" || !run.pendingQuestion) {
-        throw new RunLifecycleError("Run is not currently waiting for a planning question response");
-      }
       const nodeId = decision.context.nodeIds?.[0];
-      if (nodeId === undefined || run.pendingQuestion.nodeId !== nodeId) {
+      if (nodeId === undefined) {
         throw new RunValidationError("Node ID does not match the pending question");
       }
-
-      const nextRun = {
-        ...run,
-        status: "generating" as const,
-        questionAnswers: { ...(run.questionAnswers ?? {}), [nodeId]: choice.answer }
-      } as typeof run;
-      delete nextRun.pausedDuring;
-      delete nextRun.pendingQuestion;
-      run = await repo.save(nextRun);
+      // Atomic claim (INV-4): the pending question must still match `nodeId`
+      // inside the write lock; the mutator consumes it, so a duplicate answer
+      // gets a deterministic 409.
+      const answer = choice.answer;
+      run = await claimRunMutation(
+        run.runId,
+        { status: ["paused"], pausedDuring: "generating", pendingQuestionNodeId: nodeId },
+        (current) => {
+          const nextRun = {
+            ...current,
+            status: "generating" as const,
+            questionAnswers: { ...(current.questionAnswers ?? {}), [nodeId]: answer }
+          } as typeof current;
+          delete nextRun.pausedDuring;
+          delete nextRun.pendingQuestion;
+          return nextRun;
+        }
+      );
       publishRunEvent(run.runId, { kind: "status.changed", status: run.status, at: now });
       // Native resume into the suspended planning questionGate.
-      void resumePlanningPipeline(run.runId, { answer: choice.answer }).catch(() => undefined);
+      void resumePlanningPipeline(run.runId, { answer }).catch(() => undefined);
     }
 
     publishRunModelEvent(run.runId, {
@@ -243,11 +230,14 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         // only the invalidated closure re-enters the frontier.
         await resetExecutionThread(run.runId);
 
-        run = await repo.save({
-          ...run,
+        // Version-CAS (INV-4): `run.version` is the snapshot this amendment was
+        // computed against. A concurrent duplicate approval bumped it with its
+        // own save, so the loser 409s instead of double-seeding the pipeline.
+        run = await claimRunMutation(run.runId, { version: run.version }, (current) => ({
+          ...current,
           execution: updatedExecution,
-          status: "running"
-        });
+          status: "running" as const
+        }));
 
         void runExecutionPipeline(run.runId).catch(() => undefined);
       }
@@ -255,7 +245,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
 
     return NextResponse.json({ ...toRunResponse(run), decisionId: decision.id, choice });
   } catch (error) {
-    return errorResponse(error);
+    return runErrorResponse(error);
   }
 }
 
@@ -312,12 +302,3 @@ function parseChoice(value: unknown): DecisionChoice | null {
   return null;
 }
 
-function errorResponse(error: unknown): NextResponse {
-  if (error instanceof RunNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
-  if (error instanceof RunValidationError) return NextResponse.json({ error: error.message }, { status: 400 });
-  if (error instanceof RunLifecycleError) return NextResponse.json({ error: error.message }, { status: 409 });
-  return NextResponse.json(
-    { error: error instanceof Error ? error.message : String(error) },
-    { status: 500 }
-  );
-}
