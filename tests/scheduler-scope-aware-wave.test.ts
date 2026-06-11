@@ -36,7 +36,7 @@ function makeLeaf(id: string, scopePaths?: string[]): TaskNode {
             knownRisks: [],
             definitionOfDone: "done",
             executionScope: { implementationPaths: scopePaths, testPaths: [], configPaths: [] }
-          } as TaskNode["contract"]
+          } as unknown as NonNullable<TaskNode["contract"]>
         }
       : {})
   };
@@ -112,7 +112,7 @@ describe("selectScopeAwareWave", () => {
 
   it("serializes high/blocking risk pairs even without scopes", () => {
     const graph = makeGraph([makeLeaf("a"), makeLeaf("b"), makeLeaf("c")]);
-    const riskMatrix: TaskPairRiskMatrix = [
+    const riskMatrix = [
       {
         taskAId: "a",
         taskBId: "b",
@@ -121,14 +121,14 @@ describe("selectScopeAwareWave", () => {
         sharedSymbols: [],
         explanation: "both edit shared.ts"
       }
-    ];
+    ] as unknown as TaskPairRiskMatrix;
     const wave = selectScopeAwareWave({ graph, candidates: ["a", "b", "c"], riskMatrix });
     expect(wave).toEqual(["a", "c"]);
   });
 
   it("low/medium risk pairs stay parallel", () => {
     const graph = makeGraph([makeLeaf("a"), makeLeaf("b")]);
-    const riskMatrix: TaskPairRiskMatrix = [
+    const riskMatrix = [
       {
         taskAId: "a",
         taskBId: "b",
@@ -137,7 +137,7 @@ describe("selectScopeAwareWave", () => {
         sharedSymbols: ["X"],
         explanation: "shared symbol"
       }
-    ];
+    ] as unknown as TaskPairRiskMatrix;
     const wave = selectScopeAwareWave({ graph, candidates: ["a", "b"], riskMatrix });
     expect(wave).toEqual(["a", "b"]);
   });

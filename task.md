@@ -26,6 +26,6 @@ Objetivo: orquestador end-to-end funcional. Sistemas que instruyen, evalúan y c
 - [x] 4.2 Gate option "replan_subtree" en leafGate + resume/decisions routes (out-of-band del Command resume)
 
 ## Fase 5 — Calidad
-- [ ] 5.1 pnpm typecheck + pnpm test verdes en todo el monorepo
-- [ ] 5.2 Docs: implementacion-frontera.md + future-frontier-tasks.md + docs/system
-- [ ] 5.3 Commits de checkpoint
+- [x] 5.1 pnpm typecheck (raíz, exit 0 — incluía 40 errores latentes preexistentes en fixtures, reparados) + pnpm web:typecheck + pnpm build + pnpm test (925 passed / 3 skipped)
+- [x] 5.2 Docs: implementacion-frontera.md + future-frontier-tasks.md + walkthrough.md
+- [x] 5.3 Commits de checkpoint (b3b798d, 411adc5, 5a5f2f2, 9cf6439 + final)

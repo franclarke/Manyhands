@@ -67,7 +67,7 @@ describe("plan-review", () => {
             evidence: [],
             acknowledged: true
           }
-        ] as RunSnapshot["riskPredictions"]
+        ] as unknown as RunSnapshot["riskPredictions"]
       })
     );
 
@@ -239,7 +239,7 @@ function makeIntegratorNode(): Extract<RunPatch, { type: "INTEGRATOR_NODE_CREATE
 }
 
 function patch<T extends RunPatch["type"]>(
-  payload: Omit<Extract<RunPatch, { type: T }>, "id" | "createdAt" | "actor">
+  payload: { type: T } & Omit<Extract<RunPatch, { type: T }>, "id" | "createdAt" | "actor">
 ): Extract<RunPatch, { type: T }> {
   return {
     id: `patch-${payload.type}`,

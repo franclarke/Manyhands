@@ -34,7 +34,7 @@ function child(taskId: string, commitSha: string, status: AgentExecutionResult["
     diff: "patch",
     changedFiles: [`src/${taskId}.ts`],
     commitSha,
-    scopeCheck: { passed: true, violations: [] },
+    scopeCheck: { passed: true, violations: [], outOfScope: [] },
     executorExitCode: 0,
     executorDurationMs: 100,
     executorTimedOut: false

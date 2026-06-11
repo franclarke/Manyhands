@@ -135,7 +135,7 @@ describe("AgentExecutionResultSchema", () => {
     agentCommittedUnexpectedly: false,
     diff: "diff --git a/src/index.ts b/src/index.ts\n...",
     changedFiles: ["src/index.ts"],
-    scopeCheck: { passed: true, violations: [] },
+    scopeCheck: { passed: true, violations: [], outOfScope: [] },
     executorExitCode: 0,
     executorDurationMs: 12000,
     executorTimedOut: false,

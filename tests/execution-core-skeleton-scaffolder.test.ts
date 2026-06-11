@@ -11,7 +11,7 @@ import {
   scaffoldInterfaces,
   referencedTypeNames,
   type AgentExecutor,
-  type ExecutorOutcome
+  type ExecutorRunOutcome
 } from "@manyhands/execution-core";
 import type { InterfaceContract } from "@manyhands/contracts";
 import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
@@ -143,7 +143,7 @@ describe("scaffoldInterfaces", () => {
 class FakeExecutor implements AgentExecutor {
   calls = 0;
   constructor(private readonly onExecute?: () => Promise<void>) {}
-  async execute(): Promise<ExecutorOutcome> {
+  async execute(): Promise<ExecutorRunOutcome> {
     this.calls += 1;
     await this.onExecute?.();
     return { exitCode: 0, durationMs: 1, timedOut: false, stdout: "", stderr: "" };
@@ -177,7 +177,7 @@ function makeLeafWithSeams(id: string, produced: InterfaceContract[]): TaskNode 
       knownRisks: [],
       definitionOfDone: "done",
       producedInterfaces: produced
-    } as TaskNode["contract"]
+    } as unknown as NonNullable<TaskNode["contract"]>
   };
 }
 

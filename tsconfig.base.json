@@ -29,7 +29,8 @@
       "@manyhands/trace-store": ["packages/trace-store/src/index.ts"],
       "@manyhands/core": ["packages/core/src/index.ts"],
       "@manyhands/execution-core": ["packages/execution-core/src/index.ts"],
-      "@manyhands/orchestrator-graph": ["packages/orchestrator-graph/src/index.ts"]
+      "@manyhands/orchestrator-graph": ["packages/orchestrator-graph/src/index.ts"],
+      "@/*": ["apps/web/src/*"]
     }
   }
 }

@@ -36,6 +36,7 @@ function makeRun(overrides: Partial<RunRecord> = {}): RunRecord {
     status: "created",
     createdAt: "2026-05-26T00:00:00.000Z",
     updatedAt: "2026-05-26T00:00:00.000Z",
+    patches: [],
     ...overrides
   };
 }

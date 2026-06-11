@@ -294,6 +294,7 @@ describe("editable control plane vertical slice", () => {
             granularity: "fine",
             depth: 1,
             childrenIds: [],
+            dependencies: [],
             contract: regeneratedContract,
             metadata: { authoredBy: "ai" }
           }
@@ -777,7 +778,7 @@ describe("projectRunRecordToSnapshot — real execution results", () => {
       agentCommittedUnexpectedly: false,
       diff: status === "success" ? "diff --git a/x b/x" : "",
       changedFiles: status === "success" ? ["src/original.ts"] : [],
-      scopeCheck: { passed: true, violations: [] },
+      scopeCheck: { passed: true, violations: [], outOfScope: [] },
       executorExitCode: status === "success" ? 0 : 1,
       executorDurationMs: 1234,
       executorTimedOut: false,

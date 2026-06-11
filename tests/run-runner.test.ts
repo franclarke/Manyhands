@@ -34,7 +34,7 @@ function successLeaf(taskId: string): AgentExecutionResult {
     diff: "",
     changedFiles: [`src/${taskId}.ts`],
     commitSha: `${taskId}_SHA`,
-    scopeCheck: { passed: true, violations: [] },
+    scopeCheck: { passed: true, violations: [], outOfScope: [] },
     executorExitCode: 0,
     executorDurationMs: 10,
     executorTimedOut: false
@@ -181,7 +181,8 @@ describe("RunRunner", () => {
           compositeTaskId: "composite-a",
           status: "success",
           childResults: [],
-          repairAttempted: false
+          repairAttempted: false,
+        preMergeFindings: []
         }
       ],
       granularityVector: STUB_VECTOR,
@@ -327,6 +328,7 @@ describe("RunRunner", () => {
   it("builds feature request with a clean representative title when provided", () => {
     const mockWorkspace = {
       id: "ws-1",
+      slug: "ws-1",
       name: "Workspace 1",
       repoPath: "/path/to/repo",
       allowedPaths: ["src/**/*"],

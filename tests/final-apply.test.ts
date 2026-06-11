@@ -67,7 +67,8 @@ function resultWith(integrationCommitSha: string): RunExecutionResult {
         status: "success",
         childResults: [],
         integrationCommitSha,
-        repairAttempted: false
+        repairAttempted: false,
+        preMergeFindings: []
       }
     ],
     granularityVector: {} as RunExecutionResult["granularityVector"],

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ScopeChecker, type ExecutionScope } from "@manyhands/execution-core";
+import { ScopeChecker } from "@manyhands/execution-core";
+import type { ExecutionScope } from "@manyhands/contracts";
 
 const checker = new ScopeChecker();
 

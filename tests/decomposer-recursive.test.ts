@@ -86,7 +86,9 @@ describe("RecursiveDecomposer — atomic root (single-agent shape)", () => {
       model: "test-model",
       userPrompt: "build a calculator",
       aggressiveness: "low",
-      onStepStarted: (event) => events.push(`start:${event.nodeId}:${event.depth}`),
+      onStepStarted: (event) => {
+        events.push(`start:${event.nodeId}:${event.depth}`);
+      },
       onStepCompleted: (event) => {
         events.push(`done:${event.nodeId}:${event.decision}:${event.childIds.length}`);
         completedChildren.push(event.children.map((child) => child.nodeId));

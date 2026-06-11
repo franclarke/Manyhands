@@ -62,7 +62,7 @@ function leafResult(taskId: string, overrides: Partial<AgentExecutionResult> = {
     diff: "",
     changedFiles: [`src/${taskId}.ts`],
     commitSha: `${taskId}_SHA`,
-    scopeCheck: { passed: true, violations: [] },
+    scopeCheck: { passed: true, violations: [], outOfScope: [] },
     executorExitCode: 0,
     executorDurationMs: 100,
     executorTimedOut: false,
@@ -125,7 +125,8 @@ describe("computeGranularityVector", () => {
       status: "executor_repair_success",
       childResults: [leafResult("a"), leafResult("b")],
       integrationCommitSha: "INT_SHA",
-      repairAttempted: true
+      repairAttempted: true,
+      preMergeFindings: []
     };
 
     const vector = computeGranularityVector({

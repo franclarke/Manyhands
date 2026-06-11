@@ -1,75 +1,53 @@
-# Walkthrough — Sistema de diseño "ember sobre grafito" + grafo en vivo
+# Walkthrough — Sesión UltraCode 2026-06-10 (frontera end-to-end)
 
-> Sesión 2026-06-10. Define e implementa el sistema de diseño dual-theme de ManyHands
-> y el sistema de skeletons del grafo en tiempo real. Specs: `PRODUCT.md` y `DESIGN.md` (raíz).
+Reporte de cambios de la sesión. Detalle completo del diseño y el mapa
+instruir/evaluar/corregir: ver [`implementacion-frontera.md`](implementacion-frontera.md).
 
-## 1. Sistema de tokens (apps/web/src/app/globals.css)
+## Commits de checkpoint
 
-- **Marca ember** (naranja fundido, OKLCH hue 45–55): reemplaza al copper apagado en dark
-  y al accent negro `#111` en light. Nuevo token `--color-accent-contrast` para texto sobre
-  superficies ember (tinta oscura en dark, blanco en light) — el ember dark no soporta texto blanco AA.
-- **Celestes eliminados** (`--cu-cyan`, `--cu-blue`, `--cu-slate` y los tints `#E1F3FE`):
-  el eje vivo (`planning` / `running` / `integrating`) ahora es ember; `ready` pasa a
-  neutral cálido fuerte. Aliases legacy (`--running`, `--ready`, `--copper`, `--coral`)
-  se mantienen apuntando a los nuevos primitives.
-- **Branch lanes** sin celestes: ember / violeta / sage / ocre / terracota profunda / piedra.
-- Tints con `color-mix(in srgb, …)` en vez de rgba hardcodeado donde el valor deriva del accent.
-- Light: `--color-border-control` sube a alpha 0.47 (≥3:1 WCAG 1.4.11, antes fallaba en 1.6).
-- Controles/minimap de React Flow y `mh-kbd`/`mh-recent-row` ahora theme-aware (antes dark hardcodeado).
-- `.mh-planning-root-node`: side-stripe (patrón prohibido) → borde completo + tinte ember 4%.
-
-## 2. Tema dual con persistencia
-
-- `app/layout.tsx`: default `data-theme="dark"`, script blocking en `<head>` que aplica
-  el tema persistido (`localStorage["mh-theme"]`) antes del primer paint (sin flash).
-- `components/theme-toggle.tsx` (nuevo): switch sol/luna en el header del sidebar;
-  placeholder estable hasta el mount para no romper la hidratación.
-
-## 3. Grafo en vivo: skeletons y materialización
-
-- `lib/run-model/workspace-view.ts`: `NodeVital.planningState` expone el lifecycle crudo
-  de planning (`generating` / `retrying` / …) — la señal que dispara los skeletons.
-- `components/run-model/minimal-run-graph.tsx`:
-  - **Ghost nodes** (`skeletonTask`): mientras un nodo expande hijos (`generating`/`retrying`),
-    un placeholder con borde dashed ember y barras shimmer reserva el lugar del próximo hijo,
-    conectado con un edge punteado en marcha (`edge-flow`). Participa del tidy layout, así
-    los hijos reales llegan sin reflow.
-  - **Materialización**: los nodos recién propuestos entran con `mh-min-node-enter`
-    (fade-up + settle ring ember que decae, 520ms). Se trackean ids vistos con un ref.
-  - **Relayout suave**: `.mh-run-graph .react-flow__node { transition: transform 360ms }` —
-    los reposicionamientos del layout se deslizan en vez de teletransportarse (nodos no draggables).
-  - Los ghosts no son clickeables ni roban branch colors (excluidos de la asignación de lanes).
-  - Edges hacia subárboles aún en expansión marchan punteados; sólidos al completarse.
-- CSS nuevo en globals: `.mh-skel-node`, `.mh-skel-node-bar`, `mh-node-settle`,
-  `mh-skel-in`; todo colapsa bajo `prefers-reduced-motion`.
-
-## 4. Canal de decisión único
-
-- `runs/[runId]/_components/run-model-view.client.tsx`: el header ya no duplica el botón
-  de acción de decisiones (auto-resolvía con choice default y sin contexto); ahora muestra
-  un chip de atención (violeta review, pulso). La acción vive solo en el chat
-  (`PlanApprovalCard` / `DecisionCard`). Se eliminó `defaultChoiceFor` + `onResolve`.
-
-## 5. Limpieza de colores hardcodeados
-
-- `text-white` sobre accent → `text-[var(--color-accent-contrast)]` (thread, sidebar,
-  page, artifact-tabs, button primitive).
-- `bg-amber-500` / `text-amber-800` → tokens de estado; `StatusPill` (panel.tsx) usa
-  los `--status-*` en vez de rgba fijos; fallbacks celestes `#5a9bd0` eliminados
-  (run-frame, workspace-surface, focus-panel).
-
-## 6. Contrast gate dual
-
-- `apps/web/scripts/contrast-check.mjs` reescrito: parsea los bloques dark Y light
-  (anclando en el selector real, no en menciones en comentarios), soporta `oklch()`
-  (conversión OKLab→sRGB) y agrega el chequeo del par accent/accent-contrast.
+1. `b3b798d` — **execution-core multi-executor**: capa por perfiles
+   (`CliAgentExecutor` + `CliExecutorProfile`), rediseño Gemini (`-o json` con token
+   stats), Claude Code con `--output-format json` (usage/costo reportados), Codex CLI
+   habilitado (`codex exec` headless), clasificador de fallos (`failureKind`/`failureHint`),
+   canal send-to-user (`MH_STATUS` → trazas `agent_status`), upgrade automático de
+   `usageSource` en el recorder.
+2. `411adc5` — **enrutamiento por complejidad**: scorer determinista explicable,
+   política por tiers con fallback por disponibilidad real de binarios, escalación de
+   tier en repairs, traza `executor_routed`, `executionConfig.routing`.
+3. `5a5f2f2` — **planning sobre LangGraph**: StateGraph v2 con gates baratos
+   (`questionGate`/`approvalGate` con `interrupt()` nativo), critics in-loop,
+   `planning-host.ts`, resume nativo con `Command({ resume })` en
+   resume/answer/decisions/approve-plan, thread `${runId}__planning`,
+   `DecomposerQuestionError` eliminado del flujo de orquestación.
+4. `9cf6439` — **re-decomposición selectiva**: `graftSubtree` (task-graph),
+   `AmendmentsEngine.invalidateTask` (cierre subárbol+dependientes+ancestros),
+   `replan-service.ts` (re-plan scoped con seams congelados), gate option
+   `replan_subtree` en el leafGate.
 
 ## Verificación
 
-- `pnpm web:typecheck` ✅ · `pnpm test` ✅ (868 pass / 3 skip) ·
-  `pnpm -F @manyhands/web contrast:check` ✅ (dark + light).
-- Visual en browser: home dark/light, toggle con persistencia, playback de
-  `golden-planning-fallback` mostrando ghost "generando…" → materialización → plan listo.
-- `pnpm -F @manyhands/web lint`: 5 errores PREEXISTENTES en
-  `lib/server/runs/execution-pipeline.ts` (vars sin uso) y `planning-pipeline.ts`
-  (3 × `any`) — archivos de backend de otra sesión, fuera del alcance de este cambio.
+- `pnpm -F @manyhands/execution-core typecheck` ✅
+- `pnpm -F @manyhands/orchestrator-graph typecheck` ✅
+- `pnpm -F @manyhands/task-graph typecheck` ✅
+- `pnpm web:typecheck` ✅
+- `pnpm build` ✅
+- `pnpm typecheck` (raíz) ✅ — exit 0. Nota: el typecheck raíz estaba roto desde antes
+  (sin mapping `@/*` y ~40 errores latentes en fixtures de tests que vitest nunca
+  typecheckeó); se agregó el alias a `tsconfig.base.json`, lib DOM al programa raíz,
+  y se repararon los 21 archivos de test afectados.
+- `pnpm test` ✅ — 925 tests passed / 3 skipped (96 archivos; baseline previo: 868 / 88)
+
+## Archivos clave nuevos
+
+- `packages/execution-core/src/executor/{cli-executor,failure,status-channel}.ts`
+- `packages/execution-core/src/executor/profiles/{gemini,claude-code,codex}.ts`
+- `packages/execution-core/src/routing/{complexity,policy,availability}.ts`
+- `packages/orchestrator-graph/src/graphs/planning-graph.ts` (v2) + test
+- `apps/web/src/lib/server/runs/{planning-host,replan-service}.ts`
+
+## Eliminado (cero legacy)
+
+- `packages/execution-core/src/executor/{gemini-cli,claude-code-cli}.ts`
+  (reemplazados por perfiles + executor genérico)
+- Planning nodes v1 (cola por superstep con interrupt dentro del nodo caro) y su test
+- Flujo exception-driven de preguntas en `planning-pipeline.ts` (653 → driver fino)

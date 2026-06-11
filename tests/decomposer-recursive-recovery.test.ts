@@ -93,7 +93,9 @@ describe("RecursiveDecomposer recovery", () => {
     try {
       await decomposer(client, {
         maxStepAttempts: 2,
-        onStepStatus: (event) => statuses.push(`${event.nodeId}:${event.state}:${event.error?.kind ?? "none"}`)
+        onStepStatus: (event) => {
+          statuses.push(`${event.nodeId}:${event.state}:${event.error?.kind ?? "none"}`);
+        }
       }).decompose(FEATURE);
       throw new Error("expected root failure");
     } catch (error) {

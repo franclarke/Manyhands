@@ -142,17 +142,61 @@ conflictGate (interrupt) → [routeIntegration]
 
 ---
 
+## 9. Planning sobre LangGraph (HITL nativo) `[x]` — 2026-06-10
+
+**Diseño.** Planning StateGraph v2 (`graphs/planning-graph.ts`) con el patrón del
+execution graph: el nodo caro `decomposePlan` nunca interrumpe (las preguntas del
+decomposer vuelven como dato; `DecomposerQuestionError` muere en el seam del host);
+`questionGate` y `approvalGate` son nodos puros cuyo primer statement es
+`interrupt()`, resumidos con `Command({ resume })`. Critics deterministas corren
+in-loop (`criticReview`) y su veredicto viaja en el payload del approval gate.
+Host web: `planning-host.ts` (deps + eventos vivos `plan.node.proposed` + checkpoints
+en thread `${runId}__planning`). Rutas `resume`/`answer`/`decisions`/`approve-plan`
+reanudan nativamente; `restart` borra el thread. Runs legacy sin checkpoint caen al
+camino anterior.
+
+## 10. Multi-executor por perfiles + Codex CLI + usage estructurado `[x]` — 2026-06-10
+
+**Diseño.** `CliAgentExecutor` + `CliExecutorProfile`: los executors son datos, no
+clases (perfil = argv builder + parser de salida + log scope). Gemini pasa a
+`-o json` (response + token stats reales), Claude Code a `--output-format json`
+(usage + costo exacto), y Codex CLI queda habilitado (`codex exec` headless,
+sandbox workspace-write, prompt por stdin). Clasificador provider-agnóstico de
+fallos (`failure.ts`: timeout/auth/quota/binary_missing/model_not_found) persistido
+como `failureKind`/`failureHint` en cada resultado. Canal send-to-user: protocolo
+`MH_STATUS {json}` por stdout → trazas `agent_status` en vivo.
+
+## 11. Enrutamiento por complejidad con escalación en repair `[x]` — 2026-06-10
+
+**Diseño.** `scoreNodeComplexity` (determinista y explicable: seams, scope, fan-in/out,
+criterios, integrators) → tiers trivial/standard/complex/critical →
+`ComplexityRoutingPolicy` con carriles ranked y fallback por disponibilidad real de
+binarios (`probeExecutorAvailability`). Repairs rutean con `attempt ≥ 1` y escalan un
+tier. Config por run: `executionConfig.routing: "complexity" | "fixed"`. Decisiones
+auditadas como traza `executor_routed`.
+
+## 12. Re-decomposición selectiva post-fallo `[x]` — 2026-06-10
+
+**Diseño.** `graftSubtree` (task-graph): cirugía validada del DAG — el nodo fallido
+conserva identidad, descendientes descartados, bordes re-apuntados, subárbol nuevo
+bajo ids `-r{rev}-`. `AmendmentsEngine.invalidateTask` limpia el cierre (subárbol +
+dependientes + integraciones ancestras). `replan-service.ts` re-decompone scoped con
+seams congelados como restricciones duras, resetea el thread de ejecución y re-entra
+el wavefront sembrado con supervivientes. Gate option `replan_subtree` en el leafGate.
+
+---
+
 ## Próximas fronteras (pendientes, en orden de valor)
 
-- `[ ]` **Planning sobre LangGraph**: portar el pipeline de planificación al
-  planning StateGraph (hoy el grafo existe y está testeado, pero producción corre
-  el flujo event-driven con `DecomposerQuestionError`). Requiere streaming de
-  eventos por nodo desde dentro del grafo (custom stream mode) sin perder los
-  eventos vivos `plan.node.proposed`.
-- `[ ]` **Kill duro de subprocesos** al abortar un run (hoy es cooperativo).
+- `[ ]` **Kill duro de subprocesos** al abortar un run (hoy es cooperativo +
+  taskkill en timeout).
 - `[ ]` **Visor de evidencia enriquecido** en el panel de foco (diffs colapsables,
-  logs con resaltado) sobre `GET /api/runs/[id]/artifacts?ref=...`.
-- `[ ]` **Re-decomposición selectiva** post-amendment: reinyectar nodos `obsolete`
-  en la frontera de ejecución sin re-planificar el árbol entero.
-- `[ ]` **Presupuesto de tokens por wave** con corte adaptativo (budget guard a
-  nivel de scheduler, no solo wall-clock).
+  logs con resaltado, widget de `agent_status` en vivo) sobre
+  `GET /api/runs/[id]/artifacts?ref=...`.
+- `[ ]` **HITL en replan**: hoy una pregunta aclaratoria del decomposer durante un
+  replan aborta con mensaje accionable; debería suspender en un gate como el
+  planning normal.
+- `[ ]` **Presupuesto de tokens por wave** con corte adaptativo (ahora hay usage
+  real `reported` de Gemini/Claude para alimentarlo).
+- `[ ]` **Usage estructurado para Codex** (parsear el stream JSONL experimental de
+  `codex exec --json` cuando se estabilice).

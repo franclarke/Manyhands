@@ -32,7 +32,7 @@ const RESULT: RunExecutionResult = {
       diff: "d",
       changedFiles: ["src/a.ts"],
       commitSha: "SHA",
-      scopeCheck: { passed: true, violations: [] },
+      scopeCheck: { passed: true, violations: [], outOfScope: [] },
       executorExitCode: 0,
       executorDurationMs: 5,
       executorTimedOut: false

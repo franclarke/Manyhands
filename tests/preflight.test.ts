@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runPreflight, PreflightError, type PreflightDeps } from "@/lib/server/runs/preflight";
-import { inspectGeminiReadiness, type GeminiReadinessDeps } from "@/lib/server/providers/readiness";
+import { inspectGeminiReadiness, type ProviderReadinessDeps } from "@/lib/server/providers/readiness";
 
 const OK_DEPS: Required<Pick<PreflightDeps, "checkCli" | "hasCredentials" | "gitPorcelain" | "branchExists">> = {
   checkCli: async () => true,
@@ -63,7 +63,7 @@ describe("runPreflight", () => {
   });
 });
 
-const READINESS_DEPS: Required<GeminiReadinessDeps> = {
+const READINESS_DEPS: Required<ProviderReadinessDeps> = {
   checkCli: async () => ({ ok: true, version: "gemini 0.44.1" }),
   hasCredentials: () => true,
   gitPorcelain: async () => "",

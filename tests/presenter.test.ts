@@ -33,7 +33,7 @@ const EXECUTION: RunExecutionResult = {
       diff: "patch",
       changedFiles: ["src/a.ts", "src/b.ts"],
       commitSha: "SHA_A",
-      scopeCheck: { passed: true, violations: [] },
+      scopeCheck: { passed: true, violations: [], outOfScope: [] },
       executorExitCode: 0,
       executorDurationMs: 500,
       executorTimedOut: false,
@@ -41,7 +41,8 @@ const EXECUTION: RunExecutionResult = {
     }
   ],
   integrationResults: [
-    { compositeTaskId: "root", status: "success", childResults: [], repairAttempted: false }
+    { compositeTaskId: "root", status: "success", childResults: [], repairAttempted: false,
+        preMergeFindings: [] }
   ],
   granularityVector: VECTOR,
   totalDurationMs: 1234

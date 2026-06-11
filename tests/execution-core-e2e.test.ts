@@ -228,7 +228,7 @@ function committedLeafResult(taskId: string, commitSha: string): AgentExecutionR
     diff: "",
     changedFiles: [`src/${taskId}.ts`],
     commitSha,
-    scopeCheck: { passed: true, violations: [] },
+    scopeCheck: { passed: true, violations: [], outOfScope: [] },
     executorExitCode: 0,
     executorDurationMs: 1,
     executorTimedOut: false

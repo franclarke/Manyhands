@@ -19,8 +19,8 @@ function node(partial: Partial<TaskNodeLike> = {}): TaskNodeLike {
   } as TaskNodeLike;
 }
 
-function contractWith(partial: Record<string, unknown>): TaskNodeLike["contract"] {
-  return partial as TaskNodeLike["contract"];
+function contractWith(partial: Record<string, unknown>): NonNullable<TaskNodeLike["contract"]> {
+  return partial as NonNullable<TaskNodeLike["contract"]>;
 }
 
 describe("scoreNodeComplexity", () => {

@@ -300,7 +300,8 @@ describe("runExecutionPipeline provisioning", () => {
               status: "success",
               childResults: [],
               integrationCommitSha: integrationCommit,
-              repairAttempted: false
+              repairAttempted: false,
+        preMergeFindings: []
             }
           ],
           granularityVector: STUB_VECTOR,

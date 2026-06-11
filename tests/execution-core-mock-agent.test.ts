@@ -15,7 +15,6 @@ function optionsFor(cwd: string): AgentExecutorOptions {
     instructionFilePath: join(cwd, "instructions.txt"),
     model: "gpt-5-codex",
     timeoutMs: 300_000,
-    sandboxMode: "workspace-write",
     bypassApprovals: true
   };
 }
