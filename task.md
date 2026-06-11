@@ -22,8 +22,8 @@ Objetivo: orquestador end-to-end funcional. Sistemas que instruyen, evalúan y c
 - [x] 3.3 Rewire planning-pipeline/resume/answer/decisions/approve-plan/restart; DecomposerQuestionError muere en el seam
 
 ## Fase 4 — Re-decomposición selectiva
-- [ ] 4.1 replanSubtree: invalidación + splice del subárbol + re-plan scoped
-- [ ] 4.2 Gate option "replan_subtree" en leafGate + ruta de decisión
+- [x] 4.1 graftSubtree (task-graph) + invalidateTask/closure (AmendmentsEngine) + replan-service (web)
+- [x] 4.2 Gate option "replan_subtree" en leafGate + resume/decisions routes (out-of-band del Command resume)
 
 ## Fase 5 — Calidad
 - [ ] 5.1 pnpm typecheck + pnpm test verdes en todo el monorepo

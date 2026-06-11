@@ -24,8 +24,10 @@ import {
 import {
   clearExecutionPause,
   decisionFromAnswer,
+  isReplanRequest,
   resetExecutionThread
 } from "@/lib/server/runs/execution-host";
+import { replanSubtree } from "@/lib/server/runs/replan-service";
 import {
   executionResultsFromRun,
   integrationDurationMs,
@@ -117,6 +119,21 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       // Execution-gate clarifications resume the suspended LangGraph thread
       // natively (Command({ resume })) instead of the planning pipeline.
       if (run.status === "paused" && run.pausedDuring === "running" && run.pendingDecision !== undefined) {
+        // Selective re-decomposition: rebuild the failed subtree out-of-band.
+        if (isReplanRequest({ answer: choice.answer })) {
+          const failedTaskId = run.pendingDecision.taskId;
+          const reason = run.pendingDecision.validationOutput ?? "leaf failed irrecoverably";
+          run = await clearExecutionPause(run.runId, "running");
+          publishRunModelEvent(run.runId, {
+            actor: "human",
+            at: now,
+            type: "decision.resolved",
+            payload: { decisionId: decision.id, choice, actor: "human" }
+          });
+          void replanSubtree(run.runId, failedTaskId, reason).catch(() => undefined);
+          return NextResponse.json({ ...toRunResponse(run), decisionId: decision.id, choice });
+        }
+
         const resumeDecision = decisionFromAnswer(run.pendingDecision.gate, choice.answer);
         if (resumeDecision === null) {
           throw new RunValidationError(

@@ -72,3 +72,4 @@ export interface ExecutionRunnerOptions {
  */
 export * from "./execution-pipeline";
 export * from "./planning-pipeline";
+export * from "./replan-service";

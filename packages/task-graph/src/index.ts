@@ -695,3 +695,148 @@ function findOrphanNodeIds(graph: TaskGraph): string[] {
 
   return Object.keys(graph.nodes).filter((nodeId) => !reachable.has(nodeId)).sort();
 }
+
+// ─── Selective re-decomposition: subtree grafting ───────────────────────────
+
+export interface GraftSubtreeParams {
+  graph: TaskGraph;
+  /** The node whose subtree is being replanned. Must not be the root. */
+  taskId: string;
+  /** Freshly decomposed plan for that node; its root maps onto `taskId`. */
+  replacement: TaskGraph;
+  /** Monotonic replan revision; namespaces the new child ids. */
+  revision: number;
+}
+
+export interface GraftSubtreeResult {
+  graph: TaskGraph;
+  /** New node ids introduced by the replacement subtree (sorted). */
+  addedTaskIds: string[];
+  /** Previous descendants of the target that were discarded (sorted). */
+  removedTaskIds: string[];
+}
+
+/**
+ * Graft a replanned subtree into an existing graph without discarding the rest
+ * of the DAG. The target node keeps its identity (id, parent, title, goal) so
+ * every external edge stays meaningful; its previous descendants are removed,
+ * boundary edges that pointed at them are re-pointed at the target, and the
+ * replacement's nodes are adopted under revision-namespaced ids. The result is
+ * validated — an invalid graft throws instead of corrupting the plan.
+ */
+export function graftSubtree(params: GraftSubtreeParams): GraftSubtreeResult {
+  const { graph, taskId, replacement, revision } = params;
+  const target = graph.nodes[taskId];
+  if (target === undefined) {
+    throw new Error(`graftSubtree: task "${taskId}" is not in the graph.`);
+  }
+  if (taskId === graph.rootId) {
+    throw new Error("graftSubtree: cannot replan the root node — restart planning instead.");
+  }
+  const subRoot = replacement.nodes[replacement.rootId];
+  if (subRoot === undefined) {
+    throw new Error("graftSubtree: replacement graph has no root node.");
+  }
+
+  // 1. Previous descendants of the target are discarded.
+  const removed = new Set<string>();
+  const stack = [...target.childrenIds];
+  while (stack.length > 0) {
+    const id = stack.pop();
+    if (id === undefined || removed.has(id)) continue;
+    removed.add(id);
+    stack.push(...(graph.nodes[id]?.childrenIds ?? []));
+  }
+
+  // 2. Replacement ids are namespaced by revision; its root maps onto the target.
+  const mapId = (id: string): string =>
+    id === replacement.rootId ? taskId : `${taskId}-r${revision}-${id}`;
+
+  // 3. Surviving nodes, with boundary deps re-pointed from removed descendants
+  //    to the grafted target.
+  const nodes: Record<string, TaskNode> = {};
+  for (const [id, node] of Object.entries(graph.nodes)) {
+    if (id === taskId || removed.has(id)) continue;
+    const repointed = node.dependencies.map((dep) => (removed.has(dep) ? taskId : dep));
+    nodes[id] = { ...node, dependencies: [...new Set(repointed)].filter((dep) => dep !== id) };
+  }
+
+  // 4. Adopt the replacement subtree.
+  const isAtomic = subRoot.childrenIds.length === 0;
+  for (const [id, node] of Object.entries(replacement.nodes)) {
+    if (id === replacement.rootId) {
+      nodes[taskId] = {
+        id: taskId,
+        parentId: target.parentId,
+        kind: isAtomic ? "leaf" : "composite",
+        title: target.title,
+        goal: target.goal,
+        status: "planned",
+        granularity: target.granularity,
+        depth: target.depth,
+        childrenIds: subRoot.childrenIds.map(mapId),
+        dependencies: [...new Set(target.dependencies.filter((dep) => !removed.has(dep) && dep !== taskId))],
+        ...(subRoot.contract !== undefined ? { contract: { ...subRoot.contract, taskId } } : {}),
+        ...(subRoot.acceptanceCriteria !== undefined ? { acceptanceCriteria: subRoot.acceptanceCriteria } : {}),
+        ...(subRoot.prompt !== undefined ? { prompt: subRoot.prompt } : {}),
+        metadata: { ...(target.metadata ?? {}), replanRevision: revision }
+      };
+      continue;
+    }
+    const newId = mapId(id);
+    nodes[newId] = {
+      ...node,
+      id: newId,
+      parentId: mapId(node.parentId ?? replacement.rootId),
+      depth: target.depth + node.depth,
+      status: "planned",
+      childrenIds: node.childrenIds.map(mapId),
+      dependencies: node.dependencies.map(mapId),
+      ...(node.contract !== undefined
+        ? {
+            contract: {
+              ...node.contract,
+              taskId: newId,
+              dependencies: node.contract.dependencies.map(mapId)
+            }
+          }
+        : {})
+    };
+  }
+
+  // 5. Rebuild the canonical edge list: survivors (re-pointed), boundary edges
+  //    touching the target, and the replacement's internal edges (remapped).
+  const edges = new Map<string, TaskDependency>();
+  const addEdge = (edge: TaskDependency): void => {
+    if (edge.fromTaskId === edge.toTaskId) return;
+    edges.set(`${edge.fromTaskId}->${edge.toTaskId}`, edge);
+  };
+  for (const edge of graph.dependencies) {
+    addEdge({
+      ...edge,
+      fromTaskId: removed.has(edge.fromTaskId) ? taskId : edge.fromTaskId,
+      toTaskId: removed.has(edge.toTaskId) ? taskId : edge.toTaskId
+    });
+  }
+  for (const edge of replacement.dependencies) {
+    addEdge({ ...edge, fromTaskId: mapId(edge.fromTaskId), toTaskId: mapId(edge.toTaskId) });
+  }
+
+  const grafted: TaskGraph = { ...graph, nodes, dependencies: [...edges.values()] };
+
+  const errors = validateTaskGraph(grafted).filter((issue) => issue.severity === "error");
+  if (errors.length > 0) {
+    throw new Error(
+      `graftSubtree produced an invalid graph: ${errors.map((issue) => issue.message).join("; ")}`
+    );
+  }
+
+  return {
+    graph: grafted,
+    addedTaskIds: Object.keys(replacement.nodes)
+      .filter((id) => id !== replacement.rootId)
+      .map(mapId)
+      .sort(),
+    removedTaskIds: [...removed].sort()
+  };
+}

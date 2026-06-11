@@ -46,14 +46,21 @@ export function ChatThread({ runId, model, setActiveTab }: ChatThreadProps): Rea
     }
   };
 
+  // Check if plan approval decision is pending
+  const pendingPlanDecision = Array.from(model.decisions.values()).find(
+    (d) => d.kind === "approve_plan" && d.status === "pending"
+  );
+  const isPlanPending = pendingPlanDecision !== undefined;
+
   // Resolve plan approval
   const handleApprovePlan = async () => {
+    if (!pendingPlanDecision) return;
     setApproving(true);
     try {
-      const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/approve-plan`, {
+      const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/decisions/${encodeURIComponent(pendingPlanDecision.id)}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ acknowledgeCriticErrors: true })
+        body: JSON.stringify({ action: "approve", acknowledgeCriticErrors: true })
       });
       if (!response.ok) {
         throw new Error(`Failed to approve plan: ${response.status}`);
@@ -83,12 +90,6 @@ export function ChatThread({ runId, model, setActiveTab }: ChatThreadProps): Rea
       setBusy(null);
     }
   };
-
-  // Check if plan approval decision is pending
-  const pendingPlanDecision = Array.from(model.decisions.values()).find(
-    (d) => d.kind === "approve_plan" && d.status === "pending"
-  );
-  const isPlanPending = pendingPlanDecision !== undefined;
 
   return (
     <div className="h-full w-full bg-[var(--color-surface)] flex flex-col font-sans border-r border-[var(--color-border)]">

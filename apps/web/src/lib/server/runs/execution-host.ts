@@ -58,9 +58,23 @@ import type { RunRecord } from "./schema";
 
 export const LEAF_GATE_OPTIONS = [
   { label: "Reintentar reparación", action: "retry_repair" },
+  { label: "Re-planificar subárbol", action: "replan_subtree" },
   { label: "Aceptar fallo y continuar", action: "accept_failing" },
   { label: "Abortar run", action: "abort_run" }
 ] as const;
+
+/**
+ * True when the human picked the selective re-decomposition option at a leaf
+ * gate. Replanning is NOT a graph resume — it rebuilds the plan subtree and
+ * resets the execution thread — so callers branch on this BEFORE building a
+ * ResumeDecision.
+ */
+export function isReplanRequest(payload: { action?: unknown; answer?: unknown } | null): boolean {
+  if (payload === null) return false;
+  if (payload.action === "replan_subtree") return true;
+  const replanLabel = LEAF_GATE_OPTIONS.find((option) => option.action === "replan_subtree")?.label;
+  return typeof payload.answer === "string" && payload.answer === replanLabel;
+}
 
 export const CONFLICT_GATE_OPTIONS = [
   { label: "Aceptar conflicto y continuar", action: "accept_conflict" },
@@ -74,7 +88,12 @@ export function decisionFromAnswer(
 ): ResumeDecision | null {
   const options = gate === "leaf_validation_failed" ? LEAF_GATE_OPTIONS : CONFLICT_GATE_OPTIONS;
   const match = options.find((option) => option.label === answer || option.action === answer);
-  return match !== undefined ? ({ action: match.action } as ResumeDecision) : null;
+  if (match === undefined || match.action === "replan_subtree") {
+    // replan_subtree is handled out-of-band (see isReplanRequest), never as a
+    // graph resume value.
+    return null;
+  }
+  return { action: match.action } as ResumeDecision;
 }
 
 export function isResumeDecision(value: unknown): value is ResumeDecision {

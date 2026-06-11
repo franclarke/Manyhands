@@ -25,8 +25,10 @@ import {
 import {
   clearExecutionPause,
   decisionFromAnswer,
+  isReplanRequest,
   isResumeDecision
 } from "@/lib/server/runs/execution-host";
+import { replanSubtree } from "@/lib/server/runs/replan-service";
 import { publishRunEvent } from "@/lib/server/runs/event-bus";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 
@@ -46,10 +48,22 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
 
     // 1) Execution gate resume — native Command({ resume }).
     if (run.status === "paused" && run.pausedDuring === "running" && run.pendingDecision !== undefined) {
+      // Selective re-decomposition: rebuild the failed subtree instead of
+      // resuming the suspended gate (the execution thread is reset).
+      if (isReplanRequest(payload)) {
+        const failedTaskId = run.pendingDecision.taskId;
+        const reason = run.pendingDecision.validationOutput ?? "leaf failed irrecoverably";
+        const saved = await clearExecutionPause(id, "running");
+        void replanSubtree(id, failedTaskId, reason).catch((error) =>
+          console.error(`[Resume] Replan failed for run ${id}:`, error)
+        );
+        return NextResponse.json(toRunResponse(saved));
+      }
+
       const decision = executionDecisionFrom(payload, run.pendingDecision.gate);
       if (decision === null) {
         throw new RunValidationError(
-          "Execution resume requires { action: retry_repair | accept_failing | accept_conflict | abort_run }."
+          "Execution resume requires { action: retry_repair | replan_subtree | accept_failing | accept_conflict | abort_run }."
         );
       }
       const saved = await clearExecutionPause(id, "running");

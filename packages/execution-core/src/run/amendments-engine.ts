@@ -13,10 +13,61 @@ export interface AmendSeamParams {
   integrationResults: IntegrationResult[];
 }
 
+export interface InvalidateTaskParams {
+  repoRoot: string;
+  runId: string;
+  graph: TaskGraph;
+  taskId: string;
+  leafResults: AgentExecutionResult[];
+  integrationResults: IntegrationResult[];
+}
+
 export interface InvalidationResult {
   leafResults: AgentExecutionResult[];
   integrationResults: IntegrationResult[];
   invalidatedTaskIds: Set<string>;
+}
+
+/**
+ * Invalidation closure for replanning a whole subtree: the task itself, every
+ * descendant (their work is being discarded), every transitive dependent of
+ * any member (they built against outputs that will change), and every ancestor
+ * (their integrations must be redone).
+ */
+export function computeTaskInvalidationClosure(graph: TaskGraph, taskId: string): Set<string> {
+  const seeds = [taskId];
+  const stack = [...(graph.nodes[taskId]?.childrenIds ?? [])];
+  while (stack.length > 0) {
+    const id = stack.pop();
+    if (id === undefined) continue;
+    seeds.push(id);
+    stack.push(...(graph.nodes[id]?.childrenIds ?? []));
+  }
+  return computeDownstreamClosure(graph, seeds);
+}
+
+/** BFS from the seeds through dependents (edges) and parents (integrations). */
+function computeDownstreamClosure(graph: TaskGraph, seeds: string[]): Set<string> {
+  const invalid = new Set<string>();
+  const queue = [...seeds];
+  while (queue.length > 0) {
+    const id = queue.pop();
+    if (id === undefined || invalid.has(id)) {
+      continue;
+    }
+    invalid.add(id);
+
+    for (const dependency of graph.dependencies) {
+      if (dependency.fromTaskId === id && !invalid.has(dependency.toTaskId)) {
+        queue.push(dependency.toTaskId);
+      }
+    }
+    const parentId = graph.nodes[id]?.parentId;
+    if (parentId !== null && parentId !== undefined && !invalid.has(parentId)) {
+      queue.push(parentId);
+    }
+  }
+  return invalid;
 }
 
 /**
@@ -52,64 +103,58 @@ export class AmendmentsEngine {
       return { leafResults, integrationResults, invalidatedTaskIds: new Set() };
     }
 
-    // Compute downstream invalidated tasks
-    const invalidatedTaskIds = this.computeInvalidatedTasks(graph, producerTaskId);
-
-    // Clean worktrees for invalidated tasks
-    const worktreeManager = new WorktreeManager({ git: this.git, repoRoot });
-    for (const taskId of invalidatedTaskIds) {
-      // Skip the producer itself if it was already successfully executed and we don't want to reset it,
-      // but wait: if the seam is amended, it means the producer's output contract changed, so the producer
-      // itself might need to be re-run, or it already completed.
-      // Usually, if a seam is amended, it's either because the producer failed/changed, or the user requested.
-      // So we clean all invalidated worktrees.
-      const worktreePath = join(repoRoot, ".manyhands", "worktrees", runId, taskId);
-      const branch = `mh/${runId}/${taskId}`;
-      await worktreeManager.clean({
-        taskId,
-        runId,
-        kind: graph.nodes[taskId]?.kind === "leaf" ? "leaf" : "integration",
-        path: worktreePath,
-        branch,
-        baseCommit: graph.baseCommit,
-        status: "active",
-        createdAt: new Date().toISOString()
-      }).catch(() => undefined); // Ignore if already cleaned or doesn't exist
-    }
-
-    // Filter out invalidated tasks from results
-    const filteredLeaves = leafResults.filter((r) => !invalidatedTaskIds.has(r.taskId));
-    const filteredIntegrations = integrationResults.filter((r) => !invalidatedTaskIds.has(r.compositeTaskId));
-
-    return {
-      leafResults: filteredLeaves,
-      integrationResults: filteredIntegrations,
-      invalidatedTaskIds
-    };
+    // Downstream of the producer: dependents + ancestor integrations.
+    const invalidatedTaskIds = computeDownstreamClosure(graph, [producerTaskId]);
+    return this.invalidate({ repoRoot, runId, graph, leafResults, integrationResults }, invalidatedTaskIds);
   }
 
-  private computeInvalidatedTasks(graph: TaskGraph, taskId: string): Set<string> {
-    const invalid = new Set<string>();
-    const queue = [taskId];
-    while (queue.length > 0) {
-      const id = queue.pop()!;
-      if (invalid.has(id)) {
-        continue;
-      }
-      // Don't include the producer itself if it's the one we started with, unless it has a consumer dependency,
-      // but wait: standard computeInvalidatedTasks includes the starting taskId.
-      invalid.add(id);
+  /**
+   * Invalidate a whole subtree ahead of selective re-decomposition: cleans the
+   * worktrees/branches of the closure and returns the surviving results so the
+   * execution frontier re-enters with only the untouched work pre-seeded.
+   */
+  async invalidateTask(params: InvalidateTaskParams): Promise<InvalidationResult> {
+    const { repoRoot, runId, graph, taskId, leafResults, integrationResults } = params;
+    const invalidatedTaskIds = computeTaskInvalidationClosure(graph, taskId);
+    return this.invalidate({ repoRoot, runId, graph, leafResults, integrationResults }, invalidatedTaskIds);
+  }
 
-      for (const dependency of graph.dependencies) {
-        if (dependency.fromTaskId === id && !invalid.has(dependency.toTaskId)) {
-          queue.push(dependency.toTaskId);
-        }
-      }
-      const parentId = graph.nodes[id]?.parentId;
-      if (parentId !== null && parentId !== undefined && !invalid.has(parentId)) {
-        queue.push(parentId);
-      }
+  private async invalidate(
+    params: {
+      repoRoot: string;
+      runId: string;
+      graph: TaskGraph;
+      leafResults: AgentExecutionResult[];
+      integrationResults: IntegrationResult[];
+    },
+    invalidatedTaskIds: Set<string>
+  ): Promise<InvalidationResult> {
+    const { repoRoot, runId, graph, leafResults, integrationResults } = params;
+
+    // Clean worktrees for invalidated tasks (best-effort: already-cleaned or
+    // never-created worktrees are not errors).
+    const worktreeManager = new WorktreeManager({ git: this.git, repoRoot });
+    for (const taskId of invalidatedTaskIds) {
+      const worktreePath = join(repoRoot, ".manyhands", "worktrees", runId, taskId);
+      const branch = `mh/${runId}/${taskId}`;
+      await worktreeManager
+        .clean({
+          taskId,
+          runId,
+          kind: graph.nodes[taskId]?.kind === "leaf" ? "leaf" : "integration",
+          path: worktreePath,
+          branch,
+          baseCommit: graph.baseCommit,
+          status: "active",
+          createdAt: new Date().toISOString()
+        })
+        .catch(() => undefined);
     }
-    return invalid;
+
+    return {
+      leafResults: leafResults.filter((r) => !invalidatedTaskIds.has(r.taskId)),
+      integrationResults: integrationResults.filter((r) => !invalidatedTaskIds.has(r.compositeTaskId)),
+      invalidatedTaskIds
+    };
   }
 }
