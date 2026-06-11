@@ -312,9 +312,9 @@ export function WorkspaceFormDialog({
             disabled={busy || value.name.trim().length === 0}
             style={{
               padding: "7px 14px",
-              border: "1px solid var(--coral)",
-              background: "var(--coral)",
-              color: "#1A1915",
+              border: "1px solid var(--color-accent)",
+              background: "var(--color-accent)",
+              color: "var(--color-accent-contrast)",
               borderRadius: "var(--r-md)",
               fontSize: 12.5,
               fontWeight: 600,

@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { buildFocusView, type FocusTarget } from "@/lib/run-model/focus-view";
-import { selectMinimalWorkspaceView } from "@/lib/run-model/minimal-workspace-view";
+import { selectMinimalWorkspaceView, type ProductStage } from "@/lib/run-model/minimal-workspace-view";
 import type { Run, RunEvent, RunModel, Node } from "@/lib/run-model/types";
+import type { UiStatus } from "@/lib/status";
+import { StatusPill } from "@/components/ui/status-pill";
 import { FocusPanel } from "@/components/run-model/focus-panel";
 import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
 import { ChatRuntimeProvider } from "@/components/chat/assistant-provider";
@@ -11,6 +13,12 @@ import { ChatThread } from "@/components/chat/thread";
 import { Group, Panel, useDefaultLayout } from "react-resizable-panels";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { ArtifactTabs } from "./artifact-tabs.client";
+import { Download } from "lucide-react";
+
+const SSR_NOOP_STORAGE: Pick<Storage, "getItem" | "setItem"> = {
+  getItem: () => null,
+  setItem: () => undefined
+};
 
 export function RunModelView({
   seed,
@@ -29,23 +37,22 @@ export function RunModelView({
   const focusView = useMemo(() => (focus !== null ? buildFocusView(model, focus) : null), [model, focus]);
 
   // Persisted, per-arrangement panel layout (with/without the focus panel).
+  // `storage` must be passed explicitly: the library defaults to `localStorage`,
+  // which crashes during SSR (this component server-renders its first frame).
   const panelIds = focusView !== null ? ["chat", "artifacts", "focus"] : ["chat", "artifacts"];
-  const { defaultLayout, onLayoutChanged } = useDefaultLayout({ id: "mh-run-workspace", panelIds });
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
+    id: "mh-run-workspace",
+    panelIds,
+    storage: typeof window === "undefined" ? SSR_NOOP_STORAGE : window.localStorage
+  });
 
   return (
-    <ChatRuntimeProvider events={events} onUserMessage={async () => {}}>
+    <ChatRuntimeProvider events={events}>
       <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--color-bg)] font-sans">
-        {/* Compact Header */}
-        <CompactRunHeader
-          runId={seed.id}
-          view={view}
-          model={model}
-          _connected={connected}
-          workspaceName={workspaceName}
-        />
+        <RunHeader runId={seed.id} view={view} model={model} workspaceName={workspaceName} />
 
         {/* Resizable multipanel workspace: chat | artifacts | focus.
-            Layout persists per panel arrangement via autoSaveId. */}
+            Layout persists per panel arrangement via useDefaultLayout. */}
         <Group
           orientation="horizontal"
           defaultLayout={defaultLayout}
@@ -53,7 +60,7 @@ export function RunModelView({
           className="flex-1 overflow-hidden"
         >
           <Panel id="chat" defaultSize="30%" minSize="240px" maxSize="48%" className="relative z-10 flex h-full min-w-0 flex-col">
-            <ChatThread runId={seed.id} model={model} setActiveTab={setActiveTab} />
+            <ChatThread runId={seed.id} model={model} connected={connected} setActiveTab={setActiveTab} />
           </Panel>
           <ResizeHandle />
           <Panel id="artifacts" minSize="30%" className="flex h-full min-w-0 bg-[var(--color-bg)]">
@@ -74,7 +81,7 @@ export function RunModelView({
                 defaultSize="26%"
                 minSize="280px"
                 maxSize="44%"
-                className="mh-panel-enter relative z-20 h-full overflow-y-auto bg-[var(--color-surface)] shadow-[-12px_0_24px_rgba(0,0,0,0.18)]"
+                className="mh-panel-enter relative z-20 h-full overflow-y-auto border-l border-[var(--color-border)] bg-[var(--color-surface)]"
               >
                 <FocusPanel
                   view={focusView}
@@ -90,81 +97,91 @@ export function RunModelView({
   );
 }
 
-function CompactRunHeader({
+const STAGE_META: Record<ProductStage, { label: string; status: UiStatus }> = {
+  intent: { label: "Intención", status: "pending" },
+  proposal: { label: "Planificando", status: "planning" },
+  running: { label: "Ejecutando", status: "running" },
+  review: { label: "Revisión", status: "needs_review" }
+};
+
+function RunHeader({
   runId,
   view,
   model,
-  _connected,
   workspaceName
 }: {
   runId: string;
   view: ReturnType<typeof selectMinimalWorkspaceView>;
   model: RunModel;
-  _connected: boolean;
   workspaceName?: string | undefined;
 }): React.ReactElement {
   const nodesCount = model.nodes.size;
   const conflictsCount = model.conflicts.size;
   const runningCount = Array.from(model.nodes.values()).filter((n: Node) => n.execution.kind === "running").length;
+  const stage = STAGE_META[view.stage];
 
   return (
-    <header className="flex items-center justify-between px-6 border-b border-[var(--color-border)] bg-[var(--color-surface)] h-12 select-none">
-      <div className="flex items-center gap-3 min-w-0">
-        <span className="mh-mono text-xs font-semibold px-2 py-0.5 bg-[var(--color-bg-subtle)] rounded text-[var(--color-text-muted)]">
-          Run {runId.slice(0, 8)}
+    <header className="flex h-12 select-none items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4">
+      {/* Identity: title → stage. The id lives in a quiet mono chip. */}
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span
+          className="mh-mono shrink-0 rounded bg-[var(--color-bg-subtle)] px-2 py-0.5 text-[11px] text-[var(--color-text-subtle)]"
+          title={`Run ${runId}`}
+        >
+          {runId.slice(0, 8)}
         </span>
-        <span className="text-sm font-semibold text-[var(--color-text)] truncate max-w-sm" title={view.title}>
+        <h1 className="m-0 max-w-md truncate text-sm font-semibold text-[var(--color-text)]" title={view.title}>
           {view.title}
-        </span>
-        <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-semibold font-mono border ${
-          view.stage === "review"
-            ? "bg-[var(--status-review-bg)] text-[var(--status-review-fg)] border-[var(--status-review-border)]"
-            : view.stage === "proposal"
-              ? "bg-[var(--status-planning-bg)] text-[var(--status-planning-fg)] border-[var(--status-planning-border)]"
-              : view.stage === "running"
-                ? "bg-[var(--status-running-bg)] text-[var(--status-running-fg)] border-[var(--status-running-border)] mh-working"
-                : "bg-[var(--status-pending-bg)] text-[var(--status-pending-fg)] border-[var(--status-pending-border)]"
-        }`}>
-          {view.stage}
-        </span>
+        </h1>
+        <StatusPill status={stage.status} label={stage.label} />
       </div>
 
-      <div className="flex items-center gap-5 text-xs text-[var(--color-text-muted)]">
-        <span className="hidden md:inline">
-          Workspace: <strong className="text-[var(--color-text)]">{workspaceName ?? model.run.workspaceId.slice(0, 8)}</strong>
+      <div className="ml-auto flex items-center gap-4 text-xs text-[var(--color-text-muted)]">
+        <span className="hidden min-w-0 items-center gap-1.5 md:flex">
+          <span className="text-[var(--color-text-subtle)]">Workspace</span>
+          <strong className="max-w-[140px] truncate font-medium text-[var(--color-text)]">
+            {workspaceName ?? "—"}
+          </strong>
         </span>
-        <span className="hidden lg:inline">
-          Granularidad: <strong className="text-[var(--color-text)]">{model.run.config.aggressiveness}</strong>
+        <span className="hidden items-center gap-1.5 lg:flex">
+          <span className="text-[var(--color-text-subtle)]">Granularidad</span>
+          <strong className="mh-mono font-medium text-[var(--color-text)]">{model.run.config.aggressiveness}</strong>
         </span>
-        <div className="flex items-center gap-3">
-          <span>Tareas: <strong className="text-[var(--color-text)]">{nodesCount}</strong></span>
-          <span>Conflictos: <strong className="text-[var(--color-text)]">{conflictsCount}</strong></span>
-          {runningCount > 0 && (
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[var(--status-running-fg)] animate-pulse" />
-              Ejecutando: <strong className="text-[var(--color-text)]">{runningCount}</strong>
+        <span className="mh-mono flex items-center gap-3 text-[11.5px]">
+          <span title="Tareas del grafo">
+            <strong className="font-semibold text-[var(--color-text)]">{nodesCount}</strong>{" "}
+            <span className="text-[var(--color-text-subtle)]">tareas</span>
+          </span>
+          <span title="Conflictos detectados">
+            <strong className={conflictsCount > 0 ? "font-semibold text-[var(--status-blocked-fg)]" : "font-semibold text-[var(--color-text)]"}>
+              {conflictsCount}
+            </strong>{" "}
+            <span className="text-[var(--color-text-subtle)]">conflictos</span>
+          </span>
+          {runningCount > 0 ? (
+            <span className="flex items-center gap-1.5" title="Subagentes ejecutando ahora">
+              <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-[var(--status-running-fg)]" />
+              <strong className="font-semibold text-[var(--status-running-fg)]">{runningCount}</strong>{" "}
+              <span className="text-[var(--color-text-subtle)]">activos</span>
             </span>
-          )}
-        </div>
+          ) : null}
+        </span>
 
         {/* The chat thread is the single decision channel; the header only
             SIGNALS a pending gate instead of duplicating its action. */}
         {view.primaryAttention !== null ? (
-          <span className="h-8 px-3 rounded-lg text-xs font-semibold flex items-center gap-2 bg-[var(--status-review-bg)] text-[var(--status-review-fg)] border border-[var(--status-review-border)]">
-            <span className="w-2 h-2 rounded-full bg-[var(--status-review-fg)] animate-pulse" />
-            {view.primaryAttention.label}
-          </span>
+          <StatusPill status="needs_review" label={view.primaryAttention.label} pulse />
         ) : view.stage === "review" && view.reviewEvidence ? (
           <a
             href={`/api/runs/${runId}/export?format=patch`}
             download
-            className="h-8 px-3 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-[var(--color-accent-contrast)] rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5 transition text-none hover:text-[var(--color-accent-contrast)]"
+            className="flex h-8 items-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-accent)] bg-[var(--color-accent)] px-3 text-xs font-semibold text-[var(--color-accent-contrast)] transition-colors hover:border-[var(--color-accent-hover)] hover:bg-[var(--color-accent-hover)]"
           >
-            Descargar Cambios
+            <Download aria-hidden className="h-3.5 w-3.5" />
+            Descargar cambios
           </a>
         ) : null}
       </div>
     </header>
   );
 }
-

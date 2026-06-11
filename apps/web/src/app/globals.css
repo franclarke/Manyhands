@@ -220,14 +220,15 @@
   --scrollbar-thumb: rgba(241, 234, 216, 0.12);
   --scrollbar-thumb-hover: rgba(241, 234, 216, 0.20);
 
-  /* Branch lanes: warm vocabulary only (no cyans). Deep terracotta (5) is
-     kept far from --cu-rust so lanes never read as "failed". */
+  /* Branch lanes: warm vocabulary only (no cyans), and NEVER ember — heat is
+     reserved for live activity (P1). Deep terracotta (4) is kept far from
+     --cu-rust so lanes never read as "failed". */
   --mh-branch-root: var(--color-text-faint);
-  --mh-branch-1: var(--cu-ember);
-  --mh-branch-2: var(--cu-violet);
-  --mh-branch-3: var(--cu-sage);
-  --mh-branch-4: var(--cu-ochre);
-  --mh-branch-5: oklch(0.62 0.08 35);
+  --mh-branch-1: var(--cu-violet);
+  --mh-branch-2: var(--cu-sage);
+  --mh-branch-3: var(--cu-ochre);
+  --mh-branch-4: oklch(0.62 0.08 35);
+  --mh-branch-5: oklch(0.68 0.07 330);
   --mh-branch-6: #8d8474;
 }
 
@@ -378,51 +379,42 @@
   --scrollbar-thumb-hover: rgba(17, 17, 17, 0.22);
 
   --mh-branch-root: var(--color-text-faint);
-  --mh-branch-1: #9F582B;
-  --mh-branch-2: #5F4B8B;
-  --mh-branch-3: #346538;
-  --mh-branch-4: #8A5C00;
-  --mh-branch-5: #7A4435;
+  --mh-branch-1: #5F4B8B;
+  --mh-branch-2: #346538;
+  --mh-branch-3: #8A5C00;
+  --mh-branch-4: #7A4435;
+  --mh-branch-5: #8B4A6B;
   --mh-branch-6: #787774;
 }
 
-body {
-  min-height: 100%;
-  margin: 0;
-  background: var(--body-bg);
-  background-size: 28px 28px, 28px 28px, auto;
-  color: var(--text);
-  font-family: var(--font-sans);
-  font-feature-settings: "ss01", "cv11";
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
+/* Element resets live in @layer base so Tailwind utilities (layer utilities)
+   can always override them. Unlayered element selectors would silently beat
+   every `text-*` / `font-*` utility on form controls. */
+@layer base {
+  body {
+    min-height: 100%;
+    margin: 0;
+    background: var(--body-bg);
+    background-size: 28px 28px, 28px 28px, auto;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
 
-a { color: inherit; text-decoration: none; }
-button, input, select, textarea { font: inherit; }
-button, a, input, select, textarea { outline-color: transparent; }
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 3px;
-}
-::selection { background: color-mix(in srgb, var(--color-accent) 28%, transparent); }
-
-.mh-shell { min-height: 100vh; }
-
-.mh-container {
-  width: min(1180px, calc(100vw - 32px));
-  margin: 0 auto;
-}
-
-.mh-card {
-  border: 1px solid var(--rule);
-  background: var(--surface);
-  border-radius: var(--r-lg);
-  box-shadow: none;
+  a { color: inherit; text-decoration: none; }
+  button, input, select, textarea { font: inherit; }
+  button, a, input, select, textarea { outline-color: transparent; }
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 3px;
+  }
+  ::selection { background: color-mix(in srgb, var(--color-accent) 28%, transparent); }
 }
 
 .mh-mono {
@@ -624,6 +616,14 @@ textarea:focus-visible {
   background: var(--surface);
 }
 
+/* Cockpit variant: the canvas fills its tab panel edge to edge — same bg as
+   the page so there is no band under the graph. */
+.mh-run-graph-fill {
+  height: 100%;
+  border-radius: 0;
+  background: var(--color-bg);
+}
+
 .mh-run-graph-empty {
   display: grid;
   place-items: center;
@@ -661,28 +661,6 @@ textarea:focus-visible {
   line-height: 1.55;
 }
 
-.mh-planning-steps {
-  position: absolute;
-  top: calc(50% + 92px);
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-  max-width: min(520px, calc(100% - 40px));
-}
-
-.mh-planning-steps span {
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-text-subtle);
-  font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 4px 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
 .mh-min-node {
   width: 200px;
   min-height: 76px;
@@ -715,23 +693,36 @@ textarea:focus-visible {
   animation: mh-node-pulse 1.8s ease-in-out infinite;
 }
 
-.mh-min-node-running,
-.mh-min-node-verifying,
-.mh-min-node-repairing {
-  border-left-color: var(--running);
-}
-
-.mh-min-node-done {
-  border-left-color: var(--done);
+/* Status lives in the dot + vital label; only terminal/attention states tint
+   the card border (obsolete ≠ failed: amber, never red). The branch rail
+   (inline border-left-color) stays untouched. */
+.mh-min-node-failed {
+  border-top-color: var(--status-failed-border);
+  border-right-color: var(--status-failed-border);
+  border-bottom-color: var(--status-failed-border);
+  background: color-mix(in srgb, var(--status-failed-fg) 4%, var(--surface));
 }
 
 .mh-min-node-blocked,
 .mh-min-node-obsolete {
-  border-left-color: var(--warning);
+  border-top-color: var(--status-blocked-border);
+  border-right-color: var(--status-blocked-border);
+  border-bottom-color: var(--status-blocked-border);
 }
 
-.mh-min-node-failed {
-  border-left-color: var(--error);
+.mh-min-node-obsolete {
+  opacity: 0.72;
+}
+
+/* Root node: the run's own card — slightly raised, no branch rail. */
+.mh-min-node-root {
+  width: 220px;
+  background: var(--color-surface-raised);
+  border-left-width: 1px;
+}
+
+.mh-min-node-root h3 {
+  font-size: 15px;
 }
 
 .mh-min-node-top {
@@ -905,8 +896,7 @@ textarea:focus-visible {
   min-height: 0;
 }
 
-.mh-coord,
-.phase-label {
+.mh-coord {
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.14em;
@@ -914,106 +904,32 @@ textarea:focus-visible {
   color: var(--text-2);
 }
 
-.mh-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: currentColor;
-  flex: 0 0 auto;
-}
-
-.mh-tick-frame {
-  position: relative;
-}
-
-.mh-tick-frame::before,
-.mh-tick-frame::after {
-  content: "";
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-color: var(--rule-strong);
-  pointer-events: none;
-  z-index: 2;
-}
-
-.mh-tick-frame::before {
-  top: 8px;
-  left: 8px;
-  border-top: 1px solid var(--rule-strong);
-  border-left: 1px solid var(--rule-strong);
-}
-
-.mh-tick-frame::after {
-  right: 8px;
-  bottom: 8px;
-  border-right: 1px solid var(--rule-strong);
-  border-bottom: 1px solid var(--rule-strong);
-}
-
 .mh-select {
-  min-height: 36px;
-  padding: 0 28px 0 10px;
+  min-height: 32px;
+  padding: 0 26px 0 10px;
   border: 1px solid var(--rule-control);
-  background: var(--surface);
+  background-color: var(--surface);
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 14px) 55%, calc(100% - 10px) 55%;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
   color: var(--text);
   border-radius: var(--r-md);
   font-size: 13px;
   appearance: none;
   cursor: pointer;
+  transition: border-color 150ms ease-out;
 }
 
-/* Keycap — for inline keyboard hints (⌘↵, Ctrl+Enter, …). */
-.mh-kbd {
-  display: inline-flex;
-  align-items: center;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  line-height: 1;
-  padding: 3px 6px;
-  border: 1px solid var(--rule-control);
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--color-text) 8%, transparent);
-  color: var(--text-2);
-}
-
-/* Inline control rows stack their label above the control on narrow viewports. */
-@media (max-width: 640px) {
-  .mh-control-row {
-    flex-direction: column;
-    align-items: stretch !important;
-    gap: 8px;
-  }
-  .mh-control-row__label {
-    width: auto !important;
-    flex: 0 0 auto !important;
-    padding-top: 0 !important;
-  }
+.mh-select:hover {
+  border-color: color-mix(in srgb, var(--color-text) 60%, transparent);
 }
 
 /* Command-center example chips. */
 .mh-example-chip:hover {
-  border-color: var(--rule-control) !important;
-  color: var(--text) !important;
-}
-
-/* Recent-run list rows — quiet hover, stacks its metadata on small screens. */
-.mh-recent-row {
-  transition: background 150ms ease-out;
-}
-.mh-recent-row:hover {
-  background: color-mix(in srgb, var(--color-text) 4.5%, transparent);
-}
-@media (max-width: 560px) {
-  .mh-recent-row {
-    grid-template-columns: 1fr !important;
-    gap: 8px !important;
-  }
-  .mh-recent-row__meta {
-    justify-content: flex-start !important;
-    gap: 16px !important;
-  }
+  border-color: var(--rule-control);
+  color: var(--text);
 }
 
 @keyframes pulseSoft {
@@ -1062,59 +978,6 @@ textarea:focus-visible {
   outline-offset: 4px;
 }
 
-.command-center-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 820px) minmax(320px, 380px);
-  width: min(100%, calc(100vw - 24px));
-  gap: 36px;
-  align-items: start;
-}
-
-.command-center-grid > * {
-  min-width: 0;
-}
-
-@media (max-width: 640px) {
-  .run-header-main {
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: 12px !important;
-  }
-
-  .run-header-meta {
-    align-items: flex-start !important;
-  }
-
-  .run-header-title {
-    font-size: 24px !important;
-  }
-}
-
-@media (max-width: 900px) {
-
-  .dag-workspace-shell {
-    flex-direction: column;
-  }
-
-  .dag-canvas-frame {
-    height: 620px !important;
-    min-height: 620px !important;
-  }
-
-  .task-inspector-panel {
-    width: 100% !important;
-    min-width: 0 !important;
-    height: auto !important;
-    min-height: 560px !important;
-  }
-
-  .command-center-grid {
-    grid-template-columns: 1fr;
-    width: calc(100vw - 24px);
-    gap: 28px;
-  }
-}
-
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
 *::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
@@ -1126,15 +989,6 @@ textarea:focus-visible {
 }
 .animate-fade-in {
   animation: fadeIn 200ms ease-out forwards;
-}
-
-/* Native Fullscreen API: the canvas frame fills the screen */
-.dag-canvas-frame:fullscreen {
-  width: 100vw;
-  height: 100vh;
-  border: none !important;
-  border-radius: 0 !important;
-  background: var(--bg) !important;
 }
 
 /* ── Orchestrator micro-animations (F5) ──────────────────────────────
@@ -1155,6 +1009,17 @@ textarea:focus-visible {
   to { opacity: 1; transform: none; }
 }
 .mh-panel-enter { animation: mh-slide-in-right 180ms ease-out both; }
+
+/* ── Structural skeletons (route-level loading) ──────────────────────
+   `.mh-skeleton`: shimmering placeholder block that anticipates the shape
+   of incoming content (PRODUCT.md: skeletons, never centered spinners). */
+.mh-skeleton {
+  border-radius: var(--r-md);
+  background-color: color-mix(in srgb, var(--color-text) 7%, transparent);
+  background-image: linear-gradient(100deg, transparent 25%, var(--color-accent-glow) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: mh-shimmer 2s linear infinite;
+}
 
 /* ── Live graph generation (skeleton system) ─────────────────────────
    The plan streams in (`plan.node.proposed`); the graph projects it with
@@ -1209,6 +1074,6 @@ textarea:focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   .mh-working, .mh-panel-enter, .mh-skel-node, .mh-skel-node-bar, .mh-min-node-enter,
-  .coral-pulse, .edge-flow, .mh-min-node-wave { animation: none; }
+  .coral-pulse, .edge-flow, .mh-min-node-wave, .mh-skeleton, .animate-pulse { animation: none; }
   .mh-run-graph .react-flow__node { transition: none; }
 }

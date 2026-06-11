@@ -38,22 +38,9 @@ export function ThemeToggle(): React.ReactElement {
       onClick={toggle}
       title={label}
       aria-label={label}
-      style={{
-        width: 26,
-        height: 26,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        border: "1px solid var(--color-border)",
-        borderRadius: 6,
-        background: "transparent",
-        color: "var(--color-text-subtle)",
-        cursor: "pointer",
-        transition: "color 150ms ease-out, border-color 150ms ease-out"
-      }}
-      className="hover:text-[var(--color-text)] hover:border-[var(--color-border-strong)]"
+      className="flex h-[26px] w-[26px] items-center justify-center rounded-md border border-[var(--color-border)] bg-transparent text-[var(--color-text-subtle)] transition-colors duration-150 ease-out hover:border-[var(--color-border-strong)] hover:text-[var(--color-text)]"
     >
-      {theme === "light" ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+      {theme === "light" ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
     </button>
   );
 }

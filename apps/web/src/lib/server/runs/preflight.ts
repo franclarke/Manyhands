@@ -96,7 +96,7 @@ export async function runPreflight(input: PreflightInput, deps: PreflightDeps = 
   if (porcelain.trim().length > 0) {
     throw new PreflightError(
       "repo_clean",
-      `The repository at ${input.repoRoot} has uncommitted changes. Commit or stash them before running.`
+      `El repositorio en ${input.repoRoot} tiene cambios sin commitear. Commiteá o stasheá antes de ejecutar.`
     );
   }
 
@@ -105,7 +105,7 @@ export async function runPreflight(input: PreflightInput, deps: PreflightDeps = 
   if (!exists) {
     throw new PreflightError(
       "branch",
-      `Base branch "${input.baseBranch}" does not exist in ${input.repoRoot}.`
+      `La rama base "${input.baseBranch}" no existe en ${input.repoRoot}.`
     );
   }
 }

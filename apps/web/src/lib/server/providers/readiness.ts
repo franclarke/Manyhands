@@ -78,14 +78,14 @@ async function inspectExecutor(
     checks.push({
       id: "enabled",
       status: "warning",
-      label: "Enabled",
-      message: "Registered for future use, disabled in this build."
+      label: "Habilitado",
+      message: "Registrado para uso futuro; deshabilitado en este build."
     });
     checks.push({
       id: "quota",
       status: "warning",
-      label: "Quota",
-      message: "Unavailable while executor is disabled."
+      label: "Cuota",
+      message: "No disponible mientras el executor está deshabilitado."
     });
     return {
       executorId: descriptor.id,
@@ -103,24 +103,24 @@ async function inspectExecutor(
     status: cli.ok ? "pass" : "fail",
     label: descriptor.label,
     message: cli.ok
-      ? `Detected${cli.version !== undefined ? `: ${cli.version}` : "."}`
-      : `${descriptor.label} not found. Install it or set ${descriptor.binaryEnvVar}.`
+      ? `Detectado${cli.version !== undefined ? `: ${cli.version}` : "."}`
+      : `No se encontró ${descriptor.label}. Instalalo o configurá ${descriptor.binaryEnvVar}.`
   });
 
   const authed = (deps.hasCredentials ?? defaultHasCredentials)(descriptor.id);
   checks.push({
     id: "auth",
     status: authed ? "pass" : "fail",
-    label: "Authentication",
-    message: authed ? "Credentials found." : authMessageFor(descriptor.id)
+    label: "Autenticación",
+    message: authed ? "Credenciales encontradas." : authMessageFor(descriptor.id)
   });
 
   checks.push(...workspaceChecks);
   checks.push({
     id: "quota",
     status: "warning",
-    label: "Quota",
-    message: "Unknown without spending a live model request."
+    label: "Cuota",
+    message: "Desconocida sin gastar una request real al modelo."
   });
 
   const readiness: ProviderReadiness = {
@@ -145,8 +145,8 @@ async function inspectWorkspace(
     checks.push({
       id: "repo_path",
       status: "warning",
-      label: "Repository",
-      message: "This workspace has no local git repo configured."
+      label: "Repositorio",
+      message: "Este workspace no tiene un repo git local configurado."
     });
     return checks;
   }
@@ -154,7 +154,7 @@ async function inspectWorkspace(
   checks.push({
     id: "repo_path",
     status: "pass",
-    label: "Repository",
+    label: "Repositorio",
     message: repoPath
   });
 
@@ -162,11 +162,11 @@ async function inspectWorkspace(
   checks.push({
     id: "repo_clean",
     status: porcelain.ok && porcelain.output.trim().length === 0 ? "pass" : "warning",
-    label: "Repo clean",
+    label: "Repo limpio",
     message: porcelain.ok
       ? porcelain.output.trim().length === 0
-        ? "No uncommitted changes detected."
-        : "Repository has uncommitted changes; execution preflight will block."
+        ? "Sin cambios sin commitear."
+        : "El repo tiene cambios sin commitear; el preflight de ejecución va a bloquear."
       : porcelain.message
   });
 
@@ -175,11 +175,11 @@ async function inspectWorkspace(
   checks.push({
     id: "branch",
     status: exists.ok && exists.exists ? "pass" : "warning",
-    label: "Base branch",
+    label: "Rama base",
     message: exists.ok
       ? exists.exists
-        ? `Branch "${branch}" resolves.`
-        : `Branch "${branch}" does not resolve.`
+        ? `La rama "${branch}" resuelve.`
+        : `La rama "${branch}" no resuelve.`
       : exists.message
   });
 
@@ -190,7 +190,7 @@ async function inspectWorkspace(
   checks.push({
     id: "commands",
     status: hasDetectedCommands(commands) ? "pass" : "warning",
-    label: "Commands",
+    label: "Comandos",
     message: summary
   });
   return checks;
@@ -204,7 +204,7 @@ function describeDetectedCommands(commands: DetectedCommands): string {
   if (commands.lint !== undefined) parts.push(`lint: ${commands.lint}`);
   return parts.length > 0
     ? parts.join(" · ")
-    : "No test/build scripts detected in package.json; validation will rely on contract commands.";
+    : "Sin scripts de test/build en package.json; la validación dependerá de los comandos del contrato.";
 }
 
 function deriveStatus(checks: readonly ProviderReadinessCheck[]): ProviderReadinessStatus {
@@ -250,12 +250,12 @@ function defaultHasCredentials(executorId: ExecutorId): boolean {
 
 function authMessageFor(executorId: ExecutorId): string {
   if (executorId === GEMINI_EXECUTOR_ID) {
-    return "Gemini CLI has no credentials. Run gemini once to authenticate, or set GEMINI_API_KEY.";
+    return "Gemini CLI no tiene credenciales. Corré gemini una vez para autenticarte, o configurá GEMINI_API_KEY.";
   }
   if (executorId === CLAUDE_CODE_EXECUTOR_ID) {
-    return "Claude Code CLI has no credentials. Run claude once to authenticate, or set ANTHROPIC_API_KEY.";
+    return "Claude Code CLI no tiene credenciales. Corré claude una vez para autenticarte, o configurá ANTHROPIC_API_KEY.";
   }
-  return "Authentication check unavailable for this disabled executor.";
+  return "Chequeo de autenticación no disponible para este executor deshabilitado.";
 }
 
 async function defaultGitPorcelain(repoRoot: string): Promise<string> {

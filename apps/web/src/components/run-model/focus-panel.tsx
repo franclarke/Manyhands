@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Focus panel (PR-U1) — the on-demand deep inspector.
+ * Focus panel — the on-demand deep inspector.
  *
  * Presentational ONLY: it receives a `FocusView` (built by `buildFocusView`) and
  * paints node / seam / conflict / decision / evidence — plus a safe `missing`
@@ -13,6 +13,7 @@
  * depth without leaving the control room.
  */
 import { useEffect, useState } from "react";
+import { X } from "lucide-react";
 import type {
   ConflictFocusView,
   DecisionFocusView,
@@ -38,15 +39,7 @@ export function FocusPanel({
   return (
     <aside
       aria-label="Panel de foco"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-        minHeight: "100%",
-        padding: "14px 16px",
-        background: "var(--surface, #1a1915)",
-        borderLeft: "2px solid var(--copper, #d08a5a)"
-      }}
+      className="flex min-h-full flex-col gap-3 bg-[var(--color-surface)] px-4 py-3.5 font-sans"
     >
       <Header view={view} onClose={onClose} />
       <Body view={view} onFocus={onFocus} />
@@ -66,40 +59,21 @@ const KIND_LABEL: Record<FocusView["kind"], string> = {
 function Header({ view, onClose }: { view: FocusView; onClose: () => void }): React.ReactElement {
   const title = headerTitle(view);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-        <span
-          style={{
-            fontFamily: "var(--font-mono, monospace)",
-            fontSize: 11,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            whiteSpace: "nowrap",
-            color: "var(--copper, #d08a5a)"
-          }}
-        >
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between gap-2.5">
+        <span className="mh-mono whitespace-nowrap text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">
           Foco · {KIND_LABEL[view.kind]}
         </span>
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Cerrar foco"
-        style={{
-          minHeight: 28,
-          padding: "0 10px",
-          borderRadius: 6,
-          border: "1px solid var(--rule-control, rgba(241,234,216,0.2))",
-          background: "rgba(241,234,216,0.035)",
-          color: "var(--text-2, #cfc7b4)",
-          fontFamily: "var(--font-mono, monospace)",
-          fontSize: 12,
-          cursor: "pointer"
-        }}
-      >
-        Cerrar ✕
-      </button>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar foco"
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--r-md)] border border-transparent text-[var(--color-text-subtle)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-text)_7%,transparent)] hover:text-[var(--color-text)]"
+        >
+          <X aria-hidden className="h-4 w-4" />
+        </button>
       </div>
-      <strong style={{ fontSize: 15, lineHeight: 1.35, color: "var(--text-1, #f1ead8)", overflowWrap: "break-word" }}>
+      <strong className="break-words text-[15px] font-semibold leading-snug text-[var(--color-text)]">
         {title}
       </strong>
     </div>
@@ -144,7 +118,7 @@ function Body({ view, onFocus }: { view: FocusView; onFocus?: ((t: FocusTarget) 
   }
 }
 
-// ── Node ──────────────────────────────────────────────────────────────────────────
+// ── Node ──────────────────────────────────────────────────────────────────────
 
 function NodeBody({ view, onFocus }: { view: NodeFocusView; onFocus?: ((t: FocusTarget) => void) | undefined }): React.ReactElement {
   const showConsole =
@@ -189,14 +163,14 @@ function NodeBody({ view, onFocus }: { view: NodeFocusView; onFocus?: ((t: Focus
       ) : null}
 
       <ChipRow label="Banderas">
-        {view.isInWavefront ? <Chip text="wavefront" color="var(--running)" /> : null}
-        {view.isBlocked ? <Chip text="bloqueado" color="var(--blocked, #b08a4a)" /> : null}
-        {view.isInvalidated ? <Chip text="obsoleto" color="var(--gated, #d0953a)" /> : null}
-        {view.isPendingReexecution ? <Chip text="re-ejecución pendiente" color="var(--gated, #d0953a)" /> : null}
-        {view.isAffectedByPendingAmendment ? <Chip text="enmienda pendiente" color="var(--copper, #d08a5a)" /> : null}
-        {view.hasActiveConflict ? <Chip text="conflicto" color="var(--error, #cf5b5b)" /> : null}
+        {view.isInWavefront ? <Chip text="wavefront" tone="running" /> : null}
+        {view.isBlocked ? <Chip text="bloqueado" tone="blocked" /> : null}
+        {view.isInvalidated ? <Chip text="obsoleto" tone="blocked" /> : null}
+        {view.isPendingReexecution ? <Chip text="re-ejecución pendiente" tone="blocked" /> : null}
+        {view.isAffectedByPendingAmendment ? <Chip text="enmienda pendiente" tone="running" /> : null}
+        {view.hasActiveConflict ? <Chip text="conflicto" tone="failed" /> : null}
         {!view.isInWavefront && !view.isBlocked && !view.isInvalidated && !view.isPendingReexecution && !view.isAffectedByPendingAmendment && !view.hasActiveConflict ? (
-          <span style={mutedStyle}>—</span>
+          <span className="text-xs text-[var(--color-text-subtle)]">—</span>
         ) : null}
       </ChipRow>
 
@@ -205,49 +179,30 @@ function NodeBody({ view, onFocus }: { view: NodeFocusView; onFocus?: ((t: Focus
   );
 }
 
-// ── Seam ──────────────────────────────────────────────────────────────────────────
-
 function NodeConsole({ view }: { view: NodeFocusView }): React.ReactElement {
   return (
     <section
       aria-label="Consola del agente"
-      style={{
-        display: "grid",
-        gap: 10,
-        padding: "10px 12px",
-        borderRadius: 6,
-        border: "1px solid rgba(241,234,216,0.16)",
-        background: "rgba(0,0,0,0.24)"
-      }}
+      className="grid gap-2.5 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5"
     >
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-        <span style={labelStyle}>Consola en vivo</span>
-        <span style={{ ...monoValueStyle, fontSize: 10.5 }}>
-          {view.console.lines.length} chunks{view.console.truncated ? " · ultimos 200" : ""}
+      <div className="flex items-baseline justify-between gap-2.5">
+        <span className="text-xs text-[var(--color-text-subtle)]">Consola en vivo</span>
+        <span className="mh-mono text-[10.5px] text-[var(--color-text-subtle)]">
+          {view.console.lines.length} chunks{view.console.truncated ? " · últimos 200" : ""}
         </span>
       </div>
       {view.console.lines.length === 0 ? (
-        <span style={monoValueStyle}>Esperando output visible de Gemini...</span>
+        <span className="mh-mono text-xs text-[var(--color-text-muted)]">Esperando output visible de Gemini…</span>
       ) : (
-        <pre
-          style={{
-            margin: 0,
-            maxHeight: 300,
-            overflow: "auto",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            color: "var(--text-2, #cfc7b4)",
-            fontFamily: "var(--font-mono, monospace)",
-            fontSize: 11,
-            lineHeight: 1.45
-          }}
-        >
+        <pre className="mh-mono m-0 max-h-[300px] overflow-auto whitespace-pre-wrap break-words text-[11px] leading-[1.45] text-[var(--color-text-muted)]">
           {view.console.lines.map((line) => `[${line.stream}] ${line.chunk}`).join("")}
         </pre>
       )}
     </section>
   );
 }
+
+// ── Seam ──────────────────────────────────────────────────────────────────────
 
 function SeamBody({ view, onFocus }: { view: SeamFocusView; onFocus?: ((t: FocusTarget) => void) | undefined }): React.ReactElement {
   return (
@@ -260,7 +215,7 @@ function SeamBody({ view, onFocus }: { view: SeamFocusView; onFocus?: ((t: Focus
         />
       </ChipRow>
       <ChipRow label="Consumidores">
-        {view.consumers.length === 0 ? <span style={mutedStyle}>—</span> : null}
+        {view.consumers.length === 0 ? <span className="text-xs text-[var(--color-text-subtle)]">—</span> : null}
         {view.consumers.map((c) => (
           <LinkChip key={c.id} text={`${c.title} (${c.id})`} onClick={onFocus !== undefined ? () => onFocus({ kind: "node", id: c.id }) : undefined} />
         ))}
@@ -276,7 +231,7 @@ function SeamBody({ view, onFocus }: { view: SeamFocusView; onFocus?: ((t: Focus
   );
 }
 
-// ── Conflict ──────────────────────────────────────────────────────────────────────
+// ── Conflict ──────────────────────────────────────────────────────────────────
 
 function ConflictBody({ view, onFocus }: { view: ConflictFocusView; onFocus?: ((t: FocusTarget) => void) | undefined }): React.ReactElement {
   return (
@@ -307,7 +262,7 @@ function ConflictBody({ view, onFocus }: { view: ConflictFocusView; onFocus?: ((
   );
 }
 
-// ── Decision ──────────────────────────────────────────────────────────────────────
+// ── Decision ──────────────────────────────────────────────────────────────────
 
 function DecisionBody({ view, onFocus }: { view: DecisionFocusView; onFocus?: ((t: FocusTarget) => void) | undefined }): React.ReactElement {
   return (
@@ -388,7 +343,7 @@ function formatChoice(choice: DecisionFocusView["choice"]): string {
   return "—";
 }
 
-// ── Evidence ──────────────────────────────────────────────────────────────────────
+// ── Evidence ──────────────────────────────────────────────────────────────────
 
 function EvidenceBody({ view, onFocus }: { view: EvidenceFocusView; onFocus?: ((t: FocusTarget) => void) | undefined }): React.ReactElement {
   return (
@@ -399,10 +354,10 @@ function EvidenceBody({ view, onFocus }: { view: EvidenceFocusView; onFocus?: ((
       <RefLine refItem={view.narrativeRef} />
       {view.metrics !== undefined ? <Field label="Métricas" value={formatMetrics(view.metrics)} mono /> : null}
       {view.invalidationTrace !== undefined && view.invalidationTrace.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span style={labelStyle}>Traza de invalidación</span>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-[var(--color-text-subtle)]">Traza de invalidación</span>
           {view.invalidationTrace.map((t) => (
-            <span key={t.seamId} style={{ ...monoValueStyle, fontSize: 11 }}>
+            <span key={t.seamId} className="mh-mono text-[11px] text-[var(--color-text-muted)]">
               {t.seamId} {t.from}→{t.to} · {t.cause}
             </span>
           ))}
@@ -424,7 +379,7 @@ function EvidenceBody({ view, onFocus }: { view: EvidenceFocusView; onFocus?: ((
   );
 }
 
-// ── Missing ───────────────────────────────────────────────────────────────────────
+// ── Missing ───────────────────────────────────────────────────────────────────
 
 function MissingBody({ view }: { view: MissingFocusView }): React.ReactElement {
   return (
@@ -435,47 +390,52 @@ function MissingBody({ view }: { view: MissingFocusView }): React.ReactElement {
   );
 }
 
-// ── Shared bits ─────────────────────────────────────────────────────────────────────
-
-const labelStyle: React.CSSProperties = { fontSize: 12, color: "var(--text-3, #9a927f)" };
-const valueStyle: React.CSSProperties = { fontSize: 12.5, color: "var(--text-2, #cfc7b4)", wordBreak: "break-word" };
-const monoValueStyle: React.CSSProperties = { ...valueStyle, fontFamily: "var(--font-mono, monospace)" };
-const mutedStyle: React.CSSProperties = { fontSize: 12, color: "var(--text-3, #9a927f)" };
+// ── Shared bits ───────────────────────────────────────────────────────────────
 
 function Stack({ children }: { children: React.ReactNode }): React.ReactElement {
-  return <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{children}</div>;
+  return <div className="flex flex-col gap-2">{children}</div>;
 }
+
+const FIELD_GRID = "grid grid-cols-[minmax(110px,auto)_1fr] items-baseline gap-x-3 gap-y-0.5";
 
 function Field({ label, value, mono = false, strong = false }: { label: string; value: string; mono?: boolean; strong?: boolean }): React.ReactElement {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(110px, auto) 1fr", gap: "2px 12px", alignItems: "baseline" }}>
-      <span style={labelStyle}>{label}</span>
-      <span style={{ ...(mono ? monoValueStyle : valueStyle), ...(strong ? { color: "var(--text-1, #f1ead8)", fontWeight: 600 } : {}) }}>{value}</span>
+    <div className={FIELD_GRID}>
+      <span className="text-xs text-[var(--color-text-subtle)]">{label}</span>
+      <span
+        className={[
+          "break-words text-[12.5px]",
+          mono ? "mh-mono" : "",
+          strong ? "font-semibold text-[var(--color-text)]" : "text-[var(--color-text-muted)]"
+        ].join(" ")}
+      >
+        {value}
+      </span>
     </div>
   );
 }
 
 function ChipRow({ label, children }: { label: string; children: React.ReactNode }): React.ReactElement {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(110px, auto) 1fr", gap: "2px 12px", alignItems: "baseline" }}>
-      <span style={labelStyle}>{label}</span>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>{children}</div>
+    <div className={FIELD_GRID}>
+      <span className="text-xs text-[var(--color-text-subtle)]">{label}</span>
+      <div className="flex flex-wrap items-center gap-1.5">{children}</div>
     </div>
   );
 }
 
-function Chip({ text, color }: { text: string; color?: string }): React.ReactElement {
+type ChipTone = "running" | "blocked" | "failed" | "neutral";
+
+const CHIP_TONE: Record<ChipTone, string> = {
+  running: "border-[var(--status-running-border)] bg-[var(--status-running-bg)] text-[var(--status-running-fg)]",
+  blocked: "border-[var(--status-blocked-border)] bg-[var(--status-blocked-bg)] text-[var(--status-blocked-fg)]",
+  failed: "border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] text-[var(--status-failed-fg)]",
+  neutral: "border-[var(--color-border)] bg-transparent text-[var(--color-text-subtle)]"
+};
+
+function Chip({ text, tone = "neutral" }: { text: string; tone?: ChipTone }): React.ReactElement {
   return (
-    <span
-      style={{
-        fontFamily: "var(--font-mono, monospace)",
-        fontSize: 10.5,
-        padding: "2px 7px",
-        borderRadius: 999,
-        border: `1px solid ${color ?? "var(--border, rgba(241,234,216,0.18))"}`,
-        color: color ?? "var(--text-3, #9a927f)"
-      }}
-    >
+    <span className={`mh-mono rounded-full border px-2 py-0.5 text-[10.5px] ${CHIP_TONE[tone]}`}>
       {text}
     </span>
   );
@@ -487,16 +447,7 @@ function LinkChip({ text, onClick }: { text: string; onClick?: (() => void) | un
     <button
       type="button"
       onClick={onClick}
-      style={{
-        fontFamily: "var(--font-mono, monospace)",
-        fontSize: 10.5,
-        padding: "2px 8px",
-        borderRadius: 999,
-        border: "1px solid var(--copper, #d08a5a)",
-        background: "rgba(208,138,90,0.10)",
-        color: "var(--copper-hi, #e0a070)",
-        cursor: "pointer"
-      }}
+      className="mh-mono cursor-pointer rounded-full border border-[var(--color-accent-deep)] bg-[color-mix(in_srgb,var(--color-accent)_8%,transparent)] px-2 py-0.5 text-[10.5px] text-[var(--color-text)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-accent)_16%,transparent)]"
     >
       {text} ↗
     </button>
@@ -505,8 +456,8 @@ function LinkChip({ text, onClick }: { text: string; onClick?: (() => void) | un
 
 function RefLine({ refItem }: { refItem: FocusRef }): React.ReactElement {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(110px, auto) 1fr", gap: "2px 12px", alignItems: "baseline" }}>
-      <span style={labelStyle}>{refItem.label}</span>
+    <div className={FIELD_GRID}>
+      <span className="text-xs text-[var(--color-text-subtle)]">{refItem.label}</span>
       <ArtifactViewer refItem={refItem} />
     </div>
   );
@@ -515,7 +466,7 @@ function RefLine({ refItem }: { refItem: FocusRef }): React.ReactElement {
 function RefList({ refs }: { refs: FocusRef[] }): React.ReactElement | null {
   if (refs.length === 0) return null;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+    <div className="flex flex-col gap-1">
       {refs.map((r) => (
         <RefLine key={r.ref} refItem={r} />
       ))}
@@ -558,40 +509,28 @@ function ArtifactViewer({ refItem }: { refItem: FocusRef }): React.ReactElement 
   }, [refItem.available, refItem.ref, runId]);
 
   if (!refItem.available || runId === null) {
-    return <span style={monoValueStyle}>Artefacto referenciado: {refItem.ref}</span>;
+    return <span className="mh-mono break-words text-[12.5px] text-[var(--color-text-muted)]">Artefacto referenciado: {refItem.ref}</span>;
   }
 
   if (error !== null) {
     const notFound = /not found|404/i.test(error);
     return (
-      <span style={{ ...(notFound ? valueStyle : monoValueStyle), color: notFound ? "var(--text-3, #9a927f)" : "var(--gated, #d0953a)" }}>
+      <span className={notFound ? "text-[12.5px] text-[var(--color-text-subtle)]" : "mh-mono text-[12.5px] text-[var(--status-blocked-fg)]"}>
         {notFound ? "Sin artefacto disponible todavía." : `${refItem.label}: ${error}`}
       </span>
     );
   }
 
   if (payload === null) {
-    return <span style={monoValueStyle}>{refItem.ref} · cargando...</span>;
+    return <span className="mh-mono text-[12.5px] text-[var(--color-text-subtle)]">{refItem.ref} · cargando…</span>;
   }
 
   return (
-    <details style={{ gridColumn: "2 / 3" }}>
-      <summary style={{ ...monoValueStyle, cursor: "pointer" }}>{payload.title}</summary>
-      <pre
-        style={{
-          margin: "6px 0 0",
-          maxHeight: 260,
-          overflow: "auto",
-          padding: "8px 10px",
-          borderRadius: 6,
-          border: "1px solid var(--border, rgba(241,234,216,0.12))",
-          background: "rgba(0,0,0,0.22)",
-          color: "var(--text-2, #cfc7b4)",
-          fontFamily: "var(--font-mono, monospace)",
-          fontSize: 11,
-          whiteSpace: "pre-wrap"
-        }}
-      >
+    <details className="col-start-2">
+      <summary className="mh-mono cursor-pointer text-[12.5px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+        {payload.title}
+      </summary>
+      <pre className="mh-mono mt-1.5 max-h-[260px] overflow-auto whitespace-pre-wrap rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2 text-[11px] text-[var(--color-text-muted)]">
         {payload.content}
       </pre>
     </details>
@@ -608,11 +547,15 @@ function runIdFromRef(ref: string): string | null {
   }
 }
 
-function Note({ text, tone = "neutral" }: { text: string; tone?: "neutral" | "warn" | "success" }): React.ReactElement {
-  const color = tone === "warn" ? "var(--gated, #d0953a)" : tone === "success" ? "var(--done, #6bbf73)" : "var(--text-3, #9a927f)";
-  const bg = tone === "warn" ? "rgba(208,149,58,0.08)" : tone === "success" ? "rgba(107,191,115,0.06)" : "rgba(241,234,216,0.02)";
+const NOTE_TONE = {
+  neutral: "border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)]",
+  warn: "border-[var(--status-blocked-border)] bg-[var(--status-blocked-bg)] text-[var(--status-blocked-fg)]",
+  success: "border-[var(--status-completed-border)] bg-[var(--status-completed-bg)] text-[var(--status-completed-fg)]"
+} as const;
+
+function Note({ text, tone = "neutral" }: { text: string; tone?: keyof typeof NOTE_TONE }): React.ReactElement {
   return (
-    <div style={{ padding: "8px 10px", borderRadius: 6, border: `1px solid ${color}`, background: bg, color, fontSize: 12, lineHeight: 1.5 }}>
+    <div className={`rounded-[var(--r-md)] border px-2.5 py-2 text-xs leading-relaxed ${NOTE_TONE[tone]}`}>
       {text}
     </div>
   );

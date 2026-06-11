@@ -1,7 +1,8 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 
-export type ButtonVariant = "primary" | "ghost" | "danger";
-export type ButtonSize = "sm" | "md";
+export type ButtonVariant = "primary" | "ghost" | "danger" | "quiet";
+export type ButtonSize = "sm" | "md" | "icon";
 
 interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   variant?: ButtonVariant;
@@ -11,44 +12,50 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "chi
   children: ReactNode;
 }
 
-const VARIANT_STYLE: Record<ButtonVariant, React.CSSProperties> = {
-  primary: {
-    border: "1px solid var(--color-accent)",
-    background: "var(--color-accent)",
-    color: "var(--color-accent-contrast)",
-    fontWeight: 600
-  },
-  ghost: {
-    border: "1px solid var(--color-border-control)",
-    background: "color-mix(in srgb, var(--color-text) 3.5%, transparent)",
-    color: "var(--color-text)",
-    fontWeight: 500
-  },
-  danger: {
-    border: "1px solid var(--status-failed-border)",
-    background: "var(--status-failed-bg)",
-    color: "var(--status-failed-fg)",
-    fontWeight: 600
-  }
+const BASE_CLASS =
+  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap select-none font-sans " +
+  "transition-[background,border-color,color,transform] duration-150 ease-out " +
+  "active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55 disabled:active:translate-y-0";
+
+const VARIANT_CLASS: Record<ButtonVariant, string> = {
+  primary:
+    "border border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-accent-contrast)] font-semibold " +
+    "hover:bg-[var(--color-accent-hover)] hover:border-[var(--color-accent-hover)] " +
+    "disabled:hover:bg-[var(--color-accent)] disabled:hover:border-[var(--color-accent)]",
+  ghost:
+    "border border-[var(--color-border-control)] bg-[color-mix(in_srgb,var(--color-text)_3.5%,transparent)] " +
+    "text-[var(--color-text)] font-medium " +
+    "hover:bg-[color-mix(in_srgb,var(--color-text)_8%,transparent)] " +
+    "disabled:hover:bg-[color-mix(in_srgb,var(--color-text)_3.5%,transparent)]",
+  danger:
+    "border border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] text-[var(--status-failed-fg)] font-semibold " +
+    "hover:bg-[color-mix(in_srgb,var(--status-failed-fg)_18%,transparent)] " +
+    "disabled:hover:bg-[var(--status-failed-bg)]",
+  quiet:
+    "border border-transparent bg-transparent text-[var(--color-text-muted)] font-medium " +
+    "hover:bg-[color-mix(in_srgb,var(--color-text)_6%,transparent)] hover:text-[var(--color-text)] " +
+    "disabled:hover:bg-transparent disabled:hover:text-[var(--color-text-muted)]"
 };
 
-const SIZE_STYLE: Record<ButtonSize, React.CSSProperties> = {
-  sm: { minHeight: 36, padding: "0 13px", fontSize: 13, borderRadius: "var(--r-md)" },
-  md: { minHeight: 40, padding: "0 16px", fontSize: 13.5, borderRadius: "var(--r-lg)" }
+const SIZE_CLASS: Record<ButtonSize, string> = {
+  sm: "h-8 px-3 text-[12.5px] rounded-[var(--r-md)]",
+  md: "h-9 px-3.5 text-[13px] rounded-[var(--r-lg)]",
+  icon: "h-7 w-7 p-0 rounded-[var(--r-md)]"
 };
 
 /**
- * Tokenized button primitive. Replaces the ad-hoc Primary/Secondary buttons
- * scattered across the run chrome. Consumes semantic/state tokens only.
+ * Tokenized button primitive — the single button vocabulary for the app chrome.
+ * Consumes semantic/state tokens only; every variant ships default, hover,
+ * focus (global ring), active, disabled and busy states.
  */
 export function Button({
   variant = "ghost",
   size = "md",
   busy = false,
-  busyLabel = "Working…",
+  busyLabel,
   disabled,
   children,
-  style,
+  className,
   ...rest
 }: ButtonProps): React.ReactElement {
   const isDisabled = disabled === true || busy;
@@ -57,18 +64,16 @@ export function Button({
       type="button"
       disabled={isDisabled}
       {...rest}
-      style={{
-        ...VARIANT_STYLE[variant],
-        ...SIZE_STYLE[size],
-        cursor: isDisabled ? "not-allowed" : "pointer",
-        opacity: disabled === true && !busy ? 0.55 : 1,
-        fontFamily: "var(--font-sans)",
-        whiteSpace: "nowrap",
-        transition: "background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out",
-        ...style
-      }}
+      className={[BASE_CLASS, VARIANT_CLASS[variant], SIZE_CLASS[size], className ?? ""].join(" ")}
     >
-      {busy ? busyLabel : children}
+      {busy ? (
+        <>
+          <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />
+          {busyLabel ?? children}
+        </>
+      ) : (
+        children
+      )}
     </button>
   );
 }

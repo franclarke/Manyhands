@@ -67,7 +67,7 @@ El eje "vivo" usa ember; **cyan y celeste quedan eliminados**. Cada status defin
 | `failed`, `conflict` | rust `oklch(0.68 0.13 25)` / light `oklch(0.50 0.15 27)` | Fallo real |
 
 - Running además lleva **pulso de halo ember** (animado) y progreso en ember, no cyan.
-- Branch lanes (`--mh-branch-1..6`): paleta cálida sin celestes — ember, sage, violeta, ámbar, rust apagado, piedra.
+- Branch lanes (`--mh-branch-1..6`): paleta cálida sin celestes y **sin ember** (el calor es solo de lo vivo, P1) — violeta, sage, ámbar, terracota apagado, ciruela, piedra.
 - Contraste AA verificado en ambos temas (`pnpm -F @manyhands/web contrast:check`).
 
 ## Typography

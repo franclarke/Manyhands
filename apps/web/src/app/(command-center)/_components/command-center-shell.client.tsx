@@ -11,11 +11,15 @@ import type {
   WorkspaceCreateRequest
 } from "@/lib/api-types";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { StatusPill } from "@/components/ui/status-pill";
+import type { UiStatus } from "@/lib/status";
 import { ModelPicker } from "./model-picker.client";
 import { WorkspacePicker } from "./workspace-picker.client";
 import { WorkspaceFormDialog, type WorkspaceFormValue } from "./workspace-form-dialog.client";
 import { toGranularityMode, isGranularityLevel, GRANULARITY_DISPLAY_OPTIONS, type GranularityLevel } from "@/lib/granularity";
 import type { ExecutorSelection } from "@/lib/api-types";
+import { FolderGit2, GitBranch, Pencil, Plus, Trash2, AlertTriangle, OctagonAlert } from "lucide-react";
 
 const PROMPT_STORAGE_KEY = "manyhands:lastPrompt";
 const EXAMPLE_PROMPTS = [
@@ -37,8 +41,8 @@ export function CommandCenterShell({
 }: CommandCenterShellProps): React.ReactElement {
   const router = useRouter();
 
-  // We keep a local state of workspaces so that workspace additions/edits/deletions
-  // update the list instantly without relying solely on next.js refresh cycles.
+  // Local workspace list so create/edit/delete update instantly without a
+  // full Next.js refresh round-trip.
   const [workspaces, setWorkspaces] = useState<Workspace[]>(initialWorkspaces);
   useEffect(() => {
     setWorkspaces(initialWorkspaces);
@@ -50,11 +54,12 @@ export function CommandCenterShell({
     "";
   const [workspaceId, setWorkspaceId] = useState<string>(initialWorkspaceId);
 
-  // If the list of workspaces updates and our current selection is no longer valid,
-  // sync the selection to the first valid workspace.
+  // If the current selection disappears (deleted workspace), fall back to the
+  // first workspace that still has a usable repo.
   useEffect(() => {
-    if (workspaceId.length > 0 && !workspaces.some(w => w.id === workspaceId)) {
-      const nextWs = workspaces.find((entry) => entry.repoPath !== undefined && entry.repoPath.length > 0)?.id ??
+    if (workspaceId.length > 0 && !workspaces.some((w) => w.id === workspaceId)) {
+      const nextWs =
+        workspaces.find((entry) => entry.repoPath !== undefined && entry.repoPath.length > 0)?.id ??
         workspaces[0]?.id ??
         "";
       setWorkspaceId(nextWs);
@@ -73,9 +78,9 @@ export function CommandCenterShell({
   const [readinessError, setReadinessError] = useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  // Workspace Dialog Management State
   const [workspaceFormOpen, setWorkspaceFormOpen] = useState<"closed" | "create" | "edit">("closed");
   const [workspaceBusy, setWorkspaceBusy] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -210,7 +215,6 @@ export function CommandCenterShell({
     }
   }
 
-  // Workspace CRUD operations
   async function handleWorkspaceSubmit(value: WorkspaceFormValue): Promise<void> {
     setErrorMessage(null);
     setWorkspaceBusy(true);
@@ -248,7 +252,6 @@ export function CommandCenterShell({
         }
         const data = await response.json();
         if (data.workspace?.id) {
-          // Add to local state and select it
           setWorkspaces((current) => [...current, data.workspace]);
           setWorkspaceId(data.workspace.id);
         }
@@ -264,7 +267,6 @@ export function CommandCenterShell({
         }
         const data = await response.json();
         if (data.workspace) {
-          // Update local state
           setWorkspaces((current) =>
             current.map((w) => (w.id === data.workspace.id ? data.workspace : w))
           );
@@ -281,7 +283,6 @@ export function CommandCenterShell({
 
   async function handleWorkspaceDelete(): Promise<void> {
     if (!selectedWorkspace) return;
-    if (!confirm(`¿Eliminar el workspace "${selectedWorkspace.name}"?`)) return;
     setErrorMessage(null);
     setWorkspaceBusy(true);
     try {
@@ -289,15 +290,10 @@ export function CommandCenterShell({
       if (!response.ok) {
         throw new Error(await readError(response));
       }
-      // Remove from local state
-      const remaining = workspaces.filter(w => w.id !== selectedWorkspace.id);
+      const remaining = workspaces.filter((w) => w.id !== selectedWorkspace.id);
       setWorkspaces(remaining);
-      const nextWs = remaining[0];
-      if (nextWs !== undefined) {
-        setWorkspaceId(nextWs.id);
-      } else {
-        setWorkspaceId("");
-      }
+      setWorkspaceId(remaining[0]?.id ?? "");
+      setConfirmDeleteOpen(false);
       router.refresh();
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : String(err));
@@ -316,294 +312,135 @@ export function CommandCenterShell({
     return `Gemini CLI: ${readiness.status.toUpperCase()}\nRuta: ${readiness.binaryPath || "desconocida"}\nVersión: ${readiness.version || "desconocida"}\n\nChecks:\n${checksStr}`;
   }, [readiness, readinessLoading, readinessError]);
 
-
+  const gemini = geminiPill({ readiness, readinessLoading, readinessError });
 
   if (workspaces.length === 0 && workspaceFormOpen === "closed") {
     return (
-      <div
-        style={{
-          maxWidth: 720,
-          margin: "0 auto",
-          padding: 24,
-          border: "1px dashed var(--rule-strong)",
-          background: "var(--surface)",
-          borderRadius: "var(--r-lg)",
-          color: "var(--text-2)",
-          display: "flex",
-          flexDirection: "column",
-          gap: 12
-        }}
-      >
+      <section className="mx-auto flex w-full max-w-xl flex-col gap-4 rounded-[var(--r-xl)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] p-6">
         <div>
-          <p className="mh-serif" style={{ fontSize: 20, color: "var(--text)", margin: 0 }}>
-            Todavía no hay workspaces.
-          </p>
-          <p style={{ marginTop: 8, fontSize: 13, lineHeight: 1.5 }}>
+          <p className="m-0 text-[17px] font-semibold text-[var(--color-text)]">Todavía no hay workspaces.</p>
+          <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-muted)]">
             Creá un workspace —apuntado a un repo git local— antes de generar un grafo de tareas.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setWorkspaceFormOpen("create")}
-          style={{
-            alignSelf: "flex-start",
-            minHeight: 36,
-            padding: "0 14px",
-            border: "1px solid var(--coral)",
-            background: "var(--coral)",
-            color: "#1A1915",
-            borderRadius: "var(--r-md)",
-            fontSize: 12.5,
-            fontWeight: 600,
-            cursor: "pointer"
-          }}
-        >
-          + Crear workspace
-        </button>
-      </div>
+        <Button variant="primary" size="md" className="self-start" onClick={() => setWorkspaceFormOpen("create")}>
+          <Plus aria-hidden className="h-4 w-4" />
+          Crear workspace
+        </Button>
+      </section>
     );
   }
 
   return (
-    <section
-      style={{
-        maxWidth: 980,
-        margin: "0 auto",
-        display: "flex",
-        flexDirection: "column",
-        gap: 18
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "2px 2px 0" }}>
-        <span className="mh-coord" style={{ color: "var(--copper)", margin: 0 }}>
-          nuevo run
-        </span>
-        <div style={{ flex: 1, height: 1, background: "var(--rule)" }} />
-      </div>
-      {/* Workspace Selection & branch bar */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, rowGap: 8, flexWrap: "wrap", marginBottom: -4 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: "1 1 auto" }}>
-          <FolderIcon style={{ color: "var(--text-3)", opacity: 0.7, flexShrink: 0 }} />
-          {workspaces.length > 0 && (
-            <WorkspacePicker workspaces={workspaces} value={workspaceId} onChange={setWorkspaceId} />
-          )}
-
-          {/* Action buttons to manage workspace inline */}
-          <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
-            <button
-              type="button"
-              title="Agregar workspace"
-              onClick={() => setWorkspaceFormOpen("create")}
-              style={actionIconButtonStyle}
-            >
-              <PlusIcon />
-            </button>
-            {selectedWorkspace && (
+    <section className="flex w-full flex-col gap-4">
+      {/* ── Composer card ──────────────────────────────────────────────── */}
+      <div className="flex flex-col rounded-[var(--r-xl)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] transition-colors duration-150 focus-within:border-[var(--color-accent-deep)]">
+        {/* Context bar: workspace + repo + branch */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--color-border-soft)] px-3.5 py-2.5">
+          <FolderGit2 aria-hidden className="h-4 w-4 shrink-0 text-[var(--color-text-subtle)]" />
+          <WorkspacePicker workspaces={workspaces} value={workspaceId} onChange={setWorkspaceId} />
+          <div className="flex shrink-0 items-center gap-0.5">
+            <IconAction label="Agregar workspace" onClick={() => setWorkspaceFormOpen("create")}>
+              <Plus aria-hidden className="h-3.5 w-3.5" />
+            </IconAction>
+            {selectedWorkspace !== null ? (
               <>
-                <button
-                  type="button"
-                  title="Editar workspace seleccionado"
-                  onClick={() => setWorkspaceFormOpen("edit")}
-                  style={actionIconButtonStyle}
-                >
-                  <EditIcon />
-                </button>
-                <button
-                  type="button"
-                  title="Eliminar workspace seleccionado"
+                <IconAction label="Editar workspace seleccionado" onClick={() => setWorkspaceFormOpen("edit")}>
+                  <Pencil aria-hidden className="h-3 w-3" />
+                </IconAction>
+                <IconAction
+                  label="Eliminar workspace seleccionado"
+                  danger
                   disabled={workspaces.length <= 1 || workspaceBusy}
-                  onClick={handleWorkspaceDelete}
-                  style={{
-                    ...actionIconButtonStyle,
-                    color: workspaces.length <= 1 ? "var(--text-4)" : "var(--error)",
-                    cursor: workspaces.length <= 1 ? "not-allowed" : "pointer"
-                  }}
+                  onClick={() => setConfirmDeleteOpen(true)}
                 >
-                  <TrashIcon />
-                </button>
+                  <Trash2 aria-hidden className="h-3 w-3" />
+                </IconAction>
               </>
-            )}
+            ) : null}
           </div>
-
-          {selectedWorkspace?.repoPath && (
+          {selectedWorkspace?.repoPath ? (
             <span
-              className="mh-mono"
+              className="mh-mono min-w-0 truncate text-[11px] text-[var(--color-text-subtle)]"
               title={selectedWorkspace.repoPath}
-              style={{
-                color: "var(--text-3)",
-                fontSize: 11,
-                maxWidth: 200,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                opacity: 0.6
-              }}
             >
-              ({getCompactPath(selectedWorkspace.repoPath)})
+              {getCompactPath(selectedWorkspace.repoPath)}
             </span>
-          )}
+          ) : null}
+          {selectedWorkspace ? (
+            <span className="mh-mono ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-[var(--color-text-subtle)]">
+              <GitBranch aria-hidden className="h-3 w-3" />
+              {selectedWorkspace.defaultBranch ?? "main"}
+            </span>
+          ) : null}
         </div>
-        {selectedWorkspace && (
-          <div style={{ display: "flex", alignItems: "center", gap: 5, color: "var(--text-3)", fontSize: 11, opacity: 0.8, flexShrink: 0 }}>
-            <BranchGlyph />
-            <span className="mh-mono">{selectedWorkspace.defaultBranch ?? "main"}</span>
-          </div>
-        )}
-      </div>
 
-      {/* Main Task Input Card */}
-      <div
-        style={{
-          border: "1px solid var(--color-border-strong)",
-          background: "var(--color-surface)",
-          borderRadius: 8,
-          padding: "16px 20px 14px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-          boxShadow: "none"
-        }}
-      >
+        {/* Prompt */}
         <textarea
           id="manyhands-task-prompt"
+          aria-label="Descripción de la tarea"
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={handleKeyDown}
           rows={5}
           spellCheck={false}
-          placeholder="Describí los cambios o la funcionalidad a construir (ej: agregar autenticación, refactorizar validación, crear endpoint...)"
-          style={{
-            width: "100%",
-            border: "none",
-            background: "transparent",
-            color: "var(--color-text)",
-            fontFamily: "var(--font-sans)",
-            fontSize: "14px",
-            lineHeight: "1.6",
-            outline: "none",
-            resize: "vertical",
-            minHeight: 120,
-            padding: 0
-          }}
+          placeholder="Describí los cambios o la funcionalidad a construir (ej: agregar autenticación, refactorizar validación, crear endpoint…)"
+          className="min-h-[120px] w-full resize-y border-0 bg-transparent px-4 py-3.5 font-sans text-[14px] leading-relaxed text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-subtle)]"
         />
 
-        {/* Separator inside card */}
-        <div style={{ height: 1, background: "var(--color-border-soft)", margin: "0 -20px" }} />
-
-        {/* Bottom Action Bar */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", minWidth: 0 }}>
-            {hasLocalRepo ? (
-              <span
-                className="mh-mono cursor-help"
-                title={readinessTooltip}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: readinessTone(readiness?.status, hasLocalRepo).fg,
-                  background: readinessTone(readiness?.status, hasLocalRepo).bg,
-                  border: `1px solid ${readinessTone(readiness?.status, hasLocalRepo).border}`,
-                  padding: "3px 8px",
-                  borderRadius: 999
-                }}
-              >
-                <span
-                  className={readiness?.status === "ready" ? "w-1.5 h-1.5 rounded-full animate-pulse" : "w-1.5 h-1.5 rounded-full"}
-                  style={{ background: readinessTone(readiness?.status, hasLocalRepo).fg }}
-                />
-                Workspace listo · Gemini {readinessLabel(readiness?.status)}
-              </span>
-            ) : (
-              <span
-                className="mh-mono cursor-help"
-                title={readinessTooltip}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: "var(--status-failed-fg)",
-                  background: "var(--status-failed-bg)",
-                  border: "1px solid var(--status-failed-border)",
-                  padding: "3px 8px",
-                  borderRadius: 999
-                }}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--status-failed-fg)]" />
-                Falta repo local
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => setAdvancedOpen((open) => !open)}
-              className="mh-mono"
-              style={{
-                minHeight: 28,
-                padding: "0 10px",
-                borderRadius: 6,
-                border: "1px solid var(--color-border-strong)",
-                background: advancedOpen ? "var(--color-surface-raised)" : "transparent",
-                color: "var(--color-text-muted)",
-                fontSize: 11,
-                cursor: "pointer",
-                transition: "all 150ms ease"
-              }}
-            >
-              {advancedOpen ? "Ocultar opciones" : "Opciones avanzadas"}
-            </button>
+        {/* Action bar */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border-soft)] px-3 py-2.5">
+          <StatusPill
+            status={hasLocalRepo ? "completed" : "failed"}
+            label={hasLocalRepo ? "Repo conectado" : "Falta repo local"}
+            pulse={false}
+            title={selectedWorkspace?.repoPath}
+          />
+          <StatusPill status={gemini.status} label={gemini.label} pulse={false} title={readinessTooltip} />
+          <Button
+            variant="quiet"
+            size="sm"
+            aria-expanded={advancedOpen}
+            onClick={() => setAdvancedOpen((open) => !open)}
+          >
+            {advancedOpen ? "Ocultar opciones" : "Opciones avanzadas"}
+          </Button>
+          <div className="ml-auto flex items-center gap-3">
+            {startBlockReason !== null && hasPrompt && !submitting ? (
+              <span className="text-[11.5px] text-[var(--color-text-subtle)]">{startBlockReason}</span>
+            ) : null}
+            <Button variant="primary" size="sm" disabled={!canStart} busy={submitting} busyLabel="Generando…" onClick={() => void handleStart()}>
+              Generar plan
+              <kbd className="mh-mono ml-0.5 rounded-sm bg-[color-mix(in_srgb,var(--color-accent-contrast)_16%,transparent)] px-1 py-px text-[10px] font-normal leading-none">
+                ⌘↵
+              </kbd>
+            </Button>
           </div>
+        </div>
 
-          {/* Config options */}
-          <div style={{ display: advancedOpen ? "flex" : "none", alignItems: "center", gap: 14, flexWrap: "wrap", width: "100%", paddingTop: 6 }}>
-            {/* Model Select */}
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span className="mh-mono text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
-                planificación:
-              </span>
-              <ModelPicker value={modelId} onChange={setModelId} capability="planning" width={150} />
-            </div>
-
-            <span style={{ color: "var(--color-border)", userSelect: "none" }} aria-hidden>|</span>
-
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span className="mh-mono text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
-                ejecución:
-              </span>
+        {/* Advanced options drawer */}
+        {advancedOpen ? (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-b-[var(--r-xl)] border-t border-[var(--color-border-soft)] bg-[var(--color-bg-subtle)] px-4 py-3.5 md:grid-cols-4">
+            <AdvancedField label="Planificación">
+              <ModelPicker value={modelId} onChange={setModelId} capability="planning" />
+            </AdvancedField>
+            <AdvancedField label="Ejecución">
               <ModelPicker
                 value={defaultExecutionSelection}
                 onChange={setDefaultExecutionSelection}
                 capability="execution"
                 selectionMode="executor-selection"
-                width={185}
               />
-            </div>
-
-            <span style={{ color: "var(--color-border)", userSelect: "none" }} aria-hidden>|</span>
-
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span className="mh-mono text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
-                reparación:
-              </span>
+            </AdvancedField>
+            <AdvancedField label="Reparación">
               <ModelPicker
                 value={defaultRepairSelection}
                 onChange={setDefaultRepairSelection}
                 capability="repair"
                 selectionMode="executor-selection"
-                width={185}
               />
-            </div>
-
-            <span style={{ color: "var(--color-border)", userSelect: "none" }} aria-hidden>|</span>
-
-            {/* Aggressiveness Select */}
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <span className="mh-mono text-[10px] text-gray-500 uppercase tracking-wider font-semibold">
-                agresividad:
-              </span>
+            </AdvancedField>
+            <AdvancedField label="Agresividad">
               <select
                 aria-label="Agresividad de descomposición"
                 value={granularity}
@@ -611,14 +448,7 @@ export function CommandCenterShell({
                   const val = event.target.value;
                   if (isGranularityLevel(val)) setGranularity(val);
                 }}
-                className="mh-select"
-                style={{
-                  minHeight: 32,
-                  height: 32,
-                  padding: "0 24px 0 8px",
-                  fontSize: 12,
-                  width: 110
-                }}
+                className="mh-select h-8 w-full min-w-0 text-[12px]"
               >
                 {GRANULARITY_DISPLAY_OPTIONS.filter((opt) => !opt.disabled).map((option) => (
                   <option key={option.id} value={option.id}>
@@ -626,122 +456,46 @@ export function CommandCenterShell({
                   </option>
                 ))}
               </select>
-            </div>
+            </AdvancedField>
           </div>
-
-          {/* Action Button */}
-          <Button
-            variant="primary"
-            size="sm"
-            disabled={!canStart}
-            busy={submitting}
-            onClick={() => {
-              void handleStart();
-            }}
-            style={{
-              height: 34,
-              padding: "0 14px",
-              fontSize: 13,
-              fontWeight: 600,
-              borderRadius: 6,
-              background: canStart ? "var(--color-accent)" : "var(--color-surface-raised)",
-              borderColor: canStart ? "var(--color-accent)" : "var(--color-border)",
-              color: canStart ? "#FFF" : "var(--color-text-muted)"
-            }}
-          >
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-              {startBlockReason ?? "Generar plan"}
-              <span
-                aria-hidden
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 10,
-                  lineHeight: 1,
-                  padding: "1px 4px",
-                  borderRadius: 2,
-                  background: canStart ? "rgba(255,255,255,0.2)" : "transparent",
-                  color: canStart ? "rgba(255,255,255,0.8)" : "var(--color-text-muted)"
-                }}
-              >
-                ⌘↵
-              </span>
-            </span>
-          </Button>
-        </div>
+        ) : null}
       </div>
 
+      {/* ── Callouts ───────────────────────────────────────────────────── */}
       {readinessCallout !== null ? (
-        <ReadinessCallout message={readinessCallout} />
+        <Callout tone="blocked" icon={<AlertTriangle aria-hidden className="h-4 w-4 shrink-0" />}>
+          {readinessCallout}
+        </Callout>
+      ) : null}
+      {errorMessage !== null ? (
+        <Callout tone="failed" role="alert" icon={<OctagonAlert aria-hidden className="h-4 w-4 shrink-0" />}>
+          {errorMessage}
+        </Callout>
+      ) : null}
+      {!hasLocalRepo && selectedWorkspace ? (
+        <Callout tone="failed" icon={<OctagonAlert aria-hidden className="h-4 w-4 shrink-0" />}>
+          El workspace &quot;{selectedWorkspace.name}&quot; no tiene un repo git local. Configurá uno con el botón de editar.
+        </Callout>
       ) : null}
 
-      {/* Examples chips (only if prompt is empty) */}
-      {prompt.trim().length === 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 2 }}>
-          <span className="mh-coord" style={{ fontSize: 10, color: "var(--text-3)", opacity: 0.8 }}>
-            probá:
-          </span>
+      {/* ── Example prompts (only while the composer is empty) ─────────── */}
+      {prompt.trim().length === 0 ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-[11px] text-[var(--color-text-subtle)]">Probá:</span>
           {EXAMPLE_PROMPTS.map((example) => (
             <button
               key={example}
               type="button"
               onClick={() => setPrompt(example)}
-              className="mh-example-chip"
-              style={{
-                border: "1px solid var(--rule-soft)",
-                background: "transparent",
-                color: "var(--text-2)",
-                borderRadius: "var(--r-md)",
-                minHeight: 28,
-                padding: "4px 8px",
-                fontSize: 11.5,
-                lineHeight: 1.3,
-                cursor: "pointer",
-                transition: "border-color 150ms ease-out, color 150ms ease-out"
-              }}
+              className="mh-example-chip cursor-pointer rounded-[var(--r-md)] border border-[var(--rule-soft)] bg-transparent px-2.5 py-1.5 text-left text-[11.5px] leading-snug text-[var(--color-text-muted)] transition-colors duration-150"
             >
               {example}
             </button>
           ))}
         </div>
-      )}
-
-      {/* Errors / Warnings */}
-      {errorMessage !== null ? (
-        <div
-          role="alert"
-          style={{
-            border: "1px solid var(--status-failed-border)",
-            background: "var(--status-failed-bg)",
-            color: "var(--status-failed-fg)",
-            padding: "8px 12px",
-            borderRadius: "var(--r-md)",
-            fontSize: 12,
-            marginTop: 4
-          }}
-        >
-          {errorMessage}
-        </div>
       ) : null}
 
-      {!hasLocalRepo && selectedWorkspace && (
-        <div
-          style={{
-            border: "1px solid var(--status-failed-border)",
-            background: "var(--status-failed-bg)",
-            color: "var(--status-failed-fg)",
-            padding: "8px 12px",
-            borderRadius: "var(--r-md)",
-            fontSize: 12,
-            marginTop: 4
-          }}
-        >
-El workspace &quot;{selectedWorkspace.name}&quot; no tiene un repo git local. Configurá uno con el botón de editar.
-        </div>
-      )}
-
-      {/* Add / Edit Workspace Dialog */}
+      {/* ── Dialogs ────────────────────────────────────────────────────── */}
       {workspaceFormOpen !== "closed" ? (
         <WorkspaceFormDialog
           mode={workspaceFormOpen}
@@ -751,8 +505,116 @@ El workspace &quot;{selectedWorkspace.name}&quot; no tiene un repo git local. Co
           busy={workspaceBusy}
         />
       ) : null}
+      {confirmDeleteOpen && selectedWorkspace !== null ? (
+        <ConfirmDialog
+          title={`¿Eliminar "${selectedWorkspace.name}"?`}
+          description="Se elimina el workspace de ManyHands. El repositorio local no se toca."
+          confirmLabel="Eliminar workspace"
+          destructive
+          busy={workspaceBusy}
+          onConfirm={() => void handleWorkspaceDelete()}
+          onCancel={() => setConfirmDeleteOpen(false)}
+        />
+      ) : null}
     </section>
   );
+}
+
+// ── Presentational helpers ────────────────────────────────────────────────────
+
+function IconAction({
+  label,
+  onClick,
+  disabled = false,
+  danger = false,
+  children
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+  children: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+      className={[
+        "flex h-7 w-7 items-center justify-center rounded-[var(--r-md)] border border-transparent bg-transparent transition-colors duration-150",
+        disabled
+          ? "cursor-not-allowed text-[var(--color-text-faint)]"
+          : danger
+            ? "cursor-pointer text-[var(--color-text-subtle)] hover:bg-[var(--status-failed-bg)] hover:text-[var(--status-failed-fg)]"
+            : "cursor-pointer text-[var(--color-text-subtle)] hover:bg-[color-mix(in_srgb,var(--color-text)_7%,transparent)] hover:text-[var(--color-text)]"
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
+function AdvancedField({ label, children }: { label: string; children: React.ReactNode }): React.ReactElement {
+  return (
+    <label className="flex min-w-0 flex-col gap-1.5">
+      <span className="mh-mono text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--color-text-subtle)]">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function Callout({
+  tone,
+  icon,
+  role,
+  children
+}: {
+  tone: "blocked" | "failed";
+  icon: React.ReactNode;
+  role?: string;
+  children: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <div
+      {...(role !== undefined ? { role } : {})}
+      className="flex items-start gap-2.5 rounded-[var(--r-lg)] border px-3.5 py-2.5 text-[12.5px] leading-relaxed"
+      style={{
+        color: `var(--status-${tone}-fg)`,
+        background: `var(--status-${tone}-bg)`,
+        borderColor: `var(--status-${tone}-border)`
+      }}
+    >
+      {icon}
+      <span className="min-w-0">{children}</span>
+    </div>
+  );
+}
+
+function geminiPill({
+  readiness,
+  readinessLoading,
+  readinessError
+}: {
+  readiness: ProviderReadiness | null;
+  readinessLoading: boolean;
+  readinessError: string | null;
+}): { status: UiStatus; label: string } {
+  if (readinessLoading) return { status: "pending", label: "Verificando Gemini…" };
+  if (readinessError !== null) return { status: "blocked", label: "Gemini sin verificar" };
+  switch (readiness?.status) {
+    case "ready":
+      return { status: "completed", label: "Gemini listo" };
+    case "warning":
+      return { status: "blocked", label: "Gemini con avisos" };
+    case "error":
+      return { status: "failed", label: "Gemini con error" };
+    default:
+      return { status: "pending", label: "Gemini desconocido" };
+  }
 }
 
 function startBlockReasonFor({
@@ -770,12 +632,12 @@ function startBlockReasonFor({
   readinessLoading: boolean;
   readinessError: string | null;
 }): string | null {
-  if (selectedWorkspace === null) return "Elegir workspace";
-  if (!hasPrompt) return "Describir tarea";
-  if (!hasLocalRepo) return "Configurar repo";
-  if (readinessLoading) return "Verificando Gemini";
-  if (readinessError !== null || readiness === null) return "Verificar Gemini";
-  if (readiness.status === "error") return "Configurar Gemini";
+  if (selectedWorkspace === null) return "Elegí un workspace";
+  if (!hasPrompt) return "Describí la tarea para empezar";
+  if (!hasLocalRepo) return "Configurá un repo local";
+  if (readinessLoading) return "Verificando Gemini…";
+  if (readinessError !== null || readiness === null) return "Gemini sin verificar";
+  if (readiness.status === "error") return "Gemini necesita configuración";
   return null;
 }
 
@@ -798,80 +660,24 @@ function readinessCalloutFor({
     return `No se pudo verificar Gemini CLI: ${readinessError}`;
   }
   if (readiness === null) {
-    return "Gemini CLI todavia no fue verificado. ManyHands necesita Gemini para planificar y ejecutar.";
+    return "Gemini CLI todavía no fue verificado. ManyHands necesita Gemini para planificar y ejecutar.";
   }
   if (readiness.status === "error") {
     const failing = readiness.checks.find((check) => check.status === "fail");
-    return failing?.message ?? "Gemini CLI no esta listo. Instalalo, autenticalo o configura MANYHANDS_GEMINI_BIN.";
+    return failing?.message ?? "Gemini CLI no está listo. Instalalo, autenticalo o configurá MANYHANDS_GEMINI_BIN.";
   }
   if (readiness.status === "warning") {
     const warning = readiness.checks.find((check) => check.status === "warning");
-    return warning?.message ?? "Gemini CLI esta disponible, pero hay avisos de entorno para revisar.";
+    return warning?.message ?? "Gemini CLI está disponible, pero hay avisos de entorno para revisar.";
   }
   return null;
-}
-
-function ReadinessCallout({ message }: { message: string }): React.ReactElement {
-  return (
-    <div
-      style={{
-        border: "1px solid var(--status-blocked-border)",
-        background: "var(--status-blocked-bg)",
-        color: "var(--status-blocked-fg)",
-        padding: "10px 12px",
-        borderRadius: 8,
-        fontSize: 12,
-        lineHeight: 1.5
-      }}
-    >
-      {message}
-    </div>
-  );
-}
-
-function readinessTone(
-  status: ProviderReadiness["status"] | undefined,
-  hasLocalRepo: boolean
-): { fg: string; bg: string; border: string } {
-  if (!hasLocalRepo || status === "error") {
-    return {
-      fg: "var(--status-failed-fg)",
-      bg: "var(--status-failed-bg)",
-      border: "var(--status-failed-border)"
-    };
-  }
-  if (status === "warning" || status === undefined) {
-    return {
-      fg: "var(--status-blocked-fg)",
-      bg: "var(--status-blocked-bg)",
-      border: "var(--status-blocked-border)"
-    };
-  }
-  return {
-    fg: "var(--status-completed-fg)",
-    bg: "var(--status-completed-bg)",
-    border: "var(--status-completed-border)"
-  };
-}
-
-function readinessLabel(status: ProviderReadiness["status"] | undefined): string {
-  switch (status) {
-    case "ready":
-      return "listo";
-    case "warning":
-      return "con avisos";
-    case "error":
-      return "con error";
-    default:
-      return "desconocido";
-  }
 }
 
 function getCompactPath(path: string): string {
   if (!path) return "";
   const parts = path.split(/[/\\]/);
   if (parts.length <= 2) return path;
-  return `.../${parts.slice(-2).join("/")}`;
+  return `…/${parts.slice(-2).join("/")}`;
 }
 
 function formValueFrom(workspace: Workspace): WorkspaceFormValue {
@@ -903,89 +709,4 @@ async function readError(response: Response): Promise<string> {
 function parseSelection(value: string): ExecutorSelection {
   const [executorId, ...modelParts] = value.split("/");
   return { executorId: executorId as ExecutorSelection["executorId"], model: modelParts.join("/") };
-}
-
-// Icons and Glyphs
-const actionIconButtonStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "none",
-  color: "var(--text-3)",
-  cursor: "pointer",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 24,
-  height: 24,
-  borderRadius: 4,
-  padding: 0,
-  transition: "background 150ms ease-out, color 150ms ease-out"
-};
-
-function PlusIcon(): React.ReactElement {
-  return (
-    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <line x1="12" y1="5" x2="12" y2="19" />
-      <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  );
-}
-
-function EditIcon(): React.ReactElement {
-  return (
-    <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  );
-}
-
-function TrashIcon(): React.ReactElement {
-  return (
-    <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 6h18" />
-      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-    </svg>
-  );
-}
-
-function FolderIcon(props: React.SVGProps<SVGSVGElement>): React.ReactElement {
-  return (
-    <svg
-      width={14}
-      height={14}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-
-function BranchGlyph(): React.ReactElement {
-  return (
-    <svg
-      width={11}
-      height={11}
-      viewBox="0 0 18 18"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.4}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ flex: "0 0 auto" }}
-      aria-hidden
-    >
-      <line x1="6" y1="3" x2="6" y2="15" />
-      <circle cx="6" cy="3" r="1.6" />
-      <circle cx="6" cy="15" r="1.6" />
-      <circle cx="12" cy="9" r="1.6" />
-      <path d="M12 7.4V6c0-1.6-1.4-3-3-3H7.5" />
-    </svg>
-  );
 }

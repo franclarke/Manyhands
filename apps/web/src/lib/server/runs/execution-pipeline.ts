@@ -49,7 +49,7 @@ import {
     ensureRunModelEventLogForRun,
     publishRunModelEvent
 } from "./run-model-event-log";
-import { transitionTo, waitWhilePaused, sleep } from "./planning-pipeline";
+import { transitionTo } from "./planning-pipeline";
 import { type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
 import { markRunnerActive, markRunnerInactive } from "./runner-state";

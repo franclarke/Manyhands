@@ -1,155 +1,217 @@
 "use client";
 
 import { useThread, useComposerRuntime } from "@assistant-ui/react";
-import React, { useState, useRef, useEffect } from "react";
-import type { RunModel } from "@/lib/run-model/types";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import type { Decision, RunModel } from "@/lib/run-model/types";
+import { StatusPill } from "@/components/ui/status-pill";
 import {
   Send,
   Sparkles,
-  AlertTriangle,
   Play,
   Loader2,
-  AlertOctagon,
+  OctagonAlert,
   Eye,
-  ArrowRight
+  ArrowRight,
+  Check,
+  Flag,
+  CircleHelp
 } from "lucide-react";
+
+type TabKey = "dag" | "plan" | "conflicts" | "execution" | "files" | "evaluation";
 
 interface ChatThreadProps {
   runId: string;
   model: RunModel;
-  setActiveTab: (tab: "dag" | "plan" | "conflicts" | "execution" | "files" | "evaluation") => void;
+  connected: boolean;
+  setActiveTab: (tab: TabKey) => void;
 }
 
-export function ChatThread({ runId, model, setActiveTab }: ChatThreadProps): React.ReactElement {
+export function ChatThread({ runId, model, connected, setActiveTab }: ChatThreadProps): React.ReactElement {
   const messages = useThread((t) => t.messages);
   const composer = useComposerRuntime();
   const [inputText, setInputText] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom of chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = async () => {
-    if (inputText.trim().length === 0) return;
-    composer.setText(inputText);
+  const pendingPlanDecision = useMemo(
+    () =>
+      Array.from(model.decisions.values()).find(
+        (d) => d.kind === "approve_plan" && d.status === "pending"
+      ),
+    [model]
+  );
+
+  // A pending clarify gate makes the composer a REAL channel: the text travels
+  // as the answer to the planner's question (POST /answer → Command resume).
+  const pendingQuestion = useMemo(
+    () =>
+      Array.from(model.decisions.values()).find(
+        (d) => d.kind === "clarify" && d.status === "pending" && d.context.question !== undefined
+      ),
+    [model]
+  );
+  const canSend = pendingQuestion !== undefined;
+
+  const handleSend = async (): Promise<void> => {
+    const text = inputText.trim();
+    if (text.length === 0 || pendingQuestion === undefined) return;
+    const nodeId = pendingQuestion.context.nodeIds?.[0];
+    if (nodeId === undefined) return;
+    setActionError(null);
+    composer.setText(text);
     composer.send();
     setInputText("");
+    try {
+      const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/answer`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ nodeId, answer: text })
+      });
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
+      }
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : String(err));
+    }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === "Enter") {
       void handleSend();
     }
   };
 
-  // Check if plan approval decision is pending
-  const pendingPlanDecision = Array.from(model.decisions.values()).find(
-    (d) => d.kind === "approve_plan" && d.status === "pending"
-  );
-  const isPlanPending = pendingPlanDecision !== undefined;
-
-  // Resolve plan approval
-  const handleApprovePlan = async () => {
+  const handleApprovePlan = async (): Promise<void> => {
     if (!pendingPlanDecision) return;
     setApproving(true);
+    setActionError(null);
     try {
-      const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/decisions/${encodeURIComponent(pendingPlanDecision.id)}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "approve", acknowledgeCriticErrors: true })
-      });
+      const response = await fetch(
+        `/api/runs/${encodeURIComponent(runId)}/decisions/${encodeURIComponent(pendingPlanDecision.id)}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action: "approve", acknowledgeCriticErrors: true })
+        }
+      );
       if (!response.ok) {
-        throw new Error(`Failed to approve plan: ${response.status}`);
+        throw new Error(await readApiError(response));
       }
     } catch (err) {
-      console.error(err);
+      setActionError(err instanceof Error ? err.message : String(err));
     } finally {
       setApproving(false);
     }
   };
 
-  // Resolve decision raised in run
-  const handleResolveDecision = async (decisionId: string, choiceAction: "approve" | "reject" | "accept") => {
+  const handleResolveDecision = async (decisionId: string, choiceAction: "approve" | "reject"): Promise<void> => {
     setBusy(decisionId);
+    setActionError(null);
     try {
-      const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/decisions/${encodeURIComponent(decisionId)}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ choice: { action: choiceAction } })
-      });
+      const response = await fetch(
+        `/api/runs/${encodeURIComponent(runId)}/decisions/${encodeURIComponent(decisionId)}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ choice: { action: choiceAction } })
+        }
+      );
       if (!response.ok) {
-        throw new Error(`Failed to resolve decision: ${response.status}`);
+        throw new Error(await readApiError(response));
       }
     } catch (err) {
-      console.error(err);
+      setActionError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(null);
     }
   };
 
   return (
-    <div className="h-full w-full bg-[var(--color-surface)] flex flex-col font-sans border-r border-[var(--color-border)]">
+    <div className="flex h-full w-full flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] font-sans">
       {/* Header */}
-      <div className="px-5 py-3 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] z-10">
-        <h2 className="text-[13px] font-semibold tracking-tight text-[var(--color-text)] flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-[var(--color-text-subtle)]" />
-          Comandos
+      <div className="z-10 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-3">
+        <h2 className="flex items-center gap-2 text-[13px] font-semibold tracking-tight text-[var(--color-text)]">
+          <Sparkles aria-hidden className="h-4 w-4 text-[var(--color-text-subtle)]" />
+          Orquestador
         </h2>
-        <span className="flex items-center gap-1 text-[9px] font-mono text-[var(--status-completed-fg)] bg-[var(--status-completed-bg)] border border-[var(--status-completed-border)] px-1.5 py-0.5 rounded uppercase tracking-wide">
-          <div className="w-1.5 h-1.5 rounded-full bg-[var(--status-completed-fg)] animate-pulse" />
-          Conectado
-        </span>
+        <StatusPill
+          status={connected ? "completed" : "blocked"}
+          label={connected ? "Conectado" : "Reconectando…"}
+          pulse={!connected}
+        />
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4 bg-[var(--color-bg)]">
+      <div
+        className="flex flex-1 flex-col gap-4 overflow-y-auto bg-[var(--color-bg)] px-5 py-5"
+        aria-live="polite"
+      >
         {messages.map((message) => {
-          const isAssistant = message.role === "assistant";
           const textContent = message.content.map((c) => (c.type === "text" ? c.text : "")).join(" ");
-          
-          const isDecision = textContent.includes("⚠ Se requiere decisión humana");
-          const isConflict = textContent.includes("⚡ Conflicto de fusión detectado");
-          const isSystemInfo = textContent.startsWith("✓") || textContent.startsWith("✗") || textContent.startsWith("🏁") || textContent.startsWith("Iniciando") || textContent.startsWith("Inspeccionando");
 
-          if (!isAssistant) {
-            // User message: right-aligned blue bubble
+          if (message.role !== "assistant") {
             return (
-              <div key={message.id} className="flex justify-end w-full animate-fade-in">
-                <div className="max-w-[82%] p-3 px-4 rounded-lg bg-[var(--color-accent)] text-[var(--color-accent-contrast)]">
-                  <Markdown text={textContent} isUser={true} />
+              <div key={message.id} className="animate-fade-in flex w-full justify-end">
+                <div className="max-w-[82%] rounded-[var(--r-lg)] bg-[var(--color-accent)] px-4 py-3 text-[var(--color-accent-contrast)]">
+                  <Markdown text={textContent} isUser />
                 </div>
               </div>
             );
           }
 
-          // Assistant message: left-aligned bubble with dot indicator
-          return (
-            <div key={message.id} className="flex gap-2.5 items-start max-w-[85%] animate-fade-in">
-              <div className="w-5 h-5 rounded-md bg-[var(--color-bg-subtle)] border border-[var(--color-border)] flex items-center justify-center flex-shrink-0 mt-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)]" />
+          const kind = messageKind(message.id);
+
+          if (kind === "resolved") {
+            return (
+              <div key={message.id} className="animate-fade-in flex items-center gap-2 pl-7 text-[11.5px] text-[var(--color-text-subtle)]">
+                <Check aria-hidden className="h-3.5 w-3.5 text-[var(--status-completed-fg)]" />
+                <Markdown text={textContent} inline />
               </div>
-              <div className="flex-1 min-w-0">
-                {isDecision ? (
-                  <DecisionCard
+            );
+          }
+
+          return (
+            <div key={message.id} className="animate-fade-in flex max-w-[88%] items-start gap-2.5">
+              <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-bg-subtle)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                {kind === "decision" ? (
+                  <GateCard
+                    icon={<CircleHelp aria-hidden className="h-4 w-4" />}
+                    eyebrow="Gate · decisión humana"
+                    decision={model.decisions.get(decisionIdFrom(message.id))}
                     text={textContent}
-                    model={model}
                     busy={busy}
-                    onApprove={(id) => handleResolveDecision(id, "approve")}
-                    onReject={(id) => handleResolveDecision(id, "reject")}
+                    onApprove={(id) => void handleResolveDecision(id, "approve")}
+                    onReject={(id) => void handleResolveDecision(id, "reject")}
                   />
-                ) : isConflict ? (
+                ) : kind === "conflict" ? (
                   <ConflictCard text={textContent} onTabChange={setActiveTab} />
+                ) : kind === "final" ? (
+                  <div className="rounded-[var(--r-lg)] border border-[var(--status-completed-border)] bg-[var(--status-completed-bg)] px-4 py-3 text-sm leading-relaxed text-[var(--color-text)]">
+                    <span className="mh-mono mb-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.08em] text-[var(--status-completed-fg)]">
+                      <Flag aria-hidden className="h-3 w-3" />
+                      Run finalizado
+                    </span>
+                    <Markdown text={textContent} />
+                  </div>
+                ) : kind === "wave" ? (
+                  <WaveCard text={textContent} />
                 ) : (
                   <div
-                    className={`p-3 px-4 rounded-lg border text-sm leading-relaxed ${
-                      isSystemInfo
-                        ? "bg-[var(--color-bg-subtle)] border-[var(--color-border-strong)] text-[var(--color-text-muted)] font-medium"
-                        : "bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text)]"
-                    }`}
+                    className={[
+                      "rounded-[var(--r-lg)] border px-4 py-3 text-[13px] leading-relaxed",
+                      kind === "planning"
+                        ? "mh-working border-[var(--status-planning-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
+                        : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
+                    ].join(" ")}
                   >
                     <Markdown text={textContent} />
                   </div>
@@ -159,17 +221,17 @@ export function ChatThread({ runId, model, setActiveTab }: ChatThreadProps): Rea
           );
         })}
 
-        {/* If plan is waiting for approval, show the PlanApprovalCard inline */}
-        {isPlanPending && (
-          <div className="flex gap-2.5 items-start max-w-[85%] animate-fade-in">
-            <div className="w-5 h-5 rounded-md bg-[var(--color-bg-subtle)] border border-[var(--color-border)] flex items-center justify-center flex-shrink-0 mt-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--status-planning-fg)] animate-pulse" />
+        {/* Plan approval gate (interactive, pinned to the stream tail) */}
+        {pendingPlanDecision !== undefined && (
+          <div className="animate-fade-in flex max-w-[88%] items-start gap-2.5">
+            <div className="mt-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-bg-subtle)]">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--status-review-fg)]" />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <PlanApprovalCard
                 model={model}
                 approving={approving}
-                onApprove={handleApprovePlan}
+                onApprove={() => void handleApprovePlan()}
                 onTabChange={setActiveTab}
               />
             </div>
@@ -179,38 +241,85 @@ export function ChatThread({ runId, model, setActiveTab }: ChatThreadProps): Rea
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-4 bg-[var(--color-surface)] border-t border-[var(--color-border)]">
-        <div className="relative flex items-center bg-[var(--color-surface)] border border-[var(--color-border-control)] rounded-lg overflow-hidden focus-within:border-[var(--color-accent)] transition-all">
+      {/* Action error feedback */}
+      {actionError !== null ? (
+        <div
+          role="alert"
+          className="flex items-start gap-2 border-t border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] px-5 py-2.5 text-[12px] leading-relaxed text-[var(--status-failed-fg)]"
+        >
+          <OctagonAlert aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <span className="min-w-0">{actionError}</span>
+        </div>
+      ) : null}
+
+      {/* Composer — a real channel only while the planner waits for an answer */}
+      <div className="border-t border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div
+          className={[
+            "relative flex items-center overflow-hidden rounded-[var(--r-lg)] border bg-[var(--color-surface)] transition-colors",
+            canSend
+              ? "border-[var(--status-review-border)] focus-within:border-[var(--color-accent)]"
+              : "border-[var(--color-border)]"
+          ].join(" ")}
+        >
           <input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Preguntá o indicá un cambio..."
-            className="w-full bg-transparent pl-4 pr-12 py-3 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] focus:outline-none"
+            disabled={!canSend}
+            aria-label={canSend ? "Respuesta para el planner" : "Canal de intervención (sin gates pendientes)"}
+            placeholder={
+              canSend
+                ? "Respondé la pregunta del planner…"
+                : "ManyHands pedirá tu intervención acá cuando haga falta."
+            }
+            className="w-full bg-transparent py-3 pl-4 pr-12 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none disabled:cursor-not-allowed"
           />
           <button
-            onClick={handleSend}
-            disabled={inputText.trim().length === 0}
-            className={`absolute right-2 p-1.5 rounded-lg transition-colors ${
-              inputText.trim().length > 0
-                ? "bg-[var(--color-accent)] text-[var(--color-accent-contrast)] hover:bg-[var(--color-accent-hover)]"
-                : "bg-[var(--color-bg-subtle)] text-[var(--color-text-faint)] cursor-not-allowed"
-            }`}
+            type="button"
+            onClick={() => void handleSend()}
+            disabled={!canSend || inputText.trim().length === 0}
+            aria-label="Enviar respuesta"
+            className={[
+              "absolute right-2 rounded-[var(--r-md)] p-1.5 transition-colors",
+              canSend && inputText.trim().length > 0
+                ? "cursor-pointer bg-[var(--color-accent)] text-[var(--color-accent-contrast)] hover:bg-[var(--color-accent-hover)]"
+                : "cursor-not-allowed bg-[var(--color-bg-subtle)] text-[var(--color-text-faint)]"
+            ].join(" ")}
           >
-            <Send className="w-3.5 h-3.5" />
+            <Send aria-hidden className="h-3.5 w-3.5" />
           </button>
         </div>
-        <div className="mt-2 text-center">
-          <span className="text-[10px] text-[var(--color-text-faint)]">
-            ManyHands es un orquestador. Las solicitudes de aprobación y logs finos se integran en el chat.
-          </span>
-        </div>
+        {canSend ? (
+          <p className="mt-2 text-center text-[10.5px] text-[var(--status-review-fg)]">
+            El planner está esperando tu respuesta para continuar la descomposición.
+          </p>
+        ) : null}
       </div>
     </div>
   );
 }
+
+// ── Message taxonomy (id-based, never content sniffing) ──────────────────────
+
+type MessageKind = "decision" | "conflict" | "resolved" | "wave" | "final" | "planning" | "narration";
+
+function messageKind(id: string): MessageKind {
+  if (id.startsWith("decision-")) return "decision";
+  if (id.startsWith("conflict-")) return "conflict";
+  if (id.startsWith("resolved-")) return "resolved";
+  if (id.startsWith("wave-progress-")) return "wave";
+  if (id === "run-complete-message") return "final";
+  if (id === "plan-ongoing") return "planning";
+  return "narration";
+}
+
+function decisionIdFrom(messageId: string): string {
+  return messageId.replace(/^decision-/, "");
+}
+
+// ── Cards ─────────────────────────────────────────────────────────────────────
 
 function PlanApprovalCard({
   model,
@@ -221,7 +330,7 @@ function PlanApprovalCard({
   model: RunModel;
   approving: boolean;
   onApprove: () => void;
-  onTabChange: (tab: "dag" | "plan" | "conflicts" | "execution" | "files" | "evaluation") => void;
+  onTabChange: (tab: TabKey) => void;
 }): React.ReactElement {
   const totalTasks = model.nodes.size;
   const leafTasks = Array.from(model.nodes.values()).filter((n) => n.role === "leaf").length;
@@ -230,67 +339,57 @@ function PlanApprovalCard({
   const granularity = model.run.config.aggressiveness;
 
   return (
-    <div className="p-4 bg-[var(--color-surface)] border border-[var(--status-planning-border)] rounded-xl shadow-sm space-y-4 font-sans">
-      <div className="flex gap-2 items-center">
-        <div className="w-1.5 h-1.5 rounded-full bg-[var(--status-planning-fg)] animate-pulse" />
-        <span className="text-[10px] font-bold text-[var(--status-planning-fg)] uppercase tracking-wider">
-          Plan listo para aprobar
-        </span>
-      </div>
+    <div className="space-y-3.5 rounded-[var(--r-xl)] border border-[var(--status-review-border)] bg-[var(--color-surface)] p-4 font-sans">
+      <span className="mh-mono flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--status-review-fg)]">
+        <span aria-hidden className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--status-review-fg)]" />
+        Gate · aprobación del plan
+      </span>
 
-      <div className="space-y-2">
-        <h4 className="text-xs font-semibold text-[var(--color-text)] leading-snug">
-          Se ha generado la descomposición en subagentes. Revisá el plan y las costuras antes de ejecutar.
-        </h4>
-        
-        {/* Plan stats list */}
-        <div className="grid grid-cols-2 gap-y-1.5 gap-x-2 bg-[var(--color-bg-subtle)] p-3 rounded-lg border border-[var(--color-border)] text-[11px] text-[var(--color-text-muted)]">
-          <div>
-            • Tareas: <strong className="text-[var(--color-text)]">{totalTasks}</strong>
-          </div>
-          <div>
-            • Hojas ejecutables: <strong className="text-[var(--color-text)]">{leafTasks}</strong>
-          </div>
-          <div>
-            • Costuras (seams): <strong className="text-[var(--color-text)]">{seamsCount}</strong>
-          </div>
-          <div>
-            • Conflictos: <strong className="text-[var(--color-text)]">{conflictsCount}</strong>
-          </div>
-          <div className="col-span-2 pt-1.5 border-t border-[var(--color-border)] mt-1 flex justify-between">
-            <span>• Granularidad:</span>
-            <strong className="text-[var(--status-planning-fg)] uppercase font-mono">{granularity}</strong>
-          </div>
+      <p className="m-0 text-[12.5px] font-medium leading-snug text-[var(--color-text)]">
+        La descomposición está lista. Revisá el plan y las costuras antes de lanzar los subagentes.
+      </p>
+
+      <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3 text-[11.5px] text-[var(--color-text-muted)]">
+        <PlanStat label="Tareas" value={totalTasks} />
+        <PlanStat label="Hojas ejecutables" value={leafTasks} />
+        <PlanStat label="Costuras" value={seamsCount} />
+        <PlanStat label="Conflictos previstos" value={conflictsCount} />
+        <div className="col-span-2 mt-1 flex justify-between border-t border-[var(--color-border)] pt-1.5">
+          <dt>Granularidad</dt>
+          <dd className="mh-mono m-0 uppercase text-[var(--status-review-fg)]">{granularity}</dd>
         </div>
-      </div>
+      </dl>
 
-      <div className="flex flex-col gap-2 pt-1">
+      <div className="flex flex-col gap-2 pt-0.5">
         <button
+          type="button"
           onClick={onApprove}
           disabled={approving}
-          className="w-full h-9 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] disabled:bg-[var(--color-bg-subtle)] disabled:text-[var(--color-text-faint)] text-[var(--color-accent-contrast)] text-xs font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer"
+          className="flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-[var(--r-lg)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-xs font-semibold text-[var(--color-accent-contrast)] transition-colors hover:bg-[var(--color-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {approving ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            <Play className="w-3.5 h-3.5 fill-current" />
+            <Play aria-hidden className="h-3.5 w-3.5 fill-current" />
           )}
           Aprobar plan e iniciar subagentes
         </button>
 
         <div className="grid grid-cols-2 gap-2">
           <button
+            type="button"
             onClick={() => onTabChange("dag")}
-            className="h-8 border border-[var(--color-border-control)] hover:bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)] text-[11px] font-medium rounded-lg flex items-center justify-center gap-1 transition cursor-pointer"
+            className="flex h-8 cursor-pointer items-center justify-center gap-1 rounded-[var(--r-md)] border border-[var(--color-border-control)] text-[11.5px] font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"
           >
-            <Eye className="w-3.5 h-3.5" />
-            Revisar DAG
+            <Eye aria-hidden className="h-3.5 w-3.5" />
+            Revisar grafo
           </button>
           <button
+            type="button"
             onClick={() => onTabChange("plan")}
-            className="h-8 border border-[var(--color-border-control)] hover:bg-[var(--color-bg-subtle)] text-[var(--color-text-muted)] text-[11px] font-medium rounded-lg flex items-center justify-center gap-1 transition cursor-pointer"
+            className="flex h-8 cursor-pointer items-center justify-center gap-1 rounded-[var(--r-md)] border border-[var(--color-border-control)] text-[11.5px] font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"
           >
-            Ver Plan
+            Ver plan
           </button>
         </div>
       </div>
@@ -298,60 +397,70 @@ function PlanApprovalCard({
   );
 }
 
-function DecisionCard({
+function PlanStat({ label, value }: { label: string; value: number }): React.ReactElement {
+  return (
+    <div className="flex justify-between">
+      <dt>{label}</dt>
+      <dd className="mh-mono m-0 font-semibold text-[var(--color-text)]">{value}</dd>
+    </div>
+  );
+}
+
+function GateCard({
+  icon,
+  eyebrow,
+  decision,
   text,
-  model,
   busy,
   onApprove,
   onReject
 }: {
+  icon: React.ReactNode;
+  eyebrow: string;
+  decision: Decision | undefined;
   text: string;
-  model: RunModel;
   busy: string | null;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
 }): React.ReactElement {
-  // Find a pending decision in model to associate
-  const pendingDecision = Array.from(model.decisions.values()).find(
-    (d) => d.status === "pending"
-  );
+  const pending = decision !== undefined && decision.status === "pending";
 
   return (
-    <div className="p-4 bg-[var(--color-surface)] border border-[var(--status-blocked-border)] rounded-xl shadow-sm space-y-3 font-sans">
-      <div className="flex gap-2 items-center">
-        <AlertTriangle className="w-4 h-4 text-[var(--status-blocked-fg)]" />
-        <span className="text-xs font-semibold text-[var(--status-blocked-fg)] uppercase tracking-wide">
-          Se requiere tu aprobación
-        </span>
-      </div>
-      <p className="text-xs text-[var(--color-text)] leading-relaxed font-medium">
-        {text.replace("⚠ Se requiere decisión humana:", "").trim()}
+    <div className="space-y-3 rounded-[var(--r-xl)] border border-[var(--status-review-border)] bg-[var(--color-surface)] p-4 font-sans">
+      <span className="mh-mono flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--status-review-fg)]">
+        {icon}
+        {eyebrow}
+      </span>
+      <p className="m-0 text-[12.5px] font-medium leading-relaxed text-[var(--color-text)]">
+        <Markdown text={text} inline />
       </p>
 
-      {pendingDecision ? (
-        <div className="flex gap-2 pt-1">
+      {pending && decision !== undefined ? (
+        <div className="flex gap-2 pt-0.5">
           <button
-            onClick={() => onApprove(pendingDecision.id)}
+            type="button"
+            onClick={() => onApprove(decision.id)}
             disabled={busy !== null}
-            className="flex-1 h-8 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] text-[var(--color-accent-contrast)] text-xs font-semibold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition cursor-pointer"
+            className="flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-xs font-semibold text-[var(--color-accent-contrast)] transition-colors hover:bg-[var(--color-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {busy === pendingDecision.id ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            {busy === decision.id ? (
+              <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Play className="w-3.5 h-3.5" />
+              <Play aria-hidden className="h-3.5 w-3.5" />
             )}
             Aprobar
           </button>
           <button
-            onClick={() => onReject(pendingDecision.id)}
+            type="button"
+            onClick={() => onReject(decision.id)}
             disabled={busy !== null}
-            className="px-3 h-8 bg-[var(--color-bg-subtle)] hover:bg-[var(--color-border-soft)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-xs font-semibold rounded-lg transition cursor-pointer"
+            className="h-8 cursor-pointer rounded-[var(--r-md)] border border-[var(--color-border-control)] bg-transparent px-3 text-xs font-semibold text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Rechazar
           </button>
         </div>
       ) : (
-        <span className="text-[11px] text-[var(--color-text-faint)] italic block">
+        <span className="block text-[11px] text-[var(--color-text-subtle)]">
           Decisión ya resuelta o integrada.
         </span>
       )}
@@ -364,32 +473,56 @@ function ConflictCard({
   onTabChange
 }: {
   text: string;
-  onTabChange: (tab: "dag" | "plan" | "conflicts" | "execution" | "files" | "evaluation") => void;
+  onTabChange: (tab: TabKey) => void;
 }): React.ReactElement {
   return (
-    <div className="p-4 bg-[var(--color-surface)] border border-[var(--status-failed-border)] rounded-xl shadow-sm space-y-3 font-sans">
-      <div className="flex gap-2 items-center">
-        <AlertOctagon className="w-4 h-4 text-[var(--status-failed-fg)]" />
-        <span className="text-xs font-semibold text-[var(--status-failed-fg)] uppercase tracking-wide">
-          Conflicto Detectado
-        </span>
-      </div>
-      <p className="text-xs text-[var(--color-text)] leading-relaxed font-medium">
-        {text.replace("⚡ Conflicto de fusión detectado", "").trim()}
+    <div className="space-y-3 rounded-[var(--r-xl)] border border-[var(--status-failed-border)] bg-[var(--color-surface)] p-4 font-sans">
+      <span className="mh-mono flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--status-failed-fg)]">
+        <OctagonAlert aria-hidden className="h-3.5 w-3.5" />
+        Conflicto detectado
+      </span>
+      <p className="m-0 text-[12.5px] font-medium leading-relaxed text-[var(--color-text)]">
+        <Markdown text={text} inline />
       </p>
-      
       <button
+        type="button"
         onClick={() => onTabChange("conflicts")}
-        className="w-full h-8 border border-[var(--status-failed-border)] hover:bg-[var(--status-failed-bg)] text-[var(--status-failed-fg)] text-xs font-medium rounded-lg flex items-center justify-center gap-1 transition cursor-pointer"
+        className="flex h-8 w-full cursor-pointer items-center justify-center gap-1 rounded-[var(--r-md)] border border-[var(--status-failed-border)] text-xs font-medium text-[var(--status-failed-fg)] transition-colors hover:bg-[var(--status-failed-bg)]"
       >
-        Revisar Conflictos
-        <ArrowRight className="w-3.5 h-3.5" />
+        Revisar en Riesgos
+        <ArrowRight aria-hidden className="h-3.5 w-3.5" />
       </button>
     </div>
   );
 }
 
-function Markdown({ text, isUser }: { text: string; isUser?: boolean }): React.ReactElement {
+/** Wave progress — monospaced status lines so columns of states align. */
+function WaveCard({ text }: { text: string }): React.ReactElement {
+  const [title, ...rest] = text.split("\n\n");
+  const lines = rest.join("\n\n").split("\n").filter((line) => line.trim().length > 0);
+  const inProgress = title?.includes("…") === true;
+  return (
+    <div className="space-y-2.5 rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 font-sans">
+      <p className={["m-0 text-[12.5px] font-semibold text-[var(--color-text)]", inProgress ? "mh-working rounded" : ""].join(" ")}>
+        <Markdown text={title ?? ""} inline />
+      </p>
+      <ul className="m-0 flex list-none flex-col gap-1 p-0">
+        {lines.map((line, idx) => (
+          <li key={idx} className="mh-mono text-[11px] leading-relaxed text-[var(--color-text-muted)]">
+            {line}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ── Lightweight markdown (bold + inline code) ────────────────────────────────
+
+function Markdown({ text, isUser, inline }: { text: string; isUser?: boolean; inline?: boolean }): React.ReactElement {
+  if (inline === true) {
+    return <>{renderInline(text, isUser)}</>;
+  }
   const paragraphs = text.split(/\n\n+/);
   return (
     <div className="space-y-2">
@@ -401,7 +534,7 @@ function Markdown({ text, isUser }: { text: string; isUser?: boolean }): React.R
 
         if (isList) {
           return (
-            <ul key={pIdx} className="list-disc pl-4 space-y-1 my-1">
+            <ul key={pIdx} className="my-1 list-disc space-y-1 pl-4">
               {lines.map((line, lIdx) => (
                 <li key={lIdx} className={`text-xs leading-normal ${isUser ? "text-[var(--color-accent-contrast)] opacity-90" : "text-[var(--color-text-muted)]"}`}>
                   {renderInline(line.trim().replace(/^[-*]\s+/, ""), isUser)}
@@ -412,7 +545,7 @@ function Markdown({ text, isUser }: { text: string; isUser?: boolean }): React.R
         }
 
         return (
-          <p key={pIdx} className={`text-xs leading-relaxed ${isUser ? "text-[var(--color-accent-contrast)]" : "text-[var(--color-text)]"}`}>
+          <p key={pIdx} className={`m-0 text-[12.5px] leading-relaxed ${isUser ? "text-[var(--color-accent-contrast)]" : "text-[var(--color-text)]"}`}>
             {lines.map((line, lIdx) => (
               <span key={lIdx} className="block">
                 {renderInline(line, isUser)}
@@ -439,10 +572,10 @@ function renderInline(text: string, isUser?: boolean): React.ReactNode[] {
       );
     } else if (part.startsWith("`") && part.endsWith("`")) {
       parts.push(
-        <code key={idx} className={`font-mono text-[10.5px] px-1.5 py-0.5 rounded font-medium border ${
+        <code key={idx} className={`rounded border px-1.5 py-0.5 font-mono text-[10.5px] font-medium ${
           isUser
-            ? "bg-[color-mix(in_srgb,var(--color-accent-contrast)_12%,transparent)] border-[color-mix(in_srgb,var(--color-accent-contrast)_22%,transparent)] text-[var(--color-accent-contrast)]"
-            : "bg-[var(--color-bg-subtle)] border-[var(--color-border)] text-[var(--color-accent-hover)]"
+            ? "border-[color-mix(in_srgb,var(--color-accent-contrast)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-contrast)_12%,transparent)] text-[var(--color-accent-contrast)]"
+            : "border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-[var(--color-text)]"
         }`}>
           {part.slice(1, -1)}
         </code>
@@ -453,4 +586,13 @@ function renderInline(text: string, isUser?: boolean): React.ReactNode[] {
   });
 
   return parts;
+}
+
+async function readApiError(response: Response): Promise<string> {
+  try {
+    const payload = (await response.json()) as { error?: string };
+    return payload.error ?? `La acción falló (${response.status}).`;
+  } catch {
+    return `La acción falló (${response.status}).`;
+  }
 }

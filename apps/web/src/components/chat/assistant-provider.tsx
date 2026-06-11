@@ -17,12 +17,19 @@ interface UnifiedPayload {
   waveId?: number;
   nodeIds?: string[];
   nodeId?: string;
+  title?: string;
   changedFiles?: string[];
   cause?: string;
   iteration?: number;
   waves?: { waveId: number; nodeIds: string[] }[];
 }
 
+/**
+ * Message ids are semantic and STABLE — the thread renderer switches on them
+ * (`decision-<id>`, `conflict-<id>`, `resolved-*`, `wave-progress-*`,
+ * `plan-summary`, `plan-ongoing`, `run-complete-message`). Never sniff message
+ * text to infer intent.
+ */
 export interface MyMessage {
   id: string;
   role: "user" | "assistant";
@@ -32,12 +39,10 @@ export interface MyMessage {
 
 export function ChatRuntimeProvider({
   children,
-  events,
-  onUserMessage
+  events
 }: {
   children: ReactNode;
   events: RunEvent[];
-  onUserMessage: (message: string) => Promise<void>;
 }): React.ReactElement {
   const [customMessages, setCustomMessages] = useState<MyMessage[]>([]);
 
@@ -48,7 +53,19 @@ export function ChatRuntimeProvider({
 
     const baseTime = new Date(events[0]?.at || Date.now());
 
-    // Base welcome message
+    // nodeId → human title (streamed in via plan.node.proposed), so execution
+    // narration never shows raw ids.
+    const nodeTitle = new Map<string, string>();
+    for (const event of events) {
+      if (event.type === "plan.node.proposed") {
+        const payload = event.payload as UnifiedPayload;
+        if (payload.nodeId !== undefined && payload.title !== undefined) {
+          nodeTitle.set(payload.nodeId, payload.title);
+        }
+      }
+    }
+    const titleOf = (nodeId: string): string => nodeTitle.get(nodeId) ?? nodeId.slice(0, 8);
+
     list.push({
       id: "welcome",
       role: "assistant",
@@ -78,7 +95,7 @@ export function ChatRuntimeProvider({
       });
     }
 
-    // Planning Phase
+    // Planning phase
     const planStarted = events.find((e) => e.type === "plan.started");
     const planReady = events.find((e) => e.type === "plan.ready");
 
@@ -90,7 +107,7 @@ export function ChatRuntimeProvider({
         content: [
           {
             type: "text",
-            text: `Planificación completada. He generado un DAG con **${readyPayload.nodeCount}** tareas, incluyendo **${readyPayload.seamCount}** costuras de inter-agente. El plan requiere aprobación antes de ser ejecutado.`
+            text: `Planificación completada. Generé un DAG con **${readyPayload.nodeCount}** tareas y **${readyPayload.seamCount}** costuras entre agentes. El plan requiere tu aprobación antes de ejecutar.`
           }
         ],
         createdAt: new Date(planReady.at)
@@ -104,20 +121,20 @@ export function ChatRuntimeProvider({
         content: [
           {
             type: "text",
-            text: `Inspeccionando el workspace git e identificando tareas... (${proposedNodes.length} tareas propuestas hasta el momento)`
+            text: `Inspeccionando el workspace e identificando tareas… (${proposedNodes.length} propuestas hasta ahora)`
           }
         ],
         createdAt: latestProposed ? new Date(latestProposed.at) : new Date(planStarted.at)
       });
     }
 
-    // Human Decisions & Warnings (raised inline)
+    // Human gates & warnings (raised inline)
     events.forEach((event) => {
       const payload = event.payload as UnifiedPayload;
       const time = new Date(event.at);
 
       if (event.type === "decision.raised") {
-        // Skip plan approval here as it is rendered by a special interactive section
+        // Plan approval renders as a dedicated interactive card in the thread.
         if (payload.decisionId === "approve_plan") return;
 
         list.push({
@@ -126,7 +143,7 @@ export function ChatRuntimeProvider({
           content: [
             {
               type: "text",
-              text: `⚠ **Se requiere decisión humana**: ${payload.context?.question || "Revisar y resolver solicitud."}`
+              text: payload.context?.question || "Revisar y resolver la solicitud pendiente."
             }
           ],
           createdAt: time
@@ -140,7 +157,7 @@ export function ChatRuntimeProvider({
           content: [
             {
               type: "text",
-              text: `⚡ Conflicto de fusión detectado en **${payload.files?.join(", ") || ""}** (${payload.dimension}). Causa: *${payload.diagnosisRef || ""}*. Se recomienda serializar.`
+              text: `Conflicto ${payload.dimension ?? ""} en **${payload.files?.join(", ") || "archivos compartidos"}**. Dos subagentes tocaron la misma superficie; revisalo en Riesgos.`
             }
           ],
           createdAt: time
@@ -148,14 +165,14 @@ export function ChatRuntimeProvider({
       }
 
       if (event.type === "decision.resolved") {
-        const choiceText = payload.choice?.action || payload.choice?.answer || "Aprobado";
+        const choiceText = payload.choice?.action || payload.choice?.answer || "aprobado";
         list.push({
           id: `resolved-${payload.decisionId}-${event.seq}`,
           role: "assistant",
           content: [
             {
               type: "text",
-              text: `✓ Decisión resuelta por el usuario: **"${choiceText}"**.`
+              text: `Decisión resuelta: **${choiceText}**.`
             }
           ],
           createdAt: time
@@ -163,7 +180,7 @@ export function ChatRuntimeProvider({
       }
     });
 
-    // Waves & Subagent execution groups
+    // Waves & subagent execution groups
     const wavePlanned = events.find((e) => e.type === "wave.planned");
     const wavePlans: { waveId: number; nodeIds: string[] }[] = (wavePlanned?.payload as unknown as UnifiedPayload)?.waves || [];
 
@@ -179,25 +196,26 @@ export function ChatRuntimeProvider({
 
       const nodeStatusList = w.nodeIds.map((nodeId) => {
         const nodeEvs = waveEvents.filter((e) => (e.payload as UnifiedPayload).nodeId === nodeId);
-        if (nodeEvs.length === 0) return `- \`${nodeId}\`: Esperando ⚪`;
+        const label = titleOf(nodeId);
+        if (nodeEvs.length === 0) return `· ${label} — esperando`;
 
         const latestEv = nodeEvs[nodeEvs.length - 1]!;
         if (latestEv.type === "node.verify.passed") {
           const payload = latestEv.payload as UnifiedPayload;
-          return `- \`${nodeId}\`: Completado ✓ (${payload.changedFiles?.length || 0} archivos modificados)`;
+          return `✓ ${label} — completado (${payload.changedFiles?.length || 0} archivos)`;
         }
         if (latestEv.type === "node.execution.failed") {
           const payload = latestEv.payload as UnifiedPayload;
-          return `- \`${nodeId}\`: Falló ✗ (Causa: *${payload.cause}*)`;
+          return `✗ ${label} — falló (${payload.cause ?? "causa desconocida"})`;
         }
         if (latestEv.type === "node.verify.iteration") {
           const payload = latestEv.payload as UnifiedPayload;
-          return `- \`${nodeId}\`: Verificando 🔍 (Intento ${payload.iteration})`;
+          return `↻ ${label} — verificando (intento ${payload.iteration})`;
         }
         if (latestEv.type === "node.execution.started") {
-          return `- \`${nodeId}\`: Ejecutando ↻`;
+          return `↻ ${label} — ejecutando`;
         }
-        return `- \`${nodeId}\`: Pendiente ⚪`;
+        return `· ${label} — pendiente`;
       });
 
       const isWaveDone = w.nodeIds.every((nodeId) => {
@@ -207,8 +225,8 @@ export function ChatRuntimeProvider({
       const latestWaveEventTime = waveEvents.length > 0 ? new Date(waveEvents[waveEvents.length - 1]!.at) : new Date(waveOpened.at);
 
       const statusTitle = isWaveDone
-        ? `**Oleada Wave ${w.waveId} completada**`
-        : `**Oleada Wave ${w.waveId} en progreso paralelo...**`;
+        ? `**Oleada ${w.waveId} completada**`
+        : `**Oleada ${w.waveId} en ejecución paralela…**`;
 
       list.push({
         id: `wave-progress-${w.waveId}`,
@@ -233,14 +251,14 @@ export function ChatRuntimeProvider({
         content: [
           {
             type: "text",
-            text: `🏁 **Orquestación finalizada**. Estado final del run: **${payload.status === "success" ? "completado exitosamente" : payload.status}**.`
+            text: `Orquestación finalizada. Estado final: **${payload.status === "success" ? "completado exitosamente" : payload.status}**.`
           }
         ],
         createdAt: new Date(runCompleted.at)
       });
     }
 
-    // Sort list chronologically so user prompts, plan ready, waves, and approvals appear in exact sequence
+    // Chronological order so prompts, plan, waves and gates read as one stream.
     return list.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }, [events]);
 
@@ -258,6 +276,9 @@ export function ChatRuntimeProvider({
         createdAt: message.createdAt
       } as unknown as ThreadMessage;
     },
+    // Appends the human's own message to the thread. The REAL side effect
+    // (answering a planning question) is owned by the thread component, which
+    // knows the pending decision; this provider never fakes a reply.
     onNew: async (message: AppendMessage) => {
       const userMsg: MyMessage = {
         id: `user-${Date.now()}`,
@@ -269,28 +290,8 @@ export function ChatRuntimeProvider({
         createdAt: new Date()
       };
       setCustomMessages((prev) => [...prev, userMsg]);
-      
-      const userText = message.content.map(c => c.type === "text" ? c.text : "").join(" ");
-      if (userText.trim().length > 0) {
-        await onUserMessage(userText);
-      }
-
-      setTimeout(() => {
-        const replyMsg: MyMessage = {
-          id: `reply-${Date.now()}`,
-          role: "assistant",
-          content: [
-            {
-              type: "text",
-              text: "Recibido. Estoy procesando tu consulta en el contexto de la ejecución actual de ManyHands."
-            }
-          ],
-          createdAt: new Date()
-        };
-        setCustomMessages((prev) => [...prev, replyMsg]);
-      }, 1000);
     }
-  }), [allMessages, onUserMessage]);
+  }), [allMessages]);
 
   const runtime = useExternalStoreRuntime(adapter);
 

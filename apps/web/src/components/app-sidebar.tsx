@@ -5,16 +5,7 @@ import { usePathname } from "next/navigation";
 import type { Workspace, RunPreview } from "@/lib/api-types";
 import { runUiStatus, STATUS_META } from "@/lib/status";
 import { ThemeToggle } from "@/components/theme-toggle";
-import {
-  Plus,
-  Folder,
-  History,
-  Settings,
-  GitCompare,
-  BarChart3,
-  Flame,
-  AlertOctagon
-} from "lucide-react";
+import { Plus, Folder, History, Flame, GitMerge } from "lucide-react";
 
 interface AppSidebarProps {
   workspaces: Workspace[];
@@ -25,345 +16,140 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
   const pathname = usePathname();
 
   return (
-    <aside
-      style={{
-        width: 240,
-        flexShrink: 0,
-        background: "var(--color-bg-subtle)",
-        borderRight: "1px solid var(--color-border)",
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        position: "sticky",
-        top: 0,
-        overflowY: "auto"
-      }}
-      className="font-sans"
-    >
-      {/* Brand Header */}
-      <div
-        style={{
-          padding: "18px 20px",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          borderBottom: "1px solid var(--color-border-soft)"
-        }}
-      >
-        <div
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: 6,
-            background: "var(--color-accent)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--color-accent-contrast)"
-          }}
-        >
-          <Flame className="w-4 h-4" />
+    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col overflow-hidden border-r border-[var(--color-border)] bg-[var(--color-bg-subtle)] font-sans">
+      {/* Brand */}
+      <div className="flex items-center gap-2.5 border-b border-[var(--color-border-soft)] px-4 py-[14px]">
+        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--color-accent)] text-[var(--color-accent-contrast)]">
+          <Flame aria-hidden className="h-4 w-4" />
         </div>
-        <span
-          className="font-semibold text-lg"
-          style={{ letterSpacing: "-0.01em", color: "var(--text)" }}
-        >
+        <span className="text-[15px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">
           ManyHands
         </span>
-        <span
-          className="mh-mono text-[9px] px-1.5 py-0.5 rounded"
-          style={{
-            background: "var(--color-surface)",
-            color: "var(--text-3)",
-            marginLeft: "auto"
-          }}
-        >
+        <span className="mh-mono rounded bg-[var(--color-surface)] px-1.5 py-0.5 text-[9px] text-[var(--color-text-subtle)]">
           v0.4
         </span>
-        <ThemeToggle />
+        <div className="ml-auto">
+          <ThemeToggle />
+        </div>
       </div>
 
-      {/* Primary Action */}
-      <div style={{ padding: "16px 20px 12px" }}>
-        <Link href="/" passHref style={{ textDecoration: "none" }}>
-          <button
-            type="button"
-            style={{
-              width: "100%",
-              height: 38,
-              background: "var(--color-accent)",
-              border: "1px solid var(--color-accent)",
-              color: "var(--color-accent-contrast)",
-              borderRadius: 6,
-              fontWeight: 600,
-              fontSize: 13,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              cursor: "pointer",
-              boxShadow: "none"
-            }}
-          >
-            <Plus className="w-4 h-4" />
-            Nuevo Run
-          </button>
+      {/* Primary action */}
+      <div className="px-3 pb-1 pt-3">
+        <Link
+          href="/"
+          className="flex h-9 w-full items-center justify-center gap-2 rounded-[var(--r-lg)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-[13px] font-semibold text-[var(--color-accent-contrast)] transition-[background,border-color] duration-150 ease-out hover:border-[var(--color-accent-hover)] hover:bg-[var(--color-accent-hover)] active:translate-y-px"
+        >
+          <Plus aria-hidden className="h-4 w-4" />
+          Nuevo run
         </Link>
       </div>
 
-      {/* Navigation Links */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 2,
-          padding: "0 12px"
-        }}
-      >
-        <SidebarLink
-          href="/compare"
-          icon={<GitCompare className="w-4 h-4" />}
-          label="Comparar Granularidad"
-          active={pathname === "/compare"}
-        />
-        <SidebarLink
-          href="/benchmarks"
-          icon={<BarChart3 className="w-4 h-4" />}
-          label="Benchmarks / Evals"
-          active={pathname === "/benchmarks"}
-        />
-        <SidebarLink
-          href="/settings"
-          icon={<Settings className="w-4 h-4" />}
-          label="Configuración"
-          active={pathname === "/settings"}
-        />
-      </div>
-
-      {/* Workspaces Section */}
-      <div style={{ marginTop: 22, padding: "0 20px" }}>
-        <h3
-          className="mh-mono"
-          style={{
-            fontSize: 10,
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            color: "var(--text-3)",
-            marginBottom: 8,
-            display: "flex",
-            alignItems: "center",
-            gap: 6
-          }}
-        >
-          <Folder className="w-3.5 h-3.5" />
+      {/* Workspaces */}
+      <section className="px-3 pt-4" aria-label="Workspaces">
+        <h3 className="mh-mono flex items-center gap-1.5 px-1.5 pb-1.5 text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)]">
+          <Folder aria-hidden className="h-3 w-3" />
           Workspaces
         </h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <ul className="m-0 flex list-none flex-col p-0">
           {workspaces.map((workspace) => (
-            <div
+            <li
               key={workspace.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: 12.5,
-                color: "var(--text-2)",
-                padding: "4px 0"
-              }}
+              className="flex items-center gap-2 rounded-[var(--r-md)] px-1.5 py-1.5 text-[12.5px] text-[var(--color-text-muted)]"
+              title={workspace.repoPath}
             >
-              <div
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  backgroundColor: "var(--color-text-subtle)"
-                }}
-              />
-              <span style={{ fontWeight: 500 }} title={workspace.repoPath}>
-                {workspace.name}
-              </span>
-            </div>
+              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--color-text-subtle)]" />
+              <span className="truncate font-medium">{workspace.name}</span>
+              {workspace.defaultBranch !== undefined && workspace.defaultBranch.length > 0 ? (
+                <span className="mh-mono ml-auto flex items-center gap-1 text-[10px] text-[var(--color-text-subtle)]">
+                  <GitMerge aria-hidden className="h-3 w-3" />
+                  {workspace.defaultBranch}
+                </span>
+              ) : null}
+            </li>
           ))}
-          {workspaces.length === 0 && (
-            <span style={{ fontSize: 11, fontStyle: "italic", color: "var(--text-4)" }}>
-              Sin workspaces creados
-            </span>
-          )}
-        </div>
-      </div>
+          {workspaces.length === 0 ? (
+            <li className="px-1.5 py-1 text-[11.5px] text-[var(--color-text-subtle)]">
+              Sin workspaces todavía
+            </li>
+          ) : null}
+        </ul>
+      </section>
 
-      {/* Recent Runs Section */}
-      <div
-        style={{
-          marginTop: 22,
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          padding: "0 20px 24px",
-          minHeight: 0
-        }}
-      >
-        <h3
-          className="mh-mono"
-          style={{
-            fontSize: 10,
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            color: "var(--text-3)",
-            marginBottom: 8,
-            display: "flex",
-            alignItems: "center",
-            gap: 6
-          }}
-        >
-          <History className="w-3.5 h-3.5" />
-          Runs Recientes
+      {/* Recent runs */}
+      <section className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-4" aria-label="Runs recientes">
+        <h3 className="mh-mono flex items-center gap-1.5 px-1.5 pb-1.5 text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)]">
+          <History aria-hidden className="h-3 w-3" />
+          Runs recientes
         </h3>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 4,
-            overflowY: "auto",
-            flex: 1,
-            marginRight: -10,
-            paddingRight: 10
-          }}
-        >
-          {recentRuns.map((run) => {
-            const isActive = pathname === `/runs/${run.id}`;
-            return (
-              <Link
-                key={run.id}
-                href={`/runs/${run.id}`}
-                style={{ textDecoration: "none" }}
-              >
-                <div
-                  style={{
-                    padding: "10px 10px",
-                    borderRadius: 8,
-                    background: isActive ? "var(--color-surface)" : "transparent",
-                    border: "1px solid",
-                    borderColor: isActive ? "var(--color-border)" : "transparent",
-                    borderLeft: isActive ? "2px solid var(--color-accent)" : "1px solid transparent",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 6,
-                    cursor: "pointer",
-                    transition: "all 150ms ease",
-                    boxShadow: "none"
-                  }}
-                  className={`group ${!isActive ? "hover:bg-[var(--cu-surface-3)]" : ""}`}
-                >
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8, minWidth: 0 }}>
-                    <span
-                      style={{
-                        fontWeight: isActive ? 600 : 500,
-                        fontSize: 12.5,
-                        color: "var(--color-text)",
-                        overflow: "hidden",
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        lineHeight: 1.25,
-                        flex: 1
-                      }}
-                    >
-                      {run.title || run.userPrompt.slice(0, 32)}
-                    </span>
-                    {run.conflictCount !== undefined && run.conflictCount > 0 && (
-                      <span
-                        className="flex items-center gap-0.5 text-[10px] font-semibold font-mono rounded border"
-                        style={{
-                          color: "var(--status-failed-fg)",
-                          background: "var(--status-failed-bg)",
-                          borderColor: "var(--status-failed-border)",
-                          padding: "1px 5px"
-                        }}
-                      >
-                        <AlertOctagon className="w-2.5 h-2.5" />
-                        {run.conflictCount}
-                      </span>
-                    )}
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      fontSize: 10,
-                      color: "var(--color-text-subtle)",
-                      paddingLeft: 0
-                    }}
-                  >
-                    <span className="inline-flex items-center gap-1.5 min-w-0">
-                      <StatusDot status={run.status} />
-                      <span className="mh-mono truncate max-w-[110px]" title={run.workspaceName}>
-                        {run.workspaceName}
-                      </span>
-                    </span>
-                    <span className="mh-mono text-[9.5px]">
-                      {formatRecency(run.updatedAt)}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-          {recentRuns.length === 0 && (
-            <span style={{ fontSize: 11, fontStyle: "italic", color: "var(--text-4)" }}>
+        <nav className="-mr-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pr-1">
+          {recentRuns.map((run) => (
+            <RunRow key={run.id} run={run} active={pathname === `/runs/${run.id}`} />
+          ))}
+          {recentRuns.length === 0 ? (
+            <span className="px-1.5 py-1 text-[11.5px] text-[var(--color-text-subtle)]">
               Sin ejecuciones previas
             </span>
-          )}
-        </div>
-      </div>
+          ) : null}
+        </nav>
+      </section>
     </aside>
   );
 }
 
-function SidebarLink({
-  href,
-  icon,
-  label,
-  active
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-  active: boolean;
-}): React.ReactElement {
-  return (
-    <Link href={href} style={{ textDecoration: "none" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "8px 12px",
-          borderRadius: "var(--r-lg)",
-          background: active ? "var(--color-surface)" : "transparent",
-          color: active ? "var(--color-text)" : "var(--color-text-muted)",
-          fontSize: 13,
-          fontWeight: active ? 600 : 500,
-          cursor: "pointer"
-        }}
-        className="hover:bg-[var(--color-surface)] hover:text-[var(--color-text)] transition-colors"
-      >
-        <span style={{ color: active ? "var(--color-accent)" : "var(--color-text-subtle)" }}>{icon}</span>
-        {label}
-      </div>
-    </Link>
-  );
-}
-
-function StatusDot({ status }: { status: RunPreview["status"] }): React.ReactElement {
-  const uiStatus = runUiStatus(status);
+function RunRow({ run, active }: { run: RunPreview; active: boolean }): React.ReactElement {
+  const uiStatus = runUiStatus(run.status);
   const meta = STATUS_META[uiStatus];
+  const failed = uiStatus === "failed";
+
   return (
-    <span
-      className={meta.pulse ? "w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse" : "w-1.5 h-1.5 rounded-full flex-shrink-0"}
-      style={{ backgroundColor: meta.fg }}
-    />
+    <Link
+      href={`/runs/${run.id}`}
+      aria-current={active ? "page" : undefined}
+      className={[
+        "flex flex-col gap-1 rounded-[var(--r-lg)] border px-2.5 py-2 transition-colors duration-150",
+        active
+          ? "border-[var(--color-border)] bg-[var(--color-surface)]"
+          : "border-transparent hover:bg-[color-mix(in_srgb,var(--color-text)_4.5%,transparent)]"
+      ].join(" ")}
+    >
+      <span className="flex min-w-0 items-start gap-2">
+        <span
+          className={[
+            "line-clamp-2 min-w-0 flex-1 text-[12.5px] leading-[1.3] text-[var(--color-text)]",
+            active ? "font-semibold" : "font-medium"
+          ].join(" ")}
+        >
+          {run.title || run.userPrompt.slice(0, 64)}
+        </span>
+        {run.conflictCount !== undefined && run.conflictCount > 0 ? (
+          <span
+            className="mh-mono shrink-0 rounded border px-1 py-px text-[10px] font-semibold"
+            title={`${run.conflictCount} ${run.conflictCount === 1 ? "conflicto" : "conflictos"}`}
+            style={{
+              color: failed ? "var(--status-failed-fg)" : "var(--status-blocked-fg)",
+              background: failed ? "var(--status-failed-bg)" : "var(--status-blocked-bg)",
+              borderColor: failed ? "var(--status-failed-border)" : "var(--status-blocked-border)"
+            }}
+          >
+            {run.conflictCount}
+          </span>
+        ) : null}
+      </span>
+      <span className="flex items-center justify-between gap-2 text-[10px] text-[var(--color-text-subtle)]">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span
+            aria-hidden
+            className={meta.pulse ? "h-1.5 w-1.5 shrink-0 animate-pulse rounded-full" : "h-1.5 w-1.5 shrink-0 rounded-full"}
+            style={{ backgroundColor: meta.fg }}
+          />
+          <span className="sr-only">{meta.label} ·</span>
+          <span className="mh-mono max-w-[110px] truncate" title={run.workspaceName}>
+            {run.workspaceName}
+          </span>
+        </span>
+        <span className="mh-mono shrink-0 text-[9.5px]">{formatRecency(run.updatedAt)}</span>
+      </span>
+    </Link>
   );
 }
 

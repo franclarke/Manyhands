@@ -98,7 +98,7 @@ describe("inspectGeminiReadiness", () => {
     );
 
     expect(readiness.status).toBe("error");
-    expect(readiness.checks.find((check) => check.id === "cli")?.message).toContain("not found");
+    expect(readiness.checks.find((check) => check.id === "cli")?.message).toContain("No se encontró");
   });
 
   it("reports error when credentials are missing", async () => {

@@ -1,3 +1,35 @@
+# Walkthrough — Sesión 2026-06-11 (UI/UX Professionalization Pass)
+
+> PR: pase de profesionalización UI/UX del flujo core de ManyHands.
+> Auditoría completa + plan + resultados: [`docs/ui-audit/manyhands-ui-audit.md`](docs/ui-audit/manyhands-ui-audit.md).
+> Before/after: `docs/ui-audit/screenshots/{before,after}/`.
+
+## Qué se hizo
+
+1. **Auditoría escrita** (scorecard 11 dimensiones, issues por área, plan PR-shaped) antes de tocar código.
+2. **Loop A — fundación**: fix de capas CSS (`@layer base` para resets — los resets sin capa pisaban TODAS las utilidades Tailwind en form controls, la causa raíz de los inline styles), `Button` con estados completos, `StatusPill`, `ConfirmDialog`, `.mh-skeleton` (el loading del run era invisible), fix SSR de `useDefaultLayout` (500 intermitente en /runs/[runId]), purga de 18 componentes muertos + `/counter` + jest vestigial roto, readiness/preflight traducidos al español.
+3. **Loop B — shell**: sidebar tokenizada, sin links 404 (/compare /benchmarks /settings), conflictos en ámbar (rust solo si el run falló).
+4. **Loop C — new run**: composer de una sola tarjeta (contexto + prompt + acciones + drawer avanzado con labels), CTA estable "Generar plan" con razón de bloqueo, pills Repo/Gemini separadas, ConfirmDialog para borrar workspace.
+5. **Loop D — cockpit**: header jerárquico (sin UUIDs crudos), chat por id semántico de mensaje (sin string-sniffing), GateCard que apunta a su decisión por id, wave-progress con títulos reales de nodos, **eliminada la respuesta fake del asistente**, composer honesto conectado a `/api/runs/[id]/answer` (responde preguntas del planner), errores de acciones visibles, estado Conectado/Reconectando real, tabs ARIA con flechas.
+6. **Loop E — DAG**: lanes sin ember (P1: el calor es estado vivo), nodo raíz distinto, minimapa >12 nodos, canvas sin banda inferior, failed/blocked/obsolete tintan el borde de la card (obsolete nunca rojo), bug del dato falso "Profundidad: 3" corregido.
+7. **Loop F — polish**: FocusPanel 100% tokens semánticos, reduced-motion ampliado (`animate-pulse`, `.mh-skeleton`), selects con caret custom, targets 28px con aria-label.
+8. **Build de producción reparado**: el patch de `@assistant-ui/tap` no era production-safe (accesos `React['x']` estáticamente analizables → errores webpack en prod); endurecido con accessors opacos. `pnpm web:build` ahora pasa.
+
+## Verificación
+
+- `pnpm test` → 925 passed / 3 skipped (1 assert actualizado por traducción de readiness).
+- `pnpm typecheck`, `pnpm -F @manyhands/web typecheck`, `pnpm -F @manyhands/web lint`, `pnpm -F @manyhands/web contrast:check` → limpios.
+- `pnpm web:build` → ✅ (estaba roto pre-pase).
+- `pnpm lint` raíz → 56 errores **preexistentes** fuera del alcance UI (packages/, scratch/, tests/), documentados como follow-up.
+
+## Notas operativas
+
+- Screenshots reproducibles: `apps/web/scripts/ui-shots.mjs` y `ui-shot-crop.mjs` (puppeteer-core devDep raíz + Chrome del sistema; `MSYS_NO_PATHCONV=1` en git-bash).
+- Se detuvo un dev server huérfano en :3000 (PID 9828, de ayer) que lockeaba `next-swc` y rompía los installs.
+- Follow-ups priorizados en la sección 7.4 del audit doc.
+
+---
+
 # Walkthrough — Sesión UltraCode 2026-06-10 (frontera end-to-end)
 
 Reporte de cambios de la sesión. Detalle completo del diseño y el mapa

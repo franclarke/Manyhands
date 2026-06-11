@@ -6,6 +6,7 @@ import {
   BackgroundVariant,
   Handle,
   MarkerType,
+  MiniMap,
   Position,
   ReactFlow,
   ReactFlowProvider,
@@ -26,6 +27,8 @@ interface MinimalRunGraphProps {
   stage: ProductStage;
   selectedTarget: FocusTarget | null;
   onFocus: (target: FocusTarget) => void;
+  /** Fill the parent panel (cockpit) instead of the fixed-height page block. */
+  fill?: boolean;
 }
 
 interface MinimalGraphNodeData {
@@ -122,7 +125,8 @@ function MinimalRunGraphInner({
   graph,
   stage,
   selectedTarget,
-  onFocus
+  onFocus,
+  fill = false
 }: MinimalRunGraphProps): React.ReactElement {
   const selectedNodeId = selectedTarget?.kind === "node" ? selectedTarget.id : null;
   // Ids already on canvas — anything beyond this set just streamed in and
@@ -138,7 +142,7 @@ function MinimalRunGraphInner({
     }
   }, [flow]);
   return (
-    <section className="mh-run-graph" aria-label="Grafo de tareas del run">
+    <section className={fill ? "mh-run-graph mh-run-graph-fill" : "mh-run-graph"} aria-label="Grafo de tareas del run">
       <ReactFlow
         nodes={flow.nodes}
         edges={flow.edges}
@@ -161,6 +165,21 @@ function MinimalRunGraphInner({
       >
         <Background variant={BackgroundVariant.Dots} gap={28} size={1} color="var(--mh-graph-dots)" />
         <CanvasControls />
+        {graph.nodes.length > 12 ? (
+          <MiniMap
+            pannable
+            zoomable
+            position="bottom-left"
+            nodeColor={(node) => {
+              const data = node.data as Partial<MinimalGraphNodeData>;
+              const status = data.node?.vital.status;
+              // Idle/pending nodes need a visible neutral in the tiny map.
+              if (status === undefined || status === "idle") return "var(--rule-strong)";
+              return STATUS_DOT[status];
+            }}
+            maskColor="color-mix(in srgb, var(--color-bg) 72%, transparent)"
+          />
+        ) : null}
         <FitViewOnGrowth count={flow.nodes.length} />
         {graph.nodes.length === 0 ? <PlanningEmptyState /> : null}
       </ReactFlow>
@@ -171,15 +190,10 @@ function MinimalRunGraphInner({
 function PlanningEmptyState(): React.ReactElement {
   return (
     <div className="mh-run-graph-planning-state" aria-live="polite">
-      <div className="mh-planning-root-node">
-        <span className="mh-live mh-live-on">Planning</span>
+      <div className="mh-planning-root-node mh-working">
+        <span className="mh-live mh-live-on">Planificando</span>
         <strong>Construyendo el grafo</strong>
-        <p>ManyHands esta resolviendo el contexto del repo y esperando el primer nodo del plan.</p>
-      </div>
-      <div className="mh-planning-steps" aria-label="Estado de planning">
-        <span>Contexto del workspace</span>
-        <span>Primer nodo</span>
-        <span>Costuras candidatas</span>
+        <p>ManyHands está resolviendo el contexto del repo. El primer nodo del plan aparece acá apenas se propone.</p>
       </div>
     </div>
   );
@@ -341,9 +355,9 @@ function buildFlow(
       markerEnd: { type: MarkerType.ArrowClosed, width: 13, height: 13, color: stroke },
       style: {
         stroke,
-        strokeWidth: onPath ? 2.4 : isDependency ? 1.6 : 1.4,
+        strokeWidth: onPath ? 2.4 : isDependency ? 1.5 : 1.4,
         strokeDasharray: isDependency ? "4 5" : streaming ? "4 6" : undefined,
-        opacity: dimmed ? 0.16 : isDependency ? 0.85 : 0.6,
+        opacity: dimmed ? 0.16 : isDependency ? 0.7 : 0.55,
         transition: "opacity 200ms ease, stroke-width 200ms ease"
       }
     };
@@ -412,24 +426,30 @@ function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React
   const hasProgress = node.vital.testProgress !== undefined;
   const dotColor = STATUS_DOT[status];
   const active = status === "planning" || status === "running" || status === "verifying" || status === "repairing";
+  const isRoot = node.role === "root";
+  const attention = status === "failed" || status === "blocked" || status === "obsolete";
 
   return (
     <article
       className={[
         "mh-min-node",
+        isRoot ? "mh-min-node-root" : "",
         node.isInWavefront ? "mh-min-node-wave" : "",
         selected ? "mh-min-node-selected" : "",
         onPath && !selected ? "mh-min-node-onpath" : "",
         isNew ? "mh-min-node-enter" : "",
-        expanding ? "mh-min-node-expanding" : ""
+        expanding ? "mh-min-node-expanding" : "",
+        status === "failed" ? "mh-min-node-failed" : "",
+        status === "blocked" ? "mh-min-node-blocked" : "",
+        status === "obsolete" ? "mh-min-node-obsolete" : ""
       ]
         .filter(Boolean)
         .join(" ")}
       style={{
         // The left rail encodes the BRANCH; status lives in the dot + label below.
         ["--branch" as string]: branch,
-        borderLeftColor: selected ? "var(--accent)" : branch,
-        opacity: dimmed ? 0.34 : 1,
+        borderLeftColor: selected ? "var(--accent)" : isRoot ? "var(--rule-control)" : branch,
+        opacity: dimmed ? 0.34 : undefined,
         filter: dimmed ? "saturate(0.55)" : "none"
       }}
     >
@@ -441,15 +461,10 @@ function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React
           style={{ background: dotColor, opacity: 1 }}
           aria-hidden
         />
-        <span className="mh-min-node-role flex items-center gap-1.5" style={{ color: branch }}>
-          {roleLabel(node.role, node.depth)}
-          {status === "blocked" && <span className="text-[9px] px-1 bg-[var(--status-blocked-bg)] border border-[var(--status-blocked-border)] text-[var(--status-blocked-fg)] rounded font-semibold lowercase font-mono">bloqueado</span>}
-          {status === "failed" && <span className="text-[9px] px-1 bg-[var(--status-failed-bg)] border border-[var(--status-failed-border)] text-[var(--status-failed-fg)] rounded font-semibold lowercase font-mono">fallido</span>}
-          {status === "done" && <span className="text-[9px] px-1 bg-[var(--status-completed-bg)] border border-[var(--status-completed-border)] text-[var(--status-completed-fg)] rounded font-semibold lowercase font-mono">completado</span>}
-        </span>
+        <span className="mh-min-node-role">{roleLabel(node.role, node.depth)}</span>
       </div>
       <h3>{node.title}</h3>
-      <p>{node.vital.label}</p>
+      <p style={attention ? { color: STATUS_DOT[status], fontWeight: 500 } : undefined}>{node.vital.label}</p>
       {hasProgress ? (
         <div
           className="mh-min-node-progress"

@@ -7,7 +7,7 @@ index 1821e30e3cb572a41930abdf503ba5bab474cb09..9d9605923fd18cfae4a3d96b8c081730
  	useMemoCache
  };
 -const internals = React.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE ?? React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
-+const internals = React['__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE'] ?? React['__CLIENT_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED'] ?? React['__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED'];
++const internals = ((o) => o["__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE"] ?? o["__CLIENT_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED"] ?? o["__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED"])(React);
  const slot = internals == null ? null : "H" in internals ? {
  	get current() {
  		return internals.H;
@@ -20,7 +20,7 @@ index 3601a13f2d5e9251ab64132b19fd0110aeebf8e9..cb1f660b3ed6ce7309af363c4f3723f6
  const useEffect = (effect, deps) => inTap() ? useEffect$1(effect, deps) : React.useEffect(effect, deps);
  const useLayoutEffect = (effect, deps) => inTap() ? useEffect$1(effect, deps) : React.useLayoutEffect(effect, deps);
 -const useEffectEvent = (callback) => inTap() ? useEffectEvent$1(callback) : React.useEffectEvent(callback);
-+const useEffectEvent = (callback) => inTap() ? useEffectEvent$1(callback) : (React['useEffectEvent'] || React['experimental_useEffectEvent'] || ((fn) => fn))(callback);
++const useEffectEvent = (callback) => { const pick = (o, k) => o[k]; return inTap() ? useEffectEvent$1(callback) : (pick(React, "useEffectEvent") || pick(React, "experimental_useEffectEvent") || ((fn) => fn))(callback); };
  const use = (usable) => isResourceContext(usable) ? useResourceContext(usable) : React.use(usable);
  const useContext = (context) => isResourceContext(context) ? useResourceContext(context) : React.useContext(context);
  //#endregion

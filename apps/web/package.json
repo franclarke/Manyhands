@@ -9,8 +9,7 @@
     "start": "next start",
     "contrast:check": "node scripts/contrast-check.mjs",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint . --max-warnings=0",
-    "test": "jest"
+    "lint": "eslint . --max-warnings=0"
   },
   "dependencies": {
     "@assistant-ui/react": "^0.14.15",

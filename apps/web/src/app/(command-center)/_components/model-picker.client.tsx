@@ -8,15 +8,13 @@ interface ModelPickerProps {
   onChange: (id: string) => void;
   capability?: ModelCapability;
   selectionMode?: "model" | "executor-selection";
-  width?: number;
 }
 
 export function ModelPicker({
   value,
   onChange,
   capability,
-  selectionMode = "model",
-  width = 150
+  selectionMode = "model"
 }: ModelPickerProps): React.ReactElement {
   const options = MODEL_OPTIONS.filter((option) =>
     option.enabled && (capability === undefined || option.capabilities.includes(capability))
@@ -26,14 +24,7 @@ export function ModelPicker({
       aria-label="Modelo"
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="mh-select"
-      style={{
-        minHeight: 32,
-        height: 32,
-        padding: "0 24px 0 8px",
-        fontSize: 12,
-        width
-      }}
+      className="mh-select h-8 w-full min-w-0 text-[12px]"
     >
       {options.map((option) => (
         <option
