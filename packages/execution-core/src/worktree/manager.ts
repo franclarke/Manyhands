@@ -1,7 +1,10 @@
+import { readdir, rm } from "node:fs/promises";
+import { join } from "node:path";
+
 import { nowIso } from "@manyhands/shared";
 
 import { WorktreeError } from "../errors";
-import { execError, execLog } from "../logging/log";
+import { execError, execLog, execWarn } from "../logging/log";
 import type { GitRunner } from "../git/runner";
 import { WorktreeRecordSchema, type WorktreeKind, type WorktreeRecord } from "../types";
 
@@ -140,6 +143,58 @@ export class WorktreeManager {
       status: "cleaned",
       cleanedAt: this.now()
     });
+  }
+
+  /**
+   * Garbage-collect every worktree of a run by directory convention
+   * (`<worktreesRoot>/<runId>/*` ↔ branch `mh/<runId>/<taskId>`), used on
+   * cancel/cleanup where no in-memory records survive. Best-effort per entry —
+   * one stuck worktree must not block the rest — and finishes with
+   * `git worktree prune` plus removal of the (now empty) run directory.
+   */
+  async gcRun(runId: string): Promise<{ removed: string[]; failed: string[] }> {
+    const runRoot = join(this.worktreesRoot, runId);
+    let entries: string[];
+    try {
+      entries = await readdir(runRoot);
+    } catch {
+      return { removed: [], failed: [] }; // no worktrees for this run
+    }
+
+    const removed: string[] = [];
+    const failed: string[] = [];
+    for (const taskId of entries) {
+      const path = join(runRoot, taskId);
+      const branch = `mh/${runId}/${taskId}`;
+      try {
+        await this.git.worktreeRemove({ repoRoot: this.repoRoot, worktreePath: path, force: true });
+        removed.push(taskId);
+      } catch (error) {
+        execWarn("worktree", "gc: worktree remove failed", {
+          task: taskId,
+          path,
+          cause: error instanceof Error ? error.message : String(error)
+        });
+        failed.push(taskId);
+      }
+      try {
+        await this.git.branchDelete({ repoRoot: this.repoRoot, branch, force: true });
+      } catch {
+        // Branch may not exist (worktree died before the first commit) — fine.
+      }
+    }
+
+    try {
+      await this.git.worktreePrune(this.repoRoot);
+    } catch (error) {
+      execWarn("worktree", "gc: worktree prune failed", {
+        cause: error instanceof Error ? error.message : String(error)
+      });
+    }
+    await rm(runRoot, { recursive: true, force: true }).catch(() => undefined);
+
+    execLog("worktree", "gc completed", { runId, removed: removed.length, failed: failed.length });
+    return { removed, failed };
   }
 
   async detectUnexpectedCommit(record: WorktreeRecord): Promise<UnexpectedCommitDetection> {

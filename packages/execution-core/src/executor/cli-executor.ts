@@ -89,6 +89,7 @@ export class CliAgentExecutor implements AgentExecutor {
       useShell: this.useShell,
       timeoutMs: options.timeoutMs,
       signal: options.signal,
+      processOwnerId: options.processOwnerId,
       spawnFn: this.spawnFn,
       readInstructions: this.readInstructions,
       instructionFilePath: options.instructionFilePath,

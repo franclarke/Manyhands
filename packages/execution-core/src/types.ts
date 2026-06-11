@@ -198,6 +198,11 @@ export const AgentExecutorOptionsSchema = z.object({
   env: z.record(z.string()).optional(),
   /** Run-level cancellation: aborts the spawned process tree. Not serialized. */
   signal: z.instanceof(AbortSignal).optional(),
+  /**
+   * Owner key (the runId) under which the live subprocess is registered, so
+   * cancellation can force-kill and verify everything still running (INV-2).
+   */
+  processOwnerId: z.string().min(1).optional(),
   /** Live stdout/stderr diagnostics from the executor process. Not serialized. */
   onOutput: z.custom<(chunk: ExecutorOutputChunk) => void>((value) => typeof value === "function").optional(),
   /**

@@ -25,6 +25,8 @@ export interface GitRunner {
     baseCommit: string;
   }): Promise<void>;
   worktreeRemove(params: { repoRoot: string; worktreePath: string; force?: boolean }): Promise<void>;
+  /** Drops stale worktree bookkeeping for paths that no longer exist on disk. */
+  worktreePrune(repoRoot: string): Promise<void>;
   branchDelete(params: { repoRoot: string; branch: string; force?: boolean }): Promise<void>;
 
   head(cwd: string): Promise<string>;
@@ -78,6 +80,10 @@ export class SimpleGitRunner implements GitRunner {
     }
     args.push(params.worktreePath);
     await this.client(params.repoRoot).raw(args);
+  }
+
+  async worktreePrune(repoRoot: string): Promise<void> {
+    await this.client(repoRoot).raw(["worktree", "prune"]);
   }
 
   async branchDelete(params: { repoRoot: string; branch: string; force?: boolean }): Promise<void> {

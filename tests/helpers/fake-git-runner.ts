@@ -69,6 +69,10 @@ export class FakeGitRunner implements GitRunner {
     this.record("worktreeRemove", { ...params });
   }
 
+  async worktreePrune(repoRoot: string): Promise<void> {
+    this.record("worktreePrune", { repoRoot });
+  }
+
   async branchDelete(params: { repoRoot: string; branch: string; force?: boolean }): Promise<void> {
     this.record("branchDelete", { ...params });
   }

@@ -1,3 +1,43 @@
+# Walkthrough — Sesión 2026-06-11 (Robustez E2E, PR-2: cancelación real)
+
+> PR-2 del plan de robustez U1–U8 (diseño en
+> [`docs/design/future-frontier-tasks.md`](docs/design/future-frontier-tasks.md) §14).
+> Invariante cerrado: **INV-2 — cancelar detiene procesos hijos verificados y evita
+> escrituras posteriores**.
+
+## Qué se hizo
+
+1. **POSIX process-group kill** (`executor/kill.ts`): los executors se spawnean
+   `detached` (grupo propio) y el kill es `kill(-pid, SIGKILL)` — antes solo moría
+   el hijo directo y los forks del CLI quedaban huérfanos. Win32 sigue con
+   `taskkill /pid /t /f`.
+2. **Registry de procesos vivos** (`executor/live-process-registry.ts`): cada
+   subprocess se registra bajo `processOwnerId` (el runId), threaded por los 5
+   puntos de spawn (leaf, repair × 2, grounding, composer).
+   `killProcessTreeVerified` hace poll del PID raíz con re-kill de escalación;
+   `killOwnedProcessTrees(runId)` mata y verifica todo lo que siga vivo.
+3. **Ruta cancel reescrita**: claim de `interrupted` (INV-4) → abort cooperativo →
+   **await del kill verificado** → `WorktreeManager.gcRun(runId)` (remove por
+   convención `<repo>/.manyhands/worktrees/<runId>/*` + branch delete + `git
+   worktree prune`, best-effort) → evento `run.cancelled` durable ANTES del 200,
+   con inventario `{killedProcesses, escalatedKills, survivors, cleanedWorktrees}`.
+4. **Loop del host abort-aware**: `driveExecution(host, input, signal)` corta el
+   stream entre supersteps → outcome `aborted` (checkpoint del último superstep
+   persistido; reanudable vía restart). Además el AbortSignal ahora llega a
+   `runNode`/`repairLeaf` en el camino LangGraph — antes solo el engine mock lo
+   recibía, así que cancelar durante ejecución LangGraph no mataba nada.
+
+## Verificación
+
+- `pnpm web:typecheck`, `pnpm -F @manyhands/execution-core typecheck`, `pnpm typecheck` (raíz) ✅
+- `pnpm test` ✅ — **950 passed / 4 skipped** (baseline 939; +12 nuevos)
+- Nuevos: `execution-core-kill-verify.test.ts` (6 — procesos reales, verificación
+  post-kill, group-kill POSIX con nieto), `cancel-route.test.ts` (3 — e2e con git
+  real: worktree+branch eliminados, proceso verificado muerto antes del 200,
+  evento auditado, doble cancel → 409), `execution-host-abort.test.ts` (3).
+
+---
+
 # Walkthrough — Sesión 2026-06-11 (Robustez E2E, PR-1: mutaciones idempotentes)
 
 > PR-1 del plan de robustez U1–U8 (diseño completo en

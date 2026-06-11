@@ -353,6 +353,7 @@ export class IntegrationAgent {
         model: selection.model,
         timeoutMs: params.repair.timeoutMs,
         bypassApprovals: params.repair.bypassApprovals ?? true,
+        processOwnerId: worktree.runId,
         ...(params.signal !== undefined ? { signal: params.signal } : {}),
         onOutput: (chunk) => {
           this.traceStore.append({

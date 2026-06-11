@@ -400,7 +400,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       errorMessage: null
     };
 
-    const outcome = await driveExecution(host, alreadyStarted ? null : initialState);
+    const outcome = await driveExecution(host, alreadyStarted ? null : initialState, abortController.signal);
     await settleExecutionOutcome(runId, host, outcome, provisioned!, options);
   } catch (error) {
     console.error(`[Runner] FALLO la ejecucion del run "${runId}":`, error);
@@ -447,7 +447,7 @@ export async function resumeExecutionPipeline(
       throw new RepoNotConfiguredError(runId);
     }
 
-    createRunAbort(runId);
+    const abortController = createRunAbort(runId);
     stopBudgetWatchdog = startBudgetWatchdog(runId, run.executionConfig?.maxWallClockMs);
 
     const host = buildExecutionHost(run, provisioned, {
@@ -456,7 +456,7 @@ export async function resumeExecutionPipeline(
       predictedConflicts: derivePredictedConflicts(run)
     });
 
-    const outcome = await driveExecution(host, resumeCommand(decision));
+    const outcome = await driveExecution(host, resumeCommand(decision), abortController.signal);
     await settleExecutionOutcome(runId, host, outcome, provisioned, options);
   } catch (error) {
     console.error(`[Runner] FALLO el resume de ejecucion del run "${runId}":`, error);
@@ -489,6 +489,13 @@ async function settleExecutionOutcome(
   if (outcome.kind === "paused") {
     console.log(`[Runner] Execution paused at ${outcome.gate.gate} gate (task ${outcome.gate.taskId}).`);
     await persistExecutionPause(runId, outcome.gate);
+    return;
+  }
+
+  if (outcome.kind === "aborted") {
+    // Cancel cut the stream between supersteps; the cancel endpoint already
+    // persisted `interrupted` and owns kill/GC. Keep the partial execution.
+    console.log(`[Runner] Execution stream aborted for run ${runId}; keeping partial execution.`);
     return;
   }
 

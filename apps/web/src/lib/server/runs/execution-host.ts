@@ -52,6 +52,7 @@ import {
   resolveExecutionGraph
 } from "./execution-state";
 import { getRunRepository } from "./store";
+import { getRunAbort } from "./run-abort-registry";
 import { claimRunMutation } from "./mutation-guard";
 import type { ProvisionedRepo } from "./repo-provisioner";
 import type { RunRecord } from "./schema";
@@ -122,7 +123,7 @@ export interface ExecutionHostOptions {
   predictedConflicts?: PredictedConflictHint[];
 }
 
-interface ExecutionHost {
+export interface ExecutionHost {
   graph: ReturnType<typeof buildExecutionGraph>;
   threadConfig: { configurable: { thread_id: string }; recursionLimit: number };
   taskGraph: TaskGraph;
@@ -205,12 +206,14 @@ export function buildExecutionHost(
     const traceStore = traceStoreFactory();
     const runExecutor = makeRunExecutor(traceStore, await routerFor(current));
 
+    const signal = getRunAbort(runId)?.signal;
     const nodeResult = await runExecutor.runNode({
       graph: taskGraph,
       config: executionConfigFor(current),
       model: current.model,
       runId,
-      taskId: params.taskId
+      taskId: params.taskId,
+      ...(signal !== undefined ? { signal } : {})
     });
     if (nodeResult.kind !== "leaf") {
       throw new Error(`Expected leaf result for node ${params.taskId}, got ${nodeResult.kind}`);
@@ -240,13 +243,15 @@ export function buildExecutionHost(
     const traceStore = traceStoreFactory();
     const runExecutor = makeRunExecutor(traceStore, await routerFor(current));
 
+    const repairSignal = getRunAbort(runId)?.signal;
     const { result, worktree } = await runExecutor.repairLeaf({
       graph: taskGraph,
       config: executionConfigFor(current),
       model: current.model,
       runId,
       taskId: params.taskId,
-      validationOutput: params.validationOutput
+      validationOutput: params.validationOutput,
+      ...(repairSignal !== undefined ? { signal: repairSignal } : {})
     });
 
     publishRunEvent(runId, {
@@ -276,6 +281,7 @@ export function buildExecutionHost(
     const traceStore = traceStoreFactory();
     const runExecutor = makeRunExecutor(traceStore);
 
+    const integrateSignal = getRunAbort(runId)?.signal;
     const nodeResult = await runExecutor.runNode({
       graph: taskGraph,
       config: executionConfigFor(current),
@@ -283,6 +289,7 @@ export function buildExecutionHost(
       runId,
       taskId: params.compositeTaskId,
       childResults: params.childResults,
+      ...(integrateSignal !== undefined ? { signal: integrateSignal } : {}),
       ...(options.predictedConflicts !== undefined ? { predictedConflicts: options.predictedConflicts } : {})
     });
     if (nodeResult.kind !== "integration") {
@@ -394,16 +401,21 @@ export async function resetExecutionThread(runId: string): Promise<void> {
 
 export type ExecutionDriveOutcome =
   | { kind: "paused"; gate: NonNullable<RunRecord["pendingDecision"]> }
+  | { kind: "aborted" }
   | { kind: "finished"; status: "completed" | "failed"; errorMessage?: string };
 
 /**
- * Stream the graph until it finishes or suspends on a gate interrupt. On
- * interrupt, projects the gate into the RunRecord (pendingDecision + the
- * human-readable pendingQuestion the DecisionChannel renders) and pauses.
+ * Stream the graph until it finishes, suspends on a gate interrupt, or the
+ * run is aborted. On interrupt, projects the gate into the RunRecord
+ * (pendingDecision + the human-readable pendingQuestion the DecisionChannel
+ * renders) and pauses. On abort the stream is cut between supersteps — the
+ * checkpoint of the last completed superstep is already persisted, so the run
+ * stays resumable via restart.
  */
 export async function driveExecution(
   host: ExecutionHost,
-  input: Record<string, unknown> | Command | null
+  input: Record<string, unknown> | Command | null,
+  signal?: AbortSignal
 ): Promise<ExecutionDriveOutcome> {
   // The runtime accepts state input, a resume Command, or null (continue);
   // the generated generics are narrower than the runtime contract.
@@ -412,6 +424,13 @@ export async function driveExecution(
     void _chunk;
     // Updates are persisted by the deps themselves; the stream is consumed to
     // drive the graph to its next suspension point.
+    if (signal?.aborted === true) {
+      await (stream as unknown as { return?: () => Promise<unknown> }).return?.();
+      return { kind: "aborted" };
+    }
+  }
+  if (signal?.aborted === true) {
+    return { kind: "aborted" };
   }
 
   const state = await host.graph.getState(host.threadConfig);

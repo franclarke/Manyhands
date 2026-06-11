@@ -655,6 +655,19 @@ export interface RunMetricsReadyPayload {
 export interface RunCompletedPayload {
   status: RunOutcome;
 }
+/**
+ * Audited cancellation (INV-2/INV-6): emitted by the cancel endpoint AFTER the
+ * run's process trees were force-killed and verified, with the kill and
+ * worktree-GC inventory. `survivors` non-empty means a tree outlived the
+ * verified kill and the user must be warned.
+ */
+export interface RunCancelledPayload {
+  killedProcesses: number;
+  escalatedKills: number;
+  survivors: number[];
+  cleanedWorktrees: string[];
+  gcFailures: string[];
+}
 
 export interface DecisionRaisedPayload {
   decisionId: DecisionId;
@@ -712,6 +725,7 @@ export interface RunEventPayloads {
   "run.evidence.ready": RunEvidenceReadyPayload;
   "run.metrics.ready": RunMetricsReadyPayload;
   "run.completed": RunCompletedPayload;
+  "run.cancelled": RunCancelledPayload;
   // Cross-cutting (human decisions)
   "decision.raised": DecisionRaisedPayload;
   "decision.resolved": DecisionResolvedPayload;
@@ -758,6 +772,7 @@ export const RUN_EVENT_TYPES = [
   "run.evidence.ready",
   "run.metrics.ready",
   "run.completed",
+  "run.cancelled",
   "decision.raised",
   "decision.resolved"
 ] as const satisfies readonly RunEventType[];

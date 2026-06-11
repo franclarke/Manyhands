@@ -90,6 +90,8 @@ export interface RunNodeExecutionParams {
   cleanupWorktrees?: boolean;
   /** Plan-time conflict foresight, threaded into the Composer's repair prompt. */
   predictedConflicts?: PredictedConflictHint[];
+  /** Run-level cancellation, threaded into the executor subprocess. */
+  signal?: AbortSignal;
 }
 
 export type RunNodeExecutionResult =
@@ -377,7 +379,8 @@ export class RunExecutor {
           runId,
           config,
           defaultSelection: resolveLegacyModelSelection(params.model),
-          worktrees
+          worktrees,
+          ...(params.signal !== undefined ? { signal: params.signal } : {})
         });
         return { kind: "leaf", result, worktrees };
       }
@@ -435,6 +438,7 @@ export class RunExecutor {
         compositeTaskId: node.id,
         worktree,
         childResults,
+        ...(params.signal !== undefined ? { signal: params.signal } : {}),
         repair: {
           selection: repairSelection,
           timeoutMs: config.integrationTimeoutMs
@@ -472,6 +476,8 @@ export class RunExecutor {
     taskId: string;
     runId?: string;
     validationOutput: string;
+    /** Run-level cancellation, threaded into the repair subprocess. */
+    signal?: AbortSignal;
   }): Promise<{ result: AgentExecutionResult; worktree: WorktreeRecord }> {
     const { graph, config, taskId } = params;
     const runId = params.runId ?? graph.planId;
@@ -520,6 +526,8 @@ export class RunExecutor {
       model: selection.model,
       timeoutMs: config.leafTimeoutMs,
       bypassApprovals: true,
+      processOwnerId: runId,
+      ...(params.signal !== undefined ? { signal: params.signal } : {}),
       onOutput: (chunk) => {
         this.traceStore.append({ type: "executor_output", actor: "agent", taskId: node.id, payload: chunk });
       },
@@ -673,6 +681,7 @@ export class RunExecutor {
       model: executorSelection.model,
       timeoutMs: config.leafTimeoutMs,
       bypassApprovals: true,
+      processOwnerId: runId,
       ...(args.signal !== undefined ? { signal: args.signal } : {}),
       onOutput: (chunk) => {
         this.traceStore.append({

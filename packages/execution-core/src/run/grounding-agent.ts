@@ -142,7 +142,8 @@ export class GroundingAgent {
       instructionFilePath,
       model: params.model,
       timeoutMs: this.executorTimeoutMs,
-      bypassApprovals: true
+      bypassApprovals: true,
+      processOwnerId: params.runId
     });
 
     if (outcome.exitCode !== 0 || outcome.timedOut) {

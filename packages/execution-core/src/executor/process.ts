@@ -1,37 +1,18 @@
-import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { basename } from "node:path";
 
 import { execError, execLog, execWarn } from "../logging/log";
 import type { ExecutorOutputChunk } from "../types";
+import { killProcessTree, type SpawnFn } from "./kill";
+import { registerLiveProcess, unregisterLiveProcess } from "./live-process-registry";
 import type { ExecutorRunOutcome } from "./types";
 
-export type SpawnFn = (
-  command: string,
-  args: readonly string[],
-  options: SpawnOptions
-) => ChildProcess;
+export { killProcessTree, type SpawnFn } from "./kill";
 
 /** Conventional exit codes used when the process never produced its own. */
 export const TIMEOUT_EXIT_CODE = 124;
 export const SPAWN_FAILURE_EXIT_CODE = 127;
 /** Mirrors the shell convention for "terminated by signal" — used on abort. */
 export const ABORTED_EXIT_CODE = 130;
-
-/**
- * Kills an executor process and its descendants. On Windows a shelled CLI shim
- * often runs under cmd.exe/PowerShell, so child.kill only reaches the shell.
- */
-export function killProcessTree(child: ChildProcess, spawnFn: SpawnFn): void {
-  if (process.platform === "win32" && typeof child.pid === "number") {
-    try {
-      spawnFn("taskkill", ["/pid", String(child.pid), "/t", "/f"], { stdio: "ignore" });
-      return;
-    } catch {
-      // Fall through to a best-effort signal.
-    }
-  }
-  child.kill("SIGKILL");
-}
 
 export interface SpawnExecutorParams {
   binaryPath: string;
@@ -42,6 +23,11 @@ export interface SpawnExecutorParams {
   timeoutMs: number;
   /** Aborts the run: kills the process tree and resolves with an aborted outcome. */
   signal?: AbortSignal | undefined;
+  /**
+   * Registers the live child under this owner (the runId) so cancellation can
+   * force-kill and VERIFY everything still running for the run (INV-2).
+   */
+  processOwnerId?: string | undefined;
   spawnFn: SpawnFn;
   readInstructions: (filePath: string) => Promise<string>;
   instructionFilePath: string;
@@ -76,6 +62,7 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
     useShell,
     timeoutMs,
     signal,
+    processOwnerId,
     readInstructions,
     instructionFilePath,
     logScope,
@@ -111,8 +98,17 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
       cwd,
       env: { ...process.env, ...(env ?? {}) },
       stdio: ["pipe", "pipe", "pipe"],
-      shell: useShell
+      shell: useShell,
+      // POSIX: own process group, so killProcessTree's kill(-pid) reaches every
+      // descendant. Windows ignores detached-for-groups; taskkill /t covers it.
+      detached: process.platform !== "win32"
     });
+
+    if (processOwnerId !== undefined) {
+      registerLiveProcess(processOwnerId, child);
+      // 'close' fires on every exit path (clean, timeout-kill, abort-kill).
+      child.once("close", () => unregisterLiveProcess(processOwnerId, child));
+    }
 
     let stdout = "";
     let stderr = "";

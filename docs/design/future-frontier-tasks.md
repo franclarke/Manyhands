@@ -217,9 +217,37 @@ un gate re-acuñado.
 
 ---
 
+## 14. Cancelación real: kill verificado de árboles de procesos + GC `[x]` — 2026-06-11
+
+**Hallazgo.** El cancel era cooperativo: `abortRun()` disparaba el AbortSignal, pero
+(a) en POSIX solo moría el hijo directo (los forks del CLI quedaban huérfanos
+quemando cuota), (b) nadie verificaba que el kill aterrizara, (c) el signal ni
+siquiera llegaba a `runNode`/`repairLeaf` en el camino LangGraph (solo al engine
+mock), (d) los worktrees del run cancelado sobrevivían, y (e) "cancelado" se
+respondía antes de que nada muriera.
+
+**Diseño.** PR-2 del plan de robustez (INV-2):
+- `executor/kill.ts`: en POSIX los executors se spawnean `detached` (process
+  group propio) y el kill es `kill(-pid, SIGKILL)`; win32 sigue con
+  `taskkill /pid /t /f`.
+- `executor/live-process-registry.ts`: cada subprocess se registra bajo su
+  `processOwnerId` (el runId, threaded por leaf/repair/grounding/composer).
+  `killProcessTreeVerified` hace poll del PID raíz (~3s) con re-kill de
+  escalación; `killOwnedProcessTrees(runId)` mata y verifica todo lo vivo.
+- La ruta `cancel` reclama `interrupted` (claim INV-4), dispara el abort,
+  **espera la verificación del kill**, corre `WorktreeManager.gcRun(runId)`
+  (remove por convención de directorio + branch delete + `git worktree prune`,
+  best-effort por entrada) y persiste el evento `run.cancelled` (durable antes
+  del 200) con el inventario kill/GC.
+- `driveExecution(host, input, signal)` corta el stream entre supersteps →
+  outcome `aborted` (el checkpoint del último superstep completo ya está
+  persistido; el run queda reanudable vía restart).
+
+---
+
 ## Plan de robustez E2E (U1–U8) — secuencia aprobada 2026-06-11
 
-PR-1 `[x]` (§13) → PR-2 cancel real con kill verificado + GC → PR-3 reconciliador de
+PR-1 `[x]` (§13) → PR-2 `[x]` (§14) → PR-3 reconciliador de
 mundo físico + checkpoints corruptos detectados → PR-4 lock por repo + preflight →
 PR-5 fallas recuperables → gates (planning degradado, replan-question) → PR-6
 presupuesto tokens/costo por wave → PR-7 SSE Last-Event-ID + replay testeado →
@@ -228,8 +256,8 @@ PR-8 visor de evidencia. Detalle completo en el plan de sesión
 
 ## Próximas fronteras (pendientes, en orden de valor)
 
-- `[ ]` **Kill duro de subprocesos** al abortar un run (hoy es cooperativo +
-  taskkill en timeout).
+- `[x]` **Kill duro de subprocesos** al abortar un run — resuelto en §14
+  (kill verificado por process-group + registry por runId + GC de worktrees).
 - `[ ]` **Visor de evidencia enriquecido** en el panel de foco (diffs colapsables,
   logs con resaltado, widget de `agent_status` en vivo) sobre
   `GET /api/runs/[id]/artifacts?ref=...`.

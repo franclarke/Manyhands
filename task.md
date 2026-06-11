@@ -16,13 +16,14 @@ Invariantes INV-1…INV-7 y diseño por PR: `docs/design/future-frontier-tasks.m
 - [x] Tests: `mutation-concurrency.test.ts` (9) + `resume-route-concurrency.test.ts` (5)
 - [x] Typechecks (web, execution-core, raíz) + suite completa verde (939/3 skipped)
 
-## PR-2 — Cancelación real con kill verificado y GC (U1, INV-2) `[ ]`
-- [ ] POSIX process-group kill (`detached` + `kill(-pid)`); win32 ya usa `taskkill /t /f`
-- [ ] Verificación post-kill con reintento y traza `process.kill.escalated`
-- [ ] `LiveProcessRegistry` por runId; cancel espera la verificación antes de responder
-- [ ] Loop del host abort-aware (corta el stream entre chunks; checkpoint del último superstep queda)
-- [ ] GC de worktrees del run cancelado + `git worktree prune` + traza `cancel.gc.completed`
-- [ ] Tests: kill-verify (proceso que ignora señales), cancel mid-wave (mtime scan), reanudable post-cancel
+## PR-2 — Cancelación real con kill verificado y GC (U1, INV-2) `[x]`
+- [x] POSIX process-group kill (`detached: true` + `kill(-pid)` en `executor/kill.ts`); win32 sigue con `taskkill /t /f`
+- [x] `killProcessTreeVerified`: poll del PID raíz, re-kill de escalación, outcome dead/escalated/survived
+- [x] `live-process-registry.ts`: registro por runId vía `processOwnerId` (threaded por executor/grounding/composer); cancel espera `killOwnedProcessTrees` antes de responder
+- [x] Loop del host abort-aware (`driveExecution(host, input, signal)` → outcome `aborted`); signal ahora llega a `runNode`/`repairLeaf` en el camino LangGraph (antes solo al engine mock)
+- [x] `WorktreeManager.gcRun(runId)`: GC por convención de directorio + branch delete + `git worktree prune` (nuevo en GitRunner)
+- [x] Evento auditado `run.cancelled` (durable antes del 200) con inventario kill/GC; respuesta con `cancellation`
+- [x] Tests: `execution-core-kill-verify.test.ts` (6, procesos reales, group-kill POSIX), `cancel-route.test.ts` (3, git real e2e), `execution-host-abort.test.ts` (3)
 
 ## PR-3 — Reconciliador de mundo físico + checkpoints corruptos (U3, INV-3) `[ ]`
 - [ ] `world-reconciler.ts`: inventario físico (worktrees/branches/locks/baseCommit) vs lógico (checkpoint), resolución por hoja (casos a–d)
