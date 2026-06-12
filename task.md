@@ -46,6 +46,11 @@ Invariantes INV-1…INV-7 y diseño por PR: `docs/design/future-frontier-tasks.m
 - [x] U2: pregunta del decomposer durante replan → `pendingReplan` (step-cache + answers) + gate; `resumeReplanWithAnswer` reclama (INV-4), folda la respuesta y re-entra el replan
 - [x] Barrido INV-5 en ejecución: excepción no clasificable con checkpoint → `interrupted` reanudable (no `failed`); `failed` queda solo para precondiciones y abort explícito
 - [x] Tests: planning-graph degraded (3), `replan-question-gate.test.ts` (4)
-## PR-6 — Presupuesto tokens/costo por wave con budgetGate (U5) `[ ]`
+## PR-6 — Presupuesto tokens/costo por wave con budgetGate (U5) `[x]`
+- [x] `ExecutionConfigSchema` += `maxTokensTotal` / `maxCostUsd`; estado del grafo: `budgetLimits` + `finishPartial`
+- [x] `computeBudgetSpend` (usage reportado de hojas + repairs del composer); chequeo en `routeFrontier` ENTRE waves (nunca corta una hoja en vuelo)
+- [x] `budgetGate` (interrupt-first): `extend_budget` (nuevos límites o lift) | `finish_partial` (integra solo lo completo, cierre explícito) | `abort_run`
+- [x] Proyección web: gate `budget_exceeded` en pendingDecision (spentTokens/spentUsd/pendingTasks), `BUDGET_GATE_OPTIONS`, decisionFromAnswer/isResumeDecision
+- [x] Tests: execution-graph budget (4 — corte entre waves, extend completa, partial sin integrar incompletos, abort, sin límites = sin cambios)
 ## PR-7 — SSE Last-Event-ID + backoff + replay testeado (U8, INV-7) `[ ]`
 ## PR-8 — Visor de evidencia usable (U4) `[ ]`

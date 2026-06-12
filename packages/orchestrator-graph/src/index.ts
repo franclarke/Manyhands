@@ -54,6 +54,8 @@ export {
   makeRouteFrontier,
   makeExecuteLeafNode,
   leafGateNode,
+  budgetGateNode,
+  computeBudgetSpend,
   routeIntegration,
   makeIntegrateNextCompositeNode,
   conflictGateNode,
@@ -67,7 +69,10 @@ export type {
   LeafExecutionInput,
   LeafGateDecision,
   ConflictGateDecision,
+  BudgetGateDecision,
   ResumeDecision,
   LeafValidationInterrupt,
-  MergeConflictInterrupt
+  MergeConflictInterrupt,
+  BudgetExceededInterrupt,
+  BudgetSpend
 } from "./nodes/execution-nodes.js";

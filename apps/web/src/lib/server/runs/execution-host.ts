@@ -33,6 +33,7 @@ import {
   JsonFileCheckpointSaver,
   buildExecutionGraph,
   executionRecursionLimit,
+  type BudgetExceededInterrupt,
   type LeafExecutionInput,
   type LeafValidationInterrupt,
   type MergeConflictInterrupt,
@@ -84,12 +85,23 @@ export const CONFLICT_GATE_OPTIONS = [
   { label: "Abortar run", action: "abort_run" }
 ] as const;
 
+export const BUDGET_GATE_OPTIONS = [
+  { label: "Extender presupuesto y continuar", action: "extend_budget" },
+  { label: "Cerrar parcial (integrar lo completo)", action: "finish_partial" },
+  { label: "Abortar run", action: "abort_run" }
+] as const;
+
 /** Map a human answer (gate option label or raw action id) to a ResumeDecision. */
 export function decisionFromAnswer(
   gate: NonNullable<RunRecord["pendingDecision"]>["gate"],
   answer: string
 ): ResumeDecision | null {
-  const options = gate === "leaf_validation_failed" ? LEAF_GATE_OPTIONS : CONFLICT_GATE_OPTIONS;
+  const options =
+    gate === "leaf_validation_failed"
+      ? LEAF_GATE_OPTIONS
+      : gate === "budget_exceeded"
+        ? BUDGET_GATE_OPTIONS
+        : CONFLICT_GATE_OPTIONS;
   const match = options.find((option) => option.label === answer || option.action === answer);
   if (match === undefined || match.action === "replan_subtree") {
     // replan_subtree is handled out-of-band (see isReplanRequest), never as a
@@ -106,6 +118,8 @@ export function isResumeDecision(value: unknown): value is ResumeDecision {
     action === "retry_repair" ||
     action === "accept_failing" ||
     action === "accept_conflict" ||
+    action === "extend_budget" ||
+    action === "finish_partial" ||
     action === "abort_run"
   );
 }
@@ -437,6 +451,7 @@ export async function driveExecution(
   const interrupt = state.tasks.flatMap((task) => task.interrupts)[0]?.value as
     | LeafValidationInterrupt
     | MergeConflictInterrupt
+    | BudgetExceededInterrupt
     | undefined;
 
   if (interrupt !== undefined) {
@@ -455,7 +470,7 @@ export async function driveExecution(
 }
 
 function gateFromInterrupt(
-  interrupt: LeafValidationInterrupt | MergeConflictInterrupt
+  interrupt: LeafValidationInterrupt | MergeConflictInterrupt | BudgetExceededInterrupt
 ): NonNullable<RunRecord["pendingDecision"]> {
   // Unique per suspension: a resume carrying this id can only resolve THIS
   // interruption (INV-4). A re-suspension of the same task mints a fresh id,
@@ -466,6 +481,16 @@ function gateFromInterrupt(
       gateId: mintGateId("leaf_validation_failed", interrupt.taskId),
       taskId: interrupt.taskId,
       validationOutput: interrupt.validationOutput
+    };
+  }
+  if (interrupt.type === "budget_exceeded") {
+    return {
+      gate: "budget_exceeded",
+      gateId: mintGateId("budget_exceeded", interrupt.runId),
+      taskId: interrupt.runId,
+      spentTokens: interrupt.spentTokens,
+      spentUsd: interrupt.spentUsd,
+      pendingTasks: interrupt.pendingTasks
     };
   }
   return {
@@ -486,11 +511,19 @@ export async function persistExecutionPause(
   runId: string,
   gate: NonNullable<RunRecord["pendingDecision"]>
 ): Promise<void> {
-  const isLeafGate = gate.gate === "leaf_validation_failed";
-  const options = (isLeafGate ? LEAF_GATE_OPTIONS : CONFLICT_GATE_OPTIONS).map((option) => option.label);
-  const question = isLeafGate
-    ? `La validación de la tarea "${gate.taskId}" falló tras la auto-reparación. ¿Cómo querés continuar?`
-    : `La integración de "${gate.taskId}" falló con conflictos que el Composer no pudo resolver. ¿Cómo querés continuar?`;
+  const optionsFor = {
+    leaf_validation_failed: LEAF_GATE_OPTIONS,
+    merge_conflict: CONFLICT_GATE_OPTIONS,
+    budget_exceeded: BUDGET_GATE_OPTIONS
+  } as const;
+  const options = optionsFor[gate.gate].map((option) => option.label);
+  const question =
+    gate.gate === "leaf_validation_failed"
+      ? `La validación de la tarea "${gate.taskId}" falló tras la auto-reparación. ¿Cómo querés continuar?`
+      : gate.gate === "budget_exceeded"
+        ? `El run alcanzó su presupuesto (${Math.round(gate.spentTokens ?? 0)} tokens / $${(gate.spentUsd ?? 0).toFixed(2)}). ` +
+          `Quedan ${gate.pendingTasks?.length ?? 0} tareas pendientes. ¿Cómo querés continuar?`
+        : `La integración de "${gate.taskId}" falló con conflictos que el Composer no pudo resolver. ¿Cómo querés continuar?`;
 
   await getRunRepository().update(runId, (current) => ({
     ...current,

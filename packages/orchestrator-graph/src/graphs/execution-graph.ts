@@ -19,6 +19,7 @@
 import { StateGraph, END, START, MemorySaver } from "@langchain/langgraph";
 import { RunStateAnnotation, type RunState } from "../state.js";
 import {
+  budgetGateNode,
   conflictGateNode,
   integrationJoinNode,
   leafGateNode,
@@ -62,13 +63,14 @@ export function buildExecutionGraph(config: ExecutionGraphConfig) {
     .addNode("waveJoin", waveJoinNode)
     .addNode("executeLeaf", async (input: LeafExecutionInput) => executeLeafNode(input))
     .addNode("leafGate", leafGateNode, { ends: ["executeLeaf", "waveJoin", END] })
+    .addNode("budgetGate", budgetGateNode, { ends: ["waveJoin", END] })
     .addNode("integrationJoin", integrationJoinNode)
     .addNode("integrateNextComposite", integrateNextCompositeNode)
     .addNode("conflictGate", conflictGateNode, { ends: ["integrationJoin", END] })
     .addNode("runValidation", runValidationNode)
     .addEdge(START, "prepare")
     .addEdge("prepare", "waveJoin")
-    .addConditionalEdges("waveJoin", routeFrontier, ["executeLeaf", "leafGate", "integrationJoin"])
+    .addConditionalEdges("waveJoin", routeFrontier, ["executeLeaf", "leafGate", "budgetGate", "integrationJoin"])
     .addEdge("executeLeaf", "waveJoin")
     .addConditionalEdges("integrationJoin", routeIntegration, [
       "conflictGate",

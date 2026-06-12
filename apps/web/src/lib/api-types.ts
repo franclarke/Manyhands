@@ -169,12 +169,15 @@ export interface RunResponse {
     version: number;
     /** Suspended execution gate awaiting a decision; echo `gateId` back on resume. */
     pendingDecision?: {
-      gate: "leaf_validation_failed" | "merge_conflict";
+      gate: "leaf_validation_failed" | "merge_conflict" | "budget_exceeded";
       gateId?: string | undefined;
       taskId: string;
       validationOutput?: string | undefined;
       conflictFiles?: string[] | undefined;
       integrationStatus?: string | undefined;
+      spentTokens?: number | undefined;
+      spentUsd?: number | undefined;
+      pendingTasks?: string[] | undefined;
     };
     pausedDuring?: "generating" | "running";
     interruptedDuring?: "generating" | "running";

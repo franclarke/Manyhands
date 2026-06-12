@@ -1,124 +1,109 @@
 # ManyHands
 
-ManyHands es un sistema de orquestación de agentes LLM para desarrollo de software. Toma una feature descrita en lenguaje natural, la descompone recursivamente en un DAG jerárquico de subtareas con costuras de interfaz explícitas, ejecuta cada hoja en su propio git worktree aislado con Gemini CLI, e integra los resultados de abajo hacia arriba con cherry-pick.
+ManyHands es un sistema de orquestación de agentes LLM para desarrollo de
+software. Toma una feature descrita en lenguaje natural, la descompone en un DAG
+jerárquico de tareas con contratos de interfaz explícitos, ejecuta hojas en git
+worktrees aislados con agentes CLI headless, e integra los resultados de abajo
+hacia arriba con cherry-pick y reparación semántica.
 
-No es un agente de código. Es la capa que coordina agentes: decide qué trabajo existe, qué dependencias hay entre partes, qué archivos puede tocar cada agente, cómo se ejecutan en paralelo sin colisionar, y cómo se valida e integra cada resultado.
+No es un coding agent. Es la capa que coordina agentes: decide qué trabajo
+existe, qué dependencias hay entre partes, qué archivos puede tocar cada agente,
+cómo se supervisa el trabajo paralelo y cómo se valida e integra cada resultado.
 
 ![Command Center: prompt de feature, configuración del run](docs/img/img1.png)
 
 ![Run workspace: DAG interactivo con inspector](docs/img/img2.png)
 
-> **Actualización 2026-06-07.** El rediseño agent-first ya es el camino default
-> de `/runs/[runId]`. La UI legacy queda como rollback temporal con
-> `?model=legacy`. La fuente viva del rediseño está en [`docs/design/`](docs/design/).
-
 ---
 
-## El producto
+## Estado Actual
 
-La cara visible es una web app en Next.js orientada a inspección y control de runs.
+El foco vigente del repositorio es terminar el producto y estabilizar la sala de
+control agent-first. La estrategia de evaluación académica o de benchmarks queda
+deliberadamente fuera del plan actual: se diseñará desde cero cuando el producto
+esté completo y sea claro qué calidad queremos medir.
 
-- **`/`** — Command Center: describir la feature, elegir workspace (repo local), modelo y nivel de granularidad.
-- **`/workspaces`** — configurar los repositorios locales donde ManyHands va a ejecutar.
-- **`/runs/[runId]`** — sala de control agent-first del run: canal de decisiones,
-  superficie viva del DAG, foco on-demand, timeline secundaria y evidencia final.
-  El legacy canvas/board/timeline queda disponible con `?model=legacy`.
+Consecuencias prácticas:
 
-El flujo principal:
+- No hay una benchmark suite activa.
+- No existe un directorio `benchmarks/` en el árbol actual.
+- Las rutas antiguas de Lab/Replay y los benchmarks determinísticos
+  `mock-v0`/`conflict-v0` fueron retirados.
+- Los ADRs viejos sobre evaluación, Lab Mode y granularidad experimental son
+  historia del proyecto, no instrucciones vigentes.
+- El nombre `GranularityVector` sigue existiendo en el código por compatibilidad,
+  pero hoy debe leerse como métricas operativas del run, no como metodología de
+  tesis cerrada.
+
+## Producto
+
+La cara visible es una web app en Next.js orientada a inspección y control de
+runs.
+
+- `/` — Command Center: describir la feature, elegir workspace, modelo y nivel de
+  granularidad.
+- `/workspaces` — configurar repositorios locales donde ManyHands puede trabajar.
+- `/runs/[runId]` — sala de control agent-first: canal de decisiones, superficie
+  del DAG, foco on-demand, evidencia operativa y stream de eventos.
+- `/runs/proto/[fixture]` — prototipos con golden fixtures del modelo de UI. Son
+  fixtures de regresión de eventos, no benchmarks de calidad.
+
+Flujo principal:
 
 1. El usuario describe la feature y crea el run.
-2. El **`GeminiRecursiveDecomposer`** genera el DAG con un `sharedInterface` por nivel de descomposición (las firmas TypeScript que los hijos paralelos deben respetar).
-3. El usuario revisa el plan en la web app — puede editar nodos, regenerar subárboles, ajustar dependencias — y lo aprueba.
-4. El **`RunExecutor`** despacha hojas en batches/waves (default
-   `maxParallel = 6`), cada una en su propio `git worktree`.
-5. Por hoja: el **`FileSystemContextPacker`** arma el prompt con los archivos
-   relevantes y las interfaces consumidas; **`GeminiCliExecutor`** invoca Gemini
-   headless (`--approval-mode yolo`); el **`ScopeChecker`** hard-falla
-   `forbiddenPaths` y registra out-of-scope advisory; el **`ResultRecorder`**
-   captura `git diff HEAD` y el orquestador hace el commit; luego
-   `leafValidationCommands` pueden marcar la hoja como `validation_failed` y
-   bloquear su integración.
-6. El **`IntegrationAgent`** integra los hijos de cada composite con cherry-pick. Si hay conflicto, hace un repair semántico con Gemini que recibe el goal del padre, el `sharedInterface` canónico y la intención de cada hijo.
-7. Al final del run, se computa el **`GranularityVector`** (17 métricas: 9 pre-ejecución sobre la estructura del DAG, 8 post-ejecución sobre los resultados).
+2. El `GeminiRecursiveDecomposer` genera un `TaskGraph` con contratos e
+   interfaces compartidas entre tareas.
+3. El usuario revisa el plan y lo aprueba.
+4. El orquestador despacha hojas en worktrees aislados.
+5. Cada hoja ejecuta un agente CLI, se valida con scope/tests, y el orquestador
+   captura `git diff HEAD` como fuente de verdad.
+6. El Composer integra resultados con cherry-pick y repair semántico si hay
+   conflictos.
+7. El run persiste eventos, evidencias, diffs y métricas operativas.
 
-Una explicación más detallada de cada componente está en [`docs/system/`](docs/system/).
+## Arquitectura Del Monorepo
 
-## La tesis (en standby como formulación)
-
-ManyHands nace como tesis de Ingeniería en Sistemas. La pregunta de investigación que orientó el diseño es: **¿puede una arquitectura de orquestación basada en descomposición recursiva con costuras de interfaz explícitas, ejecución paralela aislada e integración consciente del contrato mejorar la coordinación, trazabilidad y robustez de agentes LLM de software frente a estrategias monolíticas o paralelas naive?**
-
-La formulación final de la tesis está aún en revisión. Lo que ya está definido y construido son los dos artefactos que el sistema aporta como contribución técnica:
-
-- **Artifact 1 — Decomposer recursivo interface-aware.** En vez de descomponer en una sola llamada al LLM con un objetivo de cantidad de nodos, cada nodo se evalúa localmente con una rúbrica de atomicidad, y cuando se descompone produce un `sharedInterface`: las definiciones de tipos y firmas que los hijos paralelos deben honrar. Esto convierte el paralelismo entre agentes en un problema de contrato, no de adivinanza.
-- **Artifact 2 — Composer contract-aware.** Cuando el cherry-pick produce un conflicto, el repair semántico recibe el `sharedInterface` canónico del composite, no solo el texto del conflicto. Los conflictos se resuelven por referencia al contrato, no por merge textual.
-
-La narrativa completa de la evolución del proyecto (incluyendo decisiones que ya no son vigentes) está en [`docs/thesis/project-evolution.md`](docs/thesis/project-evolution.md).
-
-## Estado actual
-
-El pipeline está cableado de punta a punta y los dos artifacts están implementados. Lo que aún **no existe** es la evidencia empírica: el sistema funciona con mocks/E2E estructurales, pero la matriz de experimentos con agentes Gemini reales sobre las fixtures todavía no se corrió. La metodología experimental original (`G3/G6/G9` como targets de profundidad de árbol y `mock-v0`/`conflict-v0` como benchmarks deterministas) fue abandonada — la granularidad se redefinió como **agresividad de descomposición** (`low | medium | high`) que sesga el umbral de atomicidad por nodo, no la forma del árbol. El diseño del nuevo Lab está pendiente.
-
-> **Rediseño agent-first (capa UI + orquestación).** La dirección vigente para la
-> experiencia y la orquestación está en [`docs/design/`](docs/design/): una sala
-> de control agent-first sobre un event log append-only + estado derivado
-> (reducer + selectores), con costuras como contratos, verify-loop/foundation
-> visible y freshness. La UI legacy (DAG viewer con vistas canvas/board/timeline
-> pares, consola CLI cruda) no debe expandirse. No renegocia D1–D10.
-
-### Verificación rápida
-
-```bash
-pnpm test          # suite completa
-pnpm build         # todos los packages
-pnpm web:typecheck # 0 errores
-```
-
-## Arquitectura del monorepo
-
-```
+```text
 apps/
-  web/                  Next.js App Router — Command Center, Run workspace
+  web/                  Next.js App Router — Command Center y Run workspace
 
 packages/
   task-graph/           TaskNode, TaskGraph, DAG, validación, topo sort
-  contracts/            AgentTaskContract V1+V2, InterfaceContract
-  decomposer/           GeminiRecursiveDecomposer (default) + baselines Anthropic
-  execution-core/       Pipeline completo: worktree, executor, scope, recorder,
-                        integration, scheduler, granularity, RunExecutor
-  scheduler/            sequential, naive, risk-aware
-  run-store/            RunSnapshot, patches, JSON persistence
-  trace-store/          TraceEvent (planning + execution)
-  conflict-risk/        Predicción de conflictos entre hojas
-  repository-index/     Índice estructural del repo (alimenta conflict-risk)
+  contracts/            AgentTaskContract, InterfaceContract, scopes
+  decomposer/           Decomposición recursiva interface-aware
+  orchestrator-graph/   StateGraphs de planning/ejecución y checkpoints
+  execution-core/       Worktrees, executors, scope, recorder, integration
+  scheduler/            Waves y políticas de selección de tareas
+  run-store/            RunSnapshot, patches, persistencia JSON
+  trace-store/          TraceEvent de planning y ejecución
+  conflict-risk/        Predicción de riesgo entre hojas
+  repository-index/     Índice estructural del repo
   shared/               EntityId, IsoTimestamp, helpers
-  core/                 Barrel legacy — usar packages específicos para código nuevo
-
-benchmarks/
-  expression-calculator/ Fixture con costuras reales (tokenize → parse → evaluate)
-  task-manager-api/      Fixture REST API (PUT/DELETE como stubs)
+  core/                 Barrel legacy — no usar para código nuevo
 
 docs/
-  system/               Documentación de cada componente del sistema
-  adr/                  29 ADRs — registro histórico de decisiones
-  design/               Diseño detallado de los artifacts de tesis
-  thesis/               Narrativa del proyecto
-  development/          Arquitectura, plan de tesis, visión de producto y UI
-  DECISIONS.md          Síntesis de decisiones cerradas (referencia para agentes)
+  system/               Cómo funciona cada componente actual
+  design/               Rediseño agent-first y modelo operativo
+  development/          Visión de producto y arquitectura viva
+  adr/                  Registro histórico de decisiones
+  DECISIONS.md          Síntesis de decisiones vigentes
 ```
 
-Dirección de dependencias: `apps → packages específicos → shared`. `@manyhands/core` queda como barrel legacy que la web app aún consume para tipos, pero el código nuevo no debe depender de él.
+Dirección de dependencias: `apps → packages específicos → shared`. `@manyhands/core`
+queda como barrel legacy; el código nuevo debe depender de paquetes específicos.
 
 ## Stack
 
-- TypeScript (strict, `exactOptionalPropertyTypes`)
+- TypeScript
 - pnpm workspaces
 - Next.js 15, React 19, Tailwind CSS 4
-- `@xyflow/react` para el DAG canvas
+- `@xyflow/react` para visualización de DAG cuando aplica
+- LangGraph.js para la orquestación de planning/ejecución
 - Zod para validación de runtime
 - Vitest, tsup
-- **Gemini CLI** (`gemini`, headless) — ejecución de subagentes y step-model del decomposer recursivo
+- Gemini CLI como executor principal configurado por `MANYHANDS_GEMINI_BIN`
 
-## Primeros pasos
+## Primeros Pasos
 
 ```bash
 pnpm install
@@ -126,17 +111,26 @@ pnpm build
 pnpm web:dev    # http://localhost:3000
 ```
 
-Para ejecutar runs reales hace falta tener Gemini CLI instalado y en `PATH` (o configurar `MANYHANDS_GEMINI_BIN`).
+Para ejecutar runs reales hace falta tener Gemini CLI instalado y en `PATH`, o
+configurar `MANYHANDS_GEMINI_BIN`.
+
+## Verificación
+
+```bash
+pnpm test
+pnpm build
+pnpm web:typecheck
+```
 
 ## Documentación
 
 | Documento | Para qué sirve |
 |-----------|----------------|
-| [`docs/design/`](docs/design/) | **Rediseño agent-first (dirección vigente de UI + orquestación)** — visión, modelo operativo congelado, fixtures golden y plan de implementación por PRs |
-| [`docs/system/`](docs/system/) | **Cómo funciona cada componente del sistema** — punto de entrada recomendado para alguien que llega nuevo al proyecto |
-| [`docs/DECISIONS.md`](docs/DECISIONS.md) | Síntesis LLM-first de decisiones de arquitectura cerradas |
-| [`docs/thesis/project-evolution.md`](docs/thesis/project-evolution.md) | Narrativa completa de cómo evolucionó el proyecto |
-| [`docs/design/decomposer-composer-redesign.md`](docs/design/decomposer-composer-redesign.md) | Diseño detallado de los dos artifacts de tesis |
-| [`docs/adr/`](docs/adr/) | 29 ADRs — registro histórico de decisiones |
-| [`docs/development/architecture.md`](docs/development/architecture.md) | Vista de arquitectura desde el código |
-| [`apps/web/README.md`](apps/web/README.md) | Detalles de rutas, APIs y canvas web |
+| [`docs/DECISIONS.md`](docs/DECISIONS.md) | Síntesis de decisiones vigentes para agentes |
+| [`docs/system/`](docs/system/) | Explicación componente por componente del sistema actual |
+| [`docs/design/`](docs/design/) | Modelo agent-first, event log, run model y UX objetivo |
+| [`docs/development/architecture.md`](docs/development/architecture.md) | Vista de arquitectura desde el código actual |
+| [`docs/development/product-vision.md`](docs/development/product-vision.md) | Visión de producto sin estrategia de benchmarks activa |
+| [`docs/adr/`](docs/adr/) | Registro histórico; algunos ADRs están superseded |
+| [`apps/web/README.md`](apps/web/README.md) | Rutas y APIs actuales de la web app |
+

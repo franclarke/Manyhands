@@ -74,6 +74,19 @@ export const RunStateAnnotation = Annotation.Root({
     default: () => []
   }),
 
+  // Budget guard (U5): limits seeded from the run's executionConfig; the
+  // budgetGate's "extend_budget" decision overwrites them mid-run.
+  budgetLimits: Annotation<{ maxTokensTotal?: number; maxCostUsd?: number } | null>({
+    reducer: (existing, incoming) => (incoming === undefined ? existing : incoming),
+    default: () => null
+  }),
+  // Set by the budgetGate's "finish_partial" decision: stop dispatching new
+  // leaves and integrate only what is already complete.
+  finishPartial: Annotation<boolean>({
+    reducer: (existing, incoming) => incoming ?? existing,
+    default: () => false
+  }),
+
   // Human-in-the-loop variables (planning phase)
   pendingQuestion: Annotation<{ nodeId: string; question: string; options: string[] } | null>(),
   userAnswers: Annotation<Record<string, string>>({

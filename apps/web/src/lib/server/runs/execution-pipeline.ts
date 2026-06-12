@@ -404,6 +404,16 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     // execution artifact and reset the thread) so the frontier only
     // re-dispatches invalidated tasks.
     const seed = executionResultsFromRun(run);
+    const budgetLimits =
+      run.executionConfig?.maxTokensTotal !== undefined || run.executionConfig?.maxCostUsd !== undefined
+        ? {
+            ...(run.executionConfig.maxTokensTotal !== undefined
+              ? { maxTokensTotal: run.executionConfig.maxTokensTotal }
+              : {}),
+            ...(run.executionConfig.maxCostUsd !== undefined ? { maxCostUsd: run.executionConfig.maxCostUsd } : {})
+          }
+        : null;
+
     const initialState = {
       runId,
       userPrompt: run.userPrompt,
@@ -416,6 +426,8 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       integrationResults: seed.integrationResults,
       acceptedLeafFailures: [],
       acceptedIntegrationFailures: [],
+      budgetLimits,
+      finishPartial: false,
       pendingQuestion: null,
       userAnswers: {},
       status: "running" as const,

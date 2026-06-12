@@ -163,7 +163,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
 
 function executionDecisionFrom(
   payload: Record<string, unknown> | null,
-  gate: "leaf_validation_failed" | "merge_conflict"
+  gate: "leaf_validation_failed" | "merge_conflict" | "budget_exceeded"
 ) {
   if (payload === null) return null;
   if (isResumeDecision(payload)) return payload;

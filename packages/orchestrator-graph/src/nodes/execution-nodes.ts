@@ -41,7 +41,13 @@ export type ConflictGateDecision =
   | { action: "accept_conflict"; compositeTaskId?: string }
   | { action: "abort_run" };
 
-export type ResumeDecision = LeafGateDecision | ConflictGateDecision;
+/** Decision payload accepted by the budget gate (U5). */
+export type BudgetGateDecision =
+  | { action: "extend_budget"; maxTokensTotal?: number; maxCostUsd?: number }
+  | { action: "finish_partial" }
+  | { action: "abort_run" };
+
+export type ResumeDecision = LeafGateDecision | ConflictGateDecision | BudgetGateDecision;
 
 /** Interrupt payload raised when a leaf keeps failing after auto-repair. */
 export interface LeafValidationInterrupt {
@@ -60,7 +66,22 @@ export interface MergeConflictInterrupt {
   conflictDetails?: { files: string[]; diff: string };
 }
 
-function parseDecision(value: unknown, gate: "leafGate" | "conflictGate"): { action: string } & Record<string, unknown> {
+/** Interrupt payload raised when the run exceeded its token/cost budget (U5). */
+export interface BudgetExceededInterrupt {
+  type: "budget_exceeded";
+  runId: string;
+  spentTokens: number;
+  spentUsd: number;
+  maxTokensTotal?: number;
+  maxCostUsd?: number;
+  completedTasks: number;
+  pendingTasks: string[];
+}
+
+function parseDecision(
+  value: unknown,
+  gate: "leafGate" | "conflictGate" | "budgetGate"
+): { action: string } & Record<string, unknown> {
   if (typeof value === "object" && value !== null && typeof (value as { action?: unknown }).action === "string") {
     return value as { action: string };
   }
@@ -161,6 +182,44 @@ function childSettled(state: RunState, graph: TaskGraph, childId: string): boole
   );
 }
 
+// ─── budget accounting (U5) ────────────────────────────────────────────────
+
+export interface BudgetSpend {
+  tokens: number;
+  usd: number;
+}
+
+/**
+ * Total reported spend across leaf results and integration repairs. Results
+ * without usage (usageSource "unavailable") contribute zero — the wall-clock
+ * watchdog remains the backstop for fully unreported executors.
+ */
+export function computeBudgetSpend(state: RunState): BudgetSpend {
+  let tokens = 0;
+  let usd = 0;
+  for (const result of state.leafResults) {
+    tokens += (result.tokensIn ?? 0) + (result.tokensOut ?? 0);
+    usd += result.costUsd ?? 0;
+  }
+  for (const integration of state.integrationResults) {
+    const repair = integration.repairResult;
+    if (repair !== undefined) {
+      tokens += (repair.tokensIn ?? 0) + (repair.tokensOut ?? 0);
+      usd += repair.costUsd ?? 0;
+    }
+  }
+  return { tokens, usd };
+}
+
+function budgetExceeded(state: RunState): boolean {
+  const limits = state.budgetLimits;
+  if (limits === null) return false;
+  const spend = computeBudgetSpend(state);
+  if (limits.maxTokensTotal !== undefined && spend.tokens >= limits.maxTokensTotal) return true;
+  if (limits.maxCostUsd !== undefined && spend.usd >= limits.maxCostUsd) return true;
+  return false;
+}
+
 // ─── prepare ───────────────────────────────────────────────────────────────
 
 /** Entry node: asserts the plan exists and flips the run into "running". */
@@ -197,11 +256,13 @@ export interface FrontierRouterDeps {
 
 /**
  * Frontier router: dispatches the next wave of executable tasks as parallel
- * Sends, detours to the leaf gate while failures await a human decision, and
- * hands over to the integration loop once no executable work remains.
+ * Sends, detours to the leaf gate while failures await a human decision,
+ * suspends on the budget gate when the spend limit is hit (always BETWEEN
+ * waves — a running leaf is never killed by the budget), and hands over to
+ * the integration loop once no executable work remains.
  */
 export function makeRouteFrontier(deps: FrontierRouterDeps = {}) {
-  return function routeFrontier(state: RunState): Send[] | "leafGate" | "integrationJoin" {
+  return function routeFrontier(state: RunState): Send[] | "leafGate" | "budgetGate" | "integrationJoin" {
     const graph = requireGraph(state, "routeFrontier");
 
     if (unhandledLeafFailures(state).length > 0) {
@@ -209,8 +270,12 @@ export function makeRouteFrontier(deps: FrontierRouterDeps = {}) {
     }
 
     const candidates = executionFrontier(state, graph);
-    if (candidates.length === 0) {
+    if (candidates.length === 0 || state.finishPartial) {
       return "integrationJoin";
+    }
+
+    if (budgetExceeded(state)) {
+      return "budgetGate";
     }
 
     const selected = deps.selectWave?.({ graph, candidates }) ?? candidates;
@@ -334,6 +399,65 @@ export function leafGateNode(state: RunState): Command<unknown, RunStateUpdate> 
       });
     default:
       throw new Error(`leafGate: unsupported action "${decision.action}".`);
+  }
+}
+
+// ─── budgetGate ────────────────────────────────────────────────────────────
+
+/**
+ * Pure HITL gate for budget exhaustion (U5). interrupt() is the first
+ * statement — resuming is free. The human extends the budget (the frontier
+ * dispatches again), finishes partial (integrate only what is complete), or
+ * aborts. Always reached BETWEEN waves: no in-flight leaf is ever cut.
+ */
+export function budgetGateNode(state: RunState): Command<unknown, RunStateUpdate> {
+  const graph = requireGraph(state, "budgetGate");
+  const spend = computeBudgetSpend(state);
+  const pending = executionFrontier(state, graph);
+
+  const decision = parseDecision(
+    interrupt({
+      type: "budget_exceeded",
+      runId: state.runId,
+      spentTokens: spend.tokens,
+      spentUsd: spend.usd,
+      ...(state.budgetLimits?.maxTokensTotal !== undefined
+        ? { maxTokensTotal: state.budgetLimits.maxTokensTotal }
+        : {}),
+      ...(state.budgetLimits?.maxCostUsd !== undefined ? { maxCostUsd: state.budgetLimits.maxCostUsd } : {}),
+      completedTasks: state.leafResults.length,
+      pendingTasks: pending
+    } satisfies BudgetExceededInterrupt),
+    "budgetGate"
+  );
+
+  switch (decision.action) {
+    case "extend_budget": {
+      const next = {
+        ...(typeof decision["maxTokensTotal"] === "number" ? { maxTokensTotal: decision["maxTokensTotal"] } : {}),
+        ...(typeof decision["maxCostUsd"] === "number" ? { maxCostUsd: decision["maxCostUsd"] } : {})
+      };
+      return new Command<unknown, RunStateUpdate>({
+        // An extend without explicit new limits lifts them entirely.
+        update: { budgetLimits: Object.keys(next).length > 0 ? next : null },
+        goto: "waveJoin"
+      });
+    }
+    case "finish_partial":
+      return new Command<unknown, RunStateUpdate>({
+        update: { finishPartial: true },
+        goto: "waveJoin"
+      });
+    case "abort_run":
+      return new Command<unknown, RunStateUpdate>({
+        update: {
+          status: "failed",
+          errorMessage: `Run aborted by user at budget gate (${spend.tokens} tokens / $${spend.usd.toFixed(2)} spent).`
+        },
+        goto: END
+      });
+    default:
+      throw new Error(`budgetGate: unsupported action "${decision.action}".`);
   }
 }
 
@@ -519,15 +643,17 @@ export function makeRunValidationNode(deps: RunValidationNodeDeps) {
       integrationResults: state.integrationResults
     });
 
-    const passed = validation.passed && !accepted;
+    const passed = validation.passed && !accepted && !state.finishPartial;
     return {
       status: passed ? "completed" : "failed",
       ...(passed
         ? {}
         : {
-            errorMessage: accepted
-              ? "Run finished with human-accepted failures."
-              : validation.output ?? "Run validation failed"
+            errorMessage: state.finishPartial
+              ? "Run closed partially at the budget gate; pending tasks were not executed."
+              : accepted
+                ? "Run finished with human-accepted failures."
+                : validation.output ?? "Run validation failed"
           })
     };
   };

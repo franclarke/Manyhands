@@ -331,6 +331,31 @@ ejecución marcaban `failed` aunque existiera checkpoint reanudable.
 
 ---
 
+## 18. Presupuesto de tokens/costo por wave con budgetGate `[x]` — 2026-06-12
+
+**Hallazgo.** El único corte de presupuesto era wall-clock; el usage real
+(`tokensIn/tokensOut/costUsd`, reportado por Gemini/Claude desde la tarea 10)
+no gateaba nada: un run fugitivo podía quemar tokens sin límite.
+
+**Diseño.** PR-6 del plan de robustez (U5):
+- `ExecutionConfigSchema` gana `maxTokensTotal`/`maxCostUsd`; el estado del grafo
+  los lleva en `budgetLimits` (sembrado del run, sobreescribible por el gate) y
+  `finishPartial`.
+- `computeBudgetSpend` suma el usage reportado de hojas + repairs del Composer
+  (`usageSource:"unavailable"` aporta cero; el watchdog wall-clock sigue siendo
+  el respaldo para executors sin telemetría).
+- El chequeo vive en `routeFrontier`, ENTRE waves: una hoja en vuelo jamás se
+  corta por presupuesto. Excedido → **`budgetGate`** (interrupt-first):
+  `extend_budget` (nuevos límites, o lift total sin parámetros) re-despacha la
+  frontera; `finish_partial` deja de despachar e integra solo los composites
+  completos (cierre explícito y auditado — los pendientes re-entran con un
+  restart); `abort_run` como en los demás gates.
+- Proyección web: gate `budget_exceeded` en `pendingDecision` con
+  `spentTokens/spentUsd/pendingTasks`, opciones en español y mapeo
+  answer→acción en los caminos de resume existentes (claims INV-4 heredados).
+
+---
+
 ## Plan de robustez E2E (U1–U8) — secuencia aprobada 2026-06-11
 
 PR-1 `[x]` (§13) → PR-2 `[x]` (§14) → PR-3 `[x]` (§15) → PR-4 `[x]` (§16) →
@@ -348,7 +373,7 @@ PR-8 visor de evidencia. Detalle completo en el plan de sesión
   `GET /api/runs/[id]/artifacts?ref=...`.
 - `[x]` **HITL en replan** — resuelto en §17 (pendingReplan + gate reanudable por
   step-cache del decomposer).
-- `[ ]` **Presupuesto de tokens por wave** con corte adaptativo (ahora hay usage
-  real `reported` de Gemini/Claude para alimentarlo).
+- `[x]` **Presupuesto de tokens por wave** — resuelto en §18 (budgetGate con
+  extend/finish_partial/abort entre waves).
 - `[ ]` **Usage estructurado para Codex** (parsear el stream JSONL experimental de
   `codex exec --json` cuando se estabilice).

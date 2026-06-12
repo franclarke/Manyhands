@@ -238,6 +238,13 @@ export const ExecutionConfigSchema = z.object({
    * "fixed" always uses the run-level selection.
    */
   routing: z.union([z.literal("complexity"), z.literal("fixed")]).default("complexity"),
+  /**
+   * Token budget for the whole run (reported usage across leaves + repairs).
+   * Checked BETWEEN waves: exceeding it suspends on the budget gate (U5).
+   */
+  maxTokensTotal: z.number().int().positive().optional(),
+  /** Cost budget in USD; same between-waves semantics as maxTokensTotal. */
+  maxCostUsd: z.number().positive().optional(),
   /** Optional wall-clock ceiling for the whole run; the orchestrator interrupts past it. */
   maxWallClockMs: z.number().int().positive().optional()
 });

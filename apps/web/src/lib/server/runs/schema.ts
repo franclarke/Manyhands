@@ -248,7 +248,11 @@ export const RunRecordSchema = z.object({
    */
   pendingDecision: z
     .object({
-      gate: z.union([z.literal("leaf_validation_failed"), z.literal("merge_conflict")]),
+      gate: z.union([
+        z.literal("leaf_validation_failed"),
+        z.literal("merge_conflict"),
+        z.literal("budget_exceeded")
+      ]),
       /**
        * Unique id for THIS suspension, minted when the pause is persisted.
        * Resumes that carry a gateId only match this exact interruption, so a
@@ -259,7 +263,11 @@ export const RunRecordSchema = z.object({
       taskId: z.string().min(1),
       validationOutput: z.string().optional(),
       conflictFiles: z.array(z.string().min(1)).optional(),
-      integrationStatus: z.string().optional()
+      integrationStatus: z.string().optional(),
+      /** Budget gate (U5): reported spend at suspension time. */
+      spentTokens: z.number().nonnegative().optional(),
+      spentUsd: z.number().nonnegative().optional(),
+      pendingTasks: z.array(z.string().min(1)).optional()
     })
     .optional(),
   /**

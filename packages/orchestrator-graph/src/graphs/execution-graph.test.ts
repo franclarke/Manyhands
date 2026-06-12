@@ -377,3 +377,106 @@ describe("execution graph — cross-process resume (JsonFileCheckpointSaver)", (
     expect(final.leafResults).toHaveLength(3);
   });
 });
+
+// ─── Budget gate (U5) ───────────────────────────────────────────────────────
+
+describe("execution graph — budget gate", () => {
+  function usageLeafResult(taskId: string, tokens: number): AgentExecutionResult {
+    return { ...leafResult(taskId, "success"), tokensIn: tokens / 2, tokensOut: tokens / 2, costUsd: tokens / 1000, usageSource: "reported" };
+  }
+
+  function makeBudgetHarness(tokensPerLeaf: number) {
+    const executions: string[] = [];
+    const graph = buildExecutionGraph({
+      leafDeps: {
+        executeLeaf: async (params: LeafExecutionInput) => {
+          executions.push(params.taskId);
+          return { result: usageLeafResult(params.taskId, tokensPerLeaf) };
+        },
+        maxRepairAttempts: 0
+      },
+      integrateDeps: {
+        integrateComposite: async (params) => integrationResult(params.compositeTaskId, "success")
+      },
+      validationDeps: { validateRun: async () => ({ passed: true }) },
+      // Serialize waves so the budget check fires BETWEEN leaves.
+      frontierDeps: { selectWave: ({ candidates }) => candidates.slice(0, 1) }
+    });
+    return { graph, executions };
+  }
+
+  function budgetState(taskGraph: TaskGraph, maxTokensTotal: number) {
+    return { ...initialState(taskGraph), budgetLimits: { maxTokensTotal }, finishPartial: false };
+  }
+
+  async function drive(graph: ReturnType<typeof buildExecutionGraph>, input: unknown, config: ReturnType<typeof threadConfig>) {
+    const stream = await graph.stream(input as never, { ...config, streamMode: "updates" as const });
+    for await (const _chunk of stream) void _chunk;
+    return graph.getState(config);
+  }
+
+  function firstInterrupt(state: Awaited<ReturnType<ReturnType<typeof buildExecutionGraph>["getState"]>>): unknown {
+    return state.tasks.flatMap((task) => task.interrupts)[0]?.value;
+  }
+
+  it("suspends BETWEEN waves when the token budget is exceeded; extend_budget finishes the run", async () => {
+    const taskGraph = makeGraph();
+    const harness = makeBudgetHarness(80); // 2 leaves = 160 ≥ 100
+    const config = threadConfig("t-budget-extend", taskGraph);
+
+    const paused = await drive(harness.graph, budgetState(taskGraph, 100), config);
+    const interrupt = firstInterrupt(paused) as {
+      type: string;
+      spentTokens: number;
+      pendingTasks: string[];
+    };
+    expect(interrupt.type).toBe("budget_exceeded");
+    expect(interrupt.spentTokens).toBe(160);
+    expect(interrupt.pendingTasks).toEqual(["leaf-c"]);
+    // No leaf was cut mid-flight: exactly the two completed waves ran.
+    expect(harness.executions).toEqual(["leaf-a", "leaf-b"]);
+
+    const final = await drive(harness.graph, new Command({ resume: { action: "extend_budget" } }), config);
+    expect((final.values as RunState).status).toBe("completed");
+    expect(harness.executions).toEqual(["leaf-a", "leaf-b", "leaf-c"]);
+  });
+
+  it("finish_partial integrates only what is complete and closes the run explicitly", async () => {
+    const taskGraph = makeGraph();
+    const harness = makeBudgetHarness(80);
+    const config = threadConfig("t-budget-partial", taskGraph);
+
+    await drive(harness.graph, budgetState(taskGraph, 100), config);
+    const final = await drive(harness.graph, new Command({ resume: { action: "finish_partial" } }), config);
+
+    const values = final.values as RunState;
+    expect(harness.executions).toEqual(["leaf-a", "leaf-b"]); // leaf-c never dispatched
+    expect(values.status).toBe("failed"); // sanctioned: explicit human decision
+    expect(values.errorMessage).toContain("partially");
+    // root is not integrable without leaf-c → no integrations were attempted.
+    expect(values.integrationResults).toHaveLength(0);
+  });
+
+  it("abort_run at the budget gate ends the run with the spend in the message", async () => {
+    const taskGraph = makeGraph();
+    const harness = makeBudgetHarness(120); // first leaf already exceeds
+    const config = threadConfig("t-budget-abort", taskGraph);
+
+    await drive(harness.graph, budgetState(taskGraph, 100), config);
+    const final = await drive(harness.graph, new Command({ resume: { action: "abort_run" } }), config);
+
+    const values = final.values as RunState;
+    expect(values.status).toBe("failed");
+    expect(values.errorMessage).toContain("budget gate");
+  });
+
+  it("without limits the budget gate never fires", async () => {
+    const taskGraph = makeGraph();
+    const harness = makeBudgetHarness(10_000);
+    const config = threadConfig("t-budget-off", taskGraph);
+
+    const final = await drive(harness.graph, { ...initialState(taskGraph), budgetLimits: null, finishPartial: false }, config);
+    expect((final.values as RunState).status).toBe("completed");
+    expect(harness.executions).toHaveLength(3);
+  });
+});

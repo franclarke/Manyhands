@@ -1,3 +1,33 @@
+# Walkthrough — Sesión 2026-06-12 (Robustez E2E, PR-6: budget gate)
+
+> PR-6 del plan de robustez U1–U8 (diseño en
+> [`docs/design/future-frontier-tasks.md`](docs/design/future-frontier-tasks.md) §18).
+> Historia cerrada: **U5 — el run se corta solo si excede presupuesto de tokens/costo**.
+
+## Qué se hizo
+
+1. **Límites configurables**: `executionConfig.maxTokensTotal` / `maxCostUsd`;
+   viajan en el estado del grafo (`budgetLimits`) y el gate puede extenderlos.
+2. **`computeBudgetSpend`**: usage reportado de hojas + repairs del Composer; los
+   executors sin telemetría aportan cero (el watchdog wall-clock sigue de respaldo).
+3. **Corte ENTRE waves**: el chequeo vive en `routeFrontier` — una hoja en vuelo
+   jamás se mata por presupuesto. Excedido → `budgetGate` (interrupt-first) con
+   `extend_budget` / `finish_partial` (integra solo composites completos; cierre
+   explícito; los pendientes re-entran con restart) / `abort_run`.
+4. **Proyección web**: gate `budget_exceeded` con `spentTokens/spentUsd/pendingTasks`
+   en `pendingDecision`, opciones en español, mapeo answer→acción reutilizando los
+   claims idempotentes de PR-1.
+
+## Verificación
+
+- Typechecks (orchestrator-graph, execution-core, web, raíz) ✅ · `pnpm test` ✅ —
+  **983 passed / 4 skipped** (+4)
+- Nuevos: execution-graph budget (4 — suspende entre waves con el gasto exacto y
+  las tareas pendientes, extend completa el run, finish_partial no integra
+  composites incompletos, abort con gasto en el mensaje, sin límites = sin cambios).
+
+---
+
 # Walkthrough — Sesión 2026-06-12 (Robustez E2E, PR-5: fallas recuperables → gates)
 
 > PR-5 del plan de robustez U1–U8 (diseño en
