@@ -24,8 +24,9 @@ import {
 import { graftSubtree } from "@manyhands/task-graph";
 import { pickDecomposer } from "@/lib/decomposer-policy";
 import { getWorkspaceRepository } from "../workspaces";
-import { RunLifecycleError, RunValidationError } from "./errors";
+import { RunLifecycleError, RunMutationConflictError, RunValidationError } from "./errors";
 import { publishRunEvent } from "./event-bus";
+import { claimRunMutation } from "./mutation-guard";
 import { resetExecutionThread } from "./execution-host";
 import { runExecutionPipeline } from "./execution-pipeline";
 import {
@@ -39,7 +40,18 @@ import { publishRunModelEvent } from "./run-model-event-log";
 import type { RunRecord } from "./schema";
 import { getRunRepository } from "./store";
 
-export async function replanSubtree(runId: string, taskId: string, reason: string): Promise<RunRecord> {
+/** Resumable decomposer context carried across a replan's clarifying question. */
+export interface ReplanResumeContext {
+  stepCache: Record<string, unknown>;
+  questionAnswers: Record<string, string>;
+}
+
+export async function replanSubtree(
+  runId: string,
+  taskId: string,
+  reason: string,
+  resume: ReplanResumeContext = { stepCache: {}, questionAnswers: {} }
+): Promise<RunRecord> {
   const repo = getRunRepository();
   let run = await repo.get(runId);
   const graph = await resolveExecutionGraph(run);
@@ -109,14 +121,15 @@ export async function replanSubtree(runId: string, taskId: string, reason: strin
       schedulerPolicy: "risk_aware",
       runLabel: `${runId}:replan:${taskId}`,
       decomposer: selection.decomposer,
-      questionAnswers: {},
-      stepCache: {}
+      questionAnswers: resume.questionAnswers,
+      stepCache: resume.stepCache
     });
   } catch (error) {
     if (isDecomposerQuestionError(error)) {
-      throw new RunLifecycleError(
-        `El decomposer necesita una aclaración para re-planificar "${taskId}": ${error.question}`
-      );
+      // U2 / INV-5: a clarifying question during replan is a GATE, not an
+      // abort. Persist the resumable decomposer context (step cache + answers)
+      // alongside the question; resumeReplanWithAnswer continues from here.
+      return suspendReplanOnQuestion(runId, taskId, reason, resume, error);
     }
     throw error;
   }
@@ -206,4 +219,109 @@ export async function replanSubtree(runId: string, taskId: string, reason: strin
 
   void runExecutionPipeline(runId).catch(() => undefined);
   return run;
+}
+
+// ─── replan question gate (U2) ─────────────────────────────────────────────
+
+/**
+ * Suspend the replan on the decomposer's clarifying question: the run pauses
+ * (during "running") with the question projected for the DecisionChannel and
+ * the resumable replan context persisted on the record.
+ */
+async function suspendReplanOnQuestion(
+  runId: string,
+  taskId: string,
+  reason: string,
+  resume: ReplanResumeContext,
+  error: { nodeId: string; question: string; options: string[]; stepCache: Record<string, unknown> }
+): Promise<RunRecord> {
+  const saved = await claimRunMutation(runId, { status: ["running"] }, (current) => ({
+    ...current,
+    status: "paused" as const,
+    pausedDuring: "running" as const,
+    pendingQuestion: {
+      nodeId: error.nodeId,
+      question: `[Replan de "${taskId}"] ${error.question}`,
+      options: error.options.length >= 2 ? error.options : [...error.options, "Continuar con lo propuesto"]
+    },
+    pendingReplan: {
+      taskId,
+      reason,
+      stepCache: error.stepCache,
+      questionAnswers: resume.questionAnswers
+    }
+  }));
+
+  const now = new Date().toISOString();
+  publishRunEvent(runId, { kind: "status.changed", status: "paused", at: now });
+  publishRunModelEvent(runId, {
+    actor: "system",
+    at: now,
+    type: "decision.raised",
+    payload: {
+      decisionId: `clarify:${error.nodeId}`,
+      kind: "clarify",
+      blocking: true,
+      context: {
+        nodeIds: [error.nodeId],
+        question: saved.pendingQuestion?.question ?? error.question,
+        options: saved.pendingQuestion?.options ?? error.options
+      }
+    }
+  });
+  return saved;
+}
+
+/**
+ * Resume a replan suspended on a clarifying question (U2): claims the pending
+ * question atomically (INV-4), folds the answer into the replan context, and
+ * re-enters replanSubtree — the decomposer continues from its step cache.
+ */
+export async function resumeReplanWithAnswer(
+  runId: string,
+  nodeId: string | undefined,
+  answer: string
+): Promise<RunRecord> {
+  let context: { taskId: string; reason: string; resume: ReplanResumeContext } | undefined;
+  const saved = await claimRunMutation(
+    runId,
+    {
+      status: ["paused"],
+      pausedDuring: "running",
+      pendingQuestionNodeId: nodeId ?? "any"
+    },
+    (current) => {
+      const pending = current.pendingReplan;
+      const question = current.pendingQuestion;
+      if (pending === undefined || question === undefined) {
+        throw new RunMutationConflictError(
+          `Run ${runId} has no suspended replan to resume.`,
+          current.status,
+          current.version
+        );
+      }
+      context = {
+        taskId: pending.taskId,
+        reason: pending.reason,
+        resume: {
+          stepCache: pending.stepCache,
+          questionAnswers: { ...pending.questionAnswers, [question.nodeId]: answer }
+        }
+      };
+      const next = { ...current, status: "running" as const };
+      delete next.pausedDuring;
+      delete next.pendingQuestion;
+      delete next.pendingReplan;
+      return next;
+    }
+  );
+
+  publishRunEvent(runId, { kind: "status.changed", status: "running", at: new Date().toISOString() });
+  const replanContext = context;
+  if (replanContext !== undefined) {
+    void replanSubtree(runId, replanContext.taskId, replanContext.reason, replanContext.resume).catch((error) =>
+      console.error(`[Replan] Resume failed for run ${runId}:`, error)
+    );
+  }
+  return saved;
 }

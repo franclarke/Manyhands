@@ -1,3 +1,36 @@
+# Walkthrough — Sesión 2026-06-12 (Robustez E2E, PR-5: fallas recuperables → gates)
+
+> PR-5 del plan de robustez U1–U8 (diseño en
+> [`docs/design/future-frontier-tasks.md`](docs/design/future-frontier-tasks.md) §17).
+> Invariante cerrado: **INV-5 — toda falla recuperable termina en gate o `interrupted`
+> reanudable; `failed` solo por decisión explícita o precondición**.
+
+## Qué se hizo
+
+1. **`degradedPlanGate` (U6)**: el fallo terminal del decomposer ya no muere en
+   `failed` — `decomposePlan` lo devuelve como dato, el grafo rutea al gate
+   (interrupt-first) y el humano elige reintentar (el step-cache preserva el árbol
+   parcial y las respuestas previas) o abortar (única vía sancionada a `failed`).
+   Proyección como pendingQuestion sintética + `decision.raised`: los caminos de
+   respuesta existentes lo conducen con sus claims idempotentes, sin UI nueva.
+2. **Replan-question como gate (U2)**: `replanSubtree` atrapa la pregunta del
+   decomposer y persiste `pendingReplan` (step-cache + respuestas acumuladas) con
+   la pausa; `resumeReplanWithAnswer` reclama el gate, folda la respuesta y
+   re-entra el replan donde quedó. Cableado en resume/answer/decisions.
+3. **`settleExecutionException`**: excepción no clasificable con checkpoint →
+   `interrupted` reanudable con mensaje accionable; `failed` queda para
+   precondiciones (preflight/repo_busy/repo ausente) y aborts explícitos.
+
+## Verificación
+
+- Typechecks (orchestrator-graph, web, raíz) ✅ · `pnpm test` ✅ — **979 passed / 4
+  skipped** (+7)
+- Nuevos: planning-graph degraded-gate (3 — retry re-entra, abort termina, el
+  step-cache sobrevive a pregunta+fallo), `replan-question-gate.test.ts` (4 —
+  resume consume el gate, duplicados → 1 ganador, sin replan → 409, ruta /answer).
+
+---
+
 # Walkthrough — Sesión 2026-06-12 (Robustez E2E, PR-4: lock por repo + preflight)
 
 > PR-4 del plan de robustez U1–U8 (diseño en

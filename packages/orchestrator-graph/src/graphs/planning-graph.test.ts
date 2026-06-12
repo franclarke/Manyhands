@@ -178,3 +178,77 @@ describe("planning graph v2 (native HITL)", () => {
     });
   });
 });
+
+describe("degraded plan gate (INV-5: terminal failure is a gate, not plain failed)", () => {
+  it("suspends on plan_degraded when decomposition fails terminally, retry re-enters the decomposer", async () => {
+    const calls: DecomposePlanInput[] = [];
+    const decomposePlan = async (input: DecomposePlanInput): Promise<DecomposePlanResult> => {
+      calls.push(input);
+      if (calls.length === 1) {
+        return { kind: "failed", errorMessage: "Graph generation failed: provider 500" };
+      }
+      return { kind: "complete", graph: TINY_GRAPH };
+    };
+    const graph = buildPlanningGraph({ deps: depsFor({ decomposePlan }) });
+    const config = threadConfig("run-degraded-retry");
+
+    const paused = await drive(graph, initialState("run-degraded-retry"), config);
+    const interrupt = firstInterrupt(paused) as { type: string; errorMessage: string };
+    expect(interrupt.type).toBe("plan_degraded");
+    expect(interrupt.errorMessage).toContain("provider 500");
+
+    // Retry: the decomposer runs again and the plan reaches the approval gate.
+    const resumed = await drive(graph, new Command({ resume: { action: "retry" } }), config);
+    expect(calls).toHaveLength(2);
+    expect((firstInterrupt(resumed) as { type: string }).type).toBe("plan_approval");
+    expect((resumed.values as { errorMessage: string | null }).errorMessage).toBeNull();
+  });
+
+  it("abort at the degraded gate ends the run as failed — the only sanctioned road", async () => {
+    const decomposePlan = async (): Promise<DecomposePlanResult> => ({
+      kind: "failed",
+      errorMessage: "invalid JSON after retries"
+    });
+    const graph = buildPlanningGraph({ deps: depsFor({ decomposePlan }) });
+    const config = threadConfig("run-degraded-abort");
+
+    const paused = await drive(graph, initialState("run-degraded-abort"), config);
+    expect((firstInterrupt(paused) as { type: string }).type).toBe("plan_degraded");
+
+    const ended = await drive(graph, new Command({ resume: { action: "abort" } }), config);
+    expect((ended.values as { status: string }).status).toBe("failed");
+    expect(ended.next).toEqual([]);
+  });
+
+  it("the partial step cache survives across a question that precedes the failure", async () => {
+    const calls: DecomposePlanInput[] = [];
+    const decomposePlan = async (input: DecomposePlanInput): Promise<DecomposePlanResult> => {
+      calls.push(input);
+      if (calls.length === 1) {
+        return {
+          kind: "question",
+          nodeId: "root",
+          question: "REST or GraphQL?",
+          options: ["REST", "GraphQL"],
+          stepCache: { tree: "partial" }
+        };
+      }
+      if (calls.length === 2) {
+        return { kind: "failed", errorMessage: "transient provider failure" };
+      }
+      return { kind: "complete", graph: TINY_GRAPH };
+    };
+    const graph = buildPlanningGraph({ deps: depsFor({ decomposePlan }) });
+    const config = threadConfig("run-degraded-cache");
+
+    await drive(graph, initialState("run-degraded-cache"), config);
+    await drive(graph, new Command({ resume: { answer: "REST" } }), config); // → fails → degraded gate
+    const resumed = await drive(graph, new Command({ resume: { action: "retry" } }), config);
+
+    // The retry call still sees the step cache and the accumulated answer:
+    // the valid partial tree was never thrown away.
+    expect(calls[2]?.stepCache).toEqual({ tree: "partial" });
+    expect(calls[2]?.userAnswers).toEqual({ root: "REST" });
+    expect((firstInterrupt(resumed) as { type: string }).type).toBe("plan_approval");
+  });
+});

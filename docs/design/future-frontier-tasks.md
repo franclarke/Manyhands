@@ -301,10 +301,40 @@ en los restarts.
 
 ---
 
+## 17. Toda falla recuperable es un gate: planning degradado + replan-question `[x]` — 2026-06-12
+
+**Hallazgo.** Dos caminos degeneraban en estado muerto: (a) un fallo terminal del
+decomposer (post-reintentos) caía en `failPlanning` → `failed` plano, perdiendo el
+árbol parcial válido; (b) una pregunta aclaratoria durante un replan abortaba con
+`RunLifecycleError` en vez de suspender. Además las excepciones no clasificables de
+ejecución marcaban `failed` aunque existiera checkpoint reanudable.
+
+**Diseño.** PR-5 del plan de robustez (INV-5):
+- **`degradedPlanGate`** (planning graph, patrón interrupt-first): `decomposePlan`
+  devuelve el fallo terminal como DATO (`kind:"failed"`); el routing lo manda al
+  gate, que ofrece `retry` (re-entra el decomposer — el step-cache en el estado
+  preserva el árbol parcial y las respuestas acumuladas) o `abort` (la única vía
+  sancionada a `failed`, decisión explícita del humano). El pipeline lo proyecta
+  como pendingQuestion sintética `__plan_degraded__` + `decision.raised`, así los
+  caminos de respuesta existentes (con sus claims INV-4) lo conducen sin UI nueva;
+  `planningResumeFor` traduce la etiqueta elegida a la acción tipada del Command.
+- **Replan-question como gate (U2)**: `replanSubtree` acepta contexto reanudable;
+  al atrapar `DecomposerQuestionError` persiste `pendingReplan` (taskId, reason,
+  step-cache del decomposer, respuestas acumuladas) + pendingQuestion (pausa
+  durante "running") + `decision.raised`. `resumeReplanWithAnswer` reclama el gate
+  atómicamente, folda la respuesta y re-entra `replanSubtree` — el decomposer
+  continúa de su step-cache. Cableado en resume/answer/decisions.
+- **Barrido de `failed` en ejecución**: `settleExecutionException` — una excepción
+  no clasificable con checkpoint existente deja el run `interrupted` (restart
+  reconcilia y reanuda); `failed` queda solo para precondiciones (preflight,
+  repo_busy, repo ausente) y aborts explícitos.
+
+---
+
 ## Plan de robustez E2E (U1–U8) — secuencia aprobada 2026-06-11
 
 PR-1 `[x]` (§13) → PR-2 `[x]` (§14) → PR-3 `[x]` (§15) → PR-4 `[x]` (§16) →
-PR-5 fallas recuperables → gates (planning degradado, replan-question) → PR-6
+PR-5 `[x]` (§17) → PR-6
 presupuesto tokens/costo por wave → PR-7 SSE Last-Event-ID + replay testeado →
 PR-8 visor de evidencia. Detalle completo en el plan de sesión
 (invariantes INV-1…INV-7, criterios de aceptación y estrategia de tests por PR).
@@ -316,9 +346,8 @@ PR-8 visor de evidencia. Detalle completo en el plan de sesión
 - `[ ]` **Visor de evidencia enriquecido** en el panel de foco (diffs colapsables,
   logs con resaltado, widget de `agent_status` en vivo) sobre
   `GET /api/runs/[id]/artifacts?ref=...`.
-- `[ ]` **HITL en replan**: hoy una pregunta aclaratoria del decomposer durante un
-  replan aborta con mensaje accionable; debería suspender en un gate como el
-  planning normal.
+- `[x]` **HITL en replan** — resuelto en §17 (pendingReplan + gate reanudable por
+  step-cache del decomposer).
 - `[ ]` **Presupuesto de tokens por wave** con corte adaptativo (ahora hay usage
   real `reported` de Gemini/Claude para alimentarlo).
 - `[ ]` **Usage estructurado para Codex** (parsear el stream JSONL experimental de

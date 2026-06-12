@@ -39,7 +39,13 @@ Invariantes INV-1…INV-7 y diseño por PR: `docs/design/future-frontier-tasks.m
 - [x] Pipelines start/resume reclaman el lock y lo liberan en finally; conflicto → `PreflightError("repo_busy")` nombrando al dueño
 - [x] Preflight: `disk_space` (statfs, umbral 1 GiB, mensaje accionable) + fix latente: `.manyhands/` ya no cuenta como suciedad en `repo_clean` (los restarts fallaban su propio preflight)
 - [x] Tests: `repo-lock.test.ts` (10: N concurrentes → 1 ganador, steal, corrupt lock, release scoped, preflight)
-## PR-5 — Fallas recuperables → gates: planning degradado + replan-question (U2, U6, INV-5) `[ ]`
+## PR-5 — Fallas recuperables → gates: planning degradado + replan-question (U2, U6, INV-5) `[x]`
+- [x] `degradedPlanGate` en el planning graph (interrupt-first): fallo terminal del decomposer → retry (step-cache sobrevive) | abort (única vía sancionada a `failed`)
+- [x] `decomposePlan` devuelve el fallo como DATO (`kind:"failed"`); host proyecta outcome `degraded`; pipeline lo proyecta como pendingQuestion `__plan_degraded__` + decision.raised
+- [x] `planningResumeFor(nodeId, answer)`: traduce el answer del gate degradado a acción tipada en los 3 caminos de respuesta
+- [x] U2: pregunta del decomposer durante replan → `pendingReplan` (step-cache + answers) + gate; `resumeReplanWithAnswer` reclama (INV-4), folda la respuesta y re-entra el replan
+- [x] Barrido INV-5 en ejecución: excepción no clasificable con checkpoint → `interrupted` reanudable (no `failed`); `failed` queda solo para precondiciones y abort explícito
+- [x] Tests: planning-graph degraded (3), `replan-question-gate.test.ts` (4)
 ## PR-6 — Presupuesto tokens/costo por wave con budgetGate (U5) `[ ]`
 ## PR-7 — SSE Last-Event-ID + backoff + replay testeado (U8, INV-7) `[ ]`
 ## PR-8 — Visor de evidencia usable (U4) `[ ]`

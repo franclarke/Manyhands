@@ -32,7 +32,20 @@ export interface PlanApprovalInterrupt {
   critique: PlanCritique | null;
 }
 
-export type PlanningResumeDecision = { answer: string } | { action: "approve" | "reject" };
+/**
+ * Raised when plan generation failed terminally (after the decomposer's own
+ * retries). Recoverable by design (INV-5): the human decides whether to retry
+ * — the partial tree survives in the step cache — or abort the run.
+ */
+export interface PlanDegradedInterrupt {
+  type: "plan_degraded";
+  runId: string;
+  errorMessage: string;
+}
+
+export type PlanningResumeDecision =
+  | { answer: string }
+  | { action: "approve" | "reject" | "retry" | "abort" };
 
 // ─── Critique model ────────────────────────────────────────────────────────
 
@@ -69,6 +82,11 @@ export type DecomposePlanResult =
       question: string;
       options: string[];
       stepCache: Record<string, unknown>;
+    }
+  | {
+      /** Terminal generation failure (post-retries) — surfaces as the degraded gate, never a plain "failed". */
+      kind: "failed";
+      errorMessage: string;
     };
 
 export interface PlanningGraphDeps {
@@ -107,19 +125,32 @@ export function makeDecomposePlanNode(deps: PlanningGraphDeps) {
       };
     }
 
+    if (result.kind === "failed") {
+      return {
+        status: "planning",
+        errorMessage: result.errorMessage,
+        pendingQuestion: null
+      };
+    }
+
     return {
       status: "planning",
       taskGraph: result.graph,
-      pendingQuestion: null
+      pendingQuestion: null,
+      errorMessage: null
     };
   };
 }
 
-/** Conditional edge after decomposePlan: question pending → gate, else critics. */
-export function routeAfterDecompose(state: RunState): "questionGate" | "criticReview" {
-  return state.pendingQuestion !== null && state.pendingQuestion !== undefined
-    ? "questionGate"
-    : "criticReview";
+/** Conditional edge after decomposePlan: question → gate, failure → degraded gate, else critics. */
+export function routeAfterDecompose(state: RunState): "questionGate" | "degradedPlanGate" | "criticReview" {
+  if (state.pendingQuestion !== null && state.pendingQuestion !== undefined) {
+    return "questionGate";
+  }
+  if (typeof state.errorMessage === "string" && state.errorMessage.length > 0) {
+    return "degradedPlanGate";
+  }
+  return "criticReview";
 }
 
 // ─── questionGate ──────────────────────────────────────────────────────────
@@ -150,6 +181,36 @@ export function questionGateNode(state: RunState): RunStateUpdate {
     pendingQuestion: null,
     userAnswers: { [pending.nodeId]: decision.answer }
   };
+}
+
+// ─── degradedPlanGate ──────────────────────────────────────────────────────
+
+/**
+ * Pure HITL gate for terminal plan-generation failures (INV-5: a recoverable
+ * failure is a gate, not a plain "failed"). interrupt() is the first
+ * statement, so resuming re-runs only this function. Retry re-enters the
+ * decomposer — its step cache survives in the state, so the valid partial
+ * tree is never thrown away. Abort is the human's explicit decision.
+ */
+export function degradedPlanGateNode(state: RunState): RunStateUpdate {
+  const decision = interrupt({
+    type: "plan_degraded",
+    runId: state.runId,
+    errorMessage: state.errorMessage ?? "Plan generation failed."
+  } satisfies PlanDegradedInterrupt) as PlanningResumeDecision;
+
+  if ("action" in decision && decision.action === "retry") {
+    return { errorMessage: null };
+  }
+  if ("action" in decision && decision.action === "abort") {
+    return { status: "failed" };
+  }
+  throw new Error('degradedPlanGate: resume value must be { action: "retry" | "abort" }.');
+}
+
+/** Conditional edge after the degraded gate: retry loops back, abort ends the run. */
+export function routeAfterDegraded(state: RunState): "decomposePlan" | "__end__" {
+  return state.status === "failed" ? "__end__" : "decomposePlan";
 }
 
 // ─── criticReview ──────────────────────────────────────────────────────────

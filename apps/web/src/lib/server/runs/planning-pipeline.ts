@@ -20,12 +20,15 @@ import { getWorkspaceRepository } from "../workspaces";
 import { publishRunEvent } from "./event-bus";
 import { assertTransition } from "./lifecycle";
 import {
+  PLAN_DEGRADED_NODE_ID,
+  PLAN_DEGRADED_OPTIONS,
   buildPlanningHost,
   drivePlanning,
   hasPlanningCheckpoint,
   initialPlanningState,
   type PlanningDriveOutcome
 } from "./planning-host";
+import { publishRunModelEvent } from "./run-model-event-log";
 import { type ProvisionedRepo, type RepoProvisioner } from "./repo-provisioner";
 import { generateRunTitle, type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
@@ -246,6 +249,44 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
     return;
   }
 
+  if (outcome.kind === "degraded") {
+    // Terminal generation failure → gate, not plain "failed" (INV-5). Projects
+    // as a pending question under a synthetic node id, so the existing answer
+    // routes (and their idempotent claims) drive the retry/abort decision.
+    console.warn(`[Runner] Planificación degradada para el run ${runId}: ${outcome.interrupt.errorMessage}`);
+    const options = PLAN_DEGRADED_OPTIONS.map((option) => option.label);
+    const question =
+      `La generación del plan falló tras los reintentos: ${outcome.interrupt.errorMessage} ` +
+      "¿Cómo querés continuar?";
+    await repo.save({
+      ...run,
+      status: "paused",
+      pausedDuring: "generating",
+      pendingQuestion: { nodeId: PLAN_DEGRADED_NODE_ID, question, options }
+    });
+    const now = new Date().toISOString();
+    publishRunEvent(runId, { kind: "status.changed", status: "paused", at: now });
+    publishRunEvent(runId, {
+      kind: "planning.question",
+      nodeId: PLAN_DEGRADED_NODE_ID,
+      question,
+      options,
+      at: now
+    });
+    publishRunModelEvent(runId, {
+      actor: "system",
+      at: now,
+      type: "decision.raised",
+      payload: {
+        decisionId: `clarify:${PLAN_DEGRADED_NODE_ID}`,
+        kind: "clarify",
+        blocking: true,
+        context: { nodeIds: [PLAN_DEGRADED_NODE_ID], question, options }
+      }
+    });
+    return;
+  }
+
   if (outcome.kind === "awaiting_approval") {
     console.log(`[Runner] Planificación completada con éxito para el run: ${runId}`);
     if (run.status !== "needs_review") {
@@ -254,7 +295,18 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
     return;
   }
 
-  // Finished: the approval gate resolved.
+  // Finished: the approval gate resolved, or the human aborted from the
+  // degraded gate (the only INV-5-sanctioned road to "failed" here).
+  if (outcome.status === "failed") {
+    await repo.save({
+      ...run,
+      status: "failed",
+      failedDuring: "generating",
+      errorMessage: `aborted by user at plan_degraded gate: ${outcome.errorMessage ?? "plan generation failed"}`
+    });
+    publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
+    return;
+  }
   if (outcome.status === "approved" && run.status !== "approved") {
     await transitionTo(run, "approved", { approvedAt: new Date().toISOString() });
   }

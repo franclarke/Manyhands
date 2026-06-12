@@ -18,10 +18,12 @@ import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint";
 import { RunStateAnnotation } from "../state.js";
 import {
   approvalGateNode,
+  degradedPlanGateNode,
   makeCriticReviewNode,
   makeDecomposePlanNode,
   questionGateNode,
   routeAfterDecompose,
+  routeAfterDegraded,
   type PlanningGraphDeps
 } from "../nodes/planning-nodes.js";
 
@@ -31,6 +33,7 @@ export type {
   PlanApprovalInterrupt,
   PlanCritique,
   PlanCritiqueFinding,
+  PlanDegradedInterrupt,
   PlanningGraphDeps,
   PlanningQuestionInterrupt,
   PlanningResumeDecision
@@ -58,11 +61,17 @@ export function buildPlanningGraph(config: PlanningGraphConfig) {
   const graph = new StateGraph(RunStateAnnotation)
     .addNode("decomposePlan", makeDecomposePlanNode(config.deps))
     .addNode("questionGate", questionGateNode)
+    .addNode("degradedPlanGate", degradedPlanGateNode)
     .addNode("criticReview", makeCriticReviewNode(config.deps))
     .addNode("approvalGate", approvalGateNode)
     .addEdge(START, "decomposePlan")
-    .addConditionalEdges("decomposePlan", routeAfterDecompose, ["questionGate", "criticReview"])
+    .addConditionalEdges("decomposePlan", routeAfterDecompose, [
+      "questionGate",
+      "degradedPlanGate",
+      "criticReview"
+    ])
     .addEdge("questionGate", "decomposePlan")
+    .addConditionalEdges("degradedPlanGate", routeAfterDegraded, ["decomposePlan", END])
     .addEdge("criticReview", "approvalGate")
     .addEdge("approvalGate", END);
 

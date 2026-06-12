@@ -32,7 +32,8 @@ import {
   isReplanRequest,
   isResumeDecision
 } from "@/lib/server/runs/execution-host";
-import { replanSubtree } from "@/lib/server/runs/replan-service";
+import { planningResumeFor } from "@/lib/server/runs/planning-host";
+import { replanSubtree, resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
 import { publishRunEvent } from "@/lib/server/runs/event-bus";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
@@ -80,9 +81,23 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       return NextResponse.json(toRunResponse(saved));
     }
 
-    // 2) Planning question resume.
+    // 2) Replan question resume: a clarifying question raised DURING a replan
+    //    (the run is paused during "running" with a pendingReplan context).
     const planningAnswer = planningAnswerFrom(payload, run.pendingQuestion?.nodeId);
+    if (
+      planningAnswer !== null &&
+      run.status === "paused" &&
+      run.pausedDuring === "running" &&
+      run.pendingReplan !== undefined
+    ) {
+      const saved = await resumeReplanWithAnswer(id, planningAnswer.nodeId ?? run.pendingQuestion?.nodeId, planningAnswer.answer);
+      return NextResponse.json(toRunResponse(saved));
+    }
+
+    // 3) Planning question resume (incl. the degraded-plan gate, whose answer
+    //    translates to a typed retry/abort action).
     if (planningAnswer !== null) {
+      let answeredNodeId = "";
       const saved = await claimRunMutation(
         id,
         {
@@ -93,6 +108,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         },
         (current) => {
           const nodeId = current.pendingQuestion?.nodeId as string;
+          answeredNodeId = nodeId;
           const next = {
             ...current,
             status: "generating" as const,
@@ -105,15 +121,15 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       );
       publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: new Date().toISOString() });
       // Native resume: the answer travels as Command({ resume }) into the
-      // suspended planning questionGate (legacy runs without a planning
-      // checkpoint fall back to re-running the pipeline).
-      void resumePlanningPipeline(id, { answer: planningAnswer.answer }).catch((error) =>
+      // suspended planning gate (legacy runs without a planning checkpoint
+      // fall back to re-running the pipeline).
+      void resumePlanningPipeline(id, planningResumeFor(answeredNodeId, planningAnswer.answer)).catch((error) =>
         console.error(`[Resume] Planning resume failed for run ${id}:`, error)
       );
       return NextResponse.json(toRunResponse(saved));
     }
 
-    // 3) Plain un-pause (cooperative engine pause).
+    // 4) Plain un-pause (cooperative engine pause).
     const saved = await claimRunMutation(
       id,
       { status: ["paused"], ...(expectedVersion !== undefined ? { version: expectedVersion } : {}) },

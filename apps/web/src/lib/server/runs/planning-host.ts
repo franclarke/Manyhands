@@ -23,8 +23,10 @@ import {
   type PlanApprovalInterrupt,
   type PlanCritique,
   type PlanCritiqueFinding,
+  type PlanDegradedInterrupt,
   type PlanningGraphDeps,
-  type PlanningQuestionInterrupt
+  type PlanningQuestionInterrupt,
+  type PlanningResumeDecision
 } from "@manyhands/orchestrator-graph";
 import {
   isDecomposerLlmError,
@@ -68,8 +70,33 @@ export interface PlanningHost {
 
 export type PlanningDriveOutcome =
   | { kind: "question"; interrupt: PlanningQuestionInterrupt }
+  | { kind: "degraded"; interrupt: PlanDegradedInterrupt }
   | { kind: "awaiting_approval"; interrupt: PlanApprovalInterrupt }
-  | { kind: "finished"; status: "approved" | "needs_review" };
+  | { kind: "finished"; status: "approved" | "needs_review" | "failed"; errorMessage?: string };
+
+/**
+ * Synthetic node id under which the degraded-plan gate projects as a pending
+ * question, so the existing answer routes/claims (INV-4) drive it unchanged.
+ */
+export const PLAN_DEGRADED_NODE_ID = "__plan_degraded__";
+
+export const PLAN_DEGRADED_OPTIONS = [
+  { label: "Reintentar la generación del plan", action: "retry" as const },
+  { label: "Abortar el run", action: "abort" as const }
+];
+
+/**
+ * Translate a human answer into the Command resume value for the suspended
+ * planning gate: the degraded gate takes typed actions, the question gate
+ * takes the answer verbatim.
+ */
+export function planningResumeFor(nodeId: string, answer: string): PlanningResumeDecision {
+  if (nodeId !== PLAN_DEGRADED_NODE_ID) {
+    return { answer };
+  }
+  const option = PLAN_DEGRADED_OPTIONS.find((candidate) => candidate.label === answer);
+  return { action: option?.action ?? "retry" };
+}
 
 function planningCheckpointer(): JsonFileCheckpointSaver {
   return new JsonFileCheckpointSaver(join(resolveRunsDirectory(), "checkpoints"));
@@ -138,16 +165,26 @@ export async function drivePlanning(
   const interrupt = state.tasks.flatMap((task) => task.interrupts)[0]?.value as
     | PlanningQuestionInterrupt
     | PlanApprovalInterrupt
+    | PlanDegradedInterrupt
     | undefined;
 
   if (interrupt !== undefined) {
-    return interrupt.type === "planning_question"
-      ? { kind: "question", interrupt }
-      : { kind: "awaiting_approval", interrupt };
+    if (interrupt.type === "planning_question") return { kind: "question", interrupt };
+    if (interrupt.type === "plan_degraded") return { kind: "degraded", interrupt };
+    return { kind: "awaiting_approval", interrupt };
   }
 
-  const status = (state.values as { status?: string } | undefined)?.status;
-  return { kind: "finished", status: status === "approved" ? "approved" : "needs_review" };
+  const values = state.values as { status?: string; errorMessage?: string | null } | undefined;
+  if (values?.status === "approved") return { kind: "finished", status: "approved" };
+  if (values?.status === "failed") {
+    // Only reachable through the degraded gate's explicit "abort" decision.
+    return {
+      kind: "finished",
+      status: "failed",
+      errorMessage: values.errorMessage ?? "Plan generation aborted by the user."
+    };
+  }
+  return { kind: "finished", status: "needs_review" };
 }
 
 // ─── decomposePlan dependency ──────────────────────────────────────────────
@@ -346,7 +383,13 @@ async function decomposePlanForRun(
         stepCache: error.stepCache
       };
     }
-    throw error;
+    // Terminal generation failure (post-retries) is DATA too (INV-5): it
+    // surfaces as the degraded-plan gate, where the human retries or aborts —
+    // never a silent transition to "failed".
+    return {
+      kind: "failed",
+      errorMessage: error instanceof Error ? error.message : String(error)
+    };
   }
 }
 

@@ -262,6 +262,20 @@ export const RunRecordSchema = z.object({
       integrationStatus: z.string().optional()
     })
     .optional(),
+  /**
+   * Suspended replan awaiting a clarifying answer (U2). Set alongside
+   * pendingQuestion while a selective re-decomposition is gated on the human;
+   * carries the decomposer's resumable step cache + accumulated answers so the
+   * replan continues where it stopped instead of aborting.
+   */
+  pendingReplan: z
+    .object({
+      taskId: z.string().min(1),
+      reason: z.string(),
+      stepCache: z.record(z.any()),
+      questionAnswers: z.record(z.string())
+    })
+    .optional(),
   /** Progressive recursive-planning nodes persisted while the final graph is still being generated. */
   livePlanningNodes: z.array(PlanningLiveNodeSchema).optional(),
   questionAnswers: z.record(z.string()).optional(),

@@ -426,20 +426,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     await settleExecutionOutcome(runId, host, outcome, provisioned!, options);
   } catch (error) {
     console.error(`[Runner] FALLO la ejecucion del run "${runId}":`, error);
-    const message = error instanceof Error ? error.message : String(error);
-    const run = await getRunRepository().get(runId).catch(() => null);
-    if (run !== null) {
-      if (run.status === "interrupted") {
-        console.log(`[Runner] Run ${runId} was interrupted; not saving status as failed.`);
-        return;
-      }
-      await getRunRepository().save({ ...run, status: "failed", failedDuring: "running", errorMessage: message });
-      publishRunEvent(runId, {
-        kind: "status.changed",
-        status: "failed",
-        at: new Date().toISOString()
-      });
-    }
+    await settleExecutionException(runId, error);
   } finally {
     if (lockedRepoRoot !== undefined) {
       await releaseRepoLock(lockedRepoRoot, runId).catch(() => undefined);
@@ -449,6 +436,39 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     stopHeartbeat();
     markRunnerInactive(runId);
   }
+}
+
+/**
+ * Persist the outcome of an unhandled pipeline exception (INV-5): when the
+ * thread already has a checkpoint the failure is recoverable — the run goes
+ * to `interrupted` (restart reconciles and resumes) instead of a dead-end
+ * `failed`. Plain `failed` remains only for preconditions (preflight, busy
+ * repo, missing repo) where there is nothing to resume.
+ */
+async function settleExecutionException(runId: string, error: unknown): Promise<void> {
+  const message = error instanceof Error ? error.message : String(error);
+  const run = await getRunRepository().get(runId).catch(() => null);
+  if (run === null) return;
+  if (run.status === "interrupted") {
+    console.log(`[Runner] Run ${runId} was interrupted; not saving status as failed.`);
+    return;
+  }
+
+  const precondition = error instanceof PreflightError || error instanceof RepoNotConfiguredError;
+  const recoverable = !precondition && (await hasExecutionCheckpoint(runId).catch(() => false));
+  if (recoverable) {
+    await getRunRepository().save({
+      ...run,
+      status: "interrupted",
+      interruptedDuring: "running",
+      errorMessage: `interrupted: ${message} (reanudable con restart — el checkpoint del último paso completo sobrevive)`
+    });
+    publishRunEvent(runId, { kind: "status.changed", status: "interrupted", at: new Date().toISOString() });
+    return;
+  }
+
+  await getRunRepository().save({ ...run, status: "failed", failedDuring: "running", errorMessage: message });
+  publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
 }
 
 /**
@@ -507,12 +527,7 @@ export async function resumeExecutionPipeline(
     await settleExecutionOutcome(runId, host, outcome, provisioned, options);
   } catch (error) {
     console.error(`[Runner] FALLO el resume de ejecucion del run "${runId}":`, error);
-    const message = error instanceof Error ? error.message : String(error);
-    const run = await getRunRepository().get(runId).catch(() => null);
-    if (run !== null && run.status !== "interrupted") {
-      await getRunRepository().save({ ...run, status: "failed", failedDuring: "running", errorMessage: message });
-      publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
-    }
+    await settleExecutionException(runId, error);
   } finally {
     if (lockedRepoRoot !== undefined) {
       await releaseRepoLock(lockedRepoRoot, runId).catch(() => undefined);

@@ -29,9 +29,11 @@ export type { ExecutionGraphConfig } from "./graphs/execution-graph.js";
 export {
   makeDecomposePlanNode,
   questionGateNode,
+  degradedPlanGateNode,
   makeCriticReviewNode,
   approvalGateNode,
-  routeAfterDecompose
+  routeAfterDecompose,
+  routeAfterDegraded
 } from "./nodes/planning-nodes.js";
 export type {
   PlanningGraphDeps,
@@ -41,6 +43,7 @@ export type {
   PlanCritiqueFinding,
   PlanningQuestionInterrupt,
   PlanApprovalInterrupt,
+  PlanDegradedInterrupt,
   PlanningResumeDecision
 } from "./nodes/planning-nodes.js";
 

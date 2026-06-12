@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { RunValidationError, claimRunMutation, resumePlanningPipeline } from "@/lib/server/runs";
 import { publishRunEvent } from "@/lib/server/runs/event-bus";
+import { planningResumeFor } from "@/lib/server/runs/planning-host";
+import { resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
+import { getRunRepository } from "@/lib/server/runs/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,6 +39,14 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     }
     const { nodeId, answer, expectedVersion } = parsed.data;
 
+    // Replan clarifying question (U2): the run is paused during "running" with
+    // a resumable replan context — the answer re-enters the replan.
+    const current = await getRunRepository().get(id);
+    if (current.status === "paused" && current.pausedDuring === "running" && current.pendingReplan !== undefined) {
+      const saved = await resumeReplanWithAnswer(id, nodeId, answer);
+      return NextResponse.json(toRunResponse(saved));
+    }
+
     // Atomic claim (INV-4): the pending question must still match `nodeId`
     // inside the write lock, and the mutator consumes it — a duplicate answer
     // (double-click, second tab) gets a deterministic 409.
@@ -61,8 +72,8 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: new Date().toISOString() });
 
     // Native resume: the answer travels as Command({ resume }) into the
-    // suspended planning questionGate.
-    void resumePlanningPipeline(saved.runId, { answer }).catch(() => undefined);
+    // suspended planning gate (the degraded-plan gate takes a typed action).
+    void resumePlanningPipeline(saved.runId, planningResumeFor(nodeId, answer)).catch(() => undefined);
 
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {

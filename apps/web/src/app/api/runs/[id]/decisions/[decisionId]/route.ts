@@ -18,6 +18,7 @@ import {
   runExecutionPipeline
 } from "@/lib/server/runs";
 import { processPlanApproval } from "@/lib/server/runs/plan-approval-service";
+import { planningResumeFor } from "@/lib/server/runs/planning-host";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import {
   clearExecutionPause,
@@ -25,7 +26,7 @@ import {
   isReplanRequest,
   resetExecutionThread
 } from "@/lib/server/runs/execution-host";
-import { replanSubtree } from "@/lib/server/runs/replan-service";
+import { replanSubtree, resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
 import {
   executionResultsFromRun,
   integrationDurationMs,
@@ -136,10 +137,24 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       if (nodeId === undefined) {
         throw new RunValidationError("Node ID does not match the pending question");
       }
+      const answer = choice.answer;
+
+      // Replan clarifying question (U2): paused during "running" with a
+      // resumable replan context — the answer re-enters the replan.
+      if (run.status === "paused" && run.pausedDuring === "running" && run.pendingReplan !== undefined) {
+        run = await resumeReplanWithAnswer(run.runId, nodeId, answer);
+        publishRunModelEvent(run.runId, {
+          actor: "human",
+          at: now,
+          type: "decision.resolved",
+          payload: { decisionId: decision.id, choice, actor: "human" }
+        });
+        return NextResponse.json({ ...toRunResponse(run), decisionId: decision.id, choice });
+      }
+
       // Atomic claim (INV-4): the pending question must still match `nodeId`
       // inside the write lock; the mutator consumes it, so a duplicate answer
       // gets a deterministic 409.
-      const answer = choice.answer;
       run = await claimRunMutation(
         run.runId,
         { status: ["paused"], pausedDuring: "generating", pendingQuestionNodeId: nodeId },
@@ -155,8 +170,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         }
       );
       publishRunEvent(run.runId, { kind: "status.changed", status: run.status, at: now });
-      // Native resume into the suspended planning questionGate.
-      void resumePlanningPipeline(run.runId, { answer }).catch(() => undefined);
+      // Native resume into the suspended planning gate (the degraded-plan
+      // gate takes a typed retry/abort action).
+      void resumePlanningPipeline(run.runId, planningResumeFor(nodeId, answer)).catch(() => undefined);
     }
 
     publishRunModelEvent(run.runId, {
