@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { validationCommandSafetyIssues } from "@manyhands/contracts";
 
 /**
  * Output schema for a SINGLE recursive-decomposition step (one node).
@@ -51,10 +52,18 @@ const StepDependencySchema = z.object({
 
 export type StepDependency = z.infer<typeof StepDependencySchema>;
 
-const StepValidationCommandSchema = z.object({
-  command: z.string().min(1).max(200),
-  args: z.array(z.string()).max(40).default([])
-});
+// Unsafe commands fail the parse so the model's retry loop (stricter JSON
+// instructions) gets a chance to fix them, instead of reaching the runner.
+const StepValidationCommandSchema = z
+  .object({
+    command: z.string().min(1).max(200),
+    args: z.array(z.string()).max(40).default([])
+  })
+  .superRefine((value, ctx) => {
+    for (const issue of validationCommandSafetyIssues(value.command, value.args)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `unsafe validation command: ${issue}` });
+    }
+  });
 
 const AtomicStepSchema = z.object({
   decision: z.literal("atomic"),
