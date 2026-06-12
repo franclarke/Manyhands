@@ -129,10 +129,42 @@ export const IntegrationStatusSchema = z.union([
   z.literal("executor_repair_failed"),
   z.literal("validation_failed"),
   z.literal("child_failed"),
-  z.literal("internal_error")
+  z.literal("internal_error"),
+  // Transient tombstone: only ever lives inside a conflict-gate Command
+  // update; the state reducer consumes it by DELETING the entry so the
+  // composite re-enters the integration frontier. Never persisted.
+  z.literal("retry_pending")
 ]);
 
 export type IntegrationStatus = z.infer<typeof IntegrationStatusSchema>;
+
+/**
+ * Why an integration failure happened, derived from the result — drives gate
+ * copy and option ordering. "infra" means the environment broke (validation
+ * command's binary missing/rejected/timed out), NOT the merged code: exit 127
+ * (spawn/binary not found), 126 (command rejected as unsafe), 124 (timeout).
+ */
+export type IntegrationFailureClass = "merge_conflict" | "code_validation" | "infra" | "internal";
+
+const INFRA_VALIDATION_EXIT_CODES = new Set([124, 126, 127]);
+
+export function classifyIntegrationFailure(result: {
+  status: IntegrationStatus;
+  parentValidation?: { exitCode: number } | undefined;
+}): IntegrationFailureClass {
+  switch (result.status) {
+    case "cherry_pick_conflict":
+    case "executor_repair_failed":
+      return "merge_conflict";
+    case "validation_failed":
+      return result.parentValidation !== undefined &&
+        INFRA_VALIDATION_EXIT_CODES.has(result.parentValidation.exitCode)
+        ? "infra"
+        : "code_validation";
+    default:
+      return "internal";
+  }
+}
 
 export const ConflictDetailSchema = z.object({
   files: z.array(NonEmptyStringSchema),

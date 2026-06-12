@@ -26,6 +26,29 @@ function mergeById<T>(keyOf: (item: T) => string): (existing: T[], incoming: T[]
   };
 }
 
+/**
+ * mergeById with a delete path: LangGraph channel reducers can't remove
+ * entries, so a retry decision sends a "retry_pending" tombstone that this
+ * reducer consumes by deleting the failed result — the composite then
+ * re-enters the integration frontier (mirrors how leaf retries replace
+ * failures, except re-integration requires ABSENCE, not replacement).
+ */
+function mergeIntegrationResults(
+  existing: IntegrationResult[],
+  incoming: IntegrationResult[]
+): IntegrationResult[] {
+  if (incoming.length === 0) return existing;
+  const merged = new Map(existing.map((item) => [item.compositeTaskId, item]));
+  for (const item of incoming) {
+    if (item.status === "retry_pending") {
+      merged.delete(item.compositeTaskId);
+      continue;
+    }
+    merged.set(item.compositeTaskId, item);
+  }
+  return [...merged.values()];
+}
+
 /** Set-union reducer for accepted-failure id lists. */
 function unionIds(existing: string[], incoming: string[]): string[] {
   if (incoming.length === 0) return existing;
@@ -59,7 +82,7 @@ export const RunStateAnnotation = Annotation.Root({
     default: () => []
   }),
   integrationResults: Annotation<IntegrationResult[]>({
-    reducer: mergeById((result) => result.compositeTaskId),
+    reducer: mergeIntegrationResults,
     default: () => []
   }),
 

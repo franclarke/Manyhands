@@ -14,6 +14,7 @@ import {
   UnexpectedCommitPolicySchema,
   ExecutionConfigSchema,
   GranularityVectorSchema,
+  classifyIntegrationFailure,
   type AgentResultStatus,
   type WorktreeRecord,
   type AgentExecutionResult,
@@ -306,3 +307,41 @@ describe("GranularityVectorSchema", () => {
     expect(() => GranularityVectorSchema.parse({ ...valid, leafCount: -1 })).toThrow();
   });
 });
+
+// ── classifyIntegrationFailure ──────────────────────────────────
+
+describe("classifyIntegrationFailure", () => {
+  it.each([
+    [127, "infra"], // binary missing (spawn failure / not recognized)
+    [126, "infra"], // command rejected as unsafe
+    [124, "infra"] // validation timeout
+  ])("validation_failed with exit %i is infra, not a merge conflict", (exitCode, expected) => {
+    expect(
+      classifyIntegrationFailure({
+        status: "validation_failed",
+        parentValidation: { exitCode }
+      })
+    ).toBe(expected);
+  });
+
+  it("validation_failed with a real test failure exit code is code_validation", () => {
+    expect(
+      classifyIntegrationFailure({ status: "validation_failed", parentValidation: { exitCode: 1 } })
+    ).toBe("code_validation");
+  });
+
+  it("validation_failed without a recorded exit code stays code_validation", () => {
+    expect(classifyIntegrationFailure({ status: "validation_failed" })).toBe("code_validation");
+  });
+
+  it("cherry-pick and repair failures classify as merge_conflict", () => {
+    expect(classifyIntegrationFailure({ status: "cherry_pick_conflict" })).toBe("merge_conflict");
+    expect(classifyIntegrationFailure({ status: "executor_repair_failed" })).toBe("merge_conflict");
+  });
+
+  it("child/internal failures classify as internal", () => {
+    expect(classifyIntegrationFailure({ status: "child_failed" })).toBe("internal");
+    expect(classifyIntegrationFailure({ status: "internal_error" })).toBe("internal");
+  });
+});
+

@@ -58,23 +58,35 @@ export class WorktreeManager {
         baseCommit: params.baseCommit
       });
     } catch (error) {
-      // Surface git's real stderr (invalid ref, path exists, locked index…) — the
-      // WorktreeError wrapper only carries a generic message.
-      execError("worktree", "git worktree add failed", {
+      // A previous attempt may have left this worktree/branch behind (e.g. a
+      // failed integration the human chose to retry at the conflict gate).
+      // Tear the leftovers down and try exactly once more; any other cause
+      // fails the same way twice and surfaces below.
+      const recreated = await this.recreateAfterStaleLeftovers(path, branch, params);
+      if (!recreated) {
+        // Surface git's real stderr (invalid ref, path exists, locked index…) — the
+        // WorktreeError wrapper only carries a generic message.
+        execError("worktree", "git worktree add failed", {
+          task: params.taskId,
+          kind: params.kind,
+          path,
+          branch,
+          baseCommit: params.baseCommit,
+          cause: error instanceof Error ? error.message : String(error)
+        });
+        throw new WorktreeError(
+          `Failed to create worktree for task ${params.taskId}`,
+          params.taskId,
+          "create",
+          path,
+          error
+        );
+      }
+      execLog("worktree", "worktree recreated after stale leftovers", {
         task: params.taskId,
         kind: params.kind,
-        path,
-        branch,
-        baseCommit: params.baseCommit,
-        cause: error instanceof Error ? error.message : String(error)
+        branch
       });
-      throw new WorktreeError(
-        `Failed to create worktree for task ${params.taskId}`,
-        params.taskId,
-        "create",
-        path,
-        error
-      );
     }
 
     execLog("worktree", "worktree created", {
@@ -94,6 +106,33 @@ export class WorktreeManager {
       status: "active",
       createdAt: this.now()
     });
+  }
+
+  /** Best-effort cleanup of a stale worktree dir + branch, then one fresh create. */
+  private async recreateAfterStaleLeftovers(
+    path: string,
+    branch: string,
+    params: CreateWorktreeParams
+  ): Promise<boolean> {
+    await this.git
+      .worktreeRemove({ repoRoot: this.repoRoot, worktreePath: path, force: true })
+      .catch(() => undefined);
+    await this.git.worktreePrune(this.repoRoot).catch(() => undefined);
+    await rm(path, { recursive: true, force: true }).catch(() => undefined);
+    await this.git
+      .branchDelete({ repoRoot: this.repoRoot, branch, force: true })
+      .catch(() => undefined);
+    try {
+      await this.git.worktreeAdd({
+        repoRoot: this.repoRoot,
+        worktreePath: path,
+        branch,
+        baseCommit: params.baseCommit
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**

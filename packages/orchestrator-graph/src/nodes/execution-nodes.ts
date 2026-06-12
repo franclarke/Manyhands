@@ -23,6 +23,7 @@
  */
 import { Command, END, interrupt, Send } from "@langchain/langgraph";
 import type { RunState, RunStateUpdate } from "../state.js";
+import { classifyIntegrationFailure } from "@manyhands/execution-core";
 import type { AgentExecutionResult, IntegrationResult } from "@manyhands/execution-core";
 import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 
@@ -39,6 +40,7 @@ export type LeafGateDecision =
 /** Decision payload accepted by the integration conflict gate. */
 export type ConflictGateDecision =
   | { action: "accept_conflict"; compositeTaskId?: string }
+  | { action: "retry_integration"; compositeTaskId?: string }
   | { action: "abort_run" };
 
 /** Decision payload accepted by the budget gate (U5). */
@@ -63,6 +65,10 @@ export interface MergeConflictInterrupt {
   type: "merge_conflict";
   compositeTaskId: string;
   status: string;
+  /** Why it failed (merge_conflict | code_validation | infra | internal) — drives gate copy. */
+  failureClass: string;
+  /** Parent validation exit code when the failure came from validation. */
+  validationExitCode?: number;
   conflictDetails?: { files: string[]; diff: string };
 }
 
@@ -584,6 +590,10 @@ export function conflictGateNode(state: RunState): Command<unknown, RunStateUpda
       type: "merge_conflict",
       compositeTaskId: failure.compositeTaskId,
       status: failure.status,
+      failureClass: classifyIntegrationFailure(failure),
+      ...(failure.parentValidation !== undefined
+        ? { validationExitCode: failure.parentValidation.exitCode }
+        : {}),
       ...(failure.conflictDetails !== undefined
         ? {
             conflictDetails: {
@@ -600,6 +610,14 @@ export function conflictGateNode(state: RunState): Command<unknown, RunStateUpda
     case "accept_conflict":
       return new Command<unknown, RunStateUpdate>({
         update: { acceptedIntegrationFailures: [failure.compositeTaskId] },
+        goto: "integrationJoin"
+      });
+    case "retry_integration":
+      // The reducer consumes this tombstone by DELETING the failed result, so
+      // routeIntegration sees the composite as integrable again and re-runs it
+      // (e.g. after the human fixed a broken environment at an infra failure).
+      return new Command<unknown, RunStateUpdate>({
+        update: { integrationResults: [{ ...failure, status: "retry_pending" }] },
         goto: "integrationJoin"
       });
     case "abort_run":

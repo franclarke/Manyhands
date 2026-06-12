@@ -81,6 +81,7 @@ export function isReplanRequest(payload: { action?: unknown; answer?: unknown } 
 }
 
 export const CONFLICT_GATE_OPTIONS = [
+  { label: "Reintentar integración", action: "retry_integration" },
   { label: "Aceptar conflicto y continuar", action: "accept_conflict" },
   { label: "Abortar run", action: "abort_run" }
 ] as const;
@@ -124,6 +125,7 @@ export function isResumeDecision(value: unknown): value is ResumeDecision {
     action === "retry_repair" ||
     action === "accept_failing" ||
     action === "accept_conflict" ||
+    action === "retry_integration" ||
     action === "extend_budget" ||
     action === "finish_partial" ||
     action === "abort_run"
@@ -504,7 +506,9 @@ function gateFromInterrupt(
     gateId: mintGateId("merge_conflict", interrupt.compositeTaskId),
     taskId: interrupt.compositeTaskId,
     ...(interrupt.conflictDetails !== undefined ? { conflictFiles: interrupt.conflictDetails.files } : {}),
-    integrationStatus: interrupt.status
+    integrationStatus: interrupt.status,
+    failureClass: interrupt.failureClass,
+    ...(interrupt.validationExitCode !== undefined ? { validationExitCode: interrupt.validationExitCode } : {})
   };
 }
 
@@ -512,24 +516,67 @@ function mintGateId(gate: string, taskId: string): string {
   return `${gate}:${taskId}:${randomUUID().slice(0, 8)}`;
 }
 
+/**
+ * Question + option order for a merge_conflict gate, by failure class. The
+ * postmortem run showed an npm-not-found (exit 127) presented as "conflictos
+ * que el Composer no pudo resolver" — with zero actual conflicts. Copy must
+ * say what really happened; options lead with the most sensible action.
+ */
+function mergeConflictGateCopy(gate: NonNullable<RunRecord["pendingDecision"]>): {
+  question: string;
+  options: string[];
+} {
+  const labelFor = (action: string): string =>
+    CONFLICT_GATE_OPTIONS.find((option) => option.action === action)?.label ?? action;
+  const exitSuffix = gate.validationExitCode !== undefined ? ` (exit ${gate.validationExitCode})` : "";
+
+  switch (gate.failureClass) {
+    case "infra":
+      return {
+        question:
+          `La integración de "${gate.taskId}" no pudo validarse por un fallo del entorno` +
+          `${exitSuffix}: el comando de validación no se pudo ejecutar (binario no encontrado, ` +
+          `comando rechazado o timeout). No hubo conflictos de merge. ` +
+          `Arreglá el entorno y reintentá. ¿Cómo querés continuar?`,
+        options: [labelFor("retry_integration"), labelFor("accept_conflict"), labelFor("abort_run")]
+      };
+    case "code_validation":
+      return {
+        question:
+          `La integración de "${gate.taskId}" se aplicó sin conflictos, pero la validación ` +
+          `del padre falló${exitSuffix}. ¿Cómo querés continuar?`,
+        options: [labelFor("accept_conflict"), labelFor("retry_integration"), labelFor("abort_run")]
+      };
+    case "merge_conflict":
+      return {
+        question: `La integración de "${gate.taskId}" falló con conflictos que el Composer no pudo resolver. ¿Cómo querés continuar?`,
+        options: [labelFor("accept_conflict"), labelFor("retry_integration"), labelFor("abort_run")]
+      };
+    default:
+      return {
+        question: `La integración de "${gate.taskId}" falló (${gate.integrationStatus ?? "error interno"}). ¿Cómo querés continuar?`,
+        options: [labelFor("retry_integration"), labelFor("accept_conflict"), labelFor("abort_run")]
+      };
+  }
+}
+
 /** Persist a gate pause: status, typed decision, and the projected question. */
 export async function persistExecutionPause(
   runId: string,
   gate: NonNullable<RunRecord["pendingDecision"]>
 ): Promise<void> {
-  const optionsFor = {
-    leaf_validation_failed: LEAF_GATE_OPTIONS,
-    merge_conflict: CONFLICT_GATE_OPTIONS,
-    budget_exceeded: BUDGET_GATE_OPTIONS
-  } as const;
-  const options = optionsFor[gate.gate].map((option) => option.label);
+  const conflictCopy = gate.gate === "merge_conflict" ? mergeConflictGateCopy(gate) : undefined;
+  const options =
+    conflictCopy?.options ??
+    (gate.gate === "leaf_validation_failed" ? LEAF_GATE_OPTIONS : BUDGET_GATE_OPTIONS).map(
+      (option) => option.label
+    );
   const question =
-    gate.gate === "leaf_validation_failed"
+    conflictCopy?.question ??
+    (gate.gate === "leaf_validation_failed"
       ? `La validación de la tarea "${gate.taskId}" falló tras la auto-reparación. ¿Cómo querés continuar?`
-      : gate.gate === "budget_exceeded"
-        ? `El run alcanzó su presupuesto (${Math.round(gate.spentTokens ?? 0)} tokens / $${(gate.spentUsd ?? 0).toFixed(2)}). ` +
-          `Quedan ${gate.pendingTasks?.length ?? 0} tareas pendientes. ¿Cómo querés continuar?`
-        : `La integración de "${gate.taskId}" falló con conflictos que el Composer no pudo resolver. ¿Cómo querés continuar?`;
+      : `El run alcanzó su presupuesto (${Math.round(gate.spentTokens ?? 0)} tokens / $${(gate.spentUsd ?? 0).toFixed(2)}). ` +
+        `Quedan ${gate.pendingTasks?.length ?? 0} tareas pendientes. ¿Cómo querés continuar?`);
 
   await getRunRepository().update(runId, (current) => ({
     ...current,

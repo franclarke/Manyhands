@@ -264,6 +264,10 @@ export const RunRecordSchema = z.object({
       validationOutput: z.string().optional(),
       conflictFiles: z.array(z.string().min(1)).optional(),
       integrationStatus: z.string().optional(),
+      /** Why the integration failed (merge_conflict | code_validation | infra | internal). */
+      failureClass: z.string().optional(),
+      /** Parent validation exit code when the failure came from validation. */
+      validationExitCode: z.number().int().optional(),
       /** Budget gate (U5): reported spend at suspension time. */
       spentTokens: z.number().nonnegative().optional(),
       spentUsd: z.number().nonnegative().optional(),

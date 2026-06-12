@@ -127,6 +127,12 @@ interface HarnessOptions {
   /** Leaves repaired successfully by the auto-repair dep. */
   repairableLeaves?: Set<string>;
   failingComposites?: Set<string>;
+  /**
+   * Composites whose FIRST integration attempt fails with an infra-classed
+   * validation failure (spawn 127); retries succeed — models "human fixed the
+   * environment and chose retry_integration".
+   */
+  compositesFailingOnce?: Set<string>;
   selectWave?: (params: { graph: TaskGraph; candidates: string[] }) => string[];
   checkpointer?: JsonFileCheckpointSaver;
 }
@@ -141,6 +147,7 @@ function makeHarness(options: HarnessOptions = {}) {
   const failing = options.failingLeaves ?? new Set<string>();
   const repairable = options.repairableLeaves ?? new Set<string>();
   const failingComposites = options.failingComposites ?? new Set<string>();
+  const compositesFailingOnce = options.compositesFailingOnce ?? new Set<string>();
 
   const graph = buildExecutionGraph({
     leafDeps: {
@@ -167,6 +174,14 @@ function makeHarness(options: HarnessOptions = {}) {
     integrateDeps: {
       integrateComposite: async (params) => {
         integrations.push(params.compositeTaskId);
+        const attempts = integrations.filter((id) => id === params.compositeTaskId).length;
+        if (compositesFailingOnce.has(params.compositeTaskId) && attempts === 1) {
+          return {
+            ...integrationResult(params.compositeTaskId, "validation_failed"),
+            conflictDetails: undefined,
+            parentValidation: { passed: false, output: "spawn npm ENOENT", exitCode: 127 }
+          } as IntegrationResult;
+        }
         const status = failingComposites.has(params.compositeTaskId) ? "executor_repair_failed" : "success";
         return integrationResult(params.compositeTaskId, status);
       }
@@ -313,6 +328,57 @@ describe("execution graph — dynamic wavefront", () => {
       config
     )) as RunState;
 
+    expect(final.acceptedIntegrationFailures).toEqual(["root"]);
+    expect(final.status).toBe("failed");
+  });
+
+  it("classifies an infra validation failure and retry_integration re-runs the composite to completion", async () => {
+    const taskGraph = makeGraph();
+    const harness = makeHarness({ compositesFailingOnce: new Set(["root"]) });
+    const config = threadConfig("t-retry-integration", taskGraph);
+
+    await harness.graph.invoke(initialState(taskGraph), config);
+    const paused = await harness.graph.getState(config);
+    const interruptValue = paused.tasks[0]?.interrupts[0]?.value as {
+      type: string;
+      failureClass: string;
+      validationExitCode?: number;
+    };
+    // exit 127 (binary missing) must surface as infra, never as a merge conflict.
+    expect(interruptValue.type).toBe("merge_conflict");
+    expect(interruptValue.failureClass).toBe("infra");
+    expect(interruptValue.validationExitCode).toBe(127);
+
+    const final = (await harness.graph.invoke(
+      new Command({ resume: { action: "retry_integration" } }),
+      config
+    )) as RunState;
+
+    // The tombstone deleted the failed result and the composite re-integrated.
+    expect(harness.integrations).toEqual(["root", "root"]);
+    expect(final.status).toBe("completed");
+    expect(final.integrationResults).toHaveLength(1);
+    expect(final.integrationResults[0]?.status).toBe("success");
+    expect(final.acceptedIntegrationFailures).toEqual([]);
+  });
+
+  it("a persistent failure re-gates after retry_integration (each retry is a human decision)", async () => {
+    const taskGraph = makeGraph();
+    const harness = makeHarness({ failingComposites: new Set(["root"]) });
+    const config = threadConfig("t-retry-persistent", taskGraph);
+
+    await harness.graph.invoke(initialState(taskGraph), config);
+    await harness.graph.invoke(new Command({ resume: { action: "retry_integration" } }), config);
+
+    // Failed again → a fresh interrupt, not a silent loop.
+    const paused = await harness.graph.getState(config);
+    expect(paused.tasks[0]?.interrupts).toHaveLength(1);
+    expect(harness.integrations).toEqual(["root", "root"]);
+
+    const final = (await harness.graph.invoke(
+      new Command({ resume: { action: "accept_conflict" } }),
+      config
+    )) as RunState;
     expect(final.acceptedIntegrationFailures).toEqual(["root"]);
     expect(final.status).toBe("failed");
   });
