@@ -99,7 +99,7 @@ describe("preflight hardening", () => {
         gitPorcelain: async () => "?? .manyhands/worktrees/run-1/\n?? .manyhands/run.lock\n",
         freeDiskBytes: async () => 50 * 1024 * 1024 * 1024
       })
-    ).resolves.toBeUndefined();
+    ).resolves.toMatchObject({ warnings: expect.any(Array) });
   });
 
   it("still fails on real user dirt", async () => {
@@ -130,6 +130,6 @@ describe("preflight hardening", () => {
         gitPorcelain: async () => "",
         freeDiskBytes: async () => undefined
       })
-    ).resolves.toBeUndefined();
+    ).resolves.toMatchObject({ warnings: expect.any(Array) });
   });
 });

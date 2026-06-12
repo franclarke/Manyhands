@@ -301,6 +301,28 @@ export function selectRenderableNodeState(model: RunModel, nodeId: NodeId): Rend
       break;
   }
 
+  // A pending blocking decision that references this node supersedes the
+  // active displays: the run is paused waiting for the human, so painting
+  // "Verificando"/"Reparando" would lie (postmortem bug). Derived purely from
+  // the decision log — resolving the gate restores the display by itself.
+  if ((display === "running" || display === "verifying") && hasPendingBlockingDecision(model, nodeId)) {
+    display = "gated";
+  }
+
   const verify = node.execution.kind === "verifying" ? node.execution.loop : undefined;
   return { display, lifecycle: kind, freshness, obsolete, ...(verify !== undefined ? { verify } : {}) };
+}
+
+function hasPendingBlockingDecision(model: RunModel, nodeId: NodeId): boolean {
+  for (const decision of model.decisions.values()) {
+    if (
+      decision.status === "pending" &&
+      decision.blocking &&
+      decision.kind !== "approve_plan" &&
+      (decision.context.nodeIds?.includes(nodeId) ?? false)
+    ) {
+      return true;
+    }
+  }
+  return false;
 }

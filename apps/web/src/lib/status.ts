@@ -260,6 +260,9 @@ export function runUiStatus(status: RunStatusKey): UiStatus {
     case "approved":
       return "ready";
     case "paused":
+      // Paused = a gate/question is waiting on the human; painting it as
+      // "Ejecutando" hid the pause in the postmortem run's header badge.
+      return "needs_review";
     case "running":
       return "running";
     case "completed":

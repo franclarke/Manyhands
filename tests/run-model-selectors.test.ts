@@ -53,6 +53,79 @@ function lastSeqOf(fx: RunFixture, predicate: (e: RunEvent) => boolean): number 
 
 const ALL: Array<[string, RunFixture]> = GOLDEN_FIXTURE_NAMES.map((name) => [name, GOLDEN_FIXTURES[name]]);
 
+/** Minimal event stream: one node mid-verification, optionally gated by a decision. */
+function gatedEvents(input: {
+  nodeId?: string;
+  decisionNodeIds?: string[];
+  blocking?: boolean;
+  resolved?: boolean;
+}): RunEvent[] {
+  const nodeId = input.nodeId ?? "build-ui";
+  const base = { runId: "run-gated", actor: "system" as const };
+  const events: RunEvent[] = [
+    {
+      ...base,
+      seq: 1,
+      at: "2026-06-12T00:00:00.000Z",
+      type: "node.verify.iteration",
+      payload: { nodeId, iteration: 1, maxIterations: 3, build: "pass", testsPass: 1, testsTotal: 1 }
+    },
+    {
+      ...base,
+      seq: 2,
+      at: "2026-06-12T00:00:01.000Z",
+      type: "decision.raised",
+      payload: {
+        decisionId: `clarify:${nodeId}`,
+        kind: "clarify",
+        blocking: input.blocking ?? true,
+        context: {
+          nodeIds: input.decisionNodeIds ?? [nodeId],
+          question: "¿Cómo querés continuar?",
+          options: ["Aceptar conflicto y continuar", "Abortar run"],
+          gate: "merge_conflict"
+        }
+      }
+    }
+  ];
+  if (input.resolved === true) {
+    events.push({
+      ...base,
+      seq: 3,
+      at: "2026-06-12T00:00:02.000Z",
+      actor: "human",
+      type: "decision.resolved",
+      payload: { decisionId: `clarify:${nodeId}`, choice: { answer: "Aceptar conflicto y continuar" }, actor: "human" }
+    });
+  }
+  return events;
+}
+
+describe("selectRenderableNodeState — gated derivation", () => {
+  it("a verifying node referenced by a pending blocking decision renders as gated", () => {
+    const m = reduceRunEvents(initialFor("run-gated"), gatedEvents({}));
+    const state = selectRenderableNodeState(m, "build-ui");
+    expect(state.display).toBe("gated");
+    // lifecycle keeps the raw execution kind; only the painted display changes.
+    expect(state.lifecycle).toBe("verifying");
+  });
+
+  it("resolving the decision restores the underlying display without extra events", () => {
+    const m = reduceRunEvents(initialFor("run-gated"), gatedEvents({ resolved: true }));
+    expect(selectRenderableNodeState(m, "build-ui").display).toBe("verifying");
+  });
+
+  it("a non-blocking decision does not gate the node", () => {
+    const m = reduceRunEvents(initialFor("run-gated"), gatedEvents({ blocking: false }));
+    expect(selectRenderableNodeState(m, "build-ui").display).toBe("verifying");
+  });
+
+  it("a decision referencing another node does not gate this one", () => {
+    const m = reduceRunEvents(initialFor("run-gated"), gatedEvents({ decisionNodeIds: ["other-node"] }));
+    expect(selectRenderableNodeState(m, "build-ui").display).toBe("verifying");
+  });
+});
+
 // ── General ────────────────────────────────────────────────────────────────────
 
 describe("selectors — general", () => {

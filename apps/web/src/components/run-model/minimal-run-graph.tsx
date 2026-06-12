@@ -388,6 +388,7 @@ const STATUS_DOT: Record<VitalStatus, string> = {
   running: "var(--running)",
   verifying: "var(--running)",
   repairing: "var(--running)",
+  gated: "var(--gated)",
   done: "var(--done)",
   obsolete: "var(--warning)",
   blocked: "var(--warning)",

@@ -442,6 +442,7 @@ export type NodeDisplay =
   | "blocked"
   | "running"
   | "verifying"
+  | "gated"
   | "done"
   | "failed"
   | "obsolete";

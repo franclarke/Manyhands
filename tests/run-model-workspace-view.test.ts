@@ -48,6 +48,51 @@ function pl(e: RunEvent): Record<string, unknown> {
 
 const ALL: Array<[string, RunFixture]> = GOLDEN_FIXTURE_NAMES.map((name) => [name, GOLDEN_FIXTURES[name]]);
 
+// ── gated vital (execution gate pauses must not paint "Reparando") ──────────────
+
+describe("workspace-view — gated node vital", () => {
+  function gatedModel(): RunModel {
+    return reduceRunEvents(initialFor("run-gated"), [
+      {
+        runId: "run-gated",
+        actor: "system",
+        seq: 1,
+        at: "2026-06-12T00:00:00.000Z",
+        type: "node.verify.iteration",
+        // build:fail mid-repair — without the gate this paints "Reparando automáticamente".
+        payload: { nodeId: "build-ui", iteration: 1, maxIterations: 3, build: "fail", testsPass: 0, testsTotal: 1 }
+      },
+      {
+        runId: "run-gated",
+        actor: "system",
+        seq: 2,
+        at: "2026-06-12T00:00:01.000Z",
+        type: "decision.raised",
+        payload: {
+          decisionId: "clarify:build-ui",
+          kind: "clarify",
+          blocking: true,
+          context: {
+            nodeIds: ["build-ui"],
+            question: "¿Cómo querés continuar?",
+            options: ["Aceptar conflicto y continuar", "Abortar run"],
+            gate: "merge_conflict"
+          }
+        }
+      }
+    ]);
+  }
+
+  it("paints 'Esperando decisión' instead of 'Reparando automáticamente' while gated", () => {
+    const view = selectWorkspaceView(gatedModel());
+    const node = view.nodes.find((n) => n.id === "build-ui")!;
+    expect(node.vital.status).toBe("gated");
+    expect(node.vital.label).toBe("Esperando decisión");
+    expect(node.vital.repairActive).toBe(false);
+    expect(node.vital.detail).toContain("esperando decisión");
+  });
+});
+
 // ── golden-happy-path phases ────────────────────────────────────────────────────
 
 describe("workspace-view — golden-happy-path", () => {

@@ -55,6 +55,7 @@ export type VitalStatus =
   | "running"
   | "verifying"
   | "repairing"
+  | "gated"
   | "done"
   | "obsolete"
   | "blocked"
@@ -200,6 +201,8 @@ function vitalStatusOf(display: NodeDisplay, isBlocked: boolean, repairActive: b
       return "running";
     case "verifying":
       return repairActive ? "repairing" : "verifying";
+    case "gated":
+      return "gated";
     case "done":
       return "done";
     case "blocked":
@@ -220,6 +223,8 @@ function vitalLabelOf(status: VitalStatus, role: NodeRole): string {
       return "Verificando";
     case "repairing":
       return "Reparando automáticamente";
+    case "gated":
+      return "Esperando decisión";
     case "done":
       return role === "leaf" ? "Verificado" : "Integrado";
     case "obsolete":
@@ -378,6 +383,10 @@ export function selectWorkspaceView(model: RunModel, options: ProtoViewOptions =
       case "verifying":
       case "repairing":
         detail = verificationSummary;
+        break;
+      case "gated":
+        blockedReason = blockedReasonOf(row.id, model, anc.waitingOn);
+        detail = blockedReason;
         break;
       case "done":
         detail = anc.commit !== undefined ? `commit ${anc.commit}` : undefined;
