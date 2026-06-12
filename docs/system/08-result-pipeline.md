@@ -30,7 +30,7 @@ El recorder llama a `WorktreeManager.detectUnexpectedCommit()`. Si el agente hiz
 
 **Camino 3 — Ejecución normal:**
 Este es el camino feliz:
-1. `git diff HEAD` captura todos los cambios del agente — la lista de archivos y el contenido del diff.
+1. El staging usa `addAllExcluding` (`git add -A` menos los `DEFAULT_ARTIFACT_GLOBS`: `**/node_modules/**`, `**/dist/**`, `**/.next/**`, etc.) y `git diff --cached` captura los cambios del agente — la lista de archivos y el contenido del diff.
 2. Si el diff está vacío y el agente terminó con exit 0, el resultado es `empty_diff` (el agente no hizo nada, lo cual puede ser un error de prompt o de scope).
 3. `ScopeChecker.check()` valida que los archivos cambiados estén dentro del scope del contrato.
 4. Si el scope check pasa, `ValidationRunner.run()` ejecuta los `leafValidationCommands`.
@@ -42,6 +42,16 @@ Los tails de stdout/stderr se truncan a 4KB y se incluyen en el resultado para d
 ### La fuente de verdad
 
 El `ResultRecorder` nunca mira el stdout del agente para determinar qué cambió. `git diff HEAD` es la única fuente de verdad. El agente puede decir en su stdout "modifiqué los archivos X, Y y Z" — pero si el diff no lo confirma, el recorder no lo registra.
+
+### Higiene de artefactos (defensa en capas)
+
+Un agente puede correr `npm install` legítimamente para testear su trabajo; lo que no puede pasar es que las dependencias terminen commiteadas (pasó en un run real contra un repo sin `.gitignore`: 4355 y 6678 archivos de `node_modules`). Defensa en tres capas, definida en `scope/artifacts.ts`:
+
+1. **Provisioning:** `ensureGitInfoExclude` agrega los patrones default a `.git/info/exclude` del repo target (vía `--git-common-dir`, así cubre todos los worktrees del run). Idempotente, nunca toca el working tree ni el `.gitignore` del usuario.
+2. **Staging:** el recorder, el grounding agent y el repair del Composer stagean con `addAllExcluding` en vez de `git add -A` pelado.
+3. **Advisory de tamaño:** más de `OVERSIZED_CHANGE_THRESHOLD` (500) archivos cambiados tras el filtrado registra un `scope_advisory` con `reason: "oversized_change"` en el trace — señal de scope leak, nunca un hard fail.
+
+Importante: los artefactos se **excluyen del commit**, no se agregan a `forbiddenPaths` — forbidden es hard-fail y mataría runs legítimos. El preflight emite un warning (no bloqueante) si el repo target no tiene `.gitignore`.
 
 ---
 
@@ -69,6 +79,13 @@ Cada `ExecutionValidationCommand` especifica:
 - `cwd`: si ejecutar en `"worktree"` (el directorio de la hoja) o en `"repo-root"` (el directorio raíz del repositorio)
 
 El `ValidationRunner` lanza el proceso, espera su terminación o el timeout, y retorna `{ passed: boolean, output: string, exitCode: number }`. Si el exit code es 0, pasó. Cualquier otro código es un fallo.
+
+Detalles operativos (post-mortem Windows):
+
+- En win32 spawnea con `shell: true` — npm/pnpm/yarn/npx son shims `.cmd` que un spawn directo no resuelve (`ENOENT`).
+- Los comandos vienen del LLM: pasan por `validationCommandSafetyIssues` (charset whitelist en `@manyhands/contracts`) en el parse del decomposer y de nuevo en el runner. Un comando rechazado no se spawnea y devuelve exit `126`.
+- Timeout devuelve exit `124` y mata el **árbol** de procesos (`killProcessTree`) — bajo shell, un SIGKILL al cmd.exe dejaría huérfano al proceso real.
+- "Binario no encontrado" se normaliza a exit `127` aunque bajo shell el error llegue como salida de texto ("is not recognized…"). Estos tres códigos sintéticos permiten clasificar el fallo como de **infraestructura** (ver `09-composer.md`) en vez de atribuirlo al código.
 
 ---
 

@@ -58,6 +58,13 @@ agent edits worktree
 Si un agente commitea inesperadamente, se registra
 `agentCommittedUnexpectedly` y se aplica la política configurada.
 
+**D12:** los artefactos de build/dependencias (`node_modules`, `dist`, `.next`,
+etc.) se **excluyen del commit**, no se prohíben: provisioning escribe
+`.git/info/exclude` y el staging usa `addAllExcluding`
+(`DEFAULT_ARTIFACT_GLOBS`). No agregarlos a `forbiddenPaths` — forbidden es
+hard-fail y mataría runs legítimos donde el agente instala dependencias para
+testear. Cambios de más de 500 archivos generan un advisory, nunca un fallo.
+
 ---
 
 ## Scope e Aislamiento
@@ -89,6 +96,15 @@ Ante conflicto, el Composer invoca reparación semántica con:
 
 No usar `git merge` ni `git rebase` para la integración normal.
 
+**D11:** los fallos de integración se clasifican antes de presentarse al humano
+(`classifyIntegrationFailure`): `merge_conflict` | `code_validation` | `infra`
+(exit 124/126/127 de la validación parent) | `internal`. Un fallo de entorno
+nunca se presenta como conflicto de merge. El conflict gate acepta
+`retry_integration`, implementado con un tombstone `retry_pending` que el
+reducer consume borrando el resultado fallido (los canales de LangGraph no
+tienen delete nativo); el composite re-entra al frontier y el worktree sucio
+del intento anterior se recrea idempotentemente.
+
 ---
 
 ## Planning y Decomposer
@@ -112,6 +128,19 @@ La ejecución pasa por el seam `AgentExecutor` y perfiles configurados en
 
 No cambiar el executor default, agregar CLIs nuevos o depender de subprocesses
 directos fuera del wrapper sin discutirlo.
+
+**D13:** los comandos de validación corren con `shell: true` en win32 (shims
+`.cmd`) y, por venir del LLM, pasan por la charset whitelist
+`validationCommandSafetyIssues` en dos capas (parse del decomposer + runner).
+Exit codes sintéticos: 124 timeout (kill de árbol), 126 comando rechazado,
+127 binario ausente — son la base de la clasificación `infra` de D11.
+
+**D14:** los gates de ejecución se publican como decisión `clarify` con
+`context.gate` y `context.options` (labels). UI y chat resuelven por el mismo
+`execution-gate-service`; respuesta inválida → 400 con opciones, duplicado →
+409 (CAS por `gateId`). El estado visual `gated` ("Esperando decisión") se
+deriva de decisiones blocking pendientes en los selectores — no existe un
+evento de "nodo pausado".
 
 ---
 

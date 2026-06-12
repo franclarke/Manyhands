@@ -68,6 +68,14 @@ servidor empuja los `RunEvent` del log append-only (JSONL); el cliente reduce la
 historia con `run-model/reducer.ts` y proyecta DAG, wavefront y estado mediante
 selectores puros. Sin polling.
 
+Los singletons en memoria que cruzan rutas (event buses, locks de append,
+runner-state, abort registry, repositorios) viven anclados en `globalThis` vía
+`lib/server/global-singleton.ts`: Next instancia el estado a nivel de módulo
+una vez **por bundle de ruta** (y de nuevo en cada recompilación dev), así que
+un `EventEmitter` a nivel de módulo fragmenta — el pipeline publicaba en una
+instancia y la ruta SSE estaba suscripta a otra, y los frames en vivo nunca
+llegaban.
+
 ### Host de ejecución y checkpoints de LangGraph
 
 `execution-host.ts` es el único lugar donde la web app compila y conduce el
@@ -89,6 +97,24 @@ el DecisionChannel. La respuesta del usuario — vía
 `POST /api/runs/[runId]/resume` o el route de decisiones — se entrega al thread
 suspendido **nativamente** con `Command({ resume })` a través de
 `resumeExecutionPipeline`. Los checkpoints nunca se editan a mano.
+
+Los gates de ejecución se publican como decisión `clarify` con
+`context.gate` (señal de que NO es una pregunta del planner) y
+`context.options` = labels de las opciones del gate. La UI renderiza un botón
+por opción que postea `{ answer: <label exacto> }`; el chat composer acepta las
+mismas respuestas porque ambos caminos (`/decisions/[decisionId]` y `/answer`)
+resuelven por el servicio compartido `execution-gate-service`. Una respuesta
+inválida devuelve 400 listando las opciones válidas; un double-submit devuelve
+409 (CAS por `gateId`, INV-4).
+
+### Estado visual "gated" (derivado)
+
+Un nodo activo (`running`/`verifying`) referenciado por una decisión blocking
+pendiente se pinta `gated` ("Esperando decisión") — derivación pura en
+`selectRenderableNodeState` sobre `model.decisions`, sin evento nuevo:
+resolver la decisión restaura el display solo. Mientras está gated,
+`repairActive` es false (nunca más "Reparando automáticamente" durante una
+pausa) y el badge del run pausado mapea a `needs_review`, no a "Ejecutando".
 
 ### Panel de Foco Polimórfico
 

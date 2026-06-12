@@ -50,6 +50,27 @@ reinyectarse para una segunda pasada según la política vigente.
 - `validation_failed`
 - `child_failed`
 - `internal_error`
+- `retry_pending` (tombstone transitorio: solo existe dentro del Command del
+  conflict gate; el reducer lo consume borrando la entrada — nunca se persiste)
+
+## Clasificación De Fallos y Retry
+
+Un fallo de integración no manejado pausa el run en el conflict gate. Para que
+el gate no mienta (un `npm` ausente no es "conflictos que el Composer no pudo
+resolver"), `classifyIntegrationFailure` deriva una clase del resultado:
+
+- `merge_conflict`: cherry-pick con conflicto o repair fallido;
+- `infra`: `validation_failed` con exit 124/126/127 de la validación parent
+  (timeout, comando rechazado, binario ausente) — falló el entorno, no el código;
+- `code_validation`: `validation_failed` con cualquier otro exit;
+- `internal`: `child_failed` / `internal_error`.
+
+La clase viaja en el interrupt (`failureClass`, `validationExitCode`) y decide
+el copy y el orden de opciones del gate. La acción `retry_integration` emite el
+tombstone `retry_pending`: el reducer borra el resultado fallido, el composite
+vuelve al frontier de integración y se re-integra (el `WorktreeManager` recrea
+worktrees/branches que el intento fallido dejó atrás). Cada retry es una
+decisión humana — un fallo persistente re-gatea, nunca loopea solo.
 
 ## Interfaces
 

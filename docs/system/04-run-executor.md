@@ -60,6 +60,22 @@ con el output exacto del fallo. Si agota el presupuesto de reparación, el run s
 pausa en un gate humano. Reanudar no debe reejecutar trabajo accidentalmente: se
 usa el checkpoint y el estado persistido.
 
+### Validation Runner
+
+`ChildProcessValidationRunner` ejecuta los comandos de validación (leaf, parent
+y run). En win32 spawnea con `shell: true` (npm/pnpm/yarn/npx son shims `.cmd`
+que `spawn` directo no resuelve — ENOENT). Comandos y args vienen del LLM, así
+que pasan por `validationCommandSafetyIssues` (charset whitelist en
+`@manyhands/contracts`) en dos bordes: el parse del decomposer y el runner.
+
+Exit codes sintéticos del runner, que alimentan la clasificación de fallos:
+
+- `124`: timeout — el kill es de árbol (`killProcessTree`, taskkill `/t` en
+  win32) para no dejar huérfano al hijo real bajo cmd.exe;
+- `126`: comando rechazado por la whitelist (no se spawnea);
+- `127`: binario no encontrado (evento `error` sin shell, o salida
+  "is not recognized…" normalizada bajo shell).
+
 ### Integración
 
 Cuando los hijos de un composite están resueltos, el Composer integra un
