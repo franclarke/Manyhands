@@ -1,3 +1,6 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { runPreflight, PreflightError, type PreflightDeps } from "@/lib/server/runs/preflight";
 import { inspectGeminiReadiness, type ProviderReadinessDeps } from "@/lib/server/providers/readiness";
@@ -13,7 +16,31 @@ const INPUT = { repoRoot: "C:/repo", baseBranch: "main" };
 
 describe("runPreflight", () => {
   it("passes when every check is green", async () => {
-    await expect(runPreflight(INPUT, OK_DEPS)).resolves.toBeUndefined();
+    const report = await runPreflight(INPUT, OK_DEPS);
+    expect(report.warnings.every((warning) => warning.check === "gitignore")).toBe(true);
+  });
+
+  it("warns (without blocking) when the repo has no .gitignore", async () => {
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "mh-preflight-"));
+    try {
+      const report = await runPreflight({ repoRoot, baseBranch: "main" }, OK_DEPS);
+      expect(report.warnings).toHaveLength(1);
+      expect(report.warnings[0]?.check).toBe("gitignore");
+      expect(report.warnings[0]?.message).toContain("info/exclude");
+    } finally {
+      await rm(repoRoot, { recursive: true, force: true }).catch(() => undefined);
+    }
+  });
+
+  it("emits no warning when a .gitignore exists", async () => {
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "mh-preflight-"));
+    try {
+      await writeFile(path.join(repoRoot, ".gitignore"), "node_modules/\n", "utf8");
+      const report = await runPreflight({ repoRoot, baseBranch: "main" }, OK_DEPS);
+      expect(report.warnings).toHaveLength(0);
+    } finally {
+      await rm(repoRoot, { recursive: true, force: true }).catch(() => undefined);
+    }
   });
 
   it("fails with repo_path when no repo is configured", async () => {

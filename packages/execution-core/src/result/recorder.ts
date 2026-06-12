@@ -5,6 +5,7 @@ import { execError, execLog, execWarn } from "../logging/log";
 import { classifyExecutorFailure } from "../executor/failure";
 import type { ExecutorRunOutcome } from "../executor/types";
 import type { GitRunner } from "../git/runner";
+import { DEFAULT_ARTIFACT_GLOBS, OVERSIZED_CHANGE_THRESHOLD } from "../scope/artifacts";
 import { ScopeChecker } from "../scope/checker";
 import {
   AgentExecutionResultSchema,
@@ -139,7 +140,10 @@ export class ResultRecorder {
       }
 
       // accept: validate the agent's committed range and keep its commit.
+      // (No staging filter possible here — the commit is the agent's — so the
+      // oversized advisory is the only artifact guard on this branch.)
       const changedFiles = await this.git.diffRangeNameOnly({ cwd: worktree.path, from: baseHead, to: head });
+      this.appendOversizedChangeAdvisory(taskId, changedFiles.length);
       const diff = await this.git.diffRange({ cwd: worktree.path, from: baseHead, to: head });
       const scopeCheck = this.scopeChecker.check({
         changedFiles,
@@ -164,8 +168,11 @@ export class ResultRecorder {
     }
 
     // 3. Normal path: stage, inspect, scope-check, and (on success) commit.
-    await this.git.addAll(worktree.path);
+    // Artifact globs are excluded at staging time: a leaf that ran `npm install`
+    // in a repo without .gitignore must not commit node_modules.
+    await this.git.addAllExcluding(worktree.path, DEFAULT_ARTIFACT_GLOBS);
     const changedFiles = await this.git.diffCachedNameOnly(worktree.path);
+    this.appendOversizedChangeAdvisory(taskId, changedFiles.length);
 
     if (changedFiles.length === 0) {
       // Exit 0 but nothing changed: the agent ran yet produced no diff — a very
@@ -214,6 +221,24 @@ export class ResultRecorder {
 
     this.appendScopeAdvisory(taskId, scopeCheck.outOfScope);
     return this.finalize({ ...base, status: "success", currentHead: commitSha, diff, changedFiles, commitSha, scopeCheck });
+  }
+
+  /** Likely scope leak signal: huge changed-file counts are logged, never failed. */
+  private appendOversizedChangeAdvisory(taskId: string, changedFileCount: number): void {
+    if (changedFileCount <= OVERSIZED_CHANGE_THRESHOLD) {
+      return;
+    }
+    execWarn("result", "oversized change: possible scope leak", {
+      task: taskId,
+      changedFiles: changedFileCount,
+      threshold: OVERSIZED_CHANGE_THRESHOLD
+    });
+    this.traceStore.append({
+      type: "scope_advisory",
+      actor: "system",
+      taskId,
+      payload: { reason: "oversized_change", changedFiles: changedFileCount, threshold: OVERSIZED_CHANGE_THRESHOLD }
+    });
   }
 
   private appendScopeFailure(taskId: string, violations: string[]): void {

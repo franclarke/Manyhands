@@ -1,8 +1,9 @@
 import { execFile } from "node:child_process";
-import { access, cp, mkdir } from "node:fs/promises";
+import { access, cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
+import { DEFAULT_EXCLUDE_LINES, EXCLUDE_BLOCK_MARKER } from "@manyhands/execution-core";
 
 import { resolveManyhandsPath, resolveRepoRoot } from "../repo-root";
 import { inspectLocalGitRepo } from "../workspaces/repo-validation";
@@ -148,6 +149,7 @@ export function createDefaultRepoProvisioner(
           `Local git repo has no commits yet: ${info.repoRoot}. Create an initial commit before running ManyHands.`
         );
       }
+      await ensureGitInfoExclude(info.repoRoot);
       return {
         repoRoot: info.repoRoot,
         baseBranch: info.branch,
@@ -156,6 +158,41 @@ export function createDefaultRepoProvisioner(
       };
     }
   };
+}
+
+/**
+ * Append the default artifact excludes to the repo's `.git/info/exclude`
+ * (resolved via `--git-common-dir`, so it also covers every worktree of the
+ * run AND the case where the user's repo is itself a worktree). Idempotent —
+ * the block is marker-delimited and only missing lines are added. Never
+ * touches the working tree or the user's .gitignore. Best-effort: a failure
+ * here must not block provisioning (the recorder's staging filter is the
+ * second line of defense).
+ */
+export async function ensureGitInfoExclude(repoRoot: string): Promise<void> {
+  try {
+    const { stdout } = await execFileAsync("git", ["rev-parse", "--git-common-dir"], { cwd: repoRoot });
+    const commonDir = path.resolve(repoRoot, stdout.trim());
+    const excludePath = path.join(commonDir, "info", "exclude");
+
+    let current = "";
+    try {
+      current = await readFile(excludePath, "utf8");
+    } catch {
+      // No exclude file yet — we'll create it (info/ exists in standard repos).
+    }
+
+    const existing = new Set(current.split(/\r?\n/).map((line) => line.trim()));
+    const missing = DEFAULT_EXCLUDE_LINES.filter((line) => !existing.has(line));
+    if (missing.length === 0) return;
+
+    const block = [EXCLUDE_BLOCK_MARKER, ...missing].join("\n");
+    const next = current.length === 0 || current.endsWith("\n") ? `${current}${block}\n` : `${current}\n${block}\n`;
+    await mkdir(path.dirname(excludePath), { recursive: true });
+    await writeFile(excludePath, next, "utf8");
+  } catch {
+    // Best-effort by design.
+  }
 }
 
 async function assertFixtureExists(spec: Extract<RepoSpec, { kind: "fixture" }>, source: string): Promise<void> {
@@ -186,6 +223,7 @@ async function bootstrapGitRepo(repoRoot: string, fixtureId: string): Promise<st
   await git("config", "user.email", "manyhands@local");
   await git("config", "user.name", "ManyHands Provisioner");
   await git("config", "commit.gpgsign", "false");
+  await ensureGitInfoExclude(repoRoot);
   await git("add", "-A");
   await git("commit", "-m", `manyhands: provision ${fixtureId}`);
   return git("rev-parse", "HEAD");

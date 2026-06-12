@@ -14,6 +14,7 @@ import {
 import type { AgentExecutor } from "../executor/types";
 import type { GitRunner } from "../git/runner";
 import { execError, execLog, execWarn } from "../logging/log";
+import { DEFAULT_ARTIFACT_GLOBS } from "../scope/artifacts";
 import { ScopeChecker } from "../scope/checker";
 
 import {
@@ -373,7 +374,9 @@ export class IntegrationAgent {
         };
       }
 
-      await this.git.addAll(worktree.path);
+      // Same artifact filter as the recorder — the repair agent may have
+      // installed dependencies to verify its fix.
+      await this.git.addAllExcluding(worktree.path, DEFAULT_ARTIFACT_GLOBS);
       const changedFiles = await this.git.diffCachedNameOnly(worktree.path);
       const diff = await this.git.diffCached(worktree.path);
       execLog("integrate", "repair produced diff", {

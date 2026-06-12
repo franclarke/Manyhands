@@ -78,6 +78,63 @@ describe("ResultRecorder usage and failure diagnosis", () => {
   });
 });
 
+describe("ResultRecorder artifact hygiene", () => {
+  it("stages with the artifact exclude globs, never a bare add -A", async () => {
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: ["src/a.ts"],
+      diffCached: "patch",
+      commitSha: "SHA"
+    });
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+
+    await recorder.record({ worktree: WORKTREE, executorOutcome: okOutcome() });
+
+    const staging = git.calls.find((call) => call.op === "addAllExcluding");
+    expect(staging).toBeDefined();
+    expect(staging?.args.excludeGlobs).toContain("**/node_modules/**");
+    expect(git.opsInvoked()).not.toContain("addAll");
+  });
+
+  it("logs an oversized-change advisory above the threshold without failing the leaf", async () => {
+    const manyFiles = Array.from({ length: 501 }, (_, i) => `src/file-${i}.ts`);
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: manyFiles,
+      diffCached: "patch",
+      commitSha: "SHA"
+    });
+    const traceStore = new InMemoryTraceStore();
+    const recorder = new ResultRecorder({ git, traceStore });
+
+    const result = await recorder.record({ worktree: WORKTREE, executorOutcome: okOutcome() });
+
+    expect(result.status).toBe("success");
+    const advisory = traceStore
+      .list()
+      .find((event) => event.type === "scope_advisory" && event.payload.reason === "oversized_change");
+    expect(advisory).toBeDefined();
+    expect(advisory?.payload.changedFiles).toBe(501);
+  });
+
+  it("stays silent below the threshold", async () => {
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: ["src/a.ts"],
+      diffCached: "patch",
+      commitSha: "SHA"
+    });
+    const traceStore = new InMemoryTraceStore();
+    const recorder = new ResultRecorder({ git, traceStore });
+
+    await recorder.record({ worktree: WORKTREE, executorOutcome: okOutcome() });
+
+    expect(
+      traceStore.list().some((event) => event.type === "scope_advisory" && event.payload.reason === "oversized_change")
+    ).toBe(false);
+  });
+});
+
 describe("ResultRecorder", () => {
   it("commits and reports success when changes are in scope", async () => {
     const git = new FakeGitRunner({

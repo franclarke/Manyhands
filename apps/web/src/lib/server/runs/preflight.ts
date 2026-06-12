@@ -17,6 +17,16 @@ const execFileAsync = promisify(execFile);
 
 export type PreflightCheck = "repo_path" | "cli" | "auth" | "repo_clean" | "branch" | "disk_space" | "repo_busy";
 
+/** Non-blocking finding: the run proceeds, but the runner logs it for the operator. */
+export interface PreflightWarning {
+  check: "gitignore";
+  message: string;
+}
+
+export interface PreflightReport {
+  warnings: PreflightWarning[];
+}
+
 /** Below this many free bytes the run is doomed to die mid-flight (builds, worktrees, .next). */
 const MIN_FREE_DISK_BYTES = 1024 * 1024 * 1024; // 1 GiB
 
@@ -60,8 +70,9 @@ export interface PreflightDeps {
  * Blocking preflight run before the real execution engine. The first
  * failing check short-circuits with a PreflightError; the runner persists that
  * message on the run so it projects in the UI like any other execution failure.
+ * Returns non-blocking warnings (e.g. missing .gitignore) for the caller to log.
  */
-export async function runPreflight(input: PreflightInput, deps: PreflightDeps = {}): Promise<void> {
+export async function runPreflight(input: PreflightInput, deps: PreflightDeps = {}): Promise<PreflightReport> {
   // 1. A configured workspace repo path is mandatory for real execution.
   if (input.repoRoot.trim().length === 0) {
     throw new PreflightError(
@@ -131,6 +142,20 @@ export async function runPreflight(input: PreflightInput, deps: PreflightDeps = 
         "Liberá espacio (ej.: borrar apps/web/.next o limpiar .manyhands/worktrees viejos) antes de ejecutar."
     );
   }
+
+  // 7. Advisory only: without a .gitignore, agents that install dependencies
+  // rely entirely on ManyHands' exclude defaults (info/exclude + staging
+  // filter). Worth telling the operator, never worth blocking the run.
+  const warnings: PreflightWarning[] = [];
+  if (!existsSync(join(input.repoRoot, ".gitignore"))) {
+    warnings.push({
+      check: "gitignore",
+      message:
+        `El repo en ${input.repoRoot} no tiene .gitignore. ManyHands excluye artefactos comunes ` +
+        "(node_modules, dist, .next…) vía .git/info/exclude, pero conviene agregar un .gitignore propio."
+    });
+  }
+  return { warnings };
 }
 
 async function defaultFreeDiskBytes(repoRoot: string): Promise<number | undefined> {

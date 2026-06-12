@@ -33,6 +33,8 @@ export interface GitRunner {
   revParse(cwd: string, ref: string): Promise<string>;
 
   addAll(cwd: string): Promise<void>;
+  /** `git add -A` minus exclude pathspecs — artifact dirs never enter the index. */
+  addAllExcluding(cwd: string, excludeGlobs: readonly string[]): Promise<void>;
   commit(params: { cwd: string; message: string }): Promise<string>;
 
   diffCached(cwd: string): Promise<string>;
@@ -105,6 +107,25 @@ export class SimpleGitRunner implements GitRunner {
 
   async addAll(cwd: string): Promise<void> {
     await this.client(cwd).add(["-A"]);
+  }
+
+  /**
+   * `git add -A` minus artifact globs, as exclude pathspecs in one command —
+   * dependency/build trees never enter the index even when the target repo
+   * has no .gitignore (second line of defense after .git/info/exclude).
+   */
+  async addAllExcluding(cwd: string, excludeGlobs: readonly string[]): Promise<void> {
+    if (excludeGlobs.length === 0) {
+      await this.addAll(cwd);
+      return;
+    }
+    await this.client(cwd).raw([
+      "add",
+      "-A",
+      "--",
+      ".",
+      ...excludeGlobs.map((glob) => `:(exclude,glob)${glob}`)
+    ]);
   }
 
   async commit(params: { cwd: string; message: string }): Promise<string> {

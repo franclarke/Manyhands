@@ -315,7 +315,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
 
     if (usingDefaultEngine && provisioned !== undefined) {
       console.log(`[Runner] Preflight start for run ${runId}`);
-      await runPreflight({
+      const preflight = await runPreflight({
         repoRoot: provisioned.repoRoot,
         baseBranch: provisioned.baseBranch,
         legacyModel: run.model,
@@ -325,6 +325,9 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
           : {}),
         ...(run.defaultRepairSelection !== undefined ? { defaultRepairSelection: run.defaultRepairSelection } : {})
       });
+      for (const warning of preflight.warnings) {
+        console.warn(`[Runner] Preflight warning (${warning.check}) for run ${runId}: ${warning.message}`);
+      }
       console.log(`[Runner] Preflight ok for run ${runId}`);
     }
 

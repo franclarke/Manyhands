@@ -91,6 +91,10 @@ export class FakeGitRunner implements GitRunner {
     this.record("addAll", { cwd });
   }
 
+  async addAllExcluding(cwd: string, excludeGlobs: readonly string[]): Promise<void> {
+    this.record("addAllExcluding", { cwd, excludeGlobs: [...excludeGlobs] });
+  }
+
   async commit(params: { cwd: string; message: string }): Promise<string> {
     this.record("commit", { ...params });
     const sha = this.config.commitSha ?? "COMMIT_SHA";

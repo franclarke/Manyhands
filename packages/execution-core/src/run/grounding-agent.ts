@@ -20,6 +20,7 @@ import type { AgentExecutor } from "../executor/types.js";
 import { SimpleGitRunner } from "../git/runner.js";
 import type { GitRunner } from "../git/runner.js";
 import { execLog, execWarn } from "../logging/log.js";
+import { DEFAULT_ARTIFACT_GLOBS } from "../scope/artifacts.js";
 import { checkRepairedFiles, describeSyntaxFindings } from "../integration/syntax-check.js";
 import { scaffoldInterfaces, type ScaffoldOutcome } from "./skeleton-scaffolder.js";
 import type { TaskGraph } from "@manyhands/task-graph";
@@ -82,7 +83,9 @@ export class GroundingAgent {
       await this.runLlmFallback(params, scaffold);
     }
 
-    await this.git.addAll(params.repoRoot);
+    // Same artifact filter as the recorder: the LLM fallback could have run a
+    // package install, and the skeleton commit becomes every leaf's baseline.
+    await this.git.addAllExcluding(params.repoRoot, DEFAULT_ARTIFACT_GLOBS);
     const changedFiles = await this.git.diffCachedNameOnly(params.repoRoot);
     if (changedFiles.length === 0) {
       return this.git.head(params.repoRoot);
