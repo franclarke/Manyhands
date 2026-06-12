@@ -1,7 +1,8 @@
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 
-import type { ExecutionValidationCommand } from "@manyhands/contracts";
+import { validationCommandSafetyIssues, type ExecutionValidationCommand } from "@manyhands/contracts";
 
+import { killProcessTree } from "../executor/kill";
 import { ValidationRunResultSchema, type ValidationRunResult } from "../types";
 
 export interface ValidationRunContext {
@@ -31,17 +32,29 @@ type SpawnFn = (
 
 export interface ChildProcessValidationRunnerDeps {
   spawn?: SpawnFn;
+  /** Run commands through a shell. Defaults to true on Windows, where npm/pnpm/npx are .cmd shims spawn() can't exec directly. */
+  useShell?: boolean;
 }
 
 const TIMEOUT_EXIT_CODE = 124;
+const UNSAFE_COMMAND_EXIT_CODE = 126;
 const SPAWN_FAILURE_EXIT_CODE = 127;
+
+// Under a shell a missing binary no longer surfaces as a spawn `error` event:
+// the shell itself exits non-zero with a "not found" message. Normalize that
+// back to 127 so failure classification can still tell "binary missing" (infra)
+// apart from "tests failed" (code).
+const BINARY_NOT_FOUND_PATTERN =
+  /is not recognized as an internal or external command|command not found|no se reconoce como un comando interno o externo/i;
 
 /** ValidationRunner backed by child processes. spawn is injectable for tests. */
 export class ChildProcessValidationRunner implements ValidationRunner {
   private readonly spawnFn: SpawnFn;
+  private readonly useShell: boolean;
 
   constructor(deps: ChildProcessValidationRunnerDeps = {}) {
     this.spawnFn = deps.spawn ?? spawn;
+    this.useShell = deps.useShell ?? process.platform === "win32";
   }
 
   async run(
@@ -74,10 +87,19 @@ export class ChildProcessValidationRunner implements ValidationRunner {
     command: ExecutionValidationCommand,
     cwd: string
   ): Promise<{ exitCode: number; output: string }> {
+    const safetyIssues = validationCommandSafetyIssues(command.command, command.args);
+    if (safetyIssues.length > 0) {
+      return Promise.resolve({
+        exitCode: UNSAFE_COMMAND_EXIT_CODE,
+        output: `validation command rejected (unsafe): ${safetyIssues.join("; ")} — fix the plan's validation commands`
+      });
+    }
+
     return new Promise((resolve) => {
       const child = this.spawnFn(command.command, command.args, {
         cwd,
-        stdio: ["ignore", "pipe", "pipe"]
+        stdio: ["ignore", "pipe", "pipe"],
+        shell: this.useShell
       });
 
       let output = "";
@@ -93,7 +115,7 @@ export class ChildProcessValidationRunner implements ValidationRunner {
       };
 
       const timer = setTimeout(() => {
-        child.kill("SIGKILL");
+        killProcessTree(child, this.spawnFn);
         finish({ exitCode: TIMEOUT_EXIT_CODE, output });
       }, command.timeoutMs);
 
@@ -107,7 +129,12 @@ export class ChildProcessValidationRunner implements ValidationRunner {
         finish({ exitCode: SPAWN_FAILURE_EXIT_CODE, output: output + error.message });
       });
       child.on("close", (code) => {
-        finish({ exitCode: code ?? SPAWN_FAILURE_EXIT_CODE, output });
+        const exitCode = code ?? SPAWN_FAILURE_EXIT_CODE;
+        if (exitCode !== 0 && BINARY_NOT_FOUND_PATTERN.test(output)) {
+          finish({ exitCode: SPAWN_FAILURE_EXIT_CODE, output });
+          return;
+        }
+        finish({ exitCode, output });
       });
     });
   }

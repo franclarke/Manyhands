@@ -90,6 +90,33 @@ export const ExecutionValidationCommandSchema = z.object({
 
 export type ExecutionValidationCommand = z.infer<typeof ExecutionValidationCommandSchema>;
 
+// Validation commands are LLM-authored and (on Windows) run under a shell, so
+// both the decomposer (parse time) and the validation runner (run time) gate
+// them through this charset whitelist. Kept out of the zod schema itself so
+// already-persisted RunRecords keep parsing.
+const SAFE_COMMAND_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const UNSAFE_ARG_PATTERN = /[&|<>^`$;"'%!\r\n]/;
+
+/**
+ * Returns the reasons a validation command is unsafe to execute (empty array
+ * means safe). Rejects path separators / metacharacters in the command name
+ * and shell metacharacters in args, since shelled spawns concatenate args.
+ */
+export function validationCommandSafetyIssues(command: string, args: readonly string[]): string[] {
+  const issues: string[] = [];
+  if (!SAFE_COMMAND_PATTERN.test(command)) {
+    issues.push(
+      `command "${command}" must be a bare binary name (letters, digits, ".", "_", "-"; no paths or shell metacharacters)`
+    );
+  }
+  for (const arg of args) {
+    if (UNSAFE_ARG_PATTERN.test(arg)) {
+      issues.push(`arg "${arg}" contains shell metacharacters`);
+    }
+  }
+  return issues;
+}
+
 export const ExecutionScopeSchema = z.object({
   implementationPaths: z.array(NonEmptyStringSchema).default([]),
   testPaths: z.array(NonEmptyStringSchema).default([]),
