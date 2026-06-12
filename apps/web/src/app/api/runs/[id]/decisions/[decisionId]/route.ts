@@ -13,20 +13,15 @@ import {
   getRunRepository,
   publishRunEvent,
   publishRunModelEvent,
-  resumeExecutionPipeline,
   resumePlanningPipeline,
   runExecutionPipeline
 } from "@/lib/server/runs";
 import { processPlanApproval } from "@/lib/server/runs/plan-approval-service";
 import { planningResumeFor } from "@/lib/server/runs/planning-host";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
-import {
-  clearExecutionPause,
-  decisionFromAnswer,
-  isReplanRequest,
-  resetExecutionThread
-} from "@/lib/server/runs/execution-host";
-import { replanSubtree, resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
+import { resetExecutionThread } from "@/lib/server/runs/execution-host";
+import { answerExecutionGate } from "@/lib/server/runs/execution-gate-service";
+import { resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
 import {
   executionResultsFromRun,
   integrationDurationMs,
@@ -96,41 +91,11 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       }
 
       // Execution-gate clarifications resume the suspended LangGraph thread
-      // natively (Command({ resume })) instead of the planning pipeline.
+      // natively (Command({ resume })) instead of the planning pipeline. The
+      // shared service keeps this path identical to POST /answer.
       if (run.status === "paused" && run.pausedDuring === "running" && run.pendingDecision !== undefined) {
-        // Pin the claim to the exact suspension we read: if the gate was
-        // resolved or re-minted meanwhile, the clear below 409s (INV-4).
-        const expectedGateId = run.pendingDecision.gateId;
-        // Selective re-decomposition: rebuild the failed subtree out-of-band.
-        if (isReplanRequest({ answer: choice.answer })) {
-          const failedTaskId = run.pendingDecision.taskId;
-          const reason = run.pendingDecision.validationOutput ?? "leaf failed irrecoverably";
-          run = await clearExecutionPause(run.runId, "running", expectedGateId);
-          publishRunModelEvent(run.runId, {
-            actor: "human",
-            at: now,
-            type: "decision.resolved",
-            payload: { decisionId: decision.id, choice, actor: "human" }
-          });
-          void replanSubtree(run.runId, failedTaskId, reason).catch(() => undefined);
-          return NextResponse.json({ ...toRunResponse(run), decisionId: decision.id, choice });
-        }
-
-        const resumeDecision = decisionFromAnswer(run.pendingDecision.gate, choice.answer);
-        if (resumeDecision === null) {
-          throw new RunValidationError(
-            `"${choice.answer}" is not a valid option for the ${run.pendingDecision.gate} gate.`
-          );
-        }
-        run = await clearExecutionPause(run.runId, "running", expectedGateId);
-        publishRunModelEvent(run.runId, {
-          actor: "human",
-          at: now,
-          type: "decision.resolved",
-          payload: { decisionId: decision.id, choice, actor: "human" }
-        });
-        void resumeExecutionPipeline(run.runId, resumeDecision).catch(() => undefined);
-        return NextResponse.json({ ...toRunResponse(run), decisionId: decision.id, choice });
+        const gateResult = await answerExecutionGate(run, choice.answer, now);
+        return NextResponse.json({ ...toRunResponse(gateResult.run), decisionId: decision.id, choice });
       }
 
       const nodeId = decision.context.nodeIds?.[0];

@@ -267,6 +267,13 @@ export interface DecisionContext {
   question?: string;
   options?: string[];
   diffRef?: BlobRef;
+  /**
+   * Set when the clarify decision is an execution gate (leaf_validation_failed,
+   * merge_conflict, budget_exceeded) rather than a planner question — the UI
+   * renders gate options and phase-aware copy from this. Additive: older
+   * events simply lack it.
+   */
+  gate?: string;
 }
 
 export type DecisionStatus = "pending" | "resolved";

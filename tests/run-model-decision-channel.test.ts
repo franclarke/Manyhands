@@ -76,6 +76,36 @@ describe("decision-channel — projection", () => {
     expect((pl(found.event) as { choice?: { answer?: string } }).choice?.answer).toBe("CSV");
   });
 
+  it("3b. a clarify decision with context.gate is labeled as an execution gate, not a planner question", () => {
+    const m = reduceRunEvents(initialFor("run-gate"), [
+      {
+        seq: 1,
+        at: "2026-06-12T00:00:00.000Z",
+        runId: "run-gate",
+        actor: "system",
+        type: "decision.raised",
+        payload: {
+          decisionId: "clarify:build-ui",
+          kind: "clarify",
+          blocking: true,
+          context: {
+            nodeIds: ["build-ui"],
+            question: "La integración falló. ¿Cómo querés continuar?",
+            options: ["Aceptar conflicto y continuar", "Abortar run"],
+            gate: "merge_conflict"
+          }
+        }
+      }
+    ]);
+    const view = buildDecisionChannelView(m);
+    const item = view.items.find((i) => i.id === "clarify:build-ui")!;
+    expect(item.label).toBe("Gate de ejecución");
+    expect(item.primaryActionLabel).toBe("Elegir opción");
+    expect(item.options).toEqual(["Aceptar conflicto y continuar", "Abortar run"]);
+    // a plain planner clarify keeps the original copy
+    expect(formatDecisionKind("clarify")).toBe("Aclaración");
+  });
+
   it("5. golden-behavioral-conflict surfaces resolve_conflict with behavioral dimension + diagnosisRef", () => {
     const m = reduceUpToSeq(goldenBehavioralConflict, seqOf(goldenBehavioralConflict, (e) => e.type === "decision.raised" && pl(e).kind === "resolve_conflict"));
     const view = buildDecisionChannelView(m);

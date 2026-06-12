@@ -148,13 +148,16 @@ export function buildDecisionChannelView(model: RunModel): DecisionChannelView {
 
   const items: DecisionChannelItem[] = pending.map((d) => {
     const ctx = d.context;
+    // Execution gates are published as clarify decisions; the planner copy
+    // would be misleading there ("Aclaración" reads as a planning question).
+    const isExecutionGate = d.kind === "clarify" && ctx.gate !== undefined;
     const item: DecisionChannelItem = {
       id: d.id,
       kind: d.kind,
-      label: KIND_LABEL[d.kind],
+      label: isExecutionGate ? "Gate de ejecución" : KIND_LABEL[d.kind],
       blocking: d.blocking,
       summary: summaryFor(d.kind, ctx.question),
-      primaryActionLabel: PRIMARY_ACTION[d.kind],
+      primaryActionLabel: isExecutionGate ? "Elegir opción" : PRIMARY_ACTION[d.kind],
       affectedNodeIds: [...(ctx.nodeIds ?? [])],
       ...(ctx.question !== undefined ? { question: ctx.question } : {}),
       ...(ctx.options !== undefined ? { options: [...ctx.options] } : {})

@@ -57,6 +57,9 @@ export function ChatThread({ runId, model, connected, setActiveTab }: ChatThread
     [model]
   );
   const canSend = pendingQuestion !== undefined;
+  // Execution gates reuse the clarify channel but are NOT planner questions —
+  // the composer copy must say so (context.gate is set by persistExecutionPause).
+  const isExecutionGate = pendingQuestion?.context.gate !== undefined;
 
   const handleSend = async (): Promise<void> => {
     const text = inputText.trim();
@@ -110,7 +113,7 @@ export function ChatThread({ runId, model, connected, setActiveTab }: ChatThread
     }
   };
 
-  const handleResolveDecision = async (decisionId: string, choiceAction: "approve" | "reject"): Promise<void> => {
+  const postDecision = async (decisionId: string, body: Record<string, unknown>): Promise<void> => {
     setBusy(decisionId);
     setActionError(null);
     try {
@@ -119,7 +122,7 @@ export function ChatThread({ runId, model, connected, setActiveTab }: ChatThread
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ choice: { action: choiceAction } })
+          body: JSON.stringify(body)
         }
       );
       if (!response.ok) {
@@ -131,6 +134,15 @@ export function ChatThread({ runId, model, connected, setActiveTab }: ChatThread
       setBusy(null);
     }
   };
+
+  const handleResolveDecision = (decisionId: string, choiceAction: "approve" | "reject"): Promise<void> =>
+    postDecision(decisionId, { choice: { action: choiceAction } });
+
+  // Gate/clarify options travel as the answer the backend validates against
+  // the gate's option labels — the exact label is what makes replan_subtree
+  // and friends match server-side.
+  const handleAnswerDecision = (decisionId: string, answer: string): Promise<void> =>
+    postDecision(decisionId, { answer });
 
   return (
     <div className="flex h-full w-full flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] font-sans">
@@ -191,6 +203,7 @@ export function ChatThread({ runId, model, connected, setActiveTab }: ChatThread
                     busy={busy}
                     onApprove={(id) => void handleResolveDecision(id, "approve")}
                     onReject={(id) => void handleResolveDecision(id, "reject")}
+                    onAnswer={(id, answer) => void handleAnswerDecision(id, answer)}
                   />
                 ) : kind === "conflict" ? (
                   <ConflictCard text={textContent} onTabChange={setActiveTab} />
@@ -268,10 +281,18 @@ export function ChatThread({ runId, model, connected, setActiveTab }: ChatThread
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={!canSend}
-            aria-label={canSend ? "Respuesta para el planner" : "Canal de intervención (sin gates pendientes)"}
+            aria-label={
+              canSend
+                ? isExecutionGate
+                  ? "Respuesta para el gate de ejecución"
+                  : "Respuesta para el planner"
+                : "Canal de intervención (sin gates pendientes)"
+            }
             placeholder={
               canSend
-                ? "Respondé la pregunta del planner…"
+                ? isExecutionGate
+                  ? "Escribí una opción del gate (o usá los botones de arriba)…"
+                  : "Respondé la pregunta del planner…"
                 : "ManyHands pedirá tu intervención acá cuando haga falta."
             }
             className="w-full bg-transparent py-3 pl-4 pr-12 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none disabled:cursor-not-allowed"
@@ -293,7 +314,9 @@ export function ChatThread({ runId, model, connected, setActiveTab }: ChatThread
         </div>
         {canSend ? (
           <p className="mt-2 text-center text-[10.5px] text-[var(--status-review-fg)]">
-            El planner está esperando tu respuesta para continuar la descomposición.
+            {isExecutionGate
+              ? "La ejecución está pausada esperando tu decisión."
+              : "El planner está esperando tu respuesta para continuar la descomposición."}
           </p>
         ) : null}
       </div>
@@ -413,7 +436,8 @@ function GateCard({
   text,
   busy,
   onApprove,
-  onReject
+  onReject,
+  onAnswer
 }: {
   icon: React.ReactNode;
   eyebrow: string;
@@ -422,8 +446,13 @@ function GateCard({
   busy: string | null;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  onAnswer: (id: string, answer: string) => void;
 }): React.ReactElement {
   const pending = decision !== undefined && decision.status === "pending";
+  // clarify decisions (planner questions AND execution gates) carry their
+  // valid answers as option labels — generic Aprobar/Rechazar would 400
+  // server-side, which is exactly how the postmortem run got stuck.
+  const options = decision?.kind === "clarify" ? decision.context.options ?? [] : [];
 
   return (
     <div className="space-y-3 rounded-[var(--r-xl)] border border-[var(--status-review-border)] bg-[var(--color-surface)] p-4 font-sans">
@@ -436,29 +465,54 @@ function GateCard({
       </p>
 
       {pending && decision !== undefined ? (
-        <div className="flex gap-2 pt-0.5">
-          <button
-            type="button"
-            onClick={() => onApprove(decision.id)}
-            disabled={busy !== null}
-            className="flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-xs font-semibold text-[var(--color-accent-contrast)] transition-colors hover:bg-[var(--color-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {busy === decision.id ? (
-              <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Play aria-hidden className="h-3.5 w-3.5" />
-            )}
-            Aprobar
-          </button>
-          <button
-            type="button"
-            onClick={() => onReject(decision.id)}
-            disabled={busy !== null}
-            className="h-8 cursor-pointer rounded-[var(--r-md)] border border-[var(--color-border-control)] bg-transparent px-3 text-xs font-semibold text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Rechazar
-          </button>
-        </div>
+        options.length > 0 ? (
+          <div className="flex flex-col gap-2 pt-0.5">
+            {options.map((option, index) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onAnswer(decision.id, option)}
+                disabled={busy !== null}
+                className={
+                  index === 0
+                    ? "flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-accent)] bg-[var(--color-accent)] px-3 text-xs font-semibold text-[var(--color-accent-contrast)] transition-colors hover:bg-[var(--color-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                    : "flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-border-control)] bg-transparent px-3 text-xs font-semibold text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] disabled:cursor-not-allowed disabled:opacity-60"
+                }
+              >
+                {busy === decision.id ? <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> : null}
+                {option}
+              </button>
+            ))}
+          </div>
+        ) : decision.kind === "clarify" ? (
+          <span className="block text-[11px] text-[var(--color-text-subtle)]">
+            Respondé desde el campo de abajo.
+          </span>
+        ) : (
+          <div className="flex gap-2 pt-0.5">
+            <button
+              type="button"
+              onClick={() => onApprove(decision.id)}
+              disabled={busy !== null}
+              className="flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-xs font-semibold text-[var(--color-accent-contrast)] transition-colors hover:bg-[var(--color-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {busy === decision.id ? (
+                <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Play aria-hidden className="h-3.5 w-3.5" />
+              )}
+              Aprobar
+            </button>
+            <button
+              type="button"
+              onClick={() => onReject(decision.id)}
+              disabled={busy !== null}
+              className="h-8 cursor-pointer rounded-[var(--r-md)] border border-[var(--color-border-control)] bg-transparent px-3 text-xs font-semibold text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Rechazar
+            </button>
+          </div>
+        )
       ) : (
         <span className="block text-[11px] text-[var(--color-text-subtle)]">
           Decisión ya resuelta o integrada.

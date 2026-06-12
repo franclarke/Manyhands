@@ -29,26 +29,25 @@ interface SpawnCall {
 }
 
 function fakeChild(script: FakeChildScript): ChildProcess {
-  const child = new EventEmitter() as unknown as ChildProcess & {
-    stdout: EventEmitter;
-    stderr: EventEmitter;
-    pid: number;
-    kill: (signal?: string) => boolean;
-  };
-  child.stdout = new EventEmitter();
-  child.stderr = new EventEmitter();
-  child.pid = 4242;
-  child.kill = vi.fn().mockReturnValue(true);
+  const emitter = new EventEmitter();
+  const stdout = new EventEmitter();
+  const stderr = new EventEmitter();
+  const child = Object.assign(emitter, {
+    stdout,
+    stderr,
+    pid: 4242,
+    kill: vi.fn().mockReturnValue(true)
+  }) as unknown as ChildProcess;
 
   queueMicrotask(() => {
-    if (script.stdout !== undefined) child.stdout.emit("data", Buffer.from(script.stdout));
-    if (script.stderr !== undefined) child.stderr.emit("data", Buffer.from(script.stderr));
+    if (script.stdout !== undefined) stdout.emit("data", Buffer.from(script.stdout));
+    if (script.stderr !== undefined) stderr.emit("data", Buffer.from(script.stderr));
     if (script.hang === true) return;
     if (script.errorMessage !== undefined) {
-      child.emit("error", new Error(script.errorMessage));
+      emitter.emit("error", new Error(script.errorMessage));
       return;
     }
-    child.emit("close", script.exitCode ?? 0);
+    emitter.emit("close", script.exitCode ?? 0);
   });
   return child;
 }

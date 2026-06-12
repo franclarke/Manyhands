@@ -91,17 +91,23 @@ export const BUDGET_GATE_OPTIONS = [
   { label: "Abortar run", action: "abort_run" }
 ] as const;
 
+/** The selectable options for a given execution gate (shared with routes/UI copy). */
+export function gateOptionsFor(
+  gate: NonNullable<RunRecord["pendingDecision"]>["gate"]
+): ReadonlyArray<{ label: string; action: string }> {
+  return gate === "leaf_validation_failed"
+    ? LEAF_GATE_OPTIONS
+    : gate === "budget_exceeded"
+      ? BUDGET_GATE_OPTIONS
+      : CONFLICT_GATE_OPTIONS;
+}
+
 /** Map a human answer (gate option label or raw action id) to a ResumeDecision. */
 export function decisionFromAnswer(
   gate: NonNullable<RunRecord["pendingDecision"]>["gate"],
   answer: string
 ): ResumeDecision | null {
-  const options =
-    gate === "leaf_validation_failed"
-      ? LEAF_GATE_OPTIONS
-      : gate === "budget_exceeded"
-        ? BUDGET_GATE_OPTIONS
-        : CONFLICT_GATE_OPTIONS;
+  const options = gateOptionsFor(gate);
   const match = options.find((option) => option.label === answer || option.action === answer);
   if (match === undefined || match.action === "replan_subtree") {
     // replan_subtree is handled out-of-band (see isReplanRequest), never as a
@@ -543,7 +549,7 @@ export async function persistExecutionPause(
       decisionId: `clarify:${gate.taskId}`,
       kind: "clarify",
       blocking: true,
-      context: { nodeIds: [gate.taskId], question, options }
+      context: { nodeIds: [gate.taskId], question, options, gate: gate.gate }
     }
   });
 }

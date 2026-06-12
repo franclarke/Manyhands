@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { RunValidationError, claimRunMutation, resumePlanningPipeline } from "@/lib/server/runs";
+import { answerExecutionGate } from "@/lib/server/runs/execution-gate-service";
 import { publishRunEvent } from "@/lib/server/runs/event-bus";
 import { planningResumeFor } from "@/lib/server/runs/planning-host";
 import { resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
@@ -45,6 +46,19 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     if (current.status === "paused" && current.pausedDuring === "running" && current.pendingReplan !== undefined) {
       const saved = await resumeReplanWithAnswer(id, nodeId, answer);
       return NextResponse.json(toRunResponse(saved));
+    }
+
+    // Execution gate: the chat composer must accept the same answers as the
+    // gate's decision card (shared service), instead of 409ing because the
+    // planning claim below only matches pauses during "generating".
+    if (current.status === "paused" && current.pausedDuring === "running" && current.pendingDecision !== undefined) {
+      if (nodeId !== current.pendingDecision.taskId) {
+        throw new RunValidationError(
+          `Node "${nodeId}" does not match the pending execution gate (task "${current.pendingDecision.taskId}").`
+        );
+      }
+      const gateResult = await answerExecutionGate(current, answer, new Date().toISOString());
+      return NextResponse.json(toRunResponse(gateResult.run));
     }
 
     // Atomic claim (INV-4): the pending question must still match `nodeId`
