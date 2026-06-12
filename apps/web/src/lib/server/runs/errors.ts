@@ -45,7 +45,7 @@ export class RepoNotConfiguredError extends Error {
   constructor(runId: string) {
     super(
       `Run ${runId} has no target repository configured. ` +
-        "Set a fixture repoSpec (e.g. task-manager-api) before executing."
+        "Select a workspace or set a localPath repoSpec before executing."
     );
     this.name = "RepoNotConfiguredError";
   }

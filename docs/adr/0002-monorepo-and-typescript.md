@@ -1,5 +1,7 @@
 # ADR 0002 - Monorepo And TypeScript
 
+> Current note (June 2026): this ADR is historical. The package list below includes removed packages such as `worktree-runner` and `evaluator`; use `AGENTS.md` and `docs/DECISIONS.md` for the current package map.
+
 ## Status
 
 Accepted.

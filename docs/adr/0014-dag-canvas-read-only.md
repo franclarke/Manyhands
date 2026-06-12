@@ -1,5 +1,7 @@
 # 0014 · Read-only DAG canvas on `@xyflow/react`
 
+> Current note (June 2026): this ADR is historical. The `/replay/demo`, `/lab/benchmarks`, `MethodologyBanner`, `mock-v0` and `conflict-v0` flow it describes was removed with the old Lab/benchmark direction.
+
 ## Status
 
 Accepted.

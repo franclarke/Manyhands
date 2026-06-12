@@ -11,10 +11,8 @@ import { rmWithRetry } from "./fs-retry";
 const execFileAsync = promisify(execFile);
 
 /**
- * Where a run executes. In Etapa 2A only `fixture` is supported: a versioned,
- * executable benchmark directory under `benchmarks/` (e.g. `task-manager-api`).
- * `localPath`/remote clone are deferred — when they arrive this becomes a
- * `z.discriminatedUnion("kind", [...])`.
+ * Where a run executes. `localPath` is the product path for real workspaces.
+ * `fixture` remains as a legacy/testing path for executable fixture directories.
  *
  * Crosses a boundary (persisted on the RunRecord, may arrive from the API),
  * so it is a Zod schema, not a bare interface.
@@ -79,14 +77,14 @@ const BASE_BRANCH = "main";
 const EXCLUDED_DIRS = new Set(["node_modules", "dist", ".git"]);
 
 interface FixtureProvisionerOptions {
-  /** Root holding executable fixtures. Default: `<repoRoot>/benchmarks`. */
+  /** Legacy option name. Root holding executable fixtures. Default: `<repoRoot>/benchmarks`. */
   benchmarksRoot?: string;
   /** Root for per-run working copies. Default: `<repoRoot>/.manyhands/work`. */
   workRoot?: string;
 }
 
 /**
- * Provisions a run repo by copying a versioned benchmark fixture into an
+ * Provisions a run repo by copying a versioned executable fixture into an
  * isolated per-run working directory and bootstrapping a single-commit git
  * history. No network, no `npm install` (Etapa 2A): the result is an
  * executable tree with a real base commit, nothing more.
@@ -94,7 +92,7 @@ interface FixtureProvisionerOptions {
 export function createFixtureRepoProvisioner(
   options: FixtureProvisionerOptions = {}
 ): RepoProvisioner {
-  const benchmarksRoot = options.benchmarksRoot ?? path.join(resolveRepoRoot(), "benchmarks");
+  const fixtureRoot = options.benchmarksRoot ?? path.join(resolveRepoRoot(), "benchmarks");
   const workRoot = options.workRoot ?? resolveManyhandsPath("work");
 
   return {
@@ -102,7 +100,7 @@ export function createFixtureRepoProvisioner(
       if (spec.kind !== "fixture") {
         throw new RepoProvisionError(spec, "Fixture provisioner only supports fixture repo specs.");
       }
-      const source = path.join(benchmarksRoot, spec.fixtureId);
+      const source = path.join(fixtureRoot, spec.fixtureId);
       await assertFixtureExists(spec, source);
 
       const repoRoot = path.join(workRoot, runId, "repo");
@@ -133,7 +131,7 @@ export function createFixtureRepoProvisioner(
   };
 }
 
-/** Provisions either a benchmark fixture copy or an existing local git repo. */
+/** Provisions either a fixture copy or an existing local git repo. */
 export function createDefaultRepoProvisioner(
   options: FixtureProvisionerOptions = {}
 ): RepoProvisioner {
@@ -167,7 +165,7 @@ async function assertFixtureExists(spec: Extract<RepoSpec, { kind: "fixture" }>,
     throw new RepoProvisionError(
       spec,
       `Fixture "${spec.fixtureId}" not found at ${source}. ` +
-        "Provide a fixtureId that names a directory under benchmarks/.",
+        "Provide a fixtureId that names a directory under the configured fixture root.",
       { cause: error }
     );
   }

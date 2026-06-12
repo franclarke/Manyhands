@@ -1,3 +1,43 @@
+# Walkthrough — Sesión 2026-06-12 (Robustez E2E, PR-8: visor de evidencia — PLAN COMPLETO)
+
+> PR-8 (último) del plan de robustez U1–U8 (diseño en
+> [`docs/design/future-frontier-tasks.md`](docs/design/future-frontier-tasks.md) §20).
+> Historia cerrada: **U4 — entiendo por qué falló una hoja mirando su evidencia**.
+> **Con esto el plan U1–U8 queda 8/8 implementado.**
+
+## Qué se hizo
+
+1. **Ref `status://runs/{id}/node/{nodeId}`** en el artifacts API: reportes
+   MH_STATUS del agente + executor ruteado + `failureKind`/`failureHint`
+   clasificados — el "por qué falló" a un clic desde el gate.
+2. **focus-view**: "Estado del agente" disponible también para nodos EN ejecución
+   (mientras el agente trabaja es el único artefacto que existe).
+3. **ArtifactViewer**: refs `status://` con refresco en vivo (4s, abiertos por
+   defecto); diffs unificados con resaltado +/−/@@ en tokens del tema.
+4. Verificado que los refs diff/log por nodo ya eran reales con carga perezosa
+   (la auditoría previa que los reportaba como placeholders estaba desactualizada).
+
+## Verificación
+
+- Typechecks (web, raíz) ✅ · `pnpm test` ✅ — **989 passed / 4 skipped** (+2)
+- Nuevo: `artifacts-status-ref.test.ts` (2). Pendiente menor: auditoría visual
+  con `ui-shots.mjs` (requiere dev server; ver task.md).
+
+## Estado del plan de robustez (8/8)
+
+| PR | Historia | Invariante | Tests clave |
+|----|----------|------------|-------------|
+| 1 | U0 idempotencia HITL | INV-4 | mutation-concurrency (9) + resume-route (5) |
+| 2 | U1 cancel real | INV-2 | kill-verify (6) + cancel-route (3) + host-abort (3) |
+| 3 | U3 restart reconciliado | INV-3 | checkpointer-corruption (5) + world-reconciler (3) + web (4) |
+| 4 | U7 lock por repo | — | repo-lock (10) |
+| 5 | U2/U6 fallas → gates | INV-5 | planning-graph degraded (3) + replan-question-gate (4) |
+| 6 | U5 budget | INV-6 | execution-graph budget (4) |
+| 7 | U8 SSE | INV-7 | run-events-replay (4) |
+| 8 | U4 evidencia | — | artifacts-status-ref (2) |
+
+---
+
 # Walkthrough — Sesión 2026-06-12 (Robustez E2E, PR-7: SSE robusto)
 
 > PR-7 del plan de robustez U1–U8 (diseño en

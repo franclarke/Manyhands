@@ -360,7 +360,7 @@ export function ArtifactTabs({
             {model.metrics === undefined && model.evidence === undefined ? (
               <EmptyLensPanel
                 title="La evidencia aparece al finalizar"
-                detail="Cuando el run llegue a disposición, ManyHands mostrará tests, diff agregado, duración, costo y métricas de tesis."
+                detail="Cuando el run llegue a disposición, ManyHands mostrará tests, diff agregado, duración, costo y métricas operativas."
               />
             ) : (
               <div className="overflow-hidden rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-surface)]">

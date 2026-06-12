@@ -482,31 +482,46 @@ interface ArtifactPayload {
   language?: string;
 }
 
+/** Agent-status artifacts refresh while the node works (MH_STATUS is live). */
+const LIVE_STATUS_POLL_MS = 4_000;
+
 function ArtifactViewer({ refItem }: { refItem: FocusRef }): React.ReactElement {
   const [payload, setPayload] = useState<ArtifactPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const runId = runIdFromRef(refItem.ref);
+  const isLiveStatus = refItem.ref.startsWith("status://");
 
   useEffect(() => {
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     setPayload(null);
     setError(null);
     if (!refItem.available || runId === null) return;
-    void fetch(`/api/runs/${encodeURIComponent(runId)}/artifacts?ref=${encodeURIComponent(refItem.ref)}`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error((await response.json().catch(() => ({})) as { error?: string }).error ?? response.statusText);
-        return response.json() as Promise<ArtifactPayload>;
-      })
-      .then((artifact) => {
-        if (!cancelled) setPayload(artifact);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
-      });
+
+    const load = (): void => {
+      void fetch(`/api/runs/${encodeURIComponent(runId)}/artifacts?ref=${encodeURIComponent(refItem.ref)}`)
+        .then(async (response) => {
+          if (!response.ok) throw new Error((await response.json().catch(() => ({})) as { error?: string }).error ?? response.statusText);
+          return response.json() as Promise<ArtifactPayload>;
+        })
+        .then((artifact) => {
+          if (cancelled) return;
+          setPayload(artifact);
+          setError(null);
+          if (isLiveStatus) timer = setTimeout(load, LIVE_STATUS_POLL_MS);
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          setError(err instanceof Error ? err.message : String(err));
+          if (isLiveStatus) timer = setTimeout(load, LIVE_STATUS_POLL_MS);
+        });
+    };
+    load();
     return () => {
       cancelled = true;
+      if (timer !== null) clearTimeout(timer);
     };
-  }, [refItem.available, refItem.ref, runId]);
+  }, [refItem.available, refItem.ref, runId, isLiveStatus]);
 
   if (!refItem.available || runId === null) {
     return <span className="mh-mono break-words text-[12.5px] text-[var(--color-text-muted)]">Artefacto referenciado: {refItem.ref}</span>;
@@ -526,14 +541,36 @@ function ArtifactViewer({ refItem }: { refItem: FocusRef }): React.ReactElement 
   }
 
   return (
-    <details className="col-start-2">
+    <details className="col-start-2" open={isLiveStatus}>
       <summary className="mh-mono cursor-pointer text-[12.5px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
         {payload.title}
       </summary>
       <pre className="mh-mono mt-1.5 max-h-[260px] overflow-auto whitespace-pre-wrap rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2.5 py-2 text-[11px] text-[var(--color-text-muted)]">
-        {payload.content}
+        {payload.language === "diff" ? <DiffContent content={payload.content} /> : payload.content}
       </pre>
     </details>
+  );
+}
+
+/** Minimal unified-diff coloring: additions, deletions, hunk headers. */
+function DiffContent({ content }: { content: string }): React.ReactElement {
+  return (
+    <>
+      {content.split("\n").map((line, index) => {
+        const tone = line.startsWith("+")
+          ? "text-[var(--status-completed-fg)]"
+          : line.startsWith("-")
+            ? "text-[var(--status-failed-fg,#cf5b5b)]"
+            : line.startsWith("@@") || line.startsWith("diff ")
+              ? "text-[var(--color-accent,#d08a5a)]"
+              : "";
+        return (
+          <span key={index} className={tone ? `block ${tone}` : "block"}>
+            {line}
+          </span>
+        );
+      })}
+    </>
   );
 }
 

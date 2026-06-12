@@ -1,5 +1,7 @@
 # ADR 0003 - Domain First Implementation
 
+> Current note (June 2026): this ADR is historical. Benchmark runners and stub agent execution were early scaffolding concerns and are not part of the active product/evaluation strategy.
+
 ## Status
 
 Accepted.

@@ -85,7 +85,7 @@ export const goldenHappyPath = fixture(RUN_ID, [
   ev("human", "decision.resolved", { decisionId: "d-merge", choice: { action: "accept" }, actor: "human" }),
   ev("system", "run.completed", { status: "success" }),
 
-  // Granularity metrics (the thesis instrument) — computed at run end.
+  // Run metrics (legacy GranularityVector shape) computed at run end.
   ev("system", "run.metrics.ready", {
     metrics: {
       depth: 1,

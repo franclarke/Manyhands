@@ -1,5 +1,7 @@
 # ADR 0006 - Persistent Run Snapshots
 
+> Current note (June 2026): this ADR is historical. `RunSnapshot` remains relevant, but references to deterministic mock execution, simulated results and scope-validation artifacts describe an older Lab-oriented flow.
+
 ## Status
 
 Accepted.

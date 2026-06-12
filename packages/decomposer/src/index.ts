@@ -1523,7 +1523,7 @@ export type {
 } from "./llm/errors";
 export { executionScopeFromAllowed } from "./scope";
 
-// ── Recursive interface-aware decomposer (thesis Artifact 1) ──────
+// ── Recursive interface-aware decomposer ──────
 export { RecursiveDecomposer } from "./llm/recursive/recursive-decomposer";
 export type {
   RecursiveDecomposerOptions,

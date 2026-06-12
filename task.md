@@ -58,4 +58,14 @@ Invariantes INV-1…INV-7 y diseño por PR: `docs/design/future-frontier-tasks.m
 - [x] Cliente: reconexión manual con backoff exponencial + jitter, cursor `?after=` del máximo seq foldeado, gap no contiguo → un replay completo desde 0 (reducer cursor-idempotente absorbe duplicados)
 - [x] Eliminado el endpoint SSE legacy `/events` (cero consumidores; política cero-legacy)
 - [x] Tests: `run-events-replay.test.ts` (4 — ids en frames, resume exacto por header, max(after, LEI), INV-7: prefijo+sufijo ≡ stream continuo, overlap total idéntico)
-## PR-8 — Visor de evidencia usable (U4) `[ ]`
+## PR-8 — Visor de evidencia usable (U4) `[x]`
+- [x] Nuevo ref `status://runs/{id}/node/{nodeId}`: reportes MH_STATUS + executor ruteado + failureKind/Hint clasificado
+- [x] focus-view: ref "Estado del agente" en nodos ejecutados y EN ejecución (único artefacto disponible mientras corre)
+- [x] ArtifactViewer: poll en vivo (4s) para refs `status://` (abierto por defecto) + resaltado de diffs unificados (+/-/@@)
+- [x] Los refs diff/log por nodo ya eran reales con carga perezosa (verificado, no placeholders)
+- [x] Tests: `artifacts-status-ref.test.ts` (2); focus-view existente verde
+- [ ] Auditoría visual con `ui-shots.mjs` (pendiente de sesión con dev server)
+
+---
+
+## Estado final del plan: 8/8 PRs implementados — suite 989 verde, typechecks limpios

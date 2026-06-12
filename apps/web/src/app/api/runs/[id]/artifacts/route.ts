@@ -105,6 +105,43 @@ async function resolveArtifact(run: RunRecord, ref: string): Promise<ArtifactRes
     };
   }
 
+  if (url.protocol === "status:" && parts[0] === "runs" && parts[1] === runId && parts[2] === "node" && parts[3] !== undefined) {
+    const nodeId = parts[3];
+    const updates = (run.executionTraces ?? []).filter(
+      (trace) => trace.type === "agent_status" && trace.taskId === nodeId
+    );
+    const leaf = leafFor(run, nodeId);
+    const routing = (run.executionTraces ?? []).filter(
+      (trace) => trace.type === "executor_routed" && trace.taskId === nodeId
+    );
+    if (updates.length === 0 && leaf === null && routing.length === 0) return null;
+    const lines = [
+      ...routing.map((trace) => `→ executor: ${JSON.stringify(trace.payload)}`),
+      ...updates.map((trace) => {
+        const payload = trace.payload as { message?: unknown } & Record<string, unknown>;
+        const message = typeof payload.message === "string" ? payload.message : JSON.stringify(payload);
+        return `· ${message}`;
+      }),
+      ...(leaf !== null && (leaf as { failureKind?: string }).failureKind !== undefined
+        ? [
+            "",
+            `failure: ${(leaf as { failureKind?: string }).failureKind}`,
+            ...((leaf as { failureHint?: string }).failureHint !== undefined
+              ? [`hint: ${(leaf as { failureHint?: string }).failureHint}`]
+              : [])
+          ]
+        : [])
+    ];
+    return {
+      ref,
+      kind: "log",
+      title: `Estado del agente: ${nodeId}`,
+      content: lines.length > 0 ? lines.join("\n") : "El agente todavía no reportó estado.",
+      language: "text",
+      metadata: { updates: updates.length }
+    };
+  }
+
   if (url.protocol === "narrative:" && parts[0] === "runs" && parts[1] === runId && parts[2] === "receipt") {
     return {
       ref,

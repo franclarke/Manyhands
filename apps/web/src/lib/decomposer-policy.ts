@@ -59,8 +59,8 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   const maxStepAttempts = positiveIntegerFromEnv("MANYHANDS_PLANNING_MAX_STEP_ATTEMPTS");
   const stepTimeoutMs = positiveIntegerFromEnv("MANYHANDS_PLANNING_STEP_TIMEOUT_MS");
 
-  // The recursive interface-aware decomposer is the product default (thesis
-  // Artifact 1). For local-first product runs, the step model is the Gemini CLI.
+  // The recursive interface-aware decomposer is the product default. For
+  // local-first product runs, the step model is the Gemini CLI.
   // Anthropic single-pass/recursive modes are kept only as explicit baselines.
   if (process.env.MANYHANDS_DECOMPOSER === "single-pass") {
     if (apiKey === undefined || apiKey.length === 0) {

@@ -169,7 +169,7 @@ export function selectEvidence(model: RunModel): Evidence | null {
   return model.evidence ?? null;
 }
 
-// ── Granularity metrics (Disposition — the thesis instrument) ───────────────────
+// ── Run metrics (legacy GranularityVector name) ───────────────────
 
 /** The run's granularity metrics, or null until `run.metrics.ready`. Pure passthrough. */
 export function selectGranularityMetrics(model: RunModel): GranularityMetrics | null {

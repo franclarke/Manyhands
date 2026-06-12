@@ -183,7 +183,7 @@ export interface WorkspaceView {
   evidence: WorkspaceEvidence | null;
   /** Per-composite reconciliation progress (Reconciliation depth). */
   integration: CompositeIntegration[];
-  /** Granularity metrics once `run.metrics.ready` arrives (Disposition / thesis). */
+  /** Run structure/outcome metrics once `run.metrics.ready` arrives. */
   metrics: GranularityMetrics | null;
   emphasis: WorkspaceEmphasis;
 }

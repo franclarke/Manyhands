@@ -914,7 +914,7 @@ export class RunExecutor {
 
       const contract = composite.contract;
       const repairSelection = resolveExecutorSelection(composite, args.defaultSelection);
-      // Contract-aware composition (Artifact 2): hand the Composer the parent goal,
+      // Contract-aware composition: hand the Composer the parent goal,
       // the canonical seams defined at this composite, and each child's intent so
       // conflict repair resolves by reference to the contract, not the diff text.
       const sharedInterfaces = contract?.producedInterfaces;

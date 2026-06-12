@@ -1,5 +1,7 @@
 # ADR 0013: Web App Foundation
 
+> Current note (June 2026): this ADR records the removed Lab/benchmark web foundation. The current web app no longer exposes `/api/benchmarks` as an active product surface.
+
 ## Status
 
 Accepted.

@@ -22,7 +22,7 @@ Planning and the decomposer stay pure: they never receive or persist a concrete 
 
 Positive:
 - Provisioning is an execution-time concern (the working tree / SHA only need to exist when running, not when planning). A logical plan is not coupled to one disposable working tree.
-- The decomposer stays deterministic — plan-shape tests (mock/benchmark) are unaffected.
+- The decomposer stays deterministic; plan-shape and fixture tests are unaffected.
 - It is a three-line spread with zero schema churn in `task-graph` or `decomposer`.
 
 Negative / accepted:

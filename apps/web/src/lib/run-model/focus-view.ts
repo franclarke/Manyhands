@@ -264,7 +264,7 @@ export interface EvidenceFocusView {
   reIntegrated: NodeId[];
   preserved: NodeId[];
   approveMergeDecision?: { id: DecisionId; status: DecisionStatus };
-  /** Granularity metrics once available (Disposition / thesis instrument). */
+  /** Run structure/outcome metrics once available. */
   metrics?: GranularityMetrics;
   /** Copy of the final acceptance moment (fixture-first; no real merge). */
   acceptanceCopy: string;
@@ -352,12 +352,17 @@ function buildNodeFocus(model: RunModel, ws: WorkspaceNode, id: NodeId, options:
     ws.display === "failed" ||
     ws.display === "done" ||
     ws.display === "obsolete";
+  const isExecuting = ws.display === "running";
   const nodeRefs: FocusRef[] = hasNodeArtifacts
     ? [
         { label: "Diff del nodo", ref: `diff://runs/${runId}/node/${ws.id}`, available: true },
-        { label: "Log del agente", ref: `log://runs/${runId}/node/${ws.id}`, available: true }
+        { label: "Log del agente", ref: `log://runs/${runId}/node/${ws.id}`, available: true },
+        { label: "Estado del agente", ref: `status://runs/${runId}/node/${ws.id}`, available: true }
       ]
-    : [];
+    : isExecuting
+      ? // While the agent works, its MH_STATUS reports are the only artifact.
+        [{ label: "Estado del agente", ref: `status://runs/${runId}/node/${ws.id}`, available: true }]
+      : [];
 
   return {
     kind: "node",

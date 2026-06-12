@@ -436,7 +436,7 @@ Si la UI consumiera `execution` directamente, mostraría como terminado algo que
 | `approve-plan` / `answer` (REST) | `decision.resolved` |
 | `nodeStatusOverrides` | **se elimina**; estado de nodo derivado de `node.*` |
 
-Detalle de adaptadores temporales en [`system-components.md`](system-components.md) y [`implementation-readiness.md`](implementation-readiness.md).
+Detalle de componentes y adaptadores en [`system-components.md`](system-components.md). La readiness de implementación se debe leer desde el estado actual del código y de este modelo operativo, no desde un plan legacy separado.
 
 ---
 

@@ -167,7 +167,7 @@ interface Accumulator {
 }
 
 /**
- * Interface-aware recursive decomposer (thesis Artifact 1).
+ * Interface-aware recursive decomposer.
  *
  * Walks the task top-down, asking the LLM one local question per node: is it
  * atomic, or should it split? When it splits, the LLM also defines the shared

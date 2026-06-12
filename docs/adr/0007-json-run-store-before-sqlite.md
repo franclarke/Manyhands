@@ -1,5 +1,7 @@
 # ADR 0007 - JSON Run Store Before SQLite
 
+> Current note (June 2026): this ADR is historical. JSON persistence remains the current storage approach, but evaluator workflows are not part of the active roadmap.
+
 ## Status
 
 Accepted.

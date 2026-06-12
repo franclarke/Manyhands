@@ -91,7 +91,7 @@ Un agente descubre a mitad de ejecución que la **firma** congelada de una costu
 
 ## 9. Decisiones tomadas durante la implementación (PR06–PR09)
 
-La implementación fixture-first (PR06–PR09) confirmó el modelo congelado A–P sin renegociarlo, pero produjo decisiones de implementación que conviene dejar registradas (detalle operativo en [`implementation-status.md`](implementation-status.md) §7):
+La implementación fixture-first (PR06–PR09) confirmó el modelo congelado A–P sin renegociarlo, pero produjo decisiones de implementación que conviene dejar registradas:
 
 - **Ruta `proto`, no `_proto`.** En el App Router de Next, una carpeta con guión bajo es *private folder* y no rutea; el prototipo vive en `/runs/proto/<fixture>`.
 - **No reutilizar `DagCanvas`.** El `RunGraphViewModel` legacy tiene un enum `status` (`done/failed/...`) que **no puede expresar `obsolete`**; pasarlo por ahí rompería el invariante "stale nunca se ve done". Se construyó una **superficie propia** (columnas por profundidad), fiel al modelo y testeable en entorno `node`. Reconciliar un canvas real es trabajo futuro.

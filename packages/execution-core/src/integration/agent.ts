@@ -85,7 +85,7 @@ export interface IntegrationParams {
   parentValidationCommands?: ExecutionValidationCommand[];
   executionScope?: ExecutionScope;
   forbiddenPaths?: string[];
-  // ── Contract-aware composition (thesis Artifact 2) ──
+  // ── Contract-aware composition ──
   /** The composite's goal — what the integrated children must collectively achieve. */
   parentGoal?: string;
   /** Canonical seams defined when this composite was decomposed (source of truth for repair). */
@@ -496,7 +496,7 @@ export class IntegrationAgent {
   }
 
   /**
-   * Contract-aware repair prompt (thesis Artifact 2). Unlike a syntactic merge
+   * Contract-aware repair prompt. Unlike a syntactic merge
    * resolver, this gives the agent the WHY: the parent's goal, the canonical shared
    * interfaces the children must honour, and each conflicting child's intent. A
    * cherry-pick conflict here is a violation of the shared seam, resolved by

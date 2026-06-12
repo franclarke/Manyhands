@@ -351,14 +351,14 @@ export interface Evidence {
   invalidationTrace?: InvalidationTraceEntry[];
 }
 
-// ── Granularity metrics (the thesis instrument — Disposition) ───────────────────
+// ── Run metrics (legacy GranularityVector name) ───────────────────
 
 /**
  * The run's `GranularityVector` made visible in the agent-first model. Mirrors the
  * field names of `computeGranularityVector` (packages/execution-core/granularity)
  * EXACTLY so wiring the real backend later is a mechanical assignment — this module
- * stays pure and does NOT import execution-core. 9 pre-execution (DAG structure) +
- * 8 post-execution (outcomes); `estimatedTokensPerLeaf`/`totalCostUsd`/
+ * stays pure and does NOT import execution-core. The legacy schema tracks
+ * pre-execution DAG structure plus post-execution outcomes; `estimatedTokensPerLeaf`/`totalCostUsd`/
  * `testsPassedRate` are optional. Rates are 0–1. Recorded data (from
  * `run.metrics.ready`); never derived, never gates the run.
  */

@@ -60,7 +60,7 @@ export interface ExecutionEngine {
 export interface ExecutionRunnerOptions {
   intervalMs?: number;
   engine?: ExecutionEngine;
-  /** Injectable for tests; default copies a benchmark fixture into a per-run dir. */
+  /** Injectable for tests; default prepares the configured target repo. */
   provisioner?: RepoProvisioner;
   /** Injectable for tests; receives the engine's trace events to persist as evidence. */
   traceStore?: TraceStore;

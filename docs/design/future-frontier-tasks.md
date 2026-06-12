@@ -378,6 +378,29 @@ sobrevivía sin consumidores.
 
 ---
 
+## 20. Visor de evidencia: agent_status en vivo + diffs resaltados `[x]` — 2026-06-12
+
+**Hallazgo (corregido).** La auditoría previa reportaba refs placeholder; en
+realidad los refs diff/log por nodo ya eran reales con carga perezosa y
+colapsables. Los gaps reales: los reportes MH_STATUS del agente no tenían
+superficie en el panel de foco (ni en vivo ni post-mortem), el failureKind
+clasificado no se mostraba, y los diffs se renderizaban sin resaltado.
+
+**Diseño.** PR-8 del plan de robustez (U4):
+- Nuevo ref `status://runs/{id}/node/{nodeId}` en el artifacts API: reportes
+  `agent_status` (protocolo MH_STATUS) del nodo + decisión `executor_routed` +
+  `failureKind`/`failureHint` clasificados del resultado.
+- `focus-view` agrega "Estado del agente" a los refs del nodo — incluso para
+  nodos EN ejecución (es el único artefacto que existe mientras el agente
+  trabaja).
+- `ArtifactViewer`: los refs `status://` se refrescan en vivo (poll 4s,
+  abiertos por defecto); los diffs unificados se renderizan con resaltado
+  +/−/@@ sobre los tokens del tema.
+- Pendiente menor: auditoría visual con el harness de screenshots (requiere
+  dev server).
+
+---
+
 ## Plan de robustez E2E (U1–U8) — secuencia aprobada 2026-06-11
 
 PR-1 `[x]` (§13) → PR-2 `[x]` (§14) → PR-3 `[x]` (§15) → PR-4 `[x]` (§16) →
@@ -390,9 +413,8 @@ PR-8 visor de evidencia. Detalle completo en el plan de sesión
 
 - `[x]` **Kill duro de subprocesos** al abortar un run — resuelto en §14
   (kill verificado por process-group + registry por runId + GC de worktrees).
-- `[ ]` **Visor de evidencia enriquecido** en el panel de foco (diffs colapsables,
-  logs con resaltado, widget de `agent_status` en vivo) sobre
-  `GET /api/runs/[id]/artifacts?ref=...`.
+- `[x]` **Visor de evidencia enriquecido** — resuelto en §20 (status:// en vivo,
+  diffs resaltados; los colapsables ya existían).
 - `[x]` **HITL en replan** — resuelto en §17 (pendingReplan + gate reanudable por
   step-cache del decomposer).
 - `[x]` **Presupuesto de tokens por wave** — resuelto en §18 (budgetGate con

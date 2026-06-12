@@ -1,5 +1,7 @@
 # ADR 0012: Product Vision And Roadmap Realignment
 
+> Current note (June 2026): this ADR is historical. Its references to Lab Mode, benchmark reports, mock datasets and thesis defense framing were superseded by the product-first direction in `docs/DECISIONS.md`.
+
 ## Status
 
 Accepted.

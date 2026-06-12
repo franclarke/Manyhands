@@ -1,5 +1,7 @@
 # ADR 0008 - Static Conflict Signals V0
 
+> Current note (June 2026): this ADR is historical. Repository indexing remains useful, but the thesis/evaluation framing below is no longer active.
+
 ## Status
 
 Accepted.
