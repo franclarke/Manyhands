@@ -50,6 +50,7 @@ import {
     publishRunModelEvent
 } from "./run-model-event-log";
 import { transitionTo } from "./planning-pipeline";
+import { reconcileExecutionWorld } from "./world-reconcile";
 import { type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
 import { markRunnerActive, markRunnerInactive } from "./runner-state";
@@ -318,10 +319,22 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       console.log(`[Runner] Preflight ok for run ${runId}`);
     }
 
+    // Cold resume (restart after crash/cancel): reconcile the physical world
+    // against the recorded state BEFORE re-entering the graph (INV-3). May
+    // filter invalidated results and reset the thread, in which case the run
+    // re-enters from scratch seeded with the surviving artifact.
+    let alreadyStarted = await hasExecutionCheckpoint(runId);
+    if (alreadyStarted && usingDefaultEngine && provisioned !== undefined) {
+      const reconciled = await reconcileExecutionWorld(run, provisioned);
+      run = reconciled.run;
+      if (reconciled.threadReset) {
+        alreadyStarted = false;
+      }
+    }
+
     // First start of this thread: freeze the seams, scaffold the walking
     // skeleton (GroundingAgent) and persist the skeleton commit as the base
     // every leaf branches from. A resumed/restarted thread skips grounding.
-    const alreadyStarted = await hasExecutionCheckpoint(runId);
     if (!alreadyStarted) {
       publishRunModelEvent(run.runId, {
         actor: "system",

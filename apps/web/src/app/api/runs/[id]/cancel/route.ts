@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
-import { SimpleGitRunner, WorktreeManager, killOwnedProcessTrees } from "@manyhands/execution-core";
+import {
+  SimpleGitRunner,
+  WorktreeManager,
+  killOwnedProcessTrees,
+  type AgentExecutionResult,
+  type IntegrationResult,
+  type RunExecutionResult
+} from "@manyhands/execution-core";
 import {
   abortRun,
   assertTransition,
@@ -55,13 +62,15 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
 
     // 3) Worktree GC: by directory convention, best-effort per entry. Only
     //    meaningful when the run got far enough to have a provisioned repo.
+    //    Branches anchoring recorded evidence commits survive the sweep — a
+    //    cancelled run must stay resumable with its completed work intact.
     let cleaned: { removed: string[]; failed: string[] } = { removed: [], failed: [] };
     if (saved.provisioned !== undefined) {
       const manager = new WorktreeManager({
         git: new SimpleGitRunner(),
         repoRoot: saved.provisioned.repoRoot
       });
-      cleaned = await manager.gcRun(saved.runId);
+      cleaned = await manager.gcRun(saved.runId, { preserveBranchesFor: evidenceTaskIds(saved) });
     }
 
     publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: now });
@@ -92,4 +101,17 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
   } catch (error) {
     return runErrorResponse(error);
   }
+}
+
+/** TaskIds whose recorded results carry an evidence commit worth anchoring. */
+function evidenceTaskIds(run: RunRecord): Set<string> {
+  const execution = run.execution as Partial<RunExecutionResult> | undefined;
+  const ids = new Set<string>();
+  for (const result of (execution?.leafResults ?? []) as AgentExecutionResult[]) {
+    if (result.commitSha !== undefined) ids.add(result.taskId);
+  }
+  for (const result of (execution?.integrationResults ?? []) as IntegrationResult[]) {
+    if (result.integrationCommitSha !== undefined) ids.add(result.compositeTaskId);
+  }
+  return ids;
 }

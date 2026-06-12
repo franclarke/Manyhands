@@ -245,10 +245,40 @@ respondía antes de que nada muriera.
 
 ---
 
+## 15. Reconciliador de mundo físico + checkpoints corruptos detectados `[x]` — 2026-06-11
+
+**Hallazgo.** Un resume frío (restart tras crash/cancel) re-entraba al grafo sin
+verificar que el mundo físico siguiera coincidiendo con el checkpoint: worktrees a
+medio escribir rompían el `git worktree add` de la re-ejecución, commits de
+evidencia desaparecidos (branch borrada, `git gc`) se cherry-pickeaban a ciegas, y
+un `latest.json` corrupto se trataba como "sin checkpoint" → re-grounding
+silencioso desde cero (el `catch { return undefined }` del checkpointer).
+
+**Diseño.** PR-3 del plan de robustez (INV-3):
+- **`run/world-reconciler.ts`** (execution-core): valida cada resultado registrado
+  resolviendo su commit de evidencia (`rev-parse <sha>^{commit}`); lo desaparecido
+  se invalida (la tarea re-ejecuta). Sweep de TODOS los worktrees sobrantes del run
+  — preservando las branches `mh/<runId>/<taskId>` de la evidencia conservada, que
+  anclan los commits contra `git gc` — y remoción del `index.lock` huérfano (en un
+  restart frío ningún proceso del run vive: el cancel verifica kills).
+- **`world-reconcile.ts`** (web): corre SIEMPRE antes de re-entrar al grafo cuando
+  hay checkpoint. Audita la salud del thread (`inspectThread`) y persiste eventos
+  durables: `checkpoint.degraded` (latest corrupto → resume desde el último válido),
+  `checkpoint.lost` (nada legible → thread reset, re-entrada informada),
+  `world.reconciled` (reporte completo). Invalidaciones → filtra el artifact +
+  `resetExecutionThread` → el wavefront re-entra sembrado solo con supervivientes
+  (el mismo mecanismo de reseed de los amendments). Base commit inalcanzable →
+  `RunNotResumableError` + `interrupted` accionable.
+- **Checkpointer**: distingue ENOENT de corrupción; `getTuple` cae al checkpoint
+  inmutable válido más nuevo cuando `latest.json` está roto; un checkpoint pedido
+  explícitamente (fork) corrupto no tiene sustituto. Fix de bug latente: `list()`
+  parseaba `<id>.writes.json` como checkpoints.
+
+---
+
 ## Plan de robustez E2E (U1–U8) — secuencia aprobada 2026-06-11
 
-PR-1 `[x]` (§13) → PR-2 `[x]` (§14) → PR-3 reconciliador de
-mundo físico + checkpoints corruptos detectados → PR-4 lock por repo + preflight →
+PR-1 `[x]` (§13) → PR-2 `[x]` (§14) → PR-3 `[x]` (§15) → PR-4 lock por repo + preflight →
 PR-5 fallas recuperables → gates (planning degradado, replan-question) → PR-6
 presupuesto tokens/costo por wave → PR-7 SSE Last-Event-ID + replay testeado →
 PR-8 visor de evidencia. Detalle completo en el plan de sesión

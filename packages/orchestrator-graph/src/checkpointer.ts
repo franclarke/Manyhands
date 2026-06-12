@@ -33,6 +33,28 @@ interface PersistedWrite {
   value: unknown;
 }
 
+interface PersistedCheckpointFile {
+  checkpoint: Checkpoint;
+  metadata: CheckpointMetadata;
+  config: RunnableConfig;
+  parentConfig?: RunnableConfig;
+}
+
+/**
+ * Health of a thread's persisted checkpoints, used by the hosts to surface
+ * corruption instead of silently re-entering from scratch (INV-3):
+ *  - ok: latest.json is readable.
+ *  - degraded: latest.json is corrupt but an older immutable checkpoint is
+ *    valid — resuming uses that one and the host should warn.
+ *  - lost: checkpoint files exist but NONE is readable.
+ *  - missing: the thread was never checkpointed.
+ */
+export type ThreadCheckpointHealth =
+  | { status: "missing" }
+  | { status: "ok"; checkpointId: string }
+  | { status: "degraded"; checkpointId: string; corrupted: string[] }
+  | { status: "lost"; corrupted: string[] };
+
 export class JsonFileCheckpointSaver extends BaseCheckpointSaver {
   private readonly directory: string;
 
@@ -47,27 +69,98 @@ export class JsonFileCheckpointSaver extends BaseCheckpointSaver {
 
     const checkpointId = config.configurable?.["checkpoint_id"] as string | undefined;
     const fileName = checkpointId ? `${checkpointId}.json` : "latest.json";
-    const filePath = join(this.directory, threadId, fileName);
 
-    try {
-      const content = await readFile(filePath, "utf-8");
-      const parsed = JSON.parse(content) as {
-        checkpoint: Checkpoint;
-        metadata: CheckpointMetadata;
-        config: RunnableConfig;
-        parentConfig?: RunnableConfig;
-      };
-      const pendingWrites = await this.readPendingWrites(threadId, parsed.checkpoint.id);
-      return {
-        checkpoint: parsed.checkpoint,
-        metadata: parsed.metadata,
-        config: parsed.config,
-        ...(pendingWrites.length > 0 ? { pendingWrites } : {}),
-        ...(parsed.parentConfig !== undefined ? { parentConfig: parsed.parentConfig } : {})
-      };
-    } catch {
-      return undefined;
+    const parsed = await this.readCheckpointFile(join(this.directory, threadId, fileName));
+    if (parsed === "missing") return undefined;
+    if (parsed !== "corrupt") return this.toTuple(threadId, parsed);
+
+    // An explicitly requested checkpoint that is corrupt has no substitute.
+    if (checkpointId !== undefined) return undefined;
+
+    // latest.json is corrupt (torn write on crash, disk full): fall back to the
+    // newest valid immutable checkpoint instead of silently restarting the
+    // thread from scratch. inspectThread() reports this as "degraded".
+    const fallback = await this.newestValidCheckpoint(threadId);
+    return fallback === undefined ? undefined : this.toTuple(threadId, fallback.parsed);
+  }
+
+  /** Validate a thread's checkpoints without loading them into a graph. */
+  async inspectThread(threadId: string): Promise<ThreadCheckpointHealth> {
+    const latest = await this.readCheckpointFile(join(this.directory, threadId, "latest.json"));
+    if (latest !== "missing" && latest !== "corrupt") {
+      return { status: "ok", checkpointId: latest.checkpoint.id };
     }
+    const files = await this.checkpointFileNames(threadId);
+    if (latest === "missing" && files.length === 0) {
+      return { status: "missing" };
+    }
+    const corrupted: string[] = latest === "corrupt" ? ["latest.json"] : [];
+    for (const file of files) {
+      const parsed = await this.readCheckpointFile(join(this.directory, threadId, file));
+      if (parsed !== "missing" && parsed !== "corrupt") {
+        return { status: "degraded", checkpointId: parsed.checkpoint.id, corrupted };
+      }
+      corrupted.push(file);
+    }
+    return { status: "lost", corrupted };
+  }
+
+  private async toTuple(threadId: string, parsed: PersistedCheckpointFile): Promise<CheckpointTuple> {
+    const pendingWrites = await this.readPendingWrites(threadId, parsed.checkpoint.id);
+    return {
+      checkpoint: parsed.checkpoint,
+      metadata: parsed.metadata,
+      config: parsed.config,
+      ...(pendingWrites.length > 0 ? { pendingWrites } : {}),
+      ...(parsed.parentConfig !== undefined ? { parentConfig: parsed.parentConfig } : {})
+    };
+  }
+
+  /**
+   * Read and shape-check one checkpoint file. ENOENT is a legitimately missing
+   * checkpoint ("missing"); any parse/shape/IO failure is "corrupt" — callers
+   * decide whether to fall back or surface it.
+   */
+  private async readCheckpointFile(filePath: string): Promise<PersistedCheckpointFile | "missing" | "corrupt"> {
+    let content: string;
+    try {
+      content = await readFile(filePath, "utf-8");
+    } catch (error) {
+      return (error as NodeJS.ErrnoException).code === "ENOENT" ? "missing" : "corrupt";
+    }
+    try {
+      const parsed = JSON.parse(content) as Partial<PersistedCheckpointFile>;
+      if (typeof parsed?.checkpoint?.id !== "string" || parsed.metadata === undefined || parsed.config === undefined) {
+        return "corrupt";
+      }
+      return parsed as PersistedCheckpointFile;
+    } catch {
+      return "corrupt";
+    }
+  }
+
+  private async checkpointFileNames(threadId: string): Promise<string[]> {
+    try {
+      const files = await readdir(join(this.directory, threadId));
+      return files
+        .filter((f) => f.endsWith(".json") && f !== "latest.json" && !f.endsWith(".writes.json"))
+        .sort()
+        .reverse(); // Most recent first
+    } catch {
+      return [];
+    }
+  }
+
+  private async newestValidCheckpoint(
+    threadId: string
+  ): Promise<{ file: string; parsed: PersistedCheckpointFile } | undefined> {
+    for (const file of await this.checkpointFileNames(threadId)) {
+      const parsed = await this.readCheckpointFile(join(this.directory, threadId, file));
+      if (parsed !== "missing" && parsed !== "corrupt") {
+        return { file, parsed };
+      }
+    }
+    return undefined;
   }
 
   private async readPendingWrites(threadId: string, checkpointId: string): Promise<CheckpointPendingWrite[]> {
@@ -91,38 +184,17 @@ export class JsonFileCheckpointSaver extends BaseCheckpointSaver {
     const threadId = config.configurable?.["thread_id"] as string | undefined;
     if (!threadId) return;
 
-    const threadDir = join(this.directory, threadId);
-    let files: string[];
-    try {
-      files = await readdir(threadDir);
-    } catch {
-      return;
-    }
-
-    const checkpointFiles = files
-      .filter((f) => f.endsWith(".json") && f !== "latest.json")
-      .sort()
-      .reverse(); // Most recent first
-
-    for (const file of checkpointFiles) {
-      const filePath = join(threadDir, file);
-      try {
-        const content = await readFile(filePath, "utf-8");
-        const parsed = JSON.parse(content) as {
-          checkpoint: Checkpoint;
-          metadata: CheckpointMetadata;
-          config: RunnableConfig;
-          parentConfig?: RunnableConfig;
-        };
-        yield {
-          checkpoint: parsed.checkpoint,
-          metadata: parsed.metadata,
-          config: parsed.config,
-          ...(parsed.parentConfig !== undefined ? { parentConfig: parsed.parentConfig } : {})
-        };
-      } catch {
-        // Skip unreadable checkpoints
+    for (const file of await this.checkpointFileNames(threadId)) {
+      const parsed = await this.readCheckpointFile(join(this.directory, threadId, file));
+      if (parsed === "missing" || parsed === "corrupt") {
+        continue; // Skip unreadable checkpoints
       }
+      yield {
+        checkpoint: parsed.checkpoint,
+        metadata: parsed.metadata,
+        config: parsed.config,
+        ...(parsed.parentConfig !== undefined ? { parentConfig: parsed.parentConfig } : {})
+      };
     }
   }
 

@@ -12,6 +12,7 @@ export * from "./executor/factory";
 export * from "./executor/cli-executor";
 export * from "./executor/process";
 export * from "./executor/live-process-registry";
+export * from "./run/world-reconciler";
 export * from "./executor/failure";
 export * from "./executor/status-channel";
 export * from "./executor/profiles/gemini";

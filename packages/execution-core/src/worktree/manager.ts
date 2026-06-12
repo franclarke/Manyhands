@@ -151,8 +151,15 @@ export class WorktreeManager {
    * cancel/cleanup where no in-memory records survive. Best-effort per entry —
    * one stuck worktree must not block the rest — and finishes with
    * `git worktree prune` plus removal of the (now empty) run directory.
+   *
+   * Branches in `options.preserveBranchesFor` are kept: they anchor recorded
+   * evidence commits (a deleted branch leaves the commit dangling and a later
+   * `git gc` would destroy the only copy of that leaf's work).
    */
-  async gcRun(runId: string): Promise<{ removed: string[]; failed: string[] }> {
+  async gcRun(
+    runId: string,
+    options: { preserveBranchesFor?: ReadonlySet<string> } = {}
+  ): Promise<{ removed: string[]; failed: string[] }> {
     const runRoot = join(this.worktreesRoot, runId);
     let entries: string[];
     try {
@@ -176,6 +183,9 @@ export class WorktreeManager {
           cause: error instanceof Error ? error.message : String(error)
         });
         failed.push(taskId);
+      }
+      if (options.preserveBranchesFor?.has(taskId) === true) {
+        continue; // The branch anchors a recorded evidence commit.
       }
       try {
         await this.git.branchDelete({ repoRoot: this.repoRoot, branch, force: true });

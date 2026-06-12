@@ -669,6 +669,29 @@ export interface RunCancelledPayload {
   gcFailures: string[];
 }
 
+/**
+ * Cold-restart reconciliation (INV-3): physical world vs. recorded state.
+ * Emitted before re-entering the execution graph; `invalidatedTaskIds` re-run.
+ */
+export interface WorldReconciledPayload {
+  baseCommitReachable: boolean;
+  keptTaskIds: string[];
+  invalidatedTaskIds: string[];
+  cleanedWorktrees: string[];
+  gcFailures: string[];
+  removedLocks: string[];
+  warnings: string[];
+}
+/** latest.json was corrupt; the resume used an older valid checkpoint. */
+export interface CheckpointDegradedPayload {
+  usedCheckpointId: string;
+  corrupted: string[];
+}
+/** Every checkpoint of the thread is unreadable; execution re-enters from scratch. */
+export interface CheckpointLostPayload {
+  corrupted: string[];
+}
+
 export interface DecisionRaisedPayload {
   decisionId: DecisionId;
   kind: DecisionKind;
@@ -726,6 +749,10 @@ export interface RunEventPayloads {
   "run.metrics.ready": RunMetricsReadyPayload;
   "run.completed": RunCompletedPayload;
   "run.cancelled": RunCancelledPayload;
+  // Recovery (cold restart)
+  "world.reconciled": WorldReconciledPayload;
+  "checkpoint.degraded": CheckpointDegradedPayload;
+  "checkpoint.lost": CheckpointLostPayload;
   // Cross-cutting (human decisions)
   "decision.raised": DecisionRaisedPayload;
   "decision.resolved": DecisionResolvedPayload;
@@ -773,6 +800,9 @@ export const RUN_EVENT_TYPES = [
   "run.metrics.ready",
   "run.completed",
   "run.cancelled",
+  "world.reconciled",
+  "checkpoint.degraded",
+  "checkpoint.lost",
   "decision.raised",
   "decision.resolved"
 ] as const satisfies readonly RunEventType[];

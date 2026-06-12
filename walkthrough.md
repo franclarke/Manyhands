@@ -1,3 +1,41 @@
+# Walkthrough — Sesión 2026-06-11 (Robustez E2E, PR-3: reconciliador de mundo físico)
+
+> PR-3 del plan de robustez U1–U8 (diseño en
+> [`docs/design/future-frontier-tasks.md`](docs/design/future-frontier-tasks.md) §15).
+> Invariante cerrado: **INV-3 — ningún resume opera sobre filesystem divergente sin
+> reconciliación previa**.
+
+## Qué se hizo
+
+1. **`run/world-reconciler.ts`** (execution-core): antes de un resume frío valida
+   cada resultado registrado resolviendo su commit de evidencia; lo desaparecido se
+   invalida y re-ejecuta. Sweep de worktrees sobrantes (un leaf nuevo no puede
+   crear worktree sobre un directorio viejo), **preservando las branches que anclan
+   evidencia conservada** (sin ancla, un `git gc` destruiría la única copia del
+   trabajo), y remoción del `index.lock` huérfano.
+2. **`world-reconcile.ts`** (web): seam que corre SIEMPRE en `runExecutionPipeline`
+   cuando existe checkpoint. Salud del thread + reconcile + eventos durables
+   (`world.reconciled`, `checkpoint.degraded`, `checkpoint.lost`). Invalidaciones →
+   filtra el artifact + reset del thread → reseed con supervivientes (mismo
+   mecanismo que amendments). Base inalcanzable → `RunNotResumableError` +
+   `interrupted` accionable.
+3. **Checkpointer endurecido**: ENOENT ≠ corrupción; `getTuple` cae al último
+   checkpoint inmutable válido cuando `latest.json` está roto (torn write);
+   `inspectThread` reporta ok/degraded/lost/missing. Fix de bug latente: `list()`
+   parseaba los `.writes.json` como checkpoints.
+4. **Cancel también preserva evidencia**: `gcRun(runId, { preserveBranchesFor })`
+   — un run cancelado queda reanudable con su trabajo completado intacto.
+
+## Verificación
+
+- Typechecks (web, execution-core, orchestrator-graph, raíz) ✅
+- `pnpm test` ✅ — **962 passed / 4 skipped** (baseline 950; +12 nuevos)
+- Nuevos: `checkpointer-corruption.test.ts` (5), `world-reconciler.test.ts` (3, git
+  real: evidencia conservada/invalidada/huérfanos/locks), `world-reconcile-web.test.ts`
+  (4: consistente / invalidación+reset / degraded / base perdida).
+
+---
+
 # Walkthrough — Sesión 2026-06-11 (Robustez E2E, PR-2: cancelación real)
 
 > PR-2 del plan de robustez U1–U8 (diseño en

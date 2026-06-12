@@ -25,12 +25,14 @@ Invariantes INV-1…INV-7 y diseño por PR: `docs/design/future-frontier-tasks.m
 - [x] Evento auditado `run.cancelled` (durable antes del 200) con inventario kill/GC; respuesta con `cancellation`
 - [x] Tests: `execution-core-kill-verify.test.ts` (6, procesos reales, group-kill POSIX), `cancel-route.test.ts` (3, git real e2e), `execution-host-abort.test.ts` (3)
 
-## PR-3 — Reconciliador de mundo físico + checkpoints corruptos (U3, INV-3) `[ ]`
-- [ ] `world-reconciler.ts`: inventario físico (worktrees/branches/locks/baseCommit) vs lógico (checkpoint), resolución por hoja (casos a–d)
-- [ ] `ReconciliationReport` → RunEvent `world.reconciled`; invalidados fuera del seed del wavefront
-- [ ] Checkpointer: ENOENT ≠ corrupto; fallback al checkpoint anterior válido + `checkpoint.degraded` / `checkpoint.lost`
-- [ ] Wiring en execution-pipeline (resume) y restart route
-- [ ] Tests: crash-recovery con git real, corrupción de `latest.json`, branch borrada → re-ejecución
+## PR-3 — Reconciliador de mundo físico + checkpoints corruptos (U3, INV-3) `[x]`
+- [x] `run/world-reconciler.ts` (core): evidencia validada por commit-resolve, sweep de worktrees (preservando branches de evidencia conservada), remoción de `index.lock` huérfano, casos a–d
+- [x] `world-reconcile.ts` (web): salud del checkpoint + reconcile + filtrado del artifact + reset del thread → reseed con supervivientes; eventos durables `world.reconciled`/`checkpoint.degraded`/`checkpoint.lost`
+- [x] Checkpointer: ENOENT ≠ corrupto; `getTuple` fallback al último checkpoint válido; `inspectThread` (ok/degraded/lost/missing); fix: `list()` ya no parsea `.writes.json` como checkpoint
+- [x] `gcRun` con `preserveBranchesFor` (las branches de evidencia anclan los commits contra `git gc`); cancel route también preserva
+- [x] Base commit inalcanzable → `RunNotResumableError` + run `interrupted` con mensaje accionable (gate terminal llega en PR-5)
+- [x] Wiring en `runExecutionPipeline` (cold resume con checkpoint existente)
+- [x] Tests: `checkpointer-corruption` (5), `world-reconciler` (3, git real), `world-reconcile-web` (4)
 
 ## PR-4 — Lock por repo + preflight endurecido (U7) `[ ]`
 ## PR-5 — Fallas recuperables → gates: planning degradado + replan-question (U2, U6, INV-5) `[ ]`

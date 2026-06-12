@@ -11,7 +11,10 @@
 export { RunStateAnnotation } from "./state.js";
 export type { RunState, RunStateUpdate } from "./state.js";
 
-export { JsonFileCheckpointSaver } from "./checkpointer.js";
+export { JsonFileCheckpointSaver, type ThreadCheckpointHealth } from "./checkpointer.js";
+// Re-exported so consumers (web app, tests) can type checkpoints without
+// depending on @langchain/langgraph-checkpoint directly.
+export type { Checkpoint, CheckpointMetadata, CheckpointTuple } from "@langchain/langgraph-checkpoint";
 
 export {
   buildPlanningGraph,
