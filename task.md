@@ -34,7 +34,11 @@ Invariantes INV-1…INV-7 y diseño por PR: `docs/design/future-frontier-tasks.m
 - [x] Wiring en `runExecutionPipeline` (cold resume con checkpoint existente)
 - [x] Tests: `checkpointer-corruption` (5), `world-reconciler` (3, git real), `world-reconcile-web` (4)
 
-## PR-4 — Lock por repo + preflight endurecido (U7) `[ ]`
+## PR-4 — Lock por repo + preflight endurecido (U7) `[x]`
+- [x] `repo-lock.ts`: adquisición atómica (`wx`), re-entrante por runId, robo de locks stale (pid muerto / heartbeat silencioso), release owner-scoped
+- [x] Pipelines start/resume reclaman el lock y lo liberan en finally; conflicto → `PreflightError("repo_busy")` nombrando al dueño
+- [x] Preflight: `disk_space` (statfs, umbral 1 GiB, mensaje accionable) + fix latente: `.manyhands/` ya no cuenta como suciedad en `repo_clean` (los restarts fallaban su propio preflight)
+- [x] Tests: `repo-lock.test.ts` (10: N concurrentes → 1 ganador, steal, corrupt lock, release scoped, preflight)
 ## PR-5 — Fallas recuperables → gates: planning degradado + replan-question (U2, U6, INV-5) `[ ]`
 ## PR-6 — Presupuesto tokens/costo por wave con budgetGate (U5) `[ ]`
 ## PR-7 — SSE Last-Event-ID + backoff + replay testeado (U8, INV-7) `[ ]`

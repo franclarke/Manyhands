@@ -38,7 +38,8 @@ import {
 import { applyFinalPatch } from "./final-apply";
 import { assertTransition } from "./lifecycle";
 import { LiveExecutionTraceStore } from "./live-trace-store";
-import { runPreflight } from "./preflight";
+import { PreflightError, runPreflight } from "./preflight";
+import { acquireRepoLock, releaseRepoLock } from "./repo-lock";
 import {
     createDefaultRepoProvisioner,
     type ProvisionedRepo,
@@ -153,6 +154,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
   markRunnerActive(runId);
   const stopHeartbeat = startHeartbeat(runId);
   let stopBudgetWatchdog: () => void = () => undefined;
+  let lockedRepoRoot: string | undefined;
   try {
     let run = await getRunRepository().get(runId);
     if (run.status === "approved") {
@@ -190,6 +192,13 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
           "Configurá un workspace con un repo git local."
       );
       throw new RepoNotConfiguredError(run.runId);
+    }
+
+    // One active pipeline per target repo (U7): atomic lock, stale locks of
+    // crashed owners are stolen. Released in the finally below.
+    if (provisioned !== undefined) {
+      await claimRepoOrThrow(provisioned.repoRoot, runId);
+      lockedRepoRoot = provisioned.repoRoot;
     }
 
     const abortController = createRunAbort(runId);
@@ -432,10 +441,31 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       });
     }
   } finally {
+    if (lockedRepoRoot !== undefined) {
+      await releaseRepoLock(lockedRepoRoot, runId).catch(() => undefined);
+    }
     stopBudgetWatchdog();
     disposeRunAbort(runId);
     stopHeartbeat();
     markRunnerInactive(runId);
+  }
+}
+
+/**
+ * Acquire the per-repo run lock or fail preflight-style with an actionable
+ * message naming the owner (U7).
+ */
+async function claimRepoOrThrow(repoRoot: string, runId: string): Promise<void> {
+  const lock = await acquireRepoLock(repoRoot, runId);
+  if (!lock.acquired) {
+    throw new PreflightError(
+      "repo_busy",
+      `El repo ${repoRoot} está siendo usado por el run ${lock.owner.runId} (pid ${lock.owner.pid}). ` +
+        "Cancelá ese run o esperá a que termine antes de ejecutar otro sobre el mismo repo."
+    );
+  }
+  if (lock.stolen) {
+    console.warn(`[Runner] Repo lock for ${repoRoot} was stale and stolen by run ${runId}.`);
   }
 }
 
@@ -453,12 +483,16 @@ export async function resumeExecutionPipeline(
   markRunnerActive(runId);
   const stopHeartbeat = startHeartbeat(runId);
   let stopBudgetWatchdog: () => void = () => undefined;
+  let lockedRepoRoot: string | undefined;
   try {
     const run = await getRunRepository().get(runId);
     const provisioned = provisionedFromRecord(run.provisioned);
     if (provisioned === undefined) {
       throw new RepoNotConfiguredError(runId);
     }
+
+    await claimRepoOrThrow(provisioned.repoRoot, runId);
+    lockedRepoRoot = provisioned.repoRoot;
 
     const abortController = createRunAbort(runId);
     stopBudgetWatchdog = startBudgetWatchdog(runId, run.executionConfig?.maxWallClockMs);
@@ -480,6 +514,9 @@ export async function resumeExecutionPipeline(
       publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
     }
   } finally {
+    if (lockedRepoRoot !== undefined) {
+      await releaseRepoLock(lockedRepoRoot, runId).catch(() => undefined);
+    }
     stopBudgetWatchdog();
     disposeRunAbort(runId);
     stopHeartbeat();

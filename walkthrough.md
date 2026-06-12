@@ -1,3 +1,31 @@
+# Walkthrough — Sesión 2026-06-12 (Robustez E2E, PR-4: lock por repo + preflight)
+
+> PR-4 del plan de robustez U1–U8 (diseño en
+> [`docs/design/future-frontier-tasks.md`](docs/design/future-frontier-tasks.md) §16).
+> Historia cerrada: **U7 — dos runs sobre el mismo repo se detectan y rechazan**.
+
+## Qué se hizo
+
+1. **`repo-lock.ts`**: lock atómico por repo destino (`.manyhands/run.lock`, flag
+   `wx`), re-entrante para el run dueño, con robo de locks stale (pid muerto u
+   owner sin heartbeat) y release owner-scoped.
+2. **Pipelines start/resume** reclaman el lock al arrancar y lo liberan en su
+   finally; el conflicto es un `PreflightError("repo_busy")` accionable que nombra
+   al run dueño. Un run gateado no retiene el lock (la carrera peligrosa son dos
+   pipelines conduciendo a la vez).
+3. **Preflight endurecido**: check `disk_space` (statfs, mínimo 1 GiB) y fix de un
+   bug latente — los worktrees de `.manyhands/` de un run previo hacían fallar el
+   `repo_clean` de los restarts.
+
+## Verificación
+
+- Typechecks (web + raíz) ✅ · `pnpm test` ✅ — **972 passed / 4 skipped** (+10)
+- Nuevo: `repo-lock.test.ts` (10 tests: 5 adquirentes concurrentes → exactamente
+  1 gana, steal de pid muerto, lock corrupto, release ajeno no clobbersea,
+  preflight con `.manyhands/` ignorado / suciedad real / disco bajo / probe ausente).
+
+---
+
 # Walkthrough — Sesión 2026-06-11 (Robustez E2E, PR-3: reconciliador de mundo físico)
 
 > PR-3 del plan de robustez U1–U8 (diseño en

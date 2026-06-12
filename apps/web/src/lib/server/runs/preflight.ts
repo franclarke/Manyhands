@@ -15,7 +15,10 @@ import type { TaskGraph } from "@manyhands/task-graph";
 
 const execFileAsync = promisify(execFile);
 
-export type PreflightCheck = "repo_path" | "cli" | "auth" | "repo_clean" | "branch";
+export type PreflightCheck = "repo_path" | "cli" | "auth" | "repo_clean" | "branch" | "disk_space" | "repo_busy";
+
+/** Below this many free bytes the run is doomed to die mid-flight (builds, worktrees, .next). */
+const MIN_FREE_DISK_BYTES = 1024 * 1024 * 1024; // 1 GiB
 
 /**
  * Raised when a pre-execution check fails. The message is actionable (mirrors
@@ -49,6 +52,8 @@ export interface PreflightDeps {
   hasCredentials?: () => boolean;
   gitPorcelain?: (repoRoot: string) => Promise<string>;
   branchExists?: (repoRoot: string, branch: string) => Promise<boolean>;
+  /** Free bytes on the volume holding the repo; undefined ⇒ probe unavailable, check skipped. */
+  freeDiskBytes?: (repoRoot: string) => Promise<number | undefined>;
 }
 
 /**
@@ -92,8 +97,14 @@ export async function runPreflight(input: PreflightInput, deps: PreflightDeps = 
 
   // 4. The repo must be clean so the orchestrator's git diff is the sole source
   // of truth (D5) — stray uncommitted changes would pollute every leaf result.
+  // ManyHands-owned artifacts (.manyhands/: worktrees, run.lock) don't count as
+  // user dirt — a restart would otherwise always fail its own preflight.
   const porcelain = await (deps.gitPorcelain ?? defaultGitPorcelain)(input.repoRoot);
-  if (porcelain.trim().length > 0) {
+  const userDirt = porcelain
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .filter((line) => !line.slice(3).startsWith(".manyhands/"));
+  if (userDirt.length > 0) {
     throw new PreflightError(
       "repo_clean",
       `El repositorio en ${input.repoRoot} tiene cambios sin commitear. Commiteá o stasheá antes de ejecutar.`
@@ -107,6 +118,28 @@ export async function runPreflight(input: PreflightInput, deps: PreflightDeps = 
       "branch",
       `La rama base "${input.baseBranch}" no existe en ${input.repoRoot}.`
     );
+  }
+
+  // 6. Enough disk to survive worktrees + builds. A run that dies on ENOSPC
+  // mid-integration is far costlier than failing here with a clear remedy.
+  const freeBytes = await (deps.freeDiskBytes ?? defaultFreeDiskBytes)(input.repoRoot);
+  if (freeBytes !== undefined && freeBytes < MIN_FREE_DISK_BYTES) {
+    const freeMb = Math.round(freeBytes / (1024 * 1024));
+    throw new PreflightError(
+      "disk_space",
+      `Quedan ${freeMb} MB libres en el volumen del repo (mínimo: 1024 MB). ` +
+        "Liberá espacio (ej.: borrar apps/web/.next o limpiar .manyhands/worktrees viejos) antes de ejecutar."
+    );
+  }
+}
+
+async function defaultFreeDiskBytes(repoRoot: string): Promise<number | undefined> {
+  try {
+    const { statfs } = await import("node:fs/promises");
+    const stats = await statfs(repoRoot);
+    return stats.bavail * stats.bsize;
+  } catch {
+    return undefined; // Probe unavailable (old Node, exotic FS): skip the check.
   }
 }
 

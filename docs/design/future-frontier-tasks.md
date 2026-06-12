@@ -276,9 +276,34 @@ silencioso desde cero (el `catch { return undefined }` del checkpointer).
 
 ---
 
+## 16. Lock por repo destino + preflight endurecido `[x]` — 2026-06-12
+
+**Hallazgo.** Dos runs `localPath` sobre el mismo repo corrían sin detección:
+carrera sobre el índice git, el bookkeeping de worktrees y el final apply.
+Además el preflight no chequeaba disco (la memoria del proyecto registra
+incidentes de C: en 0 bytes) y tenía un bug latente: los artefactos propios de
+`.manyhands/` (worktrees de un run previo) hacían fallar el check `repo_clean`
+en los restarts.
+
+**Diseño.** PR-4 del plan de robustez (U7):
+- **`repo-lock.ts`**: lock file `<repoRoot>/.manyhands/run.lock` con
+  `{runId, pid, acquiredAt}`. Adquisición atómica por flag `wx` (de N
+  concurrentes gana exactamente uno), re-entrante para el run dueño. Locks
+  stale se roban: pid muerto, o proceso ajeno vivo cuyo run dueño no está
+  live / con heartbeat vencido (umbral del sweeper). Release owner-scoped.
+- **Ciclo de vida**: los pipelines de ejecución (start y resume) reclaman al
+  arrancar y liberan en su finally — un run suspendido en gate NO retiene el
+  lock (sus worktrees/branches están namespaced por runId); la carrera
+  catastrófica son dos pipelines *conduciendo* a la vez. Conflicto →
+  `PreflightError("repo_busy")` accionable nombrando al run dueño.
+- **Preflight**: nuevo check `disk_space` (statfs, mínimo 1 GiB, remedio
+  concreto) y `repo_clean` ahora filtra las líneas `.manyhands/` del porcelain.
+
+---
+
 ## Plan de robustez E2E (U1–U8) — secuencia aprobada 2026-06-11
 
-PR-1 `[x]` (§13) → PR-2 `[x]` (§14) → PR-3 `[x]` (§15) → PR-4 lock por repo + preflight →
+PR-1 `[x]` (§13) → PR-2 `[x]` (§14) → PR-3 `[x]` (§15) → PR-4 `[x]` (§16) →
 PR-5 fallas recuperables → gates (planning degradado, replan-question) → PR-6
 presupuesto tokens/costo por wave → PR-7 SSE Last-Event-ID + replay testeado →
 PR-8 visor de evidencia. Detalle completo en el plan de sesión
