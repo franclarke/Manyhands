@@ -1,5 +1,8 @@
 # ADR 0011: Controlled Conflict Scenarios And Human Gate
 
+> Superseded note (June 2026): `benchmarks/conflict-v0`, B4 and deterministic
+> human-gate reports are retired. This ADR is historical context only.
+
 ## Status
 
 Accepted.

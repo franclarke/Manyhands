@@ -1,143 +1,79 @@
-# ManyHands — Cómo funciona el sistema
+﻿# ManyHands — Cómo Funciona El Sistema
 
-> Descripción del sistema de punta a punta para alguien que llega al proyecto por primera vez.
-> Lenguaje natural con tecnicismos en inglés.
-> Para el contexto histórico y académico, ver [`docs/thesis/project-evolution.md`](../thesis/project-evolution.md).
-> Para las decisiones de diseño cerradas, ver [`docs/DECISIONS.md`](../DECISIONS.md).
+> Descripción del sistema actual de punta a punta.
+> Para decisiones vigentes, ver [`docs/DECISIONS.md`](../DECISIONS.md).
+> Para el modelo agent-first de UI/orquestación, ver [`docs/design/`](../design/).
 
 ---
 
-## Qué hace ManyHands
+## Qué Hace ManyHands
 
-ManyHands toma una feature descrita en lenguaje natural y la ejecuta con múltiples agentes LLM trabajando en paralelo. Para lograrlo, primero convierte la descripción en un plan de trabajo estructurado (un DAG jerárquico de tareas), luego ejecuta cada tarea atómica en su propio entorno de git aislado, y finalmente integra los resultados de abajo hacia arriba.
+ManyHands toma una feature descrita en lenguaje natural y la convierte en un run supervisable:
 
-El sistema tiene dos dimensiones simultáneas: es un producto visual (una web app donde el usuario puede ver el DAG, aprobar el plan y monitorear la ejecución en tiempo real) y es un artefacto de investigación (una plataforma para medir cómo la granularidad de descomposición afecta la calidad del output de agentes LLM p## El flujo completo
+1. planifica un DAG jerárquico de tareas;
+2. define contratos e interfaces entre tareas;
+3. ejecuta hojas en git worktrees aislados;
+4. captura diffs y evidencia desde el repo real;
+5. integra resultados bottom-up;
+6. proyecta el estado en una sala de control web.
 
-```
-Feature (lenguaje natural, desde la web app)
-        │
-        ▼
-┌─────────────────────────────────────────────────────────┐
-│  planningGraph (LangGraph.js)                           │
-│  Orquesta la descomposición recursiva de la feature     │
-│  mediante GeminiRecursiveDecomposer.                    │
-│  - Produce TaskGraph jerárquico + contratos.            │
-│  - HITL: Si Gemini requiere aclaraciones, se lanza un   │
-│    interrupt() y se pausa en "decision.raised".          │
-└───────────────────────────┬─────────────────────────────┘
-                            │  TaskGraph + AgentTaskContracts
-                            ▼
-                   [Usuario aprueba el plan]
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│  executionGraph (LangGraph.js)                          │
-│  Orquesta la ejecución paralela y la integración.       │
-│                                                         │
-│   ┌─── GroundingAgent ────────────────────────────┐    │
-│   │  Genera el walking skeleton (firmas vacías)   │    │
-│   │  de las interfaces en un commit inicial para  │    │
-│   │  que el código compile en paralelo.           │    │
-│   └────────────────────┬──────────────────────────┘    │
-│                        ▼                               │
-│   ┌─── Map-Reduce (Send) ─────────────────────────┐    │
-│   │  Despacha en paralelo cada lote de hojas en   │    │
-│   │  nodos independientes de LangGraph.           │    │
-│   └────────────────────┬──────────────────────────┘    │
-│                        ▼                               │
-│   ┌─── WorktreeManager & GeminiCliExecutor ───────┐    │
-│   │  Crea un worktree de git aislado. Llama a     │    │
-│   │  Gemini CLI para implementar la tarea.        │    │
-│   └────────────────────┬──────────────────────────┘    │
-│                        ▼                               │
-│   ┌─── Verify-Loop (Auto-Fix) ────────────────────┐    │
-│   │  Si los tests fallan, realiza hasta 3         │    │
-│   │  reintentos automáticos de reparación.        │    │
-│   │  HITL: Si agota los 3 reintentos, se lanza   │    │
-│   │  un interrupt() para soporte humano.          │    │
-│   └────────────────────┬──────────────────────────┘    │
-│                        ▼                               │
-│   ┌─── Integration (Composer) ────────────────────┐    │
-│   │  Cherry-pick de cada hijo en el composite.    │    │
-│   │  - Si hay conflicto: repair semántico LLM.    │    │
-│   │  - HITL: Si el repair falla, interrupt()      │    │
-│   │    para resolverlo en la sala de control.     │    │
-│   └────────────────────┬──────────────────────────┘    │
-│                        ▼                               │
-│   ┌─── Run Validation & GranularityVector ────────┐    │
-│   │  Ejecuta la validación general y calcula las  │    │
-│   │  17 métricas del GranularityVector final.     │    │
-│   └───────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-           RunRecord (persistido en JSON)
-          Checkpoints (JsonFileCheckpointSaver)
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│  Web App (Sala de Control Agent-First)                  │
-│  Visualiza el StateGraph, expone el inspector de        │
-│  nodos, interactúa vía /resume y /fork (viaje en       │
-│  el tiempo) con los checkpoints persistidos.            │
-└─────────────────────────────────────────────────────────┘
-```�                               │
-│   ┌─── WorktreeManager.clean() ───────────────────┐    │
-│   │  Elimina el worktree del filesystem.          │    │
-│   └───────────────────────────────────────────────┘    │
-│                                                         │
-│   [cuando todas las hojas de un composite terminan]     │
-│                        ▼                               │
-│   ┌─── IntegrationAgent (Composer) ───────────────┐    │
-│   │  Cherry-pick de cada hijo sobre el padre.     │    │
-│   │  Si hay conflicto → repair semántico con      │    │
-│   │  Gemini usando el sharedInterface canónico.   │    │
-│   └───────────────────────────────────────────────┘    │
-│                                                         │
-│   [al finalizar el run completo]                        │
-│                        ▼                               │
-│   ┌─── GranularityVector ─────────────────────────┐    │
-│   │  Computa 17 métricas (9 pre + 8 post).        │    │
-│   └───────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-                  RunRecord (persistido en JSON)
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│  Web App                                                 │
-│  Visualiza el DAG, expone el inspector de nodos,        │
-│  muestra trazas y métricas en tiempo real via SSE.      │
-└─────────────────────────────────────────────────────────┘
+No hay Lab Mode ni benchmark suite activos. Las métricas que aparecen en el run son evidencia operativa, no una metodología académica cerrada.
+
+## Flujo Completo
+
+```text
+Feature prompt
+    |
+    v
+planningGraph
+    - descomposición recursiva
+    - preguntas de aclaración cuando aplica
+    - TaskGraph + AgentTaskContracts + sharedInterfaces
+    |
+    v
+Plan approval / edits
+    |
+    v
+executionGraph
+    - grounding de costuras
+    - selección de wave
+    - ejecución aislada de hojas
+    - verify-loop y gates humanos si agota reparación
+    - integración bottom-up con Composer
+    - validación y métricas de run
+    |
+    v
+RunRecord + RunEvent log + checkpoints
+    |
+    v
+Web app agent-first
+    - DecisionChannel
+    - artifact surface
+    - focus panel
+    - timeline secundaria
 ```
 
----
+## Aislamiento
 
-## Las dos capas de aislamiento
+ManyHands usa dos mecanismos complementarios:
 
-ManyHands usa dos mecanismos complementarios para garantizar que un agente no interfiera con los demás:
+- **Git worktree aislado:** cada hoja opera en su propio directorio/branch.
+- **ScopeChecker:** después de la ejecución, el orquestador valida qué archivos cambiaron contra `executionScope` y `forbiddenPaths`.
 
-1. **Git worktree aislado:** cada hoja opera en su propio directorio de trabajo, en su propia branch, partiendo del mismo commit base. Lo que hace un agente en su worktree es completamente invisible para los demás mientras trabaja.
+El modo de aprobación del CLI no es el límite de seguridad principal. El límite real está en worktrees, git diff y scope validation.
 
-2. **ScopeChecker:** después de que el agente termina, el orquestador verifica que solo tocó los archivos que su contrato le permitía. Si violó el scope, el resultado se descarta sin commitear.
-
-El sandbox del CLI de Gemini (`--approval-mode yolo`) no es parte del mecanismo de aislamiento — simplemente evita que el proceso se bloquee esperando aprobación interactiva. El aislamiento real lo dan el worktree y el ScopeChecker.
-
----
-
-## Índice de componentes
+## Índice De Componentes
 
 | Archivo | Componente | Qué hace |
-|---------|-----------|---------|
-| [01-task-graph.md](01-task-graph.md) | TaskGraph + TaskNode | El modelo de datos del plan: DAG jerárquico de tareas con dependencias, validación y estado |
-| [02-contracts.md](02-contracts.md) | AgentTaskContract | El contrato entre el orquestador y un agente: qué hacer, qué tocar, cómo verificar |
-| [03-decomposer.md](03-decomposer.md) | GeminiRecursiveDecomposer | Transforma una feature en el DAG, produciendo costuras de interfaz entre hojas paralelas |
-| [04-run-executor.md](04-run-executor.md) | RunExecutor | El orquestador top-level: coordina batches, ejecución, integración y métricas |
-| [05-worktree-layer.md](05-worktree-layer.md) | WorktreeManager + SimpleGitRunner | Crea y gestiona los entornos git aislados de cada tarea |
-| [06-gemini-executor.md](06-gemini-executor.md) | GeminiCliExecutor + MockAgentExecutor | Invoca Gemini CLI como agente y captura el resultado |
-| [07-context-and-scope.md](07-context-and-scope.md) | FileSystemContextPacker + ScopeChecker | Construye el prompt del agente y valida que respetó su scope |
-| [08-result-pipeline.md](08-result-pipeline.md) | ResultRecorder + ValidationRunner | Captura el resultado del agente, valida, y decide si commitear |
-| [09-composer.md](09-composer.md) | IntegrationAgent | Integra los resultados de hojas hermanas en su nodo padre con cherry-pick |
-| [10-web-app.md](10-web-app.md) | Web App | La capa visual: Command Center, DAG canvas, inspector, SSE streaming |
-| [11-granularity-vector.md](11-granularity-vector.md) | GranularityVector | Las 17 métricas que capturan la granularidad y calidad de cada run |
+|---------|------------|----------|
+| [01-task-graph.md](01-task-graph.md) | TaskGraph + TaskNode | Modelo de datos del plan y dependencias |
+| [02-contracts.md](02-contracts.md) | AgentTaskContract | Contrato entre orquestador y agente |
+| [03-decomposer.md](03-decomposer.md) | GeminiRecursiveDecomposer | Transforma una feature en DAG con costuras |
+| [04-run-executor.md](04-run-executor.md) | Execution graph + RunExecutor | Coordina ejecución, repair, integración y métricas |
+| [05-worktree-layer.md](05-worktree-layer.md) | WorktreeManager + SimpleGitRunner | Gestiona worktrees y operaciones git |
+| [06-gemini-executor.md](06-gemini-executor.md) | GeminiCliExecutor + AgentExecutor | Invoca agentes CLI y normaliza resultados |
+| [07-context-and-scope.md](07-context-and-scope.md) | ContextPacker + ScopeChecker | Construye prompts y valida scope |
+| [08-result-pipeline.md](08-result-pipeline.md) | ResultRecorder + ValidationRunner | Captura diff, valida y prepara commits |
+| [09-composer.md](09-composer.md) | IntegrationAgent | Integra hijos con cherry-pick y repair |
+| [10-web-app.md](10-web-app.md) | Web App | Command Center y sala de control |
+| [11-granularity-vector.md](11-granularity-vector.md) | Run metrics | Métricas operativas del run; nombre legacy en código |

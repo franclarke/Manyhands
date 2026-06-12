@@ -1,5 +1,9 @@
 # 0026 · Granularity experiment design: vectors, baselines, and fixture
 
+> Superseded note (June 2026): the experiment design in this ADR is retired.
+> `GranularityVector` remains a runtime metric schema, but B0-B4, fixture-based
+> experiment plans and thesis claims are not active.
+
 ## Status
 
 Accepted. `GranularityVectorSchema` defined in `packages/execution-core`. Fixture planned at `benchmarks/task-manager-api/`.

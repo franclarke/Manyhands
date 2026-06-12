@@ -1,5 +1,9 @@
 # ADR 0005 - Mock Worktree Runner And Scope Validation
 
+> Superseded note (June 2026): mock worktree execution and the old
+> `scope-validation`/`worktree-runner` packages were removed. This ADR is
+> historical context only.
+
 ## Status
 
 Accepted.

@@ -1,21 +1,45 @@
 # ManyHands — Context for AI Coding Agents
 
-> This file is for AI coding tools working in this repository (Codex, Cursor, and similar).
-> It is NOT the context file read by Claude Code — that's `CLAUDE.md`.
+> This file is for AI coding tools working in this repository (Codex, Cursor, and
+> similar). It is NOT the context file read by Claude Code — that is
+> `CLAUDE.md`.
 > Communication with Francisco: Spanish. Code and technical terms: English.
-> For decision rationale: `docs/DECISIONS.md`. For project narrative: `docs/thesis/project-evolution.md`.
-> For a walk-through of every system component: `docs/system/`.
-> **Agent-first redesign (UI + orchestration layer) in progress — source of truth: `docs/design/`** (executable PR plan in `docs/design/implementation-plan.md`). It conceptually supersedes the current plan-centric UI; the code is not yet rewritten. It does not renegotiate D1–D10.
+> Current decision reference: `docs/DECISIONS.md`.
+> System walkthrough: `docs/system/`.
+> Agent-first UI/orchestration direction: `docs/design/`.
 
 ---
 
-## What this repository is
+## What This Repository Is
 
-ManyHands is an LLM agent orchestration system for software development. It takes a feature in natural language, recursively decomposes it into a hierarchical DAG with explicit inter-agent interface contracts (`sharedInterface`), executes leaf tasks in isolated git worktrees with Gemini CLI (`gemini`, headless), and integrates results bottom-up with cherry-pick.
+ManyHands is an LLM agent orchestration system for software development. It
+takes a feature in natural language, recursively decomposes it into a
+hierarchical DAG with explicit inter-agent interface contracts
+(`sharedInterface`), executes leaf tasks in isolated git worktrees, and
+integrates results bottom-up with cherry-pick.
 
-Academic context: Engineering thesis. The research question's final wording is on hold — the original "granularity as DAG depth" methodology (G3/G6/G9) was abandoned in favour of **decomposition aggressiveness** (`low | medium | high`) which biases the atomicity threshold per node.
+The current priority is product completion: a reliable agent-first run
+workspace, durable orchestration state, isolated execution, semantic
+integration, and clear human decision gates.
 
-**Not:** a coding agent, a RAG system, an IDE plugin, or an organizational memory tool.
+**Not:** a coding agent, a RAG system, an IDE plugin, a benchmark suite, a Lab
+Mode replay app, or an organizational memory tool.
+
+---
+
+## Evaluation and Benchmark Status
+
+There is no active benchmark/evaluation methodology in the current roadmap.
+Past deterministic Lab Mode work (`mock-v0`, `conflict-v0`, `/lab`, `/replay`,
+B0-B4, G3/G6/G9, old benchmark fixtures) is superseded history.
+
+Do not reintroduce old benchmark runners, scenario pickers, deterministic Lab
+routes, or thesis experiment matrices. If evaluation becomes relevant again,
+surface it as a new design task after the product is stable.
+
+The code still contains some legacy names such as `GranularityVector` and
+fixture-based UI tests. Treat them as runtime metrics and regression fixtures,
+not as an active thesis/benchmark plan.
 
 ---
 
@@ -25,28 +49,31 @@ Academic context: Engineering thesis. The research question's final wording is o
 |---|-----------|
 | D1 | `graph.dependencies` is canonical. `node.dependencies` is a synced shortcut. Mutation only via `addDependency` / `removeDependency` / `syncNodeDependencies`. |
 | D2 | Canonical task intent field is `goal`, never `intent`. Normalize legacy `intent` in parsers; never persist it. |
-| D3 | LLM failure → run FAILS with actionable error. No silent fallback. There is no deterministic Lab Mode anymore; planning has one path only (prompt-only, Gemini-required). |
-| D4 | **Gemini CLI** (`gemini`, headless, stdin) is the only agent executor and the step-model for the recursive decomposer. No direct subprocess, no other CLIs. Provider-agnostic seam: `AgentExecutor` interface. Binary via `MANYHANDS_GEMINI_BIN` (default: `gemini`). |
+| D3 | LLM failure → run FAILS with actionable error. No silent fallback to deterministic planning. |
+| D4 | Agent execution goes through the `AgentExecutor` seam and configured executor profiles. Gemini CLI remains the primary/default executor; do not change the default executor policy or add new CLIs without discussing it. |
 | D5 | `git diff HEAD` is the only source of truth for what an agent changed. stdout/stderr are diagnostic only (`stderrTail`/`stdoutTail`). |
-| D6 | **The orchestrator commits.** Agents must never commit. If an agent commits unexpectedly, policy: `reject` (default) or `accept`. |
-| D7 | Real isolation comes from the git worktree + `ScopeChecker`, not the CLI mode. `--approval-mode yolo` for leaf execution; `--approval-mode plan` for the decomposer. |
-| D8 | Integration via cherry-pick + Gemini semantic repair on conflict (max 1 attempt). Repair context: parent goal, canonical `sharedInterface`, each child's intent and diff. |
-| D9 | `maxParallel = 6` leaves per batch (configurable via `ExecutionConfig`). |
-| D10 | Timeouts: leaf 300 s, integration 600 s (configurable per contract). |
+| D6 | **The orchestrator commits.** Agents must never commit. If an agent commits unexpectedly, policy is explicit (`reject` default or `accept`). |
+| D7 | Real isolation comes from the git worktree + `ScopeChecker`, not CLI approval mode. |
+| D8 | Integration uses cherry-pick + semantic repair on conflict. Repair context includes parent goal, canonical `sharedInterface`, each child's intent and diff. |
+| D9 | Parallelism is bounded by execution config and wave selection; default cap is `maxParallel = 6` unless a newer config overrides it. |
+| D10 | Timeouts are explicit and configurable per execution/integration contract. |
 
 ---
 
 ## Package Boundaries
 
-Dependency direction: `apps → specific packages → shared`. Never import from `apps` inside packages. `@manyhands/core` is a legacy barrel still consumed by `apps/web` for types and the mock-planning flow — do not add new dependencies to it.
+Dependency direction: `apps → specific packages → shared`. Never import from
+`apps` inside packages. `@manyhands/core` is legacy; do not add new dependencies
+to it.
 
 | Package | Purpose | Status |
 |---------|---------|--------|
 | `task-graph` | TaskNode, TaskGraph, DAG validation, topo sort | Active |
-| `contracts` | AgentTaskContract V1+V2, InterfaceContract | Active |
-| `decomposer` | GeminiRecursiveDecomposer (default) + Anthropic baselines | Active |
-| `execution-core` | Full real-execution pipeline | Active |
-| `scheduler` | sequential_dag, parallel_naive, risk_aware | Active |
+| `contracts` | AgentTaskContract, InterfaceContract | Active |
+| `decomposer` | Recursive decomposer and LLM planning schemas | Active |
+| `orchestrator-graph` | LangGraph StateGraphs and checkpointing | Active |
+| `execution-core` | Worktrees, executors, scope, recorder, integration | Active |
+| `scheduler` | Wave selection and scheduling policies | Active |
 | `run-store` | RunSnapshot, patches, JSON persistence | Active |
 | `trace-store` | TraceEvent (planning + execution) | Active |
 | `conflict-risk` | Pairwise conflict risk prediction | Active |
@@ -54,38 +81,39 @@ Dependency direction: `apps → specific packages → shared`. Never import from
 | `shared` | EntityId, IsoTimestamp, helpers | Active |
 | `core` | Legacy barrel; consumed by apps/web only | Legacy |
 
-> `scope-validation`, `worktree-runner`, `evaluator`, and `calculator` were deleted in the Lab Mode cleanup (June 2026). Do not reintroduce them.
-
 ---
 
 ## Operational Rules
 
-1. Do not re-argue D1–D10. If something seems in tension, flag it and stop — do not change it.
-2. Gemini CLI is mandatory for execution and planning. Do not suggest or implement alternatives.
-3. Never use agent stdout to determine what changed. Use `git diff HEAD`.
-4. Never make the agent (Gemini) commit. The orchestrator commits.
-5. No silent fallback on decomposer failure (D3). Return a clear error.
-6. Run `pnpm test` before and after changes to core packages (`task-graph`, `contracts`, `decomposer`, `execution-core`).
-7. Test suite must always pass (344 passing + 3 skipped as of June 2026). Fix failures in the same session — do not leave them.
-8. Do not reintroduce Lab Mode. If something seems to need a deterministic benchmark, replay route, or scenario picker, stop and surface it instead of bringing back `mock-v0`/`conflict-v0`/`/lab`/`/replay`. A new Lab will be designed from scratch later.
-9. `@manyhands/core` is legacy. Use specific packages for all new dependencies.
-10. UI / orchestration work follows `docs/design/` (agent-first redesign). Do not expand legacy: `nodeStatusOverrides`, the three paired views (canvas/board/timeline as equal modes), or raw CLI console as a primary surface. Node execution state is **derived** from the event model (reducer + selectors), never set imperatively. Implement via the PR plan (`docs/design/implementation-plan.md`), fixture-first, no big-bang.
+1. Do not re-argue D1-D10 casually. If a change conflicts with an invariant,
+   flag it first.
+2. Do not use agent stdout to determine changed files. Use `git diff HEAD`.
+3. Do not let agents commit. The orchestrator commits.
+4. Do not add silent fallbacks for LLM failure.
+5. Do not reintroduce Lab Mode, deterministic benchmark routes, old replay
+   flows, or old scenario manifests.
+6. Use specific packages for new code; avoid `@manyhands/core`.
+7. UI/orchestration work follows `docs/design/`: event log as source of truth,
+   reducer + selectors for derived state, no imperative node status overrides.
+8. If touching core behavior, run the narrow relevant tests first, then broader
+   checks as appropriate.
 
 ---
 
 ## Verification Commands
 
 ```bash
-pnpm test                           # 344 passing + 3 skipped
+pnpm test
 pnpm -F @manyhands/execution-core typecheck
 pnpm web:typecheck
 pnpm build
-pnpm web:dev                        # localhost:3000
+pnpm web:dev
 ```
 
 Environment variables:
-- `MANYHANDS_GEMINI_BIN` — path to gemini binary (default: `gemini`)
-- `MANYHANDS_DECOMPOSER` — `single-pass` | `anthropic-recursive` (opt-in baselines; require `ANTHROPIC_API_KEY`)
+
+- `MANYHANDS_GEMINI_BIN` — path to Gemini CLI binary.
+- `MANYHANDS_DECOMPOSER` — optional decomposer override for development.
 
 ---
 
@@ -95,25 +123,22 @@ Environment variables:
 |------|-------------|
 | `packages/task-graph/src/index.ts` | TaskNode, TaskGraph, topo sort |
 | `packages/contracts/src/index.ts` | AgentTaskContract + InterfaceContract |
-| `packages/decomposer/src/llm/recursive/` | GeminiRecursiveDecomposer |
-| `packages/execution-core/src/run/executor.ts` | RunExecutor — top-level orchestrator |
-| `packages/execution-core/src/executor/gemini-cli.ts` | GeminiCliExecutor |
+| `packages/decomposer/src/llm/recursive/` | Recursive decomposer implementation |
+| `packages/orchestrator-graph/src/` | Planning/execution StateGraphs and checkpointing |
+| `packages/execution-core/src/run/executor.ts` | Low-level node execution engine |
 | `packages/execution-core/src/integration/agent.ts` | IntegrationAgent / Composer |
-| `packages/execution-core/src/types.ts` | Zod schemas for execution domain |
-| `packages/execution-core/src/errors.ts` | Typed error hierarchy |
-| `apps/web/src/lib/server/runs/runner.ts` | Planning + execution pipeline (real engine) |
-| `apps/web/src/lib/decomposer-policy.ts` | `pickDecomposer()` |
-| `apps/web/src/lib/server/runs/schema.ts` | RunRecord schema (Zod) |
-| `benchmarks/expression-calculator/` | Interface seams fixture (thesis Artifact 1) |
-| `benchmarks/task-manager-api/` | REST API benchmark fixture |
+| `apps/web/src/lib/server/runs/runner.ts` | Planning + execution pipeline wiring |
+| `apps/web/src/lib/server/runs/execution-host.ts` | Web host for execution graph dependencies |
+| `apps/web/src/lib/run-model/` | Agent-first client model, reducer, selectors |
+| `apps/web/src/app/runs/[runId]/` | Run workspace route |
 
 ---
 
 ## Reference Documentation
 
-- [`docs/system/`](docs/system/) — component-by-component walkthrough of how the system works
-- [`docs/DECISIONS.md`](docs/DECISIONS.md) — synthesized decisions reference (LLM-first)
-- [`docs/thesis/project-evolution.md`](docs/thesis/project-evolution.md) — project narrative and architectural history
-- [`docs/design/`](docs/design/) — **agent-first redesign** (current direction for the UI + orchestration layer): vision, frozen operative model (A–P), interaction model, components, golden fixtures, and the PR-by-PR implementation plan
-- [`docs/design/decomposer-composer-redesign.md`](docs/design/decomposer-composer-redesign.md) — detailed design of the two thesis artifacts
-- [`docs/adr/`](docs/adr/) — 29 ADRs with full decision rationale
+- [`docs/DECISIONS.md`](docs/DECISIONS.md) — current decision synthesis.
+- [`docs/system/`](docs/system/) — component-by-component walkthrough.
+- [`docs/design/`](docs/design/) — agent-first model and UX/orchestration direction.
+- [`docs/development/architecture.md`](docs/development/architecture.md) — architecture overview.
+- [`docs/adr/`](docs/adr/) — historical decision record; superseded ADRs are history.
+

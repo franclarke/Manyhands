@@ -1,5 +1,9 @@
 # ADR 0009 - Evaluator V0 Granularity Comparison
 
+> Superseded note (June 2026): `@manyhands/evaluator` and the old granularity
+> comparison flow were removed. ManyHands has no active benchmark/evaluation
+> methodology today.
+
 ## Status
 
 Accepted.

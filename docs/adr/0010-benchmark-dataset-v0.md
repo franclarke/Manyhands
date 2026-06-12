@@ -1,5 +1,8 @@
 # ADR 0010: Benchmark Dataset v0
 
+> Superseded note (June 2026): `benchmarks/mock-v0`, benchmark manifests and
+> report schemas are no longer active. This ADR is historical context only.
+
 ## Status
 
 Accepted.

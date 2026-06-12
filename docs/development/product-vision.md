@@ -1,98 +1,97 @@
 # Product Vision
 
-## One-liner
+## One-Liner
 
-ManyHands is a visual orchestration workspace for multi-agent software development.
+ManyHands is a visual orchestration workspace for multi-agent software
+development.
 
 ## Product Thesis
 
-A developer should be able to describe a software goal and watch it become an executable, inspectable and reproducible plan:
+A developer should be able to describe a software goal and supervise the full
+life cycle of autonomous work:
 
-```txt
+```text
 Describe goal
   -> Review decomposition
-  -> Inspect DAG
   -> Approve plan
-  -> Run ready tasks
-  -> Monitor subagents
-  -> Resolve/gate conflicts
-  -> Integrate bottom-up
-  -> Export result/report
+  -> Watch isolated agents execute
+  -> Answer high-impact decisions
+  -> Inspect integration evidence
+  -> Accept or fork the result
 ```
 
-ManyHands is not only a benchmark runner. The benchmark is a lab instrument inside a broader product: a workspace that makes multi-agent software work visible, controllable and auditable.
+The product value is trust: the user sees what the system is doing, why it is
+blocked, what changed in git, and what decisions still require human judgment.
 
 ## Users
 
-- individual developer building a feature or app slice;
-- AI-native engineer coordinating several coding agents;
-- small team exploring parallel agent workflows;
-- researcher or thesis evaluator studying orchestration strategies.
+- Francisco as solo developer/architect today.
+- Developers experimenting with parallel coding agents.
+- Technical reviewers who need to understand whether the orchestration is
+  correct and inspectable.
+
+Evaluation or thesis audiences are not active product targets until a new
+quality-measurement strategy is designed.
 
 ## Core Workflow
 
 1. The user describes a feature, module, application or change.
 2. ManyHands decomposes the goal recursively into a hierarchical DAG.
-3. The user reviews the plan, dependencies, contracts and risk signals.
-4. The user approves the plan or adjusts it.
-5. ManyHands schedules ready atomic leaf tasks.
-6. Leaf tasks run in isolation through mock, deterministic, real worktree or future agent runners.
-7. The system tracks traces, validation, diffs, scope violations and conflict evidence.
-8. Conflicts or high-risk pairs are serialized or gated.
-9. Completed leaves are integrated bottom-up into parent objectives.
-10. The run can be replayed, exported and compared.
+3. The user reviews plan, dependencies, contracts and risk signals.
+4. The user approves, edits or asks for regeneration.
+5. ManyHands schedules ready leaf tasks as waves.
+6. Leaf tasks run in isolated worktrees.
+7. The system captures diffs, logs, validation, scope results and conflicts.
+8. The Composer integrates completed children bottom-up.
+9. Human gates appear only for high-impact decisions.
+10. The final state can be inspected, accepted or forked.
 
-## Product Modes
+## Current Product Modes
 
-### Product Mode / Build Mode
+### Command Center
 
-Product Mode, also called Build Mode in the UI, is the main product mode.
+The entry point for creating runs. It collects prompt, workspace, model and
+granularity configuration.
 
-The user describes a feature or app goal. ManyHands generates a DAG, exposes the plan visually, schedules executable leaves, supervises isolated runners and eventually integrates results into the parent objective.
+### Run Workspace
 
-Build Mode uses real execution: `GeminiCliExecutor` on provisioned fixture repos, with SSE events, real diffs, scope checks, validation, and bottom-up integration. The UI reflects real run state.
+The main product surface. It combines:
 
-### Lab Mode (removed; new Lab to be designed later)
+- conversational decision channel;
+- artifact surface for DAG/plan/conflicts/execution/files/evidence;
+- focus panel for node/seam/conflict/decision details;
+- SSE-backed event stream;
+- lazy artifact resolution.
 
-The original deterministic Lab Mode — benchmarks over `mock-v0`/`conflict-v0`, B0-B4 configurations, scenario picker, `/replay/demo` snapshots — was removed in June 2026. The metrics framework (`GranularityVector`, trace events) and the executable fixtures (`benchmarks/expression-calculator/`, `benchmarks/task-manager-api/`) are still in the repo and ready to drive a redesigned Lab once the thesis formulation is finalized.
+### Golden Fixture Prototype
 
-### Future Desktop Mode
+`/runs/proto/[fixture]` replays event fixtures against the same reducer and
+selectors used by the live UI. This is a regression harness for the UI model, not
+a benchmark or quality-evaluation product mode.
 
-Desktop Mode is not implemented yet.
+## Future Evaluation
 
-A future desktop app could run closer to the developer's local environment:
-
-- local filesystem access;
-- local git repositories;
-- local git worktrees;
-- subprocess execution;
-- real coding agents;
-- controlled permission prompts;
-- local secrets and credential boundaries.
-
-The current architecture should keep this option open by preserving clean boundaries between UI, API/core, runners and repository effects.
-
-### Real Agent Mode
-
-Real Agent Mode is implemented: leaf tasks are delegated to Gemini CLI (`GeminiCliExecutor`) via the provider-agnostic `AgentExecutor` interface. The pipeline covers diff capture, scope validation, validation commands, commit orchestration, and bottom-up integration.
-
-What remains: running the full experiment matrix (B0-B4 × low/medium/high granularity) on real fixtures to collect empirical `GranularityVector` data. The infrastructure exists; the experiments have not been run yet.
+Quality evaluation is intentionally deferred. A future effort may use public
+benchmarks, custom fixtures, real repositories, human review, or combinations of
+those, but the methodology is not designed yet and should not be inferred from
+old Lab Mode documents.
 
 ## What ManyHands Is Not
 
 - not a complete IDE;
 - not a replacement for the developer;
 - not a SWE-bench clone;
+- not a benchmark runner;
 - not a monolithic coding agent;
 - not an enterprise multi-user platform;
-- not a model training system;
-- not proof that mock benchmark results predict real code quality.
+- not a model training system.
 
 ## Product Principles
 
-- Visual first: the graph, state and evidence should be visible.
-- Core-backed: the web app consumes real core artifacts, not unrelated UI mock data.
-- Human-guided: approval, gating and interpretation stay with the developer.
-- Reproducible: snapshots and reports are first-class.
-- Mock before real: deterministic lab flows reduce risk before adding agent variance.
-- Honest evidence: distinguish mock structure, real runner results and real agent results.
+- Visual first: graph, state and evidence should be visible.
+- Core-backed: the web app consumes real orchestration artifacts.
+- Human-guided: approval, arbitration and final acceptance stay with the user.
+- Event-sourced UI: visible state is derived from `RunEvent`.
+- Honest evidence: distinguish operational evidence from future evaluation
+  claims.
+

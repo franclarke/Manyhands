@@ -1,142 +1,139 @@
-# ManyHands — Guía Operativa para Agentes de Código
+# ManyHands — Guía Operativa para Claude Code
 
-> Esta es la guía de contexto primaria para ti (Claude Fable 5) y otros agentes trabajando en este repositorio.
-> Desarrollador principal: Francisco. Comunicación de chat: Español. Código y comentarios: Inglés.
-> Fuente de verdad de decisiones: [`docs/DECISIONS.md`](docs/DECISIONS.md) y ADRs en `docs/adr/`.
-> Narrativa de la tesis y evolución: [`docs/thesis/project-evolution.md`](docs/thesis/project-evolution.md).
-> Rediseño agent-first de UI y orquestación: [`docs/design/`](docs/design/).
-
----
-
-## 1. Visión del Producto y Objetivo Técnico
-
-**ManyHands** es un sistema de orquestación de agentes de lenguaje de gran tamaño (LLM) diseñado para el desarrollo autónomo de software. El sistema toma una feature descrita en lenguaje natural, la descompone recursivamente en un grafo acíclico dirigido (DAG) jerárquico de tareas con contratos de interfaz explícitos (`sharedInterface`), y ejecuta las tareas hoja (Leaf Tasks) de forma paralela en entornos git aislados utilizando **Gemini CLI** (`gemini`, headless). Finalmente, el sistema integra recursivamente los resultados de abajo hacia arriba utilizando cherry-picks de git y reparación semántica guiada por el LLM en caso de conflictos.
-
-### Objetivo Técnico del Sistema:
-1. **Paralelismo Real y Aislamiento**: Permitir que múltiples subagentes trabajen concurrentemente en el mismo repositorio sin interferencias mutuas, garantizado mediante git worktrees independientes y validación sintáctica/de alcance por `ScopeChecker`.
-2. **Orquestación Resiliente y Transparente**: Proporcionar una sala de control en tiempo real (web app Next.js) que proyecte el estado exacto del StateGraph de **LangGraph.js**, persistido mediante checkpoints en disco, soportando la reanudación interactiva (HITL) y el viaje en el tiempo (Forking).
-3. **Validación Científica (Tesis)**: Medir el impacto de la agresividad de descomposición (`low | medium | high`) sobre la calidad y el acoplamiento del software a través del vector de 17 métricas (`GranularityVector`).
+> Comunicación con Francisco: español. Código, nombres de APIs y términos
+> técnicos: inglés.
+> Fuente de verdad de decisiones vigentes: [`docs/DECISIONS.md`](docs/DECISIONS.md).
+> Documentación técnica actual: [`docs/system/`](docs/system/).
+> Rediseño agent-first de UI/orquestación: [`docs/design/`](docs/design/).
 
 ---
 
-## 2. Autonomía de Diseño y Decisiones de Frontera
+## 1. Qué Es ManyHands
 
-ManyHands se encuentra en una etapa de refactorización activa para convertirse en un software de desarrollo agéntico completamente de frontera. Como agente senior de desarrollo:
-- Tienes **autonomía absoluta y plena libertad de diseño** sobre toda la arquitectura (LangGraph.js, paralelismo, flujo de interrupciones, scaffolding de interfaces y políticas de fusión git).
-- No hay restricciones inalterables. Si consideras que el comportamiento actual del sistema tiene deudas técnicas, malas abstracciones o acoplamientos innecesarios, tienes autorización para refactorizar o reescribir dichos componentes de forma segura.
-- Las decisiones y reglas anteriores (Invariantes D1-D10) se han trasladado a la sección final [9. Referencia de Decisiones de Diseño Anteriores (Historial del Legado)](#9-referencia-de-decisiones-de-diseño-anteriores-historial-del-legado) únicamente como mapa conceptual para comprender por qué el código preexistente funciona como funciona, pero no representan restricciones vigentes para tu refactorización.
+ManyHands es un sistema de orquestación de agentes LLM para desarrollo de
+software. Toma una feature en lenguaje natural, la descompone en un DAG
+jerárquico de tareas con contratos de interfaz, ejecuta hojas en git worktrees
+aislados y compone resultados bottom-up con cherry-pick y repair semántico.
 
----
+El foco actual es terminar el producto: una sala de control agent-first donde el
+usuario pueda crear un run, revisar el plan, supervisar ejecución, responder
+decisiones humanas de alto impacto e inspeccionar evidencia operativa.
 
-## 3. Arquitectura del Monorepo y Componentes Clave
-
-Monorepo gestionado con `pnpm`. La regla de dependencias es estrictamente unidireccional: `apps → packages → shared`. Nunca importes desde `apps` dentro de un paquete.
-
-### Paquetes Principales (`packages/`):
-- [`task-graph`](file:///c:/Users/franc/Documents/Manyhands/packages/task-graph/src/index.ts): Modelos `TaskNode` y `TaskGraph`, validaciones topológicas y de ciclos.
-- [`contracts`](file:///c:/Users/franc/Documents/Manyhands/packages/contracts/src/index.ts): Especificación de contratos de tareas (`AgentTaskContract` y `InterfaceContract`).
-- [`orchestrator-graph`](file:///c:/Users/franc/Documents/Manyhands/packages/orchestrator-graph/src/): Los StateGraphs de LangGraph.js:
-  - `planning-graph.ts`: Construcción del plan interactivo de forma recursiva.
-  - `execution-graph.ts`: Orquestador Map-Reduce de concurrencia y bottom-up merge.
-  - `checkpointer.ts`: `JsonFileCheckpointSaver` para persistir checkpoints JSON en disco.
-- [`execution-core`](file:///c:/Users/franc/Documents/Manyhands/packages/execution-core/src/): Motores de ejecución agénticos y auxiliares:
-  - `run/executor.ts`: `RunExecutor` que ejecuta y valida nodos de forma individual y aislada.
-  - `run/grounding-agent.ts`: `GroundingAgent` que inicializa el walking skeleton de interfaces antes de ejecutar hojas.
-  - `run/amendments-engine.ts`: Motor de invalidación en cascada que marca nodos dependientes como `obsolete` y limpia sus worktrees ante enmiendas de costuras.
-  - `integration/agent.ts`: Composer que realiza cherry-picks e invoca reparación semántica.
-
-### Aplicación Web (`apps/web/`):
-- [`src/lib/server/runs/runner.ts`](file:///c:/Users/franc/Documents/Manyhands/apps/web/src/lib/server/runs/runner.ts): Wired top-level de Next.js que compila los grafos de LangGraph, inyecta callbacks y corre los pipelines.
-- [`src/app/api/runs/[id]/resume/route.ts`](file:///c:/Users/franc/Documents/Manyhands/apps/web/src/app/api/runs/%5Bid%5D/resume/route.ts) y [`fork/route.ts`](file:///c:/Users/franc/Documents/Manyhands/apps/web/src/app/api/runs/%5Bid%5D/fork/route.ts): Endpoints para reanudar e interactuar con el StateGraph de LangGraph.
-- [`src/lib/run-model/`](file:///c:/Users/franc/Documents/Manyhands/apps/web/src/lib/run-model/): Modelos de datos agent-first. Reducer (`reducer.ts`), selectores (`selectors.ts`) y view-models. La UI consume únicamente selectores; no leas el modelo crudo.
+No hay una estrategia de benchmark o tesis activa. Los experimentos antiguos,
+Lab Mode, `/replay`, B0-B4, G3/G6/G9 y los benchmarks determinísticos fueron
+retirados o quedaron como historia. No los reintroduzcas.
 
 ---
 
-## 4. Guías para Desarrollo de UI/UX y Frameworks Frontend
+## 2. Objetivos Técnicos Vigentes
 
-La interfaz de la web app debe emular la calidad de las herramientas líderes en IA (minimalista, fluida, responsive, multipanel). 
-
-### 1. Frameworks y Librerías Requeridas
-Audita su instalación en `apps/web/package.json` y utilízalas de forma consistente e idiomática:
-- **`assistant-ui`**: Para renderizar el chat interactivo, hilos y estados de pensamiento/ejecución del orquestador.
-- **`Agent Elements`** y **`Vercel AI Elements`**: Para representaciones visuales de flujos agénticos y estados de ejecución.
-- **`shadcn/ui`** y **`Radix UI`**: Componentes primarios accesibles (Dialogs, Tooltips, Tabs, Popovers, Accordions, DropdownMenus).
-- **`react-resizable-panels`**: Para layouts multipanel (ej. panel lateral de foco, consola de trazas, canvas central) que el usuario pueda redimensionar con suavidad.
-- **`Tailwind CSS`** (v4.0.0+): Sistema de tokens, variables y colores HSL balanceados. Evita colores planos genéricos.
-
-### 2. Principios del Sistema de Diseño
-- **Obsoleto !== Fallado (Principio P6)**: Los nodos invalidados por enmiendas de seams se pintan como `obsolete` en color gris/ámbar suave y se mantiene su historial. No se eliminan ni muestran como rojos.
-- **Canal de Decisiones Unificado**: Todos los gates de interacción humana (HITL) se proyectan en el `DecisionChannel` con copy contextual claro.
-- **Panel de Foco Polimórfico**: El inspector lateral de foco debe reaccionar inmediatamente a clics sobre nodos, costuras (seams), conflictos o evidencia. Carga información perezosa usando `GET /api/runs/[id]/artifacts?ref=...`.
+1. **Paralelismo aislado:** múltiples agentes pueden trabajar sobre el mismo
+   repositorio mediante worktrees independientes y `ScopeChecker`.
+2. **Estado durable:** planning y ejecución se modelan con StateGraphs y
+   checkpoints JSON; resume/fork deben reconstruir dependencias desde el
+   `RunRecord`, no desde estado mutable accidental.
+3. **UI derivada de eventos:** el cliente reduce un log append-only de
+   `RunEvent` y deriva vistas con selectores. No persistas estado visual
+   duplicado.
+4. **Integración verificable:** `git diff HEAD` es la fuente de verdad de los
+   cambios; el orquestador commitea; el Composer integra y repara con contexto.
 
 ---
 
-## 5. Guías de Integración y Trabajo con LangGraph
+## 3. Arquitectura Del Monorepo
 
-- **State y Checkpoints**: El StateGraph utiliza checkpoints almacenados en `.manyhands/checkpoints/<runId>/`. Al modificar el StateGraph, asegura que la serialización JSON de `JsonFileCheckpointSaver` no se rompa.
-- **HITL (Human-in-the-Loop)**: Utiliza `interrupt()` nativo de LangGraph en el flujo de ejecución (ante preguntas aclaratorias del decomposer o conflictos insalvables de merge / agotamiento de reintentos del verify-loop). Se minimiza la intervención humana a decisiones de alto impacto arquitectónico, permitiendo que el sistema decida de manera autónoma en el resto de los flujos.
-- **Time-Travel (Forking)**: El forking clona el checkpoint JSON de un `thread_id` a un nuevo `runId` en la base de datos de manera no destructiva, inicializando un nuevo StateGraph a partir del estado de ese checkpoint.
+Regla de dependencias: `apps → packages específicos → shared`. Nunca importes
+desde `apps` dentro de un paquete.
 
----
+Paquetes principales:
 
-## 6. Principios de Calidad de Código (John Ousterhout / Clean Code)
+- `task-graph`: `TaskNode`, `TaskGraph`, DAG validation, topo sort.
+- `contracts`: `AgentTaskContract`, `InterfaceContract`, scopes.
+- `decomposer`: schemas y decomposer recursivo interface-aware.
+- `orchestrator-graph`: StateGraphs de planning/ejecución, state annotations y
+  checkpointer JSON.
+- `execution-core`: worktrees, executor registry, scope checker, recorder,
+  validation, integration, grounding y amendments.
+- `scheduler`: selección de waves y políticas de scheduling.
+- `run-store` / `trace-store`: persistencia y trazas.
+- `conflict-risk` / `repository-index`: señales de riesgo y grounding estructural.
+- `core`: barrel legacy; evita usarlo para código nuevo.
 
-1. **Clases y Módulos Profundos (Deep Modules)**: Diseña interfaces de paquetes pequeñas y encapsuladas. Oculta los detalles de bajo nivel.
-2. **Métodos Pequeños y Descriptivos**: Los métodos en los StateGraphs y ejecutores deben tener una sola responsabilidad clara y nombres legibles.
-3. **Evita la Doble Fuente de Verdad**: El estado derivado (fase, salud, freshness del seam) jamás debe persistirse imperativamente. Se recomputa mediante la capa de selectores de `src/lib/run-model/selectors.ts`.
-4. **Manejo de Errores Tipados**: Utiliza la jerarquía de excepciones en `packages/execution-core/src/errors.ts` y propaga los fallos de Gemini CLI de forma descriptiva.
+Aplicación web:
 
----
-
-## 7. Flujo de Trabajo para Tareas (Definición de "Terminado")
-
-Para dar una tarea por completada, debes asegurar los siguientes pasos:
-1. **Compilación Estricta**:
-   - `pnpm web:typecheck` no debe arrojar errores.
-   - `pnpm -F @manyhands/execution-core typecheck` debe compilar limpio.
-2. **Suite de Tests**:
-   - Todos los tests de la suite (`pnpm test`) deben estar en verde (847 tests exitosos).
-   - Escribe tests unitarios o de integración en `tests/` para cualquier nueva funcionalidad introducida.
-3. **Limpieza Absoluta (Cero Código Legacy / Deprecado)**:
-   - Elimina físicamente cualquier archivo, componente, toggle o flag viejo que sea reemplazado o quede obsoleto con tu nuevo diseño de frontera. La base de código final debe quedar 100% limpia y libre de deudas técnicas o rollbacks.
-4. **Priorización del Backend**:
-   - La verificación del backend (LangGraph, Scheduler, Composer, base de datos de checkpoints y concurrencia) tiene el mayor peso en la evaluación del software. Asegura que estas piezas tengan máxima robustez y cobertura de tests.
-5. **Auditoría de UI/UX**:
-   - La interfaz debe ser limpia, minimalista y funcionar fluidamente sin roturas en layouts responsivos de `react-resizable-panels`.
-6. **Validación de Invariantes**:
-   - Corre la verificación de invariantes en `tests/run-model-invariants.test.ts`.
-7. **Documentación**:
-   - Actualiza los documentos afectados en `docs/system/` o `docs/design/` para reflejar la realidad técnica de tus cambios. Escribe el reporte de cambios en `walkthrough.md`.
+- `apps/web/src/app/page.tsx`: Command Center.
+- `apps/web/src/app/runs/[runId]/`: Run workspace.
+- `apps/web/src/lib/server/runs/`: APIs, runner, host de planificación/ejecución.
+- `apps/web/src/lib/run-model/`: modelo agent-first, reducer, selectores y
+  view-models.
 
 ---
 
-## 8. Guía para Sesiones de Alto Esfuerzo (High-Effort / Long Execution)
+## 4. Invariantes De Trabajo
 
-Cuando operes en modo de alto esfuerzo en esta sesión:
-- **Autonomía Absoluta de Ejecución**: Se promueve la toma de decisiones independiente. Diseña el enfoque mentalmente e implementa directamente los cambios en código sin requerir propuestas ni aprobaciones humanas intermedias. No debes detenerte a proponer planes de trabajo en el chat ni esperar validaciones externas para comenzar a programar.
-- **Autodefinición del Roadmap**: Eres responsable de diseñar el camino a la frontera. Tu primer paso debe ser auditar el software y reescribir/editar el archivo `docs/design/future-frontier-tasks.md` con tus propias propuestas justificadas de backend, arquitectura y optimización del sistema, para luego proceder a implementarlas.
-- **Paso a Paso Controlado**: Escribe y edita archivos de forma modular. Realiza typechecks y ejecuta tests incrementalmente. No disperses los cambios en múltiples partes del monorepo sin verificar la estabilidad del código.
-- **Rastreo de TODOs**: Utiliza `task.md` para marcar tu progreso localmente con `[ ]`, `[/]`, y `[x]`.
-- **Commits de Checkpoint**: Registra checkpoints funcionales con commits locales y la firma de coautoría adecuada:
-  ```bash
-  git commit -m "feat/refactor(modulo): descripcion de la mejora" -m "Co-Authored-By: Claude Fable 5 <claude@anthropic.com>"
-  ```
+- `graph.dependencies` es canónico; `node.dependencies` es shortcut sincronizado.
+- El campo canónico de intención de tarea es `goal`, no `intent`.
+- Falla de LLM debe fallar con error accionable; no hay fallback silencioso.
+- La ejecución de agentes debe pasar por `AgentExecutor` y perfiles configurados.
+- `git diff HEAD` es la única fuente de verdad del resultado.
+- El orquestador hace commit; los agentes no.
+- El aislamiento real es worktree + `ScopeChecker`.
+- La integración usa cherry-pick + repair semántico con `sharedInterface`.
+- No reintroducir Lab Mode, benchmarks viejos, replay determinístico ni manifests
+  `mock-v0`/`conflict-v0`.
 
 ---
 
-## 9. Referencia de Decisiones de Diseño Anteriores (Historial del Legado)
+## 5. UI/UX
 
-Las siguientes invariantes D1-D10 sirvieron como cimiento conceptual durante las fases tempranas del desarrollo. **No son restricciones vigentes**, sino contexto histórico para que comprendas la estructura del código heredado que vas a auditar:
+La interfaz debe sentirse como una sala de control técnica: densa, clara y calma.
 
-| ID | Decisión de Diseño Histórica | Contexto y Rol del Legado |
-|----|------------------------------|---------------------------|
-| **D1** | `graph.dependencies` es el modelo canónico. | Evita dobles fuentes de verdad en dependencias del DAG. |
-| **D2** | El campo canónico de la intención de tarea es `goal`, nunca `intent`. | Normalización semántica de campos. |
-| **D3** | Tolerancia a fallos de LLM (reintentos con backoff). | Diseñado para mitigar fallos transitorios en el proveedor. |
-| **D4** | Gemini CLI como executor e-flight por defecto. | Acoplado al `AgentExecutor` configurable (ADR-0030). |
-| **D5** | `git diff HEAD` es la fuente de verdad del resultado. | Evita depender del stdout para determinar los cambios. |
-| **D6** | El orquestador commitea; los agentes nunca. | Garantiza el aislamiento de la rama base antes de la fusión. |
-| **D7** | Aislamiento real por git worktree + `ScopeChecker`. | Mantiene entornos de ejecución paralelos estancos. |
-| **D8** | Integración bottom-up con Composer cherry-pick + repair. | Algoritmo de resolución semántica de conflictos de fusión. |
-| **D9** | Paralelismo libre por Wavefront sin topes artificiales. | Maximiza la concurrencia a través del StateGraph de LangGraph. |
-| **D10**| Timeouts configurables por contrato. | Evita bloqueos indefinidos en subprocesos o colas. |
+Principios:
+
+- El color de marca señala actividad viva, no decoración.
+- Obsoleto no equivale a fallado.
+- El estado visible se deriva del event log; no inventes overrides locales.
+- El canal de decisiones unifica toda intervención humana.
+- El panel de foco resuelve detalles lazy con
+  `GET /api/runs/[id]/artifacts?ref=...`.
+- Mantener accesibilidad y contraste en ambos temas.
+
+Usá los tokens y componentes existentes antes de crear nuevos.
+
+---
+
+## 6. Definición De Terminado
+
+Para cambios funcionales:
+
+1. Leer el código relevante antes de editar.
+2. Mantener diffs pequeños y alineados al patrón existente.
+3. Agregar o ajustar tests donde el comportamiento cambie.
+4. Correr la verificación más estrecha y luego checks más amplios si aplica.
+5. Actualizar docs afectadas en `docs/system/`, `docs/design/` o
+   `docs/development/`.
+
+Comandos usuales:
+
+```bash
+pnpm test
+pnpm web:typecheck
+pnpm -F @manyhands/execution-core typecheck
+pnpm build
+```
+
+Para cambios solo de documentación, alcanza con una revisión de links y búsqueda
+de términos obsoletos.
+
+---
+
+## 7. Documentación
+
+- [`docs/DECISIONS.md`](docs/DECISIONS.md): decisiones vigentes.
+- [`docs/system/`](docs/system/): funcionamiento actual del sistema.
+- [`docs/design/`](docs/design/): modelo agent-first y UX/orquestación objetivo.
+- [`docs/development/architecture.md`](docs/development/architecture.md): mapa de
+  arquitectura vivo.
+- [`docs/adr/`](docs/adr/): historia de decisiones; no todo lo aceptado allí
+  sigue vigente.
+

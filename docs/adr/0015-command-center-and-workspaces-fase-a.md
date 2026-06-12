@@ -1,5 +1,9 @@
 # 0015 · Command Center landing and JSON-backed workspaces (Fase A)
 
+> Historical note: this ADR records the transition away from benchmark-inspector
+> UI. Mentions of `/replay/demo`, benchmark fixtures or experimental
+> requirements are not current product guidance.
+
 ## Status
 
 Accepted.

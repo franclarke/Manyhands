@@ -1,3 +1,27 @@
+# Walkthrough — Sesión 2026-06-12 (Robustez E2E, PR-7: SSE robusto)
+
+> PR-7 del plan de robustez U1–U8 (diseño en
+> [`docs/design/future-frontier-tasks.md`](docs/design/future-frontier-tasks.md) §19).
+> Invariante cerrado: **INV-7 — reconectar nunca pierde ni duplica eventos** (U8).
+
+## Qué se hizo
+
+1. **`id: <seq>` en cada frame SSE** + soporte de `Last-Event-ID` en la ruta
+   `run-events` (gana el mayor entre header y `?after=`).
+2. **Reconexión propia en `use-live-run-model`**: backoff exponencial con jitter
+   (1s→30s), cursor del máximo seq foldeado, y gap no contiguo → un replay
+   completo desde 0 (el reducer cursor-idempotente absorbe duplicados).
+3. **Eliminado el endpoint SSE legacy `/events`** (sin consumidores).
+4. **INV-7 testeado contra el handler real**: prefijo + sufijo reanudado folda al
+   mismo modelo que el stream continuo; overlap total idéntico.
+
+## Verificación
+
+- Typechecks (web, raíz) ✅ · `pnpm test` ✅ — **987 passed / 4 skipped** (+4)
+- Nuevo: `run-events-replay.test.ts` (4).
+
+---
+
 # Walkthrough — Sesión 2026-06-12 (Robustez E2E, PR-6: budget gate)
 
 > PR-6 del plan de robustez U1–U8 (diseño en

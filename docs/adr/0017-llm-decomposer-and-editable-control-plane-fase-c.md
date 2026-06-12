@@ -1,5 +1,9 @@
 # 0017 · LLM decomposer + editable control plane (Fase C — Sprint 1)
 
+> Historical note: deterministic fallback/Lab compare references are superseded.
+> LLM failures must now surface actionable errors; no silent Lab-style fallback
+> is part of the active product.
+
 ## Status
 
 Accepted. Sprint 1 implemented. Sprint 2 (DAG editing + conflict bottom sheet + Lab compare + Timeline) tracked separately and not yet shipped.

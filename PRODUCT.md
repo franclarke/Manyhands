@@ -6,7 +6,7 @@ product
 
 ## Users
 
-Francisco (solo developer/architect) hoy; evaluadores de tesis y desarrolladores técnicos mañana. El usuario está **supervisando trabajo autónomo**: lanza un run, observa cómo el sistema descompone y ejecuta en paralelo, e interviene solo en gates de alto impacto (aprobación de plan, conflictos de merge, enmiendas de seams). Sesiones largas (30 min – horas), frecuentemente de noche, con la app abierta como una sala de control. Idioma de la UI: español rioplatense.
+Francisco (solo developer/architect) hoy; desarrolladores técnicos mañana. El usuario está **supervisando trabajo autónomo**: lanza un run, observa cómo el sistema descompone y ejecuta en paralelo, e interviene solo en gates de alto impacto (aprobación de plan, conflictos de merge, enmiendas de seams). Sesiones largas (30 min – horas), frecuentemente de noche, con la app abierta como una sala de control. Idioma de la UI: español rioplatense.
 
 ## Product Purpose
 

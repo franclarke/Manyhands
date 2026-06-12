@@ -19,7 +19,10 @@ const HEARTBEAT_MS = 15_000;
 
 export async function GET(request: Request, context: RouteContext): Promise<Response> {
   const { id } = await context.params;
-  const after = readAfter(request.url);
+  // Resume cursor: the explicit ?after= param or the browser's Last-Event-ID
+  // (set automatically on reconnect from the `id:` field of the last frame).
+  // The higher one wins — both mean "I already folded everything up to here".
+  const after = Math.max(readAfter(request.url), readLastEventId(request));
   let history: RunEvent[];
 
   try {
@@ -78,6 +81,13 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
 
 function readAfter(url: string): number {
   const raw = new URL(url).searchParams.get("after");
+  if (raw === null) return 0;
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+function readLastEventId(request: Request): number {
+  const raw = request.headers.get("last-event-id");
   if (raw === null) return 0;
   const value = Number(raw);
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;

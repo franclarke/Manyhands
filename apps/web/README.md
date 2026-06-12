@@ -1,24 +1,27 @@
-> **Note:** This is a fixture repository for the ManyHands project. It is used for testing and development purposes.
-
 # ManyHands Web
 
-`apps/web` is the Phase 10 web app foundation for ManyHands.
+`apps/web` es la aplicación Next.js de ManyHands. Expone el Command Center, el
+workspace de runs, APIs de workspaces/runs y la proyección agent-first basada en
+`RunEvent`.
 
-It is a real Next.js App Router app connected to the existing deterministic core through API routes. It intentionally starts with Lab Mode and benchmark reports before adding DAG canvas, live mock execution, real worktrees or real agents.
+No es una app de Lab Mode ni un runner de benchmarks. Las rutas antiguas
+`/lab`, `/lab/benchmarks`, `/lab/reports`, `/replay` y `/replay/demo` fueron
+retiradas. Los prototipos bajo `/runs/proto/[fixture]` usan golden fixtures del
+modelo de eventos para validar UI/reducer/selectores; no son benchmarks de
+calidad.
 
 ## Stack
 
-- Next.js 15.5.7
-- React 19.2.6
+- Next.js 15
+- React 19
 - TypeScript
 - Tailwind CSS 4
 - App Router route handlers
-
-No shadcn/ui, React Flow, WebSockets, SQLite, real worktrees or real agent adapters are included in this phase.
+- `react-resizable-panels` para el workspace multipanel
 
 ## Commands
 
-From the repository root:
+Desde la raíz del repo:
 
 ```bash
 pnpm web:dev
@@ -27,143 +30,103 @@ pnpm web:lint
 pnpm web:build
 ```
 
-The root web scripts build the workspace packages first so the app can import `@manyhands/core` and `@manyhands/evaluator` from their package entrypoints.
-
 ## Routes
 
-- `/` - Command Center: prompt + workspace + granularity + model + recent runs.
-- `/workspaces` - CRUD over `.manyhands/workspaces.json`.
-- `/lab` - Lab Mode landing page.
-- `/lab/benchmarks` - benchmark runner over real API routes.
-- `/lab/reports` - report persistence placeholder.
-- `/replay` - entry cards for the deterministic canvases.
-- `/replay/demo` - read-only DAG canvas over a deterministic RunSnapshot.
+- `/` — Command Center: prompt + workspace + granularidad + modelo.
+- `/workspaces` — configuración de repositorios locales.
+- `/runs/[runId]` — sala de control agent-first del run.
+- `/runs/proto` — índice de golden fixtures de UI.
+- `/runs/proto/[fixture]` — reproducción fixture-first del modelo de eventos.
 
 ## API Routes
 
 - `GET /api/health`
-- `GET /api/benchmarks`
-- `GET /api/benchmarks/[id]`
-- `POST /api/benchmarks/[id]/run`
-- `GET /api/demo/run-snapshot`
+- `GET /api/providers/readiness`
 - `GET /api/workspaces`
 - `POST /api/workspaces`
 - `GET /api/workspaces/[id]`
 - `PATCH /api/workspaces/[id]`
 - `DELETE /api/workspaces/[id]`
-- `GET /api/runs[?workspaceId&limit]` — lists persisted runs as `RunPreview`
-- `POST /api/runs` — creates a run (body: `{ workspaceId, scenarioId, granularity, model, userPrompt? }`) and kicks the planning pipeline
-- `GET /api/runs/[id]` — full `RunRecord`
-- `GET /api/runs/[id]/events` — SSE replay + tail (`node.added`, `edge.added`, `risk.added`, `status.changed`, `agent.run.started/completed`, `validation.completed`, `heartbeat`)
-- `POST /api/runs/[id]/approve-plan` — `needs_review → approved`
-- `POST /api/runs/[id]/run` — `approved → running`, kicks the execution pipeline
-- `POST /api/runs/[id]/pause` — pauses `generating` or `running`
-- `POST /api/runs/[id]/resume` — resumes a paused run
+- `POST /api/local-fs/browse`
+- `GET /api/runs[?workspaceId&limit]`
+- `POST /api/runs`
+- `GET /api/runs/[id]`
+- `GET /api/runs/[id]/events`
+- `GET /api/runs/[id]/run-events`
+- `POST /api/runs/[id]/approve-plan`
+- `POST /api/runs/[id]/run`
+- `POST /api/runs/[id]/pause`
+- `POST /api/runs/[id]/resume`
+- `POST /api/runs/[id]/cancel`
+- `POST /api/runs/[id]/restart`
+- `POST /api/runs/[id]/fork`
+- `POST /api/runs/[id]/answer`
+- `POST /api/runs/[id]/auto-resolve`
+- `POST /api/runs/[id]/serialize`
+- `GET /api/runs/[id]/export`
+- `GET /api/runs/[id]/artifacts?ref=...`
+- `POST /api/runs/[id]/decisions/[decisionId]`
+- `PATCH /api/runs/[id]/nodes/[taskId]`
+- `POST /api/runs/[id]/nodes/[taskId]/review`
+- `POST /api/runs/[id]/nodes/[taskId]/regen`
+- `POST /api/runs/[id]/nodes/[taskId]/run`
+- `POST /api/runs/[id]/dependencies`
+- `POST /api/runs/[id]/risks/acknowledge`
+- `POST /api/runs/[id]/integrator`
 
 ## Workspaces
 
-Workspaces persist at `.manyhands/workspaces.json` in the repository root. If the file is missing on first read, the JSON repository seeds it with `ManyHands` and `Aprobado`. Delete the file to re-seed.
+Workspaces persisten en `.manyhands/workspaces.json` salvo que se configure
+`MANYHANDS_WORKSPACES_FILE`. La persistencia vive en
+`src/lib/server/workspaces/repository.ts`.
 
-The persistence layer is encapsulated in `WorkspaceRepository` (`src/lib/server/workspaces/repository.ts`). Fase C will swap the JSON implementation for SQLite without touching the UI.
-
-Override the file path with `MANYHANDS_WORKSPACES_FILE=/abs/path/workspaces.json`. See `docs/adr/0015-command-center-and-workspaces-fase-a.md`.
+Un workspace puede apuntar a un repo local y guardar hints de planificación:
+`repoPath`, `packageManager`, `defaultBranch`, `allowedPaths`, `testCommand`,
+`buildCommand`.
 
 ## Runs
 
-Runs persist at `.manyhands/runs/<runId>.json`. Each file is a `{ version: 1, run: RunRecord }` envelope validated with Zod and written atomically. Delete the directory to start fresh.
+Runs persisten en `.manyhands/runs/<runId>.json` como `{ version, run }`
+validado con Zod. La persistencia vive en
+`src/lib/server/runs/repository.ts`.
 
-The persistence layer is encapsulated in `RunRepository` (`src/lib/server/runs/repository.ts`). The lifecycle (`created → generating → needs_review → approved → running → completed | failed`, plus `paused`) is enforced in `src/lib/server/runs/lifecycle.ts`.
+El lifecycle se coordina desde:
 
-Live progressive rendering uses an in-process event bus (`src/lib/server/runs/event-bus.ts`) and SSE. The runner writes `heartbeatAt` every few seconds while generating or running; a sweeper invoked from the GET endpoints marks runs with a stale heartbeat (>10 min) as `interrupted`. The UI surfaces a primary **Restart** action on those runs via `POST /api/runs/:id/restart`. See `docs/adr/0016-run-lifecycle-and-live-mock-execution-fase-b.md` and `docs/adr/0017-llm-decomposer-and-editable-control-plane-fase-c.md`.
+- `src/lib/server/runs/planning-host.ts`
+- `src/lib/server/runs/execution-host.ts`
+- `src/lib/server/runs/runner.ts`
+- `src/lib/server/runs/lifecycle.ts`
 
-## LLM decomposer (Fase C — Sprint 1)
+La ejecución usa checkpoints JSON de LangGraph bajo `.manyhands/` y puede
+reanudar/forkear desde esos checkpoints.
 
-The Command Center prompt feeds an LLM-driven decomposer when `ANTHROPIC_API_KEY` is set. Failures (no key, schema violation, guard rejected, request error) transparently fall back to the deterministic `MetadataDrivenMockDecomposer`. Telemetry (provider, model, validationErrors, usage) is persisted under `RunRecord.decomposition`.
+## Run Model
 
-Environment variables:
+La UI agent-first consume un log append-only de `RunEvent`:
 
-- `ANTHROPIC_API_KEY` — enables the LLM decomposer. **Never commit.** CI must run without it.
-- `MANYHANDS_FORCE_FALLBACK=1` — forces the deterministic fallback even when a key is set. Use it for tests and reproducible Lab comparisons.
-- `MANYHANDS_RUNS_DIR=/abs/path/runs` — overrides the runs directory.
-- `MANYHANDS_WORKSPACES_FILE=/abs/path/workspaces.json` — overrides the workspaces file.
-- `MANYHANDS_REPO_ROOT=/abs/path` — anchors `.manyhands/` to a custom root.
+- `src/lib/run-model/reducer.ts` reduce eventos.
+- `src/lib/run-model/selectors.ts` deriva estado.
+- `src/lib/run-model/workspace-view.ts`, `focus-view.ts` y `timeline-view.ts`
+  producen view-models.
+- `src/components/run-model/` renderiza la experiencia.
 
-Workspaces grew optional hints (`repoPath`, `packageManager`, `defaultBranch`, `allowedPaths`, `testCommand`, `buildCommand`) consumed by the LLM as planning context. They are NOT executed yet — worktrees and real agents land in Fase D.
+Regla: la UI no debe escribir estado derivado imperativo para nodos. Si algo se
+ve en pantalla, debe salir del log + reducer + selectores.
 
-Override the runs directory with `MANYHANDS_RUNS_DIR=/abs/path/runs`.
+## Environment
 
-Supported benchmark ids:
-
-- `mock-v0`
-- `conflict-v0`
-
-Example run request:
-
-```json
-{
-  "config": "B4"
-}
-```
-
-Omit `config` to run all configurations declared by the manifest.
-
-Demo snapshot request:
-
-```txt
-GET /api/demo/run-snapshot?benchmark=conflict-v0&config=B4
-```
-
-The demo endpoint returns one real deterministic `RunSnapshot` generated through the core benchmark flow. It defaults to `conflict-v0`, `B4` and the `shared-schema-conflict` feature. It does not persist the snapshot.
-
-## Graph Handoff
-
-`src/lib/graph-view-model.ts` maps a `RunSnapshot` into a small UI-facing graph contract:
-
-- `GraphNodeView`
-- `GraphEdgeView`
-- `RunGraphViewModel`
-- `InspectorView` via `buildInspectorView(snapshot, taskId)`
-
-The mapper is intentionally independent from React Flow. The DAG canvas in `/replay/demo` consumes it.
-
-Companion modules:
-
-- `src/lib/graph-filters.ts` — multi-axis filter state (text / status / risk / kind / gate) and helpers.
-- `src/lib/dag-layout.ts` — depth-based phase column layout with status-aware ordering.
-
-## DAG Canvas
-
-`/replay/demo` renders a read-only DAG canvas with `@xyflow/react`:
-
-- phase columns with depth labels;
-- task cards with serif titles, monospace task ids, status pill, risk/gate tags, expected files preview, footer with dependencies/trace counts and duration/cost;
-- dependency edges (solid), risk edges (dashed, color by level, animated for high/blocking) and gate edges (amber dashed);
-- minimap, controls, dot background;
-- filter chips on the toolbar: status, risk level, kind, gate-required, text search; non-matching nodes are dimmed and edges crossing the filter boundary are dimmed too;
-- side inspector with `Overview`, `Contract`, `Risks`, `Trace`, `Validation` and `Diff` tabs.
-
-Visual direction follows the `warm technical` design language: graphite surfaces with coral accents, Newsreader serif for titles, Inter for UI, JetBrains Mono for code/ids.
-
-Components live in `src/components/dag/`:
-
-```
-DagWorkspace.tsx
-DagCanvas.tsx
-TaskNodeCard.tsx
-TaskInspector.tsx
-GraphToolbar.tsx
-RiskLegend.tsx
-MethodologyBanner.tsx
-```
-
-## Lab → Replay
-
-`/lab/benchmarks` shows an `Open canvas →` link in each report row and a row of pill links pointing at `/replay/demo?benchmark=<id>&config=<C>`. Running a benchmark and opening its canvas is one click apart.
+- `MANYHANDS_GEMINI_BIN` — ruta al binario de Gemini CLI.
+- `MANYHANDS_DECOMPOSER` — override de decomposer para desarrollo.
+- `MANYHANDS_RUNS_DIR` — override del directorio de runs.
+- `MANYHANDS_WORKSPACES_FILE` — override del archivo de workspaces.
+- `MANYHANDS_REPO_ROOT` — ancla alternativa para `.manyhands/`.
 
 ## Tests
 
-Vitest tests for the mapper live at `tests/graph-view-model.test.ts` (16 tests). They exercise `toRunGraphViewModel`, gate detection, status normalization, risk edges, `buildInspectorView` and the filter helpers. They run from the repo root via `pnpm test`.
+Los tests de web y run model viven en `tests/` en la raíz del repo y corren con:
 
-## Limits
+```bash
+pnpm test
+pnpm web:typecheck
+```
 
-Current benchmark runs are deterministic and mock-only. They do not run real agents, create real git worktrees, execute target repository tests, persist reports or claim final empirical evidence. The `Run ready tasks` button is intentionally disabled — live mock execution lands in a later phase.

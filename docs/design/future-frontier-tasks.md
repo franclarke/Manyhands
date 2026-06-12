@@ -356,6 +356,28 @@ no gateaba nada: un run fugitivo podía quemar tokens sin límite.
 
 ---
 
+## 19. Reconexión SSE robusta con replay testeado `[x]` — 2026-06-12
+
+**Hallazgo.** El stream `run-events` ya tenía `seq` monotónico + `?after=`, pero los
+frames no llevaban `id:` (el Last-Event-ID nativo del browser no funcionaba), la
+reconexión dependía del auto-retry sin control de cadencia ni detección de gaps, y
+no existía ningún test del contrato de replay. El endpoint legacy `/events`
+sobrevivía sin consumidores.
+
+**Diseño.** PR-7 del plan de robustez (U8, INV-7):
+- Frames SSE con `id: <seq>`; la ruta honra el header `Last-Event-ID` (gana el
+  mayor entre header y `?after=` — ambos significan "ya foldeé hasta acá").
+- `use-live-run-model` es dueño de la reconexión: cierre en error + reapertura con
+  backoff exponencial con jitter (1s→30s) llevando como cursor el máximo seq
+  foldeado; un seq no contiguo (log truncado/rotado) dispara UN replay completo
+  desde cero — el reducer cursor-idempotente absorbe cualquier duplicado.
+- Borrado el endpoint legacy `/events` (cero consumidores).
+- Contrato testeado contra el route handler real: prefijo + sufijo reanudado por
+  Last-Event-ID folda al MISMO modelo que un stream ininterrumpido, y un overlap
+  total también (INV-7 como propiedad verificada, no aspiración).
+
+---
+
 ## Plan de robustez E2E (U1–U8) — secuencia aprobada 2026-06-11
 
 PR-1 `[x]` (§13) → PR-2 `[x]` (§14) → PR-3 `[x]` (§15) → PR-4 `[x]` (§16) →

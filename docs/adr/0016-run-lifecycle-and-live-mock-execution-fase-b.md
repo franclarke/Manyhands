@@ -1,5 +1,9 @@
 # 0016 · Run lifecycle and live mock execution (Fase B)
 
+> Historical note: live mock execution, `/replay/demo` and Lab references in
+> this ADR are superseded. The current product runs through the agent-first
+> workspace and LangGraph-backed execution.
+
 ## Status
 
 Accepted.

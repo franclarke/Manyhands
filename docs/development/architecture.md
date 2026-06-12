@@ -1,90 +1,97 @@
 # Architecture
 
-ManyHands is a visual orchestration workspace for multi-agent software development. Takes a feature in natural language, decomposes it recursively into a hierarchical DAG, executes leaf tasks in isolated git worktrees with Gemini CLI, and integrates results bottom-up with cherry-pick.
+ManyHands is a visual orchestration workspace for multi-agent software
+development. It accepts a natural-language software goal, plans a DAG of tasks,
+executes leaf work in isolated git worktrees, and integrates the resulting
+commits bottom-up.
 
 ## Product Architecture
 
-```
+```text
 Web App (Next.js App Router)
-  → API routes
-  → Core orchestration (RunExecutor)
-  → Agent executor (GeminiCliExecutor)
-  → Git / worktree layer (WorktreeManager, SimpleGitRunner)
-  → Trace / evaluation layer (trace-store, run-store)
+  -> API routes
+  -> Planning host / Execution host
+  -> LangGraph StateGraphs
+  -> execution-core
+  -> AgentExecutor profiles
+  -> Git / worktree layer
+  -> RunEvent log + RunRecord persistence
 ```
 
-The web app does not reimplement orchestration logic. It calls API routes backed by existing package APIs and displays validated core artifacts: `TaskGraph`, `AgentTaskContract`, `RunRecord`, `GranularityVector`.
+The web app does not reimplement orchestration logic. It calls API routes backed
+by package APIs and renders validated artifacts: `TaskGraph`,
+`AgentTaskContract`, `RunRecord`, `RunEvent`, diffs, logs, decisions and run
+metrics.
 
 ## Execution Pipeline
 
+```text
+Feature prompt
+  -> planningGraph
+      -> recursive decomposition
+      -> TaskGraph + AgentTaskContracts + sharedInterfaces
+      -> plan review / approval
+  -> executionGraph
+      -> grounding / seam preparation
+      -> scope-aware wave selection
+      -> RunExecutor.runNode per leaf
+          -> WorktreeManager
+          -> FileSystemContextPacker
+          -> AgentExecutor
+          -> ScopeChecker
+          -> ValidationRunner
+          -> ResultRecorder
+          -> orchestrator commit
+      -> IntegrationAgent per composite
+          -> cherry-pick
+          -> semantic repair on conflict
+          -> parent validation
+      -> run validation and metrics
+  -> RunRecord + RunEvent log
+  -> web projection
 ```
-Feature prompt (user)
-  → GeminiRecursiveDecomposer     (recursive interface-aware decomposition)
-  → TaskGraph + AgentTaskContracts + sharedInterfaces
-  → RunExecutor (orchestrator)
-      → BatchScheduler             (maxParallel=3, respects graph dependencies)
-      → WorktreeManager.create()   (isolated git worktree per leaf)
-      → FileSystemContextPacker    (files + consumedInterfaces → prompt)
-      → GeminiCliExecutor          (gemini -p <prompt> --approval-mode yolo)
-      → ScopeChecker               (git diff --name-only vs allowed/forbidden paths)
-      → ValidationRunner           (leafValidationCommands)
-      → ResultRecorder             (git diff HEAD → patch + trace events)
-      → git commit (orchestrator)
-      → WorktreeManager.clean()
-  → IntegrationAgent (bottom-up, per composite)
-      → git cherry-pick (topological order)
-      → Gemini semantic repair on conflict (max 1 attempt)
-        - context: parent goal + sharedInterface + child intents
-      → ValidationRunner           (parentValidationCommands)
-  → GranularityVector              (17 metrics: 9 pre-execution + 8 post-execution)
-  → RunRecord (persisted as JSON)
-```
+
+`GranularityVector` is still the schema name used for run metrics in
+`execution-core`; it is not an active benchmark methodology.
 
 ## Package Boundaries
 
-Dependency direction: `apps → specific packages → shared`. Never import from `apps` inside packages. `@manyhands/core` is a legacy barrel still consumed by `apps/web` for shared types and the mock-planning flow; do not add new dependencies to it.
+Dependency direction: `apps -> specific packages -> shared`. Never import from
+`apps` inside packages. `@manyhands/core` is a legacy barrel; new code should use
+specific packages.
 
 | Package | Responsibility | Status |
-|---------|---------------|--------|
+|---------|----------------|--------|
 | `task-graph` | TaskNode, TaskGraph, DAG validation, topo sort | Active |
-| `contracts` | AgentTaskContract V1+V2, InterfaceContract, ExecutionScope | Active |
-| `decomposer` | GeminiRecursiveDecomposer (default), Anthropic baselines | Active |
-| `execution-core` | Full real-execution pipeline | Active |
-| `scheduler` | sequential_dag, parallel_naive, risk_aware policies | Active |
-| `run-store` | RunSnapshot, patches, JSON persistence | Active |
-| `trace-store` | TraceEvent (planning + execution) | Active |
-| `conflict-risk` | Pairwise conflict risk prediction (consumed by the UI) | Active |
-| `repository-index` | Structural TypeScript repo index (feeds conflict-risk) | Active |
-| `shared` | EntityId, IsoTimestamp, NonEmptyString | Active |
-| `core` | Legacy barrel consumed by apps/web | Legacy |
-
-The Lab Mode packages (`scope-validation`, `worktree-runner`, `evaluator`) and the `calculator` smoke-test artefact were removed in the June 2026 cleanup.
-
-## Thesis Artifacts
-
-**Artifact 1 — Interface-Aware Recursive Decomposer** (`packages/decomposer/src/llm/recursive/`):
-`GeminiRecursiveDecomposer` decomposes each node with a single LLM call that decides `atomic` (leaf) or `decompose` (composite + sharedInterface). When decomposing, it produces TypeScript type and function signatures that the child nodes must honor. The `FileSystemContextPacker` injects `consumedInterfaces` into each leaf's prompt, fixing the inter-agent seam before dispatching agents in parallel.
-
-**Artifact 2 — Contract-Aware Composer** (`packages/execution-core/src/integration/agent.ts`):
-`IntegrationAgent` does cherry-pick and, on conflict, invokes Gemini with full semantic context: parent goal, canonical `sharedInterface`, each child's intent and diff. Repair resolves by reference to the contract, not by guessing the merge. If `parentValidationCommands` exist, the Composer runs them against the integrated worktree to verify the seam is correct.
-
-## Decomposer Policy
-
-Configurable via `MANYHANDS_DECOMPOSER` env var:
-
-| Value | Decomposer | Requirement |
-|-------|-----------|-------------|
-| (default) | `GeminiRecursiveDecomposer` | `MANYHANDS_GEMINI_BIN` (default: `gemini`) |
-| `single-pass` | `AnthropicSinglePassDecomposer` | `ANTHROPIC_API_KEY` |
-| `anthropic-recursive` | `AnthropicRecursiveDecomposer` | `ANTHROPIC_API_KEY` |
+| `contracts` | AgentTaskContract, InterfaceContract, ExecutionScope | Active |
+| `decomposer` | Recursive planning and LLM schemas | Active |
+| `orchestrator-graph` | LangGraph StateGraphs and checkpointing | Active |
+| `execution-core` | Worktrees, executors, scope, recorder, integration | Active |
+| `scheduler` | Scope/risk-aware wave selection | Active |
+| `run-store` | Run snapshots/patches and JSON persistence | Active |
+| `trace-store` | Trace events | Active |
+| `conflict-risk` | Pairwise conflict risk prediction | Active |
+| `repository-index` | Structural TypeScript index | Active |
+| `shared` | EntityId, IsoTimestamp, helpers | Active |
+| `core` | Legacy barrel | Legacy |
 
 ## Runtime Design
 
-- **Persistence:** JSON for workspaces and runs. SQLite deferred.
-- **SSE:** execution events streamed to the web UI in real time via `/api/runs/[runId]/events`.
-- **Repos:** supports both fixture provisioning (`createFixtureRepoProvisioner`, ADR-0027) and local git folders (`createDefaultRepoProvisioner` with `kind: "localPath"`).
-- **Tests:** 344 passing + 3 skipped. `MockAgentExecutor` enables pipeline testing without invoking Gemini.
+- **Persistence:** JSON files for workspaces, runs, events and checkpoints.
+- **SSE:** run events stream through `/api/runs/[runId]/run-events`.
+- **Checkpoints:** LangGraph checkpoints support resume and fork.
+- **Repos:** local git workspaces are the product path. Fixture provisioning
+  still exists as a generic/testing mechanism, but there is no active benchmark
+  fixture suite in the repo.
+- **Agent execution:** goes through `AgentExecutor` profiles. Gemini CLI remains
+  the primary/default product executor.
+- **UI state:** the client reduces `RunEvent` and derives view-models with pure
+  selectors.
 
-## Lab Mode
+## Removed Historical Surfaces
 
-The original deterministic Lab Mode (`mock-v0`/`conflict-v0` fixtures, `MetadataDrivenMockDecomposer`, `/lab`/`/replay` routes) was removed in June 2026. A new Lab will be designed from scratch when the thesis formulation is finalized and the product is ready.
+The deterministic Lab Mode, `/lab`, `/replay`, `/replay/demo`, benchmark
+manifests, mock benchmark reports and old evaluator package are not part of the
+current product. Any future quality-measurement strategy must be designed
+freshly after product completion.
+

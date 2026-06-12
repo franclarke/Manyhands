@@ -52,5 +52,10 @@ Invariantes INV-1…INV-7 y diseño por PR: `docs/design/future-frontier-tasks.m
 - [x] `budgetGate` (interrupt-first): `extend_budget` (nuevos límites o lift) | `finish_partial` (integra solo lo completo, cierre explícito) | `abort_run`
 - [x] Proyección web: gate `budget_exceeded` en pendingDecision (spentTokens/spentUsd/pendingTasks), `BUDGET_GATE_OPTIONS`, decisionFromAnswer/isResumeDecision
 - [x] Tests: execution-graph budget (4 — corte entre waves, extend completa, partial sin integrar incompletos, abort, sin límites = sin cambios)
-## PR-7 — SSE Last-Event-ID + backoff + replay testeado (U8, INV-7) `[ ]`
+## PR-7 — SSE Last-Event-ID + backoff + replay testeado (U8, INV-7) `[x]`
+- [x] Frames con `id: <seq>` (el EventSource del browser gestiona Last-Event-ID solo)
+- [x] Route `run-events` honra `Last-Event-ID` (gana el mayor entre header y `?after=`)
+- [x] Cliente: reconexión manual con backoff exponencial + jitter, cursor `?after=` del máximo seq foldeado, gap no contiguo → un replay completo desde 0 (reducer cursor-idempotente absorbe duplicados)
+- [x] Eliminado el endpoint SSE legacy `/events` (cero consumidores; política cero-legacy)
+- [x] Tests: `run-events-replay.test.ts` (4 — ids en frames, resume exacto por header, max(after, LEI), INV-7: prefijo+sufijo ≡ stream continuo, overlap total idéntico)
 ## PR-8 — Visor de evidencia usable (U4) `[ ]`

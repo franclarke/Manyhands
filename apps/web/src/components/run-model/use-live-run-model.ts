@@ -3,9 +3,10 @@
 /**
  * Live run-model bridge.
  *
- * The real run workspace consumes `/api/runs/[id]/run-events`, an SSE stream of
- * native agent-first `RunEvent` envelopes. The legacy `/events` stream remains
- * available for rollback, but this path no longer adapts `StreamEvent`s and never
+ * The run workspace consumes `/api/runs/[id]/run-events`, an SSE stream of
+ * native agent-first `RunEvent` envelopes with monotonic `seq` ids. Reconnects
+ * are owned here (backoff + jitter + cursor resume + gap-triggered full
+ * replay); the cursor-idempotent reducer absorbs any duplicate frames.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createInitialRunModel, reduceRunEvents } from "@/lib/run-model/reducer";
@@ -33,6 +34,9 @@ export function buildLiveRunModel(
   return { model, events };
 }
 
+const RECONNECT_BASE_MS = 1_000;
+const RECONNECT_MAX_MS = 30_000;
+
 export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = []): LiveRunModel {
   const [streamEvents, setStreamEvents] = useState<RunEvent[]>([]);
   const [connected, setConnected] = useState(false);
@@ -43,19 +47,64 @@ export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = 
     if (typeof window === "undefined") return;
     bufferRef.current = [];
     setStreamEvents([]);
-    const es = new EventSource(`/api/runs/${encodeURIComponent(seed.id)}/run-events?after=${initialCursor}`);
-    es.onopen = () => setConnected(true);
-    es.onmessage = (raw) => {
-      try {
-        const event = JSON.parse(raw.data) as RunEvent;
-        bufferRef.current = [...bufferRef.current, event];
-        setStreamEvents(bufferRef.current);
-      } catch {
-        // Ignore malformed frames.
-      }
+
+    // Manual reconnection (INV-7): the browser's auto-retry has a fixed cadence
+    // and no gap awareness. We close on error and reopen with exponential
+    // backoff + jitter, carrying the highest folded seq as `?after=` — the
+    // server replays the persisted log from there, so nothing is lost. A
+    // non-contiguous seq (truncated/rotated log) triggers ONE full replay from
+    // zero; the cursor-idempotent reducer absorbs the duplicates.
+    let es: EventSource | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let attempts = 0;
+    let lastSeen = 0;
+    let refetchedAfterGap = false;
+    let disposed = false;
+
+    const cursor = (): number => Math.max(initialCursor, maxSeq(bufferRef.current));
+
+    const connect = (after: number): void => {
+      if (disposed) return;
+      es = new EventSource(`/api/runs/${encodeURIComponent(seed.id)}/run-events?after=${after}`);
+      es.onopen = () => {
+        attempts = 0;
+        setConnected(true);
+      };
+      es.onmessage = (raw) => {
+        try {
+          const event = JSON.parse(raw.data) as RunEvent;
+          if (lastSeen > 0 && event.seq > lastSeen + 1 && !refetchedAfterGap) {
+            // Gap: the log no longer covers our cursor. Full replay once.
+            refetchedAfterGap = true;
+            es?.close();
+            bufferRef.current = [];
+            lastSeen = 0;
+            connect(0);
+            return;
+          }
+          lastSeen = Math.max(lastSeen, event.seq);
+          bufferRef.current = [...bufferRef.current, event];
+          setStreamEvents(bufferRef.current);
+        } catch {
+          // Ignore malformed frames.
+        }
+      };
+      es.onerror = () => {
+        setConnected(false);
+        es?.close();
+        attempts += 1;
+        const backoff = Math.min(RECONNECT_MAX_MS, RECONNECT_BASE_MS * 2 ** Math.min(attempts, 5));
+        const delay = backoff / 2 + Math.random() * (backoff / 2); // jitter
+        retryTimer = setTimeout(() => connect(cursor()), delay);
+      };
     };
-    es.onerror = () => setConnected(false);
-    return () => es.close();
+
+    connect(initialCursor);
+    return () => {
+      disposed = true;
+      if (retryTimer !== null) clearTimeout(retryTimer);
+      es?.close();
+    };
   }, [seed.id, initialCursor]);
 
   const { model, events } = useMemo(

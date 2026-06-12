@@ -1,6 +1,6 @@
-# Evolución y rationale del rediseño
+# Evolución y Rationale Del Rediseño
 
-> Estado: **registro histórico** (2026-06-05). Documenta no solo *qué* se decidió, sino *por qué se cambió*. Tono narrativo, defendible para tesis. Complementa la síntesis de decisiones en [`../DECISIONS.md`](../DECISIONS.md).
+> Estado: **registro histórico** (2026-06-05). Documenta no solo *qué* se decidió, sino *por qué se cambió*. No define una estrategia de evaluación vigente. Complementa la síntesis de decisiones en [`../DECISIONS.md`](../DECISIONS.md).
 
 ---
 
@@ -25,7 +25,7 @@ Al ejercitar el sistema con runs reales surgieron señales consistentes:
 
 ## 3. Por qué esos problemas eran señales de un diseño inmaduro
 
-Cada síntoma apuntaba a la misma raíz: la interfaz pensaba el problema como **"render de un plan"** en lugar de **"supervisión de trabajo autónomo"**. Un visor de planes es razonable si el plan fuera correcto y la ejecución, un detalle. Pero en un orquestador de coding agents la verdad es la inversa: **el plan es una hipótesis y la ejecución es el experimento que la pone a prueba.** Una interfaz que invierte su esfuerzo en planificación está optimizando la parte fácil (proponer estructura) y descuidando la difícil (supervisar que el trabajo realmente funcione y coordine).
+Cada síntoma apuntaba a la misma raíz: la interfaz pensaba el problema como **"render de un plan"** en lugar de **"supervisión de trabajo autónomo"**. Un visor de planes es razonable si el plan fuera correcto y la ejecución, un detalle. Pero en un orquestador de coding agents el plan es una propuesta que la ejecución valida o corrige. Una interfaz que invierte su esfuerzo en planificación está optimizando la parte fácil (proponer estructura) y descuidando la difícil (supervisar que el trabajo realmente funcione y coordine).
 
 Más profundo aún: el sistema no tenía una **arquitectura de estado**. El estado visual era local y mutable, lo que abría la puerta a una **doble fuente de verdad** entre lo que decía el backend, lo que la UI mantenía en memoria, y lo que se pintaba. Sin un modelo de eventos, no había forma rigurosa de representar evolución del plan, conflictos, o re-ejecución parcial.
 
@@ -87,7 +87,7 @@ Un agente descubre a mitad de ejecución que la **firma** congelada de una costu
 
 - **Más sólido técnicamente:** una sola fuente de verdad, todo derivado, sin la clase de bugs de estado visual local. Validado contra los dos casos más difíciles (conflicto conductual y evolución de contrato con blast radius).
 - **Más coherente como producto:** una experiencia continua con jerarquía clara, en vez de un dashboard de vistas pares. La atención se rutea; el humano no caza.
-- **Más alineado con la tesis:** el rediseño hace explícito el aporte de investigación —**coordinar coding agents en paralelo vía costuras congeladas (contratos extraídos de código) y verificación, fabricando el frente paralelo seguro y manejando su evolución con invalidación selectiva**—. El producto deja de ser "un visor de DAGs" y pasa a encarnar la hipótesis central del trabajo: que el paralelismo seguro se manufactura fundamentando costuras, y que el residuo conductual lo atrapan los tests bajo supervisión humana acotada.
+- **Más alineado con el producto:** el rediseño hace explícito el valor técnico —**coordinar coding agents en paralelo vía costuras congeladas, verificación e invalidación selectiva**—. ManyHands deja de ser "un visor de DAGs" y pasa a ser una sala de control para fabricar, supervisar y corregir trabajo paralelo.
 
 ## 9. Decisiones tomadas durante la implementación (PR06–PR09)
 

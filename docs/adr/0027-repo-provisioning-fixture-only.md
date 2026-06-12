@@ -1,5 +1,9 @@
 # 0027 · Repo provisioning (fixture-only)
 
+> Partially superseded note (June 2026): fixture provisioning still exists as a
+> generic/testing mechanism, but the benchmark-fixture strategy and the
+> `benchmarks/` directory are no longer active product/evaluation assumptions.
+
 ## Status
 
 Accepted. Implemented in `apps/web/src/lib/server/runs/repo-provisioner.ts` (Etapa 2A — Real Execution Readiness).

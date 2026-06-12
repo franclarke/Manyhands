@@ -1,5 +1,8 @@
 # ADR 0004 - Deterministic Mock Decomposer
 
+> Superseded note (June 2026): deterministic Lab-style planning is no longer an
+> active product or evaluation path. This ADR is historical context only.
+
 ## Status
 
 Accepted.

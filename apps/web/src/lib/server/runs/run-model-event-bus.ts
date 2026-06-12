@@ -36,5 +36,7 @@ export function subscribeRunModelEvents(runId: string, listener: Listener): () =
 }
 
 export function serializeRunModelForSse(event: RunEvent): string {
-  return `data: ${JSON.stringify(event)}\n\n`;
+  // `id:` carries the monotonic seq so the browser's EventSource resumes with
+  // a Last-Event-ID header after any drop — replay picks up exactly there.
+  return `id: ${event.seq}\ndata: ${JSON.stringify(event)}\n\n`;
 }
