@@ -18,6 +18,9 @@ logs/
 
 .playwright-mcp/
 
+# Material de referencia local (tesis de otros alumnos) — no debe publicarse
+Otras tesis/
+
 pnpm-debug.log*
 npm-debug.log*
 yarn-debug.log*

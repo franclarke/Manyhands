@@ -26,7 +26,16 @@ export interface ModelOption {
   capabilities: ExecutorCapability[];
   usage: UsageAvailability;
   enabled: boolean;
+  /** Whether the model's CLI exposes a reasoning-effort knob (drives the effort UI). */
+  supportsEffort: boolean;
 }
+
+/**
+ * Model ids whose executor CLI accepts a reasoning-effort flag. Today only the
+ * Codex/GPT-5 family does (`--reasoning-effort`); Gemini CLI 0.44.1 and Claude
+ * Code expose only `--model`, so the effort control stays hidden for them.
+ */
+const EFFORT_CAPABLE_MODEL_IDS = new Set<string>(["gpt-5-codex"]);
 
 export const GEMINI_EXECUTOR_ID = "gemini-cli" satisfies ExecutorId;
 export const DEFAULT_EXECUTOR_SELECTION = {
@@ -141,9 +150,26 @@ export const MODEL_OPTIONS: ReadonlyArray<ModelOption> = EXECUTOR_DESCRIPTORS.fl
     executorId: descriptor.id,
     capabilities: model.capabilities,
     usage: model.usageSource,
-    enabled: descriptor.enabled
+    enabled: descriptor.enabled,
+    supportsEffort: EFFORT_CAPABLE_MODEL_IDS.has(model.id)
   }))
 );
+
+/** Encodes/decodes the "executorId/modelId" selection string used by the picker. */
+export function formatSelectionValue(selection: ExecutorSelection): string {
+  return `${selection.executorId}/${selection.model}`;
+}
+
+export function parseSelectionValue(value: string): ExecutorSelection {
+  const [executorId, ...rest] = value.split("/");
+  return { executorId: executorId as ExecutorId, model: rest.join("/") };
+}
+
+/** The model option for a "executorId/modelId" selection string, if it exists. */
+export function modelOptionForValue(value: string): ModelOption | undefined {
+  const sel = parseSelectionValue(value);
+  return MODEL_OPTIONS.find((option) => option.executorId === sel.executorId && option.id === sel.model);
+}
 
 export const DEFAULT_MODEL_ID = DEFAULT_EXECUTOR_SELECTION.model;
 

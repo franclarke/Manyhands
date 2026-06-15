@@ -51,6 +51,15 @@ export const GRANULARITY_PROFILES: Record<DecompositionMode, GranularityProfile>
     aggressiveness:
       "High pressure to split. Keep decomposing until every leaf is small, concrete, assignable and verifiable.",
     cohesiveUnit: "a single function or a tightly-scoped pair of functions"
+  },
+  // Single-pass prompting cannot adapt per-branch, so "auto" maps to the
+  // balanced profile here. True adaptive behaviour lives in the recursive
+  // decomposer's per-node step prompt.
+  auto: {
+    label: "auto",
+    aggressiveness:
+      "Balanced pressure. Split tasks and subtasks as needed until each leaf is a reasonably executable unit.",
+    cohesiveUnit: "a small group of closely-related functions"
   }
 };
 

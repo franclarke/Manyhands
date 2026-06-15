@@ -2,7 +2,7 @@ import type { StepInterface } from "./step-schema";
 
 export const RECURSIVE_DECOMPOSER_PROMPT_VERSION = "manyhands.recursive-decomposer-prompt.v2";
 
-export type Aggressiveness = "low" | "medium" | "high";
+export type Aggressiveness = "low" | "medium" | "high" | "auto";
 
 export interface StepPromptInputs {
   /** Title of the node being judged. */
@@ -39,7 +39,9 @@ export interface StepPromptInputs {
 const COHESIVE_UNIT: Record<Aggressiveness, string> = {
   low: "a whole module or file (a group of related functions that ship together). Low pressure to split: only decompose nodes that are clearly composite.",
   medium: "a small group of closely-related functions. Balanced pressure: split until each leaf is a reasonably executable unit.",
-  high: "a single function or a tightly-scoped pair of functions. High pressure: keep splitting until every leaf is small, concrete, assignable and verifiable."
+  high: "a single function or a tightly-scoped pair of functions. High pressure: keep splitting until every leaf is small, concrete, assignable and verifiable.",
+  // Adaptive: the model sets the threshold for THIS node from its own complexity.
+  auto: "whatever size matches THIS node's complexity — you choose. First judge how complex this specific node is: a simple, self-contained node should stay a larger leaf (a whole module or file) and go atomic sooner; a complex, multi-concern node should split into smaller leaves (down to closely-related functions, or a single function when the concern is genuinely fine-grained). Calibrate the split pressure per branch, not uniformly across the tree."
 };
 
 export function buildStepPrompt(inputs: StepPromptInputs): { system: string; user: string } {
@@ -177,7 +179,10 @@ const SYSTEM_PROMPT = [
   "Use `decision: \"question\"` very sparingly, only when you face true design forks or ambiguity",
   "(such as choice of library, state management strategy, database vs localStorage persistency) that",
   "significantly alters the graph decomposition structure. State your query clearly as a",
-  "multiple-choice question with 2 to 10 options in `options`.",
+  "multiple-choice question with 2 to 10 options in `options`. Keep each option a concise",
+  "label (well under 240 characters) — put any rationale in `reasoning`, not in the options.",
+  "List the single most reasonable default option FIRST: an unattended (autonomous) run",
+  "picks options[0], so it must be the safe, sensible default.",
   "",
   "## When you decompose — design the seams:",
   "- `sharedInterfaces` are the contracts (types, function signatures) the children share. Define",

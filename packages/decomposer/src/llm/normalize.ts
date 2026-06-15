@@ -129,6 +129,10 @@ function granularityForMode(mode: DecompositionMode): TaskGranularityLevel {
       return "medium";
     case "fine":
       return "fine";
+    case "auto":
+      // Adaptive only inside the recursive decomposer; for normalization metadata
+      // it records as the neutral middle level.
+      return "medium";
   }
 }
 

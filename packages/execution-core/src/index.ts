@@ -2,6 +2,7 @@
 
 export * from "./logging/log";
 export * from "./types";
+export * from "./pricing";
 export * from "./errors";
 export * from "./git/runner";
 export * from "./worktree/manager";

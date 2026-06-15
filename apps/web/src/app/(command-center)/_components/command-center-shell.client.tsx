@@ -12,14 +12,25 @@ import type {
 } from "@/lib/api-types";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { StatusPill } from "@/components/ui/status-pill";
 import type { UiStatus } from "@/lib/status";
 import { ModelPicker } from "./model-picker.client";
+import { EffortControl, type EffortLevel } from "./effort-control.client";
 import { WorkspacePicker } from "./workspace-picker.client";
 import { WorkspaceFormDialog, type WorkspaceFormValue } from "./workspace-form-dialog.client";
 import { toGranularityMode, isGranularityLevel, GRANULARITY_DISPLAY_OPTIONS, type GranularityLevel } from "@/lib/granularity";
+import { modelOptionForValue, parseSelectionValue } from "@/lib/models";
+import { estimateRunCostUsd, formatUsd } from "@/lib/model-pricing";
 import type { ExecutorSelection } from "@/lib/api-types";
-import { FolderGit2, GitBranch, Pencil, Plus, Trash2, AlertTriangle, OctagonAlert } from "lucide-react";
+import { FolderGit2, GitBranch, Plus, Pencil, Trash2, AlertTriangle, OctagonAlert, Sparkles } from "lucide-react";
+
+const DEFAULT_PLANNING_MODEL = "gemini-2.5-pro";
+
+type AutonomyLevel = "supervised" | "semi" | "autonomous";
+const AUTONOMY_OPTIONS: ReadonlyArray<{ id: AutonomyLevel; label: string; hint: string }> = [
+  { id: "supervised", label: "Supervisado", hint: "Aprobás el plan y respondés cada decisión." },
+  { id: "semi", label: "Semi", hint: "Auto-aprueba el plan; frena en gates y preguntas." },
+  { id: "autonomous", label: "Autónomo", hint: "Auto-aprueba y auto-responde preguntas; frena solo en fallos de ejecución." }
+];
 
 const PROMPT_STORAGE_KEY = "manyhands:lastPrompt";
 const EXAMPLE_PROMPTS = [
@@ -67,16 +78,16 @@ export function CommandCenterShell({
   }, [workspaces, workspaceId]);
 
   const [granularity, setGranularity] = useState<GranularityLevel>(initialGranularity);
-  const [modelId, setModelId] = useState<string>(initialModelId);
-  const [defaultExecutionSelection, setDefaultExecutionSelection] = useState<string>(`gemini-cli/${initialModelId}`);
-  const [defaultRepairSelection, setDefaultRepairSelection] = useState<string>(`gemini-cli/${initialModelId}`);
+  // Single model choice drives planning + execution + repair (W3).
+  const [modelValue, setModelValue] = useState<string>(`gemini-cli/${initialModelId}`);
+  const [effort, setEffort] = useState<EffortLevel>("medium");
+  const [autonomy, setAutonomy] = useState<AutonomyLevel>("supervised");
   const [prompt, setPrompt] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<ProviderReadiness | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
   const [readinessError, setReadinessError] = useState<string | null>(null);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const [workspaceFormOpen, setWorkspaceFormOpen] = useState<"closed" | "create" | "edit">("closed");
   const [workspaceBusy, setWorkspaceBusy] = useState(false);
@@ -143,6 +154,19 @@ export function CommandCenterShell({
   const hasPrompt = prompt.trim().length > 0;
   const hasLocalRepo = selectedWorkspace?.repoPath !== undefined && selectedWorkspace.repoPath.length > 0;
   const hasUsableGemini = readiness?.status === "ready" || readiness?.status === "warning";
+
+  // One model choice → planning + execution + repair. Planning needs a
+  // planning-capable model (Gemini today); if an execution-only model is picked,
+  // planning falls back to the default Gemini planner.
+  const selectedModel = modelOptionForValue(modelValue);
+  const selection = parseSelectionValue(modelValue);
+  const canPlanWithSelection = selectedModel?.capabilities.includes("planning") ?? false;
+  const planningModelId = canPlanWithSelection ? selection.model : DEFAULT_PLANNING_MODEL;
+  const costEstimate = estimateRunCostUsd(selection.model, {
+    promptChars: prompt.trim().length,
+    granularity
+  });
+
   const startBlockReason = startBlockReasonFor({
     selectedWorkspace,
     hasPrompt,
@@ -157,9 +181,7 @@ export function CommandCenterShell({
     hasPrompt &&
     hasLocalRepo &&
     hasUsableGemini &&
-    modelId.trim().length > 0 &&
-    defaultExecutionSelection.trim().length > 0 &&
-    defaultRepairSelection.trim().length > 0 &&
+    selectedModel !== undefined &&
     !submitting;
 
   async function handleStart(): Promise<void> {
@@ -174,15 +196,17 @@ export function CommandCenterShell({
         planningModel?: string;
         defaultExecutionSelection?: ExecutorSelection;
         defaultRepairSelection?: ExecutorSelection;
+        autonomy?: AutonomyLevel;
         userPrompt: string;
         repoSpec?: { kind: "localPath"; path: string };
       } = {
         workspaceId: selectedWorkspace.id,
         granularity: granularityMode,
-        model: modelId,
-        planningModel: modelId,
-        defaultExecutionSelection: parseSelection(defaultExecutionSelection),
-        defaultRepairSelection: parseSelection(defaultRepairSelection),
+        model: planningModelId,
+        planningModel: planningModelId,
+        defaultExecutionSelection: selection,
+        defaultRepairSelection: selection,
+        autonomy,
         userPrompt: prompt.trim()
       };
       if (selectedWorkspace.repoPath !== undefined) {
@@ -388,24 +412,60 @@ export function CommandCenterShell({
           className="min-h-[120px] w-full resize-y border-0 bg-transparent px-4 py-3.5 font-sans text-[14px] leading-relaxed text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-subtle)]"
         />
 
-        {/* Action bar */}
+        {/* Action bar: one model choice + granularity, status, submit */}
         <div className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border-soft)] px-3 py-2.5">
-          <StatusPill
-            status={hasLocalRepo ? "completed" : "failed"}
-            label={hasLocalRepo ? "Repo conectado" : "Falta repo local"}
-            pulse={false}
-            title={selectedWorkspace?.repoPath}
-          />
-          <StatusPill status={gemini.status} label={gemini.label} pulse={false} title={readinessTooltip} />
-          <Button
-            variant="quiet"
-            size="sm"
-            aria-expanded={advancedOpen}
-            onClick={() => setAdvancedOpen((open) => !open)}
-          >
-            {advancedOpen ? "Ocultar opciones" : "Opciones avanzadas"}
-          </Button>
-          <div className="ml-auto flex items-center gap-3">
+          <ModelPicker value={modelValue} onChange={setModelValue} />
+          {selectedModel?.supportsEffort ? <EffortControl value={effort} onChange={setEffort} /> : null}
+          <label className="flex items-center gap-1.5">
+            <span className="mh-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)]">
+              Granularidad
+            </span>
+            <select
+              aria-label="Granularidad de descomposición"
+              value={granularity}
+              onChange={(event) => {
+                const val = event.target.value;
+                if (isGranularityLevel(val)) setGranularity(val);
+              }}
+              className="mh-select h-8 min-w-0 text-[12px]"
+            >
+              {GRANULARITY_DISPLAY_OPTIONS.filter((opt) => !opt.disabled).map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1.5">
+            <span className="mh-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)]">
+              Autonomía
+            </span>
+            <select
+              aria-label="Nivel de autonomía"
+              title={AUTONOMY_OPTIONS.find((opt) => opt.id === autonomy)?.hint}
+              value={autonomy}
+              onChange={(event) => setAutonomy(event.target.value as AutonomyLevel)}
+              className="mh-select h-8 min-w-0 text-[12px]"
+            >
+              {AUTONOMY_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id} title={option.hint}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="ml-auto flex items-center gap-2.5">
+            <StatusIcon
+              icon={<FolderGit2 aria-hidden className="h-4 w-4" />}
+              tone={hasLocalRepo ? "ok" : "error"}
+              title={hasLocalRepo ? `Repo conectado: ${selectedWorkspace?.repoPath ?? ""}` : "Falta un repo git local"}
+            />
+            <StatusIcon
+              icon={<Sparkles aria-hidden className="h-4 w-4" />}
+              tone={toneForUiStatus(gemini.status)}
+              title={readinessTooltip}
+            />
             {startBlockReason !== null && hasPrompt && !submitting ? (
               <span className="text-[11.5px] text-[var(--color-text-subtle)]">{startBlockReason}</span>
             ) : null}
@@ -418,45 +478,20 @@ export function CommandCenterShell({
           </div>
         </div>
 
-        {/* Advanced options drawer */}
-        {advancedOpen ? (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-b-[var(--r-xl)] border-t border-[var(--color-border-soft)] bg-[var(--color-bg-subtle)] px-4 py-3.5 md:grid-cols-4">
-            <AdvancedField label="Planificación">
-              <ModelPicker value={modelId} onChange={setModelId} capability="planning" />
-            </AdvancedField>
-            <AdvancedField label="Ejecución">
-              <ModelPicker
-                value={defaultExecutionSelection}
-                onChange={setDefaultExecutionSelection}
-                capability="execution"
-                selectionMode="executor-selection"
-              />
-            </AdvancedField>
-            <AdvancedField label="Reparación">
-              <ModelPicker
-                value={defaultRepairSelection}
-                onChange={setDefaultRepairSelection}
-                capability="repair"
-                selectionMode="executor-selection"
-              />
-            </AdvancedField>
-            <AdvancedField label="Agresividad">
-              <select
-                aria-label="Agresividad de descomposición"
-                value={granularity}
-                onChange={(event) => {
-                  const val = event.target.value;
-                  if (isGranularityLevel(val)) setGranularity(val);
-                }}
-                className="mh-select h-8 w-full min-w-0 text-[12px]"
-              >
-                {GRANULARITY_DISPLAY_OPTIONS.filter((opt) => !opt.disabled).map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </AdvancedField>
+        {/* Meta: cost estimate + planning fallback note */}
+        {(costEstimate !== undefined || !canPlanWithSelection) ? (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-b-[var(--r-xl)] border-t border-[var(--color-border-soft)] bg-[var(--color-bg-subtle)] px-3.5 py-2 text-[11px] text-[var(--color-text-subtle)]">
+            {costEstimate !== undefined ? (
+              <span title="Estimación heurística previa: los tokens reales se conocen recién al ejecutar.">
+                Costo estimado{" "}
+                <span className="text-[var(--color-text-muted)]">
+                  ~{formatUsd(costEstimate.lowUsd)}–{formatUsd(costEstimate.highUsd)}
+                </span>
+              </span>
+            ) : null}
+            {!canPlanWithSelection ? (
+              <span>· Planifica con Gemini {DEFAULT_PLANNING_MODEL} (el modelo elegido solo ejecuta)</span>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -556,14 +591,40 @@ function IconAction({
   );
 }
 
-function AdvancedField({ label, children }: { label: string; children: React.ReactNode }): React.ReactElement {
+type IndicatorTone = "ok" | "warning" | "error" | "muted";
+
+const TONE_COLOR: Record<IndicatorTone, string> = {
+  ok: "var(--status-completed-fg)",
+  warning: "var(--status-blocked-fg)",
+  error: "var(--status-failed-fg)",
+  muted: "var(--color-text-subtle)"
+};
+
+function toneForUiStatus(status: UiStatus): IndicatorTone {
+  if (status === "completed") return "ok";
+  if (status === "blocked") return "warning";
+  if (status === "failed") return "error";
+  return "muted";
+}
+
+/** Compact icon indicator (replaces a word badge); the tooltip carries detail. */
+function StatusIcon({
+  icon,
+  tone,
+  title
+}: {
+  icon: React.ReactNode;
+  tone: IndicatorTone;
+  title?: string;
+}): React.ReactElement {
   return (
-    <label className="flex min-w-0 flex-col gap-1.5">
-      <span className="mh-mono text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--color-text-subtle)]">
-        {label}
-      </span>
-      {children}
-    </label>
+    <span
+      title={title}
+      className="flex h-7 w-7 items-center justify-center rounded-[var(--r-md)]"
+      style={{ color: TONE_COLOR[tone] }}
+    >
+      {icon}
+    </span>
   );
 }
 
@@ -704,9 +765,4 @@ async function readError(response: Response): Promise<string> {
   } catch {
     return `Request failed with ${response.status}`;
   }
-}
-
-function parseSelection(value: string): ExecutorSelection {
-  const [executorId, ...modelParts] = value.split("/");
-  return { executorId: executorId as ExecutorSelection["executorId"], model: modelParts.join("/") };
 }

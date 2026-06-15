@@ -26,6 +26,7 @@ import {
   drivePlanning,
   hasPlanningCheckpoint,
   initialPlanningState,
+  planningResumeFor,
   type PlanningDriveOutcome
 } from "./planning-host";
 import { publishRunModelEvent } from "./run-model-event-log";
@@ -212,6 +213,20 @@ export async function resumePlanningPipeline(
   }
 }
 
+/**
+ * Autonomy auto-approval (W6): approve the plan and kick off execution without a
+ * human. Dynamic imports break the static cycle (plan-approval-service and
+ * execution-pipeline both import this module). Runs fire-and-forget after the
+ * planning pipeline has parked the run at needs_review.
+ */
+async function autoApproveAndExecute(runId: string): Promise<void> {
+  const { processPlanApproval } = await import("./plan-approval-service");
+  const { runExecutionPipeline } = await import("./execution-pipeline");
+  // acknowledge=true: autonomy explicitly opts past the critic-error gate.
+  await processPlanApproval(runId, true);
+  await runExecutionPipeline(runId);
+}
+
 // ─── outcome projection ────────────────────────────────────────────────────
 
 async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutcome): Promise<void> {
@@ -224,6 +239,29 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
   }
 
   if (outcome.kind === "question") {
+    // Autonomy (W6): an autonomous run answers clarifying questions itself with
+    // the recommended option (the decomposer is told to list it first) so it can
+    // run unattended. The resume is deferred to a macrotask so it starts AFTER
+    // this runner's finally has released the active marker (no double-active).
+    if (run.autonomy === "autonomous") {
+      const answer = outcome.interrupt.options[0] ?? "Usá tu criterio y elegí la opción más razonable.";
+      console.log(
+        `[Runner] Autonomía autonomous: auto-respondiendo "${outcome.interrupt.question}" → "${answer}" (${runId}).`
+      );
+      await repo.save({
+        ...run,
+        status: "generating",
+        questionAnswers: { ...(run.questionAnswers ?? {}), [outcome.interrupt.nodeId]: answer }
+      });
+      const nodeId = outcome.interrupt.nodeId;
+      setTimeout(() => {
+        void resumePlanningPipeline(runId, planningResumeFor(nodeId, answer)).catch((error) => {
+          console.error(`[Runner] Auto-respuesta falló para ${runId}:`, error);
+        });
+      }, 0);
+      return;
+    }
+
     console.log(
       `[Runner] Planificación pausada en el nodo "${outcome.interrupt.nodeId}" para interactuar con el usuario.`
     );
@@ -289,8 +327,15 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
 
   if (outcome.kind === "awaiting_approval") {
     console.log(`[Runner] Planificación completada con éxito para el run: ${runId}`);
-    if (run.status !== "needs_review") {
-      await transitionTo(run, "needs_review");
+    const reviewed = run.status === "needs_review" ? run : await transitionTo(run, "needs_review");
+
+    // Autonomy (W6): semi/autonomous skip the human approval gate — auto-approve
+    // the plan and start execution. Supervised stays parked at needs_review.
+    if (reviewed.autonomy === "semi" || reviewed.autonomy === "autonomous") {
+      console.log(`[Runner] Autonomía "${reviewed.autonomy}": auto-aprobando el plan y ejecutando ${runId}.`);
+      void autoApproveAndExecute(runId).catch((error) => {
+        console.error(`[Runner] Auto-aprobación falló para ${runId}:`, error);
+      });
     }
     return;
   }

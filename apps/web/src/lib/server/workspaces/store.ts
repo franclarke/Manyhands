@@ -1,14 +1,14 @@
+import { globalSingleton, resetGlobalSingleton } from "../global-singleton";
 import { JsonWorkspaceRepository, resolveWorkspacesFilePath, type WorkspaceRepository } from "./repository";
 
-let singleton: WorkspaceRepository | null = null;
-
+// On globalThis: shared across Next route bundles (see global-singleton.ts).
 export function getWorkspaceRepository(): WorkspaceRepository {
-  if (singleton === null) {
-    singleton = new JsonWorkspaceRepository({ filePath: resolveWorkspacesFilePath() });
-  }
-  return singleton;
+  return globalSingleton(
+    "workspace-repository",
+    () => new JsonWorkspaceRepository({ filePath: resolveWorkspacesFilePath() })
+  );
 }
 
 export function resetWorkspaceRepositoryForTests(): void {
-  singleton = null;
+  resetGlobalSingleton("workspace-repository");
 }

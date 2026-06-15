@@ -58,7 +58,7 @@ export function buildRunModelSeed(run: RunRecord): Run {
   const repair = run.defaultRepairSelection ?? exec;
   return {
     id: run.runId,
-    intent: run.title,
+    intent: run.userPrompt || run.title,
     workspaceId: run.workspaceId,
     config: {
       aggressiveness,
@@ -91,7 +91,7 @@ export function projectRunRecordToRunEvents(run: RunRecord): RunEvent[] {
   const executionAt = run.completedAt ?? run.updatedAt;
 
   writer.emit("system", run.createdAt, "run.created", {
-    intent: run.title,
+    intent: run.userPrompt || run.title,
     workspaceId: run.workspaceId,
     config: buildRunModelSeed(run).config
   });

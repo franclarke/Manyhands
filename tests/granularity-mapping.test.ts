@@ -50,9 +50,13 @@ describe("granularity mapping", () => {
     expect(granularityImpactForLevel("alta")).toContain("dividiendo");
   });
 
-  it("shows Max as a disabled display-only option", () => {
-    const max = GRANULARITY_DISPLAY_OPTIONS.find((option) => option.id === "max");
-    expect(max?.disabled).toBe(true);
-    expect(isGranularityLevel("max")).toBe(false);
+  it("exposes exactly the 4 selectable levels (no dead 'max' option)", () => {
+    expect(GRANULARITY_DISPLAY_OPTIONS.map((option) => option.id)).toEqual([
+      "automatica",
+      "baja",
+      "media",
+      "alta"
+    ]);
+    expect(GRANULARITY_DISPLAY_OPTIONS.every((option) => option.disabled !== true)).toBe(true);
   });
 });

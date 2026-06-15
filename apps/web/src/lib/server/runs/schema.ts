@@ -58,6 +58,16 @@ export const GranularityModeSchema = z.union([
 
 export type GranularityMode = z.infer<typeof GranularityModeSchema>;
 
+/**
+ * How much the run runs unattended:
+ * - supervised: human approves the plan and answers every gate/question.
+ * - semi: plan is auto-approved; execution gates and blocking decisions still pause.
+ * - autonomous: plan auto-approved AND gates/clarifying questions auto-resolve to
+ *   their recommended/default option; only hard failures stop the run.
+ */
+export const AutonomySchema = z.enum(["supervised", "semi", "autonomous"]);
+export type Autonomy = z.infer<typeof AutonomySchema>;
+
 export const RunDecompositionMetadataSchema = z.object({
   provider: z.union([
     z.literal("anthropic"),
@@ -177,6 +187,8 @@ export const RunRecordSchema = z.object({
   planningModel: z.string().min(1).optional(),
   defaultExecutionSelection: ExecutorSelectionSchema.optional(),
   defaultRepairSelection: ExecutorSelectionSchema.optional(),
+  /** Unattendedness policy. Absent (old records) is treated as "supervised". */
+  autonomy: AutonomySchema.optional(),
   userPrompt: z.string().max(4000),
   title: z.string().min(1).max(160),
   /** LLM-generated one-paragraph description. Falls back to userPrompt in the UI. */
@@ -318,6 +330,7 @@ export const RunCreateRequestSchema = z.object({
   planningModel: z.string().min(1).optional(),
   defaultExecutionSelection: ExecutorSelectionSchema.optional(),
   defaultRepairSelection: ExecutorSelectionSchema.optional(),
+  autonomy: AutonomySchema.optional(),
   userPrompt: z.string().trim().max(4000).default(""),
   /** Target repo for real execution. */
   repoSpec: RepoSpecSchema.optional()

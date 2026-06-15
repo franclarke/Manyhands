@@ -110,6 +110,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       planningModel: parsed.data.planningModel ?? parsed.data.model,
       defaultExecutionSelection: parsed.data.defaultExecutionSelection,
       defaultRepairSelection: parsed.data.defaultRepairSelection,
+      autonomy: parsed.data.autonomy ?? "supervised",
       userPrompt,
       title,
       version: 0,

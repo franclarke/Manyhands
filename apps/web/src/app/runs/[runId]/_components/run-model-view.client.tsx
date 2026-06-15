@@ -9,10 +9,11 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { FocusPanel } from "@/components/run-model/focus-panel";
 import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
 import { ChatRuntimeProvider } from "@/components/chat/assistant-provider";
-import { ChatThread } from "@/components/chat/thread";
-import { Group, Panel, useDefaultLayout } from "react-resizable-panels";
+import { ChatThread, ChatRail } from "@/components/chat/thread";
+import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { ArtifactTabs } from "./artifact-tabs.client";
+import { DeliveryPanel } from "./delivery-panel.client";
 import { Download } from "lucide-react";
 
 const SSR_NOOP_STORAGE: Pick<Storage, "getItem" | "setItem"> = {
@@ -35,6 +36,17 @@ export function RunModelView({
 
   const view = useMemo(() => selectMinimalWorkspaceView(model), [model]);
   const focusView = useMemo(() => (focus !== null ? buildFocusView(model, focus) : null), [model, focus]);
+
+  // Collapsible orchestrator panel: collapse to a thin rail to free the canvas,
+  // driven imperatively so the resize handle and the header toggle stay in sync.
+  const chatPanelRef = usePanelRef();
+  const [chatCollapsed, setChatCollapsed] = useState(false);
+  const toggleChat = (): void => {
+    const ref = chatPanelRef.current;
+    if (ref === null) return;
+    if (ref.isCollapsed()) ref.expand();
+    else ref.collapse();
+  };
 
   // Persisted, per-arrangement panel layout (with/without the focus panel).
   // `storage` must be passed explicitly: the library defaults to `localStorage`,
@@ -59,19 +71,46 @@ export function RunModelView({
           onLayoutChanged={onLayoutChanged}
           className="flex-1 overflow-hidden"
         >
-          <Panel id="chat" defaultSize="30%" minSize="240px" maxSize="48%" className="relative z-10 flex h-full min-w-0 flex-col">
-            <ChatThread runId={seed.id} model={model} connected={connected} setActiveTab={setActiveTab} />
+          <Panel
+            id="chat"
+            defaultSize="30%"
+            minSize="240px"
+            maxSize="48%"
+            collapsible
+            collapsedSize="52px"
+            panelRef={chatPanelRef}
+            onResize={() => setChatCollapsed(chatPanelRef.current?.isCollapsed() ?? false)}
+            className="relative z-10 flex h-full min-w-0 flex-col"
+          >
+            {chatCollapsed ? (
+              <ChatRail
+                connected={connected}
+                hasAttention={view.primaryAttention !== null}
+                onExpand={toggleChat}
+              />
+            ) : (
+              <ChatThread
+                runId={seed.id}
+                model={model}
+                connected={connected}
+                setActiveTab={setActiveTab}
+                onCollapse={toggleChat}
+              />
+            )}
           </Panel>
           <ResizeHandle />
-          <Panel id="artifacts" minSize="30%" className="flex h-full min-w-0 bg-[var(--color-bg)]">
-            <ArtifactTabs
-              model={model}
-              view={view}
-              focus={focus}
-              onFocus={setFocus}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-            />
+          <Panel id="artifacts" minSize="30%" className="flex h-full min-w-0 flex-col bg-[var(--color-bg)]">
+            {view.stage === "review" ? <DeliveryPanel runId={seed.id} /> : null}
+            <div className="flex min-h-0 flex-1">
+              <ArtifactTabs
+                model={model}
+                view={view}
+                focus={focus}
+                onFocus={setFocus}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+              />
+            </div>
           </Panel>
           {focusView !== null && (
             <>

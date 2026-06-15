@@ -87,7 +87,7 @@ const QuestionStepSchema = z.object({
   decision: z.literal("question"),
   reasoning: z.string().min(1).max(800),
   question: z.string().min(1).max(500),
-  options: z.array(z.string().min(1).max(100)).min(2).max(10)
+  options: z.array(z.string().min(1).max(240)).min(2).max(10)
 });
 
 export const DecomposeStepOutputSchema = z.discriminatedUnion("decision", [

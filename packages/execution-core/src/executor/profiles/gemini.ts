@@ -1,4 +1,5 @@
 import type { AgentExecutorOptions } from "../../types";
+import { costForModel } from "../../pricing";
 import type { CliExecutorProfile } from "../cli-executor";
 import { GEMINI_EXECUTOR_ID } from "../registry";
 import type { ExecutorRunOutcome } from "../types";
@@ -88,22 +89,34 @@ export function parseGeminiOutcome(outcome: ExecutorRunOutcome): ExecutorRunOutc
   if (models !== undefined) {
     let tokensIn = 0;
     let tokensOut = 0;
+    let costUsd = 0;
     let reported = false;
-    for (const model of Object.values(models)) {
+    let costKnown = false;
+    for (const [modelId, model] of Object.entries(models)) {
       const prompt = model?.tokens?.prompt;
       const candidates = model?.tokens?.candidates;
-      if (typeof prompt === "number" && Number.isFinite(prompt)) {
-        tokensIn += prompt;
+      const promptTokens = typeof prompt === "number" && Number.isFinite(prompt) ? prompt : 0;
+      const candidateTokens = typeof candidates === "number" && Number.isFinite(candidates) ? candidates : 0;
+      if (promptTokens > 0 || candidateTokens > 0) {
+        tokensIn += promptTokens;
+        tokensOut += candidateTokens;
         reported = true;
-      }
-      if (typeof candidates === "number" && Number.isFinite(candidates)) {
-        tokensOut += candidates;
-        reported = true;
+        // Gemini never reports USD; derive it from the per-model token split so
+        // the receipt and budget guard see a real cost (D: budget guard was a
+        // no-op for Gemini because costUsd stayed undefined).
+        const cost = costForModel(modelId, promptTokens, candidateTokens);
+        if (cost !== undefined) {
+          costUsd += cost;
+          costKnown = true;
+        }
       }
     }
     if (reported) {
       parsed.tokensIn = tokensIn;
       parsed.tokensOut = tokensOut;
+      if (costKnown) {
+        parsed.costUsd = costUsd;
+      }
     }
   }
 

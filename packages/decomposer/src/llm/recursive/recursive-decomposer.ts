@@ -1327,12 +1327,14 @@ function formatRejectedValue(value: unknown): string | undefined {
 function modeToAggressiveness(mode: DecompositionMode): Aggressiveness {
   if (mode === "coarse") return "low";
   if (mode === "fine") return "high";
+  if (mode === "auto") return "auto";
   return "medium";
 }
 
 function aggressivenessToGranularity(aggressiveness: Aggressiveness): TaskGranularityLevel {
   if (aggressiveness === "low") return "coarse";
   if (aggressiveness === "high") return "fine";
+  // "auto" is adaptive per-node; the recorded granularity metadata is neutral.
   return "medium";
 }
 

@@ -1,8 +1,12 @@
+import { globalSingleton } from "../global-singleton";
+
 /**
  * Tracks runIds that currently have an in-process runner attached. The SSE
  * sweep uses this to distinguish "still running" from "orphaned after a crash".
+ * On globalThis: runners are marked active from one Next route bundle and
+ * checked from others (sweep, mutation guard, repo lock).
  */
-const active = new Set<string>();
+const active = globalSingleton("runner-state:active", () => new Set<string>());
 
 export function markRunnerActive(runId: string): void {
   active.add(runId);

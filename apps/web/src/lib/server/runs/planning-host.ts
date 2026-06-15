@@ -654,11 +654,11 @@ function requireExecutableWorkspace(workspace: Workspace | null, workspaceId: st
 }
 
 /**
- * Resolve the run's granularity mode to a concrete DecompositionMode the
- * decomposer can use. "auto" maps to "balanced" (the recommended default).
+ * Resolve the run's granularity mode to the DecompositionMode the decomposer
+ * uses. "auto" passes through unchanged: the recursive decomposer treats it as
+ * adaptive, letting each node pick its own split pressure from its complexity.
  */
-function resolveDecompositionMode(mode: RunRecord["granularity"]): "coarse" | "balanced" | "fine" {
-  if (mode === "auto") return "balanced";
+function resolveDecompositionMode(mode: RunRecord["granularity"]): "coarse" | "balanced" | "fine" | "auto" {
   return mode;
 }
 

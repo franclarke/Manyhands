@@ -10,7 +10,9 @@ import {
   CliAgentExecutor,
   GEMINI_PROFILE,
   buildGeminiArgs,
+  costForModel,
   parseGeminiOutcome,
+  priceForModel,
   type AgentExecutorOptions,
   type ExecutorRunOutcome
 } from "@manyhands/execution-core";
@@ -94,6 +96,8 @@ describe("parseGeminiOutcome", () => {
     expect(parsed.stdout).toBe("All files updated.");
     expect(parsed.tokensIn).toBe(900);
     expect(parsed.tokensOut).toBe(180);
+    // Gemini reports no USD; we derive it from the token split (pro: $1.25/$10 per M).
+    expect(parsed.costUsd).toBeCloseTo(900e-6 * 1.25 + 180e-6 * 10, 8);
   });
 
   it("sums usage across models when several were involved", () => {
@@ -111,6 +115,21 @@ describe("parseGeminiOutcome", () => {
 
     expect(parsed.tokensIn).toBe(140);
     expect(parsed.tokensOut).toBe(30);
+    const expected = 100e-6 * 1.25 + 20e-6 * 10 + 40e-6 * 0.3 + 10e-6 * 2.5;
+    expect(parsed.costUsd).toBeCloseTo(expected, 8);
+  });
+
+  it("reports tokens but no cost for an unpriced model", () => {
+    const stdout = JSON.stringify({
+      response: "done",
+      stats: { models: { "mystery-model": { tokens: { prompt: 50, candidates: 10 } } } }
+    });
+
+    const parsed = parseGeminiOutcome(outcome({ stdout }));
+
+    expect(parsed.tokensIn).toBe(50);
+    expect(parsed.tokensOut).toBe(10);
+    expect(parsed.costUsd).toBeUndefined();
   });
 
   it("surfaces a structured error payload on stderr", () => {
@@ -124,6 +143,19 @@ describe("parseGeminiOutcome", () => {
   it("passes non-JSON output through untouched", () => {
     const raw = outcome({ stdout: "plain text response" });
     expect(parseGeminiOutcome(raw)).toEqual(raw);
+  });
+});
+
+describe("model pricing", () => {
+  it("prices known models and tolerates provider-prefixed ids", () => {
+    expect(priceForModel("gemini-2.5-flash")).toEqual({ inputPerMillionUsd: 0.3, outputPerMillionUsd: 2.5 });
+    expect(priceForModel("models/gemini-2.5-pro")).toEqual({ inputPerMillionUsd: 1.25, outputPerMillionUsd: 10 });
+    expect(priceForModel("unknown")).toBeUndefined();
+  });
+
+  it("computes cost from a token split, or undefined for unknown models", () => {
+    expect(costForModel("gemini-2.5-flash", 1_000_000, 1_000_000)).toBeCloseTo(0.3 + 2.5, 8);
+    expect(costForModel("unknown", 1000, 1000)).toBeUndefined();
   });
 });
 

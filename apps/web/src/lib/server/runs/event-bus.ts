@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
 import type { StreamEvent } from "./events";
+import { globalSingleton } from "../global-singleton";
 
 type Listener = (event: StreamEvent) => void;
 
@@ -9,7 +10,9 @@ interface BusState {
 }
 
 const HISTORY_LIMIT = 2000;
-const buses = new Map<string, BusState>();
+// On globalThis: publishers and subscribers live in different Next route
+// bundles; a module-level map is one-per-bundle.
+const buses = globalSingleton("run-event-bus", () => new Map<string, BusState>());
 
 function getBus(runId: string): BusState {
   let state = buses.get(runId);

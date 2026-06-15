@@ -32,7 +32,11 @@ export type FeatureRequest = z.infer<typeof FeatureRequestSchema>;
 export const DecompositionModeSchema = z.union([
   z.literal("coarse"),
   z.literal("balanced"),
-  z.literal("fine")
+  z.literal("fine"),
+  // "auto" is adaptive: the recursive decomposer lets each node pick its own
+  // split pressure from its assessed complexity. Non-recursive consumers
+  // (deterministic templates, single-pass prompt) treat it as "balanced".
+  z.literal("auto")
 ]);
 
 export type DecompositionMode = z.infer<typeof DecompositionModeSchema>;
@@ -272,7 +276,7 @@ export class MetadataDrivenMockDecomposer implements Decomposer {
 }
 
 export function modeToGranularityLevel(mode: DecompositionMode): TaskGranularityLevel {
-  if (mode === "balanced") {
+  if (mode === "balanced" || mode === "auto") {
     return "medium";
   }
 

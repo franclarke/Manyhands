@@ -1,10 +1,16 @@
+import { globalSingleton } from "../global-singleton";
+
 /**
  * Per-run AbortControllers for in-process execution. The runner registers a
  * controller when it starts driving the engine; Cancel and the budget watchdog
  * call `abortRun` to actually kill the in-flight executor subprocess (not just
- * relabel the run). Mirrors `runner-state.ts`.
+ * relabel the run). Mirrors `runner-state.ts`. On globalThis: the registering
+ * runner and the aborting route live in different Next route bundles.
  */
-const controllers = new Map<string, AbortController>();
+const controllers = globalSingleton(
+  "run-abort-registry",
+  () => new Map<string, AbortController>()
+);
 
 export function createRunAbort(runId: string): AbortController {
   const controller = new AbortController();

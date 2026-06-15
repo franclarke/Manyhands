@@ -159,14 +159,18 @@ async function inspectWorkspace(
   });
 
   const porcelain = await safeGitPorcelain(repoPath, deps.gitPorcelain ?? defaultGitPorcelain);
+  // Mirror preflight: ManyHands-owned artifacts under `.manyhands/` (worktrees,
+  // run.lock) are not user dirt and never block execution, so they must not warn
+  // here either — otherwise readiness lies about what preflight will do.
+  const userDirty = porcelain.ok && countUserDirt(porcelain.output) > 0;
   checks.push({
     id: "repo_clean",
-    status: porcelain.ok && porcelain.output.trim().length === 0 ? "pass" : "warning",
+    status: !porcelain.ok || userDirty ? "warning" : "pass",
     label: "Repo limpio",
     message: porcelain.ok
-      ? porcelain.output.trim().length === 0
-        ? "Sin cambios sin commitear."
-        : "El repo tiene cambios sin commitear; el preflight de ejecución va a bloquear."
+      ? userDirty
+        ? "El repo tiene cambios sin commitear; el preflight de ejecución va a bloquear."
+        : "Sin cambios sin commitear."
       : porcelain.message
   });
 
@@ -217,6 +221,17 @@ function deriveStatus(checks: readonly ProviderReadinessCheck[]): ProviderReadin
     return "warning";
   }
   return "ready";
+}
+
+/**
+ * Count porcelain lines that represent real user changes, excluding
+ * ManyHands-owned artifacts under `.manyhands/` (same rule as preflight.ts).
+ */
+function countUserDirt(porcelain: string): number {
+  return porcelain
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .filter((line) => !line.slice(3).startsWith(".manyhands/")).length;
 }
 
 async function defaultCheckCli(binaryPath: string): Promise<{ ok: boolean; version?: string }> {

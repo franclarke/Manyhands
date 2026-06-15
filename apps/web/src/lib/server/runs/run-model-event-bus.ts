@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
 import type { RunEvent } from "@/lib/run-model/types";
+import { globalSingleton } from "../global-singleton";
 
 type Listener = (event: RunEvent) => void;
 
@@ -7,7 +8,9 @@ interface BusState {
   emitter: EventEmitter;
 }
 
-const buses = new Map<string, BusState>();
+// On globalThis: publishers (pipelines) and the SSE subscriber live in
+// different Next route bundles; a module-level map is one-per-bundle.
+const buses = globalSingleton("run-model-event-bus", () => new Map<string, BusState>());
 
 function getBus(runId: string): BusState {
   let state = buses.get(runId);

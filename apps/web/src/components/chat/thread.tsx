@@ -14,7 +14,9 @@ import {
   ArrowRight,
   Check,
   Flag,
-  CircleHelp
+  CircleHelp,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react";
 
 type TabKey = "dag" | "plan" | "conflicts" | "execution" | "files" | "evaluation";
@@ -24,9 +26,10 @@ interface ChatThreadProps {
   model: RunModel;
   connected: boolean;
   setActiveTab: (tab: TabKey) => void;
+  onCollapse: () => void;
 }
 
-export function ChatThread({ runId, model, connected, setActiveTab }: ChatThreadProps): React.ReactElement {
+export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }: ChatThreadProps): React.ReactElement {
   const messages = useThread((t) => t.messages);
   const composer = useComposerRuntime();
   const [inputText, setInputText] = useState("");
@@ -34,9 +37,22 @@ export function ChatThread({ runId, model, connected, setActiveTab }: ChatThread
   const [approving, setApproving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // Only follow the tail when the operator is already there. In long control-room
+  // sessions, wave progress rewrites the same message constantly; yanking the
+  // scroll to the bottom every tick would steal the reading position.
+  const atBottomRef = useRef(true);
+
+  const handleScroll = (): void => {
+    const el = scrollContainerRef.current;
+    if (el === null) return;
+    atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (atBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   const pendingPlanDecision = useMemo(
@@ -61,6 +77,8 @@ export function ChatThread({ runId, model, connected, setActiveTab }: ChatThread
   // the composer copy must say so (context.gate is set by persistExecutionPause).
   const isExecutionGate = pendingQuestion?.context.gate !== undefined;
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const handleSend = async (): Promise<void> => {
     const text = inputText.trim();
     if (text.length === 0 || pendingQuestion === undefined) return;
@@ -70,6 +88,7 @@ export function ChatThread({ runId, model, connected, setActiveTab }: ChatThread
     composer.setText(text);
     composer.send();
     setInputText("");
+    if (textareaRef.current !== null) textareaRef.current.style.height = "auto";
     try {
       const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/answer`, {
         method: "POST",
@@ -84,10 +103,19 @@ export function ChatThread({ runId, model, connected, setActiveTab }: ChatThread
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === "Enter") {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    // Enter sends; Shift+Enter is a newline so multi-sentence answers fit.
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
       void handleSend();
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+    setInputText(e.target.value);
+    const el = e.target;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   };
 
   const handleApprovePlan = async (): Promise<void> => {
@@ -152,17 +180,31 @@ export function ChatThread({ runId, model, connected, setActiveTab }: ChatThread
           <Sparkles aria-hidden className="h-4 w-4 text-[var(--color-text-subtle)]" />
           Orquestador
         </h2>
-        <StatusPill
-          status={connected ? "completed" : "blocked"}
-          label={connected ? "Conectado" : "Reconectando…"}
-          pulse={!connected}
-        />
+        <div className="flex items-center gap-2">
+          <StatusPill
+            status={connected ? "completed" : "blocked"}
+            label={connected ? "Conectado" : "Reconectando…"}
+            pulse={!connected}
+          />
+          <button
+            type="button"
+            onClick={onCollapse}
+            aria-label="Colapsar el orquestador"
+            title="Colapsar el orquestador"
+            className="flex h-7 w-7 items-center justify-center rounded-[var(--r-md)] text-[var(--color-text-subtle)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"
+          >
+            <PanelLeftClose aria-hidden className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
       <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
         className="flex flex-1 flex-col gap-4 overflow-y-auto bg-[var(--color-bg)] px-5 py-5"
         aria-live="polite"
+        aria-relevant="additions"
       >
         {messages.map((message) => {
           const textContent = message.content.map((c) => (c.type === "text" ? c.text : "")).join(" ");
@@ -265,60 +307,104 @@ export function ChatThread({ runId, model, connected, setActiveTab }: ChatThread
         </div>
       ) : null}
 
-      {/* Composer — a real channel only while the planner waits for an answer */}
-      <div className="border-t border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <div
-          className={[
-            "relative flex items-center overflow-hidden rounded-[var(--r-lg)] border bg-[var(--color-surface)] transition-colors",
-            canSend
-              ? "border-[var(--status-review-border)] focus-within:border-[var(--color-accent)]"
-              : "border-[var(--color-border)]"
-          ].join(" ")}
-        >
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={!canSend}
-            aria-label={
-              canSend
-                ? isExecutionGate
-                  ? "Respuesta para el gate de ejecución"
-                  : "Respuesta para el planner"
-                : "Canal de intervención (sin gates pendientes)"
-            }
-            placeholder={
-              canSend
-                ? isExecutionGate
+      {/* Intervention channel — a real input only while a gate awaits an answer.
+          Otherwise it collapses to a quiet status line instead of a dead input. */}
+      {canSend ? (
+        <div className="border-t border-[var(--status-review-border)] bg-[var(--color-surface)] p-4">
+          <div className="relative flex items-end overflow-hidden rounded-[var(--r-lg)] border border-[var(--status-review-border)] bg-[var(--color-surface)] transition-colors focus-within:border-[var(--color-accent)]">
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              value={inputText}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              aria-label={
+                isExecutionGate ? "Respuesta para el gate de ejecución" : "Respuesta para el planner"
+              }
+              placeholder={
+                isExecutionGate
                   ? "Escribí una opción del gate (o usá los botones de arriba)…"
                   : "Respondé la pregunta del planner…"
-                : "ManyHands pedirá tu intervención acá cuando haga falta."
-            }
-            className="w-full bg-transparent py-3 pl-4 pr-12 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none disabled:cursor-not-allowed"
-          />
-          <button
-            type="button"
-            onClick={() => void handleSend()}
-            disabled={!canSend || inputText.trim().length === 0}
-            aria-label="Enviar respuesta"
-            className={[
-              "absolute right-2 rounded-[var(--r-md)] p-1.5 transition-colors",
-              canSend && inputText.trim().length > 0
-                ? "cursor-pointer bg-[var(--color-accent)] text-[var(--color-accent-contrast)] hover:bg-[var(--color-accent-hover)]"
-                : "cursor-not-allowed bg-[var(--color-bg-subtle)] text-[var(--color-text-faint)]"
-            ].join(" ")}
-          >
-            <Send aria-hidden className="h-3.5 w-3.5" />
-          </button>
-        </div>
-        {canSend ? (
+              }
+              className="max-h-40 w-full resize-none bg-transparent py-3 pl-4 pr-12 text-sm leading-relaxed text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => void handleSend()}
+              disabled={inputText.trim().length === 0}
+              aria-label="Enviar respuesta"
+              className={[
+                "absolute bottom-2 right-2 rounded-[var(--r-md)] p-1.5 transition-colors",
+                inputText.trim().length > 0
+                  ? "cursor-pointer bg-[var(--color-accent)] text-[var(--color-accent-contrast)] hover:bg-[var(--color-accent-hover)]"
+                  : "cursor-not-allowed bg-[var(--color-bg-subtle)] text-[var(--color-text-faint)]"
+              ].join(" ")}
+            >
+              <Send aria-hidden className="h-3.5 w-3.5" />
+            </button>
+          </div>
           <p className="mt-2 text-center text-[10.5px] text-[var(--status-review-fg)]">
             {isExecutionGate
               ? "La ejecución está pausada esperando tu decisión."
               : "El planner está esperando tu respuesta para continuar la descomposición."}
+            <span className="text-[var(--color-text-subtle)]"> · Enter envía, Shift+Enter salta de línea</span>
           </p>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2.5 text-[11px] text-[var(--color-text-subtle)]">
+          <CircleHelp aria-hidden className="h-3.5 w-3.5 shrink-0" />
+          <span>ManyHands pedirá tu intervención acá cuando haga falta.</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Collapsed projection of the orchestrator panel: a thin rail that still
+ * surfaces the two things the operator can't afford to lose when the chat is
+ * out of the way — liveness (connection) and a pending decision (attention).
+ */
+export function ChatRail({
+  connected,
+  hasAttention,
+  onExpand
+}: {
+  connected: boolean;
+  hasAttention: boolean;
+  onExpand: () => void;
+}): React.ReactElement {
+  return (
+    <div className="flex h-full w-full flex-col items-center gap-3 border-r border-[var(--color-border)] bg-[var(--color-surface)] py-3">
+      <button
+        type="button"
+        onClick={onExpand}
+        aria-label="Expandir el orquestador"
+        title="Expandir el orquestador"
+        className="flex h-7 w-7 items-center justify-center rounded-[var(--r-md)] border border-[var(--color-border-control)] text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"
+      >
+        <PanelLeftOpen aria-hidden className="h-4 w-4" />
+      </button>
+      <Sparkles aria-hidden className="h-4 w-4 text-[var(--color-text-subtle)]" />
+      <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-subtle)] [writing-mode:vertical-rl]">
+        Orquestador
+      </span>
+      <div className="mt-auto flex flex-col items-center gap-2">
+        {hasAttention ? (
+          <span
+            aria-label="Hay una decisión pendiente"
+            title="Hay una decisión pendiente"
+            className="h-2 w-2 animate-pulse rounded-full bg-[var(--status-review-fg)]"
+          />
         ) : null}
+        <span
+          aria-label={connected ? "Conectado" : "Reconectando"}
+          title={connected ? "Conectado" : "Reconectando"}
+          className={[
+            "h-2 w-2 rounded-full",
+            connected ? "bg-[var(--status-completed-fg)]" : "animate-pulse bg-[var(--status-blocked-fg)]"
+          ].join(" ")}
+        />
       </div>
     </div>
   );
@@ -481,6 +567,11 @@ function GateCard({
               >
                 {busy === decision.id ? <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> : null}
                 {option}
+                {index === 0 && decision.kind === "clarify" && decision.context.gate === undefined ? (
+                  <span className="mh-mono rounded bg-[color-mix(in_srgb,var(--color-accent-contrast)_18%,transparent)] px-1 py-px text-[9px] font-medium uppercase tracking-[0.06em]">
+                    Recomendada
+                  </span>
+                ) : null}
               </button>
             ))}
           </div>

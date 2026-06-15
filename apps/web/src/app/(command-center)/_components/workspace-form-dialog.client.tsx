@@ -46,8 +46,10 @@ export function WorkspaceFormDialog({
   const [browser, setBrowser] = useState<LocalBrowserState>({ open: false, loading: false });
   const [showAdvanced, setShowAdvanced] = useState<boolean>(() => {
     if (initial === null) return false;
+    // Repo path is now a primary field; only non-default overrides open advanced.
     return Boolean(
-      initial.repoPath ||
+      initial.description ||
+      initial.color ||
       initial.packageManager ||
       initial.defaultBranch ||
       initial.allowedPaths ||
@@ -68,8 +70,15 @@ export function WorkspaceFormDialog({
     setBrowser({ open: false, loading: false });
   }
 
-  function selectFolder(dir: string): void {
-    setValue((current) => ({ ...current, repoPath: dir }));
+  function selectFolder(dir: string, branch?: string): void {
+    setValue((current) => ({
+      ...current,
+      repoPath: dir,
+      // Auto-fill the detected branch unless the user already set one.
+      ...(branch !== undefined && branch.length > 0 && current.defaultBranch.trim().length === 0
+        ? { defaultBranch: branch }
+        : {})
+    }));
     closeFolderPicker();
   }
 
@@ -150,24 +159,29 @@ export function WorkspaceFormDialog({
             style={inputStyle}
           />
         </Field>
-        <Field label="Descripción (opcional)">
-          <textarea
-            value={value.description}
-            onChange={(event) => setValue((v) => ({ ...v, description: event.target.value }))}
-            maxLength={400}
-            rows={3}
-            style={{ ...inputStyle, resize: "vertical" as const, minHeight: 70 }}
-          />
+
+        {/* Repo folder — the essential field: the git root ManyHands works on. */}
+        <Field label="Carpeta del repo">
+          <div style={{ display: "flex", gap: 8, width: "100%" }}>
+            <input
+              value={value.repoPath}
+              readOnly
+              placeholder="Elegí la raíz del repositorio git…"
+              maxLength={400}
+              style={{ ...inputStyle, flex: 1, cursor: "default" }}
+            />
+            <button type="button" onClick={openFolderPicker} disabled={busy} style={secondaryButtonStyle}>
+              {value.repoPath !== "" ? "Cambiar" : "Elegir carpeta"}
+            </button>
+          </div>
         </Field>
-        <Field label="Color de acento (opcional, hex)">
-          <input
-            value={value.color}
-            onChange={(event) => setValue((v) => ({ ...v, color: event.target.value }))}
-            placeholder="#cc785c"
-            pattern="^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
-            style={inputStyle}
-          />
-        </Field>
+        <p style={{ margin: 0, fontSize: 11.5, color: "var(--text-3)", lineHeight: 1.5 }}>
+          {value.repoPath === ""
+            ? "Es la raíz git local que ManyHands planifica, ejecuta, integra y entrega."
+            : value.defaultBranch !== ""
+              ? `Branch detectada: ${value.defaultBranch}. ManyHands autodetecta gestor de paquetes y comandos de test/build al ejecutar.`
+              : "ManyHands autodetecta branch, gestor de paquetes y comandos de test/build al ejecutar."}
+        </p>
 
         <button
           type="button"
@@ -184,7 +198,7 @@ export function WorkspaceFormDialog({
             letterSpacing: 0.4
           }}
         >
-          {showAdvanced ? "▾ Ocultar pistas del workspace" : "▸ Pistas del workspace (opcional, las usa el decomposer)"}
+          {showAdvanced ? "▾ Ocultar opciones avanzadas" : "▸ Opciones avanzadas (opcional)"}
         </button>
 
         {showAdvanced ? (
@@ -199,34 +213,26 @@ export function WorkspaceFormDialog({
               background: "var(--bg-1)"
             }}
           >
-            <p
-              style={{
-                margin: 0,
-                fontSize: 11.5,
-                color: "var(--text-3)",
-                lineHeight: 1.5
-              }}
-            >
-              La carpeta del repo es la raíz git local que ManyHands va a planificar, ejecutar, integrar y parchar tras la aprobación. Usá el explorador para navegar tu filesystem y elegir la raíz del repositorio.
+            <p style={{ margin: 0, fontSize: 11.5, color: "var(--text-3)", lineHeight: 1.5 }}>
+              Solo si querés forzar valores: ManyHands autodetecta branch y comandos al ejecutar.
             </p>
-            <Field label="Carpeta del repo">
-              <div style={{ display: "flex", gap: 8, width: "100%" }}>
-                <input
-                  value={value.repoPath}
-                  readOnly
-                  placeholder="Elegí una carpeta desde el explorador"
-                  maxLength={400}
-                  style={{ ...inputStyle, flex: 1, cursor: "default" }}
-                />
-                <button
-                  type="button"
-                  onClick={openFolderPicker}
-                  disabled={busy}
-                  style={secondaryButtonStyle}
-                >
-                  {value.repoPath !== "" ? "Cambiar carpeta" : "Elegir carpeta"}
-                </button>
-              </div>
+            <Field label="Descripción">
+              <textarea
+                value={value.description}
+                onChange={(event) => setValue((v) => ({ ...v, description: event.target.value }))}
+                maxLength={400}
+                rows={2}
+                style={{ ...inputStyle, resize: "vertical" as const, minHeight: 56 }}
+              />
+            </Field>
+            <Field label="Color de acento (hex)">
+              <input
+                value={value.color}
+                onChange={(event) => setValue((v) => ({ ...v, color: event.target.value }))}
+                placeholder="#cc785c"
+                pattern="^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+                style={inputStyle}
+              />
             </Field>
             <Field label="Gestor de paquetes">
               <select
@@ -234,7 +240,7 @@ export function WorkspaceFormDialog({
                 onChange={(event) => setValue((v) => ({ ...v, packageManager: event.target.value as PackageManagerKey | "" }))}
                 style={inputStyle}
               >
-                <option value="">(sin definir)</option>
+                <option value="">(autodetectar)</option>
                 <option value="pnpm">pnpm</option>
                 <option value="npm">npm</option>
                 <option value="yarn">yarn</option>
@@ -245,7 +251,7 @@ export function WorkspaceFormDialog({
               <input
                 value={value.defaultBranch}
                 onChange={(event) => setValue((v) => ({ ...v, defaultBranch: event.target.value }))}
-                placeholder="main"
+                placeholder="(autodetectar)"
                 maxLength={120}
                 style={inputStyle}
               />
@@ -262,7 +268,7 @@ export function WorkspaceFormDialog({
               <input
                 value={value.testCommand}
                 onChange={(event) => setValue((v) => ({ ...v, testCommand: event.target.value }))}
-                placeholder="pnpm test"
+                placeholder="(autodetectar)"
                 maxLength={240}
                 style={inputStyle}
               />
@@ -271,7 +277,7 @@ export function WorkspaceFormDialog({
               <input
                 value={value.buildCommand}
                 onChange={(event) => setValue((v) => ({ ...v, buildCommand: event.target.value }))}
-                placeholder="pnpm build"
+                placeholder="(autodetectar)"
                 maxLength={240}
                 style={inputStyle}
               />
@@ -406,7 +412,7 @@ function FolderPickerModal({
   state: LocalBrowserState;
   onBrowse: (dir: string) => void;
   onClose: () => void;
-  onSelect: (dir: string) => void;
+  onSelect: (dir: string, branch?: string) => void;
 }): React.ReactElement {
   return (
     <div
@@ -489,7 +495,7 @@ function LocalFolderBrowser({
 }: {
   state: LocalBrowserState;
   onBrowse: (dir: string) => void;
-  onSelect: (dir: string) => void;
+  onSelect: (dir: string, branch?: string) => void;
 }): React.ReactElement {
   return (
     <div
@@ -508,7 +514,7 @@ function LocalFolderBrowser({
           {state.loading ? "Cargando…" : state.cwd ?? "Carpetas locales"}
         </span>
         {state.git !== undefined ? (
-          <button type="button" onClick={() => onSelect(state.git!.repoRoot)} style={selectButtonStyle}>
+          <button type="button" onClick={() => onSelect(state.git!.repoRoot, state.git!.branch)} style={selectButtonStyle}>
             Elegir este repo
           </button>
         ) : null}

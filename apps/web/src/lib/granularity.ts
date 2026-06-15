@@ -2,7 +2,7 @@ import type { GranularityMode } from "@/lib/server/runs/schema";
 
 export const GRANULARITY_LEVELS = ["automatica", "baja", "media", "alta"] as const;
 export type GranularityLevel = (typeof GRANULARITY_LEVELS)[number];
-export type GranularityDisplayId = GranularityLevel | "max";
+export type GranularityDisplayId = GranularityLevel;
 
 export const GRANULARITY_TO_MODE: Record<GranularityLevel, GranularityMode> = {
   automatica: "auto",
@@ -26,7 +26,7 @@ export interface GranularityDescription {
 export const GRANULARITY_DESCRIPTIONS: Record<GranularityLevel, GranularityDescription> = {
   automatica: {
     headline: "Auto",
-    helper: "Recomendada. El planner decide cuánto dividir cada rama según su complejidad."
+    helper: "Recomendada. Adaptativa por rama: cada nodo calibra cuánto dividir según su propia complejidad."
   },
   baja: {
     headline: "Baja",
@@ -77,14 +77,6 @@ export const GRANULARITY_DISPLAY_OPTIONS: readonly GranularityDisplayOption[] = 
     label: "Alta",
     detail: "descomposición agresiva",
     impact: "Sigue dividiendo hasta que las hojas sean chicas, concretas y verificables. Más profunda donde hay complejidad."
-  },
-  {
-    id: "max",
-    label: "Máx",
-    detail: "agresividad máxima",
-    impact: "La división más agresiva — reservada para un modo de backend posterior, no disponible en este MVP.",
-    disabled: true,
-    disabledReason: "Máx queda reservada para un modo de granularidad de backend posterior."
   }
 ];
 

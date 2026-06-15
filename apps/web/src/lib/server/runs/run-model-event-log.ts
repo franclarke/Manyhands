@@ -5,6 +5,7 @@ import type { RunRecord } from "./schema";
 import { resolveRunsDirectory } from "./repository";
 import { projectRunRecordToRunEvents } from "./run-model-projection";
 import { publishRunModelBusEvent } from "./run-model-event-bus";
+import { globalSingleton } from "../global-singleton";
 
 export type RunModelEventInput<K extends RunEventType = RunEventType> = {
   at?: string;
@@ -13,7 +14,12 @@ export type RunModelEventInput<K extends RunEventType = RunEventType> = {
   payload: RunEventPayloads[K];
 };
 
-const writeChains = new Map<string, Promise<unknown>>();
+// On globalThis: appends happen from several Next route bundles (pipelines,
+// cancel, decisions); a per-bundle lock map would not serialize seq assignment.
+const writeChains = globalSingleton(
+  "run-model-event-log:write-chains",
+  () => new Map<string, Promise<unknown>>()
+);
 
 export async function readRunModelEvents(runId: string): Promise<RunEvent[]> {
   const filePath = filePathFor(runId);
@@ -109,7 +115,7 @@ function minimalRunEvents(run: RunRecord): RunEvent[] {
       actor: "system",
       type: "run.created",
       payload: {
-        intent: run.title,
+        intent: run.userPrompt || run.title,
         workspaceId: run.workspaceId,
         config: {
           aggressiveness: run.granularity === "fine" ? "high" : run.granularity === "coarse" ? "low" : "medium",
