@@ -77,3 +77,6 @@ El modo de aprobación del CLI no es el límite de seguridad principal. El lími
 | [09-composer.md](09-composer.md) | IntegrationAgent | Integra hijos con cherry-pick y repair |
 | [10-web-app.md](10-web-app.md) | Web App | Command Center y sala de control |
 | [11-granularity-vector.md](11-granularity-vector.md) | Run metrics | Métricas operativas del run; nombre legacy en código |
+| [12-scheduler.md](12-scheduler.md) | Scheduler | Selección de waves consciente de scope/riesgo |
+| [13-conflict-risk.md](13-conflict-risk.md) | conflict-risk | Predicción de riesgo de conflicto entre tareas |
+| [14-repository-index.md](14-repository-index.md) | repository-index | Índice estructural del repo (grounding) |
