@@ -10,8 +10,7 @@ import {
 import {
   abortRun,
   assertTransition,
-  claimRunMutation,
-  getRunRepository
+  claimRunMutation
 } from "@/lib/server/runs";
 import { publishRunEvent } from "@/lib/server/runs/event-bus";
 import { appendRunModelEvent } from "@/lib/server/runs/run-model-event-log";
