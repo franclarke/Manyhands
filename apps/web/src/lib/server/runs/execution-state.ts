@@ -13,8 +13,10 @@ import {
   type RunExecutionResult,
   type RunNodeExecutionResult
 } from "@manyhands/execution-core";
+import { validationCommandSafetyIssues, type ExecutionValidationCommand } from "@manyhands/contracts";
 import type { MockPlanningFlowResult } from "@manyhands/core";
 import type { TaskGraph } from "@manyhands/task-graph";
+import type { DetectedCommands } from "../providers/command-detection";
 import type { ProvisionedRepo } from "./repo-provisioner";
 import type { RunRecord } from "./schema";
 
@@ -60,6 +62,45 @@ export function integrationDurationMs(result: IntegrationResult): number {
 export function collectRunValidationCommands(graph: TaskGraph) {
   const root = graph.nodes[graph.rootId];
   return root?.contract?.runValidationCommands ?? [];
+}
+
+const RUN_VALIDATION_TIMEOUT_MS = 120_000;
+
+function detectedValidationCommand(detected: DetectedCommands | undefined): string | undefined {
+  if (detected === undefined) return undefined;
+  return detected.test ?? detected.build ?? detected.typecheck ?? detected.lint;
+}
+
+function toExecutionValidationCommand(detectedCommand: string): ExecutionValidationCommand | undefined {
+  const tokens = detectedCommand.trim().split(/\s+/);
+  const [command, ...args] = tokens;
+  if (command === undefined || command.length === 0) return undefined;
+  if (validationCommandSafetyIssues(command, args).length > 0) return undefined;
+  return { command, args, timeoutMs: RUN_VALIDATION_TIMEOUT_MS, cwd: "worktree" };
+}
+
+/**
+ * Deterministically backfill the root's run-level validation command from the
+ * detected workspace commands when the decomposer left it empty.
+ */
+export function backfillRunValidationCommands(
+  graph: TaskGraph,
+  detected: DetectedCommands | undefined
+): { graph: TaskGraph; backfilled?: ExecutionValidationCommand } {
+  const existing = collectRunValidationCommands(graph);
+  if (existing.length > 0) return { graph };
+
+  const detectedCommand = detectedValidationCommand(detected);
+  if (detectedCommand === undefined) return { graph };
+
+  const command = toExecutionValidationCommand(detectedCommand);
+  if (command === undefined) return { graph };
+
+  const next = structuredClone(graph);
+  const root = next.nodes[next.rootId] as { contract?: Record<string, unknown> } | undefined;
+  if (root === undefined) return { graph };
+  root.contract = { ...(root.contract ?? {}), runValidationCommands: [command] };
+  return { graph: next, backfilled: command };
 }
 
 /** Rebuilds the persisted execution artifact from a (possibly reduced) result set. */
