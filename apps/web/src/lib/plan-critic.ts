@@ -118,6 +118,16 @@ export function runPlanCritic(input: {
     }
   }
 
+  const root = input.graph.nodes[input.graph.rootId];
+  const hasRunValidationCommands = (root?.contract?.runValidationCommands?.length ?? 0) > 0;
+  if (suggested !== undefined && !hasRunValidationCommands) {
+    findings.push({
+      severity: "info",
+      code: "run_validation_backfilled",
+      message: `Run-level validation will run \`${suggested}\` on the integrated result.`
+    });
+  }
+
   return {
     status: statusFor(findings),
     findings,

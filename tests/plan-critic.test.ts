@@ -123,6 +123,20 @@ describe("runPlanCritic", () => {
     expect(finding?.suggestion).toContain("pnpm run test");
   });
 
+  it("announces when run-level validation will be backfilled", () => {
+    const contracts = [contract("a")];
+    const result = runPlanCritic({
+      graph: leafGraph(["a"]),
+      contracts,
+      detectedCommands: { packageManager: "pnpm", test: "pnpm run test" }
+    });
+    const finding = result.findings.find((f) => f.code === "run_validation_backfilled");
+    expect(finding).toMatchObject({
+      severity: "info",
+      message: "Run-level validation will run `pnpm run test` on the integrated result."
+    });
+  });
+
   it("flags broad-scope leaves and missing expected files", () => {
     const contracts = [
       contract("a", {
