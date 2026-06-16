@@ -9,7 +9,7 @@ import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   CliAgentExecutor,
-  GEMINI_PROFILE,
+  CODEX_PROFILE,
   ExecutionConfigSchema,
   RunExecutor,
   SimpleGitRunner
@@ -122,7 +122,7 @@ describe.skipIf(!E2E)("RunExecutor real run (opt-in, real codex exec)", () => {
     const traceStore = new InMemoryTraceStore();
     const executor = new RunExecutor({
       git: new SimpleGitRunner(),
-      executor: new CliAgentExecutor(GEMINI_PROFILE),
+      executor: new CliAgentExecutor(CODEX_PROFILE),
       traceStore,
       repoRoot: provisioned.repoRoot
     });

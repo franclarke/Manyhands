@@ -21,9 +21,9 @@ const SEED: Run = {
   workspaceId: "ws",
   config: {
     aggressiveness: "medium",
-    planningModel: "gemini-2.5-flash",
-    executionSelection: { executorId: "gemini-cli", model: "gemini-2.5-flash" },
-    repairSelection: { executorId: "gemini-cli", model: "gemini-2.5-flash" }
+    planningModel: "sonnet",
+    executionSelection: { executorId: "claude-code-cli", model: "sonnet" },
+    repairSelection: { executorId: "claude-code-cli", model: "sonnet" }
   }
 };
 

@@ -43,7 +43,7 @@ flowchart LR
 ```
 
 1. Describís una feature, módulo o cambio en lenguaje natural.
-2. El `GeminiRecursiveDecomposer` la descompone en un `TaskGraph` jerárquico con contratos e interfaces compartidas.
+2. El `ClaudeCodeRecursiveDecomposer` la descompone en un `TaskGraph` jerárquico con contratos e interfaces compartidas.
 3. Revisás el plan, dependencias y señales de riesgo; aprobás, editás o regenerás.
 4. El scheduler selecciona **waves** de hojas que pueden correr en paralelo sin pisarse.
 5. Cada hoja se ejecuta aislada; se capturan diff, logs, validación y scope.
@@ -97,8 +97,9 @@ Regla de dependencias: `apps → paquetes específicos → shared`. Nunca se imp
 corepack enable
 pnpm install
 
-# 2. Tener Gemini CLI en el PATH, o apuntar al binario:
-export MANYHANDS_GEMINI_BIN=/ruta/a/gemini
+# 2. Tener Claude Code CLI (y opcionalmente Codex) en el PATH, o apuntar al binario:
+export MANYHANDS_CLAUDE_BIN=/ruta/a/claude
+# export MANYHANDS_CODEX_BIN=/ruta/a/codex
 
 # 3. Levantar la sala de control (compila los paquetes y arranca Next.js)
 pnpm web:dev

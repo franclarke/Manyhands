@@ -45,15 +45,15 @@ describe("run-model trace adapter", () => {
       trace({
         type: "executor_started",
         taskId: "leaf-a",
-        payload: { executorId: "gemini-cli", model: "gemini-2.5-flash" }
+        payload: { executorId: "claude-code-cli", model: "sonnet" }
       }),
       CONTEXT
     );
     expect(started[0]?.type).toBe("node.execution.started");
     expect(started[0]?.payload).toMatchObject({
       nodeId: "leaf-a",
-      agent: "gemini-cli",
-      model: "gemini-2.5-flash"
+      agent: "claude-code-cli",
+      model: "sonnet"
     });
 
     const executorFailed = runModelEventsFromTrace(
