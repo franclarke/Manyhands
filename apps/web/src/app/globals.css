@@ -56,7 +56,7 @@
   /* 1 ── Primitives: raw palette ("ember on graphite") ─────────────
          Ember (molten orange, OKLCH hue ~55) is the ONLY brand hue and is
          reserved for live activity + primary action. No cyans/light blues
-         anywhere in the system (anti-reference, see PRODUCT.md). */
+         anywhere in the system (anti-reference, see docs/development/product-brand.md). */
   --cu-bg: #0f1012;
   --cu-bg-1: #131416;
   --cu-surface: #181a1c;
@@ -1012,7 +1012,7 @@
 
 /* ── Structural skeletons (route-level loading) ──────────────────────
    `.mh-skeleton`: shimmering placeholder block that anticipates the shape
-   of incoming content (PRODUCT.md: skeletons, never centered spinners). */
+   of incoming content (docs/development/product-brand.md: skeletons, never centered spinners). */
 .mh-skeleton {
   border-radius: var(--r-md);
   background-color: color-mix(in srgb, var(--color-text) 7%, transparent);
