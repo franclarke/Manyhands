@@ -68,10 +68,10 @@ El modo de aprobación del CLI no es el límite de seguridad principal. El lími
 |---------|------------|----------|
 | [01-task-graph.md](01-task-graph.md) | TaskGraph + TaskNode | Modelo de datos del plan y dependencias |
 | [02-contracts.md](02-contracts.md) | AgentTaskContract | Contrato entre orquestador y agente |
-| [03-decomposer.md](03-decomposer.md) | GeminiRecursiveDecomposer | Transforma una feature en DAG con costuras |
+| [03-decomposer.md](03-decomposer.md) | ClaudeCodeRecursiveDecomposer | Transforma una feature en DAG con costuras |
 | [04-run-executor.md](04-run-executor.md) | Execution graph + RunExecutor | Coordina ejecución, repair, integración y métricas |
 | [05-worktree-layer.md](05-worktree-layer.md) | WorktreeManager + SimpleGitRunner | Gestiona worktrees y operaciones git |
-| [06-gemini-executor.md](06-gemini-executor.md) | GeminiCliExecutor + AgentExecutor | Invoca agentes CLI y normaliza resultados |
+| [06-agent-executors.md](06-agent-executors.md) | CliAgentExecutor + profiles (Claude Code, Codex) | Invoca agentes CLI y normaliza resultados |
 | [07-context-and-scope.md](07-context-and-scope.md) | ContextPacker + ScopeChecker | Construye prompts y valida scope |
 | [08-result-pipeline.md](08-result-pipeline.md) | ResultRecorder + ValidationRunner | Captura diff, valida y prepara commits |
 | [09-composer.md](09-composer.md) | IntegrationAgent | Integra hijos con cherry-pick y repair |

@@ -124,7 +124,10 @@ fallback silencioso a planificación determinística.
 ## Ejecución De Agentes
 
 La ejecución pasa por el seam `AgentExecutor` y perfiles configurados en
-`execution-core`. Gemini CLI es el executor primario/default del producto.
+`execution-core`. **Claude Code CLI** (`claude`, headless, `--output-format json`)
+es el executor primario/default del producto; **Codex CLI** (`codex exec`) es la
+alternativa seleccionable. El planning usa el `ClaudeCodeRecursiveDecomposer`
+(CLI, plan mode). Gemini CLI fue removido el 2026-06-16 (ver ADR-0031).
 
 No cambiar el executor default, agregar CLIs nuevos o depender de subprocesses
 directos fuera del wrapper sin discutirlo.

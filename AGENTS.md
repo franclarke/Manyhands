@@ -50,7 +50,7 @@ not as an active thesis/benchmark plan.
 | D1 | `graph.dependencies` is canonical. `node.dependencies` is a synced shortcut. Mutation only via `addDependency` / `removeDependency` / `syncNodeDependencies`. |
 | D2 | Canonical task intent field is `goal`, never `intent`. Normalize legacy `intent` in parsers; never persist it. |
 | D3 | LLM failure → run FAILS with actionable error. No silent fallback to deterministic planning. |
-| D4 | Agent execution goes through the `AgentExecutor` seam and configured executor profiles. Gemini CLI remains the primary/default executor; do not change the default executor policy or add new CLIs without discussing it. |
+| D4 | Agent execution goes through the `AgentExecutor` seam and configured executor profiles. Claude Code CLI is the primary/default executor and Codex CLI is the selectable alternative (Gemini CLI removed 2026-06-16, see ADR-0031); do not change the default executor policy or add new CLIs without discussing it. |
 | D5 | `git diff HEAD` is the only source of truth for what an agent changed. stdout/stderr are diagnostic only (`stderrTail`/`stdoutTail`). |
 | D6 | **The orchestrator commits.** Agents must never commit. If an agent commits unexpectedly, policy is explicit (`reject` default or `accept`). |
 | D7 | Real isolation comes from the git worktree + `ScopeChecker`, not CLI approval mode. |
@@ -112,7 +112,8 @@ pnpm web:dev
 
 Environment variables:
 
-- `MANYHANDS_GEMINI_BIN` — path to Gemini CLI binary.
+- `MANYHANDS_CLAUDE_BIN` — path to Claude Code CLI binary (default `claude`).
+- `MANYHANDS_CODEX_BIN` — path to Codex CLI binary (default `codex`).
 - `MANYHANDS_DECOMPOSER` — optional decomposer override for development.
 
 ---

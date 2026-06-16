@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted. Supersedes ADR-0019 (Codex CLI in non-interactive mode).
+Superseded by ADR-0031 (Claude Code + Codex executors). Históricamente Accepted;
+supersedió a ADR-0019 (Codex CLI in non-interactive mode). Gemini CLI fue removido
+en 2026-06-16 tras la deprecación del tier gratuito (2026-06-18).
 
 ## Context
 
