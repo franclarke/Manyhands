@@ -165,6 +165,11 @@ export interface RunResponse {
     summary?: string;
     title: string;
     status: RunStatusKey;
+    validation?: {
+      status: "passed" | "failed" | "unverified";
+      command?: string | undefined;
+      ranAt?: string | undefined;
+    };
     /** Monotonic write counter; echo back as `expectedVersion` for optimistic mutations. */
     version: number;
     /** Suspended execution gate awaiting a decision; echo `gateId` back on resume. */

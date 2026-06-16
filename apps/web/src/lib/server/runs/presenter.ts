@@ -17,6 +17,7 @@ export function toRunResponse(run: RunRecord): RunResponse {
     createdAt: run.createdAt,
     updatedAt: run.updatedAt
   };
+  if (run.validation !== undefined) payload.validation = run.validation;
   if (run.pendingDecision !== undefined) payload.pendingDecision = run.pendingDecision;
   if (run.planningModel !== undefined) payload.planningModel = run.planningModel;
   if (run.defaultExecutionSelection !== undefined) payload.defaultExecutionSelection = run.defaultExecutionSelection;
