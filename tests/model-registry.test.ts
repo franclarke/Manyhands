@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_MODEL_ID,
   EXECUTOR_OPTIONS,
-  GEMINI_EXECUTOR_ID,
+  CLAUDE_CODE_EXECUTOR_ID,
   MODEL_OPTIONS,
   findModel,
   findModelForSelection,
@@ -10,32 +10,31 @@ import {
 } from "@/lib/models";
 
 describe("model registry", () => {
-  it("keeps Gemini CLI as the default while exposing the multi-executor registry", () => {
+  it("keeps Claude Code as the default while exposing the multi-executor registry", () => {
     const defaultModel = findModel(DEFAULT_MODEL_ID);
 
-    expect(defaultModel?.executorId).toBe(GEMINI_EXECUTOR_ID);
+    expect(defaultModel?.executorId).toBe(CLAUDE_CODE_EXECUTOR_ID);
     expect(defaultModel?.capabilities).toEqual(["planning", "execution", "repair"]);
     expect(defaultModel?.usage).toBe("unavailable");
     expect(EXECUTOR_OPTIONS.map((executor) => executor.id)).toEqual([
-      "gemini-cli",
       "claude-code-cli",
       "codex-cli",
       "opencode-cli"
     ]);
-    expect(MODEL_OPTIONS.some((model) => model.executorId === "claude-code-cli")).toBe(true);
-    expect(EXECUTOR_OPTIONS.find((executor) => executor.id === "codex-cli")?.enabled).toBe(false);
+    expect(MODEL_OPTIONS.some((model) => model.executorId === "codex-cli")).toBe(true);
+    expect(EXECUTOR_OPTIONS.find((executor) => executor.id === "codex-cli")?.enabled).toBe(true);
   });
 
   it("normalizes valid executor selections and keeps model lookup executor-scoped", () => {
-    expect(normalizeExecutorOverride({ executorId: "gemini-cli", model: "gemini-2.5-flash" })).toEqual({
-      executorId: "gemini-cli",
-      model: "gemini-2.5-flash"
-    });
-    expect(normalizeExecutorOverride({ executorId: "claude-code-cli", model: "sonnet" })).toEqual({
+    expect(normalizeExecutorOverride({ executorId: "claude-code-cli", model: "haiku" })).toEqual({
       executorId: "claude-code-cli",
-      model: "sonnet"
+      model: "haiku"
+    });
+    expect(normalizeExecutorOverride({ executorId: "codex-cli", model: "gpt-5-codex" })).toEqual({
+      executorId: "codex-cli",
+      model: "gpt-5-codex"
     });
     expect(findModelForSelection({ executorId: "claude-code-cli", model: "sonnet" })?.enabled).toBe(true);
-    expect(normalizeExecutorOverride({ executorId: "gemini-cli", model: "" })).toBeUndefined();
+    expect(normalizeExecutorOverride({ executorId: "claude-code-cli", model: "" })).toBeUndefined();
   });
 });

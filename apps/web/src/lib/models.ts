@@ -32,58 +32,39 @@ export interface ModelOption {
 
 /**
  * Model ids whose executor CLI accepts a reasoning-effort flag. Today only the
- * Codex/GPT-5 family does (`--reasoning-effort`); Gemini CLI 0.44.1 and Claude
- * Code expose only `--model`, so the effort control stays hidden for them.
+ * Codex/GPT-5 family does (`--reasoning-effort`); Claude Code exposes only
+ * `--model`, so the effort control stays hidden for it.
  */
 const EFFORT_CAPABLE_MODEL_IDS = new Set<string>(["gpt-5-codex"]);
 
-export const GEMINI_EXECUTOR_ID = "gemini-cli" satisfies ExecutorId;
+export const CLAUDE_CODE_EXECUTOR_ID = "claude-code-cli" satisfies ExecutorId;
 export const DEFAULT_EXECUTOR_SELECTION = {
-  executorId: GEMINI_EXECUTOR_ID,
-  model: "gemini-2.5-pro"
+  executorId: CLAUDE_CODE_EXECUTOR_ID,
+  model: "sonnet"
 } satisfies ExecutorSelection;
 
 const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
   {
-    id: GEMINI_EXECUTOR_ID,
-    label: "Gemini CLI",
-    provider: "Gemini",
-    binaryEnvVar: "MANYHANDS_GEMINI_BIN",
-    defaultBinary: "gemini",
-    enabled: true,
-    capabilities: ["planning", "execution", "repair"],
-    usageSource: "unavailable",
-    defaultModel: "gemini-2.5-pro",
-    models: [
-      {
-        id: "gemini-2.5-pro",
-        label: "Gemini 2.5 Pro",
-        capabilities: ["planning", "execution", "repair"],
-        usageSource: "unavailable"
-      },
-      {
-        id: "gemini-2.5-flash",
-        label: "Gemini 2.5 Flash",
-        capabilities: ["planning", "execution", "repair"],
-        usageSource: "unavailable"
-      }
-    ]
-  },
-  {
-    id: "claude-code-cli",
+    id: CLAUDE_CODE_EXECUTOR_ID,
     label: "Claude Code CLI",
     provider: "Anthropic",
     binaryEnvVar: "MANYHANDS_CLAUDE_BIN",
     defaultBinary: "claude",
     enabled: true,
-    capabilities: ["execution", "repair"],
+    capabilities: ["planning", "execution", "repair"],
     usageSource: "unavailable",
     defaultModel: "sonnet",
     models: [
       {
+        id: "haiku",
+        label: "Claude Haiku",
+        capabilities: ["execution", "repair"],
+        usageSource: "unavailable"
+      },
+      {
         id: "sonnet",
         label: "Claude Sonnet",
-        capabilities: ["execution", "repair"],
+        capabilities: ["planning", "execution", "repair"],
         usageSource: "unavailable"
       },
       {
@@ -100,7 +81,7 @@ const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
     provider: "OpenAI",
     binaryEnvVar: "MANYHANDS_CODEX_BIN",
     defaultBinary: "codex",
-    enabled: false,
+    enabled: true,
     capabilities: ["execution", "repair"],
     usageSource: "unavailable",
     defaultModel: "gpt-5-codex",
@@ -185,7 +166,7 @@ export function findModelForSelection(selection: ExecutorSelection): ModelOption
 
 export function normalizeExecutorOverride(value: unknown): ExecutorOverride | undefined {
   if (typeof value === "string" && value.trim().length > 0) {
-    return { executorId: GEMINI_EXECUTOR_ID, model: value };
+    return { executorId: CLAUDE_CODE_EXECUTOR_ID, model: value };
   }
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return undefined;

@@ -32,14 +32,14 @@ const NodeEditRequestSchema = z.object({
   manual: z.boolean().optional(),
   executorOverride: z
     .object({
-      executorId: z.literal("gemini-cli"),
+      executorId: z.literal("claude-code-cli"),
       model: EditableStringSchema.max(120)
     })
     .nullable()
     .optional(),
   executorSelection: z
     .object({
-      executorId: z.enum(["gemini-cli", "claude-code-cli", "codex-cli", "opencode-cli"]),
+      executorId: z.enum(["claude-code-cli", "codex-cli", "opencode-cli"]),
       model: EditableStringSchema.max(120)
     })
     .nullable()

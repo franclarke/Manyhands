@@ -4,7 +4,6 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import {
-  GEMINI_EXECUTOR_ID,
   normalizeExecutorSelection,
   resolveLegacyModelSelection,
   getExecutorDescriptor,
@@ -200,26 +199,16 @@ function collectExecutorIds(input: PreflightInput): ExecutorId[] {
 }
 
 function defaultHasCredentials(executorId: ExecutorId): boolean {
-  if (executorId !== GEMINI_EXECUTOR_ID) {
-    return Boolean(process.env.ANTHROPIC_API_KEY) || existsSync(join(homedir(), ".claude.json"));
+  if (executorId === "codex-cli") {
+    return Boolean(process.env.OPENAI_API_KEY) || existsSync(join(homedir(), ".codex", "auth.json"));
   }
-  if (
-    process.env.GEMINI_API_KEY ||
-    process.env.GOOGLE_API_KEY ||
-    process.env.GOOGLE_GENAI_USE_GCA
-  ) {
-    return true;
-  }
-  const geminiHome = join(homedir(), ".gemini");
-  return (
-    existsSync(join(geminiHome, "oauth_creds.json")) ||
-    existsSync(join(geminiHome, "google_accounts.json"))
-  );
+  // Claude Code (default): ANTHROPIC_API_KEY or the CLI's own auth file.
+  return Boolean(process.env.ANTHROPIC_API_KEY) || existsSync(join(homedir(), ".claude.json"));
 }
 
 function authMessageFor(executorId: ExecutorId): string {
-  if (executorId === GEMINI_EXECUTOR_ID) {
-    return "Gemini CLI has no credentials. Run `gemini` once to authenticate, or set GEMINI_API_KEY.";
+  if (executorId === "codex-cli") {
+    return "Codex CLI has no credentials. Run `codex` once to authenticate, or set OPENAI_API_KEY.";
   }
   return "Claude Code CLI has no credentials. Run `claude` once to authenticate, or set ANTHROPIC_API_KEY.";
 }

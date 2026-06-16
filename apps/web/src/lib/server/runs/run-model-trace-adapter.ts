@@ -47,7 +47,7 @@ export function runModelEventsFromTrace(
           actor: "agent",
           at,
           type: "node.execution.started",
-          payload: { nodeId: taskId, agent: "gemini-cli", model: context.defaultModel }
+          payload: { nodeId: taskId, agent: "claude-code-cli", model: context.defaultModel }
         }
       ];
     }
@@ -60,7 +60,7 @@ export function runModelEventsFromTrace(
           type: "node.execution.started",
           payload: {
             nodeId: taskId,
-            agent: stringValue(payload.executorId) ?? "gemini-cli",
+            agent: stringValue(payload.executorId) ?? "claude-code-cli",
             model: stringValue(payload.model) ?? context.defaultModel
           }
         }

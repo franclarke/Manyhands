@@ -73,7 +73,7 @@ describe("editable control plane vertical slice", () => {
       actor: "human",
       createdAt: now,
       taskId: "task-1",
-      executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-flash" }
+      executorOverride: { executorId: "claude-code-cli", model: "haiku" }
     };
 
     const withPatch = appendPatch(appendPatch(appendPatch(run, renamed), manual), executor);
@@ -83,8 +83,8 @@ describe("editable control plane vertical slice", () => {
     expect(patched.graphSnapshot.nodes["task-1"]?.title).toBe("Edited title");
     expect(patched.graphSnapshot.nodes["task-1"]?.metadata?.authoredBy).toBe("human");
     expect(patched.graphSnapshot.nodes["task-1"]?.metadata?.executorOverride).toEqual({
-      executorId: "gemini-cli",
-      model: "gemini-2.5-flash"
+      executorId: "claude-code-cli",
+      model: "haiku"
     });
     expect(snapshot!.graphSnapshot.nodes["task-1"]?.title).toBe("Original title");
 
@@ -106,7 +106,7 @@ describe("editable control plane vertical slice", () => {
           allowedPaths: ["src/edited.ts"],
           acceptanceCriteria: ["Edited criterion"],
           manual: true,
-          executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-flash" }
+          executorOverride: { executorId: "claude-code-cli", model: "haiku" }
         }),
         headers: { "content-type": "application/json" }
       }),
@@ -144,7 +144,7 @@ describe("editable control plane vertical slice", () => {
           actor: "human",
           createdAt: now,
           taskId: "task-1",
-          executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-flash" }
+          executorOverride: { executorId: "claude-code-cli", model: "haiku" }
         }
       ]
     }));
@@ -237,7 +237,7 @@ describe("editable control plane vertical slice", () => {
         actor: "human",
         createdAt: now,
         taskId: "task-1",
-        executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-flash" }
+        executorOverride: { executorId: "claude-code-cli", model: "haiku" }
       }
     ];
     const run = makeRun({ patches });
@@ -248,7 +248,7 @@ describe("editable control plane vertical slice", () => {
     expect(node?.title).toBe("Patched title");
     expect(node?.metadata?.authoredBy).toBe("human");
     expect((node?.metadata?.executorOverride as { model?: string } | undefined)?.model).toBe(
-      "gemini-2.5-flash"
+      "haiku"
     );
 
     const contract = (snapshot as RunSnapshot).contracts.find((entry) => entry.taskId === "task-1");

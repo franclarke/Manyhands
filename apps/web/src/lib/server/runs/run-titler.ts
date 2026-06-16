@@ -8,8 +8,8 @@ const SPAWN_FAILURE_EXIT_CODE = 127;
 const TIMEOUT_EXIT_CODE = 124;
 
 /**
- * Short directive passed via `-p`. Gemini CLI only enters non-interactive mode
- * when `--prompt` has a non-empty value; the real instructions go over stdin.
+ * Short directive passed via `-p`/`--print`. Claude Code runs one headless turn
+ * and emits a JSON result envelope; the real instructions go over stdin.
  */
 const STDIN_DIRECTIVE = "Follow-titling-instructions-on-stdin";
 
@@ -38,20 +38,20 @@ export interface GenerateRunTitleInput {
 }
 
 /**
- * Turns a raw user prompt into a clean `{ title, summary }` using Gemini CLI in
- * read-only planning mode. Pure presentation concern — never touches the repo
+ * Turns a raw user prompt into a clean `{ title, summary }` using Claude Code in
+ * read-only plan mode. Pure presentation concern — never touches the repo
  * and never participates in graph generation. Callers treat failures as
  * non-fatal (cosmetic fallback to the raw prompt).
  */
 export async function generateRunTitle(input: GenerateRunTitleInput): Promise<RunTitle> {
-  const binaryPath = input.binaryPath ?? process.env.MANYHANDS_GEMINI_BIN ?? "gemini";
+  const binaryPath = input.binaryPath ?? process.env.MANYHANDS_CLAUDE_BIN ?? "claude";
   const spawnFn = input.spawn ?? nodeSpawn;
   const timeoutMs = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const useShell = input.useShell ?? process.platform === "win32";
   const cwd = input.cwd ?? process.cwd();
 
   const prompt = buildTitlerPrompt(input.userPrompt);
-  const args = ["--model", input.model, "--approval-mode", "plan", "--skip-trust", "-o", "json", "-p", STDIN_DIRECTIVE];
+  const args = ["-p", STDIN_DIRECTIVE, "--model", input.model, "--output-format", "json", "--permission-mode", "plan"];
 
   const outcome = await runProcess({ binaryPath, args, cwd, prompt, timeoutMs, spawnFn, useShell });
 
@@ -173,9 +173,9 @@ function firstJsonObject(text: string): string | null {
 }
 
 /**
- * Extracts the `{ title, summary }` object from Gemini CLI stdout, tolerating
- * the `-o json` envelope (`{"response":"<inner json string>"}`) and direct
- * JSON.
+ * Extracts the `{ title, summary }` object from Claude Code stdout, tolerating
+ * the `--output-format json` envelope (`{"type":"result","result":"<inner json
+ * string>"}`) and direct JSON.
  */
 function extractTitleSummary(stdout: string): unknown {
   const outer = firstJsonObject(stdout);
@@ -192,10 +192,10 @@ function extractTitleSummary(stdout: string): unknown {
   if (
     parsed !== null &&
     typeof parsed === "object" &&
-    "response" in parsed &&
-    typeof (parsed as { response: unknown }).response === "string"
+    "result" in parsed &&
+    typeof (parsed as { result: unknown }).result === "string"
   ) {
-    const inner = firstJsonObject((parsed as { response: string }).response);
+    const inner = firstJsonObject((parsed as { result: string }).result);
     if (inner === null) return null;
     try {
       return JSON.parse(inner);

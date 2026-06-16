@@ -43,14 +43,14 @@ describe("generateRunTitle", () => {
         summary: "Una mini-app que crea, lista y resetea hábitos, persistidos en localStorage."
       })
     });
-    const result = await generateRunTitle({ userPrompt: "Construí una mini-app...", model: "gemini-2.5-pro", spawn });
+    const result = await generateRunTitle({ userPrompt: "Construí una mini-app...", model: "sonnet", spawn });
     expect(result.title).toBe("Habit counter mini-app");
     expect(result.summary).toContain("hábitos");
   });
 
-  it("unwraps the Gemini CLI `response` envelope", async () => {
+  it("unwraps the Claude Code `result` envelope", async () => {
     const inner = JSON.stringify({ title: "Task API DELETE", summary: "Implementa DELETE /tasks/:id con persistencia y tests." });
-    const spawn = makeFakeSpawn({ stdout: JSON.stringify({ response: inner }) });
+    const spawn = makeFakeSpawn({ stdout: JSON.stringify({ type: "result", result: inner }) });
     const result = await generateRunTitle({ userPrompt: "Implement DELETE", model: "m", spawn });
     expect(result.title).toBe("Task API DELETE");
   });

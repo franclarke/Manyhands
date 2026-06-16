@@ -12,8 +12,7 @@ export interface ModelPrice {
 }
 
 export const MODEL_PRICING: Readonly<Record<string, ModelPrice>> = {
-  "gemini-2.5-pro": { inputPerMillionUsd: 1.25, outputPerMillionUsd: 10 },
-  "gemini-2.5-flash": { inputPerMillionUsd: 0.3, outputPerMillionUsd: 2.5 },
+  haiku: { inputPerMillionUsd: 0.8, outputPerMillionUsd: 4 },
   sonnet: { inputPerMillionUsd: 3, outputPerMillionUsd: 15 },
   opus: { inputPerMillionUsd: 15, outputPerMillionUsd: 75 },
   "gpt-5-codex": { inputPerMillionUsd: 1.25, outputPerMillionUsd: 10 }

@@ -3,7 +3,7 @@ import { PassThrough } from "node:stream";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import {
-  GeminiRecursiveDecomposer,
+  ClaudeCodeRecursiveDecomposer,
   DecomposerQuestionError,
   isDecomposerQuestionError,
   type FeatureRequest
@@ -18,13 +18,18 @@ const FEATURE: FeatureRequest = {
   acceptanceCriteria: ["works"]
 };
 
-describe("GeminiRecursiveDecomposer - Interactive Planning", () => {
+/** Wraps a step value inside the Claude Code `--output-format json` envelope. */
+function resultEnvelope(stepValue: unknown): string {
+  return JSON.stringify({ type: "result", is_error: false, result: JSON.stringify(stepValue) });
+}
+
+describe("ClaudeCodeRecursiveDecomposer - Interactive Planning", () => {
   it("throws DecomposerQuestionError when LLM returns a question decision", async () => {
-    const decomposer = new GeminiRecursiveDecomposer({
-      model: "gemini-2.5-pro",
+    const decomposer = new ClaudeCodeRecursiveDecomposer({
+      model: "sonnet",
       userPrompt: "prompt questions",
       cwd: process.cwd(),
-      spawn: fakeGeminiSpawn({
+      spawn: fakeClaudeSpawn({
         decision: "question",
         reasoning: "ambiguous database requirements",
         question: "Do you want to use MongoDB or PostgreSQL?",
@@ -50,8 +55,8 @@ describe("GeminiRecursiveDecomposer - Interactive Planning", () => {
   it("injects previous user answer and completes when run with caching and answers", async () => {
     let capturedPrompt = "";
 
-    const decomposer = new GeminiRecursiveDecomposer({
-      model: "gemini-2.5-pro",
+    const decomposer = new ClaudeCodeRecursiveDecomposer({
+      model: "sonnet",
       userPrompt: "prompt questions",
       cwd: process.cwd(),
       spawn: (_command, _args, _options): ChildProcess => {
@@ -75,7 +80,7 @@ describe("GeminiRecursiveDecomposer - Interactive Planning", () => {
         setTimeout(() => {
           capturedPrompt = stdinData;
           // Devolvemos una decisión final atómica después de recibir la respuesta
-          child.stdout.write(JSON.stringify({
+          child.stdout.write(resultEnvelope({
             decision: "atomic",
             reasoning: "implemented with PostgreSQL as requested",
             allowedPaths: ["src/**"],
@@ -122,7 +127,7 @@ describe("GeminiRecursiveDecomposer - Interactive Planning", () => {
   });
 });
 
-function fakeGeminiSpawn(stdoutValue: unknown, exitCode = 0, stderrValue = "") {
+function fakeClaudeSpawn(stepValue: unknown, exitCode = 0, stderrValue = "") {
   return (_command: string, args: readonly string[], _options: SpawnOptions): ChildProcess => {
     const child = new EventEmitter() as EventEmitter & {
       stdin: PassThrough;
@@ -135,7 +140,7 @@ function fakeGeminiSpawn(stdoutValue: unknown, exitCode = 0, stderrValue = "") {
     child.stderr = new PassThrough();
     child.kill = () => true;
     setTimeout(() => {
-      child.stdout.write(typeof stdoutValue === "string" ? stdoutValue : JSON.stringify(stdoutValue));
+      child.stdout.write(resultEnvelope(stepValue));
       if (stderrValue.length > 0) child.stderr.write(stderrValue);
       child.emit("close", exitCode);
     }, 0);

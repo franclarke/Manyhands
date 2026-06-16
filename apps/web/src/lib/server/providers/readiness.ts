@@ -7,7 +7,6 @@ import { promisify } from "node:util";
 import {
   CLAUDE_CODE_EXECUTOR_ID,
   EXECUTOR_DESCRIPTORS,
-  GEMINI_EXECUTOR_ID,
   type ExecutorDescriptor,
   type ExecutorId
 } from "@manyhands/execution-core";
@@ -58,12 +57,12 @@ export async function inspectProvidersReadiness(
   );
 }
 
-export async function inspectGeminiReadiness(
+export async function inspectPrimaryProviderReadiness(
   workspace: Workspace | null,
   deps: ProviderReadinessDeps = {}
 ): Promise<ProviderReadiness> {
   const providers = await inspectProvidersReadiness(workspace, deps);
-  return providers.find((provider) => provider.executorId === GEMINI_EXECUTOR_ID) ?? providers[0]!;
+  return providers.find((provider) => provider.executorId === CLAUDE_CODE_EXECUTOR_ID) ?? providers[0]!;
 }
 
 async function inspectExecutor(
@@ -248,24 +247,18 @@ async function defaultCheckCli(binaryPath: string): Promise<{ ok: boolean; versi
 }
 
 function defaultHasCredentials(executorId: ExecutorId): boolean {
-  if (executorId === GEMINI_EXECUTOR_ID) {
-    return Boolean(
-      process.env.GEMINI_API_KEY ||
-      process.env.GOOGLE_API_KEY ||
-      process.env.GOOGLE_GENAI_USE_GCA ||
-      existsSync(join(homedir(), ".gemini", "oauth_creds.json")) ||
-      existsSync(join(homedir(), ".gemini", "google_accounts.json"))
-    );
-  }
   if (executorId === CLAUDE_CODE_EXECUTOR_ID) {
     return Boolean(process.env.ANTHROPIC_API_KEY || existsSync(join(homedir(), ".claude.json")));
+  }
+  if (executorId === "codex-cli") {
+    return Boolean(process.env.OPENAI_API_KEY || existsSync(join(homedir(), ".codex", "auth.json")));
   }
   return false;
 }
 
 function authMessageFor(executorId: ExecutorId): string {
-  if (executorId === GEMINI_EXECUTOR_ID) {
-    return "Gemini CLI no tiene credenciales. Corré gemini una vez para autenticarte, o configurá GEMINI_API_KEY.";
+  if (executorId === "codex-cli") {
+    return "Codex CLI no tiene credenciales. Corré codex una vez para autenticarte, o configurá OPENAI_API_KEY.";
   }
   if (executorId === CLAUDE_CODE_EXECUTOR_ID) {
     return "Claude Code CLI no tiene credenciales. Corré claude una vez para autenticarte, o configurá ANTHROPIC_API_KEY.";

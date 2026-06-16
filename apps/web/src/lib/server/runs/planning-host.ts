@@ -571,13 +571,13 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
     const reason = selection.fallbackReason ?? "no_api_key";
     const messages: Record<string, string> = {
       no_api_key:
-        "Graph generation requires Gemini CLI. Install it and ensure it is on PATH (or set MANYHANDS_GEMINI_BIN).",
+        "Graph generation requires Claude Code CLI. Install it and ensure it is on PATH (or set MANYHANDS_CLAUDE_BIN).",
       forced_by_env:
-        "MANYHANDS_FORCE_FALLBACK is set, but runs require the Gemini decomposer. Unset MANYHANDS_FORCE_FALLBACK to continue.",
+        "MANYHANDS_FORCE_FALLBACK is set, but runs require the Claude Code decomposer. Unset MANYHANDS_FORCE_FALLBACK to continue.",
       forced_by_caller:
-        "Deterministic mode was explicitly requested, but runs require the Gemini decomposer."
+        "Deterministic mode was explicitly requested, but runs require the Claude Code decomposer."
     };
-    throw new Error(messages[reason] ?? `Gemini decomposer unavailable: ${reason}`);
+    throw new Error(messages[reason] ?? `Claude Code decomposer unavailable: ${reason}`);
   }
 
   try {
@@ -610,7 +610,7 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
     const detail = describePlanningFailure(error);
     throw new Error(
       `Graph generation failed: ${detail}. ` +
-        "Retry, switch to a different Gemini model, or verify that Gemini CLI is installed and authenticated."
+        "Retry, switch to a different Claude model, or verify that Claude Code CLI is installed and authenticated."
     );
   }
 }

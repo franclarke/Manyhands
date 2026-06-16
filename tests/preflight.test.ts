@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { runPreflight, PreflightError, type PreflightDeps } from "@/lib/server/runs/preflight";
-import { inspectGeminiReadiness, type ProviderReadinessDeps } from "@/lib/server/providers/readiness";
+import { inspectPrimaryProviderReadiness, type ProviderReadinessDeps } from "@/lib/server/providers/readiness";
 
 const OK_DEPS: Required<Pick<PreflightDeps, "checkCli" | "hasCredentials" | "gitPorcelain" | "branchExists">> = {
   checkCli: async () => true,
@@ -50,11 +50,11 @@ describe("runPreflight", () => {
     });
   });
 
-  it("fails with cli when the Gemini binary is missing", async () => {
+  it("fails with cli when the Claude Code binary is missing", async () => {
     const error = await runPreflight(INPUT, { ...OK_DEPS, checkCli: async () => false }).catch((e) => e);
     expect(error).toBeInstanceOf(PreflightError);
     expect((error as PreflightError).check).toBe("cli");
-    expect((error as PreflightError).message).toContain("Gemini CLI not found");
+    expect((error as PreflightError).message).toContain("Claude Code CLI not found");
   });
 
   it("fails with auth when there are no credentials", async () => {
@@ -91,22 +91,22 @@ describe("runPreflight", () => {
 });
 
 const READINESS_DEPS: Required<ProviderReadinessDeps> = {
-  checkCli: async () => ({ ok: true, version: "gemini 0.44.1" }),
+  checkCli: async () => ({ ok: true, version: "claude 1.0.0" }),
   hasCredentials: () => true,
   gitPorcelain: async () => "",
   branchExists: async () => true,
   detectCommands: async () => ({ packageManager: "pnpm", test: "pnpm run test" })
 };
 
-describe("inspectGeminiReadiness", () => {
+describe("inspectPrimaryProviderReadiness", () => {
   it("reports ready when CLI, auth, repo, and branch checks pass", async () => {
-    const readiness = await inspectGeminiReadiness(
+    const readiness = await inspectPrimaryProviderReadiness(
       workspace({ repoPath: "C:/repo", defaultBranch: "main" }),
       READINESS_DEPS
     );
 
     expect(readiness.status).toBe("ready");
-    expect(readiness.version).toBe("gemini 0.44.1");
+    expect(readiness.version).toBe("claude 1.0.0");
     expect(readiness.checks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: "cli", status: "pass" }),
@@ -118,8 +118,8 @@ describe("inspectGeminiReadiness", () => {
     );
   });
 
-  it("reports error when the Gemini binary is missing", async () => {
-    const readiness = await inspectGeminiReadiness(
+  it("reports error when the Claude Code binary is missing", async () => {
+    const readiness = await inspectPrimaryProviderReadiness(
       workspace({ repoPath: "C:/repo" }),
       { ...READINESS_DEPS, checkCli: async () => ({ ok: false }) }
     );
@@ -129,7 +129,7 @@ describe("inspectGeminiReadiness", () => {
   });
 
   it("reports error when credentials are missing", async () => {
-    const readiness = await inspectGeminiReadiness(
+    const readiness = await inspectPrimaryProviderReadiness(
       workspace({ repoPath: "C:/repo" }),
       { ...READINESS_DEPS, hasCredentials: () => false }
     );
@@ -139,7 +139,7 @@ describe("inspectGeminiReadiness", () => {
   });
 
   it("reports warnings for dirty repos and missing branches", async () => {
-    const readiness = await inspectGeminiReadiness(
+    const readiness = await inspectPrimaryProviderReadiness(
       workspace({ repoPath: "C:/repo", defaultBranch: "main" }),
       {
         ...READINESS_DEPS,
