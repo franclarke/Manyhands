@@ -37,6 +37,7 @@ import {
 } from "./execution-state";
 import { planNodeProposedEvent } from "./planning-run-model-adapter";
 import { publishRunModelEvent } from "./run-model-event-log";
+import { appendRunStatusChanged } from "./run-status-events";
 import type { RunRecord } from "./schema";
 import { getRunRepository } from "./store";
 
@@ -109,7 +110,7 @@ export async function replanSubtree(
   });
   if (selection.provider === "deterministic") {
     throw new RunLifecycleError(
-      "Replanning requires the Gemini decomposer. Install Gemini CLI (or set MANYHANDS_GEMINI_BIN)."
+      "Replanning requires the Claude Code decomposer. Install Claude Code CLI (or set MANYHANDS_CLAUDE_BIN)."
     );
   }
 
@@ -197,7 +198,7 @@ export async function replanSubtree(
   });
 
   const now = new Date().toISOString();
-  publishRunEvent(runId, { kind: "status.changed", status: "running", at: now });
+  await appendRunStatusChanged(run, { at: now });
   for (const addedId of graft.addedTaskIds) {
     const added = graft.graph.nodes[addedId];
     if (added === undefined) continue;
@@ -253,7 +254,7 @@ async function suspendReplanOnQuestion(
   }));
 
   const now = new Date().toISOString();
-  publishRunEvent(runId, { kind: "status.changed", status: "paused", at: now });
+  await appendRunStatusChanged(saved, { at: now });
   publishRunModelEvent(runId, {
     actor: "system",
     at: now,
@@ -316,7 +317,7 @@ export async function resumeReplanWithAnswer(
     }
   );
 
-  publishRunEvent(runId, { kind: "status.changed", status: "running", at: new Date().toISOString() });
+  await appendRunStatusChanged(saved, { actor: "human" });
   const replanContext = context;
   if (replanContext !== undefined) {
     void replanSubtree(runId, replanContext.taskId, replanContext.reason, replanContext.resume).catch((error) =>

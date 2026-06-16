@@ -23,7 +23,7 @@ import { estimateRunCostUsd, formatUsd } from "@/lib/model-pricing";
 import type { ExecutorSelection } from "@/lib/api-types";
 import { FolderGit2, GitBranch, Plus, Pencil, Trash2, AlertTriangle, OctagonAlert, Sparkles } from "lucide-react";
 
-const DEFAULT_PLANNING_MODEL = "gemini-2.5-pro";
+const DEFAULT_PLANNING_MODEL = "sonnet";
 
 type AutonomyLevel = "supervised" | "semi" | "autonomous";
 const AUTONOMY_OPTIONS: ReadonlyArray<{ id: AutonomyLevel; label: string; hint: string }> = [
@@ -79,7 +79,7 @@ export function CommandCenterShell({
 
   const [granularity, setGranularity] = useState<GranularityLevel>(initialGranularity);
   // Single model choice drives planning + execution + repair (W3).
-  const [modelValue, setModelValue] = useState<string>(`gemini-cli/${initialModelId}`);
+  const [modelValue, setModelValue] = useState<string>(`claude-code-cli/${initialModelId}`);
   const [effort, setEffort] = useState<EffortLevel>("medium");
   const [autonomy, setAutonomy] = useState<AutonomyLevel>("supervised");
   const [prompt, setPrompt] = useState<string>("");
@@ -153,11 +153,11 @@ export function CommandCenterShell({
   const granularityMode = toGranularityMode(granularity);
   const hasPrompt = prompt.trim().length > 0;
   const hasLocalRepo = selectedWorkspace?.repoPath !== undefined && selectedWorkspace.repoPath.length > 0;
-  const hasUsableGemini = readiness?.status === "ready" || readiness?.status === "warning";
+  const hasUsableProvider = readiness?.status === "ready" || readiness?.status === "warning";
 
   // One model choice → planning + execution + repair. Planning needs a
-  // planning-capable model (Gemini today); if an execution-only model is picked,
-  // planning falls back to the default Gemini planner.
+  // planning-capable model (Claude Code today); if an execution-only model is
+  // picked, planning falls back to the default Claude Code planner.
   const selectedModel = modelOptionForValue(modelValue);
   const selection = parseSelectionValue(modelValue);
   const canPlanWithSelection = selectedModel?.capabilities.includes("planning") ?? false;
@@ -180,7 +180,7 @@ export function CommandCenterShell({
     selectedWorkspace !== null &&
     hasPrompt &&
     hasLocalRepo &&
-    hasUsableGemini &&
+    hasUsableProvider &&
     selectedModel !== undefined &&
     !submitting;
 
@@ -245,19 +245,7 @@ export function CommandCenterShell({
 
     const collectOptionalFields = (val: WorkspaceFormValue): Omit<WorkspaceCreateRequest, "name"> => {
       const out: Omit<WorkspaceCreateRequest, "name"> = {};
-      if (val.color !== "") out.color = val.color;
       if (val.repoPath !== "") out.repoPath = val.repoPath;
-      if (val.packageManager !== "") out.packageManager = val.packageManager;
-      if (val.defaultBranch !== "") out.defaultBranch = val.defaultBranch;
-      if (val.testCommand !== "") out.testCommand = val.testCommand;
-      if (val.buildCommand !== "") out.buildCommand = val.buildCommand;
-      if (val.allowedPaths !== "") {
-        const paths = val.allowedPaths
-          .split(",")
-          .map((entry) => entry.trim())
-          .filter((entry) => entry.length > 0);
-        if (paths.length > 0) out.allowedPaths = paths;
-      }
       return out;
     };
 
@@ -327,16 +315,16 @@ export function CommandCenterShell({
   }
 
   const readinessTooltip = useMemo(() => {
-    if (readinessLoading) return "Verificando el estado de Gemini CLI…";
+    if (readinessLoading) return "Verificando el estado de Claude Code CLI…";
     if (readinessError) return `Error al verificar el estado: ${readinessError}`;
-    if (!readiness) return "Estado de Gemini CLI desconocido";
+    if (!readiness) return "Estado de Claude Code CLI desconocido";
     const checksStr = readiness.checks
       .map((check) => `• [${check.status === "pass" ? "OK" : check.status.toUpperCase()}] ${check.label}: ${check.message}`)
       .join("\n");
-    return `Gemini CLI: ${readiness.status.toUpperCase()}\nRuta: ${readiness.binaryPath || "desconocida"}\nVersión: ${readiness.version || "desconocida"}\n\nChecks:\n${checksStr}`;
+    return `Claude Code CLI: ${readiness.status.toUpperCase()}\nRuta: ${readiness.binaryPath || "desconocida"}\nVersión: ${readiness.version || "desconocida"}\n\nChecks:\n${checksStr}`;
   }, [readiness, readinessLoading, readinessError]);
 
-  const gemini = geminiPill({ readiness, readinessLoading, readinessError });
+  const provider = providerPill({ readiness, readinessLoading, readinessError });
 
   if (workspaces.length === 0 && workspaceFormOpen === "closed") {
     return (
@@ -463,7 +451,7 @@ export function CommandCenterShell({
             />
             <StatusIcon
               icon={<Sparkles aria-hidden className="h-4 w-4" />}
-              tone={toneForUiStatus(gemini.status)}
+              tone={toneForUiStatus(provider.status)}
               title={readinessTooltip}
             />
             {startBlockReason !== null && hasPrompt && !submitting ? (
@@ -490,7 +478,7 @@ export function CommandCenterShell({
               </span>
             ) : null}
             {!canPlanWithSelection ? (
-              <span>· Planifica con Gemini {DEFAULT_PLANNING_MODEL} (el modelo elegido solo ejecuta)</span>
+              <span>· Planifica con Claude Code {DEFAULT_PLANNING_MODEL} (el modelo elegido solo ejecuta)</span>
             ) : null}
           </div>
         ) : null}
@@ -655,7 +643,7 @@ function Callout({
   );
 }
 
-function geminiPill({
+function providerPill({
   readiness,
   readinessLoading,
   readinessError
@@ -664,17 +652,17 @@ function geminiPill({
   readinessLoading: boolean;
   readinessError: string | null;
 }): { status: UiStatus; label: string } {
-  if (readinessLoading) return { status: "pending", label: "Verificando Gemini…" };
-  if (readinessError !== null) return { status: "blocked", label: "Gemini sin verificar" };
+  if (readinessLoading) return { status: "pending", label: "Verificando Claude Code…" };
+  if (readinessError !== null) return { status: "blocked", label: "Claude Code sin verificar" };
   switch (readiness?.status) {
     case "ready":
-      return { status: "completed", label: "Gemini listo" };
+      return { status: "completed", label: "Claude Code listo" };
     case "warning":
-      return { status: "blocked", label: "Gemini con avisos" };
+      return { status: "blocked", label: "Claude Code con avisos" };
     case "error":
-      return { status: "failed", label: "Gemini con error" };
+      return { status: "failed", label: "Claude Code con error" };
     default:
-      return { status: "pending", label: "Gemini desconocido" };
+      return { status: "pending", label: "Claude Code desconocido" };
   }
 }
 
@@ -696,9 +684,9 @@ function startBlockReasonFor({
   if (selectedWorkspace === null) return "Elegí un workspace";
   if (!hasPrompt) return "Describí la tarea para empezar";
   if (!hasLocalRepo) return "Configurá un repo local";
-  if (readinessLoading) return "Verificando Gemini…";
-  if (readinessError !== null || readiness === null) return "Gemini sin verificar";
-  if (readiness.status === "error") return "Gemini necesita configuración";
+  if (readinessLoading) return "Verificando Claude Code…";
+  if (readinessError !== null || readiness === null) return "Claude Code sin verificar";
+  if (readiness.status === "error") return "Claude Code necesita configuración";
   return null;
 }
 
@@ -718,18 +706,18 @@ function readinessCalloutFor({
   }
   if (readinessLoading) return null;
   if (readinessError !== null) {
-    return `No se pudo verificar Gemini CLI: ${readinessError}`;
+    return `No se pudo verificar Claude Code CLI: ${readinessError}`;
   }
   if (readiness === null) {
-    return "Gemini CLI todavía no fue verificado. ManyHands necesita Gemini para planificar y ejecutar.";
+    return "Claude Code CLI todavía no fue verificado. ManyHands necesita Claude Code para planificar y ejecutar.";
   }
   if (readiness.status === "error") {
     const failing = readiness.checks.find((check) => check.status === "fail");
-    return failing?.message ?? "Gemini CLI no está listo. Instalalo, autenticalo o configurá MANYHANDS_GEMINI_BIN.";
+    return failing?.message ?? "Claude Code CLI no está listo. Instalalo, autenticalo o configurá MANYHANDS_CLAUDE_BIN.";
   }
   if (readiness.status === "warning") {
     const warning = readiness.checks.find((check) => check.status === "warning");
-    return warning?.message ?? "Gemini CLI está disponible, pero hay avisos de entorno para revisar.";
+    return warning?.message ?? "Claude Code CLI está disponible, pero hay avisos de entorno para revisar.";
   }
   return null;
 }

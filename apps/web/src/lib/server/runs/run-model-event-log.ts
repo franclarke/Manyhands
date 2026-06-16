@@ -3,7 +3,7 @@ import path from "node:path";
 import type { Actor, RunEvent, RunEventPayloads, RunEventType } from "@/lib/run-model/types";
 import type { RunRecord } from "./schema";
 import { resolveRunsDirectory } from "./repository";
-import { projectRunRecordToRunEvents } from "./run-model-projection";
+import { projectRunRecordToRunEvents, runControlForRun } from "./run-model-projection";
 import { publishRunModelBusEvent } from "./run-model-event-bus";
 import { globalSingleton } from "../global-singleton";
 
@@ -38,7 +38,7 @@ export async function readRunModelEvents(runId: string): Promise<RunEvent[]> {
 
 export async function ensureRunModelEventLogForRun(run: RunRecord): Promise<RunEvent[]> {
   const existing = await readRunModelEvents(run.runId);
-  if (existing.length > 0) return existing;
+  if (existing.length > 0) return reconcileExistingRunModelEventLog(run, existing);
 
   const projected = safeProjectRunRecordToRunEvents(run);
   if (projected.length === 0) return [];
@@ -51,6 +51,46 @@ export async function ensureRunModelEventLogForRun(run: RunRecord): Promise<RunE
     await appendFile(filePathFor(run.runId), body, "utf8");
     return projected;
   });
+}
+
+async function reconcileExistingRunModelEventLog(run: RunRecord, existing: RunEvent[]): Promise<RunEvent[]> {
+  if (!needsApprovalResolutionEvent(run, existing)) return existing;
+
+  return withLock(run.runId, async () => {
+    const current = await readRunModelEvents(run.runId);
+    if (!needsApprovalResolutionEvent(run, current)) return current;
+
+    const event: RunEvent = {
+      seq: (current.at(-1)?.seq ?? 0) + 1,
+      at: run.approvedAt ?? run.updatedAt,
+      runId: run.runId,
+      actor: "human",
+      type: "decision.resolved",
+      payload: {
+        decisionId: "approve_plan",
+        choice: { action: "approve" },
+        actor: "human"
+      }
+    };
+    await appendFile(filePathFor(run.runId), `${JSON.stringify(event)}\n`, "utf8");
+    publishRunModelBusEvent(run.runId, event);
+    return [...current, event];
+  });
+}
+
+function needsApprovalResolutionEvent(run: RunRecord, events: RunEvent[]): boolean {
+  if (run.approvedAt === undefined) return false;
+  const hasApprovalGate = events.some(
+    (event) =>
+      event.type === "decision.raised" &&
+      (event.payload as { decisionId?: string }).decisionId === "approve_plan"
+  );
+  if (!hasApprovalGate) return false;
+  return !events.some(
+    (event) =>
+      event.type === "decision.resolved" &&
+      (event.payload as { decisionId?: string }).decisionId === "approve_plan"
+  );
 }
 
 export async function appendRunModelEvent<K extends RunEventType>(
@@ -120,8 +160,8 @@ function minimalRunEvents(run: RunRecord): RunEvent[] {
         config: {
           aggressiveness: run.granularity === "fine" ? "high" : run.granularity === "coarse" ? "low" : "medium",
           planningModel: run.planningModel ?? run.model,
-          executionSelection: run.defaultExecutionSelection ?? { executorId: "gemini-cli", model: run.model },
-          repairSelection: run.defaultRepairSelection ?? run.defaultExecutionSelection ?? { executorId: "gemini-cli", model: run.model }
+          executionSelection: run.defaultExecutionSelection ?? { executorId: "claude-code-cli", model: run.model },
+          repairSelection: run.defaultRepairSelection ?? run.defaultExecutionSelection ?? { executorId: "claude-code-cli", model: run.model }
         }
       }
     }
@@ -140,6 +180,14 @@ function minimalRunEvents(run: RunRecord): RunEvent[] {
       }
     });
   }
+  events.push({
+    seq: events.length + 1,
+    at: run.updatedAt,
+    runId: run.runId,
+    actor: "system",
+    type: "run.status.changed",
+    payload: runControlForRun(run) as unknown as Record<string, unknown>
+  });
   return events;
 }
 

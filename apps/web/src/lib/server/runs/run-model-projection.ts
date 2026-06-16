@@ -8,6 +8,7 @@ import type {
   NodeRole,
   PlanningState,
   Run,
+  RunControl,
   RunEvent,
   RunEventPayloads,
   RunEventType,
@@ -54,12 +55,13 @@ interface EventWriter {
 export function buildRunModelSeed(run: RunRecord): Run {
   const g = String(run.granularity);
   const aggressiveness = g === "coarse" || g === "low" ? "low" : g === "fine" || g === "high" ? "high" : "medium";
-  const exec = run.defaultExecutionSelection ?? { executorId: "gemini-cli", model: run.model };
+  const exec = run.defaultExecutionSelection ?? { executorId: "claude-code-cli", model: run.model };
   const repair = run.defaultRepairSelection ?? exec;
   return {
     id: run.runId,
     intent: run.userPrompt || run.title,
     workspaceId: run.workspaceId,
+    control: runControlForRun(run),
     config: {
       aggressiveness,
       planningModel: run.planningModel ?? run.model,
@@ -95,6 +97,7 @@ export function projectRunRecordToRunEvents(run: RunRecord): RunEvent[] {
     workspaceId: run.workspaceId,
     config: buildRunModelSeed(run).config
   });
+  writer.emit("system", run.updatedAt, "run.status.changed", runControlForRun(run));
 
   if (run.provisioned !== undefined) {
     writer.emit("system", run.provisioned.provisionedAt, "run.context.resolved", {
@@ -216,7 +219,7 @@ export function projectRunRecordToRunEvents(run: RunRecord): RunEvent[] {
     for (const leaf of run.execution.leafResults) {
       writer.emit("agent", executionAt, "node.execution.started", {
         nodeId: leaf.taskId,
-        agent: "gemini-cli",
+        agent: "claude-code-cli",
         model: run.defaultExecutionSelection?.model ?? run.model
       });
       if (leaf.status === "success") {
@@ -473,6 +476,22 @@ function producedRevisionFor(run: RunRecord, taskId: string): SeamRevisionRef | 
 
 function revisionForRun(run: RunRecord): number {
   return isPlanApproved(run) ? 1 : 0;
+}
+
+export function runControlForRun(run: RunRecord): RunControl {
+  return {
+    status: run.status,
+    version: run.version,
+    pendingHumanAction:
+      run.pendingDecision !== undefined
+        ? "decision"
+        : run.pendingQuestion !== undefined || run.pendingReplan !== undefined
+          ? "question"
+          : "none",
+    updatedAt: run.updatedAt,
+    ...(run.pausedDuring !== undefined ? { pausedDuring: run.pausedDuring } : {}),
+    ...(run.interruptedDuring !== undefined ? { interruptedDuring: run.interruptedDuring } : {})
+  };
 }
 
 function leafFailureCause(leaf: { status: string; executorExitCode: number; executorTimedOut: boolean; stderrTail?: string | undefined }): string {
