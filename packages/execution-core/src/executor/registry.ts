@@ -1,10 +1,8 @@
-export const GEMINI_EXECUTOR_ID = "gemini-cli";
 export const CLAUDE_CODE_EXECUTOR_ID = "claude-code-cli";
 export const CODEX_EXECUTOR_ID = "codex-cli";
 export const OPENCODE_EXECUTOR_ID = "opencode-cli";
 
 export const EXECUTOR_IDS = [
-  GEMINI_EXECUTOR_ID,
   CLAUDE_CODE_EXECUTOR_ID,
   CODEX_EXECUTOR_ID,
   OPENCODE_EXECUTOR_ID
@@ -40,35 +38,8 @@ export interface ExecutorSelection {
 }
 
 const AGENTIC_CAPABILITIES: ExecutorCapability[] = ["execution", "repair"];
-const GEMINI_CAPABILITIES: ExecutorCapability[] = ["planning", "execution", "repair"];
 
 export const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
-  {
-    id: GEMINI_EXECUTOR_ID,
-    label: "Gemini CLI",
-    provider: "Gemini",
-    binaryEnvVar: "MANYHANDS_GEMINI_BIN",
-    defaultBinary: "gemini",
-    enabled: true,
-    capabilities: GEMINI_CAPABILITIES,
-    // `-o json` carries per-model token stats; the profile parser extracts them.
-    usageSource: "reported",
-    defaultModel: "gemini-2.5-pro",
-    models: [
-      {
-        id: "gemini-2.5-pro",
-        label: "Gemini 2.5 Pro",
-        capabilities: GEMINI_CAPABILITIES,
-        usageSource: "reported"
-      },
-      {
-        id: "gemini-2.5-flash",
-        label: "Gemini 2.5 Flash",
-        capabilities: GEMINI_CAPABILITIES,
-        usageSource: "reported"
-      }
-    ]
-  },
   {
     id: CLAUDE_CODE_EXECUTOR_ID,
     label: "Claude Code CLI",
@@ -148,8 +119,8 @@ export const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
 ];
 
 export const DEFAULT_EXECUTOR_SELECTION: ExecutorSelection = {
-  executorId: GEMINI_EXECUTOR_ID,
-  model: "gemini-2.5-pro"
+  executorId: CLAUDE_CODE_EXECUTOR_ID,
+  model: "sonnet"
 };
 
 const EXECUTOR_ID_SET = new Set<string>(EXECUTOR_IDS);
@@ -187,7 +158,7 @@ export function isExecutorSelection(value: unknown): value is ExecutorSelection 
 
 export function normalizeExecutorSelection(value: unknown): ExecutorSelection | undefined {
   if (typeof value === "string" && value.trim().length > 0) {
-    return { executorId: GEMINI_EXECUTOR_ID, model: value };
+    return { executorId: CLAUDE_CODE_EXECUTOR_ID, model: value };
   }
   if (!isExecutorSelection(value)) {
     return undefined;

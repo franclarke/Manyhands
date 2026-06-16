@@ -13,18 +13,17 @@ export interface ModelPrice {
   outputPerMillionUsd: number;
 }
 
-/** Keyed by the model id the executor reports (gemini-*, sonnet/opus, …). */
+/** Keyed by the model id the executor reports (sonnet/opus/haiku, gpt-5-*, …). */
 export const MODEL_PRICING: Readonly<Record<string, ModelPrice>> = {
-  "gemini-2.5-pro": { inputPerMillionUsd: 1.25, outputPerMillionUsd: 10 },
-  "gemini-2.5-flash": { inputPerMillionUsd: 0.3, outputPerMillionUsd: 2.5 },
   // Claude Code CLI reports short model ids.
+  haiku: { inputPerMillionUsd: 0.8, outputPerMillionUsd: 4 },
   sonnet: { inputPerMillionUsd: 3, outputPerMillionUsd: 15 },
   opus: { inputPerMillionUsd: 15, outputPerMillionUsd: 75 },
   // Codex / GPT-5 family (execution-only today).
   "gpt-5-codex": { inputPerMillionUsd: 1.25, outputPerMillionUsd: 10 }
 };
 
-/** Looks up a price, tolerating provider-prefixed ids like "models/gemini-2.5-pro". */
+/** Looks up a price, tolerating provider-prefixed ids like "models/claude-sonnet". */
 export function priceForModel(model: string): ModelPrice | undefined {
   if (model in MODEL_PRICING) return MODEL_PRICING[model];
   const tail = model.includes("/") ? model.slice(model.lastIndexOf("/") + 1) : undefined;

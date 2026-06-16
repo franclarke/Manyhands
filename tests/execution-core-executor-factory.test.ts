@@ -14,7 +14,6 @@ describe("DefaultAgentExecutorFactory (profile-driven)", () => {
   it("creates executors for every enabled CLI without a hardcoded switch", () => {
     const factory = new DefaultAgentExecutorFactory();
 
-    expect(factory.create(select("gemini-cli", "gemini-2.5-pro"))).toBeInstanceOf(CliAgentExecutor);
     expect(factory.create(select("claude-code-cli", "sonnet"))).toBeInstanceOf(CliAgentExecutor);
     expect(factory.create(select("codex-cli", "gpt-5-codex"))).toBeInstanceOf(CliAgentExecutor);
   });
@@ -22,8 +21,8 @@ describe("DefaultAgentExecutorFactory (profile-driven)", () => {
   it("caches one executor instance per executor id", () => {
     const factory = new DefaultAgentExecutorFactory();
 
-    const first = factory.create(select("gemini-cli", "gemini-2.5-pro"));
-    const second = factory.create(select("gemini-cli", "gemini-2.5-flash"));
+    const first = factory.create(select("claude-code-cli", "sonnet"));
+    const second = factory.create(select("claude-code-cli", "haiku"));
 
     expect(second).toBe(first);
   });

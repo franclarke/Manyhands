@@ -4,10 +4,9 @@ import { probeExecutorAvailability } from "@manyhands/execution-core";
 describe("probeExecutorAvailability", () => {
   it("returns only enabled executors whose binary resolves", async () => {
     const available = await probeExecutorAvailability({
-      commandExists: async (binary) => binary === "gemini" || binary === "claude"
+      commandExists: async (binary) => binary === "claude"
     });
 
-    expect(available.has("gemini-cli")).toBe(true);
     expect(available.has("claude-code-cli")).toBe(true);
     expect(available.has("codex-cli")).toBe(false);
     // opencode is disabled in the registry and must never be probed in.

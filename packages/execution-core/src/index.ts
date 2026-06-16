@@ -16,7 +16,6 @@ export * from "./executor/live-process-registry";
 export * from "./run/world-reconciler";
 export * from "./executor/failure";
 export * from "./executor/status-channel";
-export * from "./executor/profiles/gemini";
 export * from "./executor/profiles/claude-code";
 export * from "./executor/profiles/codex";
 export * from "./routing/complexity";

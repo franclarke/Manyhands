@@ -13,7 +13,7 @@ import type { AgentExecutor } from "../executor/types";
 import { countDependents } from "../routing/complexity";
 import { resolveRoutedSelection, type ExecutorRouter } from "../routing/policy";
 import {
-  GEMINI_EXECUTOR_ID,
+  CLAUDE_CODE_EXECUTOR_ID,
   normalizeExecutorSelection,
   resolveLegacyModelSelection,
   usageSourceForSelection,
@@ -120,7 +120,7 @@ export function resolveExecutorSelection(node: TaskNode, defaultSelection: Execu
 }
 
 export function resolveExecutorModel(node: TaskNode, defaultModel: string): ExecutorSelection {
-  return resolveExecutorSelection(node, { executorId: GEMINI_EXECUTOR_ID, model: defaultModel });
+  return resolveExecutorSelection(node, { executorId: CLAUDE_CODE_EXECUTOR_ID, model: defaultModel });
 }
 
 /**

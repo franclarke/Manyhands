@@ -81,13 +81,13 @@ describe("scoreNodeComplexity", () => {
 });
 
 describe("ComplexityRoutingPolicy", () => {
-  const allAvailable = new Set(["gemini-cli", "claude-code-cli", "codex-cli"] as const);
+  const allAvailable = new Set(["claude-code-cli", "codex-cli"] as const);
 
   it("routes trivial nodes to the fast lane and critical nodes to the strongest model", () => {
     const policy = new ComplexityRoutingPolicy({ available: allAvailable });
 
     const trivial = policy.route({ node: node(), dependents: 0, attempt: 0 });
-    expect(trivial.model).toBe("gemini-2.5-flash");
+    expect(trivial.model).toBe("haiku");
 
     const critical = policy.route({
       node: node({
@@ -107,11 +107,11 @@ describe("ComplexityRoutingPolicy", () => {
   });
 
   it("falls back along the ranked list when an executor is unavailable", () => {
-    const policy = new ComplexityRoutingPolicy({ available: new Set(["gemini-cli"] as const) });
+    const policy = new ComplexityRoutingPolicy({ available: new Set(["codex-cli"] as const) });
 
     const critical = policy.route({ node: node({ kind: "integrator" }), dependents: 4, attempt: 0 });
 
-    expect(critical.executorId).toBe("gemini-cli");
+    expect(critical.executorId).toBe("codex-cli");
   });
 
   it("escalates one tier on repair attempts", () => {
@@ -120,16 +120,16 @@ describe("ComplexityRoutingPolicy", () => {
     const firstTry = policy.route({ node: node(), dependents: 0, attempt: 0 });
     const repair = policy.route({ node: node(), dependents: 0, attempt: 1 });
 
-    expect(firstTry.model).toBe("gemini-2.5-flash");
-    expect(repair.model).not.toBe("gemini-2.5-flash");
+    expect(firstTry.model).toBe("haiku");
+    expect(repair.model).not.toBe("haiku");
   });
 });
 
 describe("resolveRoutedSelection", () => {
-  const fallback: ExecutorSelection = { executorId: "gemini-cli", model: "gemini-2.5-pro" };
+  const fallback: ExecutorSelection = { executorId: "claude-code-cli", model: "sonnet" };
 
   it("lets an explicit per-node metadata selection win over the router", () => {
-    const policy = new ComplexityRoutingPolicy({ available: new Set(["gemini-cli", "claude-code-cli"] as const) });
+    const policy = new ComplexityRoutingPolicy({ available: new Set(["claude-code-cli", "codex-cli"] as const) });
 
     const selection = resolveRoutedSelection({
       node: node({ metadata: { executorSelection: { executorId: "claude-code-cli", model: "opus" } } }),
@@ -142,7 +142,7 @@ describe("resolveRoutedSelection", () => {
   });
 
   it("uses the router when there is no explicit override", () => {
-    const policy = new ComplexityRoutingPolicy({ available: new Set(["gemini-cli"] as const) });
+    const policy = new ComplexityRoutingPolicy({ available: new Set(["claude-code-cli"] as const) });
 
     const selection = resolveRoutedSelection({
       node: node(),
@@ -151,8 +151,8 @@ describe("resolveRoutedSelection", () => {
       router: policy
     });
 
-    expect(selection.executorId).toBe("gemini-cli");
-    expect(selection.model).toBe("gemini-2.5-flash");
+    expect(selection.executorId).toBe("claude-code-cli");
+    expect(selection.model).toBe("haiku");
   });
 
   it("falls back to the default selection without a router", () => {

@@ -276,14 +276,14 @@ describe("RunExecutor", () => {
   it("resolves executor models from node metadata with run-model fallback", () => {
     const graph = graphWith(["a"]);
     const leaf = graph.nodes.a!;
-    expect(resolveExecutorModel(leaf, "gemini-2.5-pro")).toEqual({
-      executorId: "gemini-cli",
-      model: "gemini-2.5-pro"
+    expect(resolveExecutorModel(leaf, "sonnet")).toEqual({
+      executorId: "claude-code-cli",
+      model: "sonnet"
     });
-    leaf.metadata = { executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-flash" } };
-    expect(resolveExecutorModel(leaf, "gemini-2.5-pro")).toEqual({
-      executorId: "gemini-cli",
-      model: "gemini-2.5-flash"
+    leaf.metadata = { executorOverride: { executorId: "claude-code-cli", model: "haiku" } };
+    expect(resolveExecutorModel(leaf, "sonnet")).toEqual({
+      executorId: "claude-code-cli",
+      model: "haiku"
     });
   });
 
@@ -302,11 +302,11 @@ describe("RunExecutor", () => {
     const graph = graphWith(["a", "b"]);
     graph.nodes.a = {
       ...graph.nodes.a!,
-      metadata: { executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-flash" } }
+      metadata: { executorOverride: { executorId: "claude-code-cli", model: "haiku" } }
     };
     graph.nodes.root = {
       ...graph.nodes.root!,
-      metadata: { executorOverride: { executorId: "gemini-cli", model: "gemini-2.5-pro" } }
+      metadata: { executorOverride: { executorId: "claude-code-cli", model: "opus" } }
     };
     const executor = new RunExecutor({
       git,
@@ -319,27 +319,27 @@ describe("RunExecutor", () => {
     await executor.run({
       graph,
       config,
-      model: "gemini-default"
+      model: "sonnet"
     });
 
     expect(agent.calls).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ cwd: leafWorktreePath("a"), model: "gemini-2.5-flash" }),
-        expect.objectContaining({ cwd: leafWorktreePath("b"), model: "gemini-default" }),
-        expect.objectContaining({ cwd: leafWorktreePath("root"), model: "gemini-2.5-pro" })
+        expect.objectContaining({ cwd: leafWorktreePath("a"), model: "haiku" }),
+        expect.objectContaining({ cwd: leafWorktreePath("b"), model: "sonnet" }),
+        expect.objectContaining({ cwd: leafWorktreePath("root"), model: "opus" })
       ])
     );
     expect(traceStore.findByType("executor_started")).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           taskId: "a",
-          payload: expect.objectContaining({ executorId: "gemini-cli", model: "gemini-2.5-flash" })
+          payload: expect.objectContaining({ executorId: "claude-code-cli", model: "haiku" })
         })
       ])
     );
     expect(traceStore.findByType("executor_repair_started")[0]?.payload).toMatchObject({
-      executorId: "gemini-cli",
-      model: "gemini-2.5-pro"
+      executorId: "claude-code-cli",
+      model: "opus"
     });
   });
 

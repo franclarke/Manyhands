@@ -43,29 +43,27 @@ export type TierRoutes = Record<ComplexityTier, ExecutorSelection[]>;
 
 /**
  * Default lanes. Order inside each tier is preference; unavailable CLIs are
- * skipped at runtime, so a gemini-only machine degrades to gemini everywhere.
+ * skipped at runtime, so a claude-only machine degrades to claude everywhere.
  */
 export const DEFAULT_TIER_ROUTES: TierRoutes = {
   trivial: [
-    { executorId: "gemini-cli", model: "gemini-2.5-flash" },
     { executorId: "claude-code-cli", model: "haiku" },
-    { executorId: "gemini-cli", model: "gemini-2.5-pro" }
+    { executorId: "codex-cli", model: "gpt-5-codex" },
+    { executorId: "claude-code-cli", model: "sonnet" }
   ],
   standard: [
-    { executorId: "gemini-cli", model: "gemini-2.5-pro" },
     { executorId: "claude-code-cli", model: "sonnet" },
     { executorId: "codex-cli", model: "gpt-5-codex" }
   ],
   complex: [
     { executorId: "claude-code-cli", model: "sonnet" },
     { executorId: "codex-cli", model: "gpt-5-codex" },
-    { executorId: "gemini-cli", model: "gemini-2.5-pro" }
+    { executorId: "claude-code-cli", model: "opus" }
   ],
   critical: [
     { executorId: "claude-code-cli", model: "opus" },
     { executorId: "codex-cli", model: "gpt-5-codex" },
-    { executorId: "claude-code-cli", model: "sonnet" },
-    { executorId: "gemini-cli", model: "gemini-2.5-pro" }
+    { executorId: "claude-code-cli", model: "sonnet" }
   ]
 };
 

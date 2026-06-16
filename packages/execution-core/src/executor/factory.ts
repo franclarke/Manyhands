@@ -1,7 +1,6 @@
 import { CliAgentExecutor, type CliExecutorDeps, type CliExecutorProfile } from "./cli-executor";
 import { CLAUDE_CODE_PROFILE } from "./profiles/claude-code";
 import { CODEX_PROFILE } from "./profiles/codex";
-import { GEMINI_PROFILE } from "./profiles/gemini";
 import { getExecutorDescriptor, type ExecutorId, type ExecutorSelection } from "./registry";
 import type { AgentExecutor } from "./types";
 
@@ -14,7 +13,7 @@ export interface AgentExecutorFactory {
  * profile + a registry descriptor — never a code change in the factory itself.
  */
 const CLI_PROFILES: ReadonlyMap<ExecutorId, CliExecutorProfile> = new Map(
-  [GEMINI_PROFILE, CLAUDE_CODE_PROFILE, CODEX_PROFILE].map((profile) => [profile.id, profile])
+  [CLAUDE_CODE_PROFILE, CODEX_PROFILE].map((profile) => [profile.id, profile])
 );
 
 /** Per-executor dependency overrides (binary path, injected spawn for tests). */
