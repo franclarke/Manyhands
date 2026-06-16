@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { RunValidationError, claimRunMutation, resumePlanningPipeline } from "@/lib/server/runs";
 import { answerExecutionGate } from "@/lib/server/runs/execution-gate-service";
-import { publishRunEvent } from "@/lib/server/runs/event-bus";
+import { appendRunStatusChanged } from "@/lib/server/runs/run-status-events";
 import { planningResumeFor } from "@/lib/server/runs/planning-host";
 import { resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
@@ -83,7 +83,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         return next;
       }
     );
-    publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: new Date().toISOString() });
+    await appendRunStatusChanged(saved, { actor: "human" });
 
     // Native resume: the answer travels as Command({ resume }) into the
     // suspended planning gate (the degraded-plan gate takes a typed action).

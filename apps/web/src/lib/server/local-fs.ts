@@ -21,6 +21,19 @@ export interface LocalDirectoryListing {
   git?: LocalGitRepoInfo;
 }
 
+export async function pickFolderNative(): Promise<string | null> {
+  if (process.platform === "win32") {
+    return pickFolderWindows();
+  }
+  if (process.platform === "darwin") {
+    return pickFolderMac();
+  }
+  if (process.platform === "linux") {
+    return pickFolderLinux();
+  }
+  throw new Error(`Native folder picker is not available on ${process.platform}`);
+}
+
 export async function browseLocalDirectories(inputPath?: string): Promise<LocalDirectoryListing> {
   const cwd = path.resolve(inputPath && inputPath.length > 0 ? inputPath : os.homedir());
   const stats = await stat(cwd);
@@ -84,4 +97,88 @@ async function isGitRepoRoot(dir: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function pickFolderWindows(): Promise<string | null> {
+  const script = `
+Add-Type -AssemblyName System.Windows.Forms
+$form = New-Object System.Windows.Forms.Form
+$form.TopMost = $true
+$form.ShowInTaskbar = $false
+$form.WindowState = 'Minimized'
+$dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+$dialog.Description = 'Choose repository folder'
+$dialog.ShowNewFolderButton = $true
+$result = $dialog.ShowDialog($form)
+if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+  [Console]::Out.WriteLine($dialog.SelectedPath)
+  exit 0
+}
+exit 2
+`;
+
+  try {
+    const { stdout } = await execFileAsync(
+      "powershell.exe",
+      ["-NoProfile", "-STA", "-ExecutionPolicy", "Bypass", "-Command", script],
+      { windowsHide: true }
+    );
+    return normalizePickedPath(stdout);
+  } catch (error) {
+    if (isProcessExitCode(error, 2)) return null;
+    throw new Error(`Could not open the Windows folder picker: ${processErrorDetail(error)}`);
+  }
+}
+
+async function pickFolderMac(): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync("osascript", [
+      "-e",
+      'POSIX path of (choose folder with prompt "Choose repository folder")'
+    ]);
+    return normalizePickedPath(stdout);
+  } catch (error) {
+    if (isProcessExitCode(error, 1) && processErrorDetail(error).toLowerCase().includes("user canceled")) {
+      return null;
+    }
+    throw new Error(`Could not open the macOS folder picker: ${processErrorDetail(error)}`);
+  }
+}
+
+async function pickFolderLinux(): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync("zenity", [
+      "--file-selection",
+      "--directory",
+      "--title=Choose repository folder"
+    ]);
+    return normalizePickedPath(stdout);
+  } catch (error) {
+    if (isProcessExitCode(error, 1)) return null;
+    if (isErrnoCode(error, "ENOENT")) {
+      throw new Error("Native folder picker is not available on Linux. Install zenity to enable folder selection.");
+    }
+    throw new Error(`Could not open the Linux folder picker: ${processErrorDetail(error)}`);
+  }
+}
+
+function normalizePickedPath(stdout: string): string | null {
+  const selected = stdout.trim();
+  return selected.length > 0 ? path.resolve(selected) : null;
+}
+
+function isProcessExitCode(error: unknown, code: number): boolean {
+  return typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === code;
+}
+
+function isErrnoCode(error: unknown, code: string): boolean {
+  return typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === code;
+}
+
+function processErrorDetail(error: unknown): string {
+  if (error !== null && typeof error === "object") {
+    const stderr = "stderr" in error ? String((error as { stderr?: unknown }).stderr ?? "").trim() : "";
+    if (stderr.length > 0) return stderr;
+  }
+  return error instanceof Error ? error.message : String(error);
 }

@@ -1,12 +1,13 @@
 import { RunLifecycleError, parseRunPatches } from "@/lib/server/runs";
 import type { RunRecord } from "@/lib/server/runs/schema";
-import { publishRunEvent } from "@/lib/server/runs/event-bus";
+import { appendRunModelEvent } from "@/lib/server/runs/run-model-event-log";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import { buildPlanReviewSummary } from "@/lib/plan-review";
 import { getRunRepository } from "./store";
 import { claimRunMutation } from "./mutation-guard";
 import { hasPlanningCheckpoint } from "./planning-host";
 import { resumePlanningPipeline } from "./planning-pipeline";
+import { appendRunStatusChanged } from "./run-status-events";
 
 export async function processPlanApproval(
   id: string,
@@ -49,7 +50,13 @@ export async function processPlanApproval(
     },
     (current) => ({ ...current, status: "approved" as const, approvedAt: current.approvedAt ?? now })
   );
-  publishRunEvent(claimed.runId, { kind: "status.changed", status: claimed.status, at: now });
+  await appendRunStatusChanged(claimed, { at: now, actor: "human" });
+  await appendRunModelEvent(claimed.runId, {
+    actor: "human",
+    at: now,
+    type: "decision.resolved",
+    payload: { decisionId: "approve_plan", choice: { action: "approve" }, actor: "human" }
+  });
 
   // Native path: deliver the approval as Command({ resume }) into the suspended
   // approvalGate; the pipeline re-projects END(status=approved) onto the record

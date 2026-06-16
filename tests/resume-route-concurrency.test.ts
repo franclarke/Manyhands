@@ -9,6 +9,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { POST as POST_PAUSE } from "@/app/api/runs/[id]/pause/route";
 import { POST as POST_RESUME } from "@/app/api/runs/[id]/resume/route";
 import { POST as POST_ANSWER } from "@/app/api/runs/[id]/answer/route";
 import { POST as POST_RESTART } from "@/app/api/runs/[id]/restart/route";
@@ -54,7 +55,9 @@ function makeRun(overrides: Partial<RunRecord> = {}): RunRecord {
 
 // Each test uses its own runId: fire-and-forget pipeline kicks from a previous
 // test can linger in the process-local runner-state for the same id.
-function post(handler: typeof POST_RESUME, runId: string, body: unknown): Promise<Response> {
+type RoutePost = (request: Request, context: { params: Promise<{ id: string }> }) => Promise<Response>;
+
+function post(handler: RoutePost, runId: string, body: unknown): Promise<Response> {
   return handler(
     new Request("http://mh.test", {
       method: "POST",
@@ -66,6 +69,47 @@ function post(handler: typeof POST_RESUME, runId: string, body: unknown): Promis
 }
 
 describe("duplicate HITL decisions at the route seam", () => {
+  it("pause: claims a running run atomically and records pausedDuring", async () => {
+    const saved = await getRunRepository().save(makeRun({ runId: "run-pause", status: "running" }));
+    const response = await post(POST_PAUSE, "run-pause", { expectedVersion: saved.version });
+    const body = (await response.json()) as { run: { status: string; pausedDuring?: string } };
+
+    expect(response.status).toBe(200);
+    expect(body.run.status).toBe("paused");
+    expect(body.run.pausedDuring).toBe("running");
+  });
+
+  it("pause: stale expectedVersion is rejected with 409", async () => {
+    const saved = await getRunRepository().save(makeRun({ runId: "run-pause-stale", status: "generating" }));
+    const response = await post(POST_PAUSE, "run-pause-stale", { expectedVersion: saved.version + 1 });
+
+    expect(response.status).toBe(409);
+    const run = await getRunRepository().get("run-pause-stale");
+    expect(run.status).toBe("generating");
+  });
+
+  it("resume: plain pause consumes once and duplicate request gets 409", async () => {
+    await getRunRepository().save(
+      makeRun({
+        runId: "run-plain-resume",
+        status: "paused",
+        pausedDuring: "running",
+        planning: { decomposition: { graph: { rootId: "root", nodes: {}, dependencies: [] } } }
+      })
+    );
+
+    const [first, second] = await Promise.all([
+      post(POST_RESUME, "run-plain-resume", {}),
+      post(POST_RESUME, "run-plain-resume", {})
+    ]);
+
+    expect([first.status, second.status].sort()).toEqual([200, 409]);
+    const winner = first.status === 200 ? first : second;
+    const body = (await winner.json()) as { run: { status: string; pausedDuring?: string } };
+    expect(body.run.status).toBe("running");
+    expect(body.run.pausedDuring).toBeUndefined();
+  });
+
   it("resume: one 200, one structured 409 for the same gate decision", async () => {
     await getRunRepository().save(
       makeRun({

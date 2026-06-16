@@ -39,6 +39,7 @@ import {
 import { applyFinalPatch } from "./final-apply";
 import { assertTransition } from "./lifecycle";
 import { LiveExecutionTraceStore } from "./live-trace-store";
+import { waitWhilePlainPaused } from "./pause-control";
 import { PreflightError, runPreflight } from "./preflight";
 import { acquireRepoLock, releaseRepoLock } from "./repo-lock";
 import {
@@ -57,6 +58,7 @@ import { type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
 import { markRunnerActive, markRunnerInactive } from "./runner-state";
 import { startBudgetWatchdog } from "./runner-watchdog";
+import { appendRunStatusChanged } from "./run-status-events";
 import type {
     ExecutionConfigInput,
     NodeReview,
@@ -220,6 +222,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
         executionConfig: run.executionConfig ?? {},
         traceStore,
         signal: abortController.signal,
+        onBatchBoundary: () => waitWhilePlainPaused(runId, "running", abortController.signal),
         model: run.model
       });
 
@@ -233,6 +236,12 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
           execution: result,
           ...(cancelTraces.length > 0 ? { executionTraces: [...(afterEngine.executionTraces ?? []), ...cancelTraces] } : {})
         });
+        return;
+      }
+      await waitWhilePlainPaused(runId, "running", abortController.signal);
+      const afterPause = await getRunRepository().get(runId);
+      if (afterPause.status === "interrupted") {
+        console.log(`[Runner] Run ${runId} interrupted after pause hold; keeping partial execution.`);
         return;
       }
 
@@ -301,7 +310,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
         });
       } else {
         console.warn(`[Runner] Persisting failed run ${runId}`);
-        await getRunRepository().save({
+        const saved = await getRunRepository().save({
           ...currentRun,
           status: result.status === "failed" ? "failed" : "interrupted",
           failedDuring: "running",
@@ -309,7 +318,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
           ...(executionTraces.length > 0 ? { executionTraces: [...(currentRun.executionTraces ?? []), ...executionTraces] } : {}),
           errorMessage: result.status === "failed" ? "Execution failed" : "Budget exceeded"
         });
-        publishRunEvent(runId, { kind: "status.changed", status: result.status === "failed" ? "failed" : "interrupted", at: new Date().toISOString() });
+        await appendRunStatusChanged(saved);
       }
       return;
     }
@@ -439,6 +448,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     };
 
     const outcome = await driveExecution(host, alreadyStarted ? null : initialState, abortController.signal);
+    await waitWhilePlainPaused(runId, "running", abortController.signal);
     await settleExecutionOutcome(runId, host, outcome, provisioned!, options);
   } catch (error) {
     console.error(`[Runner] FALLO la ejecucion del run "${runId}":`, error);
@@ -473,18 +483,18 @@ async function settleExecutionException(runId: string, error: unknown): Promise<
   const precondition = error instanceof PreflightError || error instanceof RepoNotConfiguredError;
   const recoverable = !precondition && (await hasExecutionCheckpoint(runId).catch(() => false));
   if (recoverable) {
-    await getRunRepository().save({
+    const saved = await getRunRepository().save({
       ...run,
       status: "interrupted",
       interruptedDuring: "running",
       errorMessage: `interrupted: ${message} (reanudable con restart — el checkpoint del último paso completo sobrevive)`
     });
-    publishRunEvent(runId, { kind: "status.changed", status: "interrupted", at: new Date().toISOString() });
+    await appendRunStatusChanged(saved);
     return;
   }
 
-  await getRunRepository().save({ ...run, status: "failed", failedDuring: "running", errorMessage: message });
-  publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
+  const saved = await getRunRepository().save({ ...run, status: "failed", failedDuring: "running", errorMessage: message });
+  await appendRunStatusChanged(saved);
 }
 
 /**
@@ -540,6 +550,7 @@ export async function resumeExecutionPipeline(
     });
 
     const outcome = await driveExecution(host, resumeCommand(decision), abortController.signal);
+    await waitWhilePlainPaused(runId, "running", abortController.signal);
     await settleExecutionOutcome(runId, host, outcome, provisioned, options);
   } catch (error) {
     console.error(`[Runner] FALLO el resume de ejecucion del run "${runId}":`, error);
@@ -567,6 +578,10 @@ async function settleExecutionOutcome(
   provisioned: ProvisionedRepo,
   _options: ExecutionRunnerOptions
 ): Promise<void> {
+  if (outcome.kind === "finished") {
+    await waitWhilePlainPaused(runId, "running");
+  }
+
   if (outcome.kind === "paused") {
     console.log(`[Runner] Execution paused at ${outcome.gate.gate} gate (task ${outcome.gate.taskId}).`);
     await persistExecutionPause(runId, outcome.gate);
@@ -589,13 +604,13 @@ async function settleExecutionOutcome(
   const existing = executionResultsFromRun(currentRun);
   const artifact = buildExecutionArtifact(runId, host.taskGraph, existing.leafResults, existing.integrationResults);
   if (artifact === undefined) {
-    await getRunRepository().save({
+    const saved = await getRunRepository().save({
       ...currentRun,
       status: "failed",
       failedDuring: "running",
       errorMessage: outcome.errorMessage ?? "Execution produced no results."
     });
-    publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
+    await appendRunStatusChanged(saved);
     return;
   }
 
@@ -638,7 +653,7 @@ async function settleExecutionOutcome(
     });
   } else {
     console.warn(`[Runner] Persisting failed run ${runId}`);
-    await getRunRepository().save({
+    const saved = await getRunRepository().save({
       ...currentRun,
       status: "failed",
       failedDuring: "running",
@@ -646,7 +661,7 @@ async function settleExecutionOutcome(
       ...(validationSummary !== undefined ? { validation: validationSummary } : {}),
       errorMessage: outcome.errorMessage ?? describeExecutionFailure(result)
     });
-    publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
+    await appendRunStatusChanged(saved);
   }
 }
 
@@ -1096,7 +1111,7 @@ export async function reviewNode(
   if (run.status === "completed" || run.status === "failed") {
     assertTransition(run.status, "approved");
     run = await repo.save({ ...run, status: "approved", updatedAt: now });
-    publishRunEvent(run.runId, { kind: "status.changed", status: "approved", at: now });
+    await appendRunStatusChanged(run, { at: now, actor: "human" });
   }
 
   if (run.status !== "approved") {

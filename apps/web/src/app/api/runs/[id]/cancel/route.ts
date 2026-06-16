@@ -12,8 +12,8 @@ import {
   assertTransition,
   claimRunMutation
 } from "@/lib/server/runs";
-import { publishRunEvent } from "@/lib/server/runs/event-bus";
 import { appendRunModelEvent } from "@/lib/server/runs/run-model-event-log";
+import { appendRunStatusChanged } from "@/lib/server/runs/run-status-events";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 import type { RunRecord } from "@/lib/server/runs/schema";
@@ -72,7 +72,7 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
       cleaned = await manager.gcRun(saved.runId, { preserveBranchesFor: evidenceTaskIds(saved) });
     }
 
-    publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: now });
+    await appendRunStatusChanged(saved, { at: now, actor: "human" });
     // Awaited (not fire-and-forget): the cancellation audit must be durable
     // before the 200 lands (INV-6).
     await appendRunModelEvent(saved.runId, {

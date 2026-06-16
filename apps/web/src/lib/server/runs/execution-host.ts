@@ -45,6 +45,7 @@ import type { TaskPairRiskMatrix } from "@manyhands/conflict-risk";
 import { resolveRunsDirectory } from "./repository";
 import { publishRunEvent } from "./event-bus";
 import { publishRunModelEvent } from "./run-model-event-log";
+import { appendRunStatusChanged } from "./run-status-events";
 import {
   INTEGRATION_SUCCESS,
   collectRunValidationCommands,
@@ -55,6 +56,7 @@ import {
 import { getRunRepository } from "./store";
 import { getRunAbort } from "./run-abort-registry";
 import { claimRunMutation } from "./mutation-guard";
+import { waitWhilePlainPaused } from "./pause-control";
 import type { ProvisionedRepo } from "./repo-provisioner";
 import type { RunRecord } from "./schema";
 
@@ -446,12 +448,17 @@ export async function driveExecution(
     void _chunk;
     // Updates are persisted by the deps themselves; the stream is consumed to
     // drive the graph to its next suspension point.
-    if (signal?.aborted === true) {
+    if (isAborted(signal)) {
+      await (stream as unknown as { return?: () => Promise<unknown> }).return?.();
+      return { kind: "aborted" };
+    }
+    await waitWhilePlainPaused(host.threadConfig.configurable.thread_id, "running", signal);
+    if (isAborted(signal)) {
       await (stream as unknown as { return?: () => Promise<unknown> }).return?.();
       return { kind: "aborted" };
     }
   }
-  if (signal?.aborted === true) {
+  if (isAborted(signal)) {
     return { kind: "aborted" };
   }
 
@@ -475,6 +482,10 @@ export async function driveExecution(
     status: "failed",
     errorMessage: values?.errorMessage ?? "Execution failed during run-level validation."
   };
+}
+
+function isAborted(signal: AbortSignal | undefined): boolean {
+  return signal?.aborted === true;
 }
 
 function gateFromInterrupt(
@@ -578,7 +589,7 @@ export async function persistExecutionPause(
       : `El run alcanzó su presupuesto (${Math.round(gate.spentTokens ?? 0)} tokens / $${(gate.spentUsd ?? 0).toFixed(2)}). ` +
         `Quedan ${gate.pendingTasks?.length ?? 0} tareas pendientes. ¿Cómo querés continuar?`);
 
-  await getRunRepository().update(runId, (current) => ({
+  const saved = await getRunRepository().update(runId, (current) => ({
     ...current,
     status: "paused",
     pausedDuring: "running",
@@ -587,7 +598,7 @@ export async function persistExecutionPause(
   }));
 
   const now = new Date().toISOString();
-  publishRunEvent(runId, { kind: "status.changed", status: "paused", at: now });
+  await appendRunStatusChanged(saved, { at: now });
   publishRunModelEvent(runId, {
     actor: "system",
     at: now,
@@ -627,7 +638,7 @@ export async function clearExecutionPause(
       return next;
     }
   );
-  publishRunEvent(runId, { kind: "status.changed", status: target, at: new Date().toISOString() });
+  await appendRunStatusChanged(updated, { actor: "human" });
   return updated;
 }
 

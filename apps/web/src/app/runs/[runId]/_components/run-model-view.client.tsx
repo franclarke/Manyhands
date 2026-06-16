@@ -10,11 +10,12 @@ import { FocusPanel } from "@/components/run-model/focus-panel";
 import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
 import { ChatRuntimeProvider } from "@/components/chat/assistant-provider";
 import { ChatThread, ChatRail } from "@/components/chat/thread";
+import { Button } from "@/components/ui/button";
 import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { ArtifactTabs } from "./artifact-tabs.client";
 import { DeliveryPanel } from "./delivery-panel.client";
-import { Download } from "lucide-react";
+import { Download, Pause, Play } from "lucide-react";
 
 const SSR_NOOP_STORAGE: Pick<Storage, "getItem" | "setItem"> = {
   getItem: () => null,
@@ -208,6 +209,7 @@ function RunHeader({
 
         {/* The chat thread is the single decision channel; the header only
             SIGNALS a pending gate instead of duplicating its action. */}
+        <RunControlButton runId={runId} model={model} />
         {view.primaryAttention !== null ? (
           <StatusPill status="needs_review" label={view.primaryAttention.label} pulse />
         ) : view.stage === "review" && view.reviewEvidence ? (
@@ -222,5 +224,60 @@ function RunHeader({
         ) : null}
       </div>
     </header>
+  );
+}
+
+function RunControlButton({ runId, model }: { runId: string; model: RunModel }): React.ReactElement | null {
+  const control = model.run.control;
+  const [busy, setBusy] = useState<"pause" | "resume" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const canPause = control.status === "generating" || control.status === "running";
+  const canResume = control.status === "paused" && control.pendingHumanAction === "none";
+  if (!canPause && !canResume) return null;
+
+  const action = canPause ? "pause" : "resume";
+  const label = action === "pause" ? "Pausar" : "Reanudar";
+
+  const submit = async (): Promise<void> => {
+    setBusy(action);
+    setError(null);
+    try {
+      const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/${action}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedVersion: control.version })
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(payload.error ?? `La acción falló (${response.status}).`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <span className="relative inline-flex items-center">
+      <Button
+        variant="ghost"
+        size="sm"
+        busy={busy === action}
+        busyLabel={action === "pause" ? "Pausando" : "Reanudando"}
+        onClick={() => void submit()}
+        title={error ?? label}
+        aria-label={label}
+      >
+        {action === "pause" ? <Pause aria-hidden className="h-3.5 w-3.5" /> : <Play aria-hidden className="h-3.5 w-3.5 fill-current" />}
+        {label}
+      </Button>
+      {error !== null ? (
+        <span className="absolute right-0 top-full mt-1 max-w-[260px] rounded-[var(--r-md)] border border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] px-2 py-1 text-[11px] leading-snug text-[var(--status-failed-fg)] shadow-sm">
+          {error}
+        </span>
+      ) : null}
+    </span>
   );
 }

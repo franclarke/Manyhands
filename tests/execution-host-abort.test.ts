@@ -4,10 +4,32 @@
  * completed superstep is already persisted by LangGraph) and the outcome is
  * `aborted`, never a bogus `failed`.
  */
-import { describe, expect, it } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { driveExecution, type ExecutionHost } from "@/lib/server/runs/execution-host";
+import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
+import type { RunRecord } from "@/lib/server/runs/schema";
 
-function fakeHost(totalChunks: number, onPulled: (n: number) => void): ExecutionHost {
+let tempDir: string;
+let previousRunsDir: string | undefined;
+
+beforeEach(async () => {
+  tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-exec-host-"));
+  previousRunsDir = process.env.MANYHANDS_RUNS_DIR;
+  process.env.MANYHANDS_RUNS_DIR = path.join(tempDir, "runs");
+  resetRunRepositoryForTests();
+});
+
+afterEach(async () => {
+  if (previousRunsDir === undefined) delete process.env.MANYHANDS_RUNS_DIR;
+  else process.env.MANYHANDS_RUNS_DIR = previousRunsDir;
+  resetRunRepositoryForTests();
+  await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+});
+
+function fakeHost(totalChunks: number, onPulled: (n: number) => void, runId = "run-abort"): ExecutionHost {
   let pulled = 0;
   let returned = false;
   const stream = {
@@ -28,9 +50,26 @@ function fakeHost(totalChunks: number, onPulled: (n: number) => void): Execution
       stream: async () => stream,
       getState: async () => ({ tasks: [], values: { status: "completed" } })
     },
-    threadConfig: { configurable: { thread_id: "run-abort" } },
+    threadConfig: { configurable: { thread_id: runId } },
     taskGraph: {}
   } as unknown as ExecutionHost;
+}
+
+function makeRun(overrides: Partial<RunRecord> = {}): RunRecord {
+  return {
+    runId: "run-abort",
+    workspaceId: "ws-1",
+    granularity: "balanced",
+    model: "gemini-2.5-pro",
+    userPrompt: "Add login",
+    title: "Add login",
+    version: 0,
+    status: "created",
+    createdAt: "2026-06-11T00:00:00.000Z",
+    updatedAt: "2026-06-11T00:00:00.000Z",
+    patches: [],
+    ...overrides
+  };
 }
 
 describe("driveExecution abort awareness", () => {
@@ -62,5 +101,26 @@ describe("driveExecution abort awareness", () => {
     const host = fakeHost(0, () => undefined);
     const outcome = await driveExecution(host, null, controller.signal);
     expect(outcome).toEqual({ kind: "aborted" });
+  });
+
+  it("holds between stream chunks while the run is plain-paused", async () => {
+    const runId = "run-drive-paused";
+    await getRunRepository().save(makeRun({ runId, status: "paused", pausedDuring: "running" }));
+    const pulled: number[] = [];
+    const host = fakeHost(2, (n) => pulled.push(n), runId);
+
+    const drive = driveExecution(host, null);
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(pulled).toEqual([1]);
+
+    await getRunRepository().update(runId, (current) => {
+      const next = { ...current, status: "running" as const };
+      delete next.pausedDuring;
+      return next;
+    });
+
+    const outcome = await drive;
+    expect(pulled).toEqual([1, 2]);
+    expect(outcome).toEqual({ kind: "finished", status: "completed" });
   });
 });

@@ -56,6 +56,17 @@ export interface ExecutorSelection {
 export type Aggressiveness = "low" | "medium" | "high";
 export type Readiness = "ok" | "warning" | "error";
 export type RunOutcome = "success" | "failed" | "interrupted";
+export type RunControlStatus =
+  | "created"
+  | "generating"
+  | "paused"
+  | "needs_review"
+  | "approved"
+  | "running"
+  | "completed"
+  | "failed"
+  | "interrupted";
+export type RunControlPendingHumanAction = "none" | "question" | "decision";
 
 export interface RunConfig {
   aggressiveness: Aggressiveness;
@@ -68,6 +79,15 @@ export interface RunContext {
   repo: string;
   baseCommit: string;
   readiness: Readiness;
+}
+
+export interface RunControl {
+  status: RunControlStatus;
+  version: number;
+  pendingHumanAction: RunControlPendingHumanAction;
+  updatedAt: IsoTimestamp;
+  pausedDuring?: "generating" | "running";
+  interruptedDuring?: "generating" | "running";
 }
 
 /** A node's result is valid against these seam revisions (enables derived invalidation). */
@@ -89,6 +109,7 @@ export interface Run {
   intent: string;
   workspaceId: string;
   config: RunConfig;
+  control: RunControl;
   context?: RunContext;
   /** Pointer to the materialized snapshot (a fold cache, not a second source of truth). */
   snapshotRef?: BlobRef;
@@ -663,6 +684,15 @@ export interface RunMetricsReadyPayload {
 export interface RunCompletedPayload {
   status: RunOutcome;
 }
+
+export interface RunStatusChangedPayload {
+  status: RunControlStatus;
+  version: number;
+  pendingHumanAction: RunControlPendingHumanAction;
+  updatedAt: IsoTimestamp;
+  pausedDuring?: "generating" | "running";
+  interruptedDuring?: "generating" | "running";
+}
 /**
  * Audited cancellation (INV-2/INV-6): emitted by the cancel endpoint AFTER the
  * run's process trees were force-killed and verified, with the kill and
@@ -756,6 +786,7 @@ export interface RunEventPayloads {
   "run.evidence.ready": RunEvidenceReadyPayload;
   "run.metrics.ready": RunMetricsReadyPayload;
   "run.completed": RunCompletedPayload;
+  "run.status.changed": RunStatusChangedPayload;
   "run.cancelled": RunCancelledPayload;
   // Recovery (cold restart)
   "world.reconciled": WorldReconciledPayload;
@@ -807,6 +838,7 @@ export const RUN_EVENT_TYPES = [
   "run.evidence.ready",
   "run.metrics.ready",
   "run.completed",
+  "run.status.changed",
   "run.cancelled",
   "world.reconciled",
   "checkpoint.degraded",

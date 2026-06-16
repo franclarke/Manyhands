@@ -5,7 +5,7 @@ import {
   WorkspaceValidationError,
   getWorkspaceRepository
 } from "@/lib/server/workspaces";
-import { normalizeRepoPath } from "@/lib/server/workspaces/repo-validation";
+import { ensureRunnableRepo } from "@/lib/server/workspaces/ensure-runnable-repo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,7 +42,8 @@ async function normalizeWorkspacePayload(payload: unknown): Promise<unknown> {
   if (typeof record.repoPath !== "string" || record.repoPath.trim().length === 0) {
     return payload;
   }
-  return { ...record, repoPath: await normalizeRepoPath(record.repoPath) };
+  const repo = await ensureRunnableRepo(record.repoPath);
+  return { ...record, repoPath: repo.repoRoot, defaultBranch: repo.branch };
 }
 
 function errorResponse(error: unknown): NextResponse {

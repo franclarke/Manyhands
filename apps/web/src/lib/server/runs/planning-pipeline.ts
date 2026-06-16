@@ -19,6 +19,7 @@ import { type TraceStore } from "@manyhands/trace-store";
 import { getWorkspaceRepository } from "../workspaces";
 import { publishRunEvent } from "./event-bus";
 import { assertTransition } from "./lifecycle";
+import { waitWhilePlainPaused } from "./pause-control";
 import {
   PLAN_DEGRADED_NODE_ID,
   PLAN_DEGRADED_OPTIONS,
@@ -34,6 +35,7 @@ import { type ProvisionedRepo, type RepoProvisioner } from "./repo-provisioner";
 import { generateRunTitle, type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
 import { markRunnerActive, markRunnerInactive } from "./runner-state";
+import { appendRunStatusChanged, publishRunStatusChanged } from "./run-status-events";
 import type { ExecutionConfigInput, RunRecord, RunStatus } from "./schema";
 import { getRunRepository } from "./store";
 
@@ -45,8 +47,6 @@ export {
   hasPlanningCheckpoint,
   resetPlanningThread
 } from "./planning-host";
-
-const PAUSE_POLL_MS = 80;
 
 // Re-export for the SSE endpoint to detect orphaned runs.
 export { isRunnerActive } from "./runner-state";
@@ -105,18 +105,12 @@ export async function transitionTo(
   assertTransition(run.status, status);
   const next: RunRecord = { ...run, ...extra, status };
   const saved = await getRunRepository().save(next);
-  publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: saved.updatedAt });
+  publishRunStatusChanged(saved);
   return saved;
 }
 
 export async function waitWhilePaused(runId: string, phase: "generating" | "running"): Promise<void> {
-  while (true) {
-    const current = await getRunRepository().get(runId);
-    if (current.status !== "paused" || current.pausedDuring !== phase) {
-      return;
-    }
-    await sleep(PAUSE_POLL_MS);
-  }
+  await waitWhilePlainPaused(runId, phase);
 }
 
 export async function sleep(ms: number): Promise<void> {
@@ -172,6 +166,7 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
       : initialPlanningState(run, await resolveRepoPath(run));
 
     const outcome = await drivePlanning(host, input);
+    await waitWhilePlainPaused(runId, "generating");
     await projectPlanningOutcome(runId, outcome);
   } catch (error) {
     await failPlanning(runId, error);
@@ -204,6 +199,7 @@ export async function resumePlanningPipeline(
     const run = await getRunRepository().get(runId);
     const host = buildPlanningHost(run, options);
     const outcome = await drivePlanning(host, new Command({ resume: decision }));
+    await waitWhilePlainPaused(runId, "generating");
     await projectPlanningOutcome(runId, outcome);
   } catch (error) {
     await failPlanning(runId, error);
@@ -265,7 +261,7 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
     console.log(
       `[Runner] Planificación pausada en el nodo "${outcome.interrupt.nodeId}" para interactuar con el usuario.`
     );
-    await repo.save({
+    const saved = await repo.save({
       ...run,
       status: "paused",
       pausedDuring: "generating",
@@ -276,7 +272,7 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
       }
     });
     const now = new Date().toISOString();
-    publishRunEvent(runId, { kind: "status.changed", status: "paused", at: now });
+    await appendRunStatusChanged(saved, { at: now });
     publishRunEvent(runId, {
       kind: "planning.question",
       nodeId: outcome.interrupt.nodeId,
@@ -296,14 +292,14 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
     const question =
       `La generación del plan falló tras los reintentos: ${outcome.interrupt.errorMessage} ` +
       "¿Cómo querés continuar?";
-    await repo.save({
+    const saved = await repo.save({
       ...run,
       status: "paused",
       pausedDuring: "generating",
       pendingQuestion: { nodeId: PLAN_DEGRADED_NODE_ID, question, options }
     });
     const now = new Date().toISOString();
-    publishRunEvent(runId, { kind: "status.changed", status: "paused", at: now });
+    await appendRunStatusChanged(saved, { at: now });
     publishRunEvent(runId, {
       kind: "planning.question",
       nodeId: PLAN_DEGRADED_NODE_ID,
@@ -343,13 +339,13 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
   // Finished: the approval gate resolved, or the human aborted from the
   // degraded gate (the only INV-5-sanctioned road to "failed" here).
   if (outcome.status === "failed") {
-    await repo.save({
+    const saved = await repo.save({
       ...run,
       status: "failed",
       failedDuring: "generating",
       errorMessage: `aborted by user at plan_degraded gate: ${outcome.errorMessage ?? "plan generation failed"}`
     });
-    publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
+    await appendRunStatusChanged(saved);
     return;
   }
   if (outcome.status === "approved" && run.status !== "approved") {
@@ -364,13 +360,13 @@ async function failPlanning(runId: string, error: unknown): Promise<void> {
     .get(runId)
     .catch(() => null);
   if (run !== null) {
-    await getRunRepository().save({
+    const saved = await getRunRepository().save({
       ...run,
       status: "failed",
       failedDuring: "generating",
       errorMessage: message
     });
-    publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
+    await appendRunStatusChanged(saved);
   }
 }
 

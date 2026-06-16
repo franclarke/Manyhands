@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import {
-  RunLifecycleError,
-  RunNotFoundError,
-  RunValidationError,
   assertTransition,
-  canPause,
-  getRunRepository
+  claimRunMutation
 } from "@/lib/server/runs";
-import { publishRunEvent } from "@/lib/server/runs/event-bus";
+import { appendRunStatusChanged } from "@/lib/server/runs/run-status-events";
+import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
@@ -17,31 +14,30 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-export async function POST(_request: Request, context: RouteContext): Promise<NextResponse> {
+export async function POST(request: Request, context: RouteContext): Promise<NextResponse> {
   const { id } = await context.params;
   try {
-    const repo = getRunRepository();
-    const run = await repo.get(id);
-    if (!canPause(run.status)) {
-      throw new RunLifecycleError(`Cannot pause from status ${run.status}`);
-    }
-    const pausedDuring = run.status === "generating" ? "generating" : "running";
-    assertTransition(run.status, "paused");
+    const payload = (await request.json().catch(() => null)) as Record<string, unknown> | null;
+    const expectedVersion = typeof payload?.expectedVersion === "number" ? payload.expectedVersion : undefined;
     const now = new Date().toISOString();
-    const saved = await repo.save({ ...run, status: "paused", pausedDuring });
-    publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: now });
+    const saved = await claimRunMutation(
+      id,
+      {
+        status: ["generating", "running"],
+        ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
+      },
+      (current) => {
+        assertTransition(current.status, "paused");
+        return {
+          ...current,
+          status: "paused" as const,
+          pausedDuring: current.status === "generating" ? ("generating" as const) : ("running" as const)
+        };
+      }
+    );
+    await appendRunStatusChanged(saved, { at: now, actor: "human" });
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {
-    return errorResponse(error);
+    return runErrorResponse(error);
   }
-}
-
-function errorResponse(error: unknown): NextResponse {
-  if (error instanceof RunNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
-  if (error instanceof RunValidationError) return NextResponse.json({ error: error.message }, { status: 400 });
-  if (error instanceof RunLifecycleError) return NextResponse.json({ error: error.message }, { status: 409 });
-  return NextResponse.json(
-    { error: error instanceof Error ? error.message : String(error) },
-    { status: 500 }
-  );
 }

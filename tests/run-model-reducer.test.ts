@@ -114,7 +114,47 @@ describe("reducer — general", () => {
     expect(next.evidence).toBe(base.evidence);
   });
 
-  it.each(ALL)("8. %s model has no derived fields", (_name, fx) => {
+  it("8. run.status.changed updates run control state", () => {
+    const base = initialFor("r-status");
+    const paused = reduceRunEvent(base, {
+      seq: 1,
+      at: "2026-06-16T00:00:00.000Z",
+      runId: "r-status",
+      actor: "human",
+      type: "run.status.changed",
+      payload: {
+        status: "paused",
+        version: 2,
+        pendingHumanAction: "none",
+        updatedAt: "2026-06-16T00:00:00.000Z",
+        pausedDuring: "running"
+      }
+    });
+    expect(paused.run.control).toMatchObject({
+      status: "paused",
+      version: 2,
+      pendingHumanAction: "none",
+      pausedDuring: "running"
+    });
+
+    const running = reduceRunEvent(paused, {
+      seq: 2,
+      at: "2026-06-16T00:00:01.000Z",
+      runId: "r-status",
+      actor: "human",
+      type: "run.status.changed",
+      payload: {
+        status: "running",
+        version: 3,
+        pendingHumanAction: "none",
+        updatedAt: "2026-06-16T00:00:01.000Z"
+      }
+    });
+    expect(running.run.control.status).toBe("running");
+    expect(running.run.control.pausedDuring).toBeUndefined();
+  });
+
+  it.each(ALL)("9. %s model has no derived fields", (_name, fx) => {
     const keys = Object.keys(reduceFixture(fx));
     for (const forbidden of ["phase", "health", "wavefront", "attention", "freshness", "invalidatedNodes", "affectedByAmendment", "renderableNodeState"]) {
       expect(keys).not.toContain(forbidden);

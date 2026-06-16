@@ -7,8 +7,8 @@ import {
   type TraceEvent
 } from "@manyhands/core";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
-import { publishRunEvent } from "./event-bus";
 import { RunLifecycleError } from "./errors";
+import { publishRunStatusChanged } from "./run-status-events";
 import { getRunRepository } from "./store";
 import {
   appendPatch,
@@ -78,11 +78,7 @@ export async function persistRunPatches(input: {
   const saved = await getRunRepository().save(nextRun);
 
   if (input.run.status !== saved.status) {
-    publishRunEvent(saved.runId, {
-      kind: "status.changed",
-      status: saved.status,
-      at: saved.updatedAt
-    });
+    publishRunStatusChanged(saved);
   }
 
   return saved;

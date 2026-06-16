@@ -23,6 +23,8 @@ import {
   RunValidationError,
   claimRunMutation,
   getRunRepository,
+  runExecutionPipeline,
+  runPlanningPipeline,
   resumePlanningPipeline,
   resumeExecutionPipeline
 } from "@/lib/server/runs";
@@ -34,10 +36,11 @@ import {
 } from "@/lib/server/runs/execution-host";
 import { planningResumeFor } from "@/lib/server/runs/planning-host";
 import { replanSubtree, resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
-import { publishRunEvent } from "@/lib/server/runs/event-bus";
+import { appendRunStatusChanged } from "@/lib/server/runs/run-status-events";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 import type { RunRecord } from "@/lib/server/runs/schema";
+import { isRunnerActive } from "@/lib/server/runs/runner-state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -119,7 +122,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
           return next;
         }
       );
-      publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: new Date().toISOString() });
+      await appendRunStatusChanged(saved, { actor: "human" });
       // Native resume: the answer travels as Command({ resume }) into the
       // suspended planning gate (legacy runs without a planning checkpoint
       // fall back to re-running the pipeline).
@@ -130,11 +133,16 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     }
 
     // 4) Plain un-pause (cooperative engine pause).
+    let resumedPhase: "generating" | "running" | undefined;
     const saved = await claimRunMutation(
       id,
       { status: ["paused"], ...(expectedVersion !== undefined ? { version: expectedVersion } : {}) },
       (current) => {
-        if (current.pendingDecision !== undefined || current.pendingQuestion !== undefined) {
+        if (
+          current.pendingDecision !== undefined ||
+          current.pendingQuestion !== undefined ||
+          current.pendingReplan !== undefined
+        ) {
           throw new RunMutationConflictError(
             `Run ${id} is suspended on a gate; resuming requires a decision payload.`,
             current.status,
@@ -148,13 +156,25 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
             current.version
           );
         }
+        resumedPhase = current.pausedDuring;
         const target = current.pausedDuring === "generating" ? ("generating" as const) : ("running" as const);
         const next = { ...current, status: target } as RunRecord;
         delete next.pausedDuring;
         return next;
       }
     );
-    publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at: new Date().toISOString() });
+    await appendRunStatusChanged(saved, { actor: "human" });
+    if (!isRunnerActive(saved.runId)) {
+      if (resumedPhase === "generating") {
+        void runPlanningPipeline(saved.runId).catch((error) =>
+          console.error(`[Resume] Planning plain resume failed for run ${id}:`, error)
+        );
+      } else {
+        void runExecutionPipeline(saved.runId).catch((error) =>
+          console.error(`[Resume] Execution plain resume failed for run ${id}:`, error)
+        );
+      }
+    }
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {
     return runErrorResponse(error);

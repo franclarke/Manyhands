@@ -11,11 +11,11 @@ import {
   claimRunMutation,
   ensureRunModelEventLogForRun,
   getRunRepository,
-  publishRunEvent,
   publishRunModelEvent,
   resumePlanningPipeline,
   runExecutionPipeline
 } from "@/lib/server/runs";
+import { appendRunStatusChanged } from "@/lib/server/runs/run-status-events";
 import { processPlanApproval } from "@/lib/server/runs/plan-approval-service";
 import { planningResumeFor } from "@/lib/server/runs/planning-host";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
@@ -134,18 +134,20 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
           return nextRun;
         }
       );
-      publishRunEvent(run.runId, { kind: "status.changed", status: run.status, at: now });
+      await appendRunStatusChanged(run, { at: now, actor: "human" });
       // Native resume into the suspended planning gate (the degraded-plan
       // gate takes a typed retry/abort action).
       void resumePlanningPipeline(run.runId, planningResumeFor(nodeId, answer)).catch(() => undefined);
     }
 
-    publishRunModelEvent(run.runId, {
-      actor: "human",
-      at: now,
-      type: "decision.resolved",
-      payload: { decisionId: decision.id, choice, actor: "human" }
-    });
+    if (decision.kind !== "approve_plan") {
+      publishRunModelEvent(run.runId, {
+        actor: "human",
+        at: now,
+        type: "decision.resolved",
+        payload: { decisionId: decision.id, choice, actor: "human" }
+      });
+    }
 
     if (decision.kind === "resolve_conflict" && decision.context.conflictId !== undefined && "resolutionId" in choice) {
       publishRunModelEvent(run.runId, {

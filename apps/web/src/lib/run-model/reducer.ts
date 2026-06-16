@@ -47,6 +47,7 @@ import type {
   RunEvent,
   RunEvidenceReadyPayload,
   RunMetricsReadyPayload,
+  RunStatusChangedPayload,
   RunModel,
   ScopeDerivedPayload,
   Seam,
@@ -58,11 +59,21 @@ import type {
   WavePlannedPayload
 } from "./types";
 
+type RunSeed = Run | (Omit<Run, "control"> & { control?: Run["control"] });
+
 // ── Construction ──────────────────────────────────────────────────────────────
 
-export function createInitialRunModel(run: Run): RunModel {
+export function createInitialRunModel(run: RunSeed): RunModel {
   return {
-    run,
+    run: {
+      ...run,
+      control: run.control ?? {
+        status: "created",
+        version: 0,
+        pendingHumanAction: "none",
+        updatedAt: new Date(0).toISOString()
+      }
+    },
     nodes: new Map(),
     seams: new Map(),
     waves: new Map(),
@@ -112,6 +123,23 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
     case "run.context.resolved": {
       const p = read<RunContextResolvedPayload>(event);
       return { ...model, run: { ...model.run, context: { repo: p.repo, baseCommit: p.baseCommit, readiness: p.readiness } } };
+    }
+    case "run.status.changed": {
+      const p = read<RunStatusChangedPayload>(event);
+      return {
+        ...model,
+        run: {
+          ...model.run,
+          control: {
+            status: p.status,
+            version: p.version,
+            pendingHumanAction: p.pendingHumanAction,
+            updatedAt: p.updatedAt,
+            ...(p.pausedDuring !== undefined ? { pausedDuring: p.pausedDuring } : {}),
+            ...(p.interruptedDuring !== undefined ? { interruptedDuring: p.interruptedDuring } : {})
+          }
+        }
+      };
     }
     case "run.completed":
       // No model field for run outcome; phase/disposition is derived (PR 05).
