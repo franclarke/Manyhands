@@ -104,14 +104,20 @@ Usá los tokens y componentes existentes antes de crear nuevos.
 
 ## 6. Definición De Terminado
 
-Para cambios funcionales:
+Para cambios funcionales se trabaja **siempre en modalidad TDD (test-first)**:
 
 1. Leer el código relevante antes de editar.
-2. Mantener diffs pequeños y alineados al patrón existente.
-3. Agregar o ajustar tests donde el comportamiento cambie.
+2. Escribir primero un test que falle y fije el comportamiento esperado
+   (rojo); recién entonces implementar el cambio mínimo para que pase (verde)
+   y refactorizar. Ninguna línea de implementación se escribe antes de su test
+   en rojo.
+3. Mantener diffs pequeños y alineados al patrón existente.
 4. Correr la verificación más estrecha y luego checks más amplios si aplica.
 5. Actualizar docs afectadas en `docs/system/`, `docs/design/` o
    `docs/development/`.
+
+Para corrección de bugs, el primer paso es un test que reproduzca el bug y
+falle; el fix lo pone en verde.
 
 Comandos usuales:
 
