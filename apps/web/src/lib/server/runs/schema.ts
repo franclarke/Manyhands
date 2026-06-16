@@ -179,6 +179,14 @@ export const NodeReviewSchema = z.object({
 
 export type NodeReview = z.infer<typeof NodeReviewSchema>;
 
+export const RunValidationSummarySchema = z.object({
+  status: z.enum(["passed", "failed", "unverified"]),
+  command: z.string().optional(),
+  ranAt: z.string().datetime().optional()
+});
+
+export type RunValidationSummary = z.infer<typeof RunValidationSummarySchema>;
+
 export const RunRecordSchema = z.object({
   runId: z.string().min(1),
   workspaceId: z.string().min(1),
@@ -310,6 +318,8 @@ export const RunRecordSchema = z.object({
   planningCritic: PlanCriticResultSchema.optional(),
   /** Deterministic seam-consistency critic, computed after planning (Fase 2). */
   seamCritic: SeamCriticResultSchema.optional(),
+  /** Run-level validation verdict, surfaced so `completed` never implies an unrun check. */
+  validation: RunValidationSummarySchema.optional(),
   /** Repository index summary used to ground the planner (Fase 2). */
   repositoryGrounding: RepositoryGroundingSummarySchema.optional()
 });

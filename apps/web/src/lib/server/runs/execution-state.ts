@@ -13,12 +13,11 @@ import {
   type RunExecutionResult,
   type RunNodeExecutionResult
 } from "@manyhands/execution-core";
-import { validationCommandSafetyIssues, type ExecutionValidationCommand } from "@manyhands/contracts";
-import type { MockPlanningFlowResult } from "@manyhands/core";
+import { validationCommandSafetyIssues, type ExecutionValidationCommand, type MockPlanningFlowResult } from "@manyhands/core";
 import type { TaskGraph } from "@manyhands/task-graph";
 import type { DetectedCommands } from "../providers/command-detection";
 import type { ProvisionedRepo } from "./repo-provisioner";
-import type { RunRecord } from "./schema";
+import type { RunRecord, RunValidationSummary } from "./schema";
 
 export const INTEGRATION_SUCCESS = new Set(["success", "executor_repair_success"]);
 
@@ -101,6 +100,26 @@ export function backfillRunValidationCommands(
   if (root === undefined) return { graph };
   root.contract = { ...(root.contract ?? {}), runValidationCommands: [command] };
   return { graph: next, backfilled: command };
+}
+
+/** Summarize run-level validation for honest terminal status reporting. */
+export function deriveRunValidationSummary(
+  graph: TaskGraph,
+  outcomeStatus: string,
+  validationResult: { passed: boolean } | undefined,
+  at: string
+): RunValidationSummary | undefined {
+  const commands = collectRunValidationCommands(graph);
+  const label =
+    commands.length > 0 ? `${commands[0]!.command} ${(commands[0]!.args ?? []).join(" ")}`.trim() : undefined;
+
+  if (outcomeStatus === "completed") {
+    return label === undefined ? { status: "unverified" } : { status: "passed", command: label, ranAt: at };
+  }
+  if (validationResult?.passed === false && label !== undefined) {
+    return { status: "failed", command: label, ranAt: at };
+  }
+  return undefined;
 }
 
 /** Rebuilds the persisted execution artifact from a (possibly reduced) result set. */

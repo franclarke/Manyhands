@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TaskGraph } from "@manyhands/task-graph";
-import { backfillRunValidationCommands } from "@/lib/server/runs/execution-state";
+import { backfillRunValidationCommands, deriveRunValidationSummary } from "@/lib/server/runs/execution-state";
 import type { DetectedCommands } from "@/lib/server/providers/command-detection";
 
 function graphWithRoot(rootContract?: Record<string, unknown>): TaskGraph {
@@ -81,5 +81,34 @@ describe("backfillRunValidationCommands", () => {
     backfillRunValidationCommands(input, detected);
     const root = input.nodes[input.rootId] as { contract: { runValidationCommands?: unknown[] } };
     expect(root.contract.runValidationCommands).toBeUndefined();
+  });
+});
+
+function graphWithRunCommand(): TaskGraph {
+  return graphWithRoot({
+    runValidationCommands: [{ command: "npm", args: ["run", "test"], timeoutMs: 120_000, cwd: "worktree" }]
+  });
+}
+
+describe("deriveRunValidationSummary", () => {
+  const at = "2026-06-16T00:00:00.000Z";
+
+  it("marks completed runs with run commands as passed", () => {
+    const summary = deriveRunValidationSummary(graphWithRunCommand(), "completed", { passed: true }, at);
+    expect(summary).toEqual({ status: "passed", command: "npm run test", ranAt: at });
+  });
+
+  it("marks completed runs without run commands as unverified", () => {
+    const summary = deriveRunValidationSummary(graphWithRoot({}), "completed", undefined, at);
+    expect(summary).toEqual({ status: "unverified" });
+  });
+
+  it("marks failed runs whose run validation failed as failed", () => {
+    const summary = deriveRunValidationSummary(graphWithRunCommand(), "failed", { passed: false }, at);
+    expect(summary).toEqual({ status: "failed", command: "npm run test", ranAt: at });
+  });
+
+  it("returns undefined for failures unrelated to run validation", () => {
+    expect(deriveRunValidationSummary(graphWithRoot({}), "failed", undefined, at)).toBeUndefined();
   });
 });
