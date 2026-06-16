@@ -71,8 +71,10 @@ export type Autonomy = z.infer<typeof AutonomySchema>;
 export const RunDecompositionMetadataSchema = z.object({
   provider: z.union([
     z.literal("anthropic"),
+    z.literal("claude-code"),
+    // "gemini"/"codex" retained so RunRecords persisted before the Claude Code
+    // swap still load.
     z.literal("gemini"),
-    // "codex" retained so RunRecords persisted before the Gemini swap still load.
     z.literal("codex"),
     z.literal("deterministic")
   ]),

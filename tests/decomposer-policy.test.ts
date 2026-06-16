@@ -14,14 +14,14 @@ afterEach(() => {
 });
 
 describe("pickDecomposer", () => {
-  it("selects Gemini recursive by default without API keys", () => {
+  it("selects Claude Code recursive by default without API keys", () => {
     const selection = pickDecomposer({
       userPrompt: "anything",
-      model: "gemini-2.5-pro",
+      model: "sonnet",
       workspace: { id: "ws", slug: "ws", name: "WS", repoPath: "C:/repo", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" }
     });
-    expect(selection.provider).toBe("gemini");
-    expect(selection.model).toBe("gemini-2.5-pro");
+    expect(selection.provider).toBe("claude-code");
+    expect(selection.model).toBe("sonnet");
     expect(selection.promptTemplateVersion).toContain("recursive-decomposer");
   });
 

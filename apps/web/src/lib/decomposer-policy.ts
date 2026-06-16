@@ -1,6 +1,6 @@
 import {
   AnthropicDecomposer,
-  GeminiRecursiveDecomposer,
+  ClaudeCodeRecursiveDecomposer,
   MetadataDrivenMockDecomposer,
   RecursiveDecomposer,
   type AnthropicDecomposerResult,
@@ -19,7 +19,7 @@ import type { Workspace } from "@/lib/api-types";
  */
 export interface DecomposerSelection {
   decomposer: Decomposer;
-  provider: "anthropic" | "gemini" | "deterministic";
+  provider: "anthropic" | "claude-code" | "deterministic";
   model: string;
   promptTemplateVersion?: string;
   fallbackReason?: "no_api_key" | "forced_by_env" | "forced_by_caller";
@@ -60,7 +60,7 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   const stepTimeoutMs = positiveIntegerFromEnv("MANYHANDS_PLANNING_STEP_TIMEOUT_MS");
 
   // The recursive interface-aware decomposer is the product default. For
-  // local-first product runs, the step model is the Gemini CLI.
+  // local-first product runs, the step model is the Claude Code CLI.
   // Anthropic single-pass/recursive modes are kept only as explicit baselines.
   if (process.env.MANYHANDS_DECOMPOSER === "single-pass") {
     if (apiKey === undefined || apiKey.length === 0) {
@@ -107,7 +107,7 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   }
 
   const model = input.model;
-  const recursive = new GeminiRecursiveDecomposer({
+  const recursive = new ClaudeCodeRecursiveDecomposer({
     cwd: input.workspace?.repoPath ?? process.cwd(),
     model,
     userPrompt: input.userPrompt,
@@ -122,7 +122,7 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   });
   return {
     decomposer: recursive,
-    provider: "gemini",
+    provider: "claude-code",
     model,
     promptTemplateVersion: recursive.promptTemplateVersion
   };

@@ -216,7 +216,7 @@ export interface RunResponse {
       indexedAt?: string | undefined;
     };
     decomposition?: {
-      provider: "anthropic" | "gemini" | "codex" | "deterministic";
+      provider: "anthropic" | "claude-code" | "gemini" | "codex" | "deterministic";
       model: string;
       promptTemplateVersion?: string;
       fallbackUsed: boolean;
