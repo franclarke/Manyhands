@@ -111,4 +111,9 @@ describe("deriveRunValidationSummary", () => {
   it("returns undefined for failures unrelated to run validation", () => {
     expect(deriveRunValidationSummary(graphWithRoot({}), "failed", undefined, at)).toBeUndefined();
   });
+
+  it("passed summary carries the exact command label", () => {
+    const summary = deriveRunValidationSummary(graphWithRunCommand(), "completed", { passed: true }, at);
+    expect(summary?.command).toBe("npm run test");
+  });
 });

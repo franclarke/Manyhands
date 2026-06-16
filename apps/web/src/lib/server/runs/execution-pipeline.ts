@@ -29,6 +29,7 @@ import {
     INTEGRATION_SUCCESS,
     buildExecutionArtifact,
     computeInvalidatedTasks,
+    deriveRunValidationSummary,
     executionResultsFromRun,
     manualReadinessForTask,
     mergeNodeExecutionResult,
@@ -604,6 +605,8 @@ async function settleExecutionOutcome(
     status: outcome.status,
     ...(persistedValidation !== undefined ? { validationResult: persistedValidation } : {})
   };
+  const settledAt = new Date().toISOString();
+  const validationSummary = deriveRunValidationSummary(host.taskGraph, outcome.status, persistedValidation, settledAt);
 
   const finalApplication =
     outcome.status === "completed"
@@ -630,7 +633,8 @@ async function settleExecutionOutcome(
     await transitionTo(currentRun, "completed", {
       execution: result,
       ...(finalApplication !== undefined ? finalApplication : {}),
-      completedAt: new Date().toISOString()
+      ...(validationSummary !== undefined ? { validation: validationSummary } : {}),
+      completedAt: settledAt
     });
   } else {
     console.warn(`[Runner] Persisting failed run ${runId}`);
@@ -639,6 +643,7 @@ async function settleExecutionOutcome(
       status: "failed",
       failedDuring: "running",
       execution: result,
+      ...(validationSummary !== undefined ? { validation: validationSummary } : {}),
       errorMessage: outcome.errorMessage ?? describeExecutionFailure(result)
     });
     publishRunEvent(runId, { kind: "status.changed", status: "failed", at: new Date().toISOString() });
