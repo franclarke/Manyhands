@@ -1538,8 +1538,8 @@ export type {
   RecursiveStepStartedEvent,
   RecursiveStepStatusEvent
 } from "./llm/recursive/recursive-decomposer";
-export { GeminiRecursiveDecomposer } from "./llm/recursive/gemini-recursive-decomposer";
-export type { GeminiRecursiveDecomposerOptions } from "./llm/recursive/gemini-recursive-decomposer";
+export { ClaudeCodeRecursiveDecomposer } from "./llm/recursive/claude-code-recursive-decomposer";
+export type { ClaudeCodeRecursiveDecomposerOptions } from "./llm/recursive/claude-code-recursive-decomposer";
 export {
   RECURSIVE_DECOMPOSER_PROMPT_VERSION,
   buildStepPrompt
