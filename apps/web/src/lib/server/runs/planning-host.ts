@@ -52,6 +52,7 @@ import {
   planNodeProposedEvent,
   planNodeStatusEvent
 } from "./planning-run-model-adapter";
+import { backfillRunValidationCommands } from "./execution-state";
 import type { PlanningLiveNode, RunDecompositionMetadata, RunRecord } from "./schema";
 import { getRunRepository } from "./store";
 
@@ -417,7 +418,22 @@ async function runCriticsForRun(
   });
   const seamCritic = runSeamCritic({ graph, contracts });
 
-  await repo.save({ ...(await repo.get(runId)), planningCritic, seamCritic });
+  const latest = await repo.get(runId);
+  const latestPlanning = latest.planning as MockPlanningFlowResult | undefined;
+  let planningToPersist = latest.planning;
+  if (latestPlanning !== undefined) {
+    const { graph: backfilledGraph, backfilled } = backfillRunValidationCommands(
+      latestPlanning.decomposition.graph,
+      detectedCommands
+    );
+    if (backfilled !== undefined) {
+      planningToPersist = {
+        ...latestPlanning,
+        decomposition: { ...latestPlanning.decomposition, graph: backfilledGraph }
+      };
+    }
+  }
+  await repo.save({ ...latest, planning: planningToPersist, planningCritic, seamCritic });
 
   if (planning !== undefined) {
     publishPlanCompletionEvents(runId, planning, planningCritic.findings.map((f) => f.message));
