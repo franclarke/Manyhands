@@ -48,7 +48,7 @@ export function fixture(runId: RunId, specs: EventSpec[]): RunFixture {
 /** Shared demo config so fixtures don't repeat it. */
 export const demoConfig: RunConfig = {
   aggressiveness: "medium",
-  planningModel: "gemini-2.5-flash",
-  executionSelection: { executorId: "gemini-cli", model: "gemini-2.5-flash" },
-  repairSelection: { executorId: "gemini-cli", model: "gemini-2.5-flash" }
+  planningModel: "sonnet",
+  executionSelection: { executorId: "claude-code-cli", model: "sonnet" },
+  repairSelection: { executorId: "claude-code-cli", model: "sonnet" }
 };
