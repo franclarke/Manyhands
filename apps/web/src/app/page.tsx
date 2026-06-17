@@ -1,7 +1,7 @@
 import { CommandCenterShell } from "./(command-center)/_components/command-center-shell.client";
 import { DEFAULT_MODEL_ID } from "@/lib/models";
 import { getWorkspaceRepository } from "@/lib/server/workspaces";
-import { Flame } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,9 +13,7 @@ export default async function HomePage(): Promise<React.ReactElement> {
     <div className="flex-1 flex flex-col justify-center max-w-2xl mx-auto w-full px-6 py-12 md:py-20 bg-[var(--color-bg)]">
       {/* Branding Header */}
       <div className="flex flex-col items-center text-center mb-8">
-        <div className="w-11 h-11 rounded-lg bg-[var(--color-accent)] flex items-center justify-center text-[var(--color-accent-contrast)] mb-4">
-          <Flame className="w-5.5 h-5.5" />
-        </div>
+        <Logo type="mark" className="w-11 h-11 mb-4" />
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)] font-sans">
           ¿En qué proyecto trabajamos hoy?
         </h1>

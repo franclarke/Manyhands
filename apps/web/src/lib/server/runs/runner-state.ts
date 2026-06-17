@@ -12,6 +12,14 @@ export function markRunnerActive(runId: string): void {
   active.add(runId);
 }
 
+export function tryMarkRunnerActive(runId: string): boolean {
+  if (active.has(runId)) {
+    return false;
+  }
+  active.add(runId);
+  return true;
+}
+
 export function markRunnerInactive(runId: string): void {
   active.delete(runId);
 }

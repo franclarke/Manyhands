@@ -70,10 +70,10 @@ describe("buildCodexArgs", () => {
 });
 
 describe("Codex executor registry entry", () => {
-  it("is enabled with gpt-5-codex as default model", () => {
+  it("is enabled with gpt-5.5 as default model", () => {
     const descriptor = getExecutorDescriptor(CODEX_EXECUTOR_ID);
     expect(descriptor.enabled).toBe(true);
-    expect(descriptor.defaultModel).toBe("gpt-5-codex");
+    expect(descriptor.defaultModel).toBe("gpt-5.5");
     expect(descriptor.binaryEnvVar).toBe("MANYHANDS_CODEX_BIN");
   });
 });

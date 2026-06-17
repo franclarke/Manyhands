@@ -1,4 +1,4 @@
-import { readdir, rm } from "node:fs/promises";
+import { lstat, readdir, rm, stat, symlink, unlink } from "node:fs/promises";
 import { join } from "node:path";
 
 import { nowIso } from "@manyhands/shared";
@@ -23,6 +23,15 @@ export interface CreateWorktreeParams {
   kind: WorktreeKind;
   baseCommit: string;
 }
+
+/**
+ * Dependency directories linked from the base repo into each worktree. git
+ * worktrees never carry untracked/gitignored trees, so without this a worktree
+ * has no node_modules and `npm test` → `jest` dies with exit 127 ("command not
+ * found"). A junction (win32) / dir symlink points the worktree at the deps the
+ * human already installed, so validation runs against the same toolchain.
+ */
+const DEPENDENCY_LINK_DIRS: readonly string[] = ["node_modules"];
 
 export interface UnexpectedCommitDetection {
   committed: boolean;
@@ -89,6 +98,8 @@ export class WorktreeManager {
       });
     }
 
+    await this.linkDependencies(path, params);
+
     execLog("worktree", "worktree created", {
       task: params.taskId,
       kind: params.kind,
@@ -114,6 +125,7 @@ export class WorktreeManager {
     branch: string,
     params: CreateWorktreeParams
   ): Promise<boolean> {
+    await this.unlinkDependencies(path);
     await this.git
       .worktreeRemove({ repoRoot: this.repoRoot, worktreePath: path, force: true })
       .catch(() => undefined);
@@ -132,6 +144,59 @@ export class WorktreeManager {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  /**
+   * Link the base repo's installed dependency dirs into the worktree so
+   * validation commands resolve their binaries. Best-effort: a missing base
+   * node_modules (deps not installed) or an unsupported FS just means the agent
+   * must install deps itself — never fail worktree creation over a link.
+   */
+  private async linkDependencies(worktreePath: string, params: CreateWorktreeParams): Promise<void> {
+    for (const dir of DEPENDENCY_LINK_DIRS) {
+      const source = join(this.repoRoot, dir);
+      const target = join(worktreePath, dir);
+      try {
+        const sourceStat = await stat(source).catch(() => undefined);
+        if (sourceStat === undefined || !sourceStat.isDirectory()) continue;
+        if (await pathExists(target)) continue;
+        // "junction" on win32 needs no elevated privileges, unlike a dir symlink.
+        await symlink(source, target, process.platform === "win32" ? "junction" : "dir");
+        execLog("worktree", "linked dependency dir", {
+          task: params.taskId,
+          kind: params.kind,
+          dir
+        });
+      } catch (error) {
+        execWarn("worktree", "dependency dir link failed", {
+          task: params.taskId,
+          dir,
+          cause: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+  }
+
+  /**
+   * Remove dependency links before deleting a worktree dir. Critical on Windows:
+   * a junction left in place can make a recursive delete follow the link and
+   * wipe the base repo's node_modules. Unlinking the link (never its target) is
+   * safe and idempotent.
+   */
+  private async unlinkDependencies(worktreePath: string): Promise<void> {
+    for (const dir of DEPENDENCY_LINK_DIRS) {
+      const target = join(worktreePath, dir);
+      try {
+        const linkStat = await lstat(target).catch(() => undefined);
+        if (linkStat === undefined || !linkStat.isSymbolicLink()) continue;
+        await unlink(target);
+      } catch (error) {
+        execWarn("worktree", "dependency dir unlink failed", {
+          path: target,
+          cause: error instanceof Error ? error.message : String(error)
+        });
+      }
     }
   }
 
@@ -155,6 +220,7 @@ export class WorktreeManager {
 
   async clean(record: WorktreeRecord): Promise<WorktreeRecord> {
     try {
+      await this.unlinkDependencies(record.path);
       await this.git.worktreeRemove({
         repoRoot: this.repoRoot,
         worktreePath: record.path,
@@ -213,6 +279,7 @@ export class WorktreeManager {
       const path = join(runRoot, taskId);
       const branch = `mh/${runId}/${taskId}`;
       try {
+        await this.unlinkDependencies(path);
         await this.git.worktreeRemove({ repoRoot: this.repoRoot, worktreePath: path, force: true });
         removed.push(taskId);
       } catch (error) {
@@ -265,4 +332,12 @@ export class WorktreeManager {
     }
     return { committed: true, sha: head };
   }
+}
+
+/** True when the path exists (file, dir, or link), without throwing on ENOENT. */
+async function pathExists(target: string): Promise<boolean> {
+  return lstat(target).then(
+    () => true,
+    () => false
+  );
 }

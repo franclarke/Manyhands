@@ -22,13 +22,13 @@ Integration uses **cherry-pick** of child commits onto the parent's branch:
    - Invoke Codex with a repair prompt containing: the conflicting diff, the parent branch context, and the child's intent/goal.
    - Codex produces a resolution. The orchestrator validates scope and runs parent validation.
    - Success → `codex_repair_success`. Failure → `codex_repair_failed`.
-   - **Maximum 1 repair attempt per integration** (not per conflict). The first
-     conflicting child triggers the single repair; if a *later* child also
-     conflicts, the integration fails fast as `codex_repair_failed` without a
-     second repair. No recursive retries. (Implementation: the `repairAttempted`
-     flag in `IntegrationAgent.integrate` is integration-scoped. Locked by the
-     test "attempts only one repair per integration" in
-     `tests/execution-core-integration.test.ts`.)
+   - **Bounded repair budget per integration**. Each conflicting child may be
+     repaired independently, preserving one commit per child, until the
+     configured `maxRepairsPerIntegration` budget is exhausted (default: 4).
+     The budget replaces the previous "maximum 1 repair per integration" rule:
+     shared files such as `package.json` and config files can legitimately
+     conflict in more than one child. No recursive retries beyond each repair's
+     own bounded validation passes.
 
 3. **Integration result**:
    - All children cherry-picked cleanly → `success`.
@@ -41,7 +41,8 @@ Integration uses **cherry-pick** of child commits onto the parent's branch:
 Positive:
 - Cherry-pick preserves individual commit history — each child's work is a discrete commit on the parent branch.
 - Codex repair provides a semantic merge capability that goes beyond textual conflict resolution.
-- Single retry limit prevents infinite loops.
+- The explicit repair budget prevents infinite loops while allowing multiple
+  shared-file conflicts in one composite.
 
 Negative / accepted:
 - Cherry-pick order matters when there are inter-child dependencies. Mitigation: topological sort based on `graph.dependencies`.

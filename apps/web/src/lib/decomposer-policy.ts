@@ -1,6 +1,7 @@
 import {
   AnthropicDecomposer,
   ClaudeCodeRecursiveDecomposer,
+  CodexRecursiveDecomposer,
   MetadataDrivenMockDecomposer,
   RecursiveDecomposer,
   type AnthropicDecomposerResult,
@@ -19,7 +20,7 @@ import type { Workspace } from "@/lib/api-types";
  */
 export interface DecomposerSelection {
   decomposer: Decomposer;
-  provider: "anthropic" | "claude-code" | "deterministic";
+  provider: "anthropic" | "claude-code" | "codex-cli" | "deterministic";
   model: string;
   promptTemplateVersion?: string;
   fallbackReason?: "no_api_key" | "forced_by_env" | "forced_by_caller";
@@ -31,6 +32,7 @@ export interface PickDecomposerInput {
   workspace?: Workspace;
   userPrompt: string;
   model: string;
+  executorId?: string | undefined;
   /** Repository symbol-topology digest appended to the prompt grounding (Fase 2.1). */
   groundingDigest?: string;
   /** Skip the LLM regardless of env (used by Lab compare for reproducibility). */
@@ -107,6 +109,30 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   }
 
   const model = input.model;
+  const isCodex = input.executorId === "codex-cli";
+
+  if (isCodex) {
+    const recursive = new CodexRecursiveDecomposer({
+      cwd: input.workspace?.repoPath ?? process.cwd(),
+      model,
+      userPrompt: input.userPrompt,
+      ...(stepTimeoutMs !== undefined ? { timeoutMs: stepTimeoutMs } : {}),
+      ...(maxParallelSteps !== undefined ? { maxParallelSteps } : {}),
+      ...(maxStepAttempts !== undefined ? { maxStepAttempts } : {}),
+      ...(input.onStepStarted !== undefined ? { onStepStarted: input.onStepStarted } : {}),
+      ...(input.onStepCompleted !== undefined ? { onStepCompleted: input.onStepCompleted } : {}),
+      ...(input.onStepStatus !== undefined ? { onStepStatus: input.onStepStatus } : {}),
+      ...(workspaceHints !== undefined ? { workspaceHints } : {}),
+      ...(input.onCliOutput !== undefined ? { onCliOutput: input.onCliOutput } : {})
+    });
+    return {
+      decomposer: recursive,
+      provider: "codex-cli",
+      model,
+      promptTemplateVersion: recursive.promptTemplateVersion
+    };
+  }
+
   const recursive = new ClaudeCodeRecursiveDecomposer({
     cwd: input.workspace?.repoPath ?? process.cwd(),
     model,

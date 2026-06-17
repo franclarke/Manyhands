@@ -185,11 +185,20 @@ export function selectScopeAwareWave(input: ScopeAwareWaveInput): string[] {
   return selected.length > 0 ? selected : input.candidates.slice(0, 1);
 }
 
-/** Segment lists for every path pattern the task declared as its write scope. */
+/**
+ * Segment lists for every path pattern the task declared as its write scope.
+ *
+ * `configPaths` are deliberately excluded: shared manifests (package.json,
+ * tsconfig.json, vite/vitest.config.ts) are touched by nearly every task, yet
+ * all leaves branch from the same skeleton commit — so serializing on them
+ * never avoids the integration-time conflict, it only collapses every wave to a
+ * single task. The composer reconciles those files at integration; the wave
+ * selector should gate parallelism only on real implementation/test overlap.
+ */
 function scopeSignature(graph: TaskGraph, taskId: string): string[][] {
   const scope = graph.nodes[taskId]?.contract?.executionScope;
   if (scope === undefined) return [];
-  return [...scope.implementationPaths, ...scope.testPaths, ...scope.configPaths].map(literalSegments);
+  return [...scope.implementationPaths, ...scope.testPaths].map(literalSegments);
 }
 
 /**

@@ -35,7 +35,7 @@ export interface ModelOption {
  * Codex/GPT-5 family does (`--reasoning-effort`); Claude Code exposes only
  * `--model`, so the effort control stays hidden for it.
  */
-const EFFORT_CAPABLE_MODEL_IDS = new Set<string>(["gpt-5-codex"]);
+const EFFORT_CAPABLE_MODEL_IDS = new Set<string>(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "haiku", "sonnet", "opus"]);
 
 export const CLAUDE_CODE_EXECUTOR_ID = "claude-code-cli" satisfies ExecutorId;
 export const DEFAULT_EXECUTOR_SELECTION = {
@@ -82,14 +82,26 @@ const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
     binaryEnvVar: "MANYHANDS_CODEX_BIN",
     defaultBinary: "codex",
     enabled: true,
-    capabilities: ["execution", "repair"],
+    capabilities: ["planning", "execution", "repair"],
     usageSource: "unavailable",
-    defaultModel: "gpt-5-codex",
+    defaultModel: "gpt-5.5",
     models: [
       {
-        id: "gpt-5-codex",
-        label: "GPT-5 Codex",
-        capabilities: ["execution", "repair"],
+        id: "gpt-5.5",
+        label: "GPT-5.5",
+        capabilities: ["planning", "execution", "repair"],
+        usageSource: "unavailable"
+      },
+      {
+        id: "gpt-5.4",
+        label: "GPT-5.4",
+        capabilities: ["planning", "execution", "repair"],
+        usageSource: "unavailable"
+      },
+      {
+        id: "gpt-5.4-mini",
+        label: "GPT-5.4 Mini",
+        capabilities: ["planning", "execution", "repair"],
         usageSource: "unavailable"
       }
     ]

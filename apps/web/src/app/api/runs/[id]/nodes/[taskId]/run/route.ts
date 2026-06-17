@@ -5,8 +5,10 @@ import {
   RunValidationError,
   assertManualNodeExecutionReady,
   getRunRepository,
+  markRunnerInactive,
   runNodeExecutionPipeline
 } from "@/lib/server/runs";
+import { tryMarkRunnerActive } from "@/lib/server/runs/runner-state";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
@@ -18,14 +20,23 @@ interface RouteContext {
 
 export async function POST(_request: Request, context: RouteContext): Promise<NextResponse> {
   const { id, taskId } = await context.params;
+  let runnerClaimed = false;
   try {
     const repo = getRunRepository();
     const run = await repo.get(id);
+    if (!tryMarkRunnerActive(run.runId)) {
+      throw new RunLifecycleError(`Run ${run.runId} is being driven by an active runner.`);
+    }
+    runnerClaimed = true;
     await assertManualNodeExecutionReady(run, taskId);
 
-    void runNodeExecutionPipeline(run.runId, taskId).catch(() => undefined);
+    void runNodeExecutionPipeline(run.runId, taskId, { runnerAlreadyClaimed: true }).catch(() => undefined);
+    runnerClaimed = false;
     return NextResponse.json(toRunResponse(await repo.get(id)));
   } catch (error) {
+    if (runnerClaimed) {
+      markRunnerInactive(id);
+    }
     return errorResponse(error);
   }
 }

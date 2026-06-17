@@ -183,8 +183,14 @@ function childSettled(state: RunState, graph: TaskGraph, childId: string): boole
   }
   const integration = state.integrationResults.find((result) => result.compositeTaskId === childId);
   if (integration === undefined) return false;
+  if (INTEGRATION_SUCCESS.has(integration.status)) return true;
+  // An accepted failure only unblocks the parent when a merged commit was
+  // preserved for it to cherry-pick. Validation failures keep their commit
+  // (see IntegrationAgent); an aborted cherry-pick conflict has none, so the
+  // parent stays non-integrable rather than crashing on a missing child.
   return (
-    INTEGRATION_SUCCESS.has(integration.status) || state.acceptedIntegrationFailures.includes(childId)
+    state.acceptedIntegrationFailures.includes(childId) &&
+    integration.integrationCommitSha !== undefined
   );
 }
 
@@ -551,6 +557,13 @@ function settledResultFor(
 
   const integration = state.integrationResults.find((result) => result.compositeTaskId === childId);
   if (integration?.integrationCommitSha === undefined) return undefined;
+  // Mirror childSettled: a clean integration, or one whose failure the operator
+  // accepted, carries its merged commit forward to the parent. A non-accepted
+  // failure is never consumed (routeIntegration would surface it at the gate).
+  const usable =
+    INTEGRATION_SUCCESS.has(integration.status) ||
+    state.acceptedIntegrationFailures.includes(childId);
+  if (!usable) return undefined;
   return syntheticCompositeResult(childId, integration.integrationCommitSha);
 }
 
@@ -642,6 +655,10 @@ export interface RunValidationNodeDeps {
     repoPath: string;
     leafResults: AgentExecutionResult[];
     integrationResults: IntegrationResult[];
+    /** Leaf failures the human accepted — treated as resolved by run validation. */
+    acceptedLeafFailures: string[];
+    /** Integration failures the human accepted — treated as resolved by run validation. */
+    acceptedIntegrationFailures: string[];
   }) => Promise<{ passed: boolean; output?: string }>;
 }
 
@@ -650,18 +667,22 @@ export function makeRunValidationNode(deps: RunValidationNodeDeps) {
   return async function runValidationNode(state: RunState): Promise<RunStateUpdate> {
     const graph = requireGraph(state, "runValidationNode");
 
-    const accepted =
-      state.acceptedLeafFailures.length > 0 || state.acceptedIntegrationFailures.length > 0;
-
     const validation = await deps.validateRun({
       runId: state.runId,
       graph,
       repoPath: state.repoPath,
       leafResults: state.leafResults,
-      integrationResults: state.integrationResults
+      integrationResults: state.integrationResults,
+      acceptedLeafFailures: state.acceptedLeafFailures,
+      acceptedIntegrationFailures: state.acceptedIntegrationFailures
     });
 
-    const passed = validation.passed && !accepted && !state.finishPartial;
+    // A human-accepted failure is NOT a run failure: the operator's acceptance
+    // IS the resolution (P2b). As long as the budget wasn't force-closed and the
+    // final validation passes, the run completes. The pipeline distinguishes a
+    // run with accepted resolutions as `completed_with_accepted` for honest UX;
+    // the graph itself stays binary completed/failed.
+    const passed = validation.passed && !state.finishPartial;
     return {
       status: passed ? "completed" : "failed",
       ...(passed
@@ -669,9 +690,7 @@ export function makeRunValidationNode(deps: RunValidationNodeDeps) {
         : {
             errorMessage: state.finishPartial
               ? "Run closed partially at the budget gate; pending tasks were not executed."
-              : accepted
-                ? "Run finished with human-accepted failures."
-                : validation.output ?? "Run validation failed"
+              : validation.output ?? "Run validation failed"
           })
     };
   };

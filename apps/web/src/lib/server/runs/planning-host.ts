@@ -212,6 +212,7 @@ async function decomposePlanForRun(
     userPrompt: run.userPrompt,
     ...(groundingDigest !== undefined ? { groundingDigest } : {}),
     model: run.planningModel ?? run.model,
+    executorId: run.planningExecutorId,
     onStepStarted: async (event) => {
       livePlanningNodes.set(event.nodeId, {
         ...livePlanningNodes.get(event.nodeId),

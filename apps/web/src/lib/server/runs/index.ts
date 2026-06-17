@@ -1,6 +1,7 @@
 export * from "./errors";
 export * from "./schema";
 export * from "./repo-provisioner";
+export * from "./executor-selection";
 export * from "./lifecycle";
 export * from "./repository";
 export * from "./store";

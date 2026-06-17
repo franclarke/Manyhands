@@ -8,7 +8,7 @@ Scheduling. Entre el plan aprobado y la ejecución: convierte el DAG en una secu
 
 ## Conceptos clave
 
-- **`selectScopeAwareWave`.** Dado el *frontier* (tareas con dependencias ya resueltas), elige el subconjunto que es seguro correr en paralelo: nunca coagenda pares de riesgo `high`/`blocking`, y serializa tareas cuyos scopes de archivos (globs de `executionScope`) se solapan. Sin scope declarado = paralelismo libre (D9), pero respetando la matriz de riesgo.
+- **`selectScopeAwareWave`.** Dado el *frontier* (tareas con dependencias ya resueltas), elige el subconjunto que es seguro correr en paralelo: nunca coagenda pares de riesgo `high`/`blocking`, y serializa tareas cuyos scopes de archivos (globs de `implementationPaths`/`testPaths`) se solapan. Los `configPaths` (manifests compartidos) se excluyen del solape: serializarlos no evita el conflicto de integración (lo resuelve el composer). Sin scope declarado = paralelismo libre (D9), pero respetando la matriz de riesgo.
 - **`scheduleTasks` + políticas.** `sequential_dag`, `parallel_naive` y `risk_aware`.
 - **`applyHumanGateToSchedule`.** Aplica gates humanos deterministas sobre conflictos `high`/`blocking` (serializa o pide revisión).
 

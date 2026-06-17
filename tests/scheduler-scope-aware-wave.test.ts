@@ -42,6 +42,20 @@ function makeLeaf(id: string, scopePaths?: string[]): TaskNode {
   };
 }
 
+function makeScopedLeaf(
+  id: string,
+  scope: { implementationPaths?: string[]; testPaths?: string[]; configPaths?: string[] }
+): TaskNode {
+  const leaf = makeLeaf(id, scope.implementationPaths ?? []);
+  const contract = leaf.contract as NonNullable<TaskNode["contract"]>;
+  (contract as unknown as { executionScope: unknown }).executionScope = {
+    implementationPaths: scope.implementationPaths ?? [],
+    testPaths: scope.testPaths ?? [],
+    configPaths: scope.configPaths ?? []
+  };
+  return leaf;
+}
+
 function makeGraph(leaves: TaskNode[]): TaskGraph {
   const root: TaskNode = {
     id: "root",
@@ -88,6 +102,41 @@ describe("selectScopeAwareWave", () => {
     ]);
     const wave = selectScopeAwareWave({ graph, candidates: ["a", "b", "c"] });
     expect(wave).toEqual(["a", "c"]); // b collides with a → next wave
+  });
+
+  it("does not serialize tasks that overlap only on shared config files", () => {
+    // Shared manifests (package.json, tsconfig.json, vite.config.ts) are touched
+    // by nearly every task. Because all leaves branch from the same skeleton
+    // commit, serializing on them never avoids the integration-time conflict —
+    // it only collapses the wave to a single task. They must not gate parallelism.
+    const graph = makeGraph([
+      makeScopedLeaf("a", {
+        implementationPaths: ["src/server/**"],
+        configPaths: ["package.json", "tsconfig.json"]
+      }),
+      makeScopedLeaf("b", {
+        implementationPaths: ["src/client/**"],
+        configPaths: ["package.json", "tsconfig.json"]
+      }),
+      makeScopedLeaf("c", { configPaths: ["package.json", "vite.config.ts"] })
+    ]);
+    const wave = selectScopeAwareWave({ graph, candidates: ["a", "b", "c"] });
+    expect(wave).toEqual(["a", "b", "c"]);
+  });
+
+  it("still serializes real implementation overlap even when configs are shared", () => {
+    const graph = makeGraph([
+      makeScopedLeaf("a", {
+        implementationPaths: ["src/server/**"],
+        configPaths: ["package.json"]
+      }),
+      makeScopedLeaf("b", {
+        implementationPaths: ["src/server/routes.ts"],
+        configPaths: ["package.json"]
+      })
+    ]);
+    const wave = selectScopeAwareWave({ graph, candidates: ["a", "b"] });
+    expect(wave).toEqual(["a"]); // src/server overlap still gates; b waits
   });
 
   it("treats a mid-segment glob conservatively (partial segment dropped)", () => {

@@ -25,14 +25,28 @@ describe("model registry", () => {
     expect(EXECUTOR_OPTIONS.find((executor) => executor.id === "codex-cli")?.enabled).toBe(true);
   });
 
+  it("exposes ChatGPT Codex models gpt-5.5/5.4/5.4-mini with effort support", () => {
+    const codexModels = MODEL_OPTIONS.filter((m) => m.executorId === "codex-cli");
+    const ids = codexModels.map((m) => m.id);
+    expect(ids).toContain("gpt-5.5");
+    expect(ids).toContain("gpt-5.4");
+    expect(ids).toContain("gpt-5.4-mini");
+    expect(ids).not.toContain("gpt-5-codex");
+    for (const id of ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini"]) {
+      const model = codexModels.find((m) => m.id === id);
+      expect(model?.supportsEffort, `${id} should support effort`).toBe(true);
+      expect(model?.capabilities, `${id} should support planning`).toContain("planning");
+    }
+  });
+
   it("normalizes valid executor selections and keeps model lookup executor-scoped", () => {
     expect(normalizeExecutorOverride({ executorId: "claude-code-cli", model: "haiku" })).toEqual({
       executorId: "claude-code-cli",
       model: "haiku"
     });
-    expect(normalizeExecutorOverride({ executorId: "codex-cli", model: "gpt-5-codex" })).toEqual({
+    expect(normalizeExecutorOverride({ executorId: "codex-cli", model: "gpt-5.5" })).toEqual({
       executorId: "codex-cli",
-      model: "gpt-5-codex"
+      model: "gpt-5.5"
     });
     expect(findModelForSelection({ executorId: "claude-code-cli", model: "sonnet" })?.enabled).toBe(true);
     expect(normalizeExecutorOverride({ executorId: "claude-code-cli", model: "" })).toBeUndefined();

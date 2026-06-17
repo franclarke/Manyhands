@@ -638,6 +638,7 @@ export class RecursiveDecomposer implements Decomposer {
     const acceptance = atomic?.acceptanceCriteria ?? [`Complete: ${ctx.title}`];
     const expectedFiles = atomic?.expectedFiles ?? [];
     const forbiddenPaths = atomic?.forbiddenPaths ?? [];
+    const leafValidationCommands = (atomic?.leafValidationCommands ?? []).map(toExecutionValidationCommand);
 
     const consumed = ctx.inheritedInterfaces.filter((i) => ctx.consumes.includes(i.id));
     const produced = ctx.inheritedInterfaces.filter((i) => ctx.produces.includes(i.id));
@@ -667,6 +668,7 @@ export class RecursiveDecomposer implements Decomposer {
         forbiddenPaths,
         expectedFiles,
         acceptance,
+        leafValidationCommands,
         consumed,
         produced,
         feature: accum.feature
@@ -697,6 +699,7 @@ export class RecursiveDecomposer implements Decomposer {
       forbiddenPaths,
       expectedFiles,
       acceptance,
+      leafValidationCommands,
       consumed,
       produced,
       feature: accum.feature
@@ -745,7 +748,8 @@ export class RecursiveDecomposer implements Decomposer {
         allowedPaths: coveredPaths,
         forbiddenPaths: [],
         expectedFiles: [],
-        acceptanceCriteria: [`Complete: ${ctx.title}`]
+        acceptanceCriteria: [`Complete: ${ctx.title}`],
+        leafValidationCommands: []
       },
       attemptCount: error?.attempt ?? this.maxStepAttempts,
       state: "fallback",
@@ -1372,6 +1376,7 @@ function buildLeafContract(input: {
   forbiddenPaths: string[];
   expectedFiles: string[];
   acceptance: string[];
+  leafValidationCommands: ExecutionValidationCommand[];
   consumed: InterfaceContract[];
   produced: InterfaceContract[];
   feature: FeatureRequest;
@@ -1393,6 +1398,7 @@ function buildLeafContract(input: {
     dependencies: [],
     acceptance: input.acceptance.map((description) => ({ kind: "custom" as const, description })),
     validationCommands: [],
+    leafValidationCommands: input.leafValidationCommands,
     expectedOutput: {
       changedFiles: input.expectedFiles,
       producedSymbols: input.produced.map((i) => i.id),

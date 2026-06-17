@@ -329,6 +329,69 @@ describe("RunRunner", () => {
     expect(events).toContain("title.updated");
   }, 30000);
 
+  it("uses the Claude titler fallback when planning with Codex", async () => {
+    const runId = `${runIdBase}-codex-titler-model`;
+    const store = new JsonRunRecordStore({ directory: runsDir });
+    await store.save({
+      runId,
+      workspaceId: "ws-1",
+      granularity: "balanced",
+      model: "gpt-5.5",
+      planningModel: "gpt-5.5",
+      planningExecutorId: "codex-cli",
+      defaultExecutionSelection: { executorId: "codex-cli", model: "gpt-5.5" },
+      userPrompt: "Build a tiny calculator.",
+      title: "Build a tiny calculator.",
+      version: 0,
+      status: "created",
+      createdAt: "2026-05-26T00:00:00.000Z",
+      updatedAt: "2026-05-26T00:00:00.000Z",
+      patches: []
+    });
+
+    const models: string[] = [];
+    await runPlanningPipeline(runId, {
+      intervalMs: 0,
+      titler: async (input) => {
+        models.push(input.model);
+        return { title: "Calculator", summary: "Builds a tiny calculator." };
+      }
+    }).catch(() => undefined);
+
+    expect(models).toEqual(["sonnet"]);
+  }, 30000);
+
+  it("passes the selected Claude planning model to the titler", async () => {
+    const runId = `${runIdBase}-claude-titler-model`;
+    const store = new JsonRunRecordStore({ directory: runsDir });
+    await store.save({
+      runId,
+      workspaceId: "ws-1",
+      granularity: "balanced",
+      model: "opus",
+      planningModel: "opus",
+      planningExecutorId: "claude-code-cli",
+      userPrompt: "Build a tiny calculator.",
+      title: "Build a tiny calculator.",
+      version: 0,
+      status: "created",
+      createdAt: "2026-05-26T00:00:00.000Z",
+      updatedAt: "2026-05-26T00:00:00.000Z",
+      patches: []
+    });
+
+    const models: string[] = [];
+    await runPlanningPipeline(runId, {
+      intervalMs: 0,
+      titler: async (input) => {
+        models.push(input.model);
+        return { title: "Calculator", summary: "Builds a tiny calculator." };
+      }
+    }).catch(() => undefined);
+
+    expect(models).toEqual(["opus"]);
+  }, 30000);
+
   it("builds feature request with a clean representative title when provided", () => {
     const mockWorkspace = {
       id: "ws-1",

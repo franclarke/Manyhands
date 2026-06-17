@@ -228,6 +228,7 @@ export const AgentExecutorOptionsSchema = z.object({
   timeoutMs: z.number().int().positive(),
   bypassApprovals: z.boolean(),
   env: z.record(z.string()).optional(),
+  reasoningEffort: z.enum(["low", "medium", "high"]).optional(),
   /** Run-level cancellation: aborts the spawned process tree. Not serialized. */
   signal: z.instanceof(AbortSignal).optional(),
   /**

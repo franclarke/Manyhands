@@ -33,7 +33,12 @@ contra las tareas ya seleccionadas:
    matriz de `conflict-risk`).
 2. **Scope de archivos:** serializa pares cuyos scopes declarados (`executionScope`)
    se **solapan**. El solapamiento se calcula sobre los *segmentos literales* del
-   path antes del primer glob: si uno prefija al otro, se serializan.
+   path antes del primer glob: si uno prefija al otro, se serializan. Solo cuentan
+   `implementationPaths` y `testPaths`: los `configPaths` (manifests compartidos
+   como `package.json`/`tsconfig.json`) se **excluyen** a propósito — como todas
+   las hojas parten del mismo commit de esqueleto, serializar por ellos nunca evita
+   el conflicto de integración (lo resuelve el composer), solo colapsa la wave a una
+   tarea.
 
 El cálculo es deliberadamente **conservador hacia serializar, nunca hacia
 colisión**: ante la duda, prefiere no paralelizar. Y el frontier nunca se

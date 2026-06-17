@@ -17,7 +17,7 @@ import {
   WorkspaceNotFoundError,
   getWorkspaceRepository
 } from "@/lib/server/workspaces";
-import { findModelForSelection, type ExecutorSelection } from "@/lib/models";
+import { CLAUDE_CODE_EXECUTOR_ID, findModelForSelection, type ExecutorSelection } from "@/lib/models";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,6 +85,11 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const workspace = await getWorkspaceRepository().get(parsed.data.workspaceId); // throws WorkspaceNotFoundError → 404
 
+    const planningSelection: ExecutorSelection = {
+      executorId: parsed.data.planningExecutorId ?? CLAUDE_CODE_EXECUTOR_ID,
+      model: parsed.data.planningModel ?? parsed.data.model
+    };
+    validateExecutionSelection(planningSelection);
     validateExecutionSelection(parsed.data.defaultExecutionSelection);
     validateExecutionSelection(parsed.data.defaultRepairSelection);
 
@@ -97,6 +102,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const title = userPrompt.slice(0, 120);
+    const hasExplicitRunSelection =
+      parsed.data.defaultExecutionSelection !== undefined ||
+      parsed.data.defaultRepairSelection !== undefined;
     const record: RunRecord = {
       runId,
       workspaceId: parsed.data.workspaceId,
@@ -107,9 +115,11 @@ export async function POST(request: Request): Promise<NextResponse> {
           : {}),
       granularity: parsed.data.granularity,
       model: parsed.data.model,
-      planningModel: parsed.data.planningModel ?? parsed.data.model,
+      planningModel: planningSelection.model,
+      planningExecutorId: planningSelection.executorId,
       defaultExecutionSelection: parsed.data.defaultExecutionSelection,
       defaultRepairSelection: parsed.data.defaultRepairSelection,
+      ...(hasExplicitRunSelection ? { executionConfig: { routing: "fixed" as const } } : {}),
       autonomy: parsed.data.autonomy ?? "supervised",
       userPrompt,
       title,

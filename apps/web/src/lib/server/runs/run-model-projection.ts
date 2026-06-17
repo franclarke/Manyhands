@@ -16,6 +16,7 @@ import type {
   TestSummary
 } from "@/lib/run-model/types";
 import type { PlanningLiveNode, RunRecord } from "./schema";
+import { executionSelection, planningSelection, repairSelection } from "./executor-selection";
 
 const INTEGRATION_SUCCESS = new Set(["success", "executor_repair_success"]);
 const UNAVAILABLE = "unavailable";
@@ -55,8 +56,9 @@ interface EventWriter {
 export function buildRunModelSeed(run: RunRecord): Run {
   const g = String(run.granularity);
   const aggressiveness = g === "coarse" || g === "low" ? "low" : g === "fine" || g === "high" ? "high" : "medium";
-  const exec = run.defaultExecutionSelection ?? { executorId: "claude-code-cli", model: run.model };
-  const repair = run.defaultRepairSelection ?? exec;
+  const planning = planningSelection(run);
+  const exec = executionSelection(run);
+  const repair = repairSelection(run);
   return {
     id: run.runId,
     intent: run.userPrompt || run.title,
@@ -64,7 +66,7 @@ export function buildRunModelSeed(run: RunRecord): Run {
     control: runControlForRun(run),
     config: {
       aggressiveness,
-      planningModel: run.planningModel ?? run.model,
+      planningModel: planning.model,
       executionSelection: { executorId: exec.executorId, model: exec.model },
       repairSelection: { executorId: repair.executorId, model: repair.model }
     },
@@ -215,12 +217,13 @@ export function projectRunRecordToRunEvents(run: RunRecord): RunEvent[] {
   }
 
   if (isExecutionResult(run.execution)) {
+    const exec = executionSelection(run);
     const seamRefsByTask = builtAgainstByTask(run);
     for (const leaf of run.execution.leafResults) {
       writer.emit("agent", executionAt, "node.execution.started", {
         nodeId: leaf.taskId,
-        agent: "claude-code-cli",
-        model: run.defaultExecutionSelection?.model ?? run.model
+        agent: exec.executorId,
+        model: exec.model
       });
       if (leaf.status === "success") {
         const produces = producedRevisionFor(run, leaf.taskId);
@@ -297,9 +300,14 @@ export function projectRunRecordToRunEvents(run: RunRecord): RunEvent[] {
     });
   }
 
-  if (run.status === "completed" || run.status === "failed" || run.status === "interrupted") {
+  if (
+    run.status === "completed" ||
+    run.status === "completed_with_accepted" ||
+    run.status === "failed" ||
+    run.status === "interrupted"
+  ) {
     writer.emit("system", run.completedAt ?? run.updatedAt, "run.completed", {
-      status: run.status === "completed" ? "success" : run.status
+      status: run.status === "completed" || run.status === "completed_with_accepted" ? "success" : run.status
     });
   }
 
@@ -434,6 +442,7 @@ function isPlanApproved(run: RunRecord): boolean {
     run.status === "approved" ||
     run.status === "running" ||
     run.status === "completed" ||
+    run.status === "completed_with_accepted" ||
     (run.status === "failed" && run.failedDuring === "running")
   );
 }

@@ -19,6 +19,7 @@ export function toRunResponse(run: RunRecord): RunResponse {
   };
   if (run.validation !== undefined) payload.validation = run.validation;
   if (run.pendingDecision !== undefined) payload.pendingDecision = run.pendingDecision;
+  if (run.planningExecutorId !== undefined) payload.planningExecutorId = run.planningExecutorId;
   if (run.planningModel !== undefined) payload.planningModel = run.planningModel;
   if (run.defaultExecutionSelection !== undefined) payload.defaultExecutionSelection = run.defaultExecutionSelection;
   if (run.defaultRepairSelection !== undefined) payload.defaultRepairSelection = run.defaultRepairSelection;

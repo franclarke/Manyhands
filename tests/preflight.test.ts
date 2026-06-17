@@ -88,6 +88,43 @@ describe("runPreflight", () => {
     expect((error as PreflightError).check).toBe("cli");
     expect(porcelainCalled).toBe(false);
   });
+
+  it("checks the grounding executor before execution starts", async () => {
+    const checked: string[] = [];
+    await runPreflight(
+      {
+        ...INPUT,
+        defaultExecutionSelection: { executorId: "codex-cli", model: "gpt-5.5" },
+        groundingSelection: { executorId: "codex-cli", model: "gpt-5.5" }
+      },
+      {
+        ...OK_DEPS,
+        checkCli: async (binaryPath) => {
+          checked.push(binaryPath);
+          return true;
+        }
+      }
+    );
+
+    expect(checked.filter((binaryPath) => binaryPath === "codex")).toHaveLength(1);
+  });
+
+  it("fails preflight when the grounding executor CLI is unavailable", async () => {
+    const error = await runPreflight(
+      {
+        ...INPUT,
+        groundingSelection: { executorId: "codex-cli", model: "gpt-5.5" }
+      },
+      {
+        ...OK_DEPS,
+        checkCli: async (binaryPath) => binaryPath !== "codex"
+      }
+    ).catch((e) => e);
+
+    expect(error).toBeInstanceOf(PreflightError);
+    expect((error as PreflightError).check).toBe("cli");
+    expect((error as PreflightError).message).toContain("Codex CLI not found");
+  });
 });
 
 const READINESS_DEPS: Required<ProviderReadinessDeps> = {

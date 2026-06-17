@@ -32,6 +32,7 @@ import {
 } from "./planning-host";
 import { publishRunModelEvent } from "./run-model-event-log";
 import { type ProvisionedRepo, type RepoProvisioner } from "./repo-provisioner";
+import { titlerSelection } from "./executor-selection";
 import { generateRunTitle, type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
 import { markRunnerActive, markRunnerInactive } from "./runner-state";
@@ -142,7 +143,7 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
       const titleFn = options.titler ?? ((input) => generateRunTitle(input));
       const runTitle = await titleFn({
         userPrompt: run.userPrompt,
-        model: run.planningModel ?? run.model
+        model: titlerSelection(run).model
       }).catch((error) => {
         console.warn(
           `[Runner] Titler skipped for run ${run.runId}: ${error instanceof Error ? error.message : String(error)}`

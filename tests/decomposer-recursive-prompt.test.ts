@@ -52,4 +52,19 @@ describe("recursive decomposer prompt", () => {
     });
     expect(atLimit.user).toContain("safety limit");
   });
+
+  it("instructs leaf validation as commands instead of verification-only child agents", () => {
+    const prompt = buildStepPrompt({
+      title: "Build a task board",
+      goal: "Create state, storage, and UI for a task board",
+      aggressiveness: "medium",
+      inheritedInterfaces: [],
+      atDepthLimit: false
+    });
+
+    expect(prompt.system).toContain("leafValidationCommands");
+    expect(prompt.system).toContain("NO crees nodos cuyo único propósito sea correr tests/typecheck/build/lint");
+    expect(prompt.system).toContain("Crear una hoja solo cuando produce o modifica código fuente/tests");
+    expect(prompt.system).toContain("parentValidationCommands");
+  });
 });

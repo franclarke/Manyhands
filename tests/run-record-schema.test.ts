@@ -69,8 +69,9 @@ describe("run-record schema", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("RunStatusSchema enumerates the 9 lifecycle values", () => {
-    expect(RUN_STATUS_VALUES.length).toBe(9);
+  it("RunStatusSchema enumerates the 10 lifecycle values", () => {
+    expect(RUN_STATUS_VALUES.length).toBe(10);
+    expect(RUN_STATUS_VALUES).toContain("completed_with_accepted");
     for (const status of RUN_STATUS_VALUES) {
       expect(RunStatusSchema.safeParse(status).success).toBe(true);
     }
@@ -109,6 +110,17 @@ describe("run-record schema", () => {
       model: "claude-opus-4.7"
     });
     expect(parsed.userPrompt).toBe("");
+  });
+
+  it("RunCreateRequestSchema rejects unknown planning executor ids", () => {
+    expect(
+      RunCreateRequestSchema.safeParse({
+        workspaceId: "ws-1",
+        granularity: "balanced",
+        model: "sonnet",
+        planningExecutorId: "unknown-cli"
+      }).success
+    ).toBe(false);
   });
 
   it("rejects invalid granularity", () => {

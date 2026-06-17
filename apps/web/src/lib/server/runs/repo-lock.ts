@@ -82,10 +82,6 @@ export async function acquireRepoLock(
 
     const owner = await readRepoLock(repoRoot);
     if (owner !== undefined) {
-      if (owner.runId === runId) {
-        // Re-entrant: this run already owns the repo (e.g. resume after gate).
-        return { acquired: true, stolen: false };
-      }
       if (await ownerIsLive(owner)) {
         return { acquired: false, owner };
       }

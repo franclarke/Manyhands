@@ -47,7 +47,7 @@ export const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
     binaryEnvVar: "MANYHANDS_CLAUDE_BIN",
     defaultBinary: "claude",
     enabled: true,
-    capabilities: AGENTIC_CAPABILITIES,
+    capabilities: ["planning", "execution", "repair"],
     // `--output-format json` reports exact usage and cost per run.
     usageSource: "reported",
     defaultModel: "sonnet",
@@ -61,7 +61,7 @@ export const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
       {
         id: "sonnet",
         label: "Claude Sonnet",
-        capabilities: AGENTIC_CAPABILITIES,
+        capabilities: ["planning", "execution", "repair"],
         usageSource: "reported"
       },
       {
@@ -79,19 +79,25 @@ export const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
     binaryEnvVar: "MANYHANDS_CODEX_BIN",
     defaultBinary: "codex",
     enabled: true,
-    capabilities: AGENTIC_CAPABILITIES,
+    capabilities: ["planning", "execution", "repair"],
     usageSource: "unavailable",
-    defaultModel: "gpt-5-codex",
+    defaultModel: "gpt-5.5",
     models: [
       {
-        id: "gpt-5-codex",
-        label: "GPT-5 Codex",
+        id: "gpt-5.5",
+        label: "GPT-5.5",
+        capabilities: ["planning", "execution", "repair"],
+        usageSource: "unavailable"
+      },
+      {
+        id: "gpt-5.4",
+        label: "GPT-5.4",
         capabilities: AGENTIC_CAPABILITIES,
         usageSource: "unavailable"
       },
       {
-        id: "gpt-5",
-        label: "GPT-5",
+        id: "gpt-5.4-mini",
+        label: "GPT-5.4 Mini",
         capabilities: AGENTIC_CAPABILITIES,
         usageSource: "unavailable"
       }
@@ -158,7 +164,13 @@ export function isExecutorSelection(value: unknown): value is ExecutorSelection 
 
 export function normalizeExecutorSelection(value: unknown): ExecutorSelection | undefined {
   if (typeof value === "string" && value.trim().length > 0) {
-    return { executorId: CLAUDE_CODE_EXECUTOR_ID, model: value };
+    const model = value.trim();
+    const matches = EXECUTOR_DESCRIPTORS.flatMap((descriptor) =>
+      descriptor.models
+        .filter((candidate) => candidate.id === model)
+        .map((candidate) => ({ executorId: descriptor.id, model: candidate.id }))
+    );
+    return matches.length === 1 ? matches[0] : { executorId: CLAUDE_CODE_EXECUTOR_ID, model };
   }
   if (!isExecutorSelection(value)) {
     return undefined;

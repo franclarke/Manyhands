@@ -24,6 +24,12 @@ const SEED: Run = {
     planningModel: "sonnet",
     executionSelection: { executorId: "claude-code-cli", model: "sonnet" },
     repairSelection: { executorId: "claude-code-cli", model: "sonnet" }
+  },
+  control: {
+    status: "created",
+    version: 0,
+    pendingHumanAction: "none",
+    updatedAt: "2026-06-06T00:00:00.000Z"
   }
 };
 

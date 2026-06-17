@@ -46,6 +46,7 @@ import { resolveRunsDirectory } from "./repository";
 import { publishRunEvent } from "./event-bus";
 import { publishRunModelEvent } from "./run-model-event-log";
 import { appendRunStatusChanged } from "./run-status-events";
+import { executionSelection, repairSelection } from "./executor-selection";
 import {
   INTEGRATION_SUCCESS,
   collectRunValidationCommands,
@@ -191,6 +192,8 @@ export function buildExecutionHost(
     });
 
   const executionConfigFor = (current: RunRecord) => ExecutionConfigSchema.parse(current.executionConfig ?? {});
+  const hasExplicitRunSelection = (current: RunRecord): boolean =>
+    current.defaultExecutionSelection !== undefined || current.defaultRepairSelection !== undefined;
 
   /**
    * Complexity router over the CLIs actually installed on this machine. The
@@ -198,7 +201,7 @@ export function buildExecutionHost(
    * gemini lanes instead of failing leaves with ENOENT.
    */
   const routerFor = async (current: RunRecord): Promise<ExecutorRouter | undefined> => {
-    if (executionConfigFor(current).routing === "fixed") {
+    if (executionConfigFor(current).routing === "fixed" || hasExplicitRunSelection(current)) {
       return undefined;
     }
     availableExecutors ??= probeExecutorAvailability();
@@ -229,12 +232,14 @@ export function buildExecutionHost(
     const current = await getRunRepository().get(runId);
     const traceStore = traceStoreFactory();
     const runExecutor = makeRunExecutor(traceStore, await routerFor(current));
+    const selection = executionSelection(current);
 
     const signal = getRunAbort(runId)?.signal;
     const nodeResult = await runExecutor.runNode({
       graph: taskGraph,
       config: executionConfigFor(current),
       model: current.model,
+      defaultExecutionSelection: selection,
       runId,
       taskId: params.taskId,
       ...(signal !== undefined ? { signal } : {})
@@ -266,12 +271,14 @@ export function buildExecutionHost(
     const current = await getRunRepository().get(runId);
     const traceStore = traceStoreFactory();
     const runExecutor = makeRunExecutor(traceStore, await routerFor(current));
+    const selection = repairSelection(current);
 
     const repairSignal = getRunAbort(runId)?.signal;
     const { result, worktree } = await runExecutor.repairLeaf({
       graph: taskGraph,
       config: executionConfigFor(current),
       model: current.model,
+      defaultRepairSelection: selection,
       runId,
       taskId: params.taskId,
       validationOutput: params.validationOutput,
@@ -304,12 +311,14 @@ export function buildExecutionHost(
     const current = await getRunRepository().get(runId);
     const traceStore = traceStoreFactory();
     const runExecutor = makeRunExecutor(traceStore);
+    const selection = repairSelection(current);
 
     const integrateSignal = getRunAbort(runId)?.signal;
     const nodeResult = await runExecutor.runNode({
       graph: taskGraph,
       config: executionConfigFor(current),
       model: current.model,
+      defaultRepairSelection: selection,
       runId,
       taskId: params.compositeTaskId,
       childResults: params.childResults,
@@ -331,13 +340,23 @@ export function buildExecutionHost(
     return result;
   };
 
-  const validateRun = async (): Promise<{ passed: boolean; output?: string }> => {
+  const validateRun = async (params: {
+    acceptedLeafFailures?: string[];
+    acceptedIntegrationFailures?: string[];
+  } = {}): Promise<{ passed: boolean; output?: string }> => {
     const current = await getRunRepository().get(runId);
     const { leafResults, integrationResults } = executionResultsFromRun(current);
+    // Human-accepted failures count as resolved (P2b): the operator decided to
+    // proceed, so the precheck treats them as OK and lets run-level validation
+    // judge the integrated tree on its own merits.
+    const acceptedLeaves = new Set(params.acceptedLeafFailures ?? []);
+    const acceptedIntegrations = new Set(params.acceptedIntegrationFailures ?? []);
     const resultsOk =
       leafResults.length > 0 &&
-      leafResults.every((result) => result.status === "success") &&
-      integrationResults.every((result) => INTEGRATION_SUCCESS.has(result.status));
+      leafResults.every((result) => result.status === "success" || acceptedLeaves.has(result.taskId)) &&
+      integrationResults.every(
+        (result) => INTEGRATION_SUCCESS.has(result.status) || acceptedIntegrations.has(result.compositeTaskId)
+      );
     if (!resultsOk) {
       return { passed: false, output: "One or more tasks did not finish successfully." };
     }
@@ -426,7 +445,13 @@ export async function resetExecutionThread(runId: string): Promise<void> {
 export type ExecutionDriveOutcome =
   | { kind: "paused"; gate: NonNullable<RunRecord["pendingDecision"]> }
   | { kind: "aborted" }
-  | { kind: "finished"; status: "completed" | "failed"; errorMessage?: string };
+  | {
+      kind: "finished";
+      status: "completed" | "failed";
+      /** True when the run completed with human-accepted leaf/integration failures (P2b). */
+      acceptedResolutions?: boolean;
+      errorMessage?: string;
+    };
 
 /**
  * Stream the graph until it finishes, suspends on a gate interrupt, or the
@@ -473,9 +498,18 @@ export async function driveExecution(
     return { kind: "paused", gate: gateFromInterrupt(interrupt) };
   }
 
-  const values = state.values as { status?: string; errorMessage?: string | null } | undefined;
+  const values = state.values as
+    | {
+        status?: string;
+        errorMessage?: string | null;
+        acceptedLeafFailures?: string[];
+        acceptedIntegrationFailures?: string[];
+      }
+    | undefined;
   if (values?.status === "completed") {
-    return { kind: "finished", status: "completed" };
+    const acceptedResolutions =
+      (values.acceptedLeafFailures?.length ?? 0) > 0 || (values.acceptedIntegrationFailures?.length ?? 0) > 0;
+    return { kind: "finished", status: "completed", ...(acceptedResolutions ? { acceptedResolutions } : {}) };
   }
   return {
     kind: "finished",

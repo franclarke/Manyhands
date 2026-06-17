@@ -26,6 +26,7 @@ const LEGAL: ReadonlyArray<[RunStatus, RunStatus]> = [
   ["approved", "failed"],
   ["running", "paused"],
   ["running", "completed"],
+  ["running", "completed_with_accepted"],
   ["running", "interrupted"],
   ["running", "failed"],
   ["interrupted", "generating"],
@@ -33,6 +34,7 @@ const LEGAL: ReadonlyArray<[RunStatus, RunStatus]> = [
   ["interrupted", "failed"],
   // Re-open a finished run for post-completion review actions (Fase C).
   ["completed", "approved"],
+  ["completed_with_accepted", "approved"],
   ["failed", "approved"]
 ];
 
@@ -71,8 +73,9 @@ describe("run lifecycle", () => {
     expect(canPause("failed")).toBe(false);
   });
 
-  it("isTerminalStatus identifies completed and failed", () => {
+  it("isTerminalStatus identifies completed, completed_with_accepted and failed", () => {
     expect(isTerminalStatus("completed")).toBe(true);
+    expect(isTerminalStatus("completed_with_accepted")).toBe(true);
     expect(isTerminalStatus("failed")).toBe(true);
     expect(isTerminalStatus("running")).toBe(false);
     expect(isTerminalStatus("needs_review")).toBe(false);

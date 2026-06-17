@@ -3,6 +3,7 @@ import path from "node:path";
 import type { Actor, RunEvent, RunEventPayloads, RunEventType } from "@/lib/run-model/types";
 import type { RunRecord } from "./schema";
 import { resolveRunsDirectory } from "./repository";
+import { executionSelection, planningSelection, repairSelection } from "./executor-selection";
 import { projectRunRecordToRunEvents, runControlForRun } from "./run-model-projection";
 import { publishRunModelBusEvent } from "./run-model-event-bus";
 import { globalSingleton } from "../global-singleton";
@@ -147,6 +148,9 @@ function safeProjectRunRecordToRunEvents(run: RunRecord): RunEvent[] {
 }
 
 function minimalRunEvents(run: RunRecord): RunEvent[] {
+  const planning = planningSelection(run);
+  const exec = executionSelection(run);
+  const repair = repairSelection(run);
   const events: RunEvent[] = [
     {
       seq: 1,
@@ -159,9 +163,9 @@ function minimalRunEvents(run: RunRecord): RunEvent[] {
         workspaceId: run.workspaceId,
         config: {
           aggressiveness: run.granularity === "fine" ? "high" : run.granularity === "coarse" ? "low" : "medium",
-          planningModel: run.planningModel ?? run.model,
-          executionSelection: run.defaultExecutionSelection ?? { executorId: "claude-code-cli", model: run.model },
-          repairSelection: run.defaultRepairSelection ?? run.defaultExecutionSelection ?? { executorId: "claude-code-cli", model: run.model }
+          planningModel: planning.model,
+          executionSelection: exec,
+          repairSelection: repair
         }
       }
     }

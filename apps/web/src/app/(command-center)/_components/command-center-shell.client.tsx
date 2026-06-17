@@ -189,11 +189,13 @@ export function CommandCenterShell({
     setSubmitting(true);
     setErrorMessage(null);
     try {
+      const planningExecutorId = canPlanWithSelection ? selection.executorId : "claude-code-cli";
       const body: {
         workspaceId: string;
         granularity: string;
         model: string;
         planningModel?: string;
+        planningExecutorId?: string;
         defaultExecutionSelection?: ExecutorSelection;
         defaultRepairSelection?: ExecutorSelection;
         autonomy?: AutonomyLevel;
@@ -204,6 +206,7 @@ export function CommandCenterShell({
         granularity: granularityMode,
         model: planningModelId,
         planningModel: planningModelId,
+        planningExecutorId: planningExecutorId,
         defaultExecutionSelection: selection,
         defaultRepairSelection: selection,
         autonomy,
@@ -400,12 +403,24 @@ export function CommandCenterShell({
           className="min-h-[120px] w-full resize-y border-0 bg-transparent px-4 py-3.5 font-sans text-[14px] leading-relaxed text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-subtle)]"
         />
 
-        {/* Action bar: one model choice + granularity, status, submit */}
-        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--color-border-soft)] px-3 py-2.5">
-          <ModelPicker value={modelValue} onChange={setModelValue} />
-          {selectedModel?.supportsEffort ? <EffortControl value={effort} onChange={setEffort} /> : null}
-          <label className="flex items-center gap-1.5">
-            <span className="mh-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)]">
+        {/* Selectors Bar */}
+        <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5 border-t border-[var(--color-border-soft)] px-4 py-3.5 bg-[var(--color-bg-subtle)]/5">
+          {/* Model */}
+          <div className="flex flex-col gap-1.5">
+            <span className="mh-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)] font-medium">
+              Modelo
+            </span>
+            <ModelPicker value={modelValue} onChange={setModelValue} />
+          </div>
+
+          {/* Effort */}
+          {selectedModel?.supportsEffort ? (
+            <EffortControl value={effort} onChange={setEffort} />
+          ) : null}
+
+          {/* Granularidad */}
+          <div className="flex flex-col gap-1.5">
+            <span className="mh-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)] font-medium">
               Granularidad
             </span>
             <select
@@ -415,7 +430,7 @@ export function CommandCenterShell({
                 const val = event.target.value;
                 if (isGranularityLevel(val)) setGranularity(val);
               }}
-              className="mh-select h-8 min-w-0 text-[12px]"
+              className="mh-select h-8 min-w-[100px] text-[12px]"
             >
               {GRANULARITY_DISPLAY_OPTIONS.filter((opt) => !opt.disabled).map((option) => (
                 <option key={option.id} value={option.id}>
@@ -423,9 +438,11 @@ export function CommandCenterShell({
                 </option>
               ))}
             </select>
-          </label>
-          <label className="flex items-center gap-1.5">
-            <span className="mh-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)]">
+          </div>
+
+          {/* Autonomía */}
+          <div className="flex flex-col gap-1.5">
+            <span className="mh-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)] font-medium">
               Autonomía
             </span>
             <select
@@ -433,7 +450,7 @@ export function CommandCenterShell({
               title={AUTONOMY_OPTIONS.find((opt) => opt.id === autonomy)?.hint}
               value={autonomy}
               onChange={(event) => setAutonomy(event.target.value as AutonomyLevel)}
-              className="mh-select h-8 min-w-0 text-[12px]"
+              className="mh-select h-8 min-w-[110px] text-[12px]"
             >
               {AUTONOMY_OPTIONS.map((option) => (
                 <option key={option.id} value={option.id} title={option.hint}>
@@ -441,9 +458,30 @@ export function CommandCenterShell({
                 </option>
               ))}
             </select>
-          </label>
+          </div>
+        </div>
 
-          <div className="ml-auto flex items-center gap-2.5">
+        {/* Footer Action Bar */}
+        <div className="flex items-center justify-between gap-4 border-t border-[var(--color-border-soft)] bg-[var(--color-bg-subtle)]/20 px-4 py-2.5 rounded-b-[var(--r-xl)]">
+          {/* Cost estimate & Warning Metadata */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--color-text-subtle)]">
+            {costEstimate !== undefined ? (
+              <span title="Estimación heurística previa: los tokens reales se conocen recién al ejecutar.">
+                Costo estimado{" "}
+                <span className="text-[var(--color-text-muted)] font-medium">
+                  ~{formatUsd(costEstimate.lowUsd)}–{formatUsd(costEstimate.highUsd)}
+                </span>
+              </span>
+            ) : null}
+            {!canPlanWithSelection ? (
+              <span className="text-[var(--color-text-faint)]">
+                {costEstimate !== undefined ? "· " : ""}Planifica con Claude Code {DEFAULT_PLANNING_MODEL}
+              </span>
+            ) : null}
+          </div>
+
+          {/* Action button & Status */}
+          <div className="flex items-center gap-2.5">
             <StatusIcon
               icon={<FolderGit2 aria-hidden className="h-4 w-4" />}
               tone={hasLocalRepo ? "ok" : "error"}
@@ -455,33 +493,23 @@ export function CommandCenterShell({
               title={readinessTooltip}
             />
             {startBlockReason !== null && hasPrompt && !submitting ? (
-              <span className="text-[11.5px] text-[var(--color-text-subtle)]">{startBlockReason}</span>
+              <span className="text-[11.5px] text-[var(--color-text-subtle)] mr-1">{startBlockReason}</span>
             ) : null}
-            <Button variant="primary" size="sm" disabled={!canStart} busy={submitting} busyLabel="Generando…" onClick={() => void handleStart()}>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={!canStart}
+              busy={submitting}
+              busyLabel="Generando…"
+              onClick={() => void handleStart()}
+            >
               Generar plan
-              <kbd className="mh-mono ml-0.5 rounded-sm bg-[color-mix(in_srgb,var(--color-accent-contrast)_16%,transparent)] px-1 py-px text-[10px] font-normal leading-none">
+              <kbd className="mh-mono ml-1.5 rounded-sm bg-[color-mix(in_srgb,var(--color-accent-contrast)_16%,transparent)] px-1 py-px text-[10px] font-normal leading-none">
                 ⌘↵
               </kbd>
             </Button>
           </div>
         </div>
-
-        {/* Meta: cost estimate + planning fallback note */}
-        {(costEstimate !== undefined || !canPlanWithSelection) ? (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-b-[var(--r-xl)] border-t border-[var(--color-border-soft)] bg-[var(--color-bg-subtle)] px-3.5 py-2 text-[11px] text-[var(--color-text-subtle)]">
-            {costEstimate !== undefined ? (
-              <span title="Estimación heurística previa: los tokens reales se conocen recién al ejecutar.">
-                Costo estimado{" "}
-                <span className="text-[var(--color-text-muted)]">
-                  ~{formatUsd(costEstimate.lowUsd)}–{formatUsd(costEstimate.highUsd)}
-                </span>
-              </span>
-            ) : null}
-            {!canPlanWithSelection ? (
-              <span>· Planifica con Claude Code {DEFAULT_PLANNING_MODEL} (el modelo elegido solo ejecuta)</span>
-            ) : null}
-          </div>
-        ) : null}
       </div>
 
       {/* ── Callouts ───────────────────────────────────────────────────── */}
@@ -589,7 +617,7 @@ const TONE_COLOR: Record<IndicatorTone, string> = {
 };
 
 function toneForUiStatus(status: UiStatus): IndicatorTone {
-  if (status === "completed") return "ok";
+  if (status === "completed" || status === "completed_with_accepted") return "ok";
   if (status === "blocked") return "warning";
   if (status === "failed") return "error";
   return "muted";

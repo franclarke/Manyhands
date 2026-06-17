@@ -64,6 +64,7 @@ export type RunControlStatus =
   | "approved"
   | "running"
   | "completed"
+  | "completed_with_accepted"
   | "failed"
   | "interrupted";
 export type RunControlPendingHumanAction = "none" | "question" | "decision";

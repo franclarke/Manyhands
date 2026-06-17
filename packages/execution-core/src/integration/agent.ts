@@ -52,7 +52,10 @@ export interface IntegrationRepairConfig {
   model?: string;
   timeoutMs: number;
   bypassApprovals?: boolean;
+  maxRepairsPerIntegration?: number;
 }
+
+const DEFAULT_MAX_REPAIRS_PER_INTEGRATION = 4;
 
 /** What a child task set out to do — feeds the Composer's semantic repair. */
 export interface ChildIntent {
@@ -101,7 +104,7 @@ export interface IntegrationParams {
 
 /**
  * Integrates completed children into the parent branch via cherry-pick, with a
- * single agent repair attempt per conflict (D8 / ADR-0025). git diff stays the
+ * bounded agent repair budget for conflicts (D8 / ADR-0025). git diff stays the
  * source of truth (D5) and the orchestrator — never the agent — commits (D6).
  */
 export class IntegrationAgent {
@@ -156,50 +159,67 @@ export class IntegrationAgent {
       return this.finalize(params, "child_failed", { repairAttempted: false });
     }
 
+    const missingCommitChild = childResults.find((child) => child.commitSha === undefined);
+    if (missingCommitChild) {
+      execWarn("integrate", "skipping integration: successful child has no commit", {
+        task: compositeTaskId,
+        child: missingCommitChild.taskId,
+        childStatus: missingCommitChild.status
+      });
+      return this.finalize(params, "child_failed", {
+        repairAttempted: false,
+        preMergeFindings: [
+          {
+            severity: "warning",
+            code: "missing_child_commit",
+            message: `Child ${missingCommitChild.taskId} reported success without a commitSha.`,
+            files: []
+          }
+        ]
+      });
+    }
+
     // Pre-merge compatibility check (Fase 3.1): a deterministic diagnosis that
     // travels into the repair prompt and onto the result, computed before we
-    // spend the single repair attempt.
+    // spend repair executor time.
     const preMergeFindings = computePreMergeFindings({
       childResults,
       ...(params.childIntents !== undefined ? { childIntents: params.childIntents } : {})
     });
 
-    let repairAttempted = false;
+    const maxRepairs = normalizeMaxRepairsPerIntegration(params.repair.maxRepairsPerIntegration);
+    let repairsUsed = 0;
     let anyRepairSucceeded = false;
     let repairResult: AgentExecutionResult | undefined;
 
     for (const child of childResults) {
-      if (!child.commitSha) {
-        execWarn("integrate", "skipping child without commit", {
-          task: compositeTaskId,
-          child: child.taskId,
-          childStatus: child.status
-        });
-        continue;
+      const commitSha = child.commitSha;
+      if (commitSha === undefined) {
+        throw new Error(`Invariant violation: successful child ${child.taskId} has no commitSha after validation.`);
       }
 
       execLog("integrate", "cherry-pick start", {
         task: compositeTaskId,
         child: child.taskId,
-        commit: child.commitSha
+        commit: commitSha
       });
       this.traceStore.append({
         type: "cherry_pick_attempted",
         actor: "system",
         taskId: compositeTaskId,
-        payload: { childTaskId: child.taskId, commitSha: child.commitSha }
+        payload: { childTaskId: child.taskId, commitSha }
       });
 
       const outcome = await this.git.cherryPick({
         cwd: worktree.path,
-        commitSha: child.commitSha
+        commitSha
       });
       if (outcome.ok) {
         execLog("integrate", "cherry-pick ok", { task: compositeTaskId, child: child.taskId });
         continue;
       }
 
-      // Conflict: one repair attempt only.
+      // Conflict: repair this child if the integration still has budget.
       execWarn("integrate", "cherry-pick conflict", {
         task: compositeTaskId,
         child: child.taskId,
@@ -213,25 +233,39 @@ export class IntegrationAgent {
         payload: { childTaskId: child.taskId, files: outcome.conflictFiles, output: outcome.output }
       });
 
-      if (repairAttempted) {
-        execWarn("integrate", "integration failed: second conflict (only one repair allowed)", {
+      if (repairsUsed >= maxRepairs) {
+        execWarn("integrate", "integration failed: repair budget exhausted", {
           task: compositeTaskId,
           child: child.taskId,
-          files: outcome.conflictFiles
+          files: outcome.conflictFiles,
+          repairsUsed,
+          maxRepairs
         });
+        // Reaching here means an earlier conflict was already repaired
+        // successfully, so HEAD points at a real partial-integration commit
+        // (prior clean cherry-picks + the repair). Abort the conflicting
+        // cherry-pick to clean the worktree and preserve that commit — mirrors
+        // validation_failed: an operator who accepts at the conflict gate must
+        // hand the parent something to cherry-pick, otherwise the parent
+        // integration crashes with "Missing: <child>".
+        await this.git.cherryPickAbort(worktree.path);
+        const partialCommitSha = await this.git.head(worktree.path);
         return this.finalize(params, "executor_repair_failed", {
-          repairAttempted: true,
+          repairAttempted: repairsUsed > 0,
           repairResult,
+          integrationCommitSha: partialCommitSha,
           conflictDetails: { files: outcome.conflictFiles, cherryPickOutput: outcome.output },
           preMergeFindings
         });
       }
-      repairAttempted = true;
+      repairsUsed += 1;
 
       execLog("integrate", "attempting agent repair of conflict", {
         task: compositeTaskId,
         child: child.taskId,
-        model: params.repair.model
+        model: params.repair.model,
+        repairsUsed,
+        maxRepairs
       });
       const repair = await this.attemptRepair(params, child, outcome, preMergeFindings);
       repairResult = repair.result;
@@ -244,9 +278,11 @@ export class IntegrationAgent {
           timedOut: repair.result.executorTimedOut,
           stderrTail: repair.result.stderrTail
         });
+        const partialCommitSha = await this.git.head(worktree.path);
         return this.finalize(params, "executor_repair_failed", {
           repairAttempted: true,
           repairResult,
+          integrationCommitSha: partialCommitSha,
           conflictDetails: { files: outcome.conflictFiles, cherryPickOutput: outcome.output },
           preMergeFindings
         });
@@ -266,9 +302,16 @@ export class IntegrationAgent {
         exitCode: validation.exitCode,
         output: validation.output
       });
+      // The cherry-picks already committed the fully-merged tree onto the
+      // integration branch; validation failing does not unwind those commits.
+      // Preserve the commit so an operator who accepts the failure at the
+      // conflict gate hands the parent composite something to cherry-pick
+      // (otherwise the parent integration crashes with "Missing: <child>").
+      const validationFailedCommitSha = await this.git.head(worktree.path);
       return this.finalize(params, "validation_failed", {
-        repairAttempted,
+        repairAttempted: repairsUsed > 0,
         repairResult,
+        integrationCommitSha: validationFailedCommitSha,
         preMergeFindings,
         parentValidation: validation
       });
@@ -280,11 +323,11 @@ export class IntegrationAgent {
       task: compositeTaskId,
       status,
       integrationCommit: integrationCommitSha,
-      repairAttempted,
+      repairAttempted: repairsUsed > 0,
       preMergeFindings: preMergeFindings.length
     });
     return this.finalize(params, status, {
-      repairAttempted,
+      repairAttempted: repairsUsed > 0,
       repairResult,
       integrationCommitSha,
       preMergeFindings,
@@ -693,4 +736,11 @@ function requireExecutor(executor: AgentExecutor | undefined): AgentExecutor {
 
 function resolveRepairSelection(repair: IntegrationRepairConfig): ExecutorSelection {
   return repair.selection ?? resolveLegacyModelSelection(repair.model);
+}
+
+function normalizeMaxRepairsPerIntegration(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) {
+    return DEFAULT_MAX_REPAIRS_PER_INTEGRATION;
+  }
+  return Math.max(0, Math.floor(value));
 }

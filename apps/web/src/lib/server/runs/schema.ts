@@ -41,6 +41,10 @@ export const RUN_STATUS_VALUES = [
   "approved",
   "running",
   "completed",
+  // Terminal success reached with human-accepted leaf/integration failures
+  // (P2b): final-apply still runs and the result is delivered, but the state is
+  // kept distinct so the UI never claims a fully-clean run.
+  "completed_with_accepted",
   "failed",
   "interrupted"
 ] as const;
@@ -72,6 +76,7 @@ export const RunDecompositionMetadataSchema = z.object({
   provider: z.union([
     z.literal("anthropic"),
     z.literal("claude-code"),
+    z.literal("codex-cli"),
     // "gemini"/"codex" retained so RunRecords persisted before the Claude Code
     // swap still load.
     z.literal("gemini"),
@@ -195,6 +200,7 @@ export const RunRecordSchema = z.object({
   granularity: GranularityModeSchema,
   model: z.string().min(1),
   planningModel: z.string().min(1).optional(),
+  planningExecutorId: z.enum(EXECUTOR_IDS).optional(),
   defaultExecutionSelection: ExecutorSelectionSchema.optional(),
   defaultRepairSelection: ExecutorSelectionSchema.optional(),
   /** Unattendedness policy. Absent (old records) is treated as "supervised". */
@@ -340,6 +346,7 @@ export const RunCreateRequestSchema = z.object({
   granularity: GranularityModeSchema,
   model: z.string().min(1),
   planningModel: z.string().min(1).optional(),
+  planningExecutorId: z.enum(EXECUTOR_IDS).optional(),
   defaultExecutionSelection: ExecutorSelectionSchema.optional(),
   defaultRepairSelection: ExecutorSelectionSchema.optional(),
   autonomy: AutonomySchema.optional(),

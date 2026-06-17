@@ -18,6 +18,7 @@ export function buildCodexArgs(options: AgentExecutorOptions): string[] {
     "exec",
     "--model",
     options.model,
+    ...(options.reasoningEffort ? ["-c", `model_reasoning_effort="${options.reasoningEffort}"`] : []),
     ...(options.bypassApprovals
       ? ["--dangerously-bypass-approvals-and-sandbox"]
       : ["--sandbox", "workspace-write"]),

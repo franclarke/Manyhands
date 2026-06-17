@@ -1,7 +1,7 @@
 /**
  * U7 — one active pipeline per target repo.
  *
- * The lock acquisition is atomic (wx flag), re-entrant for the owning run,
+ * The lock acquisition is atomic (wx flag), blocks duplicate live owners,
  * steals stale locks (dead PID / silent owner), and never lets a foreign run
  * release someone else's lock. Preflight gains disk-space awareness and stops
  * counting ManyHands-owned artifacts as user dirt.
@@ -41,12 +41,21 @@ describe("repo lock", () => {
     }
   });
 
-  it("is re-entrant for the owning run and blocked for others while the owner lives", async () => {
+  it("blocks duplicate acquirers, including the same run, while the owner lives", async () => {
     expect((await acquireRepoLock(repoRoot, "run-a", { ownerIsLive: liveOwner })).acquired).toBe(true);
-    expect((await acquireRepoLock(repoRoot, "run-a", { ownerIsLive: liveOwner })).acquired).toBe(true);
+    const duplicate = await acquireRepoLock(repoRoot, "run-a", { ownerIsLive: liveOwner });
+    expect(duplicate.acquired).toBe(false);
+    expect((duplicate as { owner: { runId: string } }).owner.runId).toBe("run-a");
     const blocked = await acquireRepoLock(repoRoot, "run-b", { ownerIsLive: liveOwner });
     expect(blocked.acquired).toBe(false);
     expect((blocked as { owner: { runId: string } }).owner.runId).toBe("run-a");
+  });
+
+  it("steals a stale lock even when the stale owner has the same run id", async () => {
+    expect((await acquireRepoLock(repoRoot, "run-a", { ownerIsLive: liveOwner })).acquired).toBe(true);
+    const stolen = await acquireRepoLock(repoRoot, "run-a", { ownerIsLive: deadOwner });
+    expect(stolen).toEqual({ acquired: true, stolen: true });
+    expect((await readRepoLock(repoRoot))?.runId).toBe("run-a");
   });
 
   it("steals the lock of a dead owner and records the theft", async () => {

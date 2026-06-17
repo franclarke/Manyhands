@@ -37,6 +37,7 @@ import {
     resolveExecutionGraph
 } from "./execution-state";
 import { applyFinalPatch } from "./final-apply";
+import { groundingSelection } from "./executor-selection";
 import { assertTransition } from "./lifecycle";
 import { LiveExecutionTraceStore } from "./live-trace-store";
 import { waitWhilePlainPaused } from "./pause-control";
@@ -56,7 +57,7 @@ import { transitionTo } from "./planning-pipeline";
 import { reconcileExecutionWorld } from "./world-reconcile";
 import { type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
-import { markRunnerActive, markRunnerInactive } from "./runner-state";
+import { markRunnerInactive, tryMarkRunnerActive } from "./runner-state";
 import { startBudgetWatchdog } from "./runner-watchdog";
 import { appendRunStatusChanged } from "./run-status-events";
 import type {
@@ -116,6 +117,8 @@ export interface ExecutionRunnerOptions {
   provisioner?: RepoProvisioner;
   /** Injectable for tests; receives the engine's trace events to persist as evidence. */
   traceStore?: TraceStore;
+  /** Internal route seam: caller already claimed runner-state before dispatch. */
+  runnerAlreadyClaimed?: boolean;
 }
 
 async function runNodeWithDefaultEngine(input: {
@@ -154,7 +157,10 @@ async function runNodeWithDefaultEngine(input: {
  */
 export async function runExecutionPipeline(runId: string, options: ExecutionRunnerOptions = {}): Promise<void> {
   console.log(`[Runner] Starting execution pipeline for run: ${runId}`);
-  markRunnerActive(runId);
+  if (options.runnerAlreadyClaimed !== true && !tryMarkRunnerActive(runId)) {
+    console.warn(`[Runner] Execution pipeline already active for run: ${runId}`);
+    return;
+  }
   const stopHeartbeat = startHeartbeat(runId);
   let stopBudgetWatchdog: () => void = () => undefined;
   let lockedRepoRoot: string | undefined;
@@ -330,6 +336,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
         baseBranch: provisioned.baseBranch,
         legacyModel: run.model,
         graph,
+        groundingSelection: groundingSelection(run),
         ...(run.defaultExecutionSelection !== undefined
           ? { defaultExecutionSelection: run.defaultExecutionSelection }
           : {}),
@@ -385,7 +392,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       const skeletonCommit = await groundingAgent.run({
         repoRoot: provisioned!.repoRoot,
         graph,
-        model: run.model,
+        selection: groundingSelection(run),
         runId: run.runId
       });
       provisioned!.baseCommit = skeletonCommit;
@@ -526,7 +533,10 @@ export async function resumeExecutionPipeline(
   options: ExecutionRunnerOptions = {}
 ): Promise<void> {
   console.log(`[Runner] Resuming execution for run ${runId} with decision:`, decision);
-  markRunnerActive(runId);
+  if (options.runnerAlreadyClaimed !== true && !tryMarkRunnerActive(runId)) {
+    console.warn(`[Runner] Execution pipeline already active for run: ${runId}`);
+    return;
+  }
   const stopHeartbeat = startHeartbeat(runId);
   let stopBudgetWatchdog: () => void = () => undefined;
   let lockedRepoRoot: string | undefined;
@@ -644,8 +654,12 @@ async function settleExecutionOutcome(
   publishRunModelEventsFromExecutionResult(currentRun, host.taskGraph, result, finalApplication);
 
   if (outcome.status === "completed") {
-    console.log(`[Runner] Persisting completed run ${runId}`);
-    await transitionTo(currentRun, "completed", {
+    // A run the human steered past accepted failures still delivers its result
+    // (final-apply ran above), but we record it as a distinct terminal state so
+    // the UI never claims a fully-clean run (P2b).
+    const terminalStatus = outcome.acceptedResolutions ? "completed_with_accepted" : "completed";
+    console.log(`[Runner] Persisting ${terminalStatus} run ${runId}`);
+    await transitionTo(currentRun, terminalStatus, {
       execution: result,
       ...(finalApplication !== undefined ? finalApplication : {}),
       ...(validationSummary !== undefined ? { validation: validationSummary } : {}),
@@ -673,7 +687,10 @@ export async function runNodeExecutionPipeline(
   options: ExecutionRunnerOptions = {}
 ): Promise<void> {
   console.log(`[Runner] Starting node execution pipeline for run=${runId} task=${taskId}`);
-  markRunnerActive(runId);
+  if (options.runnerAlreadyClaimed !== true && !tryMarkRunnerActive(runId)) {
+    console.warn(`[Runner] Node execution pipeline already active for run=${runId}`);
+    return;
+  }
   const stopHeartbeat = startHeartbeat(runId);
   try {
     const repo = getRunRepository();
@@ -1108,7 +1125,7 @@ export async function reviewNode(
 
   // Re-open a finished run so Rerun / Request changes work in the autonomous
   // flow too (not only during the manual `approved` workflow).
-  if (run.status === "completed" || run.status === "failed") {
+  if (run.status === "completed" || run.status === "completed_with_accepted" || run.status === "failed") {
     assertTransition(run.status, "approved");
     run = await repo.save({ ...run, status: "approved", updatedAt: now });
     await appendRunStatusChanged(run, { at: now, actor: "human" });

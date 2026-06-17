@@ -84,6 +84,8 @@ export interface RunNodeExecutionParams {
   graph: TaskGraph;
   config: ExecutionConfig;
   model: string;
+  defaultExecutionSelection?: ExecutorSelection;
+  defaultRepairSelection?: ExecutorSelection;
   taskId: string;
   runId?: string;
   childResults?: AgentExecutionResult[];
@@ -378,7 +380,7 @@ export class RunExecutor {
           node,
           runId,
           config,
-          defaultSelection: resolveLegacyModelSelection(params.model),
+          defaultSelection: params.defaultExecutionSelection ?? resolveLegacyModelSelection(params.model),
           worktrees,
           ...(params.signal !== undefined ? { signal: params.signal } : {})
         });
@@ -422,7 +424,12 @@ export class RunExecutor {
       });
 
       const contract = node.contract;
-      const repairSelection = resolveExecutorSelection(node, resolveLegacyModelSelection(params.model));
+      const repairSelection = resolveExecutorSelection(
+        node,
+        params.defaultRepairSelection ??
+          params.defaultExecutionSelection ??
+          resolveLegacyModelSelection(params.model)
+      );
       const sharedInterfaces = contract?.producedInterfaces;
       const childIntents = node.childrenIds
         .map((childId) => graph.nodes[childId])
@@ -473,6 +480,7 @@ export class RunExecutor {
     graph: TaskGraph;
     config: ExecutionConfig;
     model: string;
+    defaultRepairSelection?: ExecutorSelection;
     taskId: string;
     runId?: string;
     validationOutput: string;
@@ -490,11 +498,12 @@ export class RunExecutor {
     }
 
     const repairDependents = countDependents(graph, node.id);
+    const defaultSelection = params.defaultRepairSelection ?? resolveLegacyModelSelection(params.model);
     const selection = resolveRoutedSelection({
       node,
       dependents: repairDependents,
-      defaultSelection: resolveLegacyModelSelection(params.model),
-      router: this.router,
+      defaultSelection,
+      router: config.routing === "fixed" ? undefined : this.router,
       attempt: 1
     });
     this.traceRoutingDecision(node, repairDependents, selection, 1);
@@ -579,7 +588,7 @@ export class RunExecutor {
       node,
       dependents,
       defaultSelection: args.defaultSelection,
-      router: this.router
+      router: args.config.routing === "fixed" ? undefined : this.router
     });
     this.traceRoutingDecision(node, dependents, executorSelection, 0);
     const usageSource = usageSourceForSelection(executorSelection);

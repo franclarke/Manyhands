@@ -4,7 +4,10 @@ import { describe, expect, it } from "vitest";
 import {
   IntegrationAgent,
   MockAgentExecutor,
+  type AgentExecutor,
   type AgentExecutionResult,
+  type AgentExecutorOptions,
+  type IntegrationRepairConfig,
   type ValidationRunContext,
   type ValidationRunResult,
   type ValidationRunner,
@@ -41,7 +44,23 @@ function child(taskId: string, commitSha: string, status: AgentExecutionResult["
   };
 }
 
-const repair = { model: "gpt-5-codex", sandboxMode: "workspace-write" as const, timeoutMs: 600_000 };
+function successfulChildWithoutCommit(taskId: string): AgentExecutionResult {
+  return {
+    taskId,
+    status: "success",
+    baseHead: "PARENT_BASE",
+    currentHead: "PARENT_BASE",
+    agentCommittedUnexpectedly: false,
+    diff: "patch",
+    changedFiles: [`src/${taskId}.ts`],
+    scopeCheck: { passed: true, violations: [], outOfScope: [] },
+    executorExitCode: 0,
+    executorDurationMs: 100,
+    executorTimedOut: false
+  };
+}
+
+const repair: IntegrationRepairConfig = { model: "gpt-5-codex", timeoutMs: 600_000 };
 
 class FakeValidationRunner implements ValidationRunner {
   constructor(private readonly result: ValidationRunResult) {}
@@ -49,6 +68,22 @@ class FakeValidationRunner implements ValidationRunner {
   async run(_commands: ExecutionValidationCommand[], ctx: ValidationRunContext): Promise<ValidationRunResult> {
     this.calls.push(ctx);
     return this.result;
+  }
+}
+
+class SequentialExecutor implements AgentExecutor {
+  readonly calls: AgentExecutorOptions[] = [];
+  constructor(private readonly outcomes: Array<{ exitCode: number; stdout?: string; stderr?: string }>) {}
+  async execute(options: AgentExecutorOptions) {
+    this.calls.push(options);
+    const outcome = this.outcomes.shift() ?? { exitCode: 0 };
+    return {
+      exitCode: outcome.exitCode,
+      stdout: outcome.stdout ?? "",
+      stderr: outcome.stderr ?? "",
+      timedOut: false,
+      durationMs: 1
+    };
   }
 }
 
@@ -94,6 +129,32 @@ describe("IntegrationAgent", () => {
     });
 
     expect(result.status).toBe("child_failed");
+    expect(git.opsInvoked()).not.toContain("cherryPick");
+  });
+
+  it("fails explicitly when a successful child has no commit", async () => {
+    const git = new FakeGitRunner();
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: "/repo"
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("a", "SHA_A"), successfulChildWithoutCommit("b")],
+      repair
+    });
+
+    expect(result.status).toBe("child_failed");
+    expect(result.preMergeFindings).toEqual([
+      expect.objectContaining({
+        code: "missing_child_commit",
+        message: expect.stringContaining("b")
+      })
+    ]);
     expect(git.opsInvoked()).not.toContain("cherryPick");
   });
 
@@ -300,7 +361,7 @@ describe("IntegrationAgent", () => {
     expect(git.opsInvoked()).not.toContain("commit");
   });
 
-  it("attempts only one repair per integration: a second conflict fails fast (ADR-0025)", async () => {
+  it("repairs multiple conflicting children within the integration repair budget", async () => {
     const git = new FakeGitRunner({
       heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
       cherryPickOutcomes: [
@@ -326,11 +387,82 @@ describe("IntegrationAgent", () => {
       repair
     });
 
+    expect(result.status).toBe("executor_repair_success");
+    expect(result.repairAttempted).toBe(true);
+    expect(result.integrationCommitSha).toBe("REPAIR_SHA");
+    expect(git.opsInvoked().filter((op) => op === "cherryPickAbort")).toHaveLength(2);
+    expect(git.opsInvoked().filter((op) => op === "commit")).toHaveLength(2);
+    expect(traceStore.findByType("cherry_pick_conflict")).toHaveLength(2);
+    expect(traceStore.findByType("executor_repair_started")).toHaveLength(2);
+  });
+
+  it("preserves the partial integration commit when a later repair fails", async () => {
+    const git = new FakeGitRunner({
+      heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
+      cherryPickOutcomes: [
+        { ok: false, conflictFiles: ["src/a.ts"], output: "CONFLICT_A" },
+        { ok: false, conflictFiles: ["src/b.ts"], output: "CONFLICT_B" }
+      ],
+      diffCachedNameOnly: ["src/a.ts"],
+      diffCached: "resolved",
+      commitSha: "REPAIR_SHA"
+    });
+    const traceStore = new InMemoryTraceStore();
+    const agent = new IntegrationAgent({
+      git,
+      executor: new SequentialExecutor([{ exitCode: 0 }, { exitCode: 1, stderr: "repair failed" }]),
+      traceStore,
+      repoRoot: "/repo"
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("a", "SHA_A"), child("b", "SHA_B")],
+      repair
+    });
+
     expect(result.status).toBe("executor_repair_failed");
     expect(result.repairAttempted).toBe(true);
-    // First conflict was repaired (one abort); the second was not retried.
-    expect(git.opsInvoked().filter((op) => op === "cherryPickAbort")).toHaveLength(1);
+    expect(result.repairResult?.status).toBe("executor_error");
+    expect(result.integrationCommitSha).toBe("REPAIR_SHA");
+    expect(git.opsInvoked().filter((op) => op === "cherryPickAbort")).toHaveLength(2);
     expect(traceStore.findByType("cherry_pick_conflict")).toHaveLength(2);
+  });
+
+  it("fails after the configured max repairs per integration and preserves the partial commit", async () => {
+    const git = new FakeGitRunner({
+      heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
+      cherryPickOutcomes: [
+        { ok: false, conflictFiles: ["src/a.ts"], output: "CONFLICT_A" },
+        { ok: false, conflictFiles: ["src/b.ts"], output: "CONFLICT_B" },
+        { ok: false, conflictFiles: ["src/c.ts"], output: "CONFLICT_C" }
+      ],
+      diffCachedNameOnly: ["src/a.ts"],
+      diffCached: "resolved",
+      commitSha: "REPAIR_SHA"
+    });
+    const traceStore = new InMemoryTraceStore();
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore,
+      repoRoot: "/repo"
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("a", "SHA_A"), child("b", "SHA_B"), child("c", "SHA_C")],
+      repair: { ...repair, maxRepairsPerIntegration: 2 }
+    });
+
+    expect(result.status).toBe("executor_repair_failed");
+    expect(result.repairAttempted).toBe(true);
+    expect(result.integrationCommitSha).toBe("REPAIR_SHA");
+    expect(git.opsInvoked().filter((op) => op === "commit")).toHaveLength(2);
+    expect(git.opsInvoked().filter((op) => op === "cherryPickAbort")).toHaveLength(3);
+    expect(traceStore.findByType("cherry_pick_conflict")).toHaveLength(3);
   });
 
   it("re-prompts with compiler feedback when the repair is syntactically malformed, then succeeds (AST gate)", async () => {

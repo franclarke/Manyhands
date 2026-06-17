@@ -7,11 +7,11 @@ import type { Workspace, RunPreview } from "@/lib/api-types";
 import { runUiStatus, STATUS_META } from "@/lib/status";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Logo } from "@/components/logo";
 import {
   Plus,
   Folder,
   History,
-  Flame,
   GitMerge,
   PanelLeftClose,
   PanelLeftOpen,
@@ -96,9 +96,8 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
       setDeleteTarget(null);
       if (pathname === `/runs/${id}`) {
         router.push("/");
-      } else {
-        router.refresh();
       }
+      router.refresh();
     } catch {
       /* keep dialog open on failure */
     } finally {
@@ -113,15 +112,11 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
   }
 
   return (
-    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col overflow-hidden border-r border-[var(--color-border)] bg-[var(--color-bg-subtle)] font-sans">
+    <>
+      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col overflow-hidden border-r border-[var(--color-border)] bg-[var(--color-bg-subtle)] font-sans">
       {/* Brand */}
       <div className="flex items-center gap-2.5 border-b border-[var(--color-border-soft)] px-4 py-[14px]">
-        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--color-accent)] text-[var(--color-accent-contrast)]">
-          <Flame aria-hidden className="h-4 w-4" />
-        </div>
-        <span className="text-[15px] font-semibold tracking-[-0.01em] text-[var(--color-text)]">
-          ManyHands
-        </span>
+        <Logo type="full" className="h-6 w-auto" />
         <span className="mh-mono rounded bg-[var(--color-surface)] px-1.5 py-0.5 text-[9px] text-[var(--color-text-subtle)]">
           v0.4
         </span>
@@ -202,6 +197,8 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
         </nav>
       </section>
 
+      </aside>
+
       {deleteTarget !== null ? (
         <ConfirmDialog
           title="¿Eliminar este run del historial?"
@@ -213,16 +210,14 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
           onCancel={() => setDeleteTarget(null)}
         />
       ) : null}
-    </aside>
+    </>
   );
 }
 
 function CollapsedRail({ onExpand }: { onExpand: () => void }): React.ReactElement {
   return (
     <aside className="sticky top-0 flex h-screen w-14 shrink-0 flex-col items-center gap-1 overflow-hidden border-r border-[var(--color-border)] bg-[var(--color-bg-subtle)] py-[14px] font-sans">
-      <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--color-accent)] text-[var(--color-accent-contrast)]">
-        <Flame aria-hidden className="h-4 w-4" />
-      </div>
+      <Logo type="mark" className="h-6 w-6" />
       <div className="mt-2 flex flex-col items-center gap-1">
         <Link
           href="/"
@@ -352,6 +347,7 @@ function RunRow({
           label="Renombrar run"
           onClick={(event) => {
             event.preventDefault();
+            event.stopPropagation();
             onStartRename();
           }}
         >
@@ -362,6 +358,7 @@ function RunRow({
           danger
           onClick={(event) => {
             event.preventDefault();
+            event.stopPropagation();
             onRequestDelete();
           }}
         >

@@ -11,6 +11,10 @@
 
 /** Pathspec globs excluded from `git add` (leading **\/ covers nested monorepo dirs). */
 export const DEFAULT_ARTIFACT_GLOBS: readonly string[] = [
+  // Both the directory contents AND the bare entry: the WorktreeManager links
+  // the base repo's node_modules into each worktree as a junction/symlink, and
+  // a bare-path glob keeps that single link out of the orchestrator's commit.
+  "**/node_modules",
   "**/node_modules/**",
   "**/dist/**",
   "**/.next/**",

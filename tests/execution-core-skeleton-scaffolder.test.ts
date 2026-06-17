@@ -11,6 +11,9 @@ import {
   scaffoldInterfaces,
   referencedTypeNames,
   type AgentExecutor,
+  type AgentExecutorFactory,
+  type AgentExecutorOptions,
+  type ExecutorSelection,
   type ExecutorRunOutcome
 } from "@manyhands/execution-core";
 import type { InterfaceContract } from "@manyhands/contracts";
@@ -142,11 +145,25 @@ describe("scaffoldInterfaces", () => {
 
 class FakeExecutor implements AgentExecutor {
   calls = 0;
-  constructor(private readonly onExecute?: () => Promise<void>) {}
-  async execute(): Promise<ExecutorRunOutcome> {
+  models: string[] = [];
+  constructor(
+    private readonly onExecute?: () => Promise<void>,
+    private readonly outcome: ExecutorRunOutcome = { exitCode: 0, durationMs: 1, timedOut: false, stdout: "", stderr: "" }
+  ) {}
+  async execute(options: AgentExecutorOptions): Promise<ExecutorRunOutcome> {
     this.calls += 1;
+    this.models.push(options.model);
     await this.onExecute?.();
-    return { exitCode: 0, durationMs: 1, timedOut: false, stdout: "", stderr: "" };
+    return this.outcome;
+  }
+}
+
+class FakeExecutorFactory implements AgentExecutorFactory {
+  selections: ExecutorSelection[] = [];
+  constructor(private readonly executor: AgentExecutor) {}
+  create(selection: ExecutorSelection): AgentExecutor {
+    this.selections.push(selection);
+    return this.executor;
   }
 }
 
@@ -270,6 +287,66 @@ describe("GroundingAgent", () => {
 
     await agent.run({ repoRoot, graph, model: "gemini-2.5-pro", runId: "run-2" });
     expect(executor.calls).toBe(1);
+  });
+
+  it("uses the provided executor selection for unresolved contracts", async () => {
+    const executor = new FakeExecutor();
+    const executorFactory = new FakeExecutorFactory(executor);
+    const git = new FakeGitRunner({
+      heads: { [repoRoot]: "HEAD_SHA" },
+      diffCachedNameOnly: [],
+      commitSha: "SKELETON_SHA"
+    });
+    const agent = new GroundingAgent({ executorFactory, git, buildExportIndex: async () => new Map() });
+
+    const graph = makeGraph(
+      [
+        makeLeafWithSeams("leaf-1", [
+          contract({ id: "TaskStore", signature: "interface TaskStore { get(id: string): unknown }" })
+        ])
+      ],
+      repoRoot
+    );
+
+    await agent.run({
+      repoRoot,
+      graph,
+      selection: { executorId: "codex-cli", model: "gpt-5.5" },
+      runId: "run-selection"
+    });
+
+    expect(executorFactory.selections).toEqual([{ executorId: "codex-cli", model: "gpt-5.5" }]);
+    expect(executor.models).toEqual(["gpt-5.5"]);
+  });
+
+  it("throws when the LLM fallback exits non-zero", async () => {
+    const executor = new FakeExecutor(undefined, {
+      exitCode: 1,
+      durationMs: 1,
+      timedOut: false,
+      stdout: "",
+      stderr: "model unavailable"
+    });
+    const git = new FakeGitRunner({ heads: { [repoRoot]: "HEAD_SHA" } });
+    const agent = new GroundingAgent({ executor, git, buildExportIndex: async () => new Map() });
+
+    const graph = makeGraph(
+      [
+        makeLeafWithSeams("leaf-1", [
+          contract({ id: "TaskStore", signature: "interface TaskStore { get(id: string): unknown }" })
+        ])
+      ],
+      repoRoot
+    );
+
+    await expect(
+      agent.run({
+        repoRoot,
+        graph,
+        selection: { executorId: "codex-cli", model: "gpt-5.5" },
+        runId: "run-nonzero"
+      })
+    ).rejects.toThrow("GroundingAgent LLM fallback failed with exit code 1");
   });
 
   it("returns HEAD without committing when the plan declares no seams", async () => {

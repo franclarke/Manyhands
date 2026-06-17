@@ -83,6 +83,7 @@ export type RunStatusKey =
   | "approved"
   | "running"
   | "completed"
+  | "completed_with_accepted"
   | "failed"
   | "interrupted";
 
@@ -123,6 +124,7 @@ export interface RunCreateRequest {
   workspaceId: string;
   granularity: RunGranularityKey;
   model: string;
+  planningExecutorId?: ExecutorId | undefined;
   planningModel?: string | undefined;
   defaultExecutionSelection?: ExecutorSelection | undefined;
   defaultRepairSelection?: ExecutorSelection | undefined;
@@ -160,6 +162,7 @@ export interface RunResponse {
     workspaceId: string;
     granularity: RunGranularityKey;
     model: string;
+    planningExecutorId?: ExecutorId;
     planningModel?: string;
     defaultExecutionSelection?: ExecutorSelection;
     defaultRepairSelection?: ExecutorSelection;
@@ -218,7 +221,7 @@ export interface RunResponse {
       indexedAt?: string | undefined;
     };
     decomposition?: {
-      provider: "anthropic" | "claude-code" | "gemini" | "codex" | "deterministic";
+      provider: "anthropic" | "claude-code" | "claude-code-cli" | "gemini" | "codex" | "codex-cli" | "deterministic";
       model: string;
       promptTemplateVersion?: string;
       fallbackUsed: boolean;

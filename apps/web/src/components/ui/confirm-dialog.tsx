@@ -46,7 +46,12 @@ export function ConfirmDialog({
         if (event.target === event.currentTarget) onCancel();
       }}
     >
-      <div className="flex w-full max-w-sm flex-col gap-3 rounded-[var(--r-xl)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-sheet)]">
+      <div
+        className="flex w-full max-w-sm flex-col gap-3 rounded-[var(--r-xl)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-sheet)]"
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+      >
         <h2 className="m-0 text-[15px] font-semibold text-[var(--color-text)]">{title}</h2>
         <p className="m-0 text-[13px] leading-relaxed text-[var(--color-text-muted)]">{description}</p>
         <div className="mt-1 flex justify-end gap-2">

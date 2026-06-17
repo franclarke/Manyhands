@@ -65,6 +65,61 @@ describe("RecursiveDecomposer — atomic root (single-agent shape)", () => {
     expect(leaves[0]?.contract?.executionScope?.implementationPaths).toEqual(["src/**"]);
   });
 
+  it("threads atomic leaf validation commands into the generated contract", async () => {
+    const client = scriptedClient([
+      {
+        match: "Evaluate arithmetic expression strings",
+        response: {
+          decision: "atomic",
+          reasoning: "small enough for one agent at low aggressiveness",
+          allowedPaths: ["src/**"],
+          forbiddenPaths: [],
+          expectedFiles: ["src/calculate.ts"],
+          acceptanceCriteria: ["calculate returns the numeric value of an expression"],
+          leafValidationCommands: [{ command: "npm", args: ["test", "--", "src/calculate.test.ts"] }]
+        }
+      }
+    ]);
+    const decomposer = new RecursiveDecomposer({
+      client,
+      model: "test-model",
+      userPrompt: "build a calculator",
+      aggressiveness: "low"
+    });
+
+    const result = await decomposer.decompose(FEATURE);
+
+    expect(result.contracts[0]?.leafValidationCommands).toEqual([
+      { command: "npm", args: ["test", "--", "src/calculate.test.ts"], timeoutMs: 60_000, cwd: "worktree" }
+    ]);
+  });
+
+  it("defaults atomic leaf validation commands to an empty executable command list", async () => {
+    const client = scriptedClient([
+      {
+        match: "Evaluate arithmetic expression strings",
+        response: {
+          decision: "atomic",
+          reasoning: "small enough for one agent at low aggressiveness",
+          allowedPaths: ["src/**"],
+          forbiddenPaths: [],
+          expectedFiles: ["src/calculate.ts"],
+          acceptanceCriteria: ["calculate returns the numeric value of an expression"]
+        }
+      }
+    ]);
+    const decomposer = new RecursiveDecomposer({
+      client,
+      model: "test-model",
+      userPrompt: "build a calculator",
+      aggressiveness: "low"
+    });
+
+    const result = await decomposer.decompose(FEATURE);
+
+    expect(result.contracts[0]?.leafValidationCommands).toEqual([]);
+  });
+
   it("emits recursive planning step lifecycle events", async () => {
     const events: string[] = [];
     const completedChildren: string[][] = [];

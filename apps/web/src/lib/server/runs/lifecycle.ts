@@ -7,10 +7,11 @@ const ALLOWED_TRANSITIONS: Record<RunStatus, ReadonlyArray<RunStatus>> = {
   paused: ["generating", "running", "needs_review", "interrupted", "failed"],
   needs_review: ["approved", "failed"],
   approved: ["running", "needs_review", "failed"],
-  running: ["paused", "completed", "interrupted", "failed"],
+  running: ["paused", "completed", "completed_with_accepted", "interrupted", "failed"],
   interrupted: ["generating", "running", "failed"],
   // Re-open (review actions): let the user re-run a node after a finished run.
   completed: ["approved"],
+  completed_with_accepted: ["approved"],
   failed: ["approved"]
 };
 
@@ -61,5 +62,5 @@ export function restartResumesExecution(run: RestartContext): boolean {
 }
 
 export function isTerminalStatus(status: RunStatus): boolean {
-  return status === "completed" || status === "failed";
+  return status === "completed" || status === "completed_with_accepted" || status === "failed";
 }

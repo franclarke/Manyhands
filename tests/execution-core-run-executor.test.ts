@@ -8,6 +8,7 @@ import {
   MockAgentExecutor,
   resolveExecutorModel,
   RunExecutor,
+  type ExecutorRouter,
   type ValidationRunContext,
   type ValidationRunner,
   type ValidationRunResult
@@ -197,18 +198,35 @@ function nestedCompositeGraph(): TaskGraph {
   };
 }
 
-function makeExecutor(git: FakeGitRunner, traceStore: InMemoryTraceStore, agent = new MockAgentExecutor()): RunExecutor {
+function makeExecutor(
+  git: FakeGitRunner,
+  traceStore: InMemoryTraceStore,
+  agent = new MockAgentExecutor(),
+  router?: ExecutorRouter
+): RunExecutor {
   return new RunExecutor({
     git,
     executor: agent,
     traceStore,
     repoRoot: REPO_ROOT,
+    ...(router !== undefined ? { router } : {}),
     // No-op so the unit test never touches the real filesystem.
     writeInstructions: async () => {}
   });
 }
 
 const config = ExecutionConfigSchema.parse({});
+const fixedConfig = ExecutionConfigSchema.parse({ routing: "fixed" });
+
+const sonnetRouter: ExecutorRouter = {
+  route: () => ({ executorId: "claude-code-cli", model: "sonnet" }),
+  describe: () => ({
+    selection: { executorId: "claude-code-cli", model: "sonnet" },
+    tier: "standard",
+    complexity: { score: 0, tier: "standard", signals: [] },
+    degraded: false
+  })
+};
 
 describe("RunExecutor", () => {
   it("executes leaves, integrates the composite, and completes", async () => {
@@ -235,6 +253,59 @@ describe("RunExecutor", () => {
     expect(result.granularityVector.leafSuccessRate).toBe(1);
     expect(result.granularityVector.integrationSuccessRate).toBe(1);
     expect(traceStore.findByType("run_completed")).toHaveLength(1);
+  });
+
+  it("runNode uses the explicit execution selection instead of the complexity router when routing is fixed", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/x b/x\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const traceStore = new InMemoryTraceStore();
+    const agent = new MockAgentExecutor();
+    const executor = makeExecutor(git, traceStore, agent, sonnetRouter);
+
+    await executor.runNode({
+      graph: graphWith(["a"]),
+      config: fixedConfig,
+      model: "sonnet",
+      taskId: "a",
+      runId: RUN_ID,
+      defaultExecutionSelection: { executorId: "codex-cli", model: "gpt-5.5" }
+    });
+
+    expect(agent.calls[0]?.model).toBe("gpt-5.5");
+    expect(traceStore.findByType("executor_started")[0]?.payload).toMatchObject({
+      executorId: "codex-cli",
+      model: "gpt-5.5"
+    });
+  });
+
+  it("repairLeaf uses the explicit repair selection instead of the complexity router when routing is fixed", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/x b/x\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "REPAIR_SHA"
+    });
+    const traceStore = new InMemoryTraceStore();
+    const agent = new MockAgentExecutor();
+    const executor = makeExecutor(git, traceStore, agent, sonnetRouter);
+
+    await executor.repairLeaf({
+      graph: graphWith(["a"]),
+      config: fixedConfig,
+      model: "sonnet",
+      taskId: "a",
+      runId: RUN_ID,
+      validationOutput: "tests failed",
+      defaultRepairSelection: { executorId: "codex-cli", model: "gpt-5.5" }
+    });
+
+    expect(agent.calls[0]?.model).toBe("gpt-5.5");
+    expect(traceStore.findByType("executor_repair_started")[0]?.payload).toMatchObject({
+      executorId: "codex-cli",
+      model: "gpt-5.5"
+    });
   });
 
   it("traces live executor stdout/stderr chunks for the running node", async () => {

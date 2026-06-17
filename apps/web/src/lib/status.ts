@@ -73,6 +73,7 @@ export const RUN_STATUS_COLOR: Record<RunStatusKey, string> = {
   approved: "var(--done)",
   running: "var(--running)",
   completed: "var(--done)",
+  completed_with_accepted: "var(--done)",
   failed: "var(--error)",
   interrupted: "var(--ready)"
 };
@@ -90,6 +91,7 @@ export type UiStatus =
   | "ready"
   | "running"
   | "completed"
+  | "completed_with_accepted"
   | "failed"
   | "blocked"
   | "needs_review"
@@ -149,6 +151,15 @@ export const STATUS_META: Record<UiStatus, StatusMeta> = {
   },
   completed: {
     label: "Completado",
+    fg: "var(--status-completed-fg)",
+    bg: "var(--status-completed-bg)",
+    border: "var(--status-completed-border)",
+    pulse: false
+  },
+  completed_with_accepted: {
+    // Distinct label so the badge never claims a fully-clean run; reuses the
+    // success color tokens because the run did deliver a result (P2b).
+    label: "Completado con reservas",
     fg: "var(--status-completed-fg)",
     bg: "var(--status-completed-bg)",
     border: "var(--status-completed-border)",
@@ -267,6 +278,8 @@ export function runUiStatus(status: RunStatusKey): UiStatus {
       return "running";
     case "completed":
       return "completed";
+    case "completed_with_accepted":
+      return "completed_with_accepted";
     case "failed":
       return "failed";
     case "interrupted":

@@ -111,7 +111,10 @@ const OUTPUT_SCHEMA_LITERAL = `// One of these three shapes (discriminated by "d
   "allowedPaths": ["glob", "..."],
   "forbiddenPaths": ["glob", "..."],
   "expectedFiles": ["concrete/file/path.ts", "..."],
-  "acceptanceCriteria": ["string", "..."]   // at least one
+  "acceptanceCriteria": ["string", "..."],   // at least one
+  "leafValidationCommands": [
+    { "command": "npm", "args": ["test", "--", "src/x.test.ts"] }
+  ]  // optional focused commands that verify this leaf after implementation
 }
 
 // DECOMPOSE — split into children sharing explicit seams:
@@ -198,6 +201,10 @@ const SYSTEM_PROMPT = [
   "  code, or multiple leaves touch related concepts. Those are normal parallel leaves.",
   "- Add `parentValidationCommands` that verify the integrated children honour the seams",
   "  (typically the project's test command).",
+  "- NO crees nodos cuyo único propósito sea correr tests/typecheck/build/lint o verificar",
+  "  la integración. La verificación se expresa como `leafValidationCommands` en la hoja",
+  "  que produce el código, o como `parentValidationCommands` en el composite.",
+  "- Crear una hoja solo cuando produce o modifica código fuente/tests como entregable.",
   "",
   "## Lowering variance:",
   "Reason locally about THIS node only. Do not plan the whole tree — you will be asked about each",

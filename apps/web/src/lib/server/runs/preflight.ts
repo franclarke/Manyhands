@@ -18,7 +18,7 @@ export type PreflightCheck = "repo_path" | "cli" | "auth" | "repo_clean" | "bran
 
 /** Non-blocking finding: the run proceeds, but the runner logs it for the operator. */
 export interface PreflightWarning {
-  check: "gitignore";
+  check: "gitignore" | "dependencies";
   message: string;
 }
 
@@ -53,6 +53,7 @@ export interface PreflightInput {
   graph?: TaskGraph;
   defaultExecutionSelection?: ExecutorSelection;
   defaultRepairSelection?: ExecutorSelection;
+  groundingSelection?: ExecutorSelection;
 }
 
 /** Injectable checks so the pipeline can be unit-tested without spawning. */
@@ -154,7 +155,31 @@ export async function runPreflight(input: PreflightInput, deps: PreflightDeps = 
         "(node_modules, dist, .next…) vía .git/info/exclude, pero conviene agregar un .gitignore propio."
     });
   }
+
+  // 8. Advisory: worktrees link the base repo's node_modules so validation
+  // commands (`npm test` → jest) resolve their binaries. If the base repo
+  // declares dependencies (package.json + lockfile) but never installed them,
+  // there is nothing to link and every validation command dies with exit 127.
+  if (dependenciesDeclaredButNotInstalled(input.repoRoot)) {
+    warnings.push({
+      check: "dependencies",
+      message:
+        `El repo en ${input.repoRoot} declara dependencias (package.json + lockfile) pero no tiene ` +
+        "node_modules instalado. Los comandos de validación de integración fallarán (exit 127 / binario " +
+        "no encontrado). Corré la instalación (npm/pnpm/yarn install) en el repo base antes de ejecutar."
+    });
+  }
   return { warnings };
+}
+
+/** Lockfiles that signal a JS dependency install is expected before running. */
+const JS_LOCKFILES = ["package-lock.json", "pnpm-lock.yaml", "yarn.lock", "npm-shrinkwrap.json"];
+
+function dependenciesDeclaredButNotInstalled(repoRoot: string): boolean {
+  if (!existsSync(join(repoRoot, "package.json"))) return false;
+  const hasLockfile = JS_LOCKFILES.some((lockfile) => existsSync(join(repoRoot, lockfile)));
+  if (!hasLockfile) return false;
+  return !existsSync(join(repoRoot, "node_modules"));
 }
 
 async function defaultFreeDiskBytes(repoRoot: string): Promise<number | undefined> {
@@ -184,7 +209,8 @@ function collectExecutorIds(input: PreflightInput): ExecutorId[] {
   const fallback = input.defaultExecutionSelection ?? resolveLegacyModelSelection(input.legacyModel);
   const selected = new Set<ExecutorId>([
     fallback.executorId,
-    (input.defaultRepairSelection ?? fallback).executorId
+    (input.defaultRepairSelection ?? fallback).executorId,
+    ...(input.groundingSelection !== undefined ? [input.groundingSelection.executorId] : [])
   ]);
   for (const node of Object.values(input.graph?.nodes ?? {})) {
     const metadata = node.metadata as { executorSelection?: unknown; executorOverride?: unknown } | undefined;

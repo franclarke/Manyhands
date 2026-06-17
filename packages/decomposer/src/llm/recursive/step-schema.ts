@@ -71,7 +71,8 @@ const AtomicStepSchema = z.object({
   allowedPaths: z.array(z.string().min(1)).max(60).default([]),
   forbiddenPaths: z.array(z.string().min(1)).max(60).default([]),
   expectedFiles: z.array(z.string().min(1)).max(60).default([]),
-  acceptanceCriteria: z.array(z.string().min(1).max(400)).min(1).max(20)
+  acceptanceCriteria: z.array(z.string().min(1).max(400)).min(1).max(20),
+  leafValidationCommands: z.array(StepValidationCommandSchema).max(20).default([])
 });
 
 const DecomposeStepSchema = z.object({

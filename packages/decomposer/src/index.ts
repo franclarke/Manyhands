@@ -1540,6 +1540,8 @@ export type {
 } from "./llm/recursive/recursive-decomposer";
 export { ClaudeCodeRecursiveDecomposer } from "./llm/recursive/claude-code-recursive-decomposer";
 export type { ClaudeCodeRecursiveDecomposerOptions } from "./llm/recursive/claude-code-recursive-decomposer";
+export { CodexRecursiveDecomposer } from "./llm/recursive/codex-recursive-decomposer";
+export type { CodexRecursiveDecomposerOptions } from "./llm/recursive/codex-recursive-decomposer";
 export {
   RECURSIVE_DECOMPOSER_PROMPT_VERSION,
   buildStepPrompt

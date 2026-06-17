@@ -288,7 +288,7 @@ describe("execution graph — dynamic wavefront", () => {
     expect(final.leafResults.find((r) => r.taskId === "leaf-a")?.status).toBe("success");
   });
 
-  it("accept_failing unblocks integration and finishes the run as failed", async () => {
+  it("accept_failing unblocks integration and finishes the run as completed (human-accepted)", async () => {
     const taskGraph = makeGraph();
     const harness = makeHarness({ failingLeaves: new Set(["leaf-b"]) });
     const config = threadConfig("t-accept", taskGraph);
@@ -299,15 +299,15 @@ describe("execution graph — dynamic wavefront", () => {
       config
     )) as RunState;
 
-    // root integrates with a failed child → integration dep is reached; the
-    // run finishes failed because a failure was accepted.
+    // root integrates with a failed-but-accepted child → the run finishes
+    // successfully when final validation passes: human acceptance IS the
+    // resolution (P2b). The pipeline distinguishes it as completed_with_accepted.
     expect(final.acceptedLeafFailures).toEqual(["leaf-b"]);
-    expect(final.status).toBe("failed");
-    expect(final.errorMessage).toMatch(/accepted failures/i);
+    expect(final.status).toBe("completed");
     expect(harness.integrations).toEqual(["root"]);
   });
 
-  it("interrupts at conflictGate and accept_conflict finishes the run as failed", async () => {
+  it("interrupts at conflictGate and accept_conflict finishes the run as completed (human-accepted)", async () => {
     const taskGraph = makeGraph();
     const harness = makeHarness({ failingComposites: new Set(["root"]) });
     const config = threadConfig("t-conflict", taskGraph);
@@ -329,7 +329,7 @@ describe("execution graph — dynamic wavefront", () => {
     )) as RunState;
 
     expect(final.acceptedIntegrationFailures).toEqual(["root"]);
-    expect(final.status).toBe("failed");
+    expect(final.status).toBe("completed");
   });
 
   it("classifies an infra validation failure and retry_integration re-runs the composite to completion", async () => {
@@ -380,7 +380,7 @@ describe("execution graph — dynamic wavefront", () => {
       config
     )) as RunState;
     expect(final.acceptedIntegrationFailures).toEqual(["root"]);
-    expect(final.status).toBe("failed");
+    expect(final.status).toBe("completed");
   });
 
   it("abort_run at leafGate fails the run immediately", async () => {

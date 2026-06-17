@@ -14,9 +14,7 @@
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { mkdir, writeFile } from "node:fs/promises";
-import { CliAgentExecutor } from "../executor/cli-executor.js";
-import { CLAUDE_CODE_PROFILE } from "../executor/profiles/claude-code.js";
-import type { AgentExecutor } from "../executor/types.js";
+import { DefaultAgentExecutorFactory, FixedAgentExecutorFactory, type AgentExecutorFactory } from "../executor/factory.js";
 import { SimpleGitRunner } from "../git/runner.js";
 import type { GitRunner } from "../git/runner.js";
 import { execLog, execWarn } from "../logging/log.js";
@@ -25,16 +23,21 @@ import { checkRepairedFiles, describeSyntaxFindings } from "../integration/synta
 import { scaffoldInterfaces, type ScaffoldOutcome } from "./skeleton-scaffolder.js";
 import type { TaskGraph } from "@manyhands/task-graph";
 import type { InterfaceContract } from "@manyhands/contracts";
+import { resolveLegacyModelSelection, type ExecutorSelection } from "../executor/registry.js";
+import type { AgentExecutor } from "../executor/types.js";
 
 export interface GroundingAgentParams {
   repoRoot: string;
   graph: TaskGraph;
-  model: string;
+  selection?: ExecutorSelection;
+  /** Legacy compatibility for tests/old callers; product code passes selection. */
+  model?: string;
   runId: string;
 }
 
 export interface GroundingAgentDeps {
   executor?: AgentExecutor;
+  executorFactory?: AgentExecutorFactory;
   git?: GitRunner;
   /**
    * Builds the symbol → repo-relative-path map for type-import resolution.
@@ -45,13 +48,14 @@ export interface GroundingAgentDeps {
 }
 
 export class GroundingAgent {
-  private readonly executor: AgentExecutor;
+  private readonly executorFactory: AgentExecutorFactory;
   private readonly git: GitRunner;
   private readonly buildExportIndex: (repoRoot: string) => Promise<ReadonlyMap<string, string>>;
   private readonly executorTimeoutMs: number;
 
   constructor(deps: GroundingAgentDeps = {}) {
-    this.executor = deps.executor ?? new CliAgentExecutor(CLAUDE_CODE_PROFILE);
+    this.executorFactory =
+      deps.executorFactory ?? (deps.executor !== undefined ? new FixedAgentExecutorFactory(deps.executor) : new DefaultAgentExecutorFactory());
     this.git = deps.git ?? new SimpleGitRunner();
     this.buildExportIndex = deps.buildExportIndex ?? buildRepositoryExportIndex;
     this.executorTimeoutMs = deps.executorTimeoutMs ?? 300_000;
@@ -139,11 +143,13 @@ export class GroundingAgent {
 
     const instructionFilePath = join(tmpdir(), `mh-grounding-${params.runId}.txt`);
     await writeFile(instructionFilePath, prompt, "utf8");
+    const selection = params.selection ?? resolveLegacyModelSelection(params.model);
+    const executor = this.executorFactory.create(selection);
 
-    const outcome = await this.executor.execute({
+    const outcome = await executor.execute({
       cwd: params.repoRoot,
       instructionFilePath,
-      model: params.model,
+      model: selection.model,
       timeoutMs: this.executorTimeoutMs,
       bypassApprovals: true,
       processOwnerId: params.runId

@@ -105,6 +105,22 @@ reducer consume borrando el resultado fallido (los canales de LangGraph no
 tienen delete nativo); el composite re-entra al frontier y el worktree sucio
 del intento anterior se recrea idempotentemente.
 
+**D12 (P2a/P1):** la integración ya no está limitada a un solo repair global:
+cada hijo conflictivo puede disparar su propio repair hasta agotar
+`maxRepairsPerIntegration` (default 4). Si se agota el presupuesto o un repair
+falla, se aborta el cherry-pick conflictivo y se preserva el commit de
+integración parcial (los hijos previos, incluidos los reparados, ya
+commitearon). Así, si el humano hace `accept_conflict`, el composite tiene un
+`integrationCommitSha` que el padre puede cherry-pickear — antes quedaba sin
+commit y la integración del padre se trababa con `Missing: <child>`.
+
+**D13 (P2b):** un fallo de hoja/integración **aceptado por el humano** ya no
+fuerza el run a `failed`. La aceptación ES la resolución: si la validación final
+pasa, el run termina en el estado terminal `completed_with_accepted` (corre
+final-apply y entrega el resultado), distinto de `completed` para no afirmar que
+fue 100% limpio. El grafo y `RunExecutionResult` siguen siendo binarios
+`completed`/`failed`; la distinción vive en el estado del `RunRecord`.
+
 ---
 
 ## Planning y Decomposer
