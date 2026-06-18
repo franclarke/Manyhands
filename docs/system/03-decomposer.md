@@ -1,4 +1,4 @@
-# GeminiRecursiveDecomposer
+# Decomposer recursivo (interface-aware)
 
 **Archivos fuente:** `packages/decomposer/src/llm/recursive/`,
 `packages/decomposer/src/`
@@ -7,7 +7,7 @@
 
 ## Qué Es
 
-El `GeminiRecursiveDecomposer` transforma una feature en lenguaje natural en un
+El decomposer recursivo transforma una feature en lenguaje natural en un
 `TaskGraph` ejecutable. Lo hace de forma recursiva: visita nodos, decide si son
 atómicos o si deben dividirse, y cuando los divide produce interfaces compartidas
 entre los hijos.
@@ -87,11 +87,13 @@ construido el grafo completo.
 
 ## Invocación
 
-El wrapper de Gemini:
+El wrapper del decomposer (por defecto `ClaudeCodeRecursiveDecomposer` sobre
+Claude Code CLI; variantes `RecursiveDecomposer` sobre el SDK Anthropic y
+`CodexRecursiveDecomposer` sobre Codex CLI):
 
 1. construye el prompt con goal, nivel de granularidad, interfaces heredadas y
    rúbrica;
-2. invoca Gemini CLI en modo de planificación;
+2. invoca el modelo Claude en modo de planificación;
 3. parsea JSON con Zod;
 4. reintenta o falla con error accionable si la salida no cumple el schema.
 
