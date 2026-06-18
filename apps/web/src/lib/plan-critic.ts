@@ -1,4 +1,5 @@
-import { validateTaskGraph, type AgentTaskContract, type InterfaceContract, type TaskGraph } from "@manyhands/core";
+import type { AgentTaskContract, InterfaceContract } from "@manyhands/contracts";
+import { validateExecutableTaskGraph, type TaskGraph } from "@manyhands/task-graph";
 import type { DetectedCommands } from "@/lib/server/providers/command-detection";
 import type { CriticFinding, CriticStatus, PlanCriticResult, SeamCriticResult } from "@/lib/critic-types";
 
@@ -47,7 +48,7 @@ export function runPlanCritic(input: {
 }): PlanCriticResult {
   const findings: CriticFinding[] = [];
 
-  for (const issue of validateTaskGraph(input.graph)) {
+  for (const issue of validateExecutableTaskGraph(input.graph)) {
     findings.push({
       severity: issue.severity,
       code: issue.code,

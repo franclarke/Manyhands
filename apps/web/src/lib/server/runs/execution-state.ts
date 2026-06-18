@@ -14,8 +14,9 @@ import {
   type RunNodeExecutionResult
 } from "@manyhands/execution-core";
 import { validationCommandSafetyIssues, type ExecutionValidationCommand, type MockPlanningFlowResult } from "@manyhands/core";
-import type { TaskGraph } from "@manyhands/task-graph";
+import { validateExecutableTaskGraph, type TaskGraph, type TaskValidationIssue } from "@manyhands/task-graph";
 import type { DetectedCommands } from "../providers/command-detection";
+import { RunValidationError } from "./errors";
 import type { ProvisionedRepo } from "./repo-provisioner";
 import type { RunRecord, RunValidationSummary } from "./schema";
 
@@ -32,6 +33,21 @@ export function resolveExecutionGraph(run: RunRecord): TaskGraph {
     return (run.planning as MockPlanningFlowResult).decomposition.graph;
   }
   throw new Error("Cannot execute a run without a generated plan. Run planning first.");
+}
+
+export function assertExecutableRunGraph(graph: TaskGraph): void {
+  const errors = validateExecutableTaskGraph(graph).filter((issue) => issue.severity === "error");
+  if (errors.length > 0) {
+    throw new RunValidationError(
+      `Executable graph is invalid: ${errors.slice(0, 5).map(formatValidationIssue).join("; ")}`
+    );
+  }
+}
+
+function formatValidationIssue(issue: TaskValidationIssue): string {
+  return issue.taskId !== undefined
+    ? `${issue.code} (${issue.taskId}): ${issue.message}`
+    : `${issue.code}: ${issue.message}`;
 }
 
 export function provisionedFromRecord(record: RunRecord["provisioned"]): ProvisionedRepo | undefined {

@@ -124,12 +124,26 @@ function graphWith(
             childrenIds: [],
             dependencies: [],
             acceptanceCriteria: ["criterion one"],
-            ...(leafContractFor ? { contract: leafContractFor } : {})
+            contract:
+              leafContractFor !== undefined
+                ? { ...leafContractFor, taskId, objective: `Implement ${taskId}.` }
+                : { ...leafContract(["src/**"], [], ["src/x.ts"]), taskId, objective: `Implement ${taskId}.` }
           }
         ])
       )
     }
   };
+}
+
+function graphWithTaskScopes(scopesByTask: Record<string, string[]>): TaskGraph {
+  const graph = graphWith(Object.keys(scopesByTask));
+  for (const [taskId, scope] of Object.entries(scopesByTask)) {
+    const node = graph.nodes[taskId];
+    if (node !== undefined) {
+      node.contract = { ...leafContract(scope), taskId, objective: `Implement ${taskId}.` };
+    }
+  }
+  return graph;
 }
 
 function nestedCompositeGraph(): TaskGraph {
@@ -179,7 +193,8 @@ function nestedCompositeGraph(): TaskGraph {
         depth: 2,
         childrenIds: [],
         dependencies: [],
-        acceptanceCriteria: ["criterion one"]
+        acceptanceCriteria: ["criterion one"],
+        contract: { ...leafContract(["src/**"], [], ["src/x.ts"]), taskId: "a", objective: "Implement a." }
       },
       b: {
         id: "b",
@@ -192,7 +207,8 @@ function nestedCompositeGraph(): TaskGraph {
         depth: 2,
         childrenIds: [],
         dependencies: [],
-        acceptanceCriteria: ["criterion one"]
+        acceptanceCriteria: ["criterion one"],
+        contract: { ...leafContract(["src/**"], [], ["src/x.ts"]), taskId: "b", objective: "Implement b." }
       }
     }
   };
@@ -253,6 +269,63 @@ describe("RunExecutor", () => {
     expect(result.granularityVector.leafSuccessRate).toBe(1);
     expect(result.granularityVector.integrationSuccessRate).toBe(1);
     expect(traceStore.findByType("run_completed")).toHaveLength(1);
+  });
+
+  it("uses risk-aware scheduling by default and serializes overlapping leaf scopes", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/src/x.ts b/src/x.ts\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const traceStore = new InMemoryTraceStore();
+    const executor = makeExecutor(git, traceStore);
+
+    await executor.run({
+      graph: graphWithTaskScopes({ a: ["src/shared/**"], b: ["src/shared/file.ts"] }),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    expect(traceStore.findByType("batch_scheduled")[0]?.payload).toMatchObject({
+      version: 1,
+      source: "run-executor",
+      policy: "risk_aware",
+      readyTaskCount: 2,
+      selectedTaskIds: ["a", "b"],
+      blockedTaskIds: [],
+      riskSummary: { high: 1, blocking: 0 }
+    });
+    expect(traceStore.findByType("batch_started").map((event) => event.payload.taskIds)).toEqual([["a"], ["b"]]);
+  });
+
+  it("rejects an invalid executable contract before dispatching an agent", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/src/x.ts b/src/x.ts\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const traceStore = new InMemoryTraceStore();
+    const agent = new MockAgentExecutor();
+    const executor = makeExecutor(git, traceStore, agent);
+    const graph = graphWithTaskScopes({ a: ["src/a/**"] });
+    const node = graph.nodes.a;
+    if (node?.contract !== undefined) {
+      node.contract = {
+        ...node.contract,
+        allowed: { paths: ["../secrets/**"] }
+      };
+    }
+
+    await expect(
+      executor.run({
+        graph,
+        config,
+        model: "gpt-5-codex"
+      })
+    ).rejects.toThrow(/unsafe_contract_path|path traversal/i);
+
+    expect(agent.calls).toEqual([]);
+    expect(git.calls.some((call) => call.op === "worktreeAdd")).toBe(false);
   });
 
   it("runNode uses the explicit execution selection instead of the complexity router when routing is fixed", async () => {
@@ -689,6 +762,7 @@ describe("RunExecutor", () => {
         { id: "Token", kind: "type", signature: "type Token = { kind: string }", description: "lexical token", definedAtNodeId: "root" }
       ],
       producedInterfaces: [
+        { id: "Token", kind: "type", signature: "type Token = { kind: string }", description: "lexical token", definedAtNodeId: "root" },
         { id: "Ast", kind: "type", signature: "type Ast = number | { op: string }", description: "parsed tree", definedAtNodeId: "root" }
       ]
     });

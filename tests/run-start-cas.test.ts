@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { POST as POST_RUN } from "@/app/api/runs/[id]/run/route";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import { drainRunBackgroundTasks } from "@/lib/server/runs/runner-state";
+import { AgentTaskContractSchema } from "@manyhands/contracts";
 import type { RunRecord } from "@/lib/server/runs/schema";
 
 let tempDir: string;
@@ -52,8 +53,10 @@ function makeRun(overrides: Partial<RunRecord> = {}): RunRecord {
 }
 
 function planningArtifact(taskId: string) {
+  const contract = validContract(taskId);
   return {
     decomposition: {
+      contracts: [contract],
       graph: {
         id: "g1",
         planId: "p1",
@@ -76,12 +79,32 @@ function planningArtifact(taskId: string) {
             depth: 0,
             childrenIds: [],
             dependencies: [],
-            metadata: { authoredBy: "ai" }
+            metadata: { authoredBy: "ai" },
+            contract
           }
         }
       }
     }
   };
+}
+
+function validContract(taskId: string): unknown {
+  return AgentTaskContractSchema.parse({
+    taskId,
+    objective: `Implement ${taskId}.`,
+    context: { typeSignatures: [], referenceSnippets: [], conventions: [], upstreamArtifacts: [] },
+    allowed: { paths: [`src/${taskId}.ts`] },
+    forbidden: { paths: [] },
+    relevantSymbols: [],
+    dependencies: [],
+    acceptance: [{ kind: "custom", description: "done" }],
+    validationCommands: [],
+    expectedOutput: { changedFiles: [`src/${taskId}.ts`], producedSymbols: [], consumedSymbols: [] },
+    limits: { maxDurationMs: 60_000, maxCostUsd: 1 },
+    knownRisks: [],
+    definitionOfDone: "done",
+    executionScope: { implementationPaths: [`src/${taskId}.ts`], testPaths: [], configPaths: [] }
+  });
 }
 
 function postRun(runId: string): Promise<Response> {

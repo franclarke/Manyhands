@@ -53,6 +53,40 @@ Para flujos no adaptativos hay tres políticas:
 - **`parallel_naive`:** agrupa hasta `maxParallel`, ignorando el riesgo.
 - **`risk_aware`:** agrupa tareas listas sin pares `high`/`blocking`.
 
+El camino productivo usa `risk_aware` por default. `parallel_naive` no es un
+fallback implícito: si se usa, debe venir seleccionado de forma explícita y deja
+warning auditable.
+
+### Contexto de seguridad
+
+`buildSchedulingSafetyContext` normaliza los inputs del scheduler:
+
+- toma contratos desde el `TaskGraph` cuando no se pasan por separado;
+- genera o completa la `riskMatrix` desde contratos y scopes;
+- agrega riesgo conservador para scope solapado, contrato faltante, scope vacío
+  o interfaces producer/consumer sin dependencia;
+- emite warnings/fallbacks (`missing_contract`, `empty_scope`,
+  `risk_matrix_missing`, `risk_matrix_incomplete`,
+  `parallel_naive_explicit`).
+
+La regla de degradación es serializar antes que paralelizar sin evidencia.
+
+### Evento durable de wave
+
+El package `scheduler` no persiste eventos. En el camino web, `execution-host`
+usa el helper `selectAndPersistSchedulingWave`, que selecciona la wave con
+`selectScopeAwareWave` y persiste `run.scheduling.wave_selected` como evento
+required antes de devolver los task ids para dispatch. Si el append falla, esa
+wave no se ejecuta silenciosamente.
+
+Payload mínimo:
+
+- `source`, `waveIndex`, `policy`;
+- `readyTaskIds`, `selectedTaskIds`, `blockedTaskIds`;
+- `blockedReasons`;
+- `riskSummary`;
+- `fallbacks` y `warnings`.
+
 ### Gates humanos (`applyHumanGateToSchedule`)
 
 Aplica una política determinista de intervención: los conflictos `high` se

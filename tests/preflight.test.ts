@@ -5,11 +5,14 @@ import { describe, expect, it } from "vitest";
 import { runPreflight, PreflightError, type PreflightDeps } from "@/lib/server/runs/preflight";
 import { inspectPrimaryProviderReadiness, type ProviderReadinessDeps } from "@/lib/server/providers/readiness";
 
-const OK_DEPS: Required<Pick<PreflightDeps, "checkCli" | "hasCredentials" | "gitPorcelain" | "branchExists">> = {
+const OK_DEPS: Required<
+  Pick<PreflightDeps, "checkCli" | "hasCredentials" | "gitPorcelain" | "branchExists" | "freeDiskBytes">
+> = {
   checkCli: async () => true,
   hasCredentials: () => true,
   gitPorcelain: async () => "",
-  branchExists: async () => true
+  branchExists: async () => true,
+  freeDiskBytes: async () => 2 * 1024 * 1024 * 1024
 };
 
 const INPUT = { repoRoot: "C:/repo", baseBranch: "main" };

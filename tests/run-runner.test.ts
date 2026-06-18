@@ -17,6 +17,7 @@ import {
 import { POST as POST_RUN } from "@/app/api/runs/[id]/run/route";
 import { JsonRunRecordStore } from "@/lib/server/runs/repository";
 import { resetRunRepositoryForTests } from "@/lib/server/runs/store";
+import { AgentTaskContractSchema } from "@manyhands/contracts";
 import type { AgentExecutionResult, GranularityVector, RunExecutionResult } from "@manyhands/execution-core";
 
 /** Deterministic execution engine double: returns a canned successful run. */
@@ -86,10 +87,12 @@ const runIdBase = "test-run";
  * so the contents are never exercised by a real RunExecutor.
  */
 function stubPlanningArtifact(taskId: string): {
-  decomposition: { graph: { id: string; planId: string; repo: string; baseBranch: string; baseCommit: string; featureRequest: string; nodes: Record<string, unknown>; dependencies: unknown[]; rootId: string; createdAt: string } };
+  decomposition: { graph: { id: string; planId: string; repo: string; baseBranch: string; baseCommit: string; featureRequest: string; nodes: Record<string, unknown>; dependencies: unknown[]; rootId: string; createdAt: string }; contracts: unknown[] };
 } {
+  const contract = validContract(taskId);
   return {
     decomposition: {
+      contracts: [contract],
       graph: {
         id: "g1",
         planId: "p1",
@@ -109,7 +112,8 @@ function stubPlanningArtifact(taskId: string): {
             depth: 0,
             childrenIds: [],
             dependencies: [],
-            metadata: { authoredBy: "ai" }
+            metadata: { authoredBy: "ai" },
+            contract
           }
         },
         dependencies: [],
@@ -118,6 +122,25 @@ function stubPlanningArtifact(taskId: string): {
       }
     }
   };
+}
+
+function validContract(taskId: string): unknown {
+  return AgentTaskContractSchema.parse({
+    taskId,
+    objective: `Implement ${taskId}.`,
+    context: { typeSignatures: [], referenceSnippets: [], conventions: [], upstreamArtifacts: [] },
+    allowed: { paths: [`src/${taskId}.ts`] },
+    forbidden: { paths: [] },
+    relevantSymbols: [],
+    dependencies: [],
+    acceptance: [{ kind: "custom", description: "done" }],
+    validationCommands: [],
+    expectedOutput: { changedFiles: [`src/${taskId}.ts`], producedSymbols: [], consumedSymbols: [] },
+    limits: { maxDurationMs: 60_000, maxCostUsd: 1 },
+    knownRisks: [],
+    definitionOfDone: "done",
+    executionScope: { implementationPaths: [`src/${taskId}.ts`], testPaths: [], configPaths: [] }
+  });
 }
 
 let tempDir: string;

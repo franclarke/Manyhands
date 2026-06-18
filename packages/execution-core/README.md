@@ -9,7 +9,11 @@ Ejecución + composición. Aquí es donde el plan se vuelve cambios reales en el
 ## Conceptos clave
 
 - **`WorktreeManager` + `SimpleGitRunner`.** Cada hoja opera en su propio git worktree/branch. `git diff HEAD` es la única fuente de verdad de lo que cambió (D5).
-- **`AgentExecutor` + perfiles.** El seam por el que se invocan los agentes CLI (Gemini por defecto; también `claude-code`, `codex`). El routing elige executor por complejidad/disponibilidad.
+- **`AgentExecutor` + perfiles.** El seam por el que se invocan los agentes CLI. Claude Code CLI es el default del producto; Codex CLI es alternativa seleccionable. El routing elige executor por complejidad/disponibilidad.
+- **`RunExecutor`.** Ejecuta batches con scheduling `risk_aware` por default, usando contratos/scopes/riesgos reales cuando están disponibles. Emite `batch_scheduled` en `trace-store` con selected/blocked task ids, resumen de riesgo, fallbacks y warnings.
+- **`assertExecutableGraph`.** Frontera previa a dispatch: valida que el DAG y
+  los contratos de hojas sean ejecutables antes de crear worktrees o llamar al
+  agente. Un contrato inseguro falla en fase `validate`.
 - **`ScopeChecker`.** Después de ejecutar, valida los archivos cambiados contra `executionScope` y `forbiddenPaths` (allow-list advisory; `forbiddenPaths` es hard-fail — D7).
 - **`ContextPacker`.** Arma el prompt de cada hoja con las interfaces que consume.
 - **`ValidationRunner`.** Corre los comandos de validación bajo shell con whitelist; exit codes sintéticos (124 timeout, 126 rechazado, 127 ausente) alimentan la clasificación de fallos (D13).
@@ -18,7 +22,7 @@ Ejecución + composición. Aquí es donde el plan se vuelve cambios reales en el
 
 ## API pública
 
-`WorktreeManager` · `AgentExecutor` / `registry` / `factory` · `ScopeChecker` · `ValidationRunner` · `ResultRecorder` · `IntegrationAgent` · `ContextPacker` · `RunExecutor`
+`WorktreeManager` · `AgentExecutor` / `registry` / `factory` · `ScopeChecker` · `ValidationRunner` · `ResultRecorder` · `IntegrationAgent` · `ContextPacker` · `assertExecutableGraph` · `RunExecutor`
 
 ## Dependencias
 

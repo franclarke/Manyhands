@@ -3,7 +3,7 @@
  * the execution graph's frontier router (docs/design/future-frontier-tasks.md §2).
  */
 import { describe, expect, it } from "vitest";
-import { selectScopeAwareWave } from "@manyhands/scheduler";
+import { buildSchedulingSafetyContext, selectScopeAwareWave } from "@manyhands/scheduler";
 import type { TaskPairRiskMatrix } from "@manyhands/conflict-risk";
 import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 
@@ -24,14 +24,14 @@ function makeLeaf(id: string, scopePaths?: string[]): TaskNode {
           contract: {
             taskId: id,
             objective: `objective ${id}`,
-            context: { files: [], symbols: [], constraints: [] },
-            allowed: { paths: [], symbols: [] },
-            forbidden: { paths: [], symbols: [] },
+            context: { typeSignatures: [], referenceSnippets: [], conventions: [], upstreamArtifacts: [] },
+            allowed: { paths: scopePaths },
+            forbidden: { paths: [] },
             relevantSymbols: [],
             dependencies: [],
-            acceptance: [{ id: `${id}-ac`, description: "done", verification: "tests" }],
+            acceptance: [{ kind: "custom", description: "done" }],
             validationCommands: [],
-            expectedOutput: { kind: "patch", description: "diff" },
+            expectedOutput: { changedFiles: [], producedSymbols: [], consumedSymbols: [], diffShapeHint: "diff" },
             limits: { maxDurationMs: 1000, maxCostUsd: 1 },
             knownRisks: [],
             definitionOfDone: "done",
@@ -104,7 +104,7 @@ describe("selectScopeAwareWave", () => {
     expect(wave).toEqual(["a", "c"]); // b collides with a → next wave
   });
 
-  it("does not serialize tasks that overlap only on shared config files", () => {
+  it("does not serialize scoped tasks that overlap only on shared config files", () => {
     // Shared manifests (package.json, tsconfig.json, vite.config.ts) are touched
     // by nearly every task. Because all leaves branch from the same skeleton
     // commit, serializing on them never avoids the integration-time conflict —
@@ -121,7 +121,7 @@ describe("selectScopeAwareWave", () => {
       makeScopedLeaf("c", { configPaths: ["package.json", "vite.config.ts"] })
     ]);
     const wave = selectScopeAwareWave({ graph, candidates: ["a", "b", "c"] });
-    expect(wave).toEqual(["a", "b", "c"]);
+    expect(wave).toEqual(["a", "b"]);
   });
 
   it("still serializes real implementation overlap even when configs are shared", () => {
@@ -153,14 +153,23 @@ describe("selectScopeAwareWave", () => {
     expect(wave).toEqual(["a"]);
   });
 
-  it("tasks without declared scopes parallelize freely (D9)", () => {
+  it("tasks without declared scopes serialize conservatively", () => {
     const graph = makeGraph([makeLeaf("a"), makeLeaf("b"), makeLeaf("c", ["src/x/**"])]);
     const wave = selectScopeAwareWave({ graph, candidates: ["a", "b", "c"] });
-    expect(wave).toEqual(["a", "b", "c"]);
+    expect(wave).toEqual(["a"]);
+
+    const safety = buildSchedulingSafetyContext({ graph, taskIds: ["a", "b", "c"], policy: "risk_aware" });
+    expect(safety.warnings.map((warning) => warning.code)).toEqual(
+      expect.arrayContaining(["missing_contract", "missing_contract"])
+    );
   });
 
   it("serializes high/blocking risk pairs even without scopes", () => {
-    const graph = makeGraph([makeLeaf("a"), makeLeaf("b"), makeLeaf("c")]);
+    const graph = makeGraph([
+      makeLeaf("a", ["src/a/**"]),
+      makeLeaf("b", ["src/b/**"]),
+      makeLeaf("c", ["src/c/**"])
+    ]);
     const riskMatrix = [
       {
         taskAId: "a",
@@ -176,7 +185,7 @@ describe("selectScopeAwareWave", () => {
   });
 
   it("low/medium risk pairs stay parallel", () => {
-    const graph = makeGraph([makeLeaf("a"), makeLeaf("b")]);
+    const graph = makeGraph([makeLeaf("a", ["src/a/**"]), makeLeaf("b", ["src/b/**"])]);
     const riskMatrix = [
       {
         taskAId: "a",
@@ -192,7 +201,11 @@ describe("selectScopeAwareWave", () => {
   });
 
   it("honours maxParallel as an optional cap", () => {
-    const graph = makeGraph([makeLeaf("a"), makeLeaf("b"), makeLeaf("c")]);
+    const graph = makeGraph([
+      makeLeaf("a", ["src/a/**"]),
+      makeLeaf("b", ["src/b/**"]),
+      makeLeaf("c", ["src/c/**"])
+    ]);
     const wave = selectScopeAwareWave({ graph, candidates: ["a", "b", "c"], maxParallel: 2 });
     expect(wave).toEqual(["a", "b"]);
   });

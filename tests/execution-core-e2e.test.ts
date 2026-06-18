@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
+import { AgentTaskContractSchema, type AgentTaskContract } from "@manyhands/contracts";
 import type { TaskGraph } from "@manyhands/task-graph";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -66,12 +67,32 @@ function graphWith(leafIds: string[]): TaskGraph {
             depth: 1,
             childrenIds: [],
             dependencies: [],
-            acceptanceCriteria: ["module exists"]
+            acceptanceCriteria: ["module exists"],
+            contract: contract(taskId)
           }
         ])
       )
     }
   };
+}
+
+function contract(taskId: string): AgentTaskContract {
+  return AgentTaskContractSchema.parse({
+    taskId,
+    objective: `Implement ${taskId}.`,
+    context: { typeSignatures: [], referenceSnippets: [], conventions: [], upstreamArtifacts: [] },
+    allowed: { paths: [`src/${taskId}.ts`] },
+    forbidden: { paths: [] },
+    relevantSymbols: [],
+    dependencies: [],
+    acceptance: [{ kind: "custom", description: "module exists" }],
+    validationCommands: [],
+    expectedOutput: { changedFiles: [`src/${taskId}.ts`], producedSymbols: [], consumedSymbols: [] },
+    limits: { maxDurationMs: 60_000, maxCostUsd: 1 },
+    knownRisks: [],
+    definitionOfDone: "module exists",
+    executionScope: { implementationPaths: [`src/${taskId}.ts`], testPaths: [], configPaths: [] }
+  });
 }
 
 beforeEach(async () => {

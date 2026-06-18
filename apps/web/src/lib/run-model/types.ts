@@ -743,6 +743,44 @@ export interface DecisionResolvedPayload {
   actor: "human";
 }
 
+export type SchedulingAuditPolicy = "sequential_dag" | "parallel_naive" | "risk_aware";
+export type SchedulingAuditSource = "execution-host" | "run-executor";
+export type SchedulingAuditRiskLevel = "low" | "medium" | "high" | "blocking";
+
+export interface SchedulingAuditRiskSummary {
+  low: number;
+  medium: number;
+  high: number;
+  blocking: number;
+}
+
+export interface SchedulingAuditReason {
+  taskId: NodeId;
+  reason: string;
+  relatedTaskIds: NodeId[];
+  riskLevel?: SchedulingAuditRiskLevel;
+}
+
+export interface SchedulingAuditFallback {
+  code: string;
+  taskIds: NodeId[];
+  message: string;
+}
+
+export interface RunSchedulingWaveSelectedPayload {
+  version: 1;
+  source: SchedulingAuditSource;
+  waveIndex: number;
+  policy: SchedulingAuditPolicy;
+  readyTaskIds: NodeId[];
+  selectedTaskIds: NodeId[];
+  blockedTaskIds: NodeId[];
+  blockedReasons: SchedulingAuditReason[];
+  riskSummary: SchedulingAuditRiskSummary;
+  fallbacks: SchedulingAuditFallback[];
+  warnings: SchedulingAuditFallback[];
+}
+
 /**
  * Map of v1 event type → payload. The authoritative v1 vocabulary.
  * `RunEventType` is derived from this map's keys.
@@ -788,6 +826,7 @@ export interface RunEventPayloads {
   "run.metrics.ready": RunMetricsReadyPayload;
   "run.completed": RunCompletedPayload;
   "run.status.changed": RunStatusChangedPayload;
+  "run.scheduling.wave_selected": RunSchedulingWaveSelectedPayload;
   "run.cancelled": RunCancelledPayload;
   // Recovery (cold restart)
   "world.reconciled": WorldReconciledPayload;
@@ -840,6 +879,7 @@ export const RUN_EVENT_TYPES = [
   "run.metrics.ready",
   "run.completed",
   "run.status.changed",
+  "run.scheduling.wave_selected",
   "run.cancelled",
   "world.reconciled",
   "checkpoint.degraded",

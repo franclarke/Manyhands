@@ -30,6 +30,16 @@ El execution graph:
 
 ## Flujo
 
+### Frontera de grafo ejecutable
+
+Antes de preparar grounding, scheduling o worktrees, el camino productivo valida
+el `TaskGraph` aprobado con `validateExecutableTaskGraph()` /
+`assertExecutableGraph()`. La validación bloquea hojas sin contrato ejecutable,
+contratos cuyo `taskId` no coincide con el nodo, paths inseguros, schemas
+inválidos y costuras consumidas sin productor. `execution-host.ts` aplica la
+misma frontera cuando reconstruye deps para el StateGraph, de modo que start y
+resume no puedan alimentar al scheduler con contratos ambiguos.
+
 ### Grounding
 
 Antes de ejecutar hojas, el `GroundingAgent` puede materializar un walking

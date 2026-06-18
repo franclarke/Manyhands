@@ -11,6 +11,7 @@ import {
 import type { RepoProvisioner } from "@/lib/server/runs/repo-provisioner";
 import { JsonRunRecordStore } from "@/lib/server/runs/repository";
 import { resetRunRepositoryForTests } from "@/lib/server/runs/store";
+import { AgentTaskContractSchema } from "@manyhands/contracts";
 import type { GranularityVector, RunExecutionResult } from "@manyhands/execution-core";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 
@@ -66,8 +67,10 @@ let runsDir: string;
  * RunExecutor — only the shape matters.
  */
 function stubPlanning(): unknown {
+  const contract = validContract("leaf-a");
   return {
     decomposition: {
+      contracts: [contract],
       graph: {
         id: "g1",
         planId: "p1",
@@ -87,7 +90,8 @@ function stubPlanning(): unknown {
             depth: 0,
             childrenIds: [],
             dependencies: [],
-            metadata: { authoredBy: "ai" }
+            metadata: { authoredBy: "ai" },
+            contract
           }
         },
         dependencies: [],
@@ -96,6 +100,25 @@ function stubPlanning(): unknown {
       }
     }
   };
+}
+
+function validContract(taskId: string, changedFile = `src/${taskId}.ts`): unknown {
+  return AgentTaskContractSchema.parse({
+    taskId,
+    objective: `Implement ${taskId}.`,
+    context: { typeSignatures: [], referenceSnippets: [], conventions: [], upstreamArtifacts: [] },
+    allowed: { paths: [changedFile] },
+    forbidden: { paths: [] },
+    relevantSymbols: [],
+    dependencies: [],
+    acceptance: [{ kind: "custom", description: "done" }],
+    validationCommands: [],
+    expectedOutput: { changedFiles: [changedFile], producedSymbols: [], consumedSymbols: [] },
+    limits: { maxDurationMs: 60_000, maxCostUsd: 1 },
+    knownRisks: [],
+    definitionOfDone: "done",
+    executionScope: { implementationPaths: [changedFile], testPaths: [], configPaths: [] }
+  });
 }
 
 async function saveApprovedRun(runId: string, extra: Record<string, unknown> = {}): Promise<JsonRunRecordStore> {
@@ -344,6 +367,7 @@ function git(cwd: string, ...args: string[]): string {
 }
 
 function minimalGraph(baseCommit: string, repoRoot: string): unknown {
+  const contract = validContract("leaf-a", "src/feature.ts");
   return {
     id: "graph",
     planId: "plan",
@@ -364,8 +388,21 @@ function minimalGraph(baseCommit: string, repoRoot: string): unknown {
         status: "planned",
         granularity: "medium",
         depth: 0,
-        childrenIds: [],
+        childrenIds: ["leaf-a"],
         dependencies: []
+      },
+      "leaf-a": {
+        id: "leaf-a",
+        parentId: "root",
+        kind: "leaf",
+        title: "Implement feature",
+        goal: "Implement local feature",
+        status: "planned",
+        granularity: "fine",
+        depth: 1,
+        childrenIds: [],
+        dependencies: [],
+        contract
       }
     }
   };

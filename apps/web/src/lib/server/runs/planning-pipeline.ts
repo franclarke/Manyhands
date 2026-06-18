@@ -37,6 +37,7 @@ import { generateRunTitle, type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
 import { markRunnerActive, markRunnerInactive, startRunBackgroundTask } from "./runner-state";
 import { saveRunWithRequiredStatusEvent } from "./audited-mutation";
+import { assertExecutableRunGraph, resolveExecutionGraph } from "./execution-state";
 import type { ExecutionConfigInput, RunRecord, RunStatus } from "./schema";
 import { getRunRepository } from "./store";
 
@@ -321,6 +322,7 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
 
   if (outcome.kind === "awaiting_approval") {
     console.log(`[Runner] Planificación completada con éxito para el run: ${runId}`);
+    assertExecutableRunGraph(resolveExecutionGraph(run));
     const reviewed = run.status === "needs_review" ? run : await transitionTo(run, "needs_review");
 
     // Autonomy (W6): semi/autonomous skip the human approval gate — auto-approve

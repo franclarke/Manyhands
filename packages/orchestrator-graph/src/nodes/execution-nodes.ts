@@ -263,7 +263,7 @@ export interface FrontierRouterDeps {
    * run concurrently (scope overlap / conflict risk aware). Returning an empty
    * array is treated as "no constraint" and the full frontier is dispatched.
    */
-  selectWave?: (params: { graph: TaskGraph; candidates: string[] }) => string[];
+  selectWave?: (params: { graph: TaskGraph; candidates: string[] }) => string[] | Promise<string[]>;
 }
 
 /**
@@ -274,7 +274,9 @@ export interface FrontierRouterDeps {
  * the integration loop once no executable work remains.
  */
 export function makeRouteFrontier(deps: FrontierRouterDeps = {}) {
-  return function routeFrontier(state: RunState): Send[] | "leafGate" | "budgetGate" | "integrationJoin" {
+  return async function routeFrontier(
+    state: RunState
+  ): Promise<Send[] | "leafGate" | "budgetGate" | "integrationJoin"> {
     const graph = requireGraph(state, "routeFrontier");
 
     if (unhandledLeafFailures(state).length > 0) {
@@ -290,7 +292,7 @@ export function makeRouteFrontier(deps: FrontierRouterDeps = {}) {
       return "budgetGate";
     }
 
-    const selected = deps.selectWave?.({ graph, candidates }) ?? candidates;
+    const selected = (await deps.selectWave?.({ graph, candidates })) ?? candidates;
     const wave = selected.length > 0 ? selected.filter((id) => candidates.includes(id)) : candidates;
     const effective = wave.length > 0 ? wave : candidates;
 

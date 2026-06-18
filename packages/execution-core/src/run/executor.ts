@@ -3,7 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { ExecutionValidationCommand } from "@manyhands/contracts";
-import { scheduleTasks, type SchedulingPolicy } from "@manyhands/scheduler";
+import {
+  buildSchedulingSafetyContext,
+  scheduleTasks,
+  summarizeRiskMatrix,
+  type SchedulingPolicy
+} from "@manyhands/scheduler";
+import type { TaskPairRiskMatrix } from "@manyhands/conflict-risk";
 import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
 
@@ -72,6 +78,8 @@ export interface RunExecutionParams {
   defaultRepairSelection?: ExecutorSelection;
   runId?: string;
   policy?: SchedulingPolicy;
+  /** Full planning-time conflict matrix used by the scheduler. */
+  riskMatrix?: TaskPairRiskMatrix;
   /** Run-level cancellation: aborts in-flight executors and stops scheduling. */
   signal?: AbortSignal;
   /** Awaited at each batch boundary (pause hold); resolves to continue. */
@@ -214,18 +222,68 @@ export class RunExecutor {
     // them — even if a leaf/integration/validation step throws (I1).
     const worktrees: WorktreeRecord[] = [];
     try {
+      const policy = params.policy ?? "risk_aware";
+      const schedulingSafety = buildSchedulingSafetyContext({
+        graph,
+        policy,
+        ...(params.riskMatrix !== undefined ? { riskMatrix: params.riskMatrix } : {})
+      });
       const plan = scheduleTasks({
         graph,
-        contracts: {},
-        riskMatrix: [],
+        contracts: schedulingSafety.contracts,
+        riskMatrix: schedulingSafety.riskMatrix,
         maxParallel: config.maxParallel,
-        policy: params.policy ?? "parallel_naive"
+        policy
       });
       execLog("run", "scheduled", {
         runId,
+        policy: plan.policy,
         batches: plan.batches.length,
         tasks: formatTaskList(plan.batches.flatMap((batch) => batch.taskIds)),
-        blocked: plan.blocked.length
+        blocked: plan.blocked.length,
+        warnings: schedulingSafety.warnings.length
+      });
+      this.traceStore.append({
+        type: "batch_scheduled",
+        actor: "system",
+        payload: {
+          version: 1,
+          source: "run-executor",
+          policy: plan.policy,
+          readyTaskCount: leafCount,
+          readyTaskIds: Object.values(graph.nodes)
+            .filter((node) => node.kind === "leaf" || node.kind === "integrator")
+            .map((node) => node.id),
+          selectedTaskIds: plan.batches.flatMap((batch) => batch.taskIds),
+          blockedTaskIds: plan.blocked.map((task) => task.taskId),
+          blockedReasons: plan.blocked.map((task) => ({
+            taskId: task.taskId,
+            reason: task.reason,
+            relatedTaskIds: [],
+            requiresHumanReview: task.requiresHumanReview
+          })),
+          riskSummary: summarizeRiskMatrix(schedulingSafety.riskMatrix),
+          fallbacks: schedulingSafety.warnings
+            .filter((warning) => warning.code !== "parallel_naive_explicit")
+            .map((warning) => ({
+              code: warning.code,
+              taskIds: warning.taskIds,
+              message: warning.message
+            })),
+          batchCount: plan.batches.length,
+          blockedByRiskCount: plan.blocked.filter((task) => task.reason.includes("risk")).length,
+          batches: plan.batches.map((batch, index) => ({
+            batchIndex: index,
+            batchId: batch.id,
+            selectedTaskIds: batch.taskIds,
+            rationale: batch.rationale
+          })),
+          warnings: schedulingSafety.warnings.map((warning) => ({
+            code: warning.code,
+            taskIds: warning.taskIds,
+            message: warning.message
+          }))
+        }
       });
 
       const leafResultMap = await this.batchScheduler.runBatches({

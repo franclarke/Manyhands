@@ -33,6 +33,7 @@ import {
   executionResultsFromRun,
   integrationDurationMs,
   provisionedFromRecord,
+  assertExecutableRunGraph,
   resolveExecutionGraph
 } from "./execution-state";
 import { planNodeProposedEvent } from "./planning-run-model-adapter";
@@ -142,6 +143,7 @@ export async function replanSubtree(
 
   // Graft the fresh subtree into the existing DAG (validated or it throws).
   const graft = graftSubtree({ graph, taskId, replacement: planning.decomposition.graph, revision });
+  assertExecutableRunGraph(graft.graph);
 
   // Invalidate the closure: worktrees cleaned, results filtered to survivors.
   const provisioned = provisionedFromRecord(run.provisioned);

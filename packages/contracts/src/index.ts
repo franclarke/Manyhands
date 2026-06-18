@@ -261,3 +261,175 @@ export function validateAgentTaskContract(input: unknown): ContractValidationRes
     issues: parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`)
   };
 }
+
+export type ContractBoundaryIssueSeverity = "error" | "warning" | "info";
+
+export type ContractBoundaryIssueCode =
+  | "schema_invalid"
+  | "task_id_mismatch"
+  | "unsafe_path"
+  | "missing_execution_scope"
+  | "missing_expected_changed_files"
+  | "invalid_interface_id"
+  | "duplicate_interface_id";
+
+export interface ContractBoundaryIssue {
+  code: ContractBoundaryIssueCode;
+  severity: ContractBoundaryIssueSeverity;
+  field: string;
+  message: string;
+  taskId?: string;
+}
+
+export interface ContractBoundaryValidationOptions {
+  /** Node id this contract is attached to. Used to catch persisted mismatch. */
+  taskId?: string;
+  /** Executable leaves need enough information for scheduling/execution. */
+  executable?: boolean;
+}
+
+export type ContractBoundaryValidationResult =
+  | { ok: true; contract: AgentTaskContract; issues: ContractBoundaryIssue[] }
+  | { ok: false; issues: ContractBoundaryIssue[] };
+
+export function validateAgentTaskContractBoundary(
+  input: unknown,
+  options: ContractBoundaryValidationOptions = {}
+): ContractBoundaryValidationResult {
+  const parsed = AgentTaskContractSchema.safeParse(input);
+  const issues: ContractBoundaryIssue[] = [];
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      issues: parsed.error.issues.map((issue) => ({
+        code: "schema_invalid",
+        severity: "error",
+        field: issue.path.join("."),
+        ...(options.taskId !== undefined ? { taskId: options.taskId } : {}),
+        message: `${issue.path.join(".")}: ${issue.message}`
+      }))
+    };
+  }
+
+  const contract = parsed.data;
+  if (options.taskId !== undefined && contract.taskId !== options.taskId) {
+    issues.push({
+      code: "task_id_mismatch",
+      severity: "error",
+      field: "taskId",
+      taskId: options.taskId,
+      message: `contract taskId "${contract.taskId}" does not match node id "${options.taskId}"`
+    });
+  }
+
+  validatePathList(issues, contract.taskId, "allowed.paths", contract.allowed.paths);
+  validatePathList(issues, contract.taskId, "forbidden.paths", contract.forbidden.paths);
+  validatePathList(issues, contract.taskId, "forbidden.reasons", Object.keys(contract.forbidden.reasons ?? {}));
+  validatePathList(issues, contract.taskId, "forbiddenPaths", contract.forbiddenPaths ?? []);
+  validatePathList(issues, contract.taskId, "expectedOutput.changedFiles", contract.expectedOutput.changedFiles);
+  validatePathList(issues, contract.taskId, "executionScope.implementationPaths", contract.executionScope?.implementationPaths ?? []);
+  validatePathList(issues, contract.taskId, "executionScope.testPaths", contract.executionScope?.testPaths ?? []);
+  validatePathList(issues, contract.taskId, "executionScope.configPaths", contract.executionScope?.configPaths ?? []);
+
+  if (options.executable === true) {
+    const executionScopePaths = [
+      ...(contract.executionScope?.implementationPaths ?? []),
+      ...(contract.executionScope?.testPaths ?? [])
+    ];
+    if (executionScopePaths.length === 0) {
+      issues.push({
+        code: "missing_execution_scope",
+        severity: "warning",
+        field: "executionScope",
+        taskId: contract.taskId,
+        message:
+          `task ${contract.taskId} has no implementation/test executionScope; ` +
+          "allowed.paths will be used as an explicit conservative fallback"
+      });
+    }
+    if (contract.expectedOutput.changedFiles.length === 0) {
+      issues.push({
+        code: "missing_expected_changed_files",
+        severity: "warning",
+        field: "expectedOutput.changedFiles",
+        taskId: contract.taskId,
+        message: `task ${contract.taskId} does not declare expected changed files`
+      });
+    }
+  }
+
+  validateInterfaces(issues, contract.taskId, "consumedInterfaces", contract.consumedInterfaces ?? []);
+  validateInterfaces(issues, contract.taskId, "producedInterfaces", contract.producedInterfaces ?? []);
+
+  return {
+    ok: !issues.some((issue) => issue.severity === "error"),
+    contract,
+    issues
+  };
+}
+
+function validatePathList(
+  issues: ContractBoundaryIssue[],
+  taskId: string,
+  field: string,
+  paths: readonly string[]
+): void {
+  for (const path of paths) {
+    const reason = unsafeRepoRelativePathReason(path);
+    if (reason !== undefined) {
+      issues.push({
+        code: "unsafe_path",
+        severity: "error",
+        field,
+        taskId,
+        message: `${field} contains unsafe repo path "${path}": ${reason}`
+      });
+    }
+  }
+}
+
+function unsafeRepoRelativePathReason(value: string): string | undefined {
+  const path = value.trim();
+  if (path.length === 0) return "path is empty";
+  if (/[\u0000-\u001F]/u.test(path)) return "path contains control characters";
+  if (path.startsWith("/") || path.startsWith("\\")) return "path is absolute";
+  if (/^[A-Za-z]:/.test(path)) return "path uses a Windows drive prefix";
+  if (path.startsWith("~")) return "path targets a home directory";
+
+  const segments = path.replace(/\\/g, "/").split("/");
+  if (segments.some((segment) => segment === "..")) return "path traversal is not allowed";
+  return undefined;
+}
+
+const INTERFACE_ID_PATTERN = /^[A-Za-z0-9_.:-]+$/;
+
+function validateInterfaces(
+  issues: ContractBoundaryIssue[],
+  taskId: string,
+  field: "consumedInterfaces" | "producedInterfaces",
+  interfaces: readonly InterfaceContract[]
+): void {
+  const seen = new Set<string>();
+  for (const item of interfaces) {
+    if (!INTERFACE_ID_PATTERN.test(item.id)) {
+      issues.push({
+        code: "invalid_interface_id",
+        severity: "error",
+        field: `${field}.id`,
+        taskId,
+        message: `${field} contains invalid interface id "${item.id}"; use stable identifier characters only`
+      });
+    }
+    if (seen.has(item.id)) {
+      issues.push({
+        code: "duplicate_interface_id",
+        severity: "error",
+        field,
+        taskId,
+        message: `${field} repeats interface id "${item.id}"`
+      });
+    }
+    seen.add(item.id);
+  }
+}

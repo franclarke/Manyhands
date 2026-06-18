@@ -26,9 +26,9 @@ import {
   type ExecutorId,
   type ExecutorRouter,
   type IntegrationResult,
-  type PredictedConflictHint
+  type PredictedConflictHint,
+  assertExecutableGraph
 } from "@manyhands/execution-core";
-import { selectScopeAwareWave } from "@manyhands/scheduler";
 import {
   JsonFileCheckpointSaver,
   buildExecutionGraph,
@@ -58,6 +58,7 @@ import { getRunRepository } from "./store";
 import { getRunAbort } from "./run-abort-registry";
 import { claimRunMutation } from "./mutation-guard";
 import { waitWhilePlainPaused } from "./pause-control";
+import { selectAndPersistSchedulingWave } from "./scheduling-audit-events";
 import type { ProvisionedRepo } from "./repo-provisioner";
 import type { RunRecord } from "./schema";
 
@@ -179,6 +180,7 @@ export function buildExecutionHost(
     baseBranch: provisioned.baseBranch,
     baseCommit: provisioned.baseCommit
   };
+  assertExecutableGraph(taskGraph);
   const riskMatrix = riskMatrixFromRun(run);
   const traceStoreFactory = options.traceStoreFactory ?? (() => new InMemoryTraceStore());
 
@@ -395,21 +397,39 @@ export function buildExecutionHost(
   };
 
   const checkpointer = new JsonFileCheckpointSaver(join(resolveRunsDirectory(), "checkpoints"));
+  let schedulingWaveIndex = 0;
 
   const graph = buildExecutionGraph({
     leafDeps: { executeLeaf, repairLeaf, maxRepairAttempts: 1 },
     integrateDeps: { integrateComposite },
     validationDeps: { validateRun },
     frontierDeps: {
-      selectWave: ({ graph: waveGraph, candidates }) =>
-        selectScopeAwareWave({
+      selectWave: async ({ graph: waveGraph, candidates }) => {
+        const result = await selectAndPersistSchedulingWave({
+          runId,
           graph: waveGraph,
           candidates,
+          waveIndex: schedulingWaveIndex,
+          source: "execution-host",
           riskMatrix,
           ...(run.executionConfig?.maxParallel !== undefined
             ? { maxParallel: run.executionConfig.maxParallel }
             : {})
-        })
+        });
+        schedulingWaveIndex += 1;
+        console.log("[Runner] Risk-aware wave selected", {
+          runId,
+          policy: result.payload.policy,
+          readyTaskCount: result.payload.readyTaskIds.length,
+          selectedTaskCount: result.payload.selectedTaskIds.length,
+          blockedByRiskCount: result.payload.blockedTaskIds.length,
+          warnings: result.payload.warnings.map((warning) => warning.code)
+        });
+        for (const warning of result.payload.warnings) {
+          console.warn(`[Runner] Scheduling fallback for run ${runId}: ${warning.message}`);
+        }
+        return result.selectedTaskIds;
+      }
     },
     checkpointer
   });

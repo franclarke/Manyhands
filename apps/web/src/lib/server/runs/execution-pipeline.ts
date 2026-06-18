@@ -31,6 +31,7 @@ import {
     computeInvalidatedTasks,
     deriveRunValidationSummary,
     executionResultsFromRun,
+    assertExecutableRunGraph,
     manualReadinessForTask,
     mergeNodeExecutionResult,
     provisionedFromRecord,
@@ -171,6 +172,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     }
 
     const graph = await resolveExecutionGraph(run);
+    assertExecutableRunGraph(graph);
     console.log(
       `[Runner] Execution graph resolved for run ${runId}: root=${graph.rootId}, nodes=${Object.keys(graph.nodes).length}, dependencies=${graph.dependencies.length}`
     );
@@ -539,6 +541,7 @@ export async function resumeExecutionPipeline(
   let lockedRepoRoot: string | undefined;
   try {
     const run = await getRunRepository().get(runId);
+    assertExecutableRunGraph(resolveExecutionGraph(run));
     const provisioned = provisionedFromRecord(run.provisioned);
     if (provisioned === undefined) {
       throw new RepoNotConfiguredError(runId);
@@ -695,6 +698,7 @@ export async function runNodeExecutionPipeline(
     }
 
     const graph = await resolveExecutionGraph(run);
+    assertExecutableRunGraph(graph);
     const existing = executionResultsFromRun(run);
     const readiness = manualReadinessForTask(graph, taskId, existing);
     console.log(
@@ -811,6 +815,7 @@ export async function assertManualNodeExecutionReady(run: RunRecord, taskId: str
     throw new RunLifecycleError(`Cannot execute individual nodes from status ${run.status}`);
   }
   const graph = await resolveExecutionGraph(run);
+  assertExecutableRunGraph(graph);
   const readiness = manualReadinessForTask(graph, taskId, executionResultsFromRun(run));
   if (!readiness.ready) {
     throw new RunLifecycleError(readiness.reason);

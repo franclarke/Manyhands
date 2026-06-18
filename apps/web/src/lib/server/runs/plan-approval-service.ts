@@ -8,6 +8,7 @@ import { claimRunMutation } from "./mutation-guard";
 import { hasPlanningCheckpoint } from "./planning-host";
 import { resumePlanningPipeline } from "./planning-pipeline";
 import { appendStatusEventOrRollback, requireCapturedRunRecord } from "./audited-mutation";
+import { assertExecutableRunGraph, resolveExecutionGraph } from "./execution-state";
 
 export async function processPlanApproval(
   id: string,
@@ -16,6 +17,7 @@ export async function processPlanApproval(
 ): Promise<RunRecord> {
   const repo = getRunRepository();
   const run = await repo.get(id);
+  assertExecutableRunGraph(resolveExecutionGraph(run));
 
   // Quality gate (Fase B): block approval on reliable critic errors — graph
   // validation errors + orphan consumed seams — unless the user explicitly

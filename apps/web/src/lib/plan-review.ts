@@ -1,4 +1,6 @@
-import { validateTaskGraph, type AgentTaskContract, type RunSnapshot, type TaskGraph } from "@manyhands/core";
+import type { RunSnapshot } from "@manyhands/core";
+import type { AgentTaskContract } from "@manyhands/contracts";
+import { validateExecutableTaskGraph, type TaskGraph } from "@manyhands/task-graph";
 import { runSeamCritic } from "@/lib/plan-critic";
 
 export type PlanReviewStatus = "clean" | "warnings" | "errors";
@@ -56,7 +58,7 @@ export function buildPlanReviewSummary(
   }
 
   const issues: PlanReviewIssue[] = [];
-  for (const issue of validateTaskGraph(snapshot.graphSnapshot as unknown as TaskGraph)) {
+  for (const issue of validateExecutableTaskGraph(snapshot.graphSnapshot as unknown as TaskGraph)) {
     issues.push({
       severity: issue.severity,
       kind: "graph",

@@ -48,6 +48,29 @@ Cuando el sistema de ejecución real entró en escena, el contrato se extendió 
 
 Todos estos campos son opcionales para mantener backward compatibility con contratos existentes.
 
+### Validación de frontera ejecutable
+
+La compatibilidad del schema no significa que cualquier contrato sea ejecutable.
+`validateAgentTaskContractBoundary()` es la frontera runtime para contratos que
+pueden llegar a scheduler, worktrees o validación. Reutiliza
+`AgentTaskContractSchema` y además marca:
+
+- `schema_invalid`: campos requeridos por el schema ausentes o inválidos;
+- `task_id_mismatch`: el contrato no pertenece al `TaskNode` donde está embebido;
+- `unsafe_path`: paths absolutos, traversal `..`, home dirs, drive prefixes de
+  Windows o caracteres de control en scopes/outputs/forbidden paths;
+- `invalid_interface_id` y `duplicate_interface_id`: ids de costura no estables
+  o repetidos dentro del mismo contrato;
+- `missing_execution_scope` y `missing_expected_changed_files`: warnings
+  explícitos para fallback conservador cuando el contrato todavía tiene
+  suficiente scope en `allowed.paths`.
+
+`validateExecutableTaskGraph()` aplica esa validación a todas las hojas y cruza
+las interfaces del DAG: una interface consumida debe tener productor y una
+interface no puede tener múltiples productores. Approval, replan, start/resume
+de ejecución, node-run manual y `execution-host` usan esta frontera antes de
+despachar trabajo real.
+
 ### InterfaceContract: las costuras entre agentes paralelos
 
 El `InterfaceContract` es el tipo nuevo que habilita la colaboración entre hojas que trabajan en paralelo. Cuando el Decomposer descompone un nodo en hijos, produce junto con ellos un `sharedInterface`: las definiciones TypeScript concretas que los hijos deben respetar.

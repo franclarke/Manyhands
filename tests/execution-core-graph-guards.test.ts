@@ -1,4 +1,5 @@
 ﻿import type { TaskGraph } from "@manyhands/task-graph";
+import { AgentTaskContractSchema, type AgentTaskContract } from "@manyhands/contracts";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { describe, expect, it } from "vitest";
 import {
@@ -46,11 +47,31 @@ function baseGraph(overrides: Partial<TaskGraph> = {}): TaskGraph {
         depth: 1,
         childrenIds: [],
         dependencies: [],
-        acceptanceCriteria: ["c"]
+        acceptanceCriteria: ["c"],
+        contract: contract("a")
       }
     },
     ...overrides
   };
+}
+
+function contract(taskId: string): AgentTaskContract {
+  return AgentTaskContractSchema.parse({
+    taskId,
+    objective: `Do ${taskId}.`,
+    context: { typeSignatures: [], referenceSnippets: [], conventions: [], upstreamArtifacts: [] },
+    allowed: { paths: [`src/${taskId}.ts`] },
+    forbidden: { paths: [] },
+    relevantSymbols: [],
+    dependencies: [],
+    acceptance: [{ kind: "custom", description: "done" }],
+    validationCommands: [],
+    expectedOutput: { changedFiles: [`src/${taskId}.ts`], producedSymbols: [], consumedSymbols: [] },
+    limits: { maxDurationMs: 60_000, maxCostUsd: 1 },
+    knownRisks: [],
+    definitionOfDone: "done",
+    executionScope: { implementationPaths: [`src/${taskId}.ts`], testPaths: [], configPaths: [] }
+  });
 }
 
 describe("assertExecutableGraph", () => {

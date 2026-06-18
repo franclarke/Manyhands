@@ -49,11 +49,19 @@ El `TaskGraph` tiene un `dependencies` propio que es un `Map<nodeId, Set<nodeId>
 
 ### Validación del grafo
 
-`validateTaskGraph()` verifica que el grafo es estructuralmente correcto antes de ejecutar:
+`validateTaskGraph()` verifica que el grafo es estructuralmente correcto:
 - **Ciclos:** ningún nodo puede depender de sí mismo, directa o transitivamente.
 - **Nodos huérfanos:** todo nodo (excepto root) debe ser alcanzable desde root.
 - **Dependencias rotas:** no puede haber un edge que apunte a un nodeId inexistente.
 - **Constraints de kind:** solo las hojas pueden tener `AgentTaskContract`; la raíz no puede tener dependencias entrantes.
+
+`validateExecutableTaskGraph()` es la frontera más estricta usada por producto
+cuando un plan puede aprobarse o ejecutarse. Además de la estructura del DAG,
+valida cada contrato de hoja con `validateAgentTaskContractBoundary()` y
+bloquea contratos faltantes, `taskId` desalineado, paths inseguros, schemas
+inválidos y costuras consumidas sin productor o producidas por múltiples hojas.
+Warnings como `missing_execution_scope` o `missing_expected_changed_files`
+quedan explícitos para permitir fallback conservador, no paralelismo ambiguo.
 
 ### Orden topológico y readiness
 
@@ -71,7 +79,7 @@ El `TaskGraph` tiene un `dependencies` propio que es un `Map<nodeId, Set<nodeId>
 
 **Lo consumen:** `BatchScheduler` (topo sort + readiness), `IntegrationAgent` (goals y contratos de los composites), `GranularityVector` (estructura del árbol para métricas pre-ejecución), `RunGraphViewModel` (transformación para el canvas).
 
-**Lo genera:** `GeminiRecursiveDecomposer` construye el grafo nodo a nodo durante la descomposición recursiva. El usuario puede editarlo desde la web app antes de aprobar.
+**Lo genera:** el decomposer recursivo construye el grafo nodo a nodo durante la descomposición. El usuario puede editarlo desde la web app antes de aprobar, pero las fronteras de approval/replan/execution vuelven a validar el grafo ejecutable.
 
 ---
 

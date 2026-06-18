@@ -30,10 +30,12 @@ Feature prompt
   -> planningGraph
       -> recursive decomposition
       -> TaskGraph + AgentTaskContracts + sharedInterfaces
+      -> executable contract/interface boundary validation
       -> plan review / approval
   -> executionGraph
       -> grounding / seam preparation
-      -> scope-aware wave selection
+      -> risk-aware wave selection
+          -> required run.scheduling.wave_selected event
       -> RunExecutor.runNode per leaf
           -> WorktreeManager
           -> FileSystemContextPacker
@@ -83,10 +85,42 @@ specific packages.
 - **Repos:** local git workspaces are the product path. Fixture provisioning
   still exists as a generic/testing mechanism, but there is no active benchmark
   fixture suite in the repo.
-- **Agent execution:** goes through `AgentExecutor` profiles. Gemini CLI remains
-  the primary/default product executor.
+- **Agent execution:** goes through `AgentExecutor` profiles. Claude Code CLI is
+  the primary/default product executor; Codex CLI is the selectable alternative.
 - **UI state:** the client reduces `RunEvent` and derives view-models with pure
   selectors.
+
+## Runtime Safety and Auditability
+
+The current runtime hardening sequence is intentionally incremental:
+
+- **PR-S1:** run start uses a CAS/active-runner guard so one run cannot launch
+  concurrent pipelines. Integration fails explicitly when a successful child has
+  no commit to cherry-pick.
+- **PR-S2:** critical lifecycle events are awaited/required, best-effort events
+  are named as such, and background pipelines can be drained in tests before
+  temp cleanup.
+- **PR-S3:** critical `RunRecord.status` transitions and
+  `run.status.changed` event appends go through audited mutation helpers. JSON
+  snapshot + JSONL event log are not a transaction, but divergence is surfaced
+  as an explicit persistence error.
+- **PR-S4:** the production execution path feeds real contracts, scopes and
+  risk predictions into scheduling. Missing safety data serializes
+  conservatively with warnings instead of silently falling back to unsafe
+  parallelism.
+- **PR-S5:** every production wave selected by the web execution host appends
+  `run.scheduling.wave_selected` before tasks are dispatched. The event records
+  ready, selected and blocked tasks, reasons, risk summary, fallbacks and
+  warnings.
+- **PR-S6:** executable boundaries validate the approved graph plus leaf
+  contracts before approval, replan, execution start/resume, node-run and
+  execution-host dispatch. Invalid contract schemas, task id mismatch, unsafe
+  repo paths and broken interface producer/consumer relations fail explicitly
+  instead of becoming ambiguous scheduling/execution inputs.
+
+Future PRs that change orchestration semantics should update `docs/DECISIONS.md`
+with context, decision, justification, consequences/tradeoffs, and the relation
+to replay/evaluation traceability.
 
 ## Removed Historical Surfaces
 

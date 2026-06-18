@@ -59,7 +59,10 @@ por nodo.
 Con el run en `needs_review`, el usuario puede inspeccionar el DAG y los
 contratos, editar nodos, regenerar subárboles y aprobar. La aprobación desde el
 DecisionChannel **es** el go-ahead: el servidor transiciona a `approved` y
-despacha la ejecución.
+despacha la ejecución. Antes de que un plan quede aprobable, `planning-pipeline`
+y `plan-approval-service` validan el grafo ejecutable: cada hoja debe tener un
+`AgentTaskContract` seguro, los `taskId` deben coincidir, los paths deben ser
+repo-relative y las interfaces consumidas/producidas deben cerrar.
 
 ### SSE y eventos en tiempo real
 
@@ -67,6 +70,12 @@ El cliente mantiene un `EventSource` a `/api/runs/[runId]/run-events`. El
 servidor empuja los `RunEvent` del log append-only (JSONL); el cliente reduce la
 historia con `run-model/reducer.ts` y proyecta DAG, wavefront y estado mediante
 selectores puros. Sin polling.
+
+Las decisiones de scheduling productivo también quedan en este log. Antes de
+despachar una wave, `execution-host.ts` persiste el evento required
+`run.scheduling.wave_selected` con policy, tareas listas, seleccionadas,
+bloqueadas, razones, resumen de riesgo, fallbacks y warnings. Si ese append
+falla, la wave no se lanza silenciosamente.
 
 Los singletons en memoria que cruzan rutas (event buses, locks de append,
 runner-state, abort registry, repositorios) viven anclados en `globalThis` vía
@@ -80,9 +89,12 @@ llegaban.
 
 `execution-host.ts` es el único lugar donde la web app compila y conduce el
 execution StateGraph: construye las deps (RunExecutor para hojas/repair/
-integración, `selectScopeAwareWave` alimentado con la riskMatrix real del
-planning, validación run-level) **desde el RunRecord persistido**, de modo que
-start y resume cablean idéntico tras un reinicio del proceso. Los checkpoints
+integración, selección risk-aware alimentada con la riskMatrix real del
+planning, evento required de wave, validación run-level) **desde el RunRecord
+persistido**, de modo que start y resume cablean idéntico tras un reinicio del
+proceso. Antes de construir esas deps vuelve a aplicar `assertExecutableGraph`;
+las rutas de start/resume/node-run también llaman `assertExecutableRunGraph`
+antes de provisionar repos o despachar background work. Los checkpoints
 (`JsonFileCheckpointSaver`, incluidos `pendingWrites`) viven en
 `.manyhands/runs/checkpoints/<runId>/`.
 

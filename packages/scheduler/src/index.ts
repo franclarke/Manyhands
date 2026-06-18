@@ -1,6 +1,9 @@
 import {
+  buildTaskPairRiskMatrix,
   findRiskPrediction,
   type ConflictPrediction,
+  type ConflictEvidenceSignal,
+  type ConflictRiskLevel,
   type TaskPairRiskMatrix
 } from "@manyhands/conflict-risk";
 import type { AgentTaskContract } from "@manyhands/contracts";
@@ -26,6 +29,40 @@ export interface SchedulerInput {
   riskMatrix: TaskPairRiskMatrix;
   maxParallel: number;
   policy: SchedulingPolicy;
+}
+
+export type SchedulingWarningCode =
+  | "missing_contract"
+  | "empty_scope"
+  | "risk_matrix_missing"
+  | "risk_matrix_incomplete"
+  | "parallel_naive_explicit";
+
+export interface SchedulingWarning {
+  code: SchedulingWarningCode;
+  taskIds: string[];
+  message: string;
+}
+
+export interface SchedulingSafetyContext {
+  contracts: Record<string, AgentTaskContract>;
+  riskMatrix: TaskPairRiskMatrix;
+  warnings: SchedulingWarning[];
+}
+
+export interface SchedulingRiskSummary {
+  low: number;
+  medium: number;
+  high: number;
+  blocking: number;
+}
+
+export interface SchedulingSafetyContextInput {
+  graph: TaskGraph;
+  taskIds?: readonly string[];
+  contracts?: Record<string, AgentTaskContract>;
+  riskMatrix?: TaskPairRiskMatrix;
+  policy?: SchedulingPolicy;
 }
 
 export interface SchedulerBatchDecision {
@@ -163,7 +200,12 @@ export interface ScopeAwareWaveInput {
 
 export function selectScopeAwareWave(input: ScopeAwareWaveInput): string[] {
   const cap = input.maxParallel !== undefined ? Math.max(1, input.maxParallel) : Number.POSITIVE_INFINITY;
-  const riskMatrix = input.riskMatrix ?? [];
+  const riskMatrix = buildSchedulingSafetyContext({
+    graph: input.graph,
+    taskIds: input.candidates,
+    policy: "risk_aware",
+    ...(input.riskMatrix !== undefined ? { riskMatrix: input.riskMatrix } : {})
+  }).riskMatrix;
   const scopes = new Map<string, string[][]>(
     input.candidates.map((taskId) => [taskId, scopeSignature(input.graph, taskId)])
   );
@@ -196,9 +238,7 @@ export function selectScopeAwareWave(input: ScopeAwareWaveInput): string[] {
  * selector should gate parallelism only on real implementation/test overlap.
  */
 function scopeSignature(graph: TaskGraph, taskId: string): string[][] {
-  const scope = graph.nodes[taskId]?.contract?.executionScope;
-  if (scope === undefined) return [];
-  return [...scope.implementationPaths, ...scope.testPaths].map(literalSegments);
+  return schedulingScopePatterns(graph, taskId).map(literalSegments);
 }
 
 /**
@@ -232,7 +272,122 @@ function isHighRiskPair(riskMatrix: TaskPairRiskMatrix, a: string, b: string): b
   return risk?.level === "high" || risk?.level === "blocking";
 }
 
+export function buildSchedulingSafetyContext(input: SchedulingSafetyContextInput): SchedulingSafetyContext {
+  const taskIds = input.taskIds ?? orderedExecutableTaskIds(input.graph);
+  const contracts =
+    input.contracts !== undefined && Object.keys(input.contracts).length > 0
+      ? input.contracts
+      : contractsFromGraph(input.graph, taskIds);
+  const warnings: SchedulingWarning[] = [];
+  const providedRiskMatrix = input.riskMatrix ?? [];
+  const generatedRiskMatrix = buildTaskPairRiskMatrix({ contracts });
+
+  if (input.policy === "parallel_naive") {
+    warnings.push({
+      code: "parallel_naive_explicit",
+      taskIds: [...taskIds],
+      message: "parallel_naive was explicitly selected; scheduler will ignore risk and scope signals."
+    });
+  }
+
+  if (input.policy !== "parallel_naive" && providedRiskMatrix.length === 0 && generatedRiskMatrix.length > 0) {
+    warnings.push({
+      code: "risk_matrix_missing",
+      taskIds: [...taskIds],
+      message: "risk_aware scheduling generated a risk matrix from task contracts because none was provided."
+    });
+  }
+
+  const riskMatrix = mergeRiskMatrices(providedRiskMatrix, generatedRiskMatrix);
+  const incompleteTasks = new Set<string>();
+  for (const taskId of taskIds) {
+    const node = input.graph.nodes[taskId];
+    if (node === undefined) continue;
+    if (node.contract === undefined) {
+      incompleteTasks.add(taskId);
+      warnings.push({
+        code: "missing_contract",
+        taskIds: [taskId],
+        message: `task ${taskId} has no AgentTaskContract; risk_aware scheduling will serialize it conservatively.`
+      });
+      continue;
+    }
+    if (!hasSchedulingScope(input.graph, taskId)) {
+      incompleteTasks.add(taskId);
+      warnings.push({
+        code: "empty_scope",
+        taskIds: [taskId],
+        message: `task ${taskId} has no implementation/test/allowed/expected file scope; risk_aware scheduling will serialize it conservatively.`
+      });
+    }
+  }
+
+  forEachPair(taskIds, (left, right) => {
+    if (
+      input.policy !== "parallel_naive" &&
+      providedRiskMatrix.length > 0 &&
+      findRiskPrediction(providedRiskMatrix, left, right) === undefined
+    ) {
+      warnings.push({
+        code: "risk_matrix_incomplete",
+        taskIds: [left, right],
+        message: `risk matrix did not include ${left}<->${right}; scheduler filled it from contracts/scopes.`
+      });
+    }
+
+    const scopeOverlap = scopesOverlap(scopeSignature(input.graph, left), scopeSignature(input.graph, right));
+    if (scopeOverlap) {
+      upsertConservativeRisk(riskMatrix, conservativePrediction(left, right, "high", {
+        signal: "path_overlap",
+        detail: `declared execution scopes overlap for ${left} and ${right}`
+      }));
+    }
+
+    if (incompleteTasks.has(left) || incompleteTasks.has(right)) {
+      upsertConservativeRisk(riskMatrix, conservativePrediction(left, right, "high", {
+        signal: "path_overlap",
+        detail: `missing contract or usable scope prevents proving ${left} and ${right} are independent`
+      }));
+    }
+
+    const producerConsumer = producerConsumerDetail(contracts[left], contracts[right]);
+    if (producerConsumer !== undefined) {
+      upsertConservativeRisk(riskMatrix, conservativePrediction(left, right, "high", {
+        signal: "producer_consumer",
+        detail: producerConsumer
+      }));
+    }
+  });
+
+  return { contracts, riskMatrix, warnings };
+}
+
+export function summarizeRiskMatrix(riskMatrix: TaskPairRiskMatrix): SchedulingRiskSummary {
+  const summary: SchedulingRiskSummary = {
+    low: 0,
+    medium: 0,
+    high: 0,
+    blocking: 0
+  };
+
+  for (const prediction of riskMatrix) {
+    summary[prediction.level] += 1;
+  }
+
+  return summary;
+}
+
 export function scheduleTasks(input: SchedulerInput): SchedulerPlan {
+  const safety =
+    input.policy === "risk_aware"
+      ? buildSchedulingSafetyContext({
+          graph: input.graph,
+          contracts: input.contracts,
+          riskMatrix: input.riskMatrix,
+          policy: input.policy
+        })
+      : undefined;
+  const riskMatrix = safety?.riskMatrix ?? input.riskMatrix;
   const maxParallel = Math.max(1, input.maxParallel);
   const leafIds = orderedExecutableTaskIds(input.graph);
   const resolved = new Set(
@@ -252,8 +407,15 @@ export function scheduleTasks(input: SchedulerInput): SchedulerPlan {
   const explanations: string[] = [];
   const humanReviewTaskIds =
     input.policy === "risk_aware"
-      ? tasksRequiringHumanReview(input.riskMatrix, unscheduled)
+      ? tasksRequiringHumanReview(riskMatrix, unscheduled)
       : new Set<string>();
+
+  if (input.policy === "parallel_naive") {
+    explanations.push("parallel_naive policy was explicitly selected; conflict risk and scopes are ignored.");
+  }
+  if (safety !== undefined) {
+    explanations.push(...safety.warnings.map((warning) => warning.message));
+  }
 
   for (const taskId of humanReviewTaskIds) {
     if (unscheduled.delete(taskId)) {
@@ -284,7 +446,7 @@ export function scheduleTasks(input: SchedulerInput): SchedulerPlan {
 
     const selected =
       input.policy === "risk_aware"
-        ? selectRiskAwareBatch(ready, input.riskMatrix, maxParallel)
+        ? selectRiskAwareBatch(ready, riskMatrix, maxParallel)
         : selectSimpleBatch(ready, input.policy, maxParallel);
 
     if (selected.length === 0) {
@@ -303,7 +465,7 @@ export function scheduleTasks(input: SchedulerInput): SchedulerPlan {
     const batchId = `batch-${batches.length + 1}`;
     const decisions = selected.map((taskId) => ({
       taskId,
-      reason: decisionReason(input.policy, taskId, selected, input.riskMatrix)
+      reason: decisionReason(input.policy, taskId, selected, riskMatrix)
     }));
     const rationale = rationaleForBatch(input.policy, selected);
 
@@ -438,6 +600,145 @@ function decisionForPrediction(
     riskLevel: prediction.level,
     reason
   });
+}
+
+function contractsFromGraph(graph: TaskGraph, taskIds: readonly string[]): Record<string, AgentTaskContract> {
+  const contracts: Record<string, AgentTaskContract> = {};
+  for (const taskId of taskIds) {
+    const contract = graph.nodes[taskId]?.contract;
+    if (contract !== undefined) {
+      contracts[taskId] = { ...contract, taskId };
+    }
+  }
+  return contracts;
+}
+
+function hasSchedulingScope(graph: TaskGraph, taskId: string): boolean {
+  return schedulingScopePatterns(graph, taskId).length > 0;
+}
+
+function schedulingScopePatterns(graph: TaskGraph, taskId: string): string[] {
+  const contract = graph.nodes[taskId]?.contract;
+  if (contract === undefined) return [];
+  const executionScope = contract.executionScope;
+  const executionPaths =
+    executionScope !== undefined
+      ? [...executionScope.implementationPaths, ...executionScope.testPaths]
+      : [];
+  const fallbackPaths = [...contract.allowed.paths, ...contract.expectedOutput.changedFiles];
+  return uniqueStrings(executionPaths.length > 0 ? executionPaths : fallbackPaths);
+}
+
+function mergeRiskMatrices(left: TaskPairRiskMatrix, right: TaskPairRiskMatrix): TaskPairRiskMatrix {
+  const merged: TaskPairRiskMatrix = [];
+  for (const prediction of [...left, ...right]) {
+    upsertConservativeRisk(merged, prediction);
+  }
+  return merged;
+}
+
+function upsertConservativeRisk(matrix: TaskPairRiskMatrix, prediction: ConflictPrediction): void {
+  const existingIndex = matrix.findIndex((item) => samePair(item, prediction.taskAId, prediction.taskBId));
+  if (existingIndex === -1) {
+    matrix.push(prediction);
+    return;
+  }
+  const existing = matrix[existingIndex];
+  if (existing === undefined || riskRank(prediction.level) > riskRank(existing.level)) {
+    matrix[existingIndex] = prediction;
+  }
+}
+
+function conservativePrediction(
+  taskAId: string,
+  taskBId: string,
+  level: Extract<ConflictRiskLevel, "high" | "blocking">,
+  evidence: { signal: ConflictEvidenceSignal; detail: string }
+): ConflictPrediction {
+  return {
+    taskAId,
+    taskBId,
+    level,
+    score: level === "blocking" ? 1 : 0.8,
+    evidence: [{ signal: evidence.signal, detail: evidence.detail, weight: level === "blocking" ? 1 : 0.8 }],
+    sharedFiles: [],
+    sharedSymbols: [],
+    predictedConflictTypes: [evidence.signal],
+    recommendation: level === "blocking" ? "requires_human_review" : "serialize",
+    explanation: evidence.detail
+  };
+}
+
+function producerConsumerDetail(
+  left: AgentTaskContract | undefined,
+  right: AgentTaskContract | undefined
+): string | undefined {
+  if (left === undefined || right === undefined) return undefined;
+  const leftProduces = interfaceAndSymbolIds(left, "produced");
+  const leftConsumes = interfaceAndSymbolIds(left, "consumed");
+  const rightProduces = interfaceAndSymbolIds(right, "produced");
+  const rightConsumes = interfaceAndSymbolIds(right, "consumed");
+  const leftToRight = intersectStrings(leftProduces, rightConsumes);
+  if (leftToRight.length > 0) {
+    return `${right.taskId} consumes ${leftToRight.join(", ")} produced by ${left.taskId}; add a dependency or serialize.`;
+  }
+  const rightToLeft = intersectStrings(rightProduces, leftConsumes);
+  if (rightToLeft.length > 0) {
+    return `${left.taskId} consumes ${rightToLeft.join(", ")} produced by ${right.taskId}; add a dependency or serialize.`;
+  }
+  return undefined;
+}
+
+function interfaceAndSymbolIds(contract: AgentTaskContract, kind: "produced" | "consumed"): string[] {
+  const interfaces =
+    kind === "produced"
+      ? contract.producedInterfaces?.map((item) => item.id) ?? []
+      : contract.consumedInterfaces?.map((item) => item.id) ?? [];
+  const symbols =
+    kind === "produced" ? contract.expectedOutput.producedSymbols : contract.expectedOutput.consumedSymbols;
+  return uniqueStrings([...interfaces, ...symbols]);
+}
+
+function forEachPair(taskIds: readonly string[], visit: (left: string, right: string) => void): void {
+  for (let leftIndex = 0; leftIndex < taskIds.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < taskIds.length; rightIndex += 1) {
+      const left = taskIds[leftIndex];
+      const right = taskIds[rightIndex];
+      if (left !== undefined && right !== undefined) {
+        visit(left, right);
+      }
+    }
+  }
+}
+
+function samePair(prediction: ConflictPrediction, taskAId: string, taskBId: string): boolean {
+  return pairKey(prediction.taskAId, prediction.taskBId) === pairKey(taskAId, taskBId);
+}
+
+function pairKey(left: string, right: string): string {
+  return [left, right].sort().join("\u0000");
+}
+
+function riskRank(level: ConflictRiskLevel): number {
+  switch (level) {
+    case "blocking":
+      return 3;
+    case "high":
+      return 2;
+    case "medium":
+      return 1;
+    case "low":
+      return 0;
+  }
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  return [...new Set(values.map((value) => value.replace(/\\/g, "/")).filter((value) => value.length > 0))];
+}
+
+function intersectStrings(left: readonly string[], right: readonly string[]): string[] {
+  const rightSet = new Set(right);
+  return uniqueStrings(left.filter((value) => rightSet.has(value)));
 }
 
 function dependenciesResolved(

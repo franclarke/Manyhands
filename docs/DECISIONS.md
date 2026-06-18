@@ -178,11 +178,72 @@ sincronizado. Mutar dependencias solo vía helpers.
 
 **D9:** el paralelismo se controla por `ExecutionConfig` y selección de wave.
 
+**D15:** el camino productivo de ejecución usa scheduling `risk_aware` por
+default. El `execution-host` consulta `selectScopeAwareWave` con contratos,
+`executionScope` y la `riskMatrix` del planning; `RunExecutor.run` usa
+`scheduleTasks` con el mismo contexto de seguridad. `parallel_naive` solo es
+aceptable si fue seleccionado explícitamente y queda registrado como warning.
+
+**D16:** cada wave elegida por el `execution-host` debe persistir un evento
+requerido `run.scheduling.wave_selected` antes de despachar tareas. El payload
+incluye `policy`, `readyTaskIds`, `selectedTaskIds`, `blockedTaskIds`,
+`blockedReasons`, `riskSummary`, `fallbacks` y `warnings`. Si el append falla,
+la wave no se ejecuta silenciosamente. El `seq` del event log sigue siendo el
+orden durable; `waveIndex` es una correlación de pipeline.
+
 **D10:** timeouts explícitos y configurables:
 
 - hojas;
 - integración;
 - run completo cuando aplica.
+
+---
+
+## Maduración de Runtime y Auditoría (PR-S1..S6)
+
+**Contexto.** ManyHands necesita que las decisiones de orquestación sean
+reproducibles desde artefactos durables, no solo desde logs de consola o estado
+en memoria.
+
+**Decisiones.**
+
+- **PR-S1:** un run no puede iniciar dos pipelines concurrentes; start usa CAS y
+  active-runner guard. Un child `success` sin `commitSha` hace fallar la
+  integración con error explícito.
+- **PR-S2:** eventos críticos de lifecycle son required/awaited; eventos
+  best-effort se nombran como tales y no ocultan fallos críticos. Los pipelines
+  background son rastreables y drenables en tests.
+- **PR-S3:** las transiciones críticas `RunRecord.status` +
+  `run.status.changed` usan mutación auditable. No hay transacción real entre
+  JSON y JSONL, pero la divergencia deja error explícito.
+- **PR-S4:** scheduling productivo usa contratos, scopes y riesgo real. Datos
+  incompletos degradan de forma conservadora con warnings, no a paralelismo
+  inseguro silencioso.
+- **PR-S5:** la elección de cada wave productiva queda en el event log antes de
+  ejecutar tareas, para que UI, replay, debugging y evaluación puedan explicar
+  por qué se paralelizó o serializó.
+- **PR-S6:** los contratos ejecutables y sus interfaces se validan en fronteras
+  de producto antes de aprobar, replanificar, iniciar/resumir ejecución o
+  despachar nodos. `validateAgentTaskContractBoundary` bloquea schemas
+  inválidos, `taskId` desalineado, paths inseguros e interfaces incoherentes;
+  `validateExecutableTaskGraph` aplica esas reglas al DAG de hojas.
+
+**Justificación.** Estas decisiones protegen las garantías centrales del
+producto: un solo runner por run, trazabilidad append-only, aislamiento por
+worktree, integración bottom-up explicable, scheduling seguro y contratos que
+no degradan silenciosamente a tareas ambiguas.
+
+**Consecuencias y tradeoffs.** La persistencia sigue siendo JSON/JSONL sin DB ni
+outbox transaccional. El sistema prefiere fallar antes de ejecutar una wave sin
+evento requerido. El costo es que una falla de filesystem en el event log puede
+bloquear una ejecución que de otro modo podría avanzar, lo cual es intencional
+para preservar auditabilidad. Los campos V2 de contrato siguen siendo
+opcionales a nivel de schema para compatibilidad, pero las fronteras ejecutables
+los tratan como required o como fallback conservador explícito.
+
+**Relación con tesis/evaluación futura.** No hay benchmark activo, pero los
+eventos required dejan una base para reconstruir decisiones de scheduling y
+comparar runs futuros sin depender de logs efímeros.
 
 ---
 

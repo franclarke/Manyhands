@@ -1,4 +1,8 @@
-import { AgentTaskContractSchema, type AgentTaskContract } from "@manyhands/contracts";
+import {
+  AgentTaskContractSchema,
+  validateAgentTaskContractBoundary,
+  type AgentTaskContract
+} from "@manyhands/contracts";
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 
@@ -127,6 +131,12 @@ export const TaskValidationIssueCodeSchema = z.union([
   z.literal("multiple_roots"),
   z.literal("cycle_detected"),
   z.literal("leaf_without_contract"),
+  z.literal("contract_invalid"),
+  z.literal("contract_task_id_mismatch"),
+  z.literal("unsafe_contract_path"),
+  z.literal("missing_expected_output"),
+  z.literal("orphan_consumed_interface"),
+  z.literal("duplicate_produced_interface"),
   z.literal("empty_scope"),
   z.literal("dangling_dependency"),
   z.literal("dependency_sync_divergence"),
@@ -379,6 +389,87 @@ export function validateTaskGraph(
   return issues;
 }
 
+export function validateExecutableTaskGraph(
+  graphInput: TaskGraph,
+  options: TaskGraphValidationOptions = {}
+): TaskValidationIssue[] {
+  const issues = [...validateTaskGraph(graphInput, options)];
+  const parsed = TaskGraphSchema.safeParse(graphInput);
+  if (!parsed.success) {
+    return issues;
+  }
+  const graph = parsed.data as TaskGraph;
+  const producedByInterfaceId = new Map<string, string[]>();
+  const consumedInterfaces: Array<{ id: string; taskId: string }> = [];
+
+  for (const node of Object.values(graph.nodes)) {
+    if (node.kind !== "leaf") {
+      continue;
+    }
+
+    if (node.contract === undefined) {
+      issues.push({
+        code: "leaf_without_contract",
+        taskId: node.id,
+        message: `leaf node ${node.id} has no executable AgentTaskContract`,
+        severity: "error"
+      });
+      continue;
+    }
+
+    const validation = validateAgentTaskContractBoundary(node.contract, {
+      taskId: node.id,
+      executable: true
+    });
+    for (const issue of validation.issues) {
+      issues.push({
+        code: taskIssueCodeForContractIssue(issue.code),
+        taskId: issue.taskId ?? node.id,
+        message: issue.message,
+        severity: issue.severity === "error" ? "error" : "warning"
+      });
+    }
+    if (!validation.ok) {
+      continue;
+    }
+
+    for (const produced of validation.contract.producedInterfaces ?? []) {
+      const producers = producedByInterfaceId.get(produced.id) ?? [];
+      producers.push(node.id);
+      producedByInterfaceId.set(produced.id, producers);
+    }
+    for (const consumed of validation.contract.consumedInterfaces ?? []) {
+      consumedInterfaces.push({ id: consumed.id, taskId: node.id });
+    }
+  }
+
+  for (const [interfaceId, producers] of producedByInterfaceId) {
+    if (producers.length > 1) {
+      for (const taskId of producers) {
+        issues.push({
+          code: "duplicate_produced_interface",
+          taskId,
+          message: `interface "${interfaceId}" is produced by multiple tasks: ${producers.join(", ")}`,
+          severity: "error"
+        });
+      }
+    }
+  }
+
+  for (const consumed of consumedInterfaces) {
+    if (!producedByInterfaceId.has(consumed.id)) {
+      issues.push({
+        code: "orphan_consumed_interface",
+        taskId: consumed.taskId,
+        message: `interface "${consumed.id}" is consumed by ${consumed.taskId} but no leaf produces it`,
+        severity: "error"
+      });
+    }
+  }
+
+  return issues;
+}
+
 export function getLeafNodes(graph: TaskGraph): TaskNode[] {
   return Object.values(graph.nodes).filter((node) => node.kind === "leaf");
 }
@@ -601,6 +692,25 @@ function buildIncomingDependencyIndex(graph: TaskGraph): Map<string, string[]> {
   }
 
   return index;
+}
+
+function taskIssueCodeForContractIssue(
+  code: ReturnType<typeof validateAgentTaskContractBoundary>["issues"][number]["code"]
+): TaskValidationIssueCode {
+  switch (code) {
+    case "schema_invalid":
+      return "contract_invalid";
+    case "task_id_mismatch":
+      return "contract_task_id_mismatch";
+    case "unsafe_path":
+    case "invalid_interface_id":
+    case "duplicate_interface_id":
+      return "unsafe_contract_path";
+    case "missing_execution_scope":
+      return "empty_scope";
+    case "missing_expected_changed_files":
+      return "missing_expected_output";
+  }
 }
 
 function buildAdjacency(graph: TaskGraph): Map<string, string[]> {

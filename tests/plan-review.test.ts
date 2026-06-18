@@ -20,7 +20,7 @@ describe("plan-review", () => {
     });
   });
 
-  it("warns when a leaf is missing scope, acceptance and expected files", () => {
+  it("reports blocking validation and readiness issues when a leaf contract is incomplete", () => {
     const snapshot = makeSnapshot({
       contracts: [
         makeContract({
@@ -33,7 +33,7 @@ describe("plan-review", () => {
 
     const summary = buildPlanReviewSummary(snapshot);
 
-    expect(summary?.status).toBe("warnings");
+    expect(summary?.status).toBe("errors");
     expect(summary?.issues.map((issue) => issue.title)).toEqual(
       expect.arrayContaining(["Missing scope", "Missing acceptance", "Missing expected output"])
     );
@@ -120,7 +120,7 @@ describe("plan-review", () => {
 });
 
 function makeSnapshot(overrides: Partial<RunSnapshot> = {}): RunSnapshot {
-  const contract = makeContract();
+  const contract = (overrides.contracts?.[0] as AgentTaskContract | undefined) ?? makeContract();
   const graph: TaskGraph = {
     id: "graph-1",
     planId: "plan-1",
@@ -212,6 +212,11 @@ function makeContract(overrides: {
       changedFiles: overrides.changedFiles ?? ["src/task.ts"],
       producedSymbols: [],
       consumedSymbols: []
+    },
+    executionScope: {
+      implementationPaths: overrides.allowedPaths ?? ["src/task.ts"],
+      testPaths: [],
+      configPaths: []
     },
     limits: {
       maxDurationMs: 1000,

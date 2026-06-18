@@ -1,4 +1,4 @@
-import type { TaskGraph } from "@manyhands/task-graph";
+import { validateExecutableTaskGraph, type TaskGraph, type TaskValidationIssue } from "@manyhands/task-graph";
 
 import { RunExecutionError } from "../errors";
 
@@ -8,8 +8,8 @@ import { RunExecutionError } from "../errors";
  * "validate") with an actionable message on the first violation, so a
  * malformed graph never produces partially-executed runs or leaked worktrees.
  *
- * Checks: a non-empty `baseCommit`, a `rootId` that resolves to a node, and
- * every `childrenIds` reference pointing at an existing node.
+ * Checks: a non-empty `baseCommit` plus the executable TaskGraph/contract
+ * invariants from `@manyhands/task-graph`.
  */
 export function assertExecutableGraph(graph: TaskGraph): void {
   const fail = (message: string): never => {
@@ -24,11 +24,14 @@ export function assertExecutableGraph(graph: TaskGraph): void {
     fail(`Graph rootId "${graph.rootId}" does not resolve to a node.`);
   }
 
-  for (const [nodeId, node] of Object.entries(graph.nodes)) {
-    for (const childId of node.childrenIds) {
-      if (graph.nodes[childId] === undefined) {
-        fail(`Node "${nodeId}" references a missing child "${childId}".`);
-      }
-    }
+  const error = validateExecutableTaskGraph(graph).find((issue) => issue.severity === "error");
+  if (error !== undefined) {
+    fail(formatTaskValidationIssue(error));
   }
+}
+
+function formatTaskValidationIssue(issue: TaskValidationIssue): string {
+  return issue.taskId !== undefined
+    ? `${issue.code} (${issue.taskId}): ${issue.message}`
+    : `${issue.code}: ${issue.message}`;
 }
