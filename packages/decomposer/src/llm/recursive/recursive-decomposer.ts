@@ -1122,6 +1122,37 @@ function validateStepSemantics(
     }
   }
 
+  // Every seam defined at this step must be produced by some child; otherwise a
+  // consumer downstream is left with an orphaned interface that no leaf supplies,
+  // which the executable graph validation later rejects after the plan is built.
+  const producedHere = new Set(step.children.flatMap((child) => child.produces));
+  for (const iface of step.sharedInterfaces) {
+    if (!producedHere.has(iface.id)) {
+      issues.push(
+        `interface "${iface.id}" is defined at this step but no child produces it; ` +
+          `assign it to the "produces" of the child that builds it`
+      );
+    }
+  }
+
+  // A production obligation inherited from the parent (this node was assigned to
+  // produce a seam) must be carried by some child so it keeps propagating down
+  // until a leaf actually produces it. Only leaves count as producers at the
+  // executable boundary, so a node that DECOMPOSES without re-assigning its
+  // obligation silently drops it: no descendant leaf produces the seam, while a
+  // consumer elsewhere still expects it. That orphan is invisible to the
+  // step-level seam check above (which only inspects locally-defined seams) and
+  // surfaces only later as orphan_consumed_interface after the whole plan is
+  // built — exactly the deeply-nested case the step-level check failed to cover.
+  for (const obligation of ctx.produces) {
+    if (!producedHere.has(obligation)) {
+      issues.push(
+        `this node must produce interface "${obligation}" (assigned by its parent) but no child produces it; ` +
+          `assign it to the "produces" of the child that builds it`
+      );
+    }
+  }
+
   for (const dependency of step.dependencies) {
     if (!childIds.has(dependency.fromTaskId)) {
       issues.push(`dependency references unknown fromTaskId "${dependency.fromTaskId}"`);

@@ -68,6 +68,23 @@ En ejecución, el prompt de cada hoja incluye las interfaces que debe respetar.
 Esto reduce la posibilidad de que agentes paralelos inventen costuras
 incompatibles.
 
+Cada step de división se valida semánticamente antes de aceptarse: toda
+`sharedInterface` definida en ese step debe figurar en el `produces` de algún
+hijo. Si una costura queda definida y consumida pero sin productor, el step se
+rechaza como recoverable (`graph_invalid`) y se reintenta con feedback explícito,
+en lugar de dejar pasar un grafo que luego fallaría en
+`validateExecutableTaskGraph` con `orphan_consumed_interface`.
+
+La obligación de producción se propaga hacia abajo: si a un nodo se le asignó
+producir una costura y ese nodo decide **descomponerse** en vez de ser atómico,
+debe re-asignar esa costura al `produces` de alguno de sus hijos. Solo las hojas
+cuentan como productoras en la frontera ejecutable, así que un composite que
+deja caer su obligación dejaría la costura sin productor en todo el subárbol. El
+step se rechaza con el mismo mecanismo recoverable hasta que la obligación llega
+a una hoja real, en lugar de aceptar un plan que recién fallaría — en
+descomposiciones profundas — con `orphan_consumed_interface` después de
+construido el grafo completo.
+
 ## Invocación
 
 El wrapper de Gemini:
