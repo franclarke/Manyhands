@@ -57,7 +57,7 @@ import { transitionTo } from "./planning-pipeline";
 import { reconcileExecutionWorld } from "./world-reconcile";
 import { type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
-import { markRunnerInactive, tryMarkRunnerActive } from "./runner-state";
+import { markRunnerInactive, startRunBackgroundTask, tryMarkRunnerActive } from "./runner-state";
 import { startBudgetWatchdog } from "./runner-watchdog";
 import { appendRunStatusChanged } from "./run-status-events";
 import type {
@@ -1168,7 +1168,7 @@ export async function reviewNode(
 
   if (action === "rerun") {
     await assertManualNodeExecutionReady(run, taskId);
-    void runNodeExecutionPipeline(run.runId, taskId).catch(() => undefined);
+    startRunBackgroundTask(run.runId, "review-node:rerun", () => runNodeExecutionPipeline(run.runId, taskId));
     run = await repo.get(runId);
   }
 

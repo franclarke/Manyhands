@@ -37,6 +37,7 @@ import {
 } from "./execution-state";
 import { planNodeProposedEvent } from "./planning-run-model-adapter";
 import { publishRunModelEvent } from "./run-model-event-log";
+import { startRunBackgroundTask } from "./runner-state";
 import { appendRunStatusChanged } from "./run-status-events";
 import type { RunRecord } from "./schema";
 import { getRunRepository } from "./store";
@@ -218,7 +219,7 @@ export async function replanSubtree(
     );
   }
 
-  void runExecutionPipeline(runId).catch(() => undefined);
+  startRunBackgroundTask(runId, "replan:execution", () => runExecutionPipeline(runId));
   return run;
 }
 
@@ -320,9 +321,9 @@ export async function resumeReplanWithAnswer(
   await appendRunStatusChanged(saved, { actor: "human" });
   const replanContext = context;
   if (replanContext !== undefined) {
-    void replanSubtree(runId, replanContext.taskId, replanContext.reason, replanContext.resume).catch((error) =>
-      console.error(`[Replan] Resume failed for run ${runId}:`, error)
-    );
+    startRunBackgroundTask(runId, "replan:resume", async () => {
+      await replanSubtree(runId, replanContext.taskId, replanContext.reason, replanContext.resume);
+    });
   }
   return saved;
 }

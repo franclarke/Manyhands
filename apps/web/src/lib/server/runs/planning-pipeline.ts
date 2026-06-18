@@ -35,8 +35,8 @@ import { type ProvisionedRepo, type RepoProvisioner } from "./repo-provisioner";
 import { titlerSelection } from "./executor-selection";
 import { generateRunTitle, type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
-import { markRunnerActive, markRunnerInactive } from "./runner-state";
-import { appendRunStatusChanged, publishRunStatusChanged } from "./run-status-events";
+import { markRunnerActive, markRunnerInactive, startRunBackgroundTask } from "./runner-state";
+import { appendRunStatusChanged } from "./run-status-events";
 import type { ExecutionConfigInput, RunRecord, RunStatus } from "./schema";
 import { getRunRepository } from "./store";
 
@@ -106,7 +106,7 @@ export async function transitionTo(
   assertTransition(run.status, status);
   const next: RunRecord = { ...run, ...extra, status };
   const saved = await getRunRepository().save(next);
-  publishRunStatusChanged(saved);
+  await appendRunStatusChanged(saved);
   return saved;
 }
 
@@ -251,11 +251,10 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
         questionAnswers: { ...(run.questionAnswers ?? {}), [outcome.interrupt.nodeId]: answer }
       });
       const nodeId = outcome.interrupt.nodeId;
-      setTimeout(() => {
-        void resumePlanningPipeline(runId, planningResumeFor(nodeId, answer)).catch((error) => {
-          console.error(`[Runner] Auto-respuesta falló para ${runId}:`, error);
-        });
-      }, 0);
+      startRunBackgroundTask(runId, "planning:auto-answer", async () => {
+        await sleep(0);
+        await resumePlanningPipeline(runId, planningResumeFor(nodeId, answer));
+      });
       return;
     }
 
@@ -330,9 +329,7 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
     // the plan and start execution. Supervised stays parked at needs_review.
     if (reviewed.autonomy === "semi" || reviewed.autonomy === "autonomous") {
       console.log(`[Runner] Autonomía "${reviewed.autonomy}": auto-aprobando el plan y ejecutando ${runId}.`);
-      void autoApproveAndExecute(runId).catch((error) => {
-        console.error(`[Runner] Auto-aprobación falló para ${runId}:`, error);
-      });
+      startRunBackgroundTask(runId, "planning:auto-approve", () => autoApproveAndExecute(runId));
     }
     return;
   }

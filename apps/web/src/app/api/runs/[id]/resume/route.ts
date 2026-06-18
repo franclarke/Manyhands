@@ -40,7 +40,7 @@ import { appendRunStatusChanged } from "@/lib/server/runs/run-status-events";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 import type { RunRecord } from "@/lib/server/runs/schema";
-import { isRunnerActive } from "@/lib/server/runs/runner-state";
+import { isRunnerActive, startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -65,9 +65,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         const failedTaskId = run.pendingDecision.taskId;
         const reason = run.pendingDecision.validationOutput ?? "leaf failed irrecoverably";
         const saved = await clearExecutionPause(id, "running", expectedGateId);
-        void replanSubtree(id, failedTaskId, reason).catch((error) =>
-          console.error(`[Resume] Replan failed for run ${id}:`, error)
-        );
+        startRunBackgroundTask(id, "route:resume:replan", async () => {
+          await replanSubtree(id, failedTaskId, reason);
+        });
         return NextResponse.json(toRunResponse(saved));
       }
 
@@ -78,9 +78,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         );
       }
       const saved = await clearExecutionPause(id, "running", expectedGateId);
-      void resumeExecutionPipeline(id, decision).catch((error) =>
-        console.error(`[Resume] Execution resume failed for run ${id}:`, error)
-      );
+      startRunBackgroundTask(id, "route:resume:execution-gate", () => resumeExecutionPipeline(id, decision));
       return NextResponse.json(toRunResponse(saved));
     }
 
@@ -126,8 +124,8 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       // Native resume: the answer travels as Command({ resume }) into the
       // suspended planning gate (legacy runs without a planning checkpoint
       // fall back to re-running the pipeline).
-      void resumePlanningPipeline(id, planningResumeFor(answeredNodeId, planningAnswer.answer)).catch((error) =>
-        console.error(`[Resume] Planning resume failed for run ${id}:`, error)
+      startRunBackgroundTask(id, "route:resume:planning-question", () =>
+        resumePlanningPipeline(id, planningResumeFor(answeredNodeId, planningAnswer.answer))
       );
       return NextResponse.json(toRunResponse(saved));
     }
@@ -166,13 +164,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     await appendRunStatusChanged(saved, { actor: "human" });
     if (!isRunnerActive(saved.runId)) {
       if (resumedPhase === "generating") {
-        void runPlanningPipeline(saved.runId).catch((error) =>
-          console.error(`[Resume] Planning plain resume failed for run ${id}:`, error)
-        );
+        startRunBackgroundTask(saved.runId, "route:resume:planning-plain", () => runPlanningPipeline(saved.runId));
       } else {
-        void runExecutionPipeline(saved.runId).catch((error) =>
-          console.error(`[Resume] Execution plain resume failed for run ${id}:`, error)
-        );
+        startRunBackgroundTask(saved.runId, "route:resume:execution-plain", () => runExecutionPipeline(saved.runId));
       }
     }
     return NextResponse.json(toRunResponse(saved));

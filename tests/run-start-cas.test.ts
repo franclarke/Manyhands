@@ -8,7 +8,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { POST as POST_RUN } from "@/app/api/runs/[id]/run/route";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
-import { isRunnerActive } from "@/lib/server/runs/runner-state";
+import { drainRunBackgroundTasks } from "@/lib/server/runs/runner-state";
 import type { RunRecord } from "@/lib/server/runs/schema";
 
 let tempDir: string;
@@ -24,7 +24,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   if (activeRunId !== undefined) {
-    await waitForRunnerInactive(activeRunId);
+    await drainRunBackgroundTasks(activeRunId);
     activeRunId = undefined;
   }
   if (previousRunsDir === undefined) delete process.env.MANYHANDS_RUNS_DIR;
@@ -88,13 +88,6 @@ function postRun(runId: string): Promise<Response> {
   return POST_RUN(new Request(`http://manyhands.test/api/runs/${runId}/run`, { method: "POST" }), {
     params: Promise.resolve({ id: runId })
   });
-}
-
-async function waitForRunnerInactive(runId: string): Promise<void> {
-  const deadline = Date.now() + 2_000;
-  while (isRunnerActive(runId) && Date.now() < deadline) {
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
 }
 
 describe("run start CAS", () => {

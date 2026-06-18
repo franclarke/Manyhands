@@ -1,6 +1,6 @@
 import { RunLifecycleError, parseRunPatches } from "@/lib/server/runs";
 import type { RunRecord } from "@/lib/server/runs/schema";
-import { appendRunModelEvent } from "@/lib/server/runs/run-model-event-log";
+import { appendRunEventRequired } from "@/lib/server/runs/run-model-event-log";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import { buildPlanReviewSummary } from "@/lib/plan-review";
 import { getRunRepository } from "./store";
@@ -51,7 +51,7 @@ export async function processPlanApproval(
     (current) => ({ ...current, status: "approved" as const, approvedAt: current.approvedAt ?? now })
   );
   await appendRunStatusChanged(claimed, { at: now, actor: "human" });
-  await appendRunModelEvent(claimed.runId, {
+  await appendRunEventRequired(claimed.runId, {
     actor: "human",
     at: now,
     type: "decision.resolved",

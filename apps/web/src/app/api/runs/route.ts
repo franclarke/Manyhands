@@ -12,6 +12,7 @@ import {
   type RunRecord,
   type RunStatus
 } from "@/lib/server/runs";
+import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 import { toRunPreview, toRunResponse } from "@/lib/server/runs/presenter";
 import {
   WorkspaceNotFoundError,
@@ -132,7 +133,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const saved = await getRunRepository().save(record);
 
     // Fire-and-forget planning pipeline; failures land as `failed` on disk.
-    void runPlanningPipeline(saved.runId).catch(() => undefined);
+    startRunBackgroundTask(saved.runId, "route:create:planning", () => runPlanningPipeline(saved.runId));
 
     return NextResponse.json(toRunResponse(saved), { status: 201 });
   } catch (error) {

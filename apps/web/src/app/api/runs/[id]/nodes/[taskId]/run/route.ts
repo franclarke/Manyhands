@@ -8,7 +8,7 @@ import {
   markRunnerInactive,
   runNodeExecutionPipeline
 } from "@/lib/server/runs";
-import { tryMarkRunnerActive } from "@/lib/server/runs/runner-state";
+import { startRunBackgroundTask, tryMarkRunnerActive } from "@/lib/server/runs/runner-state";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
@@ -30,7 +30,9 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
     runnerClaimed = true;
     await assertManualNodeExecutionReady(run, taskId);
 
-    void runNodeExecutionPipeline(run.runId, taskId, { runnerAlreadyClaimed: true }).catch(() => undefined);
+    startRunBackgroundTask(run.runId, "route:node-run:execution", () =>
+      runNodeExecutionPipeline(run.runId, taskId, { runnerAlreadyClaimed: true })
+    );
     runnerClaimed = false;
     return NextResponse.json(toRunResponse(await repo.get(id)));
   } catch (error) {

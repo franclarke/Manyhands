@@ -6,11 +6,15 @@ import { POST as POST_RUNS } from "@/app/api/runs/route";
 import { getWorkspaceRepository } from "@/lib/server/workspaces";
 import { resetWorkspaceRepositoryForTests } from "@/lib/server/workspaces/store";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
+import { drainAllRunBackgroundTasksForTests } from "@/lib/server/runs/runner-state";
 
 let tempDir: string;
+let previousForceFallback: string | undefined;
 
 beforeEach(async () => {
   tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-run-create-"));
+  previousForceFallback = process.env.MANYHANDS_FORCE_FALLBACK;
+  process.env.MANYHANDS_FORCE_FALLBACK = "1";
   process.env.MANYHANDS_WORKSPACES_FILE = path.join(tempDir, "workspaces.json");
   process.env.MANYHANDS_RUNS_DIR = path.join(tempDir, "runs");
   resetWorkspaceRepositoryForTests();
@@ -18,6 +22,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await drainAllRunBackgroundTasksForTests();
+  if (previousForceFallback === undefined) delete process.env.MANYHANDS_FORCE_FALLBACK;
+  else process.env.MANYHANDS_FORCE_FALLBACK = previousForceFallback;
   delete process.env.MANYHANDS_WORKSPACES_FILE;
   delete process.env.MANYHANDS_RUNS_DIR;
   resetWorkspaceRepositoryForTests();

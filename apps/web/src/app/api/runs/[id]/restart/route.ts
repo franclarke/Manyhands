@@ -9,6 +9,7 @@ import {
 } from "@/lib/server/runs";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
+import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,14 +58,14 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
     );
 
     if (resumesExecution) {
-      void runExecutionPipeline(claimed.runId).catch(() => undefined);
+      startRunBackgroundTask(claimed.runId, "route:restart:execution", () => runExecutionPipeline(claimed.runId));
       return NextResponse.json(toRunResponse(await getRunRepository().get(id)));
     }
 
     // Restart plans from scratch: drop the suspended planning thread so the
     // graph re-enters at START instead of resuming a stale gate.
     await resetPlanningThread(claimed.runId);
-    void runPlanningPipeline(claimed.runId).catch(() => undefined);
+    startRunBackgroundTask(claimed.runId, "route:restart:planning", () => runPlanningPipeline(claimed.runId));
     return NextResponse.json(toRunResponse(claimed));
   } catch (error) {
     return runErrorResponse(error);

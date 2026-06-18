@@ -8,6 +8,7 @@ import { resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 import { getRunRepository } from "@/lib/server/runs/store";
+import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -87,7 +88,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
 
     // Native resume: the answer travels as Command({ resume }) into the
     // suspended planning gate (the degraded-plan gate takes a typed action).
-    void resumePlanningPipeline(saved.runId, planningResumeFor(nodeId, answer)).catch(() => undefined);
+    startRunBackgroundTask(saved.runId, "route:answer:planning-question", () =>
+      resumePlanningPipeline(saved.runId, planningResumeFor(nodeId, answer))
+    );
 
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {

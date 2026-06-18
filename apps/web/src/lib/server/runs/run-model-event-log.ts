@@ -115,14 +115,35 @@ export async function appendRunModelEvent<K extends RunEventType>(
   });
 }
 
-export function publishRunModelEvent<K extends RunEventType>(runId: string, input: RunModelEventInput<K>): void {
-  void appendRunModelEvent(runId, input).catch((error) => {
+/**
+ * Required lifecycle/audit event: callers must await this and fail the current
+ * operation if the append-only event log cannot be written.
+ */
+export const appendRunEventRequired = appendRunModelEvent;
+
+/**
+ * Best-effort projection/detail event: failures are logged but do not block the
+ * run. Use this only for events that can be reconstructed or are UI detail, not
+ * for lifecycle status/decision/cancellation guarantees.
+ */
+export async function appendRunEventBestEffort<K extends RunEventType>(
+  runId: string,
+  input: RunModelEventInput<K>
+): Promise<RunEvent | undefined> {
+  try {
+    return await appendRunModelEvent(runId, input);
+  } catch (error) {
     console.warn(
-      `[run-model-event-log] failed to append ${input.type} for ${runId}: ${
+      `[run-model-event-log] best-effort append failed for ${input.type} on ${runId}: ${
         error instanceof Error ? error.message : String(error)
       }`
     );
-  });
+    return undefined;
+  }
+}
+
+export function publishRunModelEvent<K extends RunEventType>(runId: string, input: RunModelEventInput<K>): void {
+  void appendRunEventBestEffort(runId, input);
 }
 
 export async function resetRunModelEventLogForTests(runId: string): Promise<void> {

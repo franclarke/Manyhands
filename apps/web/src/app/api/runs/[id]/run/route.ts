@@ -6,6 +6,7 @@ import {
 import { appendRunStatusChanged } from "@/lib/server/runs/run-status-events";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
+import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,7 +28,7 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
       })
     );
     await appendRunStatusChanged(saved);
-    void runExecutionPipeline(saved.runId).catch(() => undefined);
+    startRunBackgroundTask(saved.runId, "route:run:execution", () => runExecutionPipeline(saved.runId));
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {
     return runErrorResponse(error);

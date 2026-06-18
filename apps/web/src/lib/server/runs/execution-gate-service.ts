@@ -15,7 +15,8 @@ import {
   isReplanRequest
 } from "./execution-host";
 import { resumeExecutionPipeline } from "./execution-pipeline";
-import { publishRunModelEvent } from "./run-model-event-log";
+import { appendRunEventRequired } from "./run-model-event-log";
+import { startRunBackgroundTask } from "./runner-state";
 import { replanSubtree } from "./replan-service";
 import type { RunRecord } from "./schema";
 
@@ -53,13 +54,15 @@ export async function answerExecutionGate(
     const failedTaskId = pending.taskId;
     const reason = pending.validationOutput ?? "leaf failed irrecoverably";
     const cleared = await clearExecutionPause(run.runId, "running", expectedGateId);
-    publishRunModelEvent(cleared.runId, {
+    await appendRunEventRequired(cleared.runId, {
       actor: "human",
       at: now,
       type: "decision.resolved",
       payload: { decisionId, choice: { answer }, actor: "human" }
     });
-    void replanSubtree(cleared.runId, failedTaskId, reason).catch(() => undefined);
+    startRunBackgroundTask(cleared.runId, "execution-gate:replan", async () => {
+      await replanSubtree(cleared.runId, failedTaskId, reason);
+    });
     return { run: cleared, decisionId, outcome: "replanning" };
   }
 
@@ -74,12 +77,14 @@ export async function answerExecutionGate(
   }
 
   const cleared = await clearExecutionPause(run.runId, "running", expectedGateId);
-  publishRunModelEvent(cleared.runId, {
+  await appendRunEventRequired(cleared.runId, {
     actor: "human",
     at: now,
     type: "decision.resolved",
     payload: { decisionId, choice: { answer }, actor: "human" }
   });
-  void resumeExecutionPipeline(cleared.runId, resumeDecision).catch(() => undefined);
+  startRunBackgroundTask(cleared.runId, "execution-gate:resume", () =>
+    resumeExecutionPipeline(cleared.runId, resumeDecision)
+  );
   return { run: cleared, decisionId, outcome: "resumed" };
 }

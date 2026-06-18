@@ -12,7 +12,7 @@ import {
   assertTransition,
   claimRunMutation
 } from "@/lib/server/runs";
-import { appendRunModelEvent } from "@/lib/server/runs/run-model-event-log";
+import { appendRunEventRequired } from "@/lib/server/runs/run-model-event-log";
 import { appendRunStatusChanged } from "@/lib/server/runs/run-status-events";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
@@ -75,7 +75,7 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
     await appendRunStatusChanged(saved, { at: now, actor: "human" });
     // Awaited (not fire-and-forget): the cancellation audit must be durable
     // before the 200 lands (INV-6).
-    await appendRunModelEvent(saved.runId, {
+    await appendRunEventRequired(saved.runId, {
       actor: "human",
       at: now,
       type: "run.cancelled",

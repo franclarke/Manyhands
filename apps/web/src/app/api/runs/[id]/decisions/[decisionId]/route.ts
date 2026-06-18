@@ -11,7 +11,7 @@ import {
   claimRunMutation,
   ensureRunModelEventLogForRun,
   getRunRepository,
-  publishRunModelEvent,
+  appendRunEventRequired,
   resumePlanningPipeline,
   runExecutionPipeline
 } from "@/lib/server/runs";
@@ -31,6 +31,7 @@ import {
 import type { RunRecord } from "@/lib/server/runs/schema";
 import { buildRunModelSeed } from "@/lib/server/runs/run-model-projection";
 import { toRunResponse } from "@/lib/server/runs/presenter";
+import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -82,7 +83,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       // Resolving the approval gate IS the go-ahead in the agent-first model (there
       // is no separate "run" affordance). Start execution; the pipeline transitions
       // "approved" → "running" itself (mirrors the restart route).
-      void runExecutionPipeline(run.runId).catch(() => undefined);
+      startRunBackgroundTask(run.runId, "route:decision:approve-plan-execution", () =>
+        runExecutionPipeline(run.runId)
+      );
     }
 
     if (decision.kind === "clarify") {
@@ -108,7 +111,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       // resumable replan context — the answer re-enters the replan.
       if (run.status === "paused" && run.pausedDuring === "running" && run.pendingReplan !== undefined) {
         run = await resumeReplanWithAnswer(run.runId, nodeId, answer);
-        publishRunModelEvent(run.runId, {
+        await appendRunEventRequired(run.runId, {
           actor: "human",
           at: now,
           type: "decision.resolved",
@@ -137,11 +140,13 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       await appendRunStatusChanged(run, { at: now, actor: "human" });
       // Native resume into the suspended planning gate (the degraded-plan
       // gate takes a typed retry/abort action).
-      void resumePlanningPipeline(run.runId, planningResumeFor(nodeId, answer)).catch(() => undefined);
+      startRunBackgroundTask(run.runId, "route:decision:planning-question", () =>
+        resumePlanningPipeline(run.runId, planningResumeFor(nodeId, answer))
+      );
     }
 
     if (decision.kind !== "approve_plan") {
-      publishRunModelEvent(run.runId, {
+      await appendRunEventRequired(run.runId, {
         actor: "human",
         at: now,
         type: "decision.resolved",
@@ -150,7 +155,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     }
 
     if (decision.kind === "resolve_conflict" && decision.context.conflictId !== undefined && "resolutionId" in choice) {
-      publishRunModelEvent(run.runId, {
+      await appendRunEventRequired(run.runId, {
         actor: "human",
         at: now,
         type: "conflict.resolved",
@@ -164,7 +169,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       "action" in choice &&
       choice.action === "approve"
     ) {
-      publishRunModelEvent(run.runId, {
+      await appendRunEventRequired(run.runId, {
         actor: "human",
         at: now,
         type: "amendment.applied",
@@ -222,7 +227,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
           status: "running" as const
         }));
 
-        void runExecutionPipeline(run.runId).catch(() => undefined);
+        startRunBackgroundTask(run.runId, "route:decision:amendment-execution", () =>
+          runExecutionPipeline(run.runId)
+        );
       }
     }
 
