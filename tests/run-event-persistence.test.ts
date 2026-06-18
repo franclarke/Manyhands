@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as POST_RUN } from "@/app/api/runs/[id]/run/route";
+import { saveRunWithRequiredStatusEvent } from "@/lib/server/runs/audited-mutation";
 import {
   appendRunEventBestEffort,
   readRunModelEvents
@@ -45,7 +46,54 @@ describe("durable run events", () => {
     const body = (await response.json()) as { error?: string };
 
     expect(response.status).toBe(500);
-    expect(body.error).toMatch(/EISDIR|illegal operation|directory/i);
+    expect(body.error).toMatch(/Required status event append failed/i);
+
+    const persisted = await getRunRepository().get(runId);
+    expect(persisted.status).toBe("approved");
+    expect(persisted.startedAt).toBeUndefined();
+  });
+
+  it("does not append a status event when the RunRecord save fails", async () => {
+    const runId = "run-snapshot-save-fails";
+    const previous = await getRunRepository().save(makeRun({ runId }));
+    await rm(path.join(runsDir, `${runId}.json`), { force: true });
+    await mkdir(path.join(runsDir, `${runId}.json`), { recursive: true });
+
+    await expect(
+      saveRunWithRequiredStatusEvent(previous, {
+        ...previous,
+        status: "running",
+        startedAt: "2026-06-11T00:00:01.000Z"
+      })
+    ).rejects.toMatchObject({
+      name: "RunPersistenceConsistencyError",
+      details: { rollback: "not_needed" }
+    });
+
+    await expect(readRunModelEvents(runId)).resolves.toEqual([]);
+  });
+
+  it("persists a matching snapshot and status event for a successful critical transition", async () => {
+    const runId = "run-status-audit-match";
+    const previous = await getRunRepository().save(makeRun({ runId }));
+
+    const saved = await saveRunWithRequiredStatusEvent(previous, {
+      ...previous,
+      status: "running",
+      startedAt: "2026-06-11T00:00:01.000Z"
+    });
+
+    const persisted = await getRunRepository().get(runId);
+    const statusEvents = (await readRunModelEvents(runId)).filter((event) => event.type === "run.status.changed");
+    const latestStatusEvent = statusEvents.at(-1);
+
+    expect(saved.version).toBe(persisted.version);
+    expect(persisted.status).toBe("running");
+    expect(latestStatusEvent?.payload).toMatchObject({
+      status: "running",
+      version: persisted.version,
+      updatedAt: persisted.updatedAt
+    });
   });
 
   it("logs and suppresses explicitly best-effort event append failures", async () => {

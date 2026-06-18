@@ -21,8 +21,10 @@ import { NextResponse } from "next/server";
 import {
   RunMutationConflictError,
   RunValidationError,
+  appendStatusEventOrRollback,
   claimRunMutation,
   getRunRepository,
+  requireCapturedRunRecord,
   runExecutionPipeline,
   runPlanningPipeline,
   resumePlanningPipeline,
@@ -36,7 +38,6 @@ import {
 } from "@/lib/server/runs/execution-host";
 import { planningResumeFor } from "@/lib/server/runs/planning-host";
 import { replanSubtree, resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
-import { appendRunStatusChanged } from "@/lib/server/runs/run-status-events";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 import type { RunRecord } from "@/lib/server/runs/schema";
@@ -99,6 +100,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     //    translates to a typed retry/abort action).
     if (planningAnswer !== null) {
       let answeredNodeId = "";
+      let previous: RunRecord | undefined;
       const saved = await claimRunMutation(
         id,
         {
@@ -108,6 +110,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
           ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
         },
         (current) => {
+          previous = current;
           const nodeId = current.pendingQuestion?.nodeId as string;
           answeredNodeId = nodeId;
           const next = {
@@ -120,7 +123,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
           return next;
         }
       );
-      await appendRunStatusChanged(saved, { actor: "human" });
+      await appendStatusEventOrRollback(requireCapturedRunRecord(previous, id), saved, { actor: "human" });
       // Native resume: the answer travels as Command({ resume }) into the
       // suspended planning gate (legacy runs without a planning checkpoint
       // fall back to re-running the pipeline).
@@ -132,10 +135,12 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
 
     // 4) Plain un-pause (cooperative engine pause).
     let resumedPhase: "generating" | "running" | undefined;
+    let previous: RunRecord | undefined;
     const saved = await claimRunMutation(
       id,
       { status: ["paused"], ...(expectedVersion !== undefined ? { version: expectedVersion } : {}) },
       (current) => {
+        previous = current;
         if (
           current.pendingDecision !== undefined ||
           current.pendingQuestion !== undefined ||
@@ -161,7 +166,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         return next;
       }
     );
-    await appendRunStatusChanged(saved, { actor: "human" });
+    await appendStatusEventOrRollback(requireCapturedRunRecord(previous, id), saved, { actor: "human" });
     if (!isRunnerActive(saved.runId)) {
       if (resumedPhase === "generating") {
         startRunBackgroundTask(saved.runId, "route:resume:planning-plain", () => runPlanningPipeline(saved.runId));

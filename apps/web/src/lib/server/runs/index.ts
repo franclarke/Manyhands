@@ -13,6 +13,7 @@ export * from "./run-model-event-log";
 export * from "./runner";
 export * from "./runner-state";
 export * from "./mutation-guard";
+export * from "./audited-mutation";
 export * from "./run-abort-registry";
 export * from "./pause-control";
 export * from "./interrupted";

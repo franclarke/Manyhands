@@ -8,14 +8,15 @@ import {
   RunLifecycleError,
   RunNotFoundError,
   RunValidationError,
+  appendStatusEventOrRollback,
   claimRunMutation,
   ensureRunModelEventLogForRun,
   getRunRepository,
   appendRunEventRequired,
+  requireCapturedRunRecord,
   resumePlanningPipeline,
   runExecutionPipeline
 } from "@/lib/server/runs";
-import { appendRunStatusChanged } from "@/lib/server/runs/run-status-events";
 import { processPlanApproval } from "@/lib/server/runs/plan-approval-service";
 import { planningResumeFor } from "@/lib/server/runs/planning-host";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
@@ -123,10 +124,12 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       // Atomic claim (INV-4): the pending question must still match `nodeId`
       // inside the write lock; the mutator consumes it, so a duplicate answer
       // gets a deterministic 409.
+      let previous: RunRecord | undefined;
       run = await claimRunMutation(
         run.runId,
         { status: ["paused"], pausedDuring: "generating", pendingQuestionNodeId: nodeId },
         (current) => {
+          previous = current;
           const nextRun = {
             ...current,
             status: "generating" as const,
@@ -137,7 +140,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
           return nextRun;
         }
       );
-      await appendRunStatusChanged(run, { at: now, actor: "human" });
+      await appendStatusEventOrRollback(requireCapturedRunRecord(previous, run.runId), run, { at: now, actor: "human" });
       // Native resume into the suspended planning gate (the degraded-plan
       // gate takes a typed retry/abort action).
       startRunBackgroundTask(run.runId, "route:decision:planning-question", () =>
@@ -221,11 +224,19 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         // Version-CAS (INV-4): `run.version` is the snapshot this amendment was
         // computed against. A concurrent duplicate approval bumped it with its
         // own save, so the loser 409s instead of double-seeding the pipeline.
-        run = await claimRunMutation(run.runId, { version: run.version }, (current) => ({
-          ...current,
-          execution: updatedExecution,
-          status: "running" as const
-        }));
+        let previous: RunRecord | undefined;
+        run = await claimRunMutation(run.runId, { version: run.version }, (current) => {
+          previous = current;
+          return {
+            ...current,
+            execution: updatedExecution,
+            status: "running" as const
+          };
+        });
+        await appendStatusEventOrRollback(requireCapturedRunRecord(previous, run.runId), run, {
+          at: now,
+          actor: "human"
+        });
 
         startRunBackgroundTask(run.runId, "route:decision:amendment-execution", () =>
           runExecutionPipeline(run.runId)

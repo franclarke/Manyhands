@@ -7,7 +7,7 @@ import { getRunRepository } from "./store";
 import { claimRunMutation } from "./mutation-guard";
 import { hasPlanningCheckpoint } from "./planning-host";
 import { resumePlanningPipeline } from "./planning-pipeline";
-import { appendRunStatusChanged } from "./run-status-events";
+import { appendStatusEventOrRollback, requireCapturedRunRecord } from "./audited-mutation";
 
 export async function processPlanApproval(
   id: string,
@@ -40,6 +40,7 @@ export async function processPlanApproval(
   // finds no approvable status and gets a deterministic 409 — exactly one
   // caller ever delivers Command({ resume }) into the approvalGate.
   const now = new Date().toISOString();
+  let previous: RunRecord | undefined;
   const claimed = await claimRunMutation(
     id,
     {
@@ -48,9 +49,12 @@ export async function processPlanApproval(
       status: ["needs_review", "completed", "failed"],
       ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
     },
-    (current) => ({ ...current, status: "approved" as const, approvedAt: current.approvedAt ?? now })
+    (current) => {
+      previous = current;
+      return { ...current, status: "approved" as const, approvedAt: current.approvedAt ?? now };
+    }
   );
-  await appendRunStatusChanged(claimed, { at: now, actor: "human" });
+  await appendStatusEventOrRollback(requireCapturedRunRecord(previous, id), claimed, { at: now, actor: "human" });
   await appendRunEventRequired(claimed.runId, {
     actor: "human",
     at: now,

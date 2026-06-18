@@ -59,7 +59,7 @@ import { type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
 import { markRunnerInactive, startRunBackgroundTask, tryMarkRunnerActive } from "./runner-state";
 import { startBudgetWatchdog } from "./runner-watchdog";
-import { appendRunStatusChanged } from "./run-status-events";
+import { saveRunWithRequiredStatusEvent } from "./audited-mutation";
 import type {
     ExecutionConfigInput,
     NodeReview,
@@ -316,7 +316,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
         });
       } else {
         console.warn(`[Runner] Persisting failed run ${runId}`);
-        const saved = await getRunRepository().save({
+        await saveRunWithRequiredStatusEvent(currentRun, {
           ...currentRun,
           status: result.status === "failed" ? "failed" : "interrupted",
           failedDuring: "running",
@@ -324,7 +324,6 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
           ...(executionTraces.length > 0 ? { executionTraces: [...(currentRun.executionTraces ?? []), ...executionTraces] } : {}),
           errorMessage: result.status === "failed" ? "Execution failed" : "Budget exceeded"
         });
-        await appendRunStatusChanged(saved);
       }
       return;
     }
@@ -490,18 +489,16 @@ async function settleExecutionException(runId: string, error: unknown): Promise<
   const precondition = error instanceof PreflightError || error instanceof RepoNotConfiguredError;
   const recoverable = !precondition && (await hasExecutionCheckpoint(runId).catch(() => false));
   if (recoverable) {
-    const saved = await getRunRepository().save({
+    await saveRunWithRequiredStatusEvent(run, {
       ...run,
       status: "interrupted",
       interruptedDuring: "running",
       errorMessage: `interrupted: ${message} (reanudable con restart — el checkpoint del último paso completo sobrevive)`
     });
-    await appendRunStatusChanged(saved);
     return;
   }
 
-  const saved = await getRunRepository().save({ ...run, status: "failed", failedDuring: "running", errorMessage: message });
-  await appendRunStatusChanged(saved);
+  await saveRunWithRequiredStatusEvent(run, { ...run, status: "failed", failedDuring: "running", errorMessage: message });
 }
 
 /**
@@ -614,13 +611,12 @@ async function settleExecutionOutcome(
   const existing = executionResultsFromRun(currentRun);
   const artifact = buildExecutionArtifact(runId, host.taskGraph, existing.leafResults, existing.integrationResults);
   if (artifact === undefined) {
-    const saved = await getRunRepository().save({
+    await saveRunWithRequiredStatusEvent(currentRun, {
       ...currentRun,
       status: "failed",
       failedDuring: "running",
       errorMessage: outcome.errorMessage ?? "Execution produced no results."
     });
-    await appendRunStatusChanged(saved);
     return;
   }
 
@@ -667,7 +663,7 @@ async function settleExecutionOutcome(
     });
   } else {
     console.warn(`[Runner] Persisting failed run ${runId}`);
-    const saved = await getRunRepository().save({
+    await saveRunWithRequiredStatusEvent(currentRun, {
       ...currentRun,
       status: "failed",
       failedDuring: "running",
@@ -675,7 +671,6 @@ async function settleExecutionOutcome(
       ...(validationSummary !== undefined ? { validation: validationSummary } : {}),
       errorMessage: outcome.errorMessage ?? describeExecutionFailure(result)
     });
-    await appendRunStatusChanged(saved);
   }
 }
 
@@ -1127,8 +1122,7 @@ export async function reviewNode(
   // flow too (not only during the manual `approved` workflow).
   if (run.status === "completed" || run.status === "completed_with_accepted" || run.status === "failed") {
     assertTransition(run.status, "approved");
-    run = await repo.save({ ...run, status: "approved", updatedAt: now });
-    await appendRunStatusChanged(run, { at: now, actor: "human" });
+    run = await saveRunWithRequiredStatusEvent(run, { ...run, status: "approved", updatedAt: now }, { at: now, actor: "human" });
   }
 
   if (run.status !== "approved") {

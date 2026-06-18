@@ -45,7 +45,7 @@ import type { TaskPairRiskMatrix } from "@manyhands/conflict-risk";
 import { resolveRunsDirectory } from "./repository";
 import { publishRunEvent } from "./event-bus";
 import { publishRunModelEvent } from "./run-model-event-log";
-import { appendRunStatusChanged } from "./run-status-events";
+import { appendStatusEventOrRollback, requireCapturedRunRecord } from "./audited-mutation";
 import { executionSelection, repairSelection } from "./executor-selection";
 import {
   INTEGRATION_SUCCESS,
@@ -623,16 +623,20 @@ export async function persistExecutionPause(
       : `El run alcanzó su presupuesto (${Math.round(gate.spentTokens ?? 0)} tokens / $${(gate.spentUsd ?? 0).toFixed(2)}). ` +
         `Quedan ${gate.pendingTasks?.length ?? 0} tareas pendientes. ¿Cómo querés continuar?`);
 
-  const saved = await getRunRepository().update(runId, (current) => ({
-    ...current,
-    status: "paused",
-    pausedDuring: "running",
-    pendingDecision: gate,
-    pendingQuestion: { nodeId: gate.taskId, question, options }
-  }));
+  let previous: RunRecord | undefined;
+  const saved = await getRunRepository().update(runId, (current) => {
+    previous = current;
+    return {
+      ...current,
+      status: "paused",
+      pausedDuring: "running",
+      pendingDecision: gate,
+      pendingQuestion: { nodeId: gate.taskId, question, options }
+    };
+  });
 
   const now = new Date().toISOString();
-  await appendRunStatusChanged(saved, { at: now });
+  await appendStatusEventOrRollback(requireCapturedRunRecord(previous, runId), saved, { at: now });
   publishRunModelEvent(runId, {
     actor: "system",
     at: now,
@@ -657,6 +661,7 @@ export async function clearExecutionPause(
   target: "running",
   expectedGateId?: string
 ): Promise<RunRecord> {
+  let previous: RunRecord | undefined;
   const updated = await claimRunMutation(
     runId,
     {
@@ -665,6 +670,7 @@ export async function clearExecutionPause(
       pendingDecisionGateId: expectedGateId ?? "any"
     },
     (current) => {
+      previous = current;
       const next = { ...current, status: target } as RunRecord;
       delete next.pausedDuring;
       delete next.pendingDecision;
@@ -672,7 +678,7 @@ export async function clearExecutionPause(
       return next;
     }
   );
-  await appendRunStatusChanged(updated, { actor: "human" });
+  await appendStatusEventOrRollback(requireCapturedRunRecord(previous, runId), updated, { actor: "human" });
   return updated;
 }
 

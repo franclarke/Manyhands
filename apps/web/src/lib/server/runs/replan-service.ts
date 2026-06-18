@@ -38,7 +38,11 @@ import {
 import { planNodeProposedEvent } from "./planning-run-model-adapter";
 import { publishRunModelEvent } from "./run-model-event-log";
 import { startRunBackgroundTask } from "./runner-state";
-import { appendRunStatusChanged } from "./run-status-events";
+import {
+  appendStatusEventOrRollback,
+  requireCapturedRunRecord,
+  saveRunWithRequiredStatusEvent
+} from "./audited-mutation";
 import type { RunRecord } from "./schema";
 import { getRunRepository } from "./store";
 
@@ -191,7 +195,8 @@ export async function replanSubtree(
   // the next start re-enters the wavefront seeded with the survivors.
   await resetExecutionThread(runId);
 
-  run = await repo.save({
+  const previous = run;
+  run = await saveRunWithRequiredStatusEvent(previous, {
     ...run,
     planning: updatedPlanning,
     execution: updatedExecution,
@@ -199,7 +204,6 @@ export async function replanSubtree(
   });
 
   const now = new Date().toISOString();
-  await appendRunStatusChanged(run, { at: now });
   for (const addedId of graft.addedTaskIds) {
     const added = graft.graph.nodes[addedId];
     if (added === undefined) continue;
@@ -237,25 +241,29 @@ async function suspendReplanOnQuestion(
   resume: ReplanResumeContext,
   error: { nodeId: string; question: string; options: string[]; stepCache: Record<string, unknown> }
 ): Promise<RunRecord> {
-  const saved = await claimRunMutation(runId, { status: ["running"] }, (current) => ({
-    ...current,
-    status: "paused" as const,
-    pausedDuring: "running" as const,
-    pendingQuestion: {
-      nodeId: error.nodeId,
-      question: `[Replan de "${taskId}"] ${error.question}`,
-      options: error.options.length >= 2 ? error.options : [...error.options, "Continuar con lo propuesto"]
-    },
-    pendingReplan: {
-      taskId,
-      reason,
-      stepCache: error.stepCache,
-      questionAnswers: resume.questionAnswers
-    }
-  }));
+  let previous: RunRecord | undefined;
+  const saved = await claimRunMutation(runId, { status: ["running"] }, (current) => {
+    previous = current;
+    return {
+      ...current,
+      status: "paused" as const,
+      pausedDuring: "running" as const,
+      pendingQuestion: {
+        nodeId: error.nodeId,
+        question: `[Replan de "${taskId}"] ${error.question}`,
+        options: error.options.length >= 2 ? error.options : [...error.options, "Continuar con lo propuesto"]
+      },
+      pendingReplan: {
+        taskId,
+        reason,
+        stepCache: error.stepCache,
+        questionAnswers: resume.questionAnswers
+      }
+    };
+  });
 
   const now = new Date().toISOString();
-  await appendRunStatusChanged(saved, { at: now });
+  await appendStatusEventOrRollback(requireCapturedRunRecord(previous, runId), saved, { at: now });
   publishRunModelEvent(runId, {
     actor: "system",
     at: now,
@@ -285,6 +293,7 @@ export async function resumeReplanWithAnswer(
   answer: string
 ): Promise<RunRecord> {
   let context: { taskId: string; reason: string; resume: ReplanResumeContext } | undefined;
+  let previous: RunRecord | undefined;
   const saved = await claimRunMutation(
     runId,
     {
@@ -293,6 +302,7 @@ export async function resumeReplanWithAnswer(
       pendingQuestionNodeId: nodeId ?? "any"
     },
     (current) => {
+      previous = current;
       const pending = current.pendingReplan;
       const question = current.pendingQuestion;
       if (pending === undefined || question === undefined) {
@@ -318,7 +328,7 @@ export async function resumeReplanWithAnswer(
     }
   );
 
-  await appendRunStatusChanged(saved, { actor: "human" });
+  await appendStatusEventOrRollback(requireCapturedRunRecord(previous, runId), saved, { actor: "human" });
   const replanContext = context;
   if (replanContext !== undefined) {
     startRunBackgroundTask(runId, "replan:resume", async () => {

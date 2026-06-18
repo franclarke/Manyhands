@@ -1,7 +1,7 @@
 import { isRunnerActive } from "./runner-state";
 import { getRunRepository } from "./store";
 import type { RunRecord } from "./schema";
-import { appendRunStatusChanged } from "./run-status-events";
+import { saveRunWithRequiredStatusEvent } from "./audited-mutation";
 
 /**
  * Default staleness threshold for runs in `generating` or `running`. The runner
@@ -36,9 +36,7 @@ export async function sweepRunIfStale(run: RunRecord, staleMs: number = DEFAULT_
     interruptedDuring,
     errorMessage: run.errorMessage ?? "interrupted: server restart or stale heartbeat"
   };
-  const saved = await getRunRepository().save(next);
-  await appendRunStatusChanged(saved);
-  return saved;
+  return saveRunWithRequiredStatusEvent(run, next);
 }
 
 export async function sweepManyIfStale(runs: RunRecord[], staleMs: number = DEFAULT_STALE_MS): Promise<RunRecord[]> {

@@ -36,7 +36,7 @@ import { titlerSelection } from "./executor-selection";
 import { generateRunTitle, type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
 import { markRunnerActive, markRunnerInactive, startRunBackgroundTask } from "./runner-state";
-import { appendRunStatusChanged } from "./run-status-events";
+import { saveRunWithRequiredStatusEvent } from "./audited-mutation";
 import type { ExecutionConfigInput, RunRecord, RunStatus } from "./schema";
 import { getRunRepository } from "./store";
 
@@ -105,9 +105,7 @@ export async function transitionTo(
   console.log(`[Runner] Run ${run.runId}: Transición de estado de "${run.status}" a "${status}"`);
   assertTransition(run.status, status);
   const next: RunRecord = { ...run, ...extra, status };
-  const saved = await getRunRepository().save(next);
-  await appendRunStatusChanged(saved);
-  return saved;
+  return saveRunWithRequiredStatusEvent(run, next);
 }
 
 export async function waitWhilePaused(runId: string, phase: "generating" | "running"): Promise<void> {
@@ -261,18 +259,18 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
     console.log(
       `[Runner] Planificación pausada en el nodo "${outcome.interrupt.nodeId}" para interactuar con el usuario.`
     );
-    const saved = await repo.save({
+    const next = {
       ...run,
-      status: "paused",
-      pausedDuring: "generating",
+      status: "paused" as const,
+      pausedDuring: "generating" as const,
       pendingQuestion: {
         nodeId: outcome.interrupt.nodeId,
         question: outcome.interrupt.question,
         options: outcome.interrupt.options
       }
-    });
+    };
     const now = new Date().toISOString();
-    await appendRunStatusChanged(saved, { at: now });
+    const saved = await saveRunWithRequiredStatusEvent(run, next, { at: now });
     publishRunEvent(runId, {
       kind: "planning.question",
       nodeId: outcome.interrupt.nodeId,
@@ -292,14 +290,14 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
     const question =
       `La generación del plan falló tras los reintentos: ${outcome.interrupt.errorMessage} ` +
       "¿Cómo querés continuar?";
-    const saved = await repo.save({
+    const next = {
       ...run,
-      status: "paused",
-      pausedDuring: "generating",
+      status: "paused" as const,
+      pausedDuring: "generating" as const,
       pendingQuestion: { nodeId: PLAN_DEGRADED_NODE_ID, question, options }
-    });
+    };
     const now = new Date().toISOString();
-    await appendRunStatusChanged(saved, { at: now });
+    const saved = await saveRunWithRequiredStatusEvent(run, next, { at: now });
     publishRunEvent(runId, {
       kind: "planning.question",
       nodeId: PLAN_DEGRADED_NODE_ID,
@@ -337,13 +335,12 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
   // Finished: the approval gate resolved, or the human aborted from the
   // degraded gate (the only INV-5-sanctioned road to "failed" here).
   if (outcome.status === "failed") {
-    const saved = await repo.save({
+    await saveRunWithRequiredStatusEvent(run, {
       ...run,
       status: "failed",
       failedDuring: "generating",
       errorMessage: `aborted by user at plan_degraded gate: ${outcome.errorMessage ?? "plan generation failed"}`
     });
-    await appendRunStatusChanged(saved);
     return;
   }
   if (outcome.status === "approved" && run.status !== "approved") {
@@ -358,13 +355,12 @@ async function failPlanning(runId: string, error: unknown): Promise<void> {
     .get(runId)
     .catch(() => null);
   if (run !== null) {
-    const saved = await getRunRepository().save({
+    await saveRunWithRequiredStatusEvent(run, {
       ...run,
       status: "failed",
       failedDuring: "generating",
       errorMessage: message
     });
-    await appendRunStatusChanged(saved);
   }
 }
 

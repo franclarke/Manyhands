@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import {
+  appendStatusEventOrRollback,
   assertTransition,
-  claimRunMutation
+  claimRunMutation,
+  requireCapturedRunRecord,
+  type RunRecord
 } from "@/lib/server/runs";
-import { appendRunStatusChanged } from "@/lib/server/runs/run-status-events";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 
@@ -20,6 +22,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     const payload = (await request.json().catch(() => null)) as Record<string, unknown> | null;
     const expectedVersion = typeof payload?.expectedVersion === "number" ? payload.expectedVersion : undefined;
     const now = new Date().toISOString();
+    let previous: RunRecord | undefined;
     const saved = await claimRunMutation(
       id,
       {
@@ -27,6 +30,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
       },
       (current) => {
+        previous = current;
         assertTransition(current.status, "paused");
         return {
           ...current,
@@ -35,7 +39,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         };
       }
     );
-    await appendRunStatusChanged(saved, { at: now, actor: "human" });
+    await appendStatusEventOrRollback(requireCapturedRunRecord(previous, id), saved, { at: now, actor: "human" });
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {
     return runErrorResponse(error);

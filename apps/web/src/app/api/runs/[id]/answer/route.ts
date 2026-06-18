@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { RunValidationError, claimRunMutation, resumePlanningPipeline } from "@/lib/server/runs";
+import {
+  RunValidationError,
+  appendStatusEventOrRollback,
+  claimRunMutation,
+  requireCapturedRunRecord,
+  resumePlanningPipeline,
+  type RunRecord
+} from "@/lib/server/runs";
 import { answerExecutionGate } from "@/lib/server/runs/execution-gate-service";
-import { appendRunStatusChanged } from "@/lib/server/runs/run-status-events";
 import { planningResumeFor } from "@/lib/server/runs/planning-host";
 import { resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
@@ -65,6 +71,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     // Atomic claim (INV-4): the pending question must still match `nodeId`
     // inside the write lock, and the mutator consumes it — a duplicate answer
     // (double-click, second tab) gets a deterministic 409.
+    let previous: RunRecord | undefined;
     const saved = await claimRunMutation(
       id,
       {
@@ -74,6 +81,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
       },
       (current) => {
+        previous = current;
         const next = {
           ...current,
           status: "generating" as const,
@@ -84,7 +92,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         return next;
       }
     );
-    await appendRunStatusChanged(saved, { actor: "human" });
+    await appendStatusEventOrRollback(requireCapturedRunRecord(previous, id), saved, { actor: "human" });
 
     // Native resume: the answer travels as Command({ resume }) into the
     // suspended planning gate (the degraded-plan gate takes a typed action).

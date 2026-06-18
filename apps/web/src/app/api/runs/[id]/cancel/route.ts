@@ -9,11 +9,12 @@ import {
 } from "@manyhands/execution-core";
 import {
   abortRun,
+  appendStatusEventOrRollback,
   assertTransition,
-  claimRunMutation
+  claimRunMutation,
+  requireCapturedRunRecord
 } from "@/lib/server/runs";
 import { appendRunEventRequired } from "@/lib/server/runs/run-model-event-log";
-import { appendRunStatusChanged } from "@/lib/server/runs/run-status-events";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 import type { RunRecord } from "@/lib/server/runs/schema";
@@ -38,7 +39,9 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
   const { id } = await context.params;
   try {
     const now = new Date().toISOString();
+    let previous: RunRecord | undefined;
     const saved = await claimRunMutation(id, { status: CANCELLABLE }, (current) => {
+      previous = current;
       assertTransition(current.status, "interrupted");
       const interruptedDuring: "generating" | "running" =
         current.status === "running" || current.pausedDuring === "running" ? "running" : "generating";
@@ -50,6 +53,8 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
         errorMessage: "interrupted: cancelled by user"
       };
     });
+
+    await appendStatusEventOrRollback(requireCapturedRunRecord(previous, id), saved, { at: now, actor: "human" });
 
     // 1) Cooperative abort: the drive loop cuts the stream between supersteps
     //    and in-flight executors receive the signal.
@@ -72,7 +77,6 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
       cleaned = await manager.gcRun(saved.runId, { preserveBranchesFor: evidenceTaskIds(saved) });
     }
 
-    await appendRunStatusChanged(saved, { at: now, actor: "human" });
     // Awaited (not fire-and-forget): the cancellation audit must be durable
     // before the 200 lands (INV-6).
     await appendRunEventRequired(saved.runId, {
