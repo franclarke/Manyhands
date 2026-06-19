@@ -8,6 +8,7 @@
 import { dirname, posix } from "node:path";
 import ts from "typescript";
 import type { InterfaceContract } from "@manyhands/contracts";
+import { stubThrow } from "./grounding-stub.js";
 
 export interface ScaffoldContract extends InterfaceContract {
   /** Repo-relative file hints from the producing node's expected output/scope. */
@@ -307,7 +308,7 @@ function renderDeclarationBlock(block: string): string | undefined {
   if (signature.startsWith("export ")) {
     if (functionName !== undefined && !hasFunctionBody(signature)) {
       const withoutExport = signature.replace(/^export\s+/, "");
-      return parseableOrUndefined(`export ${withoutExport} {\n  throw new Error("Not implemented: ${functionName}");\n}`);
+      return parseableOrUndefined(`export ${withoutExport} {\n  ${stubThrow(functionName)}\n}`);
     }
     if (constMatch !== null && !signature.includes("=")) {
       return parseableOrUndefined(`export const ${constMatch[1]} = undefined as unknown as ${constMatch[2]};`);
@@ -316,7 +317,7 @@ function renderDeclarationBlock(block: string): string | undefined {
   }
 
   if (functionName !== undefined && !hasFunctionBody(signature)) {
-    return parseableOrUndefined(`export ${signature} {\n  throw new Error("Not implemented: ${functionName}");\n}`);
+    return parseableOrUndefined(`export ${signature} {\n  ${stubThrow(functionName)}\n}`);
   }
   if (constMatch !== null && !signature.includes("=")) {
     return parseableOrUndefined(`export const ${constMatch[1]} = undefined as unknown as ${constMatch[2]};`);

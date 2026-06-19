@@ -19,6 +19,55 @@ function okOutcome() {
   return { exitCode: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1000 };
 }
 
+describe("ResultRecorder empty-diff no-op handling", () => {
+  it("treats an empty diff as a no-op success when the baseline already satisfies the contract", async () => {
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: [],
+      showFile: { "src/index.js": "export { slugify } from './slugify.js';\n" }
+    });
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+
+    const result = await recorder.record({
+      worktree: WORKTREE,
+      executorOutcome: okOutcome(),
+      executionScope: { implementationPaths: ["src/index.js"], testPaths: [], configPaths: [] }
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.noOp).toBe(true);
+    expect(result.changedFiles).toEqual([]);
+    expect(result.commitSha).toBeUndefined();
+  });
+
+  it("keeps an empty diff a failure when an implementation file is still an unimplemented stub", async () => {
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: [],
+      showFile: { "src/slugify.js": "export function slugify(input) {\n  throw new Error('Not implemented');\n}\n" }
+    });
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+
+    const result = await recorder.record({
+      worktree: WORKTREE,
+      executorOutcome: okOutcome(),
+      executionScope: { implementationPaths: ["src/slugify.js"], testPaths: [], configPaths: [] }
+    });
+
+    expect(result.status).toBe("empty_diff");
+    expect(result.noOp).toBeUndefined();
+  });
+
+  it("keeps an empty diff a failure when no execution scope identifies the deliverable", async () => {
+    const git = new FakeGitRunner({ heads: { [WORKTREE.path]: "BASE_SHA" }, diffCachedNameOnly: [] });
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+
+    const result = await recorder.record({ worktree: WORKTREE, executorOutcome: okOutcome() });
+
+    expect(result.status).toBe("empty_diff");
+  });
+});
+
 describe("ResultRecorder usage and failure diagnosis", () => {
   it("upgrades usageSource to reported when the executor outcome carries real usage", async () => {
     const git = new FakeGitRunner({

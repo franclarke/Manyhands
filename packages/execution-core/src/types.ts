@@ -84,6 +84,14 @@ export const AgentExecutionResultSchema = z.object({
   diff: z.string(),
   changedFiles: z.array(NonEmptyStringSchema).default([]),
   commitSha: NonEmptyStringSchema.optional(),
+  /**
+   * True when the leaf exited cleanly with an empty diff because the grounding
+   * baseline already satisfied its contract (e.g. a barrel/re-export the skeleton
+   * scaffolder produced in full). Such a leaf is a no-op success: nothing to
+   * commit and nothing for integration to cherry-pick. Distinguished from a plain
+   * empty-diff failure where the agent did no real work (status `empty_diff`).
+   */
+  noOp: z.boolean().optional(),
   scopeCheck: ScopeCheckResultSchema,
   validationResult: ValidationRunResultSchema.optional(),
   executorExitCode: z.number().int(),

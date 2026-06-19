@@ -17,6 +17,7 @@ import { SimpleGitRunner, type GitRunner } from "../git/runner.js";
 import { checkRepairedFiles, describeSyntaxFindings } from "../integration/syntax-check.js";
 import { execLog, execWarn } from "../logging/log.js";
 import { DEFAULT_ARTIFACT_GLOBS } from "../scope/artifacts.js";
+import { GROUNDING_STUB_MARKER } from "./grounding-stub.js";
 import { scaffoldInterfaces, type ScaffoldContract, type ScaffoldOutcome } from "./skeleton-scaffolder.js";
 
 export interface GroundingAgentParams {
@@ -182,7 +183,8 @@ function buildFallbackPrompt(input: {
   return [
     "You are the ManyHands GroundingAgent.",
     `Scaffold walking-skeleton interface contracts for batch ${input.batchIndex}/${input.batchCount}.`,
-    "Create only imports, empty types/interfaces, or minimal signatures. Function bodies may throw.",
+    "Create only imports, empty types/interfaces, or minimal signatures.",
+    `Stub every unimplemented function body with exactly: throw new Error("${GROUNDING_STUB_MARKER}: <functionName>"); — a leaf agent replaces it later. This marker is how the orchestrator tells an unfinished stub from a deliverable that is already complete.`,
     "Do not write full implementations. Do not commit.",
     "",
     "=== INTERFACES TO SCAFFOLD ===",

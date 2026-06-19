@@ -1,7 +1,21 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, utimes } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Count readFile calls so we can assert list() does not read the whole runs
+// directory just to build a small "recent runs" slice (read amplification).
+const ioSpy = vi.hoisted(() => ({ reads: 0 }));
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  return {
+    ...actual,
+    readFile: (...args: Parameters<typeof actual.readFile>) => {
+      ioSpy.reads += 1;
+      return actual.readFile(...args);
+    }
+  };
+});
 import { RunNotFoundError, RunValidationError } from "@/lib/server/runs/errors";
 import {
   JsonRunRecordStore,
@@ -73,6 +87,25 @@ describe("JsonRunRecordStore", () => {
     await repo.save(makeRun({ runId: "c", createdAt: "2026-05-26T02:00:00.000Z" }));
     const all = await repo.list();
     expect(all.map((entry) => entry.runId)).toEqual(["c", "b", "a"]);
+  });
+
+  it("list with a limit reads at most `limit` run files (no read amplification)", async () => {
+    // Persist more runs than we will request, with strictly increasing mtimes so
+    // the newest-N selection is deterministic across platforms.
+    const baseMs = Date.parse("2026-05-26T00:00:00.000Z");
+    for (let i = 0; i < 6; i += 1) {
+      await repo.save(makeRun({ runId: `r${i}`, createdAt: "2026-05-26T00:00:00.000Z" }));
+      const when = new Date(baseMs + i * 60_000);
+      await utimes(path.join(directory, `r${i}.json`), when, when);
+    }
+
+    ioSpy.reads = 0;
+    const recent = await repo.list({ limit: 2 });
+
+    // The two newest runs come back, newest first…
+    expect(recent.map((entry) => entry.runId)).toEqual(["r5", "r4"]);
+    // …and we did not parse the other four files to produce that 2-item slice.
+    expect(ioSpy.reads).toBeLessThanOrEqual(2);
   });
 
   it("list filters by workspaceId and respects limit", async () => {
