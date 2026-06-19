@@ -61,6 +61,23 @@ function successfulChildWithoutCommit(taskId: string): AgentExecutionResult {
   };
 }
 
+function noOpChild(taskId: string): AgentExecutionResult {
+  return {
+    taskId,
+    status: "success",
+    baseHead: "PARENT_BASE",
+    currentHead: "PARENT_BASE",
+    agentCommittedUnexpectedly: false,
+    diff: "",
+    changedFiles: [],
+    noOp: true,
+    scopeCheck: { passed: true, violations: [], outOfScope: [] },
+    executorExitCode: 0,
+    executorDurationMs: 100,
+    executorTimedOut: false
+  };
+}
+
 const repair: IntegrationRepairConfig = { model: "gpt-5-codex", timeoutMs: 600_000 };
 
 class FakeValidationRunner implements ValidationRunner {
@@ -128,6 +145,30 @@ describe("IntegrationAgent", () => {
         })
       })
     ]);
+  });
+
+  it("skips a no-op child (deliverable already in the base) and integrates the rest", async () => {
+    const git = new FakeGitRunner({ heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" } });
+    const traceStore = new InMemoryTraceStore();
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore,
+      repoRoot: "/repo"
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("a", "SHA_A"), noOpChild("barrel")],
+      repair
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.appliedCommits).toEqual([{ childTaskId: "a", commitSha: "SHA_A", order: 0 }]);
+    expect(result.omittedChildCommits).toEqual([]);
+    // The no-op child contributes nothing: only the real child is cherry-picked.
+    expect(git.opsInvoked().filter((op) => op === "cherryPick")).toHaveLength(1);
   });
 
   it("skips integration when a child did not succeed", async () => {

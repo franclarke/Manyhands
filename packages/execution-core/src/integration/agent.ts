@@ -185,7 +185,12 @@ export class IntegrationAgent {
       });
     }
 
-    const missingCommitChild = childResults.find((child) => child.commitSha === undefined);
+    // A no-op child (empty diff because grounding already satisfied its contract)
+    // legitimately has no commit — its deliverable is already in the integration
+    // base, so it is excluded from the missing-commit guard and cherry-pick below.
+    const missingCommitChild = childResults.find(
+      (child) => child.noOp !== true && child.commitSha === undefined
+    );
     if (missingCommitChild) {
       execWarn("integrate", "skipping integration: successful child has no commit", {
         task: compositeTaskId,
@@ -249,6 +254,11 @@ export class IntegrationAgent {
     let repairResult: AgentExecutionResult | undefined;
 
     for (const [childIndex, child] of childResults.entries()) {
+      if (child.noOp === true) {
+        // No-op leaf: its deliverable is already part of the integration base
+        // (grounding produced it in full), so there is nothing to cherry-pick.
+        continue;
+      }
       const commitSha = child.commitSha;
       if (commitSha === undefined) {
         throw new Error(`Invariant violation: successful child ${child.taskId} has no commitSha after validation.`);
@@ -420,6 +430,9 @@ export class IntegrationAgent {
   ): Promise<{ child: AgentExecutionResult; code: string; message: string } | undefined> {
     const seen = new Map<string, string>();
     for (const child of params.childResults) {
+      if (child.noOp === true) {
+        continue; // no-op leaf: nothing committed, nothing to validate or apply.
+      }
       const commitSha = child.commitSha;
       if (commitSha === undefined || commitSha.trim().length === 0) {
         return {

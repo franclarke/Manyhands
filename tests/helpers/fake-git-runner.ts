@@ -24,6 +24,8 @@ export interface FakeGitRunnerConfig {
   failOperations?: Partial<Record<string, Error>>;
   /** refs that should fail revParse(), used to simulate missing commits. */
   missingRefs?: string[];
+  /** path -> file contents returned by showFile(); absent paths resolve to null. */
+  showFile?: Record<string, string>;
 }
 
 /**
@@ -148,5 +150,10 @@ export class FakeGitRunner implements GitRunner {
 
   async cherryPickAbort(cwd: string): Promise<void> {
     this.record("cherryPickAbort", { cwd });
+  }
+
+  async showFile(params: { cwd: string; ref: string; path: string }): Promise<string | null> {
+    this.record("showFile", { ...params });
+    return this.config.showFile?.[params.path] ?? null;
   }
 }

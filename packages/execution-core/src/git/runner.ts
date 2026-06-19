@@ -47,6 +47,14 @@ export interface GitRunner {
 
   cherryPick(params: { cwd: string; commitSha: string }): Promise<CherryPickOutcome>;
   cherryPickAbort(cwd: string): Promise<void>;
+
+  /**
+   * Contents of `path` at `ref` (`git show <ref>:<path>`), or null when the file
+   * does not exist at that ref. Lets the recorder inspect a worktree's baseline
+   * file without staging — e.g. to tell a no-op leaf (baseline already satisfies
+   * the contract) from one that left an unimplemented stub behind.
+   */
+  showFile(params: { cwd: string; ref: string; path: string }): Promise<string | null>;
 }
 
 /** GitRunner backed by simple-git. Each operation runs against the given cwd. */
@@ -163,6 +171,15 @@ export class SimpleGitRunner implements GitRunner {
     return sumNumstat(
       await this.client(params.cwd).diff([`${params.from}..${params.to}`, "--numstat"])
     );
+  }
+
+  async showFile(params: { cwd: string; ref: string; path: string }): Promise<string | null> {
+    try {
+      return await this.client(params.cwd).show([`${params.ref}:${params.path}`]);
+    } catch {
+      // Missing file at that ref (or unreadable) — treat as absent.
+      return null;
+    }
   }
 
   async cherryPick(params: { cwd: string; commitSha: string }): Promise<CherryPickOutcome> {

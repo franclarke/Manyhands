@@ -4,7 +4,7 @@
     {
       "name": "web",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["web:dev"],
+      "runtimeArgs": ["--filter", "@manyhands/web", "dev"],
       "port": 3000,
       "autoPort": true
     }

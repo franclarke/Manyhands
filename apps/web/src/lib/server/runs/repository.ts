@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir } from "node:fs/promises";
+import { mkdir, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { atomicWriteJson } from "../workspaces/atomic-write";
 import { resolveRepoRoot } from "../repo-root";
@@ -56,11 +56,31 @@ export class JsonRunRecordStore implements RunRepository {
       if (isErrno(error) && error.code === "ENOENT") return [];
       throw error;
     }
-    const records: RunRecord[] = [];
+    // Order candidate files by mtime (newest first) WITHOUT reading them, then
+    // read lazily and stop once we have `limit` matching records. `mtime` is set
+    // by the same atomic write that bumps `updatedAt`, so it is a faithful proxy
+    // for recency. This keeps a "recent runs" query O(limit) reads instead of
+    // parsing every run file on disk: the layout sidebar runs `list({ limit })`
+    // on every navigation, and a single multi-MB run record would otherwise be
+    // re-read and re-parsed each time (and, in dev, re-serialised into the page).
+    const candidates: Array<{ path: string; mtimeMs: number }> = [];
     for (const entry of entries) {
       if (!entry.endsWith(".json")) continue;
+      const filePath = path.join(this.directory, entry);
       try {
-        const record = await this.readFile(path.join(this.directory, entry));
+        const stats = await stat(filePath);
+        candidates.push({ path: filePath, mtimeMs: stats.mtimeMs });
+      } catch {
+        // A file removed between readdir and stat is simply skipped.
+      }
+    }
+    candidates.sort((left, right) => right.mtimeMs - left.mtimeMs);
+
+    const records: RunRecord[] = [];
+    for (const candidate of candidates) {
+      if (filter.limit !== undefined && records.length >= filter.limit) break;
+      try {
+        const record = await this.readFile(candidate.path);
         if (filter.workspaceId !== undefined && record.workspaceId !== filter.workspaceId) {
           continue;
         }

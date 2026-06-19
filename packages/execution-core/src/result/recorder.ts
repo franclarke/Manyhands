@@ -5,6 +5,7 @@ import { execError, execLog, execWarn } from "../logging/log";
 import { classifyExecutorFailure } from "../executor/failure";
 import type { ExecutorRunOutcome } from "../executor/types";
 import type { GitRunner } from "../git/runner";
+import { GROUNDING_STUB_PATTERN } from "../run/grounding-stub";
 import { DEFAULT_ARTIFACT_GLOBS, OVERSIZED_CHANGE_THRESHOLD } from "../scope/artifacts";
 import { ScopeChecker } from "../scope/checker";
 import {
@@ -184,8 +185,20 @@ export class ResultRecorder {
     this.appendOversizedChangeAdvisory(taskId, changedFiles.length);
 
     if (changedFiles.length === 0) {
-      // Exit 0 but nothing changed: the agent ran yet produced no diff — a very
-      // common "execute did nothing" case worth surfacing with its output tail.
+      // An empty diff is normally a failure ("execute did nothing"). But it is a
+      // legitimate NO-OP when the grounding baseline already fully satisfies the
+      // leaf's contract — e.g. a barrel/re-export the scaffolder produced in full,
+      // leaving the agent nothing to add. We accept that case as success with no
+      // commit (nothing for integration to cherry-pick) only when we can prove it.
+      if (await this.baselineSatisfiesContract(worktree.path, baseHead, params.executionScope)) {
+        execLog("result", "leaf succeeded (no-op: grounding baseline already satisfies the contract)", {
+          task: taskId,
+          durationMs: executorOutcome.durationMs
+        });
+        return this.finalize({ ...base, status: "success", noOp: true, currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
+      }
+      // Exit 0 but nothing changed and the contract is not already satisfied: the
+      // agent ran yet produced no diff — surface it with its output tail.
       execWarn("result", "leaf failed: agent produced no changes (empty diff)", {
         task: taskId,
         durationMs: executorOutcome.durationMs,
@@ -230,6 +243,37 @@ export class ResultRecorder {
 
     this.appendScopeAdvisory(taskId, scopeCheck.outOfScope);
     return this.finalize({ ...base, status: "success", currentHead: commitSha, diff, changedFiles, commitSha, scopeCheck });
+  }
+
+  /**
+   * An empty diff is a legitimate no-op (not a failure) only when the grounding
+   * baseline already fully satisfies the leaf's contract: every concrete
+   * implementation-path file exists at the baseline and none still carries the
+   * unimplemented-stub marker. Conservative by design — no concrete paths, or any
+   * lingering stub, keeps the empty diff a failure so a leaf that did no real work
+   * is never silently accepted as success.
+   */
+  private async baselineSatisfiesContract(
+    cwd: string,
+    ref: string,
+    scope: ExecutionScope | undefined
+  ): Promise<boolean> {
+    const implPaths = (scope?.implementationPaths ?? []).filter((path) => !path.includes("*"));
+    if (implPaths.length === 0) {
+      return false;
+    }
+    let sawFile = false;
+    for (const path of implPaths) {
+      const content = await this.git.showFile({ cwd, ref, path });
+      if (content === null) {
+        continue;
+      }
+      sawFile = true;
+      if (GROUNDING_STUB_PATTERN.test(content)) {
+        return false;
+      }
+    }
+    return sawFile;
   }
 
   /** Likely scope leak signal: huge changed-file counts are logged, never failed. */
@@ -285,6 +329,7 @@ export class ResultRecorder {
     diff: string;
     changedFiles: string[];
     commitSha?: string | undefined;
+    noOp?: boolean | undefined;
     scopeCheck: ScopeCheckResult;
     executorExitCode: number;
     executorDurationMs: number;
@@ -307,6 +352,7 @@ export class ResultRecorder {
       diff: input.diff,
       changedFiles: input.changedFiles,
       commitSha: input.commitSha,
+      noOp: input.noOp,
       scopeCheck: input.scopeCheck,
       executorExitCode: input.executorExitCode,
       executorDurationMs: input.executorDurationMs,

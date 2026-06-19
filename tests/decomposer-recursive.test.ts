@@ -218,6 +218,51 @@ describe("RecursiveDecomposer — decompose with shared interfaces", () => {
     expect(result.graph.nodes.root?.contract?.parentValidationCommands?.[0]?.args).toEqual(["test"]);
   });
 
+  it("syncs node.dependencies (shortcut) with graph.dependencies", async () => {
+    const client = scriptedClient([
+      {
+        match: "Evaluate arithmetic expression strings",
+        response: {
+          decision: "decompose",
+          reasoning: "pipeline with real seams",
+          sharedInterfaces: [
+            { id: "Token", kind: "type", signature: "type Token = { kind: string; value: string }", description: "lexical token" },
+            { id: "Ast", kind: "type", signature: "type Ast = { op: string; args: Ast[] } | number", description: "parsed expression tree" }
+          ],
+          children: [
+            { id: "tokenize", title: "Tokenize", goal: "Split the input into tokens", consumes: [], produces: ["Token"] },
+            { id: "parse", title: "Parse", goal: "Build an AST from tokens", consumes: ["Token"], produces: ["Ast"] },
+            { id: "evaluate", title: "Evaluate", goal: "Compute the result from the AST", consumes: ["Ast"], produces: [] }
+          ],
+          dependencies: [
+            { fromTaskId: "tokenize", toTaskId: "parse", type: "contractual" },
+            { fromTaskId: "parse", toTaskId: "evaluate", type: "contractual" }
+          ],
+          parentValidationCommands: [{ command: "npm", args: ["test"] }]
+        }
+      },
+      { match: "Split the input into tokens", response: atomic(["src/tokenizer.ts"]) },
+      { match: "Build an AST from tokens", response: atomic(["src/parser.ts"]) },
+      { match: "Compute the result from the AST", response: atomic(["src/evaluator.ts"]) }
+    ]);
+
+    const decomposer = new RecursiveDecomposer({
+      client,
+      model: "test-model",
+      userPrompt: "build a calculator",
+      aggressiveness: "high"
+    });
+
+    const result = await decomposer.decompose(FEATURE);
+
+    // graph.dependencies is canonical; node.dependencies is its synced shortcut.
+    // The edge from→to means `from` is the prerequisite, so node[to].dependencies
+    // must list each fromTaskId (and the prerequisite-less node stays empty).
+    expect(result.graph.nodes.parse?.dependencies).toEqual(["tokenize"]);
+    expect(result.graph.nodes.evaluate?.dependencies).toEqual(["parse"]);
+    expect(result.graph.nodes.tokenize?.dependencies).toEqual([]);
+  });
+
   it("retries a step schema failure with feedback that includes the invalid value", async () => {
     const rootPrompts: string[] = [];
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
