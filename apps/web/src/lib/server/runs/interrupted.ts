@@ -1,5 +1,4 @@
 import { isRunnerActive } from "./runner-state";
-import { getRunRepository } from "./store";
 import type { RunRecord } from "./schema";
 import { saveRunWithRequiredStatusEvent } from "./audited-mutation";
 

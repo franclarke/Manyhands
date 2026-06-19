@@ -21,6 +21,7 @@ import {
   ExecutionConfigSchema,
   RunExecutor,
   SimpleGitRunner,
+  worktreePathFor,
   probeExecutorAvailability,
   type AgentExecutionResult,
   type ExecutorId,
@@ -41,7 +42,7 @@ import {
 } from "@manyhands/orchestrator-graph";
 import type { TaskGraph } from "@manyhands/task-graph";
 import { InMemoryTraceStore, type TraceStore } from "@manyhands/trace-store";
-import type { TaskPairRiskMatrix } from "@manyhands/conflict-risk";
+import type { StaticConflictSignal, TaskPairRiskMatrix } from "@manyhands/conflict-risk";
 import { resolveRunsDirectory } from "./repository";
 import { publishRunEvent } from "./event-bus";
 import { publishRunModelEvent } from "./run-model-event-log";
@@ -160,6 +161,14 @@ function riskMatrixFromRun(run: RunRecord): TaskPairRiskMatrix {
   return Array.isArray(planning?.riskMatrix) ? planning.riskMatrix : [];
 }
 
+function staticConflictSignalsFromRun(run: RunRecord): StaticConflictSignal[] | undefined {
+  const planning = run.planning as { staticConflictSignals?: StaticConflictSignal[] } | undefined;
+  if (!Array.isArray(planning?.staticConflictSignals) || planning.staticConflictSignals.length === 0) {
+    return undefined;
+  }
+  return planning.staticConflictSignals;
+}
+
 /** Process-wide cache: which executor CLIs are installed (probed lazily once). */
 let availableExecutors: Promise<Set<ExecutorId>> | undefined;
 
@@ -182,6 +191,7 @@ export function buildExecutionHost(
   };
   assertExecutableGraph(taskGraph);
   const riskMatrix = riskMatrixFromRun(run);
+  const staticConflictSignals = staticConflictSignalsFromRun(run);
   const traceStoreFactory = options.traceStoreFactory ?? (() => new InMemoryTraceStore());
 
   const makeRunExecutor = (sink: TraceStore, router?: ExecutorRouter) =>
@@ -375,7 +385,11 @@ export function buildExecutionHost(
       actor: "system",
       payload: { scope: "run", commandCount: commands.length }
     });
-    const worktreePath = join(provisioned.repoRoot, ".manyhands", "worktrees", runId, taskGraph.rootId);
+    const worktreePath = worktreePathFor({
+      worktreesRoot: join(provisioned.repoRoot, ".manyhands", "worktrees"),
+      runId,
+      taskId: taskGraph.rootId
+    });
     const validation = await new ChildProcessValidationRunner().run(commands, {
       worktreePath,
       repoRoot: provisioned.repoRoot
@@ -412,6 +426,7 @@ export function buildExecutionHost(
           waveIndex: schedulingWaveIndex,
           source: "execution-host",
           riskMatrix,
+          ...(staticConflictSignals !== undefined ? { staticSignals: staticConflictSignals } : {}),
           ...(run.executionConfig?.maxParallel !== undefined
             ? { maxParallel: run.executionConfig.maxParallel }
             : {})

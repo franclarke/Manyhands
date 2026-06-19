@@ -19,9 +19,11 @@
  */
 import { NextResponse } from "next/server";
 import {
+  RunLifecycleError,
   RunMutationConflictError,
   RunValidationError,
   appendStatusEventOrRollback,
+  assertRunActionAllowed,
   claimRunMutation,
   getRunRepository,
   requireCapturedRunRecord,
@@ -57,9 +59,13 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     const expectedGateId = typeof payload?.gateId === "string" ? payload.gateId : undefined;
     const expectedVersion = typeof payload?.expectedVersion === "number" ? payload.expectedVersion : undefined;
     const run = await getRunRepository().get(id);
+    assertRunActionAllowed(run, "resume");
 
     // 1) Execution gate resume — native Command({ resume }).
     if (run.status === "paused" && run.pausedDuring === "running" && run.pendingDecision !== undefined) {
+      if (isRunnerActive(id)) {
+        throw new RunLifecycleError(`Run ${id} is being driven by an active runner.`);
+      }
       // Selective re-decomposition: rebuild the failed subtree instead of
       // resuming the suspended gate (the execution thread is reset).
       if (isReplanRequest(payload)) {
@@ -92,6 +98,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       run.pausedDuring === "running" &&
       run.pendingReplan !== undefined
     ) {
+      if (isRunnerActive(id)) {
+        throw new RunLifecycleError(`Run ${id} is being driven by an active runner.`);
+      }
       const saved = await resumeReplanWithAnswer(id, planningAnswer.nodeId ?? run.pendingQuestion?.nodeId, planningAnswer.answer);
       return NextResponse.json(toRunResponse(saved));
     }
@@ -99,6 +108,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     // 3) Planning question resume (incl. the degraded-plan gate, whose answer
     //    translates to a typed retry/abort action).
     if (planningAnswer !== null) {
+      if (isRunnerActive(id)) {
+        throw new RunLifecycleError(`Run ${id} is being driven by an active runner.`);
+      }
       let answeredNodeId = "";
       let previous: RunRecord | undefined;
       const saved = await claimRunMutation(

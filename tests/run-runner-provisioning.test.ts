@@ -9,6 +9,7 @@ import {
   type ExecutionEngineInput
 } from "@/lib/server/runs/runner";
 import type { RepoProvisioner } from "@/lib/server/runs/repo-provisioner";
+import { abortRun } from "@/lib/server/runs/run-abort-registry";
 import { JsonRunRecordStore } from "@/lib/server/runs/repository";
 import { resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import { AgentTaskContractSchema } from "@manyhands/contracts";
@@ -258,6 +259,49 @@ describe("runExecutionPipeline provisioning", () => {
     expect(finalRun.finalBranchName).toBeUndefined();
     // The partial execution result is still persisted for diagnostics.
     expect(finalRun.execution).toBeDefined();
+  }, 30000);
+
+  it("registers cancellation before repo provisioning completes", async () => {
+    const runId = "run-cancel-during-provisioning";
+    const store = await saveApprovedRun(runId, {
+      repoSpec: { kind: "fixture", fixtureId: "task-manager-api" }
+    });
+
+    let abortDelivered = false;
+    let engineCalled = false;
+    const provisioner: RepoProvisioner = {
+      async provision() {
+        await store.update(runId, (current) => ({
+          ...current,
+          status: "interrupted",
+          interruptedDuring: "running",
+          errorMessage: "interrupted: cancelled during provisioning"
+        }));
+        abortDelivered = abortRun(runId);
+        return {
+          repoRoot: `/tmp/fake/${runId}/repo`,
+          baseBranch: "main",
+          baseCommit: BASE_COMMIT,
+          cleanup: async () => undefined
+        };
+      }
+    };
+    const engine: ExecutionEngine = {
+      run: async () => {
+        engineCalled = true;
+        return completedResult(runId);
+      }
+    };
+
+    await runExecutionPipeline(runId, { intervalMs: 0, engine, provisioner });
+
+    const finalRun = await store.get(runId);
+    expect(abortDelivered).toBe(true);
+    expect(engineCalled).toBe(false);
+    expect(finalRun.status).toBe("interrupted");
+    expect(finalRun.errorMessage).toContain("provisioning");
+    expect(finalRun.provisioned?.baseCommit).toBe(BASE_COMMIT);
+    expect(finalRun.execution).toBeUndefined();
   }, 30000);
 
   it("interrupts and aborts the engine when the wall-clock budget is exceeded", async () => {

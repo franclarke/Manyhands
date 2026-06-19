@@ -10,6 +10,8 @@ export interface FakeGitRunnerConfig {
   heads?: Record<string, string>;
   /** sha returned by commit(). */
   commitSha?: string;
+  /** shas dequeued one per commit() call; useful when duplicate commits are invalid. */
+  commitShas?: string[];
   diffCached?: string;
   diffCachedNameOnly?: string[];
   diffCachedNumstat?: number;
@@ -20,6 +22,8 @@ export interface FakeGitRunnerConfig {
   cherryPickOutcomes?: CherryPickOutcome[];
   /** Operations that should throw when invoked. */
   failOperations?: Partial<Record<string, Error>>;
+  /** refs that should fail revParse(), used to simulate missing commits. */
+  missingRefs?: string[];
 }
 
 /**
@@ -32,11 +36,13 @@ export class FakeGitRunner implements GitRunner {
   readonly heads: Record<string, string>;
   private readonly config: FakeGitRunnerConfig;
   private readonly cherryPickQueue: CherryPickOutcome[];
+  private readonly commitQueue: string[];
 
   constructor(config: FakeGitRunnerConfig = {}) {
     this.config = config;
     this.heads = { ...(config.heads ?? {}) };
     this.cherryPickQueue = [...(config.cherryPickOutcomes ?? [])];
+    this.commitQueue = [...(config.commitShas ?? [])];
   }
 
   private record(op: string, args: Record<string, unknown>): void {
@@ -84,6 +90,9 @@ export class FakeGitRunner implements GitRunner {
 
   async revParse(cwd: string, ref: string): Promise<string> {
     this.record("revParse", { cwd, ref });
+    if ((this.config.missingRefs ?? []).includes(ref)) {
+      throw new Error(`unknown revision ${ref}`);
+    }
     return this.heads[cwd] ?? "BASE";
   }
 
@@ -97,7 +106,7 @@ export class FakeGitRunner implements GitRunner {
 
   async commit(params: { cwd: string; message: string }): Promise<string> {
     this.record("commit", { ...params });
-    const sha = this.config.commitSha ?? "COMMIT_SHA";
+    const sha = this.commitQueue.shift() ?? this.config.commitSha ?? "COMMIT_SHA";
     this.heads[params.cwd] = sha;
     return sha;
   }

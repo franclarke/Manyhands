@@ -39,7 +39,7 @@ import {
 } from "./execution-state";
 import { applyFinalPatch } from "./final-apply";
 import { groundingSelection } from "./executor-selection";
-import { assertTransition } from "./lifecycle";
+import { assertRunActionAllowed, assertTransition } from "./lifecycle";
 import { LiveExecutionTraceStore } from "./live-trace-store";
 import { waitWhilePlainPaused } from "./pause-control";
 import { PreflightError, runPreflight } from "./preflight";
@@ -58,7 +58,7 @@ import { transitionTo } from "./planning-pipeline";
 import { reconcileExecutionWorld } from "./world-reconcile";
 import { type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
-import { markRunnerInactive, startRunBackgroundTask, tryMarkRunnerActive } from "./runner-state";
+import { isRunnerActive, markRunnerInactive, startRunBackgroundTask, tryMarkRunnerActive } from "./runner-state";
 import { startBudgetWatchdog } from "./runner-watchdog";
 import { saveRunWithRequiredStatusEvent } from "./audited-mutation";
 import type {
@@ -180,6 +180,13 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
 
     await ensureRunModelEventLogForRun(run);
 
+    const abortController = createRunAbort(runId);
+    stopBudgetWatchdog = startBudgetWatchdog(runId, run.executionConfig?.maxWallClockMs);
+    if (await executionWasInterrupted(runId, abortController.signal)) {
+      console.log(`[Runner] Execution pipeline stopped before provisioning; run ${runId} is interrupted.`);
+      return;
+    }
+
     let provisioned: ProvisionedRepo | undefined = provisionedFromRecord(run.provisioned);
     if (provisioned === undefined && run.repoSpec !== undefined) {
       const provisioner = options.provisioner ?? createDefaultRepoProvisioner();
@@ -188,15 +195,20 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       console.log(
         `[Runner] Repo provisioned for run ${runId}: repoRoot=${provisioned.repoRoot}, baseBranch=${provisioned.baseBranch}, baseCommit=${provisioned.baseCommit}`
       );
-      run = await getRunRepository().save({
-        ...run,
+      const provisionedRepo = provisioned;
+      run = await getRunRepository().update(run.runId, (current) => ({
+        ...current,
         provisioned: {
-          repoRoot: provisioned.repoRoot,
-          baseBranch: provisioned.baseBranch,
-          baseCommit: provisioned.baseCommit,
+          repoRoot: provisionedRepo.repoRoot,
+          baseBranch: provisionedRepo.baseBranch,
+          baseCommit: provisionedRepo.baseCommit,
           provisionedAt: new Date().toISOString()
         }
-      });
+      }));
+      if (isInterrupted(run, abortController.signal)) {
+        console.log(`[Runner] Execution pipeline stopped after provisioning; run ${runId} is interrupted.`);
+        return;
+      }
     } else if (usingDefaultEngine) {
       console.error(
         `[Runner] El run ${runId} no tiene repoSpec configurado y el engine real requiere un repo. ` +
@@ -212,8 +224,10 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       lockedRepoRoot = provisioned.repoRoot;
     }
 
-    const abortController = createRunAbort(runId);
-    stopBudgetWatchdog = startBudgetWatchdog(runId, run.executionConfig?.maxWallClockMs);
+    if (await executionWasInterrupted(runId, abortController.signal)) {
+      console.log(`[Runner] Execution pipeline stopped before preflight; run ${runId} is interrupted.`);
+      return;
+    }
 
     if (options.engine !== undefined) {
       console.log(`[Runner] Running mock/custom engine for run ${runId}`);
@@ -347,6 +361,10 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
         console.warn(`[Runner] Preflight warning (${warning.check}) for run ${runId}: ${warning.message}`);
       }
       console.log(`[Runner] Preflight ok for run ${runId}`);
+      if (await executionWasInterrupted(runId, abortController.signal)) {
+        console.log(`[Runner] Execution pipeline stopped after preflight; run ${runId} is interrupted.`);
+        return;
+      }
     }
 
     // Cold resume (restart after crash/cancel): reconcile the physical world
@@ -397,15 +415,19 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
         runId: run.runId
       });
       provisioned!.baseCommit = skeletonCommit;
-      run = await getRunRepository().save({
-        ...run,
+      run = await getRunRepository().update(run.runId, (current) => ({
+        ...current,
         provisioned: {
           repoRoot: provisioned!.repoRoot,
           baseBranch: provisioned!.baseBranch,
           baseCommit: skeletonCommit,
-          provisionedAt: run.provisioned?.provisionedAt ?? new Date().toISOString()
+          provisionedAt: current.provisioned?.provisionedAt ?? new Date().toISOString()
         }
-      });
+      }));
+      if (isInterrupted(run, abortController.signal)) {
+        console.log(`[Runner] Execution pipeline stopped after grounding; run ${runId} is interrupted.`);
+        return;
+      }
 
       publishRunModelEvent(run.runId, {
         actor: "system",
@@ -519,6 +541,20 @@ async function claimRepoOrThrow(repoRoot: string, runId: string): Promise<void> 
   if (lock.stolen) {
     console.warn(`[Runner] Repo lock for ${repoRoot} was stale and stolen by run ${runId}.`);
   }
+}
+
+async function executionWasInterrupted(runId: string, signal: AbortSignal): Promise<boolean> {
+  if (signal.aborted) {
+    return true;
+  }
+  const run = await getRunRepository()
+    .get(runId)
+    .catch(() => null);
+  return run !== null && isInterrupted(run, signal);
+}
+
+function isInterrupted(run: RunRecord, signal: AbortSignal): boolean {
+  return signal.aborted || run.status === "interrupted";
 }
 
 /**
@@ -796,7 +832,7 @@ export async function runNodeExecutionPipeline(
     console.error(`[Runner] Node execution failed run="${runId}" task="${taskId}":`, error);
     const run = await getRunRepository().get(runId).catch(() => null);
     if (run !== null) {
-      await getRunRepository().save({ ...run, errorMessage: message });
+      await getRunRepository().update(run.runId, (current) => ({ ...current, errorMessage: message }));
     }
     publishEvent(runId, {
       kind: "agent.run.completed",
@@ -1118,9 +1154,16 @@ export async function reviewNode(
   const now = new Date().toISOString();
 
   if (action === "approve") {
-    const reviews: Record<string, NodeReview> = { ...(run.nodeReviews ?? {}) };
-    reviews[taskId] = { status: "approved", at: now };
-    return repo.save({ ...run, nodeReviews: reviews, updatedAt: now });
+    return repo.update(run.runId, (current) => {
+      const reviews: Record<string, NodeReview> = { ...(current.nodeReviews ?? {}) };
+      reviews[taskId] = { status: "approved", at: now };
+      return { ...current, nodeReviews: reviews, updatedAt: now };
+    });
+  }
+
+  assertRunActionAllowed(run, action === "rerun" ? "manual_node_rerun" : "manual_node_review");
+  if (isRunnerActive(run.runId)) {
+    throw new RunLifecycleError(`Run ${run.runId} is being driven by an active runner.`);
   }
 
   // Re-open a finished run so Rerun / Request changes work in the autonomous

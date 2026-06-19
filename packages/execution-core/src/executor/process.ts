@@ -70,6 +70,7 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
   } = params;
   const start = Date.now();
   const task = basename(cwd);
+  const commandLine = formatCommandLine(binaryPath, args);
 
   return new Promise<ExecutorRunOutcome>((resolve) => {
     if (signal?.aborted === true) {
@@ -78,7 +79,8 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
         stdout: "",
         stderr: "aborted before start",
         timedOut: false,
-        durationMs: 0
+        durationMs: 0,
+        commandLine
       });
       return;
     }
@@ -94,15 +96,37 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
       });
     }
 
-    const child = spawnFn(binaryPath, args, {
-      cwd,
-      env: { ...process.env, ...(env ?? {}) },
-      stdio: ["pipe", "pipe", "pipe"],
-      shell: useShell,
-      // POSIX: own process group, so killProcessTree's kill(-pid) reaches every
-      // descendant. Windows ignores detached-for-groups; taskkill /t covers it.
-      detached: process.platform !== "win32"
-    });
+    let child: ReturnType<SpawnFn>;
+    try {
+      child = spawnFn(binaryPath, args, {
+        cwd,
+        env: { ...process.env, ...(env ?? {}) },
+        stdio: ["pipe", "pipe", "pipe"],
+        shell: useShell,
+        // POSIX: own process group, so killProcessTree's kill(-pid) reaches every
+        // descendant. Windows ignores detached-for-groups; taskkill /t covers it.
+        detached: process.platform !== "win32"
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (logScope !== undefined) {
+        execError(logScope, "spawn failed before process start", {
+          task,
+          binary: binaryPath,
+          message,
+          hint: "binary could not be launched — check it is executable and on PATH / the executor's *_BIN env var"
+        });
+      }
+      resolve({
+        exitCode: SPAWN_FAILURE_EXIT_CODE,
+        stdout: "",
+        stderr: message,
+        timedOut: false,
+        durationMs: Date.now() - start,
+        commandLine
+      });
+      return;
+    }
 
     if (processOwnerId !== undefined) {
       registerLiveProcess(processOwnerId, child);
@@ -131,7 +155,8 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
         stdout,
         stderr: `${stderr}${stderr ? "\n" : ""}aborted by orchestrator`,
         timedOut: false,
-        durationMs: Date.now() - start
+        durationMs: Date.now() - start,
+        commandLine
       });
     };
 
@@ -150,7 +175,8 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
         stdout,
         stderr,
         timedOut: true,
-        durationMs: Date.now() - start
+        durationMs: Date.now() - start,
+        commandLine
       });
     }, timeoutMs);
 
@@ -184,7 +210,8 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
         stdout,
         stderr: stderr + (stderr ? "\n" : "") + error.message,
         timedOut: false,
-        durationMs: Date.now() - start
+        durationMs: Date.now() - start,
+        commandLine
       });
     });
 
@@ -209,7 +236,8 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
         stdout,
         stderr,
         timedOut: false,
-        durationMs: Date.now() - start
+        durationMs: Date.now() - start,
+        commandLine
       });
     });
 
@@ -235,9 +263,21 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
           stdout,
           stderr: `${stderr}${stderr ? "\n" : ""}failed to read instructions: ${error.message}`,
           timedOut: false,
-          durationMs: Date.now() - start
+          durationMs: Date.now() - start,
+          commandLine
         });
       }
     );
   });
+}
+
+function formatCommandLine(binaryPath: string, args: readonly string[]): string {
+  return [binaryPath, ...args].map(quoteForDisplay).join(" ");
+}
+
+function quoteForDisplay(value: string): string {
+  if (/^[A-Za-z0-9_./:=+-]+$/.test(value)) {
+    return value;
+  }
+  return JSON.stringify(value);
 }

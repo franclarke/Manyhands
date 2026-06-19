@@ -187,6 +187,44 @@ export const PreMergeFindingSchema = z.object({
 
 export type PreMergeFinding = z.infer<typeof PreMergeFindingSchema>;
 
+export const IntegrationFailureCodeSchema = z.union([
+  z.literal("child_failed"),
+  z.literal("missing_child_commit"),
+  z.literal("invalid_child_commit"),
+  z.literal("cherry_pick_conflict"),
+  z.literal("repair_failed"),
+  z.literal("validation_failed"),
+  z.literal("internal_error")
+]);
+
+export type IntegrationFailureCode = z.infer<typeof IntegrationFailureCodeSchema>;
+
+export const AppliedChildCommitSchema = z.object({
+  childTaskId: EntityIdSchema,
+  commitSha: NonEmptyStringSchema,
+  order: z.number().int().nonnegative()
+});
+
+export type AppliedChildCommit = z.infer<typeof AppliedChildCommitSchema>;
+
+export const OmittedChildCommitSchema = z.object({
+  childTaskId: EntityIdSchema,
+  reason: IntegrationFailureCodeSchema,
+  status: AgentResultStatusSchema.optional(),
+  commitSha: NonEmptyStringSchema.optional()
+});
+
+export type OmittedChildCommit = z.infer<typeof OmittedChildCommitSchema>;
+
+export const IntegrationRepairAttemptSchema = z.object({
+  childTaskId: EntityIdSchema,
+  pass: z.number().int().positive(),
+  status: z.union([z.literal("started"), z.literal("syntax_rejected"), z.literal("committed"), z.literal("failed")]),
+  files: z.array(NonEmptyStringSchema).default([])
+});
+
+export type IntegrationRepairAttempt = z.infer<typeof IntegrationRepairAttemptSchema>;
+
 export const IntegrationResultSchema = z.object({
   compositeTaskId: EntityIdSchema,
   status: IntegrationStatusSchema,
@@ -198,7 +236,17 @@ export const IntegrationResultSchema = z.object({
   /** Deterministic pre-merge compatibility findings (Fase 3.1). */
   preMergeFindings: z.array(PreMergeFindingSchema).default([]),
   /** Parent validation outcome, persisted for diagnostics/UI (Fase 3.3). */
-  parentValidation: ValidationRunResultSchema.optional()
+  parentValidation: ValidationRunResultSchema.optional(),
+  /** Stable machine-readable failure reason; status stays backward-compatible. */
+  failureCode: IntegrationFailureCodeSchema.optional(),
+  /** Child commits cherry-picked or repaired into the integration worktree, in order. */
+  appliedCommits: z.array(AppliedChildCommitSchema).optional(),
+  /** Child commits intentionally not applied because integration failed before them. */
+  omittedChildCommits: z.array(OmittedChildCommitSchema).optional(),
+  /** Worktree where parent validation ran; proves validation used the integration tree. */
+  validationWorktreePath: NonEmptyStringSchema.optional(),
+  /** Compact record of repair passes for replay/debugging. */
+  repairAttempts: z.array(IntegrationRepairAttemptSchema).optional()
 });
 
 export type IntegrationResult = z.infer<typeof IntegrationResultSchema>;
@@ -228,7 +276,7 @@ export const AgentExecutorOptionsSchema = z.object({
   timeoutMs: z.number().int().positive(),
   bypassApprovals: z.boolean(),
   env: z.record(z.string()).optional(),
-  reasoningEffort: z.enum(["low", "medium", "high"]).optional(),
+  reasoningEffort: z.enum(["low", "medium", "high", "xhigh"]).optional(),
   /** Run-level cancellation: aborts the spawned process tree. Not serialized. */
   signal: z.instanceof(AbortSignal).optional(),
   /**

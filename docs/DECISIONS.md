@@ -121,6 +121,14 @@ final-apply y entrega el resultado), distinto de `completed` para no afirmar que
 fue 100% limpio. El grafo y `RunExecutionResult` siguen siendo binarios
 `completed`/`failed`; la distinción vive en el estado del `RunRecord`.
 
+**D18:** la integración bottom-up no puede cerrar como exitosa si no puede
+explicar exactamente qué commits hijos fueron aplicados. `IntegrationResult`
+incluye `failureCode`, `appliedCommits`, `omittedChildCommits`,
+`validationWorktreePath` y `repairAttempts`. Un child `success` sin commit,
+un commit hijo inalcanzable o un SHA duplicado falla antes del cherry-pick con
+evidencia explícita. La validación parent corre sobre el worktree integrado y
+un repair exitoso no puede ocultar una validación parent fallida.
+
 ---
 
 ## Planning y Decomposer
@@ -191,6 +199,23 @@ incluye `policy`, `readyTaskIds`, `selectedTaskIds`, `blockedTaskIds`,
 la wave no se ejecuta silenciosamente. El `seq` del event log sigue siendo el
 orden durable; `waveIndex` es una correlación de pipeline.
 
+**D19:** el predictor de scheduling usa señales estructurales del
+`repository-index` cuando están disponibles. `conflict-risk` cruza contratos con
+archivos, símbolos, imports/exports y kinds del índice para producir señales como
+`static_import_dependency`, `static_producer_consumer_symbol`,
+`static_shared_schema_dependency` y `static_public_api_surface_overlap`. Si el
+índice o sus señales no están disponibles, `buildSchedulingSafetyContext`
+degrada a heurísticas de contratos/scopes con warning `missing_repository_index`;
+la incertidumbre no se convierte en bajo riesgo.
+
+**D17:** las acciones del control-plane de lifecycle tienen una matriz explícita
+de estados permitidos (`assertRunActionAllowed`). `start`, `pause`, `resume`,
+`cancel`, `answer_gate`, `approve_plan`, `replan`, `restart`, `fork` y
+`manual_node_run`/`manual_node_review`/`manual_node_rerun` se validan antes de
+mutar `RunRecord`, appendear eventos de éxito o despachar background work.
+`fork` no opera sobre `generating`/`running`; acciones que relanzan pipelines
+rechazan un runner in-process activo.
+
 **D10:** timeouts explícitos y configurables:
 
 - hojas;
@@ -199,7 +224,7 @@ orden durable; `waveIndex` es una correlación de pipeline.
 
 ---
 
-## Maduración de Runtime y Auditoría (PR-S1..S6)
+## Maduración de Runtime y Auditoría (PR-S1..S9)
 
 **Contexto.** ManyHands necesita que las decisiones de orquestación sean
 reproducibles desde artefactos durables, no solo desde logs de consola o estado
@@ -227,11 +252,30 @@ en memoria.
   despachar nodos. `validateAgentTaskContractBoundary` bloquea schemas
   inválidos, `taskId` desalineado, paths inseguros e interfaces incoherentes;
   `validateExecutableTaskGraph` aplica esas reglas al DAG de hojas.
+- **PR-S7:** las rutas y servicios de lifecycle bloquean acciones incompatibles
+  antes de mutar: pausa solo desde `generating`/`running`, resume solo desde
+  `paused`, cancel solo desde runs vivos o pausados, restart solo desde
+  `interrupted`/`failed`, fork solo desde estados estables, y gates/replan/node
+  rerun rechazan runner activo antes de lanzar background work.
+- **PR-S8:** la integración registra evidencia estructurada de commits hijos
+  aplicados u omitidos, diferencia fallos con `failureCode` estable, rechaza
+  commits faltantes/inalcanzables/duplicados antes del cherry-pick, registra
+  intentos de repair y conserva que la validación parent es parte del éxito de
+  integración.
+- **PR-S9:** la matriz de riesgo que alimenta el scheduling puede enriquecerse
+  con señales reales del `repository-index`: archivos esperados, imports entre
+  módulos tocados, símbolos producer/consumer, schemas, fixtures y API pública.
+  El path web reutiliza las señales estáticas persistidas por planning; el
+  `RunExecutor` acepta un índice opcional para ejecución directa. Si falta el
+  índice, queda warning/fallback auditable.
 
 **Justificación.** Estas decisiones protegen las garantías centrales del
 producto: un solo runner por run, trazabilidad append-only, aislamiento por
-worktree, integración bottom-up explicable, scheduling seguro y contratos que
-no degradan silenciosamente a tareas ambiguas.
+worktree, integración bottom-up explicable, scheduling seguro, contratos que
+no degradan silenciosamente a tareas ambiguas y acciones humanas que no pueden
+reescribir el lifecycle desde estados incompatibles. En scheduling, usar la
+estructura real del repo mejora la serialización defensible sin introducir ML ni
+análisis semántico profundo.
 
 **Consecuencias y tradeoffs.** La persistencia sigue siendo JSON/JSONL sin DB ni
 outbox transaccional. El sistema prefiere fallar antes de ejecutar una wave sin
@@ -239,11 +283,24 @@ evento requerido. El costo es que una falla de filesystem en el event log puede
 bloquear una ejecución que de otro modo podría avanzar, lo cual es intencional
 para preservar auditabilidad. Los campos V2 de contrato siguen siendo
 opcionales a nivel de schema para compatibilidad, pero las fronteras ejecutables
-los tratan como required o como fallback conservador explícito.
+los tratan como required o como fallback conservador explícito. El control-plane
+es más rígido: algunas operaciones experimentales ahora devuelven 409 en lugar
+de intentar avanzar desde un estado ambiguo. El tracking de runners sigue siendo
+in-process; no reemplaza locks distribuidos ni una cola durable cross-process.
+La evidencia de integración vive en `IntegrationResult` y en trazas
+`integration_completed`; no es una transacción git/event-log separada, pero evita
+que un parent parezca exitoso cuando omitió un child sin explicación durable.
+El predictor sigue siendo heurístico: depende de freshness/calidad del índice,
+no prueba equivalencia semántica y no reemplaza validación post-ejecución ni
+cherry-pick/repair.
 
 **Relación con tesis/evaluación futura.** No hay benchmark activo, pero los
 eventos required dejan una base para reconstruir decisiones de scheduling y
-comparar runs futuros sin depender de logs efímeros.
+comparar runs futuros sin depender de logs efímeros. Las guardas de lifecycle
+hacen que las ejecuciones experimentales sean más reproducibles: una respuesta
+humana o un restart/fork inválido falla antes de contaminar el estado auditable.
+Las señales estructurales permiten estudiar cómo imports, símbolos y módulos
+compartidos afectan paralelismo, riesgo y calidad de integración multiagente.
 
 ---
 

@@ -26,6 +26,7 @@ export * from "./scope/checker";
 export * from "./scope/artifacts";
 export * from "./result/recorder";
 export * from "./validation/runner";
+export * from "./validation/dependencies";
 export * from "./integration/agent";
 export * from "./integration/pre-merge";
 export * from "./integration/syntax-check";

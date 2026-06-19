@@ -36,8 +36,8 @@ export interface CliExecutorDeps {
   /** Injectable instructions reader for tests. Defaults to fs.readFile (utf8). */
   readInstructions?: (filePath: string) => Promise<string>;
   /**
-   * Run through a shell. Required on Windows so a `.cmd`/`.ps1` npm shim
-   * resolves; defaults to true on win32, false elsewhere.
+   * Run through a shell. Defaults to false because executor profiles pass
+   * structured argv and current Codex/Claude binaries are directly spawnable.
    */
   useShell?: boolean;
 }
@@ -64,7 +64,7 @@ export class CliAgentExecutor implements AgentExecutor {
       deps.binaryPath ?? process.env[descriptor.binaryEnvVar] ?? descriptor.defaultBinary;
     this.spawnFn = deps.spawn ?? spawn;
     this.readInstructions = deps.readInstructions ?? ((filePath) => readFile(filePath, "utf8"));
-    this.useShell = deps.useShell ?? process.platform === "win32";
+    this.useShell = deps.useShell ?? false;
   }
 
   async execute(options: AgentExecutorOptions): Promise<ExecutorRunOutcome> {

@@ -27,6 +27,7 @@ import { getWorkspaceRepository } from "../workspaces";
 import { RunLifecycleError, RunMutationConflictError, RunValidationError } from "./errors";
 import { publishRunEvent } from "./event-bus";
 import { claimRunMutation } from "./mutation-guard";
+import { assertRunActionAllowed } from "./lifecycle";
 import { resetExecutionThread } from "./execution-host";
 import { runExecutionPipeline } from "./execution-pipeline";
 import {
@@ -38,7 +39,7 @@ import {
 } from "./execution-state";
 import { planNodeProposedEvent } from "./planning-run-model-adapter";
 import { publishRunModelEvent } from "./run-model-event-log";
-import { startRunBackgroundTask } from "./runner-state";
+import { isRunnerActive, startRunBackgroundTask } from "./runner-state";
 import {
   appendStatusEventOrRollback,
   requireCapturedRunRecord,
@@ -61,6 +62,10 @@ export async function replanSubtree(
 ): Promise<RunRecord> {
   const repo = getRunRepository();
   let run = await repo.get(runId);
+  assertRunActionAllowed(run, "replan");
+  if (isRunnerActive(run.runId)) {
+    throw new RunLifecycleError(`Run ${run.runId} is being driven by an active runner.`);
+  }
   const graph = await resolveExecutionGraph(run);
   const node = graph.nodes[taskId];
   if (node === undefined) {

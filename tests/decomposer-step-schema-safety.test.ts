@@ -50,8 +50,23 @@ describe("StepValidationCommandSchema safety", () => {
     }
   });
 
+  it("accepts node -e with JavaScript quotes, backticks, regex pipes and redirection characters", () => {
+    const script =
+      "const value=`a|b > c`; if(!/a|b/.test(value)) throw new Error('missing pipe');";
+    const parsed = DecomposeStepOutputSchema.safeParse(
+      atomicStep([{ command: "node", args: ["-e", script] }])
+    );
+
+    expect(parsed.success).toBe(true);
+  });
+
   it("rejects a command with a path separator", () => {
     const parsed = DecomposeStepOutputSchema.safeParse(decomposeStep([{ command: "./node_modules/.bin/jest" }]));
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects explicit shell entrypoints", () => {
+    const parsed = DecomposeStepOutputSchema.safeParse(decomposeStep([{ command: "sh", args: ["-c", "npm test"] }]));
     expect(parsed.success).toBe(false);
   });
 

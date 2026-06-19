@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   appendStatusEventOrRollback,
+  assertRunActionAllowed,
   claimRunMutation,
   requireCapturedRunRecord,
   runExecutionPipeline,
@@ -26,6 +27,7 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
       { status: ["approved"], rejectActiveRunner: true },
       (current) => {
         previous = current;
+        assertRunActionAllowed(current, "start");
         return {
           ...current,
           status: "running" as const,

@@ -3,25 +3,22 @@ import type { CliExecutorProfile } from "../cli-executor";
 import { CODEX_EXECUTOR_ID } from "../registry";
 
 /**
- * Codex CLI headless mode: `codex exec` runs one autonomous turn without a TUI.
- * The trailing `-` makes codex read the full prompt from stdin (same transport
- * as every other executor — no arg-length limits). The worktree is the spawn
- * cwd, and `--skip-git-repo-check` keeps codex from refusing nested worktrees.
- *
- * Sandbox tiers:
- *   default      → `--sandbox workspace-write` (write inside cwd, no escapes)
- *   bypass       → `--dangerously-bypass-approvals-and-sandbox` (the worktree
- *                  is already the isolation boundary — mirrors gemini's yolo)
+ * Codex CLI headless mode. Global permission flags must appear before `exec`;
+ * the trailing `-` makes Codex read the full prompt from stdin.
  */
 export function buildCodexArgs(options: AgentExecutorOptions): string[] {
   return [
+    "--sandbox",
+    options.bypassApprovals ? "danger-full-access" : "workspace-write",
+    "--ask-for-approval",
+    "never",
     "exec",
     "--model",
     options.model,
+    "--color",
+    "never",
+    "--ephemeral",
     ...(options.reasoningEffort ? ["-c", `model_reasoning_effort="${options.reasoningEffort}"`] : []),
-    ...(options.bypassApprovals
-      ? ["--dangerously-bypass-approvals-and-sandbox"]
-      : ["--sandbox", "workspace-write"]),
     "--skip-git-repo-check",
     "-"
   ];

@@ -1,4 +1,9 @@
-import { findRiskPrediction, type TaskPairRiskMatrix } from "@manyhands/conflict-risk";
+import {
+  findRiskPrediction,
+  type BuildStaticConflictSignalsInput,
+  type StaticConflictSignal,
+  type TaskPairRiskMatrix
+} from "@manyhands/conflict-risk";
 import {
   buildSchedulingSafetyContext,
   selectScopeAwareWave,
@@ -19,6 +24,8 @@ export interface SelectAndPersistSchedulingWaveInput {
   waveIndex: number;
   source: SchedulingWaveSelectedPayload["source"];
   riskMatrix?: TaskPairRiskMatrix;
+  repositoryIndex?: BuildStaticConflictSignalsInput["repositoryIndex"];
+  staticSignals?: readonly StaticConflictSignal[];
   maxParallel?: number;
 }
 
@@ -35,12 +42,16 @@ export async function selectAndPersistSchedulingWave(
     graph: input.graph,
     taskIds: input.candidates,
     policy,
-    ...(input.riskMatrix !== undefined ? { riskMatrix: input.riskMatrix } : {})
+    ...(input.riskMatrix !== undefined ? { riskMatrix: input.riskMatrix } : {}),
+    ...(input.repositoryIndex !== undefined ? { repositoryIndex: input.repositoryIndex } : {}),
+    ...(input.staticSignals !== undefined ? { staticSignals: input.staticSignals } : {})
   });
   const selectedTaskIds = selectScopeAwareWave({
     graph: input.graph,
     candidates: input.candidates,
     riskMatrix: safety.riskMatrix,
+    ...(input.repositoryIndex !== undefined ? { repositoryIndex: input.repositoryIndex } : {}),
+    ...(input.staticSignals !== undefined ? { staticSignals: input.staticSignals } : {}),
     ...(input.maxParallel !== undefined ? { maxParallel: input.maxParallel } : {})
   });
   const payload = schedulingWaveSelectedPayload({
@@ -123,6 +134,7 @@ function fallbackWarnings(warnings: readonly SchedulingWarning[]): SchedulingAud
     .filter((warning) =>
       warning.code === "missing_contract" ||
       warning.code === "empty_scope" ||
+      warning.code === "missing_repository_index" ||
       warning.code === "risk_matrix_missing" ||
       warning.code === "risk_matrix_incomplete"
     )

@@ -117,6 +117,24 @@ The current runtime hardening sequence is intentionally incremental:
   execution-host dispatch. Invalid contract schemas, task id mismatch, unsafe
   repo paths and broken interface producer/consumer relations fail explicitly
   instead of becoming ambiguous scheduling/execution inputs.
+- **PR-S7:** lifecycle control-plane actions are guarded by an explicit status
+  matrix before snapshot mutation or background dispatch. `start`, `pause`,
+  `resume`, `cancel`, `answer_gate`, `approve_plan`, `replan`, `restart`,
+  `fork`, `manual_node_run`, `manual_node_review` and `manual_node_rerun` fail
+  with a conflict when called from incompatible states. Actions that start or
+  resume pipelines reject an active in-process runner; cooperative plain
+  un-pause may update the status while the existing runner is waiting.
+- **PR-S8:** bottom-up integration now records structured evidence for every
+  applied or omitted child commit. Successful children without reachable unique
+  commits fail before cherry-pick, repair attempts are captured, and parent
+  validation failure remains a failed integration even when semantic repair
+  produced a commit.
+- **PR-S9:** risk-aware scheduling can enrich pairwise risk with
+  `repository-index` signals. Planning persists static conflict signals derived
+  from files, symbols, imports/exports and file kinds; execution-host reuses
+  those compact signals for durable wave selection, while direct `RunExecutor`
+  callers may pass a `RepositoryIndex`. Missing index data falls back to
+  contract/scope heuristics with an auditable warning.
 
 Future PRs that change orchestration semantics should update `docs/DECISIONS.md`
 with context, decision, justification, consequences/tradeoffs, and the relation

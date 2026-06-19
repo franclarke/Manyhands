@@ -89,6 +89,22 @@ describe("ChildProcessValidationRunner — shell handling", () => {
     await runner.run([command()], ctx);
     expect(calls[0]?.options.shell).toBe(false);
   });
+
+  it("wraps Windows package-manager shims without enabling Node shell interpolation", async () => {
+    const calls: SpawnCall[] = [];
+    const spawn = (binary: string, args: readonly string[], options: SpawnOptions): ChildProcess => {
+      calls.push({ command: binary, args, options });
+      return fakeChild({ exitCode: 0 });
+    };
+    const runner = new ChildProcessValidationRunner({ spawn, useShell: false, platform: "win32" });
+
+    const result = await runner.run([command({ command: "npm", args: ["test"] })], ctx);
+
+    expect(result.passed).toBe(true);
+    expect(calls[0]?.command).toBe("cmd.exe");
+    expect(calls[0]?.args).toEqual(["/d", "/s", "/c", "npm", "test"]);
+    expect(calls[0]?.options.shell).toBe(false);
+  });
 });
 
 describe("ChildProcessValidationRunner — unsafe commands", () => {
@@ -104,6 +120,25 @@ describe("ChildProcessValidationRunner — unsafe commands", () => {
   it("rejects path traversal in the command name with exit 126", async () => {
     const { runner, calls } = makeRunner([{ exitCode: 0 }], true);
     const result = await runner.run([command({ command: "../../evil" })], ctx);
+    expect(result.exitCode).toBe(126);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("allows node -e JavaScript metacharacters as structured args", async () => {
+    const { runner, calls } = makeRunner([{ exitCode: 0, stdout: "ok\n" }], false);
+    const script = "const text=`a|b > c`; if(!/a|b/.test(text)) throw new Error('bad');";
+    const result = await runner.run([command({ command: "node", args: ["-e", script] })], ctx);
+
+    expect(result.passed).toBe(true);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.args).toEqual(["-e", script]);
+    expect(calls[0]?.options.shell).toBe(false);
+  });
+
+  it("rejects standalone shell redirection operators", async () => {
+    const { runner, calls } = makeRunner([{ exitCode: 0 }], false);
+    const result = await runner.run([command({ args: ["test", ">", "out.txt"] })], ctx);
+
     expect(result.exitCode).toBe(126);
     expect(calls).toHaveLength(0);
   });
@@ -127,6 +162,27 @@ describe("ChildProcessValidationRunner — failure normalization", () => {
     expect(result.passed).toBe(false);
     expect(result.exitCode).toBe(127);
     expect(result.output).toContain("is not recognized");
+  });
+
+  it("normalizes the placeholder-tsc message (TypeScript not installed) to 127", async () => {
+    // When a project has no local TypeScript, `npx tsc` resolves to the squatted
+    // `tsc` npm package, which exits 1 with this banner. That is a missing
+    // toolchain (infra), not a type error in the code — normalize it to 127.
+    const { runner } = makeRunner(
+      [
+        {
+          exitCode: 1,
+          stdout:
+            "\nThis is not the tsc command you are looking for\n\n" +
+            "To get access to the TypeScript compiler, tsc, from the command line either:\n" +
+            "- Use npm install typescript to first add TypeScript to your project before using npx\n"
+        }
+      ],
+      true
+    );
+    const result = await runner.run([command({ command: "npx", args: ["tsc", "--noEmit"] })], ctx);
+    expect(result.passed).toBe(false);
+    expect(result.exitCode).toBe(127);
   });
 
   it("does NOT rewrite a genuine test failure exit code", async () => {

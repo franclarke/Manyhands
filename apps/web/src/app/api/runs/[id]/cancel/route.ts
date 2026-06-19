@@ -10,6 +10,7 @@ import {
 import {
   abortRun,
   appendStatusEventOrRollback,
+  assertRunActionAllowed,
   assertTransition,
   claimRunMutation,
   requireCapturedRunRecord
@@ -42,6 +43,7 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
     let previous: RunRecord | undefined;
     const saved = await claimRunMutation(id, { status: CANCELLABLE }, (current) => {
       previous = current;
+      assertRunActionAllowed(current, "cancel");
       assertTransition(current.status, "interrupted");
       const interruptedDuring: "generating" | "running" =
         current.status === "running" || current.pausedDuring === "running" ? "running" : "generating";

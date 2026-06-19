@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  allowedStatusesForAction,
   assertTransition,
+  assertRunActionAllowed,
   canPause,
   isTerminalStatus
 } from "@/lib/server/runs/lifecycle";
@@ -35,7 +37,8 @@ const LEGAL: ReadonlyArray<[RunStatus, RunStatus]> = [
   // Re-open a finished run for post-completion review actions (Fase C).
   ["completed", "approved"],
   ["completed_with_accepted", "approved"],
-  ["failed", "approved"]
+  ["failed", "approved"],
+  ["failed", "generating"]
 ];
 
 describe("run lifecycle", () => {
@@ -79,5 +82,23 @@ describe("run lifecycle", () => {
     expect(isTerminalStatus("failed")).toBe(true);
     expect(isTerminalStatus("running")).toBe(false);
     expect(isTerminalStatus("needs_review")).toBe(false);
+  });
+
+  it("defines lifecycle control-plane actions with explicit allowed statuses", () => {
+    expect(allowedStatusesForAction("start")).toEqual(["approved"]);
+    expect(allowedStatusesForAction("pause")).toEqual(["generating", "running"]);
+    expect(allowedStatusesForAction("resume")).toEqual(["paused"]);
+    expect(allowedStatusesForAction("cancel")).toEqual(["generating", "running", "paused"]);
+    expect(allowedStatusesForAction("restart")).toEqual(["interrupted", "failed"]);
+    expect(allowedStatusesForAction("fork")).not.toContain("running");
+    expect(allowedStatusesForAction("fork")).not.toContain("generating");
+  });
+
+  it("rejects invalid lifecycle actions before callers mutate a run", () => {
+    expect(() => assertRunActionAllowed("completed", "pause")).toThrowError(RunLifecycleError);
+    expect(() => assertRunActionAllowed("running", "resume")).toThrowError(RunLifecycleError);
+    expect(() => assertRunActionAllowed("approved", "restart")).toThrowError(RunLifecycleError);
+    expect(() => assertRunActionAllowed("running", "fork")).toThrowError(RunLifecycleError);
+    expect(() => assertRunActionAllowed("paused", "resume")).not.toThrow();
   });
 });

@@ -13,6 +13,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { RunMutationConflictError } from "@/lib/server/runs/errors";
 import { claimRunMutation } from "@/lib/server/runs/mutation-guard";
+import { persistLivePlanningNodes } from "@/lib/server/runs/planning-host";
 import { markRunnerActive, markRunnerInactive } from "@/lib/server/runs/runner-state";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import type { RunRecord } from "@/lib/server/runs/schema";
@@ -77,6 +78,37 @@ describe("repository version counter", () => {
     expect(third.version).toBe(3);
     const fourth = await repo.update("run-1", (current) => ({ ...current, heartbeatAt: "2026-06-11T00:01:00.000Z" }));
     expect(fourth.version).toBe(4);
+  });
+
+  it("live planning node updates preserve concurrently written planning data", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun());
+
+    await Promise.all([
+      persistLivePlanningNodes(
+        "run-1",
+        new Map([
+          [
+            "node-a",
+            {
+              id: "node-a",
+              parentId: null,
+              title: "Node A",
+              depth: 0,
+              state: "active"
+            }
+          ]
+        ])
+      ),
+      repo.update("run-1", (current) => ({
+        ...current,
+        planning: { decomposition: { graph: { rootId: "root", nodes: {}, dependencies: [] } } }
+      }))
+    ]);
+
+    const final = await repo.get("run-1");
+    expect(final.livePlanningNodes?.map((node) => node.id)).toEqual(["node-a"]);
+    expect((final.planning as { decomposition: { graph: { rootId: string } } }).decomposition.graph.rootId).toBe("root");
   });
 });
 

@@ -30,6 +30,15 @@ export interface RecordParams {
   unexpectedCommitPolicy?: UnexpectedCommitPolicy;
   commitMessage?: string;
   usageSource?: "reported" | "estimated" | "unavailable";
+  /**
+   * HEAD the worktree is expected to be at when the agent finished — the
+   * baseline for detecting an unexpected agent commit. Defaults to the
+   * worktree's baseCommit (correct for a freshly-created worktree). Leaf repair
+   * re-enters an existing worktree whose HEAD already sits at the orchestrator's
+   * prior commit, so it passes that HEAD here to avoid mistaking the
+   * orchestrator's own commit for an agent commit.
+   */
+  expectedHead?: string;
 }
 
 /** Keep the last N chars of executor output as the actionable failure cause. */
@@ -61,7 +70,7 @@ export class ResultRecorder {
   async record(params: RecordParams): Promise<AgentExecutionResult> {
     const { worktree, executorOutcome } = params;
     const taskId = worktree.taskId;
-    const baseHead = worktree.baseCommit;
+    const baseHead = params.expectedHead ?? worktree.baseCommit;
     const policy: UnexpectedCommitPolicy = params.unexpectedCommitPolicy ?? "reject";
 
     // When the CLI reported real usage in its structured output, that beats the

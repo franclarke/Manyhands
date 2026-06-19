@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   GroundingAgent,
+  dedupeScaffoldContracts,
   scaffoldInterfaces,
   referencedTypeNames,
   type AgentExecutor,
@@ -20,7 +21,14 @@ import type { InterfaceContract } from "@manyhands/contracts";
 import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 import { FakeGitRunner } from "./helpers/fake-git-runner";
 
-function contract(partial: Partial<InterfaceContract> & { id: string; signature: string }): InterfaceContract {
+function contract(
+  partial: Partial<InterfaceContract> & {
+    id: string;
+    signature: string;
+    targetPathHints?: string[];
+    sourceNodeIds?: string[];
+  }
+): InterfaceContract & { targetPathHints?: string[]; sourceNodeIds?: string[] } {
   return {
     kind: "type",
     description: `seam ${partial.id}`,
@@ -107,6 +115,163 @@ describe("scaffoldInterfaces", () => {
     expect(outcome.unresolved.map((entry) => entry.id)).toEqual(["TaskStore"]);
   });
 
+  it("scaffolds non-path TypeScript contracts using target path hints", () => {
+    const outcome = scaffoldInterfaces({
+      contracts: [
+        contract({
+          id: "NoteDomain",
+          signature:
+            "export type Note = { id: string; title: string };\n" +
+            "export const createNoteSchema: z.ZodType<Note>;",
+          targetPathHints: ["src/notes.ts", "src/notes.test.ts"]
+        }),
+        contract({
+          id: "NoteStore",
+          signature: "export interface NoteStore { list(): Note[]; }\nexport function createInMemoryNoteStore(): NoteStore;",
+          targetPathHints: ["src/notes.ts", "src/notes.test.ts"]
+        })
+      ]
+    });
+
+    expect(outcome.unresolved).toEqual([]);
+    expect(outcome.files).toHaveLength(1);
+    expect(outcome.files[0]?.path).toBe("src/notes.ts");
+    expect(outcome.files[0]?.content).toContain("export type Note");
+    expect(outcome.files[0]?.content).toContain("export interface NoteStore");
+    expect(outcome.files[0]?.content).toContain("export function createInMemoryNoteStore()");
+    expect(outcome.files[0]?.content).toContain("throw new Error");
+  });
+
+  it("extracts TypeScript declarations from mixed HTTP contract prose", () => {
+    const outcome = scaffoldInterfaces({
+      contracts: [
+        contract({
+          id: "NotesHttpApi",
+          kind: "module",
+          signature:
+            "GET /api/notes -> 200 { notes: Note[] };\n" +
+            "POST /api/notes body CreateNoteInput -> 201 { note: Note };\n" +
+            "export function createApp(options?: { store?: NoteStore; staticDir?: string }): express.Express;",
+          targetPathHints: ["src/app.ts", "src/app.test.ts"]
+        })
+      ]
+    });
+
+    expect(outcome.unresolved).toEqual([]);
+    expect(outcome.files[0]?.path).toBe("src/app.ts");
+    expect(outcome.files[0]?.content).toContain("export function createApp");
+    expect(outcome.files[0]?.content).not.toContain("GET /api/notes");
+  });
+
+  it("deduplicates identical contracts and merges path/source metadata", () => {
+    const deduped = dedupeScaffoldContracts([
+      contract({
+        id: "BrowserNotesApiClient",
+        kind: "module",
+        signature: "export type BrowserNotesApiClient = { list(): Promise<Note[]> };",
+        targetPathHints: ["tests/browserNotesApiClient.test.ts"],
+        sourceNodeIds: ["root"]
+      }),
+      contract({
+        id: "BrowserNotesApiClient",
+        kind: "module",
+        signature: "export type BrowserNotesApiClient = { list(): Promise<Note[]> };",
+        targetPathHints: ["src/browserNotesApiClient.ts"],
+        sourceNodeIds: ["browser-notes-api-client"]
+      })
+    ]);
+
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0]?.targetPathHints).toEqual(["tests/browserNotesApiClient.test.ts", "src/browserNotesApiClient.ts"]);
+    expect(deduped[0]?.sourceNodeIds).toEqual(["root", "browser-notes-api-client"]);
+  });
+
+  it("scaffolds common notes-app frontend/backend seams deterministically after dedupe", () => {
+    const outcome = scaffoldInterfaces({
+      contracts: [
+        contract({
+          id: "ProjectRuntime",
+          kind: "module",
+          signature: 'package.json scripts: { "test": "vitest run" }; TypeScript ESM project.',
+          targetPathHints: ["package.json", "tsconfig.json"]
+        }),
+        contract({
+          id: "NoteDomain",
+          signature: "export type Note = { id: string; title: string; content: string };",
+          targetPathHints: ["src/notes.ts"]
+        }),
+        contract({
+          id: "NoteDomain",
+          signature: "export type Note = { id: string; title: string; content: string };",
+          targetPathHints: ["src/notes.ts"]
+        }),
+        contract({
+          id: "NotesHttpApi",
+          kind: "module",
+          signature:
+            "GET /api/notes -> 200 { notes: Note[] };\n" +
+            "export function createApp(options?: { store?: NoteStore }): express.Express;",
+          targetPathHints: ["src/app.ts", "src/app.test.ts"]
+        }),
+        contract({
+          id: "FrontendDomContract",
+          kind: "module",
+          signature:
+            "export type FrontendDomContract = {\n" +
+            "  formSelector: '#note-form';\n" +
+            "  titleInputSelector: '#note-title';\n" +
+            "  contentInputSelector: '#note-content';\n" +
+            "  notesListSelector: '#notes-list';\n" +
+            "};",
+          targetPathHints: ["public/index.html", "public/styles.css"]
+        }),
+        contract({
+          id: "NotesFrontendApp",
+          kind: "module",
+          signature: "export function startNotesApp(options?: { root?: ParentNode }): void;",
+          targetPathHints: ["public/app.js", "tests/notes-ui.test.ts"]
+        })
+      ]
+    });
+
+    expect(outcome.unresolved.map((entry) => entry.id)).toEqual(["ProjectRuntime"]);
+    expect(outcome.files.map((file) => file.path).sort()).toEqual([
+      "public/app.js",
+      "public/index.html",
+      "src/app.ts",
+      "src/notes.ts"
+    ]);
+    expect(outcome.files.find((file) => file.path === "public/index.html")?.content).toContain('id="note-form"');
+    expect(outcome.files.find((file) => file.path === "public/index.html")?.content).toContain('type="module"');
+  });
+
+  it("merges DOM selectors from multiple contracts targeting the same HTML file", () => {
+    const outcome = scaffoldInterfaces({
+      contracts: [
+        contract({
+          id: "FrontendDomForm",
+          kind: "module",
+          signature: "Selector: '#note-form'\nSelector: '#note-title'",
+          targetPathHints: ["public/index.html"]
+        }),
+        contract({
+          id: "FrontendDomList",
+          kind: "module",
+          signature: "Selector: '#notes-list'\nSelector: '#empty-state'",
+          targetPathHints: ["public/index.html"]
+        })
+      ]
+    });
+
+    expect(outcome.unresolved).toEqual([]);
+    expect(outcome.files).toHaveLength(1);
+    const html = outcome.files[0]?.content ?? "";
+    expect(html).toContain('id="note-form"');
+    expect(html).toContain('id="note-title"');
+    expect(html).toContain('id="notes-list"');
+    expect(html).toContain('id="empty-state"');
+  });
+
   it("returns unparseable signatures as unresolved instead of writing garbage", () => {
     const outcome = scaffoldInterfaces({
       contracts: [contract({ id: "src/broken.ts", signature: "interface { this is not TypeScript" })]
@@ -146,6 +311,7 @@ describe("scaffoldInterfaces", () => {
 class FakeExecutor implements AgentExecutor {
   calls = 0;
   models: string[] = [];
+  options: AgentExecutorOptions[] = [];
   constructor(
     private readonly onExecute?: () => Promise<void>,
     private readonly outcome: ExecutorRunOutcome = { exitCode: 0, durationMs: 1, timedOut: false, stdout: "", stderr: "" }
@@ -153,6 +319,7 @@ class FakeExecutor implements AgentExecutor {
   async execute(options: AgentExecutorOptions): Promise<ExecutorRunOutcome> {
     this.calls += 1;
     this.models.push(options.model);
+    this.options.push(options);
     await this.onExecute?.();
     return this.outcome;
   }
@@ -317,6 +484,7 @@ describe("GroundingAgent", () => {
 
     expect(executorFactory.selections).toEqual([{ executorId: "codex-cli", model: "gpt-5.5" }]);
     expect(executor.models).toEqual(["gpt-5.5"]);
+    expect(executor.options[0]?.bypassApprovals).toBe(false);
   });
 
   it("throws when the LLM fallback exits non-zero", async () => {
@@ -346,7 +514,7 @@ describe("GroundingAgent", () => {
         selection: { executorId: "codex-cli", model: "gpt-5.5" },
         runId: "run-nonzero"
       })
-    ).rejects.toThrow("GroundingAgent LLM fallback failed with exit code 1");
+    ).rejects.toThrow(/GroundingAgent LLM fallback failed[\s\S]*contracts=TaskStore[\s\S]*exitCode=1/);
   });
 
   it("returns HEAD without committing when the plan declares no seams", async () => {
@@ -389,5 +557,65 @@ describe("GroundingAgent", () => {
       /malformed skeleton/
     );
     expect(git.opsInvoked()).not.toContain("commit");
+  });
+
+  it("includes actionable timeout diagnostics for fallback failures", async () => {
+    const executor = new FakeExecutor(undefined, {
+      exitCode: 124,
+      durationMs: 120_001,
+      timedOut: true,
+      stdout: "thinking",
+      stderr: "still working",
+      commandLine: "codex --sandbox workspace-write --ask-for-approval never exec -"
+    });
+    const git = new FakeGitRunner({ heads: { [repoRoot]: "HEAD_SHA" } });
+    const agent = new GroundingAgent({ executor, git, buildExportIndex: async () => new Map(), executorTimeoutMs: 120_000 });
+    const graph = makeGraph(
+      [
+        makeLeafWithSeams("leaf-1", [
+          contract({ id: "ProjectRuntime", kind: "module", signature: "package.json scripts: { test: vitest }" })
+        ])
+      ],
+      repoRoot
+    );
+
+    await expect(
+      agent.run({
+        repoRoot,
+        graph,
+        selection: { executorId: "codex-cli", model: "gpt-5.5" },
+        runId: "run-timeout"
+      })
+    ).rejects.toThrow(
+      /stage=grounding\.llm_fallback[\s\S]*contracts=ProjectRuntime[\s\S]*timeoutMs=120000[\s\S]*timedOut=true[\s\S]*stderrTail:\nstill working/
+    );
+  });
+
+  it("splits LLM fallback into one contract per batch by default", async () => {
+    const executor = new FakeExecutor();
+    const git = new FakeGitRunner({
+      heads: { [repoRoot]: "HEAD_SHA" },
+      diffCachedNameOnly: [],
+      commitSha: "SKELETON_SHA"
+    });
+    const agent = new GroundingAgent({ executor, git, buildExportIndex: async () => new Map() });
+    const graph = makeGraph(
+      [
+        makeLeafWithSeams("leaf-1", [
+          contract({ id: "ProjectRuntime", kind: "module", signature: "package.json scripts: { test: vitest }" }),
+          contract({ id: "UnknownRuntime", kind: "module", signature: "external runtime setup" })
+        ])
+      ],
+      repoRoot
+    );
+
+    await agent.run({
+      repoRoot,
+      graph,
+      selection: { executorId: "codex-cli", model: "gpt-5.5" },
+      runId: "run-batches"
+    });
+
+    expect(executor.calls).toBe(2);
   });
 });

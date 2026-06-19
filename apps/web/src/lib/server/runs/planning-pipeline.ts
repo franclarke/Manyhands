@@ -35,7 +35,7 @@ import { type ProvisionedRepo, type RepoProvisioner } from "./repo-provisioner";
 import { titlerSelection } from "./executor-selection";
 import { generateRunTitle, type RunTitle } from "./run-titler";
 import { startHeartbeat } from "./runner-heartbeat";
-import { markRunnerActive, markRunnerInactive, startRunBackgroundTask } from "./runner-state";
+import { markRunnerInactive, startRunBackgroundTask, tryMarkRunnerActive } from "./runner-state";
 import { saveRunWithRequiredStatusEvent } from "./audited-mutation";
 import { assertExecutableRunGraph, resolveExecutionGraph } from "./execution-state";
 import type { ExecutionConfigInput, RunRecord, RunStatus } from "./schema";
@@ -125,7 +125,10 @@ export async function sleep(ms: number): Promise<void> {
  */
 export async function runPlanningPipeline(runId: string, options: PlanningRunnerOptions = {}): Promise<void> {
   console.log(`[Runner] Iniciando pipeline de planificación para el run: ${runId}`);
-  markRunnerActive(runId);
+  if (!tryMarkRunnerActive(runId)) {
+    console.warn(`[Runner] Planning pipeline already active for run: ${runId}`);
+    return;
+  }
   const stopHeartbeat = startHeartbeat(runId);
   try {
     let run = await getRunRepository().get(runId);
@@ -150,7 +153,11 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
         return null;
       });
       if (runTitle !== null) {
-        run = await getRunRepository().save({ ...run, title: runTitle.title, summary: runTitle.summary });
+        run = await getRunRepository().update(run.runId, (current) => ({
+          ...current,
+          title: runTitle.title,
+          summary: runTitle.summary
+        }));
         publishRunEvent(run.runId, {
           kind: "title.updated",
           title: runTitle.title,
@@ -158,6 +165,12 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
           at: new Date().toISOString()
         });
       }
+    }
+
+    run = await getRunRepository().get(runId);
+    if (run.status === "interrupted") {
+      console.log(`[Runner] Planning pipeline stopped before decomposition; run ${runId} is interrupted.`);
+      return;
     }
 
     const host = buildPlanningHost(run, options);
@@ -193,7 +206,10 @@ export async function resumePlanningPipeline(
   }
 
   console.log(`[Runner] Reanudando planning graph para el run: ${runId}`);
-  markRunnerActive(runId);
+  if (!tryMarkRunnerActive(runId)) {
+    console.warn(`[Runner] Planning pipeline already active for run: ${runId}`);
+    return;
+  }
   const stopHeartbeat = startHeartbeat(runId);
   try {
     const run = await getRunRepository().get(runId);
@@ -244,11 +260,11 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
       console.log(
         `[Runner] Autonomía autonomous: auto-respondiendo "${outcome.interrupt.question}" → "${answer}" (${runId}).`
       );
-      await repo.save({
-        ...run,
+      await repo.update(runId, (current) => ({
+        ...current,
         status: "generating",
-        questionAnswers: { ...(run.questionAnswers ?? {}), [outcome.interrupt.nodeId]: answer }
-      });
+        questionAnswers: { ...(current.questionAnswers ?? {}), [outcome.interrupt.nodeId]: answer }
+      }));
       const nodeId = outcome.interrupt.nodeId;
       startRunBackgroundTask(runId, "planning:auto-answer", async () => {
         await sleep(0);
@@ -271,7 +287,7 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
       }
     };
     const now = new Date().toISOString();
-    const saved = await saveRunWithRequiredStatusEvent(run, next, { at: now });
+    await saveRunWithRequiredStatusEvent(run, next, { at: now });
     publishRunEvent(runId, {
       kind: "planning.question",
       nodeId: outcome.interrupt.nodeId,
@@ -298,7 +314,7 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
       pendingQuestion: { nodeId: PLAN_DEGRADED_NODE_ID, question, options }
     };
     const now = new Date().toISOString();
-    const saved = await saveRunWithRequiredStatusEvent(run, next, { at: now });
+    await saveRunWithRequiredStatusEvent(run, next, { at: now });
     publishRunEvent(runId, {
       kind: "planning.question",
       nodeId: PLAN_DEGRADED_NODE_ID,

@@ -10,10 +10,12 @@ import {
   type SchedulingPolicy
 } from "@manyhands/scheduler";
 import type { TaskPairRiskMatrix } from "@manyhands/conflict-risk";
+import type { RepositoryIndex } from "@manyhands/repository-index";
 import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
 
 import { FixedAgentExecutorFactory, type AgentExecutorFactory } from "../executor/factory";
+import { SPAWN_FAILURE_EXIT_CODE } from "../executor/process";
 import { AGENT_STATUS_PROTOCOL_INSTRUCTIONS } from "../executor/status-channel";
 import type { AgentExecutor } from "../executor/types";
 import { countDependents } from "../routing/complexity";
@@ -43,6 +45,7 @@ import {
   type WorktreeRecord
 } from "../types";
 import { ChildProcessValidationRunner, type ValidationRunner } from "../validation/runner";
+import { ChildProcessDependencyInstaller, type DependencyInstaller } from "../validation/dependencies";
 import { WorktreeManager } from "../worktree/manager";
 
 export interface RunExecutorDeps {
@@ -56,6 +59,12 @@ export interface RunExecutorDeps {
   integrationAgent?: IntegrationAgent;
   validationRunner?: ValidationRunner;
   batchScheduler?: BatchScheduler;
+  /**
+   * Installs npm dependencies in the integration worktree before run-level
+   * validation, so a greenfield project's composed tree can resolve its
+   * toolchain (build/typecheck). Injectable for tests.
+   */
+  dependencyInstaller?: DependencyInstaller;
   /** Packs target-file context into leaf instructions. Injectable for tests. */
   contextPacker?: ContextPacker;
   /**
@@ -80,6 +89,8 @@ export interface RunExecutionParams {
   policy?: SchedulingPolicy;
   /** Full planning-time conflict matrix used by the scheduler. */
   riskMatrix?: TaskPairRiskMatrix;
+  /** Optional structural repository index used to enrich fallback risk prediction. */
+  repositoryIndex?: RepositoryIndex;
   /** Run-level cancellation: aborts in-flight executors and stops scheduling. */
   signal?: AbortSignal;
   /** Awaited at each batch boundary (pause hold); resolves to continue. */
@@ -151,6 +162,7 @@ export class RunExecutor {
   private readonly resultRecorder: ResultRecorder;
   private readonly integrationAgent: IntegrationAgent;
   private readonly validationRunner: ValidationRunner;
+  private readonly dependencyInstaller: DependencyInstaller;
   private readonly batchScheduler: BatchScheduler;
   private readonly contextPacker: ContextPacker;
   private readonly router: ExecutorRouter | undefined;
@@ -168,6 +180,7 @@ export class RunExecutor {
     this.resultRecorder =
       deps.resultRecorder ?? new ResultRecorder({ git: deps.git, traceStore: deps.traceStore });
     this.validationRunner = deps.validationRunner ?? new ChildProcessValidationRunner();
+    this.dependencyInstaller = deps.dependencyInstaller ?? new ChildProcessDependencyInstaller();
     this.integrationAgent =
       deps.integrationAgent ??
       new IntegrationAgent({
@@ -226,12 +239,14 @@ export class RunExecutor {
       const schedulingSafety = buildSchedulingSafetyContext({
         graph,
         policy,
-        ...(params.riskMatrix !== undefined ? { riskMatrix: params.riskMatrix } : {})
+        ...(params.riskMatrix !== undefined ? { riskMatrix: params.riskMatrix } : {}),
+        ...(params.repositoryIndex !== undefined ? { repositoryIndex: params.repositoryIndex } : {})
       });
       const plan = scheduleTasks({
         graph,
         contracts: schedulingSafety.contracts,
         riskMatrix: schedulingSafety.riskMatrix,
+        ...(params.repositoryIndex !== undefined ? { repositoryIndex: params.repositoryIndex } : {}),
         maxParallel: config.maxParallel,
         policy
       });
@@ -574,6 +589,12 @@ export class RunExecutor {
       baseCommit: graph.baseCommit
     });
 
+    // The worktree already holds the orchestrator's commit from the failed
+    // attempt, so HEAD has legitimately advanced past baseCommit. Capture it
+    // BEFORE the repair agent runs so the recorder only flags a commit the agent
+    // itself makes — never the orchestrator's own prior commit.
+    const expectedHead = await this.worktreeManager.headOf(worktree);
+
     const instructionFilePath = join(tmpdir(), `mh-repair-${runId}-${node.id}.txt`);
     await this.writeInstructions(
       instructionFilePath,
@@ -620,6 +641,7 @@ export class RunExecutor {
     const recorded = await this.resultRecorder.record({
       worktree,
       executorOutcome,
+      expectedHead,
       unexpectedCommitPolicy: config.unexpectedCommitPolicy,
       commitMessage: `mh-repair: ${node.id}`,
       ...(contract?.executionScope ? { executionScope: contract.executionScope } : {}),
@@ -870,6 +892,32 @@ export class RunExecutor {
       return { ...args.result, validationResult };
     }
 
+    // A leaf runs in an isolated worktree branched from the base, so a check
+    // whose binary is missing (exit 127) — e.g. `npx tsc --noEmit` before the
+    // project's deps exist in the composed tree — is an infra gap at the leaf
+    // altitude, not broken code. Defer it: keep the leaf successful and let
+    // run-level validation (post-compose, with deps installed) be the real gate.
+    // Without this, greenfield runs wedge at the leaf gate on unsatisfiable checks.
+    if (validationResult.exitCode === SPAWN_FAILURE_EXIT_CODE) {
+      execWarn("leaf", "leaf validation deferred (toolchain missing) — verifying at run level", {
+        task: args.node.id,
+        runId: args.runId,
+        exitCode: validationResult.exitCode,
+        output: validationResult.output
+      });
+      this.traceStore.append({
+        type: "validation_deferred",
+        actor: "system",
+        taskId: args.node.id,
+        payload: {
+          scope: "leaf",
+          exitCode: validationResult.exitCode,
+          reason: "toolchain_missing"
+        }
+      });
+      return { ...args.result, validationResult };
+    }
+
     execWarn("leaf", "leaf validation failed", {
       task: args.node.id,
       runId: args.runId,
@@ -1067,6 +1115,44 @@ export class RunExecutor {
     return rootIntegration?.path ?? worktrees[0]?.path ?? this.repoRoot;
   }
 
+  /**
+   * Install the composed tree's dependencies before run-level validation. A
+   * greenfield project's integration worktree carries a freshly-composed
+   * package.json but no node_modules, so build/typecheck would fail for missing
+   * deps. Idempotent and best-effort: a failed install is traced, never thrown —
+   * the subsequent validation surfaces the real cause.
+   */
+  private async ensureRunValidationDependencies(worktreePath: string, runId: string): Promise<void> {
+    try {
+      const result = await this.dependencyInstaller.ensure({ cwd: worktreePath });
+      execLog("validate", "run-level dependency check", {
+        runId,
+        cwd: worktreePath,
+        installed: result.installed,
+        packageManager: result.packageManager,
+        reason: result.reason
+      });
+      this.traceStore.append({
+        type: "validation_started",
+        actor: "system",
+        payload: {
+          scope: "run",
+          phase: "dependencies",
+          installed: result.installed,
+          packageManager: result.packageManager,
+          reason: result.reason,
+          exitCode: result.exitCode
+        }
+      });
+    } catch (error) {
+      execWarn("validate", "run-level dependency install failed (best-effort, ignored)", {
+        runId,
+        cwd: worktreePath,
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
   private async runRunValidation(
     graph: TaskGraph,
     worktreePath: string,
@@ -1081,6 +1167,7 @@ export class RunExecutor {
       commands: commands.length,
       cwd: worktreePath
     });
+    await this.ensureRunValidationDependencies(worktreePath, runId);
     this.traceStore.append({
       type: "validation_started",
       actor: "system",

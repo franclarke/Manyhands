@@ -8,6 +8,7 @@ import {
   MockAgentExecutor,
   resolveExecutorModel,
   RunExecutor,
+  type DependencyInstaller,
   type ExecutorRouter,
   type ValidationRunContext,
   type ValidationRunner,
@@ -249,7 +250,7 @@ describe("RunExecutor", () => {
     const git = new FakeGitRunner({
       diffCached: "diff --git a/x b/x\n+added",
       diffCachedNameOnly: ["src/x.ts"],
-      commitSha: "LEAF_SHA"
+      commitShas: ["LEAF_A_SHA", "LEAF_B_SHA"]
     });
     const traceStore = new InMemoryTraceStore();
     const executor = makeExecutor(git, traceStore);
@@ -275,7 +276,7 @@ describe("RunExecutor", () => {
     const git = new FakeGitRunner({
       diffCached: "diff --git a/src/x.ts b/src/x.ts\n+added",
       diffCachedNameOnly: ["src/x.ts"],
-      commitSha: "LEAF_SHA"
+      commitShas: ["LEAF_A_SHA", "LEAF_B_SHA"]
     });
     const traceStore = new InMemoryTraceStore();
     const executor = makeExecutor(git, traceStore);
@@ -381,6 +382,33 @@ describe("RunExecutor", () => {
     });
   });
 
+  it("repair does not mistake the orchestrator's prior commit for an agent commit", async () => {
+    // Bug B: repairLeaf re-enters the existing worktree, whose HEAD already sits
+    // at the orchestrator's commit from the failed attempt. The unexpected-commit
+    // detector must baseline against that current HEAD, not the original
+    // baseCommit — otherwise every repair self-rejects as agent_committed_unexpectedly.
+    const repairWorktree = leafWorktreePath("a");
+    const git = new FakeGitRunner({
+      heads: { [repairWorktree]: "ORCH_SHA" },
+      diffCached: "diff --git a/src/x.ts b/src/x.ts\n+fix",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "REPAIR_SHA"
+    });
+    const executor = makeExecutor(git, new InMemoryTraceStore());
+
+    const { result } = await executor.repairLeaf({
+      graph: graphWith(["a"]),
+      config,
+      model: "gpt-5-codex",
+      taskId: "a",
+      runId: RUN_ID,
+      validationOutput: "tsc failed"
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.commitSha).toBe("REPAIR_SHA");
+  });
+
   it("traces live executor stdout/stderr chunks for the running node", async () => {
     const git = new FakeGitRunner({
       diffCached: "diff --git a/x b/x\n+added",
@@ -435,7 +463,7 @@ describe("RunExecutor", () => {
     const git = new FakeGitRunner({
       diffCached: "diff --git a/x b/x\n+added",
       diffCachedNameOnly: ["src/x.ts"],
-      commitSha: "SHA",
+      commitShas: ["LEAF_A_SHA", "LEAF_B_SHA", "REPAIR_SHA"],
       cherryPickOutcomes: [
         { ok: false, conflictFiles: ["src/x.ts"], output: "conflict" },
         { ok: true, conflictFiles: [], output: "" }
@@ -491,7 +519,7 @@ describe("RunExecutor", () => {
     const git = new FakeGitRunner({
       diffCached: "diff --git a/x b/x\n+added",
       diffCachedNameOnly: ["src/x.ts"],
-      commitSha: "LEAF_SHA"
+      commitShas: ["LEAF_A_SHA", "LEAF_B_SHA"]
     });
     const executor = makeExecutor(git, new InMemoryTraceStore());
 
@@ -564,7 +592,7 @@ describe("RunExecutor", () => {
     const git = new FakeGitRunner({
       diffCached: "diff --git a/x b/x\n+added",
       diffCachedNameOnly: ["src/x.ts"],
-      commitSha: "LEAF_SHA"
+      commitShas: ["LEAF_A_SHA", "LEAF_B_SHA"]
     });
     const captured: ValidationRunContext[] = [];
     const validationRunner: ValidationRunner = {
@@ -592,6 +620,51 @@ describe("RunExecutor", () => {
     expect(captured).toHaveLength(1);
     // The integrated tree lives in the root composite's integration worktree.
     expect(captured[0]?.worktreePath).toBe(leafWorktreePath("root"));
+  });
+
+  it("installs dependencies in the integration worktree before run-level validation", async () => {
+    // Fix 4: the composed tree of a greenfield project has a package.json but no
+    // node_modules, so run-level checks (build/typecheck) would fail for missing
+    // deps. Install once, in the integration worktree, before validation runs.
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/x b/x\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitShas: ["LEAF_A_SHA", "LEAF_B_SHA"]
+    });
+    const order: string[] = [];
+    const installedIn: string[] = [];
+    const dependencyInstaller: DependencyInstaller = {
+      ensure: async ({ cwd }) => {
+        installedIn.push(cwd);
+        order.push("install");
+        return { installed: true, packageManager: "npm" };
+      }
+    };
+    const validationRunner: ValidationRunner = {
+      run: async (): Promise<ValidationRunResult> => {
+        order.push("validate");
+        return { passed: true, output: "", exitCode: 0 };
+      }
+    };
+    const executor = new RunExecutor({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: REPO_ROOT,
+      validationRunner,
+      dependencyInstaller,
+      writeInstructions: async () => {}
+    });
+
+    const result = await executor.run({
+      graph: graphWith(["a", "b"], rootContractWithRunValidation()),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    expect(result.status).toBe("completed");
+    expect(installedIn).toEqual([leafWorktreePath("root")]);
+    expect(order).toEqual(["install", "validate"]);
   });
 
   it("treats failed leaf validation as the leaf result, even after a valid diff", async () => {
@@ -644,11 +717,54 @@ describe("RunExecutor", () => {
     });
   });
 
+  it("defers leaf validation (leaf still succeeds) when the toolchain is missing (exit 127)", async () => {
+    // A leaf branches from the base in isolation, so a project-wide check like
+    // `npx tsc --noEmit` finds no installed TypeScript and exits 127. That is an
+    // infra gap at the leaf altitude, not broken code — the leaf must succeed and
+    // verification is deferred to run-level (post-compose). Without this, every
+    // greenfield run wedges at the leaf gate.
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/src/x.ts b/src/x.ts\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const validationRunner: ValidationRunner = {
+      run: async (): Promise<ValidationRunResult> => ({
+        passed: false,
+        output: "This is not the tsc command you are looking for",
+        exitCode: 127
+      })
+    };
+    const traceStore = new InMemoryTraceStore();
+    const executor = new RunExecutor({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore,
+      repoRoot: REPO_ROOT,
+      validationRunner,
+      writeInstructions: async () => {}
+    });
+
+    const result = await executor.run({
+      graph: graphWith(["a"], undefined, leafContractWithValidation()),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    expect(result.leafResults[0]?.status).toBe("success");
+    expect(result.status).toBe("completed");
+    expect(traceStore.findByType("validation_deferred")).toHaveLength(1);
+    expect(traceStore.findByType("validation_deferred")[0]?.payload).toMatchObject({
+      scope: "leaf",
+      exitCode: 127
+    });
+  });
+
   it("keeps cleaning and preserves the result when a worktree clean fails (I8)", async () => {
     const git = new FakeGitRunner({
       diffCached: "diff --git a/x b/x\n+added",
       diffCachedNameOnly: ["src/x.ts"],
-      commitSha: "LEAF_SHA",
+      commitShas: ["LEAF_A_SHA", "LEAF_B_SHA"],
       failOperations: { worktreeRemove: new Error("rm failed") }
     });
     const traceStore = new InMemoryTraceStore();

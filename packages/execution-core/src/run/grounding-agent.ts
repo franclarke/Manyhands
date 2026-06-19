@@ -1,30 +1,23 @@
 /**
- * GroundingAgent — initializes the walking skeleton before parallel leaves run.
+ * GroundingAgent initializes the walking skeleton before parallel leaves run.
  *
- * Strategy (docs/design/future-frontier-tasks.md §4):
- *  1. Deterministic scaffold: every InterfaceContract whose id is a TS file
- *     path is rendered to a syntax-verified skeleton file, with type imports
- *     resolved against the repository's export index (Type Extractor).
- *  2. LLM fallback: ONLY contracts the scaffolder could not resolve are
- *     handed to the agent executor.
- *  3. Syntax gate: every file the skeleton touched must parse before the
- *     orchestrator commits (D6) — a malformed skeleton would break every
- *     parallel leaf at once.
+ * Strategy:
+ * 1. Deterministic scaffold for mechanically resolvable interface contracts.
+ * 2. Bounded LLM fallback only for unresolved contracts, split into small batches.
+ * 3. Syntax gate before the orchestrator commits the skeleton (D6).
  */
-import { join, dirname } from "node:path";
-import { tmpdir } from "node:os";
 import { mkdir, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import type { TaskGraph } from "@manyhands/task-graph";
 import { DefaultAgentExecutorFactory, FixedAgentExecutorFactory, type AgentExecutorFactory } from "../executor/factory.js";
-import { SimpleGitRunner } from "../git/runner.js";
-import type { GitRunner } from "../git/runner.js";
+import type { AgentExecutor, ExecutorRunOutcome } from "../executor/types.js";
+import { resolveLegacyModelSelection, type ExecutorSelection } from "../executor/registry.js";
+import { SimpleGitRunner, type GitRunner } from "../git/runner.js";
+import { checkRepairedFiles, describeSyntaxFindings } from "../integration/syntax-check.js";
 import { execLog, execWarn } from "../logging/log.js";
 import { DEFAULT_ARTIFACT_GLOBS } from "../scope/artifacts.js";
-import { checkRepairedFiles, describeSyntaxFindings } from "../integration/syntax-check.js";
-import { scaffoldInterfaces, type ScaffoldOutcome } from "./skeleton-scaffolder.js";
-import type { TaskGraph } from "@manyhands/task-graph";
-import type { InterfaceContract } from "@manyhands/contracts";
-import { resolveLegacyModelSelection, type ExecutorSelection } from "../executor/registry.js";
-import type { AgentExecutor } from "../executor/types.js";
+import { scaffoldInterfaces, type ScaffoldContract, type ScaffoldOutcome } from "./skeleton-scaffolder.js";
 
 export interface GroundingAgentParams {
   repoRoot: string;
@@ -40,11 +33,12 @@ export interface GroundingAgentDeps {
   executorFactory?: AgentExecutorFactory;
   git?: GitRunner;
   /**
-   * Builds the symbol → repo-relative-path map for type-import resolution.
+   * Builds the symbol -> repo-relative-path map for type-import resolution.
    * Defaults to the repository-index scan; injectable for tests.
    */
   buildExportIndex?: (repoRoot: string) => Promise<ReadonlyMap<string, string>>;
   executorTimeoutMs?: number;
+  fallbackBatchSize?: number;
 }
 
 export class GroundingAgent {
@@ -52,6 +46,7 @@ export class GroundingAgent {
   private readonly git: GitRunner;
   private readonly buildExportIndex: (repoRoot: string) => Promise<ReadonlyMap<string, string>>;
   private readonly executorTimeoutMs: number;
+  private readonly fallbackBatchSize: number;
 
   constructor(deps: GroundingAgentDeps = {}) {
     this.executorFactory =
@@ -59,6 +54,7 @@ export class GroundingAgent {
     this.git = deps.git ?? new SimpleGitRunner();
     this.buildExportIndex = deps.buildExportIndex ?? buildRepositoryExportIndex;
     this.executorTimeoutMs = deps.executorTimeoutMs ?? 300_000;
+    this.fallbackBatchSize = deps.fallbackBatchSize ?? 1;
   }
 
   /** Scaffold the skeleton and commit it (D6). Returns the skeleton commit sha. */
@@ -87,20 +83,15 @@ export class GroundingAgent {
       await this.runLlmFallback(params, scaffold);
     }
 
-    // Same artifact filter as the recorder: the LLM fallback could have run a
-    // package install, and the skeleton commit becomes every leaf's baseline.
     await this.git.addAllExcluding(params.repoRoot, DEFAULT_ARTIFACT_GLOBS);
     const changedFiles = await this.git.diffCachedNameOnly(params.repoRoot);
     if (changedFiles.length === 0) {
       return this.git.head(params.repoRoot);
     }
 
-    // Syntax gate: a malformed skeleton breaks every parallel leaf at once.
     const syntax = await checkRepairedFiles({ worktreePath: params.repoRoot, files: changedFiles });
     if (!syntax.passed) {
-      throw new Error(
-        `GroundingAgent produced a malformed skeleton:\n${describeSyntaxFindings(syntax.findings)}`
-      );
+      throw new Error(`GroundingAgent produced a malformed skeleton:\n${describeSyntaxFindings(syntax.findings)}`);
     }
 
     return this.git.commit({
@@ -115,61 +106,161 @@ export class GroundingAgent {
       contracts: scaffold.unresolved.map((contract) => contract.id)
     });
 
-    const prompt = [
-      "You are the ManyHands GroundingAgent.",
-      "Scaffold a 'walking skeleton' for the interface contracts below: create files containing",
-      "only imports, empty types/interfaces, or minimal signatures (function bodies may simply",
-      "`throw new Error('Not implemented')`) so parallel coding subagents can import and build",
-      "against them without compilation errors.",
-      "",
-      "=== INTERFACES TO SCAFFOLD ===",
-      ...scaffold.unresolved.map(
-        (contract) =>
-          `- Id: ${contract.id} (${contract.kind})\n  Signature: ${contract.signature}\n  Description: ${contract.description}`
-      ),
-      ...(scaffold.files.length > 0
-        ? [
-            "",
-            "These seams were already scaffolded deterministically — do NOT modify them:",
-            ...scaffold.files.map((file) => `- ${file.path}`)
-          ]
-        : []),
-      "",
-      "Instructions:",
-      "1. Do NOT write full implementations — scaffolding only.",
-      "2. Write the files directly into the repository workspace at sensible paths.",
-      "3. Do NOT commit. The orchestrator commits (D6)."
-    ].join("\n");
-
-    const instructionFilePath = join(tmpdir(), `mh-grounding-${params.runId}.txt`);
-    await writeFile(instructionFilePath, prompt, "utf8");
     const selection = params.selection ?? resolveLegacyModelSelection(params.model);
     const executor = this.executorFactory.create(selection);
+    const batches = chunk(scaffold.unresolved, this.fallbackBatchSize);
 
-    const outcome = await executor.execute({
-      cwd: params.repoRoot,
-      instructionFilePath,
-      model: selection.model,
-      timeoutMs: this.executorTimeoutMs,
-      bypassApprovals: true,
-      processOwnerId: params.runId
-    });
+    for (const [index, batch] of batches.entries()) {
+      const instructionFilePath = join(tmpdir(), `mh-grounding-${params.runId}-${index + 1}.txt`);
+      await writeFile(
+        instructionFilePath,
+        buildFallbackPrompt({
+          batch,
+          batchIndex: index + 1,
+          batchCount: batches.length,
+          deterministicFiles: scaffold.files.map((file) => file.path)
+        }),
+        "utf8"
+      );
 
-    if (outcome.exitCode !== 0 || outcome.timedOut) {
-      throw new Error(`GroundingAgent LLM fallback failed with exit code ${outcome.exitCode}`);
+      const outcome = await executor.execute({
+        cwd: params.repoRoot,
+        instructionFilePath,
+        model: selection.model,
+        timeoutMs: this.executorTimeoutMs,
+        bypassApprovals: false,
+        processOwnerId: params.runId
+      });
+
+      if (outcome.exitCode !== 0 || outcome.timedOut) {
+        throw new Error(
+          formatFallbackFailure({
+            batch,
+            batchIndex: index + 1,
+            batchCount: batches.length,
+            instructionFilePath,
+            outcome,
+            selection,
+            timeoutMs: this.executorTimeoutMs
+          })
+        );
+      }
     }
   }
 }
 
-function collectProducedInterfaces(graph: TaskGraph): InterfaceContract[] {
-  const contracts: InterfaceContract[] = [];
+function collectProducedInterfaces(graph: TaskGraph): ScaffoldContract[] {
+  const contracts: ScaffoldContract[] = [];
   for (const node of Object.values(graph.nodes)) {
-    contracts.push(...(node.contract?.producedInterfaces ?? []));
+    const pathHints = contractPathHints(node.contract);
+    for (const contract of node.contract?.producedInterfaces ?? []) {
+      contracts.push({
+        ...contract,
+        targetPathHints: pathHints,
+        sourceNodeIds: [node.id]
+      });
+    }
   }
   return contracts;
 }
 
-/** Default Type Extractor: exported symbol → repo-relative path, via repository-index. */
+function contractPathHints(contract: TaskGraph["nodes"][string]["contract"]): string[] {
+  return uniqueStrings([
+    ...(contract?.expectedOutput.changedFiles ?? []),
+    ...(contract?.executionScope?.implementationPaths ?? []),
+    ...(contract?.executionScope?.testPaths ?? []),
+    ...(contract?.allowed.paths ?? [])
+  ]);
+}
+
+function buildFallbackPrompt(input: {
+  batch: readonly ScaffoldContract[];
+  batchIndex: number;
+  batchCount: number;
+  deterministicFiles: readonly string[];
+}): string {
+  return [
+    "You are the ManyHands GroundingAgent.",
+    `Scaffold walking-skeleton interface contracts for batch ${input.batchIndex}/${input.batchCount}.`,
+    "Create only imports, empty types/interfaces, or minimal signatures. Function bodies may throw.",
+    "Do not write full implementations. Do not commit.",
+    "",
+    "=== INTERFACES TO SCAFFOLD ===",
+    ...input.batch.map(formatContractForPrompt),
+    ...(input.deterministicFiles.length > 0
+      ? [
+          "",
+          "These files were already scaffolded deterministically. Do not modify them unless required for imports:",
+          ...input.deterministicFiles.map((file) => `- ${file}`)
+        ]
+      : []),
+    "",
+    "Instructions:",
+    "1. Prefer the target path hints when present.",
+    "2. Write files directly into the repository workspace.",
+    "3. Keep output small and mechanical; this is a skeleton for later leaf agents."
+  ].join("\n");
+}
+
+function formatContractForPrompt(contract: ScaffoldContract): string {
+  return [
+    `- Id: ${contract.id} (${contract.kind})`,
+    contract.sourceNodeIds !== undefined && contract.sourceNodeIds.length > 0
+      ? `  Source nodes: ${contract.sourceNodeIds.join(", ")}`
+      : undefined,
+    contract.targetPathHints !== undefined && contract.targetPathHints.length > 0
+      ? `  Target path hints: ${contract.targetPathHints.join(", ")}`
+      : undefined,
+    `  Signature: ${contract.signature}`,
+    `  Description: ${contract.description}`
+  ].filter((line): line is string => line !== undefined).join("\n");
+}
+
+function formatFallbackFailure(input: {
+  batch: readonly ScaffoldContract[];
+  batchIndex: number;
+  batchCount: number;
+  instructionFilePath: string;
+  outcome: ExecutorRunOutcome;
+  selection: ExecutorSelection;
+  timeoutMs: number;
+}): string {
+  const contracts = input.batch.map((contract) => contract.id).join(", ");
+  const command = input.outcome.commandLine ?? `${input.selection.executorId} ${input.selection.model}`;
+  return [
+    "GroundingAgent LLM fallback failed.",
+    `stage=grounding.llm_fallback batch=${input.batchIndex}/${input.batchCount}`,
+    `contracts=${contracts}`,
+    `executor=${input.selection.executorId} model=${input.selection.model}`,
+    `command=${command}`,
+    `timeoutMs=${input.timeoutMs} durationMs=${input.outcome.durationMs}`,
+    `exitCode=${input.outcome.exitCode} timedOut=${input.outcome.timedOut}`,
+    `instructionFile=${input.instructionFilePath}`,
+    tail(input.outcome.stderr) !== undefined ? `stderrTail:\n${tail(input.outcome.stderr)}` : undefined,
+    tail(input.outcome.stdout) !== undefined ? `stdoutTail:\n${tail(input.outcome.stdout)}` : undefined,
+    "suggestion=Reduce or path-back the listed contract(s), or retry after fixing the executor/model/auth issue."
+  ].filter((line): line is string => line !== undefined).join("\n");
+}
+
+function chunk<T>(items: readonly T[], size: number): T[][] {
+  const normalizedSize = Math.max(1, Math.floor(size));
+  const batches: T[][] = [];
+  for (let index = 0; index < items.length; index += normalizedSize) {
+    batches.push(items.slice(index, index + normalizedSize));
+  }
+  return batches;
+}
+
+function tail(text: string | undefined, limit = 4_000): string | undefined {
+  if (text === undefined || text.length === 0) return undefined;
+  return text.length <= limit ? text : text.slice(-limit);
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  return [...new Set(values)];
+}
+
+/** Default Type Extractor: exported symbol -> repo-relative path, via repository-index. */
 async function buildRepositoryExportIndex(repoRoot: string): Promise<ReadonlyMap<string, string>> {
   const { buildRepositoryIndex } = await import("@manyhands/repository-index");
   const index = await buildRepositoryIndex({ rootPath: repoRoot });

@@ -9,6 +9,7 @@ import {
   RunNotFoundError,
   RunValidationError,
   appendStatusEventOrRollback,
+  assertRunActionAllowed,
   claimRunMutation,
   ensureRunModelEventLogForRun,
   getRunRepository,
@@ -32,7 +33,7 @@ import {
 import type { RunRecord } from "@/lib/server/runs/schema";
 import { buildRunModelSeed } from "@/lib/server/runs/run-model-projection";
 import { toRunResponse } from "@/lib/server/runs/presenter";
-import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
+import { isRunnerActive, startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -77,6 +78,10 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     if (decision.kind === "approve_plan") {
       if (!("action" in choice) || choice.action !== "approve") {
         throw new RunValidationError("approve_plan only supports { action: 'approve' }");
+      }
+      assertRunActionAllowed(run, "approve_plan");
+      if (isRunnerActive(run.runId)) {
+        throw new RunLifecycleError(`Run ${run.runId} is being driven by an active runner.`);
       }
       // Claims the approval atomically (INV-4) and resumes the suspended
       // approvalGate natively; a concurrent duplicate approval gets a 409.
@@ -189,6 +194,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       const provisioned = provisionedFromRecord(run.provisioned);
 
       if (provisioned !== undefined) {
+        if (isRunnerActive(run.runId)) {
+          throw new RunLifecycleError(`Run ${run.runId} is being driven by an active runner.`);
+        }
         const invalidation = await amendmentsEngine.amendSeam({
           repoRoot: provisioned.repoRoot,
           runId: run.runId,

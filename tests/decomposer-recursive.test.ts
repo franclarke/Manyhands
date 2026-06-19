@@ -248,8 +248,8 @@ describe("RecursiveDecomposer — decompose with shared interfaces", () => {
                           id: "render-columns",
                           title: "Render columns",
                           goal: "Render task status columns",
-                          consumes: ["TaskViewModel"],
-                          produces: []
+                          consumes: [],
+                          produces: ["TaskViewModel"]
                         },
                         {
                           id: "render-card-list",
@@ -296,8 +296,8 @@ describe("RecursiveDecomposer — decompose with shared interfaces", () => {
                         id: "render-columns",
                         title: "Render columns",
                         goal: "Render task status columns",
-                        consumes: ["TaskViewModel"],
-                        produces: []
+                        consumes: [],
+                        produces: ["TaskViewModel"]
                       },
                       {
                         id: "render-card-list",

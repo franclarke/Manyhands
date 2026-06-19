@@ -232,6 +232,19 @@ describe("AgentExecutorOptionsSchema", () => {
     });
     expect(parsed.onOutput).toBe(onOutput);
   });
+
+  it("accepts Codex xhigh reasoning effort", () => {
+    const parsed = AgentExecutorOptionsSchema.parse({
+      cwd: "/tmp/wt",
+      instructionFilePath: "/tmp/inst.md",
+      model: "gpt-5.5",
+      timeoutMs: 300_000,
+      bypassApprovals: false,
+      reasoningEffort: "xhigh"
+    });
+
+    expect(parsed.reasoningEffort).toBe("xhigh");
+  });
 });
 
 // â”€â”€ Config with defaults â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

@@ -62,14 +62,34 @@ warning auditable.
 `buildSchedulingSafetyContext` normaliza los inputs del scheduler:
 
 - toma contratos desde el `TaskGraph` cuando no se pasan por separado;
-- genera o completa la `riskMatrix` desde contratos y scopes;
+- genera o completa la `riskMatrix` desde contratos, scopes y, cuando existen,
+  señales estáticas del `repository-index`;
 - agrega riesgo conservador para scope solapado, contrato faltante, scope vacío
   o interfaces producer/consumer sin dependencia;
 - emite warnings/fallbacks (`missing_contract`, `empty_scope`,
-  `risk_matrix_missing`, `risk_matrix_incomplete`,
+  `missing_repository_index`, `risk_matrix_missing`, `risk_matrix_incomplete`,
   `parallel_naive_explicit`).
 
 La regla de degradación es serializar antes que paralelizar sin evidencia.
+
+### Señales estructurales del repo
+
+El scheduler no recorre el filesystem. Consume evidencia ya construida por
+`conflict-risk`:
+
+- `static_import_dependency`: una tarea toca un módulo exportador y otra toca un
+  archivo que lo importa;
+- `static_producer_consumer_symbol`: una tarea produce un símbolo o seam que otra
+  consume;
+- `static_shared_schema_dependency`, `static_public_api_surface_overlap`,
+  `static_critical_file_overlap` y señales similares derivadas de `files`,
+  `symbols`, `imports` y `exports`.
+
+En el camino web, planning persiste `staticConflictSignals` compactas junto con
+la `riskMatrix`; `execution-host` las reusa en cada wave. En uso directo,
+`RunExecutor.run` puede recibir `repositoryIndex` y pasarla al contexto de
+scheduling. Si no hay índice ni señales, se mantiene el predictor heurístico de
+contratos/scopes y se emite `missing_repository_index`.
 
 ### Evento durable de wave
 
@@ -86,6 +106,10 @@ Payload mínimo:
 - `blockedReasons`;
 - `riskSummary`;
 - `fallbacks` y `warnings`.
+
+Las razones no incluyen el índice completo. Persisten solo el resumen compacto
+del riesgo elegido, por ejemplo que `consumer` fue bloqueada porque toca un
+archivo que importa `src/api.ts` tocado por `exporter`.
 
 ### Gates humanos (`applyHumanGateToSchedule`)
 

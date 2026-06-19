@@ -208,6 +208,64 @@ describe("RecursiveDecomposer recovery", () => {
     });
   });
 
+  it("rejects a shared interface that no child produces", async () => {
+    const { client } = sequenceClient([
+      {
+        match: "Evaluate arithmetic expression strings",
+        responses: [
+          decomposeStep({
+            sharedInterfaces: [sharedInterface("ApiContract")],
+            children: [
+              child("frontend", "Frontend", "Render the calculator UI", { consumes: ["ApiContract"] }),
+              child("logic", "Logic", "Compute the tip split", { consumes: ["ApiContract"] })
+            ]
+          })
+        ]
+      }
+    ]);
+
+    await expect(decomposer(client, { maxStepAttempts: 1 }).decompose(FEATURE)).rejects.toMatchObject({
+      details: expect.objectContaining({ kind: "graph_invalid", nodeId: "root" })
+    });
+  });
+
+  it("retries an orphan shared interface and succeeds once a producer is assigned", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { client, promptsFor } = sequenceClient([
+      {
+        match: "Evaluate arithmetic expression strings",
+        responses: [
+          decomposeStep({
+            sharedInterfaces: [sharedInterface("ApiContract")],
+            children: [
+              child("api", "API", "Define the calculate API", { produces: [] }),
+              child("frontend", "Frontend", "Render the calculator UI", { consumes: ["ApiContract"] })
+            ]
+          }),
+          decomposeStep({
+            sharedInterfaces: [sharedInterface("ApiContract")],
+            children: [
+              child("api", "API", "Define the calculate API", { produces: ["ApiContract"] }),
+              child("frontend", "Frontend", "Render the calculator UI", { consumes: ["ApiContract"] })
+            ]
+          })
+        ]
+      },
+      { match: "Define the calculate API", responses: [atomic(["src/api.ts"])] },
+      { match: "Render the calculator UI", responses: [atomic(["src/ui.ts"])] }
+    ]);
+
+    try {
+      const result = await decomposer(client, { maxStepAttempts: 2 }).decompose(FEATURE);
+
+      expect(validateTaskGraph(result.graph)).toEqual([]);
+      expect(result.graph.nodes.api?.contract?.producedInterfaces?.map((i) => i.id)).toEqual(["ApiContract"]);
+      expect(promptsFor("Evaluate arithmetic expression strings")[1]).toContain("ApiContract");
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("can materialize a failed non-root node as an explicit fallback leaf when opted in", async () => {
     const { client } = sequenceClient([
       {
@@ -315,13 +373,14 @@ function atomic(expectedFiles: string[]): unknown {
 }
 
 function decomposeStep(overrides: {
+  sharedInterfaces?: unknown[];
   children?: unknown[];
   dependencies?: unknown[];
 } = {}): unknown {
   return {
     decision: "decompose",
     reasoning: "pipeline with seams",
-    sharedInterfaces: [],
+    sharedInterfaces: overrides.sharedInterfaces ?? [],
     children: overrides.children ?? [
       child("tokenize", "Tokenize", "Split the input into tokens"),
       child("parse", "Parse", "Build an AST from tokens")
@@ -331,6 +390,20 @@ function decomposeStep(overrides: {
   };
 }
 
-function child(id: string, title: string, goal: string): unknown {
-  return { id, title, goal, consumes: [], produces: [] };
+function sharedInterface(id: string): unknown {
+  return {
+    id,
+    kind: "type",
+    signature: `type ${id} = { value: number }`,
+    description: `the ${id} seam`
+  };
+}
+
+function child(
+  id: string,
+  title: string,
+  goal: string,
+  seams: { consumes?: string[]; produces?: string[] } = {}
+): unknown {
+  return { id, title, goal, consumes: seams.consumes ?? [], produces: seams.produces ?? [] };
 }

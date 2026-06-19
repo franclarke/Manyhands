@@ -43,6 +43,7 @@ import { runPlanCritic, runSeamCritic } from "@/lib/plan-critic";
 import { detectWorkspaceCommands } from "../providers/command-detection";
 import { getWorkspaceRepository } from "../workspaces";
 import { publishRunEvent } from "./event-bus";
+import { RunNotFoundError } from "./errors";
 import type { RiskLevelKey } from "./events";
 import { buildRepositoryGrounding } from "./repo-index-cache";
 import { resolveRunsDirectory } from "./repository";
@@ -362,13 +363,13 @@ async function decomposePlanForRun(
 
     // Persist planning + decomposition metadata before dispatching SSE events
     // so refreshes during `generating` already have a snapshot to project.
-    const persisted = await repo.save({
-      ...(await repo.get(run.runId)),
+    const persisted = await repo.update(run.runId, (current) => ({
+      ...current,
       planning,
       decomposition,
       ...(grounding?.summary !== undefined ? { repositoryGrounding: grounding.summary } : {}),
       heartbeatAt: new Date().toISOString()
-    });
+    }));
 
     await replayPlanEvents(persisted.runId, planning, options);
 
@@ -419,22 +420,23 @@ async function runCriticsForRun(
   });
   const seamCritic = runSeamCritic({ graph, contracts });
 
-  const latest = await repo.get(runId);
-  const latestPlanning = latest.planning as MockPlanningFlowResult | undefined;
-  let planningToPersist = latest.planning;
-  if (latestPlanning !== undefined) {
-    const { graph: backfilledGraph, backfilled } = backfillRunValidationCommands(
-      latestPlanning.decomposition.graph,
-      detectedCommands
-    );
-    if (backfilled !== undefined) {
-      planningToPersist = {
-        ...latestPlanning,
-        decomposition: { ...latestPlanning.decomposition, graph: backfilledGraph }
-      };
+  await repo.update(runId, (latest) => {
+    const latestPlanning = latest.planning as MockPlanningFlowResult | undefined;
+    let planningToPersist = latest.planning;
+    if (latestPlanning !== undefined) {
+      const { graph: backfilledGraph, backfilled } = backfillRunValidationCommands(
+        latestPlanning.decomposition.graph,
+        detectedCommands
+      );
+      if (backfilled !== undefined) {
+        planningToPersist = {
+          ...latestPlanning,
+          decomposition: { ...latestPlanning.decomposition, graph: backfilledGraph }
+        };
+      }
     }
-  }
-  await repo.save({ ...latest, planning: planningToPersist, planningCritic, seamCritic });
+    return { ...latest, planning: planningToPersist, planningCritic, seamCritic };
+  });
 
   if (planning !== undefined) {
     publishPlanCompletionEvents(runId, planning, planningCritic.findings.map((f) => f.message));
@@ -645,16 +647,17 @@ export async function persistLivePlanningNodes(
   runId: string,
   nodes: ReadonlyMap<string, PlanningLiveNode>
 ): Promise<void> {
-  const current = await getRunRepository().get(runId).catch(() => null);
-  if (current === null) {
-    return;
-  }
-  await getRunRepository().save({
-    ...current,
-    livePlanningNodes: Array.from(nodes.values()).sort(
-      (left, right) => left.depth - right.depth || left.id.localeCompare(right.id)
-    )
-  });
+  await getRunRepository()
+    .update(runId, (current) => ({
+      ...current,
+      livePlanningNodes: Array.from(nodes.values()).sort(
+        (left, right) => left.depth - right.depth || left.id.localeCompare(right.id)
+      )
+    }))
+    .catch((error) => {
+      if (error instanceof RunNotFoundError) return undefined;
+      throw error;
+    });
 }
 
 function requireExecutableWorkspace(workspace: Workspace | null, workspaceId: string): Workspace {

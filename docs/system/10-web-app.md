@@ -101,6 +101,42 @@ antes de provisionar repos o despachar background work. Los checkpoints
 - **Time-travel (forking)**: `POST /api/runs/[runId]/fork` clona el checkpoint
   elegido bajo un nuevo thread y crea un `RunRecord` no destructivo.
 
+### Control-plane de lifecycle
+
+Las rutas que mutan lifecycle comparten la matriz `assertRunActionAllowed` en
+`lib/server/runs/lifecycle.ts`. La validación ocurre antes de tocar el snapshot,
+emitir eventos de éxito o lanzar pipelines background:
+
+| Acción | Estados permitidos |
+|--------|--------------------|
+| `start` | `approved` |
+| `pause` | `generating`, `running` |
+| `resume` | `paused` |
+| `cancel` | `generating`, `running`, `paused` |
+| `answer_gate` | `paused` |
+| `approve_plan` | `needs_review` |
+| `replan` | `running` |
+| `restart` | `interrupted`, `failed` |
+| `fork` | `created`, `paused`, `needs_review`, `approved`, `interrupted`, `completed`, `completed_with_accepted`, `failed` |
+| `manual_node_run` | `approved` |
+| `manual_node_review` / `manual_node_rerun` | `approved`, `completed`, `completed_with_accepted`, `failed` |
+
+`claimRunMutation` sigue dando el CAS por versión/status/gate y puede rechazar
+`rejectActiveRunner`. Las rutas que entregan decisiones o relanzan ejecución
+rechazan un runner in-process activo antes de arrancar otro pipeline. La excepción
+intencional es el plain un-pause cooperativo: si el runner activo está detenido
+en `waitWhilePlainPaused`, la ruta solo cambia `paused -> generating/running` y
+no crea un segundo runner.
+
+`cancel` persiste `interrupted`, dispara el abort cooperativo, mata procesos
+registrados, hace GC best-effort de worktrees y recién entonces responde con el
+evento durable `run.cancelled`. `restart` y `fork` no heredan un runner activo ni
+un lock vivo; si hay uno, devuelven 409.
+
+Limitación: `runner-state`, abort registry y repo-lock son in-process. Protegen
+el runtime local y los tests, pero no son un lock distribuido ni una cola durable
+cross-process.
+
 ### Canal de decisiones y HITL nativo
 
 Los `interrupt()` de los gates del StateGraph (`leafGate`, `conflictGate`)

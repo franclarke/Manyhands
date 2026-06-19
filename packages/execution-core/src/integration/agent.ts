@@ -20,9 +20,13 @@ import { ScopeChecker } from "../scope/checker";
 import {
   AgentExecutionResultSchema,
   IntegrationResultSchema,
+  type AppliedChildCommit,
   type AgentExecutionResult,
+  type IntegrationFailureCode,
   type IntegrationResult,
   type IntegrationStatus,
+  type IntegrationRepairAttempt,
+  type OmittedChildCommit,
   type PreMergeFinding,
   type ValidationRunResult,
   type WorktreeRecord
@@ -31,6 +35,7 @@ import { computePreMergeFindings } from "./pre-merge";
 import { checkRepairedFiles, describeSyntaxFindings, type SyntaxCheckResult } from "./syntax-check";
 import type { ValidationRunner } from "../validation/runner";
 import { ChildProcessValidationRunner } from "../validation/runner";
+import { ChildProcessDependencyInstaller, type DependencyInstaller } from "../validation/dependencies";
 
 export interface IntegrationAgentDeps {
   git: GitRunner;
@@ -39,6 +44,7 @@ export interface IntegrationAgentDeps {
   traceStore: TraceStore;
   repoRoot: string;
   validationRunner?: ValidationRunner;
+  dependencyInstaller?: DependencyInstaller;
   scopeChecker?: ScopeChecker;
   /** Writes the repair instructions file. Injectable for tests. */
   writeInstructions?: (path: string, content: string) => Promise<void>;
@@ -113,6 +119,7 @@ export class IntegrationAgent {
   private readonly traceStore: TraceStore;
   private readonly repoRoot: string;
   private readonly validationRunner: ValidationRunner;
+  private readonly dependencyInstaller: DependencyInstaller;
   private readonly scopeChecker: ScopeChecker;
   private readonly writeInstructions: (path: string, content: string) => Promise<void>;
   private readonly checkSyntax: (params: {
@@ -127,6 +134,7 @@ export class IntegrationAgent {
     this.traceStore = deps.traceStore;
     this.repoRoot = deps.repoRoot;
     this.validationRunner = deps.validationRunner ?? new ChildProcessValidationRunner();
+    this.dependencyInstaller = deps.dependencyInstaller ?? new ChildProcessDependencyInstaller();
     this.scopeChecker = deps.scopeChecker ?? new ScopeChecker();
     this.writeInstructions = deps.writeInstructions ?? ((path, content) => writeFile(path, content, "utf8"));
     this.checkSyntax = deps.checkSyntax ?? checkRepairedFiles;
@@ -148,6 +156,10 @@ export class IntegrationAgent {
       payload: { childTaskIds }
     });
 
+    const appliedCommits: AppliedChildCommit[] = [];
+    const omittedChildCommits: OmittedChildCommit[] = [];
+    const repairAttempts: IntegrationRepairAttempt[] = [];
+
     // Any non-successful child means we never start integration (ADR-0025).
     const failedChild = childResults.find((child) => child.status !== "success");
     if (failedChild) {
@@ -156,7 +168,21 @@ export class IntegrationAgent {
         failedChild: failedChild.taskId,
         childStatus: failedChild.status
       });
-      return this.finalize(params, "child_failed", { repairAttempted: false });
+      omittedChildCommits.push(
+        ...childResults
+          .filter((child) => child.status !== "success")
+          .map((child) => ({
+            childTaskId: child.taskId,
+            reason: "child_failed" as const,
+            status: child.status,
+            ...(child.commitSha !== undefined ? { commitSha: child.commitSha } : {})
+          }))
+      );
+      return this.finalize(params, "child_failed", {
+        repairAttempted: false,
+        failureCode: "child_failed",
+        omittedChildCommits
+      });
     }
 
     const missingCommitChild = childResults.find((child) => child.commitSha === undefined);
@@ -166,8 +192,15 @@ export class IntegrationAgent {
         child: missingCommitChild.taskId,
         childStatus: missingCommitChild.status
       });
+      omittedChildCommits.push({
+        childTaskId: missingCommitChild.taskId,
+        reason: "missing_child_commit",
+        status: missingCommitChild.status
+      });
       return this.finalize(params, "child_failed", {
         repairAttempted: false,
+        failureCode: "missing_child_commit",
+        omittedChildCommits,
         preMergeFindings: [
           {
             severity: "warning",
@@ -186,13 +219,36 @@ export class IntegrationAgent {
       childResults,
       ...(params.childIntents !== undefined ? { childIntents: params.childIntents } : {})
     });
+    const childCommitIssue = await this.validateChildCommits(params);
+    if (childCommitIssue !== undefined) {
+      omittedChildCommits.push({
+        childTaskId: childCommitIssue.child.taskId,
+        reason: "invalid_child_commit",
+        status: childCommitIssue.child.status,
+        ...(childCommitIssue.child.commitSha !== undefined ? { commitSha: childCommitIssue.child.commitSha } : {})
+      });
+      return this.finalize(params, "child_failed", {
+        repairAttempted: false,
+        failureCode: "invalid_child_commit",
+        omittedChildCommits,
+        preMergeFindings: [
+          ...preMergeFindings,
+          {
+            severity: "warning",
+            code: childCommitIssue.code,
+            message: childCommitIssue.message,
+            files: []
+          }
+        ]
+      });
+    }
 
     const maxRepairs = normalizeMaxRepairsPerIntegration(params.repair.maxRepairsPerIntegration);
     let repairsUsed = 0;
     let anyRepairSucceeded = false;
     let repairResult: AgentExecutionResult | undefined;
 
-    for (const child of childResults) {
+    for (const [childIndex, child] of childResults.entries()) {
       const commitSha = child.commitSha;
       if (commitSha === undefined) {
         throw new Error(`Invariant violation: successful child ${child.taskId} has no commitSha after validation.`);
@@ -216,6 +272,7 @@ export class IntegrationAgent {
       });
       if (outcome.ok) {
         execLog("integrate", "cherry-pick ok", { task: compositeTaskId, child: child.taskId });
+        appliedCommits.push({ childTaskId: child.taskId, commitSha, order: appliedCommits.length });
         continue;
       }
 
@@ -250,12 +307,17 @@ export class IntegrationAgent {
         // integration crashes with "Missing: <child>".
         await this.git.cherryPickAbort(worktree.path);
         const partialCommitSha = await this.git.head(worktree.path);
+        omittedChildCommits.push(...omittedFrom(childResults, childIndex, "cherry_pick_conflict"));
         return this.finalize(params, "executor_repair_failed", {
           repairAttempted: repairsUsed > 0,
           repairResult,
           integrationCommitSha: partialCommitSha,
           conflictDetails: { files: outcome.conflictFiles, cherryPickOutput: outcome.output },
-          preMergeFindings
+          failureCode: "cherry_pick_conflict",
+          preMergeFindings,
+          appliedCommits,
+          omittedChildCommits,
+          repairAttempts
         });
       }
       repairsUsed += 1;
@@ -267,7 +329,7 @@ export class IntegrationAgent {
         repairsUsed,
         maxRepairs
       });
-      const repair = await this.attemptRepair(params, child, outcome, preMergeFindings);
+      const repair = await this.attemptRepair(params, child, outcome, preMergeFindings, repairAttempts);
       repairResult = repair.result;
       if (!repair.ok) {
         execError("integrate", "integration failed: agent repair did not resolve conflict", {
@@ -279,12 +341,24 @@ export class IntegrationAgent {
           stderrTail: repair.result.stderrTail
         });
         const partialCommitSha = await this.git.head(worktree.path);
+        omittedChildCommits.push(...omittedFrom(childResults, childIndex, "repair_failed"));
         return this.finalize(params, "executor_repair_failed", {
           repairAttempted: true,
           repairResult,
           integrationCommitSha: partialCommitSha,
           conflictDetails: { files: outcome.conflictFiles, cherryPickOutput: outcome.output },
-          preMergeFindings
+          failureCode: "repair_failed",
+          preMergeFindings,
+          appliedCommits,
+          omittedChildCommits,
+          repairAttempts
+        });
+      }
+      if (repair.result.commitSha !== undefined) {
+        appliedCommits.push({
+          childTaskId: child.taskId,
+          commitSha: repair.result.commitSha,
+          order: appliedCommits.length
         });
       }
       execLog("integrate", "agent repair resolved conflict", {
@@ -312,8 +386,12 @@ export class IntegrationAgent {
         repairAttempted: repairsUsed > 0,
         repairResult,
         integrationCommitSha: validationFailedCommitSha,
+        failureCode: "validation_failed",
+        appliedCommits,
         preMergeFindings,
-        parentValidation: validation
+        parentValidation: validation,
+        validationWorktreePath: worktree.path,
+        repairAttempts
       });
     }
 
@@ -330,9 +408,48 @@ export class IntegrationAgent {
       repairAttempted: repairsUsed > 0,
       repairResult,
       integrationCommitSha,
+      appliedCommits,
       preMergeFindings,
-      ...(validation !== undefined ? { parentValidation: validation } : {})
+      ...(validation !== undefined ? { parentValidation: validation, validationWorktreePath: worktree.path } : {}),
+      repairAttempts
     });
+  }
+
+  private async validateChildCommits(
+    params: IntegrationParams
+  ): Promise<{ child: AgentExecutionResult; code: string; message: string } | undefined> {
+    const seen = new Map<string, string>();
+    for (const child of params.childResults) {
+      const commitSha = child.commitSha;
+      if (commitSha === undefined || commitSha.trim().length === 0) {
+        return {
+          child,
+          code: "invalid_child_commit",
+          message: `Child ${child.taskId} reported success with an empty commitSha.`
+        };
+      }
+      const priorTaskId = seen.get(commitSha);
+      if (priorTaskId !== undefined) {
+        return {
+          child,
+          code: "duplicate_child_commit",
+          message: `Child ${child.taskId} reuses commitSha ${commitSha} already reported by ${priorTaskId}.`
+        };
+      }
+      seen.set(commitSha, child.taskId);
+      try {
+        await this.git.revParse(params.worktree.path, commitSha);
+      } catch (error) {
+        return {
+          child,
+          code: "invalid_child_commit",
+          message:
+            `Child ${child.taskId} reported commitSha ${commitSha}, but it is not reachable from ` +
+            `integration worktree ${params.worktree.path}: ${error instanceof Error ? error.message : String(error)}`
+        };
+      }
+    }
+    return undefined;
   }
 
   /**
@@ -346,7 +463,8 @@ export class IntegrationAgent {
     params: IntegrationParams,
     child: AgentExecutionResult,
     conflict: { conflictFiles: string[]; output: string },
-    preMergeFindings: PreMergeFinding[]
+    preMergeFindings: PreMergeFinding[],
+    repairAttempts: IntegrationRepairAttempt[]
   ): Promise<{ ok: boolean; result: AgentExecutionResult }> {
     const { worktree } = params;
     await this.git.cherryPickAbort(worktree.path);
@@ -372,6 +490,12 @@ export class IntegrationAgent {
     let syntaxFeedback: string | undefined;
 
     for (let pass = 1; pass <= MAX_REPAIR_PASSES; pass++) {
+      repairAttempts.push({
+        childTaskId: child.taskId,
+        pass,
+        status: "started",
+        files: conflict.conflictFiles
+      });
       this.traceStore.append({
         type: "executor_repair_started",
         actor: "system",
@@ -411,6 +535,12 @@ export class IntegrationAgent {
       const outcomeWithUsage = { ...executorOutcome, usageSource };
 
       if (executorOutcome.timedOut || executorOutcome.exitCode !== 0) {
+        repairAttempts.push({
+          childTaskId: child.taskId,
+          pass,
+          status: "failed",
+          files: conflict.conflictFiles
+        });
         return {
           ok: false,
           result: this.buildRepairResult(child.taskId, "executor_error", baseHead, baseHead, outcomeWithUsage)
@@ -440,6 +570,12 @@ export class IntegrationAgent {
           child: child.taskId,
           violations: scopeCheck.violations
         });
+        repairAttempts.push({
+          childTaskId: child.taskId,
+          pass,
+          status: "failed",
+          files: changedFiles
+        });
         return {
           ok: false,
           result: this.buildRepairResult(
@@ -468,6 +604,12 @@ export class IntegrationAgent {
           taskId: params.compositeTaskId,
           payload: { childTaskId: child.taskId, pass, findings: syntax.findings }
         });
+        repairAttempts.push({
+          childTaskId: child.taskId,
+          pass,
+          status: "syntax_rejected",
+          files: changedFiles
+        });
         if (pass < MAX_REPAIR_PASSES) {
           continue;
         }
@@ -492,6 +634,12 @@ export class IntegrationAgent {
         task: params.compositeTaskId,
         child: child.taskId,
         commit: commitSha
+      });
+      repairAttempts.push({
+        childTaskId: child.taskId,
+        pass,
+        status: "committed",
+        files: changedFiles
       });
 
       return {
@@ -525,6 +673,7 @@ export class IntegrationAgent {
       task: params.compositeTaskId,
       commands: commands.length
     });
+    await this.ensureParentValidationDependencies(params.worktree.path, params.compositeTaskId);
     const result = await this.validationRunner.run(commands, {
       worktreePath: params.worktree.path,
       repoRoot: this.repoRoot
@@ -539,6 +688,44 @@ export class IntegrationAgent {
       });
     }
     return result;
+  }
+
+  /**
+   * Parent validation executes in the composed integration worktree. Fresh
+   * greenfield integrations can contain package.json without node_modules, so
+   * install dependencies best-effort before validation and let validation own
+   * the final pass/fail signal.
+   */
+  private async ensureParentValidationDependencies(worktreePath: string, compositeTaskId: string): Promise<void> {
+    try {
+      const result = await this.dependencyInstaller.ensure({ cwd: worktreePath });
+      execLog("integrate", "parent validation dependency check", {
+        task: compositeTaskId,
+        cwd: worktreePath,
+        installed: result.installed,
+        packageManager: result.packageManager,
+        reason: result.reason
+      });
+      this.traceStore.append({
+        type: "validation_started",
+        actor: "system",
+        taskId: compositeTaskId,
+        payload: {
+          scope: "parent",
+          phase: "dependencies",
+          installed: result.installed,
+          packageManager: result.packageManager,
+          reason: result.reason,
+          exitCode: result.exitCode
+        }
+      });
+    } catch (error) {
+      execWarn("integrate", "parent validation dependency install failed (best-effort, ignored)", {
+        task: compositeTaskId,
+        cwd: worktreePath,
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
   }
 
   /**
@@ -700,13 +887,37 @@ export class IntegrationAgent {
       conflictDetails?: { files: string[]; cherryPickOutput: string } | undefined;
       preMergeFindings?: PreMergeFinding[] | undefined;
       parentValidation?: ValidationRunResult | undefined;
+      failureCode?: IntegrationFailureCode | undefined;
+      appliedCommits?: AppliedChildCommit[] | undefined;
+      omittedChildCommits?: OmittedChildCommit[] | undefined;
+      validationWorktreePath?: string | undefined;
+      repairAttempts?: IntegrationRepairAttempt[] | undefined;
     }
   ): IntegrationResult {
+    const appliedCommits = extra.appliedCommits ?? [];
+    const omittedChildCommits = extra.omittedChildCommits ?? [];
+    const repairAttempts = extra.repairAttempts ?? [];
     this.traceStore.append({
       type: "integration_completed",
       actor: "system",
       taskId: params.compositeTaskId,
-      payload: { status }
+      payload: {
+        status,
+        ...(extra.failureCode !== undefined ? { failureCode: extra.failureCode } : {}),
+        childTaskIds: params.childResults.map((child) => child.taskId),
+        appliedCommits,
+        omittedChildCommits,
+        repairAttempts,
+        ...(extra.parentValidation !== undefined
+          ? {
+              parentValidation: {
+                passed: extra.parentValidation.passed,
+                exitCode: extra.parentValidation.exitCode
+              },
+              validationWorktreePath: extra.validationWorktreePath
+            }
+          : {})
+      }
     });
 
     return IntegrationResultSchema.parse({
@@ -718,9 +929,27 @@ export class IntegrationAgent {
       repairAttempted: extra.repairAttempted,
       repairResult: extra.repairResult,
       preMergeFindings: extra.preMergeFindings ?? [],
-      parentValidation: extra.parentValidation
+      parentValidation: extra.parentValidation,
+      failureCode: extra.failureCode,
+      appliedCommits,
+      omittedChildCommits,
+      validationWorktreePath: extra.validationWorktreePath,
+      repairAttempts
     });
   }
+}
+
+function omittedFrom(
+  childResults: readonly AgentExecutionResult[],
+  fromIndex: number,
+  reason: IntegrationFailureCode
+): OmittedChildCommit[] {
+  return childResults.slice(fromIndex).map((child) => ({
+    childTaskId: child.taskId,
+    reason,
+    status: child.status,
+    ...(child.commitSha !== undefined ? { commitSha: child.commitSha } : {})
+  }));
 }
 
 function truncate(text: string, max: number): string {

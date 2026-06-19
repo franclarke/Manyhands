@@ -248,6 +248,7 @@ export async function runMockPlanningFlow(
       graph: decomposition.graph,
       contracts,
       riskMatrix,
+      ...(staticConflictSignals.length > 0 ? { staticSignals: staticConflictSignals } : {}),
       maxParallel: options.maxParallel ?? DEFAULT_MAX_PARALLEL,
       policy: schedulerPolicy
     });

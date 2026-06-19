@@ -15,14 +15,18 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
+  RunLifecycleError,
   RunNotFoundError,
   RunValidationError,
+  assertRunActionAllowed,
   getRunRepository
 } from "@/lib/server/runs";
+import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { JsonFileCheckpointSaver } from "@manyhands/orchestrator-graph";
 import { resolveRunsDirectory } from "@/lib/server/runs/repository";
 import { join } from "node:path";
 import type { RunRecord } from "@/lib/server/runs/schema";
+import { isRunnerActive } from "@/lib/server/runs/runner-state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,6 +58,10 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
   try {
     // Fetch the source run to clone metadata
     const sourceRun = await getRunRepository().get(sourceRunId);
+    assertRunActionAllowed(sourceRun, "fork");
+    if (isRunnerActive(sourceRun.runId)) {
+      throw new RunLifecycleError(`Run ${sourceRun.runId} is being driven by an active runner.`);
+    }
 
     // Read the checkpoint to restore from
     const runsDirectory = resolveRunsDirectory();
@@ -121,15 +129,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       }
     }, { status: 201 });
   } catch (error) {
-    if (error instanceof RunNotFoundError) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
+    if (error instanceof RunNotFoundError || error instanceof RunValidationError || error instanceof RunLifecycleError) {
+      return runErrorResponse(error);
     }
-    if (error instanceof RunValidationError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }

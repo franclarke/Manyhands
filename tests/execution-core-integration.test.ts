@@ -7,6 +7,7 @@ import {
   type AgentExecutor,
   type AgentExecutionResult,
   type AgentExecutorOptions,
+  type DependencyInstaller,
   type IntegrationRepairConfig,
   type ValidationRunContext,
   type ValidationRunResult,
@@ -108,8 +109,25 @@ describe("IntegrationAgent", () => {
     expect(result.status).toBe("success");
     expect(result.integrationCommitSha).toBe("INT_HEAD");
     expect(result.repairAttempted).toBe(false);
+    expect(result.appliedCommits).toEqual([
+      { childTaskId: "a", commitSha: "SHA_A", order: 0 },
+      { childTaskId: "b", commitSha: "SHA_B", order: 1 }
+    ]);
+    expect(result.omittedChildCommits).toEqual([]);
     expect(git.opsInvoked().filter((op) => op === "cherryPick")).toHaveLength(2);
-    expect(traceStore.findByType("integration_completed")).toHaveLength(1);
+    expect(traceStore.findByType("integration_completed")).toEqual([
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          status: "success",
+          childTaskIds: ["a", "b"],
+          appliedCommits: [
+            { childTaskId: "a", commitSha: "SHA_A", order: 0 },
+            { childTaskId: "b", commitSha: "SHA_B", order: 1 }
+          ],
+          omittedChildCommits: []
+        })
+      })
+    ]);
   });
 
   it("skips integration when a child did not succeed", async () => {
@@ -129,6 +147,10 @@ describe("IntegrationAgent", () => {
     });
 
     expect(result.status).toBe("child_failed");
+    expect(result.failureCode).toBe("child_failed");
+    expect(result.omittedChildCommits).toEqual([
+      { childTaskId: "b", reason: "child_failed", status: "scope_violation", commitSha: "SHA_B" }
+    ]);
     expect(git.opsInvoked()).not.toContain("cherryPick");
   });
 
@@ -149,11 +171,76 @@ describe("IntegrationAgent", () => {
     });
 
     expect(result.status).toBe("child_failed");
+    expect(result.failureCode).toBe("missing_child_commit");
+    expect(result.omittedChildCommits).toEqual([
+      { childTaskId: "b", reason: "missing_child_commit", status: "success" }
+    ]);
     expect(result.preMergeFindings).toEqual([
       expect.objectContaining({
         code: "missing_child_commit",
         message: expect.stringContaining("b")
       })
+    ]);
+    expect(git.opsInvoked()).not.toContain("cherryPick");
+  });
+
+  it("fails explicitly before cherry-pick when a child commit is not reachable", async () => {
+    const git = new FakeGitRunner({ missingRefs: ["BAD_SHA"] });
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: "/repo"
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("a", "BAD_SHA")],
+      repair
+    });
+
+    expect(result.status).toBe("child_failed");
+    expect(result.failureCode).toBe("invalid_child_commit");
+    expect(result.preMergeFindings).toEqual([
+      expect.objectContaining({
+        code: "invalid_child_commit",
+        message: expect.stringContaining("BAD_SHA")
+      })
+    ]);
+    expect(result.omittedChildCommits).toEqual([
+      { childTaskId: "a", reason: "invalid_child_commit", status: "success", commitSha: "BAD_SHA" }
+    ]);
+    expect(git.opsInvoked()).toContain("revParse");
+    expect(git.opsInvoked()).not.toContain("cherryPick");
+  });
+
+  it("fails explicitly before cherry-pick when successful children report the same commit", async () => {
+    const git = new FakeGitRunner();
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: "/repo"
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("a", "DUP_SHA"), child("b", "DUP_SHA")],
+      repair
+    });
+
+    expect(result.status).toBe("child_failed");
+    expect(result.failureCode).toBe("invalid_child_commit");
+    expect(result.preMergeFindings).toEqual([
+      expect.objectContaining({
+        code: "duplicate_child_commit",
+        message: expect.stringContaining("already reported by a")
+      })
+    ]);
+    expect(result.omittedChildCommits).toEqual([
+      { childTaskId: "b", reason: "invalid_child_commit", status: "success", commitSha: "DUP_SHA" }
     ]);
     expect(git.opsInvoked()).not.toContain("cherryPick");
   });
@@ -192,6 +279,14 @@ describe("IntegrationAgent", () => {
     expect(result.status).toBe("executor_repair_success");
     expect(result.repairAttempted).toBe(true);
     expect(result.repairResult?.status).toBe("success");
+    expect(result.appliedCommits).toEqual([
+      { childTaskId: "a", commitSha: "SHA_A", order: 0 },
+      { childTaskId: "b", commitSha: "REPAIR_SHA", order: 1 }
+    ]);
+    expect(result.repairAttempts).toEqual([
+      { childTaskId: "b", pass: 1, status: "started", files: ["src/b.ts"] },
+      { childTaskId: "b", pass: 1, status: "committed", files: ["src/b.ts"] }
+    ]);
     expect(git.opsInvoked()).toContain("cherryPickAbort");
     expect(traceStore.findByType("cherry_pick_conflict")).toHaveLength(1);
     expect(traceStore.findByType("executor_repair_started")).toHaveLength(1);
@@ -356,9 +451,47 @@ describe("IntegrationAgent", () => {
     });
 
     expect(result.status).toBe("executor_repair_failed");
+    expect(result.failureCode).toBe("repair_failed");
     expect(result.repairResult?.status).toBe("executor_error");
+    expect(result.omittedChildCommits).toEqual([
+      { childTaskId: "b", reason: "repair_failed", status: "success", commitSha: "SHA_B" }
+    ]);
     expect(git.opsInvoked()).toContain("cherryPickAbort");
     expect(git.opsInvoked()).not.toContain("commit");
+  });
+
+  it("fails a cherry-pick conflict explicitly and aborts when repair is disabled", async () => {
+    const git = new FakeGitRunner({
+      cherryPickOutcomes: [{ ok: false, conflictFiles: ["src/a.ts"], output: "CONFLICT" }]
+    });
+    const traceStore = new InMemoryTraceStore();
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore,
+      repoRoot: "/repo"
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("a", "SHA_A"), child("b", "SHA_B")],
+      repair: { ...repair, maxRepairsPerIntegration: 0 }
+    });
+
+    expect(result.status).toBe("executor_repair_failed");
+    expect(result.failureCode).toBe("cherry_pick_conflict");
+    expect(result.conflictDetails?.files).toEqual(["src/a.ts"]);
+    expect(result.appliedCommits).toEqual([]);
+    expect(result.omittedChildCommits).toEqual([
+      { childTaskId: "a", reason: "cherry_pick_conflict", status: "success", commitSha: "SHA_A" },
+      { childTaskId: "b", reason: "cherry_pick_conflict", status: "success", commitSha: "SHA_B" }
+    ]);
+    expect(git.opsInvoked()).toContain("cherryPickAbort");
+    expect(traceStore.findByType("integration_completed")[0]?.payload).toMatchObject({
+      failureCode: "cherry_pick_conflict",
+      omittedChildCommits: result.omittedChildCommits
+    });
   });
 
   it("repairs multiple conflicting children within the integration repair budget", async () => {
@@ -423,6 +556,7 @@ describe("IntegrationAgent", () => {
     });
 
     expect(result.status).toBe("executor_repair_failed");
+    expect(result.failureCode).toBe("repair_failed");
     expect(result.repairAttempted).toBe(true);
     expect(result.repairResult?.status).toBe("executor_error");
     expect(result.integrationCommitSha).toBe("REPAIR_SHA");
@@ -458,6 +592,7 @@ describe("IntegrationAgent", () => {
     });
 
     expect(result.status).toBe("executor_repair_failed");
+    expect(result.failureCode).toBe("cherry_pick_conflict");
     expect(result.repairAttempted).toBe(true);
     expect(result.integrationCommitSha).toBe("REPAIR_SHA");
     expect(git.opsInvoked().filter((op) => op === "commit")).toHaveLength(2);
@@ -534,6 +669,7 @@ describe("IntegrationAgent", () => {
     });
 
     expect(result.status).toBe("executor_repair_failed");
+    expect(result.failureCode).toBe("repair_failed");
     expect(result.repairResult?.status).toBe("validation_failed");
     expect(traceStore.findByType("repair_syntax_rejected")).toHaveLength(2);
     // Malformed code is never committed.
@@ -560,6 +696,85 @@ describe("IntegrationAgent", () => {
     });
 
     expect(result.status).toBe("validation_failed");
+    expect(result.failureCode).toBe("validation_failed");
+    expect(result.validationWorktreePath).toBe(INTEGRATION_WORKTREE.path);
     expect(validationRunner.calls).toHaveLength(1);
+    expect(validationRunner.calls[0]).toEqual({ worktreePath: INTEGRATION_WORKTREE.path, repoRoot: "/repo" });
+  });
+
+  it("installs dependencies before running parent validation", async () => {
+    // Fix 4: parent validation runs against the freshly-composed integration
+    // worktree, which for a greenfield project has a package.json but no
+    // node_modules. Install once, before validation, so build/typecheck resolve.
+    const git = new FakeGitRunner({ heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" } });
+    const order: string[] = [];
+    const installedIn: string[] = [];
+    const dependencyInstaller: DependencyInstaller = {
+      ensure: async ({ cwd }) => {
+        installedIn.push(cwd);
+        order.push("install");
+        return { installed: true, packageManager: "npm" };
+      }
+    };
+    const validationRunner: ValidationRunner = {
+      run: async (): Promise<ValidationRunResult> => {
+        order.push("validate");
+        return { passed: true, output: "", exitCode: 0 };
+      }
+    };
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: "/repo",
+      validationRunner,
+      dependencyInstaller
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("a", "SHA_A")],
+      repair,
+      parentValidationCommands: [{ command: "npm", args: ["run", "build"], timeoutMs: 60_000, cwd: "worktree" }]
+    });
+
+    expect(result.status).toBe("success");
+    expect(installedIn).toEqual([INTEGRATION_WORKTREE.path]);
+    expect(order).toEqual(["install", "validate"]);
+  });
+
+  it("does not let a successful repair hide a failing parent validation", async () => {
+    const git = new FakeGitRunner({
+      heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
+      cherryPickOutcomes: [{ ok: false, conflictFiles: ["src/a.ts"], output: "CONFLICT" }],
+      diffCachedNameOnly: ["src/a.ts"],
+      diffCached: "resolved patch",
+      commitSha: "REPAIR_SHA"
+    });
+    const validationRunner = new FakeValidationRunner({ passed: false, output: "tests failed", exitCode: 1 });
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: "/repo",
+      validationRunner
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("a", "SHA_A")],
+      repair,
+      parentValidationCommands: [{ command: "pnpm", args: ["test"], timeoutMs: 60_000, cwd: "worktree" }]
+    });
+
+    expect(result.status).toBe("validation_failed");
+    expect(result.failureCode).toBe("validation_failed");
+    expect(result.repairAttempted).toBe(true);
+    expect(result.repairResult?.status).toBe("success");
+    expect(result.appliedCommits).toEqual([{ childTaskId: "a", commitSha: "REPAIR_SHA", order: 0 }]);
+    expect(result.parentValidation).toEqual({ passed: false, output: "tests failed", exitCode: 1 });
+    expect(result.validationWorktreePath).toBe(INTEGRATION_WORKTREE.path);
   });
 });

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { lstat, readdir, rm, stat, symlink, unlink } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -32,6 +33,64 @@ export interface CreateWorktreeParams {
  * human already installed, so validation runs against the same toolchain.
  */
 const DEPENDENCY_LINK_DIRS: readonly string[] = ["node_modules"];
+const MAX_WORKTREE_SEGMENT_LENGTH = 64;
+const WINDOWS_RESERVED_SEGMENTS = new Set([
+  "CON",
+  "PRN",
+  "AUX",
+  "NUL",
+  "COM1",
+  "COM2",
+  "COM3",
+  "COM4",
+  "COM5",
+  "COM6",
+  "COM7",
+  "COM8",
+  "COM9",
+  "LPT1",
+  "LPT2",
+  "LPT3",
+  "LPT4",
+  "LPT5",
+  "LPT6",
+  "LPT7",
+  "LPT8",
+  "LPT9"
+]);
+
+export function safeWorktreeSegment(id: string): string {
+  const trimmed = id.trim();
+  const normalized = trimmed
+    .replace(/[^A-Za-z0-9_-]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  const needsRewrite =
+    normalized.length === 0 ||
+    normalized !== trimmed ||
+    normalized.length > MAX_WORKTREE_SEGMENT_LENGTH ||
+    WINDOWS_RESERVED_SEGMENTS.has(normalized.toUpperCase());
+
+  if (!needsRewrite) {
+    return normalized;
+  }
+
+  const hash = createHash("sha256").update(id).digest("hex").slice(0, 8);
+  const prefix =
+    normalized.length === 0 || WINDOWS_RESERVED_SEGMENTS.has(normalized.toUpperCase())
+      ? "id"
+      : normalized.slice(0, MAX_WORKTREE_SEGMENT_LENGTH - hash.length - 1);
+  return `${prefix}-${hash}`;
+}
+
+export function worktreePathFor(params: { worktreesRoot: string; runId: string; taskId: string }): string {
+  const root = params.worktreesRoot.replace(/[\\/]+$/, "");
+  return `${root}/${safeWorktreeSegment(params.runId)}/${safeWorktreeSegment(params.taskId)}`;
+}
+
+export function worktreeBranchFor(params: { runId: string; taskId: string }): string {
+  return `mh/${safeWorktreeSegment(params.runId)}/${safeWorktreeSegment(params.taskId)}`;
+}
 
 export interface UnexpectedCommitDetection {
   committed: boolean;
@@ -56,8 +115,8 @@ export class WorktreeManager {
   }
 
   async create(params: CreateWorktreeParams): Promise<WorktreeRecord> {
-    const path = `${this.worktreesRoot}/${params.runId}/${params.taskId}`;
-    const branch = `mh/${params.runId}/${params.taskId}`;
+    const path = worktreePathFor({ worktreesRoot: this.worktreesRoot, runId: params.runId, taskId: params.taskId });
+    const branch = worktreeBranchFor({ runId: params.runId, taskId: params.taskId });
 
     try {
       await this.git.worktreeAdd({
@@ -210,8 +269,8 @@ export class WorktreeManager {
       taskId: params.taskId,
       runId: params.runId,
       kind: params.kind,
-      path: `${this.worktreesRoot}/${params.runId}/${params.taskId}`,
-      branch: `mh/${params.runId}/${params.taskId}`,
+      path: worktreePathFor({ worktreesRoot: this.worktreesRoot, runId: params.runId, taskId: params.taskId }),
+      branch: worktreeBranchFor({ runId: params.runId, taskId: params.taskId }),
       baseCommit: params.baseCommit,
       status: "active",
       createdAt: this.now()
@@ -265,7 +324,11 @@ export class WorktreeManager {
     runId: string,
     options: { preserveBranchesFor?: ReadonlySet<string> } = {}
   ): Promise<{ removed: string[]; failed: string[] }> {
-    const runRoot = join(this.worktreesRoot, runId);
+    const runSegment = safeWorktreeSegment(runId);
+    const runRoot = join(this.worktreesRoot, runSegment);
+    const preservedSegments = new Set(
+      Array.from(options.preserveBranchesFor ?? []).map((taskId) => safeWorktreeSegment(taskId))
+    );
     let entries: string[];
     try {
       entries = await readdir(runRoot);
@@ -275,22 +338,22 @@ export class WorktreeManager {
 
     const removed: string[] = [];
     const failed: string[] = [];
-    for (const taskId of entries) {
-      const path = join(runRoot, taskId);
-      const branch = `mh/${runId}/${taskId}`;
+    for (const taskSegment of entries) {
+      const path = join(runRoot, taskSegment);
+      const branch = `mh/${runSegment}/${taskSegment}`;
       try {
         await this.unlinkDependencies(path);
         await this.git.worktreeRemove({ repoRoot: this.repoRoot, worktreePath: path, force: true });
-        removed.push(taskId);
+        removed.push(taskSegment);
       } catch (error) {
         execWarn("worktree", "gc: worktree remove failed", {
-          task: taskId,
+          task: taskSegment,
           path,
           cause: error instanceof Error ? error.message : String(error)
         });
-        failed.push(taskId);
+        failed.push(taskSegment);
       }
-      if (options.preserveBranchesFor?.has(taskId) === true) {
+      if (preservedSegments.has(taskSegment)) {
         continue; // The branch anchors a recorded evidence commit.
       }
       try {
@@ -311,6 +374,15 @@ export class WorktreeManager {
 
     execLog("worktree", "gc completed", { runId, removed: removed.length, failed: failed.length });
     return { removed, failed };
+  }
+
+  /**
+   * Current git HEAD of the worktree. Leaf repair reads this before re-running
+   * the agent so the recorder can baseline its unexpected-commit detection
+   * against the orchestrator's prior commit instead of the original baseCommit.
+   */
+  async headOf(record: WorktreeRecord): Promise<string> {
+    return this.git.head(record.path);
   }
 
   async detectUnexpectedCommit(record: WorktreeRecord): Promise<UnexpectedCommitDetection> {

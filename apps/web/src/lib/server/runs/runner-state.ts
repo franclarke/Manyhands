@@ -40,8 +40,7 @@ export function startRunBackgroundTask(
   const tasks = backgroundTasks.get(runId) ?? new Set<Promise<void>>();
   backgroundTasks.set(runId, tasks);
 
-  let tracked: Promise<void>;
-  tracked = Promise.resolve()
+  const tracked = Promise.resolve()
     .then(task)
     .catch((error) => {
       console.error(`[Runner] Background task "${label}" failed for run ${runId}:`, error);

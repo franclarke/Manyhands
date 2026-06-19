@@ -11,6 +11,8 @@ export interface ExecutorRunOutcome {
   stderr: string;
   timedOut: boolean;
   durationMs: number;
+  /** Diagnostic command line used to spawn the executor. Never used as a source of code changes. */
+  commandLine?: string;
   tokensIn?: number;
   tokensOut?: number;
   costUsd?: number;

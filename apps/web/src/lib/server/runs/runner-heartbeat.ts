@@ -14,8 +14,7 @@ export function startHeartbeat(runId: string): () => void {
       if (stopped) return;
       try {
         const repo = getRunRepository();
-        const current = await repo.get(runId);
-        await repo.save({ ...current, heartbeatAt: new Date().toISOString() });
+        await repo.update(runId, (current) => ({ ...current, heartbeatAt: new Date().toISOString() }));
       } catch {
         // best-effort; sweeper will handle persistent failures
       }

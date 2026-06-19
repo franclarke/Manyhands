@@ -7,7 +7,7 @@
  * the decision cards accept exactly the same answers — the postmortem run got
  * stuck precisely because they didn't.
  */
-import { RunValidationError } from "./errors";
+import { RunLifecycleError, RunValidationError } from "./errors";
 import {
   clearExecutionPause,
   decisionFromAnswer,
@@ -15,8 +15,9 @@ import {
   isReplanRequest
 } from "./execution-host";
 import { resumeExecutionPipeline } from "./execution-pipeline";
+import { assertRunActionAllowed } from "./lifecycle";
 import { appendRunEventRequired } from "./run-model-event-log";
-import { startRunBackgroundTask } from "./runner-state";
+import { isRunnerActive, startRunBackgroundTask } from "./runner-state";
 import { replanSubtree } from "./replan-service";
 import type { RunRecord } from "./schema";
 
@@ -39,6 +40,10 @@ export async function answerExecutionGate(
   answer: string,
   now: string
 ): Promise<ExecutionGateAnswerResult> {
+  assertRunActionAllowed(run, "answer_gate");
+  if (isRunnerActive(run.runId)) {
+    throw new RunLifecycleError(`Run ${run.runId} is being driven by an active runner.`);
+  }
   const pending = run.pendingDecision;
   if (run.status !== "paused" || run.pausedDuring !== "running" || pending === undefined) {
     throw new RunValidationError("The run is not paused at an execution gate.");

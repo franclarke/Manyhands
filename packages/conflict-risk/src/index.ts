@@ -23,6 +23,7 @@ export const ConflictEvidenceSignalSchema = z.union([
   z.literal("explicit_dependency"),
   z.literal("static_same_declared_symbol_file"),
   z.literal("static_producer_consumer_symbol"),
+  z.literal("static_import_dependency"),
   z.literal("static_shared_import_dependency"),
   z.literal("static_shared_schema_dependency"),
   z.literal("static_test_fixture_overlap"),
@@ -86,6 +87,7 @@ export const TaskPairRiskMatrixSchema = z.array(ConflictPredictionSchema);
 export const StaticConflictSignalTypeSchema = z.union([
   z.literal("same_declared_symbol_file"),
   z.literal("producer_consumer_symbol"),
+  z.literal("import_dependency"),
   z.literal("shared_import_dependency"),
   z.literal("shared_schema_dependency"),
   z.literal("test_fixture_overlap"),
@@ -149,6 +151,11 @@ export function buildTaskPairRiskMatrix(input: BuildRiskMatrixInput): TaskPairRi
   return predictions;
 }
 
+export function buildRepositoryAwareRiskMatrix(input: BuildStaticConflictSignalsInput): TaskPairRiskMatrix {
+  const staticSignals = buildStaticConflictSignals(input);
+  return buildTaskPairRiskMatrix({ contracts: input.contracts, staticSignals });
+}
+
 export function predictConflict(
   taskA: AgentTaskContract,
   taskB: AgentTaskContract,
@@ -171,7 +178,7 @@ export function predictConflict(
     evidence.push({
       signal: "file_overlap",
       detail: `both tasks expect to change ${exactSharedFiles.join(", ")}`,
-      weight: 0.45
+      weight: 0.75
     });
   } else if (overlappingPaths.length > 0) {
     evidence.push({
@@ -265,6 +272,7 @@ export function buildStaticConflictSignals(input: BuildStaticConflictSignalsInpu
 
       signals.push(...sameDeclaredSymbolFileSignals(left, right, index));
       signals.push(...producerConsumerSymbolSignals(left, right, index));
+      signals.push(...importDependencyBetweenTouchedFilesSignals(left, right, index));
       signals.push(...sharedImportDependencySignals(left, right, index));
       signals.push(...sharedSchemaDependencySignals(left, right, index));
       signals.push(...testFixtureOverlapSignals(left, right, index));
@@ -547,6 +555,48 @@ function producerConsumerSignal(
       ...(filePath ? { filePath } : {})
     }]
   });
+}
+
+function importDependencyBetweenTouchedFilesSignals(
+  taskA: AgentTaskContract,
+  taskB: AgentTaskContract,
+  index: RepositoryIndex
+): StaticConflictSignal[] {
+  const taskAFiles = new Set(contractFilePaths(taskA));
+  const taskBFiles = new Set(contractFilePaths(taskB));
+  const signals: StaticConflictSignal[] = [];
+
+  signals.push(...importDependencySignals(taskA.taskId, taskB.taskId, taskAFiles, taskBFiles, index));
+  signals.push(...importDependencySignals(taskB.taskId, taskA.taskId, taskBFiles, taskAFiles, index));
+
+  return signals;
+}
+
+function importDependencySignals(
+  exportedTaskId: string,
+  importingTaskId: string,
+  exportedFiles: ReadonlySet<string>,
+  importingFiles: ReadonlySet<string>,
+  index: RepositoryIndex
+): StaticConflictSignal[] {
+  return index.imports
+    .filter((item) => importingFiles.has(item.filePath))
+    .map((item) => ({
+      importEntry: item,
+      dependency: resolveModuleSpecifier(item.filePath, item.moduleSpecifier, index)
+    }))
+    .filter(({ dependency }) => exportedFiles.has(dependency))
+    .map(({ importEntry, dependency }) => staticSignal({
+      taskAId: exportedTaskId,
+      taskBId: importingTaskId,
+      type: "import_dependency",
+      severity: "high",
+      evidence: [{
+        detail: `${importingTaskId} touches ${importEntry.filePath}, which imports ${dependency} touched by ${exportedTaskId}`,
+        filePath: dependency,
+        moduleSpecifier: importEntry.moduleSpecifier
+      }]
+    }));
 }
 
 function sharedImportDependencySignals(

@@ -3,6 +3,7 @@ import {
   RunLifecycleError,
   RunNotFoundError,
   RunValidationError,
+  assertRunActionAllowed,
   assertManualNodeExecutionReady,
   getRunRepository,
   markRunnerInactive,
@@ -24,6 +25,7 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
   try {
     const repo = getRunRepository();
     const run = await repo.get(id);
+    assertRunActionAllowed(run, "manual_node_run");
     if (!tryMarkRunnerActive(run.runId)) {
       throw new RunLifecycleError(`Run ${run.runId} is being driven by an active runner.`);
     }

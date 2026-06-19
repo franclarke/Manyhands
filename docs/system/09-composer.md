@@ -19,13 +19,21 @@ y fallar de forma explícita cuando no puede producir un resultado confiable.
 ## Camino Limpio
 
 1. Verifica que los hijos requeridos tengan resultado exitoso.
-2. Aplica cada commit hijo con `git cherry-pick` en orden topológico.
-3. Ejecuta `parentValidationCommands` si existen.
-4. Registra un commit de integración.
+2. Verifica que cada hijo exitoso tenga un commit alcanzable y único.
+3. Aplica cada commit hijo con `git cherry-pick` en orden topológico.
+4. Registra `appliedCommits` en el orden real de aplicación.
+5. Ejecuta `parentValidationCommands` si existen, siempre sobre el worktree
+   integrado.
+6. Registra un commit de integración.
+
+Un hijo `success` sin `commitSha`, un commit no alcanzable o un SHA duplicado
+falla antes del cherry-pick. El resultado usa `failureCode` estable y
+`omittedChildCommits` para que el parent no pueda parecer exitoso después de
+omitir trabajo hijo.
 
 ## Repair Semántico
 
-Cuando hay conflicto, Gemini recibe:
+Cuando hay conflicto, el executor de repair recibe:
 
 - goal y acceptance criteria del composite padre;
 - `sharedInterface` canónico relevante;
@@ -35,6 +43,12 @@ Cuando hay conflicto, Gemini recibe:
 
 El objetivo del repair no es reconciliar texto a ciegas, sino producir código que
 honre el contrato del composite.
+
+Cada pasada queda resumida en `repairAttempts` (`started`,
+`syntax_rejected`, `committed` o `failed`). Si el repair produce un commit pero
+la validación parent falla, la integración sigue fallando con
+`failureCode: "validation_failed"`; el commit reparado queda en `appliedCommits`,
+pero no convierte el parent en success.
 
 ## Gate Sintáctico
 
@@ -52,6 +66,17 @@ reinyectarse para una segunda pasada según la política vigente.
 - `internal_error`
 - `retry_pending` (tombstone transitorio: solo existe dentro del Command del
   conflict gate; el reducer lo consume borrando la entrada — nunca se persiste)
+
+`status` se mantiene compatible para UI y reducers existentes. `failureCode`
+agrega la razón estable y machine-readable:
+
+- `child_failed`
+- `missing_child_commit`
+- `invalid_child_commit`
+- `cherry_pick_conflict`
+- `repair_failed`
+- `validation_failed`
+- `internal_error`
 
 ## Clasificación De Fallos y Retry
 
@@ -78,11 +103,23 @@ decisión humana — un fallo persistente re-gatea, nunca loopea solo.
 compartidas y comandos de validación.
 
 **Produce:** `IntegrationResult` con estado, commit de integración, detalles de
-conflicto, resultado de repair y validación padre.
+conflicto, resultado de repair, validación padre, `failureCode`,
+`appliedCommits`, `omittedChildCommits`, `validationWorktreePath` y
+`repairAttempts`.
+
+El evento/traza `integration_completed` incluye la misma evidencia compacta de
+commits aplicados/omitidos y attempts de repair. No es una transacción durable
+separada del git commit, pero sí evita que el replay/auditoría vea un parent
+como exitoso sin saber qué hijos entraron realmente.
 
 ## Decisiones De Diseño
 
 Cherry-pick mantiene commits individuales trazables y evita merge commits
 ruidosos. El repair usa contexto semántico porque los conflictos relevantes en
 este sistema suelen ser desacuerdos de contrato, no solo choques textuales.
+
+La validación de commits hijo ocurre antes de mutar el worktree de integración:
+es preferible fallar temprano con evidencia (`missing_child_commit`,
+`invalid_child_commit`) que abrir una secuencia de cherry-picks donde el parent
+podría terminar con un subconjunto silencioso de hijos.
 

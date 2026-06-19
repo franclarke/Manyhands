@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { WorktreeError, WorktreeManager, type WorktreeRecord } from "@manyhands/execution-core";
+import { WorktreeError, WorktreeManager, safeWorktreeSegment, type WorktreeRecord } from "@manyhands/execution-core";
 
 import { FakeGitRunner } from "./helpers/fake-git-runner";
 
 const REPO_ROOT = "/repo";
+const WORKTREES_ROOT = "/repo/.manyhands/worktrees";
 
 function makeManager(git: FakeGitRunner): WorktreeManager {
   return new WorktreeManager({
     git,
     repoRoot: REPO_ROOT,
-    worktreesRoot: "/repo/.manyhands/worktrees",
+    worktreesRoot: WORKTREES_ROOT,
     now: () => "2026-05-28T00:00:00.000Z"
   });
 }
@@ -45,6 +46,29 @@ describe("WorktreeManager.create", () => {
       baseCommit: "BASE_SHA",
       status: "active",
       createdAt: "2026-05-28T00:00:00.000Z"
+    });
+  });
+
+  it("uses filesystem- and git-ref-safe physical names without changing the logical task id", async () => {
+    const git = new FakeGitRunner();
+    const manager = makeManager(git);
+    const taskId = "task:ui";
+    const safeTaskId = safeWorktreeSegment(taskId);
+
+    const record = await manager.create({
+      taskId,
+      runId: "run-1",
+      kind: "leaf",
+      baseCommit: "BASE_SHA"
+    });
+
+    expect(safeTaskId).not.toContain(":");
+    expect(record.taskId).toBe(taskId);
+    expect(record.path).toBe(`/repo/.manyhands/worktrees/run-1/${safeTaskId}`);
+    expect(record.branch).toBe(`mh/run-1/${safeTaskId}`);
+    expect(git.calls[0]?.args).toMatchObject({
+      worktreePath: `/repo/.manyhands/worktrees/run-1/${safeTaskId}`,
+      branch: `mh/run-1/${safeTaskId}`
     });
   });
 

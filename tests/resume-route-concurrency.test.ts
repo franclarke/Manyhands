@@ -13,11 +13,15 @@ import { POST as POST_PAUSE } from "@/app/api/runs/[id]/pause/route";
 import { POST as POST_RESUME } from "@/app/api/runs/[id]/resume/route";
 import { POST as POST_ANSWER } from "@/app/api/runs/[id]/answer/route";
 import { POST as POST_RESTART } from "@/app/api/runs/[id]/restart/route";
+import { POST as POST_FORK } from "@/app/api/runs/[id]/fork/route";
+import { readRunModelEvents } from "@/lib/server/runs/run-model-event-log";
+import { markRunnerActive, markRunnerInactive } from "@/lib/server/runs/runner-state";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import type { RunRecord } from "@/lib/server/runs/schema";
 
 let tempDir: string;
 let previousRunsDir: string | undefined;
+const activeRunIds = new Set<string>();
 
 beforeEach(async () => {
   tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-resume-conc-"));
@@ -27,6 +31,10 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  for (const runId of activeRunIds) {
+    markRunnerInactive(runId);
+  }
+  activeRunIds.clear();
   if (previousRunsDir === undefined) delete process.env.MANYHANDS_RUNS_DIR;
   else process.env.MANYHANDS_RUNS_DIR = previousRunsDir;
   resetRunRepositoryForTests();
@@ -68,6 +76,17 @@ function post(handler: RoutePost, runId: string, body: unknown): Promise<Respons
   );
 }
 
+function postFork(runId: string, body: unknown): Promise<Response> {
+  return POST_FORK(
+    new Request("http://mh.test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }),
+    { params: Promise.resolve({ id: runId }) }
+  );
+}
+
 describe("duplicate HITL decisions at the route seam", () => {
   it("pause: claims a running run atomically and records pausedDuring", async () => {
     const saved = await getRunRepository().save(makeRun({ runId: "run-pause", status: "running" }));
@@ -86,6 +105,24 @@ describe("duplicate HITL decisions at the route seam", () => {
     expect(response.status).toBe(409);
     const run = await getRunRepository().get("run-pause-stale");
     expect(run.status).toBe("generating");
+  });
+
+  it("pause: terminal runs are rejected without mutation", async () => {
+    await getRunRepository().save(makeRun({ runId: "run-pause-terminal", status: "completed" }));
+    const response = await post(POST_PAUSE, "run-pause-terminal", {});
+
+    expect(response.status).toBe(409);
+    const run = await getRunRepository().get("run-pause-terminal");
+    expect(run.status).toBe("completed");
+    expect(run.pausedDuring).toBeUndefined();
+  });
+
+  it("resume: non-paused runs are rejected before mutation", async () => {
+    await getRunRepository().save(makeRun({ runId: "run-resume-invalid", status: "running" }));
+    const response = await post(POST_RESUME, "run-resume-invalid", {});
+
+    expect(response.status).toBe(409);
+    expect((await getRunRepository().get("run-resume-invalid")).status).toBe("running");
   });
 
   it("resume: plain pause consumes once and duplicate request gets 409", async () => {
@@ -136,6 +173,33 @@ describe("duplicate HITL decisions at the route seam", () => {
     const loser = first.status === 409 ? first : second;
     const body = (await loser.json()) as { error: string; conflict?: { currentStatus: string } };
     expect(body.conflict?.currentStatus).toBe("running");
+  });
+
+  it("resume: gate decisions are rejected while a runner is already active", async () => {
+    const runId = "run-gate-active-runner";
+    await getRunRepository().save(
+      makeRun({
+        runId,
+        status: "paused",
+        pausedDuring: "running",
+        pendingDecision: {
+          gate: "leaf_validation_failed",
+          gateId: "leaf_validation_failed:task-1:active01",
+          taskId: "task-1",
+          validationOutput: "tests failed"
+        },
+        pendingQuestion: { nodeId: "task-1", question: "Continuar?", options: ["Reintentar", "Abortar"] }
+      })
+    );
+    markRunnerActive(runId);
+    activeRunIds.add(runId);
+
+    const response = await post(POST_RESUME, runId, { action: "retry_repair" });
+
+    expect(response.status).toBe(409);
+    const run = await getRunRepository().get(runId);
+    expect(run.status).toBe("paused");
+    expect(run.pendingDecision?.gateId).toBe("leaf_validation_failed:task-1:active01");
   });
 
   it("resume: a stale gateId cannot resolve a re-minted gate", async () => {
@@ -199,11 +263,54 @@ describe("duplicate HITL decisions at the route seam", () => {
   });
 
   it("restart: duplicate restarts — exactly one claims the run", async () => {
-    await getRunRepository().save(makeRun({ runId: "run-restart", status: "failed", failedDuring: "generating" }));
+    await getRunRepository().save(
+      makeRun({
+        runId: "run-restart",
+        status: "failed",
+        failedDuring: "generating",
+        pausedDuring: "generating",
+        pendingQuestion: { nodeId: "stale-node", question: "Stale?", options: ["yes", "no"] }
+      })
+    );
     const [first, second] = await Promise.all([
       post(POST_RESTART, "run-restart", {}),
       post(POST_RESTART, "run-restart", {})
     ]);
     expect([first.status, second.status].sort()).toEqual([200, 409]);
+    const run = await getRunRepository().get("run-restart");
+    expect(run.pendingQuestion).toBeUndefined();
+    expect(run.pausedDuring).toBeUndefined();
+    const events = await readRunModelEvents("run-restart");
+    expect(
+      events.some(
+        (event) =>
+          event.type === "run.status.changed" &&
+          (event.payload as { status?: string }).status === "generating"
+      )
+    ).toBe(true);
+  });
+
+  it("restart: active runner is rejected before the restartable state is consumed", async () => {
+    const runId = "run-restart-active";
+    await getRunRepository().save(makeRun({ runId, status: "failed", failedDuring: "running" }));
+    markRunnerActive(runId);
+    activeRunIds.add(runId);
+
+    const response = await post(POST_RESTART, runId, {});
+
+    expect(response.status).toBe(409);
+    expect((await getRunRepository().get(runId)).status).toBe("failed");
+  });
+
+  it("fork: active runner is rejected before cloning a moving run", async () => {
+    const runId = "run-fork-active";
+    await getRunRepository().save(makeRun({ runId, status: "approved" }));
+    markRunnerActive(runId);
+    activeRunIds.add(runId);
+
+    const response = await postFork(runId, {});
+
+    expect(response.status).toBe(409);
+    await expect(getRunRepository().get(runId)).resolves.toMatchObject({ status: "approved" });
   });
 });

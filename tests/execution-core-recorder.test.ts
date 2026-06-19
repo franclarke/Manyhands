@@ -280,6 +280,31 @@ describe("ResultRecorder", () => {
     expect(traceStore.findByType("unexpected_commit_detected")).toHaveLength(1);
   });
 
+  it("uses expectedHead, not baseCommit, as the unexpected-commit baseline (repair re-entry)", async () => {
+    // On leaf repair the worktree HEAD already sits at the orchestrator's prior
+    // commit, which differs from baseCommit. Passing it as expectedHead means a
+    // repair agent that does not commit is NOT mistaken for an unexpected commit,
+    // so the orchestrator can commit the repaired diff normally.
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "ORCH_SHA" },
+      diffCachedNameOnly: ["src/routes/tasks.ts"],
+      diffCached: "patch",
+      commitSha: "REPAIR_SHA"
+    });
+    const recorder = new ResultRecorder({ git, traceStore: new InMemoryTraceStore() });
+
+    const result = await recorder.record({
+      worktree: WORKTREE,
+      executorOutcome: okOutcome(),
+      expectedHead: "ORCH_SHA",
+      executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] }
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.commitSha).toBe("REPAIR_SHA");
+    expect(result.agentCommittedUnexpectedly).toBeFalsy();
+  });
+
   it("accepts an unexpected agent commit under the accept policy when in scope", async () => {
     const git = new FakeGitRunner({
       heads: { [WORKTREE.path]: "AGENT_SHA" },

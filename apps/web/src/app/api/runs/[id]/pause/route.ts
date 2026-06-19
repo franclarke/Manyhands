@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   appendStatusEventOrRollback,
+  assertRunActionAllowed,
   assertTransition,
   claimRunMutation,
   requireCapturedRunRecord,
@@ -31,6 +32,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       },
       (current) => {
         previous = current;
+        assertRunActionAllowed(current, "pause");
         assertTransition(current.status, "paused");
         return {
           ...current,

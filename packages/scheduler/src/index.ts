@@ -1,9 +1,12 @@
 import {
+  buildStaticConflictSignals,
   buildTaskPairRiskMatrix,
   findRiskPrediction,
   type ConflictPrediction,
   type ConflictEvidenceSignal,
   type ConflictRiskLevel,
+  type BuildStaticConflictSignalsInput,
+  type StaticConflictSignal,
   type TaskPairRiskMatrix
 } from "@manyhands/conflict-risk";
 import type { AgentTaskContract } from "@manyhands/contracts";
@@ -27,6 +30,8 @@ export interface SchedulerInput {
   graph: TaskGraph;
   contracts: Record<string, AgentTaskContract>;
   riskMatrix: TaskPairRiskMatrix;
+  repositoryIndex?: BuildStaticConflictSignalsInput["repositoryIndex"];
+  staticSignals?: readonly StaticConflictSignal[];
   maxParallel: number;
   policy: SchedulingPolicy;
 }
@@ -34,6 +39,7 @@ export interface SchedulerInput {
 export type SchedulingWarningCode =
   | "missing_contract"
   | "empty_scope"
+  | "missing_repository_index"
   | "risk_matrix_missing"
   | "risk_matrix_incomplete"
   | "parallel_naive_explicit";
@@ -62,6 +68,8 @@ export interface SchedulingSafetyContextInput {
   taskIds?: readonly string[];
   contracts?: Record<string, AgentTaskContract>;
   riskMatrix?: TaskPairRiskMatrix;
+  repositoryIndex?: BuildStaticConflictSignalsInput["repositoryIndex"];
+  staticSignals?: readonly StaticConflictSignal[];
   policy?: SchedulingPolicy;
 }
 
@@ -194,6 +202,8 @@ export interface ScopeAwareWaveInput {
   /** Frontier candidates, dependency-ready, in stable priority order. */
   candidates: readonly string[];
   riskMatrix?: TaskPairRiskMatrix;
+  repositoryIndex?: BuildStaticConflictSignalsInput["repositoryIndex"];
+  staticSignals?: readonly StaticConflictSignal[];
   /** Optional hard cap on wave width; omitted = unbounded (D9). */
   maxParallel?: number;
 }
@@ -204,7 +214,9 @@ export function selectScopeAwareWave(input: ScopeAwareWaveInput): string[] {
     graph: input.graph,
     taskIds: input.candidates,
     policy: "risk_aware",
-    ...(input.riskMatrix !== undefined ? { riskMatrix: input.riskMatrix } : {})
+    ...(input.riskMatrix !== undefined ? { riskMatrix: input.riskMatrix } : {}),
+    ...(input.repositoryIndex !== undefined ? { repositoryIndex: input.repositoryIndex } : {}),
+    ...(input.staticSignals !== undefined ? { staticSignals: input.staticSignals } : {})
   }).riskMatrix;
   const scopes = new Map<string, string[][]>(
     input.candidates.map((taskId) => [taskId, scopeSignature(input.graph, taskId)])
@@ -280,7 +292,12 @@ export function buildSchedulingSafetyContext(input: SchedulingSafetyContextInput
       : contractsFromGraph(input.graph, taskIds);
   const warnings: SchedulingWarning[] = [];
   const providedRiskMatrix = input.riskMatrix ?? [];
-  const generatedRiskMatrix = buildTaskPairRiskMatrix({ contracts });
+  const staticSignals =
+    input.staticSignals ??
+    (input.repositoryIndex !== undefined
+      ? buildStaticConflictSignals({ contracts, repositoryIndex: input.repositoryIndex })
+      : []);
+  const generatedRiskMatrix = buildTaskPairRiskMatrix({ contracts, staticSignals });
 
   if (input.policy === "parallel_naive") {
     warnings.push({
@@ -295,6 +312,14 @@ export function buildSchedulingSafetyContext(input: SchedulingSafetyContextInput
       code: "risk_matrix_missing",
       taskIds: [...taskIds],
       message: "risk_aware scheduling generated a risk matrix from task contracts because none was provided."
+    });
+  }
+
+  if (input.policy !== "parallel_naive" && input.repositoryIndex === undefined && input.staticSignals === undefined) {
+    warnings.push({
+      code: "missing_repository_index",
+      taskIds: [...taskIds],
+      message: "repository index was unavailable; risk_aware scheduling used contract/scope heuristics only."
     });
   }
 
@@ -384,6 +409,8 @@ export function scheduleTasks(input: SchedulerInput): SchedulerPlan {
           graph: input.graph,
           contracts: input.contracts,
           riskMatrix: input.riskMatrix,
+          ...(input.repositoryIndex !== undefined ? { repositoryIndex: input.repositoryIndex } : {}),
+          ...(input.staticSignals !== undefined ? { staticSignals: input.staticSignals } : {}),
           policy: input.policy
         })
       : undefined;

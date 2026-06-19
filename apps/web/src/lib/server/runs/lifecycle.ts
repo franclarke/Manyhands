@@ -1,5 +1,5 @@
 import { RunLifecycleError } from "./errors";
-import type { RunStatus } from "./schema";
+import type { RunRecord, RunStatus } from "./schema";
 
 const ALLOWED_TRANSITIONS: Record<RunStatus, ReadonlyArray<RunStatus>> = {
   created: ["generating", "failed"],
@@ -12,7 +12,7 @@ const ALLOWED_TRANSITIONS: Record<RunStatus, ReadonlyArray<RunStatus>> = {
   // Re-open (review actions): let the user re-run a node after a finished run.
   completed: ["approved"],
   completed_with_accepted: ["approved"],
-  failed: ["approved"]
+  failed: ["approved", "generating"]
 };
 
 export function assertTransition(from: RunStatus, to: RunStatus): void {
@@ -30,6 +30,55 @@ export function canPause(status: RunStatus): boolean {
 
 export function canRestart(status: RunStatus): boolean {
   return status === "interrupted" || status === "failed";
+}
+
+export type RunLifecycleAction =
+  | "start"
+  | "pause"
+  | "resume"
+  | "cancel"
+  | "answer_gate"
+  | "approve_plan"
+  | "replan"
+  | "restart"
+  | "fork"
+  | "manual_node_run"
+  | "manual_node_review"
+  | "manual_node_rerun";
+
+const ACTION_ALLOWED_STATUSES: Record<RunLifecycleAction, ReadonlyArray<RunStatus>> = {
+  start: ["approved"],
+  pause: ["generating", "running"],
+  resume: ["paused"],
+  cancel: ["generating", "running", "paused"],
+  answer_gate: ["paused"],
+  approve_plan: ["needs_review"],
+  replan: ["running"],
+  restart: ["interrupted", "failed"],
+  // Forking a moving run would clone a checkpoint/snapshot pair while the
+  // runner may still be writing both. Keep forks to stable, user-visible states.
+  fork: ["created", "paused", "needs_review", "approved", "interrupted", "completed", "completed_with_accepted", "failed"],
+  manual_node_run: ["approved"],
+  manual_node_review: ["approved", "completed", "completed_with_accepted", "failed"],
+  manual_node_rerun: ["approved", "completed", "completed_with_accepted", "failed"]
+};
+
+export function allowedStatusesForAction(action: RunLifecycleAction): ReadonlyArray<RunStatus> {
+  return ACTION_ALLOWED_STATUSES[action];
+}
+
+export function assertRunActionAllowed(
+  runOrStatus: Pick<RunRecord, "status"> | RunStatus,
+  action: RunLifecycleAction
+): void {
+  const status = typeof runOrStatus === "string" ? runOrStatus : runOrStatus.status;
+  const allowed = ACTION_ALLOWED_STATUSES[action];
+  if (!allowed.includes(status)) {
+    throw new RunLifecycleError(
+      `Cannot ${action.replaceAll("_", " ")} run from status "${status}". ` +
+        `Allowed statuses: ${allowed.join(", ")}.`
+    );
+  }
 }
 
 /** Minimal run shape the restart route needs to choose which pipeline to resume. */

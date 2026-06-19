@@ -47,11 +47,16 @@ function depsFor(child: ReturnType<typeof fakeChild>) {
 describe("buildCodexArgs", () => {
   it("runs codex exec headless with a writable sandbox and stdin prompt", () => {
     expect(buildCodexArgs(optionsFor("/repo"))).toEqual([
+      "--sandbox",
+      "workspace-write",
+      "--ask-for-approval",
+      "never",
       "exec",
       "--model",
       "gpt-5-codex",
-      "--sandbox",
-      "workspace-write",
+      "--color",
+      "never",
+      "--ephemeral",
       "--skip-git-repo-check",
       "-"
     ]);
@@ -59,10 +64,16 @@ describe("buildCodexArgs", () => {
 
   it("swaps the sandbox for full bypass when approvals are bypassed", () => {
     expect(buildCodexArgs(optionsFor("/repo", { bypassApprovals: true }))).toEqual([
+      "--sandbox",
+      "danger-full-access",
+      "--ask-for-approval",
+      "never",
       "exec",
       "--model",
       "gpt-5-codex",
-      "--dangerously-bypass-approvals-and-sandbox",
+      "--color",
+      "never",
+      "--ephemeral",
       "--skip-git-repo-check",
       "-"
     ]);

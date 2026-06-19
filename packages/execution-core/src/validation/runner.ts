@@ -32,29 +32,39 @@ type SpawnFn = (
 
 export interface ChildProcessValidationRunnerDeps {
   spawn?: SpawnFn;
-  /** Run commands through a shell. Defaults to true on Windows, where npm/pnpm/npx are .cmd shims spawn() can't exec directly. */
+  /** Run commands through a shell. Defaults to false so structured args are never shell-interpolated. */
   useShell?: boolean;
+  /** Injectable platform for Windows shim tests. Defaults to process.platform. */
+  platform?: NodeJS.Platform;
 }
 
 const TIMEOUT_EXIT_CODE = 124;
 const UNSAFE_COMMAND_EXIT_CODE = 126;
 const SPAWN_FAILURE_EXIT_CODE = 127;
+const WINDOWS_CMD_SHIM_COMMANDS = new Set(["corepack", "npm", "npx", "pnpm", "yarn", "yarnpkg"]);
 
 // Under a shell a missing binary no longer surfaces as a spawn `error` event:
 // the shell itself exits non-zero with a "not found" message. Normalize that
 // back to 127 so failure classification can still tell "binary missing" (infra)
 // apart from "tests failed" (code).
+//
+// The TypeScript clause covers a sharper trap: a project with no local
+// TypeScript runs `npx tsc`, which resolves to the squatted `tsc` npm package.
+// It exits 1 with "This is not the tsc command you are looking for" — a missing
+// toolchain, not a type error. Treat it as infra (127), never as broken code.
 const BINARY_NOT_FOUND_PATTERN =
-  /is not recognized as an internal or external command|command not found|no se reconoce como un comando interno o externo/i;
+  /is not recognized as an internal or external command|command not found|no se reconoce como un comando interno o externo|this is not the tsc command you are looking for|to get access to the typescript compiler/i;
 
 /** ValidationRunner backed by child processes. spawn is injectable for tests. */
 export class ChildProcessValidationRunner implements ValidationRunner {
   private readonly spawnFn: SpawnFn;
   private readonly useShell: boolean;
+  private readonly platform: NodeJS.Platform;
 
   constructor(deps: ChildProcessValidationRunnerDeps = {}) {
     this.spawnFn = deps.spawn ?? spawn;
-    this.useShell = deps.useShell ?? process.platform === "win32";
+    this.useShell = deps.useShell ?? false;
+    this.platform = deps.platform ?? process.platform;
   }
 
   async run(
@@ -87,7 +97,10 @@ export class ChildProcessValidationRunner implements ValidationRunner {
     command: ExecutionValidationCommand,
     cwd: string
   ): Promise<{ exitCode: number; output: string }> {
-    const safetyIssues = validationCommandSafetyIssues(command.command, command.args);
+    const spawnCommand = this.buildSpawnCommand(command);
+    const safetyIssues = validationCommandSafetyIssues(command.command, command.args, {
+      shell: this.useShell || spawnCommand.usesShellSyntax
+    });
     if (safetyIssues.length > 0) {
       return Promise.resolve({
         exitCode: UNSAFE_COMMAND_EXIT_CODE,
@@ -96,11 +109,20 @@ export class ChildProcessValidationRunner implements ValidationRunner {
     }
 
     return new Promise((resolve) => {
-      const child = this.spawnFn(command.command, command.args, {
-        cwd,
-        stdio: ["ignore", "pipe", "pipe"],
-        shell: this.useShell
-      });
+      let child: ChildProcess;
+      try {
+        child = this.spawnFn(spawnCommand.command, spawnCommand.args, {
+          cwd,
+          stdio: ["ignore", "pipe", "pipe"],
+          shell: this.useShell
+        });
+      } catch (error) {
+        resolve({
+          exitCode: SPAWN_FAILURE_EXIT_CODE,
+          output: error instanceof Error ? error.message : String(error)
+        });
+        return;
+      }
 
       let output = "";
       let settled = false;
@@ -137,5 +159,25 @@ export class ChildProcessValidationRunner implements ValidationRunner {
         finish({ exitCode, output });
       });
     });
+  }
+
+  private buildSpawnCommand(command: ExecutionValidationCommand): {
+    command: string;
+    args: readonly string[];
+    usesShellSyntax: boolean;
+  } {
+    if (
+      this.platform === "win32" &&
+      !this.useShell &&
+      WINDOWS_CMD_SHIM_COMMANDS.has(command.command.toLowerCase())
+    ) {
+      return {
+        command: "cmd.exe",
+        args: ["/d", "/s", "/c", command.command, ...command.args],
+        usesShellSyntax: true
+      };
+    }
+
+    return { command: command.command, args: command.args, usesShellSyntax: false };
   }
 }

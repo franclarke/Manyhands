@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { SimpleGitRunner } from "../git/runner.js";
-import { WorktreeManager } from "../worktree/manager.js";
+import { WorktreeManager, worktreeBranchFor, worktreePathFor } from "../worktree/manager.js";
 import type { TaskGraph } from "@manyhands/task-graph";
 import type { AgentExecutionResult, IntegrationResult } from "../types.js";
 
@@ -135,8 +135,12 @@ export class AmendmentsEngine {
     // never-created worktrees are not errors).
     const worktreeManager = new WorktreeManager({ git: this.git, repoRoot });
     for (const taskId of invalidatedTaskIds) {
-      const worktreePath = join(repoRoot, ".manyhands", "worktrees", runId, taskId);
-      const branch = `mh/${runId}/${taskId}`;
+      const worktreePath = worktreePathFor({
+        worktreesRoot: join(repoRoot, ".manyhands", "worktrees"),
+        runId,
+        taskId
+      });
+      const branch = worktreeBranchFor({ runId, taskId });
       await worktreeManager
         .clean({
           taskId,
