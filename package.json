@@ -8,7 +8,9 @@
   "scripts": {
     "build": "pnpm build:packages",
     "build:packages": "pnpm -r --filter \"./packages/*\" build",
-    "web:dev": "pnpm build:packages && pnpm --filter @manyhands/web dev",
+    "dev": "node scripts/manyhands-dev.mjs",
+    "web:dev": "node scripts/manyhands-dev.mjs",
+    "web:dev:raw": "pnpm build:packages && pnpm --filter @manyhands/web dev",
     "web:build": "pnpm build:packages && pnpm --filter @manyhands/web build",
     "web:typecheck": "pnpm build:packages && pnpm --filter @manyhands/web typecheck",
     "web:lint": "pnpm --filter @manyhands/web lint",
