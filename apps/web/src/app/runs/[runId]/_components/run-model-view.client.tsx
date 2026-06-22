@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { buildFocusView, type FocusTarget } from "@/lib/run-model/focus-view";
-import { selectMinimalWorkspaceView, type ProductStage } from "@/lib/run-model/minimal-workspace-view";
+import { selectMinimalWorkspaceView } from "@/lib/run-model/minimal-workspace-view";
 import type { Run, RunEvent, RunModel, Node } from "@/lib/run-model/types";
-import type { UiStatus } from "@/lib/status";
+import { runUiStatus, STATUS_META } from "@/lib/status";
 import { StatusPill } from "@/components/ui/status-pill";
 import { FocusPanel } from "@/components/run-model/focus-panel";
+import { RunTimeline } from "@/components/run-model/run-timeline";
+import { selectRunTimeline } from "@/lib/run-model/run-phases";
 import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
 import { ChatRuntimeProvider } from "@/components/chat/assistant-provider";
 import { ChatThread, ChatRail } from "@/components/chat/thread";
@@ -15,6 +17,8 @@ import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-pan
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { ArtifactTabs } from "./artifact-tabs.client";
 import { DeliveryPanel } from "./delivery-panel.client";
+import { focusDockMode } from "@/lib/cockpit-layout";
+import { useViewportWidth } from "@/lib/use-viewport-width";
 import { Download, Pause, Play } from "lucide-react";
 
 const SSR_NOOP_STORAGE: Pick<Storage, "getItem" | "setItem"> = {
@@ -36,7 +40,13 @@ export function RunModelView({
   const [activeTab, setActiveTab] = useState<"dag" | "plan" | "conflicts" | "execution" | "files" | "evaluation">("dag");
 
   const view = useMemo(() => selectMinimalWorkspaceView(model), [model]);
-  const focusView = useMemo(() => (focus !== null ? buildFocusView(model, focus) : null), [model, focus]);
+  const timeline = useMemo(() => selectRunTimeline(model, view.stage), [model, view.stage]);
+  // Pass the event log so the focus inspector can derive execution timing and the
+  // live agent console (both read `options.events`, independent of the folded model).
+  const focusView = useMemo(
+    () => (focus !== null ? buildFocusView(model, focus, { events }) : null),
+    [model, focus, events]
+  );
 
   // Collapsible orchestrator panel: collapse to a thin rail to free the canvas,
   // driven imperatively so the resize handle and the header toggle stay in sync.
@@ -49,23 +59,49 @@ export function RunModelView({
     else ref.collapse();
   };
 
-  // Persisted, per-arrangement panel layout (with/without the focus panel).
+  // Below a derived width the focus panel would clip both the chat and the DAG
+  // canvas as a third column, so it floats as an overlay drawer instead. The
+  // decision is the pure, tested `focusDockMode`; the width comes from a hook.
+  const dockMode = focusDockMode(useViewportWidth());
+  const focusDocked = focusView !== null && dockMode === "column";
+  const focusOverlay = focusView !== null && dockMode === "overlay";
+
+  // Close the overlay drawer on Escape — it has no resize handle to escape via.
+  useEffect(() => {
+    if (!focusOverlay) return;
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") setFocus(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [focusOverlay]);
+
+  // Persisted, per-arrangement panel layout (with/without the docked focus panel).
   // `storage` must be passed explicitly: the library defaults to `localStorage`,
   // which crashes during SSR (this component server-renders its first frame).
-  const panelIds = focusView !== null ? ["chat", "artifacts", "focus"] : ["chat", "artifacts"];
+  const panelIds = focusDocked ? ["chat", "artifacts", "focus"] : ["chat", "artifacts"];
+  // The persisted layout (localStorage) differs from the SSR default, so reading
+  // it on the first client render mismatches the server HTML. Gate it behind a
+  // mount flag: first client render uses the noop storage (== SSR), and the
+  // persisted layout applies on the post-hydration update instead.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: "mh-run-workspace",
     panelIds,
-    storage: typeof window === "undefined" ? SSR_NOOP_STORAGE : window.localStorage
+    storage: hydrated && typeof window !== "undefined" ? window.localStorage : SSR_NOOP_STORAGE
   });
 
   return (
     <ChatRuntimeProvider events={events}>
       <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--color-bg)] font-sans">
         <RunHeader runId={seed.id} view={view} model={model} workspaceName={workspaceName} />
+        <RunTimeline phases={timeline} />
 
         {/* Resizable multipanel workspace: chat | artifacts | focus.
-            Layout persists per panel arrangement via useDefaultLayout. */}
+            Layout persists per panel arrangement via useDefaultLayout. The
+            relative wrapper hosts the overlay focus drawer on narrow viewports. */}
+        <div className="relative flex min-h-0 flex-1">
         <Group
           orientation="horizontal"
           defaultLayout={defaultLayout}
@@ -113,7 +149,7 @@ export function RunModelView({
               />
             </div>
           </Panel>
-          {focusView !== null && (
+          {focusDocked && (
             <>
               <ResizeHandle />
               <Panel
@@ -121,7 +157,7 @@ export function RunModelView({
                 defaultSize="26%"
                 minSize="280px"
                 maxSize="44%"
-                className="mh-panel-enter relative z-20 h-full overflow-y-auto border-l border-[var(--color-border)] bg-[var(--color-surface)]"
+                className="mh-panel-enter mh-elev-2 relative z-20 h-full overflow-y-auto border-l border-[var(--color-border)] bg-[var(--color-surface-raised)]"
               >
                 <FocusPanel
                   view={focusView}
@@ -132,17 +168,29 @@ export function RunModelView({
             </>
           )}
         </Group>
+
+        {/* Narrow viewports: the focus panel floats over the canvas as a drawer
+            so chat + artifacts keep their width instead of all three clipping. */}
+        {focusOverlay && focusView !== null ? (
+          <>
+            <button
+              type="button"
+              aria-label="Cerrar foco"
+              onClick={() => setFocus(null)}
+              className="absolute inset-0 z-30 cursor-default bg-[color-mix(in_srgb,var(--color-bg)_55%,transparent)]"
+            />
+            <aside
+              className="mh-panel-enter mh-elev-sheet absolute inset-y-0 right-0 z-40 w-[min(440px,92%)] overflow-y-auto border-l border-[var(--color-border)] bg-[var(--color-surface-raised)]"
+            >
+              <FocusPanel view={focusView} onClose={() => setFocus(null)} onFocus={setFocus} />
+            </aside>
+          </>
+        ) : null}
+        </div>
       </div>
     </ChatRuntimeProvider>
   );
 }
-
-const STAGE_META: Record<ProductStage, { label: string; status: UiStatus }> = {
-  intent: { label: "Intención", status: "pending" },
-  proposal: { label: "Planificando", status: "planning" },
-  running: { label: "Ejecutando", status: "running" },
-  review: { label: "Revisión", status: "needs_review" }
-};
 
 function RunHeader({
   runId,
@@ -158,14 +206,16 @@ function RunHeader({
   const nodesCount = model.nodes.size;
   const conflictsCount = model.conflicts.size;
   const runningCount = Array.from(model.nodes.values()).filter((n: Node) => n.execution.kind === "running").length;
-  const stage = STAGE_META[view.stage];
+  // Single source of truth: the run badge derives from the durable run status —
+  // the SAME function the sidebar uses — so header and sidebar never disagree.
+  const runStatus = runUiStatus(model.run.control.status);
 
   return (
-    <header className="flex h-12 select-none items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4">
-      {/* Identity: title → stage. The id lives in a quiet mono chip. */}
-      <div className="flex min-w-0 items-center gap-2.5">
+    <header className="mh-elev-1 flex h-14 select-none items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface-raised)] px-5">
+      {/* Identity: id chip → title → ONE status pill (run status). */}
+      <div className="flex min-w-0 items-center gap-3">
         <span
-          className="mh-mono shrink-0 rounded bg-[var(--color-bg-subtle)] px-2 py-0.5 text-[11px] text-[var(--color-text-subtle)]"
+          className="mh-mono shrink-0 rounded-[var(--r-sm)] bg-[var(--color-bg-subtle)] px-2 py-0.5 text-eyebrow text-[var(--color-text-subtle)]"
           title={`Run ${runId}`}
         >
           {runId.slice(0, 8)}
@@ -173,21 +223,19 @@ function RunHeader({
         <h1 className="m-0 max-w-md truncate text-sm font-semibold text-[var(--color-text)]" title={view.title}>
           {view.title}
         </h1>
-        <StatusPill status={stage.status} label={stage.label} />
+        <StatusPill status={runStatus} label={STATUS_META[runStatus].label} />
       </div>
 
-      <div className="ml-auto flex items-center gap-4 text-xs text-[var(--color-text-muted)]">
-        <span className="hidden min-w-0 items-center gap-1.5 md:flex">
+      <div className="ml-auto flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
+        <span className="hidden min-w-0 items-center gap-1.5 lg:flex">
           <span className="text-[var(--color-text-subtle)]">Workspace</span>
           <strong className="max-w-[140px] truncate font-medium text-[var(--color-text)]">
             {workspaceName ?? "—"}
           </strong>
         </span>
-        <span className="hidden items-center gap-1.5 lg:flex">
-          <span className="text-[var(--color-text-subtle)]">Granularidad</span>
-          <strong className="mh-mono font-medium text-[var(--color-text)]">{model.run.config.aggressiveness}</strong>
-        </span>
-        <span className="mh-mono flex items-center gap-3 text-[11.5px]">
+
+        {/* Vitals readout: one bordered cluster, tabular numbers. */}
+        <span className="mh-mono inline-flex items-center gap-3 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-meta tabular-nums">
           <span title="Tareas del grafo">
             <strong className="font-semibold text-[var(--color-text)]">{nodesCount}</strong>{" "}
             <span className="text-[var(--color-text-subtle)]">tareas</span>
@@ -216,7 +264,7 @@ function RunHeader({
           <a
             href={`/api/runs/${runId}/export?format=patch`}
             download
-            className="flex h-8 items-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-accent)] bg-[var(--color-accent)] px-3 text-xs font-semibold text-[var(--color-accent-contrast)] transition-colors hover:border-[var(--color-accent-hover)] hover:bg-[var(--color-accent-hover)]"
+            className="mh-lift flex h-9 items-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-accent)] bg-[var(--color-accent)] px-4 text-label font-semibold text-[var(--color-accent-contrast)] transition-[background,border-color,box-shadow] duration-150 hover:border-[var(--color-accent-hover)] hover:bg-[var(--color-accent-hover)]"
           >
             <Download aria-hidden className="h-3.5 w-3.5" />
             Descargar cambios
@@ -274,7 +322,7 @@ function RunControlButton({ runId, model }: { runId: string; model: RunModel }):
         {label}
       </Button>
       {error !== null ? (
-        <span className="absolute right-0 top-full mt-1 max-w-[260px] rounded-[var(--r-md)] border border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] px-2 py-1 text-[11px] leading-snug text-[var(--status-failed-fg)] shadow-sm">
+        <span className="absolute right-0 top-full mt-1 max-w-[260px] rounded-[var(--r-md)] border border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] px-2 py-1 text-meta leading-snug text-[var(--status-failed-fg)] shadow-sm">
           {error}
         </span>
       ) : null}
