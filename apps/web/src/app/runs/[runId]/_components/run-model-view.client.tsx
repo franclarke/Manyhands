@@ -238,19 +238,19 @@ function RunHeader({
         <span className="mh-mono inline-flex items-center gap-3 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-meta tabular-nums">
           <span title="Tareas del grafo">
             <strong className="font-semibold text-[var(--color-text)]">{nodesCount}</strong>{" "}
-            <span className="text-[var(--color-text-subtle)]">tareas</span>
+            <span className="hidden text-[var(--color-text-subtle)] md:inline">tareas</span>
           </span>
           <span title="Conflictos detectados">
             <strong className={conflictsCount > 0 ? "font-semibold text-[var(--status-blocked-fg)]" : "font-semibold text-[var(--color-text)]"}>
               {conflictsCount}
             </strong>{" "}
-            <span className="text-[var(--color-text-subtle)]">conflictos</span>
+            <span className="hidden text-[var(--color-text-subtle)] md:inline">conflictos</span>
           </span>
           {runningCount > 0 ? (
             <span className="flex items-center gap-1.5" title="Subagentes ejecutando ahora">
               <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-[var(--status-running-fg)]" />
               <strong className="font-semibold text-[var(--status-running-fg)]">{runningCount}</strong>{" "}
-              <span className="text-[var(--color-text-subtle)]">activos</span>
+              <span className="hidden text-[var(--color-text-subtle)] md:inline">activos</span>
             </span>
           ) : null}
         </span>

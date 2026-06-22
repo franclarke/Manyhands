@@ -1,0 +1,66 @@
+<!-- @dsCard group="Cockpit" name="Header · cluster en anchos chicos (actual vs v-next)" -->
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Header · cluster en anchos chicos</title>
+  <link rel="stylesheet" href="../tokens.css" />
+  <style>
+    body { margin: 0; font-family: var(--font-sans); color: var(--color-text); background: var(--color-bg); padding: 28px; }
+    .hd { margin: 0 0 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--color-accent); }
+    .sub { margin: 0 0 24px; font-size: 13px; color: var(--color-text-muted); max-width: 66ch; line-height: 1.5; }
+    .caselbl { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-subtle); margin: 22px 0 8px; }
+
+    /* Constrain to a ~720px viewport band (the crowded case the brief names). */
+    .vp { width: 720px; max-width: 100%; border: 1px solid var(--color-border); border-radius: var(--r-lg); overflow: hidden; }
+    .hdr { display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 20px; background: var(--color-surface-raised); border-bottom: 1px solid var(--color-border); }
+    .idchip { flex: none; font-family: var(--font-mono); font-size: 11px; border-radius: var(--r-sm); background: var(--color-bg-subtle); color: var(--color-text-subtle); padding: 2px 8px; }
+    .title { font-size: 14px; font-weight: 600; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pill { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 999px; border: 1px solid; font-size: 12px; font-weight: 500; }
+    .pill .dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+    .right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .vitals { flex: none; font-family: var(--font-mono); display: inline-flex; align-items: center; gap: 12px; border: 1px solid var(--color-border); background: var(--color-surface); border-radius: var(--r-md); padding: 4px 12px; font-size: 12px; font-variant-numeric: tabular-nums; }
+    .vitals b { font-weight: 600; color: var(--color-text); }
+    .vitals .w { color: var(--color-text-subtle); }
+    .runpip { width: 8px; height: 8px; border-radius: 999px; background: var(--status-running-fg); }
+    .btn { flex: none; height: 32px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: var(--r-md); border: 1px solid var(--color-border-control); background: color-mix(in srgb, var(--color-text) 3.5%, transparent); color: var(--color-text); font-size: 13px; font-weight: 500; }
+    .att { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border-radius: 999px; border: 1px solid var(--status-review-border); background: var(--status-review-bg); color: var(--status-review-fg); font-size: 12px; font-weight: 500; }
+    .att .dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+
+    /* V-NEXT: the vitals words collapse below md; numbers + tooltips remain. */
+    .vn .vitals .w { display: none; }
+  </style>
+</head>
+<body>
+  <p class="hd">Cockpit · S1 · v-next</p>
+  <p class="sub">El cluster derecho (vitals + acciones + pill de atención) aprieta en anchos chicos (&lt;~900px). Ya estaba mitigado (workspace oculto &lt; lg, título truncado). El refuerzo: las <b>palabras</b> de los vitals colapsan &lt; md (números + tooltips), igual que el patrón del workspace — el cluster respira sin perder señal.</p>
+
+  <template id="hdr">
+    <span class="idchip">a1b2c3d4</span>
+    <span class="title">Sistema de exportación de reportes con CSV y PDF</span>
+    <span class="pill" style="color: var(--status-running-fg); background: var(--status-running-bg); border-color: var(--status-running-border);"><span class="dot"></span>Ejecutando</span>
+    <span class="right">
+      <span class="vitals" title="Vitals del run">
+        <span title="Tareas del grafo"><b>12</b> <span class="w">tareas</span></span>
+        <span title="Conflictos detectados"><b>1</b> <span class="w">conflictos</span></span>
+        <span title="Subagentes ejecutando" style="display:inline-flex;align-items:center;gap:6px"><span class="runpip"></span><b style="color:var(--status-running-fg)">4</b> <span class="w">activos</span></span>
+      </span>
+      <span class="btn">Pausar</span>
+      <span class="att"><span class="dot"></span>Decisión pendiente</span>
+    </span>
+  </template>
+
+  <p class="caselbl">actual · 720px</p>
+  <div class="vp cur"><div class="hdr" id="h-cur"></div></div>
+
+  <p class="caselbl">v-next · 720px</p>
+  <div class="vp vn"><div class="hdr" id="h-vn"></div></div>
+
+  <script>
+    const tpl = document.getElementById("hdr");
+    document.getElementById("h-cur").append(tpl.content.cloneNode(true));
+    document.getElementById("h-vn").append(tpl.content.cloneNode(true));
+  </script>
+</body>
+</html>

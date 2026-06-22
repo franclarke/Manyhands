@@ -276,8 +276,31 @@ inactivos para affordance.
 
 ---
 
-## Pendiente — Cockpit (siguiente)
+## Cockpit S2 — Timeline: lift de fase activa (hecho · portado)
 
-Restante cockpit: **S1** (header: jerarquía/colapso del cluster derecho en anchos
-chicos) y **S2** (timeline: énfasis de fase activa). Cada uno: card → aprobación →
-port a React.
+Card: `cockpit/02-timeline-active.html`. El `run-timeline.tsx` ya hablaba el lenguaje
+unificado; el único refuerzo (consistencia con el tab activo de S3) es darle a la fase
+activa el mismo **lift neutro tenue**. Port: la fase activa gana
+`bg-[color-mix(text 4%)] rounded-[--r-md] px-2 py-1 -mx-0.5` (px-2 on-grid, no px-2.5
+por el guard). Cambio puramente visual. Verde: typecheck 0 · typography 5/5 · contrast
+AA+ · suite.
+
+## Cockpit S1 — Header: colapso de vitals en anchos chicos (hecho · portado)
+
+Card: `cockpit/03-header-narrow.html` (comparación a 720px). El cluster derecho ya
+estaba mitigado (workspace oculto < lg, título truncado); el refuerzo extiende ese
+patrón: las **palabras** de los vitals (tareas/conflictos/activos) colapsan < md
+(`hidden md:inline`), dejando números + tooltips, para que el cluster respire <~900px.
+Port en `run-model-view.client.tsx` (3 spans). Verde: typecheck 0 · contrast AA+ · suite.
+
+---
+
+## Estado — loop de design-system
+
+Completo y portado: **Foundation** (tipografía/escala/tokens) · **Núcleo** C1 nodo ·
+C3 inspector · C2 pill · **Cockpit** S3 tabs · S2 timeline · S1 header. Button ya
+estaba en v2 (no se tocó); empty states ya cubiertos. Todo verde (typecheck, suite,
+contraste) y sincronizado con el proyecto Claude Design.
+
+Posible próximo (fuera de este loop): pase de screenshots reales del cockpit a
+1440/1100/768px cuando el extension del navegador esté conectado, para validar en UI.

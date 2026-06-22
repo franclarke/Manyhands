@@ -18,7 +18,16 @@ export function RunTimeline({ phases }: { phases: RunPhase[] }): React.ReactElem
     >
       {phases.map((phase, index) => (
         <Fragment key={phase.key}>
-          <div className="flex items-center gap-2">
+          <div
+            className={[
+              "flex items-center gap-2",
+              // The active phase gets the same faint neutral lift as the active tab —
+              // one "you are here" language across the cockpit chrome.
+              phase.state === "active"
+                ? "-mx-0.5 rounded-[var(--r-md)] bg-[color-mix(in_srgb,var(--color-text)_4%,transparent)] px-2 py-1"
+                : ""
+            ].join(" ")}
+          >
             <PhaseDot state={phase.state} />
             <div className="flex flex-col leading-tight">
               <span className={LABEL_CLASS[phase.state]}>{phase.label}</span>
