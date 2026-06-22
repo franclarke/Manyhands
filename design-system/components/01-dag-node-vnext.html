@@ -1,0 +1,168 @@
+<!-- @dsCard group="Núcleo" name="Nodo DAG · v-next (Glyph dial)" -->
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nodo DAG · v-next (Glyph dial)</title>
+  <link rel="stylesheet" href="../tokens.css" />
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      color: var(--color-text);
+      background-color: var(--color-bg);
+      background-image: radial-gradient(var(--mh-graph-dots) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    .wrap { padding: 32px 28px 40px; }
+    .hd { margin: 0 0 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--color-accent); }
+    .sub { margin: 0 0 28px; font-size: 13px; color: var(--color-text-muted); max-width: 66ch; line-height: 1.5; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(212px, 1fr)); gap: 28px 22px; align-items: start; }
+    .cell { display: flex; flex-direction: column; gap: 8px; }
+    .cap { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--color-text-subtle); }
+    .cap b { color: var(--color-text); font-weight: 600; }
+    .mh-min-node { position: relative; }
+
+    /* ============================================================
+       v-next — Glyph dial: la FORMA del glifo carga el estado;
+       el color sólo confirma. Estas reglas son el plan de port
+       (variantes de .mh-min-node-dot) previsualizadas sobre la base real.
+       ============================================================ */
+
+    /* El slot del glifo crece 8 -> 12px (target mayor, misma fila). */
+    .dot-v { box-sizing: border-box; width: 12px; height: 12px; border-radius: 999px; background: transparent; }
+
+    /* pending: anillo HUECO — "vacío = no arrancado" (única señal sin relleno). */
+    .dot-v--pending { background: transparent; box-shadow: inset 0 0 0 1.5px var(--text-4); }
+
+    /* active: disco ember RELLENO + el pulso existente (coral-pulse). */
+    .dot-v--active { background: var(--status-running-fg); }
+
+    /* done: disco sage RELLENO + anillo de reposo estático (asentado, sin animar). */
+    .dot-v--done { background: var(--done); box-shadow: 0 0 0 2px color-mix(in srgb, var(--done) 24%, transparent); }
+
+    /* failed: CUADRADO rust relleno — única silueta no circular (radio 2px). */
+    .dot-v--failed { background: var(--status-failed-fg); border-radius: 2px; }
+
+    /* blocked/obsolete: anillo PUNTEADO ámbar — estancado/superseded, nunca rust. */
+    .dot-v--blocked { background: transparent; border: 1.5px dashed var(--status-blocked-fg); }
+
+    /* gated: glifo Hand (Lucide) en el mismo slot — "espera a una persona". */
+    .glyph-v { display: inline-flex; align-items: center; justify-content: center; width: 13px; height: 13px; color: var(--gated); }
+    .glyph-v svg { display: block; width: 13px; height: 13px; }
+
+    /* Rol como eyebrow de operador: mono UPPERCASE con tracking. */
+    .role-v { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.10em; font-size: 11px; }
+
+    /* detalle mono al piso del sistema (10 -> 11px). */
+    .mh-min-node .detail-v { font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="hd">Núcleo · C1 · v-next</p>
+    <p class="sub">La <b>forma</b> del glifo separa los estados antes que el color: hueco = pendiente, disco = activo/listo, <b>cuadrado</b> = falló, punteado = bloqueado. Cero ember nuevo, una sola animación (el pulso activo). Probá leerlo en escala de grises: las 4 siluetas siguen siendo distintas.</p>
+    <div class="grid">
+
+      <!-- pending / idle -->
+      <div class="cell">
+        <article class="mh-min-node" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="mh-min-node-dot dot-v dot-v--pending"></span>
+            <span class="mh-min-node-role role-v">tarea · d2</span>
+          </div>
+          <h3>Resolver contrato de API</h3>
+          <p>Esperando dependencias</p>
+        </article>
+        <span class="cap"><b>pending</b> · anillo hueco</span>
+      </div>
+
+      <!-- active / running -->
+      <div class="cell">
+        <article class="mh-min-node mh-min-node-wave" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="mh-min-node-dot dot-v dot-v--active coral-pulse"></span>
+            <span class="mh-min-node-role role-v">tarea · d2</span>
+          </div>
+          <h3>Generar capa de datos</h3>
+          <p>Generando código</p>
+          <div class="mh-min-node-progress"><span style="width: 46%;"></span></div>
+        </article>
+        <span class="cap"><b>active</b> · disco ember + pulso</span>
+      </div>
+
+      <!-- done -->
+      <div class="cell">
+        <article class="mh-min-node" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="mh-min-node-dot dot-v dot-v--done"></span>
+            <span class="mh-min-node-role role-v">tarea · d2</span>
+          </div>
+          <h3>Esquema de migración</h3>
+          <p>Listo</p>
+          <small class="detail-v">12/12 tests · cherry-pick ok</small>
+        </article>
+        <span class="cap"><b>done</b> · disco sage + anillo de reposo</span>
+      </div>
+
+      <!-- failed -->
+      <div class="cell">
+        <article class="mh-min-node mh-min-node-failed" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="mh-min-node-dot dot-v dot-v--failed"></span>
+            <span class="mh-min-node-role role-v">tarea · d3</span>
+          </div>
+          <h3>Integrar worktree</h3>
+          <p style="color: var(--error); font-weight: 500;">Falló: conflicto de merge</p>
+          <small class="detail-v">scope-check: 2 archivos fuera</small>
+        </article>
+        <span class="cap"><b>failed</b> · cuadrado rust (única no-círculo)</span>
+      </div>
+
+      <!-- gated -->
+      <div class="cell">
+        <article class="mh-min-node" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="glyph-v" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+            </span>
+            <span class="mh-min-node-role role-v">grupo · d1</span>
+          </div>
+          <h3>Aprobar borrado de tabla</h3>
+          <p style="color: var(--gated); font-weight: 500;">Requiere decisión</p>
+        </article>
+        <span class="cap"><b>gated</b> · glifo Hand ocre</span>
+      </div>
+
+      <!-- blocked -->
+      <div class="cell">
+        <article class="mh-min-node mh-min-node-blocked" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="mh-min-node-dot dot-v dot-v--blocked"></span>
+            <span class="mh-min-node-role role-v">tarea · d2</span>
+          </div>
+          <h3>Publicar paquete</h3>
+          <p style="color: var(--warning); font-weight: 500;">Bloqueada por dependencia</p>
+        </article>
+        <span class="cap"><b>blocked</b> · anillo punteado ámbar</span>
+      </div>
+
+      <!-- obsolete -->
+      <div class="cell">
+        <article class="mh-min-node mh-min-node-obsolete" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="mh-min-node-dot dot-v dot-v--blocked"></span>
+            <span class="mh-min-node-role role-v">tarea · d2</span>
+          </div>
+          <h3>Refactor helper viejo</h3>
+          <p style="color: var(--warning); font-weight: 500;">Obsoleta: reemplazada por d3</p>
+        </article>
+        <span class="cap"><b>obsolete</b> · punteado + atenuado 0.72</span>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

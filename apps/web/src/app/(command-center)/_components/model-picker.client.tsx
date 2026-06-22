@@ -49,7 +49,7 @@ export function ModelPicker({ value, onChange }: ModelPickerProps): React.ReactE
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
-        className="flex h-8 items-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 text-[12px] font-medium text-[var(--color-text)] transition-colors duration-150 hover:border-[var(--color-border-strong)]"
+        className="flex h-8 items-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-meta font-medium text-[var(--color-text)] transition-colors duration-150 hover:border-[var(--color-border-strong)]"
       >
         <span className="truncate">{selected?.label ?? "Elegir modelo"}</span>
         <ChevronDown aria-hidden className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-subtle)]" />
@@ -58,11 +58,11 @@ export function ModelPicker({ value, onChange }: ModelPickerProps): React.ReactE
       {open ? (
         <div
           role="listbox"
-          className="absolute bottom-full left-0 z-30 mb-1.5 max-h-[60vh] w-[280px] overflow-y-auto rounded-[var(--r-lg)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] p-1 shadow-[var(--shadow-sheet)]"
+          className="mh-elev-sheet absolute bottom-full left-0 z-30 mb-1.5 max-h-[60vh] w-[280px] overflow-y-auto rounded-[var(--r-lg)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] p-1"
         >
           {grouped.map(([provider, models]) => (
             <div key={provider} className="mb-0.5">
-              <div className="mh-mono px-2 pb-0.5 pt-1.5 text-[9.5px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)]">
+              <div className="mh-mono px-2 pb-0.5 pt-1.5 text-eyebrow uppercase tracking-[0.08em] text-[var(--color-text-subtle)]">
                 {provider}
               </div>
               {models.map((option) => {
@@ -85,16 +85,16 @@ export function ModelPicker({ value, onChange }: ModelPickerProps): React.ReactE
                       {active ? <Check aria-hidden className="h-3.5 w-3.5" /> : null}
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="flex items-center gap-1.5 text-[12.5px] font-medium text-[var(--color-text)]">
+                      <span className="flex items-center gap-1.5 text-label font-medium text-[var(--color-text)]">
                         {option.label}
                         {option.capabilities.includes("planning") ? null : (
-                          <span className="mh-mono rounded bg-[var(--color-bg-subtle)] px-1 py-px text-[9px] text-[var(--color-text-subtle)]">
+                          <span className="mh-mono rounded bg-[var(--color-bg-subtle)] px-1 py-px text-eyebrow text-[var(--color-text-subtle)]">
                             solo ejecución
                           </span>
                         )}
                       </span>
                       {rate !== undefined ? (
-                        <span className="mh-mono text-[10px] text-[var(--color-text-subtle)]">{rate}</span>
+                        <span className="mh-mono text-eyebrow text-[var(--color-text-subtle)]">{rate}</span>
                       ) : null}
                     </span>
                   </button>

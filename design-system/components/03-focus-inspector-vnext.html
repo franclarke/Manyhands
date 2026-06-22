@@ -1,0 +1,100 @@
+<!-- @dsCard group="Núcleo" name="Focus inspector · v-next (secciones)" -->
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Focus inspector · v-next (secciones)</title>
+  <link rel="stylesheet" href="../tokens.css" />
+  <style>
+    body { margin: 0; font-family: var(--font-sans); color: var(--color-text); background: var(--color-bg); padding: 28px; }
+    .hd { margin: 0 0 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--color-accent); }
+    .sub { margin: 0 0 22px; font-size: 13px; color: var(--color-text-muted); max-width: 64ch; line-height: 1.5; }
+
+    .panel { width: 360px; background: var(--color-surface-raised); border: 1px solid var(--color-border); border-radius: var(--r-lg); padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+    .phead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .pkind { white-space: nowrap; font-size: 12px; color: var(--color-text-subtle); }
+    .pclose { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-md); color: var(--color-text-subtle); }
+    .ptitle { font-size: 16px; font-weight: 600; line-height: 1.35; color: var(--color-text); margin-top: 2px; }
+
+    /* Sectioned body: each group reads as its own block with an eyebrow header. */
+    .section { display: flex; flex-direction: column; gap: 8px; }
+    .section + .section { padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent); }
+    .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--color-text-subtle); }
+    .sec-head .count { color: var(--color-text-faint); }
+
+    .fld { display: grid; grid-template-columns: minmax(96px, auto) 1fr; gap: 4px 12px; align-items: baseline; }
+    .lbl { font-size: 12px; color: var(--color-text-subtle); }
+    .val { font-size: 13px; color: var(--color-text-muted); word-break: break-word; line-height: 1.4; }
+    .val.strong { color: var(--color-text); font-weight: 600; }
+    .val.accent { color: var(--color-text); font-variant-numeric: tabular-nums; }
+    .mono { font-family: var(--font-mono); }
+    .origin { display: inline-block; margin-left: 6px; font-family: var(--font-mono); font-size: 11px; border-radius: 999px; border: 1px solid var(--color-border); padding: 0 6px; color: var(--color-text-subtle); vertical-align: middle; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .chip { font-family: var(--font-mono); font-size: 11px; border-radius: 999px; border: 1px solid var(--color-border); padding: 2px 8px; color: var(--color-text-subtle); }
+    .chip.link { border-color: var(--color-accent-deep); background: color-mix(in srgb, var(--color-accent) 8%, transparent); color: var(--color-text); }
+    .chip.dep { border-color: var(--color-accent-deep); background: color-mix(in srgb, var(--color-accent) 10%, transparent); color: var(--color-text); }
+    .dash { font-size: 12px; color: var(--color-text-subtle); }
+    .console { display: grid; gap: 8px; border: 1px solid var(--color-border); background: var(--color-bg); border-radius: var(--r-md); padding: 12px; }
+    .console-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--color-text-subtle); }
+    .console-body { font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--color-text-muted); white-space: pre-wrap; }
+    .ref { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--color-border); border-radius: var(--r-md); padding: 6px 12px; font-size: 12px; color: var(--color-text-muted); }
+    .ref .meta { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-subtle); }
+  </style>
+</head>
+<body>
+  <p class="hd">Núcleo · C3 · v-next</p>
+  <p class="sub">Mismos datos, agrupados en 4 secciones legibles (Estado · Contrato · Dependencias · Evidencia). Nuevo: <b>Duración</b> (derivada de eventos start→fin) y <b>Depende de</b> (nodos upstream, derivados de las costuras que consume). Menos jerga: rol humanizado, origen del alcance como chip.</p>
+
+  <div class="panel">
+    <div>
+      <div class="phead">
+        <span class="pkind">Foco · Nodo</span>
+        <span class="pclose">✕</span>
+      </div>
+      <div class="ptitle">Generar capa de datos</div>
+    </div>
+
+    <div class="console">
+      <div class="console-top"><span>Consola del agente</span><span class="mono" style="font-size:11px">8 chunks</span></div>
+      <div class="console-body">✓ users.test.ts (12)
+  cherry-pick: clean</div>
+    </div>
+
+    <!-- Estado -->
+    <div class="section">
+      <div class="sec-head"><span>Estado</span></div>
+      <div class="fld"><span class="lbl">Situación</span><span class="val strong">Hecho · actual</span></div>
+      <div class="fld"><span class="lbl">Signo vital</span><span class="val">Listo — 12/12 tests</span></div>
+      <div class="fld"><span class="lbl">Duración</span><span class="val accent mono">4 min 12 s</span></div>
+      <div class="fld"><span class="lbl">Verificación</span><span class="val mono">12/12 · cherry-pick limpio</span></div>
+    </div>
+
+    <!-- Contrato -->
+    <div class="section">
+      <div class="sec-head"><span>Contrato</span></div>
+      <div class="fld"><span class="lbl">Rol</span><span class="val">Hoja · d2</span></div>
+      <div class="fld"><span class="lbl">Objetivo</span><span class="val">Implementar el repositorio de usuarios con tests</span></div>
+      <div class="fld"><span class="lbl">Alcance</span><span class="val mono">src/data/users.ts, src/data/users.test.ts<span class="origin">derivado</span></span></div>
+    </div>
+
+    <!-- Dependencias -->
+    <div class="section">
+      <div class="sec-head"><span>Dependencias</span></div>
+      <div class="fld"><span class="lbl">Depende de</span><span class="chips"><span class="chip dep">Esquema de usuarios (n-schema) ↗</span></span></div>
+      <div class="fld"><span class="lbl">Consume</span><span class="chips"><span class="chip link">user-schema (frozen r2) ↗</span></span></div>
+      <div class="fld"><span class="lbl">Produce</span><span class="chips"><span class="chip link">user-repo (frozen r1) ↗</span></span></div>
+      <div class="fld"><span class="lbl">Padre</span><span class="chips"><span class="chip link">API de usuarios (n-api) ↗</span></span></div>
+    </div>
+
+    <!-- Evidencia -->
+    <div class="section">
+      <div class="sec-head"><span>Evidencia</span><span class="count">commit a1b2c3d4</span></div>
+      <div class="fld"><span class="lbl">Archivos</span><span class="val mono">2 · src/data/users.ts, …test.ts</span></div>
+      <div class="ref"><span>Diff del nodo</span><span class="meta">2 archivos</span></div>
+      <div class="ref"><span>Log del agente</span><span class="meta">▸</span></div>
+      <div class="fld"><span class="lbl">Banderas</span><span class="chips"><span class="dash">— sin banderas activas</span></span></div>
+    </div>
+  </div>
+</body>
+</html>

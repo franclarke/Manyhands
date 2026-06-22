@@ -115,9 +115,9 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
     <>
       <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col overflow-hidden border-r border-[var(--color-border)] bg-[var(--color-bg-subtle)] font-sans">
       {/* Brand */}
-      <div className="flex items-center gap-2.5 border-b border-[var(--color-border-soft)] px-4 py-[14px]">
+      <div className="flex items-center gap-3 border-b border-[var(--color-border-soft)] px-4 py-[14px]">
         <Logo type="full" className="h-6 w-auto" />
-        <span className="mh-mono rounded bg-[var(--color-surface)] px-1.5 py-0.5 text-[9px] text-[var(--color-text-subtle)]">
+        <span className="mh-mono rounded bg-[var(--color-surface)] px-1.5 py-0.5 text-eyebrow text-[var(--color-text-subtle)]">
           v0.4
         </span>
         <div className="ml-auto flex items-center gap-0.5">
@@ -132,7 +132,7 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
       <div className="px-3 pb-1 pt-3">
         <Link
           href="/"
-          className="flex h-9 w-full items-center justify-center gap-2 rounded-[var(--r-lg)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-[13px] font-semibold text-[var(--color-accent-contrast)] transition-[background,border-color] duration-150 ease-out hover:border-[var(--color-accent-hover)] hover:bg-[var(--color-accent-hover)] active:translate-y-px"
+          className="mh-lift flex h-9 w-full items-center justify-center gap-2 rounded-[var(--r-lg)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-label font-semibold text-[var(--color-accent-contrast)] transition-[background,border-color,box-shadow] duration-150 ease-out hover:border-[var(--color-accent-hover)] hover:bg-[var(--color-accent-hover)] active:translate-y-px"
         >
           <Plus aria-hidden className="h-4 w-4" />
           Nuevo run
@@ -141,7 +141,7 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
 
       {/* Workspaces */}
       <section className="px-3 pt-4" aria-label="Workspaces">
-        <h3 className="mh-mono flex items-center gap-1.5 px-1.5 pb-1.5 text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)]">
+        <h3 className="flex items-center gap-1.5 px-1.5 pb-2 text-meta font-medium text-[var(--color-text-subtle)]">
           <Folder aria-hidden className="h-3 w-3" />
           Workspaces
         </h3>
@@ -149,13 +149,13 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
           {workspaces.map((workspace) => (
             <li
               key={workspace.id}
-              className="flex items-center gap-2 rounded-[var(--r-md)] px-1.5 py-1.5 text-[12.5px] text-[var(--color-text-muted)]"
+              className="flex items-center gap-2 rounded-[var(--r-md)] px-1.5 py-1.5 text-label text-[var(--color-text-muted)]"
               title={workspace.repoPath}
             >
               <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--color-text-subtle)]" />
               <span className="truncate font-medium">{workspace.name}</span>
               {workspace.defaultBranch !== undefined && workspace.defaultBranch.length > 0 ? (
-                <span className="mh-mono ml-auto flex items-center gap-1 text-[10px] text-[var(--color-text-subtle)]">
+                <span className="mh-mono ml-auto flex items-center gap-1 text-eyebrow text-[var(--color-text-subtle)]">
                   <GitMerge aria-hidden className="h-3 w-3" />
                   {workspace.defaultBranch}
                 </span>
@@ -163,7 +163,7 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
             </li>
           ))}
           {workspaces.length === 0 ? (
-            <li className="px-1.5 py-1 text-[11.5px] text-[var(--color-text-subtle)]">
+            <li className="px-1.5 py-1 text-meta text-[var(--color-text-subtle)]">
               Sin workspaces todavía
             </li>
           ) : null}
@@ -172,7 +172,7 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
 
       {/* Recent runs */}
       <section className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-4" aria-label="Runs recientes">
-        <h3 className="mh-mono flex items-center gap-1.5 px-1.5 pb-1.5 text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)]">
+        <h3 className="flex items-center gap-1.5 px-1.5 pb-2 text-meta font-medium text-[var(--color-text-subtle)]">
           <History aria-hidden className="h-3 w-3" />
           Runs recientes
         </h3>
@@ -190,7 +190,7 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
             />
           ))}
           {runs.length === 0 ? (
-            <span className="px-1.5 py-1 text-[11.5px] text-[var(--color-text-subtle)]">
+            <span className="px-1.5 py-1 text-meta text-[var(--color-text-subtle)]">
               Sin ejecuciones previas
             </span>
           ) : null}
@@ -296,16 +296,16 @@ function RunRow({
         href={`/runs/${run.id}`}
         aria-current={active ? "page" : undefined}
         className={[
-          "flex flex-col gap-1 rounded-[var(--r-lg)] border px-2.5 py-2 transition-colors duration-150",
+          "flex flex-col gap-1 rounded-[var(--r-lg)] border px-3 py-2 transition-colors duration-150",
           active
-            ? "border-[var(--color-border)] bg-[var(--color-surface)]"
+            ? "mh-nav-active border-[var(--color-border)] bg-[var(--color-surface-raised)]"
             : "border-transparent hover:bg-[color-mix(in_srgb,var(--color-text)_4.5%,transparent)]"
         ].join(" ")}
       >
         <span className="flex min-w-0 items-start gap-2">
           <span
             className={[
-              "line-clamp-2 min-w-0 flex-1 pr-10 text-[12.5px] leading-[1.3] text-[var(--color-text)]",
+              "line-clamp-2 min-w-0 flex-1 pr-10 text-label leading-[1.3] text-[var(--color-text)]",
               active ? "font-semibold" : "font-medium"
             ].join(" ")}
           >
@@ -313,7 +313,7 @@ function RunRow({
           </span>
           {run.conflictCount !== undefined && run.conflictCount > 0 ? (
             <span
-              className="mh-mono shrink-0 rounded border px-1 py-px text-[10px] font-semibold"
+              className="mh-mono shrink-0 rounded border px-1 py-px text-eyebrow font-semibold"
               title={`${run.conflictCount} ${run.conflictCount === 1 ? "conflicto" : "conflictos"}`}
               style={{
                 color: failed ? "var(--status-failed-fg)" : "var(--status-blocked-fg)",
@@ -325,7 +325,7 @@ function RunRow({
             </span>
           ) : null}
         </span>
-        <span className="flex items-center justify-between gap-2 text-[10px] text-[var(--color-text-subtle)]">
+        <span className="flex items-center justify-between gap-2 text-micro text-[var(--color-text-subtle)]">
           <span className="flex min-w-0 items-center gap-1.5">
             <span
               aria-hidden
@@ -337,7 +337,7 @@ function RunRow({
               {run.workspaceName}
             </span>
           </span>
-          <span className="mh-mono shrink-0 text-[9.5px]">{formatRecency(run.updatedAt)}</span>
+          <span className="mh-mono shrink-0 text-eyebrow tabular-nums">{formatRecency(run.updatedAt)}</span>
         </span>
       </Link>
 
@@ -403,7 +403,7 @@ function RenameField({
         }}
         onBlur={() => onCommit(value)}
         aria-label="Nuevo nombre del run"
-        className="min-w-0 flex-1 bg-transparent text-[12.5px] text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-subtle)]"
+        className="min-w-0 flex-1 bg-transparent text-label text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-subtle)]"
       />
       <RowAction label="Guardar nombre" onClick={() => onCommit(value)}>
         <Check aria-hidden className="h-3 w-3" />
@@ -433,7 +433,7 @@ function RowAction({
       title={label}
       onClick={onClick}
       className={[
-        "flex h-6 w-6 items-center justify-center rounded-[var(--r-sm)] border border-transparent bg-[color-mix(in_srgb,var(--color-bg-subtle)_85%,transparent)] backdrop-blur-sm transition-colors duration-150",
+        "flex h-6 w-6 items-center justify-center rounded-[var(--r-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] transition-colors duration-150",
         danger
           ? "text-[var(--color-text-subtle)] hover:bg-[var(--status-failed-bg)] hover:text-[var(--status-failed-fg)]"
           : "text-[var(--color-text-subtle)] hover:bg-[color-mix(in_srgb,var(--color-text)_10%,transparent)] hover:text-[var(--color-text)]"

@@ -14,12 +14,12 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "chi
 
 const BASE_CLASS =
   "inline-flex items-center justify-center gap-1.5 whitespace-nowrap select-none font-sans " +
-  "transition-[background,border-color,color,transform] duration-150 ease-out " +
-  "active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55 disabled:active:translate-y-0";
+  "transition-[background,border-color,color,transform,box-shadow] duration-150 ease-out " +
+  "active:translate-y-px mh-press disabled:cursor-not-allowed disabled:opacity-55 disabled:active:translate-y-0";
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary:
-    "border border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-accent-contrast)] font-semibold " +
+    "border border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-accent-contrast)] font-semibold mh-lift " +
     "hover:bg-[var(--color-accent-hover)] hover:border-[var(--color-accent-hover)] " +
     "disabled:hover:bg-[var(--color-accent)] disabled:hover:border-[var(--color-accent)]",
   ghost:
@@ -38,8 +38,8 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
 };
 
 const SIZE_CLASS: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-[12.5px] rounded-[var(--r-md)]",
-  md: "h-9 px-3.5 text-[13px] rounded-[var(--r-lg)]",
+  sm: "h-8 px-3 text-label rounded-[var(--r-md)]",
+  md: "h-9 px-4 text-label rounded-[var(--r-lg)]",
   icon: "h-7 w-7 p-0 rounded-[var(--r-md)]"
 };
 
@@ -68,7 +68,7 @@ export function Button({
     >
       {busy ? (
         <>
-          <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />
+          <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
           {busyLabel ?? children}
         </>
       ) : (

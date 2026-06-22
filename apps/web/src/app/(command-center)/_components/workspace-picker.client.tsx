@@ -18,7 +18,7 @@ export function WorkspacePicker({ workspaces, value, onChange }: WorkspacePicker
       aria-label="Workspace"
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="mh-select h-8 max-w-[220px] text-[12.5px] font-medium"
+      className="mh-select h-8 max-w-[220px] text-label font-medium"
     >
       {workspaces.map((workspace) => (
         <option key={workspace.id} value={workspace.id}>

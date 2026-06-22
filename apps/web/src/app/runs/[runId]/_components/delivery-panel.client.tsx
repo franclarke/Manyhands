@@ -85,18 +85,18 @@ export function DeliveryPanel({ runId }: { runId: string }): React.ReactElement 
       : null;
 
   return (
-    <div className="flex flex-col gap-2.5 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 font-sans">
+    <div className="mh-elev-1 flex flex-col gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface-raised)] px-5 py-4 font-sans">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="mh-mono flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--status-review-fg)]">
+        <span className="flex items-center gap-1.5 text-meta font-medium text-[var(--status-review-fg)]">
           <GitBranch aria-hidden className="h-3.5 w-3.5" />
           Resultado listo para entregar
         </span>
-        <span className="mh-mono truncate text-[11.5px] text-[var(--color-text-muted)]" title={status.branchName}>
+        <span className="mh-mono truncate text-meta text-[var(--color-text-muted)]" title={status.branchName}>
           {status.branchName}
         </span>
-        {stat !== null ? <span className="mh-mono text-[11px] text-[var(--color-text-subtle)]">{stat}</span> : null}
+        {stat !== null ? <span className="mh-mono text-eyebrow text-[var(--color-text-subtle)]">{stat}</span> : null}
         {status.merged ? (
-          <span className="mh-mono flex items-center gap-1 text-[11px] text-[var(--status-completed-fg)]">
+          <span className="mh-mono flex items-center gap-1 text-eyebrow text-[var(--status-completed-fg)]">
             <Check aria-hidden className="h-3.5 w-3.5" />
             Mergeado en {status.baseBranch}
           </span>
@@ -108,7 +108,7 @@ export function DeliveryPanel({ runId }: { runId: string }): React.ReactElement 
         <a
           href={`/api/runs/${encodeURIComponent(runId)}/export?format=patch`}
           download
-          className="flex h-8 items-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-border-control)] bg-transparent px-2.5 text-[12px] font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)]"
+          className="flex h-8 items-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-border-control)] bg-transparent px-3 text-meta font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)]"
         >
           <Download aria-hidden className="h-3.5 w-3.5" />
           Descargar diff
@@ -128,7 +128,7 @@ export function DeliveryPanel({ runId }: { runId: string }): React.ReactElement 
 
       {message !== null ? (
         <div
-          className="flex items-start gap-1.5 text-[11.5px]"
+          className="flex items-start gap-1.5 text-meta"
           style={{ color: message.tone === "ok" ? "var(--status-completed-fg)" : "var(--status-failed-fg)" }}
         >
           {message.tone === "ok" ? <Check aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" /> : <CircleAlert aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />}
@@ -181,9 +181,9 @@ function ActionButton({
   title?: string | undefined;
 }): React.ReactElement {
   const base =
-    "flex h-8 items-center gap-1.5 rounded-[var(--r-md)] border px-2.5 text-[12px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+    "flex h-8 items-center gap-1.5 rounded-[var(--r-md)] border px-3 text-meta font-medium transition-[background,border-color,color,transform,box-shadow] duration-150 active:translate-y-px mh-press disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-y-0";
   const tone = primary
-    ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-accent-contrast)] hover:bg-[var(--color-accent-hover)]"
+    ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-accent-contrast)] mh-lift hover:bg-[var(--color-accent-hover)]"
     : danger
       ? "border-[var(--color-border-control)] bg-transparent text-[var(--color-text-muted)] hover:bg-[var(--status-failed-bg)] hover:text-[var(--status-failed-fg)]"
       : "border-[var(--color-border-control)] bg-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)]";
