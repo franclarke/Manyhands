@@ -333,8 +333,8 @@ export function CommandCenterShell({
     return (
       <section className="mx-auto flex w-full max-w-xl flex-col gap-4 rounded-[var(--r-xl)] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface)] p-6">
         <div>
-          <p className="m-0 text-[17px] font-semibold text-[var(--color-text)]">Todavía no hay workspaces.</p>
-          <p className="mt-2 text-[13px] leading-relaxed text-[var(--color-text-muted)]">
+          <p className="m-0 text-base font-semibold text-[var(--color-text)]">Todavía no hay workspaces.</p>
+          <p className="mt-2 text-label leading-relaxed text-[var(--color-text-muted)]">
             Creá un workspace —apuntado a un repo git local— antes de generar un grafo de tareas.
           </p>
         </div>
@@ -349,9 +349,9 @@ export function CommandCenterShell({
   return (
     <section className="flex w-full flex-col gap-4">
       {/* ── Composer card ──────────────────────────────────────────────── */}
-      <div className="flex flex-col rounded-[var(--r-xl)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] transition-colors duration-150 focus-within:border-[var(--color-accent-deep)]">
+      <div className="mh-elev-1 mh-elev-focus flex flex-col rounded-[var(--r-xl)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] transition-[border-color,box-shadow] duration-150 focus-within:border-[var(--color-accent-deep)]">
         {/* Context bar: workspace + repo + branch */}
-        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--color-border-soft)] px-3.5 py-2.5">
+        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--color-border-soft)] px-4 py-3">
           <FolderGit2 aria-hidden className="h-4 w-4 shrink-0 text-[var(--color-text-subtle)]" />
           <WorkspacePicker workspaces={workspaces} value={workspaceId} onChange={setWorkspaceId} />
           <div className="flex shrink-0 items-center gap-0.5">
@@ -376,14 +376,14 @@ export function CommandCenterShell({
           </div>
           {selectedWorkspace?.repoPath ? (
             <span
-              className="mh-mono min-w-0 truncate text-[11px] text-[var(--color-text-subtle)]"
+              className="mh-mono min-w-0 truncate text-eyebrow text-[var(--color-text-subtle)]"
               title={selectedWorkspace.repoPath}
             >
               {getCompactPath(selectedWorkspace.repoPath)}
             </span>
           ) : null}
           {selectedWorkspace ? (
-            <span className="mh-mono ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-[var(--color-text-subtle)]">
+            <span className="mh-mono ml-auto flex shrink-0 items-center gap-1.5 text-eyebrow text-[var(--color-text-subtle)]">
               <GitBranch aria-hidden className="h-3 w-3" />
               {selectedWorkspace.defaultBranch ?? "main"}
             </span>
@@ -400,14 +400,14 @@ export function CommandCenterShell({
           rows={5}
           spellCheck={false}
           placeholder="Describí los cambios o la funcionalidad a construir (ej: agregar autenticación, refactorizar validación, crear endpoint…)"
-          className="min-h-[120px] w-full resize-y border-0 bg-transparent px-4 py-3.5 font-sans text-[14px] leading-relaxed text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-subtle)]"
+          className="min-h-[120px] w-full resize-y border-0 bg-transparent px-4 py-3.5 font-sans text-sm leading-relaxed text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-subtle)]"
         />
 
         {/* Selectors Bar */}
-        <div className="flex flex-wrap items-start gap-x-5 gap-y-3.5 border-t border-[var(--color-border-soft)] px-4 py-3.5 bg-[var(--color-bg-subtle)]/5">
+        <div className="flex flex-wrap items-start gap-x-5 gap-y-4 border-t border-[var(--color-border-soft)] px-4 py-4 bg-[var(--color-bg-subtle)]/5">
           {/* Model */}
           <div className="flex flex-col gap-1.5">
-            <span className="mh-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)] font-medium">
+            <span className="text-meta font-medium text-[var(--color-text-subtle)]">
               Modelo
             </span>
             <ModelPicker value={modelValue} onChange={setModelValue} />
@@ -420,7 +420,7 @@ export function CommandCenterShell({
 
           {/* Granularidad */}
           <div className="flex flex-col gap-1.5">
-            <span className="mh-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)] font-medium">
+            <span className="text-meta font-medium text-[var(--color-text-subtle)]">
               Granularidad
             </span>
             <select
@@ -430,7 +430,7 @@ export function CommandCenterShell({
                 const val = event.target.value;
                 if (isGranularityLevel(val)) setGranularity(val);
               }}
-              className="mh-select h-8 min-w-[100px] text-[12px]"
+              className="mh-select h-8 min-w-[100px] text-meta"
             >
               {GRANULARITY_DISPLAY_OPTIONS.filter((opt) => !opt.disabled).map((option) => (
                 <option key={option.id} value={option.id}>
@@ -442,7 +442,7 @@ export function CommandCenterShell({
 
           {/* Autonomía */}
           <div className="flex flex-col gap-1.5">
-            <span className="mh-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)] font-medium">
+            <span className="text-meta font-medium text-[var(--color-text-subtle)]">
               Autonomía
             </span>
             <select
@@ -450,7 +450,7 @@ export function CommandCenterShell({
               title={AUTONOMY_OPTIONS.find((opt) => opt.id === autonomy)?.hint}
               value={autonomy}
               onChange={(event) => setAutonomy(event.target.value as AutonomyLevel)}
-              className="mh-select h-8 min-w-[110px] text-[12px]"
+              className="mh-select h-8 min-w-[110px] text-meta"
             >
               {AUTONOMY_OPTIONS.map((option) => (
                 <option key={option.id} value={option.id} title={option.hint}>
@@ -462,9 +462,9 @@ export function CommandCenterShell({
         </div>
 
         {/* Footer Action Bar */}
-        <div className="flex items-center justify-between gap-4 border-t border-[var(--color-border-soft)] bg-[var(--color-bg-subtle)]/20 px-4 py-2.5 rounded-b-[var(--r-xl)]">
+        <div className="flex items-center justify-between gap-4 border-t border-[var(--color-border-soft)] bg-[var(--color-bg-subtle)]/20 px-4 py-3 rounded-b-[var(--r-xl)]">
           {/* Cost estimate & Warning Metadata */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--color-text-subtle)]">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-[var(--color-text-subtle)]">
             {costEstimate !== undefined ? (
               <span title="Estimación heurística previa: los tokens reales se conocen recién al ejecutar.">
                 Costo estimado{" "}
@@ -481,7 +481,7 @@ export function CommandCenterShell({
           </div>
 
           {/* Action button & Status */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             <StatusIcon
               icon={<FolderGit2 aria-hidden className="h-4 w-4" />}
               tone={hasLocalRepo ? "ok" : "error"}
@@ -493,7 +493,7 @@ export function CommandCenterShell({
               title={readinessTooltip}
             />
             {startBlockReason !== null && hasPrompt && !submitting ? (
-              <span className="text-[11.5px] text-[var(--color-text-subtle)] mr-1">{startBlockReason}</span>
+              <span className="text-meta text-[var(--color-text-subtle)] mr-1">{startBlockReason}</span>
             ) : null}
             <Button
               variant="primary"
@@ -504,7 +504,7 @@ export function CommandCenterShell({
               onClick={() => void handleStart()}
             >
               Generar plan
-              <kbd className="mh-mono ml-1.5 rounded-sm bg-[color-mix(in_srgb,var(--color-accent-contrast)_16%,transparent)] px-1 py-px text-[10px] font-normal leading-none">
+              <kbd className="mh-mono ml-1.5 rounded-sm bg-[color-mix(in_srgb,var(--color-accent-contrast)_16%,transparent)] px-1 py-px text-eyebrow font-normal leading-none">
                 ⌘↵
               </kbd>
             </Button>
@@ -532,13 +532,13 @@ export function CommandCenterShell({
       {/* ── Example prompts (only while the composer is empty) ─────────── */}
       {prompt.trim().length === 0 ? (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-[11px] text-[var(--color-text-subtle)]">Probá:</span>
+          <span className="mr-1 text-meta text-[var(--color-text-subtle)]">Probá:</span>
           {EXAMPLE_PROMPTS.map((example) => (
             <button
               key={example}
               type="button"
               onClick={() => setPrompt(example)}
-              className="mh-example-chip cursor-pointer rounded-[var(--r-md)] border border-[var(--rule-soft)] bg-transparent px-2.5 py-1.5 text-left text-[11.5px] leading-snug text-[var(--color-text-muted)] transition-colors duration-150"
+              className="mh-example-chip cursor-pointer rounded-[var(--r-md)] border border-[var(--rule-soft)] bg-transparent px-3 py-1.5 text-left text-meta leading-snug text-[var(--color-text-muted)] transition-colors duration-150"
             >
               {example}
             </button>
@@ -658,7 +658,7 @@ function Callout({
   return (
     <div
       {...(role !== undefined ? { role } : {})}
-      className="flex items-start gap-2.5 rounded-[var(--r-lg)] border px-3.5 py-2.5 text-[12.5px] leading-relaxed"
+      className="flex items-start gap-3 rounded-[var(--r-lg)] border px-4 py-3 text-label leading-relaxed"
       style={{
         color: `var(--status-${tone}-fg)`,
         background: `var(--status-${tone}-bg)`,

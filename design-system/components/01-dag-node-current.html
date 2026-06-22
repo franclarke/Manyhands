@@ -1,0 +1,136 @@
+<!-- @dsCard group="Núcleo" name="Nodo DAG · actual" -->
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nodo DAG · actual</title>
+  <link rel="stylesheet" href="../tokens.css" />
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      color: var(--color-text);
+      background-color: var(--color-bg);
+      background-image: radial-gradient(var(--mh-graph-dots) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    .wrap { padding: 32px 28px 40px; }
+    .hd { margin: 0 0 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--color-text-subtle); }
+    .sub { margin: 0 0 28px; font-size: 13px; color: var(--color-text-muted); max-width: 64ch; line-height: 1.5; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(212px, 1fr)); gap: 28px 22px; align-items: start; }
+    .cell { display: flex; flex-direction: column; gap: 8px; }
+    .cap { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; color: var(--color-text-subtle); }
+    .cap b { color: var(--color-text); font-weight: 600; }
+    /* React Flow positions nodes absolutely; here we just let them sit in flow. */
+    .mh-min-node { position: relative; }
+    /* Pin the historical "before" dot at 8px so this card stays a faithful baseline
+       even after tokens.css is resynced with the ported 12px glyph dial. */
+    .mh-min-node-dot { width: 8px; height: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="hd">Núcleo · C1</p>
+    <p class="sub">Estado <b>actual</b>: el estado vive casi solo en el color de un punto de 8&nbsp;px (más tinte de borde en estados terminales). El riel izquierdo codifica la <em>branch</em>, no el estado.</p>
+    <div class="grid">
+
+      <!-- pending / idle -->
+      <div class="cell">
+        <article class="mh-min-node" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="mh-min-node-dot" style="background: var(--text-4);"></span>
+            <span class="mh-min-node-role">tarea · d2</span>
+          </div>
+          <h3>Resolver contrato de API</h3>
+          <p>Esperando dependencias</p>
+        </article>
+        <span class="cap"><b>pending</b> · punto gris sólido</span>
+      </div>
+
+      <!-- active / running -->
+      <div class="cell">
+        <article class="mh-min-node mh-min-node-wave" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="mh-min-node-dot coral-pulse" style="background: var(--running);"></span>
+            <span class="mh-min-node-role">tarea · d2</span>
+          </div>
+          <h3>Generar capa de datos</h3>
+          <p>Generando código</p>
+          <div class="mh-min-node-progress"><span style="width: 46%;"></span></div>
+        </article>
+        <span class="cap"><b>active</b> · punto ember + pulso</span>
+      </div>
+
+      <!-- done -->
+      <div class="cell">
+        <article class="mh-min-node" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="mh-min-node-dot" style="background: var(--done);"></span>
+            <span class="mh-min-node-role">tarea · d2</span>
+          </div>
+          <h3>Esquema de migración</h3>
+          <p>Listo</p>
+          <small>12/12 tests · cherry-pick ok</small>
+        </article>
+        <span class="cap"><b>done</b> · punto sage sólido</span>
+      </div>
+
+      <!-- failed -->
+      <div class="cell">
+        <article class="mh-min-node mh-min-node-failed" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="mh-min-node-dot" style="background: var(--error);"></span>
+            <span class="mh-min-node-role">tarea · d3</span>
+          </div>
+          <h3>Integrar worktree</h3>
+          <p style="color: var(--error); font-weight: 500;">Falló: conflicto de merge</p>
+          <small>scope-check: 2 archivos fuera</small>
+        </article>
+        <span class="cap"><b>failed</b> · punto rust + borde teñido</span>
+      </div>
+
+      <!-- gated -->
+      <div class="cell">
+        <article class="mh-min-node" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="mh-min-node-dot" style="background: var(--gated);"></span>
+            <span class="mh-min-node-role">grupo · d1</span>
+          </div>
+          <h3>Aprobar borrado de tabla</h3>
+          <p>Requiere decisión</p>
+        </article>
+        <span class="cap"><b>gated</b> · punto ocre</span>
+      </div>
+
+      <!-- blocked -->
+      <div class="cell">
+        <article class="mh-min-node mh-min-node-blocked" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="mh-min-node-dot" style="background: var(--warning);"></span>
+            <span class="mh-min-node-role">tarea · d2</span>
+          </div>
+          <h3>Publicar paquete</h3>
+          <p style="color: var(--warning); font-weight: 500;">Bloqueada por dependencia</p>
+        </article>
+        <span class="cap"><b>blocked</b> · punto ocre + borde ámbar</span>
+      </div>
+
+      <!-- obsolete -->
+      <div class="cell">
+        <article class="mh-min-node mh-min-node-obsolete" style="--branch: var(--mh-branch-1); border-left-color: var(--mh-branch-1);">
+          <div class="mh-min-node-top">
+            <span class="mh-min-node-dot" style="background: var(--warning);"></span>
+            <span class="mh-min-node-role">tarea · d2</span>
+          </div>
+          <h3>Refactor helper viejo</h3>
+          <p style="color: var(--warning); font-weight: 500;">Obsoleta: reemplazada por d3</p>
+        </article>
+        <span class="cap"><b>obsolete</b> · igual al blocked, atenuado</span>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

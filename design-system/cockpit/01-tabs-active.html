@@ -1,0 +1,56 @@
+<!-- @dsCard group="Cockpit" name="Tabs · activo (actual vs v-next)" -->
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tabs · activo (actual vs v-next)</title>
+  <link rel="stylesheet" href="../tokens.css" />
+  <style>
+    body { margin: 0; font-family: var(--font-sans); color: var(--color-text); background: var(--color-bg); padding: 28px; }
+    .hd { margin: 0 0 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--color-accent); }
+    .sub { margin: 0 0 24px; font-size: 13px; color: var(--color-text-muted); max-width: 66ch; line-height: 1.5; }
+    .caselbl { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-subtle); margin: 22px 0 8px; }
+
+    .frame { border: 1px solid var(--color-border); border-radius: var(--r-lg); overflow: hidden; max-width: 720px; }
+    .bar { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--color-border); background: var(--color-surface-raised); padding: 0 12px; }
+    .panel { height: 64px; background: var(--color-bg); }
+
+    .tab { display: inline-flex; align-items: center; gap: 6px; padding: 12px; font-size: 13px; line-height: 1; border-bottom: 2px solid transparent; margin-bottom: -1px; color: var(--color-text-subtle); font-weight: 400; background: transparent; }
+    .tab svg { width: 15px; height: 15px; }
+    .badge { font-family: var(--font-mono); font-size: 11px; font-weight: 600; border-radius: 999px; border: 1px solid var(--status-blocked-border); background: var(--status-blocked-bg); color: var(--status-blocked-fg); padding: 0 6px; }
+
+    /* CURRENT active: accent underline + semibold + full-colour text only. */
+    .cur .tab.active { border-bottom-color: var(--color-accent); color: var(--color-text); font-weight: 600; }
+
+    /* V-NEXT active: + accent-tinted icon + faint neutral lift + top radii (4 channels). */
+    .vn .tab.active { border-bottom-color: var(--color-accent); color: var(--color-text); font-weight: 600; background: color-mix(in srgb, var(--color-text) 4%, transparent); border-top-left-radius: var(--r-md); border-top-right-radius: var(--r-md); }
+    .vn .tab.active svg { color: var(--color-accent); }
+  </style>
+</head>
+<body>
+  <p class="hd">Cockpit · S3 · v-next</p>
+  <p class="sub">El tab activo hoy se señala casi solo por un subrayado accent de 2px + semibold (sutil con 6 tabs). v-next suma <b>ícono tintado accent</b> + <b>lift neutro tenue</b> con esquinas superiores redondeadas → el activo se lee por 4 canales (subrayado · peso · color de ícono · superficie) sin sumar ember de relleno.</p>
+
+  <template id="tabs">
+    <a class="tab active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>Trabajo</a>
+    <a class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>Plan</a>
+    <a class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Riesgos<span class="badge">2</span></a>
+    <a class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>Eventos</a>
+    <a class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 12v6"/><path d="M9 15h6"/></svg>Diffs</a>
+    <a class="tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526"/><circle cx="12" cy="8" r="6"/></svg>Evidencia</a>
+  </template>
+
+  <p class="caselbl">actual</p>
+  <div class="frame cur"><div class="bar" id="bar-cur"></div><div class="panel"></div></div>
+
+  <p class="caselbl">v-next</p>
+  <div class="frame vn"><div class="bar" id="bar-vn"></div><div class="panel"></div></div>
+
+  <script>
+    const tpl = document.getElementById("tabs");
+    document.getElementById("bar-cur").append(tpl.content.cloneNode(true));
+    document.getElementById("bar-vn").append(tpl.content.cloneNode(true));
+  </script>
+</body>
+</html>

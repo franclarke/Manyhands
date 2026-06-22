@@ -17,9 +17,11 @@ import {
   type NodeTypes
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize, OctagonAlert, CircleSlash, Hand } from "lucide-react";
+import { nodeGlyph } from "@/lib/run-model/node-glyph";
 import type { FocusTarget } from "@/lib/run-model/focus-view";
 import type { MinimalRunGraph, ProductStage } from "@/lib/run-model/minimal-workspace-view";
+import type { GraphEmptyKind } from "@/lib/run-model/run-phases";
 import type { VitalStatus, WorkspaceNode } from "@/lib/run-model/workspace-view";
 
 interface MinimalRunGraphProps {
@@ -29,6 +31,8 @@ interface MinimalRunGraphProps {
   onFocus: (target: FocusTarget) => void;
   /** Fill the parent panel (cockpit) instead of the fixed-height page block. */
   fill?: boolean;
+  /** What the empty canvas means when there are no nodes (planning vs failed). */
+  emptyKind?: GraphEmptyKind;
 }
 
 interface MinimalGraphNodeData {
@@ -54,7 +58,7 @@ interface SkeletonGraphNodeData {
 }
 
 const X_GAP = 296;
-const Y_GAP = 150;
+const Y_GAP = 132;
 /** Synthetic placeholder shown under a parent whose children are still streaming. */
 const GHOST_PREFIX = "ghost:";
 const BRANCH_VARS = [
@@ -126,7 +130,8 @@ function MinimalRunGraphInner({
   stage,
   selectedTarget,
   onFocus,
-  fill = false
+  fill = false,
+  emptyKind = "planning"
 }: MinimalRunGraphProps): React.ReactElement {
   const selectedNodeId = selectedTarget?.kind === "node" ? selectedTarget.id : null;
   // Ids already on canvas — anything beyond this set just streamed in and
@@ -141,8 +146,29 @@ function MinimalRunGraphInner({
       if (!isGhostId(node.id)) seenIdsRef.current.add(node.id);
     }
   }, [flow]);
+
+  // Keep the graph framed when the canvas resizes — the delivery panel mounting
+  // (review stage) or a window resize shrinks the container, and `fitView` only
+  // runs on init, so without this the bottom nodes clip and the tree drifts.
+  const sectionRef = useRef<HTMLElement>(null);
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (el === null) return;
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => void fitView({ padding: 0.18, duration: 200 }));
+    });
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(frame);
+    };
+  }, [fitView]);
+
   return (
-    <section className={fill ? "mh-run-graph mh-run-graph-fill" : "mh-run-graph"} aria-label="Grafo de tareas del run">
+    <section ref={sectionRef} className={fill ? "mh-run-graph mh-run-graph-fill" : "mh-run-graph"} aria-label="Grafo de tareas del run">
       <ReactFlow
         nodes={flow.nodes}
         edges={flow.edges}
@@ -181,13 +207,41 @@ function MinimalRunGraphInner({
           />
         ) : null}
         <FitViewOnGrowth count={flow.nodes.length} />
-        {graph.nodes.length === 0 ? <PlanningEmptyState /> : null}
+        {graph.nodes.length === 0 ? <GraphEmptyState kind={emptyKind} /> : null}
       </ReactFlow>
     </section>
   );
 }
 
-function PlanningEmptyState(): React.ReactElement {
+function GraphEmptyState({ kind }: { kind: GraphEmptyKind }): React.ReactElement {
+  if (kind === "failed") {
+    return (
+      <div className="mh-run-graph-planning-state" aria-live="polite">
+        <div className="mh-planning-root-node mh-graph-empty-failed">
+          <span className="mh-graph-empty-eyebrow" style={{ color: "var(--status-failed-fg)" }}>
+            <OctagonAlert aria-hidden className="h-3.5 w-3.5" />
+            Run fallido
+          </span>
+          <strong>El run falló antes de generar el plan</strong>
+          <p>No se llegó a proponer ninguna tarea. Revisá la actividad en la pestaña Eventos o reintentá el run.</p>
+        </div>
+      </div>
+    );
+  }
+  if (kind === "interrupted") {
+    return (
+      <div className="mh-run-graph-planning-state" aria-live="polite">
+        <div className="mh-planning-root-node mh-graph-empty-interrupted">
+          <span className="mh-graph-empty-eyebrow" style={{ color: "var(--color-text-subtle)" }}>
+            <CircleSlash aria-hidden className="h-3.5 w-3.5" />
+            Run interrumpido
+          </span>
+          <strong>El run se detuvo antes de generar el plan</strong>
+          <p>La planificación se interrumpió. Podés reanudar o reintentar el run cuando quieras.</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="mh-run-graph-planning-state" aria-live="polite">
       <div className="mh-planning-root-node mh-working">
@@ -425,7 +479,7 @@ function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React
   const { node, selected, branch, onPath, dimmed, isNew, expanding } = data;
   const status = node.vital.status;
   const hasProgress = node.vital.testProgress !== undefined;
-  const dotColor = STATUS_DOT[status];
+  const glyph = nodeGlyph(status);
   const active = status === "planning" || status === "running" || status === "verifying" || status === "repairing";
   const isRoot = node.role === "root";
   const attention = status === "failed" || status === "blocked" || status === "obsolete";
@@ -457,11 +511,18 @@ function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React
       <Handle type="target" position={Position.Left} className="mh-min-node-handle" />
       <Handle type="source" position={Position.Right} className="mh-min-node-handle" />
       <div className="mh-min-node-top">
-        <span
-          className={active ? "mh-min-node-dot coral-pulse" : "mh-min-node-dot"}
-          style={{ background: dotColor, opacity: 1 }}
-          aria-hidden
-        />
+        {glyph.kind === "hand" ? (
+          // Gated waits on a person — an affordance, not a coloured dot (gated and
+          // blocked share the same ochre token, so shape is the separator).
+          <span className="mh-min-node-glyph" aria-hidden>
+            <Hand size={14} />
+          </span>
+        ) : (
+          <span
+            className={`mh-min-node-dot mh-min-node-dot--${glyph.variant}${active ? " coral-pulse" : ""}`}
+            aria-hidden
+          />
+        )}
         <span className="mh-min-node-role">{roleLabel(node.role, node.depth)}</span>
       </div>
       <h3>{node.title}</h3>

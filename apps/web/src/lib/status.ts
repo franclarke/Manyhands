@@ -111,6 +111,11 @@ export interface StatusMeta {
   border: string;
   /** Whether the state should animate (running / integrating). */
   pulse: boolean;
+  /**
+   * Not-started states (idle / pending / skipped) render a HOLLOW dot — the same
+   * "empty = no arrancado" shape the DAG node uses. Everything else is filled.
+   */
+  hollow: boolean;
 }
 
 export const STATUS_META: Record<UiStatus, StatusMeta> = {
@@ -119,42 +124,48 @@ export const STATUS_META: Record<UiStatus, StatusMeta> = {
     fg: "var(--status-idle-fg)",
     bg: "var(--status-idle-bg)",
     border: "var(--status-idle-border)",
-    pulse: false
+    pulse: false,
+    hollow: true
   },
   planning: {
     label: "Planificando",
     fg: "var(--status-planning-fg)",
     bg: "var(--status-planning-bg)",
     border: "var(--status-planning-border)",
-    pulse: true
+    pulse: true,
+    hollow: false
   },
   pending: {
     label: "Pendiente",
     fg: "var(--status-pending-fg)",
     bg: "var(--status-pending-bg)",
     border: "var(--status-pending-border)",
-    pulse: false
+    pulse: false,
+    hollow: true
   },
   ready: {
     label: "Listo",
     fg: "var(--status-ready-fg)",
     bg: "var(--status-ready-bg)",
     border: "var(--status-ready-border)",
-    pulse: false
+    pulse: false,
+    hollow: false
   },
   running: {
     label: "Ejecutando",
     fg: "var(--status-running-fg)",
     bg: "var(--status-running-bg)",
     border: "var(--status-running-border)",
-    pulse: true
+    pulse: true,
+    hollow: false
   },
   completed: {
     label: "Completado",
     fg: "var(--status-completed-fg)",
     bg: "var(--status-completed-bg)",
     border: "var(--status-completed-border)",
-    pulse: false
+    pulse: false,
+    hollow: false
   },
   completed_with_accepted: {
     // Distinct label so the badge never claims a fully-clean run; reuses the
@@ -163,56 +174,64 @@ export const STATUS_META: Record<UiStatus, StatusMeta> = {
     fg: "var(--status-completed-fg)",
     bg: "var(--status-completed-bg)",
     border: "var(--status-completed-border)",
-    pulse: false
+    pulse: false,
+    hollow: false
   },
   failed: {
     label: "Fallido",
     fg: "var(--status-failed-fg)",
     bg: "var(--status-failed-bg)",
     border: "var(--status-failed-border)",
-    pulse: false
+    pulse: false,
+    hollow: false
   },
   blocked: {
     label: "Bloqueado",
     fg: "var(--status-blocked-fg)",
     bg: "var(--status-blocked-bg)",
     border: "var(--status-blocked-border)",
-    pulse: false
+    pulse: false,
+    hollow: false
   },
   needs_review: {
     label: "Para revisar",
     fg: "var(--status-review-fg)",
     bg: "var(--status-review-bg)",
     border: "var(--status-review-border)",
-    pulse: false
+    pulse: false,
+    hollow: false
   },
   integrating: {
     label: "Integrando",
     fg: "var(--status-integrating-fg)",
     bg: "var(--status-integrating-bg)",
     border: "var(--status-integrating-border)",
-    pulse: true
+    pulse: true,
+    hollow: false
   },
   integrated: {
     label: "Integrado",
     fg: "var(--status-integrated-fg)",
     bg: "var(--status-integrated-bg)",
     border: "var(--status-integrated-border)",
-    pulse: false
+    pulse: false,
+    hollow: false
   },
   conflict: {
     label: "Conflicto",
     fg: "var(--status-conflict-fg)",
     bg: "var(--status-conflict-bg)",
     border: "var(--status-conflict-border)",
-    pulse: false
+    pulse: false,
+    hollow: false
   },
   skipped: {
     label: "Omitido",
     fg: "var(--status-skipped-fg)",
     bg: "var(--status-skipped-bg)",
     border: "var(--status-skipped-border)",
-    pulse: false
+    pulse: false,
+    hollow: true
   }
 };
 

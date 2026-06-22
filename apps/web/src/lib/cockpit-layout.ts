@@ -1,0 +1,28 @@
+/**
+ * Cockpit layout — pure viewport→layout decisions for the run workspace.
+ *
+ * PURE and node-testable: no React, no DOM. The component reads the live viewport
+ * width through a thin hook and delegates the actual decision here so the
+ * threshold is single-sourced and covered by tests.
+ */
+
+export type FocusDockMode = "column" | "overlay";
+
+/**
+ * Below this viewport width the focus panel floats as an overlay drawer instead
+ * of docking as a resizable third column.
+ *
+ * Derivation (assuming the expanded sidebar, the common case):
+ *   sidebar 240 + chat-min 240 + a usable DAG canvas ~380 + focus-min 300
+ *   + two resize handles ~16 ≈ 1176 → rounded to 1180.
+ * Under it, a third docked column would clip both the chat and the canvas — the
+ * limitation called out across blocks 2–5. Collapsing the sidebar is an escape
+ * hatch that frees width within the same arrangement; it does not change the
+ * docking decision.
+ */
+export const FOCUS_DOCK_BREAKPOINT = 1180;
+
+/** How the focus panel should attach at a given viewport width. */
+export function focusDockMode(viewportWidth: number): FocusDockMode {
+  return viewportWidth >= FOCUS_DOCK_BREAKPOINT ? "column" : "overlay";
+}

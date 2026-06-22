@@ -4,6 +4,8 @@ import type { RunModel } from "@/lib/run-model/types";
 import type { FocusTarget } from "@/lib/run-model/focus-view";
 import type { MinimalWorkspaceView } from "@/lib/run-model/minimal-workspace-view";
 import { MinimalRunGraphCanvas } from "@/components/run-model/minimal-run-graph";
+import { graphEmptyStateKind } from "@/lib/run-model/run-phases";
+import { StatusPill } from "@/components/ui/status-pill";
 import {
   Network,
   FileText,
@@ -42,17 +44,17 @@ export function ArtifactTabs({
   const failedCount = nodesArray.filter((n) => n.execution.kind === "failed").length;
 
   const tabs: Array<{ id: TabKey; label: string; icon: React.ReactNode; badge?: number }> = [
-    { id: "dag", label: "Trabajo", icon: <Network aria-hidden className="h-4 w-4" /> },
-    { id: "plan", label: "Plan", icon: <FileText aria-hidden className="h-4 w-4" /> },
+    { id: "dag", label: "Trabajo", icon: <Network aria-hidden className="h-[15px] w-[15px]" /> },
+    { id: "plan", label: "Plan", icon: <FileText aria-hidden className="h-[15px] w-[15px]" /> },
     {
       id: "conflicts",
       label: "Riesgos",
-      icon: <AlertOctagon aria-hidden className="h-4 w-4" />,
+      icon: <AlertOctagon aria-hidden className="h-[15px] w-[15px]" />,
       ...(model.conflicts.size > 0 ? { badge: model.conflicts.size } : {})
     },
-    { id: "execution", label: "Eventos", icon: <Terminal aria-hidden className="h-4 w-4" /> },
-    { id: "files", label: "Diffs", icon: <FileDiff aria-hidden className="h-4 w-4" /> },
-    { id: "evaluation", label: "Evidencia", icon: <Award aria-hidden className="h-4 w-4" /> }
+    { id: "execution", label: "Eventos", icon: <Terminal aria-hidden className="h-[15px] w-[15px]" /> },
+    { id: "files", label: "Diffs", icon: <FileDiff aria-hidden className="h-[15px] w-[15px]" /> },
+    { id: "evaluation", label: "Evidencia", icon: <Award aria-hidden className="h-[15px] w-[15px]" /> }
   ];
 
   return (
@@ -61,7 +63,7 @@ export function ArtifactTabs({
       <div
         role="tablist"
         aria-label="Vistas del run"
-        className="flex items-center gap-1 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-3"
+        className="flex items-center gap-1 overflow-x-auto border-b border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
@@ -85,16 +87,17 @@ export function ArtifactTabs({
                 document.getElementById(`mh-tab-${next.id}`)?.focus();
               }}
               className={[
-                "-mb-px flex cursor-pointer items-center gap-1.5 border-b-2 bg-transparent px-3 py-3 text-[12.5px] transition-colors duration-150",
+                "-mb-px flex shrink-0 cursor-pointer items-center gap-1.5 border-b-2 px-3 py-3 text-label transition-colors duration-150",
                 isActive
-                  ? "border-[var(--color-accent)] font-semibold text-[var(--color-text)]"
-                  : "border-transparent font-medium text-[var(--color-text-subtle)] hover:text-[var(--color-text)]"
+                  ? "rounded-t-[var(--r-md)] border-[var(--color-accent)] bg-[color-mix(in_srgb,var(--color-text)_4%,transparent)] font-semibold text-[var(--color-text)]"
+                  : "border-transparent bg-transparent font-normal text-[var(--color-text-subtle)] hover:bg-[color-mix(in_srgb,var(--color-text)_3%,transparent)] hover:text-[var(--color-text)]"
               ].join(" ")}
             >
-              {tab.icon}
+              {/* Active icon carries the accent too, so the selection reads by colour + weight + underline + lift. */}
+              <span className={isActive ? "flex text-[var(--color-accent)]" : "flex"}>{tab.icon}</span>
               {tab.label}
               {tab.badge !== undefined ? (
-                <span className="mh-mono rounded border border-[var(--status-blocked-border)] bg-[var(--status-blocked-bg)] px-1 text-[10px] font-semibold text-[var(--status-blocked-fg)]">
+                <span className="mh-mono rounded-full border border-[var(--status-blocked-border)] bg-[var(--status-blocked-bg)] px-1.5 text-eyebrow font-semibold tabular-nums text-[var(--status-blocked-fg)]">
                   {tab.badge}
                 </span>
               ) : null}
@@ -114,6 +117,7 @@ export function ArtifactTabs({
                 selectedTarget={focus}
                 onFocus={onFocus}
                 fill
+                emptyKind={graphEmptyStateKind(model.run.control.status)}
               />
             ) : null}
           </TabPanel>
@@ -175,7 +179,7 @@ export function ArtifactTabs({
                           >
                             {seam.name}
                           </button>
-                          <span className="mh-mono flex shrink-0 gap-3 text-[11px] text-[var(--color-text-subtle)]">
+                          <span className="mh-mono flex shrink-0 gap-3 text-eyebrow text-[var(--color-text-subtle)]">
                             <span title={`Productor: ${seam.producerNodeId}`}>
                               productor {seam.producerNodeId.slice(0, 8)}
                             </span>
@@ -212,7 +216,7 @@ export function ArtifactTabs({
                 {Array.from(model.conflicts.values()).map((conflict) => (
                   <li
                     key={conflict.id}
-                    className="space-y-2.5 rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+                    className="space-y-3 rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="mh-mono rounded border border-[var(--status-blocked-border)] bg-[var(--status-blocked-bg)] px-2 py-0.5 text-xs font-semibold uppercase text-[var(--status-blocked-fg)]">
@@ -248,7 +252,7 @@ export function ArtifactTabs({
                   Actividad de los subagentes por tarea, en orden del orquestador.
                 </p>
               </div>
-              <div className="mh-mono flex gap-2 text-[11px]">
+              <div className="mh-mono flex gap-2 text-eyebrow">
                 <span className="flex items-center gap-1.5 rounded border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-2 py-1 text-[var(--color-text-muted)]">
                   {runningCount > 0 ? (
                     <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin text-[var(--status-running-fg)]" />
@@ -285,7 +289,7 @@ export function ArtifactTabs({
                           <span className="truncate font-semibold text-[var(--color-text)]">{node.title}</span>
                           <span
                             className={[
-                              "mh-mono shrink-0 rounded border px-2 py-0.5 text-[10px] font-semibold uppercase",
+                              "mh-mono shrink-0 rounded border px-2 py-0.5 text-eyebrow font-semibold uppercase",
                               status === "integrated"
                                 ? "border-[var(--status-integrated-border)] bg-[var(--status-integrated-bg)] text-[var(--status-integrated-fg)]"
                                 : status === "running" || status === "verifying"
@@ -300,7 +304,7 @@ export function ArtifactTabs({
                         </div>
                         <p className="m-0 leading-relaxed text-[var(--color-text-muted)]">{node.goal}</p>
                         {status === "running" && "agent" in node.execution ? (
-                          <p className="mh-mono m-0 mt-1.5 text-[10.5px] text-[var(--color-text-subtle)]">
+                          <p className="mh-mono m-0 mt-1.5 text-eyebrow text-[var(--color-text-subtle)]">
                             {node.execution.agent} · {node.execution.model}
                           </p>
                         ) : null}
@@ -363,6 +367,10 @@ export function ArtifactTabs({
                 detail="Cuando el run llegue a disposición, ManyHands mostrará tests, diff agregado, duración, costo y métricas operativas."
               />
             ) : (
+              <>
+              {model.evidence !== undefined ? (
+                <ResultSummary model={model} onShowDiffs={() => onTabChange("files")} />
+              ) : null}
               <div className="overflow-hidden rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-surface)]">
                 <dl className="m-0 grid grid-cols-1 divide-y divide-[var(--color-border-soft)] text-xs sm:grid-cols-2 sm:divide-y-0">
                   <MetricRow label="Tiempo total" value={model.metrics ? `${Math.round(model.metrics.totalDurationMs / 1000)}s` : "—"} />
@@ -383,11 +391,70 @@ export function ArtifactTabs({
                   />
                 </dl>
               </div>
+              </>
             )}
           </TabPanel>
         </div>
       </div>
     </div>
+  );
+}
+
+function ResultSummary({ model, onShowDiffs }: { model: RunModel; onShowDiffs: () => void }): React.ReactElement {
+  const tests = model.evidence?.tests;
+  const commit = model.evidence?.integrationCommit;
+  const allPass = tests !== undefined && tests.total > 0 && tests.pass === tests.total;
+  const testTone = allPass ? "completed" : "blocked";
+  return (
+    <section className="mh-elev-1 space-y-3 rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <span className="text-meta text-[var(--color-text-subtle)]">Lo que se pidió</span>
+          <p className="m-0 mt-1 text-sm leading-relaxed text-[var(--color-text)]">{model.run.intent}</p>
+        </div>
+        <StatusPill status={allPass ? "completed" : "needs_review"} label={allPass ? "Verificado" : "Para revisar"} />
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {tests !== undefined ? (
+          <span
+            className="mh-mono inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-eyebrow tabular-nums"
+            style={{
+              color: `var(--status-${testTone}-fg)`,
+              background: `var(--status-${testTone}-bg)`,
+              borderColor: `var(--status-${testTone}-border)`
+            }}
+          >
+            tests {tests.pass}/{tests.total}
+          </span>
+        ) : null}
+        {commit !== undefined ? (
+          <span
+            className="mh-mono inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-0.5 text-eyebrow text-[var(--color-text-muted)]"
+            title={commit}
+          >
+            integrado · {commit.slice(0, 10)}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onShowDiffs}
+          className="mh-press flex h-8 items-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-border-control)] bg-transparent px-3 text-meta font-medium text-[var(--color-text-muted)] transition-colors duration-150 hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"
+        >
+          <FileDiff aria-hidden className="h-3.5 w-3.5" />
+          Ver diffs
+        </button>
+        <a
+          href={`/api/runs/${model.run.id}/export?format=patch`}
+          download
+          className="mh-lift flex h-8 items-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-accent)] bg-[var(--color-accent)] px-3 text-meta font-semibold text-[var(--color-accent-contrast)] transition-[background,box-shadow] duration-150 hover:bg-[var(--color-accent-hover)]"
+        >
+          <Download aria-hidden className="h-3.5 w-3.5" />
+          Descargar patch
+        </a>
+      </div>
+    </section>
   );
 }
 
@@ -417,7 +484,7 @@ function TabPanel({
 
 function MetricRow({ label, value }: { label: string; value: string | number }): React.ReactElement {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border-soft)] px-4 py-2.5 last:border-b-0 sm:border-b">
+    <div className="flex items-center justify-between gap-4 border-b border-[var(--color-border-soft)] px-4 py-3 last:border-b-0 sm:border-b">
       <dt className="text-[var(--color-text-muted)]">{label}</dt>
       <dd className="mh-mono m-0 font-semibold text-[var(--color-text)]">{value}</dd>
     </div>
@@ -426,10 +493,8 @@ function MetricRow({ label, value }: { label: string; value: string | number }):
 
 function EmptyLensPanel({ title, detail }: { title: string; detail: string }): React.ReactElement {
   return (
-    <div className="rounded-[var(--r-lg)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-8">
-      <span className="mh-mono text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">
-        Sin datos todavía
-      </span>
+    <div className="mh-elev-1 rounded-[var(--r-lg)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-8">
+      <span className="text-meta text-[var(--color-text-subtle)]">Sin datos todavía</span>
       <h3 className="mt-3 text-base font-semibold text-[var(--color-text)]">{title}</h3>
       <p className="mt-2 max-w-xl text-sm leading-relaxed text-[var(--color-text-muted)]">{detail}</p>
     </div>

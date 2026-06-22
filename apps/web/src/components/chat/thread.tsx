@@ -176,7 +176,7 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
     <div className="flex h-full w-full flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] font-sans">
       {/* Header */}
       <div className="z-10 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-3">
-        <h2 className="flex items-center gap-2 text-[13px] font-semibold tracking-tight text-[var(--color-text)]">
+        <h2 className="flex items-center gap-2 text-label font-semibold tracking-tight text-[var(--color-text)]">
           <Sparkles aria-hidden className="h-4 w-4 text-[var(--color-text-subtle)]" />
           Orquestador
         </h2>
@@ -223,15 +223,15 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
 
           if (kind === "resolved") {
             return (
-              <div key={message.id} className="animate-fade-in flex items-center gap-2 pl-7 text-[11.5px] text-[var(--color-text-subtle)]">
-                <Check aria-hidden className="h-3.5 w-3.5 text-[var(--status-completed-fg)]" />
+              <div key={message.id} className="animate-fade-in flex items-center gap-2 pl-7 text-meta text-[var(--color-text-subtle)]">
+                <Check aria-hidden className="h-4 w-4 text-[var(--status-completed-fg)]" />
                 <Markdown text={textContent} inline />
               </div>
             );
           }
 
           return (
-            <div key={message.id} className="animate-fade-in flex max-w-[88%] items-start gap-2.5">
+            <div key={message.id} className="animate-fade-in flex max-w-[88%] items-start gap-3">
               <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-bg-subtle)]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]" />
               </div>
@@ -251,7 +251,7 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
                   <ConflictCard text={textContent} onTabChange={setActiveTab} />
                 ) : kind === "final" ? (
                   <div className="rounded-[var(--r-lg)] border border-[var(--status-completed-border)] bg-[var(--status-completed-bg)] px-4 py-3 text-sm leading-relaxed text-[var(--color-text)]">
-                    <span className="mh-mono mb-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-[0.08em] text-[var(--status-completed-fg)]">
+                    <span className="mh-mono mb-1.5 flex items-center gap-1.5 text-eyebrow uppercase tracking-[0.08em] text-[var(--status-completed-fg)]">
                       <Flag aria-hidden className="h-3 w-3" />
                       Run finalizado
                     </span>
@@ -262,7 +262,7 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
                 ) : (
                   <div
                     className={[
-                      "rounded-[var(--r-lg)] border px-4 py-3 text-[13px] leading-relaxed",
+                      "rounded-[var(--r-lg)] border px-4 py-3 text-label leading-relaxed",
                       kind === "planning"
                         ? "mh-working border-[var(--status-planning-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
                         : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
@@ -278,7 +278,7 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
 
         {/* Plan approval gate (interactive, pinned to the stream tail) */}
         {pendingPlanDecision !== undefined && (
-          <div className="animate-fade-in flex max-w-[88%] items-start gap-2.5">
+          <div className="animate-fade-in flex max-w-[88%] items-start gap-3">
             <div className="mt-1.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-bg-subtle)]">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--status-review-fg)]" />
             </div>
@@ -300,9 +300,9 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
       {actionError !== null ? (
         <div
           role="alert"
-          className="flex items-start gap-2 border-t border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] px-5 py-2.5 text-[12px] leading-relaxed text-[var(--status-failed-fg)]"
+          className="flex items-start gap-2 border-t border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] px-5 py-3 text-meta leading-relaxed text-[var(--status-failed-fg)]"
         >
-          <OctagonAlert aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <OctagonAlert aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
           <span className="min-w-0">{actionError}</span>
         </div>
       ) : null}
@@ -340,10 +340,10 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
                   : "cursor-not-allowed bg-[var(--color-bg-subtle)] text-[var(--color-text-faint)]"
               ].join(" ")}
             >
-              <Send aria-hidden className="h-3.5 w-3.5" />
+              <Send aria-hidden className="h-4 w-4" />
             </button>
           </div>
-          <p className="mt-2 text-center text-[10.5px] text-[var(--status-review-fg)]">
+          <p className="mt-2 text-center text-micro text-[var(--status-review-fg)]">
             {isExecutionGate
               ? "La ejecución está pausada esperando tu decisión."
               : "El planner está esperando tu respuesta para continuar la descomposición."}
@@ -351,8 +351,8 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
           </p>
         </div>
       ) : (
-        <div className="flex items-center gap-2 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-2.5 text-[11px] text-[var(--color-text-subtle)]">
-          <CircleHelp aria-hidden className="h-3.5 w-3.5 shrink-0" />
+        <div className="flex items-center gap-2 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-3 text-meta text-[var(--color-text-subtle)]">
+          <CircleHelp aria-hidden className="h-4 w-4 shrink-0" />
           <span>ManyHands pedirá tu intervención acá cuando haga falta.</span>
         </div>
       )}
@@ -386,7 +386,7 @@ export function ChatRail({
         <PanelLeftOpen aria-hidden className="h-4 w-4" />
       </button>
       <Sparkles aria-hidden className="h-4 w-4 text-[var(--color-text-subtle)]" />
-      <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-text-subtle)] [writing-mode:vertical-rl]">
+      <span className="mt-1 text-eyebrow font-semibold uppercase tracking-[0.14em] text-[var(--color-text-subtle)] [writing-mode:vertical-rl]">
         Orquestador
       </span>
       <div className="mt-auto flex flex-col items-center gap-2">
@@ -448,17 +448,17 @@ function PlanApprovalCard({
   const granularity = model.run.config.aggressiveness;
 
   return (
-    <div className="space-y-3.5 rounded-[var(--r-xl)] border border-[var(--status-review-border)] bg-[var(--color-surface)] p-4 font-sans">
-      <span className="mh-mono flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--status-review-fg)]">
+    <div className="space-y-4 rounded-[var(--r-xl)] border border-[var(--status-review-border)] bg-[var(--color-surface)] p-4 font-sans">
+      <span className="mh-mono flex items-center gap-2 text-eyebrow font-semibold uppercase tracking-[0.08em] text-[var(--status-review-fg)]">
         <span aria-hidden className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--status-review-fg)]" />
         Gate · aprobación del plan
       </span>
 
-      <p className="m-0 text-[12.5px] font-medium leading-snug text-[var(--color-text)]">
+      <p className="m-0 text-label font-medium leading-snug text-[var(--color-text)]">
         La descomposición está lista. Revisá el plan y las costuras antes de lanzar los subagentes.
       </p>
 
-      <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3 text-[11.5px] text-[var(--color-text-muted)]">
+      <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3 text-meta text-[var(--color-text-muted)]">
         <PlanStat label="Tareas" value={totalTasks} />
         <PlanStat label="Hojas ejecutables" value={leafTasks} />
         <PlanStat label="Costuras" value={seamsCount} />
@@ -477,9 +477,9 @@ function PlanApprovalCard({
           className="flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-[var(--r-lg)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-xs font-semibold text-[var(--color-accent-contrast)] transition-colors hover:bg-[var(--color-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {approving ? (
-            <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />
+            <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
           ) : (
-            <Play aria-hidden className="h-3.5 w-3.5 fill-current" />
+            <Play aria-hidden className="h-4 w-4 fill-current" />
           )}
           Aprobar plan e iniciar subagentes
         </button>
@@ -488,15 +488,15 @@ function PlanApprovalCard({
           <button
             type="button"
             onClick={() => onTabChange("dag")}
-            className="flex h-8 cursor-pointer items-center justify-center gap-1 rounded-[var(--r-md)] border border-[var(--color-border-control)] text-[11.5px] font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"
+            className="flex h-8 cursor-pointer items-center justify-center gap-1 rounded-[var(--r-md)] border border-[var(--color-border-control)] text-meta font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"
           >
-            <Eye aria-hidden className="h-3.5 w-3.5" />
+            <Eye aria-hidden className="h-4 w-4" />
             Revisar grafo
           </button>
           <button
             type="button"
             onClick={() => onTabChange("plan")}
-            className="flex h-8 cursor-pointer items-center justify-center gap-1 rounded-[var(--r-md)] border border-[var(--color-border-control)] text-[11.5px] font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"
+            className="flex h-8 cursor-pointer items-center justify-center gap-1 rounded-[var(--r-md)] border border-[var(--color-border-control)] text-meta font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"
           >
             Ver plan
           </button>
@@ -542,11 +542,11 @@ function GateCard({
 
   return (
     <div className="space-y-3 rounded-[var(--r-xl)] border border-[var(--status-review-border)] bg-[var(--color-surface)] p-4 font-sans">
-      <span className="mh-mono flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--status-review-fg)]">
+      <span className="mh-mono flex items-center gap-2 text-eyebrow font-semibold uppercase tracking-[0.08em] text-[var(--status-review-fg)]">
         {icon}
         {eyebrow}
       </span>
-      <p className="m-0 text-[12.5px] font-medium leading-relaxed text-[var(--color-text)]">
+      <p className="m-0 text-label font-medium leading-relaxed text-[var(--color-text)]">
         <Markdown text={text} inline />
       </p>
 
@@ -565,10 +565,10 @@ function GateCard({
                     : "flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-border-control)] bg-transparent px-3 text-xs font-semibold text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] disabled:cursor-not-allowed disabled:opacity-60"
                 }
               >
-                {busy === decision.id ? <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> : null}
+                {busy === decision.id ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : null}
                 {option}
                 {index === 0 && decision.kind === "clarify" && decision.context.gate === undefined ? (
-                  <span className="mh-mono rounded bg-[color-mix(in_srgb,var(--color-accent-contrast)_18%,transparent)] px-1 py-px text-[9px] font-medium uppercase tracking-[0.06em]">
+                  <span className="mh-mono rounded bg-[color-mix(in_srgb,var(--color-accent-contrast)_18%,transparent)] px-1 py-px text-eyebrow font-medium uppercase tracking-[0.06em]">
                     Recomendada
                   </span>
                 ) : null}
@@ -576,7 +576,7 @@ function GateCard({
             ))}
           </div>
         ) : decision.kind === "clarify" ? (
-          <span className="block text-[11px] text-[var(--color-text-subtle)]">
+          <span className="block text-meta text-[var(--color-text-subtle)]">
             Respondé desde el campo de abajo.
           </span>
         ) : (
@@ -588,9 +588,9 @@ function GateCard({
               className="flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-xs font-semibold text-[var(--color-accent-contrast)] transition-colors hover:bg-[var(--color-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {busy === decision.id ? (
-                <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
               ) : (
-                <Play aria-hidden className="h-3.5 w-3.5" />
+                <Play aria-hidden className="h-4 w-4" />
               )}
               Aprobar
             </button>
@@ -605,7 +605,7 @@ function GateCard({
           </div>
         )
       ) : (
-        <span className="block text-[11px] text-[var(--color-text-subtle)]">
+        <span className="block text-meta text-[var(--color-text-subtle)]">
           Decisión ya resuelta o integrada.
         </span>
       )}
@@ -622,11 +622,11 @@ function ConflictCard({
 }): React.ReactElement {
   return (
     <div className="space-y-3 rounded-[var(--r-xl)] border border-[var(--status-failed-border)] bg-[var(--color-surface)] p-4 font-sans">
-      <span className="mh-mono flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--status-failed-fg)]">
-        <OctagonAlert aria-hidden className="h-3.5 w-3.5" />
+      <span className="mh-mono flex items-center gap-2 text-eyebrow font-semibold uppercase tracking-[0.08em] text-[var(--status-failed-fg)]">
+        <OctagonAlert aria-hidden className="h-4 w-4" />
         Conflicto detectado
       </span>
-      <p className="m-0 text-[12.5px] font-medium leading-relaxed text-[var(--color-text)]">
+      <p className="m-0 text-label font-medium leading-relaxed text-[var(--color-text)]">
         <Markdown text={text} inline />
       </p>
       <button
@@ -635,7 +635,7 @@ function ConflictCard({
         className="flex h-8 w-full cursor-pointer items-center justify-center gap-1 rounded-[var(--r-md)] border border-[var(--status-failed-border)] text-xs font-medium text-[var(--status-failed-fg)] transition-colors hover:bg-[var(--status-failed-bg)]"
       >
         Revisar en Riesgos
-        <ArrowRight aria-hidden className="h-3.5 w-3.5" />
+        <ArrowRight aria-hidden className="h-4 w-4" />
       </button>
     </div>
   );
@@ -647,13 +647,13 @@ function WaveCard({ text }: { text: string }): React.ReactElement {
   const lines = rest.join("\n\n").split("\n").filter((line) => line.trim().length > 0);
   const inProgress = title?.includes("…") === true;
   return (
-    <div className="space-y-2.5 rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 font-sans">
-      <p className={["m-0 text-[12.5px] font-semibold text-[var(--color-text)]", inProgress ? "mh-working rounded" : ""].join(" ")}>
+    <div className="space-y-3 rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 font-sans">
+      <p className={["m-0 text-label font-semibold text-[var(--color-text)]", inProgress ? "mh-working rounded" : ""].join(" ")}>
         <Markdown text={title ?? ""} inline />
       </p>
       <ul className="m-0 flex list-none flex-col gap-1 p-0">
         {lines.map((line, idx) => (
-          <li key={idx} className="mh-mono text-[11px] leading-relaxed text-[var(--color-text-muted)]">
+          <li key={idx} className="mh-mono text-eyebrow leading-relaxed text-[var(--color-text-muted)]">
             {line}
           </li>
         ))}
@@ -690,7 +690,7 @@ function Markdown({ text, isUser, inline }: { text: string; isUser?: boolean; in
         }
 
         return (
-          <p key={pIdx} className={`m-0 text-[12.5px] leading-relaxed ${isUser ? "text-[var(--color-accent-contrast)]" : "text-[var(--color-text)]"}`}>
+          <p key={pIdx} className={`m-0 text-label leading-relaxed ${isUser ? "text-[var(--color-accent-contrast)]" : "text-[var(--color-text)]"}`}>
             {lines.map((line, lIdx) => (
               <span key={lIdx} className="block">
                 {renderInline(line, isUser)}
@@ -717,7 +717,7 @@ function renderInline(text: string, isUser?: boolean): React.ReactNode[] {
       );
     } else if (part.startsWith("`") && part.endsWith("`")) {
       parts.push(
-        <code key={idx} className={`rounded border px-1.5 py-0.5 font-mono text-[10.5px] font-medium ${
+        <code key={idx} className={`rounded border px-1.5 py-0.5 font-mono text-micro font-medium ${
           isUser
             ? "border-[color-mix(in_srgb,var(--color-accent-contrast)_22%,transparent)] bg-[color-mix(in_srgb,var(--color-accent-contrast)_12%,transparent)] text-[var(--color-accent-contrast)]"
             : "border-[var(--color-border)] bg-[var(--color-bg-subtle)] text-[var(--color-text)]"

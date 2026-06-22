@@ -30,13 +30,13 @@ export function EffortControl({ value, onChange }: EffortControlProps): React.Re
     <div className="flex flex-col gap-1 min-w-[160px] select-none">
       {/* Title block with Tooltip */}
       <div className="flex items-center gap-1.5 h-4">
-        <span className="mh-mono text-[10px] uppercase tracking-[0.08em] text-[var(--color-text-subtle)] font-medium">
+        <span className="text-meta font-medium text-[var(--color-text-subtle)]">
           Esfuerzo: <span className="text-[var(--color-text)] font-semibold">{LABELS[value]}</span>
         </span>
         <div className="relative group cursor-pointer">
           <HelpCircle className="h-3.5 w-3.5 text-[var(--color-text-subtle)] hover:text-[var(--color-text)] transition-colors" />
           {/* Tooltip on hover */}
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-48 rounded-[var(--r-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] p-2.5 text-[11px] text-[var(--color-text-muted)] shadow-[var(--shadow-lift)] leading-relaxed pointer-events-none">
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-48 rounded-[var(--r-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] p-3 text-meta text-[var(--color-text-muted)] mh-elev-1 leading-relaxed pointer-events-none">
             {HINTS[value]}
           </div>
         </div>
@@ -97,13 +97,13 @@ export function EffortControl({ value, onChange }: EffortControlProps): React.Re
 
         {/* Sliding Thumb */}
         <div
-          className="absolute w-3 h-5 rounded-[4px] bg-[var(--color-text-muted)] hover:bg-[var(--color-text)] border border-[var(--color-border-strong)] shadow-[var(--shadow-lift)] -translate-x-1/2 transition-all duration-200 ease-out pointer-events-none"
+          className="absolute w-3 h-5 rounded-[4px] bg-[var(--color-text-muted)] hover:bg-[var(--color-text)] border border-[var(--color-border-strong)] mh-elev-1 -translate-x-1/2 transition-all duration-200 ease-out pointer-events-none"
           style={{ left: `${(currentIndex / 2) * 100}%` }}
         />
       </div>
 
       {/* Sub-label showing faster / smarter under the track */}
-      <div className="flex justify-between text-[9px] text-[var(--color-text-subtle)] px-0.5 mt-0.5 leading-none">
+      <div className="flex justify-between text-micro text-[var(--color-text-subtle)] px-0.5 mt-0.5 leading-none">
         <span>Más rápido</span>
         <span>Más inteligente</span>
       </div>

@@ -1,0 +1,83 @@
+<!-- @dsCard group="Foundation" name="Tokens & primitives (smoke test)" -->
+<!doctype html>
+<html data-theme="dark" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ManyHands — Foundation (smoke test)</title>
+  <!-- Faithful harness: real token layer + Tailwind v4 browser build. -->
+  <link rel="stylesheet" href="../tokens.css" />
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <style>
+    body { background: var(--color-bg); padding: 32px; }
+    .swatch { width: 100%; height: 44px; border-radius: var(--r-md); border: 1px solid var(--color-border); }
+  </style>
+</head>
+<body class="font-sans text-[var(--color-text)]">
+  <header class="mb-8">
+    <p class="mh-mono text-[11px] uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">Foundation · smoke test</p>
+    <h1 class="m-0 mt-1 text-[28px] font-semibold" style="font-family: var(--font-serif)">ManyHands — sistema de diseño</h1>
+    <p class="mt-1 text-[13px] text-[var(--color-text-muted)]">Valida que tokens, utilidades <code class="mh-mono">.mh-*</code> y utilidades de Tailwind rinden igual que en la app.</p>
+  </header>
+
+  <!-- Brand -->
+  <section class="mb-8">
+    <h2 class="mb-3 text-[15px] font-semibold">Marca (ember)</h2>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div><div class="swatch" style="background: var(--color-accent)"></div><p class="mh-mono mt-1.5 text-[11px] text-[var(--color-text-subtle)]">accent</p></div>
+      <div><div class="swatch" style="background: var(--color-accent-hover)"></div><p class="mh-mono mt-1.5 text-[11px] text-[var(--color-text-subtle)]">accent-hover</p></div>
+      <div><div class="swatch" style="background: var(--color-accent-deep)"></div><p class="mh-mono mt-1.5 text-[11px] text-[var(--color-text-subtle)]">accent-deep</p></div>
+      <div><div class="swatch" style="background: var(--color-accent-contrast)"></div><p class="mh-mono mt-1.5 text-[11px] text-[var(--color-text-subtle)]">accent-contrast</p></div>
+    </div>
+  </section>
+
+  <!-- Surfaces -->
+  <section class="mb-8">
+    <h2 class="mb-3 text-[15px] font-semibold">Superficies</h2>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div><div class="swatch" style="background: var(--color-bg)"></div><p class="mh-mono mt-1.5 text-[11px] text-[var(--color-text-subtle)]">bg</p></div>
+      <div><div class="swatch" style="background: var(--color-surface)"></div><p class="mh-mono mt-1.5 text-[11px] text-[var(--color-text-subtle)]">surface</p></div>
+      <div><div class="swatch" style="background: var(--color-surface-raised)"></div><p class="mh-mono mt-1.5 text-[11px] text-[var(--color-text-subtle)]">surface-raised</p></div>
+      <div><div class="swatch" style="background: var(--color-surface-overlay)"></div><p class="mh-mono mt-1.5 text-[11px] text-[var(--color-text-subtle)]">surface-overlay</p></div>
+    </div>
+  </section>
+
+  <!-- Status chips (real --status-* tokens) -->
+  <section class="mb-8">
+    <h2 class="mb-3 text-[15px] font-semibold">Estados</h2>
+    <div class="flex flex-wrap gap-2">
+      <span class="mh-mono rounded-full border px-2.5 py-0.5 text-[11px]" style="color:var(--status-planning-fg);background:var(--status-planning-bg);border-color:var(--status-planning-border)">planning</span>
+      <span class="mh-mono rounded-full border px-2.5 py-0.5 text-[11px]" style="color:var(--status-running-fg);background:var(--status-running-bg);border-color:var(--status-running-border)">running</span>
+      <span class="mh-mono rounded-full border px-2.5 py-0.5 text-[11px]" style="color:var(--status-completed-fg);background:var(--status-completed-bg);border-color:var(--status-completed-border)">completed</span>
+      <span class="mh-mono rounded-full border px-2.5 py-0.5 text-[11px]" style="color:var(--status-integrated-fg);background:var(--status-integrated-bg);border-color:var(--status-integrated-border)">integrated</span>
+      <span class="mh-mono rounded-full border px-2.5 py-0.5 text-[11px]" style="color:var(--status-blocked-fg);background:var(--status-blocked-bg);border-color:var(--status-blocked-border)">blocked</span>
+      <span class="mh-mono rounded-full border px-2.5 py-0.5 text-[11px]" style="color:var(--status-review-fg);background:var(--status-review-bg);border-color:var(--status-review-border)">review</span>
+      <span class="mh-mono rounded-full border px-2.5 py-0.5 text-[11px]" style="color:var(--status-failed-fg);background:var(--status-failed-bg);border-color:var(--status-failed-border)">failed</span>
+      <span class="mh-mono rounded-full border px-2.5 py-0.5 text-[11px]" style="color:var(--status-pending-fg);background:var(--status-pending-bg);border-color:var(--status-pending-border)">pending</span>
+    </div>
+  </section>
+
+  <!-- Type scale -->
+  <section class="mb-8">
+    <h2 class="mb-3 text-[15px] font-semibold">Tipografía</h2>
+    <div class="space-y-1.5">
+      <p class="m-0 text-[40px] font-semibold leading-tight" style="font-family:var(--font-serif)">Display 40 · Newsreader</p>
+      <p class="m-0 text-[20px] font-medium">Heading 20 · Geist</p>
+      <p class="m-0 text-[15px]">Body 15 · Geist — prosa de la sala de control.</p>
+      <p class="m-0 text-[13px] text-[var(--color-text-muted)]">Small 13 · texto funcional.</p>
+      <p class="mh-mono m-0 text-[12px] text-[var(--color-text-subtle)] tabular-nums">Mono 12 · 0123456789 · JetBrains</p>
+    </div>
+  </section>
+
+  <!-- Real components -->
+  <section>
+    <h2 class="mb-3 text-[15px] font-semibold">Componentes (fidelidad)</h2>
+    <div class="flex flex-wrap items-center gap-3">
+      <button class="mh-lift flex h-9 items-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-accent)] bg-[var(--color-accent)] px-3.5 text-[13px] font-semibold text-[var(--color-accent-contrast)]">Acción primaria</button>
+      <button class="flex h-9 items-center gap-1.5 rounded-[var(--r-md)] border border-[var(--color-border-control)] bg-transparent px-3.5 text-[13px] font-medium text-[var(--color-text-muted)]">Ghost</button>
+      <div class="mh-elev-1 rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[12.5px] text-[var(--color-text-muted)]">Card · mh-elev-1</div>
+      <div class="mh-elev-2 rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3 text-[12.5px] text-[var(--color-text-muted)]">Card · mh-elev-2</div>
+    </div>
+  </section>
+</body>
+</html>

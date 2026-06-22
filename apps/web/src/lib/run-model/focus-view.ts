@@ -129,6 +129,18 @@ export interface NodeConsoleView {
 
 // ── FocusView (discriminated union) ──────────────────────────────────────────────
 
+/** Execution timing derived from the event log — never fabricated (C3). */
+export interface NodeTimingView {
+  /** ISO of the first `node.execution.started`. */
+  startedAt: string;
+  /** ISO of the last terminal event (`node.verify.passed` / `node.execution.failed`). */
+  finishedAt?: string;
+  /** Wall time first-start → last-terminal; present iff `finishedAt` is. */
+  durationMs?: number;
+  /** Started but no terminal yet — shown as "en curso", with no fabricated number. */
+  running: boolean;
+}
+
 export interface NodeFocusView {
   kind: "node";
   id: NodeId;
@@ -144,6 +156,10 @@ export interface NodeFocusView {
   vital: NodeVital;
   produces: FocusSeamSummary[];
   consumes: FocusSeamSummary[];
+  /** Upstream task nodes this one depends on (derived from consumed seams' producers). */
+  dependencies: FocusNodeSummary[];
+  /** Execution timing derived from the event log; absent if the node never started. */
+  timing?: NodeTimingView;
   builtAgainst: SeamRevisionRef[];
   producedRevision?: SeamRevisionRef;
   changedFiles: string[];
@@ -156,7 +172,7 @@ export interface NodeFocusView {
   isPendingReexecution: boolean;
   isAffectedByPendingAmendment: boolean;
   hasActiveConflict: boolean;
-  /** Visible Gemini/process output for this node, derived from raw `node.cli.output` events. */
+  /** Visible agent/process output for this node, derived from raw `node.cli.output` events. */
   console: NodeConsoleView;
   refs: FocusRef[];
 }
@@ -364,6 +380,8 @@ function buildNodeFocus(model: RunModel, ws: WorkspaceNode, id: NodeId, options:
         [{ label: "Estado del agente", ref: `status://runs/${runId}/node/${ws.id}`, available: true }]
       : [];
 
+  const timing = deriveNodeTiming(options.events ?? [], id);
+
   return {
     kind: "node",
     id: ws.id,
@@ -379,6 +397,8 @@ function buildNodeFocus(model: RunModel, ws: WorkspaceNode, id: NodeId, options:
     vital: ws.vital,
     produces: ws.produces.map(seamSummary),
     consumes: ws.consumes.map(seamSummary),
+    dependencies: deriveNodeDependencies(model, ws),
+    ...(timing !== undefined ? { timing } : {}),
     builtAgainst: entity?.builtAgainst !== undefined ? [...entity.builtAgainst] : [],
     ...(entity?.producedRevision !== undefined ? { producedRevision: entity.producedRevision } : {}),
     changedFiles: entity?.changedFiles !== undefined ? [...entity.changedFiles] : [],
@@ -392,6 +412,53 @@ function buildNodeFocus(model: RunModel, ws: WorkspaceNode, id: NodeId, options:
     hasActiveConflict: ws.hasActiveConflict,
     console: buildNodeConsole(options.events ?? [], id),
     refs: nodeRefs
+  };
+}
+
+/**
+ * The upstream task nodes this node depends on: each seam it consumes was produced
+ * by some node, and that producer is the dependency. Deduped, self excluded, in the
+ * node's consume order. Pure model derivation — no events.
+ */
+export function deriveNodeDependencies(model: RunModel, ws: WorkspaceNode): FocusNodeSummary[] {
+  const seen = new Set<NodeId>();
+  const deps: FocusNodeSummary[] = [];
+  for (const seamId of ws.consumes) {
+    const producerId = model.seams.get(seamId)?.producerNodeId;
+    if (producerId === undefined || producerId === ws.id || seen.has(producerId)) continue;
+    seen.add(producerId);
+    deps.push({ id: producerId, title: model.nodes.get(producerId)?.title ?? producerId });
+  }
+  return deps;
+}
+
+/**
+ * Execution timing from the event log: first `node.execution.started` → last terminal
+ * (`node.verify.passed` / `node.execution.failed`). Spans across re-execution. Returns
+ * undefined when the node never started; marks `running` (no duration) when started but
+ * not yet terminal — we never fabricate a number from a wall clock.
+ */
+export function deriveNodeTiming(events: readonly RunEvent[], nodeId: NodeId): NodeTimingView | undefined {
+  let startedAt: string | undefined;
+  let finishedAt: string | undefined;
+  for (const event of events) {
+    if (event.type === "node.execution.started" && event.payload.nodeId === nodeId) {
+      if (startedAt === undefined) startedAt = event.at;
+    } else if (
+      (event.type === "node.verify.passed" || event.type === "node.execution.failed") &&
+      event.payload.nodeId === nodeId
+    ) {
+      finishedAt = event.at;
+    }
+  }
+  if (startedAt === undefined) return undefined;
+  if (finishedAt === undefined) return { startedAt, running: true };
+  const ms = Date.parse(finishedAt) - Date.parse(startedAt);
+  return {
+    startedAt,
+    finishedAt,
+    ...(Number.isFinite(ms) && ms >= 0 ? { durationMs: ms } : {}),
+    running: false
   };
 }
 

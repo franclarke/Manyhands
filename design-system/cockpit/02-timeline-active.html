@@ -1,0 +1,65 @@
+<!-- @dsCard group="Cockpit" name="Timeline · fase activa (actual vs v-next)" -->
+<!doctype html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Timeline · fase activa (actual vs v-next)</title>
+  <link rel="stylesheet" href="../tokens.css" />
+  <style>
+    body { margin: 0; font-family: var(--font-sans); color: var(--color-text); background: var(--color-bg); padding: 28px; }
+    .hd { margin: 0 0 4px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--color-accent); }
+    .sub { margin: 0 0 24px; font-size: 13px; color: var(--color-text-muted); max-width: 66ch; line-height: 1.5; }
+    .caselbl { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-subtle); margin: 22px 0 8px; }
+
+    .frame { border: 1px solid var(--color-border); border-radius: var(--r-lg); overflow: hidden; max-width: 720px; }
+    .rail { display: flex; align-items: center; gap: 6px; height: 44px; background: var(--color-surface); padding: 0 20px; }
+    .phase { display: flex; align-items: center; gap: 8px; }
+    .col { display: flex; flex-direction: column; line-height: 1.15; }
+    .lab { font-size: 12px; }
+    .lab.done { color: var(--color-text-muted); }
+    .lab.active { color: var(--color-text); font-weight: 500; }
+    .lab.pending { color: var(--color-text-faint); }
+    .det { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-subtle); }
+    .dot { width: 10px; height: 10px; border-radius: 999px; flex: none; box-sizing: border-box; }
+    .dot.done { background: var(--status-completed-fg); }
+    .dot.active { background: var(--color-accent); }
+    .dot.pending { background: transparent; border: 1px solid var(--color-text-faint); }
+    .conn { height: 1px; min-width: 14px; max-width: 44px; flex: 1; }
+    .conn.lit { background: var(--status-completed-border); }
+    .conn.dim { background: var(--color-border); }
+
+    /* V-NEXT: the active phase gets the SAME faint neutral lift as the active tab —
+       one "you are here" language across the cockpit chrome. */
+    .vn .phase.active { background: color-mix(in srgb, var(--color-text) 4%, transparent); border-radius: var(--r-md); padding: 4px 10px; margin: 0 -2px; }
+  </style>
+</head>
+<body>
+  <p class="hd">Cockpit · S2 · v-next</p>
+  <p class="sub">El timeline ya habla el lenguaje unificado (pending hueco · done sage · active ember+pulso · failed rust) y la fase activa ya es la más prominente. El único refuerzo: darle a la fase activa el mismo <b>lift neutro tenue</b> del tab activo, para que "estás acá" se lea igual en tabs y timeline. Cambio chico y consistente.</p>
+
+  <template id="rail">
+    <div class="phase"><span class="dot done"></span><div class="col"><span class="lab done">Intención</span></div></div>
+    <span class="conn lit"></span>
+    <div class="phase"><span class="dot done"></span><div class="col"><span class="lab done">Plan</span><span class="det">12 tareas</span></div></div>
+    <span class="conn lit"></span>
+    <div class="phase active"><span class="dot active coral-pulse"></span><div class="col"><span class="lab active">Ejecución</span><span class="det">4 activos</span></div></div>
+    <span class="conn dim"></span>
+    <div class="phase"><span class="dot pending"></span><div class="col"><span class="lab pending">Integración</span></div></div>
+    <span class="conn dim"></span>
+    <div class="phase"><span class="dot pending"></span><div class="col"><span class="lab pending">Revisión</span></div></div>
+  </template>
+
+  <p class="caselbl">actual</p>
+  <div class="frame cur"><div class="rail" id="rail-cur"></div></div>
+
+  <p class="caselbl">v-next</p>
+  <div class="frame vn"><div class="rail" id="rail-vn"></div></div>
+
+  <script>
+    const tpl = document.getElementById("rail");
+    document.getElementById("rail-cur").append(tpl.content.cloneNode(true));
+    document.getElementById("rail-vn").append(tpl.content.cloneNode(true));
+  </script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!-- @dsCard group="Foundation" name="Typography v-next (role scale)" -->
+<!doctype html>
+<html data-theme="dark" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ManyHands — Typography v-next</title>
+  <link rel="stylesheet" href="../tokens.css" />
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  <style>
+    /* PROPOSED role tokens (v-next) — additive, non-breaking. Old --fs-xs/-sm alias onto these. */
+    :root {
+      --fs-eyebrow: 11px; --fs-micro: 11px; --fs-meta: 12px; --fs-label: 13px;
+      --fs-base: 15px; --fs-md: 16px; --fs-lg: 20px; --fs-xl: 28px; --fs-2xl: 40px;
+      --lh-tight: 1.2; --lh-snug: 1.45; --lh-relaxed: 1.6; --lh-display: 1.05;
+      --ls-eyebrow: 0.10em;
+    }
+    body { background: var(--color-bg); padding: 32px; max-width: 920px; }
+    .row { display: grid; grid-template-columns: 190px 1fr; gap: 20px; align-items: baseline; padding: 12px 0; border-top: 1px solid var(--color-border); }
+    .tk { font-family: var(--font-mono); font-size: var(--fs-eyebrow); color: var(--color-text-subtle); line-height: var(--lh-snug); }
+    .tk b { color: var(--color-accent); font-weight: 600; }
+    .tk span { display: block; color: var(--color-text-faint); }
+    .eyebrow { font-family: var(--font-mono); font-size: var(--fs-eyebrow); text-transform: uppercase; letter-spacing: var(--ls-eyebrow); color: var(--color-text-subtle); font-variant-numeric: tabular-nums; }
+    .micro { font-family: var(--font-sans); font-size: var(--fs-micro); font-weight: 500; color: var(--color-text-muted); }
+    .meta  { font-family: var(--font-sans); font-size: var(--fs-meta); color: var(--color-text-muted); line-height: var(--lh-snug); font-variant-numeric: tabular-nums; }
+    .label { font-family: var(--font-sans); font-size: var(--fs-label); color: var(--color-text); line-height: var(--lh-snug); }
+    .base  { font-family: var(--font-sans); font-size: var(--fs-base); color: var(--color-text); line-height: var(--lh-relaxed); }
+    .md    { font-family: var(--font-sans); font-size: var(--fs-md); font-weight: 600; color: var(--color-text); line-height: var(--lh-tight); }
+    .lg    { font-family: var(--font-sans); font-size: var(--fs-lg); font-weight: 600; color: var(--color-text); line-height: var(--lh-tight); }
+    .xl    { font-family: var(--font-serif); font-size: var(--fs-xl); font-weight: 500; color: var(--color-text); line-height: var(--lh-display); }
+    .xxl   { font-family: var(--font-serif); font-size: var(--fs-2xl); font-weight: 500; color: var(--color-text); line-height: var(--lh-display); }
+  </style>
+</head>
+<body>
+  <header class="mb-6">
+    <p class="eyebrow">Foundation · v-next</p>
+    <h1 class="m-0 mt-1.5 xl">Escala tipográfica por rol</h1>
+    <p class="meta mt-2" style="max-width: 60ch">Cada paso es un <b style="color:var(--color-accent)">rol</b> con fuente, peso y line-height fijos. Reemplaza los tamaños sueltos (10.5/11/11.5/12.5px) por 4 tokens nuevos; <b style="color:var(--color-accent)">15/16/20/28/40 quedan iguales</b> (sin churn de identidad). Old <code>--fs-xs/--fs-sm</code> aliasan a meta/label.</p>
+  </header>
+
+  <section>
+    <div class="row">
+      <div class="tk"><b>--fs-eyebrow</b> 11 · mono<span>UPPERCASE · tracking .10em</span></div>
+      <div class="eyebrow">FASE · EJECUCIÓN · RUN AAEB1BF7 · 12/12</div>
+    </div>
+    <div class="row">
+      <div class="tk"><b>--fs-micro</b> 11 · sans<span>piso (no hay nada &lt; 11px)</span></div>
+      <div class="micro">hace 14m · ticks · captions de chip densos</div>
+    </div>
+    <div class="row">
+      <div class="tk"><b>--fs-meta</b> 12 · sans<span>= --fs-xs (alias)</span></div>
+      <div class="meta">Copy secundario: timestamps, conteos, helper text, rol del nodo, sublabels.</div>
+    </div>
+    <div class="row">
+      <div class="tk"><b>--fs-label</b> 13 · sans<span>= --fs-sm (alias) · workhorse</span></div>
+      <div class="label">Texto de control: botones, labels, filas de lista, líneas de chat, tabs, valores del inspector.</div>
+    </div>
+    <div class="row">
+      <div class="tk"><b>--fs-base</b> 15 · sans<span>sin cambios</span></div>
+      <div class="base">Prosa de lectura: descripción del run, descripciones de diálogo, textarea del command center.</div>
+    </div>
+    <div class="row">
+      <div class="tk"><b>--fs-md</b> 16 · sans 600<span>sin cambios · absorbe 17px</span></div>
+      <div class="md">Énfasis / título de panel</div>
+    </div>
+    <div class="row">
+      <div class="tk"><b>--fs-lg</b> 20 · sans 600<span>sin cambios</span></div>
+      <div class="lg">Heading de sección</div>
+    </div>
+    <div class="row">
+      <div class="tk"><b>--fs-xl</b> 28 · serif<span>display · máx 1/pantalla</span></div>
+      <div class="xl">Tres funciones puras de string</div>
+    </div>
+    <div class="row">
+      <div class="tk"><b>--fs-2xl</b> 40 · serif<span>hero · ancla del clamp</span></div>
+      <div class="xxl">¿En qué proyecto trabajamos?</div>
+    </div>
+  </section>
+
+  <!-- Defect fixes (identity) -->
+  <section class="mt-8">
+    <p class="eyebrow mb-3">Correcciones de defecto (identidad)</p>
+    <div class="grid gap-2 sm:grid-cols-3">
+      <div class="rounded-[var(--r-md)] border border-[var(--status-blocked-border)] bg-[var(--status-blocked-bg)] p-3">
+        <p class="label m-0" style="color:var(--status-blocked-fg)">peso 650 → 600</p>
+        <p class="meta m-0 mt-1">650 no es un master real de Geist (peso faux, el "tell" barato). El énfasis va con 600.</p>
+      </div>
+      <div class="rounded-[var(--r-md)] border border-[var(--status-blocked-border)] bg-[var(--status-blocked-bg)] p-3">
+        <p class="label m-0" style="color:var(--status-blocked-fg)">17px → 16px</p>
+        <p class="meta m-0 mt-1">17px huérfano en el banner de decisión, indistinguible de 16; el peso lleva el énfasis.</p>
+      </div>
+      <div class="rounded-[var(--r-md)] border border-[var(--status-blocked-border)] bg-[var(--status-blocked-bg)] p-3">
+        <p class="label m-0" style="color:var(--status-blocked-fg)">piso 11px (AA)</p>
+        <p class="meta m-0 mt-1">Los 9/9.5px (~14 usos) suben a 11px: el único riesgo AA claro en UI densa oscura.</p>
+      </div>
+    </div>
+  </section>
+</body>
+</html>
