@@ -1,6 +1,5 @@
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import {
@@ -11,6 +10,7 @@ import {
   type ExecutorSelection
 } from "@manyhands/execution-core";
 import type { TaskGraph } from "@manyhands/task-graph";
+import { credentialMessageFor, defaultCredentialStatus } from "@/lib/server/providers/credentials";
 
 const execFileAsync = promisify(execFile);
 
@@ -100,9 +100,14 @@ export async function runPreflight(input: PreflightInput, deps: PreflightDeps = 
       );
     }
 
-    const authed = (deps.hasCredentials ?? (() => defaultHasCredentials(executorId)))();
-    if (!authed) {
-      throw new PreflightError("auth", authMessageFor(executorId));
+    // Validity, not mere presence (F-001b): an expired on-disk OAuth token must
+    // fail preflight with an actionable error here, instead of letting the run
+    // start and 401 on every leaf. Injected boolean seam preserved for tests.
+    const authStatus = deps.hasCredentials
+      ? (deps.hasCredentials() ? ({ ok: true } as const) : ({ ok: false, reason: "absent" } as const))
+      : defaultCredentialStatus(executorId);
+    if (!authStatus.ok) {
+      throw new PreflightError("auth", credentialMessageFor(executorId, authStatus.reason));
     }
   }
 
@@ -222,21 +227,6 @@ function collectExecutorIds(input: PreflightInput): ExecutorId[] {
     }
   }
   return Array.from(selected);
-}
-
-function defaultHasCredentials(executorId: ExecutorId): boolean {
-  if (executorId === "codex-cli") {
-    return Boolean(process.env.OPENAI_API_KEY) || existsSync(join(homedir(), ".codex", "auth.json"));
-  }
-  // Claude Code (default): ANTHROPIC_API_KEY or the CLI's own auth file.
-  return Boolean(process.env.ANTHROPIC_API_KEY) || existsSync(join(homedir(), ".claude.json"));
-}
-
-function authMessageFor(executorId: ExecutorId): string {
-  if (executorId === "codex-cli") {
-    return "Codex CLI has no credentials. Run `codex` once to authenticate, or set OPENAI_API_KEY.";
-  }
-  return "Claude Code CLI has no credentials. Run `claude` once to authenticate, or set ANTHROPIC_API_KEY.";
 }
 
 async function defaultGitPorcelain(repoRoot: string): Promise<string> {

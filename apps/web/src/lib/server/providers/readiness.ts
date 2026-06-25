@@ -1,7 +1,4 @@
 import { execFile } from "node:child_process";
-import { existsSync } from "node:fs";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { promisify } from "node:util";
 
 import {
@@ -16,6 +13,7 @@ import {
   hasDetectedCommands,
   type DetectedCommands
 } from "./command-detection";
+import { credentialMessageFor, defaultCredentialStatus } from "./credentials";
 
 const execFileAsync = promisify(execFile);
 
@@ -106,12 +104,17 @@ async function inspectExecutor(
       : `No se encontró ${descriptor.label}. Instalalo o configurá ${descriptor.binaryEnvVar}.`
   });
 
-  const authed = (deps.hasCredentials ?? defaultHasCredentials)(descriptor.id);
+  // Validity, not mere presence (F-028): an expired on-disk OAuth token (F-001)
+  // must surface as a failed auth check, not a false "ready". The injected
+  // boolean seam stays for unit tests; the default reads token expiry.
+  const authStatus = deps.hasCredentials
+    ? (deps.hasCredentials(descriptor.id) ? ({ ok: true } as const) : ({ ok: false, reason: "absent" } as const))
+    : defaultCredentialStatus(descriptor.id);
   checks.push({
     id: "auth",
-    status: authed ? "pass" : "fail",
+    status: authStatus.ok ? "pass" : "fail",
     label: "Autenticación",
-    message: authed ? "Credenciales encontradas." : authMessageFor(descriptor.id)
+    message: authStatus.ok ? "Credenciales encontradas." : credentialMessageFor(descriptor.id, authStatus.reason)
   });
 
   checks.push(...workspaceChecks);
@@ -244,26 +247,6 @@ async function defaultCheckCli(binaryPath: string): Promise<{ ok: boolean; versi
   } catch {
     return { ok: false };
   }
-}
-
-function defaultHasCredentials(executorId: ExecutorId): boolean {
-  if (executorId === CLAUDE_CODE_EXECUTOR_ID) {
-    return Boolean(process.env.ANTHROPIC_API_KEY || existsSync(join(homedir(), ".claude.json")));
-  }
-  if (executorId === "codex-cli") {
-    return Boolean(process.env.OPENAI_API_KEY || existsSync(join(homedir(), ".codex", "auth.json")));
-  }
-  return false;
-}
-
-function authMessageFor(executorId: ExecutorId): string {
-  if (executorId === "codex-cli") {
-    return "Codex CLI no tiene credenciales. Corré codex una vez para autenticarte, o configurá OPENAI_API_KEY.";
-  }
-  if (executorId === CLAUDE_CODE_EXECUTOR_ID) {
-    return "Claude Code CLI no tiene credenciales. Corré claude una vez para autenticarte, o configurá ANTHROPIC_API_KEY.";
-  }
-  return "Chequeo de autenticación no disponible para este executor deshabilitado.";
 }
 
 async function defaultGitPorcelain(repoRoot: string): Promise<string> {
