@@ -335,8 +335,20 @@ export interface ExecuteLeafNodeDeps {
   maxRepairAttempts?: number;
 }
 
-function validationOutputOf(result: AgentExecutionResult): string {
-  return result.validationResult?.output ?? result.stderrTail ?? "";
+export function validationOutputOf(result: AgentExecutionResult): string {
+  // Pick the first candidate that actually carries diagnostic text. `??` only
+  // falls through on null/undefined, so an empty-string `validationResult.output`
+  // (e.g. the error went to stderr, or the run timed out) used to shadow the
+  // real reason and leave the gate/repair blank (O-10).
+  const candidates = [result.validationResult?.output, result.stderrTail, result.stdoutTail];
+  const firstNonEmpty = candidates.find(
+    (candidate): candidate is string => typeof candidate === "string" && candidate.trim().length > 0
+  );
+  if (firstNonEmpty !== undefined) return firstNonEmpty;
+  // No captured output at all (timeout, killed executor, …): synthesize a
+  // non-empty, actionable reason so the leaf gate shows *something* and the
+  // repair agent never repairs blind.
+  return `Leaf "${result.taskId}" failed (status: ${result.status}) with no captured validation output.`;
 }
 
 /**
