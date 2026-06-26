@@ -139,6 +139,46 @@ describe("selectScopeAwareWave", () => {
     expect(wave).toEqual(["a"]); // src/server overlap still gates; b waits
   });
 
+  it("parallelizes independent leaves that overlap only on a barrel shared by many (O-7)", () => {
+    // Each leaf owns a distinct file and re-exports into a shared src/index.ts.
+    // A specific file touched by many leaves is a coordination file, the same
+    // class as a shared config manifest: every leaf branches from the same
+    // skeleton commit, so serializing on it never avoids the integration-time
+    // conflict (the composer reconciles), it only collapses the wave (O-7).
+    const graph = makeGraph([
+      makeLeaf("a", ["src/a.ts", "src/index.ts"]),
+      makeLeaf("b", ["src/b.ts", "src/index.ts"]),
+      makeLeaf("c", ["src/c.ts", "src/index.ts"]),
+      makeLeaf("d", ["src/d.ts", "src/index.ts"])
+    ]);
+    const wave = selectScopeAwareWave({ graph, candidates: ["a", "b", "c", "d"] });
+    expect(wave).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("still serializes a specific file shared by only two leaves (below the coordination threshold)", () => {
+    // Two leaves on the same file is a genuine pairwise overlap, not a broadly
+    // shared coordination file — stay conservative.
+    const graph = makeGraph([
+      makeLeaf("a", ["src/a.ts", "src/shared.ts"]),
+      makeLeaf("b", ["src/b.ts", "src/shared.ts"])
+    ]);
+    const wave = selectScopeAwareWave({ graph, candidates: ["a", "b"] });
+    expect(wave).toEqual(["a"]);
+  });
+
+  it("does NOT treat a broad directory glob shared by many as a coordination file", () => {
+    // Several leaves all claiming the whole src/ tree genuinely overlap; the
+    // coordination-file relaxation must apply only to specific files (with an
+    // extension), never to directory prefixes.
+    const graph = makeGraph([
+      makeLeaf("a", ["src/**"]),
+      makeLeaf("b", ["src/**"]),
+      makeLeaf("c", ["src/**"])
+    ]);
+    const wave = selectScopeAwareWave({ graph, candidates: ["a", "b", "c"] });
+    expect(wave).toEqual(["a"]);
+  });
+
   it("treats a mid-segment glob conservatively (partial segment dropped)", () => {
     const graph = makeGraph([makeLeaf("a", ["src/auth*"]), makeLeaf("b", ["src/authx/file.ts"])]);
     // "src/auth*" reduces to the literal prefix ["src"], which prefixes

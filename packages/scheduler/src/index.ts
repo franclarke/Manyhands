@@ -221,6 +221,7 @@ export function selectScopeAwareWave(input: ScopeAwareWaveInput): string[] {
   const scopes = new Map<string, string[][]>(
     input.candidates.map((taskId) => [taskId, scopeSignature(input.graph, taskId)])
   );
+  const overlapScopes = withoutCoordinationFiles(scopes);
 
   const selected: string[] = [];
   for (const taskId of input.candidates) {
@@ -228,7 +229,7 @@ export function selectScopeAwareWave(input: ScopeAwareWaveInput): string[] {
     const compatible = selected.every(
       (other) =>
         !isHighRiskPair(riskMatrix, taskId, other) &&
-        !scopesOverlap(scopes.get(taskId) ?? [], scopes.get(other) ?? [])
+        !scopesOverlap(overlapScopes.get(taskId) ?? [], overlapScopes.get(other) ?? [])
     );
     if (compatible) {
       selected.push(taskId);
@@ -277,6 +278,48 @@ function onePrefixesOther(left: string[], right: string[]): boolean {
   const shorter = left.length <= right.length ? left : right;
   const longer = left.length <= right.length ? right : left;
   return shorter.every((segment, index) => segment === longer[index]);
+}
+
+/**
+ * A path declared by this many candidates (or more) is treated as a shared
+ * coordination file rather than a real overlap.
+ */
+const COORDINATION_SHARE_THRESHOLD = 3;
+
+/**
+ * Drop shared *coordination files* from the overlap signatures (O-7). A specific
+ * file (one with an extension) that many candidates declare — a barrel, a
+ * registry, a shared `index.ts` — is the same class as the `configPaths` that
+ * `scopeSignature` already excludes: every leaf branches from the same skeleton
+ * commit, so serializing on it never avoids the integration-time conflict (the
+ * composer reconciles it), it only collapses the wave to one task at a time.
+ * Directory prefixes (from broad globs like `src/**` → `["src"]`) are kept —
+ * those are genuine wide overlaps, not coordination files.
+ */
+function withoutCoordinationFiles(scopes: Map<string, string[][]>): Map<string, string[][]> {
+  const counts = new Map<string, number>();
+  for (const signature of scopes.values()) {
+    for (const segments of signature) {
+      if (!isSpecificFile(segments)) continue;
+      const key = segments.join("/");
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+  return new Map(
+    [...scopes].map(([taskId, signature]) => [
+      taskId,
+      signature.filter(
+        (segments) =>
+          !(isSpecificFile(segments) && (counts.get(segments.join("/")) ?? 0) >= COORDINATION_SHARE_THRESHOLD)
+      )
+    ])
+  );
+}
+
+/** A literal path whose final segment carries a file extension (e.g. index.ts). */
+function isSpecificFile(segments: string[]): boolean {
+  const last = segments[segments.length - 1];
+  return last !== undefined && /\.[A-Za-z0-9]+$/.test(last);
 }
 
 function isHighRiskPair(riskMatrix: TaskPairRiskMatrix, a: string, b: string): boolean {
@@ -347,6 +390,14 @@ export function buildSchedulingSafetyContext(input: SchedulingSafetyContextInput
     }
   }
 
+  // Coordination files (a barrel / shared index touched by many tasks) must not
+  // generate a high-risk pair (O-7) — same rationale as the wave selector: every
+  // leaf branches from the same skeleton, so the overlap is reconciled at
+  // integration, not avoided by serializing.
+  const overlapScopes = withoutCoordinationFiles(
+    new Map(taskIds.map((id) => [id, scopeSignature(input.graph, id)]))
+  );
+
   forEachPair(taskIds, (left, right) => {
     if (
       input.policy !== "parallel_naive" &&
@@ -360,7 +411,7 @@ export function buildSchedulingSafetyContext(input: SchedulingSafetyContextInput
       });
     }
 
-    const scopeOverlap = scopesOverlap(scopeSignature(input.graph, left), scopeSignature(input.graph, right));
+    const scopeOverlap = scopesOverlap(overlapScopes.get(left) ?? [], overlapScopes.get(right) ?? []);
     if (scopeOverlap) {
       upsertConservativeRisk(riskMatrix, conservativePrediction(left, right, "high", {
         signal: "path_overlap",
