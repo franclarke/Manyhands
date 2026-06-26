@@ -166,8 +166,13 @@ export function applyPatchesUpTo<T extends PatchableInput>(
     return clone;
   }
 
+  // `planning`/`execution` persist as z.unknown(); a failed or in-flight run can
+  // carry a partial payload (no `decomposition`/`graphSnapshot`). Gate every
+  // nested dereference on a structural guard so a bad record degrades to "no
+  // patchable context" instead of throwing — otherwise one editing/patch-replay
+  // request 500s (mirrors the F-002 hardening in live-graph/presenter).
   const planning = clone.planning as MockPlanningFlowResult | undefined;
-  if (planning !== undefined) {
+  if (hasPatchablePlanning(planning)) {
     applyParsedPatchesToContext(
       {
         graph: planning.decomposition.graph as PatchGraph,
@@ -179,22 +184,24 @@ export function applyPatchesUpTo<T extends PatchableInput>(
   }
 
   const execution = clone.execution as MockExecutionFlowResult | undefined;
-  if (execution?.planning !== undefined) {
+  const execPlanning = execution?.planning as MockPlanningFlowResult | undefined;
+  if (hasPatchablePlanning(execPlanning)) {
     applyParsedPatchesToContext(
       {
-        graph: execution.planning.decomposition.graph as PatchGraph,
-        contracts: execution.planning.decomposition.contracts,
-        riskPredictions: execution.planning.riskMatrix as Array<Record<string, unknown>>
+        graph: execPlanning.decomposition.graph as PatchGraph,
+        contracts: execPlanning.decomposition.contracts,
+        riskPredictions: execPlanning.riskMatrix as Array<Record<string, unknown>>
       },
       parsed
     );
   }
-  if (execution?.snapshot !== undefined) {
+  const execSnapshot = execution?.snapshot as RunSnapshot | undefined;
+  if (hasPatchableSnapshot(execSnapshot)) {
     applyParsedPatchesToContext(
       {
-        graph: execution.snapshot.graphSnapshot as PatchGraph,
-        contracts: execution.snapshot.contracts,
-        riskPredictions: execution.snapshot.riskPredictions as Array<Record<string, unknown>>
+        graph: execSnapshot.graphSnapshot as PatchGraph,
+        contracts: execSnapshot.contracts,
+        riskPredictions: execSnapshot.riskPredictions as Array<Record<string, unknown>>
       },
       parsed
     );
@@ -466,4 +473,30 @@ function toAcceptanceCriteria(descriptions: readonly string[]): AcceptanceCriter
 
 function isRunSnapshot(value: PatchableInput): value is RunSnapshot {
   return "graphSnapshot" in value;
+}
+
+/**
+ * Structural guard (F-006): the persisted `planning` payload (typed z.unknown())
+ * may be partial — a failed/in-flight run can carry `{ summary: {} }` with no
+ * `decomposition`. Patch application only dereferences `decomposition.graph` and
+ * the `contracts` array, so gate on exactly that shape and skip otherwise.
+ */
+function hasPatchablePlanning(value: unknown): value is MockPlanningFlowResult {
+  if (typeof value !== "object" || value === null) return false;
+  const decomposition = (value as { decomposition?: unknown }).decomposition;
+  if (typeof decomposition !== "object" || decomposition === null) return false;
+  const graph = (decomposition as { graph?: unknown }).graph;
+  const contracts = (decomposition as { contracts?: unknown }).contracts;
+  return typeof graph === "object" && graph !== null && Array.isArray(contracts);
+}
+
+/**
+ * Structural guard (F-006): the persisted `execution.snapshot` payload may be
+ * partial (e.g. `{}`). Patch application dereferences `graphSnapshot`, so require
+ * it to be a present object before building the context.
+ */
+function hasPatchableSnapshot(value: unknown): value is RunSnapshot {
+  if (typeof value !== "object" || value === null) return false;
+  const graphSnapshot = (value as { graphSnapshot?: unknown }).graphSnapshot;
+  return typeof graphSnapshot === "object" && graphSnapshot !== null;
 }

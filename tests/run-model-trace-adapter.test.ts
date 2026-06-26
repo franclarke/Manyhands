@@ -88,6 +88,18 @@ describe("run-model trace adapter", () => {
     });
   });
 
+  it("does NOT emit node.execution.started for agent_started — executor_started is the single source (F-003)", () => {
+    // Regression: both `agent_started` (fires pre-worktree, empty payload) and
+    // `executor_started` (fires pre-spawn, carries executorId/model) used to map
+    // to `node.execution.started`, so every leaf attempt produced TWO identical
+    // start events ~400ms apart. executor_started is now the single source.
+    const fromAgentStarted = runModelEventsFromTrace(
+      trace({ type: "agent_started", taskId: "leaf-a", payload: {} }),
+      CONTEXT
+    );
+    expect(fromAgentStarted.some((event) => event.type === "node.execution.started")).toBe(false);
+  });
+
   it("maps executor stdout/stderr chunks to native node console output events", () => {
     const mapped = runModelEventsFromTrace(
       trace({

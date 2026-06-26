@@ -36,8 +36,19 @@ interface RouteContext {
 }
 
 const ForkRequestSchema = z.object({
-  /** The checkpoint ID to fork from. If omitted, forks from "latest". */
-  checkpointId: z.string().min(1).optional()
+  /**
+   * The checkpoint ID to fork from. If omitted, forks from "latest". Restricted
+   * to a safe identifier charset (UUID-shaped): it is interpolated into a file
+   * path (`<checkpoint_id>.json`) and `path.join`'d, so allowing `.`/`/`/`\`
+   * enables path traversal into other threads' checkpoints — an authz bypass
+   * (F-025).
+   */
+  checkpointId: z
+    .string()
+    .min(1)
+    .max(200)
+    .regex(/^[A-Za-z0-9_-]+$/, "checkpointId must be a safe identifier")
+    .optional()
 });
 
 export async function POST(request: Request, context: RouteContext): Promise<NextResponse> {

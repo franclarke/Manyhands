@@ -48,21 +48,27 @@ export function projectRunRecordToSnapshot(
   options: { applyPatches?: boolean } = {}
 ): RunSnapshot | null {
   const shouldApplyPatches = options.applyPatches ?? true;
+  // A persisted run can carry only a partial planning snapshot (e.g. a failed
+  // run with `{ decomposition: { graph } }` and no feature/summary/schedule).
+  // `buildPlanningSnapshot` assumes the full shape, so gate on it here and let
+  // the projection degrade to `null` (its declared contract) instead of throwing
+  // on `planning.decomposition.feature.id`.
+  const planning = isProjectablePlanning(run.planning) ? run.planning : null;
   let snapshot: RunSnapshot | null = null;
   if (run.execution !== undefined) {
     const execution = run.execution as MockExecutionFlowResult & RealExecutionResult;
-    if (execution.snapshot !== undefined) {
+    if (isProjectableSnapshot(execution.snapshot)) {
       // Legacy mock execution flow carries its own pre-built snapshot.
       snapshot = execution.snapshot;
-    } else if (Array.isArray(execution.leafResults) && run.planning !== undefined) {
+    } else if (Array.isArray(execution.leafResults) && planning !== null) {
       // Real execution-core RunExecutionResult: overlay leaf results + execution
       // traces onto the planning structure so the canvas/inspector/trace tab
       // project the real (possibly failed) execution instead of "No execution yet".
-      snapshot = buildExecutionSnapshot(run, run.planning as MockPlanningFlowResult, execution);
+      snapshot = buildExecutionSnapshot(run, planning, execution);
     }
   }
-  if (snapshot === null && run.planning !== undefined) {
-    snapshot = buildPlanningSnapshot(run, run.planning as MockPlanningFlowResult);
+  if (snapshot === null && planning !== null) {
+    snapshot = buildPlanningSnapshot(run, planning);
   }
   if (snapshot === null || !shouldApplyPatches) {
     return snapshot;
@@ -206,4 +212,54 @@ function snapshotStatusFor(status: RunStatus): RunSnapshot["status"] {
     default:
       return "planned";
   }
+}
+
+/**
+ * Structural guard over the opaque persisted `planning` payload. True only when
+ * it has the full shape `buildPlanningSnapshot`/`buildExecutionSnapshot`
+ * consume: `decomposition.feature.id`, `decomposition.graph` (rootId + nodes),
+ * `decomposition.contracts`, `summary.mode`, and `schedule.batches`. Failed or
+ * in-flight runs can persist only a partial snapshot, so any caller that wants
+ * a projected `RunSnapshot` must gate on this. Single source of truth shared
+ * with run-model projection.
+ */
+export function isProjectablePlanning(value: unknown): value is MockPlanningFlowResult {
+  if (!isRecord(value)) return false;
+  const decomposition = asRecord(value.decomposition);
+  if (decomposition === undefined) return false;
+  const feature = asRecord(decomposition.feature);
+  const graph = asRecord(decomposition.graph);
+  const summary = asRecord(value.summary);
+  const schedule = asRecord(value.schedule);
+  return (
+    typeof feature?.id === "string" &&
+    typeof graph?.rootId === "string" &&
+    isRecord(graph.nodes) &&
+    Array.isArray(decomposition.contracts) &&
+    typeof summary?.mode === "string" &&
+    Array.isArray(schedule?.batches)
+  );
+}
+
+/**
+ * Structural guard over the opaque persisted `execution.snapshot` payload. True
+ * only when it carries the fields the projection dereferences: a `graphSnapshot`
+ * with a `nodes` record and a `contracts` array. A legacy/corrupt record can
+ * persist `{ snapshot: {} }`; returning that would violate the `RunSnapshot |
+ * null` contract and crash consumers on `snapshot.graphSnapshot.nodes`. Single
+ * source of truth shared with run-model projection.
+ */
+export function isProjectableSnapshot(value: unknown): value is RunSnapshot {
+  if (!isRecord(value)) return false;
+  const graphSnapshot = asRecord(value.graphSnapshot);
+  if (graphSnapshot === undefined) return false;
+  return isRecord(graphSnapshot.nodes) && Array.isArray(value.contracts);
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return isRecord(value) ? value : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

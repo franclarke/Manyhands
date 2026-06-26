@@ -143,14 +143,18 @@ function executionFrontier(state: RunState, graph: TaskGraph): string[] {
 }
 
 /**
- * A dependency is satisfied when its producer finished successfully — either
- * as an executable task or, for composite producers, via integration.
+ * A dependency is satisfied when its producer has SETTLED in a way that unblocks
+ * downstream — finished successfully, OR failed and had its failure accepted by
+ * the human. This MUST mirror `childSettled` (the integration-side predicate):
+ * if the two drift, an accepted-failing producer unblocks its composite parent
+ * for integration but NOT its task dependents for execution, silently stranding
+ * the whole dependent subtree (see repro-stranding.test.ts).
  */
 function dependencySatisfied(state: RunState, graph: TaskGraph, fromTaskId: string): boolean {
   const producer = graph.nodes[fromTaskId];
   if (producer === undefined) return true;
   if (producer.kind === "leaf" || producer.kind === "integrator") {
-    return leafSucceeded(state, fromTaskId);
+    return leafSettled(state, fromTaskId);
   }
   const integration = state.integrationResults.find((result) => result.compositeTaskId === fromTaskId);
   return integration !== undefined && INTEGRATION_SUCCESS.has(integration.status);

@@ -565,6 +565,33 @@ export class IntegrationAgent {
       await this.git.addAllExcluding(worktree.path, DEFAULT_ARTIFACT_GLOBS);
       const changedFiles = await this.git.diffCachedNameOnly(worktree.path);
       const diff = await this.git.diffCached(worktree.path);
+
+      if (changedFiles.length === 0) {
+        // The repair executor ran but staged nothing, so the cherry-pick conflict
+        // is unresolved. Committing an empty index throws in real git and would
+        // crash the whole integration (mirrors the empty-diff guard in
+        // ResultRecorder). Fail the repair cleanly so the conflict gate surfaces
+        // it instead of letting the empty commit blow up the run.
+        execWarn("integrate", "repair produced no changes — not committing an empty index", {
+          task: params.compositeTaskId,
+          child: child.taskId,
+          pass
+        });
+        repairAttempts.push({
+          childTaskId: child.taskId,
+          pass,
+          status: "failed",
+          files: changedFiles
+        });
+        return {
+          ok: false,
+          result: this.buildRepairResult(child.taskId, "validation_failed", baseHead, baseHead, outcomeWithUsage, {
+            diff,
+            changedFiles
+          })
+        };
+      }
+
       execLog("integrate", "repair produced diff", {
         task: params.compositeTaskId,
         child: child.taskId,

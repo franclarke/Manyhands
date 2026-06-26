@@ -218,11 +218,11 @@ function vitalLabelOf(status: VitalStatus, role: NodeRole): string {
     case "planning":
       return "Generando";
     case "running":
-      return "Ejecutando";
+      return role === "leaf" ? "Ejecutando" : "Integrando subtareas";
     case "verifying":
-      return "Verificando";
+      return role === "leaf" ? "Verificando" : "Validando integración";
     case "repairing":
-      return "Reparando automáticamente";
+      return role === "leaf" ? "Reparando automáticamente" : "Reparando integración";
     case "gated":
       return "Esperando decisión";
     case "done":

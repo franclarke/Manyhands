@@ -280,7 +280,8 @@ function render() {
   });
   const dashboard = renderDashboard(model, {
     width: process.stdout.columns ?? 100,
-    height: process.stdout.rows ?? 34
+    height: process.stdout.rows ?? 34,
+    color: true
   });
   process.stdout.write(`\x1b[H\x1b[2J${dashboard}\n`);
 }

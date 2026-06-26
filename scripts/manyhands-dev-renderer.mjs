@@ -1,4 +1,18 @@
 const PHASES = ["framing", "proposal", "foundation", "supervision", "reconciliation", "disposition"];
+
+const A = {
+  reset: "\x1b[0m",
+  bold: "\x1b[1m",
+  dim: "\x1b[2m",
+  red: "\x1b[31m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  cyan: "\x1b[36m",
+  brightRed: "\x1b[91m",
+  brightGreen: "\x1b[92m",
+  brightYellow: "\x1b[93m",
+  brightCyan: "\x1b[96m",
+};
 const ACTIVE_RUN_STATUSES = new Set(["created", "generating", "paused", "needs_review", "approved", "running"]);
 
 export function chooseRun(runs, explicitRunId) {
@@ -338,7 +352,8 @@ export function renderDashboard(inputModel, options = {}) {
   lines.push(...section("Process", processLines(model, { width: bodyWidth, max: 4 }), width));
 
   const output = fitHeight(lines, height, width);
-  return output.join("\n");
+  const rendered = output.join("\n");
+  return options.color === true ? colorize(rendered) : rendered;
 }
 
 export function summarizeEvent(event) {
@@ -538,8 +553,57 @@ function nodeDetail(node) {
   return node.goal ?? "";
 }
 
+function colorize(output) {
+  return output
+    // Border lines
+    .replace(/^(\+-+\+)$/gm, A.dim + "$1" + A.reset)
+    // Section header lines: "| -- Title ---...--- |"
+    .replace(/^(\| -- \S.+?-+ *\|)$/gm, A.dim + "$1" + A.reset)
+    // Timeline tone prefixes (after "| ")
+    .replace(/(\| )\+ /g, "$1" + A.brightGreen + "+" + A.reset + " ")
+    .replace(/(\| )! /g, "$1" + A.brightYellow + "!" + A.reset + " ")
+    .replace(/(\| )x /g, "$1" + A.brightRed + "x" + A.reset + " ")
+    .replace(/(\| )\? /g, "$1" + A.brightCyan + "?" + A.reset + " ")
+    .replace(/(\| )- /g, "$1" + A.dim + "-" + A.reset + " ")
+    // Status badges
+    .replace(/\[RUN \]/g, A.brightGreen + "[RUN ]" + A.reset)
+    .replace(/\[TEST\]/g, A.brightYellow + "[TEST]" + A.reset)
+    .replace(/\[FIX \]/g, A.brightYellow + "[FIX ]" + A.reset)
+    .replace(/\[JOIN\]/g, A.cyan + "[JOIN]" + A.reset)
+    .replace(/\[DONE\]/g, A.green + "[DONE]" + A.reset)
+    .replace(/\[FAIL\]/g, A.brightRed + "[FAIL]" + A.reset)
+    .replace(/\[WAIT\]/g, A.yellow + "[WAIT]" + A.reset)
+    .replace(/\[IDLE\]/g, A.dim + "[IDLE]" + A.reset)
+    // Attention prefixes
+    .replace(/\[OK\]/g, A.brightGreen + "[OK]" + A.reset)
+    .replace(/\[BLOCK\]/g, A.brightRed + "[BLOCK]" + A.reset)
+    .replace(/\[INFO\]/g, A.cyan + "[INFO]" + A.reset)
+    .replace(/\[CONFLICT\]/g, A.brightRed + "[CONFLICT]" + A.reset)
+    // Health status
+    .replace(/Health WORKING/g, "Health " + A.brightGreen + "WORKING" + A.reset)
+    .replace(/Health ATTENTION/g, "Health " + A.brightYellow + "ATTENTION" + A.reset)
+    .replace(/Health FAILING/g, "Health " + A.brightRed + "FAILING" + A.reset)
+    .replace(/Health SETTLED/g, "Health " + A.dim + "SETTLED" + A.reset)
+    // Phase current indicator (e.g. [FRAMING], not status badges which have trailing spaces)
+    .replace(/\[(FRAMING|PROPOSAL|FOUNDATION|SUPERVISION|RECONCILIATION|DISPOSITION)\]/g, A.bold + A.brightCyan + "[$1]" + A.reset)
+    // Phase arrows
+    .replace(/ -> /g, A.dim + " -> " + A.reset)
+    // Server/stream/process status words in header
+    .replace(/(Server |Stream |Process )(PROBING|STARTING|CONNECTING|RETRYING)/g, "$1" + A.yellow + "$2" + A.reset)
+    .replace(/(Server |Stream |Process )(READY|RUNNING|CONNECTED)/g, "$1" + A.brightGreen + "$2" + A.reset)
+    .replace(/(Server |Stream |Process )(OFFLINE|FAILED|EXITED)/g, "$1" + A.brightRed + "$2" + A.reset)
+    .replace(/(Server |Stream |Process )(IDLE|ATTACHED)/g, "$1" + A.dim + "$2" + A.reset)
+    // Process log line prefixes
+    .replace(/\[stdout\]/g, A.dim + "[stdout]" + A.reset)
+    .replace(/\[stderr\]/g, A.brightYellow + "[stderr]" + A.reset)
+    .replace(/\[manyhands\]/g, A.cyan + "[manyhands]" + A.reset)
+    // Placeholder / idle messages
+    .replace(/(No plan nodes yet\.|Waiting for run events\.\.\.|Starting dev process\.\.\.)/g, A.dim + "$1" + A.reset)
+    .replace(/(No active agents\. done \d+ \| waiting \d+ \| failed \d+)/g, A.dim + "$1" + A.reset);
+}
+
 function section(title, sectionLines, width) {
-  const lines = [row(`-- ${title} ${"-".repeat(Math.max(0, width - title.length - 7))}`, width)];
+  const lines = [row(`-- ${title} ${"-".repeat(Math.max(0, width - title.length - 8))}`, width)];
   for (const line of sectionLines) lines.push(row(line, width));
   return lines;
 }

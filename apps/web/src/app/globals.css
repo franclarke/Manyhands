@@ -1056,6 +1056,9 @@
 @keyframes dashMarch { to { stroke-dashoffset: -16; } }
 .edge-flow { stroke-dasharray: 4 6; animation: dashMarch 1.6s linear infinite; }
 
+@keyframes dashMarchReverse { to { stroke-dashoffset: 16; } }
+.edge-flow-reverse { stroke-dasharray: 4 6; animation: dashMarchReverse 1.6s linear infinite; }
+
 .react-flow__attribution { display: none; }
 .react-flow__controls {
   border-radius: var(--r-lg) !important;
@@ -1188,8 +1191,24 @@
 /* A node whose OWN decomposition is still being generated. */
 .mh-min-node-expanding { border-style: dashed; }
 
+.mh-min-node-collapsed-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--done) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--done) 25%, var(--rule-soft));
+  font-family: var(--font-mono);
+  font-size: var(--fs-eyebrow);
+  font-weight: 600;
+  color: var(--done);
+  letter-spacing: var(--ls-eyebrow);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mh-working, .mh-panel-enter, .mh-skel-node, .mh-skel-node-bar, .mh-min-node-enter,
-  .coral-pulse, .edge-flow, .mh-min-node-wave, .mh-skeleton, .animate-pulse { animation: none; }
+  .coral-pulse, .edge-flow, .edge-flow-reverse, .mh-min-node-wave, .mh-skeleton, .animate-pulse { animation: none; }
   .mh-run-graph .react-flow__node { transition: none; }
 }

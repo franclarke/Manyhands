@@ -717,6 +717,64 @@ describe("IntegrationAgent", () => {
     expect(git.opsInvoked()).not.toContain("commit");
   });
 
+  it("treats a repair that stages no changes as a failed repair, never committing an empty index (F-013)", async () => {
+    // The repair executor succeeds but stages nothing (diffCachedNameOnly: []),
+    // so the cherry-pick conflict is unresolved. Real git refuses to commit an
+    // empty index and throws, which used to crash the whole integration. The
+    // repair must fail cleanly and must NOT attempt the commit.
+    const git = new FakeGitRunner({
+      heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
+      cherryPickOutcomes: [{ ok: false, conflictFiles: ["src/b.ts"], output: "CONFLICT" }],
+      diffCachedNameOnly: [],
+      diffCached: ""
+    });
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: "/repo"
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("b", "SHA_B")],
+      repair
+    });
+
+    expect(result.status).toBe("executor_repair_failed");
+    expect(result.repairResult?.status).toBe("validation_failed");
+    expect(git.opsInvoked()).not.toContain("commit");
+  });
+
+  it("does not throw when real git rejects an empty repair commit (F-013 crash guard)", async () => {
+    // Models real git: commit on an empty index throws. With the empty-changes
+    // guard the commit is never reached, so integrate() returns a clean failure
+    // instead of rejecting with an unhandled exception.
+    const git = new FakeGitRunner({
+      heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
+      cherryPickOutcomes: [{ ok: false, conflictFiles: ["src/b.ts"], output: "CONFLICT" }],
+      diffCachedNameOnly: [],
+      diffCached: "",
+      failOperations: { commit: new Error("nothing to commit, working tree clean") }
+    });
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: "/repo"
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("b", "SHA_B")],
+      repair
+    });
+
+    expect(result.status).toBe("executor_repair_failed");
+  });
+
   it("reports validation_failed when parent validation does not pass", async () => {
     const git = new FakeGitRunner({ heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" } });
     const validationRunner = new FakeValidationRunner({ passed: false, output: "tests failed", exitCode: 1 });

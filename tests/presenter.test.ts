@@ -91,4 +91,22 @@ describe("presenter â€” execution summary", () => {
     const preview = toRunPreview(baseRun({ execution: EXECUTION }), new Map());
     expect(preview.agentCount).toBe(1);
   });
+
+  it("does not throw when a persisted run has a partial planning object (no summary/riskMatrix)", () => {
+    // A failed run can carry a partial planning snapshot shaped like
+    // `{ decomposition: { graph } }` with neither `summary` nor `riskMatrix`.
+    // toRunPreview must not assume those fields exist, or a single bad record
+    // 500s the whole `/api/runs` list.
+    const partialPlanning = {
+      decomposition: { graph: { rootId: "root", nodes: {}, dependencies: [] } }
+    } as unknown as RunRecord["planning"];
+
+    const preview = toRunPreview(
+      baseRun({ status: "failed", planning: partialPlanning }),
+      new Map()
+    );
+
+    expect(preview.nodeCount).toBeUndefined();
+    expect(preview.conflictCount).toBeUndefined();
+  });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -17,7 +17,7 @@ import {
   type NodeTypes
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ZoomIn, ZoomOut, Maximize, OctagonAlert, CircleSlash, Hand } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize, OctagonAlert, CircleSlash, Hand, ChevronsUpDown, ChevronsDownUp } from "lucide-react";
 import { nodeGlyph } from "@/lib/run-model/node-glyph";
 import type { FocusTarget } from "@/lib/run-model/focus-view";
 import type { MinimalRunGraph, ProductStage } from "@/lib/run-model/minimal-workspace-view";
@@ -49,6 +49,7 @@ interface MinimalGraphNodeData {
   isNew: boolean;
   /** Its own decomposition is still being generated (children pending). */
   expanding: boolean;
+  collapsedChildCount: number;
   [key: string]: unknown;
 }
 
@@ -92,10 +93,32 @@ export function MinimalRunGraphCanvas(props: MinimalRunGraphProps): React.ReactE
   );
 }
 
-function CanvasControls(): React.ReactElement {
+interface CanvasControlsProps {
+  onExpandAll: () => void;
+  onCollapseAll: () => void;
+}
+
+function CanvasControls({ onExpandAll, onCollapseAll }: CanvasControlsProps): React.ReactElement {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   return (
     <div className="absolute bottom-4 right-4 flex gap-1.5 p-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] z-30 select-none">
+      <button
+        onClick={onExpandAll}
+        className="p-1.5 text-[var(--color-text-subtle)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] rounded-lg transition-colors cursor-pointer"
+        title="Expandir todo"
+        type="button"
+      >
+        <ChevronsUpDown className="w-3.5 h-3.5" />
+      </button>
+      <button
+        onClick={onCollapseAll}
+        className="p-1.5 text-[var(--color-text-subtle)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] rounded-lg transition-colors cursor-pointer"
+        title="Colapsar integrados"
+        type="button"
+      >
+        <ChevronsDownUp className="w-3.5 h-3.5" />
+      </button>
+      <div className="w-[1px] h-3.5 bg-[var(--color-border)] self-center" aria-hidden />
       <button
         onClick={() => void fitView({ duration: 300, padding: 0.18 })}
         className="p-1.5 text-[var(--color-text-subtle)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] rounded-lg transition-colors cursor-pointer"
@@ -134,12 +157,41 @@ function MinimalRunGraphInner({
   emptyKind = "planning"
 }: MinimalRunGraphProps): React.ReactElement {
   const selectedNodeId = selectedTarget?.kind === "node" ? selectedTarget.id : null;
+  
+  // Set of node IDs that the user manually expanded.
+  const [userExpandedIds, setUserExpandedIds] = useState<Set<string>>(new Set());
+
+  // Derived set of collapsed node IDs. By default, any composite/root node
+  // that is "done" is collapsed, unless the user manually expanded it.
+  const collapsedIds = useMemo(() => {
+    const collapsed = new Set<string>();
+    for (const node of graph.nodes) {
+      if (node.role === "composite" || node.role === "root") {
+        if (node.vital.status === "done" && !userExpandedIds.has(node.id)) {
+          collapsed.add(node.id);
+        }
+      }
+    }
+    return collapsed;
+  }, [graph.nodes, userExpandedIds]);
+
+  const handleExpandAll = () => {
+    const allComposites = graph.nodes
+      .filter((n) => n.role === "composite" || n.role === "root")
+      .map((n) => n.id);
+    setUserExpandedIds(new Set(allComposites));
+  };
+
+  const handleCollapseAll = () => {
+    setUserExpandedIds(new Set());
+  };
+
   // Ids already on canvas — anything beyond this set just streamed in and
   // materializes with the settle entrance instead of popping.
   const seenIdsRef = useRef<Set<string>>(new Set());
   const flow = useMemo(
-    () => buildFlow(graph, stage, selectedNodeId, seenIdsRef.current),
-    [graph, stage, selectedNodeId]
+    () => buildFlow(graph, stage, selectedNodeId, seenIdsRef.current, collapsedIds),
+    [graph, stage, selectedNodeId, collapsedIds]
   );
   useEffect(() => {
     for (const node of flow.nodes) {
@@ -185,12 +237,19 @@ function MinimalRunGraphInner({
         proOptions={{ hideAttribution: true }}
         onNodeClick={(_event, node) => {
           if (isGhostId(node.id)) return;
+          if (collapsedIds.has(node.id)) {
+            setUserExpandedIds((prev) => {
+              const next = new Set(prev);
+              next.add(node.id);
+              return next;
+            });
+          }
           onFocus({ kind: "node", id: node.id });
         }}
         onPaneClick={() => undefined}
       >
         <Background variant={BackgroundVariant.Dots} gap={28} size={1} color="var(--mh-graph-dots)" />
-        <CanvasControls />
+        <CanvasControls onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
         {graph.nodes.length > 12 ? (
           <MiniMap
             pannable
@@ -269,7 +328,8 @@ function buildFlow(
   graph: MinimalRunGraph,
   stage: ProductStage,
   selectedNodeId: string | null,
-  seenIds: ReadonlySet<string>
+  seenIds: ReadonlySet<string>,
+  collapsedIds: ReadonlySet<string>
 ): { nodes: Node<MinimalGraphNodeData | SkeletonGraphNodeData>[]; edges: Edge[] } {
   const byId = new Map(graph.nodes.map((node) => [node.id, node]));
 
@@ -287,6 +347,24 @@ function buildFlow(
   }));
   const allNodes = [...graph.nodes, ...ghosts];
   for (const ghost of ghosts) byId.set(ghost.id, ghost);
+
+  // Hidden nodes list calculation: any node having any ancestor in collapsedIds is hidden.
+  const hiddenIds = new Set<string>();
+  const isHidden = (nodeId: string): boolean => {
+    let cur = byId.get(nodeId);
+    while (cur && cur.parentId !== null) {
+      if (collapsedIds.has(cur.parentId)) {
+        return true;
+      }
+      cur = byId.get(cur.parentId);
+    }
+    return false;
+  };
+  for (const node of allNodes) {
+    if (isHidden(node.id)) {
+      hiddenIds.add(node.id);
+    }
+  }
 
   const childrenOf = new Map<string, WorkspaceNode[]>();
   for (const node of allNodes) {
@@ -327,13 +405,28 @@ function buildFlow(
     return BRANCH_VARS[index % BRANCH_VARS.length]!;
   };
 
+  // Helper to find closest ancestor that is visible (the collapsed node itself).
+  const getClosestVisibleAncestor = (nodeId: string): string => {
+    let cur = byId.get(nodeId);
+    while (cur && cur.parentId !== null) {
+      if (collapsedIds.has(cur.parentId)) {
+        return cur.parentId;
+      }
+      cur = byId.get(cur.parentId);
+    }
+    return nodeId;
+  };
+
   // Tidy layout: a DFS that packs each subtree into a contiguous vertical band and
   // centres every parent over its children, so siblings sit together and branches
   // never interleave.
+  // If a node is collapsed, we treat it as a leaf (kids.length === 0) for layout calculation,
+  // making the graph contract cleanly.
   const pos = new Map<string, { x: number; y: number }>();
   let leafCursor = 0;
   const place = (node: WorkspaceNode): number => {
-    const kids = childrenOf.get(node.id) ?? [];
+    const isCollapsed = collapsedIds.has(node.id);
+    const kids = isCollapsed ? [] : (childrenOf.get(node.id) ?? []);
     let y: number;
     if (kids.length === 0) {
       y = leafCursor * Y_GAP;
@@ -361,64 +454,103 @@ function buildFlow(
   }
   const hasSelection = selectedNodeId !== null;
 
-  const flowNodes: Node<MinimalGraphNodeData | SkeletonGraphNodeData>[] = allNodes.map((node) => {
-    const position = pos.get(node.id) ?? { x: node.depth * X_GAP, y: 0 };
-    if (isGhostId(node.id)) {
+  const flowNodes: Node<MinimalGraphNodeData | SkeletonGraphNodeData>[] = allNodes
+    .filter((node) => !hiddenIds.has(node.id))
+    .map((node) => {
+      const position = pos.get(node.id) ?? { x: node.depth * X_GAP, y: 0 };
+      if (isGhostId(node.id)) {
+        return {
+          id: node.id,
+          type: "skeletonTask",
+          position,
+          selectable: false,
+          focusable: false,
+          data: { dimmed: hasSelection }
+        };
+      }
+      const isCollapsed = collapsedIds.has(node.id);
+      const directChildren = graph.nodes.filter((n) => n.parentId === node.id);
+      const collapsedChildCount = isCollapsed ? directChildren.length : 0;
       return {
         id: node.id,
-        type: "skeletonTask",
+        type: "minimalTask",
         position,
-        selectable: false,
-        focusable: false,
-        data: { dimmed: hasSelection }
+        data: {
+          node,
+          stage,
+          selected: selectedNodeId === node.id,
+          branch: branchColorFor(node),
+          onPath: pathSet.has(node.id),
+          dimmed: hasSelection && !pathSet.has(node.id),
+          isNew: !seenIds.has(node.id),
+          expanding: isExpanding(node),
+          collapsedChildCount
+        }
       };
-    }
-    return {
-      id: node.id,
-      type: "minimalTask",
-      position,
-      data: {
-        node,
-        stage,
-        selected: selectedNodeId === node.id,
-        branch: branchColorFor(node),
-        onPath: pathSet.has(node.id),
-        dimmed: hasSelection && !pathSet.has(node.id),
-        isNew: !seenIds.has(node.id),
-        expanding: isExpanding(node)
-      }
-    };
-  });
+    });
 
-  const flowEdges: Edge[] = graph.edges.map((edge) => {
+  const flowEdges: Edge[] = [];
+  for (const edge of graph.edges) {
     const isDependency = edge.kind === "dependency";
-    const target = byId.get(edge.target);
-    const onPath = !isDependency && pathSet.has(edge.source) && pathSet.has(edge.target);
+    let sourceId = edge.source;
+    let targetId = edge.target;
+
+    if (isDependency) {
+      if (hiddenIds.has(sourceId)) {
+        sourceId = getClosestVisibleAncestor(sourceId);
+      }
+      if (hiddenIds.has(targetId)) {
+        targetId = getClosestVisibleAncestor(targetId);
+      }
+      if (sourceId === targetId) {
+        continue;
+      }
+    } else {
+      if (hiddenIds.has(sourceId) || hiddenIds.has(targetId)) {
+        continue;
+      }
+    }
+
+    const target = byId.get(targetId);
+    const source = byId.get(sourceId);
+
+    const onPath = !isDependency && pathSet.has(sourceId) && pathSet.has(targetId);
     const dimmed = hasSelection && !onPath;
+    
     // Hierarchy edges into a still-expanding subtree march with the stream.
     const streaming = !isDependency && target !== undefined && isExpanding(target);
+    
+    // Hierarchy edges FROM an integrating composite flow in reverse (bottom-up).
+    const integrating =
+      !isDependency &&
+      source !== undefined &&
+      source.role !== "leaf" &&
+      source.vital.status === "running";
+
     const branchColor = target !== undefined ? branchColorFor(target) : "var(--mh-graph-edge)";
     const stroke = isDependency ? "var(--mh-graph-seam)" : branchColor;
-    return {
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
+
+    flowEdges.push({
+      id: isDependency ? `${edge.id}:remapped:${sourceId}->${targetId}` : edge.id,
+      source: sourceId,
+      target: targetId,
       type: "smoothstep",
       animated: onPath,
-      ...(streaming ? { className: "edge-flow" } : {}),
+      ...(integrating ? { className: "edge-flow-reverse" } : streaming ? { className: "edge-flow" } : {}),
       markerEnd: { type: MarkerType.ArrowClosed, width: 13, height: 13, color: stroke },
       style: {
         stroke,
-        strokeWidth: onPath ? 2.4 : isDependency ? 1.5 : 1.4,
-        strokeDasharray: isDependency ? "4 5" : streaming ? "4 6" : undefined,
-        opacity: dimmed ? 0.16 : isDependency ? 0.7 : 0.55,
+        strokeWidth: onPath ? 2.4 : integrating ? 2.2 : isDependency ? 1.5 : 1.4,
+        strokeDasharray: isDependency ? "4 5" : streaming || integrating ? "4 6" : undefined,
+        opacity: dimmed ? 0.16 : integrating ? 0.85 : isDependency ? 0.7 : 0.55,
         transition: "opacity 200ms ease, stroke-width 200ms ease"
       }
-    };
-  });
+    });
+  }
 
   // Parent → ghost: the stream itself, drawn as a marching dashed ember edge.
   for (const ghost of ghosts) {
+    if (hiddenIds.has(ghost.id) || hiddenIds.has(ghost.parentId!)) continue;
     flowEdges.push({
       id: `ghost-edge:${ghost.parentId}`,
       source: ghost.parentId!,
@@ -476,7 +608,7 @@ function SkeletonTaskNode({ data }: NodeProps<Node<SkeletonGraphNodeData>>): Rea
 }
 
 function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React.ReactElement {
-  const { node, selected, branch, onPath, dimmed, isNew, expanding } = data;
+  const { node, selected, branch, onPath, dimmed, isNew, expanding, collapsedChildCount } = data;
   const status = node.vital.status;
   const hasProgress = node.vital.testProgress !== undefined;
   const glyph = nodeGlyph(status);
@@ -536,6 +668,13 @@ function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React
         </div>
       ) : null}
       {node.vital.detail !== undefined && status !== "idle" ? <small>{compactDetail(node.vital.detail)}</small> : null}
+      {collapsedChildCount > 0 && (
+        <div className="flex justify-start">
+          <span className="mh-min-node-collapsed-badge">
+            +{collapsedChildCount}
+          </span>
+        </div>
+      )}
     </article>
   );
 }

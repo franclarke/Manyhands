@@ -25,7 +25,10 @@ interface RouteContext {
 
 const AnswerRequestSchema = z.object({
   nodeId: z.string().min(1),
-  answer: z.string().min(1),
+  // Bounded so a multi-MB answer can't be accepted, persisted to the run record,
+  // and streamed back to every client (F-024). 10k chars is ample for a human
+  // gate answer (~1500 words).
+  answer: z.string().min(1).max(10_000),
   expectedVersion: z.number().int().nonnegative().optional()
 }).strict();
 

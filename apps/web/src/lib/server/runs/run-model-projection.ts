@@ -1,6 +1,6 @@
 import type { RunExecutionResult } from "@manyhands/execution-core";
 import { isExecutionResult } from "@/lib/execution-summary";
-import { projectRunRecordToSnapshot } from "@/lib/live-graph";
+import { isProjectablePlanning, isProjectableSnapshot, projectRunRecordToSnapshot } from "@/lib/live-graph";
 import type {
   Actor,
   GranularityMetrics,
@@ -337,29 +337,8 @@ function createWriter(runId: string): EventWriter {
 
 function hasProjectableSnapshotInput(run: RunRecord): boolean {
   const execution = run.execution;
-  if (isRecord(execution) && execution.snapshot !== undefined) return true;
-  return hasProjectablePlanningShape(run.planning);
-}
-
-function hasProjectablePlanningShape(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  const decomposition = asRecord(value.decomposition);
-  const feature = asRecord(decomposition?.feature);
-  const graph = asRecord(decomposition?.graph);
-  const summary = asRecord(value.summary);
-  const schedule = asRecord(value.schedule);
-  return (
-    typeof feature?.id === "string" &&
-    typeof graph?.rootId === "string" &&
-    isRecord(graph.nodes) &&
-    Array.isArray(decomposition?.contracts) &&
-    typeof summary?.mode === "string" &&
-    Array.isArray(schedule?.batches)
-  );
-}
-
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return isRecord(value) ? value : undefined;
+  if (isRecord(execution) && isProjectableSnapshot(execution.snapshot)) return true;
+  return isProjectablePlanning(run.planning);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

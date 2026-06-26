@@ -1,8 +1,29 @@
 import type { RunPreview, RunResponse } from "@/lib/api-types";
 import type { Workspace } from "@/lib/api-types";
 import { isExecutionResult, toExecutionSummary } from "@/lib/execution-summary";
-import type { MockExecutionFlowResult, MockPlanningFlowResult } from "@manyhands/core";
+import type { MockExecutionFlowResult } from "@manyhands/core";
 import type { RunRecord } from "./schema";
+
+/**
+ * Defensive view over the opaque persisted `planning` payload. The store types
+ * `planning` as `z.unknown()`, so a record may carry only a partial snapshot;
+ * every field here is optional on purpose.
+ */
+type PlanningPreviewShape = {
+  summary?: { taskCount?: number };
+  riskMatrix?: ReadonlyArray<{ level?: string }>;
+};
+
+/**
+ * Count risks flagged `blocking`/`high`, or `undefined` when the record has no
+ * usable risk matrix (so the caller can leave `conflictCount` unset).
+ */
+function countBlockingRisks(riskMatrix: PlanningPreviewShape["riskMatrix"]): number | undefined {
+  if (!Array.isArray(riskMatrix)) return undefined;
+  return riskMatrix.filter(
+    (entry) => entry?.level === "blocking" || entry?.level === "high"
+  ).length;
+}
 
 export function toRunResponse(run: RunRecord): RunResponse {
   const payload: RunResponse["run"] = {
@@ -90,30 +111,32 @@ export function toRunPreview(run: RunRecord, workspaces: ReadonlyMap<string, Wor
     preview.workspaceName = workspace.name;
   }
 
-  const planning = run.planning as MockPlanningFlowResult | undefined;
-  if (planning !== undefined) {
+  // `run.planning`/`run.execution` are persisted opaque payloads (schema:
+  // `z.unknown()`). A run can carry a partial snapshot — e.g. a failed run with
+  // `{ decomposition: { graph } }` and no `summary`/`riskMatrix` — so every
+  // field access here must tolerate absence; otherwise one bad record 500s the
+  // whole `/api/runs` list.
+  const planning = run.planning as PlanningPreviewShape | undefined;
+  if (planning?.summary?.taskCount !== undefined) {
     preview.nodeCount = planning.summary.taskCount;
   }
 
   if (isExecutionResult(run.execution)) {
     // Real execution engine (RunExecutionResult).
     preview.agentCount = run.execution.leafResults.length;
-    if (planning !== undefined) {
-      preview.conflictCount = planning.riskMatrix.filter(
-        (entry) => entry.level === "blocking" || entry.level === "high"
-      ).length;
-    }
+    const conflicts = countBlockingRisks(planning?.riskMatrix);
+    if (conflicts !== undefined) preview.conflictCount = conflicts;
   } else if ((run.execution as MockExecutionFlowResult | undefined) !== undefined) {
     // Legacy Lab-mode execution snapshot.
-    const execution = run.execution as MockExecutionFlowResult;
+    const execution = run.execution as MockExecutionFlowResult & {
+      planning?: PlanningPreviewShape;
+    };
     preview.agentCount = execution.results.length;
-    preview.conflictCount = execution.planning.riskMatrix.filter(
-      (entry) => entry.level === "blocking" || entry.level === "high"
-    ).length;
-  } else if (planning !== undefined) {
-    preview.conflictCount = planning.riskMatrix.filter(
-      (entry) => entry.level === "blocking" || entry.level === "high"
-    ).length;
+    const conflicts = countBlockingRisks(execution.planning?.riskMatrix);
+    if (conflicts !== undefined) preview.conflictCount = conflicts;
+  } else {
+    const conflicts = countBlockingRisks(planning?.riskMatrix);
+    if (conflicts !== undefined) preview.conflictCount = conflicts;
   }
 
   if (run.completedAt !== undefined && run.startedAt !== undefined) {

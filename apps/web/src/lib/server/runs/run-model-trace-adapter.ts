@@ -41,15 +41,14 @@ export function runModelEventsFromTrace(
         : [];
     }
     case "agent_started": {
-      if (taskId === undefined) return [];
-      return [
-        {
-          actor: "agent",
-          at,
-          type: "node.execution.started",
-          payload: { nodeId: taskId, agent: "claude-code-cli", model: context.defaultModel }
-        }
-      ];
+      // Intentionally NOT mapped to `node.execution.started` (F-003). Both
+      // `agent_started` (fires pre-worktree, empty payload — would force a
+      // hardcoded "claude-code-cli"/defaultModel) and `executor_started` (fires
+      // pre-spawn, carries the real executorId/model) used to map here, so every
+      // leaf attempt emitted TWO identical start events ~400ms apart.
+      // `executor_started` is the single source. `agent_started` stays a raw
+      // trace for debugging only.
+      return [];
     }
     case "executor_started": {
       if (taskId === undefined) return [];
