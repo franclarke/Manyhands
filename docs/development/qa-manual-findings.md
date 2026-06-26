@@ -482,9 +482,18 @@ Feature `core`/`store`/`bus` + barrel raíz, diseñada para jerarquía y conflic
   tras el `testsPass:1` del primero → flicker "tests 1/1 → 0/N". `validation_started` ya no
   emite verify.iteration (single source = `executor_completed`, misma regla que F-003).
   `tests/run-model-trace-adapter.test.ts` (rojo→verde).
+- **O-7 (S3, perf) — FIXED** (`d77a3fc`): la serialización total con granularidad fina
+  venía de que un **barrel compartido** (`src/index.ts`) estaba en el scope de todos los
+  leaves → tanto `selectScopeAwareWave` como la risk matrix generada (`path_overlap → high`)
+  serializaban cada par. Un archivo específico (con extensión) declarado por **3+
+  candidatos** es un **coordination file** —misma clase que los `configPaths` que el scope
+  signature ya excluye: todas las hojas ramifican del mismo skeleton, así que serializar
+  nunca evita el conflicto de integración (lo reconcilia el composer), solo colapsa la wave.
+  `withoutCoordinationFiles()` lo dropea del overlap en **ambas** fuentes. Globs de
+  directorio y archivos compartidos por solo 2 leaves siguen conservadores. +3 tests en
+  `scheduler-scope-aware-wave.test.ts`; suite 1251 verde.
 - **No fixeados (con criterio):** **O-9** (conteo `1/1` vs real) — el fix requiere parsear
   la salida de `node --test`, format-coupled; el `total:1` es una simplificación booleana
-  pass/fail (sin riesgo de falso-pass). **O-7** (serialización por scope-overlap) — alto
-  valor pero toca la lógica de scope del decomposer (más riesgoso); candidato a PR aparte.
-  **O-6** (skeleton→master), **F-027** (gate de auth dedicado), **O-11** — decisiones de
-  diseño / a verificar, pendientes de Francisco.
+  pass/fail (sin riesgo de falso-pass). **O-6** (skeleton→master), **F-027** (gate de auth
+  dedicado), **O-11** (`spawn cmd.exe ENOENT`) — decisiones de diseño / a verificar,
+  pendientes de Francisco.
