@@ -436,3 +436,55 @@ reautenticar claude / configurar `ANTHROPIC_API_KEY` / esperar el reset de codex
   [[decomposer-validation-commands-gap]] (completed/passed con conteo no representativo).
 - **Run 2 — veredicto:** **PASS funcional** (completed, applied, 22 tests reales pasan),
   con O-7 (serialización, único finding de sistema sustantivo) + O-8/O-9 (observaciones).
+
+---
+
+## Iter 5 — Run 3 PROFUNDO + recuperación de errores + bucle de fixes
+
+### Run 3 — `cb0e29cd…` (granularidad ALTA, feature de 3 capas, depth-2)
+Feature `core`/`store`/`bus` + barrel raíz, diseñada para jerarquía y conflicto.
+- **Profundidad lograda:** 13 nodos, maxDepth 2 — root → leaves de `core` + **2
+  composites** (`store-memory`, `bus-event-bus`) con leaves d2 + barrels. Ejercitó la
+  **integración bottom-up de composites** que los runs planos no tocaron.
+- **Recuperación de errores (✅ lo más importante) — 2 escenarios:**
+  1. **Cuota de Claude agotada** a mitad de run (`core-event`, `validationOutput:
+     "You've hit your session limit"`). El run pausó en `leaf_validation_failed`,
+     **sobrevivió ~4h + reinicio del server**, y se reanudó con `retry_repair` desde el
+     **checkpoint** → re-ejecutó la hoja y siguió. **El estado es durable** (checkpoint
+     en disco + event log append-only). Confirma **F-027** en la práctica (la cuota cae
+     en el gate genérico, no en uno de auth).
+  2. **Fallo real de hoja** (`event-bus-test`: `ERR_MODULE_NOT_FOUND` por import
+     extensionless `'./eventBus'`) → **Stage D (leaf gate real)** ejercitado. `retry_repair`
+     reanudó pero **no lo fixeó** (ver O-10) → `accept_failing` para avanzar.
+- **merge_conflict gate (Stage E/F) ejercitado:** la integración de **ambos** composites
+  (`bus-event-bus`, `store-memory`) disparó `merge_conflict` → resueltos con
+  `accept_conflict`.
+- **Degeneración:** los agentes escribieron sistemáticamente imports extensionless
+  incompatibles con `node --test`+ESM → **todas las hojas fallaron validación**; conduje
+  con `accept_failing`/`accept_conflict`/`abort_run`. **Terminó `failed`** (la
+  run-validation no pasó). **Veredicto positivo: el sistema NO reportó falso-éxito** — con
+  todo roto, terminó `failed`, no `completed`.
+- **O-11 (a verificar):** la run-validation final dio `errorMessage: "spawn cmd.exe
+  ENOENT"` (Windows). Puede ser bug real del runner de validación (shell/COMSPEC) o
+  artefacto del env del server levantado por preview. Pendiente de aislar.
+
+### Bucle positivo — fixes aplicados (TDD, en `main`)
+- **F-028 (S2) — FIXED** (`432c23f`): credencial expiry-aware compartida (readiness+preflight).
+- **O-10 (S2) — FIXED** (`f665d1c`): `validationOutputOf` (`execution-nodes.ts`) usaba
+  `output ?? stderrTail ?? ""`; `??` no cae en string vacío, así que un `validationResult.output`
+  vacío (error a stderr, o timeout) dejaba el gate y el repair **en blanco** → el humano no
+  veía la causa y `retry_repair` reparaba a ciegas (causó la degeneración de Run 3). Ahora
+  toma el primer candidato **no vacío** (output→stderr→stdout) y, si todos vacíos, sintetiza
+  un mensaje accionable con `taskId`+`status`. Test nuevo `validation-output.test.ts`
+  (rojo→verde); 34 tests de orchestrator-graph verdes.
+- **O-4 (S4) — FIXED** (`1af7fed`): el trace-adapter mapeaba `executor_completed` **y**
+  `validation_started` a `node.verify.iteration`, con el segundo emitiendo `testsPass:0`
+  tras el `testsPass:1` del primero → flicker "tests 1/1 → 0/N". `validation_started` ya no
+  emite verify.iteration (single source = `executor_completed`, misma regla que F-003).
+  `tests/run-model-trace-adapter.test.ts` (rojo→verde).
+- **No fixeados (con criterio):** **O-9** (conteo `1/1` vs real) — el fix requiere parsear
+  la salida de `node --test`, format-coupled; el `total:1` es una simplificación booleana
+  pass/fail (sin riesgo de falso-pass). **O-7** (serialización por scope-overlap) — alto
+  valor pero toca la lógica de scope del decomposer (más riesgoso); candidato a PR aparte.
+  **O-6** (skeleton→master), **F-027** (gate de auth dedicado), **O-11** — decisiones de
+  diseño / a verificar, pendientes de Francisco.
