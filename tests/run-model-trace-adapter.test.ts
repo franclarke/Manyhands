@@ -72,6 +72,11 @@ describe("run-model trace adapter", () => {
       testsTotal: 1
     });
 
+    // O-4: validation_started must NOT emit its own node.verify.iteration. It
+    // used to push a testsPass:0 event AFTER executor_completed's testsPass:1,
+    // flickering the UI "tests 1/1 → 0/N". executor_completed is now the single
+    // verify.iteration source (same single-source rule as F-003); the real
+    // result lands on the terminal node.verify.passed/failed.
     const validationStarted = runModelEventsFromTrace(
       trace({
         type: "validation_started",
@@ -80,12 +85,7 @@ describe("run-model trace adapter", () => {
       }),
       CONTEXT
     );
-    expect(validationStarted[0]?.payload).toMatchObject({
-      nodeId: "leaf-a",
-      build: "pass",
-      testsPass: 0,
-      testsTotal: 3
-    });
+    expect(validationStarted.filter((event) => event.type === "node.verify.iteration")).toHaveLength(0);
   });
 
   it("does NOT emit node.execution.started for agent_started — executor_started is the single source (F-003)", () => {

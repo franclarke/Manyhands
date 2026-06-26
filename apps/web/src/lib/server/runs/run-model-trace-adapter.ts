@@ -101,22 +101,12 @@ export function runModelEventsFromTrace(
       ];
     }
     case "validation_started": {
-      if (taskId === undefined) return [];
-      return [
-        {
-          actor: "system",
-          at,
-          type: "node.verify.iteration",
-          payload: {
-            nodeId: taskId,
-            iteration: 1,
-            maxIterations: 1,
-            build: "pass",
-            testsPass: 0,
-            testsTotal: Math.max(1, numberValue(payload.commandCount) ?? 1)
-          }
-        }
-      ];
+      // Intentionally NOT mapped to `node.verify.iteration` (O-4). It used to
+      // emit a `testsPass:0` iteration that fired AFTER `executor_completed`'s
+      // `testsPass:1`, so the UI flickered "tests 1/1 → 0/N" before the terminal
+      // node.verify.passed/failed corrected it. `executor_completed` is the
+      // single verify.iteration source (same single-source rule as F-003).
+      return [];
     }
     case "cherry_pick_conflict": {
       if (taskId === undefined) return [];
