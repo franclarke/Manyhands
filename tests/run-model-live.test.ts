@@ -8,7 +8,7 @@
  * monotonic as the stream grows.
  */
 import { describe, expect, it } from "vitest";
-import { buildLiveRunModel } from "@/components/run-model/use-live-run-model";
+import { buildLiveRunModel, hasRunEventGap } from "@/components/run-model/use-live-run-model";
 import { adaptStreamHistory } from "@/lib/run-model/sse-adapter";
 import { selectRenderableNodeState } from "@/lib/run-model/selectors";
 import { buildDecisionChannelView } from "@/lib/run-model/decision-channel-view";
@@ -132,5 +132,11 @@ describe("live bridge — buildLiveRunModel", () => {
     expect(model.nodes.has("root")).toBe(true);
     expect(model.decisions.get("approve_plan")?.status).toBe("resolved");
     expect(buildDecisionChannelView(model).empty).toBe(true);
+  });
+
+  it("6. detects a first live-frame gap relative to the hydrated cursor", () => {
+    expect(hasRunEventGap(5, 7, false)).toBe(true);
+    expect(hasRunEventGap(5, 6, false)).toBe(false);
+    expect(hasRunEventGap(5, 9, true)).toBe(false);
   });
 });

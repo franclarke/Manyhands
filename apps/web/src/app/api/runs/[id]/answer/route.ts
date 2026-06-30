@@ -67,7 +67,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
           `Node "${nodeId}" does not match the pending execution gate (task "${current.pendingDecision.taskId}").`
         );
       }
-      const gateResult = await answerExecutionGate(current, answer, new Date().toISOString());
+      const gateResult = await answerExecutionGate(current, answer, new Date().toISOString(), {
+        ...(expectedVersion !== undefined ? { expectedVersion } : {})
+      });
       return NextResponse.json(toRunResponse(gateResult.run));
     }
 

@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { POST as POST_RUN } from "@/app/api/runs/[id]/run/route";
+import { readRunModelEvents } from "@/lib/server/runs/run-model-event-log";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import { drainRunBackgroundTasks } from "@/lib/server/runs/runner-state";
 import { AgentTaskContractSchema } from "@manyhands/contracts";
@@ -131,5 +132,27 @@ describe("run start CAS", () => {
     expect(winnerBody.run.status).toBe("running");
     expect(winnerBody.run.startedAt).toBeDefined();
     expect(loserBody.error).toContain("mutation rejected");
+  });
+
+  it("rejects an invalid executable graph before marking the run as running", async () => {
+    const runId = "run-start-invalid-graph";
+    const planning = planningArtifact("leaf-invalid");
+    delete (planning.decomposition.graph as { id?: string }).id;
+    await getRunRepository().save(makeRun({ runId, planning }));
+
+    const response = await postRun(runId);
+
+    expect(response.status).toBe(400);
+    const saved = await getRunRepository().get(runId);
+    expect(saved.status).toBe("approved");
+    expect(saved.startedAt).toBeUndefined();
+    const events = await readRunModelEvents(runId);
+    expect(
+      events.some(
+        (event) =>
+          event.type === "run.status.changed" &&
+          (event.payload as { status?: string }).status === "running"
+      )
+    ).toBe(false);
   });
 });

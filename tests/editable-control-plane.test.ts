@@ -27,11 +27,14 @@ import {
 const now = "2026-05-26T00:00:00.000Z";
 let tempDir: string;
 let previousRunsDir: string | undefined;
+let previousForceFallback: string | undefined;
 
 beforeEach(async () => {
   tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-edit-runs-"));
   previousRunsDir = process.env.MANYHANDS_RUNS_DIR;
+  previousForceFallback = process.env.MANYHANDS_FORCE_FALLBACK;
   process.env.MANYHANDS_RUNS_DIR = path.join(tempDir, "runs");
+  process.env.MANYHANDS_FORCE_FALLBACK = "1";
   resetRunRepositoryForTests();
 });
 
@@ -40,6 +43,11 @@ afterEach(async () => {
     delete process.env.MANYHANDS_RUNS_DIR;
   } else {
     process.env.MANYHANDS_RUNS_DIR = previousRunsDir;
+  }
+  if (previousForceFallback === undefined) {
+    delete process.env.MANYHANDS_FORCE_FALLBACK;
+  } else {
+    process.env.MANYHANDS_FORCE_FALLBACK = previousForceFallback;
   }
   resetRunRepositoryForTests();
   await rm(tempDir, { recursive: true, force: true });
@@ -518,6 +526,37 @@ describe("editable control plane vertical slice", () => {
     expect(snapshot?.graphSnapshot.nodes["task-2"]).toBeDefined();
     expect(snapshot?.graphSnapshot.nodes["task-3"]).toBeDefined();
     expect((saved.planning as MockPlanningFlowResult).traces.some((event) => event.type === "dag_patch_appended")).toBe(true);
+  });
+
+  it("POST regen rejects implicit deterministic fallback when no LLM decomposer is configured", async () => {
+    const previousDecomposer = process.env.MANYHANDS_DECOMPOSER;
+    const previousAnthropicKey = process.env.ANTHROPIC_API_KEY;
+    delete process.env.MANYHANDS_FORCE_FALLBACK;
+    delete process.env.ANTHROPIC_API_KEY;
+    process.env.MANYHANDS_DECOMPOSER = "single-pass";
+
+    try {
+      const repo = getRunRepository();
+      await repo.save(makeRun({ status: "approved", approvedAt: now }));
+
+      const response = await POST_REGEN(
+        jsonRequest({ granularity: "coarse" }),
+        { params: Promise.resolve({ id: "run-1", taskId: "task-1" }) }
+      );
+
+      expect(response.status).toBe(400);
+      const body = (await response.json()) as { error: string };
+      expect(body.error).toContain("requires a configured LLM decomposer");
+      const saved = await repo.get("run-1");
+      expect(saved.status).toBe("approved");
+      expect(saved.patches).toHaveLength(0);
+    } finally {
+      process.env.MANYHANDS_FORCE_FALLBACK = "1";
+      if (previousDecomposer === undefined) delete process.env.MANYHANDS_DECOMPOSER;
+      else process.env.MANYHANDS_DECOMPOSER = previousDecomposer;
+      if (previousAnthropicKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+      else process.env.ANTHROPIC_API_KEY = previousAnthropicKey;
+    }
   });
 
   it("POST regen does not persist when the regenerated graft leaves the DAG invalid", async () => {

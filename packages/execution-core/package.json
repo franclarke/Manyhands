@@ -18,6 +18,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@manyhands/conflict-risk": "workspace:*",
     "@manyhands/contracts": "workspace:*",
     "@manyhands/repository-index": "workspace:^0.1.0",
     "@manyhands/scheduler": "workspace:*",

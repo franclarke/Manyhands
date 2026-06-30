@@ -275,10 +275,10 @@ function pendingDecisionFor(run: RunRecord, events: RunEvent[], id: string): Dec
 
 function choiceFor(decision: Decision, body: z.infer<typeof DecisionRequestSchema>): DecisionChoice {
   const explicit = parseChoice(body.choice);
-  if (explicit !== null) return explicit;
-  if (body.answer !== undefined) return { answer: body.answer };
-  if (body.resolutionId !== undefined) return { resolutionId: body.resolutionId };
-  if (body.action !== undefined) return { action: body.action };
+  if (explicit !== null) return validateChoiceForDecision(decision, explicit);
+  if (body.answer !== undefined) return validateChoiceForDecision(decision, { answer: body.answer });
+  if (body.resolutionId !== undefined) return validateChoiceForDecision(decision, { resolutionId: body.resolutionId });
+  if (body.action !== undefined) return validateChoiceForDecision(decision, { action: body.action });
 
   switch (decision.kind) {
     case "clarify": {
@@ -287,7 +287,7 @@ function choiceFor(decision: Decision, body: z.infer<typeof DecisionRequestSchem
       return { answer };
     }
     case "resolve_conflict":
-      return { resolutionId: "human-selected" };
+      throw new RunValidationError("resolve_conflict requires { resolutionId }");
     case "approve_merge":
       return { action: "accept" };
     case "approve_plan":
@@ -295,6 +295,13 @@ function choiceFor(decision: Decision, body: z.infer<typeof DecisionRequestSchem
     default:
       return { action: "approve" };
   }
+}
+
+function validateChoiceForDecision(decision: Decision, choice: DecisionChoice): DecisionChoice {
+  if (decision.kind === "resolve_conflict" && !("resolutionId" in choice)) {
+    throw new RunValidationError("resolve_conflict requires { resolutionId }");
+  }
+  return choice;
 }
 
 function parseChoice(value: unknown): DecisionChoice | null {

@@ -29,17 +29,11 @@ import {
   requireCapturedRunRecord,
   runExecutionPipeline,
   runPlanningPipeline,
-  resumePlanningPipeline,
-  resumeExecutionPipeline
+  resumePlanningPipeline
 } from "@/lib/server/runs";
-import {
-  clearExecutionPause,
-  decisionFromAnswer,
-  isReplanRequest,
-  isResumeDecision
-} from "@/lib/server/runs/execution-host";
+import { answerExecutionGate } from "@/lib/server/runs/execution-gate-service";
 import { planningResumeFor } from "@/lib/server/runs/planning-host";
-import { replanSubtree, resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
+import { resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 import type { RunRecord } from "@/lib/server/runs/schema";
@@ -63,30 +57,17 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
 
     // 1) Execution gate resume — native Command({ resume }).
     if (run.status === "paused" && run.pausedDuring === "running" && run.pendingDecision !== undefined) {
-      if (isRunnerActive(id)) {
-        throw new RunLifecycleError(`Run ${id} is being driven by an active runner.`);
-      }
-      // Selective re-decomposition: rebuild the failed subtree instead of
-      // resuming the suspended gate (the execution thread is reset).
-      if (isReplanRequest(payload)) {
-        const failedTaskId = run.pendingDecision.taskId;
-        const reason = run.pendingDecision.validationOutput ?? "leaf failed irrecoverably";
-        const saved = await clearExecutionPause(id, "running", expectedGateId);
-        startRunBackgroundTask(id, "route:resume:replan", async () => {
-          await replanSubtree(id, failedTaskId, reason);
-        });
-        return NextResponse.json(toRunResponse(saved));
-      }
-
-      const decision = executionDecisionFrom(payload, run.pendingDecision.gate);
-      if (decision === null) {
+      const answer = executionGateAnswerFrom(payload);
+      if (answer === null) {
         throw new RunValidationError(
           "Execution resume requires { action: retry_repair | replan_subtree | accept_failing | accept_conflict | abort_run }."
         );
       }
-      const saved = await clearExecutionPause(id, "running", expectedGateId);
-      startRunBackgroundTask(id, "route:resume:execution-gate", () => resumeExecutionPipeline(id, decision));
-      return NextResponse.json(toRunResponse(saved));
+      const result = await answerExecutionGate(run, answer, new Date().toISOString(), {
+        ...(expectedGateId !== undefined ? { expectedGateId } : {}),
+        ...(expectedVersion !== undefined ? { expectedVersion } : {})
+      });
+      return NextResponse.json(toRunResponse(result.run));
     }
 
     // 2) Replan question resume: a clarifying question raised DURING a replan
@@ -192,13 +173,10 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
   }
 }
 
-function executionDecisionFrom(
-  payload: Record<string, unknown> | null,
-  gate: "leaf_validation_failed" | "merge_conflict" | "budget_exceeded"
-) {
+function executionGateAnswerFrom(payload: Record<string, unknown> | null): string | null {
   if (payload === null) return null;
-  if (isResumeDecision(payload)) return payload;
-  if (typeof payload.answer === "string") return decisionFromAnswer(gate, payload.answer);
+  if (typeof payload.action === "string" && payload.action.length > 0) return payload.action;
+  if (typeof payload.answer === "string" && payload.answer.length > 0) return payload.answer;
   return null;
 }
 

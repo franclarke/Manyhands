@@ -9,6 +9,7 @@ import {
 } from "@/lib/server/runs";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
+import { assertExecutableRunGraph, resolveExecutionGraph } from "@/lib/server/runs/execution-state";
 import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 
 export const runtime = "nodejs";
@@ -28,6 +29,7 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
       (current) => {
         previous = current;
         assertRunActionAllowed(current, "start");
+        assertExecutableRunGraph(resolveExecutionGraph(current));
         return {
           ...current,
           status: "running" as const,

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  MetadataDrivenMockDecomposer,
   runMockPlanningFlow,
   type AgentTaskContract,
   type FeatureRequest,
@@ -111,29 +110,17 @@ async function runRegenerationPlanning(input: {
   const selection = pickDecomposer({
     userPrompt: `${input.userPrompt}\n\nRegenerate subtree ${input.taskId}: ${input.feature.description}`,
     model: input.model,
-    forceFallback: true,
     ...(input.workspace !== undefined ? { workspace: input.workspace } : {})
   });
+  if (selection.provider === "deterministic" && selection.fallbackReason !== "forced_by_env") {
+    throw new RunValidationError("Subtree regeneration requires a configured LLM decomposer.");
+  }
   const baseOptions = {
     feature: input.feature,
     mode: input.mode,
     schedulerPolicy: "risk_aware" as const,
     runLabel: `${input.runId}:${input.taskId}:regen`
   };
-
-  if (selection.provider === "anthropic") {
-    try {
-      return await runMockPlanningFlow({
-        ...baseOptions,
-        decomposer: selection.decomposer
-      });
-    } catch {
-      return runMockPlanningFlow({
-        ...baseOptions,
-        decomposer: new MetadataDrivenMockDecomposer()
-      });
-    }
-  }
 
   return runMockPlanningFlow({
     ...baseOptions,

@@ -166,6 +166,7 @@ importers:
 
   packages/execution-core:
     specifiers:
+      '@manyhands/conflict-risk': workspace:*
       '@manyhands/contracts': workspace:*
       '@manyhands/repository-index': workspace:^0.1.0
       '@manyhands/scheduler': workspace:*
@@ -176,6 +177,7 @@ importers:
       typescript: ^5.7.2
       zod: ^3.23.8
     dependencies:
+      '@manyhands/conflict-risk': link:../conflict-risk
       '@manyhands/contracts': link:../contracts
       '@manyhands/repository-index': link:../repository-index
       '@manyhands/scheduler': link:../scheduler

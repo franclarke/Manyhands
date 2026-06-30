@@ -28,6 +28,11 @@ export interface ExecutionGateAnswerResult {
   outcome: "resumed" | "replanning";
 }
 
+export interface ExecutionGateAnswerOptions {
+  expectedGateId?: string;
+  expectedVersion?: number;
+}
+
 /**
  * Resolve a pending execution gate with a human answer (option label or raw
  * action id). Throws RunValidationError when the answer doesn't match any
@@ -38,7 +43,8 @@ export interface ExecutionGateAnswerResult {
 export async function answerExecutionGate(
   run: RunRecord,
   answer: string,
-  now: string
+  now: string,
+  options: ExecutionGateAnswerOptions = {}
 ): Promise<ExecutionGateAnswerResult> {
   assertRunActionAllowed(run, "answer_gate");
   if (isRunnerActive(run.runId)) {
@@ -51,14 +57,14 @@ export async function answerExecutionGate(
 
   // Pin the claim to the exact suspension we read: if the gate was resolved
   // or re-minted meanwhile, the clear below 409s (INV-4).
-  const expectedGateId = pending.gateId;
+  const expectedGateId = options.expectedGateId ?? pending.gateId;
   const decisionId = `clarify:${pending.taskId}`;
 
   // Selective re-decomposition: rebuild the failed subtree out-of-band.
-  if (isReplanRequest({ answer })) {
+  if (isReplanRequest({ action: answer, answer }, pending.gate)) {
     const failedTaskId = pending.taskId;
     const reason = pending.validationOutput ?? "leaf failed irrecoverably";
-    const cleared = await clearExecutionPause(run.runId, "running", expectedGateId);
+    const cleared = await clearExecutionPause(run.runId, "running", expectedGateId, options.expectedVersion);
     await appendRunEventRequired(cleared.runId, {
       actor: "human",
       at: now,
@@ -81,7 +87,7 @@ export async function answerExecutionGate(
     );
   }
 
-  const cleared = await clearExecutionPause(run.runId, "running", expectedGateId);
+  const cleared = await clearExecutionPause(run.runId, "running", expectedGateId, options.expectedVersion);
   await appendRunEventRequired(cleared.runId, {
     actor: "human",
     at: now,

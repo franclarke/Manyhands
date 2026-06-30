@@ -173,6 +173,16 @@ describe("duplicate HITL decisions at the route seam", () => {
     const loser = first.status === 409 ? first : second;
     const body = (await loser.json()) as { error: string; conflict?: { currentStatus: string } };
     expect(body.conflict?.currentStatus).toBe("running");
+
+    const events = await readRunModelEvents("run-gate");
+    expect(
+      events.some(
+        (event) =>
+          event.type === "decision.resolved" &&
+          (event.payload as { decisionId?: string; choice?: { answer?: string } }).decisionId === "clarify:task-1" &&
+          (event.payload as { choice?: { answer?: string } }).choice?.answer === "retry_repair"
+      )
+    ).toBe(true);
   });
 
   it("resume: gate decisions are rejected while a runner is already active", async () => {
@@ -200,6 +210,90 @@ describe("duplicate HITL decisions at the route seam", () => {
     const run = await getRunRepository().get(runId);
     expect(run.status).toBe("paused");
     expect(run.pendingDecision?.gateId).toBe("leaf_validation_failed:task-1:active01");
+  });
+
+  it("resume: rejects leaf-only replan action for a merge gate", async () => {
+    await getRunRepository().save(
+      makeRun({
+        runId: "run-merge-replan-invalid",
+        status: "paused",
+        pausedDuring: "running",
+        pendingDecision: {
+          gate: "merge_conflict",
+          gateId: "merge_conflict:root:abc12345",
+          taskId: "root",
+          integrationStatus: "cherry_pick_conflict"
+        },
+        pendingQuestion: {
+          nodeId: "root",
+          question: "La integración falló. ¿Cómo continuar?",
+          options: ["Reintentar integración", "Aceptar conflicto y continuar", "Abortar run"]
+        }
+      })
+    );
+
+    const response = await post(POST_RESUME, "run-merge-replan-invalid", { action: "replan_subtree" });
+
+    expect(response.status).toBe(400);
+    const run = await getRunRepository().get("run-merge-replan-invalid");
+    expect(run.status).toBe("paused");
+    expect(run.pendingDecision?.gateId).toBe("merge_conflict:root:abc12345");
+  });
+
+  it("resume: rejects leaf-only retry action for a merge gate", async () => {
+    await getRunRepository().save(
+      makeRun({
+        runId: "run-merge-retry-invalid",
+        status: "paused",
+        pausedDuring: "running",
+        pendingDecision: {
+          gate: "merge_conflict",
+          gateId: "merge_conflict:root:retry01",
+          taskId: "root",
+          integrationStatus: "cherry_pick_conflict"
+        },
+        pendingQuestion: {
+          nodeId: "root",
+          question: "La integraciÃ³n fallÃ³. Â¿CÃ³mo continuar?",
+          options: ["Reintentar integraciÃ³n", "Aceptar conflicto y continuar", "Abortar run"]
+        }
+      })
+    );
+
+    const response = await post(POST_RESUME, "run-merge-retry-invalid", { action: "retry_repair" });
+
+    expect(response.status).toBe(400);
+    const run = await getRunRepository().get("run-merge-retry-invalid");
+    expect(run.status).toBe("paused");
+    expect(run.pendingDecision?.gateId).toBe("merge_conflict:root:retry01");
+    expect(await readRunModelEvents("run-merge-retry-invalid")).toHaveLength(0);
+  });
+
+  it("resume: stale expectedVersion cannot consume an execution gate", async () => {
+    const saved = await getRunRepository().save(
+      makeRun({
+        runId: "run-gate-stale-version",
+        status: "paused",
+        pausedDuring: "running",
+        pendingDecision: {
+          gate: "leaf_validation_failed",
+          gateId: "leaf_validation_failed:task-1:version1",
+          taskId: "task-1",
+          validationOutput: "tests failed"
+        }
+      })
+    );
+
+    const response = await post(POST_RESUME, "run-gate-stale-version", {
+      action: "retry_repair",
+      expectedVersion: saved.version + 1
+    });
+
+    expect(response.status).toBe(409);
+    const run = await getRunRepository().get("run-gate-stale-version");
+    expect(run.status).toBe("paused");
+    expect(run.pendingDecision?.gateId).toBe("leaf_validation_failed:task-1:version1");
+    expect(await readRunModelEvents("run-gate-stale-version")).toHaveLength(0);
   });
 
   it("resume: a stale gateId cannot resolve a re-minted gate", async () => {

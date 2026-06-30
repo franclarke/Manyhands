@@ -37,6 +37,10 @@ export function buildLiveRunModel(
 const RECONNECT_BASE_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
 
+export function hasRunEventGap(lastSeenSeq: number, eventSeq: number, refetchedAfterGap: boolean): boolean {
+  return !refetchedAfterGap && eventSeq > lastSeenSeq + 1;
+}
+
 export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = []): LiveRunModel {
   const [streamEvents, setStreamEvents] = useState<RunEvent[]>([]);
   const [connected, setConnected] = useState(false);
@@ -57,7 +61,7 @@ export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = 
     let es: EventSource | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let attempts = 0;
-    let lastSeen = 0;
+    let lastSeen = initialCursor;
     let refetchedAfterGap = false;
     let disposed = false;
 
@@ -73,7 +77,7 @@ export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = 
       es.onmessage = (raw) => {
         try {
           const event = JSON.parse(raw.data) as RunEvent;
-          if (lastSeen > 0 && event.seq > lastSeen + 1 && !refetchedAfterGap) {
+          if (hasRunEventGap(lastSeen, event.seq, refetchedAfterGap)) {
             // Gap: the log no longer covers our cursor. Full replay once.
             refetchedAfterGap = true;
             es?.close();

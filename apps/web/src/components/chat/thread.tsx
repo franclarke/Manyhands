@@ -246,6 +246,7 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
                     onApprove={(id) => void handleResolveDecision(id, "approve")}
                     onReject={(id) => void handleResolveDecision(id, "reject")}
                     onAnswer={(id, answer) => void handleAnswerDecision(id, answer)}
+                    onTabChange={setActiveTab}
                   />
                 ) : kind === "conflict" ? (
                   <ConflictCard text={textContent} onTabChange={setActiveTab} />
@@ -523,7 +524,8 @@ function GateCard({
   busy,
   onApprove,
   onReject,
-  onAnswer
+  onAnswer,
+  onTabChange
 }: {
   icon: React.ReactNode;
   eyebrow: string;
@@ -533,6 +535,7 @@ function GateCard({
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   onAnswer: (id: string, answer: string) => void;
+  onTabChange: (tab: TabKey) => void;
 }): React.ReactElement {
   const pending = decision !== undefined && decision.status === "pending";
   // clarify decisions (planner questions AND execution gates) carry their
@@ -579,6 +582,15 @@ function GateCard({
           <span className="block text-meta text-[var(--color-text-subtle)]">
             Respondé desde el campo de abajo.
           </span>
+        ) : decision.kind === "resolve_conflict" ? (
+          <button
+            type="button"
+            onClick={() => onTabChange("conflicts")}
+            className="flex h-8 w-full cursor-pointer items-center justify-center gap-1 rounded-[var(--r-md)] border border-[var(--status-failed-border)] text-xs font-medium text-[var(--status-failed-fg)] transition-colors hover:bg-[var(--status-failed-bg)]"
+          >
+            Elegir resoluciÃ³n en Riesgos
+            <ArrowRight aria-hidden className="h-4 w-4" />
+          </button>
         ) : (
           <div className="flex gap-2 pt-0.5">
             <button

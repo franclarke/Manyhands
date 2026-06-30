@@ -78,7 +78,11 @@ export const LEAF_GATE_OPTIONS = [
  * resets the execution thread — so callers branch on this BEFORE building a
  * ResumeDecision.
  */
-export function isReplanRequest(payload: { action?: unknown; answer?: unknown } | null): boolean {
+export function isReplanRequest(
+  payload: { action?: unknown; answer?: unknown } | null,
+  gate: NonNullable<RunRecord["pendingDecision"]>["gate"]
+): boolean {
+  if (gate !== "leaf_validation_failed") return false;
   if (payload === null) return false;
   if (payload.action === "replan_subtree") return true;
   const replanLabel = LEAF_GATE_OPTIONS.find((option) => option.action === "replan_subtree")?.label;
@@ -694,7 +698,8 @@ export async function persistExecutionPause(
 export async function clearExecutionPause(
   runId: string,
   target: "running",
-  expectedGateId?: string
+  expectedGateId?: string,
+  expectedVersion?: number
 ): Promise<RunRecord> {
   let previous: RunRecord | undefined;
   const updated = await claimRunMutation(
@@ -702,7 +707,8 @@ export async function clearExecutionPause(
     {
       status: ["paused"],
       pausedDuring: "running",
-      pendingDecisionGateId: expectedGateId ?? "any"
+      pendingDecisionGateId: expectedGateId ?? "any",
+      ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
     },
     (current) => {
       previous = current;

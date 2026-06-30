@@ -3,6 +3,7 @@ import {
   RunNotFoundError,
   ensureRunModelEventLogForRun,
   getRunRepository,
+  readRunModelEvents,
   serializeRunModelForSse,
   subscribeRunModelEvents
 } from "@/lib/server/runs";
@@ -43,9 +44,11 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
   let unsubscribe: (() => void) | null = null;
 
   const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
+    async start(controller) {
+      let lastSentSeq = after;
       function write(event: RunEvent): void {
-        if (event.seq <= after) return;
+        if (event.seq <= lastSentSeq) return;
+        lastSentSeq = event.seq;
         try {
           controller.enqueue(encoder.encode(serializeRunModelForSse(event)));
         } catch {
@@ -53,8 +56,22 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
         }
       }
 
+      const bufferedLive: RunEvent[] = [];
+      let replaying = true;
+      unsubscribe = subscribeRunModelEvents(id, (event) => {
+        if (replaying) {
+          bufferedLive.push(event);
+          return;
+        }
+        write(event);
+      });
+
       for (const event of history) write(event);
-      unsubscribe = subscribeRunModelEvents(id, write);
+      const latest = await readRunModelEvents(id);
+      for (const event of latest) write(event);
+
+      replaying = false;
+      for (const event of bufferedLive.sort((left, right) => left.seq - right.seq)) write(event);
       heartbeat = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(`: heartbeat ${new Date().toISOString()}\n\n`));

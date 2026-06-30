@@ -141,6 +141,23 @@ describe("POST /answer with an execution gate", () => {
     expect(run.pendingDecision?.gateId).toBe("merge_conflict:build-ui:abc12345");
   });
 
+  it("rejects the leaf-only replan answer for a merge gate", async () => {
+    await getRunRepository().save(makeGatedRun("run-gate-invalid-replan"));
+    const response = await postAnswer("run-gate-invalid-replan", {
+      nodeId: "build-ui",
+      answer: "Re-planificar subárbol"
+    });
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toContain(
+      'Valid options: "Reintentar integración", "Aceptar conflicto y continuar", "Abortar run".'
+    );
+
+    const run = await getRunRepository().get("run-gate-invalid-replan");
+    expect(run.status).toBe("paused");
+    expect(run.pendingDecision?.gateId).toBe("merge_conflict:build-ui:abc12345");
+  });
+
   it("rejects a nodeId that does not match the pending gate", async () => {
     await getRunRepository().save(makeGatedRun("run-gate-mismatch"));
     const response = await postAnswer("run-gate-mismatch", {
@@ -148,6 +165,20 @@ describe("POST /answer with an execution gate", () => {
       answer: "Aceptar conflicto y continuar"
     });
     expect(response.status).toBe(400);
+  });
+
+  it("rejects a stale expectedVersion without consuming the execution gate", async () => {
+    const saved = await getRunRepository().save(makeGatedRun("run-gate-stale-version"));
+    const response = await postAnswer("run-gate-stale-version", {
+      nodeId: "build-ui",
+      answer: "Aceptar conflicto y continuar",
+      expectedVersion: saved.version + 1
+    });
+
+    expect(response.status).toBe(409);
+    const run = await getRunRepository().get("run-gate-stale-version");
+    expect(run.status).toBe("paused");
+    expect(run.pendingDecision?.gateId).toBe("merge_conflict:build-ui:abc12345");
   });
 
   it("double submit: one 200, one structured 409", async () => {
