@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Linux runs the POSIX process-group kill test that is skipped on Windows
+        # (tests/execution-core-kill-verify.test.ts). Windows is the primary dev OS.
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 7.29.3
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Non-blocking for now: the repo carries ~75 pre-existing lint errors in
+      # tests/ and packages/. Surfaced as a signal so it can be driven to zero,
+      # then flipped to a hard gate (remove continue-on-error).
+      - name: Lint
+        run: pnpm lint
+        continue-on-error: true
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Typecheck (web)
+        run: pnpm web:typecheck
+
+      - name: Test
+        run: pnpm test
