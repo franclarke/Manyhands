@@ -44,7 +44,8 @@ export type RunLifecycleAction =
   | "fork"
   | "manual_node_run"
   | "manual_node_review"
-  | "manual_node_rerun";
+  | "manual_node_rerun"
+  | "deliver";
 
 const ACTION_ALLOWED_STATUSES: Record<RunLifecycleAction, ReadonlyArray<RunStatus>> = {
   start: ["approved"],
@@ -60,7 +61,11 @@ const ACTION_ALLOWED_STATUSES: Record<RunLifecycleAction, ReadonlyArray<RunStatu
   fork: ["created", "paused", "needs_review", "approved", "interrupted", "completed", "completed_with_accepted", "failed"],
   manual_node_run: ["approved"],
   manual_node_review: ["approved", "completed", "completed_with_accepted", "failed"],
-  manual_node_rerun: ["approved", "completed", "completed_with_accepted", "failed"]
+  manual_node_rerun: ["approved", "completed", "completed_with_accepted", "failed"],
+  // Delivery merges/discards/cleans the run's branch and worktrees. Only safe on
+  // a terminal run (no pipeline driving it). The active-runner check in the route
+  // covers the in-process race; this matrix covers the status precondition.
+  deliver: ["completed", "completed_with_accepted", "failed"]
 };
 
 export function allowedStatusesForAction(action: RunLifecycleAction): ReadonlyArray<RunStatus> {

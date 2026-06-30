@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { RunNotFoundError, getRunRepository } from "@/lib/server/runs";
+import {
+  RunLifecycleError,
+  RunNotFoundError,
+  assertRunActionAllowed,
+  getRunRepository,
+  isRunnerActive
+} from "@/lib/server/runs";
 import {
   DeliveryError,
   cleanupRunArtifacts,
@@ -50,6 +56,19 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
   try {
     const run = await getRunRepository().get(id);
 
+    // Destructive delivery (merge/discard/cleanup) must not run while the run is
+    // not terminal or while a runner still drives it — otherwise it can clobber
+    // an in-flight integration or delete a resumable run's worktrees/branches.
+    // `reveal` is read-only and stays ungated.
+    if (parsed.data.action !== "reveal") {
+      assertRunActionAllowed(run, "deliver");
+      if (isRunnerActive(id)) {
+        throw new RunLifecycleError(
+          "El run tiene un runner activo en ejecución; no se puede entregar hasta que termine."
+        );
+      }
+    }
+
     switch (parsed.data.action) {
       case "merge": {
         const result = await mergeRunBranch(run);
@@ -89,6 +108,9 @@ async function workspaceRepoPath(workspaceId: string): Promise<string | undefine
 function errorResponse(error: unknown): NextResponse {
   if (error instanceof RunNotFoundError) {
     return NextResponse.json({ error: error.message }, { status: 404 });
+  }
+  if (error instanceof RunLifecycleError) {
+    return NextResponse.json({ error: error.message }, { status: 409 });
   }
   if (error instanceof DeliveryError) {
     return NextResponse.json({ error: error.message }, { status: 409 });
