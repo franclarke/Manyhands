@@ -7,6 +7,7 @@ import {
   RunRecordSchema,
   RunStatusSchema
 } from "@/lib/server/runs/schema";
+import { RUN_USER_PROMPT_MAX_LENGTH } from "@/lib/run-limits";
 
 const baseRun = {
   runId: "abc",
@@ -23,6 +24,22 @@ const baseRun = {
 describe("run-record schema", () => {
   it("accepts a minimal RunRecord", () => {
     expect(RunRecordSchema.safeParse(baseRun).success).toBe(true);
+  });
+
+  it("accepts persisted prompts up to the run prompt limit", () => {
+    expect(
+      RunRecordSchema.safeParse({
+        ...baseRun,
+        userPrompt: "x".repeat(RUN_USER_PROMPT_MAX_LENGTH)
+      }).success
+    ).toBe(true);
+
+    expect(
+      RunRecordSchema.safeParse({
+        ...baseRun,
+        userPrompt: "x".repeat(RUN_USER_PROMPT_MAX_LENGTH + 1)
+      }).success
+    ).toBe(false);
   });
 
   it("rejects unknown status", () => {
@@ -110,6 +127,26 @@ describe("run-record schema", () => {
       model: "claude-opus-4.7"
     });
     expect(parsed.userPrompt).toBe("");
+  });
+
+  it("RunCreateRequestSchema accepts prompts up to the run prompt limit", () => {
+    expect(
+      RunCreateRequestSchema.safeParse({
+        workspaceId: "ws-1",
+        granularity: "balanced",
+        model: "claude-opus-4.7",
+        userPrompt: "x".repeat(RUN_USER_PROMPT_MAX_LENGTH)
+      }).success
+    ).toBe(true);
+
+    expect(
+      RunCreateRequestSchema.safeParse({
+        workspaceId: "ws-1",
+        granularity: "balanced",
+        model: "claude-opus-4.7",
+        userPrompt: "x".repeat(RUN_USER_PROMPT_MAX_LENGTH + 1)
+      }).success
+    ).toBe(false);
   });
 
   it("RunCreateRequestSchema rejects unknown planning executor ids", () => {

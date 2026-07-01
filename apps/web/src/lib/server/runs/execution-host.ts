@@ -45,8 +45,11 @@ import { InMemoryTraceStore, type TraceStore } from "@manyhands/trace-store";
 import type { StaticConflictSignal, TaskPairRiskMatrix } from "@manyhands/conflict-risk";
 import { resolveRunsDirectory } from "./repository";
 import { publishRunEvent } from "./event-bus";
-import { publishRunModelEvent } from "./run-model-event-log";
-import { appendStatusEventOrRollback, requireCapturedRunRecord } from "./audited-mutation";
+import {
+  appendStatusAndRunEventsOrRollback,
+  requireCapturedRunRecord
+} from "./audited-mutation";
+import type { RunModelEventInput } from "./run-model-event-log";
 import { executionSelection, repairSelection } from "./executor-selection";
 import {
   INTEGRATION_SUCCESS,
@@ -675,18 +678,24 @@ export async function persistExecutionPause(
   });
 
   const now = new Date().toISOString();
-  await appendStatusEventOrRollback(requireCapturedRunRecord(previous, runId), saved, { at: now });
-  publishRunModelEvent(runId, {
-    actor: "system",
-    at: now,
-    type: "decision.raised",
-    payload: {
-      decisionId: `clarify:${gate.taskId}`,
-      kind: "clarify",
-      blocking: true,
-      context: { nodeIds: [gate.taskId], question, options, gate: gate.gate }
-    }
-  });
+  await appendStatusAndRunEventsOrRollback(
+    requireCapturedRunRecord(previous, runId),
+    saved,
+    [
+      {
+        actor: "system",
+        at: now,
+        type: "decision.raised",
+        payload: {
+          decisionId: `clarify:${gate.taskId}`,
+          kind: "clarify",
+          blocking: true,
+          context: { nodeIds: [gate.taskId], question, options, gate: gate.gate }
+        }
+      }
+    ],
+    { at: now }
+  );
 }
 
 /**
@@ -699,7 +708,8 @@ export async function clearExecutionPause(
   runId: string,
   target: "running",
   expectedGateId?: string,
-  expectedVersion?: number
+  expectedVersion?: number,
+  requiredEvents: readonly RunModelEventInput[] = []
 ): Promise<RunRecord> {
   let previous: RunRecord | undefined;
   const updated = await claimRunMutation(
@@ -719,7 +729,16 @@ export async function clearExecutionPause(
       return next;
     }
   );
-  await appendStatusEventOrRollback(requireCapturedRunRecord(previous, runId), updated, { actor: "human" });
+  const statusOptions = {
+    actor: "human" as const,
+    ...(requiredEvents[0]?.at !== undefined ? { at: requiredEvents[0].at } : {})
+  };
+  await appendStatusAndRunEventsOrRollback(
+    requireCapturedRunRecord(previous, runId),
+    updated,
+    requiredEvents,
+    statusOptions
+  );
   return updated;
 }
 

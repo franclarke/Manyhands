@@ -117,12 +117,6 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       // resumable replan context — the answer re-enters the replan.
       if (run.status === "paused" && run.pausedDuring === "running" && run.pendingReplan !== undefined) {
         run = await resumeReplanWithAnswer(run.runId, nodeId, answer);
-        await appendRunEventRequired(run.runId, {
-          actor: "human",
-          at: now,
-          type: "decision.resolved",
-          payload: { decisionId: decision.id, choice, actor: "human" }
-        });
         return NextResponse.json({ ...toRunResponse(run), decisionId: decision.id, choice });
       }
 

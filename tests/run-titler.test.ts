@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events";
+import type { SpawnOptions } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { generateRunTitle, RunTitlerError } from "@/lib/server/runs/run-titler";
 
@@ -35,6 +36,18 @@ function makeFakeSpawn(opts: { stdout?: string; stderr?: string; exitCode?: numb
   };
 }
 
+function makeRecordingSpawn(opts: { stdout?: string; stderr?: string; exitCode?: number; emitError?: Error }) {
+  const calls: Array<{ command: string; args: readonly string[]; options: SpawnOptions }> = [];
+  const fakeSpawn = makeFakeSpawn(opts);
+  return {
+    calls,
+    spawn: (command: string, args: readonly string[], options: SpawnOptions) => {
+      calls.push({ command, args, options });
+      return fakeSpawn();
+    }
+  };
+}
+
 describe("generateRunTitle", () => {
   it("parses a clean title and summary from direct JSON output", async () => {
     const spawn = makeFakeSpawn({
@@ -53,6 +66,21 @@ describe("generateRunTitle", () => {
     const spawn = makeFakeSpawn({ stdout: JSON.stringify({ type: "result", result: inner }) });
     const result = await generateRunTitle({ userPrompt: "Implement DELETE", model: "m", spawn });
     expect(result.title).toBe("Task API DELETE");
+  });
+
+  it("uses cmd.exe without shell:true when Windows shell mode is needed", async () => {
+    const { spawn, calls } = makeRecordingSpawn({
+      stdout: JSON.stringify({ title: "Task title", summary: "Short summary." })
+    });
+
+    await generateRunTitle({ userPrompt: "Implement task", model: "sonnet", spawn, platform: "win32" });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.command.toLowerCase()).toContain("cmd");
+    expect(calls[0]?.args.slice(0, 4)).toEqual(["/d", "/s", "/c", "claude"]);
+    expect(calls[0]?.args).toContain("--model");
+    expect(calls[0]?.args).toContain("sonnet");
+    expect(calls[0]?.options.shell).toBe(false);
   });
 
   it("throws RunTitlerError on non-zero exit", async () => {

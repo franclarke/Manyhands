@@ -9,7 +9,13 @@
  * chat + artifacts keep their space. This decision is pure and node-testable.
  */
 import { describe, expect, it } from "vitest";
-import { FOCUS_DOCK_BREAKPOINT, focusDockMode } from "@/lib/cockpit-layout";
+import {
+  FOCUS_DOCK_BREAKPOINT,
+  RUN_DOCK_BREAKPOINT,
+  bottomDrawerMode,
+  focusDockMode,
+  runDockMode
+} from "@/lib/cockpit-layout";
 
 describe("focusDockMode", () => {
   it("docks the focus panel as a column on a wide desktop", () => {
@@ -31,5 +37,25 @@ describe("focusDockMode", () => {
   it("treats an unknown/zero width as overlay (safe default before measurement)", () => {
     // SSR / first paint may report 0; the overlay never clips, so it is the safe pick.
     expect(focusDockMode(0)).toBe("overlay");
+  });
+});
+
+describe("runDockMode", () => {
+  it("docks the free workspace dock on wide screens", () => {
+    expect(runDockMode(1440)).toBe("column");
+    expect(runDockMode(RUN_DOCK_BREAKPOINT)).toBe("column");
+  });
+
+  it("uses an overlay when a dock column would crowd the graph", () => {
+    expect(runDockMode(1024)).toBe("overlay");
+    expect(runDockMode(RUN_DOCK_BREAKPOINT - 1)).toBe("overlay");
+    expect(runDockMode(0)).toBe("overlay");
+  });
+});
+
+describe("bottomDrawerMode", () => {
+  it("is hidden until the user opens the drawer", () => {
+    expect(bottomDrawerMode(false)).toBe("hidden");
+    expect(bottomDrawerMode(true)).toBe("docked");
   });
 });

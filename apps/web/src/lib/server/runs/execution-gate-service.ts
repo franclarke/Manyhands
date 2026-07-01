@@ -16,7 +16,6 @@ import {
 } from "./execution-host";
 import { resumeExecutionPipeline } from "./execution-pipeline";
 import { assertRunActionAllowed } from "./lifecycle";
-import { appendRunEventRequired } from "./run-model-event-log";
 import { isRunnerActive, startRunBackgroundTask } from "./runner-state";
 import { replanSubtree } from "./replan-service";
 import type { RunRecord } from "./schema";
@@ -64,13 +63,14 @@ export async function answerExecutionGate(
   if (isReplanRequest({ action: answer, answer }, pending.gate)) {
     const failedTaskId = pending.taskId;
     const reason = pending.validationOutput ?? "leaf failed irrecoverably";
-    const cleared = await clearExecutionPause(run.runId, "running", expectedGateId, options.expectedVersion);
-    await appendRunEventRequired(cleared.runId, {
-      actor: "human",
-      at: now,
-      type: "decision.resolved",
-      payload: { decisionId, choice: { answer }, actor: "human" }
-    });
+    const cleared = await clearExecutionPause(run.runId, "running", expectedGateId, options.expectedVersion, [
+      {
+        actor: "human",
+        at: now,
+        type: "decision.resolved",
+        payload: { decisionId, choice: { answer }, actor: "human" }
+      }
+    ]);
     startRunBackgroundTask(cleared.runId, "execution-gate:replan", async () => {
       await replanSubtree(cleared.runId, failedTaskId, reason);
     });
@@ -87,13 +87,14 @@ export async function answerExecutionGate(
     );
   }
 
-  const cleared = await clearExecutionPause(run.runId, "running", expectedGateId, options.expectedVersion);
-  await appendRunEventRequired(cleared.runId, {
-    actor: "human",
-    at: now,
-    type: "decision.resolved",
-    payload: { decisionId, choice: { answer }, actor: "human" }
-  });
+  const cleared = await clearExecutionPause(run.runId, "running", expectedGateId, options.expectedVersion, [
+    {
+      actor: "human",
+      at: now,
+      type: "decision.resolved",
+      payload: { decisionId, choice: { answer }, actor: "human" }
+    }
+  ]);
   startRunBackgroundTask(cleared.runId, "execution-gate:resume", () =>
     resumeExecutionPipeline(cleared.runId, resumeDecision)
   );

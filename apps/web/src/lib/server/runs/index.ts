@@ -19,3 +19,5 @@ export * from "./pause-control";
 export * from "./interrupted";
 export * from "./patches";
 export * from "./editing";
+export * from "./workspace-context";
+export * from "./terminal-sessions";

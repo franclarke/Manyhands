@@ -47,9 +47,11 @@ async function defaultCommandExists(binary: string): Promise<boolean> {
       return false;
     }
   }
-  const lookup = process.platform === "win32" ? "where" : "which";
+  const lookup = process.platform === "win32" ? "where.exe" : "which";
   return new Promise<boolean>((resolve) => {
-    const child = spawn(lookup, [binary], { stdio: "ignore", shell: process.platform === "win32" });
+    // `where.exe` is a real Windows executable; avoid shell:true + args, which
+    // triggers DEP0190 on newer Node versions and is unnecessary for PATH lookup.
+    const child = spawn(lookup, [binary], { stdio: "ignore" });
     const timer = setTimeout(() => {
       child.kill();
       resolve(false);

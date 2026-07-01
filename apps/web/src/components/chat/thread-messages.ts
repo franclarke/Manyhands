@@ -1,5 +1,18 @@
 import type { RunEvent } from "@/lib/run-model/types";
 
+interface SchedulingReason {
+  taskId?: string;
+  reason?: string;
+  relatedTaskIds?: string[];
+  riskLevel?: string;
+}
+
+interface SchedulingNotice {
+  code?: string;
+  taskIds?: string[];
+  message?: string;
+}
+
 interface UnifiedPayload {
   intent?: string;
   nodeCount?: number;
@@ -19,7 +32,15 @@ interface UnifiedPayload {
   changedFiles?: string[];
   cause?: string;
   iteration?: number;
-  waves?: { waveId: number; nodeIds: string[] }[];
+  waveIndex?: number;
+  policy?: string;
+  readyTaskIds?: string[];
+  selectedTaskIds?: string[];
+  blockedTaskIds?: string[];
+  blockedReasons?: SchedulingReason[];
+  fallbacks?: SchedulingNotice[];
+  warnings?: SchedulingNotice[];
+  waves?: { waveId: string | number; nodeIds: string[] }[];
 }
 
 /**
@@ -79,6 +100,7 @@ export function buildThreadMessages(events: RunEvent[]): MyMessage[] {
     }
   }
   const titleOf = (nodeId: string): string => nodeTitle.get(nodeId) ?? nodeId.slice(0, 8);
+  const labelList = (nodeIds: string[]): string => (nodeIds.length > 0 ? nodeIds.map(titleOf).join(", ") : "ninguna");
 
   list.push({
     id: "welcome",
@@ -199,8 +221,49 @@ export function buildThreadMessages(events: RunEvent[]): MyMessage[] {
   });
 
   // Waves & subagent execution groups
+  events
+    .filter((e) => e.type === "run.scheduling.wave_selected")
+    .forEach((event) => {
+      const payload = event.payload as UnifiedPayload;
+      const selected = payload.selectedTaskIds ?? [];
+      const blocked = payload.blockedTaskIds ?? [];
+      const reasons = payload.blockedReasons ?? [];
+      const notices = [...(payload.warnings ?? []), ...(payload.fallbacks ?? [])]
+        .map((notice) => notice.message)
+        .filter((message): message is string => message !== undefined && message.length > 0);
+
+      const reasonText = reasons
+        .map((reason) => {
+          const task = reason.taskId !== undefined ? titleOf(reason.taskId) : "tarea";
+          const related = reason.relatedTaskIds !== undefined && reason.relatedTaskIds.length > 0
+            ? ` (${labelList(reason.relatedTaskIds)})`
+            : "";
+          return `${task}: ${reason.reason ?? "bloqueada"}${related}`;
+        })
+        .join("; ");
+
+      const detailLines = [
+        `Seleccionadas: ${labelList(selected)}.`,
+        blocked.length > 0 ? `Bloqueadas para otra ola: ${labelList(blocked)}.` : "Sin tareas bloqueadas por scheduling.",
+        reasonText.length > 0 ? `Motivos: ${reasonText}.` : undefined,
+        notices.length > 0 ? `Avisos: ${notices.join("; ")}.` : undefined
+      ].filter((line): line is string => line !== undefined);
+
+      list.push({
+        id: `wave-progress-scheduling-${event.seq}`,
+        role: "assistant",
+        content: [
+          {
+            type: "text",
+            text: `**Ola ${(payload.waveIndex ?? 0) + 1} seleccionada por scheduling**\n\n${detailLines.join("\n")}`
+          }
+        ],
+        createdAt: new Date(event.at)
+      });
+    });
+
   const wavePlanned = events.find((e) => e.type === "wave.planned");
-  const wavePlans: { waveId: number; nodeIds: string[] }[] = (wavePlanned?.payload as unknown as UnifiedPayload)?.waves || [];
+  const wavePlans: { waveId: string | number; nodeIds: string[] }[] = (wavePlanned?.payload as unknown as UnifiedPayload)?.waves || [];
 
   wavePlans.forEach((w) => {
     const waveOpened = events.find((e) => e.type === "wave.opened" && (e.payload as UnifiedPayload).waveId === w.waveId);

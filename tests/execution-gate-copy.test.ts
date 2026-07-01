@@ -8,6 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { persistExecutionPause } from "@/lib/server/runs/execution-host";
+import { readRunModelEvents } from "@/lib/server/runs/run-model-event-log";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import type { RunRecord } from "@/lib/server/runs/schema";
 
@@ -92,6 +93,22 @@ describe("persistExecutionPause — merge_conflict copy by failure class", () =>
       failureClass: "merge_conflict"
     });
     expect(run.pendingQuestion?.question).toContain("el Composer no pudo resolver");
+  });
+
+  it("persists the actionable decision event before returning the paused run", async () => {
+    const run = await pauseWith("run-decision-event", {
+      integrationStatus: "cherry_pick_conflict",
+      failureClass: "merge_conflict"
+    });
+
+    const events = await readRunModelEvents(run.runId);
+    expect(events.map((event) => event.type)).toEqual(["run.status.changed", "decision.raised"]);
+    expect(events[1]?.payload).toMatchObject({
+      decisionId: "clarify:build-ui",
+      kind: "clarify",
+      blocking: true,
+      context: { nodeIds: ["build-ui"], gate: "merge_conflict" }
+    });
   });
 
   it("legacy gate without failureClass falls back to a generic message with the status", async () => {

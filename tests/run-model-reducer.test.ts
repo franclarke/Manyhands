@@ -52,6 +52,7 @@ describe("reducer — general", () => {
     expect(m.nodes.size).toBe(0);
     expect(m.seams.size).toBe(0);
     expect(m.waves.size).toBe(0);
+    expect(m.schedulingWaves.size).toBe(0);
     expect(m.conflicts.size).toBe(0);
     expect(m.decisions.size).toBe(0);
     expect(m.amendments.size).toBe(0);
@@ -154,7 +155,42 @@ describe("reducer — general", () => {
     expect(running.run.control.pausedDuring).toBeUndefined();
   });
 
-  it.each(ALL)("9. %s model has no derived fields", (_name, fx) => {
+  it("9. run.scheduling.wave_selected records the scheduling audit by wave index", () => {
+    const base = initialFor("r-scheduling");
+    const next = reduceRunEvent(base, {
+      seq: 1,
+      at: "2026-06-30T00:00:00.000Z",
+      runId: "r-scheduling",
+      actor: "system",
+      type: "run.scheduling.wave_selected",
+      payload: {
+        version: 1,
+        source: "run-executor",
+        waveIndex: 0,
+        policy: "risk_aware",
+        readyTaskIds: ["task-a", "task-b"],
+        selectedTaskIds: ["task-a"],
+        blockedTaskIds: ["task-b"],
+        blockedReasons: [
+          { taskId: "task-b", reason: "overlapping scope", relatedTaskIds: ["task-a"], riskLevel: "high" }
+        ],
+        riskSummary: { low: 0, medium: 0, high: 1, blocking: 0 },
+        fallbacks: [],
+        warnings: []
+      }
+    });
+
+    expect(next.cursor).toBe(1);
+    expect(next.schedulingWaves.get(0)).toMatchObject({
+      waveIndex: 0,
+      policy: "risk_aware",
+      selectedTaskIds: ["task-a"],
+      blockedTaskIds: ["task-b"]
+    });
+    expect(next.schedulingWaves.get(0)?.blockedReasons[0]?.relatedTaskIds).toEqual(["task-a"]);
+  });
+
+  it.each(ALL)("10. %s model has no derived fields", (_name, fx) => {
     const keys = Object.keys(reduceFixture(fx));
     for (const forbidden of ["phase", "health", "wavefront", "attention", "freshness", "invalidatedNodes", "affectedByAmendment", "renderableNodeState"]) {
       expect(keys).not.toContain(forbidden);

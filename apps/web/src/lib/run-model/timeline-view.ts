@@ -52,7 +52,14 @@ export function timelineCategoryOf(type: string): TimelineCategory {
   if (type.startsWith("grounding.") || type === "seam.frozen" || type === "scope.derived" || type === "wave.planned") {
     return "foundation";
   }
-  if (type.startsWith("node.") || type === "wave.opened" || type === "wave.closed" || type.startsWith("amendment.") || type === "seam.amended") {
+  if (
+    type.startsWith("node.") ||
+    type === "wave.opened" ||
+    type === "wave.closed" ||
+    type === "run.scheduling.wave_selected" ||
+    type.startsWith("amendment.") ||
+    type === "seam.amended"
+  ) {
     return "supervision";
   }
   if (type.startsWith("integration.") || type.startsWith("conflict.")) return "reconciliation";
@@ -70,6 +77,10 @@ interface Mapped {
 
 function str(v: unknown): string | undefined {
   return typeof v === "string" && v.length > 0 ? v : undefined;
+}
+
+function stringList(v: unknown): string[] {
+  return Array.isArray(v) ? v.filter((item): item is string => typeof item === "string") : [];
 }
 
 /** Map one event to its readable headline/detail/tone/nodeId (payload-aware). */
@@ -107,6 +118,27 @@ function describe(event: RunEvent): Mapped {
       return { title: "Scope derivado", detail: Array.isArray(p.paths) ? (p.paths as string[]).join(", ") : undefined, ...(str(p.nodeId) !== undefined ? { nodeId: str(p.nodeId) } : {}), tone: "info" };
     case "wave.planned":
       return { title: `Olas planificadas (${Array.isArray(p.waves) ? (p.waves as unknown[]).length : 0})`, tone: "info" };
+    case "run.scheduling.wave_selected": {
+      const ready = stringList(p.readyTaskIds);
+      const selected = stringList(p.selectedTaskIds);
+      const blocked = stringList(p.blockedTaskIds);
+      const warnings = Array.isArray(p.warnings) ? (p.warnings as Array<{ message?: unknown }>) : [];
+      const fallbacks = Array.isArray(p.fallbacks) ? (p.fallbacks as Array<{ message?: unknown }>) : [];
+      const warningMessages = [...warnings, ...fallbacks].map((item) => str(item.message)).filter((item): item is string => item !== undefined);
+      const riskSummary = (p.riskSummary as { blocking?: unknown } | undefined) ?? {};
+      const blockingRisk = typeof riskSummary.blocking === "number" ? riskSummary.blocking : 0;
+      const detail = [
+        `${selected.length}/${ready.length} seleccionadas`,
+        `${blocked.length} bloqueadas`,
+        `politica ${str(p.policy) ?? "?"}`,
+        ...warningMessages
+      ].join(" | ");
+      return {
+        title: `Ola seleccionada #${Number(p.waveIndex ?? 0) + 1}`,
+        detail,
+        tone: warningMessages.length > 0 || blockingRisk > 0 ? "warn" : "info"
+      };
+    }
     case "grounding.completed":
       return { title: "Grounding completo", detail: str(p.skeletonCommit), tone: "good" };
 

@@ -35,6 +35,7 @@ export interface GenerateRunTitleInput {
   timeoutMs?: number;
   spawn?: SpawnFn;
   useShell?: boolean;
+  platform?: NodeJS.Platform;
 }
 
 /**
@@ -47,13 +48,14 @@ export async function generateRunTitle(input: GenerateRunTitleInput): Promise<Ru
   const binaryPath = input.binaryPath ?? process.env.MANYHANDS_CLAUDE_BIN ?? "claude";
   const spawnFn = input.spawn ?? nodeSpawn;
   const timeoutMs = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const useShell = input.useShell ?? process.platform === "win32";
+  const platform = input.platform ?? process.platform;
+  const useShell = input.useShell ?? platform === "win32";
   const cwd = input.cwd ?? process.cwd();
 
   const prompt = buildTitlerPrompt(input.userPrompt);
   const args = ["-p", STDIN_DIRECTIVE, "--model", input.model, "--output-format", "json", "--permission-mode", "plan"];
 
-  const outcome = await runProcess({ binaryPath, args, cwd, prompt, timeoutMs, spawnFn, useShell });
+  const outcome = await runProcess({ binaryPath, args, cwd, prompt, timeoutMs, spawnFn, useShell, platform });
 
   if (outcome.timedOut) {
     throw new RunTitlerError(`Run titler timed out after ${timeoutMs}ms`);
@@ -104,13 +106,15 @@ function runProcess(input: {
   timeoutMs: number;
   spawnFn: SpawnFn;
   useShell: boolean;
+  platform: NodeJS.Platform;
 }): Promise<ProcessOutcome> {
   return new Promise((resolve) => {
-    const child = input.spawnFn(input.binaryPath, input.args, {
+    const spawnCommand = resolveSpawnCommand(input);
+    const child = input.spawnFn(spawnCommand.command, spawnCommand.args, {
       cwd: input.cwd,
       env: process.env,
       stdio: ["pipe", "pipe", "pipe"],
-      shell: input.useShell
+      shell: spawnCommand.shell
     });
 
     let stdout = "";
@@ -145,6 +149,22 @@ function runProcess(input: {
     child.stdin?.on("error", () => undefined);
     child.stdin?.end(input.prompt);
   });
+}
+
+function resolveSpawnCommand(input: {
+  binaryPath: string;
+  args: string[];
+  useShell: boolean;
+  platform: NodeJS.Platform;
+}): { command: string; args: string[]; shell: boolean } {
+  if (input.useShell && input.platform === "win32") {
+    return {
+      command: process.env.ComSpec ?? "cmd.exe",
+      args: ["/d", "/s", "/c", input.binaryPath, ...input.args],
+      shell: false
+    };
+  }
+  return { command: input.binaryPath, args: input.args, shell: input.useShell };
 }
 
 /** First balanced `{...}` object in a string, or null. */

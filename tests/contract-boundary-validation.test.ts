@@ -51,6 +51,37 @@ describe("contract boundary validation", () => {
     expect(result.issues.filter((issue) => issue.code === "unsafe_path")).toHaveLength(3);
   });
 
+  it("blocks invalid and duplicate interface ids inside a contract boundary", () => {
+    const result = validateAgentTaskContractBoundary(
+      contract("task-a", {
+        consumedInterfaces: [{ id: "Bad/Id", kind: "type", signature: "type Bad = {}", description: "bad" }],
+        producedInterfaces: [
+          { id: "SessionApi", kind: "type", signature: "type SessionApi = {}", description: "session" },
+          { id: "SessionApi", kind: "type", signature: "type SessionApi = {}", description: "session duplicate" }
+        ]
+      }),
+      { taskId: "task-a", executable: true }
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "invalid_interface_id",
+          field: "consumedInterfaces.id",
+          taskId: "task-a",
+          severity: "error"
+        }),
+        expect.objectContaining({
+          code: "duplicate_interface_id",
+          field: "producedInterfaces",
+          taskId: "task-a",
+          severity: "error"
+        })
+      ])
+    );
+  });
+
   it("blocks a task graph with a dangling dependency", () => {
     const issues = validateExecutableTaskGraph({
       ...graphWith([leaf("task-a", contract("task-a"))]),

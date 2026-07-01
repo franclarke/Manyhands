@@ -1,5 +1,8 @@
 import type { Actor } from "@/lib/run-model/types";
 import { appendRunStatusChanged } from "./run-status-events";
+import { publishRunEvent } from "./event-bus";
+import { appendRunEventsRequired, type RunModelEventInput } from "./run-model-event-log";
+import { runControlForRun } from "./run-model-projection";
 import type { RunRecord } from "./schema";
 import { getRunRepository } from "./store";
 
@@ -96,6 +99,63 @@ export async function appendStatusEventOrRollback(
       });
       throw new RunPersistenceConsistencyError(
         `Required status event append failed for run ${saved.runId}; RunRecord rollback also failed.`,
+        {
+          runId: saved.runId,
+          previousStatus: previous.status,
+          attemptedStatus: saved.status,
+          rollback: "failed",
+          cause: error,
+          rollbackCause: rollbackError
+        }
+      );
+    }
+  }
+}
+
+export async function appendStatusAndRunEventsOrRollback(
+  previous: RunRecord,
+  saved: RunRecord,
+  additionalEvents: readonly RunModelEventInput[],
+  options: RequiredStatusEventOptions = {}
+): Promise<RunRecord> {
+  const at = options.at ?? saved.updatedAt;
+  try {
+    await appendRunEventsRequired(saved.runId, [
+      {
+        actor: options.actor ?? "system",
+        at,
+        type: "run.status.changed",
+        payload: runControlForRun(saved)
+      },
+      ...additionalEvents
+    ]);
+    publishRunEvent(saved.runId, { kind: "status.changed", status: saved.status, at });
+    return saved;
+  } catch (error) {
+    try {
+      await getRunRepository().save(previous);
+      throw new RunPersistenceConsistencyError(
+        `Required event append failed for run ${saved.runId}; RunRecord rollback to ${previous.status} succeeded.`,
+        {
+          runId: saved.runId,
+          previousStatus: previous.status,
+          attemptedStatus: saved.status,
+          rollback: "succeeded",
+          cause: error
+        }
+      );
+    } catch (rollbackError) {
+      if (rollbackError instanceof RunPersistenceConsistencyError) {
+        throw rollbackError;
+      }
+      console.error(`[runs] persistence inconsistency: rollback failed for run ${saved.runId}`, {
+        attemptedStatus: saved.status,
+        previousStatus: previous.status,
+        eventError: error,
+        rollbackError
+      });
+      throw new RunPersistenceConsistencyError(
+        `Required event append failed for run ${saved.runId}; RunRecord rollback also failed.`,
         {
           runId: saved.runId,
           previousStatus: previous.status,

@@ -5,13 +5,56 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as POST_RUN } from "@/app/api/runs/[id]/run/route";
 import { readRunModelEvents } from "@/lib/server/runs/run-model-event-log";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import { drainRunBackgroundTasks } from "@/lib/server/runs/runner-state";
 import { AgentTaskContractSchema } from "@manyhands/contracts";
 import type { RunRecord } from "@/lib/server/runs/schema";
+
+const fakeRunner = vi.hoisted(() => ({
+  calls: [] as string[],
+  sawRunning: [] as boolean[]
+}));
+
+vi.mock("@/lib/server/runs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/server/runs")>();
+  return {
+    ...actual,
+    runExecutionPipeline: async (runId: string): Promise<void> => {
+      fakeRunner.calls.push(runId);
+      const current = await actual.getRunRepository().get(runId);
+      fakeRunner.sawRunning.push(current.status === "running");
+      await actual.transitionTo(current, "completed", {
+        completedAt: "2026-06-11T00:00:01.000Z",
+        execution: {
+          runId,
+          status: "completed",
+          leafResults: [],
+          integrationResults: [],
+          granularityVector: {
+            depth: 0,
+            leafCount: 0,
+            compositeCount: 0,
+            avgLeafDepth: 0,
+            maxLeafDepth: 0,
+            dependencyCount: 0,
+            avgAcceptanceCriteriaPerLeaf: 0,
+            integrationSuccessRate: 1,
+            leafSuccessRate: 1,
+            conflictRate: 0,
+            totalDurationMs: 0,
+            linesChanged: 0,
+            unexpectedCommitCount: 0,
+            scopeViolationCount: 0
+          },
+          totalDurationMs: 0
+        }
+      });
+    }
+  };
+});
 
 let tempDir: string;
 let previousRunsDir: string | undefined;
@@ -21,6 +64,8 @@ beforeEach(async () => {
   tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-run-start-"));
   previousRunsDir = process.env.MANYHANDS_RUNS_DIR;
   process.env.MANYHANDS_RUNS_DIR = path.join(tempDir, "runs");
+  fakeRunner.calls.length = 0;
+  fakeRunner.sawRunning.length = 0;
   resetRunRepositoryForTests();
 });
 
@@ -132,6 +177,34 @@ describe("run start CAS", () => {
     expect(winnerBody.run.status).toBe("running");
     expect(winnerBody.run.startedAt).toBeDefined();
     expect(loserBody.error).toContain("mutation rejected");
+  });
+
+  it("drains the injected route runner and persists final completion", async () => {
+    const runId = "run-start-route-smoke";
+    activeRunId = runId;
+    await getRunRepository().save(makeRun({ runId }));
+
+    const response = await postRun(runId);
+    const body = (await response.json()) as { run: { status: string; startedAt?: string } };
+
+    expect(response.status).toBe(200);
+    expect(body.run.status).toBe("running");
+    expect(body.run.startedAt).toBeDefined();
+
+    await drainRunBackgroundTasks(runId);
+
+    const final = await getRunRepository().get(runId);
+    expect(fakeRunner.calls).toEqual([runId]);
+    expect(fakeRunner.sawRunning).toEqual([true]);
+    expect(final.status).toBe("completed");
+    expect(final.startedAt).toBeDefined();
+    expect(final.completedAt).toBe("2026-06-11T00:00:01.000Z");
+    expect((final.execution as { status?: string } | undefined)?.status).toBe("completed");
+
+    const statusEvents = (await readRunModelEvents(runId))
+      .filter((event) => event.type === "run.status.changed")
+      .map((event) => (event.payload as { status?: string }).status);
+    expect(statusEvents).toEqual(["running", "completed"]);
   });
 
   it("rejects an invalid executable graph before marking the run as running", async () => {

@@ -82,4 +82,39 @@ describe("buildThreadMessages — id uniqueness", () => {
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids.filter((id) => id === "conflict-integration:composite-a:conflict")).toHaveLength(1);
   });
+
+  it("projects scheduling wave selections into an execution wave card", () => {
+    seq = 0;
+    const events: RunEvent[] = [
+      ev("run.created", { intent: "Agregar feature X" }),
+      ev("plan.node.proposed", { nodeId: "leaf-api", title: "Actualizar API" }),
+      ev("plan.node.proposed", { nodeId: "leaf-ui", title: "Actualizar UI" }),
+      ev("run.scheduling.wave_selected", {
+        version: 1,
+        source: "run-executor",
+        waveIndex: 0,
+        policy: "risk_aware",
+        readyTaskIds: ["leaf-api", "leaf-ui"],
+        selectedTaskIds: ["leaf-api"],
+        blockedTaskIds: ["leaf-ui"],
+        blockedReasons: [
+          { taskId: "leaf-ui", reason: "scope compartido", relatedTaskIds: ["leaf-api"], riskLevel: "high" }
+        ],
+        riskSummary: { low: 0, medium: 0, high: 1, blocking: 0 },
+        fallbacks: [],
+        warnings: [{ code: "scope-derived", taskIds: ["leaf-api"], message: "scope inferido" }]
+      })
+    ];
+
+    const messages = buildThreadMessages(events);
+    const waveMessage = messages.find((message) => message.id.startsWith("wave-progress-scheduling-"));
+    const text = waveMessage?.content[0]?.text ?? "";
+
+    expect(waveMessage).toBeDefined();
+    expect(text).toContain("Ola 1 seleccionada por scheduling");
+    expect(text).toContain("Seleccionadas: Actualizar API.");
+    expect(text).toContain("Bloqueadas para otra ola: Actualizar UI.");
+    expect(text).toContain("Actualizar UI: scope compartido (Actualizar API)");
+    expect(text).toContain("scope inferido");
+  });
 });

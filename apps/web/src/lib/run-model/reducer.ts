@@ -47,6 +47,7 @@ import type {
   RunEvent,
   RunEvidenceReadyPayload,
   RunMetricsReadyPayload,
+  RunSchedulingWaveSelectedPayload,
   RunStatusChangedPayload,
   RunModel,
   ScopeDerivedPayload,
@@ -77,6 +78,7 @@ export function createInitialRunModel(run: RunSeed): RunModel {
     nodes: new Map(),
     seams: new Map(),
     waves: new Map(),
+    schedulingWaves: new Map(),
     conflicts: new Map(),
     decisions: new Map(),
     amendments: new Map(),
@@ -237,6 +239,24 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
     }
 
     // ── Supervision ──
+    case "run.scheduling.wave_selected": {
+      const p = read<RunSchedulingWaveSelectedPayload>(event);
+      const schedulingWaves = new Map(model.schedulingWaves);
+      schedulingWaves.set(p.waveIndex, {
+        ...p,
+        readyTaskIds: [...p.readyTaskIds],
+        selectedTaskIds: [...p.selectedTaskIds],
+        blockedTaskIds: [...p.blockedTaskIds],
+        blockedReasons: p.blockedReasons.map((reason) => ({
+          ...reason,
+          relatedTaskIds: [...reason.relatedTaskIds]
+        })),
+        riskSummary: { ...p.riskSummary },
+        fallbacks: p.fallbacks.map((fallback) => ({ ...fallback, taskIds: [...fallback.taskIds] })),
+        warnings: p.warnings.map((warning) => ({ ...warning, taskIds: [...warning.taskIds] }))
+      });
+      return { ...model, schedulingWaves };
+    }
     case "wave.opened": {
       const p = read<WaveOpenedPayload>(event);
       const existing = model.waves.get(p.waveId);

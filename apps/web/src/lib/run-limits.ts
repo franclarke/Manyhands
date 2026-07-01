@@ -1,0 +1,1 @@
+export const RUN_USER_PROMPT_MAX_LENGTH = 16_000;

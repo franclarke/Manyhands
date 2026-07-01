@@ -18,6 +18,7 @@ describe("timeline — category mapping", () => {
     expect(timelineCategoryOf("plan.node.status")).toBe("proposal");
     expect(timelineCategoryOf("seam.frozen")).toBe("foundation");
     expect(timelineCategoryOf("node.verify.passed")).toBe("supervision");
+    expect(timelineCategoryOf("run.scheduling.wave_selected")).toBe("supervision");
     expect(timelineCategoryOf("integration.completed")).toBe("reconciliation");
     expect(timelineCategoryOf("run.metrics.ready")).toBe("disposition");
     expect(timelineCategoryOf("decision.raised")).toBe("decision");
@@ -116,5 +117,42 @@ describe("timeline — robustness", () => {
       nodeId: "leaf-a",
       tone: "warn"
     });
+  });
+
+  it("12. surfaces scheduling wave selections as supervision audit", () => {
+    const events: RunEvent[] = [
+      {
+        seq: 1,
+        at: "2026-06-30T00:00:00.000Z",
+        runId: "run-x",
+        actor: "system",
+        type: "run.scheduling.wave_selected",
+        payload: {
+          version: 1,
+          source: "run-executor",
+          waveIndex: 0,
+          policy: "risk_aware",
+          readyTaskIds: ["leaf-a", "leaf-b"],
+          selectedTaskIds: ["leaf-a"],
+          blockedTaskIds: ["leaf-b"],
+          blockedReasons: [{ taskId: "leaf-b", reason: "overlapping scope", relatedTaskIds: ["leaf-a"], riskLevel: "high" }],
+          riskSummary: { low: 0, medium: 0, high: 1, blocking: 0 },
+          fallbacks: [],
+          warnings: [{ code: "scope-derived", taskIds: ["leaf-a"], message: "Scope was inferred" }]
+        }
+      }
+    ];
+
+    const view = buildTimelineView(events);
+
+    expect(view.entries[0]).toMatchObject({
+      type: "run.scheduling.wave_selected",
+      category: "supervision",
+      title: "Ola seleccionada #1",
+      tone: "warn"
+    });
+    expect(view.entries[0]?.detail).toContain("1/2 seleccionadas");
+    expect(view.entries[0]?.detail).toContain("1 bloqueadas");
+    expect(view.entries[0]?.detail).toContain("Scope was inferred");
   });
 });

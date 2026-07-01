@@ -20,6 +20,7 @@ import { WorkspaceFormDialog, type WorkspaceFormValue } from "./workspace-form-d
 import { toGranularityMode, isGranularityLevel, GRANULARITY_DISPLAY_OPTIONS, type GranularityLevel } from "@/lib/granularity";
 import { modelOptionForValue, parseSelectionValue } from "@/lib/models";
 import { estimateRunCostUsd, formatUsd } from "@/lib/model-pricing";
+import { RUN_USER_PROMPT_MAX_LENGTH } from "@/lib/run-limits";
 import type { ExecutorSelection } from "@/lib/api-types";
 import { FolderGit2, GitBranch, Plus, Pencil, Trash2, AlertTriangle, OctagonAlert, Sparkles } from "lucide-react";
 
@@ -84,6 +85,7 @@ export function CommandCenterShell({
   const [autonomy, setAutonomy] = useState<AutonomyLevel>("supervised");
   const [prompt, setPrompt] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [handoffRunId, setHandoffRunId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<ProviderReadiness | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
@@ -151,7 +153,9 @@ export function CommandCenterShell({
   );
 
   const granularityMode = toGranularityMode(granularity);
-  const hasPrompt = prompt.trim().length > 0;
+  const trimmedPromptLength = prompt.trim().length;
+  const hasPrompt = trimmedPromptLength > 0;
+  const promptOverLimit = trimmedPromptLength > RUN_USER_PROMPT_MAX_LENGTH;
   const hasLocalRepo = selectedWorkspace?.repoPath !== undefined && selectedWorkspace.repoPath.length > 0;
   const hasUsableProvider = readiness?.status === "ready" || readiness?.status === "warning";
 
@@ -163,13 +167,14 @@ export function CommandCenterShell({
   const canPlanWithSelection = selectedModel?.capabilities.includes("planning") ?? false;
   const planningModelId = canPlanWithSelection ? selection.model : DEFAULT_PLANNING_MODEL;
   const costEstimate = estimateRunCostUsd(selection.model, {
-    promptChars: prompt.trim().length,
+    promptChars: trimmedPromptLength,
     granularity
   });
 
   const startBlockReason = startBlockReasonFor({
     selectedWorkspace,
     hasPrompt,
+    promptOverLimit,
     hasLocalRepo,
     readiness,
     readinessLoading,
@@ -179,6 +184,7 @@ export function CommandCenterShell({
   const canStart =
     selectedWorkspace !== null &&
     hasPrompt &&
+    !promptOverLimit &&
     hasLocalRepo &&
     hasUsableProvider &&
     selectedModel !== undefined &&
@@ -228,10 +234,15 @@ export function CommandCenterShell({
       if (typeof window !== "undefined") {
         window.sessionStorage.removeItem(PROMPT_STORAGE_KEY);
       }
+      setHandoffRunId(runId);
+      if (typeof window !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        await new Promise((resolve) => window.setTimeout(resolve, 520));
+      }
       router.push(`/runs/${runId}`);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : String(error));
       setSubmitting(false);
+      setHandoffRunId(null);
     }
   }
 
@@ -349,7 +360,21 @@ export function CommandCenterShell({
   return (
     <section className="flex w-full flex-col gap-4">
       {/* ── Composer card ──────────────────────────────────────────────── */}
-      <div className="mh-elev-1 mh-elev-focus flex flex-col rounded-[var(--r-xl)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] transition-[border-color,box-shadow] duration-150 focus-within:border-[var(--color-accent-deep)]">
+      <div
+        className={[
+          "mh-elev-1 mh-elev-focus relative flex flex-col rounded-[var(--r-xl)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] transition-[border-color,box-shadow,transform,opacity] duration-500 focus-within:border-[var(--color-accent-deep)]",
+          handoffRunId !== null ? "scale-[0.96] opacity-80" : ""
+        ].join(" ")}
+      >
+        {handoffRunId !== null ? (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-[var(--r-xl)] bg-[color-mix(in_srgb,var(--color-bg)_55%,transparent)]">
+            <div className="mh-elev-sheet flex items-center gap-3 rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-4 py-3">
+              <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-[var(--status-running-fg)]" />
+              <span className="text-sm font-semibold text-[var(--color-text)]">Abriendo workspace del run</span>
+              <span className="mh-mono text-eyebrow text-[var(--color-text-subtle)]">{handoffRunId.slice(0, 8)}</span>
+            </div>
+          </div>
+        ) : null}
         {/* Context bar: workspace + repo + branch */}
         <div className="flex flex-wrap items-center gap-2 border-b border-[var(--color-border-soft)] px-4 py-3">
           <FolderGit2 aria-hidden className="h-4 w-4 shrink-0 text-[var(--color-text-subtle)]" />
@@ -397,11 +422,25 @@ export function CommandCenterShell({
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           onKeyDown={handleKeyDown}
+          maxLength={RUN_USER_PROMPT_MAX_LENGTH}
           rows={5}
           spellCheck={false}
           placeholder="Describí los cambios o la funcionalidad a construir (ej: agregar autenticación, refactorizar validación, crear endpoint…)"
           className="min-h-[120px] w-full resize-y border-0 bg-transparent px-4 py-3.5 font-sans text-sm leading-relaxed text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-subtle)]"
         />
+        {hasPrompt ? (
+          <div className="flex justify-end px-4 pb-3">
+            <span
+              className={[
+                "text-meta",
+                promptOverLimit ? "text-[var(--status-failed-fg)]" : "text-[var(--color-text-subtle)]"
+              ].join(" ")}
+            >
+              {trimmedPromptLength.toLocaleString("es-AR")} /{" "}
+              {RUN_USER_PROMPT_MAX_LENGTH.toLocaleString("es-AR")} caracteres
+            </span>
+          </div>
+        ) : null}
 
         {/* Selectors Bar */}
         <div className="flex flex-wrap items-start gap-x-5 gap-y-4 border-t border-[var(--color-border-soft)] px-4 py-4 bg-[var(--color-bg-subtle)]/5">
@@ -697,6 +736,7 @@ function providerPill({
 function startBlockReasonFor({
   selectedWorkspace,
   hasPrompt,
+  promptOverLimit,
   hasLocalRepo,
   readiness,
   readinessLoading,
@@ -704,6 +744,7 @@ function startBlockReasonFor({
 }: {
   selectedWorkspace: Workspace | null;
   hasPrompt: boolean;
+  promptOverLimit: boolean;
   hasLocalRepo: boolean;
   readiness: ProviderReadiness | null;
   readinessLoading: boolean;
@@ -711,6 +752,7 @@ function startBlockReasonFor({
 }): string | null {
   if (selectedWorkspace === null) return "Elegí un workspace";
   if (!hasPrompt) return "Describí la tarea para empezar";
+  if (promptOverLimit) return "El prompt supera el límite de caracteres";
   if (!hasLocalRepo) return "Configurá un repo local";
   if (readinessLoading) return "Verificando Claude Code…";
   if (readinessError !== null || readiness === null) return "Claude Code sin verificar";

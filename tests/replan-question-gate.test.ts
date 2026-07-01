@@ -12,6 +12,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { POST as POST_ANSWER } from "@/app/api/runs/[id]/answer/route";
 import { RunMutationConflictError } from "@/lib/server/runs/errors";
+import { readRunModelEvents } from "@/lib/server/runs/run-model-event-log";
 import { resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import type { RunRecord } from "@/lib/server/runs/schema";
@@ -70,6 +71,16 @@ describe("replan question gate", () => {
     expect(saved.status).toBe("running");
     expect(saved.pendingQuestion).toBeUndefined();
     expect(saved.pendingReplan).toBeUndefined();
+    const events = await readRunModelEvents("run-replan-resume");
+    expect(
+      events.some(
+        (event) =>
+          event.type === "decision.resolved" &&
+          (event.payload as { decisionId?: string; choice?: { answer?: string } }).decisionId ===
+            "clarify:replan-node-1" &&
+          (event.payload as { choice?: { answer?: string } }).choice?.answer === "REST"
+      )
+    ).toBe(true);
     // The background replan re-entry fails fast in this fixture (no graph) and
     // is caught — the gate mechanics are what this test pins down.
   });
@@ -110,5 +121,15 @@ describe("replan question gate", () => {
     const saved = await getRunRepository().get("run-replan-route");
     expect(saved.status).toBe("running");
     expect(saved.pendingReplan).toBeUndefined();
+    const events = await readRunModelEvents("run-replan-route");
+    expect(
+      events.some(
+        (event) =>
+          event.type === "decision.resolved" &&
+          (event.payload as { decisionId?: string; choice?: { answer?: string } }).decisionId ===
+            "clarify:replan-node-1" &&
+          (event.payload as { choice?: { answer?: string } }).choice?.answer === "GraphQL"
+      )
+    ).toBe(true);
   });
 });

@@ -171,6 +171,56 @@ describe("RecursiveDecomposer recovery", () => {
     });
   });
 
+  it("rejects duplicate shared interface ids before accepting a decompose step", async () => {
+    const { client } = sequenceClient([
+      {
+        match: "Evaluate arithmetic expression strings",
+        responses: [
+          decomposeStep({
+            sharedInterfaces: [sharedInterface("ApiContract"), sharedInterface("ApiContract")],
+            children: [
+              child("api", "API", "Define the calculate API", { produces: ["ApiContract"] }),
+              child("frontend", "Frontend", "Render the calculator UI", { consumes: ["ApiContract"] })
+            ]
+          })
+        ]
+      }
+    ]);
+
+    await expect(decomposer(client, { maxStepAttempts: 1 }).decompose(FEATURE)).rejects.toMatchObject({
+      details: expect.objectContaining({
+        stage: "validate",
+        nodeId: "root",
+        message: expect.stringContaining('duplicate interface id "ApiContract"')
+      })
+    });
+  });
+
+  it("rejects child interface references that are not declared or inherited", async () => {
+    const { client } = sequenceClient([
+      {
+        match: "Evaluate arithmetic expression strings",
+        responses: [
+          decomposeStep({
+            sharedInterfaces: [sharedInterface("ApiContract")],
+            children: [
+              child("api", "API", "Define the calculate API", { produces: ["ApiContract"] }),
+              child("frontend", "Frontend", "Render the calculator UI", { consumes: ["MissingContract"] })
+            ]
+          })
+        ]
+      }
+    ]);
+
+    await expect(decomposer(client, { maxStepAttempts: 1 }).decompose(FEATURE)).rejects.toMatchObject({
+      details: expect.objectContaining({
+        stage: "validate",
+        nodeId: "root",
+        message: expect.stringContaining('references unknown interface "MissingContract"')
+      })
+    });
+  });
+
   it("rejects dependencies that reference missing child nodes", async () => {
     const { client } = sequenceClient([
       {

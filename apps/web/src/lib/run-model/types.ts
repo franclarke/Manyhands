@@ -491,6 +491,8 @@ export interface RunModel {
   nodes: Map<NodeId, Node>;
   seams: Map<SeamId, Seam>;
   waves: Map<WaveId, Wave>;
+  /** Recorded scheduling audit selections by wave index. */
+  schedulingWaves: Map<number, RunSchedulingWaveSelectedPayload>;
   conflicts: Map<ConflictId, Conflict>;
   decisions: Map<DecisionId, Decision>;
   amendments: Map<AmendmentId, Amendment>;

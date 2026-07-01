@@ -41,7 +41,7 @@ import { planNodeProposedEvent } from "./planning-run-model-adapter";
 import { publishRunModelEvent } from "./run-model-event-log";
 import { isRunnerActive, startRunBackgroundTask } from "./runner-state";
 import {
-  appendStatusEventOrRollback,
+  appendStatusAndRunEventsOrRollback,
   requireCapturedRunRecord,
   saveRunWithRequiredStatusEvent
 } from "./audited-mutation";
@@ -270,22 +270,28 @@ async function suspendReplanOnQuestion(
   });
 
   const now = new Date().toISOString();
-  await appendStatusEventOrRollback(requireCapturedRunRecord(previous, runId), saved, { at: now });
-  publishRunModelEvent(runId, {
-    actor: "system",
-    at: now,
-    type: "decision.raised",
-    payload: {
-      decisionId: `clarify:${error.nodeId}`,
-      kind: "clarify",
-      blocking: true,
-      context: {
-        nodeIds: [error.nodeId],
-        question: saved.pendingQuestion?.question ?? error.question,
-        options: saved.pendingQuestion?.options ?? error.options
+  await appendStatusAndRunEventsOrRollback(
+    requireCapturedRunRecord(previous, runId),
+    saved,
+    [
+      {
+        actor: "system",
+        at: now,
+        type: "decision.raised",
+        payload: {
+          decisionId: `clarify:${error.nodeId}`,
+          kind: "clarify",
+          blocking: true,
+          context: {
+            nodeIds: [error.nodeId],
+            question: saved.pendingQuestion?.question ?? error.question,
+            options: saved.pendingQuestion?.options ?? error.options
+          }
+        }
       }
-    }
-  });
+    ],
+    { at: now }
+  );
   return saved;
 }
 
@@ -300,6 +306,7 @@ export async function resumeReplanWithAnswer(
   answer: string
 ): Promise<RunRecord> {
   let context: { taskId: string; reason: string; resume: ReplanResumeContext } | undefined;
+  let decisionId: string | undefined;
   let previous: RunRecord | undefined;
   const saved = await claimRunMutation(
     runId,
@@ -327,6 +334,7 @@ export async function resumeReplanWithAnswer(
           questionAnswers: { ...pending.questionAnswers, [question.nodeId]: answer }
         }
       };
+      decisionId = `clarify:${question.nodeId}`;
       const next = { ...current, status: "running" as const };
       delete next.pausedDuring;
       delete next.pendingQuestion;
@@ -335,7 +343,22 @@ export async function resumeReplanWithAnswer(
     }
   );
 
-  await appendStatusEventOrRollback(requireCapturedRunRecord(previous, runId), saved, { actor: "human" });
+  const now = new Date().toISOString();
+  await appendStatusAndRunEventsOrRollback(
+    requireCapturedRunRecord(previous, runId),
+    saved,
+    decisionId !== undefined
+      ? [
+          {
+            actor: "human",
+            at: now,
+            type: "decision.resolved",
+            payload: { decisionId, choice: { answer }, actor: "human" }
+          }
+        ]
+      : [],
+    { actor: "human", at: now }
+  );
   const replanContext = context;
   if (replanContext !== undefined) {
     startRunBackgroundTask(runId, "replan:resume", async () => {

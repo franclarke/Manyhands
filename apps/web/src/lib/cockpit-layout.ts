@@ -7,6 +7,8 @@
  */
 
 export type FocusDockMode = "column" | "overlay";
+export type DockAttachmentMode = "column" | "overlay";
+export type BottomDrawerMode = "docked" | "hidden";
 
 /**
  * Below this viewport width the focus panel floats as an overlay drawer instead
@@ -21,8 +23,19 @@ export type FocusDockMode = "column" | "overlay";
  * docking decision.
  */
 export const FOCUS_DOCK_BREAKPOINT = 1180;
+export const RUN_DOCK_BREAKPOINT = 1180;
 
 /** How the focus panel should attach at a given viewport width. */
 export function focusDockMode(viewportWidth: number): FocusDockMode {
   return viewportWidth >= FOCUS_DOCK_BREAKPOINT ? "column" : "overlay";
+}
+
+/** How the free-form workspace dock should attach at a given viewport width. */
+export function runDockMode(viewportWidth: number): DockAttachmentMode {
+  return viewportWidth >= RUN_DOCK_BREAKPOINT ? "column" : "overlay";
+}
+
+/** The drawer is available only when the user explicitly opens it. */
+export function bottomDrawerMode(open: boolean): BottomDrawerMode {
+  return open ? "docked" : "hidden";
 }

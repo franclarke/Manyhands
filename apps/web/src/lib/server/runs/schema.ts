@@ -2,6 +2,7 @@ import { EXECUTOR_IDS, ExecutionConfigSchema } from "@manyhands/execution-core";
 import { TraceEventSchema } from "@manyhands/trace-store";
 import { z } from "zod";
 
+import { RUN_USER_PROMPT_MAX_LENGTH } from "@/lib/run-limits";
 import { RepoSpecSchema } from "./repo-provisioner";
 
 export const RUN_FILE_VERSION = 1;
@@ -205,7 +206,7 @@ export const RunRecordSchema = z.object({
   defaultRepairSelection: ExecutorSelectionSchema.optional(),
   /** Unattendedness policy. Absent (old records) is treated as "supervised". */
   autonomy: AutonomySchema.optional(),
-  userPrompt: z.string().max(4000),
+  userPrompt: z.string().max(RUN_USER_PROMPT_MAX_LENGTH),
   title: z.string().min(1).max(160),
   /** LLM-generated one-paragraph description. Falls back to userPrompt in the UI. */
   summary: z.string().max(400).optional(),
@@ -350,7 +351,7 @@ export const RunCreateRequestSchema = z.object({
   defaultExecutionSelection: ExecutorSelectionSchema.optional(),
   defaultRepairSelection: ExecutorSelectionSchema.optional(),
   autonomy: AutonomySchema.optional(),
-  userPrompt: z.string().trim().max(4000).default(""),
+  userPrompt: z.string().trim().max(RUN_USER_PROMPT_MAX_LENGTH).default(""),
   /** Target repo for real execution. */
   repoSpec: RepoSpecSchema.optional()
 });

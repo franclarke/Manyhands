@@ -6,20 +6,26 @@ import { selectMinimalWorkspaceView } from "@/lib/run-model/minimal-workspace-vi
 import type { Run, RunEvent, RunModel, Node } from "@/lib/run-model/types";
 import { runUiStatus, STATUS_META } from "@/lib/status";
 import { StatusPill } from "@/components/ui/status-pill";
-import { FocusPanel } from "@/components/run-model/focus-panel";
+import { MinimalRunGraphCanvas } from "@/components/run-model/minimal-run-graph";
 import { RunTimeline } from "@/components/run-model/run-timeline";
 import { selectRunTimeline } from "@/lib/run-model/run-phases";
+import { graphEmptyStateKind } from "@/lib/run-model/run-phases";
 import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
 import { ChatRuntimeProvider } from "@/components/chat/assistant-provider";
 import { ChatThread, ChatRail } from "@/components/chat/thread";
 import { Button } from "@/components/ui/button";
-import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-panels";
+import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 import { ResizeHandle } from "@/components/ui/resize-handle";
-import { ArtifactTabs } from "./artifact-tabs.client";
 import { DeliveryPanel } from "./delivery-panel.client";
-import { focusDockMode } from "@/lib/cockpit-layout";
+import { runDockMode } from "@/lib/cockpit-layout";
 import { useViewportWidth } from "@/lib/use-viewport-width";
-import { Download, Pause, Play } from "lucide-react";
+import { Activity, Download, FileCode2, FileDiff, MessageSquare, Pause, Play, Terminal } from "lucide-react";
+import {
+  BottomDrawer,
+  RunWorkspaceDock,
+  type DockSlotState,
+  type DockSurfaceId
+} from "./run-workspace-surfaces.client";
 
 const SSR_NOOP_STORAGE: Pick<Storage, "getItem" | "setItem"> = {
   getItem: () => null,
@@ -37,7 +43,10 @@ export function RunModelView({
 }): React.ReactElement {
   const { model, events, connected } = useLiveRunModel(seed, initialEvents);
   const [focus, setFocus] = useState<FocusTarget | null>(null);
-  const [activeTab, setActiveTab] = useState<"dag" | "plan" | "conflicts" | "execution" | "files" | "evaluation">("dag");
+  const [dockSlots, setDockSlots] = useState<DockSlotState[]>([]);
+  const [expandedDockSlotId, setExpandedDockSlotId] = useState<string | null>(null);
+  const [bottomOpen, setBottomOpen] = useState(false);
+  const [bottomTab, setBottomTab] = useState<"terminal" | "logs" | "events" | "validation">("terminal");
 
   const view = useMemo(() => selectMinimalWorkspaceView(model), [model]);
   const timeline = useMemo(() => selectRunTimeline(model, view.stage), [model, view.stage]);
@@ -59,49 +68,112 @@ export function RunModelView({
     else ref.collapse();
   };
 
-  // Below a derived width the focus panel would clip both the chat and the DAG
-  // canvas as a third column, so it floats as an overlay drawer instead. The
-  // decision is the pure, tested `focusDockMode`; the width comes from a hook.
-  const dockMode = focusDockMode(useViewportWidth());
-  const focusDocked = focusView !== null && dockMode === "column";
-  const focusOverlay = focusView !== null && dockMode === "overlay";
+  const dockMode = runDockMode(useViewportWidth());
+  const dockOpen = dockSlots.length > 0;
+  const docked = dockOpen && dockMode === "column";
+  const dockOverlay = dockOpen && dockMode === "overlay";
 
   // Close the overlay drawer on Escape — it has no resize handle to escape via.
   useEffect(() => {
-    if (!focusOverlay) return;
+    if (!dockOverlay) return;
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") setFocus(null);
+      if (event.key === "Escape") setDockSlots([]);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [focusOverlay]);
+  }, [dockOverlay]);
 
   // Persisted, per-arrangement panel layout (with/without the docked focus panel).
   // `storage` must be passed explicitly: the library defaults to `localStorage`,
   // which crashes during SSR (this component server-renders its first frame).
-  const panelIds = focusDocked ? ["chat", "artifacts", "focus"] : ["chat", "artifacts"];
+  const panelIds = docked ? ["chat", "artifacts", "dock"] : ["chat", "artifacts"];
   // The persisted layout (localStorage) differs from the SSR default, so reading
   // it on the first client render mismatches the server HTML. Gate it behind a
   // mount flag: first client render uses the noop storage (== SSR), and the
   // persisted layout applies on the post-hydration update instead.
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
+  useEffect(() => {
+    if (!hydrated || typeof window === "undefined") return;
+    const raw = window.localStorage.getItem(`mh-run-cockpit:${seed.id}:v1`);
+    if (raw === null) return;
+    try {
+      const parsed = JSON.parse(raw) as {
+        dockSlots?: DockSlotState[];
+        bottomOpen?: boolean;
+        bottomTab?: "terminal" | "logs" | "events" | "validation";
+      };
+      if (Array.isArray(parsed.dockSlots)) setDockSlots(parsed.dockSlots.slice(0, 2));
+      if (typeof parsed.bottomOpen === "boolean") setBottomOpen(parsed.bottomOpen);
+      if (parsed.bottomTab === "terminal" || parsed.bottomTab === "logs" || parsed.bottomTab === "events" || parsed.bottomTab === "validation") {
+        setBottomTab(parsed.bottomTab);
+      }
+    } catch {
+      // Ignore stale layout payloads.
+    }
+  }, [hydrated, seed.id]);
+  useEffect(() => {
+    if (!hydrated || typeof window === "undefined") return;
+    window.localStorage.setItem(
+      `mh-run-cockpit:${seed.id}:v1`,
+      JSON.stringify({ dockSlots, bottomOpen, bottomTab })
+    );
+  }, [bottomOpen, bottomTab, dockSlots, hydrated, seed.id]);
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: "mh-run-workspace",
     panelIds,
     storage: hydrated && typeof window !== "undefined" ? window.localStorage : SSR_NOOP_STORAGE
   });
 
+  function openSurface(surface: DockSurfaceId, target: FocusTarget | null = focus): void {
+    if (target !== null) setFocus(target);
+    setDockSlots((current) => {
+      const nextSlot: DockSlotState = {
+        id: `slot-${Date.now()}`,
+        surface,
+        focus: target
+      };
+      if (current.length === 0) return [nextSlot];
+      if (current.length === 1) return [...current, nextSlot];
+      return [current[0]!, { ...current[1]!, surface, focus: target }];
+    });
+    setExpandedDockSlotId(null);
+  }
+
+  function handleLegacyTab(tab: "dag" | "plan" | "conflicts" | "execution" | "files" | "evaluation"): void {
+    if (tab === "conflicts") openSurface("risks", focus);
+    else if (tab === "files") openSurface("diff", focus);
+    else if (tab === "evaluation") openSurface("evidence", { kind: "evidence", id: "final" });
+    else if (tab === "execution") {
+      setBottomTab("events");
+      setBottomOpen(true);
+    } else if (tab === "plan") openSurface("contract", focus);
+  }
+
   return (
     <ChatRuntimeProvider events={events}>
       <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--color-bg)] font-sans">
         <RunHeader runId={seed.id} view={view} model={model} workspaceName={workspaceName} />
         <RunTimeline phases={timeline} />
+        <WorkspaceToolbar
+          chatCollapsed={chatCollapsed}
+          dockSlots={dockSlots}
+          bottomOpen={bottomOpen}
+          onToggleChat={toggleChat}
+          onOpenSurface={openSurface}
+          onToggleBottom={() => setBottomOpen((open) => !open)}
+          onOpenTerminal={() => {
+            setBottomTab("terminal");
+            setBottomOpen(true);
+          }}
+        />
 
-        {/* Resizable multipanel workspace: chat | artifacts | focus.
+        {/* Resizable cockpit: chat | graph workspace | free dock.
             Layout persists per panel arrangement via useDefaultLayout. The
-            relative wrapper hosts the overlay focus drawer on narrow viewports. */}
-        <div className="relative flex min-h-0 flex-1">
+            relative wrapper hosts the overlay dock on narrow viewports. */}
+        <Group orientation="vertical" className="min-h-0 flex-1">
+          <Panel id="workspace-main" minSize="320px" className="min-h-0">
+        <div className="relative flex h-full min-h-0">
         <Group
           orientation="horizontal"
           defaultLayout={defaultLayout}
@@ -130,7 +202,7 @@ export function RunModelView({
                 runId={seed.id}
                 model={model}
                 connected={connected}
-                setActiveTab={setActiveTab}
+                setActiveTab={handleLegacyTab}
                 onCollapse={toggleChat}
               />
             )}
@@ -138,57 +210,161 @@ export function RunModelView({
           <ResizeHandle />
           <Panel id="artifacts" minSize="30%" className="flex h-full min-w-0 flex-col bg-[var(--color-bg)]">
             {view.stage === "review" ? <DeliveryPanel runId={seed.id} /> : null}
-            <div className="flex min-h-0 flex-1">
-              <ArtifactTabs
-                model={model}
-                view={view}
-                focus={focus}
+            <div className="relative min-h-0 flex-1 bg-[var(--color-bg)]">
+              <MinimalRunGraphCanvas
+                graph={view.graph}
+                stage={view.stage}
+                selectedTarget={focus}
                 onFocus={setFocus}
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
+                fill
+                emptyKind={graphEmptyStateKind(model.run.control.status)}
               />
             </div>
           </Panel>
-          {focusDocked && (
+          {docked && (
             <>
               <ResizeHandle />
               <Panel
-                id="focus"
+                id="dock"
                 defaultSize="26%"
                 minSize="280px"
                 maxSize="44%"
-                className="mh-panel-enter mh-elev-2 relative z-20 h-full overflow-y-auto border-l border-[var(--color-border)] bg-[var(--color-surface-raised)]"
+                className="relative z-20 h-full min-w-0"
               >
-                <FocusPanel
-                  view={focusView}
-                  onClose={() => setFocus(null)}
+                <RunWorkspaceDock
+                  runId={seed.id}
+                  model={model}
+                  events={events}
+                  focus={focus}
+                  focusView={focusView}
+                  slots={dockSlots}
+                  expandedSlotId={expandedDockSlotId}
                   onFocus={setFocus}
+                  onOpenSurface={openSurface}
+                  onChangeSlotSurface={(slotId, surface) =>
+                    setDockSlots((current) => current.map((slot) => slot.id === slotId ? { ...slot, surface } : slot))
+                  }
+                  onCloseSlot={(slotId) => setDockSlots((current) => current.filter((slot) => slot.id !== slotId))}
+                  onToggleExpand={(slotId) => setExpandedDockSlotId((current) => current === slotId ? null : slotId)}
                 />
               </Panel>
             </>
           )}
         </Group>
 
-        {/* Narrow viewports: the focus panel floats over the canvas as a drawer
+        {/* Narrow viewports: the dock floats over the canvas as a drawer
             so chat + artifacts keep their width instead of all three clipping. */}
-        {focusOverlay && focusView !== null ? (
+        {dockOverlay ? (
           <>
             <button
               type="button"
-              aria-label="Cerrar foco"
-              onClick={() => setFocus(null)}
+              aria-label="Cerrar dock"
+              onClick={() => setDockSlots([])}
               className="absolute inset-0 z-30 cursor-default bg-[color-mix(in_srgb,var(--color-bg)_55%,transparent)]"
             />
             <aside
-              className="mh-panel-enter mh-elev-sheet absolute inset-y-0 right-0 z-40 w-[min(440px,92%)] overflow-y-auto border-l border-[var(--color-border)] bg-[var(--color-surface-raised)]"
+              className="mh-panel-enter mh-elev-sheet absolute inset-y-0 right-0 z-40 w-[min(520px,92%)] border-l border-[var(--color-border)] bg-[var(--color-surface-raised)]"
             >
-              <FocusPanel view={focusView} onClose={() => setFocus(null)} onFocus={setFocus} />
+              <RunWorkspaceDock
+                runId={seed.id}
+                model={model}
+                events={events}
+                focus={focus}
+                focusView={focusView}
+                slots={dockSlots}
+                expandedSlotId={expandedDockSlotId}
+                onFocus={setFocus}
+                onOpenSurface={openSurface}
+                onChangeSlotSurface={(slotId, surface) =>
+                  setDockSlots((current) => current.map((slot) => slot.id === slotId ? { ...slot, surface } : slot))
+                }
+                onCloseSlot={(slotId) => setDockSlots((current) => current.filter((slot) => slot.id !== slotId))}
+                onToggleExpand={(slotId) => setExpandedDockSlotId((current) => current === slotId ? null : slotId)}
+              />
             </aside>
           </>
         ) : null}
         </div>
+          </Panel>
+        {bottomOpen ? (
+          <>
+          <BottomResizeHandle />
+          <Panel id="workspace-bottom" defaultSize="30%" minSize="180px" maxSize="48%" className="min-h-0">
+            <BottomDrawer
+              runId={seed.id}
+              model={model}
+              events={events}
+              open={bottomOpen}
+              activeTab={bottomTab}
+              onOpenChange={setBottomOpen}
+              onTabChange={setBottomTab}
+            />
+          </Panel>
+          </>
+        ) : null}
+        </Group>
       </div>
     </ChatRuntimeProvider>
+  );
+}
+
+function BottomResizeHandle(): React.ReactElement {
+  return (
+    <Separator className="group relative h-px shrink-0 cursor-row-resize bg-[var(--color-border)] outline-none transition-colors duration-150 data-[separator=hover]:bg-[var(--color-border-strong)] data-[separator=active]:bg-[var(--color-accent)]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-[3px] w-9 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--color-border-strong)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-data-[separator=active]:bg-[var(--color-accent)] group-data-[separator=active]:opacity-100"
+      />
+    </Separator>
+  );
+}
+
+function WorkspaceToolbar({
+  chatCollapsed,
+  dockSlots,
+  bottomOpen,
+  onToggleChat,
+  onOpenSurface,
+  onToggleBottom,
+  onOpenTerminal
+}: {
+  chatCollapsed: boolean;
+  dockSlots: DockSlotState[];
+  bottomOpen: boolean;
+  onToggleChat: () => void;
+  onOpenSurface: (surface: DockSurfaceId, target?: FocusTarget | null) => void;
+  onToggleBottom: () => void;
+  onOpenTerminal: () => void;
+}): React.ReactElement {
+  return (
+    <div className="flex h-10 shrink-0 items-center gap-1 border-b border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3">
+      <ToolbarButton active={!chatCollapsed} label="Chat" onClick={onToggleChat} icon={<MessageSquare aria-hidden className="h-4 w-4" />} />
+      <ToolbarButton active={dockSlots.some((slot) => slot.surface === "agents")} label="Agentes" onClick={() => onOpenSurface("agents")} icon={<Activity aria-hidden className="h-4 w-4" />} />
+      <ToolbarButton active={dockSlots.some((slot) => slot.surface === "files")} label="Archivos" onClick={() => onOpenSurface("files")} icon={<FileCode2 aria-hidden className="h-4 w-4" />} />
+      <ToolbarButton active={dockSlots.some((slot) => slot.surface === "diff")} label="Diff" onClick={() => onOpenSurface("diff")} icon={<FileDiff aria-hidden className="h-4 w-4" />} />
+      <div className="ml-auto flex items-center gap-1">
+        <ToolbarButton active={bottomOpen} label="Panel inferior" onClick={onToggleBottom} icon={<Terminal aria-hidden className="h-4 w-4" />} />
+        <ToolbarButton active={bottomOpen} label="Terminal" onClick={onOpenTerminal} icon={<Terminal aria-hidden className="h-4 w-4" />} />
+      </div>
+    </div>
+  );
+}
+
+function ToolbarButton({ active, label, icon, onClick }: { active: boolean; label: string; icon: React.ReactNode; onClick: () => void }): React.ReactElement {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "flex h-7 cursor-pointer items-center gap-1.5 rounded-[var(--r-md)] px-2 text-meta font-medium transition-colors",
+        active
+          ? "bg-[color-mix(in_srgb,var(--color-accent)_16%,transparent)] text-[var(--color-text)]"
+          : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"
+      ].join(" ")}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 

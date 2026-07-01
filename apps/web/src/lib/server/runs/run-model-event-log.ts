@@ -115,6 +115,30 @@ export async function appendRunModelEvent<K extends RunEventType>(
   });
 }
 
+export async function appendRunEventsRequired(
+  runId: string,
+  inputs: readonly RunModelEventInput[]
+): Promise<RunEvent[]> {
+  if (inputs.length === 0) return [];
+  return withLock(runId, async () => {
+    await mkdir(resolveRunsDirectory(), { recursive: true });
+    const currentSeq = await lastSeq(runId);
+    const events = inputs.map((input, index): RunEvent => ({
+      seq: currentSeq + index + 1,
+      at: input.at ?? new Date().toISOString(),
+      runId,
+      actor: input.actor,
+      type: input.type,
+      payload: input.payload as Record<string, unknown>
+    }));
+    await appendFile(filePathFor(runId), events.map((event) => JSON.stringify(event)).join("\n") + "\n", "utf8");
+    for (const event of events) {
+      publishRunModelBusEvent(runId, event);
+    }
+    return events;
+  });
+}
+
 /**
  * Required lifecycle/audit event: callers must await this and fail the current
  * operation if the append-only event log cannot be written.
