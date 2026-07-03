@@ -176,11 +176,11 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
     <div className="flex h-full w-full flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] font-sans">
       {/* Header */}
       <div className="z-10 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-3">
-        <h2 className="flex items-center gap-2 text-label font-semibold tracking-tight text-[var(--color-text)]">
-          <Sparkles aria-hidden className="h-4 w-4 text-[var(--color-text-subtle)]" />
-          Orquestador
+        <h2 className="flex min-w-0 items-center gap-2 text-label font-semibold tracking-tight text-[var(--color-text)]">
+          <Sparkles aria-hidden className="h-4 w-4 shrink-0 text-[var(--color-text-subtle)]" />
+          <span className="truncate">Orquestador</span>
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <StatusPill
             status={connected ? "completed" : "blocked"}
             label={connected ? "Conectado" : "Reconectando…"}

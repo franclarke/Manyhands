@@ -117,11 +117,12 @@ export async function replanSubtree(
   const selection = pickDecomposer({
     userPrompt: feature.description,
     model: run.planningModel ?? run.model,
+    executorId: run.planningExecutorId,
     workspace
   });
   if (selection.provider === "deterministic") {
     throw new RunLifecycleError(
-      "Replanning requires the Claude Code decomposer. Install Claude Code CLI (or set MANYHANDS_CLAUDE_BIN)."
+      "Replanning requires the selected planning executor. Install and authenticate the selected CLI, then retry."
     );
   }
 

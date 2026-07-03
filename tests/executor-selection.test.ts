@@ -24,7 +24,7 @@ describe("run executor selection resolver", () => {
     expect(groundingSelection(run)).toEqual({ executorId: "claude-code-cli", model: "sonnet" });
   });
 
-  it("uses Codex for execution/repair/grounding while keeping the Claude titler fallback", () => {
+  it("uses Codex for planning/titler/execution/repair/grounding when Codex is selected", () => {
     const run = {
       model: "gpt-5.5",
       planningModel: "gpt-5.5",
@@ -34,7 +34,7 @@ describe("run executor selection resolver", () => {
     } as const;
 
     expect(planningSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
-    expect(titlerSelection(run)).toEqual({ executorId: "claude-code-cli", model: "sonnet" });
+    expect(titlerSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
     expect(executionSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
     expect(repairSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
     expect(groundingSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
@@ -52,8 +52,54 @@ describe("run executor selection resolver", () => {
   it("does not map legacy OpenAI model strings onto Claude for execution or grounding", () => {
     const run = { model: "gpt-5.5" } as const;
 
-    expect(titlerSelection(run)).toEqual({ executorId: "claude-code-cli", model: "sonnet" });
+    expect(planningSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
+    expect(titlerSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
     expect(executionSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
+    expect(repairSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
     expect(groundingSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
+  });
+
+  it("uses the initial planning selection as the default for every phase when execution defaults are absent", () => {
+    const run = {
+      model: "gpt-5.5",
+      planningModel: "gpt-5.5",
+      planningExecutorId: "codex-cli"
+    } as const;
+
+    expect(planningSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
+    expect(titlerSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
+    expect(executionSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
+    expect(repairSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
+    expect(groundingSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
+  });
+
+  it("rejects persisted execution defaults that conflict with the initial run selection", () => {
+    const run = {
+      model: "gpt-5.5",
+      planningModel: "gpt-5.5",
+      planningExecutorId: "codex-cli",
+      defaultExecutionSelection: { executorId: "claude-code-cli", model: "sonnet" }
+    } as const;
+
+    expect(() => executionSelection(run)).toThrow(
+      'defaultExecutionSelection must match the initial run selection "codex-cli/gpt-5.5", got "claude-code-cli/sonnet".'
+    );
+    expect(() => groundingSelection(run)).toThrow(
+      'defaultExecutionSelection must match the initial run selection "codex-cli/gpt-5.5", got "claude-code-cli/sonnet".'
+    );
+  });
+
+  it("rejects persisted repair defaults that conflict with the execution selection", () => {
+    const run = {
+      model: "sonnet",
+      planningModel: "sonnet",
+      planningExecutorId: "claude-code-cli",
+      defaultExecutionSelection: { executorId: "claude-code-cli", model: "sonnet" },
+      defaultRepairSelection: { executorId: "codex-cli", model: "gpt-5.5" }
+    } as const;
+
+    expect(() => repairSelection(run)).toThrow(
+      'defaultRepairSelection must match the initial run selection "claude-code-cli/sonnet", got "codex-cli/gpt-5.5".'
+    );
   });
 });

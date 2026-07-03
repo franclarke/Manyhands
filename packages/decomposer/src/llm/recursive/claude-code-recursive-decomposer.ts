@@ -1,4 +1,7 @@
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
 import type { Decomposer, DecompositionOptions, DecompositionResult, FeatureRequest } from "../../index";
 import type { AnthropicLike } from "../anthropic-decomposer";
@@ -145,25 +148,30 @@ class ClaudeCodeStepClient implements AnthropicLike {
     this.onCliOutput = options.onCliOutput;
     this.messages = {
       create: async (args: any) => {
+        // The instructions MUST travel through the CLI's real system-prompt
+        // channel. A fake "## System" block embedded in the user turn reads as
+        // prompt injection to Claude Code 2.1.x and it refuses to answer
+        // ("This message contains what looks like an injected fake System
+        // block…"), which surfaced as every planning step failing missing_json.
         const systemPrompt = [
           "CRITICAL: Do NOT call any tools. Do not search for files, do not read files, do not run grep, and do not execute any commands. All required context is fully provided in the prompt text.",
-          "Analyze the input text locally and return strictly the JSON matching the schema.",
+          "Analyze the input text locally and respond with strictly the JSON matching the schema — no prose, no plan file, no agents.",
           args.system
         ].join("\n\n");
-        const prompt = [
-          "## System",
-          systemPrompt,
-          "",
-          "## User",
-          args.messages.map((message: any) => message.content).join("\n\n")
-        ].join("\n");
-        const text = await this.runClaude(prompt, args.nodeId);
+        const prompt = args.messages.map((message: any) => message.content).join("\n\n");
+        const text = await this.runClaude(prompt, systemPrompt, args.nodeId);
         return { content: [{ type: "text", text }] };
       }
     };
   }
 
-  private async runClaude(prompt: string, nodeId?: string): Promise<string> {
+  private async runClaude(prompt: string, systemPrompt: string, nodeId?: string): Promise<string> {
+    // The system prompt travels as a temp FILE, not an inline arg: on Windows
+    // the CLI shim needs shell:true, where a multi-line arg would be
+    // concatenated unescaped into the command line.
+    const systemPromptDir = await mkdtemp(path.join(os.tmpdir(), "mh-plan-system-"));
+    const systemPromptPath = path.join(systemPromptDir, "system-prompt.md");
+    await writeFile(systemPromptPath, systemPrompt, "utf8");
     const args = [
       "-p",
       STDIN_DIRECTIVE,
@@ -172,23 +180,30 @@ class ClaudeCodeStepClient implements AnthropicLike {
       "--output-format",
       "json",
       "--permission-mode",
-      "plan"
+      "plan",
+      "--append-system-prompt-file",
+      this.useShell ? `"${systemPromptPath}"` : systemPromptPath
     ];
 
-    const outcome = await spawnClaude({
-      binaryPath: this.binaryPath,
-      args,
-      cwd: this.cwd,
-      prompt,
-      timeoutMs: this.timeoutMs,
-      spawnFn: this.spawnFn,
-      useShell: this.useShell,
-      onChunk: (chunk, stream) => {
-        if (this.onCliOutput !== undefined && nodeId !== undefined) {
-          this.onCliOutput({ nodeId, chunk, stream });
+    let outcome;
+    try {
+      outcome = await spawnClaude({
+        binaryPath: this.binaryPath,
+        args,
+        cwd: this.cwd,
+        prompt,
+        timeoutMs: this.timeoutMs,
+        spawnFn: this.spawnFn,
+        useShell: this.useShell,
+        onChunk: (chunk, stream) => {
+          if (this.onCliOutput !== undefined && nodeId !== undefined) {
+            this.onCliOutput({ nodeId, chunk, stream });
+          }
         }
-      }
-    });
+      });
+    } finally {
+      await rm(systemPromptDir, { recursive: true, force: true }).catch(() => undefined);
+    }
 
     if (outcome.timedOut) {
       const message = `Claude Code recursive planning timed out after ${this.timeoutMs}ms`;

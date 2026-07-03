@@ -128,6 +128,28 @@ describe("runPreflight", () => {
     expect((error as PreflightError).check).toBe("cli");
     expect((error as PreflightError).message).toContain("Codex CLI not found");
   });
+
+  it("rejects per-node executor overrides when the run selection is locked", async () => {
+    const error = await runPreflight(
+      {
+        ...INPUT,
+        selectionLocked: true,
+        defaultExecutionSelection: { executorId: "codex-cli", model: "gpt-5.5" },
+        graph: {
+          nodes: {
+            leaf: {
+              id: "leaf",
+              metadata: { executorSelection: { executorId: "claude-code-cli", model: "sonnet" } }
+            }
+          }
+        } as never
+      },
+      OK_DEPS
+    ).catch((e) => e);
+
+    expect(error).toBeInstanceOf(PreflightError);
+    expect((error as PreflightError).message).toContain('fixed to "codex-cli/gpt-5.5"');
+  });
 });
 
 const READINESS_DEPS: Required<ProviderReadinessDeps> = {

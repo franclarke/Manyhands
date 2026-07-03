@@ -70,4 +70,9 @@ export async function drainAllRunBackgroundTasksForTests(): Promise<void> {
     const tasks = Array.from(backgroundTasks.values()).flatMap((set) => Array.from(set));
     await Promise.allSettled(tasks);
   }
+  // Pipelines publish fire-and-forget run-model events; a publish still in
+  // flight after its task settles would write into whatever runs dir is active
+  // when it lands. Drain those too so afterEach can safely restore the env.
+  const { drainRunModelEventWritesForTests } = await import("./run-model-event-log");
+  await drainRunModelEventWritesForTests();
 }

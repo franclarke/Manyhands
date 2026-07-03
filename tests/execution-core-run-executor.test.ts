@@ -382,6 +382,61 @@ describe("RunExecutor", () => {
     });
   });
 
+  it("rejects a Claude per-node override when a Codex run is fixed", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/x b/x\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const traceStore = new InMemoryTraceStore();
+    const agent = new MockAgentExecutor();
+    const graph = graphWith(["a"]);
+    graph.nodes.a = {
+      ...graph.nodes.a!,
+      metadata: { executorSelection: { executorId: "claude-code-cli", model: "sonnet" } }
+    };
+    const executor = makeExecutor(git, traceStore, agent, sonnetRouter);
+
+    await expect(
+      executor.runNode({
+        graph,
+        config: fixedConfig,
+        model: "gpt-5.5",
+        taskId: "a",
+        runId: RUN_ID,
+        defaultExecutionSelection: { executorId: "codex-cli", model: "gpt-5.5" }
+      })
+    ).rejects.toThrow(/fixed to "codex-cli\/gpt-5\.5"/u);
+
+    expect(agent.calls).toEqual([]);
+  });
+
+  it("rejects a Codex composite repair override when a Claude run is fixed", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/x b/x\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitShas: ["LEAF_A_SHA", "LEAF_B_SHA"]
+    });
+    const traceStore = new InMemoryTraceStore();
+    const agent = new MockAgentExecutor();
+    const graph = graphWith(["a", "b"]);
+    graph.nodes.root = {
+      ...graph.nodes.root!,
+      metadata: { executorSelection: { executorId: "codex-cli", model: "gpt-5.5" } }
+    };
+    const executor = makeExecutor(git, traceStore, agent);
+
+    await expect(
+      executor.run({
+        graph,
+        config: fixedConfig,
+        model: "sonnet",
+        defaultExecutionSelection: { executorId: "claude-code-cli", model: "sonnet" },
+        defaultRepairSelection: { executorId: "claude-code-cli", model: "sonnet" }
+      })
+    ).rejects.toThrow(/fixed to "claude-code-cli\/sonnet"/u);
+  });
+
   it("repair does not mistake the orchestrator's prior commit for an agent commit", async () => {
     // Bug B: repairLeaf re-enters the existing worktree, whose HEAD already sits
     // at the orchestrator's commit from the failed attempt. The unexpected-commit

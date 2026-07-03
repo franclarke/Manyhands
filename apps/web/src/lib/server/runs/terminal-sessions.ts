@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import os from "node:os";
+import { globalSingleton } from "../global-singleton";
 import type { RunRecord } from "./schema";
 import {
   type WorkspaceContextKind,
@@ -33,7 +34,13 @@ interface PtyProcess {
   onExit(listener: (event: { exitCode: number; signal?: number }) => void): void;
 }
 
-const sessions = new Map<string, TerminalSession>();
+// On globalThis: the POST /terminals route creates sessions in one Next route
+// bundle and the stream/input/delete routes look them up from others (see
+// global-singleton.ts) — a module-level Map makes the stream route 404 always.
+const sessions = globalSingleton(
+  "terminal-sessions:registry",
+  () => new Map<string, TerminalSession>()
+);
 const SESSION_TTL_MS = 30 * 60 * 1000;
 
 export async function createTerminalSession(input: CreateTerminalSessionInput): Promise<TerminalSessionInfo> {

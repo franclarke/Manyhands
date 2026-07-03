@@ -929,7 +929,8 @@ export class RecursiveDecomposer implements Decomposer {
 
     console.warn(
       `[RecursiveDecomposer] Step "${ctx.nodeId}" attempt ${attempt}/${this.maxStepAttempts} failed ` +
-        `(${details.kind}): ${details.message}. Retrying with stricter JSON instructions.`
+        `(${details.kind}): ${details.message}. Retrying with stricter JSON instructions.` +
+        (details.responseExcerpt !== undefined ? ` Raw response: ${details.responseExcerpt}` : "")
     );
     await this.emitStepStatus(ctx, {
       state: "retrying",
@@ -1001,6 +1002,16 @@ function normalizeNonNegativeInteger(value: number | undefined, fallback: number
   return Math.max(0, Math.floor(value));
 }
 
+const RESPONSE_EXCERPT_MAX_CHARS = 400;
+
+/** Compact, single-line evidence of a non-JSON model response for diagnostics. */
+function responseExcerptOf(text: string): string {
+  const collapsed = text.replace(/\s+/g, " ").trim();
+  return collapsed.length > RESPONSE_EXCERPT_MAX_CHARS
+    ? `${collapsed.slice(0, RESPONSE_EXCERPT_MAX_CHARS)}…`
+    : collapsed;
+}
+
 function retryDelayMs(attempt: number, baseDelayMs: number, maxDelayMs: number): number {
   if (baseDelayMs <= 0 || maxDelayMs <= 0) {
     return 0;
@@ -1030,7 +1041,8 @@ function parseStepOutputCandidates(
         recoverable: true,
         nodeId: ctx.nodeId,
         parentId: ctx.parentId,
-        message: `${parsed.message} for step "${ctx.nodeId}"`
+        message: `${parsed.message} for step "${ctx.nodeId}"`,
+        responseExcerpt: responseExcerptOf(text)
       }
     );
   }

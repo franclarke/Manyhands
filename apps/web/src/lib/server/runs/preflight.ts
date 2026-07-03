@@ -51,6 +51,7 @@ export interface PreflightInput {
   binaryPath?: string;
   legacyModel?: string;
   graph?: TaskGraph;
+  selectionLocked?: boolean;
   defaultExecutionSelection?: ExecutorSelection;
   defaultRepairSelection?: ExecutorSelection;
   groundingSelection?: ExecutorSelection;
@@ -223,10 +224,21 @@ function collectExecutorIds(input: PreflightInput): ExecutorId[] {
       normalizeExecutorSelection(metadata?.executorSelection) ??
       normalizeExecutorSelection(metadata?.executorOverride);
     if (selection !== undefined) {
+      if (input.selectionLocked === true && !sameSelection(selection, fallback)) {
+        throw new PreflightError(
+          "cli",
+          `Node "${node.id}" requests executor/model "${selection.executorId}/${selection.model}", ` +
+            `but this run is fixed to "${fallback.executorId}/${fallback.model}".`
+        );
+      }
       selected.add(selection.executorId);
     }
   }
   return Array.from(selected);
+}
+
+function sameSelection(left: ExecutorSelection, right: ExecutorSelection): boolean {
+  return left.executorId === right.executorId && left.model === right.model;
 }
 
 async function defaultGitPorcelain(repoRoot: string): Promise<string> {

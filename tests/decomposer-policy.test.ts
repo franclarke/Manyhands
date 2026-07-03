@@ -71,4 +71,40 @@ describe("pickDecomposer", () => {
     expect(selection.promptTemplateVersion).toContain("decomposer-prompt");
     expect(selection.getAnthropicTelemetry).toBeDefined();
   });
+
+  it("does not let MANYHANDS_DECOMPOSER override an explicit Codex executor selection", () => {
+    process.env.ANTHROPIC_API_KEY = "sk-test";
+    process.env.MANYHANDS_DECOMPOSER = "single-pass";
+    const selection = pickDecomposer({
+      userPrompt: "anything",
+      model: "gpt-5.5",
+      executorId: "codex-cli"
+    });
+
+    expect(selection.provider).toBe("codex-cli");
+    expect(selection.model).toBe("gpt-5.5");
+  });
+
+  it("does not let MANYHANDS_DECOMPOSER override an explicit Claude executor selection", () => {
+    process.env.ANTHROPIC_API_KEY = "sk-test";
+    process.env.MANYHANDS_DECOMPOSER = "anthropic-recursive";
+    const selection = pickDecomposer({
+      userPrompt: "anything",
+      model: "sonnet",
+      executorId: "claude-code-cli"
+    });
+
+    expect(selection.provider).toBe("claude-code");
+    expect(selection.model).toBe("sonnet");
+  });
+
+  it("fails explicitly when planning is asked to use an unsupported executor", () => {
+    expect(() =>
+      pickDecomposer({
+        userPrompt: "anything",
+        model: "model",
+        executorId: "opencode-cli"
+      })
+    ).toThrow('Planning cannot use executor "opencode-cli". Select Claude Code CLI or Codex CLI for the run.');
+  });
 });

@@ -23,7 +23,7 @@ export { isRunnerActive } from "./runner-state";
 
 export interface PlanningRunnerOptions {
   intervalMs?: number;
-  /** Injectable for tests; defaults to the real Gemini-backed titler. */
+  /** Injectable for tests; defaults to the selected executor-backed titler. */
   titler?: (input: { userPrompt: string; model: string }) => Promise<RunTitle>;
 }
 

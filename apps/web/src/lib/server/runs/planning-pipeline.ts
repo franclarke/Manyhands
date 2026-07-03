@@ -34,6 +34,7 @@ import { publishRunModelEvent } from "./run-model-event-log";
 import { type ProvisionedRepo, type RepoProvisioner } from "./repo-provisioner";
 import { titlerSelection } from "./executor-selection";
 import { generateRunTitle, type RunTitle } from "./run-titler";
+import type { ExecutorSelection } from "@manyhands/execution-core";
 import { startHeartbeat } from "./runner-heartbeat";
 import { markRunnerInactive, startRunBackgroundTask, tryMarkRunnerActive } from "./runner-state";
 import { saveRunWithRequiredStatusEvent } from "./audited-mutation";
@@ -55,8 +56,8 @@ export { isRunnerActive } from "./runner-state";
 
 export interface PlanningRunnerOptions {
   intervalMs?: number;
-  /** Injectable for tests; defaults to the real Gemini-backed titler. */
-  titler?: (input: { userPrompt: string; model: string }) => Promise<RunTitle>;
+  /** Injectable for tests; defaults to the selected executor-backed titler. */
+  titler?: (input: { userPrompt: string; selection: ExecutorSelection; model: string }) => Promise<RunTitle>;
 }
 
 /**
@@ -139,32 +140,28 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
     }
 
     // Generate a clean title + summary before decomposition so the workspace
-    // header reads well while the graph is still generating. Cosmetic: a titler
-    // failure must NOT fail the run (this is presentation, not D3).
+    // header reads well while the graph is still generating. The titler must
+    // use the run's selected executor; failures are propagated so no auxiliary
+    // phase can silently fall back to a different executor.
     if (run.summary === undefined) {
       const titleFn = options.titler ?? ((input) => generateRunTitle(input));
+      const selection = titlerSelection(run);
       const runTitle = await titleFn({
         userPrompt: run.userPrompt,
-        model: titlerSelection(run).model
-      }).catch((error) => {
-        console.warn(
-          `[Runner] Titler skipped for run ${run.runId}: ${error instanceof Error ? error.message : String(error)}`
-        );
-        return null;
+        selection,
+        model: selection.model
       });
-      if (runTitle !== null) {
-        run = await getRunRepository().update(run.runId, (current) => ({
-          ...current,
-          title: runTitle.title,
-          summary: runTitle.summary
-        }));
-        publishRunEvent(run.runId, {
-          kind: "title.updated",
-          title: runTitle.title,
-          summary: runTitle.summary,
-          at: new Date().toISOString()
-        });
-      }
+      run = await getRunRepository().update(run.runId, (current) => ({
+        ...current,
+        title: runTitle.title,
+        summary: runTitle.summary
+      }));
+      publishRunEvent(run.runId, {
+        kind: "title.updated",
+        title: runTitle.title,
+        summary: runTitle.summary,
+        at: new Date().toISOString()
+      });
     }
 
     run = await getRunRepository().get(runId);

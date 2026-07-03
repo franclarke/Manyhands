@@ -131,13 +131,25 @@ export interface RunExecutionResult {
 
 const INTEGRATION_SUCCESS = new Set(["success", "executor_repair_success"]);
 
-export function resolveExecutorSelection(node: TaskNode, defaultSelection: ExecutorSelection): ExecutorSelection {
+export function resolveExecutorSelection(
+  node: TaskNode,
+  defaultSelection: ExecutorSelection,
+  options: { locked?: boolean } = {}
+): ExecutorSelection {
   const metadata = node.metadata as { executorSelection?: unknown; executorOverride?: unknown } | undefined;
-  return (
+  const explicit =
     normalizeExecutorSelection(metadata?.executorSelection) ??
-    normalizeExecutorSelection(metadata?.executorOverride) ??
-    defaultSelection
-  );
+    normalizeExecutorSelection(metadata?.executorOverride);
+  if (explicit !== undefined) {
+    if (options.locked === true && !sameSelection(explicit, defaultSelection)) {
+      throw new Error(
+        `Node "${node.id}" requests executor/model "${explicit.executorId}/${explicit.model}", ` +
+          `but this run is fixed to "${defaultSelection.executorId}/${defaultSelection.model}".`
+      );
+    }
+    return explicit;
+  }
+  return defaultSelection;
 }
 
 export function resolveExecutorModel(node: TaskNode, defaultModel: string): ExecutorSelection {
@@ -576,6 +588,7 @@ export class RunExecutor {
       node,
       dependents: repairDependents,
       defaultSelection,
+      ...(config.routing === "fixed" ? { lockedSelection: defaultSelection } : {}),
       router: config.routing === "fixed" ? undefined : this.router,
       attempt: 1
     });
@@ -668,6 +681,7 @@ export class RunExecutor {
       node,
       dependents,
       defaultSelection: args.defaultSelection,
+      ...(args.config.routing === "fixed" ? { lockedSelection: args.defaultSelection } : {}),
       router: args.config.routing === "fixed" ? undefined : this.router
     });
     this.traceRoutingDecision(node, dependents, executorSelection, 0);
@@ -1028,7 +1042,9 @@ export class RunExecutor {
       });
 
       const contract = composite.contract;
-      const repairSelection = resolveExecutorSelection(composite, args.defaultSelection);
+      const repairSelection = resolveExecutorSelection(composite, args.defaultSelection, {
+        locked: config.routing === "fixed"
+      });
       // Contract-aware composition: hand the Composer the parent goal,
       // the canonical seams defined at this composite, and each child's intent so
       // conflict repair resolves by reference to the contract, not the diff text.
@@ -1331,6 +1347,10 @@ function requireExecutor(executor: AgentExecutor | undefined): AgentExecutor {
     throw new Error("RunExecutor requires an executor or executorFactory.");
   }
   return executor;
+}
+
+function sameSelection(left: ExecutorSelection, right: ExecutorSelection): boolean {
+  return left.executorId === right.executorId && left.model === right.model;
 }
 
 function syntheticCompositeResult(

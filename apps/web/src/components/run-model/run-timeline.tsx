@@ -10,17 +10,27 @@
 import { Fragment } from "react";
 import type { RunPhase, RunPhaseState } from "@/lib/run-model/run-phases";
 
-export function RunTimeline({ phases }: { phases: RunPhase[] }): React.ReactElement {
+export function RunTimeline({
+  phases,
+  trailing
+}: {
+  phases: RunPhase[];
+  /** Right-aligned chrome sharing the rail row (e.g. the dock toggles). */
+  trailing?: React.ReactNode | undefined;
+}): React.ReactElement {
   return (
     <nav
       aria-label="Fases del run"
       className="flex h-11 shrink-0 items-center gap-1.5 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-5"
     >
+      {/* The phase rail yields width to the trailing chrome: it scrolls inside
+          its own min-w-0 box instead of pushing the toggles past the viewport. */}
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
       {phases.map((phase, index) => (
         <Fragment key={phase.key}>
           <div
             className={[
-              "flex items-center gap-2",
+              "flex shrink-0 items-center gap-2",
               // The active phase gets the same faint neutral lift as the active tab —
               // one "you are here" language across the cockpit chrome.
               phase.state === "active"
@@ -29,16 +39,27 @@ export function RunTimeline({ phases }: { phases: RunPhase[] }): React.ReactElem
             ].join(" ")}
           >
             <PhaseDot state={phase.state} />
-            <div className="flex flex-col leading-tight">
+            {/* Narrow viewports keep every dot but only the load-bearing labels
+                (active/failed) — otherwise the rail + dock toggles overflow. */}
+            <div
+              className={[
+                "flex-col leading-tight",
+                phase.state === "active" || phase.state === "failed" ? "flex" : "hidden sm:flex"
+              ].join(" ")}
+            >
               <span className={LABEL_CLASS[phase.state]}>{phase.label}</span>
               {phase.detail !== undefined ? (
-                <span className="mh-mono text-eyebrow tabular-nums text-[var(--color-text-subtle)]">{phase.detail}</span>
+                <span className="mh-mono hidden text-eyebrow tabular-nums text-[var(--color-text-subtle)] sm:inline">
+                  {phase.detail}
+                </span>
               ) : null}
             </div>
           </div>
           {index < phases.length - 1 ? <Connector lit={phase.state === "done"} /> : null}
         </Fragment>
       ))}
+      </div>
+      {trailing !== undefined ? <div className="ml-auto flex shrink-0 items-center gap-1 pl-3">{trailing}</div> : null}
     </nav>
   );
 }

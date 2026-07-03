@@ -11,6 +11,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { POST as POST_FORK } from "@/app/api/runs/[id]/fork/route";
 import { POST as POST_ANSWER } from "@/app/api/runs/[id]/answer/route";
+import { drainAllRunBackgroundTasksForTests } from "@/lib/server/runs/runner-state";
 import { resetRunRepositoryForTests } from "@/lib/server/runs/store";
 
 let tempDir: string;
@@ -24,6 +25,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  // Drain fire-and-forget pipeline kicks BEFORE restoring the runs dir so no
+  // late write leaks into the real .manyhands/runs.
+  await drainAllRunBackgroundTasksForTests();
   if (previousRunsDir === undefined) delete process.env.MANYHANDS_RUNS_DIR;
   else process.env.MANYHANDS_RUNS_DIR = previousRunsDir;
   resetRunRepositoryForTests();

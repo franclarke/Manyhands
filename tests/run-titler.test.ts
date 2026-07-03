@@ -56,7 +56,11 @@ describe("generateRunTitle", () => {
         summary: "Una mini-app que crea, lista y resetea hábitos, persistidos en localStorage."
       })
     });
-    const result = await generateRunTitle({ userPrompt: "Construí una mini-app...", model: "sonnet", spawn });
+    const result = await generateRunTitle({
+      userPrompt: "Construí una mini-app...",
+      selection: { executorId: "claude-code-cli", model: "sonnet" },
+      spawn
+    });
     expect(result.title).toBe("Habit counter mini-app");
     expect(result.summary).toContain("hábitos");
   });
@@ -64,7 +68,11 @@ describe("generateRunTitle", () => {
   it("unwraps the Claude Code `result` envelope", async () => {
     const inner = JSON.stringify({ title: "Task API DELETE", summary: "Implementa DELETE /tasks/:id con persistencia y tests." });
     const spawn = makeFakeSpawn({ stdout: JSON.stringify({ type: "result", result: inner }) });
-    const result = await generateRunTitle({ userPrompt: "Implement DELETE", model: "m", spawn });
+    const result = await generateRunTitle({
+      userPrompt: "Implement DELETE",
+      selection: { executorId: "claude-code-cli", model: "sonnet" },
+      spawn
+    });
     expect(result.title).toBe("Task API DELETE");
   });
 
@@ -73,7 +81,12 @@ describe("generateRunTitle", () => {
       stdout: JSON.stringify({ title: "Task title", summary: "Short summary." })
     });
 
-    await generateRunTitle({ userPrompt: "Implement task", model: "sonnet", spawn, platform: "win32" });
+    await generateRunTitle({
+      userPrompt: "Implement task",
+      selection: { executorId: "claude-code-cli", model: "sonnet" },
+      spawn,
+      platform: "win32"
+    });
 
     expect(calls).toHaveLength(1);
     expect(calls[0]?.command.toLowerCase()).toContain("cmd");
@@ -83,18 +96,44 @@ describe("generateRunTitle", () => {
     expect(calls[0]?.options.shell).toBe(false);
   });
 
+  it("uses the Codex CLI when the run selected Codex", async () => {
+    const { spawn, calls } = makeRecordingSpawn({
+      stdout: JSON.stringify({ title: "Task title", summary: "Short summary." })
+    });
+
+    await generateRunTitle({
+      userPrompt: "Implement task",
+      selection: { executorId: "codex-cli", model: "gpt-5.5" },
+      spawn,
+      platform: "linux"
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.command).toBe("codex");
+    expect(calls[0]?.args).toEqual(
+      expect.arrayContaining(["--sandbox", "read-only", "exec", "--model", "gpt-5.5"])
+    );
+    expect(calls[0]?.args).not.toContain("sonnet");
+  });
+
   it("throws RunTitlerError on non-zero exit", async () => {
     const spawn = makeFakeSpawn({ stdout: "", stderr: "boom", exitCode: 1 });
-    await expect(generateRunTitle({ userPrompt: "x", model: "m", spawn })).rejects.toBeInstanceOf(RunTitlerError);
+    await expect(
+      generateRunTitle({ userPrompt: "x", selection: { executorId: "codex-cli", model: "gpt-5.5" }, spawn })
+    ).rejects.toBeInstanceOf(RunTitlerError);
   });
 
   it("throws RunTitlerError when no parseable JSON is produced", async () => {
     const spawn = makeFakeSpawn({ stdout: "I could not produce JSON." });
-    await expect(generateRunTitle({ userPrompt: "x", model: "m", spawn })).rejects.toBeInstanceOf(RunTitlerError);
+    await expect(
+      generateRunTitle({ userPrompt: "x", selection: { executorId: "claude-code-cli", model: "sonnet" }, spawn })
+    ).rejects.toBeInstanceOf(RunTitlerError);
   });
 
   it("throws RunTitlerError on spawn error", async () => {
     const spawn = makeFakeSpawn({ emitError: new Error("ENOENT") });
-    await expect(generateRunTitle({ userPrompt: "x", model: "m", spawn })).rejects.toBeInstanceOf(RunTitlerError);
+    await expect(
+      generateRunTitle({ userPrompt: "x", selection: { executorId: "claude-code-cli", model: "sonnet" }, spawn })
+    ).rejects.toBeInstanceOf(RunTitlerError);
   });
 });

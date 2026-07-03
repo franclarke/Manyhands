@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { lstat, readdir, rm, stat, symlink, unlink } from "node:fs/promises";
+import { tmpdir as osTmpdir } from "node:os";
 import { join } from "node:path";
 
 import { nowIso } from "@manyhands/shared";
@@ -16,6 +17,10 @@ export interface WorktreeManagerDeps {
   worktreesRoot?: string;
   /** Injectable clock for deterministic timestamps in tests. */
   now?: () => string;
+  /** Injectable platform for the win32 path-budget rule in tests. Default: process.platform. */
+  platform?: NodeJS.Platform;
+  /** Injectable short-path base for relocated worktrees in tests. Default: os.tmpdir. */
+  tmpdir?: () => string;
 }
 
 export interface CreateWorktreeParams {
@@ -83,9 +88,51 @@ export function safeWorktreeSegment(id: string): string {
   return `${prefix}-${hash}`;
 }
 
-export function worktreePathFor(params: { worktreesRoot: string; runId: string; taskId: string }): string {
+/**
+ * git-for-windows dies with `fatal: '$GIT_DIR' too big` when a worktree's
+ * gitdir path exceeds PATH_MAX(260) - 40 (setup.c), and with "Filename too
+ * long" once checked-out file paths pass 260 without core.longpaths. Budgeting
+ * against the worst-case task segment keeps the rule deterministic per run, so
+ * create/gc/UI all resolve the same directory.
+ */
+const WINDOWS_GIT_PATH_BUDGET = 220;
+const WORKTREE_PATH_RESERVE = 1 + MAX_WORKTREE_SEGMENT_LENGTH + "/.git".length;
+/** Short, recognizable base for relocated run worktrees: <tmpdir>/mh-wt/<run>. */
+const RELOCATED_WORKTREES_DIRNAME = "mh-wt";
+
+export interface WorktreeRootParams {
+  worktreesRoot: string;
+  runId: string;
+  platform?: NodeJS.Platform;
+  tmpdir?: () => string;
+}
+
+/**
+ * Directory that holds every worktree of a run. Normally
+ * `<worktreesRoot>/<runSegment>`; on win32, when that base plus a worst-case
+ * task segment would blow git's path budget, the run is deterministically
+ * relocated to `<tmpdir>/mh-wt/<runSegment>` so `git worktree add` still works
+ * for repos that live behind long paths.
+ */
+export function runWorktreesRootFor(params: WorktreeRootParams): string {
   const root = params.worktreesRoot.replace(/[\\/]+$/, "");
-  return `${root}/${safeWorktreeSegment(params.runId)}/${safeWorktreeSegment(params.taskId)}`;
+  const runSegment = safeWorktreeSegment(params.runId);
+  const candidate = `${root}/${runSegment}`;
+  const platform = params.platform ?? process.platform;
+  if (platform !== "win32") {
+    return candidate;
+  }
+  if (candidate.length + WORKTREE_PATH_RESERVE <= WINDOWS_GIT_PATH_BUDGET) {
+    return candidate;
+  }
+  const tmpBase = (params.tmpdir ?? osTmpdir)().replace(/[\\/]+$/, "");
+  return `${tmpBase}/${RELOCATED_WORKTREES_DIRNAME}/${runSegment}`;
+}
+
+export function worktreePathFor(
+  params: WorktreeRootParams & { taskId: string }
+): string {
+  return `${runWorktreesRootFor(params)}/${safeWorktreeSegment(params.taskId)}`;
 }
 
 export function worktreeBranchFor(params: { runId: string; taskId: string }): string {
@@ -106,16 +153,29 @@ export class WorktreeManager {
   private readonly repoRoot: string;
   private readonly worktreesRoot: string;
   private readonly now: () => string;
+  private readonly platform: NodeJS.Platform | undefined;
+  private readonly tmpdir: (() => string) | undefined;
 
   constructor(deps: WorktreeManagerDeps) {
     this.git = deps.git;
     this.repoRoot = deps.repoRoot;
     this.worktreesRoot = deps.worktreesRoot ?? `${deps.repoRoot}/.manyhands/worktrees`;
     this.now = deps.now ?? nowIso;
+    this.platform = deps.platform;
+    this.tmpdir = deps.tmpdir;
+  }
+
+  private rootParamsFor(runId: string): WorktreeRootParams {
+    return {
+      worktreesRoot: this.worktreesRoot,
+      runId,
+      ...(this.platform !== undefined ? { platform: this.platform } : {}),
+      ...(this.tmpdir !== undefined ? { tmpdir: this.tmpdir } : {})
+    };
   }
 
   async create(params: CreateWorktreeParams): Promise<WorktreeRecord> {
-    const path = worktreePathFor({ worktreesRoot: this.worktreesRoot, runId: params.runId, taskId: params.taskId });
+    const path = worktreePathFor({ ...this.rootParamsFor(params.runId), taskId: params.taskId });
     const branch = worktreeBranchFor({ runId: params.runId, taskId: params.taskId });
 
     try {
@@ -269,7 +329,7 @@ export class WorktreeManager {
       taskId: params.taskId,
       runId: params.runId,
       kind: params.kind,
-      path: worktreePathFor({ worktreesRoot: this.worktreesRoot, runId: params.runId, taskId: params.taskId }),
+      path: worktreePathFor({ ...this.rootParamsFor(params.runId), taskId: params.taskId }),
       branch: worktreeBranchFor({ runId: params.runId, taskId: params.taskId }),
       baseCommit: params.baseCommit,
       status: "active",
@@ -325,7 +385,7 @@ export class WorktreeManager {
     options: { preserveBranchesFor?: ReadonlySet<string> } = {}
   ): Promise<{ removed: string[]; failed: string[] }> {
     const runSegment = safeWorktreeSegment(runId);
-    const runRoot = join(this.worktreesRoot, runSegment);
+    const runRoot = runWorktreesRootFor(this.rootParamsFor(runId));
     const preservedSegments = new Set(
       Array.from(options.preserveBranchesFor ?? []).map((taskId) => safeWorktreeSegment(taskId))
     );

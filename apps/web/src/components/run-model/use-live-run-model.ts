@@ -10,7 +10,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createInitialRunModel, reduceRunEvents } from "@/lib/run-model/reducer";
-import type { Run, RunEvent, RunModel } from "@/lib/run-model/types";
+import type { Run, RunControlStatus, RunEvent, RunModel } from "@/lib/run-model/types";
 
 export interface LiveRunModel {
   model: RunModel;
@@ -39,6 +39,10 @@ const RECONNECT_MAX_MS = 30_000;
 
 export function hasRunEventGap(lastSeenSeq: number, eventSeq: number, refetchedAfterGap: boolean): boolean {
   return !refetchedAfterGap && eventSeq > lastSeenSeq + 1;
+}
+
+export function isTerminalRunStatus(status: RunControlStatus): boolean {
+  return status === "completed" || status === "completed_with_accepted" || status === "failed" || status === "interrupted";
 }
 
 export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = []): LiveRunModel {
@@ -115,7 +119,7 @@ export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = 
     () => buildLiveRunModel(streamEvents, seed, initialEvents),
     [streamEvents, seed, initialEvents]
   );
-  return { model, events, connected, streamCount: streamEvents.length };
+  return { model, events, connected: connected || isTerminalRunStatus(model.run.control.status), streamCount: streamEvents.length };
 }
 
 function maxSeq(events: readonly RunEvent[]): number {

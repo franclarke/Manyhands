@@ -72,12 +72,9 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
 
       replaying = false;
       for (const event of bufferedLive.sort((left, right) => left.seq - right.seq)) write(event);
+      writeComment(controller, "connected");
       heartbeat = setInterval(() => {
-        try {
-          controller.enqueue(encoder.encode(`: heartbeat ${new Date().toISOString()}\n\n`));
-        } catch {
-          // controller closed; ignore
-        }
+        writeComment(controller, "heartbeat");
       }, HEARTBEAT_MS);
     },
     cancel() {
@@ -94,6 +91,14 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
       "x-accel-buffering": "no"
     }
   });
+
+  function writeComment(controller: ReadableStreamDefaultController<Uint8Array>, label: string): void {
+    try {
+      controller.enqueue(encoder.encode(`: ${label} ${new Date().toISOString()}\n\n`));
+    } catch {
+      // controller closed; ignore
+    }
+  }
 }
 
 function readAfter(url: string): number {

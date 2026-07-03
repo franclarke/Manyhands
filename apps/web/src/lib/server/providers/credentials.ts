@@ -7,13 +7,19 @@ import { CLAUDE_CODE_EXECUTOR_ID, CODEX_EXECUTOR_ID, type ExecutorId } from "@ma
 /**
  * Why a token is unusable for a headless executor subprocess.
  * - `absent`: no API key and no parseable OAuth token on disk.
- * - `expired`: an OAuth token exists but its `expiresAt` is in the past, so the
- *   standalone CLI the executor spawns will fail with a 401 mid-run (F-001). The
- *   interactive Desktop refreshes the token in memory but does not persist the
- *   refreshed value to the file the subprocess reads.
+ * - `expired`: an OAuth token exists but its `expiresAt` is in the past AND
+ *   there is no refresh token, so the standalone CLI the executor spawns will
+ *   fail with a 401 mid-run (F-001).
+ *
+ * An expired access token WITH a refresh token is usable: the headless CLI
+ * (2.1.x) refreshes it on start and persists the new token back to the file
+ * (verified empirically). It carries a `note: "refreshable"` so the readiness
+ * panel can surface it as a warning instead of a false hard block.
  */
 export type CredentialReason = "absent" | "expired";
-export type CredentialStatus = { ok: true } | { ok: false; reason: CredentialReason };
+export type CredentialStatus =
+  | { ok: true; note?: "refreshable" }
+  | { ok: false; reason: CredentialReason };
 
 export interface ClaudeCredentialProbe {
   /** Whether ANTHROPIC_API_KEY is set (API-key auth bypasses the OAuth token). */
@@ -35,15 +41,26 @@ export function evaluateClaudeCredential(probe: ClaudeCredentialProbe): Credenti
   if (probe.credentialsFileContent === null) return { ok: false, reason: "absent" };
 
   let expiresAt: unknown;
+  let refreshToken: unknown;
   try {
-    const parsed = JSON.parse(probe.credentialsFileContent) as { claudeAiOauth?: { expiresAt?: unknown } };
+    const parsed = JSON.parse(probe.credentialsFileContent) as {
+      claudeAiOauth?: { expiresAt?: unknown; refreshToken?: unknown };
+    };
     expiresAt = parsed.claudeAiOauth?.expiresAt;
+    refreshToken = parsed.claudeAiOauth?.refreshToken;
   } catch {
     return { ok: false, reason: "absent" };
   }
 
   if (typeof expiresAt !== "number") return { ok: false, reason: "absent" };
-  if (expiresAt <= probe.now) return { ok: false, reason: "expired" };
+  if (expiresAt <= probe.now) {
+    // Expired access token + refresh token = usable: the headless CLI (2.1.x)
+    // refreshes on start and persists the new token back to the file.
+    if (typeof refreshToken === "string" && refreshToken.length > 0) {
+      return { ok: true, note: "refreshable" };
+    }
+    return { ok: false, reason: "expired" };
+  }
   return { ok: true };
 }
 

@@ -39,3 +39,22 @@ export function runDockMode(viewportWidth: number): DockAttachmentMode {
 export function bottomDrawerMode(open: boolean): BottomDrawerMode {
   return open ? "docked" : "hidden";
 }
+
+/**
+ * Below this width the 240px app sidebar starves the cockpit (a 375px phone
+ * keeps ~135px for graph + chat), so it must start collapsed no matter what
+ * the user preferred on desktop. The stored preference only applies at widths
+ * where an expanded sidebar still leaves a usable workspace.
+ */
+export const SIDEBAR_AUTO_COLLAPSE_BREAKPOINT = 900;
+
+export type SidebarStoredPreference = "collapsed" | "expanded" | null;
+
+/** Whether the app sidebar should mount collapsed at a given viewport width. */
+export function sidebarInitiallyCollapsed(
+  viewportWidth: number,
+  stored: SidebarStoredPreference
+): boolean {
+  if (viewportWidth < SIDEBAR_AUTO_COLLAPSE_BREAKPOINT) return true;
+  return stored === "collapsed";
+}

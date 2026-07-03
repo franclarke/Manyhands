@@ -19,6 +19,7 @@ import {
   getWorkspaceRepository
 } from "@/lib/server/workspaces";
 import { CLAUDE_CODE_EXECUTOR_ID, findModelForSelection, type ExecutorSelection } from "@/lib/models";
+import { resolveLegacyModelSelection } from "@manyhands/execution-core";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,6 +70,17 @@ function validateExecutionSelection(selection: ExecutorSelection | undefined): v
   }
 }
 
+function assertSameSelection(label: string, expected: ExecutorSelection, actual: ExecutorSelection | undefined): void {
+  if (actual === undefined) {
+    return;
+  }
+  if (actual.executorId !== expected.executorId || actual.model !== expected.model) {
+    throw new RunValidationError(
+      `${label} must match the initial run selection "${expected.executorId}/${expected.model}", got "${actual.executorId}/${actual.model}".`
+    );
+  }
+}
+
 export async function POST(request: Request): Promise<NextResponse> {
   let payload: unknown;
   try {
@@ -86,13 +98,17 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const workspace = await getWorkspaceRepository().get(parsed.data.workspaceId); // throws WorkspaceNotFoundError → 404
 
+    const legacySelection = resolveLegacyModelSelection(parsed.data.model);
     const planningSelection: ExecutorSelection = {
-      executorId: parsed.data.planningExecutorId ?? CLAUDE_CODE_EXECUTOR_ID,
-      model: parsed.data.planningModel ?? parsed.data.model
+      executorId: parsed.data.planningExecutorId ?? legacySelection.executorId ?? CLAUDE_CODE_EXECUTOR_ID,
+      model: parsed.data.planningModel ?? legacySelection.model
     };
     validateExecutionSelection(planningSelection);
     validateExecutionSelection(parsed.data.defaultExecutionSelection);
     validateExecutionSelection(parsed.data.defaultRepairSelection);
+    assertSameSelection("defaultExecutionSelection", planningSelection, parsed.data.defaultExecutionSelection);
+    assertSameSelection("defaultRepairSelection", planningSelection, parsed.data.defaultRepairSelection);
+    const runSelection = planningSelection;
 
     const now = new Date().toISOString();
     const runId = randomUUID();
@@ -103,9 +119,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const title = userPrompt.slice(0, 120);
-    const hasExplicitRunSelection =
-      parsed.data.defaultExecutionSelection !== undefined ||
-      parsed.data.defaultRepairSelection !== undefined;
     const record: RunRecord = {
       runId,
       workspaceId: parsed.data.workspaceId,
@@ -115,12 +128,12 @@ export async function POST(request: Request): Promise<NextResponse> {
           ? { repoSpec: { kind: "localPath" as const, path: workspace.repoPath } }
           : {}),
       granularity: parsed.data.granularity,
-      model: parsed.data.model,
-      planningModel: planningSelection.model,
-      planningExecutorId: planningSelection.executorId,
-      defaultExecutionSelection: parsed.data.defaultExecutionSelection,
-      defaultRepairSelection: parsed.data.defaultRepairSelection,
-      ...(hasExplicitRunSelection ? { executionConfig: { routing: "fixed" as const } } : {}),
+      model: runSelection.model,
+      planningModel: runSelection.model,
+      planningExecutorId: runSelection.executorId,
+      defaultExecutionSelection: runSelection,
+      defaultRepairSelection: runSelection,
+      executionConfig: { routing: "fixed" as const },
       autonomy: parsed.data.autonomy ?? "supervised",
       userPrompt,
       title,

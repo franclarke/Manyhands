@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { buildFocusView, type FocusTarget } from "@/lib/run-model/focus-view";
 import { selectMinimalWorkspaceView } from "@/lib/run-model/minimal-workspace-view";
 import type { Run, RunEvent, RunModel, Node } from "@/lib/run-model/types";
@@ -19,7 +19,7 @@ import { ResizeHandle } from "@/components/ui/resize-handle";
 import { DeliveryPanel } from "./delivery-panel.client";
 import { runDockMode } from "@/lib/cockpit-layout";
 import { useViewportWidth } from "@/lib/use-viewport-width";
-import { Activity, Download, FileCode2, FileDiff, MessageSquare, Pause, Play, Terminal } from "lucide-react";
+import { Bot, Download, FileDiff, FolderTree, List, Pause, Play, ScrollText, ShieldCheck, Terminal } from "lucide-react";
 import {
   BottomDrawer,
   RunWorkspaceDock,
@@ -44,6 +44,7 @@ export function RunModelView({
   const { model, events, connected } = useLiveRunModel(seed, initialEvents);
   const [focus, setFocus] = useState<FocusTarget | null>(null);
   const [dockSlots, setDockSlots] = useState<DockSlotState[]>([]);
+  const slotSeqRef = useRef(0);
   const [expandedDockSlotId, setExpandedDockSlotId] = useState<string | null>(null);
   const [bottomOpen, setBottomOpen] = useState(false);
   const [bottomTab, setBottomTab] = useState<"terminal" | "logs" | "events" | "validation">("terminal");
@@ -127,17 +128,36 @@ export function RunModelView({
 
   function openSurface(surface: DockSurfaceId, target: FocusTarget | null = focus): void {
     if (target !== null) setFocus(target);
+    // Monotonic id: two surfaces opened in the same millisecond collided under
+    // `Date.now()` (duplicate React keys crashed the dock panel group).
+    const nextId = `slot-${++slotSeqRef.current}-${surface}`;
     setDockSlots((current) => {
+      // A surface lives in at most one slot: re-opening it retargets that slot
+      // instead of stacking a duplicate view of the same thing.
+      const existing = current.find((slot) => slot.surface === surface);
+      if (existing !== undefined) {
+        return current.map((slot) => (slot.id === existing.id ? { ...slot, focus: target } : slot));
+      }
       const nextSlot: DockSlotState = {
-        id: `slot-${Date.now()}`,
+        id: nextId,
         surface,
         focus: target
       };
-      if (current.length === 0) return [nextSlot];
-      if (current.length === 1) return [...current, nextSlot];
+      if (current.length < 2) return [...current, nextSlot];
       return [current[0]!, { ...current[1]!, surface, focus: target }];
     });
     setExpandedDockSlotId(null);
+  }
+
+  /** Toolbar behavior: open when absent, close when already open (toggle). */
+  function toggleSurface(surface: DockSurfaceId): void {
+    const existing = dockSlots.find((slot) => slot.surface === surface);
+    if (existing !== undefined) {
+      setDockSlots((current) => current.filter((slot) => slot.id !== existing.id));
+      setExpandedDockSlotId(null);
+      return;
+    }
+    openSurface(surface);
   }
 
   function handleLegacyTab(tab: "dag" | "plan" | "conflicts" | "execution" | "files" | "evaluation"): void {
@@ -154,18 +174,21 @@ export function RunModelView({
     <ChatRuntimeProvider events={events}>
       <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--color-bg)] font-sans">
         <RunHeader runId={seed.id} view={view} model={model} workspaceName={workspaceName} />
-        <RunTimeline phases={timeline} />
-        <WorkspaceToolbar
-          chatCollapsed={chatCollapsed}
-          dockSlots={dockSlots}
-          bottomOpen={bottomOpen}
-          onToggleChat={toggleChat}
-          onOpenSurface={openSurface}
-          onToggleBottom={() => setBottomOpen((open) => !open)}
-          onOpenTerminal={() => {
-            setBottomTab("terminal");
-            setBottomOpen(true);
-          }}
+        <RunTimeline
+          phases={timeline}
+          trailing={
+            <>
+              <DockToggle label="Agentes" active={dockSlots.some((s) => s.surface === "agents")} onClick={() => toggleSurface("agents")}>
+                <Bot aria-hidden className="h-4 w-4" />
+              </DockToggle>
+              <DockToggle label="Archivos" active={dockSlots.some((s) => s.surface === "files")} onClick={() => toggleSurface("files")}>
+                <FolderTree aria-hidden className="h-4 w-4" />
+              </DockToggle>
+              <DockToggle label="Diff" active={dockSlots.some((s) => s.surface === "diff")} onClick={() => toggleSurface("diff")}>
+                <FileDiff aria-hidden className="h-4 w-4" />
+              </DockToggle>
+            </>
+          }
         />
 
         {/* Resizable cockpit: chat | graph workspace | free dock.
@@ -303,6 +326,9 @@ export function RunModelView({
           </>
         ) : null}
         </Group>
+        {!bottomOpen ? (
+          <BottomBar onOpen={(tab) => { setBottomTab(tab); setBottomOpen(true); }} />
+        ) : null}
       </div>
     </ChatRuntimeProvider>
   );
@@ -319,52 +345,49 @@ function BottomResizeHandle(): React.ReactElement {
   );
 }
 
-function WorkspaceToolbar({
-  chatCollapsed,
-  dockSlots,
-  bottomOpen,
-  onToggleChat,
-  onOpenSurface,
-  onToggleBottom,
-  onOpenTerminal
-}: {
-  chatCollapsed: boolean;
-  dockSlots: DockSlotState[];
-  bottomOpen: boolean;
-  onToggleChat: () => void;
-  onOpenSurface: (surface: DockSurfaceId, target?: FocusTarget | null) => void;
-  onToggleBottom: () => void;
-  onOpenTerminal: () => void;
+function DockToggle({ label, active, onClick, children }: {
+  label: string; active: boolean; onClick: () => void; children: React.ReactNode;
 }): React.ReactElement {
-  return (
-    <div className="flex h-10 shrink-0 items-center gap-1 border-b border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3">
-      <ToolbarButton active={!chatCollapsed} label="Chat" onClick={onToggleChat} icon={<MessageSquare aria-hidden className="h-4 w-4" />} />
-      <ToolbarButton active={dockSlots.some((slot) => slot.surface === "agents")} label="Agentes" onClick={() => onOpenSurface("agents")} icon={<Activity aria-hidden className="h-4 w-4" />} />
-      <ToolbarButton active={dockSlots.some((slot) => slot.surface === "files")} label="Archivos" onClick={() => onOpenSurface("files")} icon={<FileCode2 aria-hidden className="h-4 w-4" />} />
-      <ToolbarButton active={dockSlots.some((slot) => slot.surface === "diff")} label="Diff" onClick={() => onOpenSurface("diff")} icon={<FileDiff aria-hidden className="h-4 w-4" />} />
-      <div className="ml-auto flex items-center gap-1">
-        <ToolbarButton active={bottomOpen} label="Panel inferior" onClick={onToggleBottom} icon={<Terminal aria-hidden className="h-4 w-4" />} />
-        <ToolbarButton active={bottomOpen} label="Terminal" onClick={onOpenTerminal} icon={<Terminal aria-hidden className="h-4 w-4" />} />
-      </div>
-    </div>
-  );
-}
-
-function ToolbarButton({ active, label, icon, onClick }: { active: boolean; label: string; icon: React.ReactNode; onClick: () => void }): React.ReactElement {
   return (
     <button
       type="button"
+      aria-label={label}
+      aria-pressed={active}
+      title={label}
       onClick={onClick}
       className={[
-        "flex h-7 cursor-pointer items-center gap-1.5 rounded-[var(--r-md)] px-2 text-meta font-medium transition-colors",
+        "flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--r-md)] transition-colors",
         active
           ? "bg-[color-mix(in_srgb,var(--color-accent)_16%,transparent)] text-[var(--color-text)]"
           : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"
       ].join(" ")}
     >
-      {icon}
-      {label}
+      {children}
     </button>
+  );
+}
+
+function BottomBar({ onOpen }: { onOpen: (tab: "terminal" | "logs" | "events" | "validation") => void }): React.ReactElement {
+  const tabs = [
+    ["terminal", "Terminal", <Terminal key="t" aria-hidden className="h-3.5 w-3.5" />],
+    ["logs", "Logs", <ScrollText key="l" aria-hidden className="h-3.5 w-3.5" />],
+    ["events", "Eventos", <List key="e" aria-hidden className="h-3.5 w-3.5" />],
+    ["validation", "Validación", <ShieldCheck key="v" aria-hidden className="h-3.5 w-3.5" />]
+  ] as const;
+  return (
+    <div className="flex h-8 shrink-0 items-center gap-1 border-t border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3">
+      {tabs.map(([id, label, icon]) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => onOpen(id)}
+          className="flex h-6 cursor-pointer items-center gap-1.5 rounded-[var(--r-md)] px-2 text-meta font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"
+        >
+          {icon}
+          {label}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -389,20 +412,20 @@ function RunHeader({
   return (
     <header className="mh-elev-1 flex h-14 select-none items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface-raised)] px-5">
       {/* Identity: id chip → title → ONE status pill (run status). */}
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         <span
           className="mh-mono shrink-0 rounded-[var(--r-sm)] bg-[var(--color-bg-subtle)] px-2 py-0.5 text-eyebrow text-[var(--color-text-subtle)]"
           title={`Run ${runId}`}
         >
           {runId.slice(0, 8)}
         </span>
-        <h1 className="m-0 max-w-md truncate text-sm font-semibold text-[var(--color-text)]" title={view.title}>
+        <h1 className="m-0 min-w-0 max-w-md truncate text-sm font-semibold text-[var(--color-text)]" title={view.title}>
           {view.title}
         </h1>
         <StatusPill status={runStatus} label={STATUS_META[runStatus].label} />
       </div>
 
-      <div className="ml-auto flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
+      <div className="ml-auto flex shrink-0 items-center gap-3 text-xs text-[var(--color-text-muted)]">
         <span className="hidden min-w-0 items-center gap-1.5 lg:flex">
           <span className="text-[var(--color-text-subtle)]">Workspace</span>
           <strong className="max-w-[140px] truncate font-medium text-[var(--color-text)]">
@@ -411,7 +434,7 @@ function RunHeader({
         </span>
 
         {/* Vitals readout: one bordered cluster, tabular numbers. */}
-        <span className="mh-mono inline-flex items-center gap-3 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-meta tabular-nums">
+        <span className="mh-mono hidden items-center gap-3 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-meta tabular-nums sm:inline-flex">
           <span title="Tareas del grafo">
             <strong className="font-semibold text-[var(--color-text)]">{nodesCount}</strong>{" "}
             <span className="hidden text-[var(--color-text-subtle)] md:inline">tareas</span>

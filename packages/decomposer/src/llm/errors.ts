@@ -24,6 +24,9 @@ export interface GraphGenerationErrorDetails {
   durationMs?: number | undefined;
   message: string;
   originalMessage?: string | undefined;
+  /** First chars of the raw model text when parsing failed — the only evidence
+   *  of WHY (prose, refusal, truncation) available to the operator. */
+  responseExcerpt?: string | undefined;
 }
 
 export interface GraphGenerationErrorContext {
@@ -98,7 +101,8 @@ export function classifyGraphGenerationError(
       ? { durationMs: context.durationMs }
       : base?.durationMs !== undefined
         ? { durationMs: base.durationMs }
-        : {})
+        : {}),
+    ...(base?.responseExcerpt !== undefined ? { responseExcerpt: base.responseExcerpt } : {})
   };
 }
 

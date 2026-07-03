@@ -572,15 +572,16 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
   if (selection.provider === "deterministic") {
     // D3: no LLM available → fail with actionable message instead of silent fallback.
     const reason = selection.fallbackReason ?? "no_api_key";
+    const executorLabel = run.planningExecutorId ?? "the configured planning executor";
     const messages: Record<string, string> = {
       no_api_key:
-        "Graph generation requires Claude Code CLI. Install it and ensure it is on PATH (or set MANYHANDS_CLAUDE_BIN).",
+        `Graph generation requires ${executorLabel}. Install and authenticate the selected CLI, then retry.`,
       forced_by_env:
-        "MANYHANDS_FORCE_FALLBACK is set, but runs require the Claude Code decomposer. Unset MANYHANDS_FORCE_FALLBACK to continue.",
+        "MANYHANDS_FORCE_FALLBACK is set, but runs require the selected planning executor. Unset MANYHANDS_FORCE_FALLBACK to continue.",
       forced_by_caller:
-        "Deterministic mode was explicitly requested, but runs require the Claude Code decomposer."
+        "Deterministic mode was explicitly requested, but runs require the selected planning executor."
     };
-    throw new Error(messages[reason] ?? `Claude Code decomposer unavailable: ${reason}`);
+    throw new Error(messages[reason] ?? `Selected planning executor unavailable: ${reason}`);
   }
 
   try {
@@ -613,7 +614,7 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
     const detail = describePlanningFailure(error);
     throw new Error(
       `Graph generation failed: ${detail}. ` +
-        "Retry, switch to a different Claude model, or verify that Claude Code CLI is installed and authenticated."
+        "Retry, switch to another model for the selected executor, or verify that the selected CLI is installed and authenticated."
     );
   }
 }

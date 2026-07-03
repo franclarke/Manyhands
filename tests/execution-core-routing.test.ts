@@ -164,4 +164,32 @@ describe("resolveRoutedSelection", () => {
 
     expect(selection).toEqual(fallback);
   });
+
+  it("does not let the router override a locked run selection", () => {
+    const policy = new ComplexityRoutingPolicy({ available: new Set(["claude-code-cli", "codex-cli"] as const) });
+    const locked: ExecutorSelection = { executorId: "codex-cli", model: "gpt-5.5" };
+
+    const selection = resolveRoutedSelection({
+      node: node(),
+      dependents: 0,
+      defaultSelection: locked,
+      lockedSelection: locked,
+      router: policy
+    });
+
+    expect(selection).toEqual(locked);
+  });
+
+  it("rejects per-node metadata that conflicts with a locked run selection", () => {
+    const locked: ExecutorSelection = { executorId: "claude-code-cli", model: "sonnet" };
+
+    expect(() =>
+      resolveRoutedSelection({
+        node: node({ metadata: { executorSelection: { executorId: "codex-cli", model: "gpt-5.5" } } }),
+        dependents: 0,
+        defaultSelection: locked,
+        lockedSelection: locked
+      })
+    ).toThrow(/fixed to "claude-code-cli\/sonnet"/u);
+  });
 });

@@ -16,6 +16,7 @@ import {
 } from "@/lib/server/runs/runner";
 import { POST as POST_RUN } from "@/app/api/runs/[id]/run/route";
 import { JsonRunRecordStore } from "@/lib/server/runs/repository";
+import { drainAllRunBackgroundTasksForTests } from "@/lib/server/runs/runner-state";
 import { resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import { AgentTaskContractSchema } from "@manyhands/contracts";
 import type { AgentExecutionResult, GranularityVector, RunExecutionResult } from "@manyhands/execution-core";
@@ -154,6 +155,9 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  // Drain fire-and-forget pipeline kicks (POST /run) BEFORE restoring the runs
+  // dir so no late write leaks into the real .manyhands/runs.
+  await drainAllRunBackgroundTasksForTests();
   delete process.env.MANYHANDS_RUNS_DIR;
   resetRunRepositoryForTests();
   clearRunEventHistory(`${runIdBase}-execution`);
@@ -352,7 +356,7 @@ describe("RunRunner", () => {
     expect(events).toContain("title.updated");
   }, 30000);
 
-  it("uses the Claude titler fallback when planning with Codex", async () => {
+  it("passes the selected Codex executor and model to the titler", async () => {
     const runId = `${runIdBase}-codex-titler-model`;
     const store = new JsonRunRecordStore({ directory: runsDir });
     await store.save({
@@ -372,16 +376,16 @@ describe("RunRunner", () => {
       patches: []
     });
 
-    const models: string[] = [];
+    const selections: string[] = [];
     await runPlanningPipeline(runId, {
       intervalMs: 0,
       titler: async (input) => {
-        models.push(input.model);
+        selections.push(`${input.selection.executorId}/${input.model}`);
         return { title: "Calculator", summary: "Builds a tiny calculator." };
       }
     }).catch(() => undefined);
 
-    expect(models).toEqual(["sonnet"]);
+    expect(selections).toEqual(["codex-cli/gpt-5.5"]);
   }, 30000);
 
   it("passes the selected Claude planning model to the titler", async () => {
@@ -403,16 +407,16 @@ describe("RunRunner", () => {
       patches: []
     });
 
-    const models: string[] = [];
+    const selections: string[] = [];
     await runPlanningPipeline(runId, {
       intervalMs: 0,
       titler: async (input) => {
-        models.push(input.model);
+        selections.push(`${input.selection.executorId}/${input.model}`);
         return { title: "Calculator", summary: "Builds a tiny calculator." };
       }
     }).catch(() => undefined);
 
-    expect(models).toEqual(["opus"]);
+    expect(selections).toEqual(["claude-code-cli/opus"]);
   }, 30000);
 
   it("builds feature request with a clean representative title when provided", () => {

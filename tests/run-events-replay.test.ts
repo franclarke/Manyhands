@@ -108,6 +108,31 @@ async function readFrames(
   return frames;
 }
 
+async function readFirstChunk(
+  runId: string,
+  options: { after?: number; timeoutMs?: number } = {}
+): Promise<string> {
+  const url = `http://mh.test/api/runs/${runId}/run-events${options.after !== undefined ? `?after=${options.after}` : ""}`;
+  const response = await GET_RUN_EVENTS(new Request(url), {
+    params: Promise.resolve({ id: runId })
+  });
+  expect(response.status).toBe(200);
+
+  const reader = (response.body as ReadableStream<Uint8Array>).getReader();
+  const timeoutMs = options.timeoutMs ?? 500;
+  try {
+    const read = await Promise.race([
+      reader.read(),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(`SSE did not produce an initial chunk within ${timeoutMs}ms`)), timeoutMs);
+      })
+    ]);
+    return new TextDecoder().decode(read.value);
+  } finally {
+    await reader.cancel();
+  }
+}
+
 describe("run-events SSE replay (INV-7)", () => {
   it("frames carry id: <seq> and a fresh connection replays the full log", async () => {
     await seedEvents("run-sse-full", 5);
@@ -128,6 +153,15 @@ describe("run-events SSE replay (INV-7)", () => {
     await seedEvents("run-sse-max", 6);
     const frames = await readFrames("run-sse-max", { after: 2, lastEventId: 5, expected: 1 });
     expect(frames.map((f) => f.id)).toEqual([6]);
+  });
+
+  it("flushes an initial comment when the cursor is already at the latest event", async () => {
+    await seedEvents("run-sse-caught-up", 3);
+
+    const firstChunk = await readFirstChunk("run-sse-caught-up", { after: 3 });
+
+    expect(firstChunk).toContain(": connected ");
+    expect(firstChunk).not.toContain("data: ");
   });
 
   it("INV-7: prefix + reconnect-replayed suffix folds to the same model as one uninterrupted stream", async () => {

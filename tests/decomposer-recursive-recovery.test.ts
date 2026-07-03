@@ -105,6 +105,9 @@ describe("RecursiveDecomposer recovery", () => {
       expect(error.details?.nodeId).toBe("root");
       expect(error.details?.attempt).toBe(2);
       expect(error.details?.maxAttempts).toBe(2);
+      // The raw model text is the only evidence of WHY parsing failed (prose,
+      // refusal, wrong language) — without it the operator can't diagnose.
+      expect(error.details?.responseExcerpt).toContain("still no json");
       expect(statuses).toContain("root:retrying:missing_json");
       expect(statuses).toContain("root:failed:missing_json");
     } finally {

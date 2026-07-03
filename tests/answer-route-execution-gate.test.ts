@@ -15,6 +15,7 @@ import { POST as POST_ANSWER } from "@/app/api/runs/[id]/answer/route";
 import { POST as POST_DECISION } from "@/app/api/runs/[id]/decisions/[decisionId]/route";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import { appendRunModelEvent } from "@/lib/server/runs/run-model-event-log";
+import { drainAllRunBackgroundTasksForTests } from "@/lib/server/runs/runner-state";
 import type { RunRecord } from "@/lib/server/runs/schema";
 
 let tempDir: string;
@@ -28,12 +29,13 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  // Drain fire-and-forget pipeline kicks BEFORE restoring the runs dir: a kick
+  // that outlives the env override resolves the REAL .manyhands/runs and leaks
+  // test runs into the app (they showed up in the sidebar).
+  await drainAllRunBackgroundTasksForTests();
   if (previousRunsDir === undefined) delete process.env.MANYHANDS_RUNS_DIR;
   else process.env.MANYHANDS_RUNS_DIR = previousRunsDir;
   resetRunRepositoryForTests();
-  // Give fire-and-forget pipeline kicks a beat to fail fast before the temp
-  // dir disappears (their writes are best-effort and caught either way).
-  await new Promise((resolve) => setTimeout(resolve, 50));
   await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
 });
 

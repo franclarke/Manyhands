@@ -1,4 +1,11 @@
 import { spawn as nodeSpawn, type ChildProcess, type SpawnOptions } from "node:child_process";
+import {
+  CLAUDE_CODE_EXECUTOR_ID,
+  CODEX_EXECUTOR_ID,
+  getExecutorDescriptor,
+  resolveLegacyModelSelection,
+  type ExecutorSelection
+} from "@manyhands/execution-core";
 import { z } from "zod";
 
 type SpawnFn = (command: string, args: readonly string[], options: SpawnOptions) => ChildProcess;
@@ -29,7 +36,9 @@ export class RunTitlerError extends Error {
 
 export interface GenerateRunTitleInput {
   userPrompt: string;
-  model: string;
+  selection?: ExecutorSelection;
+  /** Legacy compatibility for old tests/callers. Product code passes selection. */
+  model?: string;
   cwd?: string;
   binaryPath?: string;
   timeoutMs?: number;
@@ -39,13 +48,15 @@ export interface GenerateRunTitleInput {
 }
 
 /**
- * Turns a raw user prompt into a clean `{ title, summary }` using Claude Code in
- * read-only plan mode. Pure presentation concern — never touches the repo
- * and never participates in graph generation. Callers treat failures as
- * non-fatal (cosmetic fallback to the raw prompt).
+ * Turns a raw user prompt into a clean `{ title, summary }` using the run's
+ * selected executor. Pure presentation concern: it never touches the repo and
+ * never participates in graph generation, but failures still fail planning so
+ * this auxiliary phase cannot silently fall back to another executor.
  */
 export async function generateRunTitle(input: GenerateRunTitleInput): Promise<RunTitle> {
-  const binaryPath = input.binaryPath ?? process.env.MANYHANDS_CLAUDE_BIN ?? "claude";
+  const selection = input.selection ?? resolveLegacyModelSelection(input.model);
+  const descriptor = getExecutorDescriptor(selection.executorId);
+  const binaryPath = input.binaryPath ?? process.env[descriptor.binaryEnvVar] ?? descriptor.defaultBinary;
   const spawnFn = input.spawn ?? nodeSpawn;
   const timeoutMs = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const platform = input.platform ?? process.platform;
@@ -53,7 +64,7 @@ export async function generateRunTitle(input: GenerateRunTitleInput): Promise<Ru
   const cwd = input.cwd ?? process.cwd();
 
   const prompt = buildTitlerPrompt(input.userPrompt);
-  const args = ["-p", STDIN_DIRECTIVE, "--model", input.model, "--output-format", "json", "--permission-mode", "plan"];
+  const args = buildTitlerArgs(selection);
 
   const outcome = await runProcess({ binaryPath, args, cwd, prompt, timeoutMs, spawnFn, useShell, platform });
 
@@ -73,6 +84,31 @@ export async function generateRunTitle(input: GenerateRunTitleInput): Promise<Ru
     throw new RunTitlerError(`Run titler output did not match schema: ${parsed.error.issues.map((i) => i.message).join("; ")}`);
   }
   return parsed.data;
+}
+
+function buildTitlerArgs(selection: ExecutorSelection): string[] {
+  if (selection.executorId === CLAUDE_CODE_EXECUTOR_ID) {
+    return ["-p", STDIN_DIRECTIVE, "--model", selection.model, "--output-format", "json", "--permission-mode", "plan"];
+  }
+  if (selection.executorId === CODEX_EXECUTOR_ID) {
+    return [
+      "--sandbox",
+      "read-only",
+      "--ask-for-approval",
+      "never",
+      "exec",
+      "--model",
+      selection.model,
+      "--color",
+      "never",
+      "--ephemeral",
+      "--skip-git-repo-check",
+      "-"
+    ];
+  }
+  throw new RunTitlerError(
+    `Run titler cannot use executor "${selection.executorId}". Select Claude Code CLI or Codex CLI for the run.`
+  );
 }
 
 function buildTitlerPrompt(userPrompt: string): string {

@@ -38,7 +38,7 @@ import {
     resolveExecutionGraph
 } from "./execution-state";
 import { applyFinalPatch } from "./final-apply";
-import { groundingSelection } from "./executor-selection";
+import { executionSelection, groundingSelection, repairSelection } from "./executor-selection";
 import { assertRunActionAllowed, assertTransition } from "./lifecycle";
 import { LiveExecutionTraceStore } from "./live-trace-store";
 import { waitWhilePlainPaused } from "./pause-control";
@@ -77,7 +77,7 @@ export { isRunnerActive } from "./runner-state";
 
 export interface PlanningRunnerOptions {
   intervalMs?: number;
-  /** Injectable for tests; defaults to the real Gemini-backed titler. */
+  /** Injectable for tests; defaults to the selected executor-backed titler. */
   titler?: (input: { userPrompt: string; model: string }) => Promise<RunTitle>;
 }
 
@@ -125,6 +125,8 @@ export interface ExecutionRunnerOptions {
 async function runNodeWithDefaultEngine(input: {
   graph: TaskGraph;
   model: string;
+  defaultExecutionSelection?: RunRecord["defaultExecutionSelection"];
+  defaultRepairSelection?: RunRecord["defaultRepairSelection"];
   taskId: string;
   runId: string;
   provisioned: ProvisionedRepo;
@@ -147,6 +149,8 @@ async function runNodeWithDefaultEngine(input: {
     },
     config: ExecutionConfigSchema.parse(input.executionConfig ?? {}),
     model: input.model,
+    ...(input.defaultExecutionSelection !== undefined ? { defaultExecutionSelection: input.defaultExecutionSelection } : {}),
+    ...(input.defaultRepairSelection !== undefined ? { defaultRepairSelection: input.defaultRepairSelection } : {}),
     runId: input.runId,
     taskId: input.taskId,
     ...(input.childResults !== undefined ? { childResults: input.childResults } : {})
@@ -245,7 +249,9 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
         traceStore,
         signal: abortController.signal,
         onBatchBoundary: () => waitWhilePlainPaused(runId, "running", abortController.signal),
-        model: run.model
+        model: run.model,
+        defaultExecutionSelection: executionSelection(run),
+        defaultRepairSelection: repairSelection(run)
       });
 
       // Cooperative cancellation check
@@ -351,11 +357,10 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
         baseBranch: provisioned.baseBranch,
         legacyModel: run.model,
         graph,
+        selectionLocked: run.executionConfig?.routing === "fixed",
         groundingSelection: groundingSelection(run),
-        ...(run.defaultExecutionSelection !== undefined
-          ? { defaultExecutionSelection: run.defaultExecutionSelection }
-          : {}),
-        ...(run.defaultRepairSelection !== undefined ? { defaultRepairSelection: run.defaultRepairSelection } : {})
+        defaultExecutionSelection: executionSelection(run),
+        defaultRepairSelection: repairSelection(run)
       });
       for (const warning of preflight.warnings) {
         console.warn(`[Runner] Preflight warning (${warning.check}) for run ${runId}: ${warning.message}`);
@@ -767,7 +772,16 @@ export async function runNodeExecutionPipeline(
     }
 
     console.log(`[Runner] Node preflight start run=${runId} task=${taskId}`);
-    await runPreflight({ repoRoot: provisioned.repoRoot, baseBranch: provisioned.baseBranch });
+    await runPreflight({
+      repoRoot: provisioned.repoRoot,
+      baseBranch: provisioned.baseBranch,
+      legacyModel: run.model,
+      graph,
+      selectionLocked: run.executionConfig?.routing === "fixed",
+      groundingSelection: groundingSelection(run),
+      defaultExecutionSelection: executionSelection(run),
+      defaultRepairSelection: repairSelection(run)
+    });
     console.log(`[Runner] Node preflight ok run=${runId} task=${taskId}`);
 
     publishEvent(runId, { kind: "agent.run.started", taskId, at: new Date().toISOString() });
@@ -777,6 +791,8 @@ export async function runNodeExecutionPipeline(
     const nodeResult = await runNodeWithDefaultEngine({
       graph,
       model: run.model,
+      defaultExecutionSelection: executionSelection(run),
+      defaultRepairSelection: repairSelection(run),
       taskId,
       runId: run.runId,
       provisioned,

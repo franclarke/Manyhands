@@ -24,7 +24,7 @@ export function StatusPill({ status, label, title, pulse, size = "md" }: StatusP
   return (
     <span
       className={[
-        "inline-flex items-center rounded-full border font-medium tabular-nums",
+        "inline-flex shrink-0 items-center whitespace-nowrap rounded-full border font-medium tabular-nums",
         mini ? "h-5 gap-1 px-1.5 text-micro" : "h-6 gap-1.5 px-2 text-meta"
       ].join(" ")}
       title={title}

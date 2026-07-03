@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { buildFocusView, type FocusTarget, type FocusView } from "@/lib/run-model/focus-view";
+import { buildTimelineView, type TimelineTone } from "@/lib/run-model/timeline-view";
 import type { Node, RunEvent, RunModel } from "@/lib/run-model/types";
 import { FocusPanel } from "@/components/run-model/focus-panel";
 import { ResizeHandle } from "@/components/ui/resize-handle";
@@ -19,6 +20,7 @@ import {
   Minimize2,
   Network,
   Play,
+  SquareTerminal,
   X
 } from "lucide-react";
 
@@ -42,6 +44,16 @@ const SURFACE_LABEL: Record<DockSurfaceId, string> = {
 };
 
 const SURFACE_OPTIONS: DockSurfaceId[] = ["agents", "node", "files", "diff", "contract", "risks", "evidence", "worktree"];
+
+const EXECUTION_LABEL: Record<Node["execution"]["kind"], string> = {
+  idle: "En espera",
+  blocked: "Bloqueado",
+  grounding: "Preparando",
+  running: "Ejecutando",
+  verifying: "Verificando",
+  integrated: "Integrado",
+  failed: "Falló"
+};
 
 export function RunWorkspaceDock({
   runId,
@@ -213,19 +225,24 @@ function AgentsSurface({
 }): React.ReactElement {
   const nodes = Array.from(model.nodes.values());
   const groups = [
-    { label: "Ejecutando", nodes: nodes.filter((node) => node.execution.kind === "running") },
+    { label: "Ejecutando", nodes: nodes.filter((node) => node.execution.kind === "running" || node.execution.kind === "grounding") },
     { label: "Verificando", nodes: nodes.filter((node) => node.execution.kind === "verifying") },
     { label: "Esperando", nodes: nodes.filter((node) => node.execution.kind === "blocked" || node.execution.kind === "idle") },
     { label: "Fallidos", nodes: nodes.filter((node) => node.execution.kind === "failed") },
     { label: "Finalizados", nodes: nodes.filter((node) => node.execution.kind === "integrated") }
-  ];
+  ].filter((group) => group.nodes.length > 0);
   return (
     <Stack>
       <SurfaceHeader icon={<Activity aria-hidden className="h-4 w-4" />} title="Agentes" detail={`${nodes.length} tareas del run`} />
+      {groups.length === 0 ? (
+        <EmptySurface title="Sin agentes todavía" detail="Los agentes aparecen acá cuando el plan empieza a ejecutarse." />
+      ) : null}
       {groups.map((group) => (
         <section key={group.label} className="space-y-2">
-          <h3 className="m-0 text-meta font-semibold uppercase tracking-normal text-[var(--color-text-subtle)]">{group.label}</h3>
-          {group.nodes.length === 0 ? <p className="m-0 text-xs text-[var(--color-text-faint)]">Sin agentes en este estado.</p> : null}
+          <h3 className="m-0 text-meta font-semibold uppercase tracking-normal text-[var(--color-text-subtle)]">
+            {group.label}
+            <span className="ml-1.5 font-normal text-[var(--color-text-faint)]">{group.nodes.length}</span>
+          </h3>
           {group.nodes.map((node) => (
             <AgentRow
               key={node.id}
@@ -247,7 +264,7 @@ function AgentRow({ node, onFocus, onDiff, onFiles }: { node: Node; onFocus: () 
       <button type="button" onClick={onFocus} className="block w-full cursor-pointer border-0 bg-transparent p-0 text-left">
         <div className="flex items-center justify-between gap-2">
           <span className="truncate text-sm font-semibold text-[var(--color-text)]">{node.title}</span>
-          <span className="mh-mono shrink-0 text-eyebrow text-[var(--color-text-subtle)]">{node.execution.kind}</span>
+          <span className="mh-mono shrink-0 text-eyebrow text-[var(--color-text-subtle)]">{EXECUTION_LABEL[node.execution.kind]}</span>
         </div>
         <p className="m-0 mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--color-text-muted)]">{node.goal}</p>
       </button>
@@ -340,7 +357,7 @@ function FilesSurface({ runId, model, initialNodeId }: { runId: string; model: R
             className="flex w-full cursor-pointer items-center justify-between gap-2 border-0 border-b border-[var(--color-border-soft)] bg-transparent px-3 py-2 text-left text-xs last:border-b-0 hover:bg-[var(--color-bg-subtle)]"
           >
             <span className="truncate text-[var(--color-text)]">{entry.kind === "directory" ? "▸ " : ""}{entry.name}</span>
-            {entry.size !== undefined ? <span className="mh-mono shrink-0 text-eyebrow text-[var(--color-text-subtle)]">{entry.size}b</span> : null}
+            {entry.size !== undefined ? <span className="mh-mono shrink-0 text-eyebrow text-[var(--color-text-subtle)]">{formatBytes(entry.size)}</span> : null}
           </button>
         ))}
       </div>
@@ -354,16 +371,19 @@ function FilesSurface({ runId, model, initialNodeId }: { runId: string; model: R
 }
 
 function DiffSurface({ runId, model, focus }: { runId: string; model: RunModel; focus: FocusTarget | null }): React.ReactElement {
-  const ref = focus?.kind === "node"
-    ? `diff://runs/${runId}/node/${focus.id}`
+  const node = focus?.kind === "node" ? model.nodes.get(focus.id) ?? null : null;
+  const ref = node !== null
+    ? `diff://runs/${runId}/node/${node.id}`
     : model.evidence?.aggregateDiffRef ?? `diff://runs/${runId}/final`;
-  return <ArtifactSurface title="Diff" icon={<FileDiff aria-hidden className="h-4 w-4" />} runId={runId} refId={ref} />;
+  const detail = node !== null ? `Worktree · ${node.title}` : "Resultado integrado del run";
+  return <ArtifactSurface title="Diff" detail={detail} icon={<FileDiff aria-hidden className="h-4 w-4" />} runId={runId} refId={ref} />;
 }
 
-function ArtifactSurface({ title, icon, runId, refId }: { title: string; icon: React.ReactNode; runId: string; refId: string }): React.ReactElement {
-  const [content, setContent] = useState<string>("Cargando...");
+function ArtifactSurface({ title, detail, icon, runId, refId }: { title: string; detail: string; icon: React.ReactNode; runId: string; refId: string }): React.ReactElement {
+  const [content, setContent] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
+    setContent(null);
     fetch(`/api/runs/${encodeURIComponent(runId)}/artifacts?ref=${encodeURIComponent(refId)}`, { signal: controller.signal })
       .then(async (response) => {
         const payload = await response.json();
@@ -377,12 +397,40 @@ function ArtifactSurface({ title, icon, runId, refId }: { title: string; icon: R
   }, [refId, runId]);
   return (
     <Stack>
-      <SurfaceHeader icon={icon} title={title} detail={refId} />
-      <pre className="mh-mono min-h-0 overflow-auto whitespace-pre-wrap rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-xs leading-relaxed text-[var(--color-text-muted)]">
-        {content}
-      </pre>
+      <SurfaceHeader icon={icon} title={title} detail={detail} />
+      <div className="mh-mono min-h-0 overflow-auto rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-xs leading-relaxed">
+        {content === null ? (
+          <p className="m-0 text-[var(--color-text-subtle)]">Cargando…</p>
+        ) : content.length === 0 ? (
+          <p className="m-0 text-[var(--color-text-subtle)]">Sin cambios para mostrar.</p>
+        ) : (
+          <DiffText content={content} />
+        )}
+      </div>
     </Stack>
   );
+}
+
+/** Minimal unified-diff tinting: adds/removes/hunks read at a glance. */
+function DiffText({ content }: { content: string }): React.ReactElement {
+  return (
+    <pre className="m-0 whitespace-pre-wrap">
+      {content.split("\n").map((line, index) => (
+        <span key={index} className={`block ${diffLineClass(line)}`}>
+          {line.length === 0 ? " " : line}
+        </span>
+      ))}
+    </pre>
+  );
+}
+
+function diffLineClass(line: string): string {
+  if (line.startsWith("+++") || line.startsWith("---")) return "font-semibold text-[var(--color-text)]";
+  if (line.startsWith("diff --git") || line.startsWith("index ")) return "text-[var(--color-text-subtle)]";
+  if (line.startsWith("@@")) return "text-[var(--color-accent)]";
+  if (line.startsWith("+")) return "bg-[var(--status-completed-bg)] text-[var(--status-completed-fg)]";
+  if (line.startsWith("-")) return "bg-[var(--status-failed-bg)] text-[var(--status-failed-fg)]";
+  return "text-[var(--color-text-muted)]";
 }
 
 function RisksSurface({ model, onFocus }: { model: RunModel; onFocus: (target: FocusTarget | null) => void }): React.ReactElement {
@@ -471,7 +519,7 @@ export function BottomDrawer({
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3">
         {activeTab === "terminal" ? <TerminalSurface runId={runId} model={model} /> : null}
-        {activeTab === "logs" ? <EventLogSurface events={events.filter((event) => event.type.includes("output") || event.type.includes("status"))} /> : null}
+        {activeTab === "logs" ? <EventLogSurface events={events.filter((event) => event.type.startsWith("node."))} /> : null}
         {activeTab === "events" ? <EventLogSurface events={events} /> : null}
         {activeTab === "validation" ? <ValidationSurface model={model} /> : null}
       </div>
@@ -514,6 +562,14 @@ function TerminalSurface({ runId, model }: { runId: string; model: RunModel }): 
         const payload = JSON.parse((event as MessageEvent).data) as { chunk: string };
         term.write(payload.chunk);
       });
+      // EventSource fails silently (auto-reconnect loop) — without this the
+      // terminal reads as a dead black box when the stream 404s or drops.
+      eventSource.onerror = () => {
+        if (!disposed) setError("Se perdió la conexión con la terminal. Cerrala y abrila de nuevo.");
+      };
+      eventSource.onopen = () => {
+        if (!disposed) setError(null);
+      };
     }).catch((err) => setError(err instanceof Error ? err.message : String(err)));
     return () => {
       disposed = true;
@@ -570,22 +626,61 @@ function TerminalSurface({ runId, model }: { runId: string; model: RunModel }): 
         {session !== null ? <span className="mh-mono truncate text-eyebrow text-[var(--color-text-subtle)]">{session.cwd}</span> : null}
       </div>
       {error !== null ? <p className="m-0 text-xs text-[var(--status-failed-fg)]">{error}</p> : null}
-      <div ref={terminalRef} className="min-h-0 flex-1 overflow-hidden rounded-[var(--r-md)] border border-[var(--color-border)] bg-black p-2" />
+      {session === null ? (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-[var(--r-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-bg)] p-4 text-center">
+          <SquareTerminal aria-hidden className="h-5 w-5 text-[var(--color-text-subtle)]" />
+          <p className="m-0 text-xs text-[var(--color-text-muted)]">
+            Shell real en el workspace del run, independiente del orquestador.
+          </p>
+        </div>
+      ) : (
+        <div ref={terminalRef} className="min-h-0 flex-1 overflow-hidden rounded-[var(--r-md)] border border-[var(--color-border)] bg-black p-2" />
+      )}
     </div>
   );
 }
 
+const TONE_COLOR: Record<TimelineTone, string> = {
+  info: "var(--color-border-strong)",
+  good: "var(--status-completed-fg)",
+  warn: "var(--status-review-fg)",
+  bad: "var(--status-failed-fg)",
+  human: "var(--color-accent)"
+};
+
 function EventLogSurface({ events }: { events: RunEvent[] }): React.ReactElement {
+  const view = useMemo(() => buildTimelineView(events), [events]);
   return (
-    <div className="mh-mono space-y-1 text-xs text-[var(--color-text-muted)]">
-      {events.map((event) => (
-        <div key={event.seq} className="rounded border border-[var(--color-border)] bg-[var(--color-bg)] p-2">
-          <span className="text-[var(--color-text-subtle)]">#{event.seq}</span> {event.type}
+    <div className="space-y-px text-xs">
+      {view.entries.map((entry) => (
+        <div
+          key={entry.seq}
+          className="grid grid-cols-[52px_1fr] items-baseline gap-2 rounded-[var(--r-sm)] border-l-2 bg-transparent px-2 py-1 hover:bg-[var(--color-bg-subtle)]"
+          style={{ borderLeftColor: TONE_COLOR[entry.tone] }}
+        >
+          <span className="mh-mono text-eyebrow tabular-nums text-[var(--color-text-faint)]" title={`#${entry.seq} · ${entry.at}`}>
+            {formatEventTime(entry.at)}
+          </span>
+          <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+            <span className="font-medium text-[var(--color-text)]">{entry.title}</span>
+            {entry.detail !== undefined ? (
+              <span className="mh-mono truncate text-eyebrow text-[var(--color-text-muted)]">{entry.detail}</span>
+            ) : null}
+            {entry.nodeId !== undefined ? (
+              <span className="mh-mono text-eyebrow text-[var(--color-text-faint)]">{entry.nodeId}</span>
+            ) : null}
+          </span>
         </div>
       ))}
-      {events.length === 0 ? <p className="m-0 text-xs text-[var(--color-text-subtle)]">Sin eventos para mostrar.</p> : null}
+      {view.count === 0 ? <p className="m-0 text-xs text-[var(--color-text-subtle)]">Sin eventos para mostrar.</p> : null}
     </div>
   );
+}
+
+function formatEventTime(at: string): string {
+  const date = new Date(at);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleTimeString("es-AR", { hour12: false });
 }
 
 function ValidationSurface({ model }: { model: RunModel }): React.ReactElement {
@@ -593,14 +688,41 @@ function ValidationSurface({ model }: { model: RunModel }): React.ReactElement {
   return (
     <div className="space-y-2">
       {nodes.map((node) => (
-        <div key={node.id} className="rounded border border-[var(--color-border)] bg-[var(--color-bg)] p-2 text-xs">
-          <strong className="text-[var(--color-text)]">{node.title}</strong>
-          <p className="m-0 mt-1 text-[var(--color-text-muted)]">{node.execution.kind}</p>
+        <div key={node.id} className="flex items-baseline justify-between gap-3 rounded border border-[var(--color-border)] bg-[var(--color-bg)] p-2 text-xs">
+          <strong className="min-w-0 truncate text-[var(--color-text)]">{node.title}</strong>
+          <ValidationDetail execution={node.execution} />
         </div>
       ))}
       {nodes.length === 0 ? <p className="m-0 text-xs text-[var(--color-text-subtle)]">La validación aparecerá cuando los agentes ejecuten tareas.</p> : null}
     </div>
   );
+}
+
+function ValidationDetail({ execution }: { execution: Node["execution"] }): React.ReactElement {
+  if (execution.kind === "verifying") {
+    const { loop } = execution;
+    const buildLabel = loop.build === "pass" ? "build ✓" : loop.build === "fail" ? "build ✗" : "build …";
+    return (
+      <span className="mh-mono shrink-0 text-eyebrow tabular-nums text-[var(--color-text-muted)]">
+        {buildLabel} · tests {loop.testsPass}/{loop.testsTotal} · iter {loop.iteration}/{loop.maxIterations}
+      </span>
+    );
+  }
+  if (execution.kind === "failed") {
+    return (
+      <span className="min-w-0 shrink truncate text-eyebrow text-[var(--status-failed-fg)]" title={execution.cause}>
+        {execution.cause}
+      </span>
+    );
+  }
+  if (execution.kind === "integrated") {
+    return (
+      <span className="mh-mono shrink-0 text-eyebrow text-[var(--status-integrated-fg)]" title={execution.commit}>
+        {execution.commit.slice(0, 10)}
+      </span>
+    );
+  }
+  return <span className="mh-mono shrink-0 text-eyebrow text-[var(--color-text-subtle)]">{EXECUTION_LABEL[execution.kind]}</span>;
 }
 
 function EmptyDock({ onOpenSurface }: { onOpenSurface: (surface: DockSurfaceId, focus?: FocusTarget | null) => void }): React.ReactElement {
@@ -678,4 +800,10 @@ function parentPath(value: string): string {
   const parts = value.split("/").filter(Boolean);
   parts.pop();
   return parts.join("/");
+}
+
+function formatBytes(size: number): string {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }

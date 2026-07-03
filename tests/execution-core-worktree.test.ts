@@ -1,5 +1,16 @@
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
-import { WorktreeError, WorktreeManager, safeWorktreeSegment, type WorktreeRecord } from "@manyhands/execution-core";
+import {
+  WorktreeError,
+  WorktreeManager,
+  runWorktreesRootFor,
+  safeWorktreeSegment,
+  worktreePathFor,
+  type WorktreeRecord
+} from "@manyhands/execution-core";
 
 import { FakeGitRunner } from "./helpers/fake-git-runner";
 
@@ -121,6 +132,140 @@ describe("WorktreeManager.clean", () => {
     await expect(manager.clean(record)).rejects.toSatisfy(
       (err) => WorktreeError.is(err) && err.operation === "clean"
     );
+  });
+});
+
+describe("win32 long-path relocation ('$GIT_DIR' too big / Filename too long)", () => {
+  // git-for-windows dies with `fatal: '$GIT_DIR' too big` when a worktree's
+  // gitdir path exceeds PATH_MAX(260) - 40 = 220 chars, and with "Filename too
+  // long" past 260 without core.longpaths. A repo this deep must push its run
+  // worktrees to a short tmpdir-based root instead.
+  const LONG_REPO_ROOT = `C:/${"a".repeat(160)}`;
+
+  it("relocates the run's worktrees to a short tmpdir root on win32 when the repo-based path would exceed git's budget", async () => {
+    const git = new FakeGitRunner();
+    const manager = new WorktreeManager({
+      git,
+      repoRoot: LONG_REPO_ROOT,
+      platform: "win32",
+      tmpdir: () => "C:/Temp",
+      now: () => "2026-05-28T00:00:00.000Z"
+    });
+
+    const record = await manager.create({
+      taskId: "http-layer",
+      runId: "run-1",
+      kind: "leaf",
+      baseCommit: "BASE_SHA"
+    });
+
+    expect(git.calls[0]).toEqual({
+      op: "worktreeAdd",
+      args: {
+        repoRoot: LONG_REPO_ROOT,
+        worktreePath: "C:/Temp/mh-wt/run-1/http-layer",
+        branch: "mh/run-1/http-layer",
+        baseCommit: "BASE_SHA"
+      }
+    });
+    expect(record.path).toBe("C:/Temp/mh-wt/run-1/http-layer");
+    // Branch naming is untouched: evidence commits stay anchored to mh/<run>/<task>.
+    expect(record.branch).toBe("mh/run-1/http-layer");
+  });
+
+  it("keeps the repo-based root on win32 when the projected path fits the budget", async () => {
+    const git = new FakeGitRunner();
+    const manager = new WorktreeManager({
+      git,
+      repoRoot: REPO_ROOT,
+      platform: "win32",
+      tmpdir: () => "C:/Temp",
+      now: () => "2026-05-28T00:00:00.000Z"
+    });
+
+    const record = await manager.create({
+      taskId: "task-1",
+      runId: "run-1",
+      kind: "leaf",
+      baseCommit: "BASE_SHA"
+    });
+
+    expect(record.path).toBe("/repo/.manyhands/worktrees/run-1/task-1");
+  });
+
+  it("never relocates on non-Windows platforms", async () => {
+    const git = new FakeGitRunner();
+    const manager = new WorktreeManager({
+      git,
+      repoRoot: LONG_REPO_ROOT,
+      platform: "linux",
+      tmpdir: () => "/tmp",
+      now: () => "2026-05-28T00:00:00.000Z"
+    });
+
+    const record = await manager.create({
+      taskId: "task-1",
+      runId: "run-1",
+      kind: "leaf",
+      baseCommit: "BASE_SHA"
+    });
+
+    expect(record.path).toBe(`${LONG_REPO_ROOT}/.manyhands/worktrees/run-1/task-1`);
+  });
+
+  it("worktreePathFor and runWorktreesRootFor expose the same relocation rule for external callers", () => {
+    const relocatedRoot = runWorktreesRootFor({
+      worktreesRoot: `${LONG_REPO_ROOT}/.manyhands/worktrees`,
+      runId: "run-1",
+      platform: "win32",
+      tmpdir: () => "C:/Temp"
+    });
+    expect(relocatedRoot).toBe("C:/Temp/mh-wt/run-1");
+
+    const path = worktreePathFor({
+      worktreesRoot: `${LONG_REPO_ROOT}/.manyhands/worktrees`,
+      runId: "run-1",
+      taskId: "http-layer",
+      platform: "win32",
+      tmpdir: () => "C:/Temp"
+    });
+    expect(path).toBe("C:/Temp/mh-wt/run-1/http-layer");
+
+    const kept = worktreePathFor({
+      worktreesRoot: "/repo/.manyhands/worktrees",
+      runId: "run-1",
+      taskId: "task-1",
+      platform: "win32",
+      tmpdir: () => "C:/Temp"
+    });
+    expect(kept).toBe("/repo/.manyhands/worktrees/run-1/task-1");
+  });
+
+  it("gcRun sweeps the relocated run root so cancel/cleanup finds the same directory create used", async () => {
+    const base = await mkdtemp(join(tmpdir(), "mh-wt-test-"));
+    try {
+      const git = new FakeGitRunner();
+      const manager = new WorktreeManager({
+        git,
+        repoRoot: LONG_REPO_ROOT,
+        platform: "win32",
+        tmpdir: () => base,
+        now: () => "2026-05-28T00:00:00.000Z"
+      });
+      const relocated = join(base, "mh-wt", "run-1", "task-x");
+      await mkdir(relocated, { recursive: true });
+
+      const result = await manager.gcRun("run-1");
+
+      expect(result.removed).toEqual(["task-x"]);
+      expect(
+        git.calls.some(
+          (call) => call.op === "worktreeRemove" && String(call.args.worktreePath).includes("task-x")
+        )
+      ).toBe(true);
+    } finally {
+      await rm(base, { recursive: true, force: true });
+    }
   });
 });
 

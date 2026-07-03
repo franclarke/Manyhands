@@ -166,8 +166,24 @@ export async function appendRunEventBestEffort<K extends RunEventType>(
   }
 }
 
+// Fire-and-forget publishes tracked for test drains: a publish still in flight
+// when a test restores MANYHANDS_RUNS_DIR would write into the REAL runs dir.
+// On globalThis: publishes happen from several Next route bundles.
+const pendingPublishes = globalSingleton(
+  "run-model-event-log:pending-publishes",
+  () => new Set<Promise<unknown>>()
+);
+
 export function publishRunModelEvent<K extends RunEventType>(runId: string, input: RunModelEventInput<K>): void {
-  void appendRunEventBestEffort(runId, input);
+  const write = appendRunEventBestEffort(runId, input).finally(() => pendingPublishes.delete(write));
+  pendingPublishes.add(write);
+}
+
+/** Await every fire-and-forget publish currently in flight (test teardown). */
+export async function drainRunModelEventWritesForTests(): Promise<void> {
+  while (pendingPublishes.size > 0) {
+    await Promise.allSettled(Array.from(pendingPublishes));
+  }
 }
 
 export async function resetRunModelEventLogForTests(runId: string): Promise<void> {

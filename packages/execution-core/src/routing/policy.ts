@@ -112,6 +112,8 @@ export interface ResolveRoutedSelectionInput {
   node: TaskNodeLike;
   dependents: number;
   defaultSelection: ExecutorSelection;
+  /** When set, node metadata may not change the selected executor/model. */
+  lockedSelection?: ExecutorSelection;
   router?: ExecutorRouter | undefined;
   attempt?: number;
 }
@@ -129,7 +131,16 @@ export function resolveRoutedSelection(input: ResolveRoutedSelectionInput): Exec
     normalizeExecutorSelection(metadata?.executorSelection) ??
     normalizeExecutorSelection(metadata?.executorOverride);
   if (explicit !== undefined) {
+    if (input.lockedSelection !== undefined && !sameSelection(explicit, input.lockedSelection)) {
+      throw new Error(
+        `Node "${input.node.id}" requests executor/model "${explicit.executorId}/${explicit.model}", ` +
+          `but this run is fixed to "${input.lockedSelection.executorId}/${input.lockedSelection.model}".`
+      );
+    }
     return explicit;
+  }
+  if (input.lockedSelection !== undefined) {
+    return input.lockedSelection;
   }
   if (input.router !== undefined) {
     return input.router.route({
@@ -139,4 +150,8 @@ export function resolveRoutedSelection(input: ResolveRoutedSelectionInput): Exec
     });
   }
   return input.defaultSelection;
+}
+
+function sameSelection(left: ExecutorSelection, right: ExecutorSelection): boolean {
+  return left.executorId === right.executorId && left.model === right.model;
 }

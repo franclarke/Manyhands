@@ -8,7 +8,7 @@
  * monotonic as the stream grows.
  */
 import { describe, expect, it } from "vitest";
-import { buildLiveRunModel, hasRunEventGap } from "@/components/run-model/use-live-run-model";
+import { buildLiveRunModel, hasRunEventGap, isTerminalRunStatus } from "@/components/run-model/use-live-run-model";
 import { adaptStreamHistory } from "@/lib/run-model/sse-adapter";
 import { selectRenderableNodeState } from "@/lib/run-model/selectors";
 import { buildDecisionChannelView } from "@/lib/run-model/decision-channel-view";
@@ -138,5 +138,14 @@ describe("live bridge — buildLiveRunModel", () => {
     expect(hasRunEventGap(5, 7, false)).toBe(true);
     expect(hasRunEventGap(5, 6, false)).toBe(false);
     expect(hasRunEventGap(5, 9, true)).toBe(false);
+  });
+
+  it("7. treats terminal historical runs as already connected for UI liveness", () => {
+    expect(isTerminalRunStatus("completed")).toBe(true);
+    expect(isTerminalRunStatus("completed_with_accepted")).toBe(true);
+    expect(isTerminalRunStatus("failed")).toBe(true);
+    expect(isTerminalRunStatus("interrupted")).toBe(true);
+    expect(isTerminalRunStatus("running")).toBe(false);
+    expect(isTerminalRunStatus("paused")).toBe(false);
   });
 });

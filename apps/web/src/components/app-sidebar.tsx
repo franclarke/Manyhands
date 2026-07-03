@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Workspace, RunPreview } from "@/lib/api-types";
+import { sidebarInitiallyCollapsed, type SidebarStoredPreference } from "@/lib/cockpit-layout";
 import { runUiStatus, STATUS_META } from "@/lib/status";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -44,12 +45,18 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
   }, [recentRuns]);
 
   // Restore the collapsed preference after mount (avoids a hydration mismatch).
+  // On narrow viewports the sidebar always mounts collapsed — the desktop
+  // preference must not eat the whole cockpit on a phone (see cockpit-layout).
   useEffect(() => {
+    let stored: SidebarStoredPreference = null;
     try {
-      setCollapsed(window.localStorage.getItem(COLLAPSE_STORAGE_KEY) === "1");
+      const raw = window.localStorage.getItem(COLLAPSE_STORAGE_KEY);
+      if (raw === "1") stored = "collapsed";
+      else if (raw === "0") stored = "expanded";
     } catch {
       /* ignore */
     }
+    setCollapsed(sidebarInitiallyCollapsed(window.innerWidth, stored));
   }, []);
 
   function toggleCollapsed(): void {

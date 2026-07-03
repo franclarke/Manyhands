@@ -61,6 +61,16 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   const maxStepAttempts = positiveIntegerFromEnv("MANYHANDS_PLANNING_MAX_STEP_ATTEMPTS");
   const stepTimeoutMs = positiveIntegerFromEnv("MANYHANDS_PLANNING_STEP_TIMEOUT_MS");
 
+  if (input.executorId === "codex-cli") {
+    return buildCodexSelection(input, modelOptions(input, workspaceHints, maxParallelSteps, maxStepAttempts, stepTimeoutMs));
+  }
+  if (input.executorId === "claude-code-cli") {
+    return buildClaudeCodeSelection(input, modelOptions(input, workspaceHints, maxParallelSteps, maxStepAttempts, stepTimeoutMs));
+  }
+  if (input.executorId !== undefined) {
+    throw new Error(`Planning cannot use executor "${input.executorId}". Select Claude Code CLI or Codex CLI for the run.`);
+  }
+
   // The recursive interface-aware decomposer is the product default. For
   // local-first product runs, the step model is the Claude Code CLI.
   // Anthropic single-pass/recursive modes are kept only as explicit baselines.
@@ -109,33 +119,19 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   }
 
   const model = input.model;
-  const isCodex = input.executorId === "codex-cli";
+  return buildClaudeCodeSelection(input, modelOptions(input, workspaceHints, maxParallelSteps, maxStepAttempts, stepTimeoutMs));
+}
 
-  if (isCodex) {
-    const recursive = new CodexRecursiveDecomposer({
-      cwd: input.workspace?.repoPath ?? process.cwd(),
-      model,
-      userPrompt: input.userPrompt,
-      ...(stepTimeoutMs !== undefined ? { timeoutMs: stepTimeoutMs } : {}),
-      ...(maxParallelSteps !== undefined ? { maxParallelSteps } : {}),
-      ...(maxStepAttempts !== undefined ? { maxStepAttempts } : {}),
-      ...(input.onStepStarted !== undefined ? { onStepStarted: input.onStepStarted } : {}),
-      ...(input.onStepCompleted !== undefined ? { onStepCompleted: input.onStepCompleted } : {}),
-      ...(input.onStepStatus !== undefined ? { onStepStatus: input.onStepStatus } : {}),
-      ...(workspaceHints !== undefined ? { workspaceHints } : {}),
-      ...(input.onCliOutput !== undefined ? { onCliOutput: input.onCliOutput } : {})
-    });
-    return {
-      decomposer: recursive,
-      provider: "codex-cli",
-      model,
-      promptTemplateVersion: recursive.promptTemplateVersion
-    };
-  }
-
-  const recursive = new ClaudeCodeRecursiveDecomposer({
+function modelOptions(
+  input: PickDecomposerInput,
+  workspaceHints: string | undefined,
+  maxParallelSteps: number | undefined,
+  maxStepAttempts: number | undefined,
+  stepTimeoutMs: number | undefined
+) {
+  return {
     cwd: input.workspace?.repoPath ?? process.cwd(),
-    model,
+    model: input.model,
     userPrompt: input.userPrompt,
     ...(stepTimeoutMs !== undefined ? { timeoutMs: stepTimeoutMs } : {}),
     ...(maxParallelSteps !== undefined ? { maxParallelSteps } : {}),
@@ -145,11 +141,27 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
     ...(input.onStepStatus !== undefined ? { onStepStatus: input.onStepStatus } : {}),
     ...(workspaceHints !== undefined ? { workspaceHints } : {}),
     ...(input.onCliOutput !== undefined ? { onCliOutput: input.onCliOutput } : {})
+  };
+}
+
+function buildCodexSelection(input: PickDecomposerInput, options: ReturnType<typeof modelOptions>): DecomposerSelection {
+  const recursive = new CodexRecursiveDecomposer(options);
+  return {
+    decomposer: recursive,
+    provider: "codex-cli",
+    model: input.model,
+    promptTemplateVersion: recursive.promptTemplateVersion
+  };
+}
+
+function buildClaudeCodeSelection(input: PickDecomposerInput, options: ReturnType<typeof modelOptions>): DecomposerSelection {
+  const recursive = new ClaudeCodeRecursiveDecomposer({
+    ...options
   });
   return {
     decomposer: recursive,
     provider: "claude-code",
-    model,
+    model: input.model,
     promptTemplateVersion: recursive.promptTemplateVersion
   };
 }

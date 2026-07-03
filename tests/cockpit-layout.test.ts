@@ -12,9 +12,11 @@ import { describe, expect, it } from "vitest";
 import {
   FOCUS_DOCK_BREAKPOINT,
   RUN_DOCK_BREAKPOINT,
+  SIDEBAR_AUTO_COLLAPSE_BREAKPOINT,
   bottomDrawerMode,
   focusDockMode,
-  runDockMode
+  runDockMode,
+  sidebarInitiallyCollapsed
 } from "@/lib/cockpit-layout";
 
 describe("focusDockMode", () => {
@@ -57,5 +59,32 @@ describe("bottomDrawerMode", () => {
   it("is hidden until the user opens the drawer", () => {
     expect(bottomDrawerMode(false)).toBe("hidden");
     expect(bottomDrawerMode(true)).toBe("docked");
+  });
+});
+
+describe("sidebarInitiallyCollapsed", () => {
+  it("honors the stored preference on a wide viewport", () => {
+    expect(sidebarInitiallyCollapsed(1440, "collapsed")).toBe(true);
+    expect(sidebarInitiallyCollapsed(1440, "expanded")).toBe(false);
+  });
+
+  it("defaults to expanded on a wide viewport without a stored preference", () => {
+    expect(sidebarInitiallyCollapsed(1440, null)).toBe(false);
+  });
+
+  it("starts collapsed on narrow viewports regardless of the stored preference", () => {
+    // A 240px sidebar on a 375px phone leaves no room for the cockpit; the
+    // stored desktop preference must not leak into the phone layout.
+    expect(sidebarInitiallyCollapsed(375, "expanded")).toBe(true);
+    expect(sidebarInitiallyCollapsed(375, null)).toBe(true);
+    expect(sidebarInitiallyCollapsed(SIDEBAR_AUTO_COLLAPSE_BREAKPOINT - 1, "expanded")).toBe(true);
+  });
+
+  it("switches exactly at the breakpoint", () => {
+    expect(sidebarInitiallyCollapsed(SIDEBAR_AUTO_COLLAPSE_BREAKPOINT, null)).toBe(false);
+  });
+
+  it("treats an unknown/zero width as collapsed (safe default before measurement)", () => {
+    expect(sidebarInitiallyCollapsed(0, "expanded")).toBe(true);
   });
 });

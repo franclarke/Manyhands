@@ -4,9 +4,14 @@ import { evaluateClaudeCredential } from "@/lib/server/providers/credentials";
 // Fixed "now": 2026-06-25T14:00:00Z (epoch ms).
 const NOW = Date.UTC(2026, 5, 25, 14, 0, 0);
 
-function credsFile(expiresAt: number): string {
+function credsFile(expiresAt: number, options: { refreshToken?: boolean } = {}): string {
   return JSON.stringify({
-    claudeAiOauth: { accessToken: "redacted", refreshToken: "redacted", expiresAt, scopes: ["user:inference"] }
+    claudeAiOauth: {
+      accessToken: "redacted",
+      ...(options.refreshToken === false ? {} : { refreshToken: "redacted" }),
+      expiresAt,
+      scopes: ["user:inference"]
+    }
   });
 }
 
@@ -23,9 +28,23 @@ describe("evaluateClaudeCredential (F-001 / F-028: validity, not mere presence)"
     ).toEqual({ ok: true });
   });
 
-  it("reports `expired` when the on-disk OAuth token is past its expiry (the real F-001 cause)", () => {
+  it("is usable (with a refreshable note) when the token expired but a refresh token exists", () => {
+    // Empirically (CLI 2.1.x): a headless `claude` call refreshes the access
+    // token from the refresh token and PERSISTS it back to the file. Blocking
+    // run creation here was a false negative that disabled "Generar plan"
+    // every time the last CLI use was more than ~1h ago.
     expect(
       evaluateClaudeCredential({ apiKeyPresent: false, credentialsFileContent: credsFile(NOW - 60_000), now: NOW })
+    ).toEqual({ ok: true, note: "refreshable" });
+  });
+
+  it("reports `expired` when the token is past its expiry and there is no refresh token (the real F-001 cause)", () => {
+    expect(
+      evaluateClaudeCredential({
+        apiKeyPresent: false,
+        credentialsFileContent: credsFile(NOW - 60_000, { refreshToken: false }),
+        now: NOW
+      })
     ).toEqual({ ok: false, reason: "expired" });
   });
 
