@@ -84,6 +84,8 @@ export type ValidationRunResult = z.infer<typeof ValidationRunResultSchema>;
 
 export const AgentExecutionResultSchema = z.object({
   taskId: EntityIdSchema,
+  /** Durable B-015 identity for this physical node execution. */
+  attemptId: z.string().uuid().optional(),
   status: AgentResultStatusSchema,
   baseHead: NonEmptyStringSchema,
   currentHead: NonEmptyStringSchema,
@@ -248,6 +250,8 @@ export type IntegrationRepairAttempt = z.infer<typeof IntegrationRepairAttemptSc
 
 export const IntegrationResultSchema = z.object({
   compositeTaskId: EntityIdSchema,
+  /** Durable B-015 identity for this integration attempt. */
+  attemptId: z.string().uuid().optional(),
   status: IntegrationStatusSchema,
   childResults: z.array(AgentExecutionResultSchema),
   integrationCommitSha: NonEmptyStringSchema.optional(),
@@ -305,6 +309,8 @@ export const AgentExecutorOptionsSchema = z.object({
    * cancellation can force-kill and verify everything still running (INV-2).
    */
   processOwnerId: z.string().min(1).optional(),
+  /** Durable task-attempt identity attached to ProcessSupervisor metadata. */
+  attemptId: z.string().uuid().optional(),
   /** Live stdout/stderr diagnostics from the executor process. Not serialized. */
   onOutput: z.custom<(chunk: ExecutorOutputChunk) => void>((value) => typeof value === "function").optional(),
   /**

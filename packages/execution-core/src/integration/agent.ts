@@ -89,6 +89,8 @@ export interface PredictedConflictHint {
 
 export interface IntegrationParams {
   compositeTaskId: string;
+  /** Durable B-015 attempt identity for integration repair processes. */
+  attemptId?: string;
   /** Integration worktree on the parent branch; children are cherry-picked here. */
   worktree: WorktreeRecord;
   /** Successful children's results, in topological dependency order. */
@@ -538,6 +540,7 @@ export class IntegrationAgent {
         bypassApprovals: params.repair.bypassApprovals ?? true,
         ...(params.repair.reasoningEffort !== undefined ? { reasoningEffort: params.repair.reasoningEffort } : {}),
         processOwnerId: worktree.runId,
+        ...(params.attemptId !== undefined ? { attemptId: params.attemptId } : {}),
         ...(params.signal !== undefined ? { signal: params.signal } : {}),
         onOutput: (chunk) => {
           this.traceStore.append({

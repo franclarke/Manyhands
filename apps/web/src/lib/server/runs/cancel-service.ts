@@ -14,6 +14,7 @@
  *
  * The audit event is durable before the caller sees the outcome.
  */
+import path from "node:path";
 import {
   SimpleGitRunner,
   WorktreeManager,
@@ -27,9 +28,11 @@ import { appendStatusEventOrRollback } from "./audited-mutation";
 import { assertRunActionAllowed, assertTransition } from "./lifecycle";
 import { claimRunMutation } from "./mutation-guard";
 import { appendRunEventRequired } from "./run-model-event-log";
+import { TASK_ATTEMPT_EVENT_TYPES, JsonTaskAttemptJournal } from "./task-attempt-journal";
 import { invalidateRunOperation } from "./run-operation-lease";
 import { abortRun } from "./run-abort-registry";
 import type { RunOperationLease, RunRecord } from "./schema";
+import { resolveRunsDirectory } from "./repository";
 
 export interface CancelRunDeps {
   killOwnedProcessTrees?: (ownerId: string) => Promise<KillReport>;
@@ -101,6 +104,43 @@ export async function cancelRun(runId: string, deps: CancelRunDeps = {}): Promis
   });
   if (previous !== undefined && previous.status !== "cancelling") {
     await appendStatusChanged(previous, claimed, now, deps.actor ?? "human");
+  }
+
+  // Fence every in-flight attempt before killing processes. The old operation
+  // lease is the evidence that owned the attempt; no stale executor can later
+  // advance it after cancellation.
+  if (previous?.activeOperation !== undefined) {
+    const journal = new JsonTaskAttemptJournal({ directory: path.join(resolveRunsDirectory(), "attempts") });
+    for (const attempt of await journal.list(runId)) {
+      if (["result_persisted", "adopted", "discarded", "failed", "cancelled", "recovery_required"].includes(attempt.state)) continue;
+      try {
+        const cancelled = await journal.transition(attempt.attemptId, {
+          expectedVersion: attempt.version,
+          lease: previous.activeOperation,
+          state: "cancelled",
+          nodeDisposition: "cancelled",
+          error: { code: "cancelled", message: deps.reason ?? "cancelled" }
+        });
+        const eventType = TASK_ATTEMPT_EVENT_TYPES.cancelled;
+        if (eventType !== undefined) {
+          await appendRunEventRequired(runId, {
+            actor: deps.actor ?? "human",
+            type: eventType as never,
+            payload: {
+              attemptId: cancelled.attemptId,
+              nodeId: cancelled.nodeId,
+              operationId: cancelled.operationId,
+              fencingToken: cancelled.fencingToken,
+              state: cancelled.state,
+              kind: cancelled.kind
+            } as never
+          });
+        }
+      } catch {
+        // A newer fenced writer already settled this attempt; cancellation's
+        // run-level event remains the authoritative terminal audit.
+      }
+    }
   }
 
   // 2) Cooperative abort: the drive loop cuts the stream between supersteps

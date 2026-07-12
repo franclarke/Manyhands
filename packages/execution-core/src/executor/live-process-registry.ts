@@ -28,6 +28,7 @@ export interface SupervisedProcessHandle {
 /** Who a supervised process belongs to and which phase spawned it. */
 export interface SupervisedProcessMeta {
   runId: string;
+  attemptId?: string;
   /** Phase label: "executor", "planning", "validation", "install", "git", "terminal", … */
   label: string;
   operationId?: string;
@@ -36,13 +37,14 @@ export interface SupervisedProcessMeta {
 const liveProcesses = new Map<string, Set<SupervisedProcessHandle>>();
 const processMetas = new WeakMap<SupervisedProcessHandle, SupervisedProcessMeta>();
 
-export function registerLiveProcess(ownerId: string, child: SupervisedProcessHandle): void {
+export function registerLiveProcess(ownerId: string, child: SupervisedProcessHandle, meta?: SupervisedProcessMeta): void {
   let set = liveProcesses.get(ownerId);
   if (set === undefined) {
     set = new Set();
     liveProcesses.set(ownerId, set);
   }
   set.add(child);
+  if (meta !== undefined) processMetas.set(child, meta);
 }
 
 export function unregisterLiveProcess(ownerId: string, child: SupervisedProcessHandle): void {
@@ -72,7 +74,7 @@ export function superviseChildProcess(
   child: SupervisedProcessHandle,
   options: SuperviseOptions = {}
 ): () => void {
-  registerLiveProcess(meta.runId, child);
+  registerLiveProcess(meta.runId, child, meta);
   processMetas.set(child, meta);
 
   const spawnFn = options.spawnFn ?? spawn;
@@ -128,6 +130,7 @@ export interface KillVerification {
   /** Phase that spawned the process, when it was supervised with metadata. */
   label?: string;
   operationId?: string;
+  attemptId?: string;
 }
 
 export interface KillReport {
@@ -167,7 +170,11 @@ export async function killProcessTreeVerified(
   const withMeta = (verification: KillVerification): KillVerification => ({
     ...verification,
     ...(meta !== undefined
-      ? { label: meta.label, ...(meta.operationId !== undefined ? { operationId: meta.operationId } : {}) }
+      ? {
+          label: meta.label,
+          ...(meta.operationId !== undefined ? { operationId: meta.operationId } : {}),
+          ...(meta.attemptId !== undefined ? { attemptId: meta.attemptId } : {})
+        }
       : {})
   });
   if (typeof pid !== "number" || !isProcessAlive(pid)) {

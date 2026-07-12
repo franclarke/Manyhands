@@ -29,6 +29,7 @@ export interface SpawnExecutorParams {
    * force-kill and VERIFY everything still running for the run (INV-2).
    */
   processOwnerId?: string | undefined;
+  attemptId?: string | undefined;
   spawnFn: SpawnFn;
   readInstructions: (filePath: string) => Promise<string>;
   instructionFilePath: string;
@@ -64,6 +65,7 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
     timeoutMs,
     signal,
     processOwnerId,
+    attemptId,
     readInstructions,
     instructionFilePath,
     logScope,
@@ -132,7 +134,11 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
     }
 
     if (processOwnerId !== undefined) {
-      registerLiveProcess(processOwnerId, child);
+      registerLiveProcess(processOwnerId, child, {
+        runId: processOwnerId,
+        label: logScope ?? "executor",
+        ...(attemptId !== undefined ? { attemptId } : {})
+      });
       // 'close' fires on every exit path (clean, timeout-kill, abort-kill).
       child.once("close", () => unregisterLiveProcess(processOwnerId, child));
     }

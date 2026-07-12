@@ -589,6 +589,7 @@ export interface NodeExecutionStartedPayload {
   agent: string;
   model: string;
   operationId?: string;
+  attemptId?: string;
   waveId?: WaveId;
   /** Set on re-execution (amendment/stale repair). */
   reason?: string;
@@ -628,6 +629,20 @@ export interface NodeExecutionFailedPayload {
   operationId?: string;
   waveId?: WaveId;
   cause: string;
+}
+/** Durable B-015 attempt journal projection. The journal remains canonical;
+ * these events are correlation/audit evidence for the live run view. */
+export interface TaskAttemptEventPayload {
+  attemptId: string;
+  nodeId: NodeId;
+  operationId: string;
+  fencingToken: number;
+  state: string;
+  kind?: "scheduled" | "manual" | "integrator" | "repair";
+  waveId?: WaveId;
+  commitSha?: string;
+  reason?: string;
+  errorCode?: string;
 }
 export interface NodeCliOutputPayload {
   nodeId: NodeId;
@@ -840,6 +855,19 @@ export interface RunEventPayloads {
   // Supervision
   "wave.opened": WaveOpenedPayload;
   "node.execution.started": NodeExecutionStartedPayload;
+  "task.attempt.prepared": TaskAttemptEventPayload;
+  "task.attempt.invocation_reserved": TaskAttemptEventPayload;
+  "task.attempt.executor_started": TaskAttemptEventPayload;
+  "task.attempt.executor_finished": TaskAttemptEventPayload;
+  "task.attempt.diff_captured": TaskAttemptEventPayload;
+  "task.attempt.scope_evaluated": TaskAttemptEventPayload;
+  "task.attempt.validation_finished": TaskAttemptEventPayload;
+  "task.attempt.commit_created": TaskAttemptEventPayload;
+  "task.attempt.result_persisted": TaskAttemptEventPayload;
+  "task.attempt.adopted": TaskAttemptEventPayload;
+  "task.attempt.discarded": TaskAttemptEventPayload;
+  "task.attempt.recovery_required": TaskAttemptEventPayload;
+  "task.attempt.cancelled": TaskAttemptEventPayload;
   "node.verify.iteration": NodeVerifyIterationPayload;
   "node.verify.passed": NodeVerifyPassedPayload;
   "node.verify.failed": NodeVerifyFailedPayload;
@@ -897,6 +925,19 @@ export const RUN_EVENT_TYPES = [
   "grounding.completed",
   "wave.opened",
   "node.execution.started",
+  "task.attempt.prepared",
+  "task.attempt.invocation_reserved",
+  "task.attempt.executor_started",
+  "task.attempt.executor_finished",
+  "task.attempt.diff_captured",
+  "task.attempt.scope_evaluated",
+  "task.attempt.validation_finished",
+  "task.attempt.commit_created",
+  "task.attempt.result_persisted",
+  "task.attempt.adopted",
+  "task.attempt.discarded",
+  "task.attempt.recovery_required",
+  "task.attempt.cancelled",
   "node.verify.iteration",
   "node.verify.passed",
   "node.verify.failed",

@@ -108,6 +108,8 @@ export interface RunNodeExecutionParams {
   defaultRepairSelection?: ExecutorSelection;
   taskId: string;
   runId?: string;
+  /** Durable B-015 attempt identity for executor/process correlation. */
+  attemptId?: string;
   childResults?: AgentExecutionResult[];
   cleanupWorktrees?: boolean;
   /** Plan-time conflict foresight, threaded into the Composer's repair prompt. */
@@ -471,6 +473,7 @@ export class RunExecutor {
           config,
           defaultSelection: params.defaultExecutionSelection ?? resolveLegacyModelSelection(params.model),
           worktrees,
+          ...(params.attemptId !== undefined ? { attemptId: params.attemptId } : {}),
           ...(params.signal !== undefined ? { signal: params.signal } : {})
         });
         return { kind: "leaf", result, worktrees };
@@ -534,6 +537,7 @@ export class RunExecutor {
         compositeTaskId: node.id,
         worktree,
         childResults,
+        ...(params.attemptId !== undefined ? { attemptId: params.attemptId } : {}),
         ...(params.signal !== undefined ? { signal: params.signal } : {}),
         repair: {
           selection: repairSelection,
@@ -577,6 +581,7 @@ export class RunExecutor {
     defaultRepairSelection?: ExecutorSelection;
     taskId: string;
     runId?: string;
+    attemptId?: string;
     validationOutput: string;
     /** Run-level cancellation, threaded into the repair subprocess. */
     signal?: AbortSignal;
@@ -638,6 +643,7 @@ export class RunExecutor {
       bypassApprovals: true,
       ...(config.reasoningEffort !== undefined ? { reasoningEffort: config.reasoningEffort } : {}),
       processOwnerId: runId,
+      ...(params.attemptId !== undefined ? { attemptId: params.attemptId } : {}),
       ...(params.signal !== undefined ? { signal: params.signal } : {}),
       onOutput: (chunk) => {
         this.traceStore.append({ type: "executor_output", actor: "agent", taskId: node.id, payload: chunk });
@@ -685,6 +691,7 @@ export class RunExecutor {
     config: ExecutionConfig;
     defaultSelection: ExecutorSelection;
     worktrees: WorktreeRecord[];
+    attemptId?: string;
     signal?: AbortSignal;
   }): Promise<AgentExecutionResult> {
     const { node, runId } = args;
@@ -759,6 +766,7 @@ export class RunExecutor {
     defaultSelection: ExecutorSelection;
     worktrees: WorktreeRecord[];
     worktree: WorktreeRecord;
+    attemptId?: string;
     executor: AgentExecutor;
     executorSelection: ExecutorSelection;
     usageSource: ReturnType<typeof usageSourceForSelection>;
@@ -798,6 +806,7 @@ export class RunExecutor {
       bypassApprovals: true,
       ...(config.reasoningEffort !== undefined ? { reasoningEffort: config.reasoningEffort } : {}),
       processOwnerId: runId,
+      ...(args.attemptId !== undefined ? { attemptId: args.attemptId } : {}),
       ...(args.signal !== undefined ? { signal: args.signal } : {}),
       onOutput: (chunk) => {
         this.traceStore.append({

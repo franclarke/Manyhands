@@ -12,6 +12,7 @@
  * so checkpoints are never hand-edited.
  */
 import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { Command } from "@langchain/langgraph";
 import {
@@ -48,7 +49,8 @@ import {
   appendStatusAndRunEventsOrRollback,
   requireCapturedRunRecord
 } from "./audited-mutation";
-import type { RunModelEventInput } from "./run-model-event-log";
+import { appendRunEventRequired, type RunModelEventInput } from "./run-model-event-log";
+import { RunLifecycleError } from "./errors";
 import { executionSelection, repairSelection } from "./executor-selection";
 import {
   INTEGRATION_SUCCESS,
@@ -66,6 +68,13 @@ import { selectAndPersistSchedulingWave } from "./scheduling-audit-events";
 import { effectiveExecutionConfig } from "./effective-execution-config";
 import type { ProvisionedRepo } from "./repo-provisioner";
 import type { RunOperationLease, RunRecord } from "./schema";
+import {
+  JsonTaskAttemptJournal,
+  type TaskAttempt,
+  type TaskAttemptKind,
+  type TaskAttemptState
+} from "./task-attempt-journal";
+import type { RunEventType } from "@/lib/run-model/types";
 
 // ─── Gate options (shared contract between host, routes and UI copy) ───────
 
@@ -203,6 +212,121 @@ export function buildExecutionHost(
   const riskMatrix = riskMatrixFromRun(run);
   const staticConflictSignals = staticConflictSignalsFromRun(run);
   const traceStoreFactory = options.traceStoreFactory ?? (() => new InMemoryTraceStore());
+  const attemptJournal = new JsonTaskAttemptJournal({ directory: join(resolveRunsDirectory(), "attempts") });
+
+  const attemptEventType: Record<TaskAttemptState, RunEventType | undefined> = {
+    prepared: "task.attempt.prepared",
+    invocation_reserved: "task.attempt.invocation_reserved",
+    executor_running: "task.attempt.executor_started",
+    executor_finished: "task.attempt.executor_finished",
+    diff_captured: "task.attempt.diff_captured",
+    scope_evaluated: "task.attempt.scope_evaluated",
+    validation_finished: "task.attempt.validation_finished",
+    commit_created: "task.attempt.commit_created",
+    result_persisted: "task.attempt.result_persisted",
+    adopted: "task.attempt.adopted",
+    discarded: "task.attempt.discarded",
+    recovery_required: "task.attempt.recovery_required",
+    cancelled: "task.attempt.cancelled",
+    failed: undefined
+  };
+
+  const emitAttemptEvent = async (attempt: TaskAttempt, reason?: string): Promise<void> => {
+    const type = attemptEventType[attempt.state];
+    if (type === undefined) return;
+    await appendRunEventRequired(runId, {
+      actor: "system",
+      type,
+      payload: {
+        attemptId: attempt.attemptId,
+        nodeId: attempt.nodeId,
+        operationId: attempt.operationId,
+        fencingToken: attempt.fencingToken,
+        state: attempt.state,
+        kind: attempt.kind,
+        ...(attempt.waveId !== undefined ? { waveId: attempt.waveId } : {}),
+        ...(attempt.commitSha !== undefined ? { commitSha: attempt.commitSha } : {}),
+        ...(reason !== undefined ? { reason } : {}),
+        ...(attempt.error !== undefined ? { errorCode: attempt.error.code } : {})
+      }
+    });
+  };
+
+  const beginAttempt = async (
+    current: RunRecord,
+    nodeId: string,
+    kind: TaskAttemptKind,
+    baseCommit: string,
+    executor: { executorId: string; model: string },
+    worktreePath?: string
+  ): Promise<{ attempt: TaskAttempt; reuse?: AgentExecutionResult; alreadyCompleted?: boolean }> => {
+    if (options.operationLease === undefined) {
+      throw new RunLifecycleError(`Cannot journal task ${nodeId} without an operation lease.`);
+    }
+    const prior = (await attemptJournal.list(runId))
+      .filter((entry) => entry.nodeId === nodeId && entry.kind === kind)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    const latest = prior[0];
+    const existing = executionResultsFromRun(current);
+    const existingResult = existing.leafResults.find((entry) => entry.taskId === nodeId);
+    if (latest?.state === "result_persisted" || latest?.state === "adopted") {
+      if (existingResult !== undefined) return { attempt: latest, reuse: existingResult };
+      if (kind === "integrator") return { attempt: latest, alreadyCompleted: true };
+      throw new RunLifecycleError(`Task ${nodeId} has a persisted attempt without a node result; recovery required.`);
+    }
+    if (latest !== undefined && !["failed", "cancelled", "discarded"].includes(latest.state)) {
+      const recovery = latest.operationId === options.operationLease.operationId
+        ? await attemptJournal.transition(latest.attemptId, {
+            expectedVersion: latest.version,
+            lease: options.operationLease,
+            state: "recovery_required",
+            error: { code: "restart_ambiguous_attempt", message: `Attempt ended in ${latest.state}.` }
+          })
+        : await attemptJournal.claimRecovery(latest.attemptId, {
+            expectedVersion: latest.version,
+            lease: options.operationLease,
+            reason: `Attempt ended in ${latest.state}; external invocation must be reconciled.`
+          });
+      if (recovery.state !== "recovery_required") throw new RunLifecycleError(`Task ${nodeId} recovery is required.`);
+      await emitAttemptEvent(recovery, "executor invocation is ambiguous; no automatic retry");
+      throw new RunLifecycleError(`Task ${nodeId} has an ambiguous prior attempt; recovery is required.`);
+    }
+    const attempt = await attemptJournal.reserve({
+      runId,
+      nodeId,
+      operationId: options.operationLease.operationId,
+      fencingToken: options.operationLease.fencingToken,
+      kind,
+      baseCommit,
+      ...(worktreePath !== undefined ? { worktreePath } : {}),
+      ...(current.targetContext?.fingerprint !== undefined ? { targetFingerprint: current.targetContext.fingerprint } : {}),
+      contractHash: digest(current.planning ?? current.decomposition ?? nodeId),
+      promptHash: digest(current.userPrompt),
+      executorConfigHash: digest(effectiveExecutionConfig(current.executionConfig)),
+      executor,
+      idempotencyKey: `${runId}:${nodeId}:${kind}:${baseCommit}:${prior.length}`
+    });
+    await emitAttemptEvent(attempt);
+    return { attempt };
+  };
+
+  const transitionAttempt = async (
+    attempt: TaskAttempt,
+    state: TaskAttemptState,
+    patch: Parameters<JsonTaskAttemptJournal["transition"]>[1] extends infer T
+      ? T extends object ? Omit<T, "expectedVersion" | "lease" | "state"> : never
+      : never
+  ): Promise<TaskAttempt> => {
+    if (options.operationLease === undefined) throw new RunLifecycleError("Attempt lease missing.");
+    const next = await attemptJournal.transition(attempt.attemptId, {
+      ...patch,
+      expectedVersion: attempt.version,
+      lease: options.operationLease,
+      state
+    });
+    await emitAttemptEvent(next);
+    return next;
+  };
 
   const makeRunExecutor = (sink: TraceStore, router?: ExecutorRouter) =>
     new RunExecutor({
@@ -255,22 +379,62 @@ export function buildExecutionHost(
     const traceStore = traceStoreFactory();
     const runExecutor = makeRunExecutor(traceStore, await routerFor(current));
     const selection = executionSelection(current);
+    const node = taskGraph.nodes[params.taskId];
+    if (node === undefined) throw new RunLifecycleError(`Unknown task ${params.taskId}.`);
+    const kind: TaskAttemptKind = node.kind === "integrator" ? "integrator" : "scheduled";
+    const prepared = await beginAttempt(current, params.taskId, kind, taskGraph.baseCommit, selection);
+    let attempt = prepared.attempt;
+    if (prepared.reuse !== undefined) return { result: prepared.reuse };
+    attempt = await transitionAttempt(attempt, "invocation_reserved", {});
+    attempt = await transitionAttempt(attempt, "executor_running", {});
 
     const signal = getRunAbort(runId)?.signal;
-    const nodeResult = await runExecutor.runNode({
-      graph: taskGraph,
-      config: executionConfigFor(current),
-      model: current.model,
-      defaultExecutionSelection: selection,
-      runId,
-      taskId: params.taskId,
-      ...(signal !== undefined ? { signal } : {})
-    });
+    let nodeResult: Awaited<ReturnType<RunExecutor["runNode"]>>;
+    try {
+      nodeResult = await runExecutor.runNode({
+        graph: taskGraph,
+        config: executionConfigFor(current),
+        model: current.model,
+        defaultExecutionSelection: selection,
+        runId,
+        taskId: params.taskId,
+        attemptId: attempt.attemptId,
+        ...(signal !== undefined ? { signal } : {})
+      });
+    } catch (error) {
+      const state: TaskAttemptState = signal?.aborted === true ? "cancelled" : "failed";
+      await transitionAttempt(attempt, state, {
+        error: { code: state === "cancelled" ? "cancelled" : "execution_failed", message: error instanceof Error ? error.message : String(error) }
+      }).catch(() => undefined);
+      throw error;
+    }
     if (nodeResult.kind !== "leaf") {
       throw new Error(`Expected leaf result for node ${params.taskId}, got ${nodeResult.kind}`);
     }
 
-    const result = nodeResult.result;
+    const result = { ...nodeResult.result, attemptId: attempt.attemptId };
+    attempt = await transitionAttempt(attempt, "executor_finished", {
+      executorResult: {
+        exitCode: result.executorExitCode,
+        timedOut: result.executorTimedOut,
+        durationMs: result.executorDurationMs
+      }
+    });
+    attempt = await transitionAttempt(attempt, "diff_captured", {
+      diffIdentity: {
+        baseHead: result.baseHead,
+        currentHead: result.currentHead,
+        hash: digest(result.diff),
+        files: result.changedFiles
+      }
+    });
+    attempt = await transitionAttempt(attempt, "scope_evaluated", { scopeResult: result.scopeCheck });
+    if (result.validationResult !== undefined) {
+      attempt = await transitionAttempt(attempt, "validation_finished", { validationResult: result.validationResult });
+    }
+    if (result.commitSha !== undefined) {
+      attempt = await transitionAttempt(attempt, "commit_created", { commitSha: result.commitSha });
+    }
     publishRunEvent(runId, {
       kind: "agent.run.completed",
       taskId: params.taskId,
@@ -283,7 +447,11 @@ export function buildExecutionHost(
       passed: result.status === "success",
       at: new Date().toISOString()
     });
-    await persistNodeResult(taskGraph, nodeResult, traceStore);
+    await persistNodeResult(taskGraph, { ...nodeResult, result }, traceStore);
+    await transitionAttempt(attempt, "result_persisted", {
+      ...(result.commitSha !== undefined ? { commitSha: result.commitSha } : {}),
+      nodeDisposition: result.disposition ?? result.status
+    });
     return { result };
   };
 
@@ -294,6 +462,11 @@ export function buildExecutionHost(
     const traceStore = traceStoreFactory();
     const runExecutor = makeRunExecutor(traceStore, await routerFor(current));
     const selection = repairSelection(current);
+    const prepared = await beginAttempt(current, params.taskId, "repair", taskGraph.baseCommit, selection);
+    let attempt = prepared.attempt;
+    if (prepared.reuse !== undefined) return { result: prepared.reuse };
+    attempt = await transitionAttempt(attempt, "invocation_reserved", {});
+    attempt = await transitionAttempt(attempt, "executor_running", {});
 
     const repairSignal = getRunAbort(runId)?.signal;
     const { result, worktree } = await runExecutor.repairLeaf({
@@ -303,24 +476,52 @@ export function buildExecutionHost(
       defaultRepairSelection: selection,
       runId,
       taskId: params.taskId,
+      attemptId: attempt.attemptId,
       validationOutput: params.validationOutput,
       ...(repairSignal !== undefined ? { signal: repairSignal } : {})
     });
 
+    const attemptedResult = { ...result, attemptId: attempt.attemptId };
+    attempt = await transitionAttempt(attempt, "executor_finished", {
+      executorResult: {
+        exitCode: attemptedResult.executorExitCode,
+        timedOut: attemptedResult.executorTimedOut,
+        durationMs: attemptedResult.executorDurationMs
+      }
+    });
+    attempt = await transitionAttempt(attempt, "diff_captured", {
+      diffIdentity: {
+        baseHead: attemptedResult.baseHead,
+        currentHead: attemptedResult.currentHead,
+        hash: digest(attemptedResult.diff),
+        files: attemptedResult.changedFiles
+      }
+    });
+    attempt = await transitionAttempt(attempt, "scope_evaluated", { scopeResult: attemptedResult.scopeCheck });
+    if (attemptedResult.validationResult !== undefined) {
+      attempt = await transitionAttempt(attempt, "validation_finished", { validationResult: attemptedResult.validationResult });
+    }
+    if (attemptedResult.commitSha !== undefined) {
+      attempt = await transitionAttempt(attempt, "commit_created", { commitSha: attemptedResult.commitSha });
+    }
     publishRunEvent(runId, {
       kind: "agent.run.completed",
       taskId: params.taskId,
-      success: result.status === "success",
+      success: attemptedResult.status === "success",
       at: new Date().toISOString()
     });
     publishRunEvent(runId, {
       kind: "validation.completed",
       taskId: params.taskId,
-      passed: result.status === "success",
+      passed: attemptedResult.status === "success",
       at: new Date().toISOString()
     });
-    await persistNodeResult(taskGraph, { kind: "leaf", result, worktrees: [worktree] }, traceStore);
-    return { result };
+    await persistNodeResult(taskGraph, { kind: "leaf", result: attemptedResult, worktrees: [worktree] }, traceStore);
+    await transitionAttempt(attempt, "result_persisted", {
+      ...(attemptedResult.commitSha !== undefined ? { commitSha: attemptedResult.commitSha } : {}),
+      nodeDisposition: attemptedResult.disposition ?? attemptedResult.status
+    });
+    return { result: attemptedResult };
   };
 
   const integrateComposite = async (params: {
@@ -334,6 +535,23 @@ export function buildExecutionHost(
     const traceStore = traceStoreFactory();
     const runExecutor = makeRunExecutor(traceStore);
     const selection = repairSelection(current);
+    const prepared = await beginAttempt(
+      current,
+      params.compositeTaskId,
+      "integrator",
+      taskGraph.baseCommit,
+      selection,
+      params.repoPath
+    );
+    let attempt = prepared.attempt;
+    if (prepared.reuse !== undefined || prepared.alreadyCompleted === true) {
+      const existingIntegration = executionResultsFromRun(current).integrationResults.find(
+        (entry) => entry.compositeTaskId === params.compositeTaskId
+      );
+      if (existingIntegration !== undefined) return existingIntegration;
+    }
+    attempt = await transitionAttempt(attempt, "invocation_reserved", {});
+    attempt = await transitionAttempt(attempt, "executor_running", {});
 
     const integrateSignal = getRunAbort(runId)?.signal;
     const nodeResult = await runExecutor.runNode({
@@ -343,6 +561,7 @@ export function buildExecutionHost(
       defaultRepairSelection: selection,
       runId,
       taskId: params.compositeTaskId,
+      attemptId: attempt.attemptId,
       childResults: params.childResults,
       ...(integrateSignal !== undefined ? { signal: integrateSignal } : {}),
       ...(options.predictedConflicts !== undefined ? { predictedConflicts: options.predictedConflicts } : {})
@@ -351,14 +570,22 @@ export function buildExecutionHost(
       throw new Error(`Expected integration result for composite ${params.compositeTaskId}`);
     }
 
-    const result = nodeResult.result;
+    const result = { ...nodeResult.result, attemptId: attempt.attemptId };
+    attempt = await transitionAttempt(attempt, "executor_finished", {});
+    if (result.integrationCommitSha !== undefined) {
+      attempt = await transitionAttempt(attempt, "commit_created", { commitSha: result.integrationCommitSha });
+    }
     publishRunEvent(runId, {
       kind: "agent.run.completed",
       taskId: params.compositeTaskId,
       success: INTEGRATION_SUCCESS.has(result.status),
       at: new Date().toISOString()
     });
-    await persistNodeResult(taskGraph, nodeResult, traceStore);
+    await persistNodeResult(taskGraph, { ...nodeResult, result }, traceStore);
+    await transitionAttempt(attempt, "result_persisted", {
+      ...(result.integrationCommitSha !== undefined ? { commitSha: result.integrationCommitSha } : {}),
+      nodeDisposition: result.status
+    });
     return result;
   };
 
@@ -747,4 +974,8 @@ export async function clearExecutionPause(
 /** Build the Command that resumes a suspended execution graph natively. */
 export function resumeCommand(decision: ResumeDecision): Command {
   return new Command({ resume: decision });
+}
+
+function digest(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
