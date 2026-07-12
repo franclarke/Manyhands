@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { AmendmentsEngine, type RunExecutionResult, computeGranularityVector } from "@manyhands/execution-core";
 import { createInitialRunModel, reduceRunEvents } from "@/lib/run-model/reducer";
@@ -22,6 +23,9 @@ import { processPlanApproval } from "@/lib/server/runs/plan-approval-service";
 import { planningResumeFor } from "@/lib/server/runs/planning-host";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { resetExecutionThread } from "@/lib/server/runs/execution-host";
+import { JsonPlanMutationJournal } from "@/lib/server/runs/plan-mutation-journal";
+import { claimRunOperation, releaseRunOperation, updateRunForOperation } from "@/lib/server/runs/run-operation-lease";
+import { resolveRunsDirectory } from "@/lib/server/runs/repository";
 import { answerExecutionGate } from "@/lib/server/runs/execution-gate-service";
 import { resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
 import {
@@ -224,32 +228,76 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
             totalDurationMs
           })
         };
+        const operationId = `amendment:${run.runId}:${decision.context.amendmentId}:${run.version}`;
+        const journal = new JsonPlanMutationJournal({ directory: `${resolveRunsDirectory()}/plan-mutations` });
+        let operation = await journal.reserve({
+          operationId,
+          runId: run.runId,
+          kind: "amendment",
+          expectedRunVersion: run.version,
+          sourcePlanRevision: run.planRevision ?? 1,
+          targetPlanRevision: (run.planRevision ?? 1) + 1,
+          ...(run.targetContext?.fingerprint !== undefined ? { targetFingerprint: run.targetContext.fingerprint } : {}),
+          graphHash: createHash("sha256").update(JSON.stringify(graph)).digest("hex"),
+          preparedGraph: graph
+        });
+        if (operation.status === "prepared") {
+          operation = await journal.transition(operation.operationId, {
+            expectedVersion: operation.version,
+            status: "graph_prepared"
+          });
+        }
 
-        // Restart the execution thread from scratch; the pipeline seeds the
-        // surviving (non-invalidated) results from the filtered artifact, so
-        // only the invalidated closure re-enters the frontier.
-        await resetExecutionThread(run.runId);
-
-        // Version-CAS (INV-4): `run.version` is the snapshot this amendment was
-        // computed against. A concurrent duplicate approval bumped it with its
-        // own save, so the loser 409s instead of double-seeding the pipeline.
-        let previous: RunRecord | undefined;
-        run = await claimRunMutation(run.runId, { version: run.version }, (current) => {
-          previous = current;
-          return {
+        const claimed = await claimRunOperation(run.runId, "replan", {
+          expectedStatuses: ["running"],
+          operationId,
+          allowTakeover: false
+        });
+        const lease = claimed.lease;
+        run = await updateRunForOperation(run.runId, lease, (current) => {
+          if ((current.planRevision ?? 1) !== operation.sourcePlanRevision) {
+            throw new RunLifecycleError("The plan revision changed while the amendment was being applied.");
+          }
+          const next: RunRecord = {
             ...current,
             execution: updatedExecution,
-            status: "running" as const
+            planRevision: operation.targetPlanRevision,
+            status: "needs_review"
           };
+          delete next.approvedAt;
+          delete next.approvedPlanRevision;
+          delete next.planApprovalOverride;
+          return next;
         });
-        await appendStatusEventOrRollback(requireCapturedRunRecord(previous, run.runId), run, {
+        operation = await journal.transition(operation.operationId, {
+          expectedVersion: operation.version,
+          status: "record_persisted"
+        });
+        await resetExecutionThread(run.runId);
+        operation = await journal.transition(operation.operationId, {
+          expectedVersion: operation.version,
+          status: "checkpoint_reset"
+        });
+        await appendRunEventRequired(run.runId, {
+          actor: "system",
           at: now,
-          actor: "human"
+          type: "decision.raised",
+          payload: {
+            decisionId: `approve_plan:r${operation.targetPlanRevision}`,
+            kind: "approve_plan",
+            blocking: true,
+            context: { nodeIds: Object.keys(graph.nodes) }
+          }
         });
-
-        startRunBackgroundTask(run.runId, "route:decision:amendment-execution", () =>
-          runExecutionPipeline(run.runId)
-        );
+        operation = await journal.transition(operation.operationId, {
+          expectedVersion: operation.version,
+          status: "events_persisted"
+        });
+        operation = await journal.transition(operation.operationId, {
+          expectedVersion: operation.version,
+          status: "completed"
+        });
+        await releaseRunOperation(run.runId, lease);
       }
     }
 

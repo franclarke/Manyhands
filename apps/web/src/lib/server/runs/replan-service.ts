@@ -9,7 +9,7 @@
  * filtered) → reset the execution thread so the wavefront re-enters seeded
  * with only the surviving work.
  */
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   isDecomposerQuestionError,
   runMockPlanningFlow,
@@ -29,7 +29,6 @@ import { publishRunEvent } from "./event-bus";
 import { claimRunMutation } from "./mutation-guard";
 import { assertRunActionAllowed } from "./lifecycle";
 import { resetExecutionThread } from "./execution-host";
-import { runExecutionPipeline } from "./execution-pipeline";
 import {
   executionResultsFromRun,
   integrationDurationMs,
@@ -42,9 +41,12 @@ import { publishRunModelEvent } from "./run-model-event-log";
 import { isRunnerActive, startRunBackgroundTask } from "./runner-state";
 import {
   appendStatusAndRunEventsOrRollback,
-  requireCapturedRunRecord,
-  saveRunWithRequiredStatusEvent
+  requireCapturedRunRecord
 } from "./audited-mutation";
+import { appendRunEventRequired } from "./run-model-event-log";
+import { JsonPlanMutationJournal } from "./plan-mutation-journal";
+import { releaseRunOperation, claimRunOperation, updateRunForOperation } from "./run-operation-lease";
+import { resolveRunsDirectory } from "./repository";
 import type { RunRecord } from "./schema";
 import { getRunRepository } from "./store";
 
@@ -151,6 +153,26 @@ export async function replanSubtree(
   const graft = graftSubtree({ graph, taskId, replacement: planning.decomposition.graph, revision });
   assertExecutableRunGraph(graft.graph);
 
+  const operationId = `replan:${runId}:${taskId}:${run.version}`;
+  const journal = new JsonPlanMutationJournal({ directory: `${resolveRunsDirectory()}/plan-mutations` });
+  let operation = await journal.reserve({
+    operationId,
+    runId,
+    kind: "replan",
+    expectedRunVersion: run.version,
+    sourcePlanRevision: run.planRevision ?? 1,
+    targetPlanRevision: (run.planRevision ?? 1) + 1,
+    ...(run.targetContext?.fingerprint !== undefined ? { targetFingerprint: run.targetContext.fingerprint } : {}),
+    graphHash: createHash("sha256").update(JSON.stringify(graft.graph)).digest("hex"),
+    preparedGraph: graft.graph
+  });
+  if (operation.status === "prepared") {
+    operation = await journal.transition(operation.operationId, {
+      expectedVersion: operation.version,
+      status: "graph_prepared"
+    });
+  }
+
   // Invalidate the closure: worktrees cleaned, results filtered to survivors.
   const provisioned = provisionedFromRecord(run.provisioned);
   const existing = executionResultsFromRun(run);
@@ -199,17 +221,67 @@ export async function replanSubtree(
     })
   };
 
-  // The previous execution thread points at the old graph shape; drop it so
-  // the next start re-enters the wavefront seeded with the survivors.
-  await resetExecutionThread(runId);
-
-  const previous = run;
-  run = await saveRunWithRequiredStatusEvent(previous, {
-    ...run,
-    planning: updatedPlanning,
-    execution: updatedExecution,
-    status: "running"
+  // Publish the graph under an operation lease. The journal is intentionally
+  // advanced only after the CAS succeeds, so restart can distinguish an old
+  // plan from a new plan waiting for checkpoint/event completion.
+  const claimed = await claimRunOperation(runId, "replan", {
+    expectedStatuses: ["running"],
+    operationId,
+    allowTakeover: false
   });
+  const lease = claimed.lease;
+  run = await updateRunForOperation(runId, lease, (current) => {
+    if (current.version !== run.version + 1 || (current.planRevision ?? 1) !== operation.sourcePlanRevision) {
+      throw new RunMutationConflictError(
+        `Replan ${operationId} was prepared for a stale run revision.`,
+        current.status,
+        current.version
+      );
+    }
+    const next: RunRecord = {
+      ...current,
+      planning: updatedPlanning,
+      execution: updatedExecution,
+      planRevision: operation.targetPlanRevision,
+      status: "needs_review"
+    };
+    delete next.approvedAt;
+    delete next.approvedPlanRevision;
+    delete next.planApprovalOverride;
+    return next;
+  });
+  operation = await journal.transition(operation.operationId, {
+    expectedVersion: operation.version,
+    status: "record_persisted"
+  });
+
+  // The old thread describes the old graph. This reset is separately
+  // journaled; a restart can safely repeat the idempotent delete.
+  await resetExecutionThread(runId);
+  operation = await journal.transition(operation.operationId, {
+    expectedVersion: operation.version,
+    status: "checkpoint_reset"
+  });
+
+  await appendRunEventRequired(runId, {
+    actor: "system",
+    type: "decision.raised",
+    payload: {
+      decisionId: `approve_plan:r${operation.targetPlanRevision}`,
+      kind: "approve_plan",
+      blocking: true,
+      context: { nodeIds: Object.keys(graft.graph.nodes) }
+    }
+  });
+  operation = await journal.transition(operation.operationId, {
+    expectedVersion: operation.version,
+    status: "events_persisted"
+  });
+  operation = await journal.transition(operation.operationId, {
+    expectedVersion: operation.version,
+    status: "completed"
+  });
+  await releaseRunOperation(runId, lease);
 
   const now = new Date().toISOString();
   for (const addedId of graft.addedTaskIds) {
@@ -231,7 +303,6 @@ export async function replanSubtree(
     );
   }
 
-  startRunBackgroundTask(runId, "replan:execution", () => runExecutionPipeline(runId));
   return run;
 }
 
