@@ -33,3 +33,28 @@ Commands/results:
 Acceptance covered: repeated valid child cherry-picks are prevented by real commit-graph evidence; the child order is immutable on resume; interrupted Git state is explicitly inspected before new mutation; no external executor is invoked in tests.
 
 Risks/deferred: recovery-center visualization and a broader operator UI remain Phase 4. The existing canonical trace event stream is retained; this task does not create a second event bus.
+
+## B-022 — Safe, explicit and idempotent delivery
+
+Status: completed.
+
+Root cause confirmed: the legacy merge action used whichever branch was currently checked out after only a dirty-tree check. It did not bind the user confirmation to a manifest, target HEAD, target fingerprint, request version or durable receipt.
+
+Design applied: the delivery panel now submits the displayed target branch, HEAD, clean state, manifest/final SHA, target fingerprint, expected run version and a stable idempotency key. `deliverRunBranch` validates all of them under the repository lease, persists a receipt before applying the merge, verifies/adopts an already-reachable final SHA on retry, and persists the completed receipt afterwards. An incomplete legacy merge request is rejected rather than silently using the current branch. Patch export remains a non-mutating artifact path.
+
+Protocol: `prepared receipt -> preflight -> merge -> verified receipt`; branch/HEAD/dirty/fingerprint mismatch is a conflict with no mutation. A completed receipt is returned unchanged for the same idempotency key.
+
+Files modified:
+
+- `apps/web/src/lib/server/runs/delivery.ts`
+- `apps/web/src/app/api/runs/[id]/deliver/route.ts`
+- `apps/web/src/app/runs/[runId]/_components/delivery-panel.client.tsx`
+- `tests/delivery-operation.test.ts`
+- `docs/implementation-progress-phase-3.md`
+
+Tests and commands:
+
+- `corepack pnpm exec vitest run tests/delivery-operation.test.ts tests/deliver-route-guard.test.ts --retry=0 --maxWorkers=1 --minWorkers=1 --silent` — 6/6 passed.
+- `corepack pnpm --filter @manyhands/web exec tsc --noEmit` — passed.
+
+Acceptance covered: delivery mutates only the confirmed branch/HEAD; a receipt survives the side effect boundary; retry does not add a second merge; lifecycle and active-runner guards remain enforced. Deferred: richer receipt history/recovery UI belongs to B-025+.

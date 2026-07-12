@@ -12,8 +12,8 @@ import {
   DeliveryError,
   cleanupRunArtifacts,
   discardRunBranch,
+  deliverRunBranch,
   getDeliveryStatus,
-  mergeRunBranch
 } from "@/lib/server/runs/delivery";
 import { revealInFileExplorer } from "@/lib/server/local-fs";
 import { getWorkspaceRepository } from "@/lib/server/workspaces";
@@ -36,7 +36,15 @@ export async function GET(_request: Request, context: RouteContext): Promise<Nex
 }
 
 const ActionSchema = z.object({
-  action: z.enum(["merge", "discard", "cleanup", "reveal"])
+  action: z.enum(["merge", "discard", "cleanup", "reveal"]),
+  manifestId: z.string().uuid().optional(),
+  finalSha: z.string().min(1).optional(),
+  targetBranch: z.string().min(1).optional(),
+  expectedTargetHead: z.string().min(1).optional(),
+  expectedClean: z.boolean().optional(),
+  targetFingerprint: z.string().min(1).optional(),
+  expectedVersion: z.number().int().nonnegative().optional(),
+  idempotencyKey: z.string().min(8).max(200).optional()
 });
 
 export async function POST(request: Request, context: RouteContext): Promise<NextResponse> {
@@ -71,8 +79,28 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
 
     switch (parsed.data.action) {
       case "merge": {
-        const result = await mergeRunBranch(run);
-        return NextResponse.json({ ok: true, mergedInto: result.mergedInto });
+        if (
+          parsed.data.manifestId !== undefined && parsed.data.finalSha !== undefined && parsed.data.targetBranch !== undefined &&
+          parsed.data.expectedTargetHead !== undefined && parsed.data.expectedClean !== undefined &&
+          parsed.data.targetFingerprint !== undefined && parsed.data.expectedVersion !== undefined && parsed.data.idempotencyKey !== undefined
+        ) {
+          if (parsed.data.expectedVersion !== run.version) {
+            throw new RunLifecycleError("El run cambió desde la confirmación de delivery; refrescá y confirmá de nuevo.");
+          }
+          const receipt = await deliverRunBranch(run, {
+            runId: id, manifestId: parsed.data.manifestId, finalSha: parsed.data.finalSha,
+            targetBranch: parsed.data.targetBranch, expectedTargetHead: parsed.data.expectedTargetHead,
+            expectedClean: parsed.data.expectedClean, targetFingerprint: parsed.data.targetFingerprint,
+            actor: "local_operator", idempotencyKey: parsed.data.idempotencyKey
+          });
+          await getRunRepository().update(id, (current) => ({
+            ...current,
+            deliveryOutcome: "delivered",
+            finalArtifactManifest: current.finalArtifactManifest === undefined ? undefined : { ...current.finalArtifactManifest, deliveryDisposition: "delivered" }
+          }));
+          return NextResponse.json({ ok: true, mergedInto: receipt.targetBranch, receipt });
+        }
+        throw new DeliveryError("La confirmación de delivery está incompleta; refrescá el estado del target y confirmá nuevamente.");
       }
       case "discard": {
         await discardRunBranch(run);

@@ -9,6 +9,8 @@
  * dirty working tree, so it never clobbers uncommitted user work.
  */
 import { execFile } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import path from "node:path";
 
@@ -34,6 +36,7 @@ export interface DeliveryStatus {
   commitSha?: string;
   /** The repo's current branch — the merge target. */
   baseBranch?: string;
+  targetHead?: string;
   filesChanged?: number;
   insertions?: number;
   deletions?: number;
@@ -41,7 +44,41 @@ export interface DeliveryStatus {
   baseClean?: boolean;
   /** The applied commit is already reachable from the base branch. */
   merged?: boolean;
+  manifestId?: string;
+  targetFingerprint?: string;
+  runVersion?: number;
   reason?: string;
+}
+
+export interface DeliveryRequest {
+  runId: string;
+  manifestId: string;
+  finalSha: string;
+  targetBranch: string;
+  expectedTargetHead: string;
+  expectedClean: boolean;
+  targetFingerprint: string;
+  actor: string;
+  idempotencyKey: string;
+}
+
+export interface DeliveryReceipt {
+  deliveryId: string;
+  runId: string;
+  manifestId: string;
+  mode: "merge";
+  targetRepo: string;
+  targetBranch: string;
+  targetHeadBefore: string;
+  targetHeadAfter: string;
+  finalSha: string;
+  patchHash: string;
+  disposition: "delivered" | "conflict" | "failed";
+  actor: string;
+  idempotencyKey: string;
+  createdAt: string;
+  completedAt?: string;
+  error?: string;
 }
 
 async function git(repoRoot: string, args: string[]): Promise<string> {
@@ -83,6 +120,7 @@ export async function getDeliveryStatus(run: RunRecord): Promise<DeliveryStatus>
 
   try {
     const baseBranch = await git(repoPath, ["rev-parse", "--abbrev-ref", "HEAD"]);
+    const targetHead = await git(repoPath, ["rev-parse", "HEAD"]);
     const commitSha = run.finalCommitSha ?? (await git(repoPath, ["rev-parse", branchName]));
     const baseCommit = run.baseCommit ?? `${branchName}^`;
 
@@ -111,9 +149,12 @@ export async function getDeliveryStatus(run: RunRecord): Promise<DeliveryStatus>
       branchName,
       commitSha,
       baseBranch,
+      targetHead,
       ...(stat !== undefined ? stat : {}),
       baseClean,
-      merged
+      merged,
+      ...(run.finalArtifactManifest !== undefined ? { manifestId: run.finalArtifactManifest.manifestId, targetFingerprint: run.finalArtifactManifest.sourceTargetFingerprint } : {}),
+      runVersion: run.version
     };
   } catch (error) {
     return { available: false, reason: describe(error) };
@@ -175,6 +216,62 @@ async function mergeRunBranchLocked(run: RunRecord): Promise<{ mergedInto: strin
     );
   }
 }
+
+/**
+ * Explicit, idempotent delivery. The caller supplies the target branch and
+ * HEAD it showed to the operator; the current branch is never implicit consent.
+ */
+export async function deliverRunBranch(run: RunRecord, request: DeliveryRequest): Promise<DeliveryReceipt> {
+  const target = appliedTarget(run);
+  const manifest = run.finalArtifactManifest;
+  if (target === undefined || manifest === undefined || manifest.artifactDisposition === "failed") {
+    throw new DeliveryError("El run no tiene un artifact final verificable para entregar.");
+  }
+  if (request.runId !== run.runId || request.manifestId !== manifest.manifestId || request.finalSha !== manifest.finalSha) {
+    throw new DeliveryError("La solicitud de delivery no coincide con el artifact final del run.");
+  }
+  if (request.targetFingerprint !== manifest.sourceTargetFingerprint) {
+    throw new DeliveryError("El fingerprint del repositorio confirmado no coincide con el artifact.");
+  }
+  return withRepositoryLease({ repoRoot: target.repoPath, runId: run.runId }, async () => {
+    const receiptPath = path.join(target.repoPath, ".manyhands", "delivery-receipts", `${receiptKey(request.idempotencyKey)}.json`);
+    const prior = await readReceipt(receiptPath);
+    if (prior?.disposition === "delivered") return prior;
+    const branch = await git(target.repoPath, ["rev-parse", "--abbrev-ref", "HEAD"]);
+    const headBefore = await git(target.repoPath, ["rev-parse", "HEAD"]);
+    if (branch !== request.targetBranch || headBefore !== request.expectedTargetHead) {
+      throw new DeliveryError(`El target cambió: se esperaba ${request.targetBranch}@${request.expectedTargetHead}, se encontró ${branch}@${headBefore}.`);
+    }
+    if (!request.expectedClean || (await userDirtCount(target.repoPath)) > 0) {
+      throw new DeliveryError("El working tree no está limpio; delivery no modificó el checkout.");
+    }
+    if (await isAncestor(target.repoPath, manifest.finalSha, "HEAD")) {
+      const adopted = newReceipt(request, target.repoPath, headBefore, headBefore, manifest.patch, "delivered");
+      await writeReceipt(receiptPath, adopted);
+      return adopted;
+    }
+    const prepared = newReceipt(request, target.repoPath, headBefore, headBefore, manifest.patch, "failed");
+    await writeReceipt(receiptPath, prepared);
+    try {
+      await gitVoid(target.repoPath, ["-c", "user.name=ManyHands", "-c", "user.email=manyhands@local", "-c", "commit.gpgsign=false", "merge", "--no-ff", target.branchName, "-m", `mh: deliver run ${run.runId} into ${branch}`]);
+      const receipt = { ...prepared, targetHeadAfter: await git(target.repoPath, ["rev-parse", "HEAD"]), disposition: "delivered" as const, completedAt: new Date().toISOString() };
+      await writeReceipt(receiptPath, receipt);
+      return receipt;
+    } catch (error) {
+      await gitVoid(target.repoPath, ["merge", "--abort"]).catch(() => undefined);
+      const receipt = { ...prepared, disposition: "conflict" as const, error: describe(error), completedAt: new Date().toISOString() };
+      await writeReceipt(receiptPath, receipt);
+      throw new DeliveryError(`El merge tuvo conflictos y se abortó: ${receipt.error}`);
+    }
+  });
+}
+
+function newReceipt(request: DeliveryRequest, targetRepo: string, before: string, after: string, patch: string, disposition: DeliveryReceipt["disposition"]): DeliveryReceipt {
+  return { deliveryId: randomUUID(), runId: request.runId, manifestId: request.manifestId, mode: "merge", targetRepo, targetBranch: request.targetBranch, targetHeadBefore: before, targetHeadAfter: after, finalSha: request.finalSha, patchHash: createHash("sha256").update(patch).digest("hex"), disposition, actor: request.actor, idempotencyKey: request.idempotencyKey, createdAt: new Date().toISOString() };
+}
+function receiptKey(key: string): string { return createHash("sha256").update(key).digest("hex"); }
+async function readReceipt(file: string): Promise<DeliveryReceipt | undefined> { try { return JSON.parse(await readFile(file, "utf8")) as DeliveryReceipt; } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined; throw error; } }
+async function writeReceipt(file: string, receipt: DeliveryReceipt): Promise<void> { await mkdir(path.dirname(file), { recursive: true }); const temp = `${file}.${randomUUID()}.tmp`; await writeFile(temp, JSON.stringify(receipt), "utf8"); await rename(temp, file); }
 
 /** Delete the applied run branch (e.g. after rejecting the result). */
 export async function discardRunBranch(run: RunRecord): Promise<void> {

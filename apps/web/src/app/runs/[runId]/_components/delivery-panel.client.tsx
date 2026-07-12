@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FolderOpen,
   GitMerge,
@@ -20,11 +20,15 @@ interface DeliveryStatus {
   branchName?: string;
   commitSha?: string;
   baseBranch?: string;
+  targetHead?: string;
   filesChanged?: number;
   insertions?: number;
   deletions?: number;
   baseClean?: boolean;
   merged?: boolean;
+  manifestId?: string;
+  targetFingerprint?: string;
+  runVersion?: number;
   reason?: string;
 }
 
@@ -41,6 +45,7 @@ export function DeliveryPanel({ runId }: { runId: string }): React.ReactElement 
   const [busy, setBusy] = useState<Busy>(null);
   const [confirming, setConfirming] = useState<Confirming>(null);
   const [message, setMessage] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+  const deliveryKey = useRef<string | undefined>(undefined);
 
   async function refresh(): Promise<void> {
     try {
@@ -63,7 +68,17 @@ export function DeliveryPanel({ runId }: { runId: string }): React.ReactElement 
       const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/deliver`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action })
+        body: JSON.stringify(action === "merge" ? {
+          action,
+          manifestId: status?.manifestId,
+          finalSha: status?.commitSha,
+          targetBranch: status?.baseBranch,
+          expectedTargetHead: status?.targetHead,
+          expectedClean: status?.baseClean,
+          targetFingerprint: status?.targetFingerprint,
+          expectedVersion: status?.runVersion,
+          idempotencyKey: deliveryKey.current ?? (deliveryKey.current = crypto.randomUUID())
+        } : { action })
       });
       const payload = (await response.json().catch(() => ({}))) as { error?: string; mergedInto?: string; removedBranches?: number };
       if (!response.ok) throw new Error(payload.error ?? `Error ${response.status}`);
