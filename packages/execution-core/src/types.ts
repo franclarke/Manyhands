@@ -340,6 +340,12 @@ export const ExecutionConfigSchema = z.object({
   scopePolicy: ScopePolicySchema.default("advisory"),
   leafTimeoutMs: z.number().int().positive().default(300_000),
   integrationTimeoutMs: z.number().int().positive().default(600_000),
+  /** Maximum diagnostic bytes retained per supervised subprocess stream. */
+  maxOutputBytes: z.number().int().positive().default(65_536),
+  /** Upper bound for declared validation commands at each validation boundary. */
+  maxValidationCommands: z.number().int().positive().default(20),
+  /** Dependency-install deadline, kept explicit alongside executor/validation timeouts. */
+  installTimeoutMs: z.number().int().positive().default(300_000),
   reasoningEffort: z.enum(["low", "medium", "high", "xhigh"]).optional(),
   unexpectedCommitPolicy: UnexpectedCommitPolicySchema.default("reject"),
   /**

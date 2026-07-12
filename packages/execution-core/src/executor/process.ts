@@ -1,5 +1,7 @@
 import { basename } from "node:path";
 
+import { BoundedOutput } from "./bounded-output";
+
 import { execError, execLog, execWarn } from "../logging/log";
 import type { ExecutorOutputChunk } from "../types";
 import { buildAgentEnvironment } from "./agent-env";
@@ -143,8 +145,8 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
       child.once("close", () => unregisterLiveProcess(processOwnerId, child));
     }
 
-    let stdout = "";
-    let stderr = "";
+    const stdout = new BoundedOutput();
+    const stderr = new BoundedOutput();
     let settled = false;
 
     const finish = (outcome: ExecutorRunOutcome): void => {
@@ -161,8 +163,8 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
       killProcessTree(child, spawnFn);
       finish({
         exitCode: ABORTED_EXIT_CODE,
-        stdout,
-        stderr: `${stderr}${stderr ? "\n" : ""}aborted by orchestrator`,
+        stdout: stdout.text(),
+        stderr: `${stderr.text()}${stderr.text() ? "\n" : ""}aborted by orchestrator`,
         timedOut: false,
         durationMs: Date.now() - start,
         commandLine
@@ -175,14 +177,14 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
           task,
           timeoutMs,
           durationMs: Date.now() - start,
-          stderrTail: stderr
+          stderrTail: stderr.text()
         });
       }
       killProcessTree(child, spawnFn);
       finish({
         exitCode: TIMEOUT_EXIT_CODE,
-        stdout,
-        stderr,
+        stdout: stdout.text(),
+        stderr: stderr.text(),
         timedOut: true,
         durationMs: Date.now() - start,
         commandLine
@@ -193,12 +195,12 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
 
     child.stdout?.on("data", (chunk: Buffer) => {
       const text = chunk.toString("utf8");
-      stdout += text;
+      stdout.append(text);
       onOutput?.({ stream: "stdout", chunk: text });
     });
     child.stderr?.on("data", (chunk: Buffer) => {
       const text = chunk.toString("utf8");
-      stderr += text;
+      stderr.append(text);
       onOutput?.({ stream: "stderr", chunk: text });
     });
 
@@ -216,8 +218,8 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
       }
       finish({
         exitCode: SPAWN_FAILURE_EXIT_CODE,
-        stdout,
-        stderr: stderr + (stderr ? "\n" : "") + error.message,
+        stdout: stdout.text(),
+        stderr: `${stderr.text()}${stderr.text() ? "\n" : ""}${error.message}`,
         timedOut: false,
         durationMs: Date.now() - start,
         commandLine
@@ -236,14 +238,14 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
             task,
             exitCode: code ?? SPAWN_FAILURE_EXIT_CODE,
             durationMs,
-            stderrTail: stderr
+            stderrTail: stderr.text()
           });
         }
       }
       finish({
         exitCode: code ?? SPAWN_FAILURE_EXIT_CODE,
-        stdout,
-        stderr,
+        stdout: stdout.text(),
+        stderr: stderr.text(),
         timedOut: false,
         durationMs: Date.now() - start,
         commandLine
@@ -269,8 +271,8 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
         killProcessTree(child, spawnFn);
         finish({
           exitCode: SPAWN_FAILURE_EXIT_CODE,
-          stdout,
-          stderr: `${stderr}${stderr ? "\n" : ""}failed to read instructions: ${error.message}`,
+          stdout: stdout.text(),
+          stderr: `${stderr.text()}${stderr.text() ? "\n" : ""}failed to read instructions: ${error.message}`,
           timedOut: false,
           durationMs: Date.now() - start,
           commandLine

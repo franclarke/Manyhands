@@ -99,7 +99,6 @@ import { resolveRunsDirectory } from "./repository";
 import {
     JsonTaskAttemptJournal,
     TASK_ATTEMPT_EVENT_TYPES,
-    type TaskAttempt,
     type TaskAttemptState
 } from "./task-attempt-journal";
 import type { RunEventType } from "@/lib/run-model/types";
@@ -814,7 +813,6 @@ export async function resumeExecutionPipeline(
       allowTakeover: true
     });
     lease = claimed.lease;
-    const operationLease = lease;
     stopHeartbeat = startHeartbeat(runId, lease);
     const run = claimed.run;
     assertExecutableRunGraph(resolveExecutionGraph(run));

@@ -11,6 +11,7 @@ export * from "./executor/mock";
 export * from "./executor/registry";
 export * from "./executor/binary";
 export * from "./executor/factory";
+export * from "./executor/bounded-output";
 export * from "./executor/cli-executor";
 export * from "./executor/agent-env";
 export * from "./executor/process";
