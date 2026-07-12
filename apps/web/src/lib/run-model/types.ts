@@ -997,6 +997,10 @@ export type RunEventTypeV2 = (typeof RUN_EVENT_TYPES_V2)[number];
 export interface RunEvent {
   /** Durable event identity; legacy projected events may omit it. */
   eventId?: string;
+  /** B-018 durable JSONL envelope version; absent means a legacy flat record. */
+  schemaVersion?: number;
+  /** SHA-256 over the durable envelope fields; absent means a legacy flat record. */
+  checksum?: string;
   seq: number;
   at: IsoTimestamp;
   runId: RunId;

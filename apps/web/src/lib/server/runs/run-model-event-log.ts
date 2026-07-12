@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
-import { appendFile, mkdir, readFile, stat } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Actor, RunEvent, RunEventPayloads, RunEventType } from "@/lib/run-model/types";
 import type { RunRecord } from "./schema";
@@ -10,6 +10,8 @@ import { publishRunModelBusEvent } from "./run-model-event-bus";
 import { globalSingleton } from "../global-singleton";
 
 export type RunModelEventInput<K extends RunEventType = RunEventType> = {
+  /** Stable producer identity: retries return the existing durable event. */
+  eventId?: string;
   at?: string;
   actor: Actor;
   type: K;
@@ -24,16 +26,21 @@ const writeChains = globalSingleton(
 );
 
 export async function readRunModelEvents(runId: string): Promise<RunEvent[]> {
-  const filePath = filePathFor(runId);
+  return (await inspectRunModelEventLog(runId)).events;
+}
+
+export interface RunModelEventLogInspection {
+  events: RunEvent[];
+  /** `degraded` is a repairable trailing partial line; `corrupt` is a real invalid record. */
+  status: "ok" | "degraded" | "corrupt";
+  reason?: string;
+}
+
+export async function inspectRunModelEventLog(runId: string): Promise<RunModelEventLogInspection> {
   try {
-    const raw = await readFile(filePath, "utf8");
-    return raw
-      .split(/\r?\n/)
-      .filter((line) => line.trim().length > 0)
-      .map((line) => JSON.parse(line) as RunEvent)
-      .sort((left, right) => left.seq - right.seq);
+    return inspectRawLog(runId, await readFile(filePathFor(runId), "utf8"));
   } catch (error) {
-    if (isErrno(error) && error.code === "ENOENT") return [];
+    if (isErrno(error) && error.code === "ENOENT") return { events: [], status: "ok" };
     throw error;
   }
 }
@@ -46,38 +53,40 @@ export async function ensureRunModelEventLogForRun(run: RunRecord): Promise<RunE
   if (projected.length === 0) return [];
 
   return withLock(run.runId, async () => {
-    const current = await readRunModelEvents(run.runId);
-    if (current.length > 0) return current;
-    await mkdir(resolveRunsDirectory(), { recursive: true });
-    const body = projected.map((event) => JSON.stringify(event)).join("\n") + "\n";
-    await appendFile(filePathFor(run.runId), body, "utf8");
-    return projected;
+    const current = await inspectRunModelEventLog(run.runId);
+    if (current.events.length > 0) return current.events;
+    return appendInputsLocked(
+      run.runId,
+      projected.map((event) => ({ actor: event.actor, at: event.at, type: event.type as RunEventType, payload: event.payload }))
+    );
   });
 }
 
 async function reconcileExistingRunModelEventLog(run: RunRecord, existing: RunEvent[]): Promise<RunEvent[]> {
-  if (!needsApprovalResolutionEvent(run, existing)) return existing;
+  if (requiredInputsForRun(run, existing).length === 0) return existing;
 
   return withLock(run.runId, async () => {
     const current = await readRunModelEvents(run.runId);
-    if (!needsApprovalResolutionEvent(run, current)) return current;
-
-    const event: RunEvent = {
-      seq: (current.at(-1)?.seq ?? 0) + 1,
-      at: run.approvedAt ?? run.updatedAt,
-      runId: run.runId,
-      actor: "human",
-      type: "decision.resolved",
-      payload: {
-        decisionId: "approve_plan",
-        choice: { action: "approve" },
-        actor: "human"
-      }
-    };
-    await appendFile(filePathFor(run.runId), `${JSON.stringify(event)}\n`, "utf8");
-    publishRunModelBusEvent(run.runId, event);
-    return [...current, event];
+    const required = requiredInputsForRun(run, current);
+    if (required.length === 0) return current;
+    const appended = await appendInputsLocked(run.runId, required);
+    return [...current, ...appended.filter((event) => !current.some((existing) => existing.eventId === event.eventId))];
   });
+}
+
+/** B-018 recovery outbox: durable RunRecord facts repair their required projection once. */
+function requiredInputsForRun(run: RunRecord, events: RunEvent[]): RunModelEventInput[] {
+  const required: RunModelEventInput[] = [];
+  if (needsApprovalResolutionEvent(run, events)) {
+    required.push({
+      eventId: `legacy-approval-resolution:${run.runId}:${run.approvedAt ?? run.updatedAt}`,
+      actor: "human",
+      at: run.approvedAt ?? run.updatedAt,
+      type: "decision.resolved",
+      payload: { decisionId: "approve_plan", choice: { action: "approve" }, actor: "human" }
+    });
+  }
+  return required;
 }
 
 function needsApprovalResolutionEvent(run: RunRecord, events: RunEvent[]): boolean {
@@ -99,22 +108,7 @@ export async function appendRunModelEvent<K extends RunEventType>(
   runId: string,
   input: RunModelEventInput<K>
 ): Promise<RunEvent> {
-  return withLock(runId, async () => {
-    await mkdir(resolveRunsDirectory(), { recursive: true });
-    const currentSeq = await lastSeq(runId);
-    const event: RunEvent = {
-      eventId: randomUUID(),
-      seq: currentSeq + 1,
-      at: input.at ?? new Date().toISOString(),
-      runId,
-      actor: input.actor,
-      type: input.type,
-      payload: input.payload as Record<string, unknown>
-    };
-    await appendFile(filePathFor(runId), `${JSON.stringify(event)}\n`, "utf8");
-    publishRunModelBusEvent(runId, event);
-    return event;
-  });
+  return withLock(runId, async () => (await appendInputsLocked(runId, [input]))[0]!);
 }
 
 export async function appendRunEventsRequired(
@@ -122,24 +116,7 @@ export async function appendRunEventsRequired(
   inputs: readonly RunModelEventInput[]
 ): Promise<RunEvent[]> {
   if (inputs.length === 0) return [];
-  return withLock(runId, async () => {
-    await mkdir(resolveRunsDirectory(), { recursive: true });
-    const currentSeq = await lastSeq(runId);
-    const events = inputs.map((input, index): RunEvent => ({
-      eventId: randomUUID(),
-      seq: currentSeq + index + 1,
-      at: input.at ?? new Date().toISOString(),
-      runId,
-      actor: input.actor,
-      type: input.type,
-      payload: input.payload as Record<string, unknown>
-    }));
-    await appendFile(filePathFor(runId), events.map((event) => JSON.stringify(event)).join("\n") + "\n", "utf8");
-    for (const event of events) {
-      publishRunModelBusEvent(runId, event);
-    }
-    return events;
-  });
+  return withLock(runId, async () => appendInputsLocked(runId, inputs));
 }
 
 /**
@@ -154,21 +131,9 @@ export async function appendRunEventRequiredWithSeq<K extends RunEventType>(
   build: (seq: number) => RunModelEventInput<K>
 ): Promise<RunEvent> {
   return withLock(runId, async () => {
-    await mkdir(resolveRunsDirectory(), { recursive: true });
-    const seq = (await lastSeq(runId)) + 1;
-    const input = build(seq);
-    const event: RunEvent = {
-      eventId: randomUUID(),
-      seq,
-      at: input.at ?? new Date().toISOString(),
-      runId,
-      actor: input.actor,
-      type: input.type,
-      payload: input.payload as Record<string, unknown>
-    };
-    await appendFile(filePathFor(runId), `${JSON.stringify(event)}\n`, "utf8");
-    publishRunModelBusEvent(runId, event);
-    return event;
+    const inspection = await inspectRunModelEventLog(runId);
+    if (inspection.status === "corrupt") throw new Error(`Run event log ${runId} is corrupt: ${inspection.reason ?? "unknown"}`);
+    return (await appendInputsLocked(runId, [build((inspection.events.at(-1)?.seq ?? 0) + 1)]))[0]!;
   });
 }
 
@@ -283,9 +248,149 @@ function minimalRunEvents(run: RunRecord): RunEvent[] {
   return events;
 }
 
-async function lastSeq(runId: string): Promise<number> {
-  const events = await readRunModelEvents(runId);
-  return events.at(-1)?.seq ?? 0;
+type DurableRunEvent = RunEvent & { schemaVersion: 1; eventId: string; checksum: string };
+
+async function appendInputsLocked(runId: string, inputs: readonly RunModelEventInput[]): Promise<RunEvent[]> {
+  const inspection = await inspectWritableRunModelEventLog(runId);
+  if (inspection.status === "corrupt") {
+    throw new Error(`Run event log ${runId} is corrupt: ${inspection.reason ?? "unknown corruption"}`);
+  }
+
+  const byId = new Map(
+    inspection.events
+      .filter((event): event is RunEvent & { eventId: string } => event.eventId !== undefined)
+      .map((event) => [event.eventId, event])
+  );
+  let seq = inspection.events.at(-1)?.seq ?? 0;
+  const appended: RunEvent[] = [];
+  const newLines: string[] = [];
+  for (const input of inputs) {
+    const eventId = input.eventId ?? randomUUID();
+    const existing = byId.get(eventId);
+    if (existing !== undefined) {
+      appended.push(existing);
+      continue;
+    }
+    const event: DurableRunEvent = {
+      schemaVersion: 1,
+      eventId,
+      seq: ++seq,
+      at: input.at ?? new Date().toISOString(),
+      runId,
+      actor: input.actor,
+      type: input.type,
+      payload: input.payload as Record<string, unknown>,
+      checksum: ""
+    };
+    event.checksum = checksumFor(event);
+    byId.set(eventId, event);
+    appended.push(event);
+    newLines.push(JSON.stringify(event));
+  }
+
+  if (newLines.length > 0 || inspection.status === "degraded") {
+    await atomicWriteEventLog(runId, [...inspection.validLines, ...newLines]);
+  }
+  for (const event of appended) {
+    if (!inspection.events.some((existing) => existing.eventId === event.eventId)) {
+      publishRunModelBusEvent(runId, event);
+    }
+  }
+  return appended;
+}
+
+async function inspectWritableRunModelEventLog(
+  runId: string
+): Promise<RunModelEventLogInspection & { validLines: string[] }> {
+  try {
+    return inspectRawLog(runId, await readFile(filePathFor(runId), "utf8"));
+  } catch (error) {
+    if (isErrno(error) && error.code === "ENOENT") return { events: [], validLines: [], status: "ok" };
+    throw error;
+  }
+}
+
+function inspectRawLog(runId: string, raw: string): RunModelEventLogInspection & { validLines: string[] } {
+  const lines = raw.split(/\r?\n/);
+  const validLines: string[] = [];
+  const events: RunEvent[] = [];
+  const eventIds = new Set<string>();
+  let expectedSeq = 1;
+  const lastNonEmpty = lines.reduce((last, line, index) => (line.trim().length > 0 ? index : last), -1);
+
+  for (let index = 0; index <= lastNonEmpty; index += 1) {
+    const line = lines[index]!;
+    if (line.trim().length === 0) continue;
+    let event: RunEvent;
+    try {
+      event = JSON.parse(line) as RunEvent;
+    } catch {
+      if (index === lastNonEmpty && !raw.endsWith("\n")) {
+        return { events, validLines, status: "degraded", reason: "trailing partial JSONL line" };
+      }
+      return { events, validLines, status: "corrupt", reason: `invalid JSON at line ${index + 1}` };
+    }
+    if (!isEventShape(event, runId)) {
+      return { events, validLines, status: "corrupt", reason: `invalid envelope at line ${index + 1}` };
+    }
+    const durable = event as Partial<DurableRunEvent>;
+    if (durable.schemaVersion !== undefined) {
+      if (durable.schemaVersion !== 1 || typeof durable.eventId !== "string" || typeof durable.checksum !== "string") {
+        return { events, validLines, status: "corrupt", reason: `invalid durable envelope at line ${index + 1}` };
+      }
+      if (durable.checksum !== checksumFor(durable as DurableRunEvent)) {
+        return { events, validLines, status: "corrupt", reason: `checksum mismatch at line ${index + 1}` };
+      }
+    }
+    if (event.seq !== expectedSeq) {
+      return { events, validLines, status: "corrupt", reason: `non-monotonic seq at line ${index + 1}` };
+    }
+    expectedSeq += 1;
+    if (event.eventId !== undefined && eventIds.has(event.eventId)) {
+      return { events, validLines, status: "corrupt", reason: `duplicate eventId at line ${index + 1}` };
+    }
+    if (event.eventId !== undefined) eventIds.add(event.eventId);
+    validLines.push(line);
+    events.push(event);
+  }
+  return { events, validLines, status: "ok" };
+}
+
+function isEventShape(event: RunEvent, runId: string): boolean {
+  return (
+    typeof event === "object" &&
+    event !== null &&
+    event.runId === runId &&
+    Number.isInteger(event.seq) &&
+    event.seq > 0 &&
+    typeof event.at === "string" &&
+    typeof event.actor === "string" &&
+    typeof event.type === "string" &&
+    typeof event.payload === "object" &&
+    event.payload !== null
+  );
+}
+
+function checksumFor(event: DurableRunEvent): string {
+  const content = JSON.stringify({
+    schemaVersion: event.schemaVersion,
+    eventId: event.eventId,
+    seq: event.seq,
+    at: event.at,
+    runId: event.runId,
+    actor: event.actor,
+    type: event.type,
+    payload: event.payload
+  });
+  return createHash("sha256").update(content).digest("hex");
+}
+
+async function atomicWriteEventLog(runId: string, lines: readonly string[]): Promise<void> {
+  const file = filePathFor(runId);
+  await mkdir(path.dirname(file), { recursive: true });
+  const temporary = `${file}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
+  await writeFile(temporary, lines.length === 0 ? "" : `${lines.join("\n")}\n`, "utf8");
+  await rename(temporary, file);
 }
 
 function filePathFor(runId: string): string {
@@ -298,9 +403,37 @@ function safeFileName(runId: string): string {
 
 function withLock<T>(runId: string, fn: () => Promise<T>): Promise<T> {
   const previous = writeChains.get(runId) ?? Promise.resolve();
-  const next = previous.then(fn, fn);
+  const next = previous.then(() => withFilesystemLock(runId, fn), () => withFilesystemLock(runId, fn));
   writeChains.set(runId, next.catch(() => undefined));
   return next;
+}
+
+async function withFilesystemLock<T>(runId: string, fn: () => Promise<T>): Promise<T> {
+  const locks = path.join(resolveRunsDirectory(), ".event-locks");
+  const lock = path.join(locks, safeFileName(runId));
+  await mkdir(locks, { recursive: true });
+  const deadline = Date.now() + 15_000;
+  while (true) {
+    try {
+      await mkdir(lock);
+      await writeFile(path.join(lock, "owner"), `${process.pid}\n${Date.now()}`, "utf8");
+      break;
+    } catch (error) {
+      if (!isErrno(error) || error.code !== "EEXIST") throw error;
+      const info = await stat(lock).catch(() => undefined);
+      if (info !== undefined && Date.now() - info.mtimeMs > 30_000) {
+        await rm(lock, { recursive: true, force: true });
+        continue;
+      }
+      if (Date.now() >= deadline) throw new Error(`Timed out locking event log for ${runId}.`);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
+  try {
+    return await fn();
+  } finally {
+    await rm(lock, { recursive: true, force: true });
+  }
 }
 
 interface NodeErrnoException {
