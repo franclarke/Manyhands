@@ -8,6 +8,7 @@ import type { TaskGraph } from "@manyhands/task-graph";
 import { resolveManyhandsPath } from "../repo-root";
 import { rmWithRetry } from "./fs-retry";
 import { superviseWithAmbientContext, supervisedExecFile } from "./process-supervision";
+import { withRepositoryLease } from "./repo-lock";
 import type { ProvisionedRepo } from "./repo-provisioner";
 import type { FinalArtifactManifest } from "./schema";
 
@@ -72,7 +73,7 @@ export function buildRunBranchName(runId: string, slug: string): string {
  * failure it degrades to exporting the patch or recording a `failed` status,
  * never an opaque mid-run crash.
  */
-export async function applyFinalPatch(input: {
+export interface ApplyFinalPatchInput {
   graph: TaskGraph;
   result: RunExecutionResult;
   provisioned: ProvisionedRepo;
@@ -80,7 +81,19 @@ export async function applyFinalPatch(input: {
   /** Free text (run title / prompt) used to make the branch name readable. */
   slug: string;
   sourceTargetFingerprint?: string;
-}): Promise<FinalApplicationRecord | undefined> {
+  /** Caller already holds the exact run-repository lease (execution pipeline). */
+  repositoryLeaseHeld?: boolean;
+}
+
+export async function applyFinalPatch(input: ApplyFinalPatchInput): Promise<FinalApplicationRecord | undefined> {
+  if (input.repositoryLeaseHeld === true) return applyFinalPatchLocked(input);
+  return withRepositoryLease(
+    { repoRoot: input.provisioned.repoRoot, runId: input.runId },
+    () => applyFinalPatchLocked(input)
+  );
+}
+
+async function applyFinalPatchLocked(input: ApplyFinalPatchInput): Promise<FinalApplicationRecord | undefined> {
   const integrationCommitSha = resolveFinalCommit(input.graph, input.result);
   if (integrationCommitSha === undefined) {
     return undefined;

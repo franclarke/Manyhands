@@ -17,6 +17,7 @@ import { executionResultsFromRun, reconcileInvalidationClosure, resolveExecution
 import { resetExecutionThread } from "./execution-host";
 import { getRunRepository } from "./store";
 import { JsonTaskAttemptJournal } from "./task-attempt-journal";
+import { withRepositoryLease } from "./repo-lock";
 import type { ProvisionedRepo } from "./repo-provisioner";
 import type { RunRecord } from "./schema";
 
@@ -44,6 +45,15 @@ export interface WorldReconcileOutcome {
  * to resume, or throws RunNotResumableError when the base commit vanished.
  */
 export async function reconcileExecutionWorld(
+  run: RunRecord,
+  provisioned: ProvisionedRepo
+): Promise<WorldReconcileOutcome> {
+  return withRepositoryLease({ repoRoot: provisioned.repoRoot, runId: run.runId }, () =>
+    reconcileExecutionWorldLocked(run, provisioned)
+  );
+}
+
+async function reconcileExecutionWorldLocked(
   run: RunRecord,
   provisioned: ProvisionedRepo
 ): Promise<WorldReconcileOutcome> {

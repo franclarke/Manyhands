@@ -74,6 +74,42 @@ export interface RepoLease {
   acquiredAt: string;
 }
 
+/**
+ * B-019 common wrapper for a bounded Git mutation. It resolves/acquires the
+ * same common-dir lease used by runners, keeps it alive, fences before and
+ * after the mutation, and only releases its own capability.
+ */
+export async function withRepositoryLease<T>(
+  input: { repoRoot: string; runId: string },
+  operation: (lease: RepoLease) => Promise<T>
+): Promise<T> {
+  const claimed = await acquireRepoLock(input.repoRoot, input.runId);
+  if (!claimed.acquired) {
+    throw new RepoLeaseLostError(
+      {
+        repoRoot: input.repoRoot,
+        lockDir: "",
+        runId: input.runId,
+        pid: process.pid,
+        token: "",
+        generation: 0,
+        acquiredAt: new Date().toISOString()
+      },
+      `repository is owned by run ${claimed.owner.runId}`
+    );
+  }
+  const stopHeartbeat = startRepoLeaseHeartbeat(claimed.lease);
+  try {
+    await assertRepoLeaseCurrent(claimed.lease);
+    const result = await operation(claimed.lease);
+    await assertRepoLeaseCurrent(claimed.lease);
+    return result;
+  } finally {
+    stopHeartbeat();
+    await releaseRepoLease(claimed.lease).catch(() => undefined);
+  }
+}
+
 export type RepoLockResult =
   | { acquired: true; stolen: boolean; lease: RepoLease }
   | { acquired: false; owner: RepoLockOwner };

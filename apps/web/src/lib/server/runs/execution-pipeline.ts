@@ -370,6 +370,17 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       stopRepoHeartbeat = startRepoLeaseHeartbeat(repoLease);
     }
 
+    // Provisioning only reads the captured source. All subsequent worktree,
+    // commit, integration and final-apply mutations target the isolated run
+    // repository, therefore must be fenced by that repository's common-dir
+    // lease rather than the source checkout's lease.
+    if (provisioned !== undefined && repoLease?.repoRoot !== provisioned.repoRoot) {
+      stopRepoHeartbeat?.();
+      if (repoLease !== undefined) await releaseRepoLease(repoLease);
+      repoLease = await claimRepoOrThrow(provisioned.repoRoot, runId);
+      stopRepoHeartbeat = startRepoLeaseHeartbeat(repoLease);
+    }
+
     if (await executionWasInterrupted(runId, abortController.signal)) {
       console.log(`[Runner] Execution pipeline stopped before preflight; run ${runId} is interrupted.`);
       return;
@@ -399,12 +410,14 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       // Cooperative cancellation check
       const afterEngine = await getRunRepository().get(runId);
       if (isInterrupted(afterEngine, abortController.signal) || afterEngine.status === "cancelling") {
+        if (afterEngine.status === "cancelling") await waitForCancellationSettlement(runId);
         console.log(`[Runner] Run ${runId} cancelled after engine returned; discarding stale engine result.`);
         return;
       }
       await waitWhilePlainPaused(runId, "running", abortController.signal);
       const afterPause = await getRunRepository().get(runId);
       if (isInterrupted(afterPause, abortController.signal) || afterPause.status === "cancelling") {
+        if (afterPause.status === "cancelling") await waitForCancellationSettlement(runId);
         console.log(`[Runner] Run ${runId} cancelled after pause hold; keeping partial execution.`);
         return;
       }
@@ -429,6 +442,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
                 },
                 () => applyFinalPatch({
                   graph, result, provisioned: provisioned!, runId, slug: run.title,
+                  repositoryLeaseHeld: repoLease !== undefined,
                   ...(run.targetContext?.fingerprint !== undefined
                     ? { sourceTargetFingerprint: run.targetContext.fingerprint }
                     : {})
@@ -763,6 +777,17 @@ function isInterrupted(run: RunRecord, signal: AbortSignal): boolean {
   return signal.aborted || run.status === "interrupted";
 }
 
+/** The watchdog owns terminal cancellation; do not release pipeline leases while it is still persisting allDead/audit. */
+async function waitForCancellationSettlement(runId: string): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    const current = await getRunRepository().get(runId);
+    if (current.status !== "cancelling") return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new RunLifecycleError(`Cancellation for run ${runId} did not settle within 30 seconds.`);
+}
+
 /**
  * Resume a paused execution natively: delivers the human gate decision to
  * the suspended LangGraph thread via Command({ resume }) - no checkpoint
@@ -911,6 +936,7 @@ async function settleExecutionOutcome(
                 provisioned,
                 runId,
                 slug: currentRun.title,
+                repositoryLeaseHeld: repoLease !== undefined,
                 ...(currentRun.targetContext?.fingerprint !== undefined
                   ? { sourceTargetFingerprint: currentRun.targetContext.fingerprint }
                   : {})
@@ -1146,6 +1172,13 @@ export async function runNodeExecutionPipeline(
           provisionedAt: new Date().toISOString()
         }
       }));
+    }
+
+    if (provisioned !== undefined && repoLease?.repoRoot !== provisioned.repoRoot) {
+      stopRepoHeartbeat?.();
+      if (repoLease !== undefined) await releaseRepoLease(repoLease);
+      repoLease = await claimRepoOrThrow(provisioned.repoRoot, runId);
+      stopRepoHeartbeat = startRepoLeaseHeartbeat(repoLease);
     }
 
     console.log(`[Runner] Node preflight start run=${runId} task=${taskId}`);

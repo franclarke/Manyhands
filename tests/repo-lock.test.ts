@@ -10,7 +10,7 @@ import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { acquireRepoLock, readRepoLock, releaseRepoLease } from "@/lib/server/runs/repo-lock";
+import { acquireRepoLock, readRepoLock, releaseRepoLease, withRepositoryLease } from "@/lib/server/runs/repo-lock";
 import { PreflightError, runPreflight } from "@/lib/server/runs/preflight";
 
 let repoRoot: string;
@@ -27,6 +27,24 @@ const liveOwner = async (): Promise<boolean> => true;
 const deadOwner = async (): Promise<boolean> => false;
 
 describe("repo lock", () => {
+  it("withRepositoryLease fences a competing Git mutation until the owner releases", async () => {
+    let release!: () => void;
+    let entered!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    const started = new Promise<void>((resolve) => { entered = resolve; });
+    const first = withRepositoryLease({ repoRoot, runId: "run-a" }, async () => {
+      entered();
+      await held;
+    });
+    await started;
+    await expect(withRepositoryLease({ repoRoot, runId: "run-b" }, async () => undefined)).rejects.toThrow(
+      /owned by run run-a/i
+    );
+    release();
+    await first;
+    await expect(withRepositoryLease({ repoRoot, runId: "run-b" }, async () => "mutated")).resolves.toBe("mutated");
+  });
+
   it("of N concurrent acquirers exactly one wins", async () => {
     const results = await Promise.all(
       Array.from({ length: 5 }, (_, i) => acquireRepoLock(repoRoot, `run-${i}`, { ownerIsLive: liveOwner }))

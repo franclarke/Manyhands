@@ -13,6 +13,7 @@ import { promisify } from "node:util";
 import path from "node:path";
 
 import { rmWithRetry } from "./fs-retry";
+import { withRepositoryLease } from "./repo-lock";
 import type { RunRecord } from "./schema";
 
 const execFileAsync = promisify(execFile);
@@ -134,6 +135,14 @@ export async function mergeRunBranch(run: RunRecord): Promise<{ mergedInto: stri
   if (target === undefined) {
     throw new DeliveryError("El run no dejó una rama aplicada para mergear.");
   }
+  return withRepositoryLease({ repoRoot: target.repoPath, runId: run.runId }, () => mergeRunBranchLocked(run));
+}
+
+async function mergeRunBranchLocked(run: RunRecord): Promise<{ mergedInto: string }> {
+  const target = appliedTarget(run);
+  if (target === undefined) {
+    throw new DeliveryError("El run no dejó una rama aplicada para mergear.");
+  }
   const { repoPath, branchName } = target;
 
   if ((await userDirtCount(repoPath)) > 0) {
@@ -173,6 +182,14 @@ export async function discardRunBranch(run: RunRecord): Promise<void> {
   if (target === undefined) {
     throw new DeliveryError("El run no tiene una rama aplicada para descartar.");
   }
+  await withRepositoryLease({ repoRoot: target.repoPath, runId: run.runId }, () => discardRunBranchLocked(run));
+}
+
+async function discardRunBranchLocked(run: RunRecord): Promise<void> {
+  const target = appliedTarget(run);
+  if (target === undefined) {
+    throw new DeliveryError("El run no tiene una rama aplicada para descartar.");
+  }
   try {
     await gitVoid(target.repoPath, ["branch", "-D", target.branchName]);
   } catch (error) {
@@ -190,6 +207,14 @@ export interface CleanupResult {
  * behind. The final `manyhands/run-*` branch is preserved (use discard for it).
  */
 export async function cleanupRunArtifacts(run: RunRecord): Promise<CleanupResult> {
+  const repoPath = run.appliedToRepoPath;
+  if (repoPath === undefined) {
+    throw new DeliveryError("El run no tiene un repo asociado para limpiar.");
+  }
+  return withRepositoryLease({ repoRoot: repoPath, runId: run.runId }, () => cleanupRunArtifactsLocked(run));
+}
+
+async function cleanupRunArtifactsLocked(run: RunRecord): Promise<CleanupResult> {
   const repoPath = run.appliedToRepoPath;
   if (repoPath === undefined) {
     throw new DeliveryError("El run no tiene un repo asociado para limpiar.");
