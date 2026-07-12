@@ -432,8 +432,25 @@ async function withFilesystemLock<T>(runId: string, fn: () => Promise<T>): Promi
   try {
     return await fn();
   } finally {
-    await rm(lock, { recursive: true, force: true });
+    await removeEventLock(lock);
   }
+}
+
+/** Windows can hold a directory handle briefly after owner write/rename. */
+async function removeEventLock(lock: string): Promise<void> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await rm(lock, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      lastError = error;
+      const code = isErrno(error) ? error.code : undefined;
+      if (code !== "EPERM" && code !== "EACCES" && code !== "EBUSY") throw error;
+      await new Promise((resolve) => setTimeout(resolve, 10 * (attempt + 1)));
+    }
+  }
+  throw lastError;
 }
 
 interface NodeErrnoException {
