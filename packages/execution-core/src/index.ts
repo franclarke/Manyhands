@@ -30,6 +30,7 @@ export * from "./result/recorder";
 export * from "./validation/runner";
 export * from "./validation/dependencies";
 export * from "./integration/agent";
+export * from "./integration/operation-journal";
 export * from "./integration/pre-merge";
 export * from "./integration/syntax-check";
 export * from "./scheduler/batch";

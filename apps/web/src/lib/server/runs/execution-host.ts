@@ -19,6 +19,7 @@ import {
   ChildProcessValidationRunner,
   ComplexityRoutingPolicy,
   DefaultAgentExecutorFactory,
+  JsonIntegrationOperationJournal,
   RunExecutor,
   SimpleGitRunner,
   worktreePathFor,
@@ -213,6 +214,7 @@ export function buildExecutionHost(
   const staticConflictSignals = staticConflictSignalsFromRun(run);
   const traceStoreFactory = options.traceStoreFactory ?? (() => new InMemoryTraceStore());
   const attemptJournal = new JsonTaskAttemptJournal({ directory: join(resolveRunsDirectory(), "attempts") });
+  const integrationJournal = new JsonIntegrationOperationJournal(join(resolveRunsDirectory(), "integrations"));
 
   const attemptEventType: Record<TaskAttemptState, RunEventType | undefined> = {
     prepared: "task.attempt.prepared",
@@ -562,6 +564,11 @@ export function buildExecutionHost(
       runId,
       taskId: params.compositeTaskId,
       attemptId: attempt.attemptId,
+      integrationOperation: {
+        journal: integrationJournal,
+        runId,
+        ...(options.operationLease !== undefined ? { operationId: options.operationLease.operationId, fencingToken: options.operationLease.fencingToken } : {})
+      },
       childResults: params.childResults,
       ...(integrateSignal !== undefined ? { signal: integrateSignal } : {}),
       ...(options.predictedConflicts !== undefined ? { predictedConflicts: options.predictedConflicts } : {})

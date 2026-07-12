@@ -33,6 +33,7 @@ import { RunExecutionError } from "../errors";
 import { computeGranularityVector } from "../granularity/vector";
 import { assertExecutableGraph } from "./graph-guards";
 import { IntegrationAgent, type PredictedConflictHint } from "../integration/agent";
+import type { IntegrationOperationJournal } from "../integration/operation-journal";
 import { ResultRecorder } from "../result/recorder";
 import { BatchScheduler } from "../scheduler/batch";
 import { classifyDeferredValidation } from "../validation/deferred";
@@ -110,6 +111,12 @@ export interface RunNodeExecutionParams {
   runId?: string;
   /** Durable B-015 attempt identity for executor/process correlation. */
   attemptId?: string;
+  integrationOperation?: {
+    journal: IntegrationOperationJournal;
+    runId: string;
+    operationId?: string;
+    fencingToken?: number;
+  };
   childResults?: AgentExecutionResult[];
   cleanupWorktrees?: boolean;
   /** Plan-time conflict foresight, threaded into the Composer's repair prompt. */
@@ -538,6 +545,7 @@ export class RunExecutor {
         worktree,
         childResults,
         ...(params.attemptId !== undefined ? { attemptId: params.attemptId } : {}),
+        ...(params.integrationOperation !== undefined ? { integrationOperation: params.integrationOperation } : {}),
         ...(params.signal !== undefined ? { signal: params.signal } : {}),
         repair: {
           selection: repairSelection,

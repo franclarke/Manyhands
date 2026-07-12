@@ -26,6 +26,10 @@ export interface FakeGitRunnerConfig {
   missingRefs?: string[];
   /** path -> file contents returned by showFile(); absent paths resolve to null. */
   showFile?: Record<string, string>;
+  /** Commits that should be considered ancestors of HEAD. */
+  ancestors?: string[];
+  cherryPickHead?: string;
+  unmergedFiles?: string[];
 }
 
 /**
@@ -96,6 +100,21 @@ export class FakeGitRunner implements GitRunner {
       throw new Error(`unknown revision ${ref}`);
     }
     return this.heads[cwd] ?? "BASE";
+  }
+
+  async isAncestor(params: { cwd: string; ancestor: string; descendant?: string }): Promise<boolean> {
+    this.record("isAncestor", { ...params });
+    return (this.config.ancestors ?? []).includes(params.ancestor);
+  }
+
+  async cherryPickHead(cwd: string): Promise<string | undefined> {
+    this.record("cherryPickHead", { cwd });
+    return this.config.cherryPickHead;
+  }
+
+  async unmergedFiles(cwd: string): Promise<string[]> {
+    this.record("unmergedFiles", { cwd });
+    return this.config.unmergedFiles ?? [];
   }
 
   async addAll(cwd: string): Promise<void> {

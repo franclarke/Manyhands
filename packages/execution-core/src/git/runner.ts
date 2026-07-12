@@ -31,6 +31,12 @@ export interface GitRunner {
 
   head(cwd: string): Promise<string>;
   revParse(cwd: string, ref: string): Promise<string>;
+  /** True only when `ancestor` is reachable from `descendant` in the real commit graph. */
+  isAncestor(params: { cwd: string; ancestor: string; descendant?: string }): Promise<boolean>;
+  /** Durable evidence of an interrupted cherry-pick, if one is active. */
+  cherryPickHead(cwd: string): Promise<string | undefined>;
+  /** Paths with unresolved index entries. */
+  unmergedFiles(cwd: string): Promise<string[]>;
 
   addAll(cwd: string): Promise<void>;
   /** `git add -A` minus exclude pathspecs — artifact dirs never enter the index. */
@@ -111,6 +117,32 @@ export class SimpleGitRunner implements GitRunner {
   async revParse(cwd: string, ref: string): Promise<string> {
     const out = await this.client(cwd).revparse([ref]);
     return out.trim();
+  }
+
+  async isAncestor(params: { cwd: string; ancestor: string; descendant?: string }): Promise<boolean> {
+    try {
+      await this.client(params.cwd).raw([
+        "merge-base",
+        "--is-ancestor",
+        params.ancestor,
+        params.descendant ?? "HEAD"
+      ]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async cherryPickHead(cwd: string): Promise<string | undefined> {
+    try {
+      return (await this.revParse(cwd, "CHERRY_PICK_HEAD")).trim();
+    } catch {
+      return undefined;
+    }
+  }
+
+  async unmergedFiles(cwd: string): Promise<string[]> {
+    return splitLines(await this.client(cwd).diff(["--name-only", "--diff-filter=U"]));
   }
 
   async addAll(cwd: string): Promise<void> {
@@ -198,9 +230,6 @@ export class SimpleGitRunner implements GitRunner {
     await this.client(cwd).raw(["cherry-pick", "--abort"]);
   }
 
-  private async unmergedFiles(cwd: string): Promise<string[]> {
-    return splitLines(await this.client(cwd).diff(["--name-only", "--diff-filter=U"]));
-  }
 }
 
 function splitLines(output: string): string[] {

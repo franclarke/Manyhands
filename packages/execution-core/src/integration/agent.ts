@@ -37,6 +37,7 @@ import { classifyDeferredValidation } from "../validation/deferred";
 import type { ValidationRunner } from "../validation/runner";
 import { ChildProcessValidationRunner } from "../validation/runner";
 import { ChildProcessDependencyInstaller, type DependencyInstaller } from "../validation/dependencies";
+import type { IntegrationOperation, IntegrationOperationJournal } from "./operation-journal";
 
 export interface IntegrationAgentDeps {
   git: GitRunner;
@@ -110,6 +111,13 @@ export interface IntegrationParams {
   signal?: AbortSignal;
   /** Conflicts predicted at planning time; repair surfaces the ones whose files collide. */
   predictedConflicts?: PredictedConflictHint[];
+  /** Durable operation evidence used to reconcile a restart before any Git mutation. */
+  integrationOperation?: {
+    journal: IntegrationOperationJournal;
+    runId: string;
+    operationId?: string;
+    fencingToken?: number;
+  };
 }
 
 /**
@@ -130,6 +138,7 @@ export class IntegrationAgent {
     worktreePath: string;
     files: readonly string[];
   }) => Promise<SyntaxCheckResult>;
+  private currentOperationJournal: IntegrationOperationJournal | undefined;
 
   constructor(deps: IntegrationAgentDeps) {
     this.git = deps.git;
@@ -163,6 +172,7 @@ export class IntegrationAgent {
     const appliedCommits: AppliedChildCommit[] = [];
     const omittedChildCommits: OmittedChildCommit[] = [];
     const repairAttempts: IntegrationRepairAttempt[] = [];
+    let operation = await this.openOperation(params);
 
     // Any non-successful child means we never start integration (ADR-0025).
     const failedChild = childResults.find((child) => child.status !== "success");
@@ -268,6 +278,32 @@ export class IntegrationAgent {
         throw new Error(`Invariant violation: successful child ${child.taskId} has no commitSha after validation.`);
       }
 
+      const existingHead = await this.git.head(worktree.path);
+      if (operation !== undefined && await this.git.isAncestor({ cwd: worktree.path, ancestor: commitSha, descendant: existingHead })) {
+        operation = await this.updateOperation(operation, {
+          state: "child_applied",
+          currentChildId: child.taskId,
+          children: markOperationChild(operation, child.taskId, "applied", existingHead)
+        });
+        appliedCommits.push({ childTaskId: child.taskId, commitSha, order: appliedCommits.length });
+        continue;
+      }
+      const activeCherryPick = await this.git.cherryPickHead(worktree.path);
+      if (activeCherryPick !== undefined) {
+        const unmerged = await this.git.unmergedFiles(worktree.path);
+        operation = await this.updateOperation(operation, {
+          state: "conflict_detected",
+          currentChildId: child.taskId,
+          children: markOperationChild(operation, child.taskId, "conflict"),
+          error: { code: "interrupted_cherry_pick", message: `Restart found CHERRY_PICK_HEAD ${activeCherryPick} with ${unmerged.join(", ") || "no"} unmerged paths.` }
+        });
+        await this.git.cherryPickAbort(worktree.path);
+      }
+      operation = await this.updateOperation(operation, {
+        state: "cherry_pick_started",
+        currentChildId: child.taskId,
+        children: markOperationChild(operation, child.taskId, "started")
+      });
       execLog("integrate", "cherry-pick start", {
         task: compositeTaskId,
         child: child.taskId,
@@ -285,6 +321,12 @@ export class IntegrationAgent {
         commitSha
       });
       if (outcome.ok) {
+        const resultSha = await this.git.head(worktree.path);
+        operation = await this.updateOperation(operation, {
+          state: "child_applied",
+          currentChildId: child.taskId,
+          children: markOperationChild(operation, child.taskId, "applied", resultSha)
+        });
         execLog("integrate", "cherry-pick ok", { task: compositeTaskId, child: child.taskId });
         appliedCommits.push({ childTaskId: child.taskId, commitSha, order: appliedCommits.length });
         continue;
@@ -302,6 +344,12 @@ export class IntegrationAgent {
         actor: "system",
         taskId: compositeTaskId,
         payload: { childTaskId: child.taskId, files: outcome.conflictFiles, output: outcome.output }
+      });
+      operation = await this.updateOperation(operation, {
+        state: "conflict_detected",
+        currentChildId: child.taskId,
+        children: markOperationChild(operation, child.taskId, "conflict"),
+        error: { code: "cherry_pick_conflict", message: outcome.output }
       });
 
       if (repairsUsed >= maxRepairs) {
@@ -418,6 +466,7 @@ export class IntegrationAgent {
       repairAttempted: repairsUsed > 0,
       preMergeFindings: preMergeFindings.length
     });
+    operation = await this.updateOperation(operation, { state: "completed", finalSha: integrationCommitSha, disposition: status });
     return this.finalize(params, status, {
       repairAttempted: repairsUsed > 0,
       repairResult,
@@ -427,6 +476,31 @@ export class IntegrationAgent {
       ...(validation !== undefined ? { parentValidation: validation, validationWorktreePath: worktree.path } : {}),
       repairAttempts
     });
+  }
+
+  private async openOperation(params: IntegrationParams): Promise<IntegrationOperation | undefined> {
+    const context = params.integrationOperation;
+    if (context === undefined) return undefined;
+    this.currentOperationJournal = context.journal;
+    return context.journal.open({
+      runId: context.runId,
+      parentNodeId: params.compositeTaskId,
+      ...(params.attemptId !== undefined ? { attemptId: params.attemptId } : {}),
+      ...(context.operationId !== undefined ? { operationId: context.operationId } : {}),
+      ...(context.fencingToken !== undefined ? { fencingToken: context.fencingToken } : {}),
+      worktreePath: params.worktree.path,
+      baseSha: params.worktree.baseCommit,
+      children: params.childResults.filter((child) => child.noOp !== true && child.commitSha !== undefined).map((child) => ({ taskId: child.taskId, commitSha: child.commitSha!, state: "pending" }))
+    });
+  }
+
+  private async updateOperation(operation: IntegrationOperation | undefined, patch: Partial<IntegrationOperation>): Promise<IntegrationOperation | undefined> {
+    if (operation === undefined) return undefined;
+    return operation.state === "completed" ? operation : (await this.operationJournal(operation)?.update(operation, patch) ?? operation);
+  }
+
+  private operationJournal(_operation: IntegrationOperation): IntegrationOperationJournal | undefined {
+    return this.currentOperationJournal;
   }
 
   private async validateChildCommits(
@@ -1024,6 +1098,17 @@ function omittedFrom(
     status: child.status,
     ...(child.commitSha !== undefined ? { commitSha: child.commitSha } : {})
   }));
+}
+
+function markOperationChild(
+  operation: IntegrationOperation | undefined,
+  taskId: string,
+  state: IntegrationOperation["children"][number]["state"],
+  resultSha?: string
+): IntegrationOperation["children"] {
+  return (operation?.children ?? []).map((child) =>
+    child.taskId === taskId ? { ...child, state, ...(resultSha !== undefined ? { resultSha } : {}) } : child
+  );
 }
 
 function truncate(text: string, max: number): string {
