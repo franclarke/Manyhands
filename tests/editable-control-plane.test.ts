@@ -109,6 +109,7 @@ describe("editable control plane vertical slice", () => {
       new Request("http://manyhands.test/api", {
         method: "PATCH",
         body: JSON.stringify({
+          expectedVersion: 1,
           title: "Edited task",
           objective: "Edited objective",
           allowedPaths: ["src/edited.ts"],
@@ -125,6 +126,8 @@ describe("editable control plane vertical slice", () => {
     const saved = await repo.get("run-1");
     expect(saved.status).toBe("needs_review");
     expect(saved.approvedAt).toBeUndefined();
+    expect(saved.planRevision).toBe(2);
+    expect(saved.approvedPlanRevision).toBeUndefined();
     expect(saved.patches.map((patch) => (patch as RunPatch).type)).toEqual([
       "NODE_RENAMED",
       "NODE_OBJECTIVE_EDITED",
@@ -160,7 +163,7 @@ describe("editable control plane vertical slice", () => {
     const response = await PATCH(
       new Request("http://manyhands.test/api", {
         method: "PATCH",
-        body: JSON.stringify({ executorOverride: null }),
+        body: JSON.stringify({ expectedVersion: 1, executorOverride: null }),
         headers: { "content-type": "application/json" }
       }),
       { params: Promise.resolve({ id: "run-1", taskId: "task-1" }) }
@@ -183,7 +186,7 @@ describe("editable control plane vertical slice", () => {
     const response = await PATCH(
       new Request("http://manyhands.test/api", {
         method: "PATCH",
-        body: JSON.stringify({ allowedPaths: [] }),
+        body: JSON.stringify({ expectedVersion: 1, allowedPaths: [] }),
         headers: { "content-type": "application/json" }
       }),
       { params: Promise.resolve({ id: "run-1", taskId: "task-1" }) }
@@ -262,6 +265,8 @@ describe("editable control plane vertical slice", () => {
     const contract = (snapshot as RunSnapshot).contracts.find((entry) => entry.taskId === "task-1");
     expect(contract?.objective).toBe("Patched objective");
     expect(contract?.allowed.paths).toEqual(["src/patched.ts"]);
+    expect(contract?.executionScope?.implementationPaths).toEqual(["src/patched.ts"]);
+    expect(contract?.forbiddenPaths).toEqual(["src/forbidden.ts"]);
     expect(contract?.forbidden.paths).toEqual(["src/forbidden.ts"]);
     expect(contract?.acceptance.map((entry) => entry.description)).toEqual(["Patched acceptance"]);
   });
@@ -526,6 +531,26 @@ describe("editable control plane vertical slice", () => {
     expect(snapshot?.graphSnapshot.nodes["task-2"]).toBeDefined();
     expect(snapshot?.graphSnapshot.nodes["task-3"]).toBeDefined();
     expect((saved.planning as MockPlanningFlowResult).traces.some((event) => event.type === "dag_patch_appended")).toBe(true);
+  });
+
+  it("rejects one of two concurrent semantic edits against the same version", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun({ status: "approved", approvedAt: now, approvedPlanRevision: 1 }));
+
+    const request = (objective: string) => PATCH(
+      new Request("http://manyhands.test/api", {
+        method: "PATCH",
+        body: JSON.stringify({ expectedVersion: 1, objective }),
+        headers: { "content-type": "application/json" }
+      }),
+      { params: Promise.resolve({ id: "run-1", taskId: "task-1" }) }
+    );
+
+    const responses = await Promise.all([request("First intent"), request("Second intent")]);
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+    const saved = await repo.get("run-1");
+    expect(saved.patches).toHaveLength(1);
+    expect(saved.planRevision).toBe(2);
   });
 
   it("POST regen rejects implicit deterministic fallback when no LLM decomposer is configured", async () => {

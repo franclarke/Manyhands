@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { POST as POST_PAUSE } from "@/app/api/runs/[id]/pause/route";
 import { POST as POST_RESUME } from "@/app/api/runs/[id]/resume/route";
 import { POST as POST_ANSWER } from "@/app/api/runs/[id]/answer/route";
+import { POST as POST_DECISION } from "@/app/api/runs/[id]/decisions/[decisionId]/route";
 import { POST as POST_RESTART } from "@/app/api/runs/[id]/restart/route";
 import { POST as POST_FORK } from "@/app/api/runs/[id]/fork/route";
 import { readRunModelEvents } from "@/lib/server/runs/run-model-event-log";
@@ -89,6 +90,17 @@ function postFork(runId: string, body: unknown): Promise<Response> {
       body: JSON.stringify(body)
     }),
     { params: Promise.resolve({ id: runId }) }
+  );
+}
+
+function postDecision(runId: string, decisionId: string, body: unknown): Promise<Response> {
+  return POST_DECISION(
+    new Request("http://mh.test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    }),
+    { params: Promise.resolve({ id: runId, decisionId }) }
   );
 }
 
@@ -344,6 +356,51 @@ describe("duplicate HITL decisions at the route seam", () => {
     expect(Object.keys(run.questionAnswers ?? {})).toEqual(["node-7"]);
   });
 
+  it("answer: an interrupted planning question can be resumed without restarting the run", async () => {
+    await getRunRepository().save(
+      makeRun({
+        runId: "run-interrupted-answer",
+        status: "interrupted",
+        pausedDuring: "generating",
+        interruptedDuring: "generating",
+        pendingQuestion: { nodeId: "node-7", question: "Continuar?", options: ["Reintentar", "Abortar"] }
+      })
+    );
+
+    const response = await post(POST_ANSWER, "run-interrupted-answer", {
+      nodeId: "node-7",
+      answer: "Reintentar"
+    });
+
+    expect(response.status).toBe(200);
+    const run = await getRunRepository().get("run-interrupted-answer");
+    expect(run.status).toBe("generating");
+    expect(run.pendingQuestion).toBeUndefined();
+    expect(run.questionAnswers?.["node-7"]).toBe("Reintentar");
+  });
+
+  it("decision: an interrupted planning question option can be resolved from the gate card", async () => {
+    await getRunRepository().save(
+      makeRun({
+        runId: "run-interrupted-decision",
+        status: "interrupted",
+        pausedDuring: "generating",
+        interruptedDuring: "generating",
+        pendingQuestion: { nodeId: "node-7", question: "Continuar?", options: ["Reintentar", "Abortar"] }
+      })
+    );
+
+    const response = await postDecision("run-interrupted-decision", "clarify:node-7", {
+      answer: "Reintentar"
+    });
+
+    expect(response.status).toBe(200);
+    const run = await getRunRepository().get("run-interrupted-decision");
+    expect(run.status).toBe("generating");
+    expect(run.pendingQuestion).toBeUndefined();
+    expect(run.questionAnswers?.["node-7"]).toBe("Reintentar");
+  });
+
   it("answer: stale expectedVersion is rejected with 409", async () => {
     const saved = await getRunRepository().save(
       makeRun({
@@ -387,6 +444,28 @@ describe("duplicate HITL decisions at the route seam", () => {
           (event.payload as { status?: string }).status === "generating"
       )
     ).toBe(true);
+  });
+
+  it("restart: backfills medium reasoning effort for fixed Codex runs", async () => {
+    await getRunRepository().save(
+      makeRun({
+        runId: "run-restart-codex-effort",
+        status: "failed",
+        failedDuring: "generating",
+        model: "gpt-5.5",
+        planningModel: "gpt-5.5",
+        planningExecutorId: "codex-cli",
+        defaultExecutionSelection: { executorId: "codex-cli", model: "gpt-5.5" },
+        defaultRepairSelection: { executorId: "codex-cli", model: "gpt-5.5" },
+        executionConfig: { routing: "fixed" }
+      })
+    );
+
+    const response = await post(POST_RESTART, "run-restart-codex-effort", {});
+
+    expect(response.status).toBe(200);
+    const run = await getRunRepository().get("run-restart-codex-effort");
+    expect(run.executionConfig).toMatchObject({ routing: "fixed", reasoningEffort: "medium" });
   });
 
   it("restart: active runner is rejected before the restartable state is consumed", async () => {

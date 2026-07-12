@@ -123,10 +123,7 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
       <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col overflow-hidden border-r border-[var(--color-border)] bg-[var(--color-bg-subtle)] font-sans">
       {/* Brand */}
       <div className="flex items-center gap-3 border-b border-[var(--color-border-soft)] px-4 py-[14px]">
-        <Logo type="full" className="h-6 w-auto" />
-        <span className="mh-mono rounded bg-[var(--color-surface)] px-1.5 py-0.5 text-eyebrow text-[var(--color-text-subtle)]">
-          v0.4
-        </span>
+        <Logo type="full" className="h-6 w-auto " />
         <div className="ml-auto flex items-center gap-0.5">
           <ThemeToggle />
           <RailButton label="Colapsar barra lateral" onClick={toggleCollapsed}>

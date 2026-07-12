@@ -46,6 +46,8 @@ import { publishRunEvent } from "./event-bus";
 import { RunNotFoundError } from "./errors";
 import type { RiskLevelKey } from "./events";
 import { buildRepositoryGrounding } from "./repo-index-cache";
+import { supervisedSpawnFn } from "./process-supervision";
+import { resolveRunTargetPath } from "./target-context";
 import { resolveRunsDirectory } from "./repository";
 import { publishRunModelEvent } from "./run-model-event-log";
 import {
@@ -54,8 +56,15 @@ import {
   planNodeStatusEvent
 } from "./planning-run-model-adapter";
 import { backfillRunValidationCommands } from "./execution-state";
-import type { PlanningLiveNode, RunDecompositionMetadata, RunRecord } from "./schema";
+import { withDefaultReasoningEffort } from "./execution-config-defaults";
+import type {
+  PlanningLiveNode,
+  RunDecompositionMetadata,
+  RunOperationLease,
+  RunRecord
+} from "./schema";
 import { getRunRepository } from "./store";
+import { updateRunForOperation } from "./run-operation-lease";
 
 const PLANNING_EVENT_INTERVAL_MS = 110;
 const PAUSE_POLL_MS = 80;
@@ -63,6 +72,7 @@ const PAUSE_POLL_MS = 80;
 export interface PlanningHostOptions {
   /** Delay between replayed node/edge SSE events; tests pass 0. */
   intervalMs?: number;
+  operationLease?: RunOperationLease;
 }
 
 export interface PlanningHost {
@@ -120,7 +130,12 @@ export async function resetPlanningThread(runId: string): Promise<void> {
 export function buildPlanningHost(run: RunRecord, options: PlanningHostOptions = {}): PlanningHost {
   const deps: PlanningGraphDeps = {
     decomposePlan: (input) => decomposePlanForRun(input, options),
-    runCritics: (input) => runCriticsForRun(input.runId, input.graph as Parameters<typeof runPlanCritic>[0]["graph"])
+    runCritics: (input) =>
+      runCriticsForRun(
+        input.runId,
+        input.graph as Parameters<typeof runPlanCritic>[0]["graph"],
+        options
+      )
   };
 
   return {
@@ -196,17 +211,33 @@ async function decomposePlanForRun(
   options: PlanningHostOptions
 ): Promise<DecomposePlanResult> {
   const repo = getRunRepository();
-  const run = await repo.get(input.runId);
+  let run = await repo.get(input.runId);
+  if (run.planningExecutorId === "codex-cli" && run.executionConfig?.reasoningEffort === undefined) {
+    run = await updateRunForOperation(run.runId, options.operationLease, (current) => ({
+      ...current,
+      executionConfig: withDefaultReasoningEffort(current.executionConfig, {
+        executorId: "codex-cli"
+      })
+    }));
+  }
 
   const livePlanningNodes = new Map<string, PlanningLiveNode>(
     (run.livePlanningNodes ?? []).map((node) => [node.id, node])
   );
-  const workspace = await getWorkspaceRepository().get(run.workspaceId).catch(() => null);
+  const workspaceRecord = await getWorkspaceRepository().get(run.workspaceId).catch(() => null);
+  // B-008 (CF-19): the frozen target context wins over the mutable workspace
+  // record — editing the workspace after create must not move what planning
+  // grounds. The workspace only contributes non-path hints (name, commands).
+  const targetPath = await resolveRunTargetPath(run);
+  const workspace =
+    workspaceRecord !== null && targetPath !== undefined
+      ? { ...workspaceRecord, repoPath: targetPath }
+      : workspaceRecord;
 
   // Repository grounding: index the target repo once, up front. The digest
   // grounds the decomposer prompt (symbol topology) and the index feeds
   // conflict-risk + the seam critic. Best-effort — planning proceeds without it.
-  const grounding = await buildRepositoryGrounding(workspace?.repoPath);
+  const grounding = await buildRepositoryGrounding(targetPath ?? workspace?.repoPath);
   const groundingDigest = grounding !== undefined ? buildGroundingDigest(grounding.index) : undefined;
 
   const selection = pickDecomposer({
@@ -214,6 +245,16 @@ async function decomposePlanForRun(
     ...(groundingDigest !== undefined ? { groundingDigest } : {}),
     model: run.planningModel ?? run.model,
     executorId: run.planningExecutorId,
+    // B-005: every planning CLI subprocess is registered under the run so a
+    // cancel can kill and verify the whole tree.
+    spawn: supervisedSpawnFn({
+      runId: run.runId,
+      label: "planning-decomposer",
+      ...(options.operationLease !== undefined ? { operationId: options.operationLease.operationId } : {})
+    }),
+    ...(run.executionConfig?.reasoningEffort !== undefined
+      ? { reasoningEffort: run.executionConfig.reasoningEffort }
+      : {}),
     onStepStarted: async (event) => {
       livePlanningNodes.set(event.nodeId, {
         ...livePlanningNodes.get(event.nodeId),
@@ -246,7 +287,7 @@ async function decomposePlanForRun(
           event.parentId === null ? "root" : "leaf"
         )
       );
-      await persistLivePlanningNodes(run.runId, livePlanningNodes);
+      await persistLivePlanningNodes(run.runId, livePlanningNodes, options.operationLease);
     },
     onStepCompleted: async (event) => {
       const existing = livePlanningNodes.get(event.nodeId);
@@ -282,7 +323,7 @@ async function decomposePlanForRun(
         childNodes: event.children,
         at: new Date().toISOString()
       });
-      await persistLivePlanningNodes(run.runId, livePlanningNodes);
+      await persistLivePlanningNodes(run.runId, livePlanningNodes, options.operationLease);
     },
     onStepStatus: async (event) => {
       const existing = livePlanningNodes.get(event.nodeId);
@@ -332,7 +373,7 @@ async function decomposePlanForRun(
           ...(event.error?.message !== undefined ? { errorMessage: event.error.message } : {})
         })
       );
-      await persistLivePlanningNodes(run.runId, livePlanningNodes);
+      await persistLivePlanningNodes(run.runId, livePlanningNodes, options.operationLease);
     },
     onCliOutput: (event) => {
       publishRunEvent(run.runId, {
@@ -363,7 +404,7 @@ async function decomposePlanForRun(
 
     // Persist planning + decomposition metadata before dispatching SSE events
     // so refreshes during `generating` already have a snapshot to project.
-    const persisted = await repo.update(run.runId, (current) => ({
+    const persisted = await updateRunForOperation(run.runId, options.operationLease, (current) => ({
       ...current,
       planning,
       decomposition,
@@ -389,9 +430,11 @@ async function decomposePlanForRun(
     // Terminal generation failure (post-retries) is DATA too (INV-5): it
     // surfaces as the degraded-plan gate, where the human retries or aborts —
     // never a silent transition to "failed".
+    const stepCache = (error as { stepCache?: Record<string, unknown> } | undefined)?.stepCache;
     return {
       kind: "failed",
-      errorMessage: error instanceof Error ? error.message : String(error)
+      errorMessage: error instanceof Error ? error.message : String(error),
+      ...(stepCache !== undefined ? { stepCache } : {})
     };
   }
 }
@@ -400,17 +443,19 @@ async function decomposePlanForRun(
 
 async function runCriticsForRun(
   runId: string,
-  graph: Parameters<typeof runPlanCritic>[0]["graph"]
+  graph: Parameters<typeof runPlanCritic>[0]["graph"],
+  options: PlanningHostOptions
 ): Promise<PlanCritique> {
   const repo = getRunRepository();
   const run = await repo.get(runId);
   const planning = run.planning as MockPlanningFlowResult | undefined;
   const contracts = (planning?.decomposition.contracts ?? []) as AgentTaskContract[];
 
-  const workspace = await getWorkspaceRepository().get(run.workspaceId).catch(() => null);
+  // B-008: critic command detection also reads the frozen target.
+  const criticTargetPath = await resolveRunTargetPath(run);
   const detectedCommands =
-    workspace?.repoPath !== undefined && workspace.repoPath.length > 0
-      ? await detectWorkspaceCommands(workspace.repoPath).catch(() => undefined)
+    criticTargetPath !== undefined && criticTargetPath.length > 0
+      ? await detectWorkspaceCommands(criticTargetPath).catch(() => undefined)
       : undefined;
 
   const planningCritic = runPlanCritic({
@@ -420,7 +465,7 @@ async function runCriticsForRun(
   });
   const seamCritic = runSeamCritic({ graph, contracts });
 
-  await repo.update(runId, (latest) => {
+  await updateRunForOperation(runId, options.operationLease, (latest) => {
     const latestPlanning = latest.planning as MockPlanningFlowResult | undefined;
     let planningToPersist = latest.planning;
     if (latestPlanning !== undefined) {
@@ -612,10 +657,16 @@ async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<Pl
     }
     // D3: LLM failed → propagate with actionable message. No fallback.
     const detail = describePlanningFailure(error);
-    throw new Error(
+    const wrapped = new Error(
       `Graph generation failed: ${detail}. ` +
         "Retry, switch to another model for the selected executor, or verify that the selected CLI is installed and authenticated."
     );
+    // Preserve the decomposer's partial progress (already-generated siblings) so
+    // a retry can resume instead of restarting the whole tree from root.
+    if (isDecomposerLlmError(error) && error.stepCache !== undefined) {
+      (wrapped as Error & { stepCache?: Record<string, unknown> }).stepCache = error.stepCache;
+    }
+    throw wrapped;
   }
 }
 
@@ -646,10 +697,10 @@ export function buildFeatureRequestFromPrompt(
 
 export async function persistLivePlanningNodes(
   runId: string,
-  nodes: ReadonlyMap<string, PlanningLiveNode>
+  nodes: ReadonlyMap<string, PlanningLiveNode>,
+  operationLease?: RunOperationLease
 ): Promise<void> {
-  await getRunRepository()
-    .update(runId, (current) => ({
+  await updateRunForOperation(runId, operationLease, (current) => ({
       ...current,
       livePlanningNodes: Array.from(nodes.values()).sort(
         (left, right) => left.depth - right.depth || left.id.localeCompare(right.id)

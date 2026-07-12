@@ -40,7 +40,7 @@ describe("run-model trace adapter", () => {
     expect(closed).toEqual([{ actor: "system", at: AT, type: "wave.closed", payload: { waveId: "batch-2" } }]);
   });
 
-  it("maps executor and validation telemetry to node verify iterations", () => {
+  it("never infers validation from executor exit and maps the real validation fact", () => {
     const started = runModelEventsFromTrace(
       trace({
         type: "executor_started",
@@ -56,18 +56,24 @@ describe("run-model trace adapter", () => {
       model: "sonnet"
     });
 
-    const executorFailed = runModelEventsFromTrace(
+    const executorFinished = runModelEventsFromTrace(
       trace({
         type: "executor_completed",
         taskId: "leaf-a",
-        payload: { exitCode: 1, timedOut: false }
+        payload: { exitCode: 0, timedOut: false }
       }),
       CONTEXT
     );
-    expect(executorFailed[0]?.type).toBe("node.verify.iteration");
-    expect(executorFailed[0]?.payload).toMatchObject({
+    expect(executorFinished).toEqual([]);
+
+    const validationFinished = runModelEventsFromTrace(
+      trace({ type: "validation_completed", taskId: "leaf-a", payload: { scope: "leaf", passed: false, exitCode: 1, commandCount: 1 } }),
+      CONTEXT
+    );
+    expect(validationFinished[0]?.type).toBe("node.verify.iteration");
+    expect(validationFinished[0]?.payload).toMatchObject({
       nodeId: "leaf-a",
-      build: "fail",
+      build: "pass",
       testsPass: 0,
       testsTotal: 1
     });

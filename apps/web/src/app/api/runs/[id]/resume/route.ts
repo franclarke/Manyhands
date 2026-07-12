@@ -53,7 +53,10 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     const expectedGateId = typeof payload?.gateId === "string" ? payload.gateId : undefined;
     const expectedVersion = typeof payload?.expectedVersion === "number" ? payload.expectedVersion : undefined;
     const run = await getRunRepository().get(id);
-    assertRunActionAllowed(run, "resume");
+    const planningAnswer = planningAnswerFrom(payload, run.pendingQuestion?.nodeId);
+    if (!(run.status === "interrupted" && run.pausedDuring === "generating" && planningAnswer !== null)) {
+      assertRunActionAllowed(run, "resume");
+    }
 
     // 1) Execution gate resume — native Command({ resume }).
     if (run.status === "paused" && run.pausedDuring === "running" && run.pendingDecision !== undefined) {
@@ -72,7 +75,6 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
 
     // 2) Replan question resume: a clarifying question raised DURING a replan
     //    (the run is paused during "running" with a pendingReplan context).
-    const planningAnswer = planningAnswerFrom(payload, run.pendingQuestion?.nodeId);
     if (
       planningAnswer !== null &&
       run.status === "paused" &&
@@ -97,7 +99,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       const saved = await claimRunMutation(
         id,
         {
-          status: ["paused"],
+          status: ["paused", "interrupted"],
           pausedDuring: "generating",
           pendingQuestionNodeId: planningAnswer.nodeId ?? "any",
           ...(expectedVersion !== undefined ? { version: expectedVersion } : {})

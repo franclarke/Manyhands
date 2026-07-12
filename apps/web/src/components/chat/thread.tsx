@@ -72,7 +72,8 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
       ),
     [model]
   );
-  const canSend = pendingQuestion !== undefined;
+  const needsRestart = model.run.control.status === "interrupted" || model.run.control.status === "failed";
+  const canSend = pendingQuestion !== undefined && !needsRestart;
   // Execution gates reuse the clarify channel but are NOT planner questions —
   // the composer copy must say so (context.gate is set by persistExecutionPause).
   const isExecutionGate = pendingQuestion?.context.gate !== undefined;
@@ -350,6 +351,13 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
               : "El planner está esperando tu respuesta para continuar la descomposición."}
             <span className="text-[var(--color-text-subtle)]"> · Enter envía, Shift+Enter salta de línea</span>
           </p>
+        </div>
+      ) : needsRestart && pendingQuestion !== undefined ? (
+        <div className="flex items-start gap-2 border-t border-[var(--status-review-border)] bg-[var(--color-surface)] px-5 py-3 text-meta leading-relaxed text-[var(--status-review-fg)]">
+          <CircleHelp aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            El run fue interrumpido mientras esperaba una respuesta. Usá Reintentar para reanudar el flujo desde el checkpoint seguro.
+          </span>
         </div>
       ) : (
         <div className="flex items-center gap-2 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-3 text-meta text-[var(--color-text-subtle)]">

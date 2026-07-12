@@ -84,6 +84,12 @@ export type RunStatusKey =
   | "running"
   | "completed"
   | "completed_with_accepted"
+  | "partial"
+  | "unverified"
+  | "needs_delivery"
+  | "failed_artifact"
+  | "failed_delivery"
+  | "cancelling"
   | "failed"
   | "interrupted";
 
@@ -128,6 +134,7 @@ export interface RunCreateRequest {
   planningModel?: string | undefined;
   defaultExecutionSelection?: ExecutorSelection | undefined;
   defaultRepairSelection?: ExecutorSelection | undefined;
+  executionConfig?: { reasoningEffort?: "low" | "medium" | "high" | "xhigh" } | undefined;
   userPrompt?: string;
   repoSpec?: { kind: "fixture"; fixtureId: string } | { kind: "localPath"; path: string };
 }

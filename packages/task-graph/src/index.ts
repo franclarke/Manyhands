@@ -145,7 +145,13 @@ export const TaskValidationIssueCodeSchema = z.union([
   z.literal("orphan_node"),
   z.literal("parent_child_mismatch"),
   z.literal("invalid_node_kind"),
-  z.literal("invalid_integrator")
+  z.literal("invalid_integrator"),
+  // B-009 (CF-12/13): full tree+DAG invariants.
+  z.literal("invalid_root"),
+  z.literal("node_key_mismatch"),
+  z.literal("invalid_depth"),
+  z.literal("duplicate_child"),
+  z.literal("duplicate_dependency")
 ]);
 
 export type TaskValidationIssueCode = z.infer<typeof TaskValidationIssueCodeSchema>;
@@ -220,6 +226,66 @@ export function validateTaskGraph(
       message: `root-kind node ${root.id} must have parentId === null`,
       severity: "error"
     });
+  }
+
+  // B-009 (CF-12): the graph's entry node must be a real tree root — a
+  // non-zero depth or a non-null parent there means the hierarchy is corrupt
+  // no matter how schema-valid the nodes look. A single-node plan MAY be
+  // rooted at a leaf (trivial prompt → one atomic task); a multi-node graph
+  // rooted at an executable node is always incoherent.
+  if (root) {
+    const nodeCount = Object.keys(graph.nodes).length;
+    if (root.kind !== "root" && root.kind !== "composite" && nodeCount > 1) {
+      issues.push({
+        code: "invalid_root",
+        taskId: root.id,
+        message: `rootId points at a ${root.kind} node in a ${nodeCount}-node graph; the root must be a root/composite node`,
+        severity: "error"
+      });
+    }
+    if (root.parentId !== null) {
+      issues.push({
+        code: "invalid_root",
+        taskId: root.id,
+        message: `root node ${root.id} must have parentId === null`,
+        severity: "error"
+      });
+    }
+    if (root.depth !== 0) {
+      issues.push({
+        code: "invalid_root",
+        taskId: root.id,
+        message: `root node ${root.id} must have depth 0, found ${root.depth}`,
+        severity: "error"
+      });
+    }
+  }
+
+  // B-009 (CF-12): map key ↔ node id identity.
+  for (const [key, node] of Object.entries(graph.nodes)) {
+    if (key !== node.id) {
+      issues.push({
+        code: "node_key_mismatch",
+        taskId: node.id,
+        message: `node stored under key "${key}" declares id "${node.id}"`,
+        severity: "error"
+      });
+    }
+  }
+
+  // B-009 (CF-12): canonical dependency edges must be unique.
+  const seenEdges = new Set<string>();
+  for (const dependency of graph.dependencies) {
+    const key = `${dependency.fromTaskId}->${dependency.toTaskId}`;
+    if (seenEdges.has(key)) {
+      issues.push({
+        code: "duplicate_dependency",
+        taskId: dependency.toTaskId,
+        message: `dependency ${key} is declared more than once in graph.dependencies`,
+        severity: "error"
+      });
+    }
+    seenEdges.add(key);
   }
 
   const incomingDeps = buildIncomingDependencyIndex(graph);
@@ -307,8 +373,20 @@ export function validateTaskGraph(
       }
     }
 
-    if (node.dependencies.length > 0) {
+    // B-009 (CF-13): the shortcut and the canonical edges must be the SAME
+    // set, in both directions. Divergence means consumers of the shortcut see
+    // a different reality than the scheduler.
+    {
       const canonicalIncoming = new Set(incomingDeps.get(node.id) ?? []);
+      const shortcut = new Set(node.dependencies);
+      if (shortcut.size !== node.dependencies.length) {
+        issues.push({
+          code: "duplicate_dependency",
+          taskId: node.id,
+          message: `node ${node.id} lists duplicate entries in node.dependencies`,
+          severity: "error"
+        });
+      }
       for (const depId of node.dependencies) {
         if (!canonicalIncoming.has(depId)) {
           issues.push({
@@ -318,6 +396,41 @@ export function validateTaskGraph(
             severity: "warning"
           });
         }
+      }
+      for (const depId of canonicalIncoming) {
+        // A dep from a missing node is already reported as dangling_dependency;
+        // flagging sync divergence on top would double-report one defect.
+        if (!shortcut.has(depId) && graph.nodes[depId] !== undefined) {
+          issues.push({
+            code: "dependency_sync_divergence",
+            taskId: node.id,
+            message: `graph.dependencies declares ${depId} -> ${node.id} but node.dependencies does not list it`,
+            severity: "warning"
+          });
+        }
+      }
+    }
+
+    // B-009 (CF-12): duplicate children corrupt integration fan-in.
+    if (new Set(node.childrenIds).size !== node.childrenIds.length) {
+      issues.push({
+        code: "duplicate_child",
+        taskId: node.id,
+        message: `node ${node.id} lists duplicate childrenIds`,
+        severity: "error"
+      });
+    }
+
+    // B-009 (CF-12): depth must be exactly parent.depth + 1.
+    if (node.parentId !== null) {
+      const parent = graph.nodes[node.parentId];
+      if (parent !== undefined && node.depth !== parent.depth + 1) {
+        issues.push({
+          code: "invalid_depth",
+          taskId: node.id,
+          message: `node ${node.id} has depth ${node.depth}; expected ${parent.depth + 1} (parent ${parent.id} is at ${parent.depth})`,
+          severity: "error"
+        });
       }
     }
 
@@ -393,7 +506,11 @@ export function validateExecutableTaskGraph(
   graphInput: TaskGraph,
   options: TaskGraphValidationOptions = {}
 ): TaskValidationIssue[] {
-  const issues = [...validateTaskGraph(graphInput, options)];
+  // B-009 (CF-13): for an EXECUTABLE graph, canonical/shortcut divergence is
+  // not advisory — scheduling and readiness would disagree with prompts/UI.
+  const issues = validateTaskGraph(graphInput, options).map((issue) =>
+    issue.code === "dependency_sync_divergence" ? { ...issue, severity: "error" as const } : issue
+  );
   const parsed = TaskGraphSchema.safeParse(graphInput);
   if (!parsed.success) {
     return issues;

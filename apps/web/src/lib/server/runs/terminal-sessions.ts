@@ -1,6 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import os from "node:os";
+import { buildAgentEnvironment, superviseChildProcess } from "@manyhands/execution-core";
 import { globalSingleton } from "../global-singleton";
 import type { RunRecord } from "./schema";
 import {
@@ -27,6 +28,7 @@ export interface TerminalSessionInfo {
 type OutputListener = (chunk: string) => void;
 
 interface PtyProcess {
+  pid?: number;
   write(data: string): void;
   resize?(cols: number, rows: number): void;
   kill(): void;
@@ -76,12 +78,30 @@ export function getTerminalSession(id: string): TerminalSession | null {
   return session;
 }
 
+/**
+ * B-006 (CF-41): a terminal id is only a capability under the run that
+ * created it. A lookup under any other run behaves as "not found" — it never
+ * confirms the terminal exists elsewhere.
+ */
+export function getTerminalSessionForRun(runId: string, terminalId: string): TerminalSession | null {
+  const session = getTerminalSession(terminalId);
+  if (session === null) return null;
+  if (session.info().runId !== runId) return null;
+  return session;
+}
+
 export function closeTerminalSession(id: string): boolean {
   const session = sessions.get(id);
   if (session === undefined) return false;
   sessions.delete(id);
   session.close();
   return true;
+}
+
+/** Ownership-checked close (B-006/CF-41). */
+export function closeTerminalSessionForRun(runId: string, terminalId: string): boolean {
+  if (getTerminalSessionForRun(runId, terminalId) === null) return false;
+  return closeTerminalSession(terminalId);
 }
 
 function sweepExpiredSessions(): void {
@@ -102,6 +122,7 @@ export class TerminalSession {
   private pty: PtyProcess | null = null;
   private child: ChildProcessWithoutNullStreams | null = null;
   private closed = false;
+  private disposeSupervision: (() => void) | null = null;
   private readonly cols: number;
   private readonly rows: number;
 
@@ -123,10 +144,19 @@ export class TerminalSession {
           cols: this.cols,
           rows: this.rows,
           cwd: this.cwd,
-          env: process.env
+          // B-006 (CF-28): human shells never inherit server secrets.
+          env: buildAgentEnvironment({ includeProviderCredentials: false })
         }) as PtyProcess;
         proc.onData((data) => this.emit(data));
-        proc.onExit((event) => this.emit(`\r\n[process exited ${event.exitCode}]\r\n`));
+        // B-005: the shell belongs to the run — cancel kills it with the run.
+        this.disposeSupervision = superviseChildProcess(
+          { runId: this.runId, label: "terminal" },
+          { pid: proc.pid, kill: () => proc.kill() }
+        );
+        proc.onExit((event) => {
+          this.disposeSupervision?.();
+          this.emit(`\r\n[process exited ${event.exitCode}]\r\n`);
+        });
         this.pty = proc;
         return;
       } catch {
@@ -136,9 +166,13 @@ export class TerminalSession {
 
     const child = spawn(shell.command, shell.args, {
       cwd: this.cwd,
-      env: process.env,
+      // B-006 (CF-28): human shells never inherit server secrets. The cast is
+      // for the app's ProcessEnv augmentation (NODE_ENV is in the allowlist).
+      env: buildAgentEnvironment({ includeProviderCredentials: false }) as NodeJS.ProcessEnv,
       shell: false
     });
+    // B-005: auto-unregisters on 'close'; cancel kills the tree with the run.
+    this.disposeSupervision = superviseChildProcess({ runId: this.runId, label: "terminal" }, child);
     child.stdout.on("data", (chunk: Buffer) => this.emit(chunk.toString("utf8")));
     child.stderr.on("data", (chunk: Buffer) => this.emit(chunk.toString("utf8")));
     child.on("exit", (code) => this.emit(`\r\n[process exited ${code ?? 0}]\r\n`));
@@ -182,6 +216,7 @@ export class TerminalSession {
     this.closed = true;
     this.pty?.kill();
     this.child?.kill();
+    this.disposeSupervision?.();
     this.listeners.clear();
   }
 

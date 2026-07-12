@@ -92,7 +92,7 @@ export type GraphEmptyKind = "planning" | "failed" | "interrupted";
  */
 export function graphEmptyStateKind(status: RunControlStatus): GraphEmptyKind {
   if (status === "failed") return "failed";
-  if (status === "interrupted") return "interrupted";
+  if (status === "interrupted" || status === "cancelling") return "interrupted";
   return "planning";
 }
 

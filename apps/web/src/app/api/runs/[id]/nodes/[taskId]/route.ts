@@ -24,6 +24,7 @@ interface RouteContext {
 const EditableStringSchema = z.string().trim().min(1);
 
 const NodeEditRequestSchema = z.object({
+  expectedVersion: z.number().int().nonnegative(),
   title: EditableStringSchema.max(160).optional(),
   objective: EditableStringSchema.max(4000).optional(),
   allowedPaths: z.array(EditableStringSchema.max(500)).optional(),
@@ -80,7 +81,12 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Ne
       throw new RunValidationError("No editable fields were supplied");
     }
 
-    const saved = await persistRunPatches({ run, baseSnapshot, patches });
+    const saved = await persistRunPatches({
+      run,
+      baseSnapshot,
+      patches,
+      expectedVersion: parsed.data.expectedVersion
+    });
 
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {

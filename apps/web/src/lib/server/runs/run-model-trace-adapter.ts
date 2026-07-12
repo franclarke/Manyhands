@@ -80,10 +80,13 @@ export function runModelEventsFromTrace(
       ];
     }
     case "executor_completed": {
-      if (taskId === undefined) return [];
-      const timedOut = payload.timedOut === true;
-      const exitCode = numberValue(payload.exitCode) ?? 0;
-      const passed = !timedOut && exitCode === 0;
+      // Executor completion is a process fact, never validation evidence.
+      return [];
+    }
+    case "validation_completed": {
+      if (taskId === undefined || stringValue(payload.scope) !== "leaf") return [];
+      const passed = payload.passed === true;
+      const commandCount = numberValue(payload.commandCount) ?? 1;
       return [
         {
           actor: "agent",
@@ -93,9 +96,9 @@ export function runModelEventsFromTrace(
             nodeId: taskId,
             iteration: 1,
             maxIterations: 1,
-            build: passed ? "pass" : "fail",
-            testsPass: passed ? 1 : 0,
-            testsTotal: 1
+            build: "pass",
+            testsPass: passed ? commandCount : 0,
+            testsTotal: commandCount
           }
         }
       ];

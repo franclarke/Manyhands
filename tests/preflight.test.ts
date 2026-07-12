@@ -3,7 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { runPreflight, PreflightError, type PreflightDeps } from "@/lib/server/runs/preflight";
-import { inspectPrimaryProviderReadiness, type ProviderReadinessDeps } from "@/lib/server/providers/readiness";
+import {
+  inspectPrimaryProviderReadiness,
+  inspectProvidersReadiness,
+  type ProviderReadinessDeps
+} from "@/lib/server/providers/readiness";
 
 const OK_DEPS: Required<
   Pick<PreflightDeps, "checkCli" | "hasCredentials" | "gitPorcelain" | "branchExists" | "freeDiskBytes">
@@ -112,6 +116,26 @@ describe("runPreflight", () => {
     expect(checked.filter((binaryPath) => binaryPath === "codex")).toHaveLength(1);
   });
 
+  it("checks distinct execution and repair executors before execution starts", async () => {
+    const checked: string[] = [];
+    await runPreflight(
+      {
+        ...INPUT,
+        defaultExecutionSelection: { executorId: "codex-cli", model: "gpt-5.5" },
+        defaultRepairSelection: { executorId: "claude-code-cli", model: "sonnet" }
+      },
+      {
+        ...OK_DEPS,
+        checkCli: async (binaryPath) => {
+          checked.push(binaryPath);
+          return true;
+        }
+      }
+    );
+
+    expect(checked).toEqual(expect.arrayContaining(["codex", "claude"]));
+  });
+
   it("fails preflight when the grounding executor CLI is unavailable", async () => {
     const error = await runPreflight(
       {
@@ -161,6 +185,19 @@ const READINESS_DEPS: Required<ProviderReadinessDeps> = {
 };
 
 describe("inspectPrimaryProviderReadiness", () => {
+  it("reports readiness for all registered providers", async () => {
+    const providers = await inspectProvidersReadiness(
+      workspace({ repoPath: "C:/repo", defaultBranch: "main" }),
+      READINESS_DEPS
+    );
+
+    expect(providers.map((provider) => provider.executorId)).toEqual([
+      "claude-code-cli",
+      "codex-cli",
+      "opencode-cli"
+    ]);
+  });
+
   it("reports ready when CLI, auth, repo, and branch checks pass", async () => {
     const readiness = await inspectPrimaryProviderReadiness(
       workspace({ repoPath: "C:/repo", defaultBranch: "main" }),

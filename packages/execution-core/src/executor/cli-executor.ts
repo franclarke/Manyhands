@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
 import type { AgentExecutorOptions } from "../types";
+import { cliPathRequiresShell, resolveCliBinaryPath } from "./binary";
 import { getExecutorDescriptor, type ExecutorId } from "./registry";
 import { createAgentStatusScanner } from "./status-channel";
 import { spawnExecutorProcess, type SpawnFn } from "./process";
@@ -60,11 +61,12 @@ export class CliAgentExecutor implements AgentExecutor {
   constructor(profile: CliExecutorProfile, deps: CliExecutorDeps = {}) {
     const descriptor = getExecutorDescriptor(profile.id);
     this.profile = profile;
-    this.binaryPath =
-      deps.binaryPath ?? process.env[descriptor.binaryEnvVar] ?? descriptor.defaultBinary;
+    this.binaryPath = resolveCliBinaryPath(
+      deps.binaryPath ?? process.env[descriptor.binaryEnvVar] ?? descriptor.defaultBinary
+    );
     this.spawnFn = deps.spawn ?? spawn;
     this.readInstructions = deps.readInstructions ?? ((filePath) => readFile(filePath, "utf8"));
-    this.useShell = deps.useShell ?? false;
+    this.useShell = deps.useShell ?? cliPathRequiresShell(this.binaryPath);
   }
 
   async execute(options: AgentExecutorOptions): Promise<ExecutorRunOutcome> {

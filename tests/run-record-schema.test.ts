@@ -86,9 +86,11 @@ describe("run-record schema", () => {
     expect(parsed.success).toBe(true);
   });
 
-  it("RunStatusSchema enumerates the 10 lifecycle values", () => {
-    expect(RUN_STATUS_VALUES.length).toBe(10);
+  it("RunStatusSchema enumerates the current lifecycle values", () => {
+    expect(RUN_STATUS_VALUES.length).toBe(16);
     expect(RUN_STATUS_VALUES).toContain("completed_with_accepted");
+    expect(RUN_STATUS_VALUES).toContain("unverified");
+    expect(RUN_STATUS_VALUES).toContain("failed_artifact");
     for (const status of RUN_STATUS_VALUES) {
       expect(RunStatusSchema.safeParse(status).success).toBe(true);
     }

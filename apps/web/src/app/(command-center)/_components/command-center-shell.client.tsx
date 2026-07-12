@@ -18,13 +18,10 @@ import { EffortControl, type EffortLevel } from "./effort-control.client";
 import { WorkspacePicker } from "./workspace-picker.client";
 import { WorkspaceFormDialog, type WorkspaceFormValue } from "./workspace-form-dialog.client";
 import { toGranularityMode, isGranularityLevel, GRANULARITY_DISPLAY_OPTIONS, type GranularityLevel } from "@/lib/granularity";
-import { modelOptionForValue, parseSelectionValue } from "@/lib/models";
+import { executorLabel, modelOptionForValue, parseSelectionValue, type ExecutorId, type ExecutorSelection } from "@/lib/models";
 import { estimateRunCostUsd, formatUsd } from "@/lib/model-pricing";
 import { RUN_USER_PROMPT_MAX_LENGTH } from "@/lib/run-limits";
-import type { ExecutorSelection } from "@/lib/api-types";
 import { FolderGit2, GitBranch, Plus, Pencil, Trash2, AlertTriangle, OctagonAlert, Sparkles } from "lucide-react";
-
-const DEFAULT_PLANNING_MODEL = "sonnet";
 
 type AutonomyLevel = "supervised" | "semi" | "autonomous";
 const AUTONOMY_OPTIONS: ReadonlyArray<{ id: AutonomyLevel; label: string; hint: string }> = [
@@ -79,15 +76,16 @@ export function CommandCenterShell({
   }, [workspaces, workspaceId]);
 
   const [granularity, setGranularity] = useState<GranularityLevel>(initialGranularity);
-  // Single model choice drives planning + execution + repair (W3).
-  const [modelValue, setModelValue] = useState<string>(`claude-code-cli/${initialModelId}`);
+  const initialSelectionValue = `claude-code-cli/${initialModelId}`;
+  const [planningModelValue, setPlanningModelValue] = useState<string>(initialSelectionValue);
+  const [executionModelValue, setExecutionModelValue] = useState<string>(initialSelectionValue);
   const [effort, setEffort] = useState<EffortLevel>("medium");
   const [autonomy, setAutonomy] = useState<AutonomyLevel>("supervised");
   const [prompt, setPrompt] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [handoffRunId, setHandoffRunId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [readiness, setReadiness] = useState<ProviderReadiness | null>(null);
+  const [readinessProviders, setReadinessProviders] = useState<ProviderReadiness[]>([]);
   const [readinessLoading, setReadinessLoading] = useState(false);
   const [readinessError, setReadinessError] = useState<string | null>(null);
 
@@ -116,7 +114,7 @@ export function CommandCenterShell({
     let cancelled = false;
     async function loadReadiness(): Promise<void> {
       if (workspaceId.length === 0) {
-        setReadiness(null);
+        setReadinessProviders([]);
         return;
       }
       setReadinessLoading(true);
@@ -128,11 +126,11 @@ export function CommandCenterShell({
           throw new Error("error" in payload ? payload.error : `Request failed with ${response.status}`);
         }
         if (!cancelled) {
-          setReadiness((payload as ProviderReadinessResponse).providers[0] ?? null);
+          setReadinessProviders((payload as ProviderReadinessResponse).providers);
         }
       } catch (error) {
         if (!cancelled) {
-          setReadiness(null);
+          setReadinessProviders([]);
           setReadinessError(error instanceof Error ? error.message : String(error));
         }
       } finally {
@@ -157,16 +155,18 @@ export function CommandCenterShell({
   const hasPrompt = trimmedPromptLength > 0;
   const promptOverLimit = trimmedPromptLength > RUN_USER_PROMPT_MAX_LENGTH;
   const hasLocalRepo = selectedWorkspace?.repoPath !== undefined && selectedWorkspace.repoPath.length > 0;
-  const hasUsableProvider = readiness?.status === "ready" || readiness?.status === "warning";
+  const selectedPlanningModel = modelOptionForValue(planningModelValue);
+  const selectedExecutionModel = modelOptionForValue(executionModelValue);
+  const planningSelection = parseSelectionValue(planningModelValue);
+  const executionSelection = parseSelectionValue(executionModelValue);
+  const requiredReadiness = readinessForSelections(readinessProviders, [planningSelection, executionSelection]);
+  const readiness = aggregateReadiness(requiredReadiness);
+  const hasUsableProvider =
+    requiredReadiness.length > 0 &&
+    requiredReadiness.every((provider) => provider.status === "ready" || provider.status === "warning");
 
-  // One model choice → planning + execution + repair. Planning needs a
-  // planning-capable model (Claude Code today); if an execution-only model is
-  // picked, planning falls back to the default Claude Code planner.
-  const selectedModel = modelOptionForValue(modelValue);
-  const selection = parseSelectionValue(modelValue);
-  const canPlanWithSelection = selectedModel?.capabilities.includes("planning") ?? false;
-  const planningModelId = canPlanWithSelection ? selection.model : DEFAULT_PLANNING_MODEL;
-  const costEstimate = estimateRunCostUsd(selection.model, {
+  // Planning and execution can use different executor/model selections.
+  const costEstimate = estimateRunCostUsd(executionSelection.model, {
     promptChars: trimmedPromptLength,
     granularity
   });
@@ -187,7 +187,8 @@ export function CommandCenterShell({
     !promptOverLimit &&
     hasLocalRepo &&
     hasUsableProvider &&
-    selectedModel !== undefined &&
+    selectedPlanningModel !== undefined &&
+    selectedExecutionModel !== undefined &&
     !submitting;
 
   async function handleStart(): Promise<void> {
@@ -195,26 +196,27 @@ export function CommandCenterShell({
     setSubmitting(true);
     setErrorMessage(null);
     try {
-      const planningExecutorId = canPlanWithSelection ? selection.executorId : "claude-code-cli";
       const body: {
         workspaceId: string;
         granularity: string;
         model: string;
         planningModel?: string;
-        planningExecutorId?: string;
+        planningExecutorId?: ExecutorId;
         defaultExecutionSelection?: ExecutorSelection;
         defaultRepairSelection?: ExecutorSelection;
+        executionConfig?: { reasoningEffort?: EffortLevel };
         autonomy?: AutonomyLevel;
         userPrompt: string;
         repoSpec?: { kind: "localPath"; path: string };
       } = {
         workspaceId: selectedWorkspace.id,
         granularity: granularityMode,
-        model: planningModelId,
-        planningModel: planningModelId,
-        planningExecutorId: planningExecutorId,
-        defaultExecutionSelection: selection,
-        defaultRepairSelection: selection,
+        model: executionSelection.model,
+        planningModel: planningSelection.model,
+        planningExecutorId: planningSelection.executorId,
+        defaultExecutionSelection: executionSelection,
+        defaultRepairSelection: executionSelection,
+        ...(selectedExecutionModel?.supportsEffort ? { executionConfig: { reasoningEffort: effort } } : {}),
         autonomy,
         userPrompt: prompt.trim()
       };
@@ -444,16 +446,24 @@ export function CommandCenterShell({
 
         {/* Selectors Bar */}
         <div className="flex flex-wrap items-start gap-x-5 gap-y-4 border-t border-[var(--color-border-soft)] px-4 py-4 bg-[var(--color-bg-subtle)]/5">
-          {/* Model */}
+          {/* Planning model */}
           <div className="flex flex-col gap-1.5">
             <span className="text-meta font-medium text-[var(--color-text-subtle)]">
-              Modelo
+              Planificacion
             </span>
-            <ModelPicker value={modelValue} onChange={setModelValue} />
+            <ModelPicker value={planningModelValue} onChange={setPlanningModelValue} capability="planning" />
+          </div>
+
+          {/* Execution model */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-meta font-medium text-[var(--color-text-subtle)]">
+              Ejecucion
+            </span>
+            <ModelPicker value={executionModelValue} onChange={setExecutionModelValue} capability="execution" />
           </div>
 
           {/* Effort */}
-          {selectedModel?.supportsEffort ? (
+          {selectedExecutionModel?.supportsEffort ? (
             <EffortControl value={effort} onChange={setEffort} />
           ) : null}
 
@@ -510,11 +520,6 @@ export function CommandCenterShell({
                 <span className="text-[var(--color-text-muted)] font-medium">
                   ~{formatUsd(costEstimate.lowUsd)}–{formatUsd(costEstimate.highUsd)}
                 </span>
-              </span>
-            ) : null}
-            {!canPlanWithSelection ? (
-              <span className="text-[var(--color-text-faint)]">
-                {costEstimate !== undefined ? "· " : ""}Planifica con Claude Code {DEFAULT_PLANNING_MODEL}
               </span>
             ) : null}
           </div>
@@ -708,6 +713,60 @@ function Callout({
       <span className="min-w-0">{children}</span>
     </div>
   );
+}
+
+function readinessForSelections(
+  providers: readonly ProviderReadiness[],
+  selections: readonly ExecutorSelection[]
+): ProviderReadiness[] {
+  const byExecutor = new Map<string, ProviderReadiness>();
+  for (const provider of providers) {
+    byExecutor.set(provider.executorId, provider);
+  }
+  const requiredIds = Array.from(new Set(selections.map((selection) => selection.executorId)));
+  return requiredIds.map((executorId) => byExecutor.get(executorId) ?? missingProviderReadiness(executorId));
+}
+
+function missingProviderReadiness(executorId: ExecutorId): ProviderReadiness {
+  return {
+    executorId,
+    label: executorLabel(executorId),
+    status: "error",
+    binaryPath: "",
+    quota: "unknown",
+    checks: [
+      {
+        id: "cli",
+        status: "fail",
+        label: executorLabel(executorId),
+        message: `No se pudo verificar ${executorLabel(executorId)}.`
+      }
+    ]
+  };
+}
+
+function aggregateReadiness(providers: readonly ProviderReadiness[]): ProviderReadiness | null {
+  if (providers.length === 0) {
+    return null;
+  }
+  const status = providers.some((provider) => provider.status === "error")
+    ? "error"
+    : providers.some((provider) => provider.status === "warning")
+      ? "warning"
+      : "ready";
+  return {
+    executorId: providers[0]!.executorId,
+    label: providers.map((provider) => provider.label).join(" + "),
+    status,
+    binaryPath: providers.map((provider) => provider.binaryPath).filter(Boolean).join(" + "),
+    quota: "unknown",
+    checks: providers.flatMap((provider) =>
+      provider.checks.map((check) => ({
+        ...check,
+        label: `${provider.label} - ${check.label}`
+      }))
+    )
+  };
 }
 
 function providerPill({

@@ -3,10 +3,12 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import {
   RunNotFoundError,
+  WorkspaceEscapeError,
   getRunRepository,
   parseWorkspaceContext,
+  resolveContainedWorkspaceFile,
+  listFinalArtifactTree,
   resolveRunWorkspaceContext,
-  resolveWorkspacePath,
   safeWorkspaceRelativePath
 } from "@/lib/server/runs";
 
@@ -37,7 +39,12 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
     if (!workspace.exists) {
       return NextResponse.json({ workspace, path: relativePath, entries: [] });
     }
-    const target = resolveWorkspacePath(workspace.rootPath, relativePath);
+    if (workspace.context === "final") {
+      return NextResponse.json({ workspace, path: relativePath, entries: await listFinalArtifactTree(run, relativePath) });
+    }
+    // B-006 (CF-40): realpath containment — navigating into a symlink/junction
+    // must not list directories outside the workspace.
+    const target = await resolveContainedWorkspaceFile(workspace.rootPath, relativePath);
     const targetStat = await stat(target);
     if (!targetStat.isDirectory()) {
       return NextResponse.json({ error: "Path is not a directory." }, { status: 400 });
@@ -72,5 +79,6 @@ async function readEntries(target: string, relativePath: string): Promise<Worksp
 
 function workspaceErrorResponse(error: unknown): NextResponse {
   if (error instanceof RunNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
+  if (error instanceof WorkspaceEscapeError) return NextResponse.json({ error: error.message }, { status: 403 });
   return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 400 });
 }

@@ -62,7 +62,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       taskIds: [leftTaskId, rightTaskId],
       reason: parsed.data.reason ?? "Accepted as an explicit coordination risk."
     });
-    const saved = await persistRunPatches({ run, baseSnapshot, patches: [patch] });
+    const saved = await persistRunPatches({ run, baseSnapshot, patches: [patch], expectedVersion: run.version });
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {
     return errorResponse(error);

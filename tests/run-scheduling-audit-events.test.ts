@@ -6,6 +6,7 @@ import { AgentTaskContractSchema, type AgentTaskContract } from "@manyhands/cont
 import type { RepositoryIndex } from "@manyhands/repository-index";
 import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 import { readRunModelEvents } from "@/lib/server/runs/run-model-event-log";
+import { effectiveExecutionConfig } from "@/lib/server/runs/effective-execution-config";
 import { selectAndPersistSchedulingWave } from "@/lib/server/runs/scheduling-audit-events";
 
 let tempDir: string;
@@ -26,6 +27,46 @@ afterEach(async () => {
 });
 
 describe("scheduling audit events", () => {
+  it("normalizes the complete effective execution config before scheduling", () => {
+    expect(effectiveExecutionConfig(undefined).maxParallel).toBe(6);
+    expect(effectiveExecutionConfig({ maxParallel: 2 }).maxParallel).toBe(2);
+  });
+
+  it("caps frontiers with the effective default and explicit override", async () => {
+    const ids = Array.from({ length: 20 }, (_, index) => `task-${index}`);
+    const graph = graphWithScopes(Object.fromEntries(ids.map((id) => [id, [`src/${id}/**`]])));
+    const defaultWave = await selectAndPersistSchedulingWave({
+      runId: "run-scheduling-default-cap", graph, candidates: ids, source: "execution-host",
+      effectiveConfig: effectiveExecutionConfig(undefined)
+    });
+    const overrideWave = await selectAndPersistSchedulingWave({
+      runId: "run-scheduling-override-cap", graph, candidates: ids, source: "execution-host",
+      effectiveConfig: effectiveExecutionConfig({ maxParallel: 2 })
+    });
+
+    expect(defaultWave.selectedTaskIds).toHaveLength(6);
+    expect(defaultWave.payload.maxParallel).toBe(6);
+    expect(overrideWave.selectedTaskIds).toHaveLength(2);
+    expect(overrideWave.payload.maxParallel).toBe(2);
+  });
+
+  it("uses a durable unique wave identity across hosts and resumes", async () => {
+    const input = {
+      runId: "run-scheduling-resume-wave",
+      graph: graphWithScopes({ taskA: ["src/a/**"] }),
+      candidates: ["taskA"],
+      source: "execution-host" as const,
+      effectiveConfig: effectiveExecutionConfig(undefined)
+    };
+    const first = await selectAndPersistSchedulingWave(input);
+    const second = await selectAndPersistSchedulingWave(input);
+
+    expect(first.payload.waveId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(second.payload.waveId).not.toBe(first.payload.waveId);
+    expect(second.payload.waveIndex).toBeGreaterThan(first.payload.waveIndex);
+    expect(await readRunModelEvents(input.runId)).toHaveLength(2);
+  });
+
   it("persists a required scheduling event before returning a selected wave", async () => {
     const runId = "run-scheduling-overlap";
     const result = await selectAndPersistSchedulingWave({

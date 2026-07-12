@@ -91,7 +91,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       dependencies: graft.dependencies,
       contracts: graft.contracts
     });
-    const saved = await persistRunPatches({ run, baseSnapshot, patches: [patch] });
+    const saved = await persistRunPatches({ run, baseSnapshot, patches: [patch], expectedVersion: run.version });
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {
     return errorResponse(error);
@@ -192,6 +192,9 @@ function buildSubtreeGraft(input: {
       parentId: nextParentId,
       depth: oldRoot.depth + generated.depth,
       childrenIds: generated.childrenIds.map((childId) => idMap.get(childId) ?? childId),
+      // B-009 (CF-13): the shortcut must be remapped exactly like the
+      // canonical edges — the old code left stale pre-remap ids here.
+      dependencies: generated.dependencies.map((depId) => idMap.get(depId) ?? depId),
       metadata: {
         ...(generated.metadata ?? {}),
         authoredBy: "ai",

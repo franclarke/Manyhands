@@ -3,15 +3,27 @@ import type { RunRecord, RunStatus } from "./schema";
 
 const ALLOWED_TRANSITIONS: Record<RunStatus, ReadonlyArray<RunStatus>> = {
   created: ["generating", "failed"],
-  generating: ["paused", "needs_review", "interrupted", "failed"],
-  paused: ["generating", "running", "needs_review", "interrupted", "failed"],
+  generating: ["paused", "needs_review", "cancelling", "interrupted", "failed"],
+  paused: ["generating", "running", "needs_review", "cancelling", "interrupted", "failed"],
   needs_review: ["approved", "failed"],
   approved: ["running", "needs_review", "failed"],
-  running: ["paused", "completed", "completed_with_accepted", "interrupted", "failed"],
-  interrupted: ["generating", "running", "failed"],
+  running: ["paused", "completed", "completed_with_accepted", "partial", "unverified", "needs_delivery", "failed_artifact", "failed_delivery", "cancelling", "interrupted", "failed"],
+  // Cancellation is terminal only when every process tree is verified dead
+  // (B-005): `cancelling` holds the run until the kill report says allDead.
+  cancelling: ["interrupted", "failed"],
+  // `approved` bridges an execution-interrupted run back into the execution
+  // pipeline (restart route: interrupted → approved → running), mirroring the
+  // symmetric `failed → approved` path. Without it, a run interrupted during
+  // execution can never be restarted.
+  interrupted: ["generating", "running", "approved", "failed"],
   // Re-open (review actions): let the user re-run a node after a finished run.
   completed: ["approved"],
   completed_with_accepted: ["approved"],
+  partial: ["approved"],
+  unverified: ["approved"],
+  needs_delivery: ["approved"],
+  failed_artifact: ["approved"],
+  failed_delivery: ["approved"],
   failed: ["approved", "generating"]
 };
 
@@ -51,7 +63,9 @@ const ACTION_ALLOWED_STATUSES: Record<RunLifecycleAction, ReadonlyArray<RunStatu
   start: ["approved"],
   pause: ["generating", "running"],
   resume: ["paused"],
-  cancel: ["generating", "running", "paused"],
+  // Retrying cancel from `cancelling` is how a blocked cancellation finishes
+  // once its survivors finally die (B-005).
+  cancel: ["generating", "running", "paused", "cancelling"],
   answer_gate: ["paused"],
   approve_plan: ["needs_review"],
   replan: ["running"],

@@ -67,7 +67,7 @@ const StepValidationCommandSchema = z
 
 const AtomicStepSchema = z.object({
   decision: z.literal("atomic"),
-  reasoning: z.string().min(1).max(800),
+  reasoning: z.string().min(1).max(1600),
   allowedPaths: z.array(z.string().min(1)).max(60).default([]),
   forbiddenPaths: z.array(z.string().min(1)).max(60).default([]),
   expectedFiles: z.array(z.string().min(1)).max(60).default([]),
@@ -77,7 +77,7 @@ const AtomicStepSchema = z.object({
 
 const DecomposeStepSchema = z.object({
   decision: z.literal("decompose"),
-  reasoning: z.string().min(1).max(800),
+  reasoning: z.string().min(1).max(1600),
   sharedInterfaces: z.array(StepInterfaceSchema).max(40).default([]),
   children: z.array(StepChildSchema).min(2).max(12),
   dependencies: z.array(StepDependencySchema).max(60).default([]),
@@ -86,7 +86,7 @@ const DecomposeStepSchema = z.object({
 
 const QuestionStepSchema = z.object({
   decision: z.literal("question"),
-  reasoning: z.string().min(1).max(800),
+  reasoning: z.string().min(1).max(1600),
   question: z.string().min(1).max(500),
   options: z.array(z.string().min(1).max(240)).min(2).max(10)
 });

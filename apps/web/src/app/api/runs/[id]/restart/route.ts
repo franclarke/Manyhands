@@ -15,6 +15,7 @@ import {
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
+import { withDefaultReasoningEffort } from "@/lib/server/runs/execution-config-defaults";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +41,12 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
         assertRunActionAllowed(current, "restart");
         resumesExecution = restartResumesExecution(current);
         const now = new Date().toISOString();
+        const effectiveSelection =
+          current.defaultExecutionSelection ??
+          (current.planningExecutorId !== undefined
+            ? { executorId: current.planningExecutorId, model: current.planningModel ?? current.model }
+            : undefined);
+        const executionConfig = withDefaultReasoningEffort(current.executionConfig, effectiveSelection);
         if (resumesExecution) {
           // The execution pipeline transitions "approved" → "running". Persist
           // approved metadata if missing and bridge through the lifecycle step.
@@ -50,6 +57,7 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
             errorMessage: undefined,
             failedDuring: undefined,
             interruptedDuring: undefined,
+            executionConfig,
             approvedAt: current.approvedAt ?? now
           };
           delete next.pausedDuring;
@@ -68,6 +76,7 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
           interruptedDuring: undefined,
           errorMessage: undefined,
           failedDuring: undefined,
+          executionConfig,
           startedAt: current.startedAt ?? now
         };
         delete next.pausedDuring;

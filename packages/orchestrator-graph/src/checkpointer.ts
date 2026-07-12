@@ -24,8 +24,9 @@ import type {
   CheckpointPendingWrite
 } from "@langchain/langgraph-checkpoint";
 import type { RunnableConfig } from "@langchain/core/runnables";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
-import { writeFile, readFile, mkdir, readdir } from "node:fs/promises";
+import { open, readFile, mkdir, readdir, rename, rm } from "node:fs/promises";
 
 interface PersistedWrite {
   taskId: string;
@@ -56,6 +57,7 @@ export type ThreadCheckpointHealth =
   | { status: "lost"; corrupted: string[] };
 
 export class JsonFileCheckpointSaver extends BaseCheckpointSaver {
+  private static readonly writeChains = new Map<string, Promise<unknown>>();
   private readonly directory: string;
 
   constructor(directory: string) {
@@ -209,15 +211,17 @@ export class JsonFileCheckpointSaver extends BaseCheckpointSaver {
       throw new Error("JsonFileCheckpointSaver.put: missing thread_id in config.configurable");
     }
 
-    const threadDir = join(this.directory, threadId);
-    await mkdir(threadDir, { recursive: true });
-
-    const state = { checkpoint, metadata, config };
-    const content = JSON.stringify(state, null, 2);
-
     const checkpointId = checkpoint.id;
-    await writeFile(join(threadDir, `${checkpointId}.json`), content, "utf-8");
-    await writeFile(join(threadDir, "latest.json"), content, "utf-8");
+    const threadDir = join(this.directory, threadId);
+    await this.withWriteLock(`thread:${threadId}`, async () => {
+      await mkdir(threadDir, { recursive: true });
+      await cleanupTempFiles(threadDir);
+
+      const state = { checkpoint, metadata, config };
+      const content = JSON.stringify(state, null, 2);
+      await atomicWriteText(join(threadDir, `${checkpointId}.json`), content);
+      await atomicWriteText(join(threadDir, "latest.json"), content);
+    });
 
     return {
       configurable: { thread_id: threadId, checkpoint_id: checkpointId }
@@ -241,24 +245,79 @@ export class JsonFileCheckpointSaver extends BaseCheckpointSaver {
       throw new Error("JsonFileCheckpointSaver.putWrites: missing thread_id or checkpoint_id");
     }
 
-    const existing = await this.readPendingWrites(threadId, checkpointId);
-    const merged: PersistedWrite[] = [
-      ...existing.map(([writeTaskId, channel, value]) => ({ taskId: writeTaskId, channel, value })),
-      ...writes.map(([channel, value]) => ({ taskId, channel: String(channel), value }))
-    ];
+    await this.withWriteLock(`thread:${threadId}`, async () => {
+      const threadDir = join(this.directory, threadId);
+      await mkdir(threadDir, { recursive: true });
+      await cleanupTempFiles(threadDir);
 
-    await mkdir(join(this.directory, threadId), { recursive: true });
-    await writeFile(this.writesPath(threadId, checkpointId), JSON.stringify(merged, null, 2), "utf-8");
+      const existing = await this.readPendingWrites(threadId, checkpointId);
+      const merged = new Map<string, PersistedWrite>();
+      for (const [writeTaskId, channel, value] of existing) {
+        merged.set(pendingWriteKey(writeTaskId, channel), { taskId: writeTaskId, channel, value });
+      }
+      for (const [channelValue, value] of writes) {
+        const channel = String(channelValue);
+        merged.set(pendingWriteKey(taskId, channel), { taskId, channel, value });
+      }
+
+      await atomicWriteText(
+        this.writesPath(threadId, checkpointId),
+        JSON.stringify(Array.from(merged.values()), null, 2)
+      );
+    });
   }
 
   async deleteThread(threadId: string): Promise<void> {
-    // Remove all checkpoints for the given thread.
-    const { rm } = await import("node:fs/promises");
     const threadDir = join(this.directory, threadId);
-    try {
+    await this.withWriteLock(`thread:${threadId}`, async () => {
       await rm(threadDir, { recursive: true, force: true });
-    } catch {
-      // Silently ignore if the thread directory doesn't exist
-    }
+    });
   }
+
+  private withWriteLock<T>(key: string, operation: () => Promise<T>): Promise<T> {
+    const lockKey = `${this.directory}\0${key}`;
+    const previous = JsonFileCheckpointSaver.writeChains.get(lockKey) ?? Promise.resolve();
+    const next = previous.then(operation, operation);
+    const tail = next.catch(() => undefined);
+    JsonFileCheckpointSaver.writeChains.set(lockKey, tail);
+    return next.finally(() => {
+      if (JsonFileCheckpointSaver.writeChains.get(lockKey) === tail) {
+        JsonFileCheckpointSaver.writeChains.delete(lockKey);
+      }
+    });
+  }
+}
+
+function pendingWriteKey(taskId: string, channel: string): string {
+  return `${taskId}\0${channel}`;
+}
+
+async function atomicWriteText(filePath: string, content: string): Promise<void> {
+  const tempPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  try {
+    handle = await open(tempPath, "wx");
+    await handle.writeFile(content, { encoding: "utf8" });
+    await handle.sync();
+    await handle.close();
+    handle = undefined;
+    await rename(tempPath, filePath);
+  } finally {
+    await handle?.close().catch(() => undefined);
+    await rm(tempPath, { force: true }).catch(() => undefined);
+  }
+}
+
+async function cleanupTempFiles(directory: string): Promise<void> {
+  let files: string[];
+  try {
+    files = await readdir(directory);
+  } catch {
+    return;
+  }
+  await Promise.all(
+    files
+      .filter((file) => file.endsWith(".tmp"))
+      .map((file) => rm(join(directory, file), { force: true }).catch(() => undefined))
+  );
 }

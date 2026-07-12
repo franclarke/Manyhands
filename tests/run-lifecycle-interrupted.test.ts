@@ -19,6 +19,16 @@ describe("interrupted lifecycle transitions", () => {
     expect(() => assertTransition("interrupted", "running")).not.toThrow();
   });
 
+  it("allows interrupted → approved (restart bridges an execution-interrupted run back into execution)", () => {
+    // The restart route resumes execution from an `interrupted` run by first
+    // moving it to `approved` (the execution pipeline's own approved → running
+    // step). `failed → approved` is already allowed for the symmetric case; a
+    // run interrupted during execution must restart the same way, otherwise it
+    // wedges with "Illegal status transition: interrupted → approved" and can
+    // never be resumed (observed E2E 2026-07-06).
+    expect(() => assertTransition("interrupted", "approved")).not.toThrow();
+  });
+
   it("rejects interrupted → completed", () => {
     expect(() => assertTransition("interrupted", "completed")).toThrowError(RunLifecycleError);
   });

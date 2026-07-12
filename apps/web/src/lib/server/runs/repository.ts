@@ -1,4 +1,5 @@
-import { mkdir, readFile, readdir, stat } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { atomicWriteJson } from "../workspaces/atomic-write";
 import { resolveRepoRoot } from "../repo-root";
@@ -110,13 +111,14 @@ export class JsonRunRecordStore implements RunRepository {
       // `version` is repository-owned: monotonic per persisted write, taken from
       // the record on disk (not the caller's possibly stale snapshot) so it never
       // regresses even under last-wins saves.
-      const diskVersion = await this.get(run.runId).then(
-        (current) => current.version,
+      const diskRecord = await this.get(run.runId).then(
+        (current) => current,
         () => undefined
       );
       const parsed = RunRecordSchema.parse({
         ...run,
-        version: Math.max(diskVersion ?? 0, run.version ?? 0) + 1,
+        version: Math.max(diskRecord?.version ?? 0, run.version ?? 0) + 1,
+        mutationFence: Math.max(diskRecord?.mutationFence ?? 0, run.mutationFence ?? 0),
         updatedAt: this.clock()
       });
       const file: RunFile = { version: RUN_FILE_VERSION, run: parsed };
@@ -130,9 +132,11 @@ export class JsonRunRecordStore implements RunRepository {
       // get() reads without taking the lock, so re-reading here is safe (no
       // re-entrancy) and yields the record left by whichever write ran before us.
       const current = await this.get(runId);
+      const mutated = mutator(current);
       const parsed = RunRecordSchema.parse({
-        ...mutator(current),
+        ...mutated,
         version: current.version + 1,
+        mutationFence: Math.max(current.mutationFence ?? 0, mutated.mutationFence ?? 0),
         updatedAt: this.clock()
       });
       const file: RunFile = { version: RUN_FILE_VERSION, run: parsed };
@@ -181,9 +185,53 @@ export class JsonRunRecordStore implements RunRepository {
 
   private withLock<T>(runId: string, fn: () => Promise<T>): Promise<T> {
     const previous = this.writeChains.get(runId) ?? Promise.resolve();
-    const next = previous.then(fn, fn);
+    const next = previous.then(
+      () => this.withFileMutationLock(runId, fn),
+      () => this.withFileMutationLock(runId, fn)
+    );
     this.writeChains.set(runId, next.catch(() => undefined));
     return next;
+  }
+
+  /**
+   * The in-memory chain orders calls in one repository instance. Next dev
+   * reloads and multiple server processes can own independent instances, so a
+   * short-lived filesystem mutex also protects the read-modify-write section.
+   * It is deliberately separate from the long-lived repository execution
+   * lease: this lock only surrounds one RunRecord mutation.
+   */
+  private async withFileMutationLock<T>(runId: string, fn: () => Promise<T>): Promise<T> {
+    await this.ensureDirectory();
+    const locksDirectory = path.join(this.directory, ".mutation-locks");
+    await mkdir(locksDirectory, { recursive: true });
+    const lockPath = path.join(locksDirectory, `${safeFileName(runId)}.lock`);
+    const token = randomUUID();
+    const deadline = Date.now() + MUTATION_LOCK_ACQUIRE_TIMEOUT_MS;
+
+    while (true) {
+      try {
+        await mkdir(lockPath);
+        await writeFile(
+          path.join(lockPath, "owner.json"),
+          JSON.stringify({ token, pid: process.pid, acquiredAtMs: Date.now() }),
+          "utf8"
+        );
+        break;
+      } catch (error) {
+        if (!isErrno(error) || error.code !== "EEXIST") throw error;
+        if (await tryQuarantineStaleMutationLock(lockPath)) continue;
+        if (Date.now() >= deadline) {
+          throw new RunValidationError(`Timed out acquiring mutation lock for run ${runId}`);
+        }
+        await delay(MUTATION_LOCK_RETRY_MS);
+      }
+    }
+
+    try {
+      return await fn();
+    } finally {
+      await releaseOwnedMutationLock(lockPath, token);
+    }
   }
 
   private async ensureDirectory(): Promise<void> {
@@ -223,6 +271,87 @@ function safeFileName(runId: string): string {
 
 interface NodeErrnoException {
   code?: string;
+}
+
+const MUTATION_LOCK_ACQUIRE_TIMEOUT_MS = 15_000;
+const MUTATION_LOCK_RETRY_MS = 10;
+const MUTATION_LOCK_STALE_MS = 30_000;
+
+interface MutationLockOwner {
+  token: string;
+  pid: number;
+  acquiredAtMs: number;
+}
+
+async function tryQuarantineStaleMutationLock(lockPath: string): Promise<boolean> {
+  let stale = false;
+  try {
+    const owner = JSON.parse(
+      await readFile(path.join(lockPath, "owner.json"), "utf8")
+    ) as Partial<MutationLockOwner>;
+    stale =
+      typeof owner.pid !== "number" ||
+      !isProcessAlive(owner.pid) ||
+      typeof owner.acquiredAtMs !== "number" ||
+      Date.now() - owner.acquiredAtMs > MUTATION_LOCK_STALE_MS;
+  } catch {
+    const info = await stat(lockPath).catch(() => null);
+    stale = info !== null && Date.now() - info.mtimeMs > MUTATION_LOCK_STALE_MS;
+  }
+  if (!stale) return false;
+
+  const quarantine = `${lockPath}.${randomUUID()}.stale`;
+  try {
+    await rename(lockPath, quarantine);
+  } catch (error) {
+    if (isErrno(error) && (error.code === "ENOENT" || error.code === "EEXIST")) return false;
+    throw error;
+  }
+  await rm(quarantine, { recursive: true, force: true });
+  return true;
+}
+
+async function releaseOwnedMutationLock(lockPath: string, token: string): Promise<void> {
+  const owner = await readFile(path.join(lockPath, "owner.json"), "utf8")
+    .then((raw) => JSON.parse(raw) as Partial<MutationLockOwner>)
+    .catch(() => null);
+  if (owner?.token !== token) return;
+  const quarantine = `${lockPath}.${token}.released`;
+  try {
+    await renameWithTransientRetry(lockPath, quarantine);
+  } catch (error) {
+    if (isErrno(error) && error.code === "ENOENT") return;
+    throw error;
+  }
+  await rm(quarantine, { recursive: true, force: true });
+}
+
+async function renameWithTransientRetry(source: string, destination: string): Promise<void> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await rename(source, destination);
+      return;
+    } catch (error) {
+      const transient =
+        isErrno(error) &&
+        (error.code === "EPERM" || error.code === "EACCES" || error.code === "EBUSY");
+      if (!transient || attempt === 9) throw error;
+      await delay(MUTATION_LOCK_RETRY_MS * (attempt + 1));
+    }
+  }
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function isErrno(value: unknown): value is NodeErrnoException {

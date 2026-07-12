@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { isProcessAlive, registerLiveProcess } from "@manyhands/execution-core";
 import { POST as POST_CANCEL } from "@/app/api/runs/[id]/cancel/route";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
+import { claimRunOperation } from "@/lib/server/runs/run-operation-lease";
 import type { RunRecord } from "@/lib/server/runs/schema";
 
 let tempDir: string;
@@ -85,6 +86,9 @@ describe("POST cancel — verified kill + worktree GC", () => {
     const runId = `run-cancel-e2e-${Date.now()}`;
     const { repoRoot, baseCommit } = await makeRepoWithWorktree(runId, "task-1");
     await getRunRepository().save(makeRun(runId, repoRoot, baseCommit));
+    const claimed = await claimRunOperation(runId, "execution", {
+      expectedStatuses: ["running"]
+    });
 
     // A live agent subprocess registered under the run, as the executor driver does.
     const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000);"], {
@@ -127,6 +131,8 @@ describe("POST cancel — verified kill + worktree GC", () => {
     const saved = await getRunRepository().get(runId);
     expect(saved.status).toBe("interrupted");
     expect(saved.interruptedDuring).toBe("running");
+    expect(saved.activeOperation).toBeUndefined();
+    expect(saved.mutationFence).toBeGreaterThan(claimed.lease.fencingToken);
   });
 
   it("second cancel gets the structured 409 (the claim already consumed the status)", async () => {

@@ -46,18 +46,6 @@ export function Logo({ type = "mark", className }: LogoProps): React.ReactElemen
           stroke="var(--color-accent-deep)"
           strokeWidth={1.5}
         />
-        {/* wordmark */}
-        <text
-          x="80"
-          y="41"
-          fontFamily="'Geist', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
-          fontSize="28"
-          fontWeight="600"
-          letterSpacing="-0.5"
-        >
-          <tspan fill="var(--color-text)">Many</tspan>
-          <tspan fill="var(--color-accent)">Hands</tspan>
-        </text>
       </svg>
     );
   }

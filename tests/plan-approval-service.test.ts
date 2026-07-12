@@ -39,26 +39,30 @@ describe("processPlanApproval", () => {
       at: "2026-06-16T00:00:01.000Z",
       type: "decision.raised",
       payload: {
-        decisionId: "approve_plan",
+        decisionId: "approve_plan:r1",
         kind: "approve_plan",
         blocking: true,
         context: { nodeIds: ["leaf-a"] }
       }
     });
 
-    await processPlanApproval("run-approve", true);
+    await processPlanApproval("run-approve");
 
     const events = await readRunModelEvents("run-approve");
     expect(events.at(-1)).toMatchObject({
       actor: "human",
       type: "decision.resolved",
       payload: {
-        decisionId: "approve_plan",
+        decisionId: "approve_plan:r1",
         choice: { action: "approve" },
         actor: "human"
       }
     });
-    await expect(repo.get("run-approve")).resolves.toMatchObject({ status: "approved" });
+    await expect(repo.get("run-approve")).resolves.toMatchObject({
+      status: "approved",
+      planRevision: 1,
+      approvedPlanRevision: 1
+    });
   });
 
   it("backfills a missing approve_plan resolution when an existing log predates the fix", async () => {
@@ -110,8 +114,36 @@ describe("processPlanApproval", () => {
       })
     );
 
-    await expect(processPlanApproval("run-approve", true)).rejects.toThrow(/Executable graph is invalid/i);
+    await expect(processPlanApproval("run-approve")).rejects.toThrow(/Executable graph is invalid/i);
     await expect(repo.get("run-approve")).resolves.toMatchObject({ status: "needs_review" });
+  });
+
+  it("requires an explicit, complete critic override and persists its evidence", async () => {
+    const repo = getRunRepository();
+    const contract = validContract("leaf-a");
+    await repo.save(makeRun({
+      status: "needs_review",
+      planning: { decomposition: { graph: validGraph(contract), contracts: [contract] } },
+      planningCritic: {
+        status: "errors",
+        generatedAt: "2026-06-16T00:00:01.000Z",
+        findings: [{ severity: "error", code: "unsafe_scope", message: "Scope crosses a trust boundary" }]
+      }
+    }));
+
+    await expect(processPlanApproval("run-approve")).rejects.toThrow(/blocking error/i);
+    await processPlanApproval("run-approve", {
+      criticOverride: { actor: "francisco", acknowledgedErrors: ["Scope crosses a trust boundary"] }
+    });
+
+    await expect(repo.get("run-approve")).resolves.toMatchObject({
+      approvedPlanRevision: 1,
+      planApprovalOverride: {
+        revision: 1,
+        actor: "francisco",
+        acknowledgedErrors: ["Scope crosses a trust boundary"]
+      }
+    });
   });
 });
 

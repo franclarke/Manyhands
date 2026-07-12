@@ -46,6 +46,13 @@ export class DecomposerLlmError extends Error {
   public readonly llmCause: unknown;
   public readonly stage?: DecomposerLlmStage;
   public readonly details?: GraphGenerationErrorDetails;
+  /**
+   * Resumable decomposer state at the moment this node's attempts were
+   * exhausted. Populated by the recursive decomposer (from its in-flight
+   * accumulator) right before throwing, so a retry can pick up the already-
+   * generated siblings instead of restarting the whole tree from root.
+   */
+  public stepCache?: Record<string, any>;
 
   constructor(
     message: string,

@@ -136,6 +136,28 @@ describe("JsonRunRecordStore", () => {
     expect(got.heartbeatAt).toBe("2026-05-26T00:09:00.000Z");
   });
 
+  it("serializes mutations across independent repository instances", async () => {
+    await repo.save(makeRun({ runId: "cross-instance" }));
+    const other = new JsonRunRecordStore({ directory });
+
+    await Promise.all(
+      Array.from({ length: 100 }, (_, index) => {
+        const writer = index % 2 === 0 ? repo : other;
+        return writer.update("cross-instance", (current) => ({
+          ...current,
+          questionAnswers: {
+            ...(current.questionAnswers ?? {}),
+            [`writer-${index}`]: String(index)
+          }
+        }));
+      })
+    );
+
+    const final = await repo.get("cross-instance");
+    expect(Object.keys(final.questionAnswers ?? {})).toHaveLength(100);
+    expect(final.version).toBe(101);
+  });
+
   it("update throws RunNotFoundError when the run is missing", async () => {
     await expect(repo.update("missing", (current) => current)).rejects.toBeInstanceOf(RunNotFoundError);
   });

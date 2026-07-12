@@ -53,7 +53,43 @@ async function writeFakeTitlerBin(dir: string): Promise<string> {
 }
 
 describe("POST /api/runs", () => {
-  it("persists the selected model as fixed execution and repair routing", async () => {
+  it("persists separate planning and execution selections with fixed routing", async () => {
+    const workspace = await getWorkspaceRepository().create({
+      name: "Test workspace",
+      repoPath: "C:/repo"
+    });
+
+    const response = await POST_RUNS(
+      new Request("http://manyhands.test/api/runs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          workspaceId: workspace.id,
+          granularity: "balanced",
+          model: "gpt-5.5",
+          planningModel: "sonnet",
+          planningExecutorId: "claude-code-cli",
+          defaultExecutionSelection: { executorId: "codex-cli", model: "gpt-5.5" },
+          defaultRepairSelection: { executorId: "codex-cli", model: "gpt-5.5" },
+          userPrompt: "Build a calculator"
+        })
+      })
+    );
+
+    const payload = (await response.json()) as { run?: { runId?: string } };
+
+    expect(response.status).toBe(201);
+    expect(payload.run?.runId).toBeDefined();
+    const saved = await getRunRepository().get(payload.run!.runId!);
+    expect(saved.model).toBe("gpt-5.5");
+    expect(saved.planningModel).toBe("sonnet");
+    expect(saved.planningExecutorId).toBe("claude-code-cli");
+    expect(saved.defaultExecutionSelection).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
+    expect(saved.defaultRepairSelection).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
+    expect(saved.executionConfig).toMatchObject({ routing: "fixed", reasoningEffort: "medium" });
+  });
+
+  it("persists the requested reasoning effort in execution config", async () => {
     const workspace = await getWorkspaceRepository().create({
       name: "Test workspace",
       repoPath: "C:/repo"
@@ -71,6 +107,7 @@ describe("POST /api/runs", () => {
           planningExecutorId: "codex-cli",
           defaultExecutionSelection: { executorId: "codex-cli", model: "gpt-5.5" },
           defaultRepairSelection: { executorId: "codex-cli", model: "gpt-5.5" },
+          executionConfig: { reasoningEffort: "medium" },
           userPrompt: "Build a calculator"
         })
       })
@@ -79,11 +116,11 @@ describe("POST /api/runs", () => {
     const payload = (await response.json()) as { run?: { runId?: string } };
 
     expect(response.status).toBe(201);
-    expect(payload.run?.runId).toBeDefined();
     const saved = await getRunRepository().get(payload.run!.runId!);
-    expect(saved.defaultExecutionSelection).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
-    expect(saved.defaultRepairSelection).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
-    expect(saved.executionConfig?.routing).toBe("fixed");
+    expect(saved.executionConfig).toMatchObject({
+      routing: "fixed",
+      reasoningEffort: "medium"
+    });
   });
 
   it("uses the initial planning selection as canonical when execution selections are omitted", async () => {
@@ -145,7 +182,7 @@ describe("POST /api/runs", () => {
     expect(payload.error).toContain('Unsupported executor/model selection "claude-code-cli/gpt-5.5"');
   });
 
-  it("rejects execution selections that differ from the initial run selection", async () => {
+  it("rejects a planning model that does not support planning", async () => {
     const workspace = await getWorkspaceRepository().create({
       name: "Test workspace",
       repoPath: "C:/repo"
@@ -158,10 +195,10 @@ describe("POST /api/runs", () => {
         body: JSON.stringify({
           workspaceId: workspace.id,
           granularity: "balanced",
-          model: "gpt-5.5",
-          planningModel: "gpt-5.5",
-          planningExecutorId: "codex-cli",
-          defaultExecutionSelection: { executorId: "claude-code-cli", model: "sonnet" },
+          model: "haiku",
+          planningModel: "haiku",
+          planningExecutorId: "claude-code-cli",
+          defaultExecutionSelection: { executorId: "claude-code-cli", model: "haiku" },
           userPrompt: "Build a calculator"
         })
       })
@@ -169,6 +206,6 @@ describe("POST /api/runs", () => {
 
     const payload = (await response.json()) as { error?: string };
     expect(response.status).toBe(400);
-    expect(payload.error).toContain('defaultExecutionSelection must match the initial run selection "codex-cli/gpt-5.5"');
+    expect(payload.error).toContain('Planning selection "claude-code-cli/haiku" does not support planning.');
   });
 });

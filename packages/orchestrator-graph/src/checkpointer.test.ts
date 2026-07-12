@@ -8,11 +8,11 @@
  * - handle missing threads gracefully (return undefined)
  */
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { JsonFileCheckpointSaver } from "./checkpointer.js";
-import type { Checkpoint, CheckpointMetadata } from "@langchain/langgraph-checkpoint";
+import type { Checkpoint, CheckpointMetadata, PendingWrite } from "@langchain/langgraph-checkpoint";
 import type { RunnableConfig } from "@langchain/core/runnables";
 
 function makeCheckpoint(id: string): Checkpoint {
@@ -140,6 +140,55 @@ describe("JsonFileCheckpointSaver", () => {
     expect(tuple?.pendingWrites).toHaveLength(2);
     expect(tuple?.pendingWrites?.[0]).toEqual(["task-abc", "leafResults", [{ taskId: "t1", status: "success" }]]);
     expect(tuple?.pendingWrites?.[1]?.[0]).toBe("task-def");
+  });
+
+  it("preserves 500 pending writes submitted concurrently", async () => {
+    const returned = await saver.put(
+      makeConfig("thread-concurrent"),
+      makeCheckpoint("cp-concurrent"),
+      makeMetadata(),
+      {}
+    );
+
+    await Promise.all(
+      Array.from({ length: 500 }, (_, index) =>
+        saver.putWrites(returned, [["leafResults", { index }]], `task-${index}`)
+      )
+    );
+
+    const tuple = await saver.getTuple(makeConfig("thread-concurrent"));
+    expect(tuple?.pendingWrites).toHaveLength(500);
+    expect(new Set(tuple?.pendingWrites?.map(([taskId]) => taskId)).size).toBe(500);
+  }, 30_000);
+
+  it("is idempotent when the same task/channel pending write is retried", async () => {
+    const returned = await saver.put(
+      makeConfig("thread-idempotent"),
+      makeCheckpoint("cp-idempotent"),
+      makeMetadata(),
+      {}
+    );
+    const write: PendingWrite = ["leafResults", { taskId: "leaf-a", status: "success" }];
+
+    await saver.putWrites(returned, [write], "task-a");
+    await saver.putWrites(returned, [write], "task-a");
+
+    const tuple = await saver.getTuple(makeConfig("thread-idempotent"));
+    expect(tuple?.pendingWrites).toEqual([
+      ["task-a", "leafResults", { taskId: "leaf-a", status: "success" }]
+    ]);
+  });
+
+  it("removes orphaned temp files before atomically publishing the next checkpoint", async () => {
+    const config = makeConfig("thread-temp-recovery");
+    await saver.put(config, makeCheckpoint("cp-before"), makeMetadata(), {});
+    const threadDir = join(tmpDir, "thread-temp-recovery");
+    await writeFile(join(threadDir, "latest.json.dead-process.tmp"), "{partial", "utf8");
+
+    await saver.put(config, makeCheckpoint("cp-after"), makeMetadata(), {});
+
+    expect((await saver.getTuple(config))?.checkpoint.id).toBe("cp-after");
+    expect((await readdir(threadDir)).filter((file) => file.endsWith(".tmp"))).toEqual([]);
   });
 
   it("stores and preserves channel_values", async () => {

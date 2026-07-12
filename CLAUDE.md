@@ -75,12 +75,37 @@ Aplicación web:
 - El campo canónico de intención de tarea es `goal`, no `intent`.
 - Falla de LLM debe fallar con error accionable; no hay fallback silencioso.
 - La ejecución de agentes debe pasar por `AgentExecutor` y perfiles configurados.
+- Claude Code CLI es el executor por defecto; Codex CLI es la alternativa. No
+  documentes ni agregues Gemini.
 - `git diff HEAD` es la única fuente de verdad del resultado.
 - El orquestador hace commit; los agentes no.
 - El aislamiento real es worktree + `ScopeChecker`.
 - La integración usa cherry-pick + repair semántico con `sharedInterface`.
 - No reintroducir Lab Mode, benchmarks viejos, replay determinístico ni manifests
   `mock-v0`/`conflict-v0`.
+
+## 4.1 Operación durable de runs
+
+- Antes de ejecutar, usa el `RunTargetContext` capturado, no el workspace mutable.
+- Toda mutación de pipeline debe conservar el operation lease, CAS y fencing.
+  Un resultado con lease invalidado no puede escribir RunRecord, eventos ni estado
+  terminal. Los side effects Git requieren además el repository lease.
+- Cancelar no es `running -> interrupted` inmediato: pasa por `cancelling`,
+  invalida el lease, usa `ProcessSupervisor` y solo termina al verificar
+  `allDead=true`. Los agentes no commitean; el orquestador hace los commits.
+- El resultado terminal se representa con `FinalArtifactManifest` y outcomes
+  separados de execution/artifact/delivery. No llames `completed` a un artifact
+  parcial, no verificado o pendiente de delivery.
+- La ejecución usa config efectiva persistida antes del scheduler. El default
+  `maxParallel=6` aplica aun sin override, el scheduling productivo es
+  `risk_aware` y cada wave lleva `waveId` durable; el evento required
+  `run.scheduling.wave_selected` se persiste antes del dispatch.
+- El JSONL de `RunEvent` es el registro canónico para reconstruir la UI. El exit
+  code del executor no prueba validation; ésta se emite desde su resultado real.
+  `gated` se deriva de decisiones pendientes `decision.raised`/`decision.resolved`.
+- Planes: ediciones semánticas usan CAS `expectedVersion`, suben `planRevision`
+  e invalidan `approvedPlanRevision`. Claude debe exigir un override explícito y
+  auditable para critic errors; nunca enviar acknowledgements implícitos.
 
 ---
 

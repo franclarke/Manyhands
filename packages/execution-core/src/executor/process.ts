@@ -2,6 +2,7 @@ import { basename } from "node:path";
 
 import { execError, execLog, execWarn } from "../logging/log";
 import type { ExecutorOutputChunk } from "../types";
+import { buildAgentEnvironment } from "./agent-env";
 import { killProcessTree, type SpawnFn } from "./kill";
 import { registerLiveProcess, unregisterLiveProcess } from "./live-process-registry";
 import type { ExecutorRunOutcome } from "./types";
@@ -100,7 +101,9 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
     try {
       child = spawnFn(binaryPath, args, {
         cwd,
-        env: { ...process.env, ...(env ?? {}) },
+        // B-006 (CF-28): agents never inherit the whole server environment —
+        // only the allowlist plus the caller's explicitly-declared overrides.
+        env: { ...buildAgentEnvironment(), ...(env ?? {}) },
         stdio: ["pipe", "pipe", "pipe"],
         shell: useShell,
         // POSIX: own process group, so killProcessTree's kill(-pid) reaches every

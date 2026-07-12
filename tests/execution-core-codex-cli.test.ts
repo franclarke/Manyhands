@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
+import type { SpawnOptionsWithoutStdio } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import {
   CODEX_EXECUTOR_ID,
@@ -78,6 +79,12 @@ describe("buildCodexArgs", () => {
       "-"
     ]);
   });
+
+  it("passes reasoning effort to codex exec when configured", () => {
+    expect(buildCodexArgs(optionsFor("/repo", { reasoningEffort: "medium" }))).toContain(
+      'model_reasoning_effort="medium"'
+    );
+  });
 });
 
 describe("Codex executor registry entry", () => {
@@ -113,5 +120,24 @@ describe("CliAgentExecutor with the Codex profile (injected spawn)", () => {
     child.emit("error", new Error("spawn codex ENOENT"));
 
     await expect(promise).resolves.toMatchObject({ exitCode: 127, timedOut: false });
+  });
+
+  it("runs Windows batch shims through a shell", async () => {
+    const child = fakeChild();
+    let shellOption: SpawnOptionsWithoutStdio["shell"] | undefined;
+    const executor = new CliAgentExecutor(CODEX_PROFILE, {
+      readInstructions: async () => "do the thing",
+      binaryPath: "C:\\tools\\codex.cmd",
+      spawn: (_command, _args, options) => {
+        shellOption = options.shell;
+        return child as never;
+      }
+    });
+
+    const promise = executor.execute(optionsFor("/repo"));
+    child.emit("close", 0);
+
+    await promise;
+    expect(shellOption).toBe(true);
   });
 });

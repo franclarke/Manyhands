@@ -155,7 +155,7 @@ describe("reducer — general", () => {
     expect(running.run.control.pausedDuring).toBeUndefined();
   });
 
-  it("9. run.scheduling.wave_selected records the scheduling audit by wave index", () => {
+  it("9. run.scheduling.wave_selected records the scheduling audit by durable wave id", () => {
     const base = initialFor("r-scheduling");
     const next = reduceRunEvent(base, {
       seq: 1,
@@ -165,8 +165,11 @@ describe("reducer — general", () => {
       type: "run.scheduling.wave_selected",
       payload: {
         version: 1,
+        waveId: "wave-a",
         source: "run-executor",
         waveIndex: 0,
+        maxParallel: 6,
+        routing: "complexity",
         policy: "risk_aware",
         readyTaskIds: ["task-a", "task-b"],
         selectedTaskIds: ["task-a"],
@@ -181,13 +184,23 @@ describe("reducer — general", () => {
     });
 
     expect(next.cursor).toBe(1);
-    expect(next.schedulingWaves.get(0)).toMatchObject({
+    expect(next.schedulingWaves.get("wave-a")).toMatchObject({
       waveIndex: 0,
       policy: "risk_aware",
       selectedTaskIds: ["task-a"],
       blockedTaskIds: ["task-b"]
     });
-    expect(next.schedulingWaves.get(0)?.blockedReasons[0]?.relatedTaskIds).toEqual(["task-a"]);
+    expect(next.schedulingWaves.get("wave-a")?.blockedReasons[0]?.relatedTaskIds).toEqual(["task-a"]);
+
+    const resumed = reduceRunEvent(next, {
+      seq: 2,
+      at: "2026-06-30T00:01:00.000Z",
+      runId: "r-scheduling",
+      actor: "system",
+      type: "run.scheduling.wave_selected",
+      payload: { ...next.schedulingWaves.get("wave-a")!, waveId: "wave-b", selectedTaskIds: ["task-b"] }
+    });
+    expect([...resumed.schedulingWaves.keys()]).toEqual(["wave-a", "wave-b"]);
   });
 
   it.each(ALL)("10. %s model has no derived fields", (_name, fx) => {

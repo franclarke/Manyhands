@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -104,6 +104,48 @@ describe("createFixtureRepoProvisioner", () => {
     await expect(
       provisioner.provision({ spec: { kind: "localPath", path: repoRoot }, runId: "run-1" })
     ).rejects.toThrow("Create an initial commit before running ManyHands");
+  });
+
+  it("provisions a local repo into a run-isolated git copy and preserves the dirty source", async () => {
+    const sourceRoot = path.join(tempDir, "source-repo");
+    await mkdir(path.join(sourceRoot, "src"), { recursive: true });
+    await writeFile(path.join(sourceRoot, "src", "tracked.ts"), "export const value = 1;\n");
+    git(sourceRoot, "init", "-b", "main");
+    git(sourceRoot, "config", "user.name", "Test");
+    git(sourceRoot, "config", "user.email", "test@example.com");
+    git(sourceRoot, "config", "commit.gpgsign", "false");
+    git(sourceRoot, "add", "-A");
+    git(sourceRoot, "commit", "-m", "base");
+
+    const sourceBaseCommit = git(sourceRoot, "rev-parse", "HEAD");
+    await writeFile(path.join(sourceRoot, "src", "tracked.ts"), "export const value = 2;\n");
+    await writeFile(path.join(sourceRoot, "notes.txt"), "untracked user work\n");
+    const sourceStatusBefore = git(sourceRoot, "status", "--porcelain=v1", "--untracked-files=all");
+
+    const provisioner = createDefaultRepoProvisioner({ benchmarksRoot, workRoot });
+    const provisioned = await provisioner.provision({
+      spec: { kind: "localPath", path: sourceRoot },
+      runId: "run-local-isolated"
+    });
+
+    expect(path.resolve(provisioned.repoRoot)).not.toBe(path.resolve(sourceRoot));
+    expect(provisioned.sourceRepoRoot).toBe(path.resolve(sourceRoot));
+    expect(provisioned.sourceBaseCommit).toBe(sourceBaseCommit);
+    expect(provisioned.sourceBranch).toBe("main");
+    expect(provisioned.baseCommit).toBe(sourceBaseCommit);
+    expect(git(provisioned.repoRoot, "rev-parse", "HEAD")).toBe(sourceBaseCommit);
+
+    // Simulate grounding writing and then crashing before it can finish. The
+    // run copy may be dirty, but the checkout supplied by the user is immutable.
+    await writeFile(path.join(provisioned.repoRoot, "grounding-crashed.ts"), "export {};\n");
+
+    expect(git(sourceRoot, "rev-parse", "HEAD")).toBe(sourceBaseCommit);
+    expect(git(sourceRoot, "status", "--porcelain=v1", "--untracked-files=all")).toBe(sourceStatusBefore);
+    expect(await readFile(path.join(sourceRoot, "src", "tracked.ts"), "utf8")).toBe(
+      "export const value = 2;\n"
+    );
+    expect(await readFile(path.join(sourceRoot, "notes.txt"), "utf8")).toBe("untracked user work\n");
+    expect(existsSync(path.join(sourceRoot, "grounding-crashed.ts"))).toBe(false);
   });
 });
 

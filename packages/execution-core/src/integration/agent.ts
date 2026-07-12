@@ -33,6 +33,7 @@ import {
 } from "../types";
 import { computePreMergeFindings } from "./pre-merge";
 import { checkRepairedFiles, describeSyntaxFindings, type SyntaxCheckResult } from "./syntax-check";
+import { classifyDeferredValidation } from "../validation/deferred";
 import type { ValidationRunner } from "../validation/runner";
 import { ChildProcessValidationRunner } from "../validation/runner";
 import { ChildProcessDependencyInstaller, type DependencyInstaller } from "../validation/dependencies";
@@ -57,6 +58,7 @@ export interface IntegrationRepairConfig {
   selection?: ExecutorSelection;
   model?: string;
   timeoutMs: number;
+  reasoningEffort?: "low" | "medium" | "high" | "xhigh";
   bypassApprovals?: boolean;
   maxRepairsPerIntegration?: number;
 }
@@ -534,6 +536,7 @@ export class IntegrationAgent {
         model: selection.model,
         timeoutMs: params.repair.timeoutMs,
         bypassApprovals: params.repair.bypassApprovals ?? true,
+        ...(params.repair.reasoningEffort !== undefined ? { reasoningEffort: params.repair.reasoningEffort } : {}),
         processOwnerId: worktree.runId,
         ...(params.signal !== undefined ? { signal: params.signal } : {}),
         onOutput: (chunk) => {
@@ -713,11 +716,32 @@ export class IntegrationAgent {
       task: params.compositeTaskId,
       commands: commands.length
     });
-    await this.ensureParentValidationDependencies(params.worktree.path, params.compositeTaskId);
+    await this.ensureParentValidationDependencies(params.worktree, params.compositeTaskId);
     const result = await this.validationRunner.run(commands, {
       worktreePath: params.worktree.path,
-      repoRoot: this.repoRoot
+      repoRoot: this.repoRoot,
+      supervision: { runId: params.worktree.runId }
     });
+    const deferredReason = classifyDeferredValidation(result);
+    if (deferredReason !== undefined) {
+      execWarn("integrate", "parent validation deferred — verifying at run level", {
+        task: params.compositeTaskId,
+        exitCode: result.exitCode,
+        output: result.output,
+        reason: deferredReason
+      });
+      this.traceStore.append({
+        type: "validation_deferred",
+        actor: "system",
+        taskId: params.compositeTaskId,
+        payload: {
+          scope: "parent",
+          exitCode: result.exitCode,
+          reason: deferredReason
+        }
+      });
+      return { ...result, passed: true };
+    }
     // A failing parent validation is logged by the caller as the integration
     // outcome ("integration failed: parent validation failed"); only the passing
     // case needs its own line here.
@@ -736,9 +760,16 @@ export class IntegrationAgent {
    * install dependencies best-effort before validation and let validation own
    * the final pass/fail signal.
    */
-  private async ensureParentValidationDependencies(worktreePath: string, compositeTaskId: string): Promise<void> {
+  private async ensureParentValidationDependencies(
+    worktree: { path: string; runId: string },
+    compositeTaskId: string
+  ): Promise<void> {
+    const worktreePath = worktree.path;
     try {
-      const result = await this.dependencyInstaller.ensure({ cwd: worktreePath });
+      const result = await this.dependencyInstaller.ensure({
+        cwd: worktreePath,
+        supervision: { runId: worktree.runId }
+      });
       execLog("integrate", "parent validation dependency check", {
         task: compositeTaskId,
         cwd: worktreePath,

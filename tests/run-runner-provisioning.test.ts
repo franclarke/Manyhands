@@ -10,10 +10,17 @@ import {
 } from "@/lib/server/runs/runner";
 import type { RepoProvisioner } from "@/lib/server/runs/repo-provisioner";
 import { abortRun } from "@/lib/server/runs/run-abort-registry";
+import { readRunModelEvents } from "@/lib/server/runs/run-model-event-log";
 import { JsonRunRecordStore } from "@/lib/server/runs/repository";
+import type { RunRecord } from "@/lib/server/runs/schema";
 import { resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import { AgentTaskContractSchema } from "@manyhands/contracts";
-import type { GranularityVector, RunExecutionResult } from "@manyhands/execution-core";
+import {
+  countLiveProcesses,
+  superviseChildProcess,
+  type GranularityVector,
+  type RunExecutionResult
+} from "@manyhands/execution-core";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 
 const STUB_VECTOR: GranularityVector = {
@@ -51,8 +58,12 @@ function fakeProvisioner(): RepoProvisioner {
     async provision({ runId }) {
       return {
         repoRoot: `/tmp/fake/${runId}/repo`,
+        sourceRepoRoot: `/tmp/fake/${runId}/source`,
+        sourceBranch: "main",
+        sourceBaseCommit: BASE_COMMIT,
         baseBranch: "main",
         baseCommit: BASE_COMMIT,
+        executionBaseCommit: BASE_COMMIT,
         cleanup: async () => undefined
       };
     }
@@ -176,8 +187,10 @@ describe("runExecutionPipeline provisioning", () => {
     });
 
     let received: ExecutionEngineInput | undefined;
+    let persistedConfigAtDispatch: RunRecord["executionConfig"] | undefined;
     const engine: ExecutionEngine = {
       run: async (input) => {
+        persistedConfigAtDispatch = (await store.get(runId)).executionConfig;
         received = input;
         return completedResult(runId);
       }
@@ -191,12 +204,17 @@ describe("runExecutionPipeline provisioning", () => {
 
     // The engine received the provisioned repo.
     expect(received?.provisioned?.baseCommit).toBe(BASE_COMMIT);
+    expect(received?.executionConfig?.maxParallel).toBe(6);
+    expect(persistedConfigAtDispatch?.maxParallel).toBe(6);
 
     // The provisioned repo was persisted as a run artifact.
     const finalRun = await store.get(runId);
-    expect(finalRun.status).toBe("completed");
+    expect(finalRun.status).toBe("failed_artifact");
     expect(finalRun.provisioned?.baseCommit).toBe(BASE_COMMIT);
     expect(finalRun.provisioned?.baseBranch).toBe("main");
+    expect(finalRun.provisioned?.sourceRepoRoot).toBe(`/tmp/fake/${runId}/source`);
+    expect(finalRun.provisioned?.sourceBaseCommit).toBe(BASE_COMMIT);
+    expect(finalRun.provisioned?.executionBaseCommit).toBe(BASE_COMMIT);
   }, 30000);
 
   it("persists the engine's trace events on the run record (Etapa D)", async () => {
@@ -257,8 +275,9 @@ describe("runExecutionPipeline provisioning", () => {
     expect(finalRun.status).toBe("interrupted");
     expect(finalRun.finalCommitSha).toBeUndefined();
     expect(finalRun.finalBranchName).toBeUndefined();
-    // The partial execution result is still persisted for diagnostics.
-    expect(finalRun.execution).toBeDefined();
+    // A result returned after cancellation belongs to the fenced-out operation
+    // and must never be accepted as durable execution evidence.
+    expect(finalRun.execution).toBeUndefined();
   }, 30000);
 
   it("registers cancellation before repo provisioning completes", async () => {
@@ -280,8 +299,12 @@ describe("runExecutionPipeline provisioning", () => {
         abortDelivered = abortRun(runId);
         return {
           repoRoot: `/tmp/fake/${runId}/repo`,
+          sourceRepoRoot: `/tmp/fake/${runId}/source`,
+          sourceBranch: "main",
+          sourceBaseCommit: BASE_COMMIT,
           baseBranch: "main",
           baseCommit: BASE_COMMIT,
+          executionBaseCommit: BASE_COMMIT,
           cleanup: async () => undefined
         };
       }
@@ -308,12 +331,24 @@ describe("runExecutionPipeline provisioning", () => {
     const runId = "run-budget";
     const store = await saveApprovedRun(runId, {
       repoSpec: { kind: "fixture", fixtureId: "task-manager-api" },
-      executionConfig: { maxWallClockMs: 50 }
+      executionConfig: { maxWallClockMs: 1_000 }
     });
 
     let sawAbort = false;
+    let supervisedKillCount = 0;
+    let resolveEngineStarted: (() => void) | undefined;
+    const engineStarted = new Promise<void>((resolve) => {
+      resolveEngineStarted = resolve;
+    });
     const engine: ExecutionEngine = {
       run: async (input) => {
+        const dispose = superviseChildProcess(
+          { runId, label: "test-engine" },
+          { kill: () => { supervisedKillCount += 1; } },
+          { signal: input.signal }
+        );
+        expect(countLiveProcesses(runId)).toBe(1);
+        resolveEngineStarted?.();
         // Behave like a real engine: keep "working" until aborted, then unwind.
         await new Promise<void>((resolve) => {
           if (input.signal?.aborted === true) {
@@ -329,19 +364,30 @@ describe("runExecutionPipeline provisioning", () => {
             { once: true }
           );
         });
+        dispose();
         return completedResult(runId);
       }
     };
 
-    await runExecutionPipeline(runId, { intervalMs: 0, engine, provisioner: fakeProvisioner() });
+    const running = runExecutionPipeline(runId, { intervalMs: 0, engine, provisioner: fakeProvisioner() });
+    await engineStarted;
+    await running;
 
     const finalRun = await store.get(runId);
     expect(sawAbort).toBe(true);
+    expect(supervisedKillCount).toBeGreaterThan(0);
+    expect(countLiveProcesses(runId)).toBe(0);
     expect(finalRun.status).toBe("interrupted");
     expect(finalRun.errorMessage).toContain("budget");
+    expect(finalRun.activeOperation).toBeUndefined();
+    expect(finalRun.execution).toBeUndefined();
+    expect(finalRun.finalArtifactManifest).toBeUndefined();
+    expect(finalRun.finalApplicationStatus).toBeUndefined();
+    const cancelled = (await readRunModelEvents(runId)).find((event) => event.type === "run.cancelled");
+    expect(cancelled?.payload.allDead).toBe(true);
   }, 30000);
 
-  it("applies the final integrated patch back to a local repo", async () => {
+  it("materializes the final branch in the isolated run repo without touching the source checkout", async () => {
     const runId = "run-local-apply";
     const repoRoot = path.join(tempDir, "local-repo");
     await initRepo(repoRoot);
@@ -353,11 +399,22 @@ describe("runExecutionPipeline provisioning", () => {
 
     const engine: ExecutionEngine = {
       run: async (input) => {
-        await writeFile(path.join(repoRoot, "src", "feature.ts"), "export const feature = true;\n");
-        git(repoRoot, "add", "-A");
-        git(repoRoot, "-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "integrated");
-        const integrationCommit = git(repoRoot, "rev-parse", "HEAD");
-        git(repoRoot, "reset", "--hard", input.provisioned!.baseCommit);
+        const executionRoot = input.provisioned!.repoRoot;
+        await mkdir(path.join(executionRoot, "src"), { recursive: true });
+        await writeFile(path.join(executionRoot, "src", "feature.ts"), "export const feature = true;\n");
+        git(executionRoot, "add", "-A");
+        git(
+          executionRoot,
+          "-c",
+          "user.name=Test",
+          "-c",
+          "user.email=test@example.com",
+          "commit",
+          "-m",
+          "integrated"
+        );
+        const integrationCommit = git(executionRoot, "rev-parse", "HEAD");
+        git(executionRoot, "reset", "--hard", input.provisioned!.baseCommit);
         return {
           runId,
           status: "completed",
@@ -381,14 +438,19 @@ describe("runExecutionPipeline provisioning", () => {
     await runExecutionPipeline(runId, { intervalMs: 0, engine });
 
     const finalRun = await store.get(runId);
-    expect(finalRun.status).toBe("completed");
+    expect(finalRun.status).toBe("unverified");
     expect(finalRun.finalApplicationStatus).toBe("applied");
+    expect(finalRun.finalArtifactManifest?.finalSha).toBe(finalRun.finalCommitSha);
+    expect(finalRun.artifactOutcome).toBe("unverified");
+    expect(finalRun.deliveryOutcome).toBe("needs_delivery");
     expect(finalRun.finalPatch).toContain("feature.ts");
     expect(finalRun.integrationCommitSha).toMatch(/^[0-9a-f]{40}$/);
     // The result lands on a fresh manyhands/run-* branch, not the user's branch.
     expect(finalRun.finalBranchName).toMatch(/^manyhands\/run-/);
-    expect(git(repoRoot, "rev-parse", finalRun.finalBranchName!)).toBe(finalRun.finalCommitSha);
-    // The user's branch and working tree are left exactly as the engine left them.
+    expect(git(finalRun.provisioned!.repoRoot, "rev-parse", finalRun.finalBranchName!)).toBe(
+      finalRun.finalCommitSha
+    );
+    // The user's branch and working tree were never used as the execution repo.
     expect(git(repoRoot, "rev-parse", "--abbrev-ref", "HEAD")).toBe("main");
     expect(git(repoRoot, "rev-parse", "HEAD")).toBe(baseCommit);
     expect(git(repoRoot, "status", "--porcelain")).toBe("");

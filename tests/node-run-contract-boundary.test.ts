@@ -16,6 +16,18 @@ describe("manual node execution contract boundary", () => {
       /Executable graph is invalid|path traversal/i
     );
   });
+
+  it("rejects a valid graph when only an older plan revision is approved", async () => {
+    const contract = validContract("leaf-a");
+    const run = {
+      ...runWithGraph(graphWith([leaf("leaf-a", contract)])),
+      planRevision: 2,
+      approvedPlanRevision: 1,
+      approvedAt: "2026-06-18T00:00:01.000Z"
+    };
+
+    await expect(assertManualNodeExecutionReady(run, "leaf-a")).rejects.toThrow(/revision 2 is not approved/i);
+  });
 });
 
 function runWithGraph(graph: TaskGraph): RunRecord {

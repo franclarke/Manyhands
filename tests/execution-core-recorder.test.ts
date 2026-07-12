@@ -31,13 +31,39 @@ describe("ResultRecorder empty-diff no-op handling", () => {
     const result = await recorder.record({
       worktree: WORKTREE,
       executorOutcome: okOutcome(),
-      executionScope: { implementationPaths: ["src/index.js"], testPaths: [], configPaths: [] }
+      executionScope: { implementationPaths: ["src/index.js"], testPaths: [], configPaths: [] },
+      expectedOutput: { changedFiles: ["src/index.js"], producedSymbols: [], consumedSymbols: [], diffShapeHint: "diff" }
     });
 
     expect(result.status).toBe("success");
     expect(result.noOp).toBe(true);
+    expect(result.disposition).toBe("already_satisfied");
+    expect(result.baselineEvidence?.verifiedPaths).toEqual(["src/index.js"]);
     expect(result.changedFiles).toEqual([]);
     expect(result.commitSha).toBeUndefined();
+  });
+
+  it("rejects an empty diff when only one of several concrete outputs exists", async () => {
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" }, diffCachedNameOnly: [],
+      showFile: { "src/a.ts": "export const a = 1;", "src/b.ts": null }
+    });
+    const result = await new ResultRecorder({ git, traceStore: new InMemoryTraceStore() }).record({
+      worktree: WORKTREE, executorOutcome: okOutcome(),
+      expectedOutput: { changedFiles: ["src/a.ts", "src/b.ts"], producedSymbols: [], consumedSymbols: [], diffShapeHint: "diff" }
+    });
+    expect(result.status).toBe("empty_diff");
+    expect(result.disposition).toBe("failed");
+  });
+
+  it("rejects an abstract empty-diff contract without explicit validation evidence", async () => {
+    const git = new FakeGitRunner({ heads: { [WORKTREE.path]: "BASE_SHA" }, diffCachedNameOnly: [] });
+    const result = await new ResultRecorder({ git, traceStore: new InMemoryTraceStore() }).record({
+      worktree: WORKTREE, executorOutcome: okOutcome(),
+      expectedOutput: { changedFiles: [], producedSymbols: ["PublicApi"], consumedSymbols: [], diffShapeHint: "abstract" }
+    });
+    expect(result.status).toBe("empty_diff");
+    expect(result.disposition).toBe("failed");
   });
 
   it("keeps an empty diff a failure when an implementation file is still an unimplemented stub", async () => {
@@ -266,6 +292,29 @@ describe("ResultRecorder", () => {
     expect(git.opsInvoked()).toContain("commit");
     expect(traceStore.findByType("scope_check_failed")).toHaveLength(0);
     expect(traceStore.findByType("scope_advisory")).toHaveLength(1);
+  });
+
+  it.each([
+    ["gate", "scope_gated", "gated", false],
+    ["strict", "scope_violation", "failed", false]
+  ] as const)("applies %s scope policy in the runtime", async (scopePolicy, status, disposition, commits) => {
+    const git = new FakeGitRunner({ heads: { [WORKTREE.path]: "BASE_SHA" }, diffCachedNameOnly: ["outside.ts"], diffCached: "patch", commitSha: "SHA" });
+    const result = await new ResultRecorder({ git, traceStore: new InMemoryTraceStore() }).record({
+      worktree: WORKTREE, executorOutcome: okOutcome(), scopePolicy,
+      executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] }
+    });
+    expect(result.status).toBe(status);
+    expect(result.disposition).toBe(disposition);
+    expect(git.opsInvoked().includes("commit")).toBe(commits);
+  });
+
+  it.each(["advisory", "gate", "strict"] as const)("keeps forbidden paths as hard deny under %s", async (scopePolicy) => {
+    const git = new FakeGitRunner({ heads: { [WORKTREE.path]: "BASE_SHA" }, diffCachedNameOnly: ["secret.env"], diffCached: "patch" });
+    const result = await new ResultRecorder({ git, traceStore: new InMemoryTraceStore() }).record({
+      worktree: WORKTREE, executorOutcome: okOutcome(), scopePolicy, forbiddenPaths: ["*.env"]
+    });
+    expect(result.status).toBe("scope_violation");
+    expect(result.disposition).toBe("failed");
   });
 
   it("reports timeout without inspecting git", async () => {

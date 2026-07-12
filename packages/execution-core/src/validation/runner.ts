@@ -3,13 +3,23 @@ import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process"
 import { validationCommandSafetyIssues, type ExecutionValidationCommand } from "@manyhands/contracts";
 
 import { killProcessTree } from "../executor/kill";
+import { superviseChildProcess } from "../executor/live-process-registry";
 import { ValidationRunResultSchema, type ValidationRunResult } from "../types";
+
+/** B-005: ties validation subprocesses to their run for cancel/kill/report. */
+export interface ValidationSupervision {
+  runId: string;
+  operationId?: string;
+  /** Aborting kills the current command's process tree and fails the run. */
+  signal?: AbortSignal;
+}
 
 export interface ValidationRunContext {
   /** Worktree the task ran in; used when a command's cwd is "worktree". */
   worktreePath: string;
   /** Repo root; used when a command's cwd is "repo-root". */
   repoRoot: string;
+  supervision?: ValidationSupervision;
 }
 
 /**
@@ -41,6 +51,7 @@ export interface ChildProcessValidationRunnerDeps {
 const TIMEOUT_EXIT_CODE = 124;
 const UNSAFE_COMMAND_EXIT_CODE = 126;
 const SPAWN_FAILURE_EXIT_CODE = 127;
+const ABORTED_EXIT_CODE = 130;
 const WINDOWS_CMD_SHIM_COMMANDS = new Set(["corepack", "npm", "npx", "pnpm", "yarn", "yarnpkg"]);
 
 // Under a shell a missing binary no longer surfaces as a spawn `error` event:
@@ -74,8 +85,15 @@ export class ChildProcessValidationRunner implements ValidationRunner {
     let aggregatedOutput = "";
 
     for (const command of commands) {
+      if (ctx.supervision?.signal?.aborted === true) {
+        return ValidationRunResultSchema.parse({
+          passed: false,
+          output: aggregatedOutput + "validation aborted (run cancelled)",
+          exitCode: ABORTED_EXIT_CODE
+        });
+      }
       const cwd = command.cwd === "repo-root" ? ctx.repoRoot : ctx.worktreePath;
-      const result = await this.runOne(command, cwd);
+      const result = await this.runOne(command, cwd, ctx.supervision);
       aggregatedOutput += result.output;
       if (result.exitCode !== 0) {
         return ValidationRunResultSchema.parse({
@@ -95,7 +113,8 @@ export class ChildProcessValidationRunner implements ValidationRunner {
 
   private runOne(
     command: ExecutionValidationCommand,
-    cwd: string
+    cwd: string,
+    supervision?: ValidationSupervision
   ): Promise<{ exitCode: number; output: string }> {
     const spawnCommand = this.buildSpawnCommand(command);
     const safetyIssues = validationCommandSafetyIssues(command.command, command.args, {
@@ -105,6 +124,12 @@ export class ChildProcessValidationRunner implements ValidationRunner {
       return Promise.resolve({
         exitCode: UNSAFE_COMMAND_EXIT_CODE,
         output: `validation command rejected (unsafe): ${safetyIssues.join("; ")} — fix the plan's validation commands`
+      });
+    }
+    if (supervision?.signal?.aborted === true) {
+      return Promise.resolve({
+        exitCode: ABORTED_EXIT_CODE,
+        output: "validation aborted (run cancelled)"
       });
     }
 
@@ -122,6 +147,21 @@ export class ChildProcessValidationRunner implements ValidationRunner {
           output: error instanceof Error ? error.message : String(error)
         });
         return;
+      }
+
+      if (supervision !== undefined) {
+        superviseChildProcess(
+          {
+            runId: supervision.runId,
+            label: "validation",
+            ...(supervision.operationId !== undefined ? { operationId: supervision.operationId } : {})
+          },
+          child,
+          {
+            ...(supervision.signal !== undefined ? { signal: supervision.signal } : {}),
+            spawnFn: this.spawnFn
+          }
+        );
       }
 
       let output = "";

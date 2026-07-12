@@ -1,15 +1,20 @@
 import { execFile } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
 import type { RunExecutionResult } from "@manyhands/execution-core";
 import type { TaskGraph } from "@manyhands/task-graph";
 
 import { resolveManyhandsPath } from "../repo-root";
 import { rmWithRetry } from "./fs-retry";
+import { superviseWithAmbientContext, supervisedExecFile } from "./process-supervision";
 import type { ProvisionedRepo } from "./repo-provisioner";
+import type { FinalArtifactManifest } from "./schema";
 
-const execFileAsync = promisify(execFile);
+// B-005: every git subprocess of the final apply is registered under the run
+// via the ambient supervision context (see execution-pipeline's
+// `runWithProcessSupervision` wrapper around `applyFinalPatch`).
+const execFileAsync = supervisedExecFile;
 
 /**
  * Outcome of writing a finished run back to the target repo.
@@ -36,6 +41,7 @@ export interface FinalApplicationRecord {
   baseCommit?: string;
   integrationCommitSha?: string;
   finalApplicationMessage?: string;
+  finalArtifactManifest?: FinalArtifactManifest;
 }
 
 /**
@@ -73,6 +79,7 @@ export async function applyFinalPatch(input: {
   runId: string;
   /** Free text (run title / prompt) used to make the branch name readable. */
   slug: string;
+  sourceTargetFingerprint?: string;
 }): Promise<FinalApplicationRecord | undefined> {
   const integrationCommitSha = resolveFinalCommit(input.graph, input.result);
   if (integrationCommitSha === undefined) {
@@ -80,7 +87,10 @@ export async function applyFinalPatch(input: {
   }
 
   const repoRoot = input.provisioned.repoRoot;
-  const baseCommit = input.provisioned.baseCommit;
+  // Delivery artifacts are relative to the immutable source snapshot so the
+  // grounding commit is included. `baseCommit` is the leaf execution base and
+  // therefore intentionally not used here.
+  const baseCommit = input.provisioned.sourceBaseCommit;
 
   // The base commit must be reachable to produce a base-relative patch. If the
   // user orphaned it (hard reset / rebase), record a failure instead of crashing.
@@ -89,6 +99,7 @@ export async function applyFinalPatch(input: {
       finalApplicationStatus: "failed",
       baseCommit,
       integrationCommitSha,
+      finalArtifactManifest: failedManifest(input, integrationCommitSha, baseCommit, ""),
       finalApplicationMessage:
         `The base commit ${baseCommit} is no longer reachable in ${repoRoot}. ` +
         "The run result could not be applied; re-run from the current HEAD."
@@ -101,6 +112,7 @@ export async function applyFinalPatch(input: {
       finalApplicationStatus: "failed",
       baseCommit,
       integrationCommitSha,
+      finalArtifactManifest: failedManifest(input, integrationCommitSha, baseCommit, finalPatch),
       finalApplicationMessage: "Execution completed but the final integrated patch is empty."
     };
   }
@@ -132,6 +144,8 @@ export async function applyFinalPatch(input: {
     const finalCommitSha = await git(worktreePath, ["rev-parse", "HEAD"]);
     // Point (or move) the run branch at the applied commit in the main repo.
     await gitVoid(repoRoot, ["branch", "-f", branchName, finalCommitSha]);
+    const files = await changedFiles(repoRoot, baseCommit, finalCommitSha);
+    const createdAt = new Date().toISOString();
 
     return {
       finalApplicationStatus: "applied",
@@ -139,9 +153,32 @@ export async function applyFinalPatch(input: {
       finalBranchName: branchName,
       finalCommitSha,
       appliedToRepoPath: repoRoot,
-      appliedAt: new Date().toISOString(),
+      appliedAt: createdAt,
       baseCommit,
-      integrationCommitSha
+      integrationCommitSha,
+      finalArtifactManifest: {
+        version: 1,
+        manifestId: randomUUID(),
+        runId: input.runId,
+        sourceTargetFingerprint: input.sourceTargetFingerprint ?? `${input.provisioned.sourceRepoRoot}@${baseCommit}`,
+        sourceBranch: input.provisioned.sourceBranch,
+        sourceBaseSha: baseCommit,
+        executionBaseSha: input.provisioned.executionBaseCommit ?? input.provisioned.baseCommit,
+        finalSha: finalCommitSha,
+        finalRef: branchName,
+        ...files,
+        patch: finalPatch,
+        validationCommands: [],
+        validationResults: [],
+        verificationDisposition: "unverified",
+        omittedTasks: [],
+        acceptedFailures: [],
+        acceptedConflicts: [],
+        repairEvidence: [],
+        artifactDisposition: "ready",
+        deliveryDisposition: "needs_delivery",
+        createdAt
+      }
     };
   } catch (error) {
     // Could not create the branch (worktree/apply failure): keep the work
@@ -152,6 +189,7 @@ export async function applyFinalPatch(input: {
       finalPatch,
       baseCommit,
       integrationCommitSha,
+      finalArtifactManifest: failedManifest(input, integrationCommitSha, baseCommit, finalPatch),
       ...(exportedPatchPath !== undefined ? { exportedPatchPath } : {}),
       finalApplicationMessage:
         `Could not apply the run result to a new branch: ${describeError(error)}.` +
@@ -161,6 +199,46 @@ export async function applyFinalPatch(input: {
     await gitVoid(repoRoot, ["worktree", "remove", "--force", worktreePath]).catch(() => undefined);
     await rmWithRetry(worktreePath).catch(() => undefined);
   }
+}
+
+async function changedFiles(repoRoot: string, baseSha: string, finalSha: string): Promise<{
+  addedFiles: string[]; modifiedFiles: string[]; deletedFiles: string[];
+}> {
+  const output = await gitRaw(repoRoot, ["diff", "--name-status", `${baseSha}..${finalSha}`]);
+  const addedFiles: string[] = [];
+  const modifiedFiles: string[] = [];
+  const deletedFiles: string[] = [];
+  for (const line of output.split(/\r?\n/).filter(Boolean)) {
+    const [status, ...paths] = line.split("\t");
+    const file = paths.at(-1);
+    if (file === undefined) continue;
+    if (status?.startsWith("A")) addedFiles.push(file);
+    else if (status?.startsWith("D")) deletedFiles.push(file);
+    else modifiedFiles.push(file);
+  }
+  return { addedFiles, modifiedFiles, deletedFiles };
+}
+
+function failedManifest(
+  input: Parameters<typeof applyFinalPatch>[0],
+  finalSha: string,
+  baseSha: string,
+  patch: string
+): FinalArtifactManifest {
+  return {
+    version: 1,
+    manifestId: randomUUID(),
+    runId: input.runId,
+    sourceTargetFingerprint: input.sourceTargetFingerprint ?? `${input.provisioned.sourceRepoRoot}@${baseSha}`,
+    sourceBranch: input.provisioned.sourceBranch,
+    sourceBaseSha: baseSha,
+    executionBaseSha: input.provisioned.executionBaseCommit ?? input.provisioned.baseCommit,
+    finalSha,
+    addedFiles: [], modifiedFiles: [], deletedFiles: [], patch,
+    validationCommands: [], validationResults: [], verificationDisposition: "failed",
+    omittedTasks: [], acceptedFailures: [], acceptedConflicts: [], repairEvidence: [],
+    artifactDisposition: "failed", deliveryDisposition: "failed", createdAt: new Date().toISOString()
+  };
 }
 
 /**
@@ -219,6 +297,7 @@ function gitWithStdin(cwd: string, args: string[], stdin: string): Promise<void>
       if (error) reject(error);
       else resolve();
     });
+    superviseWithAmbientContext(child);
     child.stdin?.end(stdin);
   });
 }

@@ -73,33 +73,30 @@ describe("run executor selection resolver", () => {
     expect(groundingSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
   });
 
-  it("rejects persisted execution defaults that conflict with the initial run selection", () => {
+  it("allows planning and execution to use different selections", () => {
     const run = {
       model: "gpt-5.5",
-      planningModel: "gpt-5.5",
-      planningExecutorId: "codex-cli",
-      defaultExecutionSelection: { executorId: "claude-code-cli", model: "sonnet" }
-    } as const;
-
-    expect(() => executionSelection(run)).toThrow(
-      'defaultExecutionSelection must match the initial run selection "codex-cli/gpt-5.5", got "claude-code-cli/sonnet".'
-    );
-    expect(() => groundingSelection(run)).toThrow(
-      'defaultExecutionSelection must match the initial run selection "codex-cli/gpt-5.5", got "claude-code-cli/sonnet".'
-    );
-  });
-
-  it("rejects persisted repair defaults that conflict with the execution selection", () => {
-    const run = {
-      model: "sonnet",
       planningModel: "sonnet",
       planningExecutorId: "claude-code-cli",
-      defaultExecutionSelection: { executorId: "claude-code-cli", model: "sonnet" },
+      defaultExecutionSelection: { executorId: "codex-cli", model: "gpt-5.5" },
       defaultRepairSelection: { executorId: "codex-cli", model: "gpt-5.5" }
     } as const;
 
-    expect(() => repairSelection(run)).toThrow(
-      'defaultRepairSelection must match the initial run selection "claude-code-cli/sonnet", got "codex-cli/gpt-5.5".'
-    );
+    expect(planningSelection(run)).toEqual({ executorId: "claude-code-cli", model: "sonnet" });
+    expect(titlerSelection(run)).toEqual({ executorId: "claude-code-cli", model: "sonnet" });
+    expect(executionSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
+    expect(repairSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
+    expect(groundingSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
+  });
+
+  it("uses the execution selection for repair when repair defaults are absent", () => {
+    const run = {
+      model: "gpt-5.5",
+      planningModel: "sonnet",
+      planningExecutorId: "claude-code-cli",
+      defaultExecutionSelection: { executorId: "codex-cli", model: "gpt-5.5" }
+    } as const;
+
+    expect(repairSelection(run)).toEqual({ executorId: "codex-cli", model: "gpt-5.5" });
   });
 });

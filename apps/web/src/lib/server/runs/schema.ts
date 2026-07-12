@@ -27,12 +27,40 @@ export type ExecutorSelectionInput = z.infer<typeof ExecutorSelectionSchema>;
 /** Serializable record of the repo a run was provisioned against (artifact). */
 export const ProvisionedRepoRecordSchema = z.object({
   repoRoot: z.string().min(1),
+  // Optional only for loading runs persisted before isolated source metadata
+  // existed. `provisionedFromRecord` normalizes those legacy records.
+  sourceRepoRoot: z.string().min(1).optional(),
+  sourceBranch: z.string().min(1).optional(),
+  sourceBaseCommit: z.string().min(1).optional(),
   baseBranch: z.string().min(1),
   baseCommit: z.string().min(1),
+  executionBaseCommit: z.string().min(1).optional(),
   provisionedAt: z.string().datetime()
 });
 
 export type ProvisionedRepoRecord = z.infer<typeof ProvisionedRepoRecordSchema>;
+
+/**
+ * B-008 (CF-19): the run's target repository, captured ONCE at creation and
+ * immutable afterwards. Planning, grounding, execution, integration, final
+ * artifact and delivery read THIS — never the mutable workspace record.
+ * `executionRepoPath`/`executionBaseCommit` are filled exactly once at
+ * provision time.
+ */
+export const RunTargetContextSchema = z.object({
+  sourceRealPath: z.string().min(1),
+  gitCommonDir: z.string().min(1),
+  sourceBranch: z.string().min(1),
+  sourceBaseCommit: z.string().min(1),
+  remoteUrl: z.string().optional(),
+  /** Identity of repo+base state: hash of gitCommonDir@sourceBaseCommit. */
+  fingerprint: z.string().min(1),
+  capturedAt: z.string().datetime(),
+  executionRepoPath: z.string().optional(),
+  executionBaseCommit: z.string().optional()
+});
+
+export type RunTargetContext = z.infer<typeof RunTargetContextSchema>;
 
 export const RUN_STATUS_VALUES = [
   "created",
@@ -46,6 +74,15 @@ export const RUN_STATUS_VALUES = [
   // (P2b): final-apply still runs and the result is delivered, but the state is
   // kept distinct so the UI never claims a fully-clean run.
   "completed_with_accepted",
+  "partial",
+  "unverified",
+  "needs_delivery",
+  "failed_artifact",
+  "failed_delivery",
+  // Cancellation in progress (B-005): the lease is invalidated and the kill
+  // was issued, but at least one process tree is not yet verified dead. Only
+  // a kill report with allDead=true moves the run on to `interrupted`.
+  "cancelling",
   "failed",
   "interrupted"
 ] as const;
@@ -195,6 +232,52 @@ export const RunValidationSummarySchema = z.object({
 
 export type RunValidationSummary = z.infer<typeof RunValidationSummarySchema>;
 
+export const FinalArtifactManifestSchema = z.object({
+  version: z.literal(1),
+  manifestId: z.string().uuid(),
+  runId: z.string().min(1),
+  sourceTargetFingerprint: z.string().min(1),
+  sourceBranch: z.string().min(1),
+  sourceBaseSha: z.string().min(1),
+  executionBaseSha: z.string().min(1),
+  finalSha: z.string().min(1),
+  finalRef: z.string().min(1).optional(),
+  addedFiles: z.array(z.string().min(1)),
+  modifiedFiles: z.array(z.string().min(1)),
+  deletedFiles: z.array(z.string().min(1)),
+  patch: z.string(),
+  validationCommands: z.array(z.object({ command: z.string().min(1), args: z.array(z.string()) })),
+  validationResults: z.array(z.object({ passed: z.boolean(), output: z.string(), exitCode: z.number().int() })),
+  verificationDisposition: z.enum(["verified", "unverified", "failed"]),
+  omittedTasks: z.array(z.string().min(1)),
+  acceptedFailures: z.array(z.string().min(1)),
+  acceptedConflicts: z.array(z.string().min(1)),
+  repairEvidence: z.array(z.record(z.unknown())),
+  artifactDisposition: z.enum(["ready", "partial", "failed"]),
+  deliveryDisposition: z.enum(["needs_delivery", "delivered", "failed"]),
+  createdAt: z.string().datetime()
+});
+export type FinalArtifactManifest = z.infer<typeof FinalArtifactManifestSchema>;
+
+export const RunOperationKindSchema = z.enum([
+  "planning",
+  "execution",
+  "replan",
+  "delivery",
+  "purge"
+]);
+
+export const RunOperationLeaseSchema = z.object({
+  operationId: z.string().uuid(),
+  kind: RunOperationKindSchema,
+  fencingToken: z.number().int().positive(),
+  acquiredAt: z.string().datetime(),
+  heartbeatAt: z.string().datetime()
+});
+
+export type RunOperationKind = z.infer<typeof RunOperationKindSchema>;
+export type RunOperationLease = z.infer<typeof RunOperationLeaseSchema>;
+
 export const RunRecordSchema = z.object({
   runId: z.string().min(1),
   workspaceId: z.string().min(1),
@@ -217,6 +300,12 @@ export const RunRecordSchema = z.object({
    * persisted before this field load unchanged.
    */
   version: z.number().int().nonnegative().default(0),
+  /** Monotonic fencing epoch for long-running background operations. */
+  // Optional for records and typed fixtures created before operation fencing.
+  // Every claimed operation persists the field before it can write.
+  mutationFence: z.number().int().nonnegative().optional(),
+  /** Current operation owner. A newer fencingToken invalidates every older writer. */
+  activeOperation: RunOperationLeaseSchema.optional(),
   status: RunStatusSchema,
   pausedDuring: z.union([z.literal("generating"), z.literal("running")]).optional(),
   /** Phase from which the run was interrupted (server restart, stale heartbeat). */
@@ -228,8 +317,20 @@ export const RunRecordSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   approvedAt: z.string().datetime().optional(),
+  /** Semantic revision of the executable plan. Legacy records start at revision 1. */
+  planRevision: z.number().int().positive().default(1),
+  /** Revision covered by the current approval. */
+  approvedPlanRevision: z.number().int().positive().optional(),
+  planApprovalOverride: z.object({
+    revision: z.number().int().positive(),
+    actor: z.string().min(1),
+    acknowledgedErrors: z.array(z.string().min(1)).min(1),
+    at: z.string().datetime()
+  }).optional(),
   startedAt: z.string().datetime().optional(),
   completedAt: z.string().datetime().optional(),
+  /** B-007: logical removal — hidden from the default list, metadata intact. */
+  archivedAt: z.string().datetime().optional(),
   /** Updated by the runner every few seconds while planning or executing. */
   heartbeatAt: z.string().datetime().optional(),
   // Opaque payloads produced by the planning and execution pipelines. The full
@@ -240,6 +341,8 @@ export const RunRecordSchema = z.object({
   decomposition: RunDecompositionMetadataSchema.optional(),
   /** Target repo for real execution. */
   repoSpec: RepoSpecSchema.optional(),
+  /** B-008: target repository captured at creation; immutable afterwards. */
+  targetContext: RunTargetContextSchema.optional(),
   /** Filled by the runner once the repo is provisioned, before execution. */
   provisioned: ProvisionedRepoRecordSchema.optional(),
   /** Final integrated patch applied back to the selected repo after successful execution. */
@@ -255,6 +358,10 @@ export const RunRecordSchema = z.object({
   exportedPatchPath: z.string().min(1).optional(),
   /** Human-readable detail when application was exported or failed. */
   finalApplicationMessage: z.string().optional(),
+  finalArtifactManifest: FinalArtifactManifestSchema.optional(),
+  executionOutcome: z.enum(["succeeded", "partial", "failed"]).optional(),
+  artifactOutcome: z.enum(["ready", "partial", "unverified", "failed"]).optional(),
+  deliveryOutcome: z.enum(["needs_delivery", "delivered", "failed"]).optional(),
   baseCommit: z.string().min(1).optional(),
   integrationCommitSha: z.string().min(1).optional(),
   /** Optional per-run overrides; defaults applied from execution-core at runtime. */
@@ -350,6 +457,7 @@ export const RunCreateRequestSchema = z.object({
   planningExecutorId: z.enum(EXECUTOR_IDS).optional(),
   defaultExecutionSelection: ExecutorSelectionSchema.optional(),
   defaultRepairSelection: ExecutorSelectionSchema.optional(),
+  executionConfig: ExecutionConfigInputSchema.optional(),
   autonomy: AutonomySchema.optional(),
   userPrompt: z.string().trim().max(RUN_USER_PROMPT_MAX_LENGTH).default(""),
   /** Target repo for real execution. */

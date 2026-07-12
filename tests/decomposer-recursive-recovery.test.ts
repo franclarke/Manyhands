@@ -319,6 +319,67 @@ describe("RecursiveDecomposer recovery", () => {
     }
   });
 
+  it("retries duplicate produced interfaces and succeeds once one producer is assigned", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { client, promptsFor } = sequenceClient([
+      {
+        match: "Evaluate arithmetic expression strings",
+        responses: [
+          decomposeStep({
+            sharedInterfaces: [sharedInterface("PantryFeatureComponents")],
+            children: [
+              child("inventory-feature-ui", "Inventory feature UI", "Build inventory feature components", {
+                produces: ["PantryFeatureComponents"]
+              }),
+              child("shopping-list-feature-ui", "Shopping list feature UI", "Build shopping list components", {
+                produces: ["PantryFeatureComponents"]
+              }),
+              child("recipe-feature-ui", "Recipe feature UI", "Build recipe feature components", {
+                produces: ["PantryFeatureComponents"]
+              })
+            ]
+          }),
+          decomposeStep({
+            sharedInterfaces: [sharedInterface("PantryFeatureComponents")],
+            children: [
+              child("inventory-feature-ui", "Inventory feature UI", "Build inventory feature components", {
+                produces: ["PantryFeatureComponents"]
+              }),
+              child("shopping-list-feature-ui", "Shopping list feature UI", "Build shopping list components", {
+                consumes: ["PantryFeatureComponents"]
+              }),
+              child("recipe-feature-ui", "Recipe feature UI", "Build recipe feature components", {
+                consumes: ["PantryFeatureComponents"]
+              })
+            ]
+          })
+        ]
+      },
+      { match: "Build inventory feature components", responses: [atomic(["src/inventory.ts"])] },
+      { match: "Build shopping list components", responses: [atomic(["src/shopping-list.ts"])] },
+      { match: "Build recipe feature components", responses: [atomic(["src/recipe.ts"])] }
+    ]);
+
+    try {
+      const result = await decomposer(client, { maxStepAttempts: 2 }).decompose(FEATURE);
+
+      expect(validateTaskGraph(result.graph)).toEqual([]);
+      expect(
+        Object.values(result.graph.nodes)
+          .filter((node) =>
+            node.kind === "leaf" &&
+            node.contract?.producedInterfaces?.some((iface) => iface.id === "PantryFeatureComponents")
+          )
+          .map((node) => node.id)
+      ).toEqual(["inventory-feature-ui"]);
+      expect(promptsFor("Evaluate arithmetic expression strings")[1]).toContain(
+        'interface "PantryFeatureComponents" is produced by multiple children'
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("can materialize a failed non-root node as an explicit fallback leaf when opted in", async () => {
     const { client } = sequenceClient([
       {

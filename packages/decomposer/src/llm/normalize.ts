@@ -7,6 +7,7 @@ import type {
   TaskNode,
   TaskGranularityLevel
 } from "@manyhands/task-graph";
+import { syncNodeDependencies } from "@manyhands/task-graph";
 import { executionScopeFromAllowed } from "../scope";
 import {
   DecomposerLlmError
@@ -100,6 +101,7 @@ export function normalizeLlmDecomposition(input: {
     rootId: rootCandidate.id,
     createdAt: input.generatedAt
   };
+  syncNodeDependencies(graph);
 
   const metadata: DecompositionMetadata = {
     mode: input.mode,

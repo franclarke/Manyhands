@@ -53,7 +53,7 @@ export async function DELETE(request: Request, context: RouteContext): Promise<N
       toTaskId,
       ...(rationale !== undefined ? { rationale } : {})
     });
-    const saved = await persistRunPatches({ run, baseSnapshot, patches: [patch] });
+    const saved = await persistRunPatches({ run, baseSnapshot, patches: [patch], expectedVersion: run.version });
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {
     return errorResponse(error);

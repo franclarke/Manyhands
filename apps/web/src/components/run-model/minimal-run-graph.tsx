@@ -28,7 +28,7 @@ interface MinimalRunGraphProps {
   graph: MinimalRunGraph;
   stage: ProductStage;
   selectedTarget: FocusTarget | null;
-  onFocus: (target: FocusTarget) => void;
+  onFocus: (target: FocusTarget | null) => void;
   /** Fill the parent panel (cockpit) instead of the fixed-height page block. */
   fill?: boolean;
   /** What the empty canvas means when there are no nodes (planning vs failed). */
@@ -246,7 +246,7 @@ function MinimalRunGraphInner({
           }
           onFocus({ kind: "node", id: node.id });
         }}
-        onPaneClick={() => undefined}
+        onPaneClick={() => onFocus(null)}
       >
         <Background variant={BackgroundVariant.Dots} gap={28} size={1} color="var(--mh-graph-dots)" />
         <CanvasControls onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />

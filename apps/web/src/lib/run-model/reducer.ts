@@ -242,7 +242,7 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
     case "run.scheduling.wave_selected": {
       const p = read<RunSchedulingWaveSelectedPayload>(event);
       const schedulingWaves = new Map(model.schedulingWaves);
-      schedulingWaves.set(p.waveIndex, {
+      schedulingWaves.set(p.waveId ?? `legacy-wave:${event.seq}`, {
         ...p,
         readyTaskIds: [...p.readyTaskIds],
         selectedTaskIds: [...p.selectedTaskIds],

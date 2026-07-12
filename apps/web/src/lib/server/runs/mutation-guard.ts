@@ -18,7 +18,7 @@
 import { RunMutationConflictError } from "./errors";
 import { isRunnerActive } from "./runner-state";
 import { getRunRepository } from "./store";
-import type { RunRecord, RunStatus } from "./schema";
+import type { RunOperationLease, RunRecord, RunStatus } from "./schema";
 
 export interface RunMutationExpectation {
   /** The run must currently be in one of these statuses. */
@@ -36,6 +36,8 @@ export interface RunMutationExpectation {
   version?: number;
   /** Reject while an in-process runner is actively driving this run. */
   rejectActiveRunner?: boolean;
+  /** Fence a background writer to the exact persisted operation owner. */
+  operationLease?: Pick<RunOperationLease, "operationId" | "fencingToken">;
 }
 
 /**
@@ -104,5 +106,18 @@ function assertExpectation(runId: string, current: RunRecord, expectation: RunMu
   }
   if (expectation.version !== undefined && current.version !== expectation.version) {
     conflict(`version ${expectation.version} is stale (current version is ${current.version})`);
+  }
+  if (expectation.operationLease !== undefined) {
+    const active = current.activeOperation;
+    if (
+      active === undefined ||
+      active.operationId !== expectation.operationLease.operationId ||
+      active.fencingToken !== expectation.operationLease.fencingToken ||
+      current.mutationFence !== expectation.operationLease.fencingToken
+    ) {
+      conflict(
+        `operation ${expectation.operationLease.operationId}/${expectation.operationLease.fencingToken} no longer owns the run`
+      );
+    }
   }
 }

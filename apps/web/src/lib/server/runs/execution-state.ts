@@ -56,10 +56,38 @@ export function provisionedFromRecord(record: RunRecord["provisioned"]): Provisi
   }
   return {
     repoRoot: record.repoRoot,
+    sourceRepoRoot: record.sourceRepoRoot ?? record.repoRoot,
+    sourceBranch: record.sourceBranch ?? record.baseBranch,
+    sourceBaseCommit: record.sourceBaseCommit ?? record.baseCommit,
     baseBranch: record.baseBranch,
     baseCommit: record.baseCommit,
+    executionBaseCommit: record.executionBaseCommit ?? record.baseCommit,
     cleanup: async () => undefined
   };
+}
+
+export type RepoProvisionAction = "reuse" | "provision" | "missing";
+
+/**
+ * Decide how the execution pipeline should obtain its repo:
+ *  - `reuse`: the run already carries a `provisioned` record (cold resume /
+ *    restart after the repo was provisioned) — use it, never re-provision.
+ *  - `provision`: no provisioned record yet, but a repoSpec exists.
+ *  - `missing`: neither — the default engine needs a repo and has none.
+ *
+ * The `reuse` case is the invariant that a restart of an execution-interrupted
+ * run must honor: treating an already-provisioned run as `missing` wrongly
+ * raised RepoNotConfiguredError and wedged every cold resume (observed E2E
+ * 2026-07-06).
+ */
+export function resolveRepoProvisionAction(params: {
+  provisioned: ProvisionedRepo | undefined;
+  hasRepoSpec: boolean;
+}): RepoProvisionAction {
+  if (params.provisioned !== undefined) {
+    return "reuse";
+  }
+  return params.hasRepoSpec ? "provision" : "missing";
 }
 
 export function executionResultsFromRun(run: RunRecord): ExecutionResults {

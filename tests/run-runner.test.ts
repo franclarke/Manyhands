@@ -231,7 +231,7 @@ describe("RunRunner", () => {
     expect(completedEvents.map(e => e.taskId)).toContain("leaf-a");
     expect(completedEvents.map(e => e.taskId)).toContain("composite-a");
     const finalRun = await store.get(runId);
-    expect(finalRun.status).toBe("completed");
+    expect(finalRun.status).toBe("failed_artifact");
   }, 30000);
 
   it("streams agent start events from execution traces before the engine finishes", async () => {
@@ -287,7 +287,7 @@ describe("RunRunner", () => {
     expect(events.filter((event) => event.kind === "agent.run.started" && event.taskId === "leaf-a")).toHaveLength(1);
     expect(events.some((event) => event.kind === "agent.run.completed" && event.taskId === "leaf-a")).toBe(true);
     const finalRun = await store.get(runId);
-    expect(finalRun.status).toBe("completed");
+    expect(finalRun.status).toBe("failed_artifact");
     expect(finalRun.executionTraces?.map((event) => event.type)).toEqual(["agent_started"]);
   }, 30000);
 
@@ -354,6 +354,37 @@ describe("RunRunner", () => {
     expect(finalRun.title).toBe("Habit counter");
     expect(finalRun.summary).toBe("Mini-app de hábitos con persistencia local.");
     expect(events).toContain("title.updated");
+  }, 30000);
+
+  it("continues planning with a fallback title when the titler fails", async () => {
+    const runId = `${runIdBase}-titler-fallback`;
+    const store = new JsonRunRecordStore({ directory: runsDir });
+    const userPrompt = "Build a tiny calculator with buttons and keyboard input.";
+    await store.save({
+      runId,
+      workspaceId: "ws-1",
+      granularity: "balanced",
+      model: "claude-opus-4.7",
+      userPrompt,
+      title: userPrompt,
+      version: 0,
+      status: "created",
+      createdAt: "2026-05-26T00:00:00.000Z",
+      updatedAt: "2026-05-26T00:00:00.000Z",
+      patches: []
+    });
+
+    await runPlanningPipeline(runId, {
+      intervalMs: 0,
+      titler: async () => {
+        throw new Error("titler timeout");
+      }
+    }).catch(() => undefined);
+
+    const finalRun = await store.get(runId);
+    expect(finalRun.title).toBe("Build a tiny calculator with buttons and keyboard input.");
+    expect(finalRun.summary).toBe("Build a tiny calculator with buttons and keyboard input.");
+    expect(finalRun.errorMessage).not.toContain("titler timeout");
   }, 30000);
 
   it("passes the selected Codex executor and model to the titler", async () => {

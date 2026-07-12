@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+import type { ExecutionConfig } from "@manyhands/execution-core";
 import {
   findRiskPrediction,
   type BuildStaticConflictSignalsInput,
@@ -13,7 +15,8 @@ import {
 } from "@manyhands/scheduler";
 import type { TaskGraph } from "@manyhands/task-graph";
 import type { RunEventPayloads, SchedulingAuditFallback, SchedulingAuditReason } from "@/lib/run-model/types";
-import { appendRunEventRequired } from "./run-model-event-log";
+import { appendRunEventRequiredWithSeq } from "./run-model-event-log";
+import { effectiveExecutionConfig } from "./effective-execution-config";
 
 type SchedulingWaveSelectedPayload = RunEventPayloads["run.scheduling.wave_selected"];
 
@@ -21,12 +24,12 @@ export interface SelectAndPersistSchedulingWaveInput {
   runId: string;
   graph: TaskGraph;
   candidates: readonly string[];
-  waveIndex: number;
+  waveIndex?: number;
   source: SchedulingWaveSelectedPayload["source"];
   riskMatrix?: TaskPairRiskMatrix;
   repositoryIndex?: BuildStaticConflictSignalsInput["repositoryIndex"];
   staticSignals?: readonly StaticConflictSignal[];
-  maxParallel?: number;
+  effectiveConfig?: ExecutionConfig;
 }
 
 export interface SelectAndPersistSchedulingWaveResult {
@@ -37,6 +40,7 @@ export interface SelectAndPersistSchedulingWaveResult {
 export async function selectAndPersistSchedulingWave(
   input: SelectAndPersistSchedulingWaveInput
 ): Promise<SelectAndPersistSchedulingWaveResult> {
+  const effectiveConfig = input.effectiveConfig ?? effectiveExecutionConfig(undefined);
   const policy: SchedulingPolicy = "risk_aware";
   const safety = buildSchedulingSafetyContext({
     graph: input.graph,
@@ -52,22 +56,23 @@ export async function selectAndPersistSchedulingWave(
     riskMatrix: safety.riskMatrix,
     ...(input.repositoryIndex !== undefined ? { repositoryIndex: input.repositoryIndex } : {}),
     ...(input.staticSignals !== undefined ? { staticSignals: input.staticSignals } : {}),
-    ...(input.maxParallel !== undefined ? { maxParallel: input.maxParallel } : {})
+    maxParallel: effectiveConfig.maxParallel
   });
-  const payload = schedulingWaveSelectedPayload({
-    source: input.source,
-    waveIndex: input.waveIndex,
-    policy,
-    readyTaskIds: input.candidates,
-    selectedTaskIds,
-    riskMatrix: safety.riskMatrix,
-    warnings: safety.warnings
-  });
-
-  await appendRunEventRequired(input.runId, {
-    actor: "system",
-    type: "run.scheduling.wave_selected",
-    payload
+  let payload!: SchedulingWaveSelectedPayload;
+  await appendRunEventRequiredWithSeq(input.runId, (seq) => {
+    payload = schedulingWaveSelectedPayload({
+      source: input.source,
+      waveId: randomUUID(),
+      waveIndex: seq - 1,
+      maxParallel: effectiveConfig.maxParallel,
+      routing: effectiveConfig.routing,
+      policy,
+      readyTaskIds: input.candidates,
+      selectedTaskIds,
+      riskMatrix: safety.riskMatrix,
+      warnings: safety.warnings
+    });
+    return { actor: "system", type: "run.scheduling.wave_selected", payload };
   });
 
   return { selectedTaskIds, payload };
@@ -75,7 +80,10 @@ export async function selectAndPersistSchedulingWave(
 
 function schedulingWaveSelectedPayload(input: {
   source: SchedulingWaveSelectedPayload["source"];
+  waveId: string;
   waveIndex: number;
+  maxParallel: number;
+  routing: ExecutionConfig["routing"];
   policy: SchedulingPolicy;
   readyTaskIds: readonly string[];
   selectedTaskIds: readonly string[];
@@ -87,7 +95,10 @@ function schedulingWaveSelectedPayload(input: {
   return {
     version: 1,
     source: input.source,
+    waveId: input.waveId,
     waveIndex: input.waveIndex,
+    maxParallel: input.maxParallel,
+    routing: input.routing,
     policy: input.policy,
     readyTaskIds: [...input.readyTaskIds],
     selectedTaskIds: [...input.selectedTaskIds],

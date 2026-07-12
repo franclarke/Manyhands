@@ -15,6 +15,7 @@ import type {
   SeamRevisionRef,
   TestSummary
 } from "@/lib/run-model/types";
+import { approvalDecisionId } from "./editing";
 import type { PlanningLiveNode, RunRecord } from "./schema";
 import { executionSelection, planningSelection, repairSelection } from "./executor-selection";
 
@@ -164,14 +165,14 @@ export function projectRunRecordToRunEvents(run: RunRecord): RunEvent[] {
     const approvalNodeIds = executableNodeIds(nodes);
     if (needsPlanApprovalDecision(run)) {
       writer.emit("system", planningAt, "decision.raised", {
-        decisionId: "approve_plan",
+        decisionId: approvalDecisionId(run.planRevision ?? 1),
         kind: "approve_plan",
         blocking: true,
         context: { nodeIds: approvalNodeIds }
       });
       if (isPlanApproved(run)) {
         writer.emit("human", run.approvedAt ?? run.updatedAt, "decision.resolved", {
-          decisionId: "approve_plan",
+          decisionId: approvalDecisionId(run.planRevision ?? 1),
           choice: { action: "approve" },
           actor: "human"
         });
@@ -417,13 +418,21 @@ function needsPlanApprovalDecision(run: RunRecord): boolean {
 
 function isPlanApproved(run: RunRecord): boolean {
   return (
+    (run.approvedPlanRevision ?? (legacyApprovalEvidence(run) ? 1 : undefined)) === (run.planRevision ?? 1) && (
     run.approvedAt !== undefined ||
     run.status === "approved" ||
     run.status === "running" ||
     run.status === "completed" ||
     run.status === "completed_with_accepted" ||
-    (run.status === "failed" && run.failedDuring === "running")
+    (run.status === "failed" && run.failedDuring === "running"))
   );
+}
+
+function legacyApprovalEvidence(run: RunRecord): boolean {
+  return run.approvedAt !== undefined || [
+    "approved", "running", "completed", "completed_with_accepted", "partial",
+    "unverified", "needs_delivery", "failed_artifact", "failed_delivery"
+  ].includes(run.status) || (run.status === "failed" && run.failedDuring === "running");
 }
 
 function planningStateFor(state: PlanningLiveNode["state"]): PlanningState | null {

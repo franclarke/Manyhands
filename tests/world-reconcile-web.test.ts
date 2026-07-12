@@ -48,7 +48,16 @@ afterEach(async () => {
 });
 
 function provisionedFor(commit: string): ProvisionedRepo {
-  return { repoRoot, baseBranch: "main", baseCommit: commit, cleanup: async () => undefined };
+  return {
+    repoRoot,
+    sourceRepoRoot: repoRoot,
+    sourceBranch: "main",
+    sourceBaseCommit: baseCommit,
+    baseBranch: "main",
+    baseCommit: commit,
+    executionBaseCommit: commit,
+    cleanup: async () => undefined
+  };
 }
 
 function makeRun(runId: string, execution: Partial<RunExecutionResult>): RunRecord {

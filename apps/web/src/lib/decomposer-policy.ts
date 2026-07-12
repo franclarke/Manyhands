@@ -12,6 +12,7 @@ import {
   type RecursiveStepStatusEvent,
   type WorkspaceHints
 } from "@manyhands/core";
+import type { ChildProcess, SpawnOptions } from "node:child_process";
 import type { Workspace } from "@/lib/api-types";
 
 /**
@@ -33,6 +34,7 @@ export interface PickDecomposerInput {
   userPrompt: string;
   model: string;
   executorId?: string | undefined;
+  reasoningEffort?: "low" | "medium" | "high" | "xhigh";
   /** Repository symbol-topology digest appended to the prompt grounding (Fase 2.1). */
   groundingDigest?: string;
   /** Skip the LLM regardless of env (used by Lab compare for reproducibility). */
@@ -41,6 +43,15 @@ export interface PickDecomposerInput {
   onStepCompleted?: RecursiveStepListener<RecursiveStepCompletedEvent>;
   onStepStatus?: RecursiveStepListener<RecursiveStepStatusEvent>;
   onCliOutput?: (data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void;
+  /**
+   * B-005: injectable spawn for the CLI decomposers so the caller can register
+   * every planning subprocess under its run (ProcessSupervisor).
+   */
+  spawn?: (
+    command: string,
+    args: readonly string[],
+    options: SpawnOptions
+  ) => ChildProcess;
 }
 
 const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-5";
@@ -118,7 +129,6 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
     };
   }
 
-  const model = input.model;
   return buildClaudeCodeSelection(input, modelOptions(input, workspaceHints, maxParallelSteps, maxStepAttempts, stepTimeoutMs));
 }
 
@@ -133,6 +143,7 @@ function modelOptions(
     cwd: input.workspace?.repoPath ?? process.cwd(),
     model: input.model,
     userPrompt: input.userPrompt,
+    ...(input.reasoningEffort !== undefined ? { reasoningEffort: input.reasoningEffort } : {}),
     ...(stepTimeoutMs !== undefined ? { timeoutMs: stepTimeoutMs } : {}),
     ...(maxParallelSteps !== undefined ? { maxParallelSteps } : {}),
     ...(maxStepAttempts !== undefined ? { maxStepAttempts } : {}),
@@ -140,7 +151,8 @@ function modelOptions(
     ...(input.onStepCompleted !== undefined ? { onStepCompleted: input.onStepCompleted } : {}),
     ...(input.onStepStatus !== undefined ? { onStepStatus: input.onStepStatus } : {}),
     ...(workspaceHints !== undefined ? { workspaceHints } : {}),
-    ...(input.onCliOutput !== undefined ? { onCliOutput: input.onCliOutput } : {})
+    ...(input.onCliOutput !== undefined ? { onCliOutput: input.onCliOutput } : {}),
+    ...(input.spawn !== undefined ? { spawn: input.spawn } : {})
   };
 }
 

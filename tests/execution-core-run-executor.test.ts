@@ -81,6 +81,32 @@ function leafContractWithValidation(): AgentTaskContract {
   });
 }
 
+function abstractLeafContractWithValidation(): AgentTaskContract {
+  return AgentTaskContractSchema.parse({
+    ...leafContractWithValidation(),
+    expectedOutput: { changedFiles: [], producedSymbols: ["PublicApi"], consumedSymbols: [], diffShapeHint: "behavioral" },
+    leafValidationCommands: [{ command: "pnpm", args: ["test"], timeoutMs: 30_000, cwd: "worktree" }]
+  });
+}
+
+/** Minimal successful child result for driving a composite runNode integration. */
+function compositeChildResult(taskId: string, commitSha: string): AgentExecutionResult {
+  return {
+    taskId,
+    status: "success",
+    baseHead: "PARENT_BASE",
+    currentHead: commitSha,
+    agentCommittedUnexpectedly: false,
+    diff: "patch",
+    changedFiles: [`src/${taskId}.ts`],
+    commitSha,
+    scopeCheck: { passed: true, violations: [], outOfScope: [] },
+    executorExitCode: 0,
+    executorDurationMs: 100,
+    executorTimedOut: false
+  };
+}
+
 function graphWith(
   leafIds: string[],
   rootContract?: AgentTaskContract,
@@ -272,6 +298,25 @@ describe("RunExecutor", () => {
     expect(traceStore.findByType("run_completed")).toHaveLength(1);
   });
 
+  it("passes configured reasoning effort to leaf executors", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/x b/x\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitShas: ["LEAF_SHA"]
+    });
+    const traceStore = new InMemoryTraceStore();
+    const agent = new MockAgentExecutor();
+    const executor = makeExecutor(git, traceStore, agent);
+
+    await executor.run({
+      graph: graphWith(["a"]),
+      config: ExecutionConfigSchema.parse({ reasoningEffort: "medium" }),
+      model: "gpt-5-codex"
+    });
+
+    expect(agent.calls[0]?.reasoningEffort).toBe("medium");
+  });
+
   it("uses risk-aware scheduling by default and serializes overlapping leaf scopes", async () => {
     const git = new FakeGitRunner({
       diffCached: "diff --git a/src/x.ts b/src/x.ts\n+added",
@@ -380,6 +425,41 @@ describe("RunExecutor", () => {
       executorId: "codex-cli",
       model: "gpt-5.5"
     });
+  });
+
+  it("includes scope boundaries in leaf repair instructions", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/src/App.tsx b/src/App.tsx\n+fix",
+      diffCachedNameOnly: ["src/App.tsx"],
+      commitSha: "REPAIR_SHA"
+    });
+    const prompts: string[] = [];
+    const executor = new RunExecutor({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: REPO_ROOT,
+      writeInstructions: async (_path, content) => {
+        prompts.push(content);
+      }
+    });
+
+    await executor.repairLeaf({
+      graph: graphWith(["a"], undefined, leafContract(["src/App.tsx", "src/App.css"], ["src/data/**"])),
+      config,
+      model: "gpt-5-codex",
+      taskId: "a",
+      runId: RUN_ID,
+      validationOutput: "No test files found, exiting with code 1"
+    });
+
+    const repairPrompt = prompts[0] ?? "";
+    expect(repairPrompt).toContain("Your work belongs primarily in files matching");
+    expect(repairPrompt).toContain("src/App.tsx");
+    expect(repairPrompt).toContain("src/App.css");
+    expect(repairPrompt).toContain("You must NOT modify");
+    expect(repairPrompt).toContain("src/data/**");
+    expect(repairPrompt).toContain("Definition of done");
   });
 
   it("rejects a Claude per-node override when a Codex run is fixed", async () => {
@@ -568,6 +648,48 @@ describe("RunExecutor", () => {
       executorId: "claude-code-cli",
       model: "opus"
     });
+  });
+
+  it("threads the configured reasoning effort into a composite integration repair (runNode)", async () => {
+    // The web pipeline integrates one composite at a time via runNode. That path
+    // built the repair params WITHOUT `reasoningEffort`, so a Codex conflict
+    // repair silently ran at its default (high) effort instead of the run's
+    // configured effort — much slower, and it timed out on real UI merge
+    // conflicts (E2E 2026-07-06). The composite repair executor call must carry
+    // the run's configured effort, exactly like leaf execution does.
+    const git = new FakeGitRunner({
+      diffCached: "resolved patch",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "REPAIR_SHA",
+      cherryPickOutcomes: [
+        { ok: true, conflictFiles: [], output: "" },
+        { ok: false, conflictFiles: ["src/x.ts"], output: "conflict" }
+      ]
+    });
+    const agent = new MockAgentExecutor();
+    const traceStore = new InMemoryTraceStore();
+    const executor = new RunExecutor({
+      git,
+      executor: agent,
+      traceStore,
+      repoRoot: REPO_ROOT,
+      writeInstructions: async () => {}
+    });
+
+    await executor.runNode({
+      graph: graphWith(["a", "b"]),
+      config: ExecutionConfigSchema.parse({ reasoningEffort: "low" }),
+      model: "sonnet",
+      taskId: "root",
+      runId: RUN_ID,
+      childResults: [compositeChildResult("a", "SHA_A"), compositeChildResult("b", "SHA_B")]
+    });
+
+    // runNode on a composite runs no leaves — the only executor call is the
+    // conflict repair. Assert it actually ran, then that it carried the effort.
+    expect(traceStore.findByType("executor_repair_started").length).toBeGreaterThan(0);
+    expect(agent.calls).toHaveLength(1);
+    expect(agent.calls[0]?.reasoningEffort).toBe("low");
   });
 
   it("cleans every worktree it created after integration", async () => {
@@ -772,6 +894,27 @@ describe("RunExecutor", () => {
     });
   });
 
+  it("records an abstract no-diff contract as already_satisfied only after explicit validation passes", async () => {
+    const git = new FakeGitRunner({ diffCachedNameOnly: [] });
+    const validationRunner: ValidationRunner = {
+      run: async () => ({ passed: true, output: "verified", exitCode: 0 })
+    };
+    const executor = new RunExecutor({
+      git, executor: new MockAgentExecutor(), traceStore: new InMemoryTraceStore(),
+      repoRoot: REPO_ROOT, validationRunner, writeInstructions: async () => {}
+    });
+    const graph = graphWith(["a"], undefined, abstractLeafContractWithValidation());
+    const nodeResult = await executor.runNode({
+      graph, config, model: "gpt-5-codex", runId: RUN_ID, taskId: "a"
+    });
+    expect(nodeResult.kind).toBe("leaf");
+    if (nodeResult.kind !== "leaf") throw new Error("expected leaf");
+    expect(nodeResult.result).toMatchObject({
+      status: "success", disposition: "already_satisfied", noOp: true,
+      validationResult: { passed: true }
+    });
+  });
+
   it("defers leaf validation (leaf still succeeds) when the toolchain is missing (exit 127)", async () => {
     // A leaf branches from the base in isolation, so a project-wide check like
     // `npx tsc --noEmit` finds no installed TypeScript and exits 127. That is an
@@ -812,6 +955,141 @@ describe("RunExecutor", () => {
     expect(traceStore.findByType("validation_deferred")[0]?.payload).toMatchObject({
       scope: "leaf",
       exitCode: 127
+    });
+  });
+
+  it("defers leaf validation when the package manager cannot read package.json (missing manifest)", async () => {
+    // A greenfield leaf branches from the walking skeleton, which carries no
+    // package.json. A leaf that touches only `src/**` (and does not itself
+    // author a manifest) makes an npm-based validation command exit with ENOENT
+    // ("Could not read package.json"). That is an infra gap at the leaf
+    // altitude — the manifest is composed later — not broken code, so the leaf
+    // must succeed and verification is deferred to run level. Without this,
+    // real greenfield runs wedge at the leaf gate (observed E2E 2026-07-06).
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/src/x.ts b/src/x.ts\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const validationRunner: ValidationRunner = {
+      run: async (): Promise<ValidationRunResult> => ({
+        passed: false,
+        output:
+          'npm error code ENOENT\n' +
+          'npm error syscall open\n' +
+          'npm error path C:\\repo\\.manyhands\\worktrees\\run-1\\a\\package.json\n' +
+          'npm error errno -4058\n' +
+          'npm error enoent Could not read package.json: Error: ENOENT: no such file or directory, ' +
+          "open 'C:\\repo\\.manyhands\\worktrees\\run-1\\a\\package.json'",
+        // Windows surfaces ENOENT as errno -4058 (uint32 4294963238); the
+        // classifier must key off the output, not this platform-specific code.
+        exitCode: 4294963238
+      })
+    };
+    const traceStore = new InMemoryTraceStore();
+    const executor = new RunExecutor({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore,
+      repoRoot: REPO_ROOT,
+      validationRunner,
+      writeInstructions: async () => {}
+    });
+
+    const result = await executor.run({
+      graph: graphWith(["a"], undefined, leafContractWithValidation()),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    expect(result.leafResults[0]?.status).toBe("success");
+    expect(result.status).toBe("completed");
+    expect(traceStore.findByType("validation_deferred")).toHaveLength(1);
+    expect(traceStore.findByType("validation_deferred")[0]?.payload).toMatchObject({
+      scope: "leaf",
+      reason: "manifest_missing"
+    });
+  });
+
+  it("defers leaf validation when a test runner reports no test files", async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/src/x.ts b/src/x.ts\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const validationRunner: ValidationRunner = {
+      run: async (): Promise<ValidationRunResult> => ({
+        passed: false,
+        output: "No test files found, exiting with code 1",
+        exitCode: 1
+      })
+    };
+    const traceStore = new InMemoryTraceStore();
+    const executor = new RunExecutor({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore,
+      repoRoot: REPO_ROOT,
+      validationRunner,
+      writeInstructions: async () => {}
+    });
+
+    const result = await executor.run({
+      graph: graphWith(["a"], undefined, leafContractWithValidation()),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    expect(result.leafResults[0]?.status).toBe("success");
+    expect(result.status).toBe("completed");
+    expect(traceStore.findByType("validation_deferred")).toHaveLength(1);
+    expect(traceStore.findByType("validation_deferred")[0]?.payload).toMatchObject({
+      scope: "leaf",
+      exitCode: 1,
+      reason: "no_tests_found"
+    });
+  });
+
+  it('defers leaf validation when the workspace has no "test" script', async () => {
+    const git = new FakeGitRunner({
+      diffCached: "diff --git a/src/x.ts b/src/x.ts\n+added",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitSha: "LEAF_SHA"
+    });
+    const validationRunner: ValidationRunner = {
+      run: async (): Promise<ValidationRunResult> => ({
+        passed: false,
+        output:
+          'npm error Missing script: "test"\n' +
+          "npm error\n" +
+          "npm error To see a list of scripts, run:\n" +
+          "npm error   npm run",
+        exitCode: 1
+      })
+    };
+    const traceStore = new InMemoryTraceStore();
+    const executor = new RunExecutor({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore,
+      repoRoot: REPO_ROOT,
+      validationRunner,
+      writeInstructions: async () => {}
+    });
+
+    const result = await executor.run({
+      graph: graphWith(["a"], undefined, leafContractWithValidation()),
+      config,
+      model: "gpt-5-codex"
+    });
+
+    expect(result.leafResults[0]?.status).toBe("success");
+    expect(result.status).toBe("completed");
+    expect(traceStore.findByType("validation_deferred")).toHaveLength(1);
+    expect(traceStore.findByType("validation_deferred")[0]?.payload).toMatchObject({
+      scope: "leaf",
+      exitCode: 1,
+      reason: "missing_test_script"
     });
   });
 

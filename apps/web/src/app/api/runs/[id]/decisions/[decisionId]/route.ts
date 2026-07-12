@@ -48,7 +48,11 @@ const DecisionRequestSchema = z
     answer: z.string().min(1).optional(),
     resolutionId: z.string().min(1).optional(),
     action: z.enum(["approve", "reject", "accept"]).optional(),
-    acknowledgeCriticErrors: z.boolean().optional()
+    expectedVersion: z.number().int().nonnegative().optional(),
+    criticOverride: z.object({
+      actor: z.string().min(1),
+      acknowledgedErrors: z.array(z.string().min(1)).min(1)
+    }).optional()
   })
   .strict();
 
@@ -85,7 +89,10 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       }
       // Claims the approval atomically (INV-4) and resumes the suspended
       // approvalGate natively; a concurrent duplicate approval gets a 409.
-      run = await processPlanApproval(run.runId, body.acknowledgeCriticErrors === true);
+      run = await processPlanApproval(run.runId, {
+        ...(body.expectedVersion !== undefined ? { expectedVersion: body.expectedVersion } : {}),
+        ...(body.criticOverride !== undefined ? { criticOverride: body.criticOverride } : {})
+      });
       // Resolving the approval gate IS the go-ahead in the agent-first model (there
       // is no separate "run" affordance). Start execution; the pipeline transitions
       // "approved" → "running" itself (mirrors the restart route).
@@ -126,7 +133,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       let previous: RunRecord | undefined;
       run = await claimRunMutation(
         run.runId,
-        { status: ["paused"], pausedDuring: "generating", pendingQuestionNodeId: nodeId },
+        { status: ["paused", "interrupted"], pausedDuring: "generating", pendingQuestionNodeId: nodeId },
         (current) => {
           previous = current;
           const nextRun = {

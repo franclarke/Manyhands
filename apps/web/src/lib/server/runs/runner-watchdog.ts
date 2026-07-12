@@ -1,8 +1,12 @@
-import { abortRun } from "./run-abort-registry";
-import { saveRunWithRequiredStatusEvent } from "./audited-mutation";
+import { cancelRun } from "./cancel-service";
 import { getRunRepository } from "./store";
+import type { RunOperationLease } from "./schema";
 
-export function startBudgetWatchdog(runId: string, maxWallClockMs: number | undefined): () => void {
+export function startBudgetWatchdog(
+  runId: string,
+  maxWallClockMs: number | undefined,
+  lease?: RunOperationLease
+): () => void {
   if (maxWallClockMs === undefined) {
     return () => undefined;
   }
@@ -11,13 +15,11 @@ export function startBudgetWatchdog(runId: string, maxWallClockMs: number | unde
       const repo = getRunRepository();
       const current = await repo.get(runId).catch(() => null);
       if (current !== null && current.status === "running") {
-        await saveRunWithRequiredStatusEvent(current, {
-          ...current,
-          status: "interrupted",
-          interruptedDuring: "running",
-          errorMessage: `interrupted: wall-clock budget of ${maxWallClockMs}ms exceeded`
+        await cancelRun(runId, {
+          ...(lease !== undefined ? { operationLease: lease } : {}),
+          actor: "system",
+          reason: `interrupted: wall-clock budget of ${maxWallClockMs}ms exceeded`
         });
-        abortRun(runId);
       }
     })().catch((error) => {
       console.error(`[runs] budget watchdog failed for run ${runId}`, error);

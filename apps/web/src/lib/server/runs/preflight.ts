@@ -6,6 +6,8 @@ import {
   normalizeExecutorSelection,
   resolveLegacyModelSelection,
   getExecutorDescriptor,
+  cliPathRequiresShell,
+  resolveCliBinaryPath,
   type ExecutorId,
   type ExecutorSelection
 } from "@manyhands/execution-core";
@@ -200,10 +202,12 @@ async function defaultFreeDiskBytes(repoRoot: string): Promise<number | undefine
 
 async function defaultCheckCli(binaryPath: string): Promise<boolean> {
   try {
-    // shell:true on win32 so the npm `.cmd`/`.ps1` shim resolves on PATH.
-    await execFileAsync(binaryPath, ["--version"], {
+    const resolvedBinaryPath = resolveCliBinaryPath(binaryPath);
+    // Resolve once so preflight and execution agree on the concrete CLI binary.
+    // A shell is only needed for Windows batch shims.
+    await execFileAsync(resolvedBinaryPath, ["--version"], {
       timeout: 10_000,
-      shell: process.platform === "win32"
+      shell: cliPathRequiresShell(resolvedBinaryPath)
     });
     return true;
   } catch {

@@ -6,11 +6,11 @@
  * release someone else's lock. Preflight gains disk-space awareness and stops
  * counting ManyHands-owned artifacts as user dirt.
  */
-import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { acquireRepoLock, readRepoLock, releaseRepoLock } from "@/lib/server/runs/repo-lock";
+import { acquireRepoLock, readRepoLock, releaseRepoLease } from "@/lib/server/runs/repo-lock";
 import { PreflightError, runPreflight } from "@/lib/server/runs/preflight";
 
 let repoRoot: string;
@@ -54,14 +54,14 @@ describe("repo lock", () => {
   it("steals a stale lock even when the stale owner has the same run id", async () => {
     expect((await acquireRepoLock(repoRoot, "run-a", { ownerIsLive: liveOwner })).acquired).toBe(true);
     const stolen = await acquireRepoLock(repoRoot, "run-a", { ownerIsLive: deadOwner });
-    expect(stolen).toEqual({ acquired: true, stolen: true });
+    expect(stolen).toMatchObject({ acquired: true, stolen: true });
     expect((await readRepoLock(repoRoot))?.runId).toBe("run-a");
   });
 
   it("steals the lock of a dead owner and records the theft", async () => {
     await acquireRepoLock(repoRoot, "run-dead", { ownerIsLive: liveOwner });
     const stolen = await acquireRepoLock(repoRoot, "run-new", { ownerIsLive: deadOwner });
-    expect(stolen).toEqual({ acquired: true, stolen: true });
+    expect(stolen).toMatchObject({ acquired: true, stolen: true });
     expect((await readRepoLock(repoRoot))?.runId).toBe("run-new");
   });
 
@@ -72,24 +72,26 @@ describe("repo lock", () => {
     expect(result.acquired).toBe(true);
   });
 
-  it("release is owner-scoped: a foreign run cannot clobber the lock", async () => {
-    await acquireRepoLock(repoRoot, "run-a", { ownerIsLive: liveOwner });
-    await releaseRepoLock(repoRoot, "run-b");
+  it("release is lease-scoped: a foreign lease cannot clobber the lock", async () => {
+    const held = await acquireRepoLock(repoRoot, "run-a", { ownerIsLive: liveOwner });
+    if (!held.acquired) throw new Error("expected run-a to acquire");
+    // A forged/foreign lease (wrong token) must be a no-op.
+    await releaseRepoLease({ ...held.lease, runId: "run-b", token: "not-the-owner-token" });
     expect((await readRepoLock(repoRoot))?.runId).toBe("run-a");
-    await releaseRepoLock(repoRoot, "run-a");
+    await releaseRepoLease(held.lease);
     expect(await readRepoLock(repoRoot)).toBeUndefined();
     // Released: the next acquirer wins cleanly.
     expect((await acquireRepoLock(repoRoot, "run-b", { ownerIsLive: liveOwner })).acquired).toBe(true);
   });
 
-  it("lock file contents survive a read round-trip", async () => {
-    await acquireRepoLock(repoRoot, "run-roundtrip", { ownerIsLive: liveOwner });
-    const raw = JSON.parse(await readFile(path.join(repoRoot, ".manyhands", "run.lock"), "utf8")) as {
-      runId: string;
-      pid: number;
-    };
-    expect(raw.runId).toBe("run-roundtrip");
-    expect(raw.pid).toBe(process.pid);
+  it("lock owner contents survive a read round-trip", async () => {
+    const held = await acquireRepoLock(repoRoot, "run-roundtrip", { ownerIsLive: liveOwner });
+    if (!held.acquired) throw new Error("expected run-roundtrip to acquire");
+    const owner = await readRepoLock(repoRoot);
+    expect(owner?.runId).toBe("run-roundtrip");
+    expect(owner?.pid).toBe(process.pid);
+    expect(owner?.token).toBe(held.lease.token);
+    expect(owner?.generation).toBe(held.lease.generation);
   });
 });
 

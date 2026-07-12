@@ -23,6 +23,7 @@ export interface CodexRecursiveDecomposerOptions {
   model: string;
   userPrompt: string;
   cwd: string;
+  reasoningEffort?: CodexReasoningEffort;
   binaryPath?: string;
   timeoutMs?: number;
   workspaceHints?: string;
@@ -41,6 +42,8 @@ export interface CodexRecursiveDecomposerOptions {
   useShell?: boolean;
   onCliOutput?: (data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void;
 }
+
+type CodexReasoningEffort = "low" | "medium" | "high" | "xhigh";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const SPAWN_FAILURE_EXIT_CODE = 127;
@@ -65,6 +68,7 @@ export class CodexRecursiveDecomposer implements Decomposer {
       model: options.model,
       cwd: options.cwd
     };
+    if (options.reasoningEffort !== undefined) clientOptions.reasoningEffort = options.reasoningEffort;
     if (options.binaryPath !== undefined) clientOptions.binaryPath = options.binaryPath;
     if (options.timeoutMs !== undefined) clientOptions.timeoutMs = options.timeoutMs;
     if (options.spawn !== undefined) clientOptions.spawn = options.spawn;
@@ -108,6 +112,7 @@ export class CodexRecursiveDecomposer implements Decomposer {
 interface CodexStepClientOptions {
   model: string;
   cwd: string;
+  reasoningEffort?: CodexReasoningEffort;
   binaryPath?: string;
   timeoutMs?: number;
   spawn?: SpawnFn;
@@ -119,6 +124,7 @@ class CodexStepClient implements AnthropicLike {
   readonly messages: AnthropicLike["messages"];
   private readonly model: string;
   private readonly cwd: string;
+  private readonly reasoningEffort: CodexReasoningEffort | undefined;
   private readonly binaryPath: string;
   private readonly timeoutMs: number;
   private readonly spawnFn: SpawnFn;
@@ -128,6 +134,7 @@ class CodexStepClient implements AnthropicLike {
   constructor(options: CodexStepClientOptions) {
     this.model = options.model;
     this.cwd = options.cwd;
+    this.reasoningEffort = options.reasoningEffort;
     this.binaryPath = options.binaryPath ?? process.env.MANYHANDS_CODEX_BIN ?? "codex";
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.spawnFn = options.spawn ?? spawn;
@@ -161,6 +168,7 @@ class CodexStepClient implements AnthropicLike {
       "--sandbox",
       "workspace-write",
       "--skip-git-repo-check",
+      ...(this.reasoningEffort !== undefined ? ["-c", `model_reasoning_effort="${this.reasoningEffort}"`] : []),
       "-"
     ];
 

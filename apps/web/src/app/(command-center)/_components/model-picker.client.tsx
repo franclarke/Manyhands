@@ -2,21 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import { MODEL_OPTIONS, formatSelectionValue, type ModelOption } from "@/lib/models";
+import { MODEL_OPTIONS, formatSelectionValue, type ModelCapability, type ModelOption } from "@/lib/models";
 import { formatRate } from "@/lib/model-pricing";
 
 interface ModelPickerProps {
   /** Selection string "executorId/modelId". */
   value: string;
   onChange: (value: string) => void;
+  capability?: ModelCapability;
 }
 
 /**
  * Claude-style single model control: a compact trigger that opens a menu of the
  * enabled models grouped by provider, each annotated with its price, with a
- * checkmark on the active one. One choice drives planning + execution + repair.
+ * checkmark on the active one.
  */
-export function ModelPicker({ value, onChange }: ModelPickerProps): React.ReactElement {
+export function ModelPicker({ value, onChange, capability }: ModelPickerProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -38,7 +39,9 @@ export function ModelPicker({ value, onChange }: ModelPickerProps): React.ReactE
     };
   }, [open]);
 
-  const options = MODEL_OPTIONS.filter((option) => option.enabled);
+  const options = MODEL_OPTIONS.filter(
+    (option) => option.enabled && (capability === undefined || option.capabilities.includes(capability))
+  );
   const selected = options.find((option) => formatSelectionValue({ executorId: option.executorId, model: option.id }) === value);
   const grouped = groupByProvider(options);
 

@@ -101,12 +101,19 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       model: sourceRun.model,
       userPrompt: sourceRun.userPrompt,
       title: `[Fork] ${sourceRun.title}`,
-      version: 0,
+          version: 0,
+          planRevision: 1,
       status: "created",
       createdAt: now,
       updatedAt: now,
       patches: [],
       ...(sourceRun.planningModel !== undefined ? { planningModel: sourceRun.planningModel } : {}),
+      ...(sourceRun.planningExecutorId !== undefined ? { planningExecutorId: sourceRun.planningExecutorId } : {}),
+      ...(sourceRun.defaultExecutionSelection !== undefined
+        ? { defaultExecutionSelection: sourceRun.defaultExecutionSelection }
+        : {}),
+      ...(sourceRun.defaultRepairSelection !== undefined ? { defaultRepairSelection: sourceRun.defaultRepairSelection } : {}),
+      ...(sourceRun.executionConfig !== undefined ? { executionConfig: sourceRun.executionConfig } : {}),
       ...(sourceRun.repoSpec !== undefined ? { repoSpec: sourceRun.repoSpec } : {})
     };
 

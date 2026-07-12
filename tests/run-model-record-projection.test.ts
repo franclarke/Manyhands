@@ -54,7 +54,7 @@ describe("run-model record projection", () => {
     });
     const model = reduceRunEvents(createInitialRunModel(buildRunModelSeed(run)), projectRunRecordToRunEvents(run));
 
-    expect(model.decisions.get("approve_plan")?.status).toBe("resolved");
+    expect(model.decisions.get("approve_plan:r1")?.status).toBe("resolved");
     expect(selectRenderableNodeState(model, "leaf-a").display).toBe("done");
     expect(selectRenderableNodeState(model, "root").display).toBe("done");
     expect(selectGranularityMetrics(model)?.leafSuccessRate).toBe(1);

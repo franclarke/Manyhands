@@ -4,6 +4,8 @@ import { promisify } from "node:util";
 import {
   CLAUDE_CODE_EXECUTOR_ID,
   EXECUTOR_DESCRIPTORS,
+  cliPathRequiresShell,
+  resolveCliBinaryPath,
   type ExecutorDescriptor,
   type ExecutorId
 } from "@manyhands/execution-core";
@@ -238,9 +240,10 @@ function countUserDirt(porcelain: string): number {
 
 async function defaultCheckCli(binaryPath: string): Promise<{ ok: boolean; version?: string }> {
   try {
-    const { stdout, stderr } = await execFileAsync(binaryPath, ["--version"], {
+    const resolvedBinaryPath = resolveCliBinaryPath(binaryPath);
+    const { stdout, stderr } = await execFileAsync(resolvedBinaryPath, ["--version"], {
       timeout: 10_000,
-      shell: process.platform === "win32"
+      shell: cliPathRequiresShell(resolvedBinaryPath)
     });
     const version = (stdout || stderr).trim();
     return version.length > 0 ? { ok: true, version } : { ok: true };

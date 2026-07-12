@@ -15,7 +15,6 @@ import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
 
 import { FixedAgentExecutorFactory, type AgentExecutorFactory } from "../executor/factory";
-import { SPAWN_FAILURE_EXIT_CODE } from "../executor/process";
 import { AGENT_STATUS_PROTOCOL_INSTRUCTIONS } from "../executor/status-channel";
 import type { AgentExecutor } from "../executor/types";
 import { countDependents } from "../routing/complexity";
@@ -36,7 +35,9 @@ import { assertExecutableGraph } from "./graph-guards";
 import { IntegrationAgent, type PredictedConflictHint } from "../integration/agent";
 import { ResultRecorder } from "../result/recorder";
 import { BatchScheduler } from "../scheduler/batch";
+import { classifyDeferredValidation } from "../validation/deferred";
 import {
+  AgentExecutionResultSchema,
   type AgentExecutionResult,
   type ExecutionConfig,
   type GranularityVector,
@@ -459,7 +460,10 @@ export class RunExecutor {
 
     const worktrees: WorktreeRecord[] = [];
     try {
-      if (node.kind === "leaf") {
+      // B-009 (CF-09): `integrator` is an ATOMIC executable task — the same
+      // semantics `run()` and the frontier already use. Only composite/root
+      // nodes take the integration path below.
+      if (node.kind === "leaf" || node.kind === "integrator") {
         const result = await this.executeLeaf({
           graph,
           node,
@@ -533,7 +537,12 @@ export class RunExecutor {
         ...(params.signal !== undefined ? { signal: params.signal } : {}),
         repair: {
           selection: repairSelection,
-          timeoutMs: config.integrationTimeoutMs
+          timeoutMs: config.integrationTimeoutMs,
+          // Thread the run's configured effort into the conflict repair, exactly
+          // as the full-graph integrateBottomUp path does. Without this, Codex
+          // repairs ran at the CLI's default (high) effort and timed out on
+          // real UI merge conflicts (E2E 2026-07-06).
+          ...(config.reasoningEffort !== undefined ? { reasoningEffort: config.reasoningEffort } : {})
         },
         parentGoal: node.goal,
         childIntents,
@@ -627,6 +636,7 @@ export class RunExecutor {
       model: selection.model,
       timeoutMs: config.leafTimeoutMs,
       bypassApprovals: true,
+      ...(config.reasoningEffort !== undefined ? { reasoningEffort: config.reasoningEffort } : {}),
       processOwnerId: runId,
       ...(params.signal !== undefined ? { signal: params.signal } : {}),
       onOutput: (chunk) => {
@@ -659,6 +669,8 @@ export class RunExecutor {
       commitMessage: `mh-repair: ${node.id}`,
       ...(contract?.executionScope ? { executionScope: contract.executionScope } : {}),
       ...(contract?.forbiddenPaths ? { forbiddenPaths: contract.forbiddenPaths } : {}),
+      ...(contract?.expectedOutput ? { expectedOutput: contract.expectedOutput } : {}),
+      scopePolicy: config.scopePolicy,
       usageSource
     });
 
@@ -784,6 +796,7 @@ export class RunExecutor {
       model: executorSelection.model,
       timeoutMs: config.leafTimeoutMs,
       bypassApprovals: true,
+      ...(config.reasoningEffort !== undefined ? { reasoningEffort: config.reasoningEffort } : {}),
       processOwnerId: runId,
       ...(args.signal !== undefined ? { signal: args.signal } : {}),
       onOutput: (chunk) => {
@@ -826,6 +839,8 @@ export class RunExecutor {
       commitMessage: `mh: ${node.id}`,
       ...(contract?.executionScope ? { executionScope: contract.executionScope } : {}),
       ...(contract?.forbiddenPaths ? { forbiddenPaths: contract.forbiddenPaths } : {}),
+      ...(contract?.expectedOutput ? { expectedOutput: contract.expectedOutput } : {}),
+      scopePolicy: config.scopePolicy,
       usageSource
     });
     return this.runLeafValidation({ node, worktree, result: recorded, runId });
@@ -876,7 +891,8 @@ export class RunExecutor {
     runId: string;
   }): Promise<AgentExecutionResult> {
     const commands = args.node.contract?.leafValidationCommands ?? [];
-    if (args.result.status !== "success" || commands.length === 0) {
+    const abstractNoOp = args.result.status === "empty_diff" && commands.length > 0;
+    if ((args.result.status !== "success" && !abstractNoOp) || commands.length === 0) {
       return args.result;
     }
 
@@ -888,7 +904,8 @@ export class RunExecutor {
     });
     const validationResult = await this.validationRunner.run(commands, {
       worktreePath: args.worktree.path,
-      repoRoot: this.repoRoot
+      repoRoot: this.repoRoot,
+      supervision: { runId: args.runId }
     });
     this.traceStore.append({
       type: "validation_completed",
@@ -903,6 +920,16 @@ export class RunExecutor {
     });
 
     if (validationResult.passed) {
+      if (abstractNoOp) {
+        return AgentExecutionResultSchema.parse({
+          ...args.result,
+          status: "success",
+          disposition: "already_satisfied",
+          noOp: true,
+          validationResult,
+          baselineEvidence: { expectedPaths: [], verifiedPaths: [], validation: validationResult }
+        });
+      }
       return { ...args.result, validationResult };
     }
 
@@ -912,12 +939,14 @@ export class RunExecutor {
     // altitude, not broken code. Defer it: keep the leaf successful and let
     // run-level validation (post-compose, with deps installed) be the real gate.
     // Without this, greenfield runs wedge at the leaf gate on unsatisfiable checks.
-    if (validationResult.exitCode === SPAWN_FAILURE_EXIT_CODE) {
-      execWarn("leaf", "leaf validation deferred (toolchain missing) — verifying at run level", {
+    const deferredReason = classifyDeferredValidation(validationResult);
+    if (deferredReason !== undefined) {
+      execWarn("leaf", "leaf validation deferred — verifying at run level", {
         task: args.node.id,
         runId: args.runId,
         exitCode: validationResult.exitCode,
-        output: validationResult.output
+        output: validationResult.output,
+        reason: deferredReason
       });
       this.traceStore.append({
         type: "validation_deferred",
@@ -926,7 +955,7 @@ export class RunExecutor {
         payload: {
           scope: "leaf",
           exitCode: validationResult.exitCode,
-          reason: "toolchain_missing"
+          reason: deferredReason
         }
       });
       return { ...args.result, validationResult };
@@ -938,7 +967,7 @@ export class RunExecutor {
       exitCode: validationResult.exitCode,
       output: validationResult.output
     });
-    return { ...args.result, status: "validation_failed", validationResult };
+    return { ...args.result, status: "validation_failed", disposition: "failed", validationResult };
   }
 
   private async integrateBottomUp(args: {
@@ -1064,7 +1093,8 @@ export class RunExecutor {
         childResults,
         repair: {
           selection: repairSelection,
-          timeoutMs: config.integrationTimeoutMs
+          timeoutMs: config.integrationTimeoutMs,
+          ...(config.reasoningEffort !== undefined ? { reasoningEffort: config.reasoningEffort } : {})
         },
         parentGoal: composite.goal,
         childIntents,
@@ -1140,7 +1170,7 @@ export class RunExecutor {
    */
   private async ensureRunValidationDependencies(worktreePath: string, runId: string): Promise<void> {
     try {
-      const result = await this.dependencyInstaller.ensure({ cwd: worktreePath });
+      const result = await this.dependencyInstaller.ensure({ cwd: worktreePath, supervision: { runId } });
       execLog("validate", "run-level dependency check", {
         runId,
         cwd: worktreePath,
@@ -1242,7 +1272,7 @@ export class RunExecutor {
   }
 }
 
-/** Repair prompt: original objective + acceptance criteria + the exact failure. */
+/** Repair prompt: original objective, boundaries, acceptance criteria, and exact failure. */
 function buildLeafRepairInstructions(node: TaskNode, validationOutput: string): string {
   const lines = [
     `Your previous implementation of the task "${node.title}" failed validation.`,
@@ -1256,6 +1286,8 @@ function buildLeafRepairInstructions(node: TaskNode, validationOutput: string): 
   if (acceptance.length > 0) {
     lines.push("Acceptance criteria:", ...acceptance.map((criterion) => `- ${criterion}`), "");
   }
+
+  appendContractExecutionGuidance(lines, node.contract);
 
   lines.push(
     "VALIDATION FAILURE OUTPUT:",
@@ -1281,6 +1313,21 @@ export function buildLeafInstructions(node: TaskNode, contextSection?: string): 
     lines.push("", "Acceptance criteria:", ...acceptance.map((c) => `- ${c}`));
   }
 
+  appendContractExecutionGuidance(lines, contract);
+
+  if (contextSection && contextSection.length > 0) {
+    lines.push("", contextSection);
+  }
+
+  lines.push("", AGENT_STATUS_PROTOCOL_INSTRUCTIONS);
+  lines.push("", "Do not commit — the orchestrator will commit your changes.");
+  return lines.join("\n");
+}
+
+function appendContractExecutionGuidance(
+  lines: string[],
+  contract: TaskNode["contract"] | undefined
+): void {
   // Communicate scope as guidance, not a hard cage. The allow-list is a hint for
   // where this task's work belongs; touching another file when the task genuinely
   // needs it is fine (the orchestrator only hard-blocks forbidden paths). This
@@ -1327,14 +1374,6 @@ export function buildLeafInstructions(node: TaskNode, contextSection?: string): 
   if (contract?.definitionOfDone) {
     lines.push("", `Definition of done: ${contract.definitionOfDone}`);
   }
-
-  if (contextSection && contextSection.length > 0) {
-    lines.push("", contextSection);
-  }
-
-  lines.push("", AGENT_STATUS_PROTOCOL_INSTRUCTIONS);
-  lines.push("", "Do not commit — the orchestrator will commit your changes.");
-  return lines.join("\n");
 }
 
 function collectRunValidationCommands(graph: TaskGraph): ExecutionValidationCommand[] {

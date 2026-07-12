@@ -123,7 +123,10 @@ export async function runMockPlanningFlow(
         stepCache: options.stepCache
       }
     );
-    const graphIssues = validateTaskGraph(decomposition.graph).map((issue) => `${issue.code}: ${issue.message}`);
+    // Warnings are advisory by contract; only errors fail planning (B-009).
+    const graphIssues = validateTaskGraph(decomposition.graph)
+      .filter((issue) => issue.severity === "error")
+      .map((issue) => `${issue.code}: ${issue.message}`);
     const contractIssues = decomposition.contracts.flatMap((contract) => {
       const parsed = AgentTaskContractSchema.safeParse(contract);
 

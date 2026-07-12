@@ -1,15 +1,16 @@
-import { execFile } from "node:child_process";
 import { access, cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
 import { z } from "zod";
 import { DEFAULT_EXCLUDE_LINES, EXCLUDE_BLOCK_MARKER } from "@manyhands/execution-core";
 
 import { resolveManyhandsPath, resolveRepoRoot } from "../repo-root";
 import { inspectLocalGitRepo } from "../workspaces/repo-validation";
 import { rmWithRetry } from "./fs-retry";
+import { supervisedExecFile } from "./process-supervision";
 
-const execFileAsync = promisify(execFile);
+// B-005: provisioning clones/reads the source repo with git subprocesses; the
+// ambient supervision context registers them under the run for verified kill.
+const execFileAsync = supervisedExecFile;
 
 /**
  * Where a run executes. `localPath` is the product path for real workspaces.
@@ -39,10 +40,18 @@ export type RepoSpec = z.infer<typeof RepoSpecSchema>;
 export interface ProvisionedRepo {
   /** Absolute path RunExecutor roots its worktrees at. */
   repoRoot: string;
+  /** Canonical checkout selected by the user. Never mutated before delivery. */
+  sourceRepoRoot: string;
+  /** Branch/ref captured from the source checkout when the run was provisioned. */
+  sourceBranch: string;
+  /** Immutable source HEAD captured before any run-owned mutation. */
+  sourceBaseCommit: string;
   /** Branch the base commit lives on. */
   baseBranch: string;
-  /** Real 40-hex SHA of the initial commit. */
+  /** Current base for leaf execution (moves once when grounding commits). */
   baseCommit: string;
+  /** Explicit alias for the current run-owned execution base. */
+  executionBaseCommit: string;
   /** Best-effort teardown of the per-run working directory. */
   cleanup: () => Promise<void>;
 }
@@ -118,7 +127,16 @@ export function createFixtureRepoProvisioner(
           filter: (src) => !EXCLUDED_DIRS.has(path.basename(src))
         });
         const baseCommit = await bootstrapGitRepo(repoRoot, spec.fixtureId);
-        return { repoRoot, baseBranch: BASE_BRANCH, baseCommit, cleanup };
+        return {
+          repoRoot,
+          sourceRepoRoot: repoRoot,
+          sourceBranch: BASE_BRANCH,
+          sourceBaseCommit: baseCommit,
+          baseBranch: BASE_BRANCH,
+          baseCommit,
+          executionBaseCommit: baseCommit,
+          cleanup
+        };
       } catch (error) {
         if (error instanceof RepoProvisionError) throw error;
         await cleanup().catch(() => undefined);
@@ -149,15 +167,65 @@ export function createDefaultRepoProvisioner(
           `Local git repo has no commits yet: ${info.repoRoot}. Create an initial commit before running ManyHands.`
         );
       }
-      await ensureGitInfoExclude(info.repoRoot);
-      return {
-        repoRoot: info.repoRoot,
-        baseBranch: info.branch,
-        baseCommit: info.head,
-        cleanup: async () => undefined
-      };
+      return provisionLocalRepoCopy({
+        sourceRepoRoot: info.repoRoot,
+        sourceBranch: info.branch,
+        sourceBaseCommit: info.head,
+        runId: input.runId,
+        workRoot: options.workRoot ?? resolveManyhandsPath("work"),
+        spec: input.spec
+      });
     }
   };
+}
+
+async function provisionLocalRepoCopy(input: {
+  sourceRepoRoot: string;
+  sourceBranch: string;
+  sourceBaseCommit: string;
+  runId: string;
+  workRoot: string;
+  spec: Extract<RepoSpec, { kind: "localPath" }>;
+}): Promise<ProvisionedRepo> {
+  const runRoot = path.join(input.workRoot, input.runId);
+  const repoRoot = path.join(runRoot, "repo");
+  const cleanup = async (): Promise<void> => rmWithRetry(runRoot);
+
+  try {
+    await cleanup();
+    await mkdir(runRoot, { recursive: true });
+    // A separate repository keeps refs, index and git metadata out of the
+    // checkout selected by the user. Leaf isolation still uses git worktrees,
+    // now rooted in this run-owned repository.
+    await execFileAsync(
+      "git",
+      ["clone", "--no-checkout", "--local", input.sourceRepoRoot, repoRoot],
+      { cwd: runRoot }
+    );
+    await execFileAsync("git", ["checkout", "--detach", input.sourceBaseCommit], { cwd: repoRoot });
+    await execFileAsync("git", ["config", "user.email", "manyhands@local"], { cwd: repoRoot });
+    await execFileAsync("git", ["config", "user.name", "ManyHands Orchestrator"], { cwd: repoRoot });
+    await execFileAsync("git", ["config", "commit.gpgsign", "false"], { cwd: repoRoot });
+    await ensureGitInfoExclude(repoRoot);
+
+    return {
+      repoRoot,
+      sourceRepoRoot: input.sourceRepoRoot,
+      sourceBranch: input.sourceBranch,
+      sourceBaseCommit: input.sourceBaseCommit,
+      baseBranch: input.sourceBranch,
+      baseCommit: input.sourceBaseCommit,
+      executionBaseCommit: input.sourceBaseCommit,
+      cleanup
+    };
+  } catch (error) {
+    await cleanup().catch(() => undefined);
+    throw new RepoProvisionError(
+      input.spec,
+      `Failed to create an isolated run repository from ${input.sourceRepoRoot}: ${describeCause(error)}`,
+      { cause: error }
+    );
+  }
 }
 
 /**

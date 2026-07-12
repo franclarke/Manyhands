@@ -18,7 +18,6 @@ import {
   ChildProcessValidationRunner,
   ComplexityRoutingPolicy,
   DefaultAgentExecutorFactory,
-  ExecutionConfigSchema,
   RunExecutor,
   SimpleGitRunner,
   worktreePathFor,
@@ -61,10 +60,12 @@ import {
 import { getRunRepository } from "./store";
 import { getRunAbort } from "./run-abort-registry";
 import { claimRunMutation } from "./mutation-guard";
+import { updateRunForOperation } from "./run-operation-lease";
 import { waitWhilePlainPaused } from "./pause-control";
 import { selectAndPersistSchedulingWave } from "./scheduling-audit-events";
+import { effectiveExecutionConfig } from "./effective-execution-config";
 import type { ProvisionedRepo } from "./repo-provisioner";
-import type { RunRecord } from "./schema";
+import type { RunOperationLease, RunRecord } from "./schema";
 
 // ─── Gate options (shared contract between host, routes and UI copy) ───────
 
@@ -155,6 +156,8 @@ export interface ExecutionHostOptions {
   traceStoreFactory?: () => TraceStore;
   /** Plan-time conflict foresight threaded into the Composer repair prompt. */
   predictedConflicts?: PredictedConflictHint[];
+  /** Durable writer identity for every persistence callback owned by this host. */
+  operationLease?: RunOperationLease;
 }
 
 export interface ExecutionHost {
@@ -210,7 +213,7 @@ export function buildExecutionHost(
       ...(router !== undefined ? { router } : {})
     });
 
-  const executionConfigFor = (current: RunRecord) => ExecutionConfigSchema.parse(current.executionConfig ?? {});
+  const executionConfigFor = (current: RunRecord) => effectiveExecutionConfig(current.executionConfig);
   const hasExplicitRunSelection = (current: RunRecord): boolean =>
     current.defaultExecutionSelection !== undefined || current.defaultRepairSelection !== undefined;
 
@@ -234,7 +237,7 @@ export function buildExecutionHost(
       | Awaited<ReturnType<RunExecutor["runNode"]>>,
     traces: TraceStore
   ): Promise<void> => {
-    await getRunRepository().update(runId, (current) => ({
+    await updateRunForOperation(runId, options.operationLease, (current) => ({
       ...current,
       execution: mergeNodeExecutionResult({
         runId,
@@ -399,14 +402,18 @@ export function buildExecutionHost(
     });
     const validation = await new ChildProcessValidationRunner().run(commands, {
       worktreePath,
-      repoRoot: provisioned.repoRoot
+      repoRoot: provisioned.repoRoot,
+      supervision: {
+        runId,
+        ...(options.operationLease !== undefined ? { operationId: options.operationLease.operationId } : {})
+      }
     });
     traceStore.append({
       type: "validation_completed",
       actor: "system",
       payload: { scope: "run", passed: validation.passed, exitCode: validation.exitCode }
     });
-    await getRunRepository().update(runId, (record) => ({
+    await updateRunForOperation(runId, options.operationLease, (record) => ({
       ...record,
       execution:
         record.execution !== undefined
@@ -418,8 +425,6 @@ export function buildExecutionHost(
   };
 
   const checkpointer = new JsonFileCheckpointSaver(join(resolveRunsDirectory(), "checkpoints"));
-  let schedulingWaveIndex = 0;
-
   const graph = buildExecutionGraph({
     leafDeps: { executeLeaf, repairLeaf, maxRepairAttempts: 1 },
     integrateDeps: { integrateComposite },
@@ -430,15 +435,11 @@ export function buildExecutionHost(
           runId,
           graph: waveGraph,
           candidates,
-          waveIndex: schedulingWaveIndex,
           source: "execution-host",
+          effectiveConfig: executionConfigFor(run),
           riskMatrix,
           ...(staticConflictSignals !== undefined ? { staticSignals: staticConflictSignals } : {}),
-          ...(run.executionConfig?.maxParallel !== undefined
-            ? { maxParallel: run.executionConfig.maxParallel }
-            : {})
         });
-        schedulingWaveIndex += 1;
         console.log("[Runner] Risk-aware wave selected", {
           runId,
           policy: result.payload.policy,
@@ -650,7 +651,8 @@ function mergeConflictGateCopy(gate: NonNullable<RunRecord["pendingDecision"]>):
 /** Persist a gate pause: status, typed decision, and the projected question. */
 export async function persistExecutionPause(
   runId: string,
-  gate: NonNullable<RunRecord["pendingDecision"]>
+  gate: NonNullable<RunRecord["pendingDecision"]>,
+  operationLease?: RunOperationLease
 ): Promise<void> {
   const conflictCopy = gate.gate === "merge_conflict" ? mergeConflictGateCopy(gate) : undefined;
   const options =
@@ -666,7 +668,7 @@ export async function persistExecutionPause(
         `Quedan ${gate.pendingTasks?.length ?? 0} tareas pendientes. ¿Cómo querés continuar?`);
 
   let previous: RunRecord | undefined;
-  const saved = await getRunRepository().update(runId, (current) => {
+  const saved = await updateRunForOperation(runId, operationLease, (current) => {
     previous = current;
     return {
       ...current,
@@ -694,7 +696,7 @@ export async function persistExecutionPause(
         }
       }
     ],
-    { at: now }
+    { at: now, ...(operationLease !== undefined ? { lease: operationLease } : {}) }
   );
 }
 

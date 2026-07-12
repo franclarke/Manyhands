@@ -19,7 +19,7 @@ import { ResizeHandle } from "@/components/ui/resize-handle";
 import { DeliveryPanel } from "./delivery-panel.client";
 import { runDockMode } from "@/lib/cockpit-layout";
 import { useViewportWidth } from "@/lib/use-viewport-width";
-import { Bot, Download, FileDiff, FolderTree, List, Pause, Play, ScrollText, ShieldCheck, Terminal } from "lucide-react";
+import { Bot, Download, FileDiff, FolderTree, List, Pause, Play, RotateCcw, ScrollText, ShieldCheck, Terminal } from "lucide-react";
 import {
   BottomDrawer,
   RunWorkspaceDock,
@@ -238,7 +238,7 @@ export function RunModelView({
                 graph={view.graph}
                 stage={view.stage}
                 selectedTarget={focus}
-                onFocus={setFocus}
+                onFocus={(target) => (target === null ? setFocus(null) : openSurface("node", target))}
                 fill
                 emptyKind={graphEmptyStateKind(model.run.control.status)}
               />
@@ -476,15 +476,16 @@ function RunHeader({
 
 function RunControlButton({ runId, model }: { runId: string; model: RunModel }): React.ReactElement | null {
   const control = model.run.control;
-  const [busy, setBusy] = useState<"pause" | "resume" | null>(null);
+  const [busy, setBusy] = useState<"pause" | "resume" | "restart" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const canPause = control.status === "generating" || control.status === "running";
   const canResume = control.status === "paused" && control.pendingHumanAction === "none";
-  if (!canPause && !canResume) return null;
+  const canRestart = control.status === "interrupted" || control.status === "failed";
+  if (!canPause && !canResume && !canRestart) return null;
 
-  const action = canPause ? "pause" : "resume";
-  const label = action === "pause" ? "Pausar" : "Reanudar";
+  const action = canPause ? "pause" : canResume ? "resume" : "restart";
+  const label = action === "pause" ? "Pausar" : action === "resume" ? "Reanudar" : "Reintentar";
 
   const submit = async (): Promise<void> => {
     setBusy(action);
@@ -512,12 +513,18 @@ function RunControlButton({ runId, model }: { runId: string; model: RunModel }):
         variant="ghost"
         size="sm"
         busy={busy === action}
-        busyLabel={action === "pause" ? "Pausando" : "Reanudando"}
+        busyLabel={action === "pause" ? "Pausando" : action === "resume" ? "Reanudando" : "Reintentando"}
         onClick={() => void submit()}
         title={error ?? label}
         aria-label={label}
       >
-        {action === "pause" ? <Pause aria-hidden className="h-3.5 w-3.5" /> : <Play aria-hidden className="h-3.5 w-3.5 fill-current" />}
+        {action === "pause" ? (
+          <Pause aria-hidden className="h-3.5 w-3.5" />
+        ) : action === "resume" ? (
+          <Play aria-hidden className="h-3.5 w-3.5 fill-current" />
+        ) : (
+          <RotateCcw aria-hidden className="h-3.5 w-3.5" />
+        )}
         {label}
       </Button>
       {error !== null ? (

@@ -345,11 +345,12 @@ export function renderDashboard(inputModel, options = {}) {
 
   lines.push(...section("Attention", attentionLines(model), width));
   lines.push(...section("Wavefront", wavefrontLines(model, { width: bodyWidth }), width));
-
-  const remainingForTimeline = Math.max(4, height - lines.length - 8);
   lines.push(...section("Plan Map", planMapLines(model, { width: bodyWidth, max: 8 }), width));
-  lines.push(...section("Timeline", timelineLines(model, { max: remainingForTimeline, width: bodyWidth }), width));
-  lines.push(...section("Process", processLines(model, { width: bodyWidth, max: 4 }), width));
+
+  const freeHeight = Math.max(0, height - lines.length - 2);
+  const { timelineMax, processMax } = allocateLogBudget(freeHeight, model.timeline.length, model.process?.lines?.length ?? 0);
+  lines.push(...section("Timeline", timelineLines(model, { max: timelineMax, width: bodyWidth }), width));
+  lines.push(...section("Process", processLines(model, { width: bodyWidth, max: processMax }), width));
 
   const output = fitHeight(lines, height, width);
   const rendered = output.join("\n");
@@ -611,6 +612,20 @@ function section(title, sectionLines, width) {
 function phaseBar(activePhase, width) {
   const labels = PHASES.map((phase) => (phase === activePhase ? `[${phase.toUpperCase()}]` : phase));
   return truncate(labels.join(" -> "), Math.max(20, width));
+}
+
+function allocateLogBudget(freeHeight, timelineBacklog, processBacklog) {
+  const minLines = 4;
+  const usableHeight = Math.max(freeHeight, minLines * 2);
+  const totalBacklog = timelineBacklog + processBacklog;
+  if (totalBacklog === 0) {
+    const half = Math.floor(usableHeight / 2);
+    return { timelineMax: Math.max(minLines, half), processMax: Math.max(minLines, usableHeight - half) };
+  }
+  const rawTimelineShare = Math.round((usableHeight * timelineBacklog) / totalBacklog);
+  const timelineMax = clamp(rawTimelineShare, minLines, usableHeight - minLines);
+  const processMax = Math.max(minLines, usableHeight - timelineMax);
+  return { timelineMax, processMax };
 }
 
 function statusTotals(nodes) {

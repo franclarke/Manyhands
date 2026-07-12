@@ -65,6 +65,12 @@ export type RunControlStatus =
   | "running"
   | "completed"
   | "completed_with_accepted"
+  | "partial"
+  | "unverified"
+  | "needs_delivery"
+  | "failed_artifact"
+  | "failed_delivery"
+  | "cancelling"
   | "failed"
   | "interrupted";
 export type RunControlPendingHumanAction = "none" | "question" | "decision";
@@ -491,8 +497,8 @@ export interface RunModel {
   nodes: Map<NodeId, Node>;
   seams: Map<SeamId, Seam>;
   waves: Map<WaveId, Wave>;
-  /** Recorded scheduling audit selections by wave index. */
-  schedulingWaves: Map<number, RunSchedulingWaveSelectedPayload>;
+  /** Recorded scheduling audit selections by durable wave identity. */
+  schedulingWaves: Map<string, RunSchedulingWaveSelectedPayload>;
   conflicts: Map<ConflictId, Conflict>;
   decisions: Map<DecisionId, Decision>;
   amendments: Map<AmendmentId, Amendment>;
@@ -582,11 +588,15 @@ export interface NodeExecutionStartedPayload {
   nodeId: NodeId;
   agent: string;
   model: string;
+  operationId?: string;
+  waveId?: WaveId;
   /** Set on re-execution (amendment/stale repair). */
   reason?: string;
 }
 export interface NodeVerifyIterationPayload {
   nodeId: NodeId;
+  operationId?: string;
+  waveId?: WaveId;
   iteration: number;
   maxIterations: number;
   build: BuildStatus;
@@ -595,6 +605,8 @@ export interface NodeVerifyIterationPayload {
 }
 export interface NodeVerifyPassedPayload {
   nodeId: NodeId;
+  operationId?: string;
+  waveId?: WaveId;
   commit: string;
   changedFiles: string[];
   /** Seam revisions this result is valid against (enables derived invalidation). */
@@ -613,6 +625,8 @@ export interface NodeRepairStartedPayload {
 }
 export interface NodeExecutionFailedPayload {
   nodeId: NodeId;
+  operationId?: string;
+  waveId?: WaveId;
   cause: string;
 }
 export interface NodeCliOutputPayload {
@@ -688,6 +702,17 @@ export interface RunCompletedPayload {
   status: RunOutcome;
 }
 
+export interface RunArtifactCreationStartedPayload {
+  operationId?: string;
+}
+
+export interface RunArtifactCreationFinishedPayload {
+  operationId?: string;
+  manifestId?: string;
+  finalSha?: string;
+  artifactDisposition: "ready" | "partial" | "failed";
+}
+
 export interface RunStatusChangedPayload {
   status: RunControlStatus;
   version: number;
@@ -708,6 +733,11 @@ export interface RunCancelledPayload {
   survivors: number[];
   cleanedWorktrees: string[];
   gcFailures: string[];
+  /**
+   * B-005: false means the cancel is NOT terminal yet — the run stays in
+   * `cancelling` until a retried kill verifies every tree dead.
+   */
+  allDead?: boolean;
 }
 
 /**
@@ -771,8 +801,11 @@ export interface SchedulingAuditFallback {
 
 export interface RunSchedulingWaveSelectedPayload {
   version: 1;
+  waveId: string;
   source: SchedulingAuditSource;
   waveIndex: number;
+  maxParallel: number;
+  routing: "fixed" | "complexity";
   policy: SchedulingAuditPolicy;
   readyTaskIds: NodeId[];
   selectedTaskIds: NodeId[];
@@ -829,6 +862,8 @@ export interface RunEventPayloads {
   "run.completed": RunCompletedPayload;
   "run.status.changed": RunStatusChangedPayload;
   "run.scheduling.wave_selected": RunSchedulingWaveSelectedPayload;
+  "run.artifact.creation.started": RunArtifactCreationStartedPayload;
+  "run.artifact.creation.finished": RunArtifactCreationFinishedPayload;
   "run.cancelled": RunCancelledPayload;
   // Recovery (cold restart)
   "world.reconciled": WorldReconciledPayload;
@@ -882,6 +917,8 @@ export const RUN_EVENT_TYPES = [
   "run.completed",
   "run.status.changed",
   "run.scheduling.wave_selected",
+  "run.artifact.creation.started",
+  "run.artifact.creation.finished",
   "run.cancelled",
   "world.reconciled",
   "checkpoint.degraded",
@@ -914,6 +951,8 @@ export type RunEventTypeV2 = (typeof RUN_EVENT_TYPES_V2)[number];
  * types); the known v1 vocabulary is `RunEventType` / `RUN_EVENT_TYPES`.
  */
 export interface RunEvent {
+  /** Durable event identity; legacy projected events may omit it. */
+  eventId?: string;
   seq: number;
   at: IsoTimestamp;
   runId: RunId;

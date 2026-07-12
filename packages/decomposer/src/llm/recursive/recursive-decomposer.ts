@@ -518,11 +518,22 @@ export class RecursiveDecomposer implements Decomposer {
         await this.emitStepCompleted(ctx, fallback.step, fallback);
         return fallback.coveredPaths;
       }
+      if (accum.stepCache !== undefined) {
+        failure.stepCache = accum.stepCache;
+      }
       throw failure;
     }
 
     const step = resolution.step;
     accum.callCount += resolution.attemptCount;
+
+    // Cache every resolved step (not just questions) as soon as it's known, so
+    // a terminal failure elsewhere in the tree can carry this node's already-
+    // generated result forward — a retry resumes instead of regenerating
+    // already-successful siblings from scratch.
+    if (accum.stepCache !== undefined) {
+      accum.stepCache[ctx.nodeId] = step;
+    }
 
     if (step.decision === "question") {
       await this.emitStepStatus(ctx, {
@@ -532,9 +543,6 @@ export class RecursiveDecomposer implements Decomposer {
         error: resolution.error
       });
       await this.emitStepCompleted(ctx, step, resolution);
-      if (accum.stepCache !== undefined) {
-        accum.stepCache[ctx.nodeId] = step;
-      }
       throw new DecomposerQuestionError(
         ctx.nodeId,
         step.question,
@@ -575,6 +583,9 @@ export class RecursiveDecomposer implements Decomposer {
         await this.emitStepStatus(ctx, { state: "fallback", error: failure.details });
         await this.emitStepCompleted(ctx, fallback.step, fallback);
         return fallback.coveredPaths;
+      }
+      if (accum.stepCache !== undefined) {
+        failure.stepCache = accum.stepCache;
       }
       throw failure;
     }
@@ -1156,10 +1167,26 @@ function validateStepSemantics(
     }
   }
 
+  const producersByInterface = new Map<string, string[]>();
+  for (const child of step.children) {
+    for (const ifaceId of child.produces) {
+      producersByInterface.set(ifaceId, [...(producersByInterface.get(ifaceId) ?? []), child.id]);
+    }
+  }
+
+  for (const [ifaceId, producerIds] of producersByInterface) {
+    if (producerIds.length > 1) {
+      issues.push(
+        `interface "${ifaceId}" is produced by multiple children: ${producerIds.join(", ")}; ` +
+          `assign each shared interface to exactly one producer child`
+      );
+    }
+  }
+
   // Every seam defined at this step must be produced by some child; otherwise a
   // consumer downstream is left with an orphaned interface that no leaf supplies,
   // which the executable graph validation later rejects after the plan is built.
-  const producedHere = new Set(step.children.flatMap((child) => child.produces));
+  const producedHere = new Set(producersByInterface.keys());
   for (const iface of step.sharedInterfaces) {
     if (!producedHere.has(iface.id)) {
       issues.push(
@@ -1209,7 +1236,7 @@ function validateStepSemantics(
 
 function classifyStepSemanticIssues(issues: readonly string[]): GraphGenerationErrorKind {
   const text = issues.join("; ").toLowerCase();
-  if (text.includes("duplicate")) return "duplicate_node_id";
+  if (text.includes("duplicate child id") || text.includes("duplicate node id")) return "duplicate_node_id";
   if (text.includes("unknown") || text.includes("self-loop")) return "dangling_dependency";
   if (text.includes("cycle")) return "cycle_detected";
   return "graph_invalid";

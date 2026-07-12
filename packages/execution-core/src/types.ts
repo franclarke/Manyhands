@@ -7,6 +7,7 @@ export const AgentResultStatusSchema = z.union([
   z.literal("success"),
   z.literal("empty_diff"),
   z.literal("scope_violation"),
+  z.literal("scope_gated"),
   z.literal("validation_failed"),
   z.literal("executor_error"),
   z.literal("timeout"),
@@ -15,6 +16,12 @@ export const AgentResultStatusSchema = z.union([
 ]);
 
 export type AgentResultStatus = z.infer<typeof AgentResultStatusSchema>;
+
+export const AgentResultDispositionSchema = z.enum(["changed", "already_satisfied", "failed", "gated"]);
+export type AgentResultDisposition = z.infer<typeof AgentResultDispositionSchema>;
+
+export const ScopePolicySchema = z.enum(["advisory", "gate", "strict"]);
+export type ScopePolicy = z.infer<typeof ScopePolicySchema>;
 
 // ── Worktree tracking ───────────────────────────────────────────
 
@@ -92,6 +99,12 @@ export const AgentExecutionResultSchema = z.object({
    * empty-diff failure where the agent did no real work (status `empty_diff`).
    */
   noOp: z.boolean().optional(),
+  disposition: AgentResultDispositionSchema.optional(),
+  baselineEvidence: z.object({
+    expectedPaths: z.array(NonEmptyStringSchema),
+    verifiedPaths: z.array(NonEmptyStringSchema),
+    validation: ValidationRunResultSchema.optional()
+  }).optional(),
   scopeCheck: ScopeCheckResultSchema,
   validationResult: ValidationRunResultSchema.optional(),
   executorExitCode: z.number().int(),
@@ -318,8 +331,10 @@ export type UnexpectedCommitPolicy = z.infer<typeof UnexpectedCommitPolicySchema
 
 export const ExecutionConfigSchema = z.object({
   maxParallel: z.number().int().positive().default(6),
+  scopePolicy: ScopePolicySchema.default("advisory"),
   leafTimeoutMs: z.number().int().positive().default(300_000),
   integrationTimeoutMs: z.number().int().positive().default(600_000),
+  reasoningEffort: z.enum(["low", "medium", "high", "xhigh"]).optional(),
   unexpectedCommitPolicy: UnexpectedCommitPolicySchema.default("reject"),
   /**
    * Executor selection mode: "complexity" routes each node to an executor tier

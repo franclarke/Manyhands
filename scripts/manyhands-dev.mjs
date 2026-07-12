@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import process from "node:process";
 import {
   buildMonitorModel,
@@ -21,6 +22,14 @@ if (options.help) {
   printHelp();
   process.exit(0);
 }
+
+// B-006: one session token for the whole dev session — the Next server (all
+// runtimes) enforces it for mutations/SSE/terminal/files, this console sends
+// it, and the operator can copy it for scripts.
+if (process.env.MANYHANDS_SESSION_TOKEN === undefined || process.env.MANYHANDS_SESSION_TOKEN.length === 0) {
+  process.env.MANYHANDS_SESSION_TOKEN = randomUUID();
+}
+const SESSION_HEADER = { "x-manyhands-session": process.env.MANYHANDS_SESSION_TOKEN };
 
 const visual = process.stdout.isTTY === true && process.env.CI !== "true" && options.plain !== true;
 const state = {
@@ -192,7 +201,7 @@ async function connectStream(runId) {
     const url = `${state.baseUrl}/api/runs/${encodeURIComponent(runId)}/run-events?after=${state.lastSeq}`;
     const response = await fetch(url, {
       signal: controller.signal,
-      headers: { accept: "text/event-stream" }
+      headers: { accept: "text/event-stream", ...SESSION_HEADER }
     });
     if (!response.ok || response.body === null) {
       throw new Error(`SSE ${response.status}`);
@@ -257,7 +266,7 @@ async function fetchJson(url) {
   try {
     const response = await fetch(url, {
       signal: controller.signal,
-      headers: { accept: "application/json" }
+      headers: { accept: "application/json", ...SESSION_HEADER }
     });
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`.trim());
     return await response.json();

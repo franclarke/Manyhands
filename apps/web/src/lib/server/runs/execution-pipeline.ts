@@ -14,7 +14,12 @@ import {
 import type { ResumeDecision } from "@manyhands/orchestrator-graph";
 import type { TaskGraph } from "@manyhands/task-graph";
 import { InMemoryTraceStore, type TraceStore } from "@manyhands/trace-store";
-import { RepoNotConfiguredError, RunLifecycleError, RunValidationError } from "./errors";
+import {
+    RepoNotConfiguredError,
+    RunLifecycleError,
+    RunMutationConflictError,
+    RunValidationError
+} from "./errors";
 import { publishRunEvent } from "./event-bus";
 import type { StreamEvent } from "./events";
 import {
@@ -35,22 +40,35 @@ import {
     manualReadinessForTask,
     mergeNodeExecutionResult,
     provisionedFromRecord,
-    resolveExecutionGraph
+    resolveExecutionGraph,
+    resolveRepoProvisionAction
 } from "./execution-state";
 import { applyFinalPatch } from "./final-apply";
+import { applyValidationToManifest, terminalDispositionForArtifact } from "./final-artifact";
 import { executionSelection, groundingSelection, repairSelection } from "./executor-selection";
+import { persistEffectiveExecutionConfig } from "./effective-execution-config";
 import { assertRunActionAllowed, assertTransition } from "./lifecycle";
 import { LiveExecutionTraceStore } from "./live-trace-store";
 import { waitWhilePlainPaused } from "./pause-control";
 import { PreflightError, runPreflight } from "./preflight";
-import { acquireRepoLock, releaseRepoLock } from "./repo-lock";
+import { runWithProcessSupervision } from "./process-supervision";
+import {
+    acquireRepoLock,
+    assertRepoLeaseCurrent,
+    releaseRepoLease,
+    startRepoLeaseHeartbeat,
+    type RepoLease
+} from "./repo-lock";
 import {
     createDefaultRepoProvisioner,
     type ProvisionedRepo,
     type RepoProvisioner
 } from "./repo-provisioner";
 import { createRunAbort, disposeRunAbort } from "./run-abort-registry";
+import { verifyProvisionedAgainstTarget } from "./target-context";
 import {
+    appendRunEventRequired,
+    appendRunEventsRequired,
     ensureRunModelEventLogForRun,
     publishRunModelEvent
 } from "./run-model-event-log";
@@ -61,9 +79,16 @@ import { startHeartbeat } from "./runner-heartbeat";
 import { isRunnerActive, markRunnerInactive, startRunBackgroundTask, tryMarkRunnerActive } from "./runner-state";
 import { startBudgetWatchdog } from "./runner-watchdog";
 import { saveRunWithRequiredStatusEvent } from "./audited-mutation";
+import {
+    claimRunOperation,
+    releaseRunOperation,
+    updateRunForOperation
+} from "./run-operation-lease";
 import type {
     ExecutionConfigInput,
+    FinalArtifactManifest,
     NodeReview,
+    RunOperationLease,
     RunRecord
 } from "./schema";
 import { getRunRepository } from "./store";
@@ -166,14 +191,29 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     console.warn(`[Runner] Execution pipeline already active for run: ${runId}`);
     return;
   }
-  const stopHeartbeat = startHeartbeat(runId);
+  let lease: RunOperationLease | undefined;
+  let stopHeartbeat: (() => void) | undefined;
   let stopBudgetWatchdog: () => void = () => undefined;
-  let lockedRepoRoot: string | undefined;
+  let repoLease: RepoLease | undefined;
+  let stopRepoHeartbeat: (() => void) | undefined;
   try {
-    let run = await getRunRepository().get(runId);
+    const claimed = await claimRunOperation(runId, "execution", {
+      expectedStatuses: ["approved", "running", "interrupted"],
+      allowTakeover: true
+    });
+    lease = claimed.lease;
+    let run = claimed.run;
+    assertApprovedPlanRevision(run);
     if (run.status === "approved") {
-      run = await transitionTo(run, "running", { startedAt: run.startedAt ?? new Date().toISOString() });
+      run = await transitionTo(
+        run,
+        "running",
+        { startedAt: run.startedAt ?? new Date().toISOString() },
+        { lease }
+      );
     }
+    run = await persistEffectiveExecutionConfig(runId, lease);
+    stopHeartbeat = startHeartbeat(runId, lease);
 
     const graph = await resolveExecutionGraph(run);
     assertExecutableRunGraph(graph);
@@ -185,35 +225,97 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     await ensureRunModelEventLogForRun(run);
 
     const abortController = createRunAbort(runId);
-    stopBudgetWatchdog = startBudgetWatchdog(runId, run.executionConfig?.maxWallClockMs);
+    stopBudgetWatchdog = startBudgetWatchdog(runId, run.executionConfig?.maxWallClockMs, lease);
     if (await executionWasInterrupted(runId, abortController.signal)) {
       console.log(`[Runner] Execution pipeline stopped before provisioning; run ${runId} is interrupted.`);
       return;
     }
 
     let provisioned: ProvisionedRepo | undefined = provisionedFromRecord(run.provisioned);
-    if (provisioned === undefined && run.repoSpec !== undefined) {
+    // Cold resume (restart of an execution-interrupted run) already carries a
+    // `provisioned` record: reuse it. Only a genuinely repo-less run under the
+    // default engine is an error — deciding "reuse" as "missing" wedged every
+    // cold resume with RepoNotConfiguredError (E2E 2026-07-06).
+    const repoAction = resolveRepoProvisionAction({
+      provisioned,
+      hasRepoSpec: run.repoSpec !== undefined
+    });
+
+    // One active pipeline per target repo (U7/B-004). The lease must exist
+    // BEFORE any git side effect against the source — the provisioning clone
+    // reads it — so claim as soon as the source path is known. B-008: the
+    // frozen target context is the authoritative source path.
+    const preLockTarget =
+      provisioned?.sourceRepoRoot ??
+      run.targetContext?.sourceRealPath ??
+      (repoAction === "provision" && run.repoSpec?.kind === "localPath" ? run.repoSpec.path : undefined);
+    if (preLockTarget !== undefined) {
+      repoLease = await claimRepoOrThrow(preLockTarget, runId);
+      stopRepoHeartbeat = startRepoLeaseHeartbeat(repoLease);
+    }
+
+    if (repoAction === "provision") {
       const provisioner = options.provisioner ?? createDefaultRepoProvisioner();
-      console.log(`[Runner] Provisioning repo for run ${runId}: kind=${run.repoSpec.kind}`);
-      provisioned = await provisioner.provision({ spec: run.repoSpec, runId: run.runId });
+      console.log(`[Runner] Provisioning repo for run ${runId}: kind=${run.repoSpec!.kind}`);
+      // B-008: provision exactly the captured target, never a re-resolved path.
+      const provisionSpec =
+        run.repoSpec!.kind === "localPath" && run.targetContext !== undefined
+          ? { kind: "localPath" as const, path: run.targetContext.sourceRealPath }
+          : run.repoSpec!;
+      provisioned = await runWithProcessSupervision(
+        {
+          runId: run.runId,
+          label: "git-provision",
+          ...(lease !== undefined ? { operationId: lease.operationId } : {}),
+          signal: abortController.signal
+        },
+        () => provisioner.provision({ spec: provisionSpec, runId: run.runId })
+      );
+      if (run.targetContext !== undefined) {
+        await verifyProvisionedAgainstTarget(provisioned, run.targetContext);
+        if (provisioned.sourceBaseCommit !== run.targetContext.sourceBaseCommit) {
+          console.warn(
+            `[Runner] Target ${run.targetContext.sourceRealPath} advanced since capture ` +
+              `(${run.targetContext.sourceBaseCommit.slice(0, 8)} → ${provisioned.sourceBaseCommit?.slice(0, 8)}); ` +
+              "executing against the current HEAD of the same repository."
+          );
+        }
+      }
       console.log(
         `[Runner] Repo provisioned for run ${runId}: repoRoot=${provisioned.repoRoot}, baseBranch=${provisioned.baseBranch}, baseCommit=${provisioned.baseCommit}`
       );
       const provisionedRepo = provisioned;
-      run = await getRunRepository().update(run.runId, (current) => ({
+      run = await updateRunForOperation(run.runId, lease, (current) => ({
         ...current,
         provisioned: {
           repoRoot: provisionedRepo.repoRoot,
+          sourceRepoRoot: provisionedRepo.sourceRepoRoot,
+          sourceBranch: provisionedRepo.sourceBranch,
+          sourceBaseCommit: provisionedRepo.sourceBaseCommit,
           baseBranch: provisionedRepo.baseBranch,
           baseCommit: provisionedRepo.baseCommit,
+          executionBaseCommit: provisionedRepo.executionBaseCommit,
           provisionedAt: new Date().toISOString()
-        }
+        },
+        // B-008: fill the execution side of the frozen context exactly once.
+        ...(current.targetContext !== undefined
+          ? {
+              targetContext: {
+                ...current.targetContext,
+                executionRepoPath: current.targetContext.executionRepoPath ?? provisionedRepo.repoRoot,
+                executionBaseCommit:
+                  current.targetContext.executionBaseCommit ??
+                  provisionedRepo.executionBaseCommit ??
+                  provisionedRepo.baseCommit
+              }
+            }
+          : {})
       }));
       if (isInterrupted(run, abortController.signal)) {
         console.log(`[Runner] Execution pipeline stopped after provisioning; run ${runId} is interrupted.`);
         return;
       }
-    } else if (usingDefaultEngine) {
+    } else if (repoAction === "missing" && usingDefaultEngine) {
       console.error(
         `[Runner] El run ${runId} no tiene repoSpec configurado y el engine real requiere un repo. ` +
           "Configurá un workspace con un repo git local."
@@ -221,11 +323,11 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       throw new RepoNotConfiguredError(run.runId);
     }
 
-    // One active pipeline per target repo (U7): atomic lock, stale locks of
-    // crashed owners are stolen. Released in the finally below.
-    if (provisioned !== undefined) {
-      await claimRepoOrThrow(provisioned.repoRoot, runId);
-      lockedRepoRoot = provisioned.repoRoot;
+    // Fixture provisioning (no stable source path upfront): claim on the
+    // provisioned source once it exists. Released in the finally below.
+    if (repoLease === undefined && provisioned !== undefined) {
+      repoLease = await claimRepoOrThrow(provisioned.sourceRepoRoot, runId);
+      stopRepoHeartbeat = startRepoLeaseHeartbeat(repoLease);
     }
 
     if (await executionWasInterrupted(runId, abortController.signal)) {
@@ -256,31 +358,58 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
 
       // Cooperative cancellation check
       const afterEngine = await getRunRepository().get(runId);
-      if (afterEngine.status === "interrupted") {
-        console.log(`[Runner] Run ${runId} interrupted after engine returned; persisting partial execution.`);
-        const cancelTraces = traceStore.list();
-        await getRunRepository().save({
-          ...afterEngine,
-          execution: result,
-          ...(cancelTraces.length > 0 ? { executionTraces: [...(afterEngine.executionTraces ?? []), ...cancelTraces] } : {})
-        });
+      if (isInterrupted(afterEngine, abortController.signal) || afterEngine.status === "cancelling") {
+        console.log(`[Runner] Run ${runId} cancelled after engine returned; discarding stale engine result.`);
         return;
       }
       await waitWhilePlainPaused(runId, "running", abortController.signal);
       const afterPause = await getRunRepository().get(runId);
-      if (afterPause.status === "interrupted") {
-        console.log(`[Runner] Run ${runId} interrupted after pause hold; keeping partial execution.`);
+      if (isInterrupted(afterPause, abortController.signal) || afterPause.status === "cancelling") {
+        console.log(`[Runner] Run ${runId} cancelled after pause hold; keeping partial execution.`);
         return;
       }
 
       const finalApplication =
         result.status === "completed" && provisioned !== undefined
           ? await (async () => {
+              // Fencing (B-004): verify the repo lease immediately before the
+              // final git side effect covered by it.
+              if (repoLease !== undefined) await assertRepoLeaseCurrent(repoLease);
+              await appendRunEventRequired(runId, {
+                actor: "system",
+                type: "run.artifact.creation.started",
+                payload: { ...(lease !== undefined ? { operationId: lease.operationId } : {}) }
+              });
               console.log(`[Runner] Final apply start for run ${runId}`);
-              const applied = await applyFinalPatch({ graph, result, provisioned: provisioned!, runId, slug: run.title });
+              const applied = await runWithProcessSupervision(
+                {
+                  runId,
+                  label: "git-final-apply",
+                  ...(lease !== undefined ? { operationId: lease.operationId } : {})
+                },
+                () => applyFinalPatch({
+                  graph, result, provisioned: provisioned!, runId, slug: run.title,
+                  ...(run.targetContext?.fingerprint !== undefined
+                    ? { sourceTargetFingerprint: run.targetContext.fingerprint }
+                    : {})
+                })
+              );
               console.log(
                 `[Runner] Final apply complete for run ${runId}: status=${applied?.finalApplicationStatus ?? "(none)"} branch=${applied?.finalBranchName ?? "(none)"} commit=${applied?.finalCommitSha ?? "(none)"}`
               );
+              if (applied?.finalArtifactManifest !== undefined) {
+                applied.finalArtifactManifest = {
+                  ...applied.finalArtifactManifest,
+                  validationCommands: runValidationCommandsForManifest(graph),
+                  validationResults: result.validationResult !== undefined ? [result.validationResult] : [],
+                  verificationDisposition:
+                    result.validationResult?.passed === true
+                      ? "verified"
+                      : result.validationResult === undefined
+                        ? "unverified"
+                        : "failed"
+                };
+              }
               return applied;
             })()
           : undefined;
@@ -326,16 +455,27 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       }
 
       const executionTraces = traceStore.list();
-      publishRunModelEventsFromExecutionResult(run, graph, result, finalApplication);
       const currentRun = await getRunRepository().get(runId);
       if (result.status === "completed") {
-        console.log(`[Runner] Persisting completed run ${runId}`);
-        await transitionTo(currentRun, "completed", {
+        const terminalStatus = terminalDispositionForArtifact({
+          manifest: finalApplication?.finalArtifactManifest,
+          acceptedRisk: false
+        });
+        console.log(`[Runner] Persisting ${terminalStatus} run ${runId}`);
+        await transitionTo(currentRun, terminalStatus, {
           execution: result,
+          executionOutcome: "succeeded",
+          artifactOutcome:
+            finalApplication?.finalArtifactManifest?.verificationDisposition === "unverified"
+              ? "unverified"
+              : finalApplication?.finalArtifactManifest?.artifactDisposition ?? "failed",
+          deliveryOutcome: finalApplication?.finalArtifactManifest?.deliveryDisposition ?? "failed",
           ...(executionTraces.length > 0 ? { executionTraces: [...(currentRun.executionTraces ?? []), ...executionTraces] } : {}),
           ...(finalApplication !== undefined ? finalApplication : {}),
           completedAt: new Date().toISOString()
-        });
+        }, { lease });
+        await appendArtifactFinishedEvent(runId, lease?.operationId, finalApplication?.finalArtifactManifest);
+        publishRunModelEventsFromExecutionResult(run, graph, result, finalApplication);
       } else {
         console.warn(`[Runner] Persisting failed run ${runId}`);
         await saveRunWithRequiredStatusEvent(currentRun, {
@@ -345,7 +485,8 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
           execution: result,
           ...(executionTraces.length > 0 ? { executionTraces: [...(currentRun.executionTraces ?? []), ...executionTraces] } : {}),
           errorMessage: result.status === "failed" ? "Execution failed" : "Budget exceeded"
-        });
+        }, { lease });
+        publishRunModelEventsFromExecutionResult(run, graph, result, finalApplication);
       }
       return;
     }
@@ -420,12 +561,17 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
         runId: run.runId
       });
       provisioned!.baseCommit = skeletonCommit;
-      run = await getRunRepository().update(run.runId, (current) => ({
+      provisioned!.executionBaseCommit = skeletonCommit;
+      run = await updateRunForOperation(run.runId, lease, (current) => ({
         ...current,
         provisioned: {
           repoRoot: provisioned!.repoRoot,
+          sourceRepoRoot: provisioned!.sourceRepoRoot,
+          sourceBranch: provisioned!.sourceBranch,
+          sourceBaseCommit: provisioned!.sourceBaseCommit,
           baseBranch: provisioned!.baseBranch,
           baseCommit: skeletonCommit,
+          executionBaseCommit: skeletonCommit,
           provisionedAt: current.provisioned?.provisionedAt ?? new Date().toISOString()
         }
       }));
@@ -445,7 +591,8 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     const host = buildExecutionHost(run, provisioned!, {
       traceStoreFactory: () =>
         new LiveExecutionTraceStore(options.traceStore ?? new InMemoryTraceStore(), runId, run.model),
-      predictedConflicts: derivePredictedConflicts(run)
+      predictedConflicts: derivePredictedConflicts(run),
+      operationLease: lease
     });
 
     // Seed surviving results (e.g. after a seam amendment filtered the
@@ -484,17 +631,21 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
 
     const outcome = await driveExecution(host, alreadyStarted ? null : initialState, abortController.signal);
     await waitWhilePlainPaused(runId, "running", abortController.signal);
-    await settleExecutionOutcome(runId, host, outcome, provisioned!, options);
+    await settleExecutionOutcome(runId, host, outcome, provisioned!, options, lease, repoLease);
   } catch (error) {
     console.error(`[Runner] FALLO la ejecucion del run "${runId}":`, error);
-    await settleExecutionException(runId, error);
+    if (!(error instanceof RunMutationConflictError)) {
+      await settleExecutionException(runId, error, lease);
+    }
   } finally {
-    if (lockedRepoRoot !== undefined) {
-      await releaseRepoLock(lockedRepoRoot, runId).catch(() => undefined);
+    stopRepoHeartbeat?.();
+    if (repoLease !== undefined) {
+      await releaseRepoLease(repoLease).catch(() => undefined);
     }
     stopBudgetWatchdog();
     disposeRunAbort(runId);
-    stopHeartbeat();
+    stopHeartbeat?.();
+    if (lease !== undefined) await releaseRunOperation(runId, lease);
     markRunnerInactive(runId);
   }
 }
@@ -506,7 +657,11 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
  * `failed`. Plain `failed` remains only for preconditions (preflight, busy
  * repo, missing repo) where there is nothing to resume.
  */
-async function settleExecutionException(runId: string, error: unknown): Promise<void> {
+async function settleExecutionException(
+  runId: string,
+  error: unknown,
+  lease: RunOperationLease | undefined
+): Promise<void> {
   const message = error instanceof Error ? error.message : String(error);
   const run = await getRunRepository().get(runId).catch(() => null);
   if (run === null) return;
@@ -523,18 +678,23 @@ async function settleExecutionException(runId: string, error: unknown): Promise<
       status: "interrupted",
       interruptedDuring: "running",
       errorMessage: `interrupted: ${message} (reanudable con restart — el checkpoint del último paso completo sobrevive)`
-    });
+    }, { ...(lease !== undefined ? { lease } : {}) });
     return;
   }
 
-  await saveRunWithRequiredStatusEvent(run, { ...run, status: "failed", failedDuring: "running", errorMessage: message });
+  await saveRunWithRequiredStatusEvent(
+    run,
+    { ...run, status: "failed", failedDuring: "running", errorMessage: message },
+    { ...(lease !== undefined ? { lease } : {}) }
+  );
 }
 
 /**
- * Acquire the per-repo run lock or fail preflight-style with an actionable
- * message naming the owner (U7).
+ * Acquire the per-repo run lease or fail preflight-style with an actionable
+ * message naming the owner (U7/B-004). The returned lease carries the
+ * fencing token; release it with `releaseRepoLease`.
  */
-async function claimRepoOrThrow(repoRoot: string, runId: string): Promise<void> {
+async function claimRepoOrThrow(repoRoot: string, runId: string): Promise<RepoLease> {
   const lock = await acquireRepoLock(repoRoot, runId);
   if (!lock.acquired) {
     throw new PreflightError(
@@ -546,6 +706,7 @@ async function claimRepoOrThrow(repoRoot: string, runId: string): Promise<void> 
   if (lock.stolen) {
     console.warn(`[Runner] Repo lock for ${repoRoot} was stale and stolen by run ${runId}.`);
   }
+  return lock.lease;
 }
 
 async function executionWasInterrupted(runId: string, signal: AbortSignal): Promise<boolean> {
@@ -577,42 +738,55 @@ export async function resumeExecutionPipeline(
     console.warn(`[Runner] Execution pipeline already active for run: ${runId}`);
     return;
   }
-  const stopHeartbeat = startHeartbeat(runId);
+  let lease: RunOperationLease | undefined;
+  let stopHeartbeat: (() => void) | undefined;
   let stopBudgetWatchdog: () => void = () => undefined;
-  let lockedRepoRoot: string | undefined;
+  let repoLease: RepoLease | undefined;
+  let stopRepoHeartbeat: (() => void) | undefined;
   try {
-    const run = await getRunRepository().get(runId);
+    const claimed = await claimRunOperation(runId, "execution", {
+      expectedStatuses: ["running", "paused", "interrupted"],
+      allowTakeover: true
+    });
+    lease = claimed.lease;
+    stopHeartbeat = startHeartbeat(runId, lease);
+    const run = claimed.run;
     assertExecutableRunGraph(resolveExecutionGraph(run));
     const provisioned = provisionedFromRecord(run.provisioned);
     if (provisioned === undefined) {
       throw new RepoNotConfiguredError(runId);
     }
 
-    await claimRepoOrThrow(provisioned.repoRoot, runId);
-    lockedRepoRoot = provisioned.repoRoot;
+    repoLease = await claimRepoOrThrow(provisioned.sourceRepoRoot, runId);
+    stopRepoHeartbeat = startRepoLeaseHeartbeat(repoLease);
 
     const abortController = createRunAbort(runId);
-    stopBudgetWatchdog = startBudgetWatchdog(runId, run.executionConfig?.maxWallClockMs);
+    stopBudgetWatchdog = startBudgetWatchdog(runId, run.executionConfig?.maxWallClockMs, lease);
 
     const host = buildExecutionHost(run, provisioned, {
       traceStoreFactory: () =>
         new LiveExecutionTraceStore(options.traceStore ?? new InMemoryTraceStore(), runId, run.model),
-      predictedConflicts: derivePredictedConflicts(run)
+      predictedConflicts: derivePredictedConflicts(run),
+      operationLease: lease
     });
 
     const outcome = await driveExecution(host, resumeCommand(decision), abortController.signal);
     await waitWhilePlainPaused(runId, "running", abortController.signal);
-    await settleExecutionOutcome(runId, host, outcome, provisioned, options);
+    await settleExecutionOutcome(runId, host, outcome, provisioned, options, lease, repoLease);
   } catch (error) {
     console.error(`[Runner] FALLO el resume de ejecucion del run "${runId}":`, error);
-    await settleExecutionException(runId, error);
+    if (!(error instanceof RunMutationConflictError)) {
+      await settleExecutionException(runId, error, lease);
+    }
   } finally {
-    if (lockedRepoRoot !== undefined) {
-      await releaseRepoLock(lockedRepoRoot, runId).catch(() => undefined);
+    stopRepoHeartbeat?.();
+    if (repoLease !== undefined) {
+      await releaseRepoLease(repoLease).catch(() => undefined);
     }
     stopBudgetWatchdog();
     disposeRunAbort(runId);
-    stopHeartbeat();
+    stopHeartbeat?.();
+    if (lease !== undefined) await releaseRunOperation(runId, lease);
     markRunnerInactive(runId);
   }
 }
@@ -627,7 +801,9 @@ async function settleExecutionOutcome(
   host: ReturnType<typeof buildExecutionHost>,
   outcome: ExecutionDriveOutcome,
   provisioned: ProvisionedRepo,
-  _options: ExecutionRunnerOptions
+  _options: ExecutionRunnerOptions,
+  lease: RunOperationLease,
+  repoLease?: RepoLease
 ): Promise<void> {
   if (outcome.kind === "finished") {
     await waitWhilePlainPaused(runId, "running");
@@ -635,7 +811,7 @@ async function settleExecutionOutcome(
 
   if (outcome.kind === "paused") {
     console.log(`[Runner] Execution paused at ${outcome.gate.gate} gate (task ${outcome.gate.taskId}).`);
-    await persistExecutionPause(runId, outcome.gate);
+    await persistExecutionPause(runId, outcome.gate, lease);
     return;
   }
 
@@ -660,7 +836,7 @@ async function settleExecutionOutcome(
       status: "failed",
       failedDuring: "running",
       errorMessage: outcome.errorMessage ?? "Execution produced no results."
-    });
+    }, { lease });
     return;
   }
 
@@ -676,35 +852,75 @@ async function settleExecutionOutcome(
   const finalApplication =
     outcome.status === "completed"
       ? await (async () => {
-          console.log(`[Runner] Final apply start for run ${runId}`);
-          const applied = await applyFinalPatch({
-            graph: host.taskGraph,
-            result,
-            provisioned,
-            runId,
-            slug: currentRun.title
+          // Fencing (B-004): verify the repo lease immediately before the
+          // final git side effect covered by it.
+          if (repoLease !== undefined) await assertRepoLeaseCurrent(repoLease);
+          await appendRunEventRequired(runId, {
+            actor: "system",
+            type: "run.artifact.creation.started",
+            payload: { operationId: lease.operationId }
           });
+          console.log(`[Runner] Final apply start for run ${runId}`);
+          const applied = await runWithProcessSupervision(
+            { runId, label: "git-final-apply", operationId: lease.operationId },
+            () =>
+              applyFinalPatch({
+                graph: host.taskGraph,
+                result,
+                provisioned,
+                runId,
+                slug: currentRun.title,
+                ...(currentRun.targetContext?.fingerprint !== undefined
+                  ? { sourceTargetFingerprint: currentRun.targetContext.fingerprint }
+                  : {})
+              })
+          );
           console.log(
             `[Runner] Final apply complete for run ${runId}: status=${applied?.finalApplicationStatus ?? "(none)"} branch=${applied?.finalBranchName ?? "(none)"} commit=${applied?.finalCommitSha ?? "(none)"}`
           );
+          if (applied?.finalArtifactManifest !== undefined) {
+            applied.finalArtifactManifest = applyValidationToManifest({
+              ...applied.finalArtifactManifest,
+              validationCommands: runValidationCommandsForManifest(host.taskGraph),
+              validationResults: persistedValidation !== undefined ? [persistedValidation] : [],
+              omittedTasks: result.integrationResults.flatMap((entry) => entry.omittedChildCommits?.map((item) => item.childTaskId) ?? []),
+              repairEvidence: result.integrationResults.flatMap((entry) => entry.repairAttempts ?? []) as Array<Record<string, unknown>>
+            }, validationSummary);
+            if (outcome.acceptedResolutions) {
+              applied.finalArtifactManifest = {
+                ...applied.finalArtifactManifest,
+                artifactDisposition: "partial",
+                acceptedFailures: ["human-accepted execution failure"]
+              };
+            }
+          }
           return applied;
         })()
       : undefined;
-
-  publishRunModelEventsFromExecutionResult(currentRun, host.taskGraph, result, finalApplication);
 
   if (outcome.status === "completed") {
     // A run the human steered past accepted failures still delivers its result
     // (final-apply ran above), but we record it as a distinct terminal state so
     // the UI never claims a fully-clean run (P2b).
-    const terminalStatus = outcome.acceptedResolutions ? "completed_with_accepted" : "completed";
+    const terminalStatus = terminalDispositionForArtifact({
+      manifest: finalApplication?.finalArtifactManifest,
+      acceptedRisk: outcome.acceptedResolutions === true
+    });
     console.log(`[Runner] Persisting ${terminalStatus} run ${runId}`);
     await transitionTo(currentRun, terminalStatus, {
       execution: result,
+      executionOutcome: outcome.acceptedResolutions ? "partial" : "succeeded",
+      artifactOutcome:
+        finalApplication?.finalArtifactManifest?.verificationDisposition === "unverified"
+          ? "unverified"
+          : finalApplication?.finalArtifactManifest?.artifactDisposition ?? "failed",
+      deliveryOutcome: finalApplication?.finalArtifactManifest?.deliveryDisposition ?? "failed",
       ...(finalApplication !== undefined ? finalApplication : {}),
       ...(validationSummary !== undefined ? { validation: validationSummary } : {}),
       completedAt: settledAt
-    });
+    }, { lease });
+    await appendArtifactFinishedEvent(runId, lease.operationId, finalApplication?.finalArtifactManifest);
+    publishRunModelEventsFromExecutionResult(currentRun, host.taskGraph, result, finalApplication);
   } else {
     console.warn(`[Runner] Persisting failed run ${runId}`);
     await saveRunWithRequiredStatusEvent(currentRun, {
@@ -714,8 +930,32 @@ async function settleExecutionOutcome(
       execution: result,
       ...(validationSummary !== undefined ? { validation: validationSummary } : {}),
       errorMessage: outcome.errorMessage ?? describeExecutionFailure(result)
-    });
+    }, { lease });
+    publishRunModelEventsFromExecutionResult(currentRun, host.taskGraph, result, finalApplication);
   }
+}
+
+async function appendArtifactFinishedEvent(
+  runId: string,
+  operationId: string | undefined,
+  manifest: FinalArtifactManifest | undefined
+): Promise<void> {
+  await appendRunEventRequired(runId, {
+    actor: "system",
+    type: "run.artifact.creation.finished",
+    payload: {
+      ...(operationId !== undefined ? { operationId } : {}),
+      ...(manifest?.manifestId !== undefined ? { manifestId: manifest.manifestId } : {}),
+      ...(manifest?.finalSha !== undefined ? { finalSha: manifest.finalSha } : {}),
+      artifactDisposition: manifest?.artifactDisposition ?? "failed"
+    }
+  });
+}
+
+function runValidationCommandsForManifest(graph: TaskGraph): Array<{ command: string; args: string[] }> {
+  return Object.values(graph.nodes).flatMap((node) =>
+    (node.contract?.runValidationCommands ?? []).map((item) => ({ command: item.command, args: [...item.args] }))
+  );
 }
 
 
@@ -730,10 +970,18 @@ export async function runNodeExecutionPipeline(
     console.warn(`[Runner] Node execution pipeline already active for run=${runId}`);
     return;
   }
-  const stopHeartbeat = startHeartbeat(runId);
+  let lease: RunOperationLease | undefined;
+  let stopHeartbeat: (() => void) | undefined;
+  let repoLease: RepoLease | undefined;
+  let stopRepoHeartbeat: (() => void) | undefined;
   try {
     const repo = getRunRepository();
-    let run = await repo.get(runId);
+    const claimed = await claimRunOperation(runId, "execution", {
+      expectedStatuses: ["approved"]
+    });
+    lease = claimed.lease;
+    stopHeartbeat = startHeartbeat(runId, lease);
+    let run = claimed.run;
     if (run.status !== "approved") {
       throw new RunLifecycleError(`Cannot execute individual nodes from status ${run.status}`);
     }
@@ -750,25 +998,58 @@ export async function runNodeExecutionPipeline(
     }
 
     let provisioned = provisionedFromRecord(run.provisioned);
+
+    // Same exclusion as the full pipeline (U7/B-004): manual node execution
+    // provisions from and executes against the same target repo. B-008: the
+    // frozen target context is the authoritative source path.
+    const preLockTarget =
+      provisioned?.sourceRepoRoot ??
+      run.targetContext?.sourceRealPath ??
+      (run.repoSpec?.kind === "localPath" ? run.repoSpec.path : undefined);
+    if (preLockTarget !== undefined) {
+      repoLease = await claimRepoOrThrow(preLockTarget, runId);
+      stopRepoHeartbeat = startRepoLeaseHeartbeat(repoLease);
+    }
+
     if (provisioned === undefined) {
       if (run.repoSpec === undefined) {
         throw new RepoNotConfiguredError(run.runId);
       }
       const provisioner = options.provisioner ?? createDefaultRepoProvisioner();
       console.log(`[Runner] Provisioning repo for node run=${runId} task=${taskId}: kind=${run.repoSpec.kind}`);
-      provisioned = await provisioner.provision({ spec: run.repoSpec, runId: run.runId });
+      // B-008: provision exactly the captured target, never a re-resolved path.
+      const provisionSpec =
+        run.repoSpec.kind === "localPath" && run.targetContext !== undefined
+          ? { kind: "localPath" as const, path: run.targetContext.sourceRealPath }
+          : run.repoSpec;
+      provisioned = await runWithProcessSupervision(
+        {
+          runId: run.runId,
+          label: "git-provision",
+          ...(lease !== undefined ? { operationId: lease.operationId } : {})
+        },
+        () => provisioner.provision({ spec: provisionSpec, runId: run.runId })
+      );
+      if (run.targetContext !== undefined) {
+        await verifyProvisionedAgainstTarget(provisioned, run.targetContext);
+      }
+      const provisionedRepo = provisioned;
       console.log(
         `[Runner] Repo provisioned for node run=${runId} task=${taskId}: repoRoot=${provisioned.repoRoot}, baseBranch=${provisioned.baseBranch}, baseCommit=${provisioned.baseCommit}`
       );
-      run = await repo.save({
-        ...run,
+      run = await updateRunForOperation(runId, lease, (current) => ({
+        ...current,
         provisioned: {
-          repoRoot: provisioned.repoRoot,
-          baseBranch: provisioned.baseBranch,
-          baseCommit: provisioned.baseCommit,
+          repoRoot: provisionedRepo.repoRoot,
+          sourceRepoRoot: provisionedRepo.sourceRepoRoot,
+          sourceBranch: provisionedRepo.sourceBranch,
+          sourceBaseCommit: provisionedRepo.sourceBaseCommit,
+          baseBranch: provisionedRepo.baseBranch,
+          baseCommit: provisionedRepo.baseCommit,
+          executionBaseCommit: provisionedRepo.executionBaseCommit,
           provisionedAt: new Date().toISOString()
         }
-      });
+      }));
     }
 
     console.log(`[Runner] Node preflight start run=${runId} task=${taskId}`);
@@ -783,6 +1064,18 @@ export async function runNodeExecutionPipeline(
       defaultRepairSelection: repairSelection(run)
     });
     console.log(`[Runner] Node preflight ok run=${runId} task=${taskId}`);
+
+    const manualSelection = executionSelection(run);
+    await appendRunEventRequired(runId, {
+      actor: "agent",
+      type: "node.execution.started",
+      payload: {
+        nodeId: taskId,
+        operationId: lease.operationId,
+        agent: manualSelection.executorId,
+        model: manualSelection.model
+      }
+    });
 
     publishEvent(runId, { kind: "agent.run.started", taskId, at: new Date().toISOString() });
 
@@ -815,17 +1108,44 @@ export async function runNodeExecutionPipeline(
       existing,
       nodeResult
     });
-    const executionTraces = [...(run.executionTraces ?? []), ...traceStore.list()];
     run = await repo.get(runId);
     console.log(
       `[Runner] Persisting node result run=${runId} task=${taskId} mergedStatus=${merged.status} leaves=${merged.leafResults.length} integrations=${merged.integrationResults.length}`
     );
-    await repo.save({
-      ...run,
+    await updateRunForOperation(runId, lease, (current) => ({
+      ...current,
       execution: merged,
-      executionTraces,
+      executionTraces: [...(current.executionTraces ?? []), ...traceStore.list()],
       heartbeatAt: new Date().toISOString()
-    });
+    }));
+
+    if (nodeResult.kind === "leaf") {
+      const leaf = nodeResult.result;
+      await appendRunEventsRequired(runId, [
+        ...(leaf.validationResult !== undefined
+          ? [{
+              actor: "system" as const,
+              type: "node.verify.iteration" as const,
+              payload: {
+                nodeId: taskId, operationId: lease.operationId,
+                iteration: 1, maxIterations: 1, build: "pass" as const,
+                testsPass: leaf.validationResult.passed ? 1 : 0, testsTotal: 1
+              }
+            }]
+          : []),
+        leaf.status === "success"
+          ? {
+              actor: "agent" as const,
+              type: "node.verify.passed" as const,
+              payload: { nodeId: taskId, operationId: lease.operationId, commit: leaf.commitSha ?? leaf.currentHead, changedFiles: [...leaf.changedFiles], builtAgainst: consumedRevisionRefs(graph, taskId) }
+            }
+          : {
+              actor: "agent" as const,
+              type: "node.execution.failed" as const,
+              payload: { nodeId: taskId, operationId: lease.operationId, cause: leafFailureCause(leaf) }
+            }
+      ]);
+    }
 
     const success =
       nodeResult.kind === "leaf"
@@ -847,8 +1167,11 @@ export async function runNodeExecutionPipeline(
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[Runner] Node execution failed run="${runId}" task="${taskId}":`, error);
     const run = await getRunRepository().get(runId).catch(() => null);
-    if (run !== null) {
-      await getRunRepository().update(run.runId, (current) => ({ ...current, errorMessage: message }));
+    if (run !== null && lease !== undefined) {
+      await updateRunForOperation(run.runId, lease, (current) => ({ ...current, errorMessage: message }))
+        .catch((failure) => {
+          if (!(failure instanceof RunMutationConflictError)) throw failure;
+        });
     }
     publishEvent(runId, {
       kind: "agent.run.completed",
@@ -857,7 +1180,12 @@ export async function runNodeExecutionPipeline(
       at: new Date().toISOString()
     });
   } finally {
-    stopHeartbeat();
+    stopRepoHeartbeat?.();
+    if (repoLease !== undefined) {
+      await releaseRepoLease(repoLease).catch(() => undefined);
+    }
+    stopHeartbeat?.();
+    if (lease !== undefined) await releaseRunOperation(runId, lease);
     markRunnerInactive(runId);
   }
 }
@@ -868,9 +1196,24 @@ export async function assertManualNodeExecutionReady(run: RunRecord, taskId: str
   }
   const graph = await resolveExecutionGraph(run);
   assertExecutableRunGraph(graph);
+  assertApprovedPlanRevision(run);
   const readiness = manualReadinessForTask(graph, taskId, executionResultsFromRun(run));
   if (!readiness.ready) {
     throw new RunLifecycleError(readiness.reason);
+  }
+}
+
+function assertApprovedPlanRevision(run: RunRecord): void {
+  const revision = run.planRevision ?? 1;
+  const legacyApproved = run.approvedAt !== undefined || [
+    "approved", "running", "completed", "completed_with_accepted", "partial",
+    "unverified", "needs_delivery", "failed_artifact", "failed_delivery"
+  ].includes(run.status) || (run.status === "failed" && run.failedDuring === "running");
+  const approvedRevision = run.approvedPlanRevision ?? (legacyApproved ? 1 : undefined);
+  if (approvedRevision !== revision) {
+    throw new RunLifecycleError(
+      `Plan revision ${revision} is not approved (approved revision: ${run.approvedPlanRevision ?? "none"}).`
+    );
   }
 }
 

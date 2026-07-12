@@ -60,7 +60,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       toTaskId,
       ...(rationale !== undefined ? { rationale } : {})
     });
-    const saved = await persistRunPatches({ run, baseSnapshot, patches: [patch] });
+    const saved = await persistRunPatches({ run, baseSnapshot, patches: [patch], expectedVersion: run.version });
     return NextResponse.json(toRunResponse(saved));
   } catch (error) {
     return errorResponse(error);

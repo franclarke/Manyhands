@@ -87,6 +87,8 @@ export type DecomposePlanResult =
       /** Terminal generation failure (post-retries) — surfaces as the degraded gate, never a plain "failed". */
       kind: "failed";
       errorMessage: string;
+      /** Partial decomposer progress at the point of failure, if any survived — lets a retry resume instead of restarting the whole tree from root. */
+      stepCache?: Record<string, unknown>;
     };
 
 export interface PlanningGraphDeps {
@@ -129,7 +131,8 @@ export function makeDecomposePlanNode(deps: PlanningGraphDeps) {
       return {
         status: "planning",
         errorMessage: result.errorMessage,
-        pendingQuestion: null
+        pendingQuestion: null,
+        ...(result.stepCache !== undefined ? { planningStepCache: result.stepCache } : {})
       };
     }
 

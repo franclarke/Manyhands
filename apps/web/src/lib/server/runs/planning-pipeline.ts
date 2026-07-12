@@ -16,7 +16,6 @@ import type { PredictedConflictHint, RunExecutionResult } from "@manyhands/execu
 import type { PlanningResumeDecision } from "@manyhands/orchestrator-graph";
 import type { TaskGraph } from "@manyhands/task-graph";
 import { type TraceStore } from "@manyhands/trace-store";
-import { getWorkspaceRepository } from "../workspaces";
 import { publishRunEvent } from "./event-bus";
 import { assertTransition } from "./lifecycle";
 import { waitWhilePlainPaused } from "./pause-control";
@@ -33,13 +32,21 @@ import {
 import { publishRunModelEvent } from "./run-model-event-log";
 import { type ProvisionedRepo, type RepoProvisioner } from "./repo-provisioner";
 import { titlerSelection } from "./executor-selection";
+import { supervisedSpawnFn } from "./process-supervision";
+import { resolveRunTargetPath } from "./target-context";
 import { generateRunTitle, type RunTitle } from "./run-titler";
 import type { ExecutorSelection } from "@manyhands/execution-core";
 import { startHeartbeat } from "./runner-heartbeat";
 import { markRunnerInactive, startRunBackgroundTask, tryMarkRunnerActive } from "./runner-state";
 import { saveRunWithRequiredStatusEvent } from "./audited-mutation";
 import { assertExecutableRunGraph, resolveExecutionGraph } from "./execution-state";
-import type { ExecutionConfigInput, RunRecord, RunStatus } from "./schema";
+import { RunMutationConflictError } from "./errors";
+import {
+  claimRunOperation,
+  releaseRunOperation,
+  updateRunForOperation
+} from "./run-operation-lease";
+import type { ExecutionConfigInput, RunOperationLease, RunRecord, RunStatus } from "./schema";
 import { getRunRepository } from "./store";
 
 export { computeInvalidatedTasks } from "./execution-state";
@@ -102,12 +109,15 @@ export interface ExecutionRunnerOptions {
 export async function transitionTo(
   run: RunRecord,
   status: RunStatus,
-  extra: Partial<RunRecord> = {}
+  extra: Partial<RunRecord> = {},
+  options: { lease?: RunOperationLease } = {}
 ): Promise<RunRecord> {
   console.log(`[Runner] Run ${run.runId}: Transición de estado de "${run.status}" a "${status}"`);
   assertTransition(run.status, status);
   const next: RunRecord = { ...run, ...extra, status };
-  return saveRunWithRequiredStatusEvent(run, next);
+  return saveRunWithRequiredStatusEvent(run, next, {
+    ...(options.lease !== undefined ? { lease: options.lease } : {})
+  });
 }
 
 export async function waitWhilePaused(runId: string, phase: "generating" | "running"): Promise<void> {
@@ -130,28 +140,49 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
     console.warn(`[Runner] Planning pipeline already active for run: ${runId}`);
     return;
   }
-  const stopHeartbeat = startHeartbeat(runId);
+  let lease: RunOperationLease | undefined;
+  let stopHeartbeat: (() => void) | undefined;
   try {
-    let run = await getRunRepository().get(runId);
+    const claimed = await claimRunOperation(runId, "planning", {
+      expectedStatuses: ["created", "generating", "interrupted"],
+      allowTakeover: true
+    });
+    lease = claimed.lease;
+    stopHeartbeat = startHeartbeat(runId, lease);
+    let run = claimed.run;
     if (run.status === "created" || run.status === "interrupted") {
       run = await transitionTo(run, "generating", {
         startedAt: run.startedAt ?? new Date().toISOString()
-      });
+      }, { lease });
     }
 
     // Generate a clean title + summary before decomposition so the workspace
-    // header reads well while the graph is still generating. The titler must
-    // use the run's selected executor; failures are propagated so no auxiliary
-    // phase can silently fall back to a different executor.
+    // header reads well while the graph is still generating. This is a
+    // presentation-only helper: it must use the selected executor, but it must
+    // never block decomposition if the auxiliary model call fails or times out.
     if (run.summary === undefined) {
-      const titleFn = options.titler ?? ((input) => generateRunTitle(input));
-      const selection = titlerSelection(run);
-      const runTitle = await titleFn({
-        userPrompt: run.userPrompt,
-        selection,
-        model: selection.model
+      // B-005: the titler CLI is registered under the run so cancel kills it.
+      const titlerSpawn = supervisedSpawnFn({
+        runId: run.runId,
+        label: "titler",
+        ...(lease !== undefined ? { operationId: lease.operationId } : {})
       });
-      run = await getRunRepository().update(run.runId, (current) => ({
+      const titleFn = options.titler ?? ((input) => generateRunTitle({ ...input, spawn: titlerSpawn }));
+      const selection = titlerSelection(run);
+      let runTitle: RunTitle;
+      try {
+        runTitle = await titleFn({
+          userPrompt: run.userPrompt,
+          selection,
+          model: selection.model
+        });
+      } catch (error) {
+        console.warn(
+          `[Runner] Run titler skipped for run ${run.runId}: ${error instanceof Error ? error.message : String(error)}`
+        );
+        runTitle = fallbackRunTitle(run.userPrompt);
+      }
+      run = await updateRunForOperation(run.runId, lease, (current) => ({
         ...current,
         title: runTitle.title,
         summary: runTitle.summary
@@ -170,18 +201,21 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
       return;
     }
 
-    const host = buildPlanningHost(run, options);
+    const host = buildPlanningHost(run, { ...options, operationLease: lease });
     const input = (await hasPlanningCheckpoint(runId))
       ? null
       : initialPlanningState(run, await resolveRepoPath(run));
 
     const outcome = await drivePlanning(host, input);
     await waitWhilePlainPaused(runId, "generating");
-    await projectPlanningOutcome(runId, outcome);
+    await projectPlanningOutcome(runId, outcome, lease);
   } catch (error) {
-    await failPlanning(runId, error);
+    if (!(error instanceof RunMutationConflictError)) {
+      await failPlanning(runId, error, lease);
+    }
   } finally {
-    stopHeartbeat();
+    stopHeartbeat?.();
+    if (lease !== undefined) await releaseRunOperation(runId, lease);
     markRunnerInactive(runId);
   }
 }
@@ -207,17 +241,27 @@ export async function resumePlanningPipeline(
     console.warn(`[Runner] Planning pipeline already active for run: ${runId}`);
     return;
   }
-  const stopHeartbeat = startHeartbeat(runId);
+  let lease: RunOperationLease | undefined;
+  let stopHeartbeat: (() => void) | undefined;
   try {
-    const run = await getRunRepository().get(runId);
-    const host = buildPlanningHost(run, options);
+    const claimed = await claimRunOperation(runId, "planning", {
+      expectedStatuses: ["generating", "paused", "interrupted"],
+      allowTakeover: true
+    });
+    lease = claimed.lease;
+    stopHeartbeat = startHeartbeat(runId, lease);
+    const run = claimed.run;
+    const host = buildPlanningHost(run, { ...options, operationLease: lease });
     const outcome = await drivePlanning(host, new Command({ resume: decision }));
     await waitWhilePlainPaused(runId, "generating");
-    await projectPlanningOutcome(runId, outcome);
+    await projectPlanningOutcome(runId, outcome, lease);
   } catch (error) {
-    await failPlanning(runId, error);
+    if (!(error instanceof RunMutationConflictError)) {
+      await failPlanning(runId, error, lease);
+    }
   } finally {
-    stopHeartbeat();
+    stopHeartbeat?.();
+    if (lease !== undefined) await releaseRunOperation(runId, lease);
     markRunnerInactive(runId);
   }
 }
@@ -231,14 +275,17 @@ export async function resumePlanningPipeline(
 async function autoApproveAndExecute(runId: string): Promise<void> {
   const { processPlanApproval } = await import("./plan-approval-service");
   const { runExecutionPipeline } = await import("./execution-pipeline");
-  // acknowledge=true: autonomy explicitly opts past the critic-error gate.
-  await processPlanApproval(runId, true);
+  await processPlanApproval(runId);
   await runExecutionPipeline(runId);
 }
 
 // ─── outcome projection ────────────────────────────────────────────────────
 
-async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutcome): Promise<void> {
+async function projectPlanningOutcome(
+  runId: string,
+  outcome: PlanningDriveOutcome,
+  lease: RunOperationLease
+): Promise<void> {
   const repo = getRunRepository();
   const run = await repo.get(runId);
 
@@ -257,7 +304,7 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
       console.log(
         `[Runner] Autonomía autonomous: auto-respondiendo "${outcome.interrupt.question}" → "${answer}" (${runId}).`
       );
-      await repo.update(runId, (current) => ({
+      await updateRunForOperation(runId, lease, (current) => ({
         ...current,
         status: "generating",
         questionAnswers: { ...(current.questionAnswers ?? {}), [outcome.interrupt.nodeId]: answer }
@@ -284,7 +331,7 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
       }
     };
     const now = new Date().toISOString();
-    await saveRunWithRequiredStatusEvent(run, next, { at: now });
+    await saveRunWithRequiredStatusEvent(run, next, { at: now, lease });
     publishRunEvent(runId, {
       kind: "planning.question",
       nodeId: outcome.interrupt.nodeId,
@@ -311,7 +358,7 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
       pendingQuestion: { nodeId: PLAN_DEGRADED_NODE_ID, question, options }
     };
     const now = new Date().toISOString();
-    await saveRunWithRequiredStatusEvent(run, next, { at: now });
+    await saveRunWithRequiredStatusEvent(run, next, { at: now, lease });
     publishRunEvent(runId, {
       kind: "planning.question",
       nodeId: PLAN_DEGRADED_NODE_ID,
@@ -336,7 +383,8 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
   if (outcome.kind === "awaiting_approval") {
     console.log(`[Runner] Planificación completada con éxito para el run: ${runId}`);
     assertExecutableRunGraph(resolveExecutionGraph(run));
-    const reviewed = run.status === "needs_review" ? run : await transitionTo(run, "needs_review");
+    const reviewed =
+      run.status === "needs_review" ? run : await transitionTo(run, "needs_review", {}, { lease });
 
     // Autonomy (W6): semi/autonomous skip the human approval gate — auto-approve
     // the plan and start execution. Supervised stays parked at needs_review.
@@ -355,33 +403,54 @@ async function projectPlanningOutcome(runId: string, outcome: PlanningDriveOutco
       status: "failed",
       failedDuring: "generating",
       errorMessage: `aborted by user at plan_degraded gate: ${outcome.errorMessage ?? "plan generation failed"}`
-    });
+    }, { lease });
     return;
   }
   if (outcome.status === "approved" && run.status !== "approved") {
-    await transitionTo(run, "approved", { approvedAt: new Date().toISOString() });
+    await transitionTo(run, "approved", {
+      approvedAt: new Date().toISOString(),
+      approvedPlanRevision: run.planRevision ?? 1
+    }, { lease });
   }
 }
 
-async function failPlanning(runId: string, error: unknown): Promise<void> {
+async function failPlanning(
+  runId: string,
+  error: unknown,
+  lease: RunOperationLease | undefined
+): Promise<void> {
   console.error(`[Runner] FALLÓ la generación del plan para el run "${runId}":`, error);
   const message = error instanceof Error ? error.message : String(error);
-  const run = await getRunRepository()
-    .get(runId)
-    .catch(() => null);
-  if (run !== null) {
-    await saveRunWithRequiredStatusEvent(run, {
-      ...run,
-      status: "failed",
-      failedDuring: "generating",
-      errorMessage: message
-    });
-  }
+  if (lease === undefined) return;
+  const run = await getRunRepository().get(runId).catch(() => null);
+  if (run === null) return;
+  await saveRunWithRequiredStatusEvent(
+    run,
+    { ...run, status: "failed", failedDuring: "generating", errorMessage: message },
+    { lease }
+  ).catch((failure) => {
+    if (!(failure instanceof RunMutationConflictError)) throw failure;
+  });
+}
+
+function fallbackRunTitle(userPrompt: string): RunTitle {
+  const normalized = userPrompt.replace(/\s+/g, " ").trim();
+  const base = normalized.length > 0 ? normalized : "Untitled run";
+  return {
+    title: truncateAtWord(base, 80),
+    summary: truncateAtWord(base, 400)
+  };
+}
+
+function truncateAtWord(value: string, maxLength: number): string {
+  if (value.length <= maxLength) return value;
+  const clipped = value.slice(0, maxLength).trimEnd();
+  const lastSpace = clipped.lastIndexOf(" ");
+  return (lastSpace > 20 ? clipped.slice(0, lastSpace) : clipped).trimEnd();
 }
 
 async function resolveRepoPath(run: RunRecord): Promise<string> {
-  const workspace = await getWorkspaceRepository()
-    .get(run.workspaceId)
-    .catch(() => null);
-  return workspace?.repoPath ?? "";
+  // B-008: the frozen target context wins; the workspace is only a legacy
+  // fallback for pre-context runs.
+  return (await resolveRunTargetPath(run)) ?? "";
 }

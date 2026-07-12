@@ -6,6 +6,12 @@ export type SpawnFn = (
   options: SpawnOptions
 ) => ChildProcess;
 
+/** Anything with a pid and a kill switch (ChildProcess, pty adapters). */
+export interface KillableProcess {
+  pid?: number | undefined;
+  kill(signal?: NodeJS.Signals | number): unknown;
+}
+
 /**
  * Kills an executor process and its descendants. On Windows a shelled CLI shim
  * often runs under cmd.exe/PowerShell, so child.kill only reaches the shell —
@@ -13,7 +19,7 @@ export type SpawnFn = (
  * process group), so kill(-pid) reaches every descendant; a plain SIGKILL to
  * the direct child would orphan whatever the CLI forked.
  */
-export function killProcessTree(child: ChildProcess, spawnFn: SpawnFn): void {
+export function killProcessTree(child: KillableProcess, spawnFn: SpawnFn): void {
   if (typeof child.pid !== "number") {
     child.kill("SIGKILL");
     return;

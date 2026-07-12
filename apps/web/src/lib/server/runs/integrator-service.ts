@@ -70,7 +70,7 @@ export async function createIntegratorTask(input: {
     }))
   });
   
-  return persistRunPatches({ run, baseSnapshot, patches: [patch] });
+  return persistRunPatches({ run, baseSnapshot, patches: [patch], expectedVersion: run.version });
 }
 
 function findLowestCommonCompositeAncestor(snapshot: RunSnapshot, taskIds: readonly string[]): string {

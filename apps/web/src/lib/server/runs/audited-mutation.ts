@@ -3,8 +3,9 @@ import { appendRunStatusChanged } from "./run-status-events";
 import { publishRunEvent } from "./event-bus";
 import { appendRunEventsRequired, type RunModelEventInput } from "./run-model-event-log";
 import { runControlForRun } from "./run-model-projection";
-import type { RunRecord } from "./schema";
-import { getRunRepository } from "./store";
+import type { RunOperationLease, RunRecord } from "./schema";
+import { claimRunMutation } from "./mutation-guard";
+import { RunMutationConflictError } from "./errors";
 
 export class RunPersistenceConsistencyError extends Error {
   constructor(
@@ -26,6 +27,7 @@ export class RunPersistenceConsistencyError extends Error {
 export interface RequiredStatusEventOptions {
   at?: string;
   actor?: Actor;
+  lease?: RunOperationLease;
 }
 
 export function requireCapturedRunRecord(run: RunRecord | undefined, runId: string): RunRecord {
@@ -49,8 +51,18 @@ export async function saveRunWithRequiredStatusEvent(
 ): Promise<RunRecord> {
   let saved: RunRecord;
   try {
-    saved = await getRunRepository().save(next);
+    saved = await claimRunMutation(
+      next.runId,
+      {
+        version: previous.version,
+        ...(options.lease !== undefined ? { operationLease: options.lease } : {})
+      },
+      () => next
+    );
   } catch (error) {
+    if (error instanceof RunMutationConflictError) {
+      throw error;
+    }
     throw new RunPersistenceConsistencyError(
       `Failed to save RunRecord for required status transition on run ${next.runId}; event was not appended.`,
       {
@@ -76,7 +88,14 @@ export async function appendStatusEventOrRollback(
     return saved;
   } catch (error) {
     try {
-      await getRunRepository().save(previous);
+      await claimRunMutation(
+        saved.runId,
+        {
+          version: saved.version,
+          ...(options.lease !== undefined ? { operationLease: options.lease } : {})
+        },
+        () => previous
+      );
       throw new RunPersistenceConsistencyError(
         `Required status event append failed for run ${saved.runId}; RunRecord rollback to ${previous.status} succeeded.`,
         {
@@ -133,7 +152,14 @@ export async function appendStatusAndRunEventsOrRollback(
     return saved;
   } catch (error) {
     try {
-      await getRunRepository().save(previous);
+      await claimRunMutation(
+        saved.runId,
+        {
+          version: saved.version,
+          ...(options.lease !== undefined ? { operationLease: options.lease } : {})
+        },
+        () => previous
+      );
       throw new RunPersistenceConsistencyError(
         `Required event append failed for run ${saved.runId}; RunRecord rollback to ${previous.status} succeeded.`,
         {

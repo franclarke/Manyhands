@@ -2,7 +2,17 @@ import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process"
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
 
+import { killProcessTree } from "../executor/kill";
+import { superviseChildProcess } from "../executor/live-process-registry";
+
 export type PackageManager = "npm" | "pnpm" | "yarn";
+
+/** B-005: ties install subprocesses to their run for cancel/kill/report. */
+export interface InstallSupervision {
+  runId: string;
+  operationId?: string;
+  signal?: AbortSignal;
+}
 
 export interface EnsureDependenciesResult {
   /** True only when an install ran and exited 0. */
@@ -20,7 +30,7 @@ export interface EnsureDependenciesResult {
  * node_modules already exists.
  */
 export interface DependencyInstaller {
-  ensure(params: { cwd: string }): Promise<EnsureDependenciesResult>;
+  ensure(params: { cwd: string; supervision?: InstallSupervision }): Promise<EnsureDependenciesResult>;
 }
 
 type SpawnFn = (command: string, args: readonly string[], options: SpawnOptions) => ChildProcess;
@@ -66,16 +76,25 @@ export class ChildProcessDependencyInstaller implements DependencyInstaller {
     this.timeoutMs = deps.timeoutMs ?? 300_000;
   }
 
-  async ensure({ cwd }: { cwd: string }): Promise<EnsureDependenciesResult> {
+  async ensure({
+    cwd,
+    supervision
+  }: {
+    cwd: string;
+    supervision?: InstallSupervision;
+  }): Promise<EnsureDependenciesResult> {
     if (!(await this.exists(join(cwd, "package.json")))) {
       return { installed: false, reason: "no_manifest" };
     }
     if (await this.exists(join(cwd, "node_modules"))) {
       return { installed: false, reason: "already_installed" };
     }
+    if (supervision?.signal?.aborted === true) {
+      return { installed: false, exitCode: 130, output: "install aborted (run cancelled)" };
+    }
 
     const packageManager = await this.detectPackageManager(cwd);
-    const { exitCode, output } = await this.runInstall(packageManager, cwd);
+    const { exitCode, output } = await this.runInstall(packageManager, cwd, supervision);
     return { installed: exitCode === 0, packageManager, exitCode, output };
   }
 
@@ -87,7 +106,8 @@ export class ChildProcessDependencyInstaller implements DependencyInstaller {
 
   private runInstall(
     packageManager: PackageManager,
-    cwd: string
+    cwd: string,
+    supervision?: InstallSupervision
   ): Promise<{ exitCode: number; output: string }> {
     return new Promise((resolve) => {
       const child = this.spawnFn(packageManager, ["install"], {
@@ -95,6 +115,21 @@ export class ChildProcessDependencyInstaller implements DependencyInstaller {
         stdio: ["ignore", "pipe", "pipe"],
         shell: this.useShell
       });
+
+      if (supervision !== undefined) {
+        superviseChildProcess(
+          {
+            runId: supervision.runId,
+            label: "install",
+            ...(supervision.operationId !== undefined ? { operationId: supervision.operationId } : {})
+          },
+          child,
+          {
+            ...(supervision.signal !== undefined ? { signal: supervision.signal } : {}),
+            spawnFn: this.spawnFn
+          }
+        );
+      }
 
       let output = "";
       let settled = false;
@@ -106,7 +141,7 @@ export class ChildProcessDependencyInstaller implements DependencyInstaller {
       };
 
       const timer = setTimeout(() => {
-        child.kill();
+        killProcessTree(child, this.spawnFn);
         finish({ exitCode: INSTALL_TIMEOUT_EXIT_CODE, output });
       }, this.timeoutMs);
 

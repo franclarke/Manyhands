@@ -74,6 +74,12 @@ export const RUN_STATUS_COLOR: Record<RunStatusKey, string> = {
   running: "var(--running)",
   completed: "var(--done)",
   completed_with_accepted: "var(--done)",
+  partial: "var(--status-review-fg)",
+  unverified: "var(--status-review-fg)",
+  needs_delivery: "var(--ready)",
+  failed_artifact: "var(--error)",
+  failed_delivery: "var(--error)",
+  cancelling: "var(--error)",
   failed: "var(--error)",
   interrupted: "var(--ready)"
 };
@@ -299,8 +305,20 @@ export function runUiStatus(status: RunStatusKey): UiStatus {
       return "completed";
     case "completed_with_accepted":
       return "completed_with_accepted";
+    case "partial":
+    case "unverified":
+      return "needs_review";
+    case "needs_delivery":
+      return "ready";
+    case "failed_artifact":
+    case "failed_delivery":
+      return "failed";
     case "failed":
       return "failed";
+    case "cancelling":
+      // Cancellation issued but not yet verified terminal (B-005): survivors
+      // block the transition to `interrupted`, so the run needs attention.
+      return "blocked";
     case "interrupted":
       return "skipped";
     default:

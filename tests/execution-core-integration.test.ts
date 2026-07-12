@@ -798,7 +798,11 @@ describe("IntegrationAgent", () => {
     expect(result.failureCode).toBe("validation_failed");
     expect(result.validationWorktreePath).toBe(INTEGRATION_WORKTREE.path);
     expect(validationRunner.calls).toHaveLength(1);
-    expect(validationRunner.calls[0]).toEqual({ worktreePath: INTEGRATION_WORKTREE.path, repoRoot: "/repo" });
+    expect(validationRunner.calls[0]).toEqual({
+      worktreePath: INTEGRATION_WORKTREE.path,
+      repoRoot: "/repo",
+      supervision: { runId: "run-1" }
+    });
   });
 
   it("installs dependencies before running parent validation", async () => {
@@ -875,5 +879,51 @@ describe("IntegrationAgent", () => {
     expect(result.appliedCommits).toEqual([{ childTaskId: "a", commitSha: "REPAIR_SHA", order: 0 }]);
     expect(result.parentValidation).toEqual({ passed: false, output: "tests failed", exitCode: 1 });
     expect(result.validationWorktreePath).toBe(INTEGRATION_WORKTREE.path);
+  });
+
+  it('defers parent validation when the integrated workspace has no "test" script', async () => {
+    const git = new FakeGitRunner({ heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" } });
+    const traceStore = new InMemoryTraceStore();
+    const validationRunner = new FakeValidationRunner({
+      passed: false,
+      output:
+        'npm error Missing script: "test"\n' +
+        "npm error\n" +
+        "npm error To see a list of scripts, run:\n" +
+        "npm error   npm run",
+      exitCode: 1
+    });
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore,
+      repoRoot: "/repo",
+      validationRunner
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [child("a", "SHA_A")],
+      repair,
+      parentValidationCommands: [{ command: "npm", args: ["run", "test"], timeoutMs: 60_000, cwd: "worktree" }]
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.parentValidation).toEqual({
+      passed: true,
+      output:
+        'npm error Missing script: "test"\n' +
+        "npm error\n" +
+        "npm error To see a list of scripts, run:\n" +
+        "npm error   npm run",
+      exitCode: 1
+    });
+    expect(traceStore.findByType("validation_deferred")).toHaveLength(1);
+    expect(traceStore.findByType("validation_deferred")[0]?.payload).toMatchObject({
+      scope: "parent",
+      exitCode: 1,
+      reason: "missing_test_script"
+    });
   });
 });

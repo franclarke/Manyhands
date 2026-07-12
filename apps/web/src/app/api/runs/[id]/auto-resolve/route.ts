@@ -38,7 +38,7 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
     const patches = acknowledgements.map((ack) =>
       buildPatch("RISK_ACKNOWLEDGED", { taskIds: ack.taskIds, reason: ack.reason }, { actor: "system" })
     );
-    const saved = await persistRunPatches({ run, baseSnapshot, patches });
+    const saved = await persistRunPatches({ run, baseSnapshot, patches, expectedVersion: run.version });
     return NextResponse.json({ ...toRunResponse(saved), resolvedCount: patches.length });
   } catch (error) {
     return errorResponse(error);

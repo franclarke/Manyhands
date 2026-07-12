@@ -14,11 +14,13 @@ const LEGAL: ReadonlyArray<[RunStatus, RunStatus]> = [
   ["created", "failed"],
   ["generating", "paused"],
   ["generating", "needs_review"],
+  ["generating", "cancelling"],
   ["generating", "interrupted"],
   ["generating", "failed"],
   ["paused", "generating"],
   ["paused", "running"],
   ["paused", "needs_review"],
+  ["paused", "cancelling"],
   ["paused", "interrupted"],
   ["paused", "failed"],
   ["needs_review", "approved"],
@@ -29,14 +31,29 @@ const LEGAL: ReadonlyArray<[RunStatus, RunStatus]> = [
   ["running", "paused"],
   ["running", "completed"],
   ["running", "completed_with_accepted"],
+  ["running", "partial"],
+  ["running", "unverified"],
+  ["running", "needs_delivery"],
+  ["running", "failed_artifact"],
+  ["running", "failed_delivery"],
+  ["running", "cancelling"],
   ["running", "interrupted"],
   ["running", "failed"],
   ["interrupted", "generating"],
   ["interrupted", "running"],
+  // Restart resumes an execution-interrupted run via interrupted → approved → running.
+  ["interrupted", "approved"],
   ["interrupted", "failed"],
+  ["cancelling", "interrupted"],
+  ["cancelling", "failed"],
   // Re-open a finished run for post-completion review actions (Fase C).
   ["completed", "approved"],
   ["completed_with_accepted", "approved"],
+  ["partial", "approved"],
+  ["unverified", "approved"],
+  ["needs_delivery", "approved"],
+  ["failed_artifact", "approved"],
+  ["failed_delivery", "approved"],
   ["failed", "approved"],
   ["failed", "generating"]
 ];
@@ -88,7 +105,7 @@ describe("run lifecycle", () => {
     expect(allowedStatusesForAction("start")).toEqual(["approved"]);
     expect(allowedStatusesForAction("pause")).toEqual(["generating", "running"]);
     expect(allowedStatusesForAction("resume")).toEqual(["paused"]);
-    expect(allowedStatusesForAction("cancel")).toEqual(["generating", "running", "paused"]);
+    expect(allowedStatusesForAction("cancel")).toEqual(["generating", "running", "paused", "cancelling"]);
     expect(allowedStatusesForAction("restart")).toEqual(["interrupted", "failed"]);
     expect(allowedStatusesForAction("fork")).not.toContain("running");
     expect(allowedStatusesForAction("fork")).not.toContain("generating");

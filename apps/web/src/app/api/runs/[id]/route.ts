@@ -6,6 +6,7 @@ import {
   getRunRepository,
   sweepRunIfStale
 } from "@/lib/server/runs";
+import { archiveRun, purgeRun } from "@/lib/server/runs/archive-service";
 import { toRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
@@ -50,11 +51,21 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Ne
   }
 }
 
-/** Delete a run from history. The target repo and its branches are untouched. */
-export async function DELETE(_request: Request, context: RouteContext): Promise<NextResponse> {
+/**
+ * Remove a run from history (B-007). Default: logical ARCHIVE — metadata
+ * survives with `archivedAt` and the list hides it. `?purge=1` runs the
+ * journaled physical purge (inactive runs only; active runs answer 409 and
+ * must be cancelled first). The target repo and its branches are untouched.
+ */
+export async function DELETE(request: Request, context: RouteContext): Promise<NextResponse> {
   const { id } = await context.params;
+  const url = new URL(request.url);
   try {
-    await getRunRepository().delete(id);
+    if (url.searchParams.get("purge") === "1") {
+      const report = await purgeRun(id);
+      return NextResponse.json({ purged: true, ...report });
+    }
+    await archiveRun(id);
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     return errorResponse(error);

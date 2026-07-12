@@ -16,6 +16,27 @@ describe("recursive decomposer prompt", () => {
     expect(prompt.system).toContain("normal parallel leaves");
   });
 
+  it("tells child planning not to redeclare inherited interfaces", () => {
+    const prompt = buildStepPrompt({
+      title: "Build the UI workflow",
+      goal: "Implement UI against the existing domain contract",
+      aggressiveness: "medium",
+      inheritedInterfaces: [
+        {
+          id: "HabitDomainApi",
+          kind: "module",
+          signature: "export function createHabit(name: string): Habit;",
+          description: "Pure habit domain functions already defined by an ancestor."
+        }
+      ],
+      atDepthLimit: false
+    });
+
+    expect(prompt.user).toContain("HabitDomainApi");
+    expect(prompt.system).toContain("Do not redeclare an interface that is already in scope");
+    expect(prompt.system).toContain("list that existing id in the child's `produces`");
+  });
+
   it("treats granularity as aggressiveness, never exposing a target depth or node count", () => {
     const prompt = buildStepPrompt({
       title: "Build a task board",

@@ -10,6 +10,8 @@ import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import { RunLifecycleError } from "./errors";
 import { publishRunStatusChanged } from "./run-status-events";
 import { getRunRepository } from "./store";
+import { claimRunMutation } from "./mutation-guard";
+import { appendRunEventRequired } from "./run-model-event-log";
 import {
   appendPatch,
   applyPatches,
@@ -43,6 +45,7 @@ export async function persistRunPatches(input: {
   run: RunRecord;
   baseSnapshot: RunSnapshot;
   patches: readonly RunPatch[];
+  expectedVersion: number;
 }): Promise<RunRecord> {
   if (input.patches.length === 0) {
     throw new RunLifecycleError("No patches were supplied");
@@ -69,13 +72,32 @@ export async function persistRunPatches(input: {
   // Advisory patches (risk acknowledgements) record a decision without mutating
   // the DAG, so they must NOT revoke plan approval — that is what lets
   // "approve → auto-resolve conflicts → run" proceed without a re-review bounce.
-  const advisoryOnly = input.patches.every((patch) => patch.type === "RISK_ACKNOWLEDGED");
+  const cosmeticOnly = input.patches.every(
+    (patch) => patch.type === "RISK_ACKNOWLEDGED" || patch.type === "NODE_RENAMED"
+  );
   const stamped = {
     ...withTraces,
     updatedAt: input.patches[input.patches.length - 1]?.createdAt ?? new Date().toISOString()
   };
-  const nextRun = advisoryOnly ? stamped : invalidateApprovalIfNeeded(stamped);
-  const saved = await getRunRepository().save(nextRun);
+  const nextRun = cosmeticOnly ? stamped : invalidateApprovalIfNeeded(stamped);
+  const saved = await claimRunMutation(
+    input.run.runId,
+    { version: input.expectedVersion, status: [input.run.status] },
+    () => nextRun
+  );
+
+  if (!cosmeticOnly) {
+    await appendRunEventRequired(saved.runId, {
+      actor: "system",
+      type: "decision.raised",
+      payload: {
+        decisionId: approvalDecisionId(saved.planRevision),
+        kind: "approve_plan",
+        blocking: true,
+        context: { nodeIds: Object.keys(candidate.graphSnapshot.nodes) }
+      }
+    });
+  }
 
   if (input.run.status !== saved.status) {
     publishRunStatusChanged(saved);
@@ -149,13 +171,18 @@ function appendPatchTraceEvents(run: RunRecord, patches: readonly RunPatch[]): R
 }
 
 function invalidateApprovalIfNeeded(run: RunRecord): RunRecord {
-  if (run.status !== "approved") {
-    return run;
-  }
+  const nextRevision = (run.planRevision ?? 1) + 1;
   const next: RunRecord = {
     ...run,
-    status: "needs_review"
+    planRevision: nextRevision,
+    ...(run.status === "approved" ? { status: "needs_review" as const } : {})
   };
   delete next.approvedAt;
+  delete next.approvedPlanRevision;
+  delete next.planApprovalOverride;
   return next;
+}
+
+export function approvalDecisionId(revision: number): string {
+  return `approve_plan:r${revision}`;
 }

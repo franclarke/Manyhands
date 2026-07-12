@@ -9,6 +9,8 @@ import {
   slugifyForBranch
 } from "@/lib/server/runs/final-apply";
 import { rmWithRetry } from "@/lib/server/runs/fs-retry";
+import { readFinalArtifactFile } from "@/lib/server/runs/workspace-context";
+import type { RunRecord } from "@/lib/server/runs/schema";
 import type { ProvisionedRepo } from "@/lib/server/runs/repo-provisioner";
 import type { RunExecutionResult } from "@manyhands/execution-core";
 import type { TaskGraph } from "@manyhands/task-graph";
@@ -39,8 +41,21 @@ async function makeIntegrationCommit(repoRoot: string, baseCommit: string): Prom
   return sha;
 }
 
-function provisioned(repoRoot: string, baseCommit: string): ProvisionedRepo {
-  return { repoRoot, baseBranch: "main", baseCommit, cleanup: async () => undefined };
+function provisioned(
+  repoRoot: string,
+  baseCommit: string,
+  sourceBaseCommit: string = baseCommit
+): ProvisionedRepo {
+  return {
+    repoRoot,
+    sourceRepoRoot: repoRoot,
+    sourceBranch: "main",
+    sourceBaseCommit,
+    baseBranch: "main",
+    baseCommit,
+    executionBaseCommit: baseCommit,
+    cleanup: async () => undefined
+  };
 }
 
 function graphWithRoot(baseCommit: string, repoRoot: string): TaskGraph {
@@ -120,16 +135,58 @@ describe("applyFinalPatch", () => {
     });
 
     expect(record?.finalApplicationStatus).toBe("applied");
+    expect(record?.finalArtifactManifest).toMatchObject({
+      runId: "run-x",
+      sourceBranch: "main",
+      sourceBaseSha: baseCommit,
+      executionBaseSha: baseCommit,
+      finalSha: expect.any(String),
+      addedFiles: ["src/feature.ts"],
+      modifiedFiles: [],
+      deletedFiles: [],
+      artifactDisposition: "ready",
+      deliveryDisposition: "needs_delivery"
+    });
     const branch = buildRunBranchName("run-x", "My Feature");
     expect(record?.finalBranchName).toBe(branch);
     expect(record?.finalPatch).toContain("feature.ts");
     // The branch holds the applied commit...
     expect(git(repoRoot, "rev-parse", branch)).toBe(record?.finalCommitSha);
     expect(git(repoRoot, "show", `${branch}:src/feature.ts`)).toContain("feature");
+    const viewerRun = {
+      provisioned: { repoRoot },
+      finalArtifactManifest: record?.finalArtifactManifest
+    } as RunRecord;
+    expect(await readFinalArtifactFile(viewerRun, "src/feature.ts")).toBe(
+      git(repoRoot, "show", `${record!.finalCommitSha}:src/feature.ts`) + "\n"
+    );
     // ...but the user's branch and working tree are untouched.
     expect(git(repoRoot, "rev-parse", "--abbrev-ref", "HEAD")).toBe("main");
     expect(git(repoRoot, "rev-parse", "HEAD")).toBe(baseCommit);
     expect(git(repoRoot, "status", "--porcelain")).toBe("");
+  }, 30000);
+
+  it("includes the grounding commit by diffing the final artifact from sourceBaseCommit", async () => {
+    const sourceBaseCommit = await initRepo(repoRoot);
+    await writeFile(path.join(repoRoot, "src", "grounding.ts"), "export const grounded = true;\n");
+    git(repoRoot, "add", "-A");
+    git(repoRoot, "commit", "-m", "grounding");
+    const executionBaseCommit = git(repoRoot, "rev-parse", "HEAD");
+    const integrationCommit = await makeIntegrationCommit(repoRoot, executionBaseCommit);
+
+    const result = await applyFinalPatch({
+      graph: graphWithRoot(executionBaseCommit, repoRoot),
+      result: resultWith(integrationCommit),
+      provisioned: provisioned(repoRoot, executionBaseCommit, sourceBaseCommit),
+      runId: "run-grounded",
+      slug: "grounded feature"
+    });
+
+    expect(result?.finalApplicationStatus).toBe("applied");
+    expect(result?.finalPatch).toContain("grounding.ts");
+    expect(result?.finalPatch).toContain("feature.ts");
+    expect(git(repoRoot, "show", `${result!.finalCommitSha}:src/grounding.ts`)).toContain("grounded");
+    expect(git(repoRoot, "show", `${result!.finalCommitSha}:src/feature.ts`)).toContain("feature");
   }, 30000);
 
   it("still branches from baseCommit when the repo moved ahead (no crash)", async () => {
@@ -184,5 +241,19 @@ describe("applyFinalPatch", () => {
 
     expect(record?.finalApplicationStatus).toBe("failed");
     expect(record?.finalApplicationMessage).toContain("empty");
+    expect(record?.finalArtifactManifest?.artifactDisposition).toBe("failed");
+  }, 30000);
+
+  it("derives deleted files from the real base..final commits", async () => {
+    const baseCommit = await initRepo(repoRoot);
+    git(repoRoot, "rm", "src/index.ts");
+    git(repoRoot, "commit", "-m", "delete index");
+    const integrationCommit = git(repoRoot, "rev-parse", "HEAD");
+    git(repoRoot, "reset", "--hard", baseCommit);
+    const record = await applyFinalPatch({
+      graph: graphWithRoot(baseCommit, repoRoot), result: resultWith(integrationCommit),
+      provisioned: provisioned(repoRoot, baseCommit), runId: "run-delete", slug: "delete"
+    });
+    expect(record?.finalArtifactManifest?.deletedFiles).toEqual(["src/index.ts"]);
   }, 30000);
 });

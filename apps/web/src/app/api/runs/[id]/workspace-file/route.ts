@@ -3,10 +3,12 @@ import { NextResponse } from "next/server";
 import {
   MAX_WORKSPACE_FILE_BYTES,
   RunNotFoundError,
+  WorkspaceEscapeError,
   getRunRepository,
   parseWorkspaceContext,
+  resolveContainedWorkspaceFile,
+  readFinalArtifactFile,
   resolveRunWorkspaceContext,
-  resolveWorkspacePath,
   safeWorkspaceRelativePath
 } from "@/lib/server/runs";
 
@@ -33,7 +35,16 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
     if (!workspace.exists) {
       return NextResponse.json({ error: "Workspace context does not exist.", workspace }, { status: 404 });
     }
-    const target = resolveWorkspacePath(workspace.rootPath, relativePath);
+    if (workspace.context === "final") {
+      const content = await readFinalArtifactFile(run, relativePath);
+      if (Buffer.byteLength(content, "utf8") > MAX_WORKSPACE_FILE_BYTES) {
+        return NextResponse.json({ error: "File is too large to preview." }, { status: 413 });
+      }
+      return NextResponse.json({ workspace, path: relativePath, size: Buffer.byteLength(content, "utf8"), content });
+    }
+    // B-006 (CF-40): realpath containment — a symlink/junction inside the
+    // workspace must not read outside it.
+    const target = await resolveContainedWorkspaceFile(workspace.rootPath, relativePath);
     const fileStat = await stat(target);
     if (!fileStat.isFile()) {
       return NextResponse.json({ error: "Path is not a file." }, { status: 400 });
@@ -53,5 +64,6 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
 
 function workspaceErrorResponse(error: unknown): NextResponse {
   if (error instanceof RunNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
+  if (error instanceof WorkspaceEscapeError) return NextResponse.json({ error: error.message }, { status: 403 });
   return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 400 });
 }

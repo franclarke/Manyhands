@@ -249,7 +249,13 @@ function applyPatchToContext(context: PatchContext, patch: RunPatch): void {
       updateContractRequired(context, patch.taskId, (contract) => ({
         ...contract,
         allowed: { ...contract.allowed, paths: [...patch.allowedPaths] },
-        forbidden: { ...contract.forbidden, paths: [...patch.forbiddenPaths] }
+        forbidden: { ...contract.forbidden, paths: [...patch.forbiddenPaths] },
+        executionScope: {
+          implementationPaths: [...patch.allowedPaths],
+          testPaths: contract.executionScope?.testPaths ?? [],
+          configPaths: contract.executionScope?.configPaths ?? []
+        },
+        forbiddenPaths: [...patch.forbiddenPaths]
       }));
       return;
     case "NODE_ACCEPTANCE_EDITED":

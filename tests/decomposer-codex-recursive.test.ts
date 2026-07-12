@@ -78,6 +78,21 @@ describe("CodexRecursiveDecomposer", () => {
     expect(args).toContain("--skip-git-repo-check");
   });
 
+  it("passes reasoning effort to codex recursive planning when configured", async () => {
+    const calls: string[][] = [];
+    const decomposer = new CodexRecursiveDecomposer({
+      model: "gpt-5-codex",
+      userPrompt: "implement locally",
+      cwd: process.cwd(),
+      reasoningEffort: "medium",
+      spawn: fakeCodexSpawn(ATOMIC_STEP, 0, "", (args) => calls.push([...args])),
+      useShell: false
+    });
+
+    await decomposer.decompose(FEATURE);
+    expect(calls[0]).toContain('model_reasoning_effort="medium"');
+  });
+
   it("surfaces codex process failures as decomposer LLM errors", async () => {
     const decomposer = new CodexRecursiveDecomposer({
       model: "gpt-5-codex",

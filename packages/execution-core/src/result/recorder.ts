@@ -1,4 +1,4 @@
-import type { ExecutionScope } from "@manyhands/contracts";
+import type { ExecutionScope, ExpectedOutput } from "@manyhands/contracts";
 import type { TraceStore } from "@manyhands/trace-store";
 
 import { execError, execLog, execWarn } from "../logging/log";
@@ -13,6 +13,7 @@ import {
   type AgentExecutionResult,
   type AgentResultStatus,
   type ScopeCheckResult,
+  type ScopePolicy,
   type UnexpectedCommitPolicy,
   type WorktreeRecord
 } from "../types";
@@ -28,6 +29,8 @@ export interface RecordParams {
   executorOutcome: ExecutorRunOutcome;
   executionScope?: ExecutionScope;
   forbiddenPaths?: string[];
+  expectedOutput?: ExpectedOutput;
+  scopePolicy?: ScopePolicy;
   unexpectedCommitPolicy?: UnexpectedCommitPolicy;
   commitMessage?: string;
   usageSource?: "reported" | "estimated" | "unavailable";
@@ -190,12 +193,18 @@ export class ResultRecorder {
       // leaf's contract — e.g. a barrel/re-export the scaffolder produced in full,
       // leaving the agent nothing to add. We accept that case as success with no
       // commit (nothing for integration to cherry-pick) only when we can prove it.
-      if (await this.baselineSatisfiesContract(worktree.path, baseHead, params.executionScope)) {
+      const baselineEvidence = await this.baselineSatisfiesContract(
+        worktree.path,
+        baseHead,
+        params.expectedOutput,
+        params.executionScope
+      );
+      if (baselineEvidence !== undefined) {
         execLog("result", "leaf succeeded (no-op: grounding baseline already satisfies the contract)", {
           task: taskId,
           durationMs: executorOutcome.durationMs
         });
-        return this.finalize({ ...base, status: "success", noOp: true, currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
+        return this.finalize({ ...base, status: "success", disposition: "already_satisfied", noOp: true, baselineEvidence, currentHead: baseHead, diff: "", changedFiles: [], scopeCheck: passedScope });
       }
       // Exit 0 but nothing changed and the contract is not already satisfied: the
       // agent ran yet produced no diff — surface it with its output tail.
@@ -222,6 +231,20 @@ export class ResultRecorder {
         violations: scopeCheck.violations
       });
       return this.finalize({ ...base, status: "scope_violation", currentHead: baseHead, diff, changedFiles, scopeCheck });
+    }
+
+    const scopePolicy = params.scopePolicy ?? "advisory";
+    if (scopeCheck.outOfScope.length > 0 && scopePolicy !== "advisory") {
+      this.appendScopePolicyResult(taskId, scopeCheck.outOfScope, scopePolicy);
+      return this.finalize({
+        ...base,
+        status: scopePolicy === "gate" ? "scope_gated" : "scope_violation",
+        disposition: scopePolicy === "gate" ? "gated" : "failed",
+        currentHead: baseHead,
+        diff,
+        changedFiles,
+        scopeCheck
+      });
     }
 
     const commitSha = await this.git.commit({
@@ -256,24 +279,35 @@ export class ResultRecorder {
   private async baselineSatisfiesContract(
     cwd: string,
     ref: string,
+    expectedOutput: ExpectedOutput | undefined,
     scope: ExecutionScope | undefined
-  ): Promise<boolean> {
-    const implPaths = (scope?.implementationPaths ?? []).filter((path) => !path.includes("*"));
+  ): Promise<{ expectedPaths: string[]; verifiedPaths: string[] } | undefined> {
+    const implPaths = (expectedOutput?.changedFiles ?? scope?.implementationPaths ?? [])
+      .filter((path) => !path.includes("*"));
     if (implPaths.length === 0) {
-      return false;
+      return undefined;
     }
-    let sawFile = false;
+    const verifiedPaths: string[] = [];
     for (const path of implPaths) {
       const content = await this.git.showFile({ cwd, ref, path });
       if (content === null) {
-        continue;
+        return undefined;
       }
-      sawFile = true;
       if (GROUNDING_STUB_PATTERN.test(content)) {
-        return false;
+        return undefined;
       }
+      verifiedPaths.push(path);
     }
-    return sawFile;
+    return { expectedPaths: implPaths, verifiedPaths };
+  }
+
+  private appendScopePolicyResult(taskId: string, outOfScope: string[], policy: ScopePolicy): void {
+    this.traceStore.append({
+      type: policy === "gate" ? "scope_gate_required" : "scope_check_failed",
+      actor: "system",
+      taskId,
+      payload: { policy, outOfScope }
+    });
   }
 
   /** Likely scope leak signal: huge changed-file counts are logged, never failed. */
@@ -330,6 +364,8 @@ export class ResultRecorder {
     changedFiles: string[];
     commitSha?: string | undefined;
     noOp?: boolean | undefined;
+    disposition?: AgentExecutionResult["disposition"];
+    baselineEvidence?: AgentExecutionResult["baselineEvidence"];
     scopeCheck: ScopeCheckResult;
     executorExitCode: number;
     executorDurationMs: number;
@@ -353,6 +389,8 @@ export class ResultRecorder {
       changedFiles: input.changedFiles,
       commitSha: input.commitSha,
       noOp: input.noOp,
+      disposition: input.disposition ?? dispositionForStatus(input.status),
+      baselineEvidence: input.baselineEvidence,
       scopeCheck: input.scopeCheck,
       executorExitCode: input.executorExitCode,
       executorDurationMs: input.executorDurationMs,
@@ -367,4 +405,10 @@ export class ResultRecorder {
       usageSource: input.usageSource
     });
   }
+}
+
+function dispositionForStatus(status: AgentResultStatus): NonNullable<AgentExecutionResult["disposition"]> {
+  if (status === "success") return "changed";
+  if (status === "scope_gated") return "gated";
+  return "failed";
 }

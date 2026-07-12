@@ -180,6 +180,7 @@ describe("RunExecutor E2E (real git + MockCodex)", () => {
       type: "logical",
       inferred: false
     });
+    graph.nodes.join!.dependencies = ["a"];
     graph.nodes.join!.kind = "integrator";
     graph.nodes.join!.metadata = { integrator: true, integratesTaskIds: ["a"] };
 

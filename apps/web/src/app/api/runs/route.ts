@@ -13,13 +13,15 @@ import {
   type RunStatus
 } from "@/lib/server/runs";
 import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
+import { captureRunTargetContext } from "@/lib/server/runs/target-context";
 import { toRunPreview, toRunResponse } from "@/lib/server/runs/presenter";
 import {
   WorkspaceNotFoundError,
   getWorkspaceRepository
 } from "@/lib/server/workspaces";
-import { CLAUDE_CODE_EXECUTOR_ID, findModelForSelection, type ExecutorSelection } from "@/lib/models";
+import { CLAUDE_CODE_EXECUTOR_ID, findModelForSelection, type ExecutorSelection, type ModelCapability } from "@/lib/models";
 import { resolveLegacyModelSelection } from "@manyhands/execution-core";
+import { withDefaultReasoningEffort } from "@/lib/server/runs/execution-config-defaults";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,6 +41,10 @@ export async function GET(request: Request): Promise<NextResponse> {
       getWorkspaceRepository().list()
     ]);
     let runs = await sweepManyIfStale(rawRuns);
+    // B-007: archived runs are hidden unless explicitly requested.
+    if (url.searchParams.get("include") !== "archived") {
+      runs = runs.filter((entry) => entry.archivedAt === undefined);
+    }
     if (statusParam !== null && statusParam.length > 0) {
       const statuses = parseStatusFilter(statusParam);
       if (statuses.length > 0) {
@@ -60,7 +66,11 @@ function parseStatusFilter(raw: string): RunStatus[] {
     .filter((entry) => entry.length > 0 && allowed.has(entry)) as RunStatus[];
 }
 
-function validateExecutionSelection(selection: ExecutorSelection | undefined): void {
+function validateSelectionForCapability(
+  label: string,
+  selection: ExecutorSelection | undefined,
+  capability: ModelCapability
+): void {
   if (selection === undefined) {
     return;
   }
@@ -68,15 +78,9 @@ function validateExecutionSelection(selection: ExecutorSelection | undefined): v
   if (model === undefined || !model.enabled) {
     throw new RunValidationError(`Unsupported executor/model selection "${selection.executorId}/${selection.model}"`);
   }
-}
-
-function assertSameSelection(label: string, expected: ExecutorSelection, actual: ExecutorSelection | undefined): void {
-  if (actual === undefined) {
-    return;
-  }
-  if (actual.executorId !== expected.executorId || actual.model !== expected.model) {
+  if (!model.capabilities.includes(capability)) {
     throw new RunValidationError(
-      `${label} must match the initial run selection "${expected.executorId}/${expected.model}", got "${actual.executorId}/${actual.model}".`
+      `${label} selection "${selection.executorId}/${selection.model}" does not support ${capability}.`
     );
   }
 }
@@ -103,12 +107,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       executorId: parsed.data.planningExecutorId ?? legacySelection.executorId ?? CLAUDE_CODE_EXECUTOR_ID,
       model: parsed.data.planningModel ?? legacySelection.model
     };
-    validateExecutionSelection(planningSelection);
-    validateExecutionSelection(parsed.data.defaultExecutionSelection);
-    validateExecutionSelection(parsed.data.defaultRepairSelection);
-    assertSameSelection("defaultExecutionSelection", planningSelection, parsed.data.defaultExecutionSelection);
-    assertSameSelection("defaultRepairSelection", planningSelection, parsed.data.defaultRepairSelection);
-    const runSelection = planningSelection;
+    const executionSelection = parsed.data.defaultExecutionSelection ?? planningSelection;
+    const repairSelection = parsed.data.defaultRepairSelection ?? executionSelection;
+    validateSelectionForCapability("Planning", planningSelection, "planning");
+    validateSelectionForCapability("Execution", executionSelection, "execution");
+    validateSelectionForCapability("Repair", repairSelection, "repair");
 
     const now = new Date().toISOString();
     const runId = randomUUID();
@@ -119,25 +122,39 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const title = userPrompt.slice(0, 120);
+    const executionConfig = {
+      ...withDefaultReasoningEffort(parsed.data.executionConfig, executionSelection),
+      routing: "fixed" as const
+    };
+
+    const repoSpec =
+      parsed.data.repoSpec ??
+      (workspace.repoPath !== undefined
+        ? { kind: "localPath" as const, path: workspace.repoPath }
+        : undefined);
+    // B-008 (CF-19): freeze the target repository at creation. Best-effort —
+    // a path that is not (yet) a git repo keeps the legacy behavior and fails
+    // later at preflight with its own actionable error.
+    const targetContext =
+      repoSpec?.kind === "localPath" ? await captureRunTargetContext(repoSpec.path, now) : undefined;
+
     const record: RunRecord = {
       runId,
       workspaceId: parsed.data.workspaceId,
-      ...(parsed.data.repoSpec !== undefined
-        ? { repoSpec: parsed.data.repoSpec }
-        : workspace.repoPath !== undefined
-          ? { repoSpec: { kind: "localPath" as const, path: workspace.repoPath } }
-          : {}),
+      ...(repoSpec !== undefined ? { repoSpec } : {}),
+      ...(targetContext !== undefined ? { targetContext } : {}),
       granularity: parsed.data.granularity,
-      model: runSelection.model,
-      planningModel: runSelection.model,
-      planningExecutorId: runSelection.executorId,
-      defaultExecutionSelection: runSelection,
-      defaultRepairSelection: runSelection,
-      executionConfig: { routing: "fixed" as const },
+      model: executionSelection.model,
+      planningModel: planningSelection.model,
+      planningExecutorId: planningSelection.executorId,
+      defaultExecutionSelection: executionSelection,
+      defaultRepairSelection: repairSelection,
+      executionConfig,
       autonomy: parsed.data.autonomy ?? "supervised",
       userPrompt,
       title,
       version: 0,
+      planRevision: 1,
       status: "created",
       createdAt: now,
       updatedAt: now,

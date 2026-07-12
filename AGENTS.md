@@ -54,9 +54,53 @@ not as an active thesis/benchmark plan.
 | D5 | `git diff HEAD` is the only source of truth for what an agent changed. stdout/stderr are diagnostic only (`stderrTail`/`stdoutTail`). |
 | D6 | **The orchestrator commits.** Agents must never commit. If an agent commits unexpectedly, policy is explicit (`reject` default or `accept`). |
 | D7 | Real isolation comes from the git worktree + `ScopeChecker`, not CLI approval mode. |
-| D8 | Integration uses cherry-pick + semantic repair on conflict. Repair context includes parent goal, canonical `sharedInterface`, each child's intent and diff. |
+| D8 | Integration uses cherry-pick + semantic repair on conflict. Repair context includes parent goal, canonical `sharedInterface`, each child's `goal` and diff. |
 | D9 | Parallelism is bounded by execution config and wave selection; default cap is `maxParallel = 6` unless a newer config overrides it. |
 | D10 | Timeouts are explicit and configurable per execution/integration contract. |
+
+## Run durability and terminal truth
+
+- A run captures an immutable `RunTargetContext`; planning, provisioning and
+  final-artifact reads must use it rather than a later mutable workspace value.
+- Mutating background work owns a persisted operation lease. Use the mutation
+  helpers/CAS and fencing token; a stale lease must not persist results, events
+  or terminal status.
+- Repository mutation is additionally guarded by the repository lease. Release
+  and takeover are token/fencing scoped; do not replace it with a process-local
+  boolean lock.
+- Cancellation is two-phase: claim `cancelling`, invalidate the operation lease,
+  abort/kill through `ProcessSupervisor`, verify `allDead`, then transition to
+  `interrupted`. Do not accept late results or events from the invalidated lease.
+- `completed` is reserved for a valid verified/delivered `FinalArtifactManifest`.
+  Keep `executionOutcome`, `artifactOutcome`, and `deliveryOutcome` distinct;
+  use `partial`, `unverified`, `needs_delivery`, `failed_artifact`, or
+  `failed_delivery` when appropriate.
+
+## Scheduling, events and approvals
+
+- Normalize and persist the complete effective execution config before the
+  execution host, scheduler or dispatch observes it. The product path remains
+  `risk_aware`; absent overrides still enforce `maxParallel = 6`.
+- Every selected wave has a durable `waveId`. Persist the required
+  `run.scheduling.wave_selected` event, including the effective relevant config,
+  before dispatching its tasks.
+- The canonical run event log is the durable UI source. Emit facts at their real
+  side-effect boundary; executor `exitCode === 0` is never validation success.
+  Human gates use `decision.raised`/`decision.resolved`, and visual `gated` is
+  derived from pending decisions.
+- Semantic plan edits require `expectedVersion` CAS, increment `planRevision`,
+  invalidate approval and create the revision-specific approval decision.
+  Dispatch requires `approvedPlanRevision === planRevision` plus strict DAG
+  validation. Critic-error overrides must be explicit and auditable.
+
+## Safe investigation in a dirty checkout
+
+Before editing, confirm the Git root, inspect `git status --short` and
+`git diff HEAD`, then trace the productive route and its tests. Preserve
+unrelated changes: never reset, destructive checkout/clean, or global stash.
+For a behavioral fix, start with a failing regression, run the narrow test,
+then consumer suites/typechecks, and inspect the diff. Update the applicable
+progress record without rewriting prior evidence.
 
 ---
 
@@ -104,9 +148,10 @@ to it.
 
 ```bash
 pnpm test
-pnpm -F @manyhands/execution-core typecheck
-pnpm web:typecheck
+pnpm -r --filter "./packages/*" typecheck
+pnpm --filter @manyhands/web exec tsc --noEmit
 pnpm build
+pnpm web:build
 pnpm web:dev
 ```
 

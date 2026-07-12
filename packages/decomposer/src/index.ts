@@ -7,6 +7,7 @@ import {
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema, uniqueValues } from "@manyhands/shared";
 import {
   getLeafNodes,
+  syncNodeDependencies,
   TaskGraphSchema,
   validateTaskGraph,
   type TaskDependency,
@@ -216,6 +217,9 @@ export class MockDecomposer implements Decomposer {
       rootId,
       createdAt: generatedAt
     }) as TaskGraph;
+    // D1/B-009: the node shortcut is DERIVED from the canonical edges — a
+    // producer must never emit a divergent pair.
+    syncNodeDependencies(graph);
 
     const validation = validateDecomposition(graph, contracts);
 
@@ -374,6 +378,9 @@ function buildDecompositionFromTemplate(input: {
     rootId,
     createdAt: input.generatedAt
   }) as TaskGraph;
+  // D1/B-009: the node shortcut is DERIVED from the canonical edges — a
+  // producer must never emit a divergent pair.
+  syncNodeDependencies(graph);
   const validation = validateDecomposition(graph, contracts);
 
   return {

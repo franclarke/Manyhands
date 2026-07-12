@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { appendFile, mkdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import type { Actor, RunEvent, RunEventPayloads, RunEventType } from "@/lib/run-model/types";
@@ -102,6 +103,7 @@ export async function appendRunModelEvent<K extends RunEventType>(
     await mkdir(resolveRunsDirectory(), { recursive: true });
     const currentSeq = await lastSeq(runId);
     const event: RunEvent = {
+      eventId: randomUUID(),
       seq: currentSeq + 1,
       at: input.at ?? new Date().toISOString(),
       runId,
@@ -124,6 +126,7 @@ export async function appendRunEventsRequired(
     await mkdir(resolveRunsDirectory(), { recursive: true });
     const currentSeq = await lastSeq(runId);
     const events = inputs.map((input, index): RunEvent => ({
+      eventId: randomUUID(),
       seq: currentSeq + index + 1,
       at: input.at ?? new Date().toISOString(),
       runId,
@@ -144,6 +147,30 @@ export async function appendRunEventsRequired(
  * operation if the append-only event log cannot be written.
  */
 export const appendRunEventRequired = appendRunModelEvent;
+
+/** Build a required event from its durable sequence while holding the append lock. */
+export async function appendRunEventRequiredWithSeq<K extends RunEventType>(
+  runId: string,
+  build: (seq: number) => RunModelEventInput<K>
+): Promise<RunEvent> {
+  return withLock(runId, async () => {
+    await mkdir(resolveRunsDirectory(), { recursive: true });
+    const seq = (await lastSeq(runId)) + 1;
+    const input = build(seq);
+    const event: RunEvent = {
+      eventId: randomUUID(),
+      seq,
+      at: input.at ?? new Date().toISOString(),
+      runId,
+      actor: input.actor,
+      type: input.type,
+      payload: input.payload as Record<string, unknown>
+    };
+    await appendFile(filePathFor(runId), `${JSON.stringify(event)}\n`, "utf8");
+    publishRunModelBusEvent(runId, event);
+    return event;
+  });
+}
 
 /**
  * Best-effort projection/detail event: failures are logged but do not block the

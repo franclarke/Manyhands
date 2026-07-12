@@ -80,7 +80,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     const saved = await claimRunMutation(
       id,
       {
-        status: ["paused"],
+        status: ["paused", "interrupted"],
         pausedDuring: "generating",
         pendingQuestionNodeId: nodeId,
         ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
