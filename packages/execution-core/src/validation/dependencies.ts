@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { killProcessTree } from "../executor/kill";
 import { superviseChildProcess } from "../executor/live-process-registry";
+import { BoundedOutput } from "../executor/bounded-output";
 
 export type PackageManager = "npm" | "pnpm" | "yarn";
 
@@ -147,7 +148,7 @@ export class ChildProcessDependencyInstaller implements DependencyInstaller {
         );
       }
 
-      let output = "";
+      const output = new BoundedOutput();
       let settled = false;
       const finish = (result: { exitCode: number; output: string }): void => {
         if (settled) return;
@@ -158,20 +159,21 @@ export class ChildProcessDependencyInstaller implements DependencyInstaller {
 
       const timer = setTimeout(() => {
         killProcessTree(child, this.spawnFn);
-        finish({ exitCode: INSTALL_TIMEOUT_EXIT_CODE, output });
+        finish({ exitCode: INSTALL_TIMEOUT_EXIT_CODE, output: output.text() });
       }, this.timeoutMs);
 
       child.stdout?.on("data", (chunk: Buffer) => {
-        output += chunk.toString("utf8");
+        output.append(chunk.toString("utf8"));
       });
       child.stderr?.on("data", (chunk: Buffer) => {
-        output += chunk.toString("utf8");
+        output.append(chunk.toString("utf8"));
       });
       child.on("error", (error: Error) => {
-        finish({ exitCode: 127, output: output + error.message });
+        output.append(error.message);
+        finish({ exitCode: 127, output: output.text() });
       });
       child.on("close", (code) => {
-        finish({ exitCode: code ?? 127, output });
+        finish({ exitCode: code ?? 127, output: output.text() });
       });
     });
   }

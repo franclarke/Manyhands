@@ -4,6 +4,7 @@ import { validationCommandSafetyIssues, type ExecutionValidationCommand } from "
 
 import { killProcessTree } from "../executor/kill";
 import { superviseChildProcess } from "../executor/live-process-registry";
+import { BoundedOutput } from "../executor/bounded-output";
 import { ValidationRunResultSchema, type ValidationRunResult } from "../types";
 
 /** B-005: ties validation subprocesses to their run for cancel/kill/report. */
@@ -82,23 +83,23 @@ export class ChildProcessValidationRunner implements ValidationRunner {
     commands: ExecutionValidationCommand[],
     ctx: ValidationRunContext
   ): Promise<ValidationRunResult> {
-    let aggregatedOutput = "";
+    const aggregatedOutput = new BoundedOutput();
 
     for (const command of commands) {
       if (ctx.supervision?.signal?.aborted === true) {
         return ValidationRunResultSchema.parse({
           passed: false,
-          output: aggregatedOutput + "validation aborted (run cancelled)",
+          output: `${aggregatedOutput.text()}validation aborted (run cancelled)`,
           exitCode: ABORTED_EXIT_CODE
         });
       }
       const cwd = command.cwd === "repo-root" ? ctx.repoRoot : ctx.worktreePath;
       const result = await this.runOne(command, cwd, ctx.supervision);
-      aggregatedOutput += result.output;
+      aggregatedOutput.append(result.output);
       if (result.exitCode !== 0) {
         return ValidationRunResultSchema.parse({
           passed: false,
-          output: aggregatedOutput,
+          output: aggregatedOutput.text(),
           exitCode: result.exitCode
         });
       }
@@ -106,7 +107,7 @@ export class ChildProcessValidationRunner implements ValidationRunner {
 
     return ValidationRunResultSchema.parse({
       passed: true,
-      output: aggregatedOutput,
+      output: aggregatedOutput.text(),
       exitCode: 0
     });
   }
@@ -164,7 +165,7 @@ export class ChildProcessValidationRunner implements ValidationRunner {
         );
       }
 
-      let output = "";
+      const output = new BoundedOutput();
       let settled = false;
 
       const finish = (result: { exitCode: number; output: string }): void => {
@@ -178,25 +179,27 @@ export class ChildProcessValidationRunner implements ValidationRunner {
 
       const timer = setTimeout(() => {
         killProcessTree(child, this.spawnFn);
-        finish({ exitCode: TIMEOUT_EXIT_CODE, output });
+        finish({ exitCode: TIMEOUT_EXIT_CODE, output: output.text() });
       }, command.timeoutMs);
 
       child.stdout?.on("data", (chunk: Buffer) => {
-        output += chunk.toString("utf8");
+        output.append(chunk.toString("utf8"));
       });
       child.stderr?.on("data", (chunk: Buffer) => {
-        output += chunk.toString("utf8");
+        output.append(chunk.toString("utf8"));
       });
       child.on("error", (error: Error) => {
-        finish({ exitCode: SPAWN_FAILURE_EXIT_CODE, output: output + error.message });
+        output.append(error.message);
+        finish({ exitCode: SPAWN_FAILURE_EXIT_CODE, output: output.text() });
       });
       child.on("close", (code) => {
         const exitCode = code ?? SPAWN_FAILURE_EXIT_CODE;
-        if (exitCode !== 0 && BINARY_NOT_FOUND_PATTERN.test(output)) {
-          finish({ exitCode: SPAWN_FAILURE_EXIT_CODE, output });
+        const captured = output.text();
+        if (exitCode !== 0 && BINARY_NOT_FOUND_PATTERN.test(captured)) {
+          finish({ exitCode: SPAWN_FAILURE_EXIT_CODE, output: captured });
           return;
         }
-        finish({ exitCode, output });
+        finish({ exitCode, output: captured });
       });
     });
   }
