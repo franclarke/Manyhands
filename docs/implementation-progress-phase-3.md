@@ -58,3 +58,25 @@ Tests and commands:
 - `corepack pnpm --filter @manyhands/web exec tsc --noEmit` — passed.
 
 Acceptance covered: delivery mutates only the confirmed branch/HEAD; a receipt survives the side effect boundary; retry does not add a second merge; lifecycle and active-runner guards remain enforced. Deferred: richer receipt history/recovery UI belongs to B-025+.
+
+## B-023 — Isolated worktree dependencies
+
+Status: completed.
+
+Root cause confirmed: `WorktreeManager.create()` linked the source checkout's writable `node_modules` into every worktree. That broke isolation even though Git worktrees themselves were separate.
+
+Design applied: worktree provisioning no longer creates dependency symlinks/junctions. Dependency installation remains a subprocess supervised by the existing ProcessSupervisor and now writes a worktree-local `DependencyEnvironmentDescriptor` containing package manager, lockfile hash, runtime, status and timestamp. A failed install is recorded as failed, never ready; worktree cleanup removes its own descriptor and dependencies with the worktree.
+
+Files modified:
+
+- `packages/execution-core/src/worktree/manager.ts`
+- `packages/execution-core/src/validation/dependencies.ts`
+- `tests/worktree-dependency-isolation.test.ts`
+- `docs/implementation-progress-phase-3.md`
+
+Tests and commands:
+
+- `corepack pnpm exec vitest run tests/worktree-dependency-isolation.test.ts tests/execution-core-worktree.test.ts tests/execution-core-dependency-installer.test.ts tests/process-supervisor.test.ts --retry=0 --maxWorkers=1 --minWorkers=1 --silent` — 25/25 passed.
+- `corepack pnpm -F @manyhands/execution-core typecheck` — passed.
+
+Acceptance covered: a real temporary source `node_modules` is not linked into its created worktree; installers run in the worktree and remain supervised. Deferred: shared content-addressable package-manager cache optimization is intentionally not introduced.

@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
-import { stat } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { killProcessTree } from "../executor/kill";
@@ -22,6 +23,19 @@ export interface EnsureDependenciesResult {
   packageManager?: PackageManager;
   exitCode?: number;
   output?: string;
+  environment?: DependencyEnvironmentDescriptor;
+}
+
+/** Durable identity of the install tree owned by exactly one worktree. */
+export interface DependencyEnvironmentDescriptor {
+  version: 1;
+  worktreePath: string;
+  packageManager: PackageManager;
+  lockfileHash?: string;
+  runtime: string;
+  ownerRunId?: string;
+  status: "ready" | "failed";
+  installedAt: string;
 }
 
 /**
@@ -86,16 +100,18 @@ export class ChildProcessDependencyInstaller implements DependencyInstaller {
     if (!(await this.exists(join(cwd, "package.json")))) {
       return { installed: false, reason: "no_manifest" };
     }
+    const packageManager = await this.detectPackageManager(cwd);
     if (await this.exists(join(cwd, "node_modules"))) {
-      return { installed: false, reason: "already_installed" };
+      const environment = await persistEnvironment(cwd, packageManager, "ready", supervision?.runId);
+      return { installed: false, reason: "already_installed", packageManager, environment };
     }
     if (supervision?.signal?.aborted === true) {
       return { installed: false, exitCode: 130, output: "install aborted (run cancelled)" };
     }
 
-    const packageManager = await this.detectPackageManager(cwd);
     const { exitCode, output } = await this.runInstall(packageManager, cwd, supervision);
-    return { installed: exitCode === 0, packageManager, exitCode, output };
+    const environment = await persistEnvironment(cwd, packageManager, exitCode === 0 ? "ready" : "failed", supervision?.runId);
+    return { installed: exitCode === 0, packageManager, exitCode, output, environment };
   }
 
   private async detectPackageManager(cwd: string): Promise<PackageManager> {
@@ -159,4 +175,19 @@ export class ChildProcessDependencyInstaller implements DependencyInstaller {
       });
     });
   }
+}
+
+async function persistEnvironment(
+  cwd: string,
+  packageManager: PackageManager,
+  status: DependencyEnvironmentDescriptor["status"],
+  ownerRunId?: string
+): Promise<DependencyEnvironmentDescriptor> {
+  const lockfile = packageManager === "pnpm" ? "pnpm-lock.yaml" : packageManager === "yarn" ? "yarn.lock" : "package-lock.json";
+  const lockfileHash = await readFile(join(cwd, lockfile)).then((content) => createHash("sha256").update(content).digest("hex")).catch(() => undefined);
+  const descriptor: DependencyEnvironmentDescriptor = { version: 1, worktreePath: cwd, packageManager, ...(lockfileHash !== undefined ? { lockfileHash } : {}), runtime: process.version, ...(ownerRunId !== undefined ? { ownerRunId } : {}), status, installedAt: new Date().toISOString() };
+  await mkdir(join(cwd, ".manyhands"), { recursive: true })
+    .then(() => writeFile(join(cwd, ".manyhands", "dependency-environment.json"), JSON.stringify(descriptor), "utf8"))
+    .catch(() => undefined);
+  return descriptor;
 }
