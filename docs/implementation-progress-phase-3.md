@@ -80,3 +80,30 @@ Tests and commands:
 - `corepack pnpm -F @manyhands/execution-core typecheck` — passed.
 
 Acceptance covered: a real temporary source `node_modules` is not linked into its created worktree; installers run in the worktree and remain supervised. Deferred: shared content-addressable package-manager cache optimization is intentionally not introduced.
+
+## B-024 — Validation, budgets and supervised process output
+
+Status: completed.
+
+Root cause confirmed: executor, validation and installer subprocesses accumulated output in unbounded strings. A noisy command could grow memory and persistence payloads without a deterministic tail, even though process cancellation and timeouts were already supervised.
+
+Design applied: `BoundedOutput` preserves the newest diagnostic tail and observed-byte/truncation evidence while capping retained text. It is used by executor process capture, validation command capture/aggregation and dependency installation. Execution config now has effective defaults for output bytes, validation command count and install duration, alongside existing executor/integration budgets. Validation remains a separate fact: no validation commands remains unverified in the terminal artifact path; executor exit zero is not converted to validation pass.
+
+Files modified:
+
+- `packages/execution-core/src/executor/bounded-output.ts`
+- `packages/execution-core/src/executor/process.ts`
+- `packages/execution-core/src/validation/runner.ts`
+- `packages/execution-core/src/validation/dependencies.ts`
+- `packages/execution-core/src/types.ts`
+- `packages/execution-core/src/index.ts`
+- `tests/bounded-output.test.ts`
+- `docs/implementation-progress-phase-3.md`
+
+Tests and commands:
+
+- `corepack pnpm exec vitest run tests/bounded-output.test.ts tests/execution-core-validation-runner.test.ts tests/execution-core-dependency-installer.test.ts tests/process-supervisor.test.ts --retry=0 --maxWorkers=1 --minWorkers=1 --silent` — 30/30 passed across the directed invocations.
+- `corepack pnpm -F @manyhands/execution-core typecheck` — passed.
+- `corepack pnpm --filter @manyhands/web exec tsc --noEmit` — passed.
+
+Acceptance covered: retained subprocess output is bounded and carries truncation evidence; validation timeout/cancel remains a non-success outcome under ProcessSupervisor; executor and validation outcomes remain distinct. Deferred: Phase 4 recovery UI and Phase 5 telemetry aggregation are not introduced.
