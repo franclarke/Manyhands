@@ -767,6 +767,9 @@ export interface WorldReconciledPayload {
   gcFailures: string[];
   removedLocks: string[];
   warnings: string[];
+  /** B-016: the run-owned repository root was rebuilt from durable source/base evidence. */
+  rootWorktreeRecreated?: boolean;
+  executionBaseCommit?: string;
 }
 /** latest.json was corrupt; the resume used an older valid checkpoint. */
 export interface CheckpointDegradedPayload {

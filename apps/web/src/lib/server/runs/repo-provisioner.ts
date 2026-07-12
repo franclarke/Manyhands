@@ -7,6 +7,7 @@ import { resolveManyhandsPath, resolveRepoRoot } from "../repo-root";
 import { inspectLocalGitRepo } from "../workspaces/repo-validation";
 import { rmWithRetry } from "./fs-retry";
 import { supervisedExecFile } from "./process-supervision";
+import type { ProvisionedRepoRecord } from "./schema";
 
 // B-005: provisioning clones/reads the source repo with git subprocesses; the
 // ambient supervision context registers them under the run for verified kill.
@@ -63,6 +64,12 @@ export interface ProvisionInput {
 
 export interface RepoProvisioner {
   provision(input: ProvisionInput): Promise<ProvisionedRepo>;
+}
+
+/** Durable recovery result for a run-owned repository root. */
+export interface RecreatedProvisionedRepo {
+  recreated: boolean;
+  provisioned: ProvisionedRepo;
 }
 
 /**
@@ -177,6 +184,70 @@ export function createDefaultRepoProvisioner(
       });
     }
   };
+}
+
+/**
+ * Rebuild a removed run-owned repository from the immutable source/base
+ * descriptor. This never invokes grounding or an executor: when the exact
+ * execution base is gone, recovery must stop rather than invent new evidence.
+ */
+export async function recreateProvisionedRepo(input: {
+  runId: string;
+  record: ProvisionedRepoRecord;
+}): Promise<RecreatedProvisionedRepo> {
+  const record = input.record;
+  const sourceRepoRoot = record.sourceRepoRoot ?? record.repoRoot;
+  const sourceBranch = record.sourceBranch ?? record.baseBranch;
+  const sourceBaseCommit = record.sourceBaseCommit ?? record.baseCommit;
+  const executionBaseCommit = record.executionBaseCommit ?? record.baseCommit;
+  const runRoot = path.dirname(record.repoRoot);
+  const cleanup = async (): Promise<void> => rmWithRetry(runRoot);
+  const provisioned = (): ProvisionedRepo => ({
+    repoRoot: record.repoRoot,
+    sourceRepoRoot,
+    sourceBranch,
+    sourceBaseCommit,
+    baseBranch: record.baseBranch,
+    baseCommit: record.baseCommit,
+    executionBaseCommit,
+    cleanup
+  });
+
+  try {
+    await access(record.repoRoot);
+    return { recreated: false, provisioned: provisioned() };
+  } catch {
+    // Only an absent root is reconstructed. Replacing an existing path is a
+    // cleanup responsibility and would risk deleting external work.
+  }
+
+  try {
+    await execFileAsync("git", ["cat-file", "-e", `${executionBaseCommit}^{commit}`], { cwd: sourceRepoRoot });
+  } catch (error) {
+    throw new RepoProvisionError(
+      { kind: "localPath", path: sourceRepoRoot },
+      `Cannot recreate run ${input.runId}: execution base ${executionBaseCommit} is unavailable in the captured source repository.`,
+      { cause: error }
+    );
+  }
+
+  try {
+    await mkdir(runRoot, { recursive: true });
+    await execFileAsync("git", ["clone", "--no-checkout", "--local", sourceRepoRoot, record.repoRoot], { cwd: runRoot });
+    await execFileAsync("git", ["checkout", "--detach", executionBaseCommit], { cwd: record.repoRoot });
+    await execFileAsync("git", ["config", "user.email", "manyhands@local"], { cwd: record.repoRoot });
+    await execFileAsync("git", ["config", "user.name", "ManyHands Orchestrator"], { cwd: record.repoRoot });
+    await execFileAsync("git", ["config", "commit.gpgsign", "false"], { cwd: record.repoRoot });
+    await ensureGitInfoExclude(record.repoRoot);
+    return { recreated: true, provisioned: provisioned() };
+  } catch (error) {
+    await rmWithRetry(record.repoRoot).catch(() => undefined);
+    throw new RepoProvisionError(
+      { kind: "localPath", path: sourceRepoRoot },
+      `Failed to recreate isolated repository for run ${input.runId}: ${describeCause(error)}`,
+      { cause: error }
+    );
+  }
 }
 
 async function provisionLocalRepoCopy(input: {

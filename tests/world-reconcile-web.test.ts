@@ -11,6 +11,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { JsonFileCheckpointSaver, type Checkpoint, type CheckpointMetadata } from "@manyhands/orchestrator-graph";
 import type { RunExecutionResult } from "@manyhands/execution-core";
+import type { TaskGraph } from "@manyhands/task-graph";
 import { reconcileExecutionWorld, RunNotResumableError } from "@/lib/server/runs/world-reconcile";
 import { hasExecutionCheckpoint } from "@/lib/server/runs/execution-host";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
@@ -90,6 +91,28 @@ function leafResult(taskId: string, commitSha?: string): Record<string, unknown>
   };
 }
 
+function dependencyGraph(): TaskGraph {
+  return {
+    id: "g-reconcile",
+    planId: "p-reconcile",
+    repo: repoRoot,
+    baseBranch: "main",
+    baseCommit,
+    rootId: "root",
+    createdAt: "2026-07-12T00:00:00.000Z",
+    dependencies: [
+      { fromTaskId: "a", toTaskId: "b" },
+      { fromTaskId: "b", toTaskId: "c" }
+    ],
+    nodes: {
+      root: { id: "root", parentId: null, kind: "root", title: "root", goal: "root", status: "planned", granularity: "auto", depth: 0, childrenIds: ["a", "b", "c"], dependencies: [] },
+      a: { id: "a", parentId: "root", kind: "leaf", title: "a", goal: "a", status: "planned", granularity: "auto", depth: 1, childrenIds: [], dependencies: [] },
+      b: { id: "b", parentId: "root", kind: "leaf", title: "b", goal: "b", status: "planned", granularity: "auto", depth: 1, childrenIds: [], dependencies: ["a"] },
+      c: { id: "c", parentId: "root", kind: "leaf", title: "c", goal: "c", status: "planned", granularity: "auto", depth: 1, childrenIds: [], dependencies: ["b"] }
+    }
+  } as unknown as TaskGraph;
+}
+
 async function putCheckpoint(runId: string, id: string): Promise<JsonFileCheckpointSaver> {
   const saver = new JsonFileCheckpointSaver(path.join(process.env.MANYHANDS_RUNS_DIR!, "checkpoints"));
   const checkpoint = {
@@ -160,6 +183,24 @@ describe("reconcileExecutionWorld", () => {
 
     const reconciledEvent = (await eventsFor(runId)).find((e) => e.type === "world.reconciled");
     expect(reconciledEvent?.payload.invalidatedTaskIds).toEqual(["task-gone"]);
+  });
+
+  it("invalidates the complete downstream closure when one chain evidence commit is gone", async () => {
+    const runId = "run-web-closure";
+    const run = makeRun(runId, {
+      leafResults: [
+        leafResult("a", "0123456789abcdef0123456789abcdef01234567"),
+        leafResult("b", baseCommit),
+        leafResult("c", baseCommit)
+      ]
+    } as never);
+    run.planning = { decomposition: { graph: dependencyGraph() } } as never;
+    await getRunRepository().save(run);
+    await putCheckpoint(runId, "chk-1");
+
+    const outcome = await reconcileExecutionWorld(await getRunRepository().get(runId), provisionedFor(baseCommit));
+    expect(outcome.report.invalidatedTaskIds).toEqual(["a", "b", "c", "root"]);
+    expect((outcome.run.execution as { leafResults: unknown[] }).leafResults).toEqual([]);
   });
 
   it("corrupt latest.json: degraded resume is audited, run continues", async () => {

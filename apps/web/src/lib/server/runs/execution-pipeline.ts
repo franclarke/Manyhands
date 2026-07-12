@@ -61,6 +61,7 @@ import {
 } from "./repo-lock";
 import {
     createDefaultRepoProvisioner,
+    recreateProvisionedRepo,
     type ProvisionedRepo,
     type RepoProvisioner
 } from "./repo-provisioner";
@@ -330,6 +331,29 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       if (isInterrupted(run, abortController.signal)) {
         console.log(`[Runner] Execution pipeline stopped after provisioning; run ${runId} is interrupted.`);
         return;
+      }
+    } else if (repoAction === "reuse" && run.provisioned !== undefined) {
+      // B-016: a GC/manual deletion can remove only the run-owned root while
+      // its durable source/base descriptor remains. Recreate that exact root
+      // before any graph resume; this path never invokes grounding/executors.
+      const restored = await recreateProvisionedRepo({ runId, record: run.provisioned });
+      provisioned = restored.provisioned;
+      if (restored.recreated) {
+        await appendRunEventRequired(runId, {
+          actor: "system",
+          type: "world.reconciled",
+          payload: {
+            baseCommitReachable: true,
+            keptTaskIds: [],
+            invalidatedTaskIds: [],
+            cleanedWorktrees: [],
+            gcFailures: [],
+            removedLocks: [],
+            warnings: [],
+            rootWorktreeRecreated: true,
+            executionBaseCommit: provisioned.executionBaseCommit
+          }
+        });
       }
     } else if (repoAction === "missing" && usingDefaultEngine) {
       console.error(

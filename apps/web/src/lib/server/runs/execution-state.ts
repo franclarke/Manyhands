@@ -259,6 +259,21 @@ export function computeInvalidatedTasks(graph: TaskGraph, taskId: string): Set<s
   return invalid;
 }
 
+/**
+ * Canonical B-016 invalidation closure. Reconciliation, manual review and
+ * plan mutations start from the dependency direction owned by
+ * `graph.dependencies`; composite results are invalidated through ancestry.
+ */
+export function reconcileInvalidationClosure(graph: TaskGraph, taskIds: Iterable<string>): Set<string> {
+  const invalidated = new Set<string>();
+  for (const taskId of taskIds) {
+    for (const affected of computeInvalidatedTasks(graph, taskId)) {
+      invalidated.add(affected);
+    }
+  }
+  return invalidated;
+}
+
 export type ManualReadiness =
   | { ready: true; childResults?: AgentExecutionResult[] }
   | { ready: false; reason: string };

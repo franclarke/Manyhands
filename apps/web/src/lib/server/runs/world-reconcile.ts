@@ -13,9 +13,10 @@ import type { AgentExecutionResult, IntegrationResult, RunExecutionResult } from
 import { JsonFileCheckpointSaver } from "@manyhands/orchestrator-graph";
 import { resolveRunsDirectory } from "./repository";
 import { appendRunModelEvent } from "./run-model-event-log";
-import { executionResultsFromRun } from "./execution-state";
+import { executionResultsFromRun, reconcileInvalidationClosure, resolveExecutionGraph } from "./execution-state";
 import { resetExecutionThread } from "./execution-host";
 import { getRunRepository } from "./store";
+import { JsonTaskAttemptJournal } from "./task-attempt-journal";
 import type { ProvisionedRepo } from "./repo-provisioner";
 import type { RunRecord } from "./schema";
 
@@ -75,37 +76,66 @@ export async function reconcileExecutionWorld(
 
   // 2) Physical world vs. recorded evidence.
   const existing = executionResultsFromRun(run);
+  const attempts = await new JsonTaskAttemptJournal({ directory: join(resolveRunsDirectory(), "attempts") }).list(runId);
+  const evidenceByTask = new Map<string, string | undefined>();
+  for (const result of existing.leafResults) evidenceByTask.set(result.taskId, result.commitSha);
+  for (const result of existing.integrationResults) evidenceByTask.set(result.compositeTaskId, result.integrationCommitSha);
+  for (const attempt of attempts) {
+    if (attempt.commitSha !== undefined) evidenceByTask.set(attempt.nodeId, attempt.commitSha);
+  }
   const report = await reconcileWorld({
     git: new SimpleGitRunner(),
     repoRoot: provisioned.repoRoot,
     runId,
     baseCommit: provisioned.baseCommit,
-    leafEvidence: existing.leafResults.map((result) => ({
-      taskId: result.taskId,
-      commitSha: result.commitSha
-    })),
-    integrationEvidence: existing.integrationResults.map((result) => ({
-      taskId: result.compositeTaskId,
-      commitSha: result.integrationCommitSha
-    }))
+    leafEvidence: Array.from(evidenceByTask, ([taskId, commitSha]) => ({ taskId, commitSha })),
+    integrationEvidence: []
   });
+
+  // A missing result invalidates every dependent result according to the
+  // canonical DAG, not merely the row that first exposed missing evidence.
+  // Pre-B-009 records can have execution evidence without a persisted graph;
+  // preserve their explicit invalidation rather than making recovery fail.
+  let graph: ReturnType<typeof resolveExecutionGraph> | undefined;
+  try {
+    graph = resolveExecutionGraph(run);
+  } catch {
+    graph = undefined;
+  }
+  const invalidated = graph === undefined
+    ? new Set(report.invalidatedTaskIds)
+    : reconcileInvalidationClosure(graph, report.invalidatedTaskIds);
+  for (const attempt of attempts) {
+    if (
+      attempt.targetFingerprint !== undefined &&
+      run.targetContext?.fingerprint !== undefined &&
+      attempt.targetFingerprint !== run.targetContext.fingerprint
+    ) {
+      if (graph === undefined) invalidated.add(attempt.nodeId);
+      else for (const taskId of reconcileInvalidationClosure(graph, [attempt.nodeId])) invalidated.add(taskId);
+    }
+  }
+  const reconciledReport: ReconciliationReport = {
+    ...report,
+    invalidatedTaskIds: [...invalidated].sort()
+  };
 
   await appendRunModelEvent(runId, {
     actor: "system",
     at: now(),
     type: "world.reconciled",
     payload: {
-      baseCommitReachable: report.baseCommitReachable,
-      keptTaskIds: report.keptTaskIds,
-      invalidatedTaskIds: report.invalidatedTaskIds,
-      cleanedWorktrees: report.cleanedWorktrees,
-      gcFailures: report.gcFailures,
-      removedLocks: report.removedLocks,
-      warnings: report.warnings
+      baseCommitReachable: reconciledReport.baseCommitReachable,
+      keptTaskIds: reconciledReport.keptTaskIds,
+      invalidatedTaskIds: reconciledReport.invalidatedTaskIds,
+      cleanedWorktrees: reconciledReport.cleanedWorktrees,
+      gcFailures: reconciledReport.gcFailures,
+      removedLocks: reconciledReport.removedLocks,
+      warnings: reconciledReport.warnings
     }
   });
 
-  if (!report.baseCommitReachable) {
+  if (!reconciledReport.baseCommitReachable) {
     const saved = await getRunRepository().update(runId, (current) => ({
       ...current,
       status: "interrupted" as const,
@@ -120,8 +150,7 @@ export async function reconcileExecutionWorld(
 
   // 3) Invalidations: filter the artifact and reset the thread so the frontier
   //    re-dispatches exactly the invalidated closure.
-  if (report.invalidatedTaskIds.length > 0) {
-    const invalidated = new Set(report.invalidatedTaskIds);
+  if (reconciledReport.invalidatedTaskIds.length > 0) {
     const updated = await getRunRepository().update(runId, (current) => {
       const execution = current.execution as Partial<RunExecutionResult> | undefined;
       if (execution === undefined) return current;
@@ -135,9 +164,9 @@ export async function reconcileExecutionWorld(
     });
     await resetExecutionThread(runId);
     threadReset = true;
-    return { run: updated, report, threadReset };
+    return { run: updated, report: reconciledReport, threadReset };
   }
 
   const current = await getRunRepository().get(runId);
-  return { run: current, report, threadReset };
+  return { run: current, report: reconciledReport, threadReset };
 }
