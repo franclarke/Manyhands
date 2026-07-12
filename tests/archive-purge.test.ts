@@ -16,6 +16,7 @@ import { planningThreadId } from "@manyhands/orchestrator-graph";
 import { DELETE as DELETE_RUN } from "@/app/api/runs/[id]/route";
 import { GET as GET_RUNS } from "@/app/api/runs/route";
 import { archiveRun, purgeRun } from "@/lib/server/runs/archive-service";
+import { JsonPlanMutationJournal } from "@/lib/server/runs/plan-mutation-journal";
 import { RunLifecycleError } from "@/lib/server/runs/errors";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import type { RunRecord } from "@/lib/server/runs/schema";
@@ -137,6 +138,17 @@ describe("B-007 purge — journaled, terminal-only, metadata last", () => {
     await writeFile(path.join(planThread, "latest.json"), "{}", "utf8");
     await mkdir(runsDir, { recursive: true });
     await writeFile(path.join(runsDir, `${runId}.events.jsonl`), "{}\n", "utf8");
+    await mkdir(path.join(runsDir, "attempts"), { recursive: true });
+    await writeFile(path.join(runsDir, "attempts", `${runId}.json`), "{\"version\":1,\"attempts\":[]}", "utf8");
+    const planMutations = new JsonPlanMutationJournal({ directory: path.join(runsDir, "plan-mutations") });
+    await planMutations.reserve({
+      operationId: `${runId}:mutation`, runId, kind: "replan", expectedRunVersion: 0,
+      sourcePlanRevision: 1, targetPlanRevision: 2, graphHash: "run-graph"
+    });
+    await planMutations.reserve({
+      operationId: "other-run:mutation", runId: "other-run", kind: "replan", expectedRunVersion: 0,
+      sourcePlanRevision: 1, targetPlanRevision: 2, graphHash: "other-graph"
+    });
 
     await getRunRepository().save(
       makeRun(runId, "completed", {
@@ -156,6 +168,9 @@ describe("B-007 purge — journaled, terminal-only, metadata last", () => {
     expect(await exists(execThread)).toBe(false);
     expect(await exists(planThread)).toBe(false);
     expect(await exists(path.join(runsDir, `${runId}.events.jsonl`))).toBe(false);
+    expect(await exists(path.join(runsDir, "attempts", `${runId}.json`))).toBe(false);
+    expect(await planMutations.pending(runId)).toEqual([]);
+    expect((await planMutations.pending("other-run")).map((operation) => operation.operationId)).toEqual(["other-run:mutation"]);
     expect(await exists(path.join(runsDir, `${runId}.json`))).toBe(false);
     expect(await exists(path.join(runsDir, `${runId}.purge.json`))).toBe(false);
 

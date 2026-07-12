@@ -20,6 +20,7 @@ import { resolveManyhandsPath } from "../repo-root";
 import { RunLifecycleError, RunNotFoundError } from "./errors";
 import { claimRunMutation } from "./mutation-guard";
 import { claimRunOperation, releaseRunOperation } from "./run-operation-lease";
+import { JsonPlanMutationJournal } from "./plan-mutation-journal";
 import { resolveRunsDirectory } from "./repository";
 import { isRunnerActive } from "./runner-state";
 import type { RunOperationLease, RunRecord } from "./schema";
@@ -76,6 +77,25 @@ export interface PurgeReport {
   alreadyPurged: boolean;
   steps: string[];
 }
+
+/** Conservative B-020 retention defaults. Archive is logical and keeps every evidence class. */
+export interface RunRetentionPolicy {
+  retainFinalArtifacts: boolean;
+  retainAttempts: boolean;
+  retainCheckpoints: boolean;
+  retainEventLog: boolean;
+  retainExecutionRepository: boolean;
+  retainFailedRunEvidence: boolean;
+}
+
+export const DEFAULT_RUN_RETENTION: Readonly<RunRetentionPolicy> = {
+  retainFinalArtifacts: true,
+  retainAttempts: true,
+  retainCheckpoints: true,
+  retainEventLog: true,
+  retainExecutionRepository: true,
+  retainFailedRunEvidence: true
+};
 
 interface PurgeJournal {
   version: 1;
@@ -205,6 +225,16 @@ export async function purgeRun(runId: string, deps: PurgeRunDeps = {}): Promise<
     // 3) Run-model event log.
     await step("event_log", async () => {
       await remove(path.join(runsDir, `${runId}.events.jsonl`));
+    });
+
+    // 3b) B-015 durable attempt evidence. Archive never reaches this path;
+    // explicit purge removes only the run-namespaced journal file.
+    await step("attempt_journal", async () => {
+      await remove(path.join(runsDir, "attempts", `${runId}.json`));
+    });
+
+    await step("plan_mutation_journal", async () => {
+      await new JsonPlanMutationJournal({ directory: path.join(runsDir, "plan-mutations") }).removeForRun(runId);
     });
 
     // 4) LAST: the run metadata. While any earlier step can still fail, the

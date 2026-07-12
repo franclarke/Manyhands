@@ -88,6 +88,17 @@ export class JsonPlanMutationJournal {
     );
   }
 
+  /** Explicit purge only: remove this run's durable operations, never another run's. */
+  async removeForRun(runId: string): Promise<number> {
+    return this.withRunLock(runId, async () => {
+      const file = await this.read();
+      const operations = file.operations.filter((operation) => operation.runId !== runId);
+      const removed = file.operations.length - operations.length;
+      if (removed > 0) await this.write({ version: 1, operations });
+      return removed;
+    });
+  }
+
   async transition(
     operationId: string,
     input: { expectedVersion: number; status: PlanMutationStatus; error?: string }

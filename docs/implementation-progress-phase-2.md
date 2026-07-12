@@ -72,3 +72,15 @@
 - **Criterios verificados:** dos mutaciones sobre el mismo root no obtienen lease simultáneo; release de un lease viejo no elimina el siguiente; final apply/reconciliation/delivery no pueden mutar sin lease; runner y manual pipeline protegen el repo aislado que realmente mutan; perder/fallar acquire impide el side effect.
 - **Compatibilidad / riesgos:** lecturas Git puras permanecen fuera del lock. Los lower-level packages siguen sin depender de `apps`; el lease se aplica en los entry points productivos que los invocan. B-021 abarcará el estado crash-safe de un cherry-pick/repair ya iniciado, que no puede resolverse sólo con exclusión mutua.
 - **Trabajo diferido:** B-020 cleanup journal/retention, B-021 cherry-pick crash-safe y B-022 delivery receipt seguro.
+
+## B-020 — Cleanup y retention idempotentes
+
+- **Estado:** completada.
+- **Causa raíz confirmada:** el purge B-007 ya preservaba metadata hasta el final y reintentaba pasos, pero no eliminaba la evidencia durable nueva de B-015/B-017. Eso dejaba task attempts y plan mutation operations después del purge, y no existía una policy explícita que diferenciara archive lógico de limpieza destructiva.
+- **Diseño aplicado:** se extendió el journal de purge monotónico con etapas `attempt_journal` y `plan_mutation_journal`, ambas después de checkpoints/event log y antes de metadata. `JsonPlanMutationJournal.removeForRun` filtra sólo operaciones del run solicitado bajo su lock, por lo que un purge no borra operaciones de otro run. `DEFAULT_RUN_RETENTION` declara una política conservadora: archive lógico retiene artifacts, attempts, checkpoints, log, repo aislado y evidencia de fallos; el purge explícito es la única vía destructiva.
+- **Archivos modificados:** `apps/web/src/lib/server/runs/{archive-service.ts,plan-mutation-journal.ts}`; test `tests/archive-purge.test.ts`.
+- **Regresión roja observada:** el caso de purge completo dejó `runs/attempts/<runId>.json` existente (`expected false, received true`).
+- **Tests y comandos:** rojo `corepack pnpm exec vitest run tests/archive-purge.test.ts -t "purges every resource" --retry=0 --maxWorkers=1 --minWorkers=1 --silent` -> 1 failed. Verde consumidores `archive-purge + task-attempt-journal + plan-mutation-journal + repo-lock` -> 4 files, 27 tests pass. `corepack pnpm --filter @manyhands/web exec tsc --noEmit` -> pass.
+- **Criterios verificados:** purge normal limpia run work copy/checkpoints/events/attempts/mutaciones y metadata última; segundo purge es no-op; fallo parcial mantiene journal+metadata y retry converge; run activo o con proceso vivo se rechaza; repos externos no se borran; archive conserva evidencia; purge de un run deja intacta la operación durable de otro.
+- **Compatibilidad / riesgos:** los journals históricos sin las nuevas etapas se retoman de forma compatible porque steps desconocidos empiezan pendientes. El sweeper de procesos/run stale conserva el comportamiento B-005/B-007; un centro UI de recovery, retención por edad/cuota y delivery segura pertenecen a fases posteriores.
+- **Trabajo diferido:** B-021 cherry-pick/repair crash-safe, B-022 delivery crash-safe y B-025 recovery center UI.
