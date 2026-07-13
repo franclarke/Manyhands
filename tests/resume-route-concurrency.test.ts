@@ -8,7 +8,32 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const pipelineCalls = vi.hoisted(() => ({ planning: [] as string[], execution: [] as string[] }));
+
+// Route concurrency verifies that exactly one request claims a transition. The
+// real pipelines are deliberately covered elsewhere; letting these background
+// kicks invoke a CLI makes this route suite consume external state and lets a
+// slow executor turn the loser into a misleading 409.
+vi.mock("@/lib/server/runs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/server/runs")>();
+  return {
+    ...actual,
+    runPlanningPipeline: async (runId: string): Promise<void> => {
+      pipelineCalls.planning.push(runId);
+    },
+    resumePlanningPipeline: async (runId: string): Promise<void> => {
+      pipelineCalls.planning.push(runId);
+    },
+    runExecutionPipeline: async (runId: string): Promise<void> => {
+      pipelineCalls.execution.push(runId);
+    },
+    resumeExecutionPipeline: async (runId: string): Promise<void> => {
+      pipelineCalls.execution.push(runId);
+    }
+  };
+});
 import { POST as POST_PAUSE } from "@/app/api/runs/[id]/pause/route";
 import { POST as POST_RESUME } from "@/app/api/runs/[id]/resume/route";
 import { POST as POST_ANSWER } from "@/app/api/runs/[id]/answer/route";
@@ -32,6 +57,8 @@ beforeEach(async () => {
   tempDir = await mkdtemp(path.join(os.tmpdir(), "mh-resume-conc-"));
   previousRunsDir = process.env.MANYHANDS_RUNS_DIR;
   process.env.MANYHANDS_RUNS_DIR = path.join(tempDir, "runs");
+  pipelineCalls.planning.length = 0;
+  pipelineCalls.execution.length = 0;
   resetRunRepositoryForTests();
 });
 
@@ -444,6 +471,8 @@ describe("duplicate HITL decisions at the route seam", () => {
           (event.payload as { status?: string }).status === "generating"
       )
     ).toBe(true);
+    await drainAllRunBackgroundTasksForTests();
+    expect(pipelineCalls.planning).toEqual(["run-restart"]);
   });
 
   it("restart: backfills medium reasoning effort for fixed Codex runs", async () => {
