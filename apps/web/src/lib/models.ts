@@ -2,13 +2,13 @@ import {
   EXECUTOR_DESCRIPTORS,
   CLAUDE_CODE_EXECUTOR_ID,
   DEFAULT_EXECUTOR_SELECTION
-} from "@manyhands/execution-core";
+} from "@manyhands/shared";
 import type {
   ExecutorCapability,
   ExecutorId,
   ExecutorSelection,
   UsageSource
-} from "@manyhands/execution-core";
+} from "@manyhands/shared";
 
 export type { ExecutorCapability as ModelCapability, ExecutorId, ExecutorSelection };
 export type UsageAvailability = UsageSource;

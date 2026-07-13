@@ -119,10 +119,24 @@ respective progress documents.
 - **Acceptance verified:** no package imports from `apps`; only Claude Code and
   Codex are active/selectable product executors; disabled legacy configuration
   cannot be submitted through normal selection.
+- **Post-check correction:** the first web projection imported the full
+  `execution-core` barrel from a client module, which made Next attempt to
+  bundle `simple-git`/Node builtins. The canonical registry now lives in the
+  client-safe `@manyhands/shared`; `execution-core` explicitly reexports it for
+  server compatibility. `next build` passed after this correction.
 - **Risks / deferred:** migration of historical `gemini` strings remains the
   existing legacy parser path; no new migration system or event-store changes
   were introduced.
 - **Commit:** pending local commit.
+
+## Final verification (in progress)
+
+- `pnpm --filter @manyhands/web exec tsc --noEmit`: passed after the B-029
+  exact-optional-property correction.
+- `pnpm --filter @manyhands/web build`: passed; compiled, typechecked, and
+  generated all static pages and route traces, including diagnostics.
+- The remaining full hermetic suite and clean-clone documentation check are
+  recorded after they complete; no external executor is invoked by these tests.
 
 ## B-030 — Scalable events, risk and UI projection
 

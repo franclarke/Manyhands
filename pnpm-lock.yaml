@@ -75,6 +75,9 @@ importers:
       '@manyhands/scheduler':
         specifier: workspace:*
         version: link:../../packages/scheduler
+      '@manyhands/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@manyhands/task-graph':
         specifier: workspace:*
         version: link:../../packages/task-graph

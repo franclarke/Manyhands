@@ -44,7 +44,7 @@ export async function buildRepositoryGrounding(
 
     const index = await buildRepositoryIndex({
       rootPath: repoPath,
-      signal: options.signal,
+      ...(options.signal === undefined ? {} : { signal: options.signal }),
       ...(options.budget === undefined ? {} : { limits: {
         maxFiles: options.budget.maxIndexedFiles,
         maxBytes: options.budget.maxIndexBytes,

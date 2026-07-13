@@ -25,6 +25,7 @@
     "@manyhands/execution-core": "workspace:*",
     "@manyhands/orchestrator-graph": "workspace:*",
     "@manyhands/scheduler": "workspace:*",
+    "@manyhands/shared": "workspace:*",
     "@manyhands/task-graph": "workspace:*",
     "@manyhands/trace-store": "workspace:*",
     "@xyflow/react": "^12.10.2",
