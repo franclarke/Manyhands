@@ -55,6 +55,10 @@ respective progress documents.
 - **Hermetic suite:** `pnpm test -- --retry=0 --maxWorkers=1 --minWorkers=1
   --silent` passed: 176 files / 1,472 tests; 1 platform-only file and 3 tests
   were explicitly skipped. All executor suites injected local spawn doubles.
+- **Explicit exclusions:** `tests/execution-core-real-run.test.ts` skipped its
+  two cases through `describe.skipIf(!MANYHANDS_E2E_GEMINI)` because they invoke
+  real Codex and require credentials/network; `tests/execution-core-kill-verify.test.ts`
+  skipped its one POSIX process-group assertion through `it.skipIf(process.platform === "win32")`.
 - **Clean clone:** `git clone --no-local .` at `d11c935` had no status output
   and contained the root/web READMEs and `packages/shared/src/executor-registry.ts`.
 - **Remaining deferred work:** B-034 and all subsequent roadmap work; Phase 2
