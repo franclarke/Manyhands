@@ -66,4 +66,4 @@ La alternativa obvia sería hacer `git checkout` de una branch diferente para ca
 
 Todos los worktrees viven bajo `.manyhands/worktrees/` dentro del repo, no en un directorio externo. Esto los hace fáciles de limpiar si algo sale mal: basta con borrar el directorio. El `WorktreeManager.clean()` los elimina normalmente al final de cada hoja, pero si el proceso muere inesperadamente los directorios quedan y pueden limpiarse manualmente.
 
-La detección de commits inesperados existe porque `--approval-mode yolo` le da a Gemini acceso a herramientas de filesystem y subprocess — incluyendo git. Gemini podría hacer `git commit` como parte de su trabajo. La detección no depende de confiar en que el agente no lo haga; verifica el estado real del worktree después de cada ejecución.
+La detección de commits inesperados existe porque un CLI executor puede acceder a herramientas de filesystem y subprocess — incluyendo git. Claude Code o Codex podrían hacer `git commit` como parte de su trabajo. La detección no depende de confiar en que el agente no lo haga; verifica el estado real del worktree después de cada ejecución.

@@ -64,6 +64,7 @@ pnpm web:build
 - `POST /api/runs/[id]/auto-resolve`
 - `POST /api/runs/[id]/serialize`
 - `GET /api/runs/[id]/export`
+- `GET /api/runs/[id]/diagnostics`
 - `GET /api/runs/[id]/artifacts?ref=...`
 - `POST /api/runs/[id]/decisions/[decisionId]`
 - `PATCH /api/runs/[id]/nodes/[taskId]`
@@ -115,7 +116,8 @@ ve en pantalla, debe salir del log + reducer + selectores.
 
 ## Environment
 
-- `MANYHANDS_GEMINI_BIN` — ruta al binario de Gemini CLI.
+- `MANYHANDS_CLAUDE_BIN` — ruta al binario de Claude Code CLI (default executor).
+- `MANYHANDS_CODEX_BIN` — ruta al binario de Codex CLI (alternativa seleccionable).
 - `MANYHANDS_DECOMPOSER` — override de decomposer para desarrollo.
 - `MANYHANDS_RUNS_DIR` — override del directorio de runs.
 - `MANYHANDS_WORKSPACES_FILE` — override del archivo de workspaces.
@@ -129,4 +131,3 @@ Los tests de web y run model viven en `tests/` en la raíz del repo y corren con
 pnpm test
 pnpm web:typecheck
 ```
-

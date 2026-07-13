@@ -14,7 +14,7 @@ El `ResultRecorder` es el componente que toma el output bruto de una ejecución 
 
 ### Responsabilidad
 
-Transformar "el proceso de Gemini terminó" en "sabemos exactamente qué cambió, si estuvo dentro de scope, y si el orquestador debe commitear". Es el componente que materializa la invariante D5 (git diff como verdad) y D6 (el orquestador commitea).
+Transformar "el proceso del executor terminó" en "sabemos exactamente qué cambió, si estuvo dentro de scope, y si el orquestador debe commitear". Es el componente que materializa la invariante D5 (git diff como verdad) y D6 (el orquestador commitea).
 
 ### Los tres caminos de un resultado
 

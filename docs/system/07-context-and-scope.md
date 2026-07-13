@@ -84,7 +84,7 @@ Separar `implementationPaths`, `testPaths` y `configPaths` permite al `ResultRec
 **FileSystemContextPacker:**
 - Recibe: `worktreePath` + `AgentTaskContract`
 - Produce: `{ section: string, includedFiles: string[], totalBytes: number }`
-- Lo invoca: `RunExecutor` antes de llamar a `GeminiCliExecutor`
+- Lo invoca: `RunExecutor` antes de llamar al `AgentExecutor` seleccionado.
 
 **ScopeChecker:**
 - Recibe: `changedFiles: string[]` + `AgentTaskContract`

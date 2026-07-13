@@ -88,16 +88,17 @@ Regla de dependencias: `apps → paquetes específicos → shared`. Nunca se imp
 ## Inicio rápido
 
 > [!IMPORTANT]
-> El executor por defecto es **Gemini CLI**, que debe estar instalado y autenticado (requiere una API key). Es el seam por el que se ejecutan los agentes; ver [`docs/system/06-gemini-executor.md`](docs/system/06-gemini-executor.md).
+> El executor por defecto es **Claude Code CLI**; **Codex CLI** es la alternativa seleccionable. Ambos se ejecutan a través del seam `AgentExecutor`; ver [`docs/system/06-agent-executors.md`](docs/system/06-agent-executors.md).
 
-**Requisitos:** Node.js ≥ 20, [pnpm](https://pnpm.io/) (el repo fija `pnpm@7.29.3` vía `packageManager`; `corepack enable` lo resuelve solo) y Gemini CLI.
+**Requisitos:** Node.js ≥ 20, [pnpm](https://pnpm.io/) (el repo fija `pnpm@11.7.0` vía `packageManager`; `corepack enable` lo resuelve solo) y Claude Code CLI. Codex CLI es opcional si se lo quiere seleccionar.
 
 ```bash
 # 1. Instalar dependencias
 corepack enable
 pnpm install
 
-# 2. Tener Claude Code CLI (y opcionalmente Codex) en el PATH, o apuntar al binario:
+# 2. Tener Claude Code CLI en el PATH, o apuntar al binario.
+# Codex CLI es una alternativa seleccionable:
 export MANYHANDS_CLAUDE_BIN=/ruta/a/claude
 # export MANYHANDS_CODEX_BIN=/ruta/a/codex
 
@@ -141,7 +142,7 @@ manyhands/
 - **Orquestación:** [LangGraph.js](https://langchain-ai.github.io/langgraphjs/) (StateGraphs con checkpoints JSON para resume/fork).
 - **Web:** Next.js 15 (App Router), React 19, Tailwind CSS 4, [@xyflow/react](https://reactflow.dev/) para el canvas del DAG.
 - **Validación:** Zod en todas las fronteras de datos.
-- **Agentes:** Gemini CLI vía el seam `AgentExecutor`.
+- **Agentes:** Claude Code CLI por defecto y Codex CLI como alternativa, vía el seam `AgentExecutor`.
 - **Tests:** Vitest.
 
 ## Documentación

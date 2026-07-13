@@ -40,6 +40,34 @@ respective progress documents.
   recovery are not implemented.
 - **Commit:** pending local commit.
 
+## B-033 — Reproducible current documentation
+
+- **Status:** completed.
+- **Confirmed cause:** root and web READMEs still instructed operators to use
+  Gemini, referenced a removed executor document, listed an obsolete pnpm
+  version, and omitted the diagnostics API. Three system pages also retained
+  Gemini-specific operational prose despite the active Claude/Codex runtime.
+- **Applied design:** corrected only active product documentation: Claude Code
+  is default, Codex is selectable, current `pnpm@11.7.0` commands are shown,
+  the diagnostics endpoint is listed, and generic executor wording replaces
+  stale Gemini-specific claims. Historical removals remain documented as
+  history, not as active functionality.
+- **Files modified:** `README.md`, `apps/web/README.md`,
+  `docs/system/05-worktree-layer.md`, `07-context-and-scope.md`,
+  `08-result-pipeline.md`, `tests/documentation-current.test.ts`, this ledger.
+- **Test added:** documentation contract verifies active executors, current
+  command presence, removed Gemini environment variable, and diagnostics API.
+- **Red regression observed:** root README lacked `Codex CLI` and still named
+  Gemini default (Vitest exit 1).
+- **Verification:** documentation contract: 1/1 passed. A clean worktree/clone
+  verification and full command matrix are recorded in the final Phase 5
+  verification section below.
+- **Acceptance verified:** docs describe implemented product behavior only;
+  no Lab/replay workflow or Gemini executor is presented as active.
+- **Risks / deferred:** historical references in fixtures and migration tests
+  intentionally remain as legacy evidence; they are not product instructions.
+- **Commit:** pending local commit.
+
 ## B-032 — Operational telemetry and retention diagnostics
 
 - **Status:** completed.
