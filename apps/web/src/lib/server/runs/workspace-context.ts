@@ -33,28 +33,85 @@ const EXCLUDED_SEGMENTS = new Set([
 export const MAX_WORKSPACE_FILE_BYTES = 512 * 1024;
 const execFileAsync = promisify(execFile);
 
-export async function readFinalArtifactFile(run: RunRecord, relativePath: string): Promise<string> {
+export interface FinalArtifactReference {
+  manifestId?: string | undefined;
+  finalSha?: string | undefined;
+}
+
+interface ResolvedFinalArtifact {
+  repoRoot: string;
+  finalSha: string;
+}
+
+/** The manifest is the sole authority for immutable final artifact reads. */
+export async function resolveFinalArtifact(
+  run: RunRecord,
+  reference: FinalArtifactReference = {}
+): Promise<ResolvedFinalArtifact> {
+  const manifest = run.finalArtifactManifest;
+  if (manifest === undefined) throw new Error("Final artifact manifest is not available.");
+  if (reference.manifestId !== undefined && reference.manifestId !== manifest.manifestId) {
+    throw new Error("Final artifact manifest does not belong to this run.");
+  }
+  if (reference.finalSha !== undefined && reference.finalSha !== manifest.finalSha) {
+    throw new Error("Requested final SHA does not match the final artifact manifest.");
+  }
   const repoRoot = await repoRootForRun(run);
-  const finalSha = run.finalArtifactManifest?.finalSha;
-  if (repoRoot === null || finalSha === undefined) throw new Error("Final artifact is not available.");
+  if (repoRoot === null) throw new Error("Final artifact repository is not available.");
+  await execFileAsync("git", ["cat-file", "-e", `${manifest.finalSha}^{commit}`], { cwd: repoRoot });
+  return { repoRoot, finalSha: manifest.finalSha };
+}
+
+export async function readFinalArtifactFile(
+  run: RunRecord,
+  relativePath: string,
+  reference: FinalArtifactReference = {}
+): Promise<string> {
+  const { repoRoot, finalSha } = await resolveFinalArtifact(run, reference);
   const { stdout } = await execFileAsync("git", ["show", `${finalSha}:${relativePath}`], {
     cwd: repoRoot, encoding: "utf8", maxBuffer: MAX_WORKSPACE_FILE_BYTES + 1
   });
   return stdout;
 }
 
-export async function listFinalArtifactTree(run: RunRecord, relativePath: string): Promise<Array<{
-  name: string; path: string; kind: "file" | "directory";
+export async function listFinalArtifactTree(
+  run: RunRecord,
+  relativePath: string,
+  reference: FinalArtifactReference = {}
+): Promise<Array<{
+  name: string; path: string; kind: "file" | "directory"; mode: string; size?: number;
 }>> {
-  const repoRoot = await repoRootForRun(run);
-  const finalSha = run.finalArtifactManifest?.finalSha;
-  if (repoRoot === null || finalSha === undefined) throw new Error("Final artifact is not available.");
+  const { repoRoot, finalSha } = await resolveFinalArtifact(run, reference);
   const treeish = relativePath.length === 0 ? finalSha : `${finalSha}:${relativePath}`;
-  const { stdout } = await execFileAsync("git", ["ls-tree", treeish], { cwd: repoRoot, encoding: "utf8" });
+  const { stdout } = await execFileAsync("git", ["ls-tree", "-l", treeish], { cwd: repoRoot, encoding: "utf8" });
   return stdout.split(/\r?\n/).filter(Boolean).map((line) => {
     const [meta, name = ""] = line.split("\t");
-    const kind = meta?.includes(" tree ") ? "directory" as const : "file" as const;
-    return { name, path: relativePath.length > 0 ? `${relativePath}/${name}` : name, kind };
+    const [mode = "", kindName = "", , size] = meta?.split(/\s+/) ?? [];
+    const kind = kindName === "tree" ? "directory" as const : "file" as const;
+    return {
+      name,
+      path: relativePath.length > 0 ? `${relativePath}/${name}` : name,
+      kind,
+      mode,
+      ...(size !== "-" && size !== undefined ? { size: Number(size) } : {})
+    };
+  });
+}
+
+export async function listFinalArtifactChanges(
+  run: RunRecord,
+  reference: FinalArtifactReference = {}
+): Promise<Array<{ status: string; path: string; previousPath?: string }>> {
+  const { repoRoot, finalSha } = await resolveFinalArtifact(run, reference);
+  const baseSha = run.finalArtifactManifest!.sourceBaseSha;
+  const { stdout } = await execFileAsync("git", ["diff", "--name-status", "--find-renames", `${baseSha}..${finalSha}`], {
+    cwd: repoRoot,
+    encoding: "utf8"
+  });
+  return stdout.split(/\r?\n/).filter(Boolean).map((line) => {
+    const [status = "", previousPath, path] = line.split("\t");
+    if (path === undefined) return { status, path: previousPath! };
+    return previousPath === undefined ? { status, path } : { status, path, previousPath };
   });
 }
 

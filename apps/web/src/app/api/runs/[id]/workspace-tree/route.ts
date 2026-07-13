@@ -8,6 +8,7 @@ import {
   parseWorkspaceContext,
   resolveContainedWorkspaceFile,
   listFinalArtifactTree,
+  listFinalArtifactChanges,
   resolveRunWorkspaceContext,
   safeWorkspaceRelativePath
 } from "@/lib/server/runs";
@@ -40,7 +41,13 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
       return NextResponse.json({ workspace, path: relativePath, entries: [] });
     }
     if (workspace.context === "final") {
-      return NextResponse.json({ workspace, path: relativePath, entries: await listFinalArtifactTree(run, relativePath) });
+      const reference = { manifestId: url.searchParams.get("manifestId") ?? undefined, finalSha: url.searchParams.get("finalSha") ?? undefined };
+      return NextResponse.json({
+        workspace,
+        path: relativePath,
+        entries: await listFinalArtifactTree(run, relativePath, reference),
+        ...(relativePath.length === 0 ? { changes: await listFinalArtifactChanges(run, reference) } : {})
+      });
     }
     // B-006 (CF-40): realpath containment — navigating into a symlink/junction
     // must not list directories outside the workspace.

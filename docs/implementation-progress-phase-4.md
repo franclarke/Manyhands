@@ -36,3 +36,19 @@ Results: directed tests passed 65/65; `pnpm --filter @manyhands/web exec tsc --n
 Deferred: attempt adopt/discard and event-log reconciliation actions are deliberately not exposed because the current API does not provide a safe operator route for them. This does not add B-029+ work.
 
 Commit: recorded after commit creation.
+
+## B-026 — Final viewer from immutable commits
+
+Status: completed.
+
+Root cause: the existing final viewer used Git object reads, but its routes did not accept and validate the manifest identity/final SHA requested by the client, and tree output did not expose immutable object metadata or base-to-final changes.
+
+Design: final reads now resolve a `FinalArtifactReference` against the run-owned manifest, reject a mismatched manifest ID or SHA, verify `finalSha^{commit}`, and use `git show`, `git ls-tree -l`, and `git diff --name-status --find-renames` in the provisioned execution repository. The client seed carries an immutable manifest view and sends its manifest ID/SHA whenever the final context is selected. Final reads never traverse the mutable source checkout; legacy runs without a manifest remain unavailable for final context rather than falling back.
+
+Modified routes and viewer: `workspace-context.ts`, workspace tree/file routes, run-model seed/types, and the existing Files surface. Tests in `tests/final-apply.test.ts` cover a divergent source checkout, mismatch rejection, final-tree mode, and base-to-final changed files; `tests/workspace-file-containment.test.ts` remains the path-boundary consumer.
+
+Results: final artifact and containment tests passed 11/11. Web typecheck is rerun as part of the committed verification.
+
+Deferred: binary preview and visual base/final diff panes remain represented by immutable metadata and the existing diff surface; no writable terminal is added to the final viewer.
+
+Commit: recorded after commit creation.

@@ -36,7 +36,8 @@ export async function GET(request: Request, context: RouteContext): Promise<Next
       return NextResponse.json({ error: "Workspace context does not exist.", workspace }, { status: 404 });
     }
     if (workspace.context === "final") {
-      const content = await readFinalArtifactFile(run, relativePath);
+      const reference = { manifestId: url.searchParams.get("manifestId") ?? undefined, finalSha: url.searchParams.get("finalSha") ?? undefined };
+      const content = await readFinalArtifactFile(run, relativePath, reference);
       if (Buffer.byteLength(content, "utf8") > MAX_WORKSPACE_FILE_BYTES) {
         return NextResponse.json({ error: "File is too large to preview." }, { status: 413 });
       }

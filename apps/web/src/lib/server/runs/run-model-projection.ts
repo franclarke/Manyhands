@@ -65,6 +65,22 @@ export function buildRunModelSeed(run: RunRecord): Run {
     intent: run.userPrompt || run.title,
     workspaceId: run.workspaceId,
     control: runControlForRun(run),
+    ...(run.finalArtifactManifest !== undefined
+      ? {
+          finalArtifact: {
+            manifestId: run.finalArtifactManifest.manifestId,
+            sourceBaseSha: run.finalArtifactManifest.sourceBaseSha,
+            finalSha: run.finalArtifactManifest.finalSha,
+            ...(run.finalArtifactManifest.finalRef !== undefined ? { finalRef: run.finalArtifactManifest.finalRef } : {}),
+            addedFiles: [...run.finalArtifactManifest.addedFiles],
+            modifiedFiles: [...run.finalArtifactManifest.modifiedFiles],
+            deletedFiles: [...run.finalArtifactManifest.deletedFiles],
+            verificationDisposition: run.finalArtifactManifest.verificationDisposition,
+            artifactDisposition: run.finalArtifactManifest.artifactDisposition,
+            deliveryDisposition: run.finalArtifactManifest.deliveryDisposition
+          }
+        }
+      : {}),
     config: {
       aggressiveness,
       planningModel: planning.model,

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -9,7 +9,7 @@ import {
   slugifyForBranch
 } from "@/lib/server/runs/final-apply";
 import { rmWithRetry } from "@/lib/server/runs/fs-retry";
-import { readFinalArtifactFile } from "@/lib/server/runs/workspace-context";
+import { listFinalArtifactChanges, listFinalArtifactTree, readFinalArtifactFile } from "@/lib/server/runs/workspace-context";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import type { ProvisionedRepo } from "@/lib/server/runs/repo-provisioner";
 import type { RunExecutionResult } from "@manyhands/execution-core";
@@ -160,6 +160,20 @@ describe("applyFinalPatch", () => {
     expect(await readFinalArtifactFile(viewerRun, "src/feature.ts")).toBe(
       git(repoRoot, "show", `${record!.finalCommitSha}:src/feature.ts`) + "\n"
     );
+    await writeFile(path.join(repoRoot, "src", "feature.ts"), "source checkout diverged\n");
+    expect(await readFinalArtifactFile(viewerRun, "src/feature.ts")).toBe(
+      git(repoRoot, "show", `${record!.finalCommitSha}:src/feature.ts`) + "\n"
+    );
+    await expect(
+      readFinalArtifactFile(viewerRun, "src/feature.ts", { finalSha: baseCommit })
+    ).rejects.toThrow(/does not match/i);
+    expect(await listFinalArtifactTree(viewerRun, "src")).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: "src/feature.ts", kind: "file", mode: "100644" })])
+    );
+    expect(await listFinalArtifactChanges(viewerRun)).toEqual(
+      expect.arrayContaining([expect.objectContaining({ status: "A", path: "src/feature.ts" })])
+    );
+    await rm(path.join(repoRoot, "src", "feature.ts"));
     // ...but the user's branch and working tree are untouched.
     expect(git(repoRoot, "rev-parse", "--abbrev-ref", "HEAD")).toBe("main");
     expect(git(repoRoot, "rev-parse", "HEAD")).toBe(baseCommit);

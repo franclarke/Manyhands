@@ -97,6 +97,20 @@ export interface RunControl {
   interruptedDuring?: "generating" | "running";
 }
 
+/** Immutable artifact identity used by the read-only final viewer. */
+export interface FinalArtifactView {
+  manifestId: string;
+  sourceBaseSha: string;
+  finalSha: string;
+  finalRef?: string;
+  addedFiles: string[];
+  modifiedFiles: string[];
+  deletedFiles: string[];
+  verificationDisposition: "verified" | "unverified" | "failed";
+  artifactDisposition: "ready" | "partial" | "failed";
+  deliveryDisposition: "needs_delivery" | "delivered" | "failed";
+}
+
 /** A node's result is valid against these seam revisions (enables derived invalidation). */
 export interface SeamRevisionRef {
   seamId: SeamId;
@@ -117,6 +131,7 @@ export interface Run {
   workspaceId: string;
   config: RunConfig;
   control: RunControl;
+  finalArtifact?: FinalArtifactView;
   context?: RunContext;
   /** Pointer to the materialized snapshot (a fold cache, not a second source of truth). */
   snapshotRef?: BlobRef;

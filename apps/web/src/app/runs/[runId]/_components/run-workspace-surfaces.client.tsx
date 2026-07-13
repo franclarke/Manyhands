@@ -286,11 +286,16 @@ function FilesSurface({ runId, model, initialNodeId }: { runId: string; model: R
   const [tree, setTree] = useState<{ entries: Array<{ name: string; path: string; kind: "file" | "directory"; size?: number }>; workspace?: { label: string; rootPath: string; exists: boolean } } | null>(null);
   const [file, setFile] = useState<{ path: string; content: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const finalArtifact = model.run.finalArtifact;
 
   useEffect(() => {
     const controller = new AbortController();
     const params = new URLSearchParams({ context: contextKind, path });
     if (contextKind === "node" && nodeId.length > 0) params.set("nodeId", nodeId);
+    if (contextKind === "final" && finalArtifact !== undefined) {
+      params.set("manifestId", finalArtifact.manifestId);
+      params.set("finalSha", finalArtifact.finalSha);
+    }
     setError(null);
     fetch(`/api/runs/${encodeURIComponent(runId)}/workspace-tree?${params}`, { signal: controller.signal })
       .then(async (response) => {
@@ -302,7 +307,7 @@ function FilesSurface({ runId, model, initialNodeId }: { runId: string; model: R
         if (!controller.signal.aborted) setError(err instanceof Error ? err.message : String(err));
       });
     return () => controller.abort();
-  }, [contextKind, nodeId, path, runId]);
+  }, [contextKind, finalArtifact, nodeId, path, runId]);
 
   useEffect(() => {
     if (selectedFile === null) {
@@ -312,6 +317,10 @@ function FilesSurface({ runId, model, initialNodeId }: { runId: string; model: R
     const controller = new AbortController();
     const params = new URLSearchParams({ context: contextKind, path: selectedFile });
     if (contextKind === "node" && nodeId.length > 0) params.set("nodeId", nodeId);
+    if (contextKind === "final" && finalArtifact !== undefined) {
+      params.set("manifestId", finalArtifact.manifestId);
+      params.set("finalSha", finalArtifact.finalSha);
+    }
     fetch(`/api/runs/${encodeURIComponent(runId)}/workspace-file?${params}`, { signal: controller.signal })
       .then(async (response) => {
         const payload = await response.json();
@@ -322,11 +331,12 @@ function FilesSurface({ runId, model, initialNodeId }: { runId: string; model: R
         if (!controller.signal.aborted) setError(err instanceof Error ? err.message : String(err));
       });
     return () => controller.abort();
-  }, [contextKind, nodeId, runId, selectedFile]);
+  }, [contextKind, finalArtifact, nodeId, runId, selectedFile]);
 
   return (
     <Stack>
       <SurfaceHeader icon={<FolderTree aria-hidden className="h-4 w-4" />} title="Archivos" detail={tree?.workspace?.label ?? "Contexto del workspace"} />
+      {contextKind === "final" && finalArtifact !== undefined ? <p className="m-0 text-meta text-[var(--color-text-muted)]">Final SHA {finalArtifact.finalSha.slice(0, 12)} · base {finalArtifact.sourceBaseSha.slice(0, 12)} · {finalArtifact.verificationDisposition}</p> : null}
       <div className="grid gap-2">
         <select className="mh-select h-8 text-meta" value={contextKind} onChange={(event) => { setContextKind(event.target.value as "base" | "node" | "final"); setPath(""); setSelectedFile(null); }}>
           <option value="base">Repo base</option>
