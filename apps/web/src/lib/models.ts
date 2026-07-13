@@ -1,6 +1,10 @@
+import {
+  EXECUTOR_DESCRIPTORS,
+  CLAUDE_CODE_EXECUTOR_ID,
+  DEFAULT_EXECUTOR_SELECTION
+} from "@manyhands/execution-core";
 import type {
   ExecutorCapability,
-  ExecutorDescriptor,
   ExecutorId,
   ExecutorSelection,
   UsageSource
@@ -37,97 +41,11 @@ export interface ModelOption {
  */
 const EFFORT_CAPABLE_MODEL_IDS = new Set<string>(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini"]);
 
-export const CLAUDE_CODE_EXECUTOR_ID = "claude-code-cli" satisfies ExecutorId;
-export const DEFAULT_EXECUTOR_SELECTION = {
-  executorId: CLAUDE_CODE_EXECUTOR_ID,
-  model: "sonnet"
-} satisfies ExecutorSelection;
+export { CLAUDE_CODE_EXECUTOR_ID, DEFAULT_EXECUTOR_SELECTION };
 
-const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
-  {
-    id: CLAUDE_CODE_EXECUTOR_ID,
-    label: "Claude Code CLI",
-    provider: "Anthropic",
-    binaryEnvVar: "MANYHANDS_CLAUDE_BIN",
-    defaultBinary: "claude",
-    enabled: true,
-    capabilities: ["planning", "execution", "repair"],
-    usageSource: "unavailable",
-    defaultModel: "sonnet",
-    models: [
-      {
-        id: "haiku",
-        label: "Claude Haiku",
-        capabilities: ["execution", "repair"],
-        usageSource: "unavailable"
-      },
-      {
-        id: "sonnet",
-        label: "Claude Sonnet",
-        capabilities: ["planning", "execution", "repair"],
-        usageSource: "unavailable"
-      },
-      {
-        id: "opus",
-        label: "Claude Opus",
-        capabilities: ["execution", "repair"],
-        usageSource: "unavailable"
-      }
-    ]
-  },
-  {
-    id: "codex-cli",
-    label: "Codex CLI",
-    provider: "OpenAI",
-    binaryEnvVar: "MANYHANDS_CODEX_BIN",
-    defaultBinary: "codex",
-    enabled: true,
-    capabilities: ["planning", "execution", "repair"],
-    usageSource: "unavailable",
-    defaultModel: "gpt-5.5",
-    models: [
-      {
-        id: "gpt-5.5",
-        label: "GPT-5.5",
-        capabilities: ["planning", "execution", "repair"],
-        usageSource: "unavailable"
-      },
-      {
-        id: "gpt-5.4",
-        label: "GPT-5.4",
-        capabilities: ["planning", "execution", "repair"],
-        usageSource: "unavailable"
-      },
-      {
-        id: "gpt-5.4-mini",
-        label: "GPT-5.4 Mini",
-        capabilities: ["planning", "execution", "repair"],
-        usageSource: "unavailable"
-      }
-    ]
-  },
-  {
-    id: "opencode-cli",
-    label: "OpenCode CLI",
-    provider: "OpenCode",
-    binaryEnvVar: "MANYHANDS_OPENCODE_BIN",
-    defaultBinary: "opencode",
-    enabled: false,
-    capabilities: ["execution", "repair"],
-    usageSource: "unavailable",
-    defaultModel: "opencode-default",
-    models: [
-      {
-        id: "opencode-default",
-        label: "OpenCode default",
-        capabilities: ["execution", "repair"],
-        usageSource: "unavailable"
-      }
-    ]
-  }
-];
+const ACTIVE_EXECUTOR_DESCRIPTORS = EXECUTOR_DESCRIPTORS.filter((descriptor) => descriptor.enabled);
 
-export const EXECUTOR_OPTIONS: ReadonlyArray<ExecutorOption> = EXECUTOR_DESCRIPTORS.map((descriptor) => ({
+export const EXECUTOR_OPTIONS: ReadonlyArray<ExecutorOption> = ACTIVE_EXECUTOR_DESCRIPTORS.map((descriptor) => ({
   id: descriptor.id,
   label: descriptor.label,
   provider: descriptor.provider,
@@ -135,7 +53,7 @@ export const EXECUTOR_OPTIONS: ReadonlyArray<ExecutorOption> = EXECUTOR_DESCRIPT
   enabled: descriptor.enabled
 }));
 
-export const MODEL_OPTIONS: ReadonlyArray<ModelOption> = EXECUTOR_DESCRIPTORS.flatMap((descriptor) =>
+export const MODEL_OPTIONS: ReadonlyArray<ModelOption> = ACTIVE_EXECUTOR_DESCRIPTORS.flatMap((descriptor) =>
   descriptor.models.map((model) => ({
     id: model.id,
     label: model.label,

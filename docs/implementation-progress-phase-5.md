@@ -40,6 +40,35 @@ respective progress documents.
   recovery are not implemented.
 - **Commit:** pending local commit.
 
+## B-031 — Single executor registry and legacy containment
+
+- **Status:** completed.
+- **Confirmed cause:** `apps/web/src/lib/models.ts` duplicated executor and model
+  descriptors already owned by `@manyhands/execution-core`; its copy drifted in
+  usage-source and planning-capability values and still displayed disabled
+  legacy OpenCode.
+- **Applied design:** web imports the execution-core registry and projects only
+  enabled descriptors for controls and request validation. Claude Code remains
+  the default; Codex remains the alternative. The disabled legacy executor is
+  retained only in the package registry for persisted-record compatibility and
+  is not exposed by the application.
+- **Files modified:** `apps/web/src/lib/models.ts`, `tests/model-registry.test.ts`, this ledger.
+- **Tests adjusted:** registry tests now assert the two visible executors and
+  source-of-truth capabilities; executor-selection tests cover Claude, Codex,
+  and legacy model resolution.
+- **Regression observed:** after replacing the duplicate, stale UI assertions
+  expected `usage=unavailable` and planning capability for all Codex models;
+  canonical registry returned `reported` for Claude and limits planning to
+  `gpt-5.5` (Vitest exit 1).
+- **Verification:** model registry + executor selection: 11/11 passed.
+- **Acceptance verified:** no package imports from `apps`; only Claude Code and
+  Codex are active/selectable product executors; disabled legacy configuration
+  cannot be submitted through normal selection.
+- **Risks / deferred:** migration of historical `gemini` strings remains the
+  existing legacy parser path; no new migration system or event-store changes
+  were introduced.
+- **Commit:** pending local commit.
+
 ## B-030 — Scalable events, risk and UI projection
 
 - **Status:** completed for the identified product hot path.

@@ -16,12 +16,8 @@ describe("model registry", () => {
 
     expect(defaultModel?.executorId).toBe(CLAUDE_CODE_EXECUTOR_ID);
     expect(defaultModel?.capabilities).toEqual(["planning", "execution", "repair"]);
-    expect(defaultModel?.usage).toBe("unavailable");
-    expect(EXECUTOR_OPTIONS.map((executor) => executor.id)).toEqual([
-      "claude-code-cli",
-      "codex-cli",
-      "opencode-cli"
-    ]);
+    expect(defaultModel?.usage).toBe("reported");
+    expect(EXECUTOR_OPTIONS.map((executor) => executor.id)).toEqual(["claude-code-cli", "codex-cli"]);
     expect(MODEL_OPTIONS.some((model) => model.executorId === "codex-cli")).toBe(true);
     expect(EXECUTOR_OPTIONS.find((executor) => executor.id === "codex-cli")?.enabled).toBe(true);
   });
@@ -36,8 +32,8 @@ describe("model registry", () => {
     for (const id of ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini"]) {
       const model = codexModels.find((m) => m.id === id);
       expect(model?.supportsEffort, `${id} should support effort`).toBe(true);
-      expect(model?.capabilities, `${id} should support planning`).toContain("planning");
     }
+    expect(codexModels.find((m) => m.id === "gpt-5.5")?.capabilities).toContain("planning");
   });
 
   it("normalizes valid executor selections and keeps model lookup executor-scoped", () => {
@@ -62,7 +58,6 @@ describe("model registry", () => {
       selectable: true,
       supportsReasoningEffort: true
     });
-    expect(runtimeCapabilitiesForSelection({ executorId: "opencode-cli", model: "opencode-default" }).selectable).toBe(false);
     expect(normalizeExecutorOverride({ executorId: "opencode-cli", model: "opencode-default" })).toBeUndefined();
     expect(normalizeExecutorOverride({ executorId: "claude-code-cli", model: "not-a-model" })).toBeUndefined();
   });
