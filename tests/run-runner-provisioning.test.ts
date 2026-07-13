@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -14,6 +14,7 @@ import { readRunModelEvents } from "@/lib/server/runs/run-model-event-log";
 import { JsonRunRecordStore } from "@/lib/server/runs/repository";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import { resetRunRepositoryForTests } from "@/lib/server/runs/store";
+import { rmWithRetry } from "@/lib/server/runs/fs-retry";
 import { AgentTaskContractSchema } from "@manyhands/contracts";
 import {
   countLiveProcesses,
@@ -163,7 +164,7 @@ beforeEach(async () => {
 afterEach(async () => {
   delete process.env.MANYHANDS_RUNS_DIR;
   resetRunRepositoryForTests();
-  await rm(tempDir, { recursive: true, force: true });
+  await rmWithRetry(tempDir);
 });
 
 describe("runExecutionPipeline provisioning", () => {

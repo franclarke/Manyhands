@@ -132,11 +132,13 @@ async function applyFinalPatchLocked(input: ApplyFinalPatchInput): Promise<Final
 
   const branchName = buildRunBranchName(input.runId, input.slug);
   const worktreeParent = resolveManyhandsPath("apply");
-  const worktreePath = path.join(worktreeParent, input.runId);
+  // This is an ephemeral read/apply worktree. A stable path reused across
+  // processes can retain a Windows handle or a registration from a different
+  // repository with the same run id, turning a valid artifact into failure.
+  const worktreePath = path.join(worktreeParent, `${input.runId}-${randomUUID().slice(0, 8)}`);
 
   try {
     await mkdir(worktreeParent, { recursive: true });
-    await rmWithRetry(worktreePath);
     // Clear any stale worktree registration from a prior interrupted run so the
     // add below doesn't fail with "already registered" on Windows.
     await gitVoid(repoRoot, ["worktree", "prune"]).catch(() => undefined);

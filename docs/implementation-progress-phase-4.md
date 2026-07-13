@@ -15,6 +15,8 @@ Commits:
 
 Directed result: `tests/durable-run-event-log-windows-lock.test.ts` and `tests/resume-route-concurrency.test.ts` passed 20/20 tests. The original watchdog provisioning test also passed in independent processes during stabilization; remaining repetitions and the full matrix are recorded in final Phase 4 verification.
 
+During the required multi-process watchdog repetition, the second process exposed two Windows-only resource races unrelated to `sawAbort`: test teardown could observe `ENOTEMPTY` while deleting its temp runs directory, and a final artifact apply could reuse a globally stable worktree path from a prior process with the same run ID. The test now uses the existing bounded `rmWithRetry` primitive; final apply uses a unique ephemeral worktree path per operation. The direct provisioning plus final-apply consumer rerun passed 15/15 after this correction. A fresh ten-process repetition is recorded below before closure.
+
 ## B-025 — Operational states and Recovery Center
 
 Status: completed.
@@ -35,7 +37,7 @@ Results: directed tests passed 65/65; `pnpm --filter @manyhands/web exec tsc --n
 
 Deferred: attempt adopt/discard and event-log reconciliation actions are deliberately not exposed because the current API does not provide a safe operator route for them. This does not add B-029+ work.
 
-Commit: recorded after commit creation.
+Commit: `b5f18ea B-025: add operational recovery center`.
 
 ## B-028 — Capability-aligned visible controls
 
@@ -49,7 +51,7 @@ Modified: `apps/web/src/lib/models.ts`, command-center model picker, create-run 
 
 Existing lifecycle-gated manual-node, critic override, replan, and delivery controls remain attached to their established product routes; this task does not add a generic integrator button because atomic integrators are graph semantics rather than a safe standalone operation.
 
-Commit: recorded after commit creation.
+Commit: `02e531c B-026: render final artifacts from immutable commits`.
 
 ## B-027 — Incremental run event streaming
 
@@ -63,7 +65,7 @@ Modified: canonical event reader, run-events route, live-model hook, run header 
 
 Compatibility: legacy logs continue using `after`; first load projects a record only when no durable event log exists. Deferred: sparse byte-offset indexing is not introduced because the bounded streaming reader satisfies the current product path without a second event store.
 
-Commit: recorded after commit creation.
+Commit: `79f2e6b B-027: make run event streaming incremental`.
 
 ## B-026 — Final viewer from immutable commits
 
@@ -79,4 +81,4 @@ Results: final artifact and containment tests passed 11/11. Web typecheck is rer
 
 Deferred: binary preview and visual base/final diff panes remain represented by immutable metadata and the existing diff surface; no writable terminal is added to the final viewer.
 
-Commit: recorded after commit creation.
+Commit: `eeb5d22 B-028: align visible controls with runtime capabilities`.
