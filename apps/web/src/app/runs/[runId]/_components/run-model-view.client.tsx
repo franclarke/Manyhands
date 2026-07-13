@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { DeliveryPanel } from "./delivery-panel.client";
+import { OperationalRecoveryCenter } from "./operational-recovery-center.client";
 import { runDockMode } from "@/lib/cockpit-layout";
 import { useViewportWidth } from "@/lib/use-viewport-width";
 import { Bot, Download, FileDiff, FolderTree, List, Pause, Play, RotateCcw, ScrollText, ShieldCheck, Terminal } from "lucide-react";
@@ -174,6 +175,7 @@ export function RunModelView({
     <ChatRuntimeProvider events={events}>
       <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--color-bg)] font-sans">
         <RunHeader runId={seed.id} view={view} model={model} workspaceName={workspaceName} />
+        <OperationalRecoveryCenter runId={seed.id} model={model} events={events} />
         <RunTimeline
           phases={timeline}
           trailing={
