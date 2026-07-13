@@ -45,7 +45,14 @@ export interface RunModelEventBatch {
   nextCursor: number;
   hasMore: boolean;
   status: "ok" | "degraded";
+  /** True when the reader resumed from the sparse offset index rather than byte zero. */
+  indexed: boolean;
 }
+
+interface SparseOffset { seq: number; offset: number; }
+interface SparseOffsetCache { size: number; mtimeMs: number; offsets: SparseOffset[]; }
+const sparseOffsetCaches = globalSingleton("run-model-event-log:sparse-offsets", () => new Map<string, SparseOffsetCache>());
+const OFFSET_STRIDE = 256;
 
 /**
  * B-027 incremental reader. It scans JSONL as a stream so reconnects retain
@@ -54,19 +61,28 @@ export interface RunModelEventBatch {
 export async function readRunModelEventBatch(runId: string, afterSeq: number, limit = 250): Promise<RunModelEventBatch> {
   const safeLimit = Math.max(1, Math.min(limit, 1_000));
   const file = filePathFor(runId);
+  let info: Awaited<ReturnType<typeof stat>>;
   try {
-    await stat(file);
+    info = await stat(file);
   } catch (error) {
-    if (isErrno(error) && error.code === "ENOENT") return { events: [], nextCursor: afterSeq, hasMore: false, status: "ok" };
+    if (isErrno(error) && error.code === "ENOENT") return { events: [], nextCursor: afterSeq, hasMore: false, status: "ok", indexed: false };
     throw error;
   }
+  const cached = sparseOffsetCaches.get(file);
+  const cache = cached?.size === info.size && cached.mtimeMs === info.mtimeMs ? cached : undefined;
+  const start = cache?.offsets.filter((entry) => entry.seq <= afterSeq + 1).at(-1);
+  const startOffset = start?.offset ?? 0;
   const events: RunEvent[] = [];
-  let expectedSeq = 1;
+  let expectedSeq = start?.seq ?? 1;
+  let byteOffset = startOffset;
+  const offsets = cache?.offsets ?? [];
   let hasMore = false;
   let status: "ok" | "degraded" = "ok";
-  const lines = readline.createInterface({ input: createReadStream(file, { encoding: "utf8" }), crlfDelay: Infinity });
+  const lines = readline.createInterface({ input: createReadStream(file, { encoding: "utf8", start: startOffset }), crlfDelay: Infinity });
   for await (const line of lines) {
     if (line.trim().length === 0) continue;
+    const lineOffset = byteOffset;
+    byteOffset += Buffer.byteLength(line, "utf8") + 1;
     let event: RunEvent;
     try {
       event = JSON.parse(line) as RunEvent;
@@ -84,6 +100,9 @@ export async function readRunModelEventBatch(runId: string, afterSeq: number, li
       break;
     }
     expectedSeq += 1;
+    if (event.seq % OFFSET_STRIDE === 1 && !offsets.some((entry) => entry.seq === event.seq)) {
+      offsets.push({ seq: event.seq, offset: lineOffset });
+    }
     if (event.seq <= afterSeq) continue;
     if (events.length >= safeLimit) {
       hasMore = true;
@@ -91,7 +110,8 @@ export async function readRunModelEventBatch(runId: string, afterSeq: number, li
     }
     events.push(event);
   }
-  return { events, nextCursor: events.at(-1)?.seq ?? afterSeq, hasMore, status };
+  sparseOffsetCaches.set(file, { size: info.size, mtimeMs: info.mtimeMs, offsets: offsets.sort((left, right) => left.seq - right.seq) });
+  return { events, nextCursor: events.at(-1)?.seq ?? afterSeq, hasMore, status, indexed: startOffset > 0 };
 }
 
 export async function inspectRunModelEventLog(runId: string): Promise<RunModelEventLogInspection> {

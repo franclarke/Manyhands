@@ -38,6 +38,20 @@ describe("B-018 durable run event log", () => {
     const second = await readRunModelEventBatch(runId, first.nextCursor, 2);
     expect(second.events.map((event) => event.seq)).toEqual([3, 4]);
   });
+
+  it("uses a sparse durable offset index for a 100k-event resume instead of replaying the full prefix", async () => {
+    const runId = "run-large-resume";
+    const lines = Array.from({ length: 100_000 }, (_, index) => JSON.stringify({
+      seq: index + 1, at: "2026-07-12T00:00:00.000Z", runId, actor: "system", type: "plan.started", payload: {}
+    }));
+    await writeFile(path.join(tempDir, `${runId}.events.jsonl`), `${lines.join("\n")}\n`, "utf8");
+
+    const first = await readRunModelEventBatch(runId, 99_900, 5);
+    expect(first.events.map((event) => event.seq)).toEqual([99_901, 99_902, 99_903, 99_904, 99_905]);
+    const resumed = await readRunModelEventBatch(runId, 99_905, 5);
+    expect(resumed.indexed).toBe(true);
+    expect(resumed.events[0]?.seq).toBe(99_906);
+  }, 30_000);
   it("preserves the valid prefix, repairs a trailing partial line, and continues with the next sequence", async () => {
     const runId = "run-tail";
     await appendRunModelEvent(runId, { actor: "system", type: "plan.started", payload: {} });
