@@ -129,7 +129,7 @@ export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = 
       es?.close();
       setConnection("disconnected");
     };
-  }, [seed.id, initialCursor]);
+  }, [seed.id, initialCursor, initialEvents]);
 
   const { model, events } = useMemo(
     () => buildLiveRunModel(streamEvents, seed, initialEvents),
