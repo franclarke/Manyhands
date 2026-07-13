@@ -35,6 +35,11 @@ export interface PickDecomposerInput {
   model: string;
   executorId?: string | undefined;
   reasoningEffort?: "low" | "medium" | "high" | "xhigh";
+  maxParallelSteps?: number;
+  maxPlanningDepth?: number;
+  maxChildrenPerNode?: number;
+  maxDecomposerCalls?: number;
+  maxPromptBytes?: number;
   /** Repository symbol-topology digest appended to the prompt grounding (Fase 2.1). */
   groundingDigest?: string;
   /** Skip the LLM regardless of env (used by Lab compare for reproducibility). */
@@ -57,6 +62,9 @@ export interface PickDecomposerInput {
 const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-5";
 
 export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection {
+  if (input.maxPromptBytes !== undefined && Buffer.byteLength(input.userPrompt, "utf8") > input.maxPromptBytes) {
+    throw new Error(`Planning prompt exceeds the persisted ${input.maxPromptBytes}-byte budget.`);
+  }
   const forceFallbackEnv = process.env.MANYHANDS_FORCE_FALLBACK === "1";
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
@@ -68,7 +76,7 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
   }
   const hints = toWorkspaceHints(input.workspace);
   const workspaceHints = formatWorkspaceHintsWithGrounding(hints, input.groundingDigest);
-  const maxParallelSteps = planningMaxParallelFromEnv();
+  const maxParallelSteps = input.maxParallelSteps ?? planningMaxParallelFromEnv();
   const maxStepAttempts = positiveIntegerFromEnv("MANYHANDS_PLANNING_MAX_STEP_ATTEMPTS");
   const stepTimeoutMs = positiveIntegerFromEnv("MANYHANDS_PLANNING_STEP_TIMEOUT_MS");
 
@@ -115,6 +123,9 @@ export function pickDecomposer(input: PickDecomposerInput): DecomposerSelection 
       model,
       userPrompt: input.userPrompt,
       ...(maxParallelSteps !== undefined ? { maxParallelSteps } : {}),
+      ...(input.maxPlanningDepth !== undefined ? { depthBudget: input.maxPlanningDepth } : {}),
+      ...(input.maxChildrenPerNode !== undefined ? { maxChildrenPerNode: input.maxChildrenPerNode } : {}),
+      ...(input.maxDecomposerCalls !== undefined ? { maxDecomposerCalls: input.maxDecomposerCalls } : {}),
       ...(maxStepAttempts !== undefined ? { maxStepAttempts } : {}),
       ...(input.onStepStarted !== undefined ? { onStepStarted: input.onStepStarted } : {}),
       ...(input.onStepCompleted !== undefined ? { onStepCompleted: input.onStepCompleted } : {}),
@@ -146,6 +157,9 @@ function modelOptions(
     ...(input.reasoningEffort !== undefined ? { reasoningEffort: input.reasoningEffort } : {}),
     ...(stepTimeoutMs !== undefined ? { timeoutMs: stepTimeoutMs } : {}),
     ...(maxParallelSteps !== undefined ? { maxParallelSteps } : {}),
+    ...(input.maxPlanningDepth !== undefined ? { depthBudget: input.maxPlanningDepth } : {}),
+    ...(input.maxChildrenPerNode !== undefined ? { maxChildrenPerNode: input.maxChildrenPerNode } : {}),
+    ...(input.maxDecomposerCalls !== undefined ? { maxDecomposerCalls: input.maxDecomposerCalls } : {}),
     ...(maxStepAttempts !== undefined ? { maxStepAttempts } : {}),
     ...(input.onStepStarted !== undefined ? { onStepStarted: input.onStepStarted } : {}),
     ...(input.onStepCompleted !== undefined ? { onStepCompleted: input.onStepCompleted } : {}),

@@ -57,6 +57,7 @@ import {
 } from "./planning-run-model-adapter";
 import { backfillRunValidationCommands } from "./execution-state";
 import { withDefaultReasoningEffort } from "./execution-config-defaults";
+import { effectivePlanningBudget } from "./effective-planning-budget";
 import type {
   PlanningLiveNode,
   RunDecompositionMetadata,
@@ -229,6 +230,7 @@ async function decomposePlanForRun(
   // record — editing the workspace after create must not move what planning
   // grounds. The workspace only contributes non-path hints (name, commands).
   const targetPath = await resolveRunTargetPath(run);
+  const budget = effectivePlanningBudget(run.planningBudget);
   const workspace =
     workspaceRecord !== null && targetPath !== undefined
       ? { ...workspaceRecord, repoPath: targetPath }
@@ -237,7 +239,11 @@ async function decomposePlanForRun(
   // Repository grounding: index the target repo once, up front. The digest
   // grounds the decomposer prompt (symbol topology) and the index feeds
   // conflict-risk + the seam critic. Best-effort — planning proceeds without it.
-  const grounding = await buildRepositoryGrounding(targetPath ?? workspace?.repoPath);
+  const grounding = await buildRepositoryGrounding(targetPath ?? workspace?.repoPath, {
+    budget,
+    ...(run.targetContext !== undefined ? { targetContext: run.targetContext } : {}),
+    signal: AbortSignal.timeout(budget.maxIndexDurationMs)
+  });
   const groundingDigest = grounding !== undefined ? buildGroundingDigest(grounding.index) : undefined;
 
   const selection = pickDecomposer({
@@ -255,6 +261,11 @@ async function decomposePlanForRun(
     ...(run.executionConfig?.reasoningEffort !== undefined
       ? { reasoningEffort: run.executionConfig.reasoningEffort }
       : {}),
+    maxParallelSteps: budget.maxPlanningConcurrency,
+    maxPlanningDepth: budget.maxPlanningDepth,
+    maxChildrenPerNode: budget.maxChildrenPerNode,
+    maxDecomposerCalls: budget.maxDecomposerCalls,
+    maxPromptBytes: budget.maxPromptBytes,
     onStepStarted: async (event) => {
       livePlanningNodes.set(event.nodeId, {
         ...livePlanningNodes.get(event.nodeId),

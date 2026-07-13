@@ -35,6 +35,7 @@ import { titlerSelection } from "./executor-selection";
 import { supervisedSpawnFn } from "./process-supervision";
 import { resolveRunTargetPath } from "./target-context";
 import { generateRunTitle, type RunTitle } from "./run-titler";
+import { persistEffectivePlanningBudget } from "./effective-planning-budget";
 import type { ExecutorSelection } from "@manyhands/execution-core";
 import { startHeartbeat } from "./runner-heartbeat";
 import { markRunnerInactive, startRunBackgroundTask, tryMarkRunnerActive } from "./runner-state";
@@ -155,6 +156,7 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
         startedAt: run.startedAt ?? new Date().toISOString()
       }, { lease });
     }
+    run = await persistEffectivePlanningBudget(runId, lease);
 
     // Generate a clean title + summary before decomposition so the workspace
     // header reads well while the graph is still generating. This is a

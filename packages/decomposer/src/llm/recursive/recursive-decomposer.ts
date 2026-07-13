@@ -86,6 +86,8 @@ export interface RecursiveDecomposerOptions {
   depthBudget?: number;
   /** Maximum recursive child planning calls that may run at once. Defaults to 3. */
   maxParallelSteps?: number;
+  maxChildrenPerNode?: number;
+  maxDecomposerCalls?: number;
   workspaceHints?: string;
   promptTemplateVersion?: string;
   /** Total attempts per node, including the first call. Defaults to 3. */
@@ -204,6 +206,8 @@ export class RecursiveDecomposer implements Decomposer {
   private readonly aggressivenessOverride?: Aggressiveness;
   private readonly depthBudget: number;
   private readonly maxParallelSteps: number;
+  private readonly maxChildrenPerNode: number;
+  private readonly maxDecomposerCalls: number;
   private readonly workspaceHints?: string;
   private readonly maxStepAttempts: number;
   private readonly stepRetryBaseDelayMs: number;
@@ -227,6 +231,8 @@ export class RecursiveDecomposer implements Decomposer {
     }
     this.depthBudget = options.depthBudget ?? DEFAULT_DEPTH_BUDGET;
     this.maxParallelSteps = normalizeParallelism(options.maxParallelSteps);
+    this.maxChildrenPerNode = normalizePositiveInteger(options.maxChildrenPerNode, 24);
+    this.maxDecomposerCalls = normalizePositiveInteger(options.maxDecomposerCalls, 500);
     if (options.workspaceHints !== undefined) {
       this.workspaceHints = options.workspaceHints;
     }
@@ -497,6 +503,9 @@ export class RecursiveDecomposer implements Decomposer {
     accum: Accumulator,
     aggressiveness: Aggressiveness
   ): Promise<string[]> {
+    if (accum.callCount >= this.maxDecomposerCalls) {
+      throw new DecomposerLlmError(`Planning decomposer-call budget (${this.maxDecomposerCalls}) was exhausted.`, undefined, "request");
+    }
     await this.emitStepStarted(ctx);
     await this.emitStepStatus(ctx, { state: "generating", maxAttempts: this.maxStepAttempts });
 
@@ -564,6 +573,10 @@ export class RecursiveDecomposer implements Decomposer {
       await this.emitStepCompleted(ctx, step, resolution);
       const atomic = step.decision === "atomic" ? step : undefined;
       return this.materializeAtomic(ctx, accum, atomic);
+    }
+
+    if (step.children.length > this.maxChildrenPerNode) {
+      throw new DecomposerLlmError(`Planning child budget (${this.maxChildrenPerNode}) was exceeded for ${ctx.nodeId}.`, undefined, "normalize");
     }
 
     // ── Decompose: define seams, create children, recurse ──

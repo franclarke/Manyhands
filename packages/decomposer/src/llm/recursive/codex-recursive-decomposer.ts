@@ -30,6 +30,8 @@ export interface CodexRecursiveDecomposerOptions {
   aggressiveness?: Aggressiveness;
   depthBudget?: number;
   maxParallelSteps?: number;
+  maxChildrenPerNode?: number;
+  maxDecomposerCalls?: number;
   maxStepAttempts?: number;
   stepRetryBaseDelayMs?: number;
   stepRetryMaxDelayMs?: number;
@@ -86,6 +88,8 @@ export class CodexRecursiveDecomposer implements Decomposer {
     if (options.aggressiveness !== undefined) recursiveOptions.aggressiveness = options.aggressiveness;
     if (options.depthBudget !== undefined) recursiveOptions.depthBudget = options.depthBudget;
     if (options.maxParallelSteps !== undefined) recursiveOptions.maxParallelSteps = options.maxParallelSteps;
+    if (options.maxChildrenPerNode !== undefined) recursiveOptions.maxChildrenPerNode = options.maxChildrenPerNode;
+    if (options.maxDecomposerCalls !== undefined) recursiveOptions.maxDecomposerCalls = options.maxDecomposerCalls;
     if (options.maxStepAttempts !== undefined) recursiveOptions.maxStepAttempts = options.maxStepAttempts;
     if (options.stepRetryBaseDelayMs !== undefined) recursiveOptions.stepRetryBaseDelayMs = options.stepRetryBaseDelayMs;
     if (options.stepRetryMaxDelayMs !== undefined) recursiveOptions.stepRetryMaxDelayMs = options.stepRetryMaxDelayMs;

@@ -17,6 +17,29 @@ export const ExecutionConfigInputSchema = ExecutionConfigSchema.partial();
 
 export type ExecutionConfigInput = z.infer<typeof ExecutionConfigInputSchema>;
 
+/** B-029: persisted, versioned limits for planning and read-only repository grounding. */
+export const PlanningBudgetInputSchema = z.object({
+  version: z.literal(1).optional(),
+  maxPlanningDurationMs: z.number().int().positive().optional(),
+  maxIndexDurationMs: z.number().int().positive().optional(),
+  maxIndexedFiles: z.number().int().positive().optional(),
+  maxIndexBytes: z.number().int().positive().optional(),
+  maxIndexedFileBytes: z.number().int().positive().optional(),
+  maxIndexedSymbols: z.number().int().positive().optional(),
+  maxIndexedImports: z.number().int().positive().optional(),
+  maxIndexedExports: z.number().int().positive().optional(),
+  maxDecomposerCalls: z.number().int().positive().optional(),
+  maxCriticCalls: z.number().int().positive().optional(),
+  maxPlanningNodes: z.number().int().positive().optional(),
+  maxPlanningDepth: z.number().int().positive().optional(),
+  maxChildrenPerNode: z.number().int().positive().optional(),
+  maxPromptBytes: z.number().int().positive().optional(),
+  maxPlanningConcurrency: z.number().int().positive().optional(),
+  maxOutputBytes: z.number().int().positive().optional()
+}).strict();
+
+export type PlanningBudgetInput = z.infer<typeof PlanningBudgetInputSchema>;
+
 export const ExecutorSelectionSchema = z.object({
   executorId: z.enum(EXECUTOR_IDS),
   model: z.string().min(1)
@@ -366,6 +389,8 @@ export const RunRecordSchema = z.object({
   integrationCommitSha: z.string().min(1).optional(),
   /** Optional per-run overrides; defaults applied from execution-core at runtime. */
   executionConfig: ExecutionConfigInputSchema.optional(),
+  /** Effective values are persisted before any planning subprocess or index dispatch. */
+  planningBudget: PlanningBudgetInputSchema.optional(),
   /** Trace events emitted by the execution engine, persisted as run evidence. */
   executionTraces: z.array(TraceEventSchema).optional(),
   /** Append-only edit log. Sprint 2 of Fase C consumes this; reserved here for compatibility. */

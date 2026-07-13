@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readdir, readFile } from "node:fs/promises";
+import { lstat, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema, uniqueValues } from "@manyhands/shared";
 import ts from "typescript";
@@ -118,7 +118,28 @@ export interface RepositoryIndexerInput {
   rootPath: string;
   repositoryId?: string;
   indexedAt?: string;
+  /** B-029: explicit read-only index limits. Omitted files are diagnosed, never silently included. */
+  limits?: Partial<RepositoryIndexLimits>;
+  signal?: AbortSignal;
 }
+
+export interface RepositoryIndexLimits {
+  maxFiles: number;
+  maxBytes: number;
+  maxFileBytes: number;
+  maxSymbols: number;
+  maxImports: number;
+  maxExports: number;
+}
+
+const DEFAULT_LIMITS: RepositoryIndexLimits = {
+  maxFiles: 20_000,
+  maxBytes: 64 * 1024 * 1024,
+  maxFileBytes: 2 * 1024 * 1024,
+  maxSymbols: 100_000,
+  maxImports: 100_000,
+  maxExports: 100_000
+};
 
 export interface RepositoryIndexer {
   index(input: RepositoryIndexerInput): Promise<RepositoryIndex>;
@@ -150,20 +171,40 @@ export class TypeScriptRepositoryIndexer implements RepositoryIndexer {
     const rootPath = path.resolve(input.rootPath);
     const repositoryId = input.repositoryId ?? path.basename(rootPath).replace(/[^A-Za-z0-9._:-]/gu, "-");
     const indexedAt = input.indexedAt ?? DEFAULT_INDEXED_AT;
-    const filePaths = await listIndexableFiles(rootPath);
-    const parsedFiles = await Promise.all(filePaths.map((filePath) => parseFile(rootPath, filePath)));
+    const limits = normalizeLimits(input.limits);
+    const listed = await listIndexableFiles(rootPath, limits, input.signal);
+    const parsedFiles: ParsedFile[] = [];
+    let indexedBytes = 0;
+    for (const filePath of listed.files) {
+      throwIfAborted(input.signal);
+      const fileStat = await stat(filePath);
+      if (fileStat.size > limits.maxFileBytes) {
+        listed.diagnostics.push({ filePath: relative(rootPath, filePath), severity: "warning", message: "repository index file-size budget exceeded" });
+        continue;
+      }
+      if (indexedBytes + fileStat.size > limits.maxBytes) {
+        listed.diagnostics.push({ severity: "warning", message: "repository index byte budget reached" });
+        break;
+      }
+      indexedBytes += fileStat.size;
+      parsedFiles.push(await parseFile(rootPath, filePath));
+    }
     const files = parsedFiles.map((item) => item.file).sort((left, right) => left.path.localeCompare(right.path));
     const symbols = parsedFiles
       .flatMap((item) => item.symbols)
+      .slice(0, limits.maxSymbols)
       .sort((left, right) => compareByPathThenName(left.filePath, left.name, right.filePath, right.name));
     const imports = parsedFiles
       .flatMap((item) => item.imports)
+      .slice(0, limits.maxImports)
       .sort((left, right) => compareByPathThenName(left.filePath, left.moduleSpecifier, right.filePath, right.moduleSpecifier));
     const exports = parsedFiles
       .flatMap((item) => item.exports)
+      .slice(0, limits.maxExports)
       .sort((left, right) => compareByPathThenName(left.filePath, left.moduleSpecifier ?? "", right.filePath, right.moduleSpecifier ?? ""));
     const diagnostics = parsedFiles
       .flatMap((item) => item.diagnostics)
+      .concat(listed.diagnostics)
       .sort((left, right) => (left.filePath ?? "").localeCompare(right.filePath ?? "") || left.message.localeCompare(right.message));
 
     return RepositoryIndexSchema.parse({
@@ -234,29 +275,84 @@ export function normalizeRepositoryPath(value: string): string {
   return value.replaceAll("\\", "/").replace(/^\.\//u, "");
 }
 
-async function listIndexableFiles(rootPath: string): Promise<string[]> {
+async function listIndexableFiles(
+  rootPath: string,
+  limits: RepositoryIndexLimits,
+  signal?: AbortSignal
+): Promise<{ files: string[]; diagnostics: RepositoryDiagnostic[] }> {
   const result: string[] = [];
+  const diagnostics: RepositoryDiagnostic[] = [];
+  const ignoredPatterns = await readIgnorePatterns(rootPath);
 
   async function visit(directory: string): Promise<void> {
+    throwIfAborted(signal);
     const entries = await readdir(directory, { withFileTypes: true });
 
     for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+      throwIfAborted(signal);
+      const absolutePath = path.join(directory, entry.name);
+      const relativePath = relative(rootPath, absolutePath);
+      if (isIgnored(relativePath, ignoredPatterns)) continue;
+      if (entry.isSymbolicLink()) {
+        diagnostics.push({ filePath: relativePath, severity: "warning", message: "repository index skipped symlink" });
+        continue;
+      }
       if (entry.isDirectory()) {
         if (!IGNORED_DIRECTORIES.has(entry.name)) {
-          await visit(path.join(directory, entry.name));
+          await visit(absolutePath);
         }
 
         continue;
       }
 
       if (entry.isFile() && INDEXABLE_EXTENSIONS.has(path.extname(entry.name))) {
-        result.push(path.join(directory, entry.name));
+        if (result.length >= limits.maxFiles) {
+          diagnostics.push({ severity: "warning", message: "repository index file budget reached" });
+          return;
+        }
+        const details = await lstat(absolutePath);
+        if (!details.isFile()) continue;
+        result.push(absolutePath);
       }
     }
   }
 
   await visit(rootPath);
-  return result.sort();
+  return { files: result.sort(), diagnostics };
+}
+
+function normalizeLimits(input: Partial<RepositoryIndexLimits> | undefined): RepositoryIndexLimits {
+  const candidate = { ...DEFAULT_LIMITS, ...input };
+  for (const [name, value] of Object.entries(candidate)) {
+    if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`Repository index ${name} must be a positive integer.`);
+  }
+  return candidate;
+}
+
+async function readIgnorePatterns(rootPath: string): Promise<string[]> {
+  try {
+    return (await readFile(path.join(rootPath, ".gitignore"), "utf8"))
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith("#") && !line.startsWith("!"));
+  } catch {
+    return [];
+  }
+}
+
+function isIgnored(relativePath: string, patterns: readonly string[]): boolean {
+  return patterns.some((rawPattern) => {
+    const pattern = rawPattern.replace(/^\//u, "").replace(/\/$/u, "");
+    return relativePath === pattern || relativePath.startsWith(`${pattern}/`) || (pattern.startsWith("**/") && relativePath.endsWith(pattern.slice(3)));
+  });
+}
+
+function relative(rootPath: string, filePath: string): string {
+  return normalizeRepositoryPath(path.relative(rootPath, filePath));
+}
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted === true) throw signal.reason instanceof Error ? signal.reason : new Error("Repository indexing aborted.");
 }
 
 async function parseFile(rootPath: string, absolutePath: string): Promise<ParsedFile> {

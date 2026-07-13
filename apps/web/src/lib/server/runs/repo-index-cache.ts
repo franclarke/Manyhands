@@ -1,9 +1,11 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { promisify } from "node:util";
 
 import { buildRepositoryIndex, summarizeRepositoryIndex, type RepositoryIndex } from "@manyhands/core";
 
-import type { RepositoryGroundingSummary } from "./schema";
+import type { EffectivePlanningBudget } from "./effective-planning-budget";
+import type { RepositoryGroundingSummary, RunTargetContext } from "./schema";
 
 const execFileAsync = promisify(execFile);
 
@@ -13,7 +15,7 @@ export interface RepositoryGrounding {
 }
 
 interface CacheEntry {
-  head: string;
+  fingerprint: string;
   grounding: RepositoryGrounding;
 }
 
@@ -27,19 +29,31 @@ const cache = new Map<string, CacheEntry>();
  * Best-effort: returns undefined (and logs) if the repo cannot be indexed.
  */
 export async function buildRepositoryGrounding(
-  repoPath: string | undefined
+  repoPath: string | undefined,
+  options: { budget?: EffectivePlanningBudget; targetContext?: RunTargetContext; signal?: AbortSignal } = {}
 ): Promise<RepositoryGrounding | undefined> {
   if (repoPath === undefined || repoPath.trim().length === 0) {
     return undefined;
   }
   try {
-    const head = await currentHead(repoPath);
+    const fingerprint = await currentFingerprint(repoPath, options);
     const cached = cache.get(repoPath);
-    if (cached !== undefined && head !== "" && cached.head === head) {
+    if (cached !== undefined && cached.fingerprint === fingerprint) {
       return cached.grounding;
     }
 
-    const index = await buildRepositoryIndex({ rootPath: repoPath });
+    const index = await buildRepositoryIndex({
+      rootPath: repoPath,
+      signal: options.signal,
+      ...(options.budget === undefined ? {} : { limits: {
+        maxFiles: options.budget.maxIndexedFiles,
+        maxBytes: options.budget.maxIndexBytes,
+        maxFileBytes: options.budget.maxIndexedFileBytes,
+        maxSymbols: options.budget.maxIndexedSymbols,
+        maxImports: options.budget.maxIndexedImports,
+        maxExports: options.budget.maxIndexedExports
+      } })
+    });
     const summary = summarizeRepositoryIndex(index);
     const grounding: RepositoryGrounding = {
       index,
@@ -51,9 +65,7 @@ export async function buildRepositoryGrounding(
         ...(summary.indexedAt !== undefined ? { indexedAt: summary.indexedAt } : {})
       }
     };
-    if (head !== "") {
-      cache.set(repoPath, { head, grounding });
-    }
+    cache.set(repoPath, { fingerprint, grounding });
     return grounding;
   } catch (error) {
     console.warn(
@@ -68,11 +80,20 @@ export function resetRepositoryGroundingCache(): void {
   cache.clear();
 }
 
-async function currentHead(repoPath: string): Promise<string> {
+async function currentFingerprint(
+  repoPath: string,
+  options: { budget?: EffectivePlanningBudget; targetContext?: RunTargetContext }
+): Promise<string> {
   try {
-    const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repoPath });
-    return stdout.trim();
+    const [{ stdout: head }, { stdout: dirty }] = await Promise.all([
+      execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repoPath, windowsHide: true }),
+      execFileAsync("git", ["status", "--porcelain=v1"], { cwd: repoPath, windowsHide: true })
+    ]);
+    return createHash("sha256").update(JSON.stringify({
+      target: options.targetContext?.fingerprint,
+      head: head.trim(), dirty: dirty.trim(), budget: options.budget, schema: "repository-index-v1"
+    })).digest("hex");
   } catch {
-    return "";
+    return createHash("sha256").update(JSON.stringify({ repoPath, target: options.targetContext?.fingerprint, budget: options.budget })).digest("hex");
   }
 }
