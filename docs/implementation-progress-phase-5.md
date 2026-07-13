@@ -40,6 +40,33 @@ respective progress documents.
   recovery are not implemented.
 - **Commit:** pending local commit.
 
+## B-032 — Operational telemetry and retention diagnostics
+
+- **Status:** completed.
+- **Confirmed cause:** recovering an incident required manually locating the run
+  record, event log and evidence directories; no bounded export correlated the
+  operation lease with durable event and disk facts.
+- **Applied design:** `buildRunDiagnostics` produces a metadata-only diagnostic
+  record with run/operation/fencing/commit correlation, lifecycle state,
+  canonical event-log health and event count, plus per-category run storage.
+  The GET endpoint at `/api/runs/:id/diagnostics` exposes that redacted export
+  with `no-store`. It reads no prompts, output tails, file content or secrets.
+  Existing archive/purge retention policy remains authoritative.
+- **Files modified:** `apps/web/src/lib/server/runs/diagnostics.ts`,
+  `apps/web/src/app/api/runs/[id]/diagnostics/route.ts`,
+  `tests/run-diagnostics.test.ts`, this ledger.
+- **Test added:** a persisted operation lease and event log produce correlated
+  disk diagnostics; an unrelated secret-containing file never appears.
+- **Red regression observed:** missing diagnostics module (Vitest exit 1).
+- **Verification:** diagnostics plus archive/purge: 8/8 passed.
+- **Acceptance verified:** an operator can obtain correlated status and storage
+  evidence without inspecting run files manually; retention remains conservative
+  and explicit.
+- **Risks / deferred:** diagnostics does not implement Phase 2 outbox/recovery
+  adoption or a task-attempt journal. Disk quota enforcement is intentionally
+  not added; this checkpoint reports categories so an operator can act safely.
+- **Commit:** pending local commit.
+
 ## B-031 — Single executor registry and legacy containment
 
 - **Status:** completed.
