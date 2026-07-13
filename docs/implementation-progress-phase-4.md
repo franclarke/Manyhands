@@ -17,6 +17,8 @@ Directed result: `tests/durable-run-event-log-windows-lock.test.ts` and `tests/r
 
 During the required multi-process watchdog repetition, the second process exposed two Windows-only resource races unrelated to `sawAbort`: test teardown could observe `ENOTEMPTY` while deleting its temp runs directory, and a final artifact apply could reuse a globally stable worktree path from a prior process with the same run ID. The test now uses the existing bounded `rmWithRetry` primitive; final apply uses a unique ephemeral worktree path per operation. The direct provisioning plus final-apply consumer rerun passed 15/15 after this correction. A fresh ten-process repetition is recorded below before closure.
 
+That repetition then exposed the original ordering race once: `cancelRun` persisted `interrupted` before the required `run.cancelled` audit event. The execution pipeline legitimately observed the terminal RunRecord and returned while the reader still had no `allDead` evidence. The cancellation event is now appended idempotently after kill/GC evidence but before the terminal transition, so `cancelling → run.cancelled(allDead) → interrupted` is externally observable in that order. `tests/cancel-terminal.test.ts` and `tests/run-runner-provisioning.test.ts` passed 11/11 after the ordering fix; a final ten-process run is in progress.
+
 ## B-025 — Operational states and Recovery Center
 
 Status: completed.

@@ -158,18 +158,13 @@ export async function cancelRun(runId: string, deps: CancelRunDeps = {}): Promis
     // 4) Worktree GC only under a verified-dead run (never sweep directories
     //    that may still be a survivor's cwd), then finish the transition.
     cleaned = await gc(run);
-    const beforeFinal = await claimRunMutation(runId, { status: ["cancelling"] }, (current) => {
-      assertTransition(current.status, "interrupted");
-      return { ...current, status: "interrupted" };
-    });
-    run = beforeFinal;
-    await appendStatusChanged({ ...claimed, status: "cancelling" }, run, now, deps.actor ?? "human");
-    terminal = true;
   }
 
-  // Awaited (not fire-and-forget): the cancellation audit must be durable
-  // before the caller sees the outcome (INV-6).
+  // The cancellation audit is a required fact. Persist it before exposing an
+  // interrupted terminal state, otherwise a watcher can observe the terminal
+  // RunRecord while the durable allDead evidence is still absent.
   await appendRunEventRequired(claimed.runId, {
+    eventId: `run.cancelled:${claimed.runId}:${claimed.version}`,
     actor: deps.actor ?? "human",
     at: now,
     type: "run.cancelled",
@@ -182,6 +177,16 @@ export async function cancelRun(runId: string, deps: CancelRunDeps = {}): Promis
       allDead: killReport.allDead
     }
   });
+
+  if (killReport.allDead) {
+    const beforeFinal = await claimRunMutation(runId, { status: ["cancelling"] }, (current) => {
+      assertTransition(current.status, "interrupted");
+      return { ...current, status: "interrupted" };
+    });
+    run = beforeFinal;
+    await appendStatusChanged({ ...claimed, status: "cancelling" }, run, now, deps.actor ?? "human");
+    terminal = true;
+  }
 
   return { run, killReport, cleaned, terminal };
 }
