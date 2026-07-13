@@ -19,6 +19,8 @@ During the required multi-process watchdog repetition, the second process expose
 
 That repetition then exposed the original ordering race once: `cancelRun` persisted `interrupted` before the required `run.cancelled` audit event. The execution pipeline legitimately observed the terminal RunRecord and returned while the reader still had no `allDead` evidence. The cancellation event is now appended idempotently after kill/GC evidence but before the terminal transition, so `cancelling → run.cancelled(allDead) → interrupted` is externally observable in that order. `tests/cancel-terminal.test.ts` and `tests/run-runner-provisioning.test.ts` passed 11/11 after the ordering fix; a final ten-process run is in progress.
 
+Final watchdog repetition after the ordering fix: 10 independent Vitest processes, 10/10 passed (70 tests total, approximately 121 seconds), with `--retry=0`. The final global hermetic suite passed 173 files/1467 tests; 1 opt-in real-executor file (2 tests) and 1 POSIX-only process-group assertion were skipped by their own repository conditions.
+
 ## B-025 — Operational states and Recovery Center
 
 Status: completed.
