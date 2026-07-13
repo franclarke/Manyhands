@@ -9,6 +9,8 @@ import { projectRunRecordToRunEvents, runControlForRun } from "./run-model-proje
 import { publishRunModelBusEvent } from "./run-model-event-bus";
 import { globalSingleton } from "../global-singleton";
 
+const ATOMIC_RENAME_RETRIES = 5;
+
 export type RunModelEventInput<K extends RunEventType = RunEventType> = {
   /** Stable producer identity: retries return the existing durable event. */
   eventId?: string;
@@ -390,7 +392,28 @@ async function atomicWriteEventLog(runId: string, lines: readonly string[]): Pro
   await mkdir(path.dirname(file), { recursive: true });
   const temporary = `${file}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
   await writeFile(temporary, lines.length === 0 ? "" : `${lines.join("\n")}\n`, "utf8");
-  await rename(temporary, file);
+  try {
+    await renameWithRetry(temporary, file);
+  } catch (error) {
+    await rm(temporary, { force: true }).catch(() => undefined);
+    throw error;
+  }
+}
+
+/** Windows can retain a transient handle on an event log during atomic publish. */
+async function renameWithRetry(from: string, to: string): Promise<void> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await rename(from, to);
+      return;
+    } catch (error) {
+      const code = isErrno(error) ? error.code : undefined;
+      if (attempt >= ATOMIC_RENAME_RETRIES || (code !== "EPERM" && code !== "EACCES" && code !== "EBUSY")) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10 * (attempt + 1)));
+    }
+  }
 }
 
 function filePathFor(runId: string): string {
