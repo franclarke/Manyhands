@@ -40,6 +40,27 @@ respective progress documents.
   recovery are not implemented.
 - **Commit:** pending local commit.
 
+## Phase 5 commit map and final verification
+
+- **B-029:** `c0c95cf` — effective planning budget and bounded index.
+- **B-030:** `db48ae9` — sparse event-resume index.
+- **B-031:** `c10192f` plus corrective `d11c935` — canonical client-safe registry.
+- **B-032:** `2884a1b` — bounded diagnostics export.
+- **B-033:** `fc8b2ed` — active operator documentation.
+- **Package typechecks:** `pnpm -r --filter "./packages/*" typecheck` passed, 12/12.
+- **Web typecheck:** `pnpm --filter @manyhands/web exec tsc --noEmit` passed.
+- **Web build:** `pnpm --filter @manyhands/web build` passed: compilation,
+  type validation, static pages and route traces all completed; diagnostics was
+  present in the generated route table.
+- **Hermetic suite:** `pnpm test -- --retry=0 --maxWorkers=1 --minWorkers=1
+  --silent` passed: 176 files / 1,472 tests; 1 platform-only file and 3 tests
+  were explicitly skipped. All executor suites injected local spawn doubles.
+- **Clean clone:** `git clone --no-local .` at `d11c935` had no status output
+  and contained the root/web READMEs and `packages/shared/src/executor-registry.ts`.
+- **Remaining deferred work:** B-034 and all subsequent roadmap work; Phase 2
+  event-store/outbox, task-attempt recovery and disk quota enforcement remain
+  deliberately out of this checkpoint.
+
 ## B-033 — Reproducible current documentation
 
 - **Status:** completed.
