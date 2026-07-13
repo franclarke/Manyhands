@@ -35,7 +35,7 @@ export interface ModelOption {
  * Codex/GPT-5 family does (`--reasoning-effort`); Claude Code exposes only
  * `--model`, so the effort control stays hidden for it.
  */
-const EFFORT_CAPABLE_MODEL_IDS = new Set<string>(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "haiku", "sonnet", "opus"]);
+const EFFORT_CAPABLE_MODEL_IDS = new Set<string>(["gpt-5.5", "gpt-5.4", "gpt-5.4-mini"]);
 
 export const CLAUDE_CODE_EXECUTOR_ID = "claude-code-cli" satisfies ExecutorId;
 export const DEFAULT_EXECUTOR_SELECTION = {
@@ -176,6 +176,24 @@ export function findModelForSelection(selection: ExecutorSelection): ModelOption
   );
 }
 
+/** One capability source shared by form controls and request validation. */
+export function runtimeCapabilitiesForSelection(selection: ExecutorSelection): {
+  selectable: boolean;
+  supportsReasoningEffort: boolean;
+  capabilities: readonly ExecutorCapability[];
+} {
+  const model = findModelForSelection(selection);
+  return {
+    selectable: model?.enabled === true,
+    supportsReasoningEffort: model?.enabled === true && model.supportsEffort,
+    capabilities: model?.capabilities ?? []
+  };
+}
+
+export function selectableModelOptions(capability?: ExecutorCapability): ReadonlyArray<ModelOption> {
+  return MODEL_OPTIONS.filter((option) => option.enabled && (capability === undefined || option.capabilities.includes(capability)));
+}
+
 export function normalizeExecutorOverride(value: unknown): ExecutorOverride | undefined {
   if (typeof value === "string" && value.trim().length > 0) {
     return { executorId: CLAUDE_CODE_EXECUTOR_ID, model: value };
@@ -191,10 +209,8 @@ export function normalizeExecutorOverride(value: unknown): ExecutorOverride | un
   ) {
     return undefined;
   }
-  if (!EXECUTOR_DESCRIPTORS.some((descriptor) => descriptor.id === candidate.executorId)) {
-    return undefined;
-  }
-  return { executorId: candidate.executorId as ExecutorId, model: candidate.model };
+  const selection = { executorId: candidate.executorId as ExecutorId, model: candidate.model };
+  return runtimeCapabilitiesForSelection(selection).selectable ? selection : undefined;
 }
 
 export function executorLabel(id: ExecutorId): string {

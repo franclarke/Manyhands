@@ -19,7 +19,7 @@ import {
   WorkspaceNotFoundError,
   getWorkspaceRepository
 } from "@/lib/server/workspaces";
-import { CLAUDE_CODE_EXECUTOR_ID, findModelForSelection, type ExecutorSelection, type ModelCapability } from "@/lib/models";
+import { CLAUDE_CODE_EXECUTOR_ID, runtimeCapabilitiesForSelection, type ExecutorSelection, type ModelCapability } from "@/lib/models";
 import { resolveLegacyModelSelection } from "@manyhands/execution-core";
 import { withDefaultReasoningEffort } from "@/lib/server/runs/execution-config-defaults";
 
@@ -74,11 +74,11 @@ function validateSelectionForCapability(
   if (selection === undefined) {
     return;
   }
-  const model = findModelForSelection(selection);
-  if (model === undefined || !model.enabled) {
+  const capabilities = runtimeCapabilitiesForSelection(selection);
+  if (!capabilities.selectable) {
     throw new RunValidationError(`Unsupported executor/model selection "${selection.executorId}/${selection.model}"`);
   }
-  if (!model.capabilities.includes(capability)) {
+  if (!capabilities.capabilities.includes(capability)) {
     throw new RunValidationError(
       `${label} selection "${selection.executorId}/${selection.model}" does not support ${capability}.`
     );

@@ -37,6 +37,20 @@ Deferred: attempt adopt/discard and event-log reconciliation actions are deliber
 
 Commit: recorded after commit creation.
 
+## B-028 — Capability-aligned visible controls
+
+Status: completed.
+
+Root cause: visible model controls and request validation shared most of the static registry, but reasoning effort incorrectly appeared available for Claude models even though only the Codex CLI accepts that runtime flag. Override normalization also accepted disabled or unknown selections before a later caller rejected them.
+
+Design: `runtimeCapabilitiesForSelection` is the canonical capability projection consumed by the command-center model picker and the create-run route. It exposes selection validity, supported capabilities, and reasoning-effort support. Only enabled Claude Code and Codex options are selectable; Claude Code remains the default, Codex remains the alternative, and no Gemini option is exposed. Reasoning effort is now shown/persisted only for Codex models, exactly where the execution config consumes it. Disabled OpenCode and unknown models are rejected during normalization rather than appearing as actionable overrides.
+
+Modified: `apps/web/src/lib/models.ts`, command-center model picker, create-run route, and `tests/model-registry.test.ts`. Tests cover Claude/Codex capability behavior, disabled executor rejection, unknown model rejection, and the existing create-run CAS consumer. Results: 7/7 tests passed; web typecheck is rerun before commit.
+
+Existing lifecycle-gated manual-node, critic override, replan, and delivery controls remain attached to their established product routes; this task does not add a generic integrator button because atomic integrators are graph semantics rather than a safe standalone operation.
+
+Commit: recorded after commit creation.
+
 ## B-027 — Incremental run event streaming
 
 Status: completed.

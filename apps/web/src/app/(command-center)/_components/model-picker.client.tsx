@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import { MODEL_OPTIONS, formatSelectionValue, type ModelCapability, type ModelOption } from "@/lib/models";
+import { formatSelectionValue, selectableModelOptions, type ModelCapability, type ModelOption } from "@/lib/models";
 import { formatRate } from "@/lib/model-pricing";
 
 interface ModelPickerProps {
@@ -39,9 +39,7 @@ export function ModelPicker({ value, onChange, capability }: ModelPickerProps): 
     };
   }, [open]);
 
-  const options = MODEL_OPTIONS.filter(
-    (option) => option.enabled && (capability === undefined || option.capabilities.includes(capability))
-  );
+  const options = selectableModelOptions(capability);
   const selected = options.find((option) => formatSelectionValue({ executorId: option.executorId, model: option.id }) === value);
   const grouped = groupByProvider(options);
 

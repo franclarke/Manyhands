@@ -6,7 +6,8 @@ import {
   MODEL_OPTIONS,
   findModel,
   findModelForSelection,
-  normalizeExecutorOverride
+  normalizeExecutorOverride,
+  runtimeCapabilitiesForSelection
 } from "@/lib/models";
 
 describe("model registry", () => {
@@ -50,5 +51,19 @@ describe("model registry", () => {
     });
     expect(findModelForSelection({ executorId: "claude-code-cli", model: "sonnet" })?.enabled).toBe(true);
     expect(normalizeExecutorOverride({ executorId: "claude-code-cli", model: "" })).toBeUndefined();
+  });
+
+  it("only exposes controls the selected executor can actually honor", () => {
+    expect(runtimeCapabilitiesForSelection({ executorId: "claude-code-cli", model: "sonnet" })).toMatchObject({
+      selectable: true,
+      supportsReasoningEffort: false
+    });
+    expect(runtimeCapabilitiesForSelection({ executorId: "codex-cli", model: "gpt-5.5" })).toMatchObject({
+      selectable: true,
+      supportsReasoningEffort: true
+    });
+    expect(runtimeCapabilitiesForSelection({ executorId: "opencode-cli", model: "opencode-default" }).selectable).toBe(false);
+    expect(normalizeExecutorOverride({ executorId: "opencode-cli", model: "opencode-default" })).toBeUndefined();
+    expect(normalizeExecutorOverride({ executorId: "claude-code-cli", model: "not-a-model" })).toBeUndefined();
   });
 });
