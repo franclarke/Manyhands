@@ -234,13 +234,17 @@ function parseOwner(raw: string): RepoLockOwner | undefined {
 async function readOwnerRecordAt(lockDir: string): Promise<RepoLockOwner | undefined> {
   try {
     return parseOwner(await readFile(join(lockDir, "owner.json"), "utf8"));
-  } catch {
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT" && code !== "ENOTDIR") throw error;
     // ENOENT (missing owner.json), ENOTDIR (legacy file lock) — fall through.
   }
   try {
     return parseOwner(await readFile(lockDir, "utf8"));
-  } catch {
-    return undefined;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR" || code === "EISDIR") return undefined;
+    throw error;
   }
 }
 
