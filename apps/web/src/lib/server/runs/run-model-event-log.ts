@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import readline from "node:readline";
 import path from "node:path";
 import type { Actor, RunEvent, RunEventPayloads, RunEventType } from "@/lib/run-model/types";
 import type { RunRecord } from "./schema";
@@ -36,6 +38,60 @@ export interface RunModelEventLogInspection {
   /** `degraded` is a repairable trailing partial line; `corrupt` is a real invalid record. */
   status: "ok" | "degraded" | "corrupt";
   reason?: string;
+}
+
+export interface RunModelEventBatch {
+  events: RunEvent[];
+  nextCursor: number;
+  hasMore: boolean;
+  status: "ok" | "degraded";
+}
+
+/**
+ * B-027 incremental reader. It scans JSONL as a stream so reconnects retain
+ * only the requested delta in memory; callers resume from the durable seq.
+ */
+export async function readRunModelEventBatch(runId: string, afterSeq: number, limit = 250): Promise<RunModelEventBatch> {
+  const safeLimit = Math.max(1, Math.min(limit, 1_000));
+  const file = filePathFor(runId);
+  try {
+    await stat(file);
+  } catch (error) {
+    if (isErrno(error) && error.code === "ENOENT") return { events: [], nextCursor: afterSeq, hasMore: false, status: "ok" };
+    throw error;
+  }
+  const events: RunEvent[] = [];
+  let expectedSeq = 1;
+  let hasMore = false;
+  let status: "ok" | "degraded" = "ok";
+  const lines = readline.createInterface({ input: createReadStream(file, { encoding: "utf8" }), crlfDelay: Infinity });
+  for await (const line of lines) {
+    if (line.trim().length === 0) continue;
+    let event: RunEvent;
+    try {
+      event = JSON.parse(line) as RunEvent;
+    } catch {
+      status = "degraded";
+      break;
+    }
+    if (!isEventShape(event, runId) || event.seq !== expectedSeq) {
+      status = "degraded";
+      break;
+    }
+    const durable = event as Partial<DurableRunEvent>;
+    if (durable.schemaVersion !== undefined && (durable.schemaVersion !== 1 || typeof durable.eventId !== "string" || typeof durable.checksum !== "string" || durable.checksum !== checksumFor(durable as DurableRunEvent))) {
+      status = "degraded";
+      break;
+    }
+    expectedSeq += 1;
+    if (event.seq <= afterSeq) continue;
+    if (events.length >= safeLimit) {
+      hasMore = true;
+      break;
+    }
+    events.push(event);
+  }
+  return { events, nextCursor: events.at(-1)?.seq ?? afterSeq, hasMore, status };
 }
 
 export async function inspectRunModelEventLog(runId: string): Promise<RunModelEventLogInspection> {

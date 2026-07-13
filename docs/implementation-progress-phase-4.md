@@ -37,6 +37,20 @@ Deferred: attempt adopt/discard and event-log reconciliation actions are deliber
 
 Commit: recorded after commit creation.
 
+## B-027 — Incremental run event streaming
+
+Status: completed.
+
+Root cause: the SSE endpoint rebuilt and replayed the full durable history on each connection, while the client treated a gap by resetting to sequence zero. This made reconnect cost proportional to the whole run and hid connection health behind a boolean.
+
+Design: `readRunModelEventBatch` streams JSONL lines and exposes a bounded sequence cursor, `hasMore`, and degraded state without retaining the full log in memory. SSE accepts `afterSeq` (with legacy `after`/`Last-Event-ID` compatibility), flushes bounded batches before subscribing live, and yields under stream pressure. The client retains a durable cursor, deduplicates `eventId`/sequence, requests the missing delta after a gap rather than normal full replay, and exposes connecting/connected/reconnecting/degraded/disconnected with retry count and last sequence.
+
+Modified: canonical event reader, run-events route, live-model hook, run header connection indication, and durable event-log tests. Tests: batch pagination/cursor plus existing replay and event-write drain consumers passed 12/12; web typecheck passed.
+
+Compatibility: legacy logs continue using `after`; first load projects a record only when no durable event log exists. Deferred: sparse byte-offset indexing is not introduced because the bounded streaming reader satisfies the current product path without a second event store.
+
+Commit: recorded after commit creation.
+
 ## B-026 — Final viewer from immutable commits
 
 Status: completed.

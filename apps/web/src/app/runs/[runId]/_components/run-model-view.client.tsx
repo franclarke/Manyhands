@@ -42,7 +42,7 @@ export function RunModelView({
   initialEvents: RunEvent[];
   workspaceName?: string | undefined;
 }): React.ReactElement {
-  const { model, events, connected } = useLiveRunModel(seed, initialEvents);
+  const { model, events, connected, connection } = useLiveRunModel(seed, initialEvents);
   const [focus, setFocus] = useState<FocusTarget | null>(null);
   const [dockSlots, setDockSlots] = useState<DockSlotState[]>([]);
   const slotSeqRef = useRef(0);
@@ -174,7 +174,7 @@ export function RunModelView({
   return (
     <ChatRuntimeProvider events={events}>
       <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--color-bg)] font-sans">
-        <RunHeader runId={seed.id} view={view} model={model} workspaceName={workspaceName} />
+        <RunHeader runId={seed.id} view={view} model={model} workspaceName={workspaceName} connection={connection} />
         <OperationalRecoveryCenter runId={seed.id} model={model} events={events} />
         <RunTimeline
           phases={timeline}
@@ -397,12 +397,14 @@ function RunHeader({
   runId,
   view,
   model,
-  workspaceName
+  workspaceName,
+  connection
 }: {
   runId: string;
   view: ReturnType<typeof selectMinimalWorkspaceView>;
   model: RunModel;
   workspaceName?: string | undefined;
+  connection: "connecting" | "connected" | "reconnecting" | "degraded" | "disconnected";
 }): React.ReactElement {
   const nodesCount = model.nodes.size;
   const conflictsCount = model.conflicts.size;
@@ -425,6 +427,7 @@ function RunHeader({
           {view.title}
         </h1>
         <StatusPill status={runStatus} label={STATUS_META[runStatus].label} />
+        <span className="text-eyebrow text-[var(--color-text-subtle)]" title="Estado de conexión del event log">{connection}</span>
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-3 text-xs text-[var(--color-text-muted)]">

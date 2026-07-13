@@ -17,6 +17,9 @@ export interface LiveRunModel {
   /** The native envelope (for the timeline / audit trail). */
   events: RunEvent[];
   connected: boolean;
+  connection: "connecting" | "connected" | "reconnecting" | "degraded" | "disconnected";
+  lastSeq: number;
+  retryCount: number;
   /** Number of native live events received after the initial cursor. */
   streamCount: number;
 }
@@ -48,6 +51,8 @@ export function isTerminalRunStatus(status: RunControlStatus): boolean {
 export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = []): LiveRunModel {
   const [streamEvents, setStreamEvents] = useState<RunEvent[]>([]);
   const [connected, setConnected] = useState(false);
+  const [connection, setConnection] = useState<LiveRunModel["connection"]>("connecting");
+  const [retryCount, setRetryCount] = useState(0);
   const bufferRef = useRef<RunEvent[]>([]);
   const initialCursor = useMemo(() => maxSeq(initialEvents), [initialEvents]);
 
@@ -55,6 +60,8 @@ export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = 
     if (typeof window === "undefined") return;
     bufferRef.current = [];
     setStreamEvents([]);
+    setConnection("connecting");
+    setRetryCount(0);
 
     // Manual reconnection (INV-7): the browser's auto-retry has a fixed cadence
     // and no gap awareness. We close on error and reopen with exponential
@@ -66,30 +73,36 @@ export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = 
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let attempts = 0;
     let lastSeen = initialCursor;
-    let refetchedAfterGap = false;
+    let recoveringGap = false;
+    const seenEventIds = new Set(initialEvents.map((event) => event.eventId).filter((eventId): eventId is string => eventId !== undefined));
     let disposed = false;
 
     const cursor = (): number => Math.max(initialCursor, maxSeq(bufferRef.current));
 
     const connect = (after: number): void => {
       if (disposed) return;
-      es = new EventSource(`/api/runs/${encodeURIComponent(seed.id)}/run-events?after=${after}`);
+      setConnection(attempts === 0 ? "connecting" : "reconnecting");
+      es = new EventSource(`/api/runs/${encodeURIComponent(seed.id)}/run-events?afterSeq=${after}`);
       es.onopen = () => {
         attempts = 0;
         setConnected(true);
+        setConnection("connected");
       };
       es.onmessage = (raw) => {
         try {
           const event = JSON.parse(raw.data) as RunEvent;
-          if (hasRunEventGap(lastSeen, event.seq, refetchedAfterGap)) {
-            // Gap: the log no longer covers our cursor. Full replay once.
-            refetchedAfterGap = true;
+          if (hasRunEventGap(lastSeen, event.seq, recoveringGap)) {
+            // Ask the durable reader for the missing delta before accepting a
+            // non-contiguous frame. A repeated gap is visible, never silent.
+            recoveringGap = true;
             es?.close();
-            bufferRef.current = [];
-            lastSeen = 0;
-            connect(0);
+            setConnection("degraded");
+            connect(lastSeen);
             return;
           }
+          if (event.eventId !== undefined && seenEventIds.has(event.eventId)) return;
+          if (event.eventId !== undefined) seenEventIds.add(event.eventId);
+          if (event.seq <= lastSeen) return;
           lastSeen = Math.max(lastSeen, event.seq);
           bufferRef.current = [...bufferRef.current, event];
           setStreamEvents(bufferRef.current);
@@ -99,8 +112,10 @@ export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = 
       };
       es.onerror = () => {
         setConnected(false);
+        setConnection("reconnecting");
         es?.close();
         attempts += 1;
+        setRetryCount(attempts);
         const backoff = Math.min(RECONNECT_MAX_MS, RECONNECT_BASE_MS * 2 ** Math.min(attempts, 5));
         const delay = backoff / 2 + Math.random() * (backoff / 2); // jitter
         retryTimer = setTimeout(() => connect(cursor()), delay);
@@ -112,6 +127,7 @@ export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = 
       disposed = true;
       if (retryTimer !== null) clearTimeout(retryTimer);
       es?.close();
+      setConnection("disconnected");
     };
   }, [seed.id, initialCursor]);
 
@@ -119,7 +135,15 @@ export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = 
     () => buildLiveRunModel(streamEvents, seed, initialEvents),
     [streamEvents, seed, initialEvents]
   );
-  return { model, events, connected: connected || isTerminalRunStatus(model.run.control.status), streamCount: streamEvents.length };
+  return {
+    model,
+    events,
+    connected: connected || isTerminalRunStatus(model.run.control.status),
+    connection,
+    lastSeq: maxSeq(events),
+    retryCount,
+    streamCount: streamEvents.length
+  };
 }
 
 function maxSeq(events: readonly RunEvent[]): number {

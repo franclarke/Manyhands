@@ -6,6 +6,7 @@ import {
   appendRunModelEvent,
   ensureRunModelEventLogForRun,
   inspectRunModelEventLog,
+  readRunModelEventBatch,
   readRunModelEvents
 } from "@/lib/server/runs/run-model-event-log";
 import type { RunRecord } from "@/lib/server/runs/schema";
@@ -26,6 +27,17 @@ afterEach(async () => {
 });
 
 describe("B-018 durable run event log", () => {
+  it("returns a bounded incremental batch with a durable sequence cursor", async () => {
+    const runId = "run-batch";
+    for (let index = 0; index < 5; index += 1) {
+      await appendRunModelEvent(runId, { eventId: `batch-${index}`, actor: "system", type: "plan.node.proposed", payload: { nodeId: `node-${index}`, parentId: null, role: "leaf", title: `Node ${index}`, goal: "work", depth: 1 } });
+    }
+    const first = await readRunModelEventBatch(runId, 0, 2);
+    expect(first).toMatchObject({ nextCursor: 2, hasMore: true, status: "ok" });
+    expect(first.events.map((event) => event.seq)).toEqual([1, 2]);
+    const second = await readRunModelEventBatch(runId, first.nextCursor, 2);
+    expect(second.events.map((event) => event.seq)).toEqual([3, 4]);
+  });
   it("preserves the valid prefix, repairs a trailing partial line, and continues with the next sequence", async () => {
     const runId = "run-tail";
     await appendRunModelEvent(runId, { actor: "system", type: "plan.started", payload: {} });
