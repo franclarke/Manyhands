@@ -3,6 +3,9 @@ import {
   CLAUDE_CODE_EXECUTOR_ID,
   CODEX_EXECUTOR_ID,
   getExecutorDescriptor,
+  killCliProcessTree,
+  resolveCliBinaryPath,
+  resolveCliProcessInvocation,
   resolveLegacyModelSelection,
   type ExecutorSelection
 } from "@manyhands/execution-core";
@@ -43,6 +46,7 @@ export interface GenerateRunTitleInput {
   binaryPath?: string;
   timeoutMs?: number;
   spawn?: SpawnFn;
+  /** @deprecated CLI argv is resolved explicitly and never shell-interpolated. */
   useShell?: boolean;
   platform?: NodeJS.Platform;
 }
@@ -56,17 +60,19 @@ export interface GenerateRunTitleInput {
 export async function generateRunTitle(input: GenerateRunTitleInput): Promise<RunTitle> {
   const selection = input.selection ?? resolveLegacyModelSelection(input.model);
   const descriptor = getExecutorDescriptor(selection.executorId);
-  const binaryPath = input.binaryPath ?? process.env[descriptor.binaryEnvVar] ?? descriptor.defaultBinary;
+  const platform = input.platform ?? process.platform;
+  const binaryPath = resolveCliBinaryPath(
+    input.binaryPath ?? process.env[descriptor.binaryEnvVar] ?? descriptor.defaultBinary,
+    { platform, env: process.env }
+  );
   const spawnFn = input.spawn ?? nodeSpawn;
   const timeoutMs = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const platform = input.platform ?? process.platform;
-  const useShell = input.useShell ?? platform === "win32";
   const cwd = input.cwd ?? process.cwd();
 
   const prompt = buildTitlerPrompt(input.userPrompt);
   const args = buildTitlerArgs(selection);
 
-  const outcome = await runProcess({ binaryPath, args, cwd, prompt, timeoutMs, spawnFn, useShell, platform });
+  const outcome = await runProcess({ binaryPath, args, cwd, prompt, timeoutMs, spawnFn, platform });
 
   if (outcome.timedOut) {
     throw new RunTitlerError(`Run titler timed out after ${timeoutMs}ms`);
@@ -141,7 +147,6 @@ function runProcess(input: {
   prompt: string;
   timeoutMs: number;
   spawnFn: SpawnFn;
-  useShell: boolean;
   platform: NodeJS.Platform;
 }): Promise<ProcessOutcome> {
   return new Promise((resolve) => {
@@ -150,12 +155,17 @@ function runProcess(input: {
       cwd: input.cwd,
       env: process.env,
       stdio: ["pipe", "pipe", "pipe"],
-      shell: spawnCommand.shell
+      shell: false,
+      detached: input.platform !== "win32",
+      ...(spawnCommand.windowsVerbatimArguments !== undefined
+        ? { windowsVerbatimArguments: spawnCommand.windowsVerbatimArguments }
+        : {})
     });
 
     let stdout = "";
     let stderr = "";
     let settled = false;
+    let terminating = false;
 
     const finish = (outcome: ProcessOutcome): void => {
       if (settled) return;
@@ -165,8 +175,20 @@ function runProcess(input: {
     };
 
     const timer = setTimeout(() => {
-      child.kill("SIGKILL");
-      finish({ exitCode: TIMEOUT_EXIT_CODE, stdout, stderr, timedOut: true });
+      if (settled || terminating) return;
+      terminating = true;
+      void killCliProcessTree(child, input.spawnFn, input.platform).then((terminationVerified) => {
+        finish({
+          exitCode: TIMEOUT_EXIT_CODE,
+          stdout,
+          stderr:
+            stderr +
+            (terminationVerified
+              ? ""
+              : `${stderr ? "\n" : ""}process-tree termination could not be verified`),
+          timedOut: true
+        });
+      });
     }, input.timeoutMs);
 
     child.stdout?.on("data", (chunk: Buffer) => {
@@ -176,9 +198,11 @@ function runProcess(input: {
       stderr += chunk.toString("utf8");
     });
     child.on("error", (error: Error) => {
+      if (terminating) return;
       finish({ exitCode: SPAWN_FAILURE_EXIT_CODE, stdout, stderr: stderr + (stderr ? "\n" : "") + error.message, timedOut: false });
     });
     child.on("close", (code) => {
+      if (terminating) return;
       finish({ exitCode: code ?? SPAWN_FAILURE_EXIT_CODE, stdout, stderr, timedOut: false });
     });
 
@@ -190,17 +214,12 @@ function runProcess(input: {
 function resolveSpawnCommand(input: {
   binaryPath: string;
   args: string[];
-  useShell: boolean;
   platform: NodeJS.Platform;
-}): { command: string; args: string[]; shell: boolean } {
-  if (input.useShell && input.platform === "win32") {
-    return {
-      command: process.env.ComSpec ?? "cmd.exe",
-      args: ["/d", "/s", "/c", input.binaryPath, ...input.args],
-      shell: false
-    };
-  }
-  return { command: input.binaryPath, args: input.args, shell: input.useShell };
+}) {
+  return resolveCliProcessInvocation(input.binaryPath, input.args, {
+    platform: input.platform,
+    env: process.env
+  });
 }
 
 /** First balanced `{...}` object in a string, or null. */

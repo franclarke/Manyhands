@@ -1,15 +1,31 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import readline from "node:readline";
 import path from "node:path";
+import { durableWritesEnabled } from "../workspaces/atomic-write";
 import type { Actor, RunEvent, RunEventPayloads, RunEventType } from "@/lib/run-model/types";
 import type { RunRecord } from "./schema";
+import {
+  approvalDecisionId,
+  approvalDecisionRevision,
+  isLegacyApprovalDecisionId
+} from "./decision-identity";
 import { resolveRunsDirectory } from "./repository";
-import { executionSelection, planningSelection, repairSelection } from "./executor-selection";
-import { projectRunRecordToRunEvents, runControlForRun } from "./run-model-projection";
+import {
+  executionSelectionForDisplay as executionSelection,
+  planningSelectionForDisplay as planningSelection,
+  repairSelectionForDisplay as repairSelection
+} from "./executor-selection";
+import {
+  projectRunRecordToPlanGraph,
+  projectRunRecordToRunEvents,
+  runControlForRun
+} from "./run-model-projection";
 import { publishRunModelBusEvent } from "./run-model-event-bus";
 import { globalSingleton } from "../global-singleton";
+import { terminalDispositionForArtifact } from "./final-artifact";
+import { RunMutationConflictError, RunValidationError } from "./errors";
 
 const ATOMIC_RENAME_RETRIES = 5;
 
@@ -124,17 +140,31 @@ export async function inspectRunModelEventLog(runId: string): Promise<RunModelEv
 }
 
 export async function ensureRunModelEventLogForRun(run: RunRecord): Promise<RunEvent[]> {
-  const existing = await readRunModelEvents(run.runId);
-  if (existing.length > 0) return reconcileExistingRunModelEventLog(run, existing);
+  // Dynamic import avoids a static cycle: recovery writes through this module
+  // and resets the execution checkpoint before any approval/execution consumer
+  // can observe the post-CAS RunRecord.
+  const {
+    hasPendingPlanMutation,
+    recoverPendingAmendmentMutations
+  } = await import("./plan-mutation-recovery");
+  const recoveredRun = await recoverPendingAmendmentMutations(run.runId, run);
+  // A fresh direct writer may still own the post-CAS finalization. Do not let a
+  // read-side projection publish late graph/approval facts ahead of checkpoint
+  // reset and the operation's canonical atomic event batch.
+  if (await hasPendingPlanMutation(run.runId)) {
+    return readRunModelEvents(run.runId);
+  }
+  const existing = await readRunModelEvents(recoveredRun.runId);
+  if (existing.length > 0) return reconcileExistingRunModelEventLog(recoveredRun, existing);
 
-  const projected = safeProjectRunRecordToRunEvents(run);
+  const projected = safeProjectRunRecordToRunEvents(recoveredRun);
   if (projected.length === 0) return [];
 
-  return withLock(run.runId, async () => {
-    const current = await inspectRunModelEventLog(run.runId);
+  return withLock(recoveredRun.runId, async () => {
+    const current = await inspectRunModelEventLog(recoveredRun.runId);
     if (current.events.length > 0) return current.events;
     return appendInputsLocked(
-      run.runId,
+      recoveredRun.runId,
       projected.map((event) => ({ actor: event.actor, at: event.at, type: event.type as RunEventType, payload: event.payload }))
     );
   });
@@ -155,31 +185,361 @@ async function reconcileExistingRunModelEventLog(run: RunRecord, existing: RunEv
 /** B-018 recovery outbox: durable RunRecord facts repair their required projection once. */
 function requiredInputsForRun(run: RunRecord, events: RunEvent[]): RunModelEventInput[] {
   const required: RunModelEventInput[] = [];
-  if (needsApprovalResolutionEvent(run, events)) {
+  const latestStatus = [...events].reverse().find((event) => event.type === "run.status.changed");
+  const projectedStatus = (latestStatus?.payload as { status?: unknown } | undefined)?.status;
+  if (projectedStatus !== run.status) {
     required.push({
-      eventId: `legacy-approval-resolution:${run.runId}:${run.approvedAt ?? run.updatedAt}`,
-      actor: "human",
-      at: run.approvedAt ?? run.updatedAt,
-      type: "decision.resolved",
-      payload: { decisionId: "approve_plan", choice: { action: "approve" }, actor: "human" }
+      eventId: `recovery-status:${run.runId}:v${run.version}:${run.status}`,
+      actor: "system",
+      at: run.updatedAt,
+      type: "run.status.changed",
+      payload: runControlForRun(run) as unknown as Record<string, unknown>
     });
   }
+  const graphProjectionInputs = requiredPlanGraphProjectionInputs(run, events);
+  required.push(...graphProjectionInputs);
+  // Legacy additive logs need a canonical D1 dependency backfill. Once an
+  // exact graph projection exists (or is being recovered in this append), its
+  // dependency snapshot is already authoritative; appending an additive fact
+  // after it would immediately make the projection stale again.
+  if (
+    graphProjectionInputs.length === 0 &&
+    !events.some((event) => event.type === "plan.graph.projected")
+  ) {
+    required.push(...requiredDependencyInputs(run, events));
+  }
+  required.push(...requiredApprovalInputs(run, events));
+  required.push(...requiredPendingQuestionInputs(run, events));
+  required.push(...requiredObsoleteDecisionInputs(run, events));
+  required.push(...requiredDeliveryInputs(run, events));
   return required;
 }
 
-function needsApprovalResolutionEvent(run: RunRecord, events: RunEvent[]): boolean {
-  if (run.approvedAt === undefined) return false;
-  const hasApprovalGate = events.some(
-    (event) =>
-      event.type === "decision.raised" &&
-      (event.payload as { decisionId?: string }).decisionId === "approve_plan"
+function requiredPlanGraphProjectionInputs(run: RunRecord, events: RunEvent[]): RunModelEventInput[] {
+  const revision = run.planRevision ?? 1;
+  const projectionPatches = (run.patches ?? []).filter((patch) => {
+    if (typeof patch !== "object" || patch === null || !("type" in patch)) return false;
+    return (patch as { type?: unknown }).type !== "RISK_ACKNOWLEDGED";
+  });
+  let latestProjectionIndex = -1;
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    if (events[index]?.type === "plan.graph.projected") {
+      latestProjectionIndex = index;
+      break;
+    }
+  }
+  const latestProjection = latestProjectionIndex >= 0 ? events[latestProjectionIndex] : undefined;
+  if (revision === 1 && projectionPatches.length === 0 && latestProjection === undefined) return [];
+
+  const hasSemanticRevision = revision > 1 || projectionPatches.some((patch) => {
+    const type = (patch as { type?: unknown }).type;
+    return type !== "NODE_RENAMED";
+  });
+  const resetRuntime = hasSemanticRevision && (run.status === "needs_review" || run.status === "approved");
+  const projection = projectRunRecordToPlanGraph(run, { resetRuntime });
+  if (projection === null) return [];
+  const projectedNodeIds = new Set(projection.nodes.map((node) => node.nodeId));
+  const projectedSeamIds = new Set(projection.seams.map((seam) => seam.seamId));
+  const lateStructuralFact = latestProjectionIndex >= 0
+    ? events.slice(latestProjectionIndex + 1).find((event) =>
+        conflictsWithPlanGraphProjection(event, projectedNodeIds, projectedSeamIds)
+      )
+    : undefined;
+  const expected = planGraphStructuralIdentity(projection);
+  const alreadyProjected = latestProjection !== undefined &&
+    planGraphStructuralIdentity(
+      latestProjection.payload as unknown as RunEventPayloads["plan.graph.projected"]
+    ) === expected;
+  if (alreadyProjected && lateStructuralFact === undefined) return [];
+  const recoveryAnchor = lateStructuralFact?.seq ?? latestProjection?.seq ?? 0;
+  const identityHash = createHash("sha256").update(expected).digest("hex").slice(0, 16);
+  return [{
+    eventId: `recovery-plan-graph:${run.runId}:v${run.version}:r${revision}:after-${recoveryAnchor}:${identityHash}`,
+    at: run.updatedAt,
+    actor: "system",
+    type: "plan.graph.projected",
+    payload: projection
+  }];
+}
+
+function conflictsWithPlanGraphProjection(
+  event: RunEvent,
+  projectedNodeIds: ReadonlySet<string>,
+  projectedSeamIds: ReadonlySet<string>
+): boolean {
+  // These facts rewrite graph structure even when every referenced entity is
+  // still present, so a late legacy/additive event invalidates the snapshot.
+  if (
+    event.type === "plan.node.proposed" ||
+    event.type === "plan.dependency.proposed" ||
+    event.type === "plan.seam.proposed"
+  ) {
+    return true;
+  }
+
+  // Runtime and planning facts normally belong after a projection and must be
+  // preserved for surviving nodes. They conflict only when reducer.ensureNode
+  // would resurrect a node removed by the durable graph.
+  if (
+    event.type === "plan.node.status" ||
+    event.type === "scope.derived" ||
+    event.type === "node.execution.started" ||
+    event.type === "node.verify.iteration" ||
+    event.type === "node.verify.passed" ||
+    event.type === "node.execution.failed"
+  ) {
+    const nodeId = (event.payload as { nodeId?: unknown }).nodeId;
+    return typeof nodeId === "string" && !projectedNodeIds.has(nodeId);
+  }
+  if (event.type === "integration.validated" || event.type === "integration.completed") {
+    const compositeNodeId = (event.payload as { compositeNodeId?: unknown }).compositeNodeId;
+    return typeof compositeNodeId === "string" && !projectedNodeIds.has(compositeNodeId);
+  }
+
+  // Both reducer branches synthesize a seam when it is missing. Re-project
+  // only for that ghost case; freezes/amendments for a surviving seam are
+  // legitimate runtime facts and remain visible.
+  if (event.type === "seam.frozen" || event.type === "seam.amended") {
+    const seamId = (event.payload as { seamId?: unknown }).seamId;
+    return typeof seamId === "string" && !projectedSeamIds.has(seamId);
+  }
+  return false;
+}
+
+function planGraphStructuralIdentity(payload: RunEventPayloads["plan.graph.projected"]): string {
+  return JSON.stringify({
+    projectionVersion: payload.projectionVersion,
+    planRevision: payload.planRevision,
+    nodes: payload.nodes,
+    dependencies: payload.dependencies,
+    seams: payload.seams
+  });
+}
+
+function requiredDependencyInputs(run: RunRecord, events: RunEvent[]): RunModelEventInput[] {
+  type Payload = RunEventPayloads["plan.dependency.proposed"];
+  const existing = new Set(
+    events
+      .filter((event) => event.type === "plan.dependency.proposed")
+      .map((event) => dependencyPayloadIdentity(event.payload as unknown as Payload))
   );
-  if (!hasApprovalGate) return false;
-  return !events.some(
-    (event) =>
-      event.type === "decision.resolved" &&
-      (event.payload as { decisionId?: string }).decisionId === "approve_plan"
+  const revision = run.planRevision ?? 1;
+  return safeProjectRunRecordToRunEvents(run).flatMap((event): RunModelEventInput[] => {
+    if (event.type !== "plan.dependency.proposed") return [];
+    const payload = event.payload as unknown as Payload;
+    if (existing.has(dependencyPayloadIdentity(payload))) return [];
+    return [{
+      eventId: `recovery-plan-dependency:${run.runId}:r${revision}:${payload.fromTaskId}:${payload.toTaskId}`,
+      actor: "system",
+      at: run.updatedAt,
+      type: "plan.dependency.proposed",
+      payload
+    }];
+  });
+}
+
+function dependencyPayloadIdentity(payload: RunEventPayloads["plan.dependency.proposed"]): string {
+  return JSON.stringify([
+    payload.fromTaskId,
+    payload.toTaskId,
+    payload.type,
+    payload.inferred,
+    payload.rationale ?? null
+  ]);
+}
+
+function requiredPendingQuestionInputs(run: RunRecord, events: RunEvent[]): RunModelEventInput[] {
+  const question = run.pendingQuestion;
+  if (question === undefined || (run.status !== "paused" && run.status !== "interrupted")) return [];
+  const decisionId = `clarify:${question.nodeId}`;
+  const raised = events.some(
+    (event) => event.type === "decision.raised" && event.payload.decisionId === decisionId
   );
+  const resolved = events.some(
+    (event) => event.type === "decision.resolved" && event.payload.decisionId === decisionId
+  );
+  // A late projection must never reopen a gate that already has a durable
+  // resolution, even if a stale RunRecord still carries pendingQuestion.
+  if (raised || resolved) return [];
+  return [{
+    eventId: `clarify-raised:${run.runId}:${question.nodeId}`,
+    actor: "system",
+    at: run.updatedAt,
+    type: "decision.raised",
+    payload: {
+      decisionId,
+      kind: "clarify",
+      blocking: true,
+      context: {
+        nodeIds: [question.nodeId],
+        question: question.question,
+        options: [...question.options]
+      }
+    }
+  }];
+}
+
+function requiredObsoleteDecisionInputs(run: RunRecord, events: RunEvent[]): RunModelEventInput[] {
+  const resolved = new Set(
+    events
+      .filter((event) => event.type === "decision.resolved")
+      .map((event) => (event.payload as { decisionId?: unknown }).decisionId)
+      .filter((decisionId): decisionId is string => typeof decisionId === "string")
+  );
+  return events.flatMap((event): RunModelEventInput[] => {
+    if (event.type !== "decision.raised") return [];
+    const payload = event.payload as { decisionId?: unknown; kind?: unknown };
+    if (
+      payload.kind !== "approve_merge" ||
+      typeof payload.decisionId !== "string" ||
+      resolved.has(payload.decisionId)
+    ) {
+      return [];
+    }
+    return [{
+      eventId: `recovery-obsolete-approve-merge:${run.runId}:${payload.decisionId}`,
+      actor: "system",
+      at: run.updatedAt,
+      type: "decision.resolved",
+      payload: {
+        decisionId: payload.decisionId,
+        choice: { action: "reject" },
+        actor: "system"
+      }
+    }];
+  });
+}
+
+function requiredDeliveryInputs(run: RunRecord, events: RunEvent[]): RunModelEventInput[] {
+  const manifest = run.finalArtifactManifest;
+  if (
+    run.status !== "completed" ||
+    run.deliveryOutcome !== "delivered" ||
+    manifest === undefined ||
+    terminalDispositionForArtifact({ manifest, acceptedRisk: false }) !== "completed"
+  ) {
+    return [];
+  }
+  const inputs: RunModelEventInput[] = [];
+  const hasDeliveryFact = events.some((event) => {
+    if (event.type !== "run.delivery.completed") return false;
+    const payload = event.payload as { manifestId?: unknown; finalSha?: unknown };
+    return payload.manifestId === manifest.manifestId && payload.finalSha === manifest.finalSha;
+  });
+  if (!hasDeliveryFact) {
+    inputs.push({
+      eventId: `recovery-delivery-completed:${run.runId}:${manifest.manifestId}`,
+      actor: "system",
+      at: run.updatedAt,
+      type: "run.delivery.completed",
+      payload: { manifestId: manifest.manifestId, finalSha: manifest.finalSha }
+    });
+  }
+  const hasTerminalFact = events.some(
+    (event) =>
+      event.type === "run.completed" &&
+      (event.payload as { status?: unknown }).status === "success"
+  );
+  if (!hasTerminalFact) {
+    inputs.push({
+      eventId: `recovery-run-completed:${run.runId}:${manifest.manifestId}`,
+      actor: "system",
+      at: run.updatedAt,
+      type: "run.completed",
+      payload: { status: "success" }
+    });
+  }
+  return inputs;
+}
+
+function requiredApprovalInputs(run: RunRecord, events: RunEvent[]): RunModelEventInput[] {
+  const raised = events.filter((event) => {
+    if (event.type !== "decision.raised") return false;
+    const payload = event.payload as { decisionId?: unknown; kind?: unknown };
+    return payload.kind === "approve_plan" && typeof payload.decisionId === "string";
+  });
+
+  const resolved = new Set(
+    events
+      .filter((event) => event.type === "decision.resolved")
+      .map((event) => (event.payload as { decisionId?: unknown }).decisionId)
+      .filter((decisionId): decisionId is string => typeof decisionId === "string")
+  );
+  const currentRevision = run.planRevision ?? 1;
+  const currentDecisionId = approvalDecisionId(currentRevision);
+  const approvedRevision = run.approvedPlanRevision ?? (run.approvedAt !== undefined ? currentRevision : undefined);
+  const inputs: RunModelEventInput[] = [];
+
+  for (const event of raised) {
+    const decisionId = (event.payload as { decisionId: string }).decisionId;
+    if (resolved.has(decisionId)) continue;
+    const revision = approvalDecisionRevision(decisionId);
+    const approvedLegacy =
+      isLegacyApprovalDecisionId(decisionId) &&
+      run.approvedAt !== undefined &&
+      (run.approvedPlanRevision ?? 1) === 1;
+    const approvedCanonical = revision !== undefined && revision === approvedRevision && run.approvedAt !== undefined;
+    const superseded =
+      (revision !== undefined && revision < currentRevision) ||
+      (isLegacyApprovalDecisionId(decisionId) && !approvedLegacy);
+    if (!approvedLegacy && !approvedCanonical && !superseded) continue;
+    const action = approvedLegacy || approvedCanonical ? "approve" : "reject";
+    inputs.push({
+      eventId: `recovery-approval:${run.runId}:${decisionId}:${action}:r${currentRevision}`,
+      actor: approvedLegacy || approvedCanonical ? "human" : "system",
+      at: approvedLegacy || approvedCanonical ? run.approvedAt ?? run.updatedAt : run.updatedAt,
+      type: "decision.resolved",
+      payload: {
+        decisionId,
+        choice: { action },
+        actor: approvedLegacy || approvedCanonical ? "human" : "system"
+      }
+    });
+  }
+
+  const hasCurrentGate = raised.some(
+    (event) => (event.payload as { decisionId?: unknown }).decisionId === currentDecisionId
+  );
+  if (run.planning !== undefined && run.status !== "created" && run.status !== "generating" && !hasCurrentGate) {
+    const latestApproval = raised.at(-1);
+    const previousNodeIds = latestApproval === undefined
+      ? undefined
+      : (latestApproval.payload as { context?: { nodeIds?: unknown } }).context?.nodeIds;
+    const currentGraph = projectRunRecordToPlanGraph(run);
+    const nodeIds = currentGraph !== null
+      ? currentGraph.nodes
+          .filter((node) => node.role === "leaf")
+          .map((node) => node.nodeId)
+      : Array.isArray(previousNodeIds)
+        ? previousNodeIds.filter((id): id is string => typeof id === "string")
+        : [];
+    inputs.push({
+      eventId: `recovery-approval-raised:${run.runId}:${currentDecisionId}`,
+      actor: "system",
+      at: run.updatedAt,
+      type: "decision.raised",
+      payload: {
+        decisionId: currentDecisionId,
+        kind: "approve_plan",
+        blocking: true,
+        context: { nodeIds }
+      }
+    });
+    if (approvedRevision === currentRevision && run.approvedAt !== undefined && !resolved.has(currentDecisionId)) {
+      inputs.push({
+        eventId: `recovery-approval:${run.runId}:${currentDecisionId}:approve:r${currentRevision}`,
+        actor: "human",
+        at: run.approvedAt,
+        type: "decision.resolved",
+        payload: {
+          decisionId: currentDecisionId,
+          choice: { action: "approve" },
+          actor: "human"
+        }
+      });
+    }
+  }
+  return inputs;
 }
 
 export async function appendRunModelEvent<K extends RunEventType>(
@@ -197,6 +557,53 @@ export async function appendRunEventsRequired(
   return withLock(runId, async () => appendInputsLocked(runId, inputs));
 }
 
+/** Re-check a human gate under the durable event-log mutex. */
+export async function assertPendingDecisionRequired(run: RunRecord, decisionId: string): Promise<void> {
+  await withLock(run.runId, async () => {
+    const inspection = await inspectRunModelEventLog(run.runId);
+    assertDecisionPendingInEvents(run, inspection.events, decisionId);
+  });
+}
+
+/** Atomically append the complete resolution batch for one pending decision. */
+export async function appendPendingDecisionEventsRequired(
+  run: RunRecord,
+  decisionId: string,
+  inputs: readonly RunModelEventInput[]
+): Promise<RunEvent[]> {
+  const resolution = inputs.find((input) =>
+    input.type === "decision.resolved" &&
+    (input.payload as { decisionId?: unknown }).decisionId === decisionId
+  );
+  if (resolution === undefined) {
+    throw new RunValidationError(`Decision batch ${decisionId} has no matching resolution event.`);
+  }
+  return withLock(run.runId, async () => {
+    const inspection = await inspectWritableRunModelEventLog(run.runId);
+    if (inspection.status === "corrupt") {
+      throw new Error(`Run event log ${run.runId} is corrupt: ${inspection.reason ?? "unknown corruption"}`);
+    }
+    assertDecisionPendingInEvents(run, inspection.events, decisionId);
+    return appendInputsLocked(run.runId, inputs);
+  });
+}
+
+function assertDecisionPendingInEvents(run: RunRecord, events: readonly RunEvent[], decisionId: string): void {
+  const raised = events.some(
+    (event) => event.type === "decision.raised" && event.payload.decisionId === decisionId
+  );
+  const resolved = events.some(
+    (event) => event.type === "decision.resolved" && event.payload.decisionId === decisionId
+  );
+  if (!raised || resolved) {
+    throw new RunMutationConflictError(
+      `Decision "${decisionId}" is no longer pending.`,
+      run.status,
+      run.version
+    );
+  }
+}
+
 /**
  * Required lifecycle/audit event: callers must await this and fail the current
  * operation if the append-only event log cannot be written.
@@ -206,12 +613,14 @@ export const appendRunEventRequired = appendRunModelEvent;
 /** Build a required event from its durable sequence while holding the append lock. */
 export async function appendRunEventRequiredWithSeq<K extends RunEventType>(
   runId: string,
-  build: (seq: number) => RunModelEventInput<K>
+  build: (seq: number, existingEvents: readonly RunEvent[]) => RunModelEventInput<K>
 ): Promise<RunEvent> {
   return withLock(runId, async () => {
     const inspection = await inspectRunModelEventLog(runId);
     if (inspection.status === "corrupt") throw new Error(`Run event log ${runId} is corrupt: ${inspection.reason ?? "unknown"}`);
-    return (await appendInputsLocked(runId, [build((inspection.events.at(-1)?.seq ?? 0) + 1)]))[0]!;
+    return (await appendInputsLocked(runId, [
+      build((inspection.events.at(-1)?.seq ?? 0) + 1, inspection.events)
+    ]))[0]!;
   });
 }
 
@@ -467,12 +876,19 @@ async function atomicWriteEventLog(runId: string, lines: readonly string[]): Pro
   const file = filePathFor(runId);
   await mkdir(path.dirname(file), { recursive: true });
   const temporary = `${file}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
-  await writeFile(temporary, lines.length === 0 ? "" : `${lines.join("\n")}\n`, "utf8");
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
   try {
+    handle = await open(temporary, "wx");
+    await handle.writeFile(lines.length === 0 ? "" : `${lines.join("\n")}\n`, "utf8");
+    if (durableWritesEnabled()) await handle.sync();
+    await handle.close();
+    handle = undefined;
     await renameWithRetry(temporary, file);
   } catch (error) {
     await rm(temporary, { force: true }).catch(() => undefined);
     throw error;
+  } finally {
+    await handle?.close().catch(() => undefined);
   }
 }
 
@@ -510,18 +926,29 @@ function withLock<T>(runId: string, fn: () => Promise<T>): Promise<T> {
 async function withFilesystemLock<T>(runId: string, fn: () => Promise<T>): Promise<T> {
   const locks = path.join(resolveRunsDirectory(), ".event-locks");
   const lock = path.join(locks, safeFileName(runId));
+  const token = randomUUID();
   await mkdir(locks, { recursive: true });
   const deadline = Date.now() + 15_000;
   while (true) {
     try {
       await mkdir(lock);
-      await writeFile(path.join(lock, "owner"), `${process.pid}\n${Date.now()}`, "utf8");
+      await writeFile(
+        path.join(lock, "owner.json"),
+        JSON.stringify({ token, pid: process.pid, acquiredAt: Date.now() }),
+        "utf8"
+      );
       break;
     } catch (error) {
       if (!isErrno(error) || error.code !== "EEXIST") throw error;
       const info = await stat(lock).catch(() => undefined);
       if (info !== undefined && Date.now() - info.mtimeMs > 30_000) {
-        await rm(lock, { recursive: true, force: true });
+        const quarantine = `${lock}.stale-${randomUUID()}`;
+        try {
+          await rename(lock, quarantine);
+          await rm(quarantine, { recursive: true, force: true });
+        } catch (takeoverError) {
+          if (!isErrno(takeoverError) || takeoverError.code !== "ENOENT") throw takeoverError;
+        }
         continue;
       }
       if (Date.now() >= deadline) throw new Error(`Timed out locking event log for ${runId}.`);
@@ -531,25 +958,44 @@ async function withFilesystemLock<T>(runId: string, fn: () => Promise<T>): Promi
   try {
     return await fn();
   } finally {
-    await removeEventLock(lock);
+    await removeEventLock(lock, token);
   }
 }
 
-/** Windows can hold a directory handle briefly after owner write/rename. */
-async function removeEventLock(lock: string): Promise<void> {
+/** Release only the lock generation acquired by this writer. */
+async function removeEventLock(lock: string, token: string): Promise<void> {
+  const owner = await readEventLockOwner(lock);
+  if (owner?.token !== token) return;
+  const quarantine = `${lock}.released-${token}`;
   let lastError: unknown;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
-      await rm(lock, { recursive: true, force: true });
+      await rename(lock, quarantine);
+      const captured = await readEventLockOwner(quarantine);
+      if (captured?.token !== token) {
+        await rename(quarantine, lock).catch(() => undefined);
+        return;
+      }
+      await rm(quarantine, { recursive: true, force: true });
       return;
     } catch (error) {
       lastError = error;
       const code = isErrno(error) ? error.code : undefined;
+      if (code === "ENOENT") return;
       if (code !== "EPERM" && code !== "EACCES" && code !== "EBUSY") throw error;
       await new Promise((resolve) => setTimeout(resolve, 10 * (attempt + 1)));
     }
   }
   throw lastError;
+}
+
+async function readEventLockOwner(lock: string): Promise<{ token: string } | undefined> {
+  try {
+    const parsed = JSON.parse(await readFile(path.join(lock, "owner.json"), "utf8")) as { token?: unknown };
+    return typeof parsed.token === "string" ? { token: parsed.token } : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 interface NodeErrnoException {

@@ -51,17 +51,6 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
   return { promise, resolve };
 }
 
-async function waitFor(condition: () => boolean): Promise<void> {
-  const deadline = Date.now() + 1_000;
-  while (Date.now() < deadline) {
-    if (condition()) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
-  throw new Error("Timed out waiting for condition.");
-}
-
 const STUB_VECTOR: GranularityVector = {
   depth: 1,
   leafCount: 1,
@@ -257,11 +246,15 @@ describe("RunRunner", () => {
       events.push(event);
     });
     const releaseEngine = deferred();
+    const engineEntered = deferred();
     let engineFinished = false;
 
     const engine: ExecutionEngine = {
       run: async (input) => {
         input.traceStore?.append({ type: "agent_started", actor: "system", taskId: "leaf-a", payload: {} });
+        // The append publishes synchronously. Signal from the controlled seam
+        // instead of racing a 1s wall-clock poll against unrelated suite IO.
+        engineEntered.resolve();
         await releaseEngine.promise;
         engineFinished = true;
         return {
@@ -277,7 +270,8 @@ describe("RunRunner", () => {
 
     const pipeline = runExecutionPipeline(runId, { intervalMs: 0, engine });
 
-    await waitFor(() => events.some((event) => event.kind === "agent.run.started" && event.taskId === "leaf-a"));
+    await engineEntered.promise;
+    expect(events.some((event) => event.kind === "agent.run.started" && event.taskId === "leaf-a")).toBe(true);
     expect(engineFinished).toBe(false);
 
     releaseEngine.resolve();

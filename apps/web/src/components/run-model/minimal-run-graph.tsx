@@ -21,6 +21,8 @@ import { ZoomIn, ZoomOut, Maximize, OctagonAlert, CircleSlash, Hand, ChevronsUpD
 import { nodeGlyph } from "@/lib/run-model/node-glyph";
 import type { FocusTarget } from "@/lib/run-model/focus-view";
 import type { MinimalRunGraph, ProductStage } from "@/lib/run-model/minimal-workspace-view";
+import { layoutVerticalTaskDag } from "@/lib/run-model/run-graph-layout";
+import type { RunCanvasMode } from "@/lib/run-model/run-canvas-projection";
 import type { GraphEmptyKind } from "@/lib/run-model/run-phases";
 import type { VitalStatus, WorkspaceNode } from "@/lib/run-model/workspace-view";
 
@@ -33,6 +35,14 @@ interface MinimalRunGraphProps {
   fill?: boolean;
   /** What the empty canvas means when there are no nodes (planning vs failed). */
   emptyKind?: GraphEmptyKind;
+  mode?: RunCanvasMode;
+  overlayNodeIds?: readonly string[];
+  dimOutsideOverlay?: boolean;
+  waveLabel?: string | undefined;
+  showHierarchyEdges?: boolean;
+  showDependencyEdges?: boolean;
+  showSeamEdges?: boolean;
+  showConflictEdges?: boolean;
 }
 
 interface MinimalGraphNodeData {
@@ -50,6 +60,9 @@ interface MinimalGraphNodeData {
   /** Its own decomposition is still being generated (children pending). */
   expanding: boolean;
   collapsedChildCount: number;
+  childSummary?: string;
+  overlay: boolean;
+  waveLabel?: string;
   [key: string]: unknown;
 }
 
@@ -58,8 +71,6 @@ interface SkeletonGraphNodeData {
   [key: string]: unknown;
 }
 
-const X_GAP = 296;
-const Y_GAP = 132;
 /** Synthetic placeholder shown under a parent whose children are still streaming. */
 const GHOST_PREFIX = "ghost:";
 const BRANCH_VARS = [
@@ -106,6 +117,7 @@ function CanvasControls({ onExpandAll, onCollapseAll }: CanvasControlsProps): Re
         onClick={onExpandAll}
         className="p-1.5 text-[var(--color-text-subtle)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] rounded-lg transition-colors cursor-pointer"
         title="Expandir todo"
+        aria-label="Expandir todo"
         type="button"
       >
         <ChevronsUpDown className="w-3.5 h-3.5" />
@@ -114,6 +126,7 @@ function CanvasControls({ onExpandAll, onCollapseAll }: CanvasControlsProps): Re
         onClick={onCollapseAll}
         className="p-1.5 text-[var(--color-text-subtle)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] rounded-lg transition-colors cursor-pointer"
         title="Colapsar integrados"
+        aria-label="Colapsar integrados"
         type="button"
       >
         <ChevronsDownUp className="w-3.5 h-3.5" />
@@ -123,6 +136,7 @@ function CanvasControls({ onExpandAll, onCollapseAll }: CanvasControlsProps): Re
         onClick={() => void fitView({ duration: 300, padding: 0.18 })}
         className="p-1.5 text-[var(--color-text-subtle)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] rounded-lg transition-colors cursor-pointer"
         title="Centrar DAG"
+        aria-label="Centrar grafo de tareas"
         type="button"
       >
         <Maximize className="w-3.5 h-3.5" />
@@ -132,6 +146,7 @@ function CanvasControls({ onExpandAll, onCollapseAll }: CanvasControlsProps): Re
         onClick={() => void zoomIn({ duration: 200 })}
         className="p-1.5 text-[var(--color-text-subtle)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] rounded-lg transition-colors cursor-pointer"
         title="Acercar"
+        aria-label="Acercar"
         type="button"
       >
         <ZoomIn className="w-3.5 h-3.5" />
@@ -140,6 +155,7 @@ function CanvasControls({ onExpandAll, onCollapseAll }: CanvasControlsProps): Re
         onClick={() => void zoomOut({ duration: 200 })}
         className="p-1.5 text-[var(--color-text-subtle)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-subtle)] rounded-lg transition-colors cursor-pointer"
         title="Alejar"
+        aria-label="Alejar"
         type="button"
       >
         <ZoomOut className="w-3.5 h-3.5" />
@@ -154,7 +170,15 @@ function MinimalRunGraphInner({
   selectedTarget,
   onFocus,
   fill = false,
-  emptyKind = "planning"
+  emptyKind = "planning",
+  mode = "tasks",
+  overlayNodeIds = [],
+  dimOutsideOverlay = false,
+  waveLabel,
+  showHierarchyEdges = true,
+  showDependencyEdges = true,
+  showSeamEdges = true,
+  showConflictEdges = true
 }: MinimalRunGraphProps): React.ReactElement {
   const selectedNodeId = selectedTarget?.kind === "node" ? selectedTarget.id : null;
   
@@ -190,8 +214,17 @@ function MinimalRunGraphInner({
   // materializes with the settle entrance instead of popping.
   const seenIdsRef = useRef<Set<string>>(new Set());
   const flow = useMemo(
-    () => buildFlow(graph, stage, selectedNodeId, seenIdsRef.current, collapsedIds),
-    [graph, stage, selectedNodeId, collapsedIds]
+    () => buildFlow(graph, stage, selectedNodeId, seenIdsRef.current, collapsedIds, {
+      mode,
+      overlayNodeIds: new Set(overlayNodeIds),
+      dimOutsideOverlay,
+      waveLabel,
+      showHierarchyEdges,
+      showDependencyEdges,
+      showSeamEdges,
+      showConflictEdges
+    }),
+    [collapsedIds, dimOutsideOverlay, graph, mode, overlayNodeIds, selectedNodeId, showConflictEdges, showDependencyEdges, showHierarchyEdges, showSeamEdges, stage, waveLabel]
   );
   useEffect(() => {
     for (const node of flow.nodes) {
@@ -210,14 +243,19 @@ function MinimalRunGraphInner({
     let frame = 0;
     const observer = new ResizeObserver(() => {
       window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => void fitView({ padding: 0.18, duration: 200 }));
+      frame = window.requestAnimationFrame(() => void fitView({
+        nodes: primaryFrameNodes(flow.nodes),
+        padding: 0.22,
+        maxZoom: 0.82,
+        duration: 200
+      }));
     });
     observer.observe(el);
     return () => {
       observer.disconnect();
       window.cancelAnimationFrame(frame);
     };
-  }, [fitView]);
+  }, [fitView, flow.nodes]);
 
   return (
     <section ref={sectionRef} className={fill ? "mh-run-graph mh-run-graph-fill" : "mh-run-graph"} aria-label="Grafo de tareas del run">
@@ -225,8 +263,7 @@ function MinimalRunGraphInner({
         nodes={flow.nodes}
         edges={flow.edges}
         nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.18, includeHiddenNodes: false }}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.72 }}
         minZoom={0.35}
         maxZoom={1.4}
         nodesDraggable={false}
@@ -250,7 +287,7 @@ function MinimalRunGraphInner({
       >
         <Background variant={BackgroundVariant.Dots} gap={28} size={1} color="var(--mh-graph-dots)" />
         <CanvasControls onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
-        {graph.nodes.length > 12 ? (
+        {flow.nodes.filter((node) => node.type === "minimalTask").length > 12 ? (
           <MiniMap
             pannable
             zoomable
@@ -265,7 +302,7 @@ function MinimalRunGraphInner({
             maskColor="color-mix(in srgb, var(--color-bg) 72%, transparent)"
           />
         ) : null}
-        <FitViewOnGrowth count={flow.nodes.length} />
+        <FramePrimaryBranch nodes={flow.nodes} />
         {graph.nodes.length === 0 ? <GraphEmptyState kind={emptyKind} /> : null}
       </ReactFlow>
     </section>
@@ -312,24 +349,48 @@ function GraphEmptyState({ kind }: { kind: GraphEmptyKind }): React.ReactElement
   );
 }
 
-/** Keep the whole tree framed as nodes stream in during planning. */
-function FitViewOnGrowth({ count }: { count: number }): null {
+/**
+ * Keep the root and the nearest first-level branches readable as planning
+ * streams in. The explicit Fit View control still frames the entire DAG.
+ */
+function FramePrimaryBranch({ nodes }: { nodes: Node<MinimalGraphNodeData | SkeletonGraphNodeData>[] }): null {
   const { fitView } = useReactFlow();
   useEffect(() => {
     const handle = window.setTimeout(() => {
-      void fitView({ padding: 0.18, duration: 320 });
+      void fitView({ nodes: primaryFrameNodes(nodes), padding: 0.22, maxZoom: 0.82, duration: 320 });
     }, 60);
     return () => window.clearTimeout(handle);
-  }, [count, fitView]);
+  }, [fitView, nodes]);
   return null;
 }
 
+function primaryFrameNodes(nodes: Node<MinimalGraphNodeData | SkeletonGraphNodeData>[]): Array<{ id: string }> {
+  const taskNodes = nodes.filter((node): node is Node<MinimalGraphNodeData> => node.type === "minimalTask");
+  if (taskNodes.length <= 12) return taskNodes.map((node) => ({ id: node.id }));
+  const root = taskNodes.find((node) => node.data.node.role === "root");
+  if (root === undefined) return taskNodes.slice(0, 5).map((node) => ({ id: node.id }));
+  const nearestChildren = taskNodes
+    .filter((node) => node.data.node.parentId === root.id)
+    .sort((left, right) => Math.abs(left.position.x - root.position.x) - Math.abs(right.position.x - root.position.x))
+    .slice(0, 4);
+  return [root, ...nearestChildren].map((node) => ({ id: node.id }));
+}
 function buildFlow(
   graph: MinimalRunGraph,
   stage: ProductStage,
   selectedNodeId: string | null,
   seenIds: ReadonlySet<string>,
-  collapsedIds: ReadonlySet<string>
+  collapsedIds: ReadonlySet<string>,
+  lens: {
+    mode: RunCanvasMode;
+    overlayNodeIds: ReadonlySet<string>;
+    dimOutsideOverlay: boolean;
+    waveLabel?: string | undefined;
+    showHierarchyEdges: boolean;
+    showDependencyEdges: boolean;
+    showSeamEdges: boolean;
+    showConflictEdges: boolean;
+  }
 ): { nodes: Node<MinimalGraphNodeData | SkeletonGraphNodeData>[]; edges: Edge[] } {
   const byId = new Map(graph.nodes.map((node) => [node.id, node]));
 
@@ -364,22 +425,6 @@ function buildFlow(
     if (isHidden(node.id)) {
       hiddenIds.add(node.id);
     }
-  }
-
-  const childrenOf = new Map<string, WorkspaceNode[]>();
-  for (const node of allNodes) {
-    if (node.parentId !== null && byId.has(node.parentId)) {
-      const bucket = childrenOf.get(node.parentId) ?? [];
-      bucket.push(node);
-      childrenOf.set(node.parentId, bucket);
-    }
-  }
-  for (const bucket of childrenOf.values()) {
-    // Ghosts sit after their real siblings: the "next child" materializes below.
-    bucket.sort((a, b) => {
-      const ghostOrder = Number(isGhostId(a.id)) - Number(isGhostId(b.id));
-      return ghostOrder || a.title.localeCompare(b.title) || a.id.localeCompare(b.id);
-    });
   }
 
   // Branch identity: the top-level ancestor (a direct child of the root) owns a
@@ -417,31 +462,7 @@ function buildFlow(
     return nodeId;
   };
 
-  // Tidy layout: a DFS that packs each subtree into a contiguous vertical band and
-  // centres every parent over its children, so siblings sit together and branches
-  // never interleave.
-  // If a node is collapsed, we treat it as a leaf (kids.length === 0) for layout calculation,
-  // making the graph contract cleanly.
-  const pos = new Map<string, { x: number; y: number }>();
-  let leafCursor = 0;
-  const place = (node: WorkspaceNode): number => {
-    const isCollapsed = collapsedIds.has(node.id);
-    const kids = isCollapsed ? [] : (childrenOf.get(node.id) ?? []);
-    let y: number;
-    if (kids.length === 0) {
-      y = leafCursor * Y_GAP;
-      leafCursor += 1;
-    } else {
-      const ys = kids.map((kid) => place(kid));
-      y = (ys[0]! + ys[ys.length - 1]!) / 2;
-    }
-    pos.set(node.id, { x: node.depth * X_GAP, y });
-    return y;
-  };
-  const roots = allNodes
-    .filter((node) => node.parentId === null || !byId.has(node.parentId))
-    .sort((a, b) => a.title.localeCompare(b.title));
-  for (const root of roots) place(root);
+  const pos = layoutVerticalTaskDag(allNodes, collapsedIds);
 
   // Path to root for the selected node (the node itself + every ancestor).
   const pathSet = new Set<string>();
@@ -457,7 +478,7 @@ function buildFlow(
   const flowNodes: Node<MinimalGraphNodeData | SkeletonGraphNodeData>[] = allNodes
     .filter((node) => !hiddenIds.has(node.id))
     .map((node) => {
-      const position = pos.get(node.id) ?? { x: node.depth * X_GAP, y: 0 };
+      const position = pos.get(node.id) ?? { x: 0, y: node.depth * 160 };
       if (isGhostId(node.id)) {
         return {
           id: node.id,
@@ -471,31 +492,51 @@ function buildFlow(
       const isCollapsed = collapsedIds.has(node.id);
       const directChildren = graph.nodes.filter((n) => n.parentId === node.id);
       const collapsedChildCount = isCollapsed ? directChildren.length : 0;
+      const integratedChildren = directChildren.filter((child) => child.display === "done").length;
+      const childSummary = node.role === "root"
+        ? `${graph.nodes.length} tareas · ${graph.nodes.filter((child) => child.display === "done").length} integradas`
+        : node.role === "composite"
+          ? `${integratedChildren}/${directChildren.length} hijas integradas`
+          : undefined;
+      const overlay = lens.overlayNodeIds.has(node.id);
+      const lensDimmed = lens.dimOutsideOverlay && !overlay;
       return {
         id: node.id,
         type: "minimalTask",
         position,
+        ariaLabel: `${node.title} · ${roleLabel(node.role, node.depth)} · ${node.vital.label}`,
+        ariaRole: "group",
         data: {
           node,
           stage,
           selected: selectedNodeId === node.id,
           branch: branchColorFor(node),
           onPath: pathSet.has(node.id),
-          dimmed: hasSelection && !pathSet.has(node.id),
+          dimmed: (hasSelection && !pathSet.has(node.id)) || lensDimmed,
           isNew: !seenIds.has(node.id),
           expanding: isExpanding(node),
-          collapsedChildCount
+          collapsedChildCount,
+          childSummary,
+          overlay,
+          waveLabel: overlay ? lens.waveLabel : undefined
         }
       };
     });
 
   const flowEdges: Edge[] = [];
   for (const edge of graph.edges) {
+    const isHierarchy = edge.kind === "hierarchy";
     const isDependency = edge.kind === "dependency";
+    const isSeam = edge.kind === "seam";
+    const isConflict = edge.kind === "conflict";
+    if (isHierarchy && !lens.showHierarchyEdges) continue;
+    if (isDependency && !lens.showDependencyEdges) continue;
+    if (isSeam && !lens.showSeamEdges) continue;
+    if (isConflict && !lens.showConflictEdges) continue;
     let sourceId = edge.source;
     let targetId = edge.target;
 
-    if (isDependency) {
+    if (!isHierarchy) {
       if (hiddenIds.has(sourceId)) {
         sourceId = getClosestVisibleAncestor(sourceId);
       }
@@ -514,35 +555,45 @@ function buildFlow(
     const target = byId.get(targetId);
     const source = byId.get(sourceId);
 
-    const onPath = !isDependency && pathSet.has(sourceId) && pathSet.has(targetId);
-    const dimmed = hasSelection && !onPath;
+    const onPath = isHierarchy && pathSet.has(sourceId) && pathSet.has(targetId);
+    const overlayEdge = lens.overlayNodeIds.has(sourceId) && lens.overlayNodeIds.has(targetId);
+    const dimmed = (hasSelection && !onPath) || (lens.dimOutsideOverlay && !overlayEdge);
     
     // Hierarchy edges into a still-expanding subtree march with the stream.
-    const streaming = !isDependency && target !== undefined && isExpanding(target);
+    const streaming = isHierarchy && target !== undefined && isExpanding(target);
     
     // Hierarchy edges FROM an integrating composite flow in reverse (bottom-up).
     const integrating =
-      !isDependency &&
+      isHierarchy &&
       source !== undefined &&
       source.role !== "leaf" &&
       source.vital.status === "running";
 
     const branchColor = target !== undefined ? branchColorFor(target) : "var(--mh-graph-edge)";
-    const stroke = isDependency ? "var(--mh-graph-seam)" : branchColor;
+    const stroke = isDependency
+      ? "var(--mh-graph-dependency)"
+      : isSeam
+        ? "var(--mh-graph-seam)"
+        : isConflict
+          ? "var(--mh-graph-conflict)"
+          : branchColor;
+    const interfaceEmphasis = lens.mode === "interfaces" && isSeam;
+    const integrationEmphasis = lens.mode === "integration" && (isHierarchy || isConflict);
+    const crossNodeEdge = !isHierarchy;
 
     flowEdges.push({
-      id: isDependency ? `${edge.id}:remapped:${sourceId}->${targetId}` : edge.id,
+      id: crossNodeEdge ? `${edge.id}:remapped:${sourceId}->${targetId}` : edge.id,
       source: sourceId,
       target: targetId,
       type: "smoothstep",
-      animated: onPath,
+      animated: onPath || integrationEmphasis,
       ...(integrating ? { className: "edge-flow-reverse" } : streaming ? { className: "edge-flow" } : {}),
-      markerEnd: { type: MarkerType.ArrowClosed, width: 13, height: 13, color: stroke },
+      ...(!isConflict ? { markerEnd: { type: MarkerType.ArrowClosed, width: 13, height: 13, color: stroke } } : {}),
       style: {
         stroke,
-        strokeWidth: onPath ? 2.4 : integrating ? 2.2 : isDependency ? 1.5 : 1.4,
-        strokeDasharray: isDependency ? "4 5" : streaming || integrating ? "4 6" : undefined,
-        opacity: dimmed ? 0.16 : integrating ? 0.85 : isDependency ? 0.7 : 0.55,
+        strokeWidth: onPath ? 2.4 : interfaceEmphasis || integrationEmphasis ? 2.2 : integrating ? 2.2 : crossNodeEdge ? 1.6 : 1.4,
+        strokeDasharray: isDependency ? "8 4" : isSeam ? "4 5" : isConflict ? "2 4" : streaming || integrating ? "4 6" : undefined,
+        opacity: dimmed ? 0.12 : interfaceEmphasis ? 0.95 : integrationEmphasis ? 0.9 : integrating ? 0.85 : crossNodeEdge ? 0.72 : 0.55,
         transition: "opacity 200ms ease, stroke-width 200ms ease"
       }
     });
@@ -589,8 +640,8 @@ function SkeletonTaskNode({ data }: NodeProps<Node<SkeletonGraphNodeData>>): Rea
       aria-label="Generando la próxima subtarea"
       aria-busy
     >
-      <Handle type="target" position={Position.Left} className="mh-min-node-handle" />
-      <Handle type="source" position={Position.Right} className="mh-min-node-handle" />
+      <Handle type="target" position={Position.Top} className="mh-min-node-handle" />
+      <Handle type="source" position={Position.Bottom} className="mh-min-node-handle" />
       <div className="mh-min-node-top">
         <span
           className="mh-min-node-dot coral-pulse"
@@ -608,7 +659,7 @@ function SkeletonTaskNode({ data }: NodeProps<Node<SkeletonGraphNodeData>>): Rea
 }
 
 function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React.ReactElement {
-  const { node, selected, branch, onPath, dimmed, isNew, expanding, collapsedChildCount } = data;
+  const { node, selected, branch, onPath, dimmed, isNew, expanding, collapsedChildCount, childSummary, overlay, waveLabel } = data;
   const status = node.vital.status;
   const hasProgress = node.vital.testProgress !== undefined;
   const glyph = nodeGlyph(status);
@@ -618,10 +669,13 @@ function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React
 
   return (
     <article
+      aria-label={`${node.title} · ${roleLabel(node.role, node.depth)} · ${node.vital.label}`}
+      aria-roledescription="tarea del plan"
       className={[
         "mh-min-node",
         isRoot ? "mh-min-node-root" : "",
         node.isInWavefront ? "mh-min-node-wave" : "",
+        overlay ? "mh-min-node-overlay" : "",
         selected ? "mh-min-node-selected" : "",
         onPath && !selected ? "mh-min-node-onpath" : "",
         isNew ? "mh-min-node-enter" : "",
@@ -640,8 +694,8 @@ function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React
         filter: dimmed ? "saturate(0.55)" : "none"
       }}
     >
-      <Handle type="target" position={Position.Left} className="mh-min-node-handle" />
-      <Handle type="source" position={Position.Right} className="mh-min-node-handle" />
+      <Handle type="target" position={Position.Top} className="mh-min-node-handle" />
+      <Handle type="source" position={Position.Bottom} className="mh-min-node-handle" />
       <div className="mh-min-node-top">
         {glyph.kind === "hand" ? (
           // Gated waits on a person — an affordance, not a coloured dot (gated and
@@ -656,9 +710,11 @@ function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React
           />
         )}
         <span className="mh-min-node-role">{roleLabel(node.role, node.depth)}</span>
+        {waveLabel !== undefined ? <span className="mh-min-node-wave-label">{waveLabel}</span> : null}
       </div>
       <h3>{node.title}</h3>
       <p style={attention ? { color: STATUS_DOT[status], fontWeight: 500 } : undefined}>{node.vital.label}</p>
+      {childSummary !== undefined ? <small className="mh-mono">{childSummary}</small> : null}
       {hasProgress ? (
         <div
           className="mh-min-node-progress"

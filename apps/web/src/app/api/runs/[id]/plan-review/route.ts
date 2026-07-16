@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import { buildPlanReviewSummary } from "@/lib/plan-review";
+import { buildPlanControlPlane, type PlanControlNodeReview } from "@/lib/plan-control";
 import {
   RunLifecycleError,
   RunNotFoundError,
@@ -8,6 +9,7 @@ import {
   getRunRepository,
   parseRunPatches
 } from "@/lib/server/runs";
+import { effectiveExecutionConfig } from "@/lib/server/runs/effective-execution-config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,8 +22,17 @@ export async function GET(_request: Request, context: RouteContext): Promise<Nex
   const { id } = await context.params;
   try {
     const run = await getRunRepository().get(id);
-    const summary = buildPlanReviewSummary(projectRunRecordToSnapshot(run), parseRunPatches(run.patches));
-    return NextResponse.json({ planReview: summary });
+    const snapshot = projectRunRecordToSnapshot(run);
+    const summary = buildPlanReviewSummary(snapshot, parseRunPatches(run.patches));
+    const controlPlane = buildPlanControlPlane(snapshot, {
+      version: run.version,
+      status: run.status,
+      routing: effectiveExecutionConfig(run.executionConfig).routing,
+      ...(run.nodeReviews !== undefined
+        ? { nodeReviews: run.nodeReviews as Record<string, PlanControlNodeReview> }
+        : {})
+    });
+    return NextResponse.json({ planReview: summary, controlPlane });
   } catch (error) {
     return errorResponse(error);
   }

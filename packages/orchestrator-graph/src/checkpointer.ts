@@ -41,6 +41,17 @@ interface PersistedCheckpointFile {
   parentConfig?: RunnableConfig;
 }
 
+interface PendingWriteWaiter {
+  resolve: () => void;
+  reject: (error: unknown) => void;
+}
+
+interface PendingWriteBatch {
+  entries: Map<string, PersistedWrite>;
+  waiters: PendingWriteWaiter[];
+  flushing: boolean;
+}
+
 /**
  * Health of a thread's persisted checkpoints, used by the hosts to surface
  * corruption instead of silently re-entering from scratch (INV-3):
@@ -58,6 +69,7 @@ export type ThreadCheckpointHealth =
 
 export class JsonFileCheckpointSaver extends BaseCheckpointSaver {
   private static readonly writeChains = new Map<string, Promise<unknown>>();
+  private static readonly pendingWriteBatches = new Map<string, PendingWriteBatch>();
   private readonly directory: string;
 
   constructor(directory: string) {
@@ -244,27 +256,89 @@ export class JsonFileCheckpointSaver extends BaseCheckpointSaver {
     if (!threadId || !checkpointId) {
       throw new Error("JsonFileCheckpointSaver.putWrites: missing thread_id or checkpoint_id");
     }
+    if (writes.length === 0) return;
 
-    await this.withWriteLock(`thread:${threadId}`, async () => {
-      const threadDir = join(this.directory, threadId);
-      await mkdir(threadDir, { recursive: true });
-      await cleanupTempFiles(threadDir);
+    const batchKey = `${this.directory}\0${threadId}\0${checkpointId}`;
+    let batch = JsonFileCheckpointSaver.pendingWriteBatches.get(batchKey);
+    if (batch === undefined) {
+      batch = { entries: new Map(), waiters: [], flushing: false };
+      JsonFileCheckpointSaver.pendingWriteBatches.set(batchKey, batch);
+    }
+    for (const [channelValue, value] of writes) {
+      const channel = String(channelValue);
+      batch.entries.set(pendingWriteKey(taskId, channel), { taskId, channel, value });
+    }
 
-      const existing = await this.readPendingWrites(threadId, checkpointId);
-      const merged = new Map<string, PersistedWrite>();
-      for (const [writeTaskId, channel, value] of existing) {
-        merged.set(pendingWriteKey(writeTaskId, channel), { taskId: writeTaskId, channel, value });
-      }
-      for (const [channelValue, value] of writes) {
-        const channel = String(channelValue);
-        merged.set(pendingWriteKey(taskId, channel), { taskId, channel, value });
-      }
-
-      await atomicWriteText(
-        this.writesPath(threadId, checkpointId),
-        JSON.stringify(Array.from(merged.values()), null, 2)
-      );
+    const persisted = new Promise<void>((resolve, reject) => {
+      batch!.waiters.push({ resolve, reject });
     });
+    if (!batch.flushing) {
+      batch.flushing = true;
+      // Queue the flush in the thread write chain synchronously. This preserves
+      // call order with put()/deleteThread(), while Promise.all callers in the
+      // same turn coalesce before the lock callback starts. Calls arriving
+      // during IO join the next iteration under the same lock.
+      void this.flushPendingWriteBatch(batchKey, threadId, checkpointId, batch);
+    }
+    return persisted;
+  }
+
+  private async flushPendingWriteBatch(
+    batchKey: string,
+    threadId: string,
+    checkpointId: string,
+    batch: PendingWriteBatch
+  ): Promise<void> {
+    try {
+      await this.withWriteLock(`thread:${threadId}`, async () => {
+        const threadDir = join(this.directory, threadId);
+        await mkdir(threadDir, { recursive: true });
+        await cleanupTempFiles(threadDir);
+
+        while (batch.entries.size > 0) {
+          const pending = batch.entries;
+          const waiters = batch.waiters;
+          batch.entries = new Map();
+          batch.waiters = [];
+
+          const existing = await this.readPendingWrites(threadId, checkpointId);
+          const merged = new Map<string, PersistedWrite>();
+          for (const [writeTaskId, channel, value] of existing) {
+            merged.set(pendingWriteKey(writeTaskId, channel), { taskId: writeTaskId, channel, value });
+          }
+          for (const [key, write] of pending) merged.set(key, write);
+
+          try {
+            await atomicWriteText(
+              this.writesPath(threadId, checkpointId),
+              JSON.stringify(Array.from(merged.values()), null, 2)
+            );
+            for (const waiter of waiters) waiter.resolve();
+          } catch (error) {
+            for (const waiter of waiters) waiter.reject(error);
+            throw error;
+          }
+        }
+      });
+    } catch (error) {
+      // Reject callers that joined while the failed disk operation was in
+      // flight. No caller observes success before its batch reaches disk.
+      for (const waiter of batch.waiters) waiter.reject(error);
+      batch.entries.clear();
+      batch.waiters = [];
+    } finally {
+      batch.flushing = false;
+      // A caller can join after the write-lock operation resolves but before
+      // this continuation runs. Re-arm instead of deleting that late batch.
+      if (batch.entries.size > 0) {
+        batch.flushing = true;
+        void this.flushPendingWriteBatch(batchKey, threadId, checkpointId, batch);
+        return;
+      }
+      if (JsonFileCheckpointSaver.pendingWriteBatches.get(batchKey) === batch) {
+        JsonFileCheckpointSaver.pendingWriteBatches.delete(batchKey);
+      }
+    }
   }
 
   async deleteThread(threadId: string): Promise<void> {

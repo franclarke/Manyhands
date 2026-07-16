@@ -42,13 +42,15 @@ import { markRunnerInactive, startRunBackgroundTask, tryMarkRunnerActive } from 
 import { saveRunWithRequiredStatusEvent } from "./audited-mutation";
 import { assertExecutableRunGraph, resolveExecutionGraph } from "./execution-state";
 import { RunMutationConflictError } from "./errors";
+import { DEFAULT_STALE_MS } from "./interrupted";
 import {
   claimRunOperation,
-  releaseRunOperation,
+  releaseRunOperationWithRetry,
   updateRunForOperation
 } from "./run-operation-lease";
 import type { ExecutionConfigInput, RunOperationLease, RunRecord, RunStatus } from "./schema";
 import { getRunRepository } from "./store";
+import { settleRunCancellation } from "./cancel-service";
 
 export { computeInvalidatedTasks } from "./execution-state";
 export type { ExecutionResults } from "./execution-state";
@@ -146,7 +148,8 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
   try {
     const claimed = await claimRunOperation(runId, "planning", {
       expectedStatuses: ["created", "generating", "interrupted"],
-      allowTakeover: true
+      allowTakeover: true,
+      takeoverStaleAfterMs: DEFAULT_STALE_MS
     });
     lease = claimed.lease;
     stopHeartbeat = startHeartbeat(runId, lease);
@@ -216,9 +219,7 @@ export async function runPlanningPipeline(runId: string, options: PlanningRunner
       await failPlanning(runId, error, lease);
     }
   } finally {
-    stopHeartbeat?.();
-    if (lease !== undefined) await releaseRunOperation(runId, lease);
-    markRunnerInactive(runId);
+    await finalizePlanningPipelineOwnership(runId, lease, stopHeartbeat);
   }
 }
 
@@ -248,7 +249,8 @@ export async function resumePlanningPipeline(
   try {
     const claimed = await claimRunOperation(runId, "planning", {
       expectedStatuses: ["generating", "paused", "interrupted"],
-      allowTakeover: true
+      allowTakeover: true,
+      takeoverStaleAfterMs: DEFAULT_STALE_MS
     });
     lease = claimed.lease;
     stopHeartbeat = startHeartbeat(runId, lease);
@@ -262,10 +264,34 @@ export async function resumePlanningPipeline(
       await failPlanning(runId, error, lease);
     }
   } finally {
-    stopHeartbeat?.();
-    if (lease !== undefined) await releaseRunOperation(runId, lease);
+    await finalizePlanningPipelineOwnership(runId, lease, stopHeartbeat);
+  }
+}
+
+async function finalizePlanningPipelineOwnership(
+  runId: string,
+  lease: RunOperationLease | undefined,
+  stopHeartbeat: (() => void) | undefined
+): Promise<void> {
+  if (lease !== undefined) await settleRunCancellation(runId);
+  let firstError: unknown;
+  try {
+    try {
+      stopHeartbeat?.();
+    } catch (error) {
+      firstError = error;
+    }
+    if (lease !== undefined) {
+      try {
+        await releaseRunOperationWithRetry(runId, lease);
+      } catch (error) {
+        firstError ??= error;
+      }
+    }
+  } finally {
     markRunnerInactive(runId);
   }
+  if (firstError !== undefined) throw firstError;
 }
 
 /**

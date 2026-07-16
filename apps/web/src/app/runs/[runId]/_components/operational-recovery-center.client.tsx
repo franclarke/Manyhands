@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { RunEvent, RunModel } from "@/lib/run-model/types";
 import { selectOperationalRecovery, type RecoveryAction } from "@/lib/run-model/operational-recovery";
 import { Button } from "@/components/ui/button";
@@ -15,16 +16,32 @@ const COPY: Record<ReturnType<typeof selectOperationalRecovery>["state"], { titl
   needs_delivery: { title: "Artifact listo para delivery", detail: "La entrega es una operación separada y requiere una acción explícita." },
   degraded: { title: "Historial degradado", detail: "Se conserva el prefijo válido del event log. Revisá la evidencia antes de continuar." },
   recovery_required: { title: "Recovery requerido", detail: "Un intento quedó ambiguo. El sistema no reintenta automáticamente para evitar efectos duplicados." },
-  failed: { title: "Run fallido", detail: "La causa está preservada en el historial. Reiniciá sólo mediante la acción de lifecycle." },
+  failed: { title: "Run fallido", detail: "La causa durable se muestra abajo. Recuperá el run sólo mediante una acción de lifecycle." },
   settled: { title: "Estado operativo", detail: "No hay una acción de recovery pendiente." }
 };
 
-export function OperationalRecoveryCenter({ runId, model, events }: { runId: string; model: RunModel; events: readonly RunEvent[] }): React.ReactElement | null {
+export function OperationalRecoveryCenter({
+  runId,
+  model,
+  events,
+  onOpenFailure,
+  onOpenDelivery
+}: {
+  runId: string;
+  model: RunModel;
+  events: readonly RunEvent[];
+  onOpenFailure: (nodeId?: string) => void;
+  onOpenDelivery: () => void;
+}): React.ReactElement | null {
+  const router = useRouter();
   const recovery = selectOperationalRecovery(model, events);
   const [pending, setPending] = useState<RecoveryAction | null>(null);
   const [error, setError] = useState<string | null>(null);
   const copy = COPY[recovery.state];
-  const shouldRender = recovery.state !== "running" && recovery.state !== "settled";
+  // Pending decisions have their own compact first-class banner in the run
+  // workspace. Rendering the generic recovery card as well duplicated the gate
+  // and pushed the Task DAG below the fold.
+  const shouldRender = recovery.state !== "running" && recovery.state !== "settled" && recovery.state !== "gated";
   if (!shouldRender) return null;
 
   async function invoke(action: RecoveryAction): Promise<void> {
@@ -38,7 +55,7 @@ export function OperationalRecoveryCenter({ runId, model, events }: { runId: str
         const body = await response.json().catch(() => ({}));
         throw new Error(typeof body.error === "string" ? body.error : `La acción no pudo completarse (${response.status}).`);
       }
-      window.location.reload();
+      router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -57,13 +74,23 @@ export function OperationalRecoveryCenter({ runId, model, events }: { runId: str
           {recovery.recommendedActions.includes("retry_cancel") ? <Button size="sm" onClick={() => invoke("retry_cancel")} disabled={pending !== null}>{model.run.control.status === "cancelling" ? "Reintentar cancelación" : "Cancelar run"}</Button> : null}
           {recovery.recommendedActions.includes("resume") ? <Button size="sm" onClick={() => invoke("resume")} disabled={pending !== null}>Reanudar</Button> : null}
           {recovery.recommendedActions.includes("restart") ? <Button size="sm" onClick={() => invoke("restart")} disabled={pending !== null}>Reiniciar</Button> : null}
+          {recovery.recommendedActions.includes("deliver") ? <Button size="sm" onClick={onOpenDelivery}>Revisar entrega</Button> : null}
           {recovery.recommendedActions.includes("export_artifact") ? <a className="inline-flex h-8 items-center rounded-[var(--r-md)] border border-[var(--color-border)] px-3 text-meta font-medium text-[var(--color-text)]" href={`/api/runs/${encodeURIComponent(runId)}/export?format=patch`}>Exportar artifact</a> : null}
         </div>
       </div>
       {recovery.cancellation !== undefined ? <p className="m-0 mt-3 text-meta text-[var(--color-text-muted)]">Procesos verificados: {recovery.cancellation.allDead === true ? "todos terminados" : `${recovery.cancellation.survivors.length} pendiente(s)`}.</p> : null}
+      {recovery.failure !== undefined ? (
+        <p className="m-0 mt-3 rounded-[var(--r-md)] border border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] px-3 py-2 text-meta text-[var(--status-failed-fg)]">
+          <strong>Causa registrada:</strong> {recovery.failure.cause}
+          {recovery.failure.nodeId !== undefined ? ` (tarea ${recovery.failure.nodeId})` : ""}
+          <button type="button" onClick={() => onOpenFailure(recovery.failure?.nodeId)} className="ml-2 underline decoration-current underline-offset-2 hover:opacity-80">
+            Ver en eventos
+          </button>
+        </p>
+      ) : null}
       {recovery.pendingDecisionIds.length > 0 ? <p className="m-0 mt-3 text-meta text-[var(--color-text-muted)]">Decisiones pendientes: {recovery.pendingDecisionIds.join(", ")}. Resolvelas en el control-plane de decisiones.</p> : null}
       {recovery.blockingReasons.map((reason) => <p key={reason} className="m-0 mt-2 text-meta text-[var(--color-text-muted)]">{reason}</p>)}
-      {error !== null ? <p role="alert" className="m-0 mt-3 text-meta text-[var(--color-danger)]">{error}</p> : null}
+      {error !== null ? <p role="alert" className="m-0 mt-3 text-meta text-[var(--danger)]">{error}</p> : null}
     </section>
   );
 }

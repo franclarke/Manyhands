@@ -3,6 +3,7 @@ import { createInitialRunModel, reduceRunEvents } from "@/lib/run-model/reducer"
 import {
   selectAffectedByAmendment,
   selectAttention,
+  selectArchivedAttention,
   selectBlocked,
   selectConflicts,
   selectEvidence,
@@ -129,6 +130,14 @@ describe("selectRenderableNodeState — gated derivation", () => {
 // ── General ────────────────────────────────────────────────────────────────────
 
 describe("selectors — general", () => {
+  it("archives pending decisions instead of keeping them actionable after terminalization", () => {
+    const m = reduceFixture(goldenPlanningQuestion);
+    m.run.control = { ...m.run.control, status: "failed" };
+
+    expect(selectAttention(m)).toEqual([]);
+    expect(selectArchivedAttention(m).map((decision) => decision.id)).toEqual(["d-approve"]);
+  });
+
   it.each(ALL)("1. %s can be queried by every selector without throwing", (_name, fx) => {
     const m = reduceFixture(fx);
     expect(() => {
@@ -190,6 +199,14 @@ describe("selectors — general", () => {
 // ── golden-happy-path ─────────────────────────────────────────────────────────
 
 describe("selectors — golden-happy-path", () => {
+  it("keeps an unapproved plan in proposal even after grounding signals arrive", () => {
+    const m = reduceFixture(goldenPlanningQuestion);
+    const node = [...m.nodes.values()][0]!;
+    m.nodes.set(node.id, { ...node, scope: { ...node.scope, origin: "derived" } });
+
+    expect(selectPhase(m)).toBe("proposal");
+  });
+
   it("after approve_plan raised: proposal + attention", () => {
     const m = reduceUpToSeq(goldenHappyPath, seqOf(goldenHappyPath, (e) => e.type === "decision.raised" && pl(e).kind === "approve_plan"));
     expect(selectPhase(m)).toBe("proposal");

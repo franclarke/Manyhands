@@ -3,9 +3,8 @@
  *
  * The node inspector used to be a flat key-value list with no upstream
  * dependencies and no duration. C3 adds both as DERIVED, never-invented data:
- *  - `dependencies`: the upstream task nodes this one depends on, derived from the
- *    seams it consumes (`consumes → seam.producerNodeId → node`). Deduped, self
- *    excluded. Pure model derivation — no events needed.
+ *  - `dependencies`: upstream task nodes derived from canonical D1 dependency
+ *    facts. Interface seams remain a separate contract channel.
  *  - `timing`: execution duration derived from the event log
  *    (`node.execution.started` → terminal `node.verify.passed` / `node.execution.failed`).
  *    Started-but-not-finished reads as `running` with no fabricated number; a node
@@ -44,10 +43,18 @@ function nodeView(model: RunModel, id: string, events?: RunEvent[]) {
 // ── Dependencies (pure model derivation) ────────────────────────────────────────
 
 describe("focus-view — explicit node dependencies", () => {
-  it("derives upstream task nodes from the seams the node consumes", () => {
-    // n-ui consumes seam-counter, whose producer is n-store ("CounterStore").
-    const view = nodeView(reduceFixture(goldenHappyPath), "n-ui");
-    expect(view.dependencies).toEqual([{ id: "n-store", title: "CounterStore" }]);
+  it("derives upstream task nodes only from canonical D1 dependencies", () => {
+    const model = reduceRunEvents(reduceFixture(goldenHappyPath), [
+      evt(1_000, "2026-06-08T00:00:00.000Z", "plan.dependency.proposed", {
+        fromTaskId: "n-logic",
+        toTaskId: "n-ui",
+        type: "logical",
+        inferred: false
+      })
+    ]);
+    const view = nodeView(model, "n-ui");
+    expect(view.dependencies).toEqual([{ id: "n-logic", title: "Lógica de incremento" }]);
+    expect(view.dependencies.map((dependency) => dependency.id)).not.toContain("n-store");
   });
 
   it("is empty for a node that consumes nothing (a pure producer leaf)", () => {
@@ -56,7 +63,15 @@ describe("focus-view — explicit node dependencies", () => {
   });
 
   it("never lists the node itself as its own dependency", () => {
-    const view = nodeView(reduceFixture(goldenHappyPath), "n-ui");
+    const model = reduceRunEvents(reduceFixture(goldenHappyPath), [
+      evt(1_000, "2026-06-08T00:00:00.000Z", "plan.dependency.proposed", {
+        fromTaskId: "n-ui",
+        toTaskId: "n-ui",
+        type: "logical",
+        inferred: false
+      })
+    ]);
+    const view = nodeView(model, "n-ui");
     expect(view.dependencies.map((d) => d.id)).not.toContain("n-ui");
   });
 });

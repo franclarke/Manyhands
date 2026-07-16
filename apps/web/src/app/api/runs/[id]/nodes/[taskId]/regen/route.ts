@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  runMockPlanningFlow,
   type AgentTaskContract,
   type FeatureRequest,
   type MockPlanningFlowResult,
@@ -10,7 +9,6 @@ import {
   type TaskGraph,
   type TaskNode
 } from "@manyhands/core";
-import { pickDecomposer } from "@/lib/decomposer-policy";
 import {
   RunLifecycleError,
   RunNotFoundError,
@@ -20,8 +18,16 @@ import {
   loadEditableRunContext,
   persistRunPatches
 } from "@/lib/server/runs";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { invokePlanning } from "@/lib/server/runs/planning-invocation-service";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 import { getWorkspaceRepository } from "@/lib/server/workspaces";
+import type { Workspace } from "@/lib/api-types";
+import type { RunRecord } from "@/lib/server/runs/schema";
+import {
+  RunTargetMismatchError,
+  resolveRunTargetPath
+} from "@/lib/server/runs/target-context";
+import { getRunRepository } from "@/lib/server/runs/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,22 +66,32 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     const contract = currentSnapshot.contracts.find((entry) => entry.taskId === taskId) ?? node.contract;
     const runGranularity = run.granularity === "auto" ? "balanced" : run.granularity;
     const mode = parsed.data.granularity ?? runGranularity;
-    const feature = buildFeatureRequest({
+    const targetPath = await resolveRunTargetPath(run);
+    const feature = {
+      ...buildFeatureRequest({
       taskId,
       node,
       snapshot: currentSnapshot,
       ...(contract !== undefined ? { contract } : {})
-    });
-    const workspace = await getWorkspaceRepository().get(run.workspaceId).catch(() => null);
+      }),
+      // The graph's historical repo field is not target authority. Productive
+      // local runs always regenerate against the immutable captured target.
+      ...(targetPath !== undefined ? { repositoryPath: targetPath } : {})
+    };
+    const workspaceRecord = await getWorkspaceRepository().get(run.workspaceId).catch(() => null);
+    const workspace = workspaceRecord !== null && targetPath !== undefined
+      ? { ...workspaceRecord, repoPath: targetPath }
+      : workspaceRecord;
     const planning = await runRegenerationPlanning({
-      runId: run.runId,
+      run,
       taskId,
       mode,
       feature,
-      userPrompt: run.userPrompt,
-      model: run.model,
-      workspace: workspace ?? undefined
+      ...(workspace !== null ? { workspace } : {})
     });
+    // A subtree regeneration is another long LLM boundary. Re-read both the
+    // record and the physical target before constructing/persisting its patch.
+    await resolveRunTargetPath(await getRunRepository().get(id));
     const graft = buildSubtreeGraft({
       snapshot: currentSnapshot,
       taskId,
@@ -92,40 +108,29 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       contracts: graft.contracts
     });
     const saved = await persistRunPatches({ run, baseSnapshot, patches: [patch], expectedVersion: run.version });
-    return NextResponse.json(toRunResponse(saved));
+    return NextResponse.json(await toCanonicalRunResponse(saved));
   } catch (error) {
     return errorResponse(error);
   }
 }
 
 async function runRegenerationPlanning(input: {
-  runId: string;
+  run: RunRecord;
   taskId: string;
   mode: "coarse" | "balanced" | "fine";
   feature: FeatureRequest;
-  userPrompt: string;
-  model: string;
-  workspace?: Parameters<typeof pickDecomposer>[0]["workspace"];
+  workspace?: Workspace;
 }): Promise<MockPlanningFlowResult> {
-  const selection = pickDecomposer({
-    userPrompt: `${input.userPrompt}\n\nRegenerate subtree ${input.taskId}: ${input.feature.description}`,
-    model: input.model,
-    ...(input.workspace !== undefined ? { workspace: input.workspace } : {})
-  });
-  if (selection.provider === "deterministic" && selection.fallbackReason !== "forced_by_env") {
-    throw new RunValidationError("Subtree regeneration requires a configured LLM decomposer.");
-  }
-  const baseOptions = {
+  const { planning } = await invokePlanning({
+    run: input.run,
     feature: input.feature,
     mode: input.mode,
-    schedulerPolicy: "risk_aware" as const,
-    runLabel: `${input.runId}:${input.taskId}:regen`
-  };
-
-  return runMockPlanningFlow({
-    ...baseOptions,
-    decomposer: selection.decomposer
+    runLabel: `${input.run.runId}:${input.taskId}:regen`,
+    processLabel: `regen-decomposer:${input.taskId}`,
+    userPrompt: `${input.run.userPrompt}\n\nRegenerate subtree ${input.taskId}: ${input.feature.description}`,
+    ...(input.workspace !== undefined ? { workspace: input.workspace } : {})
   });
+  return planning;
 }
 
 function buildFeatureRequest(input: {
@@ -186,10 +191,22 @@ function buildSubtreeGraft(input: {
     const remappedContract = contractsByOldId.has(generated.id)
       ? remapContract(contractsByOldId.get(generated.id)!, idMap)
       : undefined;
+    const isGeneratedRoot = generated.id === input.generatedGraph.rootId;
+    const graftedKind = isGeneratedRoot
+      ? oldRoot.parentId === null
+        ? "root"
+        : generated.childrenIds.length === 0
+          ? "leaf"
+          : "composite"
+      : generated.kind;
     const node: TaskNode = {
       ...generated,
       id: nextId,
       parentId: nextParentId,
+      // A standalone decomposition always has a `root`, but when grafted
+      // below the existing root that node becomes the replacement leaf or
+      // composite. Preserving kind=root would create an invalid two-root DAG.
+      kind: graftedKind,
       depth: oldRoot.depth + generated.depth,
       childrenIds: generated.childrenIds.map((childId) => idMap.get(childId) ?? childId),
       // B-009 (CF-13): the shortcut must be remapped exactly like the
@@ -288,6 +305,9 @@ function errorResponse(error: unknown): NextResponse {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
   if (error instanceof RunLifecycleError) {
+    return NextResponse.json({ error: error.message }, { status: 409 });
+  }
+  if (error instanceof RunTargetMismatchError) {
     return NextResponse.json({ error: error.message }, { status: 409 });
   }
   return NextResponse.json(

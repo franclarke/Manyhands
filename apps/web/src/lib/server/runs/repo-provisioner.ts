@@ -1,7 +1,11 @@
 import { access, cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import { DEFAULT_EXCLUDE_LINES, EXCLUDE_BLOCK_MARKER } from "@manyhands/execution-core";
+import {
+  DEFAULT_EXCLUDE_LINES,
+  EXCLUDE_BLOCK_MARKER,
+  safeGitArgs
+} from "@manyhands/execution-core";
 
 import { resolveManyhandsPath, resolveRepoRoot } from "../repo-root";
 import { inspectLocalGitRepo } from "../workspaces/repo-validation";
@@ -222,7 +226,11 @@ export async function recreateProvisionedRepo(input: {
   }
 
   try {
-    await execFileAsync("git", ["cat-file", "-e", `${executionBaseCommit}^{commit}`], { cwd: sourceRepoRoot });
+    await execFileAsync(
+      "git",
+      safeGitArgs(sourceRepoRoot, ["cat-file", "-e", `${executionBaseCommit}^{commit}`]),
+      { cwd: sourceRepoRoot }
+    );
   } catch (error) {
     throw new RepoProvisionError(
       { kind: "localPath", path: sourceRepoRoot },
@@ -233,11 +241,15 @@ export async function recreateProvisionedRepo(input: {
 
   try {
     await mkdir(runRoot, { recursive: true });
-    await execFileAsync("git", ["clone", "--no-checkout", "--local", sourceRepoRoot, record.repoRoot], { cwd: runRoot });
-    await execFileAsync("git", ["checkout", "--detach", executionBaseCommit], { cwd: record.repoRoot });
-    await execFileAsync("git", ["config", "user.email", "manyhands@local"], { cwd: record.repoRoot });
-    await execFileAsync("git", ["config", "user.name", "ManyHands Orchestrator"], { cwd: record.repoRoot });
-    await execFileAsync("git", ["config", "commit.gpgsign", "false"], { cwd: record.repoRoot });
+    await execFileAsync(
+      "git",
+      safeGitArgs(sourceRepoRoot, ["clone", "--no-checkout", "--local", sourceRepoRoot, record.repoRoot]),
+      { cwd: runRoot }
+    );
+    await execFileAsync("git", safeGitArgs(record.repoRoot, ["checkout", "--detach", executionBaseCommit]), { cwd: record.repoRoot });
+    await execFileAsync("git", safeGitArgs(record.repoRoot, ["config", "user.email", "manyhands@local"]), { cwd: record.repoRoot });
+    await execFileAsync("git", safeGitArgs(record.repoRoot, ["config", "user.name", "ManyHands Orchestrator"]), { cwd: record.repoRoot });
+    await execFileAsync("git", safeGitArgs(record.repoRoot, ["config", "commit.gpgsign", "false"]), { cwd: record.repoRoot });
     await ensureGitInfoExclude(record.repoRoot);
     return { recreated: true, provisioned: provisioned() };
   } catch (error) {
@@ -270,13 +282,13 @@ async function provisionLocalRepoCopy(input: {
     // now rooted in this run-owned repository.
     await execFileAsync(
       "git",
-      ["clone", "--no-checkout", "--local", input.sourceRepoRoot, repoRoot],
+      safeGitArgs(input.sourceRepoRoot, ["clone", "--no-checkout", "--local", input.sourceRepoRoot, repoRoot]),
       { cwd: runRoot }
     );
-    await execFileAsync("git", ["checkout", "--detach", input.sourceBaseCommit], { cwd: repoRoot });
-    await execFileAsync("git", ["config", "user.email", "manyhands@local"], { cwd: repoRoot });
-    await execFileAsync("git", ["config", "user.name", "ManyHands Orchestrator"], { cwd: repoRoot });
-    await execFileAsync("git", ["config", "commit.gpgsign", "false"], { cwd: repoRoot });
+    await execFileAsync("git", safeGitArgs(repoRoot, ["checkout", "--detach", input.sourceBaseCommit]), { cwd: repoRoot });
+    await execFileAsync("git", safeGitArgs(repoRoot, ["config", "user.email", "manyhands@local"]), { cwd: repoRoot });
+    await execFileAsync("git", safeGitArgs(repoRoot, ["config", "user.name", "ManyHands Orchestrator"]), { cwd: repoRoot });
+    await execFileAsync("git", safeGitArgs(repoRoot, ["config", "commit.gpgsign", "false"]), { cwd: repoRoot });
     await ensureGitInfoExclude(repoRoot);
 
     return {
@@ -310,7 +322,7 @@ async function provisionLocalRepoCopy(input: {
  */
 export async function ensureGitInfoExclude(repoRoot: string): Promise<void> {
   try {
-    const { stdout } = await execFileAsync("git", ["rev-parse", "--git-common-dir"], { cwd: repoRoot });
+    const { stdout } = await execFileAsync("git", safeGitArgs(repoRoot, ["rev-parse", "--git-common-dir"]), { cwd: repoRoot });
     const commonDir = path.resolve(repoRoot, stdout.trim());
     const excludePath = path.join(commonDir, "info", "exclude");
 
@@ -354,7 +366,7 @@ async function assertFixtureExists(spec: Extract<RepoSpec, { kind: "fixture" }>,
  */
 async function bootstrapGitRepo(repoRoot: string, fixtureId: string): Promise<string> {
   const git = async (...args: string[]): Promise<string> => {
-    const { stdout } = await execFileAsync("git", args, { cwd: repoRoot });
+    const { stdout } = await execFileAsync("git", safeGitArgs(repoRoot, args), { cwd: repoRoot });
     return stdout.trim();
   };
 

@@ -6,6 +6,10 @@
  * the registry-driven kill leaves them VERIFIED dead, not merely signalled.
  */
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   countLiveProcesses,
@@ -100,6 +104,42 @@ describe("live process registry", () => {
     expect(outcome.timedOut).toBe(false);
     // 'close' fired → the registry no longer tracks the child.
     expect(countLiveProcesses(ownerId)).toBe(0);
+  });
+
+  it("does not resolve a timeout while a descendant can still write", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "mh-timeout-tree-"));
+    const started = join(directory, "descendant-started.txt");
+    const lateWrite = join(directory, "late-write.txt");
+    const descendant = [
+      `setTimeout(() => require("node:fs").writeFileSync(${JSON.stringify(lateWrite)}, "stale"), 800);`,
+      "setInterval(() => {}, 1000);"
+    ].join("");
+    const parent = [
+      'const { spawn } = require("node:child_process");',
+      `spawn(process.execPath, ["-e", ${JSON.stringify(descendant)}], { stdio: "ignore" });`,
+      `require("node:fs").writeFileSync(${JSON.stringify(started)}, "started");`,
+      "setInterval(() => {}, 1000);"
+    ].join("");
+
+    try {
+      const outcome = await spawnExecutorProcess({
+        binaryPath: NODE,
+        args: ["-e", parent],
+        cwd: directory,
+        useShell: false,
+        timeoutMs: 250,
+        spawnFn: spawn,
+        readInstructions: async () => "noop",
+        instructionFilePath: "unused"
+      });
+
+      expect(outcome.timedOut).toBe(true);
+      expect(existsSync(started)).toBe(true);
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      expect(existsSync(lateWrite)).toBe(false);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 
   it.skipIf(process.platform === "win32")(

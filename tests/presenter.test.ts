@@ -1,5 +1,6 @@
 ﻿import { describe, expect, it } from "vitest";
 import { toRunPreview, toRunResponse } from "@/lib/server/runs/presenter";
+import type { Workspace } from "@/lib/api-types";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import type { GranularityVector, RunExecutionResult } from "@manyhands/execution-core";
 
@@ -92,6 +93,26 @@ describe("presenter â€” execution summary", () => {
     expect(preview.agentCount).toBe(1);
   });
 
+  it("publishes the canonical workspace id when an alias map entry resolves the run", () => {
+    const canonical: Workspace = {
+      id: "ws-canonical",
+      slug: "canonical",
+      name: "Canonical",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z"
+    };
+    const preview = toRunPreview(
+      baseRun({ workspaceId: "ws-legacy" }),
+      new Map([["ws-legacy", canonical]])
+    );
+
+    expect(preview.workspaceId).toBe("ws-canonical");
+    expect(preview.workspaceName).toBe("Canonical");
+    expect(toRunResponse(baseRun({ workspaceId: "ws-legacy" }), canonical.id).run.workspaceId).toBe(
+      "ws-canonical"
+    );
+  });
+
   it("does not throw when a persisted run has a partial planning object (no summary/riskMatrix)", () => {
     // A failed run can carry a partial planning snapshot shaped like
     // `{ decomposition: { graph } }` with neither `summary` nor `riskMatrix`.
@@ -107,6 +128,6 @@ describe("presenter â€” execution summary", () => {
     );
 
     expect(preview.nodeCount).toBeUndefined();
-    expect(preview.conflictCount).toBeUndefined();
+    expect(preview.coordinationRiskCount).toBeUndefined();
   });
 });

@@ -1,0 +1,343 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage[hidelinks]{hyperref}
+\usetikzlibrary{arrows.meta,positioning}
+
+\geometry{top=2.2cm,bottom=2.2cm,left=2.5cm,right=2.5cm}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.55em}
+\setlist[enumerate]{leftmargin=*,itemsep=0.35em,topsep=0.35em}
+\renewcommand{\arraystretch}{1.2}
+
+\newcommand{\autor}{Francisco Clarke}
+\newcommand{\lu}{120547}
+\newcommand{\director}{Ana Gabriela Maguitman}
+\newcommand{\codirector}{Federico Mart\'in Schmidt}
+
+\begin{document}
+
+\begin{center}
+  {\large\textbf{UNIVERSIDAD NACIONAL DEL SUR}}\\
+  {\large Departamento de Ciencias e Ingenier\'ia de la Computaci\'on}\\[0.8em]
+  {\large\textbf{TRABAJO FINAL DE INGENIER\'IA EN SISTEMAS DE INFORMACI\'ON}}\\
+  {\Large\textbf{PLAN DE TRABAJO}}\\[1em]
+
+  {\large\textbf{Dise\~no e implementaci\'on de una plataforma de
+  orquestaci\'on de agentes de lenguaje para el desarrollo de software y
+  an\'alisis exploratorio de una pol\'itica de descomposici\'on adaptativa}}\\[1em]
+
+  \begin{tabular}{rl}
+    Alumno: & \autor \\
+    LU: & \lu \\
+    Directora: & \director \\
+    Codirector: & \codirector
+  \end{tabular}
+\end{center}
+
+\section*{1. Objetivos}
+
+Los agentes basados en modelos de lenguaje han demostrado capacidad para
+interactuar con repositorios de software, modificar archivos y ejecutar
+herramientas de desarrollo. Trabajos como SWE-agent muestran que la interfaz
+provista al agente y la forma en que se estructura su interacci\'on con el
+entorno influyen en su desempe\~no \cite{yang2024sweagent}. Otros enfoques, como
+ChatDev y MetaGPT, exploran la colaboraci\'on entre agentes especializados para
+cubrir distintas etapas del desarrollo de software
+\cite{qian2024chatdev,hong2024metagpt}.
+
+Sin embargo, una funcionalidad de software de alcance medio o grande no se
+reduce a una \'unica tarea de generaci\'on de c\'odigo. Es necesario interpretar
+el objetivo, dividirlo en unidades ejecutables, explicitar dependencias y
+contratos, coordinar trabajo potencialmente paralelo, verificar los cambios y
+recomponer los resultados sin perder trazabilidad. La ejecuci\'on paralela
+basada en grafos de dependencias ya ha mostrado ventajas de latencia y costo en
+otros dominios de orquestaci\'on de herramientas con modelos de lenguaje
+\cite{kim2024llmcompiler}; su aplicaci\'on al desarrollo de software agrega
+desaf\'ios vinculados con el estado compartido del repositorio, la validaci\'on
+del c\'odigo y la integraci\'on sem\'antica de cambios.
+
+Este trabajo propone el dise\~no, implementaci\'on y an\'alisis de una
+plataforma denominada \textbf{Conductor}, que transforma una especificaci\'on en
+lenguaje natural en un proceso de desarrollo supervisable. Su arquitectura se
+organiza alrededor de tres mecanismos principales: descomposici\'on recursiva,
+ejecuci\'on aislada e integraci\'on incremental. Cada mecanismo constituye un
+problema de dise\~no propio y su articulaci\'on permite recorrer el ciclo completo
+desde la intenci\'on inicial hasta la obtenci\'on de cambios integrados y
+verificados.
+
+La Figura~\ref{fig:arquitectura-conductor} resume este flujo y los mecanismos
+transversales de supervisi\'on y persistencia que permiten inspeccionarlo y
+reanudarlo.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[
+    node distance=5mm,
+    flow/.style={
+      draw=black!55,
+      rounded corners=2pt,
+      fill=black!4,
+      align=center,
+      text width=2.65cm,
+      minimum height=1.45cm,
+      font=\small
+    },
+    endpoint/.style={
+      draw=black!55,
+      rounded corners=2pt,
+      fill=blue!5,
+      align=center,
+      text width=2.25cm,
+      minimum height=1.1cm,
+      font=\small
+    },
+    control/.style={
+      draw=black!45,
+      dashed,
+      rounded corners=2pt,
+      fill=orange!7,
+      align=center,
+      text width=8.9cm,
+      minimum height=1cm,
+      font=\small
+    },
+    arrow/.style={-{Stealth[length=2mm]},thick,draw=black!65},
+    controlarrow/.style={-{Stealth[length=1.7mm]},dashed,draw=black!50}
+  ]
+    \node[endpoint] (input) {Especificaci\'on\\en lenguaje natural};
+    \node[flow,right=of input] (planning)
+      {\textbf{Descomposici\'on}\\DAG, contratos e interfaces};
+    \node[flow,right=of planning] (execution)
+      {\textbf{Ejecuci\'on}\\worktrees, agentes y validaci\'on};
+    \node[flow,right=of execution] (integration)
+      {\textbf{Integraci\'on}\\composici\'on y reparaci\'on};
+    \node[endpoint,right=of integration] (result)
+      {Resultado\\integrado y verificable};
+
+    \draw[arrow] (input) -- (planning);
+    \draw[arrow] (planning) -- (execution);
+    \draw[arrow] (execution) -- (integration);
+    \draw[arrow] (integration) -- (result);
+
+    \node[control,below=8mm of execution] (supervision)
+      {\textbf{Supervisi\'on y estado durable:} revisi\'on humana, eventos,
+      decisiones, checkpoints y recuperaci\'on};
+    \draw[controlarrow] (supervision.north west) -- (planning.south);
+    \draw[controlarrow] (supervision.north) -- (execution.south);
+    \draw[controlarrow] (supervision.north east) -- (integration.south);
+  \end{tikzpicture}
+  \caption{Arquitectura conceptual de Conductor.}
+  \label{fig:arquitectura-conductor}
+\end{figure}
+
+\subsection*{Objetivo general}
+
+Dise\~nar, implementar y analizar Conductor, una plataforma de orquestaci\'on de
+agentes basados en modelos de lenguaje para el desarrollo de software, capaz de
+transformar una especificaci\'on en lenguaje natural en un conjunto estructurado
+de tareas, ejecutar dichas tareas en entornos aislados e integrar sus resultados
+de manera verificable, trazable y supervisable. Como parte del an\'alisis, se
+estudiar\'a de forma exploratoria una pol\'itica adaptativa para determinar la
+granularidad de la descomposici\'on seg\'un las caracter\'isticas de cada tarea.
+
+\subsection*{Objetivos espec\'ificos}
+
+\begin{enumerate}
+  \item Definir una arquitectura de planificaci\'on basada en un grafo jer\'arquico
+  e implementar un mecanismo de descomposici\'on recursiva que produzca tareas,
+  dependencias, criterios de aceptaci\'on e interfaces compartidas.
+
+  \item Implementar una ejecuci\'on aislada que asigne tareas a agentes, controle
+  el alcance de sus modificaciones, ejecute validaciones y registre evidencia
+  de los cambios realizados.
+
+  \item Implementar una integraci\'on incremental que recomponga los resultados
+  seg\'un el grafo, conserve su trazabilidad y permita reparar conflictos a partir
+  del objetivo y los contratos definidos durante la descomposici\'on.
+
+  \item Proporcionar mecanismos de supervisi\'on y recuperaci\'on para observar el
+  progreso, registrar decisiones, intervenir ante fallas y reanudar ejecuciones.
+
+  \item Dise\~nar una pol\'itica adaptativa de granularidad que considere la
+  complejidad de cada tarea, informaci\'on estructural del repositorio y el costo
+  potencial de nuevas divisiones.
+
+  \item Analizar el funcionamiento de la plataforma mediante casos seleccionados
+  de desarrollo de software y comparar descriptivamente los planes producidos
+  por distintas configuraciones de granularidad.
+\end{enumerate}
+
+\section*{2. Metodolog\'ia}
+
+El trabajo combinar\'a dise\~no de arquitectura, desarrollo incremental,
+verificaci\'on automatizada y an\'alisis exploratorio. La implementaci\'on se
+organizar\'a en m\'odulos con responsabilidades expl\'icitas y contratos entre
+ellos. El estado persistido y los eventos producidos por cada ejecuci\'on se
+utilizar\'an tanto para supervisar el producto como para reconstruir las
+decisiones adoptadas en los casos estudiados.
+
+\subsection*{2.1. Descomposici\'on}
+
+La entrada del sistema ser\'a una descripci\'on de una funcionalidad sobre un
+repositorio de software. Un agente planificador analizar\'a recursivamente cada
+nodo y decidir\'a si representa una unidad cohesiva y verificable o si requiere
+una nueva divisi\'on. El resultado ser\'a un grafo dirigido ac\'iclico (DAG) con
+dependencias, criterios de aceptaci\'on, alcance esperado e interfaces
+compartidas.
+
+Las interfaces actuar\'an como contratos entre tareas: permitir\'an que agentes
+aislados trabajen sobre una frontera com\'un sin necesitar los resultados
+concretos de sus pares. Las salidas del planificador se validar\'an de forma
+estructural y sem\'antica antes de habilitar la ejecuci\'on.
+
+\subsection*{2.2. Ejecuci\'on}
+
+Cada tarea hoja se ejecutar\'a en un \emph{worktree} de Git independiente. El
+agente recibir\'a su objetivo, los contratos que consume o produce, el contexto
+relevante del repositorio y las validaciones esperadas. Una vez finalizada la
+tarea, el sistema utilizar\'a el estado real del repositorio para determinar los
+cambios realizados, comprobar que respeten el alcance autorizado y ejecutar
+pruebas o comandos de validaci\'on.
+
+Las tareas sin dependencias incompatibles podr\'an ejecutarse en paralelo. La
+selecci\'on de cada grupo de ejecuci\'on considerar\'a dependencias, superposici\'on
+de archivos y se\~nales de riesgo estructural. Ante una validaci\'on fallida, el
+agente podr\'a recibir el diagn\'ostico y realizar un intento acotado de
+reparaci\'on.
+
+\subsection*{2.3. Integraci\'on y supervisi\'on}
+
+Los resultados se integrar\'an de abajo hacia arriba siguiendo la jerarqu\'ia del
+grafo. Cada contribuci\'on conservar\'a un commit identificable y ser\'a aplicada
+al nodo compuesto correspondiente. Cuando aparezca un conflicto, un agente de
+integraci\'on recibir\'a el objetivo del nodo padre, las interfaces compartidas,
+la intenci\'on de los hijos y los cambios involucrados. La reparaci\'on deber\'a
+respetar esos contratos y superar las validaciones del conjunto.
+
+La plataforma persistir\'a el estado del proceso, sus eventos y las decisiones
+humanas. Una interfaz web permitir\'a revisar el plan, observar la evoluci\'on del
+grafo, responder preguntas y resolver situaciones que no puedan tratarse de
+manera aut\'onoma.
+
+\subsection*{2.4. Pol\'itica adaptativa y an\'alisis exploratorio}
+
+La granularidad, el modelo y el esfuerzo de razonamiento son decisiones de
+asignaci\'on de recursos. Las interfaces actuales permiten
+configurar los dos \~ultimos \cite{openai2025reasoning,anthropic2026adaptive}, y
+distintos trabajos estudian pol\'iticas para equilibrar costo y calidad
+\cite{chen2023frugalgpt,ong2025routellm}. En Conductor, la granularidad es una
+decisi\'on previa: define las tareas y condiciona su ejecuci\'on, paralelismo e
+integraci\'on.
+
+Se implementar\'a una pol\'itica que combine una estimaci\'on determinista de
+complejidad con una r\'ubrica sensible al costo de dividir. Se considerar\'an el
+alcance, las interfaces, los archivos esperados y se\~nales del repositorio,
+como s\'imbolos e imports, frente al costo adicional de coordinaci\'on,
+integraci\'on y posibles conflictos. Cada recomendaci\'on conservar\'a evidencia
+auditable.
+
+El an\'alisis exploratorio se organizar\'a en dos l\'ineas complementarias. La
+primera estudiar\'a tres casos completos: una funcionalidad simple, otra de
+complejidad intermedia y una con solapamientos
+o conflictos esperables. Si los recursos lo permiten, se incorporar\'a un cuarto
+caso centrado en la recuperaci\'on ante una falla. Para cada caso se describir\'an
+el DAG producido, las interfaces y dependencias, las waves de ejecuci\'on, las
+validaciones, los conflictos, las reparaciones, las intervenciones humanas y el
+resultado integrado. Tambi\'en se registrar\'an la duraci\'on y el consumo cuando
+puedan obtenerse de forma confiable.
+
+La segunda l\'inea analizar\'a la granularidad sin ejecutar las tareas. Sobre un
+conjunto acotado de funcionalidades se comparar\'an los planes generados por la
+pol\'itica propuesta, la r\'ubrica adaptativa inicial y una granularidad fija
+intermedia. Se observar\'an la cantidad total de nodos, la profundidad y el ancho
+del DAG, las tareas at\'omicas y compuestas, las interfaces, las dependencias y
+los posibles solapamientos entre alcances.
+
+Dentro de cada comparaci\'on se mantendr\'an constantes el repositorio, la
+funcionalidad y el modelo. Los resultados se interpretar\'an de manera
+descriptiva y cualitativa, sin pretensi\'on de generalizaci\'on estad\'istica. La
+selecci\'on autom\'atica de modelos y esfuerzo quedar\'a como trabajo futuro, y la
+comparaci\'on con un agente \'unico quedar\'a fuera del alcance.
+
+\section*{3. Cronograma de actividades}
+
+Se adopta un cronograma tentativo de aproximadamente cuatro meses, iniciado
+durante la primera mitad de abril de 2026.
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{@{}Xccccc@{}}
+  \toprule
+  \textbf{Actividad} & \textbf{Abr.} & \textbf{May.} & \textbf{Jun.} & \textbf{Jul.} & \textbf{Ago.} \\
+  \midrule
+  1. Relevamiento y definici\'on de arquitectura
+    & \(\bullet\) & \(\bullet\) & & & \\
+  2. Descomposici\'on y contratos
+    & \(\bullet\) & \(\bullet\) & \(\bullet\) & & \\
+  3. Ejecuci\'on aislada y validaci\'on
+    & & \(\bullet\) & \(\bullet\) & \(\bullet\) & \\
+  4. Integraci\'on, persistencia y supervisi\'on
+    & & & \(\bullet\) & \(\bullet\) & \\
+  5. Pol\'itica adaptativa de granularidad
+    & & & & \(\bullet\) & \(\bullet\) \\
+  6. Estudio de casos y an\'alisis exploratorio
+    & & & & \(\bullet\) & \(\bullet\) \\
+  7. Documentaci\'on y redacci\'on de la tesina
+    & & \(\bullet\) & \(\bullet\) & \(\bullet\) & \(\bullet\) \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+\section*{4. Resultados esperados}
+
+Se espera obtener una plataforma funcional capaz de transformar un objetivo de
+desarrollo en un plan estructurado, ejecutar sus tareas en entornos aislados e
+integrar los cambios producidos. El sistema deber\'a conservar evidencia de cada
+etapa y ofrecer puntos de supervisi\'on y recuperaci\'on ante decisiones ambiguas
+o fallas.
+
+El principal resultado t\'ecnico ser\'a la articulaci\'on de la descomposici\'on,
+la ejecuci\'on y la integraci\'on en un producto completo. La tesina documentar\'a
+la arquitectura, los contratos entre estos mecanismos, las decisiones de
+dise\~no adoptadas y las limitaciones identificadas durante su implementaci\'on.
+
+El estudio de casos permitir\'a describir el comportamiento del sistema completo
+en escenarios de distinta complejidad, incluyendo su respuesta ante conflictos,
+reparaciones o decisiones humanas. El an\'alisis de planificaci\'on documentar\'a
+c\'omo var\'ia la estructura del DAG entre configuraciones y aportar\'a evidencia
+sobre la utilidad y los l\'imites de la pol\'itica adaptativa, sin formular
+generalizaciones estad\'isticas.
+
+\section*{5. Vinculaci\'on con actividades de investigaci\'on o transferencia}
+
+El presente proyecto final no se encuentra vinculado formalmente a ninguna
+actividad de investigaci\'on, vinculaci\'on o extensi\'on vigente en el
+Departamento de Ciencias e Ingenier\'ia de la Computaci\'on (DCIC).
+
+\section*{6. Firmas}
+
+\vspace{1.8cm}
+\begin{center}
+  \begin{tabularx}{\textwidth}{@{}>{\centering\arraybackslash}X >{\centering\arraybackslash}X >{\centering\arraybackslash}X@{}}
+    \rule{4.2cm}{0.4pt} & \rule{4.2cm}{0.4pt} & \rule{4.2cm}{0.4pt} \\
+    \autor & \director & \codirector \\
+    Alumno & Directora & Codirector
+  \end{tabularx}
+\end{center}
+
+\clearpage
+\bibliographystyle{ieeetr}
+\bibliography{referencias}
+
+\end{document}

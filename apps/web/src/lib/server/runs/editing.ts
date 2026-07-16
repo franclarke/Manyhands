@@ -7,17 +7,21 @@ import {
   type TraceEvent
 } from "@manyhands/core";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
-import { RunLifecycleError } from "./errors";
+import { RunLifecycleError, RunMutationConflictError } from "./errors";
 import { publishRunStatusChanged } from "./run-status-events";
 import { getRunRepository } from "./store";
 import { claimRunMutation } from "./mutation-guard";
-import { appendRunEventRequired } from "./run-model-event-log";
+import { appendRunEventsRequired } from "./run-model-event-log";
+import { projectRunRecordToPlanGraph } from "./run-model-projection";
+import { compatibleGraphPatches } from "./plan-graph-storage";
 import {
   appendPatch,
   applyPatches,
   type RunPatch
 } from "./patches";
 import type { RunRecord } from "./schema";
+import { approvalDecisionId } from "./decision-identity";
+import { recoverPendingAmendmentMutations } from "./plan-mutation-recovery";
 
 export interface EditableRunContext {
   run: RunRecord;
@@ -26,7 +30,7 @@ export interface EditableRunContext {
 }
 
 export async function loadEditableRunContext(runId: string): Promise<EditableRunContext> {
-  const run = await getRunRepository().get(runId);
+  const run = await recoverPendingAmendmentMutations(runId);
   assertEditableRun(run);
 
   const baseSnapshot = projectRunRecordToSnapshot(run, { applyPatches: false });
@@ -37,7 +41,10 @@ export async function loadEditableRunContext(runId: string): Promise<EditableRun
   return {
     run,
     baseSnapshot,
-    currentSnapshot: applyPatches(baseSnapshot, run.patches ?? [])
+    currentSnapshot: applyPatches(
+      baseSnapshot,
+      compatibleGraphPatches(run, baseSnapshot.graphSnapshot as unknown as TaskGraph)
+    )
   };
 }
 
@@ -53,7 +60,13 @@ export async function persistRunPatches(input: {
 
   let candidate: RunSnapshot;
   try {
-    candidate = applyPatches(input.baseSnapshot, [...(input.run.patches ?? []), ...input.patches]);
+    candidate = applyPatches(input.baseSnapshot, [
+      ...compatibleGraphPatches(
+        input.run,
+        input.baseSnapshot.graphSnapshot as unknown as TaskGraph
+      ),
+      ...input.patches
+    ]);
   } catch (error) {
     throw new RunLifecycleError(error instanceof Error ? error.message : String(error));
   }
@@ -83,20 +96,70 @@ export async function persistRunPatches(input: {
   const saved = await claimRunMutation(
     input.run.runId,
     { version: input.expectedVersion, status: [input.run.status] },
-    () => nextRun
+    (current) => {
+      if (current.activeOperation !== undefined) {
+        throw new RunMutationConflictError(
+          `Run ${current.runId} has active ${current.activeOperation.kind} operation ` +
+            `${current.activeOperation.operationId}; wait for plan mutation finalization.`,
+          current.status,
+          current.version
+        );
+      }
+      return nextRun;
+    }
   );
 
-  if (!cosmeticOnly) {
-    await appendRunEventRequired(saved.runId, {
-      actor: "system",
-      type: "decision.raised",
-      payload: {
-        decisionId: approvalDecisionId(saved.planRevision),
-        kind: "approve_plan",
-        blocking: true,
-        context: { nodeIds: Object.keys(candidate.graphSnapshot.nodes) }
-      }
-    });
+  const projectsGraph = input.patches.some((patch) => patch.type !== "RISK_ACKNOWLEDGED");
+  const graphProjection = projectsGraph
+    ? projectRunRecordToPlanGraph(saved, { resetRuntime: !cosmeticOnly })
+    : null;
+  if (projectsGraph && graphProjection === null) {
+    throw new RunLifecycleError("Saved plan could not be projected to the durable run-model log");
+  }
+  const approvalNodeIds = graphProjection?.nodes
+    .filter((node) => node.role === "leaf")
+    .map((node) => node.nodeId) ?? [];
+
+  if (projectsGraph || !cosmeticOnly) {
+    const previousRevision = input.run.planRevision ?? 1;
+    await appendRunEventsRequired(saved.runId, [
+      ...(graphProjection !== null
+        ? [{
+            eventId: `plan-graph:${saved.runId}:v${saved.version}:r${graphProjection.planRevision}`,
+            at: saved.updatedAt,
+            actor: "system" as const,
+            type: "plan.graph.projected" as const,
+            payload: graphProjection
+          }]
+        : []),
+      ...(!cosmeticOnly
+        ? [
+            ...(input.run.status === "needs_review"
+              ? [{
+                  eventId: `plan-edit-resolve:${saved.runId}:v${saved.version}:r${previousRevision}`,
+                  actor: "system" as const,
+                  type: "decision.resolved" as const,
+                  payload: {
+                    decisionId: approvalDecisionId(previousRevision),
+                    choice: { action: "reject" as const },
+                    actor: "system" as const
+                  }
+                }]
+              : []),
+            {
+              eventId: `plan-edit-approval:${saved.runId}:v${saved.version}:r${saved.planRevision ?? 1}`,
+              actor: "system" as const,
+              type: "decision.raised" as const,
+              payload: {
+                decisionId: approvalDecisionId(saved.planRevision),
+                kind: "approve_plan" as const,
+                blocking: true,
+                context: { nodeIds: approvalNodeIds }
+              }
+            }
+          ]
+        : [])
+    ]);
   }
 
   if (input.run.status !== saved.status) {
@@ -132,6 +195,14 @@ export function assertEditableRun(run: RunRecord): void {
   }
   if (run.planning === undefined) {
     throw new RunLifecycleError(`Run ${run.runId} does not have a generated plan`);
+  }
+  if (run.activeOperation !== undefined) {
+    throw new RunMutationConflictError(
+      `Run ${run.runId} has active ${run.activeOperation.kind} operation ` +
+        `${run.activeOperation.operationId}; wait for plan mutation finalization.`,
+      run.status,
+      run.version
+    );
   }
 }
 
@@ -181,8 +252,4 @@ function invalidateApprovalIfNeeded(run: RunRecord): RunRecord {
   delete next.approvedPlanRevision;
   delete next.planApprovalOverride;
   return next;
-}
-
-export function approvalDecisionId(revision: number): string {
-  return `approve_plan:r${revision}`;
 }

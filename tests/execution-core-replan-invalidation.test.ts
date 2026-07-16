@@ -1,12 +1,13 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 import {
   AmendmentsEngine,
   computeTaskInvalidationClosure,
   type AgentExecutionResult,
+  type GitRunner,
   type IntegrationResult
 } from "@manyhands/execution-core";
 
@@ -108,7 +109,7 @@ describe("AmendmentsEngine.invalidateTask", () => {
   });
 
   it("filters results for the invalidated closure and keeps survivors", async () => {
-    const engine = new AmendmentsEngine();
+    const engine = new AmendmentsEngine(cleanupGit());
     const result = await engine.invalidateTask({
       repoRoot,
       runId: "run-1",
@@ -122,4 +123,50 @@ describe("AmendmentsEngine.invalidateTask", () => {
     expect(result.leafResults.map((r) => r.taskId)).toEqual(["C"]);
     expect(result.integrationResults).toEqual([]);
   });
+
+  it("propagates cleanup failure while an invalidated branch still exists", async () => {
+    const git = cleanupGit({
+      worktreeRemove: vi.fn(async () => { throw new Error("remove failed"); }),
+      branchDelete: vi.fn(async () => { throw new Error("branch locked"); }),
+      revParse: vi.fn(async (_cwd: string, ref: string) =>
+        ref.startsWith("refs/heads/") ? "branch-sha" : "head-sha"
+      )
+    });
+    const engine = new AmendmentsEngine(git);
+
+    await expect(engine.cleanInvalidatedTasks({
+      repoRoot,
+      runId: "run-1",
+      graph: graphFixture(),
+      invalidatedTaskIds: new Set(["A1"])
+    })).rejects.toThrow("branch locked");
+  });
+
+  it("treats an already absent worktree and branch as idempotently cleaned", async () => {
+    const git = cleanupGit({
+      worktreeRemove: vi.fn(async () => { throw new Error("worktree missing"); }),
+      branchDelete: vi.fn(async () => { throw new Error("branch missing"); }),
+      revParse: vi.fn(async (_cwd: string, ref: string) => {
+        if (ref === "HEAD") return "head-sha";
+        throw new Error("unknown revision");
+      })
+    });
+    const engine = new AmendmentsEngine(git);
+
+    await expect(engine.cleanInvalidatedTasks({
+      repoRoot,
+      runId: "run-1",
+      graph: graphFixture(),
+      invalidatedTaskIds: new Set(["A1"])
+    })).resolves.toBeUndefined();
+  });
 });
+
+function cleanupGit(overrides: Partial<GitRunner> = {}): GitRunner {
+  return {
+    worktreeRemove: async () => undefined,
+    worktreePrune: async () => undefined,
+    branchDelete: async () => undefined,
+    ...overrides
+  } as unknown as GitRunner;
+}

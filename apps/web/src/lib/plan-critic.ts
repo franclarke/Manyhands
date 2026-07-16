@@ -187,16 +187,26 @@ export function runSeamCritic(input: {
       continue;
     }
     // Signature agreement between producer and consumer for the same seam id.
-    const producerSignature = producedBy[0]!.signature;
     for (const consumer of consumedBy) {
-      if (normalizeSignature(consumer.signature) !== normalizeSignature(producerSignature)) {
+      const distinctProducer = producedBy.find((producer) => producer.taskId !== consumer.taskId);
+      if (producedBy.some((producer) => producer.taskId === consumer.taskId)) {
+        findings.push({
+          severity: "error",
+          code: "self_consumed_seam",
+          taskId: consumer.taskId,
+          message: `Seam "${id}" is both produced and consumed by ${consumer.taskId}.`,
+          suggestion: "Connect the seam to a distinct consumer task, or remove the self-consumption."
+        });
+      }
+      if (distinctProducer === undefined) continue;
+      if (normalizeSignature(consumer.signature) !== normalizeSignature(distinctProducer.signature)) {
         // Warning, not error: string-level signature comparison is unreliable
         // (param names, formatting, aliases) so this must not gate approval.
         findings.push({
           severity: "warning",
           code: "seam_signature_mismatch",
           taskId: consumer.taskId,
-          message: `Seam "${id}" is consumed with a signature that differs from its producer (${producedBy[0]!.taskId}).`,
+          message: `Seam "${id}" is consumed with a signature that differs from its producer (${distinctProducer.taskId}).`,
           suggestion: "Align the consumed and produced signatures so the leaves compose."
         });
       }
@@ -204,7 +214,10 @@ export function runSeamCritic(input: {
   }
 
   for (const [id, producedBy] of producers) {
-    if (!consumers.has(id)) {
+    const consumedByDistinctTask = (consumers.get(id) ?? []).some((consumer) =>
+      producedBy.some((producer) => producer.taskId !== consumer.taskId)
+    );
+    if (!consumedByDistinctTask) {
       for (const producer of producedBy) {
         findings.push({
           severity: "warning",

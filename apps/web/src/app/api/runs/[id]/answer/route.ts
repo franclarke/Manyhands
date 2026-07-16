@@ -10,9 +10,10 @@ import {
 } from "@/lib/server/runs";
 import { answerExecutionGate } from "@/lib/server/runs/execution-gate-service";
 import { planningResumeFor } from "@/lib/server/runs/planning-host";
+import { DEFAULT_STALE_MS } from "@/lib/server/runs/interrupted";
 import { resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 import { getRunRepository } from "@/lib/server/runs/store";
 import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 
@@ -55,7 +56,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     const current = await getRunRepository().get(id);
     if (current.status === "paused" && current.pausedDuring === "running" && current.pendingReplan !== undefined) {
       const saved = await resumeReplanWithAnswer(id, nodeId, answer);
-      return NextResponse.json(toRunResponse(saved));
+      return NextResponse.json(await toCanonicalRunResponse(saved));
     }
 
     // Execution gate: the chat composer must accept the same answers as the
@@ -70,7 +71,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       const gateResult = await answerExecutionGate(current, answer, new Date().toISOString(), {
         ...(expectedVersion !== undefined ? { expectedVersion } : {})
       });
-      return NextResponse.json(toRunResponse(gateResult.run));
+      return NextResponse.json(await toCanonicalRunResponse(gateResult.run));
     }
 
     // Atomic claim (INV-4): the pending question must still match `nodeId`
@@ -83,6 +84,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         status: ["paused", "interrupted"],
         pausedDuring: "generating",
         pendingQuestionNodeId: nodeId,
+        rejectFreshOperationAfterMs: DEFAULT_STALE_MS,
         ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
       },
       (current) => {
@@ -105,7 +107,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       resumePlanningPipeline(saved.runId, planningResumeFor(nodeId, answer))
     );
 
-    return NextResponse.json(toRunResponse(saved));
+    return NextResponse.json(await toCanonicalRunResponse(saved));
   } catch (error) {
     return runErrorResponse(error);
   }

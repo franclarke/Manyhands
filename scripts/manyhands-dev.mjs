@@ -8,10 +8,13 @@ import {
   normalizeRunResponse,
   renderDashboard
 } from "./manyhands-dev-renderer.mjs";
+import { startSingleFlightPoller } from "./manyhands-dev-poller.mjs";
+import { resolveDefaultDevSpawn } from "./manyhands-dev-command.mjs";
 
 const DEFAULT_URL = "http://localhost:3000";
 const RENDER_INTERVAL_MS = 350;
 const RUN_POLL_INTERVAL_MS = 2_000;
+const RUN_POLL_MAX_BACKOFF_MS = 30_000;
 const STREAM_RETRY_MS = 1_500;
 const FETCH_TIMEOUT_MS = 2_500;
 const PROCESS_LINE_LIMIT = 200;
@@ -47,7 +50,7 @@ const state = {
 let child = null;
 let shuttingDown = false;
 let renderTimer = null;
-let pollTimer = null;
+let pollController = null;
 let streamAbort = null;
 let streamRunId = null;
 
@@ -65,22 +68,28 @@ if (visual) {
   writePlainLine("[manyhands] dev console running in plain mode");
 }
 
-pollTimer = setInterval(() => {
-  void refreshRunSelection();
-}, RUN_POLL_INTERVAL_MS);
-void refreshRunSelection();
+pollController = startSingleFlightPoller({
+  poll: refreshRunSelection,
+  intervalMs: RUN_POLL_INTERVAL_MS,
+  maxIntervalMs: RUN_POLL_MAX_BACKOFF_MS
+});
 
 function startDevServer(parsedOptions) {
-  const command = parsedOptions.command ?? "pnpm";
-  const args = parsedOptions.commandArgs.length > 0 ? parsedOptions.commandArgs : ["web:dev:raw"];
   const usesDefaultCommand = parsedOptions.command === undefined;
+  const requestedArgs = parsedOptions.commandArgs.length > 0 ? parsedOptions.commandArgs : ["web:dev:raw"];
+  const spawnSpec = usesDefaultCommand
+    ? resolveDefaultDevSpawn(requestedArgs)
+    : { command: parsedOptions.command, args: requestedArgs, windowsVerbatimArguments: false };
+  const command = spawnSpec.command;
+  const args = spawnSpec.args;
   const spawned = spawn(command, args, {
     cwd: process.cwd(),
     env: {
       ...process.env,
       FORCE_COLOR: process.env.FORCE_COLOR ?? (visual ? "1" : "0")
     },
-    shell: process.platform === "win32" && usesDefaultCommand,
+    shell: false,
+    windowsVerbatimArguments: spawnSpec.windowsVerbatimArguments,
     stdio: ["inherit", "pipe", "pipe"]
   });
 
@@ -143,7 +152,7 @@ function handleProcessLine(line, streamName) {
 }
 
 async function refreshRunSelection() {
-  if (shuttingDown) return;
+  if (shuttingDown) return true;
   try {
     const runs = await fetchRuns();
     state.server.status = "ready";
@@ -153,7 +162,7 @@ async function refreshRunSelection() {
       state.events = [];
       state.lastSeq = 0;
       reconnectStream(null);
-      return;
+      return true;
     }
     if (state.selectedRun?.id !== selected.id) {
       state.selectedRun = selected;
@@ -163,9 +172,11 @@ async function refreshRunSelection() {
     } else {
       state.selectedRun = { ...state.selectedRun, ...selected };
     }
+    return true;
   } catch (error) {
     state.server.status = "probing";
     addProcessLine(`[manyhands] waiting for web server: ${error instanceof Error ? error.message : String(error)}`);
+    return false;
   }
 }
 
@@ -322,7 +333,7 @@ function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
   if (renderTimer !== null) clearInterval(renderTimer);
-  if (pollTimer !== null) clearInterval(pollTimer);
+  pollController?.stop();
   if (streamAbort !== null) streamAbort.abort();
   if (visual) {
     render();
@@ -342,7 +353,7 @@ function shutdown(signal) {
 function exitFromChild(exitCode) {
   shuttingDown = true;
   process.exitCode = exitCode;
-  if (pollTimer !== null) clearInterval(pollTimer);
+  pollController?.stop();
   if (streamAbort !== null) streamAbort.abort();
   if (visual) {
     if (renderTimer !== null) clearInterval(renderTimer);

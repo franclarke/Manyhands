@@ -4,6 +4,7 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { killProcessTree } from "../executor/kill";
+import { resolveCliBinaryPath, resolveCliProcessInvocation } from "../executor/binary";
 import { superviseChildProcess } from "../executor/live-process-registry";
 import { BoundedOutput } from "../executor/bounded-output";
 
@@ -55,8 +56,10 @@ export interface ChildProcessDependencyInstallerDeps {
   spawn?: SpawnFn;
   /** Path-existence probe. Injectable so tests never touch disk. */
   exists?: ExistsFn;
-  /** Run through a shell. Defaults to true on Windows (npm/pnpm/yarn are .cmd shims). */
+  /** @deprecated Batch shims are resolved explicitly; Node shell interpolation is never used. */
   useShell?: boolean;
+  platform?: NodeJS.Platform;
+  hostEnv?: NodeJS.ProcessEnv;
   /** Install timeout. Installs are slow; default 5 minutes. */
   timeoutMs?: number;
 }
@@ -81,13 +84,15 @@ const INSTALL_TIMEOUT_EXIT_CODE = 124;
 export class ChildProcessDependencyInstaller implements DependencyInstaller {
   private readonly spawnFn: SpawnFn;
   private readonly exists: ExistsFn;
-  private readonly useShell: boolean;
+  private readonly platform: NodeJS.Platform;
+  private readonly hostEnv: NodeJS.ProcessEnv;
   private readonly timeoutMs: number;
 
   constructor(deps: ChildProcessDependencyInstallerDeps = {}) {
     this.spawnFn = deps.spawn ?? spawn;
     this.exists = deps.exists ?? defaultExists;
-    this.useShell = deps.useShell ?? process.platform === "win32";
+    this.platform = deps.platform ?? process.platform;
+    this.hostEnv = deps.hostEnv ?? process.env;
     this.timeoutMs = deps.timeoutMs ?? 300_000;
   }
 
@@ -127,10 +132,22 @@ export class ChildProcessDependencyInstaller implements DependencyInstaller {
     supervision?: InstallSupervision
   ): Promise<{ exitCode: number; output: string }> {
     return new Promise((resolve) => {
-      const child = this.spawnFn(packageManager, ["install"], {
+      const binaryPath = resolveCliBinaryPath(packageManager, {
+        platform: this.platform,
+        env: this.hostEnv
+      });
+      const invocation = resolveCliProcessInvocation(binaryPath, ["install"], {
+        platform: this.platform,
+        env: this.hostEnv
+      });
+      const child = this.spawnFn(invocation.command, invocation.args, {
         cwd,
         stdio: ["ignore", "pipe", "pipe"],
-        shell: this.useShell
+        shell: false,
+        detached: this.platform !== "win32",
+        ...(invocation.windowsVerbatimArguments !== undefined
+          ? { windowsVerbatimArguments: invocation.windowsVerbatimArguments }
+          : {})
       });
 
       if (supervision !== undefined) {
@@ -150,6 +167,7 @@ export class ChildProcessDependencyInstaller implements DependencyInstaller {
 
       const output = new BoundedOutput();
       let settled = false;
+      let terminating = false;
       const finish = (result: { exitCode: number; output: string }): void => {
         if (settled) return;
         settled = true;
@@ -158,8 +176,18 @@ export class ChildProcessDependencyInstaller implements DependencyInstaller {
       };
 
       const timer = setTimeout(() => {
-        killProcessTree(child, this.spawnFn);
-        finish({ exitCode: INSTALL_TIMEOUT_EXIT_CODE, output: output.text() });
+        if (settled || terminating) return;
+        terminating = true;
+        void killProcessTree(child, this.spawnFn).then((terminationVerified) => {
+          finish({
+            exitCode: INSTALL_TIMEOUT_EXIT_CODE,
+            output:
+              output.text() +
+              (terminationVerified
+                ? ""
+                : `${output.text() ? "\n" : ""}process-tree termination could not be verified`)
+          });
+        });
       }, this.timeoutMs);
 
       child.stdout?.on("data", (chunk: Buffer) => {
@@ -169,10 +197,12 @@ export class ChildProcessDependencyInstaller implements DependencyInstaller {
         output.append(chunk.toString("utf8"));
       });
       child.on("error", (error: Error) => {
+        if (terminating) return;
         output.append(error.message);
         finish({ exitCode: 127, output: output.text() });
       });
       child.on("close", (code) => {
+        if (terminating) return;
         finish({ exitCode: code ?? 127, output: output.text() });
       });
     });

@@ -18,21 +18,24 @@ import path from "node:path";
 import {
   SimpleGitRunner,
   WorktreeManager,
-  killOwnedProcessTrees as killOwnedProcessTreesDefault,
   type AgentExecutionResult,
   type IntegrationResult,
   type KillReport,
   type RunExecutionResult
 } from "@manyhands/execution-core";
+import { killRunProcessesVerified } from "./process-evidence";
 import { appendStatusEventOrRollback } from "./audited-mutation";
 import { assertRunActionAllowed, assertTransition } from "./lifecycle";
 import { claimRunMutation } from "./mutation-guard";
-import { appendRunEventRequired } from "./run-model-event-log";
+import { appendRunEventRequired, readRunModelEvents } from "./run-model-event-log";
 import { TASK_ATTEMPT_EVENT_TYPES, JsonTaskAttemptJournal } from "./task-attempt-journal";
 import { invalidateRunOperation } from "./run-operation-lease";
 import { abortRun } from "./run-abort-registry";
 import type { RunOperationLease, RunRecord } from "./schema";
 import { resolveRunsDirectory } from "./repository";
+import { globalSingleton } from "../global-singleton";
+import { getRunRepository } from "./store";
+import { runControlForRun } from "./run-model-projection";
 
 export interface CancelRunDeps {
   killOwnedProcessTrees?: (ownerId: string) => Promise<KillReport>;
@@ -76,9 +79,145 @@ function evidenceTaskIds(run: RunRecord): Set<string> {
 
 const CANCELLABLE: ReadonlyArray<RunRecord["status"]> = ["generating", "running", "paused", "cancelling"];
 
+const activeCancellations = globalSingleton(
+  "run-cancellation:active",
+  () => new Map<string, Set<Promise<CancelRunOutcome>>>()
+);
+
 export async function cancelRun(runId: string, deps: CancelRunDeps = {}): Promise<CancelRunOutcome> {
+  const operation = performCancelRun(runId, deps);
+  const operations = activeCancellations.get(runId) ?? new Set<Promise<CancelRunOutcome>>();
+  activeCancellations.set(runId, operations);
+  operations.add(operation);
+  try {
+    return await operation;
+  } finally {
+    operations.delete(operation);
+    if (operations.size === 0) activeCancellations.delete(runId);
+  }
+}
+
+/**
+ * Wait for every in-process cancellation that currently owns this run. The
+ * AbortSignal is fired only after registration, so an aborted execution can
+ * use this as the exact kill/GC/audit completion barrier. Returns false after
+ * a process restart, where callers fall back to durable status reconciliation.
+ */
+export async function waitForRunCancellation(runId: string): Promise<boolean> {
+  let observed = false;
+  while (true) {
+    const operations = activeCancellations.get(runId);
+    if (operations === undefined || operations.size === 0) return observed;
+    observed = true;
+    const outcomes = await Promise.allSettled(Array.from(operations));
+    const rejected = outcomes.find((outcome): outcome is PromiseRejectedResult => outcome.status === "rejected");
+    if (rejected !== undefined) throw rejected.reason;
+  }
+}
+
+export interface CancellationSettlementDependencies {
+  readStatus?: (runId: string) => Promise<RunRecord["status"]>;
+  sleep?: (ms: number) => Promise<void>;
+  recoverCancellation?: (runId: string) => Promise<void>;
+  repairInterruptedAudit?: (runId: string) => Promise<void>;
+  retryDelayMs?: number;
+}
+
+/**
+ * Join the cancellation that fired the abort, then keep retrying verified
+ * kill/audit/terminalization while durable truth remains `cancelling`.
+ * There is deliberately no timeout: releasing physical ownership without
+ * allDead evidence would let another run race a surviving subprocess.
+ */
+export async function settleRunCancellation(
+  runId: string,
+  dependencies: CancellationSettlementDependencies = {}
+): Promise<void> {
+  const readStatus = dependencies.readStatus ?? (async (id: string) => (await getRunRepository().get(id)).status);
+  const sleepFor = dependencies.sleep ?? (async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const retryDelayMs = dependencies.retryDelayMs ?? 250;
+  const recoverCancellation = dependencies.recoverCancellation ?? (
+    dependencies.readStatus === undefined
+      ? async (id: string): Promise<void> => {
+          await cancelRun(id, {
+            actor: "system",
+            reason: "interrupted: completing verified cancellation"
+          });
+        }
+      : undefined
+  );
+  const repairInterruptedAudit = dependencies.repairInterruptedAudit ?? (
+    dependencies.readStatus === undefined ? ensureInterruptedCancellationAudit : undefined
+  );
+
+  let cancellationAttemptFailed = false;
+  if (dependencies.readStatus === undefined) {
+    await waitForRunCancellation(runId).catch((error) => {
+      cancellationAttemptFailed = true;
+      console.error(`[Cancel] Initial cancellation for ${runId} failed; retrying under current ownership.`, error);
+    });
+  }
+
+  while (true) {
+    try {
+      const status = await readStatus(runId);
+      if (status !== "cancelling") {
+        // appendStatusEventOrRollback normally restores `cancelling` when the
+        // interrupted event cannot be written. If that rollback itself lost an
+        // I/O race, physical allDead may be true while terminal audit is
+        // missing. Repair that fact before ownership is allowed to close.
+        if (
+          cancellationAttemptFailed &&
+          status === "interrupted" &&
+          repairInterruptedAudit !== undefined
+        ) {
+          await repairInterruptedAudit(runId);
+        }
+        return;
+      }
+      await recoverCancellation?.(runId);
+    } catch (error) {
+      cancellationAttemptFailed = true;
+      console.error(`[Cancel] Recovery for ${runId} failed; retaining current ownership.`, error);
+    }
+    await sleepFor(retryDelayMs);
+  }
+}
+
+async function ensureInterruptedCancellationAudit(runId: string): Promise<void> {
+  const [run, events] = await Promise.all([
+    getRunRepository().get(runId),
+    readRunModelEvents(runId)
+  ]);
+  const hasAllDeadEvidence = events.some(
+    (event) => event.type === "run.cancelled" && (event.payload as { allDead?: unknown }).allDead === true
+  );
+  if (!hasAllDeadEvidence) {
+    throw new Error(
+      `Run ${runId} is interrupted after cancellation failure but has no durable allDead evidence.`
+    );
+  }
+  const hasInterruptedStatus = events.some(
+    (event) =>
+      event.type === "run.status.changed" &&
+      (event.payload as { status?: unknown }).status === "interrupted"
+  );
+  if (hasInterruptedStatus) return;
+  await appendRunEventRequired(runId, {
+    eventId: `run.cancelled:interrupted-repair:${runId}`,
+    actor: "system",
+    at: run.updatedAt,
+    type: "run.status.changed",
+    payload: runControlForRun(run)
+  });
+}
+
+async function performCancelRun(runId: string, deps: CancelRunDeps): Promise<CancelRunOutcome> {
   const now = deps.now?.() ?? new Date().toISOString();
-  const kill = deps.killOwnedProcessTrees ?? killOwnedProcessTreesDefault;
+  // RU1 (F2B-1): the default kill merges the in-memory registry with durable
+  // process evidence, so a cancel issued after a server restart still finds,
+  // identity-verifies and fells orphan executor trees.
+  const kill = deps.killOwnedProcessTrees ?? killRunProcessesVerified;
   const gc = deps.gcWorktrees ?? defaultGcWorktrees;
 
   // 1) Claim `cancelling` and invalidate the lease atomically.
@@ -97,7 +236,12 @@ export async function cancelRun(runId: string, deps: CancelRunDeps = {}): Promis
       ...invalidateRunOperation(current),
       status: "cancelling",
       interruptedDuring,
-      errorMessage: deps.reason ?? "interrupted: cancelled by user"
+      // Recovery retries must not erase the original human/watchdog reason
+      // (notably the exact wall-clock budget) after the first cancelling CAS.
+      errorMessage:
+        current.status === "cancelling"
+          ? current.errorMessage ?? deps.reason ?? "interrupted: cancelled by user"
+          : deps.reason ?? "interrupted: cancelled by user"
     };
     delete next.pausedDuring;
     return next;
@@ -171,7 +315,11 @@ export async function cancelRun(runId: string, deps: CancelRunDeps = {}): Promis
     payload: {
       killedProcesses: killReport.verifications.length,
       escalatedKills: killReport.verifications.filter((v) => v.outcome === "escalated").length,
-      survivors: killReport.verifications.filter((v) => v.outcome === "survived").map((v) => v.pid),
+      // `unverified` (RU1) blocks certainty exactly like a survivor: the pid
+      // may still be alive and could not be identity-checked.
+      survivors: killReport.verifications
+        .filter((v) => v.outcome === "survived" || v.outcome === "unverified")
+        .map((v) => v.pid),
       cleanedWorktrees: cleaned.removed,
       gcFailures: cleaned.failed,
       allDead: killReport.allDead

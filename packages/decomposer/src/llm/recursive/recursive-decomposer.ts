@@ -1506,8 +1506,12 @@ function buildLeafContract(input: {
     leafValidationCommands: input.leafValidationCommands,
     expectedOutput: {
       changedFiles: input.expectedFiles,
-      producedSymbols: input.produced.map((i) => i.id),
-      consumedSymbols: input.consumed.map((i) => i.id)
+      // Interface ids are compatibility seams, not concrete symbols produced
+      // by another isolated worktree. Keep them solely in the explicit
+      // consumed/produced interface fields so risk-aware scheduling can use
+      // the seam as positive parallelism evidence.
+      producedSymbols: [],
+      consumedSymbols: []
     },
     limits: { maxDurationMs: DEFAULT_MAX_DURATION_MS, maxCostUsd: DEFAULT_MAX_COST_USD },
     knownRisks: [],

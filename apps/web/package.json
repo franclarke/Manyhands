@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start -H 127.0.0.1",
     "contrast:check": "node scripts/contrast-check.mjs",
+    "token:check": "node ../../scripts/token-check.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
     "dev:lan": "next dev"

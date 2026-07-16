@@ -77,4 +77,26 @@ describe("PlanMutationOperation journal", () => {
     expect(await reloaded.pending("run-2")).toEqual([]);
     expect(completed.status).toBe("completed");
   });
+
+  it("serializes the shared journal file across independent instances and run ids", async () => {
+    const operations = Array.from({ length: 12 }, (_, index) => ({
+      operationId: `amendment:run-${index}:seam-a:1`,
+      runId: `run-${index}`,
+      kind: "amendment" as const,
+      expectedRunVersion: index,
+      sourcePlanRevision: 1,
+      targetPlanRevision: 2,
+      graphHash: `graph-${index}`
+    }));
+
+    await Promise.all(operations.map((operation) =>
+      new JsonPlanMutationJournal({ directory }).reserve(operation)
+    ));
+
+    const reloaded = new JsonPlanMutationJournal({ directory });
+    const retained = await Promise.all(operations.map((operation) => reloaded.get(operation.operationId)));
+    expect(retained.map((operation) => operation?.operationId).sort()).toEqual(
+      operations.map((operation) => operation.operationId).sort()
+    );
+  });
 });

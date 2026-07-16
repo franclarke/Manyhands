@@ -25,6 +25,7 @@ import {
   worktreePathFor,
   probeExecutorAvailability,
   type AgentExecutionResult,
+  type EffortLevel,
   type ExecutorId,
   type ExecutorRouter,
   type IntegrationResult,
@@ -63,9 +64,10 @@ import {
 import { getRunRepository } from "./store";
 import { getRunAbort } from "./run-abort-registry";
 import { claimRunMutation } from "./mutation-guard";
+import { DEFAULT_STALE_MS } from "./interrupted";
 import { updateRunForOperation } from "./run-operation-lease";
 import { waitWhilePlainPaused } from "./pause-control";
-import { selectAndPersistSchedulingWave } from "./scheduling-audit-events";
+import { persistRetryDispatch, selectAndPersistSchedulingWave } from "./scheduling-audit-events";
 import { effectiveExecutionConfig } from "./effective-execution-config";
 import type { ProvisionedRepo } from "./repo-provisioner";
 import type { RunOperationLease, RunRecord } from "./schema";
@@ -260,7 +262,8 @@ export function buildExecutionHost(
     kind: TaskAttemptKind,
     baseCommit: string,
     executor: { executorId: string; model: string },
-    worktreePath?: string
+    worktreePath?: string,
+    waveId?: string
   ): Promise<{ attempt: TaskAttempt; reuse?: AgentExecutionResult; alreadyCompleted?: boolean }> => {
     if (options.operationLease === undefined) {
       throw new RunLifecycleError(`Cannot journal task ${nodeId} without an operation lease.`);
@@ -300,6 +303,7 @@ export function buildExecutionHost(
       fencingToken: options.operationLease.fencingToken,
       kind,
       baseCommit,
+      ...(waveId !== undefined ? { waveId } : {}),
       ...(worktreePath !== undefined ? { worktreePath } : {}),
       ...(current.targetContext?.fingerprint !== undefined ? { targetFingerprint: current.targetContext.fingerprint } : {}),
       contractHash: digest(current.planning ?? current.decomposition ?? nodeId),
@@ -330,6 +334,20 @@ export function buildExecutionHost(
     return next;
   };
 
+  const terminalizeThrownAttempt = async (
+    attempt: TaskAttempt,
+    signal: AbortSignal | undefined,
+    error: unknown
+  ): Promise<void> => {
+    const state: TaskAttemptState = signal?.aborted === true ? "cancelled" : "failed";
+    await transitionAttempt(attempt, state, {
+      error: {
+        code: state === "cancelled" ? "cancelled" : "execution_failed",
+        message: error instanceof Error ? error.message : String(error)
+      }
+    }).catch(() => undefined);
+  };
+
   const makeRunExecutor = (sink: TraceStore, router?: ExecutorRouter) =>
     new RunExecutor({
       git: new SimpleGitRunner(),
@@ -340,6 +358,20 @@ export function buildExecutionHost(
     });
 
   const executionConfigFor = (current: RunRecord) => effectiveExecutionConfig(current.executionConfig);
+  // U2A-2: each stage runs at its OWN resolved effort, not a single run-level
+  // knob. Override the per-call config's reasoningEffort with the stage's effort
+  // (or clear it when the stage's model exposes none).
+  const configForStage = (
+    base: ReturnType<typeof executionConfigFor>,
+    selection: { effort?: EffortLevel }
+  ): ReturnType<typeof executionConfigFor> => {
+    if (selection.effort !== undefined) {
+      return { ...base, reasoningEffort: selection.effort };
+    }
+    const rest = { ...base };
+    delete rest.reasoningEffort;
+    return rest;
+  };
   const hasExplicitRunSelection = (current: RunRecord): boolean =>
     current.defaultExecutionSelection !== undefined || current.defaultRepairSelection !== undefined;
 
@@ -384,18 +416,26 @@ export function buildExecutionHost(
     const node = taskGraph.nodes[params.taskId];
     if (node === undefined) throw new RunLifecycleError(`Unknown task ${params.taskId}.`);
     const kind: TaskAttemptKind = node.kind === "integrator" ? "integrator" : "scheduled";
-    const prepared = await beginAttempt(current, params.taskId, kind, taskGraph.baseCommit, selection);
+    const prepared = await beginAttempt(
+      current,
+      params.taskId,
+      kind,
+      taskGraph.baseCommit,
+      selection,
+      undefined,
+      params.waveId
+    );
     let attempt = prepared.attempt;
     if (prepared.reuse !== undefined) return { result: prepared.reuse };
     attempt = await transitionAttempt(attempt, "invocation_reserved", {});
     attempt = await transitionAttempt(attempt, "executor_running", {});
 
     const signal = getRunAbort(runId)?.signal;
-    let nodeResult: Awaited<ReturnType<RunExecutor["runNode"]>>;
+    let nodeResult: Extract<Awaited<ReturnType<RunExecutor["runNode"]>>, { kind: "leaf" }>;
     try {
-      nodeResult = await runExecutor.runNode({
+      const candidate = await runExecutor.runNode({
         graph: taskGraph,
-        config: executionConfigFor(current),
+        config: configForStage(executionConfigFor(current), selection),
         model: current.model,
         defaultExecutionSelection: selection,
         runId,
@@ -403,17 +443,14 @@ export function buildExecutionHost(
         attemptId: attempt.attemptId,
         ...(signal !== undefined ? { signal } : {})
       });
+      if (candidate.kind !== "leaf") {
+        throw new Error(`Expected leaf result for node ${params.taskId}, got ${candidate.kind}`);
+      }
+      nodeResult = candidate;
     } catch (error) {
-      const state: TaskAttemptState = signal?.aborted === true ? "cancelled" : "failed";
-      await transitionAttempt(attempt, state, {
-        error: { code: state === "cancelled" ? "cancelled" : "execution_failed", message: error instanceof Error ? error.message : String(error) }
-      }).catch(() => undefined);
+      await terminalizeThrownAttempt(attempt, signal, error);
       throw error;
     }
-    if (nodeResult.kind !== "leaf") {
-      throw new Error(`Expected leaf result for node ${params.taskId}, got ${nodeResult.kind}`);
-    }
-
     const result = { ...nodeResult.result, attemptId: attempt.attemptId };
     attempt = await transitionAttempt(attempt, "executor_finished", {
       executorResult: {
@@ -464,24 +501,39 @@ export function buildExecutionHost(
     const traceStore = traceStoreFactory();
     const runExecutor = makeRunExecutor(traceStore, await routerFor(current));
     const selection = repairSelection(current);
-    const prepared = await beginAttempt(current, params.taskId, "repair", taskGraph.baseCommit, selection);
+    const prepared = await beginAttempt(
+      current,
+      params.taskId,
+      "repair",
+      taskGraph.baseCommit,
+      selection,
+      undefined,
+      params.waveId
+    );
     let attempt = prepared.attempt;
     if (prepared.reuse !== undefined) return { result: prepared.reuse };
     attempt = await transitionAttempt(attempt, "invocation_reserved", {});
     attempt = await transitionAttempt(attempt, "executor_running", {});
 
     const repairSignal = getRunAbort(runId)?.signal;
-    const { result, worktree } = await runExecutor.repairLeaf({
-      graph: taskGraph,
-      config: executionConfigFor(current),
-      model: current.model,
-      defaultRepairSelection: selection,
-      runId,
-      taskId: params.taskId,
-      attemptId: attempt.attemptId,
-      validationOutput: params.validationOutput,
-      ...(repairSignal !== undefined ? { signal: repairSignal } : {})
-    });
+    let repairResult: Awaited<ReturnType<RunExecutor["repairLeaf"]>>;
+    try {
+      repairResult = await runExecutor.repairLeaf({
+        graph: taskGraph,
+        config: configForStage(executionConfigFor(current), selection),
+        model: current.model,
+        defaultRepairSelection: selection,
+        runId,
+        taskId: params.taskId,
+        attemptId: attempt.attemptId,
+        validationOutput: params.validationOutput,
+        ...(repairSignal !== undefined ? { signal: repairSignal } : {})
+      });
+    } catch (error) {
+      await terminalizeThrownAttempt(attempt, repairSignal, error);
+      throw error;
+    }
+    const { result, worktree } = repairResult;
 
     const attemptedResult = { ...result, attemptId: attempt.attemptId };
     attempt = await transitionAttempt(attempt, "executor_finished", {
@@ -556,27 +608,33 @@ export function buildExecutionHost(
     attempt = await transitionAttempt(attempt, "executor_running", {});
 
     const integrateSignal = getRunAbort(runId)?.signal;
-    const nodeResult = await runExecutor.runNode({
-      graph: taskGraph,
-      config: executionConfigFor(current),
-      model: current.model,
-      defaultRepairSelection: selection,
-      runId,
-      taskId: params.compositeTaskId,
-      attemptId: attempt.attemptId,
-      integrationOperation: {
-        journal: integrationJournal,
+    let nodeResult: Extract<Awaited<ReturnType<RunExecutor["runNode"]>>, { kind: "integration" }>;
+    try {
+      const candidate = await runExecutor.runNode({
+        graph: taskGraph,
+        config: configForStage(executionConfigFor(current), selection),
+        model: current.model,
+        defaultRepairSelection: selection,
         runId,
-        ...(options.operationLease !== undefined ? { operationId: options.operationLease.operationId, fencingToken: options.operationLease.fencingToken } : {})
-      },
-      childResults: params.childResults,
-      ...(integrateSignal !== undefined ? { signal: integrateSignal } : {}),
-      ...(options.predictedConflicts !== undefined ? { predictedConflicts: options.predictedConflicts } : {})
-    });
-    if (nodeResult.kind !== "integration") {
-      throw new Error(`Expected integration result for composite ${params.compositeTaskId}`);
+        taskId: params.compositeTaskId,
+        attemptId: attempt.attemptId,
+        integrationOperation: {
+          journal: integrationJournal,
+          runId,
+          ...(options.operationLease !== undefined ? { operationId: options.operationLease.operationId, fencingToken: options.operationLease.fencingToken } : {})
+        },
+        childResults: params.childResults,
+        ...(integrateSignal !== undefined ? { signal: integrateSignal } : {}),
+        ...(options.predictedConflicts !== undefined ? { predictedConflicts: options.predictedConflicts } : {})
+      });
+      if (candidate.kind !== "integration") {
+        throw new Error(`Expected integration result for composite ${params.compositeTaskId}`);
+      }
+      nodeResult = candidate;
+    } catch (error) {
+      await terminalizeThrownAttempt(attempt, integrateSignal, error);
+      throw error;
     }
-
     const result = { ...nodeResult.result, attemptId: attempt.attemptId };
     attempt = await transitionAttempt(attempt, "executor_finished", {});
     if (result.integrationCommitSha !== undefined) {
@@ -685,8 +743,11 @@ export function buildExecutionHost(
         for (const warning of result.payload.warnings) {
           console.warn(`[Runner] Scheduling fallback for run ${runId}: ${warning.message}`);
         }
-        return result.selectedTaskIds;
+        return { taskIds: result.selectedTaskIds, waveId: result.payload.waveId };
       }
+    },
+    leafGateDeps: {
+      beforeRetryDispatch: ({ taskId }) => persistRetryDispatch({ runId, taskId })
     },
     checkpointer
   });
@@ -707,6 +768,12 @@ export function buildExecutionHost(
 export async function hasExecutionCheckpoint(runId: string): Promise<boolean> {
   const checkpointer = new JsonFileCheckpointSaver(join(resolveRunsDirectory(), "checkpoints"));
   return (await checkpointer.getTuple({ configurable: { thread_id: runId } })) !== undefined;
+}
+
+/** Identity of the latest durable execution checkpoint, when one exists. */
+export async function executionCheckpointId(runId: string): Promise<string | undefined> {
+  const checkpointer = new JsonFileCheckpointSaver(join(resolveRunsDirectory(), "checkpoints"));
+  return (await checkpointer.getTuple({ configurable: { thread_id: runId } }))?.checkpoint.id;
 }
 
 /**
@@ -888,6 +955,7 @@ export async function persistExecutionPause(
   gate: NonNullable<RunRecord["pendingDecision"]>,
   operationLease?: RunOperationLease
 ): Promise<void> {
+  const checkpointId = await executionCheckpointId(runId);
   const conflictCopy = gate.gate === "merge_conflict" ? mergeConflictGateCopy(gate) : undefined;
   const options =
     conflictCopy?.options ??
@@ -926,7 +994,14 @@ export async function persistExecutionPause(
           decisionId: `clarify:${gate.taskId}`,
           kind: "clarify",
           blocking: true,
-          context: { nodeIds: [gate.taskId], question, options, gate: gate.gate }
+          context: {
+            nodeIds: [gate.taskId],
+            question,
+            options,
+            gate: gate.gate,
+            ...(checkpointId !== undefined ? { checkpointId } : {}),
+            ...(gate.gateId !== undefined ? { gateId: gate.gateId } : {})
+          }
         }
       }
     ],
@@ -954,6 +1029,7 @@ export async function clearExecutionPause(
       status: ["paused"],
       pausedDuring: "running",
       pendingDecisionGateId: expectedGateId ?? "any",
+      rejectFreshOperationAfterMs: DEFAULT_STALE_MS,
       ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
     },
     (current) => {

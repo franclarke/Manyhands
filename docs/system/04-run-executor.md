@@ -56,12 +56,18 @@ o bloqueante, y ejecuta el resto en paralelo dentro del límite configurado.
 
 Cada hoja:
 
-1. obtiene o crea un git worktree;
+1. obtiene o crea un git worktree desde el `baseCommit` inmutable del run;
 2. recibe instrucciones con contexto de archivos e interfaces;
 3. ejecuta un `AgentExecutor`;
 4. se valida con `ScopeChecker` y comandos de validación;
 5. registra `git diff HEAD`;
 6. deja que el orquestador haga commit si corresponde.
+
+Una dependencia D1 solo retrasa el dispatch de la hoja (`ordering_only`). No
+materializa los cambios del predecesor: aun cuando A deba completarse antes que
+B, ambos worktrees nacen del mismo `baseCommit`. El prompt del executor lo hace
+explícito para impedir que el agente asuma archivos upstream inexistentes; la
+composición física sucede luego durante la integración bottom-up.
 
 ### Verify-Loop
 

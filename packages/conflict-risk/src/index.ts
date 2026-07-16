@@ -346,11 +346,32 @@ function contractPaths(contract: AgentTaskContract): string[] {
 }
 
 function contractSymbols(contract: AgentTaskContract): string[] {
+  const seamIds = interfaceIds(contract);
   return uniqueValues([
-    ...contract.relevantSymbols,
-    ...contract.expectedOutput.producedSymbols,
-    ...contract.expectedOutput.consumedSymbols
+    ...contract.relevantSymbols.filter((symbol) => !seamIds.has(symbol)),
+    ...concreteOutputSymbols(contract, "produced"),
+    ...concreteOutputSymbols(contract, "consumed")
   ]);
+}
+
+function interfaceIds(contract: AgentTaskContract): ReadonlySet<string> {
+  return new Set([
+    ...(contract.producedInterfaces ?? []).map((item) => item.id),
+    ...(contract.consumedInterfaces ?? []).map((item) => item.id)
+  ]);
+}
+
+function concreteOutputSymbols(
+  contract: AgentTaskContract,
+  kind: "produced" | "consumed"
+): string[] {
+  const coveredByInterface = new Set(
+    (kind === "produced" ? contract.producedInterfaces : contract.consumedInterfaces)?.map((item) => item.id) ?? []
+  );
+  const symbols = kind === "produced"
+    ? contract.expectedOutput.producedSymbols
+    : contract.expectedOutput.consumedSymbols;
+  return symbols.filter((symbol) => !coveredByInterface.has(symbol));
 }
 
 function findOverlappingPathPatterns(left: readonly string[], right: readonly string[]): string[] {
@@ -379,10 +400,10 @@ function findProducerConsumer(
   taskA: AgentTaskContract,
   taskB: AgentTaskContract
 ): ConflictPrediction["suggestedDependency"] | null {
-  const aProduces = taskA.expectedOutput.producedSymbols;
-  const bProduces = taskB.expectedOutput.producedSymbols;
-  const aConsumes = taskA.expectedOutput.consumedSymbols;
-  const bConsumes = taskB.expectedOutput.consumedSymbols;
+  const aProduces = concreteOutputSymbols(taskA, "produced");
+  const bProduces = concreteOutputSymbols(taskB, "produced");
+  const aConsumes = concreteOutputSymbols(taskA, "consumed");
+  const bConsumes = concreteOutputSymbols(taskB, "consumed");
   const aToB = intersectValues(aProduces, bConsumes);
 
   if (aToB.length > 0) {
@@ -528,8 +549,14 @@ function producerConsumerSymbolSignals(
   taskB: AgentTaskContract,
   index: RepositoryIndex
 ): StaticConflictSignal[] {
-  const aToB = intersectValues(taskA.expectedOutput.producedSymbols, taskB.expectedOutput.consumedSymbols);
-  const bToA = intersectValues(taskB.expectedOutput.producedSymbols, taskA.expectedOutput.consumedSymbols);
+  const aToB = intersectValues(
+    concreteOutputSymbols(taskA, "produced"),
+    concreteOutputSymbols(taskB, "consumed")
+  );
+  const bToA = intersectValues(
+    concreteOutputSymbols(taskB, "produced"),
+    concreteOutputSymbols(taskA, "consumed")
+  );
 
   return [
     ...aToB.map((symbol) => producerConsumerSignal(taskA.taskId, taskB.taskId, symbol, index)),

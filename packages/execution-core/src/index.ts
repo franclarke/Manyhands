@@ -16,6 +16,7 @@ export * from "./executor/cli-executor";
 export * from "./executor/agent-env";
 export * from "./executor/process";
 export * from "./executor/live-process-registry";
+export * from "./executor/process-inspector";
 export * from "./run/world-reconciler";
 export * from "./executor/failure";
 export * from "./executor/status-channel";

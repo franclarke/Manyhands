@@ -22,7 +22,7 @@ import {
   budgetGateNode,
   conflictGateNode,
   integrationJoinNode,
-  leafGateNode,
+  makeLeafGateNode,
   makeExecuteLeafNode,
   makeIntegrateNextCompositeNode,
   makeRouteFrontier,
@@ -34,6 +34,7 @@ import {
   type FrontierRouterDeps,
   type IntegrateCompositeNodeDeps,
   type LeafExecutionInput,
+  type LeafGateNodeDeps,
   type RunValidationNodeDeps
 } from "../nodes/execution-nodes.js";
 import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint";
@@ -43,6 +44,7 @@ export interface ExecutionGraphConfig {
   integrateDeps: IntegrateCompositeNodeDeps;
   validationDeps: RunValidationNodeDeps;
   frontierDeps?: FrontierRouterDeps;
+  leafGateDeps?: LeafGateNodeDeps;
   checkpointer?: BaseCheckpointSaver;
 }
 
@@ -55,6 +57,7 @@ export function buildExecutionGraph(config: ExecutionGraphConfig) {
   const integrateNextCompositeNode = makeIntegrateNextCompositeNode(config.integrateDeps);
   const runValidationNode = makeRunValidationNode(config.validationDeps);
   const routeFrontier = makeRouteFrontier(config.frontierDeps ?? {});
+  const configuredLeafGateNode = makeLeafGateNode(config.leafGateDeps ?? {});
 
   const checkpointer = config.checkpointer ?? new MemorySaver();
 
@@ -62,7 +65,7 @@ export function buildExecutionGraph(config: ExecutionGraphConfig) {
     .addNode("prepare", prepareExecutionNode)
     .addNode("waveJoin", waveJoinNode)
     .addNode("executeLeaf", async (input: LeafExecutionInput) => executeLeafNode(input))
-    .addNode("leafGate", leafGateNode, { ends: ["executeLeaf", "waveJoin", END] })
+    .addNode("leafGate", configuredLeafGateNode, { ends: ["executeLeaf", "waveJoin", END] })
     .addNode("budgetGate", budgetGateNode, { ends: ["waveJoin", END] })
     .addNode("integrationJoin", integrationJoinNode)
     .addNode("integrateNextComposite", integrateNextCompositeNode)

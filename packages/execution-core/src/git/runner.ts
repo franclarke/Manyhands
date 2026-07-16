@@ -1,4 +1,9 @@
+import { execFile } from "node:child_process";
+import { resolve } from "node:path";
+import { promisify } from "node:util";
 import { simpleGit, type SimpleGit } from "simple-git";
+
+const execFileAsync = promisify(execFile);
 
 /**
  * Outcome of a cherry-pick attempt. `ok: false` carries the conflicting files
@@ -6,6 +11,8 @@ import { simpleGit, type SimpleGit } from "simple-git";
  */
 export interface CherryPickOutcome {
   ok: boolean;
+  /** Production classification; optional so narrow test doubles remain source-compatible. */
+  kind?: "applied" | "conflict" | "empty" | "error";
   conflictFiles: string[];
   output: string;
 }
@@ -15,7 +22,7 @@ export interface CherryPickOutcome {
  * SimpleGitRunner (real) and a FakeGitRunner in tests, so worktree/result/
  * integration logic can be exercised without touching disk or a real repo.
  *
- * The agent executor (Gemini CLI) handles the *agent*; git plumbing runs directly.
+ * The configured AgentExecutor handles the agent; git plumbing runs directly.
  */
 export interface GitRunner {
   worktreeAdd(params: {
@@ -37,11 +44,17 @@ export interface GitRunner {
   cherryPickHead(cwd: string): Promise<string | undefined>;
   /** Paths with unresolved index entries. */
   unmergedFiles(cwd: string): Promise<string[]>;
+  /** Full worktree/index dirtiness for conservative crash recovery. */
+  statusPorcelain(cwd: string): Promise<string[]>;
+  /** Reset only a ManyHands-managed worktree after an invalid repair attempt. */
+  restoreManagedWorktree(cwd: string, ref: string): Promise<void>;
 
   addAll(cwd: string): Promise<void>;
   /** `git add -A` minus exclude pathspecs — artifact dirs never enter the index. */
   addAllExcluding(cwd: string, excludeGlobs: readonly string[]): Promise<void>;
   commit(params: { cwd: string; message: string }): Promise<string>;
+  /** Full commit message used to validate crash-recovery provenance. */
+  commitMessage(cwd: string, commitSha: string): Promise<string>;
 
   diffCached(cwd: string): Promise<string>;
   diffCachedNameOnly(cwd: string): Promise<string[]>;
@@ -51,8 +64,22 @@ export interface GitRunner {
   diffRangeNameOnly(params: { cwd: string; from: string; to: string }): Promise<string[]>;
   diffRangeNumstat(params: { cwd: string; from: string; to: string }): Promise<number>;
 
-  cherryPick(params: { cwd: string; commitSha: string }): Promise<CherryPickOutcome>;
+  cherryPick(params: { cwd: string; commitSha: string; mainline?: 1 }): Promise<CherryPickOutcome>;
   cherryPickAbort(cwd: string): Promise<void>;
+
+  /**
+   * Materialize a composite handoff commit whose first-parent diff is the
+   * complete integrated tree while retaining the physical integration lineage
+   * as its second parent. Parents can then cherry-pick it with mainline 1
+   * without dropping earlier child commits.
+   */
+  createIntegrationHandoff(params: {
+    cwd: string;
+    baseCommit: string;
+    message: string;
+    /** Physical parent-lineage commits, oldest to newest. */
+    appliedCommitShas: readonly string[];
+  }): Promise<string>;
 
   /**
    * Contents of `path` at `ref` (`git show <ref>:<path>`), or null when the file
@@ -66,7 +93,10 @@ export interface GitRunner {
 /** GitRunner backed by simple-git. Each operation runs against the given cwd. */
 export class SimpleGitRunner implements GitRunner {
   private client(cwd: string): SimpleGit {
-    return simpleGit({ baseDir: cwd });
+    return simpleGit({
+      baseDir: cwd,
+      config: [`safe.directory=${gitPath(resolve(cwd))}`]
+    });
   }
 
   async worktreeAdd(params: {
@@ -121,15 +151,24 @@ export class SimpleGitRunner implements GitRunner {
 
   async isAncestor(params: { cwd: string; ancestor: string; descendant?: string }): Promise<boolean> {
     try {
-      await this.client(params.cwd).raw([
-        "merge-base",
-        "--is-ancestor",
-        params.ancestor,
-        params.descendant ?? "HEAD"
-      ]);
+      // Do not use simple-git.raw() here. `git merge-base --is-ancestor`
+      // intentionally exits 1 with an empty stderr for the ordinary "no"
+      // result, and simple-git treats that combination as a resolved command.
+      // Reading the native exit code is the only unambiguous contract.
+      await execFileAsync(
+        "git",
+        safeGitArgs(params.cwd, [
+          "merge-base",
+          "--is-ancestor",
+          params.ancestor,
+          params.descendant ?? "HEAD"
+        ]),
+        { cwd: params.cwd, windowsHide: true }
+      );
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      if (gitExitCode(error) === 1) return false;
+      throw error;
     }
   }
 
@@ -143,6 +182,16 @@ export class SimpleGitRunner implements GitRunner {
 
   async unmergedFiles(cwd: string): Promise<string[]> {
     return splitLines(await this.client(cwd).diff(["--name-only", "--diff-filter=U"]));
+  }
+
+  async statusPorcelain(cwd: string): Promise<string[]> {
+    return splitLines(await this.client(cwd).raw(["status", "--porcelain=v1", "--untracked-files=all"]));
+  }
+
+  async restoreManagedWorktree(cwd: string, ref: string): Promise<void> {
+    const git = this.client(cwd);
+    await git.raw(["reset", "--hard", ref]);
+    await git.raw(["clean", "-fd"]);
   }
 
   async addAll(cwd: string): Promise<void> {
@@ -173,6 +222,10 @@ export class SimpleGitRunner implements GitRunner {
     await git.commit(params.message);
     const sha = await git.revparse(["HEAD"]);
     return sha.trim();
+  }
+
+  async commitMessage(cwd: string, commitSha: string): Promise<string> {
+    return this.client(cwd).raw(["show", "-s", "--format=%B", commitSha]);
   }
 
   async diffCached(cwd: string): Promise<string> {
@@ -214,15 +267,28 @@ export class SimpleGitRunner implements GitRunner {
     }
   }
 
-  async cherryPick(params: { cwd: string; commitSha: string }): Promise<CherryPickOutcome> {
+  async cherryPick(params: { cwd: string; commitSha: string; mainline?: 1 }): Promise<CherryPickOutcome> {
     const git = this.client(params.cwd);
     try {
-      const output = await git.raw(["cherry-pick", params.commitSha]);
-      return { ok: true, conflictFiles: [], output };
+      const output = await git.raw([
+        "cherry-pick",
+        "-x",
+        ...(params.mainline !== undefined ? ["-m", String(params.mainline)] : []),
+        params.commitSha
+      ]);
+      return { ok: true, kind: "applied", conflictFiles: [], output };
     } catch (error) {
-      const conflictFiles = await this.unmergedFiles(params.cwd);
+      const [conflictFiles, cherryPickHead] = await Promise.all([
+        this.unmergedFiles(params.cwd),
+        this.cherryPickHead(params.cwd)
+      ]);
       const output = error instanceof Error ? error.message : String(error);
-      return { ok: false, conflictFiles, output };
+      const kind = conflictFiles.length > 0
+        ? "conflict"
+        : cherryPickHead !== undefined
+          ? "empty"
+          : "error";
+      return { ok: false, kind, conflictFiles, output };
     }
   }
 
@@ -230,6 +296,138 @@ export class SimpleGitRunner implements GitRunner {
     await this.client(cwd).raw(["cherry-pick", "--abort"]);
   }
 
+  async createIntegrationHandoff(params: {
+    cwd: string;
+    baseCommit: string;
+    message: string;
+    appliedCommitShas: readonly string[];
+  }): Promise<string> {
+    const git = this.client(params.cwd);
+    const lineageHead = (await git.revparse(["HEAD"])).trim();
+    if (params.appliedCommitShas.length === 0) {
+      if (lineageHead !== params.baseCommit) {
+        throw new Error(
+          `Integration has no applied children, but HEAD drifted from ${params.baseCommit} to ${lineageHead}.`
+        );
+      }
+      return lineageHead;
+    }
+
+    // A crash may happen after the atomic handoff ref update and before the
+    // journal transition. Adopt that exact handoff only if its shape and its
+    // retained second-parent lineage are both fully explained.
+    const existingSecondParent = await git.revparse([`${lineageHead}^2`]).then(
+      (value) => value.trim(),
+      () => undefined
+    );
+    if (existingSecondParent !== undefined) {
+      const [existingFirstParent, existingTree, secondTree] = await Promise.all([
+        git.revparse([`${lineageHead}^1`]).then((value) => value.trim()),
+        git.revparse([`${lineageHead}^{tree}`]).then((value) => value.trim()),
+        git.revparse([`${existingSecondParent}^{tree}`]).then((value) => value.trim())
+      ]);
+      if (
+        existingFirstParent === params.baseCommit &&
+        existingTree === secondTree
+      ) {
+        await assertExactFirstParentLineage(
+          git,
+          params.baseCommit,
+          existingSecondParent,
+          params.appliedCommitShas
+        );
+        return lineageHead;
+      }
+      throw new Error(`Existing merge HEAD ${lineageHead} is not a valid ManyHands integration handoff.`);
+    }
+
+    await assertExactFirstParentLineage(
+      git,
+      params.baseCommit,
+      lineageHead,
+      params.appliedCommitShas
+    );
+    if (!await this.isAncestor({
+      cwd: params.cwd,
+      ancestor: params.baseCommit,
+      descendant: lineageHead
+    })) {
+      throw new Error(
+        `Cannot create integration handoff: base ${params.baseCommit} is not an ancestor of ${lineageHead}.`
+      );
+    }
+
+    const tree = (await git.revparse([`${lineageHead}^{tree}`])).trim();
+    const handoff = (
+      await git.raw([
+        "commit-tree",
+        tree,
+        "-p",
+        params.baseCommit,
+        "-p",
+        lineageHead,
+        "-m",
+        params.message
+      ])
+    ).trim();
+
+    const [firstParent, secondParent, handoffTree] = await Promise.all([
+      git.revparse([`${handoff}^1`]).then((value) => value.trim()),
+      git.revparse([`${handoff}^2`]).then((value) => value.trim()),
+      git.revparse([`${handoff}^{tree}`]).then((value) => value.trim())
+    ]);
+    if (
+      firstParent !== params.baseCommit ||
+      secondParent !== lineageHead ||
+      handoffTree !== tree
+    ) {
+      throw new Error(
+        `Integration handoff ${handoff} has invalid parents or tree ` +
+        `(first=${firstParent}, second=${secondParent}, tree=${handoffTree}).`
+      );
+    }
+
+    // The handoff has the exact same tree as lineageHead, so moving the current
+    // worktree ref is an atomic metadata update; index and files remain valid.
+    await git.raw(["update-ref", "HEAD", handoff, lineageHead]);
+    return handoff;
+  }
+
+}
+
+/**
+ * Trust only the repository explicitly selected for this git subprocess.
+ * This keeps cross-Windows-user workspaces usable without mutating the user's
+ * global git config or weakening ownership checks for unrelated repositories.
+ */
+export function safeGitArgs(cwd: string, args: readonly string[]): string[] {
+  return ["-c", `safe.directory=${gitPath(resolve(cwd))}`, ...args];
+}
+
+function gitPath(value: string): string {
+  return value.replaceAll("\\", "/");
+}
+
+function gitExitCode(error: unknown): number | undefined {
+  if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
+  return typeof error.code === "number" ? error.code : undefined;
+}
+
+async function assertExactFirstParentLineage(
+  git: SimpleGit,
+  baseCommit: string,
+  lineageHead: string,
+  expected: readonly string[]
+): Promise<void> {
+  const actual = splitLines(
+    await git.raw(["rev-list", "--reverse", "--first-parent", `${baseCommit}..${lineageHead}`])
+  );
+  if (actual.length !== expected.length || actual.some((sha, index) => sha !== expected[index])) {
+    throw new Error(
+      `Integration lineage ${baseCommit}..${lineageHead} is not fully explained by applied children ` +
+      `(expected ${expected.join(", ") || "none"}; observed ${actual.join(", ") || "none"}).`
+    );
+  }
 }
 
 function splitLines(output: string): string[] {

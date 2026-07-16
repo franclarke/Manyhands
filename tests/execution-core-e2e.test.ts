@@ -168,6 +168,53 @@ describe("RunExecutor E2E (real git + MockCodex)", () => {
     expect(tree).toContain("src/c.ts");
   }, 60_000);
 
+  it("keeps a dependent leaf on the immutable base and composes both commits only at integration", async () => {
+    const graph = graphWith(["a", "b"]);
+    graph.dependencies.push({
+      fromTaskId: "a",
+      toTaskId: "b",
+      type: "logical",
+      inferred: false,
+      rationale: "Dispatch B after A without inheriting A's worktree"
+    });
+    graph.nodes.b!.dependencies = ["a"];
+
+    const executor = new RunExecutor({
+      git: new SimpleGitRunner(),
+      executor: new MockAgentExecutor({
+        behaviors: {
+          [leafPath("a")]: { filesToWrite: { "src/a.ts": "export const a = 1;\n" } },
+          [leafPath("b")]: { filesToWrite: { "src/b.ts": "export const b = 2;\n" } }
+        }
+      }),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot
+    });
+
+    const result = await executor.run({
+      graph,
+      config: ExecutionConfigSchema.parse({}),
+      model: "gpt-5-codex",
+      runId: RUN_ID
+    });
+
+    expect(result.status).toBe("completed");
+    const aCommit = result.leafResults.find((leaf) => leaf.taskId === "a")?.commitSha;
+    const bCommit = result.leafResults.find((leaf) => leaf.taskId === "b")?.commitSha;
+    expect(aCommit).toBeDefined();
+    expect(bCommit).toBeDefined();
+    expect(git(["rev-parse", `${bCommit as string}^`])).toBe(baseCommit);
+    const dependentTree = git(["ls-tree", "-r", "--name-only", bCommit as string]);
+    expect(dependentTree).toContain("src/b.ts");
+    expect(dependentTree).not.toContain("src/a.ts");
+
+    const integratedSha = result.integrationResults[0]?.integrationCommitSha;
+    expect(integratedSha).toBeDefined();
+    const integratedTree = git(["ls-tree", "-r", "--name-only", integratedSha as string]);
+    expect(integratedTree).toContain("src/a.ts");
+    expect(integratedTree).toContain("src/b.ts");
+  }, 60_000);
+
   it("runs integrator nodes as executable tasks before parent integration", async () => {
     const behaviors = {
       [leafPath("a")]: { filesToWrite: { "src/a.ts": "export const a = 1;\n" } },

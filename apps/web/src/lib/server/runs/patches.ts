@@ -2,11 +2,13 @@ import { z } from "zod";
 import {
   AgentTaskContractSchema,
   type AcceptanceCriterion,
-  type AgentTaskContract,
+  type AgentTaskContract
+} from "@manyhands/contracts";
+import {
   TaskDependencySchema,
   TaskNodeSchema,
   type TaskDependency
-} from "@manyhands/core";
+} from "@manyhands/task-graph";
 import type { MockExecutionFlowResult, MockPlanningFlowResult, RunSnapshot } from "@manyhands/core";
 import { EXECUTOR_IDS } from "@manyhands/execution-core";
 import { addDependency, removeDependency, syncNodeDependencies, type TaskGraph } from "@manyhands/task-graph";
@@ -96,6 +98,19 @@ export const RunPatchSchema = z.discriminatedUnion("type", [
     rationale: z.string().min(1).max(1000).optional()
   }),
   PatchBaseSchema.extend({
+    type: z.literal("SEAM_AMENDED"),
+    amendmentId: z.string().min(1).optional(),
+    decisionId: z.string().min(1).optional(),
+    nodeId: z.string().min(1).optional(),
+    affects: z.array(z.string().min(1)).optional(),
+    seamId: z.string().min(1),
+    fromRevision: z.number().int().positive(),
+    toRevision: z.number().int().positive(),
+    changeKind: z.enum(["contract", "signature"]),
+    signature: z.string().min(1).optional(),
+    contract: z.record(z.string().min(1)).optional()
+  }),
+  PatchBaseSchema.extend({
     type: z.literal("RISK_ACKNOWLEDGED"),
     taskIds: z.tuple([z.string().min(1), z.string().min(1)]),
     reason: z.string().min(1).max(1000)
@@ -109,6 +124,7 @@ type PatchableInput = RunSnapshot | RunRecord;
 interface PatchContext {
   graph: PatchGraph;
   contracts: AgentTaskContract[];
+  seamRevisions: Map<string, number>;
   riskPredictions?: Array<Record<string, unknown>>;
 }
 
@@ -161,6 +177,7 @@ export function applyPatchesUpTo<T extends PatchableInput>(
     applyParsedPatchesToContext({
       graph: clone.graphSnapshot as PatchGraph,
       contracts: clone.contracts,
+      seamRevisions: new Map(),
       riskPredictions: clone.riskPredictions as Array<Record<string, unknown>>
     }, parsed);
     return clone;
@@ -177,6 +194,7 @@ export function applyPatchesUpTo<T extends PatchableInput>(
       {
         graph: planning.decomposition.graph as PatchGraph,
         contracts: planning.decomposition.contracts,
+        seamRevisions: new Map(),
         riskPredictions: planning.riskMatrix as Array<Record<string, unknown>>
       },
       parsed
@@ -190,6 +208,7 @@ export function applyPatchesUpTo<T extends PatchableInput>(
       {
         graph: execPlanning.decomposition.graph as PatchGraph,
         contracts: execPlanning.decomposition.contracts,
+        seamRevisions: new Map(),
         riskPredictions: execPlanning.riskMatrix as Array<Record<string, unknown>>
       },
       parsed
@@ -201,6 +220,7 @@ export function applyPatchesUpTo<T extends PatchableInput>(
       {
         graph: execSnapshot.graphSnapshot as PatchGraph,
         contracts: execSnapshot.contracts,
+        seamRevisions: new Map(),
         riskPredictions: execSnapshot.riskPredictions as Array<Record<string, unknown>>
       },
       parsed
@@ -328,10 +348,94 @@ function applyPatchToContext(context: PatchContext, patch: RunPatch): void {
       removeGraphDependency(context, patch.fromTaskId, patch.toTaskId);
       syncGraphDependencies(context);
       return;
+    case "SEAM_AMENDED":
+      applySeamAmended(context, patch);
+      return;
     case "RISK_ACKNOWLEDGED":
       applyRiskAcknowledged(context, patch);
       return;
   }
+}
+
+function applySeamAmended(
+  context: PatchContext,
+  patch: Extract<RunPatch, { type: "SEAM_AMENDED" }>
+): void {
+  if (patch.toRevision !== patch.fromRevision + 1) {
+    throw new Error(
+      `Seam ${patch.seamId} revision must advance exactly once (${patch.fromRevision} -> ${patch.toRevision})`
+    );
+  }
+  const currentRevision = context.seamRevisions.get(patch.seamId) ?? 1;
+  if (patch.fromRevision !== currentRevision) {
+    throw new Error(
+      `Seam ${patch.seamId} revision chain is stale: expected r${currentRevision} -> r${currentRevision + 1}, ` +
+      `received r${patch.fromRevision} -> r${patch.toRevision}`
+    );
+  }
+  if (patch.changeKind === "signature" && patch.signature === undefined) {
+    throw new Error(`Signature amendment for seam ${patch.seamId} requires a signature`);
+  }
+  if (patch.changeKind === "contract" && patch.contract === undefined) {
+    throw new Error(`Contract amendment for seam ${patch.seamId} requires semantic contract facts`);
+  }
+
+  let producerCount = 0;
+  let copyCount = 0;
+  for (const node of Object.values(context.graph.nodes)) {
+    const contract = node.contract ?? context.contracts.find((entry) => entry.taskId === node.id);
+    if (contract === undefined) continue;
+
+    const produced = (contract.producedInterfaces ?? []).map((iface) => {
+      if (iface.id !== patch.seamId) return iface;
+      producerCount += 1;
+      copyCount += 1;
+      return amendInterface(iface, patch);
+    });
+    const consumed = (contract.consumedInterfaces ?? []).map((iface) => {
+      if (iface.id !== patch.seamId) return iface;
+      copyCount += 1;
+      return amendInterface(iface, patch);
+    });
+    if (
+      produced.every((iface, index) => iface === (contract.producedInterfaces ?? [])[index]) &&
+      consumed.every((iface, index) => iface === (contract.consumedInterfaces ?? [])[index])
+    ) {
+      continue;
+    }
+    const next: AgentTaskContract = {
+      ...contract,
+      ...(contract.producedInterfaces !== undefined ? { producedInterfaces: produced } : {}),
+      ...(contract.consumedInterfaces !== undefined ? { consumedInterfaces: consumed } : {})
+    };
+    context.graph.nodes[node.id] = { ...node, contract: next };
+    upsertContract(context, next);
+  }
+
+  if (producerCount !== 1) {
+    throw new Error(
+      producerCount === 0
+        ? `Seam ${patch.seamId} has no durable producer`
+        : `Seam ${patch.seamId} has ${producerCount} durable producers`
+    );
+  }
+  if (copyCount === 0) {
+    throw new Error(`Seam ${patch.seamId} is not present in the durable graph`);
+  }
+  context.seamRevisions.set(patch.seamId, patch.toRevision);
+}
+
+function amendInterface(
+  iface: NonNullable<AgentTaskContract["producedInterfaces"]>[number],
+  patch: Extract<RunPatch, { type: "SEAM_AMENDED" }>
+): NonNullable<AgentTaskContract["producedInterfaces"]>[number] {
+  return {
+    ...iface,
+    ...(patch.signature !== undefined ? { signature: patch.signature } : {}),
+    ...(patch.contract !== undefined
+      ? { contract: { ...(iface.contract ?? {}), ...patch.contract } }
+      : {})
+  };
 }
 
 function applySubtreeRegenerated(
@@ -348,7 +452,11 @@ function applySubtreeRegenerated(
   context.graph.dependencies = context.graph.dependencies.filter(
     (dependency) => !removed.has(dependency.fromTaskId) && !removed.has(dependency.toTaskId)
   );
-  context.contracts = context.contracts.filter((contract) => !removed.has(contract.taskId));
+  const retainedContracts = context.contracts.filter((contract) => !removed.has(contract.taskId));
+  // Keep the caller-owned contracts mirror authoritative. Reassigning only the
+  // temporary PatchContext property leaves snapshot.contracts pointing at the
+  // old array and makes seam projection disagree with the materialized graph.
+  context.contracts.splice(0, context.contracts.length, ...retainedContracts);
 
   for (const node of Object.values(patch.nodes)) {
     context.graph.nodes[node.id] = node as PatchTaskNode;

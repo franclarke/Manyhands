@@ -139,6 +139,8 @@ interface HarnessOptions {
 
 function makeHarness(options: HarnessOptions = {}) {
   const executions: string[] = [];
+  const dispatches: Array<{ taskId: string; waveId?: string; dispatchKind?: "wave" | "retry" }> = [];
+  const retryDispatches: string[] = [];
   const repairs: string[] = [];
   const integrations: string[] = [];
   const waves: string[][] = [];
@@ -153,6 +155,11 @@ function makeHarness(options: HarnessOptions = {}) {
     leafDeps: {
       executeLeaf: async (params: LeafExecutionInput) => {
         executions.push(params.taskId);
+        dispatches.push({
+          taskId: params.taskId,
+          ...(params.waveId !== undefined ? { waveId: params.waveId } : {}),
+          ...(params.dispatchKind !== undefined ? { dispatchKind: params.dispatchKind } : {})
+        });
         inFlight += 1;
         maxConcurrency = Math.max(maxConcurrency, inFlight);
         await new Promise((resolve) => setTimeout(resolve, 5));
@@ -193,13 +200,19 @@ function makeHarness(options: HarnessOptions = {}) {
       selectWave: (params) => {
         const selected = options.selectWave?.(params) ?? params.candidates;
         waves.push([...selected]);
-        return selected;
+        return { taskIds: selected, waveId: `wave-${waves.length}` };
+      }
+    },
+    leafGateDeps: {
+      beforeRetryDispatch: async ({ taskId }) => {
+        retryDispatches.push(taskId);
+        return { waveId: `retry-${retryDispatches.length}` };
       }
     },
     ...(options.checkpointer !== undefined ? { checkpointer: options.checkpointer } : {})
   });
 
-  return { graph, executions, repairs, integrations, waves, maxConcurrency: () => maxConcurrency };
+  return { graph, executions, dispatches, retryDispatches, repairs, integrations, waves, maxConcurrency: () => maxConcurrency };
 }
 
 const threadConfig = (threadId: string, graph: TaskGraph) => ({
@@ -283,6 +296,11 @@ describe("execution graph — dynamic wavefront", () => {
     expect(final.status).toBe("completed");
     // Retry re-ran ONLY leaf-a (plus the still-blocked leaf-c afterwards).
     expect(harness.executions.slice(executionsBeforeResume)).toEqual(["leaf-a", "leaf-c"]);
+    expect(harness.retryDispatches).toEqual(["leaf-a"]);
+    expect([...harness.dispatches].reverse().find((entry) => entry.taskId === "leaf-a")).toMatchObject({
+      waveId: "retry-1",
+      dispatchKind: "retry"
+    });
     // Identity reducer: the retried result replaced the failed one.
     expect(final.leafResults.filter((r) => r.taskId === "leaf-a")).toHaveLength(1);
     expect(final.leafResults.find((r) => r.taskId === "leaf-a")?.status).toBe("success");

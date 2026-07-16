@@ -122,14 +122,18 @@ describe("CliAgentExecutor with the Codex profile (injected spawn)", () => {
     await expect(promise).resolves.toMatchObject({ exitCode: 127, timedOut: false });
   });
 
-  it("runs Windows batch shims through a shell", async () => {
+  it("runs Windows batch shims through explicit cmd.exe without shell:true", async () => {
     const child = fakeChild();
-    let shellOption: SpawnOptionsWithoutStdio["shell"] | undefined;
+    let call:
+      | { command: string; args: readonly string[]; options: SpawnOptionsWithoutStdio }
+      | undefined;
     const executor = new CliAgentExecutor(CODEX_PROFILE, {
       readInstructions: async () => "do the thing",
-      binaryPath: "C:\\tools\\codex.cmd",
-      spawn: (_command, _args, options) => {
-        shellOption = options.shell;
+      binaryPath: "C:\\Program Files\\Codex & Tools\\codex.cmd",
+      platform: "win32",
+      hostEnv: { ComSpec: "C:\\Windows\\System32\\cmd.exe" },
+      spawn: (command, args, options) => {
+        call = { command, args, options };
         return child as never;
       }
     });
@@ -138,6 +142,12 @@ describe("CliAgentExecutor with the Codex profile (injected spawn)", () => {
     child.emit("close", 0);
 
     await promise;
-    expect(shellOption).toBe(true);
+    expect(call).toBeDefined();
+    expect(call?.command).toBe("C:\\Windows\\System32\\cmd.exe");
+    expect(call?.options.shell).toBe(false);
+    expect(call?.options.windowsVerbatimArguments).toBe(true);
+    expect(call?.args.slice(0, 4)).toEqual(["/d", "/v:off", "/s", "/c"]);
+    expect(call?.args[4]).toContain("C:\\Program^ Files\\Codex^ ^&^ Tools\\codex.cmd");
+    expect(call?.args[4]).toContain('^^^"--model^^^"');
   });
 });

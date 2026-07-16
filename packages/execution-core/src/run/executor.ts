@@ -11,7 +11,11 @@ import {
 } from "@manyhands/scheduler";
 import type { TaskPairRiskMatrix } from "@manyhands/conflict-risk";
 import type { RepositoryIndex } from "@manyhands/repository-index";
-import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
+import {
+  TASK_DEPENDENCY_EXECUTION_SEMANTICS,
+  type TaskGraph,
+  type TaskNode
+} from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
 
 import { FixedAgentExecutorFactory, type AgentExecutorFactory } from "../executor/factory";
@@ -1148,7 +1152,12 @@ export class RunExecutor {
       if (INTEGRATION_SUCCESS.has(result.status) && result.integrationCommitSha) {
         resultByTask.set(
           composite.id,
-          syntheticCompositeResult(composite.id, graph.baseCommit, result.integrationCommitSha)
+          syntheticCompositeResult(
+            composite.id,
+            graph.baseCommit,
+            result.integrationCommitSha,
+            result.cherryPickMainline
+          )
         );
       } else {
         // Preserve failed composite state for ancestors. Without a synthetic
@@ -1304,6 +1313,7 @@ function buildLeafRepairInstructions(node: TaskNode, validationOutput: string): 
     lines.push("Acceptance criteria:", ...acceptance.map((criterion) => `- ${criterion}`), "");
   }
 
+  appendDependencyIsolationGuidance(lines, node);
   appendContractExecutionGuidance(lines, node.contract);
 
   lines.push(
@@ -1330,6 +1340,7 @@ export function buildLeafInstructions(node: TaskNode, contextSection?: string): 
     lines.push("", "Acceptance criteria:", ...acceptance.map((c) => `- ${c}`));
   }
 
+  appendDependencyIsolationGuidance(lines, node);
   appendContractExecutionGuidance(lines, contract);
 
   if (contextSection && contextSection.length > 0) {
@@ -1339,6 +1350,16 @@ export function buildLeafInstructions(node: TaskNode, contextSection?: string): 
   lines.push("", AGENT_STATUS_PROTOCOL_INSTRUCTIONS);
   lines.push("", "Do not commit — the orchestrator will commit your changes.");
   return lines.join("\n");
+}
+
+function appendDependencyIsolationGuidance(lines: string[], node: TaskNode): void {
+  if (node.dependencies.length === 0) return;
+  lines.push(
+    "",
+    `Scheduling contract (${TASK_DEPENDENCY_EXECUTION_SEMANTICS}): each D1 dependency is an ordering-only dispatch barrier.`,
+    `This isolated worktree starts from the run's immutable baseCommit and does not contain changes from: ${node.dependencies.join(", ")}.`,
+    "Do not assume upstream files were materialized. Build against the declared interface contracts and the current base files; bottom-up integration composes task commits later."
+  );
 }
 
 function appendContractExecutionGuidance(
@@ -1412,8 +1433,26 @@ function sameSelection(left: ExecutorSelection, right: ExecutorSelection): boole
 function syntheticCompositeResult(
   taskId: string,
   baseHead: string,
-  commitSha: string
+  commitSha: string,
+  cherryPickMainline?: 1
 ): AgentExecutionResult {
+  if (commitSha === baseHead) {
+    return {
+      taskId,
+      status: "success",
+      baseHead,
+      currentHead: baseHead,
+      agentCommittedUnexpectedly: false,
+      diff: "",
+      changedFiles: [],
+      noOp: true,
+      disposition: "already_satisfied",
+      scopeCheck: { passed: true, violations: [], outOfScope: [] },
+      executorExitCode: 0,
+      executorDurationMs: 0,
+      executorTimedOut: false
+    };
+  }
   return {
     taskId,
     status: "success",
@@ -1423,6 +1462,7 @@ function syntheticCompositeResult(
     diff: "",
     changedFiles: [],
     commitSha,
+    ...(cherryPickMainline !== undefined ? { cherryPickMainline } : {}),
     scopeCheck: { passed: true, violations: [], outOfScope: [] },
     executorExitCode: 0,
     executorDurationMs: 0,

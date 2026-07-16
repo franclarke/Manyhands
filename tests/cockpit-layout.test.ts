@@ -16,7 +16,8 @@ import {
   bottomDrawerMode,
   focusDockMode,
   runDockMode,
-  sidebarInitiallyCollapsed
+  sidebarInitiallyCollapsed,
+  sidebarInitiallyCollapsedForRoute
 } from "@/lib/cockpit-layout";
 
 describe("focusDockMode", () => {
@@ -86,5 +87,23 @@ describe("sidebarInitiallyCollapsed", () => {
 
   it("treats an unknown/zero width as collapsed (safe default before measurement)", () => {
     expect(sidebarInitiallyCollapsed(0, "expanded")).toBe(true);
+  });
+});
+
+describe("sidebarInitiallyCollapsedForRoute", () => {
+  it("protects the run canvas on compact desktop widths", () => {
+    expect(sidebarInitiallyCollapsedForRoute(1024, "expanded", "/runs/run-1")).toBe(true);
+    expect(sidebarInitiallyCollapsedForRoute(1179, null, "/runs/run-1")).toBe(true);
+    expect(sidebarInitiallyCollapsedForRoute(1440, "expanded", "/runs/run-1")).toBe(true);
+  });
+
+  it("keeps the home composer preference independent from the run cockpit", () => {
+    expect(sidebarInitiallyCollapsedForRoute(1024, "expanded", "/")).toBe(false);
+    expect(sidebarInitiallyCollapsedForRoute(1024, null, "/")).toBe(false);
+  });
+
+  it("honors an explicit collapsed preference everywhere", () => {
+    expect(sidebarInitiallyCollapsedForRoute(1440, "collapsed", "/")).toBe(true);
+    expect(sidebarInitiallyCollapsedForRoute(1440, "collapsed", "/runs/run-1")).toBe(true);
   });
 });

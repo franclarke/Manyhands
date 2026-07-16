@@ -29,6 +29,34 @@ afterEach(async () => {
 });
 
 describe("POST /decisions/[decisionId] choice validation", () => {
+  it("rejects a stale approval identity instead of approving the current revision through it", async () => {
+    const runId = "run-stale-plan-approval";
+    await getRunRepository().save(makeRun(runId, {
+      status: "needs_review",
+      planRevision: 2
+    }));
+    for (const revision of [1, 2]) {
+      await appendRunModelEvent(runId, {
+        actor: "system",
+        type: "decision.raised",
+        payload: {
+          decisionId: `approve_plan:r${revision}`,
+          kind: "approve_plan",
+          blocking: true,
+          context: { nodeIds: ["root"] }
+        }
+      });
+    }
+
+    const response = await postDecision(runId, "approve_plan:r1", { action: "approve" });
+
+    expect(response.status).toBe(409);
+    expect((await getRunRepository().get(runId))).toMatchObject({
+      status: "needs_review",
+      planRevision: 2
+    });
+  });
+
   it("does not resolve a conflict decision without a resolutionId", async () => {
     await saveRunWithConflictDecision("run-conflict-choice");
 
@@ -66,6 +94,32 @@ describe("POST /decisions/[decisionId] choice validation", () => {
         resolutionId: "manual-resolution-1"
       }
     });
+  });
+
+  it("serializes concurrent conflict resolutions into one decision/conflict batch", async () => {
+    const runId = "run-conflict-concurrent-resolution";
+    await saveRunWithConflictDecision(runId);
+
+    const responses = await Promise.all([
+      postDecision(runId, "resolve_conflict:root", { resolutionId: "manual-resolution-a" }),
+      postDecision(runId, "resolve_conflict:root", { resolutionId: "manual-resolution-b" })
+    ]);
+
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+    const events = await readRunModelEvents(runId);
+    const decisions = events.filter(
+      (event) => event.type === "decision.resolved" && event.payload.decisionId === "resolve_conflict:root"
+    );
+    const conflicts = events.filter(
+      (event) => event.type === "conflict.resolved" && event.payload.conflictId === "conflict-root"
+    );
+    expect(decisions).toHaveLength(1);
+    expect(conflicts).toHaveLength(1);
+    expect(decisions[0]?.seq).toBe((conflicts[0]?.seq ?? 0) - 1);
+    expect((decisions[0]?.payload.choice as { resolutionId?: string }).resolutionId).toBe(
+      conflicts[0]?.payload.resolutionId
+    );
+    expect((await getRunRepository().get(runId)).activeOperation).toBeUndefined();
   });
 });
 
@@ -109,7 +163,7 @@ function postDecision(runId: string, decisionId: string, body: unknown): Promise
   );
 }
 
-function makeRun(runId: string): RunRecord {
+function makeRun(runId: string, overrides: Partial<RunRecord> = {}): RunRecord {
   return {
     runId,
     workspaceId: "ws-1",
@@ -122,6 +176,7 @@ function makeRun(runId: string): RunRecord {
     pausedDuring: "running",
     createdAt: "2026-06-12T00:00:00.000Z",
     updatedAt: "2026-06-12T00:00:00.000Z",
-    patches: []
+    patches: [],
+    ...overrides
   } as RunRecord;
 }

@@ -127,8 +127,8 @@ describe("IntegrationAgent", () => {
     expect(result.integrationCommitSha).toBe("INT_HEAD");
     expect(result.repairAttempted).toBe(false);
     expect(result.appliedCommits).toEqual([
-      { childTaskId: "a", commitSha: "SHA_A", order: 0 },
-      { childTaskId: "b", commitSha: "SHA_B", order: 1 }
+      { childTaskId: "a", commitSha: "SHA_A", resultSha: "INT_HEAD", preSha: "INT_HEAD", application: "cherry_picked", order: 0 },
+      { childTaskId: "b", commitSha: "SHA_B", resultSha: "INT_HEAD", preSha: "INT_HEAD", application: "cherry_picked", order: 1 }
     ]);
     expect(result.omittedChildCommits).toEqual([]);
     expect(git.opsInvoked().filter((op) => op === "cherryPick")).toHaveLength(2);
@@ -138,8 +138,8 @@ describe("IntegrationAgent", () => {
           status: "success",
           childTaskIds: ["a", "b"],
           appliedCommits: [
-            { childTaskId: "a", commitSha: "SHA_A", order: 0 },
-            { childTaskId: "b", commitSha: "SHA_B", order: 1 }
+            { childTaskId: "a", commitSha: "SHA_A", resultSha: "INT_HEAD", preSha: "INT_HEAD", application: "cherry_picked", order: 0 },
+            { childTaskId: "b", commitSha: "SHA_B", resultSha: "INT_HEAD", preSha: "INT_HEAD", application: "cherry_picked", order: 1 }
           ],
           omittedChildCommits: []
         })
@@ -165,7 +165,9 @@ describe("IntegrationAgent", () => {
     });
 
     expect(result.status).toBe("success");
-    expect(result.appliedCommits).toEqual([{ childTaskId: "a", commitSha: "SHA_A", order: 0 }]);
+    expect(result.appliedCommits).toEqual([
+      { childTaskId: "a", commitSha: "SHA_A", resultSha: "INT_HEAD", preSha: "INT_HEAD", application: "cherry_picked", order: 0 }
+    ]);
     expect(result.omittedChildCommits).toEqual([]);
     // The no-op child contributes nothing: only the real child is cherry-picked.
     expect(git.opsInvoked().filter((op) => op === "cherryPick")).toHaveLength(1);
@@ -321,8 +323,8 @@ describe("IntegrationAgent", () => {
     expect(result.repairAttempted).toBe(true);
     expect(result.repairResult?.status).toBe("success");
     expect(result.appliedCommits).toEqual([
-      { childTaskId: "a", commitSha: "SHA_A", order: 0 },
-      { childTaskId: "b", commitSha: "REPAIR_SHA", order: 1 }
+      { childTaskId: "a", commitSha: "SHA_A", resultSha: "INT_HEAD", preSha: "INT_HEAD", application: "cherry_picked", order: 0 },
+      { childTaskId: "b", commitSha: "SHA_B", resultSha: "REPAIR_SHA", preSha: "INT_HEAD", application: "repaired", order: 1 }
     ]);
     expect(result.repairAttempts).toEqual([
       { childTaskId: "b", pass: 1, status: "started", files: ["src/b.ts"] },
@@ -390,6 +392,47 @@ describe("IntegrationAgent", () => {
     expect(prompt).toContain("type Ast = number");
     expect(prompt).toContain("Build an AST from tokens");
     expect(prompt).toContain("It produces: Ast.");
+  });
+
+  it("hydrates a synthetic composite handoff prompt from the physical first-parent Git diff", async () => {
+    const git = new FakeGitRunner({
+      heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
+      mergeParents: { SHA_HANDOFF: ["PARENT_BASE", "LINEAGE"] },
+      cherryPickOutcomes: [{ ok: false, conflictFiles: ["src/composed.ts"], output: "CONFLICT" }],
+      diffRangeNameOnly: ["src/composed.ts"],
+      diffRange: "diff --git a/src/composed.ts b/src/composed.ts\n+export const composed = true;",
+      diffCachedNameOnly: ["src/composed.ts"],
+      diffCached: "resolved patch",
+      commitSha: "REPAIR_SHA"
+    });
+    const prompts: string[] = [];
+    const synthetic = {
+      ...child("nested-composite", "SHA_HANDOFF"),
+      diff: "",
+      changedFiles: [],
+      cherryPickMainline: 1 as const
+    };
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: "/repo",
+      writeInstructions: async (_path, content) => {
+        prompts.push(content);
+      }
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [synthetic],
+      repair
+    });
+
+    expect(result.status).toBe("executor_repair_success");
+    expect(prompts[0]).toContain("Incoming child patch (Git source of truth):");
+    expect(prompts[0]).toContain("Changed files: src/composed.ts");
+    expect(prompts[0]).toContain("+export const composed = true;");
   });
 
   it("repair prompt surfaces predicted conflicts that overlap the colliding files (Pieza 2)", async () => {
@@ -876,7 +919,9 @@ describe("IntegrationAgent", () => {
     expect(result.failureCode).toBe("validation_failed");
     expect(result.repairAttempted).toBe(true);
     expect(result.repairResult?.status).toBe("success");
-    expect(result.appliedCommits).toEqual([{ childTaskId: "a", commitSha: "REPAIR_SHA", order: 0 }]);
+    expect(result.appliedCommits).toEqual([
+      { childTaskId: "a", commitSha: "SHA_A", resultSha: "REPAIR_SHA", preSha: "INT_HEAD", application: "repaired", order: 0 }
+    ]);
     expect(result.parentValidation).toEqual({ passed: false, output: "tests failed", exitCode: 1 });
     expect(result.validationWorktreePath).toBe(INTEGRATION_WORKTREE.path);
   });

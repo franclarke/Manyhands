@@ -15,6 +15,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { POST as POST_DELIVER } from "@/app/api/runs/[id]/deliver/route";
+import { deliverRunBranch } from "@/lib/server/runs/delivery";
+import { readRunModelEvents } from "@/lib/server/runs/run-model-event-log";
+import { claimRunOperation } from "@/lib/server/runs/run-operation-lease";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import { markRunnerActive, markRunnerInactive } from "@/lib/server/runs/runner-state";
 import type { RunRecord } from "@/lib/server/runs/schema";
@@ -84,12 +87,68 @@ function makeRun(runId: string, overrides: Partial<RunRecord> = {}): RunRecord {
   };
 }
 
+function makeNeedsDeliveryRun(
+  runId: string,
+  applied: ReturnType<typeof makeAppliedRepo>
+): { run: RunRecord; manifestId: string } {
+  const manifestId = "00000000-0000-4000-8000-000000000001";
+  return {
+    manifestId,
+    run: makeRun(runId, {
+      status: "needs_delivery",
+      finalApplicationStatus: "applied",
+      appliedToRepoPath: applied.repoRoot,
+      finalBranchName: applied.finalBranchName,
+      finalCommitSha: applied.finalCommitSha,
+      baseCommit: applied.baseCommit,
+      artifactOutcome: "ready",
+      deliveryOutcome: "needs_delivery",
+      finalArtifactManifest: {
+        version: 1,
+        manifestId,
+        runId,
+        sourceTargetFingerprint: "target-fingerprint",
+        sourceBranch: "main",
+        sourceBaseSha: applied.baseCommit,
+        executionBaseSha: applied.baseCommit,
+        finalSha: applied.finalCommitSha,
+        finalRef: applied.finalBranchName,
+        addedFiles: [],
+        modifiedFiles: [],
+        deletedFiles: [],
+        patch: "",
+        validationCommands: [],
+        validationResults: [],
+        verificationDisposition: "verified",
+        omittedTasks: [],
+        acceptedFailures: [],
+        acceptedConflicts: [],
+        repairEvidence: [],
+        artifactDisposition: "ready",
+        deliveryDisposition: "needs_delivery",
+        createdAt: "2026-06-29T00:00:00.000Z"
+      }
+    })
+  };
+}
+
 function postDeliver(runId: string, action: "merge" | "discard" | "cleanup" | "reveal"): Promise<Response> {
   return POST_DELIVER(
     new Request("http://mh.test", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ action })
+    }),
+    { params: Promise.resolve({ id: runId }) }
+  );
+}
+
+function postConfirmedDelivery(runId: string, body: Record<string, unknown>): Promise<Response> {
+  return POST_DELIVER(
+    new Request("http://mh.test", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "merge", ...body })
     }),
     { params: Promise.resolve({ id: runId }) }
   );
@@ -145,6 +204,131 @@ describe("POST deliver — lifecycle guard (A-01)", () => {
     const res = await postDeliver(runId, "cleanup");
 
     expect(res.status).toBe(200);
+  });
+
+  it("delivers a verified needs_delivery artifact and only then marks the run completed", async () => {
+    const runId = "run-deliver-needs-delivery";
+    const applied = makeAppliedRepo(runId);
+    const { run, manifestId } = makeNeedsDeliveryRun(runId, applied);
+    await getRunRepository().save(run);
+    const before = await getRunRepository().get(runId);
+
+    const deliveryRequest = {
+      manifestId,
+      finalSha: applied.finalCommitSha,
+      targetBranch: "main",
+      expectedTargetHead: applied.baseCommit,
+      expectedClean: true,
+      targetFingerprint: "target-fingerprint",
+      expectedVersion: before.version,
+      idempotencyKey: "delivery-needs-delivery-1"
+    };
+    const response = await postConfirmedDelivery(runId, deliveryRequest);
+
+    expect(response.status, await response.clone().text()).toBe(200);
+    const firstBody = await response.json() as { receipt: { deliveryId: string } };
+    const retry = await postConfirmedDelivery(runId, deliveryRequest);
+    expect(retry.status, await retry.clone().text()).toBe(200);
+    const retryBody = await retry.json() as { receipt: { deliveryId: string } };
+    expect(retryBody.receipt.deliveryId).toBe(firstBody.receipt.deliveryId);
+    const saved = await getRunRepository().get(runId);
+    expect(saved).toMatchObject({
+      status: "completed",
+      artifactOutcome: "ready",
+      deliveryOutcome: "delivered",
+      finalArtifactManifest: {
+        manifestId,
+        deliveryDisposition: "delivered"
+      }
+    });
+    expect(git(applied.repoRoot, "merge-base", "--is-ancestor", applied.finalCommitSha, "HEAD")).toBe("");
+    const events = await readRunModelEvents(runId);
+    expect(events.filter((event) => event.type === "run.delivery.completed")).toHaveLength(1);
+    expect(events.filter((event) => event.type === "run.completed")).toHaveLength(1);
+    expect(events.some(
+      (event) => event.type === "decision.raised" && event.payload.kind === "approve_merge"
+    )).toBe(false);
+  });
+
+  it("reconciles a delivered receipt after a crash before RunRecord persistence", async () => {
+    const runId = "run-deliver-receipt-recovery";
+    const applied = makeAppliedRepo(runId);
+    const { run, manifestId } = makeNeedsDeliveryRun(runId, applied);
+    await getRunRepository().save(run);
+    const before = await getRunRepository().get(runId);
+    const idempotencyKey = "delivery-receipt-recovery-1";
+    const request = {
+      runId,
+      manifestId,
+      finalSha: applied.finalCommitSha,
+      targetBranch: "main",
+      expectedTargetHead: applied.baseCommit,
+      expectedClean: true,
+      targetFingerprint: "target-fingerprint",
+      actor: "local_operator",
+      idempotencyKey
+    };
+    const { run: claimed } = await claimRunOperation(runId, "delivery", {
+      expectedStatuses: ["needs_delivery"],
+      expectedVersion: before.version
+    });
+    const durableReceipt = await deliverRunBranch(claimed, request);
+
+    // Simulate process death here: Git + receipt are durable, while the record
+    // still owns the abandoned lease and says needs_delivery.
+    const response = await postConfirmedDelivery(runId, {
+      manifestId,
+      finalSha: applied.finalCommitSha,
+      targetBranch: "main",
+      expectedTargetHead: applied.baseCommit,
+      expectedClean: true,
+      targetFingerprint: "target-fingerprint",
+      expectedVersion: before.version,
+      idempotencyKey
+    });
+
+    expect(response.status, await response.clone().text()).toBe(200);
+    const body = await response.json() as { receipt: { deliveryId: string } };
+    expect(body.receipt.deliveryId).toBe(durableReceipt.deliveryId);
+    const saved = await getRunRepository().get(runId);
+    expect(saved).toMatchObject({
+      status: "completed",
+      deliveryOutcome: "delivered",
+      finalArtifactManifest: { manifestId, deliveryDisposition: "delivered" }
+    });
+    expect(saved.activeOperation).toBeUndefined();
+    const events = await readRunModelEvents(runId);
+    expect(events.filter((event) => event.type === "run.delivery.completed")).toHaveLength(1);
+    expect(events.filter((event) => event.type === "run.completed")).toHaveLength(1);
+  });
+
+  it("checks terminal artifact preconditions before changing the target branch", async () => {
+    const runId = "run-deliver-unverified";
+    const applied = makeAppliedRepo(runId);
+    const fixture = makeNeedsDeliveryRun(runId, applied);
+    fixture.run.finalArtifactManifest = {
+      ...fixture.run.finalArtifactManifest!,
+      verificationDisposition: "unverified"
+    };
+    await getRunRepository().save(fixture.run);
+    const before = await getRunRepository().get(runId);
+
+    const response = await postConfirmedDelivery(runId, {
+      manifestId: fixture.manifestId,
+      finalSha: applied.finalCommitSha,
+      targetBranch: "main",
+      expectedTargetHead: applied.baseCommit,
+      expectedClean: true,
+      targetFingerprint: "target-fingerprint",
+      expectedVersion: before.version,
+      idempotencyKey: "delivery-unverified-1"
+    });
+
+    expect(response.status).toBe(409);
+    expect(git(applied.repoRoot, "rev-parse", "HEAD")).toBe(applied.baseCommit);
+    const saved = await getRunRepository().get(runId);
+    expect(saved.status).toBe("needs_delivery");
+    expect(saved.activeOperation).toBeUndefined();
   });
 
   it("does not block reveal with the lifecycle guard", async () => {

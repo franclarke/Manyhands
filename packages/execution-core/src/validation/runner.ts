@@ -3,6 +3,7 @@ import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process"
 import { validationCommandSafetyIssues, type ExecutionValidationCommand } from "@manyhands/contracts";
 
 import { killProcessTree } from "../executor/kill";
+import { resolveCliBinaryPath, resolveCliProcessInvocation } from "../executor/binary";
 import { superviseChildProcess } from "../executor/live-process-registry";
 import { BoundedOutput } from "../executor/bounded-output";
 import { ValidationRunResultSchema, type ValidationRunResult } from "../types";
@@ -43,17 +44,17 @@ type SpawnFn = (
 
 export interface ChildProcessValidationRunnerDeps {
   spawn?: SpawnFn;
-  /** Run commands through a shell. Defaults to false so structured args are never shell-interpolated. */
+  /** @deprecated Structured validation argv is never passed to Node shell interpolation. */
   useShell?: boolean;
   /** Injectable platform for Windows shim tests. Defaults to process.platform. */
   platform?: NodeJS.Platform;
+  hostEnv?: NodeJS.ProcessEnv;
 }
 
 const TIMEOUT_EXIT_CODE = 124;
 const UNSAFE_COMMAND_EXIT_CODE = 126;
 const SPAWN_FAILURE_EXIT_CODE = 127;
 const ABORTED_EXIT_CODE = 130;
-const WINDOWS_CMD_SHIM_COMMANDS = new Set(["corepack", "npm", "npx", "pnpm", "yarn", "yarnpkg"]);
 
 // Under a shell a missing binary no longer surfaces as a spawn `error` event:
 // the shell itself exits non-zero with a "not found" message. Normalize that
@@ -70,13 +71,13 @@ const BINARY_NOT_FOUND_PATTERN =
 /** ValidationRunner backed by child processes. spawn is injectable for tests. */
 export class ChildProcessValidationRunner implements ValidationRunner {
   private readonly spawnFn: SpawnFn;
-  private readonly useShell: boolean;
   private readonly platform: NodeJS.Platform;
+  private readonly hostEnv: NodeJS.ProcessEnv;
 
   constructor(deps: ChildProcessValidationRunnerDeps = {}) {
     this.spawnFn = deps.spawn ?? spawn;
-    this.useShell = deps.useShell ?? false;
     this.platform = deps.platform ?? process.platform;
+    this.hostEnv = deps.hostEnv ?? process.env;
   }
 
   async run(
@@ -119,7 +120,7 @@ export class ChildProcessValidationRunner implements ValidationRunner {
   ): Promise<{ exitCode: number; output: string }> {
     const spawnCommand = this.buildSpawnCommand(command);
     const safetyIssues = validationCommandSafetyIssues(command.command, command.args, {
-      shell: this.useShell || spawnCommand.usesShellSyntax
+      shell: false
     });
     if (safetyIssues.length > 0) {
       return Promise.resolve({
@@ -140,7 +141,11 @@ export class ChildProcessValidationRunner implements ValidationRunner {
         child = this.spawnFn(spawnCommand.command, spawnCommand.args, {
           cwd,
           stdio: ["ignore", "pipe", "pipe"],
-          shell: this.useShell
+          shell: false,
+          detached: this.platform !== "win32",
+          ...(spawnCommand.windowsVerbatimArguments !== undefined
+            ? { windowsVerbatimArguments: spawnCommand.windowsVerbatimArguments }
+            : {})
         });
       } catch (error) {
         resolve({
@@ -167,6 +172,7 @@ export class ChildProcessValidationRunner implements ValidationRunner {
 
       const output = new BoundedOutput();
       let settled = false;
+      let terminating = false;
 
       const finish = (result: { exitCode: number; output: string }): void => {
         if (settled) {
@@ -178,8 +184,18 @@ export class ChildProcessValidationRunner implements ValidationRunner {
       };
 
       const timer = setTimeout(() => {
-        killProcessTree(child, this.spawnFn);
-        finish({ exitCode: TIMEOUT_EXIT_CODE, output: output.text() });
+        if (settled || terminating) return;
+        terminating = true;
+        void killProcessTree(child, this.spawnFn).then((terminationVerified) => {
+          finish({
+            exitCode: TIMEOUT_EXIT_CODE,
+            output:
+              output.text() +
+              (terminationVerified
+                ? ""
+                : `${output.text() ? "\n" : ""}process-tree termination could not be verified`)
+          });
+        });
       }, command.timeoutMs);
 
       child.stdout?.on("data", (chunk: Buffer) => {
@@ -189,10 +205,12 @@ export class ChildProcessValidationRunner implements ValidationRunner {
         output.append(chunk.toString("utf8"));
       });
       child.on("error", (error: Error) => {
+        if (terminating) return;
         output.append(error.message);
         finish({ exitCode: SPAWN_FAILURE_EXIT_CODE, output: output.text() });
       });
       child.on("close", (code) => {
+        if (terminating) return;
         const exitCode = code ?? SPAWN_FAILURE_EXIT_CODE;
         const captured = output.text();
         if (exitCode !== 0 && BINARY_NOT_FOUND_PATTERN.test(captured)) {
@@ -207,20 +225,15 @@ export class ChildProcessValidationRunner implements ValidationRunner {
   private buildSpawnCommand(command: ExecutionValidationCommand): {
     command: string;
     args: readonly string[];
-    usesShellSyntax: boolean;
+    windowsVerbatimArguments?: boolean;
   } {
-    if (
-      this.platform === "win32" &&
-      !this.useShell &&
-      WINDOWS_CMD_SHIM_COMMANDS.has(command.command.toLowerCase())
-    ) {
-      return {
-        command: "cmd.exe",
-        args: ["/d", "/s", "/c", command.command, ...command.args],
-        usesShellSyntax: true
-      };
-    }
-
-    return { command: command.command, args: command.args, usesShellSyntax: false };
+    const binaryPath = resolveCliBinaryPath(command.command, {
+      platform: this.platform,
+      env: this.hostEnv
+    });
+    return resolveCliProcessInvocation(binaryPath, command.args, {
+      platform: this.platform,
+      env: this.hostEnv
+    });
   }
 }

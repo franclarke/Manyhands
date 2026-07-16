@@ -298,6 +298,50 @@ describe("RunExecutor", () => {
     expect(traceStore.findByType("run_completed")).toHaveLength(1);
   });
 
+  it("propagates nested all-no-op composites without reusing the base as a child commit", async () => {
+    const graph = nestedCompositeGraph();
+    for (const taskId of ["a", "b"]) {
+      const node = graph.nodes[taskId]!;
+      node.contract = AgentTaskContractSchema.parse({
+        ...abstractLeafContractWithValidation(),
+        taskId,
+        objective: `Validate ${taskId}.`,
+        expectedOutput: {
+          changedFiles: [],
+          producedSymbols: [`Api${taskId.toUpperCase()}`],
+          consumedSymbols: [],
+          diffShapeHint: "behavioral"
+        }
+      });
+    }
+    const git = new FakeGitRunner({ diffCachedNameOnly: [], diffCached: "" });
+    const validationRunner: ValidationRunner = {
+      run: async (): Promise<ValidationRunResult> => ({ passed: true, output: "ok", exitCode: 0 })
+    };
+    const executor = new RunExecutor({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: REPO_ROOT,
+      validationRunner,
+      writeInstructions: async () => {}
+    });
+
+    const result = await executor.run({ graph, config, model: "gpt-5-codex" });
+
+    expect(result.status).toBe("completed");
+    expect(result.leafResults.every((entry) => entry.noOp === true && entry.commitSha === undefined)).toBe(true);
+    expect(result.integrationResults.map((entry) => ({
+      taskId: entry.compositeTaskId,
+      status: entry.status,
+      sha: entry.integrationCommitSha
+    }))).toEqual([
+      { taskId: "child-composite", status: "success", sha: "BASE" },
+      { taskId: "root", status: "success", sha: "BASE" }
+    ]);
+    expect(git.opsInvoked()).not.toContain("cherryPick");
+  });
+
   it("passes configured reasoning effort to leaf executors", async () => {
     const git = new FakeGitRunner({
       diffCached: "diff --git a/x b/x\n+added",
@@ -625,7 +669,9 @@ describe("RunExecutor", () => {
 
     await executor.run({
       graph,
-      config,
+      // Per-node overrides are a complexity-routing feature. Product runs use
+      // fixed routing by default and correctly reject mismatched overrides.
+      config: ExecutionConfigSchema.parse({ routing: "complexity" }),
       model: "sonnet"
     });
 
@@ -1186,6 +1232,48 @@ describe("RunExecutor", () => {
     expect(leafPrompt).toContain("You must NOT modify");
     expect(leafPrompt).toContain("secrets/**");
     expect(leafPrompt).toContain("Definition of done");
+  });
+
+  it("treats D1 dependencies as ordering-only and keeps every leaf on the immutable base", async () => {
+    const graph = graphWith(["a", "b"]);
+    graph.dependencies = [{
+      fromTaskId: "a",
+      toTaskId: "b",
+      type: "logical",
+      inferred: false,
+      rationale: "B is dispatched after A"
+    }];
+    graph.nodes.b!.dependencies = ["a"];
+    const git = new FakeGitRunner({
+      diffCached: "diff",
+      diffCachedNameOnly: ["src/x.ts"],
+      commitShas: ["A_SHA", "B_SHA"]
+    });
+    const prompts = new Map<string, string>();
+    const executor = new RunExecutor({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: REPO_ROOT,
+      writeInstructions: async (instructionPath, content) => {
+        prompts.set(instructionPath, content);
+      }
+    });
+
+    const result = await executor.run({ graph, config, model: "gpt-5-codex" });
+
+    expect(result.status).toBe("completed");
+    const leafWorktrees = git.calls.filter((call) =>
+      call.op === "worktreeAdd" && String(call.args.worktreePath).includes("/.manyhands/worktrees/run-1/")
+    );
+    expect(leafWorktrees.filter((call) => ["a", "b"].some((id) => String(call.args.worktreePath).endsWith(`/${id}`))))
+      .toHaveLength(2);
+    expect(leafWorktrees.filter((call) => ["a", "b"].some((id) => String(call.args.worktreePath).endsWith(`/${id}`)))
+      .every((call) => call.args.baseCommit === "BASE")).toBe(true);
+    const dependentPrompt = [...prompts.entries()].find(([file]) => file.endsWith("-b.txt"))?.[1] ?? "";
+    expect(dependentPrompt).toContain("ordering-only dispatch barrier");
+    expect(dependentPrompt).toContain("does not contain changes from: a");
+    expect(dependentPrompt).toContain("Do not assume upstream files were materialized");
   });
 
   it("injects consumed and produced interface seams into the leaf prompt", async () => {

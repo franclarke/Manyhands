@@ -6,8 +6,9 @@ import {
   normalizeExecutorSelection,
   resolveLegacyModelSelection,
   getExecutorDescriptor,
-  cliPathRequiresShell,
+  resolveCliProcessInvocation,
   resolveCliBinaryPath,
+  safeGitArgs,
   type ExecutorId,
   type ExecutorSelection
 } from "@manyhands/execution-core";
@@ -203,11 +204,11 @@ async function defaultFreeDiskBytes(repoRoot: string): Promise<number | undefine
 async function defaultCheckCli(binaryPath: string): Promise<boolean> {
   try {
     const resolvedBinaryPath = resolveCliBinaryPath(binaryPath);
-    // Resolve once so preflight and execution agree on the concrete CLI binary.
-    // A shell is only needed for Windows batch shims.
-    await execFileAsync(resolvedBinaryPath, ["--version"], {
+    const invocation = resolveCliProcessInvocation(resolvedBinaryPath, ["--version"]);
+    await execFileAsync(invocation.command, invocation.args, {
       timeout: 10_000,
-      shell: cliPathRequiresShell(resolvedBinaryPath)
+      shell: invocation.shell,
+      windowsVerbatimArguments: invocation.windowsVerbatimArguments
     });
     return true;
   } catch {
@@ -246,13 +247,13 @@ function sameSelection(left: ExecutorSelection, right: ExecutorSelection): boole
 }
 
 async function defaultGitPorcelain(repoRoot: string): Promise<string> {
-  const { stdout } = await execFileAsync("git", ["status", "--porcelain"], { cwd: repoRoot });
+  const { stdout } = await execFileAsync("git", safeGitArgs(repoRoot, ["status", "--porcelain"]), { cwd: repoRoot });
   return stdout;
 }
 
 async function defaultBranchExists(repoRoot: string, branch: string): Promise<boolean> {
   try {
-    await execFileAsync("git", ["rev-parse", "--verify", "--quiet", branch], { cwd: repoRoot });
+    await execFileAsync("git", safeGitArgs(repoRoot, ["rev-parse", "--verify", "--quiet", branch]), { cwd: repoRoot });
     return true;
   } catch {
     return false;

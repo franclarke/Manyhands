@@ -117,6 +117,15 @@ describe("JsonRunRecordStore", () => {
     expect((await repo.list({ limit: 1 })).length).toBe(1);
   });
 
+  it("filters by every canonical and legacy workspace id in one pass", async () => {
+    await repo.save(makeRun({ runId: "canonical", workspaceId: "ws-canonical" }));
+    await repo.save(makeRun({ runId: "legacy", workspaceId: "ws-legacy" }));
+    await repo.save(makeRun({ runId: "other", workspaceId: "ws-other" }));
+
+    const equivalent = await repo.list({ workspaceIds: ["ws-canonical", "ws-legacy"] });
+    expect(equivalent.map((entry) => entry.runId).sort()).toEqual(["canonical", "legacy"]);
+  });
+
   it("update merges against the latest record so concurrent writers cannot clobber a field", async () => {
     await repo.save(makeRun({ runId: "r" }));
 

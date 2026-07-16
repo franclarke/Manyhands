@@ -7,9 +7,10 @@ import {
   runExecutionPipeline,
   type RunRecord
 } from "@/lib/server/runs";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
 import { assertExecutableRunGraph, resolveExecutionGraph } from "@/lib/server/runs/execution-state";
+import { DEFAULT_STALE_MS } from "@/lib/server/runs/interrupted";
 import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 
 export const runtime = "nodejs";
@@ -25,7 +26,11 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
     let previous: RunRecord | undefined;
     const saved = await claimRunMutation(
       id,
-      { status: ["approved"], rejectActiveRunner: true },
+      {
+        status: ["approved"],
+        rejectActiveRunner: true,
+        rejectFreshOperationAfterMs: DEFAULT_STALE_MS
+      },
       (current) => {
         previous = current;
         assertRunActionAllowed(current, "start");
@@ -39,7 +44,7 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
     );
     await appendStatusEventOrRollback(requireCapturedRunRecord(previous, id), saved);
     startRunBackgroundTask(saved.runId, "route:run:execution", () => runExecutionPipeline(saved.runId));
-    return NextResponse.json(toRunResponse(saved));
+    return NextResponse.json(await toCanonicalRunResponse(saved));
   } catch (error) {
     return runErrorResponse(error);
   }

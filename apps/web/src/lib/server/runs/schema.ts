@@ -1,4 +1,4 @@
-import { EXECUTOR_IDS, ExecutionConfigSchema } from "@manyhands/execution-core";
+import { EXECUTOR_IDS, ExecutionConfigSchema, ReasoningEffortSchema } from "@manyhands/execution-core";
 import { TraceEventSchema } from "@manyhands/trace-store";
 import { z } from "zod";
 
@@ -16,6 +16,7 @@ export const RUN_FILE_VERSION = 1;
 export const ExecutionConfigInputSchema = ExecutionConfigSchema.partial();
 
 export type ExecutionConfigInput = z.infer<typeof ExecutionConfigInputSchema>;
+const RunCreateExecutionConfigInputSchema = ExecutionConfigInputSchema.omit({ routing: true }).strict();
 
 /** B-029: persisted, versioned limits for planning and read-only repository grounding. */
 export const PlanningBudgetInputSchema = z.object({
@@ -47,6 +48,19 @@ export const ExecutorSelectionSchema = z.object({
 
 export type ExecutorSelectionInput = z.infer<typeof ExecutorSelectionSchema>;
 
+/**
+ * Canonical per-stage selection (U2A-2): executor + model + the reasoning effort
+ * that stage runs at. Superset of ExecutorSelectionSchema; `effort` is optional
+ * and only meaningful for models that declare effort support.
+ */
+export const StageSelectionSchema = z.object({
+  executorId: z.enum(EXECUTOR_IDS),
+  model: z.string().min(1),
+  effort: ReasoningEffortSchema.optional()
+});
+
+export type StageSelectionInput = z.infer<typeof StageSelectionSchema>;
+
 /** Serializable record of the repo a run was provisioned against (artifact). */
 export const ProvisionedRepoRecordSchema = z.object({
   repoRoot: z.string().min(1),
@@ -64,6 +78,19 @@ export const ProvisionedRepoRecordSchema = z.object({
 export type ProvisionedRepoRecord = z.infer<typeof ProvisionedRepoRecordSchema>;
 
 /**
+ * Stable filesystem identity of the captured repository's git common dir.
+ * Device + inode/file-id survives path spelling changes and detects a
+ * different repository recreated at the same path.
+ */
+export const RunTargetPhysicalIdentitySchema = z.object({
+  version: z.literal(1),
+  device: z.string().regex(/^\d+$/u),
+  file: z.string().regex(/^\d+$/u)
+}).strict();
+
+export type RunTargetPhysicalIdentity = z.infer<typeof RunTargetPhysicalIdentitySchema>;
+
+/**
  * B-008 (CF-19): the run's target repository, captured ONCE at creation and
  * immutable afterwards. Planning, grounding, execution, integration, final
  * artifact and delivery read THIS — never the mutable workspace record.
@@ -73,10 +100,16 @@ export type ProvisionedRepoRecord = z.infer<typeof ProvisionedRepoRecordSchema>;
 export const RunTargetContextSchema = z.object({
   sourceRealPath: z.string().min(1),
   gitCommonDir: z.string().min(1),
+  /**
+   * Optional only for loading pre-physical-identity RunRecords. Productive
+   * capture writes it; verification fails closed when legacy evidence cannot
+   * prove that the filesystem object is still the captured repository.
+   */
+  physicalIdentity: RunTargetPhysicalIdentitySchema.optional(),
   sourceBranch: z.string().min(1),
   sourceBaseCommit: z.string().min(1),
   remoteUrl: z.string().optional(),
-  /** Identity of repo+base state: hash of gitCommonDir@sourceBaseCommit. */
+  /** Identity of physical repo + base state. */
   fingerprint: z.string().min(1),
   capturedAt: z.string().datetime(),
   executionRepoPath: z.string().optional(),
@@ -287,6 +320,7 @@ export const RunOperationKindSchema = z.enum([
   "execution",
   "replan",
   "delivery",
+  "fork",
   "purge"
 ]);
 
@@ -301,6 +335,25 @@ export const RunOperationLeaseSchema = z.object({
 export type RunOperationKind = z.infer<typeof RunOperationKindSchema>;
 export type RunOperationLease = z.infer<typeof RunOperationLeaseSchema>;
 
+/**
+ * Durable graph-storage contract. In this representation the planning graph is
+ * the immutable decomposer output and `patches` is the only semantic edit log.
+ *
+ * The field is intentionally optional on RunRecord: records written before the
+ * marker existed need compatibility inspection before patches may be replayed.
+ */
+export const IMMUTABLE_BASE_PATCH_LOG_STORAGE = {
+  version: 1,
+  mode: "immutable_base_patch_log"
+} as const;
+
+export const PlanGraphStorageSchema = z.object({
+  version: z.literal(1),
+  mode: z.literal("immutable_base_patch_log")
+}).strict();
+
+export type PlanGraphStorage = z.infer<typeof PlanGraphStorageSchema>;
+
 export const RunRecordSchema = z.object({
   runId: z.string().min(1),
   workspaceId: z.string().min(1),
@@ -310,6 +363,15 @@ export const RunRecordSchema = z.object({
   planningExecutorId: z.enum(EXECUTOR_IDS).optional(),
   defaultExecutionSelection: ExecutorSelectionSchema.optional(),
   defaultRepairSelection: ExecutorSelectionSchema.optional(),
+  /**
+   * Canonical per-stage selections (U2A-2). Authoritative when present; the
+   * legacy fields above are kept as a compatibility mirror (dual-write) so old
+   * readers and persisted runs keep working. The resolver in executor-selection.ts
+   * is the single authority that reconciles canonical ↔ legacy.
+   */
+  planningSelection: StageSelectionSchema.optional(),
+  executionSelection: StageSelectionSchema.optional(),
+  repairSelection: StageSelectionSchema.optional(),
   /** Unattendedness policy. Absent (old records) is treated as "supervised". */
   autonomy: AutonomySchema.optional(),
   userPrompt: z.string().max(RUN_USER_PROMPT_MAX_LENGTH),
@@ -351,6 +413,8 @@ export const RunRecordSchema = z.object({
     at: z.string().datetime()
   }).optional(),
   startedAt: z.string().datetime().optional(),
+  /** Absolute origin for executionConfig.maxWallClockMs; never reset by resume/restart. */
+  executionStartedAt: z.string().datetime().optional(),
   completedAt: z.string().datetime().optional(),
   /** B-007: logical removal — hidden from the default list, metadata intact. */
   archivedAt: z.string().datetime().optional(),
@@ -360,6 +424,8 @@ export const RunRecordSchema = z.object({
   // nested shape is not re-validated here to keep apps/web decoupled from the
   // internal schemas of @manyhands/decomposer and @manyhands/execution-core.
   planning: z.unknown().optional(),
+  /** Explicit storage semantics for `planning.decomposition.graph` + `patches`. */
+  planGraphStorage: PlanGraphStorageSchema.optional(),
   execution: z.unknown().optional(),
   decomposition: RunDecompositionMetadataSchema.optional(),
   /** Target repo for real execution. */
@@ -446,7 +512,9 @@ export const RunRecordSchema = z.object({
       taskId: z.string().min(1),
       reason: z.string(),
       stepCache: z.record(z.any()),
-      questionAnswers: z.record(z.string())
+      questionAnswers: z.record(z.string()),
+      /** The answer is durable; a restart may safely re-dispatch this replan. */
+      resumeRequestedAt: z.string().datetime().optional()
     })
     .optional(),
   /** Progressive recursive-planning nodes persisted while the final graph is still being generated. */
@@ -482,7 +550,11 @@ export const RunCreateRequestSchema = z.object({
   planningExecutorId: z.enum(EXECUTOR_IDS).optional(),
   defaultExecutionSelection: ExecutorSelectionSchema.optional(),
   defaultRepairSelection: ExecutorSelectionSchema.optional(),
-  executionConfig: ExecutionConfigInputSchema.optional(),
+  /** Canonical per-stage selections (U2A-2). Preferred over the legacy fields above. */
+  planningSelection: StageSelectionSchema.optional(),
+  executionSelection: StageSelectionSchema.optional(),
+  repairSelection: StageSelectionSchema.optional(),
+  executionConfig: RunCreateExecutionConfigInputSchema.optional(),
   autonomy: AutonomySchema.optional(),
   userPrompt: z.string().trim().max(RUN_USER_PROMPT_MAX_LENGTH).default(""),
   /** Target repo for real execution. */

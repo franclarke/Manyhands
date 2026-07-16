@@ -20,6 +20,8 @@ export interface FakeGitRunnerConfig {
   diffRangeNumstat?: number;
   /** Dequeued one per cherryPick() call; defaults to a clean success. */
   cherryPickOutcomes?: CherryPickOutcome[];
+  /** Resulting parent-lineage SHAs for successful cherry-picks. */
+  cherryPickResultShas?: string[];
   /** Operations that should throw when invoked. */
   failOperations?: Partial<Record<string, Error>>;
   /** refs that should fail revParse(), used to simulate missing commits. */
@@ -30,6 +32,11 @@ export interface FakeGitRunnerConfig {
   ancestors?: string[];
   cherryPickHead?: string;
   unmergedFiles?: string[];
+  statusPorcelain?: string[];
+  /** Merge commit -> [firstParent, secondParent]. */
+  mergeParents?: Record<string, [string, string]>;
+  /** Commit messages used by crash-recovery provenance checks. */
+  commitMessages?: Record<string, string>;
 }
 
 /**
@@ -43,12 +50,17 @@ export class FakeGitRunner implements GitRunner {
   private readonly config: FakeGitRunnerConfig;
   private readonly cherryPickQueue: CherryPickOutcome[];
   private readonly commitQueue: string[];
+  private readonly cherryPickResultQueue: string[];
+  private readonly parentByCommit = new Map<string, string>();
+  private activeCherryPickHead: string | undefined;
 
   constructor(config: FakeGitRunnerConfig = {}) {
     this.config = config;
     this.heads = { ...(config.heads ?? {}) };
     this.cherryPickQueue = [...(config.cherryPickOutcomes ?? [])];
+    this.cherryPickResultQueue = [...(config.cherryPickResultShas ?? [])];
     this.commitQueue = [...(config.commitShas ?? [])];
+    this.activeCherryPickHead = config.cherryPickHead;
   }
 
   private record(op: string, args: Record<string, unknown>): void {
@@ -96,25 +108,52 @@ export class FakeGitRunner implements GitRunner {
 
   async revParse(cwd: string, ref: string): Promise<string> {
     this.record("revParse", { cwd, ref });
-    if ((this.config.missingRefs ?? []).includes(ref)) {
+    const commitRef = ref.endsWith("^{commit}") ? ref.slice(0, -"^{commit}".length) : ref;
+    const parentMatch = /^(.*)\^(1|2)$/u.exec(commitRef);
+    const baseRef = parentMatch?.[1] ?? commitRef;
+    if ((this.config.missingRefs ?? []).includes(ref) || (this.config.missingRefs ?? []).includes(baseRef)) {
       throw new Error(`unknown revision ${ref}`);
     }
-    return this.heads[cwd] ?? "BASE";
+    if (parentMatch !== null) {
+      const parentIndex = Number(parentMatch[2]) - 1;
+      const mergeParent = this.config.mergeParents?.[baseRef]?.[parentIndex];
+      if (mergeParent !== undefined) return mergeParent;
+      if (parentIndex === 1) throw new Error(`unknown revision ${ref}`);
+      return this.parentByCommit.get(baseRef) ?? "BASE";
+    }
+    if (commitRef === "HEAD") return this.heads[cwd] ?? "BASE";
+    return commitRef;
   }
 
   async isAncestor(params: { cwd: string; ancestor: string; descendant?: string }): Promise<boolean> {
     this.record("isAncestor", { ...params });
-    return (this.config.ancestors ?? []).includes(params.ancestor);
+    if ((this.config.ancestors ?? []).includes(params.ancestor)) return true;
+    let current: string | undefined = params.descendant ?? this.heads[params.cwd] ?? "BASE";
+    while (current !== undefined) {
+      if (current === params.ancestor) return true;
+      current = this.parentByCommit.get(current);
+    }
+    return false;
   }
 
   async cherryPickHead(cwd: string): Promise<string | undefined> {
     this.record("cherryPickHead", { cwd });
-    return this.config.cherryPickHead;
+    return this.activeCherryPickHead;
   }
 
   async unmergedFiles(cwd: string): Promise<string[]> {
     this.record("unmergedFiles", { cwd });
     return this.config.unmergedFiles ?? [];
+  }
+
+  async statusPorcelain(cwd: string): Promise<string[]> {
+    this.record("statusPorcelain", { cwd });
+    return this.config.statusPorcelain ?? [];
+  }
+
+  async restoreManagedWorktree(cwd: string, ref: string): Promise<void> {
+    this.record("restoreManagedWorktree", { cwd, ref });
+    this.heads[cwd] = ref;
   }
 
   async addAll(cwd: string): Promise<void> {
@@ -128,8 +167,15 @@ export class FakeGitRunner implements GitRunner {
   async commit(params: { cwd: string; message: string }): Promise<string> {
     this.record("commit", { ...params });
     const sha = this.commitQueue.shift() ?? this.config.commitSha ?? "COMMIT_SHA";
+    const parent = this.heads[params.cwd] ?? "BASE";
+    if (sha !== parent) this.parentByCommit.set(sha, parent);
     this.heads[params.cwd] = sha;
     return sha;
+  }
+
+  async commitMessage(cwd: string, commitSha: string): Promise<string> {
+    this.record("commitMessage", { cwd, commitSha });
+    return this.config.commitMessages?.[commitSha] ?? "";
   }
 
   async diffCached(cwd: string): Promise<string> {
@@ -162,13 +208,38 @@ export class FakeGitRunner implements GitRunner {
     return this.config.diffRangeNumstat ?? 0;
   }
 
-  async cherryPick(params: { cwd: string; commitSha: string }): Promise<CherryPickOutcome> {
+  async cherryPick(params: { cwd: string; commitSha: string; mainline?: 1 }): Promise<CherryPickOutcome> {
     this.record("cherryPick", { ...params });
-    return this.cherryPickQueue.shift() ?? { ok: true, conflictFiles: [], output: "" };
+    const outcome = this.cherryPickQueue.shift() ?? { ok: true, conflictFiles: [], output: "" };
+    if (outcome.ok) {
+      this.activeCherryPickHead = undefined;
+      const resultSha = this.cherryPickResultQueue.shift();
+      if (resultSha !== undefined) {
+        const parent = this.heads[params.cwd] ?? "BASE";
+        this.parentByCommit.set(resultSha, parent);
+        this.heads[params.cwd] = resultSha;
+      }
+    } else if (outcome.kind === "conflict" || (outcome.kind === undefined && outcome.conflictFiles.length > 0)) {
+      this.activeCherryPickHead = params.commitSha;
+    } else if (outcome.kind === "empty") {
+      this.activeCherryPickHead = params.commitSha;
+    }
+    return outcome;
   }
 
   async cherryPickAbort(cwd: string): Promise<void> {
     this.record("cherryPickAbort", { cwd });
+    this.activeCherryPickHead = undefined;
+  }
+
+  async createIntegrationHandoff(params: {
+    cwd: string;
+    baseCommit: string;
+    message: string;
+    appliedCommitShas: readonly string[];
+  }): Promise<string> {
+    this.record("createIntegrationHandoff", { ...params, appliedCommitShas: [...params.appliedCommitShas] });
+    return this.heads[params.cwd] ?? params.baseCommit;
   }
 
   async showFile(params: { cwd: string; ref: string; path: string }): Promise<string | null> {

@@ -6,6 +6,7 @@ import type {
   GranularityMetrics,
   NodeId,
   NodeRole,
+  PlanGraphProjectedPayload,
   PlanningState,
   Run,
   RunControl,
@@ -15,9 +16,14 @@ import type {
   SeamRevisionRef,
   TestSummary
 } from "@/lib/run-model/types";
-import { approvalDecisionId } from "./editing";
+import { approvalDecisionId } from "./decision-identity";
+import { artifactEvidenceIsReady, terminalDispositionForArtifact } from "./final-artifact";
 import type { PlanningLiveNode, RunRecord } from "./schema";
-import { executionSelection, planningSelection, repairSelection } from "./executor-selection";
+import {
+  executionSelectionForDisplay as executionSelection,
+  planningSelectionForDisplay as planningSelection,
+  repairSelectionForDisplay as repairSelection
+} from "./executor-selection";
 
 const INTEGRATION_SUCCESS = new Set(["success", "executor_repair_success"]);
 const UNAVAILABLE = "unavailable";
@@ -65,6 +71,7 @@ export function buildRunModelSeed(run: RunRecord): Run {
     intent: run.userPrompt || run.title,
     workspaceId: run.workspaceId,
     control: runControlForRun(run),
+    ...(run.errorMessage !== undefined ? { errorMessage: run.errorMessage } : {}),
     ...(run.finalArtifactManifest !== undefined
       ? {
           finalArtifact: {
@@ -96,6 +103,45 @@ export function buildRunModelSeed(run: RunRecord): Run {
           }
         }
       : {})
+  };
+}
+
+/**
+ * Materialize the exact current editable graph into one replacement event.
+ * Additive proposal facts remain useful while planning streams, but edits need
+ * a complete revision snapshot so removed nodes/edges cannot reappear on replay.
+ */
+export function projectRunRecordToPlanGraph(
+  run: RunRecord,
+  options: { resetRuntime?: boolean } = {}
+): PlanGraphProjectedPayload | null {
+  if (!hasProjectableSnapshotInput(run)) return null;
+  const snapshot = projectRunRecordToSnapshot(run);
+  if (snapshot === null) return null;
+  const nodes = (Object.values(snapshot.graphSnapshot.nodes) as PlannedNode[]).sort(byDepthThenId);
+  const contracts = snapshot.contracts as AgentTaskContractLike[];
+  const contractsByTask = new Map(contracts.map((contract) => [contract.taskId, contract]));
+  return {
+    projectionVersion: 1,
+    planRevision: run.planRevision ?? 1,
+    resetRuntime: options.resetRuntime ?? false,
+    nodes: nodes.map((node) => ({
+      nodeId: node.id,
+      parentId: node.parentId,
+      role: roleForNode(node),
+      title: node.title,
+      goal: node.goal,
+      depth: node.depth,
+      scopePaths: scopePathsFor(contractsByTask.get(node.id) ?? node.contract)
+    })),
+    dependencies: snapshot.graphSnapshot.dependencies.map((dependency) => ({
+      fromTaskId: dependency.fromTaskId,
+      toTaskId: dependency.toTaskId,
+      type: dependency.type,
+      inferred: dependency.inferred,
+      ...(dependency.rationale !== undefined ? { rationale: dependency.rationale } : {})
+    })),
+    seams: seamDraftsFromContracts(contracts)
   };
 }
 
@@ -149,6 +195,16 @@ export function projectRunRecordToRunEvents(run: RunRecord): RunEvent[] {
           paths: scope
         });
       }
+    }
+
+    for (const dependency of snapshot.graphSnapshot.dependencies) {
+      writer.emit("system", planningAt, "plan.dependency.proposed", {
+        fromTaskId: dependency.fromTaskId,
+        toTaskId: dependency.toTaskId,
+        type: dependency.type,
+        inferred: dependency.inferred,
+        ...(dependency.rationale !== undefined ? { rationale: dependency.rationale } : {})
+      });
     }
 
     const seams = seamDraftsFromContracts(contracts);
@@ -297,18 +353,12 @@ export function projectRunRecordToRunEvents(run: RunRecord): RunEvent[] {
       });
     }
 
-    if (run.execution.status === "completed") {
+    if (run.execution.status === "completed" && artifactEvidenceIsReady(run.finalArtifactManifest)) {
       writer.emit("system", executionAt, "run.evidence.ready", {
         aggregateDiffRef: `diff://runs/${run.runId}/final`,
         tests: testsFor(run.execution),
         narrativeRef: `narrative://runs/${run.runId}/receipt`,
         integrationCommit: run.finalCommitSha ?? run.integrationCommitSha ?? lastIntegrationCommit(run) ?? UNAVAILABLE
-      });
-      writer.emit("system", executionAt, "decision.raised", {
-        decisionId: "approve_merge",
-        kind: "approve_merge",
-        blocking: true,
-        context: { diffRef: `diff://runs/${run.runId}/final` }
       });
     }
 
@@ -318,7 +368,10 @@ export function projectRunRecordToRunEvents(run: RunRecord): RunEvent[] {
   }
 
   if (
-    run.status === "completed" ||
+    (run.status === "completed" && terminalDispositionForArtifact({
+      manifest: run.finalArtifactManifest,
+      acceptedRisk: false
+    }) === "completed") ||
     run.status === "completed_with_accepted" ||
     run.status === "failed" ||
     run.status === "interrupted"
@@ -412,7 +465,12 @@ export function seamDraftsFromContracts(contracts: readonly AgentTaskContractLik
       seamId: iface.id,
       name: iface.id,
       producerNodeId,
-      consumerNodeIds: unique(consumers.get(iface.id) ?? []),
+      // Historical records may contain the invalid shape where one task both
+      // produces and consumes a seam. Validation/critic now reject it; the
+      // projection also fails closed so legacy data never paints a self-edge.
+      consumerNodeIds: unique(consumers.get(iface.id) ?? []).filter(
+        (consumerNodeId) => consumerNodeId !== producerNodeId
+      ),
       draftSignature: iface.signature
     }));
 }

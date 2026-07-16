@@ -20,6 +20,12 @@ import {
 } from "node:child_process";
 import { promisify } from "node:util";
 import { superviseChildProcess, type SupervisedProcessMeta } from "@manyhands/execution-core";
+import { installProcessEvidenceSink } from "./process-evidence";
+
+// RU1 (F2B-1): every process that loads the supervision seam mirrors its
+// supervised children into the durable process journal, so evidence survives a
+// server restart. Idempotent per process.
+installProcessEvidenceSink();
 
 export type SupervisedSpawn = (
   command: string,

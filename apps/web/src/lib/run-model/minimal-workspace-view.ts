@@ -91,7 +91,7 @@ function statusLineFor(view: WorkspaceView, attention: DecisionChannelItem | nul
       return "Convirtiendo el plan en una base ejecutable.";
     case "supervision":
       return view.wavefront.length > 0
-        ? `${view.wavefront.length} tareas avanzando en paralelo.`
+        ? `${pluralize(view.wavefront.length, "tarea avanza", "tareas avanzan")} en paralelo.`
         : "Los agentes están ejecutando el plan.";
     case "reconciliation":
       return view.conflicts.length > 0
@@ -104,4 +104,8 @@ function statusLineFor(view: WorkspaceView, attention: DecisionChannelItem | nul
     default:
       return "Run en progreso.";
   }
+}
+
+function pluralize(count: number, singular: string, plural: string): string {
+  return `${count} ${count === 1 ? singular : plural}`;
 }

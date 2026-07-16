@@ -40,5 +40,7 @@ describe("explicit delivery operation", () => {
     expect(first.disposition).toBe("delivered");
     expect(second).toEqual(first);
     expect(git(run.appliedToRepoPath!, "log", "--oneline", "--all", "--grep", "mh: deliver run run-1").split("\n").filter(Boolean)).toHaveLength(1);
+    await expect(deliverRunBranch(run, { ...request, expectedTargetHead: `${base}-different` }))
+      .rejects.toThrow(/idempotency key/i);
   });
 });

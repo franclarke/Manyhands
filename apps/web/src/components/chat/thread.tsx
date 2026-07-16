@@ -3,6 +3,7 @@
 import { useThread, useComposerRuntime } from "@assistant-ui/react";
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import type { Decision, RunModel } from "@/lib/run-model/types";
+import { hasTerminalOrArtifactControlStatus } from "@/lib/run-model/selectors";
 import { StatusPill } from "@/components/ui/status-pill";
 import {
   Send,
@@ -42,6 +43,7 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
   // sessions, wave progress rewrites the same message constantly; yanking the
   // scroll to the bottom every tick would steal the reading position.
   const atBottomRef = useRef(true);
+  const decisionsAreActionable = !hasTerminalOrArtifactControlStatus(model.run.control.status);
 
   const handleScroll = (): void => {
     const el = scrollContainerRef.current;
@@ -58,7 +60,7 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
   const pendingPlanDecision = useMemo(
     () =>
       Array.from(model.decisions.values()).find(
-        (d) => d.kind === "approve_plan" && d.status === "pending"
+        (d) => decisionsAreActionable && d.kind === "approve_plan" && d.status === "pending"
       ),
     [model]
   );
@@ -68,11 +70,11 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
   const pendingQuestion = useMemo(
     () =>
       Array.from(model.decisions.values()).find(
-        (d) => d.kind === "clarify" && d.status === "pending" && d.context.question !== undefined
+        (d) => decisionsAreActionable && d.kind === "clarify" && d.status === "pending" && d.context.question !== undefined
       ),
     [model]
   );
-  const needsRestart = model.run.control.status === "interrupted" || model.run.control.status === "failed";
+  const needsRestart = model.run.control.status === "interrupted" || model.run.control.status === "failed" || model.run.control.status === "failed_artifact" || model.run.control.status === "failed_delivery";
   const canSend = pendingQuestion !== undefined && !needsRestart;
   // Execution gates reuse the clarify channel but are NOT planner questions —
   // the composer copy must say so (context.gate is set by persistExecutionPause).
@@ -129,7 +131,7 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ action: "approve", acknowledgeCriticErrors: true })
+          body: JSON.stringify({ action: "approve" })
         }
       );
       if (!response.ok) {
@@ -237,11 +239,12 @@ export function ChatThread({ runId, model, connected, setActiveTab, onCollapse }
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]" />
               </div>
               <div className="min-w-0 flex-1">
-                {kind === "decision" ? (
+                {kind === "decision" && model.decisions.get(decisionIdFrom(message.id))?.kind !== "approve_plan" ? (
                   <GateCard
                     icon={<CircleHelp aria-hidden className="h-4 w-4" />}
                     eyebrow="Gate · decisión humana"
                     decision={model.decisions.get(decisionIdFrom(message.id))}
+                    archived={!decisionsAreActionable}
                     text={textContent}
                     busy={busy}
                     onApprove={(id) => void handleResolveDecision(id, "approve")}
@@ -528,6 +531,7 @@ function GateCard({
   icon,
   eyebrow,
   decision,
+  archived,
   text,
   busy,
   onApprove,
@@ -538,6 +542,7 @@ function GateCard({
   icon: React.ReactNode;
   eyebrow: string;
   decision: Decision | undefined;
+  archived: boolean;
   text: string;
   busy: string | null;
   onApprove: (id: string) => void;
@@ -545,7 +550,7 @@ function GateCard({
   onAnswer: (id: string, answer: string) => void;
   onTabChange: (tab: TabKey) => void;
 }): React.ReactElement {
-  const pending = decision !== undefined && decision.status === "pending";
+  const pending = !archived && decision !== undefined && decision.status === "pending";
   // clarify decisions (planner questions AND execution gates) carry their
   // valid answers as option labels — generic Aprobar/Rechazar would 400
   // server-side, which is exactly how the postmortem run got stuck.
@@ -626,7 +631,7 @@ function GateCard({
         )
       ) : (
         <span className="block text-meta text-[var(--color-text-subtle)]">
-          Decisión ya resuelta o integrada.
+          {archived ? "Quedó pendiente cuando el run terminó; se conserva como historial." : "Decisión ya resuelta o integrada."}
         </span>
       )}
     </div>

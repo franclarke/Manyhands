@@ -7,7 +7,7 @@ import {
   loadEditableRunContext,
   persistRunPatches
 } from "@/lib/server/runs";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 import { deriveConflictList } from "@/lib/conflict-view-model";
 import { planConflictResolution } from "@/lib/conflict-resolution";
 
@@ -32,14 +32,14 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
     const { acknowledgements } = planConflictResolution(conflicts);
 
     if (acknowledgements.length === 0) {
-      return NextResponse.json({ ...toRunResponse(run), resolvedCount: 0 });
+      return NextResponse.json({ ...(await toCanonicalRunResponse(run)), resolvedCount: 0 });
     }
 
     const patches = acknowledgements.map((ack) =>
       buildPatch("RISK_ACKNOWLEDGED", { taskIds: ack.taskIds, reason: ack.reason }, { actor: "system" })
     );
     const saved = await persistRunPatches({ run, baseSnapshot, patches, expectedVersion: run.version });
-    return NextResponse.json({ ...toRunResponse(saved), resolvedCount: patches.length });
+    return NextResponse.json({ ...(await toCanonicalRunResponse(saved)), resolvedCount: patches.length });
   } catch (error) {
     return errorResponse(error);
   }

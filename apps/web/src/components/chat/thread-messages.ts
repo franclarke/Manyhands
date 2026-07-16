@@ -1,4 +1,5 @@
 import type { RunEvent } from "@/lib/run-model/types";
+import { displayWaveOrdinal } from "@/lib/run-model/scheduling-wave-ordinal";
 
 interface SchedulingReason {
   taskId?: string;
@@ -33,6 +34,7 @@ interface UnifiedPayload {
   cause?: string;
   iteration?: number;
   waveIndex?: number;
+  waveOrdinal?: number;
   policy?: string;
   readyTaskIds?: string[];
   selectedTaskIds?: string[];
@@ -223,7 +225,7 @@ export function buildThreadMessages(events: RunEvent[]): MyMessage[] {
   // Waves & subagent execution groups
   events
     .filter((e) => e.type === "run.scheduling.wave_selected")
-    .forEach((event) => {
+    .forEach((event, wavePosition) => {
       const payload = event.payload as UnifiedPayload;
       const selected = payload.selectedTaskIds ?? [];
       const blocked = payload.blockedTaskIds ?? [];
@@ -255,7 +257,7 @@ export function buildThreadMessages(events: RunEvent[]): MyMessage[] {
         content: [
           {
             type: "text",
-            text: `**Ola ${(payload.waveIndex ?? 0) + 1} seleccionada por scheduling**\n\n${detailLines.join("\n")}`
+            text: `**Ola ${displayWaveOrdinal(payload, wavePosition)} seleccionada por scheduling**\n\n${detailLines.join("\n")}`
           }
         ],
         createdAt: new Date(event.at)

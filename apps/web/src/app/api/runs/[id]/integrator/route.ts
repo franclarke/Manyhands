@@ -5,7 +5,7 @@ import {
   RunNotFoundError,
   RunValidationError,
 } from "@/lib/server/runs";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 import { createIntegratorTask } from "@/lib/server/runs/integrator-service";
 
 export const runtime = "nodejs";
@@ -49,7 +49,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {})
     });
     
-    return NextResponse.json(toRunResponse(saved));
+    return NextResponse.json(await toCanonicalRunResponse(saved));
   } catch (error) {
     return errorResponse(error);
   }

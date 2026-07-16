@@ -4,10 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Workspace, RunPreview } from "@/lib/api-types";
-import { sidebarInitiallyCollapsed, type SidebarStoredPreference } from "@/lib/cockpit-layout";
+import { sidebarInitiallyCollapsedForRoute, type SidebarStoredPreference } from "@/lib/cockpit-layout";
 import { runUiStatus, STATUS_META } from "@/lib/status";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { IconButton } from "@/components/ui/icon-button";
 import { Logo } from "@/components/logo";
 import {
   Plus,
@@ -19,7 +20,8 @@ import {
   Pencil,
   Trash2,
   Check,
-  X
+  X,
+  AlertTriangle
 } from "lucide-react";
 
 const COLLAPSE_STORAGE_KEY = "mh-sidebar-collapsed";
@@ -27,9 +29,10 @@ const COLLAPSE_STORAGE_KEY = "mh-sidebar-collapsed";
 interface AppSidebarProps {
   workspaces: Workspace[];
   recentRuns: RunPreview[];
+  degradedRuns: Array<{ runId: string; reason: string }>;
 }
 
-export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.ReactElement {
+export function AppSidebar({ workspaces, recentRuns, degradedRuns }: AppSidebarProps): React.ReactElement {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -56,8 +59,8 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
     } catch {
       /* ignore */
     }
-    setCollapsed(sidebarInitiallyCollapsed(window.innerWidth, stored));
-  }, []);
+    setCollapsed(sidebarInitiallyCollapsedForRoute(window.innerWidth, stored, pathname));
+  }, [pathname]);
 
   function toggleCollapsed(): void {
     setCollapsed((prev) => {
@@ -201,6 +204,29 @@ export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.R
         </nav>
       </section>
 
+      {degradedRuns.length > 0 ? (
+        <section className="mx-3 mb-3 rounded-[var(--r-md)] border border-[var(--status-blocked-border)] bg-[var(--status-blocked-bg)] p-3" aria-label="Registros dañados">
+          <div className="flex items-start gap-2 text-meta text-[var(--status-blocked-fg)]">
+            <AlertTriangle aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="font-semibold">{degradedRuns.length} run{degradedRuns.length === 1 ? "" : "s"} con datos dañados</p>
+              {degradedRuns.slice(0, 3).map((record) => (
+                <a
+                  key={record.runId}
+                  href={`/api/runs/${encodeURIComponent(record.runId)}/diagnostics`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 block truncate underline decoration-[var(--status-blocked-border)] underline-offset-2"
+                  title={record.reason}
+                >
+                  Diagnóstico: {record.runId}
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       </aside>
 
       {deleteTarget !== null ? (
@@ -251,17 +277,7 @@ function RailButton({
   onClick: () => void;
   children: React.ReactNode;
 }): React.ReactElement {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className="flex h-7 w-7 items-center justify-center rounded-[var(--r-md)] border border-transparent bg-transparent text-[var(--color-text-subtle)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--color-text)_7%,transparent)] hover:text-[var(--color-text)]"
-    >
-      {children}
-    </button>
-  );
+  return <IconButton label={label} onClick={onClick}>{children}</IconButton>;
 }
 
 interface RunRowProps {
@@ -315,17 +331,17 @@ function RunRow({
           >
             {displayTitle}
           </span>
-          {run.conflictCount !== undefined && run.conflictCount > 0 ? (
+          {run.coordinationRiskCount !== undefined && run.coordinationRiskCount > 0 ? (
             <span
               className="mh-mono shrink-0 rounded border px-1 py-px text-eyebrow font-semibold"
-              title={`${run.conflictCount} ${run.conflictCount === 1 ? "conflicto" : "conflictos"}`}
+              title={`${run.coordinationRiskCount} ${run.coordinationRiskCount === 1 ? "riesgo alto de coordinación" : "riesgos altos de coordinación"}`}
               style={{
-                color: failed ? "var(--status-failed-fg)" : "var(--status-blocked-fg)",
-                background: failed ? "var(--status-failed-bg)" : "var(--status-blocked-bg)",
-                borderColor: failed ? "var(--status-failed-border)" : "var(--status-blocked-border)"
+                color: "var(--status-blocked-fg)",
+                background: "var(--status-blocked-bg)",
+                borderColor: "var(--status-blocked-border)"
               }}
             >
-              {run.conflictCount}
+              <AlertTriangle aria-hidden className="mr-0.5 inline h-3 w-3" />{run.coordinationRiskCount}
             </span>
           ) : null}
         </span>
@@ -430,22 +446,7 @@ function RowAction({
   danger?: boolean;
   children: React.ReactNode;
 }): React.ReactElement {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className={[
-        "flex h-6 w-6 items-center justify-center rounded-[var(--r-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] transition-colors duration-150",
-        danger
-          ? "text-[var(--color-text-subtle)] hover:bg-[var(--status-failed-bg)] hover:text-[var(--status-failed-fg)]"
-          : "text-[var(--color-text-subtle)] hover:bg-[color-mix(in_srgb,var(--color-text)_10%,transparent)] hover:text-[var(--color-text)]"
-      ].join(" ")}
-    >
-      {children}
-    </button>
-  );
+  return <IconButton label={label} onClick={onClick} tone={danger ? "danger" : "default"} size="sm" className="border-[var(--color-border)] bg-[var(--color-surface)]">{children}</IconButton>;
 }
 
 function formatRecency(isoString: string): string {

@@ -6,6 +6,7 @@ const root = __dirname;
 export default defineConfig({
   resolve: {
     alias: {
+      "@manyhands/shared/node-cli-process": path.resolve(root, "packages/shared/src/node-cli-process.ts"),
       "@manyhands/shared": path.resolve(root, "packages/shared/src/index.ts"),
       "@manyhands/decomposer": path.resolve(root, "packages/decomposer/src/index.ts"),
       "@manyhands/contracts": path.resolve(root, "packages/contracts/src/index.ts"),

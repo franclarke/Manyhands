@@ -109,6 +109,31 @@ describe("runSeamCritic", () => {
     expect(codes).toContain("unconsumed_seam");
     expect(codes).toContain("vague_seam_signature");
   });
+
+  it("rejects a self-consumed seam instead of counting it as coordination", () => {
+    const shared = iface("ProjectScripts", "type ProjectScripts = Record<string, string>", "type");
+    const result = runSeamCritic({
+      graph: leafGraph(["metadata"]),
+      contracts: [
+        contract("metadata", {
+          producedInterfaces: [shared],
+          consumedInterfaces: [shared]
+        })
+      ]
+    });
+
+    expect(result.status).toBe("errors");
+    expect(result.findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "self_consumed_seam",
+          taskId: "metadata",
+          severity: "error"
+        }),
+        expect.objectContaining({ code: "unconsumed_seam", taskId: "metadata" })
+      ])
+    );
+  });
 });
 
 describe("runPlanCritic", () => {

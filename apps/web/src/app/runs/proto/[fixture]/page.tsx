@@ -11,7 +11,7 @@
  */
 import { notFound } from "next/navigation";
 import { GOLDEN_FIXTURE_NAMES, type GoldenFixtureName } from "@/lib/run-model/fixtures";
-import { ProtoRunView } from "@/components/run-model/proto-run-view.client";
+import { CockpitFixtureView } from "./cockpit-fixture-view.client";
 
 interface ProtoFixturePageProps {
   params: Promise<{ fixture: string }>;
@@ -26,11 +26,6 @@ export default async function ProtoFixturePage({ params, searchParams }: ProtoFi
   if (!names.includes(fixture)) {
     notFound();
   }
-  const initialFocus = typeof focus === "string" ? focus : undefined;
-  return (
-    <ProtoRunView
-      fixtureName={fixture as GoldenFixtureName}
-      {...(initialFocus !== undefined ? { initialFocus } : {})}
-    />
-  );
+  void focus; // Fixture playback now exercises the production cockpit, not the legacy proto layout.
+  return <CockpitFixtureView fixtureName={fixture as GoldenFixtureName} />;
 }

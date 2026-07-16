@@ -85,15 +85,17 @@ describe("generateRunTitle", () => {
       userPrompt: "Implement task",
       selection: { executorId: "claude-code-cli", model: "sonnet" },
       spawn,
-      platform: "win32"
+      platform: "win32",
+      binaryPath: "C:\\tools\\claude.cmd"
     });
 
     expect(calls).toHaveLength(1);
     expect(calls[0]?.command.toLowerCase()).toContain("cmd");
-    expect(calls[0]?.args.slice(0, 4)).toEqual(["/d", "/s", "/c", "claude"]);
-    expect(calls[0]?.args).toContain("--model");
-    expect(calls[0]?.args).toContain("sonnet");
+    expect(calls[0]?.args.slice(0, 4)).toEqual(["/d", "/v:off", "/s", "/c"]);
+    expect(calls[0]?.args[4]).toContain("--model");
+    expect(calls[0]?.args[4]).toContain("sonnet");
     expect(calls[0]?.options.shell).toBe(false);
+    expect(calls[0]?.options.windowsVerbatimArguments).toBe(true);
   });
 
   it("uses the Codex CLI when the run selected Codex", async () => {

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { appendRunModelEvent } from "@/lib/server/runs/run-model-event-log";
 import { buildRunDiagnostics } from "@/lib/server/runs/diagnostics";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
+import { listCorruptRunRecords } from "@/lib/server/runs/repository";
 
 let tempDir: string;
 
@@ -27,5 +28,23 @@ describe("B-032 run diagnostics", () => {
     expect(diagnostics.eventLog.eventCount).toBe(1);
     expect(diagnostics.disk.totalBytes).toBeGreaterThan(0);
     expect(JSON.stringify(diagnostics)).not.toContain("secret-token");
+  });
+
+  it("keeps a corrupt run visible and returns bounded diagnostics instead of hiding it", async () => {
+    const runId = "run-corrupt";
+    await writeFile(path.join(tempDir, `${runId}.json`), "{ torn run record", "utf8");
+    await writeFile(path.join(tempDir, `${runId}.events.jsonl`), "{ torn event", "utf8");
+
+    const corrupt = await listCorruptRunRecords();
+    expect(corrupt).toEqual([
+      expect.objectContaining({ runId, status: "corrupt", reason: "invalid JSON" })
+    ]);
+
+    const diagnostics = await buildRunDiagnostics(runId);
+    expect(diagnostics.record).toEqual({ status: "corrupt", reason: "invalid JSON" });
+    expect(diagnostics.lifecycle.status).toBe("corrupt");
+    expect(diagnostics.eventLog.status).toBe("degraded");
+    expect(diagnostics.disk.categories.record).toBeGreaterThan(0);
+    expect(JSON.stringify(diagnostics)).not.toContain("torn run record");
   });
 });

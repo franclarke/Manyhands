@@ -11,7 +11,8 @@ import {
   persistRunPatches,
   type RunPatch
 } from "@/lib/server/runs";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
+import { effectiveExecutionConfig } from "@/lib/server/runs/effective-execution-config";
 import { findModelForSelection, normalizeExecutorOverride, type ExecutorSelection } from "@/lib/models";
 
 export const runtime = "nodejs";
@@ -68,6 +69,7 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Ne
     const { run, baseSnapshot, currentSnapshot } = await loadEditableRunContext(id);
     assertTaskExists(currentSnapshot, taskId);
     const node = currentSnapshot.graphSnapshot.nodes[taskId];
+    assertNodeRoutingIsEditable(run.executionConfig, parsed.data);
     validateNodeSelection(parsed.data.executorSelection);
     validateNodeSelection(parsed.data.executorOverride);
 
@@ -88,7 +90,7 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Ne
       expectedVersion: parsed.data.expectedVersion
     });
 
-    return NextResponse.json(toRunResponse(saved));
+    return NextResponse.json(await toCanonicalRunResponse(saved));
   } catch (error) {
     return errorResponse(error);
   }
@@ -165,6 +167,21 @@ function buildNodeEditPatches(input: {
   }
 
   return patches;
+}
+
+function assertNodeRoutingIsEditable(
+  executionConfig: Parameters<typeof effectiveExecutionConfig>[0],
+  request: NodeEditRequest
+): void {
+  if (effectiveExecutionConfig(executionConfig).routing !== "fixed") return;
+  const requestedSelections = [request.executorSelection, request.executorOverride]
+    .filter((selection) => selection !== undefined);
+  if (requestedSelections.some((selection) => selection !== null)) {
+    throw new RunValidationError(
+      "Per-node executor selection is unavailable because this run's routing is fixed. " +
+      "All tasks inherit the run-level executor; send null only to remove a legacy override."
+    );
+  }
 }
 
 function validateNodeSelection(selection: ExecutorSelection | null | undefined): void {

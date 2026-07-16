@@ -6,7 +6,7 @@ import {
   RunValidationError,
   reviewNode
 } from "@/lib/server/runs";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       throw new RunValidationError(parsed.error.issues[0]?.message ?? "Invalid review request");
     }
     const saved = await reviewNode(id, taskId, parsed.data.action, parsed.data.feedback);
-    return NextResponse.json(toRunResponse(saved));
+    return NextResponse.json(await toCanonicalRunResponse(saved));
   } catch (error) {
     return errorResponse(error);
   }

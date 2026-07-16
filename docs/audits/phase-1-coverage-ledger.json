@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "repositoryBaseline": {
+    "auditedAt": "2026-07-12T23:56:45-03:00",
+    "branch": "main",
+    "headCommit": "deb370a14d6dca2bf63a50c4564d8d2fa8fa160a",
+    "gitStatusShort": [
+      " M .claude/launch.json",
+      " D docs/implementation-progress-phase-0-1.md",
+      " D docs/implementation-progress-phase-2.md",
+      " D docs/implementation-progress-phase-3.md",
+      " D docs/implementation-progress-phase-4.md",
+      " D docs/implementation-progress-phase-5.md",
+      " D docs/repository-completion-audit.md"
+    ],
+    "untrackedFiles": [
+      "docs/presentation/ (8 archivos, solo documentación)",
+      "docs/tesis/propuesta/ (3 archivos, solo documentación)"
+    ],
+    "localChangesAffectProductiveCode": false,
+    "workspaceGlobs": ["packages/*", "apps/*"],
+    "apps": ["@manyhands/web"],
+    "packages": [
+      "@manyhands/conflict-risk", "@manyhands/contracts", "@manyhands/core",
+      "@manyhands/decomposer", "@manyhands/execution-core", "@manyhands/orchestrator-graph",
+      "@manyhands/repository-index", "@manyhands/run-store", "@manyhands/scheduler",
+      "@manyhands/shared", "@manyhands/task-graph", "@manyhands/trace-store"
+    ],
+    "rootTestsDir": "tests/ (173 archivos de test en raíz)",
+    "auxDirs": ["scripts/", "design-system/", "output/playwright", "tmp/", "t/", "patches/"]
+  },
+  "auditStatus": {
+    "currentCheckpoint": "8-synthesis-handoff",
+    "completedCheckpoints": ["0-baseline", "1-component-inventory", "2-capability-pipeline", "3-flows", "4-connection-analysis", "5-lifecycle-sampled", "6-disconnected-code", "7-economical-verification", "8-synthesis-handoff"],
+    "startedAt": "2026-07-12T23:56:45-03:00",
+    "lastUpdatedAt": "2026-07-13T00:45:00-03:00",
+    "completionState": "partial",
+    "completionNote": "Cobertura de registro/clasificación completa (apps, packages, entrypoints, componentes, 35 pasos de flujo mapeados); profundidad pendiente en las zonas de la sección 22 del informe."
+  },
+  "applications": [
+    {
+      "id": "web",
+      "name": "@manyhands/web",
+      "entrypoints": ["apps/web/src/app/page.tsx (Command Center / The Goal)", "apps/web/src/app/runs/[runId]/page.tsx (Run workspace)", "apps/web/src/app/runs/proto/* (visor de fixtures)", "38 API routes bajo apps/web/src/app/api"],
+      "inspected": true
+    }
+  ],
+  "packages": [
+    {"id": "shared", "role": "executor registry estático + tipos base", "connection": "productive", "inspected": true},
+    {"id": "contracts", "role": "AgentTaskContract, InterfaceContract, scopes", "connection": "productive", "inspected": "shallow"},
+    {"id": "task-graph", "role": "TaskNode/TaskGraph/DAG validation", "connection": "productive", "inspected": "shallow"},
+    {"id": "decomposer", "role": "decomposers recursivos CLI (claude/codex), anthropic API, mock", "connection": "productive", "inspected": true},
+    {"id": "orchestrator-graph", "role": "StateGraphs LangGraph planning/execution + checkpointer JSON", "connection": "productive", "inspected": "shallow"},
+    {"id": "execution-core", "role": "worktrees, executors CLI, scope, recorder, validation, IntegrationAgent, routing, grounding", "connection": "productive", "inspected": true},
+    {"id": "scheduler", "role": "wave selection risk_aware", "connection": "productive", "inspected": "shallow"},
+    {"id": "conflict-risk", "role": "matriz de riesgo de conflictos", "connection": "productive", "inspected": "shallow"},
+    {"id": "repository-index", "role": "grounding estructural", "connection": "productive", "inspected": "shallow"},
+    {"id": "trace-store", "role": "traces en memoria/persistidas", "connection": "productive", "inspected": "shallow"},
+    {"id": "run-store", "role": "RunSnapshot y persistencia legacy", "connection": "partial", "inspected": "shallow", "note": "sin consumidor productivo directo; solo re-export vía core; web usa el tipo RunSnapshot y la persistencia real vive en apps/web/src/lib/server/runs/repository.ts"},
+    {"id": "core", "role": "barrel legacy + mock flows", "connection": "partial", "inspected": true, "note": "runMockPlanningFlow se usa productivamente en la ruta regen; el resto del barrel re-exporta"}
+  ],
+  "entrypoints": [
+    {"path": "apps/web/src/app/api/runs/route.ts", "kind": "api", "role": "GET list / POST create run + validación de selecciones + arranque planning pipeline", "status": "inspected"},
+    {"path": "apps/web/src/app/api/providers/readiness/route.ts", "kind": "api", "role": "readiness de CLIs/credenciales/workspace", "status": "inspected-via-lib"},
+    {"path": "apps/web/src/app/api/runs/[id]/run-events/route.ts", "kind": "api-sse", "role": "SSE sobre JSONL RunEvent durable con cursor after/Last-Event-ID", "status": "inspected"},
+    {"path": "apps/web/src/app/api/runs/[id]/nodes/[taskId]/regen/route.ts", "kind": "api", "role": "regeneración de subárbol", "status": "inspected"},
+    {"path": "apps/web/src/app/api/runs/[id]/{run,pause,resume,cancel,restart,fork,deliver,answer,decisions,plan-review,auto-resolve,integrator,artifacts,diagnostics,export,serialize,dependencies,risks,terminals,workspace-file,workspace-tree}", "kind": "api", "role": "lifecycle, decisiones, artefactos, terminales", "status": "listed-not-all-read"},
+    {"path": "apps/web/src/app/api/workspaces", "kind": "api", "role": "CRUD de workspaces", "status": "listed"},
+    {"path": "apps/web/src/app/api/local-fs/pick-folder/route.ts", "kind": "api", "role": "selección de carpeta local", "status": "listed"},
+    {"path": "apps/web/src/app/api/health/route.ts", "kind": "api", "role": "healthcheck", "status": "listed"},
+    {"path": "scripts/manyhands-dev.mjs", "kind": "cli", "role": "launcher dev (build packages + next dev)", "status": "listed"},
+    {"path": "apps/web/src/app/runs/proto/[fixture]/page.tsx", "kind": "page", "role": "visor de fixtures golden (prototipo)", "status": "inspected"}
+  ],
+  "components": [
+    {"id": "executor-registry", "name": "Executor/Model registry", "category": "shared", "paths": ["packages/shared/src/executor-registry.ts"], "responsibility": "catálogo ESTÁTICO de executors (claude-code-cli, codex-cli, opencode-cli disabled), modelos hardcodeados y capabilities planning/execution/repair", "entrypoints": ["import estático"], "consumers": ["apps/web/src/lib/models.ts", "execution-core re-export", "readiness"], "configurationRead": [], "eventsProduced": [], "connectionStatus": "productive", "maturity": "complete", "evidence": "packages/shared/src/executor-registry.ts:15-27", "risks": ["no hay descubrimiento dinámico de modelos ni de effort levels; los modelos disponibles en la UI pueden divergir de lo que el CLI realmente ofrece"], "openQuestions": []},
+    {"id": "provider-readiness", "name": "Provider readiness", "category": "server", "paths": ["apps/web/src/lib/server/providers/readiness.ts", "command-detection.ts", "credentials.ts"], "responsibility": "detección de CLI (--version), validez de credenciales, repo limpio, rama, comandos detectados", "consumers": ["/api/providers/readiness", "command-center-shell (requiredReadiness por selección)"], "connectionStatus": "productive", "maturity": "mostly-complete", "evidence": "readiness.ts:50-140", "risks": ["quota siempre unknown", "no valida que el modelo seleccionado exista en el CLI instalado"]},
+    {"id": "models-ui", "name": "Model options UI layer", "category": "web-lib", "paths": ["apps/web/src/lib/models.ts"], "responsibility": "deriva EXECUTOR_OPTIONS/MODEL_OPTIONS del registry, capabilities por selección, supportsEffort", "connectionStatus": "productive", "maturity": "complete", "evidence": "models.ts:42 EFFORT_CAPABLE_MODEL_IDS hardcodea la familia GPT-5; duplica conocimiento del registry", "risks": ["EFFORT_CAPABLE_MODEL_IDS es una segunda fuente de verdad separada del registry"]},
+    {"id": "run-create", "name": "Run creation route", "category": "api", "paths": ["apps/web/src/app/api/runs/route.ts"], "responsibility": "valida selecciones por capability, persiste RunRecord con planningExecutorId/planningModel/defaultExecutionSelection/defaultRepairSelection, fuerza routing fixed, captura RunTargetContext, dispara planning en background", "connectionStatus": "productive", "maturity": "complete", "evidence": "route.ts:105-167"},
+    {"id": "executor-selection", "name": "Executor selection resolution", "category": "server", "paths": ["apps/web/src/lib/server/runs/executor-selection.ts"], "responsibility": "resuelve selecciones efectivas planning/execution/repair/grounding/titler desde RunRecord con fallback legacy", "connectionStatus": "productive", "maturity": "complete", "evidence": "executor-selection.ts:16-53"},
+    {"id": "decomposer-policy", "name": "Decomposer policy", "category": "web-lib", "paths": ["apps/web/src/lib/decomposer-policy.ts"], "responsibility": "elige decomposer por executorId (codex/claude-code), modos anthropic vía env, fallback MetadataDrivenMockDecomposer", "connectionStatus": "productive", "maturity": "mostly-complete", "evidence": "decomposer-policy.ts:64-144", "risks": ["fallback determinístico (mock) alcanzable con MANYHANDS_FORCE_FALLBACK o sin API key en modos anthropic; registrado con fallbackReason pero es un plan mock en flujo de producto"]},
+    {"id": "planning-pipeline", "name": "Planning pipeline + host", "category": "server", "paths": ["apps/web/src/lib/server/runs/planning-pipeline.ts", "planning-host.ts"], "responsibility": "conduce el StateGraph de planning (decompose⇄questionGate, critics, approvalGate), proyecta a RunRecord y SSE, interrupts nativos", "connectionStatus": "productive", "maturity": "mostly-complete", "evidence": "planning-pipeline.ts:1-64, planning-host.ts:211-267"},
+    {"id": "execution-pipeline", "name": "Execution pipeline + host", "category": "server", "paths": ["apps/web/src/lib/server/runs/execution-pipeline.ts", "execution-host.ts"], "responsibility": "preflight, repo lock/lease, provision, drive del execution graph, executeLeaf/repairLeaf con attempt journal, artifact final", "connectionStatus": "productive", "maturity": "mostly-complete", "evidence": "execution-host.ts:333-500"},
+    {"id": "run-executor", "name": "RunExecutor (execution-core)", "category": "package", "paths": ["packages/execution-core/src/run/executor.ts"], "responsibility": "worktrees, invocación de executor CLI por perfil, diff HEAD, scope, validación, commit por orquestador, integración", "connectionStatus": "productive", "maturity": "mostly-complete", "evidence": "executor.ts:183-201 (WorktreeManager), result/recorder.ts (ScopeChecker)"},
+    {"id": "integration-agent", "name": "IntegrationAgent", "category": "package", "paths": ["packages/execution-core/src/integration/agent.ts"], "responsibility": "cherry-pick bottom-up + repair semántico con límite DEFAULT_MAX_REPAIRS_PER_INTEGRATION=4", "connectionStatus": "productive", "maturity": "mostly-complete", "evidence": "agent.ts:67,128,394"},
+    {"id": "complexity-routing", "name": "ComplexityRoutingPolicy", "category": "package", "paths": ["packages/execution-core/src/routing/policy.ts", "complexity.ts", "availability.ts"], "responsibility": "ruteo por complejidad a lanes de executor", "connectionStatus": "partial", "maturity": "partial", "evidence": "policy.ts:48-68 DEFAULT_TIER_ROUTES usa model id 'gpt-5-codex' inexistente en el registry; run create fuerza routing:'fixed' (runs/route.ts:127) y execution-host lo omite si hay selección explícita (execution-host.ts:352)", "risks": ["camino casi muerto en producto; ids de modelo obsoletos"]},
+    {"id": "scheduler", "name": "Scheduler risk_aware", "category": "package", "paths": ["packages/scheduler/src/index.ts"], "responsibility": "selección de waves, serialización conservadora sin contrato/scope", "connectionStatus": "productive", "maturity": "mostly-complete", "evidence": "scheduler/src/index.ts:216,357-388"},
+    {"id": "run-model", "name": "Run model (reducer/selectores/view-models)", "category": "web-lib", "paths": ["apps/web/src/lib/run-model/*"], "responsibility": "reduce RunEvent JSONL a RunModel, deriva vistas; gated derivado de decisiones pendientes", "connectionStatus": "productive", "maturity": "mostly-complete", "evidence": "selectors.ts:304-310"},
+    {"id": "run-model-event-log", "name": "Durable RunEvent JSONL log", "category": "server", "paths": ["apps/web/src/lib/server/runs/run-model-event-log.ts", "run-model-event-bus.ts"], "responsibility": "registro canónico append-only con seq, atomic rename, write chains", "connectionStatus": "productive", "maturity": "mostly-complete", "evidence": "run-events/route.ts consume readRunModelEventBatch + subscribeRunModelEvents"},
+    {"id": "legacy-event-bus", "name": "Legacy StreamEvent bus", "category": "server", "paths": ["apps/web/src/lib/server/runs/event-bus.ts"], "responsibility": "bus en memoria con history 2000", "connectionStatus": "disconnected", "maturity": "obsolete", "evidence": "publishRunEvent llamado desde 8+ módulos pero subscribeRunEvents/getRunEventHistory solo se usan en tests/run-runner.test.ts y en comentarios de sse-adapter.ts; ningún endpoint SSE lo consume", "risks": ["sink muerto: eventos publicados que nadie consume en producto"]},
+    {"id": "sse-adapter", "name": "run-model/sse-adapter.ts", "category": "web-lib", "paths": ["apps/web/src/lib/run-model/sse-adapter.ts"], "responsibility": "adaptar StreamEvent legacy a RunEvent", "connectionStatus": "disconnected", "maturity": "obsolete", "evidence": "sin imports desde ningún módulo (grep 'sse-adapter' solo self)"},
+    {"id": "core-barrel", "name": "@manyhands/core barrel + mock flows", "category": "package", "paths": ["packages/core/src/index.ts", "mock-planning-flow.ts", "mock-execution-flow.ts"], "responsibility": "re-export de 8 paquetes + mock flows", "connectionStatus": "partial", "maturity": "obsolete", "evidence": "runMockPlanningFlow usado productivamente por regen/route.ts:125; CLAUDE.md prohíbe usar core para código nuevo", "risks": ["mock flow legacy en camino productivo de regen"]},
+    {"id": "run-store-pkg", "name": "@manyhands/run-store", "category": "package", "paths": ["packages/run-store/src/index.ts"], "responsibility": "RunSnapshot y persistencia legacy", "connectionStatus": "partial", "maturity": "unverified", "evidence": "único consumidor: packages/core (re-export); web usa solo el tipo RunSnapshot vía core; persistencia real en apps/web/src/lib/server/runs/repository.ts", "openQuestions": ["¿alguna función de run-store (no tipos) se ejecuta en producto?"]},
+    {"id": "proto-fixture-viewer", "name": "Runs proto fixture viewer", "category": "page", "paths": ["apps/web/src/app/runs/proto/", "apps/web/src/lib/run-model/fixtures/"], "responsibility": "renderiza golden fixtures del run model", "connectionStatus": "test-only", "maturity": "complete", "evidence": "páginas accesibles en /runs/proto en el build de producto; fixtures golden-*.ts solo consumidos por proto y tests", "risks": ["ruta de prototipo shippeada en producto"]},
+    {"id": "provider-terminals", "name": "Terminal sessions", "category": "server", "paths": ["apps/web/src/lib/server/runs/terminal-sessions.ts", "api/runs/[id]/terminals/*"], "responsibility": "terminales interactivas por run (stream SSE, input, resize)", "connectionStatus": "productive", "maturity": "unverified", "evidence": "rutas presentes; no inspeccionado en profundidad"},
+    {"id": "lifecycle-guard", "name": "Lifecycle transitions", "category": "server", "paths": ["apps/web/src/lib/server/runs/lifecycle.ts"], "responsibility": "ALLOWED_TRANSITIONS centralizado + assertTransition + canPause/canRestart + RunLifecycleAction", "connectionStatus": "productive", "maturity": "complete", "evidence": "lifecycle.ts:4-50"},
+    {"id": "durable-ops", "name": "Operation lease / repo lock / process supervision", "category": "server", "paths": ["run-operation-lease.ts", "repo-lock.ts", "process-supervision.ts", "runner-state.ts", "runner-heartbeat.ts", "runner-watchdog.ts", "world-reconcile.ts"], "responsibility": "CAS + fencing, repository lease con heartbeat, ProcessSupervisor, watchdog de presupuesto", "connectionStatus": "productive", "maturity": "unverified", "evidence": "imports masivos en execution-pipeline.ts:55-89; profundidad pendiente para Fase 2"}
+  ],
+  "flows": [
+    {"id": "capability-discovery", "status": "verified", "note": "estático: registry hardcodeado + readiness --version; no hay probing de modelos ni efforts"},
+    {"id": "run-creation", "status": "verified", "note": "POST /api/runs valida capabilities por etapa, persiste selecciones separadas, fuerza routing fixed, captura targetContext, dispara planning"},
+    {"id": "planning-config-propagation", "status": "verified", "note": "planningSelection(run) → planning-host → pickDecomposer(executorId, model, reasoningEffort de executionConfig)"},
+    {"id": "execution-config-propagation", "status": "verified", "note": "executionSelection(run) → execution-host executeLeaf → RunExecutor.runNode(defaultExecutionSelection); repairSelection separada; effort vía executionConfig.reasoningEffort → perfil codex '-c model_reasoning_effort'"},
+    {"id": "planning-pipeline", "status": "partially-verified", "note": "StateGraph LangGraph con interrupts nativos; transiciones created→generating→needs_review→approved; no ejecutado dinámicamente"},
+    {"id": "execution-pipeline", "status": "partially-verified", "note": "preflight→lock/lease→provision→graph drive→leaf attempts (journal)→integración→artifact; no ejecutado dinámicamente"},
+    {"id": "scheduling-waves", "status": "partially-verified", "note": "scheduler risk_aware serializa sin contrato/scope; wave events en scheduling-audit-events.ts; persistencia wave_selected antes de dispatch no verificada línea a línea"},
+    {"id": "integration-bottom-up", "status": "partially-verified", "note": "IntegrationAgent cherry-pick + repair con límite 4; escalamiento a decisión humana no verificado línea a línea"},
+    {"id": "sse-ui-derivation", "status": "verified", "note": "run-events SSE lee JSONL durable con cursor; reducer/selectores derivan gated de decisiones pendientes"},
+    {"id": "pause-resume-cancel-recovery", "status": "unverified", "note": "rutas y módulos localizados (pause-control, cancel-service, interrupted, world-reconcile); pendiente Checkpoint 5"},
+    {"id": "final-artifact-delivery", "status": "unverified", "note": "final-apply.ts, final-artifact.ts, delivery.ts localizados; no trazados"},
+    {"id": "subtree-regen", "status": "verified", "note": "usa runMockPlanningFlow legacy + pickDecomposer SIN executorId ni planningModel → ignora la selección de planning del run"}
+  ],
+  "modelCapabilityPipeline": {
+    "localEnvironment": "binarios claude/codex en PATH u override MANYHANDS_CLAUDE_BIN/MANYHANDS_CODEX_BIN",
+    "cliDetection": "readiness.ts defaultCheckCli ejecuta '<bin> --version' (timeout 10s); solo presencia+versión, nunca modelos",
+    "capabilityRegistry": "packages/shared/src/executor-registry.ts — ESTÁTICO; modelos y capabilities hardcodeados; opencode-cli registrado pero enabled:false",
+    "effortLevels": "enum estático low|medium|high|xhigh en ExecutionConfigSchema (execution-core/types.ts:349); UI habilita effort solo para EFFORT_CAPABLE_MODEL_IDS (gpt-5.5/5.4/5.4-mini) en models.ts:42",
+    "serverRepresentation": "/api/providers/readiness devuelve ProviderReadiness[]; opciones de modelos NO viajan por API: la UI importa MODEL_OPTIONS estáticas",
+    "uiOptions": "command-center-shell.client.tsx: pickers independientes planning/execution ('executorId/modelId'), effort visible solo si selectedExecutionModel.supportsEffort",
+    "userSelection": "POST /api/runs con planningModel+planningExecutorId, defaultExecutionSelection, defaultRepairSelection, executionConfig.reasoningEffort",
+    "validation": "validateSelectionForCapability por etapa (planning/execution/repair) contra capabilities del registry; rechazo explícito 400",
+    "persistence": "RunRecord: model (=execution model), planningModel, planningExecutorId, defaultExecutionSelection, defaultRepairSelection, executionConfig (con reasoningEffort); withDefaultReasoningEffort inyecta 'medium' si execution=codex",
+    "planningInvocation": "planning-host: planningSelection(run) + run.executionConfig.reasoningEffort → pickDecomposer → ClaudeCodeRecursiveDecomposer|CodexRecursiveDecomposer (solo codex usa effort)",
+    "executionInvocation": "execution-host executeLeaf: executionSelection(run) → RunExecutor.runNode → perfil CLI (codex agrega -c model_reasoning_effort)",
+    "resumeWithUnavailableSelection": "no hay re-validación de disponibilidad al reanudar: la selección fija falla en spawn del CLI (comportamiento exacto no confirmado)",
+    "fallbacks": ["normalizeExecutorSelection mapea string legacy a claude-code-cli", "withDefaultReasoningEffort medium para codex", "pickDecomposer → MetadataDrivenMockDecomposer si MANYHANDS_FORCE_FALLBACK=1 o falta ANTHROPIC_API_KEY en modos anthropic", "ComplexityRoutingPolicy degrada por disponibilidad (solo runs legacy sin selección explícita)"]
+  },
+  "inspectedPaths": [
+    "package.json", "pnpm-workspace.yaml",
+    "packages/shared/src/executor-registry.ts",
+    "packages/core/src/index.ts",
+    "packages/execution-core/src/types.ts (parcial)",
+    "packages/execution-core/src/routing/policy.ts (parcial)",
+    "packages/execution-core/src/integration/agent.ts (grep)",
+    "packages/execution-core/src/run/executor.ts (grep)",
+    "packages/scheduler/src/index.ts (grep)",
+    "apps/web/src/lib/models.ts",
+    "apps/web/src/lib/decomposer-policy.ts",
+    "apps/web/src/lib/server/providers/{readiness,command-detection}.ts",
+    "apps/web/src/lib/server/runs/{executor-selection,effective-execution-config,execution-config-defaults,lifecycle,event-bus,run-model-event-log (head)}.ts",
+    "apps/web/src/lib/server/runs/execution-host.ts (parcial 330-500)",
+    "apps/web/src/lib/server/runs/{planning-pipeline,execution-pipeline}.ts (headers)",
+    "apps/web/src/app/api/runs/route.ts",
+    "apps/web/src/app/api/runs/[id]/run-events/route.ts (head)",
+    "apps/web/src/app/api/runs/[id]/nodes/[taskId]/regen/route.ts",
+    "apps/web/src/lib/run-model/selectors.ts (parcial)"
+  ],
+  "pendingPaths": [
+    "packages/orchestrator-graph/src/{graphs,nodes,checkpointer}.ts",
+    "packages/{contracts,task-graph,conflict-risk,repository-index,trace-store,run-store}/src/index.ts (lectura)",
+    "apps/web/src/lib/server/runs/{runner,cancel-service,interrupted,world-reconcile,pause-control,final-apply,final-artifact,delivery,plan-approval-service,replan-service,integrator-service,terminal-sessions}.ts",
+    "apps/web/src/app/api/runs/[id]/* (rutas de lifecycle y decisiones)",
+    "apps/web/src/app/(command-center) y runs/[runId]/_components (UI)",
+    "scripts/manyhands-dev.mjs",
+    "design-system/"
+  ],
+  "excludedPaths": ["node_modules", "output/playwright", "docs/presentation", "docs/tesis", "pnpm-lock.yaml", "tmp"],
+  "commandsExecuted": [
+    {"command": "git branch/rev-parse/status; date", "purpose": "baseline", "result": "main @ deb370a; cambios locales solo docs + launch.json"},
+    {"command": "node -e sobre package.json de workspaces", "purpose": "grafo deps internas", "result": "13 workspaces; direcciones apps→packages→shared respetadas a nivel manifest"},
+    {"command": "ls/find de estructura (apps, packages, api routes, tests)", "purpose": "mapa", "result": "38 rutas API; 173 tests raíz"},
+    {"command": "grep reasoningEffort/planningSelection/executionSelection/…", "purpose": "traza de configuración", "result": "pipeline completo trazado (ver modelCapabilityPipeline)"},
+    {"command": "grep consumidores @manyhands/* cruzados", "purpose": "connection analysis", "result": "run-store sin consumidor productivo directo; core barrel usado por web (incl. runMockPlanningFlow)"},
+    {"command": "grep subscribeRunEvents/getRunEventHistory/sse-adapter", "purpose": "verificar consumidores del bus legacy", "result": "sin consumidores productivos; solo tests y comentarios"},
+    {"command": "npx vitest run tests/run-create-route.test.ts", "purpose": "validar traza de creación de run, selecciones separadas, routing fixed y effort", "result": "5/5 pass; stderr confirmó el guard D3 anti-mock de planning"},
+    {"command": "npx vitest run tests/run-scheduling-audit-events.test.ts", "purpose": "validar persistencia del evento wave_selected", "result": "8/8 pass"},
+    {"command": "node -e JSON.parse(ledger)", "purpose": "validez del ledger", "result": "OK"}
+  ],
+  "confirmedFindings": [
+    {"id": "F1", "title": "Regen de subárbol ignora la selección de planning del run", "evidence": "apps/web/src/app/api/runs/[id]/nodes/[taskId]/regen/route.ts:110-114 llama pickDecomposer sin executorId y con model: run.model (modelo de execution), mientras planning-host.ts:253 usa run.planningExecutorId y planningSelection", "impact": "un run planificado con Codex regenera subárboles con Claude Code y con el modelo de execution; sin effort", "immediateCause": "la ruta regen quedó en el camino legacy (runMockPlanningFlow) y no fue migrada a executor-selection.ts"},
+    {"id": "F2", "title": "Bus de eventos legacy es un sink muerto en producto", "evidence": "event-bus.ts publishRunEvent invocado desde execution-host/planning-pipeline/etc.; subscribeRunEvents/getRunEventHistory sin consumidores productivos (solo tests/run-runner.test.ts); el SSE real usa run-model-event-log", "impact": "doble emisión de eventos, memoria (history 2000/run) y confusión de fuente de verdad", "immediateCause": "migración a RunEvent JSONL dejó el bus anterior publicando sin suscriptores"},
+    {"id": "F3", "title": "DEFAULT_TIER_ROUTES referencia el modelo inexistente 'gpt-5-codex'", "evidence": "packages/execution-core/src/routing/policy.ts:48-68 vs registry (gpt-5.5/gpt-5.4/gpt-5.4-mini)", "impact": "si un run legacy activa routing 'complexity', las lanes codex apuntan a un modelo no registrado; con codex instalado el CLI recibiría un model id desconocido", "immediateCause": "el registry fue renombrado sin actualizar las lanes"},
+    {"id": "F4", "title": "reasoningEffort es un único knob run-level, no independiente por etapa", "evidence": "ExecutionConfigSchema.reasoningEffort (types.ts:349) es el único campo; planning-host.ts:216-263 y el perfil codex leen el mismo valor; la UI solo muestra el control cuando el modelo de EXECUTION lo soporta (command-center-shell.client.tsx:219,466)", "impact": "no se puede configurar effort distinto para planning y execution; si planning=codex y execution=claude, el control de effort se oculta pero planning-host inyecta 'medium' silenciosamente", "immediateCause": "diseño actual: un solo campo en executionConfig"},
+    {"id": "F5", "title": "Guard anti-mock inconsistente entre planning y regen", "evidence": "planning-host.ts:628-641 rechaza el decomposer determinístico para las tres fallbackReason con error accionable (confirmado por stderr de tests/run-create-route.test.ts); regen/route.ts:115 solo rechaza cuando fallbackReason !== 'forced_by_env', permitiendo el mock con MANYHANDS_FORCE_FALLBACK=1", "impact": "regeneración de subárbol con plan mock posible vía env var", "immediateCause": "guards duplicados con criterios distintos"}
+  ],
+  "strongRisks": [
+    {"id": "R1-downgraded", "title": "Mock decomposer alcanzable solo tras el guard D3 (mitigado en planning; ver F5 para regen)", "evidence": "decomposer-policy.ts:71-76,96-99 devuelve MetadataDrivenMockDecomposer, pero planning-host.ts:628-641 lo convierte en error accionable", "why": "el invariante 'sin fallback silencioso' se cumple en planning; queda la asimetría del regen (F5)"},
+    {"id": "R2", "title": "Ruta /runs/proto y fixtures golden shippeados en el build", "evidence": "apps/web/src/app/runs/proto/[fixture]/page.tsx importa fixtures", "why": "superficie de producto no productiva; puede confundir y aumenta bundle"},
+    {"id": "R3", "title": "routing default 'complexity' en schema vs 'fixed' forzado al crear", "evidence": "ExecutionConfigSchema.routing default 'complexity' (types.ts:356) pero runs/route.ts:127 fuerza 'fixed'", "why": "runs legacy sin executionConfig persistido reciben 'complexity' al normalizar (effectiveExecutionConfig), activando lanes obsoletas (F3)"},
+    {"id": "R4", "title": "Sin re-validación de disponibilidad de CLI/modelo al reanudar", "evidence": "resume no consulta probeExecutorAvailability para selecciones fijas; el fallo aparecería recién al spawn del leaf", "why": "una selección persistida que dejó de estar instalada produce fallos tardíos por leaf en vez de un rechazo temprano accionable"}
+  ],
+  "hypotheses": [
+    {"id": "H1", "status": "closed-benign", "title": "scopeCheck sintéticos {passed:true}", "resolution": "executor.ts:1412-1472: son resultados sintéticos de composites/integración; los leaves pasan por ResultRecorder con ScopeChecker real"},
+    {"id": "H2", "status": "open-mitigated", "title": "run.scheduling.wave_selected persistido antes del dispatch en todos los caminos", "investigation": "8/8 tests de run-scheduling-audit-events pasan; falta verificar caminos de resume/reseed", "note": "selectAndPersistSchedulingWave usa appendRunEventRequiredWithSeq"},
+    {"id": "H3", "status": "open", "title": "run-store podría no aportar ninguna función ejecutada en producto (solo tipos)", "investigation": "listar exports de run-store y grep de usos de valores vs tipos"},
+    {"id": "H4", "status": "open", "title": "Consistencia RunRecord vs JSONL vs checkpoint bajo crash en cada frontera", "investigation": "auditar audited-mutation.ts, run-operation-lease.ts, world-reconcile.ts con escenarios de crash"}
+  ],
+  "openQuestions": [
+    "¿Qué ocurre exactamente (mensaje/estado) cuando el binario del CLI seleccionado no existe al ejecutar un leaf?",
+    "¿El titler y grounding respetan availability o solo la selección persistida?",
+    "¿terminal-sessions expone shell arbitraria y con qué guardas?",
+    "¿La caché repo-index-cache invalida correctamente entre runs?"
+  ],
+  "removalCandidates": [
+    {"component": "apps/web/src/lib/server/runs/event-bus.ts + llamadas publishRunEvent", "classification": "duplicate", "evidence": "sin suscriptores productivos; SSE usa run-model-event-log", "lastConsumer": "tests/run-runner.test.ts", "removalRisk": "medio: hay 8+ call sites; verificar que ningún dato solo viaje por StreamEvent", "validationNeeded": "grep completo de StreamEvent kinds vs RunEvent types; correr tests afectados"},
+    {"component": "apps/web/src/lib/run-model/sse-adapter.ts", "classification": "disconnected", "evidence": "cero imports", "removalRisk": "bajo", "validationNeeded": "grep dinámico/route conventions (hecho: nada)"},
+    {"component": "packages/core (barrel + mock flows)", "classification": "obsolete", "evidence": "CLAUDE.md lo declara legacy; único uso funcional real: runMockPlanningFlow en regen route y tipos re-exportados", "removalRisk": "alto hasta migrar regen y los imports de tipos de web", "validationNeeded": "migrar regen a planning real; reapuntar imports de web a paquetes específicos"},
+    {"component": "packages/run-store", "classification": "unknown", "evidence": "solo consumido vía core; web usa el tipo RunSnapshot", "removalRisk": "medio", "validationNeeded": "confirmar H3"},
+    {"component": "opencode-cli en executor-registry", "classification": "obsolete", "evidence": "enabled:false, comentario 'persisted historical selection'", "removalRisk": "bajo-medio: runs históricos persistidos podrían referenciarlo", "validationNeeded": "grep de runs persistidos + normalizeExecutorSelection"},
+    {"component": "apps/web/src/app/runs/proto + run-model/fixtures golden-*", "classification": "test-only", "evidence": "solo consumidos por proto pages y tests", "removalRisk": "bajo (los fixtures los usan tests: mover, no borrar)", "validationNeeded": "confirmar imports de tests"},
+    {"component": "ComplexityRoutingPolicy + lanes", "classification": "partial", "evidence": "solo alcanzable por runs legacy (routing complexity sin selección explícita)", "removalRisk": "medio: decisión de producto (¿se quiere ruteo por complejidad?)", "validationNeeded": "decidir producto; si se conserva, arreglar F3"}
+  ],
+  "phase2AuditUnits": [
+    {"id": "U1", "title": "Durabilidad y atomicidad (H2/H4)", "scope": "audited-mutation, run-operation-lease, repo-lock, world-reconcile, checkpointer; crash en cada frontera persistencia→evento→status→SSE"},
+    {"id": "U2", "title": "Selección efectiva y regen (F1,F4,F5,R4,R5)", "scope": "unificar executor-selection en regen/titler/grounding; effort por etapa; re-validación de disponibilidad al resume"},
+    {"id": "U3", "title": "Ejecución de leaves", "scope": "RunExecutor en profundidad: diff, scope advisory vs enforced, unexpected commits, validación, timeouts, kill"},
+    {"id": "U4", "title": "Integración y conflictos", "scope": "IntegrationAgent, conflictGate, decisiones recuperables, root integration + final apply + delivery E2E"},
+    {"id": "U5", "title": "Limpieza legacy (F2,R2,removalCandidates)", "scope": "plan de eliminación con validaciones; requiere U2 primero (regen usa harness legacy)"},
+    {"id": "U6", "title": "Superficie de seguridad", "scope": "terminal-sessions, workspace-file/tree, local-fs, agent-env allowlist"},
+    {"id": "U7", "title": "Eventos y UI", "scope": "matriz RunEventType↔reducer↔selector, SSE reconnect, obsolescencia, UI client components"}
+  ],
+  "continuation": {
+    "nextAction": "Iniciar Fase 2 por U1/U2, o completar profundidad pendiente de Fase 1 (seccion 22 del informe): UI client components, orchestrator-graph nodes/checkpointer, rutas de lifecycle no leidas, terminal-sessions, preflight, repo-provisioner, matriz evento-reducer",
+    "requiredContext": ["este ledger", "docs/audits/phase-1-system-coverage-audit.md"],
+    "continuationPrompt": "Continúa la auditoría de ManyHands. La Fase 1 (System Coverage Audit) quedó en estado partial con registro/clasificación completa: ver docs/audits/phase-1-system-coverage-audit.md (secciones 15-23) y docs/audits/phase-1-coverage-ledger.json (confirmedFindings F1-F5, strongRisks, hypotheses H2-H4, removalCandidates, phase2AuditUnits U1-U7, pendingPaths). Si continúas Fase 1: cubre pendingPaths y la sección 22. Si inicias Fase 2: empieza por U1 (durabilidad/atomicidad) o U2 (selección efectiva y regen). No modifiques código productivo salvo los entregables de auditoría."
+  }
+}

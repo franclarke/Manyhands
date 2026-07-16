@@ -8,6 +8,10 @@
  * process tree, and "binary missing under shell" is normalized back to 127.
  */
 import { EventEmitter } from "node:events";
+import { existsSync } from "node:fs";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { describe, expect, it, vi } from "vitest";
 import { ChildProcessValidationRunner } from "@manyhands/execution-core";
@@ -36,6 +40,8 @@ function fakeChild(script: FakeChildScript): ChildProcess {
     stdout,
     stderr,
     pid: 4242,
+    exitCode: null as number | null,
+    signalCode: null as NodeJS.Signals | null,
     kill: vi.fn().mockReturnValue(true)
   }) as unknown as ChildProcess;
 
@@ -47,7 +53,9 @@ function fakeChild(script: FakeChildScript): ChildProcess {
       emitter.emit("error", new Error(script.errorMessage));
       return;
     }
-    emitter.emit("close", script.exitCode ?? 0);
+    const exitCode = script.exitCode ?? 0;
+    (child as unknown as { exitCode: number | null }).exitCode = exitCode;
+    emitter.emit("close", exitCode);
   });
   return child;
 }
@@ -55,13 +63,26 @@ function fakeChild(script: FakeChildScript): ChildProcess {
 function makeRunner(scripts: FakeChildScript[], useShell: boolean) {
   const calls: SpawnCall[] = [];
   let next = 0;
+  let activeRoot: ChildProcess | undefined;
   const spawn = (command: string, args: readonly string[], options: SpawnOptions): ChildProcess => {
     calls.push({ command, args, options });
+    if (command === "taskkill") {
+      const killer = fakeChild({ exitCode: 0 });
+      queueMicrotask(() => {
+        if (activeRoot !== undefined) {
+          (activeRoot as unknown as { signalCode: NodeJS.Signals | null }).signalCode = "SIGKILL";
+          activeRoot.emit("close", null, "SIGKILL");
+        }
+      });
+      return killer;
+    }
     const script = scripts[Math.min(next, scripts.length - 1)];
     next += 1;
-    return fakeChild(script ?? {});
+    const child = fakeChild(script ?? {});
+    activeRoot = child;
+    return child;
   };
-  return { runner: new ChildProcessValidationRunner({ spawn, useShell }), calls };
+  return { runner: new ChildProcessValidationRunner({ spawn, useShell, platform: "linux" }), calls };
 }
 
 function command(overrides: Partial<ExecutionValidationCommand> = {}): ExecutionValidationCommand {
@@ -72,7 +93,7 @@ const ctx = { worktreePath: "/wt", repoRoot: "/repo" };
 
 describe("ChildProcessValidationRunner — shell handling", () => {
   it.each(["npm", "pnpm", "yarn", "npx"])(
-    "spawns %s through a shell when useShell is true, without altering command or args",
+    "keeps %s argv structured when the legacy useShell flag is true",
     async (binary) => {
       const { runner, calls } = makeRunner([{ exitCode: 0 }], true);
       const result = await runner.run([command({ command: binary, args: ["test"] })], ctx);
@@ -80,7 +101,7 @@ describe("ChildProcessValidationRunner — shell handling", () => {
       expect(calls).toHaveLength(1);
       expect(calls[0]?.command).toBe(binary);
       expect(calls[0]?.args).toEqual(["test"]);
-      expect(calls[0]?.options.shell).toBe(true);
+      expect(calls[0]?.options.shell).toBe(false);
     }
   );
 
@@ -101,9 +122,12 @@ describe("ChildProcessValidationRunner — shell handling", () => {
     const result = await runner.run([command({ command: "npm", args: ["test"] })], ctx);
 
     expect(result.passed).toBe(true);
-    expect(calls[0]?.command).toBe("cmd.exe");
-    expect(calls[0]?.args).toEqual(["/d", "/s", "/c", "npm", "test"]);
+    expect(calls[0]?.command.toLowerCase()).toMatch(/cmd\.exe$/u);
+    expect(calls[0]?.args.slice(0, 4)).toEqual(["/d", "/v:off", "/s", "/c"]);
+    expect(calls[0]?.args[4]).toContain("npm.cmd");
+    expect(calls[0]?.args[4]).toContain("test");
     expect(calls[0]?.options.shell).toBe(false);
+    expect(calls[0]?.options.windowsVerbatimArguments).toBe(true);
   });
 });
 
@@ -209,6 +233,38 @@ describe("ChildProcessValidationRunner — timeout", () => {
       }
     } finally {
       vi.useRealTimers();
+    }
+  });
+  it("does not return while a validation descendant can still write", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "mh-validation-tree-"));
+    const started = join(directory, "descendant-started.txt");
+    const lateWrite = join(directory, "late-write.txt");
+    const descendantPath = join(directory, "descendant.cjs");
+    const parentPath = join(directory, "parent.cjs");
+    await writeFile(descendantPath, [
+      `setTimeout(() => require("node:fs").writeFileSync(${JSON.stringify(lateWrite)}, "stale"), 800);`,
+      "setInterval(() => {}, 1000);"
+    ].join(""), "utf8");
+    await writeFile(parentPath, [
+      'const { spawn } = require("node:child_process");',
+      `spawn(process.execPath, [${JSON.stringify(descendantPath)}], { stdio: "ignore" });`,
+      `require("node:fs").writeFileSync(${JSON.stringify(started)}, "started");`,
+      "setInterval(() => {}, 1000);"
+    ].join(""), "utf8");
+
+    try {
+      const runner = new ChildProcessValidationRunner();
+      const result = await runner.run(
+        [command({ command: "node", args: [parentPath], timeoutMs: 250 })],
+        { worktreePath: directory, repoRoot: directory }
+      );
+
+      expect(result.exitCode).toBe(124);
+      expect(existsSync(started)).toBe(true);
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      expect(existsSync(lateWrite)).toBe(false);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
     }
   });
 });

@@ -24,8 +24,11 @@ import { publishRunEvent } from "./event-bus";
 import type { StreamEvent } from "./events";
 import {
     buildExecutionHost,
+    decisionFromAnswer,
     driveExecution,
+    executionCheckpointId,
     hasExecutionCheckpoint,
+    isReplanRequest,
     persistExecutionPause,
     resumeCommand,
     type ExecutionDriveOutcome
@@ -44,10 +47,15 @@ import {
     resolveRepoProvisionAction
 } from "./execution-state";
 import { applyFinalPatch } from "./final-apply";
-import { applyValidationToManifest, terminalDispositionForArtifact } from "./final-artifact";
+import {
+  applyValidationToManifest,
+  artifactEvidenceIsReady,
+  terminalDispositionForArtifact
+} from "./final-artifact";
 import { executionSelection, groundingSelection, repairSelection } from "./executor-selection";
 import { persistEffectiveExecutionConfig } from "./effective-execution-config";
 import { assertRunActionAllowed, assertTransition } from "./lifecycle";
+import { DEFAULT_STALE_MS } from "./interrupted";
 import { LiveExecutionTraceStore } from "./live-trace-store";
 import { waitWhilePlainPaused } from "./pause-control";
 import { PreflightError, runPreflight } from "./preflight";
@@ -66,14 +74,18 @@ import {
     type RepoProvisioner
 } from "./repo-provisioner";
 import { createRunAbort, disposeRunAbort } from "./run-abort-registry";
-import { verifyProvisionedAgainstTarget } from "./target-context";
+import {
+    assertRunHasVerifiableLocalTarget,
+    verifyProvisionedAgainstTarget
+} from "./target-context";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import {
     appendRunEventRequired,
     appendRunEventsRequired,
     ensureRunModelEventLogForRun,
-    publishRunModelEvent
+    publishRunModelEvent,
+    readRunModelEvents
 } from "./run-model-event-log";
 import { transitionTo } from "./planning-pipeline";
 import { reconcileExecutionWorld } from "./world-reconcile";
@@ -85,6 +97,7 @@ import { saveRunWithRequiredStatusEvent } from "./audited-mutation";
 import {
     claimRunOperation,
     releaseRunOperation,
+    releaseRunOperationWithRetry,
     updateRunForOperation
 } from "./run-operation-lease";
 import type {
@@ -102,6 +115,12 @@ import {
     type TaskAttemptState
 } from "./task-attempt-journal";
 import type { RunEventType } from "@/lib/run-model/types";
+import { replanSubtree } from "./replan-service";
+import { recoverPendingAmendmentMutations } from "./plan-mutation-recovery";
+import {
+  settleRunCancellation,
+  type CancellationSettlementDependencies
+} from "./cancel-service";
 
 export { computeInvalidatedTasks } from "./execution-state";
 export type { ExecutionResults } from "./execution-state";
@@ -203,22 +222,26 @@ async function runNodeWithDefaultEngine(input: {
  */
 export async function runExecutionPipeline(runId: string, options: ExecutionRunnerOptions = {}): Promise<void> {
   console.log(`[Runner] Starting execution pipeline for run: ${runId}`);
+  await recoverPendingAmendmentMutations(runId);
   if (options.runnerAlreadyClaimed !== true && !tryMarkRunnerActive(runId)) {
     console.warn(`[Runner] Execution pipeline already active for run: ${runId}`);
     return;
   }
   let lease: RunOperationLease | undefined;
   let stopHeartbeat: (() => void) | undefined;
-  let stopBudgetWatchdog: () => void = () => undefined;
+  let budgetWatchdog: ReturnType<typeof startBudgetWatchdog> | undefined;
   let repoLease: RepoLease | undefined;
   let stopRepoHeartbeat: (() => void) | undefined;
+  let deferredRecoveredReplan: { taskId: string; reason: string } | undefined;
   try {
     const claimed = await claimRunOperation(runId, "execution", {
       expectedStatuses: ["approved", "running", "interrupted"],
-      allowTakeover: true
+      allowTakeover: true,
+      takeoverStaleAfterMs: DEFAULT_STALE_MS
     });
     lease = claimed.lease;
     let run = claimed.run;
+    assertRunHasVerifiableLocalTarget(run);
     assertApprovedPlanRevision(run);
     if (run.status === "approved") {
       run = await transitionTo(
@@ -229,6 +252,12 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       );
     }
     run = await persistEffectiveExecutionConfig(runId, lease);
+    if (run.executionStartedAt === undefined) {
+      run = await updateRunForOperation(runId, lease, (current) => ({
+        ...current,
+        executionStartedAt: current.executionStartedAt ?? new Date().toISOString()
+      }));
+    }
     stopHeartbeat = startHeartbeat(runId, lease);
 
     const graph = await resolveExecutionGraph(run);
@@ -241,7 +270,9 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
     await ensureRunModelEventLogForRun(run);
 
     const abortController = createRunAbort(runId);
-    stopBudgetWatchdog = startBudgetWatchdog(runId, run.executionConfig?.maxWallClockMs, lease);
+    budgetWatchdog = startBudgetWatchdog(runId, run.executionConfig?.maxWallClockMs, lease, {
+      executionStartedAt: run.executionStartedAt!
+    });
     if (await executionWasInterrupted(runId, abortController.signal)) {
       console.log(`[Runner] Execution pipeline stopped before provisioning; run ${runId} is interrupted.`);
       return;
@@ -278,6 +309,12 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
         run.repoSpec!.kind === "localPath" && run.targetContext !== undefined
           ? { kind: "localPath" as const, path: run.targetContext.sourceRealPath }
           : run.repoSpec!;
+      if (run.targetContext !== undefined) {
+        await verifyProvisionedAgainstTarget(
+          { sourceRepoRoot: run.targetContext.sourceRealPath },
+          run.targetContext
+        );
+      }
       provisioned = await runWithProcessSupervision(
         {
           runId: run.runId,
@@ -682,25 +719,97 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
       errorMessage: null
     };
 
-    const outcome = await driveExecution(host, alreadyStarted ? null : initialState, abortController.signal);
+    let outcome = await driveExecution(host, alreadyStarted ? null : initialState, abortController.signal);
+    for (let replayCount = 0; outcome.kind === "paused" && replayCount < 8; replayCount += 1) {
+      const recovery = await durableResolutionForGate(runId, outcome.gate);
+      if (recovery === undefined) break;
+      if (recovery.kind === "replan") {
+        deferredRecoveredReplan = {
+          taskId: outcome.gate.taskId,
+          reason: outcome.gate.validationOutput ?? "leaf failed irrecoverably"
+        };
+        break;
+      }
+      console.log(
+        `[Runner] Re-applying durable decision ${recovery.decisionId} at checkpoint ${recovery.checkpointId}.`
+      );
+      outcome = await driveExecution(host, resumeCommand(recovery.decision), abortController.signal);
+    }
     await waitWhilePlainPaused(runId, "running", abortController.signal);
-    await settleExecutionOutcome(runId, host, outcome, provisioned!, options, lease, repoLease);
+    if (deferredRecoveredReplan === undefined) {
+      await settleExecutionOutcome(runId, host, outcome, provisioned!, options, lease, repoLease);
+    }
   } catch (error) {
     console.error(`[Runner] FALLO la ejecucion del run "${runId}":`, error);
     if (!(error instanceof RunMutationConflictError)) {
       await settleExecutionException(runId, error, lease);
     }
   } finally {
-    stopRepoHeartbeat?.();
-    if (repoLease !== undefined) {
-      await releaseRepoLease(repoLease).catch(() => undefined);
-    }
-    stopBudgetWatchdog();
-    disposeRunAbort(runId);
-    stopHeartbeat?.();
-    if (lease !== undefined) await releaseRunOperation(runId, lease);
-    markRunnerInactive(runId);
+    await finalizeExecutionPipelineOwnership({
+      runId,
+      budgetWatchdog,
+      stopRepoHeartbeat,
+      repoLease,
+      stopHeartbeat,
+      lease
+    });
   }
+  if (deferredRecoveredReplan !== undefined) {
+    const request = deferredRecoveredReplan;
+    startRunBackgroundTask(runId, "execution-gate:recover-replan", async () => {
+      await replanSubtree(runId, request.taskId, request.reason);
+    });
+  }
+}
+
+type DurableGateRecovery =
+  | { kind: "resume"; decisionId: string; checkpointId: string; decision: ResumeDecision }
+  | { kind: "replan"; decisionId: string; checkpointId: string };
+
+/**
+ * RU5: if a crash happened after decision.resolved but before Command(resume),
+ * the checkpoint still identifies the exact suspension. Re-apply that durable
+ * choice once; a later retry has another checkpoint id and is never consumed.
+ */
+export async function durableResolutionForGate(
+  runId: string,
+  gate: NonNullable<RunRecord["pendingDecision"]>,
+  checkpointIdOverride?: string
+): Promise<DurableGateRecovery | undefined> {
+  const checkpointId = checkpointIdOverride ?? (await executionCheckpointId(runId));
+  if (checkpointId === undefined) return undefined;
+  const events = await readRunModelEvents(runId);
+  const raised = [...events].reverse().find((event) => {
+    if (event.type !== "decision.raised") return false;
+    const payload = event.payload as {
+      decisionId?: unknown;
+      context?: { nodeIds?: unknown; gate?: unknown; checkpointId?: unknown };
+    };
+    return (
+      typeof payload.decisionId === "string" &&
+      payload.context?.gate === gate.gate &&
+      payload.context.checkpointId === checkpointId &&
+      Array.isArray(payload.context.nodeIds) &&
+      payload.context.nodeIds[0] === gate.taskId
+    );
+  });
+  if (raised === undefined) return undefined;
+  const decisionId = (raised.payload as { decisionId: string }).decisionId;
+  const resolved = events.find(
+    (event) =>
+      event.seq > raised.seq &&
+      event.type === "decision.resolved" &&
+      (event.payload as { decisionId?: unknown }).decisionId === decisionId
+  );
+  const choice = (resolved?.payload as { choice?: unknown } | undefined)?.choice;
+  if (typeof choice !== "object" || choice === null || !("answer" in choice) || typeof choice.answer !== "string") {
+    return undefined;
+  }
+  if (isReplanRequest({ action: choice.answer, answer: choice.answer }, gate.gate)) {
+    return { kind: "replan", decisionId, checkpointId };
+  }
+  const decision = decisionFromAnswer(gate.gate, choice.answer);
+  return decision === null ? undefined : { kind: "resume", decisionId, checkpointId, decision };
 }
 
 /**
@@ -776,15 +885,106 @@ function isInterrupted(run: RunRecord, signal: AbortSignal): boolean {
   return signal.aborted || run.status === "interrupted";
 }
 
-/** The watchdog owns terminal cancellation; do not release pipeline leases while it is still persisting allDead/audit. */
-async function waitForCancellationSettlement(runId: string): Promise<void> {
-  const deadline = Date.now() + 30_000;
-  while (Date.now() < deadline) {
-    const current = await getRunRepository().get(runId);
-    if (current.status !== "cancelling") return;
-    await new Promise((resolve) => setTimeout(resolve, 10));
+interface ExecutionPipelineOwnership {
+  runId: string;
+  budgetWatchdog: ReturnType<typeof startBudgetWatchdog> | undefined;
+  stopRepoHeartbeat: (() => void) | undefined;
+  repoLease: RepoLease | undefined;
+  stopHeartbeat: (() => void) | undefined;
+  lease: RunOperationLease | undefined;
+}
+
+interface ExecutionPipelineCleanupDependencies {
+  releaseOperation?: typeof releaseRunOperation;
+  settleCancellation?: (runId: string) => Promise<void>;
+  sleep?: (ms: number) => Promise<void>;
+  releaseRetryDelaysMs?: readonly number[];
+}
+
+/**
+ * Release every execution owner without letting a durable-release I/O error
+ * strand the process-local runner bit. The first error still reaches the
+ * background-task boundary, but a later retry is never blocked forever by the
+ * in-memory Set.
+ */
+export async function finalizeExecutionPipelineOwnership(
+  ownership: ExecutionPipelineOwnership,
+  dependencies: ExecutionPipelineCleanupDependencies = {}
+): Promise<void> {
+  let firstError: unknown;
+
+  // A cancelling run still owns physical processes. Keep both the repository
+  // lease and its heartbeat alive until cancellation has durable allDead
+  // evidence and has left `cancelling`. This guard belongs in the common
+  // finalizer so early abort returns (provisioning, preflight, grounding,
+  // custom engines and the graph stream) cannot accidentally bypass it.
+  if (ownership.repoLease !== undefined) {
+    await (dependencies.settleCancellation ?? settleAbortedExecutionCancellation)(ownership.runId);
   }
-  throw new RunLifecycleError(`Cancellation for run ${runId} did not settle within 30 seconds.`);
+
+  try {
+    await ownership.budgetWatchdog?.stop();
+  } catch (error) {
+    firstError = error;
+  }
+
+  try {
+    try {
+      ownership.stopRepoHeartbeat?.();
+    } catch (error) {
+      firstError ??= error;
+    }
+    if (ownership.repoLease !== undefined) {
+      try {
+        await releaseRepoLease(ownership.repoLease);
+      } catch (error) {
+        firstError ??= error;
+      }
+    }
+    try {
+      disposeRunAbort(ownership.runId);
+    } catch (error) {
+      firstError ??= error;
+    }
+    try {
+      ownership.stopHeartbeat?.();
+    } catch (error) {
+      firstError ??= error;
+    }
+    if (ownership.lease !== undefined) {
+      try {
+        await releaseRunOperationWithRetry(ownership.runId, ownership.lease, {
+          ...(dependencies.releaseOperation !== undefined ? { release: dependencies.releaseOperation } : {}),
+          ...(dependencies.sleep !== undefined ? { sleep: dependencies.sleep } : {}),
+          ...(dependencies.releaseRetryDelaysMs !== undefined
+            ? { retryDelaysMs: dependencies.releaseRetryDelaysMs }
+            : {})
+        });
+      } catch (error) {
+        firstError ??= error;
+      }
+    }
+  } finally {
+    markRunnerInactive(ownership.runId);
+  }
+
+  if (firstError !== undefined) throw firstError;
+}
+
+/** A cancellation owns kill/GC/audit until the status leaves `cancelling`. */
+export async function settleAbortedExecutionCancellation(
+  runId: string,
+  dependencies: CancellationSettlementDependencies = {}
+): Promise<void> {
+  await settleRunCancellation(runId, dependencies);
+}
+
+/** Do not release pipeline leases while cancellation is still persisting allDead/audit. */
+export async function waitForCancellationSettlement(
+  runId: string,
+  dependencies: CancellationSettlementDependencies = {}
+): Promise<void> {
+  await settleAbortedExecutionCancellation(runId, dependencies);
 }
 
 /**
@@ -798,23 +998,31 @@ export async function resumeExecutionPipeline(
   options: ExecutionRunnerOptions = {}
 ): Promise<void> {
   console.log(`[Runner] Resuming execution for run ${runId} with decision:`, decision);
+  await recoverPendingAmendmentMutations(runId);
   if (options.runnerAlreadyClaimed !== true && !tryMarkRunnerActive(runId)) {
     console.warn(`[Runner] Execution pipeline already active for run: ${runId}`);
     return;
   }
   let lease: RunOperationLease | undefined;
   let stopHeartbeat: (() => void) | undefined;
-  let stopBudgetWatchdog: () => void = () => undefined;
+  let budgetWatchdog: ReturnType<typeof startBudgetWatchdog> | undefined;
   let repoLease: RepoLease | undefined;
   let stopRepoHeartbeat: (() => void) | undefined;
   try {
     const claimed = await claimRunOperation(runId, "execution", {
       expectedStatuses: ["running", "paused", "interrupted"],
-      allowTakeover: true
+      allowTakeover: true,
+      takeoverStaleAfterMs: DEFAULT_STALE_MS
     });
     lease = claimed.lease;
     stopHeartbeat = startHeartbeat(runId, lease);
-    const run = claimed.run;
+    let run = claimed.run;
+    if (run.executionStartedAt === undefined) {
+      run = await updateRunForOperation(runId, lease, (current) => ({
+        ...current,
+        executionStartedAt: current.executionStartedAt ?? new Date().toISOString()
+      }));
+    }
     assertExecutableRunGraph(resolveExecutionGraph(run));
     const provisioned = provisionedFromRecord(run.provisioned);
     if (provisioned === undefined) {
@@ -825,7 +1033,9 @@ export async function resumeExecutionPipeline(
     stopRepoHeartbeat = startRepoLeaseHeartbeat(repoLease);
 
     const abortController = createRunAbort(runId);
-    stopBudgetWatchdog = startBudgetWatchdog(runId, run.executionConfig?.maxWallClockMs, lease);
+    budgetWatchdog = startBudgetWatchdog(runId, run.executionConfig?.maxWallClockMs, lease, {
+      executionStartedAt: run.executionStartedAt!
+    });
 
     const host = buildExecutionHost(run, provisioned, {
       traceStoreFactory: () =>
@@ -843,15 +1053,14 @@ export async function resumeExecutionPipeline(
       await settleExecutionException(runId, error, lease);
     }
   } finally {
-    stopRepoHeartbeat?.();
-    if (repoLease !== undefined) {
-      await releaseRepoLease(repoLease).catch(() => undefined);
-    }
-    stopBudgetWatchdog();
-    disposeRunAbort(runId);
-    stopHeartbeat?.();
-    if (lease !== undefined) await releaseRunOperation(runId, lease);
-    markRunnerInactive(runId);
+    await finalizeExecutionPipelineOwnership({
+      runId,
+      budgetWatchdog,
+      stopRepoHeartbeat,
+      repoLease,
+      stopHeartbeat,
+      lease
+    });
   }
 }
 
@@ -880,8 +1089,10 @@ async function settleExecutionOutcome(
   }
 
   if (outcome.kind === "aborted") {
-    // Cancel cut the stream between supersteps; the cancel endpoint already
-    // persisted `interrupted` and owns kill/GC. Keep the partial execution.
+    // Abort is fired after cancel claims `cancelling`, but before kill/GC,
+    // allDead evidence and the final `interrupted` transition. Keep ownership
+    // until that durable cancellation has actually settled.
+    await settleAbortedExecutionCancellation(runId);
     console.log(`[Runner] Execution stream aborted for run ${runId}; keeping partial execution.`);
     return;
   }
@@ -1031,6 +1242,7 @@ export async function runNodeExecutionPipeline(
   options: ExecutionRunnerOptions = {}
 ): Promise<void> {
   console.log(`[Runner] Starting node execution pipeline for run=${runId} task=${taskId}`);
+  await recoverPendingAmendmentMutations(runId);
   if (options.runnerAlreadyClaimed !== true && !tryMarkRunnerActive(runId)) {
     console.warn(`[Runner] Node execution pipeline already active for run=${runId}`);
     return;
@@ -1048,6 +1260,7 @@ export async function runNodeExecutionPipeline(
     const operationLease = lease;
     stopHeartbeat = startHeartbeat(runId, lease);
     let run = claimed.run;
+    assertRunHasVerifiableLocalTarget(run);
     if (run.status !== "approved") {
       throw new RunLifecycleError(`Cannot execute individual nodes from status ${run.status}`);
     }
@@ -1142,6 +1355,12 @@ export async function runNodeExecutionPipeline(
         run.repoSpec.kind === "localPath" && run.targetContext !== undefined
           ? { kind: "localPath" as const, path: run.targetContext.sourceRealPath }
           : run.repoSpec;
+      if (run.targetContext !== undefined) {
+        await verifyProvisionedAgainstTarget(
+          { sourceRepoRoot: run.targetContext.sourceRealPath },
+          run.targetContext
+        );
+      }
       provisioned = await runWithProcessSupervision(
         {
           runId: run.runId,
@@ -1557,7 +1776,7 @@ function publishRunModelEventsFromExecutionResult(
     });
   }
 
-  if (result.status === "completed") {
+  if (result.status === "completed" && artifactEvidenceIsReady(finalApplication?.finalArtifactManifest)) {
     const integrationCommit =
       finalApplication?.finalCommitSha ??
       finalApplication?.integrationCommitSha ??
@@ -1575,17 +1794,6 @@ function publishRunModelEventsFromExecutionResult(
         integrationCommit
       }
     });
-    publishRunModelEvent(run.runId, {
-      actor: "system",
-      at: now,
-      type: "decision.raised",
-      payload: {
-        decisionId: "approve_merge",
-        kind: "approve_merge",
-        blocking: true,
-        context: { diffRef: `diff://runs/${run.runId}/final` }
-      }
-    });
   }
 
   publishRunModelEvent(run.runId, {
@@ -1593,12 +1801,6 @@ function publishRunModelEventsFromExecutionResult(
     at: now,
     type: "run.metrics.ready",
     payload: { metrics: metricsFromVector(result.granularityVector) }
-  });
-  publishRunModelEvent(run.runId, {
-    actor: "system",
-    at: now,
-    type: "run.completed",
-    payload: { status: result.status === "completed" ? "success" : "failed" }
   });
 }
 

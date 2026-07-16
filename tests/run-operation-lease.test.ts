@@ -129,6 +129,30 @@ describe("run operation leases", () => {
     expect((await getRunRepository().get("run-release")).activeOperation).toBeUndefined();
   });
 
+  it("allows recovery takeover only after the durable owner heartbeat is stale", async () => {
+    await getRunRepository().save(makeRun("run-guarded-takeover", "running"));
+    const first = await claimRunOperation("run-guarded-takeover", "execution", {
+      expectedStatuses: ["running"],
+      now: "2026-07-15T12:00:00.000Z"
+    });
+
+    await expect(claimRunOperation("run-guarded-takeover", "execution", {
+      expectedStatuses: ["running"],
+      allowTakeover: true,
+      takeoverStaleAfterMs: 10 * 60 * 1_000,
+      now: "2026-07-15T12:01:00.000Z"
+    })).rejects.toBeInstanceOf(RunMutationConflictError);
+    expect((await getRunRepository().get("run-guarded-takeover")).activeOperation).toEqual(first.lease);
+
+    const recovered = await claimRunOperation("run-guarded-takeover", "execution", {
+      expectedStatuses: ["running"],
+      allowTakeover: true,
+      takeoverStaleAfterMs: 10 * 60 * 1_000,
+      now: "2026-07-15T12:11:00.000Z"
+    });
+    expect(recovered.lease.fencingToken).toBeGreaterThan(first.lease.fencingToken);
+  });
+
   it("never revalidates an old lease when a stale snapshot is restored", async () => {
     await getRunRepository().save(makeRun("run-fence-monotonic", "running"));
     const claimed = await claimRunOperation("run-fence-monotonic", "execution", {

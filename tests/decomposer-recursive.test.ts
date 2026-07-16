@@ -204,6 +204,8 @@ describe("RecursiveDecomposer — decompose with shared interfaces", () => {
     const parse = result.graph.nodes.parse;
     expect(parse?.contract?.consumedInterfaces?.map((i) => i.id)).toEqual(["Token"]);
     expect(parse?.contract?.producedInterfaces?.map((i) => i.id)).toEqual(["Ast"]);
+    expect(parse?.contract?.expectedOutput.producedSymbols).toEqual([]);
+    expect(parse?.contract?.expectedOutput.consumedSymbols).toEqual([]);
     // The consumed interface carries the real signature + provenance.
     expect(parse?.contract?.consumedInterfaces?.[0]?.signature).toContain("type Token");
     expect(parse?.contract?.consumedInterfaces?.[0]?.definedAtNodeId).toBe("root");

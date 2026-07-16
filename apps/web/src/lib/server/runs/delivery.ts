@@ -13,6 +13,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import path from "node:path";
+import { safeGitArgs } from "@manyhands/execution-core";
 
 import { rmWithRetry } from "./fs-retry";
 import { withRepositoryLease } from "./repo-lock";
@@ -82,17 +83,17 @@ export interface DeliveryReceipt {
 }
 
 async function git(repoRoot: string, args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync("git", args, { cwd: repoRoot, maxBuffer: 20 * 1024 * 1024 });
+  const { stdout } = await execFileAsync("git", safeGitArgs(repoRoot, args), { cwd: repoRoot, maxBuffer: 20 * 1024 * 1024 });
   return stdout.trim();
 }
 
 async function gitVoid(repoRoot: string, args: string[]): Promise<void> {
-  await execFileAsync("git", args, { cwd: repoRoot, maxBuffer: 20 * 1024 * 1024 });
+  await execFileAsync("git", safeGitArgs(repoRoot, args), { cwd: repoRoot, maxBuffer: 20 * 1024 * 1024 });
 }
 
 /** Porcelain lines that are real user changes (ManyHands artifacts excluded). */
 async function userDirtCount(repoRoot: string): Promise<number> {
-  const { stdout } = await execFileAsync("git", ["status", "--porcelain"], { cwd: repoRoot });
+  const { stdout } = await execFileAsync("git", safeGitArgs(repoRoot, ["status", "--porcelain"]), { cwd: repoRoot });
   return stdout
     .split("\n")
     .filter((line) => line.trim().length > 0)
@@ -163,7 +164,7 @@ export async function getDeliveryStatus(run: RunRecord): Promise<DeliveryStatus>
 
 async function isAncestor(repoRoot: string, maybeAncestor: string, descendant: string): Promise<boolean> {
   try {
-    await execFileAsync("git", ["merge-base", "--is-ancestor", maybeAncestor, descendant], { cwd: repoRoot });
+    await execFileAsync("git", safeGitArgs(repoRoot, ["merge-base", "--is-ancestor", maybeAncestor, descendant]), { cwd: repoRoot });
     return true;
   } catch {
     return false;
@@ -234,8 +235,11 @@ export async function deliverRunBranch(run: RunRecord, request: DeliveryRequest)
     throw new DeliveryError("El fingerprint del repositorio confirmado no coincide con el artifact.");
   }
   return withRepositoryLease({ repoRoot: target.repoPath, runId: run.runId }, async () => {
-    const receiptPath = path.join(target.repoPath, ".manyhands", "delivery-receipts", `${receiptKey(request.idempotencyKey)}.json`);
+    const receiptPath = deliveryReceiptPath(target.repoPath, request.idempotencyKey);
     const prior = await readReceipt(receiptPath);
+    if (prior !== undefined) {
+      assertReceiptMatchesRequest(prior, request, target.repoPath, manifest.patch);
+    }
     if (prior?.disposition === "delivered") return prior;
     const branch = await git(target.repoPath, ["rev-parse", "--abbrev-ref", "HEAD"]);
     const headBefore = await git(target.repoPath, ["rev-parse", "HEAD"]);
@@ -250,7 +254,7 @@ export async function deliverRunBranch(run: RunRecord, request: DeliveryRequest)
       await writeReceipt(receiptPath, adopted);
       return adopted;
     }
-    const prepared = newReceipt(request, target.repoPath, headBefore, headBefore, manifest.patch, "failed");
+    const prepared = prior ?? newReceipt(request, target.repoPath, headBefore, headBefore, manifest.patch, "failed");
     await writeReceipt(receiptPath, prepared);
     try {
       await gitVoid(target.repoPath, ["-c", "user.name=ManyHands", "-c", "user.email=manyhands@local", "-c", "commit.gpgsign=false", "merge", "--no-ff", target.branchName, "-m", `mh: deliver run ${run.runId} into ${branch}`]);
@@ -264,6 +268,67 @@ export async function deliverRunBranch(run: RunRecord, request: DeliveryRequest)
       throw new DeliveryError(`El merge tuvo conflictos y se abortó: ${receipt.error}`);
     }
   });
+}
+
+/**
+ * Read-only recovery seam for a delivery whose Git side effect completed before
+ * its RunRecord and required events were durably reconciled.
+ */
+export async function getDeliveryReceipt(
+  run: RunRecord,
+  request: DeliveryRequest
+): Promise<DeliveryReceipt | undefined> {
+  const target = appliedTarget(run);
+  const manifest = run.finalArtifactManifest;
+  if (target === undefined || manifest === undefined || manifest.artifactDisposition === "failed") {
+    throw new DeliveryError("El run no tiene un artifact final verificable para entregar.");
+  }
+  if (request.runId !== run.runId || request.manifestId !== manifest.manifestId || request.finalSha !== manifest.finalSha) {
+    throw new DeliveryError("La solicitud de delivery no coincide con el artifact final del run.");
+  }
+  if (request.targetFingerprint !== manifest.sourceTargetFingerprint) {
+    throw new DeliveryError("El fingerprint del repositorio confirmado no coincide con el artifact.");
+  }
+  return withRepositoryLease({ repoRoot: target.repoPath, runId: run.runId }, async () => {
+    const receipt = await readReceipt(deliveryReceiptPath(target.repoPath, request.idempotencyKey));
+    if (receipt !== undefined) {
+      assertReceiptMatchesRequest(receipt, request, target.repoPath, manifest.patch);
+    }
+    return receipt;
+  });
+}
+
+function deliveryReceiptPath(repoPath: string, idempotencyKey: string): string {
+  return path.join(repoPath, ".manyhands", "delivery-receipts", `${receiptKey(idempotencyKey)}.json`);
+}
+
+function assertReceiptMatchesRequest(
+  receipt: DeliveryReceipt,
+  request: DeliveryRequest,
+  targetRepo: string,
+  patch: string
+): void {
+  const patchHash = createHash("sha256").update(patch).digest("hex");
+  if (
+    typeof receipt.deliveryId !== "string" || receipt.deliveryId.length === 0 ||
+    !["delivered", "conflict", "failed"].includes(receipt.disposition) ||
+    typeof receipt.targetHeadAfter !== "string" || receipt.targetHeadAfter.length === 0 ||
+    typeof receipt.createdAt !== "string" || receipt.createdAt.length === 0 ||
+    receipt.mode !== "merge" ||
+    receipt.runId !== request.runId ||
+    receipt.manifestId !== request.manifestId ||
+    receipt.finalSha !== request.finalSha ||
+    receipt.targetRepo !== targetRepo ||
+    receipt.targetBranch !== request.targetBranch ||
+    receipt.targetHeadBefore !== request.expectedTargetHead ||
+    receipt.patchHash !== patchHash ||
+    receipt.idempotencyKey !== request.idempotencyKey ||
+    request.expectedClean !== true
+  ) {
+    throw new DeliveryError(
+      "La idempotency key ya pertenece a otra solicitud de delivery; usá una key nueva después de refrescar el target."
+    );
+  }
 }
 
 function newReceipt(request: DeliveryRequest, targetRepo: string, before: string, after: string, patch: string, disposition: DeliveryReceipt["disposition"]): DeliveryReceipt {

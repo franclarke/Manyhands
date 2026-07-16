@@ -9,7 +9,7 @@ import {
   loadEditableRunContext,
   persistRunPatches
 } from "@/lib/server/runs";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,7 +61,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       ...(rationale !== undefined ? { rationale } : {})
     });
     const saved = await persistRunPatches({ run, baseSnapshot, patches: [patch], expectedVersion: run.version });
-    return NextResponse.json(toRunResponse(saved));
+    return NextResponse.json(await toCanonicalRunResponse(saved));
   } catch (error) {
     return errorResponse(error);
   }

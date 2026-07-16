@@ -1,5 +1,12 @@
 import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process";
 
+import type { EffortLevel } from "@manyhands/shared";
+import {
+  killCliProcessTree,
+  resolveCliBinaryPath,
+  resolveCliProcessInvocation
+} from "@manyhands/shared/node-cli-process";
+
 import type { Decomposer, DecompositionOptions, DecompositionResult, FeatureRequest } from "../../index";
 import type { AnthropicLike } from "../anthropic-decomposer";
 import { DecomposerLlmError } from "../errors";
@@ -41,11 +48,14 @@ export interface CodexRecursiveDecomposerOptions {
   onStepCompleted?: RecursiveStepListener<RecursiveStepCompletedEvent>;
   onStepStatus?: RecursiveStepListener<RecursiveStepStatusEvent>;
   spawn?: SpawnFn;
+  /** Legacy test seam; structured CLI argv is always spawned without Node shell interpolation. */
   useShell?: boolean;
+  platform?: NodeJS.Platform;
+  hostEnv?: NodeJS.ProcessEnv;
   onCliOutput?: (data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void;
 }
 
-type CodexReasoningEffort = "low" | "medium" | "high" | "xhigh";
+type CodexReasoningEffort = EffortLevel;
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const SPAWN_FAILURE_EXIT_CODE = 127;
@@ -74,7 +84,8 @@ export class CodexRecursiveDecomposer implements Decomposer {
     if (options.binaryPath !== undefined) clientOptions.binaryPath = options.binaryPath;
     if (options.timeoutMs !== undefined) clientOptions.timeoutMs = options.timeoutMs;
     if (options.spawn !== undefined) clientOptions.spawn = options.spawn;
-    if (options.useShell !== undefined) clientOptions.useShell = options.useShell;
+    if (options.platform !== undefined) clientOptions.platform = options.platform;
+    if (options.hostEnv !== undefined) clientOptions.hostEnv = options.hostEnv;
     if (options.onCliOutput !== undefined) clientOptions.onCliOutput = options.onCliOutput;
     const client = new CodexStepClient(clientOptions);
 
@@ -120,7 +131,8 @@ interface CodexStepClientOptions {
   binaryPath?: string;
   timeoutMs?: number;
   spawn?: SpawnFn;
-  useShell?: boolean;
+  platform?: NodeJS.Platform;
+  hostEnv?: NodeJS.ProcessEnv;
   onCliOutput?: ((data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void) | undefined;
 }
 
@@ -132,17 +144,22 @@ class CodexStepClient implements AnthropicLike {
   private readonly binaryPath: string;
   private readonly timeoutMs: number;
   private readonly spawnFn: SpawnFn;
-  private readonly useShell: boolean;
+  private readonly platform: NodeJS.Platform;
+  private readonly hostEnv: NodeJS.ProcessEnv;
   private readonly onCliOutput?: ((data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void) | undefined;
 
   constructor(options: CodexStepClientOptions) {
     this.model = options.model;
     this.cwd = options.cwd;
     this.reasoningEffort = options.reasoningEffort;
-    this.binaryPath = options.binaryPath ?? process.env.MANYHANDS_CODEX_BIN ?? "codex";
+    this.platform = options.platform ?? process.platform;
+    this.hostEnv = options.hostEnv ?? process.env;
+    this.binaryPath = resolveCliBinaryPath(
+      options.binaryPath ?? this.hostEnv.MANYHANDS_CODEX_BIN ?? "codex",
+      { platform: this.platform, env: this.hostEnv }
+    );
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.spawnFn = options.spawn ?? spawn;
-    this.useShell = options.useShell ?? process.platform === "win32";
     this.onCliOutput = options.onCliOutput;
     this.messages = {
       create: async (args: any) => {
@@ -176,14 +193,21 @@ class CodexStepClient implements AnthropicLike {
       "-"
     ];
 
+    const invocation = resolveCliProcessInvocation(this.binaryPath, args, {
+      platform: this.platform,
+      env: this.hostEnv
+    });
     const outcome = await spawnCodex({
-      binaryPath: this.binaryPath,
-      args,
+      binaryPath: invocation.command,
+      args: invocation.args,
       cwd: this.cwd,
       prompt,
       timeoutMs: this.timeoutMs,
       spawnFn: this.spawnFn,
-      useShell: this.useShell,
+      platform: this.platform,
+      ...(invocation.windowsVerbatimArguments !== undefined
+        ? { windowsVerbatimArguments: invocation.windowsVerbatimArguments }
+        : {}),
       onChunk: (chunk, stream) => {
         if (this.onCliOutput !== undefined && nodeId !== undefined) {
           this.onCliOutput({ nodeId, chunk, stream });
@@ -224,7 +248,8 @@ interface SpawnCodexInput {
   prompt: string;
   timeoutMs: number;
   spawnFn: SpawnFn;
-  useShell: boolean;
+  platform: NodeJS.Platform;
+  windowsVerbatimArguments?: boolean;
   onChunk?: (chunk: string, stream: "stdout" | "stderr") => void;
 }
 
@@ -241,12 +266,17 @@ function spawnCodex(input: SpawnCodexInput): Promise<SpawnCodexOutcome> {
       cwd: input.cwd,
       env: process.env,
       stdio: ["pipe", "pipe", "pipe"],
-      shell: input.useShell
+      shell: false,
+      detached: input.platform !== "win32",
+      ...(input.windowsVerbatimArguments !== undefined
+        ? { windowsVerbatimArguments: input.windowsVerbatimArguments }
+        : {})
     });
 
     let stdout = "";
     let stderr = "";
     let settled = false;
+    let terminating = false;
 
     const finish = (outcome: SpawnCodexOutcome): void => {
       if (settled) return;
@@ -256,8 +286,20 @@ function spawnCodex(input: SpawnCodexInput): Promise<SpawnCodexOutcome> {
     };
 
     const timer = setTimeout(() => {
-      child.kill("SIGKILL");
-      finish({ exitCode: TIMEOUT_EXIT_CODE, stdout, stderr, timedOut: true });
+      if (settled || terminating) return;
+      terminating = true;
+      void killCliProcessTree(child, input.spawnFn, input.platform).then((terminationVerified) => {
+        finish({
+          exitCode: TIMEOUT_EXIT_CODE,
+          stdout,
+          stderr:
+            stderr +
+            (terminationVerified
+              ? ""
+              : `${stderr ? "\n" : ""}process-tree termination could not be verified`),
+          timedOut: true
+        });
+      });
     }, input.timeoutMs);
 
     child.stdout?.on("data", (chunk: Buffer) => {
@@ -271,6 +313,7 @@ function spawnCodex(input: SpawnCodexInput): Promise<SpawnCodexOutcome> {
       input.onChunk?.(text, "stderr");
     });
     child.on("error", (error: Error) => {
+      if (terminating) return;
       finish({
         exitCode: SPAWN_FAILURE_EXIT_CODE,
         stdout,
@@ -279,6 +322,7 @@ function spawnCodex(input: SpawnCodexInput): Promise<SpawnCodexOutcome> {
       });
     });
     child.on("close", (code) => {
+      if (terminating) return;
       finish({ exitCode: code ?? SPAWN_FAILURE_EXIT_CODE, stdout, stderr, timedOut: false });
     });
 

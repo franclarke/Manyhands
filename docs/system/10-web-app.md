@@ -77,6 +77,21 @@ despachar una wave, `execution-host.ts` persiste el evento required
 bloqueadas, razones, resumen de riesgo, fallbacks y warnings. Si ese append
 falla, la wave no se lanza silenciosamente.
 
+### Listado de runs y diagnóstico incremental
+
+`GET /api/runs?limit=N` ordena por metadata y sólo abre los records necesarios
+para completar el slice reciente. El inventario de records corruptos es estado
+derivado separado: `.manyhands/runs/.diagnostics/run-record-index.json` guarda
+`mtime`/tamaño y resultado de inspección. La ruta caliente lee ese índice pequeño
+con budget cero; el layout y `?diagnostics=refresh` avanzan lotes acotados de
+archivos nuevos o modificados. Así un record grande estable no se parsea en cada
+navegación, pero un record corrupto sigue apareciendo con enlace a diagnósticos.
+
+El monitor `scripts/manyhands-dev.mjs` usa un ciclo single-flight: agenda el
+siguiente poll sólo cuando termina el anterior. Los fallos aplican backoff
+exponencial hasta 30 segundos y el primer éxito restaura la cadencia normal.
+Nunca acumula requests `/api/runs` por encima de un servidor lento.
+
 Los singletons en memoria que cruzan rutas (event buses, locks de append,
 runner-state, abort registry, repositorios) viven anclados en `globalThis` vía
 `lib/server/global-singleton.ts`: Next instancia el estado a nivel de módulo

@@ -18,6 +18,8 @@ import { validateExecutableTaskGraph, type TaskGraph, type TaskValidationIssue }
 import type { DetectedCommands } from "../providers/command-detection";
 import { RunValidationError } from "./errors";
 import type { ProvisionedRepo } from "./repo-provisioner";
+import { applyPatches } from "./patches";
+import { compatibleGraphPatches } from "./plan-graph-storage";
 import type { RunRecord, RunValidationSummary } from "./schema";
 
 export const INTEGRATION_SUCCESS = new Set(["success", "executor_repair_success"]);
@@ -27,10 +29,20 @@ export interface ExecutionResults {
   integrationResults: IntegrationResult[];
 }
 
-/** Resolve the TaskGraph to execute from the persisted planning artifact. */
+/**
+ * Resolve the exact current TaskGraph from the persisted planning artifact.
+ *
+ * `planning.decomposition.graph` is the immutable base produced by planning;
+ * semantic plan edits live in the RunRecord patch log. Approval, readiness and
+ * execution all call this seam, so replay the complete log here instead of
+ * allowing execution to silently fall back to the pre-edit graph.
+ */
 export function resolveExecutionGraph(run: RunRecord): TaskGraph {
   if (run.planning !== undefined && run.planning !== null) {
-    return (run.planning as MockPlanningFlowResult).decomposition.graph;
+    const baseGraph = (run.planning as MockPlanningFlowResult).decomposition.graph;
+    const patches = compatibleGraphPatches(run, baseGraph);
+    const materialized = applyPatches(run, patches);
+    return (materialized.planning as MockPlanningFlowResult).decomposition.graph;
   }
   throw new Error("Cannot execute a run without a generated plan. Run planning first.");
 }

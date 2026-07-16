@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage(): Promise<React.ReactElement> {
-  const workspaces = await getWorkspaceRepository().list();
+  const { workspaces, migrationConflicts } = await getWorkspaceRepository().snapshot();
 
   return (
     <div className="flex-1 flex flex-col justify-center max-w-2xl mx-auto w-full px-6 py-12 md:py-20 bg-[var(--color-bg)]">
@@ -24,6 +24,7 @@ export default async function HomePage(): Promise<React.ReactElement> {
 
       <CommandCenterShell
         workspaces={workspaces}
+        migrationConflicts={migrationConflicts}
         initialGranularity="automatica"
         initialModelId={DEFAULT_MODEL_ID}
       />

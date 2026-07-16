@@ -48,7 +48,12 @@ export function isTerminalRunStatus(status: RunControlStatus): boolean {
   return status === "completed" || status === "completed_with_accepted" || status === "failed" || status === "interrupted";
 }
 
-export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = []): LiveRunModel {
+export function useLiveRunModel(
+  seed: Run,
+  initialEvents: readonly RunEvent[] = [],
+  options?: { disabled?: boolean }
+): LiveRunModel {
+  const disabled = options?.disabled === true;
   const [streamEvents, setStreamEvents] = useState<RunEvent[]>([]);
   const [connected, setConnected] = useState(false);
   const [connection, setConnection] = useState<LiveRunModel["connection"]>("connecting");
@@ -57,6 +62,7 @@ export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = 
   const initialCursor = useMemo(() => maxSeq(initialEvents), [initialEvents]);
 
   useEffect(() => {
+    if (disabled) return;
     if (typeof window === "undefined") return;
     bufferRef.current = [];
     setStreamEvents([]);
@@ -129,7 +135,7 @@ export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = 
       es?.close();
       setConnection("disconnected");
     };
-  }, [seed.id, initialCursor, initialEvents]);
+  }, [disabled, seed.id, initialCursor, initialEvents]);
 
   const { model, events } = useMemo(
     () => buildLiveRunModel(streamEvents, seed, initialEvents),
@@ -138,8 +144,8 @@ export function useLiveRunModel(seed: Run, initialEvents: readonly RunEvent[] = 
   return {
     model,
     events,
-    connected: connected || isTerminalRunStatus(model.run.control.status),
-    connection,
+    connected: disabled || connected || isTerminalRunStatus(model.run.control.status),
+    connection: disabled ? "connected" : connection,
     lastSeq: maxSeq(events),
     retryCount,
     streamCount: streamEvents.length

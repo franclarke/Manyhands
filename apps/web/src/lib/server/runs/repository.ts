@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { atomicWriteJson } from "../workspaces/atomic-write";
-import { resolveRepoRoot } from "../repo-root";
 import { RunNotFoundError, RunValidationError } from "./errors";
+import { resolveRunsDirectory } from "./runs-directory";
 import {
   RUN_FILE_VERSION,
   RunFileSchema,
@@ -14,11 +14,17 @@ import {
 
 export interface RunListFilter {
   workspaceId?: string;
+  workspaceIds?: readonly string[];
   limit?: number;
 }
 
 export interface RunRepository {
   list(filter?: RunListFilter): Promise<RunRecord[]>;
+  /**
+   * Reference-integrity query. Unlike the productive list view, this fails
+   * closed when any candidate RunRecord cannot be read or validated.
+   */
+  listStrict(filter?: RunListFilter): Promise<RunRecord[]>;
   get(runId: string): Promise<RunRecord>;
   save(run: RunRecord): Promise<RunRecord>;
   /**
@@ -36,6 +42,26 @@ export interface RunRepository {
 export interface JsonRunRecordStoreOptions {
   directory: string;
   clock?: () => string;
+}
+
+export interface RunRecordInspection {
+  runId: string;
+  fileName: string;
+  status: "ok" | "missing" | "corrupt";
+  reason?: string;
+  run?: RunRecord;
+  updatedAt?: string;
+}
+
+export interface CorruptRunRecordListOptions {
+  /** Override used by tests and offline tooling; production resolves the durable runs directory. */
+  directory?: string;
+  /**
+   * Maximum changed/unindexed records to parse during this call. `0` is the
+   * read-only hot path: it reads the durable diagnostics index but never opens
+   * a RunRecord. The default is deliberately bounded.
+   */
+  inspectionBudget?: number;
 }
 
 export class JsonRunRecordStore implements RunRepository {
@@ -77,6 +103,7 @@ export class JsonRunRecordStore implements RunRepository {
     }
     candidates.sort((left, right) => right.mtimeMs - left.mtimeMs);
 
+    const workspaceIds = filter.workspaceIds === undefined ? undefined : new Set(filter.workspaceIds);
     const records: RunRecord[] = [];
     for (const candidate of candidates) {
       if (filter.limit !== undefined && records.length >= filter.limit) break;
@@ -85,6 +112,7 @@ export class JsonRunRecordStore implements RunRepository {
         if (filter.workspaceId !== undefined && record.workspaceId !== filter.workspaceId) {
           continue;
         }
+        if (workspaceIds !== undefined && !workspaceIds.has(record.workspaceId)) continue;
         records.push(record);
       } catch {
         // Skip unreadable / invalid files silently; surfacing every malformed run
@@ -93,6 +121,44 @@ export class JsonRunRecordStore implements RunRepository {
     }
     records.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
     return filter.limit !== undefined ? records.slice(0, filter.limit) : records;
+  }
+
+  async listStrict(filter: RunListFilter = {}): Promise<RunRecord[]> {
+    try {
+      await this.ensureDirectory();
+    } catch (error) {
+      throw strictReferenceInspectionError(this.directory, error);
+    }
+    let entries: string[];
+    try {
+      entries = await readdir(this.directory);
+    } catch (error) {
+      if (isErrno(error) && error.code === "ENOENT") return [];
+      throw strictReferenceInspectionError(this.directory, error);
+    }
+
+    const workspaceIds = filter.workspaceIds === undefined ? undefined : new Set(filter.workspaceIds);
+    const records: RunRecord[] = [];
+    for (const entry of entries.filter((candidate) => candidate.endsWith(".json")).sort()) {
+      let record: RunRecord;
+      try {
+        record = await this.readFile(path.join(this.directory, entry));
+      } catch (error) {
+        const runId = entry.slice(0, -".json".length);
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new RunValidationError(
+          `Cannot safely inspect run record "${entry}" while checking workspace references: ${detail}. ` +
+            `Inspect /api/runs/${encodeURIComponent(runId)}/diagnostics and repair or explicitly remove ` +
+            "that run before retrying; no workspace data was deleted."
+        );
+      }
+      if (filter.workspaceId !== undefined && record.workspaceId !== filter.workspaceId) continue;
+      if (workspaceIds !== undefined && !workspaceIds.has(record.workspaceId)) continue;
+      records.push(record);
+      if (filter.limit !== undefined && records.length >= filter.limit) break;
+    }
+    records.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    return records;
   }
 
   async get(runId: string): Promise<RunRecord> {
@@ -239,6 +305,14 @@ export class JsonRunRecordStore implements RunRepository {
   }
 }
 
+function strictReferenceInspectionError(target: string, error: unknown): RunValidationError {
+  const detail = error instanceof Error ? error.message : String(error);
+  return new RunValidationError(
+    `Cannot safely inspect run records at "${target}" while checking workspace references: ${detail}. ` +
+      "Restore read access and retry; no workspace data was deleted."
+  );
+}
+
 /**
  * Read a file as UTF-8, retrying briefly on the transient fs errors a concurrent
  * atomic write can surface on Windows: an `atomicWriteJson` rename can momentarily
@@ -267,6 +341,254 @@ async function readRawWithRetry(filePath: string): Promise<string> {
 
 function safeFileName(runId: string): string {
   return runId.replace(/[^a-zA-Z0-9._-]+/g, "_");
+}
+
+/** Inspect one record without hiding validation/corruption failures. */
+export async function inspectRunRecordFile(
+  runId: string,
+  directory = resolveRunsDirectory()
+): Promise<RunRecordInspection> {
+  const fileName = `${safeFileName(runId)}.json`;
+  const filePath = path.join(directory, fileName);
+  let updatedAt: string | undefined;
+  try {
+    updatedAt = new Date((await stat(filePath)).mtimeMs).toISOString();
+    const raw = await readRawWithRetry(filePath);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      return { runId, fileName, status: "corrupt", reason: "invalid JSON", ...(updatedAt ? { updatedAt } : {}) };
+    }
+    const result = RunFileSchema.safeParse(parsed);
+    if (!result.success) {
+      return {
+        runId,
+        fileName,
+        status: "corrupt",
+        reason: result.error.issues[0]?.message ?? "schema validation failed",
+        ...(updatedAt ? { updatedAt } : {})
+      };
+    }
+    if (result.data.version !== RUN_FILE_VERSION) {
+      return {
+        runId,
+        fileName,
+        status: "corrupt",
+        reason: `unsupported run file version ${result.data.version}`,
+        ...(updatedAt ? { updatedAt } : {})
+      };
+    }
+    return { runId: result.data.run.runId, fileName, status: "ok", run: result.data.run, updatedAt };
+  } catch (error) {
+    if (isErrno(error) && error.code === "ENOENT") return { runId, fileName, status: "missing" };
+    return {
+      runId,
+      fileName,
+      status: "corrupt",
+      reason: error instanceof Error ? error.message : String(error),
+      ...(updatedAt ? { updatedAt } : {})
+    };
+  }
+}
+
+interface RunRecordDiagnosticsIndexEntry {
+  fileName: string;
+  runId: string;
+  mtimeMs: number;
+  size: number;
+  status: "ok" | "corrupt";
+  reason?: string;
+  updatedAt?: string;
+}
+
+interface RunRecordDiagnosticsIndexFile {
+  version: 1;
+  entries: Record<string, RunRecordDiagnosticsIndexEntry>;
+}
+
+const RUN_RECORD_DIAGNOSTICS_INDEX_VERSION = 1;
+const DEFAULT_DIAGNOSTICS_INSPECTION_BUDGET = 16;
+const diagnosticsIndexChains = new Map<string, Promise<unknown>>();
+
+/**
+ * Durable, incremental corruption inventory. Normal polling can pass a zero
+ * budget and never parse a RunRecord; layout/operator refreshes inspect only a
+ * bounded batch of new or changed files. Stable files are represented by
+ * mtime/size metadata in a small side index, so multi-megabyte records are not
+ * reparsed on every navigation while malformed records remain discoverable.
+ */
+export async function listCorruptRunRecords(
+  options: CorruptRunRecordListOptions = {}
+): Promise<RunRecordInspection[]> {
+  const directory = options.directory ?? resolveRunsDirectory();
+  const inspectionBudget = normalizeInspectionBudget(options.inspectionBudget);
+
+  if (inspectionBudget === 0) {
+    return corruptInspectionsFromIndex(await readRunRecordDiagnosticsIndex(directory));
+  }
+
+  return withDiagnosticsIndexLock(directory, async () => {
+    const index = await readRunRecordDiagnosticsIndex(directory);
+    const diskEntries = await readdir(directory).catch((error) => {
+      if (isErrno(error) && error.code === "ENOENT") return [] as string[];
+      throw error;
+    });
+    const candidates: Array<{ fileName: string; mtimeMs: number; size: number }> = [];
+    for (const fileName of diskEntries) {
+      if (!fileName.endsWith(".json")) continue;
+      const info = await stat(path.join(directory, fileName)).catch(() => undefined);
+      if (info !== undefined && info.isFile()) {
+        candidates.push({ fileName, mtimeMs: info.mtimeMs, size: info.size });
+      }
+    }
+
+    const liveFiles = new Set(candidates.map((entry) => entry.fileName));
+    let changed = false;
+    for (const indexedFileName of Object.keys(index.entries)) {
+      if (!liveFiles.has(indexedFileName)) {
+        delete index.entries[indexedFileName];
+        changed = true;
+      }
+    }
+
+    const stale = candidates
+      .filter((candidate) => {
+        const current = index.entries[candidate.fileName];
+        return current === undefined || current.mtimeMs !== candidate.mtimeMs || current.size !== candidate.size;
+      })
+      .sort((left, right) => right.mtimeMs - left.mtimeMs || left.fileName.localeCompare(right.fileName));
+
+    for (const candidate of stale.slice(0, inspectionBudget)) {
+      const fallbackRunId = candidate.fileName.slice(0, -".json".length);
+      const inspection = await inspectRunRecordFile(fallbackRunId, directory);
+      index.entries[candidate.fileName] = {
+        fileName: candidate.fileName,
+        runId: inspection.runId,
+        mtimeMs: candidate.mtimeMs,
+        size: candidate.size,
+        status: inspection.status === "corrupt" ? "corrupt" : "ok",
+        ...(inspection.reason !== undefined ? { reason: inspection.reason } : {}),
+        ...(inspection.updatedAt !== undefined ? { updatedAt: inspection.updatedAt } : {})
+      };
+      changed = true;
+    }
+
+    if (changed) {
+      await atomicWriteJson(runRecordDiagnosticsIndexPath(directory), index);
+    }
+    return corruptInspectionsFromIndex(index);
+  });
+}
+
+function normalizeInspectionBudget(value: number | undefined): number {
+  if (value === undefined) return DEFAULT_DIAGNOSTICS_INSPECTION_BUDGET;
+  if (!Number.isFinite(value)) return Number.MAX_SAFE_INTEGER;
+  return Math.max(0, Math.floor(value));
+}
+
+function emptyRunRecordDiagnosticsIndex(): RunRecordDiagnosticsIndexFile {
+  return { version: RUN_RECORD_DIAGNOSTICS_INDEX_VERSION, entries: {} };
+}
+
+async function readRunRecordDiagnosticsIndex(directory: string): Promise<RunRecordDiagnosticsIndexFile> {
+  try {
+    const parsed = JSON.parse(await readFile(runRecordDiagnosticsIndexPath(directory), "utf8")) as unknown;
+    if (!isRunRecordDiagnosticsIndexFile(parsed)) return emptyRunRecordDiagnosticsIndex();
+    return parsed;
+  } catch (error) {
+    if (isErrno(error) && error.code === "ENOENT") return emptyRunRecordDiagnosticsIndex();
+    // The diagnostics cache is derived state. A torn/legacy cache is rebuilt in
+    // bounded batches and must never take down the productive run list.
+    return emptyRunRecordDiagnosticsIndex();
+  }
+}
+
+function isRunRecordDiagnosticsIndexFile(value: unknown): value is RunRecordDiagnosticsIndexFile {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<RunRecordDiagnosticsIndexFile>;
+  if (candidate.version !== RUN_RECORD_DIAGNOSTICS_INDEX_VERSION) return false;
+  if (typeof candidate.entries !== "object" || candidate.entries === null) return false;
+  return Object.entries(candidate.entries).every(([fileName, raw]) => {
+    if (typeof raw !== "object" || raw === null) return false;
+    const entry = raw as Partial<RunRecordDiagnosticsIndexEntry>;
+    return (
+      entry.fileName === fileName &&
+      typeof entry.runId === "string" &&
+      typeof entry.mtimeMs === "number" &&
+      Number.isFinite(entry.mtimeMs) &&
+      typeof entry.size === "number" &&
+      Number.isFinite(entry.size) &&
+      (entry.status === "ok" || entry.status === "corrupt") &&
+      (entry.reason === undefined || typeof entry.reason === "string") &&
+      (entry.updatedAt === undefined || typeof entry.updatedAt === "string")
+    );
+  });
+}
+
+function corruptInspectionsFromIndex(index: RunRecordDiagnosticsIndexFile): RunRecordInspection[] {
+  return Object.values(index.entries)
+    .filter((entry) => entry.status === "corrupt")
+    .sort((left, right) => (right.updatedAt ?? "").localeCompare(left.updatedAt ?? ""))
+    .map((entry) => ({
+      runId: entry.runId,
+      fileName: entry.fileName,
+      status: "corrupt" as const,
+      ...(entry.reason !== undefined ? { reason: entry.reason } : {}),
+      ...(entry.updatedAt !== undefined ? { updatedAt: entry.updatedAt } : {})
+    }));
+}
+
+function runRecordDiagnosticsIndexPath(directory: string): string {
+  return path.join(directory, ".diagnostics", "run-record-index.json");
+}
+
+function withDiagnosticsIndexLock<T>(directory: string, operation: () => Promise<T>): Promise<T> {
+  const key = path.resolve(directory);
+  const previous = diagnosticsIndexChains.get(key) ?? Promise.resolve();
+  const next = previous.then(
+    () => withDiagnosticsIndexFilesystemLock(directory, operation),
+    () => withDiagnosticsIndexFilesystemLock(directory, operation)
+  );
+  diagnosticsIndexChains.set(key, next.catch(() => undefined));
+  return next;
+}
+
+async function withDiagnosticsIndexFilesystemLock<T>(
+  directory: string,
+  operation: () => Promise<T>
+): Promise<T> {
+  await mkdir(directory, { recursive: true });
+  const locksDirectory = path.join(directory, ".mutation-locks");
+  await mkdir(locksDirectory, { recursive: true });
+  const lockPath = path.join(locksDirectory, "run-record-diagnostics.lock");
+  const token = randomUUID();
+  const deadline = Date.now() + MUTATION_LOCK_ACQUIRE_TIMEOUT_MS;
+
+  while (true) {
+    try {
+      await mkdir(lockPath);
+      await writeFile(
+        path.join(lockPath, "owner.json"),
+        JSON.stringify({ token, pid: process.pid, acquiredAtMs: Date.now() }),
+        "utf8"
+      );
+      break;
+    } catch (error) {
+      if (!isErrno(error) || error.code !== "EEXIST") throw error;
+      if (await tryQuarantineStaleMutationLock(lockPath)) continue;
+      if (Date.now() >= deadline) {
+        throw new RunValidationError("Timed out acquiring the run-record diagnostics index lock");
+      }
+      await delay(MUTATION_LOCK_RETRY_MS);
+    }
+  }
+
+  try {
+    return await operation();
+  } finally {
+    await releaseOwnedMutationLock(lockPath, token);
+  }
 }
 
 interface NodeErrnoException {
@@ -358,10 +680,4 @@ function isErrno(value: unknown): value is NodeErrnoException {
   return typeof value === "object" && value !== null && "code" in value;
 }
 
-export function resolveRunsDirectory(): string {
-  const override = process.env.MANYHANDS_RUNS_DIR;
-  if (override !== undefined && override.length > 0) {
-    return path.resolve(override);
-  }
-  return path.resolve(resolveRepoRoot(), ".manyhands", "runs");
-}
+export { resolveRunsDirectory };

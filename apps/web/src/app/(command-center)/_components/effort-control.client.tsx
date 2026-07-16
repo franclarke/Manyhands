@@ -1,30 +1,38 @@
 "use client";
 
+import { useId } from "react";
 import { HelpCircle } from "lucide-react";
+import { EFFORT_LEVELS as CANONICAL_EFFORT_LEVELS, type EffortLevel } from "@manyhands/shared";
 
-export type EffortLevel = "low" | "medium" | "high";
-
-export const EFFORT_LEVELS: readonly EffortLevel[] = ["low", "medium", "high"];
+export type { EffortLevel };
 
 const LABELS: Record<EffortLevel, string> = {
   low: "Bajo",
   medium: "Medio",
-  high: "Alto"
+  high: "Alto",
+  xhigh: "Máximo"
 };
 
 const HINTS: Record<EffortLevel, string> = {
   low: "Rápido: menor profundidad, menor costo y tiempo.",
   medium: "Equilibrado: balance óptimo de costo y razonamiento.",
-  high: "Inteligente: razonamiento profundo para tareas complejas."
+  high: "Inteligente: razonamiento profundo para tareas complejas.",
+  xhigh: "Exhaustivo: razonamiento máximo para las tareas más difíciles."
 };
 
 interface EffortControlProps {
   value: EffortLevel;
   onChange: (value: EffortLevel) => void;
+  /** Effort levels the selected model declares (from the registry). Defaults to the full canonical set. */
+  levels?: readonly EffortLevel[];
 }
 
-export function EffortControl({ value, onChange }: EffortControlProps): React.ReactElement {
-  const currentIndex = EFFORT_LEVELS.indexOf(value);
+export function EffortControl({ value, onChange, levels }: EffortControlProps): React.ReactElement {
+  const hintId = useId();
+  const effortLevels = levels !== undefined && levels.length > 0 ? levels : CANONICAL_EFFORT_LEVELS;
+  const maxIndex = effortLevels.length - 1;
+  const rawIndex = effortLevels.indexOf(value);
+  const currentIndex = rawIndex >= 0 ? rawIndex : 0;
 
   return (
     <div className="flex flex-col gap-1 min-w-[160px] select-none">
@@ -33,10 +41,11 @@ export function EffortControl({ value, onChange }: EffortControlProps): React.Re
         <span className="text-meta font-medium text-[var(--color-text-subtle)]">
           Esfuerzo: <span className="text-[var(--color-text)] font-semibold">{LABELS[value]}</span>
         </span>
-        <div className="relative group cursor-pointer">
-          <HelpCircle className="h-3.5 w-3.5 text-[var(--color-text-subtle)] hover:text-[var(--color-text)] transition-colors" />
-          {/* Tooltip on hover */}
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-48 rounded-[var(--r-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] p-3 text-meta text-[var(--color-text-muted)] mh-elev-1 leading-relaxed pointer-events-none">
+        <div className="relative group">
+          <button type="button" aria-label="Ayuda sobre el esfuerzo de razonamiento" aria-describedby={hintId} className="flex h-8 w-8 items-center justify-center rounded-[var(--r-sm)] text-[var(--color-text-subtle)] transition-colors hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]">
+            <HelpCircle aria-hidden className="h-3.5 w-3.5" />
+          </button>
+          <div id={hintId} role="tooltip" className="absolute bottom-full left-1/2 z-50 mb-2 hidden w-48 -translate-x-1/2 rounded-[var(--r-md)] border border-[var(--color-border-strong)] bg-[var(--color-surface)] p-3 text-meta leading-relaxed text-[var(--color-text-muted)] pointer-events-none group-hover:block group-focus-within:block">
             {HINTS[value]}
           </div>
         </div>
@@ -47,58 +56,57 @@ export function EffortControl({ value, onChange }: EffortControlProps): React.Re
         role="slider"
         aria-label="Esfuerzo de razonamiento"
         aria-valuemin={0}
-        aria-valuemax={2}
+        aria-valuemax={maxIndex}
         aria-valuenow={currentIndex}
         aria-valuetext={LABELS[value]}
+        aria-describedby={hintId}
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
             e.preventDefault();
             const newIndex = Math.max(0, currentIndex - 1);
-            onChange(EFFORT_LEVELS[newIndex]!);
+            onChange(effortLevels[newIndex]!);
           } else if (e.key === "ArrowRight" || e.key === "ArrowUp") {
             e.preventDefault();
-            const newIndex = Math.min(EFFORT_LEVELS.length - 1, currentIndex + 1);
-            onChange(EFFORT_LEVELS[newIndex]!);
+            const newIndex = Math.min(maxIndex, currentIndex + 1);
+            onChange(effortLevels[newIndex]!);
           }
         }}
         onClick={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
           const clickX = e.clientX - rect.left;
-          const percentage = clickX / rect.width;
-          let newIndex = 1;
-          if (percentage < 0.33) newIndex = 0;
-          else if (percentage > 0.66) newIndex = 2;
-          onChange(EFFORT_LEVELS[newIndex]!);
+          const percentage = Math.min(1, Math.max(0, clickX / rect.width));
+          const newIndex = Math.round(percentage * maxIndex);
+          onChange(effortLevels[newIndex]!);
         }}
-        className="relative flex items-center h-4 py-1.5 cursor-pointer focus:outline-none"
+        className="relative flex h-10 items-center py-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2"
       >
         {/* Track */}
         <div className="w-full h-1.5 rounded-full bg-[color-mix(in_srgb,var(--color-text)_10%,transparent)] border border-[var(--color-border-soft)] relative">
           {/* Active range indicator */}
           <div
             className="absolute top-0 left-0 h-full bg-[var(--color-accent)] opacity-40 rounded-full transition-all duration-200"
-            style={{ width: `${(currentIndex / 2) * 100}%` }}
+            style={{ width: maxIndex > 0 ? `${(currentIndex / maxIndex) * 100}%` : "0%" }}
           />
 
           {/* Notches */}
-          {EFFORT_LEVELS.map((_, i) => (
+          {effortLevels.map((level, i) => (
             <div
-              key={i}
+              key={level}
               className={`absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full -translate-x-1/2 transition-colors duration-200 ${
-                i <= currentIndex 
-                  ? "bg-[var(--color-accent)]" 
+                i <= currentIndex
+                  ? "bg-[var(--color-accent)]"
                   : "bg-[color-mix(in_srgb,var(--color-text)_25%,transparent)]"
               }`}
-              style={{ left: `${(i / 2) * 100}%` }}
+              style={{ left: maxIndex > 0 ? `${(i / maxIndex) * 100}%` : "0%" }}
             />
           ))}
         </div>
 
         {/* Sliding Thumb */}
         <div
-          className="absolute w-3 h-5 rounded-[4px] bg-[var(--color-text-muted)] hover:bg-[var(--color-text)] border border-[var(--color-border-strong)] mh-elev-1 -translate-x-1/2 transition-all duration-200 ease-out pointer-events-none"
-          style={{ left: `${(currentIndex / 2) * 100}%` }}
+          className="absolute h-6 w-5 rounded-[4px] border border-[var(--color-border-strong)] bg-[var(--color-text-muted)] mh-elev-1 -translate-x-1/2 pointer-events-none transition-all duration-200 ease-out"
+          style={{ left: maxIndex > 0 ? `${(currentIndex / maxIndex) * 100}%` : "0%" }}
         />
       </div>
 

@@ -133,6 +133,8 @@ export interface Run {
   control: RunControl;
   finalArtifact?: FinalArtifactView;
   context?: RunContext;
+  /** Durable failure detail projected from the persisted run record when no event carries a more specific cause. */
+  errorMessage?: string;
   /** Pointer to the materialized snapshot (a fold cache, not a second source of truth). */
   snapshotRef?: BlobRef;
 }
@@ -215,6 +217,23 @@ export interface Node {
    * on the first attempt (the common case). See `selectPlanningHealth` (PR 05).
    */
   planning?: NodePlanningStatus;
+}
+
+// ── Canonical task dependencies (D1) ──────────────────────────────────────────
+
+export type TaskDependencyType = "contractual" | "structural" | "logical";
+
+/**
+ * A scheduling dependency copied from canonical `graph.dependencies`.
+ * Interface seams are separate contracts and must never be inferred as one of
+ * these edges by the run-model projection.
+ */
+export interface CanonicalTaskDependency {
+  fromTaskId: NodeId;
+  toTaskId: NodeId;
+  type: TaskDependencyType;
+  inferred: boolean;
+  rationale?: string;
 }
 
 // ── Planning health (graph-generation telemetry — orthogonal to execution) ──────
@@ -317,6 +336,13 @@ export interface DecisionContext {
    * events simply lack it.
    */
   gate?: string;
+  /**
+   * Durable identity of the LangGraph suspension that raised an execution
+   * gate. Recovery uses it to distinguish an unapplied answer from a later,
+   * legitimate retry of the same task and gate kind.
+   */
+  checkpointId?: string;
+  gateId?: string;
 }
 
 export type DecisionStatus = "pending" | "resolved";
@@ -328,7 +354,7 @@ export interface Decision {
   blocking: boolean;
   context: DecisionContext;
   status: DecisionStatus;
-  resolution?: { choice: DecisionChoice; actor: "human"; at: IsoTimestamp };
+  resolution?: { choice: DecisionChoice; actor: "human" | "system"; at: IsoTimestamp };
 }
 
 // ── Conflict ──────────────────────────────────────────────────────────────────
@@ -367,7 +393,7 @@ export interface AmendmentDetail {
   paths?: string[];
 }
 
-export type AmendmentStatus = "proposed" | "applied";
+export type AmendmentStatus = "proposed" | "applied" | "rejected";
 
 export interface Amendment {
   id: AmendmentId;
@@ -510,6 +536,8 @@ export interface RunModel {
   /** Identity/config — seeded from the Run record at store init, not from events. */
   run: Run;
   nodes: Map<NodeId, Node>;
+  /** Canonical D1 edges, keyed by `fromTaskId -> toTaskId`. */
+  dependencies: Map<string, CanonicalTaskDependency>;
   seams: Map<SeamId, Seam>;
   waves: Map<WaveId, Wave>;
   /** Recorded scheduling audit selections by durable wave identity. */
@@ -557,12 +585,30 @@ export interface PlanNodeStatusPayload {
   errorKind?: string;
   errorMessage?: string;
 }
+export interface PlanDependencyProposedPayload extends CanonicalTaskDependency {}
 export interface PlanSeamProposedPayload {
   seamId: SeamId;
   name: string;
   producerNodeId: NodeId;
   consumerNodeIds: NodeId[];
   draftSignature: string;
+}
+export interface PlanGraphProjectedNode extends PlanNodeProposedPayload {
+  scopePaths: string[];
+}
+/**
+ * Atomic, revision-scoped materialization of the current editable graph. Unlike
+ * additive proposal events, replacing from this payload makes removals durable
+ * and prevents a cold replay from resurrecting entities from an older revision.
+ */
+export interface PlanGraphProjectedPayload {
+  projectionVersion: 1;
+  planRevision: number;
+  /** Reset stale execution overlays when the projection starts a new semantic revision. */
+  resetRuntime: boolean;
+  nodes: PlanGraphProjectedNode[];
+  dependencies: PlanDependencyProposedPayload[];
+  seams: PlanSeamProposedPayload[];
 }
 export interface PlanReadyPayload {
   rootId: NodeId;
@@ -684,6 +730,9 @@ export interface SeamAmendedPayload {
 export interface AmendmentAppliedPayload {
   amendmentId: AmendmentId;
 }
+export interface AmendmentRejectedPayload {
+  amendmentId: AmendmentId;
+}
 
 export interface IntegrationStartedPayload {
   compositeNodeId: NodeId;
@@ -730,6 +779,14 @@ export interface RunMetricsReadyPayload {
 }
 export interface RunCompletedPayload {
   status: RunOutcome;
+}
+
+export interface RunDeliveryCompletedPayload {
+  manifestId: string;
+  finalSha: string;
+  deliveryId?: string;
+  targetBranch?: string;
+  targetHead?: string;
 }
 
 export interface RunArtifactCreationStartedPayload {
@@ -805,7 +862,7 @@ export interface DecisionRaisedPayload {
 export interface DecisionResolvedPayload {
   decisionId: DecisionId;
   choice: DecisionChoice;
-  actor: "human";
+  actor: "human" | "system";
 }
 
 export type SchedulingAuditPolicy = "sequential_dag" | "parallel_naive" | "risk_aware";
@@ -836,7 +893,10 @@ export interface RunSchedulingWaveSelectedPayload {
   version: 1;
   waveId: string;
   source: SchedulingAuditSource;
+  /** Zero-based durable position among scheduling-wave facts, never event seq. */
   waveIndex: number;
+  /** One-based human display ordinal. Absent only on legacy persisted events. */
+  waveOrdinal?: number;
   maxParallel: number;
   routing: "fixed" | "complexity";
   policy: SchedulingAuditPolicy;
@@ -847,6 +907,14 @@ export interface RunSchedulingWaveSelectedPayload {
   riskSummary: SchedulingAuditRiskSummary;
   fallbacks: SchedulingAuditFallback[];
   warnings: SchedulingAuditFallback[];
+}
+
+export interface RunSchedulingRetryDispatchedPayload {
+  version: 1;
+  waveId: string;
+  taskId: NodeId;
+  source: "human_gate";
+  reason: "retry_repair";
 }
 
 /**
@@ -861,6 +929,8 @@ export interface RunEventPayloads {
   "plan.started": EmptyPayload;
   "plan.node.proposed": PlanNodeProposedPayload;
   "plan.node.status": PlanNodeStatusPayload;
+  "plan.graph.projected": PlanGraphProjectedPayload;
+  "plan.dependency.proposed": PlanDependencyProposedPayload;
   "plan.seam.proposed": PlanSeamProposedPayload;
   "plan.ready": PlanReadyPayload;
   // Foundation
@@ -896,6 +966,7 @@ export interface RunEventPayloads {
   "amendment.proposed": AmendmentProposedPayload;
   "seam.amended": SeamAmendedPayload;
   "amendment.applied": AmendmentAppliedPayload;
+  "amendment.rejected": AmendmentRejectedPayload;
   // Reconciliation
   "integration.started": IntegrationStartedPayload;
   "conflict.detected": ConflictDetectedPayload;
@@ -906,8 +977,10 @@ export interface RunEventPayloads {
   "run.evidence.ready": RunEvidenceReadyPayload;
   "run.metrics.ready": RunMetricsReadyPayload;
   "run.completed": RunCompletedPayload;
+  "run.delivery.completed": RunDeliveryCompletedPayload;
   "run.status.changed": RunStatusChangedPayload;
   "run.scheduling.wave_selected": RunSchedulingWaveSelectedPayload;
+  "run.scheduling.retry_dispatched": RunSchedulingRetryDispatchedPayload;
   "run.artifact.creation.started": RunArtifactCreationStartedPayload;
   "run.artifact.creation.finished": RunArtifactCreationFinishedPayload;
   "run.cancelled": RunCancelledPayload;
@@ -933,6 +1006,8 @@ export const RUN_EVENT_TYPES = [
   "plan.started",
   "plan.node.proposed",
   "plan.node.status",
+  "plan.graph.projected",
+  "plan.dependency.proposed",
   "plan.seam.proposed",
   "plan.ready",
   "grounding.started",
@@ -966,6 +1041,7 @@ export const RUN_EVENT_TYPES = [
   "amendment.proposed",
   "seam.amended",
   "amendment.applied",
+  "amendment.rejected",
   "integration.started",
   "conflict.detected",
   "conflict.resolved",
@@ -974,8 +1050,10 @@ export const RUN_EVENT_TYPES = [
   "run.evidence.ready",
   "run.metrics.ready",
   "run.completed",
+  "run.delivery.completed",
   "run.status.changed",
   "run.scheduling.wave_selected",
+  "run.scheduling.retry_dispatched",
   "run.artifact.creation.started",
   "run.artifact.creation.finished",
   "run.cancelled",

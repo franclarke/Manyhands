@@ -8,7 +8,7 @@ import {
   type RunRecord
 } from "@/lib/server/runs";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,7 +42,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       }
     );
     await appendStatusEventOrRollback(requireCapturedRunRecord(previous, id), saved, { at: now, actor: "human" });
-    return NextResponse.json(toRunResponse(saved));
+    return NextResponse.json(await toCanonicalRunResponse(saved));
   } catch (error) {
     return runErrorResponse(error);
   }

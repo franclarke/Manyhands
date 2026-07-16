@@ -33,9 +33,11 @@ import {
 } from "@/lib/server/runs";
 import { answerExecutionGate } from "@/lib/server/runs/execution-gate-service";
 import { planningResumeFor } from "@/lib/server/runs/planning-host";
+import { DEFAULT_STALE_MS } from "@/lib/server/runs/interrupted";
+import { isRunOperationFresh } from "@/lib/server/runs/run-operation-lease";
 import { resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import { isRunnerActive, startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 
@@ -70,7 +72,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         ...(expectedGateId !== undefined ? { expectedGateId } : {}),
         ...(expectedVersion !== undefined ? { expectedVersion } : {})
       });
-      return NextResponse.json(toRunResponse(result.run));
+      return NextResponse.json(await toCanonicalRunResponse(result.run));
     }
 
     // 2) Replan question resume: a clarifying question raised DURING a replan
@@ -85,7 +87,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         throw new RunLifecycleError(`Run ${id} is being driven by an active runner.`);
       }
       const saved = await resumeReplanWithAnswer(id, planningAnswer.nodeId ?? run.pendingQuestion?.nodeId, planningAnswer.answer);
-      return NextResponse.json(toRunResponse(saved));
+      return NextResponse.json(await toCanonicalRunResponse(saved));
     }
 
     // 3) Planning question resume (incl. the degraded-plan gate, whose answer
@@ -102,6 +104,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
           status: ["paused", "interrupted"],
           pausedDuring: "generating",
           pendingQuestionNodeId: planningAnswer.nodeId ?? "any",
+          rejectFreshOperationAfterMs: DEFAULT_STALE_MS,
           ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
         },
         (current) => {
@@ -125,17 +128,28 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       startRunBackgroundTask(id, "route:resume:planning-question", () =>
         resumePlanningPipeline(id, planningResumeFor(answeredNodeId, planningAnswer.answer))
       );
-      return NextResponse.json(toRunResponse(saved));
+      return NextResponse.json(await toCanonicalRunResponse(saved));
     }
 
     // 4) Plain un-pause (cooperative engine pause).
     let resumedPhase: "generating" | "running" | undefined;
+    let durableOwnerWillResume = false;
     let previous: RunRecord | undefined;
     const saved = await claimRunMutation(
       id,
       { status: ["paused"], ...(expectedVersion !== undefined ? { version: expectedVersion } : {}) },
       (current) => {
         previous = current;
+        durableOwnerWillResume =
+          current.activeOperation !== undefined &&
+          isRunOperationFresh(current.activeOperation, DEFAULT_STALE_MS);
+        if (durableOwnerWillResume && current.activeOperation?.kind === "fork") {
+          throw new RunMutationConflictError(
+            `Run ${id} is being forked from its durable checkpoint snapshot; wait for that operation to finish.`,
+            current.status,
+            current.version
+          );
+        }
         if (
           current.pendingDecision !== undefined ||
           current.pendingQuestion !== undefined ||
@@ -162,14 +176,14 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       }
     );
     await appendStatusEventOrRollback(requireCapturedRunRecord(previous, id), saved, { actor: "human" });
-    if (!isRunnerActive(saved.runId)) {
+    if (!durableOwnerWillResume && !isRunnerActive(saved.runId)) {
       if (resumedPhase === "generating") {
         startRunBackgroundTask(saved.runId, "route:resume:planning-plain", () => runPlanningPipeline(saved.runId));
       } else {
         startRunBackgroundTask(saved.runId, "route:resume:execution-plain", () => runExecutionPipeline(saved.runId));
       }
     }
-    return NextResponse.json(toRunResponse(saved));
+    return NextResponse.json(await toCanonicalRunResponse(saved));
   } catch (error) {
     return runErrorResponse(error);
   }

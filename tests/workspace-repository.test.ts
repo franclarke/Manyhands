@@ -1,6 +1,8 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { execFile, spawn } from "node:child_process";
+import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   WorkspaceConflictError,
@@ -15,6 +17,7 @@ import {
 let tempDir: string;
 let filePath: string;
 let repo: WorkspaceRepository;
+const execFileAsync = promisify(execFile);
 
 function makeRepository(): WorkspaceRepository {
   let counter = 0;
@@ -124,8 +127,132 @@ describe("JsonWorkspaceRepository", () => {
     expect(slugs.size).toBe(results.length);
   });
 
+  it("serializes writes from independent OS processes without a lost update", async () => {
+    const childBundle = path.join(tempDir, "workspace-store-child.cjs");
+    const esbuildCli = await findEsbuildCli();
+    await execFileAsync(process.execPath, [
+      esbuildCli,
+      path.resolve("tests/helpers/workspace-store-child.ts"),
+      `--outfile=${childBundle}`,
+      "--bundle",
+      "--platform=node",
+      "--format=cjs",
+      "--log-level=silent",
+      `--tsconfig=${path.resolve("tsconfig.json")}`
+    ]);
+    const gatePath = path.join(tempDir, "start-gate");
+    const children = [
+      spawn(process.execPath, [childBundle, filePath, "process-left", "Left", gatePath], {
+        windowsHide: true,
+        stdio: ["ignore", "ignore", "pipe"]
+      }),
+      spawn(process.execPath, [childBundle, filePath, "process-right", "Right", gatePath], {
+        windowsHide: true,
+        stdio: ["ignore", "ignore", "pipe"]
+      })
+    ];
+    await Promise.all([
+      waitForPath(`${gatePath}.process-left.ready`),
+      waitForPath(`${gatePath}.process-right.ready`)
+    ]);
+    await writeFile(gatePath, "go", "utf8");
+    await Promise.all(children.map(waitForChild));
+
+    const persisted = JSON.parse(await readFile(filePath, "utf8")) as {
+      workspaces: Array<{ id: string }>;
+    };
+    expect(persisted.workspaces.map((workspace) => workspace.id).sort()).toEqual([
+      "process-left",
+      "process-right"
+    ]);
+  }, 30_000);
+
+  it("takes over an abandoned filesystem lock", async () => {
+    const lockDir = `${filePath}.lock`;
+    await mkdir(lockDir, { recursive: true });
+    await writeFile(
+      path.join(lockDir, "owner.json"),
+      JSON.stringify({ token: "dead-owner", pid: 2_147_483_647, acquiredAt: "2020-01-01T00:00:00.000Z" }),
+      "utf8"
+    );
+    const recovering = new JsonWorkspaceRepository({
+      filePath,
+      lockOptions: { staleMs: 0, acquireTimeoutMs: 2_000, retryMs: 1 }
+    });
+
+    await expect(recovering.list()).resolves.toHaveLength(2);
+    await expect(access(lockDir)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("loads a legacy path-keyed repository identity without a filesystem object id", async () => {
+    await writeFile(
+      filePath,
+      JSON.stringify({
+        version: 1,
+        workspaces: [
+          {
+            id: "legacy-id",
+            slug: "legacy",
+            name: "Legacy",
+            repoPath: path.join(tempDir, "missing-repo"),
+            repositoryIdentity: {
+              version: 1,
+              key: "a".repeat(64),
+              repoRealPath: path.join(tempDir, "missing-repo"),
+              gitCommonDir: path.join(tempDir, "missing-repo", ".git")
+            },
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z"
+          }
+        ]
+      }),
+      "utf8"
+    );
+    const legacy = new JsonWorkspaceRepository({ filePath, seeds: [] });
+
+    await expect(legacy.get("legacy-id")).resolves.toMatchObject({
+      id: "legacy-id",
+      repositoryIdentity: { key: "a".repeat(64) }
+    });
+  });
+
   it("rejects a corrupted file with WorkspaceValidationError", async () => {
     await import("node:fs/promises").then((fs) => fs.writeFile(filePath, "{ not json", "utf8"));
     await expect(repo.list()).rejects.toBeInstanceOf(WorkspaceValidationError);
   });
 });
+
+async function waitForPath(target: string): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  for (;;) {
+    try {
+      await access(target);
+      return;
+    } catch {
+      if (Date.now() >= deadline) throw new Error(`Timed out waiting for ${target}`);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  }
+}
+
+function waitForChild(child: ReturnType<typeof spawn>): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let stderr = "";
+    child.stderr?.setEncoding("utf8");
+    child.stderr?.on("data", (chunk: string) => {
+      stderr += chunk;
+    });
+    child.once("error", reject);
+    child.once("exit", (code, signal) => {
+      if (code === 0) resolve();
+      else reject(new Error(`Workspace child exited ${code ?? signal}: ${stderr}`));
+    });
+  });
+}
+
+async function findEsbuildCli(): Promise<string> {
+  const store = path.resolve("node_modules/.pnpm");
+  const packageDirectory = (await readdir(store)).find((entry) => entry.startsWith("esbuild@"));
+  if (packageDirectory === undefined) throw new Error(`esbuild package is missing under ${store}`);
+  return path.join(store, packageDirectory, "node_modules", "esbuild", "bin", "esbuild");
+}

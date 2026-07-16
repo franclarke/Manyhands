@@ -1,6 +1,5 @@
 "use client";
 
-import { useId } from "react";
 import type { Workspace } from "@/lib/api-types";
 
 interface WorkspacePickerProps {
@@ -10,11 +9,9 @@ interface WorkspacePickerProps {
 }
 
 export function WorkspacePicker({ workspaces, value, onChange }: WorkspacePickerProps): React.ReactElement {
-  const labelId = useId();
-
   return (
     <select
-      id={labelId}
+      id="workspace-picker"
       aria-label="Workspace"
       value={value}
       onChange={(event) => onChange(event.target.value)}

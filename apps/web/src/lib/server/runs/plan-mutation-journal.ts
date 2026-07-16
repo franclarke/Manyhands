@@ -1,4 +1,5 @@
-import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 
@@ -8,6 +9,7 @@ export const PLAN_MUTATION_STATUSES = [
   "prepared",
   "graph_prepared",
   "record_persisted",
+  "worktrees_cleaned",
   "checkpoint_reset",
   "events_persisted",
   "completed",
@@ -29,6 +31,11 @@ const PlanMutationOperationSchema = z.object({
   graphHash: z.string().min(1),
   /** Prepared strict-valid graph retained to make post-CAS recovery inspectable. */
   preparedGraph: z.unknown().optional(),
+  patchId: z.string().min(1).optional(),
+  amendmentId: z.string().min(1).optional(),
+  decisionId: z.string().min(1).optional(),
+  runOperationId: z.string().uuid().optional(),
+  invalidatedTaskIds: z.array(z.string().min(1)).optional(),
   status: z.enum(PLAN_MUTATION_STATUSES),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -47,7 +54,7 @@ export class PlanMutationConflictError extends Error {
 }
 
 export class JsonPlanMutationJournal {
-  private readonly chains = new Map<string, Promise<unknown>>();
+  private chain: Promise<unknown> = Promise.resolve();
   private readonly now: () => string;
 
   constructor(private readonly options: { directory: string; clock?: () => string }) {
@@ -55,7 +62,7 @@ export class JsonPlanMutationJournal {
   }
 
   async reserve(input: Omit<PlanMutationOperation, "schemaVersion" | "version" | "status" | "createdAt" | "updatedAt">): Promise<PlanMutationOperation> {
-    return this.withRunLock(input.runId, async () => {
+    return this.withJournalLock(async () => {
       const file = await this.read();
       const existing = file.operations.find((operation) => operation.operationId === input.operationId);
       if (existing !== undefined) {
@@ -90,7 +97,7 @@ export class JsonPlanMutationJournal {
 
   /** Explicit purge only: remove this run's durable operations, never another run's. */
   async removeForRun(runId: string): Promise<number> {
-    return this.withRunLock(runId, async () => {
+    return this.withJournalLock(async () => {
       const file = await this.read();
       const operations = file.operations.filter((operation) => operation.runId !== runId);
       const removed = file.operations.length - operations.length;
@@ -105,7 +112,7 @@ export class JsonPlanMutationJournal {
   ): Promise<PlanMutationOperation> {
     const current = await this.get(operationId);
     if (current === undefined) throw new PlanMutationConflictError(`Unknown plan mutation ${operationId}.`);
-    return this.withRunLock(current.runId, async () => {
+    return this.withJournalLock(async () => {
       const file = await this.read();
       const index = file.operations.findIndex((operation) => operation.operationId === operationId);
       const latest = file.operations[index];
@@ -151,41 +158,57 @@ export class JsonPlanMutationJournal {
     return path.join(this.options.directory, "plan-mutations.json");
   }
 
-  private withRunLock<T>(runId: string, operation: () => Promise<T>): Promise<T> {
-    const previous = this.chains.get(runId) ?? Promise.resolve();
+  private withJournalLock<T>(operation: () => Promise<T>): Promise<T> {
+    const previous = this.chain;
     const next = previous.then(
-      () => this.withFilesystemLock(runId, operation),
-      () => this.withFilesystemLock(runId, operation)
+      () => this.withFilesystemLock(operation),
+      () => this.withFilesystemLock(operation)
     );
-    this.chains.set(runId, next.catch(() => undefined));
+    this.chain = next.catch(() => undefined);
     return next;
   }
 
-  private async withFilesystemLock<T>(runId: string, operation: () => Promise<T>): Promise<T> {
-    const locks = path.join(this.options.directory, ".mutation-locks");
-    const lock = path.join(locks, safeName(runId));
-    await mkdir(locks, { recursive: true });
+  /**
+   * The journal is one shared JSON file, so its mutex must be global too.  A
+   * per-run lock lets two different runs read the same generation and publish
+   * competing full-file replacements.  The token makes stale takeover/release
+   * fencing-safe: an old owner can never remove a successor's lock.
+   */
+  private async withFilesystemLock<T>(operation: () => Promise<T>): Promise<T> {
+    const lock = path.join(this.options.directory, ".plan-mutations.lock");
+    await mkdir(this.options.directory, { recursive: true });
     const deadline = Date.now() + 15_000;
+    const token = randomUUID();
     while (true) {
       try {
         await mkdir(lock);
-        await writeFile(path.join(lock, "owner"), `${process.pid}\n${Date.now()}`, "utf8");
+        await writeFile(
+          path.join(lock, "owner.json"),
+          JSON.stringify({ token, pid: process.pid, acquiredAtMs: Date.now() }),
+          "utf8"
+        );
         break;
       } catch (error) {
         if (!isErrno(error) || error.code !== "EEXIST") throw error;
         const info = await stat(lock).catch(() => undefined);
         if (info !== undefined && Date.now() - info.mtimeMs > 30_000) {
-          await rm(lock, { recursive: true, force: true });
+          const quarantine = `${lock}.stale-${randomUUID()}`;
+          try {
+            await rename(lock, quarantine);
+            await rm(quarantine, { recursive: true, force: true });
+          } catch (takeoverError) {
+            if (!isErrno(takeoverError) || takeoverError.code !== "ENOENT") throw takeoverError;
+          }
           continue;
         }
-        if (Date.now() >= deadline) throw new PlanMutationConflictError(`Timed out locking plan mutations for ${runId}.`);
+        if (Date.now() >= deadline) throw new PlanMutationConflictError("Timed out locking the plan mutation journal.");
         await new Promise((resolve) => setTimeout(resolve, 20));
       }
     }
     try {
       return await operation();
     } finally {
-      await rm(lock, { recursive: true, force: true });
+      await releaseFilesystemLock(lock, token);
     }
   }
 }
@@ -194,9 +217,10 @@ const ORDER: Record<PlanMutationStatus, number> = {
   prepared: 0,
   graph_prepared: 1,
   record_persisted: 2,
-  checkpoint_reset: 3,
-  events_persisted: 4,
-  completed: 5,
+  worktrees_cleaned: 3,
+  checkpoint_reset: 4,
+  events_persisted: 5,
+  completed: 6,
   failed: 99
 };
 
@@ -205,8 +229,24 @@ function canAdvance(from: PlanMutationStatus, to: PlanMutationStatus): boolean {
   return to === "failed" || ORDER[to] > ORDER[from];
 }
 
-function safeName(value: string): string {
-  return value.replace(/[^a-zA-Z0-9._-]+/g, "_");
+export function planMutationStatusAtLeast(
+  current: PlanMutationStatus,
+  expected: PlanMutationStatus
+): boolean {
+  return ORDER[current] >= ORDER[expected];
+}
+
+async function releaseFilesystemLock(lock: string, token: string): Promise<void> {
+  try {
+    const owner = JSON.parse(await readFile(path.join(lock, "owner.json"), "utf8")) as { token?: unknown };
+    if (owner.token !== token) return;
+    const quarantine = `${lock}.released-${token}`;
+    await rename(lock, quarantine);
+    await rm(quarantine, { recursive: true, force: true });
+  } catch (error) {
+    if (isErrno(error) && error.code === "ENOENT") return;
+    throw error;
+  }
 }
 
 function isErrno(error: unknown): error is NodeJS.ErrnoException {

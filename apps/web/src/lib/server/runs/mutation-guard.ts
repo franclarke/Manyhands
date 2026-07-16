@@ -36,6 +36,13 @@ export interface RunMutationExpectation {
   version?: number;
   /** Reject while an in-process runner is actively driving this run. */
   rejectActiveRunner?: boolean;
+  /**
+   * Reject while a durable operation owner has a heartbeat newer than this
+   * threshold. Unlike `rejectActiveRunner`, this is cross-process and is
+   * checked against the fresh record inside the repository write lock.
+   * Stale owners remain eligible for an explicit fenced recovery takeover.
+   */
+  rejectFreshOperationAfterMs?: number;
   /** Fence a background writer to the exact persisted operation owner. */
   operationLease?: Pick<RunOperationLease, "operationId" | "fencingToken">;
 }
@@ -107,6 +114,16 @@ function assertExpectation(runId: string, current: RunRecord, expectation: RunMu
   if (expectation.version !== undefined && current.version !== expectation.version) {
     conflict(`version ${expectation.version} is stale (current version is ${current.version})`);
   }
+  if (
+    expectation.rejectFreshOperationAfterMs !== undefined &&
+    current.activeOperation !== undefined &&
+    operationHeartbeatIsFresh(current.activeOperation, expectation.rejectFreshOperationAfterMs)
+  ) {
+    conflict(
+      `active ${current.activeOperation.kind} operation ` +
+        `${current.activeOperation.operationId}/${current.activeOperation.fencingToken} still has a fresh heartbeat`
+    );
+  }
   if (expectation.operationLease !== undefined) {
     const active = current.activeOperation;
     if (
@@ -120,4 +137,9 @@ function assertExpectation(runId: string, current: RunRecord, expectation: RunMu
       );
     }
   }
+}
+
+function operationHeartbeatIsFresh(operation: RunOperationLease, staleAfterMs: number): boolean {
+  const heartbeatMs = Date.parse(operation.heartbeatAt);
+  return Number.isFinite(heartbeatMs) && Date.now() - heartbeatMs < staleAfterMs;
 }

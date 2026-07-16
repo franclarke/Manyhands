@@ -36,8 +36,26 @@ import type {
   RenderableNodeState,
   RunHealth,
   RunModel,
-  RunPhase
+  RunPhase,
+  RunControlStatus
 } from "./types";
+
+const TERMINAL_OR_ARTIFACT_CONTROL_STATUSES = new Set<RunControlStatus>([
+  "interrupted",
+  "completed",
+  "completed_with_accepted",
+  "partial",
+  "unverified",
+  "needs_delivery",
+  "failed_artifact",
+  "failed_delivery",
+  "failed"
+]);
+
+/** Pending decisions become durable history once the run reaches a terminal or artifact-control state. */
+export function hasTerminalOrArtifactControlStatus(status: RunControlStatus): boolean {
+  return TERMINAL_OR_ARTIFACT_CONTROL_STATUSES.has(status);
+}
 
 // ── Phase ─────────────────────────────────────────────────────────────────────
 
@@ -49,6 +67,7 @@ export function selectPhase(model: RunModel): RunPhase {
   const hasActiveConflict = [...model.conflicts.values()].some((c) => c.status !== "resolved");
   const approveMergeExists = decisions.some((d) => d.kind === "approve_merge");
   const approvePlanResolved = decisions.some((d) => d.kind === "approve_plan" && d.status === "resolved");
+  const approvePlanPending = decisions.some((d) => d.kind === "approve_plan" && d.status === "pending");
   const someLeafIntegrated = nodes.some((n) => n.role === "leaf" && n.execution.kind === "integrated");
   const someCompositeOpen = nodes.some(
     (n) => (n.role === "composite" || n.role === "root") && n.execution.kind !== "integrated"
@@ -61,6 +80,7 @@ export function selectPhase(model: RunModel): RunPhase {
     nodes.length > 0 || decisions.some((d) => d.kind === "approve_plan" || d.kind === "clarify");
 
   if (model.evidence !== undefined || approveMergeExists) return "disposition";
+  if (approvePlanPending) return "proposal";
   if (hasRunningNode) return "supervision";
   if (hasActiveConflict || (someLeafIntegrated && someCompositeOpen)) return "reconciliation";
   if (approvePlanResolved || hasGroundingSignals) return "foundation";
@@ -73,6 +93,7 @@ export function selectPhase(model: RunModel): RunPhase {
 export function selectHealth(model: RunModel): RunHealth {
   const nodes = [...model.nodes.values()];
 
+  if (["failed", "failed_artifact", "failed_delivery"].includes(model.run.control.status)) return "failing";
   const hasFailed = nodes.some((n) => n.execution.kind === "failed");
   if (hasFailed) return "failing";
 
@@ -138,8 +159,15 @@ export function selectWavefront(model: RunModel): NodeId[] {
 // ── Attention (pending decisions, blocking first, insertion order within) ──────
 
 export function selectAttention(model: RunModel): Decision[] {
+  if (hasTerminalOrArtifactControlStatus(model.run.control.status)) return [];
   const pending = [...model.decisions.values()].filter((d) => d.status === "pending");
   return [...pending.filter((d) => d.blocking), ...pending.filter((d) => !d.blocking)];
+}
+
+/** Pending decisions retained for audit after a terminal state. They never receive an active CTA. */
+export function selectArchivedAttention(model: RunModel): Decision[] {
+  if (!hasTerminalOrArtifactControlStatus(model.run.control.status)) return [];
+  return [...model.decisions.values()].filter((decision) => decision.status === "pending");
 }
 
 // ── Blocked ───────────────────────────────────────────────────────────────────

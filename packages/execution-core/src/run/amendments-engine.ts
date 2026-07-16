@@ -1,5 +1,6 @@
 import { join } from "node:path";
-import { SimpleGitRunner } from "../git/runner.js";
+import { stat } from "node:fs/promises";
+import { SimpleGitRunner, type GitRunner } from "../git/runner.js";
 import { WorktreeManager, worktreeBranchFor, worktreePathFor } from "../worktree/manager.js";
 import type { TaskGraph } from "@manyhands/task-graph";
 import type { AgentExecutionResult, IntegrationResult } from "../types.js";
@@ -70,6 +71,27 @@ function computeDownstreamClosure(graph: TaskGraph, seeds: string[]): Set<string
   return invalid;
 }
 
+/** Pure seam invalidation used to prepare a durable amendment before Git IO. */
+export function computeSeamInvalidationClosure(graph: TaskGraph, seamId: string): Set<string> {
+  const producer = Object.values(graph.nodes).find((node) =>
+    (node.contract?.producedInterfaces ?? []).some((iface) => iface.id === seamId)
+  );
+  return producer === undefined ? new Set<string>() : computeDownstreamClosure(graph, [producer.id]);
+}
+
+export function filterInvalidatedResults(
+  leafResults: AgentExecutionResult[],
+  integrationResults: IntegrationResult[],
+  invalidatedTaskIds: ReadonlySet<string>
+): Pick<InvalidationResult, "leafResults" | "integrationResults"> {
+  return {
+    leafResults: leafResults.filter((result) => !invalidatedTaskIds.has(result.taskId)),
+    integrationResults: integrationResults.filter(
+      (result) => !invalidatedTaskIds.has(result.compositeTaskId)
+    )
+  };
+}
+
 /**
  * Seam Amendments Engine.
  *
@@ -79,33 +101,30 @@ function computeDownstreamClosure(graph: TaskGraph, seeds: string[]): Set<string
  * so they are re-scheduled for execution.
  */
 export class AmendmentsEngine {
-  private readonly git: SimpleGitRunner;
+  private readonly git: GitRunner;
 
-  constructor() {
-    this.git = new SimpleGitRunner();
+  constructor(git: GitRunner = new SimpleGitRunner()) {
+    this.git = git;
   }
 
   async amendSeam(params: AmendSeamParams): Promise<InvalidationResult> {
     const { repoRoot, runId, graph, seamId, leafResults, integrationResults } = params;
-
-    // Find the node that produces this seam
-    let producerTaskId: string | null = null;
-    for (const node of Object.values(graph.nodes)) {
-      const produced = node.contract?.producedInterfaces ?? [];
-      if (produced.some((i) => i.id === seamId)) {
-        producerTaskId = node.id;
-        break;
-      }
-    }
-
-    if (producerTaskId === null) {
-      // If no producer was declared, we can't trace dependencies, return original
-      return { leafResults, integrationResults, invalidatedTaskIds: new Set() };
-    }
-
-    // Downstream of the producer: dependents + ancestor integrations.
-    const invalidatedTaskIds = computeDownstreamClosure(graph, [producerTaskId]);
+    const invalidatedTaskIds = computeSeamInvalidationClosure(graph, seamId);
     return this.invalidate({ repoRoot, runId, graph, leafResults, integrationResults }, invalidatedTaskIds);
+  }
+
+  /**
+   * Perform only the physical cleanup for an already-durable invalidation.
+   * Recovery can safely repeat this operation; missing worktrees/branches are
+   * intentionally treated as already cleaned.
+   */
+  async cleanInvalidatedTasks(params: {
+    repoRoot: string;
+    runId: string;
+    graph: TaskGraph;
+    invalidatedTaskIds: ReadonlySet<string>;
+  }): Promise<void> {
+    await this.clean(params, params.invalidatedTaskIds);
   }
 
   /**
@@ -131,8 +150,22 @@ export class AmendmentsEngine {
   ): Promise<InvalidationResult> {
     const { repoRoot, runId, graph, leafResults, integrationResults } = params;
 
-    // Clean worktrees for invalidated tasks (best-effort: already-cleaned or
-    // never-created worktrees are not errors).
+    await this.clean(params, invalidatedTaskIds);
+
+    return {
+      ...filterInvalidatedResults(leafResults, integrationResults, invalidatedTaskIds),
+      invalidatedTaskIds
+    };
+  }
+
+  private async clean(
+    params: { repoRoot: string; runId: string; graph: TaskGraph },
+    invalidatedTaskIds: ReadonlySet<string>
+  ): Promise<void> {
+    const { repoRoot, runId, graph } = params;
+    // A repeat after a crash may find the worktree and branch already gone.
+    // That exact state is idempotent; every other Git failure must propagate so
+    // the durable journal cannot claim `worktrees_cleaned` over leftovers.
     const worktreeManager = new WorktreeManager({ git: this.git, repoRoot });
     for (const taskId of invalidatedTaskIds) {
       const worktreePath = worktreePathFor({
@@ -141,8 +174,8 @@ export class AmendmentsEngine {
         taskId
       });
       const branch = worktreeBranchFor({ runId, taskId });
-      await worktreeManager
-        .clean({
+      try {
+        await worktreeManager.clean({
           taskId,
           runId,
           kind: graph.nodes[taskId]?.kind === "leaf" ? "leaf" : "integration",
@@ -151,14 +184,45 @@ export class AmendmentsEngine {
           baseCommit: graph.baseCommit,
           status: "active",
           createdAt: new Date().toISOString()
-        })
-        .catch(() => undefined);
-    }
+        });
+      } catch (error) {
+        await this.git.worktreePrune(repoRoot);
+        if (await pathExists(worktreePath)) throw error;
 
-    return {
-      leafResults: leafResults.filter((r) => !invalidatedTaskIds.has(r.taskId)),
-      integrationResults: integrationResults.filter((r) => !invalidatedTaskIds.has(r.compositeTaskId)),
-      invalidatedTaskIds
-    };
+        // `WorktreeManager.clean` stops at a missing worktree, so explicitly
+        // finish an orphan branch. A missing branch is success only when the
+        // repository itself remains readable.
+        try {
+          await this.git.branchDelete({ repoRoot, branch, force: true });
+        } catch (branchError) {
+          if (await this.branchExists(repoRoot, branch)) throw branchError;
+        }
+      }
+    }
   }
+
+  private async branchExists(repoRoot: string, branch: string): Promise<boolean> {
+    try {
+      await this.git.revParse(repoRoot, `refs/heads/${branch}`);
+      return true;
+    } catch {
+      // Distinguish an absent ref from an inaccessible/corrupt repository.
+      await this.git.revParse(repoRoot, "HEAD");
+      return false;
+    }
+  }
+}
+
+async function pathExists(value: string): Promise<boolean> {
+  try {
+    await stat(value);
+    return true;
+  } catch (error) {
+    if (isErrno(error) && error.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
+function isErrno(error: unknown): error is NodeJS.ErrnoException {
+  return typeof error === "object" && error !== null && "code" in error;
 }

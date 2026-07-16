@@ -7,7 +7,7 @@ import type { RepositoryIndex } from "@manyhands/repository-index";
 import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 import { readRunModelEvents } from "@/lib/server/runs/run-model-event-log";
 import { effectiveExecutionConfig } from "@/lib/server/runs/effective-execution-config";
-import { selectAndPersistSchedulingWave } from "@/lib/server/runs/scheduling-audit-events";
+import { persistRetryDispatch, selectAndPersistSchedulingWave } from "@/lib/server/runs/scheduling-audit-events";
 
 let tempDir: string;
 let runsDir: string;
@@ -27,6 +27,23 @@ afterEach(async () => {
 });
 
 describe("scheduling audit events", () => {
+  it("persists a retry dispatch identity before returning it to the gate", async () => {
+    const runId = "run-retry-dispatch";
+    const result = await persistRetryDispatch({ runId, taskId: "task-a" });
+    expect(result.waveId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(await readRunModelEvents(runId)).toEqual([
+      expect.objectContaining({
+        type: "run.scheduling.retry_dispatched",
+        payload: expect.objectContaining({
+          waveId: result.waveId,
+          taskId: "task-a",
+          source: "human_gate",
+          reason: "retry_repair"
+        })
+      })
+    ]);
+  });
+
   it("normalizes the complete effective execution config before scheduling", () => {
     expect(effectiveExecutionConfig(undefined).maxParallel).toBe(6);
     expect(effectiveExecutionConfig({ maxParallel: 2 }).maxParallel).toBe(2);
@@ -64,7 +81,31 @@ describe("scheduling audit events", () => {
     expect(first.payload.waveId).toMatch(/^[0-9a-f-]{36}$/);
     expect(second.payload.waveId).not.toBe(first.payload.waveId);
     expect(second.payload.waveIndex).toBeGreaterThan(first.payload.waveIndex);
+    expect(first.payload.waveOrdinal).toBe(1);
+    expect(second.payload.waveOrdinal).toBe(2);
     expect(await readRunModelEvents(input.runId)).toHaveLength(2);
+  });
+
+  it("derives contiguous wave ordinals independently from the global event sequence", async () => {
+    const runId = "run-scheduling-human-ordinal";
+    const input = {
+      runId,
+      graph: graphWithScopes({ taskA: ["src/a/**"] }),
+      candidates: ["taskA"],
+      source: "execution-host" as const,
+      effectiveConfig: effectiveExecutionConfig(undefined)
+    };
+
+    await persistRetryDispatch({ runId, taskId: "noise-before" });
+    const first = await selectAndPersistSchedulingWave(input);
+    await persistRetryDispatch({ runId, taskId: "noise-between-1" });
+    await persistRetryDispatch({ runId, taskId: "noise-between-2" });
+    const second = await selectAndPersistSchedulingWave(input);
+
+    expect(first.payload).toMatchObject({ waveIndex: 0, waveOrdinal: 1 });
+    expect(second.payload).toMatchObject({ waveIndex: 1, waveOrdinal: 2 });
+    const waveEvents = (await readRunModelEvents(runId)).filter((event) => event.type === "run.scheduling.wave_selected");
+    expect(waveEvents.map((event) => event.seq)).toEqual([2, 5]);
   });
 
   it("persists a required scheduling event before returning a selected wave", async () => {
@@ -88,6 +129,7 @@ describe("scheduling audit events", () => {
         version: 1,
         source: "execution-host",
         waveIndex: 0,
+        waveOrdinal: 1,
         policy: "risk_aware",
         readyTaskIds: ["taskA", "taskB"],
         selectedTaskIds: ["taskA"],

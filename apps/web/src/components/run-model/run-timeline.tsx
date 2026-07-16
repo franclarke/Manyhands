@@ -18,6 +18,7 @@ export function RunTimeline({
   /** Right-aligned chrome sharing the rail row (e.g. the dock toggles). */
   trailing?: React.ReactNode | undefined;
 }): React.ReactElement {
+  const current = phases.find((phase) => phase.state === "active" || phase.state === "failed") ?? phases[0];
   return (
     <nav
       aria-label="Fases del run"
@@ -25,6 +26,7 @@ export function RunTimeline({
     >
       {/* The phase rail yields width to the trailing chrome: it scrolls inside
           its own min-w-0 box instead of pushing the toggles past the viewport. */}
+      {current !== undefined ? <span className="shrink-0 text-meta font-medium text-[var(--color-text)] sm:hidden">{current.label}</span> : null}
       <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
       {phases.map((phase, index) => (
         <Fragment key={phase.key}>

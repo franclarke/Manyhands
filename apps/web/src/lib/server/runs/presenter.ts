@@ -1,8 +1,18 @@
-import type { RunPreview, RunResponse } from "@/lib/api-types";
+import type { RunPreview, RunResponse, StageSelection } from "@/lib/api-types";
 import type { Workspace } from "@/lib/api-types";
 import { isExecutionResult, toExecutionSummary } from "@/lib/execution-summary";
+import { getWorkspaceRepository, WorkspaceNotFoundError } from "@/lib/server/workspaces";
 import type { MockExecutionFlowResult } from "@manyhands/core";
 import type { RunRecord } from "./schema";
+
+/** Normalize a persisted per-stage selection into the API shape (drops `effort: undefined`). */
+function toStagePayload(selection: NonNullable<RunRecord["executionSelection"]>): StageSelection {
+  return {
+    executorId: selection.executorId,
+    model: selection.model,
+    ...(selection.effort !== undefined ? { effort: selection.effort } : {})
+  };
+}
 
 /**
  * Defensive view over the opaque persisted `planning` payload. The store types
@@ -16,7 +26,7 @@ type PlanningPreviewShape = {
 
 /**
  * Count risks flagged `blocking`/`high`, or `undefined` when the record has no
- * usable risk matrix (so the caller can leave `conflictCount` unset).
+ * usable risk matrix (so the caller can leave `coordinationRiskCount` unset).
  */
 function countBlockingRisks(riskMatrix: PlanningPreviewShape["riskMatrix"]): number | undefined {
   if (!Array.isArray(riskMatrix)) return undefined;
@@ -25,10 +35,10 @@ function countBlockingRisks(riskMatrix: PlanningPreviewShape["riskMatrix"]): num
   ).length;
 }
 
-export function toRunResponse(run: RunRecord): RunResponse {
+export function toRunResponse(run: RunRecord, canonicalWorkspaceId: string = run.workspaceId): RunResponse {
   const payload: RunResponse["run"] = {
     runId: run.runId,
-    workspaceId: run.workspaceId,
+    workspaceId: canonicalWorkspaceId,
     granularity: run.granularity,
     model: run.model,
     userPrompt: run.userPrompt,
@@ -44,6 +54,9 @@ export function toRunResponse(run: RunRecord): RunResponse {
   if (run.planningModel !== undefined) payload.planningModel = run.planningModel;
   if (run.defaultExecutionSelection !== undefined) payload.defaultExecutionSelection = run.defaultExecutionSelection;
   if (run.defaultRepairSelection !== undefined) payload.defaultRepairSelection = run.defaultRepairSelection;
+  if (run.planningSelection !== undefined) payload.planningSelection = toStagePayload(run.planningSelection);
+  if (run.executionSelection !== undefined) payload.executionSelection = toStagePayload(run.executionSelection);
+  if (run.repairSelection !== undefined) payload.repairSelection = toStagePayload(run.repairSelection);
   if (run.summary !== undefined) payload.summary = run.summary;
   if (run.pausedDuring !== undefined) payload.pausedDuring = run.pausedDuring;
   if (run.interruptedDuring !== undefined) payload.interruptedDuring = run.interruptedDuring;
@@ -91,10 +104,25 @@ export function toRunResponse(run: RunRecord): RunResponse {
   return { run: payload };
 }
 
+/** Public API projection: legacy workspace aliases never escape as dangling ids. */
+export async function toCanonicalRunResponse(run: RunRecord): Promise<RunResponse> {
+  try {
+    const workspace = await getWorkspaceRepository().get(run.workspaceId);
+    return toRunResponse(run, workspace.id);
+  } catch (error) {
+    // Pre-workspace fixtures and records whose workspace was deliberately
+    // deleted have no canonical target. Preserve their recorded id, but never
+    // hide lock, corruption or migration failures behind that compatibility.
+    if (error instanceof WorkspaceNotFoundError) return toRunResponse(run);
+    throw error;
+  }
+}
+
 export function toRunPreview(run: RunRecord, workspaces: ReadonlyMap<string, Workspace>): RunPreview {
+  const workspace = workspaces.get(run.workspaceId);
   const preview: RunPreview = {
     id: run.runId,
-    workspaceId: run.workspaceId,
+    workspaceId: workspace?.id ?? run.workspaceId,
     title: run.title,
     userPrompt: run.userPrompt,
     summary: run.summary,
@@ -106,7 +134,6 @@ export function toRunPreview(run: RunRecord, workspaces: ReadonlyMap<string, Wor
     href: `/runs/${run.runId}`
   };
 
-  const workspace = workspaces.get(run.workspaceId);
   if (workspace !== undefined) {
     preview.workspaceName = workspace.name;
   }
@@ -124,19 +151,19 @@ export function toRunPreview(run: RunRecord, workspaces: ReadonlyMap<string, Wor
   if (isExecutionResult(run.execution)) {
     // Real execution engine (RunExecutionResult).
     preview.agentCount = run.execution.leafResults.length;
-    const conflicts = countBlockingRisks(planning?.riskMatrix);
-    if (conflicts !== undefined) preview.conflictCount = conflicts;
+    const risks = countBlockingRisks(planning?.riskMatrix);
+    if (risks !== undefined) preview.coordinationRiskCount = risks;
   } else if ((run.execution as MockExecutionFlowResult | undefined) !== undefined) {
     // Legacy Lab-mode execution snapshot.
     const execution = run.execution as MockExecutionFlowResult & {
       planning?: PlanningPreviewShape;
     };
     preview.agentCount = execution.results.length;
-    const conflicts = countBlockingRisks(execution.planning?.riskMatrix);
-    if (conflicts !== undefined) preview.conflictCount = conflicts;
+    const risks = countBlockingRisks(execution.planning?.riskMatrix);
+    if (risks !== undefined) preview.coordinationRiskCount = risks;
   } else {
-    const conflicts = countBlockingRisks(planning?.riskMatrix);
-    if (conflicts !== undefined) preview.conflictCount = conflicts;
+    const risks = countBlockingRisks(planning?.riskMatrix);
+    if (risks !== undefined) preview.coordinationRiskCount = risks;
   }
 
   if (run.completedAt !== undefined && run.startedAt !== undefined) {

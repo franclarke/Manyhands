@@ -1,4 +1,5 @@
 import type { RunEvent, RunModel } from "./types";
+import { hasTerminalOrArtifactControlStatus } from "./selectors";
 
 export type RecoveryAction = "resume" | "restart" | "retry_cancel" | "resolve_decision" | "deliver" | "export_artifact";
 
@@ -14,6 +15,7 @@ export interface OperationalRecoveryView {
   canRetryDelivery: boolean;
   artifactAvailability: "none" | "partial" | "unverified" | "ready";
   deliveryState: "none" | "needs_delivery" | "failed" | "completed";
+  failure?: { cause: string; nodeId?: string; eventSeq?: number };
   cancellation?: { allDead: boolean | undefined; survivors: number[] } | undefined;
 }
 
@@ -23,13 +25,16 @@ export interface OperationalRecoveryView {
  */
 export function selectOperationalRecovery(model: RunModel, events: readonly RunEvent[]): OperationalRecoveryView {
   const status = model.run.control.status;
-  const pendingDecisionIds = Array.from(model.decisions.values())
+  const pendingDecisionIds = hasTerminalOrArtifactControlStatus(status)
+    ? []
+    : Array.from(model.decisions.values())
     .filter((decision) => decision.status === "pending" && decision.blocking)
     .map((decision) => decision.id);
   const cancellationEvent = [...events].reverse().find((event) => event.type === "run.cancelled");
   const cancellationPayload = cancellationEvent?.payload as { allDead?: boolean; survivors?: number[] } | undefined;
   const hasDegradedLog = events.some((event) => event.type === "checkpoint.degraded" || event.type === "checkpoint.lost");
   const hasRecoveryRequired = events.some((event) => event.type === "task.attempt.recovery_required");
+  const failure = selectFailureCause(model, events);
 
   const artifactAvailability = status === "partial"
     ? "partial"
@@ -48,7 +53,10 @@ export function selectOperationalRecovery(model: RunModel, events: readonly RunE
 
   const blockingReasons: string[] = [];
   let state: OperationalRecoveryView["state"] = "settled";
-  if (hasDegradedLog) {
+  if (["failed", "failed_artifact", "failed_delivery"].includes(status)) {
+    state = "failed";
+    blockingReasons.push("El run terminó con un fallo durable. La decisión pendiente, si existía, se conserva sólo como historial.");
+  } else if (hasDegradedLog) {
     state = "degraded";
     blockingReasons.push("El historial durable tiene un prefijo válido, pero requiere reconciliación antes de confiar en eventos posteriores.");
   } else if (hasRecoveryRequired) {
@@ -71,19 +79,16 @@ export function selectOperationalRecovery(model: RunModel, events: readonly RunE
   } else if (status === "unverified") {
     state = "unverified";
     blockingReasons.push("El artifact existe, pero la validación final no demuestra éxito pleno.");
-  } else if (status === "needs_delivery" || status === "failed_delivery") {
+  } else if (status === "needs_delivery") {
     state = "needs_delivery";
     blockingReasons.push("El artifact está separado de su entrega y requiere una acción de delivery explícita.");
   } else if (["generating", "approved", "running"].includes(status)) {
     state = "running";
-  } else if (status === "failed" || status === "failed_artifact") {
-    state = "failed";
-    blockingReasons.push("El run no puede continuar hasta revisar la causa y reiniciarlo mediante lifecycle.");
   }
 
   const canCancel = ["generating", "running", "paused", "cancelling"].includes(status);
   const canResume = status === "interrupted" || status === "paused";
-  const canRetry = status === "failed" || status === "interrupted" || status === "cancelling";
+  const canRetry = ["failed", "failed_artifact", "failed_delivery", "interrupted", "cancelling"].includes(status);
   const canResolveDecision = pendingDecisionIds.length > 0;
   const canRetryDelivery = status === "needs_delivery" || status === "failed_delivery";
   const recommendedActions: RecoveryAction[] = [];
@@ -91,7 +96,7 @@ export function selectOperationalRecovery(model: RunModel, events: readonly RunE
   if (status === "cancelling") recommendedActions.push("retry_cancel");
   else if (canCancel) recommendedActions.push("retry_cancel");
   if (canResume && status !== "paused") recommendedActions.push("resume");
-  if (status === "failed" || status === "interrupted") recommendedActions.push("restart");
+  if (status === "failed" || status === "failed_artifact" || status === "interrupted") recommendedActions.push("restart");
   if (canRetryDelivery) recommendedActions.push("deliver");
   if (artifactAvailability !== "none") recommendedActions.push("export_artifact");
 
@@ -107,8 +112,40 @@ export function selectOperationalRecovery(model: RunModel, events: readonly RunE
     canRetryDelivery,
     artifactAvailability,
     deliveryState,
+    ...(failure !== undefined ? { failure } : {}),
     ...(cancellationPayload !== undefined
       ? { cancellation: { allDead: cancellationPayload.allDead, survivors: cancellationPayload.survivors ?? [] } }
       : {})
   };
+}
+
+function selectFailureCause(
+  model: RunModel,
+  events: readonly RunEvent[]
+): { cause: string; nodeId?: string; eventSeq?: number } | undefined {
+  for (const event of [...events].reverse()) {
+    if (event.type === "node.execution.failed" || event.type === "node.verify.failed") {
+      const payload = event.payload as { cause?: unknown; nodeId?: unknown };
+      if (typeof payload.cause === "string" && payload.cause.trim().length > 0) {
+        return {
+          cause: payload.cause,
+          ...(typeof payload.nodeId === "string" ? { nodeId: payload.nodeId } : {}),
+          eventSeq: event.seq
+        };
+      }
+    }
+    if (event.type === "plan.node.status") {
+      const payload = event.payload as { state?: unknown; errorMessage?: unknown; nodeId?: unknown };
+      if (payload.state === "failed" && typeof payload.errorMessage === "string" && payload.errorMessage.trim().length > 0) {
+        return {
+          cause: payload.errorMessage,
+          ...(typeof payload.nodeId === "string" ? { nodeId: payload.nodeId } : {}),
+          eventSeq: event.seq
+        };
+      }
+    }
+  }
+  return model.run.errorMessage === undefined || model.run.errorMessage.trim().length === 0
+    ? undefined
+    : { cause: model.run.errorMessage };
 }

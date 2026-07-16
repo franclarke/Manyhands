@@ -8,11 +8,12 @@
  * the workspace at capture time.
  */
 import { execFileSync } from "node:child_process";
-import { chmod, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, realpath, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { POST as POST_RUNS } from "@/app/api/runs/route";
+import { resolveRunRevealTarget } from "@/app/api/runs/[id]/deliver/route";
 import {
   captureRunTargetContext,
   resolveRunTargetPath,
@@ -85,7 +86,14 @@ function headOf(repoRoot: string): string {
 }
 
 async function createRun(body: Record<string, unknown>): Promise<string> {
-  const response = await POST_RUNS(
+  const response = await createRunResponse(body);
+  expect(response.status).toBe(201);
+  const payload = (await response.json()) as { run?: { runId?: string } };
+  return payload.run!.runId!;
+}
+
+async function createRunResponse(body: Record<string, unknown>): Promise<Response> {
+  return POST_RUNS(
     new Request("http://localhost/api/runs", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -99,9 +107,6 @@ async function createRun(body: Record<string, unknown>): Promise<string> {
       })
     })
   );
-  expect(response.status).toBe(201);
-  const payload = (await response.json()) as { run?: { runId?: string } };
-  return payload.run!.runId!;
 }
 
 describe("B-008 captureRunTargetContext", () => {
@@ -111,6 +116,11 @@ describe("B-008 captureRunTargetContext", () => {
     expect(context).toBeDefined();
     expect(context!.sourceRealPath.toLowerCase()).toBe((await realpath(repoRoot)).toLowerCase());
     expect(context!.gitCommonDir.toLowerCase()).toContain(".git");
+    expect(context!.physicalIdentity).toEqual({
+      version: 1,
+      device: expect.stringMatching(/^\d+$/u),
+      file: expect.stringMatching(/^\d+$/u)
+    });
     expect(context!.sourceBranch).toBe("main");
     expect(context!.sourceBaseCommit).toBe(headOf(repoRoot));
     expect(context!.fingerprint.length).toBeGreaterThan(8);
@@ -123,6 +133,41 @@ describe("B-008 captureRunTargetContext", () => {
 });
 
 describe("B-008 run creation freezes the target", () => {
+  it("canonicalizes a migrated legacy workspace id when persisting a new run", async () => {
+    const repoRoot = await makeGitRepo("repo-legacy-alias");
+    const workspaceFile = process.env.MANYHANDS_WORKSPACES_FILE!;
+    await writeFile(
+      workspaceFile,
+      JSON.stringify({
+        version: 1,
+        workspaces: [
+          {
+            id: "workspace-canonical",
+            slug: "canonical",
+            name: "Canonical",
+            repoPath: repoRoot,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z"
+          },
+          {
+            id: "workspace-legacy",
+            slug: "legacy",
+            name: "Legacy",
+            repoPath: repoRoot,
+            createdAt: "2026-02-01T00:00:00.000Z",
+            updatedAt: "2026-02-01T00:00:00.000Z"
+          }
+        ]
+      }),
+      "utf8"
+    );
+    resetWorkspaceRepositoryForTests();
+    await getWorkspaceRepository().list();
+
+    const runId = await createRun({ workspaceId: "workspace-legacy" });
+    expect((await getRunRepository().get(runId)).workspaceId).toBe("workspace-canonical");
+  });
+
   it("captures the workspace repo at create; editing the workspace afterwards does not move the target", async () => {
     const repoA = await makeGitRepo("repo-a");
     const repoB = await makeGitRepo("repo-b");
@@ -139,6 +184,8 @@ describe("B-008 run creation freezes the target", () => {
 
     const resolved = await resolveRunTargetPath(await getRunRepository().get(runId));
     expect(resolved?.toLowerCase()).toBe((await realpath(repoA)).toLowerCase());
+    const revealTarget = await resolveRunRevealTarget(await getRunRepository().get(runId));
+    expect(revealTarget?.toLowerCase()).toBe((await realpath(repoA)).toLowerCase());
   });
 
   it("a repoSpec override wins over the workspace at capture time", async () => {
@@ -154,13 +201,33 @@ describe("B-008 run creation freezes the target", () => {
     expect(run.targetContext!.sourceRealPath.toLowerCase()).toBe((await realpath(repoB)).toLowerCase());
   });
 
-  it("a workspace without a real git repo still creates the run (no context, legacy fallback)", async () => {
-    const workspace = await getWorkspaceRepository().create({ name: "ws3", repoPath: "C:/no-such-repo" });
-    const runId = await createRun({ workspaceId: workspace.id });
-    const run = await getRunRepository().get(runId);
-    expect(run.targetContext).toBeUndefined();
-    // The immutable repoSpec still pins the path.
-    expect(await resolveRunTargetPath(run)).toBe("C:/no-such-repo");
+  it("rejects a local target whose physical repository identity cannot be captured", async () => {
+    const legacyRepoPath = path.join(tempDir, "no-such-repo");
+    await writeFile(
+      process.env.MANYHANDS_WORKSPACES_FILE!,
+      JSON.stringify({
+        version: 1,
+        workspaces: [
+          {
+            id: "legacy-invalid-target",
+            slug: "legacy-invalid-target",
+            name: "Legacy invalid target",
+            repoPath: legacyRepoPath,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z"
+          }
+        ]
+      }),
+      "utf8"
+    );
+    resetWorkspaceRepositoryForTests();
+
+    const response = await createRunResponse({ workspaceId: "legacy-invalid-target" });
+    expect(response.status).toBe(400);
+    expect((await response.json()).error).toMatch(
+      /authoritative physical identity|accessible Git repository|run was not created/i
+    );
+    expect(await getRunRepository().list()).toHaveLength(0);
   });
 });
 
@@ -176,5 +243,34 @@ describe("B-008 provisioning verifies against the captured target", () => {
     await expect(verifyProvisionedAgainstTarget({ sourceRepoRoot: repoB }, context)).rejects.toThrow(
       /target|distinto|different/i
     );
+  });
+
+  it("rejects a different repository recreated at the exact captured path", async () => {
+    const repoPath = await makeGitRepo("replaceable-repo");
+    const capturedPath = (await realpath(repoPath)).toLowerCase();
+    const context = (await captureRunTargetContext(repoPath))!;
+    const originalPhysicalIdentity = context.physicalIdentity;
+    const movedOriginal = path.join(tempDir, "moved-original-repo");
+
+    await rename(repoPath, movedOriginal);
+    const replacementPath = await makeGitRepo("replaceable-repo");
+
+    expect((await realpath(replacementPath)).toLowerCase()).toBe(capturedPath);
+    expect((await captureRunTargetContext(replacementPath))?.physicalIdentity).not.toEqual(
+      originalPhysicalIdentity
+    );
+    await expect(
+      verifyProvisionedAgainstTarget({ sourceRepoRoot: replacementPath }, context)
+    ).rejects.toThrow(/different physical repository|replaced|recreated|diverged/i);
+  });
+
+  it("fails closed for a legacy target context without physical identity evidence", async () => {
+    const repoPath = await makeGitRepo("legacy-physical-identity");
+    const captured = (await captureRunTargetContext(repoPath))!;
+    const { physicalIdentity: _physicalIdentity, ...legacyContext } = captured;
+
+    await expect(
+      verifyProvisionedAgainstTarget({ sourceRepoRoot: repoPath }, legacyContext)
+    ).rejects.toThrow(/predates physical repository identity|cannot prove|new run/i);
   });
 });

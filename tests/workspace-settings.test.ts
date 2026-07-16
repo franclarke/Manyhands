@@ -1,4 +1,5 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -68,16 +69,17 @@ describe("workspace settings schema", () => {
 
 describe("repository persistence of hints", () => {
   it("persists hints on create and surfaces them on read", async () => {
+    const repoPath = await makeGitRepo("demo");
     const created = await repo.create({
       name: "Demo",
-      repoPath: "/Users/me/code/demo",
+      repoPath,
       packageManager: "pnpm",
       defaultBranch: "main",
       allowedPaths: ["src/**"],
       testCommand: "pnpm test",
       buildCommand: "pnpm build"
     });
-    expect(created.repoPath).toBe("/Users/me/code/demo");
+    expect(created.repoPath).toBe(repoPath);
     expect(created.packageManager).toBe("pnpm");
     expect(created.allowedPaths).toEqual(["src/**"]);
     const fetched = await repo.get(created.id);
@@ -85,14 +87,27 @@ describe("repository persistence of hints", () => {
   });
 
   it("preserves hints on update when not overridden", async () => {
+    const repoPath = await makeGitRepo("preserved");
     const created = await repo.create({
       name: "Demo",
-      repoPath: "/some/path",
+      repoPath,
       testCommand: "pnpm test"
     });
     const updated = await repo.update(created.id, { name: "Demo Renamed" });
     expect(updated.name).toBe("Demo Renamed");
-    expect(updated.repoPath).toBe("/some/path");
+    expect(updated.repoPath).toBe(repoPath);
     expect(updated.testCommand).toBe("pnpm test");
   });
 });
+
+async function makeGitRepo(name: string): Promise<string> {
+  const repoRoot = path.join(tempDir, name);
+  await mkdir(repoRoot, { recursive: true });
+  execFileSync("git", ["init", "-b", "main", repoRoot], { stdio: "ignore" });
+  execFileSync("git", ["config", "user.email", "test@manyhands.local"], { cwd: repoRoot });
+  execFileSync("git", ["config", "user.name", "ManyHands Test"], { cwd: repoRoot });
+  await writeFile(path.join(repoRoot, "README.md"), `# ${name}\n`, "utf8");
+  execFileSync("git", ["add", "."], { cwd: repoRoot, stdio: "ignore" });
+  execFileSync("git", ["commit", "-m", "init"], { cwd: repoRoot, stdio: "ignore" });
+  return repoRoot;
+}

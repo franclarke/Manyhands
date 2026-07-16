@@ -113,8 +113,12 @@ export interface WorkspaceEdge {
   id: string;
   source: NodeId;
   target: NodeId;
-  kind: "hierarchy" | "dependency";
+  kind: "hierarchy" | "dependency" | "seam" | "conflict";
+  dependencyType?: "contractual" | "structural" | "logical";
+  inferred?: boolean;
+  rationale?: string;
   seamId?: SeamId;
+  conflictId?: string;
 }
 
 export interface WorkspaceSeam {
@@ -457,21 +461,54 @@ export function selectWorkspaceView(model: RunModel, options: ProtoViewOptions =
     .sort((a, b) => a[0] - b[0])
     .map(([depth, ns]) => ({ depth, nodes: ns }));
 
-  // Edges: hierarchy (parent→child) + dependency (producer→consumer via seam).
+  // Every edge channel has its own durable source. In particular, interface
+  // seams never imply a canonical D1 scheduling dependency.
   const edges: WorkspaceEdge[] = [];
+  const nodeIds = new Set(nodes.map((node) => node.id));
   for (const n of nodes) {
     if (n.parentId !== null) {
       edges.push({ id: `h:${n.parentId}:${n.id}`, source: n.parentId, target: n.id, kind: "hierarchy" });
     }
   }
+  for (const dependency of model.dependencies.values()) {
+    if (!nodeIds.has(dependency.fromTaskId) || !nodeIds.has(dependency.toTaskId)) continue;
+    edges.push({
+      id: `d:${dependency.fromTaskId}:${dependency.toTaskId}`,
+      source: dependency.fromTaskId,
+      target: dependency.toTaskId,
+      kind: "dependency",
+      dependencyType: dependency.type,
+      inferred: dependency.inferred,
+      ...(dependency.rationale !== undefined ? { rationale: dependency.rationale } : {})
+    });
+  }
   for (const seam of model.seams.values()) {
     for (const consumer of seam.consumerNodeIds) {
+      if (
+        seam.producerNodeId === consumer ||
+        !nodeIds.has(seam.producerNodeId) ||
+        !nodeIds.has(consumer)
+      ) continue;
       edges.push({
-        id: `d:${seam.id}:${seam.producerNodeId}:${consumer}`,
+        id: `s:${seam.id}:${seam.producerNodeId}:${consumer}`,
         source: seam.producerNodeId,
         target: consumer,
-        kind: "dependency",
+        kind: "seam",
         seamId: seam.id
+      });
+    }
+  }
+  for (const conflict of proto.conflicts) {
+    const participants = [...new Set(conflict.nodeIds)].filter((nodeId) => nodeIds.has(nodeId));
+    const source = participants[0];
+    if (source === undefined) continue;
+    for (const target of participants.slice(1)) {
+      edges.push({
+        id: `c:${conflict.id}:${source}:${target}`,
+        source,
+        target,
+        kind: "conflict",
+        conflictId: conflict.id
       });
     }
   }

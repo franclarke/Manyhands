@@ -10,7 +10,7 @@ import {
   runNodeExecutionPipeline
 } from "@/lib/server/runs";
 import { startRunBackgroundTask, tryMarkRunnerActive } from "@/lib/server/runs/runner-state";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
       runNodeExecutionPipeline(run.runId, taskId, { runnerAlreadyClaimed: true })
     );
     runnerClaimed = false;
-    return NextResponse.json(toRunResponse(await repo.get(id)));
+    return NextResponse.json(await toCanonicalRunResponse(await repo.get(id)));
   } catch (error) {
     if (runnerClaimed) {
       markRunnerInactive(id);

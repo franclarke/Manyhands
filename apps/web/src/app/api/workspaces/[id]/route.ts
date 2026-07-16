@@ -3,9 +3,11 @@ import {
   WorkspaceConflictError,
   WorkspaceNotFoundError,
   WorkspaceValidationError,
-  getWorkspaceRepository
+  getWorkspaceRepository,
+  withWorkspaceReferenceLock
 } from "@/lib/server/workspaces";
 import { ensureRunnableRepo } from "@/lib/server/workspaces/ensure-runnable-repo";
+import { RunValidationError, getRunRepository } from "@/lib/server/runs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,7 +57,25 @@ async function normalizeWorkspacePayload(payload: unknown): Promise<unknown> {
 export async function DELETE(_request: Request, context: RouteContext): Promise<NextResponse> {
   const { id } = await context.params;
   try {
-    await getWorkspaceRepository().delete(id);
+    await withWorkspaceReferenceLock(async () => {
+      const workspaceRepository = getWorkspaceRepository();
+      const equivalentIds = await workspaceRepository.equivalentIds(id);
+      const references = await getRunRepository()
+        .listStrict({ workspaceIds: equivalentIds, limit: 1 })
+        .catch((error: unknown) => {
+          if (error instanceof RunValidationError) {
+            throw new WorkspaceConflictError(error.message);
+          }
+          throw error;
+        });
+      if (references.length > 0) {
+        throw new WorkspaceConflictError(
+          `Workspace ${id} is referenced by run ${references[0]!.runId}. ` +
+            "Purge every referenced run before deleting the workspace."
+        );
+      }
+      await workspaceRepository.delete(id);
+    });
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     return errorResponse(error);

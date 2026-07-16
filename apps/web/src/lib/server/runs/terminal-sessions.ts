@@ -1,8 +1,17 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import os from "node:os";
-import { buildAgentEnvironment, superviseChildProcess } from "@manyhands/execution-core";
+import {
+  buildAgentEnvironment,
+  killProcessTree,
+  superviseChildProcess
+} from "@manyhands/execution-core";
+import { installProcessEvidenceSink } from "./process-evidence";
 import { globalSingleton } from "../global-singleton";
+
+// RU1 (F2B-1): terminal shells are supervised processes too; make sure their
+// durable evidence is recorded even if no pipeline module was loaded first.
+installProcessEvidenceSink();
 import type { RunRecord } from "./schema";
 import {
   type WorkspaceContextKind,
@@ -169,7 +178,8 @@ export class TerminalSession {
       // B-006 (CF-28): human shells never inherit server secrets. The cast is
       // for the app's ProcessEnv augmentation (NODE_ENV is in the allowlist).
       env: buildAgentEnvironment({ includeProviderCredentials: false }) as NodeJS.ProcessEnv,
-      shell: false
+      shell: false,
+      detached: process.platform !== "win32"
     });
     // B-005: auto-unregisters on 'close'; cancel kills the tree with the run.
     this.disposeSupervision = superviseChildProcess({ runId: this.runId, label: "terminal" }, child);
@@ -214,9 +224,17 @@ export class TerminalSession {
   close(): void {
     if (this.closed) return;
     this.closed = true;
-    this.pty?.kill();
-    this.child?.kill();
-    this.disposeSupervision?.();
+    // Keep supervision/evidence open until the actual process exit callback.
+    // Unregistering immediately after a direct root kill made cancellation
+    // believe the terminal tree was gone while descendants could still run.
+    if (this.pty !== null) {
+      void killProcessTree(
+        { pid: this.pty.pid, kill: () => this.pty?.kill() },
+        spawn
+      );
+    } else if (this.child !== null) {
+      void killProcessTree(this.child, spawn);
+    }
     this.listeners.clear();
   }
 

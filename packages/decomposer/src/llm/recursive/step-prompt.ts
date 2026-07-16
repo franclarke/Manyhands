@@ -1,6 +1,6 @@
 import type { StepInterface } from "./step-schema";
 
-export const RECURSIVE_DECOMPOSER_PROMPT_VERSION = "manyhands.recursive-decomposer-prompt.v2";
+export const RECURSIVE_DECOMPOSER_PROMPT_VERSION = "manyhands.recursive-decomposer-prompt.v3";
 
 export type Aggressiveness = "low" | "medium" | "high" | "auto";
 
@@ -141,7 +141,7 @@ const OUTPUT_SCHEMA_LITERAL = `// One of these three shapes (discriminated by "d
   ],
   "dependencies": [
     { "fromTaskId": "childId", "toTaskId": "childId", "type": "contractual | structural | logical", "rationale": "string (optional)" }
-  ],  // default to [] unless real execution order is required
+  ],  // default to []; ordering only, never predecessor file materialization
   "parentValidationCommands": [
     { "command": "npm", "args": ["test"] }
   ]
@@ -195,11 +195,15 @@ const SYSTEM_PROMPT = [
   "  list that existing id in `consumes`.",
   "- Each child declares which interface ids it `consumes` (built by siblings/ancestors) and which",
   "  it `produces` (exposes for others). This is what lets the children run in parallel safely.",
+  "- A child MUST NOT both consume and produce the same interface id. A seam connects distinct",
+  "  tasks; use different revisioned ids if one task transforms an interface into a new contract.",
   "- `consumes`/`produces` are interface contracts, not execution dependencies. A child can build",
   "  against a shared interface without waiting for another child to finish.",
-  "- Default `dependencies` to [] for siblings. Add one only when the target child truly cannot",
-  "  start until the source child's concrete files or side effects already exist in the worktree",
-  "  (for example: generated schema before codegen, migration before repository wiring).",
+  "- Default `dependencies` to [] for siblings. D1 dependencies are ordering-only dispatch barriers:",
+  "  they wait for the source task to settle but never materialize the source child's files in the",
+  "  target worktree; every child still starts from the same immutable base commit.",
+  "- If one step truly requires another step's concrete generated files, keep that concrete work in one child",
+  "  (or redesign it around an explicit sharedInterface). A dependency cannot provide those files.",
   "- Do not create dependency chains just because UI consumes state/types, tests use production",
   "  code, or multiple leaves touch related concepts. Those are normal parallel leaves.",
   "- Add `parentValidationCommands` that verify the integrated children honour the seams",

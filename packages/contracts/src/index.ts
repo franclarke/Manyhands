@@ -22,6 +22,9 @@ export const ContextSnippetSchema = z.object({
 
 export type ContextSnippet = z.infer<typeof ContextSnippetSchema>;
 
+// `upstreamArtifacts` carries declarative artifact references for prompt
+// context. D1 dependencies never materialize a predecessor commit or files in
+// the dependent worktree; executable compatibility belongs in interface seams.
 export const ContextPackSchema = z.object({
   typeSignatures: z.array(z.string()).default([]),
   referenceSnippets: z.array(ContextSnippetSchema).default([]),
@@ -194,6 +197,13 @@ export const InterfaceContractSchema = z.object({
   /** The real TS signature/definition, not just the name. */
   signature: NonEmptyStringSchema,
   description: NonEmptyStringSchema,
+  /**
+   * Semantic facts learned after the syntactic seam was frozen (for example,
+   * `{ "duration.unit": "ms" }`).  Kept on every producer/consumer copy so a
+   * durable plan replay carries the amended contract, not only its event-log
+   * projection.
+   */
+  contract: z.record(NonEmptyStringSchema).optional(),
   /** Which decomposition node defined this seam (traceability). */
   definedAtNodeId: NonEmptyStringSchema.optional()
 });
@@ -317,7 +327,8 @@ export type ContractBoundaryIssueCode =
   | "missing_execution_scope"
   | "missing_expected_changed_files"
   | "invalid_interface_id"
-  | "duplicate_interface_id";
+  | "duplicate_interface_id"
+  | "self_consumed_interface";
 
 export interface ContractBoundaryIssue {
   code: ContractBoundaryIssueCode;
@@ -407,6 +418,21 @@ export function validateAgentTaskContractBoundary(
 
   validateInterfaces(issues, contract.taskId, "consumedInterfaces", contract.consumedInterfaces ?? []);
   validateInterfaces(issues, contract.taskId, "producedInterfaces", contract.producedInterfaces ?? []);
+  const producedInterfaceIds = new Set(
+    (contract.producedInterfaces ?? []).map((item) => item.id)
+  );
+  for (const consumed of contract.consumedInterfaces ?? []) {
+    if (!producedInterfaceIds.has(consumed.id)) continue;
+    issues.push({
+      code: "self_consumed_interface",
+      severity: "error",
+      field: "consumedInterfaces",
+      taskId: contract.taskId,
+      message:
+        `task ${contract.taskId} both produces and consumes interface "${consumed.id}"; ` +
+        "a seam must connect distinct tasks"
+    });
+  }
 
   return {
     ok: !issues.some((issue) => issue.severity === "error"),

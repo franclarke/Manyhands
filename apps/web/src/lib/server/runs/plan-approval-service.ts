@@ -1,4 +1,4 @@
-import { RunLifecycleError, parseRunPatches } from "@/lib/server/runs";
+import { RunLifecycleError, RunMutationConflictError, parseRunPatches } from "@/lib/server/runs";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import { appendRunEventRequired } from "@/lib/server/runs/run-model-event-log";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
@@ -9,7 +9,8 @@ import { hasPlanningCheckpoint } from "./planning-host";
 import { resumePlanningPipeline } from "./planning-pipeline";
 import { appendStatusEventOrRollback, requireCapturedRunRecord } from "./audited-mutation";
 import { assertExecutableRunGraph, resolveExecutionGraph } from "./execution-state";
-import { approvalDecisionId } from "./editing";
+import { approvalDecisionId } from "./decision-identity";
+import { recoverPendingAmendmentMutations } from "./plan-mutation-recovery";
 
 export interface PlanApprovalOptions {
   expectedVersion?: number;
@@ -24,7 +25,7 @@ export async function processPlanApproval(
   options: PlanApprovalOptions = {}
 ): Promise<RunRecord> {
   const repo = getRunRepository();
-  const run = await repo.get(id);
+  const run = await recoverPendingAmendmentMutations(id);
   assertExecutableRunGraph(resolveExecutionGraph(run));
 
   // Quality gate (Fase B): block approval on reliable critic errors — graph
@@ -67,6 +68,13 @@ export async function processPlanApproval(
       ...(options.expectedVersion !== undefined ? { version: options.expectedVersion } : {})
     },
     (current) => {
+      if (current.activeOperation !== undefined) {
+        throw new RunMutationConflictError(
+          `Run ${id} has active ${current.activeOperation.kind} operation ${current.activeOperation.operationId}.`,
+          current.status,
+          current.version
+        );
+      }
       previous = current;
       return {
         ...current,

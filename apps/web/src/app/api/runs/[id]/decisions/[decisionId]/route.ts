@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { createHash } from "node:crypto";
 import { z } from "zod";
-import { AmendmentsEngine, type RunExecutionResult, computeGranularityVector } from "@manyhands/execution-core";
 import { createInitialRunModel, reduceRunEvents } from "@/lib/run-model/reducer";
 import type { Decision, DecisionChoice, RunEvent } from "@/lib/run-model/types";
 import { buildDecisionChannelView } from "@/lib/run-model/decision-channel-view";
@@ -14,30 +12,28 @@ import {
   claimRunMutation,
   ensureRunModelEventLogForRun,
   getRunRepository,
-  appendRunEventRequired,
   requireCapturedRunRecord,
   resumePlanningPipeline,
   runExecutionPipeline
 } from "@/lib/server/runs";
 import { processPlanApproval } from "@/lib/server/runs/plan-approval-service";
 import { planningResumeFor } from "@/lib/server/runs/planning-host";
+import { DEFAULT_STALE_MS } from "@/lib/server/runs/interrupted";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
-import { resetExecutionThread } from "@/lib/server/runs/execution-host";
-import { JsonPlanMutationJournal } from "@/lib/server/runs/plan-mutation-journal";
-import { claimRunOperation, releaseRunOperation, updateRunForOperation } from "@/lib/server/runs/run-operation-lease";
-import { resolveRunsDirectory } from "@/lib/server/runs/repository";
 import { answerExecutionGate } from "@/lib/server/runs/execution-gate-service";
 import { resumeReplanWithAnswer } from "@/lib/server/runs/replan-service";
-import {
-  executionResultsFromRun,
-  integrationDurationMs,
-  provisionedFromRecord,
-  resolveExecutionGraph
-} from "@/lib/server/runs/execution-state";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import { buildRunModelSeed } from "@/lib/server/runs/run-model-projection";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 import { isRunnerActive, startRunBackgroundTask } from "@/lib/server/runs/runner-state";
+import { approvalDecisionId } from "@/lib/server/runs/decision-identity";
+import { approveAmendment } from "@/lib/server/runs/amendment-approval-service";
+import { appendPendingDecisionEventsRequired } from "@/lib/server/runs/run-model-event-log";
+import {
+  assertRunOperationCurrent,
+  claimRunOperation,
+  releaseRunOperation
+} from "@/lib/server/runs/run-operation-lease";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,10 +76,21 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     let run = await repo.get(id);
     const events = await ensureRunModelEventLogForRun(run);
     const decision = pendingDecisionFor(run, events, decisionId);
+    if (decision.kind === "approve_merge") {
+      throw new RunLifecycleError(
+        "approve_merge is no longer an actionable decision; use the explicit delivery operation."
+      );
+    }
     const choice = choiceFor(decision, body);
     const now = new Date().toISOString();
 
     if (decision.kind === "approve_plan") {
+      const expectedDecisionId = approvalDecisionId(run.planRevision ?? 1);
+      if (decision.id !== expectedDecisionId) {
+        throw new RunLifecycleError(
+          `Decision "${decision.id}" is stale; plan revision ${run.planRevision ?? 1} requires "${expectedDecisionId}".`
+        );
+      }
       if (!("action" in choice) || choice.action !== "approve") {
         throw new RunValidationError("approve_plan only supports { action: 'approve' }");
       }
@@ -115,7 +122,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       // shared service keeps this path identical to POST /answer.
       if (run.status === "paused" && run.pausedDuring === "running" && run.pendingDecision !== undefined) {
         const gateResult = await answerExecutionGate(run, choice.answer, now);
-        return NextResponse.json({ ...toRunResponse(gateResult.run), decisionId: decision.id, choice });
+        return NextResponse.json({ ...(await toCanonicalRunResponse(gateResult.run)), decisionId: decision.id, choice });
       }
 
       const nodeId = decision.context.nodeIds?.[0];
@@ -128,7 +135,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       // resumable replan context — the answer re-enters the replan.
       if (run.status === "paused" && run.pausedDuring === "running" && run.pendingReplan !== undefined) {
         run = await resumeReplanWithAnswer(run.runId, nodeId, answer);
-        return NextResponse.json({ ...toRunResponse(run), decisionId: decision.id, choice });
+        return NextResponse.json({ ...(await toCanonicalRunResponse(run)), decisionId: decision.id, choice });
       }
 
       // Atomic claim (INV-4): the pending question must still match `nodeId`
@@ -137,7 +144,12 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       let previous: RunRecord | undefined;
       run = await claimRunMutation(
         run.runId,
-        { status: ["paused", "interrupted"], pausedDuring: "generating", pendingQuestionNodeId: nodeId },
+        {
+          status: ["paused", "interrupted"],
+          pausedDuring: "generating",
+          pendingQuestionNodeId: nodeId,
+          rejectFreshOperationAfterMs: DEFAULT_STALE_MS
+        },
         (current) => {
           previous = current;
           const nextRun = {
@@ -158,150 +170,99 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       );
     }
 
+    if (decision.kind === "approve_amendment") {
+      if (!("action" in choice) || (choice.action !== "approve" && choice.action !== "reject")) {
+        throw new RunValidationError("approve_amendment requires { action: 'approve' | 'reject' }");
+      }
+      const amendmentId = decision.context.amendmentId;
+      if (amendmentId === undefined) {
+        throw new RunValidationError(`Decision ${decision.id} has no amendment identity.`);
+      }
+      const model = reduceRunEvents(createInitialRunModel(buildRunModelSeed(run)), events);
+      const amendment = model.amendments.get(amendmentId);
+      if (amendment === undefined) {
+        throw new RunValidationError(`Decision ${decision.id} refers to missing amendment ${amendmentId}.`);
+      }
+      if (choice.action === "approve") {
+        run = await approveAmendment({
+          run,
+          decisionId: decision.id,
+          amendment,
+          seam: amendment.detail.seamId !== undefined ? model.seams.get(amendment.detail.seamId) : undefined,
+          ...(body.expectedVersion !== undefined ? { expectedVersion: body.expectedVersion } : {}),
+          at: now
+        });
+        return NextResponse.json({ ...(await toCanonicalRunResponse(run)), decisionId: decision.id, choice });
+      }
+
+      const claimed = await claimRunOperation(run.runId, "replan", {
+        expectedStatuses: [run.status],
+        ...(body.expectedVersion !== undefined ? { expectedVersion: body.expectedVersion } : {}),
+        now
+      });
+      try {
+        await assertRunOperationCurrent(run.runId, claimed.lease);
+        await appendPendingDecisionEventsRequired(claimed.run, decision.id, [{
+          eventId: `decision-resolved:${run.runId}:${decision.id}:reject`,
+          actor: "human",
+          at: now,
+          type: "decision.resolved",
+          payload: { decisionId: decision.id, choice, actor: "human" }
+        }, {
+          eventId: `amendment-rejected:${run.runId}:${amendment.id}:${decision.id}`,
+          actor: "human",
+          at: now,
+          type: "amendment.rejected",
+          payload: { amendmentId: amendment.id, decisionId: decision.id }
+        }]);
+        await assertRunOperationCurrent(run.runId, claimed.lease);
+      } finally {
+        await releaseRunOperation(run.runId, claimed.lease);
+      }
+      run = await repo.get(run.runId);
+      return NextResponse.json({ ...(await toCanonicalRunResponse(run)), decisionId: decision.id, choice });
+    }
+
+    if (decision.kind === "resolve_conflict" && decision.context.conflictId !== undefined && "resolutionId" in choice) {
+      const claimed = await claimRunOperation(run.runId, "replan", {
+        expectedStatuses: [run.status],
+        ...(body.expectedVersion !== undefined ? { expectedVersion: body.expectedVersion } : {}),
+        now
+      });
+      try {
+        await assertRunOperationCurrent(run.runId, claimed.lease);
+        await appendPendingDecisionEventsRequired(claimed.run, decision.id, [{
+          eventId: `decision-resolved:${run.runId}:${decision.id}:${choice.resolutionId}`,
+          actor: "human",
+          at: now,
+          type: "decision.resolved",
+          payload: { decisionId: decision.id, choice, actor: "human" }
+        }, {
+          eventId: `conflict-resolved:${run.runId}:${decision.context.conflictId}:${choice.resolutionId}`,
+          actor: "human",
+          at: now,
+          type: "conflict.resolved",
+          payload: { conflictId: decision.context.conflictId, by: "human", resolutionId: choice.resolutionId }
+        }]);
+        await assertRunOperationCurrent(run.runId, claimed.lease);
+      } finally {
+        await releaseRunOperation(run.runId, claimed.lease);
+      }
+      run = await repo.get(run.runId);
+      return NextResponse.json({ ...(await toCanonicalRunResponse(run)), decisionId: decision.id, choice });
+    }
+
     if (decision.kind !== "approve_plan") {
-      await appendRunEventRequired(run.runId, {
+      await appendPendingDecisionEventsRequired(run, decision.id, [{
+        eventId: `decision-resolved:${run.runId}:${decision.id}:${decision.kind}`,
         actor: "human",
         at: now,
         type: "decision.resolved",
         payload: { decisionId: decision.id, choice, actor: "human" }
-      });
+      }]);
     }
 
-    if (decision.kind === "resolve_conflict" && decision.context.conflictId !== undefined && "resolutionId" in choice) {
-      await appendRunEventRequired(run.runId, {
-        actor: "human",
-        at: now,
-        type: "conflict.resolved",
-        payload: { conflictId: decision.context.conflictId, by: "human", resolutionId: choice.resolutionId }
-      });
-    }
-
-    if (
-      decision.kind === "approve_amendment" &&
-      decision.context.amendmentId !== undefined &&
-      "action" in choice &&
-      choice.action === "approve"
-    ) {
-      await appendRunEventRequired(run.runId, {
-        actor: "human",
-        at: now,
-        type: "amendment.applied",
-        payload: { amendmentId: decision.context.amendmentId }
-      });
-
-      const model = reduceRunEvents(createInitialRunModel(buildRunModelSeed(run)), events);
-      const amendment = model.amendments.get(decision.context.amendmentId);
-      const seamId = amendment?.detail?.seamId || decision.context.amendmentId;
-
-      const amendmentsEngine = new AmendmentsEngine();
-      const graph = await resolveExecutionGraph(run);
-      const existing = executionResultsFromRun(run);
-      const provisioned = provisionedFromRecord(run.provisioned);
-
-      if (provisioned !== undefined) {
-        if (isRunnerActive(run.runId)) {
-          throw new RunLifecycleError(`Run ${run.runId} is being driven by an active runner.`);
-        }
-        const invalidation = await amendmentsEngine.amendSeam({
-          repoRoot: provisioned.repoRoot,
-          runId: run.runId,
-          graph,
-          seamId,
-          leafResults: existing.leafResults,
-          integrationResults: existing.integrationResults
-        });
-
-        const totalDurationMs =
-          invalidation.leafResults.reduce((sum, r) => sum + r.executorDurationMs, 0) +
-          invalidation.integrationResults.reduce((sum, r) => sum + integrationDurationMs(r), 0);
-
-        const updatedExecution: RunExecutionResult = {
-          runId: run.runId,
-          status: "failed",
-          leafResults: invalidation.leafResults,
-          integrationResults: invalidation.integrationResults,
-          totalDurationMs,
-          granularityVector: computeGranularityVector({
-            graph,
-            leafResults: invalidation.leafResults,
-            integrationResults: invalidation.integrationResults,
-            totalDurationMs
-          })
-        };
-        const operationId = `amendment:${run.runId}:${decision.context.amendmentId}:${run.version}`;
-        const journal = new JsonPlanMutationJournal({ directory: `${resolveRunsDirectory()}/plan-mutations` });
-        let operation = await journal.reserve({
-          operationId,
-          runId: run.runId,
-          kind: "amendment",
-          expectedRunVersion: run.version,
-          sourcePlanRevision: run.planRevision ?? 1,
-          targetPlanRevision: (run.planRevision ?? 1) + 1,
-          ...(run.targetContext?.fingerprint !== undefined ? { targetFingerprint: run.targetContext.fingerprint } : {}),
-          graphHash: createHash("sha256").update(JSON.stringify(graph)).digest("hex"),
-          preparedGraph: graph
-        });
-        if (operation.status === "prepared") {
-          operation = await journal.transition(operation.operationId, {
-            expectedVersion: operation.version,
-            status: "graph_prepared"
-          });
-        }
-
-        const claimed = await claimRunOperation(run.runId, "replan", {
-          expectedStatuses: ["running"],
-          operationId,
-          allowTakeover: false
-        });
-        const lease = claimed.lease;
-        run = await updateRunForOperation(run.runId, lease, (current) => {
-          if ((current.planRevision ?? 1) !== operation.sourcePlanRevision) {
-            throw new RunLifecycleError("The plan revision changed while the amendment was being applied.");
-          }
-          const next: RunRecord = {
-            ...current,
-            execution: updatedExecution,
-            planRevision: operation.targetPlanRevision,
-            status: "needs_review"
-          };
-          delete next.approvedAt;
-          delete next.approvedPlanRevision;
-          delete next.planApprovalOverride;
-          return next;
-        });
-        operation = await journal.transition(operation.operationId, {
-          expectedVersion: operation.version,
-          status: "record_persisted"
-        });
-        await resetExecutionThread(run.runId);
-        operation = await journal.transition(operation.operationId, {
-          expectedVersion: operation.version,
-          status: "checkpoint_reset"
-        });
-        await appendRunEventRequired(run.runId, {
-          actor: "system",
-          at: now,
-          type: "decision.raised",
-          payload: {
-            decisionId: `approve_plan:r${operation.targetPlanRevision}`,
-            kind: "approve_plan",
-            blocking: true,
-            context: { nodeIds: Object.keys(graph.nodes) }
-          }
-        });
-        operation = await journal.transition(operation.operationId, {
-          expectedVersion: operation.version,
-          status: "events_persisted"
-        });
-        operation = await journal.transition(operation.operationId, {
-          expectedVersion: operation.version,
-          status: "completed"
-        });
-        await releaseRunOperation(run.runId, lease);
-      }
-    }
-
-    return NextResponse.json({ ...toRunResponse(run), decisionId: decision.id, choice });
+    return NextResponse.json({ ...(await toCanonicalRunResponse(run)), decisionId: decision.id, choice });
   } catch (error) {
     return runErrorResponse(error);
   }

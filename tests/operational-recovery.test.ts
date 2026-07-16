@@ -42,4 +42,20 @@ describe("operational recovery selector", () => {
     expect(unverified.state).toBe("unverified");
     expect(degraded.state).toBe("degraded");
   });
+
+  it("prioritizes a durable terminal failure over an obsolete pending gate", () => {
+    const events = [event("decision.raised", { decisionId: "approve_plan", kind: "approve_plan", blocking: true, context: {} })];
+    const view = selectOperationalRecovery(reduceRunEvents(createInitialRunModel(seed("failed_artifact")), events), events);
+
+    expect(view.state).toBe("failed");
+    expect(view.canResolveDecision).toBe(false);
+    expect(view.recommendedActions).not.toContain("resolve_decision");
+  });
+
+  it("uses the latest durable execution failure as the recovery cause", () => {
+    const events = [event("node.execution.failed", { nodeId: "build-ui", cause: "La validación de tipos falló." })];
+    const view = selectOperationalRecovery(reduceRunEvents(createInitialRunModel(seed("failed")), events), events);
+
+    expect(view.failure).toEqual({ cause: "La validación de tipos falló.", nodeId: "build-ui", eventSeq: 1 });
+  });
 });

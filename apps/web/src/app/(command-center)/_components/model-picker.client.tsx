@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import { formatSelectionValue, selectableModelOptions, type ModelCapability, type ModelOption } from "@/lib/models";
+import { formatSelectionValue, type ModelCapability, type ModelOption } from "@/lib/models";
 import { formatRate } from "@/lib/model-pricing";
 
 interface ModelPickerProps {
@@ -10,6 +10,7 @@ interface ModelPickerProps {
   value: string;
   onChange: (value: string) => void;
   capability?: ModelCapability;
+  options: readonly ModelOption[];
 }
 
 /**
@@ -17,7 +18,7 @@ interface ModelPickerProps {
  * enabled models grouped by provider, each annotated with its price, with a
  * checkmark on the active one.
  */
-export function ModelPicker({ value, onChange, capability }: ModelPickerProps): React.ReactElement {
+export function ModelPicker({ value, onChange, capability, options: sourceOptions }: ModelPickerProps): React.ReactElement {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -39,7 +40,9 @@ export function ModelPicker({ value, onChange, capability }: ModelPickerProps): 
     };
   }, [open]);
 
-  const options = selectableModelOptions(capability);
+  const options = sourceOptions.filter(
+    (option) => capability === undefined || option.capabilities.includes(capability)
+  );
   const selected = options.find((option) => formatSelectionValue({ executorId: option.executorId, model: option.id }) === value);
   const grouped = groupByProvider(options);
 
@@ -76,11 +79,13 @@ export function ModelPicker({ value, onChange, capability }: ModelPickerProps): 
                     type="button"
                     role="option"
                     aria-selected={active}
+                    disabled={!option.enabled}
+                    title={option.availabilityMessage}
                     onClick={() => {
                       onChange(optionValue);
                       setOpen(false);
                     }}
-                    className="flex w-full items-center gap-2 rounded-[var(--r-md)] px-2 py-1.5 text-left transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--color-text)_6%,transparent)]"
+                    className="flex w-full items-center gap-2 rounded-[var(--r-md)] px-2 py-1.5 text-left transition-colors duration-150 enabled:hover:bg-[color-mix(in_srgb,var(--color-text)_6%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[var(--color-accent)]">
                       {active ? <Check aria-hidden className="h-3.5 w-3.5" /> : null}
@@ -93,6 +98,11 @@ export function ModelPicker({ value, onChange, capability }: ModelPickerProps): 
                             solo ejecución
                           </span>
                         )}
+                        {!option.enabled ? (
+                          <span className="mh-mono rounded bg-[var(--status-failed-bg)] px-1 py-px text-eyebrow text-[var(--status-failed-fg)]">
+                            no disponible
+                          </span>
+                        ) : null}
                       </span>
                       {rate !== undefined ? (
                         <span className="mh-mono text-eyebrow text-[var(--color-text-subtle)]">{rate}</span>

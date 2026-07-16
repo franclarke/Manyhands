@@ -12,7 +12,12 @@
  * workspace update during `generating` instead of staying stuck on "planificando".
  */
 import type { RunModelEventInput } from "./run-model-event-log";
-import type { NodeRole, PlanningState } from "@/lib/run-model/types";
+import type {
+  NodeRole,
+  PlanningState,
+  PlanDependencyProposedPayload
+} from "@/lib/run-model/types";
+import { approvalDecisionId } from "./decision-identity";
 
 export interface ProposedNode {
   nodeId: string;
@@ -73,8 +78,10 @@ export interface SeamDraftInput {
 }
 
 export interface PlanCompletion {
+  planRevision: number;
   rootId: string;
   nodeCount: number;
+  dependencies: readonly PlanDependencyProposedPayload[];
   seams: readonly SeamDraftInput[];
   criticFindings: readonly string[];
   /** Nodes the human gates on (leaves + integrators); drives blocked highlighting. */
@@ -87,17 +94,31 @@ export interface PlanCompletion {
  * once when planning reaches `needs_review`.
  */
 export function planCompletionEvents(input: PlanCompletion): RunModelEventInput[] {
-  const events: RunModelEventInput[] = input.seams.map((seam) => ({
+  const events: RunModelEventInput[] = input.dependencies.map((dependency) => ({
     actor: "system",
-    type: "plan.seam.proposed",
+    type: "plan.dependency.proposed",
     payload: {
-      seamId: seam.seamId,
-      name: seam.name,
-      producerNodeId: seam.producerNodeId,
-      consumerNodeIds: [...seam.consumerNodeIds],
-      draftSignature: seam.draftSignature
+      fromTaskId: dependency.fromTaskId,
+      toTaskId: dependency.toTaskId,
+      type: dependency.type,
+      inferred: dependency.inferred,
+      ...(dependency.rationale !== undefined ? { rationale: dependency.rationale } : {})
     }
   }));
+
+  for (const seam of input.seams) {
+    events.push({
+      actor: "system",
+      type: "plan.seam.proposed",
+      payload: {
+        seamId: seam.seamId,
+        name: seam.name,
+        producerNodeId: seam.producerNodeId,
+        consumerNodeIds: [...seam.consumerNodeIds],
+        draftSignature: seam.draftSignature
+      }
+    });
+  }
 
   events.push({
     actor: "system",
@@ -114,7 +135,7 @@ export function planCompletionEvents(input: PlanCompletion): RunModelEventInput[
     actor: "system",
     type: "decision.raised",
     payload: {
-      decisionId: "approve_plan",
+      decisionId: approvalDecisionId(input.planRevision),
       kind: "approve_plan",
       blocking: true,
       context: { nodeIds: [...input.executableNodeIds] }

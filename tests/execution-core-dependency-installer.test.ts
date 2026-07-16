@@ -52,7 +52,8 @@ function makeInstaller(existingPaths: string[], script: FakeChildScript = { exit
   const installer = new ChildProcessDependencyInstaller({
     spawn,
     exists: async (path: string) => present.has(path.replace(/\\/g, "/")),
-    useShell: true
+    useShell: true,
+    platform: "linux"
   });
   return { installer, calls };
 }
@@ -85,6 +86,7 @@ describe("ChildProcessDependencyInstaller", () => {
     expect(calls[0]?.command).toBe("pnpm");
     expect(calls[0]?.args).toEqual(["install"]);
     expect(calls[0]?.options.cwd).toBe(CWD);
+    expect(calls[0]?.options.shell).toBe(false);
   });
 
   it("defaults to `npm install` when only a package.json is present", async () => {
@@ -94,6 +96,7 @@ describe("ChildProcessDependencyInstaller", () => {
     expect(result.packageManager).toBe("npm");
     expect(calls[0]?.command).toBe("npm");
     expect(calls[0]?.args).toEqual(["install"]);
+    expect(calls[0]?.options.shell).toBe(false);
   });
 
   it("reports installed=false (without throwing) when install exits non-zero", async () => {

@@ -37,6 +37,34 @@ export interface SupervisedProcessMeta {
 const liveProcesses = new Map<string, Set<SupervisedProcessHandle>>();
 const processMetas = new WeakMap<SupervisedProcessHandle, SupervisedProcessMeta>();
 
+/**
+ * RU1 (F2B-1): durable evidence hook. The in-memory registry dies with the
+ * process, so cancellation after a server restart cannot see orphans. A host
+ * app installs a sink here; every registration/exit is mirrored to it so a
+ * fresh process can later find, verify and kill what this one spawned.
+ */
+export interface ProcessEvidenceEvent {
+  ownerId: string;
+  pid?: number;
+  label: string;
+  /** Executable name/path when the handle exposes it (never full argv). */
+  command?: string;
+  attemptId?: string;
+  operationId?: string;
+  at: string;
+}
+
+export interface ProcessEvidenceSink {
+  processRegistered(event: ProcessEvidenceEvent): void;
+  processExited(event: { ownerId: string; pid?: number; at: string }): void;
+}
+
+let evidenceSink: ProcessEvidenceSink | undefined;
+
+export function setProcessEvidenceSink(sink: ProcessEvidenceSink | undefined): void {
+  evidenceSink = sink;
+}
+
 export function registerLiveProcess(ownerId: string, child: SupervisedProcessHandle, meta?: SupervisedProcessMeta): void {
   let set = liveProcesses.get(ownerId);
   if (set === undefined) {
@@ -45,6 +73,23 @@ export function registerLiveProcess(ownerId: string, child: SupervisedProcessHan
   }
   set.add(child);
   if (meta !== undefined) processMetas.set(child, meta);
+  try {
+    const command = (child as { spawnfile?: unknown }).spawnfile;
+    evidenceSink?.processRegistered({
+      ownerId,
+      ...(typeof child.pid === "number" ? { pid: child.pid } : {}),
+      label: meta?.label ?? "process",
+      ...(typeof command === "string" && command.length > 0 ? { command } : {}),
+      ...(meta?.attemptId !== undefined ? { attemptId: meta.attemptId } : {}),
+      ...(meta?.operationId !== undefined ? { operationId: meta.operationId } : {}),
+      at: new Date().toISOString()
+    });
+  } catch (error) {
+    execWarn("supervisor", "process evidence sink failed on register", {
+      ownerId,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
 }
 
 export function unregisterLiveProcess(ownerId: string, child: SupervisedProcessHandle): void {
@@ -54,6 +99,33 @@ export function unregisterLiveProcess(ownerId: string, child: SupervisedProcessH
   if (set.size === 0) {
     liveProcesses.delete(ownerId);
   }
+  try {
+    evidenceSink?.processExited({
+      ownerId,
+      ...(typeof child.pid === "number" ? { pid: child.pid } : {}),
+      at: new Date().toISOString()
+    });
+  } catch (error) {
+    execWarn("supervisor", "process evidence sink failed on exit", {
+      ownerId,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
+/** Pids + metadata of the processes currently registered under an owner. */
+export function listLiveProcessMetas(
+  ownerId: string
+): Array<{ pid?: number; label?: string; attemptId?: string; operationId?: string }> {
+  return Array.from(liveProcesses.get(ownerId) ?? [], (child) => {
+    const meta = processMetas.get(child);
+    return {
+      ...(typeof child.pid === "number" ? { pid: child.pid } : {}),
+      ...(meta?.label !== undefined ? { label: meta.label } : {}),
+      ...(meta?.attemptId !== undefined ? { attemptId: meta.attemptId } : {}),
+      ...(meta?.operationId !== undefined ? { operationId: meta.operationId } : {})
+    };
+  });
 }
 
 export interface SuperviseOptions {
@@ -79,7 +151,7 @@ export function superviseChildProcess(
 
   const spawnFn = options.spawnFn ?? spawn;
   const onAbort = (): void => {
-    killProcessTree(child, spawnFn);
+    void killProcessTree(child, spawnFn);
   };
   if (options.signal !== undefined) {
     if (options.signal.aborted) {
@@ -124,8 +196,11 @@ export interface KillVerification {
   /**
    * dead: verified gone. escalated: survived the first kill, died after the
    * re-kill. survived: still alive after every attempt (caller must surface it).
+   * unverified: the pid appears alive but its identity could not be confirmed
+   * (RU1): killing it would risk a recycled pid, so the caller must NOT claim
+   * allDead and must NOT kill it.
    */
-  outcome: "dead" | "escalated" | "survived";
+  outcome: "dead" | "escalated" | "survived" | "unverified";
   waitedMs: number;
   /** Phase that spawned the process, when it was supervised with metadata. */
   label?: string;
@@ -181,13 +256,13 @@ export async function killProcessTreeVerified(
     return withMeta({ pid: pid ?? -1, outcome: "dead", waitedMs: 0 });
   }
 
-  killProcessTree(child, spawnFn);
+  await killProcessTree(child, spawnFn);
   if (await waitUntilDead(pid, timeoutMs / 2)) {
     return withMeta({ pid, outcome: "dead", waitedMs: Date.now() - start });
   }
 
   execWarn("cancel", "process tree survived first kill — escalating", { pid });
-  killProcessTree(child, spawnFn);
+  await killProcessTree(child, spawnFn);
   if (await waitUntilDead(pid, timeoutMs / 2)) {
     return withMeta({ pid, outcome: "escalated", waitedMs: Date.now() - start });
   }

@@ -12,6 +12,7 @@ import {
   type RecursiveStepStatusEvent,
   type WorkspaceHints
 } from "@manyhands/core";
+import type { EffortLevel } from "@manyhands/shared";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
 import type { Workspace } from "@/lib/api-types";
 
@@ -34,7 +35,7 @@ export interface PickDecomposerInput {
   userPrompt: string;
   model: string;
   executorId?: string | undefined;
-  reasoningEffort?: "low" | "medium" | "high" | "xhigh";
+  reasoningEffort?: EffortLevel;
   maxParallelSteps?: number;
   maxPlanningDepth?: number;
   maxChildrenPerNode?: number;

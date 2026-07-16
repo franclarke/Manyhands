@@ -7,7 +7,7 @@ import {
   sweepRunIfStale
 } from "@/lib/server/runs";
 import { archiveRun, purgeRun } from "@/lib/server/runs/archive-service";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ export async function GET(_request: Request, context: RouteContext): Promise<Nex
   try {
     const run = await getRunRepository().get(id);
     const swept = await sweepRunIfStale(run);
-    return NextResponse.json(toRunResponse(swept));
+    return NextResponse.json(await toCanonicalRunResponse(swept));
   } catch (error) {
     return errorResponse(error);
   }
@@ -45,7 +45,7 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Ne
     }
     const nextTitle = title.trim().slice(0, MAX_TITLE_LENGTH);
     const updated = await getRunRepository().update(id, (current) => ({ ...current, title: nextTitle }));
-    return NextResponse.json(toRunResponse(updated));
+    return NextResponse.json(await toCanonicalRunResponse(updated));
   } catch (error) {
     return errorResponse(error);
   }

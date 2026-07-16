@@ -64,13 +64,19 @@ warning auditable.
 - toma contratos desde el `TaskGraph` cuando no se pasan por separado;
 - genera o completa la `riskMatrix` desde contratos, scopes y, cuando existen,
   señales estáticas del `repository-index`;
-- agrega riesgo conservador para scope solapado, contrato faltante, scope vacío
-  o interfaces producer/consumer sin dependencia;
+- agrega riesgo conservador para scope solapado, contrato faltante, scope vacío,
+  símbolos producer/consumer concretos o declaraciones incompatibles del mismo
+  seam;
 - emite warnings/fallbacks (`missing_contract`, `empty_scope`,
   `missing_repository_index`, `risk_matrix_missing`, `risk_matrix_incomplete`,
   `parallel_naive_explicit`).
 
-La regla de degradación es serializar antes que paralelizar sin evidencia.
+La regla de degradación es serializar antes que paralelizar sin evidencia. Un
+`InterfaceContract` canónico producido y consumido con la misma identidad,
+firma, kind y origen sí es evidencia positiva de compatibilidad: ese seam no se
+promueve a riesgo por sí solo. Los agentes pueden compartir wave si tampoco hay
+riesgo físico de scopes, archivos, símbolos o imports. Esto preserva el objetivo
+del grounding: construir en paralelo contra una interfaz congelada.
 
 ### Señales estructurales del repo
 
@@ -79,8 +85,8 @@ El scheduler no recorre el filesystem. Consume evidencia ya construida por
 
 - `static_import_dependency`: una tarea toca un módulo exportador y otra toca un
   archivo que lo importa;
-- `static_producer_consumer_symbol`: una tarea produce un símbolo o seam que otra
-  consume;
+- `static_producer_consumer_symbol`: una tarea produce un símbolo concreto que
+  otra consume;
 - `static_shared_schema_dependency`, `static_public_api_surface_overlap`,
   `static_critical_file_overlap` y señales similares derivadas de `files`,
   `symbols`, `imports` y `exports`.

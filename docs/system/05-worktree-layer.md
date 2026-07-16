@@ -34,7 +34,7 @@ Un git worktree es una característica nativa de git que permite tener múltiple
 3. Registra el worktree con `git worktree add <path> <branch> --no-checkout`, luego hace checkout del `baseCommit`
 4. Retorna un `WorktreeRecord` con el path, la branch, el baseCommit, y el status `"active"`
 
-El `baseCommit` es el mismo para todas las hojas del mismo run. Esto garantiza que todos los agentes parten del mismo estado — independientemente de si otras hojas ya completaron y commitearon en sus propias ramas.
+El `baseCommit` es el mismo para todas las hojas del mismo run. Esto garantiza que todos los agentes parten del mismo estado — independientemente de si otras hojas ya completaron y commitearon en sus propias ramas. Las dependencias del DAG son barreras de orden (`ordering_only`): no trasladan el commit ni los archivos de una hoja predecesora a la dependiente.
 
 **`detectUnexpectedCommit(worktreeRecord)`:**
 Compara el HEAD actual del worktree con el `baseCommit` conocido. Si difieren, el agente hizo uno o más commits por su cuenta. Retorna `{ committed: true, sha: string }`.

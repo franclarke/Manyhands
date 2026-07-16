@@ -1,0 +1,179 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - img "ManyHands" [ref=e5]
+      - generic [ref=e16]:
+        - button "Cambiar a modo claro" [ref=e17]
+        - button "Colapsar barra lateral" [ref=e24]
+    - link "Nuevo run" [ref=e29] [cursor=pointer]:
+      - /url: /
+    - region "Workspaces" [ref=e31]:
+      - heading "Workspaces" [level=3] [ref=e32]
+      - list [ref=e35]:
+        - listitem "C:\\tmp\\manyhands-e2e-codex-20260714" [ref=e36]:
+          - generic [ref=e38]: Todo E2E Codex
+          - generic [ref=e39]: main
+        - listitem "C:\\Users\\franc\\Documents\\Proyectos\\manyhands-e2e\\group-expenses-app" [ref=e44]:
+          - generic [ref=e46]: group-expenses-app
+          - generic [ref=e47]: main
+        - listitem "C:\\Users\\franc\\Desktop\\divisorDeGastos" [ref=e52]:
+          - generic [ref=e54]: divisorDeGastos
+          - generic [ref=e55]: main
+        - listitem [ref=e60]:
+          - generic [ref=e62]: Aprobado
+        - listitem [ref=e63]:
+          - generic [ref=e65]: ManyHands
+    - region "Runs recientes" [ref=e66]:
+      - heading "Runs recientes" [level=3] [ref=e67]
+      - navigation [ref=e72]:
+        - generic [ref=e73]:
+          - link "App de división de gastos grupales 9 Para revisar · divisorDeGastos ayer" [ref=e74] [cursor=pointer]:
+            - /url: /runs/ec9a495e-a2df-49d2-9a5e-ee232fad8236
+            - generic [ref=e75]:
+              - generic [ref=e76]: App de división de gastos grupales
+              - generic "9 riesgos altos de coordinación" [ref=e77]: "9"
+            - generic [ref=e80]:
+              - generic [ref=e81]:
+                - generic [ref=e83]: Para revisar ·
+                - generic "divisorDeGastos" [ref=e84]
+              - generic [ref=e85]: ayer
+          - generic [ref=e86]:
+            - button "Renombrar run" [ref=e87]
+            - button "Eliminar run" [ref=e91]
+        - generic [ref=e95]:
+          - link "Aplicación web de lista de tareas 4 Fallido · Todo E2E Codex hace 2d" [ref=e96] [cursor=pointer]:
+            - /url: /runs/e1885451-2d3b-43a2-8b16-5495d4a89fa9
+            - generic [ref=e97]:
+              - generic [ref=e98]: Aplicación web de lista de tareas
+              - generic "4 riesgos altos de coordinación" [ref=e99]: "4"
+            - generic [ref=e102]:
+              - generic [ref=e103]:
+                - generic [ref=e105]: Fallido ·
+                - generic "Todo E2E Codex" [ref=e106]
+              - generic [ref=e107]: hace 2d
+          - generic [ref=e108]:
+            - button "Renombrar run" [ref=e109]
+            - button "Eliminar run" [ref=e113]
+        - generic [ref=e117]:
+          - link "App para dividir gastos entre grupo 15 Completado · group-expenses-app 6 jul" [ref=e118] [cursor=pointer]:
+            - /url: /runs/880dba1d-dacb-4af2-a9eb-b9bd3f69488a
+            - generic [ref=e119]:
+              - generic [ref=e120]: App para dividir gastos entre grupo
+              - generic "15 riesgos altos de coordinación" [ref=e121]: "15"
+            - generic [ref=e124]:
+              - generic [ref=e125]:
+                - generic [ref=e127]: Completado ·
+                - generic "group-expenses-app" [ref=e128]
+              - generic [ref=e129]: 6 jul
+          - generic [ref=e130]:
+            - button "Renombrar run" [ref=e131]
+            - button "Eliminar run" [ref=e135]
+        - generic [ref=e139]:
+          - link "Construí una aplicación web pequeña de división de gastos grupales. Debe 7 Omitido · divisorDeGastos 6 jul" [ref=e140] [cursor=pointer]:
+            - /url: /runs/7b7ac5e5-85ed-4f3f-9102-0f385140bbfe
+            - generic [ref=e141]:
+              - generic [ref=e142]: Construí una aplicación web pequeña de división de gastos grupales. Debe
+              - generic "7 riesgos altos de coordinación" [ref=e143]: "7"
+            - generic [ref=e146]:
+              - generic [ref=e147]:
+                - generic [ref=e149]: Omitido ·
+                - generic "divisorDeGastos" [ref=e150]
+              - generic [ref=e151]: 6 jul
+          - generic [ref=e152]:
+            - button "Renombrar run" [ref=e153]
+            - button "Eliminar run" [ref=e157]
+        - generic [ref=e161]:
+          - link "App de división de gastos grupales Omitido · 6 jul" [ref=e162] [cursor=pointer]:
+            - /url: /runs/60cc2f40-8812-491d-8e94-4d4d3cabf988
+            - generic [ref=e163]: App de división de gastos grupales
+            - generic [ref=e165]:
+              - generic [ref=e166]: Omitido ·
+              - generic [ref=e169]: 6 jul
+          - generic [ref=e170]:
+            - button "Renombrar run" [ref=e171]
+            - button "Eliminar run" [ref=e175]
+  - main [ref=e179]:
+    - generic [ref=e180]:
+      - generic [ref=e181]:
+        - button "Reproducir" [ref=e182]
+        - button "Pausar fixture" [ref=e185]
+        - button "Avanzar un evento" [ref=e189]
+        - button "Reiniciar fixture" [ref=e192]
+        - generic [ref=e196]: 0/38
+      - generic [ref=e197]:
+        - generic [ref=e198]:
+          - generic [ref=e199]:
+            - generic "Run golden-happy-path" [ref=e200]: golden-h
+            - heading [level=1]
+            - generic [ref=e201]: Inactivo
+            - generic "Conectado al event log" [ref=e203]
+          - generic [ref=e206]:
+            - generic "Tareas del grafo" [ref=e207]:
+              - strong [ref=e208]: "0"
+              - text: tareas
+            - generic "Conflictos detectados" [ref=e209]:
+              - strong [ref=e210]: "0"
+              - text: conflictos
+        - navigation "Fases del run" [ref=e211]:
+          - generic [ref=e212]:
+            - generic [ref=e213]: Intención
+            - generic [ref=e218]: Plan
+            - generic [ref=e223]: Ejecución
+            - generic [ref=e228]: Integración
+            - generic [ref=e233]: Revisión
+          - generic [ref=e237]:
+            - button "Agentes" [ref=e238] [cursor=pointer]
+            - button "Plan" [ref=e242] [cursor=pointer]
+            - button "Archivos" [ref=e246] [cursor=pointer]
+            - button "Diff" [ref=e252] [cursor=pointer]
+        - generic [ref=e259]:
+          - complementary "Run outline" [ref=e262]:
+            - generic [ref=e263]:
+              - generic [ref=e264]: Estructura
+              - combobox "Filtrar tareas del outline" [ref=e269]:
+                - option "Todas" [selected]
+                - option "En ejecución"
+                - option "Bloqueadas"
+                - option "Fallidas"
+                - option "Requieren atención"
+                - option "Integradas"
+            - paragraph [ref=e271]: No hay tareas para este filtro.
+            - generic [ref=e272]:
+              - generic [ref=e273]:
+                - generic [ref=e274]:
+                  - generic [ref=e275]: Planificación
+                  - generic "Política interna risk_aware" [ref=e280]: Por riesgo
+                - paragraph [ref=e281]: Sin wave seleccionada todavía.
+              - generic [ref=e282]:
+                - generic [ref=e283]:
+                  - generic [ref=e284]: Atención
+                  - generic [ref=e287]: "0"
+                - paragraph [ref=e288]: Nada requiere atención.
+          - separator [ref=e292]
+          - generic [ref=e294]:
+            - generic [ref=e295]:
+              - tablist "Proyección del Task DAG" [ref=e296]:
+                - tab "Tareas" [selected] [ref=e297]
+                - tab "Planificación" [ref=e302]
+                - tab "Integración" [ref=e307]
+                - tab "Interfaces" [ref=e312]
+              - generic [ref=e316]: Task DAG · 0 tasks
+            - region "Grafo de tareas del run" [ref=e323]:
+              - application [ref=e324]:
+                - generic [ref=e327]:
+                  - button "Expandir todo" [ref=e328] [cursor=pointer]
+                  - button "Colapsar integrados" [ref=e332] [cursor=pointer]
+                  - button "Centrar grafo de tareas" [ref=e337] [cursor=pointer]
+                  - button "Acercar" [ref=e344] [cursor=pointer]
+                  - button "Alejar" [ref=e348] [cursor=pointer]
+                - generic:
+                  - generic:
+                    - generic: Planificando
+                    - strong: Construyendo el grafo
+                    - paragraph: ManyHands está resolviendo el contexto del repo. El primer nodo del plan aparece acá apenas se propone.
+        - generic [ref=e353]:
+          - button "Actividad" [ref=e354] [cursor=pointer]
+          - button "Eventos" [ref=e358] [cursor=pointer]
+          - button "Terminal" [ref=e360] [cursor=pointer]
+          - button "Validación" [ref=e363] [cursor=pointer]
+          - button "Archivos" [ref=e367] [cursor=pointer]

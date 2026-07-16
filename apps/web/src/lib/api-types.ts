@@ -1,4 +1,5 @@
 import type { GranularityVector } from "@manyhands/execution-core";
+import type { EffortLevel } from "@manyhands/shared";
 import type { PlanCriticResult, SeamCriticResult } from "@/lib/critic-types";
 
 /** Per-leaf receipt: auditable evidence of what one subagent did. */
@@ -43,8 +44,25 @@ export interface Workspace {
   updatedAt: string;
 }
 
+export type WorkspaceMigrationResolutionChoice = "canonical" | "duplicate";
+
+export interface WorkspaceMigrationConflict {
+  version: 1;
+  repositoryKey: string;
+  canonicalWorkspaceId: string;
+  duplicateWorkspaceId: string;
+  conflictingFields: string[];
+  canonicalSnapshot: Workspace;
+  duplicateSnapshot: Workspace;
+  resolution?: {
+    choice: WorkspaceMigrationResolutionChoice;
+    resolvedAt: string;
+  } | undefined;
+}
+
 export interface WorkspaceListResponse {
   workspaces: Workspace[];
+  migrationConflicts: WorkspaceMigrationConflict[];
 }
 
 export interface WorkspaceResponse {
@@ -103,6 +121,13 @@ export interface ExecutorSelection {
   model: string;
 }
 
+/** Canonical per-stage selection surfaced to the client (U2A-2). */
+export interface StageSelection {
+  executorId: ExecutorId;
+  model: string;
+  effort?: EffortLevel;
+}
+
 export interface RunPreview {
   id: string;
   workspaceId: string;
@@ -115,7 +140,7 @@ export interface RunPreview {
   model: string;
   nodeCount?: number | undefined;
   agentCount?: number | undefined;
-  conflictCount?: number | undefined;
+  coordinationRiskCount?: number | undefined;
   createdAt: string;
   updatedAt: string;
   durationLabel?: string | undefined;
@@ -124,6 +149,7 @@ export interface RunPreview {
 
 export interface RunsListResponse {
   runs: RunPreview[];
+  degradedRecords: Array<{ runId: string; reason: string; diagnosticsHref: string }>;
 }
 
 export interface RunCreateRequest {
@@ -134,7 +160,7 @@ export interface RunCreateRequest {
   planningModel?: string | undefined;
   defaultExecutionSelection?: ExecutorSelection | undefined;
   defaultRepairSelection?: ExecutorSelection | undefined;
-  executionConfig?: { reasoningEffort?: "low" | "medium" | "high" | "xhigh" } | undefined;
+  executionConfig?: { reasoningEffort?: EffortLevel } | undefined;
   userPrompt?: string;
   repoSpec?: { kind: "fixture"; fixtureId: string } | { kind: "localPath"; path: string };
 }
@@ -143,7 +169,7 @@ export type ProviderReadinessStatus = "ready" | "warning" | "error";
 export type ProviderReadinessCheckStatus = "pass" | "warning" | "fail";
 
 export interface ProviderReadinessCheck {
-  id: "cli" | "auth" | "repo_path" | "repo_clean" | "branch" | "quota" | "enabled";
+  id: "cli" | "auth" | "repo_path" | "repo_clean" | "branch" | "commands" | "quota" | "enabled";
   status: ProviderReadinessCheckStatus;
   label: string;
   message: string;
@@ -163,6 +189,28 @@ export interface ProviderReadinessResponse {
   providers: ProviderReadiness[];
 }
 
+export interface CapabilityModel {
+  id: string;
+  label: string;
+  capabilities: Array<"planning" | "execution" | "repair">;
+  usage: "reported" | "estimated" | "unavailable";
+  efforts: EffortLevel[] | null;
+  defaultEffort?: EffortLevel;
+}
+
+export interface ExecutorCapabilityView {
+  executorId: Exclude<ExecutorId, "gemini-cli">;
+  label: string;
+  provider: string;
+  enabled: boolean;
+  readiness: ProviderReadiness;
+  models: CapabilityModel[];
+}
+
+export interface CapabilitiesResponse {
+  executors: ExecutorCapabilityView[];
+}
+
 export interface RunResponse {
   run: {
     runId: string;
@@ -173,6 +221,9 @@ export interface RunResponse {
     planningModel?: string;
     defaultExecutionSelection?: ExecutorSelection;
     defaultRepairSelection?: ExecutorSelection;
+    planningSelection?: StageSelection;
+    executionSelection?: StageSelection;
+    repairSelection?: StageSelection;
     userPrompt: string;
     summary?: string;
     title: string;

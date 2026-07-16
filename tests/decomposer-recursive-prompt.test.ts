@@ -14,6 +14,10 @@ describe("recursive decomposer prompt", () => {
     expect(prompt.system).toContain("Default `dependencies` to [] for siblings");
     expect(prompt.system).toContain("not execution dependencies");
     expect(prompt.system).toContain("normal parallel leaves");
+    expect(prompt.system).toContain("ordering-only dispatch barriers");
+    expect(prompt.system).toContain("never materialize the source child's files");
+    expect(prompt.system).toContain("keep that concrete work in one child");
+    expect(prompt.system).not.toContain("concrete files or side effects already exist in the worktree");
   });
 
   it("tells child planning not to redeclare inherited interfaces", () => {
@@ -35,6 +39,8 @@ describe("recursive decomposer prompt", () => {
     expect(prompt.user).toContain("HabitDomainApi");
     expect(prompt.system).toContain("Do not redeclare an interface that is already in scope");
     expect(prompt.system).toContain("list that existing id in the child's `produces`");
+    expect(prompt.system).toContain("MUST NOT both consume and produce the same interface id");
+    expect(prompt.system).toContain("A seam connects distinct");
   });
 
   it("treats granularity as aggressiveness, never exposing a target depth or node count", () => {

@@ -50,7 +50,10 @@ describe("run-model record projection", () => {
       completedAt: "2026-06-06T00:02:00.000Z",
       planning: makePlanning(),
       execution: makeExecution(),
-      finalCommitSha: "final123"
+      finalCommitSha: "final123",
+      artifactOutcome: "ready",
+      deliveryOutcome: "delivered",
+      finalArtifactManifest: finalManifest()
     });
     const model = reduceRunEvents(createInitialRunModel(buildRunModelSeed(run)), projectRunRecordToRunEvents(run));
 
@@ -59,6 +62,28 @@ describe("run-model record projection", () => {
     expect(selectRenderableNodeState(model, "root").display).toBe("done");
     expect(selectGranularityMetrics(model)?.leafSuccessRate).toBe(1);
     expect(selectEvidence(model)?.integrationCommit).toBe("final123");
+    expect(model.decisions.has("approve_merge")).toBe(false);
+  });
+
+  it("does not project ready evidence or terminal success for a failed artifact", () => {
+    const run = makeRun({
+      status: "failed_artifact",
+      planning: makePlanning(),
+      execution: makeExecution(),
+      artifactOutcome: "failed",
+      deliveryOutcome: "failed",
+      finalArtifactManifest: finalManifest({
+        artifactDisposition: "failed",
+        verificationDisposition: "failed",
+        deliveryDisposition: "failed"
+      })
+    });
+    const events = projectRunRecordToRunEvents(run);
+    const model = reduceRunEvents(createInitialRunModel(buildRunModelSeed(run)), events);
+
+    expect(events.some((event) => event.type === "run.evidence.ready")).toBe(false);
+    expect(events.some((event) => event.type === "run.completed")).toBe(false);
+    expect(selectEvidence(model)).toBeNull();
   });
 
   it("projects persisted live planning nodes when no final graph exists yet", () => {
@@ -83,6 +108,62 @@ describe("run-model record projection", () => {
 
     expect([...model.nodes.keys()].sort()).toEqual(["leaf-a", "root"]);
     expect(model.nodes.get("leaf-a")?.planning).toMatchObject({ state: "fallback", attempt: 3 });
+  });
+
+  it("projects graph.dependencies as canonical dependency events", () => {
+    const planning = makePlanning();
+    planning.decomposition.graph.dependencies = [{
+      fromTaskId: "root",
+      toTaskId: "leaf-a",
+      type: "structural",
+      inferred: false,
+      rationale: "Root foundation precedes leaf work"
+    }];
+    planning.decomposition.graph.nodes["leaf-a"]!.dependencies = ["root"];
+    const run = makeRun({ status: "needs_review", planning });
+
+    const events = projectRunRecordToRunEvents(run);
+    const model = reduceRunEvents(createInitialRunModel(buildRunModelSeed(run)), events);
+
+    expect(events.find((event) => event.type === "plan.dependency.proposed")?.payload).toEqual({
+      fromTaskId: "root",
+      toTaskId: "leaf-a",
+      type: "structural",
+      inferred: false,
+      rationale: "Root foundation precedes leaf work"
+    });
+    expect([...model.dependencies.values()]).toEqual([{
+      fromTaskId: "root",
+      toTaskId: "leaf-a",
+      type: "structural",
+      inferred: false,
+      rationale: "Root foundation precedes leaf work"
+    }]);
+  });
+
+  it("does not project a legacy self-consumed interface as a canvas self-edge", () => {
+    const planning = makePlanning();
+    const shared = {
+      id: "ProjectScripts",
+      kind: "type" as const,
+      signature: "type ProjectScripts = Record<string, string>",
+      description: "package scripts"
+    };
+    planning.decomposition.contracts[0] = {
+      ...planning.decomposition.contracts[0]!,
+      producedInterfaces: [shared],
+      consumedInterfaces: [shared]
+    };
+
+    const seam = projectRunRecordToRunEvents(
+      makeRun({ status: "needs_review", planning })
+    ).find((event) => event.type === "plan.seam.proposed");
+
+    expect(seam?.payload).toMatchObject({
+      seamId: "ProjectScripts",
+      producerNodeId: "leaf-a",
+      consumerNodeIds: []
+    });
   });
 });
 
@@ -228,5 +309,36 @@ function successLeaf(taskId: string): AgentExecutionResult {
     executorExitCode: 0,
     executorDurationMs: 1000,
     executorTimedOut: false
+  };
+}
+
+function finalManifest(
+  overrides: Partial<NonNullable<RunRecord["finalArtifactManifest"]>> = {}
+): NonNullable<RunRecord["finalArtifactManifest"]> {
+  return {
+    version: 1,
+    manifestId: "00000000-0000-4000-8000-000000000001",
+    runId: "run-record",
+    sourceTargetFingerprint: "target-fingerprint",
+    sourceBranch: "main",
+    sourceBaseSha: "base123",
+    executionBaseSha: "base123",
+    finalSha: "final123",
+    finalRef: "manyhands/run-record",
+    addedFiles: [],
+    modifiedFiles: ["src/leaf-a.ts"],
+    deletedFiles: [],
+    patch: "diff --git a/src/leaf-a.ts b/src/leaf-a.ts",
+    validationCommands: [],
+    validationResults: [],
+    verificationDisposition: "verified",
+    omittedTasks: [],
+    acceptedFailures: [],
+    acceptedConflicts: [],
+    repairEvidence: [],
+    artifactDisposition: "ready",
+    deliveryDisposition: "delivered",
+    createdAt: AT,
+    ...overrides
   };
 }

@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
 import type { AgentExecutorOptions } from "../types";
-import { cliPathRequiresShell, resolveCliBinaryPath } from "./binary";
+import { resolveCliBinaryPath, resolveCliProcessInvocation } from "./binary";
 import { getExecutorDescriptor, type ExecutorId } from "./registry";
 import { createAgentStatusScanner } from "./status-channel";
 import { spawnExecutorProcess, type SpawnFn } from "./process";
@@ -41,6 +41,9 @@ export interface CliExecutorDeps {
    * structured argv and current Codex/Claude binaries are directly spawnable.
    */
   useShell?: boolean;
+  /** Injectable host platform/environment for deterministic process tests. */
+  platform?: NodeJS.Platform;
+  hostEnv?: NodeJS.ProcessEnv;
 }
 
 /**
@@ -56,17 +59,20 @@ export class CliAgentExecutor implements AgentExecutor {
   readonly binaryPath: string;
   private readonly spawnFn: SpawnFn;
   private readonly readInstructions: (filePath: string) => Promise<string>;
-  private readonly useShell: boolean;
+  private readonly platform: NodeJS.Platform;
+  private readonly hostEnv: NodeJS.ProcessEnv;
 
   constructor(profile: CliExecutorProfile, deps: CliExecutorDeps = {}) {
     const descriptor = getExecutorDescriptor(profile.id);
     this.profile = profile;
+    this.platform = deps.platform ?? process.platform;
+    this.hostEnv = deps.hostEnv ?? process.env;
     this.binaryPath = resolveCliBinaryPath(
-      deps.binaryPath ?? process.env[descriptor.binaryEnvVar] ?? descriptor.defaultBinary
+      deps.binaryPath ?? this.hostEnv[descriptor.binaryEnvVar] ?? descriptor.defaultBinary,
+      { platform: this.platform, env: this.hostEnv }
     );
     this.spawnFn = deps.spawn ?? spawn;
     this.readInstructions = deps.readInstructions ?? ((filePath) => readFile(filePath, "utf8"));
-    this.useShell = deps.useShell ?? cliPathRequiresShell(this.binaryPath);
   }
 
   async execute(options: AgentExecutorOptions): Promise<ExecutorRunOutcome> {
@@ -83,12 +89,17 @@ export class CliAgentExecutor implements AgentExecutor {
             options.onOutput?.(chunk);
           };
 
+    const invocation = resolveCliProcessInvocation(this.binaryPath, this.profile.buildArgs(options), {
+      platform: this.platform,
+      env: this.hostEnv
+    });
     const outcome = await spawnExecutorProcess({
-      binaryPath: this.binaryPath,
-      args: this.profile.buildArgs(options),
+      binaryPath: invocation.command,
+      args: invocation.args,
       cwd: options.cwd,
       env: options.env,
-      useShell: this.useShell,
+      useShell: invocation.shell,
+      windowsVerbatimArguments: invocation.windowsVerbatimArguments,
       timeoutMs: options.timeoutMs,
       signal: options.signal,
       processOwnerId: options.processOwnerId,

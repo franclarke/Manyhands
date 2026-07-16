@@ -4,6 +4,7 @@ import {
   assertTransition,
   assertRunActionAllowed,
   canPause,
+  canRestart,
   isTerminalStatus
 } from "@/lib/server/runs/lifecycle";
 import { RUN_STATUS_VALUES, type RunStatus } from "@/lib/server/runs/schema";
@@ -41,6 +42,7 @@ const LEGAL: ReadonlyArray<[RunStatus, RunStatus]> = [
   ["running", "failed"],
   ["interrupted", "generating"],
   ["interrupted", "running"],
+  ["interrupted", "paused"],
   // Restart resumes an execution-interrupted run via interrupted → approved → running.
   ["interrupted", "approved"],
   ["interrupted", "failed"],
@@ -52,10 +54,14 @@ const LEGAL: ReadonlyArray<[RunStatus, RunStatus]> = [
   ["partial", "approved"],
   ["unverified", "approved"],
   ["needs_delivery", "approved"],
+  ["needs_delivery", "completed"],
   ["failed_artifact", "approved"],
   ["failed_delivery", "approved"],
+  ["failed_delivery", "completed"],
   ["failed", "approved"],
-  ["failed", "generating"]
+  ["failed", "generating"],
+  // Restart of an answered replan that failed before its semantic CAS.
+  ["failed", "running"]
 ];
 
 describe("run lifecycle", () => {
@@ -106,7 +112,7 @@ describe("run lifecycle", () => {
     expect(allowedStatusesForAction("pause")).toEqual(["generating", "running"]);
     expect(allowedStatusesForAction("resume")).toEqual(["paused"]);
     expect(allowedStatusesForAction("cancel")).toEqual(["generating", "running", "paused", "cancelling"]);
-    expect(allowedStatusesForAction("restart")).toEqual(["interrupted", "failed"]);
+    expect(allowedStatusesForAction("restart")).toEqual(["interrupted", "failed", "failed_artifact"]);
     expect(allowedStatusesForAction("fork")).not.toContain("running");
     expect(allowedStatusesForAction("fork")).not.toContain("generating");
   });
@@ -115,7 +121,13 @@ describe("run lifecycle", () => {
     expect(() => assertRunActionAllowed("completed", "pause")).toThrowError(RunLifecycleError);
     expect(() => assertRunActionAllowed("running", "resume")).toThrowError(RunLifecycleError);
     expect(() => assertRunActionAllowed("approved", "restart")).toThrowError(RunLifecycleError);
+    expect(() => assertRunActionAllowed("failed_artifact", "restart")).not.toThrow();
     expect(() => assertRunActionAllowed("running", "fork")).toThrowError(RunLifecycleError);
     expect(() => assertRunActionAllowed("paused", "resume")).not.toThrow();
+  });
+
+  it("permite reiniciar una falla durable del artifact", () => {
+    expect(canRestart("failed_artifact")).toBe(true);
+    expect(canRestart("failed_delivery")).toBe(false);
   });
 });

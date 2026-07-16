@@ -155,6 +155,144 @@ describe("reducer — general", () => {
     expect(running.run.control.pausedDuring).toBeUndefined();
   });
 
+  it("replaces the editable graph exactly and resets runtime only for semantic revisions", () => {
+    const planned = reduceRunEvents(initialFor("r-projection"), [
+      {
+        seq: 1,
+        at: "2026-07-15T00:00:00.000Z",
+        runId: "r-projection",
+        actor: "system",
+        type: "plan.graph.projected",
+        payload: {
+          projectionVersion: 1,
+          planRevision: 1,
+          resetRuntime: false,
+          nodes: [
+            { nodeId: "root", parentId: null, role: "root", title: "Root", goal: "Coordinate", depth: 0, scopePaths: [] },
+            { nodeId: "old", parentId: "root", role: "leaf", title: "Old", goal: "Old work", depth: 1, scopePaths: ["old.ts"] }
+          ],
+          dependencies: [{ fromTaskId: "root", toTaskId: "old", type: "structural", inferred: false }],
+          seams: [{ seamId: "seam-old", name: "Old API", producerNodeId: "root", consumerNodeIds: ["old"], draftSignature: "old()" }]
+        }
+      },
+      {
+        seq: 2,
+        at: "2026-07-15T00:00:01.000Z",
+        runId: "r-projection",
+        actor: "agent",
+        type: "node.execution.started",
+        payload: { nodeId: "root", agent: "codex", model: "gpt-5.5" }
+      },
+      {
+        seq: 3,
+        at: "2026-07-15T00:00:02.000Z",
+        runId: "r-projection",
+        actor: "system",
+        type: "wave.opened",
+        payload: { waveId: "wave-1", nodeIds: ["root"] }
+      },
+      {
+        seq: 4,
+        at: "2026-07-15T00:00:03.000Z",
+        runId: "r-projection",
+        actor: "system",
+        type: "conflict.detected",
+        payload: {
+          conflictId: "conflict-1",
+          dimension: "textual",
+          status: "open",
+          nodeIds: ["root", "old"],
+          files: ["old.ts"],
+          autoResolvable: false,
+          diagnosisRef: "blob://conflict-1"
+        }
+      }
+    ]);
+
+    const cosmeticallyProjected = reduceRunEvent(planned, {
+      seq: 5,
+      at: "2026-07-15T00:00:04.000Z",
+      runId: "r-projection",
+      actor: "system",
+      type: "plan.graph.projected",
+      payload: {
+        projectionVersion: 1,
+        planRevision: 1,
+        resetRuntime: false,
+        nodes: [
+          { nodeId: "root", parentId: null, role: "root", title: "Renamed root", goal: "Coordinate", depth: 0, scopePaths: [] },
+          { nodeId: "new", parentId: "root", role: "leaf", title: "New", goal: "New work", depth: 1, scopePaths: ["new.ts"] }
+        ],
+        dependencies: [{ fromTaskId: "root", toTaskId: "new", type: "structural", inferred: false }],
+        seams: [{ seamId: "seam-new", name: "New API", producerNodeId: "root", consumerNodeIds: ["new"], draftSignature: "new()" }]
+      }
+    });
+
+    expect([...cosmeticallyProjected.nodes.keys()]).toEqual(["root", "new"]);
+    expect([...cosmeticallyProjected.dependencies.values()]).toEqual([
+      { fromTaskId: "root", toTaskId: "new", type: "structural", inferred: false }
+    ]);
+    expect([...cosmeticallyProjected.seams.keys()]).toEqual(["seam-new"]);
+    expect(cosmeticallyProjected.nodes.get("root")?.execution.kind).toBe("running");
+    expect(cosmeticallyProjected.waves.has("wave-1")).toBe(true);
+    expect(cosmeticallyProjected.conflicts.has("conflict-1")).toBe(true);
+
+    const semanticallyProjected = reduceRunEvent(cosmeticallyProjected, {
+      seq: 6,
+      at: "2026-07-15T00:00:05.000Z",
+      runId: "r-projection",
+      actor: "system",
+      type: "plan.graph.projected",
+      payload: {
+        projectionVersion: 1,
+        planRevision: 2,
+        resetRuntime: true,
+        nodes: [
+          { nodeId: "root", parentId: null, role: "root", title: "Renamed root", goal: "Coordinate", depth: 0, scopePaths: [] },
+          { nodeId: "new", parentId: "root", role: "leaf", title: "New", goal: "New work", depth: 1, scopePaths: ["new.ts"] }
+        ],
+        dependencies: [{ fromTaskId: "root", toTaskId: "new", type: "structural", inferred: false }],
+        seams: []
+      }
+    });
+
+    expect(semanticallyProjected.nodes.get("root")?.execution.kind).toBe("idle");
+    expect(semanticallyProjected.waves.size).toBe(0);
+    expect(semanticallyProjected.conflicts.size).toBe(0);
+    expect(semanticallyProjected.seams.size).toBe(0);
+  });
+
+  it("folds delivery completion into the live final artifact projection", () => {
+    const base = createInitialRunModel({
+      id: "delivery-run",
+      intent: "ship",
+      workspaceId: "ws",
+      config: STUB_CONFIG,
+      finalArtifact: {
+        manifestId: "manifest-1",
+        sourceBaseSha: "base",
+        finalSha: "final",
+        addedFiles: [],
+        modifiedFiles: [],
+        deletedFiles: [],
+        verificationDisposition: "verified",
+        artifactDisposition: "ready",
+        deliveryDisposition: "needs_delivery"
+      }
+    });
+
+    const delivered = reduceRunEvent(base, {
+      seq: 1,
+      at: "2026-07-15T00:00:00.000Z",
+      runId: "delivery-run",
+      actor: "system",
+      type: "run.delivery.completed",
+      payload: { manifestId: "manifest-1", finalSha: "final" }
+    });
+
+    expect(delivered.run.finalArtifact?.deliveryDisposition).toBe("delivered");
+  });
+
   it("9. run.scheduling.wave_selected records the scheduling audit by durable wave id", () => {
     const base = initialFor("r-scheduling");
     const next = reduceRunEvent(base, {

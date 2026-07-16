@@ -78,6 +78,30 @@ describe("CodexRecursiveDecomposer", () => {
     expect(args).toContain("--skip-git-repo-check");
   });
 
+  it("uses explicit ComSpec with escaped argv for a Windows cmd shim", async () => {
+    const calls: Array<{ command: string; args: readonly string[]; options: SpawnOptions }> = [];
+    const delegate = fakeCodexSpawn(ATOMIC_STEP);
+    const decomposer = new CodexRecursiveDecomposer({
+      model: "gpt-5&echo PWNED",
+      userPrompt: "implement locally",
+      cwd: process.cwd(),
+      binaryPath: "C:\\tools\\codex.cmd",
+      platform: "win32",
+      hostEnv: { ComSpec: "C:\\Windows\\System32\\cmd.exe" },
+      spawn: (command, args, options) => {
+        calls.push({ command, args, options });
+        return delegate(command, args, options);
+      }
+    });
+
+    await decomposer.decompose(FEATURE);
+    expect(calls[0]?.command).toBe("C:\\Windows\\System32\\cmd.exe");
+    expect(calls[0]?.options.shell).toBe(false);
+    expect(calls[0]?.options.windowsVerbatimArguments).toBe(true);
+    expect(calls[0]?.args.slice(0, 4)).toEqual(["/d", "/v:off", "/s", "/c"]);
+    expect(calls[0]?.args[4]).toContain("gpt-5^^^&echo^^^ PWNED");
+  });
+
   it("passes reasoning effort to codex recursive planning when configured", async () => {
     const calls: string[][] = [];
     const decomposer = new CodexRecursiveDecomposer({

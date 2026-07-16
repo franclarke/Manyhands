@@ -7,7 +7,9 @@ import type { Node, RunEvent, RunModel } from "@/lib/run-model/types";
 import { FocusPanel } from "@/components/run-model/focus-panel";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { Button } from "@/components/ui/button";
-import { Group, Panel, Separator } from "react-resizable-panels";
+import { IconButton } from "@/components/ui/icon-button";
+import { PlanControlSurface } from "./plan-control-surface.client";
+import { Group, Panel } from "react-resizable-panels";
 import {
   Activity,
   AlertTriangle,
@@ -24,7 +26,8 @@ import {
   X
 } from "lucide-react";
 
-export type DockSurfaceId = "agents" | "node" | "files" | "diff" | "contract" | "risks" | "evidence" | "worktree";
+export type DockSurfaceId = "agents" | "plan" | "node" | "files" | "diff" | "contract" | "risks" | "evidence" | "worktree";
+export type BottomDrawerTab = "activity" | "events" | "terminal" | "validation" | "files";
 
 export interface DockSlotState {
   id: string;
@@ -34,6 +37,7 @@ export interface DockSlotState {
 
 const SURFACE_LABEL: Record<DockSurfaceId, string> = {
   agents: "Agentes",
+  plan: "Plan",
   node: "Nodo",
   files: "Archivos",
   diff: "Diff",
@@ -43,7 +47,7 @@ const SURFACE_LABEL: Record<DockSurfaceId, string> = {
   worktree: "Worktree"
 };
 
-const SURFACE_OPTIONS: DockSurfaceId[] = ["agents", "node", "files", "diff", "contract", "risks", "evidence", "worktree"];
+const SURFACE_OPTIONS: DockSurfaceId[] = ["agents", "plan", "node", "files", "diff", "contract", "risks", "evidence", "worktree"];
 
 const EXECUTION_LABEL: Record<Node["execution"]["kind"], string> = {
   idle: "En espera",
@@ -105,7 +109,7 @@ export function RunWorkspaceDock({
                 onClose={() => onCloseSlot(slot.id)}
                 onToggleExpand={() => onToggleExpand(slot.id)}
               />
-              {index < visibleSlots.length - 1 ? <HorizontalResizeHandle /> : null}
+              {index < visibleSlots.length - 1 ? <ResizeHandle direction="horizontal" /> : null}
             </Panel>
           ))}
         </Group>
@@ -203,12 +207,13 @@ function SurfaceBody({
   onOpenSurface: (surface: DockSurfaceId, focus?: FocusTarget | null) => void;
 }): React.ReactElement {
   if (surface === "agents") return <AgentsSurface model={model} onFocus={onFocus} onOpenSurface={onOpenSurface} />;
+  if (surface === "plan") return <PlanControlSurface runId={runId} model={model} focus={focus} onFocus={onFocus} />;
   if (surface === "files" || surface === "worktree") return <FilesSurface runId={runId} model={model} initialNodeId={focus?.kind === "node" ? focus.id : undefined} />;
   if (surface === "diff") return <DiffSurface runId={runId} model={model} focus={focus} />;
   if (surface === "risks") return <RisksSurface model={model} onFocus={onFocus} />;
   if (surface === "evidence") return <EvidenceSurface runId={runId} model={model} onOpenSurface={onOpenSurface} />;
   if ((surface === "node" || surface === "contract") && focusView !== null) {
-    return <FocusPanel view={focusView} onClose={() => onFocus(null)} onFocus={onFocus} />;
+    return <FocusPanel view={focusView} onClose={() => onFocus(null)} onFocus={onFocus} embedded />;
   }
   if (surface === "contract") return <ContractList model={model} onFocus={onFocus} />;
   return <EmptySurface title={SURFACE_LABEL[surface]} detail="Seleccioná un nodo, costura o evidencia para poblar esta vista." />;
@@ -504,16 +509,17 @@ export function BottomDrawer({
   model: RunModel;
   events: RunEvent[];
   open: boolean;
-  activeTab: "terminal" | "logs" | "events" | "validation";
+  activeTab: BottomDrawerTab;
   onOpenChange: (open: boolean) => void;
-  onTabChange: (tab: "terminal" | "logs" | "events" | "validation") => void;
+  onTabChange: (tab: BottomDrawerTab) => void;
 }): React.ReactElement | null {
   if (!open) return null;
   const tabs = [
-    ["terminal", "Terminal"],
-    ["logs", "Logs"],
+    ["activity", "Actividad"],
     ["events", "Eventos"],
-    ["validation", "Validación"]
+    ["terminal", "Terminal"],
+    ["validation", "Validación"],
+    ["files", "Archivos"]
   ] as const;
   return (
     <div className="mh-elev-sheet flex h-full min-h-0 flex-col border-t border-[var(--color-border)] bg-[var(--color-surface-raised)]">
@@ -528,10 +534,11 @@ export function BottomDrawer({
         </IconButton>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3">
+        {activeTab === "activity" ? <ActivitySurface events={events} /> : null}
+        {activeTab === "events" ? <RawEventsSurface events={events} /> : null}
         {activeTab === "terminal" ? <TerminalSurface runId={runId} model={model} /> : null}
-        {activeTab === "logs" ? <EventLogSurface events={events.filter((event) => event.type.startsWith("node."))} /> : null}
-        {activeTab === "events" ? <EventLogSurface events={events} /> : null}
         {activeTab === "validation" ? <ValidationSurface model={model} /> : null}
+        {activeTab === "files" ? <FilesSurface runId={runId} model={model} /> : null}
       </div>
     </div>
   );
@@ -644,7 +651,7 @@ function TerminalSurface({ runId, model }: { runId: string; model: RunModel }): 
           </p>
         </div>
       ) : (
-        <div ref={terminalRef} className="min-h-0 flex-1 overflow-hidden rounded-[var(--r-md)] border border-[var(--color-border)] bg-black p-2" />
+        <div ref={terminalRef} className="min-h-0 flex-1 overflow-hidden rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-terminal-bg)] p-2" />
       )}
     </div>
   );
@@ -658,11 +665,30 @@ const TONE_COLOR: Record<TimelineTone, string> = {
   human: "var(--color-accent)"
 };
 
-function EventLogSurface({ events }: { events: RunEvent[] }): React.ReactElement {
+const EVENT_PAGE_SIZE = 200;
+
+function useEventWindow<T>(entries: readonly T[]): { visible: readonly T[]; olderCount: number; loadEarlier: () => void } {
+  const [visibleCount, setVisibleCount] = useState(EVENT_PAGE_SIZE);
+  const olderCount = Math.max(0, entries.length - visibleCount);
+  return {
+    visible: entries.slice(Math.max(0, entries.length - visibleCount)),
+    olderCount,
+    loadEarlier: () => setVisibleCount((count) => Math.min(entries.length, count + EVENT_PAGE_SIZE))
+  };
+}
+
+function LoadEarlierEvents({ count, onLoad }: { count: number; onLoad: () => void }): React.ReactElement | null {
+  if (count === 0) return null;
+  return <Button variant="ghost" size="sm" onClick={onLoad}>Cargar {Math.min(count, EVENT_PAGE_SIZE)} eventos anteriores</Button>;
+}
+
+function ActivitySurface({ events }: { events: RunEvent[] }): React.ReactElement {
   const view = useMemo(() => buildTimelineView(events), [events]);
+  const windowed = useEventWindow(view.entries);
   return (
     <div className="space-y-px text-xs">
-      {view.entries.map((entry) => (
+      <LoadEarlierEvents count={windowed.olderCount} onLoad={windowed.loadEarlier} />
+      {windowed.visible.map((entry) => (
         <div
           key={entry.seq}
           className="grid grid-cols-[52px_1fr] items-baseline gap-2 rounded-[var(--r-sm)] border-l-2 bg-transparent px-2 py-1 hover:bg-[var(--color-bg-subtle)]"
@@ -683,6 +709,26 @@ function EventLogSurface({ events }: { events: RunEvent[] }): React.ReactElement
         </div>
       ))}
       {view.count === 0 ? <p className="m-0 text-xs text-[var(--color-text-subtle)]">Sin eventos para mostrar.</p> : null}
+    </div>
+  );
+}
+
+function RawEventsSurface({ events }: { events: RunEvent[] }): React.ReactElement {
+  const windowed = useEventWindow(events);
+  return (
+    <div className="space-y-1 text-xs">
+      <LoadEarlierEvents count={windowed.olderCount} onLoad={windowed.loadEarlier} />
+      {windowed.visible.map((event) => (
+        <details key={`${event.seq}-${event.eventId ?? event.type}`} className="rounded-[var(--r-sm)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5">
+          <summary className="grid cursor-pointer list-none grid-cols-[52px_minmax(0,1fr)_auto] items-center gap-2">
+            <span className="mh-mono text-eyebrow tabular-nums text-[var(--color-text-faint)]">#{event.seq}</span>
+            <strong className="mh-mono truncate font-medium text-[var(--color-text)]">{event.type}</strong>
+            <span className="mh-mono text-eyebrow text-[var(--color-text-subtle)]">{formatEventTime(event.at)}</span>
+          </summary>
+          <pre className="mh-mono m-0 mt-2 max-h-52 overflow-auto whitespace-pre-wrap border-t border-[var(--color-border)] pt-2 text-eyebrow leading-relaxed text-[var(--color-text-muted)]">{JSON.stringify(event.payload, null, 2)}</pre>
+        </details>
+      ))}
+      {events.length === 0 ? <p className="m-0 text-xs text-[var(--color-text-subtle)]">El run todavía no emitió eventos.</p> : null}
     </div>
   );
 }
@@ -743,6 +789,7 @@ function EmptyDock({ onOpenSurface }: { onOpenSurface: (surface: DockSurfaceId, 
       <p className="m-0 text-xs leading-relaxed text-[var(--color-text-muted)]">Abrí agentes, archivos, diffs o evidencia cuando los necesites.</p>
       <div className="flex flex-wrap justify-center gap-2">
         <MiniAction onClick={() => onOpenSurface("agents")}>Agentes</MiniAction>
+        <MiniAction onClick={() => onOpenSurface("plan")}>Plan</MiniAction>
         <MiniAction onClick={() => onOpenSurface("files")}>Archivos</MiniAction>
         <MiniAction onClick={() => onOpenSurface("diff")}>Diff</MiniAction>
       </div>
@@ -783,24 +830,6 @@ function MiniAction({ children, onClick }: { children: React.ReactNode; onClick:
   );
 }
 
-function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }): React.ReactElement {
-  return (
-    <button type="button" aria-label={label} title={label} onClick={onClick} className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--r-md)] border border-transparent text-[var(--color-text-subtle)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]">
-      {children}
-    </button>
-  );
-}
-
-function HorizontalResizeHandle(): React.ReactElement {
-  return (
-    <Separator className="group relative h-px shrink-0 cursor-row-resize bg-[var(--color-border)] outline-none transition-colors duration-150 data-[separator=hover]:bg-[var(--color-border-strong)] data-[separator=active]:bg-[var(--color-accent)]">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-[3px] w-9 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--color-border-strong)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-data-[separator=active]:bg-[var(--color-accent)] group-data-[separator=active]:opacity-100"
-      />
-    </Separator>
-  );
-}
 
 export function WorkspaceResizeHandle(): React.ReactElement {
   return <ResizeHandle />;

@@ -88,11 +88,17 @@ describe("processPlanApproval", () => {
 
     const events = await ensureRunModelEventLogForRun(await repo.get("run-approve"));
 
+    expect(events).toContainEqual(expect.objectContaining({
+      at: "2026-06-16T00:00:02.000Z",
+      actor: "human",
+      type: "decision.resolved",
+      payload: expect.objectContaining({ decisionId: "approve_plan", choice: { action: "approve" } })
+    }));
     expect(events.at(-1)).toMatchObject({
       at: "2026-06-16T00:00:02.000Z",
       actor: "human",
       type: "decision.resolved",
-      payload: { decisionId: "approve_plan", choice: { action: "approve" } }
+      payload: { decisionId: "approve_plan:r1", choice: { action: "approve" } }
     });
   });
 
@@ -143,6 +149,28 @@ describe("processPlanApproval", () => {
         actor: "francisco",
         acknowledgedErrors: ["Scope crosses a trust boundary"]
       }
+    });
+  });
+
+  it("rejects plan approval while another durable run operation owns the mutation fence", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun({
+      status: "needs_review",
+      mutationFence: 4,
+      activeOperation: {
+        operationId: "00000000-0000-4000-8000-000000000004",
+        kind: "replan",
+        fencingToken: 4,
+        acquiredAt: "2026-06-16T00:00:01.000Z",
+        heartbeatAt: "2026-06-16T00:00:02.000Z"
+      }
+    }));
+
+    await expect(processPlanApproval("run-approve")).rejects.toThrow(/active replan operation/u);
+    await expect(repo.get("run-approve")).resolves.toMatchObject({
+      status: "needs_review",
+      mutationFence: 4,
+      activeOperation: { fencingToken: 4 }
     });
   });
 });

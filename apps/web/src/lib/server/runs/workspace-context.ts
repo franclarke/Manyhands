@@ -2,7 +2,7 @@ import { access, realpath } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import path from "node:path";
-import { worktreePathFor } from "@manyhands/execution-core";
+import { safeGitArgs, worktreePathFor } from "@manyhands/execution-core";
 import { getWorkspaceRepository } from "../workspaces/store";
 import type { RunRecord } from "./schema";
 
@@ -58,7 +58,7 @@ export async function resolveFinalArtifact(
   }
   const repoRoot = await repoRootForRun(run);
   if (repoRoot === null) throw new Error("Final artifact repository is not available.");
-  await execFileAsync("git", ["cat-file", "-e", `${manifest.finalSha}^{commit}`], { cwd: repoRoot });
+  await execFileAsync("git", safeGitArgs(repoRoot, ["cat-file", "-e", `${manifest.finalSha}^{commit}`]), { cwd: repoRoot });
   return { repoRoot, finalSha: manifest.finalSha };
 }
 
@@ -68,7 +68,7 @@ export async function readFinalArtifactFile(
   reference: FinalArtifactReference = {}
 ): Promise<string> {
   const { repoRoot, finalSha } = await resolveFinalArtifact(run, reference);
-  const { stdout } = await execFileAsync("git", ["show", `${finalSha}:${relativePath}`], {
+  const { stdout } = await execFileAsync("git", safeGitArgs(repoRoot, ["show", `${finalSha}:${relativePath}`]), {
     cwd: repoRoot, encoding: "utf8", maxBuffer: MAX_WORKSPACE_FILE_BYTES + 1
   });
   return stdout;
@@ -83,7 +83,7 @@ export async function listFinalArtifactTree(
 }>> {
   const { repoRoot, finalSha } = await resolveFinalArtifact(run, reference);
   const treeish = relativePath.length === 0 ? finalSha : `${finalSha}:${relativePath}`;
-  const { stdout } = await execFileAsync("git", ["ls-tree", "-l", treeish], { cwd: repoRoot, encoding: "utf8" });
+  const { stdout } = await execFileAsync("git", safeGitArgs(repoRoot, ["ls-tree", "-l", treeish]), { cwd: repoRoot, encoding: "utf8" });
   return stdout.split(/\r?\n/).filter(Boolean).map((line) => {
     const [meta, name = ""] = line.split("\t");
     const [mode = "", kindName = "", , size] = meta?.split(/\s+/) ?? [];
@@ -104,7 +104,7 @@ export async function listFinalArtifactChanges(
 ): Promise<Array<{ status: string; path: string; previousPath?: string }>> {
   const { repoRoot, finalSha } = await resolveFinalArtifact(run, reference);
   const baseSha = run.finalArtifactManifest!.sourceBaseSha;
-  const { stdout } = await execFileAsync("git", ["diff", "--name-status", "--find-renames", `${baseSha}..${finalSha}`], {
+  const { stdout } = await execFileAsync("git", safeGitArgs(repoRoot, ["diff", "--name-status", "--find-renames", `${baseSha}..${finalSha}`]), {
     cwd: repoRoot,
     encoding: "utf8"
   });

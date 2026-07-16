@@ -20,6 +20,47 @@ export class RunLifecycleError extends Error {
 }
 
 /**
+ * A run's persisted or requested configuration cannot be resolved to a single
+ * unambiguous StageSelection — contradictory canonical/legacy fields, or a bare
+ * legacy model string that maps to no registered executor. Extends
+ * RunValidationError so the request boundary surfaces it as a 400 (never a
+ * silent remap: corrupt config fails loudly, U2A-2).
+ */
+export class RunConfigurationError extends RunValidationError {
+  constructor(message: string) {
+    super(message);
+    this.name = "RunConfigurationError";
+  }
+}
+
+/**
+ * The configured planning executor cannot be used for this invocation. This is
+ * a user-correctable selection/environment problem, not an internal 500.
+ */
+export class PlanningExecutorUnavailableError extends RunValidationError {
+  constructor(message: string) {
+    super(message);
+    this.name = "PlanningExecutorUnavailableError";
+  }
+}
+
+/** Runtime readiness failed after a selection was declared valid. */
+export class ExecutorUnavailableError extends RunLifecycleError {
+  constructor(message: string) {
+    super(message);
+    this.name = "ExecutorUnavailableError";
+  }
+}
+
+/** The CLI exists, but the selected account/installation rejects the model. */
+export class ExecutorModelUnavailableError extends RunLifecycleError {
+  constructor(message: string) {
+    super(message);
+    this.name = "ExecutorModelUnavailableError";
+  }
+}
+
+/**
  * Raised when a run mutation (HITL decision, resume, restart, approval) finds
  * the run in a different state than the caller expected: another request won
  * the race, the gate was already resolved, or the record version moved on.

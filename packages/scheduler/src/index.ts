@@ -752,29 +752,68 @@ function producerConsumerDetail(
   right: AgentTaskContract | undefined
 ): string | undefined {
   if (left === undefined || right === undefined) return undefined;
-  const leftProduces = interfaceAndSymbolIds(left, "produced");
-  const leftConsumes = interfaceAndSymbolIds(left, "consumed");
-  const rightProduces = interfaceAndSymbolIds(right, "produced");
-  const rightConsumes = interfaceAndSymbolIds(right, "consumed");
+  const incompatibleInterface = incompatibleInterfaceDetail(left, right);
+  if (incompatibleInterface !== undefined) return incompatibleInterface;
+
+  // A canonical interface seam is the compatibility contract that enables
+  // isolated leaves to run in parallel. Only concrete output-symbol flow is a
+  // conservative scheduling risk; physical file/import signals are added by
+  // conflict-risk when repository grounding proves them.
+  const leftProduces = concreteOutputSymbols(left, "produced");
+  const leftConsumes = concreteOutputSymbols(left, "consumed");
+  const rightProduces = concreteOutputSymbols(right, "produced");
+  const rightConsumes = concreteOutputSymbols(right, "consumed");
   const leftToRight = intersectStrings(leftProduces, rightConsumes);
   if (leftToRight.length > 0) {
-    return `${right.taskId} consumes ${leftToRight.join(", ")} produced by ${left.taskId}; add a dependency or serialize.`;
+    return `${right.taskId} consumes concrete output symbols ${leftToRight.join(", ")} produced by ${left.taskId}; serialize unless repository grounding proves the work independent.`;
   }
   const rightToLeft = intersectStrings(rightProduces, leftConsumes);
   if (rightToLeft.length > 0) {
-    return `${left.taskId} consumes ${rightToLeft.join(", ")} produced by ${right.taskId}; add a dependency or serialize.`;
+    return `${left.taskId} consumes concrete output symbols ${rightToLeft.join(", ")} produced by ${right.taskId}; serialize unless repository grounding proves the work independent.`;
   }
   return undefined;
 }
 
-function interfaceAndSymbolIds(contract: AgentTaskContract, kind: "produced" | "consumed"): string[] {
-  const interfaces =
-    kind === "produced"
-      ? contract.producedInterfaces?.map((item) => item.id) ?? []
-      : contract.consumedInterfaces?.map((item) => item.id) ?? [];
-  const symbols =
-    kind === "produced" ? contract.expectedOutput.producedSymbols : contract.expectedOutput.consumedSymbols;
-  return uniqueStrings([...interfaces, ...symbols]);
+function incompatibleInterfaceDetail(
+  left: AgentTaskContract,
+  right: AgentTaskContract
+): string | undefined {
+  const relationships = [
+    [left, right, left.producedInterfaces ?? [], right.consumedInterfaces ?? []],
+    [right, left, right.producedInterfaces ?? [], left.consumedInterfaces ?? []]
+  ] as const;
+
+  for (const [producer, consumer, produced, consumed] of relationships) {
+    for (const producedInterface of produced) {
+      const consumedInterface = consumed.find((candidate) => candidate.id === producedInterface.id);
+      if (consumedInterface === undefined) continue;
+      if (
+        producedInterface.kind !== consumedInterface.kind ||
+        normalizedSignature(producedInterface.signature) !== normalizedSignature(consumedInterface.signature) ||
+        producedInterface.definedAtNodeId !== consumedInterface.definedAtNodeId
+      ) {
+        return `${producer.taskId} and ${consumer.taskId} declare incompatible declarations for interface ${producedInterface.id}; serialize until the canonical seam is repaired.`;
+      }
+    }
+  }
+  return undefined;
+}
+
+function normalizedSignature(signature: string): string {
+  return signature.replace(/\s+/g, " ").trim();
+}
+
+function concreteOutputSymbols(
+  contract: AgentTaskContract,
+  kind: "produced" | "consumed"
+): string[] {
+  const interfaceIds = new Set(
+    (kind === "produced" ? contract.producedInterfaces : contract.consumedInterfaces)?.map((item) => item.id) ?? []
+  );
+  const symbols = kind === "produced"
+    ? contract.expectedOutput.producedSymbols
+    : contract.expectedOutput.consumedSymbols;
+  return symbols.filter((symbol) => !interfaceIds.has(symbol));
 }
 
 function forEachPair(taskIds: readonly string[], visit: (left: string, right: string) => void): void {

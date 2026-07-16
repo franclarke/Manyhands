@@ -61,6 +61,9 @@ pueden llegar a scheduler, worktrees o validación. Reutiliza
   Windows o caracteres de control en scopes/outputs/forbidden paths;
 - `invalid_interface_id` y `duplicate_interface_id`: ids de costura no estables
   o repetidos dentro del mismo contrato;
+- `self_consumed_interface`: una misma tarea declara producir y consumir el
+  mismo id. Una costura siempre conecta tareas distintas; una transformación
+  dentro de una hoja debe usar ids revisionados diferentes o no declarar seam;
 - `missing_execution_scope` y `missing_expected_changed_files`: warnings
   explícitos para fallback conservador cuando el contrato todavía tiene
   suficiente scope en `allowed.paths`.
@@ -85,6 +88,10 @@ Un `InterfaceContract` tiene:
 En el contrato de cada hoja se agregan dos campos opcionales:
 - **`consumedInterfaces`:** las costuras que *otras hojas* producen y que esta hoja debe respetar. El `FileSystemContextPacker` las inyecta en el prompt.
 - **`producedInterfaces`:** las costuras que *esta hoja* debe exponer para sus hermanas.
+
+Los dos conjuntos no pueden solaparse dentro de una hoja. El boundary validator
+y el SeamCritic lo bloquean, y la proyección filtra self-edges de records legacy
+para no representar coordinación ficticia en el canvas.
 
 El mecanismo es simple pero poderoso: dos hojas que trabajan en paralelo no se conocen entre sí, pero ambas reciben la misma definición de la costura que las conecta. Así no pueden diseñar interfaces incompatibles.
 

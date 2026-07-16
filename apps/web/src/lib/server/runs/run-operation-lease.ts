@@ -12,8 +12,11 @@ import { getRunRepository } from "./store";
 
 export interface ClaimRunOperationOptions {
   expectedStatuses: readonly RunStatus[];
+  expectedVersion?: number;
   /** Explicit recovery path after a crashed/restarted runner. */
   allowTakeover?: boolean;
+  /** When set, takeover is still rejected while the durable owner heartbeat is fresh. */
+  takeoverStaleAfterMs?: number;
   operationId?: string;
   now?: string;
 }
@@ -25,6 +28,9 @@ export async function claimRunOperation(
 ): Promise<{ run: RunRecord; lease: RunOperationLease }> {
   let lease: RunOperationLease | undefined;
   const run = await getRunRepository().update(runId, (current) => {
+    if (options.expectedVersion !== undefined && current.version !== options.expectedVersion) {
+      throw conflict(runId, current, `version ${options.expectedVersion} is stale (current version is ${current.version})`);
+    }
     if (!options.expectedStatuses.includes(current.status)) {
       throw conflict(runId, current, `status "${current.status}" cannot start ${kind}`);
     }
@@ -33,6 +39,18 @@ export async function claimRunOperation(
         runId,
         current,
         `operation ${current.activeOperation.operationId}/${current.activeOperation.fencingToken} is still active`
+      );
+    }
+    if (
+      current.activeOperation !== undefined &&
+      options.allowTakeover === true &&
+      options.takeoverStaleAfterMs !== undefined &&
+      isRunOperationFresh(current.activeOperation, options.takeoverStaleAfterMs, options.now)
+    ) {
+      throw conflict(
+        runId,
+        current,
+        `operation ${current.activeOperation.operationId}/${current.activeOperation.fencingToken} still has a fresh heartbeat`
       );
     }
     const now = options.now ?? new Date().toISOString();
@@ -51,6 +69,16 @@ export async function claimRunOperation(
     };
   });
   return { run, lease: lease! };
+}
+
+export function isRunOperationFresh(
+  lease: RunOperationLease,
+  staleAfterMs: number,
+  now: string | number = Date.now()
+): boolean {
+  const heartbeatMs = Date.parse(lease.heartbeatAt);
+  const nowMs = typeof now === "number" ? now : Date.parse(now);
+  return Number.isFinite(heartbeatMs) && Number.isFinite(nowMs) && nowMs - heartbeatMs < staleAfterMs;
 }
 
 export function mutateRunWithLease(
@@ -74,6 +102,28 @@ export function updateRunForOperation(
   return lease === undefined
     ? getRunRepository().update(runId, mutate)
     : mutateRunWithLease(runId, lease, {}, mutate);
+}
+
+/** Read-only fencing check immediately before/after a non-RunRecord side effect. */
+export async function assertRunOperationCurrent(
+  runId: string,
+  lease: Pick<RunOperationLease, "operationId" | "fencingToken">
+): Promise<RunRecord> {
+  const current = await getRunRepository().get(runId);
+  const active = current.activeOperation;
+  if (
+    active === undefined ||
+    active.operationId !== lease.operationId ||
+    active.fencingToken !== lease.fencingToken ||
+    current.mutationFence !== lease.fencingToken
+  ) {
+    throw conflict(
+      runId,
+      current,
+      `operation ${lease.operationId}/${lease.fencingToken} no longer owns the run`
+    );
+  }
+  return current;
 }
 
 export function invalidateRunOperation(current: RunRecord): RunRecord {
@@ -114,6 +164,36 @@ export async function releaseRunOperation(
     }
     throw error;
   }
+}
+
+export interface ReleaseRunOperationRetryOptions {
+  release?: typeof releaseRunOperation;
+  sleep?: (ms: number) => Promise<void>;
+  retryDelaysMs?: readonly number[];
+}
+
+const DEFAULT_RELEASE_RETRY_DELAYS_MS = [10, 50, 200] as const;
+
+/** Idempotent bounded retry for transient storage failures during owner cleanup. */
+export async function releaseRunOperationWithRetry(
+  runId: string,
+  lease: RunOperationLease,
+  options: ReleaseRunOperationRetryOptions = {}
+): Promise<RunRecord> {
+  const release = options.release ?? releaseRunOperation;
+  const sleepFor = options.sleep ?? (async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const retryDelays = options.retryDelaysMs ?? DEFAULT_RELEASE_RETRY_DELAYS_MS;
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= retryDelays.length; attempt += 1) {
+    try {
+      return await release(runId, lease);
+    } catch (error) {
+      lastError = error;
+      if (attempt === retryDelays.length) break;
+      await sleepFor(retryDelays[attempt]!);
+    }
+  }
+  throw lastError;
 }
 
 function conflict(runId: string, current: RunRecord, reason: string): RunMutationConflictError {

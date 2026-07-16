@@ -4,21 +4,24 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
   ApiErrorResponse,
+  CapabilitiesResponse,
   ProviderReadiness,
-  ProviderReadinessResponse,
   RunResponse,
   Workspace,
-  WorkspaceCreateRequest
+  WorkspaceCreateRequest,
+  WorkspaceMigrationConflict,
+  WorkspaceMigrationResolutionChoice
 } from "@/lib/api-types";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { IconButton } from "@/components/ui/icon-button";
 import type { UiStatus } from "@/lib/status";
 import { ModelPicker } from "./model-picker.client";
-import { EffortControl, type EffortLevel } from "./effort-control.client";
+import { EffortControl } from "./effort-control.client";
 import { WorkspacePicker } from "./workspace-picker.client";
 import { WorkspaceFormDialog, type WorkspaceFormValue } from "./workspace-form-dialog.client";
 import { toGranularityMode, isGranularityLevel, GRANULARITY_DISPLAY_OPTIONS, type GranularityLevel } from "@/lib/granularity";
-import { executorLabel, modelOptionForValue, parseSelectionValue, type ExecutorId, type ExecutorSelection } from "@/lib/models";
+import { executorLabel, modelOptionForValue, modelOptionsFromCapabilities, parseSelectionValue, stageSelectionForSubmit, type EffortLevel, type ExecutorId, type ExecutorSelection, type ModelOption, type StageSelection } from "@/lib/models";
 import { estimateRunCostUsd, formatUsd } from "@/lib/model-pricing";
 import { RUN_USER_PROMPT_MAX_LENGTH } from "@/lib/run-limits";
 import { FolderGit2, GitBranch, Plus, Pencil, Trash2, AlertTriangle, OctagonAlert, Sparkles } from "lucide-react";
@@ -37,14 +40,66 @@ const EXAMPLE_PROMPTS = [
   "Implementá DELETE /tasks/:id con persistencia, errores y cobertura."
 ] as const;
 
+const MIGRATION_FIELD_LABELS: Readonly<Record<string, string>> = {
+  name: "Nombre",
+  description: "Descripción",
+  color: "Color",
+  packageManager: "Package manager",
+  defaultBranch: "Branch por defecto",
+  allowedPaths: "Paths permitidos",
+  testCommand: "Comando de test",
+  buildCommand: "Comando de build"
+};
+
+function migrationConflictValue(snapshot: Workspace, field: string): string {
+  const value = (snapshot as unknown as Record<string, unknown>)[field];
+  if (value === undefined || value === null || value === "") return "Sin configurar";
+  if (Array.isArray(value)) return value.length === 0 ? "Sin configurar" : value.map(String).join(", ");
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function MigrationConfigurationSnapshot({
+  label,
+  snapshot,
+  fields
+}: {
+  label: string;
+  snapshot: Workspace;
+  fields: readonly string[];
+}): React.ReactElement {
+  return (
+    <section
+      className="min-w-0 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
+      aria-label={`${label}: ${snapshot.name}`}
+    >
+      <p className="m-0 text-meta font-semibold text-[var(--color-text)]">{label}: {snapshot.name}</p>
+      <dl className="mt-2 grid min-w-0 gap-2">
+        {fields.map((field) => (
+          <div key={field} className="min-w-0">
+            <dt className="text-eyebrow text-[var(--color-text-subtle)]">
+              {MIGRATION_FIELD_LABELS[field] ?? field}
+            </dt>
+            <dd className="mh-mono m-0 mt-0.5 break-words text-meta text-[var(--color-text)]">
+              {migrationConflictValue(snapshot, field)}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 interface CommandCenterShellProps {
   workspaces: Workspace[];
+  migrationConflicts: WorkspaceMigrationConflict[];
   initialGranularity: GranularityLevel;
   initialModelId: string;
 }
 
 export function CommandCenterShell({
   workspaces: initialWorkspaces,
+  migrationConflicts: initialMigrationConflicts,
   initialGranularity,
   initialModelId
 }: CommandCenterShellProps): React.ReactElement {
@@ -56,6 +111,14 @@ export function CommandCenterShell({
   useEffect(() => {
     setWorkspaces(initialWorkspaces);
   }, [initialWorkspaces]);
+  const [migrationConflicts, setMigrationConflicts] = useState<WorkspaceMigrationConflict[]>(
+    initialMigrationConflicts
+  );
+  const [migrationConflictBusy, setMigrationConflictBusy] =
+    useState<WorkspaceMigrationResolutionChoice | null>(null);
+  useEffect(() => {
+    setMigrationConflicts(initialMigrationConflicts);
+  }, [initialMigrationConflicts]);
 
   const initialWorkspaceId =
     workspaces.find((entry) => entry.repoPath !== undefined && entry.repoPath.length > 0)?.id ??
@@ -79,13 +142,16 @@ export function CommandCenterShell({
   const initialSelectionValue = `claude-code-cli/${initialModelId}`;
   const [planningModelValue, setPlanningModelValue] = useState<string>(initialSelectionValue);
   const [executionModelValue, setExecutionModelValue] = useState<string>(initialSelectionValue);
+  // Independent per-stage reasoning effort (U2A-2). `effort` drives execution.
   const [effort, setEffort] = useState<EffortLevel>("medium");
+  const [planningEffort, setPlanningEffort] = useState<EffortLevel>("medium");
   const [autonomy, setAutonomy] = useState<AutonomyLevel>("supervised");
   const [prompt, setPrompt] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [handoffRunId, setHandoffRunId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [readinessProviders, setReadinessProviders] = useState<ProviderReadiness[]>([]);
+  const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const [readinessLoading, setReadinessLoading] = useState(false);
   const [readinessError, setReadinessError] = useState<string | null>(null);
 
@@ -112,25 +178,29 @@ export function CommandCenterShell({
 
   useEffect(() => {
     let cancelled = false;
-    async function loadReadiness(): Promise<void> {
+    async function loadCapabilities(): Promise<void> {
       if (workspaceId.length === 0) {
         setReadinessProviders([]);
+        setModelOptions([]);
         return;
       }
       setReadinessLoading(true);
       setReadinessError(null);
       try {
-        const response = await fetch(`/api/providers/readiness?workspaceId=${encodeURIComponent(workspaceId)}`);
-        const payload = (await response.json()) as ProviderReadinessResponse | ApiErrorResponse;
+        const response = await fetch(`/api/capabilities?workspaceId=${encodeURIComponent(workspaceId)}`);
+        const payload = (await response.json()) as CapabilitiesResponse | ApiErrorResponse;
         if (!response.ok) {
           throw new Error("error" in payload ? payload.error : `Request failed with ${response.status}`);
         }
         if (!cancelled) {
-          setReadinessProviders((payload as ProviderReadinessResponse).providers);
+          const capabilities = payload as CapabilitiesResponse;
+          setReadinessProviders(capabilities.executors.map((executor) => executor.readiness));
+          setModelOptions(modelOptionsFromCapabilities(capabilities));
         }
       } catch (error) {
         if (!cancelled) {
           setReadinessProviders([]);
+          setModelOptions([]);
           setReadinessError(error instanceof Error ? error.message : String(error));
         }
       } finally {
@@ -139,11 +209,26 @@ export function CommandCenterShell({
         }
       }
     }
-    void loadReadiness();
+    void loadCapabilities();
     return () => {
       cancelled = true;
     };
   }, [workspaceId]);
+
+  useEffect(() => {
+    const availablePlanning = modelOptions.filter(
+      (option) => option.enabled && option.capabilities.includes("planning")
+    );
+    const availableExecution = modelOptions.filter(
+      (option) => option.enabled && option.capabilities.includes("execution")
+    );
+    if (!modelOptionForValue(planningModelValue, availablePlanning) && availablePlanning[0] !== undefined) {
+      setPlanningModelValue(`${availablePlanning[0].executorId}/${availablePlanning[0].id}`);
+    }
+    if (!modelOptionForValue(executionModelValue, availableExecution) && availableExecution[0] !== undefined) {
+      setExecutionModelValue(`${availableExecution[0].executorId}/${availableExecution[0].id}`);
+    }
+  }, [executionModelValue, modelOptions, planningModelValue]);
 
   const selectedWorkspace = useMemo(
     () => workspaces.find((entry) => entry.id === workspaceId) ?? workspaces[0] ?? null,
@@ -155,8 +240,8 @@ export function CommandCenterShell({
   const hasPrompt = trimmedPromptLength > 0;
   const promptOverLimit = trimmedPromptLength > RUN_USER_PROMPT_MAX_LENGTH;
   const hasLocalRepo = selectedWorkspace?.repoPath !== undefined && selectedWorkspace.repoPath.length > 0;
-  const selectedPlanningModel = modelOptionForValue(planningModelValue);
-  const selectedExecutionModel = modelOptionForValue(executionModelValue);
+  const selectedPlanningModel = modelOptionForValue(planningModelValue, modelOptions);
+  const selectedExecutionModel = modelOptionForValue(executionModelValue, modelOptions);
   const planningSelection = parseSelectionValue(planningModelValue);
   const executionSelection = parseSelectionValue(executionModelValue);
   const requiredReadiness = readinessForSelections(readinessProviders, [planningSelection, executionSelection]);
@@ -196,15 +281,18 @@ export function CommandCenterShell({
     setSubmitting(true);
     setErrorMessage(null);
     try {
+      // U2A-2: send canonical per-stage selections with independent effort.
+      // The helper attaches effort only when the stage's model declares it
+      // (never on Claude), so the server never rejects an unsupported effort.
+      // The server derives the legacy mirror fields.
+      const planningStage: StageSelection = stageSelectionForSubmit(planningSelection, selectedPlanningModel, planningEffort);
+      const executionStage: StageSelection = stageSelectionForSubmit(executionSelection, selectedExecutionModel, effort);
       const body: {
         workspaceId: string;
         granularity: string;
         model: string;
-        planningModel?: string;
-        planningExecutorId?: ExecutorId;
-        defaultExecutionSelection?: ExecutorSelection;
-        defaultRepairSelection?: ExecutorSelection;
-        executionConfig?: { reasoningEffort?: EffortLevel };
+        planningSelection?: StageSelection;
+        executionSelection?: StageSelection;
         autonomy?: AutonomyLevel;
         userPrompt: string;
         repoSpec?: { kind: "localPath"; path: string };
@@ -212,11 +300,8 @@ export function CommandCenterShell({
         workspaceId: selectedWorkspace.id,
         granularity: granularityMode,
         model: executionSelection.model,
-        planningModel: planningSelection.model,
-        planningExecutorId: planningSelection.executorId,
-        defaultExecutionSelection: executionSelection,
-        defaultRepairSelection: executionSelection,
-        ...(selectedExecutionModel?.supportsEffort ? { executionConfig: { reasoningEffort: effort } } : {}),
+        planningSelection: planningStage,
+        executionSelection: executionStage,
         autonomy,
         userPrompt: prompt.trim()
       };
@@ -330,17 +415,57 @@ export function CommandCenterShell({
     }
   }
 
+  async function handleMigrationConflictResolution(
+    conflict: WorkspaceMigrationConflict,
+    choice: WorkspaceMigrationResolutionChoice
+  ): Promise<void> {
+    setErrorMessage(null);
+    setMigrationConflictBusy(choice);
+    try {
+      const response = await fetch(
+        `/api/workspaces/migration-conflicts/${encodeURIComponent(conflict.duplicateWorkspaceId)}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ choice })
+        }
+      );
+      if (!response.ok) throw new Error(await readError(response));
+      const payload = (await response.json()) as {
+        workspace: Workspace;
+        migrationConflict: WorkspaceMigrationConflict;
+      };
+      setWorkspaces((current) =>
+        current.map((workspace) => workspace.id === payload.workspace.id ? payload.workspace : workspace)
+      );
+      setMigrationConflicts((current) =>
+        current.map((entry) =>
+          entry.duplicateWorkspaceId === payload.migrationConflict.duplicateWorkspaceId
+            ? payload.migrationConflict
+            : entry
+        )
+      );
+      router.refresh();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setMigrationConflictBusy(null);
+    }
+  }
+
   const readinessTooltip = useMemo(() => {
-    if (readinessLoading) return "Verificando el estado de Claude Code CLI…";
+    if (readinessLoading) return "Verificando los ejecutores seleccionados…";
     if (readinessError) return `Error al verificar el estado: ${readinessError}`;
-    if (!readiness) return "Estado de Claude Code CLI desconocido";
+    if (!readiness) return "Estado de ejecutores desconocido";
     const checksStr = readiness.checks
       .map((check) => `• [${check.status === "pass" ? "OK" : check.status.toUpperCase()}] ${check.label}: ${check.message}`)
       .join("\n");
-    return `Claude Code CLI: ${readiness.status.toUpperCase()}\nRuta: ${readiness.binaryPath || "desconocida"}\nVersión: ${readiness.version || "desconocida"}\n\nChecks:\n${checksStr}`;
+    return `${readiness.label}: ${readiness.status.toUpperCase()}\nRuta: ${readiness.binaryPath || "desconocida"}\nVersión: ${readiness.version || "desconocida"}\n\nChecks:\n${checksStr}`;
   }, [readiness, readinessLoading, readinessError]);
 
   const provider = providerPill({ readiness, readinessLoading, readinessError });
+  const pendingMigrationConflict =
+    migrationConflicts.find((entry) => entry.resolution === undefined) ?? null;
 
   if (workspaces.length === 0 && workspaceFormOpen === "closed") {
     return (
@@ -449,22 +574,35 @@ export function CommandCenterShell({
           {/* Planning model */}
           <div className="flex flex-col gap-1.5">
             <span className="text-meta font-medium text-[var(--color-text-subtle)]">
-              Planificacion
+              Planificación
             </span>
-            <ModelPicker value={planningModelValue} onChange={setPlanningModelValue} capability="planning" />
+            <ModelPicker value={planningModelValue} onChange={setPlanningModelValue} capability="planning" options={modelOptions} />
           </div>
+
+          {/* Planning effort (independent, only when the planning model supports it) */}
+          {selectedPlanningModel?.supportsEffort ? (
+            <EffortControl
+              value={planningEffort}
+              onChange={setPlanningEffort}
+              {...(selectedPlanningModel.efforts !== null ? { levels: selectedPlanningModel.efforts } : {})}
+            />
+          ) : null}
 
           {/* Execution model */}
           <div className="flex flex-col gap-1.5">
             <span className="text-meta font-medium text-[var(--color-text-subtle)]">
-              Ejecucion
+              Ejecución
             </span>
-            <ModelPicker value={executionModelValue} onChange={setExecutionModelValue} capability="execution" />
+            <ModelPicker value={executionModelValue} onChange={setExecutionModelValue} capability="execution" options={modelOptions} />
           </div>
 
-          {/* Effort */}
+          {/* Execution effort */}
           {selectedExecutionModel?.supportsEffort ? (
-            <EffortControl value={effort} onChange={setEffort} />
+            <EffortControl
+              value={effort}
+              onChange={setEffort}
+              {...(selectedExecutionModel.efforts !== null ? { levels: selectedExecutionModel.efforts } : {})}
+            />
           ) : null}
 
           {/* Granularidad */}
@@ -557,6 +695,53 @@ export function CommandCenterShell({
       </div>
 
       {/* ── Callouts ───────────────────────────────────────────────────── */}
+      {pendingMigrationConflict !== null ? (
+        <Callout tone="blocked" role="alert" icon={<AlertTriangle aria-hidden className="h-4 w-4 shrink-0" />}>
+          <span className="block font-semibold">Configuración duplicada de workspace</span>
+          <span className="mt-1 block">
+            Los registros &quot;{pendingMigrationConflict.canonicalSnapshot.name}&quot; y{" "}
+            &quot;{pendingMigrationConflict.duplicateSnapshot.name}&quot; apuntaban al mismo repo y difieren
+            en {pendingMigrationConflict.conflictingFields.join(", ")}. Elegí qué configuración conservar.
+          </span>
+          <div
+            className="mt-3 grid min-w-0 gap-2 sm:grid-cols-2"
+            aria-label="Comparación de configuraciones duplicadas"
+          >
+            <MigrationConfigurationSnapshot
+              label="Configuración actual"
+              snapshot={pendingMigrationConflict.canonicalSnapshot}
+              fields={pendingMigrationConflict.conflictingFields}
+            />
+            <MigrationConfigurationSnapshot
+              label="Configuración duplicada"
+              snapshot={pendingMigrationConflict.duplicateSnapshot}
+              fields={pendingMigrationConflict.conflictingFields}
+            />
+          </div>
+          <span className="mt-2 flex flex-wrap gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              busy={migrationConflictBusy === "canonical"}
+              busyLabel="Resolviendo…"
+              disabled={migrationConflictBusy !== null}
+              onClick={() => void handleMigrationConflictResolution(pendingMigrationConflict, "canonical")}
+            >
+              Conservar configuración actual: {pendingMigrationConflict.canonicalSnapshot.name}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              busy={migrationConflictBusy === "duplicate"}
+              busyLabel="Resolviendo…"
+              disabled={migrationConflictBusy !== null}
+              onClick={() => void handleMigrationConflictResolution(pendingMigrationConflict, "duplicate")}
+            >
+              Usar configuración duplicada: {pendingMigrationConflict.duplicateSnapshot.name}
+            </Button>
+          </span>
+        </Callout>
+      ) : null}
       {readinessCallout !== null ? (
         <Callout tone="blocked" icon={<AlertTriangle aria-hidden className="h-4 w-4 shrink-0" />}>
           {readinessCallout}
@@ -630,25 +815,7 @@ function IconAction({
   danger?: boolean;
   children: React.ReactNode;
 }): React.ReactElement {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-      className={[
-        "flex h-7 w-7 items-center justify-center rounded-[var(--r-md)] border border-transparent bg-transparent transition-colors duration-150",
-        disabled
-          ? "cursor-not-allowed text-[var(--color-text-faint)]"
-          : danger
-            ? "cursor-pointer text-[var(--color-text-subtle)] hover:bg-[var(--status-failed-bg)] hover:text-[var(--status-failed-fg)]"
-            : "cursor-pointer text-[var(--color-text-subtle)] hover:bg-[color-mix(in_srgb,var(--color-text)_7%,transparent)] hover:text-[var(--color-text)]"
-      ].join(" ")}
-    >
-      {children}
-    </button>
-  );
+  return <IconButton label={label} disabled={disabled} onClick={onClick} tone={danger ? "danger" : "default"}>{children}</IconButton>;
 }
 
 type IndicatorTone = "ok" | "warning" | "error" | "muted";
@@ -710,7 +877,7 @@ function Callout({
       }}
     >
       {icon}
-      <span className="min-w-0">{children}</span>
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }
@@ -778,17 +945,17 @@ function providerPill({
   readinessLoading: boolean;
   readinessError: string | null;
 }): { status: UiStatus; label: string } {
-  if (readinessLoading) return { status: "pending", label: "Verificando Claude Code…" };
-  if (readinessError !== null) return { status: "blocked", label: "Claude Code sin verificar" };
+  if (readinessLoading) return { status: "pending", label: "Verificando ejecutores…" };
+  if (readinessError !== null) return { status: "blocked", label: "Ejecutores sin verificar" };
   switch (readiness?.status) {
     case "ready":
-      return { status: "completed", label: "Claude Code listo" };
+      return { status: "completed", label: `${readiness.label} listo` };
     case "warning":
-      return { status: "blocked", label: "Claude Code con avisos" };
+      return { status: "blocked", label: `${readiness.label} con avisos` };
     case "error":
-      return { status: "failed", label: "Claude Code con error" };
+      return { status: "failed", label: `${readiness.label} con error` };
     default:
-      return { status: "pending", label: "Claude Code desconocido" };
+      return { status: "pending", label: "Ejecutores desconocidos" };
   }
 }
 
@@ -813,9 +980,9 @@ function startBlockReasonFor({
   if (!hasPrompt) return "Describí la tarea para empezar";
   if (promptOverLimit) return "El prompt supera el límite de caracteres";
   if (!hasLocalRepo) return "Configurá un repo local";
-  if (readinessLoading) return "Verificando Claude Code…";
-  if (readinessError !== null || readiness === null) return "Claude Code sin verificar";
-  if (readiness.status === "error") return "Claude Code necesita configuración";
+  if (readinessLoading) return "Verificando ejecutores…";
+  if (readinessError !== null || readiness === null) return "Ejecutores sin verificar";
+  if (readiness.status === "error") return "El ejecutor seleccionado necesita configuración";
   return null;
 }
 
@@ -835,18 +1002,18 @@ function readinessCalloutFor({
   }
   if (readinessLoading) return null;
   if (readinessError !== null) {
-    return `No se pudo verificar Claude Code CLI: ${readinessError}`;
+    return `No se pudieron verificar los ejecutores: ${readinessError}`;
   }
   if (readiness === null) {
-    return "Claude Code CLI todavía no fue verificado. ManyHands necesita Claude Code para planificar y ejecutar.";
+    return "Los ejecutores seleccionados todavía no fueron verificados.";
   }
   if (readiness.status === "error") {
     const failing = readiness.checks.find((check) => check.status === "fail");
-    return failing?.message ?? "Claude Code CLI no está listo. Instalalo, autenticalo o configurá MANYHANDS_CLAUDE_BIN.";
+    return failing?.message ?? "El ejecutor seleccionado no está listo. Instalalo, autenticalo o configurá su ruta.";
   }
   if (readiness.status === "warning") {
     const warning = readiness.checks.find((check) => check.status === "warning");
-    return warning?.message ?? "Claude Code CLI está disponible, pero hay avisos de entorno para revisar.";
+    return warning?.message ?? "El ejecutor está disponible, pero hay avisos de entorno para revisar.";
   }
   return null;
 }

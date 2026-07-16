@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { RunExecutionResult } from "@manyhands/execution-core";
+import { safeGitArgs, type RunExecutionResult } from "@manyhands/execution-core";
 import type { TaskGraph } from "@manyhands/task-graph";
 
 import { resolveManyhandsPath } from "../repo-root";
@@ -286,7 +286,7 @@ async function exportPatch(runId: string, patch: string): Promise<string> {
 
 async function commitExists(repoRoot: string, sha: string): Promise<boolean> {
   try {
-    await execFileAsync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: repoRoot });
+    await execFileAsync("git", safeGitArgs(repoRoot, ["cat-file", "-e", `${sha}^{commit}`]), { cwd: repoRoot });
     return true;
   } catch {
     return false;
@@ -298,17 +298,17 @@ async function git(cwd: string, args: string[]): Promise<string> {
 }
 
 async function gitRaw(cwd: string, args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync("git", args, { cwd, maxBuffer: 20 * 1024 * 1024 });
+  const { stdout } = await execFileAsync("git", safeGitArgs(cwd, args), { cwd, maxBuffer: 20 * 1024 * 1024 });
   return stdout;
 }
 
 async function gitVoid(cwd: string, args: string[]): Promise<void> {
-  await execFileAsync("git", args, { cwd, maxBuffer: 20 * 1024 * 1024 });
+  await execFileAsync("git", safeGitArgs(cwd, args), { cwd, maxBuffer: 20 * 1024 * 1024 });
 }
 
 function gitWithStdin(cwd: string, args: string[], stdin: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = execFile("git", args, { cwd, maxBuffer: 20 * 1024 * 1024 }, (error) => {
+    const child = execFile("git", safeGitArgs(cwd, args), { cwd, maxBuffer: 20 * 1024 * 1024 }, (error) => {
       if (error) reject(error);
       else resolve();
     });

@@ -22,7 +22,9 @@ export interface SpawnExecutorParams {
   args: string[];
   cwd: string;
   env?: Record<string, string> | undefined;
+  /** @deprecated Executor argv is always spawned without Node shell interpolation. */
   useShell: boolean;
+  windowsVerbatimArguments?: boolean | undefined;
   timeoutMs: number;
   /** Aborts the run: kills the process tree and resolves with an aborted outcome. */
   signal?: AbortSignal | undefined;
@@ -63,7 +65,7 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
     args,
     cwd,
     env,
-    useShell,
+    windowsVerbatimArguments,
     timeoutMs,
     signal,
     processOwnerId,
@@ -96,7 +98,8 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
         binary: binaryPath,
         args,
         timeoutMs,
-        shell: useShell,
+        shell: false,
+        ...(windowsVerbatimArguments !== undefined ? { windowsVerbatimArguments } : {}),
         cwd
       });
     }
@@ -109,7 +112,8 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
         // only the allowlist plus the caller's explicitly-declared overrides.
         env: { ...buildAgentEnvironment(), ...(env ?? {}) },
         stdio: ["pipe", "pipe", "pipe"],
-        shell: useShell,
+        shell: false,
+        ...(windowsVerbatimArguments !== undefined ? { windowsVerbatimArguments } : {}),
         // POSIX: own process group, so killProcessTree's kill(-pid) reaches every
         // descendant. Windows ignores detached-for-groups; taskkill /t covers it.
         detached: process.platform !== "win32"
@@ -148,6 +152,7 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
     const stdout = new BoundedOutput();
     const stderr = new BoundedOutput();
     let settled = false;
+    let terminating = false;
 
     const finish = (outcome: ExecutorRunOutcome): void => {
       if (settled) {
@@ -159,16 +164,26 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
       resolve(outcome);
     };
 
+    const terminateAndFinish = async (
+      buildOutcome: (terminationVerified: boolean) => ExecutorRunOutcome
+    ): Promise<void> => {
+      if (settled || terminating) return;
+      terminating = true;
+      const terminationVerified = await killProcessTree(child, spawnFn);
+      finish(buildOutcome(terminationVerified));
+    };
+
     const onAbort = (): void => {
-      killProcessTree(child, spawnFn);
-      finish({
-        exitCode: ABORTED_EXIT_CODE,
-        stdout: stdout.text(),
-        stderr: `${stderr.text()}${stderr.text() ? "\n" : ""}aborted by orchestrator`,
-        timedOut: false,
-        durationMs: Date.now() - start,
-        commandLine
-      });
+      void terminateAndFinish((terminationVerified) => ({
+          exitCode: ABORTED_EXIT_CODE,
+          stdout: stdout.text(),
+          stderr:
+            `${stderr.text()}${stderr.text() ? "\n" : ""}aborted by orchestrator` +
+            (terminationVerified ? "" : "\nprocess-tree termination could not be verified"),
+          timedOut: false,
+          durationMs: Date.now() - start,
+          commandLine
+        }));
     };
 
     const timer = setTimeout(() => {
@@ -180,15 +195,18 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
           stderrTail: stderr.text()
         });
       }
-      killProcessTree(child, spawnFn);
-      finish({
-        exitCode: TIMEOUT_EXIT_CODE,
-        stdout: stdout.text(),
-        stderr: stderr.text(),
-        timedOut: true,
-        durationMs: Date.now() - start,
-        commandLine
-      });
+      void terminateAndFinish((terminationVerified) => ({
+          exitCode: TIMEOUT_EXIT_CODE,
+          stdout: stdout.text(),
+          stderr:
+            stderr.text() +
+            (terminationVerified
+              ? ""
+              : `${stderr.text() ? "\n" : ""}process-tree termination could not be verified`),
+          timedOut: true,
+          durationMs: Date.now() - start,
+          commandLine
+        }));
     }, timeoutMs);
 
     signal?.addEventListener("abort", onAbort, { once: true });
@@ -205,6 +223,7 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
     });
 
     child.on("error", (error: Error) => {
+      if (terminating) return;
       // Most common real failure: binary missing / not on PATH (ENOENT). This is
       // exactly the "executor never ran" symptom — surface it loudly.
       if (logScope !== undefined && !settled) {
@@ -227,6 +246,7 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
     });
 
     child.on("close", (code) => {
+      if (terminating) return;
       // Only log when this close is what settles the run — after a timeout/abort
       // the process still emits close, but that outcome is already decided.
       if (logScope !== undefined && !settled) {
@@ -268,15 +288,16 @@ export function spawnExecutorProcess(params: SpawnExecutorParams): Promise<Execu
             message: error.message
           });
         }
-        killProcessTree(child, spawnFn);
-        finish({
-          exitCode: SPAWN_FAILURE_EXIT_CODE,
-          stdout: stdout.text(),
-          stderr: `${stderr.text()}${stderr.text() ? "\n" : ""}failed to read instructions: ${error.message}`,
-          timedOut: false,
-          durationMs: Date.now() - start,
-          commandLine
-        });
+        void terminateAndFinish((terminationVerified) => ({
+            exitCode: SPAWN_FAILURE_EXIT_CODE,
+            stdout: stdout.text(),
+            stderr:
+              `${stderr.text()}${stderr.text() ? "\n" : ""}failed to read instructions: ${error.message}` +
+              (terminationVerified ? "" : "\nprocess-tree termination could not be verified"),
+            timedOut: false,
+            durationMs: Date.now() - start,
+            commandLine
+          }));
       }
     );
   });

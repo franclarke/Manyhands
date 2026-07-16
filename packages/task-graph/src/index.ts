@@ -46,6 +46,14 @@ export const TaskDependencyTypeSchema = z.union([
 
 export type TaskDependencyType = z.infer<typeof TaskDependencyTypeSchema>;
 
+/**
+ * D1 edges are dispatch/readiness barriers only. Every executable task still
+ * starts from TaskGraph.baseCommit; predecessor commits are composed later by
+ * bottom-up integration. Cross-task code compatibility belongs in explicit
+ * interface contracts, not implicit worktree inheritance.
+ */
+export const TASK_DEPENDENCY_EXECUTION_SEMANTICS = "ordering_only" as const;
+
 export const TaskDependencySchema = z.object({
   fromTaskId: EntityIdSchema,
   toTaskId: EntityIdSchema,
@@ -137,6 +145,7 @@ export const TaskValidationIssueCodeSchema = z.union([
   z.literal("missing_expected_output"),
   z.literal("orphan_consumed_interface"),
   z.literal("duplicate_produced_interface"),
+  z.literal("self_consumed_interface"),
   z.literal("empty_scope"),
   z.literal("dangling_dependency"),
   z.literal("dependency_sync_divergence"),
@@ -823,6 +832,8 @@ function taskIssueCodeForContractIssue(
     case "invalid_interface_id":
     case "duplicate_interface_id":
       return "unsafe_contract_path";
+    case "self_consumed_interface":
+      return "self_consumed_interface";
     case "missing_execution_scope":
       return "empty_scope";
     case "missing_expected_changed_files":

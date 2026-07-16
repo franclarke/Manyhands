@@ -21,6 +21,7 @@
 import type {
   Amendment,
   AmendmentAppliedPayload,
+  AmendmentRejectedPayload,
   AmendmentProposedPayload,
   Conflict,
   ConflictDetectedPayload,
@@ -40,10 +41,13 @@ import type {
   NodeVerifyPassedPayload,
   PlanNodeProposedPayload,
   PlanNodeStatusPayload,
+  PlanGraphProjectedPayload,
+  PlanDependencyProposedPayload,
   PlanSeamProposedPayload,
   Run,
   RunContextResolvedPayload,
   RunCreatedPayload,
+  RunDeliveryCompletedPayload,
   RunEvent,
   RunEvidenceReadyPayload,
   RunMetricsReadyPayload,
@@ -76,6 +80,7 @@ export function createInitialRunModel(run: RunSeed): RunModel {
       }
     },
     nodes: new Map(),
+    dependencies: new Map(),
     seams: new Map(),
     waves: new Map(),
     schedulingWaves: new Map(),
@@ -187,6 +192,104 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
       // Planning telemetry is an ORTHOGONAL record: it never touches `execution`.
       return withNode(model, { ...node, planning });
     }
+    case "plan.graph.projected": {
+      const p = read<PlanGraphProjectedPayload>(event);
+      const nodes = new Map<string, Node>();
+      for (const projected of p.nodes) {
+        const existing = model.nodes.get(projected.nodeId);
+        const node: Node = {
+          id: projected.nodeId,
+          parentId: projected.parentId,
+          role: projected.role,
+          title: projected.title,
+          goal: projected.goal,
+          depth: projected.depth,
+          scope: {
+            paths: [...projected.scopePaths],
+            origin: projected.scopePaths.length > 0 ? "derived" : "guessed"
+          },
+          produces: [],
+          consumes: [],
+          execution: p.resetRuntime ? { kind: "idle" } : existing?.execution ?? { kind: "idle" },
+          ...(!p.resetRuntime && existing?.builtAgainst !== undefined ? { builtAgainst: existing.builtAgainst } : {}),
+          ...(!p.resetRuntime && existing?.producedRevision !== undefined ? { producedRevision: existing.producedRevision } : {}),
+          ...(!p.resetRuntime && existing?.changedFiles !== undefined ? { changedFiles: existing.changedFiles } : {}),
+          ...(existing?.planning !== undefined ? { planning: existing.planning } : {})
+        };
+        nodes.set(node.id, node);
+      }
+
+      const dependencies = new Map<string, PlanDependencyProposedPayload>();
+      for (const dependency of p.dependencies) {
+        dependencies.set(`${dependency.fromTaskId}\u0000${dependency.toTaskId}`, {
+          ...dependency,
+          ...(dependency.rationale !== undefined ? { rationale: dependency.rationale } : {})
+        });
+      }
+
+      const seams = new Map<string, Seam>();
+      for (const projected of p.seams) {
+        const existing = !p.resetRuntime ? model.seams.get(projected.seamId) : undefined;
+        seams.set(projected.seamId, existing !== undefined
+          ? {
+              ...existing,
+              name: projected.name,
+              producerNodeId: projected.producerNodeId,
+              consumerNodeIds: [...projected.consumerNodeIds],
+              signature: { ...existing.signature, draft: projected.draftSignature }
+            }
+          : {
+              id: projected.seamId,
+              name: projected.name,
+              producerNodeId: projected.producerNodeId,
+              consumerNodeIds: [...projected.consumerNodeIds],
+              signature: { draft: projected.draftSignature },
+              revision: 0,
+              state: "draft"
+            });
+        const producer = nodes.get(projected.producerNodeId);
+        if (producer !== undefined) {
+          nodes.set(producer.id, { ...producer, produces: addUnique(producer.produces, projected.seamId) });
+        }
+        for (const consumerId of projected.consumerNodeIds) {
+          const consumer = nodes.get(consumerId);
+          if (consumer !== undefined) {
+            nodes.set(consumer.id, { ...consumer, consumes: addUnique(consumer.consumes, projected.seamId) });
+          }
+        }
+      }
+
+      const projectedModel: RunModel = {
+        ...model,
+        nodes,
+        dependencies,
+        seams
+      };
+      if (!p.resetRuntime) return projectedModel;
+
+      const resetModel: RunModel = {
+        ...projectedModel,
+        waves: new Map(),
+        schedulingWaves: new Map(),
+        conflicts: new Map(),
+        amendments: new Map()
+      };
+      delete resetModel.evidence;
+      delete resetModel.metrics;
+      return resetModel;
+    }
+    case "plan.dependency.proposed": {
+      const p = read<PlanDependencyProposedPayload>(event);
+      const dependencies = new Map(model.dependencies);
+      dependencies.set(`${p.fromTaskId}\u0000${p.toTaskId}`, {
+        fromTaskId: p.fromTaskId,
+        toTaskId: p.toTaskId,
+        type: p.type,
+        inferred: p.inferred,
+        ...(p.rationale !== undefined ? { rationale: p.rationale } : {})
+      });
+      return { ...model, dependencies };
+    }
     case "plan.seam.proposed": {
       const p = read<PlanSeamProposedPayload>(event);
       const seams = new Map(model.seams);
@@ -256,6 +359,20 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
         warnings: p.warnings.map((warning) => ({ ...warning, taskIds: [...warning.taskIds] }))
       });
       return { ...model, schedulingWaves };
+    }
+    case "run.delivery.completed": {
+      const p = read<RunDeliveryCompletedPayload>(event);
+      const artifact = model.run.finalArtifact;
+      if (artifact === undefined || artifact.manifestId !== p.manifestId || artifact.finalSha !== p.finalSha) {
+        return model;
+      }
+      return {
+        ...model,
+        run: {
+          ...model.run,
+          finalArtifact: { ...artifact, deliveryDisposition: "delivered" }
+        }
+      };
     }
     case "wave.opened": {
       const p = read<WaveOpenedPayload>(event);
@@ -345,6 +462,12 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
       const amendment = model.amendments.get(p.amendmentId);
       if (!amendment) return model;
       return withAmendment(model, { ...amendment, status: "applied" });
+    }
+    case "amendment.rejected": {
+      const p = read<AmendmentRejectedPayload>(event);
+      const amendment = model.amendments.get(p.amendmentId);
+      if (!amendment) return model;
+      return withAmendment(model, { ...amendment, status: "rejected" });
     }
 
     // ── Decisions ──

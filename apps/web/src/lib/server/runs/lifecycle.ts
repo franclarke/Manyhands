@@ -15,16 +15,19 @@ const ALLOWED_TRANSITIONS: Record<RunStatus, ReadonlyArray<RunStatus>> = {
   // pipeline (restart route: interrupted → approved → running), mirroring the
   // symmetric `failed → approved` path. Without it, a run interrupted during
   // execution can never be restarted.
-  interrupted: ["generating", "running", "approved", "failed"],
+  interrupted: ["generating", "running", "paused", "approved", "failed"],
   // Re-open (review actions): let the user re-run a node after a finished run.
   completed: ["approved"],
   completed_with_accepted: ["approved"],
   partial: ["approved"],
   unverified: ["approved"],
-  needs_delivery: ["approved"],
+  needs_delivery: ["approved", "completed"],
   failed_artifact: ["approved"],
-  failed_delivery: ["approved"],
-  failed: ["approved", "generating"]
+  failed_delivery: ["approved", "completed"],
+  // An answered durable replan can fail before its plan CAS. Restart restores
+  // that exact intent directly to running so it is retried instead of
+  // dispatching the still-persisted old execution graph.
+  failed: ["approved", "generating", "running"]
 };
 
 export function assertTransition(from: RunStatus, to: RunStatus): void {
@@ -41,7 +44,7 @@ export function canPause(status: RunStatus): boolean {
 }
 
 export function canRestart(status: RunStatus): boolean {
-  return status === "interrupted" || status === "failed";
+  return status === "interrupted" || status === "failed" || status === "failed_artifact";
 }
 
 export type RunLifecycleAction =
@@ -69,7 +72,7 @@ const ACTION_ALLOWED_STATUSES: Record<RunLifecycleAction, ReadonlyArray<RunStatu
   answer_gate: ["paused"],
   approve_plan: ["needs_review"],
   replan: ["running"],
-  restart: ["interrupted", "failed"],
+  restart: ["interrupted", "failed", "failed_artifact"],
   // Forking a moving run would clone a checkpoint/snapshot pair while the
   // runner may still be writing both. Keep forks to stable, user-visible states.
   fork: ["created", "paused", "needs_review", "approved", "interrupted", "completed", "completed_with_accepted", "failed"],
@@ -79,7 +82,7 @@ const ACTION_ALLOWED_STATUSES: Record<RunLifecycleAction, ReadonlyArray<RunStatu
   // Delivery merges/discards/cleans the run's branch and worktrees. Only safe on
   // a terminal run (no pipeline driving it). The active-runner check in the route
   // covers the in-process race; this matrix covers the status precondition.
-  deliver: ["completed", "completed_with_accepted", "failed"]
+  deliver: ["needs_delivery", "failed_delivery", "completed", "completed_with_accepted", "failed"]
 };
 
 export function allowedStatusesForAction(action: RunLifecycleAction): ReadonlyArray<RunStatus> {
@@ -102,6 +105,7 @@ export function assertRunActionAllowed(
 
 /** Minimal run shape the restart route needs to choose which pipeline to resume. */
 export interface RestartContext {
+  status?: RunStatus | undefined;
   approvedAt?: string | undefined;
   planning?: unknown;
   failedDuring?: "generating" | "running" | undefined;
@@ -122,7 +126,14 @@ export function restartResumesExecution(run: RestartContext): boolean {
   if (run.planning === undefined) {
     return false;
   }
+  // The explicit phase is stronger than stale approval metadata. A critic or
+  // projection failure can happen after a planning artifact was persisted; it
+  // must restart planning, even if approvedAt survived from an older revision.
+  if (run.failedDuring === "generating" || run.interruptedDuring === "generating") {
+    return false;
+  }
   return (
+    run.status === "failed_artifact" ||
     run.approvedAt !== undefined ||
     run.failedDuring === "running" ||
     run.interruptedDuring === "running"

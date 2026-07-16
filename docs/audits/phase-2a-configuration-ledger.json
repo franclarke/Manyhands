@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "phase": "2A-configuration-capability-integrity",
+  "repositoryBaseline": {
+    "auditedAt": "2026-07-13T00:40:22-03:00",
+    "branch": "main",
+    "headCommit": "deb370a14d6dca2bf63a50c4564d8d2fa8fa160a",
+    "sameAsPhase1": true,
+    "productiveDiffSincePhase1": "ninguno (git diff --stat HEAD -- apps packages vacío); nuevos untracked: docs/audits (entregables Fase 1)",
+    "phase1DocsRead": ["docs/audits/phase-1-system-coverage-audit.md", "docs/audits/phase-1-coverage-ledger.json"]
+  },
+  "auditStatus": {
+    "currentCheckpoint": "7-remediation-design",
+    "completedCheckpoints": ["0-rebaseline-phase1-review", "1-capability-inventory", "2-ui-api-persistence", "3-runtime-propagation", "4-failure-legacy", "5-targeted-verification", "6-root-cause-synthesis", "7-remediation-design"],
+    "startedAt": "2026-07-13T00:40:22-03:00",
+    "lastUpdatedAt": "2026-07-13T01:10:00-03:00",
+    "completionState": "complete"
+  },
+  "phase1FindingsReview": [
+    {"id": "F1", "verdict": "confirmed-extended", "detail": "regen ignora executor, model Y effort de planning, y corre sin spawn supervisado (regen/route.ts:70-77,110-128)"},
+    {"id": "F4", "verdict": "confirmed-precised", "detail": "un solo executionConfig.reasoningEffort compartido por planning/execution/repair/integración; xhigh además inalcanzable desde la UI"},
+    {"id": "F5", "verdict": "confirmed-extended", "detail": "TRES guards anti-mock divergentes: planning-host:628-641 (3 razones), replan-service:125-129 (todas, otro mensaje), regen:115-117 (permite forced_by_env)"},
+    {"id": "R4", "verdict": "downgraded-split", "detail": "FALSO para ejecución: preflight revalida CLI+auth de execution/repair/grounding/overrides en start/resume/restart/manual-node (execution-pipeline:549,1183; preflight.ts:203-242). Residual: planning sin preflight, modelo nunca revalidado, probe de routing cacheado por proceso"},
+    {"id": "R5", "verdict": "confirmed-extended", "detail": "8 fuentes, 6 duplicaciones; dos ya divergidas (gpt-5-codex en lanes; UI con 3 niveles de effort vs 4 del backend)"}
+  ],
+  "executors": [
+    {"id": "claude-code-cli", "enabled": true, "provider": "Anthropic", "binaryEnvVar": "MANYHANDS_CLAUDE_BIN", "defaultBinary": "claude", "defaultModel": "sonnet", "capabilities": ["planning", "execution", "repair"], "authCheck": "OAuth expiry+refresh o ANTHROPIC_API_KEY (credentials.ts:39-65)", "effortFlag": "ninguno (claude-code.ts no referencia reasoningEffort)"},
+    {"id": "codex-cli", "enabled": true, "provider": "OpenAI", "binaryEnvVar": "MANYHANDS_CODEX_BIN", "defaultBinary": "codex", "defaultModel": "gpt-5.5", "capabilities": ["planning", "execution", "repair"], "authCheck": "presencia de ~/.codex/auth.json u OPENAI_API_KEY", "effortFlag": "-c model_reasoning_effort=\"<v>\" (codex.ts:21), sin validación"},
+    {"id": "opencode-cli", "enabled": false, "provider": "OpenCode", "note": "histórico; aceptado por z.enum(EXECUTOR_IDS) en schemas pero selectable=false lo rechaza en rutas; preflight fallaría el binario"}
+  ],
+  "models": [
+    {"executor": "claude-code-cli", "id": "haiku", "planning": false, "execution": true, "repair": true, "effortsUI": null, "effortsSchema": null, "runtimeVerification": "ninguna"},
+    {"executor": "claude-code-cli", "id": "sonnet", "planning": true, "execution": true, "repair": true, "effortsUI": null, "effortsSchema": null, "runtimeVerification": "ninguna"},
+    {"executor": "claude-code-cli", "id": "opus", "planning": false, "execution": true, "repair": true, "effortsUI": null, "effortsSchema": null, "runtimeVerification": "ninguna"},
+    {"executor": "codex-cli", "id": "gpt-5.5", "planning": true, "execution": true, "repair": true, "effortsUI": ["low", "medium", "high"], "effortsSchema": ["low", "medium", "high", "xhigh"], "runtimeVerification": "ninguna"},
+    {"executor": "codex-cli", "id": "gpt-5.4", "planning": false, "execution": true, "repair": true, "effortsUI": ["low", "medium", "high"], "effortsSchema": ["low", "medium", "high", "xhigh"], "runtimeVerification": "ninguna"},
+    {"executor": "codex-cli", "id": "gpt-5.4-mini", "planning": false, "execution": true, "repair": true, "effortsUI": ["low", "medium", "high"], "effortsSchema": ["low", "medium", "high", "xhigh"], "runtimeVerification": "ninguna"},
+    {"executor": "codex-cli", "id": "gpt-5-codex", "note": "SOLO en DEFAULT_TIER_ROUTES (routing/policy.ts:48-68); no está en el registry; llegaría al CLI sin validación vía complexity routing legacy"}
+  ],
+  "efforts": {
+    "backendEnum": ["low", "medium", "high", "xhigh"],
+    "uiLevels": ["low", "medium", "high"],
+    "xhighReachable": false,
+    "perStage": false,
+    "singleField": "executionConfig.reasoningEffort",
+    "copies": ["execution-core/types.ts:304", "execution-core/types.ts:349", "effort-control.client.tsx:5-7 (3 niveles)", "api-types.ts:137", "decomposer-policy.ts:37"],
+    "cliValidation": "ninguna; claude lo ignora silenciosamente, codex lo interpola sin comprobar"
+  },
+  "capabilitySources": [
+    {"id": "S1", "path": "packages/shared/src/executor-registry.ts", "role": "fuente de verdad declarada (executors/modelos/capabilities)"},
+    {"id": "S2", "path": "apps/web/src/lib/models.ts:42", "role": "EFFORT_CAPABLE_MODEL_IDS duplicado"},
+    {"id": "S3", "path": "packages/execution-core/src/types.ts:304,349", "role": "enum efforts x2"},
+    {"id": "S4", "path": "packages/execution-core/src/routing/policy.ts:48-68", "role": "lanes hardcodeadas divergidas (gpt-5-codex)"},
+    {"id": "S5", "path": "apps/web/src/lib/decomposer-policy.ts:62,232-237", "role": "espacio paralelo de model ids Anthropic API"},
+    {"id": "S6", "path": "apps/web/src/lib/server/runs/execution-config-defaults.ts:8", "role": "'codex soporta effort' hardcodeado"},
+    {"id": "S7", "path": "apps/web/src/app/(command-center)/_components/effort-control.client.tsx:5-7", "role": "EffortLevel de 3 niveles (divergido)"},
+    {"id": "S8", "path": "apps/web/src/lib/api-types.ts:137", "role": "union inline de 4 efforts"}
+  ],
+  "duplicatedSources": ["S2 vs S1", "S3 vs S1", "S4 vs S1", "S6 vs S1", "S7 vs S3", "S8 vs S3"],
+  "uiSelections": {
+    "planningPicker": "ModelPicker capability='planning' (command-center-shell:454) → solo sonnet y gpt-5.5",
+    "executionPicker": "ModelPicker capability='execution' (462) → 6 modelos",
+    "effortControl": "solo si selectedExecutionModel.supportsEffort (466); 3 niveles; NO hay effort de planning",
+    "defaults": "ambos pickers 'claude-code-cli/<initialModelId>' (79-81); effort 'medium'; repair := execution (218)",
+    "gating": "canStart exige readiness ready/warning de los providers seleccionados (162-192); sin refresh periódico",
+    "hiddenButAccepted": ["reasoningEffort con planning=codex y execution=claude", "xhigh"],
+    "shownButRejected": []
+  },
+  "requestFields": {
+    "model": {"schema": "z.string().min(1)", "validated": "membership+capability vía validateSelectionForCapability", "becomes": "RunRecord.model (execution model)"},
+    "planningModel": {"schema": "string opcional", "default": "model", "validated": "capability planning"},
+    "planningExecutorId": {"schema": "z.enum(EXECUTOR_IDS) — acepta opencode en schema, rechazado por selectable", "default": "legacy o claude"},
+    "defaultExecutionSelection": {"schema": "ExecutorSelectionSchema", "default": "planningSelection"},
+    "defaultRepairSelection": {"schema": "ExecutorSelectionSchema", "default": "executionSelection"},
+    "executionConfig.reasoningEffort": {"schema": "enum 4", "default": "medium si execution=codex (withDefaultReasoningEffort)", "validated": "NO contra el modelo (F9)"},
+    "routing": {"forcedAtCreate": "fixed", "schemaDefault": "complexity (riesgo legacy)"}
+  },
+  "persistedFields": {
+    "RunRecord": ["model", "planningModel?", "planningExecutorId?", "defaultExecutionSelection?", "defaultRepairSelection?", "executionConfig? (con reasoningEffort)", "node.metadata.executorSelection|executorOverride (por nodo, validado en PATCH)"]
+  },
+  "effectiveSelections": {
+    "planning": "planningSelection(run) → pickDecomposer(executorId, model, effort=executionConfig.reasoningEffort, spawn supervisado)",
+    "execution": "executionSelection(run) → RunExecutor.runNode → resolveExecutorSelection(nodo→router→default) → perfil CLI",
+    "repair": "repairSelection(run); override por nodo aplica; effort = mismo knob",
+    "integrationRepair": "resolveRepairSelection(params.repair) = selection ?? legacy (agent.ts:562,1126); effort = config.reasoningEffort (executor.ts:557,1114)",
+    "grounding": "groundingSelection = execution (execution-pipeline:555,613,1189); CLI validado por preflight (preflight.ts:223)",
+    "titler": "titlerSelection = planning (planning-pipeline:173); sin preflight"
+  },
+  "operationTraces": [
+    {"op": "initial-planning", "resolver": "planningSelection", "effort": "sí", "supervisedSpawn": true, "guard": "D3 (3 razones)", "divergence": "ninguna"},
+    {"op": "clarification-continuation", "resolver": "mismo host (interrupt nativo)", "effort": "sí", "supervisedSpawn": true, "guard": "D3", "divergence": "ninguna"},
+    {"op": "plan-approval", "resolver": "n/a (no re-invoca decomposer)", "divergence": "ninguna"},
+    {"op": "replan", "resolver": "campos crudos planningModel/planningExecutorId (replan-service:119-124)", "effort": "NO (omitido)", "supervisedSpawn": false, "guard": "propio (todas las razones)", "divergence": "F6"},
+    {"op": "subtree-regen", "resolver": "NINGUNO: model=run.model, sin executorId (regen:110-114)", "effort": "NO", "supervisedSpawn": false, "guard": "propio (permite forced_by_env)", "divergence": "F1+F5"},
+    {"op": "amendments", "resolver": "n/a: recorta/reseeda el grafo sin re-invocar decomposer (amendments-engine)", "divergence": "ninguna"},
+    {"op": "grounding", "resolver": "groundingSelection=execution", "divergence": "ninguna"},
+    {"op": "run-titler", "resolver": "titlerSelection=planning", "divergence": "sin preflight (fallo tardío menor)"},
+    {"op": "leaf-execution", "resolver": "executionSelection + node override + router(solo legacy complexity)", "effort": "sí (codex)", "divergence": "ninguna"},
+    {"op": "leaf-retry", "resolver": "attempt journal reusa/reserva; misma selección", "divergence": "ninguna"},
+    {"op": "repair-leaf", "resolver": "repairSelection", "effort": "sí", "divergence": "ninguna"},
+    {"op": "integration-repair", "resolver": "repair.selection ?? legacy", "effort": "sí", "divergence": "ninguna"},
+    {"op": "resume-execution", "resolver": "idéntico + PREFLIGHT CLI/auth (execution-pipeline:549)", "divergence": "modelo nunca revalidado"},
+    {"op": "restart", "resolver": "claim INV-4 → re-entra pipeline por failedDuring/interruptedDuring; ejecución re-pasa preflight; planning SIN preflight", "divergence": "R4-residual"},
+    {"op": "recovery-crash", "resolver": "reconcileExecutionWorld + mismo preflight", "divergence": "ninguna adicional"},
+    {"op": "fork", "resolver": "copia model/planningModel/planningExecutorId/selecciones/executionConfig tal cual (fork/route.ts:101-116)", "divergence": "ninguna; sin revalidación declared (herencia de ids muertos posible)"},
+    {"op": "import-run", "resolver": "no existe ruta de import; export/serialize solo lectura (no re-leídos)", "divergence": "n/a"},
+    {"op": "delivery", "resolver": "no usa executor LLM (git puro, delivery.ts)", "divergence": "n/a"}
+  ],
+  "configurationMatrix": [
+    {"case": "Claude→Claude", "ui": "ok", "api": "ok", "persist": "ok", "runtime": "ok (effort no aplica)"},
+    {"case": "Claude→Codex", "ui": "ok + effort visible", "api": "ok + default medium", "persist": "ok", "runtime": "planning claude sin effort; execution codex con effort"},
+    {"case": "Codex→Claude", "ui": "ok pero effort OCULTO", "api": "ok", "persist": "planning-host inyecta medium silencioso", "runtime": "planning codex effort=medium no elegido por el usuario (F4)"},
+    {"case": "Codex→Codex", "ui": "ok + effort visible", "api": "ok", "persist": "ok", "runtime": "MISMO effort para planning y execution (F4)"},
+    {"case": "effort→effort (5.5→5.4)", "ui": "un solo control", "api": "un solo campo", "persist": "un solo campo", "runtime": "compartido"},
+    {"case": "effort→sin-effort (5.5 planning→sonnet exec)", "ui": "control oculto", "api": "acepta effort igual (F9)", "persist": "persiste", "runtime": "claude ignora; codex planning lo usa"},
+    {"case": "sin-effort→effort (sonnet planning→5.5 exec)", "ui": "control visible (correcto)", "api": "ok", "persist": "ok", "runtime": "ok"},
+    {"case": "CLI ausente", "ui": "readiness error, submit bloqueado", "api": "creación IGUAL pasa si se llama directo (no valida availability)", "persist": "ok", "runtime": "planning: fallo al spawn (crudo); execution: preflight accionable"},
+    {"case": "modelo inválido", "ui": "no construible", "api": "400 validateSelectionForCapability", "persist": "n/a", "runtime": "n/a (salvo lanes S4 y legacy F8)"},
+    {"case": "effort inválido", "ui": "no construible", "api": "400 por enum zod", "persist": "n/a", "runtime": "n/a"},
+    {"case": "selección deja de estar disponible (uninstall post-create)", "ui": "readiness lo mostraría al recargar", "api": "n/a", "persist": "intacta", "runtime": "execution: preflight temprano accionable; planning: spawn tardío crudo; modelo de cuenta: error CLI mid-run"}
+  ],
+  "legacyNormalizations": [
+    {"path": "resolveLegacyModelSelection (registry:34-35)", "behavior": "string con match único en registry → ese executor; string desconocido → {claude-code-cli, string} SILENCIOSO (F8)"},
+    {"path": "normalizeExecutorOverride (models.ts:115-118)", "behavior": "misma rama string→claude"},
+    {"path": "effectiveExecutionConfig", "behavior": "runs sin executionConfig → routing default 'complexity' (lanes S4)"},
+    {"path": "replan usa campos crudos", "behavior": "legacy sin planningExecutorId: pickDecomposer sin executorId → default claude (equivalente salvo strings codex legacy)"}
+  ],
+  "fallbacks": [
+    {"id": "FB1", "what": "withDefaultReasoningEffort → medium si execution=codex", "silent": true, "where": "runs/route.ts:126 + planning-host:216-222"},
+    {"id": "FB2", "what": "string legacy → claude-code-cli", "silent": true, "where": "registry:34, models.ts:115"},
+    {"id": "FB3", "what": "MetadataDrivenMockDecomposer", "silent": false, "where": "decomposer-policy:71-76; bloqueado por guards (con la excepción regen forced_by_env)"},
+    {"id": "FB4", "what": "ComplexityRoutingPolicy degrada por disponibilidad de binario", "silent": true, "where": "solo runs legacy routing=complexity"},
+    {"id": "FB5", "what": "pickAnthropicModel → claude-sonnet-4-5 si el model no empieza con 'claude-'", "silent": true, "where": "decomposer-policy:232-237 (solo modos env anthropic)"},
+    {"id": "FB6", "what": "claude profile ignora reasoningEffort", "silent": true, "where": "claude-code.ts (por diseño del CLI)"}
+  ],
+  "validationPoints": [
+    {"point": "create", "validates": "membership+enabled+capability por etapa (declared)", "where": "runs/route.ts:69-114"},
+    {"point": "node PATCH", "validates": "membership+enabled (SIN capability por etapa)", "where": "nodes/[taskId]/route.ts:170-178"},
+    {"point": "execution preflight (start/resume/restart/manual-node)", "validates": "CLI --version + credenciales de execution/repair/grounding/overrides; lock de selección si routing=fixed", "where": "preflight.ts:203-242; execution-pipeline:549,1183"},
+    {"point": "planning", "validates": "NADA previo; guard anti-mock post-selección", "where": "planning-host:628-641"},
+    {"point": "runtime CLI", "validates": "nada: --model y effort se pasan sin comprobar", "where": "profiles claude-code.ts/codex.ts"}
+  ],
+  "confirmedFindings": [
+    {"id": "F1x", "title": "Regen ignora executor+model+effort de planning y corre sin spawn supervisado", "evidence": "regen/route.ts:70-77,110-128", "rootCause": "RC-A"},
+    {"id": "F4x", "title": "Effort único run-level; xhigh inalcanzable; inyección silenciosa de medium para planning codex", "evidence": "types.ts:349; planning-host:216-222; effort-control:5-7", "rootCause": "RC-B/RC-C"},
+    {"id": "F5x", "title": "Tres guards anti-mock divergentes", "evidence": "planning-host:628-641; replan-service:125-129; regen:115-117", "rootCause": "RC-A"},
+    {"id": "F6", "title": "Replan pierde effort y supervisión de subprocesos", "evidence": "replan-service:119-141 sin reasoningEffort ni spawn vs planning-host:253-263", "rootCause": "RC-A"},
+    {"id": "F7", "title": "Dominio de efforts fracturado en 5 copias, UI (3) ≠ backend (4)", "evidence": "S3,S7,S8 + decomposer-policy:37", "rootCause": "RC-B"},
+    {"id": "F8", "title": "Normalización legacy silenciosa: string desconocido → claude-code-cli", "evidence": "registry:34; models.ts:115-118", "rootCause": "RC-D"},
+    {"id": "F9", "title": "reasoningEffort no se valida contra el modelo en el request", "evidence": "runs/route.ts acepta effort con selección claude; claude-code.ts lo ignora", "rootCause": "RC-B"}
+  ],
+  "strongRisks": [
+    {"id": "R-2A-1", "title": "Modelos declarados nunca verificados contra CLI/cuenta; error crudo mid-run", "evidence": "profiles sin validación; sin clasificación de 'unknown model'"},
+    {"id": "R-2A-2", "title": "Probe de availability cacheado por proceso sin invalidación", "evidence": "execution-host:355 availableExecutors ??="},
+    {"id": "R-2A-3", "title": "Node override sin chequeo de capability por etapa", "evidence": "nodes route validateNodeSelection solo membership+enabled"},
+    {"id": "R-2A-4", "title": "Fork hereda config sin revalidación declared", "evidence": "fork/route.ts:101-116"}
+  ],
+  "rejectedHypotheses": [
+    {"id": "R4-half", "statement": "no hay revalidación al resume", "verdict": "rechazada para ejecución: preflight CLI+auth en todos los re-entries de ejecución", "evidence": "execution-pipeline:549,1183 + collectExecutorIds preflight.ts:218-242"}
+  ],
+  "openQuestions": [
+    "Mensaje/estado exacto del spawn fallido del decomposer en planning restart (reproducir con CLI ausente)",
+    "Formato del error 'unknown model' de cada CLI (insumo para clasificación en U2A-4)",
+    "¿Las rutas export/serialize re-derivan o copian la config? (bajo riesgo, no leídas)"
+  ],
+  "remediationUnits": [
+    {"id": "U2A-1", "title": "Registry enriquecido con efforts por modelo + EffortLevel único en shared", "dependsOn": [], "resolves": ["F7", "F9(base)", "R5"]},
+    {"id": "U2A-2", "title": "StageSelection {executorId,model,effort} por etapa + resolver único + validación de effort en request", "dependsOn": ["U2A-1"], "resolves": ["F4x", "F9"]},
+    {"id": "U2A-3", "title": "PlanningInvocationService único (selección+guard+spawn+budgets+harness renombrado) consumido por planning/replan/regen", "dependsOn": ["U2A-2"], "resolves": ["F1x", "F5x", "F6"]},
+    {"id": "U2A-4", "title": "CapabilityService declared/available + planning preflight + clasificación de errores de modelo + fin de normalización silenciosa", "dependsOn": ["U2A-1"], "resolves": ["F8", "R4-residual", "R-2A-1", "R-2A-2"]},
+    {"id": "U2A-5", "title": "GET /api/capabilities + UI de effort por etapa con rango del registry", "dependsOn": ["U2A-1", "U2A-2"], "resolves": ["F7-UI"]},
+    {"id": "U2A-6", "title": "Decisión producto sobre complexity routing y limpieza de lanes", "dependsOn": ["U2A-4"], "resolves": ["F3(Fase1)", "R3(Fase1)"]}
+  ],
+  "commandsExecuted": [
+    {"command": "git status/diff --stat HEAD -- apps packages; date", "purpose": "rebaseline", "result": "idéntico a Fase 1"},
+    {"command": "lecturas dirigidas: registry, credentials, availability, profiles, schema.ts, preflight, executor.ts (selección), replan-service, fork, regen, UI (shell/model-picker/effort-control)", "purpose": "trazas", "result": "ver secciones del informe"},
+    {"command": "greps: groundingSelection/titlerSelection, executorOverride, runPreflight, validateNodeSelection, EffortLevel", "purpose": "consumidores y validaciones", "result": "ver ledger"},
+    {"command": "npx vitest run tests/executor-selection.test.ts", "purpose": "validar resolver", "result": "7/7 pass"},
+    {"command": "npx vitest run tests/run-restart-target.test.ts", "purpose": "validar semántica de restart", "result": "6/6 pass"},
+    {"command": "node -e JSON.parse(ledger)", "purpose": "validez del JSON", "result": "OK"}
+  ],
+  "continuation": {
+    "nextAction": "Implementación por remediationUnits en orden U2A-1→U2A-6 (TDD, tests de la sección 21 del informe), o Fase 2B (U1 durabilidad/atomicidad de Fase 1)",
+    "requiredContext": ["docs/audits/phase-2a-configuration-capability-integrity.md", "este ledger", "entregables de Fase 1"],
+    "continuationPrompt": "La Fase 2A de ManyHands está completa: ver docs/audits/phase-2a-configuration-capability-integrity.md (findings F1x/F4x/F5x/F6-F9, root causes RC-A..RC-E en la sección 20, remediación en 22-24) y docs/audits/phase-2a-configuration-ledger.json. Para implementar: seguir remediationUnits en orden con TDD, empezando por U2A-1 (registry enriquecido). Para seguir auditando: Fase 2B = U1 de Fase 1 (durabilidad/atomicidad). No hay cambios productivos pendientes de esta fase."
+  }
+}

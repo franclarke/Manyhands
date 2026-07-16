@@ -15,7 +15,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { KillReport } from "@manyhands/execution-core";
-import { cancelRun } from "@/lib/server/runs/cancel-service";
+import { cancelRun, waitForRunCancellation } from "@/lib/server/runs/cancel-service";
 import { claimRunOperation } from "@/lib/server/runs/run-operation-lease";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
@@ -65,6 +65,14 @@ function cleanReport(runId: string): KillReport {
   return { ownerId: runId, verifications: [], allDead: true };
 }
 
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}
+
 describe("B-005 cancelRun — terminal only with allDead", () => {
   it("stays in cancelling while survivors remain and reaches interrupted only after a clean retry", async () => {
     const runId = "run-cancel-survivors";
@@ -72,7 +80,9 @@ describe("B-005 cancelRun — terminal only with allDead", () => {
     const claimed = await claimRunOperation(runId, "execution", { expectedStatuses: ["running"] });
 
     const first = await cancelRun(runId, {
-      killOwnedProcessTrees: async () => survivorReport(runId)
+      killOwnedProcessTrees: async () => survivorReport(runId),
+      actor: "system",
+      reason: "interrupted: wall-clock budget of 1000ms exceeded"
     });
     expect(first.terminal).toBe(false);
     expect(first.run.status).toBe("cancelling");
@@ -87,10 +97,13 @@ describe("B-005 cancelRun — terminal only with allDead", () => {
 
     // Retry once the survivor finally died.
     const second = await cancelRun(runId, {
-      killOwnedProcessTrees: async () => cleanReport(runId)
+      killOwnedProcessTrees: async () => cleanReport(runId),
+      actor: "system",
+      reason: "interrupted: completing verified cancellation"
     });
     expect(second.terminal).toBe(true);
     expect(second.run.status).toBe("interrupted");
+    expect(second.run.errorMessage).toBe("interrupted: wall-clock budget of 1000ms exceeded");
     expect((await getRunRepository().get(runId)).status).toBe("interrupted");
   });
 
@@ -104,6 +117,34 @@ describe("B-005 cancelRun — terminal only with allDead", () => {
     expect(outcome.terminal).toBe(true);
     expect(outcome.run.status).toBe("interrupted");
     expect(outcome.run.interruptedDuring).toBe("running");
+  });
+
+  it("exposes a completion barrier for kill, GC and durable cancellation audit", async () => {
+    const runId = "run-cancel-barrier";
+    await getRunRepository().save(makeRun(runId));
+    const killStarted = deferred();
+    const releaseKill = deferred();
+    let barrierSettled = false;
+
+    const cancellation = cancelRun(runId, {
+      killOwnedProcessTrees: async () => {
+        killStarted.resolve();
+        await releaseKill.promise;
+        return cleanReport(runId);
+      }
+    });
+    await killStarted.promise;
+    const barrier = waitForRunCancellation(runId).then(() => {
+      barrierSettled = true;
+    });
+    await Promise.resolve();
+    expect(barrierSettled).toBe(false);
+
+    releaseKill.resolve();
+    await cancellation;
+    await barrier;
+    expect(barrierSettled).toBe(true);
+    expect((await getRunRepository().get(runId)).status).toBe("interrupted");
   });
 
   it("records the phase when cancelling a planning run", async () => {

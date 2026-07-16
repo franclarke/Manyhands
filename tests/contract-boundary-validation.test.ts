@@ -82,6 +82,43 @@ describe("contract boundary validation", () => {
     );
   });
 
+  it("blocks a task from consuming the same seam that it produces", () => {
+    const shared = {
+      id: "ProjectScripts",
+      kind: "type" as const,
+      signature: "type ProjectScripts = Record<string, string>",
+      description: "package scripts"
+    };
+    const selfSeamed = contract("task-a", {
+      consumedInterfaces: [shared],
+      producedInterfaces: [shared]
+    });
+
+    const boundary = validateAgentTaskContractBoundary(selfSeamed, {
+      taskId: "task-a",
+      executable: true
+    });
+    expect(boundary.ok).toBe(false);
+    expect(boundary.issues).toEqual([
+      expect.objectContaining({
+        code: "self_consumed_interface",
+        field: "consumedInterfaces",
+        taskId: "task-a",
+        severity: "error"
+      })
+    ]);
+
+    expect(validateExecutableTaskGraph(graphWith([leaf("task-a", selfSeamed)]))).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "self_consumed_interface",
+          taskId: "task-a",
+          severity: "error"
+        })
+      ])
+    );
+  });
+
   it("blocks a task graph with a dangling dependency", () => {
     const issues = validateExecutableTaskGraph({
       ...graphWith([leaf("task-a", contract("task-a"))]),

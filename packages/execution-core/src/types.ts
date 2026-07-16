@@ -1,4 +1,4 @@
-import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
+import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema, ReasoningEffortSchema } from "@manyhands/shared";
 import { z } from "zod";
 
 // ── Agent result status ─────────────────────────────────────────
@@ -93,6 +93,8 @@ export const AgentExecutionResultSchema = z.object({
   diff: z.string(),
   changedFiles: z.array(NonEmptyStringSchema).default([]),
   commitSha: NonEmptyStringSchema.optional(),
+  /** Explicit only for orchestrator-created composite handoff merge commits. */
+  cherryPickMainline: z.literal(1).optional(),
   /**
    * True when the leaf exited cleanly with an empty diff because the grounding
    * baseline already satisfied its contract (e.g. a barrel/re-export the skeleton
@@ -224,7 +226,12 @@ export type IntegrationFailureCode = z.infer<typeof IntegrationFailureCodeSchema
 
 export const AppliedChildCommitSchema = z.object({
   childTaskId: EntityIdSchema,
+  /** Commit supplied by the child branch. */
   commitSha: NonEmptyStringSchema,
+  /** Physical commit created/adopted on the parent integration lineage. */
+  resultSha: NonEmptyStringSchema.optional(),
+  preSha: NonEmptyStringSchema.optional(),
+  application: z.enum(["already_ancestor", "already_satisfied", "cherry_picked", "repaired"]).optional(),
   order: z.number().int().nonnegative()
 });
 
@@ -255,6 +262,8 @@ export const IntegrationResultSchema = z.object({
   status: IntegrationStatusSchema,
   childResults: z.array(AgentExecutionResultSchema),
   integrationCommitSha: NonEmptyStringSchema.optional(),
+  /** Mainline required to consume an orchestrator-created handoff merge. */
+  cherryPickMainline: z.literal(1).optional(),
   conflictDetails: ConflictDetailSchema.optional(),
   repairAttempted: z.boolean(),
   repairResult: AgentExecutionResultSchema.optional(),
@@ -301,7 +310,7 @@ export const AgentExecutorOptionsSchema = z.object({
   timeoutMs: z.number().int().positive(),
   bypassApprovals: z.boolean(),
   env: z.record(z.string()).optional(),
-  reasoningEffort: z.enum(["low", "medium", "high", "xhigh"]).optional(),
+  reasoningEffort: ReasoningEffortSchema.optional(),
   /** Run-level cancellation: aborts the spawned process tree. Not serialized. */
   signal: z.instanceof(AbortSignal).optional(),
   /**
@@ -346,14 +355,14 @@ export const ExecutionConfigSchema = z.object({
   maxValidationCommands: z.number().int().positive().default(20),
   /** Dependency-install deadline, kept explicit alongside executor/validation timeouts. */
   installTimeoutMs: z.number().int().positive().default(300_000),
-  reasoningEffort: z.enum(["low", "medium", "high", "xhigh"]).optional(),
+  reasoningEffort: ReasoningEffortSchema.optional(),
   unexpectedCommitPolicy: UnexpectedCommitPolicySchema.default("reject"),
   /**
    * Executor selection mode: "complexity" routes each node to an executor tier
    * by its complexity score (degrading to whatever CLIs are installed);
    * "fixed" always uses the run-level selection.
    */
-  routing: z.union([z.literal("complexity"), z.literal("fixed")]).default("complexity"),
+  routing: z.union([z.literal("complexity"), z.literal("fixed")]).default("fixed"),
   /**
    * Token budget for the whole run (reported usage across leaves + repairs).
    * Checked BETWEEN waves: exceeding it suspends on the budget gate (U5).

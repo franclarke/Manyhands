@@ -13,7 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { DEFAULT_ARTIFACT_GLOBS, SimpleGitRunner } from "@manyhands/execution-core";
+import { DEFAULT_ARTIFACT_GLOBS, SimpleGitRunner, safeGitArgs } from "@manyhands/execution-core";
 import { ensureGitInfoExclude } from "@/lib/server/runs/repo-provisioner";
 
 const execFileAsync = promisify(execFile);
@@ -72,6 +72,15 @@ describe("SimpleGitRunner.addAllExcluding", () => {
 
     const staged = (await runner.diffCachedNameOnly(repoRoot)).sort();
     expect(staged).toEqual([".gitignore", "src/y.ts"]);
+  });
+});
+
+describe("safeGitArgs", () => {
+  it("scopes the ownership exception to the selected repository", () => {
+    const args = safeGitArgs("C:/Users/owner/project", ["status", "--porcelain"]);
+    expect(args.slice(0, 2)).toEqual(["-c", expect.stringMatching(/^safe\.directory=/)]);
+    expect(args.slice(2)).toEqual(["status", "--porcelain"]);
+    expect(args[1]).toContain("project");
   });
 });
 

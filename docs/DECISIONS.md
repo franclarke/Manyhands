@@ -176,6 +176,14 @@ evento de "nodo pausado".
 **D1:** `graph.dependencies` es canónico. `node.dependencies` es un shortcut
 sincronizado. Mutar dependencias solo vía helpers.
 
+La semántica de ejecución de esas aristas es `ordering_only`: afectan readiness
+y dispatch, pero todas las hojas parten del mismo `TaskGraph.baseCommit`; una
+dependencia no materializa el commit ni los archivos del predecesor. La
+compatibilidad entre tareas se declara mediante `sharedInterface` y los commits
+se componen durante la integración bottom-up. Si un paso requiere archivos
+concretos del anterior, ambos trabajos deben permanecer en una misma tarea o
+rediseñarse alrededor de una interfaz explícita.
+
 **D2:** el campo canónico de intención es `goal`, no `intent`.
 
 **D3:** no hay fallback silencioso ante falla del LLM.
@@ -197,7 +205,10 @@ requerido `run.scheduling.wave_selected` antes de despachar tareas. El payload
 incluye `policy`, `readyTaskIds`, `selectedTaskIds`, `blockedTaskIds`,
 `blockedReasons`, `riskSummary`, `fallbacks` y `warnings`. Si el append falla,
 la wave no se ejecuta silenciosamente. El `seq` del event log sigue siendo el
-orden durable; `waveIndex` es una correlación de pipeline.
+orden durable y `waveId` es la identidad de correlación. `waveIndex` es la
+posición durable base cero entre hechos de scheduling y `waveOrdinal` es el
+ordinal humano base uno; UI y recovery derivan 1..N por orden de replay para
+eventos legacy que no tienen `waveOrdinal`.
 
 **D19:** el predictor de scheduling usa señales estructurales del
 `repository-index` cuando están disponibles. `conflict-risk` cruza contratos con
@@ -207,6 +218,12 @@ archivos, símbolos, imports/exports y kinds del índice para producir señales 
 índice o sus señales no están disponibles, `buildSchedulingSafetyContext`
 degrada a heurísticas de contratos/scopes con warning `missing_repository_index`;
 la incertidumbre no se convierte en bajo riesgo.
+
+Un `InterfaceContract` canónico producer/consumer no es una colisión: es la
+costura congelada que permite construir hojas aisladas en paralelo. El scheduler
+solo eleva ese par si las declaraciones del seam son incompatibles o si existen
+señales físicas/concretas independientes (scope, archivo, símbolo, import,
+schema, fixture o API pública).
 
 **D17:** las acciones del control-plane de lifecycle tienen una matriz explícita
 de estados permitidos (`assertRunActionAllowed`). `start`, `pause`, `resume`,

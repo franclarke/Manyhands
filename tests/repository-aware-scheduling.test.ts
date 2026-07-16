@@ -52,7 +52,38 @@ describe("repository-aware scheduling risk", () => {
     }).batches.map((batch) => batch.taskIds)).toEqual([["a", "b"]]);
   });
 
-  it("producer/consumer interfaces without an explicit dependency become high risk", () => {
+  it("compatible producer/consumer interface seams remain low risk and share a wave", () => {
+    const seam = interfaceContract("TaskStore");
+    const contracts = {
+      producer: contract("producer", {
+        paths: ["src/store.ts"],
+        changedFiles: ["src/store.ts"],
+        producedSymbols: ["TaskStore"],
+        producedInterfaces: [seam]
+      }),
+      consumer: contract("consumer", {
+        paths: ["src/view.ts"],
+        changedFiles: ["src/view.ts"],
+        consumedSymbols: ["TaskStore"],
+        consumedInterfaces: [seam]
+      })
+    };
+    const graph = graphFor(contracts);
+    const safety = buildSchedulingSafetyContext({ graph, contracts, policy: "risk_aware" });
+    const prediction = findRiskPrediction(safety.riskMatrix, "producer", "consumer");
+
+    expect(prediction?.level).toBe("low");
+    expect(prediction?.evidence.map((item) => item.signal)).not.toContain("producer_consumer");
+    expect(scheduleTasks({
+      graph,
+      contracts,
+      riskMatrix: safety.riskMatrix,
+      maxParallel: 2,
+      policy: "risk_aware"
+    }).batches.map((batch) => batch.taskIds)).toEqual([["consumer", "producer"]]);
+  });
+
+  it("keeps incompatible declarations for the same interface seam at high risk", () => {
     const seam = interfaceContract("TaskStore");
     const contracts = {
       producer: contract("producer", {
@@ -63,15 +94,18 @@ describe("repository-aware scheduling risk", () => {
       consumer: contract("consumer", {
         paths: ["src/view.ts"],
         changedFiles: ["src/view.ts"],
-        consumedInterfaces: [seam]
+        consumedInterfaces: [{ ...seam, signature: "type TaskStore = { id: number }" }]
       })
     };
-    const graph = graphFor(contracts);
-    const safety = buildSchedulingSafetyContext({ graph, contracts, policy: "risk_aware" });
+    const safety = buildSchedulingSafetyContext({
+      graph: graphFor(contracts),
+      contracts,
+      policy: "risk_aware"
+    });
     const prediction = findRiskPrediction(safety.riskMatrix, "producer", "consumer");
 
     expect(prediction?.level).toBe("high");
-    expect(prediction?.evidence.map((item) => item.signal)).toContain("producer_consumer");
+    expect(prediction?.explanation).toContain("incompatible declarations");
   });
 
   it("missing repository index falls back to contract heuristics with an auditable warning", () => {

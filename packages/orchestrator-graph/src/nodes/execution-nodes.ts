@@ -267,7 +267,10 @@ export interface FrontierRouterDeps {
    * run concurrently (scope overlap / conflict risk aware). Returning an empty
    * array is treated as "no constraint" and the full frontier is dispatched.
    */
-  selectWave?: (params: { graph: TaskGraph; candidates: string[] }) => string[] | Promise<string[]>;
+  selectWave?: (params: { graph: TaskGraph; candidates: string[] }) =>
+    | string[]
+    | { taskIds: string[]; waveId: string }
+    | Promise<string[] | { taskIds: string[]; waveId: string }>;
 }
 
 /**
@@ -296,7 +299,9 @@ export function makeRouteFrontier(deps: FrontierRouterDeps = {}) {
       return "budgetGate";
     }
 
-    const selected = (await deps.selectWave?.({ graph, candidates })) ?? candidates;
+    const selection = (await deps.selectWave?.({ graph, candidates })) ?? candidates;
+    const selected = Array.isArray(selection) ? selection : selection.taskIds;
+    const waveId = Array.isArray(selection) ? undefined : selection.waveId;
     const wave = selected.length > 0 ? selected.filter((id) => candidates.includes(id)) : candidates;
     const effective = wave.length > 0 ? wave : candidates;
 
@@ -306,7 +311,8 @@ export function makeRouteFrontier(deps: FrontierRouterDeps = {}) {
           runId: state.runId,
           taskId,
           graph,
-          repoPath: state.repoPath
+          repoPath: state.repoPath,
+          ...(waveId !== undefined ? { waveId, dispatchKind: "wave" as const } : {})
         } satisfies LeafExecutionInput)
     );
   };
@@ -319,6 +325,13 @@ export interface LeafExecutionInput {
   taskId: string;
   graph: TaskGraph;
   repoPath: string;
+  waveId?: string;
+  dispatchKind?: "wave" | "retry";
+}
+
+export interface LeafGateNodeDeps {
+  /** Persist retry dispatch evidence before the gate emits its direct Send. */
+  beforeRetryDispatch?: (params: { runId: string; taskId: string }) => Promise<{ waveId: string }>;
 }
 
 export interface ExecuteLeafNodeDeps {
@@ -384,6 +397,33 @@ export function makeExecuteLeafNode(deps: ExecuteLeafNodeDeps) {
  * unhandled failures remain.
  */
 export function leafGateNode(state: RunState): Command<unknown, RunStateUpdate> {
+  return leafGateCommand(state);
+}
+
+export function makeLeafGateNode(deps: LeafGateNodeDeps = {}) {
+  return async function configuredLeafGateNode(state: RunState): Promise<Command<unknown, RunStateUpdate>> {
+    const failure = unhandledLeafFailures(state)[0];
+    const command = leafGateCommand(state);
+    if (failure === undefined || command.goto === undefined || deps.beforeRetryDispatch === undefined) return command;
+    const goto = Array.isArray(command.goto) ? command.goto : [command.goto];
+    if (!goto.some((entry) => entry instanceof Send)) return command;
+    const dispatch = await deps.beforeRetryDispatch({ runId: state.runId, taskId: failure.taskId });
+    return new Command<unknown, RunStateUpdate>({
+      goto: [
+        new Send("executeLeaf", {
+          runId: state.runId,
+          taskId: failure.taskId,
+          graph: requireGraph(state, "leafGate"),
+          repoPath: state.repoPath,
+          waveId: dispatch.waveId,
+          dispatchKind: "retry"
+        } satisfies LeafExecutionInput)
+      ]
+    });
+  };
+}
+
+function leafGateCommand(state: RunState): Command<unknown, RunStateUpdate> {
   const failure = unhandledLeafFailures(state)[0];
   if (failure === undefined) {
     return new Command<unknown, RunStateUpdate>({ goto: "waveJoin" });
@@ -582,19 +622,49 @@ function settledResultFor(
     INTEGRATION_SUCCESS.has(integration.status) ||
     state.acceptedIntegrationFailures.includes(childId);
   if (!usable) return undefined;
-  return syntheticCompositeResult(childId, integration.integrationCommitSha);
+  return syntheticCompositeResult(
+    childId,
+    graph.baseCommit,
+    integration.integrationCommitSha,
+    integration.cherryPickMainline
+  );
 }
 
-function syntheticCompositeResult(taskId: string, commitSha: string): AgentExecutionResult {
+function syntheticCompositeResult(
+  taskId: string,
+  baseHead: string,
+  commitSha: string,
+  cherryPickMainline?: 1
+): AgentExecutionResult {
+  if (commitSha === baseHead) {
+    return {
+      taskId,
+      status: "success",
+      baseHead,
+      currentHead: baseHead,
+      agentCommittedUnexpectedly: false,
+      diff: "",
+      changedFiles: [],
+      noOp: true,
+      disposition: "already_satisfied",
+      scopeCheck: { passed: true, violations: [], outOfScope: [] },
+      executorExitCode: 0,
+      executorDurationMs: 0,
+      executorTimedOut: false,
+      stderrTail: "",
+      stdoutTail: ""
+    } satisfies AgentExecutionResult;
+  }
   return {
     taskId,
     status: "success",
-    baseHead: commitSha,
+    baseHead,
     currentHead: commitSha,
     agentCommittedUnexpectedly: false,
     diff: "",
     changedFiles: [],
     commitSha,
+    ...(cherryPickMainline !== undefined ? { cherryPickMainline } : {}),
     scopeCheck: { passed: true, violations: [], outOfScope: [] },
     executorExitCode: 0,
     executorDurationMs: 0,

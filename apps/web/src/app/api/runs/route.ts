@@ -7,6 +7,7 @@ import {
   RunCreateRequestSchema,
   RUN_STATUS_VALUES,
   getRunRepository,
+  listCorruptRunRecords,
   runPlanningPipeline,
   sweepManyIfStale,
   type RunRecord,
@@ -14,14 +15,19 @@ import {
 } from "@/lib/server/runs";
 import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 import { captureRunTargetContext } from "@/lib/server/runs/target-context";
-import { toRunPreview, toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse, toRunPreview } from "@/lib/server/runs/presenter";
 import {
+  WorkspaceConflictError,
   WorkspaceNotFoundError,
-  getWorkspaceRepository
+  getWorkspaceRepository,
+  withWorkspaceReferenceLock
 } from "@/lib/server/workspaces";
-import { CLAUDE_CODE_EXECUTOR_ID, runtimeCapabilitiesForSelection, type ExecutorSelection, type ModelCapability } from "@/lib/models";
-import { resolveLegacyModelSelection } from "@manyhands/execution-core";
-import { withDefaultReasoningEffort } from "@/lib/server/runs/execution-config-defaults";
+import { assertDeclaredStageSelection } from "@/lib/server/providers/capability-service";
+import {
+  planningSelection as resolvePlanningSelection,
+  executionSelection as resolveExecutionSelection,
+  repairSelection as resolveRepairSelection
+} from "@/lib/server/runs/executor-selection";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,14 +37,23 @@ export async function GET(request: Request): Promise<NextResponse> {
     const url = new URL(request.url);
     const workspaceId = url.searchParams.get("workspaceId");
     const statusParam = url.searchParams.get("status");
+    const refreshDiagnostics = url.searchParams.get("diagnostics") === "refresh";
     const limitRaw = url.searchParams.get("limit");
     const limit = limitRaw === null ? undefined : Math.max(1, Math.min(50, Number(limitRaw) || 0));
-    const filter: { workspaceId?: string; limit?: number } = {};
-    if (workspaceId !== null && workspaceId.length > 0) filter.workspaceId = workspaceId;
+    const workspaceRepository = getWorkspaceRepository();
+    const equivalentWorkspaceIds = workspaceId !== null && workspaceId.length > 0
+      ? await workspaceRepository.equivalentIds(workspaceId)
+      : undefined;
+    const filter: { workspaceIds?: string[]; limit?: number } = {};
+    if (equivalentWorkspaceIds !== undefined) filter.workspaceIds = equivalentWorkspaceIds;
     if (limit !== undefined && limit > 0) filter.limit = limit;
-    const [rawRuns, workspaces] = await Promise.all([
+    const [rawRuns, workspaces, corruptRecords] = await Promise.all([
       getRunRepository().list(filter),
-      getWorkspaceRepository().list()
+      workspaceRepository.list(),
+      // The dev console polls this route frequently. Its normal path consumes
+      // the durable diagnostics index without opening every RunRecord; an
+      // explicit operator refresh advances the index by one bounded batch.
+      listCorruptRunRecords({ inspectionBudget: refreshDiagnostics ? 8 : 0 })
     ]);
     let runs = await sweepManyIfStale(rawRuns);
     // B-007: archived runs are hidden unless explicitly requested.
@@ -52,7 +67,21 @@ export async function GET(request: Request): Promise<NextResponse> {
       }
     }
     const wsByid = new Map(workspaces.map((w) => [w.id, w]));
-    return NextResponse.json({ runs: runs.map((run) => toRunPreview(run, wsByid)) });
+    await Promise.all(
+      [...new Set(runs.map((entry) => entry.workspaceId))].map(async (id) => {
+        if (wsByid.has(id)) return;
+        const workspace = await workspaceRepository.get(id).catch(() => undefined);
+        if (workspace !== undefined) wsByid.set(id, workspace);
+      })
+    );
+    return NextResponse.json({
+      runs: runs.map((run) => toRunPreview(run, wsByid)),
+      degradedRecords: corruptRecords.map((record) => ({
+        runId: record.runId,
+        reason: record.reason ?? "invalid run record",
+        diagnosticsHref: `/api/runs/${encodeURIComponent(record.runId)}/diagnostics`
+      }))
+    });
   } catch (error) {
     return errorResponse(error);
   }
@@ -66,25 +95,11 @@ function parseStatusFilter(raw: string): RunStatus[] {
     .filter((entry) => entry.length > 0 && allowed.has(entry)) as RunStatus[];
 }
 
-function validateSelectionForCapability(
-  label: string,
-  selection: ExecutorSelection | undefined,
-  capability: ModelCapability
-): void {
-  if (selection === undefined) {
-    return;
-  }
-  const capabilities = runtimeCapabilitiesForSelection(selection);
-  if (!capabilities.selectable) {
-    throw new RunValidationError(`Unsupported executor/model selection "${selection.executorId}/${selection.model}"`);
-  }
-  if (!capabilities.capabilities.includes(capability)) {
-    throw new RunValidationError(
-      `${label} selection "${selection.executorId}/${selection.model}" does not support ${capability}.`
-    );
-  }
-}
-
+/**
+ * Validate the reasoning effort a request explicitly attached to a canonical
+ * stage selection (U2A-2). Rejects an effort on a model that declares none, and
+ * an effort value the model does not list — never a silent drop (F9).
+ */
 export async function POST(request: Request): Promise<NextResponse> {
   let payload: unknown;
   try {
@@ -100,18 +115,51 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw new RunValidationError(issue?.message ?? "Invalid run create request");
     }
 
+    const saved = await withWorkspaceReferenceLock(async () => {
     const workspace = await getWorkspaceRepository().get(parsed.data.workspaceId); // throws WorkspaceNotFoundError → 404
 
-    const legacySelection = resolveLegacyModelSelection(parsed.data.model);
-    const planningSelection: ExecutorSelection = {
-      executorId: parsed.data.planningExecutorId ?? legacySelection.executorId ?? CLAUDE_CODE_EXECUTOR_ID,
-      model: parsed.data.planningModel ?? legacySelection.model
+    // Reject an explicit request effort the model can't honour BEFORE the
+    // resolver would drop it (F9: never a silent drop).
+    if (parsed.data.planningSelection !== undefined) {
+      assertDeclaredStageSelection("Planning", parsed.data.planningSelection, "planning");
+    }
+    if (parsed.data.executionSelection !== undefined) {
+      assertDeclaredStageSelection("Execution", parsed.data.executionSelection, "execution");
+    }
+    if (parsed.data.repairSelection !== undefined) {
+      assertDeclaredStageSelection("Repair", parsed.data.repairSelection, "repair");
+    }
+
+    // The read resolver is the single authority: it reconciles canonical ↔
+    // legacy request fields, fails on contradiction (RunConfigurationError →
+    // 400) and on unknown bare model strings, and returns full StageSelections.
+    // Creation then injects the model's declared default effort (visible/persisted).
+    const selectionView = {
+      model: parsed.data.model,
+      ...(parsed.data.planningModel !== undefined ? { planningModel: parsed.data.planningModel } : {}),
+      ...(parsed.data.planningExecutorId !== undefined ? { planningExecutorId: parsed.data.planningExecutorId } : {}),
+      ...(parsed.data.defaultExecutionSelection !== undefined ? { defaultExecutionSelection: parsed.data.defaultExecutionSelection } : {}),
+      ...(parsed.data.defaultRepairSelection !== undefined ? { defaultRepairSelection: parsed.data.defaultRepairSelection } : {}),
+      ...(parsed.data.planningSelection !== undefined ? { planningSelection: parsed.data.planningSelection } : {}),
+      ...(parsed.data.executionSelection !== undefined ? { executionSelection: parsed.data.executionSelection } : {}),
+      ...(parsed.data.repairSelection !== undefined ? { repairSelection: parsed.data.repairSelection } : {}),
+      ...(parsed.data.executionConfig !== undefined ? { executionConfig: parsed.data.executionConfig } : {})
     };
-    const executionSelection = parsed.data.defaultExecutionSelection ?? planningSelection;
-    const repairSelection = parsed.data.defaultRepairSelection ?? executionSelection;
-    validateSelectionForCapability("Planning", planningSelection, "planning");
-    validateSelectionForCapability("Execution", executionSelection, "execution");
-    validateSelectionForCapability("Repair", repairSelection, "repair");
+    const planningStage = assertDeclaredStageSelection(
+      "Planning",
+      resolvePlanningSelection(selectionView),
+      "planning"
+    );
+    const executionStage = assertDeclaredStageSelection(
+      "Execution",
+      resolveExecutionSelection(selectionView),
+      "execution"
+    );
+    const repairStage = assertDeclaredStageSelection(
+      "Repair",
+      resolveRepairSelection(selectionView),
+      "repair"
+    );
 
     const now = new Date().toISOString();
     const runId = randomUUID();
@@ -123,7 +171,8 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const title = userPrompt.slice(0, 120);
     const executionConfig = {
-      ...withDefaultReasoningEffort(parsed.data.executionConfig, executionSelection),
+      ...(parsed.data.executionConfig ?? {}),
+      ...(executionStage.effort !== undefined ? { reasoningEffort: executionStage.effort } : {}),
       routing: "fixed" as const
     };
 
@@ -132,23 +181,34 @@ export async function POST(request: Request): Promise<NextResponse> {
       (workspace.repoPath !== undefined
         ? { kind: "localPath" as const, path: workspace.repoPath }
         : undefined);
-    // B-008 (CF-19): freeze the target repository at creation. Best-effort —
-    // a path that is not (yet) a git repo keeps the legacy behavior and fails
-    // later at preflight with its own actionable error.
+    // B-008 (CF-19): freeze the target repository at creation.
+    // A local target is publishable only after its physical git-common-dir
+    // identity is captured; otherwise a later repo at the same path is ambiguous.
     const targetContext =
       repoSpec?.kind === "localPath" ? await captureRunTargetContext(repoSpec.path, now) : undefined;
+    if (repoSpec?.kind === "localPath" && targetContext?.physicalIdentity === undefined) {
+      throw new RunValidationError(
+        `Cannot capture an authoritative physical identity for local repository ${repoSpec.path}. ` +
+          "Verify that it is an accessible Git repository with at least one commit and retry; the run was not created."
+      );
+    }
 
     const record: RunRecord = {
       runId,
-      workspaceId: parsed.data.workspaceId,
+      workspaceId: workspace.id,
       ...(repoSpec !== undefined ? { repoSpec } : {}),
       ...(targetContext !== undefined ? { targetContext } : {}),
       granularity: parsed.data.granularity,
-      model: executionSelection.model,
-      planningModel: planningSelection.model,
-      planningExecutorId: planningSelection.executorId,
-      defaultExecutionSelection: executionSelection,
-      defaultRepairSelection: repairSelection,
+      // Canonical per-stage selections (U2A-2, authoritative).
+      planningSelection: planningStage,
+      executionSelection: executionStage,
+      repairSelection: repairStage,
+      // Legacy mirror (dual-write) so old readers and snapshots keep working.
+      model: executionStage.model,
+      planningModel: planningStage.model,
+      planningExecutorId: planningStage.executorId,
+      defaultExecutionSelection: { executorId: executionStage.executorId, model: executionStage.model },
+      defaultRepairSelection: { executorId: repairStage.executorId, model: repairStage.model },
       executionConfig,
       autonomy: parsed.data.autonomy ?? "supervised",
       userPrompt,
@@ -160,15 +220,19 @@ export async function POST(request: Request): Promise<NextResponse> {
       updatedAt: now,
       patches: []
     };
-    const saved = await getRunRepository().save(record);
+    return getRunRepository().save(record);
+    });
 
     // Fire-and-forget planning pipeline; failures land as `failed` on disk.
     startRunBackgroundTask(saved.runId, "route:create:planning", () => runPlanningPipeline(saved.runId));
 
-    return NextResponse.json(toRunResponse(saved), { status: 201 });
+    return NextResponse.json(await toCanonicalRunResponse(saved), { status: 201 });
   } catch (error) {
     if (error instanceof WorkspaceNotFoundError) {
       return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+    if (error instanceof WorkspaceConflictError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
     }
     return errorResponse(error);
   }

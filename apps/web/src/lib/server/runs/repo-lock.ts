@@ -32,7 +32,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join, resolve as resolvePath } from "node:path";
 import { promisify } from "node:util";
-import { isProcessAlive } from "@manyhands/execution-core";
+import { isProcessAlive, safeGitArgs } from "@manyhands/execution-core";
 import { DEFAULT_STALE_MS } from "./interrupted";
 import { isRunnerActive } from "./runner-state";
 import { getRunRepository } from "./store";
@@ -145,7 +145,7 @@ function defaultResolveLockBase(repoRoot: string): Promise<string> {
   if (cached !== undefined) return cached;
   const resolved = (async () => {
     try {
-      const { stdout } = await execFileAsync("git", ["-C", repoRoot, "rev-parse", "--git-common-dir"], {
+      const { stdout } = await execFileAsync("git", safeGitArgs(repoRoot, ["-C", repoRoot, "rev-parse", "--git-common-dir"]), {
         windowsHide: true
       });
       let commonDir = resolvePath(repoRoot, stdout.trim());

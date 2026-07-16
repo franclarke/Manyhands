@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
 
 export async function GET(): Promise<NextResponse> {
   try {
-    const workspaces = await getWorkspaceRepository().list();
-    return NextResponse.json({ workspaces });
+    const snapshot = await getWorkspaceRepository().snapshot();
+    return NextResponse.json(snapshot);
   } catch (error) {
     return errorResponse(error);
   }

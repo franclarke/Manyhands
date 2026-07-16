@@ -1,4 +1,5 @@
 import type { ChildProcess, SpawnOptions } from "node:child_process";
+import { killCliProcessTree } from "@manyhands/shared/node-cli-process";
 
 export type SpawnFn = (
   command: string,
@@ -9,35 +10,17 @@ export type SpawnFn = (
 /** Anything with a pid and a kill switch (ChildProcess, pty adapters). */
 export interface KillableProcess {
   pid?: number | undefined;
+  exitCode?: number | null | undefined;
+  signalCode?: NodeJS.Signals | null | undefined;
+  once?(event: "close", listener: () => void): unknown;
   kill(signal?: NodeJS.Signals | number): unknown;
 }
 
 /**
- * Kills an executor process and its descendants. On Windows a shelled CLI shim
- * often runs under cmd.exe/PowerShell, so child.kill only reaches the shell —
- * taskkill /t fells the tree. On POSIX the child is spawned detached (its own
- * process group), so kill(-pid) reaches every descendant; a plain SIGKILL to
- * the direct child would orphan whatever the CLI forked.
+ * Kill an executor process tree and wait for its OS termination barrier.
+ * Windows waits for taskkill /t plus the original process handle; POSIX waits
+ * for both the detached process group and the original handle to disappear.
  */
-export function killProcessTree(child: KillableProcess, spawnFn: SpawnFn): void {
-  if (typeof child.pid !== "number") {
-    child.kill("SIGKILL");
-    return;
-  }
-  if (process.platform === "win32") {
-    try {
-      spawnFn("taskkill", ["/pid", String(child.pid), "/t", "/f"], { stdio: "ignore" });
-      return;
-    } catch {
-      // Fall through to a best-effort signal.
-    }
-  } else {
-    try {
-      process.kill(-child.pid, "SIGKILL");
-      return;
-    } catch {
-      // Not a group leader (or already gone) — fall through to the direct kill.
-    }
-  }
-  child.kill("SIGKILL");
+export function killProcessTree(child: KillableProcess, spawnFn: SpawnFn): Promise<boolean> {
+  return killCliProcessTree(child, spawnFn);
 }

@@ -59,8 +59,10 @@ describe("planning → run-model adapter", () => {
 
   it("finalizes a plan with plan.ready and a blocking approve_plan decision", () => {
     const events = planCompletionEvents({
+      planRevision: 3,
       rootId: "root",
       nodeCount: 3,
+      dependencies: [],
       seams: [],
       criticFindings: ["seam X has no consumer"],
       executableNodeIds: ["store", "ui"]
@@ -71,7 +73,7 @@ describe("planning → run-model adapter", () => {
 
     const decision = events.find((e) => e.type === "decision.raised");
     expect(decision?.payload).toMatchObject({
-      decisionId: "approve_plan",
+      decisionId: "approve_plan:r3",
       kind: "approve_plan",
       blocking: true,
       context: { nodeIds: ["store", "ui"] }
@@ -80,8 +82,10 @@ describe("planning → run-model adapter", () => {
 
   it("emits a seam draft before the readiness milestone when seams exist", () => {
     const events = planCompletionEvents({
+      planRevision: 1,
       rootId: "root",
       nodeCount: 2,
+      dependencies: [],
       seams: [{ seamId: "CounterApi", name: "CounterApi", producerNodeId: "store", consumerNodeIds: ["ui"], draftSignature: "inc(): number" }],
       criticFindings: [],
       executableNodeIds: ["store", "ui"]
@@ -91,5 +95,43 @@ describe("planning → run-model adapter", () => {
     const seam = events[0];
     expect(seam?.payload).toMatchObject({ seamId: "CounterApi", producerNodeId: "store", consumerNodeIds: ["ui"] });
     expect((events.find((e) => e.type === "plan.ready")?.payload as { seamCount: number }).seamCount).toBe(1);
+  });
+
+  it("emits canonical D1 dependencies as facts distinct from interface seams", () => {
+    const events = planCompletionEvents({
+      planRevision: 1,
+      rootId: "root",
+      nodeCount: 3,
+      dependencies: [{
+        fromTaskId: "schema",
+        toTaskId: "api",
+        type: "structural",
+        inferred: false,
+        rationale: "API consumes the generated schema"
+      }],
+      seams: [{
+        seamId: "CounterApi",
+        name: "CounterApi",
+        producerNodeId: "store",
+        consumerNodeIds: ["ui"],
+        draftSignature: "inc(): number"
+      }],
+      criticFindings: [],
+      executableNodeIds: ["schema", "api"]
+    });
+
+    expect(events.map((event) => event.type)).toEqual([
+      "plan.dependency.proposed",
+      "plan.seam.proposed",
+      "plan.ready",
+      "decision.raised"
+    ]);
+    expect(events[0]?.payload).toEqual({
+      fromTaskId: "schema",
+      toTaskId: "api",
+      type: "structural",
+      inferred: false,
+      rationale: "API consumes the generated schema"
+    });
   });
 });

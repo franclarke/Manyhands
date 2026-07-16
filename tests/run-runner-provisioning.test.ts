@@ -1,8 +1,9 @@
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as auditedMutation from "@/lib/server/runs/audited-mutation";
 import {
   runExecutionPipeline,
   type ExecutionEngine,
@@ -14,6 +15,7 @@ import { readRunModelEvents } from "@/lib/server/runs/run-model-event-log";
 import { JsonRunRecordStore } from "@/lib/server/runs/repository";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import { resetRunRepositoryForTests } from "@/lib/server/runs/store";
+import { captureRunTargetContext } from "@/lib/server/runs/target-context";
 import { rmWithRetry } from "@/lib/server/runs/fs-retry";
 import { AgentTaskContractSchema } from "@manyhands/contracts";
 import {
@@ -216,6 +218,12 @@ describe("runExecutionPipeline provisioning", () => {
     expect(finalRun.provisioned?.sourceRepoRoot).toBe(`/tmp/fake/${runId}/source`);
     expect(finalRun.provisioned?.sourceBaseCommit).toBe(BASE_COMMIT);
     expect(finalRun.provisioned?.executionBaseCommit).toBe(BASE_COMMIT);
+    const runModelEvents = await readRunModelEvents(runId);
+    expect(runModelEvents.some((event) => event.type === "run.evidence.ready")).toBe(false);
+    expect(runModelEvents.some((event) => event.type === "run.completed")).toBe(false);
+    expect(runModelEvents.some(
+      (event) => event.type === "decision.raised" && event.payload.kind === "approve_merge"
+    )).toBe(false);
   }, 30000);
 
   it("persists the engine's trace events on the run record (Etapa D)", async () => {
@@ -328,6 +336,47 @@ describe("runExecutionPipeline provisioning", () => {
     expect(finalRun.execution).toBeUndefined();
   }, 30000);
 
+  it("rejects a repository replaced at the captured path before provisioning or engine dispatch", async () => {
+    const runId = "run-replaced-source";
+    const repoRoot = path.join(tempDir, "replaceable-source");
+    await initRepo(repoRoot);
+    const targetContext = await captureRunTargetContext(repoRoot);
+    expect(targetContext?.physicalIdentity).toBeDefined();
+    const originalCommit = git(repoRoot, "rev-parse", "HEAD");
+    const store = await saveApprovedRun(runId, {
+      repoSpec: { kind: "localPath", path: repoRoot },
+      targetContext,
+      planning: { decomposition: { graph: minimalGraph(originalCommit, repoRoot) } }
+    });
+
+    await rename(repoRoot, path.join(tempDir, "original-source"));
+    await initRepo(repoRoot);
+
+    let provisionCalled = false;
+    let engineCalled = false;
+    const provisioner: RepoProvisioner = {
+      async provision() {
+        provisionCalled = true;
+        throw new Error("provisioner must not run for a replaced source");
+      }
+    };
+    const engine: ExecutionEngine = {
+      run: async () => {
+        engineCalled = true;
+        return completedResult(runId);
+      }
+    };
+
+    await runExecutionPipeline(runId, { intervalMs: 0, engine, provisioner });
+
+    const finalRun = await store.get(runId);
+    expect(provisionCalled).toBe(false);
+    expect(engineCalled).toBe(false);
+    expect(finalRun.status).toBe("failed");
+    expect(finalRun.errorMessage).toMatch(/different physical repository|replaced|recreated|diverged/i);
+    expect(finalRun.provisioned).toBeUndefined();
+  }, 30000);
+
   it("interrupts and aborts the engine when the wall-clock budget is exceeded", async () => {
     const runId = "run-budget";
     const store = await saveApprovedRun(runId, {
@@ -370,9 +419,43 @@ describe("runExecutionPipeline provisioning", () => {
       }
     };
 
+    let releaseFinalStatusAppend!: () => void;
+    const finalStatusAppendRelease = new Promise<void>((resolve) => {
+      releaseFinalStatusAppend = resolve;
+    });
+    let markFinalStatusAppendStarted!: () => void;
+    const finalStatusAppendStarted = new Promise<void>((resolve) => {
+      markFinalStatusAppendStarted = resolve;
+    });
+    const appendStatusEventOrRollback = auditedMutation.appendStatusEventOrRollback;
+    const appendSpy = vi.spyOn(auditedMutation, "appendStatusEventOrRollback").mockImplementation(
+      async (previous, saved, options) => {
+        if (saved.status === "interrupted") {
+          markFinalStatusAppendStarted();
+          await finalStatusAppendRelease;
+        }
+        return appendStatusEventOrRollback(previous, saved, options);
+      }
+    );
+
     const running = runExecutionPipeline(runId, { intervalMs: 0, engine, provisioner: fakeProvisioner() });
-    await engineStarted;
-    await running;
+    let pipelineSettled = false;
+    const trackedRunning = running.then(() => {
+      pipelineSettled = true;
+    });
+    try {
+      await engineStarted;
+      await finalStatusAppendStarted;
+      // The RunRecord is already interrupted here, but cancelRun still owns a
+      // required durable event. The pipeline must keep its lifecycle open.
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(pipelineSettled).toBe(false);
+      releaseFinalStatusAppend();
+      await trackedRunning;
+    } finally {
+      releaseFinalStatusAppend();
+      appendSpy.mockRestore();
+    }
 
     const finalRun = await store.get(runId);
     expect(sawAbort).toBe(true);
@@ -384,8 +467,12 @@ describe("runExecutionPipeline provisioning", () => {
     expect(finalRun.execution).toBeUndefined();
     expect(finalRun.finalArtifactManifest).toBeUndefined();
     expect(finalRun.finalApplicationStatus).toBeUndefined();
-    const cancelled = (await readRunModelEvents(runId)).find((event) => event.type === "run.cancelled");
+    const events = await readRunModelEvents(runId);
+    const cancelled = events.find((event) => event.type === "run.cancelled");
     expect(cancelled?.payload.allDead).toBe(true);
+    expect(events.some(
+      (event) => event.type === "run.status.changed" && event.payload.status === "interrupted"
+    )).toBe(true);
   }, 30000);
 
   it("materializes the final branch in the isolated run repo without touching the source checkout", async () => {
@@ -393,8 +480,11 @@ describe("runExecutionPipeline provisioning", () => {
     const repoRoot = path.join(tempDir, "local-repo");
     await initRepo(repoRoot);
     const baseCommit = git(repoRoot, "rev-parse", "HEAD");
+    const targetContext = await captureRunTargetContext(repoRoot);
+    expect(targetContext?.physicalIdentity).toBeDefined();
     const store = await saveApprovedRun(runId, {
       repoSpec: { kind: "localPath", path: repoRoot },
+      targetContext,
       planning: { decomposition: { graph: minimalGraph(baseCommit, repoRoot) } }
     });
 

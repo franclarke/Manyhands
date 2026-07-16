@@ -57,6 +57,30 @@ describe("ClaudeCodeRecursiveDecomposer", () => {
     expect(args).toContain("haiku");
   });
 
+  it("uses explicit ComSpec with escaped argv for a Windows cmd shim", async () => {
+    const calls: Array<{ command: string; args: readonly string[]; options: SpawnOptions }> = [];
+    const delegate = fakeClaudeSpawn(ATOMIC_STEP);
+    const decomposer = new ClaudeCodeRecursiveDecomposer({
+      model: "sonnet&echo PWNED",
+      userPrompt: "implement locally",
+      cwd: process.cwd(),
+      binaryPath: "C:\\tools\\claude.cmd",
+      platform: "win32",
+      hostEnv: { ComSpec: "C:\\Windows\\System32\\cmd.exe" },
+      spawn: (command, args, options) => {
+        calls.push({ command, args, options });
+        return delegate(command, args, options);
+      }
+    });
+
+    await decomposer.decompose(FEATURE);
+    expect(calls[0]?.command).toBe("C:\\Windows\\System32\\cmd.exe");
+    expect(calls[0]?.options.shell).toBe(false);
+    expect(calls[0]?.options.windowsVerbatimArguments).toBe(true);
+    expect(calls[0]?.args.slice(0, 4)).toEqual(["/d", "/v:off", "/s", "/c"]);
+    expect(calls[0]?.args[4]).toContain("sonnet^^^&echo^^^ PWNED");
+  });
+
   it("sends instructions through the real system-prompt channel, not a fake block in the user turn", async () => {
     // Claude Code CLI 2.1.x treats a `## System` block embedded in the user
     // content as prompt injection and REFUSES to answer (observed live:

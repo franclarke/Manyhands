@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { promisify } from "node:util";
 
 import { buildRepositoryIndex, summarizeRepositoryIndex, type RepositoryIndex } from "@manyhands/core";
+import { safeGitArgs } from "@manyhands/execution-core";
 
 import type { EffectivePlanningBudget } from "./effective-planning-budget";
 import type { RepositoryGroundingSummary, RunTargetContext } from "./schema";
@@ -86,8 +87,8 @@ async function currentFingerprint(
 ): Promise<string> {
   try {
     const [{ stdout: head }, { stdout: dirty }] = await Promise.all([
-      execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repoPath, windowsHide: true }),
-      execFileAsync("git", ["status", "--porcelain=v1"], { cwd: repoPath, windowsHide: true })
+      execFileAsync("git", safeGitArgs(repoPath, ["rev-parse", "HEAD"]), { cwd: repoPath, windowsHide: true }),
+      execFileAsync("git", safeGitArgs(repoPath, ["status", "--porcelain=v1"]), { cwd: repoPath, windowsHide: true })
     ]);
     return createHash("sha256").update(JSON.stringify({
       target: options.targetContext?.fingerprint,

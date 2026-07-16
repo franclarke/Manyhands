@@ -8,7 +8,7 @@ import {
   loadEditableRunContext,
   persistRunPatches
 } from "@/lib/server/runs";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,7 +54,7 @@ export async function DELETE(request: Request, context: RouteContext): Promise<N
       ...(rationale !== undefined ? { rationale } : {})
     });
     const saved = await persistRunPatches({ run, baseSnapshot, patches: [patch], expectedVersion: run.version });
-    return NextResponse.json(toRunResponse(saved));
+    return NextResponse.json(await toCanonicalRunResponse(saved));
   } catch (error) {
     return errorResponse(error);
   }

@@ -1,5 +1,12 @@
 import { z } from "zod";
 export * from "./executor-registry";
+import { EFFORT_LEVELS } from "./executor-registry";
+
+/**
+ * Canonical zod schema for the reasoning-effort domain, sourced from the single
+ * {@link EFFORT_LEVELS} tuple so backend schemas never re-list the values.
+ */
+export const ReasoningEffortSchema = z.enum(EFFORT_LEVELS);
 
 export const NonEmptyStringSchema = z.string().trim().min(1);
 

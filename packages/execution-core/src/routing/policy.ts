@@ -48,21 +48,21 @@ export type TierRoutes = Record<ComplexityTier, ExecutorSelection[]>;
 export const DEFAULT_TIER_ROUTES: TierRoutes = {
   trivial: [
     { executorId: "claude-code-cli", model: "haiku" },
-    { executorId: "codex-cli", model: "gpt-5-codex" },
+    { executorId: "codex-cli", model: "gpt-5.4-mini" },
     { executorId: "claude-code-cli", model: "sonnet" }
   ],
   standard: [
     { executorId: "claude-code-cli", model: "sonnet" },
-    { executorId: "codex-cli", model: "gpt-5-codex" }
+    { executorId: "codex-cli", model: "gpt-5.4" }
   ],
   complex: [
     { executorId: "claude-code-cli", model: "sonnet" },
-    { executorId: "codex-cli", model: "gpt-5-codex" },
+    { executorId: "codex-cli", model: "gpt-5.5" },
     { executorId: "claude-code-cli", model: "opus" }
   ],
   critical: [
     { executorId: "claude-code-cli", model: "opus" },
-    { executorId: "codex-cli", model: "gpt-5-codex" },
+    { executorId: "codex-cli", model: "gpt-5.5" },
     { executorId: "claude-code-cli", model: "sonnet" }
   ]
 };

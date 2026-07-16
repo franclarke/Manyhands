@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { buildFocusView, type FocusTarget } from "@/lib/run-model/focus-view";
 import { selectMinimalWorkspaceView } from "@/lib/run-model/minimal-workspace-view";
+import { selectRunCanvasProjection, type RunCanvasMode } from "@/lib/run-model/run-canvas-projection";
 import type { Run, RunEvent, RunModel, Node } from "@/lib/run-model/types";
 import { runUiStatus, STATUS_META } from "@/lib/status";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -14,7 +15,8 @@ import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
 import { ChatRuntimeProvider } from "@/components/chat/assistant-provider";
 import { ChatThread, ChatRail } from "@/components/chat/thread";
 import { Button } from "@/components/ui/button";
-import { Group, Panel, Separator, useDefaultLayout, usePanelRef } from "react-resizable-panels";
+import { IconButton } from "@/components/ui/icon-button";
+import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 import { ResizeHandle } from "@/components/ui/resize-handle";
 import { DeliveryPanel } from "./delivery-panel.client";
 import { OperationalRecoveryCenter } from "./operational-recovery-center.client";
@@ -24,9 +26,11 @@ import { Bot, Download, FileDiff, FolderTree, List, Pause, Play, RotateCcw, Scro
 import {
   BottomDrawer,
   RunWorkspaceDock,
+  type BottomDrawerTab,
   type DockSlotState,
   type DockSurfaceId
 } from "./run-workspace-surfaces.client";
+import { RunCanvasToolbar, RunOutline } from "./run-cockpit-navigation.client";
 
 const SSR_NOOP_STORAGE: Pick<Storage, "getItem" | "setItem"> = {
   getItem: () => null,
@@ -36,22 +40,35 @@ const SSR_NOOP_STORAGE: Pick<Storage, "getItem" | "setItem"> = {
 export function RunModelView({
   seed,
   initialEvents,
-  workspaceName
+  workspaceName,
+  fixture
 }: {
   seed: Run;
   initialEvents: RunEvent[];
   workspaceName?: string | undefined;
+  fixture?: { model: RunModel; events: RunEvent[] } | undefined;
 }): React.ReactElement {
-  const { model, events, connected, connection } = useLiveRunModel(seed, initialEvents);
+  const live = useLiveRunModel(seed, initialEvents, { disabled: fixture !== undefined });
+  const model = fixture?.model ?? live.model;
+  const events = fixture?.events ?? live.events;
+  const connected = fixture !== undefined ? true : live.connected;
+  const connection = fixture !== undefined ? "connected" : live.connection;
   const [focus, setFocus] = useState<FocusTarget | null>(null);
   const [dockSlots, setDockSlots] = useState<DockSlotState[]>([]);
   const slotSeqRef = useRef(0);
   const [expandedDockSlotId, setExpandedDockSlotId] = useState<string | null>(null);
   const [bottomOpen, setBottomOpen] = useState(false);
-  const [bottomTab, setBottomTab] = useState<"terminal" | "logs" | "events" | "validation">("terminal");
+  const [bottomTab, setBottomTab] = useState<BottomDrawerTab>("activity");
+  const [canvasMode, setCanvasMode] = useState<RunCanvasMode>("tasks");
+  const [leftSurface, setLeftSurface] = useState<"outline" | "orchestrator">("outline");
+  const [commandOpen, setCommandOpen] = useState(false);
 
   const view = useMemo(() => selectMinimalWorkspaceView(model), [model]);
   const timeline = useMemo(() => selectRunTimeline(model, view.stage), [model, view.stage]);
+  const canvasProjection = useMemo(
+    () => selectRunCanvasProjection(model, view, canvasMode),
+    [canvasMode, model, view]
+  );
   // Pass the event log so the focus inspector can derive execution timing and the
   // live agent console (both read `options.events`, independent of the folded model).
   const focusView = useMemo(
@@ -85,6 +102,18 @@ export function RunModelView({
     return () => window.removeEventListener("keydown", onKey);
   }, [dockOverlay]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") return;
+      const target = event.target;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+      event.preventDefault();
+      setCommandOpen(true);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   // Persisted, per-arrangement panel layout (with/without the docked focus panel).
   // `storage` must be passed explicitly: the library defaults to `localStorage`,
   // which crashes during SSR (this component server-renders its first frame).
@@ -103,11 +132,11 @@ export function RunModelView({
       const parsed = JSON.parse(raw) as {
         dockSlots?: DockSlotState[];
         bottomOpen?: boolean;
-        bottomTab?: "terminal" | "logs" | "events" | "validation";
+        bottomTab?: BottomDrawerTab;
       };
       if (Array.isArray(parsed.dockSlots)) setDockSlots(parsed.dockSlots.slice(0, 2));
       if (typeof parsed.bottomOpen === "boolean") setBottomOpen(parsed.bottomOpen);
-      if (parsed.bottomTab === "terminal" || parsed.bottomTab === "logs" || parsed.bottomTab === "events" || parsed.bottomTab === "validation") {
+      if (parsed.bottomTab === "activity" || parsed.bottomTab === "events" || parsed.bottomTab === "terminal" || parsed.bottomTab === "validation" || parsed.bottomTab === "files") {
         setBottomTab(parsed.bottomTab);
       }
     } catch {
@@ -168,20 +197,87 @@ export function RunModelView({
     else if (tab === "execution") {
       setBottomTab("events");
       setBottomOpen(true);
-    } else if (tab === "plan") openSurface("contract", focus);
+    } else if (tab === "plan") openSurface("plan", focus);
   }
 
   return (
     <ChatRuntimeProvider events={events}>
       <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--color-bg)] font-sans">
-        <RunHeader runId={seed.id} view={view} model={model} workspaceName={workspaceName} connection={connection} />
-        <OperationalRecoveryCenter runId={seed.id} model={model} events={events} />
+        <RunHeader
+          runId={seed.id}
+          view={view}
+          model={model}
+          events={events}
+          workspaceName={workspaceName}
+          connection={connection}
+          onOpenDecision={() => {
+            setLeftSurface("orchestrator");
+            chatPanelRef.current?.expand();
+          }}
+        />
+        <RunCommandPalette
+          open={commandOpen}
+          onClose={() => setCommandOpen(false)}
+          actions={[
+            {
+              label: "Revisar decisiones",
+              detail: "Abre el canal resolutivo del orquestador",
+              onSelect: () => {
+                setLeftSurface("orchestrator");
+                chatPanelRef.current?.expand();
+              }
+            },
+            {
+              label: "Abrir eventos",
+              detail: "Muestra el historial durable del run",
+              onSelect: () => {
+                setBottomTab("events");
+                setBottomOpen(true);
+              }
+            },
+            { label: "Abrir plan", detail: "Inspecciona o corrige el plan", onSelect: () => openSurface("plan") },
+            { label: "Abrir diff agregado", detail: "Inspecciona los cambios integrados", onSelect: () => openSurface("diff", { kind: "evidence", id: "final" }) },
+            { label: "Abrir evidencia", detail: "Tests, trazabilidad y resultado", onSelect: () => openSurface("evidence", { kind: "evidence", id: "final" }) },
+            ...(model.run.control.status === "generating" || model.run.control.status === "running"
+              ? [{
+                  label: "Pausar run",
+                  detail: "Detiene el avance de forma reversible",
+                  onSelect: async () => {
+                    await fetch(`/api/runs/${encodeURIComponent(seed.id)}/pause`, { method: "POST" });
+                  }
+                }]
+              : [])
+          ]}
+        />
+        <DecisionBanner
+          view={view}
+          onOpen={() => {
+            setLeftSurface("orchestrator");
+            const nodeId = view.primaryAttention?.affectedNodeIds[0];
+            if (nodeId !== undefined) setFocus({ kind: "node", id: nodeId });
+            chatPanelRef.current?.expand();
+          }}
+        />
+        <OperationalRecoveryCenter
+          runId={seed.id}
+          model={model}
+          events={events}
+          onOpenFailure={(nodeId) => {
+            setBottomTab("events");
+            setBottomOpen(true);
+            if (nodeId !== undefined) openSurface("node", { kind: "node", id: nodeId });
+          }}
+          onOpenDelivery={() => document.getElementById("delivery-panel")?.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+        />
         <RunTimeline
           phases={timeline}
           trailing={
             <>
               <DockToggle label="Agentes" active={dockSlots.some((s) => s.surface === "agents")} onClick={() => toggleSurface("agents")}>
                 <Bot aria-hidden className="h-4 w-4" />
+              </DockToggle>
+              <DockToggle label="Plan" active={dockSlots.some((s) => s.surface === "plan")} onClick={() => toggleSurface("plan")}>
+                <ShieldCheck aria-hidden className="h-4 w-4" />
               </DockToggle>
               <DockToggle label="Archivos" active={dockSlots.some((s) => s.surface === "files")} onClick={() => toggleSurface("files")}>
                 <FolderTree aria-hidden className="h-4 w-4" />
@@ -207,9 +303,9 @@ export function RunModelView({
         >
           <Panel
             id="chat"
-            defaultSize="30%"
-            minSize="240px"
-            maxSize="48%"
+            defaultSize="24%"
+            minSize="300px"
+            maxSize="36%"
             collapsible
             collapsedSize="52px"
             panelRef={chatPanelRef}
@@ -222,7 +318,23 @@ export function RunModelView({
                 hasAttention={view.primaryAttention !== null}
                 onExpand={toggleChat}
               />
+            ) : leftSurface === "outline" ? (
+              <RunOutline
+                view={view}
+                selectedTarget={focus}
+                projection={canvasProjection}
+                onFocus={(target) => openSurface("node", target)}
+                onOpenDecision={() => setLeftSurface("orchestrator")}
+              />
             ) : (
+              <div className="relative h-full min-h-0">
+                <button
+                  type="button"
+                  onClick={() => setLeftSurface("outline")}
+                  className="absolute right-10 top-2 z-20 h-7 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-2 text-meta font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                >
+                  Ver outline
+                </button>
               <ChatThread
                 runId={seed.id}
                 model={model}
@@ -230,19 +342,38 @@ export function RunModelView({
                 setActiveTab={handleLegacyTab}
                 onCollapse={toggleChat}
               />
+              </div>
             )}
           </Panel>
           <ResizeHandle />
           <Panel id="artifacts" minSize="30%" className="flex h-full min-w-0 flex-col bg-[var(--color-bg)]">
-            {view.stage === "review" ? <DeliveryPanel runId={seed.id} /> : null}
+            {fixture === undefined && (view.stage === "review" || model.run.control.status === "failed_delivery") ? (
+              <div id="delivery-panel"><DeliveryPanel runId={seed.id} /></div>
+            ) : null}
+            {view.stage === "review" && view.reviewEvidence !== null ? (
+              <ReviewEvidencePanel
+                evidence={view.reviewEvidence}
+                onOpenDiff={() => openSurface("diff", { kind: "evidence", id: "final" })}
+                onOpenEvidence={() => openSurface("evidence", { kind: "evidence", id: "final" })}
+              />
+            ) : null}
+            <RunCanvasToolbar mode={canvasMode} projection={canvasProjection} onModeChange={setCanvasMode} />
             <div className="relative min-h-0 flex-1 bg-[var(--color-bg)]">
               <MinimalRunGraphCanvas
-                graph={view.graph}
+                graph={canvasProjection.graph}
                 stage={view.stage}
                 selectedTarget={focus}
                 onFocus={(target) => (target === null ? setFocus(null) : openSurface("node", target))}
                 fill
                 emptyKind={graphEmptyStateKind(model.run.control.status)}
+                mode={canvasMode}
+                overlayNodeIds={canvasProjection.overlayNodeIds}
+                dimOutsideOverlay={canvasProjection.dimOutsideOverlay}
+                waveLabel={canvasProjection.wave?.label}
+                showHierarchyEdges={canvasProjection.showHierarchyEdges}
+                showDependencyEdges={canvasProjection.showDependencyEdges}
+                showSeamEdges={canvasProjection.showSeamEdges}
+                showConflictEdges={canvasProjection.showConflictEdges}
               />
             </div>
           </Panel>
@@ -313,7 +444,7 @@ export function RunModelView({
           </Panel>
         {bottomOpen ? (
           <>
-          <BottomResizeHandle />
+          <ResizeHandle direction="horizontal" />
           <Panel id="workspace-bottom" defaultSize="30%" minSize="180px" maxSize="48%" className="min-h-0">
             <BottomDrawer
               runId={seed.id}
@@ -336,45 +467,133 @@ export function RunModelView({
   );
 }
 
-function BottomResizeHandle(): React.ReactElement {
+interface RunCommand {
+  label: string;
+  detail: string;
+  onSelect: () => void | Promise<void>;
+}
+
+function RunCommandPalette({
+  open,
+  onClose,
+  actions
+}: {
+  open: boolean;
+  onClose: () => void;
+  actions: readonly RunCommand[];
+}): React.ReactElement | null {
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose, open]);
+  if (!open) return null;
   return (
-    <Separator className="group relative h-px shrink-0 cursor-row-resize bg-[var(--color-border)] outline-none transition-colors duration-150 data-[separator=hover]:bg-[var(--color-border-strong)] data-[separator=active]:bg-[var(--color-accent)]">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-[3px] w-9 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--color-border-strong)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-data-[separator=active]:bg-[var(--color-accent)] group-data-[separator=active]:opacity-100"
-      />
-    </Separator>
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-[color-mix(in_srgb,var(--color-bg)_68%,transparent)] px-4 pt-[12vh]" role="presentation" onMouseDown={onClose}>
+      <section role="dialog" aria-modal="true" aria-label="Comandos del run" className="w-full max-w-xl overflow-hidden rounded-[var(--r-lg)] border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] shadow-xl" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
+          <strong className="text-label text-[var(--color-text)]">Comandos del run</strong>
+          <button type="button" onClick={onClose} className="mh-mono rounded-[var(--r-sm)] border border-[var(--color-border)] px-2 py-1 text-eyebrow text-[var(--color-text-muted)]">Esc</button>
+        </div>
+        <div className="p-2">
+          {actions.map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              onClick={() => {
+                onClose();
+                void action.onSelect();
+              }}
+              className="flex w-full flex-col rounded-[var(--r-md)] px-3 py-2.5 text-left hover:bg-[var(--color-bg-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            >
+              <span className="text-label font-medium text-[var(--color-text)]">{action.label}</span>
+              <span className="mt-0.5 text-meta text-[var(--color-text-muted)]">{action.detail}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ReviewEvidencePanel({
+  evidence,
+  onOpenDiff,
+  onOpenEvidence
+}: {
+  evidence: NonNullable<ReturnType<typeof selectMinimalWorkspaceView>["reviewEvidence"]>;
+  onOpenDiff: () => void;
+  onOpenEvidence: () => void;
+}): React.ReactElement {
+  return (
+    <section aria-label="Evidencia final del run" className="border-b border-[var(--color-border)] bg-[var(--color-surface-raised)] px-5 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="m-0 text-eyebrow font-semibold uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">Revisión final</p>
+          <h2 className="m-0 mt-1 font-[family:var(--font-display)] text-xl leading-tight text-[var(--color-text)]">Resultado integrado</h2>
+        </div>
+        <span className="mh-mono rounded-[var(--r-sm)] bg-[var(--status-completed-bg)] px-2 py-1 text-meta font-semibold text-[var(--status-completed-fg)]">
+          Tests {evidence.tests.pass}/{evidence.tests.total}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <p className="m-0 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-meta text-[var(--color-text-muted)]">
+          Commit <span className="mh-mono text-[var(--color-text)]">{evidence.integrationCommit}</span>
+        </p>
+        <p className="m-0 truncate rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-meta text-[var(--color-text-muted)]" title={evidence.narrativeRef}>
+          Narrativa disponible para inspección
+        </p>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="sm" onClick={onOpenDiff}><FileDiff aria-hidden className="h-3.5 w-3.5" />Ver diff agregado</Button>
+        <Button size="sm" variant="ghost" onClick={onOpenEvidence}>Ver evidencia y trazabilidad</Button>
+      </div>
+    </section>
+  );
+}
+
+function DecisionBanner({
+  view,
+  onOpen
+}: {
+  view: ReturnType<typeof selectMinimalWorkspaceView>;
+  onOpen: () => void;
+}): React.ReactElement | null {
+  const decision = view.primaryAttention;
+  if (decision === null) return null;
+  const affected = decision.affectedNodeIds.length;
+  return (
+    <section
+      aria-label="Decisión humana pendiente"
+      className="flex min-h-12 shrink-0 items-center gap-3 border-b border-[var(--status-blocked-border)] bg-[color-mix(in_srgb,var(--status-blocked-bg)_72%,var(--color-bg))] px-5 py-2"
+    >
+      <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-[var(--color-accent)] shadow-[0_0_0_4px_color-mix(in_srgb,var(--color-accent)_12%,transparent)]" />
+      <div className="min-w-0 flex-1">
+        <p className="m-0 truncate text-label font-semibold text-[var(--color-text)]">{decision.label}</p>
+        <p className="m-0 mt-0.5 truncate text-meta text-[var(--color-text-muted)]">{decision.summary}{affected > 0 ? ` · ${affected} ${affected === 1 ? "tarea afectada" : "tareas afectadas"}` : ""}</p>
+      </div>
+      <span className="hidden text-meta text-[var(--status-blocked-fg)] md:inline">{decision.blocking ? "Bloquea trabajo dependiente" : "Advisory"}</span>
+      <Button size="sm" onClick={onOpen}>Revisar y decidir →</Button>
+    </section>
   );
 }
 
 function DockToggle({ label, active, onClick, children }: {
   label: string; active: boolean; onClick: () => void; children: React.ReactNode;
 }): React.ReactElement {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={active}
-      title={label}
-      onClick={onClick}
-      className={[
-        "flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--r-md)] transition-colors",
-        active
-          ? "bg-[color-mix(in_srgb,var(--color-accent)_16%,transparent)] text-[var(--color-text)]"
-          : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"
-      ].join(" ")}
-    >
-      {children}
-    </button>
-  );
+  return <IconButton label={label} aria-pressed={active} onClick={onClick} className={active ? "bg-[color-mix(in_srgb,var(--color-accent)_16%,transparent)] text-[var(--color-text)]" : "text-[var(--color-text-muted)]"}>{children}</IconButton>;
 }
 
-function BottomBar({ onOpen }: { onOpen: (tab: "terminal" | "logs" | "events" | "validation") => void }): React.ReactElement {
+function BottomBar({ onOpen }: { onOpen: (tab: BottomDrawerTab) => void }): React.ReactElement {
   const tabs = [
-    ["terminal", "Terminal", <Terminal key="t" aria-hidden className="h-3.5 w-3.5" />],
-    ["logs", "Logs", <ScrollText key="l" aria-hidden className="h-3.5 w-3.5" />],
+    ["activity", "Actividad", <ScrollText key="a" aria-hidden className="h-3.5 w-3.5" />],
     ["events", "Eventos", <List key="e" aria-hidden className="h-3.5 w-3.5" />],
-    ["validation", "Validación", <ShieldCheck key="v" aria-hidden className="h-3.5 w-3.5" />]
+    ["terminal", "Terminal", <Terminal key="t" aria-hidden className="h-3.5 w-3.5" />],
+    ["validation", "Validación", <ShieldCheck key="v" aria-hidden className="h-3.5 w-3.5" />],
+    ["files", "Archivos", <FolderTree key="f" aria-hidden className="h-3.5 w-3.5" />]
   ] as const;
   return (
     <div className="flex h-8 shrink-0 items-center gap-1 border-t border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3">
@@ -397,21 +616,26 @@ function RunHeader({
   runId,
   view,
   model,
+  events,
   workspaceName,
-  connection
+  connection,
+  onOpenDecision
 }: {
   runId: string;
   view: ReturnType<typeof selectMinimalWorkspaceView>;
   model: RunModel;
+  events: RunEvent[];
   workspaceName?: string | undefined;
   connection: "connecting" | "connected" | "reconnecting" | "degraded" | "disconnected";
+  onOpenDecision: () => void;
 }): React.ReactElement {
   const nodesCount = model.nodes.size;
-  const conflictsCount = model.conflicts.size;
+  const conflictsCount = Array.from(model.conflicts.values()).filter((conflict) => conflict.status !== "resolved").length;
   const runningCount = Array.from(model.nodes.values()).filter((n: Node) => n.execution.kind === "running").length;
   // Single source of truth: the run badge derives from the durable run status —
   // the SAME function the sidebar uses — so header and sidebar never disagree.
   const runStatus = runUiStatus(model.run.control.status);
+  const elapsed = formatRunElapsed(events);
 
   return (
     <header className="mh-elev-1 flex h-14 select-none items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface-raised)] px-5">
@@ -427,10 +651,11 @@ function RunHeader({
           {view.title}
         </h1>
         <StatusPill status={runStatus} label={STATUS_META[runStatus].label} />
-        <span className="text-eyebrow text-[var(--color-text-subtle)]" title="Estado de conexión del event log">{connection}</span>
+        <ConnectionIndicator connection={connection} />
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-3 text-xs text-[var(--color-text-muted)]">
+        {elapsed !== null ? <span className="mh-mono hidden text-meta tabular-nums text-[var(--color-text-subtle)] xl:inline" title="Tiempo observado en el event log">{elapsed}</span> : null}
         <span className="hidden min-w-0 items-center gap-1.5 lg:flex">
           <span className="text-[var(--color-text-subtle)]">Workspace</span>
           <strong className="max-w-[140px] truncate font-medium text-[var(--color-text)]">
@@ -463,7 +688,9 @@ function RunHeader({
             SIGNALS a pending gate instead of duplicating its action. */}
         <RunControlButton runId={runId} model={model} />
         {view.primaryAttention !== null ? (
-          <StatusPill status="needs_review" label={view.primaryAttention.label} pulse />
+          <button type="button" onClick={onOpenDecision} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]" aria-label="Revisar y decidir la acción pendiente">
+            <StatusPill status="needs_review" label="Revisar y decidir" pulse />
+          </button>
         ) : view.stage === "review" && view.reviewEvidence ? (
           <a
             href={`/api/runs/${runId}/export?format=patch`}
@@ -479,6 +706,35 @@ function RunHeader({
   );
 }
 
+function formatRunElapsed(events: readonly RunEvent[]): string | null {
+  if (events.length === 0) return null;
+  const first = new Date(events[0]!.at).getTime();
+  const last = new Date(events[events.length - 1]!.at).getTime();
+  if (!Number.isFinite(first) || !Number.isFinite(last) || last < first) return null;
+  const seconds = Math.round((last - first) / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+}
+
+function ConnectionIndicator({ connection }: { connection: "connecting" | "connected" | "reconnecting" | "degraded" | "disconnected" }): React.ReactElement {
+  const label = connection === "connected"
+    ? "Conectado al event log"
+    : connection === "connecting"
+      ? "Conectando al event log"
+      : connection === "reconnecting"
+        ? "Reconectando al event log"
+        : connection === "degraded"
+          ? "Conexión degradada; el historial puede estar desactualizado"
+          : "Sin conexión al event log";
+  const tone = connection === "connected" ? "bg-[var(--status-running-fg)]" : "bg-[var(--status-blocked-fg)]";
+  return (
+    <span className="flex items-center gap-1.5 text-eyebrow text-[var(--color-text-subtle)]" title={label}>
+      <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${tone}`} />
+      {connection === "connected" ? null : label.replace(" al event log", "")}
+    </span>
+  );
+}
+
 function RunControlButton({ runId, model }: { runId: string; model: RunModel }): React.ReactElement | null {
   const control = model.run.control;
   const [busy, setBusy] = useState<"pause" | "resume" | "restart" | null>(null);
@@ -486,7 +742,7 @@ function RunControlButton({ runId, model }: { runId: string; model: RunModel }):
 
   const canPause = control.status === "generating" || control.status === "running";
   const canResume = control.status === "paused" && control.pendingHumanAction === "none";
-  const canRestart = control.status === "interrupted" || control.status === "failed";
+  const canRestart = control.status === "interrupted" || control.status === "failed" || control.status === "failed_artifact";
   if (!canPause && !canResume && !canRestart) return null;
 
   const action = canPause ? "pause" : canResume ? "resume" : "restart";

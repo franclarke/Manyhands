@@ -9,12 +9,13 @@ import { Separator } from "react-resizable-panels";
  * only owns the visuals: a 1px rule that brightens on hover and takes the
  * accent token while dragging, plus a grip pill for affordance.
  */
-export function ResizeHandle(): React.ReactElement {
+export function ResizeHandle({ direction = "vertical" }: { direction?: "vertical" | "horizontal" }): React.ReactElement {
+  const horizontal = direction === "horizontal";
   return (
-    <Separator className="group relative w-px shrink-0 cursor-col-resize bg-[var(--color-border)] outline-none transition-colors duration-150 data-[separator=hover]:bg-[var(--color-border-strong)] data-[separator=active]:bg-[var(--color-accent)]">
+    <Separator className={`group relative shrink-0 bg-[var(--color-border)] outline-none transition-colors duration-150 data-[separator=hover]:bg-[var(--color-border-strong)] data-[separator=active]:bg-[var(--color-accent)] ${horizontal ? "h-px cursor-row-resize" : "w-px cursor-col-resize"}`}>
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 z-10 h-9 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--color-border-strong)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-data-[separator=active]:bg-[var(--color-accent)] group-data-[separator=active]:opacity-100"
+        className={`pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--color-border-strong)] opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-data-[separator=active]:bg-[var(--color-accent)] group-data-[separator=active]:opacity-100 ${horizontal ? "h-[3px] w-9" : "h-9 w-[3px]"}`}
       />
     </Separator>
   );

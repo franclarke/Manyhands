@@ -33,9 +33,10 @@ describe("interrupted lifecycle transitions", () => {
     expect(() => assertTransition("interrupted", "completed")).toThrowError(RunLifecycleError);
   });
 
-  it("canRestart is true for interrupted and failed", () => {
+  it("canRestart is true for interrupted, failed and failed_artifact", () => {
     expect(canRestart("interrupted")).toBe(true);
     expect(canRestart("failed")).toBe(true);
+    expect(canRestart("failed_artifact")).toBe(true);
     expect(canRestart("generating")).toBe(false);
     expect(canRestart("completed")).toBe(false);
   });

@@ -416,18 +416,19 @@ function buildNodeFocus(model: RunModel, ws: WorkspaceNode, id: NodeId, options:
 }
 
 /**
- * The upstream task nodes this node depends on: each seam it consumes was produced
- * by some node, and that producer is the dependency. Deduped, self excluded, in the
- * node's consume order. Pure model derivation — no events.
+ * The upstream task nodes this node depends on, derived only from canonical D1
+ * dependency facts. Interface seams describe contracts and are intentionally not
+ * promoted to scheduling dependencies.
  */
 export function deriveNodeDependencies(model: RunModel, ws: WorkspaceNode): FocusNodeSummary[] {
   const seen = new Set<NodeId>();
   const deps: FocusNodeSummary[] = [];
-  for (const seamId of ws.consumes) {
-    const producerId = model.seams.get(seamId)?.producerNodeId;
-    if (producerId === undefined || producerId === ws.id || seen.has(producerId)) continue;
-    seen.add(producerId);
-    deps.push({ id: producerId, title: model.nodes.get(producerId)?.title ?? producerId });
+  for (const dependency of model.dependencies.values()) {
+    if (dependency.toTaskId !== ws.id) continue;
+    const upstreamId = dependency.fromTaskId;
+    if (upstreamId === ws.id || seen.has(upstreamId)) continue;
+    seen.add(upstreamId);
+    deps.push({ id: upstreamId, title: model.nodes.get(upstreamId)?.title ?? upstreamId });
   }
   return deps;
 }

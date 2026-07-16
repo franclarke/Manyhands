@@ -14,6 +14,7 @@
  */
 import { useEffect, useState } from "react";
 import { ChevronRight, X } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
 import { parseAnsiLog, type AnsiTone } from "@/lib/run-model/ansi";
 import type {
   ConflictFocusView,
@@ -31,18 +32,20 @@ import type { GranularityMetrics, NodePlanningStatus } from "@/lib/run-model/typ
 export function FocusPanel({
   view,
   onClose,
-  onFocus
+  onFocus,
+  embedded = false
 }: {
   view: FocusView;
   onClose: () => void;
   onFocus?: ((target: FocusTarget) => void) | undefined;
+  embedded?: boolean;
 }): React.ReactElement {
   return (
     <aside
       aria-label="Panel de foco"
       className="flex min-h-full flex-col gap-3 bg-[var(--color-surface-raised)] px-5 py-4 font-sans"
     >
-      <Header view={view} onClose={onClose} />
+      {embedded ? null : <Header view={view} onClose={onClose} />}
       <Body view={view} onFocus={onFocus} />
     </aside>
   );
@@ -65,14 +68,9 @@ function Header({ view, onClose }: { view: FocusView; onClose: () => void }): Re
         <span className="whitespace-nowrap text-meta text-[var(--color-text-subtle)]">
           Foco · {KIND_LABEL[view.kind]}
         </span>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Cerrar foco"
-          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-[var(--r-md)] border border-transparent text-[var(--color-text-subtle)] transition-colors hover:bg-[color-mix(in_srgb,var(--color-text)_7%,transparent)] hover:text-[var(--color-text)]"
-        >
+        <IconButton label="Cerrar foco" onClick={onClose}>
           <X aria-hidden className="h-4 w-4" />
-        </button>
+        </IconButton>
       </div>
       <strong className="break-words text-base font-semibold leading-snug text-[var(--color-text)]">
         {title}
@@ -121,91 +119,48 @@ function Body({ view, onFocus }: { view: FocusView; onFocus?: ((t: FocusTarget) 
 
 // ── Node ──────────────────────────────────────────────────────────────────────
 
-function NodeBody({ view, onFocus }: { view: NodeFocusView; onFocus?: ((t: FocusTarget) => void) | undefined }): React.ReactElement {
-  const live =
-    view.vital.status === "running" || view.vital.status === "verifying" || view.vital.status === "repairing";
-  const showConsole = view.console.lines.length > 0 || live;
+type NodeInspectorTab = "overview" | "contract" | "changes" | "verification" | "scheduling" | "integration" | "activity";
 
-  const noFlags =
-    !view.isInWavefront &&
-    !view.isBlocked &&
-    !view.isInvalidated &&
-    !view.isPendingReexecution &&
-    !view.isAffectedByPendingAmendment &&
-    !view.hasActiveConflict;
+function NodeBody({ view, onFocus }: { view: NodeFocusView; onFocus?: ((t: FocusTarget) => void) | undefined }): React.ReactElement {
+  const [tab, setTab] = useState<NodeInspectorTab>("overview");
+  const live = view.vital.status === "running" || view.vital.status === "verifying" || view.vital.status === "repairing";
+  const showConsole = view.console.lines.length > 0 || live;
+  const noFlags = !view.isInWavefront && !view.isBlocked && !view.isInvalidated && !view.isPendingReexecution && !view.isAffectedByPendingAmendment && !view.hasActiveConflict;
+  const tabs: Array<{ id: NodeInspectorTab; label: string }> = [{ id: "overview", label: "Resumen" }];
+  if (view.goal.length > 0 || view.consumes.length > 0 || view.produces.length > 0) tabs.push({ id: "contract", label: "Contrato" });
+  if (view.commit !== undefined || view.changedFiles.length > 0) tabs.push({ id: "changes", label: "Cambios" });
+  if (view.vital.verificationSummary !== undefined || live) tabs.push({ id: "verification", label: "Verificación" });
+  if (!noFlags) tabs.push({ id: "scheduling", label: "Planificación" });
+  if (view.builtAgainst.length > 0 || view.producedRevision !== undefined || view.commit !== undefined) tabs.push({ id: "integration", label: "Integración" });
+  if (showConsole || view.refs.length > 0 || !noFlags) tabs.push({ id: "activity", label: "Actividad" });
+  useEffect(() => {
+    if (!tabs.some((item) => item.id === tab)) setTab("overview");
+  }, [tab, tabs]);
+  const seamLinks = (kind: "consumes" | "produces"): React.ReactNode => view[kind].map((seam) => (
+    <LinkChip key={seam.id} text={`${seam.id} (${seam.state} r${seam.revision})`} onClick={onFocus !== undefined ? () => onFocus({ kind: "seam", id: seam.id }) : undefined} />
+  ));
 
   return (
-    <Stack>
-      {showConsole ? <NodeConsole view={view} /> : null}
-
-      <Section title="Estado">
-        <Field label="Situación" value={`${view.display} · ${view.freshness}`} strong />
-        <Field label="Signo vital" value={`${view.vital.label}${view.vital.detail !== undefined ? ` — ${view.vital.detail}` : ""}`} />
-        <Field label="Duración" value={formatTiming(view.timing)} mono />
-        {view.vital.verificationSummary !== undefined ? <Field label="Verificación" value={view.vital.verificationSummary} mono /> : null}
-      </Section>
-
-      <Section title="Contrato">
-        <Field label="Rol" value={`${humanizeRole(view.role)} · d${view.depth}`} />
-        {view.goal.length > 0 ? <Field label="Objetivo" value={view.goal} /> : null}
-        <Field
-          label="Alcance"
-          value={view.scope.paths.length > 0 ? view.scope.paths.join(", ") : "—"}
-          tag={humanizeOrigin(view.scope.origin)}
-          mono
-        />
-        {view.planning !== undefined ? <Field label="Planning" value={formatPlanning(view.planning)} mono /> : null}
-      </Section>
-
-      <Section title="Dependencias">
-        <ChipRow label="Depende de">
-          {view.dependencies.length === 0 ? <span className="text-xs text-[var(--color-text-subtle)]">—</span> : null}
-          {view.dependencies.map((d) => (
-            <LinkChip key={d.id} text={`${d.title} (${d.id})`} onClick={onFocus !== undefined ? () => onFocus({ kind: "node", id: d.id }) : undefined} />
-          ))}
-        </ChipRow>
-        {view.consumes.length > 0 ? (
-          <ChipRow label="Consume">
-            {view.consumes.map((s) => (
-              <LinkChip key={s.id} text={`${s.id} (${s.state} r${s.revision})`} onClick={onFocus !== undefined ? () => onFocus({ kind: "seam", id: s.id }) : undefined} />
-            ))}
-          </ChipRow>
-        ) : null}
-        {view.produces.length > 0 ? (
-          <ChipRow label="Produce">
-            {view.produces.map((s) => (
-              <LinkChip key={s.id} text={`${s.id} (${s.state} r${s.revision})`} onClick={onFocus !== undefined ? () => onFocus({ kind: "seam", id: s.id }) : undefined} />
-            ))}
-          </ChipRow>
-        ) : null}
-        {view.parent !== undefined ? (
-          <ChipRow label="Padre">
-            <LinkChip text={`${view.parent.title} (${view.parent.id})`} onClick={onFocus !== undefined ? () => onFocus({ kind: "node", id: view.parent!.id }) : undefined} />
-          </ChipRow>
-        ) : null}
-      </Section>
-
-      <Section title="Evidencia">
-        {view.commit !== undefined ? <Field label="Commit" value={view.commit.slice(0, 10)} mono /> : null}
-        {view.changedFiles.length > 0 ? <Field label="Archivos" value={view.changedFiles.join(", ")} mono /> : null}
-        {view.builtAgainst.length > 0 ? (
-          <Field label="Construido contra" value={view.builtAgainst.map((b) => `${b.seamId}@${b.revision}`).join(", ")} mono />
-        ) : null}
-        {view.producedRevision !== undefined ? (
-          <Field label="Produce rev." value={`${view.producedRevision.seamId}@${view.producedRevision.revision}`} mono />
-        ) : null}
-        <ChipRow label="Banderas">
-          {view.isInWavefront ? <Chip text="wavefront" tone="running" /> : null}
-          {view.isBlocked ? <Chip text="bloqueado" tone="blocked" /> : null}
-          {view.isInvalidated ? <Chip text="obsoleto" tone="blocked" /> : null}
-          {view.isPendingReexecution ? <Chip text="re-ejecución pendiente" tone="blocked" /> : null}
-          {view.isAffectedByPendingAmendment ? <Chip text="enmienda pendiente" tone="running" /> : null}
-          {view.hasActiveConflict ? <Chip text="conflicto" tone="failed" /> : null}
-          {noFlags ? <span className="text-xs text-[var(--color-text-subtle)]">— sin banderas activas</span> : null}
-        </ChipRow>
-        <RefList refs={view.refs} live={live} />
-      </Section>
-    </Stack>
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div role="tablist" aria-label="Detalle de la tarea" className="flex shrink-0 flex-wrap gap-1 border-b border-[var(--color-border)] pb-2">
+        {tabs.map((item) => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} onClick={() => setTab(item.id)} className={["h-7 shrink-0 rounded-[var(--r-md)] px-2 text-meta font-medium transition-colors", tab === item.id ? "bg-[var(--color-accent)] text-[var(--color-accent-contrast)]" : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"].join(" ")}>{item.label}</button>)}
+      </div>
+      <div role="tabpanel" className="min-h-0 flex-1 overflow-auto pr-1">
+        {tab === "overview" ? <Stack>
+          <Section title="Estado"><Field label="Situación" value={`${humanizeDisplay(view.display)} · ${humanizeFreshness(view.freshness)}`} strong /><Field label="Signo vital" value={`${view.vital.label}${view.vital.detail !== undefined ? ` — ${view.vital.detail}` : ""}`} /><Field label="Duración" value={formatTiming(view.timing)} mono /></Section>
+          <Section title="Relaciones">
+            {view.parent !== undefined ? <ChipRow label="Padre"><LinkChip text={`${view.parent.title} (${view.parent.id})`} onClick={onFocus !== undefined ? () => onFocus({ kind: "node", id: view.parent!.id }) : undefined} /></ChipRow> : null}
+            <ChipRow label="Depende de">{view.dependencies.length === 0 ? <span className="text-xs text-[var(--color-text-subtle)]">—</span> : view.dependencies.map((node) => <LinkChip key={node.id} text={`${node.title} (${node.id})`} onClick={onFocus !== undefined ? () => onFocus({ kind: "node", id: node.id }) : undefined} />)}</ChipRow>
+          </Section>
+        </Stack> : null}
+        {tab === "contract" ? <Stack><Section title="Contrato de tarea"><Field label="Rol" value={`${humanizeRole(view.role)} · d${view.depth}`} />{view.goal.length > 0 ? <Field label="Objetivo" value={view.goal} /> : null}<Field label="Alcance" value={view.scope.paths.length > 0 ? view.scope.paths.join(", ") : "—"} tag={humanizeOrigin(view.scope.origin)} mono />{view.planning !== undefined ? <Field label="Planning" value={formatPlanning(view.planning)} mono /> : null}</Section><Section title="Interfaces">{view.consumes.length > 0 ? <ChipRow label="Consume">{seamLinks("consumes")}</ChipRow> : null}{view.produces.length > 0 ? <ChipRow label="Produce">{seamLinks("produces")}</ChipRow> : null}{view.consumes.length === 0 && view.produces.length === 0 ? <Note text="Esta tarea no tiene interfaces persistidas." /> : null}</Section></Stack> : null}
+        {tab === "changes" ? <Stack><Section title="Cambios observados">{view.commit !== undefined ? <Field label="Commit" value={view.commit.slice(0, 10)} mono /> : null}{view.changedFiles.length > 0 ? <Field label="Archivos" value={view.changedFiles.join(", ")} mono /> : null}{view.commit === undefined && view.changedFiles.length === 0 ? <Note text="Todavía no hay cambios verificados para esta tarea." /> : null}<RefList refs={view.refs} live={live} /></Section></Stack> : null}
+        {tab === "verification" ? <Stack><Section title="Verificación">{view.vital.verificationSummary !== undefined ? <Field label="Resultado" value={view.vital.verificationSummary} mono /> : <Note text="La verificación aparecerá cuando la ejecución produzca evidencia." />}<Field label="Estado actual" value={view.vital.label} /><Field label="Duración" value={formatTiming(view.timing)} mono /></Section></Stack> : null}
+        {tab === "scheduling" ? <Stack><Section title="Scheduling"><Field label="Wavefront actual" value={view.isInWavefront ? "Seleccionada para despacho" : "Fuera de la wavefront actual"} strong={view.isInWavefront} /><Field label="Disponibilidad" value={view.isBlocked ? "Bloqueada por dependencias o una decisión" : "Sin bloqueo derivado"} />{view.isAffectedByPendingAmendment ? <Note text="Una enmienda pendiente afecta esta tarea." tone="warn" /> : null}</Section></Stack> : null}
+        {tab === "integration" ? <Stack><Section title="Integración">{view.builtAgainst.length > 0 ? <Field label="Construido contra" value={view.builtAgainst.map((item) => `${item.seamId}@${item.revision}`).join(", ")} mono /> : null}{view.producedRevision !== undefined ? <Field label="Produce rev." value={`${view.producedRevision.seamId}@${view.producedRevision.revision}`} mono /> : null}{view.commit !== undefined ? <Field label="Commit" value={view.commit.slice(0, 10)} mono /> : null}{view.builtAgainst.length === 0 && view.producedRevision === undefined && view.commit === undefined ? <Note text="Esta tarea todavía no produjo un resultado integrado." /> : null}</Section></Stack> : null}
+        {tab === "activity" ? <Stack>{showConsole ? <NodeConsole view={view} /> : <Note text="Esta tarea todavía no emitió actividad de agente." />}<Section title="Señales"><ChipRow label="Banderas">{view.isInWavefront ? <Chip text="wavefront" tone="running" /> : null}{view.isBlocked ? <Chip text="bloqueado" tone="blocked" /> : null}{view.isInvalidated ? <Chip text="obsoleto" tone="blocked" /> : null}{view.isPendingReexecution ? <Chip text="re-ejecución pendiente" tone="blocked" /> : null}{view.isAffectedByPendingAmendment ? <Chip text="enmienda pendiente" tone="running" /> : null}{view.hasActiveConflict ? <Chip text="conflicto" tone="failed" /> : null}{noFlags ? <span className="text-xs text-[var(--color-text-subtle)]">— sin banderas activas</span> : null}</ChipRow><RefList refs={view.refs} live={live} /></Section></Stack> : null}
+      </div>
+    </div>
   );
 }
 
@@ -368,7 +323,7 @@ function formatPlanning(planning: NodePlanningStatus): string {
     ? ` · intento ${planning.attempt}${planning.maxAttempts !== undefined ? `/${planning.maxAttempts}` : ""}`
     : "";
   const error = planning.errorKind !== undefined ? ` · ${planning.errorKind}` : "";
-  return `${planning.state}${attempts}${error}`;
+  return `${humanizePlanningState(planning.state)}${attempts}${error}`;
 }
 
 function formatChoice(choice: DecisionFocusView["choice"]): string {
@@ -472,6 +427,25 @@ function humanizeRole(role: NodeFocusView["role"]): string {
 
 function humanizeOrigin(origin: NodeFocusView["scope"]["origin"]): string {
   return origin === "derived" ? "derivado" : "inferido";
+}
+
+function humanizeDisplay(display: NodeFocusView["display"]): string {
+  const labels: Record<NodeFocusView["display"], string> = {
+    idle: "En espera", running: "Ejecutando", verifying: "Verificando", done: "Completado",
+    blocked: "Bloqueado", gated: "Esperando decisión", failed: "Fallido", obsolete: "Obsoleto"
+  };
+  return labels[display];
+}
+
+function humanizeFreshness(freshness: NodeFocusView["freshness"]): string {
+  return freshness === "fresh" ? "vigente" : "requiere actualización";
+}
+
+function humanizePlanningState(state: NodePlanningStatus["state"]): string {
+  const labels: Record<NodePlanningStatus["state"], string> = {
+    generating: "generando", generated: "generado", retrying: "reintentando", failed: "fallido", fallback: "alternativa aplicada"
+  };
+  return labels[state];
 }
 
 /** Execution duration, humanized — never fabricated (the selector returns undefined / running honestly). */

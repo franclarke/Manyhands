@@ -1,9 +1,11 @@
 import type {
   MockExecutionFlowResult,
   MockPlanningFlowResult,
-  RunSnapshot
+  RunSnapshot,
+  TaskGraph
 } from "@manyhands/core";
 import { applyPatches } from "@/lib/server/runs/patches";
+import { compatibleGraphPatches } from "@/lib/server/runs/plan-graph-storage";
 import type { RunRecord, RunStatus } from "@/lib/server/runs/schema";
 
 /** Minimal shape of a real execution-core RunExecutionResult (opaque in the record). */
@@ -73,7 +75,10 @@ export function projectRunRecordToSnapshot(
   if (snapshot === null || !shouldApplyPatches) {
     return snapshot;
   }
-  return applyPatches(snapshot, run.patches ?? []);
+  return applyPatches(
+    snapshot,
+    compatibleGraphPatches(run, snapshot.graphSnapshot as unknown as TaskGraph)
+  );
 }
 
 /**

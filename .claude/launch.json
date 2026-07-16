@@ -7,6 +7,12 @@
       "runtimeArgs": ["--filter", "@manyhands/web", "dev"],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "presentation-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "4173", "--directory", "docs/presentation"],
+      "port": 4173
     }
   ]
 }

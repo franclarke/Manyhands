@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { access, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
+import { safeGitArgs } from "@manyhands/execution-core";
 
 import { WorkspaceValidationError } from "./errors";
 import { inspectLocalGitRepo, type LocalGitRepoInfo } from "./repo-validation";
@@ -116,6 +117,6 @@ function gitErrorDetail(error: unknown): string {
 }
 
 async function git(cwd: string, args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync("git", args, { cwd });
+  const { stdout } = await execFileAsync("git", safeGitArgs(cwd, args), { cwd });
   return stdout.trim();
 }

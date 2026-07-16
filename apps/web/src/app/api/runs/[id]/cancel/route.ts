@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cancelRun } from "@/lib/server/runs/cancel-service";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
-import { toRunResponse } from "@/lib/server/runs/presenter";
+import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,12 +24,12 @@ export async function POST(_request: Request, context: RouteContext): Promise<Ne
     const outcome = await cancelRun(id);
     return NextResponse.json(
       {
-        ...toRunResponse(outcome.run),
+        ...(await toCanonicalRunResponse(outcome.run)),
         cancellation: {
           processesKilled: outcome.killReport.verifications.length,
           allProcessesDead: outcome.killReport.allDead,
           survivors: outcome.killReport.verifications
-            .filter((v) => v.outcome === "survived")
+            .filter((v) => v.outcome === "survived" || v.outcome === "unverified")
             .map((v) => ({ pid: v.pid, label: v.label ?? "unknown" })),
           worktreesCleaned: outcome.cleaned.removed.length,
           worktreeGcFailures: outcome.cleaned.failed.length,

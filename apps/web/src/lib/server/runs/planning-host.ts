@@ -29,16 +29,13 @@ import {
   type PlanningResumeDecision
 } from "@manyhands/orchestrator-graph";
 import {
-  isDecomposerLlmError,
   isDecomposerQuestionError,
-  runMockPlanningFlow,
   type AgentTaskContract,
   type FeatureRequest,
   type MockPlanningFlowResult,
   type RepositoryIndex
 } from "@manyhands/core";
 import type { Workspace } from "@/lib/api-types";
-import { pickDecomposer, type DecomposerSelection } from "@/lib/decomposer-policy";
 import { runPlanCritic, runSeamCritic } from "@/lib/plan-critic";
 import { detectWorkspaceCommands } from "../providers/command-detection";
 import { getWorkspaceRepository } from "../workspaces";
@@ -46,7 +43,10 @@ import { publishRunEvent } from "./event-bus";
 import { RunNotFoundError } from "./errors";
 import type { RiskLevelKey } from "./events";
 import { buildRepositoryGrounding } from "./repo-index-cache";
-import { supervisedSpawnFn } from "./process-supervision";
+import {
+  invokePlanning,
+  type PlanningInvocationInput
+} from "./planning-invocation-service";
 import { resolveRunTargetPath } from "./target-context";
 import { resolveRunsDirectory } from "./repository";
 import { publishRunModelEvent } from "./run-model-event-log";
@@ -58,11 +58,11 @@ import {
 import { backfillRunValidationCommands } from "./execution-state";
 import { withDefaultReasoningEffort } from "./execution-config-defaults";
 import { effectivePlanningBudget } from "./effective-planning-budget";
-import type {
-  PlanningLiveNode,
-  RunDecompositionMetadata,
-  RunOperationLease,
-  RunRecord
+import {
+  IMMUTABLE_BASE_PATCH_LOG_STORAGE,
+  type PlanningLiveNode,
+  type RunOperationLease,
+  type RunRecord
 } from "./schema";
 import { getRunRepository } from "./store";
 import { updateRunForOperation } from "./run-operation-lease";
@@ -246,26 +246,10 @@ async function decomposePlanForRun(
   });
   const groundingDigest = grounding !== undefined ? buildGroundingDigest(grounding.index) : undefined;
 
-  const selection = pickDecomposer({
-    userPrompt: run.userPrompt,
-    ...(groundingDigest !== undefined ? { groundingDigest } : {}),
-    model: run.planningModel ?? run.model,
-    executorId: run.planningExecutorId,
-    // B-005: every planning CLI subprocess is registered under the run so a
-    // cancel can kill and verify the whole tree.
-    spawn: supervisedSpawnFn({
-      runId: run.runId,
-      label: "planning-decomposer",
-      ...(options.operationLease !== undefined ? { operationId: options.operationLease.operationId } : {})
-    }),
-    ...(run.executionConfig?.reasoningEffort !== undefined
-      ? { reasoningEffort: run.executionConfig.reasoningEffort }
-      : {}),
-    maxParallelSteps: budget.maxPlanningConcurrency,
-    maxPlanningDepth: budget.maxPlanningDepth,
-    maxChildrenPerNode: budget.maxChildrenPerNode,
-    maxDecomposerCalls: budget.maxDecomposerCalls,
-    maxPromptBytes: budget.maxPromptBytes,
+  const invocationObservers: Pick<
+    PlanningInvocationInput,
+    "onStepStarted" | "onStepCompleted" | "onStepStatus" | "onCliOutput"
+  > = {
     onStepStarted: async (event) => {
       livePlanningNodes.set(event.nodeId, {
         ...livePlanningNodes.get(event.nodeId),
@@ -394,30 +378,51 @@ async function decomposePlanForRun(
         stream: event.stream,
         at: new Date().toISOString()
       });
-    },
-    ...(workspace !== null ? { workspace } : {})
-  });
-
-  console.log(`[Planner] Decomposer: provider="${selection.provider}", model="${selection.model}"`);
+    }
+  };
 
   const executableWorkspace = requireExecutableWorkspace(workspace, run.workspaceId);
   const feature = buildFeatureRequestFromPrompt(run.userPrompt, executableWorkspace, run.title);
 
   try {
-    const { planning, decomposition } = await runPromptOnlyPlanning({
-      selection,
-      feature,
+    const { planning, decomposition } = await invokePlanning({
       run,
+      feature,
+      mode: resolveDecompositionMode(run.granularity),
+      runLabel: `${run.runId}:planning`,
+      userPrompt: run.userPrompt,
+      ...(workspace !== null ? { workspace } : {}),
+      ...(options.operationLease !== undefined ? { operationLease: options.operationLease } : {}),
+      ...(groundingDigest !== undefined ? { groundingDigest } : {}),
+      limits: {
+        maxParallelSteps: budget.maxPlanningConcurrency,
+        maxPlanningDepth: budget.maxPlanningDepth,
+        maxChildrenPerNode: budget.maxChildrenPerNode,
+        maxDecomposerCalls: budget.maxDecomposerCalls,
+        maxPromptBytes: budget.maxPromptBytes
+      },
+      ...invocationObservers,
       questionAnswers: input.userAnswers,
       stepCache: input.stepCache,
       ...(grounding?.index !== undefined ? { repositoryIndex: grounding.index } : {})
     });
+
+    // Decomposition is a long external call. Re-read the fenced RunRecord and
+    // revalidate the captured physical repository immediately before the
+    // planning snapshot becomes durable; otherwise a repository replaced at
+    // the same path during the call could be published under the old identity.
+    const beforePlanningCommit = await repo.get(run.runId);
+    await resolveRunTargetPath(beforePlanningCommit);
 
     // Persist planning + decomposition metadata before dispatching SSE events
     // so refreshes during `generating` already have a snapshot to project.
     const persisted = await updateRunForOperation(run.runId, options.operationLease, (current) => ({
       ...current,
       planning,
+      planGraphStorage: IMMUTABLE_BASE_PATCH_LOG_STORAGE,
+      // A planning invocation creates a new immutable base. No patch authored
+      // against the replaced graph may survive and replay over it.
+      patches: [],
       decomposition,
       ...(grounding?.summary !== undefined ? { repositoryGrounding: grounding.summary } : {}),
       heartbeatAt: new Date().toISOString()
@@ -476,7 +481,7 @@ async function runCriticsForRun(
   });
   const seamCritic = runSeamCritic({ graph, contracts });
 
-  await updateRunForOperation(runId, options.operationLease, (latest) => {
+  const persisted = await updateRunForOperation(runId, options.operationLease, (latest) => {
     const latestPlanning = latest.planning as MockPlanningFlowResult | undefined;
     let planningToPersist = latest.planning;
     if (latestPlanning !== undefined) {
@@ -495,7 +500,12 @@ async function runCriticsForRun(
   });
 
   if (planning !== undefined) {
-    publishPlanCompletionEvents(runId, planning, planningCritic.findings.map((f) => f.message));
+    publishPlanCompletionEvents(
+      runId,
+      persisted.planRevision ?? 1,
+      planning,
+      planningCritic.findings.map((f) => f.message)
+    );
   }
 
   const findings: PlanCritiqueFinding[] = [
@@ -559,6 +569,7 @@ async function replayPlanEvents(
 
 function publishPlanCompletionEvents(
   runId: string,
+  planRevision: number,
   planning: MockPlanningFlowResult,
   criticFindings: string[]
 ): void {
@@ -587,97 +598,21 @@ function publishPlanCompletionEvents(
   );
 
   for (const event of planCompletionEvents({
+    planRevision,
     rootId,
     nodeCount: nodes.length,
+    dependencies: planning.decomposition.graph.dependencies.map((dependency) => ({
+      fromTaskId: dependency.fromTaskId,
+      toTaskId: dependency.toTaskId,
+      type: dependency.type,
+      inferred: dependency.inferred,
+      ...(dependency.rationale !== undefined ? { rationale: dependency.rationale } : {})
+    })),
     seams: seamDrafts,
     criticFindings,
     executableNodeIds
   })) {
     publishRunModelEvent(runId, event);
-  }
-}
-
-// ─── prompt-only planning (D3: LLM required, no silent fallback) ───────────
-
-interface PromptOnlyPlanningInput {
-  selection: DecomposerSelection;
-  feature: FeatureRequest;
-  run: RunRecord;
-  questionAnswers: Record<string, string>;
-  stepCache: Record<string, unknown>;
-  repositoryIndex?: RepositoryIndex;
-}
-
-interface PlanningResult {
-  planning: MockPlanningFlowResult;
-  decomposition: RunDecompositionMetadata;
-}
-
-async function runPromptOnlyPlanning(input: PromptOnlyPlanningInput): Promise<PlanningResult> {
-  const { selection, feature, run } = input;
-  const mode = resolveDecompositionMode(run.granularity);
-  const baseOptions = {
-    feature,
-    mode,
-    schedulerPolicy: "risk_aware" as const,
-    runLabel: `${run.runId}:planning`,
-    questionAnswers: input.questionAnswers,
-    stepCache: input.stepCache
-  };
-
-  if (selection.provider === "deterministic") {
-    // D3: no LLM available → fail with actionable message instead of silent fallback.
-    const reason = selection.fallbackReason ?? "no_api_key";
-    const executorLabel = run.planningExecutorId ?? "the configured planning executor";
-    const messages: Record<string, string> = {
-      no_api_key:
-        `Graph generation requires ${executorLabel}. Install and authenticate the selected CLI, then retry.`,
-      forced_by_env:
-        "MANYHANDS_FORCE_FALLBACK is set, but runs require the selected planning executor. Unset MANYHANDS_FORCE_FALLBACK to continue.",
-      forced_by_caller:
-        "Deterministic mode was explicitly requested, but runs require the selected planning executor."
-    };
-    throw new Error(messages[reason] ?? `Selected planning executor unavailable: ${reason}`);
-  }
-
-  try {
-    const planning = await runMockPlanningFlow({
-      ...baseOptions,
-      decomposer: selection.decomposer,
-      ...(input.repositoryIndex !== undefined ? { repositoryIndex: input.repositoryIndex } : {})
-    });
-    const telemetry = selection.getAnthropicTelemetry?.() ?? null;
-    const decomposition: RunDecompositionMetadata = {
-      provider: selection.provider,
-      model: selection.model,
-      fallbackUsed: false,
-      validationErrors: [],
-      generatedAt: new Date().toISOString()
-    };
-    if (selection.promptTemplateVersion !== undefined) {
-      decomposition.promptTemplateVersion = selection.promptTemplateVersion;
-    }
-    if (telemetry?.usage !== undefined) decomposition.usage = telemetry.usage;
-    if (telemetry?.rawResponse !== undefined) decomposition.rawResponse = telemetry.rawResponse;
-    if (telemetry?.parsedOutput !== undefined) decomposition.parsedOutput = telemetry.parsedOutput;
-    return { planning, decomposition };
-  } catch (error) {
-    // A clarifying question must bubble untouched to the graph seam above.
-    if (isDecomposerQuestionError(error)) {
-      throw error;
-    }
-    // D3: LLM failed → propagate with actionable message. No fallback.
-    const detail = describePlanningFailure(error);
-    const wrapped = new Error(
-      `Graph generation failed: ${detail}. ` +
-        "Retry, switch to another model for the selected executor, or verify that the selected CLI is installed and authenticated."
-    );
-    // Preserve the decomposer's partial progress (already-generated siblings) so
-    // a retry can resume instead of restarting the whole tree from root.
-    if (isDecomposerLlmError(error) && error.stepCache !== undefined) {
-      (wrapped as Error & { stepCache?: Record<string, unknown> }).stepCache = error.stepCache;
-    }
-    throw wrapped;
   }
 }
 
@@ -761,24 +696,6 @@ function buildGroundingDigest(index: RepositoryIndex): string {
     lines.push(`- ${file.path} -> ${file.exportedSymbols.slice(0, 8).join(", ")}`);
   }
   return lines.join("\n");
-}
-
-function describePlanningFailure(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  if (!isDecomposerLlmError(error) || error.details === undefined) {
-    return message;
-  }
-  const detail = error.details;
-  const parts = [
-    message,
-    `kind=${detail.kind}`,
-    `stage=${detail.stage}`,
-    ...(detail.nodeId !== undefined ? [`node=${detail.nodeId}`] : []),
-    ...(detail.attempt !== undefined && detail.maxAttempts !== undefined
-      ? [`attempt=${detail.attempt}/${detail.maxAttempts}`]
-      : [])
-  ];
-  return parts.join(" | ");
 }
 
 async function waitWhileGeneratingPaused(runId: string): Promise<void> {

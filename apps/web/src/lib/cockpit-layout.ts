@@ -58,3 +58,18 @@ export function sidebarInitiallyCollapsed(
   if (viewportWidth < SIDEBAR_AUTO_COLLAPSE_BREAKPOINT) return true;
   return stored === "collapsed";
 }
+
+/**
+ * The run workspace needs more horizontal room than the composer. Keep the
+ * global preference on ordinary routes, but protect the DAG when entering a
+ * run below the same width used by the contextual dock.
+ */
+export function sidebarInitiallyCollapsedForRoute(
+  viewportWidth: number,
+  stored: SidebarStoredPreference,
+  pathname: string
+): boolean {
+  if (stored === "collapsed") return true;
+  if (pathname.startsWith("/runs/")) return true;
+  return sidebarInitiallyCollapsed(viewportWidth, stored);
+}

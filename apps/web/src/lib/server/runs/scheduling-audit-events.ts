@@ -24,6 +24,7 @@ export interface SelectAndPersistSchedulingWaveInput {
   runId: string;
   graph: TaskGraph;
   candidates: readonly string[];
+  /** @deprecated Ignored. Wave position is derived from durable facts under the event-log lock. */
   waveIndex?: number;
   source: SchedulingWaveSelectedPayload["source"];
   riskMatrix?: TaskPairRiskMatrix;
@@ -59,11 +60,13 @@ export async function selectAndPersistSchedulingWave(
     maxParallel: effectiveConfig.maxParallel
   });
   let payload!: SchedulingWaveSelectedPayload;
-  await appendRunEventRequiredWithSeq(input.runId, (seq) => {
+  await appendRunEventRequiredWithSeq(input.runId, (_seq, existingEvents) => {
+    const waveIndex = existingEvents.filter((event) => event.type === "run.scheduling.wave_selected").length;
     payload = schedulingWaveSelectedPayload({
       source: input.source,
       waveId: randomUUID(),
-      waveIndex: seq - 1,
+      waveIndex,
+      waveOrdinal: waveIndex + 1,
       maxParallel: effectiveConfig.maxParallel,
       routing: effectiveConfig.routing,
       policy,
@@ -78,10 +81,31 @@ export async function selectAndPersistSchedulingWave(
   return { selectedTaskIds, payload };
 }
 
+/** Required audit boundary for the direct Send emitted by retry_repair. */
+export async function persistRetryDispatch(input: {
+  runId: string;
+  taskId: string;
+}): Promise<{ waveId: string }> {
+  const waveId = randomUUID();
+  await appendRunEventRequiredWithSeq(input.runId, () => ({
+    actor: "system",
+    type: "run.scheduling.retry_dispatched",
+    payload: {
+      version: 1,
+      waveId,
+      taskId: input.taskId,
+      source: "human_gate",
+      reason: "retry_repair"
+    }
+  }));
+  return { waveId };
+}
+
 function schedulingWaveSelectedPayload(input: {
   source: SchedulingWaveSelectedPayload["source"];
   waveId: string;
   waveIndex: number;
+  waveOrdinal: number;
   maxParallel: number;
   routing: ExecutionConfig["routing"];
   policy: SchedulingPolicy;
@@ -97,6 +121,7 @@ function schedulingWaveSelectedPayload(input: {
     source: input.source,
     waveId: input.waveId,
     waveIndex: input.waveIndex,
+    waveOrdinal: input.waveOrdinal,
     maxParallel: input.maxParallel,
     routing: input.routing,
     policy: input.policy,

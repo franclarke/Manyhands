@@ -12,6 +12,10 @@ describe("restartResumesExecution", () => {
     expect(restartResumesExecution({ failedDuring: "running", planning: {} })).toBe(true);
   });
 
+  it("resumes execution after a durable artifact failure", () => {
+    expect(restartResumesExecution({ status: "failed_artifact", planning: {} })).toBe(true);
+  });
+
   it("resumes execution when interrupted during execution (sweeper path)", () => {
     expect(restartResumesExecution({ interruptedDuring: "running", planning: {} })).toBe(true);
   });

@@ -4,8 +4,9 @@ import { promisify } from "node:util";
 import {
   CLAUDE_CODE_EXECUTOR_ID,
   EXECUTOR_DESCRIPTORS,
-  cliPathRequiresShell,
+  resolveCliProcessInvocation,
   resolveCliBinaryPath,
+  safeGitArgs,
   type ExecutorDescriptor,
   type ExecutorId
 } from "@manyhands/execution-core";
@@ -241,9 +242,11 @@ function countUserDirt(porcelain: string): number {
 async function defaultCheckCli(binaryPath: string): Promise<{ ok: boolean; version?: string }> {
   try {
     const resolvedBinaryPath = resolveCliBinaryPath(binaryPath);
-    const { stdout, stderr } = await execFileAsync(resolvedBinaryPath, ["--version"], {
+    const invocation = resolveCliProcessInvocation(resolvedBinaryPath, ["--version"]);
+    const { stdout, stderr } = await execFileAsync(invocation.command, invocation.args, {
       timeout: 10_000,
-      shell: cliPathRequiresShell(resolvedBinaryPath)
+      shell: invocation.shell,
+      windowsVerbatimArguments: invocation.windowsVerbatimArguments
     });
     const version = (stdout || stderr).trim();
     return version.length > 0 ? { ok: true, version } : { ok: true };
@@ -253,13 +256,13 @@ async function defaultCheckCli(binaryPath: string): Promise<{ ok: boolean; versi
 }
 
 async function defaultGitPorcelain(repoRoot: string): Promise<string> {
-  const { stdout } = await execFileAsync("git", ["status", "--porcelain"], { cwd: repoRoot });
+  const { stdout } = await execFileAsync("git", safeGitArgs(repoRoot, ["status", "--porcelain"]), { cwd: repoRoot });
   return stdout;
 }
 
 async function defaultBranchExists(repoRoot: string, branch: string): Promise<boolean> {
   try {
-    await execFileAsync("git", ["rev-parse", "--verify", "--quiet", branch], { cwd: repoRoot });
+    await execFileAsync("git", safeGitArgs(repoRoot, ["rev-parse", "--verify", "--quiet", branch]), { cwd: repoRoot });
     return true;
   } catch {
     return false;

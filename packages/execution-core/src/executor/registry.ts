@@ -12,7 +12,13 @@ export {
   isExecutorSelection,
   normalizeExecutorSelection,
   resolveLegacyModelSelection,
-  usageSourceForSelection
+  usageSourceForSelection,
+  EFFORT_LEVELS,
+  isEffortLevel,
+  effortsForSelection,
+  supportsEffortForSelection,
+  defaultEffortForSelection,
+  ReasoningEffortSchema
 } from "@manyhands/shared";
 export type {
   ExecutorId,
@@ -20,5 +26,7 @@ export type {
   UsageSource,
   ExecutorModelDescriptor,
   ExecutorDescriptor,
-  ExecutorSelection
+  ExecutorSelection,
+  StageSelection,
+  EffortLevel
 } from "@manyhands/shared";

@@ -55,8 +55,7 @@ async function writeFakeTitlerBin(dir: string): Promise<string> {
 describe("POST /api/runs", () => {
   it("persists separate planning and execution selections with fixed routing", async () => {
     const workspace = await getWorkspaceRepository().create({
-      name: "Test workspace",
-      repoPath: "C:/repo"
+      name: "Test workspace"
     });
 
     const response = await POST_RUNS(
@@ -91,8 +90,7 @@ describe("POST /api/runs", () => {
 
   it("persists the requested reasoning effort in execution config", async () => {
     const workspace = await getWorkspaceRepository().create({
-      name: "Test workspace",
-      repoPath: "C:/repo"
+      name: "Test workspace"
     });
 
     const response = await POST_RUNS(
@@ -125,8 +123,7 @@ describe("POST /api/runs", () => {
 
   it("uses the initial planning selection as canonical when execution selections are omitted", async () => {
     const workspace = await getWorkspaceRepository().create({
-      name: "Test workspace",
-      repoPath: "C:/repo"
+      name: "Test workspace"
     });
 
     const response = await POST_RUNS(
@@ -157,8 +154,7 @@ describe("POST /api/runs", () => {
 
   it("rejects a planning model that does not belong to its executor", async () => {
     const workspace = await getWorkspaceRepository().create({
-      name: "Test workspace",
-      repoPath: "C:/repo"
+      name: "Test workspace"
     });
 
     const response = await POST_RUNS(
@@ -184,8 +180,7 @@ describe("POST /api/runs", () => {
 
   it("rejects a planning model that does not support planning", async () => {
     const workspace = await getWorkspaceRepository().create({
-      name: "Test workspace",
-      repoPath: "C:/repo"
+      name: "Test workspace"
     });
 
     const response = await POST_RUNS(

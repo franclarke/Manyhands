@@ -1,5 +1,12 @@
 import type { FinalArtifactManifest, RunStatus, RunValidationSummary } from "./schema";
 
+/** True only when final-apply produced an inspectable artifact tree/diff. */
+export function artifactEvidenceIsReady(
+  manifest: Pick<FinalArtifactManifest, "artifactDisposition" | "finalSha"> | undefined
+): boolean {
+  return manifest !== undefined && manifest.finalSha.length > 0 && manifest.artifactDisposition !== "failed";
+}
+
 export function terminalDispositionForArtifact(input: {
   manifest: Pick<FinalArtifactManifest, "artifactDisposition" | "deliveryDisposition" | "verificationDisposition" | "finalSha"> | undefined;
   acceptedRisk: boolean;

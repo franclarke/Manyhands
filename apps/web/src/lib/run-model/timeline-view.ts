@@ -14,6 +14,7 @@
  * neutral/auxiliary, never as human attention.
  */
 import type { Actor, NodeId, RunEvent } from "./types";
+import { displayWaveOrdinal } from "./scheduling-wave-ordinal";
 
 export type TimelineCategory =
   | "framing"
@@ -84,7 +85,7 @@ function stringList(v: unknown): string[] {
 }
 
 /** Map one event to its readable headline/detail/tone/nodeId (payload-aware). */
-function describe(event: RunEvent): Mapped {
+function describe(event: RunEvent, schedulingWavePosition = 0): Mapped {
   const p = event.payload;
   switch (event.type) {
     case "run.created":
@@ -134,7 +135,7 @@ function describe(event: RunEvent): Mapped {
         ...warningMessages
       ].join(" | ");
       return {
-        title: `Ola seleccionada #${Number(p.waveIndex ?? 0) + 1}`,
+        title: `Ola seleccionada #${displayWaveOrdinal(p, schedulingWavePosition)}`,
         detail,
         tone: warningMessages.length > 0 || blockingRisk > 0 ? "warn" : "info"
       };
@@ -176,6 +177,8 @@ function describe(event: RunEvent): Mapped {
       return { title: `Costura enmendada: ${str(p.seamId) ?? "?"} r${Number(p.revision ?? 0)}`, detail: str(p.changeKind), tone: "warn" };
     case "amendment.applied":
       return { title: "Enmienda aplicada", tone: "info" };
+    case "amendment.rejected":
+      return { title: "Enmienda rechazada", tone: "info" };
 
     case "integration.started":
       return { title: "Integración iniciada", detail: Array.isArray(p.childNodeIds) ? (p.childNodeIds as string[]).join(", ") : undefined, ...(str(p.compositeNodeId) !== undefined ? { nodeId: str(p.compositeNodeId) } : {}), tone: "info" };
@@ -218,8 +221,11 @@ function compactChunk(chunk: string): string {
  */
 export function buildTimelineView(events: readonly RunEvent[], options: { nodeId?: NodeId } = {}): TimelineView {
   const entries: TimelineEntry[] = [];
+  let schedulingWavePosition = 0;
   for (const event of events) {
-    const mapped = describe(event);
+    const position = schedulingWavePosition;
+    if (event.type === "run.scheduling.wave_selected") schedulingWavePosition += 1;
+    const mapped = describe(event, position);
     if (options.nodeId !== undefined && mapped.nodeId !== options.nodeId) continue;
     entries.push({
       seq: event.seq,

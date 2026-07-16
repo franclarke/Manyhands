@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AgentTaskContract, RunSnapshot, TaskGraph } from "@manyhands/core";
 import { buildPlanReviewSummary } from "@/lib/plan-review";
+import { buildPlanControlPlane } from "@/lib/plan-control";
 import type { RunPatch } from "@/lib/server/runs";
 
 const now = "2026-06-01T00:00:00.000Z";
@@ -116,6 +117,59 @@ describe("plan-review", () => {
 
     expect(summary?.status).toBe("errors");
     expect(summary?.issues.some((issue) => issue.kind === "seam" && issue.severity === "error")).toBe(true);
+  });
+
+  it("projects one authoritative editable control plane from the patched snapshot", () => {
+    const snapshot = makeSnapshot({
+      riskPredictions: [{
+        taskAId: "task-1",
+        taskBId: "task-2",
+        level: "high",
+        score: 0.82,
+        evidence: [],
+        sharedFiles: ["src/shared.ts"],
+        sharedSymbols: [],
+        predictedConflictTypes: ["file_overlap"],
+        recommendation: "serialize",
+        explanation: "Both tasks change the same module.",
+        acknowledged: true,
+        acknowledgedReason: "Reviewed by the operator."
+      }] as unknown as RunSnapshot["riskPredictions"]
+    });
+    snapshot.graphSnapshot.nodes["task-1"]!.metadata = {
+      authoredBy: "human",
+      executorSelection: { executorId: "codex-cli", model: "gpt-5.5" }
+    };
+
+    const control = buildPlanControlPlane(snapshot, {
+      version: 7,
+      status: "approved",
+      routing: "fixed",
+      nodeReviews: {
+        "task-1": { status: "approved", at: now }
+      }
+    });
+
+    expect(control).toMatchObject({
+      version: 7,
+      status: "approved",
+      editable: true,
+      canRunManualNodes: true
+    });
+    expect(control?.nodes.find((node) => node.id === "task-1")).toMatchObject({
+      objective: "Implement task one.",
+      allowedPaths: ["src/task.ts"],
+      acceptanceCriteria: ["Criterion"],
+      manual: true,
+      executorSelection: { executorId: "codex-cli", model: "gpt-5.5" },
+      review: { status: "approved" }
+    });
+    expect(control?.routing).toBe("fixed");
+    expect(control?.risks[0]).toMatchObject({
+      acknowledged: true,
+      acknowledgedReason: "Reviewed by the operator.",
+      recommendation: "serialize"
+    });
   });
 });
 

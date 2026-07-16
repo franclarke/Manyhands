@@ -47,6 +47,15 @@ El `TaskGraph` tiene un `dependencies` propio que es un `Map<nodeId, Set<nodeId>
 
 **La regla es simple:** nunca se modifica `node.dependencies` directamente. Toda mutación de dependencias pasa por los helpers `addDependency()`, `removeDependency()` y `syncNodeDependencies()`, que mantienen ambos registros coherentes. Esta separación existe porque el mapa del grafo es más eficiente para los algoritmos de traversal (topo sort, cycle detection), mientras que el array del nodo es más cómodo para serialización y acceso rápido.
 
+Las aristas D1 tienen semántica de ejecución `ordering_only`: bloquean el
+dispatch/readiness de la tarea dependiente hasta que su predecesora se resuelve,
+pero no copian ni materializan el commit del predecesor en su worktree. Todas
+las hojas parten del mismo `TaskGraph.baseCommit`; la integración bottom-up
+compone sus commits después. Si una tarea necesita archivos concretos producidos
+por otra, ese trabajo debe quedar en una sola tarea o expresarse como una
+compatibilidad explícita mediante `sharedInterface`, no como herencia implícita
+de una dependencia.
+
 ### Validación del grafo
 
 `validateTaskGraph()` verifica que el grafo es estructuralmente correcto:

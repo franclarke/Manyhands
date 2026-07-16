@@ -32,11 +32,10 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
     throw error;
   }
 
-  const [initialEvents, workspaces] = await Promise.all([
+  const [initialEvents, workspace] = await Promise.all([
     ensureRunModelEventLogForRun(run),
-    getWorkspaceRepository().list()
+    getWorkspaceRepository().get(run.workspaceId).catch(() => null)
   ]);
-  const workspace = workspaces.find((entry) => entry.id === run.workspaceId) ?? null;
 
   return (
     <div className="mh-workspace-frame">

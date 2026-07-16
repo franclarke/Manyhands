@@ -155,4 +155,36 @@ describe("timeline — robustness", () => {
     expect(view.entries[0]?.detail).toContain("1 bloqueadas");
     expect(view.entries[0]?.detail).toContain("Scope was inferred");
   });
+
+  it("13. displays contiguous wave ordinals even when durable event seq values are sparse", () => {
+    const events = [46, 139, 201].map((eventSeq, index): RunEvent => ({
+      seq: eventSeq,
+      at: `2026-06-30T00:0${index}:00.000Z`,
+      runId: "run-sparse",
+      actor: "system",
+      type: "run.scheduling.wave_selected",
+      payload: {
+        version: 1,
+        waveId: `wave-${index + 1}`,
+        waveIndex: eventSeq - 1,
+        source: "execution-host",
+        maxParallel: 6,
+        routing: "fixed",
+        policy: "risk_aware",
+        readyTaskIds: [`leaf-${index}`],
+        selectedTaskIds: [`leaf-${index}`],
+        blockedTaskIds: [],
+        blockedReasons: [],
+        riskSummary: { low: 0, medium: 0, high: 0, blocking: 0 },
+        fallbacks: [],
+        warnings: []
+      }
+    }));
+
+    expect(buildTimelineView(events).entries.map((entry) => entry.title)).toEqual([
+      "Ola seleccionada #1",
+      "Ola seleccionada #2",
+      "Ola seleccionada #3"
+    ]);
+  });
 });

@@ -1,14 +1,55 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   AgentTaskContract,
   MockPlanningFlowResult,
   RunSnapshot,
   TaskGraph
 } from "@manyhands/core";
+
+vi.mock("@/lib/server/runs/planning-invocation-service", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/server/runs/planning-invocation-service")>(
+    "@/lib/server/runs/planning-invocation-service"
+  );
+  const core = await vi.importActual<typeof import("@manyhands/core")>("@manyhands/core");
+  return {
+    ...actual,
+    invokePlanning: vi.fn(async (input: Parameters<typeof actual.invokePlanning>[0]) => {
+      if (
+        process.env.MANYHANDS_FORCE_FALLBACK !== "1" ||
+        process.env.MANYHANDS_TEST_REAL_PLANNING_SERVICE === "1"
+      ) {
+        return actual.invokePlanning(input);
+      }
+      const planning = await core.runMockPlanningFlow({
+        feature: input.feature,
+        mode: input.mode,
+        schedulerPolicy: "risk_aware",
+        runLabel: input.runLabel
+      });
+      return {
+        planning,
+        decomposition: {
+          provider: "deterministic" as const,
+          model: "test-fixture",
+          fallbackUsed: true,
+          validationErrors: [],
+          generatedAt: now
+        }
+      };
+    })
+  };
+});
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
+import { createInitialRunModel, reduceRunEvents } from "@/lib/run-model/reducer";
+import {
+  ensureRunModelEventLogForRun,
+  readRunModelEvents
+} from "@/lib/server/runs/run-model-event-log";
+import { buildRunModelSeed } from "@/lib/server/runs/run-model-projection";
+import { resolveExecutionGraph } from "@/lib/server/runs/execution-state";
 import { PATCH } from "@/app/api/runs/[id]/nodes/[taskId]/route";
 import { POST as POST_REGEN } from "@/app/api/runs/[id]/nodes/[taskId]/regen/route";
 import { POST as POST_INTEGRATOR } from "@/app/api/runs/[id]/integrator/route";
@@ -103,7 +144,12 @@ describe("editable control plane vertical slice", () => {
 
   it("PATCH node writes patches, appends trace events, and invalidates approval", async () => {
     const repo = getRunRepository();
-    await repo.save(makeRun({ status: "approved", approvedAt: now }));
+    await repo.save(makeRun({
+      status: "approved",
+      approvedAt: now,
+      executionStartedAt: "2026-07-16T09:30:00.000Z",
+      executionConfig: { routing: "complexity" }
+    }));
 
     const response = await PATCH(
       new Request("http://manyhands.test/api", {
@@ -128,6 +174,7 @@ describe("editable control plane vertical slice", () => {
     expect(saved.approvedAt).toBeUndefined();
     expect(saved.planRevision).toBe(2);
     expect(saved.approvedPlanRevision).toBeUndefined();
+    expect(saved.executionStartedAt).toBe("2026-07-16T09:30:00.000Z");
     expect(saved.patches.map((patch) => (patch as RunPatch).type)).toEqual([
       "NODE_RENAMED",
       "NODE_OBJECTIVE_EDITED",
@@ -143,6 +190,110 @@ describe("editable control plane vertical slice", () => {
     );
     expect(patchTraceEvents).toHaveLength(6);
     expect(patchTraceEvents[0]?.taskId).toBe("task-1");
+  });
+
+  it("edits the authoritative baked replan without resurrecting its historical subtree", async () => {
+    const repo = getRunRepository();
+    const run = makeRun();
+    const planning = structuredClone(run.planning as MockPlanningFlowResult);
+    const original = planning.decomposition.graph.nodes["task-1"]!;
+    const currentContract = makeContract({
+      taskId: "task-1-r2-new",
+      objective: "Current regenerated task",
+      allowedPaths: ["src/current.ts"],
+      changedFiles: ["src/current.ts"],
+      acceptance: ["Current subtree works"]
+    });
+    planning.decomposition.graph.nodes["task-1"] = {
+      ...original,
+      kind: "composite",
+      childrenIds: ["task-1-r2-new"],
+      contract: undefined,
+      metadata: { replanRevision: 2 }
+    };
+    planning.decomposition.graph.nodes["task-1-r2-new"] = {
+      ...original,
+      id: "task-1-r2-new",
+      parentId: "task-1",
+      title: "Current regenerated task",
+      goal: "Current regenerated task",
+      depth: 2,
+      childrenIds: [],
+      contract: currentContract,
+      metadata: { replanRevision: 2 }
+    };
+    planning.decomposition.contracts = [
+      ...planning.decomposition.contracts.filter((contract) => contract.taskId !== "task-1"),
+      currentContract
+    ];
+    const oldContract = makeContract({
+      taskId: "task-1-r1-old",
+      objective: "Obsolete regenerated task",
+      allowedPaths: ["src/obsolete.ts"],
+      changedFiles: ["src/obsolete.ts"],
+      acceptance: ["Obsolete subtree works"]
+    });
+    run.planning = planning;
+    run.patches = [
+      {
+        id: "patch-obsolete-subtree",
+        type: "SUBTREE_REGENERATED",
+        actor: "system",
+        createdAt: "2026-05-25T00:00:00.000Z",
+        taskId: "task-1",
+        removedTaskIds: ["task-1", "task-1-r2-new"],
+        nodes: {
+          "task-1": {
+            ...planning.decomposition.graph.nodes["task-1"]!,
+            childrenIds: ["task-1-r1-old"],
+            metadata: { replanRevision: 1 }
+          },
+          "task-1-r1-old": {
+            ...planning.decomposition.graph.nodes["task-1-r2-new"]!,
+            id: "task-1-r1-old",
+            title: "Obsolete regenerated task",
+            goal: "Obsolete regenerated task",
+            contract: oldContract,
+            metadata: { replanRevision: 1 }
+          }
+        },
+        dependencies: [],
+        contracts: [oldContract]
+      },
+      {
+        id: "patch-safe-later-title",
+        type: "NODE_RENAMED",
+        actor: "human",
+        createdAt: now,
+        taskId: "task-1",
+        title: "Safe edit before route"
+      }
+    ];
+    const saved = await repo.save(run);
+
+    const before = projectRunRecordToSnapshot(saved);
+    expect(before?.graphSnapshot.nodes["task-1-r2-new"]).toBeDefined();
+    expect(before?.graphSnapshot.nodes["task-1-r1-old"]).toBeUndefined();
+
+    const response = await PATCH(
+      new Request("http://manyhands.test/api", {
+        method: "PATCH",
+        body: JSON.stringify({ expectedVersion: saved.version, title: "Edited current subtree" }),
+        headers: { "content-type": "application/json" }
+      }),
+      { params: Promise.resolve({ id: saved.runId, taskId: "task-1" }) }
+    );
+
+    expect(response.status, await response.clone().text()).toBe(200);
+    const edited = await repo.get(saved.runId);
+    const snapshot = projectRunRecordToSnapshot(edited);
+    const runtime = resolveExecutionGraph(edited);
+    expect(snapshot?.graphSnapshot.nodes["task-1-r2-new"]).toBeDefined();
+    expect(snapshot?.graphSnapshot.nodes["task-1-r1-old"]).toBeUndefined();
+    expect(snapshot?.graphSnapshot.nodes["task-1"]?.title).toBe("Edited current subtree");
+    expect(runtime.nodes["task-1-r2-new"]).toBeDefined();
+    expect(runtime.nodes["task-1-r1-old"]).toBeUndefined();
+    expect(runtime.nodes["task-1"]?.title).toBe("Edited current subtree");
   });
 
   it("PATCH node clears an executor override back to the run default", async () => {
@@ -177,6 +328,29 @@ describe("editable control plane vertical slice", () => {
     });
     const snapshot = projectRunRecordToSnapshot(saved);
     expect(snapshot?.graphSnapshot.nodes["task-1"]?.metadata?.executorOverride).toBeUndefined();
+  });
+
+  it("rejects new per-node executor selections when the run routing is fixed", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun({ executionConfig: { routing: "fixed" } }));
+
+    const response = await PATCH(
+      new Request("http://manyhands.test/api", {
+        method: "PATCH",
+        body: JSON.stringify({
+          expectedVersion: 1,
+          executorSelection: { executorId: "codex-cli", model: "gpt-5.5" }
+        }),
+        headers: { "content-type": "application/json" }
+      }),
+      { params: Promise.resolve({ id: "run-1", taskId: "task-1" }) }
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      error: expect.stringMatching(/routing is fixed|inherit the run-level executor/i)
+    });
+    expect((await repo.get("run-1")).patches).toEqual([]);
   });
 
   it("does not persist when a patch would leave the DAG invalid", async () => {
@@ -395,6 +569,10 @@ describe("editable control plane vertical slice", () => {
     expect(patched.graphSnapshot.nodes["task-2"]?.dependencies).toContain("task-1");
     expect(patched.graphSnapshot.nodes["task-3"]?.dependencies).not.toContain("task-2");
     expect(patched.graphSnapshot.nodes["integrator-task-1-task-2"]?.dependencies).toEqual(["task-1", "task-2"]);
+    expect(patched.contracts.filter((contract) => contract.taskId === "task-1")).toEqual([
+      regeneratedContract
+    ]);
+    expect(patched.contracts).toContainEqual(integratorContract);
   });
 
   it("POST serialize appends a guided dependency patch and trace", async () => {
@@ -506,6 +684,68 @@ describe("editable control plane vertical slice", () => {
     expect(snapshot?.graphSnapshot.nodes[patch.taskId]?.dependencies).toEqual(["task-1", "task-2"]);
   });
 
+  it("keeps RunRecord, revisioned approval and cold-reloaded run-model on the same edited graph", async () => {
+    const repo = getRunRepository();
+    await repo.save(makeRun({ status: "approved", approvedAt: now, approvedPlanRevision: 1 }));
+    const initial = await repo.get("run-1");
+    await ensureRunModelEventLogForRun(initial);
+
+    const integratorResponse = await POST_INTEGRATOR(
+      jsonRequest({
+        taskIds: ["task-1", "task-2"],
+        reason: "Shared schema paths need explicit integration.",
+        title: "Schema integration"
+      }),
+      { params: Promise.resolve({ id: "run-1" }) }
+    );
+    expect(integratorResponse.status).toBe(200);
+
+    const removalResponse = await DELETE_DEPENDENCY(
+      jsonRequest({ fromTaskId: "task-1", toTaskId: "task-2", rationale: "Integrator owns the join." }),
+      { params: Promise.resolve({ id: "run-1" }) }
+    );
+    expect(removalResponse.status).toBe(200);
+
+    const saved = await repo.get("run-1");
+    const snapshot = projectRunRecordToSnapshot(saved);
+    expect(snapshot).not.toBeNull();
+    const executionGraph = resolveExecutionGraph(saved);
+    const integratorPatch = (saved.patches as RunPatch[]).find(
+      (patch): patch is Extract<RunPatch, { type: "INTEGRATOR_NODE_CREATED" }> =>
+        patch.type === "INTEGRATOR_NODE_CREATED"
+    );
+    expect(integratorPatch).toBeDefined();
+    expect(saved.planRevision).toBe(3);
+    expect(executionGraph).toEqual(snapshot!.graphSnapshot);
+    expect(executionGraph.nodes[integratorPatch!.taskId]?.metadata?.integrator).toBe(true);
+    expect(executionGraph.dependencies).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ fromTaskId: "task-1", toTaskId: "task-2" })
+    ]));
+
+    await ensureRunModelEventLogForRun(saved);
+    await ensureRunModelEventLogForRun(saved);
+    const events = await readRunModelEvents(saved.runId);
+    const model = reduceRunEvents(createInitialRunModel(buildRunModelSeed(saved)), events);
+
+    expect([...model.nodes.keys()].sort()).toEqual(Object.keys(snapshot!.graphSnapshot.nodes).sort());
+    expect(model.nodes.get(integratorPatch!.taskId)?.title).toBe("Schema integration");
+    expect([...model.dependencies.values()].map((dependency) => [
+      dependency.fromTaskId,
+      dependency.toTaskId
+    ]).sort()).toEqual(snapshot!.graphSnapshot.dependencies.map((dependency) => [
+      dependency.fromTaskId,
+      dependency.toTaskId
+    ]).sort());
+    expect([...model.dependencies.values()]).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ fromTaskId: "task-1", toTaskId: "task-2" })
+    ]));
+    expect(model.decisions.get("approve_plan:r2")?.status).toBe("resolved");
+    expect(model.decisions.get("approve_plan:r3")?.status).toBe("pending");
+    expect(model.decisions.get("approve_plan:r3")?.context.nodeIds).toContain(integratorPatch!.taskId);
+    expect(model.decisions.get("approve_plan:r3")?.context.nodeIds).not.toContain("root");
+    expect(events.filter((event) => event.type === "plan.graph.projected")).toHaveLength(2);
+  });
+
   it("POST regen replaces only the requested subtree, preserves the task id, and traces the patch", async () => {
     const repo = getRunRepository();
     await repo.save(makeRun({ status: "approved", approvedAt: now }));
@@ -556,26 +796,35 @@ describe("editable control plane vertical slice", () => {
   it("POST regen rejects implicit deterministic fallback when no LLM decomposer is configured", async () => {
     const previousDecomposer = process.env.MANYHANDS_DECOMPOSER;
     const previousAnthropicKey = process.env.ANTHROPIC_API_KEY;
-    delete process.env.MANYHANDS_FORCE_FALLBACK;
+    process.env.MANYHANDS_FORCE_FALLBACK = "1";
+    process.env.MANYHANDS_TEST_REAL_PLANNING_SERVICE = "1";
     delete process.env.ANTHROPIC_API_KEY;
     process.env.MANYHANDS_DECOMPOSER = "single-pass";
 
     try {
       const repo = getRunRepository();
-      await repo.save(makeRun({ status: "approved", approvedAt: now }));
+      await repo.save(makeRun({
+        status: "approved",
+        approvedAt: now,
+        model: "sonnet",
+        planningModel: "sonnet",
+        planningExecutorId: "claude-code-cli",
+        planningSelection: { executorId: "claude-code-cli", model: "sonnet" }
+      }));
 
       const response = await POST_REGEN(
         jsonRequest({ granularity: "coarse" }),
         { params: Promise.resolve({ id: "run-1", taskId: "task-1" }) }
       );
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(409);
       const body = (await response.json()) as { error: string };
-      expect(body.error).toContain("requires a configured LLM decomposer");
+      expect(body.error).toContain("Claude Code CLI");
       const saved = await repo.get("run-1");
       expect(saved.status).toBe("approved");
       expect(saved.patches).toHaveLength(0);
     } finally {
+      delete process.env.MANYHANDS_TEST_REAL_PLANNING_SERVICE;
       process.env.MANYHANDS_FORCE_FALLBACK = "1";
       if (previousDecomposer === undefined) delete process.env.MANYHANDS_DECOMPOSER;
       else process.env.MANYHANDS_DECOMPOSER = previousDecomposer;
