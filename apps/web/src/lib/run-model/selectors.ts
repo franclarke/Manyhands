@@ -26,6 +26,7 @@ import type {
   Conflict,
   Decision,
   Evidence,
+  EvidenceMatrixView,
   Freshness,
   GranularityMetrics,
   IntegrationState,
@@ -80,7 +81,7 @@ export function selectPhase(model: RunModel): RunPhase {
   const hasProposalSignals =
     nodes.length > 0 || decisions.some((d) => d.kind === "approve_plan" || d.kind === "clarify");
 
-  if (model.evidence !== undefined || approveMergeExists) return "disposition";
+  if (model.evidence !== undefined || model.evidenceMatrices.size > 0 || ["result_ready", "delivering", "completed"].includes(model.orchestration.lifecycle) || approveMergeExists) return "disposition";
   if (approvePlanPending) return "proposal";
   if (hasRunningNode) return "supervision";
   if (hasActiveConflict || (someLeafIntegrated && someCompositeOpen)) return "reconciliation";
@@ -196,6 +197,34 @@ export function selectConflicts(model: RunModel): Conflict[] {
 
 export function selectEvidence(model: RunModel): Evidence | null {
   return model.evidence ?? null;
+}
+
+export interface LocalDecisionState {
+  items: Array<{ id: string; question?: string; affectedNodeIds: string[]; blocking: boolean }>;
+  readyNodeIds: string[];
+  runBlocked: boolean;
+}
+
+export function selectLocalDecisionState(model: RunModel): LocalDecisionState {
+  const items = [...model.decisions.values()]
+    .filter((decision) => decision.status === "pending")
+    .map((decision) => ({ id: decision.id, ...(decision.context.question !== undefined ? { question: decision.context.question } : {}), affectedNodeIds: [...(decision.context.nodeIds ?? [])], blocking: decision.blocking }));
+  return { items, readyNodeIds: [...model.orchestration.readyNodeIds], runBlocked: items.length > 0 && model.orchestration.readyNodeIds.length === 0 };
+}
+
+export interface ResultReadiness {
+  matrix: EvidenceMatrixView | null;
+  uncovered: Array<{ criterionId: string; justification: string }>;
+  failed: Array<{ criterionId: string; justification: string }>;
+  deliveryAllowed: boolean;
+}
+
+export function selectResultReadiness(model: RunModel): ResultReadiness {
+  const matrix = [...model.evidenceMatrices.values()].at(-1) ?? null;
+  const uncovered = matrix?.criteria.filter((criterion) => criterion.status === "uncovered").map((criterion) => ({ criterionId: criterion.criterionId, justification: criterion.justification })) ?? [];
+  const failed = matrix?.criteria.filter((criterion) => criterion.status === "failed" || criterion.status === "flaky").map((criterion) => ({ criterionId: criterion.criterionId, justification: criterion.justification })) ?? [];
+  const candidate = model.orchestration.finalCandidate;
+  return { matrix, uncovered, failed, deliveryAllowed: matrix?.outcome === "verified" && candidate?.evidenceEligible === true && candidate.evidenceMatrixId === matrix.matrixId };
 }
 
 // ── Run metrics (legacy GranularityVector name) ───────────────────

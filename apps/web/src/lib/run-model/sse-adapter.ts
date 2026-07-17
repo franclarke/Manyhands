@@ -53,6 +53,20 @@ import type {
   RunEventType
 } from "./types";
 
+export interface CoordinatorEventEnvelope {
+  eventId: string;
+  runId: string;
+  sequence: number;
+  occurredAt: string;
+  type: string;
+  payload: Record<string, unknown>;
+}
+
+/** Lossless envelope adapter for the canonical V2 event journal. */
+export function adaptCoordinatorEvent(event: CoordinatorEventEnvelope): RunEvent {
+  return { eventId: event.eventId, seq: event.sequence, at: event.occurredAt, runId: event.runId, actor: "system", type: event.type, payload: structuredClone(event.payload) };
+}
+
 /** Placeholder for legacy fields the agent-first envelope requires but the stream lacks. */
 const STREAM_PLACEHOLDER = "—";
 

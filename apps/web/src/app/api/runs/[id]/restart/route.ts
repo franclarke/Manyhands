@@ -173,7 +173,7 @@ async function restartFreshPlanning(candidate: RunRecord): Promise<NextResponse>
   // Checkpoints are external durable state. Acquire the durable/fenced writer
   // authority while the record remains restartable, then clean them. A second
   // process cannot race a late delete against the winner's new checkpoint.
-  const { run: leased, lease } = await claimRunOperation(candidate.runId, "planning", {
+  const { lease } = await claimRunOperation(candidate.runId, "planning", {
     expectedStatuses: ["interrupted", "failed", "failed_artifact"],
     expectedVersion: candidate.version,
     allowTakeover: true,

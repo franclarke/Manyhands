@@ -13,7 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { POST as POST_RUNS } from "@/app/api/runs/route";
-import { resolveRunRevealTarget } from "@/app/api/runs/[id]/deliver/route";
+import { resolveRunRevealTarget } from "@/lib/server/runs/delivery-reveal-target";
 import {
   captureRunTargetContext,
   resolveRunTargetPath,

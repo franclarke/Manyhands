@@ -23,10 +23,8 @@ import {
 import { revealInFileExplorer } from "@/lib/server/local-fs";
 import { terminalDispositionForArtifact } from "@/lib/server/runs/final-artifact";
 import type { RunRecord } from "@/lib/server/runs/schema";
-import {
-  RunTargetMismatchError,
-  resolveRunTargetPath
-} from "@/lib/server/runs/target-context";
+import { resolveRunRevealTarget } from "@/lib/server/runs/delivery-reveal-target";
+import { RunTargetMismatchError } from "@/lib/server/runs/target-context";
 import {
   claimRunOperation,
   releaseRunOperation,
@@ -245,11 +243,6 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
   } catch (error) {
     return errorResponse(error);
   }
-}
-
-export async function resolveRunRevealTarget(run: RunRecord): Promise<string | undefined> {
-  if (run.appliedToRepoPath !== undefined) return run.appliedToRepoPath;
-  return resolveRunTargetPath(run);
 }
 
 function isDeliveryPersisted(run: RunRecord, manifestId: string, finalSha: string): boolean {

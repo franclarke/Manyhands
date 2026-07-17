@@ -399,7 +399,6 @@ function RunRow({
 }: RunRowProps): React.ReactElement {
   const uiStatus = runUiStatus(run.status);
   const meta = STATUS_META[uiStatus];
-  const failed = uiStatus === "failed";
   const displayTitle = run.title || run.userPrompt.slice(0, 64);
 
   if (editing) {

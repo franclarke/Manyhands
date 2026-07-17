@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -173,7 +173,7 @@ function MinimalRunGraphInner({
   onFocus,
   fill = false,
   emptyKind = "planning",
-  mode = "tasks",
+  mode = "graph",
   overlayNodeIds = [],
   dimOutsideOverlay = false,
   waveLabel,
@@ -235,26 +235,7 @@ function MinimalRunGraphInner({
     }
     previousStatusesRef.current = new Map(graph.nodes.map((node) => [node.id, node.vital.status]));
   }, [flow, graph.nodes]);
-
-  // Frame the first proposed node once. Afterwards the viewport remains under
-  // the operator's control while planning and execution events stream in.
-  const initialFrameDoneRef = useRef(false);
-  const { fitView } = useReactFlow();
-  useEffect(() => {
-    if (initialFrameDoneRef.current || flow.nodes.length === 0) return;
-    const frame = window.requestAnimationFrame(() => {
-      initialFrameDoneRef.current = true;
-      void fitView({
-        nodes: flow.nodes.map((node) => ({ id: node.id })),
-        padding: 0.22,
-        maxZoom: 0.82,
-        duration: 0
-      });
-    });
-    return () => {
-      window.cancelAnimationFrame(frame);
-    };
-  }, [fitView, flow.nodes]);
+  const onMoveEnd = useInitialCanvasFrame(flow.nodes.map((node) => node.id));
 
   return (
     <section className={fill ? "mh-run-graph mh-run-graph-fill" : "mh-run-graph"} aria-label="Grafo de tareas del run">
@@ -283,6 +264,7 @@ function MinimalRunGraphInner({
           onFocus({ kind: "node", id: node.id });
         }}
         onPaneClick={() => onFocus(null)}
+        onMoveEnd={onMoveEnd}
       >
         <Background variant={BackgroundVariant.Dots} gap={28} size={1} color="var(--mh-graph-dots)" />
         <CanvasControls onExpandAll={handleExpandAll} onCollapseAll={handleCollapseAll} />
@@ -305,6 +287,28 @@ function MinimalRunGraphInner({
       </ReactFlow>
     </section>
   );
+}
+
+/** Initial framing is a one-shot bootstrap; streamed events never own viewport. */
+function useInitialCanvasFrame(nodeIds: readonly string[]): () => void {
+  const { fitView } = useReactFlow();
+  const initialFrameDoneRef = useRef(false);
+  const initialNodeIdsRef = useRef<string[]>([]);
+  const hasNodes = nodeIds.length > 0;
+  if (!initialFrameDoneRef.current && initialNodeIdsRef.current.length === 0 && hasNodes) {
+    initialNodeIdsRef.current = [...nodeIds];
+  }
+  useEffect(() => {
+    if (initialFrameDoneRef.current || !hasNodes) return;
+    const frame = window.requestAnimationFrame(() => {
+      initialFrameDoneRef.current = true;
+      void fitView({ nodes: initialNodeIdsRef.current.map((id) => ({ id })), padding: 0.22, maxZoom: 0.82, duration: 0 });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [fitView, hasNodes]);
+  return useCallback(() => {
+    initialFrameDoneRef.current = true;
+  }, []);
 }
 
 function GraphEmptyState({ kind }: { kind: GraphEmptyKind }): React.ReactElement {
@@ -553,8 +557,8 @@ function buildFlow(
         : isConflict
           ? "var(--mh-graph-conflict)"
           : branchColor;
-    const interfaceEmphasis = lens.mode === "interfaces" && isSeam;
-    const integrationEmphasis = lens.mode === "integration" && (isHierarchy || isConflict);
+    const interfaceEmphasis = lens.mode === "contracts" && isSeam;
+    const integrationEmphasis = lens.mode === "risks" && (isHierarchy || isConflict);
     const crossNodeEdge = !isHierarchy;
 
     flowEdges.push({

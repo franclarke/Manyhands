@@ -2,7 +2,7 @@ import type { MinimalRunGraph, MinimalWorkspaceView } from "./minimal-workspace-
 import { displayWaveOrdinal } from "./scheduling-wave-ordinal";
 import type { RunModel, RunSchedulingWaveSelectedPayload } from "./types";
 
-export type RunCanvasMode = "tasks" | "scheduling" | "integration" | "interfaces";
+export type RunCanvasMode = "graph" | "execution" | "contracts" | "risks";
 
 export interface SchedulingOverlaySummary {
   id: string;
@@ -49,9 +49,9 @@ export function selectRunCanvasProjection(
     risk: latestWave.riskSummary
   };
 
-  const overlayNodeIds = mode === "scheduling"
+  const overlayNodeIds = mode === "execution"
     ? latestWave?.selectedTaskIds ?? []
-    : mode === "integration"
+    : mode === "risks"
       ? view.details.nodes.filter((node) => node.role !== "leaf").map((node) => node.id)
       : [];
 
@@ -59,11 +59,11 @@ export function selectRunCanvasProjection(
     mode,
     graph: view.graph,
     overlayNodeIds: [...overlayNodeIds],
-    dimOutsideOverlay: mode === "scheduling" && overlayNodeIds.length > 0,
+    dimOutsideOverlay: mode === "execution" && overlayNodeIds.length > 0,
     showHierarchyEdges: true,
-    showDependencyEdges: mode === "tasks" || mode === "scheduling",
-    showSeamEdges: mode === "interfaces",
-    showConflictEdges: mode === "integration",
+    showDependencyEdges: mode === "graph" || mode === "execution",
+    showSeamEdges: mode === "contracts",
+    showConflictEdges: mode === "risks",
     wave
   };
 }

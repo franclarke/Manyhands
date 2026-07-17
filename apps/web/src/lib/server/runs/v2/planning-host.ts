@@ -2,7 +2,7 @@ import type { CompiledGraphRevision, GraphCompilerInput, WorkBreakdown, WorkBrea
 import type { RepositorySnapshot } from "@manyhands/repository-index";
 import { PLAN_CRITIC_KINDS } from "@manyhands/decomposer";
 import { foldRun, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
-import { JsonlRunEventStore, RunSnapshotStore, type FencingAuthority } from "@manyhands/run-store";
+import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 
 export interface PlanningV2Input {
   runId: string;

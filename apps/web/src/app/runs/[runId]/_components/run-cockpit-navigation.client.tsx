@@ -31,10 +31,10 @@ const FILTERS: Array<{ value: RunOutlineFilter; label: string }> = [
 ];
 
 const MODES: Array<{ id: RunCanvasMode; label: string; icon: typeof Workflow }> = [
-  { id: "tasks", label: "Tareas", icon: Workflow },
-  { id: "scheduling", label: "Planificación", icon: Route },
-  { id: "integration", label: "Integración", icon: GitMerge },
-  { id: "interfaces", label: "Interfaces", icon: Braces }
+  { id: "graph", label: "Grafo", icon: Workflow },
+  { id: "execution", label: "Ejecución", icon: Route },
+  { id: "contracts", label: "Contratos", icon: Braces },
+  { id: "risks", label: "Riesgos", icon: GitMerge }
 ];
 
 export function RunOutline({
@@ -196,7 +196,7 @@ export function RunCanvasToolbar({
           );
         })}
       </div>
-      {mode === "scheduling" && projection.wave !== null ? (
+      {mode === "execution" && projection.wave !== null ? (
         <div className="ml-auto flex items-center gap-2 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-2 py-1 text-meta text-[var(--color-text-muted)]">
           <span className="mh-mono font-semibold text-[var(--color-accent)]">{projection.wave.label}</span>
           <span>{projection.overlayNodeIds.length} selected</span>

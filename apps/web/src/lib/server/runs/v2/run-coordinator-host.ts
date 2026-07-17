@@ -57,7 +57,7 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
 
 export async function approvePlanningV2Pipeline(runId: string, revision: number): Promise<RunRecord> {
   const claimed = await claimRunOperation(runId, "planning", { expectedStatuses: ["needs_review"] });
-  const { run, lease } = claimed;
+  const { lease } = claimed;
   try {
     const directory = resolveRunsDirectory();
     const events = new JsonlRunEventStore({ directory });

@@ -21,6 +21,7 @@
  */
 import type {
   Amendment,
+  CanonicalTaskDependency,
   AmendmentAppliedPayload,
   AmendmentRejectedPayload,
   AmendmentProposedPayload,
@@ -31,6 +32,7 @@ import type {
   DecisionRaisedPayload,
   DecisionResolvedPayload,
   Evidence,
+  EvidenceMatrixView,
   ExecutionState,
   IntegrationCompletedPayload,
   IntegrationValidatedPayload,
@@ -55,6 +57,7 @@ import type {
   RunSchedulingWaveSelectedPayload,
   RunStatusChangedPayload,
   RunModel,
+  RunModelSnapshot,
   ScopeDerivedPayload,
   Seam,
   SeamAmendedPayload,
@@ -88,6 +91,8 @@ export function createInitialRunModel(run: RunSeed): RunModel {
     conflicts: new Map(),
     decisions: new Map(),
     amendments: new Map(),
+    evidenceMatrices: new Map(),
+    orchestration: { lifecycle: "planning", readyNodeIds: [], pendingDecisionIds: [] },
     cursor: 0
   };
 }
@@ -113,6 +118,44 @@ export function reduceRunEvents(initial: RunModel, events: readonly RunEvent[]):
   return model;
 }
 
+export function snapshotRunModel(model: RunModel): RunModelSnapshot {
+  return {
+    run: structuredClone(model.run),
+    nodes: [...model.nodes.values()].map((value) => structuredClone(value)),
+    dependencies: [...model.dependencies.entries()].map(([key, value]) => [key, structuredClone(value)]),
+    seams: [...model.seams.values()].map((value) => structuredClone(value)),
+    waves: [...model.waves.values()].map((value) => structuredClone(value)),
+    schedulingWaves: [...model.schedulingWaves.values()].map((value) => structuredClone(value)),
+    conflicts: [...model.conflicts.values()].map((value) => structuredClone(value)),
+    decisions: [...model.decisions.values()].map((value) => structuredClone(value)),
+    amendments: [...model.amendments.values()].map((value) => structuredClone(value)),
+    evidenceMatrices: [...model.evidenceMatrices.values()].map((value) => structuredClone(value)),
+    orchestration: structuredClone(model.orchestration),
+    ...(model.evidence !== undefined ? { evidence: structuredClone(model.evidence) } : {}),
+    ...(model.metrics !== undefined ? { metrics: structuredClone(model.metrics) } : {}),
+    cursor: model.cursor
+  };
+}
+
+export function restoreRunModelSnapshot(snapshot: RunModelSnapshot): RunModel {
+  return {
+    run: structuredClone(snapshot.run),
+    nodes: new Map(snapshot.nodes.map((value) => [value.id, structuredClone(value)])),
+    dependencies: new Map(snapshot.dependencies.map(([key, value]) => [key, structuredClone(value)])),
+    seams: new Map(snapshot.seams.map((value) => [value.id, structuredClone(value)])),
+    waves: new Map(snapshot.waves.map((value) => [value.id, structuredClone(value)])),
+    schedulingWaves: new Map(snapshot.schedulingWaves.map((value) => [value.waveId, structuredClone(value)])),
+    conflicts: new Map(snapshot.conflicts.map((value) => [value.id, structuredClone(value)])),
+    decisions: new Map(snapshot.decisions.map((value) => [value.id, structuredClone(value)])),
+    amendments: new Map(snapshot.amendments.map((value) => [value.id, structuredClone(value)])),
+    evidenceMatrices: new Map(snapshot.evidenceMatrices.map((value) => [value.matrixId, structuredClone(value)])),
+    orchestration: structuredClone(snapshot.orchestration),
+    ...(snapshot.evidence !== undefined ? { evidence: structuredClone(snapshot.evidence) } : {}),
+    ...(snapshot.metrics !== undefined ? { metrics: structuredClone(snapshot.metrics) } : {}),
+    cursor: snapshot.cursor
+  };
+}
+
 /** Centralizes the `payload` narrowing. The reducer knows the type from the
  *  switch; the envelope's payload is `Record<string, unknown>` by contract. */
 function read<T>(event: RunEvent): T {
@@ -125,9 +168,53 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
   switch (event.type) {
     // ── Framing ──
     case "run.created": {
+      if (typeof event.payload.goal === "string") {
+        return { ...model, run: { ...model.run, intent: event.payload.goal } };
+      }
       const p = read<RunCreatedPayload>(event);
       return { ...model, run: { ...model.run, intent: p.intent, workspaceId: p.workspaceId, config: p.config } };
     }
+    case "graph.compiled":
+      return applyCompiledGraph(model, event.payload);
+    case "graph.revision.proposed": {
+      const graphId = String(event.payload.graphId ?? "");
+      const graphRevision = Number(event.payload.revision ?? 0);
+      return { ...model, orchestration: { ...model.orchestration, lifecycle: "needs_approval", graphId, graphRevision } };
+    }
+    case "graph.revision.approved": {
+      const graphId = String(event.payload.graphId ?? "");
+      const revision = Number(event.payload.revision ?? 0);
+      return { ...model, orchestration: { ...model.orchestration, lifecycle: "running", graphId, graphRevision: revision, approvedGraphRevision: revision } };
+    }
+    case "readiness.observed": {
+      const readyNodeIds = stringArray(event.payload.readyNodeIds);
+      const pendingDecisionIds = stringArray(event.payload.pendingDecisionIds);
+      return { ...model, orchestration: { ...model.orchestration, readyNodeIds, pendingDecisionIds, lifecycle: readyNodeIds.length === 0 && pendingDecisionIds.length > 0 ? "waiting_for_input" : "running" } };
+    }
+    case "evidence.matrix_recorded": {
+      const matrix = event.payload.matrix as EvidenceMatrixView | undefined;
+      if (matrix === undefined || typeof matrix.matrixId !== "string") return model;
+      const evidenceMatrices = new Map(model.evidenceMatrices);
+      evidenceMatrices.set(matrix.matrixId, structuredClone(matrix));
+      return { ...model, evidenceMatrices };
+    }
+    case "final_candidate.verified": {
+      const evidenceEligible = event.payload.evidenceEligible === true;
+      const finalCandidate = { manifestId: String(event.payload.manifestId ?? ""), commit: String(event.payload.commit ?? ""), evidenceMatrixId: String(event.payload.evidenceMatrixId ?? ""), evidenceEligible };
+      return { ...model, run: { ...model.run, control: { ...model.run.control, status: evidenceEligible ? "needs_delivery" : "unverified", updatedAt: event.at } }, orchestration: { ...model.orchestration, lifecycle: evidenceEligible ? "result_ready" : "running", finalCandidate } };
+    }
+    case "delivery.started":
+      return { ...model, orchestration: { ...model.orchestration, lifecycle: "delivering", deliveryApproval: structuredClone(event.payload.approval as Record<string, unknown>) } };
+    case "delivery.published": {
+      const receipt = event.payload.receipt as { confirmed?: unknown; disposition?: unknown } | undefined;
+      if (receipt?.confirmed !== true || (receipt.disposition !== undefined && receipt.disposition !== "delivered")) return model;
+      return { ...model, run: { ...model.run, control: { ...model.run.control, status: "completed", updatedAt: event.at } }, orchestration: { ...model.orchestration, lifecycle: "completed" } };
+    }
+    case "delivery.failed":
+      return { ...model, run: { ...model.run, control: { ...model.run.control, status: "failed_delivery", updatedAt: event.at } }, orchestration: { ...model.orchestration, lifecycle: "result_ready" } };
+    case "run.failed":
+    case "planning.failed":
+      return { ...model, run: { ...model.run, control: { ...model.run.control, status: "failed", updatedAt: event.at }, errorMessage: String(event.payload.reason ?? "Run failed") }, orchestration: { ...model.orchestration, lifecycle: "failed" } };
     case "run.context.resolved": {
       const p = read<RunContextResolvedPayload>(event);
       return { ...model, run: { ...model.run, context: { repo: p.repo, baseCommit: p.baseCommit, readiness: p.readiness } } };
@@ -273,7 +360,13 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
         waves: new Map(),
         schedulingWaves: new Map(),
         conflicts: new Map(),
-        amendments: new Map()
+        amendments: new Map(),
+        evidenceMatrices: new Map(),
+        orchestration: {
+          lifecycle: "planning",
+          readyNodeIds: [],
+          pendingDecisionIds: []
+        }
       };
       delete resetModel.evidence;
       delete resetModel.metrics;
@@ -473,6 +566,25 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
 
     // ── Decisions ──
     case "decision.raised": {
+      if (typeof event.payload.decision === "object" && event.payload.decision !== null) {
+        const decision = event.payload.decision as Record<string, unknown>;
+        const kind = v2DecisionKind(String(decision.kind ?? "clarify_goal"));
+        const affectedNodeIds = stringArray(decision.affectedNodeIds);
+        const rawOptions = arrayOfRecords(decision.options);
+        const options = rawOptions.map((option) => String(option.label ?? option.id ?? "")).filter(Boolean);
+        const optionValues = rawOptions.map((option) => String(option.id ?? option.label ?? "")).filter(Boolean);
+        return withDecision(model, {
+          id: String(decision.id ?? ""),
+          kind,
+          blocking: true,
+          context: {
+            nodeIds: affectedNodeIds,
+            question: String(decision.question ?? "Human input required"),
+            ...(options.length > 0 ? { options, optionValues } : {})
+          },
+          status: "pending"
+        });
+      }
       const p = read<DecisionRaisedPayload>(event);
       return withDecision(model, {
         id: p.decisionId,
@@ -483,6 +595,12 @@ function applyEvent(model: RunModel, event: RunEvent): RunModel {
       });
     }
     case "decision.resolved": {
+      if (typeof event.payload.decisionId === "string" && !("choice" in event.payload)) {
+        const decision = model.decisions.get(event.payload.decisionId);
+        if (!decision) return model;
+        const answer = typeof event.payload.answer === "string" ? event.payload.answer : String(event.payload.optionId ?? "resolved");
+        return withDecision(model, { ...decision, status: "resolved", resolution: { choice: { answer }, actor: "human", at: event.at } });
+      }
       const p = read<DecisionResolvedPayload>(event);
       const decision = model.decisions.get(p.decisionId);
       if (!decision) return model;
@@ -594,6 +712,60 @@ function withAmendment(model: RunModel, amendment: Amendment): RunModel {
   const amendments = new Map(model.amendments);
   amendments.set(amendment.id, amendment);
   return { ...model, amendments };
+}
+
+function applyCompiledGraph(model: RunModel, payload: Record<string, unknown>): RunModel {
+  const graph = payload.graph as Record<string, unknown> | undefined;
+  const rawNodes = graph?.nodes as Record<string, Record<string, unknown>> | undefined;
+  if (graph === undefined || rawNodes === undefined) return model;
+  const nodes = new Map<string, Node>();
+  const depthOf = (id: string, seen = new Set<string>()): number => {
+    if (seen.has(id)) return 0;
+    seen.add(id);
+    const parentId = rawNodes[id]?.parentId;
+    return typeof parentId === "string" ? 1 + depthOf(parentId, seen) : 0;
+  };
+  for (const [id, raw] of Object.entries(rawNodes)) {
+    const kind = String(raw.kind ?? "leaf");
+    nodes.set(id, {
+      ...minimalNode(id),
+      parentId: typeof raw.parentId === "string" ? raw.parentId : null,
+      role: kind === "root" ? "root" : kind === "composite" || kind === "integrator" ? "composite" : "leaf",
+      title: String(raw.title ?? id),
+      goal: String(raw.goal ?? raw.title ?? id),
+      depth: depthOf(id)
+    });
+  }
+  const dependencies = new Map<string, CanonicalTaskDependency>();
+  for (const raw of arrayOfRecords(graph.artifactRequirements)) {
+    const fromTaskId = String(raw.producerNodeId ?? "");
+    const toTaskId = String(raw.consumerNodeId ?? "");
+    if (fromTaskId && toTaskId) dependencies.set(`${fromTaskId}->${toTaskId}`, { fromTaskId, toTaskId, type: "logical", inferred: false, rationale: String(raw.purpose ?? "Required artifact") });
+  }
+  const seams = new Map<string, Seam>();
+  for (const raw of arrayOfRecords(graph.seamBindings)) {
+    const id = String(raw.id ?? "");
+    if (!id) continue;
+    const contract = raw.seamContract as Record<string, unknown> | undefined;
+    seams.set(id, { id, name: String(contract?.id ?? id), producerNodeId: String(raw.producerNodeId ?? ""), consumerNodeIds: [String(raw.consumerNodeId ?? "")].filter(Boolean), signature: { draft: `${String(contract?.id ?? id)}@${String(contract?.revision ?? "unknown")}` }, revision: 1, state: "frozen" });
+  }
+  return { ...model, nodes, dependencies, seams, orchestration: { ...model.orchestration, graphId: String(graph.graphId ?? payload.graphId ?? ""), graphRevision: Number(graph.revision ?? payload.revision ?? 0) } };
+}
+
+function arrayOfRecords(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null) : [];
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function v2DecisionKind(kind: string): Decision["kind"] {
+  if (kind === "approve_plan") return "approve_plan";
+  if (kind === "approve_amendment") return "approve_amendment";
+  if (kind === "resolve_conflict") return "resolve_conflict";
+  if (kind === "approve_delivery") return "approve_merge";
+  return "clarify";
 }
 
 function ensureNode(model: RunModel, id: string): Node {

@@ -149,7 +149,7 @@ export async function approveAmendment(
       status: "graph_prepared"
     });
 
-    let persisted = await updateRunForOperation(input.run.runId, lease, (current) => {
+    const persisted = await updateRunForOperation(input.run.runId, lease, (current) => {
       if (current.status !== "running" || (current.planRevision ?? 1) !== sourcePlanRevision) {
         throw new RunMutationConflictError(
           `Amendment ${amendment.id} was prepared for a stale plan revision.`,

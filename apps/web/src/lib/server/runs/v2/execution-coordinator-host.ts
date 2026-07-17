@@ -4,7 +4,7 @@ import {
   type ExecutionReadinessObservation,
   type RunProjection
 } from "@manyhands/run-coordinator";
-import { JsonlRunEventStore, type FencingAuthority } from "@manyhands/run-store";
+import type { FencingAuthority, JsonlRunEventStore } from "@manyhands/run-store";
 
 export interface ExecutionCoordinatorHostV2Options {
   runId: string;

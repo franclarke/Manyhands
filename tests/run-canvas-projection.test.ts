@@ -89,8 +89,8 @@ describe("run canvas projection", () => {
   it("keeps scheduling as an overlay over the unchanged task DAG", () => {
     const model = withSchedulingWave(completedModel());
     const view = selectMinimalWorkspaceView(model);
-    const tasks = selectRunCanvasProjection(model, view, "tasks");
-    const scheduling = selectRunCanvasProjection(model, view, "scheduling");
+    const tasks = selectRunCanvasProjection(model, view, "graph");
+    const scheduling = selectRunCanvasProjection(model, view, "execution");
 
     expect(scheduling.graph.nodes.map((node) => node.id)).toEqual(tasks.graph.nodes.map((node) => node.id));
     expect(scheduling.graph.edges.map((edge) => edge.id)).toEqual(tasks.graph.edges.map((edge) => edge.id));
@@ -105,9 +105,9 @@ describe("run canvas projection", () => {
   it("uses projections to change emphasis without filtering structural nodes", () => {
     const model = withDistinctCanonicalEdges(completedModel());
     const view = selectMinimalWorkspaceView(model);
-    const tasks = selectRunCanvasProjection(model, view, "tasks");
-    const integration = selectRunCanvasProjection(model, view, "integration");
-    const interfaces = selectRunCanvasProjection(model, view, "interfaces");
+    const tasks = selectRunCanvasProjection(model, view, "graph");
+    const integration = selectRunCanvasProjection(model, view, "risks");
+    const interfaces = selectRunCanvasProjection(model, view, "contracts");
 
     expect(integration.graph.nodes).toHaveLength(tasks.graph.nodes.length);
     expect(interfaces.graph.nodes).toHaveLength(tasks.graph.nodes.length);
@@ -116,7 +116,7 @@ describe("run canvas projection", () => {
     );
     expect(tasks.showDependencyEdges).toBe(true);
     expect(tasks.showSeamEdges).toBe(false);
-    expect(selectRunCanvasProjection(model, view, "scheduling").showDependencyEdges).toBe(true);
+    expect(selectRunCanvasProjection(model, view, "execution").showDependencyEdges).toBe(true);
     expect(interfaces.showDependencyEdges).toBe(false);
     expect(interfaces.showSeamEdges).toBe(true);
     expect(integration.showConflictEdges).toBe(true);

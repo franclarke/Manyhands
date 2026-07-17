@@ -329,6 +329,8 @@ export interface DecisionContext {
   amendmentId?: AmendmentId;
   question?: string;
   options?: string[];
+  /** Stable values paired with display labels for canonical V2 decisions. */
+  optionValues?: string[];
   diffRef?: BlobRef;
   /**
    * Set when the clarify decision is an execution gate (leaf_validation_failed,
@@ -426,6 +428,33 @@ export interface Evidence {
   narrativeRef: BlobRef;
   integrationCommit: string;
   invalidationTrace?: InvalidationTraceEntry[];
+}
+
+export type EvidenceCriterionStatus = "satisfied" | "failed" | "uncovered" | "flaky" | "not_applicable";
+export interface EvidenceCriterionView {
+  criterionId: string;
+  obligationId: string;
+  status: EvidenceCriterionStatus;
+  justification: string;
+  evidenceRefs: string[];
+}
+export interface EvidenceMatrixView {
+  matrixId: string;
+  candidateCommit: string;
+  validationContract: { id: string; revision: string };
+  criteria: EvidenceCriterionView[];
+  outcome: "verified" | "unverified" | "failed";
+}
+
+export interface RunOrchestrationProjection {
+  lifecycle: "planning" | "needs_approval" | "running" | "waiting_for_input" | "paused" | "cancelling" | "interrupted" | "result_ready" | "delivering" | "completed" | "failed";
+  readyNodeIds: NodeId[];
+  pendingDecisionIds: DecisionId[];
+  graphId?: string;
+  graphRevision?: number;
+  approvedGraphRevision?: number;
+  finalCandidate?: { manifestId: string; commit: string; evidenceMatrixId: string; evidenceEligible: boolean };
+  deliveryApproval?: Record<string, unknown>;
 }
 
 // ── Run metrics (legacy GranularityVector name) ───────────────────
@@ -547,9 +576,28 @@ export interface RunModel {
   decisions: Map<DecisionId, Decision>;
   amendments: Map<AmendmentId, Amendment>;
   evidence?: Evidence;
+  evidenceMatrices: Map<string, EvidenceMatrixView>;
+  orchestration: RunOrchestrationProjection;
   /** The run's granularity metrics (from `run.metrics.ready`); a fold cache, not derived. */
   metrics?: GranularityMetrics;
   /** Last applied `seq` (idempotency / append-only cursor). */
+  cursor: number;
+}
+
+export interface RunModelSnapshot {
+  run: Run;
+  nodes: Node[];
+  dependencies: Array<[string, CanonicalTaskDependency]>;
+  seams: Seam[];
+  waves: Wave[];
+  schedulingWaves: RunSchedulingWaveSelectedPayload[];
+  conflicts: Conflict[];
+  decisions: Decision[];
+  amendments: Amendment[];
+  evidenceMatrices: EvidenceMatrixView[];
+  orchestration: RunOrchestrationProjection;
+  evidence?: Evidence;
+  metrics?: GranularityMetrics;
   cursor: number;
 }
 

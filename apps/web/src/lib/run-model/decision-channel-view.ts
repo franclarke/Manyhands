@@ -81,6 +81,7 @@ export interface DecisionChannelItem {
   affectedNodeIds: NodeId[];
   question?: string;
   options?: string[];
+  optionValues?: string[];
   conflict?: DecisionConflictRef;
   amendment?: DecisionAmendmentRef;
   seam?: DecisionSeamRef;
@@ -160,7 +161,8 @@ export function buildDecisionChannelView(model: RunModel): DecisionChannelView {
       primaryActionLabel: isExecutionGate ? "Elegir opción" : PRIMARY_ACTION[d.kind],
       affectedNodeIds: [...(ctx.nodeIds ?? [])],
       ...(ctx.question !== undefined ? { question: ctx.question } : {}),
-      ...(ctx.options !== undefined ? { options: [...ctx.options] } : {})
+      ...(ctx.options !== undefined ? { options: [...ctx.options] } : {}),
+      ...(ctx.optionValues !== undefined ? { optionValues: [...ctx.optionValues] } : {})
     };
 
     // resolve_conflict → embed the conflict it points at.

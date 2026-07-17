@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { buildFocusView, type FocusTarget } from "@/lib/run-model/focus-view";
 import { selectMinimalWorkspaceView } from "@/lib/run-model/minimal-workspace-view";
 import { selectRunCanvasProjection, type RunCanvasMode } from "@/lib/run-model/run-canvas-projection";
+import { selectResultReadiness } from "@/lib/run-model/selectors";
 import type { Run, RunEvent, RunModel, Node } from "@/lib/run-model/types";
 import { runUiStatus, STATUS_META } from "@/lib/status";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -31,6 +32,8 @@ import {
   type DockSurfaceId
 } from "./run-workspace-surfaces.client";
 import { RunCanvasToolbar, RunOutline } from "./run-cockpit-navigation.client";
+import { DecisionIntervention } from "@/components/run-model/decision-intervention";
+import { EvidenceMatrixPanel } from "@/components/run-model/evidence-matrix-panel";
 
 const SSR_NOOP_STORAGE: Pick<Storage, "getItem" | "setItem"> = {
   getItem: () => null,
@@ -59,7 +62,7 @@ export function RunModelView({
   const [expandedDockSlotId, setExpandedDockSlotId] = useState<string | null>(null);
   const [bottomOpen, setBottomOpen] = useState(false);
   const [bottomTab, setBottomTab] = useState<BottomDrawerTab>("activity");
-  const [canvasMode, setCanvasMode] = useState<RunCanvasMode>("tasks");
+  const [canvasMode, setCanvasMode] = useState<RunCanvasMode>("graph");
   const [leftSurface, setLeftSurface] = useState<"outline" | "orchestrator">("outline");
   const [commandOpen, setCommandOpen] = useState(false);
 
@@ -69,6 +72,7 @@ export function RunModelView({
     () => selectRunCanvasProjection(model, view, canvasMode),
     [canvasMode, model, view]
   );
+  const resultReadiness = useMemo(() => selectResultReadiness(model), [model]);
   // Pass the event log so the focus inspector can derive execution timing and the
   // live agent console (both read `options.events`, independent of the folded model).
   const focusView = useMemo(
@@ -249,15 +253,6 @@ export function RunModelView({
               : [])
           ]}
         />
-        <DecisionBanner
-          view={view}
-          onOpen={() => {
-            setLeftSurface("orchestrator");
-            const nodeId = view.primaryAttention?.affectedNodeIds[0];
-            if (nodeId !== undefined) setFocus({ kind: "node", id: nodeId });
-            chatPanelRef.current?.expand();
-          }}
-        />
         <OperationalRecoveryCenter
           runId={seed.id}
           model={model}
@@ -357,8 +352,10 @@ export function RunModelView({
                 onOpenEvidence={() => openSurface("evidence", { kind: "evidence", id: "final" })}
               />
             ) : null}
+            {view.stage === "review" ? <EvidenceMatrixPanel result={resultReadiness} /> : null}
             <RunCanvasToolbar mode={canvasMode} projection={canvasProjection} onModeChange={setCanvasMode} />
             <div className="relative min-h-0 flex-1 bg-[var(--color-bg)]">
+              {fixture === undefined && view.primaryAttention !== null ? <DecisionIntervention runId={seed.id} item={view.primaryAttention} /> : null}
               <MinimalRunGraphCanvas
                 graph={canvasProjection.graph}
                 stage={view.stage}
@@ -551,32 +548,6 @@ function ReviewEvidencePanel({
         <Button size="sm" onClick={onOpenDiff}><FileDiff aria-hidden className="h-3.5 w-3.5" />Ver diff agregado</Button>
         <Button size="sm" variant="ghost" onClick={onOpenEvidence}>Ver evidencia y trazabilidad</Button>
       </div>
-    </section>
-  );
-}
-
-function DecisionBanner({
-  view,
-  onOpen
-}: {
-  view: ReturnType<typeof selectMinimalWorkspaceView>;
-  onOpen: () => void;
-}): React.ReactElement | null {
-  const decision = view.primaryAttention;
-  if (decision === null) return null;
-  const affected = decision.affectedNodeIds.length;
-  return (
-    <section
-      aria-label="Decisión humana pendiente"
-      className="flex min-h-12 shrink-0 items-center gap-3 border-b border-[var(--status-blocked-border)] bg-[color-mix(in_srgb,var(--status-blocked-bg)_72%,var(--color-bg))] px-5 py-2"
-    >
-      <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-[var(--color-accent)] shadow-[0_0_0_4px_color-mix(in_srgb,var(--color-accent)_12%,transparent)]" />
-      <div className="min-w-0 flex-1">
-        <p className="m-0 truncate text-label font-semibold text-[var(--color-text)]">{decision.label}</p>
-        <p className="m-0 mt-0.5 truncate text-meta text-[var(--color-text-muted)]">{decision.summary}{affected > 0 ? ` · ${affected} ${affected === 1 ? "tarea afectada" : "tareas afectadas"}` : ""}</p>
-      </div>
-      <span className="hidden text-meta text-[var(--status-blocked-fg)] md:inline">{decision.blocking ? "Bloquea trabajo dependiente" : "Advisory"}</span>
-      <Button size="sm" onClick={onOpen}>Revisar y decidir →</Button>
     </section>
   );
 }
