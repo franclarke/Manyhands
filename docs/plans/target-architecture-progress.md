@@ -10,9 +10,9 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-11 — ExecutionBaseBuilder e intentos exactos` |
-| Last completed packet | `WP-10 — Scheduler readiness V2` |
-| Open gate | G3 — Artifact identity |
+| Current packet | `WP-12 — Execution coordination V2` |
+| Last completed packet | `WP-11 — ExecutionBaseBuilder e intentos exactos` |
+| Open gate | G4 — Honest verification |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
 | WP-00 implementation commit | `d381f61` |
@@ -27,6 +27,7 @@
 | WP-09 implementation commit | `b0c0fb0` |
 | WP-09 contract-identity correction | `a697974` |
 | WP-10 implementation commit | `1623025` |
+| WP-11 implementation commit | `824332d` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -44,7 +45,7 @@
 | WP-08 Planning V2 slice | completed | `9c08157` | 33/33 packet and adjacent tests; coordinator, orchestrator and web typechecks; three package builds passed | Opt-in productive inspector-to-approval path, selected CLI with bounded retries/timeouts, canonical facts, revision CAS and compatible RunRecord projection; G2 closed |
 | WP-09 Artifacts and fingerprints | completed | `b0c0fb0` | 12/12 packet and legacy journal tests; coordinator/store typechecks and builds passed | Canonical full-input fingerprint, immutable artifact/attempt registries and one exact adoption gate with explicit stale event |
 | WP-10 Scheduler readiness V2 | completed | `1623025` | 26/26 packet and scheduling regressions; scheduler/conflict-risk typechecks and builds passed | Pure per-node readiness reasons, artifact/decision scoped blocking, required effective maxParallel and evidenced conflict constraints with unknown risk |
-| WP-11 ExecutionBaseBuilder | queued | — | — | — |
+| WP-11 ExecutionBaseBuilder | completed | `824332d` | 56/56 packet and execution regressions; execution-core/web typechecks and execution-core build passed | Exact declared artifact materialization, structured pre-dispatch conflicts, reproducible base manifests and reserved-attempt fingerprint validation |
 | WP-12 Execution coordination | queued | — | — | — |
 | WP-13 Failure recovery | queued | — | — | — |
 | WP-14 EvidenceMatrix | queued | — | — | — |
@@ -112,7 +113,7 @@ baseline until a later packet owns their migration.
 |---|---|---|
 | G1 Contracts executable | closed | WP-01 through WP-05 integrated; schemas, typed relations, semantic breakdown, compiler and critics are green |
 | G2 Canonical history | closed | WP-07 canonical event persistence and WP-08 productive planning slice use the same fenced event history; RunRecord is compatibility projection only |
-| G3 Exact adoption | not_started | WP-09 through WP-11 |
+| G3 Exact adoption | closed | WP-09 through WP-11 provide canonical fingerprints, immutable adoption, exact artifact readiness and reproducible physical execution bases |
 | G4 Honest verification | not_started | WP-14 |
 | G5 Real delivery | not_started | WP-16 |
 | G6 Single architecture | not_started | WP-18 |
@@ -519,6 +520,44 @@ scheduler and conflict-risk builds: passed
 - Conflict constraints retain signals, confidence, observation and expiry.
   Missing evidence yields `unknown`, never fabricated `low`; unknown, high and
   blocking pairs are not co-scheduled.
+
+## WP-11 evidence
+
+### Red-green evidence
+
+The five initial exact-base and attempt-identity cases failed because no base
+builder existed, the legacy attempt adapter discarded `inputFingerprint`, and
+the executor had no exact-base seam. The final verification produced:
+
+```text
+WP-11 and execution regressions: 6 files passed, 56 tests passed
+execution-core typecheck: passed
+web TypeScript check: passed
+execution-core build including declarations: passed
+git diff --check: passed
+```
+
+### Implemented exact execution bases
+
+- `ExecutionBaseBuilder` starts from the declared repository commit and
+  materializes only the ordered artifacts named by the request. It never scans
+  siblings or pulls transitive commits from graph ancestry.
+- Commit artifacts are cherry-picked through the existing Git seam. Conflict,
+  empty application, Git error and unsupported artifact kinds produce typed,
+  structured evidence; a failed build aborts the cherry-pick and cleans its
+  managed worktree before an executor can be invoked.
+- `ExecutionBaseManifest` records repository base, contract baseline, each
+  artifact id/digest/contract revision, every pre/post materialization SHA,
+  resulting SHA, exact input fingerprint and creation time.
+- The worktree handed to result recording uses the fully materialized SHA as
+  its diff baseline. Dependency changes therefore cannot be misattributed to
+  the executing agent.
+- `RunExecutor.runNode` exposes an opt-in V2 exact-base seam and checks the
+  attempt's reserved fingerprint both before materialization and after agent
+  execution. Legacy execution remains explicit by omitting this input until
+  WP-12/WP-14 migrate the productive coordinator path.
+- The temporary web attempt journal now durably preserves a canonical
+  `inputFingerprint` while retaining backward compatibility for V1 attempts.
 
 ## Resume instructions
 
