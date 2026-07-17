@@ -3,6 +3,8 @@ import { RepositoryIndexSchema, type RepositoryFileIndex, type RepositoryIndex }
 import { clamp01, intersectValues, pairKey, uniqueValues } from "@manyhands/shared";
 import { z } from "zod";
 
+export * from "./constraint-evidence.js";
+
 export const ConflictRiskLevelSchema = z.union([
   z.literal("low"),
   z.literal("medium"),
