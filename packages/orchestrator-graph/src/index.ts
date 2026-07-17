@@ -21,6 +21,17 @@ export type {
   PlanningRunSummary
 } from "./planning-flow.js";
 
+export { V2ExecutionDriver } from "./v2/execution-driver.js";
+export type {
+  V2ExecutionDriverOptions,
+  V2ExecutionRunInput,
+  V2ExecutionTarget,
+  V2ExecutorProfile,
+  V2NodeExecutionInput,
+  V2NodeExecutionOutcome,
+  V2RepairObservation
+} from "./v2/execution-driver.js";
+
 export { JsonFileCheckpointSaver, type ThreadCheckpointHealth } from "./checkpointer.js";
 // Re-exported so consumers (web app, tests) can type checkpoints without
 // depending on @langchain/langgraph-checkpoint directly.

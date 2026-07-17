@@ -302,6 +302,9 @@ importers:
       '@manyhands/repository-index':
         specifier: workspace:*
         version: link:../repository-index
+      '@manyhands/run-coordinator':
+        specifier: workspace:*
+        version: link:../run-coordinator
       '@manyhands/scheduler':
         specifier: workspace:*
         version: link:../scheduler

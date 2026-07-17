@@ -26,6 +26,7 @@
     "@manyhands/decomposer": "workspace:*",
     "@manyhands/execution-core": "workspace:*",
     "@manyhands/repository-index": "workspace:*",
+    "@manyhands/run-coordinator": "workspace:*",
     "@manyhands/scheduler": "workspace:*",
     "@manyhands/task-graph": "workspace:*",
     "@manyhands/trace-store": "workspace:*",

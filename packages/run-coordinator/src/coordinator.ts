@@ -54,6 +54,18 @@ export class RunCoordinator {
     return state;
   }
 
+  /**
+   * Persists facts produced by an external side-effect adapter. Callers supply
+   * stable event ids so crash recovery can retry the exact observation without
+   * fabricating a second lifecycle history.
+   */
+  async record(runId: string, inputs: RunEventInput[]): Promise<RunProjection> {
+    if (inputs.length === 0) return this.load(runId);
+    const current = await this.ports.events.load(runId);
+    await this.ports.events.append(runId, current.length, inputs);
+    return foldRun(await this.ports.events.load(runId));
+  }
+
   private async append(runId: string, existing: RunEvent[], drafts: RunEventDraft[]): Promise<RunEvent[]> {
     const expectedSequence = existing.length;
     const inputs = drafts.map((draft, index) => ({
