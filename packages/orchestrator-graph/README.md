@@ -1,23 +1,26 @@
 # @manyhands/orchestrator-graph
 
-> Los StateGraphs de [LangGraph](https://langchain-ai.github.io/langgraphjs/) que orquestan planning y ejecución, con checkpoints durables para resume/fork.
+Implementación actual de planning/execution StateGraphs con LangGraph y
+checkpoints JSON.
 
-## Rol en el pipeline
+## Estado actual
 
-Orquestación. Es el motor que conecta `decomposer`, `scheduler` y `execution-core` en dos grafos de estado.
+El package conecta decomposer, scheduler y execution-core. Modela gates,
+fan-out/fan-in, resume y fork mediante APIs de LangGraph.
 
-## Conceptos clave
+## Boundary objetivo
 
-- **`planningGraph`.** Flujo de planificación: `decompose` → *question gate* (aclaraciones) → *degraded gate* → *critic review* → *approval gate*.
-- **`executionGraph`.** Flujo de ejecución: `prepare` → *route frontier* → `execute leaf` → *leaf gate* → *budget gate* → `integrate composite` → *conflict gate* → `run validation`.
-- **Estado reducible.** `RunStateAnnotation` modela el run como canales que se reducen (append-only), no como estado mutable.
-- **Checkpoints durables.** `JsonFileCheckpointSaver` persiste el estado del grafo en JSON, habilitando `resume` y `fork`.
-- **Gates = interrupts humanos.** Los gates (question / approval / leaf / budget / conflict) pausan el grafo esperando una decisión.
+LangGraph es un adapter del control plane. No define TaskGraph, lifecycle,
+Decision, Artifact ni RunEvent. Los nodos del StateGraph deben invocar casos de
+uso del `RunCoordinator` y respetar leases/fencing.
 
-## API pública
+El plan de transición debe identificar:
 
-`buildPlanningGraph` · `buildExecutionGraph` · `RunStateAnnotation` · `JsonFileCheckpointSaver` · factories de nodos (`makeDecomposePlanNode`, `approvalGateNode`, `makeExecuteLeafNode`, `conflictGateNode`, …)
+- semántica de dominio hoy embebida en state/channels;
+- checkpoints usados como segunda verdad;
+- interrupts que deben convertirse en `Decision` durable;
+- tombstones o reducers específicos del framework;
+- funcionalidades de fan-out/resume que conviene conservar.
 
-## Dependencias
-
-`@manyhands/decomposer`, `@manyhands/execution-core`, `@manyhands/task-graph`, `@langchain/langgraph`. **Más:** [`docs/system/04-run-executor.md`](../../docs/system/04-run-executor.md).
+Ver [`docs/design/langgraph-orchestrator-design.md`](../../docs/design/langgraph-orchestrator-design.md)
+y [`docs/system/04-run-executor.md`](../../docs/system/04-run-executor.md).

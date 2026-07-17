@@ -1,68 +1,47 @@
-# Repository-index: Grounding Estructural
-
-**Archivos fuente:** `packages/repository-index/src/index.ts`
-
----
-
-## Qué Es
-
-El `repository-index` construye un índice estructural del repositorio: archivos,
-símbolos, imports y exports usando el compilador de TypeScript. Es conocimiento
-determinístico del código existente para que otras capas no dependan solo de
-heurísticas de paths.
+# Repository model e índice estructural
 
 ## Responsabilidad
 
-Responder qué hay en este repo: qué archivos existen y de qué tipo son, qué
-símbolos declara/exporta cada uno y qué importa. No interpreta intención ni
-predice conflictos por sí mismo; solo describe estructura.
+Proveer grounding versionado al planning, context packing, risk y validation
+recipe compilation.
 
-## Cómo Funciona
+## Snapshot
 
-### `TypeScriptRepositoryIndexer.index`
+Se identifica por repository target + commit/tree + index schema version. Incluye:
 
-1. Recorre el repo desde `rootPath`, ignorando directorios de ruido
-   (`node_modules`, `.next`, `dist`, `coverage`, etc.).
-2. Parsea archivos indexables (`.ts`, `.tsx`, `.js`, `.jsx`, `.json`) con
-   `ts.createSourceFile` cuando aplica.
-3. Extrae por archivo símbolos declarados/exportados, imports, exports y un
-   `kind` (`source`, `test`, `config`, `schema`, `migration`, `unknown`).
+- workspaces/packages y manifests;
+- archivos y kinds;
+- símbolos, exports/imports y referencias;
+- APIs, schemas, migrations y entrypoints;
+- tests y relación aproximada con código;
+- scripts y herramientas;
+- ownership/boundaries inferidos con evidencia;
+- warnings por parseo incompleto.
 
-### Determinismo y Hash
+## Freshness
 
-El índice se ordena de forma estable y puede resumirse
-(`summarizeRepositoryIndex`) y hashearse (`computeRepositoryIndexHash`). Esto
-permite detectar cambios entre corridas sin persistir el índice completo en
-eventos de scheduling.
+El índice nunca se reutiliza solo por path del workspace. Debe coincidir commit y
+schema. Puede actualizarse incrementalmente, pero el digest final identifica el
+snapshot usado por el run.
 
-## Señales Disponibles Hoy
+## Uso por componente
 
-- Archivos repo-relativos y `kind`.
-- Símbolos declarados/exportados por archivo.
-- Imports con `moduleSpecifier` y símbolos importados.
-- Exports por archivo.
-- Resumen/hash determinístico.
+- Planner: límites y ejemplos del repo.
+- Graph Compiler: scopes, seams y outputs plausibles.
+- Context Packer: archivos/símbolos relevantes.
+- Risk: overlap y relaciones físicas.
+- Validator: comandos, tests y baseline.
 
-Con eso `conflict-risk` puede detectar relaciones exportador/importador,
-símbolos producer/consumer, schema compartido, fixture compartido y superficie
-pública compartida.
+## Lenguajes
 
-## Datos Que No Tiene
+TypeScript/JavaScript es la prioridad de producto. El modelo debe declarar
+capability y cobertura; no fingir un índice estructural completo para lenguajes
+sin parser. El fallback textual se etiqueta con confidence menor.
 
-No contiene AST completo persistido, call graph, type checker semántico,
-runtime usage, owners, historial git, cobertura ni embeddings. Por eso el
-predictor de riesgo sigue siendo heurístico y conserva fallbacks por
-contrato/scope cuando falta índice o la señal es insuficiente.
+## Seguridad y performance
 
-## Interfaces
-
-**Recibe:** `rootPath` y, opcionalmente, `repositoryId` / `indexedAt`.
-
-**Produce:** `RepositoryIndex` con `files`, `symbols`, `imports`, `exports`,
-`diagnostics` y `metadata`.
-
-## Cómo Encaja
-
-Planning usa el índice para grounding y puede persistir `staticConflictSignals`.
-El scheduler no indexa directamente: consume esas señales o un `RepositoryIndex`
-recibido por `RunExecutor.run` y deja evidencia compacta en la auditoría de wave.
+- respetar ignores y límites de tamaño;
+- no indexar secrets;
+- evitar ejecutar código para indexar;
+- cache por digest con writes atómicos;
+- findings parciales no bloquean salvo que afecten una frontera obligatoria.

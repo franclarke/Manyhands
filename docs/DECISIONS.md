@@ -1,342 +1,252 @@
-# ManyHands — Decisiones Vigentes
+# ManyHands — Decisiones de arquitectura objetivo
 
-> Síntesis operativa para agentes. Para historia completa, leer ADRs en
-> `docs/adr/`. Los ADRs preservan decisiones pasadas; este documento dice qué
-> sigue vigente hoy.
+> Estado: vigente. Este documento sintetiza el diseño que debe guiar la
+> transición. Los ADR explican alternativas y trade-offs; `docs/system/`
+> especifica los contratos técnicos.
 
----
+## A1. La documentación describe el objetivo, no disfraza el estado actual
 
-## Estado De Evaluación y Benchmarks
+La arquitectura se define por el producto que queremos construir. El código
+actual se auditará después contra esta referencia. Una función existente no se
+considera correcta por el solo hecho de existir, y una función objetivo no se
+presenta como implementada sin evidencia.
 
-No hay benchmark suite ni metodología de evaluación activa. La prioridad actual
-es terminar y estabilizar el producto. La forma de medir calidad se diseñará
-después.
+Consecuencia: todo plan de migración deberá distinguir `implemented`,
+`partial`, `missing` y `incompatible`.
 
-Decisiones pasadas superseded:
+## A2. El run es la unidad de producto
 
-- Lab Mode determinístico.
-- Rutas `/lab`, `/replay`, `/replay/demo`.
-- Manifests `mock-v0` y `conflict-v0`.
-- Baselines B0-B4 como matriz operativa.
-- G3/G6/G9 como targets de granularidad.
-- Fixtures bajo `benchmarks/` como fuente de experimentos.
-- Narrativa de “artifacts de tesis” como objetivo operativo.
+Un run transforma un objetivo de software y un contexto inmutable de repositorio
+en un resultado integrado, verificado y entregable. Tareas, contratos, waves,
+intentos y decisiones existen dentro del run; no son productos independientes.
 
-Los nombres heredados que todavía existen en código, como `GranularityVector` o
-golden fixtures del run model, son mecanismos internos/operativos. No implican
-una estrategia académica activa.
+Estados de lifecycle objetivo:
 
----
+`planning → needs_approval → running → result_ready → delivering → completed`
 
-## Fuente De Verdad Del Resultado
+Estados alternativos: `waiting_for_input`, `paused`, `cancelling`,
+`interrupted` y `failed`. `waiting_for_input` solo se usa cuando no queda trabajo
+independiente ejecutable.
 
-**D5:** `git diff HEAD` es la única fuente de verdad de lo que un agente cambió.
-Stdout/stderr se guardan solo como diagnóstico (`stderrTail`/`stdoutTail`).
+## A3. El grafo usa un modelo híbrido optimizado para implementar software
 
-Reglas:
+La raíz representa el objetivo del usuario. Los composites representan límites
+reales de integración —módulo, dominio, paquete, aplicación o incremento
+vertical— y las hojas son los cambios cohesivos más pequeños que pueden
+implementarse y verificarse de forma independiente.
 
-- No confiar en stdout para decidir qué archivos cambiaron.
-- Diff vacío + exit 0 es `empty_diff`, no éxito.
-- Los patches y evidencias deben derivarse del estado real del repo.
+No se fuerza una división uniforme frontend/backend, una profundidad fija ni un
+número fijo de hijos. Una hoja puede atravesar UI, API y tests si ese corte
+produce una unidad vertical más coherente. La forma del grafo debe seguir al
+repositorio y a las fronteras de integración, no a una plantilla de demo.
 
----
+## A4. Planning y compilación del grafo son responsabilidades distintas
 
-## Commits
+El Planner interpreta el objetivo, inspecciona el repositorio y propone una
+descomposición semántica. El Graph Compiler convierte esa propuesta en un plan
+ejecutable: nodos, relaciones, contratos, scopes, validaciones y requisitos de
+artefactos.
 
-**D6:** el orquestador hace commit. El agente no debe commitear.
+Antes de aprobación se ejecutan críticos de completitud, atomicidad,
+compatibilidad de contratos, validez del DAG, aislamiento, riesgo y cobertura de
+validación. La falla de un modelo se reporta; no se reemplaza silenciosamente por
+un plan determinista de otra calidad.
 
-Flujo:
+## A5. Jerarquía, disponibilidad, compatibilidad y riesgo son relaciones diferentes
 
-```text
-agent edits worktree
-  -> git diff HEAD
-  -> scope check
-  -> validation
-  -> orchestrator commit
-```
+El modelo no usa una arista genérica `dependency` para todo:
 
-Si un agente commitea inesperadamente, se registra
-`agentCommittedUnexpectedly` y se aplica la política configurada.
+- `parentId`: ownership de integración y jerarquía.
+- `ArtifactRequirement`: un nodo necesita un resultado materializado de otro.
+- `SeamBinding`: productor y consumidores comparten un contrato compatible; no
+  impone orden por sí solo.
+- `ConflictConstraint`: señal de scheduling o exclusión de recursos; no es una
+  dependencia funcional.
 
-**D12:** los artefactos de build/dependencias (`node_modules`, `dist`, `.next`,
-etc.) se **excluyen del commit**, no se prohíben: provisioning escribe
-`.git/info/exclude` y el staging usa `addAllExcluding`
-(`DEFAULT_ARTIFACT_GLOBS`). No agregarlos a `forbiddenPaths` — forbidden es
-hard-fail y mataría runs legítimos donde el agente instala dependencias para
-testear. Cambios de más de 500 archivos generan un advisory, nunca un fallo.
+Estas relaciones tienen una única representación canónica. No se duplican en
+campos del nodo y listas globales sincronizadas manualmente.
 
----
+## A6. No se pretende conocer todas las dependencias futuras
 
-## Scope e Aislamiento
+El planner declara lo que puede justificar con el repositorio y los contratos.
+Si un agente descubre una dependencia ausente, el intento no la oculta: emite
+una propuesta de enmienda con evidencia, relación nueva e impacto calculado.
 
-**D7:** el aislamiento real lo dan git worktrees + `ScopeChecker`, no el modo de
-aprobación del CLI.
+La enmienda crea una nueva revisión del grafo. Solo los intentos cuyo
+`InputFingerprint` dejó de coincidir quedan obsoletos. El trabajo independiente
+se preserva.
 
-`executionScope` se divide en:
+## A7. Los contratos definen obligaciones, no detalles prematuros
 
-- `implementationPaths`
-- `testPaths`
-- `configPaths`
+Cada hoja recibe:
 
-`forbiddenPaths` siempre gana sobre cualquier allow-list.
+- objetivo y criterios de aceptación;
+- `ScopeContract`;
+- contratos de seam consumidos y producidos;
+- requisitos y outputs de artefactos;
+- `ValidationContract`;
+- contexto y base de ejecución identificables.
 
----
+El `ValidationContract` congela qué debe demostrarse. La `ValidationRecipe`
+puede compilarse más tarde según el repositorio real. No se congela de manera
+prematura un comando exacto cuando todavía puede cambiar legítimamente.
 
-## Integración
+## A8. Los intentos son inmutables y adoptables solo contra entradas exactas
 
-**D8:** la integración se realiza con cherry-pick de commits hijo sobre el
-composite padre.
+Cada intento tiene identidad propia y un `InputFingerprint` que incluye, como
+mínimo, revisión del grafo, revisiones de contratos, commit base, artefactos
+consumidos, contexto, perfil de executor y contrato de validación.
 
-Ante conflicto, el Composer invoca reparación semántica con:
+Un intento puede terminar técnicamente y aun así quedar `stale`. Un resultado
+obsoleto nunca se integra. Reintentar crea otro intento; no reescribe evidencia
+anterior.
 
-- goal del padre;
-- `sharedInterface` canónico;
-- intención de cada hijo;
-- diff y salida del cherry-pick.
+## A9. La base de ejecución se construye explícitamente
 
-No usar `git merge` ni `git rebase` para la integración normal.
+El `ExecutionBaseBuilder` compone el commit base del run, el baseline de
+contratos y únicamente los artefactos requeridos por el nodo. Registra un
+manifest de composición y evita aplicar commits transitivos a ciegas.
 
-**D11:** los fallos de integración se clasifican antes de presentarse al humano
-(`classifyIntegrationFailure`): `merge_conflict` | `code_validation` | `infra`
-(exit 124/126/127 de la validación parent) | `internal`. Un fallo de entorno
-nunca se presenta como conflicto de merge. El conflict gate acepta
-`retry_integration`, implementado con un tombstone `retry_pending` que el
-reducer consume borrando el resultado fallido (los canales de LangGraph no
-tienen delete nativo); el composite re-entra al frontier y el worktree sucio
-del intento anterior se recrea idempotentemente.
-
-**D12 (P2a/P1):** la integración ya no está limitada a un solo repair global:
-cada hijo conflictivo puede disparar su propio repair hasta agotar
-`maxRepairsPerIntegration` (default 4). Si se agota el presupuesto o un repair
-falla, se aborta el cherry-pick conflictivo y se preserva el commit de
-integración parcial (los hijos previos, incluidos los reparados, ya
-commitearon). Así, si el humano hace `accept_conflict`, el composite tiene un
-`integrationCommitSha` que el padre puede cherry-pickear — antes quedaba sin
-commit y la integración del padre se trababa con `Missing: <child>`.
-
-**D13 (P2b):** un fallo de hoja/integración **aceptado por el humano** ya no
-fuerza el run a `failed`. La aceptación ES la resolución: si la validación final
-pasa, el run termina en el estado terminal `completed_with_accepted` (corre
-final-apply y entrega el resultado), distinto de `completed` para no afirmar que
-fue 100% limpio. El grafo y `RunExecutionResult` siguen siendo binarios
-`completed`/`failed`; la distinción vive en el estado del `RunRecord`.
-
-**D18:** la integración bottom-up no puede cerrar como exitosa si no puede
-explicar exactamente qué commits hijos fueron aplicados. `IntegrationResult`
-incluye `failureCode`, `appliedCommits`, `omittedChildCommits`,
-`validationWorktreePath` y `repairAttempts`. Un child `success` sin commit,
-un commit hijo inalcanzable o un SHA duplicado falla antes del cherry-pick con
-evidencia explícita. La validación parent corre sobre el worktree integrado y
-un repair exitoso no puede ocultar una validación parent fallida.
-
----
-
-## Planning y Decomposer
-
-El producto usa descomposición recursiva interface-aware. Cada nodo decide si es
-atómico o si debe dividirse. Cuando se divide, produce interfaces compartidas
-que los hijos deben honrar.
-
-`low | medium | high` describe agresividad de descomposición. No fija cantidad
-de nodos ni profundidad de árbol.
-
-Falla de LLM durante planning debe producir error accionable. No agregar
-fallback silencioso a planificación determinística.
-
----
-
-## Ejecución De Agentes
-
-La ejecución pasa por el seam `AgentExecutor` y perfiles configurados en
-`execution-core`. **Claude Code CLI** (`claude`, headless, `--output-format json`)
-es el executor primario/default del producto; **Codex CLI** (`codex exec`) es la
-alternativa seleccionable. El planning usa el `ClaudeCodeRecursiveDecomposer`
-(CLI, plan mode). Gemini CLI fue removido el 2026-06-16 (ver ADR-0031).
-
-No cambiar el executor default, agregar CLIs nuevos o depender de subprocesses
-directos fuera del wrapper sin discutirlo.
-
-**D13:** los comandos de validación corren con `shell: true` en win32 (shims
-`.cmd`) y, por venir del LLM, pasan por la charset whitelist
-`validationCommandSafetyIssues` en dos capas (parse del decomposer + runner).
-Exit codes sintéticos: 124 timeout (kill de árbol), 126 comando rechazado,
-127 binario ausente — son la base de la clasificación `infra` de D11.
-
-**D14:** los gates de ejecución se publican como decisión `clarify` con
-`context.gate` y `context.options` (labels). UI y chat resuelven por el mismo
-`execution-gate-service`; respuesta inválida → 400 con opciones, duplicado →
-409 (CAS por `gateId`). El estado visual `gated` ("Esperando decisión") se
-deriva de decisiones blocking pendientes en los selectores — no existe un
-evento de "nodo pausado".
-
----
-
-## Modelo De Datos
-
-**D1:** `graph.dependencies` es canónico. `node.dependencies` es un shortcut
-sincronizado. Mutar dependencias solo vía helpers.
-
-La semántica de ejecución de esas aristas es `ordering_only`: afectan readiness
-y dispatch, pero todas las hojas parten del mismo `TaskGraph.baseCommit`; una
-dependencia no materializa el commit ni los archivos del predecesor. La
-compatibilidad entre tareas se declara mediante `sharedInterface` y los commits
-se componen durante la integración bottom-up. Si un paso requiere archivos
-concretos del anterior, ambos trabajos deben permanecer en una misma tarea o
-rediseñarse alrededor de una interfaz explícita.
-
-**D2:** el campo canónico de intención es `goal`, no `intent`.
-
-**D3:** no hay fallback silencioso ante falla del LLM.
-
----
-
-## Scheduling y Timeouts
-
-**D9:** el paralelismo se controla por `ExecutionConfig` y selección de wave.
-
-**D15:** el camino productivo de ejecución usa scheduling `risk_aware` por
-default. El `execution-host` consulta `selectScopeAwareWave` con contratos,
-`executionScope` y la `riskMatrix` del planning; `RunExecutor.run` usa
-`scheduleTasks` con el mismo contexto de seguridad. `parallel_naive` solo es
-aceptable si fue seleccionado explícitamente y queda registrado como warning.
-
-**D16:** cada wave elegida por el `execution-host` debe persistir un evento
-requerido `run.scheduling.wave_selected` antes de despachar tareas. El payload
-incluye `policy`, `readyTaskIds`, `selectedTaskIds`, `blockedTaskIds`,
-`blockedReasons`, `riskSummary`, `fallbacks` y `warnings`. Si el append falla,
-la wave no se ejecuta silenciosamente. El `seq` del event log sigue siendo el
-orden durable y `waveId` es la identidad de correlación. `waveIndex` es la
-posición durable base cero entre hechos de scheduling y `waveOrdinal` es el
-ordinal humano base uno; UI y recovery derivan 1..N por orden de replay para
-eventos legacy que no tienen `waveOrdinal`.
-
-**D19:** el predictor de scheduling usa señales estructurales del
-`repository-index` cuando están disponibles. `conflict-risk` cruza contratos con
-archivos, símbolos, imports/exports y kinds del índice para producir señales como
-`static_import_dependency`, `static_producer_consumer_symbol`,
-`static_shared_schema_dependency` y `static_public_api_surface_overlap`. Si el
-índice o sus señales no están disponibles, `buildSchedulingSafetyContext`
-degrada a heurísticas de contratos/scopes con warning `missing_repository_index`;
-la incertidumbre no se convierte en bajo riesgo.
-
-Un `InterfaceContract` canónico producer/consumer no es una colisión: es la
-costura congelada que permite construir hojas aisladas en paralelo. El scheduler
-solo eleva ese par si las declaraciones del seam son incompatibles o si existen
-señales físicas/concretas independientes (scope, archivo, símbolo, import,
-schema, fixture o API pública).
-
-**D17:** las acciones del control-plane de lifecycle tienen una matriz explícita
-de estados permitidos (`assertRunActionAllowed`). `start`, `pause`, `resume`,
-`cancel`, `answer_gate`, `approve_plan`, `replan`, `restart`, `fork` y
-`manual_node_run`/`manual_node_review`/`manual_node_rerun` se validan antes de
-mutar `RunRecord`, appendear eventos de éxito o despachar background work.
-`fork` no opera sobre `generating`/`running`; acciones que relanzan pipelines
-rechazan un runner in-process activo.
-
-**D10:** timeouts explícitos y configurables:
-
-- hojas;
-- integración;
-- run completo cuando aplica.
-
----
-
-## Maduración de Runtime y Auditoría (PR-S1..S9)
-
-**Contexto.** ManyHands necesita que las decisiones de orquestación sean
-reproducibles desde artefactos durables, no solo desde logs de consola o estado
-en memoria.
-
-**Decisiones.**
-
-- **PR-S1:** un run no puede iniciar dos pipelines concurrentes; start usa CAS y
-  active-runner guard. Un child `success` sin `commitSha` hace fallar la
-  integración con error explícito.
-- **PR-S2:** eventos críticos de lifecycle son required/awaited; eventos
-  best-effort se nombran como tales y no ocultan fallos críticos. Los pipelines
-  background son rastreables y drenables en tests.
-- **PR-S3:** las transiciones críticas `RunRecord.status` +
-  `run.status.changed` usan mutación auditable. No hay transacción real entre
-  JSON y JSONL, pero la divergencia deja error explícito.
-- **PR-S4:** scheduling productivo usa contratos, scopes y riesgo real. Datos
-  incompletos degradan de forma conservadora con warnings, no a paralelismo
-  inseguro silencioso.
-- **PR-S5:** la elección de cada wave productiva queda en el event log antes de
-  ejecutar tareas, para que UI, replay, debugging y evaluación puedan explicar
-  por qué se paralelizó o serializó.
-- **PR-S6:** los contratos ejecutables y sus interfaces se validan en fronteras
-  de producto antes de aprobar, replanificar, iniciar/resumir ejecución o
-  despachar nodos. `validateAgentTaskContractBoundary` bloquea schemas
-  inválidos, `taskId` desalineado, paths inseguros e interfaces incoherentes;
-  `validateExecutableTaskGraph` aplica esas reglas al DAG de hojas.
-- **PR-S7:** las rutas y servicios de lifecycle bloquean acciones incompatibles
-  antes de mutar: pausa solo desde `generating`/`running`, resume solo desde
-  `paused`, cancel solo desde runs vivos o pausados, restart solo desde
-  `interrupted`/`failed`, fork solo desde estados estables, y gates/replan/node
-  rerun rechazan runner activo antes de lanzar background work.
-- **PR-S8:** la integración registra evidencia estructurada de commits hijos
-  aplicados u omitidos, diferencia fallos con `failureCode` estable, rechaza
-  commits faltantes/inalcanzables/duplicados antes del cherry-pick, registra
-  intentos de repair y conserva que la validación parent es parte del éxito de
-  integración.
-- **PR-S9:** la matriz de riesgo que alimenta el scheduling puede enriquecerse
-  con señales reales del `repository-index`: archivos esperados, imports entre
-  módulos tocados, símbolos producer/consumer, schemas, fixtures y API pública.
-  El path web reutiliza las señales estáticas persistidas por planning; el
-  `RunExecutor` acepta un índice opcional para ejecución directa. Si falta el
-  índice, queda warning/fallback auditable.
-
-**Justificación.** Estas decisiones protegen las garantías centrales del
-producto: un solo runner por run, trazabilidad append-only, aislamiento por
-worktree, integración bottom-up explicable, scheduling seguro, contratos que
-no degradan silenciosamente a tareas ambiguas y acciones humanas que no pueden
-reescribir el lifecycle desde estados incompatibles. En scheduling, usar la
-estructura real del repo mejora la serialización defensible sin introducir ML ni
-análisis semántico profundo.
-
-**Consecuencias y tradeoffs.** La persistencia sigue siendo JSON/JSONL sin DB ni
-outbox transaccional. El sistema prefiere fallar antes de ejecutar una wave sin
-evento requerido. El costo es que una falla de filesystem en el event log puede
-bloquear una ejecución que de otro modo podría avanzar, lo cual es intencional
-para preservar auditabilidad. Los campos V2 de contrato siguen siendo
-opcionales a nivel de schema para compatibilidad, pero las fronteras ejecutables
-los tratan como required o como fallback conservador explícito. El control-plane
-es más rígido: algunas operaciones experimentales ahora devuelven 409 en lugar
-de intentar avanzar desde un estado ambiguo. El tracking de runners sigue siendo
-in-process; no reemplaza locks distribuidos ni una cola durable cross-process.
-La evidencia de integración vive en `IntegrationResult` y en trazas
-`integration_completed`; no es una transacción git/event-log separada, pero evita
-que un parent parezca exitoso cuando omitió un child sin explicación durable.
-El predictor sigue siendo heurístico: depende de freshness/calidad del índice,
-no prueba equivalencia semántica y no reemplaza validación post-ejecución ni
-cherry-pick/repair.
-
-**Relación con tesis/evaluación futura.** No hay benchmark activo, pero los
-eventos required dejan una base para reconstruir decisiones de scheduling y
-comparar runs futuros sin depender de logs efímeros. Las guardas de lifecycle
-hacen que las ejecuciones experimentales sean más reproducibles: una respuesta
-humana o un restart/fork inválido falla antes de contaminar el estado auditable.
-Las señales estructurales permiten estudiar cómo imports, símbolos y módulos
-compartidos afectan paralelismo, riesgo y calidad de integración multiagente.
-
----
-
-## Package Boundaries
-
-Dirección de dependencias: `apps → packages específicos → shared`.
-
-| Package | Estado | Notas |
-|---------|--------|-------|
-| `task-graph` | Activo | Modelo de nodos y DAG |
-| `contracts` | Activo | Contratos e interfaces |
-| `decomposer` | Activo | Planning recursivo |
-| `orchestrator-graph` | Activo | StateGraphs y checkpoints |
-| `execution-core` | Activo | Worktrees, executors, scope, recorder, integration |
-| `scheduler` | Activo | Selección de waves |
-| `run-store` | Activo | Persistencia JSON de runs |
-| `trace-store` | Activo | Eventos y trazas |
-| `conflict-risk` | Activo | Riesgo entre tareas |
-| `repository-index` | Activo | Índice estructural |
-| `shared` | Activo | Tipos base |
-| `core` | Legacy | Barrel heredado; evitar en código nuevo |
+Los siblings pueden trabajar en paralelo cuando un seam congelado les permite
+implementar contra la misma frontera. Si un nodo necesita archivos concretos de
+otro, eso se modela como `ArtifactRequirement` y su base debe incluirlos.
 
+## A10. El scheduler decide por readiness, presupuesto y riesgo
+
+Un nodo está listo cuando sus contratos son vigentes, sus artefactos requeridos
+están disponibles, su base puede materializarse y no existe una restricción de
+recurso activa. El límite de paralelismo es configuración efectiva persistida,
+no una constante arquitectónica.
+
+La incertidumbre aumenta cautela; nunca se convierte silenciosamente en bajo
+riesgo. Cada wave queda registrada antes de despachar trabajo.
+
+## A11. Los fallos se recuperan según su causa
+
+La política objetivo es:
+
+| Causa | Respuesta automática |
+|---|---|
+| transitorio | reintento acotado |
+| autenticación, binario o entorno | suspender recurso y pedir corrección |
+| código o test local | un intento de reparación en el mismo worktree |
+| contrato o descomposición incorrectos | proponer enmienda/replan local |
+| dependencia no declarada | registrar y enmendar el grafo |
+| scope o commit inesperado | descartar intento |
+| integración | una reparación semántica; luego decisión humana |
+| infraestructura compartida | suspender solo trabajo afectado |
+
+No existe “reintentar tres veces” como respuesta universal. Tampoco se puede
+aceptar un resultado fallido como si estuviera verificado.
+
+## A12. El event log contiene hechos; los snapshots y la UI son proyecciones
+
+Los eventos de dominio se emiten en la frontera real del efecto. El event log
+append-only es la historia dinámica canónica. Los snapshots son materializaciones
+versionadas para carga y recuperación, no una segunda verdad.
+
+Estado de fase, nodo, atención, freshness, progreso y resultado se deriva mediante
+reducer y selectores. Las trazas de modelos y logs de proceso son telemetría
+separada; no gobiernan el lifecycle.
+
+## A13. Las decisiones humanas son recursos locales y no bloquean lo independiente
+
+Toda intervención se representa como `Decision` con pregunta, opciones,
+evidencia, nodos afectados, impacto y estado. Resolverla produce
+`decision.resolved` y puede generar una revisión de grafo o contrato.
+
+Una decisión bloquea únicamente los nodos cuyo readiness depende de ella. El run
+sigue en `running` mientras exista trabajo independiente; cambia a
+`waiting_for_input` solo cuando la decisión es el único impedimento restante.
+
+Decisiones principales: aclaración de objetivo, aprobación de plan, aprobación
+de enmienda, resolución de conflicto conductual y aprobación de entrega.
+
+## A14. La integración es bottom-up y produce artefactos explícitos
+
+Cada composite integra los resultados adoptados de sus hijos sobre una base
+conocida, registra los artefactos aplicados y valida su propio contrato. Un
+cherry-pick limpio no prueba corrección semántica.
+
+Los conflictos se clasifican antes de actuar. El sistema puede hacer una
+reparación semántica acotada con contexto del padre, contratos, resultados y
+evidencia. Si no converge, escala una decisión; no oculta hijos omitidos ni crea
+un “éxito parcial” ambiguo.
+
+## A15. Validar significa demostrar criterios sobre el commit exacto
+
+La validación ocurre en un sandbox limpio sobre el commit candidato exacto. Una
+`EvidenceMatrix` vincula cada criterio de aceptación con evidencia:
+`satisfied`, `failed`, `uncovered`, `flaky` o `not_applicable` con justificación.
+
+Se registra baseline previo, se detecta debilitamiento de tests y se usa control
+negativo cuando sea razonable. Un test que solo pasa después de reintentos se
+considera flaky, no evidencia limpia. Un resultado con criterios sin cubrir es
+`unverified`.
+
+La entrega sigue `prepare → validate exact candidate → publish`. `completed`
+requiere un `FinalArtifactManifest` válido y entrega confirmada.
+
+## A16. El aislamiento se aplica en varias capas
+
+Cada intento corre en un worktree aislado. El agente propone cambios; el
+orquestador inspecciona `git diff`, aplica scope, valida y crea el commit
+candidato. El stdout nunca define qué cambió.
+
+Los procesos quedan bajo un supervisor cancelable. Mutaciones del run y del
+repositorio usan leases durables y fencing tokens para impedir resultados
+tardíos. La cancelación invalida la autoridad antes de aceptar nuevos eventos o
+artefactos.
+
+## A17. El grafo es el centro de la experiencia, no toda la experiencia
+
+Durante planning y ejecución el workspace se organiza alrededor del grafo. Las
+superficies separadas de Tareas, Planificación, Integración e Interfaces dejan de
+ser destinos principales: esa información aparece progresivamente en el nodo o
+relación seleccionada.
+
+Cuando el run alcanza `result_ready`, la evidencia y la entrega toman el centro;
+el grafo queda como mapa de procedencia. El canvas nunca se recentra por eventos,
+creación de nodos o cambios de estado. Solo cambia el foco ante una acción
+explícita del usuario.
+
+Las decisiones se anuncian con una tarjeta horizontal asociada al nodo y se
+resuelven en un popup accesible. La cola global permite recorrer pendientes sin
+convertirse en un dashboard.
+
+## A18. El dominio no depende de LangGraph, React Flow ni un executor específico
+
+`TaskGraph`, contratos, eventos, intentos, artefactos y estados pertenecen al
+dominio. LangGraph puede implementar el control plane y React Flow el canvas,
+pero ninguno define la semántica persistida.
+
+La ejecución usa el seam `AgentExecutor`. Los perfiles concretos son
+configuración y pueden evolucionar sin cambiar el contrato del run. La falta de
+un executor configurado falla de forma explícita.
+
+## A19. Simplicidad de producto antes que diagnóstico avanzado
+
+La superficie principal debe permitir: entender el plan, observar trabajo real,
+responder decisiones, pausar o cancelar y aceptar un resultado probado. Logs,
+trazas, prompts, manifests y diagnósticos completos existen bajo demanda para
+explicar evidencia, no como navegación primaria.
+
+No se incorpora un “modo diagnóstico avanzado” independiente mientras esos
+datos puedan resolverse mediante progressive disclosure en el mismo run.
+
+## Decisiones retiradas
+
+Quedan retiradas como arquitectura vigente:
+
+- el campo duplicado `node.dependencies`;
+- dependencias con semántica exclusivamente `ordering_only`;
+- fases de UX rígidas como Foundation/Supervision/Reconciliation/Disposition;
+- gates que congelan el run entero por defecto;
+- aceptación de fallos como equivalente a verificación;
+- `maxParallel = 6` como constante de producto;
+- LangGraph checkpoints como sustituto automático del event log de dominio;
+- un número fijo de repairs de integración como regla universal;
+- benchmarks, Lab Mode o granularidad experimental como centro del producto;
+- vistas principales separadas para tareas, planificación, integración e
+  interfaces;
+- recentrado automático del canvas ante actividad.

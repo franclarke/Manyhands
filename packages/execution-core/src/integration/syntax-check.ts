@@ -9,7 +9,7 @@
  *    needs no tsconfig resolution).
  *
  * Findings feed back into the repair prompt so the executor gets the exact
- * compiler error on its next attempt (docs/design/future-frontier-tasks.md §3).
+ * compiler error on its next attempt (docs/system/09-composer.md).
  */
 import { readFile } from "node:fs/promises";
 import { extname, join } from "node:path";

@@ -1,139 +1,65 @@
-# Scheduler y Selección de Waves
+# Scheduler y waves
 
-**Archivos fuente:** `packages/scheduler/src/index.ts`
+## Readiness
 
----
+Un leaf está ready si:
 
-## Qué Es
+- pertenece a la graph revision aprobada;
+- no está pausado, cancelled ni cubierto por decisión pendiente;
+- todos sus ArtifactRequirements resuelven artifacts fresh;
+- seams requeridos tienen baseline compatible;
+- puede construirse execution base;
+- no existe resource/conflict constraint activa;
+- existe presupuesto de executor y validación.
 
-El `scheduler` convierte un plan aprobado en una secuencia de **waves**: grupos de
-tareas que pueden ejecutarse en paralelo sin pisarse. Es el puente entre "tengo un
-DAG válido" y "puedo lanzar agentes en simultáneo con seguridad".
+Un composite está ready para integración cuando sus child artifacts obligatorios
+están verified/fresh y el contrato del parent es vigente.
 
-## Responsabilidad
+## Wave selection
 
-Decidir *qué tareas del frontier pueden correr juntas* respetando tres
-restricciones: dependencias, scope de archivos y riesgo de conflicto. No ejecuta
-tareas ni habla con agentes — solo selecciona y ordena.
+La wave maximiza trabajo útil bajo restricciones. No maximiza cantidad de nodos.
 
-## Cómo Funciona
+Inputs:
 
-### El frontier
+- ready set y razones de bloqueo;
+- effective parallel budget por executor/recurso;
+- risk/conflict constraints;
+- prioridades y critical path;
+- costo estimado y fairness;
+- estado de circuit breakers.
 
-En cada paso de la ejecución, el *frontier* es el conjunto de tareas ejecutables
-(hojas e integradores) cuyas dependencias ya están resueltas. El scheduler opera
-sobre ese conjunto dinámico.
+Output durable:
 
-### `selectScopeAwareWave` (el corazón)
+```ts
+type WaveSelection = {
+  waveId: string;
+  graphRevision: number;
+  readyNodeIds: NodeId[];
+  selectedNodeIds: NodeId[];
+  blocked: { nodeId: NodeId; reasons: string[] }[];
+  effectiveBudget: Record<string, number>;
+  riskSummary: string[];
+};
+```
 
-Del frontier, elige el subconjunto seguro para paralelizar aplicando dos filtros
-contra las tareas ya seleccionadas:
+Se persiste antes del dispatch. Si no puede registrarse, no se despacha la wave.
 
-1. **Riesgo:** nunca coagenda un par con predicción `high` o `blocking` (lo dice la
-   matriz de `conflict-risk`).
-2. **Scope de archivos:** serializa pares cuyos scopes declarados (`executionScope`)
-   se **solapan**. El solapamiento se calcula sobre los *segmentos literales* del
-   path antes del primer glob: si uno prefija al otro, se serializan. Solo cuentan
-   `implementationPaths` y `testPaths`: los `configPaths` (manifests compartidos
-   como `package.json`/`tsconfig.json`) se **excluyen** a propósito — como todas
-   las hojas parten del mismo commit de esqueleto, serializar por ellos nunca evita
-   el conflicto de integración (lo resuelve el composer), solo colapsa la wave a una
-   tarea.
+## Política
 
-El cálculo es deliberadamente **conservador hacia serializar, nunca hacia
-colisión**: ante la duda, prefiere no paralelizar. Y el frontier nunca se
-*starvea* — si ninguna tarea es compatible con las ya elegidas, igual emite la
-primera para garantizar progreso.
+Default objetivo: `risk_aware`. El paralelismo máximo proviene de configuración
+normalizada y capacidades reales; no es una constante universal.
 
-### Políticas (`scheduleTasks`)
+Unknown data produce warnings y serialización conservadora cuando el riesgo no
+puede acotarse. Una relación seam compatible no aumenta riesgo por sí sola.
 
-Para flujos no adaptativos hay tres políticas:
+## Decisions y pause
 
-- **`sequential_dag`:** una tarea por wave (orden topológico).
-- **`parallel_naive`:** agrupa hasta `maxParallel`, ignorando el riesgo.
-- **`risk_aware`:** agrupa tareas listas sin pares `high`/`blocking`.
+Pending decisions eliminan solo affected nodes del ready set. Pause branch usa
+parentage + requirements para determinar alcance, sin bloquear siblings
+independientes.
 
-El camino productivo usa `risk_aware` por default. `parallel_naive` no es un
-fallback implícito: si se usa, debe venir seleccionado de forma explícita y deja
-warning auditable.
+## Reproducibilidad
 
-### Contexto de seguridad
-
-`buildSchedulingSafetyContext` normaliza los inputs del scheduler:
-
-- toma contratos desde el `TaskGraph` cuando no se pasan por separado;
-- genera o completa la `riskMatrix` desde contratos, scopes y, cuando existen,
-  señales estáticas del `repository-index`;
-- agrega riesgo conservador para scope solapado, contrato faltante, scope vacío,
-  símbolos producer/consumer concretos o declaraciones incompatibles del mismo
-  seam;
-- emite warnings/fallbacks (`missing_contract`, `empty_scope`,
-  `missing_repository_index`, `risk_matrix_missing`, `risk_matrix_incomplete`,
-  `parallel_naive_explicit`).
-
-La regla de degradación es serializar antes que paralelizar sin evidencia. Un
-`InterfaceContract` canónico producido y consumido con la misma identidad,
-firma, kind y origen sí es evidencia positiva de compatibilidad: ese seam no se
-promueve a riesgo por sí solo. Los agentes pueden compartir wave si tampoco hay
-riesgo físico de scopes, archivos, símbolos o imports. Esto preserva el objetivo
-del grounding: construir en paralelo contra una interfaz congelada.
-
-### Señales estructurales del repo
-
-El scheduler no recorre el filesystem. Consume evidencia ya construida por
-`conflict-risk`:
-
-- `static_import_dependency`: una tarea toca un módulo exportador y otra toca un
-  archivo que lo importa;
-- `static_producer_consumer_symbol`: una tarea produce un símbolo concreto que
-  otra consume;
-- `static_shared_schema_dependency`, `static_public_api_surface_overlap`,
-  `static_critical_file_overlap` y señales similares derivadas de `files`,
-  `symbols`, `imports` y `exports`.
-
-En el camino web, planning persiste `staticConflictSignals` compactas junto con
-la `riskMatrix`; `execution-host` las reusa en cada wave. En uso directo,
-`RunExecutor.run` puede recibir `repositoryIndex` y pasarla al contexto de
-scheduling. Si no hay índice ni señales, se mantiene el predictor heurístico de
-contratos/scopes y se emite `missing_repository_index`.
-
-### Evento durable de wave
-
-El package `scheduler` no persiste eventos. En el camino web, `execution-host`
-usa el helper `selectAndPersistSchedulingWave`, que selecciona la wave con
-`selectScopeAwareWave` y persiste `run.scheduling.wave_selected` como evento
-required antes de devolver los task ids para dispatch. Si el append falla, esa
-wave no se ejecuta silenciosamente.
-
-Payload mínimo:
-
-- `source`, `waveIndex`, `policy`;
-- `readyTaskIds`, `selectedTaskIds`, `blockedTaskIds`;
-- `blockedReasons`;
-- `riskSummary`;
-- `fallbacks` y `warnings`.
-
-Las razones no incluyen el índice completo. Persisten solo el resumen compacto
-del riesgo elegido, por ejemplo que `consumer` fue bloqueada porque toca un
-archivo que importa `src/api.ts` tocado por `exporter`.
-
-### Gates humanos (`applyHumanGateToSchedule`)
-
-Aplica una política determinista de intervención: los conflictos `high` se
-**serializan**; los `blocking` **requieren revisión humana** antes de poder
-ejecutarse.
-
-## Interfaces
-
-**Recibe:** el `TaskGraph`, la matriz de riesgo de `conflict-risk`, y un
-`maxParallel` opcional (sin él, paralelismo no acotado — D9).
-
-**Produce:** un `SchedulerPlan` (waves/`ExecutionBatch`) o, en el camino
-adaptativo, la wave seleccionada para el frontier actual.
-
-## Cómo Encaja
-
-El `executionGraph` (en `orchestrator-graph`) calcula el frontier y consulta al
-scheduler para decidir la próxima wave; la matriz de riesgo proviene de
-[`conflict-risk`](13-conflict-risk.md), que a su vez se apoya en el
-[`repository-index`](14-repository-index.md).
+La selección debe poder recalcularse desde graph revision, artifact registry,
+decisions, config y constraints del mismo cursor. Heurísticas no deterministas
+registran seed/model output o su decisión completa.

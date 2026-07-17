@@ -1,124 +1,67 @@
-# Execution Graph y RunExecutor
-
-**Archivos fuente:** `packages/orchestrator-graph/src/`,
-`packages/execution-core/src/run/executor.ts`,
-`packages/execution-core/src/run/grounding-agent.ts`,
-`packages/execution-core/src/run/amendments-engine.ts`,
-`apps/web/src/lib/server/runs/execution-host.ts`,
-`apps/web/src/lib/server/runs/runner.ts`
-
----
-
-## Qué Es
-
-La ejecución de un run se coordina con un StateGraph de LangGraph. El
-`RunExecutor` de `execution-core` queda como motor de bajo nivel para ejecutar y
-validar nodos individuales en worktrees aislados.
+# Run Coordinator y ejecución
 
 ## Responsabilidad
 
-El execution graph:
+Coordinar casos de uso durables sin apropiarse de git, procesos, planning o
+validación. Es el único actor que adopta resultados, avanza outcomes y emite
+transiciones terminales.
 
-- lee el `TaskGraph` aprobado;
-- prepara costuras y contexto;
-- selecciona waves ejecutables;
-- despacha hojas en paralelo cuando es seguro;
-- repara hojas cuando fallan validaciones;
-- integra composites bottom-up;
-- persiste checkpoints y eventos;
-- produce el resultado final del run.
+## Comandos
 
-## Flujo
+`create`, `plan`, `approve_plan`, `start`, `pause_run`, `pause_branch`, `resume`,
+`answer_decision`, `cancel`, `retry`, `fork`, `approve_delivery`.
 
-### Frontera de grafo ejecutable
+Cada comando valida lifecycle, expected revision, lease y permisos antes de
+efectos. Conflictos devuelven estado actual y siguiente acción posible.
 
-Antes de preparar grounding, scheduling o worktrees, el camino productivo valida
-el `TaskGraph` aprobado con `validateExecutableTaskGraph()` /
-`assertExecutableGraph()`. La validación bloquea hojas sin contrato ejecutable,
-contratos cuyo `taskId` no coincide con el nodo, paths inseguros, schemas
-inválidos y costuras consumidas sin productor. `execution-host.ts` aplica la
-misma frontera cuando reconstruye deps para el StateGraph, de modo que start y
-resume no puedan alimentar al scheduler con contratos ambiguos.
+## Operación durable
 
-### Grounding
+Una operación mutante adquiere lease con fencing token. Cada persistencia,
+evento y adopción verifica el token. El takeover invalida autoridad anterior.
 
-Antes de ejecutar hojas, el `GroundingAgent` puede materializar un walking
-skeleton con firmas e imports necesarios para que los agentes construyan contra
-interfaces compartidas.
+El repository lease protege mutaciones sobre un target compartido. No se
+reemplaza con booleans in-process.
 
-### Wavefront
+## Loop de coordinación
 
-El grafo calcula en cada superstep qué tareas están listas. La selección de wave
-usa `selectScopeAwareWave`: serializa scopes que solapan y pares con riesgo alto
-o bloqueante, y ejecuta el resto en paralelo dentro del límite configurado.
+1. Reconciliar event log, snapshot, leases y procesos.
+2. Resolver acciones automáticas pendientes por causa.
+3. Calcular decisions y nodes ready.
+4. Persistir `wave.selected` con configuración efectiva.
+5. Despachar intentos bajo presupuesto.
+6. Adoptar solo candidatos fresh y elegibles.
+7. Integrar composites ready.
+8. Producir/validar raíz.
+9. Cambiar a `result_ready` o explicar por qué no puede avanzar.
 
-### Ejecución De Hojas
+## Recuperación por causa
 
-Cada hoja:
+| Clase | Política |
+|---|---|
+| transient | retry con backoff y presupuesto del recurso |
+| code/test | una reparación local en el mismo worktree |
+| contract/decomposition | enmienda; no retry idéntico |
+| missing dependency | propuesta de ArtifactRequirement/SeamBinding |
+| scope/unexpected commit | descartar intento |
+| environment/auth/binary | suspender recurso afectado y pedir corrección |
+| integration | una reparación semántica y luego decisión |
+| shared infrastructure | circuit breaker para el recurso |
 
-1. obtiene o crea un git worktree desde el `baseCommit` inmutable del run;
-2. recibe instrucciones con contexto de archivos e interfaces;
-3. ejecuta un `AgentExecutor`;
-4. se valida con `ScopeChecker` y comandos de validación;
-5. registra `git diff HEAD`;
-6. deja que el orquestador haga commit si corresponde.
+Los presupuestos son por clase y quedan persistidos. Repetir el mismo input sin
+nueva evidencia no constituye recuperación.
 
-Una dependencia D1 solo retrasa el dispatch de la hoja (`ordering_only`). No
-materializa los cambios del predecesor: aun cuando A deba completarse antes que
-B, ambos worktrees nacen del mismo `baseCommit`. El prompt del executor lo hace
-explícito para impedir que el agente asuma archivos upstream inexistentes; la
-composición física sucede luego durante la integración bottom-up.
+## Pausa y cancelación
 
-### Verify-Loop
+- Pause run detiene nuevos dispatches. La política efectiva declara si deja
+  terminar intentos o los suspende/cancela.
+- Pause branch afecta el subárbol seleccionado y dependents reales.
+- Cancel es bifásico: marca `cancelling`, invalida lease, aborta procesos,
+  verifica `allDead` y termina `interrupted`.
+- Resultados tardíos con fencing viejo se descartan aunque el proceso haya
+  terminado con exit 0.
 
-Si la validación de una hoja falla, el sistema puede reingresar al mismo worktree
-con el output exacto del fallo. Si agota el presupuesto de reparación, el run se
-pausa en un gate humano. Reanudar no debe reejecutar trabajo accidentalmente: se
-usa el checkpoint y el estado persistido.
+## Fallo terminal
 
-### Validation Runner
-
-`ChildProcessValidationRunner` ejecuta los comandos de validación (leaf, parent
-y run). En win32 spawnea con `shell: true` (npm/pnpm/yarn/npx son shims `.cmd`
-que `spawn` directo no resuelve — ENOENT). Comandos y args vienen del LLM, así
-que pasan por `validationCommandSafetyIssues` (charset whitelist en
-`@manyhands/contracts`) en dos bordes: el parse del decomposer y el runner.
-
-Exit codes sintéticos del runner, que alimentan la clasificación de fallos:
-
-- `124`: timeout — el kill es de árbol (`killProcessTree`, taskkill `/t` en
-  win32) para no dejar huérfano al hijo real bajo cmd.exe;
-- `126`: comando rechazado por la whitelist (no se spawnea);
-- `127`: binario no encontrado (evento `error` sin shell, o salida
-  "is not recognized…" normalizada bajo shell).
-
-### Integración
-
-Cuando los hijos de un composite están resueltos, el Composer integra un
-composite por superstep con cherry-pick y repair semántico si hay conflicto.
-
-### Amendments
-
-Si una costura cambia, el motor de amendments deriva qué nodos quedan obsoletos,
-limpia artefactos afectados y permite re-ejecutar solo el subgrafo necesario.
-
-## Persistencia
-
-- `RunRecord` guarda estado durable del run.
-- `RunEvent` JSONL alimenta la UI.
-- `JsonFileCheckpointSaver` permite resume/fork del StateGraph.
-
-## Interfaces
-
-**Recibe:** estado del grafo, dependencias reconstruidas desde el `RunRecord`,
-checkpointer y canal de decisiones.
-
-**Produce:** `RunExecutionResult`, commits, eventos, evidencia y métricas
-operativas.
-
-## Nota Histórica
-
-Este componente ya no se documenta como instrumento de tesis. Las métricas del
-run sirven para operación, diagnóstico y producto. Cualquier evaluación formal
-futura se diseñará aparte.
-
+`failed` se usa cuando no existe trabajo independiente, recuperación automática
+segura ni decisión pendiente que pueda resolver el bloqueo. El error incluye
+causa, evidencia, scope afectado y acciones disponibles.

@@ -1,132 +1,120 @@
-# Modelo de interacción — UX / producto
+# Modelo de interacción del run
 
-> Estado: **baseline de diseño** (2026-06-05). Describe **comportamiento, jerarquía y reglas de interacción**, no diseño visual fino (colores, CSS, tipografía). Se apoya en las fases de [`agent-first-redesign.md`](agent-first-redesign.md) y en los selectores de [`run-operative-model.md`](run-operative-model.md).
+## Estructura persistente
 
----
-
-## 1. Un run de punta a punta
-
-El usuario vive **un solo espacio que madura**, no una secuencia de pantallas. La estructura espacial es constante; lo que cambia es el **centro de gravedad**:
-
-```
-[ marco persistente del run: intención · fase · salud · canal de decisiones ]
-[ ───────────────── superficie de trabajo (phase-adaptive) ───────────────── ]
-[ panel de foco (on-demand) ]            [ canal de comandos (⌘K, on-demand) ]
+```text
+┌ Sidebar ─────────┬ Run header: objetivo · estado · controles ───────────────┐
+│ workspaces/runs  │ Decision strip contextual                              │
+│ o fixtures proto ├──────────────────────────────────────────────────────────┤
+│                  │ Graph workspace / Result workspace                     │
+│                  │                                           Inspector →  │
+└──────────────────┴──────────────────────────────────────────────────────────┘
 ```
 
-1. **Framing** — el usuario describe la feature. La superficie es el compositor de intención; el DAG no existe aún.
-2. **Proposal** — aparece el DAG como **hipótesis**; el usuario lo juzga y aprueba (un gate).
-3. **Foundation** — el mismo grafo se *solidifica*: archivos reales, costuras que se congelan, el frente paralelo se revela. Umbral breve.
-4. **Supervision** — el grafo se vuelve **wavefront**: olas paralelas con signos vitales. El canal de decisiones está ambiente (vacío = sano).
-5. **Reconciliation** — el grafo cambia a **ensamblaje**; los conflictos que requieren juicio aparecen como decisiones bloqueantes.
-6. **Disposition** — la **evidencia** toma el centro; el DAG se degrada a mapa de contexto.
+El run usa una única ruta. No navega automáticamente entre pantallas al cambiar
+de estado. La selección del usuario, el pan y el zoom permanecen estables.
 
-Las transiciones **no navegan**: el usuario nunca cambia de página ni pierde el mapa. La superficie reinterpreta el mismo grafo.
+## Run header
 
----
+Siempre muestra:
 
-## 2. Superficie principal por fase y rol del DAG
+- objetivo resumido;
+- estado real del run;
+- trabajo activo y decisiones pendientes;
+- `Pause run`, `Pause branch` cuando hay selección y `Cancel`;
+- acceso a la cola de decisiones.
 
-| Fase | Superficie dominante | Rol del DAG |
-|---|---|---|
-| Framing | Compositor de intención | ausente |
-| Proposal | Estructura del plan | **protagonista** (como hipótesis) |
-| Foundation | Solidificación + costuras congelándose | **protagonista** (madurando) |
-| Supervision | Wavefront | **protagonista** (trabajo vivo) |
-| Reconciliation | Ensamblaje + arbitraje | **protagonista** (convergencia) |
-| Disposition | Evidencia (diff + tests + narrativa) | **contexto** (mapa pequeño) |
+No muestra métricas decorativas ni una lista completa de fases.
 
-> El DAG es el **escenario recurrente**, no el protagonista permanente: cede el centro a la *intención* al inicio y a la *evidencia* al final.
+## Grafo
 
----
+### Interacción
 
-## 3. El marco persistente del run
+- click selecciona; doble click o acción explícita enfoca;
+- pan y zoom pertenecen al usuario;
+- `Fit graph` es un comando, no una reacción a eventos;
+- seleccionar abre el inspector sin pausar ejecución;
+- los edges secundarios aparecen al seleccionar un nodo o activar un lente;
+- la jerarquía permanece visible; requirements, seams y conflictos se revelan
+  según contexto.
 
-Siempre visible, en todas las fases. Responde "¿qué construimos y dónde estamos?". Contiene exactamente tres cosas (todo derivado):
-- **Intención** del run (una línea).
-- **Posición en el ciclo de vida** (`selectPhase`) + progreso.
-- **Salud** (`selectHealth`) y el **canal de decisiones** (`selectAttention`).
+### Regla de viewport
 
-Esta minimalidad es deliberada: es la espina agent-first. Nada más merece estar siempre presente.
+Ningún evento puede llamar implícitamente a `fitView`, centrar un nodo o cambiar
+el zoom. La creación de nodos, inicio de intentos, integración, fallos y
+decisiones conservan el viewport. Una notificación puede ofrecer `Ver nodo`, y
+esa acción sí cambia el foco.
 
----
+### Layout estable
 
-## 4. El canal de decisiones
+Los nodos nuevos reciben una posición determinista relativa a su padre y a la
+revisión de grafo. El layout puede ampliar espacio fuera del viewport, pero no
+reordena nodos materializados durante una revisión. Una nueva revisión puede
+ofrecer `Aplicar nuevo layout`; nunca se aplica mientras el usuario inspecciona
+sin consentimiento.
 
-Concentra **toda** intervención humana tipada en un lugar (`selectAttention`). Reglas:
-- **Vacío por defecto, y vacío = éxito operativo**: se muestra con confianza ("N agentes trabajando · nada requiere tu atención"), nunca como un hueco vacío incómodo.
-- **Bloqueante vs advisory**: una decisión bloqueante es asertiva (el subárbol afectado espera); una advisory es ambiente (FYI, el run sigue). Esta distinción evita los dos fracasos: el notification-center que molesta y el gate que se pierde.
-- **Cada decisión llega con su contexto embebido**: aprobar plan muestra el plan; resolver conflicto muestra las dos interpretaciones + el test que falla + los candidatos; aprobar enmienda muestra la firma `de→a` + el blast radius (preview).
-- **Resolución inline**: el gate se resuelve sin salir del run.
+## Decisiones humanas
 
-> **Una decisión bloqueante nunca pausa todo el run.** Solo el subárbol dependiente entra en `blocked` (atenuado); lo independiente sigue ejecutando. Esto preserva el valor del paralelismo: el humano decide mientras el resto avanza.
+Cuando un nodo requiere intervención aparece una tarjeta horizontal encima del
+área del grafo, alineada visualmente con el nodo cuando sea posible. Contiene:
 
----
+- pregunta en lenguaje claro;
+- por qué importa;
+- alcance bloqueado y trabajo que continúa;
+- acción `Responder` y acción `Ver impacto`.
 
-## 5. La superficie de trabajo phase-adaptive
+`Responder` abre un popup accesible con opciones, evidencia y consecuencias. El
+popup no esconde el contexto del nodo y puede cerrarse sin resolver. Cada nodo
+pendiente conserva un badge. El header ofrece la cola y `Siguiente decisión`.
 
-Es **una sola** superficie (el grafo) que cambia de énfasis, **no** tres vistas pares. La lectura temporal (timeline) y la columnar (board) son **lentes secundarios** que se invocan, no modos por defecto.
+## Inspector progresivo
 
-- **Selección** de un nodo/costura/conflicto → abre el **panel de foco** (no navega, no pausa).
-- El **wavefront** (`selectWavefront`) dirige el énfasis y el movimiento durante Supervision.
-- Los **edges están tipados**: dependencia / costura / conflicto. La costura es portante.
+El inspector tiene una estructura consistente:
 
----
+1. **Resumen:** objetivo, estado y razón.
+2. **Entradas y salidas:** artefactos y seams en lenguaje de producto.
+3. **Validación:** criterios y evidencia.
+4. **Cambios:** diff, commits y archivos.
+5. **Historial:** intentos, eventos y logs bajo demanda.
 
-## 6. El panel de foco (polimórfico)
+No existen tabs globales equivalentes para Tareas, Planificación, Integración o
+Interfaces. Esos conceptos se inspeccionan desde el objeto correspondiente.
 
-Profundidad on-demand de **un** objeto. Nunca abierto por defecto.
-- **Nodo:** signo vital expandido, scope, diff (lazy por ref), log (lazy).
-- **Costura:** firma congelada, contrato semántico, productor/consumidores, revisión, estado draft/frozen/amended.
-- **Conflicto:** diagnóstico (dos lados, assertion que falla, candidatos con blast radius).
+## Estados visibles
 
-Selección → foco es **peek**: la superficie sigue viva detrás; no se interrumpe la ejecución.
-
----
-
-## 7. Cómo se representa cada concepto (comportamiento)
-
-| Concepto | Comportamiento de representación |
+| Estado | Representación |
 |---|---|
-| **planning** | El grafo se "forma" (nodos apareciendo); estilizado como hipótesis (provisional). |
-| **seam draft** | Edge punteado entre productor y consumidores. |
-| **seam frozen** | El edge pasa de punteado a sólido (la costura se congeló → habilita paralelismo). |
-| **seam amended** | El edge marca "contrato cambiado"; preview del blast radius sobre los nodos afectados. |
-| **wavefront** | Los nodos de la ola activa encendidos **a la vez**, cada uno con signo vital. |
-| **verify-loop** | Signo vital compacto en el nodo: `build ✓ · tests 4/5 · retry 2/3`. El detalle/log, en el foco. |
-| **blocked** | Nodo atenuado con indicación de qué espera; **no** es alarma. |
-| **stale / obsolete** | Nodo que era verde, ahora "superseded" (neutro), con afordancia de re-ejecución. **Nunca rojo de fallo.** |
-| **conflict** | Edge tipado entre los nodos implicados; los no implicados quedan sin marca. |
-| **decision pending** | Item en el canal de decisiones, bloqueante o advisory, con contexto embebido. |
-| **integration** | Énfasis de ensamblaje: el frente converge hacia arriba; gates de test por compuesto. |
-| **evidence** | Superficie protagonista al final: diff agregado + prueba de tests + narrativa (incl. traza de invalidación). |
+| planned/ready | neutro, con razón de readiness disponible |
+| running | actividad ember y progreso del intento |
+| validating | checks activos, distinto de escribir código |
+| candidate | cambio producido, todavía no adoptado |
+| verified | evidencia satisfecha |
+| integrating | convergencia hacia el composite |
+| needs_input | badge y tarjeta de decisión |
+| blocked | atenuado con “espera X”; no rojo |
+| stale | obsoleto por inputs nuevos; conserva historial |
+| failed | fallo real con causa y siguiente acción |
 
----
+El color nunca es la única señal.
 
-## 8. Cómo se evita saturar al usuario
+## Movimiento
 
-- **Jerarquía + progressive disclosure**, no esconder: la superficie primaria responde "¿voy bien?"; el detalle responde "¿qué pasó acá?" solo si se pide.
-- **Bajo demanda (drawers/paneles secundarios):** logs crudos del agente, diffs completos, razonamiento del modelo, lentes temporal/columnar. Razón: son debug y profundidad, no la experiencia primaria. Promoverlos (como hacía la consola CLI) ahoga la señal.
-- **Signos vitales compactos** en lugar de streams crudos durante ejecución. Mostrar todos los eventos satura; el resumen (`tests 4/5 · retry 2/3`) comunica el estado sin ruido.
+- aparición de nodo: 180–240 ms, fade + desplazamiento corto desde el padre;
+- edge nuevo: trazo progresivo que termina en estado estático;
+- inicio de intento: pulso local, no permanente en todo el nodo;
+- integración: flujo breve de hijos al composite y confirmación del padre;
+- invalidación: transición a stale sin animación de error;
+- decisión: entrada de la tarjeta, sin mover el canvas.
 
----
+No se animan posiciones durante la interacción. `prefers-reduced-motion` elimina
+trazos, pulsos y desplazamientos; conserva cambios instantáneos y foco.
 
-## 9. Reglas de interacción que definen el carácter agent-first
+## Responsive y accesibilidad
 
-1. **"Vacío en decisiones" se muestra como éxito**, con un mensaje afirmativo, no como pantalla en blanco.
-2. **Una decisión bloqueante no congela el run**: solo el subárbol dependiente espera; el resto del wavefront sigue. El usuario ve claramente *qué* espera y *qué* sigue.
-3. **Una re-ejecución parcial se ve parcial**: solo los nodos afectados vuelven a latir; los no afectados quedan verdes y estáticos. *El contraste —la mayor parte del grafo intacta— es el mensaje de que el cambio es controlado, no un fallo total.*
-4. **Obsoleto ≠ fallo**: un nodo invalidado por una enmienda se muestra distinto de un nodo fallado. Es evolución planificada, no regresión.
-5. **El blast radius se previsualiza antes de aprobar** una enmienda: el humano ve exactamente qué se va a invalidar y qué se preserva, *antes* de decidir.
-6. **Peek sin interrumpir**: inspeccionar nunca pausa la ejecución.
-7. **Steer por teclado** (canal de comandos): el usuario técnico actúa por comando, no cazando botones.
-
----
-
-## 10. Qué NO debe hacer la interacción (anti-patrones a evitar)
-
-- No tratar canvas/board/timeline como vistas pares (vuelve a "dashboard").
-- No promover logs crudos a la superficie primaria.
-- No mostrar el estado de nodo desde `execution` directo (debe usar `selectRenderableNodeState`, o mostrará obsoleto como done).
-- No dispersar la intervención humana en múltiples superficies (todo va al canal de decisiones).
-- No usar un spinner genérico para "trabajando": el trabajo se expresa con el signo vital del verify-loop y el wavefront.
+- Sidebar colapsable; el grafo mantiene su estado.
+- En pantallas estrechas el inspector es un sheet y la decisión un diálogo
+  fullscreen parcial.
+- Todo nodo, edge interactivo, acción y popup es operable por teclado.
+- El foco vuelve al elemento invocador al cerrar un popup.
+- Los live regions anuncian decisiones y estados terminales, no cada evento.
+- Cumplimiento objetivo: WCAG 2.2 AA.

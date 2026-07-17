@@ -8,7 +8,7 @@
  *   3. Creates a new RunRecord with a fresh runId (preserves the original).
  *   4. Returns the new run ID so the frontend can navigate to it.
  *
- * Design: docs/design/langgraph-orchestrator-design.md §6 (Forking)
+ * Target framework boundary: docs/design/langgraph-orchestrator-design.md
  * Invariant: Worktrees for the new run will be named mh-{newRunId}-{nodeId}.
  */
 import { randomUUID } from "node:crypto";

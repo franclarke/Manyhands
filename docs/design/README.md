@@ -1,45 +1,43 @@
-# Rediseño Agent-First De ManyHands
+# Diseño de producto de ManyHands
 
-Esta carpeta documenta la dirección vigente de UI y orquestación: una sala de
-control continua para runs de agentes de software.
+Esta carpeta define cómo una persona comprende y controla el sistema. La
+semántica técnica del backend vive en [`../system/`](../system/); esta capa no
+inventa estados ni capacidades que el backend no pueda demostrar.
 
-La documentación de esta carpeta no define una estrategia de benchmarks ni de
-tesis. Los golden fixtures mencionados aquí son fixtures de eventos para validar
-el reducer, selectores y UI; no son benchmarks de calidad.
+## Orden de lectura
 
-## Orden De Lectura
+1. [`agent-first-redesign.md`](agent-first-redesign.md): propuesta de experiencia.
+2. [`run-operative-model.md`](run-operative-model.md): entidades, eventos y
+   estados derivados.
+3. [`interaction-model.md`](interaction-model.md): comportamiento del workspace.
+4. [`system-components.md`](system-components.md): responsabilidades de producto
+   y backend.
+5. [`decomposer-composer-redesign.md`](decomposer-composer-redesign.md): ida y
+   vuelta del grafo.
+6. [`design-system.md`](design-system.md): lenguaje visual, accesibilidad y
+   movimiento.
+7. [`golden-fixtures.md`](golden-fixtures.md): demostraciones y regresiones.
+8. [`evolution-and-rationale.md`](evolution-and-rationale.md): decisiones retiradas
+   y razones del cambio.
 
-| # | Documento | Rol |
-|---|-----------|-----|
-| 1 | [`agent-first-redesign.md`](agent-first-redesign.md) | Visión de experiencia y producto |
-| 2 | [`run-operative-model.md`](run-operative-model.md) | Event log, entidades, reducer, selectores e invariantes |
-| 3 | [`interaction-model.md`](interaction-model.md) | Cómo se vive un run de punta a punta |
-| 4 | [`system-components.md`](system-components.md) | Piezas conceptuales y colaboración entre capas |
-| 5 | [`golden-fixtures.md`](golden-fixtures.md) | Fixtures de eventos para regresión de UI/modelo |
-| 6 | [`evolution-and-rationale.md`](evolution-and-rationale.md) | Registro histórico del cambio de DAG viewer a sala de control |
-| 7 | [`decomposer-composer-redesign.md`](decomposer-composer-redesign.md) | Diseño técnico de decomposer/composer, sin metodología de evaluación activa |
-| 8 | [`langgraph-orchestrator-design.md`](langgraph-orchestrator-design.md) | Diseño del orquestador con LangGraph |
-| 9 | [`future-frontier-tasks.md`](future-frontier-tasks.md) | Backlog técnico exploratorio |
+## Principios
 
-## Conceptos Clave
+- Un solo workspace por run.
+- Grafo como centro durante planning y ejecución.
+- Evidencia como centro cuando existe un resultado.
+- Decisiones humanas locales y no bloqueantes para trabajo independiente.
+- Progressive disclosure en lugar de superficies técnicas separadas.
+- Estado derivado de eventos, nunca sobrescrito por componentes.
+- Movimiento para explicar causalidad, nunca para mover el viewport.
 
-- **Sala de control continua** — un run que madura por fases.
-- **Event log append-only** — fuente de verdad dinámica.
-- **Reducer + selectors** — todo estado visible es derivado.
-- **Seam** — contrato entre nodos que habilita paralelismo seguro.
-- **Verify-loop** — un leaf no está bien porque produjo diff, sino porque valida.
-- **Freshness** — vigencia derivada frente a cambios de seams.
-- **Decision** — recurso unificado para intervención humana.
+## Superficies que dejan de ser primarias
 
-## Estado De Las Decisiones
+`Tareas`, `Planificación`, `Integración`, `Interfaces`, board, timeline, logs y
+diagnóstico avanzado no son destinos de navegación equivalentes. Siguen
+existiendo como detalles del nodo, relación o resultado cuando aportan contexto.
 
-El modelo operativo A-P está congelado como dirección de producto. La
-implementación puede cambiar detalles, pero no debe volver a:
+## Relación con `/proto`
 
-- estados visuales imperativos por nodo;
-- tres vistas primarias equivalentes;
-- consola CLI cruda como superficie principal;
-- Lab Mode o replay determinístico como experiencia de producto.
-
-Relación con decisiones del sistema: [`../DECISIONS.md`](../DECISIONS.md).
-
+Los fixtures usan el mismo reducer, selectores y componentes que el producto.
+Su sidebar enumera fixtures, no workspaces reales. Son herramientas de diseño y
+regresión visual; no certifican comportamiento backend.

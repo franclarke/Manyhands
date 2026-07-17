@@ -1,25 +1,23 @@
 # @manyhands/contracts
 
-> El contrato entre el orquestador y cada agente, y las interfaces compartidas (las "costuras") entre tareas hermanas.
+Schemas actuales para tareas de agentes, execution scope, interfaces y
+resultados de validación.
 
-## Rol en el pipeline
+## Dirección objetivo
 
-Modelo. Define el "qué tiene que hacer y qué puede tocar" de cada hoja, y el acuerdo que permite que el trabajo paralelo recomponga.
+El package debe expresar obligaciones versionadas:
 
-## Conceptos clave
+- `TaskContract` con goal y acceptance criteria;
+- `ScopeContract`;
+- `SeamContract` con semántica, producer y consumers;
+- `ArtifactContract`;
+- `ValidationContract` separado de recipes ejecutables.
 
-- **`AgentTaskContract`.** Todo lo que una hoja necesita para ejecutarse de forma aislada y verificable: `objective`, `ContextPack`, scope permitido/prohibido, `ExecutionScope` (`implementationPaths` / `testPaths` / `configPaths`), criterios de aceptación, comandos de validación, `expectedOutput` (símbolos producidos/consumidos) y límites de costo/tiempo.
-- **`InterfaceContract`.** La costura entre hermanos: un `id` estable, su `kind` (`type` / `function` / `module`) y la **firma real** (no solo el nombre). Las hojas declaran qué interfaces `consumen` y `producen` — esto es lo que vuelve seguro el paralelismo y posible la composición.
-- **Seguridad de comandos.** `validationCommandSafetyIssues` aplica una whitelist de charset a los comandos de validación (que vienen del LLM) antes de ejecutarlos (D13).
-- **Validación de frontera.** `validateAgentTaskContractBoundary` convierte un
-  contrato de schema-compatible a runtime-safe: valida `taskId`, paths
-  repo-relative seguros, interfaces estables y warnings explícitos para scopes
-  incompletos.
+Los tipos actuales `AgentTaskContract` e `InterfaceContract` son el punto de
+partida, no necesariamente la forma final. Los comandos del LLM no se convierten
+en evidencia confiable solo por pasar una whitelist.
 
-## API pública
+La validación de frontera debe rechazar paths inseguros, producers ausentes,
+revisions incompatibles y criteria sin forma de evidencia.
 
-`AgentTaskContractSchema` · `InterfaceContractSchema` · `ExecutionScopeSchema` · `AgentRunResult` · `ValidationResult` · `validateAgentTaskContract` · `validateAgentTaskContractBoundary` · `validationCommandSafetyIssues`
-
-## Dependencias
-
-`@manyhands/shared`. **Más:** [`docs/system/02-contracts.md`](../../docs/system/02-contracts.md).
+Contrato objetivo: [`docs/system/02-contracts.md`](../../docs/system/02-contracts.md).

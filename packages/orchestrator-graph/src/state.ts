@@ -8,7 +8,7 @@
  * Execution results use identity-merge reducers (last write per task wins) so
  * a retried leaf REPLACES its failed result instead of accumulating duplicates.
  *
- * Design: docs/design/langgraph-orchestrator-design.md §3
+ * Target framework boundary: docs/design/langgraph-orchestrator-design.md
  */
 import { Annotation } from "@langchain/langgraph";
 import type { TaskGraph } from "@manyhands/task-graph";

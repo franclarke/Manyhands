@@ -1,128 +1,91 @@
-# Decomposer y Composer — Diseño Actual
+# Planner, Graph Compiler e Integrator
 
-> Estado: documento técnico vigente. Reemplaza la narrativa anterior centrada en
-> “artifacts de tesis” y experimentos de granularidad. El diseño sigue siendo
-> importante para el producto, pero no define una metodología de evaluación
-> activa.
+## Por qué se separan
 
----
+“Descomponer” mezcla hoy tres problemas distintos: comprender la intención,
+elegir una arquitectura de trabajo y fabricar estructuras ejecutables. La
+arquitectura objetivo los separa para que cada salida pueda validarse.
 
-## Objetivo
+```text
+goal + repository model
+  -> Planner: WorkBreakdown
+  -> Graph Compiler: GraphRevision + contracts
+  -> Critics: findings / approval candidate
+  -> execution
+  -> Composite Integrator: parent artifacts
+```
 
-ManyHands necesita partir un objetivo de software en tareas ejecutables y luego
-volver a componer los resultados. Dos componentes sostienen ese ciclo:
+## Planner
 
-- **Decomposer:** convierte intención en un `TaskGraph` con contratos e
-  interfaces.
-- **Composer:** integra commits hijos en composites padres con cherry-pick,
-  validación y repair semántico.
+El Planner responde:
 
-El valor del diseño no está en producir más nodos. Está en fabricar fronteras de
-trabajo suficientemente claras para que agentes aislados puedan construir en
-paralelo y luego componer.
+- ¿qué resultado observable debe existir?;
+- ¿qué fronteras reales tiene el repositorio?;
+- ¿qué capacidades compartidas habilitan otros cambios?;
+- ¿qué incrementos pueden verificarse de forma independiente?;
+- ¿qué ambigüedades requieren una decisión humana?
 
-## Decomposer
+No debe inventar paths exactos si el índice no los sustenta ni optimizar por una
+cantidad objetivo de nodos.
 
-### Responsabilidad
+## WorkBreakdown
 
-El Decomposer toma una feature y produce:
+La salida intermedia contiene objetivos, boundaries, outputs esperados,
+relaciones candidatas, preguntas y evidencia de grounding. Es revisable sin
+mezclar IDs, waves o detalles de persistencia.
 
-- nodos `root`, `integrator` y `leaf`;
-- dependencias entre nodos;
-- `AgentTaskContract` por hoja;
-- `executionScope` y `forbiddenPaths`;
-- acceptance criteria y comandos de validación;
-- `InterfaceContract`s cuando hay costuras compartidas.
+## Graph Compiler
 
-### Recursión Local
+Convierte el breakdown en:
 
-El decomposer visita nodos de forma recursiva. Cada llamada decide:
+- árbol de ownership `root/composite/leaf`;
+- `ArtifactRequirement` para disponibilidad real;
+- `SeamBinding` para compatibilidad paralela;
+- `ConflictConstraint` para scheduling;
+- contratos de scope, interfaces, artefactos y validación;
+- revisiones y fingerprints iniciales.
 
-- si el nodo ya es atómico;
-- o si debe dividirse en hijos con interfaces compartidas.
+Debe rechazar ciclos, producers inexistentes, criteria sin validación, scopes
+imposibles, outputs sin consumer/propósito y hojas demasiado ambiguas.
 
-Esto evita asumir que todo el árbol necesita la misma profundidad. Una rama
-simple puede quedar shallow y una rama compleja puede dividirse más.
+## Atomicidad óptima
 
-### Atomicidad
+Una hoja es atómica si un agente puede:
 
-`low | medium | high` controla agresividad de descomposición:
+1. comprenderla con contexto acotado;
+2. modificar un conjunto cohesivo de archivos;
+3. producir un output identificable;
+4. demostrar criterios sin depender de integración futura desconocida;
+5. reintentarse o descartarse sin invalidar trabajo no relacionado.
 
-- `low`: tolera unidades más grandes;
-- `medium`: punto intermedio;
-- `high`: busca unidades más pequeñas.
+No se exige que toque una sola capa o un solo archivo.
 
-No hay objetivo de cantidad de nodos ni profundidad fija.
+## Integrator
 
-### sharedInterface
+El Composite Integrator recibe una base, manifests hijos y contrato del padre.
 
-Cuando un composite se divide, puede producir un `sharedInterface`: firmas de
-tipos/funciones que los hijos deben respetar. Esas interfaces se inyectan en los
-prompts de hojas mediante `consumedInterfaces` y `producedInterfaces`.
+Camino:
 
-Esto convierte la coordinación paralela en un problema de contrato explícito:
-los agentes no tienen que adivinar la forma de la frontera compartida.
+1. valida que cada input esté vigente y sea alcanzable;
+2. ordena solo por requirements reales;
+3. aplica artefactos explícitos y registra qué incorporó;
+4. clasifica conflictos;
+5. ejecuta una reparación semántica acotada si corresponde;
+6. valida el composite en un sandbox limpio;
+7. registra un nuevo artefacto o una falla explicable.
 
-## Composer
+Un conflicto textual limpio puede requerir validación conductual. Una reparación
+que compila pero no satisface el contrato sigue siendo falla.
 
-### Responsabilidad
+## Enmiendas
 
-El Composer recibe resultados de hijos y produce una rama integrada para el
-composite padre.
+Cuando ejecución o integración descubre una omisión, propone una enmienda con:
 
-### Camino Limpio
+- causa y evidencia;
+- cambio de grafo/contrato;
+- impacto proyectado;
+- intentos y artefactos que quedarían stale;
+- trabajo preservado;
+- opciones para el usuario si requiere juicio.
 
-1. Ordena hijos por dependencias.
-2. Aplica commits con `git cherry-pick`.
-3. Ejecuta validaciones del padre si existen.
-4. Persiste `IntegrationResult`.
-
-### Repair Semántico
-
-Si un cherry-pick falla, el repair recibe:
-
-- goal del composite padre;
-- `sharedInterface` canónico;
-- objetivo/intención de cada hijo;
-- diff y salida real del conflicto;
-- diagnósticos pre-merge cuando existen.
-
-El repair busca honrar el contrato del composite, no solo borrar marcadores de
-conflicto.
-
-### Validación
-
-El resultado integrado puede fallar aunque el repair haya aplicado. Por eso el
-Composer corre validaciones del padre y puede producir `validation_failed`.
-
-## Grounding y Amendments
-
-El grounding prepara un walking skeleton para que las hojas ejecuten contra
-costuras existentes desde el inicio. Si un seam cambia durante el run, el motor
-de amendments deriva blast radius y vuelve obsoletos solo los nodos afectados.
-
-## Qué Se Retiró Del Diseño
-
-Estas ideas pertenecen a etapas anteriores y no son roadmap activo:
-
-- definir el éxito del sistema como experimento de tesis;
-- usar DAGs congelados como matriz experimental;
-- comparar B0-B4 como plan oficial;
-- tratar `GranularityVector` como instrumento académico central;
-- documentar `benchmarks/expression-calculator` o `benchmarks/task-manager-api`
-  como fixtures existentes;
-- usar `G3/G6/G9` o cantidad de hojas como variable experimental.
-
-La evaluación futura se diseñará desde cero cuando el producto esté completo.
-
-## Puntos De Implementación
-
-- `packages/decomposer/src/llm/recursive/` contiene la descomposición recursiva.
-- `packages/contracts/src/index.ts` define `InterfaceContract` y contratos de
-  tarea.
-- `packages/execution-core/src/run/executor.ts` construye instrucciones de hojas
-  con interfaces consumidas/producidas.
-- `packages/execution-core/src/integration/agent.ts` implementa el Composer.
-- `packages/execution-core/src/run/amendments-engine.ts` maneja invalidación por
-  cambios de seams.
-
+La aprobación crea una nueva revisión. No edita la historia anterior.

@@ -1,150 +1,94 @@
-# ManyHands — Context for AI Coding Agents
+# ManyHands — Context for AI coding agents
 
-> This file is for AI coding tools working in this repository (Codex, Cursor, and
-> similar). It is NOT the context file read by Claude Code — that is
-> `CLAUDE.md`.
-> Communication with Francisco: Spanish. Code and technical terms: English.
-> Current decision reference: `docs/DECISIONS.md`.
-> System walkthrough: `docs/system/`.
-> Agent-first UI/orchestration direction: `docs/design/`.
+> Communication with Francisco: Spanish. Code and technical names: English.
+> Start at [`PRODUCT.md`](PRODUCT.md) and [`docs/README.md`](docs/README.md).
 
----
+## Product
 
-## What This Repository Is
+ManyHands coordinates coding agents to turn a software goal into a verified,
+integrated and delivered result. The run is the product unit. The graph is
+central during planning/execution; evidence is central once a result exists.
 
-ManyHands is an LLM agent orchestration system for software development. It
-takes a feature in natural language, recursively decomposes it into a
-hierarchical DAG with explicit inter-agent interface contracts
-(`sharedInterface`), executes leaf tasks in isolated git worktrees, and
-integrates results bottom-up with cherry-pick.
+The repository is in transition: documentation describes the target
+architecture, while current code may be partial or incompatible. Never claim a
+target capability is implemented without inspecting code, tests and persisted
+runs.
 
-The current priority is product completion: a reliable agent-first run
-workspace, durable orchestration state, isolated execution, semantic
-integration, and clear human decision gates.
+## Documentation authority
 
-**Not:** a coding agent, a RAG system, an IDE plugin, a benchmark suite, a Lab
-Mode replay app, or an organizational memory tool.
+1. `PRODUCT.md` — users and product principles.
+2. `docs/DECISIONS.md` — target architecture decisions.
+3. `docs/system/` — technical contracts.
+4. `docs/design/` — product interaction and visual behavior.
+5. `docs/adr/` — rationale and trade-offs.
 
----
+When current code differs, record a transition gap. Do not silently rewrite the
+target to match implementation.
 
-## Evaluation and Benchmark Status
+## Target architecture summary
 
-There is no active benchmark/evaluation methodology in the current roadmap.
-Past deterministic Lab Mode work (`mock-v0`, `conflict-v0`, `/lab`, `/replay`,
-B0-B4, G3/G6/G9, old benchmark fixtures) is superseded history.
+- Hybrid graph: goal root, integration-boundary composites, cohesive leaves.
+- Canonical typed relations: parent ownership, `ArtifactRequirement`,
+  `SeamBinding`, `ConflictConstraint`.
+- Planner and Graph Compiler are separate responsibilities.
+- Contracts version goal, scope, seams, artifacts and validation obligations.
+- Attempts are immutable and identified by `InputFingerprint`.
+- Execution bases materialize only declared artifacts.
+- Failures recover by cause, not a universal retry count.
+- Run domain events are canonical; snapshots are projections and traces are
+  diagnostics.
+- Human decisions block only affected readiness.
+- Validation builds an Evidence Matrix on exact commits.
+- Integration is bottom-up; delivery publishes the validated tree.
+- LangGraph, React Flow and CLI executors are adapters, not domain types.
+- The canvas never recenters in response to run events.
 
-Do not reintroduce old benchmark runners, scenario pickers, deterministic Lab
-routes, or thesis experiment matrices. If evaluation becomes relevant again,
-surface it as a new design task after the product is stable.
+## Current repository boundaries
 
-The code still contains some legacy names such as `GranularityVector` and
-fixture-based UI tests. Treat them as runtime metrics and regression fixtures,
-not as an active thesis/benchmark plan.
+Dependency direction remains `apps -> specific packages -> shared` while the
+transition is implemented. Do not add new dependencies to legacy
+`@manyhands/core`.
 
----
+| Area | Current location | Target direction |
+|---|---|---|
+| Graph | `packages/task-graph` | typed relations and revisions |
+| Contracts | `packages/contracts` | scope/artifact/validation contracts |
+| Planning | `packages/decomposer` | Planner + Graph Compiler boundary |
+| Coordination | `packages/orchestrator-graph`, web hosts | framework-independent Run Coordinator |
+| Execution | `packages/execution-core` | bases, attempts, validation, integration modules |
+| Scheduling | `packages/scheduler`, `conflict-risk` | artifact readiness and constraints |
+| Persistence | `packages/run-store`, `trace-store` | domain events separate from diagnostics |
+| Grounding | `packages/repository-index` | versioned repository model |
+| UI | `apps/web` | one graph/result run workspace |
 
-## System Invariants — Do Not Change Without Discussing
+## Working in the transition
 
-| # | Invariant |
-|---|-----------|
-| D1 | `graph.dependencies` is canonical. `node.dependencies` is a synced shortcut. Mutation only via `addDependency` / `removeDependency` / `syncNodeDependencies`. |
-| D2 | Canonical task intent field is `goal`, never `intent`. Normalize legacy `intent` in parsers; never persist it. |
-| D3 | LLM failure → run FAILS with actionable error. No silent fallback to deterministic planning. |
-| D4 | Agent execution goes through the `AgentExecutor` seam and configured executor profiles. Claude Code CLI is the primary/default executor and Codex CLI is the selectable alternative (Gemini CLI removed 2026-06-16, see ADR-0031); do not change the default executor policy or add new CLIs without discussing it. |
-| D5 | `git diff HEAD` is the only source of truth for what an agent changed. stdout/stderr are diagnostic only (`stderrTail`/`stdoutTail`). |
-| D6 | **The orchestrator commits.** Agents must never commit. If an agent commits unexpectedly, policy is explicit (`reject` default or `accept`). |
-| D7 | Real isolation comes from the git worktree + `ScopeChecker`, not CLI approval mode. |
-| D8 | Integration uses cherry-pick + semantic repair on conflict. Repair context includes parent goal, canonical `sharedInterface`, each child's `goal` and diff. |
-| D9 | Parallelism is bounded by execution config and wave selection; default cap is `maxParallel = 6` unless a newer config overrides it. |
-| D10 | Timeouts are explicit and configurable per execution/integration contract. |
+1. Confirm the real Git root and inspect `git status --short` and `git diff HEAD`.
+2. Preserve unrelated changes; never reset, clean or stash globally.
+3. Trace the productive route and verify current behavior before changing it.
+4. For behavioral work, start with a targeted failing regression.
+5. Implement the smallest vertical slice that moves toward the target.
+6. Do not introduce parallel representations of graph relations, lifecycle or
+   evidence for convenience.
+7. Update the applicable target docs and future transition ledger.
+8. Run narrow checks first, then affected package/web typechecks or builds.
 
-## Run durability and terminal truth
+Current safety behavior such as worktree isolation, diff inspection, scope
+enforcement, orchestrator-owned candidate commits, process supervision, leases
+and fencing must not be weakened during migration. Their target contracts are in
+`docs/system/05-worktree-layer.md` and `docs/system/security-boundary.md`.
 
-- A run captures an immutable `RunTargetContext`; planning, provisioning and
-  final-artifact reads must use it rather than a later mutable workspace value.
-- Mutating background work owns a persisted operation lease. Use the mutation
-  helpers/CAS and fencing token; a stale lease must not persist results, events
-  or terminal status.
-- Repository mutation is additionally guarded by the repository lease. Release
-  and takeover are token/fencing scoped; do not replace it with a process-local
-  boolean lock.
-- Cancellation is two-phase: claim `cancelling`, invalidate the operation lease,
-  abort/kill through `ProcessSupervisor`, verify `allDead`, then transition to
-  `interrupted`. Do not accept late results or events from the invalidated lease.
-- `completed` is reserved for a valid verified/delivered `FinalArtifactManifest`.
-  Keep `executionOutcome`, `artifactOutcome`, and `deliveryOutcome` distinct;
-  use `partial`, `unverified`, `needs_delivery`, `failed_artifact`, or
-  `failed_delivery` when appropriate.
+## Product UI rules
 
-## Scheduling, events and approvals
+- No primary Tasks/Planning/Integration/Interfaces destinations.
+- No imperative node status overrides.
+- No automatic `fitView`, focus or zoom on events.
+- Decisions use contextual card + accessible dialog + global queue.
+- Work independent from a pending decision keeps running.
+- Distinguish candidate, verified, stale, failed and delivered.
+- Meet WCAG 2.2 AA and support reduced motion.
 
-- Normalize and persist the complete effective execution config before the
-  execution host, scheduler or dispatch observes it. The product path remains
-  `risk_aware`; absent overrides still enforce `maxParallel = 6`.
-- Every selected wave has a durable `waveId`. Persist the required
-  `run.scheduling.wave_selected` event, including the effective relevant config,
-  before dispatching its tasks.
-- The canonical run event log is the durable UI source. Emit facts at their real
-  side-effect boundary; executor `exitCode === 0` is never validation success.
-  Human gates use `decision.raised`/`decision.resolved`, and visual `gated` is
-  derived from pending decisions.
-- Semantic plan edits require `expectedVersion` CAS, increment `planRevision`,
-  invalidate approval and create the revision-specific approval decision.
-  Dispatch requires `approvedPlanRevision === planRevision` plus strict DAG
-  validation. Critic-error overrides must be explicit and auditable.
-
-## Safe investigation in a dirty checkout
-
-Before editing, confirm the Git root, inspect `git status --short` and
-`git diff HEAD`, then trace the productive route and its tests. Preserve
-unrelated changes: never reset, destructive checkout/clean, or global stash.
-For a behavioral fix, start with a failing regression, run the narrow test,
-then consumer suites/typechecks, and inspect the diff. Update the applicable
-progress record without rewriting prior evidence.
-
----
-
-## Package Boundaries
-
-Dependency direction: `apps → specific packages → shared`. Never import from
-`apps` inside packages. `@manyhands/core` is legacy; do not add new dependencies
-to it.
-
-| Package | Purpose | Status |
-|---------|---------|--------|
-| `task-graph` | TaskNode, TaskGraph, DAG validation, topo sort | Active |
-| `contracts` | AgentTaskContract, InterfaceContract | Active |
-| `decomposer` | Recursive decomposer and LLM planning schemas | Active |
-| `orchestrator-graph` | LangGraph StateGraphs and checkpointing | Active |
-| `execution-core` | Worktrees, executors, scope, recorder, integration | Active |
-| `scheduler` | Wave selection and scheduling policies | Active |
-| `run-store` | RunSnapshot, patches, JSON persistence | Active |
-| `trace-store` | TraceEvent (planning + execution) | Active |
-| `conflict-risk` | Pairwise conflict risk prediction | Active |
-| `repository-index` | Structural repo index (feeds conflict-risk) | Active |
-| `shared` | EntityId, IsoTimestamp, helpers | Active |
-| `core` | Legacy barrel; consumed by apps/web only | Legacy |
-
----
-
-## Operational Rules
-
-1. Do not re-argue D1-D10 casually. If a change conflicts with an invariant,
-   flag it first.
-2. Do not use agent stdout to determine changed files. Use `git diff HEAD`.
-3. Do not let agents commit. The orchestrator commits.
-4. Do not add silent fallbacks for LLM failure.
-5. Do not reintroduce Lab Mode, deterministic benchmark routes, old replay
-   flows, or old scenario manifests.
-6. Use specific packages for new code; avoid `@manyhands/core`.
-7. UI/orchestration work follows `docs/design/`: event log as source of truth,
-   reducer + selectors for derived state, no imperative node status overrides.
-8. If touching core behavior, run the narrow relevant tests first, then broader
-   checks as appropriate.
-
----
-
-## Verification Commands
+## Verification
 
 ```bash
 pnpm test
@@ -152,39 +96,19 @@ pnpm -r --filter "./packages/*" typecheck
 pnpm --filter @manyhands/web exec tsc --noEmit
 pnpm build
 pnpm web:build
-pnpm web:dev
 ```
 
-Environment variables:
+For documentation-only changes, verify relative links, obsolete terminology and
+the final diff. Do not run expensive builds without a relevant code change.
 
-- `MANYHANDS_CLAUDE_BIN` — path to Claude Code CLI binary (default `claude`).
-- `MANYHANDS_CODEX_BIN` — path to Codex CLI binary (default `codex`).
-- `MANYHANDS_DECOMPOSER` — optional decomposer override for development.
+## Key entry points
 
----
-
-## Key Files
-
-| File | Description |
-|------|-------------|
-| `packages/task-graph/src/index.ts` | TaskNode, TaskGraph, topo sort |
-| `packages/contracts/src/index.ts` | AgentTaskContract + InterfaceContract |
-| `packages/decomposer/src/llm/recursive/` | Recursive decomposer implementation |
-| `packages/orchestrator-graph/src/` | Planning/execution StateGraphs and checkpointing |
-| `packages/execution-core/src/run/executor.ts` | Low-level node execution engine |
-| `packages/execution-core/src/integration/agent.ts` | IntegrationAgent / Composer |
-| `apps/web/src/lib/server/runs/runner.ts` | Planning + execution pipeline wiring |
-| `apps/web/src/lib/server/runs/execution-host.ts` | Web host for execution graph dependencies |
-| `apps/web/src/lib/run-model/` | Agent-first client model, reducer, selectors |
-| `apps/web/src/app/runs/[runId]/` | Run workspace route |
-
----
-
-## Reference Documentation
-
-- [`docs/DECISIONS.md`](docs/DECISIONS.md) — current decision synthesis.
-- [`docs/system/`](docs/system/) — component-by-component walkthrough.
-- [`docs/design/`](docs/design/) — agent-first model and UX/orchestration direction.
-- [`docs/development/architecture.md`](docs/development/architecture.md) — architecture overview.
-- [`docs/adr/`](docs/adr/) — historical decision record; superseded ADRs are history.
-
+- `apps/web/src/lib/server/runs/`
+- `apps/web/src/lib/run-model/`
+- `apps/web/src/app/runs/[runId]/`
+- `packages/task-graph/src/`
+- `packages/contracts/src/`
+- `packages/decomposer/src/`
+- `packages/orchestrator-graph/src/`
+- `packages/execution-core/src/`
+- `packages/run-store/src/`

@@ -14,7 +14,8 @@
  * Sends are dispatched exclusively from conditional edges; HITL interrupts
  * live exclusively in the pure gate nodes, resumable with Command({ resume }).
  *
- * Design: docs/design/future-frontier-tasks.md §1
+ * Current implementation notes: docs/design/langgraph-orchestrator-design.md
+ * Target run semantics: docs/system/04-run-executor.md
  */
 import { StateGraph, END, START, MemorySaver } from "@langchain/langgraph";
 import { RunStateAnnotation, type RunState } from "../state.js";

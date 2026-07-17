@@ -1,93 +1,184 @@
 # Fixtures golden
 
-> Estado: **baseline de diseño** (2026-06-05). Define el conjunto de fixtures que validan el modelo operativo **antes** del backend real. Cada fixture es un array de `RunEvent` (ver [`run-operative-model.md`](run-operative-model.md)).
+## Propósito
 
----
+Los fixtures de `/runs/proto/[fixture]` cumplen tres funciones:
 
-## 1. Propósito
+1. regresión del reducer, selectores y componentes;
+2. exploración de la experiencia antes de conectar una capacidad backend;
+3. demostración comprensible del producto.
 
-Los fixtures golden cumplen tres roles:
-1. **Tests del reducer y los selectores** — dado un log de eventos, el estado derivado debe ser el esperado.
-2. **Insumo del prototipo de UI** — permiten construir y validar la experiencia sin backend.
-3. **Tests de regresión del contrato** — si un cambio rompe un golden, el contrato cambió y hay que decidirlo conscientemente.
+No prueban que el backend real implemente una capacidad. Cada fixture debe
+declarar qué simula y tener un test backend equivalente antes de usar esa
+capacidad como afirmación de producto.
 
-## 2. Por qué fixtures y SSE comparten la misma forma
-
-Un fixture es exactamente un array de `RunEvent`, el mismo envelope que emite (o emitirá) el stream SSE. El reducer no distingue origen. Esto garantiza que **lo prototipado con fixtures mapea 1:1 al backend real**: no hay trabajo descartable. El único agregado exclusivo de fixture es metadata de reproducción de timing:
+## Contrato
 
 ```ts
 type RunFixture = {
-  runId: string;
+  id: string;
+  title: string;
+  summary: string;
   events: RunEvent[];
-  playback?: { delaysMs: number[] };   // SOLO fixture: para replay con ritmo "vivo"; se descarta en backend
+  playback?: {
+    defaultSpeed: number;
+    stepDelaysMs?: Record<string, number>;
+  };
+  assertions: FixtureAssertion[];
 };
 ```
 
-## 3. Cómo validan el modelo antes del backend
+- `events` usa el mismo envelope de dominio que el stream real.
+- La reproducción puede avanzar manualmente, pausar y ajustar velocidad.
+- El reducer no conoce si el origen es fixture o backend.
+- La sidebar de Proto enumera fixtures y nunca workspaces/runs reales.
+- Ningún evento recentra el canvas. `Fit graph` y `Ver nodo` son acciones
+  explícitas.
 
-Como `ExecutionState`, fase, salud, wavefront, freshness y blast radius son **derivados**, alcanza con alimentar el log de un fixture al reducer para verificar que **todos** los selectores devuelven lo correcto en cada corte. Esto valida el corazón del sistema (modelo + reducer + selectores + UI projections) sin depender de Gemini, git, ni capacidades backend aún pendientes (grounding, verify-loop real, diagnóstico de conflictos).
+## Catálogo
 
----
+| Fixture | Propósito |
+|---|---|
+| `golden-appointment-booking` | demo principal para público general |
+| `golden-happy-path` | run completo sin incidentes |
+| `golden-planning-question` | aclaración que cambia el plan |
+| `golden-verify-auto-repair` | reparación local autónoma |
+| `golden-behavioral-conflict` | conflicto semántico con decisión humana |
+| `golden-seam-amendment-blast-radius` | enmienda e invalidación selectiva |
+| `golden-support-desk-saas` | desarrollo SaaS con varios límites técnicos |
+| `golden-subscriptions-billing-saas` | reglas de negocio e integración de eventos |
+| `golden-deep-import-pipeline` | DAG profundo y angosto para audiencia técnica |
 
-## 4. El set golden
+## Fixture principal: AgendaFácil
 
-| Fixture | Demuestra | Estado backend que simula |
-|---|---|---|
-| `golden-happy-path` | Run exitoso sin conflicto | feliz |
-| `golden-planning-question` | Pregunta humana durante planning | aclaración |
-| `golden-verify-auto-repair` | Build/test falla y se auto-repara | reparación autónoma |
-| `golden-behavioral-conflict` | Conflicto conductual invisible al merge | arbitraje humano |
-| `golden-seam-amendment-blast-radius` | Cambio de firma + invalidación selectiva | plan vivo |
+### Historia
 
----
+El usuario solicita una aplicación sencilla para reservar turnos. El grafo es
+comprensible por el producto, pero está cortado para trabajo agéntico real:
+
+```text
+Construir AgendaFácil
+├─ Motor de reservas
+│  ├─ modelo y disponibilidad
+│  ├─ reserva atómica
+│  └─ API y evidencia de concurrencia
+├─ Experiencia de reserva
+│  ├─ búsqueda de horarios
+│  ├─ formulario y confirmación
+│  └─ estados de error/accesibilidad
+└─ Operación del servicio
+   ├─ comprobantes
+   ├─ recordatorios
+   └─ observabilidad y herramientas internas
+```
+
+Los títulos explican valor; los nodos representan límites técnicos e incrementos
+verificables. Los contratos conectan disponibilidad, `BookingRequest`,
+`BookingReceipt`, zona horaria y notificaciones.
+
+### Recorrido manual
+
+1. **Objetivo:** se crea el run y el repositorio queda fijado.
+2. **Aclaración:** el planner pregunta la política de cancelación porque cambia
+   dominio, UI y recordatorios.
+3. **Propuesta:** aparecen la raíz y tres composites. Cada expansión explica por
+   qué el nodo se divide.
+4. **Aprobación:** se muestran outputs, requirements, seams y Evidence Matrix
+   proyectada, no tabs técnicas separadas.
+5. **Baseline:** se materializan contratos compartidos para habilitar trabajo
+   paralelo.
+6. **Wave inicial:** motor, UI y operación avanzan donde sus requisitos lo
+   permiten.
+7. **Fallo local:** la reserva atómica acepta doble booking. El mismo intento
+   recibe un diagnóstico y hace una única reparación; luego valida.
+8. **Dependencia descubierta:** recordatorios detecta que `BookingReceipt` no
+   incluye zona horaria. Propone una enmienda y muestra el impacto.
+9. **Decisión humana:** el usuario aprueba. Solo productor, consumidores y
+   composites afectados quedan stale; trabajo independiente se conserva.
+10. **Integración:** un conflicto estructural en estado compartido se repara
+    automáticamente. La validación conductual confirma el flujo completo.
+11. **Resultado:** Evidence Matrix, diff agregado y candidato exacto toman el
+    centro. El grafo queda como procedencia.
+12. **Entrega:** se valida nuevamente el candidato y se publica.
+
+### Assertions
+
+- exactamente tres hijos de la raíz por decisión narrativa de este fixture, no
+  como regla del producto;
+- profundidad de cuatro, con una rama de cinco solo si mejora la historia;
+- ningún composite existe únicamente para “planificar” o “integrar”;
+- al menos un `ArtifactRequirement`, un `SeamBinding` y un
+  `ConflictConstraint` visibles en contexto;
+- una reparación autónoma, una enmienda, una invalidación selectiva y una
+  integración reparada;
+- una decisión pendiente no detiene ramas independientes;
+- ningún resultado stale se integra;
+- cada criterio final tiene evidencia;
+- la reproducción manual permite explicar un evento por vez;
+- creación, fallo e integración no cambian el viewport.
+
+## Fixtures de mecanismo
 
 ### `golden-happy-path`
-- **Propósito:** el camino feliz completo; valida las seis fases y las transiciones de fase/salud.
-- **Historia:** feature simple; el plan se aprueba; Foundation congela una costura; una wave paralela; todos los leaves pasan verify; integración bottom-up verde; evidencia; merge.
-- **Eventos mínimos:** `run.created` → `run.context.resolved` → `plan.*` → `decision{approve_plan}` → `grounding.*` + `seam.frozen` + `wave.planned` → `wave.opened` + `node.execution.started`×N + `node.verify.passed`×N + `wave.closed` → `integration.started/validated/completed` → `run.evidence.ready` + `decision{approve_merge}` → `run.accepted` → `run.completed`.
-- **Assertions del reducer:** `selectPhase` recorre Framing→…→Disposition en orden; `selectHealth` = working durante la wave, attention solo en los dos gates, settled al cerrar; `selectWavefront` = los leaves de la wave simultáneamente; `selectInvalidatedNodes` = ∅ siempre.
-- **Assertions de UI:** los signos vitales se encienden a la vez (paralelismo visible); canal de decisiones vacío salvo en los gates; evidencia al final.
-- **Invariantes cubiertas:** 1, 5, 6, 11 (ver [`run-operative-model.md`](run-operative-model.md#6-invariantes-del-modelo-para-tests)).
-- **Por qué golden:** es la línea base. Si este se rompe, algo fundamental del ciclo de vida cambió.
+
+Plan aprobado, dos hojas compatibles en paralelo, integración limpia, Evidence
+Matrix completa y entrega confirmada. Es la mínima línea base del lifecycle
+objetivo.
 
 ### `golden-planning-question`
-- **Propósito:** validar el gate de aclaración durante planning como `Decision{clarify}`.
-- **Historia:** durante la descomposición, el agente necesita desambiguar una decisión de diseño; emite una pregunta; el humano responde; el planning continúa.
-- **Eventos mínimos:** `plan.started` → `plan.node.proposed`× → `decision.raised{clarify}` (con `context.question/options`) → `decision.resolved{choice:{answer}}` → `plan.node.proposed`× → `plan.ready` + `decision.raised{approve_plan}`.
-- **Assertions del reducer:** mientras la pregunta está pendiente, `selectHealth=attention` y `selectAttention=[clarify]`; `selectPhase=Proposal`.
-- **Assertions de UI:** la pregunta aparece en el **canal de decisiones** (no en una superficie aparte), con contexto embebido; el resto del planning no se pierde.
-- **Invariantes cubiertas:** unificación de gates (toda intervención es `Decision`), 6 (sin flicker).
-- **Por qué golden:** prueba que un gate **no-de-conflicto** usa el mismo recurso unificado; valida que la dispersión de intervención del diseño viejo quedó resuelta.
+
+Una ambigüedad arquitectónica genera `decision.raised`. La respuesta se incorpora
+a una nueva revisión antes de aprobar. No simula preguntas cosméticas.
 
 ### `golden-verify-auto-repair`
-- **Propósito:** validar el verify-loop y la reparación autónoma **sin** molestar al humano.
-- **Historia:** un leaf falla el build en la iteración 1; el sistema repara; pasa en la iteración 2–3.
-- **Eventos mínimos:** `node.execution.started` → `node.verify.iteration{build:fail}` → `node.verify.failed` → `node.repair.started` → `node.verify.iteration{build:pass, tests:n/m}` → `node.verify.passed`.
-- **Assertions del reducer:** durante el loop, `selectHealth=working` (no attention — la reparación es autónoma); el signo vital refleja `retry k/max`; `selectAttention=∅`.
-- **Assertions de UI:** el nodo late con `retry`; **el humano no es interrumpido**; el log crudo queda en drawer.
-- **Invariantes cubiertas:** 1 (estado derivado), verify-as-truth.
-- **Por qué golden:** prueba que lo reversible/verificable lo maneja el sistema solo, manteniendo al humano fuera del loop. Si esto empieza a generar `attention`, se rompió el principio P2.
+
+Un test local falla por un defecto de código. Se permite una reparación en el
+mismo worktree y se crea evidencia de ambos intentos. No genera atención humana
+mientras exista una política segura.
 
 ### `golden-behavioral-conflict`
-- **Propósito:** conflicto **conductual** que pasa los tests locales y solo aparece en integración; requiere juicio humano.
-- **Historia:** un productor define `duration` en segundos; un consumidor lo llama en milisegundos. Ambos type-checkean y pasan local. La integración falla el e2e. El sistema diagnostica un mismatch de unidad no auto-resoluble y escala. El humano fija la unidad canónica; se re-ejecuta el productor; la integración pasa. La resolución **enriquece el `contract` de la costura** para que no recurra.
-- **Eventos mínimos:** wave paralela con `node.verify.passed`× (builtAgainst rev1) → `integration.validated{passed:false}` → `conflict.detected{behavioral, autoResolvable:false}` + `decision.raised{resolve_conflict}` → `decision.resolved{resolutionId}` → `seam.amended{contract}` → re-`node.execution.started`/`verify.passed` del productor → `integration.validated{passed:true}` → `conflict.resolved` → evidencia.
-- **Assertions del reducer:** tras `conflict.detected`, `selectHealth=attention` **en el mismo corte** (emisión atómica); `selectConflicts=[behavioral]`; `selectBlocked` incluye el compuesto, **no** los hermanos no implicados; tras resolver, el productor recorre `integrated→running→integrated` (no monotónico); `conflict.status=resolved` solo tras la re-validación verde.
-- **Assertions de UI:** edge tipado entre los dos nodos implicados, el tercero sin marca; el resto del grafo no bloqueado; un único gate bloqueante hidratado con las dos interpretaciones + el assertion que falla; la evidencia cita la decisión humana.
-- **Invariantes cubiertas:** 3 (no monotonicidad), 6 (sin flicker), 7 (resuelto tras re-validación).
-- **Por qué golden:** prueba que congelar una costura no captura semántica, y que el modelo cierra el loop conflicto→decisión→`contract`. Es el regresión de los refinamientos A–G.
+
+Producer y consumer pasan tests aislados pero discrepan sobre unidades. La
+integración detecta el fallo e intenta una reparación. Al no poder decidir
+semántica de negocio, crea una decisión con opciones e impacto.
 
 ### `golden-seam-amendment-blast-radius`
-- **Propósito:** evolución real del plan vivo — **cambio de firma** que invalida consumidores ya verdes y un compuesto ya integrado, con re-ejecución **parcial** y preservación selectiva.
-- **Historia:** un productor descubre que la firma congelada es insuficiente (necesita paginación). La enmienda cambia la firma; invalida los dos consumidores (verdes) y el compuesto (integrado); un nodo independiente queda intacto. El humano aprueba viendo el blast radius; se re-ejecuta solo lo afectado; la integración final pasa.
-- **Eventos mínimos:** wave con `node.verify.passed{builtAgainst:rev1}`× + `integration.completed` del compuesto → `amendment.proposed{changeKind:signature, affects}` + `decision.raised{approve_amendment}` → `decision.resolved{approve}` → `seam.amended{revision:2, signature}` → re-ejecución de productor + consumidores stale (`builtAgainst:rev2`) → re-`integration` del compuesto y la raíz → `evidence{invalidationTrace}`.
-- **Assertions del reducer:** **antes** de aprobar, `selectAffectedByAmendment` = blast proyectado y `selectInvalidatedNodes=∅` (no aplicada); **tras** `seam.amended`, `selectInvalidatedNodes` = {consumidores + compuesto + raíz}, el nodo independiente **fresh**; los consumidores recorren `integrated→stale→running→integrated`; `freshness` vuelve a `fresh` al re-pasar con `builtAgainst=rev2`; el nodo independiente **nunca** emite un segundo `execution.started`.
-- **Assertions de UI:** el blast radius se previsualiza antes de aprobar; los nodos invalidados se muestran **obsoletos (no fallo)**; solo los afectados re-laten; el independiente queda verde estático; la evidencia muestra `invalidationTrace` con `preserved`.
-- **Invariantes cubiertas:** 2 (freshness derivada), 3 (no monotonicidad), 8 (no `completed` con stale), 9 (proyección vs realización), 10 (obsoleto ≠ done), 11 (una fuente de verdad).
-- **Por qué golden:** es el único caso que prueba blast radius real, invalidación selectiva y re-ejecución parcial. Es el regresión de los refinamientos H–P, que el modelo A–G no tenía.
 
----
+Un contrato agrega paginación. El preview distingue trabajo preservado y
+artefactos que quedarían stale. La aprobación crea otra revisión y reejecuta solo
+inputs incompatibles.
 
-## 5. Cobertura del set
+## Fixtures de aplicaciones complejas
 
-Entre los cinco, el set cubre: las seis fases, los cuatro tipos de `Decision` (approve_plan, clarify, resolve_conflict, approve_amendment, approve_merge), el verify-loop (éxito y reparación), las dos clases de evolución de costura (`contract` y `signature`), la invalidación derivada, y todas las invariantes del modelo. Un cambio que rompa cualquiera de estos fixtures debe tratarse como un cambio consciente del contrato congelado.
+### `golden-support-desk-saas`
+
+Mesa de ayuda con identidad, tickets, inbox, comentarios, SLA y auditoría. Debe
+mostrar que algunos cortes son verticales y otros son capacidades compartidas.
+
+### `golden-subscriptions-billing-saas`
+
+Planes, prorrateo, checkout, webhooks, facturación y portal. La aclaración de
+redondeo ocurre antes de ejecutar; la integración valida idempotencia y orden de
+eventos.
+
+### `golden-deep-import-pipeline`
+
+Ingesta B2B, parsing, schema, validación, normalización, persistencia idempotente
+y entrega. Prioriza profundidad sobre anchura. Cada paso consume un artefacto
+concreto; no usa dependencies de orden ficticias. La velocidad default es lenta
+y los pasos de integración tienen pausas narrables.
+
+## Cobertura mínima del set
+
+El catálogo conjunto debe cubrir:
+
+- lifecycle completo y cancelación/interrupción;
+- graph revision y aprobación;
+- todas las relaciones tipadas;
+- intentos verified, failed, discarded y stale;
+- recuperación por causa;
+- decisiones locales y cola de atención;
+- integración limpia, reparada y escalada;
+- evidencia satisfied, failed, uncovered y flaky;
+- entrega exitosa y fallida;
+- reduced motion, teclado, contenido largo y viewport estrecho.

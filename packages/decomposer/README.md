@@ -1,24 +1,25 @@
 # @manyhands/decomposer
 
-> Convierte una feature en lenguaje natural en un DAG de tareas con contratos e interfaces compartidas. Es uno de los **aportes centrales** del proyecto.
+Implementación actual de descomposición recursiva y schemas LLM. El camino
+productivo actual debe verificarse en código; no asumir providers desde docs
+históricos.
 
-## Rol en el pipeline
+## Dirección objetivo
 
-Planning. Es el primer paso: del prompt al plan.
+Separar dos responsabilidades dentro del boundary de planning:
 
-## Conceptos clave
+- `Planner`: produce un `WorkBreakdown` semántico grounded.
+- `GraphCompiler`: materializa GraphRevision, relaciones, contracts, scopes y
+  validation obligations.
 
-- **Descomposición recursiva *interface-aware*.** Cada nodo se evalúa por separado y decide si es **atómico** o si debe **dividirse**. Cuando se divide, define las **interfaces compartidas** que sus hijos deben consumir y producir — esas costuras son lo que después permite ejecutar las hojas en paralelo y recomponerlas con contexto.
-- **Camino de producto.** `RecursiveDecomposer` / `GeminiRecursiveDecomposer` (LLM vía Gemini). La granularidad `low` / `medium` / `high` describe la **agresividad** de la descomposición, no una cantidad fija de nodos ni de profundidad.
-- **Sin fallback silencioso.** Una falla del LLM durante planning produce un error accionable; no se degrada a una descomposición determinística (D3).
+Los critics validan completitud, atomicidad, graph, contracts, scope, validation
+y riesgo. La falla de modelo se reporta; no hay fallback silencioso a un plan de
+otra calidad.
 
-## API pública
+La granularidad deja de ser un selector central de producto. La atomicidad se
+decide por cohesión, contexto, outputs y verificabilidad.
 
-`RecursiveDecomposer` · `GeminiRecursiveDecomposer` · `buildStepPrompt` · `DecomposeStepOutputSchema` · `StepInterfaceSchema` · `normalizeLlmDecomposition` · `runDecomposerGuards` · `GRANULARITY_PROFILES`
+Los decomposers deterministas actuales pueden seguir como test fixtures, nunca
+como reemplazo silencioso del camino real.
 
-> [!NOTE]
-> `MockDecomposer`, `MetadataDrivenMockDecomposer` y `SingleTaskDecomposer` son descomponedores determinísticos remanentes de fixtures/tests, **no** el camino de producto.
-
-## Dependencias
-
-`@manyhands/contracts`, `@manyhands/task-graph`, `@manyhands/shared`. **Más:** [`docs/system/03-decomposer.md`](../../docs/system/03-decomposer.md).
+Contrato objetivo: [`docs/system/03-decomposer.md`](../../docs/system/03-decomposer.md).

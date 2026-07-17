@@ -11,7 +11,7 @@
  *   - page-load restoration: read latest.json without replaying events
  *   - time-travel (forking): clone any <checkpoint_id>.json to a new thread
  *
- * Design: docs/design/langgraph-orchestrator-design.md §5
+ * Target framework boundary: docs/design/langgraph-orchestrator-design.md
  */
 import { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint";
 import type {

@@ -1,27 +1,44 @@
 # ManyHands Web
 
-`apps/web` es la aplicación Next.js de ManyHands. Expone el Command Center, el
-workspace de runs, APIs de workspaces/runs y la proyección agent-first basada en
-`RunEvent`.
+`apps/web` contiene el producto Next.js actual: Command Center, workspaces, runs,
+APIs y el prototipo `/runs/proto`.
 
-No es una app de Lab Mode ni un runner de benchmarks. Las rutas antiguas
-`/lab`, `/lab/benchmarks`, `/lab/reports`, `/replay` y `/replay/demo` fueron
-retiradas. Los prototipos bajo `/runs/proto/[fixture]` usan golden fixtures del
-modelo de eventos para validar UI/reducer/selectores; no son benchmarks de
-calidad.
+> Estado de transición: el código actual usa un run model y superficies heredadas
+> que deben auditarse contra [`docs/system/10-web-app.md`](../../docs/system/10-web-app.md)
+> y [`docs/design/interaction-model.md`](../../docs/design/interaction-model.md).
 
-## Stack
+## Dirección objetivo
 
-- Next.js 15
-- React 19
-- TypeScript
-- Tailwind CSS 4
-- App Router route handlers
-- `react-resizable-panels` para el workspace multipanel
+- una ruta continua por run;
+- grafo central durante planning/ejecución;
+- resultado/evidencia central al finalizar;
+- reducer + selectors sobre eventos de dominio;
+- decisiones contextuales que bloquean solo alcance afectado;
+- sin destinos primarios separados de Tasks/Planning/Integration/Interfaces;
+- sin auto-fit o recentrado por eventos;
+- WCAG 2.2 AA y reduced motion.
 
-## Commands
+## Proto
 
-Desde la raíz del repo:
+`/runs/proto/[fixture]` reproduce fixtures contra el modelo cliente actual. Su
+sidebar muestra fixtures y no datos reales. Un fixture es demostración/regresión
+de UI, no evidencia backend. Ver
+[`docs/design/golden-fixtures.md`](../../docs/design/golden-fixtures.md).
+
+## Puntos actuales
+
+- `src/app/(command-center)/`: creación y navegación.
+- `src/app/runs/[runId]/`: workspace real.
+- `src/app/runs/proto/`: fixtures.
+- `src/lib/server/runs/`: planning, lifecycle, ejecución y delivery web.
+- `src/lib/run-model/`: tipos, reducer, selectors y view models actuales.
+- `src/components/run-model/`: proyección del run.
+
+Runs y workspaces persisten actualmente bajo `.manyhands/` con overrides por
+variables de entorno. La arquitectura objetivo exige separar event log de
+dominio, snapshots y trazas; no asumir que la persistencia actual ya cumple.
+
+## Comandos
 
 ```bash
 pnpm web:dev
@@ -30,104 +47,6 @@ pnpm web:lint
 pnpm web:build
 ```
 
-## Routes
-
-- `/` — Command Center: prompt + workspace + granularidad + modelo.
-- `/workspaces` — configuración de repositorios locales.
-- `/runs/[runId]` — sala de control agent-first del run.
-- `/runs/proto` — índice de golden fixtures de UI.
-- `/runs/proto/[fixture]` — reproducción fixture-first del modelo de eventos.
-
-## API Routes
-
-- `GET /api/health`
-- `GET /api/providers/readiness`
-- `GET /api/workspaces`
-- `POST /api/workspaces`
-- `GET /api/workspaces/[id]`
-- `PATCH /api/workspaces/[id]`
-- `DELETE /api/workspaces/[id]`
-- `POST /api/local-fs/browse`
-- `GET /api/runs[?workspaceId&limit]`
-- `POST /api/runs`
-- `GET /api/runs/[id]`
-- `GET /api/runs/[id]/events`
-- `GET /api/runs/[id]/run-events`
-- `POST /api/runs/[id]/approve-plan`
-- `POST /api/runs/[id]/run`
-- `POST /api/runs/[id]/pause`
-- `POST /api/runs/[id]/resume`
-- `POST /api/runs/[id]/cancel`
-- `POST /api/runs/[id]/restart`
-- `POST /api/runs/[id]/fork`
-- `POST /api/runs/[id]/answer`
-- `POST /api/runs/[id]/auto-resolve`
-- `POST /api/runs/[id]/serialize`
-- `GET /api/runs/[id]/export`
-- `GET /api/runs/[id]/diagnostics`
-- `GET /api/runs/[id]/artifacts?ref=...`
-- `POST /api/runs/[id]/decisions/[decisionId]`
-- `PATCH /api/runs/[id]/nodes/[taskId]`
-- `POST /api/runs/[id]/nodes/[taskId]/review`
-- `POST /api/runs/[id]/nodes/[taskId]/regen`
-- `POST /api/runs/[id]/nodes/[taskId]/run`
-- `POST /api/runs/[id]/dependencies`
-- `POST /api/runs/[id]/risks/acknowledge`
-- `POST /api/runs/[id]/integrator`
-
-## Workspaces
-
-Workspaces persisten en `.manyhands/workspaces.json` salvo que se configure
-`MANYHANDS_WORKSPACES_FILE`. La persistencia vive en
-`src/lib/server/workspaces/repository.ts`.
-
-Un workspace puede apuntar a un repo local y guardar hints de planificación:
-`repoPath`, `packageManager`, `defaultBranch`, `allowedPaths`, `testCommand`,
-`buildCommand`.
-
-## Runs
-
-Runs persisten en `.manyhands/runs/<runId>.json` como `{ version, run }`
-validado con Zod. La persistencia vive en
-`src/lib/server/runs/repository.ts`.
-
-El lifecycle se coordina desde:
-
-- `src/lib/server/runs/planning-host.ts`
-- `src/lib/server/runs/execution-host.ts`
-- `src/lib/server/runs/runner.ts`
-- `src/lib/server/runs/lifecycle.ts`
-
-La ejecución usa checkpoints JSON de LangGraph bajo `.manyhands/` y puede
-reanudar/forkear desde esos checkpoints.
-
-## Run Model
-
-La UI agent-first consume un log append-only de `RunEvent`:
-
-- `src/lib/run-model/reducer.ts` reduce eventos.
-- `src/lib/run-model/selectors.ts` deriva estado.
-- `src/lib/run-model/workspace-view.ts`, `focus-view.ts` y `timeline-view.ts`
-  producen view-models.
-- `src/components/run-model/` renderiza la experiencia.
-
-Regla: la UI no debe escribir estado derivado imperativo para nodos. Si algo se
-ve en pantalla, debe salir del log + reducer + selectores.
-
-## Environment
-
-- `MANYHANDS_CLAUDE_BIN` — ruta al binario de Claude Code CLI (default executor).
-- `MANYHANDS_CODEX_BIN` — ruta al binario de Codex CLI (alternativa seleccionable).
-- `MANYHANDS_DECOMPOSER` — override de decomposer para desarrollo.
-- `MANYHANDS_RUNS_DIR` — override del directorio de runs.
-- `MANYHANDS_WORKSPACES_FILE` — override del archivo de workspaces.
-- `MANYHANDS_REPO_ROOT` — ancla alternativa para `.manyhands/`.
-
-## Tests
-
-Los tests de web y run model viven en `tests/` en la raíz del repo y corren con:
-
-```bash
-pnpm test
-pnpm web:typecheck
-```
+Variables actuales: `MANYHANDS_CLAUDE_BIN`, `MANYHANDS_CODEX_BIN`,
+`MANYHANDS_DECOMPOSER`, `MANYHANDS_RUNS_DIR`, `MANYHANDS_WORKSPACES_FILE` y
+`MANYHANDS_REPO_ROOT`.

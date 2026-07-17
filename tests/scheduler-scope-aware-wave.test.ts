@@ -1,6 +1,6 @@
 /**
  * Tests for selectScopeAwareWave — the adaptive wavefront selector that feeds
- * the execution graph's frontier router (docs/design/future-frontier-tasks.md §2).
+ * the execution graph's current frontier router (docs/system/12-scheduler.md).
  */
 import { describe, expect, it } from "vitest";
 import { buildSchedulingSafetyContext, selectScopeAwareWave } from "@manyhands/scheduler";

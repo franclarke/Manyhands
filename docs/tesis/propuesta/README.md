@@ -1,14 +1,11 @@
-# Propuesta de tesis - Conductor
+# Propuesta académica — material histórico
 
-La fuente principal es `main.tex` y la bibliografía está en
-`referencias.bib`.
+`main.tex` y `referencias.bib` conservan la propuesta académica presentada antes
+de fijar la arquitectura objetivo actual. No son documentación normativa del
+producto y pueden contener énfasis retirados, como experimentos de granularidad
+o una metodología de evaluación previa.
 
-Para compilar en Prism:
-
-1. Crear o abrir un proyecto LaTeX.
-2. Importar ambos archivos conservando sus nombres.
-3. Configurar `main.tex` como documento raíz.
-4. Compilar con LaTeX + BibTeX.
-
-El documento no contiene campos pendientes. La fecha de presentación se expresa
-deliberadamente como tentativa y sujeta al calendario institucional.
+La arquitectura vigente está en [`../../DECISIONS.md`](../../DECISIONS.md) y
+[`../../system/`](../../system/). Si se decide actualizar formalmente la
+propuesta/tesis, debe hacerse como una revisión académica separada, preservando
+trazabilidad del documento presentado.

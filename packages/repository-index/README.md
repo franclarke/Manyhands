@@ -1,21 +1,25 @@
 # @manyhands/repository-index
 
-> Un índice estructural del repositorio —archivos, símbolos, imports/exports— construido con el compilador de TypeScript.
+Índice estructural actual para repositorios TypeScript/JavaScript, basado en la
+API del compilador de TypeScript.
 
-## Rol en el pipeline
+## Dirección objetivo
 
-Grounding. Da a las otras capas conocimiento real del código existente, en vez de adivinar.
+Producir un `RepositoryModel` versionado por target, commit/tree y schema con:
 
-## Conceptos clave
+- packages, archivos, símbolos e imports/exports;
+- APIs, schemas, migrations y entrypoints;
+- tests, scripts y convenciones;
+- boundaries inferidos con evidencia;
+- coverage, confidence y warnings.
 
-- **`TypeScriptRepositoryIndexer`.** Recorre el repo y, usando la API del compilador de TypeScript, extrae por archivo: símbolos declarados/exportados, imports y `kind` (`source` / `test` / `config` / `schema` / `migration`).
-- **Determinístico y hasheable.** El índice se ordena de forma estable y se puede resumir + hashear (`summarizeRepositoryIndex`) para detectar cambios entre corridas.
-- **Consumidores.** Lo usa `conflict-risk` para las señales estáticas y el grounding de los contratos de tarea.
+Planner, Graph Compiler, Context Packer, conflict-risk y Validator consumen el
+mismo snapshot. Un cache por path sin commit no es válido.
 
-## API pública
+La prioridad continúa siendo TypeScript/JavaScript. Fallbacks para otros
+lenguajes deben declarar menor coverage.
 
-`buildRepositoryIndex` · `TypeScriptRepositoryIndexer` · `summarizeRepositoryIndex` · `RepositoryIndex` · `RepositorySymbolIndex`
+API actual destacada: `buildRepositoryIndex`, `TypeScriptRepositoryIndexer` y
+`summarizeRepositoryIndex`.
 
-## Dependencias
-
-`@manyhands/shared`, `typescript`.
+Contrato objetivo: [`docs/system/14-repository-index.md`](../../docs/system/14-repository-index.md).

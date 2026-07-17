@@ -1,99 +1,102 @@
-# TaskGraph y TaskNode
-
-**Archivos fuente:** `packages/task-graph/src/index.ts`
-
----
-
-## Qué es
-
-El `TaskGraph` es el modelo de datos central de ManyHands: representa el plan de trabajo como un grafo dirigido acíclico (DAG) de tareas jerárquicas. Contiene todos los nodos del plan y el mapa de dependencias entre ellos.
-
----
+# TaskGraph objetivo
 
 ## Responsabilidad
 
-El `task-graph` tiene una sola responsabilidad: modelar *qué hay que hacer* y *en qué orden*. No ejecuta tareas, no toma decisiones de scheduling, y no habla con agentes. Es la fuente de verdad estructural del plan — el punto de partida del que todo lo demás se alimenta.
+Representar ownership de integración y las relaciones necesarias para ejecutar
+software. No representa el control flow interno del orquestador.
 
----
+## Forma
 
-## Cómo funciona
+```ts
+type TaskGraph = {
+  rootId: NodeId;
+  nodes: Record<NodeId, TaskNode>;
+  artifactRequirements: ArtifactRequirement[];
+  seamBindings: SeamBinding[];
+  conflictConstraints: ConflictConstraint[];
+  revision: number;
+};
 
-### Los tres tipos de nodo (NodeKind)
+type TaskNode = {
+  id: NodeId;
+  parentId?: NodeId;
+  role: "root" | "composite" | "leaf";
+  goal: string;
+  boundary?: {
+    kind: "application" | "package" | "module" | "domain" | "vertical_slice";
+    ref?: string;
+  };
+  contractId: ContractId;
+};
+```
 
-Todo nodo en el grafo es uno de tres tipos:
+`parentId` es canónico; children y profundidad se derivan. Solo las hojas se
+envían a coding agents. Root y composites se materializan por integración.
 
-- **`root`:** el objetivo raíz de la feature. Siempre hay exactamente uno por run. Representa la intención completa del usuario en lenguaje natural. No tiene contrato de ejecución porque no se ejecuta directamente — su objetivo se logra cuando todos sus hijos integran.
+## Relaciones
 
-- **`integrator`:** un nodo compuesto con hijos. Representa un sub-objetivo que se logra componiendo el trabajo de múltiples hojas. El `IntegrationAgent` lo utiliza como contexto cuando integra sus hijos: el goal y acceptance criteria del integrator son la fuente de verdad de qué debe lograr el conjunto.
+### Ownership
 
-- **`leaf`:** la unidad atómica ejecutable. Es el único tipo de nodo que tiene un `AgentTaskContract` completo. Un agente LLM recibe su contrato y ejecuta exactamente lo que describe.
+El parent responde por integrar y validar sus hijos. Cada nodo, salvo root, tiene
+un único parent. Esto forma un árbol jerárquico aun cuando requirements y seams
+formen un DAG entre hojas.
 
-### La anatomía de un TaskNode
+### ArtifactRequirement
 
-Cada nodo tiene:
-- **`id`:** identificador único (UUID)
-- **`title`:** nombre corto del sub-objetivo
-- **`goal`:** descripción completa de qué debe lograr este nodo (el campo canónico; nunca `intent`)
-- **`kind`:** root | integrator | leaf
-- **`granularity`:** auto | low | medium | high — el nivel de agresividad de descomposición aplicado a este nodo
-- **`status`:** el estado actual del nodo en el ciclo de vida del run
-- **`prompt`:** texto adicional de contexto (optional)
-- **`acceptanceCriteria`:** lista de criterios verificables que definen qué significa "terminado"
-- **`dependencies`:** shortcut de lectura que refleja las dependencias del nodo (el registro canónico está en `graph.dependencies`)
+```ts
+type ArtifactRequirement = {
+  consumerNodeId: NodeId;
+  artifactType: string;
+  producerNodeId: NodeId;
+  requiredRevision: string;
+};
+```
 
-### Las dependencias: dos registros, una fuente de verdad
+Impone readiness y materialización. Si el output no existe, el consumer no puede
+crear una base válida.
 
-El `TaskGraph` tiene un `dependencies` propio que es un `Map<nodeId, Set<nodeId>>` — el mapa canónico de quién depende de quién. Cada `TaskNode` también tiene un campo `dependencies` que es simplemente una copia sincronizada para conveniencia de lectura.
+### SeamBinding
 
-**La regla es simple:** nunca se modifica `node.dependencies` directamente. Toda mutación de dependencias pasa por los helpers `addDependency()`, `removeDependency()` y `syncNodeDependencies()`, que mantienen ambos registros coherentes. Esta separación existe porque el mapa del grafo es más eficiente para los algoritmos de traversal (topo sort, cycle detection), mientras que el array del nodo es más cómodo para serialización y acceso rápido.
+Declara compatibilidad entre producer y consumers contra un contrato versionado.
+Permite paralelismo cuando todos trabajan sobre el mismo baseline. No impone
+orden por sí mismo.
 
-Las aristas D1 tienen semántica de ejecución `ordering_only`: bloquean el
-dispatch/readiness de la tarea dependiente hasta que su predecesora se resuelve,
-pero no copian ni materializan el commit del predecesor en su worktree. Todas
-las hojas parten del mismo `TaskGraph.baseCommit`; la integración bottom-up
-compone sus commits después. Si una tarea necesita archivos concretos producidos
-por otra, ese trabajo debe quedar en una sola tarea o expresarse como una
-compatibilidad explícita mediante `sharedInterface`, no como herencia implícita
-de una dependencia.
+### ConflictConstraint
 
-### Validación del grafo
+Declara overlap o recurso exclusivo. Influye en scheduling y puede serializar
+intentos, pero no materializa outputs.
 
-`validateTaskGraph()` verifica que el grafo es estructuralmente correcto:
-- **Ciclos:** ningún nodo puede depender de sí mismo, directa o transitivamente.
-- **Nodos huérfanos:** todo nodo (excepto root) debe ser alcanzable desde root.
-- **Dependencias rotas:** no puede haber un edge que apunte a un nodeId inexistente.
-- **Constraints de kind:** solo las hojas pueden tener `AgentTaskContract`; la raíz no puede tener dependencias entrantes.
+## Criterios de una hoja
 
-`validateExecutableTaskGraph()` es la frontera más estricta usada por producto
-cuando un plan puede aprobarse o ejecutarse. Además de la estructura del DAG,
-valida cada contrato de hoja con `validateAgentTaskContractBoundary()` y
-bloquea contratos faltantes, `taskId` desalineado, paths inseguros, schemas
-inválidos y costuras consumidas sin productor o producidas por múltiples hojas.
-Warnings como `missing_execution_scope` o `missing_expected_changed_files`
-quedan explícitos para permitir fallback conservador, no paralelismo ambiguo.
+Una hoja debe tener objetivo observable, scope acotado, output identificable,
+criterios demostrables y contexto suficiente. Puede tocar varias capas si forma
+un incremento vertical cohesivo.
 
-### Orden topológico y readiness
+Debe descomponerse si mezcla outputs sin relación, requiere decisiones internas
+independientes, no puede validarse sin trabajo futuro ambiguo o su blast radius
+impide descartarla de forma local.
 
-`getTopologicalOrder()` produce la lista de nodos ordenada de tal forma que los antecesores siempre aparecen antes que sus dependientes. El `BatchScheduler` consume este orden para saber qué hojas se pueden ejecutar en cada batch.
+## Validez
 
-`getLeafReadiness()` determina si una hoja específica está lista para ejecutarse: lo está cuando todos sus nodos antecesores (directos e indirectos) están en estado `done` o `integrated`. Una hoja con dependencias pendientes permanece bloqueada hasta que sus predecesores completen.
+Un graph revision es ejecutable solo si:
 
-`aggregateTaskStatus()` sube el estado desde las hojas hasta la raíz: el estado de un nodo compuesto es una función del estado de sus hijos. Si todas las hojas son `done`, el composite puede avanzar a `integrated`.
+- existe exactamente una raíz;
+- todos los nodos son alcanzables por parentage;
+- no hay ciclos de ArtifactRequirement;
+- producers y consumers existen;
+- revisions y contratos referenciados existen;
+- todo leaf tiene contrato ejecutable;
+- todo composite tiene criterios de integración;
+- ningún output obligatorio carece de producer;
+- todo criterio obligatorio tiene estrategia de evidencia;
+- la revisión aprobada coincide con la que se despacha.
 
----
+## Enmiendas
 
-## Interfaces
+Una enmienda nunca muta la revisión aprobada. Produce otra revisión con reason,
+evidence, projected impact y preserved work. La aprobación usa CAS sobre la
+revisión esperada.
 
-**Produce:** el `TaskGraph` completo que el `RunExecutor` y el `BatchScheduler` consumen para planificar la ejecución.
-
-**Lo consumen:** `BatchScheduler` (topo sort + readiness), `IntegrationAgent` (goals y contratos de los composites), `GranularityVector` (estructura del árbol para métricas pre-ejecución), `RunGraphViewModel` (transformación para el canvas).
-
-**Lo genera:** el decomposer recursivo construye el grafo nodo a nodo durante la descomposición. El usuario puede editarlo desde la web app antes de aprobar, pero las fronteras de approval/replan/execution vuelven a validar el grafo ejecutable.
-
----
-
-## Decisiones de diseño
-
-El mapa de dependencias vive en el grafo y no solo en los nodos porque los algoritmos de traversal (ciclos, topo sort, readiness) son más eficientes y legibles sobre estructuras de grafo explícitas. Duplicar la información en `node.dependencies` es un trade-off deliberado de conveniencia de lectura versus complejidad de escritura — los helpers lo administran.
-
-El campo `goal` reemplazó a `intent` porque semánticamente es más preciso: describe el *objetivo alcanzable* del nodo, no la *intención abstracta* del usuario.
+Los intentos activos pueden terminar, pero su resultado solo se adopta si el
+fingerprint sigue vigente. El coordinator puede cancelarlos para ahorrar costo;
+la corrección no depende de lograr cancelación instantánea.

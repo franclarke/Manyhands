@@ -1,21 +1,23 @@
 # @manyhands/conflict-risk
 
-> Predice el riesgo de conflicto entre pares de tareas **antes** de ejecutarlas, para informar al scheduler.
+Predicción actual de riesgo pairwise a partir de contratos, scopes y señales del
+repository index.
 
-## Rol en el pipeline
+## Dirección objetivo
 
-Señal de scheduling (grounding). Es lo que permite al `scheduler` paralelizar con criterio en vez de a ciegas.
+El package produce evidencia para `ConflictConstraint` y decisiones de
+scheduling. No debe:
 
-## Conceptos clave
+- crear dependencies funcionales;
+- recomendar `add_dependency` sin pasar por Graph Compiler;
+- tratar un SeamBinding compatible como conflicto;
+- convertir falta de información en riesgo bajo;
+- afirmar corrección semántica.
 
-- **`predictConflict` / `buildTaskPairRiskMatrix`.** Combina evidencia entre dos contratos — solapamiento de archivos, de paths, de símbolos; relación *producer-consumer*; paths críticos; fixtures de test compartidos — en un score que se mapea a `low` / `medium` / `high` / `blocking`.
-- **Señales estáticas v0.** `buildStaticConflictSignals` deriva señales del `repository-index` (mismo archivo de símbolos declarados, producer-consumer real, schema compartido, solapamiento de API pública). Ver `ADR-0008`.
-- **Recomendación accionable.** Cada predicción sugiere `run_parallel`, `serialize`, `add_dependency` o `requires_human_review`.
+Las señales conservan source, freshness, confidence y rationale. El scheduler
+decide cómo actuar según política y presupuesto.
 
-## API pública
+API actual destacada: `buildTaskPairRiskMatrix`, `predictConflict`,
+`buildStaticConflictSignals`, `findRiskPrediction`.
 
-`buildTaskPairRiskMatrix` · `predictConflict` · `buildStaticConflictSignals` · `findRiskPrediction` · `ConflictPrediction`
-
-## Dependencias
-
-`@manyhands/contracts`, `@manyhands/repository-index`, `@manyhands/shared`.
+Contrato objetivo: [`docs/system/13-conflict-risk.md`](../../docs/system/13-conflict-risk.md).

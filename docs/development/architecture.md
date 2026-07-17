@@ -1,149 +1,133 @@
-# Architecture
+# Arquitectura objetivo
 
-ManyHands is a visual orchestration workspace for multi-agent software
-development. It accepts a natural-language software goal, plans a DAG of tasks,
-executes leaf work in isolated git worktrees, and integrates the resulting
-commits bottom-up.
+> Esta vista conecta el diseño conceptual con los límites de código. No afirma
+> que el monorepo actual ya respete todos estos límites.
 
-## Product Architecture
+## Objetivo arquitectónico
 
-```text
-Web App (Next.js App Router)
-  -> API routes
-  -> Planning host / Execution host
-  -> LangGraph StateGraphs
-  -> execution-core
-  -> AgentExecutor profiles
-  -> Git / worktree layer
-  -> RunEvent log + RunRecord persistence
+ManyHands transforma una intención en una entrega de software mediante un ciclo
+auditable: comprender el repositorio, compilar un grafo ejecutable, construir
+bases aisladas, ejecutar intentos, integrar artefactos, validar el candidato
+exacto y entregarlo.
+
+```mermaid
+flowchart LR
+  UI["Run workspace"] --> API["Commands and queries"]
+  API --> RC["Run Coordinator"]
+  RC --> PI["Repository Inspector"]
+  RC --> PL["Planner"]
+  PL --> GC["Graph Compiler"]
+  GC --> TG["TaskGraph + contracts"]
+  RC --> SC["Scheduler"]
+  SC --> EB["Execution Base Builder"]
+  EB --> NE["Node Executor"]
+  NE --> AR["Artifact Registry"]
+  AR --> CI["Composite Integrator"]
+  CI --> VA["Validation and Evidence"]
+  VA --> DE["Delivery"]
+  RC --> EL["Run Event Store"]
+  EL --> UI
 ```
 
-The web app does not reimplement orchestration logic. It calls API routes backed
-by package APIs and renders validated artifacts: `TaskGraph`,
-`AgentTaskContract`, `RunRecord`, `RunEvent`, diffs, logs, decisions and run
-metrics.
+## Capas
 
-## Execution Pipeline
+### Producto
 
-```text
-Feature prompt
-  -> planningGraph
-      -> recursive decomposition
-      -> TaskGraph + AgentTaskContracts + sharedInterfaces
-      -> executable contract/interface boundary validation
-      -> plan review / approval
-  -> executionGraph
-      -> grounding / seam preparation
-      -> risk-aware wave selection
-          -> required run.scheduling.wave_selected event
-      -> RunExecutor.runNode per leaf
-          -> WorktreeManager
-          -> FileSystemContextPacker
-          -> AgentExecutor
-          -> ScopeChecker
-          -> ValidationRunner
-          -> ResultRecorder
-          -> orchestrator commit
-      -> IntegrationAgent per composite
-          -> cherry-pick
-          -> semantic repair on conflict
-          -> parent validation
-      -> run validation and metrics
-  -> RunRecord + RunEvent log
-  -> web projection
-```
+La web envía comandos y proyecta eventos. No decide readiness, adopción de
+intentos, invalidación, integración ni verdad terminal. El cliente usa un reducer
+puro y selectores.
 
-`GranularityVector` is still the schema name used for run metrics in
-`execution-core`; it is not an active benchmark methodology.
+### Dominio
 
-## Package Boundaries
+Define `TaskGraph`, contratos, intentos, artefactos, decisiones, eventos y
+outcomes. No importa Next.js, React Flow, LangGraph, git ni procesos CLI.
 
-Dependency direction: `apps -> specific packages -> shared`. Never import from
-`apps` inside packages. `@manyhands/core` is a legacy barrel; new code should use
-specific packages.
+### Aplicación
 
-| Package | Responsibility | Status |
-|---------|----------------|--------|
-| `task-graph` | TaskNode, TaskGraph, DAG validation, topo sort | Active |
-| `contracts` | AgentTaskContract, InterfaceContract, ExecutionScope | Active |
-| `decomposer` | Recursive planning and LLM schemas | Active |
-| `orchestrator-graph` | LangGraph StateGraphs and checkpointing | Active |
-| `execution-core` | Worktrees, executors, scope, recorder, integration | Active |
-| `scheduler` | Scope/risk-aware wave selection | Active |
-| `run-store` | Run snapshots/patches and JSON persistence | Active |
-| `trace-store` | Trace events | Active |
-| `conflict-risk` | Pairwise conflict risk prediction | Active |
-| `repository-index` | Structural TypeScript index | Active |
-| `shared` | EntityId, IsoTimestamp, helpers | Active |
-| `core` | Legacy barrel | Legacy |
+El `RunCoordinator` implementa casos de uso y políticas: planning, aprobación,
+scheduling, ejecución, recuperación, integración, validación y entrega. Orquesta
+puertos; no contiene adaptadores concretos.
 
-## Runtime Design
+### Infraestructura
 
-- **Persistence:** JSON files for workspaces, runs, events and checkpoints.
-- **SSE:** run events stream through `/api/runs/[runId]/run-events`.
-- **Checkpoints:** LangGraph checkpoints support resume and fork.
-- **Repos:** local git workspaces are the product path. Fixture provisioning
-  still exists as a generic/testing mechanism, but there is no active benchmark
-  fixture suite in the repo.
-- **Agent execution:** goes through `AgentExecutor` profiles. Claude Code CLI is
-  the primary/default product executor; Codex CLI is the selectable alternative.
-- **UI state:** the client reduces `RunEvent` and derives view-models with pure
-  selectors.
+Git, worktrees, filesystem, procesos, executors, persistencia y streaming son
+adaptadores reemplazables. Deben preservar leases, fencing, idempotencia y
+eventos de dominio.
 
-## Runtime Safety and Auditability
+## Flujo de datos
 
-The current runtime hardening sequence is intentionally incremental:
+1. El usuario crea un run con `goal` y `RunTargetContext` inmutable.
+2. `RepositoryInspector` produce un snapshot estructural y un baseline de
+   validación.
+3. `Planner` produce un `WorkBreakdown`; `GraphCompiler` lo convierte en un
+   `TaskGraph` ejecutable y versionado.
+4. Los críticos validan el plan. La aprobación fija `approvedGraphRevision`.
+5. El scheduler selecciona nodos ready según artefactos, contratos, recursos,
+   riesgo y presupuesto.
+6. `ExecutionBaseBuilder` materializa la entrada exacta de cada intento.
+7. `NodeExecutor` invoca un `AgentExecutor`, inspecciona el diff, aplica scope y
+   prepara un commit candidato.
+8. La validación decide si el intento puede adoptarse. `ArtifactRegistry`
+   registra outputs y evidencia.
+9. Los composites integran bottom-up. Cada resultado vuelve a validarse contra
+   el contrato del padre.
+10. La raíz produce un candidato final; se valida el commit exacto y luego se
+    entrega.
 
-- **PR-S1:** run start uses a CAS/active-runner guard so one run cannot launch
-  concurrent pipelines. Integration fails explicitly when a successful child has
-  no commit to cherry-pick.
-- **PR-S2:** critical lifecycle events are awaited/required, best-effort events
-  are named as such, and background pipelines can be drained in tests before
-  temp cleanup.
-- **PR-S3:** critical `RunRecord.status` transitions and
-  `run.status.changed` event appends go through audited mutation helpers. JSON
-  snapshot + JSONL event log are not a transaction, but divergence is surfaced
-  as an explicit persistence error.
-- **PR-S4:** the production execution path feeds real contracts, scopes and
-  risk predictions into scheduling. Missing safety data serializes
-  conservatively with warnings instead of silently falling back to unsafe
-  parallelism.
-- **PR-S5:** every production wave selected by the web execution host appends
-  `run.scheduling.wave_selected` before tasks are dispatched. The event records
-  ready, selected and blocked tasks, reasons, risk summary, fallbacks and
-  warnings.
-- **PR-S6:** executable boundaries validate the approved graph plus leaf
-  contracts before approval, replan, execution start/resume, node-run and
-  execution-host dispatch. Invalid contract schemas, task id mismatch, unsafe
-  repo paths and broken interface producer/consumer relations fail explicitly
-  instead of becoming ambiguous scheduling/execution inputs.
-- **PR-S7:** lifecycle control-plane actions are guarded by an explicit status
-  matrix before snapshot mutation or background dispatch. `start`, `pause`,
-  `resume`, `cancel`, `answer_gate`, `approve_plan`, `replan`, `restart`,
-  `fork`, `manual_node_run`, `manual_node_review` and `manual_node_rerun` fail
-  with a conflict when called from incompatible states. Actions that start or
-  resume pipelines reject an active in-process runner; cooperative plain
-  un-pause may update the status while the existing runner is waiting.
-- **PR-S8:** bottom-up integration now records structured evidence for every
-  applied or omitted child commit. Successful children without reachable unique
-  commits fail before cherry-pick, repair attempts are captured, and parent
-  validation failure remains a failed integration even when semantic repair
-  produced a commit.
-- **PR-S9:** risk-aware scheduling can enrich pairwise risk with
-  `repository-index` signals. Planning persists static conflict signals derived
-  from files, symbols, imports/exports and file kinds; execution-host reuses
-  those compact signals for durable wave selection, while direct `RunExecutor`
-  callers may pass a `RepositoryIndex`. Missing index data falls back to
-  contract/scope heuristics with an auditable warning.
+## Propiedad de la información
 
-Future PRs that change orchestration semantics should update `docs/DECISIONS.md`
-with context, decision, justification, consequences/tradeoffs, and the relation
-to replay/evaluation traceability.
+| Información | Dueño | Derivaciones permitidas |
+|---|---|---|
+| Objetivo y target del run | Run record inmutable | resumen de UI |
+| Grafo y contratos aprobados | Graph revision | children, readiness, blast radius |
+| Historia dinámica | Run event log | snapshot, estado de UI |
+| Cambios de un intento | Git diff del worktree | patch, commit, scope report |
+| Artefactos adoptados | Artifact registry | execution bases, integration manifest |
+| Evidencia | Evidence matrix | result summary, delivery eligibility |
+| Logs y trazas | Trace store | diagnóstico bajo demanda |
 
-## Removed Historical Surfaces
+## Mapeo inicial al monorepo
 
-The deterministic Lab Mode, `/lab`, `/replay`, `/replay/demo`, benchmark
-manifests, mock benchmark reports and old evaluator package are not part of the
-current product. Any future quality-measurement strategy must be designed
-freshly after product completion.
+El primer plan de transición debe preferir límites internos antes que crear
+paquetes nuevos sin necesidad.
 
+| Límite objetivo | Punto de partida actual | Dirección |
+|---|---|---|
+| TaskGraph | `packages/task-graph` | reemplazar dependencia genérica por relaciones tipadas |
+| Contracts | `packages/contracts` | incorporar scope, artifacts y validation obligations |
+| Planner + Graph Compiler | `packages/decomposer` | separar salida semántica de compilación ejecutable |
+| Run Coordinator | `packages/orchestrator-graph` + hosts web | crear `@manyhands/run-coordinator` como único paquete nuevo de dominio/aplicación y dejar LangGraph como adapter |
+| Scheduler | `packages/scheduler` + `conflict-risk` | readiness por artefactos y constraints |
+| Attempts, git and validation | `packages/execution-core` | dividir por módulos cohesivos, no necesariamente paquetes |
+| Event store and snapshots | `packages/run-store` | consolidar eventos de dominio y proyecciones durables |
+| Diagnostics | `packages/trace-store` | separar telemetría de lifecycle |
+| Repository model | `packages/repository-index` | ampliar grounding y freshness |
+| Product projection | `apps/web` | una ruta de run centrada en grafo/evidencia |
+
+`@manyhands/core` continúa como compatibilidad temporal y no recibe conceptos
+nuevos.
+
+La secuencia, los adaptadores temporales y los gates para materializar este mapa
+están definidos en el [plan incremental de transición](../plans/2026-07-17-target-architecture-transition.md).
+
+## Límites que deben poder probarse
+
+- El dominio se prueba sin filesystem, red, UI ni CLIs.
+- El coordinator se prueba con puertos fake y un event store determinista.
+- Los adaptadores git/proceso se prueban con repositorios temporales reales.
+- El reducer de UI reproduce exactamente los mismos eventos que el backend.
+- Un candidato final se puede reconstruir desde manifests y commits registrados.
+- Un takeover con fencing viejo no puede persistir eventos ni resultados.
+
+## Riesgos de la transición
+
+- Confundir eventos actuales de telemetría con eventos de dominio.
+- Migrar estados persistidos sin estrategia de compatibilidad.
+- Introducir nuevos tipos de relación manteniendo shortcuts duplicados.
+- Adoptar artefactos producidos contra inputs obsoletos.
+- Cambiar UI antes de que el backend pueda sostener sus promesas.
+- Repartir responsabilidades en demasiados paquetes antes de estabilizar los
+  contratos.
+
+La transición deberá resolver estos riesgos por slices verticales verificables,
+no mediante una reescritura total.

@@ -1,29 +1,31 @@
 # @manyhands/execution-core
 
-> El corazón operativo: worktrees aislados, ejecución de agentes, validación de scope, captura de evidencia e integración bottom-up.
+Package operativo actual: worktrees, git, executors, scope, validación,
+resultados, integración, grounding y amendments.
 
-## Rol en el pipeline
+## Estado de transición
 
-Ejecución + composición. Aquí es donde el plan se vuelve cambios reales en el repositorio.
+El package concentra varias responsabilidades que la arquitectura objetivo
+separa conceptualmente. La primera transición debe crear módulos/puertos claros
+antes de decidir nuevos packages.
 
-## Conceptos clave
+## Límites objetivo
 
-- **`WorktreeManager` + `SimpleGitRunner`.** Cada hoja opera en su propio git worktree/branch. `git diff HEAD` es la única fuente de verdad de lo que cambió (D5).
-- **`AgentExecutor` + perfiles.** El seam por el que se invocan los agentes CLI. Claude Code CLI es el default del producto; Codex CLI es alternativa seleccionable. El routing elige executor por complejidad/disponibilidad.
-- **`RunExecutor`.** Ejecuta batches con scheduling `risk_aware` por default, usando contratos/scopes/riesgos reales cuando están disponibles. Emite `batch_scheduled` en `trace-store` con selected/blocked task ids, resumen de riesgo, fallbacks y warnings.
-- **`assertExecutableGraph`.** Frontera previa a dispatch: valida que el DAG y
-  los contratos de hojas sean ejecutables antes de crear worktrees o llamar al
-  agente. Un contrato inseguro falla en fase `validate`.
-- **`ScopeChecker`.** Después de ejecutar, valida los archivos cambiados contra `executionScope` y `forbiddenPaths` (allow-list advisory; `forbiddenPaths` es hard-fail — D7).
-- **`ContextPacker`.** Arma el prompt de cada hoja con las interfaces que consume.
-- **`ValidationRunner`.** Corre los comandos de validación bajo shell con whitelist; exit codes sintéticos (124 timeout, 126 rechazado, 127 ausente) alimentan la clasificación de fallos (D13).
-- **`ResultRecorder`.** Captura diff, archivos cambiados y métricas.
-- **`IntegrationAgent`.** Integra los hijos con `cherry-pick` bottom-up y, ante conflicto, repara semánticamente usando el `sharedInterface` y la intención de cada hijo (D8); clasifica los fallos de integración (D11).
+- `ExecutionBaseBuilder`: inputs y manifests exactos.
+- `NodeExecutor`: proceso del agente y diagnóstico.
+- `ScopeEnforcer`: diff y paths adoptables.
+- `ValidationService`: recipes y Evidence Matrix.
+- `ArtifactRegistry` port: registro/adopción/freshness.
+- `CompositeIntegrator`: manifests, conflict classification y repair.
+- git/worktree adapters y Process Supervisor.
 
-## API pública
+El agente no decide changed files ni success. El orquestador inspecciona git,
+crea candidatos y adopta solo resultados fresh/verificados.
 
-`WorktreeManager` · `AgentExecutor` / `registry` / `factory` · `ScopeChecker` · `ValidationRunner` · `ResultRecorder` · `IntegrationAgent` · `ContextPacker` · `assertExecutableGraph` · `RunExecutor`
+Las APIs actuales (`WorktreeManager`, `AgentExecutor`, `ScopeChecker`,
+`ValidationRunner`, `ResultRecorder`, `IntegrationAgent`, `RunExecutor`) son
+puntos de partida y deben conservarse mediante tests mientras se migran.
 
-## Dependencias
-
-`@manyhands/contracts`, `@manyhands/task-graph`, `@manyhands/shared`, … **Más:** [`docs/system/04`](../../docs/system/04-run-executor.md)–[`09`](../../docs/system/09-composer.md).
+Ver [`docs/system/05-worktree-layer.md`](../../docs/system/05-worktree-layer.md),
+[`08-result-pipeline.md`](../../docs/system/08-result-pipeline.md) y
+[`09-composer.md`](../../docs/system/09-composer.md).

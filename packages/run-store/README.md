@@ -1,23 +1,26 @@
 # @manyhands/run-store
 
-> Persistencia JSON de snapshots de run.
+Package actual de snapshots JSON de run.
 
-## Rol en el pipeline
+## Estado
 
-Persistencia.
+`RunSnapshot` conserva una representación histórica con campos de etapas
+anteriores. No debe asumirse como modelo objetivo ni como fuente única del run.
 
-## Conceptos clave
+## Dirección objetivo
 
-- **`JsonRunStore`.** Guarda y lee `RunSnapshot` como archivos JSON (por defecto bajo `.manyhands/runs`), con hashes canónicos de input/output para identidad y detección de cambios.
-- **`RunSnapshot`.** Una captura completa de un run: feature, grafo, contratos, predicciones de riesgo, batches, resultados de agentes y eventos de traza.
+`run-store` debe ofrecer:
 
-> [!NOTE]
-> `RunSnapshot` es la persistencia más **antigua** del sistema (arrastra campos de la era *Lab Mode*, como `deterministic` y `sourceFixture`). El estado **vivo** del producto se persiste vía los **checkpoints JSON de `orchestrator-graph`** y el **event log del `run-model`** en `apps/web`, no vía `RunSnapshot`.
+- append de eventos de dominio ordenados e idempotentes;
+- snapshots materializados con cursor y schema version;
+- graph revisions y approvals;
+- operation/repository leases con fencing;
+- referencias a artifacts, evidence y delivery receipts;
+- replay y recovery deterministas.
 
-## API pública
+Las trazas diagnósticas permanecen en `trace-store`. Los checkpoints del motor no
+sustituyen el event log.
 
-`JsonRunStore` · `RunSnapshot` · `withRunSnapshotHashes` · `computeRunSnapshotOutputHash`
+API actual: `JsonRunStore`, `RunSnapshot`, hashes de snapshots.
 
-## Dependencias
-
-`@manyhands/contracts`, `@manyhands/task-graph`, `@manyhands/decomposer`, `@manyhands/scheduler`, `@manyhands/conflict-risk`, `@manyhands/repository-index`, `@manyhands/trace-store`.
+Contrato objetivo: [`docs/system/04-run-executor.md`](../../docs/system/04-run-executor.md).
