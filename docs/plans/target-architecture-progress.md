@@ -10,9 +10,9 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-08 — Slice vertical de planning V2` |
-| Last completed packet | `WP-07 — Event store, snapshots y fencing V2` |
-| Open gate | G2 — Canonical history |
+| Current packet | `WP-09 — Artifact registry e InputFingerprint` |
+| Last completed packet | `WP-08 — Slice vertical de planning V2` |
+| Open gate | G3 — Artifact identity |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
 | WP-00 implementation commit | `d381f61` |
@@ -23,6 +23,7 @@
 | WP-05 implementation commit | `3d39ac4` |
 | WP-06 implementation commit | `9de4893` |
 | WP-07 implementation commit | `f1c0428` |
+| WP-08 implementation commit | `9c08157` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -37,7 +38,7 @@
 | WP-05 Graph Compiler | completed | `3d39ac4` | 38/38 cross-boundary tests, four package typechecks and decomposer build passed | Deterministic compiler, complete V2 bundles, traceability and eight structured critics; G1 closed |
 | WP-06 RunCoordinator kernel | completed | `9de4893` | 9/9 packet tests, 12/12 with baseline, package typecheck/build and full package build passed | Framework-independent event-folded lifecycle, explicit outcomes and decisions, guarded commands, cancellation fencing and receipt-backed completion |
 | WP-07 Event store | completed | `f1c0428` | 19/19 packet, durability and baseline tests; run-store/core typechecks and builds passed | Canonical JSONL events with CAS, idempotency and durable fencing; discardable snapshots; audited legacy importer; V1 snapshot isolated in core |
-| WP-08 Planning V2 slice | queued | — | — | — |
+| WP-08 Planning V2 slice | completed | `9c08157` | 33/33 packet and adjacent tests; coordinator, orchestrator and web typechecks; three package builds passed | Opt-in productive inspector-to-approval path, selected CLI with bounded retries/timeouts, canonical facts, revision CAS and compatible RunRecord projection; G2 closed |
 | WP-09 Artifacts and fingerprints | queued | — | — | — |
 | WP-10 Scheduler readiness V2 | queued | — | — | — |
 | WP-11 ExecutionBaseBuilder | queued | — | — | — |
@@ -107,7 +108,7 @@ baseline until a later packet owns their migration.
 | Gate | Status | Evidence required to close |
 |---|---|---|
 | G1 Contracts executable | closed | WP-01 through WP-05 integrated; schemas, typed relations, semantic breakdown, compiler and critics are green |
-| G2 Canonical history | not_started | WP-07 and WP-08 |
+| G2 Canonical history | closed | WP-07 canonical event persistence and WP-08 productive planning slice use the same fenced event history; RunRecord is compatibility projection only |
 | G3 Exact adoption | not_started | WP-09 through WP-11 |
 | G4 Honest verification | not_started | WP-14 |
 | G5 Real delivery | not_started | WP-16 |
@@ -417,6 +418,43 @@ run-store and core typechecks: passed
 - The productive `run-store` package now depends only on `run-coordinator`,
   `shared` and schema support. The V1 snapshot surface remains available from
   the already-legacy `core` package until WP-18.
+
+## WP-08 evidence
+
+### Red-green evidence
+
+The two V2 planning suites initially failed at module resolution because no V2
+web host existed. After the slice and approval path were implemented:
+
+```text
+WP-08 named suites plus coordinator/store regressions: 7 files passed, 33 tests passed
+Broader run-create compatibility sample: 8 files passed, 38 tests passed
+run-coordinator, orchestrator-graph and web typechecks: passed
+run-coordinator, run-store and orchestrator-graph builds: passed
+```
+
+### Implemented planning slice
+
+- Runs explicitly created with `architectureVersion.planning=v2` require an
+  immutable captured local Git target and are dispatched to the V2 host. Runs
+  without that opt-in remain V1 until execution and integration V2 exist.
+- The productive host claims the existing durable operation lease, mirrors its
+  fencing token into `run-store`, renews heartbeat during model work and uses
+  only the selected Claude Code or Codex CLI. Attempts have explicit timeout,
+  supervised process termination and schema-repair feedback; there is no
+  deterministic fallback.
+- One pipeline records `run.created`, the complete repository snapshot,
+  WorkBreakdown, compiled graph/contracts/trace, one event for every critic,
+  the graph proposal and its revision-specific approval decision.
+- Model or compilation failure records `planning.failed` and folds to `failed`
+  without substituting another planner.
+- Approval resolves the exact decision and graph revision under sequence CAS.
+  A semantic edit must preserve graph identity, increment revision exactly
+  once, makes the prior approval inapplicable and raises a new decision.
+- The legacy LangGraph planning StateGraph is now explicitly the V1 adapter;
+  V2 lifecycle and facts come only from RunCoordinator events. Existing API
+  readers receive a compatibility RunRecord projection, not a second semantic
+  write model.
 
 ## Resume instructions
 
