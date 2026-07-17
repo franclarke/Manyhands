@@ -10,14 +10,15 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-03 — GraphRevision y relaciones tipadas` |
-| Last completed packet | `WP-02 — RepositorySnapshot inmutable y baseline` |
+| Current packet | `WP-04 — WorkBreakdown semántico` |
+| Last completed packet | `WP-03 — GraphRevision y relaciones tipadas` |
 | Open gate | Pre-G1 |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
 | WP-00 implementation commit | `d381f61` |
 | WP-01 implementation commit | `cee0973` |
 | WP-02 implementation commit | `a5eac15` |
+| WP-03 implementation commit | `15e027b` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -27,7 +28,7 @@
 | WP-00 Baseline | completed | `d381f61` | 5/5 narrow tests passed | V1 run fixture, current lifecycle characterization, package boundary guard and frozen `@manyhands/core` allowlist |
 | WP-01 Contracts V2 | completed | `cee0973` | 23/23 contract tests, 56/56 direct consumer tests, package typecheck and build passed | Five versioned contracts, bundle invariants and loss-aware V1 adapter with explicit migration issues |
 | WP-02 Repository snapshot | completed | `a5eac15` | 14/14 focused tests, package typecheck and build passed | Immutable snapshot identity, content hashing, capabilities and explicit partial/unavailable inspection |
-| WP-03 GraphRevision | queued | — | — | — |
+| WP-03 GraphRevision | completed | `15e027b` | 36/36 graph and scheduler tests, package typecheck and build passed | Typed relations, artifact-based readiness, immutable revisions and loss-aware V1 adapter |
 | WP-04 WorkBreakdown | queued | — | — | — |
 | WP-05 Graph Compiler | queued | — | — | — |
 | WP-06 RunCoordinator kernel | queued | — | — | — |
@@ -188,6 +189,52 @@ pnpm --filter @manyhands/repository-index build
   and runnable baseline commands are persisted as capabilities with evidence.
 - Index failures and unsupported repositories produce explicit `unavailable`
   and `partial` snapshots with diagnostics instead of a silent empty success.
+
+## WP-03 evidence
+
+### Red-green evidence
+
+Before implementation, both new suites failed because no GraphRevision V2 API
+existed:
+
+```text
+Test Files 2 failed (2)
+Tests 10 failed (10)
+```
+
+After implementation:
+
+```text
+Focused V1/V2 graph suites: 3 files passed, 16 tests passed
+Graph plus scheduler consumer suites: 5 files passed, 36 tests passed
+@manyhands/task-graph typecheck: passed
+@manyhands/task-graph build including declarations: passed
+```
+
+Commands:
+
+```bash
+pnpm test -- tests/task-graph-v2.test.ts tests/task-graph-v1-compatibility.test.ts tests/task-graph-graft.test.ts tests/scheduler-scope-aware-wave.test.ts tests/execution-core-batch-scheduler.test.ts
+pnpm --filter @manyhands/task-graph typecheck
+pnpm --filter @manyhands/task-graph build
+```
+
+### Implemented graph boundary
+
+- V2 nodes express hierarchy only through `parentId` and contain no dependency
+  shortcut requiring synchronization.
+- Artifact requirements alone determine execution readiness; seam bindings
+  enforce a shared contract revision without imposing order, and conflict
+  constraints remain scheduler metadata.
+- Hierarchy roles, cycles, relation endpoints, relation identity and root
+  integrity are validated independently of V1.
+- `reviseGraph` applies typed operations to a clone, enforces optimistic
+  revision matching and rejects an invalid next revision without mutating the
+  approved predecessor.
+- The V1 adapter promotes an ordering edge only when producer output and
+  consumer upstream-artifact evidence match. Ambiguous edges become deprecated
+  `legacyOrderingConstraints` and force replan; matching interfaces become
+  non-ordering seam bindings.
 
 ## Resume instructions
 
