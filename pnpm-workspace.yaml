@@ -3,5 +3,6 @@ packages:
   - "apps/*"
 allowBuilds:
   esbuild: true
+  node-pty: true
   sharp: true
   unrs-resolver: true
