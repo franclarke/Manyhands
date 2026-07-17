@@ -1299,7 +1299,6 @@ describe("RunExecutor", () => {
         { id: "Token", kind: "type", signature: "type Token = { kind: string }", description: "lexical token", definedAtNodeId: "root" }
       ],
       producedInterfaces: [
-        { id: "Token", kind: "type", signature: "type Token = { kind: string }", description: "lexical token", definedAtNodeId: "root" },
         { id: "Ast", kind: "type", signature: "type Ast = number | { op: string }", description: "parsed tree", definedAtNodeId: "root" }
       ]
     });
@@ -1313,13 +1312,24 @@ describe("RunExecutor", () => {
       }
     });
 
+    const graph = graphWith(["tokenizer", "parser"]);
+    graph.nodes.tokenizer!.contract = {
+      ...leafContract(["src/**"], [], ["src/tokenizer.ts"]),
+      taskId: "tokenizer",
+      objective: "Build the tokenizer",
+      producedInterfaces: [
+        { id: "Token", kind: "type", signature: "type Token = { kind: string }", description: "lexical token", definedAtNodeId: "root" }
+      ]
+    };
+    graph.nodes.parser!.contract = { ...contract, taskId: "parser", objective: "Build the parser" };
+
     await executor.run({
-      graph: graphWith(["a"], undefined, contract),
+      graph,
       config,
       model: "gpt-5-codex"
     });
 
-    const leafPrompt = prompts[0] ?? "";
+    const leafPrompt = prompts.find((prompt) => prompt.includes("type Ast = number")) ?? "";
     expect(leafPrompt).toContain("Build EXACTLY against these signatures");
     expect(leafPrompt).toContain("type Token = { kind: string }");
     expect(leafPrompt).toContain("MUST expose these interfaces");
