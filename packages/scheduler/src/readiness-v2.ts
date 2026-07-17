@@ -1,9 +1,13 @@
 import type { ReadinessExplanationV2, ReadinessInputV2, ReadinessReason } from "./types-v2.js";
 
 export function explainReadiness(input: ReadinessInputV2): ReadinessExplanationV2 {
-  if (input.graph.nodes[input.nodeId] === undefined) throw new Error(`Unknown graph node ${input.nodeId}.`);
+  const node = input.graph.nodes[input.nodeId];
+  if (node === undefined) throw new Error(`Unknown graph node ${input.nodeId}.`);
   const reasons: ReadinessReason[] = [];
-  for (const requirement of input.graph.artifactRequirements.filter((item) => item.consumerNodeId === input.nodeId && item.requiredFor === "execution")) {
+  const requiredPhases = node.kind === "root" || node.kind === "composite"
+    ? new Set(["execution", "integration"])
+    : new Set(["execution"]);
+  for (const requirement of input.graph.artifactRequirements.filter((item) => item.consumerNodeId === input.nodeId && requiredPhases.has(item.requiredFor))) {
     const adopted = input.adoptedArtifacts.some((artifact) => artifact.artifactId === requirement.artifactContract.id && artifact.revision === requirement.artifactContract.revision);
     if (!adopted) reasons.push({ code: "missing_artifact", artifactId: requirement.artifactContract.id, requiredRevision: requirement.artifactContract.revision });
   }

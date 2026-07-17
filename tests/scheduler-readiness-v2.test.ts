@@ -21,6 +21,32 @@ describe("artifact-aware readiness V2", () => {
     expect(explainReadiness({ graph: revision, nodeId: "node-api", ...base, adoptedArtifacts: [{ artifactId: "artifact-contract", revision: "r2", digest: "sha256:x" }] }).ready).toBe(true);
   });
 
+  it("blocks a composite until every declared child integration artifact is adopted", () => {
+    const revision = graph();
+    const rootId = revision.rootId;
+    const rootState = {
+      ...base,
+      materializableNodeIds: [...base.materializableNodeIds, rootId],
+      availableExecutorNodeIds: [...base.availableExecutorNodeIds, rootId]
+    };
+    const requirements = revision.artifactRequirements.filter(
+      (requirement) => requirement.consumerNodeId === rootId && requirement.requiredFor === "integration"
+    );
+
+    expect(requirements).toHaveLength(3);
+    expect(explainReadiness({ graph: revision, nodeId: rootId, ...rootState }).reasons).toHaveLength(3);
+    expect(explainReadiness({
+      graph: revision,
+      nodeId: rootId,
+      ...rootState,
+      adoptedArtifacts: requirements.map((requirement) => ({
+        artifactId: requirement.artifactContract.id,
+        revision: requirement.artifactContract.revision,
+        digest: `sha256:${requirement.producerNodeId}`
+      }))
+    }).ready).toBe(true);
+  });
+
   it("scopes a decision to its affected node set and explains every other blocker", () => {
     const revision = graph();
     const decision = { decisionId: "decision-1", affectedNodeIds: ["node-api"] };
