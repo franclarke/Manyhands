@@ -16,6 +16,7 @@ export interface RunProjection {
   readiness: { readyNodeIds: string[]; pendingDecisionIds: string[] };
   selectedWaves: Array<{ waveId: string; nodeIds: string[]; maxParallel: number }>;
   recoveryHistory: Array<{ eventId: string; nodeId?: string; kind: "failure" | "amendment" }>;
+  evidenceMatrices: string[];
   outcomes: RunOutcomes;
   finalCandidate?: FinalCandidate;
   deliveryReceipt?: DeliveryReceipt;
@@ -43,6 +44,7 @@ export function foldRun(rawEvents: readonly RunEvent[]): RunProjection {
         readiness: { readyNodeIds: [], pendingDecisionIds: [] },
         selectedWaves: [],
         recoveryHistory: [],
+        evidenceMatrices: [],
         outcomes: { ...INITIAL_RUN_OUTCOMES }
       };
       continue;
@@ -80,6 +82,11 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
     case "graph.amendment.proposed":
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot propose an amendment while ${next.lifecycle}.`);
       next.recoveryHistory.push({ eventId: event.eventId, kind: "amendment" });
+      break;
+    case "evidence.matrix_recorded":
+      if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot record validation evidence while ${next.lifecycle}.`);
+      if (next.evidenceMatrices.includes(event.payload.matrix.matrixId)) throw new Error(`Evidence matrix ${event.payload.matrix.matrixId} already exists.`);
+      next.evidenceMatrices.push(event.payload.matrix.matrixId);
       break;
     case "graph.revision.proposed":
       if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot propose a graph while ${next.lifecycle}.`);

@@ -5,6 +5,7 @@ import type { FailureObservation } from "./domain/failures.js";
 import { classifyFailure } from "./domain/failures.js";
 import { recoveryPolicyFor } from "./recovery-policy.js";
 import type { GraphAmendmentProposal } from "./amendments.js";
+import type { EvidenceMatrixRecord } from "./domain/evidence.js";
 
 export type RunCommand =
   | { type: "propose_graph"; graphId: string; revision: number }
@@ -15,6 +16,7 @@ export type RunCommand =
   | { type: "select_wave"; waveId: string; nodeIds: string[]; maxParallel: number }
   | { type: "record_failure"; nodeId: string; observation: FailureObservation }
   | { type: "propose_amendment"; proposal: GraphAmendmentProposal }
+  | { type: "record_evidence_matrix"; matrix: EvidenceMatrixRecord }
   | { type: "pause"; reason: string }
   | { type: "resume"; reason: string }
   | { type: "verify_final_candidate"; manifestId: string; commit: string; evidenceEligible: boolean; executionSucceeded: boolean }
@@ -36,6 +38,7 @@ export function eventsForCommand(state: RunProjection, command: Exclude<RunComma
       return [{ type: "failure.classified", payload: { nodeId: command.nodeId, failureClass, observation: command.observation, allowedActions: policy.actions, automaticRetryBudget: policy.automaticRetryBudget, discardCandidate: policy.discardCandidate } }];
     }
     case "propose_amendment": return [{ type: "graph.amendment.proposed", payload: { ...command.proposal, operations: command.proposal.operations.map((operation) => operation as unknown as Record<string, unknown>) } }];
+    case "record_evidence_matrix": return [{ type: "evidence.matrix_recorded", payload: { matrix: command.matrix } }];
     case "pause": return [{ type: "run.pause_requested", payload: { reason: command.reason } }];
     case "resume": return [{ type: "run.resume_requested", payload: { reason: command.reason } }];
     case "verify_final_candidate": return [{ type: "final_candidate.verified", payload: { manifestId: command.manifestId, commit: command.commit, evidenceEligible: command.evidenceEligible, executionSucceeded: command.executionSucceeded } }];
