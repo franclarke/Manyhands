@@ -13,7 +13,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import path from "node:path";
-import { safeGitArgs } from "@manyhands/execution-core";
+import { deliveryRequestFingerprint, safeGitArgs } from "@manyhands/execution-core";
 
 import { rmWithRetry } from "./fs-retry";
 import { withRepositoryLease } from "./repo-lock";
@@ -77,6 +77,8 @@ export interface DeliveryReceipt {
   disposition: "delivered" | "conflict" | "failed";
   actor: string;
   idempotencyKey: string;
+  /** Present on V2 receipts; legacy receipts remain recoverable from their exact fields. */
+  requestFingerprint?: string;
   createdAt: string;
   completedAt?: string;
   error?: string;
@@ -323,6 +325,7 @@ function assertReceiptMatchesRequest(
     receipt.targetHeadBefore !== request.expectedTargetHead ||
     receipt.patchHash !== patchHash ||
     receipt.idempotencyKey !== request.idempotencyKey ||
+    (receipt.requestFingerprint !== undefined && receipt.requestFingerprint !== webDeliveryRequestFingerprint(request)) ||
     request.expectedClean !== true
   ) {
     throw new DeliveryError(
@@ -332,7 +335,10 @@ function assertReceiptMatchesRequest(
 }
 
 function newReceipt(request: DeliveryRequest, targetRepo: string, before: string, after: string, patch: string, disposition: DeliveryReceipt["disposition"]): DeliveryReceipt {
-  return { deliveryId: randomUUID(), runId: request.runId, manifestId: request.manifestId, mode: "merge", targetRepo, targetBranch: request.targetBranch, targetHeadBefore: before, targetHeadAfter: after, finalSha: request.finalSha, patchHash: createHash("sha256").update(patch).digest("hex"), disposition, actor: request.actor, idempotencyKey: request.idempotencyKey, createdAt: new Date().toISOString() };
+  return { deliveryId: randomUUID(), runId: request.runId, manifestId: request.manifestId, mode: "merge", targetRepo, targetBranch: request.targetBranch, targetHeadBefore: before, targetHeadAfter: after, finalSha: request.finalSha, patchHash: createHash("sha256").update(patch).digest("hex"), disposition, actor: request.actor, idempotencyKey: request.idempotencyKey, requestFingerprint: webDeliveryRequestFingerprint(request), createdAt: new Date().toISOString() };
+}
+function webDeliveryRequestFingerprint(request: DeliveryRequest): string {
+  return deliveryRequestFingerprint({ manifestId: request.manifestId, finalSha: request.finalSha, targetBranch: request.targetBranch, targetHead: request.expectedTargetHead, targetFingerprint: request.targetFingerprint, actor: request.actor, idempotencyKey: request.idempotencyKey });
 }
 function receiptKey(key: string): string { return createHash("sha256").update(key).digest("hex"); }
 async function readReceipt(file: string): Promise<DeliveryReceipt | undefined> { try { return JSON.parse(await readFile(file, "utf8")) as DeliveryReceipt; } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined; throw error; } }

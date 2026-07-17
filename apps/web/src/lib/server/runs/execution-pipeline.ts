@@ -46,7 +46,7 @@ import {
     resolveExecutionGraph,
     resolveRepoProvisionAction
 } from "./execution-state";
-import { applyFinalPatch } from "./final-apply";
+import { prepareFinalCandidate } from "./final-apply";
 import {
   applyValidationToManifest,
   artifactEvidenceIsReady,
@@ -476,7 +476,7 @@ export async function runExecutionPipeline(runId: string, options: ExecutionRunn
                   label: "git-final-apply",
                   ...(lease !== undefined ? { operationId: lease.operationId } : {})
                 },
-                () => applyFinalPatch({
+                () => prepareFinalCandidate({
                   graph, result, provisioned: provisioned!, runId, slug: run.title,
                   repositoryLeaseHeld: repoLease !== undefined,
                   ...(run.targetContext?.fingerprint !== undefined
@@ -1139,7 +1139,7 @@ async function settleExecutionOutcome(
           const applied = await runWithProcessSupervision(
             { runId, label: "git-final-apply", operationId: lease.operationId },
             () =>
-              applyFinalPatch({
+              prepareFinalCandidate({
                 graph: host.taskGraph,
                 result,
                 provisioned,

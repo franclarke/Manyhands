@@ -1,7 +1,7 @@
 import { DecisionSchema, type Decision } from "./domain/decisions.js";
 import { RunEventSchema, type RunEvent } from "./domain/events.js";
 import { assertLifecycleTransition, type RunLifecycle } from "./domain/lifecycle.js";
-import { INITIAL_RUN_OUTCOMES, type DeliveryReceipt, type FinalCandidate, type RunOutcomes } from "./domain/outcomes.js";
+import { INITIAL_RUN_OUTCOMES, type DeliveryApproval, type DeliveryReceipt, type FinalCandidate, type RunOutcomes } from "./domain/outcomes.js";
 
 export interface RunProjection {
   runId: string;
@@ -20,6 +20,7 @@ export interface RunProjection {
   outcomes: RunOutcomes;
   finalCandidate?: FinalCandidate;
   deliveryReceipt?: DeliveryReceipt;
+  deliveryApproval?: DeliveryApproval;
   lifecycleBeforePause?: Extract<RunLifecycle, "running" | "waiting_for_input">;
   failureReason?: string;
 }
@@ -152,20 +153,32 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       if (!event.payload.executionSucceeded) throw new Error("A final candidate cannot be verified before execution succeeds.");
       if (!event.payload.evidenceEligible) throw new Error("A final candidate requires eligible evidence.");
       if (Object.values(next.decisions).some((decision) => decision.status === "pending")) throw new Error("A final candidate cannot become ready with pending decisions.");
-      next.finalCandidate = { manifestId: event.payload.manifestId, commit: event.payload.commit, evidenceEligible: true };
+      next.finalCandidate = { manifestId: event.payload.manifestId, commit: event.payload.commit, evidenceMatrixId: event.payload.evidenceMatrixId, sourceTargetFingerprint: event.payload.sourceTargetFingerprint, targetBranch: event.payload.targetBranch, targetHead: event.payload.targetHead, evidenceEligible: true };
       next.outcomes = { execution: "succeeded", artifact: "verified", delivery: "ready" };
       transition(next, "result_ready");
       break;
     case "delivery.started":
-      if (next.finalCandidate?.manifestId !== event.payload.manifestId) throw new Error(`Delivery manifest ${event.payload.manifestId} is not the verified final candidate.`);
+      if (next.finalCandidate?.manifestId !== event.payload.approval.manifestId || next.finalCandidate.commit !== event.payload.approval.finalSha) throw new Error(`Delivery manifest ${event.payload.approval.manifestId} is not the verified final candidate.`);
+      if (next.finalCandidate.sourceTargetFingerprint !== event.payload.approval.targetFingerprint || next.finalCandidate.targetBranch !== event.payload.approval.targetBranch || next.finalCandidate.targetHead !== event.payload.approval.targetHead) throw new Error("Delivery approval does not match the candidate target snapshot.");
+      next.deliveryApproval = event.payload.approval;
       transition(next, "delivering");
       break;
     case "delivery.published":
       if (!event.payload.receipt.confirmed) throw new Error("Delivery receipt must be confirmed before completed.");
       if (next.finalCandidate?.evidenceEligible !== true || next.finalCandidate.manifestId !== event.payload.receipt.manifestId) throw new Error("Delivery receipt does not match an evidence-eligible final candidate.");
+      if (event.payload.receipt.disposition !== undefined && event.payload.receipt.disposition !== "delivered") throw new Error("Delivery receipt must have delivered disposition before completed.");
+      if (event.payload.receipt.finalSha !== undefined && event.payload.receipt.finalSha !== next.deliveryApproval?.finalSha) throw new Error("Delivery receipt final SHA does not match the approved candidate.");
+      if (event.payload.receipt.targetBranch !== undefined && event.payload.receipt.targetBranch !== next.deliveryApproval?.targetBranch) throw new Error("Delivery receipt target branch does not match the approval.");
+      if (event.payload.receipt.targetHeadBefore !== undefined && event.payload.receipt.targetHeadBefore !== next.deliveryApproval?.targetHead) throw new Error("Delivery receipt target head does not match the approval.");
       next.deliveryReceipt = event.payload.receipt;
       next.outcomes.delivery = "published";
       transition(next, "completed");
+      break;
+    case "delivery.failed":
+      if (next.deliveryApproval?.manifestId !== event.payload.manifestId) throw new Error(`Delivery failure does not match the active approval for ${event.payload.manifestId}.`);
+      next.outcomes.delivery = "failed";
+      next.failureReason = event.payload.reason;
+      transition(next, "result_ready");
       break;
     case "run.failed":
       if (event.payload.area === "execution") next.outcomes.execution = "failed";

@@ -1,5 +1,6 @@
 import type { RunEvent, RunEventInput } from "./domain/events.js";
 import type { DeliveryReceipt } from "./domain/outcomes.js";
+import type { DeliveryApproval } from "./domain/outcomes.js";
 import type { AdoptedArtifact } from "./domain/artifacts.js";
 import type { AttemptRecord } from "./domain/attempts.js";
 
@@ -9,7 +10,7 @@ export interface RunEventJournalPort {
 }
 
 export interface DeliveryPublisherPort {
-  publish(input: { runId: string; manifestId: string; destination: string }): Promise<DeliveryReceipt>;
+  publish(input: { runId: string; approval: DeliveryApproval }): Promise<DeliveryReceipt>;
 }
 
 export interface CancellationPort {

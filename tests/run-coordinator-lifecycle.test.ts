@@ -28,8 +28,8 @@ describe("RunCoordinator lifecycle", () => {
       event(1, "run.created", { goal: "Build booking app" }),
       event(2, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
       event(3, "graph.revision.approved", { graphId: "graph-1", revision: 1 }),
-      event(4, "final_candidate.verified", { manifestId: "manifest-1", commit: "abc123", evidenceEligible: true, executionSucceeded: true }),
-      event(5, "delivery.started", { manifestId: "manifest-1" }),
+      event(4, "final_candidate.verified", candidatePayload()),
+      event(5, "delivery.started", { approval: deliveryApproval() }),
       event(6, "delivery.published", { receipt: { receiptId: "delivery-1", manifestId: "manifest-1", destination: "main", confirmed: true } })
     ]);
 
@@ -43,15 +43,15 @@ describe("RunCoordinator lifecycle", () => {
       event(1, "run.created", { goal: "Build it" }),
       event(2, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
       event(3, "graph.revision.approved", { graphId: "graph-1", revision: 1 }),
-      event(4, "final_candidate.verified", { manifestId: "manifest-1", commit: "abc123", evidenceEligible: false, executionSucceeded: true })
+      event(4, "final_candidate.verified", { ...candidatePayload(), evidenceEligible: false })
     ])).toThrow(/evidence/i);
 
     expect(() => foldRun([
       event(1, "run.created", { goal: "Build it" }),
       event(2, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
       event(3, "graph.revision.approved", { graphId: "graph-1", revision: 1 }),
-      event(4, "final_candidate.verified", { manifestId: "manifest-1", commit: "abc123", evidenceEligible: true, executionSucceeded: true }),
-      event(5, "delivery.started", { manifestId: "manifest-1" }),
+      event(4, "final_candidate.verified", candidatePayload()),
+      event(5, "delivery.started", { approval: deliveryApproval() }),
       event(6, "delivery.published", { receipt: { receiptId: "delivery-1", manifestId: "manifest-1", destination: "main", confirmed: false } })
     ])).toThrow(/confirmed/i);
   });
@@ -83,7 +83,7 @@ describe("RunCoordinator lifecycle", () => {
       event(1, "run.created", { goal: "Build it" }),
       event(2, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
       event(3, "graph.revision.approved", { graphId: "graph-1", revision: 1 }),
-      event(4, "final_candidate.verified", { manifestId: "manifest-1", commit: "abc123", evidenceEligible: true, executionSucceeded: true })
+      event(4, "final_candidate.verified", candidatePayload())
     ];
     const publish = vi.fn().mockResolvedValue({ receiptId: "delivery-1", manifestId: "manifest-1", destination: "main", confirmed: true });
     const coordinator = new RunCoordinator({
@@ -101,9 +101,9 @@ describe("RunCoordinator lifecycle", () => {
       eventId: (type, sequence) => `${type}-${sequence}`
     });
 
-    const state = await coordinator.execute("run-1", { type: "publish_delivery", destination: "main" });
+    const state = await coordinator.execute("run-1", { type: "publish_delivery", approval: deliveryApproval() });
 
-    expect(publish).toHaveBeenCalledWith({ runId: "run-1", manifestId: "manifest-1", destination: "main" });
+    expect(publish).toHaveBeenCalledWith({ runId: "run-1", approval: deliveryApproval() });
     expect(events.slice(-2).map((item) => item.type)).toEqual(["delivery.started", "delivery.published"]);
     expect(state.lifecycle).toBe("completed");
   });
@@ -168,4 +168,12 @@ function event<T extends RunEvent["type"]>(sequence: number, type: T, payload: E
     type,
     payload
   } as Extract<RunEvent, { type: T }>;
+}
+
+function candidatePayload() {
+  return { manifestId: "manifest-1", commit: "abc123", evidenceMatrixId: "matrix-1", evidenceEligible: true, executionSucceeded: true, sourceTargetFingerprint: "repo@base", targetBranch: "main", targetHead: "base-sha" } as const;
+}
+
+function deliveryApproval() {
+  return { manifestId: "manifest-1", finalSha: "abc123", targetBranch: "main", targetHead: "base-sha", targetFingerprint: "repo@base", actor: "operator", idempotencyKey: "delivery-key-1" } as const;
 }

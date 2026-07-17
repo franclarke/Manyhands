@@ -29,10 +29,16 @@ export class RunCoordinator {
     if (command.type === "publish_delivery") {
       const candidate = state.finalCandidate;
       if (state.lifecycle !== "result_ready" || candidate === undefined) throw new Error("Delivery requires an evidence-eligible result_ready candidate.");
-      persisted = await this.append(runId, persisted, [{ type: "delivery.started", payload: { manifestId: candidate.manifestId } }]);
-      const receipt = await this.ports.delivery.publish({ runId, manifestId: candidate.manifestId, destination: command.destination });
-      persisted = await this.append(runId, persisted, [{ type: "delivery.published", payload: { receipt } }]);
-      return foldRun(persisted);
+      persisted = await this.append(runId, persisted, [{ type: "delivery.started", payload: { approval: command.approval } }]);
+      try {
+        const receipt = await this.ports.delivery.publish({ runId, approval: command.approval });
+        persisted = await this.append(runId, persisted, [{ type: "delivery.published", payload: { receipt } }]);
+        return foldRun(persisted);
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        await this.append(runId, persisted, [{ type: "delivery.failed", payload: { manifestId: command.approval.manifestId, reason, retryable: true } }]);
+        throw error;
+      }
     }
     if (command.type === "cancel") {
       if (this.ports.cancellation === undefined) throw new Error("Cancellation port is not configured.");

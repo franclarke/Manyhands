@@ -85,13 +85,16 @@ export interface ApplyFinalPatchInput {
   repositoryLeaseHeld?: boolean;
 }
 
-export async function applyFinalPatch(input: ApplyFinalPatchInput): Promise<FinalApplicationRecord | undefined> {
+export async function prepareFinalCandidate(input: ApplyFinalPatchInput): Promise<FinalApplicationRecord | undefined> {
   if (input.repositoryLeaseHeld === true) return applyFinalPatchLocked(input);
   return withRepositoryLease(
     { repoRoot: input.provisioned.repoRoot, runId: input.runId },
     () => applyFinalPatchLocked(input)
   );
 }
+
+/** @deprecated V1 compatibility name. Preparation never publishes to the target branch. */
+export const applyFinalPatch = prepareFinalCandidate;
 
 async function applyFinalPatchLocked(input: ApplyFinalPatchInput): Promise<FinalApplicationRecord | undefined> {
   const integrationCommitSha = resolveFinalCommit(input.graph, input.result);

@@ -1,7 +1,7 @@
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { DecisionInputSchema, DecisionResolutionShape, requireDecisionResolution } from "./decisions.js";
-import { DeliveryReceiptSchema } from "./outcomes.js";
+import { DeliveryApprovalSchema, DeliveryReceiptSchema } from "./outcomes.js";
 import { AdoptedArtifactSchema } from "./artifacts.js";
 import { FailureClassSchema, FailureObservationSchema } from "./failures.js";
 import { EvidenceMatrixRecordSchema } from "./evidence.js";
@@ -43,9 +43,10 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   event("run.resume_requested", z.object({ reason: NonEmptyStringSchema }).strict()),
   event("operation.cancel_requested", z.object({ invalidationReceiptId: EntityIdSchema, reason: NonEmptyStringSchema }).strict()),
   event("operation.interrupted", z.object({ processReceiptId: EntityIdSchema, allDead: z.literal(true) }).strict()),
-  event("final_candidate.verified", z.object({ manifestId: EntityIdSchema, commit: NonEmptyStringSchema, evidenceEligible: z.boolean(), executionSucceeded: z.boolean() }).strict()),
-  event("delivery.started", z.object({ manifestId: EntityIdSchema }).strict()),
+  event("final_candidate.verified", z.object({ manifestId: EntityIdSchema, commit: NonEmptyStringSchema, evidenceMatrixId: EntityIdSchema, evidenceEligible: z.boolean(), executionSucceeded: z.boolean(), sourceTargetFingerprint: NonEmptyStringSchema, targetBranch: NonEmptyStringSchema, targetHead: NonEmptyStringSchema }).strict()),
+  event("delivery.started", z.object({ approval: DeliveryApprovalSchema }).strict()),
   event("delivery.published", z.object({ receipt: DeliveryReceiptSchema }).strict()),
+  event("delivery.failed", z.object({ manifestId: EntityIdSchema, reason: NonEmptyStringSchema, retryable: z.boolean() }).strict()),
   event("run.failed", z.object({ reason: NonEmptyStringSchema, area: z.enum(["execution", "artifact", "delivery", "domain"]) }).strict())
 ]);
 

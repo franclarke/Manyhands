@@ -25,7 +25,7 @@ export const LEGAL_LIFECYCLE_TRANSITIONS: Readonly<Record<RunLifecycle, readonly
   cancelling: ["interrupted", "failed"],
   interrupted: [],
   result_ready: ["delivering", "cancelling", "failed"],
-  delivering: ["cancelling", "completed", "failed"],
+  delivering: ["result_ready", "cancelling", "completed", "failed"],
   completed: [],
   failed: []
 };
