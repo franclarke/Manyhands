@@ -28,7 +28,12 @@ export function validateGraphRevision(input: GraphRevision): GraphRevisionIssue[
   const issues: GraphRevisionIssue[] = [];
   const root = graph.nodes[graph.rootId];
   if (root === undefined) issues.push({ code: "missing_root", severity: "error", nodeId: graph.rootId, message: `Root ${graph.rootId} does not exist.` });
-  else if (root.parentId !== null || (root.kind !== "root" && root.kind !== "composite")) issues.push({ code: "invalid_root", severity: "error", nodeId: root.id, message: "The graph root must be a root/composite node without a parent." });
+  else {
+    const atomicRoot = root.kind === "leaf" && Object.keys(graph.nodes).length === 1;
+    if (root.parentId !== null || (!atomicRoot && root.kind !== "root" && root.kind !== "composite")) {
+      issues.push({ code: "invalid_root", severity: "error", nodeId: root.id, message: "The graph root must be a root/composite node, or the only atomic leaf, without a parent." });
+    }
+  }
 
   for (const [key, node] of Object.entries(graph.nodes)) {
     if (key !== node.id) issues.push({ code: "node_key_mismatch", severity: "error", nodeId: node.id, message: `Node key ${key} does not match id ${node.id}.` });

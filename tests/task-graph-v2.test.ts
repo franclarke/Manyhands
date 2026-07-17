@@ -36,6 +36,15 @@ describe("GraphRevision V2", () => {
     expect(candidate.nodes.ui).not.toHaveProperty("dependencies");
   });
 
+  it("accepts a single atomic leaf as the graph root", () => {
+    const candidate = graph();
+    candidate.rootId = "api";
+    candidate.nodes = {
+      api: { id: "api", parentId: null, kind: "leaf", title: "Booking API", goal: "Expose bookings" }
+    };
+    expect(validateGraphRevision(candidate)).toEqual([]);
+  });
+
   it.each([
     ["invalid root", (candidate: GraphRevision) => { candidate.rootId = "missing"; }, "missing_root"],
     ["hierarchy cycle", (candidate: GraphRevision) => { candidate.nodes.root!.parentId = "api"; candidate.nodes.api!.parentId = "root"; }, "hierarchy_cycle"],
