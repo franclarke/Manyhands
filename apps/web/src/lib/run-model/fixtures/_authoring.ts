@@ -2,7 +2,8 @@
  * Fixture authoring helpers — PURE DATA construction for golden fixtures.
  *
  * NOT a reducer, selector, or UI. This only assembles `RunEvent[]` with the same
- * shape as the future SSE stream (PR 03 of `docs/design/implementation-plan.md`).
+ * shape as the current fixture event stream. The target envelope is specified
+ * in `docs/design/run-operative-model.md` and may require a transition adapter.
  * `seq` is auto-assigned (1-based) so fixtures stay strictly monotonic by
  * construction; `at` is derived from `seq` for deterministic ordering.
  */

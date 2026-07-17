@@ -21,7 +21,9 @@ const SEED_CONFIG: RunConfig = {
   executionSelection: { executorId: "—", model: "—" },
   repairSelection: { executorId: "—", model: "—" }
 };
-const DEFAULT_DELAY_MS = 650;
+const DEFAULT_DELAY_MS = 900;
+const MIN_PLAYBACK_RATE = 0.25;
+const MAX_PLAYBACK_RATE = 2;
 
 function seedStore(fixture: RunFixture): RunStore {
   return createRunStore(
@@ -51,12 +53,20 @@ export interface FixturePlayback {
   resolveDecision(decisionId: string): DecisionResolutionOutcome;
 }
 
+export interface FixturePlaybackOptions {
+  autoplay?: boolean;
+  defaultDelayMs?: number;
+  /** Multiplier applied to fixture timing: 0.5 is slower, 2 is faster. */
+  playbackRate?: number;
+}
+
 export function useFixturePlayback(
   fixture: RunFixture,
-  opts?: { autoplay?: boolean; defaultDelayMs?: number }
+  opts?: FixturePlaybackOptions
 ): FixturePlayback {
   const autoplay = opts?.autoplay ?? true;
-  const delayMs = opts?.defaultDelayMs ?? DEFAULT_DELAY_MS;
+  const baseDelayMs = opts?.defaultDelayMs ?? DEFAULT_DELAY_MS;
+  const playbackRate = Math.min(MAX_PLAYBACK_RATE, Math.max(MIN_PLAYBACK_RATE, opts?.playbackRate ?? 1));
 
   const storeRef = useRef<RunStore>(seedStore(fixture));
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -93,7 +103,8 @@ export function useFixturePlayback(
       return;
     }
     const event = fixture.events[index]!;
-    const wait = fixture.playback?.delaysMs?.[index] ?? delayMs;
+    const fixtureDelay = fixture.playback?.delaysMs?.[index] ?? baseDelayMs;
+    const wait = Math.max(100, Math.round(fixtureDelay / playbackRate));
     const handle = setTimeout(() => {
       timerRef.current = null;
       storeRef.current.apply(event);
@@ -101,7 +112,7 @@ export function useFixturePlayback(
     }, wait);
     timerRef.current = handle;
     return () => clearTimeout(handle);
-  }, [playing, index, total, fixture, delayMs]);
+  }, [playing, index, total, fixture, baseDelayMs, playbackRate]);
 
   const play = useCallback(() => {
     if (index < total) setPlaying(true);

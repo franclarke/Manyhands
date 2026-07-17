@@ -2,12 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   GOLDEN_FIXTURES,
   GOLDEN_FIXTURE_NAMES,
+  FIXTURE_CATALOG,
+  goldenAppointmentBooking,
   goldenBehavioralConflict,
+  goldenDeepImportPipeline,
   goldenExecutionFailed,
   goldenHappyPath,
   goldenPlanningFallback,
   goldenPlanningQuestion,
   goldenSeamAmendmentBlastRadius,
+  goldenSupportDeskSaas,
+  goldenSubscriptionsBillingSaas,
   goldenVerifyAutoRepair
 } from "@/lib/run-model/fixtures";
 import { RUN_EVENT_TYPES, type RunEvent, type RunFixture } from "@/lib/run-model/types";
@@ -23,7 +28,7 @@ function payload(event: RunEvent): Record<string, unknown> {
 }
 
 describe("golden fixtures — discovery & structure", () => {
-  it("1. exports the seven golden fixtures from the index", () => {
+  it("1. exports the golden fixtures from the index", () => {
     expect(GOLDEN_FIXTURE_NAMES).toEqual([
       "golden-happy-path",
       "golden-planning-question",
@@ -31,7 +36,11 @@ describe("golden fixtures — discovery & structure", () => {
       "golden-behavioral-conflict",
       "golden-seam-amendment-blast-radius",
       "golden-execution-failed",
-      "golden-planning-fallback"
+      "golden-planning-fallback",
+      "golden-support-desk-saas",
+      "golden-subscriptions-billing-saas",
+      "golden-deep-import-pipeline",
+      "golden-appointment-booking"
     ]);
     expect(goldenHappyPath).toBeDefined();
     expect(goldenPlanningQuestion).toBeDefined();
@@ -40,6 +49,15 @@ describe("golden fixtures — discovery & structure", () => {
     expect(goldenSeamAmendmentBlastRadius).toBeDefined();
     expect(goldenExecutionFailed).toBeDefined();
     expect(goldenPlanningFallback).toBeDefined();
+    expect(goldenSupportDeskSaas).toBeDefined();
+    expect(goldenSubscriptionsBillingSaas).toBeDefined();
+    expect(goldenDeepImportPipeline).toBeDefined();
+    expect(goldenAppointmentBooking).toBeDefined();
+  });
+
+  it("1a. exposes every fixture through the demo catalog exactly once", () => {
+    expect(FIXTURE_CATALOG.map((fixture) => fixture.name).sort()).toEqual([...GOLDEN_FIXTURE_NAMES].sort());
+    expect(FIXTURE_CATALOG.every((fixture) => fixture.title.length > 0 && fixture.description.length > 0)).toBe(true);
   });
 
   it.each(ALL)("2. %s has a runId", (_name, fx) => {
@@ -159,6 +177,108 @@ describe("golden fixtures — scenario specifics", () => {
       (e) => e.type === "node.execution.started" && payload(e).nodeId === "n-telemetry"
     );
     expect(starts.length).toBeLessThanOrEqual(1);
+  });
+
+  it("19. golden-support-desk-saas is a full product slice with repair and selective re-execution", () => {
+    const events = goldenSupportDeskSaas.events;
+    expect(events.filter((event) => event.type === "plan.node.proposed")).toHaveLength(12);
+    expect(events.some((event) => event.type === "node.repair.started" && payload(event).nodeId === "n-ticket-domain")).toBe(true);
+    expect(events.some((event) => event.type === "amendment.proposed" && payload(event).amendmentId === "am-sla-timezone")).toBe(true);
+    expect(events.some((event) => event.type === "decision.raised" && payload(event).kind === "approve_amendment")).toBe(true);
+
+    const startsFor = (nodeId: string) => events.filter(
+      (event) => event.type === "node.execution.started" && payload(event).nodeId === nodeId
+    ).length;
+    expect(startsFor("n-ticket-api")).toBe(2);
+    expect(startsFor("n-auth")).toBe(1);
+    expect(startsFor("n-audit")).toBe(1);
+
+    const evidence = events.find((event) => event.type === "run.evidence.ready");
+    expect(payload(evidence!).tests).toEqual({ pass: 43, total: 43 });
+    expect(payload(evidence!).invalidationTrace).toEqual(expect.arrayContaining([
+      expect.objectContaining({ preserved: expect.arrayContaining(["n-auth", "n-audit"]) })
+    ]));
+  });
+
+  it("20. golden-subscriptions-billing-saas preserves human planning input and repairs a structural integration conflict autonomously", () => {
+    const events = goldenSubscriptionsBillingSaas.events;
+    expect(events.filter((event) => event.type === "plan.node.proposed")).toHaveLength(13);
+    expect(events.some((event) => event.type === "decision.raised" && payload(event).kind === "clarify")).toBe(true);
+    expect(events.some((event) => event.type === "decision.resolved" && hasAnswer(payload(event).choice))).toBe(true);
+
+    const conflictIndex = events.findIndex(
+      (event) => event.type === "conflict.detected" && payload(event).conflictId === "cf-billing-event-order"
+    );
+    expect(conflictIndex).toBeGreaterThanOrEqual(0);
+    expect(events[conflictIndex + 1]!.type).toBe("conflict.resolved");
+    expect(payload(events[conflictIndex + 1]!).by).toBe("system");
+
+    const selected = events.filter((event) => event.type === "run.scheduling.wave_selected");
+    expect(selected).toHaveLength(4);
+    expect(selected.every((event) => payload(event).maxParallel === 3)).toBe(true);
+    expect(events.find((event) => event.type === "run.evidence.ready")?.payload.tests).toEqual({ pass: 38, total: 38 });
+  });
+
+  it("21. golden-deep-import-pipeline is narrow, deep, and ready for a paced presentation", () => {
+    const events = goldenDeepImportPipeline.events;
+    const nodes = events.filter((event) => event.type === "plan.node.proposed").map((event) => payload(event));
+    expect(nodes).toHaveLength(15);
+    expect(Math.max(...nodes.map((node) => Number(node.depth)))).toBe(8);
+    const childrenByParent = new Map<string, number>();
+    for (const node of nodes) {
+      if (typeof node.parentId !== "string") continue;
+      childrenByParent.set(node.parentId, (childrenByParent.get(node.parentId) ?? 0) + 1);
+    }
+    expect(Math.max(...childrenByParent.values())).toBeLessThanOrEqual(2);
+
+    const decisions = events.filter((event) => event.type === "decision.raised").map((event) => payload(event).kind);
+    expect(decisions).toEqual(expect.arrayContaining(["clarify", "approve_plan", "approve_amendment", "approve_merge"]));
+    expect(events.filter((event) => event.type === "seam.frozen")).toHaveLength(5);
+    expect(events.filter((event) => event.type === "node.execution.started" && payload(event).nodeId === "n-dialect")).toHaveLength(2);
+    expect(events.filter((event) => event.type === "node.execution.started" && payload(event).nodeId === "n-upload")).toHaveLength(1);
+    expect(goldenDeepImportPipeline.playback?.delaysMs).toHaveLength(events.length);
+    expect(Math.max(...(goldenDeepImportPipeline.playback?.delaysMs ?? []))).toBeGreaterThanOrEqual(3200);
+  });
+
+  it("22. golden-appointment-booking is a hybrid technical product graph with a complete presentation arc", () => {
+    const events = goldenAppointmentBooking.events;
+    const nodes = events.filter((event) => event.type === "plan.node.proposed").map((event) => payload(event));
+    expect(nodes).toHaveLength(23);
+    expect(Math.max(...nodes.map((node) => Number(node.depth)))).toBe(3);
+
+    const rootChildren = nodes.filter((node) => node.parentId === "root").map((node) => node.nodeId);
+    expect(rootChildren).toEqual(["c-backend", "c-customer-web", "c-operations"]);
+
+    const childrenByParent = new Map<string, number>();
+    for (const node of nodes) {
+      if (typeof node.parentId !== "string") continue;
+      childrenByParent.set(node.parentId, (childrenByParent.get(node.parentId) ?? 0) + 1);
+    }
+    expect(Math.max(...childrenByParent.values())).toBe(3);
+
+    expect(events.filter((event) => event.type === "seam.frozen")).toHaveLength(9);
+    expect(events.filter((event) => event.type === "plan.dependency.proposed").length).toBeGreaterThanOrEqual(8);
+
+    const decisions = events.filter((event) => event.type === "decision.raised").map((event) => payload(event).kind);
+    expect(decisions).toEqual(expect.arrayContaining(["clarify", "approve_plan", "approve_amendment", "approve_merge"]));
+
+    expect(events.some((event) => event.type === "node.repair.started" && payload(event).nodeId === "n-concurrency-guard")).toBe(true);
+    const conflictIndex = events.findIndex((event) => event.type === "conflict.detected" && payload(event).conflictId === "cf-booking-status-view");
+    expect(conflictIndex).toBeGreaterThanOrEqual(0);
+    expect(events[conflictIndex + 1]?.type).toBe("conflict.resolved");
+    expect(payload(events[conflictIndex + 1]!).by).toBe("system");
+
+    expect(events.some((event) => event.type === "amendment.proposed" && payload(event).amendmentId === "am-booking-timezone")).toBe(true);
+    const startsFor = (nodeId: string) => events.filter(
+      (event) => event.type === "node.execution.started" && payload(event).nodeId === nodeId
+    ).length;
+    expect(startsFor("n-persist-booking")).toBe(2);
+    expect(startsFor("n-business-hours")).toBe(1);
+
+    const evidence = events.find((event) => event.type === "run.evidence.ready");
+    expect(payload(evidence!).tests).toEqual({ pass: 52, total: 52 });
+    expect(goldenAppointmentBooking.playback?.delaysMs).toHaveLength(events.length);
+    expect(Math.max(...(goldenAppointmentBooking.playback?.delaysMs ?? []))).toBeGreaterThanOrEqual(3400);
   });
 });
 

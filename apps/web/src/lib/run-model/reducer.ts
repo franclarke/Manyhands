@@ -1,8 +1,9 @@
 /**
  * Run model reducer — the pure fold `(model, event) => model`.
  *
- * Source of truth: docs/design/run-operative-model.md §4 (frozen). PR 04 of the
- * implementation plan. PURE and deterministic: no React, no browser, no server,
+ * Target semantics: docs/design/run-operative-model.md. This reducer implements
+ * the current event schema and may require a versioned transition. It is PURE
+ * and deterministic: no React, no browser, no server,
  * no SSE, no side effects. The SAME reducer serves fixtures and the live stream.
  *
  * It builds a normalized `RunModel` of ENTITIES only. It does NOT derive

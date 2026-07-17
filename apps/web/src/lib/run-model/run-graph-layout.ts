@@ -52,5 +52,16 @@ export function layoutVerticalTaskDag(
     .filter((node) => node.parentId === null || !byId.has(node.parentId))
     .sort((left, right) => left.title.localeCompare(right.title) || left.id.localeCompare(right.id));
   for (const root of roots) place(root);
+
+  // Streaming children changes a subtree's width. Keep the canonical root at a
+  // stable x coordinate so new nodes expand around it without moving the
+  // operator's viewport. Forests use the midpoint of their root span.
+  const rootXs = roots.map((root) => positions.get(root.id)?.x ?? 0);
+  const anchorX = rootXs.length <= 1
+    ? rootXs[0] ?? 0
+    : ((Math.min(...rootXs) + Math.max(...rootXs)) / 2);
+  if (anchorX !== 0) {
+    for (const position of positions.values()) position.x -= anchorX;
+  }
   return positions;
 }

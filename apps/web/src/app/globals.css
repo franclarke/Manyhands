@@ -1202,7 +1202,7 @@
      instead of teleporting as siblings stream in. Safe because nodes are
      not draggable in this canvas. */
 .mh-run-graph .react-flow__node {
-  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 240ms ease-out;
 }
 
 .mh-skel-node {
@@ -1232,11 +1232,16 @@
 }
 
 @keyframes mh-node-settle {
-  0% { opacity: 0; transform: translateY(6px); box-shadow: 0 0 0 4px var(--color-accent-glow); }
-  45% { opacity: 1; transform: none; box-shadow: 0 0 0 4px var(--color-accent-glow); }
-  100% { opacity: 1; transform: none; box-shadow: 0 0 0 0 transparent; }
+  0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+  100% { opacity: 1; transform: none; }
 }
-.mh-min-node-enter { animation: mh-node-settle 520ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.mh-min-node-enter { animation: mh-node-settle 280ms ease-out both; }
+
+@keyframes mh-node-integrated {
+  0% { opacity: 0.68; transform: scale(0.97); }
+  100% { opacity: 1; transform: none; }
+}
+.mh-min-node-integrated { animation: mh-node-integrated 320ms ease-out both; }
 
 /* Context path for a selected task: branch rail stays semantic, while the
    subdued ember ring exposes ancestry without competing with selection. */
@@ -1262,7 +1267,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mh-working, .mh-panel-enter, .mh-skel-node, .mh-skel-node-bar, .mh-min-node-enter,
+  .mh-working, .mh-panel-enter, .mh-skel-node, .mh-skel-node-bar, .mh-min-node-enter, .mh-min-node-integrated,
   .coral-pulse, .edge-flow, .edge-flow-reverse, .mh-min-node-wave, .mh-skeleton, .animate-pulse { animation: none; }
   .mh-run-graph .react-flow__node { transition: none; }
 }

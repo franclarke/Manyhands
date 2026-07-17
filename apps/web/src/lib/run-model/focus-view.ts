@@ -1,7 +1,8 @@
 /**
  * Focus view-model (PR-U1) — the polymorphic "deep on-demand" projection.
  *
- * Source of truth: docs/design/run-operative-model.md + implementation-status.md §8
+ * Target interaction: docs/design/interaction-model.md. This view-model reflects
+ * the current implementation.
  * (PR-U1 reframing of PR10). Given a `RunModel` + a `FocusTarget` it builds a pure,
  * discriminated `FocusView` for node / seam / conflict / decision / evidence. It is
  * the model layer for the focus panel: the React component (`focus-panel.tsx`) is a

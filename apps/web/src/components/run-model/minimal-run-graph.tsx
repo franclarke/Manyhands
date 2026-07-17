@@ -57,6 +57,8 @@ interface MinimalGraphNodeData {
   dimmed: boolean;
   /** Just streamed in (`plan.node.proposed`) — materialize with a settle pulse. */
   isNew: boolean;
+  /** Just became integrated — briefly carry completion through its parent edge. */
+  justIntegrated: boolean;
   /** Its own decomposition is still being generated (children pending). */
   expanding: boolean;
   collapsedChildCount: number;
@@ -213,8 +215,9 @@ function MinimalRunGraphInner({
   // Ids already on canvas — anything beyond this set just streamed in and
   // materializes with the settle entrance instead of popping.
   const seenIdsRef = useRef<Set<string>>(new Set());
+  const previousStatusesRef = useRef<Map<string, VitalStatus>>(new Map());
   const flow = useMemo(
-    () => buildFlow(graph, stage, selectedNodeId, seenIdsRef.current, collapsedIds, {
+    () => buildFlow(graph, stage, selectedNodeId, seenIdsRef.current, previousStatusesRef.current, collapsedIds, {
       mode,
       overlayNodeIds: new Set(overlayNodeIds),
       dimOutsideOverlay,
@@ -230,35 +233,31 @@ function MinimalRunGraphInner({
     for (const node of flow.nodes) {
       if (!isGhostId(node.id)) seenIdsRef.current.add(node.id);
     }
-  }, [flow]);
+    previousStatusesRef.current = new Map(graph.nodes.map((node) => [node.id, node.vital.status]));
+  }, [flow, graph.nodes]);
 
-  // Keep the graph framed when the canvas resizes — the delivery panel mounting
-  // (review stage) or a window resize shrinks the container, and `fitView` only
-  // runs on init, so without this the bottom nodes clip and the tree drifts.
-  const sectionRef = useRef<HTMLElement>(null);
+  // Frame the first proposed node once. Afterwards the viewport remains under
+  // the operator's control while planning and execution events stream in.
+  const initialFrameDoneRef = useRef(false);
   const { fitView } = useReactFlow();
   useEffect(() => {
-    const el = sectionRef.current;
-    if (el === null) return;
-    let frame = 0;
-    const observer = new ResizeObserver(() => {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => void fitView({
-        nodes: primaryFrameNodes(flow.nodes),
+    if (initialFrameDoneRef.current || flow.nodes.length === 0) return;
+    const frame = window.requestAnimationFrame(() => {
+      initialFrameDoneRef.current = true;
+      void fitView({
+        nodes: flow.nodes.map((node) => ({ id: node.id })),
         padding: 0.22,
         maxZoom: 0.82,
-        duration: 200
-      }));
+        duration: 0
+      });
     });
-    observer.observe(el);
     return () => {
-      observer.disconnect();
       window.cancelAnimationFrame(frame);
     };
   }, [fitView, flow.nodes]);
 
   return (
-    <section ref={sectionRef} className={fill ? "mh-run-graph mh-run-graph-fill" : "mh-run-graph"} aria-label="Grafo de tareas del run">
+    <section className={fill ? "mh-run-graph mh-run-graph-fill" : "mh-run-graph"} aria-label="Grafo de tareas del run">
       <ReactFlow
         nodes={flow.nodes}
         edges={flow.edges}
@@ -302,7 +301,6 @@ function MinimalRunGraphInner({
             maskColor="color-mix(in srgb, var(--color-bg) 72%, transparent)"
           />
         ) : null}
-        <FramePrimaryBranch nodes={flow.nodes} />
         {graph.nodes.length === 0 ? <GraphEmptyState kind={emptyKind} /> : null}
       </ReactFlow>
     </section>
@@ -349,37 +347,12 @@ function GraphEmptyState({ kind }: { kind: GraphEmptyKind }): React.ReactElement
   );
 }
 
-/**
- * Keep the root and the nearest first-level branches readable as planning
- * streams in. The explicit Fit View control still frames the entire DAG.
- */
-function FramePrimaryBranch({ nodes }: { nodes: Node<MinimalGraphNodeData | SkeletonGraphNodeData>[] }): null {
-  const { fitView } = useReactFlow();
-  useEffect(() => {
-    const handle = window.setTimeout(() => {
-      void fitView({ nodes: primaryFrameNodes(nodes), padding: 0.22, maxZoom: 0.82, duration: 320 });
-    }, 60);
-    return () => window.clearTimeout(handle);
-  }, [fitView, nodes]);
-  return null;
-}
-
-function primaryFrameNodes(nodes: Node<MinimalGraphNodeData | SkeletonGraphNodeData>[]): Array<{ id: string }> {
-  const taskNodes = nodes.filter((node): node is Node<MinimalGraphNodeData> => node.type === "minimalTask");
-  if (taskNodes.length <= 12) return taskNodes.map((node) => ({ id: node.id }));
-  const root = taskNodes.find((node) => node.data.node.role === "root");
-  if (root === undefined) return taskNodes.slice(0, 5).map((node) => ({ id: node.id }));
-  const nearestChildren = taskNodes
-    .filter((node) => node.data.node.parentId === root.id)
-    .sort((left, right) => Math.abs(left.position.x - root.position.x) - Math.abs(right.position.x - root.position.x))
-    .slice(0, 4);
-  return [root, ...nearestChildren].map((node) => ({ id: node.id }));
-}
 function buildFlow(
   graph: MinimalRunGraph,
   stage: ProductStage,
   selectedNodeId: string | null,
   seenIds: ReadonlySet<string>,
+  previousStatuses: ReadonlyMap<string, VitalStatus>,
   collapsedIds: ReadonlySet<string>,
   lens: {
     mode: RunCanvasMode;
@@ -393,6 +366,11 @@ function buildFlow(
   }
 ): { nodes: Node<MinimalGraphNodeData | SkeletonGraphNodeData>[]; edges: Edge[] } {
   const byId = new Map(graph.nodes.map((node) => [node.id, node]));
+  const justIntegratedIds = new Set(
+    graph.nodes
+      .filter((node) => node.vital.status === "done" && previousStatuses.get(node.id) !== undefined && previousStatuses.get(node.id) !== "done")
+      .map((node) => node.id)
+  );
 
   // Ghost children: while a parent's decomposition streams in, a skeleton node
   // reserves its place so the arriving children glide in instead of popping.
@@ -514,6 +492,7 @@ function buildFlow(
           onPath: pathSet.has(node.id),
           dimmed: (hasSelection && !pathSet.has(node.id)) || lensDimmed,
           isNew: !seenIds.has(node.id),
+          justIntegrated: justIntegratedIds.has(node.id),
           expanding: isExpanding(node),
           collapsedChildCount,
           childSummary,
@@ -553,7 +532,6 @@ function buildFlow(
     }
 
     const target = byId.get(targetId);
-    const source = byId.get(sourceId);
 
     const onPath = isHierarchy && pathSet.has(sourceId) && pathSet.has(targetId);
     const overlayEdge = lens.overlayNodeIds.has(sourceId) && lens.overlayNodeIds.has(targetId);
@@ -562,12 +540,10 @@ function buildFlow(
     // Hierarchy edges into a still-expanding subtree march with the stream.
     const streaming = isHierarchy && target !== undefined && isExpanding(target);
     
-    // Hierarchy edges FROM an integrating composite flow in reverse (bottom-up).
-    const integrating =
-      isHierarchy &&
-      source !== undefined &&
-      source.role !== "leaf" &&
-      source.vital.status === "running";
+    // Integration has no imperative UI state: the durable transition to done is
+    // enough to carry a short bottom-up confirmation through its hierarchy edge.
+    const integrating = isHierarchy && (justIntegratedIds.has(sourceId) || justIntegratedIds.has(targetId));
+    const connecting = !seenIds.has(sourceId) || !seenIds.has(targetId);
 
     const branchColor = target !== undefined ? branchColorFor(target) : "var(--mh-graph-edge)";
     const stroke = isDependency
@@ -586,8 +562,8 @@ function buildFlow(
       source: sourceId,
       target: targetId,
       type: "smoothstep",
-      animated: onPath || integrationEmphasis,
-      ...(integrating ? { className: "edge-flow-reverse" } : streaming ? { className: "edge-flow" } : {}),
+      animated: onPath || integrationEmphasis || integrating || connecting,
+      ...(integrating ? { className: "edge-flow-reverse" } : streaming || connecting ? { className: "edge-flow" } : {}),
       ...(!isConflict ? { markerEnd: { type: MarkerType.ArrowClosed, width: 13, height: 13, color: stroke } } : {}),
       style: {
         stroke,
@@ -659,7 +635,7 @@ function SkeletonTaskNode({ data }: NodeProps<Node<SkeletonGraphNodeData>>): Rea
 }
 
 function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React.ReactElement {
-  const { node, selected, branch, onPath, dimmed, isNew, expanding, collapsedChildCount, childSummary, overlay, waveLabel } = data;
+  const { node, selected, branch, onPath, dimmed, isNew, justIntegrated, expanding, collapsedChildCount, childSummary, overlay, waveLabel } = data;
   const status = node.vital.status;
   const hasProgress = node.vital.testProgress !== undefined;
   const glyph = nodeGlyph(status);
@@ -679,6 +655,7 @@ function MinimalTaskNode({ data }: NodeProps<Node<MinimalGraphNodeData>>): React
         selected ? "mh-min-node-selected" : "",
         onPath && !selected ? "mh-min-node-onpath" : "",
         isNew ? "mh-min-node-enter" : "",
+        justIntegrated ? "mh-min-node-integrated" : "",
         expanding ? "mh-min-node-expanding" : "",
         status === "failed" ? "mh-min-node-failed" : "",
         status === "blocked" ? "mh-min-node-blocked" : "",

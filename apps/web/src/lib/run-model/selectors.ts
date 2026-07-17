@@ -1,13 +1,14 @@
 /**
  * Run model selectors — the pure derivation layer.
  *
- * Source of truth: docs/design/run-operative-model.md §5 (frozen). PR 05 of the
- * implementation plan. Every selector is `(model) => derivedView`, PURE and
+ * Target semantics: docs/design/run-operative-model.md. The selectors below are
+ * part of the current implementation and must be gap-audited before migration.
+ * Every selector is `(model) => derivedView`, PURE and
  * read-only: it never mutates the `RunModel`. The UI consumes THESE, never the
  * raw model. The reducer (PR 04) stores entities only; ALL of phase/health/
  * wavefront/freshness/invalidation is derived here.
  *
- * Frozen rules honoured:
+ * Current v1 rules:
  *  - `freshness` is derived (revision comparison), never persisted; there is no
  *    `node.invalidated` and no `stale` execution state.
  *  - A node is stale only when it built against a seam revision behind the seam's

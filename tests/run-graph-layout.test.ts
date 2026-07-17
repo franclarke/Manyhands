@@ -26,6 +26,13 @@ describe("vertical task DAG layout", () => {
     expect(positions.get("a")?.x).toBe(childMidpoint);
   });
 
+  it("keeps the root anchored while children stream into the graph", () => {
+    const before = layoutVerticalTaskDag([NODES[0]!], new Set());
+    const after = layoutVerticalTaskDag(NODES, new Set());
+    expect(before.get("root")?.x).toBe(0);
+    expect(after.get("root")?.x).toBe(0);
+  });
+
   it("treats a collapsed composite as a leaf without moving descendants into the visible layout", () => {
     const positions = layoutVerticalTaskDag(NODES, new Set(["a"]));
     expect(positions.has("a")).toBe(true);

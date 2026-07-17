@@ -1,13 +1,14 @@
 /**
  * Proto view presenter — the PURE projection the fixture prototype renders.
  *
- * PR 06 of docs/design/implementation-plan.md. This is NOT the final UI; it is the
- * single composition point that turns a `RunModel` into everything the prototype
+ * This is a prototype projection, not evidence that the backend implements the
+ * target model. It is the single composition point that turns a `RunModel` into
+ * everything the prototype
  * page paints, by composing the PR 05 selectors. It lives in the model layer (not
  * inside a component) so it stays pure and node-testable — the React shell in
  * `apps/web/src/components/run-model/*` is a thin render over this object.
  *
- * Discipline honoured (docs/design/run-operative-model.md, frozen):
+ * Target discipline (docs/design/run-operative-model.md):
  *  - Components never derive: ALL phase/health/wavefront/freshness/invalidation
  *    comes from selectors, composed here once. The component re-reads, it never
  *    re-derives.

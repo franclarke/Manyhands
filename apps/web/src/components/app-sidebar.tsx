@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Workspace, RunPreview } from "@/lib/api-types";
+import { FIXTURE_CATALOG } from "@/lib/run-model/fixtures";
 import { sidebarInitiallyCollapsedForRoute, type SidebarStoredPreference } from "@/lib/cockpit-layout";
 import { runUiStatus, STATUS_META } from "@/lib/status";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -14,6 +15,7 @@ import {
   Plus,
   Folder,
   History,
+  FlaskConical,
   GitMerge,
   PanelLeftClose,
   PanelLeftOpen,
@@ -35,6 +37,7 @@ interface AppSidebarProps {
 export function AppSidebar({ workspaces, recentRuns, degradedRuns }: AppSidebarProps): React.ReactElement {
   const pathname = usePathname();
   const router = useRouter();
+  const isProtoRoute = pathname === "/runs/proto" || pathname.startsWith("/runs/proto/");
 
   const [collapsed, setCollapsed] = useState(false);
   const [runs, setRuns] = useState<RunPreview[]>(recentRuns);
@@ -113,6 +116,10 @@ export function AppSidebar({ workspaces, recentRuns, degradedRuns }: AppSidebarP
     } finally {
       setBusy(false);
     }
+  }
+
+  if (isProtoRoute) {
+    return <ProtoSidebar pathname={pathname} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />;
   }
 
   if (collapsed) {
@@ -278,6 +285,97 @@ function RailButton({
   children: React.ReactNode;
 }): React.ReactElement {
   return <IconButton label={label} onClick={onClick}>{children}</IconButton>;
+}
+
+function ProtoSidebar({
+  pathname,
+  collapsed,
+  onToggleCollapsed
+}: {
+  pathname: string;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+}): React.ReactElement {
+  if (collapsed) {
+    return (
+      <aside className="sticky top-0 flex h-screen w-14 shrink-0 flex-col items-center gap-1 overflow-hidden border-r border-[var(--color-border)] bg-[var(--color-bg-subtle)] py-[14px] font-sans">
+        <Logo type="mark" className="h-6 w-6" />
+        <div className="mt-2 flex flex-col items-center gap-1">
+          <Link
+            href="/runs/proto"
+            aria-label="Explorar fixtures de demo"
+            title="Explorar fixtures de demo"
+            className="flex h-9 w-9 items-center justify-center rounded-[var(--r-lg)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-accent-contrast)] transition-colors duration-150 hover:bg-[var(--color-accent-hover)]"
+          >
+            <FlaskConical aria-hidden className="h-4 w-4" />
+          </Link>
+          <RailButton label="Expandir barra lateral" onClick={onToggleCollapsed}>
+            <PanelLeftOpen aria-hidden className="h-4 w-4" />
+          </RailButton>
+        </div>
+        <div className="mt-auto"><ThemeToggle /></div>
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col overflow-hidden border-r border-[var(--color-border)] bg-[var(--color-bg-subtle)] font-sans">
+      <div className="flex items-center gap-3 border-b border-[var(--color-border-soft)] px-4 py-[14px]">
+        <Logo type="full" className="h-6 w-auto" />
+        <div className="ml-auto flex items-center gap-0.5">
+          <ThemeToggle />
+          <RailButton label="Colapsar barra lateral" onClick={onToggleCollapsed}>
+            <PanelLeftClose aria-hidden className="h-4 w-4" />
+          </RailButton>
+        </div>
+      </div>
+
+      <div className="px-3 pb-1 pt-3">
+        <Link
+          href="/runs/proto"
+          className="mh-lift flex h-9 w-full items-center justify-center gap-2 rounded-[var(--r-lg)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-label font-semibold text-[var(--color-accent-contrast)] transition-[background,border-color,box-shadow] duration-150 ease-out hover:border-[var(--color-accent-hover)] hover:bg-[var(--color-accent-hover)] active:translate-y-px"
+        >
+          <FlaskConical aria-hidden className="h-4 w-4" />
+          Explorar demos
+        </Link>
+      </div>
+
+      <section className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-4" aria-label="Fixtures disponibles">
+        <h3 className="flex items-center gap-1.5 px-1.5 pb-2 text-meta font-medium text-[var(--color-text-subtle)]">
+          <FlaskConical aria-hidden className="h-3 w-3" />
+          Fixtures disponibles
+        </h3>
+        <nav className="-mr-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pr-1">
+          {FIXTURE_CATALOG.map((fixture) => {
+            const active = pathname === `/runs/proto/${fixture.name}`;
+            return (
+              <Link
+                key={fixture.name}
+                href={`/runs/proto/${fixture.name}`}
+                aria-current={active ? "page" : undefined}
+                title={fixture.description}
+                className={[
+                  "flex flex-col gap-1 rounded-[var(--r-lg)] border px-3 py-2 transition-colors duration-150",
+                  active
+                    ? "mh-nav-active border-[var(--color-border)] bg-[var(--color-surface-raised)]"
+                    : "border-transparent hover:bg-[color-mix(in_srgb,var(--color-text)_4.5%,transparent)]"
+                ].join(" ")}
+              >
+                <span className={active ? "text-label font-semibold text-[var(--color-text)]" : "text-label font-medium text-[var(--color-text)]"}>
+                  {fixture.title}
+                </span>
+                <span className="line-clamp-2 text-micro leading-[1.35] text-[var(--color-text-subtle)]">{fixture.description}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </section>
+
+      <div className="mx-3 mb-3 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-meta text-[var(--color-text-muted)]">
+        Fixtures locales: esta vista no muestra workspaces ni ejecuciones reales.
+      </div>
+    </aside>
+  );
 }
 
 interface RunRowProps {

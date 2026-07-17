@@ -112,8 +112,8 @@ export type RunStatusKey =
   | "interrupted";
 
 export type RunGranularityKey = "auto" | "coarse" | "balanced" | "fine";
-// "gemini-cli" retained only so RunRecords persisted before the Claude Code swap
-// (ADR-0031) still type-check; it is no longer a live/selectable executor.
+// "gemini-cli" is retained only for legacy RunRecords created before the
+// current Claude Code/Codex executor set; it is not live or selectable.
 export type ExecutorId = "gemini-cli" | "claude-code-cli" | "codex-cli" | "opencode-cli";
 
 export interface ExecutorSelection {

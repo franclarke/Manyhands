@@ -1,12 +1,13 @@
 /**
  * Run operative model — v1 conceptual types.
  *
- * Source of truth: `docs/design/run-operative-model.md` (frozen, refinements A–P).
+ * Target model: `docs/design/run-operative-model.md`. These types represent the
+ * current implementation and may not yet satisfy that target.
  * This module is PURE TYPES + a few `const` vocabularies. No runtime logic, no
- * React, no backend imports — it must stay reducible/testable in isolation
- * (PR 02 of `docs/design/implementation-plan.md`).
+ * React, no backend imports — it must stay reducible/testable in isolation.
+ * Keep compatibility explicit while the transition plan is developed.
  *
- * Frozen decisions honoured here:
+ * Current v1 decisions represented here:
  *  - `RunEvent` is the dynamic source of truth (envelope: seq/at/runId/actor/type/payload).
  *  - `ExecutionState` does NOT include `stale` — freshness is a derived, orthogonal axis.
  *  - There is NO `node.invalidated` event — invalidation is derived from seam revision.
