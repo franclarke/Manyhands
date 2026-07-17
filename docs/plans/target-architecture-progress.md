@@ -10,8 +10,8 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-17 — Graph- and evidence-centered web workspace` |
-| Last completed packet | `WP-16 — Final candidate and transactional delivery` |
+| Current packet | `WP-18 — Legacy retirement` |
+| Last completed packet | `WP-17 — Graph- and evidence-centered web workspace` |
 | Open gate | G6 — Single architecture |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
@@ -33,6 +33,7 @@
 | WP-14 implementation commit | `01a385a` |
 | WP-15 implementation commit | `4423967` |
 | WP-16 implementation commit | `27925c8` |
+| WP-17 implementation commit | `f15929c` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -56,7 +57,7 @@
 | WP-14 EvidenceMatrix | completed | `01a385a` | 30/30 packet and validation/terminal regressions; execution-core/coordinator typechecks and builds passed | Capability-compiled recipes, exact clean candidate sandbox, criterion evidence matrix, baseline/flakiness/negative-control honesty and test-integrity findings; G4 closed |
 | WP-15 Integration manifests | completed | `4423967` | 35/35 manifest, legacy integration, recovery and real-Git tests; execution-core/coordinator typechecks and builds passed | Exact adopted child artifacts, complete integration manifests, parent evidence gate, one semantic repair and manifest-backed output adoption |
 | WP-16 Final candidate and delivery | completed | `27925c8` | 28/28 packet, delivery, route and terminal tests; execution-core/coordinator/web typechecks passed | Exact isolated candidate validation, immutable delivery approval, request fingerprint, retry-safe receipt adoption and receipt-only completion; G5 closed |
-| WP-17 Workspace web V2 | queued | — | — | — |
+| WP-17 Workspace web V2 | completed | `f15929c` | 154/154 model/canvas tests and target-path regression; web typecheck and production build passed | Canonical event adaptation, graph-centered lenses, local non-blocking decision dialogs, evidence matrix/result readiness and operator-owned viewport |
 | WP-18 Legacy retirement | queued | — | — | Split into WP-18A through WP-18D during execution |
 | WP-19 Migration and E2E | queued | — | — | — |
 
@@ -120,7 +121,7 @@ baseline until a later packet owns their migration.
 | G2 Canonical history | closed | WP-07 canonical event persistence and WP-08 productive planning slice use the same fenced event history; RunRecord is compatibility projection only |
 | G3 Exact adoption | closed | WP-09 through WP-11 provide canonical fingerprints, immutable adoption, exact artifact readiness and reproducible physical execution bases |
 | G4 Honest verification | closed | WP-14 compiles obligations from observed capabilities and requires criterion-linked evidence on the exact clean candidate, including required baselines, negative controls, flakiness and integrity findings |
-| G5 Real delivery | not_started | WP-16 |
+| G5 Real delivery | closed | WP-16 candidate validation, immutable approval, transactional publication and receipt-only completion |
 | G6 Single architecture | not_started | WP-18 |
 
 ## WP-01 evidence
@@ -762,6 +763,43 @@ git diff --check: passed
   resolvable candidate instead of declaring completion or destroying it.
 - `completed` remains derivable only from an evidence-eligible final candidate
   and a matching confirmed delivered receipt. Gate G5 is closed.
+
+## WP-17 evidence
+
+### Red-green evidence
+
+The initial V2 reducer, local-decision, result-readiness and viewport suites
+failed because the web model could not consume canonical coordinator events or
+represent evidence and local intervention state. The completed packet produced:
+
+```text
+WP-17 run-model and canvas suites: 7 files passed, 154 tests passed
+target reveal regression: 1 passed, 8 skipped
+web typecheck: passed
+web production build: passed
+git diff --check: passed
+```
+
+### Implemented graph-centered workspace
+
+- The SSE boundary losslessly adapts canonical coordinator envelopes and the
+  reducer folds V2 graph revisions, readiness, decisions, evidence, final
+  candidate and delivery facts into a serializable client projection.
+- The workspace's primary lenses are Grafo, Ejecución, Contratos and Riesgos;
+  planning, task, integration and interface concepts remain contextual details
+  rather than parallel product surfaces.
+- Human intervention is local to the affected graph context. A horizontal card
+  opens an accessible native dialog, while independent ready nodes remain
+  executable and the run is considered globally blocked only when no work can
+  progress.
+- Review shows criterion-level evidence with explicit pass, fail, uncovered and
+  unavailable states. Delivery remains unavailable unless the exact final
+  candidate has a verified evidence matrix.
+- Canvas framing runs only on initial node availability. Subsequent events and
+  generated nodes preserve the operator's pan and zoom; recentering is an
+  explicit toolbar action.
+- Route-only helper exports were moved behind a server module so Next.js route
+  contracts and production type generation remain valid.
 
 ## Resume instructions
 
