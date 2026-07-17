@@ -22,7 +22,6 @@
     "@manyhands/contracts": "workspace:*",
     "@manyhands/decomposer": "workspace:*",
     "@manyhands/repository-index": "workspace:*",
-    "@manyhands/run-store": "workspace:*",
     "@manyhands/scheduler": "workspace:*",
     "@manyhands/task-graph": "workspace:*",
     "@manyhands/trace-store": "workspace:*"

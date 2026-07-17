@@ -203,9 +203,6 @@ importers:
       '@manyhands/repository-index':
         specifier: workspace:*
         version: link:../repository-index
-      '@manyhands/run-store':
-        specifier: workspace:*
-        version: link:../run-store
       '@manyhands/scheduler':
         specifier: workspace:*
         version: link:../scheduler
@@ -327,30 +324,12 @@ importers:
 
   packages/run-store:
     dependencies:
-      '@manyhands/conflict-risk':
+      '@manyhands/run-coordinator':
         specifier: workspace:*
-        version: link:../conflict-risk
-      '@manyhands/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@manyhands/decomposer':
-        specifier: workspace:*
-        version: link:../decomposer
-      '@manyhands/repository-index':
-        specifier: workspace:*
-        version: link:../repository-index
-      '@manyhands/scheduler':
-        specifier: workspace:*
-        version: link:../scheduler
+        version: link:../run-coordinator
       '@manyhands/shared':
         specifier: workspace:*
         version: link:../shared
-      '@manyhands/task-graph':
-        specifier: workspace:*
-        version: link:../task-graph
-      '@manyhands/trace-store':
-        specifier: workspace:*
-        version: link:../trace-store
       zod:
         specifier: ^3.23.8
         version: 3.25.76

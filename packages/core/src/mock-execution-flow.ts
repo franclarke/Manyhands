@@ -10,7 +10,7 @@
  */
 import type { AgentRunResult } from "@manyhands/contracts";
 import type { DecompositionMode } from "@manyhands/decomposer";
-import type { RunSnapshot, ScopeValidationResult } from "@manyhands/run-store";
+import type { RunSnapshot, ScopeValidationResult } from "./legacy-run-store";
 import type { HumanGateResult, SchedulerPlan } from "@manyhands/scheduler";
 import type { TraceEvent } from "@manyhands/trace-store";
 import type { MockPlanningFlowResult, PlanningRunSummary } from "./mock-planning-flow";
