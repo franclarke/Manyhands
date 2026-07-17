@@ -10,8 +10,8 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-13 — Failure recovery and amendments V2` |
-| Last completed packet | `WP-12 — Execution coordination V2` |
+| Current packet | `WP-14 — ValidationRecipe and EvidenceMatrix` |
+| Last completed packet | `WP-13 — Failure recovery and amendments V2` |
 | Open gate | G4 — Honest verification |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
@@ -29,6 +29,7 @@
 | WP-10 implementation commit | `1623025` |
 | WP-11 implementation commit | `824332d` |
 | WP-12 implementation commit | `4e8ad12` |
+| WP-13 implementation commit | `9b074cc` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -48,7 +49,7 @@
 | WP-10 Scheduler readiness V2 | completed | `1623025` | 26/26 packet and scheduling regressions; scheduler/conflict-risk typechecks and builds passed | Pure per-node readiness reasons, artifact/decision scoped blocking, required effective maxParallel and evidenced conflict constraints with unknown risk |
 | WP-11 ExecutionBaseBuilder | completed | `824332d` | 56/56 packet and execution regressions; execution-core/web typechecks and execution-core build passed | Exact declared artifact materialization, structured pre-dispatch conflicts, reproducible base manifests and reserved-attempt fingerprint validation |
 | WP-12 Execution coordination | completed | `4e8ad12` | 28/28 packet and StateGraph/audit regressions; coordinator/orchestrator/web typechecks and package builds passed | Command-driven readiness, local decisions, durable wave-before-dispatch boundary and fenced web V2 host adapter |
-| WP-13 Failure recovery | queued | — | — | — |
+| WP-13 Failure recovery | completed | `9b074cc` | 28/28 packet and legacy replan regressions; coordinator/execution-core/web typechecks and package builds passed | Cause-specific recovery policy, evidenced immutable graph amendments and exact fingerprint invalidation with V1 closure retained only as compatibility behavior |
 | WP-14 EvidenceMatrix | queued | — | — | — |
 | WP-15 Integration manifests | queued | — | — | — |
 | WP-16 Final candidate and delivery | queued | — | — | — |
@@ -594,6 +595,48 @@ git diff --check: passed
 - The web V2 host binds this cursor to the fenced JSONL event journal. The
   existing LangGraph execution graph is explicitly documented as a V1
   compatibility branch-cursor adapter, not the V2 lifecycle authority.
+
+## WP-13 evidence
+
+### Red-green evidence
+
+All twelve initial classifier, amendment and invalidation cases failed because
+the recovery domain did not exist. The completed packet produced:
+
+```text
+WP-13 and legacy replan regressions: 5 files passed, 28 tests passed
+run-coordinator typecheck: passed
+execution-core typecheck: passed
+web TypeScript check: passed
+run-coordinator and execution-core builds: passed
+git diff --check: passed
+```
+
+The expected stderr from legacy replan-question fixtures was preserved: those
+tests intentionally launch background recovery against incomplete fixture
+repositories and assert the resulting durable failure or resumable gate.
+
+### Implemented cause-specific recovery
+
+- Failures are classified as transient, environment/auth/executor, code/test,
+  contract/decomposition, undeclared artifact, scope/unexpected commit,
+  integration or shared infrastructure. Classification compiles to an explicit
+  action set, automatic retry budget and mandatory candidate-discard rule.
+- Scope violations and unexpected agent commits always discard the candidate;
+  no policy can auto-adopt them. Environment and shared-infrastructure causes
+  do not consume blind code-retry loops.
+- `failure.classified` persists the observation, class, allowed actions, retry
+  budget and disposition. `graph.amendment.proposed` persists rationale,
+  evidence and operations before approval.
+- A discovered artifact dependency becomes an evidenced proposal over the
+  current graph identity. Approval applies operations through `reviseGraph`,
+  producing a new immutable revision and rejecting stale proposals.
+- V2 invalidation compares each attempt's complete old and current input
+  fingerprint. Only mismatches become stale; unchanged independent work is
+  retained even when graph ancestry or another branch changes.
+- The legacy closure-based amendments engine remains available for V1 recovery
+  while exposing exact fingerprint invalidation for the V2 migration. Its
+  existing replan and question-gate suites remain green.
 
 ## Resume instructions
 
