@@ -39,6 +39,12 @@ import type { ValidationRunner } from "../validation/runner";
 import { ChildProcessValidationRunner } from "../validation/runner";
 import { ChildProcessDependencyInstaller, type DependencyInstaller } from "../validation/dependencies";
 import type { IntegrationOperation, IntegrationOperationJournal } from "./operation-journal";
+import {
+  IntegrationManifestExecutor,
+  type IntegrationManifest,
+  type IntegrationManifestExecutorDeps,
+  type IntegrationRequestManifest
+} from "./manifest";
 
 export interface IntegrationAgentDeps {
   git: GitRunner;
@@ -857,6 +863,13 @@ export class IntegrationAgent {
       result: finalized
     });
     return finalized;
+  }
+
+  async integrateManifest(
+    input: { request: IntegrationRequestManifest; worktreePath: string },
+    dependencies: Omit<IntegrationManifestExecutorDeps, "git">
+  ): Promise<IntegrationManifest> {
+    return new IntegrationManifestExecutor({ git: this.git, ...dependencies }).integrate(input);
   }
 
   private async openOperation(params: IntegrationParams): Promise<IntegrationOperation | undefined> {

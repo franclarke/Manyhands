@@ -38,6 +38,8 @@ export interface IntegrationOperation {
   runId: string;
   parentNodeId: string;
   attemptId?: string;
+  requestManifestId?: string;
+  resultManifestId?: string;
   operationId?: string;
   fencingToken?: number;
   worktreePath: string;
@@ -214,6 +216,7 @@ function assertSameOperation(
   if (
     existing.worktreePath !== input.worktreePath ||
     existing.baseSha !== input.baseSha ||
+    existing.requestManifestId !== input.requestManifestId ||
     JSON.stringify(existing.children.map(({ taskId, commitSha }) => ({ taskId, commitSha }))) !==
       JSON.stringify(input.children.map(({ taskId, commitSha }) => ({ taskId, commitSha })))
   ) {
@@ -244,6 +247,7 @@ function assertPatchDoesNotRewriteIdentity(
     "runId",
     "parentNodeId",
     "attemptId",
+    "requestManifestId",
     "operationId",
     "fencingToken",
     "worktreePath",

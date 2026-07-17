@@ -40,6 +40,7 @@ export * from "./validation/candidate-validator";
 export * from "./validation/baseline";
 export * from "./validation/test-integrity";
 export * from "./integration/agent";
+export * from "./integration/manifest";
 export * from "./integration/operation-journal";
 export * from "./integration/pre-merge";
 export * from "./integration/syntax-check";

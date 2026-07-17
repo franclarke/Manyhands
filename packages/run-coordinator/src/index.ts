@@ -1,6 +1,7 @@
 export * from "./commands.js";
 export * from "./coordinator.js";
 export * from "./execution.js";
+export * from "./integration.js";
 export * from "./amendments.js";
 export * from "./recovery-policy.js";
 export * from "./domain/decisions.js";
