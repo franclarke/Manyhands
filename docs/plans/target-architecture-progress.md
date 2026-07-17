@@ -10,12 +10,13 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-01 — Contratos V2 versionados` |
-| Last completed packet | `WP-00 — Baseline and characterization` |
+| Current packet | `WP-02 — RepositorySnapshot inmutable y baseline` |
+| Last completed packet | `WP-01 — Contratos V2 versionados` |
 | Open gate | Pre-G1 |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
 | WP-00 implementation commit | `d381f61` |
+| WP-01 implementation commit | `cee0973` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -23,8 +24,8 @@
 | Packet | Status | Implementation commit | Verification | Notes |
 |---|---|---|---|---|
 | WP-00 Baseline | completed | `d381f61` | 5/5 narrow tests passed | V1 run fixture, current lifecycle characterization, package boundary guard and frozen `@manyhands/core` allowlist |
-| WP-01 Contracts V2 | queued | — | — | Next packet |
-| WP-02 Repository snapshot | queued | — | — | — |
+| WP-01 Contracts V2 | completed | `cee0973` | 23/23 contract tests, 56/56 direct consumer tests, package typecheck and build passed | Five versioned contracts, bundle invariants and loss-aware V1 adapter with explicit migration issues |
+| WP-02 Repository snapshot | queued | — | — | Next packet |
 | WP-03 GraphRevision | queued | — | — | — |
 | WP-04 WorkBreakdown | queued | — | — | — |
 | WP-05 Graph Compiler | queued | — | — | — |
@@ -105,6 +106,47 @@ baseline until a later packet owns their migration.
 | G4 Honest verification | not_started | WP-14 |
 | G5 Real delivery | not_started | WP-16 |
 | G6 Single architecture | not_started | WP-18 |
+
+## WP-01 evidence
+
+### Red-green evidence
+
+Before implementation, both new suites failed because the V2 schemas and
+adapter did not exist:
+
+```text
+Test Files 2 failed (2)
+Tests 9 failed (9)
+```
+
+After implementation:
+
+```text
+Contract suites: 4 files passed, 23 tests passed
+Direct consumer suites: 3 files passed, 56 tests passed
+@manyhands/contracts typecheck: passed
+@manyhands/contracts build including declarations: passed
+```
+
+Commands:
+
+```bash
+pnpm test -- tests/contracts-v2.test.ts tests/contracts-v1-compatibility.test.ts tests/contract-boundary-validation.test.ts tests/contracts-interface-contract.test.ts
+pnpm test -- tests/decomposer-recursive.test.ts tests/execution-core-types.test.ts tests/task-graph-graft.test.ts
+pnpm --filter @manyhands/contracts typecheck
+pnpm --filter @manyhands/contracts build
+```
+
+### Implemented contract
+
+- Added versioned `TaskContract`, `ScopeContract`, `SeamContract`,
+  `ArtifactContract` and `ValidationContract` schemas.
+- Added strict bundle validation for references, revisions, task ownership and
+  acceptance-criterion coverage.
+- Rejected unsafe repo paths and structurally impossible self-consumption.
+- Added deterministic content-derived legacy revisions.
+- V1 dependencies, commands and incomplete seams are emitted as explicit
+  `migrationIssues`; the adapter does not invent V2 evidence or relations.
 
 ## Resume instructions
 
