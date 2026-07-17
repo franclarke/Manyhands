@@ -10,8 +10,8 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-09 — Artifact registry e InputFingerprint` |
-| Last completed packet | `WP-08 — Slice vertical de planning V2` |
+| Current packet | `WP-10 — Scheduler readiness V2` |
+| Last completed packet | `WP-09 — Artifact registry e InputFingerprint` |
 | Open gate | G3 — Artifact identity |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
@@ -24,6 +24,7 @@
 | WP-06 implementation commit | `9de4893` |
 | WP-07 implementation commit | `f1c0428` |
 | WP-08 implementation commit | `9c08157` |
+| WP-09 implementation commit | `b0c0fb0` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -39,7 +40,7 @@
 | WP-06 RunCoordinator kernel | completed | `9de4893` | 9/9 packet tests, 12/12 with baseline, package typecheck/build and full package build passed | Framework-independent event-folded lifecycle, explicit outcomes and decisions, guarded commands, cancellation fencing and receipt-backed completion |
 | WP-07 Event store | completed | `f1c0428` | 19/19 packet, durability and baseline tests; run-store/core typechecks and builds passed | Canonical JSONL events with CAS, idempotency and durable fencing; discardable snapshots; audited legacy importer; V1 snapshot isolated in core |
 | WP-08 Planning V2 slice | completed | `9c08157` | 33/33 packet and adjacent tests; coordinator, orchestrator and web typechecks; three package builds passed | Opt-in productive inspector-to-approval path, selected CLI with bounded retries/timeouts, canonical facts, revision CAS and compatible RunRecord projection; G2 closed |
-| WP-09 Artifacts and fingerprints | queued | — | — | — |
+| WP-09 Artifacts and fingerprints | completed | `b0c0fb0` | 12/12 packet and legacy journal tests; coordinator/store typechecks and builds passed | Canonical full-input fingerprint, immutable artifact/attempt registries and one exact adoption gate with explicit stale event |
 | WP-10 Scheduler readiness V2 | queued | — | — | — |
 | WP-11 ExecutionBaseBuilder | queued | — | — | — |
 | WP-12 Execution coordination | queued | — | — | — |
@@ -455,6 +456,35 @@ run-coordinator, run-store and orchestrator-graph builds: passed
   V2 lifecycle and facts come only from RunCoordinator events. Existing API
   readers receive a compatibility RunRecord projection, not a second semantic
   write model.
+
+## WP-09 evidence
+
+### Red-green evidence
+
+All five initial identity and registry tests failed because fingerprint,
+artifact and attempt APIs did not exist. The completed packet produced:
+
+```text
+WP-09 plus legacy task-attempt journal: 4 files passed, 12 tests passed
+run-coordinator and run-store typechecks: passed
+run-coordinator and run-store builds: passed
+```
+
+### Implemented exact adoption identity
+
+- `InputFingerprint` hashes graph and node identity, every relevant contract
+  revision, base commit, consumed artifact ids and digests, repository context,
+  executor profile revision and validation contract revision. Set-like inputs
+  are uniqueness-checked and canonically sorted.
+- Attempts are immutable records. A retry gets a new identity and points to its
+  predecessor; prior evidence remains in the append-only registry.
+- Adopted artifacts are immutable and include content digest, producer attempt,
+  producing node, contract revision, kind, location and adoption time. Exact
+  retries are idempotent; divergent reuse of an id fails.
+- `adoptAttemptResult` is the single productive eligibility gate. A finished
+  attempt with a mismatched fingerprint returns `attempt.stale` and never calls
+  the artifact registry; an exact match records the artifact and emits
+  `artifact.adopted`.
 
 ## Resume instructions
 
