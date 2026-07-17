@@ -10,8 +10,8 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-07 — Event store, snapshots y fencing V2` |
-| Last completed packet | `WP-06 — Kernel framework-independent de RunCoordinator` |
+| Current packet | `WP-08 — Slice vertical de planning V2` |
+| Last completed packet | `WP-07 — Event store, snapshots y fencing V2` |
 | Open gate | G2 — Canonical history |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
@@ -22,6 +22,7 @@
 | WP-04 implementation commit | `180ed88` |
 | WP-05 implementation commit | `3d39ac4` |
 | WP-06 implementation commit | `9de4893` |
+| WP-07 implementation commit | `f1c0428` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -35,7 +36,7 @@
 | WP-04 WorkBreakdown | completed | `180ed88` | 33/33 focused tests, package typecheck and build passed | Semantic recursive schema, grounded prompt, bounded repair, cache and explicit model failure |
 | WP-05 Graph Compiler | completed | `3d39ac4` | 38/38 cross-boundary tests, four package typechecks and decomposer build passed | Deterministic compiler, complete V2 bundles, traceability and eight structured critics; G1 closed |
 | WP-06 RunCoordinator kernel | completed | `9de4893` | 9/9 packet tests, 12/12 with baseline, package typecheck/build and full package build passed | Framework-independent event-folded lifecycle, explicit outcomes and decisions, guarded commands, cancellation fencing and receipt-backed completion |
-| WP-07 Event store | queued | — | — | — |
+| WP-07 Event store | completed | `f1c0428` | 19/19 packet, durability and baseline tests; run-store/core typechecks and builds passed | Canonical JSONL events with CAS, idempotency and durable fencing; discardable snapshots; audited legacy importer; V1 snapshot isolated in core |
 | WP-08 Planning V2 slice | queued | — | — | — |
 | WP-09 Artifacts and fingerprints | queued | — | — | — |
 | WP-10 Scheduler readiness V2 | queued | — | — | — |
@@ -380,6 +381,42 @@ all workspace package builds: passed
   only records interruption after every owned process is confirmed dead.
 - The package has no dependency on web frameworks, persistence, Git,
   `execution-core`, `orchestrator-graph` or `run-store`.
+
+## WP-07 evidence
+
+### Red-green evidence
+
+All five initial persistence scenarios failed because the V2 event-store API
+did not exist. After the implementation and concurrency hardening:
+
+```text
+WP-07 own suites: 3 files passed, 8 tests passed
+WP-07 plus legacy durability and architecture baseline: 6 files passed, 19 tests passed
+run-store and core typechecks: passed
+@manyhands/run-store and @manyhands/core builds: passed
+```
+
+### Implemented canonical persistence
+
+- `JsonlRunEventStore` assigns sequences under expected-sequence CAS,
+  deduplicates exact retries by stable `eventId` and rejects mixed or divergent
+  retries.
+- Every append and snapshot requires the current operation id and monotonic
+  fencing token. An atomic filesystem lock serializes writers across package
+  instances and processes; a superseded owner cannot publish events, delivery
+  receipts or cache state.
+- JSONL records are checksummed and schema-versioned. A final incomplete line
+  preserves the valid prefix and is replaced on the next append; middle,
+  checksum or domain-history corruption fails explicitly.
+- `RunSnapshotStore` treats projections as disposable cache entries. Corrupt,
+  stale-sequence or stale-authority snapshots are rebuilt by folding canonical
+  events.
+- `LegacyRunRecordImporter` requires an approving actor and an explicit lossy
+  mapping, returning source hash, warnings and import metadata instead of
+  projecting legacy records as fictitious observed facts.
+- The productive `run-store` package now depends only on `run-coordinator`,
+  `shared` and schema support. The V1 snapshot surface remains available from
+  the already-legacy `core` package until WP-18.
 
 ## Resume instructions
 
