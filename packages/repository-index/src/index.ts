@@ -4,6 +4,15 @@ import path from "node:path";
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema, uniqueValues } from "@manyhands/shared";
 import ts from "typescript";
 import { z } from "zod";
+import {
+  buildRepositorySnapshotRecord,
+  createRepositorySnapshotSchema,
+  type RepositorySnapshotBuilderInput,
+  type RepositorySnapshotRecord
+} from "./snapshot.js";
+
+export * from "./capabilities.js";
+export * from "./snapshot.js";
 
 export const RepositoryFileKindSchema = z.union([
   z.literal("source"),
@@ -31,6 +40,7 @@ export type RepositorySymbolKind = z.infer<typeof RepositorySymbolKindSchema>;
 export const RepositoryFileIndexSchema = z.object({
   path: NonEmptyStringSchema,
   kind: RepositoryFileKindSchema,
+  contentHash: NonEmptyStringSchema.optional(),
   exportedSymbols: z.array(NonEmptyStringSchema).default([]),
   importedSymbols: z.array(NonEmptyStringSchema).default([]),
   declaredSymbols: z.array(NonEmptyStringSchema).default([])
@@ -321,6 +331,40 @@ async function listIndexableFiles(
   return { files: result.sort(), diagnostics };
 }
 
+export const RepositorySnapshotSchema = createRepositorySnapshotSchema(RepositoryIndexSchema);
+export type RepositorySnapshot = RepositorySnapshotRecord<RepositoryIndex>;
+
+export interface RepositorySnapshotBuilderOptions {
+  indexer?: RepositoryIndexer;
+  now?: () => string;
+}
+
+export class RepositorySnapshotBuilder {
+  private readonly indexer: RepositoryIndexer;
+  private readonly now: () => string;
+
+  constructor(options: RepositorySnapshotBuilderOptions = {}) {
+    this.indexer = options.indexer ?? new TypeScriptRepositoryIndexer();
+    this.now = options.now ?? (() => new Date().toISOString());
+  }
+
+  async build(input: RepositorySnapshotBuilderInput): Promise<RepositorySnapshot> {
+    const snapshot = await buildRepositorySnapshotRecord<RepositoryIndex>(input, {
+      index: (indexInput) => this.indexer.index(indexInput),
+      computeIndexHash: computeRepositoryIndexHash,
+      now: this.now
+    });
+    RepositorySnapshotSchema.parse(snapshot);
+    return snapshot;
+  }
+}
+
+export async function buildRepositorySnapshot(
+  input: RepositorySnapshotBuilderInput
+): Promise<RepositorySnapshot> {
+  return new RepositorySnapshotBuilder().build(input);
+}
+
 function normalizeLimits(input: Partial<RepositoryIndexLimits> | undefined): RepositoryIndexLimits {
   const candidate = { ...DEFAULT_LIMITS, ...input };
   for (const [name, value] of Object.entries(candidate)) {
@@ -359,12 +403,15 @@ async function parseFile(rootPath: string, absolutePath: string): Promise<Parsed
   const relativePath = normalizeRepositoryPath(path.relative(rootPath, absolutePath));
   const extension = path.extname(relativePath);
   const kind = classifyFileKind(relativePath);
+  const sourceText = await readFile(absolutePath, "utf8");
+  const contentHash = createHash("sha256").update(sourceText).digest("hex");
 
   if (extension === ".json") {
     return {
       file: {
         path: relativePath,
         kind,
+        contentHash,
         exportedSymbols: [],
         importedSymbols: [],
         declaredSymbols: []
@@ -376,7 +423,6 @@ async function parseFile(rootPath: string, absolutePath: string): Promise<Parsed
     };
   }
 
-  const sourceText = await readFile(absolutePath, "utf8");
   const sourceFile = ts.createSourceFile(
     relativePath,
     sourceText,
@@ -431,6 +477,7 @@ async function parseFile(rootPath: string, absolutePath: string): Promise<Parsed
   const file = RepositoryFileIndexSchema.parse({
     path: relativePath,
     kind,
+    contentHash,
     exportedSymbols: uniqueValues(exportedSymbols).sort(),
     importedSymbols: uniqueValues(importedSymbols).sort(),
     declaredSymbols: uniqueValues(declaredSymbols).sort()
