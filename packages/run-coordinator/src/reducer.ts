@@ -2,6 +2,30 @@ import { DecisionSchema, type Decision } from "./domain/decisions.js";
 import { RunEventSchema, type RunEvent } from "./domain/events.js";
 import { assertLifecycleTransition, type RunLifecycle } from "./domain/lifecycle.js";
 import { INITIAL_RUN_OUTCOMES, type DeliveryApproval, type DeliveryReceipt, type FinalCandidate, type RunOutcomes } from "./domain/outcomes.js";
+import type { AdoptedArtifact } from "./domain/artifacts.js";
+
+export interface AttemptProjection {
+  attemptId: string;
+  nodeId: string;
+  inputFingerprint: string;
+  kind: "execution" | "integration";
+  status: "running" | "candidate" | "validated" | "adopted" | "failed" | "discarded" | "stale";
+  candidateCommit?: string;
+  outputDigest?: string;
+  failureReason?: string;
+}
+
+export interface IntegrationProjection {
+  attemptId: string;
+  nodeId: string;
+  requiredArtifactIds: string[];
+  status: "running" | "completed" | "failed" | "decision_required";
+  manifestId?: string;
+  candidateCommit?: string;
+  evidenceMatrixId?: string;
+  repairPasses: number;
+  failureReason?: string;
+}
 
 export interface RunProjection {
   runId: string;
@@ -15,6 +39,10 @@ export interface RunProjection {
   decisions: Record<string, Decision>;
   readiness: { readyNodeIds: string[]; pendingDecisionIds: string[] };
   selectedWaves: Array<{ waveId: string; nodeIds: string[]; maxParallel: number }>;
+  attempts: Record<string, AttemptProjection>;
+  adoptedArtifacts: Record<string, AdoptedArtifact>;
+  nodeEvidenceMatrixIds: Record<string, string>;
+  integrations: Record<string, IntegrationProjection>;
   recoveryHistory: Array<{ eventId: string; nodeId?: string; kind: "failure" | "amendment" }>;
   evidenceMatrices: string[];
   outcomes: RunOutcomes;
@@ -44,6 +72,10 @@ export function foldRun(rawEvents: readonly RunEvent[]): RunProjection {
         decisions: {},
         readiness: { readyNodeIds: [], pendingDecisionIds: [] },
         selectedWaves: [],
+        attempts: {},
+        adoptedArtifacts: {},
+        nodeEvidenceMatrixIds: {},
+        integrations: {},
         recoveryHistory: [],
         evidenceMatrices: [],
         outcomes: { ...INITIAL_RUN_OUTCOMES }
@@ -72,10 +104,97 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       next.failureReason = event.payload.reason;
       transition(next, "failed");
       break;
-    case "attempt.stale":
-    case "artifact.adopted":
+    case "attempt.started":
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot record execution artifacts while ${next.lifecycle}.`);
+      if (next.attempts[event.payload.attemptId] !== undefined) throw new Error(`Attempt ${event.payload.attemptId} already exists.`);
+      next.attempts[event.payload.attemptId] = {
+        attemptId: event.payload.attemptId,
+        nodeId: event.payload.nodeId,
+        inputFingerprint: event.payload.inputFingerprint,
+        kind: "execution",
+        status: "running"
+      };
       break;
+    case "attempt.candidate_created": {
+      const attempt = requireAttempt(next, event.payload.attemptId, event.payload.nodeId);
+      if (attempt.status !== "running") throw new Error(`Attempt ${attempt.attemptId} cannot create a candidate while ${attempt.status}.`);
+      attempt.status = "candidate";
+      attempt.candidateCommit = event.payload.candidateCommit;
+      attempt.outputDigest = event.payload.outputDigest;
+      break;
+    }
+    case "attempt.failed": {
+      const attempt = requireAttempt(next, event.payload.attemptId, event.payload.nodeId);
+      attempt.status = "failed";
+      attempt.failureReason = event.payload.reason;
+      break;
+    }
+    case "attempt.discarded": {
+      const attempt = requireAttempt(next, event.payload.attemptId, event.payload.nodeId);
+      attempt.status = "discarded";
+      attempt.failureReason = event.payload.reason;
+      break;
+    }
+    case "attempt.stale": {
+      const attempt = next.attempts[event.payload.attemptId];
+      if (attempt !== undefined) attempt.status = "stale";
+      break;
+    }
+    case "validation.started":
+    case "validation.evidence_recorded":
+      requireAttempt(next, event.payload.attemptId, event.payload.nodeId);
+      break;
+    case "validation.completed": {
+      const attempt = requireAttempt(next, event.payload.attemptId, event.payload.nodeId);
+      if (attempt.status !== "candidate") throw new Error(`Attempt ${attempt.attemptId} cannot complete validation while ${attempt.status}.`);
+      attempt.status = "validated";
+      next.nodeEvidenceMatrixIds[event.payload.nodeId] = event.payload.matrix.matrixId;
+      if (!next.evidenceMatrices.includes(event.payload.matrix.matrixId)) next.evidenceMatrices.push(event.payload.matrix.matrixId);
+      break;
+    }
+    case "artifact.adopted": {
+      if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot record execution artifacts while ${next.lifecycle}.`);
+      const artifact = event.payload.artifact;
+      if (next.adoptedArtifacts[artifact.artifactId] !== undefined) throw new Error(`Artifact ${artifact.artifactId} already exists.`);
+      next.adoptedArtifacts[artifact.artifactId] = structuredClone(artifact);
+      const attempt = next.attempts[artifact.producerAttemptId];
+      if (attempt !== undefined) attempt.status = "adopted";
+      break;
+    }
+    case "integration.started":
+      if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot integrate while ${next.lifecycle}.`);
+      if (next.attempts[event.payload.attemptId] !== undefined) throw new Error(`Attempt ${event.payload.attemptId} already exists.`);
+      next.attempts[event.payload.attemptId] = { attemptId: event.payload.attemptId, nodeId: event.payload.nodeId, inputFingerprint: event.payload.inputFingerprint, kind: "integration", status: "running" };
+      next.integrations[event.payload.nodeId] = { attemptId: event.payload.attemptId, nodeId: event.payload.nodeId, requiredArtifactIds: [...event.payload.requiredArtifactIds], status: "running", repairPasses: 0 };
+      break;
+    case "integration.repair_attempted": {
+      const integration = requireIntegration(next, event.payload.attemptId, event.payload.nodeId);
+      integration.repairPasses = Math.max(integration.repairPasses, event.payload.pass);
+      break;
+    }
+    case "integration.completed": {
+      const integration = requireIntegration(next, event.payload.attemptId, event.payload.nodeId);
+      integration.status = "completed";
+      if (event.payload.manifestId !== undefined) integration.manifestId = event.payload.manifestId;
+      integration.candidateCommit = event.payload.candidateCommit;
+      integration.evidenceMatrixId = event.payload.matrix.matrixId;
+      const attempt = requireAttempt(next, event.payload.attemptId, event.payload.nodeId);
+      attempt.status = "validated";
+      attempt.candidateCommit = event.payload.candidateCommit;
+      next.nodeEvidenceMatrixIds[event.payload.nodeId] = event.payload.matrix.matrixId;
+      if (!next.evidenceMatrices.includes(event.payload.matrix.matrixId)) next.evidenceMatrices.push(event.payload.matrix.matrixId);
+      break;
+    }
+    case "integration.failed": {
+      const integration = requireIntegration(next, event.payload.attemptId, event.payload.nodeId);
+      integration.status = event.payload.decisionRequired ? "decision_required" : "failed";
+      if (event.payload.manifestId !== undefined) integration.manifestId = event.payload.manifestId;
+      integration.failureReason = event.payload.reason;
+      const attempt = requireAttempt(next, event.payload.attemptId, event.payload.nodeId);
+      attempt.status = "failed";
+      attempt.failureReason = event.payload.reason;
+      break;
+    }
     case "failure.classified":
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot classify execution failure while ${next.lifecycle}.`);
       next.recoveryHistory.push({ eventId: event.eventId, nodeId: event.payload.nodeId, kind: "failure" });
@@ -191,6 +310,18 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
   next.sequence = event.sequence;
   next.appliedEventIds.push(event.eventId);
   return next;
+}
+
+function requireAttempt(state: RunProjection, attemptId: string, nodeId: string): AttemptProjection {
+  const attempt = state.attempts[attemptId];
+  if (attempt === undefined || attempt.nodeId !== nodeId) throw new Error(`Attempt ${attemptId} does not belong to node ${nodeId}.`);
+  return attempt;
+}
+
+function requireIntegration(state: RunProjection, attemptId: string, nodeId: string): IntegrationProjection {
+  const integration = state.integrations[nodeId];
+  if (integration === undefined || integration.attemptId !== attemptId) throw new Error(`Integration attempt ${attemptId} does not belong to node ${nodeId}.`);
+  return integration;
 }
 
 function transition(state: RunProjection, target: RunLifecycle): void {
