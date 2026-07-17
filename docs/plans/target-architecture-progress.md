@@ -10,8 +10,8 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-10 — Scheduler readiness V2` |
-| Last completed packet | `WP-09 — Artifact registry e InputFingerprint` |
+| Current packet | `WP-11 — ExecutionBaseBuilder e intentos exactos` |
+| Last completed packet | `WP-10 — Scheduler readiness V2` |
 | Open gate | G3 — Artifact identity |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
@@ -25,6 +25,8 @@
 | WP-07 implementation commit | `f1c0428` |
 | WP-08 implementation commit | `9c08157` |
 | WP-09 implementation commit | `b0c0fb0` |
+| WP-09 contract-identity correction | `a697974` |
+| WP-10 implementation commit | `1623025` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -41,7 +43,7 @@
 | WP-07 Event store | completed | `f1c0428` | 19/19 packet, durability and baseline tests; run-store/core typechecks and builds passed | Canonical JSONL events with CAS, idempotency and durable fencing; discardable snapshots; audited legacy importer; V1 snapshot isolated in core |
 | WP-08 Planning V2 slice | completed | `9c08157` | 33/33 packet and adjacent tests; coordinator, orchestrator and web typechecks; three package builds passed | Opt-in productive inspector-to-approval path, selected CLI with bounded retries/timeouts, canonical facts, revision CAS and compatible RunRecord projection; G2 closed |
 | WP-09 Artifacts and fingerprints | completed | `b0c0fb0` | 12/12 packet and legacy journal tests; coordinator/store typechecks and builds passed | Canonical full-input fingerprint, immutable artifact/attempt registries and one exact adoption gate with explicit stale event |
-| WP-10 Scheduler readiness V2 | queued | — | — | — |
+| WP-10 Scheduler readiness V2 | completed | `1623025` | 26/26 packet and scheduling regressions; scheduler/conflict-risk typechecks and builds passed | Pure per-node readiness reasons, artifact/decision scoped blocking, required effective maxParallel and evidenced conflict constraints with unknown risk |
 | WP-11 ExecutionBaseBuilder | queued | — | — | — |
 | WP-12 Execution coordination | queued | — | — | — |
 | WP-13 Failure recovery | queued | — | — | — |
@@ -485,6 +487,38 @@ run-coordinator and run-store builds: passed
   attempt with a mismatched fingerprint returns `attempt.stale` and never calls
   the artifact registry; an exact match records the artifact and emits
   `artifact.adopted`.
+
+Supporting correction `a697974` aligns artifact, validation, executor-profile
+and contract revisions with the repository's content-identity string contract;
+only graph revisions remain monotonic integers.
+
+## WP-10 evidence
+
+### Red-green evidence
+
+All five initial scheduler/constraint cases failed because the V2 APIs did not
+exist. The final verification produced:
+
+```text
+WP-10 and adjacent scheduling suites: 4 files passed, 26 tests passed
+scheduler and conflict-risk typechecks: passed
+scheduler and conflict-risk builds: passed
+```
+
+### Implemented explainable readiness
+
+- `explainReadiness` is pure and returns every applicable reason: exact missing
+  artifact revision, stale contract, affected unresolved decision,
+  unmaterializable base, active resource constraint, exhausted budget,
+  unavailable executor or already-adopted node.
+- Seam compatibility never creates readiness order. An artifact requirement
+  blocks only its declared consumer, and a decision blocks only its affected
+  node set.
+- `selectReadyWaveV2` consumes the persisted effective `maxParallel`; missing
+  or invalid values fail instead of being defaulted inside the scheduler.
+- Conflict constraints retain signals, confidence, observation and expiry.
+  Missing evidence yields `unknown`, never fabricated `low`; unknown, high and
+  blocking pairs are not co-scheduled.
 
 ## Resume instructions
 
