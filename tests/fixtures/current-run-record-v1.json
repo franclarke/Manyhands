@@ -1,0 +1,102 @@
+{
+  "runId": "run-current-v1",
+  "workspaceId": "workspace-current-v1",
+  "granularity": "balanced",
+  "model": "claude-sonnet-4.5",
+  "userPrompt": "Add appointment booking",
+  "title": "Appointment booking",
+  "version": 18,
+  "mutationFence": 7,
+  "activeOperation": {
+    "operationId": "77777777-7777-4777-8777-777777777777",
+    "kind": "delivery",
+    "fencingToken": 7,
+    "acquiredAt": "2026-07-17T00:05:30.000Z",
+    "heartbeatAt": "2026-07-17T00:05:35.000Z"
+  },
+  "status": "needs_delivery",
+  "createdAt": "2026-07-17T00:00:00.000Z",
+  "updatedAt": "2026-07-17T00:05:35.000Z",
+  "planRevision": 1,
+  "approvedPlanRevision": 1,
+  "approvedAt": "2026-07-17T00:03:00.000Z",
+  "startedAt": "2026-07-17T00:04:00.000Z",
+  "executionStartedAt": "2026-07-17T00:04:00.000Z",
+  "targetContext": {
+    "sourceRealPath": "C:/work/example-app",
+    "gitCommonDir": "C:/work/example-app/.git",
+    "sourceBranch": "main",
+    "sourceBaseCommit": "1111111111111111111111111111111111111111",
+    "fingerprint": "sha256:target-v1",
+    "capturedAt": "2026-07-17T00:00:00.000Z",
+    "executionRepoPath": "C:/work/example-app/.manyhands/runs/run-current-v1/repo",
+    "executionBaseCommit": "2222222222222222222222222222222222222222"
+  },
+  "planning": {
+    "decomposition": {
+      "graph": {
+        "id": "graph-v1",
+        "rootId": "root",
+        "baseCommit": "1111111111111111111111111111111111111111",
+        "nodes": {},
+        "dependencies": []
+      },
+      "contracts": []
+    }
+  },
+  "execution": {
+    "leafResults": [],
+    "integrationResults": []
+  },
+  "finalApplicationStatus": "applied",
+  "finalBranchName": "manyhands/run-current-v1",
+  "finalCommitSha": "3333333333333333333333333333333333333333",
+  "appliedToRepoPath": "C:/work/example-app",
+  "appliedAt": "2026-07-17T00:05:00.000Z",
+  "finalArtifactManifest": {
+    "version": 1,
+    "manifestId": "11111111-1111-4111-8111-111111111111",
+    "runId": "run-current-v1",
+    "sourceTargetFingerprint": "sha256:target-v1",
+    "sourceBranch": "main",
+    "sourceBaseSha": "1111111111111111111111111111111111111111",
+    "executionBaseSha": "2222222222222222222222222222222222222222",
+    "finalSha": "3333333333333333333333333333333333333333",
+    "finalRef": "refs/heads/manyhands/run-current-v1",
+    "addedFiles": [
+      "src/appointments.ts"
+    ],
+    "modifiedFiles": [],
+    "deletedFiles": [],
+    "patch": "diff --git a/src/appointments.ts b/src/appointments.ts",
+    "validationCommands": [
+      {
+        "command": "pnpm",
+        "args": [
+          "test"
+        ]
+      }
+    ],
+    "validationResults": [
+      {
+        "passed": true,
+        "output": "passed",
+        "exitCode": 0
+      }
+    ],
+    "verificationDisposition": "verified",
+    "omittedTasks": [],
+    "acceptedFailures": [],
+    "acceptedConflicts": [],
+    "repairEvidence": [],
+    "artifactDisposition": "ready",
+    "deliveryDisposition": "needs_delivery",
+    "createdAt": "2026-07-17T00:05:00.000Z"
+  },
+  "executionOutcome": "succeeded",
+  "artifactOutcome": "ready",
+  "deliveryOutcome": "needs_delivery",
+  "baseCommit": "1111111111111111111111111111111111111111",
+  "integrationCommitSha": "3333333333333333333333333333333333333333",
+  "patches": []
+}
