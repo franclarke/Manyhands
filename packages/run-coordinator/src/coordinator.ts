@@ -1,0 +1,63 @@
+import { eventsForCommand, type RunCommand } from "./commands.js";
+import { RunEventSchema, type RunEvent, type RunEventDraft, type RunEventInput } from "./domain/events.js";
+import { assertLifecycleTransition } from "./domain/lifecycle.js";
+import type { CancellationPort, DeliveryPublisherPort, RunEventJournalPort } from "./ports.js";
+import { foldRun, type RunProjection } from "./reducer.js";
+
+export interface RunCoordinatorOptions {
+  events: RunEventJournalPort;
+  delivery: DeliveryPublisherPort;
+  cancellation?: CancellationPort;
+  clock(): string;
+  eventId(type: string, sequence: number): string;
+}
+
+export class RunCoordinator {
+  private readonly ports: RunCoordinatorOptions;
+
+  constructor(options: RunCoordinatorOptions) {
+    this.ports = options;
+  }
+
+  async execute(runId: string, command: RunCommand): Promise<RunProjection> {
+    let persisted = await this.ports.events.load(runId);
+    let state = foldRun(persisted);
+    if (command.type === "publish_delivery") {
+      const candidate = state.finalCandidate;
+      if (state.lifecycle !== "result_ready" || candidate === undefined) throw new Error("Delivery requires an evidence-eligible result_ready candidate.");
+      persisted = await this.append(runId, persisted, [{ type: "delivery.started", payload: { manifestId: candidate.manifestId } }]);
+      const receipt = await this.ports.delivery.publish({ runId, manifestId: candidate.manifestId, destination: command.destination });
+      persisted = await this.append(runId, persisted, [{ type: "delivery.published", payload: { receipt } }]);
+      return foldRun(persisted);
+    }
+    if (command.type === "cancel") {
+      if (this.ports.cancellation === undefined) throw new Error("Cancellation port is not configured.");
+      assertLifecycleTransition(state.lifecycle, "cancelling");
+      const invalidation = await this.ports.cancellation.invalidateAuthority({ runId, reason: command.reason });
+      persisted = await this.append(runId, persisted, [{ type: "operation.cancel_requested", payload: { invalidationReceiptId: invalidation.invalidationReceiptId, reason: command.reason } }]);
+      const stopped = await this.ports.cancellation.stopProcesses({ runId });
+      if (stopped.allDead) persisted = await this.append(runId, persisted, [{ type: "operation.interrupted", payload: { processReceiptId: stopped.processReceiptId, allDead: true } }]);
+      return foldRun(persisted);
+    }
+    persisted = await this.append(runId, persisted, eventsForCommand(state, command));
+    state = foldRun(persisted);
+    return state;
+  }
+
+  private async append(runId: string, existing: RunEvent[], drafts: RunEventDraft[]): Promise<RunEvent[]> {
+    const expectedSequence = existing.length;
+    const inputs = drafts.map((draft, index) => ({
+      ...draft,
+      eventId: this.ports.eventId(draft.type, expectedSequence + index + 1),
+      occurredAt: this.ports.clock()
+    })) as RunEventInput[];
+    const provisional = inputs.map((input, index) => RunEventSchema.parse({
+      ...input,
+      runId,
+      sequence: expectedSequence + index + 1
+    }));
+    foldRun([...existing, ...provisional]);
+    const appended = await this.ports.events.append(runId, expectedSequence, inputs);
+    return [...existing, ...appended];
+  }
+}

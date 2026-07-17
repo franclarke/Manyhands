@@ -316,6 +316,15 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
 
+  packages/run-coordinator:
+    dependencies:
+      '@manyhands/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+
   packages/run-store:
     dependencies:
       '@manyhands/conflict-risk':
