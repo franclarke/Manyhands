@@ -224,6 +224,9 @@ importers:
       '@manyhands/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@manyhands/repository-index':
+        specifier: workspace:*
+        version: link:../repository-index
       '@manyhands/shared':
         specifier: workspace:*
         version: link:../shared

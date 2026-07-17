@@ -25,6 +25,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",
     "@manyhands/contracts": "workspace:*",
+    "@manyhands/repository-index": "workspace:*",
     "@manyhands/shared": "workspace:*",
     "@manyhands/task-graph": "workspace:*",
     "zod": "^3.23.8"

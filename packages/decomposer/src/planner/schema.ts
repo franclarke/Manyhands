@@ -15,7 +15,8 @@ const WorkUnitCommonShape = {
   objective: NonEmptyStringSchema,
   concerns: z.array(NonEmptyStringSchema).min(1),
   expectedOutcomes: z.array(NonEmptyStringSchema).min(1),
-  acceptanceIntentIds: z.array(EntityIdSchema).min(1)
+  acceptanceIntentIds: z.array(EntityIdSchema).min(1),
+  evidenceIds: z.array(EntityIdSchema)
 };
 
 export interface WorkUnitLeaf {
@@ -26,6 +27,7 @@ export interface WorkUnitLeaf {
   concerns: string[];
   expectedOutcomes: string[];
   acceptanceIntentIds: string[];
+  evidenceIds: string[];
 }
 
 export interface WorkUnitComposite {
@@ -36,6 +38,7 @@ export interface WorkUnitComposite {
   concerns: string[];
   expectedOutcomes: string[];
   acceptanceIntentIds: string[];
+  evidenceIds: string[];
   cut: z.infer<typeof SemanticCutSchema>;
   children: WorkUnit[];
 }
@@ -132,7 +135,10 @@ export const WorkBreakdownSchema = z.object({
   const unitKeys = new Set(units.map((unit) => unit.key));
   const acceptanceIds = new Set(breakdown.acceptanceIntents.map((intent) => intent.id));
   const evidenceIds = new Set(breakdown.repositoryEvidence.map((evidence) => evidence.id));
-  for (const unit of units) for (const id of unit.acceptanceIntentIds) if (!acceptanceIds.has(id)) addIssue(context, `unit ${unit.key} references unknown acceptance intent ${id}`);
+  for (const unit of units) {
+    for (const id of unit.acceptanceIntentIds) if (!acceptanceIds.has(id)) addIssue(context, `unit ${unit.key} references unknown acceptance intent ${id}`);
+    for (const evidenceId of unit.evidenceIds) if (!evidenceIds.has(evidenceId)) addIssue(context, `unit ${unit.key} references unknown evidence ${evidenceId}`);
+  }
   for (const relation of [...breakdown.candidateArtifacts, ...breakdown.candidateSeams]) {
     if (!unitKeys.has(relation.producerUnitKey)) addIssue(context, `candidate ${relation.id} references unknown producer ${relation.producerUnitKey}`);
     for (const consumer of relation.consumerUnitKeys) {

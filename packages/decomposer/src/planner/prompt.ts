@@ -42,10 +42,10 @@ const WORK_BREAKDOWN_OUTPUT_SHAPE = `{
   "acceptanceIntents": [{ "id": "intent-id", "description": "...", "required": true }],
   "root": {
     "key": "semantic-unit-key", "kind": "composite", "title": "...", "objective": "...",
-    "concerns": ["cohesive concern"], "expectedOutcomes": ["..."], "acceptanceIntentIds": ["intent-id"],
+    "concerns": ["cohesive concern"], "expectedOutcomes": ["..."], "acceptanceIntentIds": ["intent-id"], "evidenceIds": ["repository-evidence-id"],
     "cut": { "criterion": "cohesion|integration|risk|verifiability", "rationale": "..." },
     "children": [
-      { "key": "leaf-key", "kind": "leaf", "title": "...", "objective": "...", "concerns": ["ui", "api", "tests"], "expectedOutcomes": ["..."], "acceptanceIntentIds": ["intent-id"] }
+      { "key": "leaf-key", "kind": "leaf", "title": "...", "objective": "...", "concerns": ["ui", "api", "tests"], "expectedOutcomes": ["..."], "acceptanceIntentIds": ["intent-id"], "evidenceIds": ["repository-evidence-id"] }
     ]
   },
   "candidateArtifacts": [{ "id": "...", "artifactType": "...", "producerUnitKey": "...", "consumerUnitKeys": ["..."], "purpose": "...", "materializationHint": "logical|files|manifest|commit", "evidenceIds": ["..."] }],

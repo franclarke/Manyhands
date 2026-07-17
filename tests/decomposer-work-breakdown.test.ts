@@ -102,6 +102,7 @@ function fixture(): WorkBreakdown {
       concerns: ["product-flow"],
       expectedOutcomes: ["A usable booking flow"],
       acceptanceIntentIds: ["booking-created"],
+      evidenceIds: ["route-evidence"],
       cut: { criterion: "cohesion", rationale: "Keep the observable flow together while isolating policy." },
       children: [
         {
@@ -111,7 +112,8 @@ function fixture(): WorkBreakdown {
           objective: "Implement the cohesive booking flow",
           concerns: ["ui", "api", "tests"],
           expectedOutcomes: ["The form submits and renders the stored booking"],
-          acceptanceIntentIds: ["booking-created"]
+          acceptanceIntentIds: ["booking-created"],
+          evidenceIds: ["route-evidence"]
         },
         {
           key: "booking-policy",
@@ -120,7 +122,8 @@ function fixture(): WorkBreakdown {
           objective: "Define overlap behavior after the user decides it",
           concerns: ["domain"],
           expectedOutcomes: ["Overlap rules are explicit"],
-          acceptanceIntentIds: ["booking-created"]
+          acceptanceIntentIds: ["booking-created"],
+          evidenceIds: ["route-evidence"]
         }
       ]
     },
