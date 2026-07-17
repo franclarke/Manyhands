@@ -10,8 +10,8 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-14 — ValidationRecipe and EvidenceMatrix` |
-| Last completed packet | `WP-13 — Failure recovery and amendments V2` |
+| Current packet | `WP-15 — IntegrationManifest bottom-up` |
+| Last completed packet | `WP-14 — ValidationRecipe and EvidenceMatrix` |
 | Open gate | G4 — Honest verification |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
@@ -30,6 +30,7 @@
 | WP-11 implementation commit | `824332d` |
 | WP-12 implementation commit | `4e8ad12` |
 | WP-13 implementation commit | `9b074cc` |
+| WP-14 implementation commit | `01a385a` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -50,7 +51,7 @@
 | WP-11 ExecutionBaseBuilder | completed | `824332d` | 56/56 packet and execution regressions; execution-core/web typechecks and execution-core build passed | Exact declared artifact materialization, structured pre-dispatch conflicts, reproducible base manifests and reserved-attempt fingerprint validation |
 | WP-12 Execution coordination | completed | `4e8ad12` | 28/28 packet and StateGraph/audit regressions; coordinator/orchestrator/web typechecks and package builds passed | Command-driven readiness, local decisions, durable wave-before-dispatch boundary and fenced web V2 host adapter |
 | WP-13 Failure recovery | completed | `9b074cc` | 28/28 packet and legacy replan regressions; coordinator/execution-core/web typechecks and package builds passed | Cause-specific recovery policy, evidenced immutable graph amendments and exact fingerprint invalidation with V1 closure retained only as compatibility behavior |
-| WP-14 EvidenceMatrix | queued | — | — | — |
+| WP-14 EvidenceMatrix | completed | `01a385a` | 30/30 packet and validation/terminal regressions; execution-core/coordinator typechecks and builds passed | Capability-compiled recipes, exact clean candidate sandbox, criterion evidence matrix, baseline/flakiness/negative-control honesty and test-integrity findings; G4 closed |
 | WP-15 Integration manifests | queued | — | — | — |
 | WP-16 Final candidate and delivery | queued | — | — | — |
 | WP-17 Workspace web V2 | queued | — | — | — |
@@ -116,7 +117,7 @@ baseline until a later packet owns their migration.
 | G1 Contracts executable | closed | WP-01 through WP-05 integrated; schemas, typed relations, semantic breakdown, compiler and critics are green |
 | G2 Canonical history | closed | WP-07 canonical event persistence and WP-08 productive planning slice use the same fenced event history; RunRecord is compatibility projection only |
 | G3 Exact adoption | closed | WP-09 through WP-11 provide canonical fingerprints, immutable adoption, exact artifact readiness and reproducible physical execution bases |
-| G4 Honest verification | not_started | WP-14 |
+| G4 Honest verification | closed | WP-14 compiles obligations from observed capabilities and requires criterion-linked evidence on the exact clean candidate, including required baselines, negative controls, flakiness and integrity findings |
 | G5 Real delivery | not_started | WP-16 |
 | G6 Single architecture | not_started | WP-18 |
 
@@ -637,6 +638,45 @@ repositories and assert the resulting durable failure or resumable gate.
 - The legacy closure-based amendments engine remains available for V1 recovery
   while exposing exact fingerprint invalidation for the V2 migration. Its
   existing replan and question-gate suites remain green.
+
+## WP-14 evidence
+
+### Red-green evidence
+
+The initial seven recipe, matrix, exact-candidate and integrity cases failed
+because none of the V2 validation surfaces existed. After adding the missing
+baseline-required regression, the completed packet produced:
+
+```text
+WP-14 and validation/terminal regressions: 6 files passed, 30 tests passed
+execution-core typecheck: passed
+run-coordinator typecheck: passed
+execution-core and run-coordinator builds: passed
+git diff --check: passed
+```
+
+### Implemented criterion-level proof
+
+- `compileValidationRecipe` preserves obligation/criterion identities and
+  selects commands only from capabilities observed in the immutable repository
+  snapshot. Unsupported layers remain explicitly unmaterialized.
+- `GitCandidateSandboxFactory` creates an isolated worktree at the exact
+  candidate SHA, verifies its HEAD and cleanliness, and always disposes it.
+  Candidate validation refuses a mismatched or dirty sandbox.
+- Evidence is linked to an obligation and acceptable evidence kind. An
+  unrelated command with exit code zero cannot satisfy any criterion.
+- Every criterion is `satisfied`, `failed`, `uncovered`, `flaky` or
+  `not_applicable`, with justification and evidence references. Required
+  uncovered evidence yields `unverified`; hard failures, forbidden flakiness,
+  failed negative controls or integrity findings yield `failed`.
+- Required baselines cannot be omitted: a passing candidate command without
+  linked baseline evidence remains `uncovered`. Candidate and baseline failures
+  are distinguished as regressions or pre-existing failures.
+- Pass-after-failure is represented as `flaky`. Required negative controls are
+  enforced when requested, and missing test files or explicitly weakened test
+  scripts produce integrity findings.
+- `evidence.matrix_recorded` is a canonical coordinator fact. Its schema rejects
+  a `verified` claim containing failed or uncovered criteria.
 
 ## Resume instructions
 
