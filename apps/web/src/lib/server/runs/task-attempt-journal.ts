@@ -8,6 +8,7 @@ import { RunMutationConflictError } from "./errors";
 
 const AttemptIdSchema = z.string().uuid();
 const ShaSchema = z.string().regex(/^[0-9a-f]{40}$/i);
+const InputFingerprintSchema = z.string().regex(/^sha256:[0-9a-f]{64}$/i);
 
 export const TASK_ATTEMPT_STATES = [
   "prepared",
@@ -72,6 +73,7 @@ export const TaskAttemptSchema = z.object({
   waveId: z.string().min(1).optional(),
   kind: TaskAttemptKindSchema,
   baseCommit: ShaSchema,
+  inputFingerprint: InputFingerprintSchema.optional(),
   worktreePath: z.string().min(1).optional(),
   targetFingerprint: z.string().min(1).optional(),
   contractHash: z.string().min(1).optional(),
@@ -136,6 +138,7 @@ export interface ReserveTaskAttemptInput {
   waveId?: string;
   kind: TaskAttemptKind;
   baseCommit: string;
+  inputFingerprint?: string;
   worktreePath?: string;
   targetFingerprint?: string;
   contractHash?: string;

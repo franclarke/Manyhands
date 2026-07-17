@@ -31,6 +31,11 @@ import {
   type ExecutorSelection
 } from "../executor/registry";
 import type { GitRunner } from "../git/runner";
+import {
+  ExecutionBaseBuilder,
+  type ExecutionBaseRequest
+} from "../base/execution-base-builder";
+import { assertExecutionAttemptFingerprint } from "../base/execution-base-manifest";
 import { FileSystemContextPacker, type ContextPacker } from "../context/packer";
 import { execError, execLog, execWarn } from "../logging/log";
 import { RunExecutionError } from "../errors";
@@ -83,6 +88,7 @@ export interface RunExecutorDeps {
   writeInstructions?: (path: string, content: string) => Promise<void>;
   clock?: () => number;
   now?: () => string;
+  executionBaseBuilder?: ExecutionBaseBuilder;
 }
 
 export interface RunExecutionParams {
@@ -115,6 +121,10 @@ export interface RunNodeExecutionParams {
   runId?: string;
   /** Durable B-015 attempt identity for executor/process correlation. */
   attemptId?: string;
+  /** V2 exact base. Omit only on the legacy execution path. */
+  executionBase?: Omit<ExecutionBaseRequest, "runId" | "nodeId">;
+  /** Fingerprint persisted when the attempt was reserved. Required with executionBase. */
+  attemptInputFingerprint?: string;
   integrationOperation?: {
     journal: IntegrationOperationJournal;
     runId: string;
@@ -194,6 +204,7 @@ export class RunExecutor {
   private readonly router: ExecutorRouter | undefined;
   private readonly writeInstructions: (path: string, content: string) => Promise<void>;
   private readonly clock: () => number;
+  private readonly executionBaseBuilder: ExecutionBaseBuilder;
 
   constructor(deps: RunExecutorDeps) {
     this.git = deps.git;
@@ -222,6 +233,10 @@ export class RunExecutor {
     this.router = deps.router;
     this.writeInstructions = deps.writeInstructions ?? ((path, content) => writeFile(path, content, "utf8"));
     this.clock = deps.clock ?? (() => Date.now());
+    this.executionBaseBuilder = deps.executionBaseBuilder ?? new ExecutionBaseBuilder({
+      git: deps.git,
+      worktreeManager: this.worktreeManager
+    });
   }
 
   async run(params: RunExecutionParams): Promise<RunExecutionResult> {
@@ -485,6 +500,10 @@ export class RunExecutor {
           defaultSelection: params.defaultExecutionSelection ?? resolveLegacyModelSelection(params.model),
           worktrees,
           ...(params.attemptId !== undefined ? { attemptId: params.attemptId } : {}),
+          ...(params.executionBase !== undefined ? { executionBase: params.executionBase } : {}),
+          ...(params.attemptInputFingerprint !== undefined
+            ? { attemptInputFingerprint: params.attemptInputFingerprint }
+            : {}),
           ...(params.signal !== undefined ? { signal: params.signal } : {})
         });
         return { kind: "leaf", result, worktrees };
@@ -704,6 +723,8 @@ export class RunExecutor {
     defaultSelection: ExecutorSelection;
     worktrees: WorktreeRecord[];
     attemptId?: string;
+    executionBase?: Omit<ExecutionBaseRequest, "runId" | "nodeId">;
+    attemptInputFingerprint?: string;
     signal?: AbortSignal;
   }): Promise<AgentExecutionResult> {
     const { node, runId } = args;
@@ -729,13 +750,28 @@ export class RunExecutor {
     this.traceStore.append({ type: "agent_started", actor: "system", taskId: node.id, payload: {} });
 
     let worktree: WorktreeRecord;
+    let observedInputFingerprint: string | undefined;
     try {
-      worktree = await this.worktreeManager.create({
-        taskId: node.id,
-        runId,
-        kind: "leaf",
-        baseCommit: args.graph.baseCommit
-      });
+      if (args.executionBase !== undefined) {
+        if (args.attemptInputFingerprint === undefined) {
+          throw new Error(`Exact execution base for ${node.id} requires a reserved attempt fingerprint.`);
+        }
+        assertExecutionAttemptFingerprint(args.attemptInputFingerprint, args.executionBase.inputFingerprint);
+        const built = await this.executionBaseBuilder.build({
+          ...args.executionBase,
+          runId,
+          nodeId: node.id
+        });
+        worktree = built.worktree;
+        observedInputFingerprint = built.manifest.inputFingerprint;
+      } else {
+        worktree = await this.worktreeManager.create({
+          taskId: node.id,
+          runId,
+          kind: "leaf",
+          baseCommit: args.graph.baseCommit
+        });
+      }
     } catch (error) {
       // A worktree-creation failure throws and aborts the whole batch/run via the
       // scheduler — log which leaf and why before it propagates.
@@ -756,7 +792,11 @@ export class RunExecutor {
     });
 
     try {
-      return await this.executeLeafInWorktree({ ...args, worktree, executor, executorSelection, usageSource });
+      const result = await this.executeLeafInWorktree({ ...args, worktree, executor, executorSelection, usageSource });
+      if (observedInputFingerprint !== undefined && args.attemptInputFingerprint !== undefined) {
+        assertExecutionAttemptFingerprint(args.attemptInputFingerprint, observedInputFingerprint);
+      }
+      return result;
     } catch (error) {
       // Context packing, instruction writing, the executor seam and result
       // recording should all be total — a throw here is unexpected. Log it
