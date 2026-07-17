@@ -10,9 +10,9 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-16 — Final candidate and transactional delivery` |
-| Last completed packet | `WP-15 — IntegrationManifest bottom-up` |
-| Open gate | G4 — Honest verification |
+| Current packet | `WP-17 — Graph- and evidence-centered web workspace` |
+| Last completed packet | `WP-16 — Final candidate and transactional delivery` |
+| Open gate | G6 — Single architecture |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
 | WP-00 implementation commit | `d381f61` |
@@ -32,6 +32,7 @@
 | WP-13 implementation commit | `9b074cc` |
 | WP-14 implementation commit | `01a385a` |
 | WP-15 implementation commit | `4423967` |
+| WP-16 implementation commit | `27925c8` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -54,7 +55,7 @@
 | WP-13 Failure recovery | completed | `9b074cc` | 28/28 packet and legacy replan regressions; coordinator/execution-core/web typechecks and package builds passed | Cause-specific recovery policy, evidenced immutable graph amendments and exact fingerprint invalidation with V1 closure retained only as compatibility behavior |
 | WP-14 EvidenceMatrix | completed | `01a385a` | 30/30 packet and validation/terminal regressions; execution-core/coordinator typechecks and builds passed | Capability-compiled recipes, exact clean candidate sandbox, criterion evidence matrix, baseline/flakiness/negative-control honesty and test-integrity findings; G4 closed |
 | WP-15 Integration manifests | completed | `4423967` | 35/35 manifest, legacy integration, recovery and real-Git tests; execution-core/coordinator typechecks and builds passed | Exact adopted child artifacts, complete integration manifests, parent evidence gate, one semantic repair and manifest-backed output adoption |
-| WP-16 Final candidate and delivery | queued | — | — | — |
+| WP-16 Final candidate and delivery | completed | `27925c8` | 28/28 packet, delivery, route and terminal tests; execution-core/coordinator/web typechecks passed | Exact isolated candidate validation, immutable delivery approval, request fingerprint, retry-safe receipt adoption and receipt-only completion; G5 closed |
 | WP-17 Workspace web V2 | queued | — | — | — |
 | WP-18 Legacy retirement | queued | — | — | Split into WP-18A through WP-18D during execution |
 | WP-19 Migration and E2E | queued | — | — | — |
@@ -723,6 +724,44 @@ unexpected repair commit.
 - Coordinator adoption accepts output artifacts only when required inputs match
   exactly, no omission/error exists and parent evidence is verified. Adopted
   outputs retain the integration attempt as producer identity.
+
+## WP-16 evidence
+
+### Red-green evidence
+
+The initial candidate and delivery-state cases failed because no isolated final
+candidate preparer existed and coordinator events did not retain the approved
+target snapshot. The completed packet produced:
+
+```text
+WP-16 candidate, delivery, route and terminal regressions: 7 files passed, 28 tests passed
+execution-core typecheck: passed
+run-coordinator typecheck: passed
+web typecheck: passed
+git diff --check: passed
+```
+
+### Implemented candidate and delivery boundary
+
+- `FinalCandidatePreparer` has no publication capability. It prepares one
+  isolated candidate and returns an eligible manifest only when the evidence
+  matrix identifies that exact commit.
+- The productive final-apply call is named `prepareFinalCandidate`; its legacy
+  name remains only as a compatibility alias. Preparation creates the run
+  candidate ref/commit without moving or merging the user's target branch.
+- Delivery approval is an immutable snapshot of manifest id, final SHA, target
+  branch and head, repository fingerprint, actor and idempotency key. The
+  coordinator rejects any approval that differs from the verified candidate.
+- Transactional publication claims the idempotency key before mutation,
+  recovers a prior completed side effect, checks the frozen clean target, and
+  accepts only a confirmed `delivered` receipt for the approved request.
+- Web delivery receipts now include the same deterministic request fingerprint;
+  exact legacy receipt fields remain recoverable for backward compatibility.
+- A changed or dirty target produces no checkout mutation. The coordinator
+  records `delivery.failed` and returns to `result_ready`, preserving a
+  resolvable candidate instead of declaring completion or destroying it.
+- `completed` remains derivable only from an evidence-eligible final candidate
+  and a matching confirmed delivered receipt. Gate G5 is closed.
 
 ## Resume instructions
 
