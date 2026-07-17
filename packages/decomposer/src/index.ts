@@ -18,6 +18,10 @@ import {
 import { executionScopeFromAllowed } from "./scope";
 import { z } from "zod";
 
+export * from "./planner/prompt.js";
+export * from "./planner/schema.js";
+export * from "./planner/work-breakdown.js";
+
 export const FeatureRequestSchema = z.object({
   id: EntityIdSchema,
   title: NonEmptyStringSchema,
