@@ -10,13 +10,14 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-02 — RepositorySnapshot inmutable y baseline` |
-| Last completed packet | `WP-01 — Contratos V2 versionados` |
+| Current packet | `WP-03 — GraphRevision y relaciones tipadas` |
+| Last completed packet | `WP-02 — RepositorySnapshot inmutable y baseline` |
 | Open gate | Pre-G1 |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
 | WP-00 implementation commit | `d381f61` |
 | WP-01 implementation commit | `cee0973` |
+| WP-02 implementation commit | `a5eac15` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -25,7 +26,7 @@
 |---|---|---|---|---|
 | WP-00 Baseline | completed | `d381f61` | 5/5 narrow tests passed | V1 run fixture, current lifecycle characterization, package boundary guard and frozen `@manyhands/core` allowlist |
 | WP-01 Contracts V2 | completed | `cee0973` | 23/23 contract tests, 56/56 direct consumer tests, package typecheck and build passed | Five versioned contracts, bundle invariants and loss-aware V1 adapter with explicit migration issues |
-| WP-02 Repository snapshot | queued | — | — | Next packet |
+| WP-02 Repository snapshot | completed | `a5eac15` | 14/14 focused tests, package typecheck and build passed | Immutable snapshot identity, content hashing, capabilities and explicit partial/unavailable inspection |
 | WP-03 GraphRevision | queued | — | — | — |
 | WP-04 WorkBreakdown | queued | — | — | — |
 | WP-05 Graph Compiler | queued | — | — | — |
@@ -147,6 +148,46 @@ pnpm --filter @manyhands/contracts build
 - Added deterministic content-derived legacy revisions.
 - V1 dependencies, commands and incomplete seams are emitted as explicit
   `migrationIssues`; the adapter does not invent V2 evidence or relations.
+
+## WP-02 evidence
+
+### Red-green evidence
+
+Before implementation, the new suites failed because the snapshot builder and
+file-content hash did not exist:
+
+```text
+Test Files 2 failed (2)
+Tests 5 failed (5)
+```
+
+After implementation:
+
+```text
+Focused repository and consumer suites: 4 files passed, 14 tests passed
+@manyhands/repository-index typecheck: passed
+@manyhands/repository-index build including declarations: passed
+```
+
+Commands:
+
+```bash
+pnpm test -- tests/repository-snapshot.test.ts tests/repository-index.test.ts tests/repository-aware-scheduling.test.ts tests/planning-budget.test.ts
+pnpm --filter @manyhands/repository-index typecheck
+pnpm --filter @manyhands/repository-index build
+```
+
+### Implemented snapshot boundary
+
+- Snapshot identity is derived from target fingerprint, base commit, repository
+  content hash, inspection disposition and discovered capabilities; capture time
+  and local absolute path do not destabilize identity.
+- File content contributes to the repository index hash even when the symbol
+  topology remains unchanged.
+- Package manager, scripts, TypeScript/JavaScript coverage, known stack signals
+  and runnable baseline commands are persisted as capabilities with evidence.
+- Index failures and unsupported repositories produce explicit `unavailable`
+  and `partial` snapshots with diagnostics instead of a silent empty success.
 
 ## Resume instructions
 
