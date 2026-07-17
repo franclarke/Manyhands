@@ -19,6 +19,10 @@ export class RunCoordinator {
     this.ports = options;
   }
 
+  async load(runId: string): Promise<RunProjection> {
+    return foldRun(await this.ports.events.load(runId));
+  }
+
   async execute(runId: string, command: RunCommand): Promise<RunProjection> {
     let persisted = await this.ports.events.load(runId);
     let state = foldRun(persisted);

@@ -45,3 +45,7 @@ export const DecisionSchema = DecisionInputSchema.extend({
 }).strict();
 
 export type Decision = z.infer<typeof DecisionSchema>;
+
+export function decisionBlocksNode(decision: Decision, nodeId: string): boolean {
+  return decision.status === "pending" && decision.affectedNodeIds.includes(nodeId);
+}

@@ -1,5 +1,6 @@
 export * from "./commands.js";
 export * from "./coordinator.js";
+export * from "./execution.js";
 export * from "./domain/decisions.js";
 export * from "./domain/artifacts.js";
 export * from "./domain/attempts.js";

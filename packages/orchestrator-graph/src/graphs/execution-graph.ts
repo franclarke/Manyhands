@@ -1,5 +1,5 @@
 /**
- * Execution StateGraph for the ManyHands LangGraph orchestrator.
+ * Legacy V1 Execution StateGraph adapter for the ManyHands orchestrator.
  *
  * Topology (dynamic wavefront map-reduce, D9):
  *
@@ -11,8 +11,10 @@
  *   conflictGate ─Command→ integrationJoin | END
  *   runValidation → END
  *
- * Sends are dispatched exclusively from conditional edges; HITL interrupts
- * live exclusively in the pure gate nodes, resumable with Command({ resume }).
+ * Sends are dispatched exclusively from conditional edges; legacy HITL
+ * interrupts live in pure gate nodes. They are compatibility branch cursors,
+ * not V2 run lifecycle: durable Decision facts and global waiting are owned by
+ * RunCoordinator.
  *
  * Current implementation notes: docs/design/langgraph-orchestrator-design.md
  * Target run semantics: docs/system/04-run-executor.md

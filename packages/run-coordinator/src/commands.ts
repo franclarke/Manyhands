@@ -8,6 +8,7 @@ export type RunCommand =
   | { type: "raise_decision"; decision: DecisionInput }
   | { type: "resolve_decision"; decisionId: string; optionId?: string; answer?: string }
   | { type: "observe_readiness"; readyNodeIds: string[]; pendingDecisionIds: string[] }
+  | { type: "select_wave"; waveId: string; nodeIds: string[]; maxParallel: number }
   | { type: "pause"; reason: string }
   | { type: "resume"; reason: string }
   | { type: "verify_final_candidate"; manifestId: string; commit: string; evidenceEligible: boolean; executionSucceeded: boolean }
@@ -22,6 +23,7 @@ export function eventsForCommand(state: RunProjection, command: Exclude<RunComma
     case "raise_decision": return [{ type: "decision.raised", payload: { decision: command.decision } }];
     case "resolve_decision": return [{ type: "decision.resolved", payload: { decisionId: command.decisionId, ...(command.optionId !== undefined ? { optionId: command.optionId } : {}), ...(command.answer !== undefined ? { answer: command.answer } : {}) } }];
     case "observe_readiness": return [{ type: "readiness.observed", payload: { readyNodeIds: command.readyNodeIds, pendingDecisionIds: command.pendingDecisionIds } }];
+    case "select_wave": return [{ type: "wave.selected", payload: { waveId: command.waveId, nodeIds: command.nodeIds, maxParallel: command.maxParallel } }];
     case "pause": return [{ type: "run.pause_requested", payload: { reason: command.reason } }];
     case "resume": return [{ type: "run.resume_requested", payload: { reason: command.reason } }];
     case "verify_final_candidate": return [{ type: "final_candidate.verified", payload: { manifestId: command.manifestId, commit: command.commit, evidenceEligible: command.evidenceEligible, executionSucceeded: command.executionSucceeded } }];

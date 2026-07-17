@@ -14,6 +14,7 @@ export interface RunProjection {
   approvedGraphRevision?: number;
   decisions: Record<string, Decision>;
   readiness: { readyNodeIds: string[]; pendingDecisionIds: string[] };
+  selectedWaves: Array<{ waveId: string; nodeIds: string[]; maxParallel: number }>;
   outcomes: RunOutcomes;
   finalCandidate?: FinalCandidate;
   deliveryReceipt?: DeliveryReceipt;
@@ -39,6 +40,7 @@ export function foldRun(rawEvents: readonly RunEvent[]): RunProjection {
         appliedEventIds: [event.eventId],
         decisions: {},
         readiness: { readyNodeIds: [], pendingDecisionIds: [] },
+        selectedWaves: [],
         outcomes: { ...INITIAL_RUN_OUTCOMES }
       };
       continue;
@@ -105,6 +107,13 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       }
       break;
     }
+    case "wave.selected":
+      if (next.lifecycle !== "running") throw new Error(`Cannot select a wave while ${next.lifecycle}.`);
+      if (event.payload.nodeIds.length > event.payload.maxParallel) throw new Error(`Wave ${event.payload.waveId} exceeds maxParallel.`);
+      if (event.payload.nodeIds.some((nodeId) => !next.readiness.readyNodeIds.includes(nodeId))) throw new Error(`Wave ${event.payload.waveId} contains a node not present in observed readiness.`);
+      if (next.selectedWaves.some((wave) => wave.waveId === event.payload.waveId)) throw new Error(`Wave ${event.payload.waveId} already exists.`);
+      next.selectedWaves.push({ ...event.payload, nodeIds: [...event.payload.nodeIds] });
+      break;
     case "run.pause_requested":
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot pause while ${next.lifecycle}.`);
       next.lifecycleBeforePause = next.lifecycle;

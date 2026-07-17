@@ -1,6 +1,7 @@
 /**
- * Execution host — the single place where the web app drives the LangGraph
- * execution StateGraph.
+ * Legacy V1 execution host — the compatibility path that drives the LangGraph
+ * execution StateGraph. V2 uses ./v2/execution-coordinator-host and treats
+ * LangGraph as a branch-cursor adapter rather than lifecycle authority.
  *
  * Owns: dependency wiring (RunExecutor-backed leaf/repair/integration deps,
  * scope-aware wave selection fed by the planning risk matrix), graph

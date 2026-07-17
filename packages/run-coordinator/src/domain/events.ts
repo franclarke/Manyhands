@@ -29,6 +29,11 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   event("decision.raised", z.object({ decision: DecisionInputSchema }).strict()),
   event("decision.resolved", z.object({ decisionId: EntityIdSchema, ...DecisionResolutionShape }).strict().superRefine(requireDecisionResolution)),
   event("readiness.observed", z.object({ readyNodeIds: z.array(EntityIdSchema), pendingDecisionIds: z.array(EntityIdSchema) }).strict()),
+  event("wave.selected", z.object({
+    waveId: EntityIdSchema,
+    nodeIds: z.array(EntityIdSchema).min(1),
+    maxParallel: z.number().int().positive()
+  }).strict()),
   event("run.pause_requested", z.object({ reason: NonEmptyStringSchema }).strict()),
   event("run.resume_requested", z.object({ reason: NonEmptyStringSchema }).strict()),
   event("operation.cancel_requested", z.object({ invalidationReceiptId: EntityIdSchema, reason: NonEmptyStringSchema }).strict()),
