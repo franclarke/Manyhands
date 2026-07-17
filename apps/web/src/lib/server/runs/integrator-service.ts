@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
-import type { AgentTaskContract, RunSnapshot, TaskNode } from "@manyhands/core";
+import type { AgentTaskContract } from "@manyhands/contracts";
+import type { TaskNode } from "@manyhands/task-graph";
+import type { LegacyRunSnapshot } from "./legacy-projection-types";
 import {
   RunLifecycleError,
   assertTaskExists,
@@ -73,7 +75,7 @@ export async function createIntegratorTask(input: {
   return persistRunPatches({ run, baseSnapshot, patches: [patch], expectedVersion: run.version });
 }
 
-function findLowestCommonCompositeAncestor(snapshot: RunSnapshot, taskIds: readonly string[]): string {
+function findLowestCommonCompositeAncestor(snapshot: LegacyRunSnapshot, taskIds: readonly string[]): string {
   const ancestorChains = taskIds.map((taskId) => ancestorsFor(snapshot, taskId));
   const firstChain = ancestorChains[0] ?? [];
   for (const candidate of firstChain) {
@@ -88,7 +90,7 @@ function findLowestCommonCompositeAncestor(snapshot: RunSnapshot, taskIds: reado
   return snapshot.graphSnapshot.rootId;
 }
 
-function ancestorsFor(snapshot: RunSnapshot, taskId: string): string[] {
+function ancestorsFor(snapshot: LegacyRunSnapshot, taskId: string): string[] {
   const ancestors: string[] = [];
   let currentId: string | null = taskId;
   while (currentId !== null) {
@@ -102,7 +104,7 @@ function buildIntegratorContract(input: {
   taskId: string;
   objective: string;
   taskIds: readonly string[];
-  snapshot: RunSnapshot;
+  snapshot: LegacyRunSnapshot;
 }): AgentTaskContract {
   const contracts = input.taskIds
     .map((taskId) =>

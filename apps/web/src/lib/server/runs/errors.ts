@@ -35,9 +35,10 @@ export class RunConfigurationError extends RunValidationError {
 
 /**
  * The configured planning executor cannot be used for this invocation. This is
- * a user-correctable selection/environment problem, not an internal 500.
+ * a user-correctable runtime readiness problem, not invalid request syntax or
+ * an internal 500. Routes expose it as a lifecycle conflict (409).
  */
-export class PlanningExecutorUnavailableError extends RunValidationError {
+export class PlanningExecutorUnavailableError extends RunLifecycleError {
   constructor(message: string) {
     super(message);
     this.name = "PlanningExecutorUnavailableError";

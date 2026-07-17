@@ -1,5 +1,5 @@
 import { buildTaskPairRiskMatrix, type ConflictPrediction } from "@manyhands/conflict-risk";
-import type { RunSnapshot } from "@manyhands/core";
+import type { LegacyRunSnapshot } from "@/lib/server/runs/legacy-projection-types";
 import type { RunPatch } from "@/lib/server/runs/patches";
 
 export type ConflictViewRiskLevel = ConflictPrediction["level"];
@@ -26,7 +26,7 @@ export interface ConflictListItem {
 
 const actionableLevels = new Set<ConflictViewRiskLevel>(["medium", "high", "blocking"]);
 
-export function deriveConflictList(snapshot: RunSnapshot, patches: readonly unknown[]): ConflictListItem[] {
+export function deriveConflictList(snapshot: LegacyRunSnapshot, patches: readonly unknown[]): ConflictListItem[] {
   const leafTaskIds = new Set(
     Object.values(snapshot.graphSnapshot.nodes)
       .filter((node) => node.kind === "leaf")

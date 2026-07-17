@@ -10,13 +10,10 @@
  * with only the surviving work.
  */
 import { createHash, randomUUID } from "node:crypto";
-import {
-  isDecomposerQuestionError,
-  type AgentTaskContract,
-  type FeatureRequest,
-  type MockPlanningFlowResult,
-  type TraceEvent
-} from "@manyhands/core";
+import { isDecomposerQuestionError, type FeatureRequest } from "@manyhands/decomposer";
+import type { AgentTaskContract } from "@manyhands/contracts";
+import type { PlanningFlowResult } from "@manyhands/orchestrator-graph";
+import type { TraceEvent } from "@manyhands/trace-store";
 import {
   AmendmentsEngine,
   computeTaskInvalidationClosure,
@@ -214,7 +211,7 @@ export async function replanSubtree(
       acceptanceCriteria: node.acceptanceCriteria ?? [`The subtree fulfils its goal: ${node.goal}`]
     };
 
-    let planning: MockPlanningFlowResult;
+    let planning: PlanningFlowResult;
     try {
       ({ planning } = await invokePlanning({
         run,
@@ -287,14 +284,14 @@ export async function replanSubtree(
     // Keep planning as the immutable base and append the replan as a semantic patch.
     // Baking an already-materialized graph while retaining older patches would
     // replay them twice and can resurrect an earlier regenerated subtree.
-    const storedPlanning = run.planning as MockPlanningFlowResult;
+    const storedPlanning = run.planning as PlanningFlowResult;
     // Upgrade pre-marker records at the write boundary. Their planning graph
     // may already be a baked replan while SUBTREE patches are historical; once
     // the marker is stamped those patches would all replay again. Compact the
     // exact materialized graph into the new immutable base and absorb the old
     // log before appending this operation's patch.
     const normalizingLegacyGraph = run.planGraphStorage === undefined;
-    const previousPlanning: MockPlanningFlowResult = normalizingLegacyGraph
+    const previousPlanning: PlanningFlowResult = normalizingLegacyGraph
       ? {
           ...storedPlanning,
           decomposition: {
@@ -319,7 +316,7 @@ export async function replanSubtree(
         order: previousPlanning.traces.length + 1
       }
     };
-    const updatedPlanning: MockPlanningFlowResult = {
+    const updatedPlanning: PlanningFlowResult = {
       ...previousPlanning,
       traces: [...previousPlanning.traces, patchTrace]
     };

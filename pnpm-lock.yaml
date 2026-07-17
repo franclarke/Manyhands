@@ -63,9 +63,6 @@ importers:
       '@manyhands/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@manyhands/core':
-        specifier: workspace:*
-        version: link:../../packages/core
       '@manyhands/decomposer':
         specifier: workspace:*
         version: link:../../packages/decomposer
@@ -290,12 +287,24 @@ importers:
       '@langchain/langgraph-checkpoint':
         specifier: ^1.0.4
         version: 1.1.3(@langchain/core@1.2.1(ws@8.21.0))
+      '@manyhands/conflict-risk':
+        specifier: workspace:*
+        version: link:../conflict-risk
       '@manyhands/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@manyhands/decomposer':
+        specifier: workspace:*
+        version: link:../decomposer
       '@manyhands/execution-core':
         specifier: workspace:*
         version: link:../execution-core
+      '@manyhands/repository-index':
+        specifier: workspace:*
+        version: link:../repository-index
+      '@manyhands/scheduler':
+        specifier: workspace:*
+        version: link:../scheduler
       '@manyhands/task-graph':
         specifier: workspace:*
         version: link:../task-graph

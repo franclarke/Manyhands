@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { promisify } from "node:util";
 
-import { buildRepositoryIndex, summarizeRepositoryIndex, type RepositoryIndex } from "@manyhands/core";
+import { buildRepositoryIndex, summarizeRepositoryIndex, type RepositoryIndex } from "@manyhands/repository-index";
 import { safeGitArgs } from "@manyhands/execution-core";
 
 import type { EffectivePlanningBudget } from "./effective-planning-budget";

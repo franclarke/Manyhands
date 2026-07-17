@@ -1,9 +1,9 @@
+import type { PlanningFlowResult } from "@manyhands/orchestrator-graph";
+import type { TaskGraph } from "@manyhands/task-graph";
 import type {
-  MockExecutionFlowResult,
-  MockPlanningFlowResult,
-  RunSnapshot,
-  TaskGraph
-} from "@manyhands/core";
+  LegacyExecutionProjection,
+  LegacyRunSnapshot
+} from "@/lib/server/runs/legacy-projection-types";
 import { applyPatches } from "@/lib/server/runs/patches";
 import { compatibleGraphPatches } from "@/lib/server/runs/plan-graph-storage";
 import type { RunRecord, RunStatus } from "@/lib/server/runs/schema";
@@ -48,7 +48,7 @@ interface RealIntegrationResult {
 export function projectRunRecordToSnapshot(
   run: RunRecord,
   options: { applyPatches?: boolean } = {}
-): RunSnapshot | null {
+): LegacyRunSnapshot | null {
   const shouldApplyPatches = options.applyPatches ?? true;
   // A persisted run can carry only a partial planning snapshot (e.g. a failed
   // run with `{ decomposition: { graph } }` and no feature/summary/schedule).
@@ -56,9 +56,9 @@ export function projectRunRecordToSnapshot(
   // the projection degrade to `null` (its declared contract) instead of throwing
   // on `planning.decomposition.feature.id`.
   const planning = isProjectablePlanning(run.planning) ? run.planning : null;
-  let snapshot: RunSnapshot | null = null;
+  let snapshot: LegacyRunSnapshot | null = null;
   if (run.execution !== undefined) {
-    const execution = run.execution as MockExecutionFlowResult & RealExecutionResult;
+    const execution = run.execution as LegacyExecutionProjection & RealExecutionResult;
     if (isProjectableSnapshot(execution.snapshot)) {
       // Legacy mock execution flow carries its own pre-built snapshot.
       snapshot = execution.snapshot;
@@ -89,9 +89,9 @@ export function projectRunRecordToSnapshot(
  */
 function buildExecutionSnapshot(
   run: RunRecord,
-  planning: MockPlanningFlowResult,
+  planning: PlanningFlowResult,
   execution: RealExecutionResult
-): RunSnapshot {
+): LegacyRunSnapshot {
   const base = buildPlanningSnapshot(run, planning);
   const agentRunResults = (execution.leafResults ?? []).map((leaf) =>
     leafToAgentRunResult(run.runId, leaf)
@@ -99,20 +99,20 @@ function buildExecutionSnapshot(
   const integrationRunResults = (execution.integrationResults ?? []).map((integration) =>
     integrationToAgentRunResult(run.runId, integration)
   );
-  const executionTraces = (run.executionTraces ?? []) as RunSnapshot["traceEvents"];
+  const executionTraces = (run.executionTraces ?? []) as LegacyRunSnapshot["traceEvents"];
   return {
     ...base,
-    agentRunResults: [...agentRunResults, ...integrationRunResults] as RunSnapshot["agentRunResults"],
+    agentRunResults: [...agentRunResults, ...integrationRunResults] as LegacyRunSnapshot["agentRunResults"],
     ...(execution.integrationResults !== undefined ? { integrationResults: execution.integrationResults } : {}),
     traceEvents: [...base.traceEvents, ...executionTraces],
     metadata: { ...base.metadata, deterministic: false }
-  } as RunSnapshot;
+  } as LegacyRunSnapshot;
 }
 
 function leafToAgentRunResult(
   runId: string,
   leaf: RealLeafResult
-): RunSnapshot["agentRunResults"][number] {
+): LegacyRunSnapshot["agentRunResults"][number] {
   const usageUnavailable =
     leaf.tokensIn === undefined && leaf.tokensOut === undefined && leaf.costUsd === undefined;
   return {
@@ -140,13 +140,13 @@ function leafToAgentRunResult(
       usageUnavailable
     },
     ...(leaf.commitSha !== undefined ? { commitHash: leaf.commitSha } : {})
-  } as RunSnapshot["agentRunResults"][number];
+  } as LegacyRunSnapshot["agentRunResults"][number];
 }
 
 function integrationToAgentRunResult(
   runId: string,
   integration: RealIntegrationResult
-): RunSnapshot["agentRunResults"][number] {
+): LegacyRunSnapshot["agentRunResults"][number] {
   const success = integration.status === "success" || integration.status === "executor_repair_success";
   const changedFiles = uniqueStrings(integration.childResults.flatMap((child) => child.changedFiles ?? []));
   return {
@@ -173,14 +173,14 @@ function integrationToAgentRunResult(
       usageUnavailable: true
     },
     ...(integration.integrationCommitSha !== undefined ? { commitHash: integration.integrationCommitSha } : {})
-  } as RunSnapshot["agentRunResults"][number];
+  } as LegacyRunSnapshot["agentRunResults"][number];
 }
 
 function uniqueStrings(values: readonly string[]): string[] {
   return [...new Set(values)];
 }
 
-function buildPlanningSnapshot(run: RunRecord, planning: MockPlanningFlowResult): RunSnapshot {
+function buildPlanningSnapshot(run: RunRecord, planning: PlanningFlowResult): LegacyRunSnapshot {
   return {
     runId: run.runId,
     featureId: planning.decomposition.feature.id,
@@ -205,10 +205,10 @@ function buildPlanningSnapshot(run: RunRecord, planning: MockPlanningFlowResult)
       // tag a real run with "/ mock".
       deterministic: run.decomposition?.provider === "deterministic"
     }
-  } as RunSnapshot;
+  } as LegacyRunSnapshot;
 }
 
-function snapshotStatusFor(status: RunStatus): RunSnapshot["status"] {
+function snapshotStatusFor(status: RunStatus): LegacyRunSnapshot["status"] {
   switch (status) {
     case "completed":
       return "executed";
@@ -228,7 +228,7 @@ function snapshotStatusFor(status: RunStatus): RunSnapshot["status"] {
  * a projected `RunSnapshot` must gate on this. Single source of truth shared
  * with run-model projection.
  */
-export function isProjectablePlanning(value: unknown): value is MockPlanningFlowResult {
+export function isProjectablePlanning(value: unknown): value is PlanningFlowResult {
   if (!isRecord(value)) return false;
   const decomposition = asRecord(value.decomposition);
   if (decomposition === undefined) return false;
@@ -254,7 +254,7 @@ export function isProjectablePlanning(value: unknown): value is MockPlanningFlow
  * null` contract and crash consumers on `snapshot.graphSnapshot.nodes`. Single
  * source of truth shared with run-model projection.
  */
-export function isProjectableSnapshot(value: unknown): value is RunSnapshot {
+export function isProjectableSnapshot(value: unknown): value is LegacyRunSnapshot {
   if (!isRecord(value)) return false;
   const graphSnapshot = asRecord(value.graphSnapshot);
   if (graphSnapshot === undefined) return false;

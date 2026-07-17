@@ -1,4 +1,4 @@
-import type { RunSnapshot } from "@manyhands/core";
+import type { LegacyRunSnapshot } from "@/lib/server/runs/legacy-projection-types";
 import type { AgentTaskContract } from "@manyhands/contracts";
 import { validateExecutableTaskGraph, type TaskGraph } from "@manyhands/task-graph";
 import { runSeamCritic } from "@/lib/plan-critic";
@@ -50,7 +50,7 @@ const NODE_EDIT_PATCH_TYPES = new Set([
 ]);
 
 export function buildPlanReviewSummary(
-  snapshot: RunSnapshot | null,
+  snapshot: LegacyRunSnapshot | null,
   patches: readonly unknown[] = []
 ): PlanReviewSummary | null {
   if (snapshot === null) {

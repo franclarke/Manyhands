@@ -24,17 +24,15 @@ import {
   type PlanCritique,
   type PlanCritiqueFinding,
   type PlanDegradedInterrupt,
+  type PlanningFlowResult,
   type PlanningGraphDeps,
   type PlanningQuestionInterrupt,
   type PlanningResumeDecision
 } from "@manyhands/orchestrator-graph";
-import {
-  isDecomposerQuestionError,
-  type AgentTaskContract,
-  type FeatureRequest,
-  type MockPlanningFlowResult,
-  type RepositoryIndex
-} from "@manyhands/core";
+import { isDecomposerQuestionError, type FeatureRequest } from "@manyhands/decomposer";
+import type { AgentTaskContract } from "@manyhands/contracts";
+import type { RepositoryIndex } from "@manyhands/repository-index";
+import type { TaskGraph } from "@manyhands/task-graph";
 import type { Workspace } from "@/lib/api-types";
 import { runPlanCritic, runSeamCritic } from "@/lib/plan-critic";
 import { detectWorkspaceCommands } from "../providers/command-detection";
@@ -464,7 +462,7 @@ async function runCriticsForRun(
 ): Promise<PlanCritique> {
   const repo = getRunRepository();
   const run = await repo.get(runId);
-  const planning = run.planning as MockPlanningFlowResult | undefined;
+  const planning = run.planning as PlanningFlowResult | undefined;
   const contracts = (planning?.decomposition.contracts ?? []) as AgentTaskContract[];
 
   // B-008: critic command detection also reads the frozen target.
@@ -482,7 +480,7 @@ async function runCriticsForRun(
   const seamCritic = runSeamCritic({ graph, contracts });
 
   const persisted = await updateRunForOperation(runId, options.operationLease, (latest) => {
-    const latestPlanning = latest.planning as MockPlanningFlowResult | undefined;
+    const latestPlanning = latest.planning as PlanningFlowResult | undefined;
     let planningToPersist = latest.planning;
     if (latestPlanning !== undefined) {
       const { graph: backfilledGraph, backfilled } = backfillRunValidationCommands(
@@ -534,11 +532,12 @@ function toCritiqueFinding(
 
 async function replayPlanEvents(
   runId: string,
-  planning: MockPlanningFlowResult,
+  planning: PlanningFlowResult,
   options: PlanningHostOptions
 ): Promise<void> {
   const interval = options.intervalMs ?? PLANNING_EVENT_INTERVAL_MS;
-  const nodeIds = Object.values(planning.decomposition.graph.nodes)
+  const graph = planning.decomposition.graph as TaskGraph;
+  const nodeIds = Object.values(graph.nodes)
     .sort((left, right) => left.depth - right.depth || left.id.localeCompare(right.id))
     .map((node) => node.id);
 
@@ -548,7 +547,7 @@ async function replayPlanEvents(
     await sleep(interval);
   }
 
-  for (const dependency of planning.decomposition.graph.dependencies) {
+  for (const dependency of graph.dependencies) {
     await waitWhileGeneratingPaused(runId);
     const edgeId = `dependency:${dependency.fromTaskId}:${dependency.toTaskId}`;
     publishRunEvent(runId, { kind: "edge.added", edgeId, at: new Date().toISOString() });
@@ -570,10 +569,11 @@ async function replayPlanEvents(
 function publishPlanCompletionEvents(
   runId: string,
   planRevision: number,
-  planning: MockPlanningFlowResult,
+  planning: PlanningFlowResult,
   criticFindings: string[]
 ): void {
-  const nodes = Object.values(planning.decomposition.graph.nodes);
+  const graph = planning.decomposition.graph as TaskGraph;
+  const nodes = Object.values(graph.nodes);
   const rootNodes = nodes.filter((node) => node.depth === 0);
   const rootId = rootNodes.length > 0 ? rootNodes[0]!.id : "root";
   const executableNodeIds = nodes.filter((node) => node.kind === "leaf").map((node) => node.id);
@@ -601,7 +601,7 @@ function publishPlanCompletionEvents(
     planRevision,
     rootId,
     nodeCount: nodes.length,
-    dependencies: planning.decomposition.graph.dependencies.map((dependency) => ({
+    dependencies: graph.dependencies.map((dependency) => ({
       fromTaskId: dependency.fromTaskId,
       toTaskId: dependency.toTaskId,
       type: dependency.type,

@@ -2,14 +2,12 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type {
-  AgentTaskContract,
-  ConflictPrediction,
-  MockPlanningFlowResult,
-  RunSnapshot,
-  TaskGraph,
-  TraceEvent
-} from "@manyhands/core";
+import type { AgentTaskContract } from "@manyhands/contracts";
+import type { ConflictPrediction } from "@manyhands/conflict-risk";
+import type { PlanningFlowResult as MockPlanningFlowResult } from "@manyhands/orchestrator-graph";
+import type { TaskGraph } from "@manyhands/task-graph";
+import type { TraceEvent } from "@manyhands/trace-store";
+import type { LegacyRunSnapshot as RunSnapshot } from "@/lib/server/runs/legacy-projection-types";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import { deriveConflictList } from "@/lib/conflict-view-model";
 import { POST as POST_ACKNOWLEDGE_RISK } from "@/app/api/runs/[id]/risks/acknowledge/route";

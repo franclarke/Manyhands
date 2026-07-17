@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { AgentTaskContract, RunSnapshot, TaskGraph } from "@manyhands/core";
+import type { AgentTaskContract } from "@manyhands/contracts";
+import type { TaskGraph } from "@manyhands/task-graph";
+import type { LegacyRunSnapshot as RunSnapshot } from "@/lib/server/runs/legacy-projection-types";
 import { buildPlanReviewSummary } from "@/lib/plan-review";
 import { buildPlanControlPlane } from "@/lib/plan-control";
 import type { RunPatch } from "@/lib/server/runs";

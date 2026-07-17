@@ -4,12 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  AgentTaskContract,
-  MockPlanningFlowResult,
-  TaskGraph,
-  TaskNode
-} from "@manyhands/core";
+import type { AgentTaskContract } from "@manyhands/contracts";
+import type { PlanningFlowResult as MockPlanningFlowResult } from "@manyhands/orchestrator-graph";
+import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 
 const invokePlanningMock = vi.hoisted(() => vi.fn());
 

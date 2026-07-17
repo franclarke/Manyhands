@@ -22,7 +22,6 @@
     "@langchain/langgraph": "^1.3.6",
     "@manyhands/conflict-risk": "workspace:*",
     "@manyhands/contracts": "workspace:*",
-    "@manyhands/core": "workspace:*",
     "@manyhands/decomposer": "workspace:*",
     "@manyhands/execution-core": "workspace:*",
     "@manyhands/orchestrator-graph": "workspace:*",

@@ -11,6 +11,16 @@
 export { RunStateAnnotation } from "./state.js";
 export type { RunState, RunStateUpdate } from "./state.js";
 
+export {
+  batchHasHighOrBlockingRisk,
+  runPlanningFlow
+} from "./planning-flow.js";
+export type {
+  PlanningFlowOptions,
+  PlanningFlowResult,
+  PlanningRunSummary
+} from "./planning-flow.js";
+
 export { JsonFileCheckpointSaver, type ThreadCheckpointHealth } from "./checkpointer.js";
 // Re-exported so consumers (web app, tests) can type checkpoints without
 // depending on @langchain/langgraph-checkpoint directly.

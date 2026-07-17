@@ -1,11 +1,8 @@
 import { randomUUID } from "node:crypto";
-import {
-  validateTaskGraph,
-  type MockPlanningFlowResult,
-  type RunSnapshot,
-  type TaskGraph,
-  type TraceEvent
-} from "@manyhands/core";
+import { validateTaskGraph, type TaskGraph } from "@manyhands/task-graph";
+import type { PlanningFlowResult } from "@manyhands/orchestrator-graph";
+import type { TraceEvent } from "@manyhands/trace-store";
+import type { LegacyRunSnapshot } from "./legacy-projection-types";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import { RunLifecycleError, RunMutationConflictError } from "./errors";
 import { publishRunStatusChanged } from "./run-status-events";
@@ -24,8 +21,8 @@ import { recoverPendingAmendmentMutations } from "./plan-mutation-recovery";
 
 export interface EditableRunContext {
   run: RunRecord;
-  baseSnapshot: RunSnapshot;
-  currentSnapshot: RunSnapshot;
+  baseSnapshot: LegacyRunSnapshot;
+  currentSnapshot: LegacyRunSnapshot;
 }
 
 export async function loadEditableRunContext(runId: string): Promise<EditableRunContext> {
@@ -49,7 +46,7 @@ export async function loadEditableRunContext(runId: string): Promise<EditableRun
 
 export async function persistRunPatches(input: {
   run: RunRecord;
-  baseSnapshot: RunSnapshot;
+  baseSnapshot: LegacyRunSnapshot;
   patches: readonly RunPatch[];
   expectedVersion: number;
 }): Promise<RunRecord> {
@@ -57,7 +54,7 @@ export async function persistRunPatches(input: {
     throw new RunLifecycleError("No patches were supplied");
   }
 
-  let candidate: RunSnapshot;
+  let candidate: LegacyRunSnapshot;
   try {
     candidate = applyPatches(input.baseSnapshot, [
       ...compatibleGraphPatches(
@@ -182,7 +179,7 @@ export function buildPatch<TType extends RunPatch["type"]>(
   } as Extract<RunPatch, { type: TType }>;
 }
 
-export function assertTaskExists(snapshot: RunSnapshot, taskId: string): void {
+export function assertTaskExists(snapshot: LegacyRunSnapshot, taskId: string): void {
   if (snapshot.graphSnapshot.nodes[taskId] === undefined) {
     throw new RunLifecycleError(`Task ${taskId} does not exist`);
   }
@@ -206,7 +203,7 @@ export function assertEditableRun(run: RunRecord): void {
 }
 
 function appendPatchTraceEvents(run: RunRecord, patches: readonly RunPatch[]): RunRecord {
-  const planning = run.planning as MockPlanningFlowResult | undefined;
+  const planning = run.planning as PlanningFlowResult | undefined;
   if (planning === undefined) {
     return run;
   }

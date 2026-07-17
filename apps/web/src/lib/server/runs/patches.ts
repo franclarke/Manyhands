@@ -9,9 +9,10 @@ import {
   TaskNodeSchema,
   type TaskDependency
 } from "@manyhands/task-graph";
-import type { MockExecutionFlowResult, MockPlanningFlowResult, RunSnapshot } from "@manyhands/core";
+import type { PlanningFlowResult } from "@manyhands/orchestrator-graph";
 import { EXECUTOR_IDS } from "@manyhands/execution-core";
 import type { RunRecord } from "./schema";
+import type { LegacyExecutionProjection, LegacyRunSnapshot } from "./legacy-projection-types";
 
 const PatchActorSchema = z.union([z.literal("human"), z.literal("system")]);
 
@@ -118,7 +119,7 @@ export const RunPatchSchema = z.discriminatedUnion("type", [
 
 export type RunPatch = z.infer<typeof RunPatchSchema>;
 
-type PatchableInput = RunSnapshot | RunRecord;
+type PatchableInput = LegacyRunSnapshot | RunRecord;
 
 interface PatchContext {
   graph: PatchGraph;
@@ -187,7 +188,7 @@ export function applyPatchesUpTo<T extends PatchableInput>(
   // nested dereference on a structural guard so a bad record degrades to "no
   // patchable context" instead of throwing — otherwise one editing/patch-replay
   // request 500s (mirrors the F-002 hardening in live-graph/presenter).
-  const planning = clone.planning as MockPlanningFlowResult | undefined;
+  const planning = clone.planning as PlanningFlowResult | undefined;
   if (hasPatchablePlanning(planning)) {
     applyParsedPatchesToContext(
       {
@@ -200,8 +201,8 @@ export function applyPatchesUpTo<T extends PatchableInput>(
     );
   }
 
-  const execution = clone.execution as MockExecutionFlowResult | undefined;
-  const execPlanning = execution?.planning as MockPlanningFlowResult | undefined;
+  const execution = clone.execution as LegacyExecutionProjection | undefined;
+  const execPlanning = execution?.planning as PlanningFlowResult | undefined;
   if (hasPatchablePlanning(execPlanning)) {
     applyParsedPatchesToContext(
       {
@@ -213,7 +214,7 @@ export function applyPatchesUpTo<T extends PatchableInput>(
       parsed
     );
   }
-  const execSnapshot = execution?.snapshot as RunSnapshot | undefined;
+  const execSnapshot = execution?.snapshot as LegacyRunSnapshot | undefined;
   if (hasPatchableSnapshot(execSnapshot)) {
     applyParsedPatchesToContext(
       {
@@ -246,6 +247,9 @@ function selectPatches(patches: RunPatch[], until?: number | string): RunPatch[]
 function applyParsedPatchesToContext(context: PatchContext, patches: readonly RunPatch[]): void {
   for (const patch of patches) {
     applyPatchToContext(context, patch);
+  }
+  for (const node of Object.values(context.graph.nodes)) {
+    Reflect.deleteProperty(node, "dependencies");
   }
 }
 
@@ -582,7 +586,7 @@ function toAcceptanceCriteria(descriptions: readonly string[]): AcceptanceCriter
   }));
 }
 
-function isRunSnapshot(value: PatchableInput): value is RunSnapshot {
+function isRunSnapshot(value: PatchableInput): value is LegacyRunSnapshot {
   return "graphSnapshot" in value;
 }
 
@@ -592,7 +596,7 @@ function isRunSnapshot(value: PatchableInput): value is RunSnapshot {
  * `decomposition`. Patch application only dereferences `decomposition.graph` and
  * the `contracts` array, so gate on exactly that shape and skip otherwise.
  */
-function hasPatchablePlanning(value: unknown): value is MockPlanningFlowResult {
+function hasPatchablePlanning(value: unknown): value is PlanningFlowResult {
   if (typeof value !== "object" || value === null) return false;
   const decomposition = (value as { decomposition?: unknown }).decomposition;
   if (typeof decomposition !== "object" || decomposition === null) return false;
@@ -606,7 +610,7 @@ function hasPatchablePlanning(value: unknown): value is MockPlanningFlowResult {
  * partial (e.g. `{}`). Patch application dereferences `graphSnapshot`, so require
  * it to be a present object before building the context.
  */
-function hasPatchableSnapshot(value: unknown): value is RunSnapshot {
+function hasPatchableSnapshot(value: unknown): value is LegacyRunSnapshot {
   if (typeof value !== "object" || value === null) return false;
   const graphSnapshot = (value as { graphSnapshot?: unknown }).graphSnapshot;
   return typeof graphSnapshot === "object" && graphSnapshot !== null;

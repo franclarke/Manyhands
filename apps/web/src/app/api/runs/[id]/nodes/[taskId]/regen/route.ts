@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  type AgentTaskContract,
-  type FeatureRequest,
-  type MockPlanningFlowResult,
-  type RunSnapshot,
-  type TaskDependency,
-  type TaskGraph,
-  type TaskNode
-} from "@manyhands/core";
+import type { AgentTaskContract } from "@manyhands/contracts";
+import type { FeatureRequest } from "@manyhands/decomposer";
+import type { PlanningFlowResult } from "@manyhands/orchestrator-graph";
+import type { TaskDependency, TaskGraph, TaskNode } from "@manyhands/task-graph";
+import type { LegacyRunSnapshot } from "@/lib/server/runs/legacy-projection-types";
 import {
   RunLifecycleError,
   RunNotFoundError,
@@ -32,7 +28,7 @@ import { getRunRepository } from "@/lib/server/runs/store";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type SnapshotGraph = RunSnapshot["graphSnapshot"];
+type SnapshotGraph = LegacyRunSnapshot["graphSnapshot"];
 type SnapshotNode = SnapshotGraph["nodes"][string];
 
 interface RouteContext {
@@ -120,7 +116,7 @@ async function runRegenerationPlanning(input: {
   mode: "coarse" | "balanced" | "fine";
   feature: FeatureRequest;
   workspace?: Workspace;
-}): Promise<MockPlanningFlowResult> {
+}): Promise<PlanningFlowResult> {
   const { planning } = await invokePlanning({
     run: input.run,
     feature: input.feature,
@@ -137,7 +133,7 @@ function buildFeatureRequest(input: {
   taskId: string;
   node: SnapshotNode;
   contract?: AgentTaskContract;
-  snapshot: RunSnapshot;
+  snapshot: LegacyRunSnapshot;
 }): FeatureRequest {
   const acceptanceCriteria = input.contract?.acceptance.map((entry) => entry.description) ?? [];
   return {
@@ -155,7 +151,7 @@ function buildFeatureRequest(input: {
 }
 
 function buildSubtreeGraft(input: {
-  snapshot: RunSnapshot;
+  snapshot: LegacyRunSnapshot;
   taskId: string;
   generatedGraph: TaskGraph;
   generatedContracts: readonly AgentTaskContract[];
@@ -209,9 +205,6 @@ function buildSubtreeGraft(input: {
       kind: graftedKind,
       depth: oldRoot.depth + generated.depth,
       childrenIds: generated.childrenIds.map((childId) => idMap.get(childId) ?? childId),
-      // B-009 (CF-13): the shortcut must be remapped exactly like the
-      // canonical edges — the old code left stale pre-remap ids here.
-      dependencies: generated.dependencies.map((depId) => idMap.get(depId) ?? depId),
       metadata: {
         ...(generated.metadata ?? {}),
         authoredBy: "ai",

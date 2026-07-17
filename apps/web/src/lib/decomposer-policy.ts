@@ -11,7 +11,7 @@ import {
   type RecursiveStepStartedEvent,
   type RecursiveStepStatusEvent,
   type WorkspaceHints
-} from "@manyhands/core";
+} from "@manyhands/decomposer";
 import type { EffortLevel } from "@manyhands/shared";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
 import type { Workspace } from "@/lib/api-types";

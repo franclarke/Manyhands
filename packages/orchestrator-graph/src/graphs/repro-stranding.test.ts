@@ -21,7 +21,6 @@ function makeNode(partial: Partial<TaskNode> & { id: string; kind: TaskNode["kin
     granularity: "auto",
     depth: 0,
     childrenIds: [],
-    dependencies: [],
     ...partial
   };
 }

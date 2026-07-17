@@ -13,7 +13,8 @@ import {
   type RunExecutionResult,
   type RunNodeExecutionResult
 } from "@manyhands/execution-core";
-import { validationCommandSafetyIssues, type ExecutionValidationCommand, type MockPlanningFlowResult } from "@manyhands/core";
+import { validationCommandSafetyIssues, type ExecutionValidationCommand } from "@manyhands/contracts";
+import type { PlanningFlowResult } from "@manyhands/orchestrator-graph";
 import { validateExecutableTaskGraph, type TaskGraph, type TaskValidationIssue } from "@manyhands/task-graph";
 import type { DetectedCommands } from "../providers/command-detection";
 import { RunValidationError } from "./errors";
@@ -39,10 +40,10 @@ export interface ExecutionResults {
  */
 export function resolveExecutionGraph(run: RunRecord): TaskGraph {
   if (run.planning !== undefined && run.planning !== null) {
-    const baseGraph = (run.planning as MockPlanningFlowResult).decomposition.graph;
+    const baseGraph = (run.planning as PlanningFlowResult).decomposition.graph;
     const patches = compatibleGraphPatches(run, baseGraph);
     const materialized = applyPatches(run, patches);
-    return (materialized.planning as MockPlanningFlowResult).decomposition.graph;
+    return (materialized.planning as PlanningFlowResult).decomposition.graph;
   }
   throw new Error("Cannot execute a run without a generated plan. Run planning first.");
 }

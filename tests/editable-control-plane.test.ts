@@ -2,18 +2,16 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type {
-  AgentTaskContract,
-  MockPlanningFlowResult,
-  RunSnapshot,
-  TaskGraph
-} from "@manyhands/core";
+import type { AgentTaskContract } from "@manyhands/contracts";
+import type { PlanningFlowResult as MockPlanningFlowResult } from "@manyhands/orchestrator-graph";
+import type { TaskGraph } from "@manyhands/task-graph";
+import type { LegacyRunSnapshot as RunSnapshot } from "@/lib/server/runs/legacy-projection-types";
 
 vi.mock("@/lib/server/runs/planning-invocation-service", async () => {
   const actual = await vi.importActual<typeof import("@/lib/server/runs/planning-invocation-service")>(
     "@/lib/server/runs/planning-invocation-service"
   );
-  const core = await vi.importActual<typeof import("@manyhands/core")>("@manyhands/core");
+  const planningRuntime = await vi.importActual<typeof import("@manyhands/orchestrator-graph")>("@manyhands/orchestrator-graph");
   return {
     ...actual,
     invokePlanning: vi.fn(async (input: Parameters<typeof actual.invokePlanning>[0]) => {
@@ -23,7 +21,7 @@ vi.mock("@/lib/server/runs/planning-invocation-service", async () => {
       ) {
         return actual.invokePlanning(input);
       }
-      const planning = await core.runMockPlanningFlow({
+      const planning = await planningRuntime.runPlanningFlow({
         feature: input.feature,
         mode: input.mode,
         schedulerPolicy: "risk_aware",
@@ -566,9 +564,9 @@ describe("editable control plane vertical slice", () => {
     expect(patched.graphSnapshot.dependencies).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ fromTaskId: "task-2", toTaskId: "task-3" })])
     );
-    expect(patched.graphSnapshot.nodes["task-2"]?.dependencies).toContain("task-1");
-    expect(patched.graphSnapshot.nodes["task-3"]?.dependencies).not.toContain("task-2");
-    expect(patched.graphSnapshot.nodes["integrator-task-1-task-2"]?.dependencies).toEqual(["task-1", "task-2"]);
+    expect(patched.graphSnapshot.nodes["task-2"]).not.toHaveProperty("dependencies");
+    expect(patched.graphSnapshot.nodes["task-3"]).not.toHaveProperty("dependencies");
+    expect(patched.graphSnapshot.nodes["integrator-task-1-task-2"]).not.toHaveProperty("dependencies");
     expect(patched.contracts.filter((contract) => contract.taskId === "task-1")).toEqual([
       regeneratedContract
     ]);
@@ -593,7 +591,7 @@ describe("editable control plane vertical slice", () => {
     expect(snapshot?.graphSnapshot.dependencies).toEqual(
       expect.arrayContaining([expect.objectContaining({ fromTaskId: "task-1", toTaskId: "task-3" })])
     );
-    expect(snapshot?.graphSnapshot.nodes["task-3"]?.dependencies).toContain("task-1");
+    expect(snapshot?.graphSnapshot.nodes["task-3"]).not.toHaveProperty("dependencies");
     expect((saved.planning as MockPlanningFlowResult).traces.some((event) => event.type === "dag_patch_appended")).toBe(true);
   });
 
@@ -617,7 +615,7 @@ describe("editable control plane vertical slice", () => {
     expect(saved.patches).toHaveLength(0);
   });
 
-  it("DELETE dependency removes a dependency patch, syncs node shortcut, and invalidates approval", async () => {
+  it("DELETE dependency removes the canonical edge and invalidates approval", async () => {
     const repo = getRunRepository();
     await repo.save(makeRun({ status: "approved", approvedAt: now }));
 
@@ -636,7 +634,7 @@ describe("editable control plane vertical slice", () => {
     expect(snapshot?.graphSnapshot.dependencies).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ fromTaskId: "task-1", toTaskId: "task-2" })])
     );
-    expect(snapshot?.graphSnapshot.nodes["task-2"]?.dependencies).not.toContain("task-1");
+    expect(snapshot?.graphSnapshot.nodes["task-2"]).not.toHaveProperty("dependencies");
   });
 
   it("DELETE dependency rejects missing dependencies without persisting", async () => {
@@ -681,7 +679,13 @@ describe("editable control plane vertical slice", () => {
     expect(integratorNode?.metadata?.integrator).toBe(true);
     expect(integratorNode?.metadata?.authoredBy).toBe("human");
     expect(snapshot?.graphSnapshot.nodes.root?.childrenIds).toContain(patch.taskId);
-    expect(snapshot?.graphSnapshot.nodes[patch.taskId]?.dependencies).toEqual(["task-1", "task-2"]);
+    expect(snapshot?.graphSnapshot.nodes[patch.taskId]).not.toHaveProperty("dependencies");
+    expect(snapshot?.graphSnapshot.dependencies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fromTaskId: "task-1", toTaskId: patch.taskId }),
+        expect.objectContaining({ fromTaskId: "task-2", toTaskId: patch.taskId })
+      ])
+    );
   });
 
   it("keeps RunRecord, revisioned approval and cold-reloaded run-model on the same edited graph", async () => {

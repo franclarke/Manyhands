@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { runPlanCritic, runSeamCritic } from "@/lib/plan-critic";
-import type { AgentTaskContract } from "@manyhands/core";
+import type { AgentTaskContract } from "@manyhands/contracts";
 import type { TaskGraph } from "@manyhands/task-graph";
 
 function leafGraph(leafIds: string[]): TaskGraph {

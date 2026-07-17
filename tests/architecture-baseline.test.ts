@@ -5,24 +5,6 @@ import { describe, expect, it } from "vitest";
 import { RunRecordSchema } from "@/lib/server/runs/schema";
 
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
-const LEGACY_CORE_CONSUMERS = [
-  "apps/web/src/app/api/runs/[id]/nodes/[taskId]/regen/route.ts",
-  "apps/web/src/lib/conflict-view-model.ts",
-  "apps/web/src/lib/decomposer-policy.ts",
-  "apps/web/src/lib/live-graph.ts",
-  "apps/web/src/lib/plan-control.ts",
-  "apps/web/src/lib/plan-review.ts",
-  "apps/web/src/lib/server/runs/editing.ts",
-  "apps/web/src/lib/server/runs/execution-state.ts",
-  "apps/web/src/lib/server/runs/integrator-service.ts",
-  "apps/web/src/lib/server/runs/patches.ts",
-  "apps/web/src/lib/server/runs/planning-host.ts",
-  "apps/web/src/lib/server/runs/planning-invocation-service.ts",
-  "apps/web/src/lib/server/runs/presenter.ts",
-  "apps/web/src/lib/server/runs/replan-service.ts",
-  "apps/web/src/lib/server/runs/repo-index-cache.ts"
-] as const;
-
 describe("target architecture migration baseline", () => {
   it("loads a representative V1 run without losing its durable identity", async () => {
     const fixture = JSON.parse(
@@ -61,7 +43,7 @@ describe("target architecture migration baseline", () => {
     expect(violations).toEqual([]);
   });
 
-  it("freezes the existing @manyhands/core consumer allowlist", async () => {
+  it("forbids productive @manyhands/core consumers", async () => {
     const productSources = [
       ...(await sourceFiles(path.join(REPO_ROOT, "apps", "web", "src"))),
       ...(await sourceFiles(path.join(REPO_ROOT, "packages")))
@@ -74,7 +56,7 @@ describe("target architecture migration baseline", () => {
       }
     }
 
-    expect(consumers.sort()).toEqual([...LEGACY_CORE_CONSUMERS].sort());
+    expect(consumers).toEqual([]);
   });
 });
 

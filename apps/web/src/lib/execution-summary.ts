@@ -3,7 +3,7 @@ import type { RunExecutionResult } from "@manyhands/execution-core";
 
 /**
  * Narrows the opaque `run.execution` field to a real-engine RunExecutionResult.
- * Distinguishes it from the legacy Lab-mode MockExecutionFlowResult (which has
+ * Distinguishes it from the legacy imported execution projection (which has
  * `results`/`planning`, not `leafResults`/`granularityVector`).
  */
 export function isExecutionResult(value: unknown): value is RunExecutionResult {

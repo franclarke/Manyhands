@@ -2,7 +2,7 @@ import type { RunPreview, RunResponse, StageSelection } from "@/lib/api-types";
 import type { Workspace } from "@/lib/api-types";
 import { isExecutionResult, toExecutionSummary } from "@/lib/execution-summary";
 import { getWorkspaceRepository, WorkspaceNotFoundError } from "@/lib/server/workspaces";
-import type { MockExecutionFlowResult } from "@manyhands/core";
+import type { LegacyExecutionProjection } from "./legacy-projection-types";
 import type { RunRecord } from "./schema";
 
 /** Normalize a persisted per-stage selection into the API shape (drops `effort: undefined`). */
@@ -153,9 +153,9 @@ export function toRunPreview(run: RunRecord, workspaces: ReadonlyMap<string, Wor
     preview.agentCount = run.execution.leafResults.length;
     const risks = countBlockingRisks(planning?.riskMatrix);
     if (risks !== undefined) preview.coordinationRiskCount = risks;
-  } else if ((run.execution as MockExecutionFlowResult | undefined) !== undefined) {
+  } else if ((run.execution as LegacyExecutionProjection | undefined) !== undefined) {
     // Legacy Lab-mode execution snapshot.
-    const execution = run.execution as MockExecutionFlowResult & {
+    const execution = run.execution as LegacyExecutionProjection & {
       planning?: PlanningPreviewShape;
     };
     preview.agentCount = execution.results.length;

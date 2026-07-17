@@ -1,4 +1,4 @@
-import type { RunSnapshot } from "@manyhands/core";
+import type { LegacyRunSnapshot } from "@/lib/server/runs/legacy-projection-types";
 import type { RunControlStatus } from "@/lib/run-model/types";
 
 export interface PlanControlExecutorSelection {
@@ -63,7 +63,7 @@ export interface PlanControlPlane {
 }
 
 export function buildPlanControlPlane(
-  snapshot: RunSnapshot | null,
+  snapshot: LegacyRunSnapshot | null,
   input: {
     version: number;
     status: RunControlStatus;

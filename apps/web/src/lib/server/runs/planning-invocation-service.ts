@@ -2,13 +2,16 @@ import type { ChildProcess, SpawnOptions } from "node:child_process";
 import {
   isDecomposerLlmError,
   isDecomposerQuestionError,
-  runMockPlanningFlow,
   type DecompositionMode,
-  type FeatureRequest,
-  type MockPlanningFlowOptions,
-  type MockPlanningFlowResult,
-  type RepositoryIndex
-} from "@manyhands/core";
+  type FeatureRequest
+} from "@manyhands/decomposer";
+import {
+  runPlanningFlow,
+  type PlanningFlowOptions,
+  type PlanningFlowResult
+} from "@manyhands/orchestrator-graph";
+import type { RepositoryIndex } from "@manyhands/repository-index";
+import { findExecutorDescriptor } from "@manyhands/shared";
 import type { Workspace } from "@/lib/api-types";
 import {
   pickDecomposer,
@@ -64,13 +67,13 @@ export interface PlanningInvocationInput {
 }
 
 export interface PlanningInvocationResult {
-  planning: MockPlanningFlowResult;
+  planning: PlanningFlowResult;
   decomposition: RunDecompositionMetadata;
 }
 
 export interface PlanningInvocationDependencies {
   pickDecomposer: (input: PickDecomposerInput) => DecomposerSelection;
-  runPlanningFlow: (options: MockPlanningFlowOptions) => Promise<MockPlanningFlowResult>;
+  runPlanningFlow: (options: PlanningFlowOptions) => Promise<PlanningFlowResult>;
   createSupervisedSpawn: (input: {
     runId: string;
     label: string;
@@ -81,7 +84,7 @@ export interface PlanningInvocationDependencies {
 
 const DEFAULT_DEPENDENCIES: PlanningInvocationDependencies = {
   pickDecomposer,
-  runPlanningFlow: runMockPlanningFlow,
+  runPlanningFlow,
   createSupervisedSpawn: supervisedSpawnFn,
   inspectCapabilities
 };
@@ -178,13 +181,14 @@ function unavailableMessage(
   executorId: string,
   reason: DecomposerSelection["fallbackReason"]
 ): string {
+  const executorLabel = findExecutorDescriptor(executorId)?.label ?? executorId;
   if (reason === "forced_by_env") {
-    return "MANYHANDS_FORCE_FALLBACK is set, but runs require the selected planning executor. Unset MANYHANDS_FORCE_FALLBACK to continue.";
+    return `MANYHANDS_FORCE_FALLBACK is set, but runs require ${executorLabel}. Unset MANYHANDS_FORCE_FALLBACK to continue.`;
   }
   if (reason === "forced_by_caller") {
-    return "Deterministic mode was explicitly requested, but runs require the selected planning executor.";
+    return `Deterministic mode was explicitly requested, but runs require ${executorLabel}.`;
   }
-  return `Graph generation requires ${executorId}. Install and authenticate the selected CLI, then retry.`;
+  return `Graph generation requires ${executorLabel}. Install and authenticate the selected CLI, then retry.`;
 }
 
 function decompositionMetadata(selection: DecomposerSelection): RunDecompositionMetadata {

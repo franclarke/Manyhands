@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { AgentTaskContract, MockPlanningFlowResult, TaskGraph, TaskNode } from "@manyhands/core";
+import type { AgentTaskContract } from "@manyhands/contracts";
+import type { PlanningFlowResult as MockPlanningFlowResult } from "@manyhands/orchestrator-graph";
+import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 import { projectRunRecordToSnapshot } from "@/lib/live-graph";
 import { resolveExecutionGraph } from "@/lib/server/runs/execution-state";
 import type { RunPatch } from "@/lib/server/runs/patches";

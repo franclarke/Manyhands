@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { RecursiveDecomposer, runMockPlanningFlow } from "@manyhands/core";
-import type { AnthropicLike, FeatureRequest } from "@manyhands/decomposer";
+import { RecursiveDecomposer, type AnthropicLike, type FeatureRequest } from "@manyhands/decomposer";
+import { runPlanningFlow } from "@manyhands/orchestrator-graph";
 
 /**
  * End-to-end planning integration: the recursive decomposer flows through the
- * product's planning pipeline (runMockPlanningFlow → validate graph + contracts
+ * product's planning pipeline (runPlanningFlow → validate graph + contracts
  * → scheduler) without issues. Proves the new decomposer is a drop-in for the
  * pipeline, not just correct in isolation.
  */
@@ -77,7 +77,7 @@ describe("RecursiveDecomposer through the planning pipeline", () => {
       aggressiveness: "high"
     });
 
-    const result = await runMockPlanningFlow({
+    const result = await runPlanningFlow({
       feature: FEATURE,
       decomposer,
       mode: "fine",

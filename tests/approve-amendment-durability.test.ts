@@ -2,7 +2,9 @@ import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AgentTaskContract, MockPlanningFlowResult, TaskGraph } from "@manyhands/core";
+import type { AgentTaskContract } from "@manyhands/contracts";
+import type { PlanningFlowResult as MockPlanningFlowResult } from "@manyhands/orchestrator-graph";
+import type { TaskGraph } from "@manyhands/task-graph";
 import type { AgentExecutionResult, IntegrationResult } from "@manyhands/execution-core";
 
 const cleanupInvalidatedTasks = vi.hoisted(() => vi.fn(async () => undefined));
