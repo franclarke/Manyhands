@@ -34,6 +34,7 @@ import {
   claimRunOperation,
   releaseRunOperation
 } from "@/lib/server/runs/run-operation-lease";
+import { approvePlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,6 +75,16 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
   try {
     const repo = getRunRepository();
     let run = await repo.get(id);
+    const isV2Approval = run.architectureVersion?.planning === "v2" && (
+      decisionId.startsWith("approve-plan:") || decisionId === approvalDecisionId(run.planRevision ?? 1)
+    );
+    if (isV2Approval) {
+      if (body.action !== "approve") throw new RunValidationError("approve_plan only supports { action: 'approve' }");
+      const match = /:r([1-9]\d*)$/u.exec(decisionId);
+      const revision = match === null ? run.planRevision ?? 1 : Number(match[1]);
+      run = await approvePlanningV2Pipeline(run.runId, revision);
+      return NextResponse.json({ ...(await toCanonicalRunResponse(run)), decisionId, choice: { action: "approve" } });
+    }
     const events = await ensureRunModelEventLogForRun(run);
     const decision = pendingDecisionFor(run, events, decisionId);
     if (decision.kind === "approve_merge") {

@@ -55,8 +55,18 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
   switch (event.type) {
     case "run.created":
       throw new Error("run.created can only be the first event.");
+    case "repository.inspected":
+    case "planning.completed":
+    case "graph.compiled":
+    case "planning.critic_recorded":
+      if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot record planning facts while ${next.lifecycle}.`);
+      break;
+    case "planning.failed":
+      next.failureReason = event.payload.reason;
+      transition(next, "failed");
+      break;
     case "graph.revision.proposed":
-      if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval") throw new Error(`Cannot propose a graph while ${next.lifecycle}.`);
+      if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot propose a graph while ${next.lifecycle}.`);
       next.graphId = event.payload.graphId;
       next.graphRevision = event.payload.revision;
       transition(next, "needs_approval");

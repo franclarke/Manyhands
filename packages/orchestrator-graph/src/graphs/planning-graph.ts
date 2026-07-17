@@ -12,6 +12,7 @@
  * gate nodes resumed natively with Command({ resume }) — identical to the
  * execution graph's leaf/conflict gates, so checkpoints are never hand-edited.
  */
+
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { MemorySaver } from "@langchain/langgraph";
 import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint";
@@ -38,6 +39,13 @@ export type {
   PlanningQuestionInterrupt,
   PlanningResumeDecision
 } from "../nodes/planning-nodes.js";
+
+/**
+ * This StateGraph is the compatibility adapter for planning V1. Planning V2
+ * persists domain commands directly through RunCoordinator; it must not turn
+ * LangGraph checkpoint state into a second lifecycle or event source.
+ */
+export const PLANNING_GRAPH_ARCHITECTURE_ROLE = "legacy-v1-adapter" as const;
 
 export interface PlanningGraphConfig {
   deps: PlanningGraphDeps;

@@ -66,12 +66,24 @@ importers:
       '@manyhands/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@manyhands/decomposer':
+        specifier: workspace:*
+        version: link:../../packages/decomposer
       '@manyhands/execution-core':
         specifier: workspace:*
         version: link:../../packages/execution-core
       '@manyhands/orchestrator-graph':
         specifier: workspace:*
         version: link:../../packages/orchestrator-graph
+      '@manyhands/repository-index':
+        specifier: workspace:*
+        version: link:../../packages/repository-index
+      '@manyhands/run-coordinator':
+        specifier: workspace:*
+        version: link:../../packages/run-coordinator
+      '@manyhands/run-store':
+        specifier: workspace:*
+        version: link:../../packages/run-store
       '@manyhands/scheduler':
         specifier: workspace:*
         version: link:../../packages/scheduler

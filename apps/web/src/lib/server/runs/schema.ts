@@ -354,8 +354,17 @@ export const PlanGraphStorageSchema = z.object({
 
 export type PlanGraphStorage = z.infer<typeof PlanGraphStorageSchema>;
 
+export const RunArchitectureVersionSchema = z.object({
+  planning: z.enum(["v1", "v2"]),
+  execution: z.enum(["v1", "v2"]),
+  integration: z.enum(["v1", "v2"])
+}).strict();
+
+export type RunArchitectureVersion = z.infer<typeof RunArchitectureVersionSchema>;
+
 export const RunRecordSchema = z.object({
   runId: z.string().min(1),
+  architectureVersion: RunArchitectureVersionSchema.optional(),
   workspaceId: z.string().min(1),
   granularity: GranularityModeSchema,
   model: z.string().min(1),
@@ -544,6 +553,7 @@ export type RunFile = z.infer<typeof RunFileSchema>;
 
 export const RunCreateRequestSchema = z.object({
   workspaceId: z.string().min(1),
+  architectureVersion: z.object({ planning: z.enum(["v1", "v2"]) }).strict().optional(),
   granularity: GranularityModeSchema,
   model: z.string().min(1),
   planningModel: z.string().min(1).optional(),

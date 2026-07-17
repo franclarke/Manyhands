@@ -19,7 +19,7 @@ export type RunLifecycle = z.infer<typeof RunLifecycleSchema>;
 export const LEGAL_LIFECYCLE_TRANSITIONS: Readonly<Record<RunLifecycle, readonly RunLifecycle[]>> = {
   planning: ["needs_approval", "cancelling", "failed"],
   needs_approval: ["planning", "running", "cancelling", "failed"],
-  running: ["waiting_for_input", "paused", "cancelling", "result_ready", "failed"],
+  running: ["needs_approval", "waiting_for_input", "paused", "cancelling", "result_ready", "failed"],
   waiting_for_input: ["running", "paused", "cancelling", "failed"],
   paused: ["running", "waiting_for_input", "cancelling", "failed"],
   cancelling: ["interrupted", "failed"],

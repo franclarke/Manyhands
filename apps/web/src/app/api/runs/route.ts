@@ -14,6 +14,7 @@ import {
   type RunStatus
 } from "@/lib/server/runs";
 import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
+import { runPlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
 import { captureRunTargetContext } from "@/lib/server/runs/target-context";
 import { toCanonicalRunResponse, toRunPreview } from "@/lib/server/runs/presenter";
 import {
@@ -192,9 +193,13 @@ export async function POST(request: Request): Promise<NextResponse> {
           "Verify that it is an accessible Git repository with at least one commit and retry; the run was not created."
       );
     }
+    if (parsed.data.architectureVersion?.planning === "v2" && targetContext === undefined) {
+      throw new RunValidationError("Planning V2 requires a captured local Git repository target.");
+    }
 
     const record: RunRecord = {
       runId,
+      architectureVersion: { planning: parsed.data.architectureVersion?.planning ?? "v1", execution: "v1", integration: "v1" },
       workspaceId: workspace.id,
       ...(repoSpec !== undefined ? { repoSpec } : {}),
       ...(targetContext !== undefined ? { targetContext } : {}),
@@ -224,7 +229,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     // Fire-and-forget planning pipeline; failures land as `failed` on disk.
-    startRunBackgroundTask(saved.runId, "route:create:planning", () => runPlanningPipeline(saved.runId));
+    startRunBackgroundTask(saved.runId, "route:create:planning", () =>
+      saved.architectureVersion?.planning === "v2"
+        ? runPlanningV2Pipeline(saved.runId)
+        : runPlanningPipeline(saved.runId)
+    );
 
     return NextResponse.json(await toCanonicalRunResponse(saved), { status: 201 });
   } catch (error) {
