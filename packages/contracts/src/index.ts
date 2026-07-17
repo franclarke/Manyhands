@@ -1,5 +1,18 @@
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
+import {
+  adaptParsedLegacyAgentTaskContract,
+  type LegacyContractAdapterResult
+} from "./legacy-adapter.js";
+
+export * from "./artifact-contract.js";
+export * from "./contract-bundle.js";
+export * from "./contract-identity.js";
+export * from "./legacy-adapter.js";
+export * from "./scope-contract.js";
+export * from "./seam-contract.js";
+export * from "./task-contract.js";
+export * from "./validation-contract.js";
 
 export const AllowedScopeSchema = z.object({
   paths: z.array(NonEmptyStringSchema).min(1),
@@ -245,6 +258,15 @@ export const AgentTaskContractSchema = z.object({
 });
 
 export type AgentTaskContract = z.infer<typeof AgentTaskContractSchema>;
+
+export function adaptLegacyAgentTaskContract(input: unknown): LegacyContractAdapterResult {
+  const parsed = AgentTaskContractSchema.safeParse(input);
+  if (!parsed.success) {
+    const issues = parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
+    throw new Error(`Invalid legacy AgentTaskContract: ${issues.join("; ")}`);
+  }
+  return adaptParsedLegacyAgentTaskContract(parsed.data);
+}
 
 export const ValidationCheckKindSchema = z.union([
   z.literal("typecheck"),
