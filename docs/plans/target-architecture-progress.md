@@ -10,8 +10,8 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-15 — IntegrationManifest bottom-up` |
-| Last completed packet | `WP-14 — ValidationRecipe and EvidenceMatrix` |
+| Current packet | `WP-16 — Final candidate and transactional delivery` |
+| Last completed packet | `WP-15 — IntegrationManifest bottom-up` |
 | Open gate | G4 — Honest verification |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
@@ -31,6 +31,7 @@
 | WP-12 implementation commit | `4e8ad12` |
 | WP-13 implementation commit | `9b074cc` |
 | WP-14 implementation commit | `01a385a` |
+| WP-15 implementation commit | `4423967` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -52,7 +53,7 @@
 | WP-12 Execution coordination | completed | `4e8ad12` | 28/28 packet and StateGraph/audit regressions; coordinator/orchestrator/web typechecks and package builds passed | Command-driven readiness, local decisions, durable wave-before-dispatch boundary and fenced web V2 host adapter |
 | WP-13 Failure recovery | completed | `9b074cc` | 28/28 packet and legacy replan regressions; coordinator/execution-core/web typechecks and package builds passed | Cause-specific recovery policy, evidenced immutable graph amendments and exact fingerprint invalidation with V1 closure retained only as compatibility behavior |
 | WP-14 EvidenceMatrix | completed | `01a385a` | 30/30 packet and validation/terminal regressions; execution-core/coordinator typechecks and builds passed | Capability-compiled recipes, exact clean candidate sandbox, criterion evidence matrix, baseline/flakiness/negative-control honesty and test-integrity findings; G4 closed |
-| WP-15 Integration manifests | queued | — | — | — |
+| WP-15 Integration manifests | completed | `4423967` | 35/35 manifest, legacy integration, recovery and real-Git tests; execution-core/coordinator typechecks and builds passed | Exact adopted child artifacts, complete integration manifests, parent evidence gate, one semantic repair and manifest-backed output adoption |
 | WP-16 Final candidate and delivery | queued | — | — | — |
 | WP-17 Workspace web V2 | queued | — | — | — |
 | WP-18 Legacy retirement | queued | — | — | Split into WP-18A through WP-18D during execution |
@@ -677,6 +678,51 @@ git diff --check: passed
   scripts produce integrity findings.
 - `evidence.matrix_recorded` is a canonical coordinator fact. Its schema rejects
   a `verified` claim containing failed or uncovered criteria.
+
+## WP-15 evidence
+
+### Red-green evidence
+
+The four initial manifest, omission, contract-validation and repair-policy
+cases failed because integration accepted only implicit child results. The
+completed packet produced:
+
+```text
+WP-15 manifest and integration regressions: 6 files passed, 35 tests passed
+execution-core typecheck: passed
+run-coordinator typecheck: passed
+execution-core and run-coordinator builds: passed
+git diff --check: passed
+```
+
+The verification includes three temporary-repository Git scenarios covering
+multi-level handoff preservation, redundant child patches and rejection of an
+unexpected repair commit.
+
+### Implemented manifest-backed integration
+
+- `IntegrationRequestManifest` fixes the composite/node graph revision, exact
+  base manifest, required adopted artifact ids and digests, seam revisions,
+  parent goal, validation contract, output artifact contract and one-repair
+  budget.
+- Request construction selects only explicitly required adopted artifacts from
+  those available. Missing requirements remain explicit and fail before any
+  Git mutation; extra siblings are never applied transitively.
+- Every cherry-pick records artifact id, pre-SHA, result SHA and outcome. The
+  result manifest also records repair evidence, candidate SHA, parent evidence,
+  errors and output artifacts; there is no ambiguous partial-success state.
+- A clean cherry-pick followed by `unverified` or failed parent evidence is a
+  failed integration and produces no output artifact.
+- Semantic repair receives the parent goal, seam revisions, child artifact
+  digests/evidence, conflicting files and output. Exactly one repair is
+  permitted; failure derives `decision_required` rather than another hidden
+  retry.
+- The durable integration journal can bind the immutable request manifest and
+  persist the result manifest id. `IntegrationAgent` exposes the manifest path
+  while preserving the V1 adapter and its recovery behavior.
+- Coordinator adoption accepts output artifacts only when required inputs match
+  exactly, no omission/error exists and parent evidence is verified. Adopted
+  outputs retain the integration attempt as producer identity.
 
 ## Resume instructions
 
