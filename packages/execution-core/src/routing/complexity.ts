@@ -11,7 +11,7 @@ export type ComplexityTier = "trivial" | "standard" | "complex" | "critical";
 /** Structural subset of TaskNode the scorer needs (keeps tests light). */
 export type TaskNodeLike = Pick<
   TaskNode,
-  "id" | "kind" | "goal" | "depth" | "dependencies" | "metadata" | "contract" | "acceptanceCriteria"
+  "id" | "kind" | "goal" | "depth" | "metadata" | "contract" | "acceptanceCriteria"
 >;
 
 export interface ComplexityScore {
@@ -41,9 +41,9 @@ function tierForScore(score: number): ComplexityTier {
   return "critical";
 }
 
-/** Count how many sibling nodes list `nodeId` among their dependencies. */
-export function countDependents(graph: Pick<TaskGraph, "nodes">, nodeId: string): number {
-  return Object.values(graph.nodes).filter((node) => node.dependencies.includes(nodeId)).length;
+/** Count canonical outgoing dependency edges for `nodeId`. */
+export function countDependents(graph: Pick<TaskGraph, "dependencies">, nodeId: string): number {
+  return graph.dependencies.filter((dependency) => dependency.fromTaskId === nodeId).length;
 }
 
 export function scoreNodeComplexity(input: ScoreNodeComplexityInput): ComplexityScore {
@@ -85,11 +85,6 @@ export function scoreNodeComplexity(input: ScoreNodeComplexityInput): Complexity
     signals.push("sizeable goal description");
   }
 
-  const fanIn = Math.min(node.dependencies.length, 3);
-  if (fanIn > 0) {
-    score += fanIn;
-    signals.push(`depends on ${node.dependencies.length} sibling task(s)`);
-  }
   const fanOut = Math.min(input.dependents, 3);
   if (fanOut > 0) {
     score += fanOut;

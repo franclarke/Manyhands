@@ -7,7 +7,6 @@ import {
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema, uniqueValues } from "@manyhands/shared";
 import {
   getLeafNodes,
-  syncNodeDependencies,
   TaskGraphSchema,
   validateTaskGraph,
   type TaskDependency,
@@ -162,8 +161,7 @@ export class MockDecomposer implements Decomposer {
         status: "planned",
         granularity,
         depth: 0,
-        childrenIds: template.areas.map((area) => taskId(feature.id, mode, area.id)),
-        dependencies: []
+        childrenIds: template.areas.map((area) => taskId(feature.id, mode, area.id))
       }
     };
 
@@ -180,8 +178,7 @@ export class MockDecomposer implements Decomposer {
         depth: 1,
         childrenIds: template.leaves
           .filter((leaf) => leaf.parentId === area.id)
-          .map((leaf) => taskId(feature.id, mode, leaf.id)),
-        dependencies: []
+          .map((leaf) => taskId(feature.id, mode, leaf.id))
       };
     }
 
@@ -204,7 +201,6 @@ export class MockDecomposer implements Decomposer {
         granularity,
         depth: 2,
         childrenIds: [],
-        dependencies: [],
         contract
       };
     }
@@ -225,10 +221,6 @@ export class MockDecomposer implements Decomposer {
       rootId,
       createdAt: generatedAt
     }) as TaskGraph;
-    // D1/B-009: the node shortcut is DERIVED from the canonical edges — a
-    // producer must never emit a divergent pair.
-    syncNodeDependencies(graph);
-
     const validation = validateDecomposition(graph, contracts);
 
     return {
@@ -323,8 +315,7 @@ function buildDecompositionFromTemplate(input: {
       status: "planned",
       granularity,
       depth: 0,
-      childrenIds: input.template.areas.map((area) => taskId(input.feature.id, input.mode, area.id)),
-      dependencies: []
+      childrenIds: input.template.areas.map((area) => taskId(input.feature.id, input.mode, area.id))
     }
   };
 
@@ -341,8 +332,7 @@ function buildDecompositionFromTemplate(input: {
       depth: 1,
       childrenIds: input.template.leaves
         .filter((leaf) => leaf.parentId === area.id)
-        .map((leaf) => taskId(input.feature.id, input.mode, leaf.id)),
-      dependencies: []
+        .map((leaf) => taskId(input.feature.id, input.mode, leaf.id))
     };
   }
 
@@ -365,7 +355,6 @@ function buildDecompositionFromTemplate(input: {
       granularity,
       depth: 2,
       childrenIds: [],
-      dependencies: [],
       contract
     };
   }
@@ -386,9 +375,6 @@ function buildDecompositionFromTemplate(input: {
     rootId,
     createdAt: input.generatedAt
   }) as TaskGraph;
-  // D1/B-009: the node shortcut is DERIVED from the canonical edges — a
-  // producer must never emit a divergent pair.
-  syncNodeDependencies(graph);
   const validation = validateDecomposition(graph, contracts);
 
   return {

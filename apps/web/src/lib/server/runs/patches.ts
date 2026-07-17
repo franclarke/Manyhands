@@ -11,7 +11,6 @@ import {
 } from "@manyhands/task-graph";
 import type { MockExecutionFlowResult, MockPlanningFlowResult, RunSnapshot } from "@manyhands/core";
 import { EXECUTOR_IDS } from "@manyhands/execution-core";
-import { addDependency, removeDependency, syncNodeDependencies, type TaskGraph } from "@manyhands/task-graph";
 import type { RunRecord } from "./schema";
 
 const PatchActorSchema = z.union([z.literal("human"), z.literal("system")]);
@@ -332,7 +331,6 @@ function applyPatchToContext(context: PatchContext, patch: RunPatch): void {
       for (const dependency of patch.dependencies) {
         addGraphDependency(context, dependency);
       }
-      syncGraphDependencies(context);
       return;
     case "TASKS_SERIALIZED":
       addGraphDependency(context, {
@@ -342,11 +340,9 @@ function applyPatchToContext(context: PatchContext, patch: RunPatch): void {
         inferred: false,
         ...(patch.rationale !== undefined ? { rationale: patch.rationale } : {})
       });
-      syncGraphDependencies(context);
       return;
     case "DEPENDENCY_REMOVED":
       removeGraphDependency(context, patch.fromTaskId, patch.toTaskId);
-      syncGraphDependencies(context);
       return;
     case "SEAM_AMENDED":
       applySeamAmended(context, patch);
@@ -474,19 +470,20 @@ function applySubtreeRegenerated(
       context.graph.nodes[contract.taskId] = { ...node, contract };
     }
   }
-  syncGraphDependencies(context);
 }
 
 function addGraphDependency(context: PatchContext, dependency: TaskDependency): void {
-  addDependency(context.graph as unknown as TaskGraph, dependency);
+  if (context.graph.nodes[dependency.toTaskId] === undefined) return;
+  const exists = context.graph.dependencies.some(
+    (candidate) => candidate.fromTaskId === dependency.fromTaskId && candidate.toTaskId === dependency.toTaskId
+  );
+  if (!exists) context.graph.dependencies.push(dependency);
 }
 
 function removeGraphDependency(context: PatchContext, fromTaskId: string, toTaskId: string): void {
-  removeDependency(context.graph as unknown as TaskGraph, fromTaskId, toTaskId);
-}
-
-function syncGraphDependencies(context: PatchContext): void {
-  syncNodeDependencies(context.graph as unknown as TaskGraph);
+  context.graph.dependencies = context.graph.dependencies.filter(
+    (dependency) => dependency.fromTaskId !== fromTaskId || dependency.toTaskId !== toTaskId
+  );
 }
 
 function attachNodeToParent(context: PatchContext, taskId: string, parentId: string | null): void {

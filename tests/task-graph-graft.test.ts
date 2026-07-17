@@ -169,7 +169,7 @@ describe("graftSubtree", () => {
 
     expect(result.removedTaskIds).toEqual(["auth-old"]);
     expect(result.graph.nodes["auth-old"]).toBeUndefined();
-    expect(result.graph.nodes["billing"]?.dependencies).toEqual(["auth"]);
+    expect(result.graph.nodes["billing"]).not.toHaveProperty("dependencies");
     expect(result.graph.dependencies).toContainEqual(
       expect.objectContaining({ fromTaskId: "auth", toTaskId: "billing" })
     );

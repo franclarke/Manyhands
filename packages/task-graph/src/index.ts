@@ -51,14 +51,6 @@ export const TaskDependencyTypeSchema = z.union([
 
 export type TaskDependencyType = z.infer<typeof TaskDependencyTypeSchema>;
 
-/**
- * D1 edges are dispatch/readiness barriers only. Every executable task still
- * starts from TaskGraph.baseCommit; predecessor commits are composed later by
- * bottom-up integration. Cross-task code compatibility belongs in explicit
- * interface contracts, not implicit worktree inheritance.
- */
-export const TASK_DEPENDENCY_EXECUTION_SEMANTICS = "ordering_only" as const;
-
 export const TaskDependencySchema = z.object({
   fromTaskId: EntityIdSchema,
   toTaskId: EntityIdSchema,
@@ -106,7 +98,6 @@ export const TaskNodeSchema = z.object({
   granularity: TaskGranularityLevelSchema,
   depth: z.number().int().nonnegative(),
   childrenIds: z.array(EntityIdSchema).default([]),
-  dependencies: z.array(EntityIdSchema).default([]),
   prompt: NonEmptyStringSchema.optional(),
   acceptanceCriteria: z.array(NonEmptyStringSchema).optional(),
   output: z.record(z.unknown()).optional(),
@@ -302,7 +293,6 @@ export function validateTaskGraph(
     seenEdges.add(key);
   }
 
-  const incomingDeps = buildIncomingDependencyIndex(graph);
 
   for (const node of Object.values(graph.nodes)) {
     if (options.maxDepth !== undefined && node.depth > options.maxDepth) {
@@ -383,44 +373,6 @@ export function validateTaskGraph(
               severity: "error"
             });
           }
-        }
-      }
-    }
-
-    // B-009 (CF-13): the shortcut and the canonical edges must be the SAME
-    // set, in both directions. Divergence means consumers of the shortcut see
-    // a different reality than the scheduler.
-    {
-      const canonicalIncoming = new Set(incomingDeps.get(node.id) ?? []);
-      const shortcut = new Set(node.dependencies);
-      if (shortcut.size !== node.dependencies.length) {
-        issues.push({
-          code: "duplicate_dependency",
-          taskId: node.id,
-          message: `node ${node.id} lists duplicate entries in node.dependencies`,
-          severity: "error"
-        });
-      }
-      for (const depId of node.dependencies) {
-        if (!canonicalIncoming.has(depId)) {
-          issues.push({
-            code: "dependency_sync_divergence",
-            taskId: node.id,
-            message: `node ${node.id} lists dependency ${depId} not found in graph.dependencies`,
-            severity: "warning"
-          });
-        }
-      }
-      for (const depId of canonicalIncoming) {
-        // A dep from a missing node is already reported as dangling_dependency;
-        // flagging sync divergence on top would double-report one defect.
-        if (!shortcut.has(depId) && graph.nodes[depId] !== undefined) {
-          issues.push({
-            code: "dependency_sync_divergence",
-            taskId: node.id,
-            message: `graph.dependencies declares ${depId} -> ${node.id} but node.dependencies does not list it`,
-            severity: "warning"
-          });
         }
       }
     }
@@ -763,67 +715,9 @@ export function getExecutableNodes(graph: TaskGraph): TaskNode[] {
   );
 }
 
-export function addDependency(
-  graph: TaskGraph,
-  dep: TaskDependency
-): TaskGraph {
-  const target = graph.nodes[dep.toTaskId];
-  if (!target) return graph;
-
-  const alreadyExists = graph.dependencies.some(
-    (d) => d.fromTaskId === dep.fromTaskId && d.toTaskId === dep.toTaskId
-  );
-  if (alreadyExists) return graph;
-
-  graph.dependencies.push(dep);
-
-  if (!target.dependencies.includes(dep.fromTaskId)) {
-    target.dependencies.push(dep.fromTaskId);
-  }
-
-  return graph;
-}
-
-export function removeDependency(
-  graph: TaskGraph,
-  fromTaskId: string,
-  toTaskId: string
-): TaskGraph {
-  graph.dependencies = graph.dependencies.filter(
-    (d) => !(d.fromTaskId === fromTaskId && d.toTaskId === toTaskId)
-  );
-
-  const target = graph.nodes[toTaskId];
-  if (target) {
-    target.dependencies = target.dependencies.filter((id) => id !== fromTaskId);
-  }
-
-  return graph;
-}
-
-export function syncNodeDependencies(graph: TaskGraph): void {
-  const incoming = buildIncomingDependencyIndex(graph);
-
-  for (const node of Object.values(graph.nodes)) {
-    node.dependencies = incoming.get(node.id) ?? [];
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
-
-function buildIncomingDependencyIndex(graph: TaskGraph): Map<string, string[]> {
-  const index = new Map<string, string[]>();
-
-  for (const dep of graph.dependencies) {
-    const list = index.get(dep.toTaskId) ?? [];
-    list.push(dep.fromTaskId);
-    index.set(dep.toTaskId, list);
-  }
-
-  return index;
-}
 
 function taskIssueCodeForContractIssue(
   code: ReturnType<typeof validateAgentTaskContractBoundary>["issues"][number]["code"]
@@ -1000,8 +894,7 @@ export function graftSubtree(params: GraftSubtreeParams): GraftSubtreeResult {
   const nodes: Record<string, TaskNode> = {};
   for (const [id, node] of Object.entries(graph.nodes)) {
     if (id === taskId || removed.has(id)) continue;
-    const repointed = node.dependencies.map((dep) => (removed.has(dep) ? taskId : dep));
-    nodes[id] = { ...node, dependencies: [...new Set(repointed)].filter((dep) => dep !== id) };
+    nodes[id] = { ...node };
   }
 
   // 4. Adopt the replacement subtree.
@@ -1018,7 +911,6 @@ export function graftSubtree(params: GraftSubtreeParams): GraftSubtreeResult {
         granularity: target.granularity,
         depth: target.depth,
         childrenIds: subRoot.childrenIds.map(mapId),
-        dependencies: [...new Set(target.dependencies.filter((dep) => !removed.has(dep) && dep !== taskId))],
         ...(subRoot.contract !== undefined ? { contract: { ...subRoot.contract, taskId } } : {}),
         ...(subRoot.acceptanceCriteria !== undefined ? { acceptanceCriteria: subRoot.acceptanceCriteria } : {}),
         ...(subRoot.prompt !== undefined ? { prompt: subRoot.prompt } : {}),
@@ -1034,7 +926,6 @@ export function graftSubtree(params: GraftSubtreeParams): GraftSubtreeResult {
       depth: target.depth + node.depth,
       status: "planned",
       childrenIds: node.childrenIds.map(mapId),
-      dependencies: node.dependencies.map(mapId),
       ...(node.contract !== undefined
         ? {
             contract: {
@@ -1063,6 +954,10 @@ export function graftSubtree(params: GraftSubtreeParams): GraftSubtreeResult {
   }
   for (const edge of replacement.dependencies) {
     addEdge({ ...edge, fromTaskId: mapId(edge.fromTaskId), toTaskId: mapId(edge.toTaskId) });
+  }
+
+  for (const node of Object.values(nodes)) {
+    Reflect.deleteProperty(node, "dependencies");
   }
 
   const grafted: TaskGraph = { ...graph, nodes, dependencies: [...edges.values()] };

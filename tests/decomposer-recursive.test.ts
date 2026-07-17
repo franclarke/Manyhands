@@ -220,7 +220,7 @@ describe("RecursiveDecomposer — decompose with shared interfaces", () => {
     expect(result.graph.nodes.root?.contract?.parentValidationCommands?.[0]?.args).toEqual(["test"]);
   });
 
-  it("syncs node.dependencies (shortcut) with graph.dependencies", async () => {
+  it("keeps graph.dependencies as the only dependency source", async () => {
     const client = scriptedClient([
       {
         match: "Evaluate arithmetic expression strings",
@@ -258,11 +258,13 @@ describe("RecursiveDecomposer — decompose with shared interfaces", () => {
     const result = await decomposer.decompose(FEATURE);
 
     // graph.dependencies is canonical; node.dependencies is its synced shortcut.
-    // The edge from→to means `from` is the prerequisite, so node[to].dependencies
-    // must list each fromTaskId (and the prerequisite-less node stays empty).
-    expect(result.graph.nodes.parse?.dependencies).toEqual(["tokenize"]);
-    expect(result.graph.nodes.evaluate?.dependencies).toEqual(["parse"]);
-    expect(result.graph.nodes.tokenize?.dependencies).toEqual([]);
+    expect(result.graph.dependencies).toEqual([
+      expect.objectContaining({ fromTaskId: "tokenize", toTaskId: "parse" }),
+      expect.objectContaining({ fromTaskId: "parse", toTaskId: "evaluate" })
+    ]);
+    expect(result.graph.nodes.parse).not.toHaveProperty("dependencies");
+    expect(result.graph.nodes.evaluate).not.toHaveProperty("dependencies");
+    expect(result.graph.nodes.tokenize).not.toHaveProperty("dependencies");
   });
 
   it("retries a step schema failure with feedback that includes the invalid value", async () => {

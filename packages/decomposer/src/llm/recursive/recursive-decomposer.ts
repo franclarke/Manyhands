@@ -45,24 +45,6 @@ import {
 } from "./step-schema";
 import { parseJsonObjectCandidates, type ParsedJsonObjectCandidate } from "./json";
 
-/**
- * Mirror the canonical edge list onto each node's `dependencies` shortcut.
- * `graph.dependencies` stays canonical; consumers that read `node.dependencies`
- * (UI, readiness, schedulers) require it to match. The edge from→to means `from`
- * is the prerequisite, so it is appended to `node[to].dependencies`.
- */
-function syncNodeDependencyShortcuts(
-  nodes: Record<string, TaskNode>,
-  dependencies: readonly TaskDependency[]
-): void {
-  for (const dep of dependencies) {
-    const target = nodes[dep.toTaskId];
-    if (target !== undefined && !target.dependencies.includes(dep.fromTaskId)) {
-      target.dependencies.push(dep.fromTaskId);
-    }
-  }
-}
-
 const DEFAULT_DEPTH_BUDGET = 5;
 const DEFAULT_MAX_TOKENS = 4000;
 const DEFAULT_MAX_PARALLEL_STEPS = 3;
@@ -307,7 +289,6 @@ export class RecursiveDecomposer implements Decomposer {
       createdAt: generatedAt
     };
 
-    syncNodeDependencyShortcuts(graph.nodes, graph.dependencies);
 
     const issues = validateTaskGraph(graph).map((issue) => `${issue.code}: ${issue.message}`);
     if (issues.length > 0) {
@@ -426,7 +407,6 @@ export class RecursiveDecomposer implements Decomposer {
         granularity: accum.granularity,
         depth: ctx.depth,
         childrenIds: childIds,
-        dependencies: [],
         metadata: { authoredBy: "ai" }
       };
       accum.nodes[ctx.nodeId] = selfNode;
@@ -493,7 +473,6 @@ export class RecursiveDecomposer implements Decomposer {
       createdAt: repoSpec?.createdAt ?? new Date().toISOString()
     };
 
-    syncNodeDependencyShortcuts(graph.nodes, graph.dependencies);
 
     return { graph, contracts: accum.contracts };
   }
@@ -622,7 +601,6 @@ export class RecursiveDecomposer implements Decomposer {
       granularity: accum.granularity,
       depth: ctx.depth,
       childrenIds: childIds,
-      dependencies: [],
       metadata: { authoredBy: "ai" }
     };
     accum.nodes[ctx.nodeId] = selfNode;
@@ -703,7 +681,6 @@ export class RecursiveDecomposer implements Decomposer {
         granularity: accum.granularity,
         depth: 0,
         childrenIds: [leafId],
-        dependencies: [],
         metadata: { authoredBy: "ai" }
       };
       const contract = buildLeafContract({
@@ -729,7 +706,6 @@ export class RecursiveDecomposer implements Decomposer {
         granularity: accum.granularity,
         depth: 1,
         childrenIds: [],
-        dependencies: [],
         contract,
         metadata: { authoredBy: "ai" }
       };
@@ -760,7 +736,6 @@ export class RecursiveDecomposer implements Decomposer {
       granularity: accum.granularity,
       depth: ctx.depth,
       childrenIds: [],
-      dependencies: [],
       contract,
       metadata: { authoredBy: "ai" }
     };

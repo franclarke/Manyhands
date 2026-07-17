@@ -11,11 +11,7 @@ import {
 } from "@manyhands/scheduler";
 import type { TaskPairRiskMatrix } from "@manyhands/conflict-risk";
 import type { RepositoryIndex } from "@manyhands/repository-index";
-import {
-  TASK_DEPENDENCY_EXECUTION_SEMANTICS,
-  type TaskGraph,
-  type TaskNode
-} from "@manyhands/task-graph";
+import type { TaskGraph, TaskNode } from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
 
 import { FixedAgentExecutorFactory, type AgentExecutorFactory } from "../executor/factory";
@@ -1353,7 +1349,6 @@ function buildLeafRepairInstructions(node: TaskNode, validationOutput: string): 
     lines.push("Acceptance criteria:", ...acceptance.map((criterion) => `- ${criterion}`), "");
   }
 
-  appendDependencyIsolationGuidance(lines, node);
   appendContractExecutionGuidance(lines, node.contract);
 
   lines.push(
@@ -1380,7 +1375,6 @@ export function buildLeafInstructions(node: TaskNode, contextSection?: string): 
     lines.push("", "Acceptance criteria:", ...acceptance.map((c) => `- ${c}`));
   }
 
-  appendDependencyIsolationGuidance(lines, node);
   appendContractExecutionGuidance(lines, contract);
 
   if (contextSection && contextSection.length > 0) {
@@ -1390,16 +1384,6 @@ export function buildLeafInstructions(node: TaskNode, contextSection?: string): 
   lines.push("", AGENT_STATUS_PROTOCOL_INSTRUCTIONS);
   lines.push("", "Do not commit — the orchestrator will commit your changes.");
   return lines.join("\n");
-}
-
-function appendDependencyIsolationGuidance(lines: string[], node: TaskNode): void {
-  if (node.dependencies.length === 0) return;
-  lines.push(
-    "",
-    `Scheduling contract (${TASK_DEPENDENCY_EXECUTION_SEMANTICS}): each D1 dependency is an ordering-only dispatch barrier.`,
-    `This isolated worktree starts from the run's immutable baseCommit and does not contain changes from: ${node.dependencies.join(", ")}.`,
-    "Do not assume upstream files were materialized. Build against the declared interface contracts and the current base files; bottom-up integration composes task commits later."
-  );
 }
 
 function appendContractExecutionGuidance(
