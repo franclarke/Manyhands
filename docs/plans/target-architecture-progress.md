@@ -10,8 +10,8 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-12 — Execution coordination V2` |
-| Last completed packet | `WP-11 — ExecutionBaseBuilder e intentos exactos` |
+| Current packet | `WP-13 — Failure recovery and amendments V2` |
+| Last completed packet | `WP-12 — Execution coordination V2` |
 | Open gate | G4 — Honest verification |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
@@ -28,6 +28,7 @@
 | WP-09 contract-identity correction | `a697974` |
 | WP-10 implementation commit | `1623025` |
 | WP-11 implementation commit | `824332d` |
+| WP-12 implementation commit | `4e8ad12` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -46,7 +47,7 @@
 | WP-09 Artifacts and fingerprints | completed | `b0c0fb0` | 12/12 packet and legacy journal tests; coordinator/store typechecks and builds passed | Canonical full-input fingerprint, immutable artifact/attempt registries and one exact adoption gate with explicit stale event |
 | WP-10 Scheduler readiness V2 | completed | `1623025` | 26/26 packet and scheduling regressions; scheduler/conflict-risk typechecks and builds passed | Pure per-node readiness reasons, artifact/decision scoped blocking, required effective maxParallel and evidenced conflict constraints with unknown risk |
 | WP-11 ExecutionBaseBuilder | completed | `824332d` | 56/56 packet and execution regressions; execution-core/web typechecks and execution-core build passed | Exact declared artifact materialization, structured pre-dispatch conflicts, reproducible base manifests and reserved-attempt fingerprint validation |
-| WP-12 Execution coordination | queued | — | — | — |
+| WP-12 Execution coordination | completed | `4e8ad12` | 28/28 packet and StateGraph/audit regressions; coordinator/orchestrator/web typechecks and package builds passed | Command-driven readiness, local decisions, durable wave-before-dispatch boundary and fenced web V2 host adapter |
 | WP-13 Failure recovery | queued | — | — | — |
 | WP-14 EvidenceMatrix | queued | — | — | — |
 | WP-15 Integration manifests | queued | — | — | — |
@@ -558,6 +559,41 @@ git diff --check: passed
   WP-12/WP-14 migrate the productive coordinator path.
 - The temporary web attempt journal now durably preserves a canonical
   `inputFingerprint` while retaining backward compatibility for V1 attempts.
+
+## WP-12 evidence
+
+### Red-green evidence
+
+The initial coordination tests failed because no execution cursor, local
+decision predicate or durable V2 wave event existed. The final verification
+produced:
+
+```text
+WP-12 packet and StateGraph/audit regressions: 4 files passed, 28 tests passed
+run-coordinator typecheck: passed
+orchestrator-graph typecheck: passed
+web TypeScript check: passed
+run-coordinator and orchestrator-graph builds: passed
+git diff --check: passed
+```
+
+### Implemented local-decision execution
+
+- `RunExecutionCoordinator` recomputes readiness from canonical facts, records
+  that observation, validates the selected subset against persisted
+  `maxParallel`, records `wave.selected`, and only then permits parallel
+  dispatch. A failed append or stale fence therefore dispatches nothing.
+- Pending decisions block only their `affectedNodeIds`. Independent ready work
+  keeps the lifecycle `running`; `waiting_for_input` is derived only when no
+  ready nodes remain and at least one decision is pending.
+- Resolution records `decision.resolved` and recomputes readiness. It does not
+  assign node statuses or edit a checkpoint imperatively.
+- Selected waves are durable projection facts with stable ids and effective
+  parallelism. Invalid, duplicate, oversized or non-ready selections fail in
+  the coordinator reducer before persistence.
+- The web V2 host binds this cursor to the fenced JSONL event journal. The
+  existing LangGraph execution graph is explicitly documented as a V1
+  compatibility branch-cursor adapter, not the V2 lifecycle authority.
 
 ## Resume instructions
 
