@@ -10,8 +10,8 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-06 — Kernel framework-independent de RunCoordinator` |
-| Last completed packet | `WP-05 — Graph Compiler y critics V2` |
+| Current packet | `WP-07 — Event store, snapshots y fencing V2` |
+| Last completed packet | `WP-06 — Kernel framework-independent de RunCoordinator` |
 | Open gate | G2 — Canonical history |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
@@ -21,6 +21,7 @@
 | WP-03 implementation commit | `15e027b` |
 | WP-04 implementation commit | `180ed88` |
 | WP-05 implementation commit | `3d39ac4` |
+| WP-06 implementation commit | `9de4893` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -33,7 +34,7 @@
 | WP-03 GraphRevision | completed | `15e027b` | 36/36 graph and scheduler tests, package typecheck and build passed | Typed relations, artifact-based readiness, immutable revisions and loss-aware V1 adapter |
 | WP-04 WorkBreakdown | completed | `180ed88` | 33/33 focused tests, package typecheck and build passed | Semantic recursive schema, grounded prompt, bounded repair, cache and explicit model failure |
 | WP-05 Graph Compiler | completed | `3d39ac4` | 38/38 cross-boundary tests, four package typechecks and decomposer build passed | Deterministic compiler, complete V2 bundles, traceability and eight structured critics; G1 closed |
-| WP-06 RunCoordinator kernel | queued | — | — | — |
+| WP-06 RunCoordinator kernel | completed | `9de4893` | 9/9 packet tests, 12/12 with baseline, package typecheck/build and full package build passed | Framework-independent event-folded lifecycle, explicit outcomes and decisions, guarded commands, cancellation fencing and receipt-backed completion |
 | WP-07 Event store | queued | — | — | — |
 | WP-08 Planning V2 slice | queued | — | — | — |
 | WP-09 Artifacts and fingerprints | queued | — | — | — |
@@ -343,6 +344,42 @@ corepack pnpm --filter @manyhands/decomposer build
 - `546335e` corrects a V1 execution test fixture that simultaneously consumed
   and produced the same seam. It now uses distinct producer and consumer leaves
   and the complete 34-test executor suite passes.
+
+## WP-06 evidence
+
+### Red-green evidence
+
+The first focused run proved that neither the package nor its public boundary
+existed: the lifecycle suite could not resolve `@manyhands/run-coordinator` and
+both package-boundary assertions failed.
+
+After implementing and hardening the kernel:
+
+```text
+WP-06 lifecycle and boundary suites: 2 files passed, 9 tests passed
+WP-06 plus architecture baseline: 3 files passed, 12 tests passed
+run-coordinator typecheck: passed
+@manyhands/run-coordinator build: passed
+all workspace package builds: passed
+```
+
+### Implemented run kernel
+
+- Lifecycle and execution, artifact and delivery outcomes are separate domain
+  concepts; `completed` requires a verified final candidate and its matching
+  confirmed delivery receipt.
+- Run state is folded from ordered domain facts. Invalid sequences, duplicate
+  event identifiers, mismatched runs and illegal lifecycle transitions fail
+  explicitly.
+- Decisions carry kind, options, affected nodes, evidence and impact. A pending
+  decision only derives `waiting_for_input` when no independent node remains
+  ready.
+- Commands are previewed through the reducer before append, preventing an
+  invalid fact from corrupting canonical history.
+- Cancellation invalidates authority before requesting process termination and
+  only records interruption after every owned process is confirmed dead.
+- The package has no dependency on web frameworks, persistence, Git,
+  `execution-core`, `orchestrator-graph` or `run-store`.
 
 ## Resume instructions
 
