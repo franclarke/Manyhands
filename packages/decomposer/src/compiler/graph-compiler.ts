@@ -80,6 +80,17 @@ export function compileGraphRevision(
     }
     trace.push({ sourceType: "candidate_artifact", sourceId: candidate.id, compiledRelationIds: relationIds, evidenceIds: [...candidate.evidenceIds] });
   }
+  for (const contract of contractResult.nodeOutputArtifactContracts) {
+    for (const consumerNodeId of contract.consumerNodeIds) {
+      artifactRequirements.push({
+        id: dependencies.idFor("artifact-requirement", `${contract.id}-${consumerNodeId}`),
+        artifactContract: { id: contract.id, revision: contract.revision },
+        producerNodeId: contract.producerNodeId,
+        consumerNodeId,
+        requiredFor: "integration"
+      });
+    }
+  }
 
   const seamBindings: SeamBinding[] = [];
   for (const candidate of breakdown.candidateSeams) {
@@ -101,7 +112,7 @@ export function compileGraphRevision(
     trace.push({ sourceType: "candidate_seam", sourceId: candidate.id, compiledRelationIds: relationIds, evidenceIds: [...candidate.evidenceIds] });
   }
 
-  const conflictConstraints = compileScopeConflicts(contractResult.scopePathsByNodeId, dependencies, trace);
+  const conflictConstraints = compileScopeConflicts(contractResult.scopePathsByNodeId, nodes, dependencies, trace);
   const graph = GraphRevisionSchema.parse({
     schemaVersion: 2,
     graphId: dependencies.idFor("graph", breakdown.breakdownId),
@@ -145,6 +156,7 @@ function compileNodes(root: WorkUnit, nodeIdByUnitKey: Record<string, string>): 
 
 function compileScopeConflicts(
   scopes: Record<string, string[]>,
+  nodes: Record<string, TaskNodeV2>,
   dependencies: GraphCompilerDependencies,
   trace: CompilationRelationTrace[]
 ): ConflictConstraint[] {
@@ -154,6 +166,7 @@ function compileScopeConflicts(
     for (let rightIndex = leftIndex + 1; rightIndex < entries.length; rightIndex += 1) {
       const [leftNodeId, leftPaths] = entries[leftIndex]!;
       const [rightNodeId, rightPaths] = entries[rightIndex]!;
+      if (isAncestor(nodes, leftNodeId, rightNodeId) || isAncestor(nodes, rightNodeId, leftNodeId)) continue;
       const overlap = leftPaths.filter((path) => rightPaths.includes(path));
       if (overlap.length === 0) continue;
       const id = dependencies.idFor("conflict-constraint", `${leftNodeId}-${rightNodeId}`);
@@ -162,6 +175,15 @@ function compileScopeConflicts(
     }
   }
   return constraints;
+}
+
+function isAncestor(nodes: Record<string, TaskNodeV2>, ancestorId: string, descendantId: string): boolean {
+  let current = nodes[descendantId]?.parentId ?? null;
+  while (current !== null) {
+    if (current === ancestorId) return true;
+    current = nodes[current]?.parentId ?? null;
+  }
+  return false;
 }
 
 function flattenUnits(root: WorkUnit): WorkUnit[] {

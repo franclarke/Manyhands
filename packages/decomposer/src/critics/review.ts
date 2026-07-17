@@ -69,8 +69,8 @@ function reviewCompleteness(input: CompiledPlanReviewInput, findings: PlanFindin
   for (const intent of input.breakdown.acceptanceIntents) {
     if (intent.required && !leafIntentIds.has(intent.id)) findings.push(finding("completeness", "error", "unowned_acceptance", `Required acceptance intent ${intent.id} has no leaf owner.`, "Assign the intent to a cohesive leaf.", [intent.id]));
   }
-  const expectedLeafCount = flattenUnits(input.breakdown.root).filter((unit) => unit.kind === "leaf").length;
-  if (input.contracts.length !== expectedLeafCount) findings.push(finding("completeness", "error", "missing_task_contract", `Expected ${expectedLeafCount} leaf contract bundles, found ${input.contracts.length}.`, "Compile one contract bundle for every leaf.", []));
+  const expectedNodeCount = flattenUnits(input.breakdown.root).length;
+  if (input.contracts.length !== expectedNodeCount) findings.push(finding("completeness", "error", "missing_task_contract", `Expected ${expectedNodeCount} node contract bundles, found ${input.contracts.length}.`, "Compile one contract bundle for every graph node.", []));
 }
 
 function reviewAtomicity(input: CompiledPlanReviewInput, findings: PlanFinding[]): void {
@@ -103,6 +103,7 @@ function reviewScopes(input: CompiledPlanReviewInput, findings: PlanFinding[]): 
     for (let rightIndex = leftIndex + 1; rightIndex < input.contracts.length; rightIndex += 1) {
       const left = input.contracts[leftIndex]!;
       const right = input.contracts[rightIndex]!;
+      if (isAncestor(input, left.task.nodeId, right.task.nodeId) || isAncestor(input, right.task.nodeId, left.task.nodeId)) continue;
       const overlap = left.scope.allowedPaths.filter((path) => right.scope.allowedPaths.includes(path));
       if (overlap.length === 0) continue;
       const constrained = input.graph.conflictConstraints.some((constraint) => new Set([constraint.leftNodeId, constraint.rightNodeId]).size === 2 && [constraint.leftNodeId, constraint.rightNodeId].includes(left.task.nodeId) && [constraint.leftNodeId, constraint.rightNodeId].includes(right.task.nodeId));
@@ -111,10 +112,20 @@ function reviewScopes(input: CompiledPlanReviewInput, findings: PlanFinding[]): 
   }
 }
 
+function isAncestor(input: CompiledPlanReviewInput, ancestorId: string, descendantId: string): boolean {
+  let current = input.graph.nodes[descendantId]?.parentId ?? null;
+  while (current !== null) {
+    if (current === ancestorId) return true;
+    current = input.graph.nodes[current]?.parentId ?? null;
+  }
+  return false;
+}
+
 function reviewArtifacts(input: CompiledPlanReviewInput, findings: PlanFinding[]): void {
   for (const bundle of input.contracts) {
     for (const artifact of bundle.artifacts.filter((candidate) => candidate.producerNodeId === bundle.task.nodeId)) {
-      if (artifact.consumerNodeIds.length === 0) findings.push(finding("artifact_coverage", "error", "orphan_output", `Artifact ${artifact.id} has no consumer or declared final purpose.`, "Declare a consumer or model it as a final root artifact.", [], bundle.task.nodeId, artifact.id));
+      const isFinalRootArtifact = bundle.task.nodeId === input.graph.rootId && artifact.artifactType === "final-candidate";
+      if (artifact.consumerNodeIds.length === 0 && !isFinalRootArtifact) findings.push(finding("artifact_coverage", "error", "orphan_output", `Artifact ${artifact.id} has no consumer or declared final purpose.`, "Declare a consumer or model it as a final root artifact.", [], bundle.task.nodeId, artifact.id));
       for (const consumerId of artifact.consumerNodeIds) {
         const consumer = input.contracts.find((candidate) => candidate.task.nodeId === consumerId);
         if (consumer === undefined || !consumer.task.consumes.some((reference) => reference.id === artifact.id)) findings.push(finding("artifact_coverage", "error", "artifact_consumer_missing", `Artifact ${artifact.id} names ${consumerId} but that task does not consume it.`, "Compile matching producer and consumer artifact references.", [], consumerId, artifact.id));
