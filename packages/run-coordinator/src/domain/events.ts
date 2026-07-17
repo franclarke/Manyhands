@@ -3,6 +3,7 @@ import { z } from "zod";
 import { DecisionInputSchema, DecisionResolutionShape, requireDecisionResolution } from "./decisions.js";
 import { DeliveryReceiptSchema } from "./outcomes.js";
 import { AdoptedArtifactSchema } from "./artifacts.js";
+import { FailureClassSchema, FailureObservationSchema } from "./failures.js";
 
 const BaseEventShape = {
   eventId: EntityIdSchema,
@@ -23,6 +24,8 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   event("planning.critic_recorded", z.object({ critic: NonEmptyStringSchema, findings: z.array(z.record(z.unknown())) }).strict()),
   event("planning.failed", z.object({ reason: NonEmptyStringSchema }).strict()),
   event("attempt.stale", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, attemptedFingerprint: NonEmptyStringSchema, currentFingerprint: NonEmptyStringSchema, reason: NonEmptyStringSchema }).strict()),
+  event("failure.classified", z.object({ nodeId: EntityIdSchema, failureClass: FailureClassSchema, observation: FailureObservationSchema, allowedActions: z.array(NonEmptyStringSchema), automaticRetryBudget: z.number().int().nonnegative(), discardCandidate: z.boolean() }).strict()),
+  event("graph.amendment.proposed", z.object({ proposalId: EntityIdSchema, graphId: EntityIdSchema, sourceRevision: z.number().int().positive(), kind: z.enum(["artifact_requirement", "graph_revision"]), rationale: NonEmptyStringSchema, evidenceRefs: z.array(NonEmptyStringSchema).min(1), operations: z.array(z.record(z.unknown())).min(1) }).strict()),
   event("artifact.adopted", z.object({ artifact: AdoptedArtifactSchema }).strict()),
   event("graph.revision.proposed", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive() }).strict()),
   event("graph.revision.approved", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive() }).strict()),

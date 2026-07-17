@@ -71,6 +71,19 @@ function computeDownstreamClosure(graph: TaskGraph, seeds: string[]): Set<string
   return invalid;
 }
 
+export function computeExactAttemptInvalidation(input: {
+  attempts: Array<{ attemptId: string; nodeId: string; inputFingerprint: string }>;
+  currentFingerprints: Record<string, string | undefined>;
+}): { staleAttemptIds: Set<string>; staleNodeIds: Set<string> } {
+  const stale = input.attempts.filter(
+    (attempt) => input.currentFingerprints[attempt.nodeId] !== attempt.inputFingerprint
+  );
+  return {
+    staleAttemptIds: new Set(stale.map((attempt) => attempt.attemptId)),
+    staleNodeIds: new Set(stale.map((attempt) => attempt.nodeId))
+  };
+}
+
 /** Pure seam invalidation used to prepare a durable amendment before Git IO. */
 export function computeSeamInvalidationClosure(graph: TaskGraph, seamId: string): Set<string> {
   const producer = Object.values(graph.nodes).find((node) =>

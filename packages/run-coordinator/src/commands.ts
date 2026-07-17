@@ -1,6 +1,10 @@
 import type { DecisionInput } from "./domain/decisions.js";
 import type { RunEventDraft } from "./domain/events.js";
 import type { RunProjection } from "./reducer.js";
+import type { FailureObservation } from "./domain/failures.js";
+import { classifyFailure } from "./domain/failures.js";
+import { recoveryPolicyFor } from "./recovery-policy.js";
+import type { GraphAmendmentProposal } from "./amendments.js";
 
 export type RunCommand =
   | { type: "propose_graph"; graphId: string; revision: number }
@@ -9,6 +13,8 @@ export type RunCommand =
   | { type: "resolve_decision"; decisionId: string; optionId?: string; answer?: string }
   | { type: "observe_readiness"; readyNodeIds: string[]; pendingDecisionIds: string[] }
   | { type: "select_wave"; waveId: string; nodeIds: string[]; maxParallel: number }
+  | { type: "record_failure"; nodeId: string; observation: FailureObservation }
+  | { type: "propose_amendment"; proposal: GraphAmendmentProposal }
   | { type: "pause"; reason: string }
   | { type: "resume"; reason: string }
   | { type: "verify_final_candidate"; manifestId: string; commit: string; evidenceEligible: boolean; executionSucceeded: boolean }
@@ -24,6 +30,12 @@ export function eventsForCommand(state: RunProjection, command: Exclude<RunComma
     case "resolve_decision": return [{ type: "decision.resolved", payload: { decisionId: command.decisionId, ...(command.optionId !== undefined ? { optionId: command.optionId } : {}), ...(command.answer !== undefined ? { answer: command.answer } : {}) } }];
     case "observe_readiness": return [{ type: "readiness.observed", payload: { readyNodeIds: command.readyNodeIds, pendingDecisionIds: command.pendingDecisionIds } }];
     case "select_wave": return [{ type: "wave.selected", payload: { waveId: command.waveId, nodeIds: command.nodeIds, maxParallel: command.maxParallel } }];
+    case "record_failure": {
+      const failureClass = classifyFailure(command.observation);
+      const policy = recoveryPolicyFor(failureClass);
+      return [{ type: "failure.classified", payload: { nodeId: command.nodeId, failureClass, observation: command.observation, allowedActions: policy.actions, automaticRetryBudget: policy.automaticRetryBudget, discardCandidate: policy.discardCandidate } }];
+    }
+    case "propose_amendment": return [{ type: "graph.amendment.proposed", payload: { ...command.proposal, operations: command.proposal.operations.map((operation) => operation as unknown as Record<string, unknown>) } }];
     case "pause": return [{ type: "run.pause_requested", payload: { reason: command.reason } }];
     case "resume": return [{ type: "run.resume_requested", payload: { reason: command.reason } }];
     case "verify_final_candidate": return [{ type: "final_candidate.verified", payload: { manifestId: command.manifestId, commit: command.commit, evidenceEligible: command.evidenceEligible, executionSucceeded: command.executionSucceeded } }];

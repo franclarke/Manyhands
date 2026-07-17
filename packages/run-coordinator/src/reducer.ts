@@ -15,6 +15,7 @@ export interface RunProjection {
   decisions: Record<string, Decision>;
   readiness: { readyNodeIds: string[]; pendingDecisionIds: string[] };
   selectedWaves: Array<{ waveId: string; nodeIds: string[]; maxParallel: number }>;
+  recoveryHistory: Array<{ eventId: string; nodeId?: string; kind: "failure" | "amendment" }>;
   outcomes: RunOutcomes;
   finalCandidate?: FinalCandidate;
   deliveryReceipt?: DeliveryReceipt;
@@ -41,6 +42,7 @@ export function foldRun(rawEvents: readonly RunEvent[]): RunProjection {
         decisions: {},
         readiness: { readyNodeIds: [], pendingDecisionIds: [] },
         selectedWaves: [],
+        recoveryHistory: [],
         outcomes: { ...INITIAL_RUN_OUTCOMES }
       };
       continue;
@@ -70,6 +72,14 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
     case "attempt.stale":
     case "artifact.adopted":
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot record execution artifacts while ${next.lifecycle}.`);
+      break;
+    case "failure.classified":
+      if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot classify execution failure while ${next.lifecycle}.`);
+      next.recoveryHistory.push({ eventId: event.eventId, nodeId: event.payload.nodeId, kind: "failure" });
+      break;
+    case "graph.amendment.proposed":
+      if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot propose an amendment while ${next.lifecycle}.`);
+      next.recoveryHistory.push({ eventId: event.eventId, kind: "amendment" });
       break;
     case "graph.revision.proposed":
       if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot propose a graph while ${next.lifecycle}.`);

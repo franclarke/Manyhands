@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@manyhands/shared": "workspace:*",
+    "@manyhands/task-graph": "workspace:*",
     "zod": "^3.23.8"
   }
 }

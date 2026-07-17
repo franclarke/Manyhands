@@ -330,6 +330,9 @@ importers:
       '@manyhands/shared':
         specifier: workspace:*
         version: link:../shared
+      '@manyhands/task-graph':
+        specifier: workspace:*
+        version: link:../task-graph
       zod:
         specifier: ^3.23.8
         version: 3.25.76
