@@ -4,12 +4,12 @@ import { computeInputFingerprint, type InputFingerprintSource } from "@manyhands
 const source: InputFingerprintSource = {
   graph: { id: "graph-1", revision: 3 },
   nodeId: "node-1",
-  contractRevisions: [{ id: "task", revision: 2 }, { id: "scope", revision: 4 }, { id: "artifact", revision: 1 }],
+  contractRevisions: [{ id: "task", revision: "r2" }, { id: "scope", revision: "r4" }, { id: "artifact", revision: "r1" }],
   baseCommit: "a".repeat(40),
   consumedArtifacts: [{ id: "schema", digest: "sha256:111" }, { id: "types", digest: "sha256:222" }],
   repositoryContextDigest: "sha256:repo",
-  executorProfile: { id: "claude-default", revision: 5 },
-  validationContract: { id: "validation-1", revision: 2 }
+  executorProfile: { id: "claude-default", revision: "r5" },
+  validationContract: { id: "validation-1", revision: "r2" }
 };
 
 describe("InputFingerprint", () => {
@@ -18,12 +18,12 @@ describe("InputFingerprint", () => {
     const variants: InputFingerprintSource[] = [
       { ...source, nodeId: "node-2" },
       { ...source, graph: { ...source.graph, revision: 4 } },
-      { ...source, contractRevisions: source.contractRevisions.map((item, index) => index === 0 ? { ...item, revision: 3 } : item) },
+      { ...source, contractRevisions: source.contractRevisions.map((item, index) => index === 0 ? { ...item, revision: "r3" } : item) },
       { ...source, baseCommit: "b".repeat(40) },
       { ...source, consumedArtifacts: source.consumedArtifacts.map((item, index) => index === 0 ? { ...item, digest: "sha256:changed" } : item) },
       { ...source, repositoryContextDigest: "sha256:changed" },
-      { ...source, executorProfile: { ...source.executorProfile, revision: 6 } },
-      { ...source, validationContract: { ...source.validationContract, revision: 3 } }
+      { ...source, executorProfile: { ...source.executorProfile, revision: "r6" } },
+      { ...source, validationContract: { ...source.validationContract, revision: "r3" } }
     ];
     expect(new Set(variants.map(computeInputFingerprint))).not.toContain(baseline);
     expect(new Set(variants.map(computeInputFingerprint)).size).toBe(variants.length);

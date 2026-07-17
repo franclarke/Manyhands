@@ -2,18 +2,19 @@ import { createHash } from "node:crypto";
 import { EntityIdSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 
-const RevisionRefSchema = z.object({ id: EntityIdSchema, revision: z.number().int().positive() }).strict();
+const ContractRevisionRefSchema = z.object({ id: EntityIdSchema, revision: NonEmptyStringSchema }).strict();
+const GraphRevisionRefSchema = z.object({ id: EntityIdSchema, revision: z.number().int().positive() }).strict();
 const ArtifactDigestRefSchema = z.object({ id: EntityIdSchema, digest: NonEmptyStringSchema }).strict();
 
 export const InputFingerprintSourceSchema = z.object({
-  graph: RevisionRefSchema,
+  graph: GraphRevisionRefSchema,
   nodeId: EntityIdSchema,
-  contractRevisions: z.array(RevisionRefSchema).min(1),
+  contractRevisions: z.array(ContractRevisionRefSchema).min(1),
   baseCommit: NonEmptyStringSchema,
   consumedArtifacts: z.array(ArtifactDigestRefSchema),
   repositoryContextDigest: NonEmptyStringSchema,
-  executorProfile: RevisionRefSchema,
-  validationContract: RevisionRefSchema
+  executorProfile: ContractRevisionRefSchema,
+  validationContract: ContractRevisionRefSchema
 }).strict().superRefine((input, context) => {
   for (const [path, values] of [["contractRevisions", input.contractRevisions], ["consumedArtifacts", input.consumedArtifacts]] as const) {
     const ids = values.map((item) => item.id);

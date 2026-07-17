@@ -9,14 +9,14 @@ let directory: string;
 beforeEach(async () => { directory = await mkdtemp(path.join(os.tmpdir(), "mh-attempts-")); });
 afterEach(async () => { await rm(directory, { recursive: true, force: true }); });
 
-const fingerprintSource = { graph: { id: "graph", revision: 1 }, nodeId: "node", contractRevisions: [{ id: "task", revision: 1 }], baseCommit: "a".repeat(40), consumedArtifacts: [], repositoryContextDigest: "repo", executorProfile: { id: "executor", revision: 1 }, validationContract: { id: "validation", revision: 1 } };
+const fingerprintSource = { graph: { id: "graph", revision: 1 }, nodeId: "node", contractRevisions: [{ id: "task", revision: "r1" }], baseCommit: "a".repeat(40), consumedArtifacts: [], repositoryContextDigest: "repo", executorProfile: { id: "executor", revision: "r1" }, validationContract: { id: "validation", revision: "r1" } };
 
 describe("attempt adoption eligibility", () => {
   it("marks an old fingerprint stale and never adopts its artifact", async () => {
     const attempts = new JsonlAttemptStore({ directory });
     const artifacts = new JsonlArtifactStore({ directory });
     const attempt = await attempts.create({ attemptId: "attempt-1", runId: "run-1", nodeId: "node", inputFingerprint: computeInputFingerprint(fingerprintSource), createdAt: "2026-07-17T00:00:00.000Z" });
-    const decision = await adoptAttemptResult({ attempt: { ...attempt, status: "finished", outputDigest: "sha256:result" }, currentFingerprint: computeInputFingerprint({ ...fingerprintSource, graph: { id: "graph", revision: 2 } }), artifact: { artifactId: "artifact-1", contract: { id: "artifact-contract", revision: 1 }, kind: "commit", location: "abc" } }, artifacts);
+    const decision = await adoptAttemptResult({ attempt: { ...attempt, status: "finished", outputDigest: "sha256:result" }, currentFingerprint: computeInputFingerprint({ ...fingerprintSource, graph: { id: "graph", revision: 2 } }), artifact: { artifactId: "artifact-1", contract: { id: "artifact-contract", revision: "r1" }, kind: "commit", location: "abc" } }, artifacts);
     expect(decision).toMatchObject({ eligible: false, event: { type: "attempt.stale" } });
     expect(await artifacts.list("run-1")).toEqual([]);
   });
@@ -34,10 +34,10 @@ describe("attempt adoption eligibility", () => {
     const decision = await adoptAttemptResult({
       attempt: { schemaVersion: 1, attemptId: "attempt-ok", runId: "run-1", nodeId: "node", inputFingerprint: fingerprint, createdAt: "2026-07-17T00:00:00.000Z", status: "finished", outputDigest: "sha256:result" },
       currentFingerprint: fingerprint,
-      artifact: { artifactId: "artifact-ok", contract: { id: "artifact-contract", revision: 3 }, kind: "commit", location: "abc" },
+      artifact: { artifactId: "artifact-ok", contract: { id: "artifact-contract", revision: "r3" }, kind: "commit", location: "abc" },
       adoptedAt: "2026-07-17T00:02:00.000Z"
     }, artifacts);
     expect(decision).toMatchObject({ eligible: true, event: { type: "artifact.adopted" } });
-    expect(await artifacts.list("run-1")).toEqual([expect.objectContaining({ artifactId: "artifact-ok", digest: "sha256:result", producerAttemptId: "attempt-ok", contract: { id: "artifact-contract", revision: 3 } })]);
+    expect(await artifacts.list("run-1")).toEqual([expect.objectContaining({ artifactId: "artifact-ok", digest: "sha256:result", producerAttemptId: "attempt-ok", contract: { id: "artifact-contract", revision: "r3" } })]);
   });
 });

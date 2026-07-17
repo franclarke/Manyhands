@@ -8,7 +8,7 @@ export const AdoptedArtifactSchema = z.object({
   nodeId: EntityIdSchema,
   digest: NonEmptyStringSchema,
   producerAttemptId: EntityIdSchema,
-  contract: z.object({ id: EntityIdSchema, revision: z.number().int().positive() }).strict(),
+  contract: z.object({ id: EntityIdSchema, revision: NonEmptyStringSchema }).strict(),
   kind: z.enum(["commit", "files", "manifest", "logical"]),
   location: NonEmptyStringSchema,
   adoptedAt: IsoTimestampSchema

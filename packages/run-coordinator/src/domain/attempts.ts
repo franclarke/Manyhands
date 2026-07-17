@@ -18,7 +18,7 @@ export type AttemptAdoptionDecision =
 export function decideAttemptAdoption(input: {
   attempt: AttemptRecord;
   currentFingerprint: string;
-  artifact: { artifactId: string; contract: { id: string; revision: number }; kind: AdoptedArtifact["kind"]; location: string };
+  artifact: { artifactId: string; contract: AdoptedArtifact["contract"]; kind: AdoptedArtifact["kind"]; location: string };
   adoptedAt?: string;
 }): AttemptAdoptionDecision {
   const attempt = AttemptRecordSchema.parse(input.attempt);
