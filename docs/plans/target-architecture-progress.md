@@ -10,9 +10,9 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-05 — Graph Compiler y critics V2` |
-| Last completed packet | `WP-04 — WorkBreakdown semántico` |
-| Open gate | Pre-G1 |
+| Current packet | `WP-06 — Kernel framework-independent de RunCoordinator` |
+| Last completed packet | `WP-05 — Graph Compiler y critics V2` |
+| Open gate | G2 — Canonical history |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
 | WP-00 implementation commit | `d381f61` |
@@ -20,6 +20,7 @@
 | WP-02 implementation commit | `a5eac15` |
 | WP-03 implementation commit | `15e027b` |
 | WP-04 implementation commit | `180ed88` |
+| WP-05 implementation commit | `3d39ac4` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -31,7 +32,7 @@
 | WP-02 Repository snapshot | completed | `a5eac15` | 14/14 focused tests, package typecheck and build passed | Immutable snapshot identity, content hashing, capabilities and explicit partial/unavailable inspection |
 | WP-03 GraphRevision | completed | `15e027b` | 36/36 graph and scheduler tests, package typecheck and build passed | Typed relations, artifact-based readiness, immutable revisions and loss-aware V1 adapter |
 | WP-04 WorkBreakdown | completed | `180ed88` | 33/33 focused tests, package typecheck and build passed | Semantic recursive schema, grounded prompt, bounded repair, cache and explicit model failure |
-| WP-05 Graph Compiler | queued | — | — | — |
+| WP-05 Graph Compiler | completed | `3d39ac4` | 38/38 cross-boundary tests, four package typechecks and decomposer build passed | Deterministic compiler, complete V2 bundles, traceability and eight structured critics; G1 closed |
 | WP-06 RunCoordinator kernel | queued | — | — | — |
 | WP-07 Event store | queued | — | — | — |
 | WP-08 Planning V2 slice | queued | — | — | — |
@@ -103,7 +104,7 @@ baseline until a later packet owns their migration.
 
 | Gate | Status | Evidence required to close |
 |---|---|---|
-| G1 Contracts executable | open | WP-01, WP-03, WP-04 and WP-05 integrated and reviewed |
+| G1 Contracts executable | closed | WP-01 through WP-05 integrated; schemas, typed relations, semantic breakdown, compiler and critics are green |
 | G2 Canonical history | not_started | WP-07 and WP-08 |
 | G3 Exact adoption | not_started | WP-09 through WP-11 |
 | G4 Honest verification | not_started | WP-14 |
@@ -280,6 +281,68 @@ pnpm --filter @manyhands/decomposer build
 - The V2 planner has a content-addressed cache, bounded schema repair and the
   existing multi-candidate JSON normalization. Exhausted model attempts fail
   explicitly; no synthetic or deterministic fallback is created.
+
+## WP-05 evidence
+
+### Red-green evidence
+
+After the snapshot fixture was made valid, the new suites failed because the
+compiler and critic APIs did not exist:
+
+```text
+Test Files 2 failed (2)
+Tests 7 failed (7)
+```
+
+After implementation and the atomic-root review:
+
+```text
+Compiler, critics and adjacent architecture suites: 7 files passed, 38 tests passed
+Atomic-root and focused planning suites: 5 files passed, 30 tests passed
+contracts, repository-index, task-graph and decomposer typechecks: passed
+@manyhands/decomposer build including declarations: passed
+execution-core seam prompt regression: 34 tests passed
+```
+
+Commands used for unambiguous file selection with pnpm 11:
+
+```bash
+node node_modules/vitest/vitest.mjs run tests/graph-compiler.test.ts tests/graph-critics-v2.test.ts tests/decomposer-recursive-planning-flow.test.ts tests/decomposer-work-breakdown.test.ts tests/contracts-v2.test.ts tests/task-graph-v2.test.ts tests/repository-snapshot.test.ts
+node node_modules/typescript/bin/tsc -p packages/contracts/tsconfig.json --noEmit
+node node_modules/typescript/bin/tsc -p packages/repository-index/tsconfig.json --noEmit
+node node_modules/typescript/bin/tsc -p packages/task-graph/tsconfig.json --noEmit
+node node_modules/typescript/bin/tsc -p packages/decomposer/tsconfig.json --noEmit
+corepack pnpm --filter @manyhands/decomposer build
+```
+
+### Implemented executable compilation boundary
+
+- The pure compiler consumes exactly one validated WorkBreakdown and its
+  referenced RepositorySnapshot; identity and clock are injected.
+- Every leaf receives a Task, Scope, Artifact, Seam and Validation contract
+  bundle with deterministic content revisions and repository-grounded scope.
+- Seams across siblings compile to compatible bindings without readiness
+  order. Materialized artifacts compile to ArtifactRequirements; logical
+  artifacts do not invent a dispatch barrier.
+- Scope overlap compiles to an explicit ConflictConstraint. Every compiled
+  relation retains a trace to its semantic candidate or repository evidence.
+- Completeness, atomicity, contract compatibility, DAG validity, scope
+  isolation, artifact coverage, risk uncertainty and validation coverage
+  produce structured findings with repair guidance.
+- Consequential unresolved questions, ungrounded scopes, missing validation and
+  orphan outputs block approval instead of being normalized away.
+- A single atomic leaf is a valid root revision; multi-node executable leaves
+  still cannot own children.
+
+### Supporting commits and environment repair
+
+- `a0b7909` allows a single atomic root revision before the G1 schema freeze.
+- `3066622` resolves the pre-existing pnpm 11 `allowBuilds` placeholder for the
+  already-declared `node-pty` production dependency. Installs now complete with
+  the repository-pinned pnpm 11.7.0 via Corepack.
+- `546335e` corrects a V1 execution test fixture that simultaneously consumed
+  and produced the same seam. It now uses distinct producer and consumer leaves
+  and the complete 34-test executor suite passes.
 
 ## Resume instructions
 
