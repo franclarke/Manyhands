@@ -2,6 +2,7 @@ import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyh
 import { z } from "zod";
 import { DecisionInputSchema, DecisionResolutionShape, requireDecisionResolution } from "./decisions.js";
 import { DeliveryReceiptSchema } from "./outcomes.js";
+import { AdoptedArtifactSchema } from "./artifacts.js";
 
 const BaseEventShape = {
   eventId: EntityIdSchema,
@@ -21,6 +22,8 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   event("graph.compiled", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive(), graph: z.record(z.unknown()), contracts: z.array(z.record(z.unknown())), review: z.record(z.unknown()), trace: z.record(z.unknown()) }).strict()),
   event("planning.critic_recorded", z.object({ critic: NonEmptyStringSchema, findings: z.array(z.record(z.unknown())) }).strict()),
   event("planning.failed", z.object({ reason: NonEmptyStringSchema }).strict()),
+  event("attempt.stale", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, attemptedFingerprint: NonEmptyStringSchema, currentFingerprint: NonEmptyStringSchema, reason: NonEmptyStringSchema }).strict()),
+  event("artifact.adopted", z.object({ artifact: AdoptedArtifactSchema }).strict()),
   event("graph.revision.proposed", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive() }).strict()),
   event("graph.revision.approved", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive() }).strict()),
   event("decision.raised", z.object({ decision: DecisionInputSchema }).strict()),
