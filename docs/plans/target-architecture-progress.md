@@ -10,8 +10,8 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-04 — WorkBreakdown semántico` |
-| Last completed packet | `WP-03 — GraphRevision y relaciones tipadas` |
+| Current packet | `WP-05 — Graph Compiler y critics V2` |
+| Last completed packet | `WP-04 — WorkBreakdown semántico` |
 | Open gate | Pre-G1 |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
@@ -19,6 +19,7 @@
 | WP-01 implementation commit | `cee0973` |
 | WP-02 implementation commit | `a5eac15` |
 | WP-03 implementation commit | `15e027b` |
+| WP-04 implementation commit | `180ed88` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -29,7 +30,7 @@
 | WP-01 Contracts V2 | completed | `cee0973` | 23/23 contract tests, 56/56 direct consumer tests, package typecheck and build passed | Five versioned contracts, bundle invariants and loss-aware V1 adapter with explicit migration issues |
 | WP-02 Repository snapshot | completed | `a5eac15` | 14/14 focused tests, package typecheck and build passed | Immutable snapshot identity, content hashing, capabilities and explicit partial/unavailable inspection |
 | WP-03 GraphRevision | completed | `15e027b` | 36/36 graph and scheduler tests, package typecheck and build passed | Typed relations, artifact-based readiness, immutable revisions and loss-aware V1 adapter |
-| WP-04 WorkBreakdown | queued | — | — | — |
+| WP-04 WorkBreakdown | completed | `180ed88` | 33/33 focused tests, package typecheck and build passed | Semantic recursive schema, grounded prompt, bounded repair, cache and explicit model failure |
 | WP-05 Graph Compiler | queued | — | — | — |
 | WP-06 RunCoordinator kernel | queued | — | — | — |
 | WP-07 Event store | queued | — | — | — |
@@ -235,6 +236,50 @@ pnpm --filter @manyhands/task-graph build
   consumer upstream-artifact evidence match. Ambiguous edges become deprecated
   `legacyOrderingConstraints` and force replan; matching interfaces become
   non-ordering seam bindings.
+
+## WP-04 evidence
+
+### Red-green evidence
+
+Before implementation, the WorkBreakdown suite failed because the schema,
+planner and prompt API did not exist:
+
+```text
+Test Files 1 failed (1)
+Tests 10 failed (10)
+```
+
+After implementation:
+
+```text
+Focused planning and legacy guard suites: 4 files passed, 33 tests passed
+@manyhands/decomposer typecheck: passed
+@manyhands/decomposer build including declarations: passed
+```
+
+Commands:
+
+```bash
+pnpm test -- tests/decomposer-work-breakdown.test.ts tests/decomposer-recursive-prompt.test.ts tests/decomposer-policy.test.ts tests/decomposer-llm-guards.test.ts
+pnpm --filter @manyhands/decomposer typecheck
+pnpm --filter @manyhands/decomposer build
+```
+
+### Implemented semantic planning boundary
+
+- Recursive semantic units are cut by cohesion, integration, risk or
+  verifiability, without a target depth, child count or layer template.
+- A leaf may be a vertical slice spanning UI, API and tests when that is the
+  cohesive independently verifiable increment.
+- Strict schemas reject worktrees, exact commands, executor profiles and
+  generic dependency fields instead of leaking compiler decisions into the
+  model output.
+- Candidate artifacts and seams carry producer, consumers, purpose and
+  repository evidence; uncertainties and consequential human questions retain
+  their grounding.
+- The V2 planner has a content-addressed cache, bounded schema repair and the
+  existing multi-candidate JSON normalization. Exhausted model attempts fail
+  explicitly; no synthetic or deterministic fallback is created.
 
 ## Resume instructions
 
