@@ -1,5 +1,9 @@
 # Auditorías de transición
 
+Auditoría vigente del camino productivo:
+
+- [`v2-productive-run-audit-2026-07-18.md`](v2-productive-run-audit-2026-07-18.md)
+
 Los audits y ledgers anteriores fueron retirados porque evaluaban una
 arquitectura distinta y no deben funcionar como backlog vigente.
 

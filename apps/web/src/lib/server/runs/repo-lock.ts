@@ -288,7 +288,7 @@ async function tryClaimTakeover(lockDir: string): Promise<string | undefined> {
     return token;
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
-    if (code === "EEXIST" || code === "ENOENT" || code === "ENOTDIR") return undefined;
+    if (code === "EEXIST" || code === "ENOENT" || code === "ENOTDIR" || code === "EPERM" || code === "EBUSY") return undefined;
     throw error;
   }
 }

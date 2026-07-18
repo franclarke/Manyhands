@@ -1,3 +1,4 @@
+import { RepoRelativePathSchema } from "@manyhands/contracts";
 import { EntityIdSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 
@@ -16,7 +17,8 @@ const WorkUnitCommonShape = {
   concerns: z.array(NonEmptyStringSchema).min(1),
   expectedOutcomes: z.array(NonEmptyStringSchema).min(1),
   acceptanceIntentIds: z.array(EntityIdSchema).min(1),
-  evidenceIds: z.array(EntityIdSchema)
+  evidenceIds: z.array(EntityIdSchema),
+  plannedPaths: z.array(RepoRelativePathSchema).optional()
 };
 
 export interface WorkUnitLeaf {
@@ -28,6 +30,7 @@ export interface WorkUnitLeaf {
   expectedOutcomes: string[];
   acceptanceIntentIds: string[];
   evidenceIds: string[];
+  plannedPaths?: string[] | undefined;
 }
 
 export interface WorkUnitComposite {
@@ -39,6 +42,7 @@ export interface WorkUnitComposite {
   expectedOutcomes: string[];
   acceptanceIntentIds: string[];
   evidenceIds: string[];
+  plannedPaths?: string[] | undefined;
   cut: z.infer<typeof SemanticCutSchema>;
   children: WorkUnit[];
 }
@@ -135,9 +139,13 @@ export const WorkBreakdownSchema = z.object({
   const unitKeys = new Set(units.map((unit) => unit.key));
   const acceptanceIds = new Set(breakdown.acceptanceIntents.map((intent) => intent.id));
   const evidenceIds = new Set(breakdown.repositoryEvidence.map((evidence) => evidence.id));
+  const pathEvidenceIds = new Set(breakdown.repositoryEvidence.filter((evidence) => evidence.kind === "path").map((evidence) => evidence.id));
   for (const unit of units) {
     for (const id of unit.acceptanceIntentIds) if (!acceptanceIds.has(id)) addIssue(context, `unit ${unit.key} references unknown acceptance intent ${id}`);
     for (const evidenceId of unit.evidenceIds) if (!evidenceIds.has(evidenceId)) addIssue(context, `unit ${unit.key} references unknown evidence ${evidenceId}`);
+    if (unit.kind === "leaf" && (unit.plannedPaths?.length ?? 0) === 0 && !unit.evidenceIds.some((evidenceId) => pathEvidenceIds.has(evidenceId))) {
+      addIssue(context, `leaf ${unit.key} must reference an existing path or declare at least one planned path`);
+    }
   }
   for (const relation of [...breakdown.candidateArtifacts, ...breakdown.candidateSeams]) {
     if (!unitKeys.has(relation.producerUnitKey)) addIssue(context, `candidate ${relation.id} references unknown producer ${relation.producerUnitKey}`);

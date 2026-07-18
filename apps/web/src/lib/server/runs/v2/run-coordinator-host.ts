@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ChildProcess } from "node:child_process";
-import { WorkBreakdownPlanner, compileGraphRevision, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
+import { WorkBreakdownPlanner, compileGraphRevision, parseWorkBreakdownProgressLine, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
+import { foldRun } from "@manyhands/run-coordinator";
 import { buildRepositorySnapshot } from "@manyhands/repository-index";
 import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 import { killCliProcessTree, resolveCliBinaryPath, resolveCliProcessInvocation } from "@manyhands/shared/node-cli-process";
@@ -30,6 +31,8 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
     const directory = resolveRunsDirectory();
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });
+    const existingEvents = await events.load(runId);
+    const questionAnswers = resolvedPlanningAnswers(existingEvents.length === 0 ? undefined : foldRun(existingEvents));
     const stage = planningSelection(run);
     const planner = new WorkBreakdownPlanner({
       model: { generate: (request) => invokeSelectedPlanningCli(runId, repoPath, stage, lease.operationId, request) },
@@ -42,13 +45,15 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
       repoPath,
       targetFingerprint: run.targetContext.fingerprint,
       baseCommit: run.targetContext.sourceBaseCommit,
-      authority
+      authority,
+      ...(Object.keys(questionAnswers).length > 0 ? { questionAnswers } : {})
     }, {
       events,
       snapshots,
       inspect: (input) => buildRepositorySnapshot({ rootPath: input.repoPath, targetFingerprint: input.targetFingerprint, baseCommit: input.baseCommit }),
-      plan: (input) => planner.plan(input),
+      plan: (input, observer) => planner.plan(input, observer),
       compile: (input) => compileGraphRevision(input, { idFor: stableId, now: () => new Date().toISOString() }),
+      nodeIdFor: (key) => stableId("node", key),
       now: () => new Date().toISOString()
     });
     const persistedEvents = await events.load(runId);
@@ -105,13 +110,18 @@ async function invokeSelectedPlanningCli(
   const binary = resolveCliBinaryPath(isCodex ? (process.env.MANYHANDS_CODEX_BIN ?? "codex") : (process.env.MANYHANDS_CLAUDE_BIN ?? "claude"));
   const args = isCodex
     ? ["exec", "--model", stage.model, "--sandbox", "read-only", "--skip-git-repo-check", ...(stage.effort !== undefined ? ["-c", `model_reasoning_effort=\"${stage.effort}\"`] : []), "-"]
-    : ["-p", "-", "--model", stage.model, "--output-format", "text", "--permission-mode", "plan"];
+    : ["-p", "-", "--model", stage.model, "--output-format", "stream-json", "--include-partial-messages", "--verbose", "--permission-mode", "plan"];
   const invocation = resolveCliProcessInvocation(binary, args);
   const spawn = supervisedSpawnFn({ runId, operationId, label: `planning-v2-attempt-${request.attempt}` });
   return new Promise((resolve, reject) => {
     const child: ChildProcess = spawn(invocation.command, invocation.args, { cwd, env: process.env, stdio: ["pipe", "pipe", "pipe"], shell: false, detached: process.platform !== "win32", ...(invocation.windowsVerbatimArguments !== undefined ? { windowsVerbatimArguments: invocation.windowsVerbatimArguments } : {}) });
     let stdout = "";
     let stderr = "";
+    let cliBuffer = "";
+    let assistantText = "";
+    let resultText: string | undefined;
+    let progressBuffer = "";
+    let progressQueue = Promise.resolve();
     let settled = false;
     const configuredTimeout = Number(process.env.MANYHANDS_PLANNING_STEP_TIMEOUT_MS ?? 300_000);
     const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout > 0 ? configuredTimeout : 300_000;
@@ -124,10 +134,83 @@ async function invokeSelectedPlanningCli(
       clearTimeout(timer);
       complete();
     };
-    child.stdout?.on("data", (chunk) => { stdout += String(chunk); });
+    const enqueueProgress = (line: string) => {
+      const unit = parseWorkBreakdownProgressLine(line.trim());
+      if (unit !== undefined) progressQueue = progressQueue.then(() => request.onProgress(unit));
+    };
+    const consumeAssistantText = (text: string) => {
+      assistantText += text;
+      progressBuffer += text;
+      const lines = progressBuffer.split(/\r?\n/u);
+      progressBuffer = lines.pop() ?? "";
+      for (const line of lines) enqueueProgress(line);
+    };
+    const consumeClaudeLine = (line: string) => {
+      const decoded = decodeClaudePlanningStreamLine(line);
+      if (decoded.textDelta !== undefined) consumeAssistantText(decoded.textDelta);
+      if (decoded.result !== undefined) {
+        resultText = decoded.result;
+        if (assistantText.length === 0) consumeAssistantText(decoded.result);
+      }
+    };
+    child.stdout?.on("data", (chunk) => {
+      const text = String(chunk);
+      stdout += text;
+      if (isCodex) {
+        consumeAssistantText(text);
+        return;
+      }
+      cliBuffer += text;
+      const lines = cliBuffer.split(/\r?\n/u);
+      cliBuffer = lines.pop() ?? "";
+      for (const line of lines) consumeClaudeLine(line);
+    });
     child.stderr?.on("data", (chunk) => { stderr += String(chunk); });
     child.once("error", (error) => finish(() => reject(error)));
-    child.once("close", (code) => finish(() => code === 0 ? resolve(stdout) : reject(new Error(`${stage.executorId} planning failed with exit code ${code}: ${stderr || stdout}`))));
+    child.once("close", (code) => {
+      if (!isCodex) consumeClaudeLine(cliBuffer);
+      enqueueProgress(progressBuffer);
+      void progressQueue.then(
+        () => finish(() => code === 0 ? resolve(isCodex ? assistantText : resultText ?? assistantText) : reject(new Error(`${stage.executorId} planning failed with exit code ${code}: ${stderr || stdout}`))),
+        (error) => finish(() => reject(error))
+      );
+    });
     child.stdin?.end(prompt);
   });
+}
+
+function resolvedPlanningAnswers(state: ReturnType<typeof foldRun> | undefined): Record<string, string> {
+  if (state === undefined) return {};
+  const answers: Record<string, string> = {};
+  for (const decision of Object.values(state.decisions)) {
+    if (decision.kind !== "clarify_goal" || decision.status !== "resolved" || decision.resolution === undefined) continue;
+    const source = decision.evidenceRefs.find((reference) => reference.startsWith("work-question:") || reference.startsWith("work-uncertainty:"));
+    if (source === undefined) continue;
+    const key = source.slice(source.indexOf(":") + 1);
+    const selected = decision.resolution.optionId === undefined
+      ? undefined
+      : decision.options.find((option) => option.id === decision.resolution?.optionId)?.label;
+    const answer = decision.resolution.answer ?? selected;
+    if (answer !== undefined) answers[key] = answer;
+  }
+  return answers;
+}
+
+export function decodeClaudePlanningStreamLine(line: string): { textDelta?: string; result?: string } {
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(line);
+  } catch {
+    return {};
+  }
+  if (!isRecord(candidate)) return {};
+  if (candidate.type === "stream_event" && isRecord(candidate.event) && candidate.event.type === "content_block_delta" && isRecord(candidate.event.delta) && candidate.event.delta.type === "text_delta" && typeof candidate.event.delta.text === "string") {
+    return { textDelta: candidate.event.delta.text };
+  }
+  if (candidate.type === "result" && typeof candidate.result === "string") return { result: candidate.result };
+  return {};
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

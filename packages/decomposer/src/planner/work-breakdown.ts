@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { NonEmptyStringSchema } from "@manyhands/shared";
+import { z } from "zod";
 import { parseJsonObjectCandidates } from "../llm/recursive/json.js";
 import { WorkBreakdownSchema, type WorkBreakdown } from "./schema.js";
 import { buildWorkBreakdownPrompt } from "./prompt.js";
@@ -28,6 +30,34 @@ export interface WorkBreakdownModelRequest {
   user: string;
   attempt: number;
   repairIssues: string[];
+  onProgress(unit: WorkBreakdownProgressUnit): Promise<void>;
+}
+
+export const WorkBreakdownProgressUnitSchema = z.object({
+  key: NonEmptyStringSchema,
+  parentKey: NonEmptyStringSchema.nullable(),
+  kind: z.enum(["composite", "leaf"]),
+  title: NonEmptyStringSchema,
+  objective: NonEmptyStringSchema,
+  siblingIndex: z.number().int().nonnegative(),
+  siblingCount: z.number().int().positive()
+}).strict().superRefine((unit, context) => {
+  if (unit.siblingIndex >= unit.siblingCount) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "siblingIndex must be lower than siblingCount" });
+  }
+});
+
+export type WorkBreakdownProgressUnit = z.infer<typeof WorkBreakdownProgressUnitSchema>;
+
+export const WorkBreakdownProgressLineSchema = z.object({
+  type: z.literal("planning.node"),
+  unit: WorkBreakdownProgressUnitSchema
+}).strict();
+
+export interface WorkBreakdownPlanningObserver {
+  onAttemptStarted?(event: { attempt: number }): void | Promise<void>;
+  onUnitDiscovered?(event: { attempt: number; unit: WorkBreakdownProgressUnit }): void | Promise<void>;
+  onAttemptFailed?(event: { attempt: number; reason: string }): void | Promise<void>;
 }
 
 export interface WorkBreakdownModel {
@@ -60,7 +90,7 @@ export class WorkBreakdownPlanner {
     this.cache = options.cache;
   }
 
-  async plan(input: WorkBreakdownPlannerInput): Promise<WorkBreakdown> {
+  async plan(input: WorkBreakdownPlannerInput, observer: WorkBreakdownPlanningObserver = {}): Promise<WorkBreakdown> {
     const cacheKey = planningCacheKey(input);
     const cached = this.cache?.get(cacheKey);
     if (cached !== undefined) return WorkBreakdownSchema.parse(cached);
@@ -68,12 +98,21 @@ export class WorkBreakdownPlanner {
     const prompt = buildWorkBreakdownPrompt(input);
     let repairIssues: string[] = [];
     for (let attempt = 1; attempt <= this.maxAttempts; attempt += 1) {
+      await observer.onAttemptStarted?.({ attempt });
+      const discovered = new Set<string>();
+      const reportUnit = async (candidate: WorkBreakdownProgressUnit): Promise<void> => {
+        const unit = WorkBreakdownProgressUnitSchema.parse(candidate);
+        if (discovered.has(unit.key)) return;
+        discovered.add(unit.key);
+        await observer.onUnitDiscovered?.({ attempt, unit });
+      };
       try {
-        const outputs = normalizeModelOutputs(await this.model.generate({ ...prompt, attempt, repairIssues }));
+        const outputs = normalizeModelOutputs(await this.model.generate({ ...prompt, attempt, repairIssues, onProgress: reportUnit }));
         const failures: string[] = [];
         for (const output of outputs) {
           const parsed = WorkBreakdownSchema.safeParse(output);
           if (parsed.success) {
+            for (const unit of progressUnits(parsed.data.root)) await reportUnit(unit);
             this.cache?.set(cacheKey, parsed.data);
             return parsed.data;
           }
@@ -83,17 +122,45 @@ export class WorkBreakdownPlanner {
       } catch (error) {
         repairIssues = [error instanceof Error ? error.message : String(error)];
       }
+      await observer.onAttemptFailed?.({ attempt, reason: repairIssues.join("; ") });
       if (attempt < this.maxAttempts && this.retryDelayMs > 0) await delay(this.retryDelayMs);
     }
     throw new Error(`WorkBreakdown planning failed after ${this.maxAttempts} attempts: ${repairIssues.join("; ")}`);
   }
 }
 
+export function parseWorkBreakdownProgressLine(line: string): WorkBreakdownProgressUnit | undefined {
+  let candidate: unknown;
+  try {
+    candidate = JSON.parse(line);
+  } catch {
+    return undefined;
+  }
+  const parsed = WorkBreakdownProgressLineSchema.safeParse(candidate);
+  return parsed.success ? parsed.data.unit : undefined;
+}
+
+function progressUnits(root: WorkBreakdown["root"]): WorkBreakdownProgressUnit[] {
+  const output: WorkBreakdownProgressUnit[] = [];
+  const visit = (unit: WorkBreakdown["root"], parentKey: string | null, siblingIndex: number, siblingCount: number): void => {
+    output.push({ key: unit.key, parentKey, kind: unit.kind, title: unit.title, objective: unit.objective, siblingIndex, siblingCount });
+    if (unit.kind === "composite") unit.children.forEach((child, index) => visit(child, unit.key, index, unit.children.length));
+  };
+  visit(root, null, 0, 1);
+  return output;
+}
+
 function normalizeModelOutputs(output: unknown): unknown[] {
   if (typeof output !== "string") return [output];
   const parsed = parseJsonObjectCandidates(output);
   if (!parsed.ok) throw new Error(parsed.message);
-  return parsed.candidates.map((candidate) => candidate.value);
+  const documents = parsed.candidates
+    .map((candidate) => candidate.value)
+    .filter((candidate) => !WorkBreakdownProgressLineSchema.safeParse(candidate).success);
+  if (documents.length === 0) {
+    throw new Error("Model emitted planning progress but no complete WorkBreakdown JSON.");
+  }
+  return documents;
 }
 
 function planningCacheKey(input: WorkBreakdownPlannerInput): string {

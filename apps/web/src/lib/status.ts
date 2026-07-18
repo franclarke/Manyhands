@@ -32,10 +32,10 @@ export const STATUS_META: Record<UiStatus, StatusMeta> = {
   ready: meta("Listo", "ready", false, false),
   running: meta("Ejecutando", "running", true, false),
   completed: meta("Completado", "completed", false, false),
-  failed: meta("FallÃ³", "failed", false, false),
+  failed: meta("Falló", "failed", false, false),
   blocked: meta("Bloqueado", "blocked", false, false),
   attention: {
-    label: "Requiere atenciÃ³n",
+    label: "Requiere atención",
     fg: "var(--status-review-fg)",
     bg: "var(--status-review-bg)",
     border: "var(--status-review-border)",

@@ -8,9 +8,11 @@ export function buildRunModel(seed: RunSeed, inputEvents: readonly RunEvent[]): 
   const events = uniqueOrderedEvents(inputEvents);
   const projection = foldProjection(events);
   const compiled = latestEvent(events, "graph.compiled");
-  const graph = parseGraph(compiled?.payload.graph);
+  const compiledGraph = parseGraph(compiled?.payload.graph);
+  const provisional = compiledGraph === null ? buildProvisionalGraph(seed, events) : null;
+  const graph = compiledGraph ?? provisional?.graph ?? null;
   const contracts = parseContracts(compiled?.payload.contracts);
-  const nodes = graph === null ? [] : buildNodeViews(graph, projection);
+  const nodes = graph === null ? [] : buildNodeViews(graph, projection, provisional?.layoutByNodeId, provisional !== null);
   const evidenceMatrices = events
     .filter((event) => event.type === "evidence.matrix_recorded" || event.type === "validation.completed" || event.type === "integration.completed")
     .flatMap((event) => {
@@ -25,6 +27,7 @@ export function buildRunModel(seed: RunSeed, inputEvents: readonly RunEvent[]): 
     },
     projection,
     graph,
+    graphPhase: compiledGraph !== null ? "compiled" : provisional !== null ? "provisional" : null,
     contracts,
     nodes,
     events,
@@ -61,8 +64,12 @@ function parseContracts(value: unknown): TaskContractBundle[] {
   });
 }
 
-function buildNodeViews(graph: GraphRevision, projection: RunProjection | null): RunNodeView[] {
-  const own = Object.values(graph.nodes).map((node) => nodeView(node, projection));
+function buildNodeViews(graph: GraphRevision, projection: RunProjection | null, layoutByNodeId?: ReadonlyMap<string, RunNodeView["layout"]>, provisional = false): RunNodeView[] {
+  const own = Object.values(graph.nodes).map((node) => ({
+    ...nodeView(node, projection),
+    ...(provisional && node.id === graph.rootId ? { status: "running" as const } : {}),
+    ...(layoutByNodeId?.get(node.id) !== undefined ? { layout: layoutByNodeId.get(node.id) } : {})
+  }));
   const byId = new Map(own.map((node) => [node.id, node]));
   const children = new Map<string, RunNodeView[]>();
   for (const node of own) {
@@ -84,6 +91,76 @@ function buildNodeViews(graph: GraphRevision, projection: RunProjection | null):
   };
   aggregate(graph.rootId);
   return own;
+}
+
+function buildProvisionalGraph(seed: RunSeed, events: readonly RunEvent[]): { graph: GraphRevision; layoutByNodeId: Map<string, RunNodeView["layout"]> } | null {
+  const started = [...events].reverse().find((event) => event.type === "planning.attempt_started");
+  const attempt = typeof started?.payload.attempt === "number" ? started.payload.attempt : undefined;
+  const discoveries = events.filter((event) => event.type === "planning.node_discovered" && (attempt === undefined || event.payload.attempt === attempt));
+  if (events.length === 0) return null;
+  const layoutByNodeId = new Map<string, RunNodeView["layout"]>();
+  const nodes: GraphRevision["nodes"] = {};
+  for (const event of discoveries) {
+    const candidate = event.payload.node;
+    if (!isRecord(candidate) || typeof candidate.nodeId !== "string" || typeof candidate.title !== "string" || typeof candidate.objective !== "string") continue;
+    const parentNodeId = typeof candidate.parentNodeId === "string" ? candidate.parentNodeId : null;
+    nodes[candidate.nodeId] = {
+      id: candidate.nodeId,
+      parentId: parentNodeId,
+      kind: parentNodeId === null ? "root" : candidate.kind === "composite" ? "composite" : "leaf",
+      title: candidate.title,
+      goal: candidate.objective
+    };
+    if (typeof candidate.siblingIndex === "number" && typeof candidate.siblingCount === "number") {
+      layoutByNodeId.set(candidate.nodeId, {
+        depth: provisionalDepth(candidate.nodeId, discoveries),
+        siblingIndex: candidate.siblingIndex,
+        siblingCount: candidate.siblingCount
+      });
+    }
+  }
+  let rootId = Object.values(nodes).find((node) => node.parentId === null)?.id;
+  if (rootId === undefined) {
+    rootId = `planning-root:${seed.id}`;
+    nodes[rootId] = { id: rootId, parentId: null, kind: "root", title: "Diseñando la solución", goal: seed.goal };
+    layoutByNodeId.set(rootId, { depth: 0, siblingIndex: 0, siblingCount: 1 });
+  }
+  const inspected = latestEvent(events, "repository.inspected");
+  const snapshotId = typeof inspected?.payload.snapshotId === "string" ? inspected.payload.snapshotId : "planning";
+  return {
+    graph: {
+      schemaVersion: 2,
+      graphId: `planning:${seed.id}`,
+      revision: 1,
+      rootId,
+      baseCommit: "planning",
+      repositorySnapshotId: snapshotId,
+      nodes,
+      artifactRequirements: [],
+      seamBindings: [],
+      conflictConstraints: [],
+      legacyOrderingConstraints: [],
+      createdAt: events[0]?.at ?? new Date(0).toISOString()
+    },
+    layoutByNodeId
+  };
+}
+
+function provisionalDepth(nodeId: string, discoveries: readonly RunEvent[]): number {
+  const parents = new Map<string, string | null>();
+  for (const event of discoveries) {
+    const node = event.payload.node;
+    if (isRecord(node) && typeof node.nodeId === "string") parents.set(node.nodeId, typeof node.parentNodeId === "string" ? node.parentNodeId : null);
+  }
+  let depth = 0;
+  let current = parents.get(nodeId) ?? null;
+  const visited = new Set<string>();
+  while (current !== null && !visited.has(current)) {
+    visited.add(current);
+    depth += 1;
+    current = parents.get(current) ?? null;
+  }
+  return depth;
 }
 
 function nodeView(node: TaskNodeV2, projection: RunProjection | null): RunNodeView {

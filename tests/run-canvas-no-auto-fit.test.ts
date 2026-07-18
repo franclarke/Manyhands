@@ -7,7 +7,8 @@ describe("run canvas viewport ownership", () => {
     const source = readFileSync(path.join(process.cwd(), "apps/web/src/components/run-model/minimal-run-graph.tsx"), "utf8");
     expect(source).toContain("const framed = useRef(false)");
     expect(source).toContain("if (framed.current || nodes.length === 0) return");
-    expect(source).toMatch(/useEffect\([\s\S]{0,500}\[flow, nodes\.length\]/);
-    expect(source).not.toMatch(/useEffect\([\s\S]{0,500}\[flow, nodes\]/);
+    expect(source).toMatch(/useEffect\([\s\S]{0,900}\[flow, model\.graph\?\.rootId, nodes\]/);
+    expect(source).not.toContain("flow.fitView(");
+    expect(source.match(/flow\.setCenter/g)).toHaveLength(1);
   });
 });

@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { compileGraphRevision } from "@manyhands/decomposer";
 import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 import { bookingBreakdown, bookingSnapshot, compilerDependencies } from "./helpers/target-planning-fixtures";
@@ -50,5 +50,96 @@ describe("planning V2 vertical slice", () => {
     expect(calls).toBe(1);
     expect(result).toMatchObject({ lifecycle: "failed", failureReason: "selected LLM unavailable" });
     expect((await events.load("run-failed")).map((event) => event.type)).toEqual(["run.created", "repository.inspected", "planning.failed"]);
+  });
+
+  it("persists planning nodes before the planner completes", async () => {
+    const events = new JsonlRunEventStore({ directory });
+    const snapshots = new RunSnapshotStore({ directory, events });
+    let releasePlan!: () => void;
+    const planBarrier = new Promise<void>((resolve) => { releasePlan = resolve; });
+    let discoveryPersisted!: () => void;
+    const discovery = new Promise<void>((resolve) => { discoveryPersisted = resolve; });
+
+    const running = runPlanningV2({ runId: "run-progress", goal: "Build booking", repoPath: "C:/repo/booking", targetFingerprint: "target-1", baseCommit: "1".repeat(40), authority }, {
+      events,
+      snapshots,
+      inspect: async () => bookingSnapshot(),
+      plan: async (_input, observer) => {
+        await observer.onAttemptStarted({ attempt: 1 });
+        await observer.onUnitDiscovered({
+          attempt: 1,
+          unit: {
+            key: "booking",
+            parentKey: null,
+            kind: "composite",
+            title: "Booking creation",
+            objective: "Deliver booking creation",
+            siblingIndex: 0,
+            siblingCount: 1
+          }
+        });
+        discoveryPersisted();
+        await planBarrier;
+        return bookingBreakdown();
+      },
+      compile: (input) => compileGraphRevision(input, compilerDependencies),
+      nodeIdFor: (key) => compilerDependencies.idFor("node", key),
+      now: () => "2026-07-17T01:00:00.000Z"
+    });
+
+    await discovery;
+    expect((await events.load("run-progress")).map((event) => event.type)).toEqual([
+      "run.created",
+      "repository.inspected",
+      "planning.attempt_started",
+      "planning.node_discovered"
+    ]);
+    releasePlan();
+    await expect(running).resolves.toMatchObject({ lifecycle: "needs_approval" });
+  });
+
+  it("turns consequential planning questions into durable decisions instead of failing the run", async () => {
+    const events = new JsonlRunEventStore({ directory });
+    const snapshots = new RunSnapshotStore({ directory, events });
+    const breakdown = bookingBreakdown();
+    breakdown.questions.push({
+      id: "storage-policy",
+      question: "Which persistence policy should the app use?",
+      reason: "It changes observable durability and implementation scope.",
+      impact: "architecture",
+      options: ["JSON file", "SQLite"],
+      evidenceIds: []
+    });
+    const compile = vi.fn((input) => compileGraphRevision(input, compilerDependencies));
+
+    const result = await runPlanningV2({
+      runId: "run-clarification",
+      goal: "Build booking",
+      repoPath: "C:/repo/booking",
+      targetFingerprint: "target-1",
+      baseCommit: "1".repeat(40),
+      authority
+    }, {
+      events,
+      snapshots,
+      inspect: async () => bookingSnapshot(),
+      plan: async () => breakdown,
+      compile,
+      nodeIdFor: (key) => compilerDependencies.idFor("node", key),
+      now: () => "2026-07-17T01:00:00.000Z"
+    });
+
+    expect(result.lifecycle).toBe("planning");
+    expect(result.failureReason).toBeUndefined();
+    expect(Object.values(result.decisions)).toEqual([
+      expect.objectContaining({ kind: "clarify_goal", status: "pending", affectedNodeIds: ["node-booking"] })
+    ]);
+    expect(compile).not.toHaveBeenCalled();
+    expect((await events.load("run-clarification")).map((event) => event.type)).toEqual([
+      "run.created",
+      "repository.inspected",
+      "planning.completed",
+      "decision.raised"
+    ]);
   });
 });

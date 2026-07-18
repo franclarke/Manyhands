@@ -96,8 +96,12 @@ function reviewDag(input: CompiledPlanReviewInput, findings: PlanFinding[]): voi
 
 function reviewScopes(input: CompiledPlanReviewInput, findings: PlanFinding[]): void {
   const indexedPaths = new Set(input.repositorySnapshot.index?.files.map((file) => file.path) ?? []);
+  const plannedPaths = new Set(flattenUnits(input.breakdown.root).flatMap((unit) => unit.plannedPaths ?? []));
+  for (const path of plannedPaths) {
+    if (indexedPaths.has(path)) findings.push(finding("scope_isolation", "error", "planned_path_already_exists", `Planned path ${path} already exists in the repository snapshot.`, "Cite the existing path as repository evidence instead of declaring it as a new output.", []));
+  }
   for (const bundle of input.contracts) {
-    for (const path of bundle.scope.allowedPaths) if (!indexedPaths.has(path)) findings.push(finding("scope_isolation", "error", "scope_path_not_grounded", `Scope path ${path} for ${bundle.task.nodeId} is absent from the repository snapshot.`, "Ground the scope in repository evidence or request a fresh snapshot.", [], bundle.task.nodeId, bundle.scope.id));
+    for (const path of bundle.scope.allowedPaths) if (!indexedPaths.has(path) && !plannedPaths.has(path)) findings.push(finding("scope_isolation", "error", "scope_path_not_grounded", `Scope path ${path} for ${bundle.task.nodeId} is neither present in the repository snapshot nor declared as a planned output.`, "Ground the scope in repository evidence or declare a concrete planned output path.", [], bundle.task.nodeId, bundle.scope.id));
   }
   for (let leftIndex = 0; leftIndex < input.contracts.length; leftIndex += 1) {
     for (let rightIndex = leftIndex + 1; rightIndex < input.contracts.length; rightIndex += 1) {

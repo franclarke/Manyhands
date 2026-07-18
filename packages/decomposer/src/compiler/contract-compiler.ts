@@ -39,7 +39,8 @@ export function compileContractBundles(input: {
       .map((id) => evidence.get(id))
       .filter((item): item is NonNullable<typeof item> => item?.kind === "path")
       .map((item) => item.reference)
-      .filter((path) => indexedPaths.has(path))]));
+      .filter((path) => indexedPaths.has(path))
+      .concat(unit.plannedPaths ?? [])]));
   populateScopePaths(input.breakdown.root, input.nodeIdByUnitKey, directPaths, scopePathsByNodeId);
 
   const artifactContracts = input.breakdown.candidateArtifacts.map((candidate) => {
@@ -53,7 +54,8 @@ export function compileContractBundles(input: {
       .map((id) => evidence.get(id))
       .filter((item): item is NonNullable<typeof item> => item?.kind === "path")
       .map((item) => item.reference)
-      .filter((path) => indexedPaths.has(path));
+      .filter((path) => indexedPaths.has(path))
+      .concat(producerUnit.plannedPaths ?? []);
     const base = {
       schemaVersion: 2 as const,
       id: dependencies.idFor("artifact-contract", candidate.id),
@@ -168,7 +170,7 @@ function populateScopePaths(
     : [];
   const paths = [...new Set([...(directPaths.get(unit.key) ?? []), ...descendants])].sort();
   if (paths.length === 0) {
-    throw new Error(`Cannot compile an honest scope for unit ${unit.key}; no referenced path exists in the repository snapshot.`);
+    throw new Error(`Cannot compile an honest scope for unit ${unit.key}; no existing or explicitly planned path is available.`);
   }
   output[requireNodeId(nodeIdByUnitKey, unit.key)] = paths;
   return paths;

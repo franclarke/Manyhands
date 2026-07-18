@@ -111,7 +111,45 @@ describe("Graph Compiler V2", () => {
     const breakdown = bookingBreakdown();
     const api = leaf(breakdown, "api");
     api.evidenceIds = [];
-    expect(() => compileGraphRevision({ breakdown, repositorySnapshot: bookingSnapshot() }, compilerDependencies)).toThrow(/scope/i);
+    expect(() => compileGraphRevision({ breakdown, repositorySnapshot: bookingSnapshot() }, compilerDependencies)).toThrow(/existing path|planned path/i);
+  });
+
+  it("compiles honest scopes for a greenfield repository from explicitly declared planned paths", () => {
+    const breakdown = bookingBreakdown();
+    if (breakdown.root.kind !== "composite") throw new Error("Expected a composite fixture root.");
+    breakdown.repositoryEvidence = [];
+    breakdown.root.evidenceIds = [];
+    const plannedPaths = [
+      ["src/domain/booking.ts"],
+      ["src/api/bookings.ts"],
+      ["src/ui/BookingForm.tsx"]
+    ];
+    breakdown.root.children.forEach((unit, index) => {
+      unit.evidenceIds = [];
+      unit.plannedPaths = plannedPaths[index]!;
+    });
+    breakdown.candidateSeams[0]!.evidenceIds = [];
+    const snapshot = bookingSnapshot();
+    snapshot.inspectionDisposition = "partial";
+    snapshot.index!.files = [];
+    snapshot.index!.metadata.fileCount = 0;
+    snapshot.diagnostics = [{
+      code: "no_supported_source_files",
+      severity: "warning",
+      message: "No supported source files were found in this repository."
+    }];
+
+    const compiled = compileGraphRevision({ breakdown, repositorySnapshot: snapshot }, compilerDependencies);
+
+    expect(compiled.contracts.find((bundle) => bundle.task.nodeId === "node-domain")?.scope.allowedPaths).toEqual([
+      "src/domain/booking.ts"
+    ]);
+    expect(compiled.contracts.find((bundle) => bundle.task.nodeId === compiled.graph.rootId)?.scope.allowedPaths).toEqual([
+      "src/api/bookings.ts",
+      "src/domain/booking.ts",
+      "src/ui/BookingForm.tsx"
+    ]);
+    expect(compiled.review.findings.filter((finding) => finding.severity === "error")).toEqual([]);
   });
 });
 

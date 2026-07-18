@@ -28,6 +28,22 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     warnings: z.array(NonEmptyStringSchema)
   }).strict()),
   event("repository.inspected", z.object({ snapshotId: NonEmptyStringSchema, disposition: z.enum(["complete", "partial", "unavailable"]), snapshot: z.record(z.unknown()) }).strict()),
+  event("planning.attempt_started", z.object({ attempt: z.number().int().positive() }).strict()),
+  event("planning.node_discovered", z.object({
+    attempt: z.number().int().positive(),
+    node: z.object({
+      nodeId: EntityIdSchema,
+      parentNodeId: EntityIdSchema.nullable(),
+      key: EntityIdSchema,
+      parentKey: EntityIdSchema.nullable(),
+      kind: z.enum(["composite", "leaf"]),
+      title: NonEmptyStringSchema,
+      objective: NonEmptyStringSchema,
+      siblingIndex: z.number().int().nonnegative(),
+      siblingCount: z.number().int().positive()
+    }).strict()
+  }).strict()),
+  event("planning.attempt_failed", z.object({ attempt: z.number().int().positive(), reason: NonEmptyStringSchema }).strict()),
   event("planning.completed", z.object({ breakdownId: EntityIdSchema, breakdown: z.record(z.unknown()) }).strict()),
   event("graph.compiled", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive(), graph: z.record(z.unknown()), contracts: z.array(z.record(z.unknown())), review: z.record(z.unknown()), trace: z.record(z.unknown()) }).strict()),
   event("planning.critic_recorded", z.object({ critic: NonEmptyStringSchema, findings: z.array(z.record(z.unknown())) }).strict()),

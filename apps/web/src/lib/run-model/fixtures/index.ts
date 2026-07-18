@@ -30,25 +30,25 @@ function contract(nodeId: string, goal: string, paths: string[], consumes: strin
 }
 
 function matrix(id: string, commit: string, nodeId = "run") {
-  return { matrixId: id, candidateCommit: commit, validationContract: { id: `validation-${nodeId}`, revision: REV }, criteria: [{ criterionId: `criterion-${nodeId}`, obligationId: `obligation-${nodeId}`, status: "satisfied", justification: "Pruebas de integraciÃ³n y comportamiento completadas sobre el commit exacto.", evidenceRefs: [`test:${commit}`] }], outcome: "verified" };
+  return { matrixId: id, candidateCommit: commit, validationContract: { id: `validation-${nodeId}`, revision: REV }, criteria: [{ criterionId: `criterion-${nodeId}`, obligationId: `obligation-${nodeId}`, status: "satisfied", justification: "Pruebas de integración y comportamiento completadas sobre el commit exacto.", evidenceRefs: [`test:${commit}`] }], outcome: "verified" };
 }
 
 function appointmentFixture(): RunFixture {
   const runId = "fixture-appointment-booking-v2";
   const nodes = {
-    root: node("root", null, "root", "AgendaFÃ¡cil", "Entregar una aplicaciÃ³n sencilla para reservar turnos"),
+    root: node("root", null, "root", "AgendaFácil", "Entregar una aplicación sencilla para reservar turnos"),
     experience: node("experience", "root", "composite", "Experiencia de reserva", "Permitir que una persona encuentre y confirme un turno"),
-    journey: node("journey", "experience", "composite", "Flujo del cliente", "Reunir bÃºsqueda y confirmaciÃ³n en una experiencia coherente"),
+    journey: node("journey", "experience", "composite", "Flujo del cliente", "Reunir búsqueda y confirmación en una experiencia coherente"),
     "booking-ui": node("booking-ui", "journey", "leaf", "Pantalla de turnos", "Mostrar fechas y horarios disponibles de forma accesible"),
-    confirmation: node("confirmation", "journey", "leaf", "ConfirmaciÃ³n", "Confirmar la reserva y explicar el siguiente paso"),
+    confirmation: node("confirmation", "journey", "leaf", "Confirmación", "Confirmar la reserva y explicar el siguiente paso"),
     scheduling: node("scheduling", "root", "composite", "Motor de agenda", "Garantizar disponibilidad y reservas sin duplicados"),
     core: node("core", "scheduling", "composite", "Reglas de agenda", "Concentrar las reglas que protegen cada turno"),
-    availability: node("availability", "core", "leaf", "Disponibilidad", "Calcular horarios libres segÃºn agenda y duraciÃ³n"),
+    availability: node("availability", "core", "leaf", "Disponibilidad", "Calcular horarios libres según agenda y duración"),
     reservations: node("reservations", "core", "leaf", "Reserva segura", "Crear una reserva idempotente y evitar dobles turnos"),
-    operations: node("operations", "root", "composite", "OperaciÃ³n confiable", "Dar visibilidad y seguimiento al negocio"),
-    reliability: node("reliability", "operations", "composite", "ComunicaciÃ³n y control", "Notificar cambios y permitir supervisar reservas"),
+    operations: node("operations", "root", "composite", "Operación confiable", "Dar visibilidad y seguimiento al negocio"),
+    reliability: node("reliability", "operations", "composite", "Comunicación y control", "Notificar cambios y permitir supervisar reservas"),
     notifications: node("notifications", "reliability", "leaf", "Recordatorios", "Enviar confirmaciones y recordatorios sin duplicarlos"),
-    admin: node("admin", "reliability", "leaf", "Panel diario", "Mostrar los turnos del dÃ­a y sus estados")
+    admin: node("admin", "reliability", "leaf", "Panel diario", "Mostrar los turnos del día y sus estados")
   };
   const graph = {
     schemaVersion: 2, graphId: "graph-appointment", revision: 1, rootId: "root", baseCommit: "base-appointment", repositorySnapshotId: "snapshot-appointment", nodes,
@@ -57,7 +57,7 @@ function appointmentFixture(): RunFixture {
       { id: "binding-availability", seamContract: { id: "seam-availability", revision: REV }, producerNodeId: "availability", consumerNodeId: "booking-ui", producerRevision: REV, consumerRevision: REV },
       { id: "binding-reservation", seamContract: { id: "seam-reservation", revision: REV }, producerNodeId: "reservations", consumerNodeId: "confirmation", producerRevision: REV, consumerRevision: REV }
     ],
-    conflictConstraints: [{ id: "conflict-booking-admin", leftNodeId: "reservations", rightNodeId: "admin", reason: "Ambos tocan la proyecciÃ³n de estado de una reserva", risk: "high" }], legacyOrderingConstraints: [], createdAt: new Date(START).toISOString()
+    conflictConstraints: [{ id: "conflict-booking-admin", leftNodeId: "reservations", rightNodeId: "admin", reason: "Ambos tocan la proyección de estado de una reserva", risk: "high" }], legacyOrderingConstraints: [], createdAt: new Date(START).toISOString()
   };
   const contracts = [
     contract("booking-ui", nodes["booking-ui"].goal, ["apps/web/src/booking/**"], [], [], ["seam-availability"]),
@@ -67,12 +67,30 @@ function appointmentFixture(): RunFixture {
     contract("notifications", nodes.notifications.goal, ["apps/worker/src/reminders/**"]),
     contract("admin", nodes.admin.goal, ["apps/web/src/admin/**"])
   ];
-  const approval = { id: "decision-approve-plan", kind: "approve_plan", question: "Â¿Aprobamos este plan para construir AgendaFÃ¡cil?", options: [{ id: "approve", label: "Aprobar plan", description: "Comienza la ejecuciÃ³n con estos contratos." }, { id: "revise", label: "Pedir cambios", description: "Vuelve a planificar antes de escribir cÃ³digo." }], affectedNodeIds: ["root"], evidenceRefs: ["graph-appointment@1"], impact: "architecture" };
-  const local = { id: "decision-reminder-channel", kind: "clarify_goal", question: "Â¿El recordatorio principal debe ser por email o por WhatsApp?", options: [{ id: "email", label: "Email", description: "Canal universal y sin proveedor adicional." }, { id: "whatsapp", label: "WhatsApp", description: "Mayor inmediatez, requiere integraciÃ³n externa." }], affectedNodeIds: ["notifications"], evidenceRefs: ["requirement:reminder-channel"], impact: "behavior" };
+  const approval = { id: "decision-approve-plan", kind: "approve_plan", question: "¿Aprobamos este plan para construir AgendaFácil?", options: [{ id: "approve", label: "Aprobar plan", description: "Comienza la ejecución con estos contratos." }, { id: "revise", label: "Pedir cambios", description: "Vuelve a planificar antes de escribir código." }], affectedNodeIds: ["root"], evidenceRefs: ["graph-appointment@1"], impact: "architecture" };
+  const local = { id: "decision-reminder-channel", kind: "clarify_goal", question: "¿El recordatorio principal debe ser por email o por WhatsApp?", options: [{ id: "email", label: "Email", description: "Canal universal y sin proveedor adicional." }, { id: "whatsapp", label: "WhatsApp", description: "Mayor inmediatez, requiere integración externa." }], affectedNodeIds: ["notifications"], evidenceRefs: ["requirement:reminder-channel"], impact: "behavior" };
   const events: RunEvent[] = [];
   const push = (type: string, payload: Record<string, unknown>) => events.push(event(runId, events.length + 1, type, payload));
-  push("run.created", { goal: "Crear AgendaFÃ¡cil, una aplicaciÃ³n para reservar turnos" });
+  push("run.created", { goal: "Crear AgendaFácil, una aplicación para reservar turnos" });
   push("repository.inspected", { snapshotId: "snapshot-appointment", disposition: "complete", snapshot: { stack: "Next.js + TypeScript", tests: "Vitest + Playwright" } });
+  push("planning.attempt_started", { attempt: 1 });
+  for (const item of Object.values(nodes)) {
+    const siblings = Object.values(nodes).filter((candidate) => candidate.parentId === item.parentId);
+    push("planning.node_discovered", {
+      attempt: 1,
+      node: {
+        nodeId: item.id,
+        parentNodeId: item.parentId,
+        key: item.id,
+        parentKey: item.parentId,
+        kind: item.kind === "leaf" ? "leaf" : "composite",
+        title: item.title,
+        objective: item.goal,
+        siblingIndex: siblings.findIndex((candidate) => candidate.id === item.id),
+        siblingCount: siblings.length
+      }
+    });
+  }
   push("planning.completed", { breakdownId: "breakdown-appointment", breakdown: { units: ["experience", "scheduling", "operations"] } });
   push("graph.compiled", { graphId: graph.graphId, revision: 1, graph, contracts, review: { outcome: "approved_for_human_review" }, trace: { source: "work-breakdown" } });
   push("graph.revision.proposed", { graphId: graph.graphId, revision: 1 });
@@ -86,7 +104,7 @@ function appointmentFixture(): RunFixture {
   push("attempt.candidate_created", { attemptId: "attempt-availability-1", nodeId: "availability", candidateCommit: "commit-availability", outputDigest: "digest-availability", changedFiles: ["packages/scheduling/src/availability/index.ts"] });
   push("validation.completed", { attemptId: "attempt-availability-1", nodeId: "availability", matrix: matrix("matrix-availability", "commit-availability", "availability") });
   push("artifact.adopted", { artifact: { schemaVersion: 1, artifactId: "artifact-availability-result", runId, nodeId: "availability", digest: "digest-availability", producerAttemptId: "attempt-availability-1", contract: { id: "artifact-availability-result", revision: REV }, kind: "commit", location: "commit-availability", adoptedAt: new Date(START + 16 * 35_000).toISOString() } });
-  push("attempt.failed", { attemptId: "attempt-admin-1", nodeId: "admin", reason: "La prueba detectÃ³ que dos estados usaban el mismo color." });
+  push("attempt.failed", { attemptId: "attempt-admin-1", nodeId: "admin", reason: "La prueba detectó que dos estados usaban el mismo color." });
   push("failure.classified", { nodeId: "admin", failureClass: "code_test", observation: { source: "validation", code: "accessibility_contrast", exitCode: 1, message: "Contraste insuficiente" }, allowedActions: ["repair_code"], automaticRetryBudget: 1, discardCandidate: false });
   push("attempt.started", { attemptId: "attempt-admin-2", nodeId: "admin", inputFingerprint: "fingerprint-admin-1", retryOfAttemptId: "attempt-admin-1", executorProfile: { id: "codex-cli", revision: REV } });
   push("attempt.candidate_created", { attemptId: "attempt-admin-2", nodeId: "admin", candidateCommit: "commit-admin-fixed", outputDigest: "digest-admin", changedFiles: ["apps/web/src/admin/dashboard.tsx"] });
@@ -106,11 +124,11 @@ function appointmentFixture(): RunFixture {
   }
   push("evidence.matrix_recorded", { matrix: matrix("matrix-final", "commit-final", "run") });
   push("final_candidate.verified", { manifestId: "manifest-final", commit: "commit-final", evidenceMatrixId: "matrix-final", evidenceEligible: true, executionSucceeded: true, sourceTargetFingerprint: "target-fixture", targetBranch: "main", targetHead: "base-appointment" });
-  return { seed: { id: runId, title: "AgendaFÃ¡cil: reservas de turnos", goal: "Crear una aplicaciÃ³n simple para reservar turnos", lifecycle: "planning", eventSequence: 0 }, events, intervalMs: 2_200 };
+  return { seed: { id: runId, title: "AgendaFácil: reservas de turnos", goal: "Crear una aplicación simple para reservar turnos", lifecycle: "planning", eventSequence: 0 }, events, intervalMs: 2_200 };
 }
 
 export const GOLDEN_FIXTURES = { "golden-appointment-booking": appointmentFixture() } satisfies Record<string, RunFixture>;
 export type GoldenFixtureName = keyof typeof GOLDEN_FIXTURES;
 export const GOLDEN_FIXTURE_NAMES = Object.keys(GOLDEN_FIXTURES) as GoldenFixtureName[];
 export interface FixtureCatalogEntry { name: GoldenFixtureName; title: string; description: string; }
-export const FIXTURE_CATALOG: readonly FixtureCatalogEntry[] = [{ name: "golden-appointment-booking", title: "AgendaFÃ¡cil: run completo V2", description: "Fixture estrella: grafo hÃ­brido, contratos, dependencia materializada, conflicto de alcance, decisiÃ³n local, fallo verificable, reparaciÃ³n y resultado final." }];
+export const FIXTURE_CATALOG: readonly FixtureCatalogEntry[] = [{ name: "golden-appointment-booking", title: "AgendaFácil: run completo V2", description: "Fixture estrella: grafo híbrido, contratos, dependencia materializada, conflicto de alcance, decisión local, fallo verificable, reparación y resultado final." }];

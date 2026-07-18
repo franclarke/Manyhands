@@ -50,7 +50,7 @@ export function RunModelView({
         ...(body !== undefined ? { body: JSON.stringify(body) } : {})
       });
       const payload = await response.json().catch(() => ({})) as { error?: string };
-      if (!response.ok) throw new Error(payload.error ?? `La operaciÃ³n fallÃ³ (${response.status}).`);
+      if (!response.ok) throw new Error(payload.error ?? `La operación falló (${response.status}).`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -84,7 +84,7 @@ export function RunModelView({
         <div className="min-w-0">
           <div className="mb-1 flex items-center gap-2 text-micro text-[var(--color-text-subtle)]">
             <span className="mh-mono uppercase tracking-[0.12em]">{workspaceName ?? "ManyHands"}</span>
-            <span>Â·</span>
+            <span>·</span>
             <span>{live.connected ? "historial sincronizado" : live.connection}</span>
           </div>
           <h1 className="truncate text-lg font-semibold">{model.run.title}</h1>
@@ -124,7 +124,7 @@ export function RunModelView({
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_340px]">
         <section className="relative min-h-0 border-r border-[var(--color-border)]">
           <div className="absolute left-4 top-4 z-10 flex items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)]/95 px-3 py-2 text-eyebrow text-[var(--color-text-muted)] shadow-sm backdrop-blur">
-            <span><i className="mr-1 inline-block h-0.5 w-4 bg-[var(--color-border-strong)] align-middle" /> jerarquÃ­a</span>
+            <span><i className="mr-1 inline-block h-0.5 w-4 bg-[var(--color-border-strong)] align-middle" /> jerarquía</span>
             <span><i className="mr-1 inline-block h-0.5 w-4 bg-[var(--color-accent)] align-middle" /> artefacto</span>
             <span><i className="mr-1 inline-block h-0.5 w-4 border-t border-dashed border-[var(--status-review-fg)] align-middle" /> contrato</span>
             <span><i className="mr-1 inline-block h-0.5 w-4 border-t border-dotted border-[var(--error)] align-middle" /> conflicto</span>
@@ -145,8 +145,8 @@ export function RunModelView({
       {activeDecision !== null ? (
         <dialog open className="fixed inset-0 z-50 m-auto w-[min(560px,calc(100vw-32px))] rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface-raised)] p-0 text-[var(--color-text)] shadow-2xl backdrop:bg-black/55">
           <div className="border-b border-[var(--color-border)] px-5 py-4">
-            <div className="flex items-start justify-between gap-4"><div><span className="mh-mono text-eyebrow uppercase tracking-[0.12em] text-[var(--status-review-fg)]">DecisiÃ³n humana</span><h2 className="mt-1 text-base font-semibold">{activeDecision.question}</h2></div><button type="button" onClick={() => setDecisionId(null)} aria-label="Cerrar"><X className="h-4 w-4" /></button></div>
-            <p className="mt-2 text-xs text-[var(--color-text-muted)]">Esta respuesta desbloquea sÃ³lo los nodos afectados. Las ramas independientes no se detienen.</p>
+            <div className="flex items-start justify-between gap-4"><div><span className="mh-mono text-eyebrow uppercase tracking-[0.12em] text-[var(--status-review-fg)]">Decisión humana</span><h2 className="mt-1 text-base font-semibold">{activeDecision.question}</h2></div><button type="button" onClick={() => setDecisionId(null)} aria-label="Cerrar"><X className="h-4 w-4" /></button></div>
+            <p className="mt-2 text-xs text-[var(--color-text-muted)]">Esta respuesta desbloquea sólo los nodos afectados. Las ramas independientes no se detienen.</p>
           </div>
           <div className="grid gap-2 p-5">
             {activeDecision.options.map((option) => (
@@ -180,7 +180,7 @@ function RunSummary({ model }: { model: ReturnType<typeof useLiveRunModel>["mode
   return (
     <section className="border-b border-[var(--color-border)] p-5">
       <span className="mh-mono text-eyebrow uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">Estado del objetivo</span>
-      <h2 className="mt-2 text-sm font-semibold">{model.graph === null ? "DiseÃ±ando el plan" : `${done} de ${model.nodes.length} nodos con resultado`}</h2>
+      <h2 className="mt-2 text-sm font-semibold">{model.graphPhase === "provisional" ? `Construyendo el grafo · ${model.nodes.length} nodo${model.nodes.length === 1 ? "" : "s"} identificado${model.nodes.length === 1 ? "" : "s"}` : model.graph === null ? "Preparando el plan" : `${done} de ${model.nodes.length} nodos con resultado`}</h2>
       <div className="mt-4 grid grid-cols-3 gap-2 text-center"><Metric value={active} label="activos" /><Metric value={waiting} label="esperan" /><Metric value={model.contracts.length} label="contratos" /></div>
       {model.projection?.finalCandidate !== undefined ? <div className="mt-4 rounded-lg border border-[var(--status-completed-border)] bg-[var(--status-completed-bg)] p-3 text-xs text-[var(--status-completed-fg)]"><CheckCircle2 className="mr-2 inline h-4 w-4" />Resultado verificado listo para publicar.</div> : null}
       {model.projection?.failureReason !== undefined ? <div className="mt-4 rounded-lg border border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] p-3 text-xs text-[var(--status-failed-fg)]">{model.projection.failureReason}</div> : null}
@@ -195,7 +195,7 @@ function NodeDetails({ node, contract, onClose }: { node: ReturnType<typeof useL
     <section className="border-b border-[var(--color-border)] p-5">
       <div className="flex items-start justify-between gap-4"><div><span className="mh-mono text-eyebrow uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">{node.kind}</span><h2 className="mt-1 text-sm font-semibold">{node.title}</h2></div><button type="button" onClick={onClose} aria-label="Cerrar detalle"><X className="h-4 w-4" /></button></div>
       <p className="mt-3 text-xs leading-5 text-[var(--color-text-muted)]">{node.goal}</p>
-      {contract !== null ? <div className="mt-5 space-y-4 text-xs"><Detail label="Alcance" value={`${contract.scope.allowedPaths.length} rutas permitidas`} /><Detail label="Criterios" value={`${contract.task.acceptanceCriteria.length} condiciones verificables`} /><Detail label="Entradas / salidas" value={`${contract.task.consumes.length} / ${contract.task.produces.length}`} /><div><span className="mb-2 block text-eyebrow uppercase tracking-wide text-[var(--color-text-subtle)]">AceptaciÃ³n</span><ul className="space-y-1.5">{contract.task.acceptanceCriteria.map((criterion) => <li key={criterion.id} className="rounded bg-[var(--color-bg-subtle)] p-2">{criterion.description}</li>)}</ul></div></div> : <p className="mt-4 text-xs text-[var(--color-text-subtle)]">Este nodo agrupa trabajo; sus contratos viven en los nodos ejecutables.</p>}
+      {contract !== null ? <div className="mt-5 space-y-4 text-xs"><Detail label="Alcance" value={`${contract.scope.allowedPaths.length} rutas permitidas`} /><Detail label="Criterios" value={`${contract.task.acceptanceCriteria.length} condiciones verificables`} /><Detail label="Entradas / salidas" value={`${contract.task.consumes.length} / ${contract.task.produces.length}`} /><div><span className="mb-2 block text-eyebrow uppercase tracking-wide text-[var(--color-text-subtle)]">Aceptación</span><ul className="space-y-1.5">{contract.task.acceptanceCriteria.map((criterion) => <li key={criterion.id} className="rounded bg-[var(--color-bg-subtle)] p-2">{criterion.description}</li>)}</ul></div></div> : <p className="mt-4 text-xs text-[var(--color-text-subtle)]">Este nodo agrupa trabajo; sus contratos viven en los nodos ejecutables.</p>}
     </section>
   );
 }
@@ -203,28 +203,32 @@ function NodeDetails({ node, contract, onClose }: { node: ReturnType<typeof useL
 function Detail({ label, value }: { label: string; value: string }): React.ReactElement { return <div><span className="block text-eyebrow uppercase tracking-wide text-[var(--color-text-subtle)]">{label}</span><span className="mt-1 block">{value}</span></div>; }
 
 function Activity({ events }: { events: readonly RunEvent[] }): React.ReactElement {
-  return <section className="p-5"><span className="mh-mono text-eyebrow uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">Actividad canÃ³nica</span><ol className="mt-3 space-y-3">{events.slice(-16).reverse().map((event) => <li key={event.eventId} className="flex gap-3 text-xs"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-accent)]" /><span><strong className="block font-medium">{eventLabel(event.type)}</strong><small className="text-[var(--color-text-subtle)]">#{event.seq} Â· {new Date(event.at).toLocaleTimeString()}</small></span></li>)}</ol></section>;
+  return <section className="p-5"><span className="mh-mono text-eyebrow uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">Actividad canónica</span><ol className="mt-3 space-y-3">{events.slice(-16).reverse().map((event) => <li key={event.eventId} className="flex gap-3 text-xs"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-accent)]" /><span><strong className="block font-medium">{eventLabel(event.type)}</strong><small className="text-[var(--color-text-subtle)]">#{event.seq} · {new Date(event.at).toLocaleTimeString()}</small></span></li>)}</ol></section>;
 }
 
 function eventLabel(type: string): string {
   const labels: Record<string, string> = {
     "run.created": "Objetivo registrado",
     "repository.inspected": "Repositorio comprendido",
+    "planning.attempt_started": "Planificación iniciada",
+    "planning.node_discovered": "Nodo identificado",
+    "planning.attempt_failed": "Intento de planificación descartado",
+    "planning.failed": "Planificación fallida",
     "planning.completed": "Trabajo desglosado",
     "graph.compiled": "Grafo y contratos compilados",
     "graph.revision.approved": "Plan aprobado",
     "wave.selected": "Nueva ola de trabajo",
     "attempt.started": "Agente iniciado",
     "attempt.candidate_created": "Cambio candidato creado",
-    "validation.completed": "ValidaciÃ³n completada",
+    "validation.completed": "Validación completada",
     "artifact.adopted": "Artefacto adoptado",
-    "integration.started": "IntegraciÃ³n iniciada",
-    "integration.completed": "IntegraciÃ³n completada",
-    "decision.raised": "DecisiÃ³n solicitada",
-    "decision.resolved": "DecisiÃ³n respondida",
+    "integration.started": "Integración iniciada",
+    "integration.completed": "Integración completada",
+    "decision.raised": "Decisión solicitada",
+    "decision.resolved": "Decisión respondida",
     "final_candidate.verified": "Resultado final verificado",
     "delivery.published": "Resultado publicado",
     "run.failed": "Run fallido"
   };
-  return labels[type] ?? type.replaceAll(".", " Â· ");
+  return labels[type] ?? type.replaceAll(".", " · ");
 }

@@ -27,12 +27,14 @@ export interface RunNodeView extends TaskNodeV2 {
   attemptId?: string;
   artifactCount: number;
   decisionCount: number;
+  layout?: { depth: number; siblingIndex: number; siblingCount: number } | undefined;
 }
 
 export interface RunModel {
   run: RunSeed;
   projection: RunProjection | null;
   graph: GraphRevision | null;
+  graphPhase: "provisional" | "compiled" | null;
   contracts: TaskContractBundle[];
   nodes: RunNodeView[];
   events: RunEvent[];

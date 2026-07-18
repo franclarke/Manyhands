@@ -76,7 +76,7 @@ async function executeDecisionCommand(runId: string, command: RunCommand): Promi
   const current = await getRunRepository().get(runId);
   const activeExecution = current.activeOperation?.kind === "execution" ? current.activeOperation : undefined;
   if (activeExecution === undefined) {
-    return executeCommand(runId, "control", ["waiting_for_input", "running"], command);
+    return executeCommand(runId, "control", ["planning", "needs_approval", "waiting_for_input", "running"], command);
   }
   const store = eventStore();
   const owner = authority(activeExecution);

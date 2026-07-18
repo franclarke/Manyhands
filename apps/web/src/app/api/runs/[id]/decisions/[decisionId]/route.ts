@@ -4,11 +4,13 @@ import { z } from "zod";
 import { RunValidationError } from "@/lib/server/runs/errors";
 import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
+import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 import {
   loadRunProjectionV2,
   resolveDecisionV2
 } from "@/lib/server/runs/v2/command-host";
 import { approvePlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
+import { runPlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
 import { startExecutionV2Pipeline } from "@/lib/server/runs/v2/execution-pipeline";
 
 export const runtime = "nodejs";
@@ -42,6 +44,24 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       let run = await approvePlanningV2Pipeline(id, state.graphRevision);
       run = await startExecutionV2Pipeline(id, "route:decision:execution-v2");
       return NextResponse.json({ ...(await toCanonicalRunResponse(run)), decisionId, optionId });
+    }
+
+    if (decision.kind === "clarify_goal") {
+      const resolved = await resolveDecisionV2(id, decisionId, {
+        ...(optionId !== undefined ? { optionId } : {}),
+        ...(parsed.data.answer !== undefined ? { answer: parsed.data.answer } : {})
+      });
+      const hasPendingClarification = Object.values(resolved.state.decisions)
+        .some((candidate) => candidate.kind === "clarify_goal" && candidate.status === "pending");
+      if (!hasPendingClarification) {
+        startRunBackgroundTask(id, "route:decision:replan-v2", () => runPlanningV2Pipeline(id));
+      }
+      return NextResponse.json({
+        ...(await toCanonicalRunResponse(resolved.run)),
+        decisionId,
+        ...(optionId !== undefined ? { optionId } : {}),
+        ...(parsed.data.answer !== undefined ? { answer: parsed.data.answer } : {})
+      });
     }
 
     const resolved = await resolveDecisionV2(id, decisionId, {

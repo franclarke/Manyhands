@@ -1,4 +1,4 @@
-import type { CompiledGraphRevision, GraphCompilerInput, WorkBreakdown, WorkBreakdownPlannerInput } from "@manyhands/decomposer";
+import type { CompiledGraphRevision, GraphCompilerInput, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
 import { PLAN_CRITIC_KINDS } from "@manyhands/decomposer";
 import { foldRun, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
@@ -20,8 +20,9 @@ export interface PlanningV2Dependencies {
   events: JsonlRunEventStore;
   snapshots: RunSnapshotStore;
   inspect(input: Pick<PlanningV2Input, "repoPath" | "targetFingerprint" | "baseCommit">): Promise<RepositorySnapshot>;
-  plan(input: WorkBreakdownPlannerInput): Promise<WorkBreakdown>;
+  plan(input: WorkBreakdownPlannerInput, observer: WorkBreakdownPlanningObserver): Promise<WorkBreakdown>;
   compile(input: GraphCompilerInput): CompiledGraphRevision;
+  nodeIdFor?(key: string): string;
   now(): string;
 }
 
@@ -35,13 +36,54 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
   }
   let state = foldRun(events);
   if (state.lifecycle !== "planning") return state;
+  if (Object.values(state.decisions).some((decision) => decision.kind === "clarify_goal" && decision.status === "pending")) {
+    return state;
+  }
 
   try {
+    const attemptOffset = latestPlanningAttempt(events);
     const repositorySnapshot = await dependencies.inspect(input);
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
-      eventId: `repository:${repositorySnapshot.snapshotId}`, occurredAt: dependencies.now(), type: "repository.inspected",
+      eventId: `repository:${repositorySnapshot.snapshotId}:inspection:${events.length + 1}`, occurredAt: dependencies.now(), type: "repository.inspected",
       payload: { snapshotId: repositorySnapshot.snapshotId, disposition: repositorySnapshot.inspectionDisposition, snapshot: asRecord(repositorySnapshot) }
     }])];
+    const nodeIdFor = dependencies.nodeIdFor ?? defaultNodeIdFor;
+    const planningObserver: WorkBreakdownPlanningObserver = {
+      onAttemptStarted: async ({ attempt }) => {
+        const globalAttempt = attemptOffset + attempt;
+        events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
+          eventId: `planning:${input.runId}:attempt:${globalAttempt}:started`,
+          occurredAt: dependencies.now(),
+          type: "planning.attempt_started",
+          payload: { attempt: globalAttempt }
+        }])];
+      },
+      onUnitDiscovered: async ({ attempt, unit }) => {
+        const globalAttempt = attemptOffset + attempt;
+        events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
+          eventId: `planning:${input.runId}:attempt:${globalAttempt}:node:${unit.key}`,
+          occurredAt: dependencies.now(),
+          type: "planning.node_discovered",
+          payload: {
+            attempt: globalAttempt,
+            node: {
+              ...unit,
+              nodeId: nodeIdFor(unit.key),
+              parentNodeId: unit.parentKey === null ? null : nodeIdFor(unit.parentKey)
+            }
+          }
+        }])];
+      },
+      onAttemptFailed: async ({ attempt, reason }) => {
+        const globalAttempt = attemptOffset + attempt;
+        events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
+          eventId: `planning:${input.runId}:attempt:${globalAttempt}:failed`,
+          occurredAt: dependencies.now(),
+          type: "planning.attempt_failed",
+          payload: { attempt: globalAttempt, reason }
+        }])];
+      }
+    };
     const breakdown = await dependencies.plan({
       goal: input.goal,
       acceptanceCriteria: input.acceptanceCriteria ?? [],
@@ -52,7 +94,14 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
         evidence: repositoryEvidence(repositorySnapshot)
       },
       ...(input.questionAnswers !== undefined ? { questionAnswers: input.questionAnswers } : {})
-    });
+    }, planningObserver);
+    if (requiresClarification(breakdown)) {
+      const drafts = clarificationEvents(breakdown, nodeIdFor, dependencies.now, events.length);
+      events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
+      state = foldRun(events);
+      await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
+      return state;
+    }
     const compiled = dependencies.compile({ breakdown, repositorySnapshot });
     const drafts = successEvents(input.runId, breakdown, compiled, dependencies.now);
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
@@ -114,9 +163,85 @@ export async function revisePlanningV2(
 
 function successEvents(runId: string, breakdown: WorkBreakdown, compiled: CompiledGraphRevision, now: () => string): RunEventInput[] {
   return [
-    { eventId: `planning:${breakdown.breakdownId}:completed`, occurredAt: now(), type: "planning.completed", payload: { breakdownId: breakdown.breakdownId, breakdown: asRecord(breakdown) } },
+    { eventId: `planning:${breakdown.breakdownId}:completed:${runId}`, occurredAt: now(), type: "planning.completed", payload: { breakdownId: breakdown.breakdownId, breakdown: asRecord(breakdown) } },
     ...compiledEvents(compiled, now)
   ];
+}
+
+function requiresClarification(breakdown: WorkBreakdown): boolean {
+  return breakdown.questions.length > 0 || breakdown.uncertainties.some((uncertainty) => uncertainty.requiresHumanDecision);
+}
+
+function clarificationEvents(
+  breakdown: WorkBreakdown,
+  nodeIdFor: (key: string) => string,
+  now: () => string,
+  sequenceOffset: number
+): RunEventInput[] {
+  const completion: RunEventInput = {
+    eventId: `planning:${breakdown.breakdownId}:clarification:${sequenceOffset + 1}`,
+    occurredAt: now(),
+    type: "planning.completed",
+    payload: { breakdownId: breakdown.breakdownId, breakdown: asRecord(breakdown) }
+  };
+  const questions = breakdown.questions.length > 0
+    ? breakdown.questions.map((question) => ({
+      id: `planning-question-${question.id}`,
+      question: question.question,
+      options: question.options,
+      impact: question.impact,
+      evidenceIds: question.evidenceIds,
+      sourceRef: `work-question:${question.id}`
+    }))
+    : breakdown.uncertainties
+      .filter((uncertainty) => uncertainty.requiresHumanDecision)
+      .map((uncertainty) => ({
+        id: `planning-uncertainty-${uncertainty.id}`,
+        question: `How should this uncertainty be resolved? ${uncertainty.description}`,
+        options: ["Provide direction", "Stop this run"],
+        impact: "risk" as const,
+        evidenceIds: uncertainty.evidenceIds,
+        sourceRef: `work-uncertainty:${uncertainty.id}`
+      }));
+  return [
+    completion,
+    ...questions.map((question) => ({
+      eventId: question.id,
+      occurredAt: now(),
+      type: "decision.raised" as const,
+      payload: {
+        decision: {
+          id: question.id,
+          kind: "clarify_goal" as const,
+          question: question.question,
+          options: question.options.map((label, index) => ({ id: `option-${index + 1}`, label })),
+          affectedNodeIds: affectedNodeIds(breakdown.root, question.evidenceIds, nodeIdFor),
+          evidenceRefs: [question.sourceRef, ...question.evidenceIds],
+          impact: question.impact
+        }
+      }
+    }))
+  ];
+}
+
+function affectedNodeIds(root: WorkUnit, evidenceIds: readonly string[], nodeIdFor: (key: string) => string): string[] {
+  if (evidenceIds.length === 0) return [nodeIdFor(root.key)];
+  const matches = flattenUnits(root)
+    .filter((unit) => unit.evidenceIds.some((id) => evidenceIds.includes(id)))
+    .map((unit) => nodeIdFor(unit.key));
+  return matches.length > 0 ? [...new Set(matches)] : [nodeIdFor(root.key)];
+}
+
+function flattenUnits(root: WorkUnit): WorkUnit[] {
+  return root.kind === "leaf" ? [root] : [root, ...root.children.flatMap(flattenUnits)];
+}
+
+function latestPlanningAttempt(events: readonly { type: string; payload: Record<string, unknown> }[]): number {
+  return events.reduce((latest, event) => {
+    if (!event.type.startsWith("planning.attempt_")) return latest;
+    const attempt = event.payload.attempt;
+    return typeof attempt === "number" && Number.isInteger(attempt) ? Math.max(latest, attempt) : latest;
+  }, 0);
 }
 
 function compiledEvents(compiled: CompiledGraphRevision, now: () => string): RunEventInput[] {
@@ -137,8 +262,15 @@ async function append(dependencies: PlanningV2Dependencies, runId: string, autho
 }
 
 function repositoryEvidence(snapshot: RepositorySnapshot) {
-  if (snapshot.index === undefined) return snapshot.diagnostics.map((diagnostic, index) => ({ id: `diagnostic-${index}`, kind: "diagnostic" as const, reference: diagnostic.filePath ?? snapshot.rootPath, observation: diagnostic.message, confidence: diagnostic.severity === "error" ? 0.3 : 0.7 }));
-  return snapshot.index.files.map((file, index) => ({ id: `path-${index}`, kind: "path" as const, reference: file.path, observation: `Repository ${file.kind} file`, confidence: 1 }));
+  const paths = snapshot.index?.files.map((file, index) => ({ id: `path-${index}`, kind: "path" as const, reference: file.path, observation: `Repository ${file.kind} file`, confidence: 1 })) ?? [];
+  const diagnostics = snapshot.diagnostics.map((diagnostic, index) => ({ id: `diagnostic-${index}`, kind: "diagnostic" as const, reference: diagnostic.filePath ?? snapshot.rootPath, observation: diagnostic.message, confidence: diagnostic.severity === "error" ? 0.3 : 0.7 }));
+  const scripts = Object.entries(snapshot.capabilities.scripts).map(([name, command], index) => ({ id: `script-${index}`, kind: "script" as const, reference: name, observation: command, confidence: 1 }));
+  const stack = snapshot.capabilities.stack.map((item, index) => ({ id: `stack-${index}`, kind: "stack" as const, reference: item.name, observation: item.evidence.join("; ") || `Detected ${item.name}`, confidence: item.confidence }));
+  return [...paths, ...scripts, ...stack, ...diagnostics];
+}
+
+function defaultNodeIdFor(key: string): string {
+  return `node-${key.replace(/[^A-Za-z0-9._:-]/gu, "-")}`;
 }
 
 function asRecord<T>(value: T): Record<string, unknown> { return value as unknown as Record<string, unknown>; }

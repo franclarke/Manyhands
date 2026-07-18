@@ -63,14 +63,104 @@ describe("WorkBreakdown", () => {
     await expect(failing.plan(input)).rejects.toThrow(/after 2 attempts/i);
   });
 
+  it("accepts declared planned paths for a greenfield leaf without treating them as repository evidence", () => {
+    const breakdown = fixture();
+    if (breakdown.root.kind !== "composite") throw new Error("Expected a composite fixture root.");
+    const leaf = breakdown.root.children[0]!;
+    leaf.evidenceIds = [];
+    leaf.plannedPaths = ["src/app/bookings/page.tsx", "src/app/api/bookings/route.ts"];
+
+    const parsed = WorkBreakdownSchema.parse(breakdown);
+
+    expect(parsed.root.kind === "composite" ? parsed.root.children[0]?.plannedPaths : undefined).toEqual([
+      "src/app/bookings/page.tsx",
+      "src/app/api/bookings/route.ts"
+    ]);
+    expect(parsed.repositoryEvidence).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ reference: "src/app/bookings/page.tsx" })
+    ]));
+  });
+
+  it("rejects a leaf with neither grounded path evidence nor declared planned paths", () => {
+    const breakdown = fixture();
+    if (breakdown.root.kind !== "composite") throw new Error("Expected a composite fixture root.");
+    breakdown.root.children[0]!.evidenceIds = [];
+
+    expect(WorkBreakdownSchema.safeParse(breakdown)).toMatchObject({ success: false });
+  });
+
+  it("reports planning attempts and units while the model is still generating", async () => {
+    const observed: string[] = [];
+    const planner = new WorkBreakdownPlanner({
+      model: {
+        generate: async (request) => {
+          await request.onProgress({
+            key: "booking-feature",
+            parentKey: null,
+            kind: "composite",
+            title: "Booking creation",
+            objective: "Deliver booking creation end to end",
+            siblingIndex: 0,
+            siblingCount: 1
+          });
+          observed.push("model-completed");
+          return fixture();
+        }
+      },
+      maxAttempts: 1,
+      retryDelayMs: 0
+    });
+
+    await planner.plan(plannerInput(), {
+      onAttemptStarted: ({ attempt }) => { observed.push(`attempt-${attempt}`); },
+      onUnitDiscovered: ({ unit }) => { observed.push(`unit-${unit.key}`); }
+    });
+
+    expect(observed.slice(0, 3)).toEqual(["attempt-1", "unit-booking-feature", "model-completed"]);
+    expect(observed).toEqual(expect.arrayContaining(["unit-booking-flow", "unit-booking-policy"]));
+  });
+
   it("prompts for semantic cuts without imposing graph shape or executable details", () => {
-    const prompt = buildWorkBreakdownPrompt(plannerInput());
+    const prompt = buildWorkBreakdownPrompt({
+      ...plannerInput(),
+      questionAnswers: { "booking-policy": "Reject overlap" }
+    });
     expect(prompt.system).toContain("hybrid vertical slice");
     expect(prompt.system).toContain("Do not emit worktrees, exact commands, executor profiles, or generic dependency edges");
     expect(prompt.system).toContain("Do not target a fixed depth, child count, or layer template");
     expect(prompt.system).toContain('"candidateArtifacts"');
+    expect(prompt.system).toContain("plannedPaths");
+    expect(prompt.system).toContain("planning.node");
     expect(prompt.user).toContain("src/routes/bookings.ts");
     expect(prompt.user).toContain("repository snapshot snapshot-1");
+    expect(prompt.user).toContain("booking-policy: Reject overlap");
+    expect(prompt.system).toContain("do not ask the same question again");
+  });
+
+  it("does not mistake streamed planning-node envelopes for complete WorkBreakdown documents", async () => {
+    const planner = new WorkBreakdownPlanner({
+      model: {
+        generate: async () => [
+          JSON.stringify({
+            type: "planning.node",
+            unit: {
+              key: "booking-feature",
+              parentKey: null,
+              kind: "composite",
+              title: "Booking creation",
+              objective: "Deliver booking creation end to end",
+              siblingIndex: 0,
+              siblingCount: 1
+            }
+          }),
+          JSON.stringify(fixture())
+        ].join("\n")
+      },
+      maxAttempts: 1,
+      retryDelayMs: 0
+    });
+
+    await expect(planner.plan(plannerInput())).resolves.toEqual(fixture());
   });
 });
 

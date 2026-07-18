@@ -101,6 +101,9 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       next.lifecycle = "interrupted";
       break;
     case "repository.inspected":
+    case "planning.attempt_started":
+    case "planning.node_discovered":
+    case "planning.attempt_failed":
     case "planning.completed":
     case "graph.compiled":
     case "planning.critic_recorded":
