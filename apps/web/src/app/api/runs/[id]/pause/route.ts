@@ -1,48 +1,21 @@
 import { NextResponse } from "next/server";
-import {
-  appendStatusEventOrRollback,
-  assertRunActionAllowed,
-  assertTransition,
-  claimRunMutation,
-  requireCapturedRunRecord,
-  type RunRecord
-} from "@/lib/server/runs";
-import { runErrorResponse } from "@/lib/server/runs/route-errors";
+import { z } from "zod";
+
 import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
+import { runErrorResponse } from "@/lib/server/runs/route-errors";
+import { pauseRunV2 } from "@/lib/server/runs/v2/command-host";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface RouteContext {
-  params: Promise<{ id: string }>;
-}
+interface RouteContext { params: Promise<{ id: string }>; }
 
 export async function POST(request: Request, context: RouteContext): Promise<NextResponse> {
   const { id } = await context.params;
   try {
-    const payload = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-    const expectedVersion = typeof payload?.expectedVersion === "number" ? payload.expectedVersion : undefined;
-    const now = new Date().toISOString();
-    let previous: RunRecord | undefined;
-    const saved = await claimRunMutation(
-      id,
-      {
-        status: ["generating", "running"],
-        ...(expectedVersion !== undefined ? { version: expectedVersion } : {})
-      },
-      (current) => {
-        previous = current;
-        assertRunActionAllowed(current, "pause");
-        assertTransition(current.status, "paused");
-        return {
-          ...current,
-          status: "paused" as const,
-          pausedDuring: current.status === "generating" ? ("generating" as const) : ("running" as const)
-        };
-      }
-    );
-    await appendStatusEventOrRollback(requireCapturedRunRecord(previous, id), saved, { at: now, actor: "human" });
-    return NextResponse.json(await toCanonicalRunResponse(saved));
+    const parsed = z.object({ reason: z.string().min(1).optional() }).strict().parse(await request.json().catch(() => ({})));
+    const result = await pauseRunV2(id, parsed.reason ?? "Paused by operator");
+    return NextResponse.json({ ...(await toCanonicalRunResponse(result.run)), pause: { allProcessesDead: result.allProcessesDead } });
   } catch (error) {
     return runErrorResponse(error);
   }

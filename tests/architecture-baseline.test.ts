@@ -6,27 +6,11 @@ import { RunRecordSchema } from "@/lib/server/runs/schema";
 
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 describe("target architecture migration baseline", () => {
-  it("loads a representative V1 run without losing its durable identity", async () => {
+  it("keeps V1 records out of the canonical V2 cache schema", async () => {
     const fixture = JSON.parse(
       await readFile(path.join(REPO_ROOT, "tests", "fixtures", "current-run-record-v1.json"), "utf8")
     ) as unknown;
-    const run = RunRecordSchema.parse(fixture);
-
-    expect(run.status).toBe("needs_delivery");
-    expect(run.targetContext).toMatchObject({
-      sourceRealPath: "C:/work/example-app",
-      sourceBranch: "main",
-      sourceBaseCommit: "1111111111111111111111111111111111111111",
-      fingerprint: "sha256:target-v1"
-    });
-    expect(run.planning).toMatchObject({ decomposition: { graph: { id: "graph-v1" } } });
-    expect(run.activeOperation).toMatchObject({ kind: "delivery", fencingToken: 7 });
-    expect(run.finalArtifactManifest).toMatchObject({
-      runId: run.runId,
-      finalSha: "3333333333333333333333333333333333333333",
-      artifactDisposition: "ready",
-      deliveryDisposition: "needs_delivery"
-    });
+    expect(RunRecordSchema.safeParse(fixture).success).toBe(false);
   });
 
   it("keeps packages independent from application-layer imports", async () => {

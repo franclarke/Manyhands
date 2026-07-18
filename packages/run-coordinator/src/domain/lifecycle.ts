@@ -23,7 +23,7 @@ export const LEGAL_LIFECYCLE_TRANSITIONS: Readonly<Record<RunLifecycle, readonly
   waiting_for_input: ["running", "paused", "cancelling", "failed"],
   paused: ["running", "waiting_for_input", "cancelling", "failed"],
   cancelling: ["interrupted", "failed"],
-  interrupted: [],
+  interrupted: ["running", "cancelling", "failed"],
   result_ready: ["delivering", "cancelling", "failed"],
   delivering: ["result_ready", "cancelling", "completed", "failed"],
   completed: [],

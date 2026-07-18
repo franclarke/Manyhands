@@ -1,27 +1,71 @@
 import { describe, expect, it } from "vitest";
-import { adaptCoordinatorEvent } from "@/lib/run-model/sse-adapter";
-import { createInitialRunModel, reduceRunEvents, restoreRunModelSnapshot, snapshotRunModel } from "@/lib/run-model/reducer";
-import type { RunConfig } from "@/lib/run-model/types";
 
-const config: RunConfig = { aggressiveness: "medium", planningModel: "planner", executionSelection: { executorId: "claude", model: "m" }, repairSelection: { executorId: "claude", model: "m" } };
-const initial = () => createInitialRunModel({ id: "run-1", intent: "Build it", workspaceId: "ws", config });
+import { adaptCoordinatorEvent } from "@/lib/run-model/sse-adapter";
+import { buildRunModel } from "@/lib/run-model/reducer";
+import type { RunSeed } from "@/lib/run-model/types";
+
+const seed: RunSeed = {
+  id: "run-1",
+  title: "Booking app",
+  goal: "Ship booking",
+  lifecycle: "planning",
+  eventSequence: 0
+};
 
 describe("run model V2 replay", () => {
-  it("restores the same normalized model as replaying canonical V2 events", () => {
+  it("projects the graph and remains idempotent when SSE replays duplicate event ids", () => {
     const events = [
-      coordinator(1, "graph.compiled", { graphId: "graph-1", revision: 1, graph: { schemaVersion: 2, graphId: "graph-1", revision: 1, rootId: "root", baseCommit: "base", repositorySnapshotId: "snapshot", nodes: { root: { id: "root", parentId: null, kind: "root", title: "Booking app", goal: "Ship booking" }, ui: { id: "ui", parentId: "root", kind: "leaf", title: "Booking screen", goal: "Build UI" } }, artifactRequirements: [], seamBindings: [], conflictConstraints: [], legacyOrderingConstraints: [], createdAt: "2026-07-17T00:00:00.000Z" }, contracts: [], review: {}, trace: {} }),
-      coordinator(2, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
-      coordinator(3, "graph.revision.approved", { graphId: "graph-1", revision: 1 }),
-      coordinator(4, "readiness.observed", { readyNodeIds: ["ui"], pendingDecisionIds: [] })
+      coordinator(1, "run.created", { goal: "Ship booking" }),
+      coordinator(2, "graph.compiled", {
+        graphId: "graph-1",
+        revision: 1,
+        graph: graph(),
+        contracts: [],
+        review: {},
+        trace: {}
+      }),
+      coordinator(3, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
+      coordinator(4, "graph.revision.approved", { graphId: "graph-1", revision: 1 }),
+      coordinator(5, "readiness.observed", { readyNodeIds: ["ui"], pendingDecisionIds: [] })
     ].map(adaptCoordinatorEvent);
-    const replayed = reduceRunEvents(initial(), events);
-    const restored = restoreRunModelSnapshot(snapshotRunModel(replayed));
-    expect(snapshotRunModel(restored)).toEqual(snapshotRunModel(replayed));
-    expect(restored.nodes.get("ui")?.depth).toBe(1);
-    expect(restored.orchestration.lifecycle).toBe("running");
+
+    const replayed = buildRunModel(seed, events);
+    const duplicated = buildRunModel(seed, [...events, ...events]);
+
+    expect(duplicated).toEqual(replayed);
+    expect(replayed.run.lifecycle).toBe("running");
+    expect(replayed.run.eventSequence).toBe(5);
+    expect(replayed.nodes.find((node) => node.id === "ui")?.status).toBe("ready");
   });
 });
 
+function graph(): Record<string, unknown> {
+  return {
+    schemaVersion: 2,
+    graphId: "graph-1",
+    revision: 1,
+    rootId: "root",
+    baseCommit: "base",
+    repositorySnapshotId: "snapshot",
+    nodes: {
+      root: { id: "root", parentId: null, kind: "root", title: "Booking app", goal: "Ship booking" },
+      ui: { id: "ui", parentId: "root", kind: "leaf", title: "Booking screen", goal: "Build UI" }
+    },
+    artifactRequirements: [],
+    seamBindings: [],
+    conflictConstraints: [],
+    legacyOrderingConstraints: [],
+    createdAt: "2026-07-17T00:00:00.000Z"
+  };
+}
+
 function coordinator(sequence: number, type: string, payload: Record<string, unknown>) {
-  return { eventId: `event-${sequence}`, runId: "run-1", sequence, occurredAt: `2026-07-17T00:00:0${sequence}.000Z`, type, payload };
+  return {
+    eventId: `event-${sequence}`,
+    runId: "run-1",
+    sequence,
+    occurredAt: `2026-07-17T00:00:0${sequence}.000Z`,
+    type,
+    payload
+  };
 }

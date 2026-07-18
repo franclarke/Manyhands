@@ -17,7 +17,6 @@ import { createHash } from "node:crypto";
 import { realpath } from "node:fs/promises";
 import { promisify } from "node:util";
 import { safeGitArgs } from "@manyhands/execution-core";
-import { getWorkspaceRepository } from "../workspaces/store";
 import {
   canonicalPhysicalPath,
   resolveWorkspaceRepositoryIdentity
@@ -65,13 +64,14 @@ export async function captureRunTargetContext(
     const sourceRealPath = identity.repoRealPath;
     const gitCommonDir = identity.gitCommonDir;
     const physicalIdentity = identity.filesystemObjectId;
+    if (physicalIdentity === undefined) return undefined;
     const sourceBranch = await git(sourceRealPath, "rev-parse", "--abbrev-ref", "HEAD");
     const sourceBaseCommit = await git(sourceRealPath, "rev-parse", "HEAD");
     const remoteUrl = await git(sourceRealPath, "remote", "get-url", "origin").catch(() => undefined);
     return {
       sourceRealPath,
       gitCommonDir,
-      ...(physicalIdentity !== undefined ? { physicalIdentity } : {}),
+      physicalIdentity,
       sourceBranch,
       sourceBaseCommit,
       ...(remoteUrl !== undefined && remoteUrl.length > 0 ? { remoteUrl } : {}),
@@ -90,26 +90,11 @@ export async function captureRunTargetContext(
  */
 export async function resolveRunTargetPath(run: RunRecord): Promise<string | undefined> {
   assertRunHasVerifiableLocalTarget(run);
-  if (run.targetContext !== undefined) {
-    // A canonical path is not an identity: another repository can be created
-    // at exactly the same location after capture. Verify before every planning
-    // or grounding consumer receives the path, not only after provisioning.
-    await verifyProvisionedAgainstTarget(
-      { sourceRepoRoot: run.targetContext.sourceRealPath },
-      run.targetContext
-    );
-    return run.targetContext.sourceRealPath;
-  }
-  if (run.repoSpec?.kind === "localPath") return run.repoSpec.path;
-  // Legacy pre-B-008 records: inspect only to explain why they cannot be
-  // migrated safely; never return the mutable workspace path.
-  const workspace = await getWorkspaceRepository()
-    .get(run.workspaceId)
-    .catch(() => null);
-  if (workspace?.repoPath !== undefined) {
-    throw unverifiableLegacyTarget(workspace.repoPath);
-  }
-  return undefined;
+  await verifyProvisionedAgainstTarget(
+    { sourceRepoRoot: run.targetContext.sourceRealPath },
+    run.targetContext
+  );
+  return run.targetContext.sourceRealPath;
 }
 
 export class RunTargetMismatchError extends Error {
@@ -125,12 +110,7 @@ export class RunTargetMismatchError extends Error {
  * must be recreated so identity is captured at the user decision boundary.
  */
 export function assertRunHasVerifiableLocalTarget(run: RunRecord): void {
-  if (run.targetContext !== undefined && run.targetContext.physicalIdentity === undefined) {
-    throw unverifiableLegacyTarget(run.targetContext.sourceRealPath);
-  }
-  if (run.repoSpec?.kind === "localPath" && run.targetContext === undefined) {
-    throw unverifiableLegacyTarget(run.repoSpec.path);
-  }
+  if (run.targetContext.physicalIdentity === undefined) throw unverifiableLegacyTarget(run.targetContext.sourceRealPath);
 }
 
 function unverifiableLegacyTarget(targetPath: string): RunTargetMismatchError {

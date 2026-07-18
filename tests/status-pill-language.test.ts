@@ -26,8 +26,8 @@ describe("StatusPill — hollow (not-started) dot language", () => {
     }
   });
 
-  it("keeps failed and conflict filled (colour + label carry them, not shape)", () => {
+  it("keeps failed and attention states filled (colour + label carry them, not shape)", () => {
     expect(STATUS_META.failed.hollow).toBe(false);
-    expect(STATUS_META.conflict.hollow).toBe(false);
+    expect(STATUS_META.attention.hollow).toBe(false);
   });
 });

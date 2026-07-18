@@ -33,10 +33,10 @@ export function CockpitFixtureView({ fixtureName }: { fixtureName: GoldenFixture
         <span className="mh-mono px-1 text-eyebrow text-[var(--color-text-subtle)]">{playback.index}/{playback.total}</span>
       </div>
       <RunModelView
-        seed={playback.model.run}
+        seed={fixture.seed}
         initialEvents={events}
         workspaceName={`Fixture: ${fixtureName}`}
-        fixture={{ model: playback.model, events }}
+        fixture
       />
     </div>
   );

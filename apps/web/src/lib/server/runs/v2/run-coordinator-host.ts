@@ -10,14 +10,18 @@ import { supervisedSpawnFn } from "../process-supervision";
 import { resolveRunsDirectory } from "../runs-directory";
 import { resolveRunTargetPath } from "../target-context";
 import { claimRunOperation, releaseRunOperationWithRetry, updateRunForOperation } from "../run-operation-lease";
-import { projectPlanningV2ToRunRecord } from "./legacy-run-projection";
+import { projectV2RunRecordCache } from "./run-record-cache";
 import { runPlanningV2 } from "./planning-host";
 import { approvePlanningV2 } from "./planning-host";
 import { DEFAULT_STALE_MS } from "../interrupted";
 import { startHeartbeat } from "../runner-heartbeat";
 
 export async function runPlanningV2Pipeline(runId: string): Promise<void> {
-  const claimed = await claimRunOperation(runId, "planning", { expectedStatuses: ["created", "generating", "interrupted"], allowTakeover: true, takeoverStaleAfterMs: DEFAULT_STALE_MS });
+  const claimed = await claimRunOperation(runId, "planning", {
+    expectedLifecycles: ["planning"],
+    allowTakeover: true,
+    takeoverStaleAfterMs: DEFAULT_STALE_MS
+  });
   const { run, lease } = claimed;
   const stopHeartbeat = startHeartbeat(runId, lease);
   try {
@@ -48,7 +52,7 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
       now: () => new Date().toISOString()
     });
     const persistedEvents = await events.load(runId);
-    await updateRunForOperation(runId, lease, (current) => projectPlanningV2ToRunRecord(current, state, persistedEvents));
+    await updateRunForOperation(runId, lease, (current) => projectV2RunRecordCache(current, state, persistedEvents));
   } finally {
     stopHeartbeat();
     await releaseRunOperationWithRetry(runId, lease);
@@ -56,7 +60,7 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
 }
 
 export async function approvePlanningV2Pipeline(runId: string, revision: number): Promise<RunRecord> {
-  const claimed = await claimRunOperation(runId, "planning", { expectedStatuses: ["needs_review"] });
+  const claimed = await claimRunOperation(runId, "planning", { expectedLifecycles: ["needs_approval"] });
   const { lease } = claimed;
   try {
     const directory = resolveRunsDirectory();
@@ -74,7 +78,7 @@ export async function approvePlanningV2Pipeline(runId: string, revision: number)
       now: () => new Date().toISOString()
     });
     const persistedEvents = await events.load(runId);
-    return await updateRunForOperation(runId, lease, (currentRun) => projectPlanningV2ToRunRecord(currentRun, state, persistedEvents));
+    return await updateRunForOperation(runId, lease, (currentRun) => projectV2RunRecordCache(currentRun, state, persistedEvents));
   } finally {
     await releaseRunOperationWithRetry(runId, lease);
   }

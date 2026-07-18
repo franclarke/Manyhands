@@ -31,7 +31,7 @@ import { markRunnerInactive, startRunBackgroundTask, tryMarkRunnerActive } from 
 import { resolveRunsDirectory } from "../runs-directory";
 import type { RunOperationLease, RunRecord } from "../schema";
 import { resolveRunTargetPath } from "../target-context";
-import { projectPlanningV2ToRunRecord } from "./legacy-run-projection";
+import { projectV2RunRecordCache } from "./run-record-cache";
 
 export interface ApprovedExecutionPlanV2 {
   graph: GraphRevision;
@@ -76,7 +76,7 @@ export async function startExecutionV2Pipeline(runId: string, label = "execution
 
 function claimExecutionV2(runId: string): Promise<{ run: RunRecord; lease: RunOperationLease }> {
   return claimRunOperation(runId, "execution", {
-    expectedStatuses: ["approved", "running", "interrupted"],
+    expectedLifecycles: ["running"],
     allowTakeover: true,
     takeoverStaleAfterMs: DEFAULT_STALE_MS
   });
@@ -170,7 +170,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     })));
     const persistedEvents = await events.load(runId);
     await snapshots.write(runId, authority, state, state.sequence, persistedEvents.at(-1)!.eventId);
-    await updateRunForOperation(runId, lease, (current) => projectPlanningV2ToRunRecord(current, state, persistedEvents));
+    await updateRunForOperation(runId, lease, (current) => projectV2RunRecordCache(current, state, persistedEvents));
   } catch (error) {
     await recordExecutionFailure(runId, lease, error).catch(() => undefined);
     throw error;
@@ -252,7 +252,7 @@ async function recordExecutionFailure(runId: string, lease: RunOperationLease, e
   }]);
   const persisted = await events.load(runId);
   const state = foldRun(persisted);
-  await updateRunForOperation(runId, lease, (run) => projectPlanningV2ToRunRecord(run, state, persisted));
+  await updateRunForOperation(runId, lease, (run) => projectV2RunRecordCache(run, state, persisted));
 }
 
 function executorProfileRevision(selection: { executorId: string; model: string; effort?: string }): string {

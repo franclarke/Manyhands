@@ -20,6 +20,7 @@ export type RunCommand =
   | { type: "record_evidence_matrix"; matrix: EvidenceMatrixRecord }
   | { type: "pause"; reason: string }
   | { type: "resume"; reason: string }
+  | { type: "restart"; reason: string }
   | { type: "verify_final_candidate"; manifestId: string; commit: string; evidenceMatrixId: string; evidenceEligible: boolean; executionSucceeded: boolean; sourceTargetFingerprint: string; targetBranch: string; targetHead: string }
   | { type: "publish_delivery"; approval: DeliveryApproval }
   | { type: "cancel"; reason: string }
@@ -42,6 +43,7 @@ export function eventsForCommand(state: RunProjection, command: Exclude<RunComma
     case "record_evidence_matrix": return [{ type: "evidence.matrix_recorded", payload: { matrix: command.matrix } }];
     case "pause": return [{ type: "run.pause_requested", payload: { reason: command.reason } }];
     case "resume": return [{ type: "run.resume_requested", payload: { reason: command.reason } }];
+    case "restart": return [{ type: "run.restart_requested", payload: { reason: command.reason } }];
     case "verify_final_candidate": return [{ type: "final_candidate.verified", payload: { manifestId: command.manifestId, commit: command.commit, evidenceMatrixId: command.evidenceMatrixId, evidenceEligible: command.evidenceEligible, executionSucceeded: command.executionSucceeded, sourceTargetFingerprint: command.sourceTargetFingerprint, targetBranch: command.targetBranch, targetHead: command.targetHead } }];
     case "fail": return [{ type: "run.failed", payload: { reason: command.reason, area: command.area } }];
   }

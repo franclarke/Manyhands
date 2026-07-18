@@ -5,24 +5,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { GET as GET_RUNS } from "@/app/api/runs/route";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import type { RunRecord } from "@/lib/server/runs/schema";
+import { makeRunRecordV2 } from "./helpers/run-v2-record";
 
 let tempDir: string;
 let previousRunsDir: string | undefined;
 
 function makeRun(runId: string): RunRecord {
-  return {
-    runId,
-    workspaceId: "missing-workspace",
-    granularity: "balanced",
-    model: "codex",
-    userPrompt: "x",
-    title: runId,
-    version: 0,
-    status: "completed",
-    createdAt: "2026-07-15T00:00:00.000Z",
-    updatedAt: "2026-07-15T00:00:00.000Z",
-    patches: []
-  };
+  return makeRunRecordV2({ runId, workspaceId: "missing-workspace", title: runId, lifecycle: "completed" });
 }
 
 beforeEach(async () => {
@@ -52,13 +41,13 @@ describe("GET /api/runs hot path", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
-  it("offers an explicit bounded refresh for diagnostics", async () => {
+  it("ignores retired diagnostics query flags without starting a crawl", async () => {
     const response = await GET_RUNS(
       new Request("http://localhost/api/runs?limit=5&diagnostics=refresh")
     );
     expect(response.status).toBe(200);
-    expect(
-      await stat(path.join(process.env.MANYHANDS_RUNS_DIR!, ".diagnostics", "run-record-index.json"))
-    ).toBeDefined();
+    await expect(
+      stat(path.join(process.env.MANYHANDS_RUNS_DIR!, ".diagnostics", "run-record-index.json"))
+    ).rejects.toMatchObject({ code: "ENOENT" });
   });
 });

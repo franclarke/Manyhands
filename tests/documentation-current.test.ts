@@ -15,7 +15,8 @@ describe("B-033 current product documentation", () => {
     expect(readme).toContain("Codex CLI");
     expect(readme).not.toContain("executor por defecto es **Gemini CLI**");
     expect(webReadme).not.toContain("MANYHANDS_GEMINI_BIN");
-    expect(webReadme).toContain("GET /api/runs/[id]/diagnostics");
+    expect(webReadme).toContain("GET /api/runs/[id]/run-events");
+    expect(webReadme).not.toContain("GET /api/runs/[id]/diagnostics");
     expect(pkg).toContain('"web:build"');
   });
 });

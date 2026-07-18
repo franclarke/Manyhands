@@ -1,42 +1,35 @@
 # ManyHands Web
 
-`apps/web` contiene el producto Next.js actual: Command Center, workspaces, runs,
-APIs y el prototipo `/runs/proto`.
+`apps/web` contiene el Command Center y el workspace continuo de cada run. La
+ruta productiva usa una sola arquitectura V2: journal de eventos canÃ³nico,
+proyecciÃ³n descartable y una interfaz centrada en el grafo.
 
-> Estado de transición: el código actual usa un run model y superficies heredadas
-> que deben auditarse contra [`docs/system/10-web-app.md`](../../docs/system/10-web-app.md)
-> y [`docs/design/interaction-model.md`](../../docs/design/interaction-model.md).
+## Experiencia de run
 
-## Dirección objetivo
+- El grafo es la superficie principal durante planning y ejecuciÃ³n.
+- Las decisiones aparecen asociadas a los nodos afectados y no detienen ramas independientes.
+- Los contratos, seams, dependencias de artefactos y conflictos se leen en contexto.
+- El canvas se encuadra una vez al abrirse; nuevos eventos no alteran el viewport del usuario.
+- En `result_ready`, evidencia y publicaciÃ³n explican el resultado sin inventar estados cliente.
 
-- una ruta continua por run;
-- grafo central durante planning/ejecución;
-- resultado/evidencia central al finalizar;
-- reducer + selectors sobre eventos de dominio;
-- decisiones contextuales que bloquean solo alcance afectado;
-- sin destinos primarios separados de Tasks/Planning/Integration/Interfaces;
-- sin auto-fit o recentrado por eventos;
-- WCAG 2.2 AA y reduced motion.
+`/runs/proto/[fixture]` reproduce el mismo workspace con eventos V2 de ejemplo.
+Su sidebar enumera fixtures, nunca workspaces o runs reales.
 
-## Proto
+## API de runs
 
-`/runs/proto/[fixture]` reproduce fixtures contra el modelo cliente actual. Su
-sidebar muestra fixtures y no datos reales. Un fixture es demostración/regresión
-de UI, no evidencia backend. Ver
-[`docs/design/golden-fixtures.md`](../../docs/design/golden-fixtures.md).
+- `POST /api/runs`
+- `GET /api/runs/[id]`
+- `GET /api/runs/[id]/run-events` (SSE con replay por sequence)
+- `POST /api/runs/[id]/run`
+- `POST /api/runs/[id]/pause`
+- `POST /api/runs/[id]/resume`
+- `POST /api/runs/[id]/restart`
+- `POST /api/runs/[id]/cancel`
+- `POST /api/runs/[id]/decisions/[decisionId]`
+- `POST /api/runs/[id]/deliver`
 
-## Puntos actuales
-
-- `src/app/(command-center)/`: creación y navegación.
-- `src/app/runs/[runId]/`: workspace real.
-- `src/app/runs/proto/`: fixtures.
-- `src/lib/server/runs/`: planning, lifecycle, ejecución y delivery web.
-- `src/lib/run-model/`: tipos, reducer, selectors y view models actuales.
-- `src/components/run-model/`: proyección del run.
-
-Runs y workspaces persisten actualmente bajo `.manyhands/` con overrides por
-variables de entorno. La arquitectura objetivo exige separar event log de
-dominio, snapshots y trazas; no asumir que la persistencia actual ya cumple.
+El journal V2 es la verdad durable. El `RunRecord` solo conserva identidad,
+target inmutable, selecciones de executor y un cache de proyecciÃ³n para listas.
 
 ## Comandos
 
@@ -47,6 +40,5 @@ pnpm web:lint
 pnpm web:build
 ```
 
-Variables actuales: `MANYHANDS_CLAUDE_BIN`, `MANYHANDS_CODEX_BIN`,
-`MANYHANDS_DECOMPOSER`, `MANYHANDS_RUNS_DIR`, `MANYHANDS_WORKSPACES_FILE` y
-`MANYHANDS_REPO_ROOT`.
+Variables principales: `MANYHANDS_CLAUDE_BIN`, `MANYHANDS_CODEX_BIN`,
+`MANYHANDS_DECOMPOSER`, `MANYHANDS_RUNS_DIR` y `MANYHANDS_WORKSPACES_FILE`.

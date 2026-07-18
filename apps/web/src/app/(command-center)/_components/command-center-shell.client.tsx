@@ -20,7 +20,7 @@ import { ModelPicker } from "./model-picker.client";
 import { EffortControl } from "./effort-control.client";
 import { WorkspacePicker } from "./workspace-picker.client";
 import { WorkspaceFormDialog, type WorkspaceFormValue } from "./workspace-form-dialog.client";
-import { toGranularityMode, isGranularityLevel, GRANULARITY_DISPLAY_OPTIONS, type GranularityLevel } from "@/lib/granularity";
+import { isGranularityLevel, GRANULARITY_DISPLAY_OPTIONS, type GranularityLevel } from "@/lib/granularity";
 import { executorLabel, modelOptionForValue, modelOptionsFromCapabilities, parseSelectionValue, stageSelectionForSubmit, type EffortLevel, type ExecutorId, type ExecutorSelection, type ModelOption, type StageSelection } from "@/lib/models";
 import { estimateRunCostUsd, formatUsd } from "@/lib/model-pricing";
 import { RUN_USER_PROMPT_MAX_LENGTH } from "@/lib/run-limits";
@@ -235,7 +235,6 @@ export function CommandCenterShell({
     [workspaces, workspaceId]
   );
 
-  const granularityMode = toGranularityMode(granularity);
   const trimmedPromptLength = prompt.trim().length;
   const hasPrompt = trimmedPromptLength > 0;
   const promptOverLimit = trimmedPromptLength > RUN_USER_PROMPT_MAX_LENGTH;
@@ -289,25 +288,17 @@ export function CommandCenterShell({
       const executionStage: StageSelection = stageSelectionForSubmit(executionSelection, selectedExecutionModel, effort);
       const body: {
         workspaceId: string;
-        granularity: string;
-        model: string;
         planningSelection?: StageSelection;
         executionSelection?: StageSelection;
-        autonomy?: AutonomyLevel;
+        repairSelection?: StageSelection;
         userPrompt: string;
-        repoSpec?: { kind: "localPath"; path: string };
       } = {
         workspaceId: selectedWorkspace.id,
-        granularity: granularityMode,
-        model: executionSelection.model,
         planningSelection: planningStage,
         executionSelection: executionStage,
-        autonomy,
+        repairSelection: executionStage,
         userPrompt: prompt.trim()
       };
-      if (selectedWorkspace.repoPath !== undefined) {
-        body.repoSpec = { kind: "localPath", path: selectedWorkspace.repoPath };
-      }
       const response = await fetch("/api/runs", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -828,7 +819,7 @@ const TONE_COLOR: Record<IndicatorTone, string> = {
 };
 
 function toneForUiStatus(status: UiStatus): IndicatorTone {
-  if (status === "completed" || status === "completed_with_accepted") return "ok";
+  if (status === "completed") return "ok";
   if (status === "blocked") return "warning";
   if (status === "failed") return "error";
   return "muted";

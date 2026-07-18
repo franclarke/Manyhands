@@ -1234,7 +1234,7 @@ describe("RunExecutor", () => {
     expect(leafPrompt).toContain("Definition of done");
   });
 
-  it("treats D1 dependencies as ordering-only and keeps every leaf on the immutable base", async () => {
+  it("keeps canonically ordered leaves on the immutable base", async () => {
     const graph = graphWith(["a", "b"]);
     graph.dependencies = [{
       fromTaskId: "a",
@@ -1243,21 +1243,17 @@ describe("RunExecutor", () => {
       inferred: false,
       rationale: "B is dispatched after A"
     }];
-    graph.nodes.b!.dependencies = ["a"];
     const git = new FakeGitRunner({
       diffCached: "diff",
       diffCachedNameOnly: ["src/x.ts"],
       commitShas: ["A_SHA", "B_SHA"]
     });
-    const prompts = new Map<string, string>();
     const executor = new RunExecutor({
       git,
       executor: new MockAgentExecutor(),
       traceStore: new InMemoryTraceStore(),
       repoRoot: REPO_ROOT,
-      writeInstructions: async (instructionPath, content) => {
-        prompts.set(instructionPath, content);
-      }
+      writeInstructions: async () => undefined
     });
 
     const result = await executor.run({ graph, config, model: "gpt-5-codex" });
@@ -1270,10 +1266,6 @@ describe("RunExecutor", () => {
       .toHaveLength(2);
     expect(leafWorktrees.filter((call) => ["a", "b"].some((id) => String(call.args.worktreePath).endsWith(`/${id}`)))
       .every((call) => call.args.baseCommit === "BASE")).toBe(true);
-    const dependentPrompt = [...prompts.entries()].find(([file]) => file.endsWith("-b.txt"))?.[1] ?? "";
-    expect(dependentPrompt).toContain("ordering-only dispatch barrier");
-    expect(dependentPrompt).toContain("does not contain changes from: a");
-    expect(dependentPrompt).toContain("Do not assume upstream files were materialized");
   });
 
   it("injects consumed and produced interface seams into the leaf prompt", async () => {

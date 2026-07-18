@@ -141,6 +141,20 @@ describe("RunCoordinator lifecycle", () => {
     expect(state.outcomes.execution).toBe("interrupted");
   });
 
+  it("restarts an explicitly interrupted run without rewriting its prior outcome", () => {
+    const state = foldRun([
+      event(1, "run.created", { goal: "Build it" }),
+      event(2, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
+      event(3, "graph.revision.approved", { graphId: "graph-1", revision: 1 }),
+      event(4, "operation.cancel_requested", { invalidationReceiptId: "fence-2", reason: "Restart test" }),
+      event(5, "operation.interrupted", { processReceiptId: "processes-1", allDead: true }),
+      event(6, "run.restart_requested", { reason: "Operator requested recovery" })
+    ]);
+
+    expect(state.lifecycle).toBe("running");
+    expect(state.outcomes.execution).toBe("pending");
+  });
+
   it("previews domain validity before appending a command event", async () => {
     const events: RunEvent[] = [
       event(1, "run.created", { goal: "Build it" }),

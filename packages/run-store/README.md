@@ -5,9 +5,8 @@ Adapter durable del event log canónico de RunCoordinator.
 ## Estado
 
 Los eventos de dominio V2 son la fuente de verdad. Los snapshots son una cache
-descartable que se valida contra el último evento y se reconstruye por fold. La
-superficie histórica `RunSnapshot` vive temporalmente en `@manyhands/core`, el
-contenedor legacy, hasta su retiro en WP-18.
+descartable que se valida contra el último evento y se reconstruye por fold.
+No existe una segunda representación productiva del estado del run.
 
 ## Dirección objetivo
 
@@ -21,8 +20,9 @@ contenedor legacy, hasta su retiro en WP-18.
   corrupción intermedia;
 - importación V1 explícita y auditada, sin inventar eventos silenciosamente.
 
-Artifacts y attempts se incorporan en WP-09. Los leases de repositorio siguen
-siendo responsabilidad del adapter de Git, no de este paquete.
+Artifacts y attempts se persisten como registros inmutables e idempotentes. Los
+leases de repositorio siguen siendo responsabilidad del adapter de Git, no de
+este paquete.
 
 Las trazas diagnósticas permanecen en `trace-store`. Los checkpoints del motor no
 sustituyen el event log.

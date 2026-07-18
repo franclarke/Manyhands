@@ -9,12 +9,11 @@
  *    `generation` (fencing token) persisted next to the lock. Validity is
  *    defined by `owner.json`: a lease whose token/generation no longer match
  *    is dead forever — it cannot renew, release or pass fencing.
- *  - Stale takeover is atomic: the contender re-checks the owner immediately
- *    before `rename`-ing the lock directory into a quarantine name; only one
- *    rename can win, the rest observe ENOENT and re-race the `mkdir`. A
- *    fresh winner additionally verifies its own token after writing
- *    (read-back), so a pathological late quarantine is detected before the
- *    lease is ever handed out.
+ *  - Stale takeover is conditional: contenders first create one exclusive
+ *    claim inside the current lock and re-check that exact owner before
+ *    `rename`-ing it to quarantine. A delayed stale decision therefore cannot
+ *    move a replacement lock. A fresh winner additionally verifies its own
+ *    token after writing before the lease is handed out.
  *  - Release/renew verify the token first and never clobber a foreign lock;
  *    a release that raced a takeover restores the victim.
  *  - Liveness is heartbeat-first: the holder renews a token-scoped heartbeat
@@ -41,6 +40,7 @@ const execFileAsync = promisify(execFile);
 
 const LOCK_DIR_NAME = "run.lock";
 const GENERATION_FILE = "run.lock.generation";
+const TAKEOVER_CLAIM_FILE = "takeover.claim";
 /** A lock dir without owner.json younger than this is a write in progress. */
 const ACQUIRE_GRACE_MS = 2_000;
 /**
@@ -273,6 +273,38 @@ async function readOwnerWithGrace(lockDir: string): Promise<RepoLockOwner | unde
   }
 }
 
+/**
+ * Claim the right to replace the lock currently stored at `lockDir`.
+ *
+ * A plain rename is atomic, but it is not conditional: a contender that
+ * inspected an old owner can execute its rename after another contender has
+ * already installed a new lock at the same path. The exclusive file inside
+ * the current directory turns takeover into a claim-and-recheck protocol.
+ */
+async function tryClaimTakeover(lockDir: string): Promise<string | undefined> {
+  const token = randomUUID();
+  try {
+    await writeFile(join(lockDir, TAKEOVER_CLAIM_FILE), token, { encoding: "utf8", flag: "wx" });
+    return token;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "EEXIST" || code === "ENOENT" || code === "ENOTDIR") return undefined;
+    throw error;
+  }
+}
+
+async function releaseTakeoverClaim(lockDir: string, token: string): Promise<void> {
+  const path = join(lockDir, TAKEOVER_CLAIM_FILE);
+  try {
+    if ((await readFile(path, "utf8")) === token) {
+      await rm(path, { force: true });
+    }
+  } catch {
+    // The lock was renamed, removed or replaced. Never remove an unverified
+    // claim from the new directory occupying the canonical path.
+  }
+}
+
 async function readGeneration(mhDir: string): Promise<number> {
   try {
     const raw = await readFile(join(mhDir, GENERATION_FILE), "utf8");
@@ -331,7 +363,7 @@ async function defaultOwnerIsLive(
     .get(owner.runId)
     .catch(() => null);
   if (run === null) return false;
-  const live = run.status === "generating" || run.status === "running" || run.status === "paused";
+  const live = ["planning", "running", "waiting_for_input", "paused", "cancelling", "delivering"].includes(run.projection.lifecycle);
   if (!live) return false;
   const lastBeat = new Date(run.heartbeatAt ?? run.updatedAt).getTime();
   return Number.isFinite(lastBeat) && Date.now() - lastBeat < ctx.staleMs;
@@ -407,9 +439,35 @@ export async function acquireRepoLock(
     // immediately before the rename so we never quarantine a lock that was
     // already replaced by a fresh winner, then rename into a quarantine name
     // — exactly one contender wins the rename, the rest observe ENOENT.
-    const recheck = await readOwnerRecordAt(lockDir);
-    if (recheck !== undefined && owner !== undefined && recheck.token !== owner.token) {
-      continue; // The lock changed hands since we judged it stale.
+    const takeoverClaim = await tryClaimTakeover(lockDir);
+    if (takeoverClaim === undefined) {
+      // Legacy single-file locks cannot contain a claim. Keep their one-time
+      // transition path; every productive lock uses the directory protocol.
+      let legacy = false;
+      try {
+        legacy = !(await stat(lockDir)).isDirectory();
+      } catch {
+        // The lock changed while contending; re-race the canonical slot.
+      }
+      if (!legacy) {
+        await sleep(5 + Math.floor(Math.random() * 20));
+        continue;
+      }
+    } else {
+      // A late contender can create its claim inside a replacement directory.
+      // Judge the owner again only after the exclusive claim is held.
+      const claimedOwner = await readOwnerWithGrace(lockDir);
+      if (claimedOwner !== undefined) {
+        if (owner === undefined || claimedOwner.token !== owner.token || claimedOwner.generation !== owner.generation) {
+          await releaseTakeoverClaim(lockDir, takeoverClaim);
+          continue;
+        }
+        if (await ownerIsLive(claimedOwner)) {
+          await releaseTakeoverClaim(lockDir, takeoverClaim);
+          return { acquired: false, owner: claimedOwner };
+        }
+        staleGeneration = Math.max(staleGeneration, claimedOwner.generation);
+      }
     }
     const quarantine = join(mhDir, `${LOCK_DIR_NAME}.stale-${randomUUID().slice(0, 8)}`);
     try {
@@ -417,6 +475,9 @@ export async function acquireRepoLock(
       stolen = true;
       await rm(quarantine, { recursive: true, force: true }).catch(() => undefined);
     } catch {
+      if (takeoverClaim !== undefined) {
+        await releaseTakeoverClaim(lockDir, takeoverClaim);
+      }
       await sleep(5 + Math.floor(Math.random() * 20));
     }
   }
@@ -467,8 +528,6 @@ export function startRepoLeaseHeartbeat(lease: RepoLease, options: RepoLeaseHear
   let stopped = false;
   const tick = async (): Promise<void> => {
     while (!stopped) {
-      await sleep(intervalMs);
-      if (stopped) return;
       try {
         const at = new Date().toISOString();
         const result = await renewRepoLease(lease, at);
@@ -483,6 +542,7 @@ export function startRepoLeaseHeartbeat(lease: RepoLease, options: RepoLeaseHear
       } catch {
         // Transient FS error: keep trying; staleness needs a long silence.
       }
+      await sleep(intervalMs);
     }
   };
   void tick();

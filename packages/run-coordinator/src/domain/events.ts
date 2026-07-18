@@ -70,6 +70,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   }).strict()),
   event("run.pause_requested", z.object({ reason: NonEmptyStringSchema }).strict()),
   event("run.resume_requested", z.object({ reason: NonEmptyStringSchema }).strict()),
+  event("run.restart_requested", z.object({ reason: NonEmptyStringSchema }).strict()),
   event("operation.cancel_requested", z.object({ invalidationReceiptId: EntityIdSchema, reason: NonEmptyStringSchema }).strict()),
   event("operation.interrupted", z.object({ processReceiptId: EntityIdSchema, allDead: z.literal(true) }).strict()),
   event("final_candidate.verified", z.object({ manifestId: EntityIdSchema, commit: NonEmptyStringSchema, evidenceMatrixId: EntityIdSchema, evidenceEligible: z.boolean(), executionSucceeded: z.boolean(), sourceTargetFingerprint: NonEmptyStringSchema, targetBranch: NonEmptyStringSchema, targetHead: NonEmptyStringSchema }).strict()),

@@ -13,6 +13,7 @@ import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/
 import { WorkspaceConflictError, WorkspaceValidationError } from "@/lib/server/workspaces/errors";
 import { JsonWorkspaceRepository } from "@/lib/server/workspaces/repository";
 import { resetWorkspaceRepositoryForTests } from "@/lib/server/workspaces/store";
+import { makeRunRecordV2 } from "./helpers/run-v2-record";
 
 let tempDir: string;
 let previousWorkspacesFile: string | undefined;
@@ -416,17 +417,5 @@ function legacyWorkspace(id: string, name: string, repoPath: string, createdAt: 
 }
 
 function runRecord(runId: string, workspaceId: string) {
-  return {
-    runId,
-    workspaceId,
-    granularity: "balanced" as const,
-    model: "gpt-5.5",
-    userPrompt: "Implement feature",
-    title: runId,
-    version: 0,
-    status: "failed" as const,
-    createdAt: "2026-07-15T00:00:00.000Z",
-    updatedAt: "2026-07-15T00:00:00.000Z",
-    patches: []
-  };
+  return makeRunRecordV2({ runId, workspaceId, title: runId, lifecycle: "failed" });
 }

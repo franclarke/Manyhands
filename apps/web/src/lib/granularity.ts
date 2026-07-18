@@ -1,4 +1,4 @@
-import type { GranularityMode } from "@/lib/server/runs/schema";
+export type GranularityMode = "auto" | "coarse" | "balanced" | "fine";
 
 export const GRANULARITY_LEVELS = ["automatica", "baja", "media", "alta"] as const;
 export type GranularityLevel = (typeof GRANULARITY_LEVELS)[number];
@@ -85,7 +85,7 @@ export function toGranularityMode(level: GranularityLevel): GranularityMode {
 }
 
 export function fromGranularityMode(mode: GranularityMode): GranularityLevel {
-  return GRANULARITY_FROM_MODE[mode];
+  return GRANULARITY_FROM_MODE[mode]!;
 }
 
 export function isGranularityLevel(value: unknown): value is GranularityLevel {

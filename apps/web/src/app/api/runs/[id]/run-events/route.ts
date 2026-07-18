@@ -20,10 +20,7 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
   const after = Math.max(readAfter(request.url), readLastEventId(request));
   const store = new JsonlRunEventStore({ directory: resolveRunsDirectory() });
   try {
-    const run = await getRunRepository().get(id);
-    if (run.architectureVersion?.planning !== "v2") {
-      return NextResponse.json({ error: `Run ${id} must be imported into the V2 event journal before it can be streamed.` }, { status: 409 });
-    }
+    await getRunRepository().get(id);
     await store.load(id);
   } catch (error) {
     if (error instanceof RunNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });

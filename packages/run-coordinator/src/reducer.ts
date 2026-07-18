@@ -261,6 +261,12 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       transition(next, next.readiness.readyNodeIds.length === 0 && next.readiness.pendingDecisionIds.length > 0 ? "waiting_for_input" : "running");
       delete next.lifecycleBeforePause;
       break;
+    case "run.restart_requested":
+      if (next.lifecycle !== "interrupted") throw new Error(`Cannot restart while ${next.lifecycle}.`);
+      next.outcomes.execution = "pending";
+      delete next.failureReason;
+      transition(next, "running");
+      break;
     case "operation.cancel_requested":
       transition(next, "cancelling");
       break;

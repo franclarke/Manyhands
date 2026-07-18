@@ -197,27 +197,4 @@ describe("B-009 strict DAG invariants", () => {
     expect(errorCodes(graph)).toContain("duplicate_dependency");
   });
 
-  it("rejects a canonical edge missing from the node shortcut (the audit's second probe)", () => {
-    const graph = baseGraph({
-      dependencies: [{ fromTaskId: "a", toTaskId: "b", type: "structural", inferred: false }],
-      nodes: {
-        root: node("root", { kind: "composite", parentId: null, depth: 0, childrenIds: ["a", "b"] }),
-        a: node("a"),
-        b: node("b", { dependencies: [] }) // divergence: shortcut lost the edge
-      }
-    });
-    expect(errorCodes(graph)).toContain("dependency_sync_divergence");
-  });
-
-  it("rejects a shortcut dependency missing from the canonical edges", () => {
-    const graph = baseGraph({
-      dependencies: [],
-      nodes: {
-        root: node("root", { kind: "composite", parentId: null, depth: 0, childrenIds: ["a", "b"] }),
-        a: node("a"),
-        b: node("b", { dependencies: ["a"] }) // divergence: no canonical edge
-      }
-    });
-    expect(errorCodes(graph)).toContain("dependency_sync_divergence");
-  });
 });

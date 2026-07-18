@@ -15,10 +15,11 @@ import type { RunEventInput } from "@manyhands/run-coordinator";
 import { JsonlRunEventStore } from "@manyhands/run-store";
 import { GET as GET_RUN_EVENTS } from "@/app/api/runs/[id]/run-events/route";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
-import { createInitialRunModel, reduceRunEvents } from "@/lib/run-model/reducer";
-import type { Run, RunEvent } from "@/lib/run-model/types";
+import { buildRunModel } from "@/lib/run-model/reducer";
+import type { RunEvent, RunSeed } from "@/lib/run-model/types";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import { bookingBreakdown, bookingSnapshot, compilerDependencies } from "./helpers/target-planning-fixtures";
+import { makeRunRecordV2 } from "./helpers/run-v2-record";
 
 let tempDir: string;
 let previousRunsDir: string | undefined;
@@ -38,29 +39,17 @@ afterEach(async () => {
 });
 
 function makeRun(runId: string): RunRecord {
-  return {
-    runId,
-    architectureVersion: { planning: "v2", execution: "v2", integration: "v2" },
-    workspaceId: "ws-1",
-    granularity: "balanced",
-    model: "gemini-2.5-pro",
-    userPrompt: "Add login",
-    title: "Add login",
-    version: 0,
-    status: "running",
-    createdAt: "2026-06-12T00:00:00.000Z",
-    updatedAt: "2026-06-12T00:00:00.000Z",
-    patches: []
-  };
+  return makeRunRecordV2({ runId });
 }
 
-function seedFor(runId: string): Run {
+function seedFor(runId: string): RunSeed {
   return {
     id: runId,
-    intent: "Add login",
-    config: { granularity: "balanced", model: "gemini-2.5-pro" },
-    createdAt: "2026-06-12T00:00:00.000Z"
-  } as unknown as Run;
+    title: "Add login",
+    goal: "Add login",
+    lifecycle: "planning",
+    eventSequence: 0
+  };
 }
 
 async function seedEvents(runId: string, count: number): Promise<void> {
@@ -187,22 +176,16 @@ describe("run-events SSE replay (INV-7)", () => {
     const suffix = await readFrames(runId, { lastEventId: 3, expected: 5 });
 
     const seed = seedFor(runId);
-    const continuous = reduceRunEvents(createInitialRunModel(seed), uninterrupted.map((f) => f.event));
-    const stitched = reduceRunEvents(
-      createInitialRunModel(seed),
-      [...prefix, ...suffix].map((f) => f.event)
-    );
+    const continuous = buildRunModel(seed, uninterrupted.map((f) => f.event));
+    const stitched = buildRunModel(seed, [...prefix, ...suffix].map((f) => f.event));
 
     expect([...prefix, ...suffix].map((f) => f.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-    expect(stitched.cursor).toBe(continuous.cursor);
-    expect(stitched.nodes.size).toBe(continuous.nodes.size);
+    expect(stitched.run.eventSequence).toBe(continuous.run.eventSequence);
+    expect(stitched.nodes).toEqual(continuous.nodes);
     // Even a FULL overlap (replay from zero after a gap) folds identically —
     // the reducer is cursor-idempotent.
-    const overlapped = reduceRunEvents(
-      createInitialRunModel(seed),
-      [...uninterrupted, ...uninterrupted].map((f) => f.event)
-    );
-    expect(overlapped.cursor).toBe(continuous.cursor);
-    expect(overlapped.nodes.size).toBe(continuous.nodes.size);
+    const overlapped = buildRunModel(seed, [...uninterrupted, ...uninterrupted].map((f) => f.event));
+    expect(overlapped.run.eventSequence).toBe(continuous.run.eventSequence);
+    expect(overlapped.nodes).toEqual(continuous.nodes);
   });
 });

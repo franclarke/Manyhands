@@ -24,7 +24,6 @@ import {
   superviseChildProcess
 } from "@manyhands/execution-core";
 import { supervisedSpawnFn } from "@/lib/server/runs/process-supervision";
-import { TerminalSession } from "@/lib/server/runs/terminal-sessions";
 
 let tempDir: string;
 
@@ -164,25 +163,4 @@ describe("B-005 web supervised spawn (titler/decomposer seam)", () => {
     expect(report.verifications[0]).toMatchObject({ label: "planning-decomposer" });
     expect(isProcessAlive(pid)).toBe(false);
   });
-});
-
-describe("B-005 terminal sessions under supervision", () => {
-  it("a terminal's shell is registered under its run and dies with the run's kill", async () => {
-    const runId = `run-terminal-${Date.now()}`;
-    const session = new TerminalSession({
-      id: "term-1",
-      runId,
-      cwd: tempDir,
-      label: "workspace",
-      cols: 80,
-      rows: 24
-    });
-    await session.start();
-    await pollUntil(() => countLiveProcesses(runId) >= 1);
-
-    const report = await killOwnedProcessTrees(runId);
-    expect(report.allDead).toBe(true);
-    await pollUntil(() => countLiveProcesses(runId) === 0);
-    session.close();
-  }, 30_000);
 });

@@ -1,792 +1,123 @@
-/**
- * Run model reducer — the pure fold `(model, event) => model`.
- *
- * Target semantics: docs/design/run-operative-model.md. This reducer implements
- * the current event schema and may require a versioned transition. It is PURE
- * and deterministic: no React, no browser, no server,
- * no SSE, no side effects. The SAME reducer serves fixtures and the live stream.
- *
- * It builds a normalized `RunModel` of ENTITIES only. It does NOT derive
- * `phase`, `health`, `wavefront`, `attention`, `freshness`, `invalidatedNodes`,
- * `affectedByAmendment`, `pendingReexecution` or `renderableNodeState` — those
- * are selectors (PR 05). It records `builtAgainst`/`producedRevision` so PR 05 can
- * derive freshness; it never marks nodes stale and there is no `node.invalidated`.
- *
- * Ordering & idempotency:
- *  - Events with `seq <= model.cursor` are ignored (replay / out-of-order).
- *  - Applied events advance `cursor` to their `seq`.
- *  - Unknown event types are acknowledged (cursor advances) but change nothing
- *    (forward-compatibility). Events are assumed to arrive in `seq` order; the
- *    reducer does not sort.
- */
-import type {
-  Amendment,
-  CanonicalTaskDependency,
-  AmendmentAppliedPayload,
-  AmendmentRejectedPayload,
-  AmendmentProposedPayload,
-  Conflict,
-  ConflictDetectedPayload,
-  ConflictResolvedPayload,
-  Decision,
-  DecisionRaisedPayload,
-  DecisionResolvedPayload,
-  Evidence,
-  EvidenceMatrixView,
-  ExecutionState,
-  IntegrationCompletedPayload,
-  IntegrationValidatedPayload,
-  Node,
-  NodeExecutionFailedPayload,
-  NodeExecutionStartedPayload,
-  NodePlanningStatus,
-  NodeVerifyIterationPayload,
-  NodeVerifyPassedPayload,
-  PlanNodeProposedPayload,
-  PlanNodeStatusPayload,
-  PlanGraphProjectedPayload,
-  PlanDependencyProposedPayload,
-  PlanSeamProposedPayload,
-  Run,
-  RunContextResolvedPayload,
-  RunCreatedPayload,
-  RunDeliveryCompletedPayload,
-  RunEvent,
-  RunEvidenceReadyPayload,
-  RunMetricsReadyPayload,
-  RunSchedulingWaveSelectedPayload,
-  RunStatusChangedPayload,
-  RunModel,
-  RunModelSnapshot,
-  ScopeDerivedPayload,
-  Seam,
-  SeamAmendedPayload,
-  SeamFrozenPayload,
-  Wave,
-  WaveClosedPayload,
-  WaveOpenedPayload,
-  WavePlannedPayload
-} from "./types";
+import { TaskContractBundleSchema, type TaskContractBundle } from "@manyhands/contracts";
+import { foldRun, type RunEvent as CoordinatorRunEvent, type RunProjection } from "@manyhands/run-coordinator";
+import { GraphRevisionSchema, type GraphRevision, type TaskNodeV2 } from "@manyhands/task-graph";
 
-type RunSeed = Run | (Omit<Run, "control"> & { control?: Run["control"] });
+import type { NodeExecutionStatus, RunEvent, RunModel, RunNodeView, RunSeed } from "./types";
 
-// ── Construction ──────────────────────────────────────────────────────────────
-
-export function createInitialRunModel(run: RunSeed): RunModel {
+export function buildRunModel(seed: RunSeed, inputEvents: readonly RunEvent[]): RunModel {
+  const events = uniqueOrderedEvents(inputEvents);
+  const projection = foldProjection(events);
+  const compiled = latestEvent(events, "graph.compiled");
+  const graph = parseGraph(compiled?.payload.graph);
+  const contracts = parseContracts(compiled?.payload.contracts);
+  const nodes = graph === null ? [] : buildNodeViews(graph, projection);
+  const evidenceMatrices = events
+    .filter((event) => event.type === "evidence.matrix_recorded" || event.type === "validation.completed" || event.type === "integration.completed")
+    .flatMap((event) => {
+      const matrix = event.payload.matrix;
+      return isRecord(matrix) ? [matrix] : [];
+    });
   return {
     run: {
-      ...run,
-      control: run.control ?? {
-        status: "created",
-        version: 0,
-        pendingHumanAction: "none",
-        updatedAt: new Date(0).toISOString()
-      }
+      ...seed,
+      lifecycle: projection?.lifecycle ?? seed.lifecycle,
+      eventSequence: projection?.sequence ?? seed.eventSequence
     },
-    nodes: new Map(),
-    dependencies: new Map(),
-    seams: new Map(),
-    waves: new Map(),
-    schedulingWaves: new Map(),
-    conflicts: new Map(),
-    decisions: new Map(),
-    amendments: new Map(),
-    evidenceMatrices: new Map(),
-    orchestration: { lifecycle: "planning", readyNodeIds: [], pendingDecisionIds: [] },
-    cursor: 0
+    projection,
+    graph,
+    contracts,
+    nodes,
+    events,
+    evidenceMatrices
   };
 }
 
-// ── Public fold API ────────────────────────────────────────────────────────────
-
-export function reduceRunEvent(model: RunModel, event: RunEvent): RunModel {
-  // Replay / out-of-order: ignore anything we've already passed.
-  if (event.seq <= model.cursor) {
-    return model;
-  }
-  const applied = applyEvent(model, event);
-  // Always advance the cursor (even for unknown/no-op events) to keep the
-  // append-only stream monotonic and idempotent on re-application.
-  return { ...applied, cursor: event.seq };
+export function reduceRunEvents(seed: RunSeed, events: readonly RunEvent[]): RunModel {
+  return buildRunModel(seed, events);
 }
 
-export function reduceRunEvents(initial: RunModel, events: readonly RunEvent[]): RunModel {
-  let model = initial;
-  for (const event of events) {
-    model = reduceRunEvent(model, event);
-  }
-  return model;
+function foldProjection(events: readonly RunEvent[]): RunProjection | null {
+  if (events.length === 0) return null;
+  return foldRun(events.map((event) => ({
+    eventId: event.eventId,
+    runId: event.runId,
+    sequence: event.seq,
+    occurredAt: event.at,
+    type: event.type,
+    payload: event.payload
+  })) as CoordinatorRunEvent[]);
 }
 
-export function snapshotRunModel(model: RunModel): RunModelSnapshot {
+function parseGraph(value: unknown): GraphRevision | null {
+  const parsed = GraphRevisionSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
+function parseContracts(value: unknown): TaskContractBundle[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((candidate) => {
+    const parsed = TaskContractBundleSchema.safeParse(candidate);
+    return parsed.success ? [parsed.data] : [];
+  });
+}
+
+function buildNodeViews(graph: GraphRevision, projection: RunProjection | null): RunNodeView[] {
+  const own = Object.values(graph.nodes).map((node) => nodeView(node, projection));
+  const byId = new Map(own.map((node) => [node.id, node]));
+  const children = new Map<string, RunNodeView[]>();
+  for (const node of own) {
+    if (node.parentId === null) continue;
+    children.set(node.parentId, [...(children.get(node.parentId) ?? []), node]);
+  }
+  const aggregate = (nodeId: string): NodeExecutionStatus => {
+    const node = byId.get(nodeId);
+    if (node === undefined) return "pending";
+    const direct = children.get(nodeId) ?? [];
+    if (direct.length === 0) return node.status;
+    const statuses = direct.map((child) => aggregate(child.id));
+    if (statuses.some((status) => status === "failed")) node.status = "failed";
+    else if (statuses.every((status) => status === "succeeded")) node.status = "succeeded";
+    else if (statuses.some((status) => status === "running")) node.status = "running";
+    else if (statuses.some((status) => status === "waiting")) node.status = "waiting";
+    else if (statuses.some((status) => status === "ready")) node.status = "ready";
+    return node.status;
+  };
+  aggregate(graph.rootId);
+  return own;
+}
+
+function nodeView(node: TaskNodeV2, projection: RunProjection | null): RunNodeView {
+  const attempts = projection === null ? [] : Object.values(projection.attempts).filter((attempt) => attempt.nodeId === node.id);
+  const latestAttempt = attempts.at(-1);
+  const integration = projection === null ? undefined : Object.values(projection.integrations).find((entry) => entry.nodeId === node.id);
+  const artifacts = projection === null ? [] : Object.values(projection.adoptedArtifacts).filter((artifact) => artifact.nodeId === node.id);
+  const decisions = projection === null ? [] : Object.values(projection.decisions).filter((decision) => decision.status === "pending" && decision.affectedNodeIds.includes(node.id));
+  let status: NodeExecutionStatus = "pending";
+  if (artifacts.length > 0 || integration?.status === "completed" || latestAttempt?.status === "adopted") status = "succeeded";
+  else if (integration?.status === "failed" || latestAttempt?.status === "failed" || latestAttempt?.status === "discarded") status = "failed";
+  else if (latestAttempt?.status === "stale") status = "stale";
+  else if (integration?.status === "running" || latestAttempt?.status === "running" || latestAttempt?.status === "candidate" || latestAttempt?.status === "validated") status = "running";
+  else if (decisions.length > 0) status = "waiting";
+  else if (projection?.readiness.readyNodeIds.includes(node.id) === true) status = "ready";
   return {
-    run: structuredClone(model.run),
-    nodes: [...model.nodes.values()].map((value) => structuredClone(value)),
-    dependencies: [...model.dependencies.entries()].map(([key, value]) => [key, structuredClone(value)]),
-    seams: [...model.seams.values()].map((value) => structuredClone(value)),
-    waves: [...model.waves.values()].map((value) => structuredClone(value)),
-    schedulingWaves: [...model.schedulingWaves.values()].map((value) => structuredClone(value)),
-    conflicts: [...model.conflicts.values()].map((value) => structuredClone(value)),
-    decisions: [...model.decisions.values()].map((value) => structuredClone(value)),
-    amendments: [...model.amendments.values()].map((value) => structuredClone(value)),
-    evidenceMatrices: [...model.evidenceMatrices.values()].map((value) => structuredClone(value)),
-    orchestration: structuredClone(model.orchestration),
-    ...(model.evidence !== undefined ? { evidence: structuredClone(model.evidence) } : {}),
-    ...(model.metrics !== undefined ? { metrics: structuredClone(model.metrics) } : {}),
-    cursor: model.cursor
+    ...node,
+    status,
+    ...(latestAttempt !== undefined ? { attemptId: latestAttempt.attemptId } : {}),
+    artifactCount: artifacts.length,
+    decisionCount: decisions.length
   };
 }
 
-export function restoreRunModelSnapshot(snapshot: RunModelSnapshot): RunModel {
-  return {
-    run: structuredClone(snapshot.run),
-    nodes: new Map(snapshot.nodes.map((value) => [value.id, structuredClone(value)])),
-    dependencies: new Map(snapshot.dependencies.map(([key, value]) => [key, structuredClone(value)])),
-    seams: new Map(snapshot.seams.map((value) => [value.id, structuredClone(value)])),
-    waves: new Map(snapshot.waves.map((value) => [value.id, structuredClone(value)])),
-    schedulingWaves: new Map(snapshot.schedulingWaves.map((value) => [value.waveId, structuredClone(value)])),
-    conflicts: new Map(snapshot.conflicts.map((value) => [value.id, structuredClone(value)])),
-    decisions: new Map(snapshot.decisions.map((value) => [value.id, structuredClone(value)])),
-    amendments: new Map(snapshot.amendments.map((value) => [value.id, structuredClone(value)])),
-    evidenceMatrices: new Map(snapshot.evidenceMatrices.map((value) => [value.matrixId, structuredClone(value)])),
-    orchestration: structuredClone(snapshot.orchestration),
-    ...(snapshot.evidence !== undefined ? { evidence: structuredClone(snapshot.evidence) } : {}),
-    ...(snapshot.metrics !== undefined ? { metrics: structuredClone(snapshot.metrics) } : {}),
-    cursor: snapshot.cursor
-  };
+function uniqueOrderedEvents(events: readonly RunEvent[]): RunEvent[] {
+  const byId = new Map<string, RunEvent>();
+  for (const event of events) byId.set(event.eventId, event);
+  return [...byId.values()].sort((left, right) => left.seq - right.seq);
 }
 
-/** Centralizes the `payload` narrowing. The reducer knows the type from the
- *  switch; the envelope's payload is `Record<string, unknown>` by contract. */
-function read<T>(event: RunEvent): T {
-  return event.payload as unknown as T;
+function latestEvent(events: readonly RunEvent[], type: string): RunEvent | undefined {
+  return [...events].reverse().find((event) => event.type === type);
 }
 
-// ── Per-event entity updates (cursor handled by reduceRunEvent) ─────────────────
-
-function applyEvent(model: RunModel, event: RunEvent): RunModel {
-  switch (event.type) {
-    // ── Framing ──
-    case "run.created": {
-      if (typeof event.payload.goal === "string") {
-        return { ...model, run: { ...model.run, intent: event.payload.goal } };
-      }
-      const p = read<RunCreatedPayload>(event);
-      return { ...model, run: { ...model.run, intent: p.intent, workspaceId: p.workspaceId, config: p.config } };
-    }
-    case "graph.compiled":
-      return applyCompiledGraph(model, event.payload);
-    case "graph.revision.proposed": {
-      const graphId = String(event.payload.graphId ?? "");
-      const graphRevision = Number(event.payload.revision ?? 0);
-      return { ...model, orchestration: { ...model.orchestration, lifecycle: "needs_approval", graphId, graphRevision } };
-    }
-    case "graph.revision.approved": {
-      const graphId = String(event.payload.graphId ?? "");
-      const revision = Number(event.payload.revision ?? 0);
-      return { ...model, orchestration: { ...model.orchestration, lifecycle: "running", graphId, graphRevision: revision, approvedGraphRevision: revision } };
-    }
-    case "readiness.observed": {
-      const readyNodeIds = stringArray(event.payload.readyNodeIds);
-      const pendingDecisionIds = stringArray(event.payload.pendingDecisionIds);
-      return { ...model, orchestration: { ...model.orchestration, readyNodeIds, pendingDecisionIds, lifecycle: readyNodeIds.length === 0 && pendingDecisionIds.length > 0 ? "waiting_for_input" : "running" } };
-    }
-    case "evidence.matrix_recorded": {
-      const matrix = event.payload.matrix as EvidenceMatrixView | undefined;
-      if (matrix === undefined || typeof matrix.matrixId !== "string") return model;
-      const evidenceMatrices = new Map(model.evidenceMatrices);
-      evidenceMatrices.set(matrix.matrixId, structuredClone(matrix));
-      return { ...model, evidenceMatrices };
-    }
-    case "final_candidate.verified": {
-      const evidenceEligible = event.payload.evidenceEligible === true;
-      const finalCandidate = { manifestId: String(event.payload.manifestId ?? ""), commit: String(event.payload.commit ?? ""), evidenceMatrixId: String(event.payload.evidenceMatrixId ?? ""), evidenceEligible };
-      return { ...model, run: { ...model.run, control: { ...model.run.control, status: evidenceEligible ? "needs_delivery" : "unverified", updatedAt: event.at } }, orchestration: { ...model.orchestration, lifecycle: evidenceEligible ? "result_ready" : "running", finalCandidate } };
-    }
-    case "delivery.started":
-      return { ...model, orchestration: { ...model.orchestration, lifecycle: "delivering", deliveryApproval: structuredClone(event.payload.approval as Record<string, unknown>) } };
-    case "delivery.published": {
-      const receipt = event.payload.receipt as { confirmed?: unknown; disposition?: unknown } | undefined;
-      if (receipt?.confirmed !== true || (receipt.disposition !== undefined && receipt.disposition !== "delivered")) return model;
-      return { ...model, run: { ...model.run, control: { ...model.run.control, status: "completed", updatedAt: event.at } }, orchestration: { ...model.orchestration, lifecycle: "completed" } };
-    }
-    case "delivery.failed":
-      return { ...model, run: { ...model.run, control: { ...model.run.control, status: "failed_delivery", updatedAt: event.at } }, orchestration: { ...model.orchestration, lifecycle: "result_ready" } };
-    case "run.failed":
-    case "planning.failed":
-      return { ...model, run: { ...model.run, control: { ...model.run.control, status: "failed", updatedAt: event.at }, errorMessage: String(event.payload.reason ?? "Run failed") }, orchestration: { ...model.orchestration, lifecycle: "failed" } };
-    case "run.context.resolved": {
-      const p = read<RunContextResolvedPayload>(event);
-      return { ...model, run: { ...model.run, context: { repo: p.repo, baseCommit: p.baseCommit, readiness: p.readiness } } };
-    }
-    case "run.status.changed": {
-      const p = read<RunStatusChangedPayload>(event);
-      return {
-        ...model,
-        run: {
-          ...model.run,
-          control: {
-            status: p.status,
-            version: p.version,
-            pendingHumanAction: p.pendingHumanAction,
-            updatedAt: p.updatedAt,
-            ...(p.pausedDuring !== undefined ? { pausedDuring: p.pausedDuring } : {}),
-            ...(p.interruptedDuring !== undefined ? { interruptedDuring: p.interruptedDuring } : {})
-          }
-        }
-      };
-    }
-    case "run.completed":
-      // No model field for run outcome; phase/disposition is derived (PR 05).
-      return model;
-
-    // ── Proposal ──
-    case "plan.started":
-    case "plan.ready":
-      // Milestone-only events. Phase is derived from entities (PR 05).
-      return model;
-    case "plan.node.proposed": {
-      const p = read<PlanNodeProposedPayload>(event);
-      const existing = model.nodes.get(p.nodeId);
-      const node: Node = {
-        id: p.nodeId,
-        parentId: p.parentId,
-        role: p.role,
-        title: p.title,
-        goal: p.goal,
-        depth: p.depth,
-        scope: existing?.scope ?? { paths: [], origin: "guessed" },
-        produces: existing?.produces ?? [],
-        consumes: existing?.consumes ?? [],
-        execution: existing?.execution ?? { kind: "idle" },
-        ...(existing?.builtAgainst !== undefined ? { builtAgainst: existing.builtAgainst } : {}),
-        ...(existing?.producedRevision !== undefined ? { producedRevision: existing.producedRevision } : {}),
-        ...(existing?.changedFiles !== undefined ? { changedFiles: existing.changedFiles } : {}),
-        ...(existing?.planning !== undefined ? { planning: existing.planning } : {})
-      };
-      return withNode(model, node);
-    }
-    case "plan.node.status": {
-      const p = read<PlanNodeStatusPayload>(event);
-      const node = ensureNode(model, p.nodeId);
-      const planning: NodePlanningStatus = {
-        state: p.state,
-        ...(p.attempt !== undefined ? { attempt: p.attempt } : {}),
-        ...(p.maxAttempts !== undefined ? { maxAttempts: p.maxAttempts } : {}),
-        ...(p.durationMs !== undefined ? { durationMs: p.durationMs } : {}),
-        ...(p.errorKind !== undefined ? { errorKind: p.errorKind } : {}),
-        ...(p.errorMessage !== undefined ? { errorMessage: p.errorMessage } : {})
-      };
-      // Planning telemetry is an ORTHOGONAL record: it never touches `execution`.
-      return withNode(model, { ...node, planning });
-    }
-    case "plan.graph.projected": {
-      const p = read<PlanGraphProjectedPayload>(event);
-      const nodes = new Map<string, Node>();
-      for (const projected of p.nodes) {
-        const existing = model.nodes.get(projected.nodeId);
-        const node: Node = {
-          id: projected.nodeId,
-          parentId: projected.parentId,
-          role: projected.role,
-          title: projected.title,
-          goal: projected.goal,
-          depth: projected.depth,
-          scope: {
-            paths: [...projected.scopePaths],
-            origin: projected.scopePaths.length > 0 ? "derived" : "guessed"
-          },
-          produces: [],
-          consumes: [],
-          execution: p.resetRuntime ? { kind: "idle" } : existing?.execution ?? { kind: "idle" },
-          ...(!p.resetRuntime && existing?.builtAgainst !== undefined ? { builtAgainst: existing.builtAgainst } : {}),
-          ...(!p.resetRuntime && existing?.producedRevision !== undefined ? { producedRevision: existing.producedRevision } : {}),
-          ...(!p.resetRuntime && existing?.changedFiles !== undefined ? { changedFiles: existing.changedFiles } : {}),
-          ...(existing?.planning !== undefined ? { planning: existing.planning } : {})
-        };
-        nodes.set(node.id, node);
-      }
-
-      const dependencies = new Map<string, PlanDependencyProposedPayload>();
-      for (const dependency of p.dependencies) {
-        dependencies.set(`${dependency.fromTaskId}\u0000${dependency.toTaskId}`, {
-          ...dependency,
-          ...(dependency.rationale !== undefined ? { rationale: dependency.rationale } : {})
-        });
-      }
-
-      const seams = new Map<string, Seam>();
-      for (const projected of p.seams) {
-        const existing = !p.resetRuntime ? model.seams.get(projected.seamId) : undefined;
-        seams.set(projected.seamId, existing !== undefined
-          ? {
-              ...existing,
-              name: projected.name,
-              producerNodeId: projected.producerNodeId,
-              consumerNodeIds: [...projected.consumerNodeIds],
-              signature: { ...existing.signature, draft: projected.draftSignature }
-            }
-          : {
-              id: projected.seamId,
-              name: projected.name,
-              producerNodeId: projected.producerNodeId,
-              consumerNodeIds: [...projected.consumerNodeIds],
-              signature: { draft: projected.draftSignature },
-              revision: 0,
-              state: "draft"
-            });
-        const producer = nodes.get(projected.producerNodeId);
-        if (producer !== undefined) {
-          nodes.set(producer.id, { ...producer, produces: addUnique(producer.produces, projected.seamId) });
-        }
-        for (const consumerId of projected.consumerNodeIds) {
-          const consumer = nodes.get(consumerId);
-          if (consumer !== undefined) {
-            nodes.set(consumer.id, { ...consumer, consumes: addUnique(consumer.consumes, projected.seamId) });
-          }
-        }
-      }
-
-      const projectedModel: RunModel = {
-        ...model,
-        nodes,
-        dependencies,
-        seams
-      };
-      if (!p.resetRuntime) return projectedModel;
-
-      const resetModel: RunModel = {
-        ...projectedModel,
-        waves: new Map(),
-        schedulingWaves: new Map(),
-        conflicts: new Map(),
-        amendments: new Map(),
-        evidenceMatrices: new Map(),
-        orchestration: {
-          lifecycle: "planning",
-          readyNodeIds: [],
-          pendingDecisionIds: []
-        }
-      };
-      delete resetModel.evidence;
-      delete resetModel.metrics;
-      return resetModel;
-    }
-    case "plan.dependency.proposed": {
-      const p = read<PlanDependencyProposedPayload>(event);
-      const dependencies = new Map(model.dependencies);
-      dependencies.set(`${p.fromTaskId}\u0000${p.toTaskId}`, {
-        fromTaskId: p.fromTaskId,
-        toTaskId: p.toTaskId,
-        type: p.type,
-        inferred: p.inferred,
-        ...(p.rationale !== undefined ? { rationale: p.rationale } : {})
-      });
-      return { ...model, dependencies };
-    }
-    case "plan.seam.proposed": {
-      const p = read<PlanSeamProposedPayload>(event);
-      const seams = new Map(model.seams);
-      seams.set(p.seamId, {
-        id: p.seamId,
-        name: p.name,
-        producerNodeId: p.producerNodeId,
-        consumerNodeIds: [...p.consumerNodeIds],
-        signature: { draft: p.draftSignature },
-        revision: 0,
-        state: "draft"
-      });
-      // Populate structural produce/consume edges the freshness selector needs.
-      const nodes = new Map(model.nodes);
-      const producer = nodes.get(p.producerNodeId) ?? minimalNode(p.producerNodeId);
-      nodes.set(producer.id, { ...producer, produces: addUnique(producer.produces, p.seamId) });
-      for (const cid of p.consumerNodeIds) {
-        const consumer = nodes.get(cid) ?? minimalNode(cid);
-        nodes.set(cid, { ...consumer, consumes: addUnique(consumer.consumes, p.seamId) });
-      }
-      return { ...model, seams, nodes };
-    }
-
-    // ── Foundation ──
-    case "grounding.started":
-    case "skeleton.file.committed":
-    case "grounding.completed":
-      // Acknowledged; no entity to create. Grounding progress is derived (PR 05).
-      return model;
-    case "seam.frozen": {
-      const p = read<SeamFrozenPayload>(event);
-      const seam = model.seams.get(p.seamId);
-      const updated: Seam = seam
-        ? { ...seam, revision: p.revision, signature: { ...seam.signature, frozen: p.frozenSignature, extractedFrom: p.extractedFrom }, state: "frozen" }
-        : { id: p.seamId, name: p.seamId, producerNodeId: "", consumerNodeIds: [], signature: { draft: p.frozenSignature, frozen: p.frozenSignature, extractedFrom: p.extractedFrom }, revision: p.revision, state: "frozen" };
-      return withSeam(model, updated);
-    }
-    case "scope.derived": {
-      const p = read<ScopeDerivedPayload>(event);
-      const node = ensureNode(model, p.nodeId);
-      return withNode(model, { ...node, scope: { origin: "derived", paths: [...p.paths] } });
-    }
-    case "wave.planned": {
-      const p = read<WavePlannedPayload>(event);
-      const waves = new Map(model.waves);
-      for (const plan of p.waves) {
-        waves.set(plan.waveId, { id: plan.waveId, index: plan.index, nodeIds: [...plan.nodeIds], unlockedBySeams: [...plan.unlockedBySeams] });
-      }
-      return { ...model, waves };
-    }
-
-    // ── Supervision ──
-    case "run.scheduling.wave_selected": {
-      const p = read<RunSchedulingWaveSelectedPayload>(event);
-      const schedulingWaves = new Map(model.schedulingWaves);
-      schedulingWaves.set(p.waveId ?? `legacy-wave:${event.seq}`, {
-        ...p,
-        readyTaskIds: [...p.readyTaskIds],
-        selectedTaskIds: [...p.selectedTaskIds],
-        blockedTaskIds: [...p.blockedTaskIds],
-        blockedReasons: p.blockedReasons.map((reason) => ({
-          ...reason,
-          relatedTaskIds: [...reason.relatedTaskIds]
-        })),
-        riskSummary: { ...p.riskSummary },
-        fallbacks: p.fallbacks.map((fallback) => ({ ...fallback, taskIds: [...fallback.taskIds] })),
-        warnings: p.warnings.map((warning) => ({ ...warning, taskIds: [...warning.taskIds] }))
-      });
-      return { ...model, schedulingWaves };
-    }
-    case "run.delivery.completed": {
-      const p = read<RunDeliveryCompletedPayload>(event);
-      const artifact = model.run.finalArtifact;
-      if (artifact === undefined || artifact.manifestId !== p.manifestId || artifact.finalSha !== p.finalSha) {
-        return model;
-      }
-      return {
-        ...model,
-        run: {
-          ...model.run,
-          finalArtifact: { ...artifact, deliveryDisposition: "delivered" }
-        }
-      };
-    }
-    case "wave.opened": {
-      const p = read<WaveOpenedPayload>(event);
-      const existing = model.waves.get(p.waveId);
-      const wave: Wave = existing
-        ? { ...existing, opened: true }
-        : { id: p.waveId, index: 0, nodeIds: [...p.nodeIds], unlockedBySeams: [], opened: true };
-      return withWave(model, wave);
-    }
-    case "wave.closed": {
-      const p = read<WaveClosedPayload>(event);
-      const existing = model.waves.get(p.waveId);
-      if (!existing) return model;
-      return withWave(model, { ...existing, closed: true });
-    }
-    case "node.execution.started": {
-      const p = read<NodeExecutionStartedPayload>(event);
-      const node = ensureNode(model, p.nodeId);
-      return withNode(model, { ...node, execution: { kind: "running", agent: p.agent, model: p.model } });
-    }
-    case "node.verify.iteration": {
-      const p = read<NodeVerifyIterationPayload>(event);
-      const node = ensureNode(model, p.nodeId);
-      const execution: ExecutionState = {
-        kind: "verifying",
-        loop: { iteration: p.iteration, maxIterations: p.maxIterations, build: p.build, testsPass: p.testsPass, testsTotal: p.testsTotal }
-      };
-      return withNode(model, { ...node, execution });
-    }
-    case "node.verify.passed": {
-      const p = read<NodeVerifyPassedPayload>(event);
-      const node = ensureNode(model, p.nodeId);
-      const updated: Node = {
-        ...node,
-        execution: { kind: "integrated", commit: p.commit },
-        builtAgainst: [...p.builtAgainst],
-        changedFiles: [...p.changedFiles]
-      };
-      if (p.produces !== undefined) updated.producedRevision = p.produces;
-      return withNode(model, updated);
-    }
-    case "node.verify.failed":
-      // A failed ITERATION is non-terminal (repair/iteration follow). Keep the
-      // node `verifying`; the terminal signal is `node.execution.failed`.
-      return model;
-    case "node.repair.started":
-      // Autonomous repair: acknowledged, never raises human attention.
-      return model;
-    case "node.execution.failed": {
-      const p = read<NodeExecutionFailedPayload>(event);
-      const node = ensureNode(model, p.nodeId);
-      return withNode(model, { ...node, execution: { kind: "failed", cause: p.cause } });
-    }
-
-    // ── Amendment / seam evolution ──
-    case "node.cli.output":
-      // Live console output is an audit/detail artifact. It is intentionally not
-      // folded into the entity model; consumers derive console views from the
-      // raw event log so D5 stays intact (git diff remains the change source).
-      return model;
-    case "amendment.proposed": {
-      const p = read<AmendmentProposedPayload>(event);
-      return withAmendment(model, {
-        id: p.amendmentId,
-        nodeId: p.nodeId,
-        kind: p.kind,
-        changeKind: p.changeKind,
-        detail: p.detail,
-        affects: [...p.affects],
-        status: "proposed"
-      });
-    }
-    case "seam.amended": {
-      const p = read<SeamAmendedPayload>(event);
-      const base: Seam = model.seams.get(p.seamId) ?? {
-        id: p.seamId, name: p.seamId, producerNodeId: "", consumerNodeIds: [], signature: { draft: "" }, revision: 0, state: "draft"
-      };
-      const updated: Seam = { ...base, revision: p.revision, state: "amended", lastChangeKind: p.changeKind };
-      if (p.signature !== undefined) updated.signature = { ...base.signature, frozen: p.signature };
-      if (p.contract !== undefined) updated.contract = { ...(base.contract ?? {}), ...p.contract };
-      // NOTE: seam.amended updates the seam ONLY. It never marks nodes stale —
-      // invalidation is derived from revision + changeKind comparison in PR 05.
-      return withSeam(model, updated);
-    }
-    case "amendment.applied": {
-      const p = read<AmendmentAppliedPayload>(event);
-      const amendment = model.amendments.get(p.amendmentId);
-      if (!amendment) return model;
-      return withAmendment(model, { ...amendment, status: "applied" });
-    }
-    case "amendment.rejected": {
-      const p = read<AmendmentRejectedPayload>(event);
-      const amendment = model.amendments.get(p.amendmentId);
-      if (!amendment) return model;
-      return withAmendment(model, { ...amendment, status: "rejected" });
-    }
-
-    // ── Decisions ──
-    case "decision.raised": {
-      if (typeof event.payload.decision === "object" && event.payload.decision !== null) {
-        const decision = event.payload.decision as Record<string, unknown>;
-        const kind = v2DecisionKind(String(decision.kind ?? "clarify_goal"));
-        const affectedNodeIds = stringArray(decision.affectedNodeIds);
-        const rawOptions = arrayOfRecords(decision.options);
-        const options = rawOptions.map((option) => String(option.label ?? option.id ?? "")).filter(Boolean);
-        const optionValues = rawOptions.map((option) => String(option.id ?? option.label ?? "")).filter(Boolean);
-        return withDecision(model, {
-          id: String(decision.id ?? ""),
-          kind,
-          blocking: true,
-          context: {
-            nodeIds: affectedNodeIds,
-            question: String(decision.question ?? "Human input required"),
-            ...(options.length > 0 ? { options, optionValues } : {})
-          },
-          status: "pending"
-        });
-      }
-      const p = read<DecisionRaisedPayload>(event);
-      return withDecision(model, {
-        id: p.decisionId,
-        kind: p.kind,
-        blocking: p.blocking,
-        context: p.context,
-        status: "pending"
-      });
-    }
-    case "decision.resolved": {
-      if (typeof event.payload.decisionId === "string" && !("choice" in event.payload)) {
-        const decision = model.decisions.get(event.payload.decisionId);
-        if (!decision) return model;
-        const answer = typeof event.payload.answer === "string" ? event.payload.answer : String(event.payload.optionId ?? "resolved");
-        return withDecision(model, { ...decision, status: "resolved", resolution: { choice: { answer }, actor: "human", at: event.at } });
-      }
-      const p = read<DecisionResolvedPayload>(event);
-      const decision = model.decisions.get(p.decisionId);
-      if (!decision) return model;
-      const resolved: Decision = { ...decision, status: "resolved", resolution: { choice: p.choice, actor: p.actor, at: event.at } };
-      return withDecision(model, resolved);
-    }
-
-    // ── Conflicts ──
-    case "conflict.detected": {
-      const p = read<ConflictDetectedPayload>(event);
-      return withConflict(model, {
-        id: p.conflictId,
-        dimension: p.dimension,
-        status: p.status,
-        nodeIds: [...p.nodeIds],
-        ...(p.seamId !== undefined ? { seamId: p.seamId } : {}),
-        files: [...p.files],
-        autoResolvable: p.autoResolvable,
-        diagnosisRef: p.diagnosisRef
-      });
-    }
-    case "conflict.resolved": {
-      const p = read<ConflictResolvedPayload>(event);
-      const conflict = model.conflicts.get(p.conflictId);
-      if (!conflict) return model;
-      // A conflict is resolved ONLY by conflict.resolved — never by decision.resolved.
-      return withConflict(model, { ...conflict, status: "resolved", resolution: { by: p.by, resolutionId: p.resolutionId } });
-    }
-
-    // ── Integration / reconciliation ──
-    case "integration.started":
-      // Acknowledged; the composite reaches `integrated` at integration.completed.
-      // In-progress integration is derived (leaves done + composite not integrated).
-      return model;
-    case "integration.validated": {
-      const p = read<IntegrationValidatedPayload>(event);
-      const node = ensureNode(model, p.compositeNodeId);
-      // Store builtAgainst (freshness input). A passed:false validation is
-      // NON-terminal (a conflict or re-integration follows): we do NOT flip the
-      // composite to `failed` here; it only becomes `integrated` at completion.
-      const updated: Node = { ...node };
-      if (p.builtAgainst !== undefined) updated.builtAgainst = [...p.builtAgainst];
-      return withNode(model, updated);
-    }
-    case "integration.completed": {
-      const p = read<IntegrationCompletedPayload>(event);
-      const node = ensureNode(model, p.compositeNodeId);
-      const execution: ExecutionState = p.status === "success" ? { kind: "integrated", commit: p.commit } : { kind: "failed", cause: `integration ${p.status}` };
-      return withNode(model, { ...node, execution });
-    }
-
-    // ── Disposition ──
-    case "run.evidence.ready": {
-      const p = read<RunEvidenceReadyPayload>(event);
-      const evidence: Evidence = {
-        aggregateDiffRef: p.aggregateDiffRef,
-        tests: p.tests,
-        narrativeRef: p.narrativeRef,
-        integrationCommit: p.integrationCommit,
-        ...(p.invalidationTrace !== undefined ? { invalidationTrace: p.invalidationTrace } : {})
-      };
-      return { ...model, evidence };
-    }
-    case "run.metrics.ready": {
-      const p = read<RunMetricsReadyPayload>(event);
-      // Recorded fold cache (like evidence); never derived, never gates the run.
-      return { ...model, metrics: { ...p.metrics } };
-    }
-
-    // ── Forward-compat: unknown / v2 events are acknowledged, not applied ──
-    default:
-      return model;
-  }
-}
-
-// ── Immutable map helpers ───────────────────────────────────────────────────
-
-function withNode(model: RunModel, node: Node): RunModel {
-  const nodes = new Map(model.nodes);
-  nodes.set(node.id, node);
-  return { ...model, nodes };
-}
-
-function withSeam(model: RunModel, seam: Seam): RunModel {
-  const seams = new Map(model.seams);
-  seams.set(seam.id, seam);
-  return { ...model, seams };
-}
-
-function withWave(model: RunModel, wave: Wave): RunModel {
-  const waves = new Map(model.waves);
-  waves.set(wave.id, wave);
-  return { ...model, waves };
-}
-
-function withDecision(model: RunModel, decision: Decision): RunModel {
-  const decisions = new Map(model.decisions);
-  decisions.set(decision.id, decision);
-  return { ...model, decisions };
-}
-
-function withConflict(model: RunModel, conflict: Conflict): RunModel {
-  const conflicts = new Map(model.conflicts);
-  conflicts.set(conflict.id, conflict);
-  return { ...model, conflicts };
-}
-
-function withAmendment(model: RunModel, amendment: Amendment): RunModel {
-  const amendments = new Map(model.amendments);
-  amendments.set(amendment.id, amendment);
-  return { ...model, amendments };
-}
-
-function applyCompiledGraph(model: RunModel, payload: Record<string, unknown>): RunModel {
-  const graph = payload.graph as Record<string, unknown> | undefined;
-  const rawNodes = graph?.nodes as Record<string, Record<string, unknown>> | undefined;
-  if (graph === undefined || rawNodes === undefined) return model;
-  const nodes = new Map<string, Node>();
-  const depthOf = (id: string, seen = new Set<string>()): number => {
-    if (seen.has(id)) return 0;
-    seen.add(id);
-    const parentId = rawNodes[id]?.parentId;
-    return typeof parentId === "string" ? 1 + depthOf(parentId, seen) : 0;
-  };
-  for (const [id, raw] of Object.entries(rawNodes)) {
-    const kind = String(raw.kind ?? "leaf");
-    nodes.set(id, {
-      ...minimalNode(id),
-      parentId: typeof raw.parentId === "string" ? raw.parentId : null,
-      role: kind === "root" ? "root" : kind === "composite" || kind === "integrator" ? "composite" : "leaf",
-      title: String(raw.title ?? id),
-      goal: String(raw.goal ?? raw.title ?? id),
-      depth: depthOf(id)
-    });
-  }
-  const dependencies = new Map<string, CanonicalTaskDependency>();
-  for (const raw of arrayOfRecords(graph.artifactRequirements)) {
-    const fromTaskId = String(raw.producerNodeId ?? "");
-    const toTaskId = String(raw.consumerNodeId ?? "");
-    if (fromTaskId && toTaskId) dependencies.set(`${fromTaskId}->${toTaskId}`, { fromTaskId, toTaskId, type: "logical", inferred: false, rationale: String(raw.purpose ?? "Required artifact") });
-  }
-  const seams = new Map<string, Seam>();
-  for (const raw of arrayOfRecords(graph.seamBindings)) {
-    const id = String(raw.id ?? "");
-    if (!id) continue;
-    const contract = raw.seamContract as Record<string, unknown> | undefined;
-    seams.set(id, { id, name: String(contract?.id ?? id), producerNodeId: String(raw.producerNodeId ?? ""), consumerNodeIds: [String(raw.consumerNodeId ?? "")].filter(Boolean), signature: { draft: `${String(contract?.id ?? id)}@${String(contract?.revision ?? "unknown")}` }, revision: 1, state: "frozen" });
-  }
-  return { ...model, nodes, dependencies, seams, orchestration: { ...model.orchestration, graphId: String(graph.graphId ?? payload.graphId ?? ""), graphRevision: Number(graph.revision ?? payload.revision ?? 0) } };
-}
-
-function arrayOfRecords(value: unknown): Record<string, unknown>[] {
-  return Array.isArray(value) ? value.filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null) : [];
-}
-
-function stringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
-
-function v2DecisionKind(kind: string): Decision["kind"] {
-  if (kind === "approve_plan") return "approve_plan";
-  if (kind === "approve_amendment") return "approve_amendment";
-  if (kind === "resolve_conflict") return "resolve_conflict";
-  if (kind === "approve_delivery") return "approve_merge";
-  return "clarify";
-}
-
-function ensureNode(model: RunModel, id: string): Node {
-  return model.nodes.get(id) ?? minimalNode(id);
-}
-
-function minimalNode(id: string): Node {
-  return {
-    id,
-    parentId: null,
-    role: "leaf",
-    title: "",
-    goal: "",
-    depth: 0,
-    scope: { paths: [], origin: "guessed" },
-    produces: [],
-    consumes: [],
-    execution: { kind: "idle" }
-  };
-}
-
-function addUnique(list: readonly string[], value: string): string[] {
-  return list.includes(value) ? [...list] : [...list, value];
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

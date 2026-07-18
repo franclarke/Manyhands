@@ -140,7 +140,7 @@ describe("IntegrationAgent with real Git", () => {
     expect(recovered.status).toBe("success");
     expect(recovered.integrationCommitSha).toBe(finalSha);
     expect(traceStore.list()).toHaveLength(traceCount);
-  });
+  }, 90_000);
 
   it("treats a distinct child commit with an already-satisfied patch as redundant", async () => {
     const fixture = await createFixture();

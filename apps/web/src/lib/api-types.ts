@@ -1,6 +1,5 @@
 import type { GranularityVector } from "@manyhands/execution-core";
 import type { EffortLevel } from "@manyhands/shared";
-import type { PlanCriticResult, SeamCriticResult } from "@/lib/critic-types";
 
 /** Per-leaf receipt: auditable evidence of what one subagent did. */
 export interface ExecutionLeafReceipt {
@@ -94,24 +93,17 @@ export interface WorkspaceUpdateRequest {
 }
 
 export type RunStatusKey =
-  | "created"
-  | "generating"
-  | "paused"
-  | "needs_review"
-  | "approved"
+  | "planning"
+  | "needs_approval"
   | "running"
-  | "completed"
-  | "completed_with_accepted"
-  | "partial"
-  | "unverified"
-  | "needs_delivery"
-  | "failed_artifact"
-  | "failed_delivery"
+  | "waiting_for_input"
+  | "paused"
   | "cancelling"
-  | "failed"
-  | "interrupted";
-
-export type RunGranularityKey = "auto" | "coarse" | "balanced" | "fine";
+  | "interrupted"
+  | "result_ready"
+  | "delivering"
+  | "completed"
+  | "failed";
 // "gemini-cli" is retained only for legacy RunRecords created before the
 // current Claude Code/Codex executor set; it is not live or selectable.
 export type ExecutorId = "gemini-cli" | "claude-code-cli" | "codex-cli" | "opencode-cli";
@@ -134,12 +126,7 @@ export interface RunPreview {
   workspaceName?: string | undefined;
   title: string;
   userPrompt: string;
-  summary?: string | undefined;
   status: RunStatusKey;
-  granularity: RunGranularityKey;
-  model: string;
-  nodeCount?: number | undefined;
-  agentCount?: number | undefined;
   coordinationRiskCount?: number | undefined;
   createdAt: string;
   updatedAt: string;
@@ -149,20 +136,18 @@ export interface RunPreview {
 
 export interface RunsListResponse {
   runs: RunPreview[];
-  degradedRecords: Array<{ runId: string; reason: string; diagnosticsHref: string }>;
 }
 
 export interface RunCreateRequest {
   workspaceId: string;
-  granularity: RunGranularityKey;
-  model: string;
-  planningExecutorId?: ExecutorId | undefined;
-  planningModel?: string | undefined;
-  defaultExecutionSelection?: ExecutorSelection | undefined;
-  defaultRepairSelection?: ExecutorSelection | undefined;
-  executionConfig?: { reasoningEffort?: EffortLevel } | undefined;
-  userPrompt?: string;
-  repoSpec?: { kind: "fixture"; fixtureId: string } | { kind: "localPath"; path: string };
+  userPrompt: string;
+  planningSelection?: StageSelection;
+  executionSelection?: StageSelection;
+  repairSelection?: StageSelection;
+  executionConfig?: {
+    maxParallel?: number;
+    reasoningEffort?: EffortLevel;
+  };
 }
 
 export type ProviderReadinessStatus = "ready" | "warning" | "error";
@@ -215,79 +200,21 @@ export interface RunResponse {
   run: {
     runId: string;
     workspaceId: string;
-    granularity: RunGranularityKey;
-    model: string;
-    planningExecutorId?: ExecutorId;
-    planningModel?: string;
-    defaultExecutionSelection?: ExecutorSelection;
-    defaultRepairSelection?: ExecutorSelection;
-    planningSelection?: StageSelection;
-    executionSelection?: StageSelection;
-    repairSelection?: StageSelection;
     userPrompt: string;
-    summary?: string;
     title: string;
-    status: RunStatusKey;
-    validation?: {
-      status: "passed" | "failed" | "unverified";
-      command?: string | undefined;
-      ranAt?: string | undefined;
-    };
-    /** Monotonic write counter; echo back as `expectedVersion` for optimistic mutations. */
+    lifecycle: RunStatusKey;
+    eventSequence: number;
+    planningSelection: StageSelection;
+    executionSelection: StageSelection;
+    repairSelection: StageSelection;
     version: number;
-    /** Suspended execution gate awaiting a decision; echo `gateId` back on resume. */
-    pendingDecision?: {
-      gate: "leaf_validation_failed" | "merge_conflict" | "budget_exceeded";
-      gateId?: string | undefined;
-      taskId: string;
-      validationOutput?: string | undefined;
-      conflictFiles?: string[] | undefined;
-      integrationStatus?: string | undefined;
-      spentTokens?: number | undefined;
-      spentUsd?: number | undefined;
-      pendingTasks?: string[] | undefined;
-    };
-    pausedDuring?: "generating" | "running";
-    interruptedDuring?: "generating" | "running";
-    errorMessage?: string;
     createdAt: string;
     updatedAt: string;
-    approvedAt?: string;
-    startedAt?: string;
-    completedAt?: string;
-    heartbeatAt?: string;
-    finalApplicationStatus?: "applied" | "exported_patch" | "failed";
-    finalBranchName?: string;
-    finalCommitSha?: string;
-    appliedToRepoPath?: string;
-    appliedAt?: string;
-    exportedPatchPath?: string;
-    finalApplicationMessage?: string;
-    baseCommit?: string;
-    integrationCommitSha?: string;
-    nodeReviews?: Record<
-      string,
-      { status: "approved" | "changes_requested"; feedback?: string | undefined; at: string }
-    >;
-    planningCritic?: PlanCriticResult;
-    seamCritic?: SeamCriticResult;
-    repositoryGrounding?: {
-      repositoryId: string;
-      fileCount: number;
-      symbolCount: number;
-      indexHash: string;
-      indexedAt?: string | undefined;
-    };
-    decomposition?: {
-      provider: "anthropic" | "claude-code" | "claude-code-cli" | "gemini" | "codex" | "codex-cli" | "deterministic";
-      model: string;
-      promptTemplateVersion?: string;
-      fallbackUsed: boolean;
-      fallbackReason?: "no_api_key" | "forced_by_env" | "forced_by_caller" | "llm_failed";
-      validationErrors: string[];
-      generatedAt: string;
-      usage?: { inputTokens: number; outputTokens: number; costUsd?: number };
-    };
-    execution?: ExecutionSummary;
+    graphId?: string;
+    graphRevision?: number;
+    approvedGraphRevision?: number;
+    finalManifestId?: string;
+    finalCommit?: string;
+    failureReason?: string;
   };
 }

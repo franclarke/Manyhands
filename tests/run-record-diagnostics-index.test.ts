@@ -20,24 +20,13 @@ import {
   listCorruptRunRecords
 } from "@/lib/server/runs/repository";
 import type { RunRecord } from "@/lib/server/runs/schema";
+import { makeRunRecordV2 } from "./helpers/run-v2-record";
 
 let tempDir: string;
 let runsDir: string;
 
 function makeRun(runId: string): RunRecord {
-  return {
-    runId,
-    workspaceId: "ws",
-    granularity: "balanced",
-    model: "codex",
-    userPrompt: "x",
-    title: runId,
-    version: 0,
-    status: "completed",
-    createdAt: "2026-07-15T00:00:00.000Z",
-    updatedAt: "2026-07-15T00:00:00.000Z",
-    patches: []
-  };
+  return makeRunRecordV2({ runId, workspaceId: "ws", title: runId, lifecycle: "completed" });
 }
 
 beforeEach(async () => {
