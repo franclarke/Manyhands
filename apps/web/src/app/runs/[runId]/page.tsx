@@ -4,7 +4,7 @@ import {
   getRunRepository
 } from "@/lib/server/runs";
 import { buildRunModelSeed } from "@/lib/server/runs/run-model-projection";
-import { ensureRunModelEventLogForRun } from "@/lib/server/runs/run-model-event-log";
+import { readCanonicalRunModelEvents } from "@/lib/server/runs/v2/run-event-reader";
 import { getWorkspaceRepository } from "@/lib/server/workspaces";
 import { RunModelView } from "./_components/run-model-view.client";
 
@@ -33,7 +33,7 @@ export default async function RunPage({ params }: RunPageProps): Promise<React.R
   }
 
   const [initialEvents, workspace] = await Promise.all([
-    ensureRunModelEventLogForRun(run),
+    readCanonicalRunModelEvents(run.runId),
     getWorkspaceRepository().get(run.workspaceId).catch(() => null)
   ]);
 

@@ -10,12 +10,15 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { compileGraphRevision } from "@manyhands/decomposer";
+import type { RunEventInput } from "@manyhands/run-coordinator";
+import { JsonlRunEventStore } from "@manyhands/run-store";
 import { GET as GET_RUN_EVENTS } from "@/app/api/runs/[id]/run-events/route";
-import { appendRunModelEvent } from "@/lib/server/runs/run-model-event-log";
 import { getRunRepository, resetRunRepositoryForTests } from "@/lib/server/runs/store";
 import { createInitialRunModel, reduceRunEvents } from "@/lib/run-model/reducer";
 import type { Run, RunEvent } from "@/lib/run-model/types";
 import type { RunRecord } from "@/lib/server/runs/schema";
+import { bookingBreakdown, bookingSnapshot, compilerDependencies } from "./helpers/target-planning-fixtures";
 
 let tempDir: string;
 let previousRunsDir: string | undefined;
@@ -37,6 +40,7 @@ afterEach(async () => {
 function makeRun(runId: string): RunRecord {
   return {
     runId,
+    architectureVersion: { planning: "v2", execution: "v2", integration: "v2" },
     workspaceId: "ws-1",
     granularity: "balanced",
     model: "gemini-2.5-pro",
@@ -61,15 +65,25 @@ function seedFor(runId: string): Run {
 
 async function seedEvents(runId: string, count: number): Promise<void> {
   await getRunRepository().save(makeRun(runId));
-  await appendRunModelEvent(runId, { actor: "system", at: new Date().toISOString(), type: "plan.started", payload: {} });
-  for (let i = 1; i < count; i += 1) {
-    await appendRunModelEvent(runId, {
-      actor: "system",
-      at: new Date().toISOString(),
-      type: "plan.node.proposed",
-      payload: { nodeId: `node-${i}`, parentId: null, title: `Node ${i}`, goal: `goal ${i}`, depth: 1, role: "leaf" as const }
-    });
-  }
+  const snapshot = bookingSnapshot();
+  const breakdown = bookingBreakdown();
+  const compiled = compileGraphRevision({ breakdown, repositorySnapshot: snapshot }, compilerDependencies);
+  const decisionId = `approve-plan:${compiled.graph.graphId}:r${compiled.graph.revision}`;
+  const at = "2026-07-17T12:00:00.000Z";
+  const inputs: RunEventInput[] = [
+    { eventId: "run-created", occurredAt: at, type: "run.created", payload: { goal: "Add login" } },
+    { eventId: "repository-inspected", occurredAt: at, type: "repository.inspected", payload: { snapshotId: snapshot.snapshotId, disposition: snapshot.inspectionDisposition, snapshot: snapshot as unknown as Record<string, unknown> } },
+    { eventId: "planning-completed", occurredAt: at, type: "planning.completed", payload: { breakdownId: breakdown.breakdownId, breakdown: breakdown as unknown as Record<string, unknown> } },
+    { eventId: "graph-compiled", occurredAt: at, type: "graph.compiled", payload: { graphId: compiled.graph.graphId, revision: compiled.graph.revision, graph: compiled.graph as unknown as Record<string, unknown>, contracts: compiled.contracts as unknown as Array<Record<string, unknown>>, review: compiled.review as unknown as Record<string, unknown>, trace: compiled.trace as unknown as Record<string, unknown> } },
+    { eventId: "critic-recorded", occurredAt: at, type: "planning.critic_recorded", payload: { critic: "completeness", findings: [] } },
+    { eventId: "revision-proposed", occurredAt: at, type: "graph.revision.proposed", payload: { graphId: compiled.graph.graphId, revision: compiled.graph.revision } },
+    { eventId: decisionId, occurredAt: at, type: "decision.raised", payload: { decision: { id: decisionId, kind: "approve_plan", question: "Approve?", options: [{ id: "approve", label: "Approve" }, { id: "request_changes", label: "Request changes" }], affectedNodeIds: [compiled.graph.rootId], evidenceRefs: ["graph-compiled"], impact: "acceptance" } } },
+    { eventId: `${decisionId}:resolved`, occurredAt: at, type: "decision.resolved", payload: { decisionId, optionId: "approve" } }
+  ];
+  const store = new JsonlRunEventStore({ directory: process.env.MANYHANDS_RUNS_DIR });
+  const authority = { operationId: "11111111-1111-4111-8111-111111111111", fencingToken: 1 };
+  await store.advanceFence(runId, authority);
+  await store.appendFenced(runId, 0, authority, inputs.slice(0, count));
 }
 
 /** Read SSE frames from the handler until `expected` data events arrive. */

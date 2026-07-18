@@ -7,10 +7,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { buildTimelineView, timelineCategoryOf } from "@/lib/run-model/timeline-view";
-import { adaptStreamHistory } from "@/lib/run-model/sse-adapter";
 import { goldenHappyPath, goldenPlanningFallback } from "@/lib/run-model/fixtures";
 import type { RunEvent } from "@/lib/run-model/types";
-import type { StreamEvent } from "@/lib/server/runs/events";
 
 describe("timeline — category mapping", () => {
   it("1. maps types to stable, payload-free categories", () => {
@@ -86,12 +84,12 @@ describe("timeline — robustness", () => {
   });
 
   it("10. works over a bridged live history (adapter → timeline)", () => {
-    const stream: StreamEvent[] = [
-      { kind: "planning.node.started", at: "t", nodeId: "root", title: "R", goal: "g", depth: 0 },
-      { kind: "agent.run.started", at: "t", taskId: "root" },
-      { kind: "agent.run.completed", at: "t", taskId: "root", success: true }
+    const events: RunEvent[] = [
+      { eventId: "e1", seq: 1, at: "t", runId: "run-x", actor: "system", type: "plan.node.proposed", payload: { nodeId: "root", parentId: null, role: "root", title: "R", goal: "g", depth: 0 } },
+      { eventId: "e2", seq: 2, at: "t", runId: "run-x", actor: "system", type: "node.execution.started", payload: { nodeId: "root", agent: "agent", model: "m" } },
+      { eventId: "e3", seq: 3, at: "t", runId: "run-x", actor: "system", type: "node.verify.passed", payload: { nodeId: "root", commit: "abc", changedFiles: [], builtAgainst: [] } }
     ];
-    const view = buildTimelineView(adaptStreamHistory(stream, "run-x"));
+    const view = buildTimelineView(events);
     expect(view.count).toBe(3);
     expect(view.entries.map((e) => e.type)).toEqual(["plan.node.proposed", "node.execution.started", "node.verify.passed"]);
   });

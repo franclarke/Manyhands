@@ -18,9 +18,7 @@ import {
 } from "@/lib/run-model/selectors";
 import { buildDecisionChannelView } from "@/lib/run-model/decision-channel-view";
 import { buildFocusView } from "@/lib/run-model/focus-view";
-import { adaptStreamHistory } from "@/lib/run-model/sse-adapter";
 import { goldenPlanningFallback } from "@/lib/run-model/fixtures";
-import type { StreamEvent } from "@/lib/server/runs/events";
 import type { RunConfig, RunEvent, RunModel } from "@/lib/run-model/types";
 
 const STUB_CONFIG: RunConfig = {
@@ -119,22 +117,20 @@ describe("planning-health — orthogonality invariants", () => {
 
 describe("planning-health — SSE bridge round-trip", () => {
   it("11. a legacy retry→recovery stream round-trips to a clean planning axis", () => {
-    const stream: StreamEvent[] = [
-      { kind: "planning.node.started", at: "t", nodeId: "n", parentId: "root", title: "N", goal: "g", depth: 1 },
-      { kind: "planning.node.status", at: "t", nodeId: "n", title: "N", goal: "g", depth: 1, state: "retrying", attempt: 1, maxAttempts: 3, errorKind: "missing_json" },
-      { kind: "planning.node.status", at: "t", nodeId: "n", title: "N", goal: "g", depth: 1, state: "generated", attempt: 2 }
-    ];
-    const model = reduceRunEvents(emptyModel(), adaptStreamHistory(stream, "run-x"));
+    const model = reduceRunEvents(emptyModel(), [
+      ev(1, "plan.node.proposed", { nodeId: "n", parentId: "root", role: "leaf", title: "N", goal: "g", depth: 1 }),
+      ev(2, "plan.node.status", { nodeId: "n", state: "retrying", attempt: 1, maxAttempts: 3, errorKind: "missing_json" }),
+      ev(3, "plan.node.status", { nodeId: "n", state: "generated", attempt: 2 })
+    ]);
     expect(model.nodes.get("n")!.planning?.state).toBe("generated");
     expect(selectPlanningHealth(model).clean).toBe(true);
   });
 
   it("12. a legacy fallback stream round-trips to a flagged-but-usable node", () => {
-    const stream: StreamEvent[] = [
-      { kind: "planning.node.started", at: "t", nodeId: "n", parentId: "root", title: "N", goal: "g", depth: 1 },
-      { kind: "planning.node.status", at: "t", nodeId: "n", title: "N", goal: "g", depth: 1, state: "fallback", attempt: 3, maxAttempts: 3, errorKind: "schema_invalid" }
-    ];
-    const model = reduceRunEvents(emptyModel(), adaptStreamHistory(stream, "run-x"));
+    const model = reduceRunEvents(emptyModel(), [
+      ev(1, "plan.node.proposed", { nodeId: "n", parentId: "root", role: "leaf", title: "N", goal: "g", depth: 1 }),
+      ev(2, "plan.node.status", { nodeId: "n", state: "fallback", attempt: 3, maxAttempts: 3, errorKind: "schema_invalid" })
+    ]);
     expect(selectPlanningHealth(model).fallback).toEqual(["n"]);
     expect(selectRenderableNodeState(model, "n").display).toBe("idle"); // still a usable proposed leaf
   });

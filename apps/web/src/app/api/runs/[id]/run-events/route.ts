@@ -1,14 +1,8 @@
 import { NextResponse } from "next/server";
-import {
-  RunNotFoundError,
-  ensureRunModelEventLogForRun,
-  getRunRepository,
-  hasRunModelEventLog,
-  readRunModelEventBatch,
-  serializeRunModelForSse,
-  subscribeRunModelEvents
-} from "@/lib/server/runs";
-import type { RunEvent } from "@/lib/run-model/types";
+import { JsonlRunEventStore } from "@manyhands/run-store";
+import { adaptCoordinatorEvent } from "@/lib/run-model/sse-adapter";
+import { RunNotFoundError, getRunRepository } from "@/lib/server/runs";
+import { resolveRunsDirectory } from "@/lib/server/runs/runs-directory";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,77 +12,56 @@ interface RouteContext {
 }
 
 const HEARTBEAT_MS = 15_000;
+const POLL_MS = 250;
 
+/** Streams the canonical fenced V2 journal. No RunRecord backfill or ephemeral event bus participates. */
 export async function GET(request: Request, context: RouteContext): Promise<Response> {
   const { id } = await context.params;
-  // Resume cursor: the explicit ?after= param or the browser's Last-Event-ID
-  // (set automatically on reconnect from the `id:` field of the last frame).
-  // The higher one wins — both mean "I already folded everything up to here".
   const after = Math.max(readAfter(request.url), readLastEventId(request));
-  let initial;
-
+  const store = new JsonlRunEventStore({ directory: resolveRunsDirectory() });
   try {
     const run = await getRunRepository().get(id);
-    // Legacy/first-load records need one projection; normal reconnects read
-    // only the delta from the durable JSONL stream.
-    if (!(await hasRunModelEventLog(id))) await ensureRunModelEventLogForRun(run);
-    initial = await readRunModelEventBatch(id, after, readBatchLimit(request.url));
-  } catch (error) {
-    if (error instanceof RunNotFoundError) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
+    if (run.architectureVersion?.planning !== "v2") {
+      return NextResponse.json({ error: `Run ${id} must be imported into the V2 event journal before it can be streamed.` }, { status: 409 });
     }
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    );
+    await store.load(id);
+  } catch (error) {
+    if (error instanceof RunNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 
   const encoder = new TextEncoder();
-  let heartbeat: ReturnType<typeof setInterval> | null = null;
-  let unsubscribe: (() => void) | null = null;
-
+  let cancelled = false;
   const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      let lastSentSeq = after;
-      async function write(event: RunEvent): Promise<void> {
-        if (event.seq <= lastSentSeq) return;
-        lastSentSeq = event.seq;
-        await waitForCapacity(controller);
-        try {
-          controller.enqueue(encoder.encode(serializeRunModelForSse(event)));
-        } catch {
-          // controller closed; ignore
+    start(controller) {
+      let lastSentSequence = after;
+      let lastHeartbeatAt = Date.now();
+      const pump = async (): Promise<void> => {
+        while (!cancelled) {
+          try {
+            const events = await store.load(id);
+            for (const event of events) {
+              if (event.sequence <= lastSentSequence) continue;
+              lastSentSequence = event.sequence;
+              await waitForCapacity(controller);
+              controller.enqueue(encoder.encode(serialize(event)));
+            }
+            if (Date.now() - lastHeartbeatAt >= HEARTBEAT_MS) {
+              controller.enqueue(encoder.encode(`: heartbeat ${new Date().toISOString()}\n\n`));
+              lastHeartbeatAt = Date.now();
+            }
+          } catch (error) {
+            if (!cancelled) controller.error(error);
+            return;
+          }
+          await delay(POLL_MS);
         }
-      }
-
-      const bufferedLive: RunEvent[] = [];
-      let replaying = true;
-      unsubscribe = subscribeRunModelEvents(id, (event) => {
-        if (replaying) {
-          bufferedLive.push(event);
-          return;
-        }
-        void write(event);
-      });
-
-      let batch = initial;
-      while (true) {
-        for (const event of batch.events) await write(event);
-        if (batch.status === "degraded") writeComment(controller, "degraded");
-        if (!batch.hasMore) break;
-        batch = await readRunModelEventBatch(id, batch.nextCursor, readBatchLimit(request.url));
-      }
-
-      replaying = false;
-      for (const event of bufferedLive.sort((left, right) => left.seq - right.seq)) await write(event);
-      writeComment(controller, "connected");
-      heartbeat = setInterval(() => {
-        writeComment(controller, "heartbeat");
-      }, HEARTBEAT_MS);
+      };
+      controller.enqueue(encoder.encode(`: connected ${new Date().toISOString()}\n\n`));
+      void pump();
     },
     cancel() {
-      if (heartbeat !== null) clearInterval(heartbeat);
-      if (unsubscribe !== null) unsubscribe();
+      cancelled = true;
     }
   });
 
@@ -100,14 +73,18 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
       "x-accel-buffering": "no"
     }
   });
+}
 
-  function writeComment(controller: ReadableStreamDefaultController<Uint8Array>, label: string): void {
-    try {
-      controller.enqueue(encoder.encode(`: ${label} ${new Date().toISOString()}\n\n`));
-    } catch {
-      // controller closed; ignore
-    }
-  }
+function serialize(event: Awaited<ReturnType<JsonlRunEventStore["load"]>>[number]): string {
+  const adapted = adaptCoordinatorEvent({
+    eventId: event.eventId,
+    runId: event.runId,
+    sequence: event.sequence,
+    occurredAt: event.occurredAt,
+    type: event.type,
+    payload: event.payload as Record<string, unknown>
+  });
+  return `id: ${event.sequence}\ndata: ${JSON.stringify(adapted)}\n\n`;
 }
 
 function readAfter(url: string): number {
@@ -118,22 +95,19 @@ function readAfter(url: string): number {
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
 }
 
-function readBatchLimit(url: string): number {
-  const value = Number(new URL(url).searchParams.get("limit") ?? "250");
-  return Number.isFinite(value) ? Math.max(1, Math.min(Math.floor(value), 1_000)) : 250;
-}
-
-async function waitForCapacity(controller: ReadableStreamDefaultController<Uint8Array>): Promise<void> {
-  // Web streams expose desiredSize rather than Node's drain event. Yielding at
-  // a bounded cadence prevents an unbounded producer loop for a slow client.
-  for (let checks = 0; controller.desiredSize !== null && controller.desiredSize <= 0 && checks < 200; checks += 1) {
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
-}
-
 function readLastEventId(request: Request): number {
   const raw = request.headers.get("last-event-id");
   if (raw === null) return 0;
   const value = Number(raw);
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+async function waitForCapacity(controller: ReadableStreamDefaultController<Uint8Array>): Promise<void> {
+  for (let checks = 0; controller.desiredSize !== null && controller.desiredSize <= 0 && checks < 200; checks += 1) {
+    await delay(5);
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

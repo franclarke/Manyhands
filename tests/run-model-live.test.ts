@@ -9,10 +9,8 @@
  */
 import { describe, expect, it } from "vitest";
 import { buildLiveRunModel, hasRunEventGap, isTerminalRunStatus } from "@/components/run-model/use-live-run-model";
-import { adaptStreamHistory } from "@/lib/run-model/sse-adapter";
 import { selectRenderableNodeState } from "@/lib/run-model/selectors";
 import { buildDecisionChannelView } from "@/lib/run-model/decision-channel-view";
-import type { StreamEvent } from "@/lib/server/runs/events";
 import type { Run, RunEvent } from "@/lib/run-model/types";
 
 const SEED: Run = {
@@ -37,21 +35,20 @@ const AT = "2026-06-06T00:00:00.000Z";
 
 // A realistic legacy run stream: status churn, planning, gate, two leaves (one
 // passes, one fails), plus replay/heartbeat noise the adapter must drop.
-const LEGACY_STREAM: StreamEvent[] = [
-  { kind: "replay.start", at: AT },
-  { kind: "status.changed", at: AT, status: "generating" },
-  { kind: "planning.node.started", at: AT, nodeId: "root", title: "Root", goal: "coord", depth: 0 },
-  { kind: "planning.node.started", at: AT, nodeId: "n-a", parentId: "root", title: "A", goal: "do a", depth: 1 },
-  { kind: "planning.node.started", at: AT, nodeId: "n-b", parentId: "root", title: "B", goal: "do b", depth: 1 },
-  { kind: "replay.end", at: AT },
-  { kind: "gate.required", at: AT, taskIds: ["n-a", "n-b"] },
-  { kind: "heartbeat", at: AT },
-  { kind: "agent.run.started", at: AT, taskId: "n-a" },
-  { kind: "agent.run.started", at: AT, taskId: "n-b" },
-  { kind: "agent.run.completed", at: AT, taskId: "n-a", success: true },
-  { kind: "agent.run.completed", at: AT, taskId: "n-b", success: false }
+function event(seq: number, type: string, payload: Record<string, unknown>, actor: RunEvent["actor"] = "system"): RunEvent {
+  return { eventId: `event-${seq}`, seq, at: AT, runId: SEED.id, actor, type, payload };
+}
+
+const STREAM: RunEvent[] = [
+  event(1, "plan.node.proposed", { nodeId: "root", parentId: null, role: "root", title: "Root", goal: "coord", depth: 0 }),
+  event(2, "plan.node.proposed", { nodeId: "n-a", parentId: "root", role: "leaf", title: "A", goal: "do a", depth: 1 }),
+  event(3, "plan.node.proposed", { nodeId: "n-b", parentId: "root", role: "leaf", title: "B", goal: "do b", depth: 1 }),
+  event(4, "decision.raised", { decisionId: "approve_plan", kind: "approve_plan", blocking: true, context: { nodeIds: ["n-a", "n-b"] } }),
+  event(5, "node.execution.started", { nodeId: "n-a", agent: "agent", model: "m" }, "agent"),
+  event(6, "node.execution.started", { nodeId: "n-b", agent: "agent", model: "m" }, "agent"),
+  event(7, "node.verify.passed", { nodeId: "n-a", commit: "a", changedFiles: [], builtAgainst: [] }, "agent"),
+  event(8, "node.execution.failed", { nodeId: "n-b", cause: "failed" }, "agent")
 ];
-const STREAM = adaptStreamHistory(LEGACY_STREAM, SEED.id);
 
 describe("live bridge — buildLiveRunModel", () => {
   it("1. seeds run identity/config and renders the real run through the model", () => {
@@ -63,18 +60,14 @@ describe("live bridge — buildLiveRunModel", () => {
     expect(selectRenderableNodeState(model, "n-b").display).toBe("failed");
   });
 
-  it("2. drops replay/heartbeat noise (envelope only carries modelled events)", () => {
+  it("2. preserves the ordered canonical envelope", () => {
     const { events } = buildLiveRunModel(STREAM, SEED);
     expect(events.some((e) => e.type === "plan.node.proposed")).toBe(true);
-    expect(events.every((e) => e.type !== "heartbeat" && !e.type.startsWith("replay"))).toBe(true);
     expect(events.map((e) => e.seq)).toEqual([...events.map((e) => e.seq)].sort((a, b) => a - b));
   });
 
   it("3. the approve_plan gate surfaces in the decision channel", () => {
-    const upToGate = adaptStreamHistory(
-      LEGACY_STREAM.slice(0, LEGACY_STREAM.findIndex((e) => e.kind === "gate.required") + 1),
-      SEED.id
-    );
+    const upToGate = STREAM.slice(0, STREAM.findIndex((event) => event.type === "decision.raised") + 1);
     const { model } = buildLiveRunModel(upToGate, SEED);
     const channel = buildDecisionChannelView(model);
     expect(channel.items.some((i) => i.kind === "approve_plan")).toBe(true);
