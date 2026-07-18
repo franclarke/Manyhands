@@ -35,7 +35,8 @@ export function makeRunRecordV2(
     createdAt: AT,
     updatedAt: AT
   };
-  const { lifecycle: _lifecycle, ...recordOverrides } = overrides;
+  const recordOverrides = { ...overrides };
+  delete recordOverrides.lifecycle;
   return {
     ...base,
     ...recordOverrides,

@@ -4,13 +4,36 @@ import path from "node:path";
 
 const rendererUrl = pathToFileURL(path.resolve("scripts/manyhands-dev-renderer.mjs")).href;
 
-async function loadRenderer(): Promise<{
-  buildMonitorModel: (input: Record<string, unknown>) => any;
-  chooseRun: (runs: any[], explicitRunId?: string) => any;
-  renderDashboard: (input: any, options?: Record<string, unknown>) => string;
-  summarizeEvent: (event: any) => { text: string; tone: string } | null;
-}> {
-  return (await import(rendererUrl)) as any;
+interface RunSummary {
+  id: string;
+  status: string;
+  [key: string]: unknown;
+}
+
+interface MonitorModel {
+  health: string;
+  pendingDecisions: unknown[];
+  activeNodes: Array<{ id: string }>;
+}
+
+interface RendererEvent {
+  seq: number;
+  at: string;
+  runId: string;
+  actor: string;
+  type: string;
+  payload: Record<string, unknown>;
+}
+
+interface RendererModule {
+  buildMonitorModel(input: Record<string, unknown>): MonitorModel;
+  chooseRun(runs: RunSummary[], explicitRunId?: string): RunSummary;
+  renderDashboard(input: MonitorModel, options?: Record<string, unknown>): string;
+  summarizeEvent(event: RendererEvent): { text: string; tone: string } | null;
+}
+
+async function loadRenderer(): Promise<RendererModule> {
+  return (await import(rendererUrl)) as unknown as RendererModule;
 }
 
 const baseRun = {
@@ -21,7 +44,7 @@ const baseRun = {
   href: "/runs/run-1"
 };
 
-function event(seq: number, type: string, payload: Record<string, unknown>, actor = "system") {
+function event(seq: number, type: string, payload: Record<string, unknown>, actor = "system"): RendererEvent {
   return {
     seq,
     at: `2026-06-19T12:00:${String(seq).padStart(2, "0")}Z`,
@@ -112,7 +135,7 @@ describe("manyhands dev console renderer", () => {
     });
 
     expect(model.health).toBe("working");
-    expect(model.activeNodes.map((node: any) => node.id)).toEqual(["auth"]);
+    expect(model.activeNodes.map((node) => node.id)).toEqual(["auth"]);
     expect(summarizeEvent(stdoutEvent)).toBeNull();
     const rendered = renderDashboard(model, { width: 110, height: 32 });
     expect(rendered).toContain("[TEST] Auth Backend");

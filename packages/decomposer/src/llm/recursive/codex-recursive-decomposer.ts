@@ -115,12 +115,12 @@ export class CodexRecursiveDecomposer implements Decomposer {
     return this.inner.decompose(input, options);
   }
 
-  executeStep(ctx: any, aggressiveness: any, accum: any) {
-    return this.inner.executeStep(ctx, aggressiveness, accum);
+  executeStep(...args: Parameters<RecursiveDecomposer["executeStep"]>): ReturnType<RecursiveDecomposer["executeStep"]> {
+    return this.inner.executeStep(...args);
   }
 
-  reconstructGraph(feature: any, stepCache: any, questionAnswers?: any, repoSpec?: any) {
-    return this.inner.reconstructGraph(feature, stepCache, questionAnswers, repoSpec);
+  reconstructGraph(...args: Parameters<RecursiveDecomposer["reconstructGraph"]>): ReturnType<RecursiveDecomposer["reconstructGraph"]> {
+    return this.inner.reconstructGraph(...args);
   }
 }
 
@@ -162,7 +162,7 @@ class CodexStepClient implements AnthropicLike {
     this.spawnFn = options.spawn ?? spawn;
     this.onCliOutput = options.onCliOutput;
     this.messages = {
-      create: async (args: any) => {
+      create: async (args: Parameters<AnthropicLike["messages"]["create"]>[0]) => {
         const systemPrompt = [
           "CRITICAL: Do NOT call any tools. Do not search for files, do not read files, do not run grep, and do not execute any commands. All required context is fully provided in the prompt text.",
           "Analyze the input text locally and return strictly the JSON matching the schema.",
@@ -173,7 +173,7 @@ class CodexStepClient implements AnthropicLike {
           systemPrompt,
           "",
           "## User",
-          args.messages.map((message: any) => message.content).join("\n\n")
+          args.messages.map((message) => message.content).join("\n\n")
         ].join("\n");
         const text = await this.runCodex(prompt, args.nodeId);
         return { content: [{ type: "text", text }] };

@@ -18,7 +18,6 @@ import {
   type AgentResultStatus,
   type WorktreeRecord,
   type AgentExecutionResult,
-  type ExecutionConfig,
   type GranularityVector,
 } from "@manyhands/execution-core";
 
@@ -167,7 +166,7 @@ describe("AgentExecutionResultSchema", () => {
   });
 
   it("defaults changedFiles to empty array", () => {
-    const { changedFiles: _, ...withoutChanged } = minimal;
+    const withoutChanged = Object.fromEntries(Object.entries(minimal).filter(([key]) => key !== "changedFiles"));
     const parsed = AgentExecutionResultSchema.parse(withoutChanged);
     expect(parsed.changedFiles).toEqual([]);
   });

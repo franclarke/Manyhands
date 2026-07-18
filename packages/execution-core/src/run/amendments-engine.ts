@@ -161,7 +161,7 @@ export class AmendmentsEngine {
     },
     invalidatedTaskIds: Set<string>
   ): Promise<InvalidationResult> {
-    const { repoRoot, runId, graph, leafResults, integrationResults } = params;
+    const { leafResults, integrationResults } = params;
 
     await this.clean(params, invalidatedTaskIds);
 

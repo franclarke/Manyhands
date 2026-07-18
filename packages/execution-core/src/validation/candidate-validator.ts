@@ -3,7 +3,7 @@ import { buildEvidenceMatrix, type EvidenceMatrix, type ValidationEvidenceObserv
 import type { ValidationRecipe, ValidationRecipeStep } from "./recipe-compiler";
 import { compareBaselineResult } from "./baseline";
 import type { GitRunner } from "../git/runner";
-import { WorktreeManager } from "../worktree/manager";
+import type { WorktreeManager } from "../worktree/manager";
 
 export interface CandidateSandbox {
   worktreePath: string;

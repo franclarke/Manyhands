@@ -20,7 +20,12 @@ describe("InterfaceContractSchema", () => {
   });
 
   it("allows definedAtNodeId to be omitted", () => {
-    const { definedAtNodeId: _omit, ...withoutNode } = VALID_INTERFACE;
+    const withoutNode = {
+      id: VALID_INTERFACE.id,
+      kind: VALID_INTERFACE.kind,
+      signature: VALID_INTERFACE.signature,
+      description: VALID_INTERFACE.description
+    };
     expect(InterfaceContractSchema.safeParse(withoutNode).success).toBe(true);
   });
 

@@ -5,7 +5,6 @@ import type {
   InterfaceContract
 } from "@manyhands/contracts";
 import {
-  getLeafNodes,
   validateTaskGraph,
   type TaskDependency,
   type TaskGraph,
@@ -165,7 +164,7 @@ interface Accumulator {
   callCount: number;
   reservedNodeIds: Set<string>;
   questionAnswers?: Record<string, string> | undefined;
-  stepCache?: Record<string, any> | undefined;
+  stepCache?: Record<string, DecomposeStepOutput> | undefined;
 }
 
 /**
@@ -255,8 +254,8 @@ export class RecursiveDecomposer implements Decomposer {
       granularity: aggressivenessToGranularity(aggressiveness),
       callCount: 0,
       reservedNodeIds: new Set([ROOT_ID]),
-      questionAnswers: options.questionAnswers,
-      stepCache: options.stepCache ? { ...options.stepCache } : {}
+      questionAnswers: parsedOptions.questionAnswers,
+      stepCache: parsedOptions.stepCache ? { ...parsedOptions.stepCache } : {}
     };
 
     await this.expand(
@@ -340,7 +339,7 @@ export class RecursiveDecomposer implements Decomposer {
     },
     aggressiveness: Aggressiveness,
     accum: {
-      stepCache?: Record<string, any>;
+      stepCache?: Record<string, DecomposeStepOutput>;
       questionAnswers?: Record<string, string>;
       callCount: number;
     }
@@ -353,7 +352,7 @@ export class RecursiveDecomposer implements Decomposer {
    */
   public reconstructGraph(
     feature: FeatureRequest,
-    stepCache: Record<string, any>,
+    stepCache: Record<string, DecomposeStepOutput>,
     questionAnswers?: Record<string, string>,
     repoSpec?: { repo: string; baseBranch?: string; baseCommit?: string; createdAt?: string }
   ): { graph: TaskGraph; contracts: AgentTaskContract[] } {
@@ -390,11 +389,11 @@ export class RecursiveDecomposer implements Decomposer {
       }
 
       // decision === "decompose"
-      const newInterfaces = step.sharedInterfaces.map((iface: any) =>
+      const newInterfaces = step.sharedInterfaces.map((iface) =>
         toInterfaceContract(iface, ctx.nodeId)
       );
       const pool = [...ctx.inheritedInterfaces, ...newInterfaces];
-      const childIds = step.children.map((child: any) => child.id);
+      const childIds = step.children.map((child) => child.id);
       
       // Register self node
       const selfNode: TaskNode = {
@@ -436,12 +435,11 @@ export class RecursiveDecomposer implements Decomposer {
         });
       }
 
-      const compositeScope = step.children.flatMap((c: any) => c.allowedPaths || []);
       selfNode.contract = buildCompositeContract({
         taskId: ctx.nodeId,
         title: ctx.title,
         goal: ctx.goal,
-        coveredPaths: compositeScope.length > 0 ? compositeScope : ["src/**", "tests/**"],
+        coveredPaths: ["src/**", "tests/**"],
         sharedInterfaces: newInterfaces,
         parentValidationCommands: step.parentValidationCommands.map(toExecutionValidationCommand)
       });
@@ -822,7 +820,7 @@ export class RecursiveDecomposer implements Decomposer {
           system: stepSystem,
           messages: [{ role: "user", content: stepUser }],
           nodeId: ctx.nodeId
-        } as any);
+        });
       } catch (error) {
         const failure = this.toAttemptError(error, ctx, attempt, Date.now() - attemptStartedAt, "request");
         if (await this.shouldRetry(ctx, failure, attempt, user)) {

@@ -19,6 +19,14 @@ function event<T extends string, S extends z.ZodTypeAny>(type: T, payload: S) {
 
 export const RunEventSchema = z.discriminatedUnion("type", [
   event("run.created", z.object({ goal: NonEmptyStringSchema }).strict()),
+  event("legacy.run_imported", z.object({
+    sourceHash: NonEmptyStringSchema,
+    importerVersion: z.literal(1),
+    approvedBy: NonEmptyStringSchema,
+    sourceStatus: NonEmptyStringSchema,
+    disposition: z.literal("requires_revalidation"),
+    warnings: z.array(NonEmptyStringSchema)
+  }).strict()),
   event("repository.inspected", z.object({ snapshotId: NonEmptyStringSchema, disposition: z.enum(["complete", "partial", "unavailable"]), snapshot: z.record(z.unknown()) }).strict()),
   event("planning.completed", z.object({ breakdownId: EntityIdSchema, breakdown: z.record(z.unknown()) }).strict()),
   event("graph.compiled", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive(), graph: z.record(z.unknown()), contracts: z.array(z.record(z.unknown())), review: z.record(z.unknown()), trace: z.record(z.unknown()) }).strict()),
@@ -38,6 +46,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     outputDigest: NonEmptyStringSchema,
     changedFiles: z.array(NonEmptyStringSchema)
   }).strict()),
+  event("attempt.repair_attempted", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, pass: z.number().int().positive(), evidenceRefs: z.array(NonEmptyStringSchema) }).strict()),
   event("attempt.failed", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, reason: NonEmptyStringSchema }).strict()),
   event("attempt.discarded", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, reason: NonEmptyStringSchema }).strict()),
   event("attempt.stale", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, attemptedFingerprint: NonEmptyStringSchema, currentFingerprint: NonEmptyStringSchema, reason: NonEmptyStringSchema }).strict()),

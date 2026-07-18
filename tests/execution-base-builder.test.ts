@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   ExecutionBaseBuilder,
-  ExecutionBaseMaterializationError,
   WorktreeManager
 } from "@manyhands/execution-core";
 import { FakeGitRunner } from "./helpers/fake-git-runner";
@@ -64,7 +63,7 @@ describe("ExecutionBaseBuilder", () => {
         artifacts: [artifact("artifact-a", ARTIFACT_A_COMMIT, "digest-a")],
         inputFingerprint: FINGERPRINT
       })
-    ).rejects.toMatchObject<Partial<ExecutionBaseMaterializationError>>({
+    ).rejects.toMatchObject({
       name: "ExecutionBaseMaterializationError",
       evidence: {
         code: "artifact_conflict",

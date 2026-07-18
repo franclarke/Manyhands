@@ -3,8 +3,7 @@ import { AgentTaskContractSchema, type AgentTaskContract, type InterfaceContract
 import {
   buildRepositoryAwareRiskMatrix,
   buildStaticConflictSignals,
-  findRiskPrediction,
-  type TaskPairRiskMatrix
+  findRiskPrediction
 } from "@manyhands/conflict-risk";
 import type { RepositoryIndex } from "@manyhands/repository-index";
 import { buildSchedulingSafetyContext, scheduleTasks } from "@manyhands/scheduler";

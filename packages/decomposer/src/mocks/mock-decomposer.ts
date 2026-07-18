@@ -1,28 +1,5 @@
-import {
-  AgentTaskContractSchema,
-  type AcceptanceCriterion,
-  type AgentTaskContract,
-  type ValidationCommand
-} from "@manyhands/contracts";
-import { NonEmptyStringSchema, uniqueValues } from "@manyhands/shared";
-import {
-  getLeafNodes,
-  TaskGraphSchema,
-  validateTaskGraph,
-  type TaskDependency,
-  type TaskGraph,
-  type TaskNode,
-  type TaskGranularityLevel
-} from "@manyhands/task-graph";
-import { z } from "zod";
-import { executionScopeFromAllowed } from "../scope";
-import {
-  FeatureRequestSchema,
-  DecompositionOptionsSchema,
-  type FeatureRequest,
-  type DecompositionMode,
-  type DecompositionOptions,
-  type DecompositionResult,
-  type Decomposer
-} from "../index";
+// Compatibility entrypoint retained so the historical package export resolves.
+// MockDecomposer and MetadataDrivenMockDecomposer live in the package root; this
+// module intentionally stays empty to avoid a circular root -> mocks -> root edge.
+export {};
 

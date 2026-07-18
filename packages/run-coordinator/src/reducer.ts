@@ -12,6 +12,7 @@ export interface AttemptProjection {
   status: "running" | "candidate" | "validated" | "adopted" | "failed" | "discarded" | "stale";
   candidateCommit?: string;
   outputDigest?: string;
+  repairPasses: number;
   failureReason?: string;
 }
 
@@ -94,6 +95,11 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
   switch (event.type) {
     case "run.created":
       throw new Error("run.created can only be the first event.");
+    case "legacy.run_imported":
+      if (next.sequence !== 1 || next.lifecycle !== "planning") throw new Error("A legacy import must immediately follow run.created.");
+      next.outcomes.execution = "interrupted";
+      next.lifecycle = "interrupted";
+      break;
     case "repository.inspected":
     case "planning.completed":
     case "graph.compiled":
@@ -112,9 +118,15 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
         nodeId: event.payload.nodeId,
         inputFingerprint: event.payload.inputFingerprint,
         kind: "execution",
-        status: "running"
+        status: "running",
+        repairPasses: 0
       };
       break;
+    case "attempt.repair_attempted": {
+      const attempt = requireAttempt(next, event.payload.attemptId, event.payload.nodeId);
+      attempt.repairPasses = Math.max(attempt.repairPasses, event.payload.pass);
+      break;
+    }
     case "attempt.candidate_created": {
       const attempt = requireAttempt(next, event.payload.attemptId, event.payload.nodeId);
       if (attempt.status !== "running") throw new Error(`Attempt ${attempt.attemptId} cannot create a candidate while ${attempt.status}.`);
@@ -164,7 +176,7 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
     case "integration.started":
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot integrate while ${next.lifecycle}.`);
       if (next.attempts[event.payload.attemptId] !== undefined) throw new Error(`Attempt ${event.payload.attemptId} already exists.`);
-      next.attempts[event.payload.attemptId] = { attemptId: event.payload.attemptId, nodeId: event.payload.nodeId, inputFingerprint: event.payload.inputFingerprint, kind: "integration", status: "running" };
+      next.attempts[event.payload.attemptId] = { attemptId: event.payload.attemptId, nodeId: event.payload.nodeId, inputFingerprint: event.payload.inputFingerprint, kind: "integration", status: "running", repairPasses: 0 };
       next.integrations[event.payload.nodeId] = { attemptId: event.payload.attemptId, nodeId: event.payload.nodeId, requiredArtifactIds: [...event.payload.requiredArtifactIds], status: "running", repairPasses: 0 };
       break;
     case "integration.repair_attempted": {

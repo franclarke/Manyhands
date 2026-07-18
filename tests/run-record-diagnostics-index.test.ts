@@ -1,11 +1,12 @@
 import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import type { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const ioSpy = vi.hoisted(() => ({ reads: [] as string[] }));
 vi.mock("node:fs/promises", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs/promises")>();
+  const actual = await importOriginal<Record<string, unknown> & { readFile: typeof readFile }>();
   return {
     ...actual,
     readFile: (...args: Parameters<typeof actual.readFile>) => {

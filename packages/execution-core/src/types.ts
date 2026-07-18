@@ -1,5 +1,6 @@
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema, ReasoningEffortSchema } from "@manyhands/shared";
 import { z } from "zod";
+import type { AgentStatusUpdate } from "./executor/status-channel";
 
 // ── Agent result status ─────────────────────────────────────────
 
@@ -327,7 +328,7 @@ export const AgentExecutorOptionsSchema = z.object({
    * MH_STATUS stdout protocol while it works. Not serialized.
    */
   onAgentStatus: z
-    .custom<(status: import("./executor/status-channel").AgentStatusUpdate) => void>(
+    .custom<(status: AgentStatusUpdate) => void>(
       (value) => typeof value === "function"
     )
     .optional()

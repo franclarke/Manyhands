@@ -112,7 +112,6 @@ export type ExecutionValidationCommand = z.infer<typeof ExecutionValidationComma
 // already-persisted RunRecords keep parsing.
 const SAFE_COMMAND_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const SHELL_ENTRYPOINTS = new Set(["bash", "sh", "zsh", "cmd", "cmd.exe", "powershell", "powershell.exe", "pwsh", "pwsh.exe"]);
-const NUL_PATTERN = /\u0000/;
 const SHELL_OPERATOR_TOKEN_PATTERN = /^(?:&&|\|\||[|&;<>]|\d?>&\d?|2>&1)$/;
 const SHELL_FRAGMENT_PATTERN = /(?:^|\s)(?:&&|\|\||[|<>])(?:\s|$)|^\s*;/;
 const SHELLED_UNSAFE_ARG_PATTERN = /[&|<>^`$;"'%!\r\n]/;
@@ -155,7 +154,7 @@ export function validationCommandSafetyIssues(
     issues.push(`command "${command}" is a shell entrypoint; use a structured command and args instead`);
   }
   for (const [index, arg] of args.entries()) {
-    if (NUL_PATTERN.test(arg)) {
+    if (arg.includes("\0")) {
       issues.push(`arg ${index} contains a NUL byte`);
       continue;
     }
@@ -486,7 +485,7 @@ function validatePathList(
 function unsafeRepoRelativePathReason(value: string): string | undefined {
   const path = value.trim();
   if (path.length === 0) return "path is empty";
-  if (/[\u0000-\u001F]/u.test(path)) return "path contains control characters";
+  if ([...path].some((character) => character.codePointAt(0)! <= 0x1f)) return "path contains control characters";
   if (path.startsWith("/") || path.startsWith("\\")) return "path is absolute";
   if (/^[A-Za-z]:/.test(path)) return "path uses a Windows drive prefix";
   if (path.startsWith("~")) return "path targets a home directory";

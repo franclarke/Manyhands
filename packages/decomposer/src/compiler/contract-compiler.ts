@@ -5,7 +5,6 @@ import {
   type ContractReference,
   type ScopeContract,
   type SeamContract,
-  type TaskAcceptanceCriterion,
   type TaskContractBundle,
   type ValidationContract
 } from "@manyhands/contracts";

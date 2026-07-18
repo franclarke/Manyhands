@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 
-import { safeGitArgs } from "@manyhands/execution-core";
+import {
+  TransactionalDeliveryPublisher,
+  deliveryRequestFingerprint,
+  safeGitArgs,
+  type TransactionalDeliveryApproval,
+  type TransactionalDeliveryReceipt
+} from "@manyhands/execution-core";
 import {
   RunCoordinator,
   foldRun,
@@ -13,6 +19,7 @@ import {
 import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 
 import { getRunRepository } from "../store";
+import { DEFAULT_STALE_MS } from "../interrupted";
 import { runWithProcessSupervision, supervisedExecFile } from "../process-supervision";
 import { withRepositoryLease } from "../repo-lock";
 import { abortRun } from "../run-abort-registry";
@@ -50,19 +57,37 @@ export async function resolveDecisionV2(
   if (resolution.optionId !== undefined && !decision.options.some((option) => option.id === resolution.optionId)) {
     throw new Error(`Decision ${decisionId} has no option ${resolution.optionId}.`);
   }
-  const result = await executeCommand(runId, "control", ["waiting_for_input", "running"], {
+  const result = await executeDecisionCommand(runId, {
     type: "resolve_decision",
     decisionId,
     ...resolution
   });
   if (resolution.optionId === "stop") {
-    return executeCommand(runId, "control", [result.state.lifecycle], {
+    return executeDecisionCommand(runId, {
       type: "fail",
       reason: `The operator stopped the branch affected by decision ${decisionId}.`,
       area: "execution"
     });
   }
   return result;
+}
+
+async function executeDecisionCommand(runId: string, command: RunCommand): Promise<{ run: RunRecord; state: RunProjection }> {
+  const current = await getRunRepository().get(runId);
+  const activeExecution = current.activeOperation?.kind === "execution" ? current.activeOperation : undefined;
+  if (activeExecution === undefined) {
+    return executeCommand(runId, "control", ["waiting_for_input", "running"], command);
+  }
+  const store = eventStore();
+  const owner = authority(activeExecution);
+  await store.assertAuthority(runId, owner);
+  const state = await new RunCoordinator({
+    events: store.bind(owner),
+    delivery: unavailableDelivery,
+    clock: () => new Date().toISOString(),
+    eventId: eventIdFor(runId)
+  }).execute(runId, command);
+  return { run: await cacheProjection(runId, activeExecution, state, store), state };
 }
 
 export async function pauseRunV2(runId: string, reason: string): Promise<{ run: RunRecord; state: RunProjection; allProcessesDead: boolean }> {
@@ -132,16 +157,30 @@ export async function cancelRunV2(
 }
 
 export async function deliverRunV2(runId: string, approval: DeliveryApproval): Promise<{ run: RunRecord; state: RunProjection }> {
+  const store = eventStore();
+  const initialEvents = await store.load(runId);
+  const initialState = foldRun(initialEvents);
+  if (initialState.lifecycle === "completed") {
+    if (!sameApproval(initialState.deliveryApproval, approval) || initialState.deliveryReceipt === undefined) {
+      throw new Error("The completed delivery belongs to a different approval.");
+    }
+    const run = await getRunRepository().update(runId, (current) => projectV2RunRecordCache(current, initialState, initialEvents));
+    return { run, state: initialState };
+  }
+  if (initialState.lifecycle !== "result_ready" && initialState.lifecycle !== "delivering") {
+    throw new Error(`Delivery cannot start while the canonical run is ${initialState.lifecycle}.`);
+  }
+  await getRunRepository().update(runId, (current) => projectV2RunRecordCache(current, initialState, initialEvents));
   const { run, lease } = await claimRunOperation(runId, "delivery", {
-    expectedLifecycles: ["result_ready"],
-    allowTakeover: true
+    expectedLifecycles: ["result_ready", "delivering"],
+    allowTakeover: true,
+    takeoverStaleAfterMs: DEFAULT_STALE_MS
   });
   try {
-    const store = eventStore();
     await store.advanceFence(runId, authority(lease));
     const coordinator = new RunCoordinator({
       events: store.bind(authority(lease)),
-      delivery: { publish: ({ approval: request }) => publishDelivery(run, request) },
+      delivery: { publish: ({ approval: request }) => publishDelivery(run, request, store) },
       clock: () => new Date().toISOString(),
       eventId: eventIdFor(runId)
     });
@@ -212,36 +251,56 @@ async function cacheProjection(
   return updateRunForOperation(runId, lease, (current) => projectV2RunRecordCache(current, state, events));
 }
 
-async function publishDelivery(run: RunRecord, approval: DeliveryApproval): Promise<DeliveryReceipt> {
+async function publishDelivery(
+  run: RunRecord,
+  approval: DeliveryApproval,
+  store: JsonlRunEventStore
+): Promise<DeliveryReceipt> {
   if (run.targetContext === undefined) throw new Error("Delivery requires the captured run target.");
   const repoRoot = await resolveRunTargetPath(run);
   if (repoRoot === undefined) throw new Error("Delivery requires a local Git target.");
   return withRepositoryLease({ repoRoot, runId: run.runId }, () => runWithProcessSupervision(
     { runId: run.runId, label: "delivery-v2" },
     async () => {
-      const branch = await git(repoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]);
-      const head = await git(repoRoot, ["rev-parse", "HEAD"]);
-      if (approval.targetFingerprint !== run.targetContext!.fingerprint) throw new Error("Delivery target fingerprint changed.");
-      if (branch !== approval.targetBranch || head !== approval.targetHead) {
-        throw new Error(`Delivery target changed; expected ${approval.targetBranch}@${approval.targetHead}, found ${branch}@${head}.`);
-      }
-      if ((await git(repoRoot, ["status", "--porcelain"])).trim().length > 0) throw new Error("Delivery requires a clean target working tree.");
-      const alreadyDelivered = await isAncestor(repoRoot, approval.finalSha, "HEAD");
-      if (!alreadyDelivered) await git(repoRoot, ["merge", "--ff-only", approval.finalSha]);
-      const deliveredHead = await git(repoRoot, ["rev-parse", "HEAD"]);
-      if (deliveredHead !== approval.finalSha) throw new Error("Delivery did not publish the approved final SHA.");
-      return {
-        receiptId: `delivery:${approval.idempotencyKey}`,
-        requestFingerprint: approval.idempotencyKey,
-        manifestId: approval.manifestId,
-        finalSha: approval.finalSha,
-        targetBranch: branch,
-        targetHeadBefore: head,
-        targetHeadAfter: deliveredHead,
-        disposition: "delivered",
-        destination: `${repoRoot}#${branch}`,
-        confirmed: true
-      };
+      const publisher = new TransactionalDeliveryPublisher({
+        journal: {
+          claim: async (_idempotencyKey, requestFingerprint) => {
+            const state = foldRun(await store.load(run.runId));
+            if (!sameApproval(state.deliveryApproval, approval)) {
+              throw new Error("The canonical delivery journal belongs to a different approval.");
+            }
+            const receipt = state.deliveryReceipt === undefined
+              ? undefined
+              : transactionalReceipt(state.deliveryReceipt);
+            return { requestFingerprint, ...(receipt !== undefined ? { receipt } : {}) };
+          },
+          complete: async () => undefined
+        },
+        repository: {
+          inspect: async () => ({
+            branch: await git(repoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]),
+            head: await git(repoRoot, ["rev-parse", "HEAD"]),
+            fingerprint: run.targetContext!.fingerprint,
+            clean: (await git(repoRoot, ["status", "--porcelain"])).trim().length === 0
+          }),
+          recover: async (request) => {
+            const branch = await git(repoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]);
+            const head = await git(repoRoot, ["rev-parse", "HEAD"]);
+            const clean = (await git(repoRoot, ["status", "--porcelain"])).trim().length === 0;
+            if (branch !== request.targetBranch || head !== request.finalSha || !clean || request.targetFingerprint !== run.targetContext!.fingerprint) {
+              return undefined;
+            }
+            return deliveryReceipt(request, repoRoot, head);
+          },
+          publish: async (request) => {
+            await git(repoRoot, ["merge", "--ff-only", request.finalSha]);
+            const deliveredHead = await git(repoRoot, ["rev-parse", "HEAD"]);
+            if (deliveredHead !== request.finalSha) throw new Error("Delivery did not publish the approved final SHA.");
+            return deliveryReceipt(request, repoRoot, deliveredHead);
+          }
+        }
+      });
+      return publisher.publish(approval);
     }
   ));
 }
@@ -250,13 +309,58 @@ async function git(repoRoot: string, args: string[]): Promise<string> {
   return (await supervisedExecFile("git", safeGitArgs(repoRoot, args), { cwd: repoRoot, windowsHide: true })).stdout.trim();
 }
 
-async function isAncestor(repoRoot: string, ancestor: string, descendant: string): Promise<boolean> {
-  try {
-    await git(repoRoot, ["merge-base", "--is-ancestor", ancestor, descendant]);
-    return true;
-  } catch {
-    return false;
+function deliveryReceipt(
+  approval: TransactionalDeliveryApproval,
+  repoRoot: string,
+  targetHeadAfter: string
+): TransactionalDeliveryReceipt {
+  return {
+    receiptId: `delivery:${approval.idempotencyKey}`,
+    requestFingerprint: deliveryRequestFingerprint(approval),
+    manifestId: approval.manifestId,
+    finalSha: approval.finalSha,
+    targetBranch: approval.targetBranch,
+    targetHeadBefore: approval.targetHead,
+    targetHeadAfter,
+    disposition: "delivered",
+    confirmed: true
+  };
+}
+
+function transactionalReceipt(receipt: DeliveryReceipt): TransactionalDeliveryReceipt {
+  if (
+    receipt.requestFingerprint === undefined ||
+    receipt.finalSha === undefined ||
+    receipt.targetBranch === undefined ||
+    receipt.targetHeadBefore === undefined ||
+    receipt.targetHeadAfter === undefined ||
+    receipt.disposition !== "delivered" ||
+    receipt.confirmed !== true
+  ) {
+    throw new Error("The persisted delivery receipt is incomplete.");
   }
+  return {
+    receiptId: receipt.receiptId,
+    requestFingerprint: receipt.requestFingerprint,
+    manifestId: receipt.manifestId,
+    finalSha: receipt.finalSha,
+    targetBranch: receipt.targetBranch,
+    targetHeadBefore: receipt.targetHeadBefore,
+    targetHeadAfter: receipt.targetHeadAfter,
+    disposition: "delivered",
+    confirmed: true
+  };
+}
+
+function sameApproval(left: DeliveryApproval | undefined, right: DeliveryApproval): boolean {
+  return left !== undefined &&
+    left.manifestId === right.manifestId &&
+    left.finalSha === right.finalSha &&
+    left.targetBranch === right.targetBranch &&
+    left.targetHead === right.targetHead &&
+    left.targetFingerprint === right.targetFingerprint &&
+    left.actor === right.actor &&
+    left.idempotencyKey === right.idempotencyKey;
 }
 
 function eventStore(): JsonlRunEventStore {

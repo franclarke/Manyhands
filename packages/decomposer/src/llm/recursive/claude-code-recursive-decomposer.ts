@@ -123,12 +123,12 @@ export class ClaudeCodeRecursiveDecomposer implements Decomposer {
     return this.inner.decompose(input, options);
   }
 
-  executeStep(ctx: any, aggressiveness: any, accum: any) {
-    return this.inner.executeStep(ctx, aggressiveness, accum);
+  executeStep(...args: Parameters<RecursiveDecomposer["executeStep"]>): ReturnType<RecursiveDecomposer["executeStep"]> {
+    return this.inner.executeStep(...args);
   }
 
-  reconstructGraph(feature: any, stepCache: any, questionAnswers?: any, repoSpec?: any) {
-    return this.inner.reconstructGraph(feature, stepCache, questionAnswers, repoSpec);
+  reconstructGraph(...args: Parameters<RecursiveDecomposer["reconstructGraph"]>): ReturnType<RecursiveDecomposer["reconstructGraph"]> {
+    return this.inner.reconstructGraph(...args);
   }
 }
 
@@ -167,7 +167,7 @@ class ClaudeCodeStepClient implements AnthropicLike {
     this.spawnFn = options.spawn ?? spawn;
     this.onCliOutput = options.onCliOutput;
     this.messages = {
-      create: async (args: any) => {
+      create: async (args: Parameters<AnthropicLike["messages"]["create"]>[0]) => {
         // The instructions MUST travel through the CLI's real system-prompt
         // channel. A fake "## System" block embedded in the user turn reads as
         // prompt injection to Claude Code 2.1.x and it refuses to answer
@@ -178,7 +178,7 @@ class ClaudeCodeStepClient implements AnthropicLike {
           "Analyze the input text locally and respond with strictly the JSON matching the schema — no prose, no plan file, no agents.",
           args.system
         ].join("\n\n");
-        const prompt = args.messages.map((message: any) => message.content).join("\n\n");
+        const prompt = args.messages.map((message) => message.content).join("\n\n");
         const text = await this.runClaude(prompt, systemPrompt, args.nodeId);
         return { content: [{ type: "text", text }] };
       }

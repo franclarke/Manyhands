@@ -172,7 +172,7 @@ export class JsonlRunEventStore implements FencedRunEventStore {
 async function acquireDurableLock(lockPath: string): Promise<() => Promise<void>> {
   await mkdir(path.dirname(lockPath), { recursive: true });
   const startedAt = Date.now();
-  while (true) {
+  for (;;) {
     try {
       await mkdir(lockPath, { recursive: false });
       await writeFile(path.join(lockPath, "owner.json"), JSON.stringify({ pid: process.pid, acquiredAt: new Date().toISOString() }), "utf8");

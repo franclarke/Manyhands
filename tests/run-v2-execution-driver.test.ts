@@ -140,6 +140,56 @@ describe("V2ExecutionDriver", () => {
     expect(state.lifecycle).toBe("waiting_for_input");
   });
 
+  it("persists a local decision before slower siblings in the same wave finish", async () => {
+    const compiled = compileGraphRevision(
+      { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const harness = coordinatorHarness(compiled.graph.graphId);
+    let releaseSiblings!: () => void;
+    const siblingsReleased = new Promise<void>((resolve) => { releaseSiblings = resolve; });
+    let decisionObserved!: () => void;
+    const observed = new Promise<void>((resolve) => { decisionObserved = resolve; });
+    harness.onAppend((events) => {
+      if (events.some((event) => event.type === "decision.raised")) decisionObserved();
+    });
+    const driver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      execute: async (input) => {
+        if (input.node.id === "node-api") return { kind: "failure", reason: "Choose the public API shape." };
+        await siblingsReleased;
+        return success(input);
+      }
+    });
+
+    const running = driver.run({
+      runId: "run-v2",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 3 },
+      materializableNodeIds: Object.keys(compiled.graph.nodes),
+      availableExecutorNodeIds: Object.keys(compiled.graph.nodes),
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+
+    const decisionWasVisible = await Promise.race([
+      observed.then(() => true),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 50))
+    ]);
+    releaseSiblings();
+    const state = await running;
+
+    expect(decisionWasVisible).toBe(true);
+    expect(Object.values(state.adoptedArtifacts).map((artifact) => artifact.nodeId).sort()).toEqual([
+      "node-domain",
+      "node-ui"
+    ]);
+  });
+
   it("executes an atomic root as a task attempt and still produces the final candidate", async () => {
     const breakdown = bookingBreakdown();
     if (breakdown.root.kind !== "composite") throw new Error("Fixture must start composite.");

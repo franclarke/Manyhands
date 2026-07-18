@@ -1,3 +1,5 @@
+import type { DecomposeStepOutput } from "./recursive/step-schema";
+
 export type GraphGenerationErrorKind =
   | "provider_timeout"
   | "provider_request"
@@ -52,7 +54,7 @@ export class DecomposerLlmError extends Error {
    * accumulator) right before throwing, so a retry can pick up the already-
    * generated siblings instead of restarting the whole tree from root.
    */
-  public stepCache?: Record<string, any>;
+  public stepCache?: Record<string, DecomposeStepOutput>;
 
   constructor(
     message: string,
@@ -135,14 +137,14 @@ export class DecomposerQuestionError extends Error {
   public readonly nodeId: string;
   public readonly question: string;
   public readonly options: string[];
-  public readonly stepCache: Record<string, any>;
+  public readonly stepCache: Record<string, DecomposeStepOutput>;
   public readonly reasoning?: string | undefined;
 
   constructor(
     nodeId: string,
     question: string,
     options: string[],
-    stepCache: Record<string, any>,
+    stepCache: Record<string, DecomposeStepOutput>,
     reasoning?: string | undefined
   ) {
     super(`Clarification needed for node ${nodeId}: ${question}`);

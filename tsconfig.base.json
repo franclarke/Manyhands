@@ -26,6 +26,7 @@
       "@manyhands/conflict-risk": ["packages/conflict-risk/src/index.ts"],
       "@manyhands/scheduler": ["packages/scheduler/src/index.ts"],
       "@manyhands/repository-index": ["packages/repository-index/src/index.ts"],
+      "@manyhands/run-coordinator": ["packages/run-coordinator/src/index.ts"],
       "@manyhands/run-store": ["packages/run-store/src/index.ts"],
       "@manyhands/trace-store": ["packages/trace-store/src/index.ts"],
       "@manyhands/core": ["packages/core/src/index.ts"],

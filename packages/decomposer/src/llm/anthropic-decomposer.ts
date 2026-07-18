@@ -38,6 +38,7 @@ export interface AnthropicLike {
       max_tokens: number;
       system: string;
       messages: Array<{ role: "user"; content: string }>;
+      nodeId?: string;
     }): Promise<{
       content: Array<{ type: string; text?: string }>;
       usage?: { input_tokens: number; output_tokens: number };

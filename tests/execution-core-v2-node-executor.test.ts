@@ -60,10 +60,75 @@ describe("V2NodeExecutor", () => {
     expect(prompts[0]).toContain("Do not commit");
   });
 
+  it("repairs one failed code candidate in the same worktree and revalidates the repaired commit", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const node = compiled.graph.nodes["node-api"]!;
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === node.id)!;
+    const firstCommit = "2".repeat(40);
+    const repairedCommit = "3".repeat(40);
+    const git = new FakeGitRunner({
+      commitShas: [firstCommit, repairedCommit],
+      diffCached: "diff",
+      diffCachedNameOnly: [contract.scope.allowedPaths[0]!]
+    });
+    const agent = successfulAgent();
+    const prompts: string[] = [];
+    const validated: string[] = [];
+    const prepared: string[] = [];
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(agent),
+      validator: {
+        validate: async (input) => {
+          validated.push(input.candidateCommit);
+          const evidence = matrix(input.contract, input.candidateCommit);
+          return input.candidateCommit === firstCommit
+            ? {
+                ...evidence,
+                outcome: "failed" as const,
+                criteria: evidence.criteria.map((criterion) => ({
+                  ...criterion,
+                  status: "failed" as const,
+                  justification: "The API response violates the declared seam."
+                }))
+              }
+            : evidence;
+        }
+      },
+      finalCandidate: {
+        prepare: async (input) => {
+          prepared.push(input.candidateCommit);
+          return { manifestId: "manifest-repaired-root" };
+        }
+      },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async (_path, content) => { prompts.push(content); },
+      now: () => at
+    });
+
+    const input = request(compiled, node.id);
+    input.graph = { ...input.graph, rootId: node.id };
+    const outcome = await executor.execute(input);
+
+    expect(outcome).toMatchObject({
+      kind: "success",
+      candidateCommit: repairedCommit,
+      evidenceMatrix: { outcome: "verified" },
+      repairObservations: [{ pass: 1 }],
+      finalManifestId: "manifest-repaired-root"
+    });
+    expect(validated).toEqual([firstCommit, repairedCommit]);
+    expect(agent.calls).toHaveLength(2);
+    expect(prepared).toEqual([repairedCommit]);
+    expect(prompts[1]).toContain("The API response violates the declared seam.");
+    expect(git.calls.filter((call) => call.op === "commit")).toHaveLength(2);
+  });
+
   it("integrates adopted child artifacts bottom-up and prepares only a verified root candidate", async () => {
     const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
     const root = compiled.graph.nodes[compiled.graph.rootId]!;
-    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === root.id)!;
     const integrated = ["6".repeat(40), "7".repeat(40), "8".repeat(40)];
     const git = new FakeGitRunner({
       cherryPickResultShas: integrated,

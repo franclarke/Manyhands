@@ -31,12 +31,16 @@ export const RepoRelativePathSchema = NonEmptyStringSchema.superRefine((value, c
 
 function unsafeRepoRelativePathReason(value: string): string | undefined {
   const candidate = value.trim();
-  if (/[\u0000-\u001F]/u.test(candidate)) return "path contains control characters";
+  if (containsControlCharacter(candidate)) return "path contains control characters";
   if (candidate.startsWith("/") || candidate.startsWith("\\")) return "path must be repository-relative";
   if (/^[A-Za-z]:/u.test(candidate)) return "path must not use a Windows drive prefix";
   if (candidate.startsWith("~")) return "path must not target a home directory";
   if (candidate.replaceAll("\\", "/").split("/").includes("..")) return "path traversal is not allowed";
   return undefined;
+}
+
+function containsControlCharacter(value: string): boolean {
+  return [...value].some((character) => character.codePointAt(0)! <= 0x1f);
 }
 
 export function addDuplicateIssues(

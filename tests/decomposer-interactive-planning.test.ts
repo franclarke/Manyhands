@@ -2,9 +2,9 @@ import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { describe, expect, it } from "vitest";
+import type { DecomposerQuestionError } from "@manyhands/decomposer";
 import {
   ClaudeCodeRecursiveDecomposer,
-  DecomposerQuestionError,
   isDecomposerQuestionError,
   type FeatureRequest
 } from "@manyhands/decomposer";
@@ -48,7 +48,7 @@ describe("ClaudeCodeRecursiveDecomposer - Interactive Planning", () => {
       expect(qErr.question).toBe("Do you want to use MongoDB or PostgreSQL?");
       expect(qErr.options).toEqual(["MongoDB", "PostgreSQL"]);
       expect(qErr.stepCache["root"]).toBeDefined();
-      expect(qErr.stepCache["root"].decision).toBe("question");
+      expect(qErr.stepCache["root"]!.decision).toBe("question");
     }
   });
 
@@ -99,7 +99,7 @@ describe("ClaudeCodeRecursiveDecomposer - Interactive Planning", () => {
     // Simulamos que el caché ya tiene la pregunta pendiente para el nodo 'root'
     const stepCache = {
       root: {
-        decision: "question",
+        decision: "question" as const,
         reasoning: "ambiguous database",
         question: "Do you want to use MongoDB or PostgreSQL?",
         options: ["MongoDB", "PostgreSQL"]
@@ -128,7 +128,7 @@ describe("ClaudeCodeRecursiveDecomposer - Interactive Planning", () => {
 });
 
 function fakeClaudeSpawn(stepValue: unknown, exitCode = 0, stderrValue = "") {
-  return (_command: string, args: readonly string[], _options: SpawnOptions): ChildProcess => {
+  return (_command: string, _args: readonly string[], _options: SpawnOptions): ChildProcess => {
     const child = new EventEmitter() as EventEmitter & {
       stdin: PassThrough;
       stdout: PassThrough;

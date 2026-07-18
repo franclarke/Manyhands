@@ -6,6 +6,8 @@ import {
 import type { ConflictConstraintEvidence } from "@manyhands/conflict-risk";
 import {
   computeInputFingerprint,
+  classifyFailure,
+  recoveryPolicyFor,
   type AdoptedArtifact,
   type DecisionInput,
   type EvidenceMatrixRecord,
@@ -41,6 +43,7 @@ export interface V2NodeExecutionInput {
 }
 
 export interface V2RepairObservation {
+  kind: "code" | "integration";
   pass: number;
   evidenceRefs: string[];
 }
@@ -153,11 +156,18 @@ export class V2ExecutionDriver {
       attempts.map((attempt) => attempt.startedEvent)
     );
 
-    const outcomes = await Promise.all(
-      attempts.map(async (attempt) => ({ attempt, outcome: await this.options.execute(attempt.executionInput) }))
-    );
-    const facts = outcomes.flatMap(({ attempt, outcome }) => this.factsForOutcome(input, attempt, outcome));
-    state = await this.options.coordinator.record(input.runId, facts);
+    let recording = Promise.resolve();
+    let latestState = state;
+    await Promise.all(attempts.map(async (attempt) => {
+      const outcome = await this.options.execute(attempt.executionInput);
+      const facts = this.factsForOutcome(input, attempt, outcome);
+      const persisted = recording.then(async () => {
+        latestState = await this.options.coordinator.record(input.runId, facts);
+      });
+      recording = persisted;
+      await persisted;
+    }));
+    state = latestState;
     return { dispatched: true, state };
   }
 
@@ -170,14 +180,45 @@ export class V2ExecutionDriver {
     const facts: RunEventInput[] = [];
     const isComposite = attempt.startedEvent.type === "integration.started";
     for (const repair of outcome.repairObservations ?? []) {
-      facts.push(fact(`${attempt.attemptId}:integration-repair:${repair.pass}`, at, "integration.repair_attempted", {
+      const observation = repair.kind === "integration"
+        ? { source: "integration" as const, code: "conflict", message: "Integration required semantic repair." }
+        : { source: "validation" as const, code: "validation_failed", message: "Exact-candidate validation required code repair." };
+      const failureClass = classifyFailure(observation);
+      const policy = recoveryPolicyFor(failureClass);
+      facts.push(fact(`${attempt.attemptId}:${repair.kind}-failure:${repair.pass}`, at, "failure.classified", {
+        nodeId: attempt.nodeId,
+        failureClass,
+        observation,
+        allowedActions: policy.actions,
+        automaticRetryBudget: policy.automaticRetryBudget,
+        discardCandidate: policy.discardCandidate
+      }));
+      const payload = {
         attemptId: attempt.attemptId,
         nodeId: attempt.nodeId,
         pass: repair.pass,
         evidenceRefs: repair.evidenceRefs
-      }));
+      };
+      facts.push(repair.kind === "integration"
+        ? fact(`${attempt.attemptId}:integration-repair:${repair.pass}`, at, "integration.repair_attempted", payload)
+        : fact(`${attempt.attemptId}:code-repair:${repair.pass}`, at, "attempt.repair_attempted", payload));
     }
     if (outcome.kind === "failure") {
+      if ((outcome.repairObservations?.length ?? 0) === 0) {
+        const observation = isComposite
+          ? { source: "integration" as const, code: "integration_failed", message: outcome.reason }
+          : { source: "executor" as const, code: "execution_failed", message: outcome.reason };
+        const failureClass = classifyFailure(observation);
+        const policy = recoveryPolicyFor(failureClass);
+        facts.push(fact(`${attempt.attemptId}:failure-classified`, at, "failure.classified", {
+          nodeId: attempt.nodeId,
+          failureClass,
+          observation,
+          allowedActions: policy.actions,
+          automaticRetryBudget: policy.automaticRetryBudget,
+          discardCandidate: policy.discardCandidate
+        }));
+      }
       facts.push(isComposite
         ? fact(`${attempt.attemptId}:integration-failed`, at, "integration.failed", {
             attemptId: attempt.attemptId,

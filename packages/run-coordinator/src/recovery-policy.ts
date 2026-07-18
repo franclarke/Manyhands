@@ -22,7 +22,7 @@ export interface RecoveryPolicy {
 const POLICIES: Record<FailureClass, Omit<RecoveryPolicy, "failureClass">> = {
   transient: { actions: ["retry_attempt"], automaticRetryBudget: 2, discardCandidate: true, requiresEvidence: true },
   environment_auth_executor: { actions: ["request_environment_fix", "switch_executor"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
-  code_test: { actions: ["repair_code", "propose_graph_amendment"], automaticRetryBudget: 2, discardCandidate: true, requiresEvidence: true },
+  code_test: { actions: ["repair_code", "propose_graph_amendment"], automaticRetryBudget: 1, discardCandidate: true, requiresEvidence: true },
   contract_decomposition: { actions: ["propose_graph_amendment"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
   undeclared_artifact: { actions: ["propose_artifact_requirement"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },
   scope_unexpected_commit: { actions: ["discard_candidate", "raise_local_decision"], automaticRetryBudget: 0, discardCandidate: true, requiresEvidence: true },

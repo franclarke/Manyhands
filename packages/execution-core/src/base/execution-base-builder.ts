@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import type { GitRunner } from "../git/runner";
 import type { WorktreeRecord } from "../types";
-import { WorktreeManager } from "../worktree/manager";
+import type { WorktreeManager } from "../worktree/manager";
 import { ArtifactMaterializer } from "./artifact-materializer";
 import {
   ExecutionArtifactInputSchema,

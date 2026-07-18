@@ -31,9 +31,9 @@ describe("versioned V2 contracts", () => {
     ];
 
     for (const { schema, value } of contracts) {
-      const { revision: _revision, ...withoutRevision } = value;
+      const withoutRevision = omit(value, "revision");
       expect(schema.safeParse(withoutRevision).success).toBe(false);
-      const { provenance: _provenance, ...withoutProvenance } = value;
+      const withoutProvenance = omit(value, "provenance");
       expect(schema.safeParse(withoutProvenance).success).toBe(false);
     }
   });
@@ -168,4 +168,8 @@ function validBundle() {
       ]
     }
   };
+}
+
+function omit(value: Record<string, unknown>, key: string): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(value).filter(([candidate]) => candidate !== key));
 }

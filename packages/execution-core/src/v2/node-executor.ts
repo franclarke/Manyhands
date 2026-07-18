@@ -97,14 +97,14 @@ export type V2PhysicalNodeExecutionOutcome =
       evidenceMatrix: V2ExecutionEvidenceMatrix;
       artifactLocation: string;
       integrationManifestId?: string;
-      repairObservations?: Array<{ pass: number; evidenceRefs: string[] }>;
+      repairObservations?: Array<{ kind: "code" | "integration"; pass: number; evidenceRefs: string[] }>;
       finalManifestId?: string;
     }
   | {
       kind: "failure";
       reason: string;
       integrationManifestId?: string;
-      repairObservations?: Array<{ pass: number; evidenceRefs: string[] }>;
+      repairObservations?: Array<{ kind: "code" | "integration"; pass: number; evidenceRefs: string[] }>;
     };
 
 export interface V2NodeExecutorOptions {
@@ -196,16 +196,21 @@ export class V2NodeExecutor {
         baselineCommit: input.graph.baseCommit,
         ...(input.signal !== undefined ? { signal: input.signal } : {})
       });
-      const success = successOutcome(candidateCommit, result.changedFiles, evidenceMatrix);
-      if (input.node.id !== input.graph.rootId || evidenceMatrix.outcome !== "verified") return success;
+      let success = successOutcome(candidateCommit, result.changedFiles, evidenceMatrix);
+      if (evidenceMatrix.outcome === "failed") {
+        const repaired = await this.repairLeaf(input, base.worktree, candidateCommit, evidenceMatrix);
+        if (repaired.kind === "failure") return repaired;
+        success = repaired;
+      }
+      if (input.node.id !== input.graph.rootId || success.evidenceMatrix.outcome !== "verified") return success;
       if (this.options.finalCandidate === undefined) {
         return { kind: "failure", reason: "Root execution has no final-candidate preparer." };
       }
       const finalManifestId = (await this.options.finalCandidate.prepare({
         runId: input.runId,
         attemptId: input.attemptId,
-        candidateCommit,
-        evidenceMatrix,
+        candidateCommit: success.candidateCommit,
+        evidenceMatrix: success.evidenceMatrix,
         ...input.target
       })).manifestId;
       return { ...success, finalManifestId };
@@ -274,7 +279,7 @@ export class V2NodeExecutor {
     }
     const repairObservations = manifest.repairAttempt === undefined
       ? undefined
-      : [{ pass: manifest.repairAttempt.pass, evidenceRefs: [...manifest.repairAttempt.evidenceRefs] }];
+      : [{ kind: "integration" as const, pass: manifest.repairAttempt.pass, evidenceRefs: [...manifest.repairAttempt.evidenceRefs] }];
     if (manifest.disposition !== "success" || manifest.candidateSha === undefined || evidenceMatrix === undefined) {
       return {
         kind: "failure",
@@ -356,6 +361,63 @@ export class V2NodeExecutor {
       await rm(instructionPath, { force: true }).catch(() => undefined);
     }
   }
+
+  private async repairLeaf(
+    input: V2PhysicalNodeExecutionInput,
+    worktree: WorktreeRecord,
+    candidateCommit: string,
+    failedMatrix: V2ExecutionEvidenceMatrix
+  ): Promise<Extract<V2PhysicalNodeExecutionOutcome, { kind: "success" | "failure" }>> {
+    const pass = 1;
+    const evidenceRefs = [failedMatrix.matrixId, ...failedMatrix.criteria.flatMap((criterion) => criterion.evidenceRefs)];
+    const repairObservation = { kind: "code" as const, pass, evidenceRefs: [...new Set(evidenceRefs)] };
+    const instructionPath = instructionFilePath(input, "code-repair");
+    try {
+      await this.writeInstructions(instructionPath, buildV2CodeRepairInstructions(input, failedMatrix));
+      const executor = this.options.executorFactory.create(input.repairSelection);
+      const outcome = await executor.execute({
+        cwd: worktree.path,
+        instructionFilePath: instructionPath,
+        model: input.repairSelection.model,
+        timeoutMs: input.config.leafTimeoutMs,
+        bypassApprovals: true,
+        processOwnerId: input.runId,
+        attemptId: stableUuid(`${input.attemptId}:code-repair:${pass}`),
+        ...(input.repairSelection.effort !== undefined ? { reasoningEffort: input.repairSelection.effort } : {}),
+        ...(input.signal !== undefined ? { signal: input.signal } : {})
+      });
+      const result = await this.recorder.record({
+        worktree,
+        executorOutcome: outcome,
+        expectedHead: candidateCommit,
+        scopeContract: input.contract.scope,
+        scopePolicy: input.config.scopePolicy,
+        unexpectedCommitPolicy: input.config.unexpectedCommitPolicy,
+        commitMessage: `mh-v2-code-repair: ${input.node.id}`,
+        usageSource: usageSourceForSelection(input.repairSelection)
+      });
+      if (result.status !== "success") {
+        return { kind: "failure", reason: `Code repair failed: ${executionFailureReason(result)}`, repairObservations: [repairObservation] };
+      }
+      const repairedCommit = result.commitSha ?? result.currentHead;
+      const evidenceMatrix = await this.options.validator.validate({
+        runId: input.runId,
+        attemptId: input.attemptId,
+        contract: input.contract,
+        candidateCommit: repairedCommit,
+        baselineCommit: input.graph.baseCommit,
+        ...(input.signal !== undefined ? { signal: input.signal } : {})
+      });
+      return {
+        ...successOutcome(repairedCommit, result.changedFiles, evidenceMatrix),
+        repairObservations: [repairObservation]
+      };
+    } catch (error) {
+      return { kind: "failure", reason: `Code repair failed: ${describe(error)}`, repairObservations: [repairObservation] };
+    } finally {
+      await rm(instructionPath, { force: true }).catch(() => undefined);
+    }
+  }
 }
 
 export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract" | "consumedArtifacts">): string {
@@ -409,6 +471,24 @@ function buildV2RepairInstructions(
     repair.conflictOutput,
     "",
     "Resolve the files and leave the worktree ready to commit. Do not commit; the orchestrator commits."
+  ].join("\n");
+}
+
+function buildV2CodeRepairInstructions(
+  input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract">,
+  failedMatrix: V2ExecutionEvidenceMatrix
+): string {
+  return [
+    `Repair the failed candidate for ${input.node.title}.`,
+    "",
+    `Objective: ${input.contract.task.goal}`,
+    "The exact candidate was rejected by these validation obligations:",
+    ...failedMatrix.criteria
+      .filter((criterion) => criterion.status === "failed")
+      .map((criterion) => `- ${criterion.criterionId}: ${criterion.justification}`),
+    "",
+    "Preserve the declared scope and shared contracts. Change only what is required to satisfy the failed evidence.",
+    "Do not commit; the orchestrator will revalidate and commit the repair."
   ].join("\n");
 }
 

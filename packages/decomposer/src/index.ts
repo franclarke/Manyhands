@@ -15,6 +15,7 @@ import {
   type TaskNode
 } from "@manyhands/task-graph";
 import { executionScopeFromAllowed } from "./scope";
+import { DecomposeStepOutputSchema } from "./llm/recursive/step-schema";
 import { z } from "zod";
 
 export * from "./planner/prompt.js";
@@ -56,7 +57,7 @@ export const DecompositionOptionsSchema = z.object({
   baseCommit: NonEmptyStringSchema.default("mock-base-commit"),
   repo: NonEmptyStringSchema.optional(),
   questionAnswers: z.record(z.string()).optional(),
-  stepCache: z.record(z.any()).optional()
+  stepCache: z.record(DecomposeStepOutputSchema).optional()
 });
 
 

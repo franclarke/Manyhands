@@ -183,7 +183,7 @@ export class JsonIntegrationOperationJournal implements IntegrationOperationJour
     const lock = join(locks, safeLockName(journalPath));
     await mkdir(locks, { recursive: true });
     const deadline = Date.now() + 15_000;
-    while (true) {
+    for (;;) {
       try {
         await mkdir(lock);
         await writeFile(join(lock, "owner"), `${process.pid}\n${Date.now()}`, "utf8");
