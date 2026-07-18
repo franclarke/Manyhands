@@ -1177,18 +1177,18 @@ Después de `WP-16`, `completed` solo deriva de FinalArtifactManifest elegible y
 
 ## 11. Checklist de release de la arquitectura
 
-- [ ] G1: contracts y GraphRevision congelados.
-- [ ] G2: events canónicos en planning y execution.
-- [ ] G3: attempts/artifacts exactos.
-- [ ] G4: EvidenceMatrix completa y honesta.
-- [ ] G5: delivery transaccional.
-- [ ] Decisiones locales probadas con trabajo paralelo.
-- [ ] Run target, leases, fencing y cancelación preservados.
-- [ ] UI V2 sin modos legacy ni auto-fit por evento.
-- [ ] `@manyhands/core` fuera de product path.
-- [ ] Migración V1 dry-run y apply verificadas.
-- [ ] Searches legacy en cero.
-- [ ] Dos ejecuciones consecutivas de la suite completa en verde.
-- [ ] Typecheck de paquetes y web en verde.
-- [ ] Builds de paquetes y web en verde.
-- [ ] Ledger cerrado con SHA final y evidencia por packet.
+- [x] G1: contracts y GraphRevision congelados.
+- [x] G2: events canónicos en planning y execution.
+- [x] G3: attempts/artifacts exactos.
+- [x] G4: EvidenceMatrix completa y honesta.
+- [x] G5: delivery transaccional.
+- [x] Decisiones locales probadas con trabajo paralelo.
+- [x] Run target, leases, fencing y cancelación preservados.
+- [x] UI V2 sin modos legacy ni auto-fit por evento.
+- [x] `@manyhands/core` fuera de product path.
+- [x] Migración V1 dry-run y apply verificadas.
+- [x] Searches legacy en cero.
+- [x] Dos ejecuciones consecutivas de la suite completa en verde.
+- [x] Typecheck de paquetes y web en verde.
+- [x] Builds de paquetes y web en verde.
+- [x] Ledger cerrado con SHA final y evidencia por packet.

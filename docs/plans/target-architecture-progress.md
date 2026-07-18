@@ -10,9 +10,9 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-19 — Migration and E2E` |
-| Last completed packet | `WP-18 — Legacy retirement` |
-| Open gate | Final migration, recovery and E2E verification |
+| Current packet | `Complete — target architecture transition closed` |
+| Last completed packet | `WP-19 — Migration and E2E` |
+| Open gate | None |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
 | WP-00 implementation commit | `d381f61` |
@@ -35,7 +35,8 @@
 | WP-16 implementation commit | `27925c8` |
 | WP-17 implementation commit | `f15929c` |
 | WP-18 implementation commit | `c5a4f99` |
-| Last updated | 2026-07-17 |
+| WP-19 implementation commit | `edcba38` |
+| Last updated | 2026-07-18 |
 
 ## Packet ledger
 
@@ -60,7 +61,7 @@
 | WP-16 Final candidate and delivery | completed | `27925c8` | 28/28 packet, delivery, route and terminal tests; execution-core/coordinator/web typechecks passed | Exact isolated candidate validation, immutable delivery approval, request fingerprint, retry-safe receipt adoption and receipt-only completion; G5 closed |
 | WP-17 Workspace web V2 | completed | `f15929c` | 154/154 model/canvas tests and target-path regression; web typecheck and production build passed | Canonical event adaptation, graph-centered lenses, local non-blocking decision dialogs, evidence matrix/result readiness and operator-owned viewport |
 | WP-18 Legacy retirement | completed | `c5a4f99` | 150/150 test files, 896 passed and 1 skipped; package/web typechecks and builds passed; forbidden-surface searches empty | Productive run path, API, event stream, web projection and fixture now consume V2 only; obsolete V1 routes, models, hosts and LangGraph state removed; repository takeover race fenced |
-| WP-19 Migration and E2E | queued | — | — | — |
+| WP-19 Migration and E2E | completed | `edcba38` | 11/11 acceptance scenarios; two full runs with 154/154 files, 904 passed and 1 skipped; 13 package typechecks, web typecheck, lint and both builds passed; production route smoke returned 200 | Concurrent event durability, local decisions, bounded code repair, crash-safe delivery and fail-closed V1 migration complete; no open blockers |
 
 ## WP-00 evidence
 
@@ -124,6 +125,7 @@ baseline until a later packet owns their migration.
 | G4 Honest verification | closed | WP-14 compiles obligations from observed capabilities and requires criterion-linked evidence on the exact clean candidate, including required baselines, negative controls, flakiness and integrity findings |
 | G5 Real delivery | closed | WP-16 candidate validation, immutable approval, transactional publication and receipt-only completion |
 | G6 Single architecture | closed | V2 is the only productive run lifecycle and event authority; forbidden V1 dependency/status/core-consumer searches are empty and the complete suite/build is green |
+| G7 Release candidate | closed | WP-19 proves all 11 E2E/recovery/migration scenarios, two consecutive complete suites, production builds and a real `/runs/:runId` smoke |
 
 ## WP-01 evidence
 
@@ -848,19 +850,84 @@ git diff --check: passed
   terminal statuses and productive application/package consumers of the core
   compatibility barrel. Gate G6 is closed.
 
-### Remaining final-packet work
+### Final-packet work closed by WP-19
 
-The repository-wide ESLint gate still reports 83 accumulated style errors in
-packages and tests (mostly explicit `any`, historical unused imports and type
-import rules). Functional tests, package typechecks and both production builds
-are green. WP-19 owns that bounded cleanup together with migration and E2E
-recovery scenarios.
+The accumulated ESLint backlog was resolved without weakening the gate. Runtime
+hardening, migration and the required recovery scenarios are recorded below.
 
-## Resume instructions
+## WP-19 evidence
 
-1. Confirm `git branch --show-current` is `codex/target-architecture-v2`.
-2. Confirm `git status --short` is clean.
-3. Read the `Current checkpoint` table above.
-4. Start only the packet named in `Current packet`.
-5. On completion, update its row, evidence, current packet and gate status before
-   moving to the next packet.
+### Execution failures found and corrected
+
+- A local node decision used to claim a separate control operation, fencing the
+  live execution owner and interrupting unrelated siblings. Decision resolution
+  now appends under the current execution authority, so unaffected branches keep
+  running.
+- Sibling outcomes were collected with `Promise.all` and persisted only after the
+  slowest sibling finished. Each completed outcome is now durably serialized as
+  it arrives; the persistence chain stops on the first journal failure.
+- Concurrent command/fact writers could lose a compare-and-swap race. The
+  coordinator now retries only after observing journal progress and treats stable
+  event IDs idempotently.
+- A failed exact candidate had no bounded code-repair path. One repair is now run
+  in the same worktree, committed by the orchestrator, revalidated on the repaired
+  SHA and recorded with its failure classification and evidence.
+- Delivery could not recover from a crash after the Git side effect but before
+  receipt persistence. The productive host now uses the transactional publisher,
+  resumes `delivering`, reconciles an already-published exact SHA and adopts the
+  confirmed receipt without repeating the side effect.
+
+### Required scenario coverage
+
+| Scenario | Evidence |
+|---|---|
+| Parallel seam siblings and bottom-up root | `run-v2-execution-driver.test.ts`, `run-v2-e2e.test.ts` |
+| Declared producer artifact materialization | `run-v2-e2e.test.ts`, `execution-core-v2-node-executor.test.ts` |
+| Local decision while another branch continues | `run-v2-decision-control.test.ts`, `run-v2-execution-driver.test.ts` |
+| Code failure, one repair and revalidation | `execution-core-v2-node-executor.test.ts`, `run-v2-execution-driver.test.ts` |
+| Undeclared dependency, amendment and fingerprint invalidation | `graph-amendment-v2.test.ts`, `amendment-fingerprint-invalidation.test.ts` |
+| Integration conflict, bounded repair and non-convergent decision | `integration-repair-policy.test.ts` |
+| Uncovered, flaky and weakened validation evidence | `evidence-matrix.test.ts`, `test-weakening-detection.test.ts` |
+| Cancellation, process death, fencing and late-result rejection | `run-v2-cancellation.test.ts` |
+| Crash after side effect and before durable receipt | `run-v2-crash-recovery.test.ts` |
+| Changed delivery target and idempotent receipt retry | `delivery-state-machine.test.ts`, `run-v2-crash-recovery.test.ts` |
+| V1 import without invented evidence | `run-v2-migration.test.ts` |
+
+### Migration behavior
+
+- `scripts/migrate-runs-v2.mjs` is dry-run by default and produces a per-run
+  report.
+- Apply requires an explicit backup directory and approving actor.
+- Active V1 runs and records without verifiable physical repository identity are
+  rejected.
+- Imported runs preserve identity and operator context only. They become
+  `interrupted` and require replanning plus exact-candidate revalidation; legacy
+  success, evidence and delivery flags are never promoted.
+- A dry-run over the five local historical records performed no writes and
+  classified each as `blocked_target_identity`, as required by fail-closed
+  migration.
+
+### Final verification
+
+```text
+WP-19 acceptance: 11/11 required scenarios passed (24 focused tests)
+Complete suite, pass 1: 154/154 files; 904 passed; 1 intentionally skipped
+Complete suite, pass 2: 154/154 files; 904 passed; 1 intentionally skipped
+Package typechecks: 13 workspace packages passed
+Web TypeScript check: passed
+Repository ESLint gate: passed with zero warnings
+Package build: passed
+Web production build: passed
+Forbidden legacy searches: empty
+git diff --check: passed
+```
+
+A production build was started against an isolated V2 smoke record. Requesting
+`/runs/smoke-run` returned HTTP 200 and rendered the expected title and prompt.
+
+## Transition status
+
+The planned WP-00 through WP-19 transition is complete. Future changes should
+use the V2 contracts, canonical event history and package boundaries documented
+by the architecture; this ledger no longer has a resumable migration packet or
+an open gate.
