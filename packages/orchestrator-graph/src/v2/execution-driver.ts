@@ -168,7 +168,7 @@ export class V2ExecutionDriver {
   ): RunEventInput[] {
     const at = this.options.now();
     const facts: RunEventInput[] = [];
-    const isComposite = attempt.executionInput.node.kind === "root" || attempt.executionInput.node.kind === "composite";
+    const isComposite = attempt.startedEvent.type === "integration.started";
     for (const repair of outcome.repairObservations ?? []) {
       facts.push(fact(`${attempt.attemptId}:integration-repair:${repair.pass}`, at, "integration.repair_attempted", {
         attemptId: attempt.attemptId,
@@ -358,7 +358,7 @@ function createAttempt(
   const ordinal = Object.values(state.attempts).filter((attempt) => attempt.nodeId === nodeId).length + 1;
   const attemptId = `${run.runId}:attempt:${nodeId}:${ordinal}`;
   const common = { attemptId, nodeId, inputFingerprint, executorProfile: run.executorProfile };
-  const isComposite = node.kind === "root" || node.kind === "composite";
+  const isComposite = requirements.length > 0 && (node.kind === "root" || node.kind === "composite");
   const startedEvent = fact(
     `${attemptId}:started`,
     startedAt,

@@ -1,4 +1,4 @@
-import type { ExecutionScope } from "@manyhands/contracts";
+import type { ExecutionScope, ScopeContract } from "@manyhands/contracts";
 
 import { ScopeCheckResultSchema, type ScopeCheckResult } from "../types";
 import { matchesAnyGlob } from "./glob";
@@ -7,6 +7,8 @@ export interface ScopeCheckParams {
   changedFiles: string[];
   /** Allowed path categories. If omitted, every non-forbidden file is allowed. */
   executionScope?: ExecutionScope | undefined;
+  /** Canonical V2 scope. Takes precedence over the legacy categorized scope. */
+  scopeContract?: Pick<ScopeContract, "allowedPaths" | "forbiddenPaths"> | undefined;
   /** Globs always prohibited regardless of scope. Deny wins (ADR-0023). */
   forbiddenPaths?: string[] | undefined;
 }
@@ -26,14 +28,17 @@ export interface ScopeCheckParams {
  */
 export class ScopeChecker {
   check(params: ScopeCheckParams): ScopeCheckResult {
-    const forbidden = params.forbiddenPaths ?? [];
-    const allowed = params.executionScope
+    const forbidden = [
+      ...(params.scopeContract?.forbiddenPaths ?? []),
+      ...(params.forbiddenPaths ?? [])
+    ];
+    const allowed = params.scopeContract?.allowedPaths ?? (params.executionScope
       ? [
           ...params.executionScope.implementationPaths,
           ...params.executionScope.testPaths,
           ...params.executionScope.configPaths
         ]
-      : undefined;
+      : undefined);
 
     const violations: string[] = [];
     const outOfScope: string[] = [];

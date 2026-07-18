@@ -122,11 +122,16 @@ export class IntegrationManifestExecutor {
         continue;
       }
       operations.push({ artifactId: artifact.artifactId, operation: "cherry_pick", preSha, outcome: "conflict" });
-      await this.deps.git.cherryPickAbort(worktreePath).catch(() => undefined);
-      if (this.deps.repair === undefined) return { ...base, operations, disposition: "decision_required", errors: [{ code: "materialization_failed", artifactId: artifact.artifactId, message: outcome.output }] };
+      if (this.deps.repair === undefined) {
+        await this.deps.git.cherryPickAbort(worktreePath).catch(() => undefined);
+        return { ...base, operations, disposition: "decision_required", errors: [{ code: "materialization_failed", artifactId: artifact.artifactId, message: outcome.output }] };
+      }
       const repaired = await this.deps.repair({ requestManifestId: request.manifestId, artifactId: artifact.artifactId, parentGoal: request.parentGoal, seamRevisions: request.seamRevisions, childArtifacts: request.childArtifacts, conflictFiles: outcome.conflictFiles, conflictOutput: outcome.output, worktreePath, pass: 1 });
       repairAttempt = { pass: 1, artifactId: artifact.artifactId, outcome: repaired.success ? "succeeded" : "failed", evidenceRefs: repaired.evidenceRefs };
-      if (!repaired.success || repaired.candidateSha === undefined) return { ...base, operations, repairAttempt, disposition: "decision_required", errors: [{ code: "materialization_failed", artifactId: artifact.artifactId, message: "The single semantic repair attempt failed." }] };
+      if (!repaired.success || repaired.candidateSha === undefined) {
+        await this.deps.git.cherryPickAbort(worktreePath).catch(() => undefined);
+        return { ...base, operations, repairAttempt, disposition: "decision_required", errors: [{ code: "materialization_failed", artifactId: artifact.artifactId, message: "The single semantic repair attempt failed." }] };
+      }
       operations[operations.length - 1] = { ...operations.at(-1)!, resultSha: repaired.candidateSha, outcome: "applied" };
     }
 

@@ -35,6 +35,7 @@ import {
   releaseRunOperation
 } from "@/lib/server/runs/run-operation-lease";
 import { approvePlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
+import { startExecutionV2Pipeline } from "@/lib/server/runs/v2/execution-pipeline";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -83,6 +84,7 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       const match = /:r([1-9]\d*)$/u.exec(decisionId);
       const revision = match === null ? run.planRevision ?? 1 : Number(match[1]);
       run = await approvePlanningV2Pipeline(run.runId, revision);
+      run = await startExecutionV2Pipeline(run.runId, "route:decision:approve-plan-execution-v2");
       return NextResponse.json({ ...(await toCanonicalRunResponse(run)), decisionId, choice: { action: "approve" } });
     }
     const events = await ensureRunModelEventLogForRun(run);

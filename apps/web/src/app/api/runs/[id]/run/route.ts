@@ -1,17 +1,10 @@
 import { NextResponse } from "next/server";
 import {
-  appendStatusEventOrRollback,
-  assertRunActionAllowed,
-  claimRunMutation,
-  requireCapturedRunRecord,
-  runExecutionPipeline,
-  type RunRecord
+  getRunRepository
 } from "@/lib/server/runs";
 import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
-import { assertExecutableRunGraph, resolveExecutionGraph } from "@/lib/server/runs/execution-state";
-import { DEFAULT_STALE_MS } from "@/lib/server/runs/interrupted";
-import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
+import { startExecutionV2Pipeline } from "@/lib/server/runs/v2/execution-pipeline";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,28 +16,12 @@ interface RouteContext {
 export async function POST(_request: Request, context: RouteContext): Promise<NextResponse> {
   const { id } = await context.params;
   try {
-    let previous: RunRecord | undefined;
-    const saved = await claimRunMutation(
-      id,
-      {
-        status: ["approved"],
-        rejectActiveRunner: true,
-        rejectFreshOperationAfterMs: DEFAULT_STALE_MS
-      },
-      (current) => {
-        previous = current;
-        assertRunActionAllowed(current, "start");
-        assertExecutableRunGraph(resolveExecutionGraph(current));
-        return {
-          ...current,
-          status: "running" as const,
-          startedAt: current.startedAt ?? new Date().toISOString()
-        };
-      }
-    );
-    await appendStatusEventOrRollback(requireCapturedRunRecord(previous, id), saved);
-    startRunBackgroundTask(saved.runId, "route:run:execution", () => runExecutionPipeline(saved.runId));
-    return NextResponse.json(await toCanonicalRunResponse(saved));
+    const run = await getRunRepository().get(id);
+    if (run.architectureVersion?.execution !== "v2") {
+      throw new Error(`Run ${id} is not executable by the current V2 product path.`);
+    }
+    const started = await startExecutionV2Pipeline(run.runId, "route:run:execution-v2");
+    return NextResponse.json(await toCanonicalRunResponse(started));
   } catch (error) {
     return runErrorResponse(error);
   }

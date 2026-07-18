@@ -139,6 +139,46 @@ describe("V2ExecutionDriver", () => {
     ]);
     expect(state.lifecycle).toBe("waiting_for_input");
   });
+
+  it("executes an atomic root as a task attempt and still produces the final candidate", async () => {
+    const breakdown = bookingBreakdown();
+    if (breakdown.root.kind !== "composite") throw new Error("Fixture must start composite.");
+    const domain = breakdown.root.children.find((unit) => unit.key === "domain");
+    if (domain?.kind !== "leaf") throw new Error("Missing atomic domain leaf.");
+    breakdown.root = domain;
+    breakdown.acceptanceIntents = breakdown.acceptanceIntents.filter((intent) => intent.id === "domain-ready");
+    breakdown.candidateSeams = [];
+    const compiled = compileGraphRevision(
+      { breakdown, repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const harness = coordinatorHarness(compiled.graph.graphId);
+    const driver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      execute: async (input) => ({
+        ...(success(input) as Extract<V2NodeExecutionOutcome, { kind: "success" }>),
+        finalManifestId: "final-atomic"
+      })
+    });
+
+    const state = await driver.run({
+      runId: "run-v2",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 3 },
+      materializableNodeIds: [compiled.graph.rootId],
+      availableExecutorNodeIds: [compiled.graph.rootId],
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+
+    expect(state.lifecycle).toBe("result_ready");
+    expect(harness.events().some((event) => event.type === "attempt.started")).toBe(true);
+    expect(harness.events().some((event) => event.type === "integration.started")).toBe(false);
+  });
 });
 
 function success(input: V2NodeExecutionInput): V2NodeExecutionOutcome {
@@ -185,5 +225,9 @@ function coordinatorHarness(graphId: string) {
     clock: () => at,
     eventId: (type, sequence) => `${type}:${sequence}`
   });
-  return { coordinator, onAppend(next: (events: RunEvent[]) => void) { listener = next; } };
+  return {
+    coordinator,
+    events: () => structuredClone(events),
+    onAppend(next: (events: RunEvent[]) => void) { listener = next; }
+  };
 }

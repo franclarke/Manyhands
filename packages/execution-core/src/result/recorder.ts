@@ -1,4 +1,4 @@
-import type { ExecutionScope, ExpectedOutput } from "@manyhands/contracts";
+import type { ExecutionScope, ExpectedOutput, ScopeContract } from "@manyhands/contracts";
 import type { TraceStore } from "@manyhands/trace-store";
 
 import { execError, execLog, execWarn } from "../logging/log";
@@ -28,6 +28,7 @@ export interface RecordParams {
   worktree: WorktreeRecord;
   executorOutcome: ExecutorRunOutcome;
   executionScope?: ExecutionScope;
+  scopeContract?: Pick<ScopeContract, "allowedPaths" | "forbiddenPaths">;
   forbiddenPaths?: string[];
   expectedOutput?: ExpectedOutput;
   scopePolicy?: ScopePolicy;
@@ -161,6 +162,7 @@ export class ResultRecorder {
       const scopeCheck = this.scopeChecker.check({
         changedFiles,
         executionScope: params.executionScope,
+        scopeContract: params.scopeContract,
         forbiddenPaths: params.forbiddenPaths
       });
       if (!scopeCheck.passed) {
@@ -219,6 +221,7 @@ export class ResultRecorder {
     const scopeCheck = this.scopeChecker.check({
       changedFiles,
       executionScope: params.executionScope,
+      scopeContract: params.scopeContract,
       forbiddenPaths: params.forbiddenPaths
     });
     const diff = await this.git.diffCached(worktree.path);

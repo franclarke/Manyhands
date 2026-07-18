@@ -1,0 +1,214 @@
+import { describe, expect, it } from "vitest";
+import { compileGraphRevision } from "@manyhands/decomposer";
+import {
+  ExecutionConfigSchema,
+  ExactCandidateValidatorV2,
+  FixedAgentExecutorFactory,
+  ScopeChecker,
+  V2NodeExecutor,
+  WorktreeManager,
+  type AgentExecutor,
+  type ExecutorRunOutcome,
+  type V2ExecutionEvidenceMatrix,
+  type V2PhysicalNodeExecutionInput
+} from "@manyhands/execution-core";
+import { InMemoryTraceStore } from "@manyhands/trace-store";
+import { bookingBreakdown, bookingSnapshot, compilerDependencies } from "./helpers/target-planning-fixtures";
+import { FakeGitRunner } from "./helpers/fake-git-runner";
+
+const at = "2026-07-17T12:00:00.000Z";
+
+describe("V2NodeExecutor", () => {
+  it("executes a leaf directly from its V2 bundle and validates the exact orchestrator commit", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const node = compiled.graph.nodes["node-api"]!;
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === node.id)!;
+    const commit = "2".repeat(40);
+    const changedFile = contract.scope.allowedPaths[0]!;
+    const git = new FakeGitRunner({
+      commitSha: commit,
+      diffCached: "diff",
+      diffCachedNameOnly: [changedFile]
+    });
+    const agent = successfulAgent();
+    const prompts: string[] = [];
+    const validated: string[] = [];
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(agent),
+      validator: {
+        validate: async (input) => {
+          validated.push(input.candidateCommit);
+          return matrix(input.contract, input.candidateCommit);
+        }
+      },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async (_path, content) => { prompts.push(content); },
+      now: () => at
+    });
+
+    const outcome = await executor.execute(request(compiled, node.id));
+
+    expect(outcome).toMatchObject({ kind: "success", candidateCommit: commit, artifactLocation: commit });
+    expect(validated).toEqual([commit]);
+    expect(agent.calls).toHaveLength(1);
+    expect(prompts[0]).toContain(contract.task.goal);
+    expect(prompts[0]).toContain(contract.scope.allowedPaths[0]);
+    expect(prompts[0]).toContain("Shared contracts with sibling work");
+    expect(prompts[0]).toContain("Do not commit");
+  });
+
+  it("integrates adopted child artifacts bottom-up and prepares only a verified root candidate", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const root = compiled.graph.nodes[compiled.graph.rootId]!;
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === root.id)!;
+    const integrated = ["6".repeat(40), "7".repeat(40), "8".repeat(40)];
+    const git = new FakeGitRunner({
+      cherryPickResultShas: integrated,
+      diffRangeNameOnly: ["src/domain/booking.ts", "src/api/bookings.ts", "src/ui/BookingForm.tsx"]
+    });
+    const prepared: string[] = [];
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(successfulAgent()),
+      validator: { validate: async (input) => matrix(input.contract, input.candidateCommit) },
+      finalCandidate: {
+        prepare: async (input) => {
+          expect(input.evidenceMatrix.outcome).toBe("verified");
+          prepared.push(input.candidateCommit);
+          return { manifestId: "final-manifest" };
+        }
+      },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+    const input = request(compiled, root.id);
+    input.consumedArtifacts = compiled.graph.artifactRequirements
+      .filter((requirement) => requirement.consumerNodeId === root.id)
+      .map((requirement, index) => ({
+        artifactId: `adopted-${index}`,
+        runId: input.runId,
+        nodeId: requirement.producerNodeId,
+        digest: `sha256:child-${index}`,
+        producerAttemptId: `attempt-child-${index}`,
+        contract: { ...requirement.artifactContract },
+        kind: "commit" as const,
+        location: `${index + 3}`.repeat(40),
+        adoptedAt: at
+      }));
+
+    const outcome = await executor.execute(input);
+
+    expect(outcome).toMatchObject({
+      kind: "success",
+      candidateCommit: integrated.at(-1),
+      integrationManifestId: expect.stringMatching(/^integration-result-/u),
+      finalManifestId: "final-manifest"
+    });
+    expect(prepared).toEqual([integrated.at(-1)]);
+    expect(git.calls.filter((call) => call.op === "cherryPick").map((call) => call.args.commitSha)).toEqual(
+      input.consumedArtifacts.map((artifact) => artifact.location)
+    );
+  });
+});
+
+describe("ScopeChecker V2", () => {
+  it("uses the canonical allowed and forbidden paths without a legacy ExecutionScope", () => {
+    const checked = new ScopeChecker().check({
+      changedFiles: ["src/feature.ts", "docs/readme.md", "secrets/key.txt"],
+      scopeContract: { allowedPaths: ["src/**"], forbiddenPaths: ["secrets/**"] }
+    });
+    expect(checked).toEqual({
+      passed: false,
+      violations: ["secrets/key.txt"],
+      outOfScope: ["docs/readme.md"]
+    });
+  });
+});
+
+describe("ExactCandidateValidatorV2", () => {
+  it("links baseline and candidate observations to the V2 validation obligations", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!;
+    const candidate = "9".repeat(40);
+    const git = new FakeGitRunner();
+    const worktrees = new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at });
+    const validator = new ExactCandidateValidatorV2({
+      git,
+      worktrees,
+      repoRoot: "C:/repo/booking",
+      repositorySnapshot: bookingSnapshot(),
+      runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) }
+    });
+
+    const evidence = await validator.validate({
+      runId: "run-v2-validation",
+      attemptId: "attempt-api-1",
+      contract,
+      candidateCommit: candidate,
+      baselineCommit: compiled.graph.baseCommit
+    });
+
+    expect(evidence).toMatchObject({ candidateCommit: candidate, outcome: "verified" });
+    expect(evidence.criteria.every((criterion) => criterion.status === "satisfied")).toBe(true);
+    expect(git.opsInvoked().filter((operation) => operation === "worktreeAdd")).toHaveLength(2);
+    expect(git.opsInvoked().filter((operation) => operation === "worktreeRemove")).toHaveLength(2);
+  });
+});
+
+function request(
+  compiled: ReturnType<typeof compileGraphRevision>,
+  nodeId: string
+): V2PhysicalNodeExecutionInput {
+  const node = compiled.graph.nodes[nodeId]!;
+  const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === nodeId)!;
+  const outputArtifactContract = contract.artifacts.find((artifact) =>
+    artifact.producerNodeId === nodeId && ["node-result", "final-candidate"].includes(artifact.artifactType)
+  )!;
+  return {
+    runId: "run-v2-physical",
+    attemptId: `run-v2-physical:attempt:${nodeId}:1`,
+    inputFingerprint: `sha256:${"f".repeat(64)}`,
+    graph: compiled.graph,
+    node,
+    contract,
+    consumedArtifacts: [],
+    outputArtifactContract,
+    selection: { executorId: "claude-code-cli", model: "claude-sonnet-4-5" },
+    repairSelection: { executorId: "claude-code-cli", model: "claude-sonnet-4-5" },
+    config: ExecutionConfigSchema.parse({ maxParallel: 3 }),
+    target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: compiled.graph.baseCommit }
+  };
+}
+
+function matrix(contract: V2PhysicalNodeExecutionInput["contract"], candidateCommit: string): V2ExecutionEvidenceMatrix {
+  return {
+    matrixId: `matrix-${contract.task.nodeId}`,
+    candidateCommit,
+    validationContract: { ...contract.task.validation },
+    criteria: contract.validation.obligations.map((obligation) => ({
+      criterionId: obligation.criterionId,
+      obligationId: obligation.id,
+      status: "satisfied" as const,
+      justification: "Exact candidate evidence passed.",
+      evidenceRefs: [`evidence-${obligation.id}`]
+    })),
+    outcome: "verified"
+  };
+}
+
+function successfulAgent(): AgentExecutor & { calls: unknown[] } {
+  const calls: unknown[] = [];
+  return {
+    calls,
+    execute: async (options): Promise<ExecutorRunOutcome> => {
+      calls.push(options);
+      return { exitCode: 0, stdout: "", stderr: "", timedOut: false, durationMs: 1 };
+    }
+  };
+}

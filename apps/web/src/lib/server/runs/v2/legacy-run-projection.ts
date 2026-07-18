@@ -1,15 +1,15 @@
 import type { RunEvent, RunProjection } from "@manyhands/run-coordinator";
 import type { RunRecord } from "../schema";
 
-/** Compatibility DTO only. Canonical semantics remain in the V2 event log. */
+/** Disposable compatibility cache only. Canonical semantics remain in the V2 event log. */
 export function projectPlanningV2ToRunRecord(run: RunRecord, state: RunProjection, events: readonly RunEvent[]): RunRecord {
   const compiled = [...events].reverse().find((event) => event.type === "graph.compiled");
   const repository = [...events].reverse().find((event) => event.type === "repository.inspected");
   const now = new Date().toISOString();
   return {
     ...run,
-    architectureVersion: { planning: "v2", execution: run.architectureVersion?.execution ?? "v1", integration: run.architectureVersion?.integration ?? "v1" },
-    status: state.lifecycle === "failed" ? "failed" : state.lifecycle === "running" ? "approved" : "needs_review",
+    architectureVersion: { planning: "v2", execution: "v2", integration: "v2" },
+    status: compatibilityStatus(state),
     ...(state.lifecycle === "failed" ? { failedDuring: "generating" as const, errorMessage: state.failureReason ?? "Planning V2 failed." } : {}),
     planning: {
       architectureVersion: "v2",
@@ -23,4 +23,30 @@ export function projectPlanningV2ToRunRecord(run: RunRecord, state: RunProjectio
     ...(state.lifecycle === "running" && state.approvedGraphRevision !== undefined ? { approvedPlanRevision: state.approvedGraphRevision, approvedAt: now } : {}),
     updatedAt: now
   };
+}
+
+function compatibilityStatus(state: RunProjection): RunRecord["status"] {
+  switch (state.lifecycle) {
+    case "planning":
+      return "generating";
+    case "needs_approval":
+      return "needs_review";
+    case "running":
+      return "approved";
+    case "waiting_for_input":
+    case "paused":
+      return "paused";
+    case "cancelling":
+      return "cancelling";
+    case "interrupted":
+      return "interrupted";
+    case "result_ready":
+      return "needs_delivery";
+    case "delivering":
+      return "needs_delivery";
+    case "completed":
+      return "completed";
+    case "failed":
+      return "failed";
+  }
 }

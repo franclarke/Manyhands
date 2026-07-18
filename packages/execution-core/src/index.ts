@@ -54,3 +54,5 @@ export * from "./run/executor";
 export * from "./run/grounding-agent";
 export * from "./run/skeleton-scaffolder";
 export * from "./run/amendments-engine";
+export * from "./v2/exact-candidate-validator";
+export * from "./v2/node-executor";

@@ -8,7 +8,6 @@ import {
   RUN_STATUS_VALUES,
   getRunRepository,
   listCorruptRunRecords,
-  runPlanningPipeline,
   sweepManyIfStale,
   type RunRecord,
   type RunStatus
@@ -193,13 +192,13 @@ export async function POST(request: Request): Promise<NextResponse> {
           "Verify that it is an accessible Git repository with at least one commit and retry; the run was not created."
       );
     }
-    if (parsed.data.architectureVersion?.planning === "v2" && targetContext === undefined) {
-      throw new RunValidationError("Planning V2 requires a captured local Git repository target.");
+    if (targetContext === undefined) {
+      throw new RunValidationError("ManyHands requires a captured local Git repository target.");
     }
 
     const record: RunRecord = {
       runId,
-      architectureVersion: { planning: parsed.data.architectureVersion?.planning ?? "v1", execution: "v1", integration: "v1" },
+      architectureVersion: { planning: "v2", execution: "v2", integration: "v2" },
       workspaceId: workspace.id,
       ...(repoSpec !== undefined ? { repoSpec } : {}),
       ...(targetContext !== undefined ? { targetContext } : {}),
@@ -229,11 +228,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     // Fire-and-forget planning pipeline; failures land as `failed` on disk.
-    startRunBackgroundTask(saved.runId, "route:create:planning", () =>
-      saved.architectureVersion?.planning === "v2"
-        ? runPlanningV2Pipeline(saved.runId)
-        : runPlanningPipeline(saved.runId)
-    );
+    startRunBackgroundTask(saved.runId, "route:create:planning-v2", () => runPlanningV2Pipeline(saved.runId));
 
     return NextResponse.json(await toCanonicalRunResponse(saved), { status: 201 });
   } catch (error) {
