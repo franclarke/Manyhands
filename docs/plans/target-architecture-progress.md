@@ -10,9 +10,9 @@
 | Field | Value |
 |---|---|
 | Integration branch | `codex/target-architecture-v2` |
-| Current packet | `WP-18 — Legacy retirement` |
-| Last completed packet | `WP-17 — Graph- and evidence-centered web workspace` |
-| Open gate | G6 — Single architecture |
+| Current packet | `WP-19 — Migration and E2E` |
+| Last completed packet | `WP-18 — Legacy retirement` |
+| Open gate | Final migration, recovery and E2E verification |
 | Baseline fixture/UI commit | `6cde401` |
 | Target docs and plan commit | `bf24862` |
 | WP-00 implementation commit | `d381f61` |
@@ -34,6 +34,7 @@
 | WP-15 implementation commit | `4423967` |
 | WP-16 implementation commit | `27925c8` |
 | WP-17 implementation commit | `f15929c` |
+| WP-18 implementation commit | `c5a4f99` |
 | Last updated | 2026-07-17 |
 
 ## Packet ledger
@@ -58,7 +59,7 @@
 | WP-15 Integration manifests | completed | `4423967` | 35/35 manifest, legacy integration, recovery and real-Git tests; execution-core/coordinator typechecks and builds passed | Exact adopted child artifacts, complete integration manifests, parent evidence gate, one semantic repair and manifest-backed output adoption |
 | WP-16 Final candidate and delivery | completed | `27925c8` | 28/28 packet, delivery, route and terminal tests; execution-core/coordinator/web typechecks passed | Exact isolated candidate validation, immutable delivery approval, request fingerprint, retry-safe receipt adoption and receipt-only completion; G5 closed |
 | WP-17 Workspace web V2 | completed | `f15929c` | 154/154 model/canvas tests and target-path regression; web typecheck and production build passed | Canonical event adaptation, graph-centered lenses, local non-blocking decision dialogs, evidence matrix/result readiness and operator-owned viewport |
-| WP-18 Legacy retirement | queued | — | — | Split into WP-18A through WP-18D during execution |
+| WP-18 Legacy retirement | completed | `c5a4f99` | 150/150 test files, 896 passed and 1 skipped; package/web typechecks and builds passed; forbidden-surface searches empty | Productive run path, API, event stream, web projection and fixture now consume V2 only; obsolete V1 routes, models, hosts and LangGraph state removed; repository takeover race fenced |
 | WP-19 Migration and E2E | queued | — | — | — |
 
 ## WP-00 evidence
@@ -122,7 +123,7 @@ baseline until a later packet owns their migration.
 | G3 Exact adoption | closed | WP-09 through WP-11 provide canonical fingerprints, immutable adoption, exact artifact readiness and reproducible physical execution bases |
 | G4 Honest verification | closed | WP-14 compiles obligations from observed capabilities and requires criterion-linked evidence on the exact clean candidate, including required baselines, negative controls, flakiness and integrity findings |
 | G5 Real delivery | closed | WP-16 candidate validation, immutable approval, transactional publication and receipt-only completion |
-| G6 Single architecture | not_started | WP-18 |
+| G6 Single architecture | closed | V2 is the only productive run lifecycle and event authority; forbidden V1 dependency/status/core-consumer searches are empty and the complete suite/build is green |
 
 ## WP-01 evidence
 
@@ -800,6 +801,60 @@ git diff --check: passed
   explicit toolbar action.
 - Route-only helper exports were moved behind a server module so Next.js route
   contracts and production type generation remain valid.
+
+## WP-18 evidence
+
+### Failure diagnosis and red-green evidence
+
+The productive execution path failed for three related architecture reasons:
+
+- V2 commands validated the canonical lifecycle while the web hosts still
+  claimed V1 operation statuses;
+- Command Center posted retired V1 creation fields, so strict V2 parsing could
+  reject a run before planning;
+- the remaining API and UI readers still depended on the removed V1 RunRecord,
+  event and status projections.
+
+After moving those boundaries to the canonical coordinator journal, the broad
+suite exposed a real repository-lease race: two stale contenders could both
+report acquisition because a delayed path-based rename could move a newly
+installed lock. The takeover now requires an exclusive claim inside the
+current lock and revalidates that exact owner before quarantine. Heartbeats
+also renew immediately on acquisition before entering their interval.
+
+```text
+Repository lock regression: 13/13 passed
+Concurrent stale-takeover stress: passed in repeated focused runs
+Complete suite: 150/150 files, 896 passed, 1 intentionally skipped
+Package typechecks: 13 workspace packages passed
+Web TypeScript check: passed
+Package build: passed
+Web production build: passed
+git diff --check: passed
+```
+
+### Implemented single architecture
+
+- The run create/control/delivery/event routes call the V2 command and
+  execution hosts and persist one canonical coordinator history.
+- The client reducer, live SSE adapter and graph-centered workspace fold those
+  same facts; generated events do not recenter the operator-owned canvas.
+- One canonical presentation fixture demonstrates graph, contracts, local
+  decisions, failure/retry, evidence and delivery without a parallel state
+  model.
+- Obsolete V1 run routes, server services, UI surfaces, fixtures and LangGraph
+  checkpoints were removed together with their retired tests.
+- Production searches are empty for legacy dependency shortcuts, legacy
+  terminal statuses and productive application/package consumers of the core
+  compatibility barrel. Gate G6 is closed.
+
+### Remaining final-packet work
+
+The repository-wide ESLint gate still reports 83 accumulated style errors in
+packages and tests (mostly explicit `any`, historical unused imports and type
+import rules). Functional tests, package typechecks and both production builds
+are green. WP-19 owns that bounded cleanup together with migration and E2E
+recovery scenarios.
 
 ## Resume instructions
 
