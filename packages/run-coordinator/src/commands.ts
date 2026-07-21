@@ -1,4 +1,4 @@
-import type { DecisionInput } from "./domain/decisions.js";
+import { supersededDecisionIds, type DecisionInput } from "./domain/decisions.js";
 import type { RunEventDraft } from "./domain/events.js";
 import type { RunProjection } from "./reducer.js";
 import type { FailureObservation } from "./domain/failures.js";
@@ -29,7 +29,13 @@ export type RunCommand =
 export function eventsForCommand(state: RunProjection, command: Exclude<RunCommand, { type: "publish_delivery" } | { type: "cancel" }>): RunEventDraft[] {
   switch (command.type) {
     case "propose_graph": return [{ type: "graph.revision.proposed", payload: { graphId: command.graphId, revision: command.revision } }];
-    case "approve_graph": return [{ type: "graph.revision.approved", payload: { graphId: command.graphId, revision: command.revision } }];
+    case "approve_graph": return [
+      { type: "graph.revision.approved", payload: { graphId: command.graphId, revision: command.revision } },
+      ...supersededDecisionIds(state.decisions, command.revision).map((decisionId) => ({
+        type: "decision.expired" as const,
+        payload: { decisionId, supersededByRevision: command.revision, reason: "A newer approved graph revision superseded the decision's premise." }
+      }))
+    ];
     case "raise_decision": return [{ type: "decision.raised", payload: { decision: command.decision } }];
     case "resolve_decision": return [{ type: "decision.resolved", payload: { decisionId: command.decisionId, ...(command.optionId !== undefined ? { optionId: command.optionId } : {}), ...(command.answer !== undefined ? { answer: command.answer } : {}) } }];
     case "observe_readiness": return [{ type: "readiness.observed", payload: { readyNodeIds: command.readyNodeIds, pendingDecisionIds: command.pendingDecisionIds } }];

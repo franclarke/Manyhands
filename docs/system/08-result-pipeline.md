@@ -35,6 +35,15 @@ type EvidenceItem = {
 8. Construir Evidence Matrix.
 9. Clasificar eligibility y persistir evidencia.
 
+La evidencia es función pura de la `ValidationRecipe` compilada, que fija el
+commit candidato exacto, el contrato de validación, el snapshot y los steps. Un
+`EvidenceValidationCache` opcional, keyed por `recipeId`, permite reutilizar la
+Evidence Matrix de una recipe idéntica —revalidación de entrega, replay de
+recuperación o un retry que reprodujo el mismo candidato— sin reabrir sandbox ni
+re-ejecutar checks; nunca convierte un resultado negativo en positivo. El sandbox
+de baseline se abre una vez por candidato y se reutiliza entre obligaciones, no
+uno por obligación.
+
 ## Capas
 
 - Leaf: scope, static checks, tests focalizados y criterios locales.

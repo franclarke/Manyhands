@@ -1181,8 +1181,9 @@ describe("RunExecutor", () => {
   });
 
   it("treats an out-of-allow-list (but not forbidden) change as advisory: the run still completes", async () => {
-    // The allow-list is an LLM guess; a file outside it that is not forbidden must
-    // not fail the run. It commits and is recorded in scopeCheck.outOfScope.
+    // Under the explicit advisory policy the allow-list is an LLM guess; a file
+    // outside it that is not forbidden must not fail the run. It commits and is
+    // recorded in scopeCheck.outOfScope.
     const git = new FakeGitRunner({
       diffCached: "diff --git a/index.html b/index.html\n+ui",
       diffCachedNameOnly: ["index.html"],
@@ -1192,7 +1193,7 @@ describe("RunExecutor", () => {
 
     const result = await executor.run({
       graph: graphWith(["a"], undefined, leafContract(["src/**"])),
-      config,
+      config: { ...config, scopePolicy: "advisory" },
       model: "gpt-5-codex"
     });
 

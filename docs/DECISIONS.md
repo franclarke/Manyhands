@@ -1,18 +1,19 @@
-# ManyHands — Decisiones de arquitectura objetivo
+# ManyHands — Decisiones de arquitectura vigente
 
-> Estado: vigente. Este documento sintetiza el diseño que debe guiar la
-> transición. Los ADR explican alternativas y trade-offs; `docs/system/`
-> especifica los contratos técnicos.
+> Estado: vigente. La ruta productiva V2 implementa estas decisiones. Los ADR
+> explican alternativas y trade-offs; `docs/system/` especifica los contratos
+> técnicos y código/tests/persistencia aportan la evidencia operacional.
 
-## A1. La documentación describe el objetivo, no disfraza el estado actual
+## A1. La documentación fija el contrato y declara el estado real
 
-La arquitectura se define por el producto que queremos construir. El código
-actual se auditará después contra esta referencia. Una función existente no se
-considera correcta por el solo hecho de existir, y una función objetivo no se
-presenta como implementada sin evidencia.
+La arquitectura se define por el producto y sus contratos, no por accidentes de
+implementación. Una función existente no se considera correcta por el solo hecho
+de existir y una capacidad documentada no se presenta como operativa sin
+evidencia en código, tests y, cuando corresponde, un run persistido.
 
-Consecuencia: todo plan de migración deberá distinguir `implemented`,
-`partial`, `missing` y `incompatible`.
+Consecuencia: auditorías y cambios deben distinguir `implemented`, `partial`,
+`missing` e `incompatible`. Los planes cerrados son evidencia histórica; las
+brechas nuevas se registran como drift o trabajo de migración explícito.
 
 ## A2. El run es la unidad de producto
 
@@ -94,8 +95,12 @@ prematura un comando exacto cuando todavía puede cambiar legítimamente.
 ## A8. Los intentos son inmutables y adoptables solo contra entradas exactas
 
 Cada intento tiene identidad propia y un `InputFingerprint` que incluye, como
-mínimo, revisión del grafo, revisiones de contratos, commit base, artefactos
-consumidos, contexto, perfil de executor y contrato de validación.
+mínimo, identidad del nodo, revisiones de contratos, commit base, artefactos
+consumidos, contexto, perfil de executor y contrato de validación. El fingerprint
+es deliberadamente node-local: la revisión global del grafo **no** es una de sus
+entradas. Así una enmienda ajena que sube la revisión no invalida un nodo
+independiente (ver A6); la revisión viaja como procedencia del intento, no como
+identidad de elegibilidad.
 
 Un intento puede terminar técnicamente y aun así quedar `stale`. Un resultado
 obsoleto nunca se integra. Reintentar crea otro intento; no reescribe evidencia
@@ -152,8 +157,15 @@ separada; no gobiernan el lifecycle.
 ## A13. Las decisiones humanas son recursos locales y no bloquean lo independiente
 
 Toda intervención se representa como `Decision` con pregunta, opciones,
-evidencia, nodos afectados, impacto y estado. Resolverla produce
-`decision.resolved` y puede generar una revisión de grafo o contrato.
+evidencia, nodos afectados, impacto, la revisión de grafo contra la que se
+levantó y estado. Resolverla produce `decision.resolved` y puede generar una
+revisión de grafo o contrato.
+
+Una decisión pendiente registra su base (`raisedAtGraphRevision`). Si se aprueba
+una revisión posterior que supera esa base, la decisión se marca `expired`
+mediante `decision.expired` en lugar de aplicarse con premisa obsoleta; deja de
+bloquear sus nodos afectados. Las aclaraciones previas al grafo no tienen base de
+revisión y no se expiran automáticamente.
 
 Una decisión bloquea únicamente los nodos cuyo readiness depende de ella. El run
 sigue en `running` mientras exista trabajo independiente; cambia a
@@ -208,11 +220,13 @@ relación seleccionada.
 Cuando el run alcanza `result_ready`, la evidencia y la entrega toman el centro;
 el grafo queda como mapa de procedencia. El canvas nunca se recentra por eventos,
 creación de nodos o cambios de estado. Solo cambia el foco ante una acción
-explícita del usuario.
+explícita del usuario. La jerarquía permanece visible y las relaciones tipadas se
+revelan mediante lentes explícitos o el vecindario del nodo seleccionado.
 
-Las decisiones se anuncian con una tarjeta horizontal asociada al nodo y se
-resuelven en un popup accesible. La cola global permite recorrer pendientes sin
-convertirse en un dashboard.
+Las decisiones se anuncian en una franja global con alcance contextual. Al
+elegir una, la UI selecciona el nodo afectado y muestra pregunta, evidencia,
+impacto y opciones en el inspector persistente; no abre un modal que oculte el
+grafo. La franja permite recorrer pendientes sin convertirse en un dashboard.
 
 ## A18. El dominio no depende de LangGraph, React Flow ni un executor específico
 

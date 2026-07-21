@@ -249,6 +249,13 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       };
       break;
     }
+    case "decision.expired": {
+      const decision = next.decisions[event.payload.decisionId];
+      if (decision === undefined) throw new Error(`Decision ${event.payload.decisionId} does not exist.`);
+      if (decision.status !== "pending") throw new Error(`Decision ${event.payload.decisionId} is not pending.`);
+      decision.status = "expired";
+      break;
+    }
     case "readiness.observed": {
       for (const decisionId of event.payload.pendingDecisionIds) {
         if (next.decisions[decisionId]?.status !== "pending") throw new Error(`Readiness references non-pending decision ${decisionId}.`);

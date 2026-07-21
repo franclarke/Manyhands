@@ -12,11 +12,39 @@ export interface CandidateSandbox {
   dispose(): Promise<void>;
 }
 
+export interface ExactCandidateValidationResult {
+  candidateCommit: string;
+  evidence: ValidationEvidenceObservation[];
+  matrix: EvidenceMatrix;
+}
+
+/**
+ * Evidence for a candidate is a pure function of the compiled recipe (which binds
+ * the exact candidate commit, validation contract, snapshot and steps). Reusing a
+ * cached matrix for an identical recipe — a delivery re-validation, a recovery
+ * replay, a retry that reproduced the same candidate — avoids re-opening a sandbox
+ * and re-running checks. It never turns a negative result positive: the whole
+ * matrix, including failed/flaky evidence, is stored and returned verbatim.
+ */
+export interface EvidenceValidationCache {
+  get(recipeId: string): Promise<ExactCandidateValidationResult | undefined>;
+  set(recipeId: string, result: ExactCandidateValidationResult): Promise<void>;
+}
+
+export class InMemoryEvidenceValidationCache implements EvidenceValidationCache {
+  private readonly entries = new Map<string, ExactCandidateValidationResult>();
+  async get(recipeId: string): Promise<ExactCandidateValidationResult | undefined> { return this.entries.get(recipeId); }
+  async set(recipeId: string, result: ExactCandidateValidationResult): Promise<void> { this.entries.set(recipeId, result); }
+}
+
 export interface CandidateValidatorDependencies {
   sandbox: { create(input: { candidateCommit: string }): Promise<CandidateSandbox> };
   run(step: ValidationRecipeStep, sandbox: CandidateSandbox): Promise<{ passed: boolean; exitCode: number; output: string }>;
-  runBaseline?(step: ValidationRecipeStep, baselineCommit: string): Promise<{ passed: boolean; exitCode: number; output: string }>;
+  /** Opens the baseline worktree once; the orchestrator reuses it across obligations. */
+  createBaselineSandbox?(baselineCommit: string): Promise<CandidateSandbox>;
+  runBaseline?(step: ValidationRecipeStep, sandbox: CandidateSandbox): Promise<{ passed: boolean; exitCode: number; output: string }>;
   runNegativeControl?(step: ValidationRecipeStep, sandbox: CandidateSandbox): Promise<{ detectedFailure: boolean; output: string }>;
+  cache?: EvidenceValidationCache;
 }
 
 export class GitCandidateSandboxFactory {
@@ -47,8 +75,17 @@ export class GitCandidateSandboxFactory {
 export async function validateExactCandidate(
   input: { recipe: ValidationRecipe; obligations: ValidationObligation[]; notApplicableObligationIds?: string[]; integrityFindingRefs?: string[] },
   dependencies: CandidateValidatorDependencies
-): Promise<{ candidateCommit: string; evidence: ValidationEvidenceObservation[]; matrix: EvidenceMatrix }> {
+): Promise<ExactCandidateValidationResult> {
+  const cached = await dependencies.cache?.get(input.recipe.recipeId);
+  if (cached !== undefined) return cached;
   const sandbox = await dependencies.sandbox.create({ candidateCommit: input.recipe.candidateCommit });
+  // Opened lazily on the first baseline obligation and reused for the rest, then
+  // disposed once — never one worktree per obligation.
+  let baselineSandbox: CandidateSandbox | undefined;
+  const ensureBaselineSandbox = async (baselineCommit: string): Promise<CandidateSandbox> => {
+    if (baselineSandbox === undefined) baselineSandbox = await dependencies.createBaselineSandbox!(baselineCommit);
+    return baselineSandbox;
+  };
   try {
     if (sandbox.headCommit !== input.recipe.candidateCommit || !sandbox.clean) throw new Error(`Validation sandbox is not the clean exact candidate ${input.recipe.candidateCommit}.`);
     const evidence: ValidationEvidenceObservation[] = [];
@@ -60,21 +97,24 @@ export async function validateExactCandidate(
         evidence.push(observation(step, retry, 2));
       }
       const final = evidence.filter((item) => item.obligationId === step.obligationId).at(-1)!;
-      if (step.baselinePolicy !== "not_required" && input.recipe.baselineCommit !== undefined && dependencies.runBaseline !== undefined) {
-        const baseline = await dependencies.runBaseline(step, input.recipe.baselineCommit);
+      if (step.baselinePolicy !== "not_required" && input.recipe.baselineCommit !== undefined && dependencies.runBaseline !== undefined && dependencies.createBaselineSandbox !== undefined) {
+        const baseline = await dependencies.runBaseline(step, await ensureBaselineSandbox(input.recipe.baselineCommit));
         final.baselineDisposition = compareBaselineResult({ baselinePassed: baseline.passed && baseline.exitCode === 0, candidatePassed: final.passed });
       }
       if (final.passed && step.negativeControl !== "not_required" && dependencies.runNegativeControl !== undefined) {
         final.negativeControlPassed = (await dependencies.runNegativeControl(step, sandbox)).detectedFailure;
       }
     }
-    return {
+    const result: ExactCandidateValidationResult = {
       candidateCommit: input.recipe.candidateCommit,
       evidence,
       matrix: buildEvidenceMatrix({ obligations: input.obligations, evidence, ...(input.notApplicableObligationIds !== undefined ? { notApplicableObligationIds: input.notApplicableObligationIds } : {}), ...(input.integrityFindingRefs !== undefined ? { integrityFindingRefs: input.integrityFindingRefs } : {}) })
     };
+    await dependencies.cache?.set(input.recipe.recipeId, result);
+    return result;
   } finally {
     await sandbox.dispose();
+    if (baselineSandbox !== undefined) await baselineSandbox.dispose();
   }
 }
 

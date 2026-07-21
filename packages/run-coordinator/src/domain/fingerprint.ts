@@ -3,11 +3,13 @@ import { EntityIdSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 
 const ContractRevisionRefSchema = z.object({ id: EntityIdSchema, revision: NonEmptyStringSchema }).strict();
-const GraphRevisionRefSchema = z.object({ id: EntityIdSchema, revision: z.number().int().positive() }).strict();
 const ArtifactDigestRefSchema = z.object({ id: EntityIdSchema, digest: NonEmptyStringSchema }).strict();
 
 export const InputFingerprintSourceSchema = z.object({
-  graph: GraphRevisionRefSchema,
+  // Namespacing only. The global graph revision is deliberately NOT an input:
+  // a foreign amendment must not invalidate an independent node (A6/A11). The
+  // revision travels as attempt provenance, not as eligibility identity.
+  graphId: EntityIdSchema,
   nodeId: EntityIdSchema,
   contractRevisions: z.array(ContractRevisionRefSchema).min(1),
   baseCommit: NonEmptyStringSchema,

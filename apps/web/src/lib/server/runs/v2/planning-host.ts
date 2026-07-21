@@ -1,7 +1,7 @@
 import type { CompiledGraphRevision, GraphCompilerInput, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
 import { PLAN_CRITIC_KINDS } from "@manyhands/decomposer";
-import { foldRun, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
+import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 
 export interface PlanningV2Input {
@@ -132,9 +132,16 @@ export async function approvePlanningV2(
   if (state.sequence !== expectedSequence) throw new Error(`Planning approval sequence conflict: expected ${expectedSequence}, current ${state.sequence}.`);
   if (state.graphRevision !== revision) throw new Error(`Planning approval revision conflict: expected ${revision}, current ${state.graphRevision ?? "none"}.`);
   const decisionId = approvalDecisionId(state.graphId!, revision);
+  const superseded = supersededDecisionIds(state.decisions, revision).filter((id) => id !== decisionId);
   const appended = await append(dependencies, runId, authority, expectedSequence, [
     { eventId: `${decisionId}:resolved`, occurredAt: dependencies.now(), type: "decision.resolved", payload: { decisionId, optionId: "approve" } },
-    { eventId: `${decisionId}:graph-approved`, occurredAt: dependencies.now(), type: "graph.revision.approved", payload: { graphId: state.graphId!, revision } }
+    { eventId: `${decisionId}:graph-approved`, occurredAt: dependencies.now(), type: "graph.revision.approved", payload: { graphId: state.graphId!, revision } },
+    ...superseded.map((id) => ({
+      eventId: `${id}:expired:r${revision}`,
+      occurredAt: dependencies.now(),
+      type: "decision.expired" as const,
+      payload: { decisionId: id, supersededByRevision: revision, reason: "A newer approved graph revision superseded the decision's premise." }
+    }))
   ]);
   const next = foldRun([...current, ...appended]);
   await dependencies.snapshots.write(runId, authority, next, next.sequence, appended.at(-1)!.eventId);

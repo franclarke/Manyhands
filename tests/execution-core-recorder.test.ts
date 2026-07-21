@@ -281,17 +281,38 @@ describe("ResultRecorder", () => {
     const result = await recorder.record({
       worktree: WORKTREE,
       executorOutcome: okOutcome(),
+      scopePolicy: "advisory",
       executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] }
     });
 
-    // The allow-list is advisory: an out-of-lane file is recorded but the leaf
-    // still commits and succeeds, so one guessed glob can't fail the run.
+    // Under the explicit advisory policy an out-of-lane file is recorded but the
+    // leaf still commits and succeeds, so one guessed glob can't fail the run.
     expect(result.status).toBe("success");
     expect(result.scopeCheck.violations).toEqual([]);
     expect(result.scopeCheck.outOfScope).toEqual(["index.html"]);
     expect(git.opsInvoked()).toContain("commit");
     expect(traceStore.findByType("scope_check_failed")).toHaveLength(0);
     expect(traceStore.findByType("scope_advisory")).toHaveLength(1);
+  });
+
+  it("defaults to strict: discards an out-of-allow-list write when no policy is configured", async () => {
+    // A16 / 02-contracts: the scope is an adoption boundary. With no explicit
+    // policy the safe default must discard the candidate, not silently commit it.
+    const git = new FakeGitRunner({
+      heads: { [WORKTREE.path]: "BASE_SHA" },
+      diffCachedNameOnly: ["src/routes/tasks.ts", "index.html"],
+      diffCached: "patch",
+      commitSha: "LEAF_SHA"
+    });
+    const result = await new ResultRecorder({ git, traceStore: new InMemoryTraceStore() }).record({
+      worktree: WORKTREE,
+      executorOutcome: okOutcome(),
+      executionScope: { implementationPaths: ["src/**"], testPaths: [], configPaths: [] }
+    });
+    expect(result.status).toBe("scope_violation");
+    expect(result.disposition).toBe("failed");
+    expect(result.scopeCheck.outOfScope).toEqual(["index.html"]);
+    expect(git.opsInvoked()).not.toContain("commit");
   });
 
   it.each([

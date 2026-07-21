@@ -32,6 +32,25 @@ Categorías sugeridas:
 Se soportan paths exactos y globs relativos normalizados. Deny wins. Symlinks,
 path traversal y casing de Windows se resuelven antes de comparar.
 
+## Políticas de enforcement
+
+`forbiddenPaths` es un deny duro: un cambio que toca un path prohibido siempre
+produce `scope_violation` y nunca se commitea, en cualquier política.
+
+Para paths fuera del allow-list pero no prohibidos, la política efectiva decide
+la disposición:
+
+| Política | Disposición de un cambio fuera de scope |
+|---|---|
+| `strict` (default) | descarta el candidato (`scope_violation`, `disposition: failed`) |
+| `gate` | retiene el candidato para decisión (`scope_gated`, `disposition: gated`) |
+| `advisory` | commitea y registra el cambio en `scopeCheck.outOfScope` |
+
+El default es `strict`: el scope es un límite de adopción y, sin una política
+explícita, un cambio fuera de scope no se adopta. `advisory` existe para casos
+donde el allow-list es una conjetura del planner y una glob errada no debe hacer
+fallar el run, pero debe elegirse deliberadamente, no heredarse por omisión.
+
 ## Scope y vertical slices
 
 Una hoja vertical puede tocar UI, API y tests. El scope debe reflejar la unidad

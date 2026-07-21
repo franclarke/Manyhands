@@ -1,15 +1,17 @@
 # Modelo operativo del run
 
-> Contrato conceptual de estado para backend, reducer, selectores, streaming y
-> fixtures. Los nombres pueden cambiar durante la transición; la semántica no.
+> Contrato de estado implementado por backend, reducer, selectores, streaming y
+> fixtures. Los schemas TypeScript/Zod son la referencia exacta de campos.
 
 ## 1. Fuentes de verdad
 
-- `RunRecord`: identidad, objetivo, target inmutable, configuración efectiva y
-  punteros de persistencia.
-- `GraphRevision`: grafo, contratos y aprobación de una revisión.
-- `RunEventLog`: hechos dinámicos append-only con `seq` y causalidad.
-- `ArtifactRegistry`: commits, manifests, outputs y evidencia adoptada.
+- Metadata del run: identidad, objetivo, target inmutable y configuración
+  efectiva; el `RunRecord` web es cache/listado, no lifecycle canónico.
+- `GraphRevision` + contract bundles: grafo compilado y obligaciones de una
+  revisión.
+- `RunEventLog`: hechos dinámicos append-only con `sequence` y causalidad; es la
+  historia canónica.
+- `AttemptJournal` y `ArtifactRegistry`: intentos inmutables y outputs adoptados.
 - `Snapshot`: proyección versionada para cargar y recuperar; nunca autoridad
   independiente.
 - `TraceStore`: logs, prompts y telemetría diagnóstica; nunca lifecycle.
@@ -36,14 +38,22 @@ type TaskNode = {
 };
 
 type GraphRevision = {
+  schemaVersion: 2;
+  graphId: string;
   revision: number;
+  rootId: NodeId;
+  baseCommit: string;
+  repositorySnapshotId: string;
   nodes: Record<NodeId, TaskNode>;
   artifactRequirements: ArtifactRequirement[];
   seamBindings: SeamBinding[];
   conflictConstraints: ConflictConstraint[];
-  contracts: ContractSet;
+  createdAt: string;
 };
 ```
+
+Los contract bundles se persisten junto al evento `graph.compiled`, pero no se
+duplican dentro de `GraphRevision`.
 
 `children` se deriva de `parentId`. Readiness se deriva de requirements,
 contratos, decisiones, recursos y artefactos. No se persisten shortcuts que
@@ -52,23 +62,26 @@ deban sincronizarse.
 ## 3. Intentos e inputs
 
 ```ts
-type InputFingerprint = {
-  graphRevision: number;
-  contractRevisions: Record<ContractId, number>;
+type InputFingerprintSource = {
+  graphId: string; // namespacing only; the graph revision is NOT an input
+  nodeId: NodeId;
+  contractRevisions: Array<{ id: ContractId; revision: string }>;
   baseCommit: string;
-  artifactDigests: Record<ArtifactId, string>;
+  consumedArtifacts: Array<{ id: ArtifactId; digest: string }>;
   repositoryContextDigest: string;
-  validationContractRevision: number;
-  executorProfile: string;
+  executorProfile: { id: string; revision: string };
+  validationContract: { id: ContractId; revision: string };
 };
 
 type NodeAttempt = {
-  id: AttemptId;
+  attemptId: AttemptId;
+  runId: RunId;
   nodeId: NodeId;
-  input: InputFingerprint;
-  worktreeRef: string;
-  candidateCommit?: string;
-  outcome: "running" | "candidate" | "verified" | "failed" | "discarded";
+  inputFingerprint: string;
+  retryOfAttemptId?: AttemptId;
+  createdAt: string;
+  status: "created" | "running" | "finished" | "stale" | "adopted" | "failed";
+  outputDigest?: string;
 };
 ```
 
@@ -121,10 +134,13 @@ pueda contradecirlos; un campo materializado debe incluir versión/cursor.
 
 ## 6. Estado derivado de nodo
 
-La UI deriva:
+La proyección web actual deriva:
 
-`planned | ready | running | validating | candidate | integrating | verified |
-needs_input | blocked | stale | failed | cancelled`
+`pending | ready | running | waiting | succeeded | failed | stale`
+
+`integrationStatus` se mantiene separado como `running | completed | failed |
+decision_required`. La UI traduce esos estados a copy y señales visuales más
+ricas sin inventar un segundo lifecycle.
 
 Prioridad conceptual:
 
@@ -140,31 +156,34 @@ no un fallo.
 
 ## 7. Eventos de dominio
 
-Familias mínimas:
+Familias implementadas:
 
-- `run.created`, `run.config.normalized`, `run.status.changed`;
-- `repository.inspected`, `baseline.recorded`;
-- `graph.revision.proposed`, `graph.revision.approved`, `graph.amended`;
-- `contract.baseline.prepared`;
-- `decision.raised`, `decision.resolved`;
-- `wave.selected`;
-- `attempt.started`, `attempt.candidate_created`, `attempt.failed`,
-  `attempt.discarded`;
-- `validation.started`, `validation.evidence_recorded`, `validation.completed`;
-- `artifact.registered`, `artifact.invalidated`;
-- `integration.started`, `integration.repair_attempted`,
+- intake/migration: `run.created`, `legacy.run_imported`;
+- inspection/planning: `repository.inspected`, `planning.attempt_started`,
+  `planning.node_discovered`, `planning.attempt_failed`, `planning.completed`,
+  `planning.critic_recorded`, `planning.failed`, `graph.compiled`;
+- graph/decisions: `graph.revision.proposed`, `graph.revision.approved`,
+  `graph.amendment.proposed`, `decision.raised`, `decision.resolved`;
+- scheduling/execution: `readiness.observed`, `wave.selected`,
+  `attempt.started`, `attempt.candidate_created`, `attempt.repair_attempted`,
+  `attempt.failed`, `attempt.discarded`, `attempt.stale`, `failure.classified`;
+- validation/artifacts: `validation.started`, `validation.evidence_recorded`,
+  `validation.completed`, `evidence.matrix_recorded`, `artifact.adopted`;
+- integration: `integration.started`, `integration.repair_attempted`,
   `integration.completed`, `integration.failed`;
-- `delivery.prepared`, `delivery.validated`, `delivery.published`;
-- `operation.lease_acquired`, `operation.cancel_requested`,
-  `operation.interrupted`.
+- control/delivery: `run.pause_requested`, `run.resume_requested`,
+  `run.restart_requested`, `operation.cancel_requested`,
+  `operation.interrupted`, `final_candidate.verified`, `delivery.started`,
+  `delivery.published`, `delivery.failed`, `run.failed`.
 
 Un evento se emite cuando el efecto ocurrió, no cuando se desea que ocurra. Los
 comandos no se representan como hechos completados.
 
 ## 8. Freshness e invalidación
 
-Freshness compara el `InputFingerprint` del intento/artefacto con la revisión
-vigente. Una enmienda calcula dos conjuntos:
+Freshness compara el `InputFingerprint` del intento/artefacto con el fingerprint
+node-local vigente del nodo (no con la revisión global del grafo). Una enmienda
+calcula dos conjuntos:
 
 - `projectedImpact`: preview antes de aprobar;
 - `realizedInvalidation`: artefactos e intentos cuyo fingerprint ya no coincide.

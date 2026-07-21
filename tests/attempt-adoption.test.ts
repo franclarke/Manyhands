@@ -9,14 +9,14 @@ let directory: string;
 beforeEach(async () => { directory = await mkdtemp(path.join(os.tmpdir(), "mh-attempts-")); });
 afterEach(async () => { await rm(directory, { recursive: true, force: true }); });
 
-const fingerprintSource = { graph: { id: "graph", revision: 1 }, nodeId: "node", contractRevisions: [{ id: "task", revision: "r1" }], baseCommit: "a".repeat(40), consumedArtifacts: [], repositoryContextDigest: "repo", executorProfile: { id: "executor", revision: "r1" }, validationContract: { id: "validation", revision: "r1" } };
+const fingerprintSource = { graphId: "graph", nodeId: "node", contractRevisions: [{ id: "task", revision: "r1" }], baseCommit: "a".repeat(40), consumedArtifacts: [], repositoryContextDigest: "repo", executorProfile: { id: "executor", revision: "r1" }, validationContract: { id: "validation", revision: "r1" } };
 
 describe("attempt adoption eligibility", () => {
   it("marks an old fingerprint stale and never adopts its artifact", async () => {
     const attempts = new JsonlAttemptStore({ directory });
     const artifacts = new JsonlArtifactStore({ directory });
     const attempt = await attempts.create({ attemptId: "attempt-1", runId: "run-1", nodeId: "node", inputFingerprint: computeInputFingerprint(fingerprintSource), createdAt: "2026-07-17T00:00:00.000Z" });
-    const decision = await adoptAttemptResult({ attempt: { ...attempt, status: "finished", outputDigest: "sha256:result" }, currentFingerprint: computeInputFingerprint({ ...fingerprintSource, graph: { id: "graph", revision: 2 } }), artifact: { artifactId: "artifact-1", contract: { id: "artifact-contract", revision: "r1" }, kind: "commit", location: "abc" } }, artifacts);
+    const decision = await adoptAttemptResult({ attempt: { ...attempt, status: "finished", outputDigest: "sha256:result" }, currentFingerprint: computeInputFingerprint({ ...fingerprintSource, contractRevisions: [{ id: "task", revision: "r2" }] }), artifact: { artifactId: "artifact-1", contract: { id: "artifact-contract", revision: "r1" }, kind: "commit", location: "abc" } }, artifacts);
     expect(decision).toMatchObject({ eligible: false, event: { type: "attempt.stale" } });
     expect(await artifacts.list("run-1")).toEqual([]);
   });

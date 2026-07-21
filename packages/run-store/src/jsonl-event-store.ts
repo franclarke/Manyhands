@@ -16,6 +16,7 @@ import {
   type FencingAuthority,
   type RunEventLogInspection
 } from "./event-store.js";
+import { CURRENT_EVENT_SCHEMA_VERSION, upcastEventToCurrent } from "./event-upcaster.js";
 
 interface DurableEventEnvelope {
   schemaVersion: 2;
@@ -205,11 +206,11 @@ function inspectRawLog(runId: string, raw: string): RunEventLogInspection {
     const line = lines[index]!;
     if (line.trim().length === 0) return corrupt(events, `blank record at line ${index + 1}`);
     try {
-      const rawEnvelope = JSON.parse(line) as Partial<DurableEventEnvelope>;
-      if (rawEnvelope.schemaVersion !== 2 || rawEnvelope.event === undefined || typeof rawEnvelope.checksum !== "string") {
+      const rawEnvelope = JSON.parse(line) as { schemaVersion?: unknown; event?: unknown; checksum?: unknown };
+      if (typeof rawEnvelope.schemaVersion !== "number" || rawEnvelope.event === undefined || typeof rawEnvelope.checksum !== "string") {
         return corrupt(events, `invalid envelope at line ${index + 1}`);
       }
-      const event = RunEventSchema.parse(rawEnvelope.event);
+      const event = RunEventSchema.parse(upcastEventToCurrent(rawEnvelope.schemaVersion, rawEnvelope.event));
       if (event.runId !== runId) return corrupt(events, `record at line ${index + 1} belongs to ${event.runId}`);
       if (event.sequence !== index + 1) return corrupt(events, `expected sequence ${index + 1}, received ${event.sequence}`);
       if (rawEnvelope.checksum !== checksumFor(event)) return corrupt(events, `checksum mismatch at line ${index + 1}`);
@@ -233,7 +234,7 @@ function corrupt(events: RunEvent[], reason: string): RunEventLogInspection {
 }
 
 async function writeDurableEvents(filePath: string, events: readonly RunEvent[]): Promise<void> {
-  const contents = events.map((event) => JSON.stringify({ schemaVersion: 2, event, checksum: checksumFor(event) } satisfies DurableEventEnvelope)).join("\n");
+  const contents = events.map((event) => JSON.stringify({ schemaVersion: CURRENT_EVENT_SCHEMA_VERSION, event, checksum: checksumFor(event) } satisfies DurableEventEnvelope)).join("\n");
   await atomicWrite(filePath, `${contents}\n`);
 }
 

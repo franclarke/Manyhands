@@ -236,7 +236,7 @@ export class ResultRecorder {
       return this.finalize({ ...base, status: "scope_violation", currentHead: baseHead, diff, changedFiles, scopeCheck });
     }
 
-    const scopePolicy = params.scopePolicy ?? "advisory";
+    const scopePolicy = params.scopePolicy ?? "strict";
     if (scopeCheck.outOfScope.length > 0 && scopePolicy !== "advisory") {
       this.appendScopePolicyResult(taskId, scopeCheck.outOfScope, scopePolicy);
       return this.finalize({

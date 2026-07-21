@@ -53,6 +53,15 @@ prompts no incluyen credenciales salvo capability explícita y auditada.
 El adapter publica únicamente commit/tree del `FinalArtifactManifest` validado y
 registra receipt. Auth/permissions se verifican antes de preparar y al publicar.
 
+### Versionado del event log
+
+El journal append-only es inmortal: la forma en disco de un evento no cambia in
+situ. Cada envelope declara `schemaVersion`. Cuando la forma de un evento debe
+cambiar se incrementa la versión actual y se registra un upcaster de la versión
+previa a la nueva; la lectura migra hacia adelante todo registro anterior antes
+de aplicar el schema de dominio. Un registro de una versión más nueva que la que
+este build entiende falla cerrado: un journal del futuro no se lee a ciegas.
+
 ## Trust boundaries
 
 Se consideran no confiables: output del LLM, stdout/stderr, contenido del repo,

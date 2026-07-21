@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computeInputFingerprint, type InputFingerprintSource } from "@manyhands/run-coordinator";
 
 const source: InputFingerprintSource = {
-  graph: { id: "graph-1", revision: 3 },
+  graphId: "graph-1",
   nodeId: "node-1",
   contractRevisions: [{ id: "task", revision: "r2" }, { id: "scope", revision: "r4" }, { id: "artifact", revision: "r1" }],
   baseCommit: "a".repeat(40),
@@ -13,11 +13,11 @@ const source: InputFingerprintSource = {
 };
 
 describe("InputFingerprint", () => {
-  it("changes when any eligibility input changes", () => {
+  it("changes when any node-local eligibility input changes", () => {
     const baseline = computeInputFingerprint(source);
     const variants: InputFingerprintSource[] = [
+      { ...source, graphId: "graph-2" },
       { ...source, nodeId: "node-2" },
-      { ...source, graph: { ...source.graph, revision: 4 } },
       { ...source, contractRevisions: source.contractRevisions.map((item, index) => index === 0 ? { ...item, revision: "r3" } : item) },
       { ...source, baseCommit: "b".repeat(40) },
       { ...source, consumedArtifacts: source.consumedArtifacts.map((item, index) => index === 0 ? { ...item, digest: "sha256:changed" } : item) },
@@ -27,6 +27,15 @@ describe("InputFingerprint", () => {
     ];
     expect(new Set(variants.map(computeInputFingerprint))).not.toContain(baseline);
     expect(new Set(variants.map(computeInputFingerprint)).size).toBe(variants.length);
+  });
+
+  it("does not fold the global graph revision into node identity", () => {
+    // A11/A6: a foreign amendment bumps the graph revision but leaves an
+    // independent node's inputs untouched. The fingerprint must therefore be a
+    // pure function of node-local inputs — the revision is provenance, not input.
+    // The source shape deliberately has no revision field to make this structural.
+    expect(Object.keys(source)).not.toContain("graph");
+    expect(computeInputFingerprint(source)).toBe(computeInputFingerprint({ ...source }));
   });
 
   it("is stable when set-like inputs are reordered", () => {

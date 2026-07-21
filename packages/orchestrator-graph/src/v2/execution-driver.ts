@@ -232,7 +232,7 @@ export class V2ExecutionDriver {
             nodeId: attempt.nodeId,
             reason: outcome.reason
           }));
-      const decision = outcome.decision ?? defaultFailureDecision(attempt, outcome.reason);
+      const decision = { ...(outcome.decision ?? defaultFailureDecision(attempt, outcome.reason)), raisedAtGraphRevision: run.graph.revision };
       facts.push(fact(`${attempt.attemptId}:decision:${decision.id}`, at, "decision.raised", { decision }));
       return facts;
     }
@@ -264,7 +264,7 @@ export class V2ExecutionDriver {
     }
 
     if (outcome.evidenceMatrix.outcome !== "verified") {
-      const decision = defaultFailureDecision(attempt, `Validation outcome is ${outcome.evidenceMatrix.outcome}.`);
+      const decision = { ...defaultFailureDecision(attempt, `Validation outcome is ${outcome.evidenceMatrix.outcome}.`), raisedAtGraphRevision: run.graph.revision };
       facts.push(fact(`${attempt.attemptId}:decision:${decision.id}`, at, "decision.raised", { decision }));
       return facts;
     }
@@ -387,7 +387,7 @@ function createAttempt(
   const contractRevisions = [contract.task, contract.scope, contract.validation, ...contract.seams, ...contract.artifacts]
     .map(({ id, revision }) => ({ id, revision }));
   const inputFingerprint = computeInputFingerprint({
-    graph: { id: run.graph.graphId, revision: run.graph.revision },
+    graphId: run.graph.graphId,
     nodeId,
     contractRevisions,
     baseCommit: run.graph.baseCommit,

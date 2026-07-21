@@ -87,6 +87,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   event("graph.revision.approved", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive() }).strict()),
   event("decision.raised", z.object({ decision: DecisionInputSchema }).strict()),
   event("decision.resolved", z.object({ decisionId: EntityIdSchema, ...DecisionResolutionShape }).strict().superRefine(requireDecisionResolution)),
+  event("decision.expired", z.object({ decisionId: EntityIdSchema, supersededByRevision: z.number().int().positive(), reason: NonEmptyStringSchema }).strict()),
   event("readiness.observed", z.object({ readyNodeIds: z.array(EntityIdSchema), pendingDecisionIds: z.array(EntityIdSchema) }).strict()),
   event("wave.selected", z.object({
     waveId: EntityIdSchema,
