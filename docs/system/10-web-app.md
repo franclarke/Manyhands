@@ -22,8 +22,11 @@ Interfaces.
 ### Proto
 
 `/runs/proto/[fixture]` usa fixtures registrados y una sidebar propia. No consulta
-el registry real de workspaces/runs. Ofrece play/pause, avance manual, velocidad,
-reset y navegación de fixtures.
+el registry real de workspaces/runs. Ofrece play/pause, navegación bidireccional
+por evento y por hito, scrubber, velocidad, reset y navegación de fixtures. Toda
+navegación manual pausa la reproducción antes de reconstruir la proyección.
+Las sidebars enlazan explícitamente entre el laboratorio y los runs reales; la
+barra de reproducción permanece compacta para no desplazar el canvas.
 
 ## Command/query boundary
 
@@ -31,6 +34,9 @@ La UI envía comandos con `expectedVersion`/revision. El servidor valida,
 persiste efectos y responde con identidad/cursor. El cliente aprende el estado
 real mediante snapshot + eventos, no aplicando éxito optimista a estados de
 dominio.
+
+El `RunRecord` JSON usado para metadata, previews y listados es una cache de la
+proyección V2. El journal `*.events.v2.jsonl` conserva la historia canónica.
 
 Queries principales:
 
@@ -62,19 +68,31 @@ Cada pending decision:
 - marca los nodos afectados;
 - genera tarjeta contextual;
 - aparece en cola global;
-- abre dialog con evidence/impact;
+- selecciona su nodo y abre evidence/impact/opciones en el inspector;
 - maneja submitting, CAS conflict, expired y resolved.
 
 La UI nunca transforma pending en resolved hasta recibir el evento.
 
 ## Canvas
 
-- layout determinista por graph revision;
-- viewport persistido localmente por run/fixture;
-- no auto-fit por eventos;
+- layout determinista por span de subárbol, profundidad y sibling order;
+- autoencuadre activado por defecto y controlable desde la toolbar compartida
+  del canvas;
+- auto-fit solo por cambios estructurales de nodos, nunca por estado, selección
+  o actividad; al desactivarlo, el viewport vuelve a ser propiedad exclusiva del
+  usuario;
 - navegación por teclado y focus visible;
-- edges secundarios filtrables;
+- jerarquía persistente y edges secundarios agrupados/filtrables por lentes de
+  ejecución, artefactos, contratos, conflictos y todo;
+- `Encuadrar` y minimapa siempre iniciados por el operador;
 - reduced motion.
+
+## Listado y archivo de runs
+
+Los listados excluyen runs archivados dentro del repositorio, antes de aplicar
+el límite solicitado. `include=archived` habilita la consulta explícita. La
+acción de la sidebar archiva y muestra el error del servidor si no puede
+completarla; nunca presenta un borrado exitoso de forma optimista.
 
 ## Honestidad
 

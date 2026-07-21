@@ -9,7 +9,7 @@ proyecciÃ³n descartable y una interfaz centrada en el grafo.
 - El grafo es la superficie principal durante planning y ejecuciÃ³n.
 - Las decisiones aparecen asociadas a los nodos afectados y no detienen ramas independientes.
 - Los contratos, seams, dependencias de artefactos y conflictos se leen en contexto.
-- El canvas se encuadra una vez al abrirse; nuevos eventos no alteran el viewport del usuario.
+- El switch `Autoencuadre`, activado por defecto en la toolbar compartida del grafo, sigue la incorporación de nodos sin mover el viewport por otros eventos; el operador puede desactivarlo en cualquier momento.
 - En `result_ready`, evidencia y publicaciÃ³n explican el resultado sin inventar estados cliente.
 
 `/runs/proto/[fixture]` reproduce el mismo workspace con eventos V2 de ejemplo.

@@ -86,14 +86,16 @@ describe("POST /api/runs canonical StageSelection", () => {
     expect(((await response.json()) as { error: string }).error).toMatch(/effort/i);
   });
 
-  it("rejects a planning model without planning capability", async () => {
+  it("accepts every selectable model for planning", async () => {
     const response = await post({
       workspaceId: await createWorkspace(),
       userPrompt: "Build it",
       planningSelection: { executorId: "claude-code-cli", model: "haiku" }
     });
-    expect(response.status).toBe(400);
-    expect(((await response.json()) as { error: string }).error).toMatch(/planning/i);
+    expect(response.status).toBe(201);
+    const { run } = (await response.json()) as { run: { runId: string } };
+    const saved = await getRunRepository().get(run.runId);
+    expect(planningSelection(saved)).toEqual({ executorId: "claude-code-cli", model: "haiku" });
   });
 
   it("rejects unknown models instead of silently remapping them", async () => {

@@ -1,8 +1,8 @@
 # Architecture Decision Records
 
-Estos ADR documentan decisiones de la arquitectura objetivo definida en julio de
-2026. Reemplazan la serie histórica anterior, que describía prototipos, Lab Mode,
-benchmarks, migraciones de executor y restricciones que ya no son normativas.
+Estos ADR documentan las decisiones que originaron la arquitectura V2 y sus
+ajustes posteriores. La migración cerró en julio de 2026; los ADR siguen
+explicando el porqué de los contratos vigentes.
 
 Un ADR explica por qué se eligió una dirección. La síntesis vigente está en
 [`../DECISIONS.md`](../DECISIONS.md); ante contradicción, se crea un ADR nuevo y
@@ -19,3 +19,4 @@ se actualiza la síntesis.
 | [0007](0007-immutable-attempts-and-integration.md) | intentos exactos e integración bottom-up |
 | [0008](0008-local-human-decisions.md) | decisiones humanas locales |
 | [0009](0009-framework-and-executor-boundaries.md) | frameworks y executors como adapters |
+| [0010](0010-graph-lenses-and-decision-inspector.md) | lentes del grafo e inspector de decisiones |

@@ -4,6 +4,7 @@ import {
   assertDeclaredStageSelection,
   inspectCapabilities
 } from "@/lib/server/providers/capability-service";
+import { modelOptionsFromCapabilities } from "@/lib/models";
 import type { ProviderReadiness } from "@/lib/api-types";
 
 const readyCodex: ProviderReadiness = {
@@ -23,11 +24,11 @@ describe("CapabilityService", () => {
       "planning"
     )).toEqual({ executorId: "codex-cli", model: "gpt-5.5", effort: "medium" });
 
-    expect(() => assertDeclaredStageSelection(
+    expect(assertDeclaredStageSelection(
       "Planning",
       { executorId: "codex-cli", model: "gpt-5.4", effort: "high" },
       "planning"
-    )).toThrow("does not support planning");
+    )).toEqual({ executorId: "codex-cli", model: "gpt-5.4", effort: "high" });
   });
 
   it("keeps declared and available as separate facts", async () => {
@@ -47,5 +48,16 @@ describe("CapabilityService", () => {
       { executorId: "claude-code-cli", model: "sonnet" },
       "Planning"
     )).toThrow("No se pudo verificar Claude Code CLI");
+  });
+
+  it("omits disabled executors from the model selector", async () => {
+    const capabilities = await inspectCapabilities(null, {
+      inspectReadiness: async () => [readyCodex]
+    });
+
+    const options = modelOptionsFromCapabilities(capabilities);
+
+    expect(options.some((option) => option.executorId === "opencode-cli")).toBe(false);
+    expect(options.some((option) => option.executorId === "claude-code-cli")).toBe(true);
   });
 });

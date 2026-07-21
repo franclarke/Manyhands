@@ -6,7 +6,7 @@ inventa estados ni capacidades que el backend no pueda demostrar.
 
 ## Orden de lectura
 
-1. [`agent-first-redesign.md`](agent-first-redesign.md): propuesta de experiencia.
+1. [`agent-first-redesign.md`](agent-first-redesign.md): experiencia implementada.
 2. [`run-operative-model.md`](run-operative-model.md): entidades, eventos y
    estados derivados.
 3. [`interaction-model.md`](interaction-model.md): comportamiento del workspace.
@@ -17,8 +17,15 @@ inventa estados ni capacidades que el backend no pueda demostrar.
 6. [`design-system.md`](design-system.md): lenguaje visual, accesibilidad y
    movimiento.
 7. [`golden-fixtures.md`](golden-fixtures.md): demostraciones y regresiones.
-8. [`evolution-and-rationale.md`](evolution-and-rationale.md): decisiones retiradas
-   y razones del cambio.
+
+El contexto histórico y las decisiones ya retiradas se conservan aparte en
+[`evolution-and-rationale.md`](evolution-and-rationale.md); no es necesario para
+comprender la experiencia actual.
+
+El comportamiento productivo actual se verifica además en
+[`../development/architecture.md`](../development/architecture.md) y en los
+tests del reducer, layout, relaciones y viewport bajo `tests/run-model-*` y
+`tests/run-canvas-*`.
 
 ## Principios
 
@@ -29,6 +36,9 @@ inventa estados ni capacidades que el backend no pueda demostrar.
 - Progressive disclosure en lugar de superficies técnicas separadas.
 - Estado derivado de eventos, nunca sobrescrito por componentes.
 - Movimiento para explicar causalidad, nunca para mover el viewport.
+- Jerarquía persistente y relaciones secundarias reveladas mediante lentes.
+- Decisiones resueltas en el inspector contextual, con una franja global para
+  recorrer pendientes.
 
 ## Superficies que dejan de ser primarias
 

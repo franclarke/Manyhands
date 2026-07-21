@@ -115,7 +115,7 @@ export function modelOptionForValue(
 
 /** Convert the server capability/readiness contract into picker options. */
 export function modelOptionsFromCapabilities(response: CapabilitiesResponse): ModelOption[] {
-  return response.executors.flatMap((executor) => {
+  return response.executors.filter((executor) => executor.enabled).flatMap((executor) => {
     const available = executor.enabled && executor.readiness.status !== "error";
     const availabilityMessage = executor.readiness.checks.find((check) => check.status === "fail")?.message;
     return executor.models.map((model) => ({

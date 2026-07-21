@@ -26,8 +26,8 @@ técnica”: depende de mostrar estados verdaderos, evidencia y control.
 - Ember identifica actividad y acción primaria, no decoración.
 - El grafo conserva posición y contexto; nunca se recentra por eventos.
 - El detalle técnico se revela desde el objeto seleccionado.
-- Una decisión se presenta junto al nodo afectado y se resuelve en un popup
-  accesible.
+- Una decisión aparece en la franja global, selecciona el nodo afectado y se
+  resuelve en su inspector accesible.
 - Al terminar, la evidencia reemplaza al grafo como contenido principal.
 - El producto cumple WCAG 2.2 AA y ofrece reducción de movimiento.
 

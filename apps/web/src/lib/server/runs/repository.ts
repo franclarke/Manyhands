@@ -15,6 +15,7 @@ import {
 export interface RunListFilter {
   workspaceId?: string;
   workspaceIds?: readonly string[];
+  includeArchived?: boolean;
   limit?: number;
 }
 
@@ -22,7 +23,8 @@ export interface RunRepository {
   list(filter?: RunListFilter): Promise<RunRecord[]>;
   /**
    * Reference-integrity query. Unlike the productive list view, this fails
-   * closed when any candidate RunRecord cannot be read or validated.
+   * closed when a record that may reference the requested workspace cannot be
+   * read or validated.
    */
   listStrict(filter?: RunListFilter): Promise<RunRecord[]>;
   get(runId: string): Promise<RunRecord>;
@@ -104,6 +106,7 @@ export class JsonRunRecordStore implements RunRepository {
     candidates.sort((left, right) => right.mtimeMs - left.mtimeMs);
 
     const workspaceIds = filter.workspaceIds === undefined ? undefined : new Set(filter.workspaceIds);
+    const includeArchived = filter.includeArchived ?? true;
     const records: RunRecord[] = [];
     for (const candidate of candidates) {
       if (filter.limit !== undefined && records.length >= filter.limit) break;
@@ -113,6 +116,7 @@ export class JsonRunRecordStore implements RunRepository {
           continue;
         }
         if (workspaceIds !== undefined && !workspaceIds.has(record.workspaceId)) continue;
+        if (!includeArchived && record.archivedAt !== undefined) continue;
         records.push(record);
       } catch {
         // Skip unreadable / invalid files silently; surfacing every malformed run
@@ -138,22 +142,30 @@ export class JsonRunRecordStore implements RunRepository {
     }
 
     const workspaceIds = filter.workspaceIds === undefined ? undefined : new Set(filter.workspaceIds);
+    const referenceWorkspaceIds = new Set(workspaceIds ?? []);
+    if (filter.workspaceId !== undefined) referenceWorkspaceIds.add(filter.workspaceId);
+    const includeArchived = filter.includeArchived ?? true;
     const records: RunRecord[] = [];
-    for (const entry of entries.filter((candidate) => candidate.endsWith(".json")).sort()) {
+    for (const entry of entries.filter(isPrimaryRunRecordFile).sort()) {
+      const filePath = path.join(this.directory, entry);
+      if (referenceWorkspaceIds.size > 0) {
+        let referencedWorkspaceId: string;
+        try {
+          referencedWorkspaceId = await readWorkspaceIdForReference(filePath);
+        } catch (error) {
+          throw strictReferenceInspectionError(this.directory, error, entry);
+        }
+        if (!referenceWorkspaceIds.has(referencedWorkspaceId)) continue;
+      }
       let record: RunRecord;
       try {
-        record = await this.readFile(path.join(this.directory, entry));
+        record = await this.readFile(filePath);
       } catch (error) {
-        const runId = entry.slice(0, -".json".length);
-        const detail = error instanceof Error ? error.message : String(error);
-        throw new RunValidationError(
-          `Cannot safely inspect run record "${entry}" while checking workspace references: ${detail}. ` +
-            `Inspect /api/runs/${encodeURIComponent(runId)}/diagnostics and repair or explicitly remove ` +
-            "that run before retrying; no workspace data was deleted."
-        );
+        throw strictReferenceInspectionError(this.directory, error, entry);
       }
       if (filter.workspaceId !== undefined && record.workspaceId !== filter.workspaceId) continue;
       if (workspaceIds !== undefined && !workspaceIds.has(record.workspaceId)) continue;
+      if (!includeArchived && record.archivedAt !== undefined) continue;
       records.push(record);
       if (filter.limit !== undefined && records.length >= filter.limit) break;
     }
@@ -305,8 +317,16 @@ export class JsonRunRecordStore implements RunRepository {
   }
 }
 
-function strictReferenceInspectionError(target: string, error: unknown): RunValidationError {
+function strictReferenceInspectionError(target: string, error: unknown, entry?: string): RunValidationError {
   const detail = error instanceof Error ? error.message : String(error);
+  if (entry !== undefined) {
+    const runId = entry.slice(0, -".json".length);
+    return new RunValidationError(
+      `Cannot safely inspect run record "${entry}" while checking workspace references: ${detail}. ` +
+        `Inspect /api/runs/${encodeURIComponent(runId)}/diagnostics and repair or explicitly remove ` +
+        "that run before retrying; no workspace data was deleted."
+    );
+  }
   return new RunValidationError(
     `Cannot safely inspect run records at "${target}" while checking workspace references: ${detail}. ` +
       "Restore read access and retry; no workspace data was deleted."
@@ -341,6 +361,30 @@ async function readRawWithRetry(filePath: string): Promise<string> {
 
 function safeFileName(runId: string): string {
   return runId.replace(/[^a-zA-Z0-9._-]+/g, "_");
+}
+
+function isPrimaryRunRecordFile(entry: string): boolean {
+  return entry.endsWith(".json") && !entry.endsWith(".snapshot.v2.json") && !entry.endsWith(".fence.v2.json");
+}
+
+async function readWorkspaceIdForReference(filePath: string): Promise<string> {
+  const raw = await readRawWithRetry(filePath);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new RunValidationError(`Run file at ${filePath} is not valid JSON`);
+  }
+  if (
+    typeof parsed !== "object" || parsed === null || Array.isArray(parsed) ||
+    !("run" in parsed) ||
+    typeof parsed.run !== "object" || parsed.run === null || Array.isArray(parsed.run) ||
+    !("workspaceId" in parsed.run) ||
+    typeof parsed.run.workspaceId !== "string" || parsed.run.workspaceId.length === 0
+  ) {
+    throw new RunValidationError(`Run file at ${filePath} does not declare a workspaceId`);
+  }
+  return parsed.run.workspaceId;
 }
 
 /** Inspect one record without hiding validation/corruption failures. */

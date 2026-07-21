@@ -64,8 +64,10 @@ La profundidad técnica permanece disponible, pero deja de competir por atenció
 - documentos de benchmarks, Lab Mode y planes cerrados;
 - decisiones D1–D19 como invariantes eternas.
 
-## Regla para la transición
+## Resultado de la transición
 
-La arquitectura nueva se implementará por capacidades verticales y con
-compatibilidad explícita. No se reescribe todo de una vez. Cada slice debe dejar
-una verdad menos duplicada y una promesa de producto respaldada por tests.
+La arquitectura nueva se implementó por capacidades verticales y con
+compatibilidad explícita. El cierre retiró la ruta V1 productiva, dejó el event
+journal como autoridad y respaldó los gates con tests, typechecks, builds y
+escenarios E2E. Los planes se conservan como historia; los cambios nuevos parten
+de la arquitectura V2 vigente.

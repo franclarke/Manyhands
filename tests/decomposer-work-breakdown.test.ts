@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  NonRetryablePlanningError,
   WorkBreakdownPlanner,
   WorkBreakdownSchema,
   buildWorkBreakdownPrompt,
@@ -61,6 +62,19 @@ describe("WorkBreakdown", () => {
       retryDelayMs: 0
     });
     await expect(failing.plan(input)).rejects.toThrow(/after 2 attempts/i);
+  });
+
+  it("does not retry a planning protocol failure that cannot be repaired by another model attempt", async () => {
+    const generate = vi.fn().mockRejectedValue(new NonRetryablePlanningError("Claude stream closed without a successful terminal result."));
+    const attempts: string[] = [];
+    const planner = new WorkBreakdownPlanner({ model: { generate }, maxAttempts: 3, retryDelayMs: 0 });
+
+    await expect(planner.plan(plannerInput(), {
+      onAttemptFailed: ({ attempt, reason }) => { attempts.push(`${attempt}:${reason}`); }
+    })).rejects.toThrow(/stopped after 1 attempt.*terminal result/i);
+
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(attempts).toEqual(["1:Claude stream closed without a successful terminal result."]);
   });
 
   it("accepts declared planned paths for a greenfield leaf without treating them as repository evidence", () => {

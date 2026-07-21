@@ -32,3 +32,10 @@ Los documentos temporales no forman parte del recorrido normativo.
 - Los docs no pueden usarse como evidencia de feature implementada.
 - Cambios de arquitectura requieren actualizar varias vistas canónicas.
 - Se retira documentación histórica que competía por autoridad.
+
+## Resultado de la transición
+
+La transición V2 se cerró el 18 de julio de 2026. Desde ese cierre, los mismos
+documentos describen la arquitectura vigente y toda divergencia se registra como
+drift, limitación verificada o nueva propuesta; ya no se presenta el monorepo
+como una implementación V1 parcial por defecto.

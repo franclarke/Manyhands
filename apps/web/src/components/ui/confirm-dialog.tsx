@@ -10,6 +10,7 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   destructive?: boolean;
   busy?: boolean;
+  error?: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -25,6 +26,7 @@ export function ConfirmDialog({
   cancelLabel = "Cancelar",
   destructive = false,
   busy = false,
+  error = null,
   onConfirm,
   onCancel
 }: ConfirmDialogProps): React.ReactElement {
@@ -54,6 +56,9 @@ export function ConfirmDialog({
       >
         <h2 className="m-0 text-base font-semibold text-[var(--color-text)]">{title}</h2>
         <p className="m-0 text-label leading-relaxed text-[var(--color-text-muted)]">{description}</p>
+        {error !== null ? (
+          <p role="alert" className="m-0 text-label text-[var(--status-failed-fg)]">{error}</p>
+        ) : null}
         <div className="mt-1 flex justify-end gap-2">
           <Button variant="ghost" size="sm" onClick={onCancel} disabled={busy} autoFocus>
             {cancelLabel}

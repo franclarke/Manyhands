@@ -24,6 +24,7 @@ export type NodeExecutionStatus = "pending" | "ready" | "running" | "waiting" | 
 
 export interface RunNodeView extends TaskNodeV2 {
   status: NodeExecutionStatus;
+  integrationStatus?: "running" | "completed" | "failed" | "decision_required" | undefined;
   attemptId?: string;
   artifactCount: number;
   decisionCount: number;
@@ -44,5 +45,14 @@ export interface RunModel {
 export interface RunFixture {
   seed: RunSeed;
   events: RunEvent[];
+  milestones: FixtureMilestone[];
   intervalMs?: number;
+}
+
+export interface FixtureMilestone {
+  id: string;
+  title: string;
+  description: string;
+  /** Number of events included when this narrative moment is displayed. */
+  eventIndex: number;
 }

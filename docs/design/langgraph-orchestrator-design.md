@@ -1,56 +1,59 @@
-# Boundary del motor de orquestación
+# LangGraph — uso histórico y boundary actual
 
-## Decisión
+## Estado
 
-LangGraph puede seguir siendo el motor del control plane, pero no es el modelo
-del producto ni el `TaskGraph` que se muestra al usuario.
+LangGraph ya no conduce la ruta productiva V2. `@langchain/core` y
+`@langchain/langgraph` continúan declarados en `apps/web/package.json`, pero el
+árbol actual no contiene imports productivos de esas librerías.
 
-```text
-TaskGraph       = trabajo de software planificado
-Control graph   = flujo interno para coordinar casos de uso
-RunEventLog     = historia de dominio durable
-Checkpoint      = mecanismo de recuperación del motor
-```
+La explicación detallada y la evidencia están en
+[`../development/library-usage.md`](../development/library-usage.md#langchain-y-langgraph).
 
-Ninguno sustituye automáticamente a otro.
+## Qué hacía en la arquitectura anterior
 
-## Responsabilidad permitida de LangGraph
+La arquitectura V1 usaba `StateGraph` para encadenar planning y ejecución,
+checkpoints para resume y `interrupt()` para gates humanos. Eso distinguía un
+control graph interno del `TaskGraph`, pero en la práctica introducía otra
+representación mutable del run que debía reconciliarse con `RunRecord` y eventos.
 
-- encadenar planning, scheduling, ejecución, integración y delivery;
-- pausar y reanudar casos de uso;
-- fan-out/fan-in controlado;
-- checkpoint de estado interno;
-- transportar comandos hacia servicios de dominio.
+El commit de retiro `c5a4f99` eliminó:
 
-## Responsabilidad prohibida
+- `graphs/planning-graph.ts`;
+- `graphs/execution-graph.ts`;
+- `checkpointer.ts`;
+- `state.ts`;
+- los nodos y tests asociados al control graph legacy.
 
-- definir estados persistidos de producto sin eventos de dominio;
-- representar las relaciones del TaskGraph mediante edges del control graph;
-- convertir un checkpoint en event log por conveniencia;
-- mutar artefactos, git o RunRecord desde nodos sin puertos y leases;
-- usar `interrupt()` como única representación de decisiones humanas;
-- exponer tipos de LangGraph en contratos compartidos o UI.
+## Qué lo reemplazó
 
-## Adapter objetivo
+- [`RunCoordinator`](../../packages/run-coordinator/src/coordinator.ts) valida
+  commands, persiste eventos y pliega el lifecycle.
+- [`V2ExecutionDriver`](../../packages/orchestrator-graph/src/v2/execution-driver.ts)
+  calcula readiness, registra waves y despacha attempts.
+- [`JsonlRunEventStore`](../../packages/run-store/src/jsonl-event-store.ts) aporta
+  replay, CAS, checksums, idempotencia y fencing.
+- Los hosts de [`apps/web/src/lib/server/runs/v2/`](../../apps/web/src/lib/server/runs/v2/)
+  conectan CLIs, filesystem, leases y rutas HTTP.
 
-`RunCoordinator` expone casos de uso independientes del framework. Un adapter de
-LangGraph llama esos casos y persiste su propio checkpoint. Los servicios
-devuelven eventos/outputs explícitos; el adapter no infiere éxito de que un nodo
-del control graph terminó.
+El resultado es un control plane explícito en TypeScript: el event journal es la
+historia durable y ningún checkpoint de framework puede recuperar autoridad.
 
-## Resume y fork
+## Boundary que se conserva
 
-- Resume recupera el checkpoint del motor y reconcilia contra el event log y las
-  leases vigentes.
-- Fork crea un nuevo run con target, graph revision y artefactos elegibles
-  referenciados explícitamente.
-- Un checkpoint viejo nunca recupera autoridad sobre una lease reemplazada.
+La decisión arquitectónica sigue siendo útil aunque LangGraph ya no esté activo:
+un framework de workflow futuro solo puede ser un adapter. No puede:
 
-## Criterio para conservar o reemplazar LangGraph
+- definir el lifecycle persistido;
+- representar relaciones del `TaskGraph` mediante sus edges internos;
+- usar un checkpoint como event log;
+- convertir `interrupt()` en la única entidad de decisión;
+- importar sus tipos en `run-coordinator`, contratos o UI.
 
-Se conserva si simplifica fan-out, resume y testing sin duplicar lifecycle. Se
-reemplaza si obliga a traducir tombstones, estado mutable o interrupts en una
-semántica que el dominio ya expresa mejor.
+[`run-coordinator-boundaries.test.ts`](../../tests/run-coordinator-boundaries.test.ts)
+prohíbe de forma explícita `@langchain/langgraph` dentro del paquete de dominio.
 
-La transición debe evaluar costo de migración y corrección; no reemplazar el
-framework por preferencia estética.
+## Deuda residual
+
+Que LangChain/LangGraph sigan en el manifest web no es evidencia de uso. Mientras
+no exista un adapter productivo y sus tests, deben considerarse dependencias
+residuales candidatas a eliminación, no una capacidad actual de ManyHands.

@@ -1,4 +1,4 @@
-import { mkdtemp, rm, utimes } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import type { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -108,5 +108,18 @@ describe("JsonRunRecordStore V2 cache", () => {
     await fs.writeFile(path.join(directory, "garbage.json"), "{ not json", "utf8");
     expect(await repo.list()).toEqual([]);
     await expect(repo.get("garbage")).rejects.toBeInstanceOf(RunValidationError);
+  });
+
+  it("does not let an unrelated legacy run block a strict workspace-reference check", async () => {
+    await mkdir(directory, { recursive: true });
+    await writeFile(
+      path.join(directory, "legacy-other.json"),
+      JSON.stringify({ version: 1, run: { runId: "legacy-other", workspaceId: "ws-other" } }),
+      "utf8"
+    );
+    await writeFile(path.join(directory, "legacy-other.snapshot.v2.json"), "{}", "utf8");
+
+    await expect(repo.listStrict({ workspaceIds: ["ws-target"] })).resolves.toEqual([]);
+    await expect(repo.listStrict({ workspaceIds: ["ws-other"] })).rejects.toBeInstanceOf(RunValidationError);
   });
 });

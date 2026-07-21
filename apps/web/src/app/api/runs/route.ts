@@ -32,11 +32,12 @@ export async function GET(request: Request): Promise<NextResponse> {
     const equivalentWorkspaceIds = workspaceId !== null && workspaceId.length > 0
       ? await workspaceRepository.equivalentIds(workspaceId)
       : undefined;
-    const filter: { workspaceIds?: string[]; limit?: number } = {};
+    const filter: { workspaceIds?: string[]; includeArchived?: boolean; limit?: number } = {
+      includeArchived: url.searchParams.get("include") === "archived"
+    };
     if (equivalentWorkspaceIds !== undefined) filter.workspaceIds = equivalentWorkspaceIds;
     if (limit !== undefined) filter.limit = limit;
     let runs = await getRunRepository().list(filter);
-    if (url.searchParams.get("include") !== "archived") runs = runs.filter((run) => run.archivedAt === undefined);
     const statuses = statusParam === null ? [] : parseStatusFilter(statusParam);
     if (statuses.length > 0) runs = runs.filter((run) => statuses.includes(run.projection.lifecycle));
     const workspaces = await workspaceRepository.list();

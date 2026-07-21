@@ -27,4 +27,11 @@ puede renderizar el canvas; Claude Code/Codex implementan `AgentExecutor`.
 - Se requieren mappers y puertos claros.
 - Cambiar executor modifica config/fingerprint, no schemas del run.
 - Checkpoint no sustituye event log.
-- La transición evalúa si LangGraph sigue aportando valor antes de reemplazarlo.
+- La transición debía evaluar si LangGraph aportaba valor sin duplicar estado.
+
+## Resultado
+
+La evaluación terminó retirando los StateGraph y checkpoints legacy en
+`c5a4f99`. LangGraph permanece permitido conceptualmente como adapter futuro,
+pero no tiene imports productivos en V2. Sus dependencias declaradas en web son
+residuales hasta que se eliminen o exista una adopción nueva con boundary tests.

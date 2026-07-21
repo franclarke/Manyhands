@@ -1,4 +1,4 @@
-# Grafo como centro — experiencia objetivo
+# Grafo como centro — experiencia vigente
 
 ## Propuesta
 
@@ -12,6 +12,11 @@ qué entregan, qué necesitan, cuáles pueden avanzar y dónde se integran. No d
 forzarse para ser didáctico: primero tiene que ser correcto para los agentes y
 para el repositorio. La UI traduce esa estructura mediante nombres comprensibles,
 resúmenes y progressive disclosure.
+
+La implementación actual usa un layout de árbol determinista por subárbol. La
+jerarquía permanece visible y las relaciones de artefactos, contratos y
+conflictos se revelan por lente. La lente de ejecución muestra el vecindario del
+nodo seleccionado y atenúa el resto sin alterar el grafo de dominio.
 
 ## Dos centros de gravedad
 
@@ -72,6 +77,10 @@ El sistema ejecuta lo reversible y verificable. Convoca al usuario ante:
 Una decisión no congela lo que no depende de ella. Si todavía hay nodos ready,
 el run continúa en `running`. Solo se muestra `waiting_for_input` cuando no queda
 trabajo útil que pueda avanzar.
+
+Las pendientes se recorren desde una franja global. Elegir una enfoca su objeto
+en el inspector lateral, donde se muestran alcance, razón y opciones; el canvas
+permanece visible y conserva pan y zoom.
 
 ## Criterios de éxito de la experiencia
 

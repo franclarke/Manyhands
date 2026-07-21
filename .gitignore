@@ -17,9 +17,14 @@ logs/
 *.log
 
 .playwright-mcp/
+.playwright-cli/
+output/
+__pycache__/
+*.pyc
 
 # Material de referencia local (tesis de otros alumnos) — no debe publicarse
 Otras tesis/
+docs/otras tesis (NO LEER)/
 
 pnpm-debug.log*
 npm-debug.log*

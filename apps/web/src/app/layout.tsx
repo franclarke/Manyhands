@@ -26,7 +26,7 @@ export default async function RootLayout({
   const workspaceRepository = getWorkspaceRepository();
   const [workspaces, runs, corruptRecords] = await Promise.all([
     workspaceRepository.list(),
-    getRunRepository().list({ limit: 10 }),
+    getRunRepository().list({ includeArchived: false, limit: 10 }),
     // Advance corruption discovery incrementally on real navigations. Stable
     // records come from the durable metadata index and are not reparsed.
     listCorruptRunRecords({ inspectionBudget: 8 })

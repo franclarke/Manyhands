@@ -1,7 +1,8 @@
-# ManyHands — especificación del sistema objetivo
+# ManyHands — especificación del sistema vigente
 
-> Esta carpeta describe el comportamiento que debe alcanzar el producto. Para
-> verificar el estado actual hay que inspeccionar código, tests y persistencia.
+> Esta carpeta define los contratos que implementa el sistema actual. Para
+> afirmar que un caso concreto funciona se inspeccionan código, tests y
+> persistencia; la especificación no sustituye esa evidencia.
 
 ## Flujo completo
 
@@ -81,6 +82,31 @@ sequenceDiagram
 - Las decisiones bloquean alcance, no el run entero por defecto.
 - La UI no es fuente de estado.
 - `completed` significa verificado y entregado.
+
+## Implementación de referencia
+
+- `packages/run-coordinator`: comandos, eventos, reducer, lifecycle, decisions,
+  outcomes y políticas de recuperación.
+- `packages/decomposer`: `WorkBreakdownPlanner`, Graph Compiler y critics.
+- `packages/task-graph` y `packages/contracts`: grafo tipado y obligaciones
+  versionadas.
+- `packages/orchestrator-graph` y `packages/execution-core`: driver, bases,
+  intentos, validación, integración y delivery.
+- `packages/run-store`: event journal JSONL canónico, fencing, snapshots
+  descartables y registros inmutables de attempts/artifacts.
+- `apps/web`: composition root, commands/queries y proyección del workspace.
+
+El registro JSON usado para listar runs y conservar metadata es una proyección
+operativa. El lifecycle se reconstruye desde `*.events.v2.jsonl`; los snapshots
+`*.snapshot.v2.json` se pueden regenerar y las trazas no gobiernan estado.
+
+## Límites verificados
+
+La suite E2E cubre el recorrido completo hasta delivery y sus recuperaciones. La
+auditoría productiva del 18 de julio verificó además planning greenfield y
+streaming progresivo con Claude Code CLI. La granularidad incremental del
+adapter de Codex continúa dependiendo del stdout de la CLI y debe tratarse como
+parcial hasta una prueba dedicada.
 
 ## Glosario mínimo
 

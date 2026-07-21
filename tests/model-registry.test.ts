@@ -7,7 +7,8 @@ import {
   findModel,
   findModelForSelection,
   normalizeExecutorOverride,
-  runtimeCapabilitiesForSelection
+  runtimeCapabilitiesForSelection,
+  selectableModelOptions
 } from "@/lib/models";
 
 describe("model registry", () => {
@@ -34,6 +35,13 @@ describe("model registry", () => {
       expect(model?.supportsEffort, `${id} should support effort`).toBe(true);
     }
     expect(codexModels.find((m) => m.id === "gpt-5.5")?.capabilities).toContain("planning");
+  });
+
+  it("offers every selectable model for both planning and execution", () => {
+    const selectionValues = (capability: "planning" | "execution") =>
+      selectableModelOptions(capability).map((model) => `${model.executorId}/${model.id}`);
+
+    expect(selectionValues("planning")).toEqual(selectionValues("execution"));
   });
 
   it("normalizes valid executor selections and keeps model lookup executor-scoped", () => {

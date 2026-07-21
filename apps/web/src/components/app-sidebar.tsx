@@ -38,11 +38,13 @@ export function AppSidebar({ workspaces, recentRuns, degradedRuns }: AppSidebarP
   const pathname = usePathname();
   const router = useRouter();
   const isProtoRoute = pathname === "/runs/proto" || pathname.startsWith("/runs/proto/");
+  const realRunHref = recentRuns[0] === undefined ? "/" : `/runs/${recentRuns[0].id}`;
 
   const [collapsed, setCollapsed] = useState(false);
   const [runs, setRuns] = useState<RunPreview[]>(recentRuns);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RunPreview | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   // Keep the local list in sync with fresh server data on navigation/refresh.
@@ -101,25 +103,29 @@ export function AppSidebar({ workspaces, recentRuns, degradedRuns }: AppSidebarP
   async function confirmDelete(): Promise<void> {
     if (deleteTarget === null) return;
     setBusy(true);
+    setDeleteError(null);
     const id = deleteTarget.id;
     try {
       const response = await fetch(`/api/runs/${encodeURIComponent(id)}`, { method: "DELETE" });
-      if (!response.ok && response.status !== 204) throw new Error(String(response.status));
+      if (!response.ok && response.status !== 204) {
+        const payload = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(payload.error ?? `No se pudo archivar el run (${response.status}).`);
+      }
       setRuns((prev) => prev.filter((run) => run.id !== id));
       setDeleteTarget(null);
       if (pathname === `/runs/${id}`) {
         router.push("/");
       }
       router.refresh();
-    } catch {
-      /* keep dialog open on failure */
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
     }
   }
 
   if (isProtoRoute) {
-    return <ProtoSidebar pathname={pathname} collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />;
+    return <ProtoSidebar pathname={pathname} collapsed={collapsed} realRunHref={realRunHref} onToggleCollapsed={toggleCollapsed} />;
   }
 
   if (collapsed) {
@@ -200,7 +206,10 @@ export function AppSidebar({ workspaces, recentRuns, degradedRuns }: AppSidebarP
               onStartRename={() => setEditingId(run.id)}
               onCommitRename={(title) => void commitRename(run.id, title)}
               onCancelRename={() => setEditingId(null)}
-              onRequestDelete={() => setDeleteTarget(run)}
+              onRequestDelete={() => {
+                setDeleteError(null);
+                setDeleteTarget(run);
+              }}
             />
           ))}
           {runs.length === 0 ? (
@@ -234,17 +243,32 @@ export function AppSidebar({ workspaces, recentRuns, degradedRuns }: AppSidebarP
         </section>
       ) : null}
 
+      <div className="border-t border-[var(--color-border-soft)] p-3">
+        <Link
+          href="/runs/proto"
+          aria-label="Abrir laboratorio de runs"
+          className="flex h-9 items-center gap-2 rounded-[var(--r-lg)] border border-transparent px-3 text-label font-medium text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-border)] hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+        >
+          <FlaskConical aria-hidden className="h-4 w-4 text-[var(--color-accent)]" />
+          Laboratorio de runs
+        </Link>
+      </div>
+
       </aside>
 
       {deleteTarget !== null ? (
         <ConfirmDialog
-          title="¿Eliminar este run del historial?"
-          description={`Se elimina "${deleteTarget.title || deleteTarget.userPrompt.slice(0, 48)}" de ManyHands. El repositorio y sus ramas no se tocan.`}
-          confirmLabel="Eliminar run"
+          title="¿Archivar este run del historial?"
+          description={`Se oculta "${deleteTarget.title || deleteTarget.userPrompt.slice(0, 48)}" de ManyHands. El repositorio y sus ramas no se tocan.`}
+          confirmLabel="Archivar run"
           destructive
           busy={busy}
+          error={deleteError}
           onConfirm={() => void confirmDelete()}
-          onCancel={() => setDeleteTarget(null)}
+          onCancel={() => {
+            setDeleteError(null);
+            setDeleteTarget(null);
+          }}
         />
       ) : null}
     </>
@@ -268,7 +292,15 @@ function CollapsedRail({ onExpand }: { onExpand: () => void }): React.ReactEleme
           <PanelLeftOpen aria-hidden className="h-4 w-4" />
         </RailButton>
       </div>
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-col items-center gap-1">
+        <Link
+          href="/runs/proto"
+          aria-label="Abrir laboratorio de runs"
+          title="Abrir laboratorio de runs"
+          className="grid h-9 w-9 place-items-center rounded-[var(--r-lg)] border border-transparent text-[var(--color-accent)] transition-colors hover:border-[var(--color-border)] hover:bg-[var(--color-surface-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+        >
+          <FlaskConical aria-hidden className="h-4 w-4" />
+        </Link>
         <ThemeToggle />
       </div>
     </aside>
@@ -290,10 +322,12 @@ function RailButton({
 function ProtoSidebar({
   pathname,
   collapsed,
+  realRunHref,
   onToggleCollapsed
 }: {
   pathname: string;
   collapsed: boolean;
+  realRunHref: string;
   onToggleCollapsed: () => void;
 }): React.ReactElement {
   if (collapsed) {
@@ -313,7 +347,17 @@ function ProtoSidebar({
             <PanelLeftOpen aria-hidden className="h-4 w-4" />
           </RailButton>
         </div>
-        <div className="mt-auto"><ThemeToggle /></div>
+        <div className="mt-auto flex flex-col items-center gap-1">
+          <Link
+            href={realRunHref}
+            aria-label="Volver a runs reales"
+            title="Volver a runs reales"
+            className="grid h-9 w-9 place-items-center rounded-[var(--r-lg)] border border-transparent text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-border)] hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+          >
+            <History aria-hidden className="h-4 w-4" />
+          </Link>
+          <ThemeToggle />
+        </div>
       </aside>
     );
   }
@@ -371,8 +415,18 @@ function ProtoSidebar({
         </nav>
       </section>
 
-      <div className="mx-3 mb-3 rounded-[var(--r-md)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-meta text-[var(--color-text-muted)]">
-        Fixtures locales: esta vista no muestra workspaces ni ejecuciones reales.
+      <div className="mx-3 mb-3 space-y-2">
+        <Link
+          href={realRunHref}
+          aria-label="Volver a runs reales"
+          className="flex h-9 items-center gap-2 rounded-[var(--r-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-label font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-surface-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+        >
+          <History aria-hidden className="h-4 w-4 text-[var(--color-text-muted)]" />
+          Volver a runs reales
+        </Link>
+        <p className="px-1 text-micro leading-4 text-[var(--color-text-subtle)]">
+          Los fixtures son locales y no alteran ejecuciones reales.
+        </p>
       </div>
     </aside>
   );

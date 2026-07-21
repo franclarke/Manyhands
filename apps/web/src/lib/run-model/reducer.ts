@@ -81,11 +81,18 @@ function buildNodeViews(graph: GraphRevision, projection: RunProjection | null, 
     if (node === undefined) return "pending";
     const direct = children.get(nodeId) ?? [];
     if (direct.length === 0) return node.status;
+    // A human decision is attached to one exact node. Ancestors may be waiting
+    // for that work to finish, but must not impersonate the decision owner.
+    if (node.decisionCount > 0) return node.status;
     const statuses = direct.map((child) => aggregate(child.id));
-    if (statuses.some((status) => status === "failed")) node.status = "failed";
-    else if (statuses.every((status) => status === "succeeded")) node.status = "succeeded";
+    if (node.integrationStatus === "completed") node.status = "succeeded";
+    else if (node.integrationStatus === "running") node.status = "running";
+    else if (node.integrationStatus === "failed" || node.integrationStatus === "decision_required") node.status = "failed";
+    else if (statuses.some((status) => status === "failed")) node.status = "failed";
+    // Finished children make their parent eligible for integration. They do not
+    // prove that the parent boundary itself has integrated successfully.
+    else if (statuses.every((status) => status === "succeeded")) node.status = "ready";
     else if (statuses.some((status) => status === "running")) node.status = "running";
-    else if (statuses.some((status) => status === "waiting")) node.status = "waiting";
     else if (statuses.some((status) => status === "ready")) node.status = "ready";
     return node.status;
   };
@@ -94,9 +101,22 @@ function buildNodeViews(graph: GraphRevision, projection: RunProjection | null, 
 }
 
 function buildProvisionalGraph(seed: RunSeed, events: readonly RunEvent[]): { graph: GraphRevision; layoutByNodeId: Map<string, RunNodeView["layout"]> } | null {
-  const started = [...events].reverse().find((event) => event.type === "planning.attempt_started");
+  let startedIndex = -1;
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    if (events[index]?.type === "planning.attempt_started") {
+      startedIndex = index;
+      break;
+    }
+  }
+  const started = startedIndex < 0 ? undefined : events[startedIndex];
   const attempt = typeof started?.payload.attempt === "number" ? started.payload.attempt : undefined;
-  const discoveries = events.filter((event) => event.type === "planning.node_discovered" && (attempt === undefined || event.payload.attempt === attempt));
+  const discoveriesForCurrentAttempt = events.filter((event) => event.type === "planning.node_discovered" && (attempt === undefined || event.payload.attempt === attempt));
+  const currentAttemptCompleted = startedIndex >= 0 && events.slice(startedIndex + 1).some((event) => event.type === "planning.completed");
+  const previousDiscovery = [...events].reverse().find((event) => event.type === "planning.node_discovered" && event.payload.attempt !== attempt);
+  const previousAttempt = typeof previousDiscovery?.payload.attempt === "number" ? previousDiscovery.payload.attempt : undefined;
+  const discoveries = currentAttemptCompleted || previousAttempt === undefined
+    ? discoveriesForCurrentAttempt
+    : events.filter((event) => event.type === "planning.node_discovered" && event.payload.attempt === previousAttempt);
   if (events.length === 0) return null;
   const layoutByNodeId = new Map<string, RunNodeView["layout"]>();
   const nodes: GraphRevision["nodes"] = {};
@@ -170,15 +190,16 @@ function nodeView(node: TaskNodeV2, projection: RunProjection | null): RunNodeVi
   const artifacts = projection === null ? [] : Object.values(projection.adoptedArtifacts).filter((artifact) => artifact.nodeId === node.id);
   const decisions = projection === null ? [] : Object.values(projection.decisions).filter((decision) => decision.status === "pending" && decision.affectedNodeIds.includes(node.id));
   let status: NodeExecutionStatus = "pending";
-  if (artifacts.length > 0 || integration?.status === "completed" || latestAttempt?.status === "adopted") status = "succeeded";
+  if (decisions.length > 0) status = "waiting";
+  else if (artifacts.length > 0 || integration?.status === "completed" || latestAttempt?.status === "adopted") status = "succeeded";
   else if (integration?.status === "failed" || latestAttempt?.status === "failed" || latestAttempt?.status === "discarded") status = "failed";
   else if (latestAttempt?.status === "stale") status = "stale";
   else if (integration?.status === "running" || latestAttempt?.status === "running" || latestAttempt?.status === "candidate" || latestAttempt?.status === "validated") status = "running";
-  else if (decisions.length > 0) status = "waiting";
   else if (projection?.readiness.readyNodeIds.includes(node.id) === true) status = "ready";
   return {
     ...node,
     status,
+    ...(integration !== undefined ? { integrationStatus: integration.status } : {}),
     ...(latestAttempt !== undefined ? { attemptId: latestAttempt.attemptId } : {}),
     artifactCount: artifacts.length,
     decisionCount: decisions.length

@@ -41,6 +41,20 @@ describe("GET /api/runs hot path", () => {
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("fills the requested recent-runs slice after excluding archived records", async () => {
+    await getRunRepository().update("run-11", (current) => ({
+      ...current,
+      archivedAt: "2026-07-18T21:00:00.000Z"
+    }));
+
+    const response = await GET_RUNS(new Request("http://localhost/api/runs?limit=5"));
+    expect(response.status).toBe(200);
+    const payload = await response.json() as { runs: Array<{ id: string }> };
+
+    expect(payload.runs).toHaveLength(5);
+    expect(payload.runs.map((run) => run.id)).not.toContain("run-11");
+  });
+
   it("ignores retired diagnostics query flags without starting a crawl", async () => {
     const response = await GET_RUNS(
       new Request("http://localhost/api/runs?limit=5&diagnostics=refresh")

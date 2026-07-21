@@ -2,9 +2,9 @@
 
 ## Por qué se separan
 
-“Descomponer” mezcla hoy tres problemas distintos: comprender la intención,
-elegir una arquitectura de trabajo y fabricar estructuras ejecutables. La
-arquitectura objetivo los separa para que cada salida pueda validarse.
+“Descomponer” mezclaba tres problemas distintos: comprender la intención, elegir
+una arquitectura de trabajo y fabricar estructuras ejecutables. La arquitectura
+vigente los separa para que cada salida pueda validarse.
 
 ```text
 goal + repository model

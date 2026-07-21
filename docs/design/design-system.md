@@ -1,8 +1,9 @@
 # Sistema visual de ManyHands
 
 > Registro: `product`. La implementación actual de tokens vive en
-> `apps/web/src/app/globals.css`. Este documento define la dirección objetivo;
-> cualquier valor exacto debe verificarse contra los tokens antes de modificarlo.
+> `apps/web/src/app/globals.css`. Este documento define el contrato visual
+> vigente; cualquier valor exacto debe verificarse contra los tokens antes de
+> modificarlo.
 
 ## Identidad
 
@@ -51,11 +52,22 @@ Jerarquía es el edge default. Artifact requirement, seam y conflict constraint
 usan forma, label y patrón distintos. Los edges secundarios pueden ocultarse
 hasta que el usuario selecciona un nodo.
 
-### Decision card y dialog
+### Decision card e inspector
 
-La tarjeta horizontal explica pregunta, razón e impacto. El diálogo contiene
-opciones y evidencia. Ambos conservan referencia visible al nodo. Estados:
+La tarjeta horizontal explica alcance, razón e impacto. Al revisarla selecciona
+el nodo afectado y muestra opciones/evidencia en el inspector lateral o sheet
+móvil. Ambas superficies conservan referencia visible al nodo. Estados:
 pending, submitting, conflict/CAS, resolved y expired.
+
+### Graph toolbar
+
+Los lentes `Ejecución`, `Artefactos`, `Contratos`, `Conflictos` y `Todo` usan
+botones con `aria-pressed`. `Encuadrar` es una acción puntual. `Autoencuadre` usa
+semántica de switch, comienza activado y permite seguir la incorporación de nodos.
+La toolbar del grafo es compartida por runs reales y de muestra; la barra de
+reproducción no duplica el control.
+El minimapa es opt-in para grafos de más de seis nodos y no aparece como ruido
+permanente.
 
 ### Inspector
 
@@ -92,7 +104,8 @@ Energía de “calma instrumental”, normalmente 150–250 ms con easing out.
 
 Reglas absolutas:
 
-- no llamar `fitView` ni centrar como efecto de eventos;
+- no llamar `fitView` ni centrar por eventos salvo un cambio estructural con
+  `Autoencuadre` activo;
 - no animar pan, zoom o posiciones elegidas por el usuario;
 - no gatear visibilidad de contenido a una animación;
 - no usar bounce o elastic;
@@ -105,7 +118,8 @@ Reglas absolutas:
 - Focus visible en todos los controles y nodos interactivos.
 - Estado expresado con texto/icono además de color.
 - Navegación completa por teclado y orden de foco estable.
-- Dialogs con nombre accesible, trap de foco y retorno al invocador.
+- Inspector/sheet con nombre accesible, orden de foco estable y retorno al
+  invocador.
 - Live regions limitadas a decisiones, errores importantes y estados terminales.
 
 ## Estados de calidad obligatorios

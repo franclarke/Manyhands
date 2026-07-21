@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { ChildProcess } from "node:child_process";
-import { WorkBreakdownPlanner, compileGraphRevision, parseWorkBreakdownProgressLine, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
+import { NonRetryablePlanningError, WorkBreakdownPlanner, compileGraphRevision, parseWorkBreakdownProgressLine, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
 import { foldRun } from "@manyhands/run-coordinator";
 import { buildRepositorySnapshot } from "@manyhands/repository-index";
 import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
@@ -115,18 +115,21 @@ async function invokeSelectedPlanningCli(
   const spawn = supervisedSpawnFn({ runId, operationId, label: `planning-v2-attempt-${request.attempt}` });
   return new Promise((resolve, reject) => {
     const child: ChildProcess = spawn(invocation.command, invocation.args, { cwd, env: process.env, stdio: ["pipe", "pipe", "pipe"], shell: false, detached: process.platform !== "win32", ...(invocation.windowsVerbatimArguments !== undefined ? { windowsVerbatimArguments: invocation.windowsVerbatimArguments } : {}) });
-    let stdout = "";
-    let stderr = "";
+    let stdoutBytes = 0;
+    let stderrTail = "";
     let cliBuffer = "";
     let assistantText = "";
     let resultText: string | undefined;
+    let terminalError: string | undefined;
+    let receivedClaudeDelta = false;
+    const observedEnvelopeTypes = new Set<string>();
     let progressBuffer = "";
     let progressQueue = Promise.resolve();
     let settled = false;
     const configuredTimeout = Number(process.env.MANYHANDS_PLANNING_STEP_TIMEOUT_MS ?? 300_000);
     const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout > 0 ? configuredTimeout : 300_000;
     const timer = setTimeout(() => {
-      void killCliProcessTree(child, spawn).finally(() => finish(() => reject(new Error(`${stage.executorId} planning timed out after ${timeoutMs}ms.`))));
+      void killCliProcessTree(child, spawn).finally(() => finish(() => reject(new Error(`${stage.executorId} planning timed out after ${timeoutMs}ms (${formatPlanningCliDiagnostics({ observedEnvelopeTypes, stdoutBytes, stderrTail })}).`))));
     }, timeoutMs);
     const finish = (complete: () => void) => {
       if (settled) return;
@@ -147,15 +150,20 @@ async function invokeSelectedPlanningCli(
     };
     const consumeClaudeLine = (line: string) => {
       const decoded = decodeClaudePlanningStreamLine(line);
-      if (decoded.textDelta !== undefined) consumeAssistantText(decoded.textDelta);
+      if (decoded.envelopeType !== undefined) observedEnvelopeTypes.add(decoded.envelopeType);
+      if (decoded.textDelta !== undefined) {
+        receivedClaudeDelta = true;
+        consumeAssistantText(decoded.textDelta);
+      }
+      if (decoded.assistantText !== undefined && !receivedClaudeDelta) consumeAssistantText(decoded.assistantText);
       if (decoded.result !== undefined) {
         resultText = decoded.result;
-        if (assistantText.length === 0) consumeAssistantText(decoded.result);
       }
+      if (decoded.terminalError !== undefined) terminalError = decoded.terminalError;
     };
     child.stdout?.on("data", (chunk) => {
       const text = String(chunk);
-      stdout += text;
+      stdoutBytes += Buffer.byteLength(text);
       if (isCodex) {
         consumeAssistantText(text);
         return;
@@ -165,13 +173,27 @@ async function invokeSelectedPlanningCli(
       cliBuffer = lines.pop() ?? "";
       for (const line of lines) consumeClaudeLine(line);
     });
-    child.stderr?.on("data", (chunk) => { stderr += String(chunk); });
+    child.stderr?.on("data", (chunk) => { stderrTail = appendPlanningCliDiagnosticTail(stderrTail, String(chunk)); });
     child.once("error", (error) => finish(() => reject(error)));
     child.once("close", (code) => {
       if (!isCodex) consumeClaudeLine(cliBuffer);
       enqueueProgress(progressBuffer);
       void progressQueue.then(
-        () => finish(() => code === 0 ? resolve(isCodex ? assistantText : resultText ?? assistantText) : reject(new Error(`${stage.executorId} planning failed with exit code ${code}: ${stderr || stdout}`))),
+        () => finish(() => {
+          if (code !== 0) {
+            reject(new Error(`${stage.executorId} planning failed with exit code ${code} (${formatPlanningCliDiagnostics({ observedEnvelopeTypes, stdoutBytes, stderrTail })}).`));
+            return;
+          }
+          if (isCodex) {
+            resolve(assistantText);
+            return;
+          }
+          try {
+            resolve(completeClaudePlanningStream({ resultText, terminalError, observedEnvelopeTypes, stdoutBytes, stderrTail }));
+          } catch (error) {
+            reject(error);
+          }
+        }),
         (error) => finish(() => reject(error))
       );
     });
@@ -196,7 +218,15 @@ function resolvedPlanningAnswers(state: ReturnType<typeof foldRun> | undefined):
   return answers;
 }
 
-export function decodeClaudePlanningStreamLine(line: string): { textDelta?: string; result?: string } {
+export interface ClaudePlanningStreamLine {
+  envelopeType?: string;
+  textDelta?: string;
+  assistantText?: string;
+  result?: string;
+  terminalError?: string;
+}
+
+export function decodeClaudePlanningStreamLine(line: string): ClaudePlanningStreamLine {
   let candidate: unknown;
   try {
     candidate = JSON.parse(line);
@@ -204,11 +234,72 @@ export function decodeClaudePlanningStreamLine(line: string): { textDelta?: stri
     return {};
   }
   if (!isRecord(candidate)) return {};
+  const envelopeType = typeof candidate.type === "string" ? candidate.type : undefined;
   if (candidate.type === "stream_event" && isRecord(candidate.event) && candidate.event.type === "content_block_delta" && isRecord(candidate.event.delta) && candidate.event.delta.type === "text_delta" && typeof candidate.event.delta.text === "string") {
-    return { textDelta: candidate.event.delta.text };
+    return withClaudeEnvelope(envelopeType, { textDelta: candidate.event.delta.text });
   }
-  if (candidate.type === "result" && typeof candidate.result === "string") return { result: candidate.result };
-  return {};
+  if (candidate.type === "assistant" && isRecord(candidate.message)) {
+    const assistantText = assistantMessageText(candidate.message.content);
+    return withClaudeEnvelope(envelopeType, assistantText === undefined ? {} : { assistantText });
+  }
+  if (candidate.type === "result") {
+    const subtype = typeof candidate.subtype === "string" ? candidate.subtype : undefined;
+    const terminalError = candidate.is_error === true || subtype?.startsWith("error_") === true ? subtype ?? "unknown_error" : undefined;
+    if (typeof candidate.result === "string") return withClaudeEnvelope(envelopeType, terminalError === undefined ? { result: candidate.result } : { result: candidate.result, terminalError });
+    return withClaudeEnvelope(envelopeType, terminalError === undefined ? {} : { terminalError });
+  }
+  return withClaudeEnvelope(envelopeType, {});
+}
+
+export function completeClaudePlanningStream(input: {
+  resultText?: string | undefined;
+  terminalError?: string | undefined;
+  observedEnvelopeTypes: Iterable<string>;
+  stdoutBytes: number;
+  stderrTail?: string;
+}): string {
+  const diagnostics = formatPlanningCliDiagnostics(input);
+  if (input.terminalError !== undefined) throw new Error(`Claude planning stream ended with terminal error ${input.terminalError} (${diagnostics}).`);
+  if (input.resultText === undefined) {
+    throw new NonRetryablePlanningError(`Claude planning stream closed without a successful terminal result (${diagnostics}).`);
+  }
+  return input.resultText;
+}
+
+function withClaudeEnvelope(envelopeType: string | undefined, line: Omit<ClaudePlanningStreamLine, "envelopeType">): ClaudePlanningStreamLine {
+  return envelopeType === undefined ? line : { envelopeType, ...line };
+}
+
+function assistantMessageText(content: unknown): string | undefined {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return undefined;
+  const text = content
+    .filter(isRecord)
+    .filter((block) => block.type === "text" && typeof block.text === "string")
+    .map((block) => block.text as string)
+    .join("");
+  return text.length === 0 ? undefined : text;
+}
+
+function appendPlanningCliDiagnosticTail(current: string, chunk: string): string {
+  return `${current}${chunk}`.slice(-600);
+}
+
+function formatPlanningCliDiagnostics(input: {
+  observedEnvelopeTypes: Iterable<string>;
+  stdoutBytes: number;
+  stderrTail?: string;
+}): string {
+  const envelopes = [...new Set(input.observedEnvelopeTypes)].sort().join(",") || "none";
+  const stderr = redactPlanningCliDiagnostic(input.stderrTail);
+  return `envelopes=${envelopes}; stdoutBytes=${input.stdoutBytes}${stderr === undefined ? "" : `; stderr=${JSON.stringify(stderr)}`}`;
+}
+
+function redactPlanningCliDiagnostic(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  const compact = value.replace(/\s+/gu, " ").trim();
+  if (compact.length === 0) return undefined;
+  return compact.replace(/(api[_-]?key|authorization|token|password)\s*[=:]\s*\S+/giu, "$1=[redacted]").slice(-500);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

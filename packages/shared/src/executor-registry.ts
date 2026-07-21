@@ -47,6 +47,7 @@ export interface ExecutorSelection { executorId: ExecutorId; model: string; }
  */
 export interface StageSelection { executorId: ExecutorId; model: string; effort?: EffortLevel; }
 
+const ALL_STAGE_CAPABILITIES: ExecutorCapability[] = ["planning", "execution", "repair"];
 const AGENTIC_CAPABILITIES: ExecutorCapability[] = ["execution", "repair"];
 // Codex CLI accepts `model_reasoning_effort` across the whole level range; the
 // injected product default is medium (see withDefaultReasoningEffort). Claude
@@ -55,14 +56,14 @@ const CODEX_EFFORTS: readonly EffortLevel[] = EFFORT_LEVELS;
 const CODEX_DEFAULT_EFFORT: EffortLevel = "medium";
 export const EXECUTOR_DESCRIPTORS: ExecutorDescriptor[] = [
   { id: CLAUDE_CODE_EXECUTOR_ID, label: "Claude Code CLI", provider: "Anthropic", binaryEnvVar: "MANYHANDS_CLAUDE_BIN", defaultBinary: "claude", enabled: true, capabilities: ["planning", "execution", "repair"], usageSource: "reported", defaultModel: "sonnet", models: [
-    { id: "haiku", label: "Claude Haiku", capabilities: AGENTIC_CAPABILITIES, usageSource: "reported", efforts: null },
-    { id: "sonnet", label: "Claude Sonnet", capabilities: ["planning", "execution", "repair"], usageSource: "reported", efforts: null },
-    { id: "opus", label: "Claude Opus", capabilities: AGENTIC_CAPABILITIES, usageSource: "reported", efforts: null }
+    { id: "haiku", label: "Claude Haiku", capabilities: ALL_STAGE_CAPABILITIES, usageSource: "reported", efforts: null },
+    { id: "sonnet", label: "Claude Sonnet", capabilities: ALL_STAGE_CAPABILITIES, usageSource: "reported", efforts: null },
+    { id: "opus", label: "Claude Opus", capabilities: ALL_STAGE_CAPABILITIES, usageSource: "reported", efforts: null }
   ] },
   { id: CODEX_EXECUTOR_ID, label: "Codex CLI", provider: "OpenAI", binaryEnvVar: "MANYHANDS_CODEX_BIN", defaultBinary: "codex", enabled: true, capabilities: ["planning", "execution", "repair"], usageSource: "unavailable", defaultModel: "gpt-5.5", models: [
-    { id: "gpt-5.5", label: "GPT-5.5", capabilities: ["planning", "execution", "repair"], usageSource: "unavailable", efforts: CODEX_EFFORTS, defaultEffort: CODEX_DEFAULT_EFFORT },
-    { id: "gpt-5.4", label: "GPT-5.4", capabilities: AGENTIC_CAPABILITIES, usageSource: "unavailable", efforts: CODEX_EFFORTS, defaultEffort: CODEX_DEFAULT_EFFORT },
-    { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", capabilities: AGENTIC_CAPABILITIES, usageSource: "unavailable", efforts: CODEX_EFFORTS, defaultEffort: CODEX_DEFAULT_EFFORT }
+    { id: "gpt-5.5", label: "GPT-5.5", capabilities: ALL_STAGE_CAPABILITIES, usageSource: "unavailable", efforts: CODEX_EFFORTS, defaultEffort: CODEX_DEFAULT_EFFORT },
+    { id: "gpt-5.4", label: "GPT-5.4", capabilities: ALL_STAGE_CAPABILITIES, usageSource: "unavailable", efforts: CODEX_EFFORTS, defaultEffort: CODEX_DEFAULT_EFFORT },
+    { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", capabilities: ALL_STAGE_CAPABILITIES, usageSource: "unavailable", efforts: CODEX_EFFORTS, defaultEffort: CODEX_DEFAULT_EFFORT }
   ] },
   { id: OPENCODE_EXECUTOR_ID, label: "OpenCode CLI", provider: "OpenCode", binaryEnvVar: "MANYHANDS_OPENCODE_BIN", defaultBinary: "opencode", enabled: false, capabilities: AGENTIC_CAPABILITIES, usageSource: "unavailable", defaultModel: "opencode-default", models: [{ id: "opencode-default", label: "OpenCode default", capabilities: AGENTIC_CAPABILITIES, usageSource: "unavailable", efforts: null }] }
 ];

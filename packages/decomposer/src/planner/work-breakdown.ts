@@ -76,6 +76,14 @@ export interface WorkBreakdownPlannerOptions {
   cache?: WorkBreakdownCache;
 }
 
+/** Signals a transport or protocol failure that another model attempt cannot repair. */
+export class NonRetryablePlanningError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NonRetryablePlanningError";
+  }
+}
+
 export class WorkBreakdownPlanner {
   readonly architectureVersion = "v2" as const;
   private readonly model: WorkBreakdownModel;
@@ -106,6 +114,7 @@ export class WorkBreakdownPlanner {
         discovered.add(unit.key);
         await observer.onUnitDiscovered?.({ attempt, unit });
       };
+      let nonRetryable = false;
       try {
         const outputs = normalizeModelOutputs(await this.model.generate({ ...prompt, attempt, repairIssues, onProgress: reportUnit }));
         const failures: string[] = [];
@@ -121,8 +130,12 @@ export class WorkBreakdownPlanner {
         repairIssues = failures;
       } catch (error) {
         repairIssues = [error instanceof Error ? error.message : String(error)];
+        nonRetryable = error instanceof NonRetryablePlanningError;
       }
       await observer.onAttemptFailed?.({ attempt, reason: repairIssues.join("; ") });
+      if (nonRetryable) {
+        throw new Error(`WorkBreakdown planning stopped after ${attempt} attempt${attempt === 1 ? "" : "s"}: ${repairIssues.join("; ")}`);
+      }
       if (attempt < this.maxAttempts && this.retryDelayMs > 0) await delay(this.retryDelayMs);
     }
     throw new Error(`WorkBreakdown planning failed after ${this.maxAttempts} attempts: ${repairIssues.join("; ")}`);

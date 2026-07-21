@@ -4,7 +4,7 @@
 
 ```text
 ┌ Sidebar ─────────┬ Run header: objetivo · estado · controles ───────────────┐
-│ workspaces/runs  │ Decision strip contextual                              │
+│ workspaces/runs  │ Decision strip global y contextual                     │
 │ o fixtures proto ├──────────────────────────────────────────────────────────┤
 │                  │ Graph workspace / Result workspace                     │
 │                  │                                           Inspector →  │
@@ -25,6 +25,8 @@ Siempre muestra:
 - acceso a la cola de decisiones.
 
 No muestra métricas decorativas ni una lista completa de fases.
+En escritorio, header, reproducción de fixtures y cola de decisiones usan
+franjas compactas de una línea para priorizar la altura visible del grafo.
 
 ## Grafo
 
@@ -41,31 +43,46 @@ No muestra métricas decorativas ni una lista completa de fases.
 ### Regla de viewport
 
 Ningún evento puede llamar implícitamente a `fitView`, centrar un nodo o cambiar
-el zoom. La creación de nodos, inicio de intentos, integración, fallos y
-decisiones conservan el viewport. Una notificación puede ofrecer `Ver nodo`, y
-esa acción sí cambia el foco.
+el zoom fuera del modo `Autoencuadre`. El switch comienza activado y habilita
+`fitView` solo cuando cambia la estructura de nodos. El inicio
+de intentos, integración, fallos, decisiones, selección y cambios de lente
+conservan el viewport. Una notificación puede ofrecer `Ver nodo`, y esa acción sí
+cambia el foco.
 
 ### Layout estable
 
-Los nodos nuevos reciben una posición determinista relativa a su padre y a la
-revisión de grafo. El layout puede ampliar espacio fuera del viewport, pero no
-reordena nodos materializados durante una revisión. Una nueva revisión puede
-ofrecer `Aplicar nuevo layout`; nunca se aplica mientras el usuario inspecciona
-sin consentimiento.
+Los nodos reciben una posición determinista a partir del span de cada subárbol,
+la profundidad y el orden de siblings. El mismo árbol produce el mismo layout.
+El viewport se inicializa una sola vez. `Encuadrar` es una acción puntual;
+`Autoencuadre` es un modo temporal, activado inicialmente, para seguir nodos nuevos; el
+minimapa solo aparece bajo demanda en grafos grandes. Desactivar el switch
+devuelve inmediatamente el control exclusivo del viewport al operador.
+
+### Lentes de relaciones
+
+- **Ejecución:** jerarquía y relaciones del nodo seleccionado.
+- **Artefactos:** requirements materiales entre producer y consumer.
+- **Contratos:** compatibilidad de seams.
+- **Conflictos:** restricciones de scheduling/riesgo.
+- **Todo:** todas las relaciones secundarias.
+
+Las relaciones secundarias del mismo par se agrupan visualmente. El agrupamiento
+reduce ruido pero no elimina el detalle canónico, que permanece inspeccionable.
 
 ## Decisiones humanas
 
-Cuando un nodo requiere intervención aparece una tarjeta horizontal encima del
-área del grafo, alineada visualmente con el nodo cuando sea posible. Contiene:
+Cuando uno o más nodos requieren intervención aparece una tarjeta horizontal en
+la franja superior. Contiene:
 
 - pregunta en lenguaje claro;
 - por qué importa;
 - alcance bloqueado y trabajo que continúa;
-- acción `Responder` y acción `Ver impacto`.
+- acción `Revisar`.
 
-`Responder` abre un popup accesible con opciones, evidencia y consecuencias. El
-popup no esconde el contexto del nodo y puede cerrarse sin resolver. Cada nodo
-pendiente conserva un badge. El header ofrece la cola y `Siguiente decisión`.
+`Revisar` selecciona el primer nodo afectado y abre la decisión en el inspector
+lateral. El inspector muestra razón, alcance, opciones, evidencia y
+consecuencias sin tapar el canvas; puede cerrarse sin resolver. Cada nodo
+pendiente conserva un badge y la franja funciona como cola global.
 
 ## Inspector progresivo
 
@@ -79,6 +96,8 @@ El inspector tiene una estructura consistente:
 
 No existen tabs globales equivalentes para Tareas, Planificación, Integración o
 Interfaces. Esos conceptos se inspeccionan desde el objeto correspondiente.
+El inspector lateral puede colapsarse sin alterar selección, pan o zoom; al
+seleccionar un nodo o revisar una decisión vuelve a abrirse con ese contexto.
 
 ## Estados visibles
 
@@ -111,10 +130,11 @@ trazos, pulsos y desplazamientos; conserva cambios instantáneos y foco.
 
 ## Responsive y accesibilidad
 
-- Sidebar colapsable; el grafo mantiene su estado.
-- En pantallas estrechas el inspector es un sheet y la decisión un diálogo
-  fullscreen parcial.
-- Todo nodo, edge interactivo, acción y popup es operable por teclado.
-- El foco vuelve al elemento invocador al cerrar un popup.
+- Sidebar colapsable con acceso explícito entre runs reales y laboratorio; el
+  grafo mantiene su estado.
+- En pantallas estrechas el inspector es un sheet que conserva la misma
+  semántica de decisión.
+- Todo nodo, edge interactivo, lente y acción es operable por teclado.
+- El foco vuelve al elemento invocador al cerrar el inspector/sheet.
 - Los live regions anuncian decisiones y estados terminales, no cada evento.
 - Cumplimiento objetivo: WCAG 2.2 AA.

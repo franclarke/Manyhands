@@ -81,8 +81,9 @@ decide elegibilidad. Valida commits exactos en sandboxes limpios.
 
 ### Artifact Registry
 
-Registra candidatos, outputs lógicos, commits, digests, evidencia, producers,
-consumers y freshness. No almacena un segundo DAG.
+Registra únicamente outputs adoptados con commits/locations, digests, producer,
+contrato y freshness. Los candidatos e intentos permanecen en su journal hasta
+pasar la puerta de adopción. No almacena un segundo DAG.
 
 ### Composite Integrator
 
@@ -129,7 +130,8 @@ Representa topología, actividad y relaciones. Conserva viewport y selección.
 
 ### Decision UI
 
-Tarjeta contextual, popup accesible y cola global. No inventa bloqueos.
+Franja global, selección contextual e inspector/sheet accesible. No inventa
+bloqueos.
 
 ### Result Workspace
 
