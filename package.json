@@ -3,7 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "description": "ManyHands monorepo: LLM agent orchestration for software development.",
-  "packageManager": "pnpm@11.7.0",
+  "packageManager": "pnpm@7.29.3",
+  "engines": {
+    "node": ">=22",
+    "pnpm": "7.29.3"
+  },
   "type": "module",
   "scripts": {
     "build": "pnpm build:packages",

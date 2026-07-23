@@ -39,15 +39,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Non-blocking for now: the repo carries ~75 pre-existing lint errors in
-      # tests/ and packages/. Surfaced as a signal so it can be driven to zero,
-      # then flipped to a hard gate (remove continue-on-error).
+      # Non-blocking for now: the repo carries 46 pre-existing lint errors in
+      # tests/ and packages/ (measured 2026-07-23). Surfaced as a signal so it
+      # can be driven to zero, then flipped to a hard gate (remove
+      # continue-on-error). Lint is not one of the six thesis gates.
       - name: Lint
         run: pnpm lint
         continue-on-error: true
 
       - name: Build packages
         run: pnpm build
+
+      - name: Typecheck (packages)
+        run: pnpm -r --filter "./packages/*" typecheck
 
       - name: Typecheck (web)
         run: pnpm web:typecheck
@@ -60,3 +64,6 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Build (web)
+        run: pnpm web:build
