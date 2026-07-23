@@ -69,7 +69,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
       rationale: NonEmptyStringSchema
     }).strict()).min(1),
     criticDecisions: z.array(z.object({
-      kind: z.enum(["coalesced", "resplit_required"]),
+      kind: z.enum(["coalesced", "resplit_required", "resplit_declined"]),
       unitIds: z.array(EntityIdSchema).min(1),
       rationale: NonEmptyStringSchema
     }).strict()),

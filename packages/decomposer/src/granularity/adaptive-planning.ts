@@ -99,8 +99,25 @@ export function applyAdaptiveGranularity(input: AdaptivePlanningInput): Adaptive
     ...compiled.criticDecisions,
     ...collapseDecisions(assessments, breakdown.root)
   ];
-  const restoredRoot = restoreSemanticFields(compiled.root, preserved, compiled.mergedFrom, breakdown.root.acceptanceIntentIds);
-  const reshaped = WorkBreakdownSchema.parse({ ...breakdown, root: restoredRoot });
+  const restoredRoot = restoreSemanticFields(
+    compiled.root,
+    preserved,
+    compiled.mergedFrom,
+    breakdown.root.acceptanceIntentIds,
+    pathEvidenceById
+  );
+  // Reshaping can merge, collapse or re-split units, so relations authored
+  // against the planner's original keys must be remapped onto the units that
+  // absorbed them. A dangling producer/consumer would fail schema validation
+  // and silently lose a real dependency.
+  const survivors = unitKeys(restoredRoot);
+  const absorbedBy = absorptionMap(breakdown.root, restoredRoot, compiled.mergedFrom, survivors);
+  const reshaped = WorkBreakdownSchema.parse({
+    ...breakdown,
+    root: restoredRoot,
+    candidateArtifacts: remapRelations(breakdown.candidateArtifacts, absorbedBy),
+    candidateSeams: remapRelations(breakdown.candidateSeams, absorbedBy)
+  });
   const metrics = structuralMetrics(reshaped.root, compiled.coalescedUnitsCount);
 
   return {
@@ -255,7 +272,8 @@ function restoreSemanticFields(
   unit: WorkUnit,
   preserved: Map<string, PreservedUnitFields>,
   mergedFrom: Record<string, string[]>,
-  rootAcceptanceIntentIds: string[]
+  rootAcceptanceIntentIds: string[],
+  pathEvidenceById: Map<string, string>
 ): WorkUnit {
   const own = preserved.get(unit.key);
   const mergedSources = (mergedFrom[unit.key] ?? [])
@@ -280,9 +298,12 @@ function restoreSemanticFields(
         concerns: [...unit.concerns],
         expectedOutcomes: [...unit.expectedOutcomes],
         acceptanceIntentIds: parentFields === undefined ? [...rootAcceptanceIntentIds] : [...parentFields.acceptanceIntentIds],
-        evidenceIds: parentFields === undefined ? [] : [...parentFields.evidenceIds],
-        // A re-split part only keeps the slice of paths its source leaf
-        // declared as new outputs; observed repo paths stay evidence.
+        // A synthesized part must own only ITS slice of the parent's surface.
+        // Inheriting every evidence id would give each part the parent's whole
+        // scope, making the split meaningless and forcing siblings to conflict
+        // over the same files.
+        evidenceIds: partEvidenceIds(unit.plannedPaths, parentFields, pathEvidenceById),
+        // Likewise for declared new outputs: keep only the part's own slice.
         plannedPaths: partPlannedPaths(unit.plannedPaths, parentFields)
       });
 
@@ -302,8 +323,84 @@ function restoreSemanticFields(
     ...common,
     kind: "composite",
     cut: unit.cut,
-    children: unit.children.map((child) => restoreSemanticFields(child, preserved, mergedFrom, rootAcceptanceIntentIds))
+    children: unit.children.map((child) => restoreSemanticFields(child, preserved, mergedFrom, rootAcceptanceIntentIds, pathEvidenceById))
   };
+}
+
+function unitKeys(root: WorkUnit): Set<string> {
+  return new Set(flattenUnits(root).map((unit) => unit.key));
+}
+
+/**
+ * Maps every original planner unit key onto the surviving unit that absorbed
+ * it: itself when it survived, the merged unit when it was coalesced, or the
+ * nearest surviving ancestor when its subtree collapsed into a leaf.
+ */
+function absorptionMap(
+  originalRoot: WorkUnit,
+  reshapedRoot: WorkUnit,
+  mergedFrom: Record<string, string[]>,
+  survivors: Set<string>
+): Map<string, string> {
+  const absorbed = new Map<string, string>();
+  for (const [mergedKey, sourceKeys] of Object.entries(mergedFrom)) {
+    if (!survivors.has(mergedKey)) continue;
+    for (const sourceKey of sourceKeys) absorbed.set(sourceKey, mergedKey);
+  }
+
+  const parents = new Map<string, string>();
+  const indexParents = (unit: WorkUnit): void => {
+    if (unit.kind !== "composite") return;
+    for (const child of unit.children) {
+      parents.set(child.key, unit.key);
+      indexParents(child);
+    }
+  };
+  indexParents(originalRoot);
+
+  for (const unit of flattenUnits(originalRoot)) {
+    if (absorbed.has(unit.key)) continue;
+    if (survivors.has(unit.key)) {
+      absorbed.set(unit.key, unit.key);
+      continue;
+    }
+    // The unit disappeared: walk up until a surviving ancestor is found. The
+    // reshaped root always survives, so this terminates.
+    let ancestor = parents.get(unit.key);
+    while (ancestor !== undefined && !survivors.has(ancestor) && !absorbed.has(ancestor)) {
+      ancestor = parents.get(ancestor);
+    }
+    const target = ancestor === undefined
+      ? reshapedRoot.key
+      : absorbed.get(ancestor) ?? ancestor;
+    absorbed.set(unit.key, survivors.has(target) ? target : reshapedRoot.key);
+  }
+  return absorbed;
+}
+
+interface CandidateRelation {
+  producerUnitKey: string;
+  consumerUnitKeys: string[];
+}
+
+/**
+ * Rewrites a relation onto surviving units and drops it when producer and
+ * consumers collapse into the same unit — a unit cannot consume its own
+ * output, and an intra-unit dependency is no longer a coordination fact.
+ */
+function remapRelations<T extends CandidateRelation>(relations: readonly T[], absorbedBy: Map<string, string>): T[] {
+  const remapped: T[] = [];
+  for (const relation of relations) {
+    const producer = absorbedBy.get(relation.producerUnitKey) ?? relation.producerUnitKey;
+    const consumers = [...new Set(
+      relation.consumerUnitKeys
+        .map((key) => absorbedBy.get(key) ?? key)
+        .filter((key) => key !== producer)
+    )];
+    if (consumers.length === 0) continue;
+    remapped.push({ ...relation, producerUnitKey: producer, consumerUnitKeys: consumers });
+  }
+  return remapped;
 }
 
 /** Records composites the policy collapsed into a single leaf (leaf-stop rule). */
@@ -356,6 +453,25 @@ function flattenUnits(root: WorkUnit): WorkUnit[] {
 function mergedPlannedPaths(sources: readonly PreservedUnitFields[]): string[] | undefined {
   const paths = uniqueValues(sources.flatMap((source) => source.plannedPaths ?? []));
   return paths.length === 0 ? undefined : paths;
+}
+
+/**
+ * Evidence a synthesized part inherits: only the parent's path evidence whose
+ * reference falls inside the part's assigned scope. Non-path evidence is not
+ * inherited because it is not scope-bearing.
+ */
+function partEvidenceIds(
+  assignedPaths: string[] | undefined,
+  parentFields: PreservedUnitFields | undefined,
+  pathEvidenceById: Map<string, string>
+): string[] {
+  if (parentFields === undefined) return [];
+  if (assignedPaths === undefined) return [...parentFields.evidenceIds];
+  const assigned = new Set(assignedPaths);
+  return parentFields.evidenceIds.filter((id) => {
+    const reference = pathEvidenceById.get(id);
+    return reference !== undefined && assigned.has(reference);
+  });
 }
 
 function partPlannedPaths(

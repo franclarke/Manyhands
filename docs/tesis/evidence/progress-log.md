@@ -84,10 +84,53 @@
     `compileAdaptiveWorkUnitTree`, preservación de campos semánticos, métricas
     estructurales).
 
+11. **G3 = PASS** (commit `3a52b8b`). Suite 185 files / 1085 tests, exit 0.
+    Evidencia: `evidence/gates/g3-adaptive-integration.md`.
+
+### Etapa 4 (en curso) — run canónico
+
+12. **Cambio de regla (Francisco, 2026-07-23):** Codex para planning **y**
+    ejecución (reemplaza Claude Sonnet en planning).
+13. Codex CLI 0.141.0 autenticado con cuenta ChatGPT. `gpt-5-codex`,
+    `gpt-5.1-codex*` y `gpt-5` **no soportados** con esa cuenta; el default del
+    config (`gpt-5.6-sol`) exige CLI más nuevo. **Modelo elegido: `gpt-5.5`**
+    (probado OK).
+14. Repo objetivo creado fuera de ManyHands:
+    `~/manyhands-thesis-targets/expense-splitter` (TS, dominio + API + web +
+    tests, 5 tests verdes, typecheck limpio). Base SHA `1da878d`.
+15. **Run 1 (`890f19e1`)**: planning adaptativo con Codex real **funcionó** —
+    `planning.granularity_assessed` persistido, señales `llm` aceptadas, grafo
+    compilado. Pero el grafo salió patológico: **23 conflict constraints para 9
+    nodos** y partes `:part-N` con **scopes idénticos**.
+16. **Bug A (causa raíz):** las partes sintetizadas heredaban *todos* los
+    `evidenceIds` del padre, así que el contract-compiler les daba el scope
+    completo del padre. Además `synthesizeUnits` tenía un fallback degenerado
+    que duplicaba todos los paths. Regresión agregada + corregido (evidencia por
+    slice, sin fabricar partes sin trabajo disjunto).
+17. **Run 2 (`8074fd46`)**: `planning.failed` — `candidate ... references
+    unknown producer/consumer`. **Bug B (causa raíz):** al reshapear el árbol no
+    se remapeaban `candidateArtifacts`/`candidateSeams`, así que las referencias
+    a unidades fusionadas/colapsadas quedaban colgando. Regresión + corregido
+    (`absorptionMap` + `remapRelations`, descarta auto-referencias).
+18. **Run 3 (`88263695`)**: planning limpio al primer intento. Grafo sano: 5
+    nodos, **3 conflictos** (antes 23), scopes distintos, coalescencia real
+    (`domain-category-totals` + `web-category-breakdown` fusionados). Plan
+    aprobado → ejecución real: 3 attempts en worktrees aislados (pool 2 slots),
+    2 waves, agentes Codex exit 0 (125s/144s/184s). **Los 3 fallaron con
+    `scope_violation`.**
+19. **Bug C — hallazgo empírico decisivo.** Las partes sintetizadas reciben
+    particiones mecánicas de paths que no corresponden a unidades de trabajo
+    coherentes (`part-2` recibió solo `src/domain/expense.ts`; el agente
+    necesitaba también el test y el tipo). **Causa raíz sistémica:** la política
+    determinista puede *detectar* exceso de complejidad, pero **no puede
+    inventar el corte semántico** — eso es responsabilidad del Architect
+    (`DECISIONS.md` A4). Corrección: se retiró por completo `synthesizeUnits`;
+    cuando el Architect no propone sub-unidades se conserva la hoja cohesiva y
+    se registra `resplit_declined` con su rationale. El run canónico produjo la
+    evidencia que justifica esta decisión de diseño.
+
 ## Siguiente acción exacta
 
-- Correr `tests/decomposer-adaptive-planning.test.ts` hasta verde.
-- Prompt del planner: instruir `complexitySignals` + shape.
-- Evento `planning.granularity_assessed` en run-coordinator (schema + reducer +
-  proyección) y emisión en `planning-host.ts` entre plan() y compile().
-- Test vertical `runPlanningV2` + replay. Luego gates completos y commit G3.
+- Verificar suite completa tras el retiro de la síntesis; commit del fix.
+- Relanzar el run canónico (Run 4) y llevarlo hasta `completed` con delivery.
+- Escribir `evidence/canonical-run/` con el paquete completo.

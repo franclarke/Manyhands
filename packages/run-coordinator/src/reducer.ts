@@ -45,7 +45,7 @@ export interface GranularityProjection {
   leafThreshold: number;
   /** Keyed by compiled node id so the UI can explain the decision per node. */
   assessments: Record<string, GranularityAssessmentProjection>;
-  criticDecisions: Array<{ kind: "coalesced" | "resplit_required"; unitIds: string[]; rationale: string }>;
+  criticDecisions: Array<{ kind: "coalesced" | "resplit_required" | "resplit_declined"; unitIds: string[]; rationale: string }>;
   metrics: { maxGraphDepth: number; totalLeafCount: number; averageBranchingFactor: number; coalescedUnitsCount: number };
 }
 

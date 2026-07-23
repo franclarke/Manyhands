@@ -70,8 +70,14 @@ describe("adaptive granularity decomposer v3", () => {
 
     expect(compilation.root.kind).toBe("composite");
     expect(compilation.assessments["complete-module"]?.recommendedBranchingFactor).toBeGreaterThanOrEqual(2);
-    expect(compilation.root.kind === "composite" && compilation.root.children.some((unit) => unit.kind === "composite")).toBe(true);
+    // Both proposals survive as the composite's children.
+    expect(compilation.root.kind === "composite" && compilation.root.children.map((unit) => unit.key).sort())
+      .toEqual(["public-api", "runtime"]);
     expect(compilation.units.some((unit) => unit.kind === "leaf")).toBe(true);
+    // `public-api` is itself above the leaf threshold, but the Architect
+    // proposed no sub-units for it, so the policy records the tension instead
+    // of fabricating a decomposition it cannot justify.
+    expect(compilation.criticDecisions.some((decision) => decision.kind === "resplit_declined")).toBe(true);
   });
 
   it("coalesces trivial sibling tasks that touch the same file", () => {

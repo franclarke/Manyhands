@@ -21,7 +21,7 @@ export interface ReviewedGranularityUnit extends ProposedGranularityUnit {
 }
 
 export interface GranularityCriticDecision {
-  kind: "coalesced" | "resplit_required";
+  kind: "coalesced" | "resplit_required" | "resplit_declined";
   unitIds: string[];
   rationale: string;
 }

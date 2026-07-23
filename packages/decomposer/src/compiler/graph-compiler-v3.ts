@@ -76,17 +76,31 @@ export function compileAdaptiveWorkUnitTree(input: ArchitectTaskInput): Adaptive
       return leaf;
     }
 
-    const architectProposed = (task.proposedUnits?.length ?? 0) > 0;
-    const proposals = architectProposed
-      ? task.proposedUnits ?? []
-      : synthesizeUnits(task, assessment.recommendedBranchingFactor ?? 2);
-    const review = architectProposed
-      ? reviewGranularityProposal(proposals)
-      : {
-          units: proposals.flatMap((proposal) => reviewGranularityProposal([proposal]).units),
-          decisions: [],
-          coalescedUnitsCount: 0
-        };
+    const proposals = task.proposedUnits ?? [];
+    if (proposals.length === 0) {
+      // The policy judged this unit composite, but only the Architect can say
+      // HOW it decomposes. Partitioning the declared paths mechanically
+      // produces units that do not match the real shape of the work: a
+      // canonical run showed every such fabricated part violating its own
+      // scope, because implementing an API slice also needs the domain type it
+      // depends on. Detecting excess complexity is the policy's job; inventing
+      // the semantic cut is not. Keep the cohesive leaf and record the tension.
+      criticDecisions.push({
+        kind: "resplit_declined",
+        unitIds: [task.nodeId],
+        rationale: `C_task=${assessment.complexityScore.toFixed(2)} exceeds the leaf threshold, but the Architect proposed no sub-units for ${task.nodeId}; a mechanical split would fabricate incoherent scopes.`
+      });
+      assessments[task.nodeId] = {
+        ...assessment,
+        isLeaf: true,
+        nodeKind: "LeafNode",
+        rationale: `${assessment.rationale} Kept as a leaf: the Architect proposed no semantic sub-units.`
+      };
+      const leaf: WorkUnit = { ...common, kind: "leaf" };
+      units.push(leaf);
+      return leaf;
+    }
+    const review = reviewGranularityProposal(proposals);
     coalescedUnitsCount += review.coalescedUnitsCount;
     criticDecisions.push(...review.decisions);
     for (const reviewed of review.units) {
@@ -131,29 +145,3 @@ export class AdaptiveGranularityCompiler {
   }
 }
 
-function synthesizeUnits(task: ArchitectTaskInput, requestedBranches: number): ProposedGranularityUnit[] {
-  const branchCount = Math.max(2, Math.min(requestedBranches, Math.max(2, task.targetScopePaths.length)));
-  const pathGroups = Array.from({ length: branchCount }, () => [] as string[]);
-  task.targetScopePaths.forEach((path, index) => pathGroups[index % branchCount]!.push(path));
-  const nonEmptyGroups = pathGroups.filter((paths) => paths.length > 0);
-  const groups = nonEmptyGroups.length >= 2
-    ? nonEmptyGroups
-    : [[...task.targetScopePaths], [...task.targetScopePaths]];
-
-  return groups.map((paths, index) => {
-    const divisor = Math.max(2, groups.length);
-    return {
-      nodeId: `${task.nodeId}:part-${index + 1}`,
-      title: `${task.title} — part ${index + 1}`,
-      goal: `Implement cohesive part ${index + 1} of: ${task.goal}`,
-      targetScopePaths: [...new Set(paths)],
-      expectedDependencies: [],
-      complexity: {
-        scopeRadius: Math.min(3, Math.max(1, paths.length)),
-        interfaceImpact: task.complexity.interfaceImpact / divisor,
-        validationSurface: task.complexity.validationSurface / divisor,
-        contextTokenMass: task.complexity.contextTokenMass / divisor
-      }
-    };
-  });
-}
