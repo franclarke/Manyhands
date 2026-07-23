@@ -1,5 +1,5 @@
 /** Canonical V2 execution driver. Lifecycle and facts belong to RunCoordinator. */
-export { V2ExecutionDriver } from "./v2/execution-driver.js";
+export { V2ExecutionDriver, leafFailureObservation } from "./v2/execution-driver.js";
 export type {
   V2ExecutionDriverOptions,
   V2ExecutionRunInput,

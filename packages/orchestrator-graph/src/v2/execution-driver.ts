@@ -11,6 +11,7 @@ import {
   type AdoptedArtifact,
   type DecisionInput,
   type EvidenceMatrixRecord,
+  type FailureObservation,
   type RunCoordinator,
   type RunEventInput,
   type RunProjection
@@ -219,9 +220,9 @@ export class V2ExecutionDriver {
     }
     if (outcome.kind === "failure") {
       if ((outcome.repairObservations?.length ?? 0) === 0) {
-        const observation = isComposite
-          ? { source: "integration" as const, code: "integration_failed", message: outcome.reason }
-          : { source: "executor" as const, code: "execution_failed", message: outcome.reason };
+        const observation: FailureObservation = isComposite
+          ? { source: "integration", code: "integration_failed", message: outcome.reason }
+          : leafFailureObservation(outcome);
         const failureClass = classifyFailure(observation);
         const policy = recoveryPolicyFor(failureClass);
         facts.push(fact(`${attempt.attemptId}:failure-classified`, at, "failure.classified", {
@@ -473,4 +474,21 @@ function fact<T extends RunEventInput["type"]>(
   payload: Extract<RunEventInput, { type: T }>["payload"]
 ): Extract<RunEventInput, { type: T }> {
   return { eventId, occurredAt, type, payload } as Extract<RunEventInput, { type: T }>;
+}
+
+/**
+ * Derives the failure cause of a leaf attempt from the executor's reason.
+ *
+ * `V2NodeExecutor` encodes the cause as the reason's leading token (the result
+ * status: `scope_violation`, `unexpected_commit`, …). Collapsing every leaf
+ * failure into `execution_failed` would send the recovery policy down the wrong
+ * branch — repairing code that was actually rejected for leaving its scope
+ * (DECISIONS.md A11).
+ */
+export function leafFailureObservation(outcome: { reason: string }): FailureObservation {
+  const code = outcome.reason.split(":", 1)[0]?.trim();
+  if (code === "scope_violation" || code === "unexpected_commit") {
+    return { source: "scope", code, message: outcome.reason };
+  }
+  return { source: "executor", code: "execution_failed", message: outcome.reason };
 }
