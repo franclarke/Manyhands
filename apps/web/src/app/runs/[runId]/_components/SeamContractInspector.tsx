@@ -61,7 +61,7 @@ export function SeamContractInspector({
               </div>
               {seams.length > 0 ? seams.map((seam) => (
                 <div key={`${seam.id}:${seam.revision}`} className="mt-3 rounded-lg bg-slate-950 p-3 text-slate-100">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                  <span className="text-micro font-semibold uppercase tracking-[0.12em] text-slate-400">
                     Seam {seam.kind} · compatibilidad {seam.compatibility.mode}
                   </span>
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -69,7 +69,7 @@ export function SeamContractInspector({
                     <SignatureBlock label="Firma importada" revision={detail.consumerRevision} specification={seam.specification} />
                   </div>
                   {Object.keys(seam.semanticFacts).length > 0 ? (
-                    <dl className="mt-3 grid gap-1 border-t border-slate-700 pt-3 text-[11px]">
+                    <dl className="mt-3 grid gap-1 border-t border-slate-700 pt-3 text-micro">
                       {Object.entries(seam.semanticFacts).map(([name, value]) => (
                         <div key={name} className="grid grid-cols-[minmax(7rem,0.35fr)_1fr] gap-2">
                           <dt className="text-slate-400">{name}</dt><dd>{value}</dd>
@@ -96,13 +96,13 @@ function ContractCard({ title, children }: { title: string; children: React.Reac
 }
 
 function Detail({ label, value }: { label: string; value: string }): React.ReactElement {
-  return <div><span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-subtle)]">{label}</span><p className="mt-1 text-xs text-[var(--color-text)]">{value}</p></div>;
+  return <div><span className="text-micro font-semibold uppercase tracking-[0.1em] text-[var(--color-text-subtle)]">{label}</span><p className="mt-1 text-xs text-[var(--color-text)]">{value}</p></div>;
 }
 
 function SignatureBlock({ label, revision, specification }: { label: string; revision: string; specification: string }): React.ReactElement {
   return (
     <div className="rounded-lg border border-slate-700 bg-slate-900 p-3">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">{label} · {revision}</span>
+      <span className="text-micro font-semibold uppercase tracking-[0.1em] text-slate-400">{label} · {revision}</span>
       <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs leading-5">{specification}</pre>
     </div>
   );

@@ -36,8 +36,8 @@ export function DecisionQueueDrawer({
       <aside aria-label="Cola de decisiones" className="pointer-events-none fixed right-4 top-20 z-40 w-[min(360px,calc(100vw-2rem))]">
         <div className="pointer-events-auto max-h-[calc(100dvh-7rem)] overflow-y-auto rounded-2xl border border-[var(--status-review-border)] bg-[var(--color-surface)]/95 p-3 shadow-xl backdrop-blur motion-reduce:backdrop-blur-none">
           <div className="mb-2 flex items-center justify-between gap-3 px-1">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--status-review-fg)]">Decision queue</span>
-            <span className="rounded-full bg-[var(--status-review-bg)] px-2 py-0.5 text-[10px] font-bold tabular-nums text-[var(--status-review-fg)]">{decisions.length}</span>
+            <span className="text-micro font-semibold uppercase tracking-[0.12em] text-[var(--status-review-fg)]">Decision queue</span>
+            <span className="rounded-full bg-[var(--status-review-bg)] px-2 py-0.5 text-micro font-bold tabular-nums text-[var(--status-review-fg)]">{decisions.length}</span>
           </div>
           <div className="grid gap-2">
             {decisions.map((decision) => {
@@ -54,7 +54,7 @@ export function DecisionQueueDrawer({
                     <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-[var(--status-review-fg)]" />
                     <span className="min-w-0">
                       <strong className="line-clamp-2 text-xs leading-5 text-[var(--color-text)]">{decision.question}</strong>
-                      <span className="mt-1 block text-[10px] text-[var(--color-text-muted)]">
+                      <span className="mt-1 block text-micro text-[var(--color-text-muted)]">
                         {blocked.size} nodo{blocked.size === 1 ? "" : "s"} en pausa · {independent} independiente{independent === 1 ? "" : "s"} continúan
                       </span>
                     </span>
@@ -130,7 +130,7 @@ function DecisionDialog({
       <div className="grid gap-5">
         <section className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.42fr)]">
           <div>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--status-review-fg)]">Pregunta</span>
+            <span className="text-micro font-semibold uppercase tracking-[0.12em] text-[var(--status-review-fg)]">Pregunta</span>
             <p className="mt-1 text-sm font-semibold leading-6 text-[var(--color-text)]">{decision.question}</p>
             {decision.evidenceRefs.length > 0 ? (
               <p className="mt-2 text-xs text-[var(--color-text-muted)]">Evidencia: {decision.evidenceRefs.join(" · ")}</p>
@@ -150,14 +150,14 @@ function DecisionDialog({
           </div>
           <SideBySideDiffViewer before={comparison.before} after={comparison.after} />
           {comparison.exact ? null : (
-            <p className="mt-2 text-[10px] text-[var(--color-text-subtle)]">
+            <p className="mt-2 text-micro text-[var(--color-text-subtle)]">
               El journal conserva el commit y los archivos cambiados, pero no contiene hunks de texto; se muestra la comparación verificable disponible.
             </p>
           )}
         </div>
 
         <fieldset disabled={busy || loadingDiff}>
-          <legend className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">Elegí una acción</legend>
+          <legend className="text-micro font-semibold uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">Elegí una acción</legend>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {decision.options.map((option) => (
               <button
@@ -167,7 +167,7 @@ function DecisionDialog({
                 className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3 text-left hover:border-[var(--color-accent)] hover:bg-[var(--color-surface-raised)] disabled:cursor-wait disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
               >
                 <strong className="block text-xs">{option.label}</strong>
-                {option.description === undefined ? null : <span className="mt-1 block text-[11px] leading-5 text-[var(--color-text-muted)]">{option.description}</span>}
+                {option.description === undefined ? null : <span className="mt-1 block text-micro leading-5 text-[var(--color-text-muted)]">{option.description}</span>}
               </button>
             ))}
           </div>

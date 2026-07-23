@@ -37,26 +37,26 @@ export function TaskNodeV2({ data }: NodeProps<TaskNodeV2FlowNode>): React.React
       <Handle id="target" type="target" position={Position.Top} className="opacity-0" />
       <Handle id="source" type="source" position={Position.Bottom} className="opacity-0" />
       <div className="flex items-start justify-between gap-3">
-        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">{node.kind}</span>
+        <span className="font-mono text-micro uppercase tracking-[0.12em] text-[var(--color-text-subtle)]">{node.kind}</span>
         {medal.state !== "none" ? (
-          <span className={`inline-flex max-w-[155px] items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold leading-none ${visual.badge}`}>
+          <span className={`inline-flex max-w-[155px] items-center gap-1 rounded-full px-2 py-1 text-micro font-semibold leading-none ${visual.badge}`}>
             <MedalIcon state={medal.state} />
             <span className="truncate">{medal.badge}</span>
           </span>
         ) : (
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-subtle)]">{fallbackStatus(node.status)}</span>
+          <span className="text-micro font-semibold uppercase tracking-wide text-[var(--color-text-subtle)]">{fallbackStatus(node.status)}</span>
         )}
       </div>
       <h3 className="mt-2 text-sm font-semibold leading-5 text-[var(--color-text)]">{node.title}</h3>
-      <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-[var(--color-text-muted)]">{node.goal}</p>
+      <p className="mt-1 line-clamp-2 text-micro leading-4 text-[var(--color-text-muted)]">{node.goal}</p>
       {medal.state === "failed" ? (
-        <p role="status" className="mt-2 flex gap-1.5 rounded-lg bg-red-50 p-2 text-[10px] leading-4 text-red-800 dark:bg-red-950/40 dark:text-red-200">
+        <p role="status" className="mt-2 flex gap-1.5 rounded-lg bg-red-50 p-2 text-micro leading-4 text-red-800 dark:bg-red-950/40 dark:text-red-200">
           <AlertTriangle aria-hidden className="mt-0.5 h-3 w-3 shrink-0" />{medal.detail}
         </p>
       ) : null}
       {blocked ? (
         <div className="mt-3 border-t border-[var(--color-border)] pt-2">
-          <span className="block text-[10px] font-medium text-[var(--status-review-fg)]">Pausado por una decisión de este subgrafo</span>
+          <span className="block text-micro font-medium text-[var(--status-review-fg)]">Pausado por una decisión de este subgrafo</span>
           {decisionIds.map((decisionId) => (
             <button
               key={decisionId}
@@ -65,7 +65,7 @@ export function TaskNodeV2({ data }: NodeProps<TaskNodeV2FlowNode>): React.React
                 event.stopPropagation();
                 onOpenDecision(decisionId);
               }}
-              className="nodrag mt-1 w-full rounded-md border border-[var(--status-review-border)] bg-[var(--status-review-bg)] px-2 py-1.5 text-left text-[10px] font-semibold text-[var(--status-review-fg)] hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              className="nodrag mt-1 w-full rounded-md border border-[var(--status-review-border)] bg-[var(--status-review-bg)] px-2 py-1.5 text-left text-micro font-semibold text-[var(--status-review-fg)] hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             >
               Revisar decisión
             </button>

@@ -8,11 +8,11 @@ export interface DiffSide {
 export function SideBySideDiffViewer({ before, after }: { before: DiffSide; after: DiffSide }): React.ReactElement {
   return (
     <section aria-label="Comparación del candidato" className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-slate-950 text-slate-100">
-      <div className="grid grid-cols-2 border-b border-slate-700 bg-slate-900 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-300">
+      <div className="grid grid-cols-2 border-b border-slate-700 bg-slate-900 text-micro font-semibold uppercase tracking-[0.1em] text-slate-300">
         <span className="border-r border-slate-700 px-4 py-2">{before.label}</span>
         <span className="px-4 py-2">{after.label}</span>
       </div>
-      <div className="grid max-h-72 grid-cols-2 overflow-auto font-mono text-[11px] leading-5">
+      <div className="grid max-h-72 grid-cols-2 overflow-auto font-mono text-micro leading-5">
         <DiffColumn content={before.content} tone="before" />
         <DiffColumn content={after.content} tone="after" />
       </div>

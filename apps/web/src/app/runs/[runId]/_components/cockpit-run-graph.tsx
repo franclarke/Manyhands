@@ -97,7 +97,7 @@ function CockpitRunGraphInner({
                 type="button"
                 aria-pressed={lens === option.value}
                 onClick={() => setLens(option.value)}
-                className="rounded-md px-2.5 py-1.5 text-[10px] font-semibold text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] aria-pressed:bg-[var(--color-accent)] aria-pressed:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                className="rounded-md px-2 py-1.5 text-micro font-semibold text-[var(--color-text-muted)] hover:bg-[var(--color-bg-subtle)] aria-pressed:bg-[var(--color-accent)] aria-pressed:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
               >
                 {option.label}
               </button>
