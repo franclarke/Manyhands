@@ -1,3 +1,4 @@
+import type { GranularityProjection } from "@manyhands/run-coordinator";
 import type { GraphRevision } from "@manyhands/task-graph";
 
 import type { RunNodeView } from "@/lib/run-model/types";
@@ -241,4 +242,66 @@ function bundleSecondaryRelations(relations: readonly SecondaryRelation[]): Grap
 function humanizeEventType(type: string): string {
   const words = type.replaceAll("_", " ").replaceAll(".", " · ");
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+export interface GranularityDimensionView {
+  label: string;
+  value: number;
+  weight: number;
+}
+
+export interface GranularityExplanationView {
+  decisionLabel: string;
+  score: number;
+  threshold: number;
+  /** Reads as "C_task 0.78 ≤ 3.5" so the decision is legible at a glance. */
+  comparison: string;
+  dimensions: GranularityDimensionView[];
+  signalSourceLabel: string;
+  rationale: string;
+  formulaVersion: string;
+  branchingFactor?: number;
+}
+
+const GRANULARITY_DIMENSION_LABELS: ReadonlyArray<{ key: keyof GranularityProjection["weights"]; label: string }> = [
+  { key: "scopeRadius", label: "Radio de alcance" },
+  { key: "interfaceImpact", label: "Impacto de interfaz" },
+  { key: "validationSurface", label: "Superficie de validación" },
+  { key: "contextTokenMass", label: "Masa de contexto" }
+];
+
+const SIGNAL_SOURCE_LABELS: Record<"llm" | "clamped" | "derived", string> = {
+  llm: "estimadas por el planner",
+  clamped: "ajustadas contra el repositorio",
+  derived: "derivadas del alcance declarado"
+};
+
+/**
+ * Turns the persisted C_task evidence into the human explanation of why a node
+ * became a leaf or a composite. It never re-derives the policy: every number
+ * comes from the `planning.granularity_assessed` domain event.
+ */
+export function granularityExplanation(
+  granularity: GranularityProjection | undefined,
+  nodeId: string | null
+): GranularityExplanationView | null {
+  if (granularity === undefined || nodeId === null) return null;
+  const assessment = granularity.assessments[nodeId];
+  if (assessment === undefined) return null;
+  const isLeaf = assessment.decision === "leaf";
+  return {
+    decisionLabel: isLeaf ? "Hoja cohesiva" : "Compuesto",
+    score: assessment.complexityScore,
+    threshold: granularity.leafThreshold,
+    comparison: `C_task ${assessment.complexityScore} ${isLeaf ? "≤" : ">"} ${granularity.leafThreshold}`,
+    dimensions: GRANULARITY_DIMENSION_LABELS.map(({ key, label }) => ({
+      label,
+      value: assessment.dimensions[key],
+      weight: granularity.weights[key]
+    })),
+    signalSourceLabel: SIGNAL_SOURCE_LABELS[assessment.signalSource],
+    rationale: assessment.rationale,
+    formulaVersion: granularity.formulaVersion,
+    ...(assessment.recommendedBranchingFactor === undefined ? {} : { branchingFactor: assessment.recommendedBranchingFactor })
+  };
 }

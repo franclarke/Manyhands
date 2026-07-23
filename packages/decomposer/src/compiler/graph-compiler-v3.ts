@@ -1,5 +1,9 @@
 import type { WorkUnit } from "../planner/schema.js";
-import { reviewGranularityProposal, type ProposedGranularityUnit } from "../granularity/coalescing-critic.js";
+import {
+  reviewGranularityProposal,
+  type GranularityCriticDecision,
+  type ProposedGranularityUnit
+} from "../granularity/coalescing-critic.js";
 import type { GranularityAssessment } from "../granularity/complexity-evaluator.js";
 import { runArchitectPass, type ArchitectTaskInput } from "../llm/architect-pass.js";
 
@@ -9,6 +13,10 @@ export interface AdaptiveWorkUnitCompilation {
   units: WorkUnit[];
   assessments: Record<string, GranularityAssessment>;
   coalescedUnitsCount: number;
+  /** Merged unit key → the source unit keys it coalesced (provenance). */
+  mergedFrom: Record<string, string[]>;
+  /** Critic decisions recorded while reshaping (coalescence / re-splits). */
+  criticDecisions: GranularityCriticDecision[];
 }
 
 const MAX_COMPILER_DEPTH = 8;
@@ -26,6 +34,8 @@ export function compileAdaptiveWorkUnitTree(input: ArchitectTaskInput): Adaptive
     ? [...new Set(input.acceptanceIntentIds)]
     : [DEFAULT_ACCEPTANCE_INTENT_ID];
   let coalescedUnitsCount = 0;
+  const mergedFrom: Record<string, string[]> = {};
+  const criticDecisions: GranularityCriticDecision[] = [];
 
   const compile = (
     task: ArchitectTaskInput,
@@ -78,6 +88,10 @@ export function compileAdaptiveWorkUnitTree(input: ArchitectTaskInput): Adaptive
           coalescedUnitsCount: 0
         };
     coalescedUnitsCount += review.coalescedUnitsCount;
+    criticDecisions.push(...review.decisions);
+    for (const reviewed of review.units) {
+      if (reviewed.mergedFrom.length > 1) mergedFrom[reviewed.nodeId] = [...reviewed.mergedFrom];
+    }
     const composite: WorkUnit = {
       ...common,
       kind: "composite",
@@ -108,7 +122,7 @@ export function compileAdaptiveWorkUnitTree(input: ArchitectTaskInput): Adaptive
   };
 
   const root = compile(input, 0);
-  return { root, units, assessments, coalescedUnitsCount };
+  return { root, units, assessments, coalescedUnitsCount, mergedFrom, criticDecisions };
 }
 
 export class AdaptiveGranularityCompiler {

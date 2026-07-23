@@ -44,6 +44,42 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     }).strict()
   }).strict()),
   event("planning.attempt_failed", z.object({ attempt: z.number().int().positive(), reason: NonEmptyStringSchema }).strict()),
+  event("planning.granularity_assessed", z.object({
+    formulaVersion: NonEmptyStringSchema,
+    weights: z.object({
+      scopeRadius: z.number().nonnegative(),
+      interfaceImpact: z.number().nonnegative(),
+      validationSurface: z.number().nonnegative(),
+      contextTokenMass: z.number().nonnegative()
+    }).strict(),
+    leafThreshold: z.number().positive(),
+    assessments: z.array(z.object({
+      unitKey: EntityIdSchema,
+      nodeId: EntityIdSchema,
+      dimensions: z.object({
+        scopeRadius: z.number().min(0).max(10),
+        interfaceImpact: z.number().min(0).max(10),
+        validationSurface: z.number().min(0).max(10),
+        contextTokenMass: z.number().min(0).max(10)
+      }).strict(),
+      signalSource: z.enum(["llm", "clamped", "derived"]),
+      complexityScore: z.number().nonnegative(),
+      decision: z.enum(["leaf", "composite"]),
+      recommendedBranchingFactor: z.number().int().min(2).max(5).optional(),
+      rationale: NonEmptyStringSchema
+    }).strict()).min(1),
+    criticDecisions: z.array(z.object({
+      kind: z.enum(["coalesced", "resplit_required"]),
+      unitIds: z.array(EntityIdSchema).min(1),
+      rationale: NonEmptyStringSchema
+    }).strict()),
+    metrics: z.object({
+      maxGraphDepth: z.number().int().nonnegative(),
+      totalLeafCount: z.number().int().positive(),
+      averageBranchingFactor: z.number().nonnegative(),
+      coalescedUnitsCount: z.number().int().nonnegative()
+    }).strict()
+  }).strict()),
   event("planning.completed", z.object({ breakdownId: EntityIdSchema, breakdown: z.record(z.unknown()) }).strict()),
   event("graph.compiled", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive(), graph: z.record(z.unknown()), contracts: z.array(z.record(z.unknown())), review: z.record(z.unknown()), trace: z.record(z.unknown()) }).strict()),
   event("planning.critic_recorded", z.object({ critic: NonEmptyStringSchema, findings: z.array(z.record(z.unknown())) }).strict()),

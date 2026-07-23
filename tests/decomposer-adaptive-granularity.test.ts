@@ -105,7 +105,7 @@ describe("adaptive granularity decomposer v3", () => {
     ]);
 
     expect(review.units).toHaveLength(1);
-    expect(review.units[0]?.nodeId).toBe("rename+fix-import");
+    expect(review.units[0]?.nodeId).toBe("rename:fix-import");
     expect(review.units[0]?.forceComposite).toBe(false);
     expect(review.coalescedUnitsCount).toBe(1);
   });

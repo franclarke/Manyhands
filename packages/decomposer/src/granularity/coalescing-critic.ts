@@ -126,7 +126,9 @@ function mergeUnits(units: readonly ReviewedGranularityUnit[]): ReviewedGranular
     validationSurface: average(units.map((unit) => unit.complexity.validationSurface)),
     contextTokenMass: average(units.map((unit) => unit.complexity.contextTokenMass))
   };
-  const nodeId = units.map((unit) => unit.nodeId).join("+");
+  // Merged ids must remain valid EntityIds (WorkUnit keys / node ids), so the
+  // join separator is drawn from the schema's allowed character set.
+  const nodeId = units.map((unit) => unit.nodeId).join(":");
   const assessment = evaluateIntrinsicComplexity({ nodeId, ...dimensions });
   return {
     nodeId,

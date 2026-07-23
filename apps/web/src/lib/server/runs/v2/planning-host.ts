@@ -1,6 +1,8 @@
-import type { CompiledGraphRevision, GraphCompilerInput, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
+import type { AdaptivePlanningResult, CompiledGraphRevision, GraphCompilerInput, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
-import { PLAN_CRITIC_KINDS } from "@manyhands/decomposer";
+import { PLAN_CRITIC_KINDS, applyAdaptiveGranularity } from "@manyhands/decomposer";
 import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 
@@ -102,11 +104,16 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
       return state;
     }
-    const compiled = dependencies.compile({ breakdown, repositorySnapshot });
-    const drafts = successEvents(input.runId, breakdown, compiled, dependencies.now);
+    // Adaptive granularity policy (target route, roadmap §9): the semantic
+    // breakdown is reshaped by the deterministic C_task assessment before the
+    // Graph Compiler materializes it. Same canonical WorkUnit tree, one model.
+    const adaptive = applyAdaptiveGranularity({ breakdown });
+    const compiled = dependencies.compile({ breakdown: adaptive.breakdown, repositorySnapshot });
+    const drafts = successEvents(input.runId, adaptive, compiled, nodeIdFor, dependencies.now);
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
     state = foldRun(events);
     await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
+    await writeGranularityDiagnostics(dependencies, input.runId, adaptive);
     return state;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
@@ -168,11 +175,71 @@ export async function revisePlanningV2(
   return next;
 }
 
-function successEvents(runId: string, breakdown: WorkBreakdown, compiled: CompiledGraphRevision, now: () => string): RunEventInput[] {
+function successEvents(
+  runId: string,
+  adaptive: AdaptivePlanningResult,
+  compiled: CompiledGraphRevision,
+  nodeIdFor: (key: string) => string,
+  now: () => string
+): RunEventInput[] {
+  const breakdown = adaptive.breakdown;
   return [
     { eventId: `planning:${breakdown.breakdownId}:completed:${runId}`, occurredAt: now(), type: "planning.completed", payload: { breakdownId: breakdown.breakdownId, breakdown: asRecord(breakdown) } },
+    granularityAssessedEvent(runId, adaptive, nodeIdFor, now),
     ...compiledEvents(compiled, now)
   ];
+}
+
+function granularityAssessedEvent(
+  runId: string,
+  adaptive: AdaptivePlanningResult,
+  nodeIdFor: (key: string) => string,
+  now: () => string
+): RunEventInput {
+  return {
+    eventId: `planning:${adaptive.breakdown.breakdownId}:granularity:${runId}`,
+    occurredAt: now(),
+    type: "planning.granularity_assessed",
+    payload: {
+      formulaVersion: adaptive.formulaVersion,
+      weights: adaptive.weights,
+      leafThreshold: adaptive.leafThreshold,
+      assessments: Object.entries(adaptive.assessments).map(([unitKey, assessment]) => ({
+        unitKey,
+        nodeId: nodeIdFor(unitKey),
+        dimensions: assessment.dimensions,
+        signalSource: assessment.signalSource,
+        complexityScore: assessment.complexityScore,
+        decision: assessment.isLeaf ? "leaf" as const : "composite" as const,
+        ...(assessment.recommendedBranchingFactor === undefined ? {} : { recommendedBranchingFactor: assessment.recommendedBranchingFactor }),
+        rationale: assessment.rationale
+      })),
+      criticDecisions: adaptive.criticDecisions.map((decision) => ({ kind: decision.kind, unitIds: decision.unitIds, rationale: decision.rationale })),
+      metrics: adaptive.metrics
+    }
+  };
+}
+
+/**
+ * Structural thesis metrics are diagnostics keyed by run — they never govern
+ * lifecycle, so they live next to the journal instead of inside it.
+ */
+async function writeGranularityDiagnostics(
+  dependencies: PlanningV2Dependencies,
+  runId: string,
+  adaptive: AdaptivePlanningResult
+): Promise<void> {
+  const directory = dependencies.events.directory;
+  const artifact = {
+    runId,
+    formulaVersion: adaptive.formulaVersion,
+    weights: adaptive.weights,
+    leafThreshold: adaptive.leafThreshold,
+    metrics: adaptive.metrics,
+    generatedAt: new Date().toISOString()
+  };
+  const target = path.join(directory, `${runId.replace(/[^A-Za-z0-9._-]/gu, "_")}.granularity-metrics.json`);
+  await writeFile(target, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
 }
 
 function requiresClarification(breakdown: WorkBreakdown): boolean {

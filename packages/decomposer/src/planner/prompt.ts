@@ -24,6 +24,7 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       "Raise a human question only when the answer changes behavior, architecture, scope, risk, or acceptance.",
       "Existing repository paths must be cited through path evidence. Files that a unit will create must be declared in plannedPaths and are not repository evidence.",
       "Every leaf must either cite existing path evidence or declare at least one concrete planned path.",
+      "For every unit, estimate complexitySignals as 0-10 magnitudes: scopeRadius (breadth of affected files/modules), interfaceImpact (exported contracts or public APIs touched), validationSurface (validation obligations and suites needed), contextTokenMass (code context an agent must hold). Signals are evidence, not decisions: a deterministic policy owns the final leaf/composite boundary and will clamp signals inconsistent with the unit's declared paths.",
       "As soon as you decide each unit, emit one compact JSON line before the final document: {\"type\":\"planning.node\",\"unit\":{\"key\":\"...\",\"parentKey\":null,\"kind\":\"composite|leaf\",\"title\":\"...\",\"objective\":\"...\",\"siblingIndex\":0,\"siblingCount\":1}}.",
       "Emit planning.node lines in parent-first order. Then emit the complete schema-valid WorkBreakdown JSON. Never invent repository evidence.",
       "Resolved human decisions are authoritative requirements. Incorporate them into the WorkBreakdown and do not ask the same question again.",
@@ -52,9 +53,10 @@ const WORK_BREAKDOWN_OUTPUT_SHAPE = `{
   "root": {
     "key": "semantic-unit-key", "kind": "composite", "title": "...", "objective": "...",
     "concerns": ["cohesive concern"], "expectedOutcomes": ["..."], "acceptanceIntentIds": ["intent-id"], "evidenceIds": ["repository-evidence-id"], "plannedPaths": ["src/new-file.ts"],
+    "complexitySignals": { "scopeRadius": 0.0, "interfaceImpact": 0.0, "validationSurface": 0.0, "contextTokenMass": 0.0, "rationale": "optional short justification" },
     "cut": { "criterion": "cohesion|integration|risk|verifiability", "rationale": "..." },
     "children": [
-      { "key": "leaf-key", "kind": "leaf", "title": "...", "objective": "...", "concerns": ["ui", "api", "tests"], "expectedOutcomes": ["..."], "acceptanceIntentIds": ["intent-id"], "evidenceIds": ["repository-evidence-id"], "plannedPaths": ["src/new-file.ts"] }
+      { "key": "leaf-key", "kind": "leaf", "title": "...", "objective": "...", "concerns": ["ui", "api", "tests"], "expectedOutcomes": ["..."], "acceptanceIntentIds": ["intent-id"], "evidenceIds": ["repository-evidence-id"], "plannedPaths": ["src/new-file.ts"], "complexitySignals": { "scopeRadius": 0.0, "interfaceImpact": 0.0, "validationSurface": 0.0, "contextTokenMass": 0.0 } }
     ]
   },
   "candidateArtifacts": [{ "id": "...", "artifactType": "...", "producerUnitKey": "...", "consumerUnitKeys": ["..."], "purpose": "...", "materializationHint": "logical|files|manifest|commit", "evidenceIds": ["..."] }],

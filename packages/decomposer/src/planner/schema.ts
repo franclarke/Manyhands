@@ -10,6 +10,22 @@ export const SemanticCutSchema = z.object({
   rationale: NonEmptyStringSchema
 }).strict();
 
+/**
+ * Raw complexity signals for one unit, emitted by the semantic Planner (LLM)
+ * and validated deterministically against the unit's declared surface before
+ * the adaptive C_task policy decides leaf vs composite. Each dimension is a
+ * 0..10 magnitude; the policy — not the planner — owns the decision boundary.
+ */
+export const ComplexitySignalsSchema = z.object({
+  scopeRadius: z.number().min(0).max(10),
+  interfaceImpact: z.number().min(0).max(10),
+  validationSurface: z.number().min(0).max(10),
+  contextTokenMass: z.number().min(0).max(10),
+  rationale: NonEmptyStringSchema.optional()
+}).strict();
+
+export type ComplexitySignals = z.infer<typeof ComplexitySignalsSchema>;
+
 const WorkUnitCommonShape = {
   key: EntityIdSchema,
   title: NonEmptyStringSchema,
@@ -18,7 +34,8 @@ const WorkUnitCommonShape = {
   expectedOutcomes: z.array(NonEmptyStringSchema).min(1),
   acceptanceIntentIds: z.array(EntityIdSchema).min(1),
   evidenceIds: z.array(EntityIdSchema),
-  plannedPaths: z.array(RepoRelativePathSchema).optional()
+  plannedPaths: z.array(RepoRelativePathSchema).optional(),
+  complexitySignals: ComplexitySignalsSchema.optional()
 };
 
 export interface WorkUnitLeaf {
@@ -31,6 +48,7 @@ export interface WorkUnitLeaf {
   acceptanceIntentIds: string[];
   evidenceIds: string[];
   plannedPaths?: string[] | undefined;
+  complexitySignals?: ComplexitySignals | undefined;
 }
 
 export interface WorkUnitComposite {
@@ -43,6 +61,7 @@ export interface WorkUnitComposite {
   acceptanceIntentIds: string[];
   evidenceIds: string[];
   plannedPaths?: string[] | undefined;
+  complexitySignals?: ComplexitySignals | undefined;
   cut: z.infer<typeof SemanticCutSchema>;
   children: WorkUnit[];
 }
