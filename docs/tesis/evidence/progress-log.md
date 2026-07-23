@@ -10,10 +10,10 @@
 |---|---|---|---|
 | 1 — Congelar alcance | G1 | **PASS** (aprobado por Francisco, D-1..D-4) | `docs/tesis/*.md`, `evidence/baselines/stage-1-baseline.md` |
 | 2 — Toolchain y gates | G2 | **PASS** (commit `d552c5d`) | `evidence/gates/g2-gate-results.md`, `g2-fresh-install.md` |
-| 3 — Aporte adaptativo | G3 | pending | — |
-| 4 — Run canónico | G4 | pending | — |
-| 5 — Experimento | G5 | pending | — |
-| 6 — Tesis y presentación | G6 | pending | — |
+| 3 — Aporte adaptativo | G3 | **PASS** (`3a52b8b`) | `evidence/gates/g3-adaptive-integration.md` |
+| 4 — Run canónico | G4 | **PARTIAL** (1 run `completed` de 4) | `evidence/canonical-run/` |
+| 5 — Experimento | G5 | **BLOCKED** (no ejecutado) | `evidence/experiment/protocol.md` |
+| 6 — Tesis y presentación | G6 | **PARTIAL** (tesis reescrita; PDF no compilable) | `docs/tesis/main.tex`, `evidence/thesis-reference-analysis.md` |
 
 ## Decisiones adoptadas
 
@@ -134,3 +134,45 @@
 - Verificar suite completa tras el retiro de la síntesis; commit del fix.
 - Relanzar el run canónico (Run 4) y llevarlo hasta `completed` con delivery.
 - Escribir `evidence/canonical-run/` con el paquete completo.
+
+
+### Etapas 4–6 — cierre de sesión (2026-07-24)
+
+20. **Run canónico completado.** Run `55f8ba9f` alcanzó `completed`:
+    `finalSha c48835a ≠ base 1da878d`, 4 archivos (+104/−5), manifest + receipt
+    confirmados, 12 tests verdes y typecheck limpio verificados **en clon
+    limpio**. Ejecutor Codex `gpt-5.5` en planning y ejecución.
+21. **Defectos adicionales corregidos con regresión previa:**
+    - delivery bloqueada por el propio `.manyhands/` del target (`9338419`);
+    - clasificación de fallo por causa real, no `execution_failed` genérico
+      (`a73c6ba`) — verificado en run 6: `scope_unexpected_commit`, `discard: true`;
+    - el motivo de una violación de alcance volcaba el diff en vez de nombrar
+      las rutas (`225881d`).
+22. **Reproducibilidad: 1 de 4 runs completó.** Causa raíz caracterizada: bajo
+    política `strict`, un archivo fuera de `allowedPaths` se rechaza; el objetivo
+    invita a crear tests nuevos que el planner no pre-declaró. **No se relajó la
+    política** (invariante de seguridad). Tres líneas de solución documentadas en
+    `evidence/canonical-run/README.md` §7.
+23. **G5 no ejecutado**, con razón declarada y procedimiento de reanudación en
+    `evidence/experiment/protocol.md`. La tesis no afirma superioridad de la
+    política adaptativa.
+24. **Tesis reescrita íntegramente** (`docs/tesis/main.tex`): nueva estructura de
+    9 capítulos derivada del análisis de tesinas de referencia
+    (`evidence/thesis-reference-analysis.md`), bibliografía reconstruida a 24
+    referencias verificables (se eliminaron 3 fabricadas), SQLite WAL y los
+    números `GEI` removidos, privacidad y WCAG matizados, rótulos «V3»
+    eliminados, y un capítulo de evaluación basado en el run real incluido el
+    resultado negativo.
+25. **PDF no compilado:** no hay toolchain LaTeX en el entorno
+    (`pdflatex`/`xelatex`/`latexmk`/`tectonic` ausentes). Limitación de entorno,
+    no del documento.
+26. Suite final: **187 archivos, 1099 tests, 2 skipped, exit 0**.
+
+## Siguiente acción exacta (para reanudar)
+
+1. Resolver la causa raíz de las violaciones de alcance
+   (`evidence/canonical-run/README.md` §7, opciones a/b/c).
+2. Repetir el caso canónico hasta obtener dos ejecuciones válidas consecutivas → cerrar G4.
+3. Parametrizar umbral y críticos por run; ejecutar el protocolo de G5.
+4. Instalar una toolchain LaTeX y compilar `docs/tesis/main.tex`; revisar el PDF.
+5. Regenerar la presentación desde la tesis final.
