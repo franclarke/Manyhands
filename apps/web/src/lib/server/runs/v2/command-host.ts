@@ -4,6 +4,7 @@ import {
   TransactionalDeliveryPublisher,
   deliveryRequestFingerprint,
   safeGitArgs,
+  targetWorkingTreeIsClean,
   type TransactionalDeliveryApproval,
   type TransactionalDeliveryReceipt
 } from "@manyhands/execution-core";
@@ -281,12 +282,12 @@ async function publishDelivery(
             branch: await git(repoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]),
             head: await git(repoRoot, ["rev-parse", "HEAD"]),
             fingerprint: run.targetContext!.fingerprint,
-            clean: (await git(repoRoot, ["status", "--porcelain"])).trim().length === 0
+            clean: targetWorkingTreeIsClean(await git(repoRoot, ["status", "--porcelain"]))
           }),
           recover: async (request) => {
             const branch = await git(repoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]);
             const head = await git(repoRoot, ["rev-parse", "HEAD"]);
-            const clean = (await git(repoRoot, ["status", "--porcelain"])).trim().length === 0;
+            const clean = targetWorkingTreeIsClean(await git(repoRoot, ["status", "--porcelain"]));
             if (branch !== request.targetBranch || head !== request.finalSha || !clean || request.targetFingerprint !== run.targetContext!.fingerprint) {
               return undefined;
             }

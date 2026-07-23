@@ -47,6 +47,7 @@ export * from "./integration/pre-merge";
 export * from "./integration/syntax-check";
 export * from "./delivery/candidate-preparer";
 export * from "./delivery/publisher";
+export * from "./delivery/target-cleanliness";
 export * from "./scheduler/batch";
 export * from "./granularity/vector";
 export * from "./context/packer";
