@@ -25,6 +25,11 @@ __pycache__/
 # Material de referencia local (tesis de otros alumnos) — no debe publicarse
 Otras tesis/
 docs/otras tesis (NO LEER)/
+docs/UNI (NO LEER)/
+
+# Scratch de orquestación de agentes — solo se versionan las skills compartidas
+.agents/*
+!.agents/skills/
 
 pnpm-debug.log*
 npm-debug.log*
