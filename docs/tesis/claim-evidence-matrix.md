@@ -1,6 +1,9 @@
 # Matriz Claim–Evidencia (Gate G1)
 
 > **Gate:** G1 — Congelar alcance · **Commit auditado:** `5355d4b` · **Fecha:** 2026-07-23 (UTC)
+> **ACTUALIZACIÓN (2026-07-24, tras Etapas 2–4):** varias filas cambiaron de estado con evidencia nueva.
+> Ver la sección «Actualización tras el run canónico» al final del documento; la tabla resumen de abajo
+> conserva el estado original de G1 para trazabilidad histórica.
 > **Fuente de autoridad:** `PRODUCT.md` → `docs/DECISIONS.md` → `docs/core-pillars/` + `docs/system/` → `docs/design/` → `docs/adr/` → código/tests/runs.
 > **Regla de clasificación:** un claim es `implemented` solo si se localizó ruta productiva **y** test de comportamiento; los claims end-to-end exigen además evidencia persistida. Ante duda se elige la clasificación más conservadora. Los runs persistidos actuales se declararon **no-evidencia** (decisión de Francisco, 2026-07-23); toda `Persisted evidence` end-to-end es `none` hasta el run canónico de la Etapa 4.
 
@@ -647,3 +650,46 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 - **Verificaciones que esta auditoría NO hizo (declaradas):** ejecución de la suite/gates (Etapa 2); línea-por-línea del invariante `fitView`; confirmación de los 5 estados de nodo; existencia del Re-splitting critic como módulo; integración productiva de `compactor`. Están marcadas como `partial`/`needs-verify` y no como `implemented`.
 
 Ver decisiones pendientes de Francisco en [`research-questions.md`](research-questions.md) y el resumen de handoff.
+
+
+---
+
+## Actualización tras el run canónico (2026-07-24)
+
+Las Etapas 2, 3 y 4 produjeron evidencia que modifica el estado de varias filas.
+Esta sección es la **autoridad vigente**; la tabla original se conserva arriba
+como registro del estado en G1.
+
+| ID | Estado G1 | Estado actual | Evidencia nueva |
+|---|---|---|---|
+| CLAIM-001 | partial | **implemented** | La política adaptativa gobierna el planning productivo (`runPlanningV2` → `applyAdaptiveGranularity` → `compileGraphRevision`). Prueba vertical `tests/planning-v2-adaptive.test.ts`; run canónico `55f8ba9f` con topología adaptativa real. Commit `3a52b8b`. |
+| CLAIM-002 | partial | **implemented** | `C_task` decide leaf/composite en producción y se persiste por nodo en `planning.granularity_assessed` (dimensiones, pesos, `formulaVersion c-task/1.0.0`, umbral, decisión, origen de señales). Sobrevive replay y snapshot. |
+| CLAIM-003 | partial | **implemented (con corrección de diseño)** | Coalescencia verificada en run real (fusionó dominio+web). El crítico de re-división **ya no fabrica particiones**: registra `resplit_declined`. Ver §Resultado negativo de la tesis. |
+| CLAIM-004 | partial | partial | Sin cambios; el compresor de contexto sigue sin trazarse a la ruta productiva de planning. |
+| CLAIM-005 | missing | **removed** | Los números `GEI` fueron eliminados de la tesis (D-4). El estudio comparativo no se ejecutó; queda como trabajo futuro con protocolo especificado. |
+| CLAIM-006 | missing | **replaced** | Los 4 casos narrados fueron reemplazados por **un caso canónico real** con evidencia persistida (`evidence/canonical-run/`). |
+| CLAIM-042 | partial | **implemented** | Integración bottom-up ejecutada en run real con 1 pase de reparación semántica → `integration.completed` `verified`. |
+| CLAIM-043 | partial | **implemented** | `final_candidate.verified` + `delivery.published` con receipt confirmado. Requirió corregir la verificación de limpieza del target (commit `9338419`). |
+| CLAIM-044 | missing | **implemented** | Run `55f8ba9f`: `completed`, `finalSha c48835a ≠ base 1da878d`, 4 archivos modificados, 12 tests verdes en clon limpio. **Ejecutor Codex `gpt-5.5` en planning y ejecución.** |
+| CLAIM-051 | missing | **removed** | SQLite WAL eliminado de la tesis; la persistencia declarada es JSONL + snapshots (D-3). |
+| CLAIM-052 | partial | **deferred** | Compactación movida a trabajo futuro en la tesis reescrita. |
+| CLAIM-061 | partial | **removed** | El número «< 150 ms» fue eliminado; la tesis describe el mecanismo (ripgrep) sin afirmar una cota no medida. |
+| CLAIM-072 | partial | **implemented** | Guard repo-wide en `tests/run-canvas-no-auto-fit.test.ts` (prohíbe toda API de movimiento de viewport en `apps/web/src`). Commit `d552c5d`. |
+| CLAIM-073 | partial | **downgraded (aplicado)** | La tesis ahora dice «sigue las pautas WCAG 2.2 AA … aunque no se realizó una auditoría externa de conformidad». |
+| CLAIM-081 | partial | **clarified (aplicado)** | La tesis declara explícitamente «plano de control local con inferencia remota, no un sistema de inferencia local, y por lo tanto no ofrece garantías de privacidad absoluta». |
+| CLAIM-090 | incompatible | **resolved** | Los rótulos «V3» fueron eliminados del texto de la tesis (D-1). |
+
+### Claims nuevos surgidos de la evaluación
+
+| ID | Claim | Status | Evidencia |
+|---|---|---|---|
+| CLAIM-100 | Una política determinista puede decidir *si* dividir, pero no *cómo*; fabricar el corte semántico produce unidades inejecutables | **implemented (resultado empírico)** | Run `88263695`: 3/3 agentes exit 0, 3/3 rechazados por `scope_violation` con particiones sintetizadas. Corrección en commit `673b32e`; tesis §4.5 y §7.3. |
+| CLAIM-101 | Los fallos se recuperan según su causa real (`DECISIONS.md` A11) | **implemented** | Antes toda falla de hoja se etiquetaba `execution_failed`. `leafFailureObservation` mapea `scope_violation`/`unexpected_commit` a causa de alcance; verificado en run 6 (`scope_unexpected_commit`, `discard: true`). Commit `a73c6ba`. |
+| CLAIM-102 | La reproducibilidad del planning está limitada por la variabilidad del modelo remoto | **limitación declarada** | Ejecuciones del mismo objetivo produjeron topologías distintas; una no completó. Reportado en la tesis §7.4 y como amenaza a la validez. |
+
+### Claims que siguen sin evidencia
+
+| ID | Claim | Estado | Consecuencia |
+|---|---|---|---|
+| — | Estudio comparativo de granularidad (A/B/C) con repeticiones | **no ejecutado** | La tesis **no afirma** superioridad de la política adaptativa, solo viabilidad. Protocolo especificado como trabajo futuro. |
+| — | Segunda ejecución consecutiva del caso canónico con resultado válido | **no obtenido** | El gate G4 del roadmap pide dos ejecuciones válidas. Se obtuvo **una** completa. Ver `evidence/canonical-run/README.md` §6. |

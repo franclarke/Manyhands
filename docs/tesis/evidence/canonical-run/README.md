@@ -144,3 +144,53 @@ usó una fixture (roadmap §10).
 - Reproducibilidad del planning: al ser un modelo remoto, dos runs del mismo
   objetivo producen topologías distintas (ver §7). El gate exige que ambas
   satisfagan los mismos criterios, no que produzcan el mismo commit.
+
+
+## 7. Reproducibilidad: tres ejecuciones del mismo objetivo
+
+| Run | Commit ManyHands | Planning | Resultado | Estado final |
+|---|---|---|---|---|
+| `88263695` | `3a52b8b` | 3 nodos, 1 conflicto | 3/3 agentes exit 0, **3/3 rechazados por scope** | `waiting_for_input` |
+| **`55f8ba9f`** | `673b32e` (+ `9338419` para publicar) | 3 nodos, 1 conflicto | 2/2 verificados, integración con 1 reparación | **`completed`** |
+| `be588dc3` | `a73c6ba` | 4 nodos, 3 conflictos (incluye unidad solo-tests) | 3/3 rechazados por scope | `waiting_for_input` |
+| `4cefffbd` | `a73c6ba` | 3 nodos, 1 conflicto (misma topología que el exitoso) | 2/2 rechazados por scope | `waiting_for_input` |
+
+**El gate G4 del roadmap exige dos ejecuciones válidas consecutivas. Se obtuvo
+una.** Por lo tanto **G4 queda `PARTIAL`**, con un recorrido completo demostrado
+y la causa de los fallos restantes caracterizada.
+
+### Causa raíz de los fallos por alcance (caracterizada)
+
+Bajo la política de alcance `strict`, `ScopeChecker` clasifica todo archivo
+modificado que no coincide con `allowedPaths` como fuera de alcance, y el
+`ResultRecorder` convierte esa condición en `scope_violation`. Los
+`allowedPaths` compilados son las **rutas exactas** que la unidad declaró: las
+citadas como evidencia del repositorio más las declaradas como salidas nuevas
+(`plannedPaths`).
+
+El objetivo del caso canónico pide explícitamente «cubrir el comportamiento
+nuevo en `tests/`», lo que invita al agente a **crear archivos de prueba
+nuevos**. El contrato exige que el planificador anticipe y declare toda ruta que
+la unidad vaya a crear; el prompt lo indica de forma explícita. En la práctica,
+el modelo no lo cumple de forma confiable: en el run exitoso los agentes
+editaron únicamente archivos ya existentes, mientras que en los fallidos
+crearon archivos no declarados.
+
+**Esta no es una falla del verificador de alcance**, que se comportó según su
+contrato en los cuatro runs, ni se corrigió relajando la política ---sería
+debilitar un invariante de seguridad---. Es una limitación de la interacción
+entre una política de alcance estricta y un planificador que debe predecir todos
+los archivos que se crearán. Las líneas de solución, en orden de preferencia,
+son: (a) reforzar la obligación de declarar `plannedPaths` y rechazar en los
+críticos de plan toda hoja que prometa pruebas nuevas sin declararlas;
+(b) permitir que una unidad declare un patrón de directorio acotado para sus
+salidas nuevas; (c) convertir la violación de alcance en una propuesta de
+enmienda del grafo en lugar de una falla terminal, aprovechando que la
+clasificación ya identifica la causa correctamente.
+
+### Mejora de diagnosticabilidad aplicada
+
+El motivo persistido de una violación de alcance volcaba el diff del agente, lo
+que hacía ilegible el journal. Ahora nombra las rutas que salieron del contrato
+(`scope_violation: changed files outside the declared scope: <rutas>`), de modo
+que la evidencia del fallo sea utilizable sin reconstruir el worktree.

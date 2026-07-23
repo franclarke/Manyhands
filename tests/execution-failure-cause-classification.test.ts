@@ -43,3 +43,20 @@ describe("leafFailureObservation", () => {
     expect(leafFailureObservation({ reason }).message).toBe(reason);
   });
 });
+
+describe("scope violation reasons name the offending paths", () => {
+  it("carries the violated paths through to the classified failure", async () => {
+    const { executionFailureReasonForTest } = await import("@manyhands/execution-core");
+    const reason = executionFailureReasonForTest({
+      status: "scope_violation",
+      scopeCheck: { violations: ["src/forbidden.ts", "config/global.json"] },
+      // The diff used to be what surfaced in the reason; it must not win.
+      stdoutTail: "+ some enormous diff hunk that hides the real cause"
+    });
+
+    expect(reason).toContain("src/forbidden.ts");
+    expect(reason).toContain("config/global.json");
+    expect(reason).not.toContain("diff hunk");
+    expect(leafFailureObservation({ reason }).code).toBe("scope_violation");
+  });
+});

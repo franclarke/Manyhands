@@ -592,7 +592,25 @@ function instructionFilePath(input: Pick<V2PhysicalNodeExecutionInput, "runId" |
   return join(tmpdir(), `mh-v2-${createHash("sha256").update(`${input.runId}:${input.attemptId}:${kind}`).digest("hex").slice(0, 20)}.txt`);
 }
 
-function executionFailureReason(result: { status: string; stderrTail?: string | undefined; stdoutTail?: string | undefined; failureHint?: string | undefined }): string {
+export const executionFailureReasonForTest = executionFailureReason;
+
+function executionFailureReason(result: {
+  status: string;
+  stderrTail?: string | undefined;
+  stdoutTail?: string | undefined;
+  failureHint?: string | undefined;
+  scopeCheck?: { violations?: readonly string[]; outOfScope?: readonly string[] } | undefined;
+}): string {
+  // A scope rejection is explained by the paths that left the contract, not by
+  // the agent's diff: dumping the diff here buried the actual cause in the
+  // persisted failure reason and made the journal unreadable.
+  if (result.status === "scope_violation") {
+    const violations = result.scopeCheck?.violations ?? [];
+    const detail = violations.length > 0
+      ? `changed files outside the declared scope: ${violations.join(", ")}`
+      : "the agent changed files outside the declared scope";
+    return `${result.status}: ${detail}`;
+  }
   return [result.status, result.failureHint, result.stderrTail, result.stdoutTail].filter((value) => value !== undefined && value.length > 0).join(": ");
 }
 

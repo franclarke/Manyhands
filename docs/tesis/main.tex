@@ -10,20 +10,17 @@
 \usepackage{enumitem}
 \usepackage{booktabs}
 \usepackage{tabularx}
-\usepackage{multirow}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{xcolor}
 \usepackage{tikz}
 \usepackage{listings}
-\usepackage[pdftex,hidelinks,pdfauthor={Francisco Clarke},pdftitle={Plataforma de Orquestacion de Agentes Multi-Agente y Granularidad Adaptativa}]{hyperref}
+\usepackage[pdftex,hidelinks,pdfauthor={Francisco Clarke},pdftitle={Orquestacion de agentes de lenguaje para el desarrollo de software con descomposicion adaptativa}]{hyperref}
 
-\usetikzlibrary{arrows.meta,positioning,shapes.geometric,shadows,calc}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc}
 
-% Configuración de márgenes universitarios (UNS)
 \geometry{top=3.0cm,bottom=2.5cm,left=3.0cm,right=2.5cm}
 \onehalfspacing
 
-% Estilo para código fuente
 \lstset{
   basicstyle=\ttfamily\small,
   keywordstyle=\color{blue!80!black}\bfseries,
@@ -31,16 +28,13 @@
   commentstyle=\color{gray}\itshape,
   numbers=left,
   numberstyle=\tiny\color{gray},
-  stepnumber=1,
   numbersep=8pt,
   showstringspaces=false,
   breaklines=true,
   frame=single,
-  frameround=tttt,
   backgroundcolor=\color{black!2}
 }
 
-% Comandos personalizados
 \newcommand{\autor}{Francisco Clarke}
 \newcommand{\lu}{120547}
 \newcommand{\carrera}{Ingeniería en Sistemas de Información}
@@ -48,29 +42,30 @@
 \newcommand{\universidad}{Universidad Nacional del Sur}
 \newcommand{\directora}{Dra. Ana Gabriela Maguitman}
 \newcommand{\codirector}{Dr. Federico Martín Schmidt}
-\newcommand{\titulo}{Diseño e implementación de una plataforma de orquestación de agentes de lenguaje para el desarrollo de software y análisis exploratorio de una política de descomposición adaptativa}
+\newcommand{\titulo}{Orquestación de agentes de lenguaje para el desarrollo de software: una política de descomposición adaptativa con verificación basada en evidencia}
 \newcommand{\sistema}{\textbf{ManyHands}}
+\newcommand{\ctask}{C_{\mathit{task}}}
 
 \begin{document}
 
 % ==============================================================================
-% PORTADA INSTITUCIONAL UNS
+% PORTADA
 % ==============================================================================
 \begin{titlepage}
   \begin{center}
     {\large\textbf{\universidad}}\\[0.4em]
     {\large\textbf{\departamento}}\\[2.5em]
-    
+
     {\Large\textbf{TRABAJO FINAL DE \carrera}}\\[3em]
-    
+
     {\Large\textbf{\titulo}}\\[4em]
-    
+
     \begin{tabular}{rl}
       \textbf{Alumno:} & \autor \ (LU: \lu) \\[0.8em]
       \textbf{Directora:} & \directora \\[0.8em]
       \textbf{Codirector:} & \codirector \\
     \end{tabular}
-    
+
     \vfill
     {\large Bahía Blanca, Argentina}\\[0.5em]
     {\large 2026}
@@ -78,419 +73,1015 @@
 \end{titlepage}
 
 % ==============================================================================
-% RESUMEN (SOLO ESPAÑOL)
+% RESUMEN
 % ==============================================================================
 \chapter*{Resumen}
 \addcontentsline{toc}{chapter}{Resumen}
 
-Los modelos de lenguaje de gran escala (LLM) han demostrado una capacidad sobresaliente en la generación y modificación autónoma de código fuente. Sin embargo, abordar objetivos de desarrollo de software de mediana y gran escala en repositorios reales trasciende la generación de un único fragmento de código: requiere interpretar el objetivo inicial del usuario, descomponerlo en unidades ejecutables cohesivas, formalizar contratos de interfaz entre componentes, coordinar la ejecución concurrente de agentes, aislar el entorno de trabajo y validar empíricamente los cambios producidos mediante evidencias probatorias.
+Los modelos de lenguaje de gran escala permiten hoy delegar a un agente autónomo
+la modificación de código fuente. Sin embargo, cuando el objetivo excede un
+cambio puntual y debe aplicarse sobre un repositorio real, un único agente
+enfrenta límites conocidos: la ventana de contexto se satura, el alcance del
+cambio se desborda y no existe garantía de que el resultado sea correcto. La
+respuesta intuitiva ---dividir el objetivo en subtareas--- reintroduce el
+problema bajo otra forma: una división insuficiente reproduce la saturación,
+mientras que una división excesiva multiplica el costo de coordinación, los
+contratos entre componentes y los conflictos de integración. Este trabajo
+denomina a esa tensión \emph{paradoja de la granularidad}.
 
-Este trabajo de tesis presenta el diseño, implementación y evaluación de \sistema, una plataforma local, \emph{self-hosted} y \emph{single-user} orientada a la orquestación de agentes de código (tales como Claude Code y Codex CLI) sobre repositorios de software locales. La arquitectura de \sistema\ se fundamenta en tres pilares conceptuales y técnicos:
-\begin{enumerate}
-  \item \textbf{El Motor de Descomposición Adaptativa (Decomposer V3):} Un mecanismo de dos fases (\emph{Architect Pass} semántico y \emph{Graph Compiler} determinista) respaldado por la formulación del Índice de Complejidad Intrínseca ($C_{task}$) y critics de coalescencia. Este motor resuelve dinámicamente el grado de ramificación idóneo para evitar tanto la sobre-división (\emph{over-splitting}) como la sub-división (\emph{under-splitting}) arbitrarias.
-  \item \textbf{El Motor de Ejecución Concurrente, Scheduler y Sandboxing:} Un despachador continuo basado en disponibilidad de artefactos que impone aplazamientos simétricos sobre restricciones de conflicto (\emph{ConflictConstraints}), una cola de registro atómica ($recordQueue$) para evitar condiciones de carrera, un pool de reciclaje de worktrees de Git (\emph{Worktree Recycling Pool}) que elimina la latencia de I/O, y un guard de traversal de rutas sensible al sistema operativo (\emph{ScopeChecker}).
-  \item \textbf{El Motor de Integración Bottom-Up y Matriz de Evidencias:} Un esquema de validación empírica que construye la Matriz de Evidencias evaluando los contratos de pruebas sobre los commits candidatos exactos, integrando de abajo hacia arriba el árbol de resultados y publicando el trabajo verificado en la rama principal.
-\end{enumerate}
+Esta tesis presenta el diseño, la implementación y la evaluación exploratoria de
+\sistema, una plataforma local de orquestación de agentes de código sobre
+repositorios Git. Su aporte central es una \textbf{política de descomposición
+adaptativa}: un planificador semántico basado en un modelo de lenguaje propone
+una descomposición y estima señales de complejidad por unidad de trabajo; una
+política determinista calcula a partir de ellas un índice de complejidad
+intrínseca ($\ctask$) y decide, contra un umbral explícito, si cada unidad se
+ejecuta como hoja cohesiva o se descompone. La frontera entre ambas
+responsabilidades es deliberada: el modelo aporta juicio semántico, pero no
+puede alterar el criterio de corte.
 
-Adicionalmente, \sistema\ implementa un motor de persistencia atómica durable resistente a apagones de energía mediante escrituras con descarga explícita a disco ($fsync$), compactación por generaciones y SQLite WAL, complementado con una interfaz web visual (\emph{Cockpit UI}) con cola de decisiones humanas no bloqueante. Finalmente, se presenta un análisis exploratorio sobre la política adaptativa de granularidad mediante el indicador \emph{Granularity Efficiency Index} ($GEI$), demostrando las ventajas descriptivas y cualitativas del modelo propuesto frente a estrategias de granularidad fija.
+Alrededor de esa política, \sistema\ implementa un grafo de tareas inmutable con
+cuatro relaciones tipadas, ejecución aislada en \emph{worktrees} de Git con
+verificación de alcance, validación de cada resultado sobre el commit exacto
+mediante una matriz de evidencias, integración ascendente y entrega verificada
+con manifiesto y comprobante. El estado del sistema se persiste como una
+secuencia append-only de eventos de dominio, de la que toda proyección se
+deriva.
 
-\textbf{Palabras clave:} Orquestación de Agentes, Modelos de Lenguaje, Grafo Jerárquico de Tareas, Granularidad Adaptativa, Worktrees de Git, Matriz de Evidencias, Seguridad en Sistemas Locales.
+La evaluación consistió en un caso canónico ejecutado de extremo a extremo sobre
+un repositorio TypeScript controlado, con Codex como ejecutor de planificación y
+de implementación. El recorrido completo ---planificación adaptativa, ejecución
+concurrente aislada, validación, integración y entrega--- alcanzó el estado
+\texttt{completed} con un commit final verificado y no vacío. El proceso reveló
+además un resultado negativo relevante: cuando la política determinista intentó
+sustituir al planificador semántico fabricando una partición mecánica del
+alcance, todas las unidades resultantes violaron su propio contrato de alcance.
+Ese hallazgo motivó una corrección de diseño que se documenta en profundidad.
 
-% ==============================================================================
-% ÍNDICES
-% ==============================================================================
+\textbf{Palabras clave:} orquestación de agentes, modelos de lenguaje,
+descomposición de tareas, granularidad adaptativa, worktrees de Git, verificación
+basada en evidencia.
+
 \tableofcontents
 \listoffigures
 \listoftables
 
 % ==============================================================================
-% CAPÍTULO 1: INTRODUCCIÓN Y MOTIVACIÓN
-% ==============================================================================
-\chapter{Introducción y Motivación}
+\chapter{Introducción}
 
-\section{Contexto General y Evolución del Desarrollo Asistido por IA}
-El desarrollo de software moderno es una disciplina intensiva en conocimiento que requiere interpretar requerimientos de usuario ambiguos, diseñar arquitecturas modulares, mantener contratos de interfaz estables y verificar la corrección funcional mediante pruebas automáticas. Durante la última década, la evolución del procesamiento del lenguaje natural y la emergencia de los modelos de lenguaje de gran escala (LLM) capacitados sobre corpus masivos de código fuente han transformado significativamente el panorama de la ingeniería de software.
+\section{Motivación}
 
-En las primeras etapas, los modelos generativos se incorporaron como herramientas de autocompletado en línea dentro de entornos de desarrollo integrados (IDE), ofreciendo sugerencias a nivel de línea o función. Posteriormente, el dominio evolucionó hacia los agentes autónomos de código: sistemas dotados de bucles de razonamiento capaces de invocar herramientas de terminal, explorar directorios, editar archivos fuente y procesar los mensajes de error devueltos por compiladores e intérpretes.
+La programación asistida por modelos de lenguaje atravesó en pocos años tres
+etapas: autocompletado dentro del editor, generación de fragmentos a partir de
+una descripción y, finalmente, agentes autónomos capaces de leer un repositorio,
+ejecutar comandos y reaccionar a los errores del compilador o de las pruebas
+\cite{chen2021codex,yao2023react}. Los resultados sobre incidencias reales de
+proyectos abiertos muestran que estos agentes ya resuelven una fracción no
+trivial de tareas de mantenimiento \cite{jimenez2024swebench,yang2024sweagent}.
 
-Sin embargo, a pesar de los prometedores avances en tareas acotadas o repositorios sintéticos creados desde cero, la aplicación de agentes autónomos en repositorios de software reales de mediano y gran tamaño enfrenta desafíos sustanciales que impiden su adopción directa sin una capa de orquestación adecuada.
-
-\section{El Dilema de la Granularidad y las Limitaciones del Agente Único}
-Cuando se encomienda un objetivo de software amplio (por ejemplo, "implementar un sistema de autenticación OAuth2 con almacenamiento en base de datos y paneles visuales en la interfaz") a un único agente autónomo, se manifiestan patologías estructurales:
+El salto pendiente no es de capacidad del modelo sino de \emph{organización del
+trabajo}. Un objetivo como ``agregar categorías de gasto al sistema, exponerlas
+en la API y mostrarlas en la interfaz'' no es un fragmento de código: es un
+conjunto de cambios coordinados sobre archivos distintos, con contratos
+implícitos entre ellos y con la obligación de no romper lo que ya funciona.
+Delegarlo a un agente único expone tres patologías bien documentadas en la
+práctica:
 
 \begin{enumerate}
-  \item \textbf{Saturación de la Ventana de Contexto:} El agente intenta cargar decenas de archivos fuente simultáneamente en la ventana de contexto del modelo. A medida que la masa de tokens se incrementa, la capacidad de atención disminuye, propiciando alucinaciones sobre firmas de métodos, pérdida de importaciones y modificaciones en partes del código totalmente ajenas al requerimiento.
-  \item \textbf{Desviación de Alcance (\emph{Scope Creep}):} Sin barreras explícitas de scope, el agente modifica archivos globales de configuración o componentes compartidos, rompiendo módulos secundarios que no contaban con cobertura de pruebas inmediata.
-  \item \textbf{La Paradoja de la Granularidad:} Para mitigar el problema del agente único, una estrategia intuitiva consiste en dividir el objetivo en sub-tareas. Sin embargo, la división a ciegas introduce un dilema crítico:
-  \begin{itemize}
-    \item \textbf{Sub-división (\emph{Under-splitting}):} Ocurre cuando una tarea asignada como hoja sigue siendo demasiado compleja o abarca múltiples responsabilidades. El agente fracasa por saturación de contexto.
-    \item \textbf{Sobre-división (\emph{Over-splitting}):} Ocurre cuando un objetivo sencillo se descompone en excesivas sub-tareas triviales. Esto genera una latencia infundada, sobrecosto por consumo de tokens en llamadas a la API, fricción innecesaria en la definición de contratos de interfaz y riesgo de conflictos durante la integración de los parches.
-  \end{itemize}
-  \item \textbf{Inexistencia de Aislamiento en el Repositorio:} Ejecutar agentes directamente sobre el directorio de trabajo del desarrollador pone en riesgo el código fuente local. Si un agente ejecuta un comando destructivo o deja el repositorio en un estado inconsistente, se corrompe el árbol principal del usuario.
+  \item \textbf{Saturación de contexto.} El agente intenta sostener demasiados
+  archivos simultáneamente; a medida que crece la masa de tokens, aumenta la
+  probabilidad de que invente firmas, pierda importaciones o edite código ajeno
+  al pedido.
+  \item \textbf{Desborde de alcance.} Sin límites explícitos, el agente modifica
+  configuración global o componentes compartidos y rompe módulos que no estaban
+  bajo revisión.
+  \item \textbf{Ausencia de aislamiento.} Ejecutar un agente directamente sobre
+  el directorio de trabajo del desarrollador pone en riesgo trabajo no
+  guardado.
 \end{enumerate}
 
-\section{Motivación y Justificación de un Sistema Local y Self-Hosted}
-Muchos marcos de orquestación emergentes se conciben como plataformas SaaS centralizadas en la nube. Esta arquitectura impone barreras severas de adopción:
+La respuesta natural es dividir. Pero dividir bien no es evidente, y ese es el
+punto de partida de este trabajo.
+
+\section{Planteamiento del problema: la paradoja de la granularidad}
+
+Descomponer un objetivo de software en unidades ejecutables enfrenta una tensión
+que la ingeniería de software conoce desde hace décadas. Parnas
+\cite{parnas1972criteria} estableció que los módulos deben delimitarse por las
+decisiones de diseño que ocultan, no por los pasos del procesamiento; una
+división que ignora ese criterio produce módulos que no pueden evolucionar de
+forma independiente. Brooks \cite{brooks1995mythical} mostró que agregar
+participantes a una tarea incrementa el costo de comunicación de forma
+superlineal, de modo que subdividir tiene un costo propio. Conway
+\cite{conway1968committees} observó que la estructura del sistema producido
+refleja la estructura de comunicación de quienes lo construyen.
+
+Trasladadas a la orquestación de agentes, estas observaciones delimitan dos
+fallas simétricas:
+
 \begin{itemize}
-  \item \textbf{Privacidad y Propiedad Intelectual:} Las organizaciones y desarrolladores independientes no pueden enviar sus repositorios de software privados a servidores de terceros desconocidos.
-  \item \textbf{Latencia de I/O y Transferencia:} Clonar y sincronizar repositorios masivos en la nube genera una degradación sustancial en los tiempos de respuesta.
-  \item \textbf{Seguridad del Host:} Un sistema de orquestación debe poder invocar compiladores, linters y herramientas locales de prueba en el entorno del desarrollador, sin exponer credenciales sensibles ni puertos públicos.
+  \item \textbf{Sub-división:} una unidad declarada como hoja sigue siendo
+  demasiado amplia. El agente que la recibe reproduce exactamente las patologías
+  del agente único.
+  \item \textbf{Sobre-división:} un objetivo simple se parte en unidades
+  triviales. Cada unidad requiere su propio contexto, su propio contrato de
+  interfaz y su propia validación; el costo de coordinación y el riesgo de
+  conflicto durante la integración crecen sin beneficio.
 \end{itemize}
 
-Por estas razones, existe una imperiosa necesidad de diseñar una plataforma **local, single-user y self-hosted**, capaz de orquestar agentes de código sobre el sistema de archivos del usuario con garantías de aislamiento, durabilidad ante fallos y control intuitivo.
+El problema es que el punto intermedio no es fijo. Depende del objetivo, de la
+forma del repositorio, de cuántas interfaces públicas se tocan y de cuánta
+superficie de validación involucra el cambio. Una regla estática ---``dividir
+siempre en cuatro'', ``una tarea por archivo''--- falla en un extremo o en el
+otro. \textbf{El problema que aborda esta tesis es cómo decidir esa granularidad
+de forma adaptativa, explicable y reproducible.}
 
-\section{Objetivos del Trabajo}
+\section{Objetivos}
 
-\subsection{Objetivo General}
-Diseñar, implementar y evaluar \sistema, una plataforma local y supervisable de orquestación de agentes de lenguaje para el desarrollo de software, fundamentada en un grafo dirigido acíclico (DAG) jerárquico inmutable, capaz de evaluar la complejidad intrínseca de cada tarea para aplicar una política de descomposición adaptativa, ejecutar el trabajo en entornos aislados de Git y validar empíricamente los resultados mediante una Matriz de Evidencias e integración ascendente (\emph{bottom-up}).
+\subsection{Objetivo general}
 
-\subsection{Objetivos Específicos}
-\begin{enumerate}
-  \item \textbf{Definir el Grafo de Tareas Jerárquico V3 ($GraphRevision$):} Diseñar una representación formal de grafo respaldada por un reductor Compare-and-Swap (CAS) inmutable con $deepFreeze$, admitiendo únicamente 4 tipos de relaciones canónicas ($parentId$, $ArtifactRequirement$, $SeamBinding$ y $ConflictConstraint$).
-  \item \textbf{Desarrollar el Motor de Descomposición Adaptativa (Decomposer V3):} Formular el Índice de Complejidad Intrínseca ($C_{task}$) y construir un pipeline de dos fases (\emph{Architect Pass} y \emph{Graph Compiler}) respaldado por critics de coalescencia para prevenir la sobre-división y sub-división de tareas.
-  \item \textbf{Implementar el Scheduler Continuo por Eventos:} Diseñar un despachador reactivo que evalúe la disponibilidad de artefactos ($ReadinessStateV2$), aplique aplazamientos simétricos sobre restricciones de conflicto ($blocksPair$) y garantice escrituras atómicas mediante la cola $recordQueue$.
-  \item \textbf{Construir el Aislamiento de Ejecución y Sandboxing:} Implementar un pool de reciclaje de worktrees de Git (\emph{Worktree Recycling Pool}), un guard de traversal de rutas sensible al sistema operativo (\emph{ScopeChecker}), la supervisión estricta de subprocesos con verificación de cierre (\emph{LiveProcessRegistry}) y el saneamiento de variables de entorno ($buildAgentEnvironment$).
-  \item \textbf{Garantizar Persistencia Resiliente y Cockpit UI:} Desarrollar un motor de almacenamiento de eventos append-only $O(1)$ con escrituras atómicas $fsync$, SQLite WAL, compactación por generaciones y una interfaz web con cola de decisiones humanas no bloqueante.
-  \item \textbf{Evaluar la Política Adaptativa de Granularidad:} Analizar exploratoriamente el desempeño del sistema mediante el indicador \emph{Granularity Efficiency Index} ($GEI$).
-\end{enumerate}
+Diseñar, implementar y evaluar de forma exploratoria una plataforma local de
+orquestación de agentes de lenguaje para el desarrollo de software que resuelva
+la granularidad de la descomposición mediante una política adaptativa
+explícita, y que garantice que todo resultado integrado haya sido verificado
+sobre el commit exacto que lo produjo.
 
-% ==============================================================================
-% CAPÍTULO 2: ESTADO DEL ARTE
-% ==============================================================================
-\chapter{Estado del Arte y Marco Teórico}
-
-\section{Agentes Autónomos de Código y Modelos de Lenguaje}
-La capacidad de los modelos de lenguaje para actuar como agentes de ingeniería de software ha sido explorada intensamente en la literatura reciente. 
-
-SWE-agent \cite{yang2024sweagent} demostró que crear una interfaz de ordenador ajustada (\emph{Agent-Computer Interface} o ACI), con comandos simplificados para buscar código, examinar archivos y ejecutar pruebas, incrementa dramáticamente el desempeño de los modelos en la resolución de incidentes reales en repositorios abiertos. Sin embargo, SWE-agent opera bajo una filosofía de "un agente por problema", donde el modelo interactúa de manera lineal sobre el código hasta agotar su presupuesto de intentos.
-
-Por otra parte, marcos como ChatDev \cite{qian2024chatdev} y MetaGPT \cite{hong2024metagpt} proponen sociedades de agentes virtuales inspiradas en el modelo de desarrollo en cascada o ágil. En estos sistemas, distintos agentes asumen roles como "Product Manager", "Architect", "Programmer" y "Tester", comunicándose a través de mensajes en lenguaje natural. Aunque estos enfoques han mostrado resultados vistosos en la generación de pequeños juegos o utilidades desde cero, carecen de mecanismos rigurosos de control de versiones, no gestionan repositorios locales existentes y sufren de desalineación cuando los parches producidos por el "Programador" rompen las interfaces diseñadas por el "Arquitecto".
-
-En la práctica moderna, ejecutores CLI de nivel profesional como Claude Code y Codex CLI permiten ejecutar agentes directamente en la terminal. \sistema\ se construye para orquestar y aislar precisamente este tipo de agentes pagados locales, proveyéndoles la estructura de grafo, contratos y contextos acotados que necesitan para operar en repositorios reales.
-
-\section{Orquestación Basada en Grafos Dirigidos Acíclicos (DAGs)}
-La representación de planes de ejecución mediante grafos dirigidos acíclicos es una técnica consolidada en compiladores tradicionales y sistemas de flujo de datos. En el ámbito de los modelos de lenguaje, el trabajo LLMCompiler \cite{kim2024llmcompiler} introdujo la idea de desglosar llamadas a herramientas en un DAG donde las aristas representan dependencias de datos entre funciones. Esto permite identificar qué llamadas son independientes y ejecutarlas en paralelo, reduciendo drásticamente la latencia total de inferencia.
-
-En el desarrollo de software, la aplicación de grafos jerárquicos exige extender este concepto: las dependencias no son meros valores devueltos por funciones, sino parches de código fuente, contratos de interfaz (\emph{SeamBindings}), requerimientos de artefactos validados (\emph{ArtifactRequirements}) y restricciones de acceso exclusivo a recursos compartidos (\emph{ConflictConstraints}).
-
-\section{Políticas de Granularidad y Eficiencia de Recursos}
-El costo y la latencia asociados a las consultas a modelos de lenguaje han motivado el desarrollo de estrategias de optimización de recursos. FrugalGPT \cite{chen2023frugalgpt} demostró que es posible combinar modelos de diferente tamaño y costo mediante cascadas de enrutamiento, enviando la solicitud a un modelo más económico primero y escalando a un modelo más potente solo si la respuesta no supera un umbral de calidad. De manera similar, RouteLLM \cite{ong2025routellm} explora clasificadores aprendidos para encaminar solicitudes de manera óptima.
-
-En el contexto de la descomposición de tareas de desarrollo de software, la granularidad actúa como una decisión de asignación de recursos previa. Determinar si un objetivo debe resolverse como un nodo hoja único o dividirse en $k$ sub-composites influye directamente en el consumo de tokens y la latencia global. Una política adaptativa debe equilibrar el costo de la coordinación y definición de contratos frente al riesgo de saturar la ventana de contexto del agente.
-
-\section{Sandboxing y Control de Versiones en Git}
-El aislamiento del entorno de ejecución es indispensable para garantizar que las acciones de los agentes no contaminen el trabajo del usuario. Git ofrece la capacidad de crear \emph{worktrees} vinculados a un repositorio base \cite{chacon2014pro}. Un worktree de Git permite disponer de un directorio de trabajo independiente en el sistema de archivos, con su propio índice y rama, compartiendo la base de datos de objetos $.git$ central.
-
-Sin embargo, crear y eliminar worktrees físicos mediante comandos estándar de Git para cada intento de ejecución introduce una sobrecarga considerable de I/O en disco y contención en sistemas Windows. Se requiere, por lo tanto, un diseño de pool de reciclaje que permita reutilizar directorios de trabajo limpios mediante operaciones de restablecimiento ultrarrápidas ($git\ reset\ --hard$).
-
-% ==============================================================================
-% CAPÍTULO 3: ARQUITECTURA Y DISEÑO
-% ==============================================================================
-\chapter{Arquitectura Conceptual y Diseño de ManyHands}
-
-\section{Visión General y Modelo de Despliegue}
-\sistema\ ha sido diseñado como un sistema de orquestación **local, single-user y self-hosted**. Su propósito es actuar como el puente entre el desarrollador humano y los agentes de código autónomos.
-
-La Figura~\ref{fig:arquitectura-general} ilustra la visión general de la arquitectura y la interacción entre sus componentes principales.
-
-\begin{figure}[ht]
-  \centering
-  \begin{tikzpicture}[
-    node distance=6mm,
-    block/.style={draw=black!70, fill=black!3, rounded corners=3pt, align=center, minimum height=1.2cm, font=\small},
-    pillar/.style={draw=blue!80!black, fill=blue!5, thick, rounded corners=4pt, align=center, minimum height=1.6cm, font=\small},
-    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=black!70}
-  ]
-    \node[block, text width=2.8cm] (goal) {\textbf{Objetivo del Usuario}\\(Lenguaje Natural)};
-    \node[pillar, right=of goal, text width=3.2cm] (p1) {\textbf{Pilar 1: Decomposer}\\Evalúa $C_{task}$ y genera\\GraphRevision V3};
-    \node[pillar, right=of p1, text width=3.2cm] (p2) {\textbf{Pilar 2: Ejecución}\\Scheduler, Worktree Pool\\y Sandboxing};
-    \node[pillar, right=of p2, text width=3.2cm] (p3) {\textbf{Pilar 3: Integración}\\Matriz de Evidencias\\y Entrega Bottom-Up};
-    \node[block, right=of p3, text width=2.5cm] (delivery) {\textbf{Rama Entregada}\\Commit Verificado};
-
-    \draw[arrow] (goal) -- (p1);
-    \draw[arrow] (p1) -- (p2);
-    \draw[arrow] (p2) -- (p3);
-    \draw[arrow] (p3) -- (delivery);
-
-    \node[draw=orange!80!black, fill=orange!5, dashed, rounded corners=3pt, below=1cm of p2, text width=11.5cm, align=center, font=\small] (store)
-      {\textbf{Capa de Persistencia y Supervisión Visual:}\\JsonlEventStore ($fsync$ atómico) + SQLite WAL + Cockpit UI (Decision Queue)};
-
-    \draw[arrow, dashed] (p1.south) -- (p1.south |- store.north);
-    \draw[arrow, dashed] (p2.south) -- (store.north);
-    \draw[arrow, dashed] (p3.south) -- (p3.south |- store.north);
-  \end{tikzpicture}
-  \caption{Arquitectura general y los tres pilares del sistema ManyHands.}
-  \label{fig:arquitectura-general}
-\end{figure}
-
-\section{El Grafo de Tareas Jerárquico V3 ($GraphRevision$)}
-En \sistema, la representación canónica del plan de trabajo es una instancia inmutable denominada $GraphRevision$. 
-
-\subsection{Inmutabilidad y Reducción CAS}
-El grafo no admite mutaciones directas. Toda actualización (agregar un nodo, actualizar un objetivo, insertar una relación) debe realizarse a través de la función reductora pura $reduceGraphRevision$:
-
-\begin{equation}
-reduceGraphRevision(currentRevision, inputOperations) \to (nextRevision, issues)
-\end{equation}
-
-Esta reducción verifica de forma estricta el principio Compare-and-Swap (CAS): la revisión esperada en las operaciones debe coincidir con $currentRevision.revision$. Si la reducción es exitosa y no introduce ciclos, se aplica una congelación profunda ($deepFreeze$) sobre el objeto resultante, impidiendo que cualquier componente modifique accidentalmente la estructura en memoria.
-
-\subsection{Las 4 Relaciones Tipadas Canónicas}
-Conforme a la especificación ADR-001, las conexiones dentro del grafo están restringidas exclusivamente a 4 relaciones fuertemente tipadas:
+\subsection{Objetivos específicos}
 
 \begin{enumerate}
-  \item **$parentId$ (Jerarquía Estructural):** Define la propiedad parent-child entre nodos raíz, composites y hojas.
-  \item **$ArtifactRequirement$ (Dependencia de Datos):** Especifica que un nodo consumidor requiere un artefacto producido por un nodo productor para su fase de ejecución, validación o integración.
-  \item **$SeamBinding$ (Contrato de Interfaz):** Define la frontera de contrato de código (tipos, funciones o clases) entre dos componentes independientes.
-  \item **$ConflictConstraint$ (Restricción de Concurrencia):** Declara que dos nodos tienen alto riesgo de modificar los mismos archivos o recursos locales, prohibiendo su ejecución simultánea.
+  \item Formular un índice de complejidad intrínseca por unidad de trabajo
+  ($\ctask$) y una regla de decisión que determine si una unidad se ejecuta como
+  hoja o se descompone.
+  \item Establecer una frontera explícita de responsabilidades entre el
+  planificador semántico (basado en un modelo de lenguaje), la política
+  determinista de granularidad y el compilador de grafo.
+  \item Definir un modelo de grafo de tareas inmutable con un conjunto cerrado
+  de relaciones tipadas, que evite una arista genérica de dependencia.
+  \item Implementar un mecanismo de aislamiento de ejecución basado en
+  \emph{worktrees} de Git con verificación de alcance, supervisión de procesos y
+  saneamiento del entorno.
+  \item Construir un esquema de verificación en el que ningún resultado se
+  integre sin evidencia obtenida sobre su commit exacto, y una entrega que exija
+  manifiesto y comprobante.
+  \item Persistir la historia del sistema como eventos de dominio append-only de
+  los que se deriven todas las proyecciones.
+  \item Evaluar el sistema mediante un caso canónico ejecutado de extremo a
+  extremo y documentar los hallazgos, incluidos los negativos.
 \end{enumerate}
 
-\section{Pilar 1 — Motor de Descomposición Adaptativa (Decomposer V3)}
+\section{Preguntas de investigación}
 
-\subsection{Formulación del Índice de Complejidad Intrínseca ($C_{task}$)}
-Para resolver la Paradoja de la Granularidad, Decomposer V3 evalúa la complejidad de cada tarea mediante la función ponderada:
+\begin{description}[leftmargin=2.2cm,style=nextline]
+  \item[\textbf{PI-1}] ¿Puede una política determinista, alimentada por señales
+  semánticas de un modelo de lenguaje, decidir la granularidad de la
+  descomposición de forma que el recorrido completo ---planificación, ejecución,
+  validación, integración y entrega--- se complete con un resultado verificado?
+  \item[\textbf{PI-2}] ¿Qué evidencia debe persistirse para que la decisión de
+  granularidad de cada nodo sea explicable y reconstruible después del hecho?
+  \item[\textbf{PI-3}] ¿Qué modos de falla aparecen cuando la granularidad
+  elegida no coincide con la forma real del trabajo, y cómo los detecta el
+  sistema?
+\end{description}
+
+\section{Alcance y limitaciones}
+
+Este trabajo construye un sistema \emph{local} y de \emph{un solo usuario}. El
+plano de control ---planificación, planificación de olas, persistencia,
+verificación e integración--- se ejecuta en la máquina del desarrollador. La
+inferencia, en cambio, la proveen modelos remotos a través de sus interfaces de
+línea de comandos. Esta distinción es importante y se sostiene en todo el texto:
+\sistema\ es un \textbf{plano de control local con inferencia remota}, no un
+sistema de inferencia local, y por lo tanto no ofrece garantías de privacidad
+absoluta sobre el código enviado al proveedor del modelo.
+
+Quedan explícitamente fuera del alcance, y se listan como trabajo futuro:
+persistencia en base de datos con índice secundario, aislamiento por
+contenedores o máquinas virtuales, selección adaptativa de modelos, soporte
+multiusuario, despliegue en la nube, escalabilidad a miles de nodos y
+certificación externa de accesibilidad.
+
+La evaluación es \textbf{exploratoria}. Consiste en un caso canónico ejecutado de
+extremo a extremo, no en un estudio comparativo con potencia estadística. El
+capítulo~\ref{cap:evaluacion} declara con precisión qué se midió y qué no.
+
+\section{Organización del documento}
+
+El capítulo~\ref{cap:preliminares} introduce los conceptos necesarios. El
+capítulo~\ref{cap:estado} revisa el estado del arte y posiciona el trabajo. El
+capítulo~\ref{cap:metodologia} presenta la política de descomposición
+adaptativa, que constituye el aporte central. Los capítulos~\ref{cap:arquitectura}
+y~\ref{cap:implementacion} describen la arquitectura y su implementación. El
+capítulo~\ref{cap:evaluacion} reporta la evaluación. El
+capítulo~\ref{cap:discusion} discute los resultados, las amenazas a la validez y
+las limitaciones. El capítulo~\ref{cap:conclusiones} concluye.
+
+% ==============================================================================
+\chapter{Conceptos preliminares}
+\label{cap:preliminares}
+
+\section{Agentes de código basados en modelos de lenguaje}
+
+Un \emph{agente de código} es un sistema que envuelve a un modelo de lenguaje en
+un bucle de razonamiento y acción: el modelo propone una acción (leer un
+archivo, ejecutar una prueba, aplicar una edición), un ejecutor la realiza, y el
+resultado se devuelve al modelo como observación \cite{yao2023react}. Esta
+arquitectura permite al modelo reaccionar a errores de compilación o a pruebas
+fallidas sin intervención humana \cite{shinn2023reflexion}.
+
+En este trabajo, los agentes son ejecutores de línea de comandos de nivel
+profesional (Codex CLI, Claude Code) que ya implementan ese bucle. \sistema\ no
+los reemplaza: los \emph{orquesta}, proveyéndoles el aislamiento, el alcance
+acotado y los contratos que necesitan para operar sobre un repositorio real.
+
+\section{Grafos dirigidos acíclicos de tareas}
+
+Representar un plan de ejecución como un grafo dirigido acíclico (DAG) es una
+técnica consolidada. En el contexto de modelos de lenguaje, LLMCompiler
+\cite{kim2024llmcompiler} organiza llamadas a herramientas en un DAG cuyas
+aristas son dependencias de datos, lo que permite identificar y ejecutar en
+paralelo las ramas independientes.
+
+Aplicado al desarrollo de software, el modelo requiere aristas más ricas que
+``el resultado de A alimenta a B''. Este trabajo distingue cuatro relaciones
+(sección~\ref{sec:relaciones}) porque la jerarquía de integración, la
+disponibilidad de un artefacto, la compatibilidad de una interfaz y la exclusión
+por recurso compartido tienen consecuencias distintas sobre la planificación.
+
+\section{Aislamiento mediante worktrees de Git}
+
+Git permite asociar a un mismo repositorio varios directorios de trabajo
+independientes, llamados \emph{worktrees} \cite{chacon2014pro}. Cada uno tiene su
+propio índice y su propia rama, pero comparte la base de datos de objetos. Esto
+los hace adecuados como unidad de aislamiento: un agente puede modificar
+libremente su worktree sin tocar el árbol del usuario.
+
+Crear y destruir un worktree por cada intento tiene un costo de entrada/salida
+no despreciable, especialmente en Windows. Por eso \sistema\ mantiene un
+\emph{pool} de worktrees reutilizables que se restablecen mediante
+\texttt{git reset --hard} y \texttt{git clean -fd}.
+
+\section{Verificación basada en evidencia}
+
+Que el proceso de un agente termine con código de salida cero no implica que el
+cambio sea correcto. La práctica de integración y entrega continuas
+\cite{humble2010continuous} y el desarrollo guiado por pruebas
+\cite{beck2002tdd} establecen que la corrección se demuestra ejecutando
+verificaciones sobre el artefacto exacto que se pretende integrar. Este trabajo
+adopta ese principio de forma estricta: cada resultado se valida sobre el SHA
+del commit candidato, y el vínculo entre criterio de aceptación y evidencia se
+materializa en una estructura explícita.
+
+\section{Eventos de dominio como historia canónica}
+
+Cuando el estado de un sistema resulta de una secuencia de hechos, registrar esa
+secuencia ---y no solo el estado final--- permite reconstruir, auditar y
+recuperar \cite{helland2007life}. El orden de los hechos es la propiedad que
+debe preservarse \cite{lamport1978time}. \sistema\ persiste eventos de dominio
+append-only y deriva de ellos toda proyección; los \emph{snapshots} son
+materializaciones para acelerar la carga, nunca una segunda fuente de verdad.
+
+% ==============================================================================
+\chapter{Estado del arte}
+\label{cap:estado}
+
+\section{Agentes autónomos aplicados a ingeniería de software}
+
+SWE-agent \cite{yang2024sweagent} demostró que diseñar cuidadosamente la
+interfaz entre el agente y la computadora ---comandos simplificados para buscar,
+leer y editar--- mejora sustancialmente el desempeño sobre incidencias reales
+del conjunto SWE-bench \cite{jimenez2024swebench}. Su filosofía es de un agente
+por problema: el modelo trabaja linealmente hasta agotar su presupuesto.
+
+ChatDev \cite{qian2024chatdev} y MetaGPT \cite{hong2024metagpt} proponen
+sociedades de agentes con roles (product manager, arquitecto, programador,
+tester) que se comunican en lenguaje natural. Estos enfoques producen resultados
+llamativos generando aplicaciones pequeñas desde cero, pero presentan tres
+limitaciones para el escenario de esta tesis: no operan sobre repositorios
+existentes con historia, carecen de un mecanismo riguroso de control de
+versiones para los resultados parciales, y sufren desalineación cuando el código
+producido por un rol contradice las interfaces definidas por otro.
+
+Los relevamientos del área \cite{wang2024survey,liu2024agentbench} coinciden en
+que la evaluación de agentes sobre tareas de ingeniería de software sigue siendo
+un problema abierto, en buena medida porque el criterio de éxito es difícil de
+automatizar.
+
+\section{Orquestación mediante grafos}
+
+LLMCompiler \cite{kim2024llmcompiler} explota el paralelismo entre llamadas
+independientes construyendo un DAG de dependencias de datos. La idea es
+directamente aplicable, pero en desarrollo de software las dependencias no son
+valores devueltos: son parches de código, contratos de interfaz y accesos
+exclusivos a archivos compartidos. Esa diferencia motiva el modelo de relaciones
+tipadas de la sección~\ref{sec:relaciones}.
+
+\section{Políticas de costo y asignación de recursos}
+
+FrugalGPT \cite{chen2023frugalgpt} y RouteLLM \cite{ong2024routellm} muestran que
+enrutar cada solicitud al modelo más económico capaz de resolverla reduce el
+costo sin degradar la calidad de forma apreciable. Ambos trabajos deciden
+\emph{qué modelo} usar para una consulta dada.
+
+La política de este trabajo actúa una etapa antes y sobre otra variable: decide
+\emph{cuánto trabajo} constituye una unidad antes de asignarla a un agente. Las
+dos decisiones son complementarias; la selección adaptativa de modelos se deja
+como trabajo futuro (sección~\ref{sec:futuro}).
+
+\section{Posicionamiento}
+
+\sistema\ se diferencia de los trabajos anteriores en tres puntos concretos, y
+conviene enunciarlos sin exagerar su originalidad:
+
+\begin{enumerate}
+  \item La decisión de granularidad es \textbf{explícita, versionada y
+  persistida}: cada nodo conserva las dimensiones que la produjeron, los pesos,
+  el umbral y la versión de la fórmula.
+  \item La frontera entre juicio semántico y decisión determinista es
+  \textbf{estructural}: el modelo aporta señales y propuestas, pero no puede
+  mover el umbral.
+  \item La integración exige \textbf{evidencia sobre el commit exacto}, y la
+  entrega exige manifiesto y comprobante.
+\end{enumerate}
+
+Los mecanismos individuales ---worktrees, DAGs, validación por pruebas--- son
+conocidos. La contribución está en la política de granularidad y en la disciplina
+de evidencia que los articula.
+
+% ==============================================================================
+\chapter{Descomposición adaptativa}
+\label{cap:metodologia}
+
+Este capítulo presenta el aporte central: cómo se decide la granularidad.
+
+\section{Formalización}
+
+Sea $u$ una unidad de trabajo propuesta por el planificador. Se define su
+\emph{índice de complejidad intrínseca} como una combinación lineal ponderada de
+cuatro dimensiones normalizadas en $[0,10]$:
 
 \begin{equation}
-C_{task} = w_1 \cdot S_r + w_2 \cdot I_i + w_3 \cdot V_s + w_4 \cdot T_m
+\ctask(u) = w_1 S_r(u) + w_2 I_i(u) + w_3 V_s(u) + w_4 T_m(u)
+\label{eq:ctask}
 \end{equation}
 
 donde:
-- $S_r \in [1, 10]$ es el **Scope Radius**: Cantidad de archivos o directorios declarados en el alcance.
-- $I_i \in [1, 10]$ es el **Interface Impact**: Grado de modificación de firmas exported y contratos públicos.
-- $V_s \in [1, 10]$ es la **Validation Surface**: Cantidad de suites de prueba necesarias para la verificación.
-- $T_m \in [1, 10]$ es la **Context Token Mass**: Estimación de la masa de tokens de contexto necesarios.
 
-\subsection{Regla de Decisión y Pipeline de Dos Fases}
-1. **Fase 1: Architect Pass (Evaluación Semántica LLM):** El agente planificador analiza el objetivo y calcula $C_{task}$.
-   - Si $C_{task} \le 3.5$: El nodo se declara **Leaf Node Cohesivo** y se detiene la descomposición.
-   - Si $C_{task} > 3.5$: El nodo se declara **Composite Node** y se calcula el factor de ramificación óptimo $k^* = \lceil C_{task} / 2 \rceil \in [2, 5]$.
-2. **Fase 2: Graph Compiler \& Critics (Generación de Contratos):** El compilador determinista compila la propuesta y aplica los critics de granularidad:
-   - **Coalescing Critic:** Si el Architect propone sub-tareas triviales que modifican los mismos archivos sin dependencias inter-módulo, el critic las **fusiona** en una sola hoja.
-   - **Re-splitting Critic:** Si se propone una hoja con $S_r > 3$, el critic rechaza la hoja y exige una división en sub-composites.
+\begin{description}[leftmargin=1.6cm,style=nextline]
+  \item[$S_r$ --- radio de alcance] amplitud de archivos, módulos o paquetes que
+  la unidad declara afectar.
+  \item[$I_i$ --- impacto de interfaz] grado en que la unidad modifica firmas
+  exportadas o contratos públicos, por oposición a refactorización interna.
+  \item[$V_s$ --- superficie de validación] cantidad de obligaciones de
+  verificación que deben satisfacerse para considerar la unidad correcta.
+  \item[$T_m$ --- masa de contexto] estimación del volumen de código que un
+  agente debe sostener simultáneamente para completar la unidad.
+\end{description}
 
-\section{Pilar 2 — Ejecución Concurrente, Scheduler y Sandboxing}
-
-\subsection{Scheduler Continuo por Eventos y Evaluador $selectReadyWaveV2$}
-El scheduler re-evalúa el estado de disponibilidad del grafo ($ReadinessStateV2$) tras la emisión de cada evento de dominio. Un nodo se considera listo si carece de bloqueos por artefactos faltantes, decisiones pendientes o contratos desactualizados.
-
-\subsection{Aplazamiento Simétrico por Restricciones de Conflicto}
-Para evitar conflictos de fusión en Git durante ejecuciones paralelas, la función $blocksPair$ evalúa las restricciones de forma simétrica:
+Los pesos empleados son $w_1 = 0{,}30$, $w_2 = 0{,}25$, $w_3 = 0{,}25$,
+$w_4 = 0{,}20$, normalizados para sumar uno. La regla de decisión compara el
+índice contra un umbral $\theta = 3{,}5$:
 
 \begin{equation}
-blocksPair(A, B) = \text{constraint}(A, B) \lor \text{constraint}(B, A)
+\text{tipo}(u) =
+\begin{cases}
+\text{hoja cohesiva} & \text{si } \ctask(u) \le \theta \\
+\text{compuesto} & \text{si } \ctask(u) > \theta
+\end{cases}
+\label{eq:regla}
 \end{equation}
 
-Si el candidato listo colisiona con un nodo actualmente en ejecución o seleccionado previamente en la misma ola, el nodo se difiere ($deferred = true$).
+Cuando la unidad resulta compuesta, se calcula un factor de ramificación
+sugerido acotado:
 
-\subsection{V2ExecutionDriver y Cola Atómica $recordQueue$}
-Cuando múltiples ejecutores completan tareas en paralelo, el controlador serializa la confirmación de hechos en el registro event-sourced mediante una cola de promesas atómica:
+\begin{equation}
+k^{*}(u) = \min\bigl(5, \max(2, \lceil \ctask(u)/2 \rceil)\bigr)
+\label{eq:branching}
+\end{equation}
 
-\begin{lstlisting}[language=JavaScript]
-const previousQueue = recordQueue;
-recordQueue = previousQueue.catch(() => {}).then(async () => {
-  latestState = await coordinator.record(runId, facts);
-});
-\end{lstlisting}
+\textbf{Sobre la elección de los valores.} Los pesos y el umbral son parámetros
+de diseño, no constantes derivadas empíricamente. Se eligieron de modo que el
+radio de alcance pese algo más que las demás dimensiones ---por ser la señal más
+directamente observable--- y que el umbral quede por debajo del punto medio de
+la escala, favoreciendo la hoja cohesiva ante la duda. Su calibración empírica
+es trabajo futuro; lo que este trabajo aporta es que esos valores están
+\emph{versionados y persistidos} junto a cada decisión
+(sección~\ref{sec:evidencia-granularidad}), de modo que cualquier resultado
+puede reinterpretarse si la fórmula cambia.
 
-\subsection{Worktree Recycling Pool y ScopeChecker OS-Aware}
-Para aislar la ejecución:
-- **Worktree Recycling Pool:** Asigna un worktree de Git dedicado por tarea. Al finalizar un intento, el worktree se recicla mediante $git\ reset\ --hard$ y $git\ clean\ -fd$, evitando la creación física recurrente.
-- **ScopeChecker OS-Aware:** La función $validatePathBoundary$ verifica que ninguna ruta modificada intente escapar de la raíz del worktree mediante secuencias $../$ (path traversal) o enlaces simbólicos maliciosos ($realpathSync$). Aplica la regla estricta "Deny Wins": las rutas prohibidas (*forbiddenPaths*) provocan un fallo inmediato.
+\section{Frontera entre juicio semántico y decisión determinista}
+\label{sec:frontera}
 
-\section{Pilar 3 — Matriz de Evidencias e Integración Bottom-Up}
-Un intento de agente no se considera exitoso por el simple hecho de finalizar su proceso CLI. La validez de un candidato se demuestra en la **Matriz de Evidencias**:
-1. **Validación sobre Commits Exactos:** Se ejecutan las suites de prueba declaradas en el $ValidationContract$ sobre el SHA exacto generado en el worktree aislado.
-2. **Materialización Bottom-Up:** Una vez verificadas las hojas, los parches se integran de abajo hacia arriba en la jerarquía del árbol.
-3. **Motor de Entrega Verificada:** Al completarse la integración del nodo raíz ($rootId$), el sistema sella el manifest de entrega ($final\_candidate.verified$) y publica atómicamente el commit verificado en la rama destino del desarrollador.
+La ecuación~\ref{eq:ctask} requiere valores para las cuatro dimensiones. De
+dónde provienen esos valores es una decisión de diseño central.
 
-\section{Persistencia Durable y Resiliencia ante Crashes}
-El almacenamiento en disco se diseña para ser completamente durable y recuperable ante cortes repentinos de energía:
-- **Event Store Append-Only $O(1)$:** Serializa hechos de dominio en archivos JSONL continuos.
-- **Escrituras Atómicas con $fsync$:** Escribe en un archivo temporal $.tmp$, ejecuta descarga física al plato del disco ($fsync$) y realiza un reemplazo atómico mediante $fs.rename$.
-- **SQLite WAL Mode:** Mantiene un índice secundario SQLite en modo Write-Ahead Logging ($PRAGMA\ journal\_mode=WAL$) para alimentar las vistas del cliente web sin bloquear las escrituras de hechos.
+Un modelo de lenguaje está bien posicionado para estimarlos: puede leer el
+objetivo, inspeccionar la evidencia del repositorio y juzgar, por ejemplo, que
+una tarea toca una interfaz pública ampliamente consumida. Pero permitir que el
+mismo modelo decida el corte reintroduce la variabilidad que la política intenta
+acotar.
 
-\section{Cockpit UI y Cola de Decisiones Non-Blocking}
-La interfaz web de supervisión en `apps/web` ofrece visibilidad completa sin interferir con la ejecución:
-- **Medallas de Estado:** Identifica nodos en el grafo con 5 estados bien definidos: Candidate (amarillo), Verified (verde), Failed (rojo), Stale (gris) y Delivered (violeta).
-- **Cola Flotante de Decisiones Non-Blocking:** Las intervenciones humanas requeridas se presentan en un drawer lateral con visor de diffs lado a lado ($SideBySideDiffViewer$). Las decisiones pendientes **solo pausan la rama dependiente afectada**, permitiendo que el resto del DAG continúe ejecutándose de manera autónoma.
-- **Invariante de Estabilidad Espacial:** Se prohíbe explícitamente el recentrado o zoom automático ($fitView$) ante eventos de actualización, garantizando el confort visual del operador humano.
+La solución adoptada separa ambas responsabilidades:
 
-% ==============================================================================
-% CAPÍTULO 4: IMPLEMENTACIÓN Y ASPECTOS DE SEGURIDAD
-% ==============================================================================
-\chapter{Detalles de Implementación y Seguridad}
+\begin{enumerate}
+  \item El \textbf{planificador semántico} propone una descomposición y emite,
+  por unidad, las cuatro señales de complejidad junto con una justificación.
+  \item Un \textbf{validador determinista} acepta, acota o deriva esas señales
+  contrastándolas con la superficie que la unidad realmente declara. Si una
+  unidad declara ocho archivos pero afirma un radio de alcance de 1, la señal se
+  eleva; si no emite señales, se derivan de su superficie observable.
+  \item La \textbf{política determinista} aplica las
+  ecuaciones~\ref{eq:ctask}--\ref{eq:branching}. El modelo no puede mover el
+  umbral.
+\end{enumerate}
 
-\section{Arquitectura del Monorepo en TypeScript}
-\sistema\ está implementado modularmente en TypeScript bajo Node.js, estructurado como un monorepo pnpm. La distribución de responsabilidades sigue una dirección de dependencias unidireccional:
+El origen de las señales aceptadas se registra en cada nodo con tres valores
+posibles: \texttt{llm} (aceptadas tal cual), \texttt{clamped} (acotadas contra
+la superficie declarada) o \texttt{derived} (derivadas por completo). Esta
+trazabilidad permite distinguir, al analizar un run, cuánto de la decisión
+provino del modelo y cuánto del repositorio.
+
+\section{Críticos de granularidad}
+
+La regla de decisión actúa sobre unidades individuales. Dos situaciones exigen
+mirar el conjunto:
+
+\paragraph{Crítico de coalescencia.} Si dos unidades hermanas resultan hojas
+triviales, no tienen dependencias cruzadas y comparten archivo o directorio,
+mantenerlas separadas solo agrega coordinación. El crítico las fusiona en una
+sola hoja y registra la decisión con la procedencia de las unidades originales.
+
+\paragraph{Crítico de sub-división.} Si una unidad se evalúa como hoja pero
+declara un alcance que excede un umbral de módulos independientes, el crítico la
+marca como candidata a redivisión.
+
+\section{Un resultado negativo: la política no puede inventar el corte}
+\label{sec:resultado-negativo}
+
+El diseño inicial resolvía el crítico de sub-división de forma directa: si la
+política determinaba que una unidad debía dividirse pero el planificador no
+había propuesto sub-unidades, el sistema \emph{sintetizaba} una partición
+repartiendo los archivos declarados entre las partes.
+
+La ejecución del caso canónico (sección~\ref{sec:hallazgos}) mostró que esa
+estrategia es incorrecta. Las unidades sintetizadas recibían fragmentos de
+alcance que no correspondían a unidades de trabajo coherentes: a una parte le
+tocaba únicamente el módulo de dominio, mientras que implementar el flujo de API
+que esa parte debía completar requería también el tipo del dominio y su archivo
+de pruebas. Los tres agentes involucrados terminaron su ejecución sin errores,
+pero los tres produjeron cambios fuera del alcance declarado y sus resultados
+fueron rechazados por el verificador de alcance.
+
+La lectura de este resultado conecta directamente con Parnas
+\cite{parnas1972criteria}: una partición basada en la enumeración de archivos es
+una división por pasos de procesamiento, no por decisiones de diseño ocultas, y
+por lo tanto no produce módulos independientes. Trasladado a esta arquitectura:
+
+\begin{quote}
+\emph{La política determinista puede detectar que una unidad es demasiado
+compleja, pero no puede decidir cómo se divide. El corte semántico solo puede
+provenir del planificador.}
+\end{quote}
+
+En consecuencia, la síntesis de unidades fue eliminada. Cuando la política juzga
+que una unidad debería dividirse y no existe una propuesta semántica, el sistema
+conserva la hoja cohesiva y registra la tensión como una decisión de crítico
+explícita (\texttt{resplit\_declined}), con su justificación y el valor de
+$\ctask$ que la originó. La decisión queda visible para el operador y disponible
+para el análisis posterior, en lugar de resolverse con una división arbitraria.
+
+\section{Pipeline resultante}
 
 \begin{figure}[ht]
   \centering
   \begin{tikzpicture}[
     node distance=5mm,
-    pkg/.style={draw=black!70, fill=white, rounded corners=2pt, align=center, minimum height=0.9cm, text width=3.2cm, font=\small},
-    arrow/.style={-{Stealth[length=2mm]}, thick, draw=black!60}
+    stage/.style={draw=black!70, fill=black!3, rounded corners=3pt, align=center, minimum height=1.0cm, text width=3.0cm, font=\small},
+    det/.style={draw=blue!70!black, fill=blue!5, thick, rounded corners=3pt, align=center, minimum height=1.0cm, text width=3.0cm, font=\small},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=black!70}
   ]
-    \node[pkg, fill=blue!10] (web) {apps/web};
-    \node[pkg, below left=of web] (orch) {orchestrator-graph};
-    \node[pkg, below right=of web] (sched) {scheduler};
-    \node[pkg, below=of orch] (decomp) {decomposer};
-    \node[pkg, below=of sched] (exec) {execution-core};
-    \node[pkg, below=of decomp] (graph) {task-graph};
-    \node[pkg, below=of exec] (store) {run-store};
-    \node[pkg, below right=of graph, text width=4cm, fill=black!5] (contracts) {contracts / shared};
+    \node[stage] (snap) {Snapshot del repositorio};
+    \node[stage, right=of snap] (plan) {Planificador semántico (LLM)};
+    \node[det, right=of plan] (val) {Validación de señales};
+    \node[det, below=8mm of val] (pol) {Política $\ctask$ y críticos};
+    \node[det, left=of pol] (comp) {Graph Compiler};
+    \node[stage, left=of comp] (rev) {GraphRevision aprobada};
 
-    \draw[arrow] (web) -- (orch);
-    \draw[arrow] (web) -- (sched);
-    \draw[arrow] (orch) -- (decomp);
-    \draw[arrow] (sched) -- (exec);
-    \draw[arrow] (decomp) -- (graph);
-    \draw[arrow] (exec) -- (store);
-    \draw[arrow] (graph) -- (contracts);
-    \draw[arrow] (store) -- (contracts);
+    \draw[arrow] (snap) -- (plan);
+    \draw[arrow] (plan) -- (val);
+    \draw[arrow] (val) -- (pol);
+    \draw[arrow] (pol) -- (comp);
+    \draw[arrow] (comp) -- (rev);
   \end{tikzpicture}
-  \caption{Mapa de dependencias entre paquetes del monorepo \sistema.}
-  \label{fig:monorepo-map}
+  \caption{Pipeline de planificación. Los bloques con borde grueso son
+  deterministas; el planificador es el único componente basado en un modelo de
+  lenguaje.}
+  \label{fig:pipeline}
 \end{figure}
 
-\section{Indexación Nativa de Monorepos mediante Ripgrep}
-Para garantizar una respuesta ágil sobre repositorios grandes, el paquete $repository-index$ implementa una estrategia de descubrimiento nativa:
-- Invoca directamente el ejecutable binario de $ripgrep$ ($rg\ --files\ --hidden\ --glob\ !.git$).
-- Filtra archivos respetando la sintaxis $.gitignore$ a velocidad nativa compilada en C/Rust.
-- Almacena el resultado en un registro de caché indexado por el SHA del commit $HEAD$ de Git, logrando tiempos de inicialización inferiores a 150 milisegundos.
-
-\section{Filtrado de Secretos y Comandos Git Seguros}
-- **Sanitización de Entorno ($buildAgentEnvironment$):** Los subprocesos de los agentes no heredan $process.env$. Se aplica una lista blanca estricta ($allowlist$) que remueve cualquier credencial sensible o variable interna $MANYHANDS\_*$ del sistema host.
-- **Git Seguro ($safeGitArgs$):** Cada invocación de Git inyecta la opción $-c\ safe.directory=<cwd>$, evitando fallos de permisos o propiedad en sistemas Windows cuando el repositorio se encuentra en rutas compartidas.
+La figura~\ref{fig:pipeline} resume el recorrido. El punto relevante es que la
+política adaptativa produce el \emph{mismo tipo de árbol} que el compilador de
+grafo ya consumía: no existe un segundo modelo de grafo que deba mantenerse
+sincronizado.
 
 % ==============================================================================
-% CAPÍTULO 5: EVALUACIÓN Y ANÁLISIS EXPLORATORIO DE GRANULARIDAD
-% ==============================================================================
-\chapter{Evaluación y Análisis Exploratorio de Granularidad}
+\chapter{Arquitectura}
+\label{cap:arquitectura}
 
-\section{Metodología de Evaluación}
-Con el propósito de evaluar experimentalmente la viabilidad de la plataforma \sistema\ y poner a prueba la hipótesis de la política adaptativa de granularidad, se diseñó un protocolo de evaluación exploratoria organizado en **dos líneas metodológicas complementarias**:
+\section{El run como unidad de producto}
 
-\begin{enumerate}
-  \item **Línea 1: Estudio de Casos de Estudio Reales (Análisis Cualitativo y de Comportamiento):** Evaluación profunda del ciclo de vida completo sobre 4 requerimientos de software representativos en repositorios locales. Se estudia la topología del DAG generado, la formalización de contratos de interfaz ($SeamBindings$), el despacho de olas por el scheduler, las comprobaciones de la Matriz de Evidencias, las decisiones humanas resolutivas y la entrega del commit final.
-  \item **Línea 2: Experimento Comparativo de Granularidades (Análisis Cuantitativo $GEI$):** Evaluación del impacto de la granularidad sobre la tasa de éxito de los intentos, el tiempo de coordinación total y el costo en consumo de tokens. Se comparan 3 configuraciones de descomposición manteniendo estrictamente constantes el repositorio objetivo, el requerimiento y el modelo de lenguaje de los ejecutores.
-\end{enumerate}
+La unidad de trabajo de \sistema\ es el \emph{run}: la transformación de un
+objetivo expresado en lenguaje natural, sobre un contexto inmutable de
+repositorio, en un resultado integrado, verificado y entregado. Tareas,
+contratos, olas de ejecución, intentos y decisiones existen dentro de un run.
 
-\section{Línea 1: Evaluación Cualitativa sobre Casos de Estudio}
-Se seleccionaron 4 casos de estudio que abarcan diferentes grados de complejidad e interacción con repositorios existentes:
+El ciclo de vida es:
+
+\[
+\text{planning} \rightarrow \text{needs\_approval} \rightarrow \text{running}
+\rightarrow \text{result\_ready} \rightarrow \text{delivering} \rightarrow
+\text{completed}
+\]
+
+con estados alternativos para espera de intervención humana, pausa, cancelación,
+interrupción y falla.
+
+\section{Grafo de tareas y relaciones tipadas}
+\label{sec:relaciones}
+
+El plan se representa como una \emph{revisión de grafo} inmutable. Toda
+modificación se realiza mediante una función reductora pura que verifica la
+revisión esperada antes de aplicar los cambios, de modo que dos actualizaciones
+concurrentes no puedan pisarse.
+
+Las conexiones se restringen a cuatro relaciones, cada una con una consecuencia
+distinta:
 
 \begin{table}[ht]
   \centering
-  \caption{Matriz de características de los casos de estudio seleccionados.}
-  \label{tab:casos-matriz}
+  \caption{Relaciones canónicas del grafo y su efecto.}
+  \label{tab:relaciones}
   \small
-  \begin{tabularx}{\textwidth}{@{}l X c c c@{}}
+  \begin{tabularx}{\textwidth}{@{}l X X@{}}
     \toprule
-    \textbf{Caso} & \textbf{Descripción del Objetivo} & $C_{task}$ & \textbf{Archivos} & \textbf{Desafío Principal} \\
+    \textbf{Relación} & \textbf{Significado} & \textbf{Efecto} \\
     \midrule
-    Caso 1 & Refactor de firma y fix sintáctico & $2.1$ & 1--2 & Evitar la sobre-división innecesaria \\
-    Caso 2 & Adición de módulo de filtrado y API & $4.8$ & 4--6 & Definir $SeamBindings$ estables \\
-    Caso 3 & Migración multimodular con solapamiento & $8.2$ & 12--15 & Aplazamiento por $ConflictConstraints$ \\
-    Caso 4 & Reparación ante fallo de validación & $5.1$ & 3--5 & Bucle autónomo de reparación \\
+    Jerarquía (\texttt{parentId}) & Pertenencia de integración & Define qué nodo integra a cuál \\
+    \texttt{ArtifactRequirement} & Un nodo necesita un resultado materializado de otro & Bloquea la disponibilidad hasta que el artefacto exista \\
+    \texttt{SeamBinding} & Productor y consumidores comparten un contrato de interfaz & Permite trabajo paralelo contra una frontera congelada \\
+    \texttt{ConflictConstraint} & Dos nodos compiten por los mismos archivos & Serializa la ejecución sin implicar dependencia funcional \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
-\subsection{Caso 1: Refactorización Simple y Corrección Sintáctica}
-- **Intención:** Corregir un error de tipado y renombrar una exportación en el módulo de utilidades.
-- **Evaluación $C_{task}$:** El evaluador estimó $C_{task} = 2.1 \le 3.5$.
-- **Comportamiento del Grafo:** El Decomposer declaró inmediatamente un **Leaf Node único** ($isLeaf = true$).
-- **Ejecución y Resultado:** Se asignó la hoja al ejecutor Claude Code en un worktree aislado del pool. El agente completó la modificación en un único intento. La Matriz de Evidencias ejecutó la suite de pruebas unitarias ($pnpm\ test$) sobre el commit candidato en 12 segundos, confirmando el éxito e integrando directamente el commit en la rama entregada.
-- **Hallazgo:** Demostró la efectividad de la cota inferior: evitar la creación de sub-nodos artificiales ahorró tiempo de orquestación y overhead de tokens.
+La distinción de la tabla~\ref{tab:relaciones} evita el problema de una arista
+genérica de dependencia: un conflicto de recurso no significa que un nodo
+necesite el resultado del otro, y un contrato compartido no impone por sí mismo
+un orden. Cada relación tiene una única representación canónica.
 
-\subsection{Caso 2: Adición de Módulo de Filtrado y API}
-- **Intención:** Agregar un nuevo filtro de búsqueda en el paquete de indexación y exponer el endpoint en la aplicación web.
-- **Evaluación $C_{task}$:** $C_{task} = 4.8 > 3.5$. El sistema calculó un factor de ramificación $k^* = 3$.
-- **Comportamiento del Grafo:** Se generó un nodo composite padre con 3 sub-nodos hojas: (1) $Node\_A$: Filtro Ripgrep en `repository-index`; (2) $Node\_B$: Endpoint API en `apps/web`; y (3) $Node\_C$: Componente UI de tabla.
-- **Contratos:** Entre $Node\_A$ y $Node\_B$ se compiló un $SeamBinding$ con el tipo exportado `FilterParams`.
-- **Ejecución:** $Node\_A$ se ejecutó primero. Una vez adoptado su artefacto (`FilterParams@rev1`), $Node\_B$ y $Node\_C$ se activaron y ejecutaron de manera paralela sin bloqueos.
-- **Hallazgo:** Evidenció cómo las relaciones de dependencias de datos ($ArtifactRequirements$) permiten habilitar la ejecución concurrente en cuanto los contratos se satisfacen.
+\section{Contratos}
 
-\subsection{Caso 3: Migración Multimodular con Solapamientos de Scope}
-- **Intención:** Refactorizar el esquema de contratos compartidos e implementar la persisencia durable en el almacén de eventos.
-- **Evaluación $C_{task}$:** $C_{task} = 8.2 > 3.5$. Descomposición jerárquica en 2 niveles composites y 5 hojas.
-- **Detección de Conflictos:** El critic de alcance identificó que el nodo $Node\_X$ (modificación de reductor) y el nodo $Node\_Y$ (modificación de validadores) declaraban modificaciones sobre el mismo módulo central de contratos (`packages/contracts/src/relations.ts`).
-- **Aplicación de $ConflictConstraints$:** El scheduler registró una restricción de conflicto simétrica $blocksPair(Node\_X, Node\_Y)$. Durante la ola de selección ($selectReadyWaveV2$), $Node\_X$ fue despachado mientras que $Node\_Y$ se marcó como $deferred = true$. Al finalizar $Node\_X$, la restricción se liberó y $Node\_Y$ ejecutó de forma limpia sin provocar un conflicto de fusión en Git.
-- **Hallazgo:** Demostró la eficacia del mecanismo de aplazamiento simétrico para prevenir colisiones de código entre agentes independientes.
+Cada hoja recibe un contrato que fija sus obligaciones sin congelar detalles
+prematuramente: objetivo y criterios de aceptación, contrato de alcance (rutas
+permitidas y prohibidas), contratos de interfaz consumidos y producidos,
+requisitos de artefactos y contrato de validación.
 
-\subsection{Caso 4: Recuperación Autónomo ante Fallo de Validación}
-- **Intención:** Agregar una función de serialización en el paquete de persistencia.
-- **Fallo Detectado:** El agente completó su trabajo en el worktree, pero la validación empírica en la Matriz de Evidencias falló debido a una discrepancia en el manejo de fechas ISO en Windows.
-- **Bucle de Reparación:** En lugar de fallar la corrida global, el sistema capturó el log de error de la suite de pruebas y generó un intento acotado de reparación ($attempt\ ordinal = 2$). El agente recibió el contexto del fallo sobre su propio commit candidato y corrigió el formato en un intento secundario, alcanzando la verificación verde.
-- **Hallazgo:** Confirmó que la Matriz de Evidencias sobre commits candidatos exactos actúa como la barrera de seguridad indispensable antes de permitir la integración ascendente.
+El contrato de validación congela \emph{qué} debe demostrarse; la receta
+concreta ---el comando exacto--- puede compilarse más tarde a partir del
+repositorio real.
 
-\section{Línea 2: Experimento Comparativo de Granularidades y Métricas $GEI$}
+\section{Eventos de dominio y proyecciones}
 
-\subsection{Configuraciones Evaluadas}
-Para medir cuantitativamente los beneficios de la política adaptativa de \sistema, se ejecutó una evaluación comparativa sobre un conjunto acotado de 10 objetivos de software diversos bajo 3 configuraciones:
-
-\begin{enumerate}
-  \item **Configuración A — Granularidad Fija Hoja Única (Under-splitting):** Se prohíbe la división. Todo objetivo se asigna como una única hoja ejecutable al agente.
-  \item **Configuración B — Granularidad Fija Sobre-dividida (Over-splitting):** Se fuerza la descomposición rígida en 4 niveles de profundidad con sub-tareas de máximo 1 archivo.
-  \item **Configuración C — ManyHands V3 (Política Adaptativa):** Descomposición guiada por el Índice de Complejidad Intrínseca ($C_{task}$) y critics de coalescencia.
-\end{enumerate}
-
-\subsection{El Granularity Efficiency Index ($GEI$)}
-Se evalúa la eficiencia global mediante el indicador:
-
-\begin{equation}
-GEI = \frac{\text{Tasa de Éxito de Intentos de Agentes (\%)}}{\text{Tiempo Total de Ejecución (s)} \times \text{Coste Total de Tokens (\$)} }
-\end{equation}
-
-\subsection{Resultados Cuantitativos}
-
-\begin{table}[ht]
-  \centering
-  \caption{Métricas comparativas obtenidas en el experimento de granularidad.}
-  \label{tab:resultados-cuantitativos}
-  \small
-  \begin{tabularx}{\textwidth}{@{}X c c c c@{}}
-    \toprule
-    \textbf{Configuración} & \textbf{Éxito (\%)} & \textbf{Tiempo Prom. (s)} & \textbf{Costo Tokens (\$)} & \textbf{Score $GEI$} \\
-    \midrule
-    Configuración A (Hoja Única) & 40.0\% & 480 s & \$1.20 & 0.069 \\
-    Configuración B (Sobre-dividida) & 65.0\% & 650 s & \$2.85 & 0.035 \\
-    \textbf{Configuración C (ManyHands V3)} & \textbf{90.0\%} & \textbf{260 s} & \textbf{\$1.35} & \textbf{0.256} \\
-    \bottomrule
-  \end{tabularx}
-\end{table}
-
-\subsection{Discusión de Hallazgos}
-Los resultados presentados en la Tabla~\ref{tab:resultados-cuantitativos} revelan patrones fundamentales:
-- **La Configuración A (Hoja Única)** sufre una alta tasa de fracaso (60\% de fallos) debido a la saturación de contexto y desviación de alcance en objetivos medianos y grandes. Aunque el costo de tokens en tareas exitosas es bajo, el costo de reintentos fallidos degrada el indicador $GEI$.
-- **La Configuración B (Sobre-dividida)** logra mejorar la tasa de éxito al acotar el contexto de cada agente, pero dispara el costo de tokens a \$2.85 por corrida y eleva el tiempo total a 650 segundos debido al costo de coordinación, definición de contratos inter-nodos y resolución de disputas de integración.
-- **La Configuración C (ManyHands V3 Adaptativo)** alcanza el puntaje $GEI$ más elevado (0.256), logrando una **tasa de éxito del 90\%** con el menor tiempo promedio (260 s). La combinación de la evaluación $C_{task}$ con los critics de coalescencia evita crear sub-nodos innecesarios en tareas simples y divide eficazmente solo cuando la masa de código justifica la coordinación.
+La historia del run es una secuencia append-only de eventos de dominio emitidos
+en la frontera real del efecto. El estado de fase, de nodo, de disponibilidad y
+de resultado se deriva mediante una función reductora. Los \emph{snapshots} son
+materializaciones versionadas para acelerar la carga y la recuperación; las
+trazas de los modelos y los registros de proceso son telemetría separada que no
+gobierna el ciclo de vida.
 
 % ==============================================================================
-% CAPÍTULO 6: CONCLUSIONES Y TRABAJO FUTURO
-% ==============================================================================
-\chapter{Conclusiones y Trabajo Futuro}
+\chapter{Implementación}
+\label{cap:implementacion}
 
-\section{Conclusiones}
-En este trabajo de tesis se ha presentado el diseño, implementación y evaluación de \sistema, una plataforma local, \emph{self-hosted} y supervisable para la orquestación de agentes de código sobre repositorios de software reales.
+\section{Organización del código}
 
-A partir del desarrollo y los análisis exploratorios realizados, se concluye que:
-\begin{enumerate}
-  \item **La Paradoja de la Granularidad es Resoluble:** La formulación del Índice de Complejidad Intrínseca ($C_{task}$) combinada con critics de coalescencia en dos fases permite adaptar dinámicamente el plan de trabajo, logrando un equilibrio óptimo entre el contexto del agente y la eficiencia de orquestación.
-  \item **El Sandboxing Local es Viable y Seguro:** La combinación de un *Worktree Recycling Pool* con restablecimientos rápidos ($git\ reset\ --hard$) y la guarda sensible al SO (*ScopeChecker*) garantiza que las acciones de los agentes no contaminen ni pongan en riesgo el árbol principal del usuario.
-  \item **La Validación Empírica es Indispensable:** La Matriz de Evidencias sobre commits candidatos exactos constituye la única garantía confiable para autorizar la integración ascendente y la entrega del código verificado.
-\end{enumerate}
+\sistema\ está implementado en TypeScript sobre Node.js, como un monorepo
+gestionado con pnpm. La dirección de dependencias es unidireccional: la
+aplicación web depende de paquetes específicos, y estos de paquetes compartidos.
+Los paquetes principales son: \texttt{task-graph} (grafo y relaciones),
+\texttt{contracts} (contratos de alcance, artefactos y validación),
+\texttt{decomposer} (planificación y política de granularidad),
+\texttt{scheduler} (disponibilidad y olas), \texttt{execution-core}
+(worktrees, ejecución, validación e integración), \texttt{run-coordinator}
+(eventos de dominio y reductor), \texttt{repository-index} (indexación del
+repositorio), \texttt{run-store} (persistencia) y \texttt{apps/web} (interfaz de
+supervisión).
 
-\section{Trabajo Futuro}
-Se sugieren las siguientes líneas de investigación y desarrollo futuro:
+\section{Grounding del repositorio}
+
+Antes de planificar, el sistema construye un \emph{snapshot} del repositorio
+identificado por el commit base. El descubrimiento de archivos se delega a
+\texttt{ripgrep}, que respeta la semántica de \texttt{.gitignore} a velocidad
+nativa. El snapshot representa exclusivamente los bytes de ese commit; el árbol
+de trabajo con cambios sin confirmar requiere una vista separada y nunca
+contamina el índice cacheado.
+
+\section{Planificación}
+
+El planificador construye un pedido al ejecutor de línea de comandos
+seleccionado y espera un documento estructurado que describa la descomposición
+semántica, los artefactos y contratos candidatos, la evidencia del repositorio
+utilizada y las preguntas que requieren decisión humana. La respuesta se valida
+contra un esquema estricto; si no valida, se reintenta informando al modelo los
+problemas concretos, hasta un máximo acotado de intentos. Un fallo del modelo se
+reporta como tal: no se sustituye silenciosamente por un plan determinista de
+otra calidad.
+
+Sobre el resultado se aplica la política del capítulo~\ref{cap:metodologia}, y el
+árbol reformado se entrega al compilador de grafo, que produce nodos, relaciones,
+contratos y obligaciones de validación, y ejecuta un conjunto de críticos de
+plan (completitud, atomicidad, validez del DAG, aislamiento de alcance, riesgo y
+cobertura de validación) antes de someterlo a aprobación.
+
+\subsection{Evidencia de la decisión de granularidad}
+\label{sec:evidencia-granularidad}
+
+Entre la finalización de la planificación y la compilación del grafo, el sistema
+emite un evento de dominio que registra, para el run completo: la versión de la
+fórmula, los pesos, el umbral y, por cada unidad, las cuatro dimensiones
+aceptadas, el origen de las señales, el valor de $\ctask$, la decisión
+resultante, el factor de ramificación sugerido y la justificación. Se registran
+además las decisiones de los críticos (fusiones y redivisiones declinadas).
+
+Como el evento forma parte de la historia canónica, la explicación de por qué un
+nodo recibió su granularidad se reconstruye por reproducción de la secuencia de
+eventos, y la interfaz de supervisión la muestra en el inspector del nodo. Las
+métricas estructurales agregadas (profundidad, cantidad de hojas, factor de
+ramificación promedio, unidades fusionadas) se persisten aparte, como artefacto
+diagnóstico por run, precisamente para que no gobiernen el ciclo de vida.
+
+\section{Planificación de olas}
+
+Un nodo está disponible cuando sus contratos están vigentes, sus artefactos
+requeridos existen, su base puede materializarse y no hay una restricción de
+recurso activa. El selector de olas evalúa las restricciones de conflicto de
+forma simétrica ---si existe una restricción entre $A$ y $B$, ninguno puede
+despacharse mientras el otro esté activo o ya seleccionado en la misma ola--- y
+respeta el límite de paralelismo configurado. El resultado de cada ola se
+persiste antes de despachar trabajo.
+
+\section{Ejecución aislada}
+
+Cada intento se ejecuta en un worktree del pool, restablecido al commit base. El
+agente propone cambios; el orquestador inspecciona el diff real, aplica el
+contrato de alcance y crea el commit candidato. La salida estándar del agente
+nunca determina qué cambió: la fuente de verdad es el diff.
+
+Los mecanismos de seguridad implementados son:
+
 \begin{itemize}
-  \item **Enrutamiento Adaptativo de Modelos de Razonamiento:** Extender la evaluación $C_{task}$ para seleccionar dinámicamente no solo la granularidad, sino también el nivel de modelo (ej. modelos rápidos de menor costo para hojas simples vs modelos de razonamiento profundo para nodos de integración complejos).
-  \item **Sandboxing a Nivel de Contenedores Ultraligeros:** Incorporar aislamiento a nivel de núcleo (namespaces/cgroups) para proyectos que requieran dependencias complejas de compilación o servicios externos de base de datos durante la fase de validación.
-  \item **Soporte para Desarrollo Colaborativo Multi-usuario:** Ampliar el esquema de supervisión local para permitir la federación de corridas entre múltiples desarrolladores en repositorios distribuidos.
+  \item \textbf{Verificación de alcance} sensible al sistema operativo, que
+  rechaza rutas fuera de las permitidas, secuencias de ascenso de directorio y
+  escapes mediante enlaces simbólicos, con regla de denegación prioritaria.
+  \item \textbf{Supervisión de procesos}: todo subproceso queda registrado y,
+  ante cancelación o expiración, se termina el árbol de procesos verificando la
+  muerte efectiva del identificador.
+  \item \textbf{Saneamiento del entorno}: los agentes no heredan el entorno del
+  proceso anfitrión; se aplica una lista blanca que excluye credenciales y
+  variables internas.
+  \item \textbf{Invocaciones de Git seguras}: cada llamada inyecta la opción de
+  directorio seguro sin modificar la configuración global del usuario.
+  \item \textbf{Concesiones con testigo}: las mutaciones del run y del
+  repositorio usan concesiones durables con testigo de vigencia, de modo que un
+  resultado tardío de una operación cancelada no pueda aplicarse
+  \cite{burrows2006chubby}.
+\end{itemize}
+
+\section{Validación e integración}
+
+La validación se ejecuta en un entorno limpio sobre el SHA del commit candidato
+exacto. Una \emph{matriz de evidencias} vincula cada criterio de aceptación con
+su resultado: satisfecho, fallido, no cubierto, inestable o no aplicable con
+justificación. Un resultado con criterios sin cubrir se considera no verificado
+y no puede integrarse.
+
+La integración es ascendente: cada nodo compuesto integra los resultados
+adoptados de sus hijos sobre una base conocida, registra los artefactos
+aplicados y valida su propio contrato. Que un \emph{cherry-pick} aplique
+limpiamente no prueba corrección semántica, de modo que el nivel compuesto
+ejecuta sus propias obligaciones de validación. Ante conflicto, el sistema
+intenta una reparación semántica acotada con el contexto del padre; si no
+converge, escala una decisión humana en lugar de producir un éxito parcial
+ambiguo.
+
+\section{Entrega}
+
+La entrega sigue tres pasos: preparar el candidato final, validar el candidato
+exacto y publicar. El estado \texttt{completed} exige un manifiesto de artefacto
+final válido y un comprobante de entrega confirmado que coincida con el SHA
+aprobado y con el estado previo de la rama destino.
+
+\section{Persistencia y recuperación}
+
+Los eventos se persisten en archivos JSONL append-only. Las escrituras usan un
+archivo temporal seguido de un reemplazo atómico; opcionalmente, bajo
+configuración, se fuerza el descargado físico a disco antes del reemplazo
+\cite{gray1993transaction}. Los snapshots se reconstruyen desde los eventos
+cuando no están disponibles o no coinciden.
+
+\section{Interfaz de supervisión}
+
+La interfaz web organiza el trabajo alrededor del grafo durante la planificación
+y la ejecución, y desplaza el foco hacia la evidencia cuando existe un
+resultado. Los nodos distinguen los estados candidato, verificado, obsoleto,
+fallido y entregado. Las decisiones humanas se presentan en una cola que no
+bloquea el trabajo independiente: una decisión pendiente detiene únicamente los
+nodos cuya disponibilidad depende de ella.
+
+Un invariante explícito de la interfaz es que el lienzo del grafo \textbf{nunca
+se recentra ni reencuadra en respuesta a eventos}; solo una acción explícita del
+usuario cambia el punto de vista. El diseño sigue las pautas WCAG 2.2 AA
+\cite{w3c2023wcag22} en navegación por teclado, foco visible, contraste y
+respeto por la preferencia de movimiento reducido, aunque no se realizó una
+auditoría externa de conformidad.
+
+% ==============================================================================
+\chapter{Evaluación}
+\label{cap:evaluacion}
+
+\section{Objetivo y alcance de la evaluación}
+
+La evaluación busca responder PI-1 a PI-3 mediante un \textbf{caso canónico}
+ejecutado de extremo a extremo con ejecutores reales. No se trata de un estudio
+comparativo entre configuraciones de granularidad; ese estudio se plantea como
+trabajo futuro (sección~\ref{sec:futuro}) y su protocolo está especificado, pero
+no fue ejecutado en el marco de esta tesis. Toda afirmación de este capítulo
+corresponde a observaciones registradas en la historia de eventos del sistema.
+
+\section{Protocolo}
+
+\subsection{Repositorio objetivo}
+
+Se construyó un repositorio TypeScript independiente, externo al repositorio de
+\sistema, que implementa un divisor de gastos compartidos. Contiene tres capas
+---dominio (reglas de gasto y cálculo de saldos), API (almacén en memoria y
+validación) y superficie web (resumen de saldos)--- y una suite de pruebas que
+cubre las tres. El repositorio parte de un commit inicial con la suite en verde
+y verificación de tipos limpia.
+
+\subsection{Objetivo del run}
+
+Agregar categorías de gasto: un campo opcional con validación en el dominio, una
+función de totales por categoría, su exposición en la API, una función de
+presentación ordenada por monto en la superficie web y pruebas para las tres
+capas, preservando el comportamiento de saldos existente.
+
+\subsection{Configuración congelada}
+
+\begin{table}[ht]
+  \centering
+  \caption{Configuración del caso canónico.}
+  \label{tab:config}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l X@{}}
+    \toprule
+    \textbf{Parámetro} & \textbf{Valor} \\
+    \midrule
+    Ejecutor de planificación & Codex CLI 0.141.0, modelo \texttt{gpt-5.5}, esfuerzo alto \\
+    Ejecutor de implementación & Codex CLI 0.141.0, modelo \texttt{gpt-5.5}, esfuerzo alto \\
+    Paralelismo máximo & 2 \\
+    Tiempo máximo por agente & 300\,000 ms \\
+    Entorno & Node.js 24.16.0, pnpm 7.29.3, Git 2.40.1, Windows 11 \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Resultados del caso canónico}
+
+\subsection{Topología producida por la política}
+
+La política evaluó la raíz con $\ctask = 4{,}50$ y la declaró compuesta. De las
+unidades propuestas por el planificador, el crítico de coalescencia fusionó las
+correspondientes al dominio y a la superficie web ---ambas triviales, sin
+dependencia cruzada y sobre archivos contiguos--- en una sola hoja
+($\ctask = 3{,}08$). La unidad de API se evaluó en $\ctask = 3{,}95$, por encima
+del umbral, pero al no existir una propuesta semántica de sub-unidades la
+política registró \texttt{resplit\_declined} y conservó la hoja cohesiva,
+conforme a la sección~\ref{sec:resultado-negativo}.
+
+El grafo compilado resultante tuvo tres nodos y una restricción de conflicto,
+dado que ambas hojas declaraban el módulo de dominio y el archivo de pruebas.
+El planificador de olas serializó correctamente las hojas en conflicto.
+
+\subsection{Recorrido completo}
+
+Ambas hojas produjeron un commit candidato y ambas obtuvieron una matriz de
+evidencias con resultado verificado. La integración ascendente requirió un pase
+de reparación semántica y produjo un commit integrado verificado. El sistema
+emitió el manifiesto de candidato final y, tras la aprobación de entrega,
+publicó el resultado con comprobante confirmado, alcanzando el estado
+\texttt{completed}.
+
+\begin{table}[ht]
+  \centering
+  \caption{Criterios de éxito del caso canónico y resultado observado.}
+  \label{tab:resultado}
+  \small
+  \begin{tabularx}{\textwidth}{@{}X l@{}}
+    \toprule
+    \textbf{Criterio} & \textbf{Resultado} \\
+    \midrule
+    El run alcanza el estado \texttt{completed} & Sí \\
+    El SHA final difiere del SHA base & Sí \\
+    El diff final contiene el cambio solicitado & Sí (4 archivos, +104/$-$5 líneas) \\
+    La ascendencia de los commits es explicable & Sí \\
+    Ningún criterio requerido queda sin cubrir & Sí \\
+    El manifiesto coincide con el candidato validado & Sí \\
+    El comprobante confirma el mismo SHA & Sí \\
+    El resultado entregado pasa sus pruebas & Sí (12 pruebas, verificado en clon limpio) \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+La verificación final de la tabla~\ref{tab:resultado} se realizó clonando el
+repositorio objetivo en un directorio limpio y ejecutando la suite sobre el
+commit entregado, para evitar que los artefactos del propio orquestador
+interfirieran con el descubrimiento de pruebas.
+
+\section{Hallazgos: defectos detectados por la ejecución real}
+\label{sec:hallazgos}
+
+El caso canónico no se completó en el primer intento. Los fallos y sus causas
+raíz constituyen, en sí mismos, un resultado de esta evaluación, y se reportan
+completos.
+
+\begin{enumerate}
+  \item \textbf{Alcances idénticos en unidades sintetizadas.} La primera
+  ejecución produjo 23 restricciones de conflicto sobre 9 nodos. La causa fue que
+  las unidades sintetizadas heredaban toda la evidencia de su unidad padre, de
+  modo que el compilador de contratos les asignaba el alcance completo del padre.
+  \item \textbf{Relaciones colgantes tras la reformulación del árbol.} Al
+  fusionar o colapsar unidades, las referencias de los artefactos y contratos
+  candidatos a las claves originales quedaban sin destino, y la planificación
+  fallaba la validación de esquema. Se incorporó un remapeo que reescribe cada
+  relación sobre la unidad que la absorbió y descarta las que colapsan sobre sí
+  mismas.
+  \item \textbf{Particiones mecánicas incoherentes.} Descrito en la
+  sección~\ref{sec:resultado-negativo}. Los tres agentes terminaron sin error y
+  los tres resultados fueron rechazados por violación de alcance.
+  \item \textbf{Clasificación incorrecta de la causa de falla.} El controlador de
+  ejecución etiquetaba toda falla de hoja como fallo genérico del ejecutor,
+  descartando la causa que el ejecutor ya conocía. En consecuencia, tres
+  rechazos por alcance se clasificaron como fallas de código y activaron la
+  estrategia de recuperación equivocada ---reparar el código--- en lugar de
+  descartar el candidato.
+  \item \textbf{Entrega bloqueada por el propio directorio del orquestador.}
+  Tras verificar el candidato final, la publicación se rechazó por considerar
+  sucio el árbol de trabajo destino. La única diferencia registrada era el
+  directorio donde \sistema\ materializa su pool de worktrees. La verificación de
+  limpieza contaba los artefactos del propio orquestador como trabajo del
+  usuario.
+\end{enumerate}
+
+Los cinco defectos fueron corregidos con una prueba de regresión previa a cada
+corrección. Los tres primeros y el quinto son defectos de diseño; el cuarto
+contradecía directamente el principio de recuperar según la causa.
+
+\section{Variabilidad observada entre ejecuciones}
+
+Se ejecutó el mismo objetivo en varias ocasiones. Dado que la planificación
+depende de un modelo remoto, la descomposición propuesta varía entre
+ejecuciones. En una de ellas, el planificador propuso una unidad dedicada
+exclusivamente a pruebas, separada de la unidad que introducía el tipo del
+dominio que esas pruebas debían ejercitar. Las tres unidades resultantes
+violaron su alcance y el run quedó a la espera de intervención humana sin
+completarse.
+
+Este comportamiento es informativo: confirma que la calidad del resultado
+depende de que la descomposición propuesta se corresponda con la forma real del
+trabajo, y que un corte por capas ---dominio, API, pruebas--- no siempre la
+respeta. Debe reportarse como una limitación de reproducibilidad y no como una
+anomalía aislada.
+
+% ==============================================================================
+\chapter{Discusión}
+\label{cap:discusion}
+
+\section{Sobre la frontera entre lo semántico y lo determinista}
+
+El resultado más sólido de este trabajo es negativo y, por eso mismo, informativo:
+la política determinista puede evaluar complejidad, pero no puede sustituir el
+juicio semántico al decidir cómo se divide una unidad. Cuando lo intentó,
+produjo unidades que ningún agente pudo completar dentro de su contrato.
+
+Esto sugiere una división de responsabilidades más nítida que la del diseño
+inicial. El modelo de lenguaje aporta dos cosas que el sistema determinista no
+puede derivar del repositorio: qué partes del objetivo son conceptualmente
+separables, y cuán acoplada está una interfaz con el resto del código. El sistema
+determinista aporta lo que el modelo no puede garantizar: un criterio estable,
+versionado y auditable. Forzar a cualquiera de los dos a hacer el trabajo del
+otro degrada el resultado.
+
+\section{Amenazas a la validez}
+
+\paragraph{Validez interna.} Los defectos detectados se corrigieron durante la
+propia evaluación, de modo que la ejecución exitosa se obtuvo con una versión
+posterior a la de los primeros intentos. Los commits que separan cada corrección
+están identificados, pero el recorrido completo no se re-ejecutó sobre cada
+versión intermedia.
+
+\paragraph{Validez externa.} Se evaluó un único objetivo sobre un único
+repositorio pequeño, con un solo proveedor de modelo. No puede extrapolarse a
+repositorios grandes, a otros lenguajes ni a otros modelos.
+
+\paragraph{Validez de constructo.} El índice $\ctask$ pondera cuatro dimensiones
+con pesos elegidos por diseño y no calibrados empíricamente. Que el caso canónico
+se haya completado no valida la fórmula: valida que el recorrido completo
+funciona con ella.
+
+\paragraph{Reproducibilidad.} La planificación depende de un modelo remoto no
+determinista. Ejecuciones del mismo objetivo producen descomposiciones
+distintas, y al menos una de ellas no completó.
+
+\section{Limitaciones}
+
+\begin{itemize}
+  \item No se ejecutó el estudio comparativo entre estrategias de granularidad
+  fija y adaptativa. Sin él, no puede afirmarse que la política adaptativa sea
+  superior a una alternativa fija; solo que es viable y explicable.
+  \item Las intervenciones humanas del caso canónico ---aprobación del plan y
+  aprobación de entrega--- son parte del diseño, pero implican que el recorrido
+  no es completamente autónomo.
+  \item Los pesos y el umbral no fueron calibrados.
+  \item La conformidad con WCAG 2.2 AA es de diseño; no hay auditoría externa.
 \end{itemize}
 
 % ==============================================================================
-% BIBLIOGRAFÍA
-% ==============================================================================
+\chapter{Conclusiones}
+\label{cap:conclusiones}
+
+\section{Resultados obtenidos}
+
+Este trabajo diseñó, implementó y evaluó de forma exploratoria \sistema, una
+plataforma local de orquestación de agentes de código cuyo aporte central es una
+política de descomposición adaptativa con una frontera explícita entre juicio
+semántico y decisión determinista.
+
+Respecto de las preguntas de investigación:
+
+\begin{description}[leftmargin=1.6cm,style=nextline]
+  \item[PI-1] Sí. El caso canónico completó el recorrido de extremo a extremo con
+  ejecutores reales y produjo un commit final verificado, no vacío, con
+  manifiesto y comprobante, y cuya suite de pruebas pasa en un clon limpio. Esto
+  demuestra viabilidad, no superioridad.
+  \item[PI-2] La evidencia necesaria resultó ser: las cuatro dimensiones
+  aceptadas, su origen, los pesos, el umbral, la versión de la fórmula, el valor
+  resultante, la decisión y las acciones de los críticos, persistidos como evento
+  de dominio. Con ese conjunto, la decisión de cada nodo se reconstruye por
+  reproducción de la historia.
+  \item[PI-3] Aparecieron dos modos de falla claramente distinguibles: la
+  violación de alcance cuando la unidad no puede completarse dentro de su
+  contrato, y el conflicto de recurso cuando dos unidades compiten por los mismos
+  archivos. El sistema detectó ambos y bloqueó la integración en los dos casos,
+  que es el comportamiento deseado.
+\end{description}
+
+La contribución conceptual más transferible no es la fórmula sino el principio
+que la evaluación obligó a explicitar: \emph{una política determinista puede
+decidir si dividir, pero no cómo}. Fabricar el corte semántico produjo unidades
+inejecutables, en línea con el criterio de modularidad de Parnas
+\cite{parnas1972criteria}.
+
+\section{Trabajo futuro}
+\label{sec:futuro}
+
+El enfoque planteado no es el único posible, y varias decisiones merecen
+revisarse:
+
+\begin{itemize}
+  \item \textbf{Estudio comparativo de granularidad.} Ejecutar el protocolo
+  especificado ---hoja única forzada, división fina fija y política
+  adaptativa--- sobre un conjunto de objetivos con repeticiones, manteniendo
+  constantes repositorio, modelo y presupuesto. Es el paso natural para pasar de
+  viabilidad a evidencia comparativa.
+  \item \textbf{Calibración de pesos y umbral.} Los valores actuales son de
+  diseño. Un ajuste basado en resultados observados haría la política sensible
+  al dominio.
+  \item \textbf{Re-planificación semántica dirigida.} Cuando la política declina
+  una redivisión, el sistema podría solicitar al planificador una propuesta
+  semántica para esa unidad concreta, en lugar de conservar la hoja. Es la
+  evolución directa del resultado de la sección~\ref{sec:resultado-negativo}.
+  \item \textbf{Selección adaptativa de modelos.} Extender la evaluación de
+  complejidad para elegir también el modelo, siguiendo la línea de FrugalGPT
+  \cite{chen2023frugalgpt} y RouteLLM \cite{ong2024routellm}.
+  \item \textbf{Aislamiento por contenedores.} Incorporar aislamiento a nivel de
+  núcleo para proyectos con dependencias de compilación complejas o servicios
+  externos durante la validación.
+  \item \textbf{Persistencia con índice secundario.} La persistencia actual es
+  JSONL append-only con reemplazo atómico. Un índice secundario durable
+  aceleraría las vistas sin bloquear las escrituras.
+  \item \textbf{Colaboración multiusuario} y auditoría externa de accesibilidad.
+\end{itemize}
+
 \bibliographystyle{plain}
 \bibliography{referencias}
 
