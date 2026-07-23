@@ -13,6 +13,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "4173", "--directory", "docs/presentation"],
       "port": 4173
+    },
+    {
+      "name": "presenter-deck-scratch-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "4174", "--directory", "C:/Users/franc/AppData/Local/Temp/claude/C--Users-franc-Documents-Proyectos-Manyhands/07a32745-1d01-4877-8722-1ed84b895eea/scratchpad"],
+      "port": 4174
     }
   ]
 }

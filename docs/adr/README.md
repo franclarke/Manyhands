@@ -20,3 +20,4 @@ se actualiza la síntesis.
 | [0008](0008-local-human-decisions.md) | decisiones humanas locales |
 | [0009](0009-framework-and-executor-boundaries.md) | frameworks y executors como adapters |
 | [0010](0010-graph-lenses-and-decision-inspector.md) | lentes del grafo e inspector de decisiones |
+| [0011](0011-exact-repository-index-and-fenced-worktree-pool.md) | índice exacto y pool de worktrees con fencing |

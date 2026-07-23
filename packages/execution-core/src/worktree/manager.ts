@@ -1,6 +1,4 @@
-import { createHash } from "node:crypto";
 import { readdir, rm } from "node:fs/promises";
-import { tmpdir as osTmpdir } from "node:os";
 import { join } from "node:path";
 
 import { nowIso } from "@manyhands/shared";
@@ -9,6 +7,18 @@ import { WorktreeError } from "../errors";
 import { execError, execLog, execWarn } from "../logging/log";
 import type { GitRunner } from "../git/runner";
 import { WorktreeRecordSchema, type WorktreeKind, type WorktreeRecord } from "../types";
+import {
+  runWorktreesRootFor,
+  safeWorktreeSegment,
+  worktreeBranchFor,
+  worktreePathFor,
+  type WorktreeRootParams
+} from "./layout";
+
+export * from "./worktree-pool";
+export * from "./layout";
+export * from "./fenced-lease";
+export * from "./execution-workspace";
 
 export interface WorktreeManagerDeps {
   git: GitRunner;
@@ -30,114 +40,7 @@ export interface CreateWorktreeParams {
   baseCommit: string;
 }
 
-/**
- * Dependency directories linked from the base repo into each worktree. git
- * worktrees never carry untracked/gitignored trees, so without this a worktree
- * has no node_modules and `npm test` → `jest` dies with exit 127 ("command not
- * found"). A junction (win32) / dir symlink points the worktree at the deps the
- * human already installed, so validation runs against the same toolchain.
- */
-const MAX_WORKTREE_SEGMENT_LENGTH = 64;
-const WINDOWS_RESERVED_SEGMENTS = new Set([
-  "CON",
-  "PRN",
-  "AUX",
-  "NUL",
-  "COM1",
-  "COM2",
-  "COM3",
-  "COM4",
-  "COM5",
-  "COM6",
-  "COM7",
-  "COM8",
-  "COM9",
-  "LPT1",
-  "LPT2",
-  "LPT3",
-  "LPT4",
-  "LPT5",
-  "LPT6",
-  "LPT7",
-  "LPT8",
-  "LPT9"
-]);
-
-export function safeWorktreeSegment(id: string): string {
-  const trimmed = id.trim();
-  const normalized = trimmed
-    .replace(/[^A-Za-z0-9_-]+/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  const needsRewrite =
-    normalized.length === 0 ||
-    normalized !== trimmed ||
-    normalized.length > MAX_WORKTREE_SEGMENT_LENGTH ||
-    WINDOWS_RESERVED_SEGMENTS.has(normalized.toUpperCase());
-
-  if (!needsRewrite) {
-    return normalized;
-  }
-
-  const hash = createHash("sha256").update(id).digest("hex").slice(0, 8);
-  const prefix =
-    normalized.length === 0 || WINDOWS_RESERVED_SEGMENTS.has(normalized.toUpperCase())
-      ? "id"
-      : normalized.slice(0, MAX_WORKTREE_SEGMENT_LENGTH - hash.length - 1);
-  return `${prefix}-${hash}`;
-}
-
-/**
- * git-for-windows dies with `fatal: '$GIT_DIR' too big` when a worktree's
- * gitdir path exceeds PATH_MAX(260) - 40 (setup.c), and with "Filename too
- * long" once checked-out file paths pass 260 without core.longpaths. Budgeting
- * against the worst-case task segment keeps the rule deterministic per run, so
- * create/gc/UI all resolve the same directory.
- */
-const WINDOWS_GIT_PATH_BUDGET = 220;
-const WORKTREE_PATH_RESERVE = 1 + MAX_WORKTREE_SEGMENT_LENGTH + "/.git".length;
-/** Short, recognizable base for relocated run worktrees: <tmpdir>/mh-wt/<run>. */
-const RELOCATED_WORKTREES_DIRNAME = "mh-wt";
-
-export interface WorktreeRootParams {
-  worktreesRoot: string;
-  runId: string;
-  platform?: NodeJS.Platform;
-  tmpdir?: () => string;
-}
-
-/**
- * Directory that holds every worktree of a run. Normally
- * `<worktreesRoot>/<runSegment>`; on win32, when that base plus a worst-case
- * task segment would blow git's path budget, the run is deterministically
- * relocated to `<tmpdir>/mh-wt/<runSegment>` so `git worktree add` still works
- * for repos that live behind long paths.
- */
-export function runWorktreesRootFor(params: WorktreeRootParams): string {
-  const root = params.worktreesRoot.replace(/[\\/]+$/, "");
-  const runSegment = safeWorktreeSegment(params.runId);
-  const candidate = `${root}/${runSegment}`;
-  const platform = params.platform ?? process.platform;
-  if (platform !== "win32") {
-    return candidate;
-  }
-  if (candidate.length + WORKTREE_PATH_RESERVE <= WINDOWS_GIT_PATH_BUDGET) {
-    return candidate;
-  }
-  const tmpBase = (params.tmpdir ?? osTmpdir)().replace(/[\\/]+$/, "");
-  return `${tmpBase}/${RELOCATED_WORKTREES_DIRNAME}/${runSegment}`;
-}
-
-export function worktreePathFor(
-  params: WorktreeRootParams & { taskId: string }
-): string {
-  return `${runWorktreesRootFor(params)}/${safeWorktreeSegment(params.taskId)}`;
-}
-
-export function worktreeBranchFor(params: { runId: string; taskId: string }): string {
-  return `mh/${safeWorktreeSegment(params.runId)}/${safeWorktreeSegment(params.taskId)}`;
-}
-
+/** Result of checking whether an agent moved HEAD outside the protocol. */
 export interface UnexpectedCommitDetection {
   committed: boolean;
   sha?: string;
@@ -262,18 +165,6 @@ export class WorktreeManager {
     }
   }
 
-  /**
-   * Link the base repo's installed dependency dirs into the worktree so
-   * validation commands resolve their binaries. Best-effort: a missing base
-   * node_modules (deps not installed) or an unsupported FS just means the agent
-   * must install deps itself — never fail worktree creation over a link.
-   */
-  /**
-   * Remove dependency links before deleting a worktree dir. Critical on Windows:
-   * a junction left in place can make a recursive delete follow the link and
-   * wipe the base repo's node_modules. Unlinking the link (never its target) is
-   * safe and idempotent.
-   */
   /**
    * Record referencing a worktree created earlier in this run (same layout as
    * create() without touching git) — used by leaf repair, which re-enters the

@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import type { ChildProcess } from "node:child_process";
+import { buildAgentEnvironment } from "@manyhands/execution-core";
 import { NonRetryablePlanningError, WorkBreakdownPlanner, compileGraphRevision, parseWorkBreakdownProgressLine, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
 import { foldRun } from "@manyhands/run-coordinator";
-import { buildRepositorySnapshot } from "@manyhands/repository-index";
+import { buildFastRepositorySnapshot } from "@manyhands/repository-index";
 import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 import { killCliProcessTree, resolveCliBinaryPath, resolveCliProcessInvocation } from "@manyhands/shared/node-cli-process";
 import { planningSelection } from "../executor-selection";
@@ -50,7 +51,7 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
     }, {
       events,
       snapshots,
-      inspect: (input) => buildRepositorySnapshot({ rootPath: input.repoPath, targetFingerprint: input.targetFingerprint, baseCommit: input.baseCommit }),
+      inspect: (input) => buildFastRepositorySnapshot({ rootPath: input.repoPath, targetFingerprint: input.targetFingerprint, baseCommit: input.baseCommit }),
       plan: (input, observer) => planner.plan(input, observer),
       compile: (input) => compileGraphRevision(input, { idFor: stableId, now: () => new Date().toISOString() }),
       nodeIdFor: (key) => stableId("node", key),
@@ -114,7 +115,7 @@ async function invokeSelectedPlanningCli(
   const invocation = resolveCliProcessInvocation(binary, args);
   const spawn = supervisedSpawnFn({ runId, operationId, label: `planning-v2-attempt-${request.attempt}` });
   return new Promise((resolve, reject) => {
-    const child: ChildProcess = spawn(invocation.command, invocation.args, { cwd, env: process.env, stdio: ["pipe", "pipe", "pipe"], shell: false, detached: process.platform !== "win32", ...(invocation.windowsVerbatimArguments !== undefined ? { windowsVerbatimArguments: invocation.windowsVerbatimArguments } : {}) });
+    const child: ChildProcess = spawn(invocation.command, invocation.args, { cwd, env: buildAgentEnvironment() as NodeJS.ProcessEnv, stdio: ["pipe", "pipe", "pipe"], shell: false, detached: process.platform !== "win32", ...(invocation.windowsVerbatimArguments !== undefined ? { windowsVerbatimArguments: invocation.windowsVerbatimArguments } : {}) });
     let stdoutBytes = 0;
     let stderrTail = "";
     let cliBuffer = "";

@@ -248,6 +248,19 @@ explicar evidencia, no como navegación primaria.
 No se incorpora un “modo diagnóstico avanzado” independiente mientras esos
 datos puedan resolverse mediante progressive disclosure en el mismo run.
 
+## A20. Grounding exacto y worktrees reciclables conservan identidad
+
+Un `RepositorySnapshot` cacheado por commit representa exclusivamente los bytes
+de ese commit. El working tree dirty requiere una vista separada y nunca puede
+contaminar `index-<commit>.json`. Ripgrep y el extractor de exports producen el
+`RepositoryIndex` canónico; métricas de caché y timings quedan fuera del dominio.
+
+Los worktrees reciclables implementan el mismo boundary de ejecución que los
+worktrees descartables. Cada slot tiene una lease durable con token y generación
+monótona, se sanea y verifica antes de entregarse, y entra en quarantine ante
+cualquier resultado ambiguo. Un commit candidato se ancla antes del reset. Véase
+[ADR 0011](adr/0011-exact-repository-index-and-fenced-worktree-pool.md).
+
 ## Decisiones retiradas
 
 Quedan retiradas como arquitectura vigente:

@@ -345,7 +345,6 @@ function makeLeafWithSeams(id: string, produced: InterfaceContract[]): TaskNode 
     granularity: "auto",
     depth: 1,
     childrenIds: [],
-    dependencies: [],
     contract: {
       taskId: id,
       objective: "obj",
@@ -375,8 +374,7 @@ function makeGraph(leaves: TaskNode[], repo: string): TaskGraph {
     status: "planned",
     granularity: "auto",
     depth: 0,
-    childrenIds: leaves.map((leaf) => leaf.id),
-    dependencies: []
+    childrenIds: leaves.map((leaf) => leaf.id)
   };
   return {
     id: "g",

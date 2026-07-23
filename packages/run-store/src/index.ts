@@ -5,3 +5,8 @@ export * from "./attempt-store.js";
 export * from "./jsonl-event-store.js";
 export * from "./migrations.js";
 export * from "./snapshot-store.js";
+export * from "./durable-file.js";
+export * from "./durable-lock.js";
+export * from "./compactor.js";
+export * from "./recovery.js";
+export * from "./projection-fold.js";

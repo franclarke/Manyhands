@@ -1,4 +1,4 @@
-﻿import { execFileSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -50,8 +50,7 @@ function graphWith(leafIds: string[]): TaskGraph {
         status: "planned",
         granularity: "medium",
         depth: 0,
-        childrenIds: leafIds,
-        dependencies: []
+        childrenIds: leafIds
       },
       ...Object.fromEntries(
         leafIds.map((taskId) => [
@@ -66,7 +65,6 @@ function graphWith(leafIds: string[]): TaskGraph {
             granularity: "fine" as const,
             depth: 1,
             childrenIds: [],
-            dependencies: [],
             acceptanceCriteria: ["module exists"],
             contract: contract(taskId)
           }
@@ -177,7 +175,6 @@ describe("RunExecutor E2E (real git + MockCodex)", () => {
       inferred: false,
       rationale: "Dispatch B after A without inheriting A's worktree"
     });
-    graph.nodes.b!.dependencies = ["a"];
 
     const executor = new RunExecutor({
       git: new SimpleGitRunner(),
@@ -227,7 +224,6 @@ describe("RunExecutor E2E (real git + MockCodex)", () => {
       type: "logical",
       inferred: false
     });
-    graph.nodes.join!.dependencies = ["a"];
     graph.nodes.join!.kind = "integrator";
     graph.nodes.join!.metadata = { integrator: true, integratesTaskIds: ["a"] };
 

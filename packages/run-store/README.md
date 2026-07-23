@@ -30,4 +30,16 @@ sustituyen el event log.
 API V2: `JsonlRunEventStore`, `RunSnapshotStore`,
 `LegacyRunRecordImporter` y errores de CAS/fencing/corrupción.
 
+La API durable también expone `EventStoreCompactor`,
+`verifyAndRecoverRunStore`, `JsonlAttemptStore`, `atomicWriteFile` y
+`atomicWriteJson`. Los reemplazos fuerzan el temporal a disco, renombran con
+backoff exponencial y jitter, limpian residuos y sincronizan el directorio
+cuando la plataforma lo permite. El log activo usa append continuo y cada
+generación compactada se publica con un manifest atómico y checksummed antes de
+rotar el tail.
+
+La recuperación elimina exclusivamente una línea final incompleta, rechaza
+corrupción intermedia y reconstruye la proyección desde la última generación
+válida más su tail activo.
+
 Contrato objetivo: [`docs/system/04-run-executor.md`](../../docs/system/04-run-executor.md).

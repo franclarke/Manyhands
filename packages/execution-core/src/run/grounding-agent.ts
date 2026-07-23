@@ -60,6 +60,13 @@ export class GroundingAgent {
 
   /** Scaffold the skeleton and commit it (D6). Returns the skeleton commit sha. */
   async run(params: GroundingAgentParams): Promise<string> {
+    const dirtyFiles = await this.git.statusPorcelain(params.repoRoot);
+    if (dirtyFiles.length > 0) {
+      throw new Error(
+        `GroundingAgent cannot run in a dirty workspace. Uncommitted changes detected:\n${dirtyFiles.join("\n")}`
+      );
+    }
+
     const contracts = collectProducedInterfaces(params.graph);
     if (contracts.length === 0) {
       return this.git.head(params.repoRoot);

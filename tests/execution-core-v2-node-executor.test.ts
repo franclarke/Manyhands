@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { compileGraphRevision } from "@manyhands/decomposer";
 import {
   ExecutionConfigSchema,
+  ExecutionBaseBuilder,
   ExactCandidateValidatorV2,
   FixedAgentExecutorFactory,
   ScopeChecker,
@@ -10,7 +11,8 @@ import {
   type AgentExecutor,
   type ExecutorRunOutcome,
   type V2ExecutionEvidenceMatrix,
-  type V2PhysicalNodeExecutionInput
+  type V2PhysicalNodeExecutionInput,
+  type WorktreeReleaseOutcome
 } from "@manyhands/execution-core";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { bookingBreakdown, bookingSnapshot, compilerDependencies } from "./helpers/target-planning-fixtures";
@@ -58,6 +60,116 @@ describe("V2NodeExecutor", () => {
     expect(prompts[0]).toContain(contract.scope.allowedPaths[0]);
     expect(prompts[0]).toContain("Shared contracts with sibling work");
     expect(prompts[0]).toContain("Do not commit");
+  });
+
+  it("releases a pooled execution base with the successful candidate identity", async () => {
+    const compiled = compileGraphRevision(
+      { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const node = compiled.graph.nodes["node-api"]!;
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === node.id)!;
+    const commit = "4".repeat(40);
+    const git = new FakeGitRunner({
+      commitSha: commit,
+      diffCached: "diff",
+      diffCachedNameOnly: [contract.scope.allowedPaths[0]!]
+    });
+    const releases: WorktreeReleaseOutcome[] = [];
+    const baseBuilder = new ExecutionBaseBuilder({
+      git,
+      workspaceProvider: {
+        acquire: async (params) => ({
+          worktree: {
+            ...params,
+            path: "C:/repo/booking/.manyhands/pool/slot-000",
+            branch: "pool/slot-000",
+            status: "active",
+            createdAt: at
+          },
+          release: async (outcome = { kind: "discard" }) => {
+            releases.push(outcome);
+          }
+        })
+      },
+      now: () => at
+    });
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      baseBuilder,
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(successfulAgent()),
+      validator: {
+        validate: async (input) => matrix(input.contract, input.candidateCommit)
+      },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+
+    const outcome = await executor.execute(request(compiled, node.id));
+
+    expect(outcome).toMatchObject({ kind: "success", candidateCommit: commit });
+    expect(releases).toEqual([{
+      kind: "candidate",
+      runId: "run-v2-physical",
+      attemptId: "run-v2-physical:attempt:node-api:1",
+      candidateCommit: commit
+    }]);
+  });
+
+  it("does not report success when a pooled candidate cannot be anchored", async () => {
+    const compiled = compileGraphRevision(
+      { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const node = compiled.graph.nodes["node-api"]!;
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === node.id)!;
+    const commit = "5".repeat(40);
+    const git = new FakeGitRunner({
+      commitSha: commit,
+      diffCached: "diff",
+      diffCachedNameOnly: [contract.scope.allowedPaths[0]!]
+    });
+    const baseBuilder = new ExecutionBaseBuilder({
+      git,
+      workspaceProvider: {
+        acquire: async (params) => ({
+          worktree: {
+            ...params,
+            path: "C:/repo/booking/.manyhands/pool/slot-000",
+            branch: "pool/slot-000",
+            status: "active",
+            createdAt: at
+          },
+          release: async () => {
+            throw new Error("candidate anchor failed");
+          }
+        })
+      },
+      now: () => at
+    });
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      baseBuilder,
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(successfulAgent()),
+      validator: {
+        validate: async (input) => matrix(input.contract, input.candidateCommit)
+      },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+
+    const outcome = await executor.execute(request(compiled, node.id));
+
+    expect(outcome).toEqual({
+      kind: "failure",
+      reason: "candidate anchor failed"
+    });
   });
 
   it("repairs one failed code candidate in the same worktree and revalidates the repaired commit", async () => {

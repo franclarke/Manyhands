@@ -25,6 +25,12 @@ export * from "./compiler/contract-compiler.js";
 export * from "./compiler/graph-compiler.js";
 export * from "./compiler/validation-obligations.js";
 export * from "./critics/review.js";
+export * from "./granularity/complexity-evaluator.js";
+export * from "./granularity/coalescing-critic.js";
+export * from "./granularity/thesis-metrics.js";
+export * from "./context-compressor.js";
+export * from "./llm/architect-pass.js";
+export * from "./compiler/graph-compiler-v3.js";
 
 export const FeatureRequestSchema = z.object({
   id: EntityIdSchema,

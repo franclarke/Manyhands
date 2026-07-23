@@ -30,6 +30,7 @@ export * from "./routing/policy";
 export * from "./routing/availability";
 export * from "./scope/glob";
 export * from "./scope/checker";
+export * from "./scope/scope-errors";
 export * from "./scope/artifacts";
 export * from "./result/recorder";
 export * from "./validation/runner";

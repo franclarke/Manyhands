@@ -1,10 +1,10 @@
 import { access, writeFile } from "node:fs/promises";
 import { JsonRunRecordStore } from "@/lib/server/runs/repository";
-import { persistForkAtomically } from "@/lib/server/runs/fork-persistence";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import { WorkspaceConflictError, WorkspaceNotFoundError } from "@/lib/server/workspaces/errors";
 import { JsonWorkspaceRepository } from "@/lib/server/workspaces/repository";
 import { withWorkspaceReferenceLock } from "@/lib/server/workspaces/reference-lock";
+import { makeRunRecordV2 } from "./run-v2-record";
 
 type Action = "create" | "fork" | "delete";
 
@@ -47,11 +47,9 @@ async function main(): Promise<void> {
     }
   } else if (action === "fork") {
     try {
-      await persistForkAtomically({
-        sourceWorkspaceId: workspaceId,
-        forkedRun: runRecord(runId, workspaceId),
-        runRepository: runs,
-        workspaceRepository: workspaces
+      await withWorkspaceReferenceLock(async () => {
+        const workspace = await workspaces.get(workspaceId);
+        await runs.save(runRecord(runId, workspace.id));
       });
       outcome = "forked";
     } catch (error) {
@@ -77,19 +75,12 @@ async function main(): Promise<void> {
 }
 
 function runRecord(runId: string, workspaceId: string): RunRecord {
-  return {
+  return makeRunRecordV2({
     runId,
     workspaceId,
-    granularity: "balanced",
-    model: "gpt-5.5",
-    userPrompt: "Cross-process publication",
     title: runId,
-    version: 0,
-    status: "failed",
-    createdAt: "2026-07-15T00:00:00.000Z",
-    updatedAt: "2026-07-15T00:00:00.000Z",
-    patches: []
-  };
+    userPrompt: "Cross-process publication"
+  });
 }
 
 async function exists(target: string): Promise<boolean> {

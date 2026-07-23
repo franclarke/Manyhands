@@ -8,9 +8,9 @@ import {
   granularityImpactForLevel,
   granularityLabelForMode,
   isGranularityLevel,
-  toGranularityMode
+  toGranularityMode,
+  type GranularityMode
 } from "@/lib/granularity";
-import type { GranularityMode } from "@/lib/server/runs/schema";
 
 describe("granularity mapping", () => {
   it("declares the expected 4 UI levels including auto", () => {

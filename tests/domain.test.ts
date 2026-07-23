@@ -92,8 +92,7 @@ function makeGraph(
         status: "planned",
         granularity: "medium",
         depth: 0,
-        childrenIds: leafIds,
-        dependencies: []
+        childrenIds: leafIds
       },
       ...Object.fromEntries(
         leafIds.map((taskId) => [

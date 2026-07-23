@@ -1,8 +1,7 @@
 import { createHash } from "node:crypto";
 import { lstat, readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema, uniqueValues } from "@manyhands/shared";
-import ts from "typescript";
+import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import {
   buildRepositorySnapshotRecord,
@@ -10,8 +9,11 @@ import {
   type RepositorySnapshotBuilderInput,
   type RepositorySnapshotRecord
 } from "./snapshot.js";
+import { FastRepositoryIndexer } from "./fast-indexer.js";
+import { parseRepositoryFile, type ParsedRepositoryFile } from "./source-parser.js";
 
 export * from "./capabilities.js";
+export * from "./fast-indexer.js";
 export * from "./snapshot.js";
 
 export const RepositoryFileKindSchema = z.union([
@@ -128,6 +130,8 @@ export interface RepositoryIndexerInput {
   rootPath: string;
   repositoryId?: string;
   indexedAt?: string;
+  /** Exact Git commit represented by this index when the source is versioned. */
+  baseCommit?: string;
   /** B-029: explicit read-only index limits. Omitted files are diagnosed, never silently included. */
   limits?: Partial<RepositoryIndexLimits>;
   signal?: AbortSignal;
@@ -155,14 +159,6 @@ export interface RepositoryIndexer {
   index(input: RepositoryIndexerInput): Promise<RepositoryIndex>;
 }
 
-interface ParsedFile {
-  file: RepositoryFileIndex;
-  symbols: RepositorySymbolIndex[];
-  imports: RepositoryImportIndex[];
-  exports: RepositoryExportIndex[];
-  diagnostics: RepositoryDiagnostic[];
-}
-
 const INDEXER_NAME = "typescript-repository-indexer-v0";
 const DEFAULT_INDEXED_AT = "1970-01-01T00:00:00.000Z";
 const INDEXABLE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".json"]);
@@ -183,7 +179,7 @@ export class TypeScriptRepositoryIndexer implements RepositoryIndexer {
     const indexedAt = input.indexedAt ?? DEFAULT_INDEXED_AT;
     const limits = normalizeLimits(input.limits);
     const listed = await listIndexableFiles(rootPath, limits, input.signal);
-    const parsedFiles: ParsedFile[] = [];
+    const parsedFiles: ParsedRepositoryFile[] = [];
     let indexedBytes = 0;
     for (const filePath of listed.files) {
       throwIfAborted(input.signal);
@@ -197,7 +193,7 @@ export class TypeScriptRepositoryIndexer implements RepositoryIndexer {
         break;
       }
       indexedBytes += fileStat.size;
-      parsedFiles.push(await parseFile(rootPath, filePath));
+      parsedFiles.push(await parseRepositoryFile(rootPath, filePath));
     }
     const files = parsedFiles.map((item) => item.file).sort((left, right) => left.path.localeCompare(right.path));
     const symbols = parsedFiles
@@ -365,6 +361,48 @@ export async function buildRepositorySnapshot(
   return new RepositorySnapshotBuilder().build(input);
 }
 
+/** Productive exact-commit snapshot path backed by Ripgrep and the HEAD cache. */
+export async function buildFastRepositorySnapshot(
+  input: RepositorySnapshotBuilderInput
+): Promise<RepositorySnapshot> {
+  const capturedAt = input.capturedAt ?? new Date().toISOString();
+  const receipt = new FastRepositoryIndexer().indexWithReceipt({
+    rootPath: input.rootPath,
+    ...(input.repositoryId !== undefined ? { repositoryId: input.repositoryId } : {}),
+    indexedAt: capturedAt,
+    baseCommit: input.baseCommit,
+    ...(input.limits !== undefined
+      ? { limits: input.limits as Partial<RepositoryIndexLimits> }
+      : {}),
+    ...(input.signal !== undefined ? { signal: input.signal } : {})
+  });
+  const snapshot = await buildRepositorySnapshotRecord<RepositoryIndex>(
+    { ...input, capturedAt },
+    {
+      index: async () => (await receipt).index,
+      discoverCapabilities: async () => {
+        try {
+          return (await receipt).capabilityResult;
+        } catch {
+          return {
+            capabilities: {
+              scripts: {},
+              baselineCommands: [],
+              languages: [],
+              stack: []
+            },
+            diagnostics: []
+          };
+        }
+      },
+      computeIndexHash: computeRepositoryIndexHash,
+      now: () => capturedAt
+    }
+  );
+  RepositorySnapshotSchema.parse(snapshot);
+  return snapshot;
+}
+
 function normalizeLimits(input: Partial<RepositoryIndexLimits> | undefined): RepositoryIndexLimits {
   const candidate = { ...DEFAULT_LIMITS, ...input };
   for (const [name, value] of Object.entries(candidate)) {
@@ -397,284 +435,6 @@ function relative(rootPath: string, filePath: string): string {
 
 function throwIfAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted === true) throw signal.reason instanceof Error ? signal.reason : new Error("Repository indexing aborted.");
-}
-
-async function parseFile(rootPath: string, absolutePath: string): Promise<ParsedFile> {
-  const relativePath = normalizeRepositoryPath(path.relative(rootPath, absolutePath));
-  const extension = path.extname(relativePath);
-  const kind = classifyFileKind(relativePath);
-  const sourceText = await readFile(absolutePath, "utf8");
-  const contentHash = createHash("sha256").update(sourceText).digest("hex");
-
-  if (extension === ".json") {
-    return {
-      file: {
-        path: relativePath,
-        kind,
-        contentHash,
-        exportedSymbols: [],
-        importedSymbols: [],
-        declaredSymbols: []
-      },
-      symbols: [],
-      imports: [],
-      exports: [],
-      diagnostics: []
-    };
-  }
-
-  const sourceFile = ts.createSourceFile(
-    relativePath,
-    sourceText,
-    ts.ScriptTarget.Latest,
-    true,
-    extension === ".tsx" || extension === ".jsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS
-  );
-  const symbols: RepositorySymbolIndex[] = [];
-  const imports: RepositoryImportIndex[] = [];
-  const exports: RepositoryExportIndex[] = [];
-  const importedSymbols: string[] = [];
-  const exportedSymbols: string[] = [];
-  const declaredSymbols: string[] = [];
-
-  for (const statement of sourceFile.statements) {
-    if (ts.isImportDeclaration(statement)) {
-      const imported = importedSymbolsFromImport(statement);
-      const moduleSpecifier = stringLiteralText(statement.moduleSpecifier);
-
-      if (moduleSpecifier) {
-        imports.push({
-          filePath: relativePath,
-          moduleSpecifier,
-          importedSymbols: imported
-        });
-      }
-
-      importedSymbols.push(...imported);
-      continue;
-    }
-
-    if (ts.isExportDeclaration(statement)) {
-      const exported = exportedSymbolsFromExportDeclaration(statement);
-      const moduleSpecifier = statement.moduleSpecifier ? stringLiteralText(statement.moduleSpecifier) : undefined;
-      const exportEntry: RepositoryExportIndex = {
-        filePath: relativePath,
-        exportedSymbols: exported
-      };
-
-      if (moduleSpecifier !== undefined) {
-        exportEntry.moduleSpecifier = moduleSpecifier;
-      }
-
-      exports.push(exportEntry);
-      exportedSymbols.push(...exported);
-      continue;
-    }
-
-    collectDeclaration(statement, sourceFile, relativePath, symbols, declaredSymbols, exportedSymbols, exports);
-  }
-
-  const file = RepositoryFileIndexSchema.parse({
-    path: relativePath,
-    kind,
-    contentHash,
-    exportedSymbols: uniqueValues(exportedSymbols).sort(),
-    importedSymbols: uniqueValues(importedSymbols).sort(),
-    declaredSymbols: uniqueValues(declaredSymbols).sort()
-  });
-
-  return {
-    file,
-    symbols: symbols.sort((left, right) => compareByPathThenName(left.filePath, left.name, right.filePath, right.name)),
-    imports,
-    exports,
-    diagnostics: []
-  };
-}
-
-function collectDeclaration(
-  statement: ts.Statement,
-  sourceFile: ts.SourceFile,
-  filePath: string,
-  symbols: RepositorySymbolIndex[],
-  declaredSymbols: string[],
-  exportedSymbols: string[],
-  exports: RepositoryExportIndex[]
-): void {
-  if (ts.isFunctionDeclaration(statement) && statement.name) {
-    collectSymbol(statement.name.text, symbolKindForDeclaration(statement, filePath), hasExportModifier(statement), statement, sourceFile, filePath, symbols, declaredSymbols, exportedSymbols, exports);
-    return;
-  }
-
-  if (ts.isClassDeclaration(statement) && statement.name) {
-    collectSymbol(statement.name.text, "class", hasExportModifier(statement), statement, sourceFile, filePath, symbols, declaredSymbols, exportedSymbols, exports);
-    return;
-  }
-
-  if (ts.isInterfaceDeclaration(statement)) {
-    collectSymbol(statement.name.text, "interface", hasExportModifier(statement), statement, sourceFile, filePath, symbols, declaredSymbols, exportedSymbols, exports);
-    return;
-  }
-
-  if (ts.isTypeAliasDeclaration(statement)) {
-    collectSymbol(statement.name.text, "type", hasExportModifier(statement), statement, sourceFile, filePath, symbols, declaredSymbols, exportedSymbols, exports);
-    return;
-  }
-
-  if (ts.isVariableStatement(statement)) {
-    const exported = hasExportModifier(statement);
-
-    for (const declaration of statement.declarationList.declarations) {
-      if (ts.isIdentifier(declaration.name)) {
-        collectSymbol(
-          declaration.name.text,
-          variableSymbolKind(declaration.name.text, filePath),
-          exported,
-          declaration,
-          sourceFile,
-          filePath,
-          symbols,
-          declaredSymbols,
-          exportedSymbols,
-          exports
-        );
-      }
-    }
-  }
-}
-
-function collectSymbol(
-  name: string,
-  kind: RepositorySymbolKind,
-  exported: boolean,
-  node: ts.Node,
-  sourceFile: ts.SourceFile,
-  filePath: string,
-  symbols: RepositorySymbolIndex[],
-  declaredSymbols: string[],
-  exportedSymbols: string[],
-  exports: RepositoryExportIndex[]
-): void {
-  declaredSymbols.push(name);
-
-  if (exported) {
-    exportedSymbols.push(name);
-    exports.push({
-      filePath,
-      exportedSymbols: [name]
-    });
-  }
-
-  symbols.push(RepositorySymbolIndexSchema.parse({
-    name,
-    kind,
-    filePath,
-    exported,
-    line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
-  }));
-}
-
-function importedSymbolsFromImport(statement: ts.ImportDeclaration): string[] {
-  const importClause = statement.importClause;
-  const symbols: string[] = [];
-
-  if (!importClause) {
-    return symbols;
-  }
-
-  if (importClause.name) {
-    symbols.push(importClause.name.text);
-  }
-
-  if (importClause.namedBindings && ts.isNamedImports(importClause.namedBindings)) {
-    for (const element of importClause.namedBindings.elements) {
-      symbols.push(element.propertyName?.text ?? element.name.text);
-    }
-  }
-
-  if (importClause.namedBindings && ts.isNamespaceImport(importClause.namedBindings)) {
-    symbols.push(importClause.namedBindings.name.text);
-  }
-
-  return uniqueValues(symbols).sort();
-}
-
-function exportedSymbolsFromExportDeclaration(statement: ts.ExportDeclaration): string[] {
-  if (!statement.exportClause || !ts.isNamedExports(statement.exportClause)) {
-    return [];
-  }
-
-  return uniqueValues(
-    statement.exportClause.elements.map((element) => element.propertyName?.text ?? element.name.text)
-  ).sort();
-}
-
-function hasExportModifier(node: ts.Node): boolean {
-  return ts.canHaveModifiers(node) && (ts.getModifiers(node) ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword);
-}
-
-function stringLiteralText(node: ts.Node): string | undefined {
-  return ts.isStringLiteral(node) ? node.text : undefined;
-}
-
-function symbolKindForDeclaration(node: ts.FunctionDeclaration, filePath: string): RepositorySymbolKind {
-  if (node.name && variableSymbolKind(node.name.text, filePath) === "component") {
-    return "component";
-  }
-
-  return "function";
-}
-
-function variableSymbolKind(name: string, filePath: string): RepositorySymbolKind {
-  if ((filePath.endsWith(".tsx") || filePath.endsWith(".jsx")) && /^[A-Z]/u.test(name)) {
-    return "component";
-  }
-
-  return "const";
-}
-
-function classifyFileKind(filePath: string): RepositoryFileKind {
-  const normalized = normalizeRepositoryPath(filePath);
-  const baseName = path.posix.basename(normalized);
-
-  if (
-    baseName === "package.json" ||
-    baseName === "tsconfig.json" ||
-    baseName.includes("config") ||
-    normalized.includes("eslint")
-  ) {
-    return "config";
-  }
-
-  if (
-    normalized.endsWith("schema.ts") ||
-    normalized.endsWith("schema.tsx") ||
-    normalized.endsWith("schema.prisma") ||
-    normalized.includes("/schema/")
-  ) {
-    return "schema";
-  }
-
-  if (normalized.includes("migrations/")) {
-    return "migration";
-  }
-
-  if (
-    normalized.includes("/tests/") ||
-    normalized.startsWith("tests/") ||
-    normalized.endsWith(".test.ts") ||
-    normalized.endsWith(".test.tsx") ||
-    normalized.endsWith(".spec.ts") ||
-    normalized.endsWith(".spec.tsx")
-  ) {
-    return "test";
-  }
-
-  if ([".ts", ".tsx", ".js", ".jsx"].includes(path.posix.extname(normalized))) {
-    return "source";
-  }
-
-  return "unknown";
 }
 
 function compareByPathThenName(leftPath: string, leftName: string, rightPath: string, rightName: string): number {

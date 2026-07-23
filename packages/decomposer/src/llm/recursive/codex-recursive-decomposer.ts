@@ -52,6 +52,8 @@ export interface CodexRecursiveDecomposerOptions {
   useShell?: boolean;
   platform?: NodeJS.Platform;
   hostEnv?: NodeJS.ProcessEnv;
+  /** Filtered environment for spawned agent processes. Defaults to process.env. */
+  agentEnv?: Record<string, string>;
   onCliOutput?: (data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void;
 }
 
@@ -70,9 +72,11 @@ export class CodexRecursiveDecomposer implements Decomposer {
   private readonly inner: RecursiveDecomposer;
   public readonly model: string;
   public readonly promptTemplateVersion: string;
+  private readonly agentEnv: Record<string, string> | NodeJS.ProcessEnv;
 
   constructor(options: CodexRecursiveDecomposerOptions) {
     this.model = options.model;
+    this.agentEnv = options.agentEnv ?? process.env;
     this.promptTemplateVersion =
       options.promptTemplateVersion ?? `${RECURSIVE_DECOMPOSER_PROMPT_VERSION}.codex`;
 
@@ -86,6 +90,7 @@ export class CodexRecursiveDecomposer implements Decomposer {
     if (options.spawn !== undefined) clientOptions.spawn = options.spawn;
     if (options.platform !== undefined) clientOptions.platform = options.platform;
     if (options.hostEnv !== undefined) clientOptions.hostEnv = options.hostEnv;
+    if (options.agentEnv !== undefined) clientOptions.agentEnv = options.agentEnv;
     if (options.onCliOutput !== undefined) clientOptions.onCliOutput = options.onCliOutput;
     const client = new CodexStepClient(clientOptions);
 
@@ -133,6 +138,8 @@ interface CodexStepClientOptions {
   spawn?: SpawnFn;
   platform?: NodeJS.Platform;
   hostEnv?: NodeJS.ProcessEnv;
+  /** Filtered environment for spawned agent processes. Defaults to process.env. */
+  agentEnv?: Record<string, string>;
   onCliOutput?: ((data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void) | undefined;
 }
 
@@ -146,6 +153,7 @@ class CodexStepClient implements AnthropicLike {
   private readonly spawnFn: SpawnFn;
   private readonly platform: NodeJS.Platform;
   private readonly hostEnv: NodeJS.ProcessEnv;
+  private readonly agentEnv: Record<string, string> | NodeJS.ProcessEnv;
   private readonly onCliOutput?: ((data: { nodeId: string; chunk: string; stream: "stdout" | "stderr" }) => void) | undefined;
 
   constructor(options: CodexStepClientOptions) {
@@ -154,6 +162,7 @@ class CodexStepClient implements AnthropicLike {
     this.reasoningEffort = options.reasoningEffort;
     this.platform = options.platform ?? process.platform;
     this.hostEnv = options.hostEnv ?? process.env;
+    this.agentEnv = options.agentEnv ?? process.env;
     this.binaryPath = resolveCliBinaryPath(
       options.binaryPath ?? this.hostEnv.MANYHANDS_CODEX_BIN ?? "codex",
       { platform: this.platform, env: this.hostEnv }
@@ -205,6 +214,7 @@ class CodexStepClient implements AnthropicLike {
       timeoutMs: this.timeoutMs,
       spawnFn: this.spawnFn,
       platform: this.platform,
+      env: this.agentEnv,
       ...(invocation.windowsVerbatimArguments !== undefined
         ? { windowsVerbatimArguments: invocation.windowsVerbatimArguments }
         : {}),
@@ -249,6 +259,7 @@ interface SpawnCodexInput {
   timeoutMs: number;
   spawnFn: SpawnFn;
   platform: NodeJS.Platform;
+  env: Record<string, string> | NodeJS.ProcessEnv;
   windowsVerbatimArguments?: boolean;
   onChunk?: (chunk: string, stream: "stdout" | "stderr") => void;
 }
@@ -264,7 +275,7 @@ function spawnCodex(input: SpawnCodexInput): Promise<SpawnCodexOutcome> {
   return new Promise((resolve) => {
     const child = input.spawnFn(input.binaryPath, input.args, {
       cwd: input.cwd,
-      env: process.env,
+      env: input.env,
       stdio: ["pipe", "pipe", "pipe"],
       shell: false,
       detached: input.platform !== "win32",

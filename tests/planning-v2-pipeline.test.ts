@@ -65,19 +65,21 @@ describe("planning V2 vertical slice", () => {
       snapshots,
       inspect: async () => bookingSnapshot(),
       plan: async (_input, observer) => {
-        await observer.onAttemptStarted({ attempt: 1 });
-        await observer.onUnitDiscovered({
-          attempt: 1,
-          unit: {
-            key: "booking",
-            parentKey: null,
-            kind: "composite",
-            title: "Booking creation",
-            objective: "Deliver booking creation",
-            siblingIndex: 0,
-            siblingCount: 1
-          }
-        });
+        if (observer) {
+          await observer.onAttemptStarted({ attempt: 1 });
+          await observer.onUnitDiscovered({
+            attempt: 1,
+            unit: {
+              key: "booking",
+              parentKey: null,
+              kind: "composite",
+              title: "Booking creation",
+              objective: "Deliver booking creation",
+              siblingIndex: 0,
+              siblingCount: 1
+            }
+          });
+        }
         discoveryPersisted();
         await planBarrier;
         return bookingBreakdown();

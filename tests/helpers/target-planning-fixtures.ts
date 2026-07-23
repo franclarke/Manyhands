@@ -97,7 +97,7 @@ export function bookingSnapshot(): RepositorySnapshot {
         exportCount: 0
       }
     }
-  });
+  }) as RepositorySnapshot;
 }
 
 export const compilerDependencies = {

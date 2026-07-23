@@ -211,7 +211,6 @@ function leaf(id: string, contractValue: AgentTaskContract): TaskNode {
     granularity: "auto",
     depth: 1,
     childrenIds: [],
-    dependencies: [],
     acceptanceCriteria: ["done"],
     contract: contractValue
   };
@@ -227,8 +226,7 @@ function graphWith(leaves: TaskNode[]): TaskGraph {
     status: "planned",
     granularity: "auto",
     depth: 0,
-    childrenIds: leaves.map((node) => node.id),
-    dependencies: []
+    childrenIds: leaves.map((node) => node.id)
   };
   return {
     id: "graph",

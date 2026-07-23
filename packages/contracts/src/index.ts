@@ -9,6 +9,7 @@ export * from "./artifact-contract.js";
 export * from "./contract-bundle.js";
 export * from "./contract-identity.js";
 export * from "./legacy-adapter.js";
+export * from "./relations.js";
 export * from "./scope-contract.js";
 export * from "./seam-contract.js";
 export * from "./task-contract.js";

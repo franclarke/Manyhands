@@ -10,7 +10,7 @@ describe("artifact-aware readiness V2", () => {
   it("does not serialize siblings merely because they share a compatible seam", () => {
     const revision = graph();
     expect(explainReadiness({ graph: revision, nodeId: "node-api", ...base }).reasons).not.toContainEqual(expect.objectContaining({ code: "seam" }));
-    expect(selectReadyWaveV2({ graph: revision, nodeIds: ["node-domain", "node-api", "node-ui"], state: base, effectiveConfig: { maxParallel: 3 }, conflictConstraints: [] }).nodeIds).toEqual(["node-domain", "node-api", "node-ui"]);
+    expect(selectReadyWaveV2({ graph: revision, nodeIds: ["node-domain", "node-api", "node-ui"], state: base, effectiveConfig: { maxParallel: 3 }, conflictConstraints: [] }).nodeIds).toEqual(["node-api", "node-domain", "node-ui"]);
   });
 
   it("blocks only an artifact consumer until the exact artifact is adopted", () => {

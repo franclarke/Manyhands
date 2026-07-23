@@ -23,4 +23,4 @@ export interface ReadinessStateV2 {
 }
 
 export interface ReadinessInputV2 extends ReadinessStateV2 { graph: GraphRevision; nodeId: string; }
-export interface ReadinessExplanationV2 { nodeId: string; ready: boolean; reasons: ReadinessReason[]; }
+export interface ReadinessExplanationV2 { nodeId: string; ready: boolean; reasons: ReadinessReason[]; deferred?: boolean; }

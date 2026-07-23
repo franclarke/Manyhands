@@ -1,4 +1,4 @@
-﻿import type { TaskGraph } from "@manyhands/task-graph";
+import type { TaskGraph } from "@manyhands/task-graph";
 import { describe, expect, it } from "vitest";
 import {
   computeGranularityVector,
@@ -27,8 +27,7 @@ function graphWith(leafIds: string[]): TaskGraph {
         status: "planned",
         granularity: "medium",
         depth: 0,
-        childrenIds: leafIds,
-        dependencies: []
+        childrenIds: leafIds
       },
       ...Object.fromEntries(
         leafIds.map((taskId) => [
@@ -43,7 +42,6 @@ function graphWith(leafIds: string[]): TaskGraph {
             granularity: "fine" as const,
             depth: 1,
             childrenIds: [],
-            dependencies: [],
             acceptanceCriteria: ["criterion one", "criterion two"]
           }
         ])

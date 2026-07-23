@@ -46,7 +46,7 @@ describe("V2 cancellation", () => {
       activeOperation: oldLease,
       projection: { eventSequence: 3, lifecycle: "running", graphId: "graph-1", graphRevision: 1, approvedGraphRevision: 1, updatedAt: "2026-07-17T12:00:00.000Z" }
     }));
-    const store = new JsonlRunEventStore({ directory: process.env.MANYHANDS_RUNS_DIR });
+    const store = new JsonlRunEventStore({ ...(process.env.MANYHANDS_RUNS_DIR ? { directory: process.env.MANYHANDS_RUNS_DIR } : {}) });
     const authority = { operationId: oldLease.operationId, fencingToken: oldLease.fencingToken };
     await store.advanceFence(runId, authority);
     await store.appendFenced(runId, 0, authority, [

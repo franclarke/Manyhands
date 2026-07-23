@@ -15,7 +15,7 @@ const loadingSource = readFileSync(
 describe("run loading skeleton", () => {
   it("mirrors the current cockpit regions and dimensions", () => {
     const sharedLayoutClasses = [
-      "px-6 py-4",
+      "px-4 py-2",
       "grid-cols-[minmax(0,1fr)_340px]",
       "border-r border-[var(--color-border)]",
       "bg-[var(--color-surface)]"

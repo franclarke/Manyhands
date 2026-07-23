@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, CircleStop, PanelRightClose, PanelRightOpen, Pause, Play, RotateCcw, Send, X } from "lucide-react";
+import { CheckCircle2, CircleStop, PanelRightClose, PanelRightOpen, Pause, Play, RotateCcw, Send, X } from "lucide-react";
 
-import { RunGraphCanvas } from "@/components/run-model/minimal-run-graph";
 import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -11,6 +10,8 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { eventPresentation, summarizeRunNodes } from "@/lib/run-model/presentation";
 import type { RunEvent, RunSeed } from "@/lib/run-model/types";
 import { runUiStatus, statusMeta } from "@/lib/status";
+import { CockpitRunGraph } from "./cockpit-run-graph";
+import { DecisionQueueDrawer } from "./DecisionQueueDrawer";
 
 export function RunModelView({
   seed,
@@ -32,7 +33,6 @@ export function RunModelView({
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
-  const [autoFit, setAutoFit] = useState(true);
   const selectedNode = model.nodes.find((node) => node.id === selectedNodeId) ?? null;
   const pendingDecisions = model.projection === null
     ? []
@@ -120,24 +120,15 @@ export function RunModelView({
 
       {fixtureToolbar}
 
-      {pendingDecisions.length > 0 ? (
-        <section aria-label="Decisiones pendientes" className="flex shrink-0 gap-2 overflow-x-auto border-b border-[var(--status-review-border)] bg-[var(--status-review-bg)] px-4 py-1.5">
-          {pendingDecisions.map((decision) => (
-            <button
-              key={decision.id}
-              type="button"
-              onClick={() => openDecision(decision.id)}
-              className="group flex min-w-[min(100%,480px)] max-w-[760px] flex-1 items-center justify-between gap-3 rounded-[var(--r-md)] border border-[var(--status-review-border)] bg-[var(--color-surface)] px-3 py-2 text-left transition-[border-color,background-color] duration-150 hover:border-[var(--status-review-fg)] hover:bg-[var(--color-surface-raised)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--status-review-fg)]"
-            >
-              <span className="flex min-w-0 items-center gap-2.5">
-                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--status-review-bg)] text-[var(--status-review-fg)]"><AlertTriangle className="h-3.5 w-3.5" /></span>
-                <span className="min-w-0 truncate text-xs"><small className="mh-mono mr-2 text-eyebrow uppercase tracking-[0.11em] text-[var(--status-review-fg)]">Decisión pendiente · {decision.affectedNodeIds.length} nodo{decision.affectedNodeIds.length === 1 ? "" : "s"}</small>{" "}<strong>{affectedNodeLabel(decision.affectedNodeIds, model.nodes)}</strong><small className="ml-2 hidden truncate text-[var(--color-text-muted)] 2xl:inline">{decisionReason(decision.question, model.nodes, decision.affectedNodeIds)}</small></span>
-              </span>
-              <span className="shrink-0 text-label font-semibold text-[var(--status-review-fg)] group-hover:underline">Revisar <span aria-hidden="true">→</span></span>
-            </button>
-          ))}
-        </section>
-      ) : null}
+      <DecisionQueueDrawer
+        decisions={pendingDecisions}
+        model={model}
+        activeDecisionId={decisionId}
+        busy={busyAction !== null}
+        onOpen={openDecision}
+        onClose={() => setDecisionId(null)}
+        onResolve={(optionId) => void resolveDecision(optionId)}
+      />
 
       {error !== null ? (
         <div role="alert" className="flex shrink-0 items-center justify-between border-b border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] px-6 py-2 text-xs text-[var(--status-failed-fg)]">
@@ -147,12 +138,12 @@ export function RunModelView({
 
       <div className={`grid min-h-0 flex-1 transition-[grid-template-columns] duration-200 motion-reduce:transition-none ${inspectorCollapsed ? "grid-cols-[minmax(0,1fr)_0px]" : "grid-cols-[minmax(0,1fr)_340px]"}`}>
         <section className={`relative min-h-0 ${inspectorCollapsed ? "" : "border-r border-[var(--color-border)]"}`}>
-          <RunGraphCanvas
+          <CockpitRunGraph
             model={model}
             selectedNodeId={selectedNodeId}
+            pendingDecisions={pendingDecisions}
             onSelectNode={selectNode}
-            autoFit={autoFit}
-            onAutoFitChange={setAutoFit}
+            onOpenDecision={openDecision}
           />
           <IconButton
             label={inspectorCollapsed ? "Mostrar panel de detalles" : "Ocultar panel de detalles"}
@@ -227,7 +218,7 @@ function DecisionDetails({ decision, nodes, busy, onResolve, onDismiss }: { deci
   const affectedLabel = affectedNodeLabel(decision.affectedNodeIds, nodes);
   return (
     <section className="border-b border-[var(--color-border)] p-5">
-      <div className="flex items-start justify-between gap-4"><div><span className="mh-mono text-eyebrow uppercase tracking-[0.12em] text-[var(--status-review-fg)]">Decisión requerida</span><h2 className="mt-1 text-base font-semibold">{affectedLabel}</h2></div><button type="button" onClick={onDismiss} aria-label="Cerrar decisiones" className="rounded-md p-1 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"><X className="h-4 w-4" /></button></div>
+      <div className="flex items-start justify-between gap-4"><div><span className="mh-mono text-eyebrow uppercase tracking-[0.12em] text-[var(--status-review-fg)]">Decisión requerida</span><h2 className="mt-1 text-base font-semibold">{affectedLabel}</h2></div><button type="button" onClick={onDismiss} aria-label="Cerrar decisiones" className="rounded-md p-1 text-[var(--color-text-muted)] transition-colors motion-reduce:transition-none hover:bg-[var(--color-bg-subtle)] hover:text-[var(--color-text)]"><X className="h-4 w-4" /></button></div>
       <div className="mt-4 rounded-lg border border-[var(--status-review-border)] bg-[var(--status-review-bg)] p-3">
         <span className="block text-eyebrow font-semibold uppercase tracking-[0.1em] text-[var(--status-review-fg)]">Qué necesita resolución</span>
         <p className="mt-1.5 text-xs leading-5 text-[var(--color-text)]">{decisionReason(decision.question, nodes, decision.affectedNodeIds)}</p>
@@ -235,7 +226,7 @@ function DecisionDetails({ decision, nodes, busy, onResolve, onDismiss }: { deci
       <p className="mt-3 text-xs leading-5 text-[var(--color-text-muted)]">Esta respuesta se aplica a {decision.affectedNodeIds.length === 1 ? "este nodo" : "estos nodos"}; las ramas independientes siguen su curso.</p>
       <div className="mt-5"><span className="mh-mono block text-eyebrow uppercase tracking-[0.11em] text-[var(--color-text-subtle)]">Elegí una acción</span><div className="mt-2 grid gap-2">
         {decision.options.map((option, index) => (
-          <button key={option.id} type="button" disabled={busy} onClick={() => onResolve(option.id)} className="group rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3 text-left transition-[border-color,background-color,transform] duration-200 hover:-translate-y-px hover:border-[var(--status-review-fg)] hover:bg-[var(--color-surface-raised)] disabled:cursor-wait disabled:opacity-60">
+          <button key={option.id} type="button" disabled={busy} onClick={() => onResolve(option.id)} className="group rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3 text-left transition-[border-color,background-color,transform] duration-200 motion-reduce:transform-none motion-reduce:transition-none hover:-translate-y-px hover:border-[var(--status-review-fg)] hover:bg-[var(--color-surface-raised)] disabled:cursor-wait disabled:opacity-60">
             <span className="flex items-start gap-3"><span className="mh-mono mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border border-[var(--color-border-strong)] text-eyebrow text-[var(--color-text-subtle)]">{index + 1}</span><span><strong className="block text-sm">{option.label}</strong>{option.description !== undefined ? <span className="mt-1 block text-xs leading-5 text-[var(--color-text-muted)]">{option.description}</span> : null}</span></span>
           </button>
         ))}

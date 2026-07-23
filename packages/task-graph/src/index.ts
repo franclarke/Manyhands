@@ -6,6 +6,7 @@ import {
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 
+export * from "./graph-reducer.js";
 export * from "./graph-revision.js";
 export * from "./legacy-adapter.js";
 export * from "./relations.js";

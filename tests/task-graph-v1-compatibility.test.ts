@@ -65,7 +65,6 @@ function legacyGraph(): TaskGraph {
         parentId: "root",
         kind: "leaf",
         depth: 1,
-        dependencies: ["model"],
         contract: contract("ui", ["src/ui.ts"], ["src/model.ts"])
       }),
       tests: node({
@@ -73,7 +72,6 @@ function legacyGraph(): TaskGraph {
         parentId: "root",
         kind: "leaf",
         depth: 1,
-        dependencies: ["model"],
         contract: contract("tests", ["tests/model.test.ts"])
       })
     },
@@ -92,7 +90,6 @@ function node(partial: Partial<TaskNode> & Pick<TaskNode, "id" | "kind" | "depth
     status: "planned",
     granularity: "auto",
     childrenIds: [],
-    dependencies: [],
     ...partial
   } as TaskNode;
 }

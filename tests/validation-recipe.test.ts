@@ -4,7 +4,7 @@ import type { RepositoryCapabilities } from "@manyhands/repository-index";
 import type { ValidationContract } from "@manyhands/contracts";
 
 const contract: ValidationContract = {
-  schemaVersion: 2, id: "validation-1", revision: "rev-1", nodeId: "node-1",
+  schemaVersion: 2, id: "validation-1", revision: "rev-1", provenance: "compiled", nodeId: "node-1",
   obligations: [
     { id: "obligation-static", criterionId: "criterion-static", layer: "static", severity: "required", acceptableEvidence: ["static_analysis"], baselinePolicy: "required", negativeControl: "not_required", flakyPolicy: "forbid" },
     { id: "obligation-unit", criterionId: "criterion-unit", layer: "unit", severity: "required", acceptableEvidence: ["test_result"], baselinePolicy: "optional", negativeControl: "when_feasible", flakyPolicy: "allow_with_warning" }

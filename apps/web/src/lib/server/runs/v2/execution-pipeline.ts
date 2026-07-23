@@ -5,11 +5,14 @@ import { createConflictConstraintEvidence, type ConflictConstraintEvidence } fro
 import {
   DefaultAgentExecutorFactory,
   ExactCandidateValidatorV2,
+  ExecutionBaseBuilder,
   ExecutionConfigSchema,
   FinalCandidatePreparer,
+  PooledExecutionWorkspaceProvider,
   SimpleGitRunner,
   V2NodeExecutor,
   WorktreeManager,
+  WorktreePool,
   safeGitArgs,
   type V2FinalCandidatePort
 } from "@manyhands/execution-core";
@@ -109,11 +112,20 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     const git = new SimpleGitRunner();
     await git.revParse(repoRoot, `${prepared.graph.baseCommit}^{commit}`);
     const worktrees = new WorktreeManager({ git, repoRoot });
+    const worktreePool = new WorktreePool({
+      repoRoot,
+      size: config.maxParallel
+    });
+    const baseBuilder = new ExecutionBaseBuilder({
+      git,
+      workspaceProvider: new PooledExecutionWorkspaceProvider({ pool: worktreePool })
+    });
     const traceStore = new InMemoryTraceStore();
     const nodeExecutor = new V2NodeExecutor({
       git,
       repoRoot,
       worktrees,
+      baseBuilder,
       traceStore,
       executorFactory: new DefaultAgentExecutorFactory(),
       validator: new ExactCandidateValidatorV2({

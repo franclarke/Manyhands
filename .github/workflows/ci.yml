@@ -52,5 +52,11 @@ jobs:
       - name: Typecheck (web)
         run: pnpm web:typecheck
 
+      - name: Repository index performance gate
+        if: runner.os == 'Windows'
+        env:
+          MANYHANDS_PERF_GATE: "1"
+        run: pnpm exec vitest run tests/repository-fast-indexer.test.ts
+
       - name: Test
         run: pnpm test

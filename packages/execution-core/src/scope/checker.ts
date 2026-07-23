@@ -1,5 +1,7 @@
+import { resolve, sep } from "node:path";
+import { realpathSync } from "node:fs";
+import { ScopePathTraversalError, SymlinkEscapeError, ScopeViolationError } from "./scope-errors";
 import type { ExecutionScope, ScopeContract } from "@manyhands/contracts";
-
 import { ScopeCheckResultSchema, type ScopeCheckResult } from "../types";
 import { matchesAnyGlob } from "./glob";
 
@@ -11,6 +13,7 @@ export interface ScopeCheckParams {
   scopeContract?: Pick<ScopeContract, "allowedPaths" | "forbiddenPaths"> | undefined;
   /** Globs always prohibited regardless of scope. Deny wins (ADR-0023). */
   forbiddenPaths?: string[] | undefined;
+  worktreeRoot?: string | undefined;
 }
 
 /**
@@ -27,6 +30,34 @@ export interface ScopeCheckParams {
  *   and real collisions surface at cherry-pick where the composer repairs.
  */
 export class ScopeChecker {
+  /**
+   * Validates that a file path resolves within the worktree boundary.
+   * Catches path traversal (../) and symlink escape attempts.
+   */
+  validatePathBoundary(worktreeRoot: string, targetPath: string): void {
+    const resolvedRoot = resolve(worktreeRoot);
+    const resolvedTarget = resolve(resolvedRoot, targetPath);
+
+    // Path traversal check: resolved path must be within or equal to root
+    if (resolvedTarget !== resolvedRoot && !resolvedTarget.startsWith(resolvedRoot + sep)) {
+      throw new ScopePathTraversalError(targetPath, resolvedTarget, resolvedRoot);
+    }
+
+    // Symlink escape check: follow symlinks and verify the real path is still within boundary
+    try {
+      const realTarget = realpathSync(resolvedTarget);
+      const realRoot = realpathSync(resolvedRoot);
+      if (realTarget !== realRoot && !realTarget.startsWith(realRoot + sep)) {
+        throw new SymlinkEscapeError(targetPath, resolvedTarget, realRoot, realTarget);
+      }
+    } catch (error) {
+      // ENOENT: path does not exist yet (greenfield file). The logical path
+      // check above already passed, so the file is within scope.
+      if (error instanceof ScopeViolationError || error instanceof SymlinkEscapeError) throw error;
+      // Other fs errors (ENOENT, EACCES) are acceptable for non-existent files.
+    }
+  }
+
   check(params: ScopeCheckParams): ScopeCheckResult {
     const forbidden = [
       ...(params.scopeContract?.forbiddenPaths ?? []),
@@ -42,6 +73,13 @@ export class ScopeChecker {
 
     const violations: string[] = [];
     const outOfScope: string[] = [];
+
+    // B-008: when worktreeRoot is provided, validate path boundaries first
+    if (params.worktreeRoot !== undefined) {
+      for (const file of params.changedFiles) {
+        this.validatePathBoundary(params.worktreeRoot, file);
+      }
+    }
 
     for (const file of params.changedFiles) {
       if (matchesAnyGlob(file, forbidden)) {
@@ -60,3 +98,5 @@ export class ScopeChecker {
     });
   }
 }
+
+export { ScopePathTraversalError, SymlinkEscapeError } from "./scope-errors";

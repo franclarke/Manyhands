@@ -1,53 +1,29 @@
-# Diseño de producto de ManyHands
+# DOCUMENTACIÓN DE DISEÑO Y ARQUITECTURA DE MANYHANDS
 
-Esta carpeta define cómo una persona comprende y controla el sistema. La
-semántica técnica del backend vive en [`../system/`](../system/); esta capa no
-inventa estados ni capacidades que el backend no pueda demostrar.
+Este directorio contiene la especificación de diseño canónica y actualizada para el sistema de orquestación multiagente **ManyHands**.
 
-## Orden de lectura
+---
 
-1. [`agent-first-redesign.md`](agent-first-redesign.md): experiencia implementada.
-2. [`run-operative-model.md`](run-operative-model.md): entidades, eventos y
-   estados derivados.
-3. [`interaction-model.md`](interaction-model.md): comportamiento del workspace.
-4. [`system-components.md`](system-components.md): responsabilidades de producto
-   y backend.
-5. [`decomposer-composer-redesign.md`](decomposer-composer-redesign.md): ida y
-   vuelta del grafo.
-6. [`design-system.md`](design-system.md): lenguaje visual, accesibilidad y
-   movimiento.
-7. [`golden-fixtures.md`](golden-fixtures.md): demostraciones y regresiones.
+## ESTRUCTURA DE LA DOCUMENTACIÓN
 
-El contexto histórico y las decisiones ya retiradas se conservan aparte en
-[`evolution-and-rationale.md`](evolution-and-rationale.md); no es necesario para
-comprender la experiencia actual.
+| Documento | Título / Tema | Descripción |
+|---|---|---|
+| 📄 **[01-system-overview.md](01-system-overview.md)** | General Architecture & Product Model | Visión general del sistema, modelo local/single-user, matriz de confianza e invariantes. |
+| 📄 **[02-task-graph-and-contracts.md](02-task-graph-and-contracts.md)** | TaskGraph V3 & Canonical Relations | Modelo de grafo jerárquico, relaciones tipadas (`parentId`, `ArtifactRequirement`, `SeamBinding`, `ConflictConstraint`), reductor CAS e inmutabilidad profunda. |
+| 📄 **[03-adaptive-decomposer.md](03-adaptive-decomposer.md)** | Adaptive Granularity Decomposer Engine V3 | Planificación en 2 fases (Architect + Compiler), cálculo de complejidad intrínseca ($C_{task}$), critics de coalescencia y métricas de tesis ($GEI$). |
+| 📄 **[04-orchestration-and-scheduler.md](04-orchestration-and-scheduler.md)** | Event-Driven Scheduler & Execution Driver | Scheduler continuo por eventos, deferral de `ConflictConstraints`, `V2ExecutionDriver` y `recordQueue` atómico. |
+| 📄 **[05-execution-core-and-sandboxing.md](05-execution-core-and-sandboxing.md)** | Worktree Pool & Host Security | Pool de reciclaje de worktrees (`git reset --hard`), guard de traversal OS-aware (`ScopeChecker`), supervisión de procesos (`LiveProcessRegistry`) y saneamiento de entorno. |
+| 📄 **[06-persistence-durability-recovery.md](06-persistence-durability-recovery.md)** | Persistence, Durability & Recovery | Motor de escrituras atómicas con `fsync`, writer $O(1)$, compactación por generaciones, SQLite WAL y recuperador ante fallos de energía. |
+| 📄 **[07-monorepo-grounding.md](07-monorepo-grounding.md)** | High-Performance Ripgrep Monorepo Indexing | Indexación nativa con `rg --files`, caché incremental por Git HEAD SHA y extractor de firmas de exportación. |
+| 📄 **[08-cockpit-ui-interaction-model.md](08-cockpit-ui-interaction-model.md)** | Cockpit Visual UI & Decision Queue | Modelo de presentación del Cockpit web (`apps/web`), 5 estados de ciclo de vida de nodos, cola de decisiones non-blocking (`<DecisionQueueDrawer />`), visor de diffs e inspectores de seams. |
 
-El comportamiento productivo actual se verifica además en
-[`../development/architecture.md`](../development/architecture.md) y en los
-tests del reducer, layout, relaciones y viewport bajo `tests/run-model-*` y
-`tests/run-canvas-*`.
+---
 
-## Principios
+## PRINCIPIOS DE AUTORIDAD DE DOCUMENTACIÓN
 
-- Un solo workspace por run.
-- Grafo como centro durante planning y ejecución.
-- Evidencia como centro cuando existe un resultado.
-- Decisiones humanas locales y no bloqueantes para trabajo independiente.
-- Progressive disclosure en lugar de superficies técnicas separadas.
-- Estado derivado de eventos, nunca sobrescrito por componentes.
-- Movimiento para explicar causalidad, nunca para mover el viewport.
-- Jerarquía persistente y relaciones secundarias reveladas mediante lentes.
-- Decisiones resueltas en el inspector contextual, con una franja global para
-  recorrer pendientes.
+1. **`PRODUCT.md`**: Definición de usuarios y principios de producto.
+2. **`docs/DECISIONS.md`**: Decisiones de arquitectura target.
+3. **`docs/design/`**: Especificación técnica de componentes y comportamiento de usuario.
+4. **`docs/system/`**: Contratos técnicos de la API y esquemas de datos.
 
-## Superficies que dejan de ser primarias
-
-`Tareas`, `Planificación`, `Integración`, `Interfaces`, board, timeline, logs y
-diagnóstico avanzado no son destinos de navegación equivalentes. Siguen
-existiendo como detalles del nodo, relación o resultado cuando aportan contexto.
-
-## Relación con `/proto`
-
-Los fixtures usan el mismo reducer, selectores y componentes que el producto.
-Su sidebar enumera fixtures, no workspaces reales. Son herramientas de diseño y
-regresión visual; no certifican comportamiento backend.
+Toda implementación en el repositorio debe ser consistente con la especificación de estos documentos.

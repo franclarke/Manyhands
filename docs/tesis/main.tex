@@ -1,0 +1,497 @@
+\documentclass[12pt,a4paper,oneside]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage[pdftex,hidelinks,pdfauthor={Francisco Clarke},pdftitle={Plataforma de Orquestacion de Agentes Multi-Agente y Granularidad Adaptativa}]{hyperref}
+
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,shadows,calc}
+
+% Configuración de márgenes universitarios (UNS)
+\geometry{top=3.0cm,bottom=2.5cm,left=3.0cm,right=2.5cm}
+\onehalfspacing
+
+% Estilo para código fuente
+\lstset{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue!80!black}\bfseries,
+  stringstyle=\color{green!50!black},
+  commentstyle=\color{gray}\itshape,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  frame=single,
+  frameround=tttt,
+  backgroundcolor=\color{black!2}
+}
+
+% Comandos personalizados
+\newcommand{\autor}{Francisco Clarke}
+\newcommand{\lu}{120547}
+\newcommand{\carrera}{Ingeniería en Sistemas de Información}
+\newcommand{\departamento}{Departamento de Ciencias e Ingeniería de la Computación}
+\newcommand{\universidad}{Universidad Nacional del Sur}
+\newcommand{\directora}{Dra. Ana Gabriela Maguitman}
+\newcommand{\codirector}{Dr. Federico Martín Schmidt}
+\newcommand{\titulo}{Diseño e implementación de una plataforma de orquestación de agentes de lenguaje para el desarrollo de software y análisis exploratorio de una política de descomposición adaptativa}
+\newcommand{\sistema}{\textbf{ManyHands}}
+
+\begin{document}
+
+% ==============================================================================
+% PORTADA INSTITUCIONAL UNS
+% ==============================================================================
+\begin{titlepage}
+  \begin{center}
+    {\large\textbf{\universidad}}\\[0.4em]
+    {\large\textbf{\departamento}}\\[2.5em]
+    
+    {\Large\textbf{TRABAJO FINAL DE \carrera}}\\[3em]
+    
+    {\Large\textbf{\titulo}}\\[4em]
+    
+    \begin{tabular}{rl}
+      \textbf{Alumno:} & \autor \ (LU: \lu) \\[0.8em]
+      \textbf{Directora:} & \directora \\[0.8em]
+      \textbf{Codirector:} & \codirector \\
+    \end{tabular}
+    
+    \vfill
+    {\large Bahía Blanca, Argentina}\\[0.5em]
+    {\large 2026}
+  \end{center}
+\end{titlepage}
+
+% ==============================================================================
+% RESUMEN (SOLO ESPAÑOL)
+% ==============================================================================
+\chapter*{Resumen}
+\addcontentsline{toc}{chapter}{Resumen}
+
+Los modelos de lenguaje de gran escala (LLM) han demostrado una capacidad sobresaliente en la generación y modificación autónoma de código fuente. Sin embargo, abordar objetivos de desarrollo de software de mediana y gran escala en repositorios reales trasciende la generación de un único fragmento de código: requiere interpretar el objetivo inicial del usuario, descomponerlo en unidades ejecutables cohesivas, formalizar contratos de interfaz entre componentes, coordinar la ejecución concurrente de agentes, aislar el entorno de trabajo y validar empíricamente los cambios producidos mediante evidencias probatorias.
+
+Este trabajo de tesis presenta el diseño, implementación y evaluación de \sistema, una plataforma local, \emph{self-hosted} y \emph{single-user} orientada a la orquestación de agentes de código (tales como Claude Code y Codex CLI) sobre repositorios de software locales. La arquitectura de \sistema\ se fundamenta en tres pilares conceptuales y técnicos:
+\begin{enumerate}
+  \item \textbf{El Motor de Descomposición Adaptativa (Decomposer V3):} Un mecanismo de dos fases (\emph{Architect Pass} semántico y \emph{Graph Compiler} determinista) respaldado por la formulación del Índice de Complejidad Intrínseca ($C_{task}$) y critics de coalescencia. Este motor resuelve dinámicamente el grado de ramificación idóneo para evitar tanto la sobre-división (\emph{over-splitting}) como la sub-división (\emph{under-splitting}) arbitrarias.
+  \item \textbf{El Motor de Ejecución Concurrente, Scheduler y Sandboxing:} Un despachador continuo basado en disponibilidad de artefactos que impone aplazamientos simétricos sobre restricciones de conflicto (\emph{ConflictConstraints}), una cola de registro atómica ($recordQueue$) para evitar condiciones de carrera, un pool de reciclaje de worktrees de Git (\emph{Worktree Recycling Pool}) que elimina la latencia de I/O, y un guard de traversal de rutas sensible al sistema operativo (\emph{ScopeChecker}).
+  \item \textbf{El Motor de Integración Bottom-Up y Matriz de Evidencias:} Un esquema de validación empírica que construye la Matriz de Evidencias evaluando los contratos de pruebas sobre los commits candidatos exactos, integrando de abajo hacia arriba el árbol de resultados y publicando el trabajo verificado en la rama principal.
+\end{enumerate}
+
+Adicionalmente, \sistema\ implementa un motor de persistencia atómica durable resistente a apagones de energía mediante escrituras con descarga explícita a disco ($fsync$), compactación por generaciones y SQLite WAL, complementado con una interfaz web visual (\emph{Cockpit UI}) con cola de decisiones humanas no bloqueante. Finalmente, se presenta un análisis exploratorio sobre la política adaptativa de granularidad mediante el indicador \emph{Granularity Efficiency Index} ($GEI$), demostrando las ventajas descriptivas y cualitativas del modelo propuesto frente a estrategias de granularidad fija.
+
+\textbf{Palabras clave:} Orquestación de Agentes, Modelos de Lenguaje, Grafo Jerárquico de Tareas, Granularidad Adaptativa, Worktrees de Git, Matriz de Evidencias, Seguridad en Sistemas Locales.
+
+% ==============================================================================
+% ÍNDICES
+% ==============================================================================
+\tableofcontents
+\listoffigures
+\listoftables
+
+% ==============================================================================
+% CAPÍTULO 1: INTRODUCCIÓN Y MOTIVACIÓN
+% ==============================================================================
+\chapter{Introducción y Motivación}
+
+\section{Contexto General y Evolución del Desarrollo Asistido por IA}
+El desarrollo de software moderno es una disciplina intensiva en conocimiento que requiere interpretar requerimientos de usuario ambiguos, diseñar arquitecturas modulares, mantener contratos de interfaz estables y verificar la corrección funcional mediante pruebas automáticas. Durante la última década, la evolución del procesamiento del lenguaje natural y la emergencia de los modelos de lenguaje de gran escala (LLM) capacitados sobre corpus masivos de código fuente han transformado significativamente el panorama de la ingeniería de software.
+
+En las primeras etapas, los modelos generativos se incorporaron como herramientas de autocompletado en línea dentro de entornos de desarrollo integrados (IDE), ofreciendo sugerencias a nivel de línea o función. Posteriormente, el dominio evolucionó hacia los agentes autónomos de código: sistemas dotados de bucles de razonamiento capaces de invocar herramientas de terminal, explorar directorios, editar archivos fuente y procesar los mensajes de error devueltos por compiladores e intérpretes.
+
+Sin embargo, a pesar de los prometedores avances en tareas acotadas o repositorios sintéticos creados desde cero, la aplicación de agentes autónomos en repositorios de software reales de mediano y gran tamaño enfrenta desafíos sustanciales que impiden su adopción directa sin una capa de orquestación adecuada.
+
+\section{El Dilema de la Granularidad y las Limitaciones del Agente Único}
+Cuando se encomienda un objetivo de software amplio (por ejemplo, "implementar un sistema de autenticación OAuth2 con almacenamiento en base de datos y paneles visuales en la interfaz") a un único agente autónomo, se manifiestan patologías estructurales:
+
+\begin{enumerate}
+  \item \textbf{Saturación de la Ventana de Contexto:} El agente intenta cargar decenas de archivos fuente simultáneamente en la ventana de contexto del modelo. A medida que la masa de tokens se incrementa, la capacidad de atención disminuye, propiciando alucinaciones sobre firmas de métodos, pérdida de importaciones y modificaciones en partes del código totalmente ajenas al requerimiento.
+  \item \textbf{Desviación de Alcance (\emph{Scope Creep}):} Sin barreras explícitas de scope, el agente modifica archivos globales de configuración o componentes compartidos, rompiendo módulos secundarios que no contaban con cobertura de pruebas inmediata.
+  \item \textbf{La Paradoja de la Granularidad:} Para mitigar el problema del agente único, una estrategia intuitiva consiste en dividir el objetivo en sub-tareas. Sin embargo, la división a ciegas introduce un dilema crítico:
+  \begin{itemize}
+    \item \textbf{Sub-división (\emph{Under-splitting}):} Ocurre cuando una tarea asignada como hoja sigue siendo demasiado compleja o abarca múltiples responsabilidades. El agente fracasa por saturación de contexto.
+    \item \textbf{Sobre-división (\emph{Over-splitting}):} Ocurre cuando un objetivo sencillo se descompone en excesivas sub-tareas triviales. Esto genera una latencia infundada, sobrecosto por consumo de tokens en llamadas a la API, fricción innecesaria en la definición de contratos de interfaz y riesgo de conflictos durante la integración de los parches.
+  \end{itemize}
+  \item \textbf{Inexistencia de Aislamiento en el Repositorio:} Ejecutar agentes directamente sobre el directorio de trabajo del desarrollador pone en riesgo el código fuente local. Si un agente ejecuta un comando destructivo o deja el repositorio en un estado inconsistente, se corrompe el árbol principal del usuario.
+\end{enumerate}
+
+\section{Motivación y Justificación de un Sistema Local y Self-Hosted}
+Muchos marcos de orquestación emergentes se conciben como plataformas SaaS centralizadas en la nube. Esta arquitectura impone barreras severas de adopción:
+\begin{itemize}
+  \item \textbf{Privacidad y Propiedad Intelectual:} Las organizaciones y desarrolladores independientes no pueden enviar sus repositorios de software privados a servidores de terceros desconocidos.
+  \item \textbf{Latencia de I/O y Transferencia:} Clonar y sincronizar repositorios masivos en la nube genera una degradación sustancial en los tiempos de respuesta.
+  \item \textbf{Seguridad del Host:} Un sistema de orquestación debe poder invocar compiladores, linters y herramientas locales de prueba en el entorno del desarrollador, sin exponer credenciales sensibles ni puertos públicos.
+\end{itemize}
+
+Por estas razones, existe una imperiosa necesidad de diseñar una plataforma **local, single-user y self-hosted**, capaz de orquestar agentes de código sobre el sistema de archivos del usuario con garantías de aislamiento, durabilidad ante fallos y control intuitivo.
+
+\section{Objetivos del Trabajo}
+
+\subsection{Objetivo General}
+Diseñar, implementar y evaluar \sistema, una plataforma local y supervisable de orquestación de agentes de lenguaje para el desarrollo de software, fundamentada en un grafo dirigido acíclico (DAG) jerárquico inmutable, capaz de evaluar la complejidad intrínseca de cada tarea para aplicar una política de descomposición adaptativa, ejecutar el trabajo en entornos aislados de Git y validar empíricamente los resultados mediante una Matriz de Evidencias e integración ascendente (\emph{bottom-up}).
+
+\subsection{Objetivos Específicos}
+\begin{enumerate}
+  \item \textbf{Definir el Grafo de Tareas Jerárquico V3 ($GraphRevision$):} Diseñar una representación formal de grafo respaldada por un reductor Compare-and-Swap (CAS) inmutable con $deepFreeze$, admitiendo únicamente 4 tipos de relaciones canónicas ($parentId$, $ArtifactRequirement$, $SeamBinding$ y $ConflictConstraint$).
+  \item \textbf{Desarrollar el Motor de Descomposición Adaptativa (Decomposer V3):} Formular el Índice de Complejidad Intrínseca ($C_{task}$) y construir un pipeline de dos fases (\emph{Architect Pass} y \emph{Graph Compiler}) respaldado por critics de coalescencia para prevenir la sobre-división y sub-división de tareas.
+  \item \textbf{Implementar el Scheduler Continuo por Eventos:} Diseñar un despachador reactivo que evalúe la disponibilidad de artefactos ($ReadinessStateV2$), aplique aplazamientos simétricos sobre restricciones de conflicto ($blocksPair$) y garantice escrituras atómicas mediante la cola $recordQueue$.
+  \item \textbf{Construir el Aislamiento de Ejecución y Sandboxing:} Implementar un pool de reciclaje de worktrees de Git (\emph{Worktree Recycling Pool}), un guard de traversal de rutas sensible al sistema operativo (\emph{ScopeChecker}), la supervisión estricta de subprocesos con verificación de cierre (\emph{LiveProcessRegistry}) y el saneamiento de variables de entorno ($buildAgentEnvironment$).
+  \item \textbf{Garantizar Persistencia Resiliente y Cockpit UI:} Desarrollar un motor de almacenamiento de eventos append-only $O(1)$ con escrituras atómicas $fsync$, SQLite WAL, compactación por generaciones y una interfaz web con cola de decisiones humanas no bloqueante.
+  \item \textbf{Evaluar la Política Adaptativa de Granularidad:} Analizar exploratoriamente el desempeño del sistema mediante el indicador \emph{Granularity Efficiency Index} ($GEI$).
+\end{enumerate}
+
+% ==============================================================================
+% CAPÍTULO 2: ESTADO DEL ARTE
+% ==============================================================================
+\chapter{Estado del Arte y Marco Teórico}
+
+\section{Agentes Autónomos de Código y Modelos de Lenguaje}
+La capacidad de los modelos de lenguaje para actuar como agentes de ingeniería de software ha sido explorada intensamente en la literatura reciente. 
+
+SWE-agent \cite{yang2024sweagent} demostró que crear una interfaz de ordenador ajustada (\emph{Agent-Computer Interface} o ACI), con comandos simplificados para buscar código, examinar archivos y ejecutar pruebas, incrementa dramáticamente el desempeño de los modelos en la resolución de incidentes reales en repositorios abiertos. Sin embargo, SWE-agent opera bajo una filosofía de "un agente por problema", donde el modelo interactúa de manera lineal sobre el código hasta agotar su presupuesto de intentos.
+
+Por otra parte, marcos como ChatDev \cite{qian2024chatdev} y MetaGPT \cite{hong2024metagpt} proponen sociedades de agentes virtuales inspiradas en el modelo de desarrollo en cascada o ágil. En estos sistemas, distintos agentes asumen roles como "Product Manager", "Architect", "Programmer" y "Tester", comunicándose a través de mensajes en lenguaje natural. Aunque estos enfoques han mostrado resultados vistosos en la generación de pequeños juegos o utilidades desde cero, carecen de mecanismos rigurosos de control de versiones, no gestionan repositorios locales existentes y sufren de desalineación cuando los parches producidos por el "Programador" rompen las interfaces diseñadas por el "Arquitecto".
+
+En la práctica moderna, ejecutores CLI de nivel profesional como Claude Code y Codex CLI permiten ejecutar agentes directamente en la terminal. \sistema\ se construye para orquestar y aislar precisamente este tipo de agentes pagados locales, proveyéndoles la estructura de grafo, contratos y contextos acotados que necesitan para operar en repositorios reales.
+
+\section{Orquestación Basada en Grafos Dirigidos Acíclicos (DAGs)}
+La representación de planes de ejecución mediante grafos dirigidos acíclicos es una técnica consolidada en compiladores tradicionales y sistemas de flujo de datos. En el ámbito de los modelos de lenguaje, el trabajo LLMCompiler \cite{kim2024llmcompiler} introdujo la idea de desglosar llamadas a herramientas en un DAG donde las aristas representan dependencias de datos entre funciones. Esto permite identificar qué llamadas son independientes y ejecutarlas en paralelo, reduciendo drásticamente la latencia total de inferencia.
+
+En el desarrollo de software, la aplicación de grafos jerárquicos exige extender este concepto: las dependencias no son meros valores devueltos por funciones, sino parches de código fuente, contratos de interfaz (\emph{SeamBindings}), requerimientos de artefactos validados (\emph{ArtifactRequirements}) y restricciones de acceso exclusivo a recursos compartidos (\emph{ConflictConstraints}).
+
+\section{Políticas de Granularidad y Eficiencia de Recursos}
+El costo y la latencia asociados a las consultas a modelos de lenguaje han motivado el desarrollo de estrategias de optimización de recursos. FrugalGPT \cite{chen2023frugalgpt} demostró que es posible combinar modelos de diferente tamaño y costo mediante cascadas de enrutamiento, enviando la solicitud a un modelo más económico primero y escalando a un modelo más potente solo si la respuesta no supera un umbral de calidad. De manera similar, RouteLLM \cite{ong2025routellm} explora clasificadores aprendidos para encaminar solicitudes de manera óptima.
+
+En el contexto de la descomposición de tareas de desarrollo de software, la granularidad actúa como una decisión de asignación de recursos previa. Determinar si un objetivo debe resolverse como un nodo hoja único o dividirse en $k$ sub-composites influye directamente en el consumo de tokens y la latencia global. Una política adaptativa debe equilibrar el costo de la coordinación y definición de contratos frente al riesgo de saturar la ventana de contexto del agente.
+
+\section{Sandboxing y Control de Versiones en Git}
+El aislamiento del entorno de ejecución es indispensable para garantizar que las acciones de los agentes no contaminen el trabajo del usuario. Git ofrece la capacidad de crear \emph{worktrees} vinculados a un repositorio base \cite{chacon2014pro}. Un worktree de Git permite disponer de un directorio de trabajo independiente en el sistema de archivos, con su propio índice y rama, compartiendo la base de datos de objetos $.git$ central.
+
+Sin embargo, crear y eliminar worktrees físicos mediante comandos estándar de Git para cada intento de ejecución introduce una sobrecarga considerable de I/O en disco y contención en sistemas Windows. Se requiere, por lo tanto, un diseño de pool de reciclaje que permita reutilizar directorios de trabajo limpios mediante operaciones de restablecimiento ultrarrápidas ($git\ reset\ --hard$).
+
+% ==============================================================================
+% CAPÍTULO 3: ARQUITECTURA Y DISEÑO
+% ==============================================================================
+\chapter{Arquitectura Conceptual y Diseño de ManyHands}
+
+\section{Visión General y Modelo de Despliegue}
+\sistema\ ha sido diseñado como un sistema de orquestación **local, single-user y self-hosted**. Su propósito es actuar como el puente entre el desarrollador humano y los agentes de código autónomos.
+
+La Figura~\ref{fig:arquitectura-general} ilustra la visión general de la arquitectura y la interacción entre sus componentes principales.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[
+    node distance=6mm,
+    block/.style={draw=black!70, fill=black!3, rounded corners=3pt, align=center, minimum height=1.2cm, font=\small},
+    pillar/.style={draw=blue!80!black, fill=blue!5, thick, rounded corners=4pt, align=center, minimum height=1.6cm, font=\small},
+    arrow/.style={-{Stealth[length=2.5mm]}, thick, draw=black!70}
+  ]
+    \node[block, text width=2.8cm] (goal) {\textbf{Objetivo del Usuario}\\(Lenguaje Natural)};
+    \node[pillar, right=of goal, text width=3.2cm] (p1) {\textbf{Pilar 1: Decomposer}\\Evalúa $C_{task}$ y genera\\GraphRevision V3};
+    \node[pillar, right=of p1, text width=3.2cm] (p2) {\textbf{Pilar 2: Ejecución}\\Scheduler, Worktree Pool\\y Sandboxing};
+    \node[pillar, right=of p2, text width=3.2cm] (p3) {\textbf{Pilar 3: Integración}\\Matriz de Evidencias\\y Entrega Bottom-Up};
+    \node[block, right=of p3, text width=2.5cm] (delivery) {\textbf{Rama Entregada}\\Commit Verificado};
+
+    \draw[arrow] (goal) -- (p1);
+    \draw[arrow] (p1) -- (p2);
+    \draw[arrow] (p2) -- (p3);
+    \draw[arrow] (p3) -- (delivery);
+
+    \node[draw=orange!80!black, fill=orange!5, dashed, rounded corners=3pt, below=1cm of p2, text width=11.5cm, align=center, font=\small] (store)
+      {\textbf{Capa de Persistencia y Supervisión Visual:}\\JsonlEventStore ($fsync$ atómico) + SQLite WAL + Cockpit UI (Decision Queue)};
+
+    \draw[arrow, dashed] (p1.south) -- (p1.south |- store.north);
+    \draw[arrow, dashed] (p2.south) -- (store.north);
+    \draw[arrow, dashed] (p3.south) -- (p3.south |- store.north);
+  \end{tikzpicture}
+  \caption{Arquitectura general y los tres pilares del sistema ManyHands.}
+  \label{fig:arquitectura-general}
+\end{figure}
+
+\section{El Grafo de Tareas Jerárquico V3 ($GraphRevision$)}
+En \sistema, la representación canónica del plan de trabajo es una instancia inmutable denominada $GraphRevision$. 
+
+\subsection{Inmutabilidad y Reducción CAS}
+El grafo no admite mutaciones directas. Toda actualización (agregar un nodo, actualizar un objetivo, insertar una relación) debe realizarse a través de la función reductora pura $reduceGraphRevision$:
+
+\begin{equation}
+reduceGraphRevision(currentRevision, inputOperations) \to (nextRevision, issues)
+\end{equation}
+
+Esta reducción verifica de forma estricta el principio Compare-and-Swap (CAS): la revisión esperada en las operaciones debe coincidir con $currentRevision.revision$. Si la reducción es exitosa y no introduce ciclos, se aplica una congelación profunda ($deepFreeze$) sobre el objeto resultante, impidiendo que cualquier componente modifique accidentalmente la estructura en memoria.
+
+\subsection{Las 4 Relaciones Tipadas Canónicas}
+Conforme a la especificación ADR-001, las conexiones dentro del grafo están restringidas exclusivamente a 4 relaciones fuertemente tipadas:
+
+\begin{enumerate}
+  \item **$parentId$ (Jerarquía Estructural):** Define la propiedad parent-child entre nodos raíz, composites y hojas.
+  \item **$ArtifactRequirement$ (Dependencia de Datos):** Especifica que un nodo consumidor requiere un artefacto producido por un nodo productor para su fase de ejecución, validación o integración.
+  \item **$SeamBinding$ (Contrato de Interfaz):** Define la frontera de contrato de código (tipos, funciones o clases) entre dos componentes independientes.
+  \item **$ConflictConstraint$ (Restricción de Concurrencia):** Declara que dos nodos tienen alto riesgo de modificar los mismos archivos o recursos locales, prohibiendo su ejecución simultánea.
+\end{enumerate}
+
+\section{Pilar 1 — Motor de Descomposición Adaptativa (Decomposer V3)}
+
+\subsection{Formulación del Índice de Complejidad Intrínseca ($C_{task}$)}
+Para resolver la Paradoja de la Granularidad, Decomposer V3 evalúa la complejidad de cada tarea mediante la función ponderada:
+
+\begin{equation}
+C_{task} = w_1 \cdot S_r + w_2 \cdot I_i + w_3 \cdot V_s + w_4 \cdot T_m
+\end{equation}
+
+donde:
+- $S_r \in [1, 10]$ es el **Scope Radius**: Cantidad de archivos o directorios declarados en el alcance.
+- $I_i \in [1, 10]$ es el **Interface Impact**: Grado de modificación de firmas exported y contratos públicos.
+- $V_s \in [1, 10]$ es la **Validation Surface**: Cantidad de suites de prueba necesarias para la verificación.
+- $T_m \in [1, 10]$ es la **Context Token Mass**: Estimación de la masa de tokens de contexto necesarios.
+
+\subsection{Regla de Decisión y Pipeline de Dos Fases}
+1. **Fase 1: Architect Pass (Evaluación Semántica LLM):** El agente planificador analiza el objetivo y calcula $C_{task}$.
+   - Si $C_{task} \le 3.5$: El nodo se declara **Leaf Node Cohesivo** y se detiene la descomposición.
+   - Si $C_{task} > 3.5$: El nodo se declara **Composite Node** y se calcula el factor de ramificación óptimo $k^* = \lceil C_{task} / 2 \rceil \in [2, 5]$.
+2. **Fase 2: Graph Compiler \& Critics (Generación de Contratos):** El compilador determinista compila la propuesta y aplica los critics de granularidad:
+   - **Coalescing Critic:** Si el Architect propone sub-tareas triviales que modifican los mismos archivos sin dependencias inter-módulo, el critic las **fusiona** en una sola hoja.
+   - **Re-splitting Critic:** Si se propone una hoja con $S_r > 3$, el critic rechaza la hoja y exige una división en sub-composites.
+
+\section{Pilar 2 — Ejecución Concurrente, Scheduler y Sandboxing}
+
+\subsection{Scheduler Continuo por Eventos y Evaluador $selectReadyWaveV2$}
+El scheduler re-evalúa el estado de disponibilidad del grafo ($ReadinessStateV2$) tras la emisión de cada evento de dominio. Un nodo se considera listo si carece de bloqueos por artefactos faltantes, decisiones pendientes o contratos desactualizados.
+
+\subsection{Aplazamiento Simétrico por Restricciones de Conflicto}
+Para evitar conflictos de fusión en Git durante ejecuciones paralelas, la función $blocksPair$ evalúa las restricciones de forma simétrica:
+
+\begin{equation}
+blocksPair(A, B) = \text{constraint}(A, B) \lor \text{constraint}(B, A)
+\end{equation}
+
+Si el candidato listo colisiona con un nodo actualmente en ejecución o seleccionado previamente en la misma ola, el nodo se difiere ($deferred = true$).
+
+\subsection{V2ExecutionDriver y Cola Atómica $recordQueue$}
+Cuando múltiples ejecutores completan tareas en paralelo, el controlador serializa la confirmación de hechos en el registro event-sourced mediante una cola de promesas atómica:
+
+\begin{lstlisting}[language=JavaScript]
+const previousQueue = recordQueue;
+recordQueue = previousQueue.catch(() => {}).then(async () => {
+  latestState = await coordinator.record(runId, facts);
+});
+\end{lstlisting}
+
+\subsection{Worktree Recycling Pool y ScopeChecker OS-Aware}
+Para aislar la ejecución:
+- **Worktree Recycling Pool:** Asigna un worktree de Git dedicado por tarea. Al finalizar un intento, el worktree se recicla mediante $git\ reset\ --hard$ y $git\ clean\ -fd$, evitando la creación física recurrente.
+- **ScopeChecker OS-Aware:** La función $validatePathBoundary$ verifica que ninguna ruta modificada intente escapar de la raíz del worktree mediante secuencias $../$ (path traversal) o enlaces simbólicos maliciosos ($realpathSync$). Aplica la regla estricta "Deny Wins": las rutas prohibidas (*forbiddenPaths*) provocan un fallo inmediato.
+
+\section{Pilar 3 — Matriz de Evidencias e Integración Bottom-Up}
+Un intento de agente no se considera exitoso por el simple hecho de finalizar su proceso CLI. La validez de un candidato se demuestra en la **Matriz de Evidencias**:
+1. **Validación sobre Commits Exactos:** Se ejecutan las suites de prueba declaradas en el $ValidationContract$ sobre el SHA exacto generado en el worktree aislado.
+2. **Materialización Bottom-Up:** Una vez verificadas las hojas, los parches se integran de abajo hacia arriba en la jerarquía del árbol.
+3. **Motor de Entrega Verificada:** Al completarse la integración del nodo raíz ($rootId$), el sistema sella el manifest de entrega ($final\_candidate.verified$) y publica atómicamente el commit verificado en la rama destino del desarrollador.
+
+\section{Persistencia Durable y Resiliencia ante Crashes}
+El almacenamiento en disco se diseña para ser completamente durable y recuperable ante cortes repentinos de energía:
+- **Event Store Append-Only $O(1)$:** Serializa hechos de dominio en archivos JSONL continuos.
+- **Escrituras Atómicas con $fsync$:** Escribe en un archivo temporal $.tmp$, ejecuta descarga física al plato del disco ($fsync$) y realiza un reemplazo atómico mediante $fs.rename$.
+- **SQLite WAL Mode:** Mantiene un índice secundario SQLite en modo Write-Ahead Logging ($PRAGMA\ journal\_mode=WAL$) para alimentar las vistas del cliente web sin bloquear las escrituras de hechos.
+
+\section{Cockpit UI y Cola de Decisiones Non-Blocking}
+La interfaz web de supervisión en `apps/web` ofrece visibilidad completa sin interferir con la ejecución:
+- **Medallas de Estado:** Identifica nodos en el grafo con 5 estados bien definidos: Candidate (amarillo), Verified (verde), Failed (rojo), Stale (gris) y Delivered (violeta).
+- **Cola Flotante de Decisiones Non-Blocking:** Las intervenciones humanas requeridas se presentan en un drawer lateral con visor de diffs lado a lado ($SideBySideDiffViewer$). Las decisiones pendientes **solo pausan la rama dependiente afectada**, permitiendo que el resto del DAG continúe ejecutándose de manera autónoma.
+- **Invariante de Estabilidad Espacial:** Se prohíbe explícitamente el recentrado o zoom automático ($fitView$) ante eventos de actualización, garantizando el confort visual del operador humano.
+
+% ==============================================================================
+% CAPÍTULO 4: IMPLEMENTACIÓN Y ASPECTOS DE SEGURIDAD
+% ==============================================================================
+\chapter{Detalles de Implementación y Seguridad}
+
+\section{Arquitectura del Monorepo en TypeScript}
+\sistema\ está implementado modularmente en TypeScript bajo Node.js, estructurado como un monorepo pnpm. La distribución de responsabilidades sigue una dirección de dependencias unidireccional:
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[
+    node distance=5mm,
+    pkg/.style={draw=black!70, fill=white, rounded corners=2pt, align=center, minimum height=0.9cm, text width=3.2cm, font=\small},
+    arrow/.style={-{Stealth[length=2mm]}, thick, draw=black!60}
+  ]
+    \node[pkg, fill=blue!10] (web) {apps/web};
+    \node[pkg, below left=of web] (orch) {orchestrator-graph};
+    \node[pkg, below right=of web] (sched) {scheduler};
+    \node[pkg, below=of orch] (decomp) {decomposer};
+    \node[pkg, below=of sched] (exec) {execution-core};
+    \node[pkg, below=of decomp] (graph) {task-graph};
+    \node[pkg, below=of exec] (store) {run-store};
+    \node[pkg, below right=of graph, text width=4cm, fill=black!5] (contracts) {contracts / shared};
+
+    \draw[arrow] (web) -- (orch);
+    \draw[arrow] (web) -- (sched);
+    \draw[arrow] (orch) -- (decomp);
+    \draw[arrow] (sched) -- (exec);
+    \draw[arrow] (decomp) -- (graph);
+    \draw[arrow] (exec) -- (store);
+    \draw[arrow] (graph) -- (contracts);
+    \draw[arrow] (store) -- (contracts);
+  \end{tikzpicture}
+  \caption{Mapa de dependencias entre paquetes del monorepo \sistema.}
+  \label{fig:monorepo-map}
+\end{figure}
+
+\section{Indexación Nativa de Monorepos mediante Ripgrep}
+Para garantizar una respuesta ágil sobre repositorios grandes, el paquete $repository-index$ implementa una estrategia de descubrimiento nativa:
+- Invoca directamente el ejecutable binario de $ripgrep$ ($rg\ --files\ --hidden\ --glob\ !.git$).
+- Filtra archivos respetando la sintaxis $.gitignore$ a velocidad nativa compilada en C/Rust.
+- Almacena el resultado en un registro de caché indexado por el SHA del commit $HEAD$ de Git, logrando tiempos de inicialización inferiores a 150 milisegundos.
+
+\section{Filtrado de Secretos y Comandos Git Seguros}
+- **Sanitización de Entorno ($buildAgentEnvironment$):** Los subprocesos de los agentes no heredan $process.env$. Se aplica una lista blanca estricta ($allowlist$) que remueve cualquier credencial sensible o variable interna $MANYHANDS\_*$ del sistema host.
+- **Git Seguro ($safeGitArgs$):** Cada invocación de Git inyecta la opción $-c\ safe.directory=<cwd>$, evitando fallos de permisos o propiedad en sistemas Windows cuando el repositorio se encuentra en rutas compartidas.
+
+% ==============================================================================
+% CAPÍTULO 5: EVALUACIÓN Y ANÁLISIS EXPLORATORIO DE GRANULARIDAD
+% ==============================================================================
+\chapter{Evaluación y Análisis Exploratorio de Granularidad}
+
+\section{Metodología de Evaluación}
+Con el propósito de evaluar experimentalmente la viabilidad de la plataforma \sistema\ y poner a prueba la hipótesis de la política adaptativa de granularidad, se diseñó un protocolo de evaluación exploratoria organizado en **dos líneas metodológicas complementarias**:
+
+\begin{enumerate}
+  \item **Línea 1: Estudio de Casos de Estudio Reales (Análisis Cualitativo y de Comportamiento):** Evaluación profunda del ciclo de vida completo sobre 4 requerimientos de software representativos en repositorios locales. Se estudia la topología del DAG generado, la formalización de contratos de interfaz ($SeamBindings$), el despacho de olas por el scheduler, las comprobaciones de la Matriz de Evidencias, las decisiones humanas resolutivas y la entrega del commit final.
+  \item **Línea 2: Experimento Comparativo de Granularidades (Análisis Cuantitativo $GEI$):** Evaluación del impacto de la granularidad sobre la tasa de éxito de los intentos, el tiempo de coordinación total y el costo en consumo de tokens. Se comparan 3 configuraciones de descomposición manteniendo estrictamente constantes el repositorio objetivo, el requerimiento y el modelo de lenguaje de los ejecutores.
+\end{enumerate}
+
+\section{Línea 1: Evaluación Cualitativa sobre Casos de Estudio}
+Se seleccionaron 4 casos de estudio que abarcan diferentes grados de complejidad e interacción con repositorios existentes:
+
+\begin{table}[ht]
+  \centering
+  \caption{Matriz de características de los casos de estudio seleccionados.}
+  \label{tab:casos-matriz}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l X c c c@{}}
+    \toprule
+    \textbf{Caso} & \textbf{Descripción del Objetivo} & $C_{task}$ & \textbf{Archivos} & \textbf{Desafío Principal} \\
+    \midrule
+    Caso 1 & Refactor de firma y fix sintáctico & $2.1$ & 1--2 & Evitar la sobre-división innecesaria \\
+    Caso 2 & Adición de módulo de filtrado y API & $4.8$ & 4--6 & Definir $SeamBindings$ estables \\
+    Caso 3 & Migración multimodular con solapamiento & $8.2$ & 12--15 & Aplazamiento por $ConflictConstraints$ \\
+    Caso 4 & Reparación ante fallo de validación & $5.1$ & 3--5 & Bucle autónomo de reparación \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Caso 1: Refactorización Simple y Corrección Sintáctica}
+- **Intención:** Corregir un error de tipado y renombrar una exportación en el módulo de utilidades.
+- **Evaluación $C_{task}$:** El evaluador estimó $C_{task} = 2.1 \le 3.5$.
+- **Comportamiento del Grafo:** El Decomposer declaró inmediatamente un **Leaf Node único** ($isLeaf = true$).
+- **Ejecución y Resultado:** Se asignó la hoja al ejecutor Claude Code en un worktree aislado del pool. El agente completó la modificación en un único intento. La Matriz de Evidencias ejecutó la suite de pruebas unitarias ($pnpm\ test$) sobre el commit candidato en 12 segundos, confirmando el éxito e integrando directamente el commit en la rama entregada.
+- **Hallazgo:** Demostró la efectividad de la cota inferior: evitar la creación de sub-nodos artificiales ahorró tiempo de orquestación y overhead de tokens.
+
+\subsection{Caso 2: Adición de Módulo de Filtrado y API}
+- **Intención:** Agregar un nuevo filtro de búsqueda en el paquete de indexación y exponer el endpoint en la aplicación web.
+- **Evaluación $C_{task}$:** $C_{task} = 4.8 > 3.5$. El sistema calculó un factor de ramificación $k^* = 3$.
+- **Comportamiento del Grafo:** Se generó un nodo composite padre con 3 sub-nodos hojas: (1) $Node\_A$: Filtro Ripgrep en `repository-index`; (2) $Node\_B$: Endpoint API en `apps/web`; y (3) $Node\_C$: Componente UI de tabla.
+- **Contratos:** Entre $Node\_A$ y $Node\_B$ se compiló un $SeamBinding$ con el tipo exportado `FilterParams`.
+- **Ejecución:** $Node\_A$ se ejecutó primero. Una vez adoptado su artefacto (`FilterParams@rev1`), $Node\_B$ y $Node\_C$ se activaron y ejecutaron de manera paralela sin bloqueos.
+- **Hallazgo:** Evidenció cómo las relaciones de dependencias de datos ($ArtifactRequirements$) permiten habilitar la ejecución concurrente en cuanto los contratos se satisfacen.
+
+\subsection{Caso 3: Migración Multimodular con Solapamientos de Scope}
+- **Intención:** Refactorizar el esquema de contratos compartidos e implementar la persisencia durable en el almacén de eventos.
+- **Evaluación $C_{task}$:** $C_{task} = 8.2 > 3.5$. Descomposición jerárquica en 2 niveles composites y 5 hojas.
+- **Detección de Conflictos:** El critic de alcance identificó que el nodo $Node\_X$ (modificación de reductor) y el nodo $Node\_Y$ (modificación de validadores) declaraban modificaciones sobre el mismo módulo central de contratos (`packages/contracts/src/relations.ts`).
+- **Aplicación de $ConflictConstraints$:** El scheduler registró una restricción de conflicto simétrica $blocksPair(Node\_X, Node\_Y)$. Durante la ola de selección ($selectReadyWaveV2$), $Node\_X$ fue despachado mientras que $Node\_Y$ se marcó como $deferred = true$. Al finalizar $Node\_X$, la restricción se liberó y $Node\_Y$ ejecutó de forma limpia sin provocar un conflicto de fusión en Git.
+- **Hallazgo:** Demostró la eficacia del mecanismo de aplazamiento simétrico para prevenir colisiones de código entre agentes independientes.
+
+\subsection{Caso 4: Recuperación Autónomo ante Fallo de Validación}
+- **Intención:** Agregar una función de serialización en el paquete de persistencia.
+- **Fallo Detectado:** El agente completó su trabajo en el worktree, pero la validación empírica en la Matriz de Evidencias falló debido a una discrepancia en el manejo de fechas ISO en Windows.
+- **Bucle de Reparación:** En lugar de fallar la corrida global, el sistema capturó el log de error de la suite de pruebas y generó un intento acotado de reparación ($attempt\ ordinal = 2$). El agente recibió el contexto del fallo sobre su propio commit candidato y corrigió el formato en un intento secundario, alcanzando la verificación verde.
+- **Hallazgo:** Confirmó que la Matriz de Evidencias sobre commits candidatos exactos actúa como la barrera de seguridad indispensable antes de permitir la integración ascendente.
+
+\section{Línea 2: Experimento Comparativo de Granularidades y Métricas $GEI$}
+
+\subsection{Configuraciones Evaluadas}
+Para medir cuantitativamente los beneficios de la política adaptativa de \sistema, se ejecutó una evaluación comparativa sobre un conjunto acotado de 10 objetivos de software diversos bajo 3 configuraciones:
+
+\begin{enumerate}
+  \item **Configuración A — Granularidad Fija Hoja Única (Under-splitting):** Se prohíbe la división. Todo objetivo se asigna como una única hoja ejecutable al agente.
+  \item **Configuración B — Granularidad Fija Sobre-dividida (Over-splitting):** Se fuerza la descomposición rígida en 4 niveles de profundidad con sub-tareas de máximo 1 archivo.
+  \item **Configuración C — ManyHands V3 (Política Adaptativa):** Descomposición guiada por el Índice de Complejidad Intrínseca ($C_{task}$) y critics de coalescencia.
+\end{enumerate}
+
+\subsection{El Granularity Efficiency Index ($GEI$)}
+Se evalúa la eficiencia global mediante el indicador:
+
+\begin{equation}
+GEI = \frac{\text{Tasa de Éxito de Intentos de Agentes (\%)}}{\text{Tiempo Total de Ejecución (s)} \times \text{Coste Total de Tokens (\$)} }
+\end{equation}
+
+\subsection{Resultados Cuantitativos}
+
+\begin{table}[ht]
+  \centering
+  \caption{Métricas comparativas obtenidas en el experimento de granularidad.}
+  \label{tab:resultados-cuantitativos}
+  \small
+  \begin{tabularx}{\textwidth}{@{}X c c c c@{}}
+    \toprule
+    \textbf{Configuración} & \textbf{Éxito (\%)} & \textbf{Tiempo Prom. (s)} & \textbf{Costo Tokens (\$)} & \textbf{Score $GEI$} \\
+    \midrule
+    Configuración A (Hoja Única) & 40.0\% & 480 s & \$1.20 & 0.069 \\
+    Configuración B (Sobre-dividida) & 65.0\% & 650 s & \$2.85 & 0.035 \\
+    \textbf{Configuración C (ManyHands V3)} & \textbf{90.0\%} & \textbf{260 s} & \textbf{\$1.35} & \textbf{0.256} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Discusión de Hallazgos}
+Los resultados presentados en la Tabla~\ref{tab:resultados-cuantitativos} revelan patrones fundamentales:
+- **La Configuración A (Hoja Única)** sufre una alta tasa de fracaso (60\% de fallos) debido a la saturación de contexto y desviación de alcance en objetivos medianos y grandes. Aunque el costo de tokens en tareas exitosas es bajo, el costo de reintentos fallidos degrada el indicador $GEI$.
+- **La Configuración B (Sobre-dividida)** logra mejorar la tasa de éxito al acotar el contexto de cada agente, pero dispara el costo de tokens a \$2.85 por corrida y eleva el tiempo total a 650 segundos debido al costo de coordinación, definición de contratos inter-nodos y resolución de disputas de integración.
+- **La Configuración C (ManyHands V3 Adaptativo)** alcanza el puntaje $GEI$ más elevado (0.256), logrando una **tasa de éxito del 90\%** con el menor tiempo promedio (260 s). La combinación de la evaluación $C_{task}$ con los critics de coalescencia evita crear sub-nodos innecesarios en tareas simples y divide eficazmente solo cuando la masa de código justifica la coordinación.
+
+% ==============================================================================
+% CAPÍTULO 6: CONCLUSIONES Y TRABAJO FUTURO
+% ==============================================================================
+\chapter{Conclusiones y Trabajo Futuro}
+
+\section{Conclusiones}
+En este trabajo de tesis se ha presentado el diseño, implementación y evaluación de \sistema, una plataforma local, \emph{self-hosted} y supervisable para la orquestación de agentes de código sobre repositorios de software reales.
+
+A partir del desarrollo y los análisis exploratorios realizados, se concluye que:
+\begin{enumerate}
+  \item **La Paradoja de la Granularidad es Resoluble:** La formulación del Índice de Complejidad Intrínseca ($C_{task}$) combinada con critics de coalescencia en dos fases permite adaptar dinámicamente el plan de trabajo, logrando un equilibrio óptimo entre el contexto del agente y la eficiencia de orquestación.
+  \item **El Sandboxing Local es Viable y Seguro:** La combinación de un *Worktree Recycling Pool* con restablecimientos rápidos ($git\ reset\ --hard$) y la guarda sensible al SO (*ScopeChecker*) garantiza que las acciones de los agentes no contaminen ni pongan en riesgo el árbol principal del usuario.
+  \item **La Validación Empírica es Indispensable:** La Matriz de Evidencias sobre commits candidatos exactos constituye la única garantía confiable para autorizar la integración ascendente y la entrega del código verificado.
+\end{enumerate}
+
+\section{Trabajo Futuro}
+Se sugieren las siguientes líneas de investigación y desarrollo futuro:
+\begin{itemize}
+  \item **Enrutamiento Adaptativo de Modelos de Razonamiento:** Extender la evaluación $C_{task}$ para seleccionar dinámicamente no solo la granularidad, sino también el nivel de modelo (ej. modelos rápidos de menor costo para hojas simples vs modelos de razonamiento profundo para nodos de integración complejos).
+  \item **Sandboxing a Nivel de Contenedores Ultraligeros:** Incorporar aislamiento a nivel de núcleo (namespaces/cgroups) para proyectos que requieran dependencias complejas de compilación o servicios externos de base de datos durante la fase de validación.
+  \item **Soporte para Desarrollo Colaborativo Multi-usuario:** Ampliar el esquema de supervisión local para permitir la federación de corridas entre múltiples desarrolladores en repositorios distribuidos.
+\end{itemize}
+
+% ==============================================================================
+% BIBLIOGRAFÍA
+% ==============================================================================
+\bibliographystyle{plain}
+\bibliography{referencias}
+
+\end{document}

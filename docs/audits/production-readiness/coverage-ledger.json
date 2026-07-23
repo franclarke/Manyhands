@@ -1,0 +1,450 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "auditDate": "2026-07-21T23:50:31Z",
+  "auditor": "Principal Engineering Review Board (Orchestrator)",
+  "totalWorkspaces": 13,
+  "summary": {
+    "appsCount": 1,
+    "packagesCount": 12,
+    "statusBreakdown": {
+      "Complete": 6,
+      "Partial": 7,
+      "Stub": 0,
+      "Missing": 0,
+      "Legacy": 0
+    }
+  },
+  "workspaces": [
+    {
+      "name": "@manyhands/web",
+      "path": "apps/web",
+      "type": "app",
+      "status": "Partial",
+      "evidenceTag": "Confirmado",
+      "mainEntrypoints": [
+        "src/app/layout.tsx",
+        "src/app/runs/[runId]/page.tsx",
+        "src/lib/server/runs/repository.ts"
+      ],
+      "exports": [
+        "Next.js App Router Web Application"
+      ],
+      "internalDependencies": [
+        "@manyhands/conflict-risk",
+        "@manyhands/contracts",
+        "@manyhands/decomposer",
+        "@manyhands/execution-core",
+        "@manyhands/orchestrator-graph",
+        "@manyhands/repository-index",
+        "@manyhands/run-coordinator",
+        "@manyhands/run-store",
+        "@manyhands/scheduler",
+        "@manyhands/shared",
+        "@manyhands/task-graph",
+        "@manyhands/trace-store"
+      ],
+      "externalDependencies": [
+        "@assistant-ui/react",
+        "@assistant-ui/react-markdown",
+        "@xterm/addon-fit",
+        "@xterm/xterm",
+        "@xyflow/react",
+        "lucide-react",
+        "next",
+        "node-pty",
+        "react",
+        "react-dom",
+        "react-resizable-panels",
+        "zod"
+      ],
+      "architecturalGaps": [
+        "Repository adapter in apps/web/src/lib/server/runs/repository.ts mixes legacy in-memory run state with V2 event-sourced projections.",
+        "Canvas/UI state projections retain legacy imperative node statuses in UI helpers."
+      ]
+    },
+    {
+      "name": "@manyhands/shared",
+      "path": "packages/shared",
+      "type": "package",
+      "status": "Complete",
+      "evidenceTag": "Confirmado",
+      "mainEntrypoints": [
+        "src/index.ts",
+        "src/executor-registry.ts",
+        "src/node-cli-process.ts"
+      ],
+      "exports": [
+        "ReasoningEffortSchema",
+        "EntityIdSchema",
+        "EntityId",
+        "IsoTimestampSchema",
+        "IsoTimestamp",
+        "nowIso",
+        "uniqueValues",
+        "intersectValues",
+        "clamp01",
+        "pairKey",
+        "EFFORT_LEVELS",
+        "AgentExecutorConfig",
+        "CLI_EXECUTOR_ID",
+        "LANGGRAPH_EXECUTOR_ID",
+        "node-cli-process"
+      ],
+      "internalDependencies": [],
+      "externalDependencies": [
+        "zod"
+      ],
+      "architecturalGaps": [
+        "node-cli-process.ts in packages/shared/src/node-cli-process.ts contains process spawning logic, leaking OS-level execution concerns into shared domain base."
+      ]
+    },
+    {
+      "name": "@manyhands/task-graph",
+      "path": "packages/task-graph",
+      "type": "package",
+      "status": "Partial",
+      "evidenceTag": "Confirmado",
+      "mainEntrypoints": [
+        "src/index.ts",
+        "src/graph-revision.ts",
+        "src/relations.ts",
+        "src/validate-v2.ts",
+        "src/legacy-adapter.ts"
+      ],
+      "exports": [
+        "TaskGraphSchema",
+        "TaskNodeSchema",
+        "TaskNodeStatusSchema",
+        "GraphRevisionSchema",
+        "TaskNodeV2Schema",
+        "ArtifactRequirementSchema",
+        "SeamBindingSchema",
+        "ConflictConstraintSchema",
+        "LegacyOrderingConstraintSchema",
+        "validateGraphV2",
+        "reviseGraph",
+        "legacyAdapter"
+      ],
+      "internalDependencies": [
+        "@manyhands/contracts",
+        "@manyhands/shared"
+      ],
+      "externalDependencies": [
+        "zod"
+      ],
+      "architecturalGaps": [
+        "Dual schema representations: Legacy TaskNode embeds runtime node status (planned, running, done) inside the graph node, whereas target spec docs/system/01-task-graph.md dictates GraphRevision is strictly immutable structure and runtime status is managed solely by RunCoordinator."
+      ]
+    },
+    {
+      "name": "@manyhands/contracts",
+      "path": "packages/contracts",
+      "type": "package",
+      "status": "Partial",
+      "evidenceTag": "Confirmado",
+      "mainEntrypoints": [
+        "src/index.ts",
+        "src/contract-bundle.ts",
+        "src/task-contract.ts",
+        "src/scope-contract.ts",
+        "src/seam-contract.ts",
+        "src/artifact-contract.ts",
+        "src/validation-contract.ts",
+        "src/legacy-adapter.ts"
+      ],
+      "exports": [
+        "TaskContractBundleSchema",
+        "TaskContractSchema",
+        "ScopeContractSchema",
+        "SeamContractSchema",
+        "ArtifactContractSchema",
+        "ValidationContractSchema",
+        "ContractReferenceSchema",
+        "AgentTaskContractSchema"
+      ],
+      "internalDependencies": [
+        "@manyhands/shared"
+      ],
+      "externalDependencies": [
+        "zod"
+      ],
+      "architecturalGaps": [
+        "Legacy AgentTaskContractSchema is still exported and used across legacy decomposer and execution-core flows alongside target TaskContractBundleSchema."
+      ]
+    },
+    {
+      "name": "@manyhands/decomposer",
+      "path": "packages/decomposer",
+      "type": "package",
+      "status": "Partial",
+      "evidenceTag": "Confirmado",
+      "mainEntrypoints": [
+        "src/index.ts",
+        "src/compiler/graph-compiler.ts",
+        "src/compiler/contract-compiler.ts",
+        "src/planner/work-breakdown.ts"
+      ],
+      "exports": [
+        "FeatureRequestSchema",
+        "DecompositionOptionsSchema",
+        "DecompositionResult",
+        "Decomposer",
+        "DeterministicDecomposer",
+        "LLMDecomposer",
+        "WorkBreakdownPlanner",
+        "compileGraphRevision",
+        "compileContractBundles"
+      ],
+      "internalDependencies": [
+        "@manyhands/contracts",
+        "@manyhands/repository-index",
+        "@manyhands/shared",
+        "@manyhands/task-graph"
+      ],
+      "externalDependencies": [
+        "@anthropic-ai/sdk",
+        "zod"
+      ],
+      "architecturalGaps": [
+        "DecompositionResult main output interface still returns legacy TaskGraph and AgentTaskContract[], requiring downstream adapters to call V2 GraphCompiler."
+      ]
+    },
+    {
+      "name": "@manyhands/execution-core",
+      "path": "packages/execution-core",
+      "type": "package",
+      "status": "Partial",
+      "evidenceTag": "Confirmado",
+      "mainEntrypoints": [
+        "src/index.ts",
+        "src/v2/exact-candidate-validator.ts",
+        "src/v2/node-executor.ts",
+        "src/worktree/manager.ts",
+        "src/base/execution-base-builder.ts"
+      ],
+      "exports": [
+        "WorktreeManager",
+        "ExecutionBaseBuilder",
+        "CandidateValidator",
+        "ExactCandidateValidator",
+        "NodeExecutor",
+        "CLIExecutor",
+        "ProcessInspector",
+        "EvidenceMatrix"
+      ],
+      "internalDependencies": [
+        "@manyhands/conflict-risk",
+        "@manyhands/contracts",
+        "@manyhands/repository-index",
+        "@manyhands/scheduler",
+        "@manyhands/shared",
+        "@manyhands/task-graph",
+        "@manyhands/trace-store"
+      ],
+      "externalDependencies": [
+        "simple-git",
+        "typescript",
+        "zod"
+      ],
+      "architecturalGaps": [
+        "Coexistence of legacy task execution pipeline (src/run/executor.ts) and target V2 exact candidate validator and base builder (src/v2/exact-candidate-validator.ts)."
+      ]
+    },
+    {
+      "name": "@manyhands/orchestrator-graph",
+      "path": "packages/orchestrator-graph",
+      "type": "package",
+      "status": "Partial",
+      "evidenceTag": "Confirmado",
+      "mainEntrypoints": [
+        "src/index.ts",
+        "src/v2/execution-driver.ts"
+      ],
+      "exports": [
+        "V2ExecutionDriver",
+        "V2ExecutionDriverOptions",
+        "V2ExecutionRunInput",
+        "V2ExecutionTarget",
+        "V2NodeExecutionOutcome"
+      ],
+      "internalDependencies": [
+        "@manyhands/conflict-risk",
+        "@manyhands/contracts",
+        "@manyhands/run-coordinator",
+        "@manyhands/scheduler",
+        "@manyhands/task-graph"
+      ],
+      "externalDependencies": [
+        "zod"
+      ],
+      "architecturalGaps": [
+        "V2ExecutionDriver drives graph execution over RunCoordinator state, but legacy orchestrator paths remain in web host adapters."
+      ]
+    },
+    {
+      "name": "@manyhands/run-coordinator",
+      "path": "packages/run-coordinator",
+      "type": "package",
+      "status": "Complete",
+      "evidenceTag": "Confirmado",
+      "mainEntrypoints": [
+        "src/index.ts",
+        "src/coordinator.ts",
+        "src/reducer.ts"
+      ],
+      "exports": [
+        "RunCoordinator",
+        "runCoordinatorReducer",
+        "RunDomainEventSchema",
+        "RunLifecycleState",
+        "InputFingerprint",
+        "HumanDecision",
+        "EvidenceMatrix"
+      ],
+      "internalDependencies": [
+        "@manyhands/shared",
+        "@manyhands/task-graph"
+      ],
+      "externalDependencies": [
+        "zod"
+      ],
+      "architecturalGaps": []
+    },
+    {
+      "name": "@manyhands/run-store",
+      "path": "packages/run-store",
+      "type": "package",
+      "status": "Complete",
+      "evidenceTag": "Confirmado",
+      "mainEntrypoints": [
+        "src/index.ts",
+        "src/jsonl-event-store.ts",
+        "src/snapshot-store.ts",
+        "src/artifact-store.ts",
+        "src/attempt-store.ts"
+      ],
+      "exports": [
+        "EventStore",
+        "JsonlEventStore",
+        "ArtifactStore",
+        "AttemptStore",
+        "SnapshotStore",
+        "EventUpcaster"
+      ],
+      "internalDependencies": [
+        "@manyhands/run-coordinator",
+        "@manyhands/shared"
+      ],
+      "externalDependencies": [
+        "zod"
+      ],
+      "architecturalGaps": []
+    },
+    {
+      "name": "@manyhands/trace-store",
+      "path": "packages/trace-store",
+      "type": "package",
+      "status": "Complete",
+      "evidenceTag": "Confirmado",
+      "mainEntrypoints": [
+        "src/index.ts"
+      ],
+      "exports": [
+        "TraceStore",
+        "InMemoryTraceStore",
+        "TraceEventSchema",
+        "TraceEventTypeSchema"
+      ],
+      "internalDependencies": [
+        "@manyhands/shared"
+      ],
+      "externalDependencies": [
+        "zod"
+      ],
+      "architecturalGaps": []
+    },
+    {
+      "name": "@manyhands/repository-index",
+      "path": "packages/repository-index",
+      "type": "package",
+      "status": "Complete",
+      "evidenceTag": "Confirmado",
+      "mainEntrypoints": [
+        "src/index.ts",
+        "src/snapshot.ts",
+        "src/capabilities.ts"
+      ],
+      "exports": [
+        "RepositoryIndexer",
+        "buildRepositorySnapshotRecord",
+        "createRepositorySnapshotSchema",
+        "discoverRepositoryCapabilities",
+        "RepositorySnapshotRecord"
+      ],
+      "internalDependencies": [
+        "@manyhands/shared"
+      ],
+      "externalDependencies": [
+        "typescript",
+        "zod"
+      ],
+      "architecturalGaps": []
+    },
+    {
+      "name": "@manyhands/scheduler",
+      "path": "packages/scheduler",
+      "type": "package",
+      "status": "Partial",
+      "evidenceTag": "Confirmado",
+      "mainEntrypoints": [
+        "src/index.ts",
+        "src/readiness-v2.ts",
+        "src/wave-selector-v2.ts"
+      ],
+      "exports": [
+        "explainReadiness",
+        "selectReadyWaveV2",
+        "Scheduler",
+        "scheduleBatch"
+      ],
+      "internalDependencies": [
+        "@manyhands/conflict-risk",
+        "@manyhands/contracts",
+        "@manyhands/task-graph"
+      ],
+      "externalDependencies": [
+        "zod"
+      ],
+      "architecturalGaps": [
+        "Coexistence of legacy task dependency batch scheduler and V2 artifact readiness calculator (readiness-v2.ts)."
+      ]
+    },
+    {
+      "name": "@manyhands/conflict-risk",
+      "path": "packages/conflict-risk",
+      "type": "package",
+      "status": "Complete",
+      "evidenceTag": "Confirmado",
+      "mainEntrypoints": [
+        "src/index.ts",
+        "src/constraint-evidence.ts"
+      ],
+      "exports": [
+        "ConflictRiskAnalyzer",
+        "analyzeConflictRisk",
+        "ConflictEvidenceSchema",
+        "ConflictRiskScoreSchema",
+        "ConflictConstraintEvidenceSchema"
+      ],
+      "internalDependencies": [
+        "@manyhands/contracts",
+        "@manyhands/repository-index",
+        "@manyhands/shared"
+      ],
+      "externalDependencies": [
+        "zod"
+      ],
+      "architecturalGaps": []
+    }
+  ]
+}

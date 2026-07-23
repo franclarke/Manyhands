@@ -18,4 +18,10 @@ en el producto. El plan de transición debe clasificar cada tipo como:
 API actual destacada: `TraceEvent`, `TraceEventType`, `TraceStore` e
 `InMemoryTraceStore`.
 
+`JsonlTraceStore` persiste envelopes checksummed en
+`.manyhands/runs/<runId>/traces.jsonl`, fuerza cada append a disco y redacta
+tokens, passwords, claves, cookies, headers Bearer y credenciales embebidas
+antes de serializar. Una nueva instancia sobre el mismo run recupera las trazas
+sin depender de memoria de proceso.
+
 Contrato objetivo: [`docs/design/run-operative-model.md`](../../docs/design/run-operative-model.md).

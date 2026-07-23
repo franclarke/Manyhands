@@ -1,9 +1,11 @@
-import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { foldRun, type RunProjection } from "@manyhands/run-coordinator";
+import type { RunProjection } from "@manyhands/run-coordinator";
+import { atomicWriteFile } from "./durable-file.js";
 import type { FencingAuthority } from "./event-store.js";
 import type { JsonlRunEventStore } from "./jsonl-event-store.js";
+import { foldRunEvents } from "./projection-fold.js";
 
 interface SnapshotEnvelope {
   schemaVersion: 2;
@@ -39,7 +41,7 @@ export class RunSnapshotStore {
     await this.events.withFencedWrite(runId, authority, async () => {
       const base = { schemaVersion: 2 as const, runId, eventSequence, lastEventId, operationId: authority.operationId, fencingToken: authority.fencingToken, projection };
       const envelope: SnapshotEnvelope = { ...base, checksum: checksum(base) };
-      await atomicWrite(this.snapshotPath(runId), `${JSON.stringify(envelope, null, 2)}\n`);
+      await atomicWriteFile(this.snapshotPath(runId), `${JSON.stringify(envelope, null, 2)}\n`);
     });
   }
 
@@ -52,7 +54,7 @@ export class RunSnapshotStore {
     if (cached !== null && cached.operationId === authority.operationId && cached.fencingToken === authority.fencingToken && cached.eventSequence === last.sequence && cached.lastEventId === last.eventId) {
       return cached.projection as RunProjection;
     }
-    const projection = foldRun(events);
+    const projection = foldRunEvents(events);
     await this.write(runId, authority, projection, last.sequence, last.eventId);
     return projection;
   }
@@ -78,13 +80,6 @@ export class RunSnapshotStore {
 
 function checksum(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
-}
-
-async function atomicWrite(filePath: string, contents: string): Promise<void> {
-  await mkdir(path.dirname(filePath), { recursive: true });
-  const temporary = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
-  await writeFile(temporary, contents, "utf8");
-  await rename(temporary, filePath);
 }
 
 function isNotFound(error: unknown): boolean {

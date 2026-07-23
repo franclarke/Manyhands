@@ -138,10 +138,16 @@ export class V2NodeExecutor {
   }
 
   async execute(input: V2PhysicalNodeExecutionInput): Promise<V2PhysicalNodeExecutionOutcome> {
-    const hasChildren = Object.values(input.graph.nodes).some((node) => node.parentId === input.node.id);
-    return (input.node.kind === "root" || input.node.kind === "composite") && hasChildren
-      ? this.executeComposite(input)
-      : this.executeLeaf(input);
+    try {
+      const hasChildren = Object.values(input.graph.nodes).some((node) => node.parentId === input.node.id);
+      return await (
+        (input.node.kind === "root" || input.node.kind === "composite") && hasChildren
+          ? this.executeComposite(input)
+          : this.executeLeaf(input)
+      );
+    } catch (error) {
+      return { kind: "failure", reason: describe(error) };
+    }
   }
 
   private async executeLeaf(input: V2PhysicalNodeExecutionInput): Promise<V2PhysicalNodeExecutionOutcome> {
@@ -159,6 +165,7 @@ export class V2NodeExecutor {
       return { kind: "failure", reason: describe(error) };
     }
     const instructionPath = instructionFilePath(input, "execute");
+    let candidateToAnchor: string | undefined;
     try {
       await this.writeInstructions(instructionPath, buildV2NodeInstructions(input));
       const executor = this.options.executorFactory.create(input.selection);
@@ -188,6 +195,7 @@ export class V2NodeExecutor {
         return { kind: "failure", reason: executionFailureReason(result) };
       }
       const candidateCommit = result.commitSha ?? result.currentHead;
+      candidateToAnchor = candidateCommit;
       const evidenceMatrix = await this.options.validator.validate({
         runId: input.runId,
         attemptId: input.attemptId,
@@ -201,6 +209,7 @@ export class V2NodeExecutor {
         const repaired = await this.repairLeaf(input, base.worktree, candidateCommit, evidenceMatrix);
         if (repaired.kind === "failure") return repaired;
         success = repaired;
+        candidateToAnchor = repaired.candidateCommit;
       }
       if (input.node.id !== input.graph.rootId || success.evidenceMatrix.outcome !== "verified") return success;
       if (this.options.finalCandidate === undefined) {
@@ -218,6 +227,7 @@ export class V2NodeExecutor {
       return { kind: "failure", reason: describe(error) };
     } finally {
       await rm(instructionPath, { force: true }).catch(() => undefined);
+      await this.releaseExecutionBase(base, input, candidateToAnchor);
     }
   }
 
@@ -236,82 +246,140 @@ export class V2NodeExecutor {
       return { kind: "failure", reason: describe(error) };
     }
 
-    const childArtifacts = input.consumedArtifacts.map(integrationArtifact);
-    const request = createIntegrationRequestManifest({
-      runId: input.runId,
-      integrationAttemptId: input.attemptId,
-      compositeNode: { id: input.node.id, graphRevision: input.graph.revision },
-      base: {
-        manifestId: `execution-base:${input.attemptId}`,
-        resultingCommit: base.manifest.resultingCommit,
-        inputFingerprint: input.inputFingerprint
-      },
-      availableArtifacts: childArtifacts,
-      requiredArtifactIds: childArtifacts.map((artifact) => artifact.artifactId),
-      seamRevisions: input.contract.seams.map(({ id, revision }) => ({ id, revision })),
-      parentGoal: input.contract.task.goal,
-      validationContract: { ...input.contract.task.validation },
-      outputArtifactContract: { id: input.outputArtifactContract.id, revision: input.outputArtifactContract.revision },
-      createdAt: this.now()
-    });
-    let evidenceMatrix: V2ExecutionEvidenceMatrix | undefined;
-    const integrator = new IntegrationManifestExecutor({
-      git: this.options.git,
-      validate: async ({ candidateSha }) => {
-        evidenceMatrix = await this.options.validator.validate({
+    let candidateToAnchor: string | undefined;
+    try {
+      const childArtifacts = input.consumedArtifacts.map(integrationArtifact);
+      const request = createIntegrationRequestManifest({
+        runId: input.runId,
+        integrationAttemptId: input.attemptId,
+        compositeNode: { id: input.node.id, graphRevision: input.graph.revision },
+        base: {
+          manifestId: `execution-base:${input.attemptId}`,
+          resultingCommit: base.manifest.resultingCommit,
+          inputFingerprint: input.inputFingerprint
+        },
+        availableArtifacts: childArtifacts,
+        requiredArtifactIds: childArtifacts.map((artifact) => artifact.artifactId),
+        seamRevisions: input.contract.seams.map(({ id, revision }) => ({ id, revision })),
+        parentGoal: input.contract.task.goal,
+        validationContract: { ...input.contract.task.validation },
+        outputArtifactContract: {
+          id: input.outputArtifactContract.id,
+          revision: input.outputArtifactContract.revision
+        },
+        createdAt: this.now()
+      });
+      let evidenceMatrix: V2ExecutionEvidenceMatrix | undefined;
+      const integrator = new IntegrationManifestExecutor({
+        git: this.options.git,
+        validate: async ({ candidateSha }) => {
+          evidenceMatrix = await this.options.validator.validate({
+            runId: input.runId,
+            attemptId: input.attemptId,
+            contract: input.contract,
+            candidateCommit: candidateSha,
+            baselineCommit: input.graph.baseCommit,
+            ...(input.signal !== undefined ? { signal: input.signal } : {})
+          });
+          return { matrixId: evidenceMatrix.matrixId, outcome: evidenceMatrix.outcome };
+        },
+        repair: async (repair) => this.repairIntegration(input, base.worktree, repair),
+        digestCandidate: async ({ candidateSha }) => digest(candidateSha)
+      });
+      let manifest: IntegrationManifest;
+      try {
+        manifest = await integrator.integrate({ request, worktreePath: base.worktree.path });
+        candidateToAnchor = manifest.candidateSha;
+      } catch (error) {
+        return {
+          kind: "failure",
+          integrationManifestId: `integration-result-${request.manifestId}`,
+          reason: describe(error)
+        };
+      }
+      const repairObservations = manifest.repairAttempt === undefined
+        ? undefined
+        : [{
+            kind: "integration" as const,
+            pass: manifest.repairAttempt.pass,
+            evidenceRefs: [...manifest.repairAttempt.evidenceRefs]
+          }];
+      if (
+        manifest.disposition !== "success" ||
+        manifest.candidateSha === undefined ||
+        evidenceMatrix === undefined
+      ) {
+        return {
+          kind: "failure",
+          integrationManifestId: manifest.manifestId,
+          ...(repairObservations !== undefined ? { repairObservations } : {}),
+          reason:
+            manifest.errors.map((error) => error.message).join("; ") ||
+            `Integration ended as ${manifest.disposition}.`
+        };
+      }
+      const changedFiles = await this.options.git.diffRangeNameOnly({
+        cwd: base.worktree.path,
+        from: base.manifest.resultingCommit,
+        to: manifest.candidateSha
+      });
+      let finalManifestId: string | undefined;
+      if (input.node.kind === "root") {
+        if (this.options.finalCandidate === undefined) {
+          return {
+            kind: "failure",
+            integrationManifestId: manifest.manifestId,
+            reason: "Root execution has no final-candidate preparer."
+          };
+        }
+        finalManifestId = (await this.options.finalCandidate.prepare({
           runId: input.runId,
           attemptId: input.attemptId,
-          contract: input.contract,
-          candidateCommit: candidateSha,
-          baselineCommit: input.graph.baseCommit,
-          ...(input.signal !== undefined ? { signal: input.signal } : {})
-        });
-        return { matrixId: evidenceMatrix.matrixId, outcome: evidenceMatrix.outcome };
-      },
-      repair: async (repair) => this.repairIntegration(input, base.worktree, repair),
-      digestCandidate: async ({ candidateSha }) => digest(candidateSha)
-    });
-    let manifest: IntegrationManifest;
-    try {
-      manifest = await integrator.integrate({ request, worktreePath: base.worktree.path });
-    } catch (error) {
-      return { kind: "failure", integrationManifestId: `integration-result-${request.manifestId}`, reason: describe(error) };
-    }
-    const repairObservations = manifest.repairAttempt === undefined
-      ? undefined
-      : [{ kind: "integration" as const, pass: manifest.repairAttempt.pass, evidenceRefs: [...manifest.repairAttempt.evidenceRefs] }];
-    if (manifest.disposition !== "success" || manifest.candidateSha === undefined || evidenceMatrix === undefined) {
+          candidateCommit: manifest.candidateSha,
+          evidenceMatrix,
+          ...input.target
+        })).manifestId;
+      }
       return {
-        kind: "failure",
+        ...successOutcome(manifest.candidateSha, changedFiles, evidenceMatrix),
         integrationManifestId: manifest.manifestId,
         ...(repairObservations !== undefined ? { repairObservations } : {}),
-        reason: manifest.errors.map((error) => error.message).join("; ") || `Integration ended as ${manifest.disposition}.`
+        ...(finalManifestId !== undefined ? { finalManifestId } : {})
       };
+    } finally {
+      await this.releaseExecutionBase(base, input, candidateToAnchor);
     }
-    const changedFiles = await this.options.git.diffRangeNameOnly({
-      cwd: base.worktree.path,
-      from: base.manifest.resultingCommit,
-      to: manifest.candidateSha
-    });
-    let finalManifestId: string | undefined;
-    if (input.node.kind === "root") {
-      if (this.options.finalCandidate === undefined) {
-        return { kind: "failure", integrationManifestId: manifest.manifestId, reason: "Root execution has no final-candidate preparer." };
+  }
+
+  private async releaseExecutionBase(
+    base: BuiltExecutionBase,
+    input: V2PhysicalNodeExecutionInput,
+    candidateCommit: string | undefined
+  ): Promise<void> {
+    try {
+      await base.release?.(
+        candidateCommit === undefined
+          ? { kind: "discard" }
+          : {
+              kind: "candidate",
+              runId: input.runId,
+              attemptId: input.attemptId,
+              candidateCommit
+            }
+      );
+    } catch (error) {
+      try {
+        await this.options.traceStore.append({
+          type: "worktree_clean_failed",
+          actor: "system",
+          taskId: input.node.id,
+          payload: { message: describe(error) }
+        });
+      } catch {
+        // Cleanup authority is reported by the execution outcome below.
       }
-      finalManifestId = (await this.options.finalCandidate.prepare({
-        runId: input.runId,
-        attemptId: input.attemptId,
-        candidateCommit: manifest.candidateSha,
-        evidenceMatrix,
-        ...input.target
-      })).manifestId;
+      if (candidateCommit !== undefined) throw error;
     }
-    return {
-      ...successOutcome(manifest.candidateSha, changedFiles, evidenceMatrix),
-      integrationManifestId: manifest.manifestId,
-      ...(repairObservations !== undefined ? { repairObservations } : {}),
-      ...(finalManifestId !== undefined ? { finalManifestId } : {})
-    };
   }
 
   private async repairIntegration(

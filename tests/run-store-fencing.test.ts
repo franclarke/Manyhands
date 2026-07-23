@@ -29,7 +29,7 @@ describe("run mutation fencing", () => {
       .rejects.toBeInstanceOf(StaleFencingTokenError);
     await expect(snapshots.write("run-1", stale, { runId: "run-1", marker: "late" }, 1, "created"))
       .rejects.toBeInstanceOf(StaleFencingTokenError);
-    await expect(events.appendFenced("run-1", 1, stale, [{ eventId: "late-receipt", occurredAt: at, type: "delivery.published", payload: { receipt: { receiptId: "receipt-1", manifestId: "manifest-1", destination: "main", publishedAt: at, confirmed: true } } }]))
+    await expect(events.appendFenced("run-1", 1, stale, [{ eventId: "late-receipt", occurredAt: at, type: "delivery.published", payload: { receipt: { receiptId: "receipt-1", manifestId: "manifest-1", destination: "main", confirmed: true } } }]))
       .rejects.toBeInstanceOf(StaleFencingTokenError);
   });
 

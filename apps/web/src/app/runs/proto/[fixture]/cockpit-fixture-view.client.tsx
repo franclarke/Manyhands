@@ -70,7 +70,7 @@ export function CockpitFixtureView({ fixtureName }: { fixtureName: GoldenFixture
           type="button"
           onClick={playback.playing ? playback.pause : playback.play}
           disabled={playback.done && !playback.playing}
-          className={`${ICON_BUTTON} !w-auto gap-1.5 border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 text-label font-semibold`}
+          className={`${ICON_BUTTON} !w-auto gap-1.5 border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-label font-semibold`}
           aria-label={playback.playing ? "Pausar demostración" : "Reproducir demostración"}
         >
           {playback.playing

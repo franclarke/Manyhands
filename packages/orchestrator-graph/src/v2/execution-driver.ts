@@ -156,16 +156,30 @@ export class V2ExecutionDriver {
       attempts.map((attempt) => attempt.startedEvent)
     );
 
-    let recording = Promise.resolve();
     let latestState = state;
+    let recordQueue = Promise.resolve();
     await Promise.all(attempts.map(async (attempt) => {
       const outcome = await this.options.execute(attempt.executionInput);
       const facts = this.factsForOutcome(input, attempt, outcome);
-      const persisted = recording.then(async () => {
-        latestState = await this.options.coordinator.record(input.runId, facts);
+
+      let resolveEnqueued!: () => void;
+      let rejectEnqueued!: (err: unknown) => void;
+      const enqueued = new Promise<void>((resolve, reject) => {
+        resolveEnqueued = resolve;
+        rejectEnqueued = reject;
       });
-      recording = persisted;
-      await persisted;
+
+      const previousQueue = recordQueue;
+      recordQueue = previousQueue.catch(() => {}).then(async () => {
+        try {
+          latestState = await this.options.coordinator.record(input.runId, facts);
+          resolveEnqueued();
+        } catch (err) {
+          rejectEnqueued(err);
+        }
+      });
+
+      await enqueued;
     }));
     state = latestState;
     return { dispatched: true, state };

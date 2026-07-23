@@ -69,7 +69,7 @@ async function seedEvents(runId: string, count: number): Promise<void> {
     { eventId: decisionId, occurredAt: at, type: "decision.raised", payload: { decision: { id: decisionId, kind: "approve_plan", question: "Approve?", options: [{ id: "approve", label: "Approve" }, { id: "request_changes", label: "Request changes" }], affectedNodeIds: [compiled.graph.rootId], evidenceRefs: ["graph-compiled"], impact: "acceptance" } } },
     { eventId: `${decisionId}:resolved`, occurredAt: at, type: "decision.resolved", payload: { decisionId, optionId: "approve" } }
   ];
-  const store = new JsonlRunEventStore({ directory: process.env.MANYHANDS_RUNS_DIR });
+  const store = new JsonlRunEventStore({ ...(process.env.MANYHANDS_RUNS_DIR ? { directory: process.env.MANYHANDS_RUNS_DIR } : {}) });
   const authority = { operationId: "11111111-1111-4111-8111-111111111111", fencingToken: 1 };
   await store.advanceFence(runId, authority);
   await store.appendFenced(runId, 0, authority, inputs.slice(0, count));

@@ -44,7 +44,9 @@ describe("RunExecutionCoordinator", () => {
       observeReadiness: async () => ({ readyNodeIds: ["node-b"], pendingDecisionIds: [] }),
       selectWave: ({ readyNodeIds }) => readyNodeIds,
       waveId: () => "wave-1",
-      dispatch: async ({ nodeId }) => test.ordering.push(`dispatch:${nodeId}`)
+      dispatch: async ({ nodeId }) => {
+        test.ordering.push(`dispatch:${nodeId}`);
+      }
     });
 
     const state = await execution.advance("run-1", { maxParallel: 2 });

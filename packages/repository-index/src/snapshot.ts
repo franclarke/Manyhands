@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   RepositoryCapabilitiesSchema,
   discoverRepositoryCapabilities,
+  type CapabilityDiagnostic,
   type RepositoryCapabilities
 } from "./capabilities.js";
 
@@ -61,9 +62,17 @@ export interface RepositorySnapshotBuildDependencies<TIndex extends RepositoryIn
     rootPath: string;
     repositoryId?: string;
     indexedAt?: string;
+    baseCommit?: string;
     limits?: Record<string, number>;
     signal?: AbortSignal;
   }): Promise<TIndex>;
+  discoverCapabilities?(
+    rootPath: string,
+    index: TIndex | undefined
+  ): Promise<{
+    capabilities: RepositoryCapabilities;
+    diagnostics: CapabilityDiagnostic[];
+  }>;
   computeIndexHash(index: TIndex): string;
   now(): string;
 }
@@ -109,6 +118,7 @@ export async function buildRepositorySnapshotRecord<TIndex extends RepositoryInd
       rootPath,
       ...(input.repositoryId !== undefined ? { repositoryId: input.repositoryId } : {}),
       indexedAt: capturedAt,
+      ...(input.baseCommit !== undefined ? { baseCommit: input.baseCommit } : {}),
       ...(input.limits !== undefined ? { limits: input.limits } : {}),
       ...(input.signal !== undefined ? { signal: input.signal } : {})
     });
@@ -129,7 +139,9 @@ export async function buildRepositorySnapshotRecord<TIndex extends RepositoryInd
     });
   }
 
-  const capabilityResult = await discoverRepositoryCapabilities(rootPath, index);
+  const capabilityResult = await (
+    dependencies.discoverCapabilities ?? discoverRepositoryCapabilities
+  )(rootPath, index);
   diagnostics.push(...capabilityResult.diagnostics);
   if (index !== undefined && capabilityResult.capabilities.languages.length === 0) {
     diagnostics.push({

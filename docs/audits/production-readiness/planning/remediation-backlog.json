@@ -1,0 +1,1464 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "generatedAt": "2026-07-22T16:59:21.781Z",
+  "version": "3.0.0-canonical",
+  "author": "Principal Engineering Review Board",
+  "totalItems": 50,
+  "summary": {
+    "byWave": {
+      "Wave 1": 6,
+      "Wave 0": 5,
+      "Wave 3": 7,
+      "Wave 2": 6,
+      "Wave 4": 6,
+      "Wave 5": 7,
+      "Wave 6": 6,
+      "Wave 7": 5,
+      "Wave 8": 2
+    },
+    "byReleaseGate": {
+      "Gate B": 19,
+      "Gate A": 5,
+      "Gate C": 13,
+      "Gate D": 13
+    },
+    "byAdrStatus": {
+      "APPROVED": 50
+    }
+  },
+  "items": [
+    {
+      "id": "MH-REM-001",
+      "title": "DAG Cycle Validation for ArtifactRequirements",
+      "epic": "Epic 1: Task Graph & Canonical Relations Contract Engine",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-ORCH-001",
+        "MH-AUDIT-GAP-003"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "packages/task-graph/src/validate-v2.ts",
+        "packages/task-graph/src/types-v2.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Construct combined parentage and ArtifactRequirement edge adjacency matrix in validateGraphRevision.",
+        "Execute Kahn's topological sort algorithm over the graph matrix.",
+        "Return valid: false with CyclicDependencyError if unvisited nodes remain.",
+        "Pass tests/task-graph-artifact-cycles.test.ts verifying circular artifact dependencies are rejected."
+      ],
+      "wave": 1,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-001",
+      "adrStatus": "APPROVED",
+      "status": "COMPLETE",
+      "implementedFiles": [
+        "packages/task-graph/src/validate-v2.ts"
+      ],
+      "tests": [
+        "tests/task-graph-artifact-cycles.test.ts"
+      ],
+      "evidence": "13/13 passing tests in task-graph-artifact-cycles.test.ts verifying structural, artifact requirement, and mixed execution cycles."
+    },
+    {
+      "id": "MH-REM-002",
+      "title": "Wave Selector ConflictConstraints Integration",
+      "epic": "Epic 1: Task Graph & Canonical Relations Contract Engine",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-ORCH-002",
+        "MH-AUDIT-ORCH-010",
+        "MH-AUDIT-GAP-010"
+      ],
+      "technicalDependencies": [
+        "MH-REM-001"
+      ],
+      "targetFilesPackages": [
+        "packages/scheduler/src/wave-selector-v2.ts",
+        "packages/conflict-risk/src/analyzer.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Read ConflictConstraint records from GraphRevision in selectReadyWaveV2.",
+        "Filter ready candidates against currently running wave nodes using ConflictRiskAnalyzer.",
+        "Defer conflicting candidates to subsequent wave execution.",
+        "Pass tests/scheduler-conflict-constraints.test.ts asserting conflicting nodes do not execute in parallel."
+      ],
+      "wave": 1,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-001",
+      "adrStatus": "APPROVED",
+      "status": "COMPLETE",
+      "implementedFiles": [
+        "packages/scheduler/src/wave-selector-v2.ts"
+      ],
+      "tests": [
+        "tests/scheduler-conflict-constraints.test.ts"
+      ],
+      "evidence": "10/10 passing tests in scheduler-conflict-constraints.test.ts verifying conflict constraint deferral, symmetric matching, and deterministic ordering."
+    },
+    {
+      "id": "MH-REM-003",
+      "title": "V2ExecutionDriver Promise Mutation Race Fix",
+      "epic": "Epic 1: Task Graph & Canonical Relations Contract Engine",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-ORCH-003"
+      ],
+      "technicalDependencies": [
+        "MH-REM-001",
+        "MH-REM-002",
+        "MH-REM-006"
+      ],
+      "targetFilesPackages": [
+        "packages/orchestrator-graph/src/v2/execution-driver.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Refactor V2ExecutionDriver to eliminate in-place array/map mutation of active node execution promise drivers.",
+        "Process state updates through immutable compare-and-swap (CAS) reducer callback.",
+        "Pass tests/execution-driver-concurrency.test.ts verifying 10 concurrent completions resolve without race condition errors."
+      ],
+      "wave": 1,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-001",
+      "adrStatus": "APPROVED",
+      "status": "COMPLETE",
+      "implementedFiles": [
+        "packages/orchestrator-graph/src/v2/execution-driver.ts"
+      ],
+      "tests": [
+        "tests/execution-driver-concurrency.test.ts"
+      ],
+      "evidence": "10/10 passing tests in execution-driver-concurrency.test.ts verifying 10 concurrent completions resolve sequentially via atomic recordQueue without race conditions."
+    },
+    {
+      "id": "MH-REM-004",
+      "title": "Scope Isolation Critic Calibration",
+      "epic": "Epic 1: Task Graph & Canonical Relations Contract Engine",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-ORCH-004"
+      ],
+      "technicalDependencies": [
+        "MH-REM-001"
+      ],
+      "targetFilesPackages": [
+        "packages/decomposer/src/critics/scope-critic.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Update ScopeCritic logic to distinguish between declared file edits and valid shared module imports.",
+        "Approve valid file edits strictly contained within node's declared ScopeContract file list.",
+        "Pass automated scope critic unit tests verifying leaf node edits are approved."
+      ],
+      "wave": 1,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-001",
+      "adrStatus": "APPROVED",
+      "status": "COMPLETE",
+      "implementedFiles": [
+        "packages/decomposer/src/critics/review.ts"
+      ],
+      "tests": [
+        "tests/scope-critic-calibration.test.ts"
+      ],
+      "evidence": "5/5 passing tests in scope-critic-calibration.test.ts verifying path normalization (Windows/POSIX) and unmodeled scope overlap detection."
+    },
+    {
+      "id": "MH-REM-005",
+      "title": "Canonical Typed Relations & SeamBinding Schema",
+      "epic": "Epic 1: Task Graph & Canonical Relations Contract Engine",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level B",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-ORCH-005",
+        "MH-AUDIT-ORCH-007"
+      ],
+      "technicalDependencies": [
+        "MH-REM-001"
+      ],
+      "targetFilesPackages": [
+        "packages/task-graph/src/types-v2.ts",
+        "packages/contracts/src/relations.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Define RelationType union: 'parentId' | 'ArtifactRequirement' | 'SeamBinding' | 'ConflictConstraint'.",
+        "Implement Zod schema validation for all 4 edge types in packages/contracts.",
+        "Export contract validation utilities verifying relation targets exist within GraphRevision."
+      ],
+      "wave": 1,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-001",
+      "adrStatus": "APPROVED",
+      "status": "COMPLETE",
+      "implementedFiles": [
+        "packages/contracts/src/relations.ts",
+        "packages/contracts/src/index.ts"
+      ],
+      "tests": [
+        "tests/contract-relations.test.ts"
+      ],
+      "evidence": "10/10 passing tests in contract-relations.test.ts verifying parentId, ArtifactRequirement, SeamBinding, ConflictConstraint, and validateRelationEndpoints."
+    },
+    {
+      "id": "MH-REM-006",
+      "title": "Compare-and-Swap (CAS) GraphRevision Reducer",
+      "epic": "Epic 1: Task Graph & Canonical Relations Contract Engine",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level B",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-ORCH-006",
+        "MH-AUDIT-ORCH-008",
+        "MH-AUDIT-ORCH-009"
+      ],
+      "technicalDependencies": [
+        "MH-REM-005"
+      ],
+      "targetFilesPackages": [
+        "packages/task-graph/src/graph-reducer.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Implement reduceGraphRevision(currentRev, action) returning a newly instantiated, immutable GraphRevision.",
+        "Increment revisionId (rev_0001 -> rev_0002) and record parentRevisionId on every reduction.",
+        "Freeze existing GraphRevision instances with Object.freeze."
+      ],
+      "wave": 1,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-001",
+      "adrStatus": "APPROVED",
+      "status": "COMPLETE",
+      "implementedFiles": [
+        "packages/task-graph/src/graph-reducer.ts",
+        "packages/task-graph/src/index.ts"
+      ],
+      "tests": [
+        "tests/task-graph-reducer.test.ts"
+      ],
+      "evidence": "11/11 passing tests in task-graph-reducer.test.ts verifying atomic operation application, revision incrementing, Object.freeze, and validation issue handling."
+    },
+    {
+      "id": "MH-REM-007",
+      "title": "Dirty Workspace Check in GroundingAgent",
+      "epic": "Epic 2: Worktree Security, Process Supervision & Host Sandboxing",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level B",
+      "priority": "P0",
+      "relatedAuditFindings": [
+        "MH-AUDIT-GIT-010",
+        "MH-AUDIT-GIT-002"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "packages/execution-core/src/run/grounding-agent.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Invoke git.statusPorcelain(params.repoRoot) before creating walking skeleton files.",
+        "Abort or isolate skeleton creation in temporary worktree if uncommitted/untracked user files exist.",
+        "Do NOT invoke git.addAllExcluding on params.repoRoot when dirty.",
+        "Pass tests/git-dirty-workspace-grounding.test.ts verifying dirty user files remain untouched."
+      ],
+      "wave": 0,
+      "releaseGate": "Gate A",
+      "adrId": "ADR-002",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-008",
+      "title": "Path Normalization & Scope Traversal Guard",
+      "epic": "Epic 2: Worktree Security, Process Supervision & Host Sandboxing",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-SEC-002",
+        "MH-AUDIT-GIT-004"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "packages/execution-core/src/scope/checker.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Resolve target paths using path.resolve(worktreeRoot, targetPath).",
+        "Verify resolved path starts with worktreeRoot + path.sep or matches worktreeRoot.",
+        "Throw ScopeViolationError immediately for path traversal attempts containing ../.",
+        "Pass tests/scope-path-traversal.test.ts verifying attempts to access ../../etc/passwd are blocked."
+      ],
+      "wave": 3,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-002",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-009",
+      "title": "Supervised Process Spawning & Secret Filtering",
+      "epic": "Epic 2: Worktree Security, Process Supervision & Host Sandboxing",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-SEC-001",
+        "MH-AUDIT-SEC-003",
+        "MH-AUDIT-SEC-005"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "apps/web/src/lib/server/runs/v2/run-coordinator-host.ts",
+        "packages/execution-core/src/git/supervised-process-manager.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Replace raw child_process.spawn with buildAgentEnvironment() filtered environment keys.",
+        "Register spawned child PIDs with LiveProcessRegistry.",
+        "Terminate all PIDs registered for a run via SIGTERM/SIGKILL upon run completion or cancellation.",
+        "Pass tests/security-planning-env.test.ts verifying secrets are excluded and process termination works."
+      ],
+      "wave": 3,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-002",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-010",
+      "title": "Automatic Worktree & Branch Garbage Collector",
+      "epic": "Epic 2: Worktree Security, Process Supervision & Host Sandboxing",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-GIT-001",
+        "MH-AUDIT-GIT-003",
+        "MH-AUDIT-GIT-011",
+        "MH-AUDIT-GAP-006"
+      ],
+      "technicalDependencies": [
+        "MH-REM-007"
+      ],
+      "targetFilesPackages": [
+        "apps/web/src/lib/server/runs/v2/execution-pipeline.ts",
+        "packages/execution-core/src/worktree/manager.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Wrap execution pipeline in try-finally block calling worktreeManager.cleanupRunWorktrees(runId).",
+        "Prune temporary worktree directories via git worktree remove --force.",
+        "Delete temporary attempt branches via git branch -D.",
+        "Pass tests/git-worktree-cleanup.test.ts verifying zero leaked worktree folders or temporary branches remain."
+      ],
+      "wave": 3,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-002",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-011",
+      "title": "Jittered Exponential Backoff for Git Index Lock",
+      "epic": "Epic 2: Worktree Security, Process Supervision & Host Sandboxing",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-GIT-005",
+        "MH-AUDIT-GIT-006"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "packages/execution-core/src/git/runner.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Execute exponential backoff retry loop when encountering .git/index.lock contention.",
+        "Apply random jitter to retry delays (base 100ms, max 5 retries, max delay 2000ms).",
+        "Pass tests/git-index-lock-retry.test.ts verifying concurrent Git operations succeed despite lock contention."
+      ],
+      "wave": 3,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-002",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-012",
+      "title": "Explicit Fallback Git Committer Identity",
+      "epic": "Epic 2: Worktree Security, Process Supervision & Host Sandboxing",
+      "classification": "LOCAL_HARDENING",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-GIT-007",
+        "MH-AUDIT-GIT-008"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "packages/execution-core/src/git/runner.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Inspect local and global Git user.name and user.email configuration.",
+        "Set fallback identity ('ManyHands Bot', 'bot@manyhands.dev') if unconfigured.",
+        "Ensure automated Git commits succeed on clean developer workstations."
+      ],
+      "wave": 3,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-002",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-013",
+      "title": "Host Worktree Resource Limit & Isolation Policy",
+      "epic": "Epic 2: Worktree Security, Process Supervision & Host Sandboxing",
+      "classification": "LOCAL_HARDENING",
+      "targetReadinessLevel": "Level D",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-GIT-009",
+        "MH-AUDIT-GIT-012"
+      ],
+      "technicalDependencies": [
+        "MH-REM-009",
+        "MH-REM-010"
+      ],
+      "targetFilesPackages": [
+        "packages/execution-core/src/worktree/isolation-policy.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Enforce max concurrent sub-processes limit based on local CPU core count.",
+        "Block execution of root/administrative commands (sudo, system format).",
+        "Verify agent sub-processes execute under current unprivileged local user context."
+      ],
+      "wave": 3,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-002",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-014",
+      "title": "Lock Ownership Fencing in acquireDurableLock",
+      "epic": "Epic 3: Persistence Engine & Atomic Event Store Recovery",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level B",
+      "priority": "P0",
+      "relatedAuditFindings": [
+        "MH-AUDIT-PERS-001",
+        "MH-AUDIT-PERS-010",
+        "MH-AUDIT-SEC-004",
+        "MH-AUDIT-SEC-006"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "packages/run-store/src/jsonl-event-store.ts",
+        "packages/run-store/src/durable-lock.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Write owner.json { pid, acquiredAt, lockToken } inside lockPath upon acquisition.",
+        "Inspect owner.json in lock release callback and compare lockToken.",
+        "Do NOT delete lockPath directory if lockToken does not match.",
+        "Pass tests/run-store-lock-ownership.test.ts verifying foreign lock directories are preserved."
+      ],
+      "wave": 0,
+      "releaseGate": "Gate A",
+      "adrId": "ADR-003",
+      "adrStatus": "APPROVED",
+      "status": "COMPLETE"
+    },
+    {
+      "id": "MH-REM-015",
+      "title": "fsync Flushes & Jittered Delay in Atomic Writes",
+      "epic": "Epic 3: Persistence Engine & Atomic Event Store Recovery",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-PERS-002",
+        "MH-AUDIT-PERS-003"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "packages/run-store/src/jsonl-event-store.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Write to unique temp file (file.tmp.<uuid>) and execute fs.fsync(fd) before closing.",
+        "Retry renames on EBUSY/EPERM with exponential backoff and random jitter (10ms, 20ms, 40ms).",
+        "Unlink unused temp files in finally block on failure.",
+        "Pass tests/atomic-write-fsync.test.ts verifying zero file corruption or leaked .tmp files."
+      ],
+      "wave": 2,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-003",
+      "adrStatus": "APPROVED",
+      "status": "COMPLETE"
+    },
+    {
+      "id": "MH-REM-016",
+      "title": "JsonlAttemptStore update() State Transition Method",
+      "epic": "Epic 3: Persistence Engine & Atomic Event Store Recovery",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-PERS-006",
+        "MH-AUDIT-PERS-007"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "packages/run-store/src/attempt-store.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Add update(attemptId, patchFn) method to JsonlAttemptStore.",
+        "Apply patchFn to current attempt state and write updated attempt state atomically.",
+        "Support seamless attempt status transitions (pending -> running -> succeeded/failed)."
+      ],
+      "wave": 2,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-003",
+      "adrStatus": "APPROVED",
+      "status": "COMPLETE"
+    },
+    {
+      "id": "MH-REM-017",
+      "title": "Event Store Compaction & Snapshot Truncation",
+      "epic": "Epic 3: Persistence Engine & Atomic Event Store Recovery",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level C",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-GAP-001",
+        "MH-AUDIT-GAP-005",
+        "MH-AUDIT-GAP-012",
+        "MH-AUDIT-PERS-008"
+      ],
+      "technicalDependencies": [
+        "MH-REM-014",
+        "MH-REM-015"
+      ],
+      "targetFilesPackages": [
+        "packages/run-store/src/compactor.ts",
+        "packages/run-store/src/jsonl-event-store.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Implement EventStoreCompactor triggering when event log exceeds 1,000 events.",
+        "Write snapshot.json and truncate historical JSONL events prior to snapshot checkpoint.",
+        "Pass tests/run-store-compaction.test.ts verifying 10,000 events are compacted without state loss."
+      ],
+      "wave": 2,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-003",
+      "adrStatus": "APPROVED",
+      "status": "COMPLETE"
+    },
+    {
+      "id": "MH-REM-018",
+      "title": "High-Throughput Stream Writer for Event Store",
+      "epic": "Epic 3: Persistence Engine & Atomic Event Store Recovery",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level C",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-GAP-008",
+        "MH-AUDIT-PERS-009"
+      ],
+      "technicalDependencies": [
+        "MH-REM-015"
+      ],
+      "targetFilesPackages": [
+        "packages/run-store/src/jsonl-event-store.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Replace full file re-write append loop with true append stream (fs.createWriteStream with { flags: 'a' }).",
+        "Achieve O(1) constant time event appends regardless of file size.",
+        "Achieve >= 5,000 events/sec append throughput under load."
+      ],
+      "wave": 2,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-003",
+      "adrStatus": "APPROVED",
+      "status": "COMPLETE"
+    },
+    {
+      "id": "MH-REM-019",
+      "title": "Durable JsonlTraceStore Telemetry Persistence",
+      "epic": "Epic 3: Persistence Engine & Atomic Event Store Recovery",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level C",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-PERS-004",
+        "MH-AUDIT-QA-001",
+        "MH-AUDIT-GAP-002"
+      ],
+      "technicalDependencies": [
+        "MH-REM-015"
+      ],
+      "targetFilesPackages": [
+        "packages/trace-store/src/jsonl-trace-store.ts",
+        "packages/trace-store/src/index.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Replace InMemoryTraceStore with durable JsonlTraceStore writing to .manyhands/runs/<runId>/traces.jsonl.",
+        "Persist telemetry events durably to disk across process restarts.",
+        "Pass tests/trace-store-durability.test.ts verifying logged traces are readable after process restart."
+      ],
+      "wave": 2,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-003",
+      "adrStatus": "APPROVED",
+      "status": "COMPLETE"
+    },
+    {
+      "id": "MH-REM-020",
+      "title": "Persistence Crash Recovery & Integrity Verifier",
+      "epic": "Epic 3: Persistence Engine & Atomic Event Store Recovery",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level C",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-PERS-005",
+        "MH-AUDIT-QA-007"
+      ],
+      "technicalDependencies": [
+        "MH-REM-017",
+        "MH-REM-018"
+      ],
+      "targetFilesPackages": [
+        "packages/run-store/src/recovery.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Implement verifyAndRecoverRunStore(runId) checking JSONL formatting and checksums.",
+        "Repair incomplete trailing lines caused by abrupt power loss gracefully.",
+        "Reconstruct latest valid state snapshot without throwing syntax errors."
+      ],
+      "wave": 2,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-003",
+      "adrStatus": "APPROVED",
+      "status": "COMPLETE"
+    },
+    {
+      "id": "MH-REM-021",
+      "title": "Declared Artifact ExecutionBase Materializer",
+      "epic": "Epic 4: Execution Core, Base Materialization & Input Fingerprinting",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-ORCH-003"
+      ],
+      "technicalDependencies": [
+        "MH-REM-007"
+      ],
+      "targetFilesPackages": [
+        "packages/execution-core/src/base/builder.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Build attempt workspace by applying ONLY explicitly declared ArtifactRequirement commits onto baseline Git commit.",
+        "Do NOT merge un-declared sibling commits into execution base.",
+        "Verify materialized execution base directory contains exact files specified by contracts."
+      ],
+      "wave": 4,
+      "releaseGate": "Gate C",
+      "adrId": "ADR-004",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-022",
+      "title": "Node-Local InputFingerprint Calculator & Rejection",
+      "epic": "Epic 4: Execution Core, Base Materialization & Input Fingerprinting",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-ORCH-004"
+      ],
+      "technicalDependencies": [
+        "MH-REM-021"
+      ],
+      "targetFilesPackages": [
+        "packages/execution-core/src/fingerprint.ts",
+        "packages/orchestrator-graph/src/v2/attempt-adopter.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Hash node ID, scope contract, validation contract, base commit, artifact SHA-256 map, and executor profile ID in computeInputFingerprint.",
+        "Exclude global GraphRevision ID from fingerprint calculation.",
+        "Reject completed attempt results whose InputFingerprint no longer matches active node contracts."
+      ],
+      "wave": 4,
+      "releaseGate": "Gate C",
+      "adrId": "ADR-004",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-023",
+      "title": "Worktree Git Object Hardlink Disk Optimization",
+      "epic": "Epic 4: Execution Core, Base Materialization & Input Fingerprinting",
+      "classification": "LOCAL_HARDENING",
+      "targetReadinessLevel": "Level B",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-GAP-009"
+      ],
+      "technicalDependencies": [
+        "MH-REM-010"
+      ],
+      "targetFilesPackages": [
+        "packages/execution-core/src/worktree/manager.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Configure Git worktree creation to share local Git object storage via .git/objects/info/alternates.",
+        "Reduce physical disk overhead per attempt worktree by >= 80% compared to full clone copies."
+      ],
+      "wave": 4,
+      "releaseGate": "Gate C",
+      "adrId": "ADR-004",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-024",
+      "title": "Stale Node Attempt Event Notification System",
+      "epic": "Epic 4: Execution Core, Base Materialization & Input Fingerprinting",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level B",
+      "priority": "P2",
+      "relatedAuditFindings": [],
+      "technicalDependencies": [
+        "MH-REM-022"
+      ],
+      "targetFilesPackages": [
+        "packages/orchestrator-graph/src/v2/attempt-adopter.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Emit NodeAttemptStaleEvent when an attempt is rejected due to fingerprint mismatch.",
+        "Transition node state to re-queued for automatic re-execution with updated execution base."
+      ],
+      "wave": 4,
+      "releaseGate": "Gate C",
+      "adrId": "ADR-004",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-025",
+      "title": "Execution Base Manifest Generator",
+      "epic": "Epic 4: Execution Core, Base Materialization & Input Fingerprinting",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level B",
+      "priority": "P2",
+      "relatedAuditFindings": [],
+      "technicalDependencies": [
+        "MH-REM-021"
+      ],
+      "targetFilesPackages": [
+        "packages/execution-core/src/base/manifest.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Write execution-base-manifest.json recording base commit, applied artifact versions, checksums, and timestamp.",
+        "Attach manifest to attempt completion payload for audit verification."
+      ],
+      "wave": 4,
+      "releaseGate": "Gate C",
+      "adrId": "ADR-004",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-026",
+      "title": "Immutable Attempt Checksum Verification",
+      "epic": "Epic 4: Execution Core, Base Materialization & Input Fingerprinting",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level B",
+      "priority": "P2",
+      "relatedAuditFindings": [],
+      "technicalDependencies": [
+        "MH-REM-025"
+      ],
+      "targetFilesPackages": [
+        "packages/execution-core/src/run/checksum-verifier.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Calculate SHA-256 hash over completed attempt output diffs and materialized files.",
+        "Verify checksum matches manifest before marking attempt succeeded."
+      ],
+      "wave": 4,
+      "releaseGate": "Gate C",
+      "adrId": "ADR-004",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-027",
+      "title": "SSE Request Abort Signal Server Teardown",
+      "epic": "Epic 5: API, SSE & Web UI Local State Synchronization",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level C",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-API-001",
+        "MH-AUDIT-API-014"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "apps/web/src/app/api/runs/[runId]/events/route.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Attach request.signal.addEventListener('abort', ...) in SSE route handler.",
+        "Cancel background event store polling timer and unsubscribe listener within 100ms of client disconnect.",
+        "Pass tests/api-sse-disconnect.test.ts verifying zero background timers remain active after stream abort."
+      ],
+      "wave": 5,
+      "releaseGate": "Gate C",
+      "adrId": "ADR-005",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-028",
+      "title": "Localhost API Route Guard & CSRF Verification",
+      "epic": "Epic 5: API, SSE & Web UI Local State Synchronization",
+      "classification": "LOCAL_HARDENING",
+      "targetReadinessLevel": "Level C",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-API-006",
+        "MH-AUDIT-API-004",
+        "MH-AUDIT-API-005",
+        "MH-AUDIT-GAP-007"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "apps/web/src/middleware.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Implement Next.js middleware restricting API access to loopback addresses (127.0.0.1, ::1).",
+        "Verify Origin/Host headers match localhost or 127.0.0.1 on mutating HTTP requests.",
+        "Reject non-local network requests with HTTP 403 Forbidden."
+      ],
+      "wave": 5,
+      "releaseGate": "Gate C",
+      "adrId": "ADR-005",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-029",
+      "title": "Protected Native Folder Picker Confirmation",
+      "epic": "Epic 5: API, SSE & Web UI Local State Synchronization",
+      "classification": "LOCAL_HARDENING",
+      "targetReadinessLevel": "Level C",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-API-008",
+        "MH-AUDIT-API-007"
+      ],
+      "technicalDependencies": [
+        "MH-REM-028"
+      ],
+      "targetFilesPackages": [
+        "apps/web/src/app/api/local-fs/pick-folder/route.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Require valid local confirmation token in pick-folder route.",
+        "Reject unauthenticated or external calls without spawning OS file picker dialogs."
+      ],
+      "wave": 5,
+      "releaseGate": "Gate C",
+      "adrId": "ADR-005",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-030",
+      "title": "Client Incremental Event Fold & Reconnect Checkpoints",
+      "epic": "Epic 5: API, SSE & Web UI Local State Synchronization",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level C",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-API-002",
+        "MH-AUDIT-API-009",
+        "MH-AUDIT-API-010",
+        "MH-AUDIT-API-011",
+        "MH-AUDIT-GAP-011"
+      ],
+      "technicalDependencies": [
+        "MH-REM-027"
+      ],
+      "targetFilesPackages": [
+        "apps/web/src/lib/client/use-live-run-model.ts",
+        "apps/web/src/lib/run-model/state-folder.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Store cached RunSnapshot and bounded event buffer (max 500 events) in useLiveRunModel.",
+        "Fold incoming SSE events incrementally into state projection without full re-folding.",
+        "Send Last-Event-ID header on stream reconnection to resume without full log re-fetch.",
+        "Maintain 60fps UI responsiveness under high event throughput."
+      ],
+      "wave": 5,
+      "releaseGate": "Gate C",
+      "adrId": "ADR-005",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-031",
+      "title": "Web Cockpit Off-Grid Tailwind Spacing Fix",
+      "epic": "Epic 5: API, SSE & Web UI Local State Synchronization",
+      "classification": "OPTIONAL_IMPROVEMENT",
+      "targetReadinessLevel": "Level C",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-QA-003",
+        "MH-AUDIT-API-013",
+        "MH-AUDIT-API-016"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "apps/web/src/components/cockpit-fixture-view.client.tsx",
+        "apps/web/src/components/run-model-view.client.tsx"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Replace off-grid custom CSS spacing classes with standard Tailwind grid/spacing utilities.",
+        "Fix visual component alignment across breakpoints.",
+        "Pass all existing pnpm test UI component tests."
+      ],
+      "wave": 0,
+      "releaseGate": "Gate A",
+      "adrId": "ADR-005",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-032",
+      "title": "Non-Auto-Recentering Canvas Viewport Policy",
+      "epic": "Epic 5: API, SSE & Web UI Local State Synchronization",
+      "classification": "LOCAL_HARDENING",
+      "targetReadinessLevel": "Level C",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-API-003"
+      ],
+      "technicalDependencies": [
+        "MH-REM-030"
+      ],
+      "targetFilesPackages": [
+        "apps/web/src/components/graph-canvas.client.tsx"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Disable automatic fitView(), auto-pan, or auto-zoom calls on incoming SSE run events.",
+        "Preserve user canvas pan position and zoom level across background graph updates.",
+        "Trigger viewport auto-recenter ONLY when user clicks manual Recenter button."
+      ],
+      "wave": 5,
+      "releaseGate": "Gate C",
+      "adrId": "ADR-005",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-033",
+      "title": "WCAG 2.2 AA Keyboard Navigation & Reduced Motion",
+      "epic": "Epic 5: API, SSE & Web UI Local State Synchronization",
+      "classification": "LOCAL_HARDENING",
+      "targetReadinessLevel": "Level D",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-API-015"
+      ],
+      "technicalDependencies": [
+        "MH-REM-031"
+      ],
+      "targetFilesPackages": [
+        "apps/web/src/app/"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Provide 100% keyboard accessibility across interactive Web UI elements (Tab, Enter, Space, Escape).",
+        "Add visible focus rings (focus-visible:ring-2) on clickable buttons and canvas nodes.",
+        "Support prefers-reduced-motion media query disabling canvas animations."
+      ],
+      "wave": 5,
+      "releaseGate": "Gate C",
+      "adrId": "ADR-005",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-034",
+      "title": "XML Prompt Envelope Isolation for Untrusted Content",
+      "epic": "Epic 6: AI Security, Prompt Protection & Token Governance",
+      "classification": "LOCAL_HARDENING",
+      "targetReadinessLevel": "Level D",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-AI-001",
+        "MH-AUDIT-AI-007"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "packages/decomposer/src/planner/work-breakdown.ts",
+        "packages/decomposer/src/planner/prompt-envelope.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Wrap user repository files and issue texts in <user_repository_file path=\"...\"> XML tags.",
+        "Escape inner occurrences of </user_repository_file> to &lt;/user_repository_file&gt;.",
+        "Instruct model in system prompt that text inside <user_repository_file> is untrusted data.",
+        "Pass tests/ai-prompt-injection.test.ts verifying prompt injection payloads inside source files are rendered inert."
+      ],
+      "wave": 6,
+      "releaseGate": "Gate D",
+      "adrId": "ADR-006",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-035",
+      "title": "Pre-Execution Token Budget Spending Caps",
+      "epic": "Epic 6: AI Security, Prompt Protection & Token Governance",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level D",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-AI-002"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "packages/decomposer/src/llm-decomposer.ts",
+        "packages/shared/src/token-budget.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Track cumulative prompt and completion token expenditure per run in TokenBudgetLedger.",
+        "Check remaining budget against maxBudgetUsd spending cap before executing LLM call.",
+        "Abort with TokenBudgetExceededError before invoking API provider if budget cap is exceeded.",
+        "Pass tests/ai-budget-limits.test.ts verifying calls abort when budget is exhausted."
+      ],
+      "wave": 6,
+      "releaseGate": "Gate D",
+      "adrId": "ADR-006",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-036",
+      "title": "Local Sidecar Tool Execution Capability Sandbox",
+      "epic": "Epic 6: AI Security, Prompt Protection & Token Governance",
+      "classification": "LOCAL_HARDENING",
+      "targetReadinessLevel": "Level D",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-AI-003"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "packages/shared/src/sidecar-wrapper.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Validate incoming MCP tool parameters against explicit Zod JSON schemas.",
+        "Enforce allowlists restricting tool actions to safe, permitted local capabilities.",
+        "Reject execution attempts with invalid parameters or unpermitted tools with UnpermittedToolCapabilityError."
+      ],
+      "wave": 6,
+      "releaseGate": "Gate D",
+      "adrId": "ADR-006",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-037",
+      "title": "Prompt Injection Escaping & Delimiter Sanitizer",
+      "epic": "Epic 6: AI Security, Prompt Protection & Token Governance",
+      "classification": "LOCAL_HARDENING",
+      "targetReadinessLevel": "Level D",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-AI-006"
+      ],
+      "technicalDependencies": [
+        "MH-REM-034"
+      ],
+      "targetFilesPackages": [
+        "packages/decomposer/src/planner/prompt-sanitizer.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Implement regex sanitizer stripping adversarial system override framing phrases.",
+        "Sanitize user text prior to prompt template rendering."
+      ],
+      "wave": 6,
+      "releaseGate": "Gate D",
+      "adrId": "ADR-006",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-038",
+      "title": "Per-Agent Token Cost Attribution Logging",
+      "epic": "Epic 6: AI Security, Prompt Protection & Token Governance",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level D",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-AI-005"
+      ],
+      "technicalDependencies": [
+        "MH-REM-035"
+      ],
+      "targetFilesPackages": [
+        "packages/shared/src/token-budget.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Record input tokens, output tokens, estimated USD cost, and model name in every AgentInvocationCompletedEvent.",
+        "Expose summary token spending report via CLI (agy run cost <runId>)."
+      ],
+      "wave": 6,
+      "releaseGate": "Gate D",
+      "adrId": "ADR-006",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-039",
+      "title": "Local Model Fallback Router for API Outages",
+      "epic": "Epic 6: AI Security, Prompt Protection & Token Governance",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level D",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-AI-004"
+      ],
+      "technicalDependencies": [
+        "MH-REM-035"
+      ],
+      "targetFilesPackages": [
+        "packages/decomposer/src/llm-router.ts"
+      ],
+      "estimateComplexity": "4 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Implement LLM Provider Fallback Router (Anthropic -> OpenAI -> Ollama/vLLM).",
+        "Failover to secondary provider on HTTP 429 Rate Limit or 5xx API error automatically."
+      ],
+      "wave": 6,
+      "releaseGate": "Gate D",
+      "adrId": "ADR-006",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-040",
+      "title": "Standardize Internal Monorepo Package Dependencies to workspace:*",
+      "epic": "Epic 7: Infrastructure, Supply Chain & Build Hardening",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level D",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-INFRA-001",
+        "MH-AUDIT-INFRA-006",
+        "MH-AUDIT-INFRA-007",
+        "MH-AUDIT-INFRA-010",
+        "MH-AUDIT-GAP-004"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "packages/*/package.json",
+        "apps/web/package.json"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Update internal package dependencies in package.json files to workspace:*.",
+        "Eliminate fixed version strings for internal @manyhands/* packages.",
+        "Run pnpm install cleanly with zero workspace version resolution warnings."
+      ],
+      "wave": 0,
+      "releaseGate": "Gate A",
+      "adrId": "ADR-007",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-041",
+      "title": "Local Dependency Build Integrity Verification Script",
+      "epic": "Epic 7: Infrastructure, Supply Chain & Build Hardening",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level D",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-INFRA-002",
+        "MH-AUDIT-INFRA-003",
+        "MH-AUDIT-INFRA-004",
+        "MH-AUDIT-INFRA-005",
+        "MH-AUDIT-INFRA-008"
+      ],
+      "technicalDependencies": [
+        "MH-REM-040"
+      ],
+      "targetFilesPackages": [
+        "scripts/verify-monorepo.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Add scripts/verify-monorepo.ts checking package dependencies and export signatures.",
+        "Add script to pre-build check suite (pnpm verify)."
+      ],
+      "wave": 7,
+      "releaseGate": "Gate D",
+      "adrId": "ADR-007",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-042",
+      "title": "Clean Local Setup & Startup Launcher (agy start)",
+      "epic": "Epic 7: Infrastructure, Supply Chain & Build Hardening",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level D",
+      "priority": "P3",
+      "relatedAuditFindings": [],
+      "technicalDependencies": [
+        "MH-REM-040"
+      ],
+      "targetFilesPackages": [
+        "packages/cli/src/commands/start.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Verify developer can git clone, pnpm install, pnpm build, and agy start.",
+        "Launch local web server on http://127.0.0.1:3000 with clean status output."
+      ],
+      "wave": 7,
+      "releaseGate": "Gate D",
+      "adrId": "ADR-007",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-043",
+      "title": "Local Environment API Key Validator",
+      "epic": "Epic 7: Infrastructure, Supply Chain & Build Hardening",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level D",
+      "priority": "P2",
+      "relatedAuditFindings": [],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "packages/cli/src/env-check.ts"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Validate local environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY) prior to starting a run.",
+        "Print friendly guidance for configuring .env.local if keys are missing."
+      ],
+      "wave": 7,
+      "releaseGate": "Gate D",
+      "adrId": "ADR-007",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-044",
+      "title": "Standardize Vitest Configuration & Package Test Scripts",
+      "epic": "Epic 7: Infrastructure, Supply Chain & Build Hardening",
+      "classification": "BLOCKER_LOCAL_PRODUCT",
+      "targetReadinessLevel": "Level D",
+      "priority": "P3",
+      "relatedAuditFindings": [
+        "MH-AUDIT-QA-004",
+        "MH-AUDIT-INFRA-009"
+      ],
+      "technicalDependencies": [
+        "MH-REM-040"
+      ],
+      "targetFilesPackages": [
+        "vitest.config.ts",
+        "packages/*/package.json"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Update vitest.config.ts test globs to match packages/*/src/**/*.test.ts.",
+        "Add explicit test script (\"test\": \"vitest run\") to all package package.json manifests."
+      ],
+      "wave": 7,
+      "releaseGate": "Gate D",
+      "adrId": "ADR-007",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-045",
+      "title": "React Testing Library DOM Component Tests",
+      "epic": "Epic 8: QA, Observability & End-to-End Test Infrastructure",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level C",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-QA-003"
+      ],
+      "technicalDependencies": [
+        "MH-REM-031"
+      ],
+      "targetFilesPackages": [
+        "tests/run-loading-skeleton.test.ts",
+        "apps/web/src/__tests__/ui-components.test.tsx"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Replace raw fs.readFileSync TSX text string matching with React Testing Library component DOM assertions.",
+        "Assert DOM elements, ARIA roles, and props inside JSDOM environment.",
+        "Ensure TSX formatting changes do not break DOM tests."
+      ],
+      "wave": 5,
+      "releaseGate": "Gate C",
+      "adrId": "ADR-005",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-046",
+      "title": "Playwright E2E Browser Test Suite for Local Web Application",
+      "epic": "Epic 8: QA, Observability & End-to-End Test Infrastructure",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level C",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-QA-002"
+      ],
+      "technicalDependencies": [],
+      "targetFilesPackages": [
+        "apps/web/e2e/run-lifecycle.spec.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Create Playwright E2E browser tests covering run creation, live SSE graph sync, decision card responses, and completion.",
+        "Execute against local web server (http://127.0.0.1:3000) and pass in headless Chromium."
+      ],
+      "wave": 0,
+      "releaseGate": "Gate A",
+      "adrId": "ADR-005",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-047",
+      "title": "Standardize Package-Level Test Scripts & Vitest Discovery Globs",
+      "epic": "Epic 8: QA, Observability & End-to-End Test Infrastructure",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level C",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-QA-004",
+        "MH-AUDIT-QA-009"
+      ],
+      "technicalDependencies": [
+        "MH-REM-044"
+      ],
+      "targetFilesPackages": [
+        "package.json",
+        "packages/*/package.json"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Running pnpm test from root MUST execute unit tests across all 7 packages and web app.",
+        "Zero obsolete vitest glob warnings or missing test script errors."
+      ],
+      "wave": 7,
+      "releaseGate": "Gate D",
+      "adrId": "ADR-007",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-048",
+      "title": "Build Worktree Lifecycle & Concurrency Integration Suite",
+      "epic": "Epic 8: QA, Observability & End-to-End Test Infrastructure",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level B",
+      "priority": "P1",
+      "relatedAuditFindings": [
+        "MH-AUDIT-GIT-001",
+        "MH-AUDIT-GIT-010",
+        "MH-AUDIT-QA-005"
+      ],
+      "technicalDependencies": [
+        "MH-REM-007",
+        "MH-REM-010"
+      ],
+      "targetFilesPackages": [
+        "tests/integration/worktree-concurrency.test.ts"
+      ],
+      "estimateComplexity": "5 Story Points (High)",
+      "detailedAcceptanceCriteria": [
+        "Create integration test suite exercising GroundingAgent dirty workspace checks, worktree allocation, and LiveProcessRegistry cleanup.",
+        "Assert zero leaked worktree folders, zero background process leaks, and zero dirty workspace staging."
+      ],
+      "wave": 3,
+      "releaseGate": "Gate B",
+      "adrId": "ADR-002",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-049",
+      "title": "Implement Synthetic Task Graph Wave Selector Stress Tests",
+      "epic": "Epic 8: QA, Observability & End-to-End Test Infrastructure",
+      "classification": "REQUIRED_FOR_LOCAL_RELIABILITY",
+      "targetReadinessLevel": "Level B",
+      "priority": "P2",
+      "relatedAuditFindings": [
+        "MH-AUDIT-ORCH-002",
+        "MH-AUDIT-QA-008"
+      ],
+      "technicalDependencies": [
+        "MH-REM-002"
+      ],
+      "targetFilesPackages": [
+        "tests/integration/graph-scheduler-stress.test.ts"
+      ],
+      "estimateComplexity": "4 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Build synthetic graph generator producing 500-node task graphs with complex relations.",
+        "Process 500-node graph wave selection in under 500ms without violating conflict constraints."
+      ],
+      "wave": 8,
+      "releaseGate": "Gate D",
+      "adrId": "ADR-001",
+      "adrStatus": "APPROVED"
+    },
+    {
+      "id": "MH-REM-050",
+      "title": "Implement Local Diagnostic Trace Reader CLI & Web Component",
+      "epic": "Epic 8: QA, Observability & End-to-End Test Infrastructure",
+      "classification": "LOCAL_HARDENING",
+      "targetReadinessLevel": "Level C",
+      "priority": "P3",
+      "relatedAuditFindings": [
+        "MH-AUDIT-QA-001",
+        "MH-AUDIT-QA-006"
+      ],
+      "technicalDependencies": [
+        "MH-REM-019"
+      ],
+      "targetFilesPackages": [
+        "packages/cli/src/commands/traces.ts",
+        "apps/web/src/components/trace-inspector.client.tsx"
+      ],
+      "estimateComplexity": "3 Story Points (Medium)",
+      "detailedAcceptanceCriteria": [
+        "Implement agy run traces <runId> CLI command and Web UI trace viewer component.",
+        "Enable developer to inspect sub-agent LLM prompts, tool execution logs, and timing spans locally."
+      ],
+      "wave": 8,
+      "releaseGate": "Gate D",
+      "adrId": "ADR-003",
+      "adrStatus": "APPROVED"
+    }
+  ]
+}

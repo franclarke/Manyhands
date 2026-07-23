@@ -20,7 +20,6 @@ function node(partial: Partial<TaskNode> & Pick<TaskNode, "id" | "kind" | "depth
     status: "planned",
     granularity: "auto",
     childrenIds: [],
-    dependencies: [],
     ...partial
   } as TaskNode;
 }
@@ -62,7 +61,6 @@ function mainGraph(): TaskGraph {
         kind: "leaf",
         depth: 1,
         parentId: "root",
-        dependencies: ["auth"],
         contract: leafContract("billing") as never
       })
     },
@@ -95,7 +93,6 @@ function replacementGraph(): TaskGraph {
         kind: "leaf",
         depth: 1,
         parentId: "sub-root",
-        dependencies: ["login"],
         contract: leafContract("session") as never
       })
     },
@@ -160,7 +157,6 @@ describe("graftSubtree", () => {
       kind: "leaf",
       depth: 1,
       parentId: "root",
-      dependencies: ["auth-old"],
       contract: leafContract("billing") as never
     });
     graph.dependencies = [{ fromTaskId: "auth-old", toTaskId: "billing", type: "contractual", inferred: false }] as never;

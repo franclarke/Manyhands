@@ -95,20 +95,26 @@ function reviewDag(input: CompiledPlanReviewInput, findings: PlanFinding[]): voi
 }
 
 function reviewScopes(input: CompiledPlanReviewInput, findings: PlanFinding[]): void {
-  const indexedPaths = new Set(input.repositorySnapshot.index?.files.map((file) => file.path) ?? []);
-  const plannedPaths = new Set(flattenUnits(input.breakdown.root).flatMap((unit) => unit.plannedPaths ?? []));
-  for (const path of plannedPaths) {
-    if (indexedPaths.has(path)) findings.push(finding("scope_isolation", "error", "planned_path_already_exists", `Planned path ${path} already exists in the repository snapshot.`, "Cite the existing path as repository evidence instead of declaring it as a new output.", []));
+  const isWin = (input as any).options?.isWin ?? (process.platform === "win32");
+  const normalizePath = (p: string) => {
+    const posix = p.replaceAll("\\", "/");
+    return isWin ? posix.toLowerCase() : posix;
+  };
+  const indexedPathsNormalized = new Set((input.repositorySnapshot.index?.files.map((file) => file.path) ?? []).map(normalizePath));
+  const plannedPathsNormalized = new Set(flattenUnits(input.breakdown.root).flatMap((unit) => unit.plannedPaths ?? []).map(normalizePath));
+  for (const path of plannedPathsNormalized) {
+    if (indexedPathsNormalized.has(path)) findings.push(finding("scope_isolation", "error", "planned_path_already_exists", `Planned path ${path} already exists in the repository snapshot.`, "Cite the existing path as repository evidence instead of declaring it as a new output.", []));
   }
   for (const bundle of input.contracts) {
-    for (const path of bundle.scope.allowedPaths) if (!indexedPaths.has(path) && !plannedPaths.has(path)) findings.push(finding("scope_isolation", "error", "scope_path_not_grounded", `Scope path ${path} for ${bundle.task.nodeId} is neither present in the repository snapshot nor declared as a planned output.`, "Ground the scope in repository evidence or declare a concrete planned output path.", [], bundle.task.nodeId, bundle.scope.id));
+    for (const path of bundle.scope.allowedPaths) if (!indexedPathsNormalized.has(normalizePath(path)) && !plannedPathsNormalized.has(normalizePath(path))) findings.push(finding("scope_isolation", "error", "scope_path_not_grounded", `Scope path ${path} for ${bundle.task.nodeId} is neither present in the repository snapshot nor declared as a planned output.`, "Ground the scope in repository evidence or declare a concrete planned output path.", [], bundle.task.nodeId, bundle.scope.id));
   }
   for (let leftIndex = 0; leftIndex < input.contracts.length; leftIndex += 1) {
     for (let rightIndex = leftIndex + 1; rightIndex < input.contracts.length; rightIndex += 1) {
       const left = input.contracts[leftIndex]!;
       const right = input.contracts[rightIndex]!;
       if (isAncestor(input, left.task.nodeId, right.task.nodeId) || isAncestor(input, right.task.nodeId, left.task.nodeId)) continue;
-      const overlap = left.scope.allowedPaths.filter((path) => right.scope.allowedPaths.includes(path));
+      const rightNormalized = new Set(right.scope.allowedPaths.map(normalizePath));
+      const overlap = left.scope.allowedPaths.filter((path) => rightNormalized.has(normalizePath(path)));
       if (overlap.length === 0) continue;
       const constrained = input.graph.conflictConstraints.some((constraint) => new Set([constraint.leftNodeId, constraint.rightNodeId]).size === 2 && [constraint.leftNodeId, constraint.rightNodeId].includes(left.task.nodeId) && [constraint.leftNodeId, constraint.rightNodeId].includes(right.task.nodeId));
       if (!constrained) findings.push(finding("scope_isolation", "error", "unmodeled_scope_overlap", `${left.task.nodeId} and ${right.task.nodeId} overlap on ${overlap.join(", ")} without a conflict constraint.`, "Add a scheduling conflict constraint or redraw scopes.", [], left.task.nodeId));

@@ -1,79 +1,43 @@
-# Documentación de ManyHands
+# DOCUMENTACIÓN TÉCNICA DE MANYHANDS
 
-## Estado y alcance
+Bienvenido al centro oficial de documentación de **ManyHands**, el sistema local y self-hosted de orquestación multiagente para desarrollo de software.
 
-Esta carpeta describe la **implementación vigente** de ManyHands y la semántica
-que debe preservar. La guía principal parte del objetivo del producto y recorre
-componentes, datos, estrategias y garantías sin requerir conocimiento de
-versiones o migraciones previas. Código, tests y journals son la evidencia de la
-implementación concreta.
+---
 
-Cuando exista una diferencia entre estos documentos y la implementación, debe
-registrarse como drift o brecha operativa. No se cambia una decisión normativa
-para justificar silenciosamente un comportamiento accidental.
+## 🌟 LOS 3 PILARES FUNDAMENTALES DEL SISTEMA
 
-## Orden de autoridad
+Muchos componentes del sistema existen para dar soporte a la arquitectura, pero el núcleo estratégico de ManyHands descansa sobre **3 pilares principales**:
 
-1. [`PRODUCT.md`](../PRODUCT.md): usuarios, propósito y principios de producto.
-2. [`DECISIONS.md`](DECISIONS.md): decisiones arquitectónicas vigentes.
-3. [`system/`](system/): contratos técnicos de punta a punta.
-4. [`design/`](design/): experiencia, interacción y sistema visual.
-5. [`adr/`](adr/): contexto, alternativas y consecuencias de las decisiones.
-6. Código, tests y persistencia: evidencia del comportamiento implementado.
+| Pilar | Documento de Arquitectura | Descripción |
+|---|---|---|
+| 🧠 **Pilar 1: El Decomposer** | 📄 **[01-decomposer-engine.md](core-pillars/01-decomposer-engine.md)** | Motor de granularidad adaptativa (V3). Evalúa el índice de complejidad intrínseca ($C_{task}$), ejecuta la división en 2 fases (*Architect Pass + Compiler*) y optimiza sub-tareas mediante critics de coalescencia. |
+| ⚡ **Pilar 2: La Ejecución** | 📄 **[02-execution-and-orchestration.md](core-pillars/02-execution-and-orchestration.md)** | Despacho continuo por eventos, scheduler determinista, `V2ExecutionDriver` con `recordQueue` atómico, pool de reciclaje de worktrees y sandboxing de seguridad. |
+| 🛡️ **Pilar 3: La Integración** | 📄 **[03-integration-and-evidence.md](core-pillars/03-integration-and-evidence.md)** | Construcción de la Matriz de Evidencias sobre commits exactos, materialización bottom-up del árbol e integración final verificada en la rama entregada. |
 
-## Recorrido recomendado
+---
 
-| Necesidad | Documento |
-|---|---|
-| Entender el producto | [`PRODUCT.md`](../PRODUCT.md) |
-| Entender el sistema completo | [`development/architecture.md`](development/architecture.md) |
-| Entender cada estrategia y su evidencia | [`development/problem-solving-strategies.md`](development/problem-solving-strategies.md) |
-| Entender el uso de librerías | [`development/library-usage.md`](development/library-usage.md) |
-| Entender el flujo de un run | [`system/README.md`](system/README.md) |
-| Entender el modelo del grafo | [`system/01-task-graph.md`](system/01-task-graph.md) |
-| Entender dependencias y contratos | [`system/02-contracts.md`](system/02-contracts.md) |
-| Entender ejecución e integración | [`system/04-run-executor.md`](system/04-run-executor.md) |
-| Entender validación y entrega | [`system/08-result-pipeline.md`](system/08-result-pipeline.md) |
-| Entender la experiencia del usuario | [`design/interaction-model.md`](design/interaction-model.md) |
-| Entender el workspace centrado en el grafo | [`design/agent-first-redesign.md`](design/agent-first-redesign.md) |
-| Preparar una demostración | [`design/golden-fixtures.md`](design/golden-fixtures.md) |
+## ⚙️ SUBSISTEMAS TÉCNICOS Y ESPECIFICACIONES
 
-## Lenguaje normativo
+| Subsistema | Especificación Técnica | Descripción |
+|---|---|---|
+| 📐 **TaskGraph & Contratos** | 📄 **[01-task-graph-and-contracts.md](system/01-task-graph-and-contracts.md)** | Grafo jerárquico V3, relaciones canónicas tipadas, reductor Compare-and-Swap e inmutabilidad profunda (`deepFreeze`). |
+| 💾 **Persistencia y Durabilidad** | 📄 **[02-persistence-and-durability.md](system/02-persistence-and-durability.md)** | Escrituras atómicas con `fsync`, log $O(1)$, compactación por generaciones, SQLite WAL mode y recuperador de fallos de energía. |
+| 🚀 **Indexación Monorepo** | 📄 **[03-monorepo-grounding.md](system/03-monorepo-grounding.md)** | Indexación nativa con `ripgrep` (`rg --files`), caché incremental por Git HEAD SHA y extractor de firmas de exportación. |
+| 🖥️ **Cockpit UI & Interacción** | 📄 **[04-cockpit-ui-and-interaction.md](system/04-cockpit-ui-and-interaction.md)** | Modelo visual del Cockpit (`apps/web`), medallas de ciclo de vida de nodos, cola de decisiones non-blocking y prohibición de `fitView`. |
 
-- **Debe**: requisito de la arquitectura vigente.
-- **Puede**: decisión local permitida sin alterar el contrato.
-- **Actual**: comportamiento verificado en el código al momento de documentar.
-- **Propuesto**: comportamiento todavía no incorporado a una decisión vigente.
-- **Histórico**: material sin autoridad normativa.
+---
 
-Los nombres de frameworks, clases o paquetes no son decisiones arquitectónicas
-salvo que el documento lo diga expresamente. React Flow, JSON o un executor CLI
-son implementaciones actuales sin formar parte del contrato conceptual.
-LangChain/LangGraph fueron removidos de las dependencias web: no tienen imports
-productivos ni responsabilidad en la arquitectura actual.
+## 📜 REGISTRO DE DECISIONES Y PLANIFICACIÓN
 
-## Material no normativo
+- **Decisiones de Arquitectura**: `docs/DECISIONS.md` y carpeta `docs/adr/`.
+- **Auditoría de Producción y Backlog**: `docs/audits/production-readiness/planning/remediation-backlog.json`.
+- **Prompts Autónomos de Ejecución**: `docs/prompts/`.
 
-- `docs/otras tesis/` contiene bibliografía y ejemplos externos.
-- `docs/tesis/propuesta/` conserva una propuesta académica previa; su README
-  aclara su relación con la arquitectura vigente.
-- Los fixtures de `/proto` son demostraciones y regresiones del modelo de UI. No
-  prueban por sí solos que el backend real implemente el comportamiento.
-- `plans/`, `audits/` y `design/evolution-and-rationale.md` conservan contexto de
-  implementación y evaluación. Son útiles para investigar historia, pero no son
-  necesarios para comprender cómo funciona el sistema actual.
+---
 
-## Política de actualización
+## PRINCIPIOS DE AUTORIDAD DE DOCUMENTACIÓN
 
-Un cambio arquitectónico debe actualizar, en la misma revisión:
-
-1. la decisión en `DECISIONS.md`;
-2. el contrato técnico afectado en `system/`;
-3. la experiencia afectada en `design/`, si corresponde;
-4. un ADR cuando cambien alternativas, trade-offs o límites relevantes;
-5. un plan o ledger activo cuando el cambio requiera migración, compatibilidad o
-   gates de rollout.
-
-No se agregan bitácoras de implementación, auditorías temporales ni planes
-cerrados a la documentación normativa. Esos artefactos deben vivir fuera del
-recorrido principal y declarar fecha y estado.
+1. **`PRODUCT.md`**: Usuarios y principios del producto.
+2. **`docs/DECISIONS.md`**: Decisiones de arquitectura target.
+3. **`docs/core-pillars/`**: Los 3 pilares estructurales del producto.
+4. **`docs/system/`**: Esquemas y especificaciones técnicas de subsistemas.

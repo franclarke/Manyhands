@@ -5,7 +5,7 @@ import {
   type ReviseGraphInput
 } from "./graph-revision.js";
 
-export type GraphRevisionIssueCode = "schema_invalid" | "missing_root" | "invalid_root" | "invalid_node_kind" | "node_key_mismatch" | "missing_parent" | "hierarchy_cycle" | "missing_relation_node" | "duplicate_relation";
+export type GraphRevisionIssueCode = "schema_invalid" | "missing_root" | "invalid_root" | "invalid_node_kind" | "node_key_mismatch" | "missing_parent" | "hierarchy_cycle" | "artifact_cycle" | "self_relation" | "missing_relation_node" | "duplicate_relation";
 
 export interface GraphRevisionIssue {
   code: GraphRevisionIssueCode;
@@ -43,7 +43,7 @@ export function validateGraphRevision(input: GraphRevision): GraphRevisionIssue[
     if ((node.kind === "leaf" || node.kind === "integrator") && hasChildren) issues.push({ code: "invalid_node_kind", severity: "error", nodeId: node.id, message: `${node.kind} node ${node.id} cannot own child nodes.` });
     if ((node.kind === "root" || node.kind === "composite") && !hasChildren) issues.push({ code: "invalid_node_kind", severity: "error", nodeId: node.id, message: `${node.kind} node ${node.id} must own at least one child.` });
   }
-  for (const nodeId of hierarchyCycleNodes(graph)) issues.push({ code: "hierarchy_cycle", severity: "error", nodeId, message: `Hierarchy cycle includes ${nodeId}.` });
+  checkCyclesAndSelfRelations(graph, issues);
   validateRelationNodes(graph, issues);
   validateUniqueIds(graph, issues);
   return issues;
@@ -77,24 +77,105 @@ export function getExecutableReadinessV2(graph: GraphRevision, options: { availa
     });
 }
 
-function hierarchyCycleNodes(graph: GraphRevision): string[] {
-  const result = new Set<string>();
-  for (const start of Object.keys(graph.nodes)) {
-    const path: string[] = [];
-    const positions = new Map<string, number>();
-    let current: string | null | undefined = start;
-    while (current !== null && current !== undefined && graph.nodes[current] !== undefined) {
-      const position = positions.get(current);
-      if (position !== undefined) {
-        for (const id of path.slice(position)) result.add(id);
-        break;
+type EdgeType = "hierarchy" | "artifact" | "legacy";
+interface Edge {
+  to: string;
+  type: EdgeType;
+}
+
+function checkCyclesAndSelfRelations(graph: GraphRevision, issues: GraphRevisionIssue[]): void {
+  const adjacency = new Map<string, Edge[]>();
+  for (const nodeId of Object.keys(graph.nodes)) adjacency.set(nodeId, []);
+
+  for (const [nodeId, node] of Object.entries(graph.nodes)) {
+    if (node.parentId !== null) {
+      if (node.parentId === nodeId) {
+        issues.push({ code: "self_relation", severity: "error", nodeId, message: `Node ${nodeId} cannot be its own parent.` });
+      } else {
+        let edges = adjacency.get(node.parentId);
+        if (!edges) { edges = []; adjacency.set(node.parentId, edges); }
+        edges.push({ to: nodeId, type: "hierarchy" });
       }
-      positions.set(current, path.length);
-      path.push(current);
-      current = graph.nodes[current]?.parentId;
     }
   }
-  return [...result].sort();
+
+  for (const req of graph.artifactRequirements) {
+    if (req.producerNodeId === req.consumerNodeId) {
+      issues.push({ code: "self_relation", severity: "error", relationId: req.id, message: `Self relation in artifact requirement ${req.id}.` });
+    } else if (req.requiredFor === "execution") {
+      let edges = adjacency.get(req.producerNodeId);
+      if (!edges) { edges = []; adjacency.set(req.producerNodeId, edges); }
+      edges.push({ to: req.consumerNodeId, type: "artifact" });
+    }
+  }
+
+  for (const binding of graph.seamBindings) {
+    if (binding.producerNodeId === binding.consumerNodeId) {
+      issues.push({ code: "self_relation", severity: "error", relationId: binding.id, message: `Self relation in seam binding ${binding.id}.` });
+    }
+  }
+
+  for (const constraint of graph.conflictConstraints) {
+    if (constraint.leftNodeId === constraint.rightNodeId) {
+      issues.push({ code: "self_relation", severity: "error", relationId: constraint.id, message: `Self relation in conflict constraint ${constraint.id}.` });
+    }
+  }
+
+  for (const legacy of graph.legacyOrderingConstraints) {
+    if (legacy.fromNodeId === legacy.toNodeId) {
+      issues.push({ code: "self_relation", severity: "error", relationId: legacy.id, message: `Self relation in legacy ordering constraint ${legacy.id}.` });
+    } else {
+      let edges = adjacency.get(legacy.fromNodeId);
+      if (!edges) { edges = []; adjacency.set(legacy.fromNodeId, edges); }
+      edges.push({ to: legacy.toNodeId, type: "legacy" });
+    }
+  }
+
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const cycleIssues = new Map<string, GraphRevisionIssueCode>();
+
+  function dfs(nodeId: string, path: string[], edgesInPath: EdgeType[]) {
+    if (visiting.has(nodeId)) {
+      const startIdx = path.indexOf(nodeId);
+      if (startIdx !== -1) {
+        const cyclePathNodes = path.slice(startIdx);
+        const cycleEdges = edgesInPath.slice(startIdx);
+        const isHierarchyOnly = cycleEdges.every((e) => e === "hierarchy");
+        const code: GraphRevisionIssueCode = isHierarchyOnly ? "hierarchy_cycle" : "artifact_cycle";
+        for (const n of cyclePathNodes) {
+          const existing = cycleIssues.get(n);
+          if (existing !== "artifact_cycle") cycleIssues.set(n, code);
+        }
+      }
+      return;
+    }
+    if (visited.has(nodeId)) return;
+
+    visiting.add(nodeId);
+    path.push(nodeId);
+
+    const edges = adjacency.get(nodeId) || [];
+    for (const edge of edges) {
+      edgesInPath.push(edge.type);
+      dfs(edge.to, path, edgesInPath);
+      edgesInPath.pop();
+    }
+
+    path.pop();
+    visiting.delete(nodeId);
+    visited.add(nodeId);
+  }
+
+  for (const nodeId of Object.keys(graph.nodes)) {
+    if (!visited.has(nodeId)) {
+      dfs(nodeId, [], []);
+    }
+  }
+
+  for (const [nodeId, code] of cycleIssues.entries()) {
+    issues.push({ code, severity: "error", nodeId, message: `Cycle detected including ${nodeId}.` });
+  }
 }
 
 function validateRelationNodes(graph: GraphRevision, issues: GraphRevisionIssue[]): void {

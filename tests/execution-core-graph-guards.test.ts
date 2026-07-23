@@ -1,4 +1,4 @@
-﻿import type { TaskGraph } from "@manyhands/task-graph";
+import type { TaskGraph } from "@manyhands/task-graph";
 import { AgentTaskContractSchema, type AgentTaskContract } from "@manyhands/contracts";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { describe, expect, it } from "vitest";
@@ -33,8 +33,7 @@ function baseGraph(overrides: Partial<TaskGraph> = {}): TaskGraph {
         status: "planned",
         granularity: "medium",
         depth: 0,
-        childrenIds: ["a"],
-        dependencies: []
+        childrenIds: ["a"]
       },
       a: {
         id: "a",
@@ -46,7 +45,6 @@ function baseGraph(overrides: Partial<TaskGraph> = {}): TaskGraph {
         granularity: "fine",
         depth: 1,
         childrenIds: [],
-        dependencies: [],
         acceptanceCriteria: ["c"],
         contract: contract("a")
       }

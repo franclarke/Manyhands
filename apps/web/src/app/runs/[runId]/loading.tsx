@@ -17,7 +17,7 @@ export default function RunLoading(): React.ReactElement {
         className="flex h-dvh min-h-[680px] flex-col overflow-hidden bg-[var(--color-bg)] text-[var(--color-text)]"
       >
         {/* Header skeleton */}
-        <header className="flex shrink-0 items-center justify-between gap-6 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-4">
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2">
           <div className="min-w-0 flex-1">
             <div className="mb-2 flex items-center gap-2">
               <div className="mh-skeleton h-2.5 w-24" />

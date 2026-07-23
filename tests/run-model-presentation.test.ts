@@ -7,6 +7,7 @@ import {
   relationLaneOffset,
   summarizeRunNodes
 } from "@/lib/run-model/presentation";
+import type { ConflictConstraint } from "@manyhands/task-graph";
 import type { RunNodeView } from "@/lib/run-model/types";
 
 describe("run graph presentation", () => {
@@ -172,7 +173,7 @@ function graph() {
       seam("seam-storage-ui", "storage", "ui")
     ],
     conflictConstraints: [
-      { id: "conflict-storage-ui", leftNodeId: "ui", rightNodeId: "storage", reason: "Shared files", risk: "medium" as const }
+      { id: "conflict-storage-ui", leftNodeId: "ui", rightNodeId: "storage", reason: "Shared files", risk: "medium" as ConflictConstraint["risk"] }
     ],
     legacyOrderingConstraints: [],
     createdAt: "2026-07-18T00:00:00.000Z"

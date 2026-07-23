@@ -239,7 +239,6 @@ function graphFor(contracts: Record<string, AgentTaskContract>): TaskGraph {
     granularity: "auto",
     depth: 1,
     childrenIds: [],
-    dependencies: [],
     contract: item
   }));
   const root: TaskNode = {
@@ -251,8 +250,7 @@ function graphFor(contracts: Record<string, AgentTaskContract>): TaskGraph {
     status: "planned",
     granularity: "auto",
     depth: 0,
-    childrenIds: leaves.map((leaf) => leaf.id),
-    dependencies: []
+    childrenIds: leaves.map((leaf) => leaf.id)
   };
 
   return {
