@@ -121,7 +121,8 @@ export function compileContractBundles(input: {
       nodeId,
       allowedPaths: scopePathsByNodeId[nodeId] ?? [],
       forbiddenPaths: [],
-      coordinationPaths: coordinationPaths(nodeId, scopePathsByNodeId)
+      coordinationPaths: coordinationPaths(nodeId, scopePathsByNodeId),
+      outputRoots: deriveOutputRoots(scopePathsByNodeId[nodeId] ?? [])
     }) satisfies ScopeContract;
     const validation = contractWithRevision({
       schemaVersion: 2 as const,
@@ -215,6 +216,24 @@ function requireNodeId(nodeIdByUnitKey: Record<string, string>, key: string): st
 
 function flattenUnits(root: WorkUnit): WorkUnit[] {
   return root.kind === "leaf" ? [root] : [root, ...root.children.flatMap(flattenUnits)];
+}
+
+/**
+ * Output roots are *derived*, never requested. A node may create new files only
+ * under the directories its own declared surface already occupies, so the
+ * authority stays grounded in the repository evidence the planner cited rather
+ * than in a root the model could invent. A path that lives at the repository
+ * root yields no root at all — that would be repo-wide write.
+ */
+function deriveOutputRoots(allowedPaths: readonly string[]): string[] {
+  const roots = new Set<string>();
+  for (const path of allowedPaths) {
+    const normalized = path.replaceAll("\\", "/");
+    const cut = normalized.lastIndexOf("/");
+    if (cut <= 0) continue;
+    roots.add(normalized.slice(0, cut));
+  }
+  return [...roots].sort();
 }
 
 function coordinationPaths(nodeId: string, scopePathsByNodeId: Record<string, string[]>): string[] {

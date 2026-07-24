@@ -28,7 +28,9 @@ export interface RecordParams {
   worktree: WorktreeRecord;
   executorOutcome: ExecutorRunOutcome;
   executionScope?: ExecutionScope;
-  scopeContract?: Pick<ScopeContract, "allowedPaths" | "forbiddenPaths">;
+  scopeContract?: Pick<ScopeContract, "allowedPaths" | "forbiddenPaths"> & {
+    outputRoots?: readonly string[] | undefined;
+  };
   forbiddenPaths?: string[];
   expectedOutput?: ExpectedOutput;
   scopePolicy?: ScopePolicy;
@@ -161,6 +163,7 @@ export class ResultRecorder {
       const diff = await this.git.diffRange({ cwd: worktree.path, from: baseHead, to: head });
       const scopeCheck = this.scopeChecker.check({
         changedFiles,
+        createdFiles: await this.git.diffRangeAddedFiles({ cwd: worktree.path, from: baseHead, to: head }),
         executionScope: params.executionScope,
         scopeContract: params.scopeContract,
         forbiddenPaths: params.forbiddenPaths
@@ -220,6 +223,7 @@ export class ResultRecorder {
 
     const scopeCheck = this.scopeChecker.check({
       changedFiles,
+      createdFiles: await this.git.diffCachedAddedFiles(worktree.path),
       executionScope: params.executionScope,
       scopeContract: params.scopeContract,
       forbiddenPaths: params.forbiddenPaths

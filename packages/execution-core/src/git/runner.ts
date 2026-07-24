@@ -58,10 +58,13 @@ export interface GitRunner {
 
   diffCached(cwd: string): Promise<string>;
   diffCachedNameOnly(cwd: string): Promise<string[]>;
+  /** Staged paths git reports as additions -- the only evidence of a new file. */
+  diffCachedAddedFiles(cwd: string): Promise<string[]>;
   diffCachedNumstat(cwd: string): Promise<number>;
 
   diffRange(params: { cwd: string; from: string; to: string }): Promise<string>;
   diffRangeNameOnly(params: { cwd: string; from: string; to: string }): Promise<string[]>;
+  diffRangeAddedFiles(params: { cwd: string; from: string; to: string }): Promise<string[]>;
   diffRangeNumstat(params: { cwd: string; from: string; to: string }): Promise<number>;
 
   cherryPick(params: { cwd: string; commitSha: string; mainline?: 1 }): Promise<CherryPickOutcome>;
@@ -236,6 +239,10 @@ export class SimpleGitRunner implements GitRunner {
     return splitLines(await this.client(cwd).diff(["--cached", "--name-only"]));
   }
 
+  async diffCachedAddedFiles(cwd: string): Promise<string[]> {
+    return splitLines(await this.client(cwd).diff(["--cached", "--diff-filter=A", "--name-only"]));
+  }
+
   async diffCachedNumstat(cwd: string): Promise<number> {
     return sumNumstat(await this.client(cwd).diff(["--cached", "--numstat"]));
   }
@@ -250,6 +257,14 @@ export class SimpleGitRunner implements GitRunner {
       "--name-only"
     ]);
     return splitLines(out);
+  }
+
+  async diffRangeAddedFiles(params: { cwd: string; from: string; to: string }): Promise<string[]> {
+    return splitLines(await this.client(params.cwd).diff([
+      `${params.from}..${params.to}`,
+      "--diff-filter=A",
+      "--name-only"
+    ]));
   }
 
   async diffRangeNumstat(params: { cwd: string; from: string; to: string }): Promise<number> {

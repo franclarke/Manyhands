@@ -3,14 +3,37 @@ import { realpathSync } from "node:fs";
 import { ScopePathTraversalError, SymlinkEscapeError, ScopeViolationError } from "./scope-errors";
 import type { ExecutionScope, ScopeContract } from "@manyhands/contracts";
 import { ScopeCheckResultSchema, type ScopeCheckResult } from "../types";
-import { matchesAnyGlob } from "./glob";
+import { matchesAnyGlob, normalizePath } from "./glob";
+
+/**
+ * A file is under a root only when the root is a strict directory prefix of it.
+ * String prefixing alone would let `src/domain` swallow `src/domain-legacy/x.ts`,
+ * so the boundary is the separator, and a root that normalizes to nothing (or to
+ * the repository root) is refused here as well as in the contract schema.
+ */
+function isUnderAnyRoot(file: string, roots: readonly string[]): boolean {
+  const target = normalizePath(file);
+  return roots.some((root) => {
+    const prefix = normalizePath(root).replace(/\/+$/u, "");
+    if (prefix === "" || prefix === ".") return false;
+    return target.startsWith(`${prefix}/`);
+  });
+}
 
 export interface ScopeCheckParams {
   changedFiles: string[];
+  /**
+   * The subset of `changedFiles` the diff reports as newly created. Bounded
+   * creation under `outputRoots` applies only to these — `git diff` is the
+   * source of truth for what "new" means, never the agent's claim.
+   */
+  createdFiles?: readonly string[] | undefined;
   /** Allowed path categories. If omitted, every non-forbidden file is allowed. */
   executionScope?: ExecutionScope | undefined;
   /** Canonical V2 scope. Takes precedence over the legacy categorized scope. */
-  scopeContract?: Pick<ScopeContract, "allowedPaths" | "forbiddenPaths"> | undefined;
+  scopeContract?: Pick<ScopeContract, "allowedPaths" | "forbiddenPaths"> & {
+    outputRoots?: readonly string[] | undefined;
+  } | undefined;
   /** Globs always prohibited regardless of scope. Deny wins (ADR-0023). */
   forbiddenPaths?: string[] | undefined;
   worktreeRoot?: string | undefined;
@@ -28,6 +51,14 @@ export interface ScopeCheckParams {
  *   the allow-list but not forbidden is recorded in `outOfScope` for visibility
  *   but does NOT fail the run — the real isolation is the per-leaf git worktree,
  *   and real collisions surface at cherry-pick where the composer repairs.
+ *
+ * On top of the allow-list, `outputRoots` grant **bounded creation**: a node may
+ * create a file it never pre-declared, provided the file is new and sits under a
+ * directory the node already owns. This exists because a planner cannot reliably
+ * predict every file a correct implementation will add (new tests, above all),
+ * and rejecting that work made honest candidates fail. It is deliberately not a
+ * relaxation of the allow-list: an existing file the node never declared stays
+ * out of scope, so a root can never be used to take over a sibling's work.
  */
 export class ScopeChecker {
   /**
@@ -71,6 +102,9 @@ export class ScopeChecker {
         ]
       : undefined);
 
+    const outputRoots = params.scopeContract?.outputRoots ?? [];
+    const created = new Set((params.createdFiles ?? []).map(normalizePath));
+
     const violations: string[] = [];
     const outOfScope: string[] = [];
 
@@ -87,6 +121,9 @@ export class ScopeChecker {
         continue;
       }
       if (allowed !== undefined && !matchesAnyGlob(file, allowed)) {
+        if (created.has(normalizePath(file)) && isUnderAnyRoot(file, outputRoots)) {
+          continue;
+        }
         outOfScope.push(file);
       }
     }
