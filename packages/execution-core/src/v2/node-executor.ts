@@ -499,9 +499,19 @@ export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput
     "Acceptance criteria:",
     ...task.acceptanceCriteria.map((criterion) => `- [${criterion.required ? "required" : "advisory"}] ${criterion.description}`),
     "",
-    "Work primarily inside these declared paths:",
+    "Change only these existing paths:",
     ...scope.allowedPaths.map((path) => `- ${path}`)
   ];
+  // Without this the agent has no way to know that a new test file is even
+  // permitted, and a correct candidate gets rejected for leaving its scope.
+  if (scope.outputRoots.length > 0) {
+    lines.push(
+      "",
+      "You may also CREATE new files, but only directly under these directories:",
+      ...scope.outputRoots.map((root) => `- ${root}/`),
+      "Creating a file anywhere else, or editing an existing file not listed above, fails this task."
+    );
+  }
   if (scope.forbiddenPaths.length > 0) lines.push("", "Never modify these paths:", ...scope.forbiddenPaths.map((path) => `- ${path}`));
   if (seams.length > 0) {
     lines.push("", "Shared contracts with sibling work (follow these exactly):");
