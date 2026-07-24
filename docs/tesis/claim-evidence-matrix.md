@@ -693,3 +693,33 @@ como registro del estado en G1.
 |---|---|---|---|
 | — | Estudio comparativo de granularidad (A/B/C) con repeticiones | **no ejecutado** | La tesis **no afirma** superioridad de la política adaptativa, solo viabilidad. Protocolo especificado como trabajo futuro. |
 | — | Segunda ejecución consecutiva del caso canónico con resultado válido | **no obtenido** | El gate G4 del roadmap pide dos ejecuciones válidas. Se obtuvo **una** completa. Ver `evidence/canonical-run/README.md` §6. |
+
+---
+
+## Actualización tras la corrección de la causa raíz de alcance (2026-07-24)
+
+> Esta sección es la **autoridad vigente** sobre las anteriores. Corrige claims
+> que la evidencia posterior volvió inexactos.
+
+### Claims corregidos
+
+| ID | Estado previo | Estado actual | Evidencia nueva |
+|---|---|---|---|
+| CLAIM-044 | implemented (1 run) | **implemented** | Además de `55f8ba9f`, el run `a55525c7` completó tras la corrección de alcance: `1da878d → 0e550b49`, receipt confirmado, **11 tests verdes** (baseline 5) y `tsc --noEmit` exit 0 en clon limpio. Ninguna de sus 3 hojas fue rechazada por alcance, donde antes fallaban 3 de 3. |
+| CLAIM-102 | limitación declarada | **limitación declarada (ampliada)** | La variabilidad del planificador no solo cambia la topología: cambia **qué caminos del orquestador se ejercitan**. Un defecto de adopción de artefactos permaneció latente en todos los runs previos porque ningún planificador había declarado un artefacto entre hermanos. Ver CLAIM-104. |
+
+### Claims nuevos
+
+| ID | Claim | Status | Evidencia |
+|---|---|---|---|
+| CLAIM-103 | El alcance estricto admite **creación acotada** sin volverse escritura repo-wide | **implemented** | `outputRoots` en el contrato de alcance: derivados por el compilador de los directorios que el nodo ya posee, nunca pedidos por el modelo; una ruta en la raíz no produce root; solo autorizan crear, no editar un archivo preexistente no declarado; `forbiddenPaths` sigue ganando; «nuevo» lo determina `git diff --diff-filter=A`. El alcance efectivo entra en el `InputFingerprint` vía la revisión del contrato. Regresión: `tests/scope-bounded-creation.test.ts`. Commit `4bc0040`. |
+| CLAIM-104 | Un requisito de artefacto insatisfacible produce un **estancamiento silencioso**, no un fallo | **limitación declarada** | Run `0c0f066a`: un nodo adoptaba solo su artefacto de resultado, así que un artefacto declarado entre hermanos nunca se satisfacía; el run quedó sin fallo, sin decisión y sin avance. Corregido en `c227205` (se adoptan todos los contratos producidos), **pero el orquestador sigue sin detectar una condición de readiness insatisfacible**: solo el límite de reloj externo la corta. Evidencia en `evidence/canonical-run/defects/silent-artifact-deadlock/`. |
+| CLAIM-105 | Las condiciones experimentales A/B/C son configuración efectiva y persistida por run | **implemented** | Umbral, pesos y activación del crítico de coalescencia viajan como `GranularityPolicy` resuelta por run y plegada en `formulaVersion` (`c-task/1.0.0+condA`). Omitir la condición deja el comportamiento productivo idéntico. Regresión: `tests/granularity-policy-conditions.test.ts`. Commit `7d36faf`. |
+| CLAIM-106 | El consumo de cada intento queda en la historia durable | **implemented (parcial por proveedor)** | `attempt.candidate_created` y `attempt.failed` llevan un registro de uso con `source` obligatorio; Codex reporta un **total**, no un desglose in/out, y se persiste como tal sin inventar la división. Un reporte ausente deja el registro vacío en lugar de un cero fabricado. Commits `fe6d5ab` y `3bc253d`. |
+
+### Claims que siguen sin evidencia
+
+| ID | Claim | Estado | Consecuencia |
+|---|---|---|---|
+| — | Detección de una condición de readiness insatisfacible | **no implementado** | Un requisito que ningún evento futuro puede satisfacer espera hasta el límite de reloj externo. Declarado como trabajo futuro (CLAIM-104). |
+| — | Calibración empírica de los pesos de $C_{task}$ | **no ejecutado** | Los pesos son una asignación razonada. La tesis lo declara como limitación; el diseño experimental adoptado, deliberadamente, no permite calibrarlos. |
