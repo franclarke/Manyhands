@@ -1,0 +1,12 @@
+[
+  {
+    "cellId": "g4-series-1",
+    "position": 1,
+    "taskId": "T1",
+    "condition": "C",
+    "outcome": "not_delivered",
+    "exitCode": 1,
+    "startedAt": "2026-07-24T11:07:11.774Z",
+    "finishedAt": "2026-07-24T11:16:02.634Z"
+  }
+]

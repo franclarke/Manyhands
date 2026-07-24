@@ -204,6 +204,29 @@ export class V2NodeExecutor {
         usageSource: usageSourceForSelection(input.selection)
       });
       if (result.status !== "success") {
+        // An empty diff is not automatically a failed leaf. A sibling whose
+        // declared scope overlaps this one can legitimately have implemented
+        // the work already, leaving this agent nothing to do. Rather than guess
+        // from paths -- the existing heuristic needs expected outputs this path
+        // never carries -- let the system's own verification decide: revalidate
+        // the baseline, and accept the no-op only if the contract really is
+        // satisfied. An agent that simply skipped its work still fails.
+        if (result.status === "empty_diff") {
+          const baselineMatrix = await this.options.validator.validate({
+            runId: input.runId,
+            attemptId: input.attemptId,
+            contract: input.contract,
+            candidateCommit: result.currentHead,
+            baselineCommit: input.graph.baseCommit,
+            ...(input.signal !== undefined ? { signal: input.signal } : {})
+          });
+          if (baselineMatrix.outcome === "verified") {
+            return {
+              ...successOutcome(result.currentHead, [], baselineMatrix),
+              usage: usageOf(result)
+            };
+          }
+        }
         return { kind: "failure", reason: executionFailureReason(result), usage: usageOf(result) };
       }
       const candidateCommit = result.commitSha ?? result.currentHead;

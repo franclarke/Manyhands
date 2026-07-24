@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 2,
+  "runId": "5fe0aa27-2862-4af8-be04-be882995d727",
+  "eventSequence": 36,
+  "lastEventId": "5fe0aa27-2862-4af8-be04-be882995d727:readiness.observed:36",
+  "operationId": "c8277bd8-af7a-4d1b-b14a-794998ca66e3",
+  "fencingToken": 3,
+  "projection": {
+    "runId": "5fe0aa27-2862-4af8-be04-be882995d727",
+    "goal": "Add expense categories to the splitter. Extend the Expense type with an optional category field validated against a fixed set of categories, add computeCategoryTotals to the domain, expose listCategoryTotals from the API layer, render a category breakdown in the web surface, and cover the new behaviour with tests. Preserve the existing balance behaviour and keep the current tests green.",
+    "lifecycle": "waiting_for_input",
+    "sequence": 36,
+    "appliedEventIds": [
+      "run:5fe0aa27-2862-4af8-be04-be882995d727:created",
+      "repository:sha256:42fb0ba8239a0d7e3cbbc2b7b572ff65aee6022f9abf0cc1187a3f74a7a97f02:inspection:2",
+      "planning:5fe0aa27-2862-4af8-be04-be882995d727:attempt:1:started",
+      "planning:5fe0aa27-2862-4af8-be04-be882995d727:attempt:1:node:expense-categories",
+      "planning:5fe0aa27-2862-4af8-be04-be882995d727:attempt:1:node:expense-category-domain",
+      "planning:5fe0aa27-2862-4af8-be04-be882995d727:attempt:1:node:expense-category-api",
+      "planning:5fe0aa27-2862-4af8-be04-be882995d727:attempt:1:node:expense-category-web",
+      "planning:expense-categories:completed:5fe0aa27-2862-4af8-be04-be882995d727",
+      "planning:expense-categories:granularity:5fe0aa27-2862-4af8-be04-be882995d727",
+      "graph:graph-expense-categories-3d261c20e8:r1:compiled",
+      "graph:graph-expense-categories-3d261c20e8:r1:critic:completeness",
+      "graph:graph-expense-categories-3d261c20e8:r1:critic:atomicity",
+      "graph:graph-expense-categories-3d261c20e8:r1:critic:contract_compatibility",
+      "graph:graph-expense-categories-3d261c20e8:r1:critic:dag_validity",
+      "graph:graph-expense-categories-3d261c20e8:r1:critic:scope_isolation",
+      "graph:graph-expense-categories-3d261c20e8:r1:critic:artifact_coverage",
+      "graph:graph-expense-categories-3d261c20e8:r1:critic:risk_uncertainty",
+      "graph:graph-expense-categories-3d261c20e8:r1:critic:validation_coverage",
+      "graph:graph-expense-categories-3d261c20e8:r1:proposed",
+      "approve-plan:graph-expense-categories-3d261c20e8:r1",
+      "approve-plan:graph-expense-categories-3d261c20e8:r1:resolved",
+      "approve-plan:graph-expense-categories-3d261c20e8:r1:graph-approved",
+      "5fe0aa27-2862-4af8-be04-be882995d727:readiness.observed:23",
+      "5fe0aa27-2862-4af8-be04-be882995d727:wave.selected:24",
+      "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-domain:expense-category-web-ca5ddc686e:1:started",
+      "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-domain:expense-category-web-ca5ddc686e:1:candidate",
+      "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-domain:expense-category-web-ca5ddc686e:1:validation-completed",
+      "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-domain:expense-category-web-ca5ddc686e:1:artifact-adopted",
+      "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-domain:expense-category-web-ca5ddc686e:1:artifact-adopted:1",
+      "5fe0aa27-2862-4af8-be04-be882995d727:readiness.observed:30",
+      "5fe0aa27-2862-4af8-be04-be882995d727:wave.selected:31",
+      "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-api-15ac52c6ab:1:started",
+      "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-api-15ac52c6ab:1:failure-classified",
+      "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-api-15ac52c6ab:1:failed",
+      "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-api-15ac52c6ab:1:decision:5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-api-15ac52c6ab:1:decision",
+      "5fe0aa27-2862-4af8-be04-be882995d727:readiness.observed:36"
+    ],
+    "decisions": {
+      "approve-plan:graph-expense-categories-3d261c20e8:r1": {
+        "id": "approve-plan:graph-expense-categories-3d261c20e8:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-expense-categories-095864ac3e"
+        ],
+        "evidenceRefs": [
+          "graph:graph-expense-categories-3d261c20e8:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      },
+      "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-api-15ac52c6ab:1:decision": {
+        "id": "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-api-15ac52c6ab:1:decision",
+        "kind": "resolve_conflict",
+        "question": "The work for Category Totals API needs guidance: empty_diff: ion shows the requested behavior appears already present; verification will determine whether any corrective edit is needed.\n  ✓ Inspect current expense domain/API/tests and package scripts\n  → Add category-total domain/API behavior with regression tests\n  • Run targeted tests plus typecheck/test suite\ncodex\nMH_STATUS {\"message\":\"running targeted expense tests\",\"phase\":\"verify\",\"pct\":65}\nexec\n\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'pnpm test -- tests/expense.test.ts' in C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\n succeeded in 2268ms:\n\n> expense-splitter@0.1.0 test C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\n> vitest run \"tests/expense.test.ts\"\n\n\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/Users/franc/manyhands-thesis-targets/expense-splitter/.manyhands/worktree-pool/92b25f5fccfb/slot-000\u001b[39m\n\n \u001b[32m✓\u001b[39m tests/expense.test.ts \u001b[2m(\u001b[22m\u001b[2m10 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 7\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m10 passed\u001b[39m\u001b[22m\u001b[90m (10)\u001b[39m\n\u001b[2m   Start at \u001b[22m 08:14:24\n\u001b[2m   Duration \u001b[22m 799ms\u001b[2m (transform 155ms, setup 0ms, collect 168ms, tests 7ms, environment 0ms, prepare 230ms)\u001b[22m\n\n\ncodex\nMH_STATUS {\"message\":\"targeted expense tests passed\",\"phase\":\"verify\",\"pct\":75}\nexec\n\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'pnpm test' in C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\nexec\n\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'pnpm typecheck' in C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\n succeeded in 2168ms:\n\n> expense-splitter@0.1.0 typecheck C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\n> tsc --noEmit\n\n\n succeeded in 2519ms:\n\n> expense-splitter@0.1.0 test C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\n> vitest run\n\n\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/Users/franc/manyhands-thesis-targets/expense-splitter/.manyhands/worktree-pool/92b25f5fccfb/slot-000\u001b[39m\n\n \u001b[32m✓\u001b[39m tests/expense.test.ts \u001b[2m(\u001b[22m\u001b[2m10 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 6\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m10 passed\u001b[39m\u001b[22m\u001b[90m (10)\u001b[39m\n\u001b[2m   Start at \u001b[22m 08:14:35\n\u001b[2m   Duration \u001b[22m 886ms\u001b[2m (transform 157ms, setup 0ms, collect 169ms, tests 6ms, environment 0ms, prepare 269ms)\u001b[22m\n\n\ncodex\nMH_STATUS {\"message\":\"full test and typecheck suites passed\",\"phase\":\"verify\",\"pct\":100}\nThe requested implementation was already present in the allowed files, so no file edits were necessary. Verification passed.\n  ✓ Inspect current expense domain/API/tests and package scripts\n  ✓ Add category-total domain/API behavior with regression tests\n  ✓ Run targeted tests plus typecheck/test suite\ncodex\nMH_STATUS {\"message\":\"checking final diff state\",\"phase\":\"finalize\",\"pct\":100}\nexec\n\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'git status --short' in C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\n succeeded in 334ms:\ncodex\nImplemented status: already present in the worktree, so I made no file edits.\n\nVerified:\n- `src/api/expenses.ts` exports `listCategoryTotals` backed by `computeCategoryTotals`.\n- `src/domain/expense.ts` computes grouped category totals and leaves `computeBalances` unchanged.\n- `tests/expense.test.ts` covers domain and API category totals.\n\nVerification:\n- `pnpm test -- tests/expense.test.ts`: passed, 10 tests\n- `pnpm test`: passed, 10 tests\n- `pnpm typecheck`: passed\n\nFiles changed: none. Git status is clean.\ntokens used\n38,392\n: Implemented status: already present in the worktree, so I made no file edits.\n\nVerified:\n- `src/api/expenses.ts` exports `listCategoryTotals` backed by `computeCategoryTotals`.\n- `src/domain/expense.ts` computes grouped category totals and leaves `computeBalances` unchanged.\n- `tests/expense.test.ts` covers domain and API category totals.\n\nVerification:\n- `pnpm test -- tests/expense.test.ts`: passed, 10 tests\n- `pnpm test`: passed, 10 tests\n- `pnpm typecheck`: passed\n\nFiles changed: none. Git status is clean.",
+        "options": [
+          {
+            "id": "retry",
+            "label": "Retry with guidance"
+          },
+          {
+            "id": "stop",
+            "label": "Stop this branch"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-expense-category-api-15ac52c6ab"
+        ],
+        "evidenceRefs": [
+          "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-api-15ac52c6ab:1"
+        ],
+        "impact": "behavior",
+        "raisedAtGraphRevision": 1,
+        "status": "pending"
+      }
+    },
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": [
+        "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-api-15ac52c6ab:1:decision"
+      ]
+    },
+    "selectedWaves": [
+      {
+        "waveId": "5fe0aa27-2862-4af8-be04-be882995d727:wave:1",
+        "nodeIds": [
+          "node-expense-category-domain:expense-category-web-ca5ddc686e"
+        ],
+        "maxParallel": 2
+      },
+      {
+        "waveId": "5fe0aa27-2862-4af8-be04-be882995d727:wave:2",
+        "nodeIds": [
+          "node-expense-category-api-15ac52c6ab"
+        ],
+        "maxParallel": 2
+      }
+    ],
+    "attempts": {
+      "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-domain:expense-category-web-ca5ddc686e:1": {
+        "attemptId": "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-domain:expense-category-web-ca5ddc686e:1",
+        "nodeId": "node-expense-category-domain:expense-category-web-ca5ddc686e",
+        "inputFingerprint": "sha256:de4903d6bf2934c4e2aaf008a7933c417fd638736aa3f139e9b997727c42a7af",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "ffcc4aa1472565857d827a96b6c8e0ac071dee8f",
+        "outputDigest": "sha256:0fff988775deed43bedfabf27a1a9ee4a56a94b817fb4f291adc0d006f4a4df5"
+      },
+      "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-api-15ac52c6ab:1": {
+        "attemptId": "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-api-15ac52c6ab:1",
+        "nodeId": "node-expense-category-api-15ac52c6ab",
+        "inputFingerprint": "sha256:28047058ff8bd7f28c64b8efc4b92ee5e9059fb988f19514cc4dfb6355c64d0a",
+        "kind": "execution",
+        "status": "failed",
+        "repairPasses": 0,
+        "failureReason": "empty_diff: ion shows the requested behavior appears already present; verification will determine whether any corrective edit is needed.\n  ✓ Inspect current expense domain/API/tests and package scripts\n  → Add category-total domain/API behavior with regression tests\n  • Run targeted tests plus typecheck/test suite\ncodex\nMH_STATUS {\"message\":\"running targeted expense tests\",\"phase\":\"verify\",\"pct\":65}\nexec\n\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'pnpm test -- tests/expense.test.ts' in C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\n succeeded in 2268ms:\n\n> expense-splitter@0.1.0 test C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\n> vitest run \"tests/expense.test.ts\"\n\n\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/Users/franc/manyhands-thesis-targets/expense-splitter/.manyhands/worktree-pool/92b25f5fccfb/slot-000\u001b[39m\n\n \u001b[32m✓\u001b[39m tests/expense.test.ts \u001b[2m(\u001b[22m\u001b[2m10 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 7\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m10 passed\u001b[39m\u001b[22m\u001b[90m (10)\u001b[39m\n\u001b[2m   Start at \u001b[22m 08:14:24\n\u001b[2m   Duration \u001b[22m 799ms\u001b[2m (transform 155ms, setup 0ms, collect 168ms, tests 7ms, environment 0ms, prepare 230ms)\u001b[22m\n\n\ncodex\nMH_STATUS {\"message\":\"targeted expense tests passed\",\"phase\":\"verify\",\"pct\":75}\nexec\n\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'pnpm test' in C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\nexec\n\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'pnpm typecheck' in C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\n succeeded in 2168ms:\n\n> expense-splitter@0.1.0 typecheck C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\n> tsc --noEmit\n\n\n succeeded in 2519ms:\n\n> expense-splitter@0.1.0 test C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\n> vitest run\n\n\n\u001b[1m\u001b[7m\u001b[36m RUN \u001b[39m\u001b[27m\u001b[22m \u001b[36mv2.1.9 \u001b[39m\u001b[90mC:/Users/franc/manyhands-thesis-targets/expense-splitter/.manyhands/worktree-pool/92b25f5fccfb/slot-000\u001b[39m\n\n \u001b[32m✓\u001b[39m tests/expense.test.ts \u001b[2m(\u001b[22m\u001b[2m10 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[90m 6\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m1 passed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m10 passed\u001b[39m\u001b[22m\u001b[90m (10)\u001b[39m\n\u001b[2m   Start at \u001b[22m 08:14:35\n\u001b[2m   Duration \u001b[22m 886ms\u001b[2m (transform 157ms, setup 0ms, collect 169ms, tests 6ms, environment 0ms, prepare 269ms)\u001b[22m\n\n\ncodex\nMH_STATUS {\"message\":\"full test and typecheck suites passed\",\"phase\":\"verify\",\"pct\":100}\nThe requested implementation was already present in the allowed files, so no file edits were necessary. Verification passed.\n  ✓ Inspect current expense domain/API/tests and package scripts\n  ✓ Add category-total domain/API behavior with regression tests\n  ✓ Run targeted tests plus typecheck/test suite\ncodex\nMH_STATUS {\"message\":\"checking final diff state\",\"phase\":\"finalize\",\"pct\":100}\nexec\n\"C:\\\\Windows\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe\" -Command 'git status --short' in C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.manyhands\\worktree-pool\\92b25f5fccfb\\slot-000\n succeeded in 334ms:\ncodex\nImplemented status: already present in the worktree, so I made no file edits.\n\nVerified:\n- `src/api/expenses.ts` exports `listCategoryTotals` backed by `computeCategoryTotals`.\n- `src/domain/expense.ts` computes grouped category totals and leaves `computeBalances` unchanged.\n- `tests/expense.test.ts` covers domain and API category totals.\n\nVerification:\n- `pnpm test -- tests/expense.test.ts`: passed, 10 tests\n- `pnpm test`: passed, 10 tests\n- `pnpm typecheck`: passed\n\nFiles changed: none. Git status is clean.\ntokens used\n38,392\n: Implemented status: already present in the worktree, so I made no file edits.\n\nVerified:\n- `src/api/expenses.ts` exports `listCategoryTotals` backed by `computeCategoryTotals`.\n- `src/domain/expense.ts` computes grouped category totals and leaves `computeBalances` unchanged.\n- `tests/expense.test.ts` covers domain and API category totals.\n\nVerification:\n- `pnpm test -- tests/expense.test.ts`: passed, 10 tests\n- `pnpm test`: passed, 10 tests\n- `pnpm typecheck`: passed\n\nFiles changed: none. Git status is clean."
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-expense-category-domain:expense-category-web-out-57050e8d96:5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-domain:expense-category-web-ca5ddc686e:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-expense-category-domain:expense-category-web-out-57050e8d96:5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-domain:expense-category-web-ca5ddc686e:1",
+        "runId": "5fe0aa27-2862-4af8-be04-be882995d727",
+        "nodeId": "node-expense-category-domain:expense-category-web-ca5ddc686e",
+        "digest": "sha256:0fff988775deed43bedfabf27a1a9ee4a56a94b817fb4f291adc0d006f4a4df5",
+        "producerAttemptId": "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-domain:expense-category-web-ca5ddc686e:1",
+        "contract": {
+          "id": "artifact-contract-expense-category-domain:expense-category-web-out-57050e8d96",
+          "revision": "sha256:d81a2919cd08931fdc1d46ac02e10d7b8c1236dde03a9729c0978ddeafa60903"
+        },
+        "kind": "commit",
+        "location": "ffcc4aa1472565857d827a96b6c8e0ac071dee8f",
+        "adoptedAt": "2026-07-24T11:13:13.872Z"
+      },
+      "artifact-contract-fixed-expense-category-set-a134cdd094:5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-domain:expense-category-web-ca5ddc686e:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-fixed-expense-category-set-a134cdd094:5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-domain:expense-category-web-ca5ddc686e:1",
+        "runId": "5fe0aa27-2862-4af8-be04-be882995d727",
+        "nodeId": "node-expense-category-domain:expense-category-web-ca5ddc686e",
+        "digest": "sha256:0fff988775deed43bedfabf27a1a9ee4a56a94b817fb4f291adc0d006f4a4df5",
+        "producerAttemptId": "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-domain:expense-category-web-ca5ddc686e:1",
+        "contract": {
+          "id": "artifact-contract-fixed-expense-category-set-a134cdd094",
+          "revision": "sha256:d62cc1fe1a7b563d31b8eb31267b6ea0bf6f16f058c38fb3faf39294b35a3036"
+        },
+        "kind": "commit",
+        "location": "ffcc4aa1472565857d827a96b6c8e0ac071dee8f",
+        "adoptedAt": "2026-07-24T11:13:13.872Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-expense-category-domain:expense-category-web-ca5ddc686e": "matrix-3a3913d61b3c3ca1"
+    },
+    "integrations": {},
+    "recoveryHistory": [
+      {
+        "eventId": "5fe0aa27-2862-4af8-be04-be882995d727:attempt:node-expense-category-api-15ac52c6ab:1:failure-classified",
+        "nodeId": "node-expense-category-api-15ac52c6ab",
+        "kind": "failure"
+      }
+    ],
+    "evidenceMatrices": [
+      "matrix-3a3913d61b3c3ca1"
+    ],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "granularity": {
+      "formulaVersion": "c-task/1.0.0",
+      "weights": {
+        "scopeRadius": 0.3,
+        "interfaceImpact": 0.25,
+        "validationSurface": 0.25,
+        "contextTokenMass": 0.2
+      },
+      "leafThreshold": 3.5,
+      "assessments": {
+        "node-expense-categories-095864ac3e": {
+          "unitKey": "expense-categories",
+          "nodeId": "node-expense-categories-095864ac3e",
+          "dimensions": {
+            "scopeRadius": 4,
+            "interfaceImpact": 4,
+            "validationSurface": 5,
+            "contextTokenMass": 4
+          },
+          "signalSource": "llm",
+          "complexityScore": 4.25,
+          "decision": "composite",
+          "rationale": "The change crosses the existing domain, API, web, and test files, but it is a small vertical feature with no new persistence or external dependency surface.",
+          "recommendedBranchingFactor": 3
+        },
+        "node-expense-category-domain:expense-category-web-ca5ddc686e": {
+          "unitKey": "expense-category-domain:expense-category-web",
+          "nodeId": "node-expense-category-domain:expense-category-web-ca5ddc686e",
+          "dimensions": {
+            "scopeRadius": 2.5,
+            "interfaceImpact": 3,
+            "validationSurface": 4.5,
+            "contextTokenMass": 3
+          },
+          "signalSource": "derived",
+          "complexityScore": 3.23,
+          "decision": "leaf",
+          "rationale": "Leaf at C_task=3.23 (S_r=2.5, I_i=3, V_s=4.5, T_m=3)."
+        },
+        "node-expense-category-api-15ac52c6ab": {
+          "unitKey": "expense-category-api",
+          "nodeId": "node-expense-category-api-15ac52c6ab",
+          "dimensions": {
+            "scopeRadius": 3,
+            "interfaceImpact": 5,
+            "validationSurface": 4,
+            "contextTokenMass": 3
+          },
+          "signalSource": "llm",
+          "complexityScore": 3.75,
+          "decision": "leaf",
+          "rationale": "Composite at C_task=3.75 (S_r=3, I_i=5, V_s=4, T_m=3). Kept as a leaf: the Architect proposed no semantic sub-units.",
+          "recommendedBranchingFactor": 2
+        }
+      },
+      "criticDecisions": [
+        {
+          "kind": "coalesced",
+          "unitIds": [
+            "expense-category-domain",
+            "expense-category-web"
+          ],
+          "rationale": "Merged trivial, dependency-free siblings sharing tests/expense.test.ts."
+        },
+        {
+          "kind": "resplit_declined",
+          "unitIds": [
+            "expense-category-api"
+          ],
+          "rationale": "C_task=3.75 exceeds the leaf threshold, but the Architect proposed no sub-units for expense-category-api; a mechanical split would fabricate incoherent scopes."
+        }
+      ],
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 2,
+        "averageBranchingFactor": 2,
+        "coalescedUnitsCount": 1
+      }
+    },
+    "graphId": "graph-expense-categories-3d261c20e8",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1
+  },
+  "checksum": "d63b91d9f35b9f1d5a49420a770017a1699b13d60c9b40799f13a987acffdf65"
+}

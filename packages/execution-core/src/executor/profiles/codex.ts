@@ -37,7 +37,9 @@ export function buildCodexArgs(options: AgentExecutorOptions): string[] {
  * fabricated zero and a measured zero must stay distinguishable.
  */
 export function parseCodexOutcome(outcome: ExecutorRunOutcome): ExecutorRunOutcome {
-  const total = lastReportedTokenTotal(outcome.stdout);
+  // Both streams are searched: which one carries the report is the CLI's
+  // choice, and a real run lost its measurement because only stdout was read.
+  const total = lastReportedTokenTotal(outcome.stdout) ?? lastReportedTokenTotal(outcome.stderr);
   return total === undefined ? outcome : { ...outcome, tokensTotal: total };
 }
 

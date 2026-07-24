@@ -58,4 +58,13 @@ describe("Codex usage parsing", () => {
 
     expect(parseCodexOutcome(outcome).tokensTotal).toBeUndefined();
   });
+
+  it("reads the report when the CLI wrote it to stderr", () => {
+    // Observed in a real run: usage was journaled as unavailable because the
+    // report did not arrive on stdout. Which stream carries it is the CLI's
+    // choice, not a reason to lose the measurement.
+    const parsed = parseCodexOutcome({ ...base, stderr: "tokens used\n8,192\n" });
+
+    expect(parsed.tokensTotal).toBe(8192);
+  });
 });
