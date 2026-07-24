@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { ScopeChecker } from "@manyhands/execution-core";
+import { ScopeChecker, buildV2NodeInstructions } from "@manyhands/execution-core";
 import { ScopeContractSchema } from "@manyhands/contracts";
 import { compileGraphRevision } from "@manyhands/decomposer";
 import { computeInputFingerprint } from "@manyhands/run-coordinator";
@@ -163,3 +163,33 @@ function canonicalize(value: unknown): unknown {
   }
   return value;
 }
+
+describe("what the agent is told", () => {
+  it("names the directories it may create files under", () => {
+    // The contract is useless if the agent cannot know about it: without this
+    // the model has no way to tell an authorized new test file from a
+    // forbidden one, and writes the correct code into the wrong place.
+    const instructions = buildV2NodeInstructions({
+      node: { id: "node-1", title: "Add category totals" } as never,
+      consumedArtifacts: [],
+      contract: {
+        task: {
+          goal: "Add category totals",
+          acceptanceCriteria: [{ description: "Totals are correct", required: true }],
+          constraints: []
+        },
+        scope: {
+          allowedPaths: ["src/domain/expense.ts", "tests/expense.test.ts"],
+          forbiddenPaths: [],
+          outputRoots: ["src/domain", "tests"]
+        },
+        seams: []
+      } as never
+    });
+
+    expect(instructions).toContain("You may also CREATE new files");
+    expect(instructions).toContain("- src/domain/");
+    expect(instructions).toContain("- tests/");
+    expect(instructions).toContain("Change only these existing paths:");
+  });
+});

@@ -168,11 +168,60 @@
     no del documento.
 26. Suite final: **187 archivos, 1099 tests, 2 skipped, exit 0**.
 
+### 2026-07-24 — Etapa 4 (reanudación): causa raíz del alcance
+
+27. **Causa raíz corregida (commit `4bc0040`).** Se implementó la línea (b) de
+    las tres documentadas: **creación acotada** mediante `outputRoots` en el
+    contrato de alcance. Un nodo puede *crear* archivos que no pre-declaró,
+    siempre que sean nuevos y estén bajo un directorio que ya posee. Las
+    fronteras que lo mantienen acotado:
+    - los roots los **deriva el compilador** de los directorios de las rutas
+      declaradas por el propio nodo; el modelo no puede pedirlos;
+    - una ruta en la raíz del repositorio no produce root alguno, y el esquema
+      rechaza `.` y globs, así que un root nunca se ensancha a escritura
+      repo-wide;
+    - solo autoriza **creación**: editar un archivo preexistente no declarado
+      sigue fuera de alcance, de modo que un root no puede apropiarse del
+      trabajo de un hermano;
+    - `forbiddenPaths` sigue ganando incondicionalmente;
+    - «nuevo» lo determina `git diff --diff-filter=A`, nunca el agente.
+
+    El alcance efectivo viaja dentro del `InputFingerprint`, porque los roots
+    viven en el contrato de alcance cuya revisión ya integra
+    `contractRevisions`. Regresión previa en `tests/scope-bounded-creation.test.ts`.
+28. **Condiciones A/B/C parametrizadas por run (commit `7d36faf`).** Umbral,
+    pesos y activación del crítico de coalescencia son ahora configuración por
+    run, resuelta desde una etiqueta de condición y plegada en `formulaVersion`
+    (`c-task/1.0.0+condA`). Omitir la condición deja el comportamiento
+    productivo idéntico. Precondición de G5 satisfecha.
+29. **Drivers reproducibles (commit `b8832ca`):** `run-experiment.mjs`,
+    `generate-cells.mjs`, `run-g5.mjs` y `derive-metrics.mjs`. Ninguna cifra
+    reportada se transcribe a mano.
+30. **Defecto operativo descubierto y registrado.** El servidor de desarrollo
+    resuelve `@manyhands/*` desde `dist`, no desde las fuentes. Un primer run se
+    lanzó contra un `dist` del día anterior y **no** estaba ejercitando el fix;
+    se detectó y descartó. Desde entonces: `pnpm build` obligatorio antes de
+    todo run que valide un cambio conductual.
+31. **Run descartado por fallo de entorno.** El run `16429274` superó
+    planificación y su **primera hoja pasó el control de alcance y commiteó**
+    (3 archivos) —donde antes fallaba—, pero el nodo siguiente expiró por
+    **disco lleno (0 bytes libres en C:)**. Es un fallo de entorno, no de
+    ManyHands, así que el run se descarta y no cuenta para la serie. Para
+    liberar espacio se eliminaron `.manyhands/_archive_old_runs` (855 MB) y
+    `.manyhands/_archive_huge` (72 MB) —runs legacy V1/V2 que Francisco ya
+    había declarado descartables y que no son evidencia de tesis— y se ejecutó
+    `pnpm store prune`. **Consecuencia declarada:** la observación de
+    `stage-1-baseline.md` §runs legacy ya no es re-verificable sobre esos
+    archivos.
+
 ## Siguiente acción exacta (para reanudar)
 
-1. Resolver la causa raíz de las violaciones de alcance
-   (`evidence/canonical-run/README.md` §7, opciones a/b/c).
-2. Repetir el caso canónico hasta obtener dos ejecuciones válidas consecutivas → cerrar G4.
-3. Parametrizar umbral y críticos por run; ejecutar el protocolo de G5.
-4. Instalar una toolchain LaTeX y compilar `docs/tesis/main.tex`; revisar el PDF.
+1. Obtener **dos runs canónicos válidos consecutivos** sobre el commit actual →
+   cerrar G4. Antes de cada run: `pnpm build`, servidor reiniciado, target en
+   `1da878d`, y **verificar espacio libre en disco** (cada run consume varios
+   GB entre pools de worktrees e instalaciones).
+2. Ejecutar el protocolo de G5 con `run-g5.mjs` sobre un único commit de
+   ManyHands; derivar tablas y figuras con `derive-metrics.mjs`.
+3. Completar la toolchain LaTeX y compilar `docs/tesis/main.tex`; revisar el PDF.
+4. Actualizar tesis y `claim-evidence-matrix` con la evidencia definitiva.
 5. Regenerar la presentación desde la tesis final.
