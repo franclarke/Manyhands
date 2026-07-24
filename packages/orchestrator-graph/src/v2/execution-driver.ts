@@ -291,22 +291,35 @@ export class V2ExecutionDriver {
       return facts;
     }
 
-    const artifact: AdoptedArtifact = {
-      schemaVersion: 1,
-      artifactId: `${attempt.executionInput.outputArtifactContract.id}:${attempt.attemptId}`,
-      runId: run.runId,
-      nodeId: attempt.nodeId,
-      digest: outcome.outputDigest,
-      producerAttemptId: attempt.attemptId,
-      contract: {
-        id: attempt.executionInput.outputArtifactContract.id,
-        revision: attempt.executionInput.outputArtifactContract.revision
-      },
-      kind: "commit",
-      location: outcome.artifactLocation,
-      adoptedAt: at
-    };
-    facts.push(fact(`${attempt.attemptId}:artifact-adopted`, at, "artifact.adopted", { artifact }));
+    // Adopt EVERY artifact contract this node produces, not just its node-result.
+    // A planner-declared artifact between siblings compiles into an
+    // execution-phase requirement; adopting only the node-result left that
+    // requirement permanently unsatisfied, so its consumers never became ready
+    // and the run went quiet with no failure and no decision. A stall that
+    // reports nothing is worse than a failure -- it looks like work in progress.
+    // The verified candidate is the evidence for all of them, so they share its
+    // digest and location.
+    const produced = producedArtifactContracts(attempt);
+    for (const [index, contract] of produced.entries()) {
+      const artifact: AdoptedArtifact = {
+        schemaVersion: 1,
+        artifactId: `${contract.id}:${attempt.attemptId}`,
+        runId: run.runId,
+        nodeId: attempt.nodeId,
+        digest: outcome.outputDigest,
+        producerAttemptId: attempt.attemptId,
+        contract: { id: contract.id, revision: contract.revision },
+        kind: "commit",
+        location: outcome.artifactLocation,
+        adoptedAt: at
+      };
+      facts.push(fact(
+        index === 0 ? `${attempt.attemptId}:artifact-adopted` : `${attempt.attemptId}:artifact-adopted:${index}`,
+        at,
+        "artifact.adopted",
+        { artifact }
+      ));
+    }
     if (attempt.nodeId === run.graph.rootId) {
       if (outcome.finalManifestId === undefined) throw new Error("The root execution outcome requires a final manifest id.");
       facts.push(fact(`${attempt.attemptId}:final-candidate`, at, "final_candidate.verified", {
@@ -447,6 +460,21 @@ function createAttempt(
       executorProfile: run.executorProfile
     }
   };
+}
+
+/**
+ * The artifact contracts a node is responsible for producing: its node-result
+ * plus every declared artifact whose producer it is. Deduplicated by id, since
+ * the bundle carries the node-result in both collections.
+ */
+function producedArtifactContracts(attempt: PreparedAttempt): Array<{ id: string; revision: string }> {
+  const output = attempt.executionInput.outputArtifactContract;
+  const byId = new Map<string, { id: string; revision: string }>([[output.id, { id: output.id, revision: output.revision }]]);
+  for (const contract of attempt.executionInput.contract.artifacts) {
+    if (contract.producerNodeId !== attempt.nodeId) continue;
+    if (!byId.has(contract.id)) byId.set(contract.id, { id: contract.id, revision: contract.revision });
+  }
+  return [...byId.values()];
 }
 
 function assertSuccessfulOutcome(attempt: PreparedAttempt, outcome: Extract<V2NodeExecutionOutcome, { kind: "success" }>): void {
