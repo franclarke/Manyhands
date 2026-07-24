@@ -69,7 +69,12 @@ export const RunEventSchema = z.discriminatedUnion("type", [
       validationSurface: z.number().nonnegative(),
       contextTokenMass: z.number().nonnegative()
     }).strict(),
-    leafThreshold: z.number().positive(),
+    // Finite, not positive. The threshold is a policy parameter, and two
+    // legitimate policies sit outside the productive range: "every unit is a
+    // leaf" needs a value at or above the highest reachable score, and "no unit
+    // is a leaf" needs one below the lowest. Requiring a positive number
+    // rejected the latter at write time and cost an entire experiment arm.
+    leafThreshold: z.number().finite(),
     assessments: z.array(z.object({
       unitKey: EntityIdSchema,
       nodeId: EntityIdSchema,

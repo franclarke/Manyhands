@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 2,
+  "runId": "eb0bd96d-f2e2-4f5f-b9ff-d645b0eaadf1",
+  "eventSequence": 7,
+  "lastEventId": "planning:eb0bd96d-f2e2-4f5f-b9ff-d645b0eaadf1:failed:7",
+  "operationId": "08c00696-249c-45c2-bfdb-4bf419ae48ed",
+  "fencingToken": 1,
+  "projection": {
+    "runId": "eb0bd96d-f2e2-4f5f-b9ff-d645b0eaadf1",
+    "goal": "Allow an expense to be split unequally between participants using explicit per-participant weights. Validate that the weights are positive and that the weighted shares add up to the expense total, rejecting any expense whose weights do not balance, and cover the rule with tests. Keep the change inside the domain module and preserve the existing equal-split behaviour.",
+    "lifecycle": "failed",
+    "sequence": 7,
+    "appliedEventIds": [
+      "run:eb0bd96d-f2e2-4f5f-b9ff-d645b0eaadf1:created",
+      "repository:sha256:42fb0ba8239a0d7e3cbbc2b7b572ff65aee6022f9abf0cc1187a3f74a7a97f02:inspection:2",
+      "planning:eb0bd96d-f2e2-4f5f-b9ff-d645b0eaadf1:attempt:1:started",
+      "planning:eb0bd96d-f2e2-4f5f-b9ff-d645b0eaadf1:attempt:1:node:weighted-expense-splits",
+      "planning:eb0bd96d-f2e2-4f5f-b9ff-d645b0eaadf1:attempt:1:node:domain-weighted-split-rule",
+      "planning:eb0bd96d-f2e2-4f5f-b9ff-d645b0eaadf1:attempt:1:node:expense-split-regression-tests",
+      "planning:eb0bd96d-f2e2-4f5f-b9ff-d645b0eaadf1:failed:7"
+    ],
+    "decisions": {},
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "failureReason": "[\n  {\n    \"code\": \"too_small\",\n    \"minimum\": 0,\n    \"type\": \"number\",\n    \"inclusive\": false,\n    \"exact\": false,\n    \"message\": \"Number must be greater than 0\",\n    \"path\": [\n      \"payload\",\n      \"leafThreshold\"\n    ]\n  }\n]"
+  },
+  "checksum": "8b7011832faf550067c7f975d8a76e84d47e3a43a3a9d0a5ca25a3344bcf1134"
+}

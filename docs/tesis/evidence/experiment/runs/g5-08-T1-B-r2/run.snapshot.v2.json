@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 2,
+  "runId": "f1393da1-a4d0-4e62-857d-8878fe51f39f",
+  "eventSequence": 8,
+  "lastEventId": "planning:f1393da1-a4d0-4e62-857d-8878fe51f39f:failed:8",
+  "operationId": "bb0c2440-2ed6-4a2a-b7ea-78e674066bfb",
+  "fencingToken": 1,
+  "projection": {
+    "runId": "f1393da1-a4d0-4e62-857d-8878fe51f39f",
+    "goal": "Add expense categories to the splitter. Extend the Expense type with an optional category field validated against a fixed set of categories, add computeCategoryTotals to the domain, expose listCategoryTotals from the API layer, render a category breakdown in the web surface, and cover the new behaviour with tests. Preserve the existing balance behaviour and keep the current tests green.",
+    "lifecycle": "failed",
+    "sequence": 8,
+    "appliedEventIds": [
+      "run:f1393da1-a4d0-4e62-857d-8878fe51f39f:created",
+      "repository:sha256:42fb0ba8239a0d7e3cbbc2b7b572ff65aee6022f9abf0cc1187a3f74a7a97f02:inspection:2",
+      "planning:f1393da1-a4d0-4e62-857d-8878fe51f39f:attempt:1:started",
+      "planning:f1393da1-a4d0-4e62-857d-8878fe51f39f:attempt:1:node:add-expense-categories",
+      "planning:f1393da1-a4d0-4e62-857d-8878fe51f39f:attempt:1:node:domain-category-model-and-totals",
+      "planning:f1393da1-a4d0-4e62-857d-8878fe51f39f:attempt:1:node:api-category-totals-exposure",
+      "planning:f1393da1-a4d0-4e62-857d-8878fe51f39f:attempt:1:node:web-category-breakdown",
+      "planning:f1393da1-a4d0-4e62-857d-8878fe51f39f:failed:8"
+    ],
+    "decisions": {},
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "failureReason": "[\n  {\n    \"code\": \"too_small\",\n    \"minimum\": 0,\n    \"type\": \"number\",\n    \"inclusive\": false,\n    \"exact\": false,\n    \"message\": \"Number must be greater than 0\",\n    \"path\": [\n      \"payload\",\n      \"leafThreshold\"\n    ]\n  }\n]"
+  },
+  "checksum": "2685b8caedcb5bf1148285cc913a3f95ffdbb8c69c53a2535996b0a45270aebc"
+}

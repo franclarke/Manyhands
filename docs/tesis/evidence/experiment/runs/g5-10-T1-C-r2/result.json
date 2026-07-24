@@ -1,0 +1,13 @@
+{
+  "cellId": "g5-10-T1-C-r2",
+  "condition": "C",
+  "taskId": "T1",
+  "runId": "38b69e58-388a-492d-a402-e12ff5f9da0c",
+  "started": "2026-07-24T12:52:16.107Z",
+  "finished": "2026-07-24T12:54:12.162Z",
+  "outcome": {
+    "lifecycle": "planning",
+    "receipt": null,
+    "reason": "planner asked for clarification: What exact category values should the fixed category set allow?"
+  }
+}

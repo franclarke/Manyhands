@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 2,
+  "runId": "deecf911-93af-487e-88c3-754d114dd11b",
+  "eventSequence": 31,
+  "lastEventId": "deecf911-93af-487e-88c3-754d114dd11b:delivery.published:31",
+  "operationId": "6c17acaa-d5be-41e2-928c-3224edf04283",
+  "fencingToken": 4,
+  "projection": {
+    "runId": "deecf911-93af-487e-88c3-754d114dd11b",
+    "goal": "Add expense categories to the splitter. Extend the Expense type with an optional category field validated against a fixed set of categories, add computeCategoryTotals to the domain, expose listCategoryTotals from the API layer, render a category breakdown in the web surface, and cover the new behaviour with tests. Preserve the existing balance behaviour and keep the current tests green.",
+    "lifecycle": "completed",
+    "sequence": 31,
+    "appliedEventIds": [
+      "run:deecf911-93af-487e-88c3-754d114dd11b:created",
+      "repository:sha256:42fb0ba8239a0d7e3cbbc2b7b572ff65aee6022f9abf0cc1187a3f74a7a97f02:inspection:2",
+      "planning:deecf911-93af-487e-88c3-754d114dd11b:attempt:1:started",
+      "planning:deecf911-93af-487e-88c3-754d114dd11b:attempt:1:node:expense-category-support",
+      "planning:deecf911-93af-487e-88c3-754d114dd11b:attempt:1:node:domain-category-model-and-totals",
+      "planning:deecf911-93af-487e-88c3-754d114dd11b:attempt:1:node:api-category-totals",
+      "planning:deecf911-93af-487e-88c3-754d114dd11b:attempt:1:node:web-category-breakdown",
+      "planning:expense-category-breakdown:completed:deecf911-93af-487e-88c3-754d114dd11b",
+      "planning:expense-category-breakdown:granularity:deecf911-93af-487e-88c3-754d114dd11b",
+      "graph:graph-expense-category-breakdown-06a268aa5d:r1:compiled",
+      "graph:graph-expense-category-breakdown-06a268aa5d:r1:critic:completeness",
+      "graph:graph-expense-category-breakdown-06a268aa5d:r1:critic:atomicity",
+      "graph:graph-expense-category-breakdown-06a268aa5d:r1:critic:contract_compatibility",
+      "graph:graph-expense-category-breakdown-06a268aa5d:r1:critic:dag_validity",
+      "graph:graph-expense-category-breakdown-06a268aa5d:r1:critic:scope_isolation",
+      "graph:graph-expense-category-breakdown-06a268aa5d:r1:critic:artifact_coverage",
+      "graph:graph-expense-category-breakdown-06a268aa5d:r1:critic:risk_uncertainty",
+      "graph:graph-expense-category-breakdown-06a268aa5d:r1:critic:validation_coverage",
+      "graph:graph-expense-category-breakdown-06a268aa5d:r1:proposed",
+      "approve-plan:graph-expense-category-breakdown-06a268aa5d:r1",
+      "approve-plan:graph-expense-category-breakdown-06a268aa5d:r1:resolved",
+      "approve-plan:graph-expense-category-breakdown-06a268aa5d:r1:graph-approved",
+      "deecf911-93af-487e-88c3-754d114dd11b:readiness.observed:23",
+      "deecf911-93af-487e-88c3-754d114dd11b:wave.selected:24",
+      "deecf911-93af-487e-88c3-754d114dd11b:attempt:node-expense-category-support-f98c1a9153:1:started",
+      "deecf911-93af-487e-88c3-754d114dd11b:attempt:node-expense-category-support-f98c1a9153:1:candidate",
+      "deecf911-93af-487e-88c3-754d114dd11b:attempt:node-expense-category-support-f98c1a9153:1:validation-completed",
+      "deecf911-93af-487e-88c3-754d114dd11b:attempt:node-expense-category-support-f98c1a9153:1:artifact-adopted",
+      "deecf911-93af-487e-88c3-754d114dd11b:attempt:node-expense-category-support-f98c1a9153:1:final-candidate",
+      "deecf911-93af-487e-88c3-754d114dd11b:delivery.started:30",
+      "deecf911-93af-487e-88c3-754d114dd11b:delivery.published:31"
+    ],
+    "decisions": {
+      "approve-plan:graph-expense-category-breakdown-06a268aa5d:r1": {
+        "id": "approve-plan:graph-expense-category-breakdown-06a268aa5d:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-expense-category-support-f98c1a9153"
+        ],
+        "evidenceRefs": [
+          "graph:graph-expense-category-breakdown-06a268aa5d:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      }
+    },
+    "readiness": {
+      "readyNodeIds": [
+        "node-expense-category-support-f98c1a9153"
+      ],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [
+      {
+        "waveId": "deecf911-93af-487e-88c3-754d114dd11b:wave:1",
+        "nodeIds": [
+          "node-expense-category-support-f98c1a9153"
+        ],
+        "maxParallel": 2
+      }
+    ],
+    "attempts": {
+      "deecf911-93af-487e-88c3-754d114dd11b:attempt:node-expense-category-support-f98c1a9153:1": {
+        "attemptId": "deecf911-93af-487e-88c3-754d114dd11b:attempt:node-expense-category-support-f98c1a9153:1",
+        "nodeId": "node-expense-category-support-f98c1a9153",
+        "inputFingerprint": "sha256:a877b1bf2eb17e0b61b19d8fe97a99311d497c1151ffb85d4998d18f0a196501",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "4da942186d93875361696a5e790b7992141e64c9",
+        "outputDigest": "sha256:66b3dd5411078f0223f08158c3fe490f59012260799da156cfc3114d244cdaf5"
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-expense-category-support-output-77df7d9aab:deecf911-93af-487e-88c3-754d114dd11b:attempt:node-expense-category-support-f98c1a9153:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-expense-category-support-output-77df7d9aab:deecf911-93af-487e-88c3-754d114dd11b:attempt:node-expense-category-support-f98c1a9153:1",
+        "runId": "deecf911-93af-487e-88c3-754d114dd11b",
+        "nodeId": "node-expense-category-support-f98c1a9153",
+        "digest": "sha256:66b3dd5411078f0223f08158c3fe490f59012260799da156cfc3114d244cdaf5",
+        "producerAttemptId": "deecf911-93af-487e-88c3-754d114dd11b:attempt:node-expense-category-support-f98c1a9153:1",
+        "contract": {
+          "id": "artifact-contract-expense-category-support-output-77df7d9aab",
+          "revision": "sha256:ab38430b0eb97f8173abc7f3df05f48de38af2c18d7a8ae15cf5b50b35930a19"
+        },
+        "kind": "commit",
+        "location": "4da942186d93875361696a5e790b7992141e64c9",
+        "adoptedAt": "2026-07-24T11:58:15.625Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-expense-category-support-f98c1a9153": "matrix-7db095ad88eaabe9"
+    },
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [
+      "matrix-7db095ad88eaabe9"
+    ],
+    "outcomes": {
+      "execution": "succeeded",
+      "artifact": "verified",
+      "delivery": "published"
+    },
+    "granularity": {
+      "formulaVersion": "c-task/1.0.0+condA",
+      "weights": {
+        "scopeRadius": 0.3,
+        "interfaceImpact": 0.25,
+        "validationSurface": 0.25,
+        "contextTokenMass": 0.2
+      },
+      "leafThreshold": 10,
+      "assessments": {
+        "node-expense-category-support-f98c1a9153": {
+          "unitKey": "expense-category-support",
+          "nodeId": "node-expense-category-support-f98c1a9153",
+          "dimensions": {
+            "scopeRadius": 5,
+            "interfaceImpact": 5,
+            "validationSurface": 6,
+            "contextTokenMass": 4
+          },
+          "signalSource": "llm",
+          "complexityScore": 5.05,
+          "decision": "leaf",
+          "rationale": "The change crosses domain, API, web, and tests, but the repository evidence indicates a small TypeScript codebase with focused existing files."
+        }
+      },
+      "criticDecisions": [
+        {
+          "kind": "coalesced",
+          "unitIds": [
+            "expense-category-support"
+          ],
+          "rationale": "Composite expense-category-support collapsed into a single leaf at C_task=5.05."
+        }
+      ],
+      "metrics": {
+        "maxGraphDepth": 0,
+        "totalLeafCount": 1,
+        "averageBranchingFactor": 0,
+        "coalescedUnitsCount": 0
+      }
+    },
+    "graphId": "graph-expense-category-breakdown-06a268aa5d",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1,
+    "finalCandidate": {
+      "manifestId": "final-da4936bce499bb45",
+      "commit": "4da942186d93875361696a5e790b7992141e64c9",
+      "evidenceMatrixId": "matrix-7db095ad88eaabe9",
+      "sourceTargetFingerprint": "20665faf6a1c11f6",
+      "targetBranch": "main",
+      "targetHead": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "evidenceEligible": true
+    },
+    "deliveryApproval": {
+      "manifestId": "final-da4936bce499bb45",
+      "finalSha": "4da942186d93875361696a5e790b7992141e64c9",
+      "targetBranch": "main",
+      "targetHead": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "targetFingerprint": "20665faf6a1c11f6",
+      "actor": "thesis-operator",
+      "idempotencyKey": "deecf911-93af-487e-88c3-754d114dd11b:delivery"
+    },
+    "deliveryReceipt": {
+      "receiptId": "delivery:deecf911-93af-487e-88c3-754d114dd11b:delivery",
+      "requestFingerprint": "6fc6a11d289112dc374468a183a7ed9866599e9c9ba5e97b1a5795ede92a55d9",
+      "manifestId": "final-da4936bce499bb45",
+      "finalSha": "4da942186d93875361696a5e790b7992141e64c9",
+      "targetBranch": "main",
+      "targetHeadBefore": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "targetHeadAfter": "4da942186d93875361696a5e790b7992141e64c9",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  },
+  "checksum": "90cf7f914bef07ec21733d001a25ce64bf041e1ce32258d89ec2c2d526da6e74"
+}

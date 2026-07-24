@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 2,
+  "runId": "434d0349-16c4-4414-be57-388f7db2ce63",
+  "eventSequence": 34,
+  "lastEventId": "434d0349-16c4-4414-be57-388f7db2ce63:delivery.published:34",
+  "operationId": "31633e7e-0d68-4141-8f63-c8f7f2a61528",
+  "fencingToken": 4,
+  "projection": {
+    "runId": "434d0349-16c4-4414-be57-388f7db2ce63",
+    "goal": "Allow an expense to be split unequally between participants using explicit per-participant weights. Validate that the weights are positive and that the weighted shares add up to the expense total, rejecting any expense whose weights do not balance, and cover the rule with tests. Keep the change inside the domain module and preserve the existing equal-split behaviour.",
+    "lifecycle": "completed",
+    "sequence": 34,
+    "appliedEventIds": [
+      "run:434d0349-16c4-4414-be57-388f7db2ce63:created",
+      "repository:sha256:42fb0ba8239a0d7e3cbbc2b7b572ff65aee6022f9abf0cc1187a3f74a7a97f02:inspection:2",
+      "planning:434d0349-16c4-4414-be57-388f7db2ce63:attempt:1:started",
+      "planning:434d0349-16c4-4414-be57-388f7db2ce63:attempt:1:node:weighted-expense-splitting",
+      "planning:434d0349-16c4-4414-be57-388f7db2ce63:attempt:1:node:domain-weighted-split-rule",
+      "planning:434d0349-16c4-4414-be57-388f7db2ce63:attempt:1:failed",
+      "planning:434d0349-16c4-4414-be57-388f7db2ce63:attempt:2:started",
+      "planning:434d0349-16c4-4414-be57-388f7db2ce63:attempt:2:node:weighted-expense-splitting",
+      "planning:434d0349-16c4-4414-be57-388f7db2ce63:attempt:2:node:domain-weighted-share-rule",
+      "planning:434d0349-16c4-4414-be57-388f7db2ce63:attempt:2:node:expense-weight-rule-tests",
+      "planning:weighted-expense-splitting:completed:434d0349-16c4-4414-be57-388f7db2ce63",
+      "planning:weighted-expense-splitting:granularity:434d0349-16c4-4414-be57-388f7db2ce63",
+      "graph:graph-weighted-expense-splitting-a288971ee2:r1:compiled",
+      "graph:graph-weighted-expense-splitting-a288971ee2:r1:critic:completeness",
+      "graph:graph-weighted-expense-splitting-a288971ee2:r1:critic:atomicity",
+      "graph:graph-weighted-expense-splitting-a288971ee2:r1:critic:contract_compatibility",
+      "graph:graph-weighted-expense-splitting-a288971ee2:r1:critic:dag_validity",
+      "graph:graph-weighted-expense-splitting-a288971ee2:r1:critic:scope_isolation",
+      "graph:graph-weighted-expense-splitting-a288971ee2:r1:critic:artifact_coverage",
+      "graph:graph-weighted-expense-splitting-a288971ee2:r1:critic:risk_uncertainty",
+      "graph:graph-weighted-expense-splitting-a288971ee2:r1:critic:validation_coverage",
+      "graph:graph-weighted-expense-splitting-a288971ee2:r1:proposed",
+      "approve-plan:graph-weighted-expense-splitting-a288971ee2:r1",
+      "approve-plan:graph-weighted-expense-splitting-a288971ee2:r1:resolved",
+      "approve-plan:graph-weighted-expense-splitting-a288971ee2:r1:graph-approved",
+      "434d0349-16c4-4414-be57-388f7db2ce63:readiness.observed:26",
+      "434d0349-16c4-4414-be57-388f7db2ce63:wave.selected:27",
+      "434d0349-16c4-4414-be57-388f7db2ce63:attempt:node-weighted-expense-splitting-c9b75d83ea:1:started",
+      "434d0349-16c4-4414-be57-388f7db2ce63:attempt:node-weighted-expense-splitting-c9b75d83ea:1:candidate",
+      "434d0349-16c4-4414-be57-388f7db2ce63:attempt:node-weighted-expense-splitting-c9b75d83ea:1:validation-completed",
+      "434d0349-16c4-4414-be57-388f7db2ce63:attempt:node-weighted-expense-splitting-c9b75d83ea:1:artifact-adopted",
+      "434d0349-16c4-4414-be57-388f7db2ce63:attempt:node-weighted-expense-splitting-c9b75d83ea:1:final-candidate",
+      "434d0349-16c4-4414-be57-388f7db2ce63:delivery.started:33",
+      "434d0349-16c4-4414-be57-388f7db2ce63:delivery.published:34"
+    ],
+    "decisions": {
+      "approve-plan:graph-weighted-expense-splitting-a288971ee2:r1": {
+        "id": "approve-plan:graph-weighted-expense-splitting-a288971ee2:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-weighted-expense-splitting-c9b75d83ea"
+        ],
+        "evidenceRefs": [
+          "graph:graph-weighted-expense-splitting-a288971ee2:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      }
+    },
+    "readiness": {
+      "readyNodeIds": [
+        "node-weighted-expense-splitting-c9b75d83ea"
+      ],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [
+      {
+        "waveId": "434d0349-16c4-4414-be57-388f7db2ce63:wave:1",
+        "nodeIds": [
+          "node-weighted-expense-splitting-c9b75d83ea"
+        ],
+        "maxParallel": 2
+      }
+    ],
+    "attempts": {
+      "434d0349-16c4-4414-be57-388f7db2ce63:attempt:node-weighted-expense-splitting-c9b75d83ea:1": {
+        "attemptId": "434d0349-16c4-4414-be57-388f7db2ce63:attempt:node-weighted-expense-splitting-c9b75d83ea:1",
+        "nodeId": "node-weighted-expense-splitting-c9b75d83ea",
+        "inputFingerprint": "sha256:c017546a01d89a0fc491f2d30a287336c7dea396e5ebc3788c8a808c204e0ce2",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "a5d5b22f02918ca4de75fc6811bc81c828661c73",
+        "outputDigest": "sha256:45db4ffd10336f2d5a8d711572f498ac3954e7e5c21b946fd29965d1dfdd221c"
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-weighted-expense-splitting-output-79d3a6f06f:434d0349-16c4-4414-be57-388f7db2ce63:attempt:node-weighted-expense-splitting-c9b75d83ea:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-weighted-expense-splitting-output-79d3a6f06f:434d0349-16c4-4414-be57-388f7db2ce63:attempt:node-weighted-expense-splitting-c9b75d83ea:1",
+        "runId": "434d0349-16c4-4414-be57-388f7db2ce63",
+        "nodeId": "node-weighted-expense-splitting-c9b75d83ea",
+        "digest": "sha256:45db4ffd10336f2d5a8d711572f498ac3954e7e5c21b946fd29965d1dfdd221c",
+        "producerAttemptId": "434d0349-16c4-4414-be57-388f7db2ce63:attempt:node-weighted-expense-splitting-c9b75d83ea:1",
+        "contract": {
+          "id": "artifact-contract-weighted-expense-splitting-output-79d3a6f06f",
+          "revision": "sha256:1ec2c75a8d4565440e724c277c548f4c5019db77faac0882176461d57a04b144"
+        },
+        "kind": "commit",
+        "location": "a5d5b22f02918ca4de75fc6811bc81c828661c73",
+        "adoptedAt": "2026-07-24T12:27:26.602Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-weighted-expense-splitting-c9b75d83ea": "matrix-c64c89e8ec94b1b3"
+    },
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [
+      "matrix-c64c89e8ec94b1b3"
+    ],
+    "outcomes": {
+      "execution": "succeeded",
+      "artifact": "verified",
+      "delivery": "published"
+    },
+    "granularity": {
+      "formulaVersion": "c-task/1.0.0+condA",
+      "weights": {
+        "scopeRadius": 0.3,
+        "interfaceImpact": 0.25,
+        "validationSurface": 0.25,
+        "contextTokenMass": 0.2
+      },
+      "leafThreshold": 10,
+      "assessments": {
+        "node-weighted-expense-splitting-c9b75d83ea": {
+          "unitKey": "weighted-expense-splitting",
+          "nodeId": "node-weighted-expense-splitting-c9b75d83ea",
+          "dimensions": {
+            "scopeRadius": 3,
+            "interfaceImpact": 4,
+            "validationSurface": 7,
+            "contextTokenMass": 4
+          },
+          "signalSource": "llm",
+          "complexityScore": 4.45,
+          "decision": "leaf",
+          "rationale": "The requested change is constrained to the domain module and existing expense tests, but it touches domain input semantics and validation behavior that may be consumed by API or web callers."
+        }
+      },
+      "criticDecisions": [
+        {
+          "kind": "coalesced",
+          "unitIds": [
+            "weighted-expense-splitting"
+          ],
+          "rationale": "Composite weighted-expense-splitting collapsed into a single leaf at C_task=4.45."
+        }
+      ],
+      "metrics": {
+        "maxGraphDepth": 0,
+        "totalLeafCount": 1,
+        "averageBranchingFactor": 0,
+        "coalescedUnitsCount": 0
+      }
+    },
+    "graphId": "graph-weighted-expense-splitting-a288971ee2",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1,
+    "finalCandidate": {
+      "manifestId": "final-5d614c379c153ecb",
+      "commit": "a5d5b22f02918ca4de75fc6811bc81c828661c73",
+      "evidenceMatrixId": "matrix-c64c89e8ec94b1b3",
+      "sourceTargetFingerprint": "20665faf6a1c11f6",
+      "targetBranch": "main",
+      "targetHead": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "evidenceEligible": true
+    },
+    "deliveryApproval": {
+      "manifestId": "final-5d614c379c153ecb",
+      "finalSha": "a5d5b22f02918ca4de75fc6811bc81c828661c73",
+      "targetBranch": "main",
+      "targetHead": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "targetFingerprint": "20665faf6a1c11f6",
+      "actor": "thesis-operator",
+      "idempotencyKey": "434d0349-16c4-4414-be57-388f7db2ce63:delivery"
+    },
+    "deliveryReceipt": {
+      "receiptId": "delivery:434d0349-16c4-4414-be57-388f7db2ce63:delivery",
+      "requestFingerprint": "7bd90aef271f66b8a8ee4d217c1921cd68d64b5deae1ed56c046ea333c80ba46",
+      "manifestId": "final-5d614c379c153ecb",
+      "finalSha": "a5d5b22f02918ca4de75fc6811bc81c828661c73",
+      "targetBranch": "main",
+      "targetHeadBefore": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "targetHeadAfter": "a5d5b22f02918ca4de75fc6811bc81c828661c73",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  },
+  "checksum": "c17695ff6ea6e1895b516413a5c2cc487662cea536364bcb17ce2f62d3b8d9af"
+}

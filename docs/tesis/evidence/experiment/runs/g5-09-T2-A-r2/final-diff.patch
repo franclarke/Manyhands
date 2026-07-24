@@ -1,0 +1,183 @@
+diff --git a/src/domain/expense.ts b/src/domain/expense.ts
+index c4a4e12..3ae138c 100644
+--- a/src/domain/expense.ts
++++ b/src/domain/expense.ts
+@@ -9,6 +9,7 @@ export interface Expense {
+   amountCents: number;
+   paidByParticipantId: string;
+   sharedWithParticipantIds: string[];
++  participantWeights?: Record<string, number>;
+ }
+ 
+ export interface Balance {
+@@ -17,21 +18,95 @@ export interface Balance {
+   netCents: number;
+ }
+ 
++type ParticipantShare = readonly [participantId: string, shareCents: number];
++
+ export function createExpense(input: Expense): Expense {
+   if (input.amountCents <= 0) throw new Error("An expense amount must be positive.");
+-  if (input.sharedWithParticipantIds.length === 0) throw new Error("An expense must be shared with at least one participant.");
+-  return { ...input, sharedWithParticipantIds: [...new Set(input.sharedWithParticipantIds)] };
++  const sharedWithParticipantIds = [...new Set(input.sharedWithParticipantIds)];
++  if (sharedWithParticipantIds.length === 0) throw new Error("An expense must be shared with at least one participant.");
++
++  const expense: Expense = { ...input, sharedWithParticipantIds };
++  if (expense.participantWeights !== undefined) {
++    validateParticipantWeights(expense);
++    validateWeightedSharesBalance(expense);
++    return { ...expense, participantWeights: { ...expense.participantWeights } };
++  }
++
++  return expense;
+ }
+ 
+-/** Splits each expense evenly across its participants and nets the result. */
++/** Splits each expense across its participants and nets the result. */
+ export function computeBalances(participants: readonly Participant[], expenses: readonly Expense[]): Balance[] {
+   const net = new Map<string, number>(participants.map((participant) => [participant.id, 0]));
+   for (const expense of expenses) {
+-    const shareCents = Math.round(expense.amountCents / expense.sharedWithParticipantIds.length);
+-    for (const participantId of expense.sharedWithParticipantIds) {
++    const shares = computeSharesCents(expense);
++    for (const [participantId, shareCents] of shares) {
+       net.set(participantId, (net.get(participantId) ?? 0) - shareCents);
+     }
+     net.set(expense.paidByParticipantId, (net.get(expense.paidByParticipantId) ?? 0) + expense.amountCents);
+   }
+   return [...net.entries()].map(([participantId, netCents]) => ({ participantId, netCents }));
+ }
++
++function computeSharesCents(expense: Expense): ParticipantShare[] {
++  if (expense.participantWeights === undefined) {
++    const shareCents = Math.round(expense.amountCents / expense.sharedWithParticipantIds.length);
++    return expense.sharedWithParticipantIds.map((participantId) => [participantId, shareCents]);
++  }
++
++  validateParticipantWeights(expense);
++  const shares = computeWeightedSharesCents(expense);
++  validateSharesBalance(expense.amountCents, shares);
++  return [...shares.entries()];
++}
++
++function validateParticipantWeights(expense: Expense): void {
++  const participantWeights = expense.participantWeights;
++  if (participantWeights === undefined) return;
++
++  const sharedParticipantIds = new Set(expense.sharedWithParticipantIds);
++  const weightedParticipantIds = Object.keys(participantWeights);
++  if (weightedParticipantIds.length !== sharedParticipantIds.size || weightedParticipantIds.some((participantId) => !sharedParticipantIds.has(participantId))) {
++    throw new Error("Participant weights must match the expense participants.");
++  }
++
++  for (const participantId of expense.sharedWithParticipantIds) {
++    const weight = participantWeights[participantId];
++    if (typeof weight !== "number" || !Number.isFinite(weight) || weight <= 0) {
++      throw new Error("Participant weights must be positive.");
++    }
++  }
++}
++
++function validateWeightedSharesBalance(expense: Expense): void {
++  validateSharesBalance(expense.amountCents, computeWeightedSharesCents(expense));
++}
++
++function computeWeightedSharesCents(expense: Expense): Map<string, number> {
++  const participantWeights = expense.participantWeights;
++  if (participantWeights === undefined) throw new Error("Participant weights are required for weighted shares.");
++
++  const totalWeight = expense.sharedWithParticipantIds.reduce((sum, participantId) => sum + participantWeights[participantId], 0);
++  const shares = new Map<string, number>();
++
++  for (const participantId of expense.sharedWithParticipantIds) {
++    const shareCents = (expense.amountCents * participantWeights[participantId]) / totalWeight;
++    if (!isWholeCent(shareCents)) {
++      throw new Error("Weighted participant shares must balance with the expense total.");
++    }
++    shares.set(participantId, Math.round(shareCents));
++  }
++
++  return shares;
++}
++
++function validateSharesBalance(amountCents: number, shares: ReadonlyMap<string, number>): void {
++  const totalSharesCents = [...shares.values()].reduce((sum, shareCents) => sum + shareCents, 0);
++  if (totalSharesCents !== amountCents) {
++    throw new Error("Weighted participant shares must balance with the expense total.");
++  }
++}
++
++function isWholeCent(value: number): boolean {
++  return Math.abs(value - Math.round(value)) < 0.0000001;
++}
+diff --git a/tests/expense.test.ts b/tests/expense.test.ts
+index b6acc36..c10c13f 100644
+--- a/tests/expense.test.ts
++++ b/tests/expense.test.ts
+@@ -8,6 +8,12 @@ const participants = [
+   { id: "bruno", name: "Bruno" }
+ ];
+ 
++const weightedParticipants = [
++  { id: "ana", name: "Ana" },
++  { id: "bruno", name: "Bruno" },
++  { id: "clara", name: "Clara" }
++];
++
+ describe("expense domain", () => {
+   it("rejects a non-positive amount", () => {
+     expect(() => createExpense({ id: "e1", description: "x", amountCents: 0, paidByParticipantId: "ana", sharedWithParticipantIds: ["ana"] })).toThrow(/positive/);
+@@ -22,6 +28,52 @@ describe("expense domain", () => {
+       { participantId: "bruno", netCents: -2000 }
+     ]);
+   });
++
++  it("splits an expense by explicit participant weights", () => {
++    const balances = computeBalances(weightedParticipants, [
++      {
++        id: "e1",
++        description: "Rent",
++        amountCents: 6000,
++        paidByParticipantId: "ana",
++        sharedWithParticipantIds: ["ana", "bruno", "clara"],
++        participantWeights: { ana: 3, bruno: 2, clara: 1 }
++      }
++    ]);
++    expect(balances).toEqual([
++      { participantId: "ana", netCents: 3000 },
++      { participantId: "bruno", netCents: -2000 },
++      { participantId: "clara", netCents: -1000 }
++    ]);
++  });
++
++  it("rejects non-positive participant weights", () => {
++    for (const participantWeights of [{ ana: 1, bruno: 0 }, { ana: -1, bruno: 1 }]) {
++      expect(() =>
++        createExpense({
++          id: "e1",
++          description: "Rent",
++          amountCents: 6000,
++          paidByParticipantId: "ana",
++          sharedWithParticipantIds: ["ana", "bruno"],
++          participantWeights
++        })
++      ).toThrow(/positive/);
++    }
++  });
++
++  it("rejects weighted shares that do not balance with the expense total", () => {
++    expect(() =>
++      createExpense({
++        id: "e1",
++        description: "Snacks",
++        amountCents: 100,
++        paidByParticipantId: "ana",
++        sharedWithParticipantIds: ["ana", "bruno", "clara"],
++        participantWeights: { ana: 1, bruno: 1, clara: 1 }
++      })
++    ).toThrow(/balance/);
++  });
+ });
+ 
+ describe("expense api", () => {

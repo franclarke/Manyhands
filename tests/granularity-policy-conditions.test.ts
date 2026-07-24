@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { RunEventSchema } from "@manyhands/run-coordinator";
 import {
   ADAPTIVE_GRANULARITY_FORMULA_VERSION,
   ADAPTIVE_GRANULARITY_POLICY,
@@ -142,6 +143,43 @@ describe("granularity policy as per-run configuration", () => {
     for (const policy of [SINGLE_LEAF_POLICY, FINE_SPLIT_POLICY, ADAPTIVE_GRANULARITY_POLICY]) {
       expect(Number.isFinite(policy.leafThreshold)).toBe(true);
       expect(JSON.parse(JSON.stringify(policy))).toEqual(policy);
+    }
+  });
+});
+
+describe("every condition survives the durable journal", () => {
+  it("persists the assessment of each policy without schema rejection", () => {
+    // The experiment lost all four condition-B runs to an event-schema
+    // rejection: the journal required a positive leaf threshold, and "no unit
+    // is a leaf" needs a value below the lowest score a unit can reach. The
+    // policy tests alone could not catch it, because none of them round-tripped
+    // through the event the planner actually writes.
+    for (const policy of [SINGLE_LEAF_POLICY, FINE_SPLIT_POLICY, ADAPTIVE_GRANULARITY_POLICY]) {
+      const parsed = RunEventSchema.safeParse({
+        eventId: "run-1:granularity",
+        runId: "run-1",
+        sequence: 1,
+        occurredAt: "2026-07-24T12:00:00.000Z",
+        type: "planning.granularity_assessed",
+        payload: {
+          formulaVersion: `c-task/1.0.0${policy.versionSuffix}`,
+          weights: policy.weights,
+          leafThreshold: policy.leafThreshold,
+          assessments: [{
+            unitKey: "unit-1",
+            nodeId: "node-1",
+            dimensions: { scopeRadius: 1, interfaceImpact: 1, validationSurface: 1, contextTokenMass: 1 },
+            signalSource: "llm",
+            complexityScore: 1,
+            decision: "leaf",
+            rationale: "Trivial unit."
+          }],
+          criticDecisions: [],
+          metrics: { maxGraphDepth: 0, totalLeafCount: 1, averageBranchingFactor: 0, coalescedUnitsCount: 0 }
+        }
+      });
+
+      expect(parsed.success, `${policy.versionSuffix || "productive"} was rejected`).toBe(true);
     }
   });
 });

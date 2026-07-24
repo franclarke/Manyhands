@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 2,
+  "runId": "38b69e58-388a-492d-a402-e12ff5f9da0c",
+  "eventSequence": 11,
+  "lastEventId": "planning-question-question-uncategorized-policy",
+  "operationId": "2681da5e-2270-486c-8005-6c44a6ffef88",
+  "fencingToken": 1,
+  "projection": {
+    "runId": "38b69e58-388a-492d-a402-e12ff5f9da0c",
+    "goal": "Add expense categories to the splitter. Extend the Expense type with an optional category field validated against a fixed set of categories, add computeCategoryTotals to the domain, expose listCategoryTotals from the API layer, render a category breakdown in the web surface, and cover the new behaviour with tests. Preserve the existing balance behaviour and keep the current tests green.",
+    "lifecycle": "planning",
+    "sequence": 11,
+    "appliedEventIds": [
+      "run:38b69e58-388a-492d-a402-e12ff5f9da0c:created",
+      "repository:sha256:42fb0ba8239a0d7e3cbbc2b7b572ff65aee6022f9abf0cc1187a3f74a7a97f02:inspection:2",
+      "planning:38b69e58-388a-492d-a402-e12ff5f9da0c:attempt:1:started",
+      "planning:38b69e58-388a-492d-a402-e12ff5f9da0c:attempt:1:node:expense-categories",
+      "planning:38b69e58-388a-492d-a402-e12ff5f9da0c:attempt:1:node:domain-category-model-and-totals",
+      "planning:38b69e58-388a-492d-a402-e12ff5f9da0c:attempt:1:node:api-category-totals",
+      "planning:38b69e58-388a-492d-a402-e12ff5f9da0c:attempt:1:node:web-category-breakdown",
+      "planning:38b69e58-388a-492d-a402-e12ff5f9da0c:attempt:1:node:category-behaviour-tests",
+      "planning:expense-categories-splitter:clarification:9",
+      "planning-question-question-category-set",
+      "planning-question-question-uncategorized-policy"
+    ],
+    "decisions": {
+      "planning-question-question-category-set": {
+        "id": "planning-question-question-category-set",
+        "kind": "clarify_goal",
+        "question": "What exact category values should the fixed category set allow?",
+        "options": [
+          {
+            "id": "option-1",
+            "label": "Use a provided product category list"
+          },
+          {
+            "id": "option-2",
+            "label": "Adopt a small default set such as food, travel, housing, utilities, entertainment, other"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-expense-categories-095864ac3e",
+          "node-domain-category-model-and-totals-eb9abbf18e",
+          "node-api-category-totals-acb3154d4f",
+          "node-category-behaviour-tests-93a160f3d1"
+        ],
+        "evidenceRefs": [
+          "work-question:question-category-set",
+          "path-1",
+          "path-3"
+        ],
+        "impact": "behavior",
+        "status": "pending"
+      },
+      "planning-question-question-uncategorized-policy": {
+        "id": "planning-question-question-uncategorized-policy",
+        "kind": "clarify_goal",
+        "question": "How should computeCategoryTotals treat expenses without a category?",
+        "options": [
+          {
+            "id": "option-1",
+            "label": "Exclude uncategorized expenses from category totals"
+          },
+          {
+            "id": "option-2",
+            "label": "Include them under an Uncategorized bucket"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-expense-categories-095864ac3e",
+          "node-domain-category-model-and-totals-eb9abbf18e",
+          "node-api-category-totals-acb3154d4f",
+          "node-web-category-breakdown-3988b433c6",
+          "node-category-behaviour-tests-93a160f3d1"
+        ],
+        "evidenceRefs": [
+          "work-question:question-uncategorized-policy",
+          "path-1",
+          "path-2",
+          "path-3"
+        ],
+        "impact": "acceptance",
+        "status": "pending"
+      }
+    },
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    }
+  },
+  "checksum": "8bcc58ba46af6a09616b3ae3c23f99cddec229b282bb61b28e6ea26271bb643a"
+}

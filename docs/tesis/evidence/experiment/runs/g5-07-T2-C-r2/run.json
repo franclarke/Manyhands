@@ -1,0 +1,63 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "0889d2c8-2224-4927-bf35-f23feabb751c",
+    "workspaceId": "fdc04903-8cb9-4981-b5de-05bcb2382f62",
+    "userPrompt": "Allow an expense to be split unequally between participants using explicit per-participant weights. Validate that the weights are positive and that the weighted shares add up to the expense total, rejecting any expense whose weights do not balance, and cover the rule with tests. Keep the change inside the domain module and preserve the existing equal-split behaviour.",
+    "title": "Allow an expense to be split unequally between participants using explicit per-participant weights. Validate that the we",
+    "planningSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "repairSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 300000,
+      "integrationTimeoutMs": 600000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed"
+    },
+    "granularityCondition": "C",
+    "targetContext": {
+      "sourceRealPath": "C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter",
+      "gitCommonDir": "C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "19703248370169717"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "fingerprint": "20665faf6a1c11f6",
+      "capturedAt": "2026-07-24T12:34:25.890Z"
+    },
+    "projection": {
+      "eventSequence": 33,
+      "lifecycle": "waiting_for_input",
+      "graphId": "graph-weighted-expense-splitting-domain-b6ad0489fb",
+      "graphRevision": 1,
+      "approvedGraphRevision": 1,
+      "repositorySnapshotId": "sha256:42fb0ba8239a0d7e3cbbc2b7b572ff65aee6022f9abf0cc1187a3f74a7a97f02",
+      "updatedAt": "2026-07-24T12:41:37.163Z"
+    },
+    "version": 113,
+    "mutationFence": 3,
+    "createdAt": "2026-07-24T12:34:25.890Z",
+    "updatedAt": "2026-07-24T12:41:37.179Z",
+    "heartbeatAt": "2026-07-24T12:41:34.599Z"
+  }
+}

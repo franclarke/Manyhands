@@ -74,6 +74,9 @@ function measure({ cell, result, events, granularity }) {
     0
   );
 
+  // `result.json` nests the terminal state under `outcome`; reading it one level
+  // too shallow silently reported every cell as undelivered.
+  const outcome = result.outcome ?? result;
   return {
     cellId: cell.cellId,
     position: cell.position,
@@ -83,10 +86,10 @@ function measure({ cell, result, events, granularity }) {
     runId: result.runId,
     // Primary: a delivery counts only with a confirmed receipt, never on
     // lifecycle alone.
-    delivered: result.lifecycle === "completed" && result.receipt?.confirmed === true,
-    lifecycle: result.lifecycle,
-    finalSha: result.finalSha ?? "",
-    stopReason: result.reason ?? "",
+    delivered: outcome.lifecycle === "completed" && outcome.receipt?.confirmed === true,
+    lifecycle: outcome.lifecycle ?? "",
+    finalSha: outcome.finalSha ?? "",
+    stopReason: outcome.reason ?? "",
     wallClockSeconds: times.length >= 2 ? Math.round((Math.max(...times) - Math.min(...times)) / 1000) : "",
     attempts,
     repairs,
