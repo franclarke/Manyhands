@@ -1,0 +1,344 @@
+% =============================================================================
+% Defensa del trabajo final. Acompaña a main.tex y no lo reemplaza: cada cifra
+% de estas diapositivas debe existir primero en la tesis y en evidence/.
+%
+% Compilar:
+%   pdflatex --enable-installer -interaction=nonstopmode presentacion.tex
+%   pdflatex --enable-installer -interaction=nonstopmode presentacion.tex
+% =============================================================================
+\documentclass[10pt,aspectratio=169]{beamer}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-nodecimaldot]{babel}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+
+% Version con notas del orador (pantalla dual):
+%   \setbeameroption{show notes on second screen=right}
+% Para imprimir solo las notas:
+%   \setbeameroption{show only notes}
+\usepackage{pgfpages}
+\usetheme{default}
+\usecolortheme{seahorse}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+\setbeamertemplate{itemize items}[circle]
+
+\title[ManyHands]{Orquestación de agentes de lenguaje para el desarrollo de software}
+\subtitle{Una política de descomposición adaptativa con verificación basada en evidencia}
+\author{Francisco Clarke \\ \small LU 120547}
+\institute{\small Departamento de Ciencias e Ingeniería de la Computación \\ Universidad Nacional del Sur \\[0.5em] \scriptsize Directora: Dra. Ana Gabriela Maguitman \\ \scriptsize Codirector: Dr. Federico Martín Schmidt}
+\date{2026}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\section{Problema}
+
+\begin{frame}{El problema}
+  Un agente de lenguaje puede resolver una tarea de programación acotada. Un
+  objetivo real de software no es una tarea acotada.
+
+  \bigskip
+  \pause
+  La salida natural es \textbf{descomponer}. Y ahí aparece la tensión:
+
+  \bigskip
+  \begin{columns}[T]
+    \begin{column}{0.47\textwidth}
+      \textbf{Dividir de menos}
+      \begin{itemize}
+        \item El agente satura su contexto.
+        \item No hay puntos de verificación intermedios.
+        \item Un fallo invalida todo el trabajo.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.47\textwidth}
+      \textbf{Dividir de más}
+      \begin{itemize}
+        \item Aparecen contratos entre unidades.
+        \item Crece el costo de integración.
+        \item Los conflictos serializan el trabajo.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \bigskip
+  \pause
+  \begin{center}
+    \textbf{La paradoja de la granularidad:} el óptimo no es un extremo, y no es
+    el mismo para todas las tareas.
+  \end{center}
+\note{%
+  Abrir por la tension, no por la herramienta. El tribunal tiene que entender
+  que ninguno de los dos extremos es una solucion: dividir de menos satura al
+  agente, dividir de mas traslada el costo a la integracion. Si preguntan por
+  que no basta con dividir bien a mano, la respuesta es que el optimo depende
+  de la tarea, y por eso hace falta una politica.%
+}
+\end{frame}
+
+\begin{frame}{Preguntas de investigación}
+  \begin{description}
+    \item[RQ1] ¿Cómo varía la tasa de entrega verificada entre hoja única
+      forzada, división fina fija y una política adaptativa?
+    \item[RQ2] ¿Qué trade-off existe entre éxito, duración, costo y overhead de
+      coordinación?
+    \item[RQ3] ¿Qué modos de falla aparecen en cada configuración?
+  \end{description}
+
+  \bigskip
+  \begin{center}
+    \small Estudio \textbf{exploratorio} de viabilidad y modos de falla.\\
+    No busca —ni podría alcanzar— significancia estadística.
+  \end{center}
+\note{%
+  Decir explicitamente que es exploratorio ANTES de mostrar cualquier numero.
+  Si alguien pide significancia, la respuesta ya esta dada: con dos
+  observaciones por celda no hay base para un p-valor, y afirmar lo contrario
+  seria deshonesto.%
+}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\section{Aporte}
+
+\begin{frame}{La política de descomposición adaptativa}
+  Cada unidad recibe cuatro señales normalizadas en $[0,10]$:
+
+  \[
+    C_{\mathit{task}} = w_1 S_r + w_2 I_i + w_3 V_s + w_4 T_m
+  \]
+
+  \begin{center}
+  \small
+  \begin{tabular}{llc}
+    \toprule
+    Símbolo & Dimensión & Peso \\
+    \midrule
+    $S_r$ & Radio de alcance (archivos y módulos afectados) & 0{,}30 \\
+    $I_i$ & Impacto sobre interfaces exportadas & 0{,}25 \\
+    $V_s$ & Superficie de validación & 0{,}25 \\
+    $T_m$ & Masa de contexto en tokens & 0{,}20 \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \bigskip
+  Una unidad se mantiene como hoja si $C_{\mathit{task}} \le 3{,}5$.
+
+  \bigskip
+  \pause
+  \textbf{Validación híbrida:} el modelo \emph{propone} las señales; un
+  validador determinista las \emph{acota} contra la superficie real del
+  repositorio. El origen de cada señal queda registrado como \texttt{llm},
+  \texttt{clamped} o \texttt{derived}.
+\note{%
+  Los pesos NO estan calibrados empiricamente: son una asignacion razonada, y
+  eso esta declarado como limitacion en la tesis. Si preguntan por la
+  calibracion, reconocerlo de frente y remitir a trabajo futuro. Lo defendible
+  aca es la validacion hibrida: el modelo propone, el validador determinista
+  acota, y el origen de cada senal queda registrado.%
+}
+\end{frame}
+
+\begin{frame}{Dónde está la frontera}
+  \begin{center}
+    \large
+    La política decide \textbf{si} dividir.\\[0.6em]
+    Solo el Arquitecto puede decir \textbf{cómo}.
+  \end{center}
+
+  \bigskip
+  \pause
+  Esto no es una decisión de escritorio: es un \textbf{resultado negativo}
+  obtenido de un run real.
+
+  \begin{itemize}
+    \item Una versión previa fabricaba sub-unidades particionando rutas de
+      forma mecánica cuando el Arquitecto no proponía ninguna.
+    \item En un run canónico los tres agentes terminaron con código de salida
+      0, y \textbf{los tres candidatos fueron rechazados por violar su propio
+      contrato de alcance}.
+    \item Causa: implementar una porción de la API también necesita el tipo del
+      dominio del que depende. Una partición de rutas no es una unidad de
+      trabajo coherente.
+  \end{itemize}
+
+  \pause
+  \bigskip
+  Corrección: se retiró la síntesis mecánica. Sin sub-unidades propuestas se
+  conserva la hoja cohesiva y se registra \texttt{resplit\_declined}.
+\note{%
+  Esta es la diapositiva mas importante de la defensa. Es un resultado
+  negativo, y conviene presentarlo como tal: el sistema hacia algo que parecia
+  razonable, un run real lo refuto, y la correccion fue quitar funcionalidad,
+  no agregarla. Conecta con Parnas 1972: los modulos se separan por decisiones
+  de diseno, no por archivos. Si preguntan como se detecto: tres agentes con
+  exit 0 y tres candidatos rechazados por alcance.%
+}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\section{Arquitectura}
+
+\begin{frame}{Recorrido de un run}
+  \begin{enumerate}
+    \item \textbf{Grounding} — se indexa el repositorio objetivo; el plan cita
+      rutas que existen.
+    \item \textbf{Planificación} — el planificador emite unidades semánticas y
+      señales de complejidad.
+    \item \textbf{Política adaptativa} — $C_{\mathit{task}}$ reforma el árbol;
+      la decisión se persiste como evento.
+    \item \textbf{Compilación} — grafo con cuatro relaciones tipadas:
+      pertenencia, artefactos, costuras y restricciones de conflicto.
+    \item \textbf{Ejecución} — cada hoja corre en un worktree de Git aislado,
+      con \emph{lease} y \emph{fencing}.
+    \item \textbf{Validación} — matriz de evidencias sobre el commit exacto.
+    \item \textbf{Integración} — bottom-up, con reparación semántica.
+    \item \textbf{Entrega} — manifiesto y receipt sobre el árbol validado.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Dos invariantes que sostienen todo}
+  \textbf{1. \texttt{git diff} es la única fuente de verdad.}\\
+  El agente no commitea. El orquestador inspecciona el árbol y commitea el diff
+  exacto. Lo que el agente \emph{dice} que hizo no entra en la evidencia.
+
+  \bigskip
+  \textbf{2. El alcance es un contrato, no una sugerencia.}\\
+  Cada nodo declara las rutas que puede modificar. Un archivo fuera de contrato
+  invalida el candidato.
+
+  \bigskip
+  \pause
+  \small
+  Este segundo invariante tuvo un costo medido: bajo alcance estricto, un
+  archivo de prueba \emph{nuevo} que el planificador no anticipó hacía fallar
+  trabajo correcto. La corrección fue \textbf{creación acotada}: un nodo puede
+  crear archivos bajo los directorios que ya posee —roots derivados por el
+  compilador, nunca pedidos por el modelo—, pero editar un archivo preexistente
+  no declarado sigue fuera de alcance.
+\note{%
+  Insistir en que el alcance estricto no se relajo para hacer pasar los runs.
+  Se acoto la autorizacion a la creacion de archivos nuevos bajo directorios
+  que el nodo ya posee, y los roots los deriva el compilador, no el modelo.
+  Editar un archivo preexistente no declarado sigue fuera de alcance.%
+}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\section{Evaluación}
+
+\begin{frame}{Cómo se evaluó}
+  \textbf{Caso canónico:} repositorio objetivo externo, commit base congelado,
+  objetivo que cruza dominio, API, superficie web y pruebas. Codex CLI
+  (\texttt{gpt-5.5}) en planificación y ejecución.
+
+  \bigskip
+  \textbf{Estudio comparativo:} 2 tareas $\times$ 3 condiciones $\times$ 2
+  repeticiones. Las dos tareas caen \textbf{en lados opuestos del umbral}: si
+  ambas fueran complejas, la condición de hoja única fallaría por construcción y
+  la política adaptativa parecería superior por una razón trivial.
+
+  \bigskip
+  \pause
+  Todo se fijó \textbf{antes} de observar resultados: tareas, orden, métricas,
+  hipótesis, su falsador y una regla de inconclusión.
+
+  \bigskip
+  \small Las tablas y figuras se derivan automáticamente del journal de
+  eventos. Ninguna cifra se transcribe a mano.
+\note{%
+  El punto no obvio de la seleccion de tareas: las dos tareas estan en lados
+  opuestos del umbral a proposito. Una politica adaptativa util debe parecerse
+  a la hoja unica en la tarea acotada y no ser peor que la division fina en la
+  tarea multi-capa. Una politica que siempre divide no resolvio la paradoja:
+  eligio un extremo. Con dos tareas complejas eso seria invisible.%
+}
+\end{frame}
+
+\begin{frame}{Lo que este diseño permite decir}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{Permite}
+      \begin{itemize}
+        \item Caracterizar viabilidad.
+        \item Describir trade-offs observados.
+        \item Identificar \textbf{modos de falla}.
+        \item Reportar la variabilidad del planificador.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{No permite}
+      \begin{itemize}
+        \item Afirmar superioridad de la política.
+        \item Reportar significancia.
+        \item Generalizar a otros repositorios.
+        \item Calibrar los pesos.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \bigskip
+  \pause
+  \begin{center}
+    Con $n = 2$ por celda, una muestra chica rinde en lo cualitativo.\\
+    Los modos de falla son el resultado, no un subproducto.
+  \end{center}
+\note{%
+  Esta diapositiva anticipa las preguntas incomodas. Decirlo antes de que lo
+  pregunten cuesta menos que defenderlo despues. Si insisten con si sirve o no,
+  la respuesta honesta: sirve para caracterizar viabilidad y modos de falla;
+  para afirmar superioridad haria falta otro diseno.%
+}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\section{Cierre}
+
+\begin{frame}{Conclusiones}
+  \begin{itemize}
+    \item Se construyó un orquestador que lleva un objetivo hasta un resultado
+      \textbf{integrado, verificado y entregado}, con evidencia auditable de
+      cada paso.
+    \item La descomposición adaptativa está en la ruta productiva y su decisión
+      queda \textbf{persistida y explicable} run por run.
+    \item El hallazgo más informativo es negativo: una política determinista
+      puede \emph{detectar} exceso de complejidad, pero \textbf{no puede
+      inventar el corte semántico}. Esa frontera es la contribución conceptual.
+    \item Los defectos que importaron no se encontraron leyendo código, sino
+      \textbf{ejecutando runs reales} contra un repositorio de verdad.
+  \end{itemize}
+\note{%
+  Cerrar por el resultado negativo, no por la plataforma. La plataforma es el
+  medio; la frontera entre juicio semantico y decision determinista es lo que
+  queda. Segundo mensaje: los defectos que importaron aparecieron ejecutando,
+  no leyendo codigo.%
+}
+\end{frame}
+
+\begin{frame}{Trabajo futuro}
+  \begin{itemize}
+    \item Calibrar los pesos de $C_{\mathit{task}}$ con una muestra que lo
+      permita; el diseño actual, deliberadamente, no lo sostiene.
+    \item Enmiendas versionadas de alcance: convertir una violación en una
+      propuesta de revisión del grafo en lugar de una falla terminal.
+    \item Ampliar el estudio a repositorios de dominios y tamaños distintos.
+    \item Reducir la dependencia de la variabilidad del proveedor en
+      planificación.
+  \end{itemize}
+
+  \vfill
+  \begin{center}
+    \large ¿Preguntas?
+  \end{center}
+\end{frame}
+
+\end{document}
