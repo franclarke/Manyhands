@@ -1,10 +1,13 @@
 import { EXECUTOR_IDS, ExecutionConfigSchema, ReasoningEffortSchema } from "@manyhands/execution-core";
+import { GRANULARITY_CONDITIONS } from "@manyhands/decomposer";
 import { RunLifecycleSchema } from "@manyhands/run-coordinator";
 import { z } from "zod";
 
 import { RUN_USER_PROMPT_MAX_LENGTH } from "@/lib/run-limits";
 
 export const RUN_FILE_VERSION = 2;
+
+export const GranularityConditionSchema = z.enum(GRANULARITY_CONDITIONS);
 
 export const StageSelectionSchema = z.object({
   executorId: z.enum(EXECUTOR_IDS),
@@ -79,6 +82,12 @@ export const RunRecordSchema = z.object({
   executionSelection: StageSelectionSchema,
   repairSelection: StageSelectionSchema,
   executionConfig: ExecutionConfigSchema,
+  /**
+   * Granularity condition for the comparative study. Absent means the
+   * productive adaptive policy; a run that names one is self-describing about
+   * the policy that shaped its plan.
+   */
+  granularityCondition: GranularityConditionSchema.optional(),
   targetContext: RunTargetContextSchema,
   projection: RunProjectionCacheSchema,
   version: z.number().int().nonnegative().default(0),
@@ -107,6 +116,7 @@ export const RunCreateRequestSchema = z.object({
   planningSelection: StageSelectionSchema.optional(),
   executionSelection: StageSelectionSchema.optional(),
   repairSelection: StageSelectionSchema.optional(),
+  granularityCondition: GranularityConditionSchema.optional(),
   executionConfig: ExecutionConfigSchema.partial().omit({ routing: true }).strict().optional()
 }).strict();
 

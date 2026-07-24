@@ -1,7 +1,6 @@
 import type { GranularityCriticDecision, ProposedGranularityUnit } from "./coalescing-critic.js";
+import { ADAPTIVE_GRANULARITY_POLICY, type GranularityPolicy } from "./policy.js";
 import {
-  DEFAULT_COMPLEXITY_WEIGHTS,
-  LEAF_COMPLEXITY_THRESHOLD,
   type ComplexityDimensions,
   type ComplexityWeights,
   type GranularityAssessment
@@ -40,7 +39,8 @@ export interface AdaptiveStructuralMetrics {
 
 export interface AdaptivePlanningResult {
   breakdown: WorkBreakdown;
-  formulaVersion: typeof ADAPTIVE_GRANULARITY_FORMULA_VERSION;
+  /** `c-task/1.0.0`, suffixed with the experiment condition when not productive. */
+  formulaVersion: string;
   weights: ComplexityWeights;
   leafThreshold: number;
   assessments: Record<string, AdaptiveUnitAssessment>;
@@ -51,6 +51,8 @@ export interface AdaptivePlanningResult {
 
 export interface AdaptivePlanningInput {
   breakdown: WorkBreakdown;
+  /** Defaults to the productive policy; G5 conditions override it per run. */
+  policy?: GranularityPolicy;
 }
 
 interface PreservedUnitFields {
@@ -80,6 +82,7 @@ interface PreservedUnitFields {
  * derive their fields from their sources.
  */
 export function applyAdaptiveGranularity(input: AdaptivePlanningInput): AdaptivePlanningResult {
+  const policy = input.policy ?? ADAPTIVE_GRANULARITY_POLICY;
   const breakdown = WorkBreakdownSchema.parse(input.breakdown);
   const sources = new Map<string, ComplexitySignalSource>();
   const preserved = new Map<string, PreservedUnitFields>();
@@ -88,7 +91,7 @@ export function applyAdaptiveGranularity(input: AdaptivePlanningInput): Adaptive
   );
 
   const architectRoot = toArchitectInput(breakdown.root, { sources, preserved, pathEvidenceById });
-  const compiled = compileAdaptiveWorkUnitTree(architectRoot);
+  const compiled = compileAdaptiveWorkUnitTree(architectRoot, policy);
 
   const assessments: Record<string, AdaptiveUnitAssessment> = {};
   for (const [key, assessment] of Object.entries(compiled.assessments)) {
@@ -122,9 +125,9 @@ export function applyAdaptiveGranularity(input: AdaptivePlanningInput): Adaptive
 
   return {
     breakdown: reshaped,
-    formulaVersion: ADAPTIVE_GRANULARITY_FORMULA_VERSION,
-    weights: { ...DEFAULT_COMPLEXITY_WEIGHTS },
-    leafThreshold: LEAF_COMPLEXITY_THRESHOLD,
+    formulaVersion: `${ADAPTIVE_GRANULARITY_FORMULA_VERSION}${policy.versionSuffix}`,
+    weights: { ...policy.weights },
+    leafThreshold: policy.leafThreshold,
     assessments,
     criticDecisions,
     coalescedUnitsCount: compiled.coalescedUnitsCount,

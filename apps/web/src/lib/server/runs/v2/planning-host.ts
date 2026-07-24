@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { AdaptivePlanningResult, CompiledGraphRevision, GraphCompilerInput, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
-import { PLAN_CRITIC_KINDS, applyAdaptiveGranularity } from "@manyhands/decomposer";
+import { PLAN_CRITIC_KINDS, applyAdaptiveGranularity, granularityPolicyFor } from "@manyhands/decomposer";
 import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 
@@ -16,6 +16,8 @@ export interface PlanningV2Input {
   acceptanceCriteria?: string[];
   constraints?: string[];
   questionAnswers?: Record<string, string>;
+  /** G5 condition label; absent means the productive adaptive policy. */
+  granularityCondition?: string;
 }
 
 export interface PlanningV2Dependencies {
@@ -107,7 +109,10 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
     // Adaptive granularity policy (target route, roadmap §9): the semantic
     // breakdown is reshaped by the deterministic C_task assessment before the
     // Graph Compiler materializes it. Same canonical WorkUnit tree, one model.
-    const adaptive = applyAdaptiveGranularity({ breakdown });
+    const adaptive = applyAdaptiveGranularity({
+      breakdown,
+      policy: granularityPolicyFor(input.granularityCondition)
+    });
     const compiled = dependencies.compile({ breakdown: adaptive.breakdown, repositorySnapshot });
     const drafts = successEvents(input.runId, adaptive, compiled, nodeIdFor, dependencies.now);
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];

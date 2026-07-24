@@ -6,6 +6,7 @@ import {
 } from "../granularity/coalescing-critic.js";
 import type { GranularityAssessment } from "../granularity/complexity-evaluator.js";
 import { runArchitectPass, type ArchitectTaskInput } from "../llm/architect-pass.js";
+import { ADAPTIVE_GRANULARITY_POLICY, type GranularityPolicy } from "../granularity/policy.js";
 
 export interface AdaptiveWorkUnitCompilation {
   /** Canonical semantic planner tree consumed by the existing Graph Compiler. */
@@ -26,7 +27,10 @@ const DEFAULT_ACCEPTANCE_INTENT_ID = "adaptive-goal";
  * Applies adaptive granularity before graph compilation. It deliberately emits
  * the canonical WorkUnit tree instead of introducing another graph model.
  */
-export function compileAdaptiveWorkUnitTree(input: ArchitectTaskInput): AdaptiveWorkUnitCompilation {
+export function compileAdaptiveWorkUnitTree(
+  input: ArchitectTaskInput,
+  policy: GranularityPolicy = ADAPTIVE_GRANULARITY_POLICY
+): AdaptiveWorkUnitCompilation {
   const units: WorkUnit[] = [];
   const assessments: Record<string, GranularityAssessment> = {};
   const seenIds = new Set<string>();
@@ -48,7 +52,7 @@ export function compileAdaptiveWorkUnitTree(input: ArchitectTaskInput): Adaptive
     if (seenIds.has(task.nodeId)) throw new Error(`Duplicate adaptive unit key: ${task.nodeId}.`);
     seenIds.add(task.nodeId);
 
-    const architect = runArchitectPass(task);
+    const architect = runArchitectPass(task, policy);
     const assessment = forceComposite
       ? {
           ...architect.assessment,
@@ -100,7 +104,7 @@ export function compileAdaptiveWorkUnitTree(input: ArchitectTaskInput): Adaptive
       units.push(leaf);
       return leaf;
     }
-    const review = reviewGranularityProposal(proposals);
+    const review = reviewGranularityProposal(proposals, policy.coalescingEnabled);
     coalescedUnitsCount += review.coalescedUnitsCount;
     criticDecisions.push(...review.decisions);
     for (const reviewed of review.units) {
@@ -140,8 +144,8 @@ export function compileAdaptiveWorkUnitTree(input: ArchitectTaskInput): Adaptive
 }
 
 export class AdaptiveGranularityCompiler {
-  compile(input: ArchitectTaskInput): AdaptiveWorkUnitCompilation {
-    return compileAdaptiveWorkUnitTree(input);
+  compile(input: ArchitectTaskInput, policy?: GranularityPolicy): AdaptiveWorkUnitCompilation {
+    return compileAdaptiveWorkUnitTree(input, policy);
   }
 }
 

@@ -29,6 +29,7 @@ export * from "./granularity/complexity-evaluator.js";
 export * from "./granularity/coalescing-critic.js";
 export * from "./granularity/thesis-metrics.js";
 export * from "./granularity/adaptive-planning.js";
+export * from "./granularity/policy.js";
 export * from "./context-compressor.js";
 export * from "./llm/architect-pass.js";
 export * from "./compiler/graph-compiler-v3.js";

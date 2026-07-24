@@ -42,7 +42,8 @@ export const DEFAULT_COMPLEXITY_WEIGHTS: Readonly<ComplexityWeights> = Object.fr
 
 export function evaluateIntrinsicComplexity(
   input: ComplexityEvaluationInput,
-  weights: ComplexityWeights = DEFAULT_COMPLEXITY_WEIGHTS
+  weights: ComplexityWeights = DEFAULT_COMPLEXITY_WEIGHTS,
+  leafThreshold: number = LEAF_COMPLEXITY_THRESHOLD
 ): GranularityAssessment {
   assertNodeId(input.nodeId);
   const dimensions = {
@@ -59,7 +60,7 @@ export function evaluateIntrinsicComplexity(
       dimensions.contextTokenMass * normalizedWeights.contextTokenMass,
     2
   );
-  const isLeaf = complexityScore <= LEAF_COMPLEXITY_THRESHOLD;
+  const isLeaf = complexityScore <= leafThreshold;
   const assessment: GranularityAssessment = {
     nodeId: input.nodeId,
     complexityScore,

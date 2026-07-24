@@ -36,10 +36,14 @@ const EXCESSIVE_SCOPE_RADIUS = 3;
 const SMALL_DIRECTORY_PATH_LIMIT = 3;
 
 export function reviewGranularityProposal(
-  proposedUnits: readonly ProposedGranularityUnit[]
+  proposedUnits: readonly ProposedGranularityUnit[],
+  coalescingEnabled = true
 ): GranularityCriticReview {
   const assessed = proposedUnits.map(reviewUnit);
-  const groups = coalescingGroups(assessed);
+  // A fixed fine-split condition keeps every proposed sibling separate; the
+  // re-split critic below still runs, since it protects against a unit whose
+  // scope is too wide to be a leaf under any condition.
+  const groups = coalescingEnabled ? coalescingGroups(assessed) : assessed.map((unit) => [unit]);
   const decisions: GranularityCriticDecision[] = [];
   const units = groups.map((group) => {
     if (group.length === 1) return group[0]!;

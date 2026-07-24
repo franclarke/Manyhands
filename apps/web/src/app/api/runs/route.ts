@@ -84,6 +84,9 @@ export async function POST(request: Request): Promise<NextResponse> {
         executionSelection,
         repairSelection,
         executionConfig,
+        ...(parsed.data.granularityCondition !== undefined
+          ? { granularityCondition: parsed.data.granularityCondition }
+          : {}),
         targetContext,
         projection: { eventSequence: 0, lifecycle: "planning", updatedAt: now },
         version: 0,
