@@ -11,9 +11,9 @@
 | 1 — Congelar alcance | G1 | **PASS** (aprobado por Francisco, D-1..D-4) | `docs/tesis/*.md`, `evidence/baselines/stage-1-baseline.md` |
 | 2 — Toolchain y gates | G2 | **PASS** (commit `d552c5d`) | `evidence/gates/g2-gate-results.md`, `g2-fresh-install.md` |
 | 3 — Aporte adaptativo | G3 | **PASS** (`3a52b8b`) | `evidence/gates/g3-adaptive-integration.md` |
-| 4 — Run canónico | G4 | **PARTIAL** (1 run `completed` de 4) | `evidence/canonical-run/` |
-| 5 — Experimento | G5 | **BLOCKED** (no ejecutado) | `evidence/experiment/protocol.md` |
-| 6 — Tesis y presentación | G6 | **PARTIAL** (tesis reescrita; PDF no compilable) | `docs/tesis/main.tex`, `evidence/thesis-reference-analysis.md` |
+| 4 — Run canónico | G4 | **EN CURSO** (causa raíz de alcance corregida; serie reiniciada tras defecto sistémico) | `evidence/canonical-run/` |
+| 5 — Experimento | G5 | **LISTO PARA EJECUTAR** (condiciones parametrizadas, 12 celdas congeladas) | `evidence/experiment/` |
+| 6 — Tesis y presentación | G6 | **PARTIAL** (PDF compila limpio; falta incorporar la evidencia definitiva) | `docs/tesis/main.tex`, `docs/tesis/presentacion.tex` |
 
 ## Decisiones adoptadas
 
@@ -214,12 +214,42 @@
     `stage-1-baseline.md` §runs legacy ya no es re-verificable sobre esos
     archivos.
 
+32. **Run canónico válido tras el fix de alcance** (`a55525c7`, 14 min):
+    `1da878d → 0e550b49`, receipt confirmado, 3 hojas ejecutadas y **ninguna
+    rechazada por alcance** —donde antes fallaban 3 de 3—. Verificado en clon
+    limpio: **11 tests verdes** (baseline 5) y `tsc --noEmit` exit 0.
+33. **Telemetría de consumo (commit `fe6d5ab`).** RQ2 pregunta por el costo y el
+    journal no registraba tokens: la usage del ejecutor llegaba a
+    `AgentExecutionResult` y se descartaba. Ahora viaja en
+    `attempt.candidate_created` y `attempt.failed`, con `source` obligatorio.
+    **Limitación observada:** Codex CLI reporta `source: "unavailable"`, así que
+    el componente de tokens de RQ2 **no es derivable** con este ejecutor; la
+    duración wall-clock queda como el único indicador de costo disponible.
+34. **Defecto sistémico: deadlock silencioso (commit `c227205`).** El run
+    `0c0f066a` de la serie se detuvo sin fallo, sin decisión y sin avance. Causa
+    raíz: un nodo adoptaba **solo** su artefacto de resultado, así que un
+    artefacto declarado por el planificador entre hermanos nunca se satisfacía y
+    sus consumidores jamás se volvían elegibles. Un estancamiento que no reporta
+    nada es peor que un fallo: es indistinguible de trabajo en curso. Evidencia
+    completa en `canonical-run/defects/silent-artifact-deadlock/`.
+    **Consecuencia:** la serie de G4 se reinició por completo sobre el commit
+    corregido, conforme al criterio del roadmap.
+35. **Dato de evaluación que el defecto deja expuesto:** la variabilidad del
+    planificador no solo cambia la topología, cambia **qué caminos del
+    orquestador se ejercitan**. El defecto llevaba latente todos los runs
+    anteriores. Un run exitoso no cubre el espacio de grafos posibles.
+36. **G6 desbloqueado:** MiKTeX 25.12 instalado; `main.tex` compila a **36
+    páginas**, con 0 referencias/citas indefinidas, 0 cajas desbordadas y 0
+    advertencias de LaTeX. Se creó `presentacion.tex` (no existía ninguna),
+    19 diapositivas con notas del orador, y `evidence/DEMO.md` con el guion de
+    demo y su material de respaldo rotulado.
+
 ## Siguiente acción exacta (para reanudar)
 
-1. Obtener **dos runs canónicos válidos consecutivos** sobre el commit actual →
-   cerrar G4. Antes de cada run: `pnpm build`, servidor reiniciado, target en
-   `1da878d`, y **verificar espacio libre en disco** (cada run consume varios
-   GB entre pools de worktrees e instalaciones).
+1. Obtener **dos runs canónicos válidos consecutivos** sobre el commit
+   `f634ff0` → cerrar G4. Antes de cada run: `pnpm build`, servidor reiniciado,
+   target en `1da878d`, y **verificar espacio libre en disco** (cada run consume
+   varios GB entre pools de worktrees e instalaciones).
 2. Ejecutar el protocolo de G5 con `run-g5.mjs` sobre un único commit de
    ManyHands; derivar tablas y figuras con `derive-metrics.mjs`.
 3. Completar la toolchain LaTeX y compilar `docs/tesis/main.tex`; revisar el PDF.
