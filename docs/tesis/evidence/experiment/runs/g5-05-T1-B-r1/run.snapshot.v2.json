@@ -1,0 +1,423 @@
+{
+  "schemaVersion": 2,
+  "runId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc",
+  "eventSequence": 51,
+  "lastEventId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:readiness.observed:51",
+  "operationId": "32e54359-c15c-4af5-a4d6-140f6568ff82",
+  "fencingToken": 3,
+  "projection": {
+    "runId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc",
+    "goal": "Add expense categories to the splitter. Extend the Expense type with an optional category field that must be one of exactly \"food\", \"transport\", \"lodging\", \"entertainment\" or \"other\", rejecting any other value, add computeCategoryTotals to the domain, expose listCategoryTotals from the API layer, render a category breakdown in the web surface, and cover the new behaviour with tests. Preserve the existing balance behaviour and keep the current tests green.",
+    "lifecycle": "waiting_for_input",
+    "sequence": 51,
+    "appliedEventIds": [
+      "run:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:created",
+      "repository:sha256:42fb0ba8239a0d7e3cbbc2b7b572ff65aee6022f9abf0cc1187a3f74a7a97f02:inspection:2",
+      "planning:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:1:started",
+      "planning:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:1:node:expense-categories",
+      "planning:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:1:node:domain-category-model-and-totals",
+      "planning:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:1:node:api-category-totals",
+      "planning:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:1:node:web-category-breakdown",
+      "planning:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:1:node:category-regression-tests",
+      "planning:expense-categories-breakdown:completed:97ea71fb-0144-4960-aad1-58dcb2c0f9dc",
+      "planning:expense-categories-breakdown:granularity:97ea71fb-0144-4960-aad1-58dcb2c0f9dc",
+      "graph:graph-expense-categories-breakdown-a2bf2767cb:r1:compiled",
+      "graph:graph-expense-categories-breakdown-a2bf2767cb:r1:critic:completeness",
+      "graph:graph-expense-categories-breakdown-a2bf2767cb:r1:critic:atomicity",
+      "graph:graph-expense-categories-breakdown-a2bf2767cb:r1:critic:contract_compatibility",
+      "graph:graph-expense-categories-breakdown-a2bf2767cb:r1:critic:dag_validity",
+      "graph:graph-expense-categories-breakdown-a2bf2767cb:r1:critic:scope_isolation",
+      "graph:graph-expense-categories-breakdown-a2bf2767cb:r1:critic:artifact_coverage",
+      "graph:graph-expense-categories-breakdown-a2bf2767cb:r1:critic:risk_uncertainty",
+      "graph:graph-expense-categories-breakdown-a2bf2767cb:r1:critic:validation_coverage",
+      "graph:graph-expense-categories-breakdown-a2bf2767cb:r1:proposed",
+      "approve-plan:graph-expense-categories-breakdown-a2bf2767cb:r1",
+      "approve-plan:graph-expense-categories-breakdown-a2bf2767cb:r1:resolved",
+      "approve-plan:graph-expense-categories-breakdown-a2bf2767cb:r1:graph-approved",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:readiness.observed:24",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:wave.selected:25",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1:started",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1:candidate",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1:validation-completed",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1:artifact-adopted",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1:artifact-adopted:1",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1:artifact-adopted:2",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:readiness.observed:32",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:wave.selected:33",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-api-category-totals-acb3154d4f:1:started",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-api-category-totals-acb3154d4f:1:candidate",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-api-category-totals-acb3154d4f:1:validation-completed",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-api-category-totals-acb3154d4f:1:artifact-adopted",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:readiness.observed:38",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:wave.selected:39",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-category-regression-tests-7398f7e8eb:1:started",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-category-regression-tests-7398f7e8eb:1:code-failure:1",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-category-regression-tests-7398f7e8eb:1:code-repair:1",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-category-regression-tests-7398f7e8eb:1:failed",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-category-regression-tests-7398f7e8eb:1:decision:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-category-regression-tests-7398f7e8eb:1:decision",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:readiness.observed:45",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:wave.selected:46",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-web-category-breakdown-3988b433c6:1:started",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-web-category-breakdown-3988b433c6:1:candidate",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-web-category-breakdown-3988b433c6:1:validation-completed",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-web-category-breakdown-3988b433c6:1:artifact-adopted",
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:readiness.observed:51"
+    ],
+    "decisions": {
+      "approve-plan:graph-expense-categories-breakdown-a2bf2767cb:r1": {
+        "id": "approve-plan:graph-expense-categories-breakdown-a2bf2767cb:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-expense-categories-095864ac3e"
+        ],
+        "evidenceRefs": [
+          "graph:graph-expense-categories-breakdown-a2bf2767cb:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      },
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-category-regression-tests-7398f7e8eb:1:decision": {
+        "id": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-category-regression-tests-7398f7e8eb:1:decision",
+        "kind": "resolve_conflict",
+        "question": "The work for Category regression tests needs guidance: Code repair failed: scope_violation: the agent changed files outside the declared scope",
+        "options": [
+          {
+            "id": "retry",
+            "label": "Retry with guidance"
+          },
+          {
+            "id": "stop",
+            "label": "Stop this branch"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-category-regression-tests-7398f7e8eb"
+        ],
+        "evidenceRefs": [
+          "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-category-regression-tests-7398f7e8eb:1"
+        ],
+        "impact": "behavior",
+        "raisedAtGraphRevision": 1,
+        "status": "pending"
+      }
+    },
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": [
+        "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-category-regression-tests-7398f7e8eb:1:decision"
+      ]
+    },
+    "selectedWaves": [
+      {
+        "waveId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:wave:1",
+        "nodeIds": [
+          "node-domain-category-model-and-totals-eb9abbf18e"
+        ],
+        "maxParallel": 2
+      },
+      {
+        "waveId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:wave:2",
+        "nodeIds": [
+          "node-api-category-totals-acb3154d4f"
+        ],
+        "maxParallel": 2
+      },
+      {
+        "waveId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:wave:3",
+        "nodeIds": [
+          "node-category-regression-tests-7398f7e8eb"
+        ],
+        "maxParallel": 2
+      },
+      {
+        "waveId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:wave:4",
+        "nodeIds": [
+          "node-web-category-breakdown-3988b433c6"
+        ],
+        "maxParallel": 2
+      }
+    ],
+    "attempts": {
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1": {
+        "attemptId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1",
+        "nodeId": "node-domain-category-model-and-totals-eb9abbf18e",
+        "inputFingerprint": "sha256:77369f04c917be61f32f7818018cb1d44a65c4e7243438bc2dbea373b3ec8f5b",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "7ecf908007deda48ee49493f9300f5c3bfd1520f",
+        "outputDigest": "sha256:8a6b7220f141e3f90bf4f054e94583d06644ad2b3e909c9a557e7f8db7cb364b"
+      },
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-api-category-totals-acb3154d4f:1": {
+        "attemptId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-api-category-totals-acb3154d4f:1",
+        "nodeId": "node-api-category-totals-acb3154d4f",
+        "inputFingerprint": "sha256:186384b28f395648a7bd1cf52df26ee991032562c34efa78228fe4d824a0648a",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "f9a52581cfcdaa11ff003155ef18ceda356a6d53",
+        "outputDigest": "sha256:63088befb7ed2793bd35fdbccfd0ee58f7df9f1ab4029acee419b8add6bd06dd"
+      },
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-category-regression-tests-7398f7e8eb:1": {
+        "attemptId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-category-regression-tests-7398f7e8eb:1",
+        "nodeId": "node-category-regression-tests-7398f7e8eb",
+        "inputFingerprint": "sha256:721f4e254b425f22b6eadeca7dd5e49d06540753ec5fc637b86014959a9a8083",
+        "kind": "execution",
+        "status": "failed",
+        "repairPasses": 1,
+        "failureReason": "Code repair failed: scope_violation: the agent changed files outside the declared scope"
+      },
+      "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-web-category-breakdown-3988b433c6:1": {
+        "attemptId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-web-category-breakdown-3988b433c6:1",
+        "nodeId": "node-web-category-breakdown-3988b433c6",
+        "inputFingerprint": "sha256:0d04f690e4a0589d34798c5a49fe9d2982608fbd02c5c9c67d3614c38907c945",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "e8eceebbf78c45bc97f8e6aa99670fe637088c34",
+        "outputDigest": "sha256:1341370a35682a9c5ce2d49b5a834735535f291b955294f22acf481d0fdbea35"
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-domain-category-model-and-totals-output-cbe58158dd:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-domain-category-model-and-totals-output-cbe58158dd:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1",
+        "runId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc",
+        "nodeId": "node-domain-category-model-and-totals-eb9abbf18e",
+        "digest": "sha256:8a6b7220f141e3f90bf4f054e94583d06644ad2b3e909c9a557e7f8db7cb364b",
+        "producerAttemptId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1",
+        "contract": {
+          "id": "artifact-contract-domain-category-model-and-totals-output-cbe58158dd",
+          "revision": "sha256:c350af4b08c28bd738e8f6891488a5c914256ec6b55e7057b802fbad5a939f4b"
+        },
+        "kind": "commit",
+        "location": "7ecf908007deda48ee49493f9300f5c3bfd1520f",
+        "adoptedAt": "2026-07-24T15:40:04.416Z"
+      },
+      "artifact-contract-category-vocabulary-contract-09bd12b688:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-category-vocabulary-contract-09bd12b688:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1",
+        "runId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc",
+        "nodeId": "node-domain-category-model-and-totals-eb9abbf18e",
+        "digest": "sha256:8a6b7220f141e3f90bf4f054e94583d06644ad2b3e909c9a557e7f8db7cb364b",
+        "producerAttemptId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1",
+        "contract": {
+          "id": "artifact-contract-category-vocabulary-contract-09bd12b688",
+          "revision": "sha256:a904b80b70ae1560603dd55080f7135dae5bdad829275a9ee3ce70e3f5a6af59"
+        },
+        "kind": "commit",
+        "location": "7ecf908007deda48ee49493f9300f5c3bfd1520f",
+        "adoptedAt": "2026-07-24T15:40:04.416Z"
+      },
+      "artifact-contract-category-totals-result-c58bfff1bf:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-category-totals-result-c58bfff1bf:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1",
+        "runId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc",
+        "nodeId": "node-domain-category-model-and-totals-eb9abbf18e",
+        "digest": "sha256:8a6b7220f141e3f90bf4f054e94583d06644ad2b3e909c9a557e7f8db7cb364b",
+        "producerAttemptId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-domain-category-model-and-totals-eb9abbf18e:1",
+        "contract": {
+          "id": "artifact-contract-category-totals-result-c58bfff1bf",
+          "revision": "sha256:4c59168983982cbd64ac2156483b65d09a600e1434642c7c7943076d2ab5fb2c"
+        },
+        "kind": "commit",
+        "location": "7ecf908007deda48ee49493f9300f5c3bfd1520f",
+        "adoptedAt": "2026-07-24T15:40:04.416Z"
+      },
+      "artifact-contract-api-category-totals-output-0e2fa0edd1:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-api-category-totals-acb3154d4f:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-api-category-totals-output-0e2fa0edd1:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-api-category-totals-acb3154d4f:1",
+        "runId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc",
+        "nodeId": "node-api-category-totals-acb3154d4f",
+        "digest": "sha256:63088befb7ed2793bd35fdbccfd0ee58f7df9f1ab4029acee419b8add6bd06dd",
+        "producerAttemptId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-api-category-totals-acb3154d4f:1",
+        "contract": {
+          "id": "artifact-contract-api-category-totals-output-0e2fa0edd1",
+          "revision": "sha256:5b8c82c42671d6443f31c9b84d4440d4c6f1b64ad2fadca18526cd4ffa4c571f"
+        },
+        "kind": "commit",
+        "location": "f9a52581cfcdaa11ff003155ef18ceda356a6d53",
+        "adoptedAt": "2026-07-24T15:41:54.234Z"
+      },
+      "artifact-contract-web-category-breakdown-output-1d3fcc2dfa:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-web-category-breakdown-3988b433c6:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-web-category-breakdown-output-1d3fcc2dfa:97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-web-category-breakdown-3988b433c6:1",
+        "runId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc",
+        "nodeId": "node-web-category-breakdown-3988b433c6",
+        "digest": "sha256:1341370a35682a9c5ce2d49b5a834735535f291b955294f22acf481d0fdbea35",
+        "producerAttemptId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-web-category-breakdown-3988b433c6:1",
+        "contract": {
+          "id": "artifact-contract-web-category-breakdown-output-1d3fcc2dfa",
+          "revision": "sha256:5664af1718c6051f723a0f0bb47f2b2feafe85f8a746ea4fcaf0ffbcf78ac71c"
+        },
+        "kind": "commit",
+        "location": "e8eceebbf78c45bc97f8e6aa99670fe637088c34",
+        "adoptedAt": "2026-07-24T15:50:43.893Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-domain-category-model-and-totals-eb9abbf18e": "matrix-f21a9295289dd9e3",
+      "node-api-category-totals-acb3154d4f": "matrix-0a9a7dd2aa3162e6",
+      "node-web-category-breakdown-3988b433c6": "matrix-a15364377d30635f"
+    },
+    "integrations": {},
+    "recoveryHistory": [
+      {
+        "eventId": "97ea71fb-0144-4960-aad1-58dcb2c0f9dc:attempt:node-category-regression-tests-7398f7e8eb:1:code-failure:1",
+        "nodeId": "node-category-regression-tests-7398f7e8eb",
+        "kind": "failure"
+      }
+    ],
+    "evidenceMatrices": [
+      "matrix-f21a9295289dd9e3",
+      "matrix-0a9a7dd2aa3162e6",
+      "matrix-a15364377d30635f"
+    ],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "granularity": {
+      "formulaVersion": "c-task/1.0.0+condB",
+      "weights": {
+        "scopeRadius": 0.3,
+        "interfaceImpact": 0.25,
+        "validationSurface": 0.25,
+        "contextTokenMass": 0.2
+      },
+      "leafThreshold": -1,
+      "assessments": {
+        "node-expense-categories-095864ac3e": {
+          "unitKey": "expense-categories",
+          "nodeId": "node-expense-categories-095864ac3e",
+          "dimensions": {
+            "scopeRadius": 4,
+            "interfaceImpact": 6,
+            "validationSurface": 7,
+            "contextTokenMass": 5
+          },
+          "signalSource": "llm",
+          "complexityScore": 5.45,
+          "decision": "composite",
+          "rationale": "The change spans the existing domain, API, web, and test surfaces, with a small but exported type/API contract impact.",
+          "recommendedBranchingFactor": 3
+        },
+        "node-domain-category-model-and-totals-eb9abbf18e": {
+          "unitKey": "domain-category-model-and-totals",
+          "nodeId": "node-domain-category-model-and-totals-eb9abbf18e",
+          "dimensions": {
+            "scopeRadius": 2,
+            "interfaceImpact": 6,
+            "validationSurface": 7,
+            "contextTokenMass": 4
+          },
+          "signalSource": "llm",
+          "complexityScore": 4.65,
+          "decision": "leaf",
+          "rationale": "Composite at C_task=4.65 (S_r=2, I_i=6, V_s=7, T_m=4). Kept as a leaf: the Architect proposed no semantic sub-units.",
+          "recommendedBranchingFactor": 3
+        },
+        "node-api-category-totals-acb3154d4f": {
+          "unitKey": "api-category-totals",
+          "nodeId": "node-api-category-totals-acb3154d4f",
+          "dimensions": {
+            "scopeRadius": 2,
+            "interfaceImpact": 6,
+            "validationSurface": 6,
+            "contextTokenMass": 4
+          },
+          "signalSource": "llm",
+          "complexityScore": 4.4,
+          "decision": "leaf",
+          "rationale": "Composite at C_task=4.40 (S_r=2, I_i=6, V_s=6, T_m=4). Kept as a leaf: the Architect proposed no semantic sub-units.",
+          "recommendedBranchingFactor": 3
+        },
+        "node-web-category-breakdown-3988b433c6": {
+          "unitKey": "web-category-breakdown",
+          "nodeId": "node-web-category-breakdown-3988b433c6",
+          "dimensions": {
+            "scopeRadius": 2,
+            "interfaceImpact": 3,
+            "validationSurface": 4,
+            "contextTokenMass": 3
+          },
+          "signalSource": "llm",
+          "complexityScore": 2.95,
+          "decision": "leaf",
+          "rationale": "Composite at C_task=2.95 (S_r=2, I_i=3, V_s=4, T_m=3). Kept as a leaf: the Architect proposed no semantic sub-units.",
+          "recommendedBranchingFactor": 2
+        },
+        "node-category-regression-tests-7398f7e8eb": {
+          "unitKey": "category-regression-tests",
+          "nodeId": "node-category-regression-tests-7398f7e8eb",
+          "dimensions": {
+            "scopeRadius": 3,
+            "interfaceImpact": 2,
+            "validationSurface": 8,
+            "contextTokenMass": 5
+          },
+          "signalSource": "llm",
+          "complexityScore": 4.4,
+          "decision": "leaf",
+          "rationale": "Composite at C_task=4.40 (S_r=3, I_i=2, V_s=8, T_m=5). Kept as a leaf: the Architect proposed no semantic sub-units.",
+          "recommendedBranchingFactor": 3
+        }
+      },
+      "criticDecisions": [
+        {
+          "kind": "resplit_declined",
+          "unitIds": [
+            "domain-category-model-and-totals"
+          ],
+          "rationale": "C_task=4.65 exceeds the leaf threshold, but the Architect proposed no sub-units for domain-category-model-and-totals; a mechanical split would fabricate incoherent scopes."
+        },
+        {
+          "kind": "resplit_declined",
+          "unitIds": [
+            "api-category-totals"
+          ],
+          "rationale": "C_task=4.40 exceeds the leaf threshold, but the Architect proposed no sub-units for api-category-totals; a mechanical split would fabricate incoherent scopes."
+        },
+        {
+          "kind": "resplit_declined",
+          "unitIds": [
+            "web-category-breakdown"
+          ],
+          "rationale": "C_task=2.95 exceeds the leaf threshold, but the Architect proposed no sub-units for web-category-breakdown; a mechanical split would fabricate incoherent scopes."
+        },
+        {
+          "kind": "resplit_declined",
+          "unitIds": [
+            "category-regression-tests"
+          ],
+          "rationale": "C_task=4.40 exceeds the leaf threshold, but the Architect proposed no sub-units for category-regression-tests; a mechanical split would fabricate incoherent scopes."
+        }
+      ],
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 4,
+        "averageBranchingFactor": 4,
+        "coalescedUnitsCount": 0
+      }
+    },
+    "graphId": "graph-expense-categories-breakdown-a2bf2767cb",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1
+  },
+  "checksum": "e27d2e32089fe140febde250e0bfca900071b41fdfe07425e25c6a5cff650526"
+}

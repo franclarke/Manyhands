@@ -9,30 +9,30 @@ No se aplican pruebas de significancia (§8.1).
 
 | # | Tarea | Cond. | Rep. | Entregado | Wall-clock (s) | Intentos | Reparaciones | Criterios | Hojas | Modos de falla |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | T1 | A | 1 | sí | 365 | 1 | 0 | 5/5 | 1 | — |
-| 2 | T2 | B | 1 | no | 74 | 0 | 0 | — | — | — |
-| 3 | T1 | C | 1 | sí | 1269 | 4 | 1 | 15/15 | 4 | conflict |
-| 4 | T2 | A | 1 | sí | 384 | 1 | 0 | 5/5 | 1 | — |
-| 5 | T1 | B | 1 | no | 96 | 0 | 0 | — | — | — |
-| 6 | T2 | C | 1 | sí | 302 | 1 | 0 | 10/10 | 1 | — |
-| 7 | T2 | C | 2 | no | 429 | 2 | 1 | 5/5 | 2 | validation_failed |
-| 8 | T1 | B | 2 | no | 96 | 0 | 0 | — | — | — |
-| 9 | T2 | A | 2 | sí | 462 | 1 | 0 | 5/5 | 1 | — |
-| 10 | T1 | C | 2 | no | 104 | 0 | 0 | — | — | — |
-| 11 | T2 | B | 2 | no | 82 | 0 | 0 | — | — | — |
-| 12 | T1 | A | 2 | sí | 312 | 1 | 0 | 5/5 | 1 | — |
+| 1 | T1 | A | 1 | sí | 259 | 1 | 0 | 5/5 | 1 | — |
+| 2 | T2 | B | 1 | sí | 362 | 1 | 0 | 8/8 | 1 | — |
+| 3 | T1 | C | 1 | no | 810 | 3 | 0 | 6/6 | 3 | execution_failed |
+| 4 | T2 | A | 1 | sí | 282 | 1 | 0 | 4/4 | 1 | — |
+| 5 | T1 | B | 1 | no | 942 | 4 | 1 | 9/9 | 4 | validation_failed |
+| 6 | T2 | C | 1 | sí | 344 | 1 | 0 | 8/8 | 1 | — |
+| 7 | T2 | C | 2 | sí | 351 | 1 | 0 | 10/10 | 1 | — |
+| 8 | T1 | B | 2 | sí | 1209 | 3 | 1 | 14/14 | 3 | conflict |
+| 9 | T2 | A | 2 | sí | 291 | 1 | 0 | 5/5 | 1 | — |
+| 10 | T1 | C | 2 | sí | 1109 | 3 | 1 | 14/14 | 3 | conflict |
+| 11 | T2 | B | 2 | sí | 393 | 1 | 0 | 8/8 | 1 | — |
+| 12 | T1 | A | 2 | sí | 357 | 1 | 0 | 5/5 | 1 | — |
 
 ## Por celda
 
 | Tarea | Cond. | Entregas | Wall-clock por run (s) | Hojas por run |
 |---|---|---|---|---|
-| T1 | A | 2/2 | 365, 312 | 1, 1 |
-| T1 | B | 0/2 | 96, 96 | ,  |
-| T1 | C | 1/2 | 1269, 104 | 4,  |
-| T2 | A | 2/2 | 384, 462 | 1, 1 |
-| T2 | B | 0/2 | 74, 82 | ,  |
-| T2 | C | 1/2 | 302, 429 | 1, 2 |
+| T1 | A | 2/2 | 259, 357 | 1, 1 |
+| T1 | B | 1/2 | 942, 1209 | 4, 3 |
+| T1 | C | 1/2 | 810, 1109 | 3, 3 |
+| T2 | A | 2/2 | 282, 291 | 1, 1 |
+| T2 | B | 2/2 | 362, 393 | 1, 1 |
+| T2 | C | 2/2 | 344, 351 | 1, 1 |
 
 ## Discrepancia interna (§8.4)
 
-Celdas cuyas repeticiones discrepan en la entrega verificada: **T1/C, T2/C**. Para esas celdas la varianza del planificador domina sobre el efecto de la condición.
+Celdas cuyas repeticiones discrepan en la entrega verificada: **T1/B, T1/C**. Para esas celdas la varianza del planificador domina sobre el efecto de la condición.

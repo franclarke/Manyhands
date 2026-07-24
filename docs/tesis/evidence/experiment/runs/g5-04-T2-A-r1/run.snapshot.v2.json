@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 2,
+  "runId": "5a988cf7-7d3c-4500-b7e7-b28e5410864d",
+  "eventSequence": 30,
+  "lastEventId": "5a988cf7-7d3c-4500-b7e7-b28e5410864d:delivery.published:30",
+  "operationId": "bd466361-84bc-4f18-8169-ccf3d4036f44",
+  "fencingToken": 4,
+  "projection": {
+    "runId": "5a988cf7-7d3c-4500-b7e7-b28e5410864d",
+    "goal": "Allow an expense to be split unequally between participants using explicit per-participant weights. A weight is a positive number, one per participant, and the weights must sum to exactly 1; each participant owes that fraction of the total. Reject an expense whose weights are not positive, do not cover every participant, or do not sum to 1, and cover the rule with tests. Keep the change inside the domain module and preserve the existing equal-split behaviour.",
+    "lifecycle": "completed",
+    "sequence": 30,
+    "appliedEventIds": [
+      "run:5a988cf7-7d3c-4500-b7e7-b28e5410864d:created",
+      "repository:sha256:42fb0ba8239a0d7e3cbbc2b7b572ff65aee6022f9abf0cc1187a3f74a7a97f02:inspection:2",
+      "planning:5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:1:started",
+      "planning:5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:1:node:unequal-expense-weights",
+      "planning:5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:1:node:domain-weighted-split-rule",
+      "planning:5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:1:node:expense-weight-regression-tests",
+      "planning:unequal-expense-participant-weights:completed:5a988cf7-7d3c-4500-b7e7-b28e5410864d",
+      "planning:unequal-expense-participant-weights:granularity:5a988cf7-7d3c-4500-b7e7-b28e5410864d",
+      "graph:graph-unequal-expense-participant-weights-d23bd8694e:r1:compiled",
+      "graph:graph-unequal-expense-participant-weights-d23bd8694e:r1:critic:completeness",
+      "graph:graph-unequal-expense-participant-weights-d23bd8694e:r1:critic:atomicity",
+      "graph:graph-unequal-expense-participant-weights-d23bd8694e:r1:critic:contract_compatibility",
+      "graph:graph-unequal-expense-participant-weights-d23bd8694e:r1:critic:dag_validity",
+      "graph:graph-unequal-expense-participant-weights-d23bd8694e:r1:critic:scope_isolation",
+      "graph:graph-unequal-expense-participant-weights-d23bd8694e:r1:critic:artifact_coverage",
+      "graph:graph-unequal-expense-participant-weights-d23bd8694e:r1:critic:risk_uncertainty",
+      "graph:graph-unequal-expense-participant-weights-d23bd8694e:r1:critic:validation_coverage",
+      "graph:graph-unequal-expense-participant-weights-d23bd8694e:r1:proposed",
+      "approve-plan:graph-unequal-expense-participant-weights-d23bd8694e:r1",
+      "approve-plan:graph-unequal-expense-participant-weights-d23bd8694e:r1:resolved",
+      "approve-plan:graph-unequal-expense-participant-weights-d23bd8694e:r1:graph-approved",
+      "5a988cf7-7d3c-4500-b7e7-b28e5410864d:readiness.observed:22",
+      "5a988cf7-7d3c-4500-b7e7-b28e5410864d:wave.selected:23",
+      "5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:node-unequal-expense-weights-932a5ab7d3:1:started",
+      "5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:node-unequal-expense-weights-932a5ab7d3:1:candidate",
+      "5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:node-unequal-expense-weights-932a5ab7d3:1:validation-completed",
+      "5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:node-unequal-expense-weights-932a5ab7d3:1:artifact-adopted",
+      "5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:node-unequal-expense-weights-932a5ab7d3:1:final-candidate",
+      "5a988cf7-7d3c-4500-b7e7-b28e5410864d:delivery.started:29",
+      "5a988cf7-7d3c-4500-b7e7-b28e5410864d:delivery.published:30"
+    ],
+    "decisions": {
+      "approve-plan:graph-unequal-expense-participant-weights-d23bd8694e:r1": {
+        "id": "approve-plan:graph-unequal-expense-participant-weights-d23bd8694e:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-unequal-expense-weights-932a5ab7d3"
+        ],
+        "evidenceRefs": [
+          "graph:graph-unequal-expense-participant-weights-d23bd8694e:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      }
+    },
+    "readiness": {
+      "readyNodeIds": [
+        "node-unequal-expense-weights-932a5ab7d3"
+      ],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [
+      {
+        "waveId": "5a988cf7-7d3c-4500-b7e7-b28e5410864d:wave:1",
+        "nodeIds": [
+          "node-unequal-expense-weights-932a5ab7d3"
+        ],
+        "maxParallel": 2
+      }
+    ],
+    "attempts": {
+      "5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:node-unequal-expense-weights-932a5ab7d3:1": {
+        "attemptId": "5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:node-unequal-expense-weights-932a5ab7d3:1",
+        "nodeId": "node-unequal-expense-weights-932a5ab7d3",
+        "inputFingerprint": "sha256:51ba7c9b85f902e8cf653841ddc1fb52cfabdb468e1554ca0328ede686f3e240",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "2f6b656bad8f37344b640468f86098f73f641960",
+        "outputDigest": "sha256:2dbe42c5730c13974a756b44f0deb0e775d79ead602df072b688930f6382271b"
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-unequal-expense-weights-output-7e365f8846:5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:node-unequal-expense-weights-932a5ab7d3:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-unequal-expense-weights-output-7e365f8846:5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:node-unequal-expense-weights-932a5ab7d3:1",
+        "runId": "5a988cf7-7d3c-4500-b7e7-b28e5410864d",
+        "nodeId": "node-unequal-expense-weights-932a5ab7d3",
+        "digest": "sha256:2dbe42c5730c13974a756b44f0deb0e775d79ead602df072b688930f6382271b",
+        "producerAttemptId": "5a988cf7-7d3c-4500-b7e7-b28e5410864d:attempt:node-unequal-expense-weights-932a5ab7d3:1",
+        "contract": {
+          "id": "artifact-contract-unequal-expense-weights-output-7e365f8846",
+          "revision": "sha256:f1b62044f40a436908cc24c6aae8c904cc86b4afa0e3db5c1fe050ff9930ee1f"
+        },
+        "kind": "commit",
+        "location": "2f6b656bad8f37344b640468f86098f73f641960",
+        "adoptedAt": "2026-07-24T15:34:46.281Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-unequal-expense-weights-932a5ab7d3": "matrix-387357d0a5ec8b1d"
+    },
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [
+      "matrix-387357d0a5ec8b1d"
+    ],
+    "outcomes": {
+      "execution": "succeeded",
+      "artifact": "verified",
+      "delivery": "published"
+    },
+    "granularity": {
+      "formulaVersion": "c-task/1.0.0+condA",
+      "weights": {
+        "scopeRadius": 0.3,
+        "interfaceImpact": 0.25,
+        "validationSurface": 0.25,
+        "contextTokenMass": 0.2
+      },
+      "leafThreshold": 10,
+      "assessments": {
+        "node-unequal-expense-weights-932a5ab7d3": {
+          "unitKey": "unequal-expense-weights",
+          "nodeId": "node-unequal-expense-weights-932a5ab7d3",
+          "dimensions": {
+            "scopeRadius": 2,
+            "interfaceImpact": 3,
+            "validationSurface": 6,
+            "contextTokenMass": 4
+          },
+          "signalSource": "llm",
+          "complexityScore": 3.65,
+          "decision": "leaf",
+          "rationale": "The requested change is intentionally contained to the domain module plus its tests, but it may touch the domain expense input shape or validation contract."
+        }
+      },
+      "criticDecisions": [
+        {
+          "kind": "coalesced",
+          "unitIds": [
+            "unequal-expense-weights"
+          ],
+          "rationale": "Composite unequal-expense-weights collapsed into a single leaf at C_task=3.65."
+        }
+      ],
+      "metrics": {
+        "maxGraphDepth": 0,
+        "totalLeafCount": 1,
+        "averageBranchingFactor": 0,
+        "coalescedUnitsCount": 0
+      }
+    },
+    "graphId": "graph-unequal-expense-participant-weights-d23bd8694e",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1,
+    "finalCandidate": {
+      "manifestId": "final-b2b5ef2c71fe9332",
+      "commit": "2f6b656bad8f37344b640468f86098f73f641960",
+      "evidenceMatrixId": "matrix-387357d0a5ec8b1d",
+      "sourceTargetFingerprint": "20665faf6a1c11f6",
+      "targetBranch": "main",
+      "targetHead": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "evidenceEligible": true
+    },
+    "deliveryApproval": {
+      "manifestId": "final-b2b5ef2c71fe9332",
+      "finalSha": "2f6b656bad8f37344b640468f86098f73f641960",
+      "targetBranch": "main",
+      "targetHead": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "targetFingerprint": "20665faf6a1c11f6",
+      "actor": "thesis-operator",
+      "idempotencyKey": "5a988cf7-7d3c-4500-b7e7-b28e5410864d:delivery"
+    },
+    "deliveryReceipt": {
+      "receiptId": "delivery:5a988cf7-7d3c-4500-b7e7-b28e5410864d:delivery",
+      "requestFingerprint": "d7ee018211803b6a5e2fbe109fab19c22070aa882a1d6a4b291c8fdfa9b1aca3",
+      "manifestId": "final-b2b5ef2c71fe9332",
+      "finalSha": "2f6b656bad8f37344b640468f86098f73f641960",
+      "targetBranch": "main",
+      "targetHeadBefore": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "targetHeadAfter": "2f6b656bad8f37344b640468f86098f73f641960",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  },
+  "checksum": "5c6587b4f98c0a9955ac358d14aa349ddcece377d9a9616f21ab043c55f5cfa1"
+}

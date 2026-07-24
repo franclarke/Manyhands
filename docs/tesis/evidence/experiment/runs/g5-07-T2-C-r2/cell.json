@@ -1,0 +1,39 @@
+{
+  "cellId": "g5-07-T2-C-r2",
+  "position": 7,
+  "taskId": "T2",
+  "taskLabel": "narrow domain rule below the threshold",
+  "condition": "C",
+  "repetition": 2,
+  "workspaceName": "thesis-expense-splitter",
+  "baseUrl": "http://127.0.0.1:3111",
+  "targetRepo": "C:/Users/franc/manyhands-thesis-targets/expense-splitter",
+  "baseSha": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+  "goal": "Allow an expense to be split unequally between participants using explicit per-participant weights. A weight is a positive number, one per participant, and the weights must sum to exactly 1; each participant owes that fraction of the total. Reject an expense whose weights are not positive, do not cover every participant, or do not sum to 1, and cover the rule with tests. Keep the change inside the domain module and preserve the existing equal-split behaviour.",
+  "granularityCondition": "C",
+  "planningSelection": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.5",
+    "effort": "high"
+  },
+  "executionSelection": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.5",
+    "effort": "high"
+  },
+  "repairSelection": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.5",
+    "effort": "high"
+  },
+  "executionConfig": {
+    "maxParallel": 2,
+    "scopePolicy": "strict",
+    "leafTimeoutMs": 300000,
+    "integrationTimeoutMs": 600000,
+    "unexpectedCommitPolicy": "reject"
+  },
+  "runsDir": "C:/Users/franc/Documents/Proyectos/Manyhands/.manyhands/runs",
+  "pollIntervalMs": 10000,
+  "wallClockLimitMs": 5400000
+}

@@ -1,0 +1,39 @@
+{
+  "cellId": "g5-08-T1-B-r2",
+  "position": 8,
+  "taskId": "T1",
+  "taskLabel": "multi-layer feature above the threshold",
+  "condition": "B",
+  "repetition": 2,
+  "workspaceName": "thesis-expense-splitter",
+  "baseUrl": "http://127.0.0.1:3111",
+  "targetRepo": "C:/Users/franc/manyhands-thesis-targets/expense-splitter",
+  "baseSha": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+  "goal": "Add expense categories to the splitter. Extend the Expense type with an optional category field that must be one of exactly \"food\", \"transport\", \"lodging\", \"entertainment\" or \"other\", rejecting any other value, add computeCategoryTotals to the domain, expose listCategoryTotals from the API layer, render a category breakdown in the web surface, and cover the new behaviour with tests. Preserve the existing balance behaviour and keep the current tests green.",
+  "granularityCondition": "B",
+  "planningSelection": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.5",
+    "effort": "high"
+  },
+  "executionSelection": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.5",
+    "effort": "high"
+  },
+  "repairSelection": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.5",
+    "effort": "high"
+  },
+  "executionConfig": {
+    "maxParallel": 2,
+    "scopePolicy": "strict",
+    "leafTimeoutMs": 300000,
+    "integrationTimeoutMs": 600000,
+    "unexpectedCommitPolicy": "reject"
+  },
+  "runsDir": "C:/Users/franc/Documents/Proyectos/Manyhands/.manyhands/runs",
+  "pollIntervalMs": 10000,
+  "wallClockLimitMs": 5400000
+}

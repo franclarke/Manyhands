@@ -1,13 +1,13 @@
 cellId,position,taskId,condition,repetition,runId,delivered,lifecycle,finalSha,stopReason,wallClockSeconds,attempts,repairs,criteriaTotal,criteriaSatisfied,criteriaCoverage,tokensTotal,usageReportedAttempts,usageMissingAttempts,failureModes,scopeViolations,formulaVersion,leafThreshold,leafCount,graphDepth,branchingFactor,coalescedUnits,resplitDeclined
-g5-01-T1-A-r1,1,T1,A,1,deecf911-93af-487e-88c3-754d114dd11b,true,completed,4da942186d93875361696a5e790b7992141e64c9,,365,1,0,5,5,1,36540,1,0,,0,c-task/1.0.0+condA,10,1,0,0,0,0
-g5-02-T2-B-r1,2,T2,B,1,1b876501-b49f-42ce-b043-e2855e78e7ab,false,failed,,,74,0,0,0,0,,,0,0,,0,,,,,,,0
-g5-03-T1-C-r1,3,T1,C,1,71456fc9-a22a-4465-b5d7-8a322f0fa239,true,completed,6022dc80681c86af73635271e52b0dc9f29d9f39,,1269,4,1,15,15,1,173070,4,0,conflict,0,c-task/1.0.0,3.5,4,1,4,0,4
-g5-04-T2-A-r1,4,T2,A,1,434d0349-16c4-4414-be57-388f7db2ce63,true,completed,a5d5b22f02918ca4de75fc6811bc81c828661c73,,384,1,0,5,5,1,31286,1,0,,0,c-task/1.0.0+condA,10,1,0,0,0,0
-g5-05-T1-B-r1,5,T1,B,1,98b6105f-0456-4934-b2e9-12edd987c381,false,failed,,,96,0,0,0,0,,,0,0,,0,,,,,,,0
-g5-06-T2-C-r1,6,T2,C,1,944ea15b-1b9e-4645-aacb-861c2b5681d1,true,completed,03a72af43f69f8c078542b5bc0bbc9456b66475e,,302,1,0,10,10,1,25975,1,0,,0,c-task/1.0.0,3.5,1,1,1,0,1
-g5-07-T2-C-r2,7,T2,C,2,0889d2c8-2224-4927-bf35-f23feabb751c,false,waiting_for_input,,run parked on resolve_conflict,429,2,1,5,5,1,67702,2,0,validation_failed,0,c-task/1.0.0,3.5,2,1,2,0,1
-g5-08-T1-B-r2,8,T1,B,2,f1393da1-a4d0-4e62-857d-8878fe51f39f,false,failed,,,96,0,0,0,0,,,0,0,,0,,,,,,,0
-g5-09-T2-A-r2,9,T2,A,2,19852f7a-692f-404b-8fd7-3130a6d5bdc5,true,completed,5a2ffdad1e6a7699dbaca88ab352ec059b8eba62,,462,1,0,5,5,1,61816,1,0,,0,c-task/1.0.0+condA,10,1,0,0,0,0
-g5-10-T1-C-r2,10,T1,C,2,38b69e58-388a-492d-a402-e12ff5f9da0c,false,planning,,planner asked for clarification: What exact category values should the fixed category set allow?,104,0,0,0,0,,,0,0,,0,,,,,,,0
-g5-11-T2-B-r2,11,T2,B,2,eb0bd96d-f2e2-4f5f-b9ff-d645b0eaadf1,false,failed,,,82,0,0,0,0,,,0,0,,0,,,,,,,0
-g5-12-T1-A-r2,12,T1,A,2,70c1b317-fe53-4ebf-9107-f96b0ba4253a,true,completed,ba961dfe3730790ff5d93d4b31620c07a7aecbfc,,312,1,0,5,5,1,38048,1,0,,0,c-task/1.0.0+condA,10,1,0,0,0,0
+g5-01-T1-A-r1,1,T1,A,1,4374d67b-edcb-4dae-954a-188f9ff6cd0a,true,completed,56a59b86b2a9ad845e685e72fc24484b59046b29,,259,1,0,5,5,1,21794,1,0,,0,c-task/1.0.0+condA,10,1,0,0,0,0
+g5-02-T2-B-r1,2,T2,B,1,07657d31-c60c-4aaa-971e-8bf77dccee5d,true,completed,2b0483c50f78f753aaf98416cabf68ea45bc4582,,362,1,0,8,8,1,52499,1,0,,0,c-task/1.0.0+condB,-1,1,1,1,0,1
+g5-03-T1-C-r1,3,T1,C,1,342b6603-c2db-43c3-9a1f-135be923a4bd,false,waiting_for_input,,run parked on resolve_conflict,810,3,0,6,6,1,104361,2,1,execution_failed,0,c-task/1.0.0,3.5,3,1,3,0,2
+g5-04-T2-A-r1,4,T2,A,1,5a988cf7-7d3c-4500-b7e7-b28e5410864d,true,completed,2f6b656bad8f37344b640468f86098f73f641960,,282,1,0,4,4,1,29546,1,0,,0,c-task/1.0.0+condA,10,1,0,0,0,0
+g5-05-T1-B-r1,5,T1,B,1,97ea71fb-0144-4960-aad1-58dcb2c0f9dc,false,waiting_for_input,,run parked on resolve_conflict,942,4,1,9,9,1,111663,4,0,validation_failed,0,c-task/1.0.0+condB,-1,4,1,4,0,4
+g5-06-T2-C-r1,6,T2,C,1,4ec8bca6-009a-4081-846c-7598996eb718,true,completed,21d0c4b2622e01c0f949be3db13cb501a0a7ea5d,,344,1,0,8,8,1,32096,1,0,,0,c-task/1.0.0,3.5,1,1,1,0,1
+g5-07-T2-C-r2,7,T2,C,2,d5608d2c-3c38-4c11-9fe6-c788c2ca95cd,true,completed,0b9f6a0981c4fa5df205ea7ee767365668f5b7c6,,351,1,0,10,10,1,26299,1,0,,0,c-task/1.0.0,3.5,1,1,1,0,1
+g5-08-T1-B-r2,8,T1,B,2,e1795c84-02b1-4306-a568-bc63a3fab764,true,completed,2cb8a8a3ec6879df12de0d6d5bc005365511e77d,,1209,3,1,14,14,1,101120,3,0,conflict,0,c-task/1.0.0+condB,-1,3,1,3,0,3
+g5-09-T2-A-r2,9,T2,A,2,d6c79286-ab63-43da-8845-c93fe3d7f6c3,true,completed,ee90bf27bd669d5863e920c23b39936a550b8855,,291,1,0,5,5,1,28385,1,0,,0,c-task/1.0.0+condA,10,1,0,0,0,0
+g5-10-T1-C-r2,10,T1,C,2,0bb3c00e-bbff-4d27-a732-22a87e5830ed,true,completed,176072e88792ccef2a0020a5577fdfb56c4091af,,1109,3,1,14,14,1,96316,3,0,conflict,0,c-task/1.0.0,3.5,3,1,3,0,2
+g5-11-T2-B-r2,11,T2,B,2,652b7b19-9a72-4a03-a0f3-a9e9eac3f340,true,completed,84305c6a0d326ce274ac9612bc86d7fff7a50b55,,393,1,0,8,8,1,28270,1,0,,0,c-task/1.0.0+condB,-1,1,1,1,0,1
+g5-12-T1-A-r2,12,T1,A,2,e3f92598-2751-4470-b02d-8d4846b75196,true,completed,01a1f640c089f9e122f99e7ff2c54eda48427255,,357,1,0,5,5,1,24898,1,0,,0,c-task/1.0.0+condA,10,1,0,0,0,0

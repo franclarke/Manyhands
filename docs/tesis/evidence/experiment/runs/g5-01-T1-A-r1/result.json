@@ -1,0 +1,23 @@
+{
+  "cellId": "g5-01-T1-A-r1",
+  "condition": "A",
+  "taskId": "T1",
+  "runId": "4374d67b-edcb-4dae-954a-188f9ff6cd0a",
+  "started": "2026-07-24T15:04:46.496Z",
+  "finished": "2026-07-24T15:09:09.866Z",
+  "outcome": {
+    "lifecycle": "completed",
+    "finalSha": "56a59b86b2a9ad845e685e72fc24484b59046b29",
+    "receipt": {
+      "receiptId": "delivery:4374d67b-edcb-4dae-954a-188f9ff6cd0a:delivery",
+      "requestFingerprint": "61802dca9ab95f2816a33efa4978de41197725e7e064848a4de96d1eca07185a",
+      "manifestId": "final-a91d0a19feb8fe0d",
+      "finalSha": "56a59b86b2a9ad845e685e72fc24484b59046b29",
+      "targetBranch": "main",
+      "targetHeadBefore": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "targetHeadAfter": "56a59b86b2a9ad845e685e72fc24484b59046b29",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  }
+}

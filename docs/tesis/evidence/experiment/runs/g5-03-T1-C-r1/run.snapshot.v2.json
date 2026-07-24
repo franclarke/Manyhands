@@ -1,0 +1,335 @@
+{
+  "schemaVersion": 2,
+  "runId": "342b6603-c2db-43c3-9a1f-135be923a4bd",
+  "eventSequence": 42,
+  "lastEventId": "342b6603-c2db-43c3-9a1f-135be923a4bd:readiness.observed:42",
+  "operationId": "be73b20f-2c66-4ae9-9d82-9313e0498ce0",
+  "fencingToken": 3,
+  "projection": {
+    "runId": "342b6603-c2db-43c3-9a1f-135be923a4bd",
+    "goal": "Add expense categories to the splitter. Extend the Expense type with an optional category field that must be one of exactly \"food\", \"transport\", \"lodging\", \"entertainment\" or \"other\", rejecting any other value, add computeCategoryTotals to the domain, expose listCategoryTotals from the API layer, render a category breakdown in the web surface, and cover the new behaviour with tests. Preserve the existing balance behaviour and keep the current tests green.",
+    "lifecycle": "waiting_for_input",
+    "sequence": 42,
+    "appliedEventIds": [
+      "run:342b6603-c2db-43c3-9a1f-135be923a4bd:created",
+      "repository:sha256:42fb0ba8239a0d7e3cbbc2b7b572ff65aee6022f9abf0cc1187a3f74a7a97f02:inspection:2",
+      "planning:342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:1:started",
+      "planning:342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:1:node:add-expense-categories",
+      "planning:342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:1:node:domain-category-model-and-totals",
+      "planning:342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:1:node:api-category-totals",
+      "planning:342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:1:node:web-category-breakdown",
+      "planning:expense-categories-splitter:completed:342b6603-c2db-43c3-9a1f-135be923a4bd",
+      "planning:expense-categories-splitter:granularity:342b6603-c2db-43c3-9a1f-135be923a4bd",
+      "graph:graph-expense-categories-splitter-4e7ea1176a:r1:compiled",
+      "graph:graph-expense-categories-splitter-4e7ea1176a:r1:critic:completeness",
+      "graph:graph-expense-categories-splitter-4e7ea1176a:r1:critic:atomicity",
+      "graph:graph-expense-categories-splitter-4e7ea1176a:r1:critic:contract_compatibility",
+      "graph:graph-expense-categories-splitter-4e7ea1176a:r1:critic:dag_validity",
+      "graph:graph-expense-categories-splitter-4e7ea1176a:r1:critic:scope_isolation",
+      "graph:graph-expense-categories-splitter-4e7ea1176a:r1:critic:artifact_coverage",
+      "graph:graph-expense-categories-splitter-4e7ea1176a:r1:critic:risk_uncertainty",
+      "graph:graph-expense-categories-splitter-4e7ea1176a:r1:critic:validation_coverage",
+      "graph:graph-expense-categories-splitter-4e7ea1176a:r1:proposed",
+      "approve-plan:graph-expense-categories-splitter-4e7ea1176a:r1",
+      "approve-plan:graph-expense-categories-splitter-4e7ea1176a:r1:resolved",
+      "approve-plan:graph-expense-categories-splitter-4e7ea1176a:r1:graph-approved",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:readiness.observed:23",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:wave.selected:24",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-api-category-totals-acb3154d4f:1:started",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-api-category-totals-acb3154d4f:1:failure-classified",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-api-category-totals-acb3154d4f:1:failed",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-api-category-totals-acb3154d4f:1:decision:342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-api-category-totals-acb3154d4f:1:decision",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:readiness.observed:29",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:wave.selected:30",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-domain-category-model-and-totals-eb9abbf18e:1:started",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-domain-category-model-and-totals-eb9abbf18e:1:candidate",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-domain-category-model-and-totals-eb9abbf18e:1:validation-completed",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-domain-category-model-and-totals-eb9abbf18e:1:artifact-adopted",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-domain-category-model-and-totals-eb9abbf18e:1:artifact-adopted:1",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:readiness.observed:36",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:wave.selected:37",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-web-category-breakdown-3988b433c6:1:started",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-web-category-breakdown-3988b433c6:1:candidate",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-web-category-breakdown-3988b433c6:1:validation-completed",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-web-category-breakdown-3988b433c6:1:artifact-adopted",
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:readiness.observed:42"
+    ],
+    "decisions": {
+      "approve-plan:graph-expense-categories-splitter-4e7ea1176a:r1": {
+        "id": "approve-plan:graph-expense-categories-splitter-4e7ea1176a:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-add-expense-categories-5c7a9280e5"
+        ],
+        "evidenceRefs": [
+          "graph:graph-expense-categories-splitter-4e7ea1176a:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      },
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-api-category-totals-acb3154d4f:1:decision": {
+        "id": "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-api-category-totals-acb3154d4f:1:decision",
+        "kind": "resolve_conflict",
+        "question": "The work for Expose category totals from API needs guidance: timeout: The agent hit the hard timeout. Consider a longer per-task timeout or a faster executor for this node.: omputeBalances, computeCategoryTotals, createExpense } from \"../src/domain/expense.js\";\n import { renderBalanceSummary } from \"../src/web/summary.js\";\r\n \r\n const participants = [\r\n@@ -13,16 +13,31 @@\n     expect(() => createExpense({ id: \"e1\", description: \"x\", amountCents: 0, paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\"] })).toThrow(/positive/);\r\n   });\r\n \r\n-  it(\"splits an expense evenly and nets the payer\", () => {\r\n-    const balances = computeBalances(participants, [\r\n-      { id: \"e1\", description: \"Dinner\", amountCents: 4000, paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\", \"bruno\"] }\r\n-    ]);\r\n+  it(\"splits an expense evenly and nets the payer\", () => {\n+    const balances = computeBalances(participants, [\n+      { id: \"e1\", description: \"Dinner\", amountCents: 4000, paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\", \"bruno\"] }\n+    ]);\n     expect(balances).toEqual([\r\n       { participantId: \"ana\", netCents: 2000 },\r\n-      { participantId: \"bruno\", netCents: -2000 }\r\n-    ]);\r\n-  });\r\n-});\r\n+      { participantId: \"bruno\", netCents: -2000 }\n+    ]);\n+  });\n+\n+  it(\"computes totals grouped by category\", () => {\n+    const totals = computeCategoryTotals([\n+      { id: \"e1\", description: \"Dinner\", amountCents: 4000, category: \"food\", paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\", \"bruno\"] },\n+      { id: \"e2\", description: \"Groceries\", amountCents: 2500, category: \"food\", paidByParticipantId: \"bruno\", sharedWithParticipantIds: [\"ana\", \"bruno\"] },\n+      { id: \"e3\", description: \"Bus\", amountCents: 900, category: \"transport\", paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\"] },\n+      { id: \"e4\", description: \"Tip\", amountCents: 500, paidByParticipantId: \"bruno\", sharedWithParticipantIds: [\"bruno\"] }\n+    ]);\n+\n+    expect(totals).toEqual([\n+      { category: \"food\", totalCents: 6500 },\n+      { category: \"transport\", totalCents: 900 },\n+      { category: \"uncategorized\", totalCents: 500 }\n+    ]);\n+  });\n+});\n \r\n describe(\"expense api\", () => {\r\n   it(\"rejects unknown participants\", () => {\r\n@@ -30,15 +45,26 @@\n     expect(() => addExpense(store, { id: \"e1\", description: \"x\", amountCents: 100, paidByParticipantId: \"zoe\", sharedWithParticipantIds: [\"ana\"] })).toThrow(/Unknown participants/);\r\n   });\r\n \r\n-  it(\"accumulates expenses and reports balances\", () => {\r\n-    let store = createStore(participants);\r\n-    store = addExpense(store, { id: \"e1\", description: \"Dinner\", amountCents: 4000, paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\", \"bruno\"] });\r\n-    expect(listBalances(store)).toEqual([\r\n+  it(\"accumulates expenses and reports balances\", () => {\n+    let store = createStore(participants);\n+    store = addExpense(store, { id: \"e1\", description: \"Dinner\", amountCents: 4000, paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\", \"bruno\"] });\n+    expect(listBalances(store)).toEqual([\n       { participantId: \"ana\", netCents: 2000 },\r\n-      { participantId: \"bruno\", netCents: -2000 }\r\n-    ]);\r\n-  });\r\n-});\r\n+      { participantId: \"bruno\", netCents: -2000 }\n+    ]);\n+  });\n+\n+  it(\"reports category totals from stored expenses\", () => {\n+    let store = createStore(participants);\n+    store = addExpense(store, { id: \"e1\", description: \"Dinner\", amountCents: 4000, category: \"food\", paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\", \"bruno\"] });\n+    store = addExpense(store, { id: \"e2\", description: \"Bus\", amountCents: 900, category: \"transport\", paidByParticipantId: \"bruno\", sharedWithParticipantIds: [\"bruno\"] });\n+\n+    expect(listCategoryTotals(store)).toEqual([\n+      { category: \"food\", totalCents: 4000 },\n+      { category: \"transport\", totalCents: 900 }\n+    ]);\n+  });\n+});\n \r\n describe(\"web summary\", () => {\r\n   it(\"renders who owes and who is owed\", () => {\r\n\n2026-07-24T15:21:55.689166Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5",
+        "options": [
+          {
+            "id": "retry",
+            "label": "Retry with guidance"
+          },
+          {
+            "id": "stop",
+            "label": "Stop this branch"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-api-category-totals-acb3154d4f"
+        ],
+        "evidenceRefs": [
+          "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-api-category-totals-acb3154d4f:1"
+        ],
+        "impact": "behavior",
+        "raisedAtGraphRevision": 1,
+        "status": "pending"
+      }
+    },
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": [
+        "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-api-category-totals-acb3154d4f:1:decision"
+      ]
+    },
+    "selectedWaves": [
+      {
+        "waveId": "342b6603-c2db-43c3-9a1f-135be923a4bd:wave:1",
+        "nodeIds": [
+          "node-api-category-totals-acb3154d4f"
+        ],
+        "maxParallel": 2
+      },
+      {
+        "waveId": "342b6603-c2db-43c3-9a1f-135be923a4bd:wave:2",
+        "nodeIds": [
+          "node-domain-category-model-and-totals-eb9abbf18e"
+        ],
+        "maxParallel": 2
+      },
+      {
+        "waveId": "342b6603-c2db-43c3-9a1f-135be923a4bd:wave:3",
+        "nodeIds": [
+          "node-web-category-breakdown-3988b433c6"
+        ],
+        "maxParallel": 2
+      }
+    ],
+    "attempts": {
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-api-category-totals-acb3154d4f:1": {
+        "attemptId": "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-api-category-totals-acb3154d4f:1",
+        "nodeId": "node-api-category-totals-acb3154d4f",
+        "inputFingerprint": "sha256:b939c1bd65d7609260a11dfa771282cc8d0ef866dc8236343b3a1cbcc82cff49",
+        "kind": "execution",
+        "status": "failed",
+        "repairPasses": 0,
+        "failureReason": "timeout: The agent hit the hard timeout. Consider a longer per-task timeout or a faster executor for this node.: omputeBalances, computeCategoryTotals, createExpense } from \"../src/domain/expense.js\";\n import { renderBalanceSummary } from \"../src/web/summary.js\";\r\n \r\n const participants = [\r\n@@ -13,16 +13,31 @@\n     expect(() => createExpense({ id: \"e1\", description: \"x\", amountCents: 0, paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\"] })).toThrow(/positive/);\r\n   });\r\n \r\n-  it(\"splits an expense evenly and nets the payer\", () => {\r\n-    const balances = computeBalances(participants, [\r\n-      { id: \"e1\", description: \"Dinner\", amountCents: 4000, paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\", \"bruno\"] }\r\n-    ]);\r\n+  it(\"splits an expense evenly and nets the payer\", () => {\n+    const balances = computeBalances(participants, [\n+      { id: \"e1\", description: \"Dinner\", amountCents: 4000, paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\", \"bruno\"] }\n+    ]);\n     expect(balances).toEqual([\r\n       { participantId: \"ana\", netCents: 2000 },\r\n-      { participantId: \"bruno\", netCents: -2000 }\r\n-    ]);\r\n-  });\r\n-});\r\n+      { participantId: \"bruno\", netCents: -2000 }\n+    ]);\n+  });\n+\n+  it(\"computes totals grouped by category\", () => {\n+    const totals = computeCategoryTotals([\n+      { id: \"e1\", description: \"Dinner\", amountCents: 4000, category: \"food\", paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\", \"bruno\"] },\n+      { id: \"e2\", description: \"Groceries\", amountCents: 2500, category: \"food\", paidByParticipantId: \"bruno\", sharedWithParticipantIds: [\"ana\", \"bruno\"] },\n+      { id: \"e3\", description: \"Bus\", amountCents: 900, category: \"transport\", paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\"] },\n+      { id: \"e4\", description: \"Tip\", amountCents: 500, paidByParticipantId: \"bruno\", sharedWithParticipantIds: [\"bruno\"] }\n+    ]);\n+\n+    expect(totals).toEqual([\n+      { category: \"food\", totalCents: 6500 },\n+      { category: \"transport\", totalCents: 900 },\n+      { category: \"uncategorized\", totalCents: 500 }\n+    ]);\n+  });\n+});\n \r\n describe(\"expense api\", () => {\r\n   it(\"rejects unknown participants\", () => {\r\n@@ -30,15 +45,26 @@\n     expect(() => addExpense(store, { id: \"e1\", description: \"x\", amountCents: 100, paidByParticipantId: \"zoe\", sharedWithParticipantIds: [\"ana\"] })).toThrow(/Unknown participants/);\r\n   });\r\n \r\n-  it(\"accumulates expenses and reports balances\", () => {\r\n-    let store = createStore(participants);\r\n-    store = addExpense(store, { id: \"e1\", description: \"Dinner\", amountCents: 4000, paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\", \"bruno\"] });\r\n-    expect(listBalances(store)).toEqual([\r\n+  it(\"accumulates expenses and reports balances\", () => {\n+    let store = createStore(participants);\n+    store = addExpense(store, { id: \"e1\", description: \"Dinner\", amountCents: 4000, paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\", \"bruno\"] });\n+    expect(listBalances(store)).toEqual([\n       { participantId: \"ana\", netCents: 2000 },\r\n-      { participantId: \"bruno\", netCents: -2000 }\r\n-    ]);\r\n-  });\r\n-});\r\n+      { participantId: \"bruno\", netCents: -2000 }\n+    ]);\n+  });\n+\n+  it(\"reports category totals from stored expenses\", () => {\n+    let store = createStore(participants);\n+    store = addExpense(store, { id: \"e1\", description: \"Dinner\", amountCents: 4000, category: \"food\", paidByParticipantId: \"ana\", sharedWithParticipantIds: [\"ana\", \"bruno\"] });\n+    store = addExpense(store, { id: \"e2\", description: \"Bus\", amountCents: 900, category: \"transport\", paidByParticipantId: \"bruno\", sharedWithParticipantIds: [\"bruno\"] });\n+\n+    expect(listCategoryTotals(store)).toEqual([\n+      { category: \"food\", totalCents: 4000 },\n+      { category: \"transport\", totalCents: 900 }\n+    ]);\n+  });\n+});\n \r\n describe(\"web summary\", () => {\r\n   it(\"renders who owes and who is owed\", () => {\r\n\n2026-07-24T15:21:55.689166Z ERROR codex_models_manager::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 86 column 5"
+      },
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-domain-category-model-and-totals-eb9abbf18e:1": {
+        "attemptId": "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-domain-category-model-and-totals-eb9abbf18e:1",
+        "nodeId": "node-domain-category-model-and-totals-eb9abbf18e",
+        "inputFingerprint": "sha256:6484aa0068b2600bee6eb8d798b568871e54c252bf0c45e5f1a2aea15d822e36",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "ce9c207fab736b0359f8309c115d44d38a40c0a9",
+        "outputDigest": "sha256:857cfdc881ebc5e983f6f2566b1a6a8d9b84e1b339d668fa0fa4d0b637673977"
+      },
+      "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-web-category-breakdown-3988b433c6:1": {
+        "attemptId": "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-web-category-breakdown-3988b433c6:1",
+        "nodeId": "node-web-category-breakdown-3988b433c6",
+        "inputFingerprint": "sha256:abf598903bc1843b9f18f498d80daa1d2742b56c7e10766773636fe6a1c231aa",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "866b0a17efdfa731ba9d8d2b500a3b768ae41a85",
+        "outputDigest": "sha256:0ae7fa7f739b840490f9271f657b5462c05afd19dd9ccfe372cf7331c001df4a"
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-domain-category-model-and-totals-output-cbe58158dd:342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-domain-category-model-and-totals-eb9abbf18e:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-domain-category-model-and-totals-output-cbe58158dd:342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-domain-category-model-and-totals-eb9abbf18e:1",
+        "runId": "342b6603-c2db-43c3-9a1f-135be923a4bd",
+        "nodeId": "node-domain-category-model-and-totals-eb9abbf18e",
+        "digest": "sha256:857cfdc881ebc5e983f6f2566b1a6a8d9b84e1b339d668fa0fa4d0b637673977",
+        "producerAttemptId": "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-domain-category-model-and-totals-eb9abbf18e:1",
+        "contract": {
+          "id": "artifact-contract-domain-category-model-and-totals-output-cbe58158dd",
+          "revision": "sha256:75235af8bdb64d486c1059506d530eed20fb62f055b6322dc227ed7f2c83af0e"
+        },
+        "kind": "commit",
+        "location": "ce9c207fab736b0359f8309c115d44d38a40c0a9",
+        "adoptedAt": "2026-07-24T15:25:04.996Z"
+      },
+      "artifact-contract-artifact-category-totals-98bc683f86:342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-domain-category-model-and-totals-eb9abbf18e:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-artifact-category-totals-98bc683f86:342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-domain-category-model-and-totals-eb9abbf18e:1",
+        "runId": "342b6603-c2db-43c3-9a1f-135be923a4bd",
+        "nodeId": "node-domain-category-model-and-totals-eb9abbf18e",
+        "digest": "sha256:857cfdc881ebc5e983f6f2566b1a6a8d9b84e1b339d668fa0fa4d0b637673977",
+        "producerAttemptId": "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-domain-category-model-and-totals-eb9abbf18e:1",
+        "contract": {
+          "id": "artifact-contract-artifact-category-totals-98bc683f86",
+          "revision": "sha256:73483dd8e0a5eac35203425fbdfe716037abae21a41a0adf0a9b3f29dd67ec75"
+        },
+        "kind": "commit",
+        "location": "ce9c207fab736b0359f8309c115d44d38a40c0a9",
+        "adoptedAt": "2026-07-24T15:25:04.996Z"
+      },
+      "artifact-contract-web-category-breakdown-output-1d3fcc2dfa:342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-web-category-breakdown-3988b433c6:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-web-category-breakdown-output-1d3fcc2dfa:342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-web-category-breakdown-3988b433c6:1",
+        "runId": "342b6603-c2db-43c3-9a1f-135be923a4bd",
+        "nodeId": "node-web-category-breakdown-3988b433c6",
+        "digest": "sha256:0ae7fa7f739b840490f9271f657b5462c05afd19dd9ccfe372cf7331c001df4a",
+        "producerAttemptId": "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-web-category-breakdown-3988b433c6:1",
+        "contract": {
+          "id": "artifact-contract-web-category-breakdown-output-1d3fcc2dfa",
+          "revision": "sha256:44d954354641b3bbb028c7157666c2499b6be1c53079336661346fbe7c776364"
+        },
+        "kind": "commit",
+        "location": "866b0a17efdfa731ba9d8d2b500a3b768ae41a85",
+        "adoptedAt": "2026-07-24T15:28:58.491Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-domain-category-model-and-totals-eb9abbf18e": "matrix-7874de9590be020f",
+      "node-web-category-breakdown-3988b433c6": "matrix-cbfeb8be8f964781"
+    },
+    "integrations": {},
+    "recoveryHistory": [
+      {
+        "eventId": "342b6603-c2db-43c3-9a1f-135be923a4bd:attempt:node-api-category-totals-acb3154d4f:1:failure-classified",
+        "nodeId": "node-api-category-totals-acb3154d4f",
+        "kind": "failure"
+      }
+    ],
+    "evidenceMatrices": [
+      "matrix-7874de9590be020f",
+      "matrix-cbfeb8be8f964781"
+    ],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "granularity": {
+      "formulaVersion": "c-task/1.0.0",
+      "weights": {
+        "scopeRadius": 0.3,
+        "interfaceImpact": 0.25,
+        "validationSurface": 0.25,
+        "contextTokenMass": 0.2
+      },
+      "leafThreshold": 3.5,
+      "assessments": {
+        "node-add-expense-categories-5c7a9280e5": {
+          "unitKey": "add-expense-categories",
+          "nodeId": "node-add-expense-categories-5c7a9280e5",
+          "dimensions": {
+            "scopeRadius": 5,
+            "interfaceImpact": 5,
+            "validationSurface": 6,
+            "contextTokenMass": 4
+          },
+          "signalSource": "llm",
+          "complexityScore": 5.05,
+          "decision": "composite",
+          "rationale": "The change crosses domain, API, web, and tests but stays within four known files and existing TypeScript/Vitest tooling.",
+          "recommendedBranchingFactor": 3
+        },
+        "node-domain-category-model-and-totals-eb9abbf18e": {
+          "unitKey": "domain-category-model-and-totals",
+          "nodeId": "node-domain-category-model-and-totals-eb9abbf18e",
+          "dimensions": {
+            "scopeRadius": 3,
+            "interfaceImpact": 5,
+            "validationSurface": 7,
+            "contextTokenMass": 4
+          },
+          "signalSource": "llm",
+          "complexityScore": 4.7,
+          "decision": "leaf",
+          "rationale": "Composite at C_task=4.70 (S_r=3, I_i=5, V_s=7, T_m=4). Kept as a leaf: the Architect proposed no semantic sub-units.",
+          "recommendedBranchingFactor": 3
+        },
+        "node-api-category-totals-acb3154d4f": {
+          "unitKey": "api-category-totals",
+          "nodeId": "node-api-category-totals-acb3154d4f",
+          "dimensions": {
+            "scopeRadius": 3,
+            "interfaceImpact": 6,
+            "validationSurface": 5,
+            "contextTokenMass": 4
+          },
+          "signalSource": "llm",
+          "complexityScore": 4.45,
+          "decision": "leaf",
+          "rationale": "Composite at C_task=4.45 (S_r=3, I_i=6, V_s=5, T_m=4). Kept as a leaf: the Architect proposed no semantic sub-units.",
+          "recommendedBranchingFactor": 3
+        },
+        "node-web-category-breakdown-3988b433c6": {
+          "unitKey": "web-category-breakdown",
+          "nodeId": "node-web-category-breakdown-3988b433c6",
+          "dimensions": {
+            "scopeRadius": 3,
+            "interfaceImpact": 3,
+            "validationSurface": 5,
+            "contextTokenMass": 3
+          },
+          "signalSource": "llm",
+          "complexityScore": 3.5,
+          "decision": "leaf",
+          "rationale": "Leaf at C_task=3.50 (S_r=3, I_i=3, V_s=5, T_m=3)."
+        }
+      },
+      "criticDecisions": [
+        {
+          "kind": "resplit_declined",
+          "unitIds": [
+            "domain-category-model-and-totals"
+          ],
+          "rationale": "C_task=4.70 exceeds the leaf threshold, but the Architect proposed no sub-units for domain-category-model-and-totals; a mechanical split would fabricate incoherent scopes."
+        },
+        {
+          "kind": "resplit_declined",
+          "unitIds": [
+            "api-category-totals"
+          ],
+          "rationale": "C_task=4.45 exceeds the leaf threshold, but the Architect proposed no sub-units for api-category-totals; a mechanical split would fabricate incoherent scopes."
+        }
+      ],
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 3,
+        "averageBranchingFactor": 3,
+        "coalescedUnitsCount": 0
+      }
+    },
+    "graphId": "graph-expense-categories-splitter-4e7ea1176a",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1
+  },
+  "checksum": "90affc22d01a7254f87ca1c487332883a4edb4222de50011f976fe46fe18d283"
+}

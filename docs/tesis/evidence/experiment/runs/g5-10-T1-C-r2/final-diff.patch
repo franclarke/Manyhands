@@ -1,0 +1,261 @@
+diff --git a/src/api/expenses.ts b/src/api/expenses.ts
+index 900a78d..d30c58b 100644
+--- a/src/api/expenses.ts
++++ b/src/api/expenses.ts
+@@ -1,4 +1,17 @@
+-import { computeBalances, createExpense, type Balance, type Expense, type Participant } from "../domain/expense.js";
++import {
++  EXPENSE_CATEGORIES,
++  computeBalances,
++  computeCategoryTotals,
++  createExpense,
++  type Balance,
++  type CategoryTotal,
++  type Expense,
++  type ExpenseCategory,
++  type Participant
++} from "../domain/expense.js";
++
++export const expenseCategories = EXPENSE_CATEGORIES;
++export type { CategoryTotal, ExpenseCategory };
+ 
+ export interface ExpenseStore {
+   participants: Participant[];
+@@ -13,9 +26,18 @@ export function addExpense(store: ExpenseStore, expense: Expense): ExpenseStore
+   const known = new Set(store.participants.map((participant) => participant.id));
+   const unknown = [expense.paidByParticipantId, ...expense.sharedWithParticipantIds].filter((id) => !known.has(id));
+   if (unknown.length > 0) throw new Error(`Unknown participants: ${unknown.join(", ")}.`);
++  if (expense.category !== undefined && !isExpenseCategory(expense.category)) throw new Error(`Unknown category: ${expense.category}.`);
+   return { ...store, expenses: [...store.expenses, createExpense(expense)] };
+ }
+ 
+ export function listBalances(store: ExpenseStore): Balance[] {
+   return computeBalances(store.participants, store.expenses);
+ }
++
++export function listCategoryTotals(store: ExpenseStore): CategoryTotal[] {
++  return computeCategoryTotals(store.expenses);
++}
++
++function isExpenseCategory(category: unknown): category is ExpenseCategory {
++  return expenseCategories.includes(category as ExpenseCategory);
++}
+diff --git a/src/domain/expense.ts b/src/domain/expense.ts
+index c4a4e12..80224f8 100644
+--- a/src/domain/expense.ts
++++ b/src/domain/expense.ts
+@@ -3,12 +3,17 @@ export interface Participant {
+   name: string;
+ }
+ 
++export const EXPENSE_CATEGORIES = ["food", "transport", "lodging", "entertainment", "other"] as const;
++
++export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
++
+ export interface Expense {
+   id: string;
+   description: string;
+   amountCents: number;
+   paidByParticipantId: string;
+   sharedWithParticipantIds: string[];
++  category?: ExpenseCategory;
+ }
+ 
+ export interface Balance {
+@@ -17,9 +22,17 @@ export interface Balance {
+   netCents: number;
+ }
+ 
++export interface CategoryTotal {
++  category: ExpenseCategory;
++  totalCents: number;
++}
++
+ export function createExpense(input: Expense): Expense {
+   if (input.amountCents <= 0) throw new Error("An expense amount must be positive.");
+   if (input.sharedWithParticipantIds.length === 0) throw new Error("An expense must be shared with at least one participant.");
++  if (input.category !== undefined && !isExpenseCategory(input.category)) {
++    throw new Error(`Invalid expense category: ${input.category}.`);
++  }
+   return { ...input, sharedWithParticipantIds: [...new Set(input.sharedWithParticipantIds)] };
+ }
+ 
+@@ -35,3 +48,22 @@ export function computeBalances(participants: readonly Participant[], expenses:
+   }
+   return [...net.entries()].map(([participantId, netCents]) => ({ participantId, netCents }));
+ }
++
++export function computeCategoryTotals(expenses: readonly Expense[]): CategoryTotal[] {
++  const totals = new Map<ExpenseCategory, number>();
++  for (const expense of expenses) {
++    if (expense.category === undefined) continue;
++    if (!isExpenseCategory(expense.category)) {
++      throw new Error(`Invalid expense category: ${expense.category}.`);
++    }
++    totals.set(expense.category, (totals.get(expense.category) ?? 0) + expense.amountCents);
++  }
++  return EXPENSE_CATEGORIES.flatMap((category) => {
++    const totalCents = totals.get(category);
++    return totalCents === undefined ? [] : [{ category, totalCents }];
++  });
++}
++
++function isExpenseCategory(category: unknown): category is ExpenseCategory {
++  return EXPENSE_CATEGORIES.includes(category as ExpenseCategory);
++}
+diff --git a/src/web/summary.ts b/src/web/summary.ts
+index 2abb5c8..f7d86d4 100644
+--- a/src/web/summary.ts
++++ b/src/web/summary.ts
+@@ -1,11 +1,25 @@
++import type { CategoryTotal } from "../api/expenses.js";
+ import type { Balance, Participant } from "../domain/expense.js";
+ 
+ function formatCents(cents: number): string {
+   return `${cents < 0 ? "-" : ""}$${(Math.abs(cents) / 100).toFixed(2)}`;
+ }
+ 
++const categoryLabels: Record<string, string> = {
++  food: "Food",
++  transport: "Transport",
++  lodging: "Lodging",
++  entertainment: "Entertainment",
++  other: "Other"
++};
++
++function renderCategoryBreakdown(categoryTotals: readonly CategoryTotal[]): string {
++  if (categoryTotals.length === 0) return "";
++  return ["Category breakdown:", ...categoryTotals.map((total) => `${categoryLabels[total.category]}: ${formatCents(total.totalCents)}`)].join("\n");
++}
++
+ /** Renders the balance summary the group sees after every expense. */
+-export function renderBalanceSummary(participants: readonly Participant[], balances: readonly Balance[]): string {
++export function renderBalanceSummary(participants: readonly Participant[], balances: readonly Balance[], categoryTotals: readonly CategoryTotal[] = []): string {
+   const byId = new Map(participants.map((participant) => [participant.id, participant.name]));
+   const lines = balances.map((balance) => {
+     const name = byId.get(balance.participantId) ?? balance.participantId;
+@@ -14,5 +28,5 @@ export function renderBalanceSummary(participants: readonly Participant[], balan
+       ? `${name}: is owed ${formatCents(balance.netCents)}`
+       : `${name}: owes ${formatCents(-balance.netCents)}`;
+   });
+-  return lines.join("\n");
++  return [lines.join("\n"), renderCategoryBreakdown(categoryTotals)].filter(Boolean).join("\n\n");
+ }
+diff --git a/tests/expense.test.ts b/tests/expense.test.ts
+index b6acc36..8aad42e 100644
+--- a/tests/expense.test.ts
++++ b/tests/expense.test.ts
+@@ -1,6 +1,6 @@
+ import { describe, expect, it } from "vitest";
+-import { addExpense, createStore, listBalances } from "../src/api/expenses.js";
+-import { computeBalances, createExpense } from "../src/domain/expense.js";
++import { addExpense, createStore, listBalances, listCategoryTotals } from "../src/api/expenses.js";
++import { computeBalances, computeCategoryTotals, createExpense, type Expense } from "../src/domain/expense.js";
+ import { renderBalanceSummary } from "../src/web/summary.js";
+ 
+ const participants = [
+@@ -13,6 +13,32 @@ describe("expense domain", () => {
+     expect(() => createExpense({ id: "e1", description: "x", amountCents: 0, paidByParticipantId: "ana", sharedWithParticipantIds: ["ana"] })).toThrow(/positive/);
+   });
+ 
++  it("accepts valid optional categories", () => {
++    const expense = createExpense({
++      id: "e1",
++      description: "Bus",
++      amountCents: 350,
++      paidByParticipantId: "ana",
++      sharedWithParticipantIds: ["ana"],
++      category: "transport"
++    });
++
++    expect(expense.category).toBe("transport");
++  });
++
++  it("rejects unknown categories", () => {
++    expect(() =>
++      createExpense({
++        id: "e1",
++        description: "x",
++        amountCents: 100,
++        paidByParticipantId: "ana",
++        sharedWithParticipantIds: ["ana"],
++        category: "supplies"
++      } as unknown as Expense)
++    ).toThrow(/Invalid expense category/);
++  });
++
+   it("splits an expense evenly and nets the payer", () => {
+     const balances = computeBalances(participants, [
+       { id: "e1", description: "Dinner", amountCents: 4000, paidByParticipantId: "ana", sharedWithParticipantIds: ["ana", "bruno"] }
+@@ -22,6 +48,32 @@ describe("expense domain", () => {
+       { participantId: "bruno", netCents: -2000 }
+     ]);
+   });
++
++  it("aggregates expenses by category", () => {
++    const totals = computeCategoryTotals([
++      { id: "e1", description: "Dinner", amountCents: 4000, paidByParticipantId: "ana", sharedWithParticipantIds: ["ana", "bruno"], category: "food" },
++      { id: "e2", description: "Taxi", amountCents: 1500, paidByParticipantId: "bruno", sharedWithParticipantIds: ["ana", "bruno"], category: "transport" },
++      { id: "e3", description: "Breakfast", amountCents: 1200, paidByParticipantId: "ana", sharedWithParticipantIds: ["ana", "bruno"], category: "food" }
++    ]);
++    expect(totals).toEqual([
++      { category: "food", totalCents: 5200 },
++      { category: "transport", totalCents: 1500 }
++    ]);
++  });
++
++  it("aggregates category totals without uncategorized expenses", () => {
++    const totals = computeCategoryTotals([
++      { id: "e1", description: "Dinner", amountCents: 4000, paidByParticipantId: "ana", sharedWithParticipantIds: ["ana", "bruno"], category: "food" },
++      { id: "e2", description: "Hotel", amountCents: 12000, paidByParticipantId: "bruno", sharedWithParticipantIds: ["ana", "bruno"], category: "lodging" },
++      { id: "e3", description: "Snacks", amountCents: 1500, paidByParticipantId: "ana", sharedWithParticipantIds: ["ana", "bruno"], category: "food" },
++      { id: "e4", description: "Tip", amountCents: 500, paidByParticipantId: "ana", sharedWithParticipantIds: ["ana", "bruno"] }
++    ]);
++
++    expect(totals).toEqual([
++      { category: "food", totalCents: 5500 },
++      { category: "lodging", totalCents: 12000 }
++    ]);
++  });
+ });
+ 
+ describe("expense api", () => {
+@@ -38,6 +90,17 @@ describe("expense api", () => {
+       { participantId: "bruno", netCents: -2000 }
+     ]);
+   });
++
++  it("reports category totals from stored expenses", () => {
++    let store = createStore(participants);
++    store = addExpense(store, { id: "e1", description: "Dinner", amountCents: 4000, paidByParticipantId: "ana", sharedWithParticipantIds: ["ana", "bruno"], category: "food" });
++    store = addExpense(store, { id: "e2", description: "Hotel", amountCents: 10000, paidByParticipantId: "bruno", sharedWithParticipantIds: ["ana", "bruno"], category: "lodging" });
++    store = addExpense(store, { id: "e3", description: "Snacks", amountCents: 800, paidByParticipantId: "ana", sharedWithParticipantIds: ["ana", "bruno"], category: "food" });
++    expect(listCategoryTotals(store)).toEqual([
++      { category: "food", totalCents: 4800 },
++      { category: "lodging", totalCents: 10000 }
++    ]);
++  });
+ });
+ 
+ describe("web summary", () => {
+@@ -48,4 +111,20 @@ describe("web summary", () => {
+     ]);
+     expect(summary).toBe("Ana: is owed $20.00\nBruno: owes $20.00");
+   });
++
++  it("renders category breakdown after balances", () => {
++    const summary = renderBalanceSummary(
++      participants,
++      [
++        { participantId: "ana", netCents: 2000 },
++        { participantId: "bruno", netCents: -2000 }
++      ],
++      [
++        { category: "food", totalCents: 4600 },
++        { category: "transport", totalCents: 1500 }
++      ]
++    );
++
++    expect(summary).toBe("Ana: is owed $20.00\nBruno: owes $20.00\n\nCategory breakdown:\nFood: $46.00\nTransport: $15.00");
++  });
+ });
