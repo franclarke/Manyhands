@@ -135,6 +135,7 @@ export const AgentExecutionResultSchema = z.object({
   /** Actionable hint matching failureKind, surfaced in traces and the UI. */
   failureHint: z.string().optional(),
   tokensIn: z.number().int().nonnegative().optional(),
+  tokensTotal: z.number().int().nonnegative().optional(),
   tokensOut: z.number().int().nonnegative().optional(),
   costUsd: z.number().nonnegative().optional(),
   usageSource: z.union([

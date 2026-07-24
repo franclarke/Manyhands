@@ -92,6 +92,8 @@ export interface V2PhysicalNodeExecutionInput {
 export interface V2AttemptUsage {
   tokensIn?: number;
   tokensOut?: number;
+  /** Providers that report only a total keep it here, never split. */
+  tokensTotal?: number;
   costUsd?: number;
   source: "reported" | "estimated" | "unavailable";
 }
@@ -597,12 +599,14 @@ function integrationArtifact(artifact: V2ExecutionArtifact): IntegrationChildArt
  */
 function usageOf(result: {
   tokensIn?: number | undefined;
+  tokensTotal?: number | undefined;
   tokensOut?: number | undefined;
   costUsd?: number | undefined;
   usageSource?: "reported" | "estimated" | "unavailable" | undefined;
 }): V2AttemptUsage {
   return {
     ...(result.tokensIn !== undefined ? { tokensIn: result.tokensIn } : {}),
+    ...(result.tokensTotal !== undefined ? { tokensTotal: result.tokensTotal } : {}),
     ...(result.tokensOut !== undefined ? { tokensOut: result.tokensOut } : {}),
     ...(result.costUsd !== undefined ? { costUsd: result.costUsd } : {}),
     source: result.usageSource ?? "unavailable"

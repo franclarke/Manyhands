@@ -15,6 +15,7 @@ import { EvidenceMatrixRecordSchema } from "./evidence.js";
  */
 export const AttemptUsageSchema = z.object({
   tokensIn: z.number().int().nonnegative().optional(),
+  tokensTotal: z.number().int().nonnegative().optional(),
   tokensOut: z.number().int().nonnegative().optional(),
   costUsd: z.number().nonnegative().optional(),
   source: z.enum(["reported", "estimated", "unavailable"])

@@ -84,6 +84,7 @@ export class ResultRecorder {
     // registry's static declaration — the numbers came from the provider.
     const reportedUsage =
       executorOutcome.tokensIn !== undefined ||
+      executorOutcome.tokensTotal !== undefined ||
       executorOutcome.tokensOut !== undefined ||
       executorOutcome.costUsd !== undefined;
     const failureDiagnosis = classifyExecutorFailure(executorOutcome);
@@ -102,6 +103,7 @@ export class ResultRecorder {
         ? { failureKind: failureDiagnosis.kind, failureHint: failureDiagnosis.hint }
         : {}),
       tokensIn: executorOutcome.tokensIn,
+      tokensTotal: executorOutcome.tokensTotal,
       tokensOut: executorOutcome.tokensOut,
       costUsd: executorOutcome.costUsd,
       usageSource: reportedUsage ? ("reported" as const) : params.usageSource
@@ -382,6 +384,7 @@ export class ResultRecorder {
     failureKind?: AgentExecutionResult["failureKind"] | undefined;
     failureHint?: string | undefined;
     tokensIn?: number | undefined;
+    tokensTotal?: number | undefined;
     tokensOut?: number | undefined;
     costUsd?: number | undefined;
     usageSource?: "reported" | "estimated" | "unavailable" | undefined;
@@ -407,6 +410,7 @@ export class ResultRecorder {
       failureKind: input.failureKind,
       failureHint: input.failureHint,
       tokensIn: input.tokensIn,
+      tokensTotal: input.tokensTotal,
       tokensOut: input.tokensOut,
       costUsd: input.costUsd,
       usageSource: input.usageSource

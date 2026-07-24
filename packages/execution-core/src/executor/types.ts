@@ -15,6 +15,11 @@ export interface ExecutorRunOutcome {
   commandLine?: string;
   tokensIn?: number;
   tokensOut?: number;
+  /**
+   * Total tokens, for providers that report only a total. Kept separate from
+   * the in/out pair so a total is never mistaken for either half.
+   */
+  tokensTotal?: number;
   costUsd?: number;
 }
 

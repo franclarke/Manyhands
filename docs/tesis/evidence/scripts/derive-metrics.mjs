@@ -20,7 +20,8 @@ import { join, resolve } from "node:path";
 const COLUMNS = [
   "cellId", "position", "taskId", "condition", "repetition", "runId", "delivered", "lifecycle",
   "finalSha", "stopReason", "wallClockSeconds", "attempts", "repairs", "criteriaTotal",
-  "criteriaSatisfied", "criteriaCoverage", "tokensTotal", "failureModes", "scopeViolations",
+  "criteriaSatisfied", "criteriaCoverage", "tokensTotal", "usageReportedAttempts",
+  "usageMissingAttempts", "failureModes", "scopeViolations",
   "formulaVersion", "leafThreshold", "leafCount", "graphDepth", "branchingFactor",
   "coalescedUnits", "resplitDeclined"
 ];
@@ -60,9 +61,18 @@ function measure({ cell, result, events, granularity }) {
   const criteria = matrices.flatMap((matrix) => matrix.criteria ?? []);
   const satisfied = criteria.filter((criterion) => criterion.status === "satisfied").length;
   const assessed = events.find((event) => event.type === "planning.granularity_assessed")?.payload;
-  const usage = events
-    .filter((event) => event.type === "attempt.completed" || event.type === "attempt.failed")
-    .reduce((total, event) => total + (event.payload.tokensIn ?? 0) + (event.payload.tokensOut ?? 0), 0);
+  // Cost is summed only from attempts whose provider actually reported it.
+  // Mixing a reported figure with a registry estimate would produce a number
+  // that answers neither question, so estimates are counted separately.
+  const usages = events
+    .filter((event) => event.type === "attempt.candidate_created" || event.type === "attempt.failed")
+    .map((event) => event.payload.usage)
+    .filter((usage) => usage !== undefined);
+  const reported = usages.filter((usage) => usage.source === "reported");
+  const usage = reported.reduce(
+    (total, item) => total + (item.tokensTotal ?? ((item.tokensIn ?? 0) + (item.tokensOut ?? 0))),
+    0
+  );
 
   return {
     cellId: cell.cellId,
@@ -83,7 +93,9 @@ function measure({ cell, result, events, granularity }) {
     criteriaTotal: criteria.length,
     criteriaSatisfied: satisfied,
     criteriaCoverage: criteria.length === 0 ? "" : round(satisfied / criteria.length, 3),
-    tokensTotal: usage === 0 ? "" : usage,
+    tokensTotal: reported.length === 0 ? "" : usage,
+    usageReportedAttempts: reported.length,
+    usageMissingAttempts: usages.length - reported.length,
     failureModes: [...new Set(failures.map((event) => event.payload.observation?.code ?? "unknown"))].join("|"),
     scopeViolations: failures.filter((event) => event.payload.observation?.code === "scope_violation").length,
     formulaVersion: assessed?.formulaVersion ?? "",
