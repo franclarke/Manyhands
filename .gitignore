@@ -49,3 +49,7 @@ docs/tesis/*.toc
 docs/tesis/*.fls
 docs/tesis/*.fdb_latexmk
 docs/tesis/main.pdf
+docs/tesis/*.nav
+docs/tesis/*.snm
+docs/tesis/*.vrb
+docs/tesis/presentacion.pdf
