@@ -1,0 +1,22 @@
+[
+  {
+    "cellId": "g4-series-1",
+    "position": 1,
+    "taskId": "T1",
+    "condition": "C",
+    "outcome": "completed",
+    "exitCode": 0,
+    "startedAt": "2026-07-24T11:24:49.437Z",
+    "finishedAt": "2026-07-24T11:45:39.400Z"
+  },
+  {
+    "cellId": "g4-series-2",
+    "position": 2,
+    "taskId": "T1",
+    "condition": "C",
+    "outcome": "completed",
+    "exitCode": 0,
+    "startedAt": "2026-07-24T11:45:39.924Z",
+    "finishedAt": "2026-07-24T11:52:06.983Z"
+  }
+]

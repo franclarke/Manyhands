@@ -11,8 +11,8 @@
 | 1 — Congelar alcance | G1 | **PASS** (aprobado por Francisco, D-1..D-4) | `docs/tesis/*.md`, `evidence/baselines/stage-1-baseline.md` |
 | 2 — Toolchain y gates | G2 | **PASS** (commit `d552c5d`) | `evidence/gates/g2-gate-results.md`, `g2-fresh-install.md` |
 | 3 — Aporte adaptativo | G3 | **PASS** (`3a52b8b`) | `evidence/gates/g3-adaptive-integration.md` |
-| 4 — Run canónico | G4 | **EN CURSO** (causa raíz de alcance corregida; serie reiniciada tras defecto sistémico) | `evidence/canonical-run/` |
-| 5 — Experimento | G5 | **LISTO PARA EJECUTAR** (condiciones parametrizadas, 12 celdas congeladas) | `evidence/experiment/` |
+| 4 — Run canónico | G4 | **PASS** (2 runs válidos consecutivos sobre `db096d0`) | `evidence/gates/g4-gate-results.md` |
+| 5 — Experimento | G5 | **EN EJECUCIÓN** (12 celdas sobre `db096d0`) | `evidence/experiment/` |
 | 6 — Tesis y presentación | G6 | **PARTIAL** (PDF compila limpio; falta incorporar la evidencia definitiva) | `docs/tesis/main.tex`, `docs/tesis/presentacion.tex` |
 
 ## Decisiones adoptadas
