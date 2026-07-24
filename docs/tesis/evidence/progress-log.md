@@ -12,8 +12,8 @@
 | 2 — Toolchain y gates | G2 | **PASS** (commit `d552c5d`) | `evidence/gates/g2-gate-results.md`, `g2-fresh-install.md` |
 | 3 — Aporte adaptativo | G3 | **PASS** (`3a52b8b`) | `evidence/gates/g3-adaptive-integration.md` |
 | 4 — Run canónico | G4 | **PASS** (2 runs válidos consecutivos sobre `db096d0`) | `evidence/gates/g4-gate-results.md` |
-| 5 — Experimento | G5 | **EN EJECUCIÓN** (12 celdas sobre `db096d0`) | `evidence/experiment/` |
-| 6 — Tesis y presentación | G6 | **PARTIAL** (PDF compila limpio; falta incorporar la evidencia definitiva) | `docs/tesis/main.tex`, `docs/tesis/presentacion.tex` |
+| 5 — Experimento | G5 | **PASS** (12 celdas ejecutadas sobre `4f4ead5`; hipótesis falsada) | `evidence/gates/g5-gate-results.md` |
+| 6 — Tesis y presentación | G6 | **PASS** (tesis 43 pág. y presentación 24 slides, ambas sin warnings, con la evidencia definitiva) | `docs/tesis/main.tex`, `docs/tesis/presentacion.tex` |
 
 ## Decisiones adoptadas
 
@@ -255,3 +255,37 @@
 3. Completar la toolchain LaTeX y compilar `docs/tesis/main.tex`; revisar el PDF.
 4. Actualizar tesis y `claim-evidence-matrix` con la evidencia definitiva.
 5. Regenerar la presentación desde la tesis final.
+
+### 2026-07-24 — Cierre de G5 y G6
+
+37. **G4 = PASS** (`db096d0`): dos runs válidos consecutivos, verificados en clon
+    limpio (13 y 10 tests sobre una base de 5). Evidencia en
+    `evidence/gates/g4-gate-results.md`. Las dos ejecuciones produjeron
+    **topologías distintas** para el mismo objetivo, lo que el gate admite y la
+    tesis reporta como variabilidad del planificador.
+38. **G5 = PASS** (`4f4ead5`): 12 celdas, **10 entregas**. La hipótesis
+    pre-registrada quedó **falsada**: sobre T1 la condición A —no dividir—
+    entregó 2/2 mientras B y C entregaron 1/2, con cerca de un tercio del tiempo
+    y un cuarto de los tokens para la misma superficie funcional. Sobre T2 la
+    mitad favorable de la hipótesis sí se sostuvo: las tres condiciones
+    convergieron a una sola unidad, **incluida B**, que fuerza dividir.
+39. **Defecto de medición declarado como resultado principal.** Los criterios de
+    aceptación se compilan por unidad, así que su cantidad depende de la
+    descomposición (5 en A frente a 14 en B y C sobre T1). Las 12 celdas dieron
+    cobertura 1,00 porque **cada condición satisfizo su propia vara**. «Tasa de
+    entrega verificada», tal como está instrumentada, no puede responder RQ1.
+40. **Dos intentos completos de G5 descartados** por defectos del sistema
+    (§6 del protocolo): el esquema del evento exigía umbral positivo y anulaba
+    la condición B; y los objetivos estaban sub-especificados, lo que hacía que
+    el planificador se detuviera a preguntar. Ambas correcciones quedaron
+    registradas como enmiendas E-1 y E-2 en el protocolo, con el argumento de por
+    qué no son ajuste post-hoc.
+41. **La regla de escalamiento no se invocó** pese a que dos celdas discrepan
+    entre repeticiones: agregar una tercera después de ver datos desfavorables
+    sería el ajuste que el pre-registro prohíbe.
+42. **G6 = PASS.** Tesis recompilada a **43 páginas** con la evidencia
+    definitiva: resumen, capítulo de evaluación con el estudio comparativo,
+    amenazas a la validez ampliadas, limitaciones, conclusiones y trabajo futuro.
+    0 referencias/citas indefinidas, 0 cajas desbordadas, 0 advertencias.
+    Presentación a **24 diapositivas**, 0 errores, con las slides del resultado
+    falsado y del defecto de medición, más notas del orador.

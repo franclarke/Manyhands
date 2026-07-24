@@ -108,15 +108,30 @@ con manifiesto y comprobante. El estado del sistema se persiste como una
 secuencia append-only de eventos de dominio, de la que toda proyección se
 deriva.
 
-La evaluación consistió en un caso canónico ejecutado de extremo a extremo sobre
-un repositorio TypeScript controlado, con Codex como ejecutor de planificación y
-de implementación. El recorrido completo ---planificación adaptativa, ejecución
-concurrente aislada, validación, integración y entrega--- alcanzó el estado
-\texttt{completed} con un commit final verificado y no vacío. El proceso reveló
-además un resultado negativo relevante: cuando la política determinista intentó
-sustituir al planificador semántico fabricando una partición mecánica del
-alcance, todas las unidades resultantes violaron su propio contrato de alcance.
-Ese hallazgo motivó una corrección de diseño que se documenta en profundidad.
+La evaluación tuvo dos partes, ambas sobre un repositorio TypeScript controlado y
+con Codex como ejecutor de planificación y de implementación. Primero, un caso
+canónico ejecutado de extremo a extremo ---planificación adaptativa, ejecución
+concurrente aislada, validación, integración y entrega--- que alcanzó el estado
+\texttt{completed} con un commit final verificado y no vacío en dos ejecuciones
+válidas consecutivas. Segundo, un estudio comparativo exploratorio de doce
+ejecuciones entre tres configuraciones de granularidad, con diseño registrado
+antes de observar resultados.
+
+El estudio comparativo \textbf{falsó su propia hipótesis}: sobre la tarea
+multi-capa, no descomponer entregó ambas repeticiones mientras las dos
+configuraciones que descomponen entregaron una cada una, con una fracción del
+tiempo y del costo para la misma superficie funcional. La mitad de la hipótesis
+que sí se sostuvo concierne a la sobre-división: sobre una tarea cohesiva las
+tres configuraciones convergieron a una sola unidad. Esta tesis, en consecuencia,
+\textbf{no afirma que la política adaptativa sea superior a no descomponer}.
+
+Los dos hallazgos más transferibles son negativos. El primero: cuando la política
+determinista intentó sustituir al planificador semántico fabricando una partición
+mecánica del alcance, todas las unidades resultantes violaron su propio contrato
+---una política puede decidir \emph{si} dividir, pero no \emph{cómo}---. El
+segundo es metodológico: los criterios de aceptación son endógenos a la
+configuración comparada, de modo que toda métrica de éxito construida sobre ellos
+evalúa a cada configuración contra su propia vara.
 
 \textbf{Palabras clave:} orquestación de agentes, modelos de lenguaje,
 descomposición de tareas, granularidad adaptativa, worktrees de Git, verificación
@@ -810,12 +825,16 @@ auditoría externa de conformidad.
 
 \section{Objetivo y alcance de la evaluación}
 
-La evaluación busca responder PI-1 a PI-3 mediante un \textbf{caso canónico}
-ejecutado de extremo a extremo con ejecutores reales. No se trata de un estudio
-comparativo entre configuraciones de granularidad; ese estudio se plantea como
-trabajo futuro (sección~\ref{sec:futuro}) y su protocolo está especificado, pero
-no fue ejecutado en el marco de esta tesis. Toda afirmación de este capítulo
-corresponde a observaciones registradas en la historia de eventos del sistema.
+La evaluación tiene dos partes. La primera es un \textbf{caso canónico}
+ejecutado de extremo a extremo con ejecutores reales, repetido hasta obtener dos
+ejecuciones válidas consecutivas sobre una única versión del sistema. La segunda
+es un \textbf{estudio comparativo exploratorio} entre tres configuraciones de
+granularidad, con diseño pre-registrado antes de observar ningún resultado.
+
+Toda afirmación de este capítulo corresponde a observaciones registradas en la
+historia de eventos del sistema. Las tablas del estudio comparativo se derivan
+automáticamente de esos registros mediante un script versionado; ninguna cifra
+fue transcrita a mano.
 
 \section{Protocolo}
 
@@ -962,6 +981,205 @@ trabajo, y que un corte por capas ---dominio, API, pruebas--- no siempre la
 respeta. Debe reportarse como una limitación de reproducibilidad y no como una
 anomalía aislada.
 
+Hay una consecuencia menos evidente. La variabilidad del planificador no solo
+cambia la topología del grafo: cambia \emph{qué caminos del orquestador se
+ejercitan}. Un defecto por el cual un nodo adoptaba únicamente su propio
+artefacto de resultado ---dejando permanentemente insatisfecho cualquier
+artefacto que el planificador declarara entre unidades hermanas--- permaneció
+latente en todas las ejecuciones previas, simplemente porque ningún planificador
+había declarado tal artefacto. Cuando lo hizo, el run quedó detenido sin fallo,
+sin decisión y sin avance. Una ejecución exitosa no cubre el espacio de grafos
+que el planificador puede producir.
+
+% ==============================================================================
+\section{Estudio comparativo entre configuraciones de granularidad}
+\label{sec:estudio}
+
+\subsection{Diseño}
+
+El diseño se registró \textbf{antes} de observar cualquier resultado: dos tareas,
+tres condiciones, dos repeticiones ---doce ejecuciones--- con orden, métricas,
+hipótesis, falsador y criterios de interpretación fijados de antemano.
+
+\begin{table}[ht]
+  \centering
+  \caption{Condiciones comparadas.}
+  \label{tab:condiciones}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l X@{}}
+    \toprule
+    \textbf{Cond.} & \textbf{Mecanismo} \\
+    \midrule
+    A & Hoja única: se prohíbe descomponer (umbral efectivo en el máximo alcanzable) \\
+    B & División fina fija: ninguna unidad es hoja y los críticos de coalescencia se desactivan \\
+    C & Política adaptativa productiva: $\ctask$, umbral 3{,}5, críticos activos \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+La decisión de diseño que hace informativo un experimento pequeño es la
+selección de tareas: ambas deben caer en \textbf{lados opuestos del umbral}. T1
+es una tarea multi-capa ---campo validado en el dominio, totales por categoría,
+exposición en la API, presentación en la superficie web y pruebas--- y T2 una
+regla de negocio cohesiva confinada al módulo de dominio. Si las dos fueran
+complejas, la condición A fallaría por construcción y C parecería superior por
+una razón trivial.
+
+\subsection{Un defecto de medición que precede a cualquier lectura}
+\label{sec:defecto-medicion}
+
+Los criterios de aceptación se compilan \textbf{por unidad}. Su cantidad es, por
+lo tanto, función de la descomposición y no del objetivo. En T1:
+
+\begin{table}[ht]
+  \centering
+  \caption{La vara de evaluación depende de la condición (tarea T1).}
+  \label{tab:endogeneidad}
+  \small
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Condición} & \textbf{Hojas} & \textbf{Criterios evaluados} & \textbf{Diff entregado} \\
+    \midrule
+    A & 1 & 5 & $+96 / -11$ \\
+    B & 3 & 14 & $+176 / -8$ \\
+    C & 3 & 14 & $+156 / -9$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Las doce ejecuciones alcanzaron cobertura de criterios igual a 1. Eso
+\textbf{no} significa que las tres condiciones superaran la misma vara:
+significa que \textbf{cada una satisfizo la suya}. Una condición que divide se
+impone más obligaciones y luego las cumple; una que no divide se impone menos y
+también las cumple.
+
+La consecuencia es que la «tasa de entrega verificada», tal como está
+instrumentada, \textbf{no puede responder PI-1 comparando condiciones}. Es un
+defecto de validez de constructo del instrumento ---no de los datos--- y es el
+resultado metodológico más importante de este estudio.
+
+Sí son comparables, porque el objetivo, el repositorio y el commit base son
+idénticos: la duración de reloj, los tokens consumidos, los modos de falla, las
+métricas estructurales y la superficie pública efectivamente entregada.
+
+\subsection{Resultados}
+
+\begin{table}[ht]
+  \centering
+  \caption{Resultados por celda. Cada valor corresponde a una ejecución individual.}
+  \label{tab:resultados-g5}
+  \small
+  \begin{tabular}{llccc}
+    \toprule
+    \textbf{Tarea} & \textbf{Cond.} & \textbf{Entregas} & \textbf{Reloj (s)} & \textbf{Tokens} \\
+    \midrule
+    T1 & A & \textbf{2/2} & 259, 357 & 21\,794, 24\,898 \\
+    T1 & B & 1/2 & 942, 1209 & 111\,663, 101\,120 \\
+    T1 & C & 1/2 & 810, 1109 & 104\,361, 96\,316 \\
+    T2 & A & \textbf{2/2} & 282, 291 & 29\,546, 28\,385 \\
+    T2 & B & \textbf{2/2} & 362, 393 & 52\,499, 28\,270 \\
+    T2 & C & \textbf{2/2} & 344, 351 & 32\,096, 26\,299 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Diez de doce ejecuciones alcanzaron entrega verificada. Se publican los valores
+individuales y no solo agregados: con dos observaciones por celda, un promedio
+oculta más de lo que muestra. No se aplican pruebas de significancia.
+
+\subsection{La hipótesis pre-registrada queda falsada}
+\label{sec:falsacion}
+
+La hipótesis era que C se comportaría como A en T2 ---sin dividir de más--- y no
+peor que B en T1. El falsador incluía explícitamente que C no mostrara ventaja
+sobre B en T1.
+
+\textbf{En T2 la hipótesis se sostiene, y por el mecanismo previsto.} Las tres
+condiciones produjeron una sola hoja y entregaron 2/2. Es notable que
+\textbf{B también produjo una sola hoja}: una división fina fija tampoco puede
+inventar un corte que el Architect no propuso, exactamente como establece la
+sección~\ref{sec:resultado-negativo}. Sobre una tarea cohesiva, dividir no es
+una opción disponible.
+
+\textbf{En T1 la hipótesis se falsa, y en la dirección más desfavorable para el
+aporte de esta tesis.} La condición A ---no dividir--- entregó 2/2, mientras B y
+C entregaron 1/2 cada una, con aproximadamente un tercio del tiempo de reloj y
+un cuarto de los tokens. Se comparó la superficie pública entregada por A y por
+C: ambas exportan el conjunto de categorías, el tipo, la función de totales, su
+exposición en la API y el desglose en la superficie web. La diferencia está en la
+densidad de pruebas ---tres casos frente a seis---, no en la funcionalidad. A
+implementó el objetivo completo.
+
+\textbf{No existe evidencia de que la política adaptativa aporte ventaja sobre no
+descomponer en este objetivo y este repositorio}, y esta tesis no afirma lo
+contrario.
+
+\subsection{Por qué el resultado no autoriza la conclusión inversa}
+
+Tampoco alcanza para afirmar que descomponer sea peor. Cuatro razones:
+
+\begin{enumerate}
+  \item \textbf{El repositorio objetivo es pequeño}: cinco pruebas en la línea de
+  base. La hipótesis de la descomposición es que ayuda cuando un agente único
+  \emph{satura su contexto}; con del orden de veinticinco mil tokens por
+  ejecución, eso no ocurrió ni cerca. El experimento no puso a prueba la
+  condición bajo la cual la descomposición debería ganar.
+  \item \textbf{Dos celdas discrepan internamente.} En T1/B y T1/C una
+  repetición entregó y la otra no, de modo que la varianza del planificador
+  domina sobre el efecto de la condición. Ninguna diferencia en T1 califica como
+  señal observada bajo los criterios fijados de antemano.
+  \item \textbf{Los fallos de esas celdas no fueron de granularidad}: uno fue un
+  agente que agotó su presupuesto de tiempo, otro una validación fallida cuya
+  reparación salió del alcance declarado. Son modos de falla de ejecución.
+  \item \textbf{La métrica primaria está confundida con la condición}
+  (sección~\ref{sec:defecto-medicion}).
+\end{enumerate}
+
+\subsection{Modos de falla y costo de coordinación}
+
+\begin{table}[ht]
+  \centering
+  \caption{Modos de falla observados.}
+  \label{tab:fallas-g5}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l l X@{}}
+    \toprule
+    \textbf{Modo} & \textbf{Dónde} & \textbf{Lectura} \\
+    \midrule
+    Timeout del agente & T1/C & Una hoja excedió el presupuesto por agente; más hojas, más oportunidades de agotarlo \\
+    Validación fallida y reparación fuera de alcance & T1/B & La división fina produjo una hoja dedicada a pruebas; al fallar su validación, la reparación salió del contrato \\
+    Conflicto de integración & T1/B, T1/C & Ambas \emph{entregaron}: la integración resolvió el conflicto con un pase de reparación. El conflicto es costo, no fallo \\
+    Ninguno & las seis celdas de T2 & Una tarea cohesiva no genera coordinación que pueda fallar \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+Los conflictos de integración aparecen \textbf{únicamente cuando se divide}. Ese
+es el costo de coordinación que PI-2 pregunta, y aquí queda medido sobre el
+mismo objetivo: del orden de ochocientos segundos y setenta y cinco mil tokens
+adicionales respecto de no descomponer.
+
+\subsection{Desviaciones del protocolo}
+
+Se registraron dos enmiendas, ambas reparaciones del instrumento aplicadas de
+forma idéntica a las tres condiciones: los objetivos se hicieron
+auto-contenidos, porque una redacción ambigua hacía que el planificador se
+detuviera a preguntar y la ejecución se perdiera; y se habilitó la lectura del
+consumo de tokens, que el ejecutor reportaba y el sistema no leía.
+
+Dos intentos completos del experimento se descartaron por defectos del sistema
+descubiertos al ejecutar, conforme a la regla de no mezclar ejecuciones de
+versiones distintas. En particular, el esquema del evento de granularidad exigía
+un umbral positivo, lo que anulaba por completo la condición B: el umbral es un
+parámetro de política, y «ninguna unidad es hoja» requiere un valor por debajo
+del mínimo alcanzable. Las pruebas de la política no lo detectaron porque
+ninguna atravesaba el evento que el planificador realmente escribe.
+
+La regla de escalamiento ---una tercera repetición ante discrepancia interna---
+\textbf{no se invocó}: la discrepancia ya está reportada como el resultado que
+es, y agregar repeticiones después de observar datos desfavorables sería el
+ajuste posterior que el diseño pre-registrado prohíbe.
+
 % ==============================================================================
 \chapter{Discusión}
 \label{cap:discusion}
@@ -998,6 +1216,24 @@ con pesos elegidos por diseño y no calibrados empíricamente. Que el caso canó
 se haya completado no valida la fórmula: valida que el recorrido completo
 funciona con ella.
 
+\paragraph{Validez de constructo de la métrica primaria.} Es la amenaza más
+severa que la ejecución expuso. Los criterios de aceptación son 	extbf{endógenos
+a la condición}: se compilan por unidad, de modo que descomponer multiplica las
+obligaciones que luego se verifican. Cualquier métrica de éxito construida sobre
+ellos compara a cada condición contra su propia vara, no contra una común
+(sección~ef{sec:defecto-medicion}). Un diseño futuro debe fijar un conjunto de
+criterios 	extbf{externo e idéntico} para las tres condiciones y evaluarlo
+contra el árbol entregado.
+
+\paragraph{Poder del diseño.} El estudio comparativo se dimensionó para
+caracterizar viabilidad y modos de falla, no para detectar diferencias. Con dos
+observaciones por celda no hay base para inferencia, y en las dos celdas donde
+las repeticiones discrepan la varianza del proveedor domina cualquier efecto de
+la condición. Además, el repositorio objetivo es lo bastante pequeño como para
+que ningún agente se acercara a saturar su contexto ---la situación en la que la
+descomposición debería ayudar---, de modo que el experimento no puso a prueba su
+hipótesis en el régimen que le es favorable.
+
 \paragraph{Reproducibilidad.} La planificación depende de un modelo remoto no
 determinista. Ejecuciones del mismo objetivo producen descomposiciones
 distintas, y al menos una de ellas no completó.
@@ -1005,9 +1241,14 @@ distintas, y al menos una de ellas no completó.
 \section{Limitaciones}
 
 \begin{itemize}
-  \item No se ejecutó el estudio comparativo entre estrategias de granularidad
-  fija y adaptativa. Sin él, no puede afirmarse que la política adaptativa sea
-  superior a una alternativa fija; solo que es viable y explicable.
+  \item El estudio comparativo se ejecutó y 	extbf{falsó su hipótesis
+  pre-registrada}: sobre la tarea multi-capa, no descomponer entregó las dos
+  repeticiones mientras las dos condiciones que descomponen entregaron una cada
+  una, con aproximadamente un tercio del tiempo y un cuarto de los tokens para la
+  misma superficie funcional. 	extbf{No puede afirmarse que la política
+  adaptativa sea superior a no descomponer}; solo que es viable, explicable y
+  que sobre una tarea cohesiva se comporta como la alternativa mínima, que era la
+  mitad de la hipótesis que sí se sostuvo.
   \item Las intervenciones humanas del caso canónico ---aprobación del plan y
   aprobación de entrega--- son parte del diseño, pero implican que el recorrido
   no es completamente autónomo.
@@ -1038,18 +1279,43 @@ Respecto de las preguntas de investigación:
   resultante, la decisión y las acciones de los críticos, persistidos como evento
   de dominio. Con ese conjunto, la decisión de cada nodo se reconstruye por
   reproducción de la historia.
-  \item[PI-3] Aparecieron dos modos de falla claramente distinguibles: la
-  violación de alcance cuando la unidad no puede completarse dentro de su
-  contrato, y el conflicto de recurso cuando dos unidades compiten por los mismos
-  archivos. El sistema detectó ambos y bloqueó la integración en los dos casos,
-  que es el comportamiento deseado.
+  \item[PI-3] Aparecieron cuatro modos de falla distinguibles: la violación de
+  alcance cuando la unidad no puede completarse dentro de su contrato; el
+  conflicto de recurso cuando dos unidades compiten por los mismos archivos ---que
+  la integración resolvió con un pase de reparación, de modo que es costo y no
+  fallo---; el agotamiento del presupuesto de tiempo de un agente; y el
+  estancamiento silencioso ante un requisito de artefacto insatisfacible. El
+  sistema detectó los tres primeros; el cuarto es una limitación abierta.
+  	extbf{Los conflictos aparecieron únicamente cuando se descompuso}, y su
+  costo quedó medido.
 \end{description}
+
+\paragraph{El resultado comparativo, en contra de la hipótesis.} El estudio
+falsó su propia hipótesis pre-registrada: sobre la tarea multi-capa, no
+descomponer entregó ambas repeticiones mientras las dos condiciones que
+descomponen entregaron una cada una, con una fracción del tiempo y del costo para
+la misma superficie funcional. La mitad de la hipótesis que sí se sostuvo es la
+que concierne a la sobre-división: sobre una tarea cohesiva las tres condiciones
+convergieron a una sola unidad, incluida la que fuerza división fina. Se reporta
+así porque el diseño se registró de antemano precisamente para que un resultado
+desfavorable no pudiera reinterpretarse después.
 
 La contribución conceptual más transferible no es la fórmula sino el principio
 que la evaluación obligó a explicitar: \emph{una política determinista puede
 decidir si dividir, pero no cómo}. Fabricar el corte semántico produjo unidades
 inejecutables, en línea con el criterio de modularidad de Parnas
-\cite{parnas1972criteria}.
+\cite{parnas1972criteria}. El estudio comparativo agrega un corolario: cuando el
+Architect no propone un corte, ninguna configuración de umbral puede forzarlo
+---ni siquiera una diseñada para dividir siempre---, de modo que la frontera no
+es un parámetro ajustable sino una propiedad estructural del problema.
+
+\paragraph{Un aporte metodológico no previsto.} La ejecución expuso que los
+criterios de aceptación son \emph{endógenos a la condición} comparada: al
+compilarse por unidad, descomponer multiplica las obligaciones que luego se
+verifican, y toda métrica de éxito construida sobre ellos evalúa a cada
+configuración contra su propia vara. Cualquier estudio futuro que compare
+estrategias de granularidad debe fijar un conjunto de criterios externo e
+idéntico antes de descomponer.
 
 \section{Trabajo futuro}
 \label{sec:futuro}
@@ -1058,11 +1324,24 @@ El enfoque planteado no es el único posible, y varias decisiones merecen
 revisarse:
 
 \begin{itemize}
-  \item \textbf{Estudio comparativo de granularidad.} Ejecutar el protocolo
-  especificado ---hoja única forzada, división fina fija y política
-  adaptativa--- sobre un conjunto de objetivos con repeticiones, manteniendo
-  constantes repositorio, modelo y presupuesto. Es el paso natural para pasar de
-  viabilidad a evidencia comparativa.
+  \item \textbf{Un estudio comparativo en el régimen que corresponde.} El estudio
+  ejecutado aquí no puso a prueba su hipótesis donde debería sostenerse: el
+  repositorio era lo bastante pequeño como para que un agente único nunca se
+  acercara a saturar su contexto. Repetirlo sobre repositorios donde eso
+  efectivamente ocurra ---y con un conjunto de criterios de aceptación externo e
+  idéntico para las tres condiciones, según la
+  sección~\ref{sec:defecto-medicion}--- es lo que permitiría decidir si la
+  descomposición aporta algo.
+  \item \textbf{Detección de requisitos insatisfacibles.} Una condición de
+  disponibilidad que ningún evento futuro puede satisfacer debería clasificarse
+  como fallo con su causa. Hoy el run espera, y solo un límite de reloj externo
+  lo corta: un estancamiento que no reporta nada es indistinguible de trabajo en
+  curso.
+  \item \textbf{Alcance de las unidades fusionadas.} Al coalescer, una unidad
+  hereda las rutas de sus fuentes, de modo que puede realizar trabajo de una
+  unidad hermana sin violar ningún contrato. Acotarlo exige una decisión
+  semántica que, por el resultado de la sección~\ref{sec:resultado-negativo}, la
+  política determinista no puede tomar.
   \item \textbf{Calibración de pesos y umbral.} Los valores actuales son de
   diseño. Un ajuste basado en resultados observados haría la política sensible
   al dominio.

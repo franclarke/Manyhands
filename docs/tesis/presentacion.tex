@@ -264,6 +264,71 @@
 }
 \end{frame}
 
+\begin{frame}{El resultado: la hipótesis quedó falsada}
+  \small
+  \begin{center}
+  \begin{tabular}{llccc}
+    \toprule
+    \textbf{Tarea} & \textbf{Cond.} & \textbf{Entregas} & \textbf{Reloj (s)} & \textbf{Tokens} \\
+    \midrule
+    T1 multi-capa & A \emph{no dividir} & \textbf{2/2} & 259, 357 & 22k, 25k \\
+    T1 multi-capa & B división fina & 1/2 & 942, 1209 & 112k, 101k \\
+    T1 multi-capa & C adaptativa & 1/2 & 810, 1109 & 104k, 96k \\
+    \midrule
+    T2 acotada & A & 2/2 & 282, 291 & 30k, 28k \\
+    T2 acotada & B & 2/2 & 362, 393 & 52k, 28k \\
+    T2 acotada & C & 2/2 & 344, 351 & 32k, 26k \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \bigskip
+  \pause
+  \textbf{En T2 la hipótesis se sostiene, y por el mecanismo previsto:} las tres
+  condiciones convergieron a \emph{una sola unidad} —incluida la que fuerza
+  dividir—. Sobre una tarea cohesiva, dividir no es una opción disponible.
+
+  \bigskip
+  \pause
+  \textbf{En T1 se falsa, en la dirección más desfavorable:} no descomponer
+  entregó 2/2, con cerca de un tercio del tiempo y un cuarto de los tokens, y la \emph{misma}
+  superficie funcional.
+\note{%
+  No suavizar esto. El diseno se pre-registro justamente para que un resultado
+  desfavorable no pudiera reinterpretarse despues. Si preguntan si entonces el
+  aporte sirve: la respuesta honesta es que sobre este objetivo y este
+  repositorio no hay evidencia de ventaja, y que el experimento no probo su
+  hipotesis donde deberia sostenerse.%
+}
+\end{frame}
+
+\begin{frame}{Por qué tampoco autoriza la conclusión inversa}
+  \begin{itemize}
+    \item \textbf{El repositorio es chico} —5 pruebas de base, aprox.\ 25k tokens por
+      run—. La descomposición se hipotetiza útil cuando un agente \emph{satura su
+      contexto}. Eso no pasó ni cerca: el experimento no puso a prueba su
+      hipótesis en el régimen que le es favorable.
+    \item \textbf{Dos celdas discrepan entre repeticiones} → la varianza del
+      planificador domina sobre el efecto de la condición.
+    \item \textbf{Los fallos no fueron de granularidad}: un timeout de agente y
+      una validación cuya reparación salió de alcance.
+  \end{itemize}
+
+  \pause
+  \bigskip
+  \begin{center}
+    \textbf{Un defecto de medición que invalida la lectura ingenua}
+  \end{center}
+  Los criterios de aceptación se compilan \textbf{por unidad}: descomponer
+  multiplica las obligaciones. Las 12 celdas dieron cobertura 1{,}00 — pero cada
+  condición satisfizo \emph{su propia} vara (5 criterios en A, 14 en B y C).
+\note{%
+  Este es el aporte metodologico no previsto, y conviene presentarlo como tal.
+  Cualquier estudio futuro que compare estrategias de granularidad debe fijar un
+  conjunto de criterios externo e identico ANTES de descomponer.%
+}
+\end{frame}
+
 \begin{frame}{Lo que este diseño permite decir}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
@@ -310,9 +375,13 @@
       cada paso.
     \item La descomposición adaptativa está en la ruta productiva y su decisión
       queda \textbf{persistida y explicable} run por run.
-    \item El hallazgo más informativo es negativo: una política determinista
-      puede \emph{detectar} exceso de complejidad, pero \textbf{no puede
-      inventar el corte semántico}. Esa frontera es la contribución conceptual.
+    \item \textbf{Dos hallazgos negativos} son lo más transferible. Una política
+      determinista puede \emph{detectar} exceso de complejidad pero no puede
+      \emph{inventar el corte semántico}; y los criterios de aceptación son
+      endógenos a la configuración comparada, así que toda métrica de éxito
+      construida sobre ellos evalúa a cada una contra su propia vara.
+    \item \textbf{No se afirma superioridad de la política adaptativa.} El
+      estudio falsó su hipótesis y el documento lo reporta como tal.
     \item Los defectos que importaron no se encontraron leyendo código, sino
       \textbf{ejecutando runs reales} contra un repositorio de verdad.
   \end{itemize}
