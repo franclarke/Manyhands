@@ -88,9 +88,18 @@ export interface V2PhysicalNodeExecutionInput {
   signal?: AbortSignal;
 }
 
+/** What one attempt consumed, as the executor reported it. */
+export interface V2AttemptUsage {
+  tokensIn?: number;
+  tokensOut?: number;
+  costUsd?: number;
+  source: "reported" | "estimated" | "unavailable";
+}
+
 export type V2PhysicalNodeExecutionOutcome =
   | {
       kind: "success";
+      usage?: V2AttemptUsage;
       candidateCommit: string;
       outputDigest: string;
       changedFiles: string[];
@@ -103,6 +112,7 @@ export type V2PhysicalNodeExecutionOutcome =
   | {
       kind: "failure";
       reason: string;
+      usage?: V2AttemptUsage;
       integrationManifestId?: string;
       repairObservations?: Array<{ kind: "code" | "integration"; pass: number; evidenceRefs: string[] }>;
     };
@@ -192,7 +202,7 @@ export class V2NodeExecutor {
         usageSource: usageSourceForSelection(input.selection)
       });
       if (result.status !== "success") {
-        return { kind: "failure", reason: executionFailureReason(result) };
+        return { kind: "failure", reason: executionFailureReason(result), usage: usageOf(result) };
       }
       const candidateCommit = result.commitSha ?? result.currentHead;
       candidateToAnchor = candidateCommit;
@@ -204,7 +214,8 @@ export class V2NodeExecutor {
         baselineCommit: input.graph.baseCommit,
         ...(input.signal !== undefined ? { signal: input.signal } : {})
       });
-      let success = successOutcome(candidateCommit, result.changedFiles, evidenceMatrix);
+      let success: Extract<V2PhysicalNodeExecutionOutcome, { kind: "success" }> =
+        { ...successOutcome(candidateCommit, result.changedFiles, evidenceMatrix), usage: usageOf(result) };
       if (evidenceMatrix.outcome === "failed") {
         const repaired = await this.repairLeaf(input, base.worktree, candidateCommit, evidenceMatrix);
         if (repaired.kind === "failure") return repaired;
@@ -465,7 +476,7 @@ export class V2NodeExecutor {
         usageSource: usageSourceForSelection(input.repairSelection)
       });
       if (result.status !== "success") {
-        return { kind: "failure", reason: `Code repair failed: ${executionFailureReason(result)}`, repairObservations: [repairObservation] };
+        return { kind: "failure", reason: `Code repair failed: ${executionFailureReason(result)}`, usage: usageOf(result), repairObservations: [repairObservation] };
       }
       const repairedCommit = result.commitSha ?? result.currentHead;
       const evidenceMatrix = await this.options.validator.validate({
@@ -478,6 +489,7 @@ export class V2NodeExecutor {
       });
       return {
         ...successOutcome(repairedCommit, result.changedFiles, evidenceMatrix),
+        usage: usageOf(result),
         repairObservations: [repairObservation]
       };
     } catch (error) {
@@ -576,6 +588,25 @@ function executionArtifactInput(artifact: V2ExecutionArtifact) {
 
 function integrationArtifact(artifact: V2ExecutionArtifact): IntegrationChildArtifact {
   return { schemaVersion: 1, ...artifact, contract: { ...artifact.contract } };
+}
+
+/**
+ * Reads usage off the recorded result. `source` always travels with the
+ * numbers: a provider-reported figure and a registry estimate answer different
+ * questions and must never be summed as one measurement.
+ */
+function usageOf(result: {
+  tokensIn?: number | undefined;
+  tokensOut?: number | undefined;
+  costUsd?: number | undefined;
+  usageSource?: "reported" | "estimated" | "unavailable" | undefined;
+}): V2AttemptUsage {
+  return {
+    ...(result.tokensIn !== undefined ? { tokensIn: result.tokensIn } : {}),
+    ...(result.tokensOut !== undefined ? { tokensOut: result.tokensOut } : {}),
+    ...(result.costUsd !== undefined ? { costUsd: result.costUsd } : {}),
+    source: result.usageSource ?? "unavailable"
+  };
 }
 
 function successOutcome(candidateCommit: string, changedFiles: string[], evidenceMatrix: V2ExecutionEvidenceMatrix) {

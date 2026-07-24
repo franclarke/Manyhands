@@ -17,6 +17,14 @@
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
+const COLUMNS = [
+  "cellId", "position", "taskId", "condition", "repetition", "runId", "delivered", "lifecycle",
+  "finalSha", "stopReason", "wallClockSeconds", "attempts", "repairs", "criteriaTotal",
+  "criteriaSatisfied", "criteriaCoverage", "tokensTotal", "failureModes", "scopeViolations",
+  "formulaVersion", "leafThreshold", "leafCount", "graphDepth", "branchingFactor",
+  "coalescedUnits", "resplitDeclined"
+];
+
 const runsRoot = resolve(argOf("--runs") ?? "docs/tesis/evidence/experiment/runs");
 const outDir = resolve(argOf("--out") ?? "docs/tesis/evidence/experiment");
 await mkdir(outDir, { recursive: true });
@@ -87,14 +95,6 @@ function measure({ cell, result, events, granularity }) {
     resplitDeclined: (assessed?.criticDecisions ?? []).filter((decision) => decision.kind === "resplit_declined").length
   };
 }
-
-const COLUMNS = [
-  "cellId", "position", "taskId", "condition", "repetition", "runId", "delivered", "lifecycle",
-  "finalSha", "stopReason", "wallClockSeconds", "attempts", "repairs", "criteriaTotal",
-  "criteriaSatisfied", "criteriaCoverage", "tokensTotal", "failureModes", "scopeViolations",
-  "formulaVersion", "leafThreshold", "leafCount", "graphDepth", "branchingFactor",
-  "coalescedUnits", "resplitDeclined"
-];
 
 function toCsv(rows) {
   const lines = [COLUMNS.join(",")];

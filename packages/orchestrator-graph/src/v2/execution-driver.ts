@@ -9,6 +9,7 @@ import {
   classifyFailure,
   recoveryPolicyFor,
   type AdoptedArtifact,
+  type AttemptUsage,
   type DecisionInput,
   type EvidenceMatrixRecord,
   type FailureObservation,
@@ -52,6 +53,7 @@ export interface V2RepairObservation {
 export type V2NodeExecutionOutcome =
   | {
       kind: "success";
+      usage?: AttemptUsage;
       candidateCommit: string;
       outputDigest: string;
       changedFiles: string[];
@@ -64,6 +66,7 @@ export type V2NodeExecutionOutcome =
   | {
       kind: "failure";
       reason: string;
+      usage?: AttemptUsage;
       integrationManifestId?: string;
       repairObservations?: V2RepairObservation[];
       decision?: DecisionInput;
@@ -245,7 +248,10 @@ export class V2ExecutionDriver {
         : fact(`${attempt.attemptId}:failed`, at, "attempt.failed", {
             attemptId: attempt.attemptId,
             nodeId: attempt.nodeId,
-            reason: outcome.reason
+            reason: outcome.reason,
+            // A condition that burns tokens and delivers nothing is exactly the
+            // cost the comparative study needs to see.
+            ...(outcome.usage !== undefined ? { usage: outcome.usage } : {})
           }));
       const decision = { ...(outcome.decision ?? defaultFailureDecision(attempt, outcome.reason)), raisedAtGraphRevision: run.graph.revision };
       facts.push(fact(`${attempt.attemptId}:decision:${decision.id}`, at, "decision.raised", { decision }));
@@ -268,7 +274,8 @@ export class V2ExecutionDriver {
           nodeId: attempt.nodeId,
           candidateCommit: outcome.candidateCommit,
           outputDigest: outcome.outputDigest,
-          changedFiles: outcome.changedFiles
+          changedFiles: outcome.changedFiles,
+          ...(outcome.usage !== undefined ? { usage: outcome.usage } : {})
         }),
         fact(`${attempt.attemptId}:validation-completed`, at, "validation.completed", {
           attemptId: attempt.attemptId,

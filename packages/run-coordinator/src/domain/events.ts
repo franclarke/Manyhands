@@ -6,6 +6,22 @@ import { AdoptedArtifactSchema } from "./artifacts.js";
 import { FailureClassSchema, FailureObservationSchema } from "./failures.js";
 import { EvidenceMatrixRecordSchema } from "./evidence.js";
 
+/**
+ * What one attempt cost. Optional on the event: a provider that reports nothing
+ * must still produce a valid journal instead of a fabricated zero, so an absent
+ * record stays distinguishable from a measured zero. `source` is required
+ * whenever a record exists -- a provider-reported figure and a registry
+ * estimate must never be summed as if they were the same measurement.
+ */
+export const AttemptUsageSchema = z.object({
+  tokensIn: z.number().int().nonnegative().optional(),
+  tokensOut: z.number().int().nonnegative().optional(),
+  costUsd: z.number().nonnegative().optional(),
+  source: z.enum(["reported", "estimated", "unavailable"])
+}).strict();
+
+export type AttemptUsage = z.infer<typeof AttemptUsageSchema>;
+
 const BaseEventShape = {
   eventId: EntityIdSchema,
   runId: EntityIdSchema,
@@ -96,10 +112,11 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     nodeId: EntityIdSchema,
     candidateCommit: NonEmptyStringSchema,
     outputDigest: NonEmptyStringSchema,
-    changedFiles: z.array(NonEmptyStringSchema)
+    changedFiles: z.array(NonEmptyStringSchema),
+    usage: AttemptUsageSchema.optional()
   }).strict()),
   event("attempt.repair_attempted", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, pass: z.number().int().positive(), evidenceRefs: z.array(NonEmptyStringSchema) }).strict()),
-  event("attempt.failed", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, reason: NonEmptyStringSchema }).strict()),
+  event("attempt.failed", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, reason: NonEmptyStringSchema, usage: AttemptUsageSchema.optional() }).strict()),
   event("attempt.discarded", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, reason: NonEmptyStringSchema }).strict()),
   event("attempt.stale", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, attemptedFingerprint: NonEmptyStringSchema, currentFingerprint: NonEmptyStringSchema, reason: NonEmptyStringSchema }).strict()),
   event("failure.classified", z.object({ nodeId: EntityIdSchema, failureClass: FailureClassSchema, observation: FailureObservationSchema, allowedActions: z.array(NonEmptyStringSchema), automaticRetryBudget: z.number().int().nonnegative(), discardCandidate: z.boolean() }).strict()),
