@@ -316,3 +316,47 @@ Los artefactos por run son
 `.manyhands/runs/<runId>.snapshot.v2.json`,
 `.manyhands/runs/<runId>.granularity-metrics.json` y el diff
 `git -C <target> diff <base>..<final>`.
+
+---
+
+## Enmiendas al protocolo
+
+> Toda modificación posterior al registro inicial se documenta acá, con su
+> fecha, su motivo y el argumento de por qué no constituye ajuste post-hoc.
+> El criterio es simple: una enmienda es admisible si repara el **instrumento**
+> y afecta a las tres condiciones por igual; es inadmisible si toca el
+> **análisis** o si puede favorecer a alguna condición.
+
+### E-1 (2026-07-24) — Los objetivos se hicieron auto-contenidos
+
+**Qué cambió.** T1 ahora enumera el conjunto exacto de categorías admitidas
+(`food`, `transport`, `lodging`, `entertainment`, `other`). T2 ahora define qué
+es un peso válido (positivo, uno por participante, suma exactamente 1).
+
+**Por qué.** Con la redacción original el planificador se detenía a preguntar
+—«¿qué valores fijos de categoría se aceptan?»— y el driver, por diseño, **para
+en vez de improvisar una respuesta**, porque contestar a mitad del experimento
+cambiaría el estímulo. El resultado era la pérdida completa del run.
+
+**Por qué no es ajuste post-hoc.**
+
+1. Repara el **instrumento**, no el análisis: no toca métricas, criterios de
+   interpretación, hipótesis, orden ni tamaño.
+2. Afecta a las **tres condiciones de forma idéntica**: la ambigüedad no
+   interactúa con la granularidad, y la pérdida de runs por aclaración caía
+   sobre cualquier condición que la sacara en suerte.
+3. No puede favorecer una condición: precisar el dominio del campo no altera
+   cuántas capas toca la tarea, que es lo que determina $C_{task}$.
+
+**Consecuencia.** Conforme al §6, las 12 celdas se re-ejecutaron por completo
+sobre el commit corregido. Ningún run previo a esta enmienda se usa para
+responder una RQ.
+
+### E-2 (2026-07-24) — Métrica de tokens disponible
+
+El §7 anticipaba «tokens / costo» como métrica primaria desde la telemetría del
+executor. Al ejecutar se constató que **nada leía el reporte de consumo**, de
+modo que la métrica no era derivable. Se corrigió el parseo (Codex reporta un
+**total**, no un desglose entrada/salida, y a veces por `stderr`). El total se
+persiste como tal; **no se inventa la división**. Las celdas cuyo proveedor no
+reporte consumo se cuentan aparte y no se promedian con las que sí.

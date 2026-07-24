@@ -9,7 +9,7 @@
   "baseUrl": "http://127.0.0.1:3111",
   "targetRepo": "C:/Users/franc/manyhands-thesis-targets/expense-splitter",
   "baseSha": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
-  "goal": "Add expense categories to the splitter. Extend the Expense type with an optional category field validated against a fixed set of categories, add computeCategoryTotals to the domain, expose listCategoryTotals from the API layer, render a category breakdown in the web surface, and cover the new behaviour with tests. Preserve the existing balance behaviour and keep the current tests green.",
+  "goal": "Add expense categories to the splitter. Extend the Expense type with an optional category field that must be one of exactly \"food\", \"transport\", \"lodging\", \"entertainment\" or \"other\", rejecting any other value, add computeCategoryTotals to the domain, expose listCategoryTotals from the API layer, render a category breakdown in the web surface, and cover the new behaviour with tests. Preserve the existing balance behaviour and keep the current tests green.",
   "granularityCondition": "B",
   "planningSelection": {
     "executorId": "codex-cli",

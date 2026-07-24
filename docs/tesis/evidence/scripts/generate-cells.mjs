@@ -20,13 +20,23 @@ const RUNS_DIR = "C:/Users/franc/Documents/Proyectos/Manyhands/.manyhands/runs";
 
 const CODEX = { executorId: "codex-cli", model: "gpt-5.5", effort: "high" };
 
-/** §3 — two tasks deliberately on opposite sides of the decision threshold. */
+/**
+ * §3 — two tasks deliberately on opposite sides of the decision threshold.
+ *
+ * Both goals are **self-contained**: every value a planner could otherwise stop
+ * to ask about is stated. A goal that triggers a clarification loses the run,
+ * because answering it mid-experiment would change the stimulus. That is an
+ * instrument defect, not a result, and it costs runs from whichever condition
+ * happens to draw it -- so it is fixed once, identically for every condition,
+ * rather than answered case by case.
+ */
 const TASKS = {
   T1: {
     label: "multi-layer feature above the threshold",
     goal: [
       "Add expense categories to the splitter.",
-      "Extend the Expense type with an optional category field validated against a fixed set of categories,",
+      "Extend the Expense type with an optional category field that must be one of exactly",
+      "\"food\", \"transport\", \"lodging\", \"entertainment\" or \"other\", rejecting any other value,",
       "add computeCategoryTotals to the domain, expose listCategoryTotals from the API layer,",
       "render a category breakdown in the web surface, and cover the new behaviour with tests.",
       "Preserve the existing balance behaviour and keep the current tests green."
@@ -36,8 +46,9 @@ const TASKS = {
     label: "narrow domain rule below the threshold",
     goal: [
       "Allow an expense to be split unequally between participants using explicit per-participant weights.",
-      "Validate that the weights are positive and that the weighted shares add up to the expense total,",
-      "rejecting any expense whose weights do not balance, and cover the rule with tests.",
+      "A weight is a positive number, one per participant, and the weights must sum to exactly 1;",
+      "each participant owes that fraction of the total. Reject an expense whose weights are not",
+      "positive, do not cover every participant, or do not sum to 1, and cover the rule with tests.",
       "Keep the change inside the domain module and preserve the existing equal-split behaviour."
     ].join(" ")
   }

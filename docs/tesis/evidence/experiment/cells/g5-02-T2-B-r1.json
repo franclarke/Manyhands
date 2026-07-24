@@ -9,7 +9,7 @@
   "baseUrl": "http://127.0.0.1:3111",
   "targetRepo": "C:/Users/franc/manyhands-thesis-targets/expense-splitter",
   "baseSha": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
-  "goal": "Allow an expense to be split unequally between participants using explicit per-participant weights. Validate that the weights are positive and that the weighted shares add up to the expense total, rejecting any expense whose weights do not balance, and cover the rule with tests. Keep the change inside the domain module and preserve the existing equal-split behaviour.",
+  "goal": "Allow an expense to be split unequally between participants using explicit per-participant weights. A weight is a positive number, one per participant, and the weights must sum to exactly 1; each participant owes that fraction of the total. Reject an expense whose weights are not positive, do not cover every participant, or do not sum to 1, and cover the rule with tests. Keep the change inside the domain module and preserve the existing equal-split behaviour.",
   "granularityCondition": "B",
   "planningSelection": {
     "executorId": "codex-cli",

@@ -1,0 +1,13 @@
+{
+  "cellId": "g5-01-T1-A-r1",
+  "condition": "A",
+  "taskId": "T1",
+  "runId": "11083aa1-b534-4322-bb11-ccf04792126a",
+  "started": "2026-07-24T15:01:07.677Z",
+  "finished": "2026-07-24T15:02:52.959Z",
+  "outcome": {
+    "lifecycle": "planning",
+    "receipt": null,
+    "reason": "planner asked for clarification: What fixed category values should be accepted for Expense.category?"
+  }
+}
