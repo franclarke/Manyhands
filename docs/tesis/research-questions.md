@@ -125,17 +125,30 @@ precondición de implementación.
 
 No se ejecuta en G1; se fija aquí para que las RQ sean operables.
 
-- **Tamaño mínimo:** 3 tareas × 3 condiciones × 3 repeticiones = **27 runs**;
-  recomendado 5 × 3 × 3 = **45**. Cualquier reducción se documenta **antes** de
-  observar resultados. **[roadmap §11]**
+- **Tamaño: 2 tareas × 3 condiciones × 2 repeticiones = 12 runs**, con una regla
+  de escalamiento pre-declarada (una tercera repetición solo en las celdas cuyas
+  dos repeticiones discrepen en la métrica primaria) que lo acota a un máximo de
+  **18**. Este diseño reemplaza al de 27–45 runs del roadmap §11, que resulta
+  desproporcionado para el alcance y el presupuesto de esta tesis. **[decisión
+  de Francisco, 2026-07-24]**
+- **Selección de tareas:** las dos tareas deben caer en **lados opuestos del
+  umbral** de decisión —una multi-capa por encima, una acotada por debajo—, de
+  modo que la política quede expuesta a los dos lados de la paradoja
+  (sub-división y sobre-división) y el diseño no favorezca la hipótesis por
+  construcción.
 - **Constantes:** repositorio y base commit, objetivo y criterios, modelo/esfuerzo/executor,
-  presupuesto/timeouts, versión de ManyHands, comandos de validación, hardware.
-- **Control de sesgo temporal del proveedor:** alternar/randomizar el orden de
-  condiciones.
-- **Análisis:** datos crudos completos; mediana, rango e IQR por condición;
-  resultados por tarea y agregados; fallos y outliers; sensibilidad a costos y a
-  la fórmula de `GEI`; amenazas a la validez; ausencia explícita de significancia
-  cuando el tamaño no la permita. **[roadmap §11]**
+  presupuesto/timeouts, versión de ManyHands (un único commit para todos los
+  runs), comandos de validación, hardware.
+- **Control de sesgo temporal del proveedor:** orden pre-registrado en dos
+  bloques con las condiciones invertidas en el segundo.
+- **Análisis:** datos crudos completos y **valores de cada run individual**
+  (con $n=2$ un promedio oculta más de lo que muestra); fallos y modos de falla;
+  amenazas a la validez. **Sin pruebas de significancia**: el tamaño no las
+  admite y no se reportan p-valores ni intervalos de confianza.
+
+El protocolo completo ---tareas, orden, métricas, criterios de interpretación,
+hipótesis y falsador pre-registrados--- está en
+[`evidence/experiment/protocol.md`](evidence/experiment/protocol.md).
 
 ---
 

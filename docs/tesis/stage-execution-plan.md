@@ -392,18 +392,22 @@ RQ1 (entrega verificada), RQ2 (trade-off éxito/tiempo/costo/coordinación), RQ3
 2. **Protocolo y constantes** (roadmap §11): mismas tareas, repo, base commit,
    modelo/esfuerzo/executor, presupuesto/timeouts, versión de ManyHands, comandos
    de validación, hardware. Orden de condiciones alternado/randomizado.
-3. **Tamaño:** mínimo 3×3×3 = 27 runs; recomendado 5×3×3 = 45. Toda reducción se
-   documenta **antes** de ver resultados; no se elimina una corrida por perjudicar
-   la hipótesis.
+3. **Tamaño: 2 tareas × 3 condiciones × 2 repeticiones = 12 runs**, con
+   escalamiento pre-declarado a un máximo de 18 (tercera repetición solo en
+   celdas cuyas dos repeticiones discrepen en la métrica primaria). Reemplaza el
+   27–45 del roadmap §11 por desproporcionado. Las dos tareas deben caer en
+   **lados opuestos del umbral** para no sesgar el diseño. No se elimina una
+   corrida por perjudicar la hipótesis. Ver `evidence/experiment/protocol.md`.
 4. **Métricas:** primarias (entrega verificada, cobertura de criterios, wall-clock,
    tokens/costo, attempts/retries, fallos validación/integración, decisiones
    humanas) y estructurales (profundidad, hojas, branching, coalesced, tamaño de
    contexto, `stale`, conflictos). `GEI` **secundaria**, siempre con sus
    componentes; versionar fórmula, unidades y denominador cero.
 5. **Scripts de análisis** que regeneran tablas y métricas desde datos crudos.
-6. **Análisis honesto:** datos crudos completos; mediana, rango e IQR; por tarea y
-   agregados; fallos y outliers; sensibilidad a costos y a `GEI`; amenazas a la
-   validez; ausencia explícita de significancia cuando el tamaño no la permita.
+6. **Análisis honesto:** datos crudos completos y valores de **cada run
+   individual**; fallos y modos de falla por condición; amenazas a la validez.
+   **Sin pruebas de significancia** —el tamaño no las admite—; se declara
+   explícitamente qué conclusiones permite y cuáles no.
 
 ### Estructura de evidencia (roadmap §11)
 ```text
@@ -415,10 +419,17 @@ Cada fila de `runs.csv` apunta a `runId`, commit de ManyHands, base commit,
 config y artefactos verificables.
 
 ### Riesgos y mitigación
-- **R5.1 — Varianza del proveedor.** *Mitigación:* repeticiones + randomización de
-  orden; reportar rango/IQR, no solo promedios.
-- **R5.2 — Costo/tiempo.** *Mitigación:* diseño mínimo 27 runs; documentar
-  reducciones antes de observar resultados.
+- **R5.1 — Varianza del proveedor.** *Mitigación:* 2 repeticiones + orden
+  pre-registrado en bloques invertidos; reportar cada run, no solo promedios. Si
+  las dos repeticiones de una celda discrepan, se reporta que la varianza domina
+  sobre el efecto de la condición.
+- **R5.2 — Costo/tiempo.** *Mitigación:* diseño de 12 runs (máx. 18), ejecutable
+  dentro del presupuesto real de la tesis.
+- **R5.4 — Limitación del contrato de alcance como factor de confusión.** La
+  condición B, al generar unidades con alcances más estrechos, está a priori más
+  expuesta al modo de falla conocido. *Mitigación:* resolver la causa raíz antes
+  de ejecutar; regla de inconclusión pre-declarada si más del 50 % de los runs
+  falla por esa causa en todas las condiciones.
 - **R5.3 — `GEI` engañoso.** *Mitigación:* nunca única base; análisis de
   sensibilidad a la fórmula.
 
