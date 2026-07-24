@@ -723,3 +723,33 @@ como registro del estado en G1.
 |---|---|---|---|
 | — | Detección de una condición de readiness insatisfacible | **no implementado** | Un requisito que ningún evento futuro puede satisfacer espera hasta el límite de reloj externo. Declarado como trabajo futuro (CLAIM-104). |
 | — | Calibración empírica de los pesos de $C_{task}$ | **no ejecutado** | Los pesos son una asignación razonada. La tesis lo declara como limitación; el diseño experimental adoptado, deliberadamente, no permite calibrarlos. |
+
+---
+
+## Actualización tras la ejecución de G4 y G5 (2026-07-24, final)
+
+> **Autoridad vigente.** Reemplaza a las secciones anteriores donde haya
+> conflicto.
+
+| ID | Estado previo | Estado final | Evidencia |
+|---|---|---|---|
+| CLAIM-005 | removed | **removed (confirmado)** | El `GEI` sigue fuera de la tesis. El estudio se ejecutó, pero la métrica primaria resultó endógena a la condición (CLAIM-107), de modo que ningún índice compuesto construido sobre ella sería interpretable. |
+| CLAIM-044 | implemented | **implemented** | G4 = PASS: dos runs válidos consecutivos sobre `db096d0`, 13 y 10 tests verdes en clon limpio sobre una base de 5. `evidence/gates/g4-gate-results.md`. |
+| CLAIM-102 | limitación declarada | **limitación declarada (medida)** | Las dos ejecuciones de G4 produjeron topologías distintas para el mismo objetivo; en G5, dos celdas discrepan entre repeticiones. La variabilidad ya no es una afirmación: está cuantificada. |
+
+### Claims nuevos
+
+| ID | Claim | Status | Evidencia |
+|---|---|---|---|
+| CLAIM-107 | Los criterios de aceptación son **endógenos a la condición** comparada | **implemented (resultado metodológico)** | Se compilan por unidad: 5 criterios en la condición A frente a 14 en B y C sobre la misma tarea. Las 12 celdas dieron cobertura 1,00 porque cada condición satisfizo su propia vara. Ninguna métrica de éxito construida sobre ellos compara condiciones. Tesis §7.6.2. |
+| CLAIM-108 | La política adaptativa **no muestra ventaja** sobre no descomponer en este objetivo | **resultado negativo** | G5: sobre T1, A entregó 2/2 y B y C 1/2 cada una, con cerca de un tercio del tiempo y un cuarto de los tokens para la misma superficie pública. La hipótesis pre-registrada quedó falsada. `evidence/gates/g5-gate-results.md`. |
+| CLAIM-109 | Ninguna configuración de umbral puede forzar un corte que el Architect no propuso | **implemented (corolario confirmado)** | Sobre T2, la condición B —diseñada para dividir siempre— produjo **una sola hoja**, igual que A y C. La frontera del resultado negativo es estructural, no un parámetro ajustable. |
+| CLAIM-110 | Los conflictos de integración aparecen **únicamente** al descomponer, y su costo está medido | **implemented** | G5: las 6 celdas de T2 (una hoja) no registraron conflicto alguno; los conflictos aparecen solo en T1/B y T1/C. Costo del orden de 800 s y 75 000 tokens adicionales sobre el mismo objetivo. |
+
+### Claims que siguen sin evidencia
+
+| ID | Claim | Estado | Consecuencia |
+|---|---|---|---|
+| — | Ventaja de la descomposición bajo saturación de contexto | **no probado** | El repositorio objetivo es demasiado pequeño: con ~25 000 tokens por run ningún agente se acercó a saturar. El experimento **no puso a prueba su hipótesis en el régimen que le es favorable**, y la tesis lo declara. |
+| — | Detección de una condición de readiness insatisfacible | **no implementado** | Sigue esperando en vez de fallar con su causa. |
+| — | Calibración empírica de los pesos de $C_{task}$ | **no ejecutado** | El diseño adoptado, deliberadamente, no permite calibrarlos. |
