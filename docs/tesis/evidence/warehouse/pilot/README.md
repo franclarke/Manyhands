@@ -67,3 +67,13 @@ recibieron del Codex CLI el mismo rechazo de cuota y cero bytes de stdout. No
 hubo selección C2, agente de código ni entrega. Se clasifica como interrupción
 de capacidad externa, no como resultado del sistema bajo estudio. Véase
 [`interruptions/codex-usage-limit-2026-07-25.md`](interruptions/codex-usage-limit-2026-07-25.md).
+
+## Series 4 a 7 — planning corregido, ejecución interrumpida
+
+Las series `4` a `7` corrieron sobre Claude Code `sonnet`. Produjeron tres
+defectos productivos de planning, todos corregidos con TDD y documentados en
+`defects/`. `series-7` superó planning por primera vez y persistió una decisión
+C2 real, pero su agente agotó el límite de sesión del proveedor durante la
+ejecución; véase `interruptions/claude-session-limit-2026-07-25.md`.
+
+Resultado acumulado del piloto: **0/8 incrementos verificados**.

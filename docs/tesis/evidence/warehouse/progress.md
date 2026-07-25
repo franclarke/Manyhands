@@ -158,5 +158,29 @@ por tres causas distintas y dos de ellas eran detectables sin gastar un run.
   de ManyHands.
 - Estado científico sin cambios: **0/8 incrementos verificados**; ninguna
   entrega fallida es base de W2. Task 13 sigue abierta.
-- Falla ajena preexistente: `tests/runs-list-performance.test.ts` (3 tests con
-  timeout). Ningún archivo de su grafo de imports fue tocado por este bloque.
+- Falla ajena preexistente, ya resuelta: `tests/runs-list-performance.test.ts`
+  expiraba porque `GET /api/runs` resolvía alias con una lectura bajo lock por
+  workspace. Corregido en `433d107`; la suite completa bajó de 282 s a 91 s.
+
+### 2026-07-25 — Task 13: planning corregido; ejecución interrumpida por cuota
+
+- Cuatro series nuevas (`series-4` a `series-7`) sobre el executor Claude Code
+  `sonnet`. Tres defectos productivos hallados y corregidos con TDD:
+  - `62564ef`: los envelopes `planning.node` contaminaban el feedback de
+    reparación y enterraban la única causa accionable, así que los reintentos no
+    convergían;
+  - `635062e`: `plannedPaths` se decidía por intención de escritura y no por
+    existencia en el snapshot, de modo que `package.json` se declaraba como
+    creado y el review lo rechazaba;
+  - `cdb3466`: la regla de fidelidad contractual quedó insatisfacible al
+    renderizar el contrato desde el specimen —41 líneas y 1212 caracteres— y
+    ahora exige verbatim sólo los bloques con fences.
+- `series-7` es el primer run del piloto que **supera planning**: plan aprobado,
+  ejecución iniciada y decisión C2 persistida sobre el instrumento endurecido
+  (`totalLeafCount=1`, `maxGraphDepth=0`, `minimumAdvantage=0.15`).
+- Se detuvo en `waiting_for_input` porque el agente de código agotó el límite de
+  sesión de Claude Code. Interrupción externa, no defecto del sistema bajo
+  estudio; documentada en
+  [`pilot/interruptions/claude-session-limit-2026-07-25.md`](pilot/interruptions/claude-session-limit-2026-07-25.md).
+- Estado científico sin cambios: **0/8 incrementos verificados**; ninguna entrega
+  fallida es base de W2. Task 13 sigue abierta.
