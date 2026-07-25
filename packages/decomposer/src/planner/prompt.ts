@@ -31,6 +31,7 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       "Every candidate artifact and seam must name at least one consumer unit key. A candidate whose only consumer would be its own producer, or which has no consumer yet, is not a relation: omit it entirely rather than emitting an empty consumerUnitKeys array.",
       "Raise a human question only when the answer changes behavior, architecture, scope, risk, or acceptance.",
       "Existing repository paths must be cited through path evidence. Files that a unit will create must be declared in plannedPaths and are not repository evidence.",
+      "The test is whether the file exists in the snapshot, not whether you will write to it. A file you will modify, extend, or rewrite already exists, so cite it as path evidence; plannedPaths is only for paths absent from the snapshot. Editing an existing package.json, tsconfig, or lockfile is evidence, never a planned path.",
       "Every leaf must either cite existing path evidence or declare at least one concrete planned path.",
       "If an outcome adds or changes a package script, dependency, build, test, typecheck, lint, or workspace command, cite the relevant package manifest path evidence in the implementing unit so that configuration is inside its executable scope.",
       "Acceptance intents are a fidelity boundary. Preserve declared Contract, Protocol, or Schema sections verbatim in an acceptance intent; never flatten nested fields, rename literals, or weaken exact formats and thresholds.",

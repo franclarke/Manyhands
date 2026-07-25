@@ -244,6 +244,12 @@ describe("WorkBreakdown", () => {
     // Warehouse pilot W1 lost every planning attempt to an empty
     // consumerUnitKeys array; the schema forbids it but the prompt only asked
     // for consumers to be "explicit", which an empty array formally satisfies.
+    // W1 of series-5 produced a full breakdown and lost it at plan review:
+    // planned_path_already_exists for package.json. Asking for a manifest to be
+    // cited "so that configuration is inside its executable scope" left it open
+    // whether a file you intend to write to counts as created or existing.
+    expect(prompt.system).toContain("whether the file exists in the snapshot, not whether you will write to it");
+    expect(prompt.system).toContain("Editing an existing package.json, tsconfig, or lockfile is evidence, never a planned path");
     expect(prompt.system).toContain("at least one consumer unit key");
     expect(prompt.system).toContain("omit it entirely rather than emitting an empty consumerUnitKeys array");
     expect(prompt.system).toContain("at least two cohesive children");
