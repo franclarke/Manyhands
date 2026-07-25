@@ -753,3 +753,22 @@ como registro del estado en G1.
 | — | Ventaja de la descomposición bajo saturación de contexto | **no probado** | El repositorio objetivo es demasiado pequeño: con ~25 000 tokens por run ningún agente se acercó a saturar. El experimento **no puso a prueba su hipótesis en el régimen que le es favorable**, y la tesis lo declara. |
 | — | Detección de una condición de readiness insatisfacible | **no implementado** | Sigue esperando en vez de fallar con su causa. |
 | — | Calibración empírica de los pesos de $C_{task}$ | **no ejecutado** | El diseño adoptado, deliberadamente, no permite calibrarlos. |
+
+---
+
+## Programa C2 + Warehouse (iniciado 2026-07-24)
+
+> Esta sección registra trabajo nuevo sin reescribir el resultado final de G5.
+> Hasta que cada gate cierre, los ítems C2 permanecen `planned` o `partial` y no
+> respaldan claims de la tesis.
+
+| ID | Claim candidato | Estado | Evidencia requerida |
+|---|---|---|---|
+| CLAIM-111 | C2 selecciona una frontera semántica por utilidad esperada sin fabricar particiones por paths | **planned** | selector puro, prueba vertical y eventos replayables |
+| CLAIM-112 | La masa de contexto usada por C2 se deriva de bytes versionados del snapshot y declara incertidumbre para paths no medidos | **planned** | índice exacto + estimator determinista |
+| CLAIM-113 | Los criterios de aceptación del usuario no se multiplican por la topología seleccionada | **planned** | contratos A/B/C2 con ownership único |
+| CLAIM-114 | Warehouse Control Tower puede construirse incrementalmente con una única versión congelada de ManyHands | **planned** | W1–W8, oráculos externos y reconstrucción limpia |
+
+El G5 anterior conserva su interpretación: C1 no mostró ventaja sobre A en el
+target pequeño y la métrica de aceptación fue endógena. Es evidencia formativa
+que motiva CLAIM-111..114, no evidencia a favor de ellos.

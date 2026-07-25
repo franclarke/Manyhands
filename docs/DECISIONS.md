@@ -261,6 +261,20 @@ monótona, se sanea y verifica antes de entregarse, y entra en quarantine ante
 cualquier resultado ambiguo. Un commit candidato se ancla antes del reset. Véase
 [ADR 0011](adr/0011-exact-repository-index-and-fenced-worktree-pool.md).
 
+## A21. La granularidad se selecciona entre cortes semánticos por utilidad esperada
+
+El Planner propone un `WorkBreakdown` semántico; no decide por sí solo qué
+frontera se ejecuta. La política adaptativa compara ejecutar un composite como
+hoja con expandir sus hijos, usando señales disponibles antes de ejecutar:
+alivio de contexto, paralelismo, aislamiento de fallos, coordinación, overlap
+de paths, duplicación de validación e incertidumbre.
+
+La política nunca fabrica unidades partiendo rutas. Si una hoja es inviable y
+el Planner no ofreció al menos dos hijos coherentes, el resultado correcto es
+un replan semántico explícito. La selección, configuración efectiva y evidencia
+se persisten como hechos del planning; sólo la frontera elegida llega al Graph
+Compiler. Véase [ADR 0012](adr/0012-utility-based-granularity-selection.md).
+
 ## Decisiones retiradas
 
 Quedan retiradas como arquitectura vigente:

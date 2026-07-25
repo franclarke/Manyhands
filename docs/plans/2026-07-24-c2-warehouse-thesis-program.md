@@ -10,6 +10,23 @@
 
 ---
 
+## Execution status
+
+> **Started:** 2026-07-24 · **Branch:** `main` · **Rule:** a checkpoint closes
+> only after its documentation, verification evidence and local commit exist.
+> Detailed evidence: [`../tesis/evidence/warehouse/progress.md`](../tesis/evidence/warehouse/progress.md).
+
+| Checkpoint | Tasks | Status | Evidence |
+|---|---:|---|---|
+| 1 — C2 core | 1–4 | **in progress** | pending |
+| 2 — Productive integration | 5–8 | pending | — |
+| 3 — Metrics and stability | 9–10 | pending | — |
+| 4 — Warehouse assets and drivers | 11–12 | pending | — |
+| 5 — Pilot construction | 13 | pending | — |
+| 6 — Freeze | 14 | pending | — |
+| 7 — Final construction and comparison | 15–16 | pending | — |
+| 8 — Results and thesis | 17–18 | pending | — |
+
 ## 1. Decisión ejecutiva
 
 Sí conviene construir Warehouse de manera incremental con ManyHands, pero no como una única construcción que mezcle versiones del orquestador.

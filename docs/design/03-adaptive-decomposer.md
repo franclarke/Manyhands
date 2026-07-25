@@ -1,4 +1,29 @@
-# 03 — MOTOR DE DESCOMPOSICIÓN ADAPTATIVA DE GRANULARIDAD (DECOMPOSER V3)
+# 03 — MOTOR DE DESCOMPOSICIÓN ADAPTATIVA DE GRANULARIDAD
+
+> **Estado de transición (2026-07-24):** la política productiva vigente al
+> iniciar el programa Warehouse es C1 (`c-task/1.0.0`). El target aceptado es C2
+> (`adaptive-utility/2.0.0`), definido en
+> [`../adr/0012-utility-based-granularity-selection.md`](../adr/0012-utility-based-granularity-selection.md).
+> Las secciones de `C_task` que siguen documentan C1 como antecedente histórico;
+> no describen todavía una implementación C2 verificada.
+
+## Target C2
+
+C2 mantiene la separación Planner / Graph Compiler: el Planner produce un
+árbol de cortes semánticos y relaciones justificadas; un selector determinista
+elige bottom-up qué composites permanecen como hojas y cuáles se expanden. La
+decisión compara beneficios (`contextRelief`, `parallelism`, `faultIsolation`)
+contra costos (`coordination`, `pathOverlap`, `validationDuplication`,
+`uncertainty`).
+
+Una configuración no puede forzar un corte inexistente. Una hoja inviable sin
+dos hijos semánticos válidos solicita replan y nunca se divide por paths. Cada
+assessment debe citar el snapshot y candidate hash que lo originaron y debe
+sobrevivir event replay.
+
+---
+
+## Antecedente histórico: C1
 
 Este documento especifica la arquitectura, formulación matemática, pipeline en dos fases, críticos deterministas y métricas del **Adaptive Granularity Decomposer Engine V3** en **ManyHands** (`packages/decomposer`).
 
