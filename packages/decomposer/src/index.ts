@@ -22,6 +22,7 @@ export * from "./planner/prompt.js";
 export * from "./planner/schema.js";
 export * from "./planner/work-breakdown.js";
 export * from "./compiler/contract-compiler.js";
+export * from "./compiler/acceptance-allocation.js";
 export * from "./compiler/graph-compiler.js";
 export * from "./compiler/validation-obligations.js";
 export * from "./critics/review.js";

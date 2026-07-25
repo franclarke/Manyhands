@@ -21,6 +21,18 @@ export function compileAcceptanceCriterion(
   };
 }
 
+export function compileLocalAcceptanceCriterion(
+  unit: WorkUnit,
+  dependencies: ValidationCompilationDependencies
+): TaskAcceptanceCriterion {
+  return {
+    id: dependencies.idFor("criterion", `${unit.key}-local-outcome`),
+    kind: validationLayerFor(unit),
+    description: `Local outcome: ${unit.expectedOutcomes.join("; ")}`,
+    required: true
+  };
+}
+
 export function compileValidationObligation(
   unit: WorkUnit,
   criterion: TaskAcceptanceCriterion,

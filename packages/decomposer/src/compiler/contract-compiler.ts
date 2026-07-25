@@ -10,8 +10,10 @@ import {
 } from "@manyhands/contracts";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
 import type { WorkBreakdown, WorkUnit } from "../planner/schema.js";
+import { allocateAcceptanceIntents } from "./acceptance-allocation.js";
 import {
   compileAcceptanceCriterion,
+  compileLocalAcceptanceCriterion,
   compileValidationObligation,
   type ValidationCompilationDependencies
 } from "./validation-obligations.js";
@@ -24,6 +26,7 @@ export interface ContractCompilationResult {
   nodeOutputArtifactContracts: ArtifactContract[];
   seamContracts: SeamContract[];
   scopePathsByNodeId: Record<string, string[]>;
+  acceptanceOwnerByIntentId: Record<string, string>;
 }
 
 export function compileContractBundles(input: {
@@ -107,13 +110,22 @@ export function compileContractBundles(input: {
   });
 
   const intents = new Map(input.breakdown.acceptanceIntents.map((intent) => [intent.id, intent]));
+  const acceptanceOwnerByIntentId = allocateAcceptanceIntents(input.breakdown.root);
+  for (const intent of input.breakdown.acceptanceIntents) {
+    acceptanceOwnerByIntentId[intent.id] ??= input.breakdown.root.key;
+  }
   const bundles = units.map((unit) => {
     const nodeId = requireNodeId(input.nodeIdByUnitKey, unit.key);
-    const criteria = unit.acceptanceIntentIds.map((intentId) => {
+    const userCriteria = unit.acceptanceIntentIds
+      .filter((intentId) => acceptanceOwnerByIntentId[intentId] === unit.key)
+      .map((intentId) => {
       const intent = intents.get(intentId);
       if (intent === undefined) throw new Error(`Unit ${unit.key} references missing acceptance intent ${intentId}.`);
       return compileAcceptanceCriterion(unit, intent, dependencies);
     });
+    const criteria = userCriteria.length > 0
+      ? userCriteria
+      : [compileLocalAcceptanceCriterion(unit, dependencies)];
     const scope = contractWithRevision({
       schemaVersion: 2 as const,
       id: dependencies.idFor("scope-contract", unit.key),
@@ -157,7 +169,14 @@ export function compileContractBundles(input: {
     });
   });
 
-  return { bundles, artifactContracts: allArtifactContracts, nodeOutputArtifactContracts, seamContracts, scopePathsByNodeId };
+  return {
+    bundles,
+    artifactContracts: allArtifactContracts,
+    nodeOutputArtifactContracts,
+    seamContracts,
+    scopePathsByNodeId,
+    acceptanceOwnerByIntentId
+  };
 }
 
 function populateScopePaths(
