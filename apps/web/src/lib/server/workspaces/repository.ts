@@ -45,6 +45,14 @@ export interface WorkspaceRepository {
   delete(id: string): Promise<void>;
   /** Canonical id plus every legacy id migrated to it. */
   equivalentIds(id: string): Promise<string[]>;
+  /**
+   * Every id — canonical and legacy alias alike — mapped to its workspace, in a
+   * single locked read. Callers resolving a batch of arbitrary workspace ids
+   * must use this instead of one `equivalentIds` per workspace: each read takes
+   * the cross-process file lock, so the per-workspace form is an N+1 over a
+   * mutex and dominates the request it belongs to.
+   */
+  indexById(): Promise<Map<string, Workspace>>;
   resolveMigrationConflict(
     duplicateWorkspaceId: string,
     choice: WorkspaceMigrationResolutionChoice
@@ -114,6 +122,19 @@ export class JsonWorkspaceRepository implements WorkspaceRepository {
     return this.withLock(async () => {
       const file = await this.readOrEmpty();
       return file.workspaces.find((entry) => entry.slug === slug) ?? null;
+    });
+  }
+
+  async indexById(): Promise<Map<string, Workspace>> {
+    return this.withLock(async () => {
+      const file = await this.ensureSeeded();
+      const byCanonicalId = new Map(file.workspaces.map((entry) => [entry.id, entry]));
+      const index = new Map(byCanonicalId);
+      for (const alias of Object.keys(file.aliases ?? {})) {
+        const workspace = byCanonicalId.get(resolveAlias(file.aliases, alias));
+        if (workspace !== undefined) index.set(alias, workspace);
+      }
+      return index;
     });
   }
 

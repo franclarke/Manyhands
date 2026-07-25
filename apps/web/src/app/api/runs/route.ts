@@ -40,13 +40,11 @@ export async function GET(request: Request): Promise<NextResponse> {
     let runs = await getRunRepository().list(filter);
     const statuses = statusParam === null ? [] : parseStatusFilter(statusParam);
     if (statuses.length > 0) runs = runs.filter((run) => statuses.includes(run.projection.lifecycle));
-    const workspaces = await workspaceRepository.list();
-    const byId = new Map(workspaces.map((workspace) => [workspace.id, workspace]));
-    for (const workspace of workspaces) {
-      for (const equivalentId of await workspaceRepository.equivalentIds(workspace.id)) {
-        byId.set(equivalentId, workspace);
-      }
-    }
+    // One locked read. Resolving aliases with an `equivalentIds` call per
+    // workspace took the workspace file lock once per workspace, and each
+    // acquisition costs ~1.3s on a Windows volume: the listing spent ~17s of
+    // its ~17.3s here while its own run data read in 6ms.
+    const byId = await workspaceRepository.indexById();
     return NextResponse.json({ runs: runs.map((run) => toRunPreview(run, byId)) });
   } catch (error) {
     return errorResponse(error);

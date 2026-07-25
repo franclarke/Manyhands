@@ -216,6 +216,14 @@ describe("workspace physical repository identity", () => {
     expect((await workspaces.get("workspace-new")).id).toBe("workspace-old");
     expect((await workspaces.equivalentIds("workspace-old")).sort()).toEqual(["workspace-new", "workspace-old"]);
 
+    // One locked read must resolve every id `equivalentIds` would, canonical
+    // and migrated alike; callers batch-resolving ids rely on it instead of
+    // taking the workspace file lock once per workspace.
+    const index = await workspaces.indexById();
+    expect([...index.keys()].sort()).toEqual(["workspace-new", "workspace-old"]);
+    expect(index.get("workspace-new")?.id).toBe("workspace-old");
+    expect(index.get("workspace-old")?.id).toBe("workspace-old");
+
     const persisted = JSON.parse(await readFile(filePath, "utf8")) as {
       aliases?: Record<string, string>;
       workspaces: Array<{ id: string; repositoryIdentity?: { key: string } }>;
