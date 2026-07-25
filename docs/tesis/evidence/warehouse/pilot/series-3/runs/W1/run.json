@@ -1,0 +1,62 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "efa0a8cc-b293-4082-bf59-b502b213f150",
+    "workspaceId": "bdcf0fcf-3a84-4b69-bce3-737fcf5b136e",
+    "userPrompt": "# W1 — Layout e inventario determinista\n\n## Goal\n\nConstruí el primer incremento funcional de Warehouse Control Tower: un modelo\nde zonas, pasillos y bins con inventario por SKU y un escenario reproducible\n`thesis-seed-2026`.\n\n## Acceptance\n\n- El escenario contiene al menos 3 zonas, 12 bins y 3 SKUs con stock positivo.\n- Operaciones de ingreso, retiro y transferencia preservan cantidades y\n  rechazan stock negativo o bins desconocidos.\n- `pnpm study:probe -- --increment W1 --scenario thesis-seed-2026 --format json`\n  usa el dominio productivo y emite schema 1, `stateHash`, `layout` e `inventory`.\n- Tests, typecheck y build quedan verdes.\n\n## Probe contract\n\nCampos exactos: `schemaVersion`, `increment`, `scenario`, `stateHash`,\n`capabilities`, `layout` e `inventory`.\n\nEl comando de la sonda escribe únicamente un objeto JSON determinista con esta\nenvoltura exacta: `schemaVersion: 1`, `increment: \"W1\"`,\n`scenario: \"thesis-seed-2026\"`, `stateHash: \"sha256:<64 hex minúsculos>\"` y\n`capabilities`. Este último contiene `layout: { zones, bins }` con valores\nnuméricos mínimos 3 y 12, e `inventory: { skus, totalUnits }` con mínimos 3 y\n1. No renombrar, anidar ni sustituir estos campos.\n\n## Constraints\n\n- Base: domain-free seed commit from `seed-manifest.json`.\n- No fixtures, respuestas hardcodeadas ni una segunda implementación para la\n  sonda; el mismo seed debe producir bytes JSON deterministas.\n- Elegí boundaries cohesivos sin asumir la arquitectura de referencia.\n\n## Oracle\n\nOracle id: `warehouse-w1-v1`. El oráculo externo ejecuta los comandos del repo,\ninvoca dos veces la sonda y verifica layout, inventario y determinismo.",
+    "title": "# W1 — Layout e inventario determinista\n\n## Goal\n\nConstruí el primer incremento funcional de Warehouse Control Tower: un",
+    "planningSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "repairSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 600000,
+      "integrationTimeoutMs": 900000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed"
+    },
+    "granularityCondition": "C2",
+    "targetContext": {
+      "sourceRealPath": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-3",
+      "gitCommonDir": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-3\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "46443371157641239"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "0f87e457ae154385cbb81bb6e3541a3533b78761",
+      "remoteUrl": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-seed",
+      "fingerprint": "998a23963c6ecc34",
+      "capturedAt": "2026-07-25T03:16:23.021Z"
+    },
+    "projection": {
+      "eventSequence": 9,
+      "lifecycle": "failed",
+      "repositorySnapshotId": "sha256:4a2c3f16863ad4470108e11949e1b07db64f50e15e891acb1faca637580107bb",
+      "failureReason": "WorkBreakdown planning failed after 3 attempts: codex-cli planning failed with exit code 1 (envelopes=none; stdoutBytes=0; stderr=\"::manager: failed to renew cache TTL: missing field `supports_reasoning_summaries` at line 80 column 5 ERROR: You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Jul 30th, 2026 12:37 AM. ERROR: You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Jul 30th, 2026 12:37 AM.\").",
+      "updatedAt": "2026-07-25T03:17:52.028Z"
+    },
+    "version": 24,
+    "mutationFence": 1,
+    "createdAt": "2026-07-25T03:16:23.021Z",
+    "updatedAt": "2026-07-25T03:17:52.127Z",
+    "heartbeatAt": "2026-07-25T03:17:51.357Z"
+  }
+}

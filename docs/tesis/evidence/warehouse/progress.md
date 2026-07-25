@@ -19,7 +19,7 @@
 | 2 — Productive integration | 5–8 | **completed** | `bf0ee82`, `d96cc24`, `a424ade`, `7f7d9b4`, `18e6aab` | 50 tests PASS + 3 typechecks + 2 builds |
 | 3 — Metrics and stability | 9–10 | **completed** | `cf6db65`, `5584602`, commit de cierre | 2/2 entregas + clones limpios |
 | 4 — Warehouse assets and drivers | 11–12 | **completed** | `550f81c`, `c0d4be8` | 26 tests + seed verify + 8-cell dry-run |
-| 5 — Pilot construction | 13 | pending | — | — |
+| 5 — Pilot construction | 13 | **in progress; external quota pause** | commits formativos versionados | 0/8 verificados; reanudar W1 después de 2026-07-30 00:37 |
 | 6 — Freeze | 14 | pending | — | — |
 | 7 — Final construction and comparison | 15–16 | pending | — | — |
 | 8 — Results and thesis | 17–18 | pending | — | — |
@@ -99,3 +99,20 @@
 - Verificación: 26 tests PASS, seed verify PASS y dry-run W1–W8 PASS sin writes.
 - Evidencia detallada: [`checkpoints/checkpoint-4.md`](checkpoints/checkpoint-4.md).
 - Siguiente bloque: Task 13, Warehouse Pilot.
+
+### 2026-07-25 — Task 13 en curso; pausa por cuota externa
+
+- Primer W1: lifecycle completed pero oráculo FAIL. Se corrigieron con TDD el
+  scope de `package.json` y la especificación oculta de la sonda; no se adoptó.
+- Segundo W1: lifecycle completed sin repair y comandos reales, pero oráculo
+  FAIL. Se corrigió el banner pnpm del instrumento; la reejecución diagnóstica
+  confirmó además nesting y prefijo hash incorrectos. Se agregó preservación
+  verbatim de secciones contractuales; no se adoptó.
+- Tercer W1: no evaluable. Los tres attempts de planning fueron rechazados por
+  cuota del proveedor antes de emitir un candidate. No hubo decisión C2 ni
+  ejecución.
+- Estado científico: 0/8 incrementos verificados; ninguna entrega fallida es
+  base de W2. Task 13 sigue abierta.
+- Reanudación: después de 2026-07-30 00:37, nuevo clon seed y nueva serie con la
+  misma versión conductual (`f5b99f2`), assets fijados y preflight completo; el
+  HEAD exacto se registra al reiniciar.

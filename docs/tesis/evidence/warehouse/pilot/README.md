@@ -41,3 +41,11 @@ Las causas y regresiones están en
 [`pnpm-json-channel`](defects/pnpm-json-channel/README.md) y
 [`contract-fidelity`](defects/contract-fidelity/README.md). Resultado acumulado:
 **0/8 incrementos verificados**.
+
+## Tercer intento W1 — interrupción externa
+
+La serie `series-3` no llegó a producir un breakdown. Sus tres planning attempts
+recibieron del Codex CLI el mismo rechazo de cuota y cero bytes de stdout. No
+hubo selección C2, agente de código ni entrega. Se clasifica como interrupción
+de capacidad externa, no como resultado del sistema bajo estudio. Véase
+[`interruptions/codex-usage-limit-2026-07-25.md`](interruptions/codex-usage-limit-2026-07-25.md).
