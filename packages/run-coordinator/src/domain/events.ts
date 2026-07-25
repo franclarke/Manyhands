@@ -102,6 +102,43 @@ export const RunEventSchema = z.discriminatedUnion("type", [
       coalescedUnitsCount: z.number().int().nonnegative()
     }).strict()
   }).strict()),
+  event("planning.granularity_strategy_selected", z.object({
+    policyVersion: NonEmptyStringSchema,
+    condition: z.enum(["A", "B", "C2"]),
+    candidateTreeHash: NonEmptyStringSchema,
+    config: z.object({
+      minimumAdvantage: z.number().min(-1).max(1),
+      maxLeafContextTokens: z.number().int().positive(),
+      maxLeafScopePaths: z.number().int().positive()
+    }).strict(),
+    assessments: z.array(z.object({
+      unitKey: EntityIdSchema,
+      nodeId: EntityIdSchema,
+      selected: z.enum(["leaf", "split", "semantic_replan"]),
+      leafFeasible: z.boolean(),
+      splitViable: z.boolean(),
+      features: z.object({
+        contextRelief: z.number().min(0).max(1),
+        parallelism: z.number().min(0).max(1),
+        faultIsolation: z.number().min(0).max(1),
+        coordination: z.number().min(0).max(1),
+        pathOverlap: z.number().min(0).max(1),
+        validationDuplication: z.number().min(0).max(1),
+        uncertainty: z.number().min(0).max(1)
+      }).strict(),
+      benefit: z.number().min(0).max(1),
+      cost: z.number().min(0).max(1),
+      splitAdvantage: z.number().min(-1).max(1),
+      minimumAdvantage: z.number().min(-1).max(1),
+      evidenceRefs: z.array(NonEmptyStringSchema),
+      rationale: NonEmptyStringSchema
+    }).strict()).min(1),
+    metrics: z.object({
+      maxGraphDepth: z.number().int().nonnegative(),
+      totalLeafCount: z.number().int().positive(),
+      averageBranchingFactor: z.number().nonnegative()
+    }).strict()
+  }).strict()),
   event("planning.completed", z.object({ breakdownId: EntityIdSchema, breakdown: z.record(z.unknown()) }).strict()),
   event("graph.compiled", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive(), graph: z.record(z.unknown()), contracts: z.array(z.record(z.unknown())), review: z.record(z.unknown()), trace: z.record(z.unknown()) }).strict()),
   event("planning.critic_recorded", z.object({ critic: NonEmptyStringSchema, findings: z.array(z.record(z.unknown())) }).strict()),

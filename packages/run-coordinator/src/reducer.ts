@@ -49,6 +49,38 @@ export interface GranularityProjection {
   metrics: { maxGraphDepth: number; totalLeafCount: number; averageBranchingFactor: number; coalescedUnitsCount: number };
 }
 
+export interface GranularityStrategyAssessmentProjection {
+  unitKey: string;
+  nodeId: string;
+  selected: "leaf" | "split" | "semantic_replan";
+  leafFeasible: boolean;
+  splitViable: boolean;
+  features: {
+    contextRelief: number;
+    parallelism: number;
+    faultIsolation: number;
+    coordination: number;
+    pathOverlap: number;
+    validationDuplication: number;
+    uncertainty: number;
+  };
+  benefit: number;
+  cost: number;
+  splitAdvantage: number;
+  minimumAdvantage: number;
+  evidenceRefs: string[];
+  rationale: string;
+}
+
+export interface GranularityStrategyProjection {
+  policyVersion: string;
+  condition: "A" | "B" | "C2";
+  candidateTreeHash: string;
+  config: { minimumAdvantage: number; maxLeafContextTokens: number; maxLeafScopePaths: number };
+  assessments: Record<string, GranularityStrategyAssessmentProjection>;
+  metrics: { maxGraphDepth: number; totalLeafCount: number; averageBranchingFactor: number };
+}
+
 export interface RunProjection {
   runId: string;
   goal: string;
@@ -59,6 +91,7 @@ export interface RunProjection {
   graphRevision?: number;
   approvedGraphRevision?: number;
   granularity?: GranularityProjection;
+  granularityStrategy?: GranularityStrategyProjection;
   decisions: Record<string, Decision>;
   readiness: { readyNodeIds: string[]; pendingDecisionIds: string[] };
   selectedWaves: Array<{ waveId: string; nodeIds: string[]; maxParallel: number }>;
@@ -148,6 +181,21 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
           ...(assessment.recommendedBranchingFactor === undefined ? {} : { recommendedBranchingFactor: assessment.recommendedBranchingFactor })
         }])),
         criticDecisions: event.payload.criticDecisions.map((decision) => ({ ...decision, unitIds: [...decision.unitIds] })),
+        metrics: { ...event.payload.metrics }
+      };
+      break;
+    case "planning.granularity_strategy_selected":
+      if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot record planning facts while ${next.lifecycle}.`);
+      next.granularityStrategy = {
+        policyVersion: event.payload.policyVersion,
+        condition: event.payload.condition,
+        candidateTreeHash: event.payload.candidateTreeHash,
+        config: { ...event.payload.config },
+        assessments: Object.fromEntries(event.payload.assessments.map((assessment) => [assessment.nodeId, {
+          ...assessment,
+          features: { ...assessment.features },
+          evidenceRefs: [...assessment.evidenceRefs]
+        }])),
         metrics: { ...event.payload.metrics }
       };
       break;
