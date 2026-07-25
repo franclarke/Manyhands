@@ -198,6 +198,31 @@ describe("WorkBreakdown", () => {
     expect(result).toEqual(repaired);
   });
 
+  it("retries when a declared contract section is flattened instead of preserved verbatim", async () => {
+    const contract = [
+      "## Probe contract",
+      "",
+      "Emit `{ capabilities: { layout, inventory } }` and a `sha256:` state hash."
+    ].join("\n");
+    const incomplete = fixture();
+    incomplete.acceptanceIntents[0]!.description = "Emit capabilities, layout, inventory and a state hash.";
+    const repaired = fixture();
+    repaired.acceptanceIntents[0]!.description = contract;
+    const generate = vi.fn().mockResolvedValueOnce(incomplete).mockResolvedValueOnce(repaired);
+    const planner = new WorkBreakdownPlanner({ model: { generate }, maxAttempts: 2, retryDelayMs: 0 });
+
+    const result = await planner.plan({
+      ...plannerInput(),
+      goal: `Build the probe.\n\n${contract}\n\n## Constraints\n\nKeep it deterministic.`
+    });
+
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(generate.mock.calls[1]?.[0].repairIssues).toEqual(expect.arrayContaining([
+      expect.stringContaining("Probe contract")
+    ]));
+    expect(result).toEqual(repaired);
+  });
+
   it("passes measured granularity feedback into a semantic replan without prescribing a path split", () => {
     const prompt = buildWorkBreakdownPrompt({
       ...plannerInput(),

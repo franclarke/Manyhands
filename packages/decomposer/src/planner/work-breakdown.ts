@@ -111,11 +111,11 @@ export class WorkBreakdownPlanner {
     const cached = this.cache?.get(cacheKey);
     if (cached !== undefined) {
       const parsedCached = WorkBreakdownSchema.parse(cached);
-      if (commandSurfaceIssues(parsedCached, input).length === 0) return parsedCached;
+      if (planningIssues(parsedCached, input).length === 0) return parsedCached;
     }
 
     const prompt = buildWorkBreakdownPrompt(input);
-    let repairIssues: string[] = cached === undefined ? [] : commandSurfaceIssues(WorkBreakdownSchema.parse(cached), input);
+    let repairIssues: string[] = cached === undefined ? [] : planningIssues(WorkBreakdownSchema.parse(cached), input);
     for (let attempt = 1; attempt <= this.maxAttempts; attempt += 1) {
       await observer.onAttemptStarted?.({ attempt });
       const discovered = new Set<string>();
@@ -132,7 +132,7 @@ export class WorkBreakdownPlanner {
         for (const output of outputs) {
           const parsed = WorkBreakdownSchema.safeParse(output);
           if (parsed.success) {
-            const groundingIssues = commandSurfaceIssues(parsed.data, input);
+            const groundingIssues = planningIssues(parsed.data, input);
             if (groundingIssues.length > 0) {
               failures.push(...groundingIssues);
               continue;
@@ -156,6 +156,37 @@ export class WorkBreakdownPlanner {
     }
     throw new Error(`WorkBreakdown planning failed after ${this.maxAttempts} attempts: ${repairIssues.join("; ")}`);
   }
+}
+
+function planningIssues(breakdown: WorkBreakdown, input: WorkBreakdownPlannerInput): string[] {
+  return [...commandSurfaceIssues(breakdown, input), ...contractFidelityIssues(breakdown, input.goal)];
+}
+
+function contractFidelityIssues(breakdown: WorkBreakdown, goal: string): string[] {
+  const descriptions = breakdown.acceptanceIntents.map((intent) => normalizeContractText(intent.description));
+  return declaredContractSections(goal)
+    .filter((section) => !descriptions.some((description) => description.includes(section)))
+    .map((section) => {
+      const heading = section.split("\n", 1)[0];
+      return `contract fidelity: preserve the complete ${heading} section verbatim in one acceptance intent`;
+    });
+}
+
+function declaredContractSections(goal: string): string[] {
+  const lines = normalizeContractText(goal).split("\n");
+  const sections: string[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    if (!/^##\s+.*\b(?:contract|protocol|schema|contrato|protocolo|esquema)\b/iu.test(lines[index] ?? "")) continue;
+    let end = index + 1;
+    while (end < lines.length && !/^##\s+/u.test(lines[end] ?? "")) end += 1;
+    sections.push(lines.slice(index, end).join("\n").trim());
+    index = end - 1;
+  }
+  return sections;
+}
+
+function normalizeContractText(value: string): string {
+  return value.replaceAll("\r\n", "\n").split("\n").map((line) => line.trimEnd()).join("\n").trim();
 }
 
 function commandSurfaceIssues(breakdown: WorkBreakdown, input: WorkBreakdownPlannerInput): string[] {
