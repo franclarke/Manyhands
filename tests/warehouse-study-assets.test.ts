@@ -47,8 +47,10 @@ describe("Warehouse study assets", () => {
     const manifest = JSON.parse(await readFile(path.join(oracleDir, "oracle.json"), "utf8"));
     const script = await readFile(path.join(oracleDir, "oracle.mjs"));
     const core = await readFile(path.join(root, "oracles", "oracle-core.mjs"));
+    const specimen = await readFile(path.join(root, "oracles", "probe-specimen.mjs"));
     const hash = createHash("sha256").update(script).digest("hex");
     const coreHash = createHash("sha256").update(core).digest("hex");
+    const specimenHash = createHash("sha256").update(specimen).digest("hex");
 
     expect(manifest).toMatchObject({
       schemaVersion: 1,
@@ -57,10 +59,25 @@ describe("Warehouse study assets", () => {
       command: ["node", "oracle.mjs"],
       timeoutMs: expect.any(Number),
       scriptSha256: hash,
-      coreSha256: coreHash
+      coreSha256: coreHash,
+      specimenSha256: specimenHash
     });
     expect(manifest.timeoutMs).toBeGreaterThanOrEqual(30_000);
     expect(script.toString("utf8")).toContain("external Warehouse oracle");
+  });
+
+  it("keeps every asset pin reconciled with the bytes it names", async () => {
+    const { execFile } = await import("node:child_process");
+    const { promisify } = await import("node:util");
+    const run = promisify(execFile);
+
+    // `--check` exits non-zero on any stale pin, so hand-edited hashes cannot survive.
+    await expect(
+      run(process.execPath, ["docs/tesis/evidence/scripts/pin-warehouse-assets.mjs", "--check"], {
+        cwd: process.cwd(),
+        windowsHide: true
+      })
+    ).resolves.toMatchObject({ stdout: expect.stringContaining("all Warehouse asset pins match") });
   });
 
   it("keeps pnpm lifecycle banners out of the JSON probe channel", async () => {

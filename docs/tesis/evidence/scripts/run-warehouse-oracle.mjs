@@ -12,8 +12,12 @@ const oracleDir = resolve(`docs/tesis/evidence/warehouse/oracles/${increment}`);
 const manifest = JSON.parse(await readFile(join(oracleDir, "oracle.json"), "utf8"));
 const script = join(oracleDir, "oracle.mjs");
 const core = resolve("docs/tesis/evidence/warehouse/oracles/oracle-core.mjs");
+const specimen = resolve("docs/tesis/evidence/warehouse/oracles/probe-specimen.mjs");
 await verifyHash(script, manifest.scriptSha256);
 await verifyHash(core, manifest.coreSha256);
+// The specimen defines the contract the core enforces; leaving it unpinned would
+// let the acceptance rules change without any hash moving.
+await verifyHash(specimen, manifest.specimenSha256);
 
 const pnpm = "pnpm";
 const startedAt = new Date().toISOString();

@@ -1,0 +1,10 @@
+{
+  "name": "warehouse-probe-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node -e \"console.log('fixture tests: ok')\"",
+    "study:probe": "node probe.mjs"
+  }
+}

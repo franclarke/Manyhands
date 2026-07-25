@@ -1,35 +1,179 @@
 #!/usr/bin/env node
 /** Core for every external Warehouse oracle. It executes outside the target. */
 import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
+import { CAPABILITY_RULES, SCENARIO, SCHEMA_VERSION, capabilitiesFor } from "./probe-specimen.mjs";
+import { resolveDefaultDevSpawn } from "../../../../../scripts/manyhands-dev-command.mjs";
 
 const exec = promisify(execFile);
-const pnpm = "pnpm";
+const STATE_HASH_PATTERN = /^sha256:[0-9a-f]{64}$/u;
 
+/**
+ * Run a pnpm command in `cwd`.
+ *
+ * The published probe contract contains a bare `--` separator. Spawning a
+ * Windows `pnpm.cmd` shim routes that command line through cmd.exe, which
+ * re-parses it and reports the token after `--` as an unknown command — an
+ * instrument failure that looks exactly like a broken delivery. The shared
+ * launcher resolver picks `pnpm.exe` when present and otherwise builds a
+ * correctly quoted, verbatim cmd.exe line.
+ */
+export async function runPnpm(args, cwd, timeout) {
+  const spawn = resolveDefaultDevSpawn(args);
+  try {
+    return await exec(spawn.command, spawn.args, {
+      cwd,
+      timeout,
+      maxBuffer: 16 * 1024 * 1024,
+      windowsHide: true,
+      windowsVerbatimArguments: spawn.windowsVerbatimArguments
+    });
+  } catch (error) {
+    throw new Error(`pnpm ${args.join(" ")} failed: ${error.stderr ?? error.message}`);
+  }
+}
+
+/**
+ * Validate one probe output against the specimen rules for `increment`.
+ *
+ * Pure and total: returns EVERY failure rather than throwing on the first one,
+ * so a single burned run reports the complete defect list instead of revealing
+ * them one at a time across successive runs. Extra capabilities beyond the
+ * increment's chain are permitted; missing or malformed ones are not.
+ */
+export function checkProbeOutput(increment, output) {
+  const failures = [];
+  const check = (condition, message) => { if (!condition) failures.push(message); };
+
+  if (output === null || typeof output !== "object" || Array.isArray(output)) {
+    return ["probe output must be a JSON object"];
+  }
+
+  check(output.schemaVersion === SCHEMA_VERSION, `schemaVersion must be ${SCHEMA_VERSION}, got ${JSON.stringify(output.schemaVersion)}`);
+  check(output.increment === increment, `increment must be "${increment}", got ${JSON.stringify(output.increment)}`);
+  check(output.scenario === SCENARIO, `scenario must be "${SCENARIO}", got ${JSON.stringify(output.scenario)}`);
+  check(
+    typeof output.stateHash === "string" && STATE_HASH_PATTERN.test(output.stateHash),
+    `stateHash must match sha256:<64 lowercase hex>, got ${JSON.stringify(output.stateHash)}`
+  );
+
+  const capabilities = output.capabilities;
+  if (capabilities === null || typeof capabilities !== "object" || Array.isArray(capabilities)) {
+    failures.push("capabilities must be an object holding every declared capability");
+    return failures;
+  }
+
+  for (const name of capabilitiesFor(increment)) {
+    if (!Object.hasOwn(capabilities, name)) {
+      const hoisted = Object.hasOwn(output, name) ? ` (found at the top level instead of inside capabilities)` : "";
+      failures.push(`capabilities.${name} is missing${hoisted}`);
+      continue;
+    }
+    const value = capabilities[name];
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+      failures.push(`capabilities.${name} must be an object, got ${JSON.stringify(value)}`);
+      continue;
+    }
+    for (const [field, rule] of Object.entries(CAPABILITY_RULES[name])) {
+      const actual = value[field];
+      const label = `${name}.${field}`;
+      if (rule.true === true) {
+        check(actual === true, `${label} must be exactly true, got ${JSON.stringify(actual)}`);
+      } else if (rule.finite === true) {
+        check(typeof actual === "number" && Number.isFinite(actual), `${label} must be a finite number, got ${JSON.stringify(actual)}`);
+      } else {
+        if (typeof actual !== "number" || !Number.isFinite(actual)) {
+          failures.push(`${label} must be a finite number, got ${JSON.stringify(actual)}`);
+        } else {
+          check(actual >= rule.min, `${label} must be >= ${rule.min}, got ${actual}`);
+        }
+      }
+    }
+  }
+
+  return failures;
+}
+
+const GATE_SCRIPTS = ["test", "typecheck", "build"];
+const PROBE_SCRIPT = "study:probe";
+
+/**
+ * An inline `node -e "console.log(...)"` one-liner. The seed ships exactly this
+ * for every gate so the empty repository is installable; a delivery that leaves
+ * one in place exits 0 without validating anything, which is how the first W1
+ * recorded five satisfied criteria against untouched stubs.
+ */
+function isInlineEcho(command) {
+  return /^node\s+(-e|--eval)\b/u.test(command.trim()) && /console\.log/u.test(command);
+}
+
+/**
+ * Decide from the target's manifest alone whether the published commands exist
+ * and are real. Pure, so it runs in milliseconds before any install or build,
+ * and reports every problem at once.
+ */
+export function checkCommandSurface(packageJson) {
+  const scripts = packageJson?.scripts;
+  if (scripts === null || typeof scripts !== "object" || Array.isArray(scripts)) {
+    return [`package.json declares no scripts block; ${[...GATE_SCRIPTS, PROBE_SCRIPT].join(", ")} are all required`];
+  }
+
+  const failures = [];
+  for (const script of [...GATE_SCRIPTS, PROBE_SCRIPT]) {
+    const command = scripts[script];
+    if (typeof command !== "string" || command.trim() === "") {
+      failures.push(`script "${script}" is missing from package.json`);
+    } else if (isInlineEcho(command)) {
+      failures.push(`script "${script}" is still an inline echo stub (${command.trim()}); it validates nothing`);
+    }
+  }
+  return failures;
+}
+
+/**
+ * Entry point for every `Wn/oracle.mjs`. Reports a verdict, never a stack trace:
+ * the failure text is copied verbatim into the run's `oracle-result.json` and is
+ * read months later as thesis evidence.
+ */
 export async function runExternalOracle(spec) {
+  try {
+    await evaluate(spec);
+  } catch (error) {
+    process.stderr.write(`${error.message}\n`);
+    process.exit(1);
+  }
+}
+
+async function evaluate(spec) {
   const target = resolve(argument("--target") ?? process.env.WAREHOUSE_TARGET ?? process.cwd());
-  const scenario = "thesis-seed-2026";
   const checks = [];
 
-  for (const script of ["test", "typecheck", "build"]) {
-    await command(pnpm, [script], target, 180_000);
+  const manifest = JSON.parse(await readFile(join(target, "package.json"), "utf8"));
+  const surfaceFailures = checkCommandSurface(manifest);
+  if (surfaceFailures.length > 0) {
+    throw new Error(`command surface unusable (${surfaceFailures.length}):\n- ${surfaceFailures.join("\n- ")}`);
+  }
+  checks.push("command-surface:pass");
+
+  for (const script of GATE_SCRIPTS) {
+    await runPnpm([script], target, 180_000);
     checks.push(`${script}:pass`);
   }
 
-  const first = await probe(target, spec.increment, scenario);
-  const second = await probe(target, spec.increment, scenario);
-  assert(first.schemaVersion === 1, "probe schemaVersion must be 1");
-  assert(first.increment === spec.increment, `probe increment must be ${spec.increment}`);
-  assert(first.scenario === scenario, `probe scenario must be ${scenario}`);
-  assert(JSON.stringify(first) === JSON.stringify(second), "probe output is not deterministic");
-  assert(typeof first.stateHash === "string" && /^sha256:[0-9a-f]{64}$/u.test(first.stateHash), "stateHash is not versioned sha256");
+  const first = await probe(target, spec.increment);
+  const second = await probe(target, spec.increment);
 
-  for (const capability of spec.capabilities) {
-    assert(Object.hasOwn(first.capabilities ?? {}, capability), `missing capability ${capability}`);
-    validate(capability, first.capabilities[capability]);
-    checks.push(`${capability}:pass`);
+  const failures = checkProbeOutput(spec.increment, first);
+  if (JSON.stringify(first) !== JSON.stringify(second)) {
+    failures.push("probe output is not deterministic across two invocations on the same commit");
   }
+  if (failures.length > 0) {
+    throw new Error(`probe contract violated (${failures.length}):\n- ${failures.join("\n- ")}`);
+  }
+
+  for (const capability of capabilitiesFor(spec.increment)) checks.push(`${capability}:pass`);
 
   process.stdout.write(`${JSON.stringify({
     oracleId: `warehouse-${spec.increment.toLowerCase()}-v1`,
@@ -41,34 +185,10 @@ export async function runExternalOracle(spec) {
   }, null, 2)}\n`);
 }
 
-async function probe(target, increment, scenario) {
-  const { stdout } = await command(pnpm, ["--silent", "study:probe", "--", "--increment", increment, "--scenario", scenario, "--format", "json"], target, 120_000);
+async function probe(target, increment) {
+  const { stdout } = await runPnpm(["--silent", "study:probe", "--", "--increment", increment, "--scenario", SCENARIO, "--format", "json"], target, 120_000);
   try { return JSON.parse(stdout.trim()); }
   catch { throw new Error(`study:probe did not emit JSON: ${stdout.slice(0, 300)}`); }
 }
 
-function validate(name, value) {
-  assert(value !== null && typeof value === "object", `${name} must be an object`);
-  const validators = {
-    layout: () => { positive(value.zones, "layout.zones", 3); positive(value.bins, "layout.bins", 12); },
-    inventory: () => { positive(value.skus, "inventory.skus", 3); positive(value.totalUnits, "inventory.totalUnits", 1); },
-    visual: () => { positive(value.svgElements, "visual.svgElements", 1); positive(value.heatmapCells, "visual.heatmapCells", 12); positive(value.textLabels, "visual.textLabels", 3); },
-    orders: () => { positive(value.accepted, "orders.accepted", 1); positive(value.rejected, "orders.rejected", 1); assert(value.reservationConserved === true, "orders must conserve reservations"); },
-    simulation: () => { positive(value.events, "simulation.events", 4); assert(value.playPauseStepReset === true, "simulation controls incomplete"); assert(value.sseMonotonic === true, "SSE sequence is not monotonic"); },
-    routing: () => { positive(value.pickStops, "routing.pickStops", 2); positive(value.distance, "routing.distance", 1); assert(value.overlayVisible === true, "route overlay not visible"); },
-    congestion: () => { positive(value.waves, "congestion.waves", 2); assert(value.capacityEnforced === true, "picker capacity not enforced"); assert(value.costInfluencesRoute === true, "congestion does not influence routing"); },
-    persistence: () => { positive(value.timelineEvents, "persistence.timelineEvents", 4); assert(value.replayMatchesLive === true, "replay differs from live state"); assert(value.snapshotRestores === true, "snapshot restore failed"); },
-    analytics: () => { number(value.throughput, "analytics.throughput"); number(value.utilization, "analytics.utilization"); positive(value.alerts, "analytics.alerts", 1); },
-    accessibility: () => { assert(value.keyboardJourney === true, "keyboard journey failed"); assert(value.reducedMotion === true, "reduced motion unsupported"); assert(value.statusNotColorOnly === true, "status depends on color only"); }
-  };
-  validators[name]?.();
-}
-
-async function command(file, args, cwd, timeout) {
-  try { return await exec(file, args, { cwd, timeout, maxBuffer: 16 * 1024 * 1024, windowsHide: true }); }
-  catch (error) { throw new Error(`${file} ${args.join(" ")} failed: ${error.stderr ?? error.message}`); }
-}
 function argument(flag) { const index = process.argv.indexOf(flag); return index === -1 ? undefined : process.argv[index + 1]; }
-function assert(condition, message) { if (!condition) throw new Error(message); }
-function positive(value, label, minimum) { number(value, label); assert(value >= minimum, `${label} must be >= ${minimum}`); }
-function number(value, label) { assert(typeof value === "number" && Number.isFinite(value), `${label} must be finite`); }
