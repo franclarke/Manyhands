@@ -18,6 +18,14 @@ import { approvePlanningV2 } from "./planning-host";
 import { DEFAULT_STALE_MS } from "../interrupted";
 import { startHeartbeat } from "../runner-heartbeat";
 
+/**
+ * Wording that means the provider refused for capacity, mirroring the execution
+ * side's QUOTA_PATTERN (`@manyhands/execution-core` classifyExecutorFailure).
+ * Planning reads a CLI stream rather than a finished ExecutorRunOutcome, so it
+ * matches the text directly; both layers must recognise the same phrases.
+ */
+const PROVIDER_CAPACITY_PATTERN = /(429|quota|rate.?limit|resource_exhausted|too many requests|overloaded|capacity|(?:session|usage|message|token)\s+limit)/i;
+
 export async function runPlanningV2Pipeline(runId: string): Promise<void> {
   const claimed = await claimRunOperation(runId, "planning", {
     expectedLifecycles: ["planning"],
@@ -188,11 +196,12 @@ async function invokeSelectedPlanningCli(
         () => finish(() => {
           if (code !== 0) {
             const diagnostics = formatPlanningCliDiagnostics({ observedEnvelopeTypes, stdoutBytes, stderrTail });
-            // A throttled CLI exits non-zero after emitting a rate_limit_event.
-            // That says nothing about the plan, so it must not spend one of the
-            // planner's three repair attempts (Warehouse pilot series-9 lost
-            // all three to it while a minimal probe answered normally).
-            if (observedEnvelopeTypes.has("rate_limit_event")) {
+            // Capacity is decided by what the CLI SAID, not by which envelopes
+            // it emitted: a direct probe showed `rate_limit_event` present in
+            // successful calls too, so keying on the envelope type would have
+            // relabelled every non-zero exit as throttling and retried genuine
+            // planning failures without ever spending an attempt.
+            if (PROVIDER_CAPACITY_PATTERN.test(`${stderrTail}\n${terminalError ?? ""}`)) {
               reject(new PlanningCapacityError(`${stage.executorId} was throttled by the provider (${diagnostics}).`));
               return;
             }

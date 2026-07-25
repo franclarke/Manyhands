@@ -76,3 +76,24 @@ la cadena avanza desde donde quedó.
 ## Estado
 
 Resultado acumulado del piloto: **0/8**.
+
+## Corrección de la corrección — 2026-07-25
+
+La primera versión de este fix detectaba capacidad preguntando si el stream
+había emitido un envelope `rate_limit_event`. **Estaba mal.** Una llamada directa
+al CLI con un prompt trivial, que devolvió el JSON pedido correctamente, listó:
+
+    envelopes: system,stream_event,assistant,rate_limit_event,result
+
+Es decir, `rate_limit_event` aparece también en llamadas exitosas: es una
+notificación de estado de uso, no una señal de rechazo. Con esa condición,
+cualquier salida no-cero habría quedado etiquetada como throttling y los fallos
+genuinos de planning se habrían reintentado sin consumir nunca un intento.
+
+La detección pasa a mirar **lo que el CLI dijo**, con el mismo vocabulario que
+`classifyExecutorFailure` usa del lado de ejecución. Ambas capas reconocen las
+mismas frases.
+
+La hipótesis de que `--permission-mode plan` causaba las respuestas sin JSON
+quedó **refutada** por el mismo experimento: con y sin la bandera, el CLI
+devolvió el JSON pedido. Véase `planner-emits-no-document/README.md`.
