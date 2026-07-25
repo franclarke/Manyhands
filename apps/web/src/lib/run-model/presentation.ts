@@ -1,4 +1,4 @@
-import type { GranularityProjection } from "@manyhands/run-coordinator";
+import type { GranularityProjection, GranularityStrategyProjection } from "@manyhands/run-coordinator";
 import type { GraphRevision } from "@manyhands/task-graph";
 
 import type { RunNodeView } from "@/lib/run-model/types";
@@ -125,6 +125,7 @@ export function eventPresentation(type: string): { label: string; diagnostic: bo
     "planning.attempt_failed": "Intento de planificación descartado",
     "planning.failed": "Planificación fallida",
     "planning.completed": "Trabajo desglosado",
+    "planning.granularity_strategy_selected": "Estrategia de granularidad seleccionada",
     "graph.compiled": "Grafo y contratos compilados",
     "graph.revision.proposed": "Revisión del grafo propuesta",
     "graph.revision.approved": "Plan aprobado",
@@ -247,7 +248,7 @@ function humanizeEventType(type: string): string {
 export interface GranularityDimensionView {
   label: string;
   value: number;
-  weight: number;
+  weight?: number;
 }
 
 export interface GranularityExplanationView {
@@ -261,6 +262,49 @@ export interface GranularityExplanationView {
   rationale: string;
   formulaVersion: string;
   branchingFactor?: number;
+  benefit?: number;
+  cost?: number;
+  evidenceRefs?: string[];
+}
+
+const STRATEGY_FEATURE_LABELS: ReadonlyArray<{
+  key: keyof GranularityStrategyProjection["assessments"][string]["features"];
+  label: string;
+}> = [
+  { key: "contextRelief", label: "Alivio de contexto" },
+  { key: "parallelism", label: "Paralelismo" },
+  { key: "faultIsolation", label: "Aislamiento de fallos" },
+  { key: "coordination", label: "Coordinación" },
+  { key: "pathOverlap", label: "Solapamiento de paths" },
+  { key: "validationDuplication", label: "Duplicación de validación" },
+  { key: "uncertainty", label: "Incertidumbre" }
+];
+
+export function granularityStrategyExplanation(
+  strategy: GranularityStrategyProjection | undefined,
+  nodeId: string | null
+): GranularityExplanationView | null {
+  if (strategy === undefined || nodeId === null) return null;
+  const assessment = strategy.assessments[nodeId];
+  if (assessment === undefined) return null;
+  const decisionLabel = assessment.selected === "split"
+    ? "División semántica"
+    : assessment.selected === "semantic_replan"
+      ? "Replan semántico"
+      : "Hoja cohesiva";
+  return {
+    decisionLabel,
+    score: assessment.splitAdvantage,
+    threshold: assessment.minimumAdvantage,
+    comparison: `Ventaja ${assessment.splitAdvantage} ${assessment.selected === "split" ? "≥" : "<"} ${assessment.minimumAdvantage}`,
+    dimensions: STRATEGY_FEATURE_LABELS.map(({ key, label }) => ({ label, value: assessment.features[key] })),
+    signalSourceLabel: "medidas sobre el árbol candidato y el repositorio",
+    rationale: assessment.rationale,
+    formulaVersion: strategy.policyVersion,
+    benefit: assessment.benefit,
+    cost: assessment.cost,
+    evidenceRefs: [...assessment.evidenceRefs]
+  };
 }
 
 const GRANULARITY_DIMENSION_LABELS: ReadonlyArray<{ key: keyof GranularityProjection["weights"]; label: string }> = [

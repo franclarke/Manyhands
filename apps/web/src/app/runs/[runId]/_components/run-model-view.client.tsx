@@ -7,7 +7,7 @@ import { useLiveRunModel } from "@/components/run-model/use-live-run-model";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { StatusPill } from "@/components/ui/status-pill";
-import { eventPresentation, granularityExplanation, summarizeRunNodes, type GranularityExplanationView } from "@/lib/run-model/presentation";
+import { eventPresentation, granularityExplanation, granularityStrategyExplanation, summarizeRunNodes, type GranularityExplanationView } from "@/lib/run-model/presentation";
 import type { RunEvent, RunSeed } from "@/lib/run-model/types";
 import { runUiStatus, statusMeta } from "@/lib/status";
 import { CockpitRunGraph } from "./cockpit-run-graph";
@@ -46,8 +46,9 @@ export function RunModelView({
   );
 
   const selectedGranularity = useMemo(
-    () => granularityExplanation(model.projection?.granularity, selectedNodeId),
-    [model.projection?.granularity, selectedNodeId]
+    () => granularityStrategyExplanation(model.projection?.granularityStrategy, selectedNodeId)
+      ?? granularityExplanation(model.projection?.granularity, selectedNodeId),
+    [model.projection?.granularity, model.projection?.granularityStrategy, selectedNodeId]
   );
 
   async function command(path: string, body?: unknown): Promise<void> {
@@ -281,11 +282,14 @@ function GranularityDetails({ granularity }: { granularity: GranularityExplanati
           <div key={dimension.label} className="flex items-baseline justify-between gap-3">
             <dt className="text-[var(--color-text-muted)]">{dimension.label}</dt>
             <dd className="tabular-nums">
-              {dimension.value} <span className="text-[var(--color-text-subtle)]">× {dimension.weight}</span>
+              {dimension.value} {dimension.weight === undefined ? null : <span className="text-[var(--color-text-subtle)]">× {dimension.weight}</span>}
             </dd>
           </div>
         ))}
       </dl>
+      {granularity.benefit === undefined ? null : <p className="mt-3 tabular-nums text-[var(--color-text-muted)]">Beneficio {granularity.benefit}; costo {granularity.cost}.</p>}
+      <p className="mt-3 leading-5 text-[var(--color-text-muted)]">{granularity.rationale}</p>
+      {(granularity.evidenceRefs?.length ?? 0) === 0 ? null : <p className="mt-2 break-all text-[var(--color-text-subtle)]">Evidencia: {granularity.evidenceRefs?.join(", ")}</p>}
       <p className="mt-3 text-[var(--color-text-subtle)]">Fórmula {granularity.formulaVersion}</p>
     </details>
   );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { granularityExplanation } from "@/lib/run-model/presentation";
-import type { GranularityProjection } from "@manyhands/run-coordinator";
+import { granularityExplanation, granularityStrategyExplanation } from "@/lib/run-model/presentation";
+import type { GranularityProjection, GranularityStrategyProjection } from "@manyhands/run-coordinator";
 
 /**
  * Gate G3 requires the UI (or a report) to explain WHY a node received its
@@ -70,5 +70,34 @@ describe("granularityExplanation", () => {
   it("returns null when the run has no assessment for the node", () => {
     expect(granularityExplanation(projection(), "node-unknown")).toBeNull();
     expect(granularityExplanation(undefined, "node-leaf")).toBeNull();
+  });
+});
+
+describe("granularityStrategyExplanation", () => {
+  it("explains C2 from persisted utility, limits and evidence", () => {
+    const strategy: GranularityStrategyProjection = {
+      policyVersion: "adaptive-utility/2.0.0-pilot",
+      condition: "C2",
+      candidateTreeHash: "sha256:candidate",
+      config: { minimumAdvantage: 0.15, maxLeafContextTokens: 24_000, maxLeafScopePaths: 40 },
+      assessments: {
+        "node-web": {
+          unitKey: "web", nodeId: "node-web", selected: "split", leafFeasible: true, splitViable: true,
+          features: { contextRelief: 0.7, parallelism: 0.8, faultIsolation: 0.6, coordination: 0.2, pathOverlap: 0.1, validationDuplication: 0, uncertainty: 0.1 },
+          benefit: 0.7, cost: 0.1, splitAdvantage: 0.6, minimumAdvantage: 0.15,
+          evidenceRefs: ["src/web.ts"], rationale: "Positive measured utility."
+        }
+      },
+      metrics: { maxGraphDepth: 2, totalLeafCount: 3, averageBranchingFactor: 3 }
+    };
+
+    expect(granularityStrategyExplanation(strategy, "node-web")).toMatchObject({
+      decisionLabel: "División semántica",
+      comparison: "Ventaja 0.6 ≥ 0.15",
+      benefit: 0.7,
+      cost: 0.1,
+      rationale: "Positive measured utility.",
+      evidenceRefs: ["src/web.ts"]
+    });
   });
 });
