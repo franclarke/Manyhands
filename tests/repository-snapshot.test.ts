@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  RepositoryFileIndexSchema,
   RepositorySnapshotBuilder,
   RepositorySnapshotSchema,
   type RepositoryIndexer
@@ -15,6 +16,17 @@ afterEach(async () => {
 });
 
 describe("RepositorySnapshotBuilder", () => {
+  it("keeps historical file index records without size metrics replayable", () => {
+    expect(RepositoryFileIndexSchema.safeParse({
+      path: "src/historical.ts",
+      kind: "source",
+      contentHash: "a".repeat(64),
+      exportedSymbols: [],
+      importedSymbols: [],
+      declaredSymbols: []
+    }).success).toBe(true);
+  });
+
   it("produces the same identity for the same target, commit and content", async () => {
     const root = await repository({
       "package.json": JSON.stringify({

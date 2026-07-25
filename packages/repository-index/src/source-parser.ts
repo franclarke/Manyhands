@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { Buffer } from "node:buffer";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -43,6 +44,8 @@ export function parseRepositorySourceText(
     path: normalizedPath,
     kind,
     contentHash,
+    byteSize: Buffer.byteLength(sourceText, "utf8"),
+    lineCount: physicalLineCount(sourceText),
     exportedSymbols: [],
     importedSymbols: [],
     declaredSymbols: []
@@ -175,6 +178,8 @@ export function parseExportedRepositorySourceText(
       path: normalizedPath,
       kind: classifyFileKind(normalizedPath),
       contentHash: createHash("sha256").update(sourceText).digest("hex"),
+      byteSize: Buffer.byteLength(sourceText, "utf8"),
+      lineCount: physicalLineCount(sourceText),
       exportedSymbols,
       importedSymbols: [],
       declaredSymbols: [...exportedSymbols]
@@ -187,6 +192,11 @@ export function parseExportedRepositorySourceText(
     })),
     diagnostics: []
   };
+}
+
+function physicalLineCount(sourceText: string): number {
+  if (sourceText.length === 0) return 0;
+  return sourceText.split(/\r\n|\n|\r/u).length;
 }
 
 function exportsOnly(parsed: ParsedRepositoryFile): ParsedRepositoryFile {

@@ -43,6 +43,10 @@ export const RepositoryFileIndexSchema = z.object({
   path: NonEmptyStringSchema,
   kind: RepositoryFileKindSchema,
   contentHash: NonEmptyStringSchema.optional(),
+  /** UTF-8 bytes of the exact source text represented by this index entry. */
+  byteSize: z.number().int().nonnegative().optional(),
+  /** Physical lines in the indexed text, including a trailing empty line. */
+  lineCount: z.number().int().nonnegative().optional(),
   exportedSymbols: z.array(NonEmptyStringSchema).default([]),
   importedSymbols: z.array(NonEmptyStringSchema).default([]),
   declaredSymbols: z.array(NonEmptyStringSchema).default([])

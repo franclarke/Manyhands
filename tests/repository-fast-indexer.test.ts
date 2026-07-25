@@ -143,7 +143,7 @@ describe("FastRepositoryIndexer", () => {
     ).toMatchObject({
       schemaVersion: 2,
       baseCommit: headSha,
-      indexerProfile: "exports-only-v1",
+      indexerProfile: "exports-only-v2-size-metrics",
       index: { files: first.index.files }
     });
   });
@@ -164,6 +164,10 @@ describe("FastRepositoryIndexer", () => {
 
     expect(result.index.files.map((file) => file.path)).toEqual(["src/committed.ts"]);
     expect(result.index.files[0]?.exportedSymbols).toEqual(["committed"]);
+    expect(result.index.files[0]).toMatchObject({
+      byteSize: Buffer.byteLength("export const committed = true;\n", "utf8"),
+      lineCount: 2
+    });
   });
 
   it("uses ignore rules from the exact commit instead of dirty workspace rules", async () => {
