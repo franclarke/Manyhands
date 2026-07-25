@@ -9,6 +9,8 @@ const increments = Array.from({ length: 8 }, (_, index) => `W${index + 1}`);
 describe("Warehouse study assets", () => {
   it("pins every prompt in the study asset manifest", async () => {
     const manifest = JSON.parse(await readFile(path.join(root, "assets-manifest.json"), "utf8"));
+    const seedManifest = await readFile(path.join(root, "seed", "seed-manifest.json"));
+    expect(createHash("sha256").update(seedManifest).digest("hex")).toBe(manifest.seedManifestSha256);
     for (const increment of increments) {
       const prompt = await readFile(path.join(root, "protocol", "prompts", `${increment}.md`));
       expect(createHash("sha256").update(prompt).digest("hex")).toBe(manifest.prompts[increment]);

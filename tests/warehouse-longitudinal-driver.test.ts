@@ -3,7 +3,8 @@ import {
   advanceVerifiedBase,
   assertOraclePassed,
   buildLongitudinalPlan,
-  evaluatePreflight
+  evaluatePreflight,
+  seedIdentityMatches
 } from "../docs/tesis/evidence/scripts/lib/warehouse-longitudinal.mjs";
 
 const valid = {
@@ -49,5 +50,14 @@ describe("Warehouse longitudinal driver", () => {
   it("adopts the verified delivery as the next increment base", () => {
     expect(advanceVerifiedBase({ currentBase: "a".repeat(40), deliveredSha: "b".repeat(40), oracleOutcome: "pass" }))
       .toBe("b".repeat(40));
+  });
+
+  it("verifies a cloned seed by Git objects instead of checkout line endings", () => {
+    expect(seedIdentityMatches({
+      tree: "a".repeat(40),
+      expectedTree: "a".repeat(40),
+      lockfileGitBlob: "b".repeat(40),
+      expectedLockfileGitBlob: "b".repeat(40)
+    })).toBe(true);
   });
 });

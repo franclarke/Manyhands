@@ -11,7 +11,8 @@ import {
   buildLongitudinalPlan,
   evaluatePreflight,
   INCREMENTS,
-  MINIMUM_FREE_BYTES
+  MINIMUM_FREE_BYTES,
+  seedIdentityMatches
 } from "./lib/warehouse-longitudinal.mjs";
 
 const exec = promisify(execFile);
@@ -97,7 +98,8 @@ async function observe({ root, targetRepo, expectedBase, seed, assets, declaredM
   const fs = await statfs(targetRepo);
   const freeBytes = Number(fs.bavail) * Number(fs.bsize);
   const targetHead = (await git(targetRepo, ["rev-parse", "HEAD"])).trim();
-  const seedCheck = expectedBase === seed.commit ? await verifySeed(targetRepo, seed) : true;
+  const seedManifestMatches = sha(await readFile(seedManifestPath)) === assets.seedManifestSha256;
+  const seedCheck = seedManifestMatches && (expectedBase === seed.commit ? await verifySeed(targetRepo, seed) : true);
   const promptHashesMatch = await verifyPromptHashes(assets.prompts);
   const oracleHashesMatch = await verifyOracleHashes(assets.oracleCoreSha256);
   const dist = await readFile(resolve("packages/decomposer/dist/index.js"), "utf8").catch(() => "");
@@ -121,8 +123,13 @@ async function observe({ root, targetRepo, expectedBase, seed, assets, declaredM
 
 async function verifySeed(repository, expected) {
   const tree = (await git(repository, ["rev-parse", "HEAD^{tree}"])).trim();
-  const lock = sha(await readFile(join(repository, "pnpm-lock.yaml")));
-  return tree === expected.tree && lock === expected.lockfileSha256;
+  const lockfileGitBlob = (await git(repository, ["rev-parse", "HEAD:pnpm-lock.yaml"])).trim();
+  return seedIdentityMatches({
+    tree,
+    expectedTree: expected.tree,
+    lockfileGitBlob,
+    expectedLockfileGitBlob: expected.lockfileGitBlob
+  });
 }
 async function verifyPromptHashes(expected) {
   for (const increment of INCREMENTS) if (sha(await readFile(resolve(`docs/tesis/evidence/warehouse/protocol/prompts/${increment}.md`))) !== expected[increment]) return false;

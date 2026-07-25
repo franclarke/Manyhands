@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "policyVersion": "adaptive-utility/2.0.0-pilot",
-  "seedManifestSha256": "52217b333390018dcb86da29acfa851f358a73093a169982933d97bc631462ac",
+  "seedManifestSha256": "a8f30033e8953a7082afeb9586e77c5bdadf8b3366097c7decf956f9fa56e804",
   "oracleCoreSha256": "36eae54088bd9526a9f84298ba144ec2dde0f842bf5803e9755cfb1e0e38f158",
   "prompts": {
     "W1": "0337c4e6ef35ae5a6fee0a8381ac4d40ca56a134a063986c7677a648ecb549e0",

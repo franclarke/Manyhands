@@ -42,3 +42,7 @@ export function advanceVerifiedBase({ deliveredSha, oracleOutcome }) {
   if (!/^[0-9a-f]{40}$/u.test(deliveredSha)) throw new Error(`invalid delivered SHA ${deliveredSha}`);
   return deliveredSha;
 }
+
+export function seedIdentityMatches({ tree, expectedTree, lockfileGitBlob, expectedLockfileGitBlob }) {
+  return tree === expectedTree && lockfileGitBlob === expectedLockfileGitBlob;
+}

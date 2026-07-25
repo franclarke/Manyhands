@@ -34,10 +34,12 @@ async function verifySeed(repository, expected) {
   const dirty = (await git(repository, ["status", "--porcelain"])).trim();
   const files = (await git(repository, ["ls-tree", "-r", "--name-only", "HEAD"])).trim().split(/\r?\n/u).filter(Boolean).sort();
   const lockHash = createHash("sha256").update(await readFile(join(repository, "pnpm-lock.yaml"))).digest("hex");
+  const lockfileGitBlob = (await git(repository, ["rev-parse", "HEAD:pnpm-lock.yaml"])).trim();
   if (head !== expected.commit) fail(`seed commit ${head} != ${expected.commit}`);
   if (tree !== expected.tree) fail(`seed tree ${tree} != ${expected.tree}`);
   if (dirty !== "") fail(`seed is dirty: ${dirty.replaceAll("\n", " | ")}`);
   if (lockHash !== expected.lockfileSha256) fail(`seed lockfile hash ${lockHash} != ${expected.lockfileSha256}`);
+  if (lockfileGitBlob !== expected.lockfileGitBlob) fail(`seed lockfile blob ${lockfileGitBlob} != ${expected.lockfileGitBlob}`);
   if (JSON.stringify(files) !== JSON.stringify([...expected.allowedSeedFiles].sort())) fail(`seed file list differs: ${files.join(", ")}`);
   if (files.some((file) => /(^|\/)(src|domain)(\/|$)|inventory|routing|orders?/iu.test(file))) fail("seed contains domain source paths");
 }
