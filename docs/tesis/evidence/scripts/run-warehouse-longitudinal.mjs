@@ -12,7 +12,9 @@ import {
   evaluatePreflight,
   INCREMENTS,
   MINIMUM_FREE_BYTES,
-  seedIdentityMatches
+  seedIdentityMatches,
+  selectionMatches,
+  studyStageSelections
 } from "./lib/warehouse-longitudinal.mjs";
 
 const exec = promisify(execFile);
@@ -61,9 +63,7 @@ for (const increment of INCREMENTS.slice(state.completed.length)) {
     manyhandsCommit: declaredManyHandsCommit,
     promptSha256: assets.prompts[increment],
     goal: await readFile(promptPath, "utf8"),
-    planningSelection: modelSelection(),
-    executionSelection: modelSelection(),
-    repairSelection: modelSelection(),
+    ...studyStageSelections(),
     executionConfig: { maxParallel: 2, scopePolicy: "strict", leafTimeoutMs: 600000, integrationTimeoutMs: 900000, unexpectedCommitPolicy: "reject" },
     runsDir: resolve(".manyhands/runs"),
     pollIntervalMs: 10000,
@@ -117,7 +117,7 @@ async function observe({ root, targetRepo, expectedBase, seed, assets, declaredM
     distHasPolicyMarker: dist.includes(assets.policyVersion),
     commitMatches: (await git(root, ["rev-parse", "HEAD"])).trim() === declaredManyHandsCommit,
     toolchainMatches: Number(process.versions.node.split('.')[0]) >= 22 && pnpmVersion === "7.29.3",
-    modelMatches: modelSelection().model === "gpt-5.5" && modelSelection().effort === "high"
+    modelMatches: selectionMatches(studyStageSelections().executionSelection)
   };
 }
 
@@ -154,7 +154,6 @@ async function writeState(outDir, state) {
   await writeFile(temporary, `${JSON.stringify(state, null, 2)}\n`, "utf8");
   await rename(temporary, target);
 }
-function modelSelection() { return { executorId: "codex-cli", model: "gpt-5.5", effort: "high" }; }
 function sha(value) { return createHash("sha256").update(value).digest("hex"); }
 function git(cwd, args) { return run("git", ["-C", cwd, ...args], root, 300_000).then((result) => result.stdout); }
 function run(file, args, cwd, timeout) { return exec(file, args, { cwd, timeout, windowsHide: true, maxBuffer: 64 * 1024 * 1024 }); }

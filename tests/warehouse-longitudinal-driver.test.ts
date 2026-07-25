@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  findExecutorModel,
+  isExecutorSelection,
+  usageSourceForSelection
+} from "../packages/shared/src/executor-registry";
+import {
   advanceVerifiedBase,
   assertOraclePassed,
   buildLongitudinalPlan,
   evaluatePreflight,
-  seedIdentityMatches
+  seedIdentityMatches,
+  STUDY_SELECTION,
+  studyStageSelections
 } from "../docs/tesis/evidence/scripts/lib/warehouse-longitudinal.mjs";
 
 const valid = {
@@ -59,5 +66,40 @@ describe("Warehouse longitudinal driver", () => {
       lockfileGitBlob: "b".repeat(40),
       expectedLockfileGitBlob: "b".repeat(40)
     })).toBe(true);
+  });
+});
+
+/**
+ * Cost and tokens are primary variables of the study. An executor whose CLI
+ * cannot report them turns both into lower bounds — G5 already carries one cell
+ * with a missing attempt, so its token total is a floor and not a measurement.
+ * The declared study executor must be able to report what the study claims.
+ */
+describe("Warehouse study executor selection", () => {
+  it("declares a selection the executor registry knows", () => {
+    expect(isExecutorSelection(STUDY_SELECTION)).toBe(true);
+    expect(findExecutorModel(STUDY_SELECTION)).toBeDefined();
+  });
+
+  it("declares an executor that reports usage rather than leaving it unavailable", () => {
+    expect(usageSourceForSelection(STUDY_SELECTION)).toBe("reported");
+  });
+
+  it("carries a reasoning effort only when the model exposes one", () => {
+    const model = findExecutorModel(STUDY_SELECTION);
+
+    if (model?.efforts === null) {
+      expect(STUDY_SELECTION).not.toHaveProperty("effort");
+    } else {
+      expect(model?.efforts).toContain(STUDY_SELECTION.effort);
+    }
+  });
+
+  it("uses one identical selection for planning, execution and repair", () => {
+    expect(studyStageSelections()).toEqual({
+      planningSelection: STUDY_SELECTION,
+      executionSelection: STUDY_SELECTION,
+      repairSelection: STUDY_SELECTION
+    });
   });
 });

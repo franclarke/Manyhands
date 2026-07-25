@@ -1,6 +1,42 @@
 export const MINIMUM_FREE_BYTES = 25 * 1024 ** 3;
 export const INCREMENTS = Array.from({ length: 8 }, (_, index) => `W${index + 1}`);
 
+/**
+ * The one executor selection the whole study runs on, for planning, execution
+ * and repair alike.
+ *
+ * Claude Code reports token usage and an exact `total_cost_usd` per attempt;
+ * the Codex CLI declares `usageSource: "unavailable"`, which would make cost —
+ * a primary variable of this study — permanently unmeasurable and tokens a
+ * lower bound. G5 already carries a cell whose token total is a floor because
+ * an attempt reported nothing.
+ *
+ * `sonnet` is the declared model: strong enough for the increments and
+ * sustainable across the full program's run count. If the pilot shows it is not
+ * capable enough for the later increments, that is a pilot finding and the
+ * model changes BEFORE the freeze — never during the Final series.
+ *
+ * Claude models expose no reasoning-effort knob (`efforts: null` in the
+ * registry), so this selection carries no `effort` field by design.
+ */
+export const STUDY_SELECTION = { executorId: "claude-code-cli", model: "sonnet" };
+
+/** The identical selection applied to every pipeline stage. */
+export function studyStageSelections() {
+  return {
+    planningSelection: { ...STUDY_SELECTION },
+    executionSelection: { ...STUDY_SELECTION },
+    repairSelection: { ...STUDY_SELECTION }
+  };
+}
+
+/** Whether an observed stage selection matches the declared study selection. */
+export function selectionMatches(selection) {
+  return selection?.executorId === STUDY_SELECTION.executorId
+    && selection?.model === STUDY_SELECTION.model
+    && selection?.effort === STUDY_SELECTION.effort;
+}
+
 export function evaluatePreflight(observation) {
   const failures = [];
   check(observation.freeBytes >= observation.minimumFreeBytes, "disk_insufficient", `${observation.freeBytes} bytes free; ${observation.minimumFreeBytes} required`);
