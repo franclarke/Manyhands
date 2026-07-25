@@ -17,7 +17,7 @@
 |---|---:|---|---|---|
 | 1 — C2 core | 1–4 | **completed** | `74f001f`, `950dd18`, `e94b4b8`, `d9e5b41` | 45 tests PASS + 2 package typechecks |
 | 2 — Productive integration | 5–8 | **completed** | `bf0ee82`, `d96cc24`, `a424ade`, `7f7d9b4`, `18e6aab` | 50 tests PASS + 3 typechecks + 2 builds |
-| 3 — Metrics and stability | 9–10 | pending | — | — |
+| 3 — Metrics and stability | 9–10 | **completed** | `cf6db65`, `5584602`, commit de cierre | 2/2 entregas + clones limpios |
 | 4 — Warehouse assets and drivers | 11–12 | pending | — | — |
 | 5 — Pilot construction | 13 | pending | — | — |
 | 6 — Freeze | 14 | pending | — | — |
@@ -29,7 +29,7 @@
 | Task | Estado | Evidencia |
 |---|---|---|
 | 9 — métricas no censuradas | **completed** | `cf6db65`; fixtures de fallo/éxito y rederivación G5 |
-| 10 — gates y estabilidad | **in progress** | C2-G1 PASS; checks C2-G2 PASS; runs bloqueados por 8,71 GB libres |
+| 10 — gates y estabilidad | **completed** | C2-G1/G2 PASS; 2/2 runs reales entregados y verificados |
 
 ## Registro cronológico
 
@@ -70,3 +70,17 @@
 - Verificación combinada: 50 tests, tres typechecks y dos builds PASS.
 - Evidencia detallada: [`checkpoints/checkpoint-2.md`](checkpoints/checkpoint-2.md).
 - Siguiente bloque: Tasks 9–10; métricas no censuradas y estabilidad real.
+
+### 2026-07-25 — Cierre del checkpoint 3
+
+- Task 9: la derivación conserva métricas de runs fallidos y distingue cero,
+  `unavailable` y `not_applicable`; G5 histórico rederiva sus doce celdas.
+- Task 10: dos ejecuciones C2 secuenciales sobre el mismo objetivo, commit y
+  base terminaron `completed`, sin reparaciones, con receipts confirmados.
+- Ambos commits entregados pasaron instalación, tests y typecheck en clones
+  limpios independientes.
+- C2 eligió una hoja en ambas repeticiones por ventaja de split negativa. La
+  planificación viva produjo hashes candidatos distintos; el gate no exige
+  identidad textual de topología.
+- Evidencia detallada: [`checkpoints/checkpoint-3.md`](checkpoints/checkpoint-3.md).
+- Siguiente bloque: Tasks 11–12; seed, prompts, oráculos y driver longitudinal.

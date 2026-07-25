@@ -20,16 +20,16 @@
 |---|---:|---|---|
 | 1 — C2 core | 1–4 | **completed** | [`checkpoint-1.md`](../tesis/evidence/warehouse/checkpoints/checkpoint-1.md) |
 | 2 — Productive integration | 5–8 | **completed** | [`checkpoint-2.md`](../tesis/evidence/warehouse/checkpoints/checkpoint-2.md) |
-| 3 — Metrics and stability | 9–10 | pending | — |
+| 3 — Metrics and stability | 9–10 | **completed** | [`checkpoint-3.md`](../tesis/evidence/warehouse/checkpoints/checkpoint-3.md) |
 | 4 — Warehouse assets and drivers | 11–12 | pending | — |
 | 5 — Pilot construction | 13 | pending | — |
 | 6 — Freeze | 14 | pending | — |
 | 7 — Final construction and comparison | 15–16 | pending | — |
 | 8 — Results and thesis | 17–18 | pending | — |
 
-> Checkpoint 3 en curso: Task 9 completada en `cf6db65`. C2-G1 y todos los
-> checks locales de C2-G2 están verdes; los dos runs de estabilidad de Task 10
-> no se iniciaron porque el preflight dio 8,71 GB frente al mínimo de 25 GB.
+> Checkpoint 3 cerrado: Task 9 completada en `cf6db65`; C2-G1 y C2-G2 PASS.
+> Dos runs reales sobre ManyHands `5584602` entregaron desde la misma base y
+> pasaron tests y typecheck en clones limpios. Continúa el checkpoint 4.
 
 ## 1. Decisión ejecutiva
 

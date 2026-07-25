@@ -328,3 +328,22 @@
 51. **C2-G2 sigue INCOMPLETE.** El preflight midió 8,71 GB libres frente al
     mínimo de 25 GB. No se iniciaron los dos runs reales y no se borró ni movió
     evidencia o pools sin autorización.
+
+### 2026-07-25 — Cierre de C2-G2 y checkpoint 3
+
+52. **Capacidad operativa restablecida.** Francisco liberó espacio y el
+    preflight superó el mínimo de 25 GB sin borrar automáticamente evidencia ni
+    pools del usuario.
+53. **C2-G2 = PASS sobre ManyHands `5584602`.** Dos runs secuenciales con el
+    mismo objetivo, configuración y base `1da878d` terminaron `completed`; los
+    journals pliegan correctamente, los receipts están confirmados y las dos
+    matrices satisfacen 5/5 criterios.
+54. **Verificación externa real.** Los commits `f86c5c7` y `cf0810b` se
+    instalaron y verificaron en clones limpios: 9/10 tests respectivamente y
+    typecheck PASS. No hubo eventos de fallo ni reparación.
+55. **Decisión estable, no fan-out forzado.** C2 eligió una hoja en ambas
+    repeticiones porque el split del composite raíz tuvo ventajas `-0.2005` y
+    `-0.2271`, inferiores al mínimo `0.15`. Los hashes candidatos difieren por
+    variación del Planner y se preservan como evidencia, no se normalizan.
+56. **Checkpoint 3 = completed.** CLAIM-111 queda implementado y con estabilidad
+    productiva; su ventaja comparativa continúa pendiente de Warehouse Final.

@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "4b7c75b8-8cb6-46c9-bca4-3a999ad18783",
+    "workspaceId": "2ce9a628-1f8d-4c4e-bfc5-41c8b31be7cc",
+    "userPrompt": "Add expense categories to the splitter. Extend the Expense type with an optional category field validated against a fixed set of categories, add computeCategoryTotals to the domain, expose listCategoryTotals from the API layer, render a category breakdown in the web surface, and cover the new behaviour with tests. Preserve the existing balance behaviour and keep the current tests green.",
+    "title": "Add expense categories to the splitter. Extend the Expense type with an optional category field validated against a fixe",
+    "planningSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "repairSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 300000,
+      "integrationTimeoutMs": 600000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed"
+    },
+    "granularityCondition": "C2",
+    "targetContext": {
+      "sourceRealPath": "C:\\Users\\franc\\manyhands-thesis-targets\\c2-stability-2",
+      "gitCommonDir": "C:\\Users\\franc\\manyhands-thesis-targets\\c2-stability-2\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "110619665847311658"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "remoteUrl": "C:\\Users\\franc\\manyhands-thesis-targets\\expense-splitter",
+      "fingerprint": "cf8317f770d44916",
+      "capturedAt": "2026-07-25T01:47:19.975Z"
+    },
+    "projection": {
+      "eventSequence": 31,
+      "lifecycle": "completed",
+      "graphId": "graph-expense-category-totals-4b69162e23",
+      "graphRevision": 1,
+      "approvedGraphRevision": 1,
+      "repositorySnapshotId": "sha256:9890b74c6a697b99d2941a8b1715e27c8e23564880a56eb5c93eea3504d8b6be",
+      "finalManifestId": "final-bc90d91eeba10834",
+      "finalCommit": "cf0810b535f8ba4bfd43b8081640a5fa28aed4ad",
+      "updatedAt": "2026-07-25T01:53:31.738Z"
+    },
+    "version": 102,
+    "mutationFence": 4,
+    "createdAt": "2026-07-25T01:47:19.975Z",
+    "updatedAt": "2026-07-25T01:53:31.753Z",
+    "heartbeatAt": "2026-07-25T01:53:30.116Z"
+  }
+}

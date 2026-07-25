@@ -1,0 +1,290 @@
+{
+  "schemaVersion": 2,
+  "runId": "4b7c75b8-8cb6-46c9-bca4-3a999ad18783",
+  "eventSequence": 31,
+  "lastEventId": "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:delivery.published:31",
+  "operationId": "d5e28219-00e5-4036-a0aa-138e91e1f000",
+  "fencingToken": 4,
+  "projection": {
+    "runId": "4b7c75b8-8cb6-46c9-bca4-3a999ad18783",
+    "goal": "Add expense categories to the splitter. Extend the Expense type with an optional category field validated against a fixed set of categories, add computeCategoryTotals to the domain, expose listCategoryTotals from the API layer, render a category breakdown in the web surface, and cover the new behaviour with tests. Preserve the existing balance behaviour and keep the current tests green.",
+    "lifecycle": "completed",
+    "sequence": 31,
+    "appliedEventIds": [
+      "run:4b7c75b8-8cb6-46c9-bca4-3a999ad18783:created",
+      "repository:sha256:9890b74c6a697b99d2941a8b1715e27c8e23564880a56eb5c93eea3504d8b6be:inspection:2",
+      "planning:4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:1:started",
+      "planning:4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:1:node:expense-categories",
+      "planning:4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:1:node:domain-category-model-and-totals",
+      "planning:4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:1:node:api-category-totals-surface",
+      "planning:4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:1:node:web-category-breakdown",
+      "planning:expense-category-totals:completed:4b7c75b8-8cb6-46c9-bca4-3a999ad18783",
+      "planning:expense-category-totals:strategy:4b7c75b8-8cb6-46c9-bca4-3a999ad18783",
+      "graph:graph-expense-category-totals-4b69162e23:r1:compiled",
+      "graph:graph-expense-category-totals-4b69162e23:r1:critic:completeness",
+      "graph:graph-expense-category-totals-4b69162e23:r1:critic:atomicity",
+      "graph:graph-expense-category-totals-4b69162e23:r1:critic:contract_compatibility",
+      "graph:graph-expense-category-totals-4b69162e23:r1:critic:dag_validity",
+      "graph:graph-expense-category-totals-4b69162e23:r1:critic:scope_isolation",
+      "graph:graph-expense-category-totals-4b69162e23:r1:critic:artifact_coverage",
+      "graph:graph-expense-category-totals-4b69162e23:r1:critic:risk_uncertainty",
+      "graph:graph-expense-category-totals-4b69162e23:r1:critic:validation_coverage",
+      "graph:graph-expense-category-totals-4b69162e23:r1:proposed",
+      "approve-plan:graph-expense-category-totals-4b69162e23:r1",
+      "approve-plan:graph-expense-category-totals-4b69162e23:r1:resolved",
+      "approve-plan:graph-expense-category-totals-4b69162e23:r1:graph-approved",
+      "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:readiness.observed:23",
+      "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:wave.selected:24",
+      "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:node-expense-categories-095864ac3e:1:started",
+      "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:node-expense-categories-095864ac3e:1:candidate",
+      "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:node-expense-categories-095864ac3e:1:validation-completed",
+      "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:node-expense-categories-095864ac3e:1:artifact-adopted",
+      "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:node-expense-categories-095864ac3e:1:final-candidate",
+      "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:delivery.started:30",
+      "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:delivery.published:31"
+    ],
+    "decisions": {
+      "approve-plan:graph-expense-category-totals-4b69162e23:r1": {
+        "id": "approve-plan:graph-expense-category-totals-4b69162e23:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-expense-categories-095864ac3e"
+        ],
+        "evidenceRefs": [
+          "graph:graph-expense-category-totals-4b69162e23:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      }
+    },
+    "readiness": {
+      "readyNodeIds": [
+        "node-expense-categories-095864ac3e"
+      ],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [
+      {
+        "waveId": "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:wave:1",
+        "nodeIds": [
+          "node-expense-categories-095864ac3e"
+        ],
+        "maxParallel": 2
+      }
+    ],
+    "attempts": {
+      "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:node-expense-categories-095864ac3e:1": {
+        "attemptId": "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:node-expense-categories-095864ac3e:1",
+        "nodeId": "node-expense-categories-095864ac3e",
+        "inputFingerprint": "sha256:bed3374be36ec434b85be7ccb104e987dcc7ce0c9c06bdfdc53223a5cfacaa06",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "cf0810b535f8ba4bfd43b8081640a5fa28aed4ad",
+        "outputDigest": "sha256:1d991497cd4276ccf18a200cd4e285290235916dcd31abbd72bc28432c6b14f7"
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-expense-categories-output-37637f828b:4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:node-expense-categories-095864ac3e:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-expense-categories-output-37637f828b:4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:node-expense-categories-095864ac3e:1",
+        "runId": "4b7c75b8-8cb6-46c9-bca4-3a999ad18783",
+        "nodeId": "node-expense-categories-095864ac3e",
+        "digest": "sha256:1d991497cd4276ccf18a200cd4e285290235916dcd31abbd72bc28432c6b14f7",
+        "producerAttemptId": "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:attempt:node-expense-categories-095864ac3e:1",
+        "contract": {
+          "id": "artifact-contract-expense-categories-output-37637f828b",
+          "revision": "sha256:d662695f32e5b8b58c4f1c61a85eef4c0d7b36ba4b952aeb0093607101addc6a"
+        },
+        "kind": "commit",
+        "location": "cf0810b535f8ba4bfd43b8081640a5fa28aed4ad",
+        "adoptedAt": "2026-07-25T01:53:29.761Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-expense-categories-095864ac3e": "matrix-c7ce4cc729778f6e"
+    },
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [
+      "matrix-c7ce4cc729778f6e"
+    ],
+    "outcomes": {
+      "execution": "succeeded",
+      "artifact": "verified",
+      "delivery": "published"
+    },
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/2.0.0-pilot",
+      "condition": "C2",
+      "candidateTreeHash": "sha256:78953df67985eda477e7d8f7b2698cd241ad518035e0d3fe40dd90adb4aace14",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40
+      },
+      "assessments": {
+        "node-domain-category-model-and-totals-eb9abbf18e": {
+          "unitKey": "domain-category-model-and-totals",
+          "nodeId": "node-domain-category-model-and-totals-eb9abbf18e",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "sha256:9890b74c6a697b99d2941a8b1715e27c8e23564880a56eb5c93eea3504d8b6be"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-api-category-totals-surface-74672bd802": {
+          "unitKey": "api-category-totals-surface",
+          "nodeId": "node-api-category-totals-surface-74672bd802",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-0",
+            "path-1",
+            "path-3",
+            "sha256:9890b74c6a697b99d2941a8b1715e27c8e23564880a56eb5c93eea3504d8b6be"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-web-category-breakdown-3988b433c6": {
+          "unitKey": "web-category-breakdown",
+          "nodeId": "node-web-category-breakdown-3988b433c6",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-2",
+            "path-0",
+            "path-3",
+            "sha256:9890b74c6a697b99d2941a8b1715e27c8e23564880a56eb5c93eea3504d8b6be"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-expense-categories-095864ac3e": {
+          "unitKey": "expense-categories",
+          "nodeId": "node-expense-categories-095864ac3e",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.156,
+            "parallelism": 0,
+            "faultIsolation": 0.6,
+            "coordination": 1,
+            "pathOverlap": 0.4722,
+            "validationDuplication": 0.4444,
+            "uncertainty": 0
+          },
+          "benefit": 0.252,
+          "cost": 0.4792,
+          "splitAdvantage": -0.2271,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-0",
+            "path-1",
+            "path-2",
+            "path-3",
+            "sha256:9890b74c6a697b99d2941a8b1715e27c8e23564880a56eb5c93eea3504d8b6be"
+          ],
+          "rationale": "Split advantage -0.2271 is below minimum 0.1500."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 0,
+        "totalLeafCount": 1,
+        "averageBranchingFactor": 0
+      }
+    },
+    "graphId": "graph-expense-category-totals-4b69162e23",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1,
+    "finalCandidate": {
+      "manifestId": "final-bc90d91eeba10834",
+      "commit": "cf0810b535f8ba4bfd43b8081640a5fa28aed4ad",
+      "evidenceMatrixId": "matrix-c7ce4cc729778f6e",
+      "sourceTargetFingerprint": "cf8317f770d44916",
+      "targetBranch": "main",
+      "targetHead": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "evidenceEligible": true
+    },
+    "deliveryApproval": {
+      "manifestId": "final-bc90d91eeba10834",
+      "finalSha": "cf0810b535f8ba4bfd43b8081640a5fa28aed4ad",
+      "targetBranch": "main",
+      "targetHead": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "targetFingerprint": "cf8317f770d44916",
+      "actor": "thesis-operator",
+      "idempotencyKey": "4b7c75b8-8cb6-46c9-bca4-3a999ad18783:delivery"
+    },
+    "deliveryReceipt": {
+      "receiptId": "delivery:4b7c75b8-8cb6-46c9-bca4-3a999ad18783:delivery",
+      "requestFingerprint": "9fc3062f07675d10034f4a86ef18c0426c769b178af6e90745bc5756f1a256d2",
+      "manifestId": "final-bc90d91eeba10834",
+      "finalSha": "cf0810b535f8ba4bfd43b8081640a5fa28aed4ad",
+      "targetBranch": "main",
+      "targetHeadBefore": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "targetHeadAfter": "cf0810b535f8ba4bfd43b8081640a5fa28aed4ad",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  },
+  "checksum": "9288faf7162eaee6144f613cade5ee50c7b3df2dd44c0d510c1ba262a1cd4af7"
+}

@@ -1,0 +1,23 @@
+{
+  "cellId": "c2-stability-2",
+  "condition": "C2",
+  "taskId": "STABILITY",
+  "runId": "4b7c75b8-8cb6-46c9-bca4-3a999ad18783",
+  "started": "2026-07-25T01:47:14.869Z",
+  "finished": "2026-07-25T01:53:32.764Z",
+  "outcome": {
+    "lifecycle": "completed",
+    "finalSha": "cf0810b535f8ba4bfd43b8081640a5fa28aed4ad",
+    "receipt": {
+      "receiptId": "delivery:4b7c75b8-8cb6-46c9-bca4-3a999ad18783:delivery",
+      "requestFingerprint": "9fc3062f07675d10034f4a86ef18c0426c769b178af6e90745bc5756f1a256d2",
+      "manifestId": "final-bc90d91eeba10834",
+      "finalSha": "cf0810b535f8ba4bfd43b8081640a5fa28aed4ad",
+      "targetBranch": "main",
+      "targetHeadBefore": "1da878de6edd38cefb1ea4d8ceecdceea0bb6acc",
+      "targetHeadAfter": "cf0810b535f8ba4bfd43b8081640a5fa28aed4ad",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  }
+}
