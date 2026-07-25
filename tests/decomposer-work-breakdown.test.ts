@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   NonRetryablePlanningError,
+  PlanningCapacityError,
   WorkBreakdownPlanner,
   WorkBreakdownSchema,
   buildWorkBreakdownPrompt,
@@ -255,6 +256,46 @@ describe("WorkBreakdown", () => {
     expect(generate.mock.calls[1]?.[0].repairIssues).toEqual(expect.arrayContaining([
       expect.stringContaining("fenced specimen")
     ]));
+  });
+
+  /**
+   * Warehouse pilot series-9 lost all three planning attempts to claude-code-cli
+   * exiting non-zero with a rate_limit_event, while a minimal probe to the same
+   * model answered normally seconds later. Throttling is a property of the
+   * provider, not of the plan the model produced: spending the repair budget on
+   * it makes a transient capacity condition indistinguishable from a model that
+   * could not satisfy the schema, and no prompt fix can recover it.
+   */
+  it("does not spend a planning attempt on a provider capacity failure", async () => {
+    const generate = vi.fn()
+      .mockRejectedValueOnce(new PlanningCapacityError("rate_limit_event"))
+      .mockRejectedValueOnce(new PlanningCapacityError("rate_limit_event"))
+      .mockResolvedValue(fixture());
+    const planner = new WorkBreakdownPlanner({
+      model: { generate },
+      maxAttempts: 1,
+      retryDelayMs: 0,
+      capacityBackoffMs: 0
+    });
+
+    await expect(planner.plan(plannerInput())).resolves.toEqual(fixture());
+    expect(generate).toHaveBeenCalledTimes(3);
+    // The single model attempt was never consumed by the two throttles.
+    expect(generate.mock.calls.map((call) => call[0].attempt)).toEqual([1, 1, 1]);
+  });
+
+  it("gives up with a capacity-specific error once the throttle budget is exhausted", async () => {
+    const generate = vi.fn().mockRejectedValue(new PlanningCapacityError("rate_limit_event"));
+    const planner = new WorkBreakdownPlanner({
+      model: { generate },
+      maxAttempts: 3,
+      retryDelayMs: 0,
+      capacityBackoffMs: 0,
+      maxCapacityRetries: 2
+    });
+
+    await expect(planner.plan(plannerInput())).rejects.toThrow(/capacity/iu);
+    expect(generate).toHaveBeenCalledTimes(3);
   });
 
   it("passes measured granularity feedback into a semantic replan without prescribing a path split", () => {

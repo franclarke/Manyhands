@@ -81,6 +81,10 @@ export interface WorkBreakdownPlannerOptions {
   model: WorkBreakdownModel;
   maxAttempts?: number;
   retryDelayMs?: number;
+  /** How long to wait after a throttle before re-issuing the same attempt. */
+  capacityBackoffMs?: number;
+  /** How many throttles to absorb before giving up. Separate from `maxAttempts`. */
+  maxCapacityRetries?: number;
   cache?: WorkBreakdownCache;
 }
 
@@ -92,17 +96,37 @@ export class NonRetryablePlanningError extends Error {
   }
 }
 
+/**
+ * Signals that the provider refused the request for capacity reasons.
+ *
+ * This is not a property of the plan the model produced, so it must not consume
+ * the repair budget: Warehouse pilot series-9 lost all three planning attempts
+ * to a throttled CLI while a minimal probe to the same model answered normally
+ * seconds later. Spending attempts on it makes a transient condition look like a
+ * model that cannot satisfy the schema, and no repair issue can recover it.
+ */
+export class PlanningCapacityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PlanningCapacityError";
+  }
+}
+
 export class WorkBreakdownPlanner {
   readonly architectureVersion = "v2" as const;
   private readonly model: WorkBreakdownModel;
   private readonly maxAttempts: number;
   private readonly retryDelayMs: number;
+  private readonly capacityBackoffMs: number;
+  private readonly maxCapacityRetries: number;
   private readonly cache: WorkBreakdownCache | undefined;
 
   constructor(options: WorkBreakdownPlannerOptions) {
     this.model = options.model;
     this.maxAttempts = positiveInteger(options.maxAttempts ?? 3, "maxAttempts");
     this.retryDelayMs = nonNegativeInteger(options.retryDelayMs ?? 250, "retryDelayMs");
+    this.capacityBackoffMs = nonNegativeInteger(options.capacityBackoffMs ?? 60_000, "capacityBackoffMs");
+    this.maxCapacityRetries = nonNegativeInteger(options.maxCapacityRetries ?? 3, "maxCapacityRetries");
     this.cache = options.cache;
   }
 
@@ -116,6 +140,7 @@ export class WorkBreakdownPlanner {
 
     const prompt = buildWorkBreakdownPrompt(input);
     let repairIssues: string[] = cached === undefined ? [] : planningIssues(WorkBreakdownSchema.parse(cached), input);
+    let capacityRetries = 0;
     for (let attempt = 1; attempt <= this.maxAttempts; attempt += 1) {
       await observer.onAttemptStarted?.({ attempt });
       const discovered = new Set<string>();
@@ -145,6 +170,21 @@ export class WorkBreakdownPlanner {
         }
         repairIssues = failures;
       } catch (error) {
+        if (error instanceof PlanningCapacityError) {
+          capacityRetries += 1;
+          if (capacityRetries > this.maxCapacityRetries) {
+            throw new Error(
+              `WorkBreakdown planning ran out of provider capacity after ${this.maxCapacityRetries} throttled retries: ${error.message}`
+            );
+          }
+          await observer.onAttemptFailed?.({
+            attempt,
+            reason: `provider capacity: ${error.message} (throttle ${capacityRetries}/${this.maxCapacityRetries}; attempt not consumed)`
+          });
+          if (this.capacityBackoffMs > 0) await delay(this.capacityBackoffMs * capacityRetries);
+          attempt -= 1;
+          continue;
+        }
         repairIssues = [error instanceof Error ? error.message : String(error)];
         nonRetryable = error instanceof NonRetryablePlanningError;
       }

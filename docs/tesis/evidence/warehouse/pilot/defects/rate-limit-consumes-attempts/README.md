@@ -43,16 +43,36 @@ intentos. Hoy un fallo externo se contabiliza como fallo del sistema bajo
 estudio, que es exactamente la confusión que el protocolo intenta evitar en
 todas partes.
 
-**2. Resumibilidad de la serie.** El driver corre W1–W8 en un único proceso y
-corta en el primer fallo. Como la base de cada incremento es la entrega
-verificada del anterior, la cadena es conceptualmente resumible, pero no existe
-`--from Wn`. Medido hoy: una ventana de cuota fresca alcanza para unos 40
-minutos de piloto, y la serie necesita ocho incrementos de hasta 30 minutos cada
-uno. **Con el executor y la cuenta actuales la serie completa no entra en una
-sola ventana de cuota.** Sin reanudación por incremento, cada ventana empieza de
-cero en W1.
+**2. Resumibilidad de la serie — corrección.** Una versión previa de esta nota
+afirmó que el driver no podía reanudar la cadena y que cada ventana de cuota
+volvía a empezar en W1. **Es falso.** El driver persiste `chain-state.json` tras
+cada oráculo PASS, con `completed` y `currentBase`, y arranca en
+`INCREMENTS.slice(state.completed.length)`. Reejecutarlo con el mismo `--out` y
+el mismo `--target` retoma en el incremento siguiente.
+
+Las series 4 a 9 reiniciaron en W1 porque cada una usó target y directorio de
+salida nuevos, decisión deliberada: cada una corría sobre una versión conductual
+distinta y mezclarlas habría violado el protocolo. Eso es una consecuencia de
+estar corrigiendo defectos, no un límite de la herramienta.
+
+Sigue siendo cierto el dato de capacidad: una ventana fresca sostuvo hoy unos 40
+minutos de piloto, y la serie necesita ocho incrementos de hasta 30 minutos. Con
+la versión conductual ya congelada, el procedimiento correcto es conservar un
+único target y un único `--out`, y reejecutar el driver después de cada reset;
+la cadena avanza desde donde quedó.
+
+## Corrección TDD
+
+- Rojo: con `maxAttempts: 1`, dos throttles seguidos de una respuesta válida
+  debían resolver el plan y no lo hacían; y agotar el presupuesto de throttle
+  debía dar un error de capacidad distinguible.
+- Verde: `PlanningCapacityError` es una clase propia. El planner la absorbe con
+  backoff creciente sin consumir el intento —`attempt` no avanza— hasta
+  `maxCapacityRetries`, y recién ahí falla con un mensaje que nombra la
+  capacidad y no la calidad del plan. `run-coordinator-host` la emite cuando el
+  CLI sale distinto de cero habiendo observado un `rate_limit_event`.
+- Verificación: 47 tests de planning PASS; typechecks de `decomposer` y web PASS.
 
 ## Estado
 
-Ninguna corrección aplicada todavía; ambos puntos quedan como el próximo bloque
-de trabajo. Resultado acumulado del piloto: **0/8**.
+Resultado acumulado del piloto: **0/8**.

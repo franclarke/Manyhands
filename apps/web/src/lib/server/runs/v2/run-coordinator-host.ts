@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ChildProcess } from "node:child_process";
 import { buildAgentEnvironment } from "@manyhands/execution-core";
-import { NonRetryablePlanningError, WorkBreakdownPlanner, compileGraphRevision, parseWorkBreakdownProgressLine, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
+import { NonRetryablePlanningError, PlanningCapacityError, WorkBreakdownPlanner, compileGraphRevision, parseWorkBreakdownProgressLine, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
 import { foldRun } from "@manyhands/run-coordinator";
 import { buildFastRepositorySnapshot } from "@manyhands/repository-index";
 import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
@@ -187,7 +187,16 @@ async function invokeSelectedPlanningCli(
       void progressQueue.then(
         () => finish(() => {
           if (code !== 0) {
-            reject(new Error(`${stage.executorId} planning failed with exit code ${code} (${formatPlanningCliDiagnostics({ observedEnvelopeTypes, stdoutBytes, stderrTail })}).`));
+            const diagnostics = formatPlanningCliDiagnostics({ observedEnvelopeTypes, stdoutBytes, stderrTail });
+            // A throttled CLI exits non-zero after emitting a rate_limit_event.
+            // That says nothing about the plan, so it must not spend one of the
+            // planner's three repair attempts (Warehouse pilot series-9 lost
+            // all three to it while a minimal probe answered normally).
+            if (observedEnvelopeTypes.has("rate_limit_event")) {
+              reject(new PlanningCapacityError(`${stage.executorId} was throttled by the provider (${diagnostics}).`));
+              return;
+            }
+            reject(new Error(`${stage.executorId} planning failed with exit code ${code} (${diagnostics}).`));
             return;
           }
           if (isCodex) {
