@@ -70,7 +70,9 @@ la cadena avanza desde donde quedó.
   backoff creciente sin consumir el intento —`attempt` no avanza— hasta
   `maxCapacityRetries`, y recién ahí falla con un mensaje que nombra la
   capacidad y no la calidad del plan. `run-coordinator-host` la emite cuando el
-  CLI sale distinto de cero habiendo observado un `rate_limit_event`.
+  CLI sale distinto de cero y su texto coincide con el vocabulario de capacidad
+  (véase la corrección al pie: la primera versión miraba el envelope y estaba
+  mal).
 - Verificación: 47 tests de planning PASS; typechecks de `decomposer` y web PASS.
 
 ## Estado
