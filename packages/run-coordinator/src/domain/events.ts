@@ -106,6 +106,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     policyVersion: NonEmptyStringSchema,
     condition: z.enum(["A", "B", "C2"]),
     candidateTreeHash: NonEmptyStringSchema,
+    candidateSourceHash: NonEmptyStringSchema.optional(),
     config: z.object({
       minimumAdvantage: z.number().min(-1).max(1),
       maxLeafContextTokens: z.number().int().positive(),

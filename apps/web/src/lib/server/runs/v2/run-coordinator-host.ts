@@ -48,7 +48,11 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
       baseCommit: run.targetContext.sourceBaseCommit,
       authority,
       ...(Object.keys(questionAnswers).length > 0 ? { questionAnswers } : {}),
-      ...(run.granularityCondition !== undefined ? { granularityCondition: run.granularityCondition } : {})
+      ...(run.granularityCondition !== undefined ? { granularityCondition: run.granularityCondition } : {}),
+      ...(run.experimentalCandidate !== undefined ? {
+        acceptanceCriteria: run.experimentalCandidate.acceptanceCriteria,
+        experimentalCandidate: run.experimentalCandidate
+      } : {})
     }, {
       events,
       snapshots,

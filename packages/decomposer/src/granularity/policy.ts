@@ -59,21 +59,29 @@ export const FINE_SPLIT_POLICY: GranularityPolicy = Object.freeze({
   versionSuffix: "+condB"
 });
 
-export const GRANULARITY_CONDITIONS = ["A", "B", "C"] as const;
+export const GRANULARITY_CONDITIONS = ["A", "B", "C1", "C2"] as const;
 export type GranularityCondition = (typeof GRANULARITY_CONDITIONS)[number];
 
-const BY_CONDITION: Record<GranularityCondition, GranularityPolicy> = {
+const LEGACY_POLICY_BY_CONDITION: Record<"A" | "B" | "C1", GranularityPolicy> = {
   A: SINGLE_LEAF_POLICY,
   B: FINE_SPLIT_POLICY,
-  C: ADAPTIVE_GRANULARITY_POLICY
+  C1: ADAPTIVE_GRANULARITY_POLICY
 };
 
-/** Resolves an experiment condition label. Absent means the productive policy. */
+/** Maps historical C records and absent productive configuration explicitly. */
+export function resolveGranularityCondition(condition: string | undefined): GranularityCondition {
+  if (condition === undefined) return "C2";
+  if (condition === "C") return "C1";
+  if (GRANULARITY_CONDITIONS.includes(condition as GranularityCondition)) return condition as GranularityCondition;
+  throw new Error(`Unknown granularity condition "${condition}"; expected one of ${GRANULARITY_CONDITIONS.join(", ")}.`);
+}
+
+/** Resolves only the historical C_task policies kept for C1 replay. */
 export function granularityPolicyFor(condition: string | undefined): GranularityPolicy {
-  if (condition === undefined) return ADAPTIVE_GRANULARITY_POLICY;
-  const policy = BY_CONDITION[condition as GranularityCondition];
+  const normalized = condition === "C" || condition === undefined ? "C1" : condition;
+  const policy = LEGACY_POLICY_BY_CONDITION[normalized as keyof typeof LEGACY_POLICY_BY_CONDITION];
   if (policy === undefined) {
-    throw new Error(`Unknown granularity condition "${condition}"; expected one of ${GRANULARITY_CONDITIONS.join(", ")}.`);
+    throw new Error(`Condition "${condition}" does not use the historical C_task policy.`);
   }
   return policy;
 }

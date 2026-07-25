@@ -6,7 +6,9 @@ import {
   FINE_SPLIT_POLICY,
   SINGLE_LEAF_POLICY,
   applyAdaptiveGranularity,
+  GRANULARITY_CONDITIONS,
   granularityPolicyFor,
+  resolveGranularityCondition,
   WorkBreakdownSchema,
   type WorkBreakdown,
   type WorkUnit
@@ -131,11 +133,16 @@ describe("granularity policy as per-run configuration", () => {
     expect(result.breakdown.root.kind).toBe("leaf");
   });
 
-  it("resolves a condition label to its policy and rejects an unknown one", () => {
+  it("exposes A/B/C1/C2 explicitly and defaults productive runs to C2", () => {
+    expect(GRANULARITY_CONDITIONS).toEqual(["A", "B", "C1", "C2"]);
+    expect(resolveGranularityCondition(undefined)).toBe("C2");
+    expect(resolveGranularityCondition("C")).toBe("C1");
+    expect(resolveGranularityCondition("C1")).toBe("C1");
+    expect(resolveGranularityCondition("C2")).toBe("C2");
     expect(granularityPolicyFor("A")).toEqual(SINGLE_LEAF_POLICY);
     expect(granularityPolicyFor("B")).toEqual(FINE_SPLIT_POLICY);
+    expect(granularityPolicyFor("C1")).toEqual(ADAPTIVE_GRANULARITY_POLICY);
     expect(granularityPolicyFor("C")).toEqual(ADAPTIVE_GRANULARITY_POLICY);
-    expect(granularityPolicyFor(undefined)).toEqual(ADAPTIVE_GRANULARITY_POLICY);
     expect(() => granularityPolicyFor("Z")).toThrow();
   });
 

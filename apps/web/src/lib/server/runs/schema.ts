@@ -1,5 +1,5 @@
 import { EXECUTOR_IDS, ExecutionConfigSchema, ReasoningEffortSchema } from "@manyhands/execution-core";
-import { GRANULARITY_CONDITIONS } from "@manyhands/decomposer";
+import { GRANULARITY_CONDITIONS, WorkBreakdownSchema } from "@manyhands/decomposer";
 import { RunLifecycleSchema } from "@manyhands/run-coordinator";
 import { z } from "zod";
 
@@ -8,6 +8,15 @@ import { RUN_USER_PROMPT_MAX_LENGTH } from "@/lib/run-limits";
 export const RUN_FILE_VERSION = 2;
 
 export const GranularityConditionSchema = z.enum(GRANULARITY_CONDITIONS);
+const StoredGranularityConditionSchema = z.enum(["A", "B", "C", "C1", "C2"]);
+
+export const ExperimentalPlanningCandidateSchema = z.object({
+  sourceHash: z.string().min(1),
+  repositorySnapshotId: z.string().min(1),
+  goal: z.string().trim().min(1),
+  acceptanceCriteria: z.array(z.string().trim().min(1)),
+  breakdown: WorkBreakdownSchema
+}).strict();
 
 export const StageSelectionSchema = z.object({
   executorId: z.enum(EXECUTOR_IDS),
@@ -87,7 +96,8 @@ export const RunRecordSchema = z.object({
    * productive adaptive policy; a run that names one is self-describing about
    * the policy that shaped its plan.
    */
-  granularityCondition: GranularityConditionSchema.optional(),
+  granularityCondition: StoredGranularityConditionSchema.optional(),
+  experimentalCandidate: ExperimentalPlanningCandidateSchema.optional(),
   targetContext: RunTargetContextSchema,
   projection: RunProjectionCacheSchema,
   version: z.number().int().nonnegative().default(0),
@@ -117,6 +127,7 @@ export const RunCreateRequestSchema = z.object({
   executionSelection: StageSelectionSchema.optional(),
   repairSelection: StageSelectionSchema.optional(),
   granularityCondition: GranularityConditionSchema.optional(),
+  experimentalCandidate: ExperimentalPlanningCandidateSchema.optional(),
   executionConfig: ExecutionConfigSchema.partial().omit({ routing: true }).strict().optional()
 }).strict();
 

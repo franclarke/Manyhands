@@ -28,7 +28,7 @@ describe("planning V2 vertical slice", () => {
     expect(result.lifecycle).toBe("needs_approval");
     const persisted = await events.load("run-v2");
     expect(persisted.map((event) => event.type)).toEqual([
-      "run.created", "repository.inspected", "planning.completed", "planning.granularity_assessed", "graph.compiled",
+      "run.created", "repository.inspected", "planning.completed", "planning.granularity_strategy_selected", "graph.compiled",
       ...Array(8).fill("planning.critic_recorded"),
       "graph.revision.proposed", "decision.raised"
     ]);

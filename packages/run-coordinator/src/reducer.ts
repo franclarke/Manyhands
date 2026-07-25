@@ -76,6 +76,7 @@ export interface GranularityStrategyProjection {
   policyVersion: string;
   condition: "A" | "B" | "C2";
   candidateTreeHash: string;
+  candidateSourceHash?: string;
   config: { minimumAdvantage: number; maxLeafContextTokens: number; maxLeafScopePaths: number };
   assessments: Record<string, GranularityStrategyAssessmentProjection>;
   metrics: { maxGraphDepth: number; totalLeafCount: number; averageBranchingFactor: number };
@@ -190,6 +191,7 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
         policyVersion: event.payload.policyVersion,
         condition: event.payload.condition,
         candidateTreeHash: event.payload.candidateTreeHash,
+        ...(event.payload.candidateSourceHash === undefined ? {} : { candidateSourceHash: event.payload.candidateSourceHash }),
         config: { ...event.payload.config },
         assessments: Object.fromEntries(event.payload.assessments.map((assessment) => [assessment.nodeId, {
           ...assessment,

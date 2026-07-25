@@ -32,7 +32,8 @@ describe("adaptive granularity in the productive planning pipeline", () => {
       repoPath: "C:/repo/booking",
       targetFingerprint: "target-1",
       baseCommit: "1".repeat(40),
-      authority
+      authority,
+      granularityCondition: "C1"
     }, {
       events,
       snapshots,
@@ -43,6 +44,7 @@ describe("adaptive granularity in the productive planning pipeline", () => {
       now: () => "2026-07-23T01:00:00.000Z"
     });
 
+    expect(result.failureReason).toBeUndefined();
     expect(result.lifecycle).toBe("needs_approval");
 
     // 1. The event is persisted in the canonical journal.
@@ -82,5 +84,59 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     expect(metrics.runId).toBe("run-adaptive");
     expect(metrics.formulaVersion).toBe(ADAPTIVE_GRANULARITY_FORMULA_VERSION);
     expect((metrics.metrics as Record<string, unknown>).totalLeafCount).toBe(3);
+  });
+
+  it("performs one semantic replan when a C2 leaf exceeds the measured context budget", async () => {
+    const events = new JsonlRunEventStore({ directory });
+    const snapshots = new RunSnapshotStore({ directory, events });
+    const semanticSplit = bookingBreakdown();
+    const firstCandidate = {
+      ...semanticSplit,
+      candidateArtifacts: [],
+      candidateSeams: [],
+      root: {
+        key: "booking",
+        kind: "leaf" as const,
+        title: "Booking creation",
+        objective: "Deliver booking creation",
+        concerns: ["domain", "api", "ui"],
+        expectedOutcomes: ["A working booking flow"],
+        acceptanceIntentIds: ["domain-ready", "api-ready", "ui-ready"],
+        evidenceIds: ["domain-path", "api-path", "ui-path"]
+      }
+    };
+    const measuredSnapshot = bookingSnapshot();
+    for (const file of measuredSnapshot.index?.files ?? []) {
+      file.byteSize = 40_000;
+      file.lineCount = 1_000;
+    }
+    const plan = vi.fn()
+      .mockResolvedValueOnce(firstCandidate)
+      .mockResolvedValueOnce(semanticSplit);
+
+    const result = await runPlanningV2({
+      runId: "run-c2-replan",
+      goal: "Build booking",
+      repoPath: "C:/repo/booking",
+      targetFingerprint: "target-1",
+      baseCommit: "1".repeat(40),
+      authority
+    }, {
+      events,
+      snapshots,
+      inspect: async () => measuredSnapshot,
+      plan,
+      compile: (input) => compileGraphRevision(input, compilerDependencies),
+      nodeIdFor: (key) => compilerDependencies.idFor("node", key),
+      now: () => "2026-07-24T01:00:00.000Z"
+    });
+
+    expect(result.failureReason).toBeUndefined();
+    expect(result.lifecycle).toBe("needs_approval");
+    expect(plan).toHaveBeenCalledTimes(2);
+    expect(plan.mock.calls[1]?.[0].granularityFeedback).toMatchObject({
+      reason: "leaf_context_infeasible"
+    });
+    expect(result.granularityStrategy?.policyVersion).toBe("adaptive-utility/2.0.0-pilot");
   });
 });

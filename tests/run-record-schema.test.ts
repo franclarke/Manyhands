@@ -43,5 +43,9 @@ describe("V2 run-record schema", () => {
     };
     expect(RunCreateRequestSchema.safeParse(canonical).success).toBe(true);
     expect(RunCreateRequestSchema.safeParse({ ...canonical, granularity: "balanced" }).success).toBe(false);
+    for (const granularityCondition of ["A", "B", "C1", "C2"]) {
+      expect(RunCreateRequestSchema.safeParse({ ...canonical, granularityCondition }).success).toBe(true);
+    }
+    expect(RunCreateRequestSchema.safeParse({ ...canonical, granularityCondition: "C" }).success).toBe(false);
   });
 });

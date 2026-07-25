@@ -36,6 +36,10 @@ export interface GranularityStrategyResult {
   requiresSemanticReplan: boolean;
 }
 
+export function candidateBreakdownHash(breakdown: WorkBreakdown): string {
+  return stableHash(WorkBreakdownSchema.parse(breakdown));
+}
+
 interface SelectedUnit {
   unit: WorkUnit;
   decision: GranularityStrategyDecision;
