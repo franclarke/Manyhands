@@ -347,3 +347,18 @@
     variación del Planner y se preservan como evidencia, no se normalizan.
 56. **Checkpoint 3 = completed.** CLAIM-111 queda implementado y con estabilidad
     productiva; su ventaja comparativa continúa pendiente de Warehouse Final.
+
+### 2026-07-25 — Programa C2 + Warehouse, checkpoint 4
+
+57. **Seed reproducible fijado.** El repositorio externo
+    `warehouse-control-tower-seed` quedó en `0f87e45`, con cero código de dominio
+    y lockfile estable después de install congelado; test, typecheck y build
+    vacíos son PASS.
+58. **Instrumento pre-registrado.** Protocolos, prompts W1–W8 y oráculos
+    externos quedaron versionados antes de ejecutar W1. Los oráculos usan una
+    sonda productiva determinista y no aceptan fixtures como sustituto.
+59. **Driver longitudinal = PASS.** 26 tests cubren integridad, disco, dirty
+    target, hashes, `dist`, fallo de oráculo y adopción de base. El dry-run real
+    sobre `c0d4be8` imprimió ocho celdas sin mutar target ni crear worktrees.
+60. **Checkpoint 4 = completed.** CLAIM-114 sólo tiene instrumento; ninguna
+    construcción Warehouse se afirma todavía. Sigue Task 13 Pilot.

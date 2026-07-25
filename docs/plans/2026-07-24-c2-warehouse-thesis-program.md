@@ -21,15 +21,15 @@
 | 1 — C2 core | 1–4 | **completed** | [`checkpoint-1.md`](../tesis/evidence/warehouse/checkpoints/checkpoint-1.md) |
 | 2 — Productive integration | 5–8 | **completed** | [`checkpoint-2.md`](../tesis/evidence/warehouse/checkpoints/checkpoint-2.md) |
 | 3 — Metrics and stability | 9–10 | **completed** | [`checkpoint-3.md`](../tesis/evidence/warehouse/checkpoints/checkpoint-3.md) |
-| 4 — Warehouse assets and drivers | 11–12 | pending | — |
+| 4 — Warehouse assets and drivers | 11–12 | **completed** | [`checkpoint-4.md`](../tesis/evidence/warehouse/checkpoints/checkpoint-4.md) |
 | 5 — Pilot construction | 13 | pending | — |
 | 6 — Freeze | 14 | pending | — |
 | 7 — Final construction and comparison | 15–16 | pending | — |
 | 8 — Results and thesis | 17–18 | pending | — |
 
-> Checkpoint 3 cerrado: Task 9 completada en `cf6db65`; C2-G1 y C2-G2 PASS.
-> Dos runs reales sobre ManyHands `5584602` entregaron desde la misma base y
-> pasaron tests y typecheck en clones limpios. Continúa el checkpoint 4.
+> Checkpoint 4 cerrado: seed `0f87e45`, prompts/oráculos W1–W8 y drivers
+> preflight/longitudinal verificados. El dry-run sobre `c0d4be8` imprimió ocho
+> celdas sin mutación. Continúa Warehouse Pilot.
 
 ## 1. Decisión ejecutiva
 

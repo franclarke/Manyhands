@@ -18,7 +18,7 @@
 | 1 — C2 core | 1–4 | **completed** | `74f001f`, `950dd18`, `e94b4b8`, `d9e5b41` | 45 tests PASS + 2 package typechecks |
 | 2 — Productive integration | 5–8 | **completed** | `bf0ee82`, `d96cc24`, `a424ade`, `7f7d9b4`, `18e6aab` | 50 tests PASS + 3 typechecks + 2 builds |
 | 3 — Metrics and stability | 9–10 | **completed** | `cf6db65`, `5584602`, commit de cierre | 2/2 entregas + clones limpios |
-| 4 — Warehouse assets and drivers | 11–12 | pending | — | — |
+| 4 — Warehouse assets and drivers | 11–12 | **completed** | `550f81c`, `c0d4be8` | 26 tests + seed verify + 8-cell dry-run |
 | 5 — Pilot construction | 13 | pending | — | — |
 | 6 — Freeze | 14 | pending | — | — |
 | 7 — Final construction and comparison | 15–16 | pending | — | — |
@@ -84,3 +84,18 @@
   identidad textual de topología.
 - Evidencia detallada: [`checkpoints/checkpoint-3.md`](checkpoints/checkpoint-3.md).
 - Siguiente bloque: Tasks 11–12; seed, prompts, oráculos y driver longitudinal.
+
+### 2026-07-25 — Cierre del checkpoint 4
+
+- Se creó y verificó el seed técnico externo `0f87e45`; contiene nueve archivos
+  técnicos, cero source files de dominio y queda limpio tras install congelado.
+- W1–W8 quedaron pre-registrados como estímulos acumulativos. Cada entrega debe
+  exponer una sonda pública conectada al camino productivo; fixtures o valores
+  hardcodeados están prohibidos.
+- Los oráculos externos ejecutan install, test, typecheck, build, dos sondas y
+  validaciones funcionales acumulativas; sus hashes están fijados.
+- El driver aborta por preflight inválido y sólo avanza la base luego de un
+  oráculo PASS en clon limpio. La ruta negativa se verificó contra el seed.
+- Verificación: 26 tests PASS, seed verify PASS y dry-run W1–W8 PASS sin writes.
+- Evidencia detallada: [`checkpoints/checkpoint-4.md`](checkpoints/checkpoint-4.md).
+- Siguiente bloque: Task 13, Warehouse Pilot.
