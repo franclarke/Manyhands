@@ -1,0 +1,12 @@
+{
+  "cellId": "warehouse-pilot-w1",
+  "condition": "C2",
+  "taskId": "W1",
+  "runId": "e66585be-747a-4c68-96f2-b4b6dc479904",
+  "started": "2026-07-25T05:01:29.276Z",
+  "finished": "2026-07-25T05:07:47.905Z",
+  "outcome": {
+    "lifecycle": "failed",
+    "receipt": null
+  }
+}

@@ -241,6 +241,11 @@ describe("WorkBreakdown", () => {
     expect(prompt.user).toContain("previous proposal exposed only one child");
     expect(prompt.system).toContain("Revise the semantic cut when granularity feedback is supplied");
     expect(prompt.system).toContain("Never partition a task by mechanically distributing paths");
+    // Warehouse pilot W1 lost every planning attempt to an empty
+    // consumerUnitKeys array; the schema forbids it but the prompt only asked
+    // for consumers to be "explicit", which an empty array formally satisfies.
+    expect(prompt.system).toContain("at least one consumer unit key");
+    expect(prompt.system).toContain("omit it entirely rather than emitting an empty consumerUnitKeys array");
     expect(prompt.system).toContain("at least two cohesive children");
   });
 
@@ -268,6 +273,47 @@ describe("WorkBreakdown", () => {
     });
 
     await expect(planner.plan(plannerInput())).resolves.toEqual(fixture());
+  });
+
+  /**
+   * Progress envelopes were classified by whether they fully validated, so an
+   * imperfect one fell through to the document candidates and was rejected as a
+   * malformed WorkBreakdown. Warehouse pilot W1 burned all three planning
+   * attempts on `root: Unrecognized key(s) in object: 'type', 'unit'` — the
+   * planner never saw the document the model had also emitted. `type` is the
+   * discriminator: a planning.node envelope is never a WorkBreakdown, however
+   * badly formed its unit payload is.
+   */
+  it.each([
+    ["a missing siblingCount", { key: "u", parentKey: null, kind: "leaf", title: "T", objective: "O", siblingIndex: 0 }],
+    ["a siblingIndex past siblingCount", { key: "u", parentKey: null, kind: "leaf", title: "T", objective: "O", siblingIndex: 3, siblingCount: 1 }],
+    ["an unexpected extra field", { key: "u", parentKey: null, kind: "leaf", title: "T", objective: "O", siblingIndex: 0, siblingCount: 1, depth: 2 }],
+    ["an entirely absent unit", undefined]
+  ])("ignores a planning-node envelope with %s instead of failing the attempt", async (_label, unit) => {
+    const planner = new WorkBreakdownPlanner({
+      model: {
+        generate: async () => [
+          JSON.stringify({ type: "planning.node", ...(unit === undefined ? {} : { unit }) }),
+          JSON.stringify(fixture())
+        ].join("\n")
+      },
+      maxAttempts: 1,
+      retryDelayMs: 0
+    });
+
+    await expect(planner.plan(plannerInput())).resolves.toEqual(fixture());
+  });
+
+  it("still reports when the model emitted only progress and no document", async () => {
+    const planner = new WorkBreakdownPlanner({
+      model: {
+        generate: async () => JSON.stringify({ type: "planning.node", unit: { key: "u" } })
+      },
+      maxAttempts: 1,
+      retryDelayMs: 0
+    });
+
+    await expect(planner.plan(plannerInput())).rejects.toThrow(/no complete WorkBreakdown/u);
   });
 });
 

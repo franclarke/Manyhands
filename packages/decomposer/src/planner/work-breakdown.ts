@@ -242,13 +242,26 @@ function normalizeModelOutputs(output: unknown): unknown[] {
   if (typeof output !== "string") return [output];
   const parsed = parseJsonObjectCandidates(output);
   if (!parsed.ok) throw new Error(parsed.message);
+  // `type` is the discriminator. Classifying by full progress-line validity
+  // instead let an imperfect envelope fall through to the document candidates,
+  // and when no document validated its schema errors were reported alongside
+  // the real one: Warehouse pilot W1 retried three times against
+  // "root: Unrecognized key(s) in object: 'type', 'unit'" repeated four times,
+  // which buried the single actionable issue the model needed to repair.
   const documents = parsed.candidates
     .map((candidate) => candidate.value)
-    .filter((candidate) => !WorkBreakdownProgressLineSchema.safeParse(candidate).success);
+    .filter((candidate) => !isProgressEnvelope(candidate));
   if (documents.length === 0) {
     throw new Error("Model emitted planning progress but no complete WorkBreakdown JSON.");
   }
   return documents;
+}
+
+function isProgressEnvelope(candidate: unknown): boolean {
+  return typeof candidate === "object" &&
+    candidate !== null &&
+    !Array.isArray(candidate) &&
+    (candidate as { type?: unknown }).type === "planning.node";
 }
 
 function planningCacheKey(input: WorkBreakdownPlannerInput): string {

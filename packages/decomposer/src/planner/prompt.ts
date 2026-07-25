@@ -28,6 +28,7 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       "Do not target a fixed depth, child count, or layer template.",
       "Do not emit worktrees, exact commands, executor profiles, or generic dependency edges.",
       "Propose artifact and seam candidates only when their producer, consumers, purpose, and evidence are explicit.",
+      "Every candidate artifact and seam must name at least one consumer unit key. A candidate whose only consumer would be its own producer, or which has no consumer yet, is not a relation: omit it entirely rather than emitting an empty consumerUnitKeys array.",
       "Raise a human question only when the answer changes behavior, architecture, scope, risk, or acceptance.",
       "Existing repository paths must be cited through path evidence. Files that a unit will create must be declared in plannedPaths and are not repository evidence.",
       "Every leaf must either cite existing path evidence or declare at least one concrete planned path.",
