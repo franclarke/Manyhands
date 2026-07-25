@@ -42,7 +42,7 @@ export async function runExternalOracle(spec) {
 }
 
 async function probe(target, increment, scenario) {
-  const { stdout } = await command(pnpm, ["study:probe", "--", "--increment", increment, "--scenario", scenario, "--format", "json"], target, 120_000);
+  const { stdout } = await command(pnpm, ["--silent", "study:probe", "--", "--increment", increment, "--scenario", scenario, "--format", "json"], target, 120_000);
   try { return JSON.parse(stdout.trim()); }
   catch { throw new Error(`study:probe did not emit JSON: ${stdout.slice(0, 300)}`); }
 }

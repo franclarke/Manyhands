@@ -63,6 +63,12 @@ describe("Warehouse study assets", () => {
     expect(script.toString("utf8")).toContain("external Warehouse oracle");
   });
 
+  it("keeps pnpm lifecycle banners out of the JSON probe channel", async () => {
+    const core = await readFile(path.join(root, "oracles", "oracle-core.mjs"), "utf8");
+
+    expect(core).toContain('["--silent", "study:probe"');
+  });
+
   it("pins a domain-free, reproducible seed", async () => {
     const manifest = JSON.parse(await readFile(path.join(root, "seed", "seed-manifest.json"), "utf8"));
 
