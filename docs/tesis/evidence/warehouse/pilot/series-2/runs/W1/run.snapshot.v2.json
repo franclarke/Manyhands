@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 2,
+  "runId": "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c",
+  "eventSequence": 31,
+  "lastEventId": "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:delivery.published:31",
+  "operationId": "05081e2d-6975-4193-8b58-a0a98060e91c",
+  "fencingToken": 4,
+  "projection": {
+    "runId": "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c",
+    "goal": "# W1 — Layout e inventario determinista\n\n## Goal\n\nConstruí el primer incremento funcional de Warehouse Control Tower: un modelo\nde zonas, pasillos y bins con inventario por SKU y un escenario reproducible\n`thesis-seed-2026`.\n\n## Acceptance\n\n- El escenario contiene al menos 3 zonas, 12 bins y 3 SKUs con stock positivo.\n- Operaciones de ingreso, retiro y transferencia preservan cantidades y\n  rechazan stock negativo o bins desconocidos.\n- `pnpm study:probe -- --increment W1 --scenario thesis-seed-2026 --format json`\n  usa el dominio productivo y emite schema 1, `stateHash`, `layout` e `inventory`.\n- Tests, typecheck y build quedan verdes.\n\n## Probe contract\n\nCampos exactos: `schemaVersion`, `increment`, `scenario`, `stateHash`,\n`capabilities`, `layout` e `inventory`.\n\nEl comando de la sonda escribe únicamente un objeto JSON determinista con esta\nenvoltura exacta: `schemaVersion: 1`, `increment: \"W1\"`,\n`scenario: \"thesis-seed-2026\"`, `stateHash: \"sha256:<64 hex minúsculos>\"` y\n`capabilities`. Este último contiene `layout: { zones, bins }` con valores\nnuméricos mínimos 3 y 12, e `inventory: { skus, totalUnits }` con mínimos 3 y\n1. No renombrar, anidar ni sustituir estos campos.\n\n## Constraints\n\n- Base: domain-free seed commit from `seed-manifest.json`.\n- No fixtures, respuestas hardcodeadas ni una segunda implementación para la\n  sonda; el mismo seed debe producir bytes JSON deterministas.\n- Elegí boundaries cohesivos sin asumir la arquitectura de referencia.\n\n## Oracle\n\nOracle id: `warehouse-w1-v1`. El oráculo externo ejecuta los comandos del repo,\ninvoca dos veces la sonda y verifica layout, inventario y determinismo.",
+    "lifecycle": "completed",
+    "sequence": 31,
+    "appliedEventIds": [
+      "run:2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:created",
+      "repository:sha256:e7c6c11eb5faf79ec47551e92bcdb0ffba0aa0ae523642c0368be7032ba1f987:inspection:2",
+      "planning:2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:1:started",
+      "planning:2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:1:node:w1-root",
+      "planning:2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:1:node:w1-domain-seed",
+      "planning:2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:1:node:w1-probe-contract",
+      "planning:2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:1:node:w1-verification-harness",
+      "planning:w1-layout-inventory-deterministic:completed:2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c",
+      "planning:w1-layout-inventory-deterministic:strategy:2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c",
+      "graph:graph-w1-layout-inventory-deterministic-c070881733:r1:compiled",
+      "graph:graph-w1-layout-inventory-deterministic-c070881733:r1:critic:completeness",
+      "graph:graph-w1-layout-inventory-deterministic-c070881733:r1:critic:atomicity",
+      "graph:graph-w1-layout-inventory-deterministic-c070881733:r1:critic:contract_compatibility",
+      "graph:graph-w1-layout-inventory-deterministic-c070881733:r1:critic:dag_validity",
+      "graph:graph-w1-layout-inventory-deterministic-c070881733:r1:critic:scope_isolation",
+      "graph:graph-w1-layout-inventory-deterministic-c070881733:r1:critic:artifact_coverage",
+      "graph:graph-w1-layout-inventory-deterministic-c070881733:r1:critic:risk_uncertainty",
+      "graph:graph-w1-layout-inventory-deterministic-c070881733:r1:critic:validation_coverage",
+      "graph:graph-w1-layout-inventory-deterministic-c070881733:r1:proposed",
+      "approve-plan:graph-w1-layout-inventory-deterministic-c070881733:r1",
+      "approve-plan:graph-w1-layout-inventory-deterministic-c070881733:r1:resolved",
+      "approve-plan:graph-w1-layout-inventory-deterministic-c070881733:r1:graph-approved",
+      "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:readiness.observed:23",
+      "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:wave.selected:24",
+      "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:node-w1-root-5fd4cf03a5:1:started",
+      "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:node-w1-root-5fd4cf03a5:1:candidate",
+      "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:node-w1-root-5fd4cf03a5:1:validation-completed",
+      "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:node-w1-root-5fd4cf03a5:1:artifact-adopted",
+      "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:node-w1-root-5fd4cf03a5:1:final-candidate",
+      "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:delivery.started:30",
+      "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:delivery.published:31"
+    ],
+    "decisions": {
+      "approve-plan:graph-w1-layout-inventory-deterministic-c070881733:r1": {
+        "id": "approve-plan:graph-w1-layout-inventory-deterministic-c070881733:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-w1-root-5fd4cf03a5"
+        ],
+        "evidenceRefs": [
+          "graph:graph-w1-layout-inventory-deterministic-c070881733:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      }
+    },
+    "readiness": {
+      "readyNodeIds": [
+        "node-w1-root-5fd4cf03a5"
+      ],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [
+      {
+        "waveId": "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:wave:1",
+        "nodeIds": [
+          "node-w1-root-5fd4cf03a5"
+        ],
+        "maxParallel": 2
+      }
+    ],
+    "attempts": {
+      "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:node-w1-root-5fd4cf03a5:1": {
+        "attemptId": "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:node-w1-root-5fd4cf03a5:1",
+        "nodeId": "node-w1-root-5fd4cf03a5",
+        "inputFingerprint": "sha256:21189d31dde7e2e5279682b9456585d8984f6c0b4385846c1d573fd41da2c149",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "f49dffa5e33d2bc812a41c4fa3b0810767b712aa",
+        "outputDigest": "sha256:39ce7ffb782a8ef79db44a2248f6f149c2d97a8f00d6deb31d69fcbcf678b5d3"
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-w1-root-output-9d1c11fdb0:2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:node-w1-root-5fd4cf03a5:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-w1-root-output-9d1c11fdb0:2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:node-w1-root-5fd4cf03a5:1",
+        "runId": "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c",
+        "nodeId": "node-w1-root-5fd4cf03a5",
+        "digest": "sha256:39ce7ffb782a8ef79db44a2248f6f149c2d97a8f00d6deb31d69fcbcf678b5d3",
+        "producerAttemptId": "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:attempt:node-w1-root-5fd4cf03a5:1",
+        "contract": {
+          "id": "artifact-contract-w1-root-output-9d1c11fdb0",
+          "revision": "sha256:beebaafffb49256d44da558da1203fa49ecddada78e2d8cfd80ad08441c15bac"
+        },
+        "kind": "commit",
+        "location": "f49dffa5e33d2bc812a41c4fa3b0810767b712aa",
+        "adoptedAt": "2026-07-25T03:04:59.973Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-w1-root-5fd4cf03a5": "matrix-59bbab13c8db9dfe"
+    },
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [
+      "matrix-59bbab13c8db9dfe"
+    ],
+    "outcomes": {
+      "execution": "succeeded",
+      "artifact": "verified",
+      "delivery": "published"
+    },
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/2.0.0-pilot",
+      "condition": "C2",
+      "candidateTreeHash": "sha256:439f37c820a2c749b8274e387eb5a70b353f621eb15a66ddd6b63a8e238d442f",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40
+      },
+      "assessments": {
+        "node-w1-domain-seed-9757a4379a": {
+          "unitKey": "w1-domain-seed",
+          "nodeId": "node-w1-domain-seed-9757a4379a",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 1
+          },
+          "benefit": 0,
+          "cost": 0.25,
+          "splitAdvantage": -0.25,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "sha256:e7c6c11eb5faf79ec47551e92bcdb0ffba0aa0ae523642c0368be7032ba1f987"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-w1-probe-contract-48343ac23a": {
+          "unitKey": "w1-probe-contract",
+          "nodeId": "node-w1-probe-contract-48343ac23a",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 1
+          },
+          "benefit": 0,
+          "cost": 0.25,
+          "splitAdvantage": -0.25,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "config-package-json",
+            "sha256:e7c6c11eb5faf79ec47551e92bcdb0ffba0aa0ae523642c0368be7032ba1f987"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-w1-verification-harness-035312dce7": {
+          "unitKey": "w1-verification-harness",
+          "nodeId": "node-w1-verification-harness-035312dce7",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 1
+          },
+          "benefit": 0,
+          "cost": 0.25,
+          "splitAdvantage": -0.25,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "config-package-json",
+            "sha256:e7c6c11eb5faf79ec47551e92bcdb0ffba0aa0ae523642c0368be7032ba1f987"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-w1-root-5fd4cf03a5": {
+          "unitKey": "w1-root",
+          "nodeId": "node-w1-root-5fd4cf03a5",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 1,
+            "coordination": 1,
+            "pathOverlap": 0.0833,
+            "validationDuplication": 0,
+            "uncertainty": 1
+          },
+          "benefit": 0.3333,
+          "cost": 0.5208,
+          "splitAdvantage": -0.1875,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "config-package-json",
+            "sha256:e7c6c11eb5faf79ec47551e92bcdb0ffba0aa0ae523642c0368be7032ba1f987"
+          ],
+          "rationale": "Split advantage -0.1875 is below minimum 0.1500."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 0,
+        "totalLeafCount": 1,
+        "averageBranchingFactor": 0
+      }
+    },
+    "graphId": "graph-w1-layout-inventory-deterministic-c070881733",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1,
+    "finalCandidate": {
+      "manifestId": "final-0ec664d71b29d641",
+      "commit": "f49dffa5e33d2bc812a41c4fa3b0810767b712aa",
+      "evidenceMatrixId": "matrix-59bbab13c8db9dfe",
+      "sourceTargetFingerprint": "c71e9d07fe8708fa",
+      "targetBranch": "main",
+      "targetHead": "0f87e457ae154385cbb81bb6e3541a3533b78761",
+      "evidenceEligible": true
+    },
+    "deliveryApproval": {
+      "manifestId": "final-0ec664d71b29d641",
+      "finalSha": "f49dffa5e33d2bc812a41c4fa3b0810767b712aa",
+      "targetBranch": "main",
+      "targetHead": "0f87e457ae154385cbb81bb6e3541a3533b78761",
+      "targetFingerprint": "c71e9d07fe8708fa",
+      "actor": "thesis-operator",
+      "idempotencyKey": "2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:delivery"
+    },
+    "deliveryReceipt": {
+      "receiptId": "delivery:2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c:delivery",
+      "requestFingerprint": "475b569b9b7bd57895b47724317a6292b91eac3672b47ddbe5eab30a77f4104c",
+      "manifestId": "final-0ec664d71b29d641",
+      "finalSha": "f49dffa5e33d2bc812a41c4fa3b0810767b712aa",
+      "targetBranch": "main",
+      "targetHeadBefore": "0f87e457ae154385cbb81bb6e3541a3533b78761",
+      "targetHeadAfter": "f49dffa5e33d2bc812a41c4fa3b0810767b712aa",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  },
+  "checksum": "40c816c22244915b6ca332c34510670880d02bb9eb4a007b41207a2d4c9a8c0e"
+}

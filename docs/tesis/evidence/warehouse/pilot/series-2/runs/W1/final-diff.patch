@@ -1,0 +1,723 @@
+diff --git a/package.json b/package.json
+index 19790f2..9b7a0fa 100644
+--- a/package.json
++++ b/package.json
+@@ -9,9 +9,10 @@
+     "pnpm": "7.29.3"
+   },
+   "scripts": {
+-    "build": "node -e \"console.log('empty seed build: ok')\"",
+-    "test": "node -e \"console.log('empty seed tests: ok')\"",
+-    "typecheck": "node -e \"console.log('empty seed typecheck: ok')\""
++    "build": "tsc -p tsconfig.json",
++    "study:probe": "tsc -p tsconfig.json && node dist/src/cli/study-probe.js",
++    "test": "pnpm build && node --test dist/tests/domain/inventory-operations.test.js dist/tests/domain/thesis-seed.test.js dist/tests/probe/study-probe-contract.test.js",
++    "typecheck": "tsc -p tsconfig.json --noEmit"
+   },
+   "devDependencies": {
+     "typescript": "5.7.2"
+diff --git a/src/cli/study-probe.ts b/src/cli/study-probe.ts
+new file mode 100644
+index 0000000..5a0b698
+--- /dev/null
++++ b/src/cli/study-probe.ts
+@@ -0,0 +1,70 @@
++import { loadScenario } from "../domain/scenarios.js";
++import { stateHash } from "../domain/state-hash.js";
++
++interface ProbeArgs {
++  readonly increment: string;
++  readonly scenario: string;
++  readonly format: "json";
++}
++
++const args = parseArgs(process.argv.slice(2));
++const state = loadScenario(args.scenario);
++
++if (args.increment !== "W1") {
++  throw new Error(`Unsupported increment: ${args.increment}`);
++}
++
++const payload = {
++  schemaVersion: 1,
++  increment: args.increment,
++  scenario: state.scenario,
++  stateHash: stateHash(state),
++  capabilities: {
++    inventoryOperations: ["ingress", "withdrawal", "transfer"],
++    rejects: ["unknown-bin", "unknown-sku", "non-positive-quantity", "negative-stock"],
++    deterministic: true,
++  },
++  layout: state.layout,
++  inventory: state.inventory,
++};
++
++process.stdout.write(`${JSON.stringify(payload)}\n`);
++
++function parseArgs(argv: readonly string[]): ProbeArgs {
++  const values = new Map<string, string>();
++  const normalizedArgv = argv.filter((arg) => arg !== "--");
++
++  for (let index = 0; index < normalizedArgv.length; index += 1) {
++    const arg = normalizedArgv[index];
++    if (!arg.startsWith("--")) {
++      throw new Error(`Unexpected argument: ${arg}`);
++    }
++
++    const key = arg.slice(2);
++    const value = normalizedArgv[index + 1];
++    if (value === undefined || value.startsWith("--")) {
++      throw new Error(`Missing value for --${key}`);
++    }
++
++    values.set(key, value);
++    index += 1;
++  }
++
++  const increment = values.get("increment");
++  const scenario = values.get("scenario");
++  const format = values.get("format");
++
++  if (increment === undefined) {
++    throw new Error("Missing required argument: --increment");
++  }
++
++  if (scenario === undefined) {
++    throw new Error("Missing required argument: --scenario");
++  }
++
++  if (format !== "json") {
++    throw new Error("Only --format json is supported.");
++  }
++
++  return { increment, scenario, format };
++}
+diff --git a/src/domain/inventory.ts b/src/domain/inventory.ts
+new file mode 100644
+index 0000000..2a30d95
+--- /dev/null
++++ b/src/domain/inventory.ts
+@@ -0,0 +1,198 @@
++import { assertKnownBin, type BinId, type Layout } from "./layout.js";
++
++export type SkuId = string;
++
++export interface Sku {
++  readonly id: SkuId;
++  readonly description: string;
++}
++
++export interface StockLine {
++  readonly binId: BinId;
++  readonly skuId: SkuId;
++  readonly quantity: number;
++}
++
++export interface Inventory {
++  readonly skus: readonly Sku[];
++  readonly stock: readonly StockLine[];
++}
++
++export interface StockMovement {
++  readonly binId: BinId;
++  readonly skuId: SkuId;
++  readonly quantity: number;
++}
++
++export interface TransferMovement {
++  readonly fromBinId: BinId;
++  readonly toBinId: BinId;
++  readonly skuId: SkuId;
++  readonly quantity: number;
++}
++
++export function createInventory(skus: readonly Sku[], stock: readonly StockLine[], layout: Layout): Inventory {
++  const skuIds = new Set<string>();
++
++  for (const sku of skus) {
++    if (!sku.id) {
++      throw new Error("SKU id is required.");
++    }
++
++    if (skuIds.has(sku.id)) {
++      throw new Error(`Duplicate SKU id: ${sku.id}`);
++    }
++
++    skuIds.add(sku.id);
++  }
++
++  for (const line of stock) {
++    assertKnownBin(layout, line.binId);
++    assertKnownSku(skuIds, line.skuId);
++    assertNonNegativeQuantity(line.quantity);
++  }
++
++  return normalizeInventory({
++    skus: skus.map((sku) => ({ ...sku })),
++    stock: stock.map((line) => ({ ...line })),
++  });
++}
++
++export function receiveStock(inventory: Inventory, layout: Layout, movement: StockMovement): Inventory {
++  validateMovement(inventory, layout, movement);
++
++  return applyQuantityDelta(inventory, movement.binId, movement.skuId, movement.quantity);
++}
++
++export function ingressStock(inventory: Inventory, layout: Layout, movement: StockMovement): Inventory {
++  return receiveStock(inventory, layout, movement);
++}
++
++export function withdrawStock(inventory: Inventory, layout: Layout, movement: StockMovement): Inventory {
++  validateMovement(inventory, layout, movement);
++
++  const available = getStockQuantity(inventory, movement.binId, movement.skuId);
++  if (available < movement.quantity) {
++    throw new Error(
++      `Insufficient stock for SKU ${movement.skuId} in bin ${movement.binId}: requested ${movement.quantity}, available ${available}.`,
++    );
++  }
++
++  return applyQuantityDelta(inventory, movement.binId, movement.skuId, -movement.quantity);
++}
++
++export function transferStock(inventory: Inventory, layout: Layout, movement: TransferMovement): Inventory {
++  assertPositiveQuantity(movement.quantity);
++  assertKnownBin(layout, movement.fromBinId);
++  assertKnownBin(layout, movement.toBinId);
++  assertKnownSku(new Set(inventory.skus.map((sku) => sku.id)), movement.skuId);
++
++  if (movement.fromBinId === movement.toBinId) {
++    return normalizeInventory(inventory);
++  }
++
++  const sourceQuantity = getStockQuantity(inventory, movement.fromBinId, movement.skuId);
++  if (sourceQuantity < movement.quantity) {
++    throw new Error(
++      `Insufficient stock for SKU ${movement.skuId} in bin ${movement.fromBinId}: requested ${movement.quantity}, available ${sourceQuantity}.`,
++    );
++  }
++
++  return applyQuantityDelta(
++    applyQuantityDelta(inventory, movement.fromBinId, movement.skuId, -movement.quantity),
++    movement.toBinId,
++    movement.skuId,
++    movement.quantity,
++  );
++}
++
++export function getStockQuantity(inventory: Inventory, binId: BinId, skuId: SkuId): number {
++  return inventory.stock.find((line) => line.binId === binId && line.skuId === skuId)?.quantity ?? 0;
++}
++
++export function totalQuantity(inventory: Inventory, skuId?: SkuId): number {
++  return inventory.stock
++    .filter((line) => skuId === undefined || line.skuId === skuId)
++    .reduce((total, line) => total + line.quantity, 0);
++}
++
++function validateMovement(inventory: Inventory, layout: Layout, movement: StockMovement): void {
++  assertPositiveQuantity(movement.quantity);
++  assertKnownBin(layout, movement.binId);
++  assertKnownSku(new Set(inventory.skus.map((sku) => sku.id)), movement.skuId);
++}
++
++function applyQuantityDelta(inventory: Inventory, binId: BinId, skuId: SkuId, delta: number): Inventory {
++  const stockByKey = new Map<string, StockLine>();
++
++  for (const line of inventory.stock) {
++    stockByKey.set(stockKey(line.binId, line.skuId), { ...line });
++  }
++
++  const key = stockKey(binId, skuId);
++  const current = stockByKey.get(key)?.quantity ?? 0;
++  const nextQuantity = current + delta;
++
++  if (nextQuantity < 0) {
++    throw new Error(`Stock cannot be negative for SKU ${skuId} in bin ${binId}.`);
++  }
++
++  if (nextQuantity === 0) {
++    stockByKey.delete(key);
++  } else {
++    stockByKey.set(key, { binId, skuId, quantity: nextQuantity });
++  }
++
++  return normalizeInventory({
++    skus: inventory.skus.map((sku) => ({ ...sku })),
++    stock: [...stockByKey.values()],
++  });
++}
++
++function normalizeInventory(inventory: Inventory): Inventory {
++  const stockByKey = new Map<string, StockLine>();
++
++  for (const line of inventory.stock) {
++    const key = stockKey(line.binId, line.skuId);
++    const currentQuantity = stockByKey.get(key)?.quantity ?? 0;
++    const quantity = currentQuantity + line.quantity;
++
++    if (quantity === 0) {
++      stockByKey.delete(key);
++    } else {
++      stockByKey.set(key, { binId: line.binId, skuId: line.skuId, quantity });
++    }
++  }
++
++  return {
++    skus: [...inventory.skus].sort((left, right) => left.id.localeCompare(right.id)).map((sku) => ({ ...sku })),
++    stock: [...stockByKey.values()]
++      .sort((left, right) => {
++        const byBin = left.binId.localeCompare(right.binId);
++        return byBin === 0 ? left.skuId.localeCompare(right.skuId) : byBin;
++      })
++      .map((line) => ({ ...line })),
++  };
++}
++
++function assertKnownSku(skuIds: Set<string>, skuId: SkuId): void {
++  if (!skuIds.has(skuId)) {
++    throw new Error(`Unknown SKU: ${skuId}`);
++  }
++}
++
++function assertPositiveQuantity(quantity: number): void {
++  if (!Number.isInteger(quantity) || quantity <= 0) {
++    throw new Error(`Quantity must be a positive integer: ${quantity}`);
++  }
++}
++
++function assertNonNegativeQuantity(quantity: number): void {
++  if (!Number.isInteger(quantity) || quantity < 0) {
++    throw new Error(`Quantity must be a non-negative integer: ${quantity}`);
++  }
++}
++
++function stockKey(binId: BinId, skuId: SkuId): string {
++  return `${binId}\u0000${skuId}`;
++}
+diff --git a/src/domain/layout.ts b/src/domain/layout.ts
+new file mode 100644
+index 0000000..229ce3c
+--- /dev/null
++++ b/src/domain/layout.ts
+@@ -0,0 +1,67 @@
++export type ZoneId = string;
++export type BinId = string;
++
++export interface Zone {
++  readonly id: ZoneId;
++  readonly name: string;
++}
++
++export interface Bin {
++  readonly id: BinId;
++  readonly zoneId: ZoneId;
++  readonly label: string;
++}
++
++export interface Layout {
++  readonly zones: readonly Zone[];
++  readonly bins: readonly Bin[];
++}
++
++export function createLayout(zones: readonly Zone[], bins: readonly Bin[]): Layout {
++  const zoneIds = new Set<string>();
++
++  for (const zone of zones) {
++    if (!zone.id) {
++      throw new Error("Zone id is required.");
++    }
++
++    if (zoneIds.has(zone.id)) {
++      throw new Error(`Duplicate zone id: ${zone.id}`);
++    }
++
++    zoneIds.add(zone.id);
++  }
++
++  const binIds = new Set<string>();
++
++  for (const bin of bins) {
++    if (!bin.id) {
++      throw new Error("Bin id is required.");
++    }
++
++    if (binIds.has(bin.id)) {
++      throw new Error(`Duplicate bin id: ${bin.id}`);
++    }
++
++    if (!zoneIds.has(bin.zoneId)) {
++      throw new Error(`Bin ${bin.id} references unknown zone ${bin.zoneId}.`);
++    }
++
++    binIds.add(bin.id);
++  }
++
++  return {
++    zones: zones.map((zone) => ({ ...zone })),
++    bins: bins.map((bin) => ({ ...bin })),
++  };
++}
++
++export function hasBin(layout: Layout, binId: BinId): boolean {
++  return layout.bins.some((bin) => bin.id === binId);
++}
++
++export function assertKnownBin(layout: Layout, binId: BinId): void {
++  if (!hasBin(layout, binId)) {
++    throw new Error(`Unknown bin: ${binId}`);
++  }
++}
+diff --git a/src/domain/node-runtime.d.ts b/src/domain/node-runtime.d.ts
+new file mode 100644
+index 0000000..421d86c
+--- /dev/null
++++ b/src/domain/node-runtime.d.ts
+@@ -0,0 +1,41 @@
++declare const process: {
++  readonly argv: readonly string[];
++  readonly cwd: () => string;
++  readonly execPath: string;
++  readonly stdout: {
++    write: (value: string) => void;
++  };
++};
++
++declare module "node:assert/strict" {
++  const assert: {
++    equal: (actual: unknown, expected: unknown, message?: string) => void;
++    deepEqual: (actual: unknown, expected: unknown, message?: string) => void;
++    ok: (value: unknown, message?: string) => void;
++    match: (actual: string, expected: RegExp, message?: string) => void;
++    throws: (block: () => unknown, expected?: RegExp, message?: string) => void;
++  };
++
++  export default assert;
++}
++
++declare module "node:child_process" {
++  export function execFileSync(
++    file: string,
++    args: readonly string[],
++    options: { readonly encoding: "utf8" },
++  ): string;
++}
++
++declare module "node:crypto" {
++  export function createHash(algorithm: string): {
++    update: (value: string) => {
++      digest: (encoding: "hex") => string;
++    };
++  };
++}
++
++declare module "node:test" {
++  export function describe(name: string, fn: () => void): void;
++  export function it(name: string, fn: () => void): void;
++}
+diff --git a/src/domain/scenarios.ts b/src/domain/scenarios.ts
+new file mode 100644
+index 0000000..4626059
+--- /dev/null
++++ b/src/domain/scenarios.ts
+@@ -0,0 +1,52 @@
++import { createInventory } from "./inventory.js";
++import { createLayout } from "./layout.js";
++import { createWarehouseState, type WarehouseState } from "./state.js";
++
++export const THESIS_SEED_2026 = "thesis-seed-2026";
++
++export function loadScenario(scenario: string): WarehouseState {
++  if (scenario !== THESIS_SEED_2026) {
++    throw new Error(`Unknown scenario: ${scenario}`);
++  }
++
++  const layout = createLayout(
++    [
++      { id: "receiving", name: "Receiving" },
++      { id: "reserve", name: "Reserve Storage" },
++      { id: "picking", name: "Forward Picking" },
++    ],
++    [
++      { id: "RCV-01", zoneId: "receiving", label: "Receiving Dock 1" },
++      { id: "RCV-02", zoneId: "receiving", label: "Receiving Dock 2" },
++      { id: "RCV-03", zoneId: "receiving", label: "Receiving Staging 1" },
++      { id: "RSV-A01", zoneId: "reserve", label: "Reserve A01" },
++      { id: "RSV-A02", zoneId: "reserve", label: "Reserve A02" },
++      { id: "RSV-A03", zoneId: "reserve", label: "Reserve A03" },
++      { id: "RSV-B01", zoneId: "reserve", label: "Reserve B01" },
++      { id: "RSV-B02", zoneId: "reserve", label: "Reserve B02" },
++      { id: "RSV-B03", zoneId: "reserve", label: "Reserve B03" },
++      { id: "PCK-01", zoneId: "picking", label: "Pick Face 1" },
++      { id: "PCK-02", zoneId: "picking", label: "Pick Face 2" },
++      { id: "PCK-03", zoneId: "picking", label: "Pick Face 3" },
++    ],
++  );
++
++  const inventory = createInventory(
++    [
++      { id: "SKU-ALPHA", description: "Ambient control module" },
++      { id: "SKU-BRAVO", description: "Pallet sensor kit" },
++      { id: "SKU-CHARLIE", description: "Rechargeable scanner battery" },
++    ],
++    [
++      { binId: "RSV-A01", skuId: "SKU-ALPHA", quantity: 120 },
++      { binId: "PCK-01", skuId: "SKU-ALPHA", quantity: 24 },
++      { binId: "RSV-A02", skuId: "SKU-BRAVO", quantity: 80 },
++      { binId: "PCK-02", skuId: "SKU-BRAVO", quantity: 18 },
++      { binId: "RSV-B01", skuId: "SKU-CHARLIE", quantity: 200 },
++      { binId: "PCK-03", skuId: "SKU-CHARLIE", quantity: 36 },
++    ],
++    layout,
++  );
++
++  return createWarehouseState(scenario, layout, inventory);
++}
+diff --git a/src/domain/state-hash.ts b/src/domain/state-hash.ts
+new file mode 100644
+index 0000000..a0f5cde
+--- /dev/null
++++ b/src/domain/state-hash.ts
+@@ -0,0 +1,19 @@
++import { createHash } from "node:crypto";
++
++export function stateHash(value: unknown): string {
++  return createHash("sha256").update(stableStringify(value)).digest("hex");
++}
++
++export function stableStringify(value: unknown): string {
++  if (value === null || typeof value !== "object") {
++    return JSON.stringify(value);
++  }
++
++  if (Array.isArray(value)) {
++    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
++  }
++
++  const record = value as Record<string, unknown>;
++  const keys = Object.keys(record).sort();
++  return `{${keys.map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(",")}}`;
++}
+diff --git a/src/domain/state.ts b/src/domain/state.ts
+new file mode 100644
+index 0000000..1b39614
+--- /dev/null
++++ b/src/domain/state.ts
+@@ -0,0 +1,16 @@
++import type { Inventory } from "./inventory.js";
++import type { Layout } from "./layout.js";
++
++export interface WarehouseState {
++  readonly scenario: string;
++  readonly layout: Layout;
++  readonly inventory: Inventory;
++}
++
++export function createWarehouseState(scenario: string, layout: Layout, inventory: Inventory): WarehouseState {
++  return {
++    scenario,
++    layout,
++    inventory,
++  };
++}
+diff --git a/tests/domain/inventory-operations.test.ts b/tests/domain/inventory-operations.test.ts
+new file mode 100644
+index 0000000..f84bad4
+--- /dev/null
++++ b/tests/domain/inventory-operations.test.ts
+@@ -0,0 +1,105 @@
++import { describe, it } from "node:test";
++import assert from "node:assert/strict";
++
++import {
++  getStockQuantity,
++  receiveStock,
++  totalQuantity,
++  transferStock,
++  withdrawStock,
++} from "../../src/domain/inventory.js";
++import { THESIS_SEED_2026, loadScenario } from "../../src/domain/scenarios.js";
++
++describe("inventory operations", () => {
++  it("ingresses stock by the requested quantity", () => {
++    const state = loadScenario(THESIS_SEED_2026);
++    const before = getStockQuantity(state.inventory, "RCV-01", "SKU-ALPHA");
++
++    const inventory = receiveStock(state.inventory, state.layout, {
++      binId: "RCV-01",
++      skuId: "SKU-ALPHA",
++      quantity: 10,
++    });
++
++    assert.equal(getStockQuantity(inventory, "RCV-01", "SKU-ALPHA"), before + 10);
++    assert.equal(totalQuantity(inventory, "SKU-ALPHA"), totalQuantity(state.inventory, "SKU-ALPHA") + 10);
++  });
++
++  it("withdraws stock by the requested quantity", () => {
++    const state = loadScenario(THESIS_SEED_2026);
++
++    const inventory = withdrawStock(state.inventory, state.layout, {
++      binId: "PCK-01",
++      skuId: "SKU-ALPHA",
++      quantity: 4,
++    });
++
++    assert.equal(getStockQuantity(inventory, "PCK-01", "SKU-ALPHA"), 20);
++    assert.equal(totalQuantity(inventory, "SKU-ALPHA"), totalQuantity(state.inventory, "SKU-ALPHA") - 4);
++  });
++
++  it("transfers stock without changing the total quantity", () => {
++    const state = loadScenario(THESIS_SEED_2026);
++
++    const inventory = transferStock(state.inventory, state.layout, {
++      fromBinId: "RSV-A01",
++      toBinId: "PCK-01",
++      skuId: "SKU-ALPHA",
++      quantity: 12,
++    });
++
++    assert.equal(getStockQuantity(inventory, "RSV-A01", "SKU-ALPHA"), 108);
++    assert.equal(getStockQuantity(inventory, "PCK-01", "SKU-ALPHA"), 36);
++    assert.equal(totalQuantity(inventory, "SKU-ALPHA"), totalQuantity(state.inventory, "SKU-ALPHA"));
++  });
++
++  it("rejects withdrawals and transfers that would create negative stock", () => {
++    const state = loadScenario(THESIS_SEED_2026);
++
++    assert.throws(
++      () =>
++        withdrawStock(state.inventory, state.layout, {
++          binId: "PCK-01",
++          skuId: "SKU-ALPHA",
++          quantity: 25,
++        }),
++      /Insufficient stock/,
++    );
++
++    assert.throws(
++      () =>
++        transferStock(state.inventory, state.layout, {
++          fromBinId: "PCK-01",
++          toBinId: "PCK-02",
++          skuId: "SKU-ALPHA",
++          quantity: 25,
++        }),
++      /Insufficient stock/,
++    );
++  });
++
++  it("rejects unknown bins", () => {
++    const state = loadScenario(THESIS_SEED_2026);
++
++    assert.throws(
++      () =>
++        receiveStock(state.inventory, state.layout, {
++          binId: "MISSING",
++          skuId: "SKU-ALPHA",
++          quantity: 1,
++        }),
++      /Unknown bin/,
++    );
++
++    assert.throws(
++      () =>
++        transferStock(state.inventory, state.layout, {
++          fromBinId: "RSV-A01",
++          toBinId: "MISSING",
++          skuId: "SKU-ALPHA",
++          quantity: 1,
++        }),
++      /Unknown bin/,
++    );
++  });
++});
+diff --git a/tests/domain/thesis-seed.test.ts b/tests/domain/thesis-seed.test.ts
+new file mode 100644
+index 0000000..5d430c3
+--- /dev/null
++++ b/tests/domain/thesis-seed.test.ts
+@@ -0,0 +1,19 @@
++import { describe, it } from "node:test";
++import assert from "node:assert/strict";
++
++import { THESIS_SEED_2026, loadScenario } from "../../src/domain/scenarios.js";
++import { totalQuantity } from "../../src/domain/inventory.js";
++
++describe("thesis-seed-2026 scenario", () => {
++  it("contains the W1 minimum layout and positive SKU stock", () => {
++    const state = loadScenario(THESIS_SEED_2026);
++
++    assert.equal(state.layout.zones.length, 3);
++    assert.equal(state.layout.bins.length, 12);
++    assert.equal(state.inventory.skus.length, 3);
++
++    for (const sku of state.inventory.skus) {
++      assert.ok(totalQuantity(state.inventory, sku.id) > 0, `${sku.id} should have positive stock`);
++    }
++  });
++});
+diff --git a/tests/probe/study-probe-contract.test.ts b/tests/probe/study-probe-contract.test.ts
+new file mode 100644
+index 0000000..9b55a0c
+--- /dev/null
++++ b/tests/probe/study-probe-contract.test.ts
+@@ -0,0 +1,34 @@
++import { describe, it } from "node:test";
++import assert from "node:assert/strict";
++import { execFileSync } from "node:child_process";
++
++describe("study probe contract", () => {
++  it("emits one deterministic JSON object for W1 thesis-seed-2026", () => {
++    const args = [
++      "dist/src/cli/study-probe.js",
++      "--",
++      "--increment",
++      "W1",
++      "--scenario",
++      "thesis-seed-2026",
++      "--format",
++      "json",
++    ];
++
++    const first = execFileSync(process.execPath, args, { encoding: "utf8" });
++    const second = execFileSync(process.execPath, args, { encoding: "utf8" });
++
++    assert.equal(first, second);
++    assert.match(first, /^\{.*\}\n$/s);
++
++    const payload = JSON.parse(first);
++    assert.equal(payload.schemaVersion, 1);
++    assert.equal(payload.increment, "W1");
++    assert.equal(payload.scenario, "thesis-seed-2026");
++    assert.equal(typeof payload.stateHash, "string");
++    assert.equal(payload.layout.zones.length, 3);
++    assert.equal(payload.layout.bins.length, 12);
++    assert.equal(payload.inventory.skus.length, 3);
++    assert.deepEqual(payload.capabilities.inventoryOperations, ["ingress", "withdrawal", "transfer"]);
++  });
++});
+diff --git a/tsconfig.json b/tsconfig.json
+new file mode 100644
+index 0000000..e76952a
+--- /dev/null
++++ b/tsconfig.json
+@@ -0,0 +1,18 @@
++{
++  "extends": "./tsconfig.base.json",
++  "compilerOptions": {
++    "module": "NodeNext",
++    "moduleResolution": "NodeNext",
++    "target": "ES2022",
++    "lib": ["ES2022"],
++    "rootDir": ".",
++    "outDir": "dist",
++    "strict": true,
++    "noEmit": false,
++    "noEmitOnError": true,
++    "forceConsistentCasingInFileNames": true,
++    "skipLibCheck": true,
++    "types": []
++  },
++  "include": ["src/**/*.ts", "tests/**/*.ts"]
++}

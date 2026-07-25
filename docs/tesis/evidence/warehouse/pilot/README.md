@@ -24,3 +24,20 @@ tesis. El piloto sólo cierra cuando W1–W8 pasan sus oráculos externos.
 Resultado acumulado del piloto: **0/8 incrementos verificados**. El siguiente
 intento comienza desde un clon nuevo del seed; no modifica ni oculta esta
 evidencia formativa.
+
+## Segundo intento W1
+
+La serie `series-2` ejecutó el run `2d0ef7fe-5f3c-4e33-b8e8-4484b916f98c`
+sobre un clon nuevo. ManyHands incluyó `package.json` en scope, reemplazó los
+stubs, completó sin repair y entregó
+`f49dffa5e33d2bc812a41c4fa3b0810767b712aa`. El incremento tampoco fue adoptado:
+
+1. el oráculo descubrió que el banner de pnpm contaminaba el canal JSON;
+2. una reejecución diagnóstica silenciosa reveló además un FAIL productivo: la
+   entrega omitió el prefijo `sha256:` y aplanó `layout` e `inventory` fuera de
+   `capabilities`.
+
+Las causas y regresiones están en
+[`pnpm-json-channel`](defects/pnpm-json-channel/README.md) y
+[`contract-fidelity`](defects/contract-fidelity/README.md). Resultado acumulado:
+**0/8 incrementos verificados**.
