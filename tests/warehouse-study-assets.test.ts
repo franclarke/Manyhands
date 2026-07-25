@@ -5,6 +5,10 @@ import { describe, expect, it } from "vitest";
 
 const root = path.resolve("docs/tesis/evidence/warehouse");
 const increments = Array.from({ length: 8 }, (_, index) => `W${index + 1}`);
+const cumulativeCapabilities = [
+  "layout", "inventory", "visual", "orders", "simulation",
+  "routing", "congestion", "persistence", "analytics", "accessibility"
+];
 
 describe("Warehouse study assets", () => {
   it("pins every prompt in the study asset manifest", async () => {
@@ -28,6 +32,13 @@ describe("Warehouse study assets", () => {
     expect(prompt).toContain(`Oracle id: \`warehouse-${increment.toLowerCase()}-v1\``);
     if (increment !== "W1") {
       expect(prompt).toContain(`Base: verified delivery of W${Number(increment.slice(1)) - 1}`);
+    }
+    for (const field of ["schemaVersion", "increment", "scenario", "capabilities", "stateHash"]) {
+      expect(prompt).toContain(`\`${field}\``);
+    }
+    const capabilityCount = increment === "W8" ? cumulativeCapabilities.length : Number(increment.slice(1)) + 1;
+    for (const capability of cumulativeCapabilities.slice(0, capabilityCount)) {
+      expect(prompt).toContain(`\`${capability}\``);
     }
   });
 

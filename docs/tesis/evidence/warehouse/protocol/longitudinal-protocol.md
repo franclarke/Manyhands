@@ -33,6 +33,13 @@ thesis-seed-2026 --format json`. La sonda es una interfaz pública de estudio y
 debe invocar el mismo dominio, estado y adaptadores productivos: no puede usar
 fixtures, respuestas hardcodeadas ni una implementación paralela.
 
+La salida estándar de la sonda contiene únicamente JSON con la envoltura
+`{ schemaVersion, increment, scenario, stateHash, capabilities }`. Los prompts
+fijan en cada incremento los nombres, tipos y mínimos acumulativos exactos. El
+`stateHash` usa el formato `sha256:` seguido por 64 dígitos hexadecimales
+minúsculos. Esta forma es parte del estímulo público, no conocimiento oculto del
+oráculo.
+
 El oráculo vive fuera del target, verifica su propio hash, ejecuta `pnpm test`,
 `pnpm typecheck`, `pnpm build`, invoca dos veces la sonda y comprueba
 determinismo más invariantes acumulativos. Las capturas visuales son evidencia
