@@ -12,6 +12,13 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
   const resolvedDecisions = Object.entries(input.questionAnswers ?? {})
     .map(([questionId, answer]) => `- ${questionId}: ${answer}`)
     .join("\n");
+  const granularityFeedback = input.granularityFeedback === undefined
+    ? "- none"
+    : [
+        `Granularity replan feedback for ${input.granularityFeedback.unitKey}:`,
+        `- reason: ${input.granularityFeedback.reason}`,
+        ...input.granularityFeedback.evidence.map((item) => `- evidence: ${item}`)
+      ].join("\n");
   return {
     system: [
       "You are the semantic Planner for a software implementation system.",
@@ -28,6 +35,8 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       "As soon as you decide each unit, emit one compact JSON line before the final document: {\"type\":\"planning.node\",\"unit\":{\"key\":\"...\",\"parentKey\":null,\"kind\":\"composite|leaf\",\"title\":\"...\",\"objective\":\"...\",\"siblingIndex\":0,\"siblingCount\":1}}.",
       "Emit planning.node lines in parent-first order. Then emit the complete schema-valid WorkBreakdown JSON. Never invent repository evidence.",
       "Resolved human decisions are authoritative requirements. Incorporate them into the WorkBreakdown and do not ask the same question again.",
+      "Revise the semantic cut when granularity feedback is supplied. Preserve the objective and acceptance intents, and propose at least two cohesive children only when the evidence supports a real boundary.",
+      "Never partition a task by mechanically distributing paths. A path list is evidence of scope, not a semantic decomposition.",
       "Required JSON shape:",
       WORK_BREAKDOWN_OUTPUT_SHAPE
     ].join("\n"),
@@ -39,7 +48,9 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       "Repository evidence:",
       evidence || "- none; mark uncertainty explicitly",
       "Resolved human decisions:",
-      resolvedDecisions || "- none"
+      resolvedDecisions || "- none",
+      "Granularity feedback:",
+      granularityFeedback
     ].join("\n")
   };
 }

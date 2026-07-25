@@ -151,6 +151,27 @@ describe("WorkBreakdown", () => {
     expect(prompt.system).toContain("do not ask the same question again");
   });
 
+  it("passes measured granularity feedback into a semantic replan without prescribing a path split", () => {
+    const prompt = buildWorkBreakdownPrompt({
+      ...plannerInput(),
+      granularityFeedback: {
+        unitKey: "booking-feature",
+        reason: "missing_semantic_cut",
+        evidence: [
+          "estimated context exceeds the configured leaf budget",
+          "the previous proposal exposed only one child"
+        ]
+      }
+    });
+
+    expect(prompt.user).toContain("Granularity replan feedback for booking-feature");
+    expect(prompt.user).toContain("missing_semantic_cut");
+    expect(prompt.user).toContain("previous proposal exposed only one child");
+    expect(prompt.system).toContain("Revise the semantic cut when granularity feedback is supplied");
+    expect(prompt.system).toContain("Never partition a task by mechanically distributing paths");
+    expect(prompt.system).toContain("at least two cohesive children");
+  });
+
   it("does not mistake streamed planning-node envelopes for complete WorkBreakdown documents", async () => {
     const planner = new WorkBreakdownPlanner({
       model: {

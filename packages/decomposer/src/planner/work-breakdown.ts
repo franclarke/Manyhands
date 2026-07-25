@@ -23,6 +23,14 @@ export interface WorkBreakdownPlannerInput {
     evidence: PlannerRepositoryEvidence[];
   };
   questionAnswers?: Record<string, string>;
+  /** Deterministic C2 feedback requesting a better semantic alternative. */
+  granularityFeedback?: GranularityReplanFeedback;
+}
+
+export interface GranularityReplanFeedback {
+  unitKey: string;
+  reason: "leaf_context_infeasible" | "missing_semantic_cut";
+  evidence: string[];
 }
 
 export interface WorkBreakdownModelRequest {
