@@ -165,11 +165,34 @@ function planningIssues(breakdown: WorkBreakdown, input: WorkBreakdownPlannerInp
 function contractFidelityIssues(breakdown: WorkBreakdown, goal: string): string[] {
   const descriptions = breakdown.acceptanceIntents.map((intent) => normalizeContractText(intent.description));
   return declaredContractSections(goal)
-    .filter((section) => !descriptions.some((description) => description.includes(section)))
-    .map((section) => {
+    .flatMap((section) => {
       const heading = section.split("\n", 1)[0];
-      return `contract fidelity: preserve the complete ${heading} section verbatim in one acceptance intent`;
-    });
+      return loadBearingExcerpts(section).map((excerpt) => ({ heading, excerpt }));
+    })
+    .filter(({ excerpt }) => !descriptions.some((description) => description.includes(excerpt)))
+    .map(({ heading }) =>
+      `contract fidelity: reproduce the fenced specimen of ${heading} verbatim in one acceptance intent, including nesting and exact literals`);
+}
+
+/**
+ * The parts of a declared contract section that must survive transcription.
+ *
+ * The rule began as "the whole section, verbatim". That was satisfiable while
+ * the sections were a short paragraph of prose, but the Warehouse prompts now
+ * render their contract from the probe specimen: 41 lines and 1212 characters
+ * including a fenced JSON block, which the model has to re-emit inside a JSON
+ * string. Three series-6 planning attempts died against it.
+ *
+ * Fidelity was never about the prose. The delivery this rule exists for hoisted
+ * capabilities out of their parent and dropped a `sha256:` prefix — both facts
+ * live in the fenced specimen. Requiring the fences and leaving the surrounding
+ * explanation to be summarised keeps exactly the guarantee that was lost, at a
+ * cost the planner can actually pay. Sections with no fenced block still have
+ * to be preserved whole.
+ */
+function loadBearingExcerpts(section: string): string[] {
+  const fences = [...section.matchAll(/```[^\n]*\n[\s\S]*?\n```/gu)].map((match) => match[0]);
+  return fences.length > 0 ? fences : [section];
 }
 
 function declaredContractSections(goal: string): string[] {

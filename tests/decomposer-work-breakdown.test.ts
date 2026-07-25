@@ -223,6 +223,40 @@ describe("WorkBreakdown", () => {
     expect(result).toEqual(repaired);
   });
 
+  /**
+   * Warehouse renders its contract from the probe specimen, so the section is
+   * 41 lines around a fenced JSON block. Demanding all of it verbatim inside a
+   * JSON string cost series-6 all three planning attempts. The fence carries
+   * the nesting and the exact literals the rule exists to protect; the prose
+   * around it may be summarised.
+   */
+  it("accepts a contract whose fenced specimen is reproduced without the surrounding prose", async () => {
+    const fence = ["```json", '{ "capabilities": { "layout": { "zones": 3 } } }', "```"].join("\n");
+    const contract = ["## Probe contract", "", "La envoltura fija estos campos:", "", fence, "", "Los valores son ilustrativos."].join("\n");
+    const breakdown = fixture();
+    breakdown.acceptanceIntents[0]!.description = `The probe emits exactly:\n${fence}`;
+    const generate = vi.fn().mockResolvedValue(breakdown);
+    const planner = new WorkBreakdownPlanner({ model: { generate }, maxAttempts: 2, retryDelayMs: 0 });
+
+    await expect(planner.plan({ ...plannerInput(), goal: `Build it.\n\n${contract}\n\n## Constraints\n\nDeterministic.` }))
+      .resolves.toEqual(breakdown);
+    expect(generate).toHaveBeenCalledTimes(1);
+  });
+
+  it("still retries when the fenced specimen itself is paraphrased", async () => {
+    const fence = ["```json", '{ "capabilities": { "layout": { "zones": 3 } } }', "```"].join("\n");
+    const contract = ["## Probe contract", "", "Forma exacta:", "", fence].join("\n");
+    const flattened = fixture();
+    flattened.acceptanceIntents[0]!.description = "Emit capabilities.layout.zones as a top-level zones field.";
+    const generate = vi.fn().mockResolvedValue(flattened);
+    const planner = new WorkBreakdownPlanner({ model: { generate }, maxAttempts: 2, retryDelayMs: 0 });
+
+    await expect(planner.plan({ ...plannerInput(), goal: `Build it.\n\n${contract}` })).rejects.toThrow(/contract fidelity/u);
+    expect(generate.mock.calls[1]?.[0].repairIssues).toEqual(expect.arrayContaining([
+      expect.stringContaining("fenced specimen")
+    ]));
+  });
+
   it("passes measured granularity feedback into a semantic replan without prescribing a path split", () => {
     const prompt = buildWorkBreakdownPrompt({
       ...plannerInput(),
