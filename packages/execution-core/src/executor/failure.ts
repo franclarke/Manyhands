@@ -29,7 +29,11 @@ export interface ExecutorFailureDiagnosis {
 }
 
 const AUTH_PATTERN = /(401|403|unauthor|forbidden|invalid api key|api key not|authentication|not logged in|please (run|use).*(login|auth)|credit balance)/i;
-const QUOTA_PATTERN = /(429|quota|rate.?limit|resource_exhausted|too many requests|overloaded|capacity)/i;
+// `(session|usage|message|token) limit` covers how the two CLIs the study drives
+// actually announce exhaustion ("You've hit your session limit · resets 2pm").
+// Without them a pure capacity refusal fell through to `unknown`, which reads as
+// a broken agent and asks a human to resolve something no human can.
+const QUOTA_PATTERN = /(429|quota|rate.?limit|resource_exhausted|too many requests|overloaded|capacity|(?:session|usage|message|token)\s+limit)/i;
 const MODEL_PATTERN = /(model\s+\S+\s+(not|isn't|is not)\s+(found|supported|available)|unknown model|invalid model|model not found|no such model)/i;
 const BINARY_PATTERN = /(enoent|not recognized as an internal or external command|command not found|no se reconoce)/i;
 

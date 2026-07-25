@@ -1,0 +1,13 @@
+{
+  "cellId": "warehouse-pilot-w1",
+  "condition": "C2",
+  "taskId": "W1",
+  "runId": "9cf4852f-d707-46ee-84e4-7487c9040c5a",
+  "started": "2026-07-25T13:07:07.606Z",
+  "finished": "2026-07-25T13:11:32.664Z",
+  "outcome": {
+    "lifecycle": "waiting_for_input",
+    "receipt": null,
+    "reason": "run parked on resolve_conflict"
+  }
+}

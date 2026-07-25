@@ -55,6 +55,24 @@ describe("classifyExecutorFailure", () => {
     expect(rate?.kind).toBe("quota");
   });
 
+  /**
+   * Both CLIs the study uses announce exhaustion in words the pattern missed, so
+   * a pure capacity refusal was classified `unknown` — "the agent exited
+   * non-zero without a recognizable cause". Warehouse pilot series-10 lost its
+   * W1 execution attempt to one after nine seconds, and the supervisor raised a
+   * human `resolve_conflict` for a condition no human decision can resolve.
+   */
+  it.each([
+    ["Claude Code session limit", "You've hit your session limit · resets 2pm (America/Buenos_Aires)"],
+    ["Codex usage limit", "You've hit your usage limit · resets 2026-07-30 00:37"],
+    ["a plain limit reset notice", "Session limit reached, resets in 45 minutes"]
+  ])("classifies %s as a capacity failure, not an unknown one", (_label, stderr) => {
+    const diagnosis = classifyExecutorFailure(outcome({ stderr }));
+
+    expect(diagnosis?.kind).toBe("quota");
+    expect(diagnosis?.retryableOnOtherExecutor).toBe(true);
+  });
+
   it("classifies unknown-model failures", () => {
     const diagnosis = classifyExecutorFailure(
       outcome({ stderr: "Error: model 'gemini-9.9-ultra' not found" })
