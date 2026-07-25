@@ -1,0 +1,4 @@
+{"eventId":"failed-1","runId":"failed-run","sequence":1,"occurredAt":"2026-07-24T00:00:00.000Z","type":"run.created","payload":{"goal":"Build warehouse"}}
+{"eventId":"failed-2","runId":"failed-run","sequence":2,"occurredAt":"2026-07-24T00:00:02.000Z","type":"attempt.started","payload":{"attemptId":"attempt-1","nodeId":"node-1"}}
+{"eventId":"failed-3","runId":"failed-run","sequence":3,"occurredAt":"2026-07-24T00:00:12.000Z","type":"attempt.failed","payload":{"attemptId":"attempt-1","nodeId":"node-1","reason":"executor failed","usage":{"tokensTotal":1200,"source":"reported"}}}
+{"eventId":"failed-4","runId":"failed-run","sequence":4,"occurredAt":"2026-07-24T00:00:20.000Z","type":"run.failed","payload":{"area":"execution","reason":"executor failed"}}

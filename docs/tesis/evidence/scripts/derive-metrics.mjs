@@ -16,6 +16,7 @@
  */
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { readJournal } from "./lib/study-metrics.mjs";
 
 const COLUMNS = [
   "cellId", "position", "taskId", "condition", "repetition", "runId", "delivered", "lifecycle",
@@ -217,18 +218,11 @@ async function readJson(path) {
 }
 
 async function readEvents(path) {
-  let raw;
   try {
-    raw = await readFile(path, "utf8");
+    return await readJournal(path);
   } catch {
     return [];
   }
-  return raw.split("\n")
-    .filter((line) => line.trim().length > 0)
-    .map((line) => {
-      const record = JSON.parse(line);
-      return record.event ?? record;
-    });
 }
 
 function round(value, digits) {
