@@ -100,7 +100,10 @@ function reviewScopes(input: CompiledPlanReviewInput, findings: PlanFinding[]): 
     const posix = p.replaceAll("\\", "/");
     return isWin ? posix.toLowerCase() : posix;
   };
-  const indexedPathsNormalized = new Set((input.repositorySnapshot.index?.files.map((file) => file.path) ?? []).map(normalizePath));
+  const indexedPathsNormalized = new Set([
+    ...(input.repositorySnapshot.index?.files.map((file) => file.path) ?? []),
+    ...(hasPackageManifest(input.repositorySnapshot) ? ["package.json"] : [])
+  ].map(normalizePath));
   const plannedPathsNormalized = new Set(flattenUnits(input.breakdown.root).flatMap((unit) => unit.plannedPaths ?? []).map(normalizePath));
   for (const path of plannedPathsNormalized) {
     if (indexedPathsNormalized.has(path)) findings.push(finding("scope_isolation", "error", "planned_path_already_exists", `Planned path ${path} already exists in the repository snapshot.`, "Cite the existing path as repository evidence instead of declaring it as a new output.", []));
@@ -120,6 +123,12 @@ function reviewScopes(input: CompiledPlanReviewInput, findings: PlanFinding[]): 
       if (!constrained) findings.push(finding("scope_isolation", "error", "unmodeled_scope_overlap", `${left.task.nodeId} and ${right.task.nodeId} overlap on ${overlap.join(", ")} without a conflict constraint.`, "Add a scheduling conflict constraint or redraw scopes.", [], left.task.nodeId));
     }
   }
+}
+
+function hasPackageManifest(snapshot: RepositorySnapshot): boolean {
+  return snapshot.capabilities.packageManager !== undefined ||
+    Object.keys(snapshot.capabilities.scripts).length > 0 ||
+    snapshot.capabilities.stack.some((item) => item.evidence.some((entry) => entry.includes("package.json")));
 }
 
 function isAncestor(input: CompiledPlanReviewInput, ancestorId: string, descendantId: string): boolean {

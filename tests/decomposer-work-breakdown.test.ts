@@ -151,6 +151,53 @@ describe("WorkBreakdown", () => {
     expect(prompt.system).toContain("do not ask the same question again");
   });
 
+  it("retries a greenfield plan that leaves stub validation scripts out of scope", async () => {
+    const incomplete = fixture();
+    const repaired = fixture();
+    const manifestEvidence = {
+      id: "config-package-json",
+      kind: "path" as const,
+      reference: "package.json",
+      observation: "Repository package manifest defining scripts",
+      confidence: 1
+    };
+    for (const breakdown of [incomplete, repaired]) {
+      breakdown.repositoryEvidence.push(manifestEvidence, {
+        id: "script-empty-test",
+        kind: "script",
+        reference: "test",
+        observation: "node -e \"console.log('empty seed tests: ok')\"",
+        confidence: 1
+      });
+      if (breakdown.root.kind !== "composite") throw new Error("Expected composite fixture.");
+      breakdown.root.children[0]!.plannedPaths = ["src/new-domain.ts"];
+    }
+    if (repaired.root.kind !== "composite") throw new Error("Expected composite fixture.");
+    repaired.root.children[0]!.evidenceIds.push(manifestEvidence.id);
+
+    const generate = vi.fn().mockResolvedValueOnce(incomplete).mockResolvedValueOnce(repaired);
+    const planner = new WorkBreakdownPlanner({ model: { generate }, maxAttempts: 2, retryDelayMs: 0 });
+    const result = await planner.plan({
+      ...plannerInput(),
+      repositorySnapshot: {
+        ...plannerInput().repositorySnapshot,
+        evidence: [...plannerInput().repositorySnapshot.evidence, manifestEvidence, {
+          id: "script-empty-test",
+          kind: "script",
+          reference: "test",
+          observation: "node -e \"console.log('empty seed tests: ok')\"",
+          confidence: 1
+        }]
+      }
+    });
+
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(generate.mock.calls[1]?.[0].repairIssues).toEqual(expect.arrayContaining([
+      expect.stringContaining("package.json")
+    ]));
+    expect(result).toEqual(repaired);
+  });
+
   it("passes measured granularity feedback into a semantic replan without prescribing a path split", () => {
     const prompt = buildWorkBreakdownPrompt({
       ...plannerInput(),

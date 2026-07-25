@@ -37,6 +37,7 @@ export function compileContractBundles(input: {
   const units = flattenUnits(input.breakdown.root);
   const evidence = new Map(input.breakdown.repositoryEvidence.map((item) => [item.id, item]));
   const indexedPaths = new Set(input.repositorySnapshot.index?.files.map((file) => file.path) ?? []);
+  if (hasPackageManifest(input.repositorySnapshot)) indexedPaths.add("package.json");
   const scopePathsByNodeId: Record<string, string[]> = {};
   const directPaths = new Map(units.map((unit) => [unit.key, unit.evidenceIds
       .map((id) => evidence.get(id))
@@ -177,6 +178,12 @@ export function compileContractBundles(input: {
     scopePathsByNodeId,
     acceptanceOwnerByIntentId
   };
+}
+
+function hasPackageManifest(snapshot: RepositorySnapshot): boolean {
+  return snapshot.capabilities.packageManager !== undefined ||
+    Object.keys(snapshot.capabilities.scripts).length > 0 ||
+    snapshot.capabilities.stack.some((item) => item.evidence.some((entry) => entry.includes("package.json")));
 }
 
 function populateScopePaths(

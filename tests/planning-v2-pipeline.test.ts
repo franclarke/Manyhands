@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { compileGraphRevision } from "@manyhands/decomposer";
+import { compileGraphRevision, type WorkBreakdownPlannerInput } from "@manyhands/decomposer";
 import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 import { bookingBreakdown, bookingSnapshot, compilerDependencies } from "./helpers/target-planning-fixtures";
 import { runPlanningV2 } from "@/lib/server/runs/v2/planning-host";
@@ -14,6 +14,27 @@ beforeEach(async () => { directory = await mkdtemp(path.join(os.tmpdir(), "mh-pl
 afterEach(async () => { await rm(directory, { recursive: true, force: true }); });
 
 describe("planning V2 vertical slice", () => {
+  it("grounds the package manifest when repository scripts form part of the command surface", async () => {
+    const events = new JsonlRunEventStore({ directory });
+    const snapshots = new RunSnapshotStore({ directory, events });
+    let evidence: WorkBreakdownPlannerInput["repositorySnapshot"]["evidence"] = [];
+    const plan = vi.fn(async (input: WorkBreakdownPlannerInput) => {
+      evidence = input.repositorySnapshot.evidence;
+      return bookingBreakdown();
+    });
+
+    await runPlanningV2({ runId: "run-manifest-grounding", goal: "Build booking", repoPath: "C:/repo/booking", targetFingerprint: "target-1", baseCommit: "1".repeat(40), authority }, {
+      events, snapshots,
+      inspect: async () => bookingSnapshot(),
+      plan,
+      compile: (input) => compileGraphRevision(input, compilerDependencies),
+      now: () => "2026-07-17T01:00:00.000Z"
+    });
+
+    expect(plan).toHaveBeenCalledOnce();
+    expect(evidence).toContainEqual(expect.objectContaining({ kind: "path", reference: "package.json" }));
+  });
+
   it("persists inspection, semantic planning, compilation, critics and approval decision", async () => {
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });

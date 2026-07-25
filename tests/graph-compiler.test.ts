@@ -151,6 +151,25 @@ describe("Graph Compiler V2", () => {
     ]);
     expect(compiled.review.findings.filter((finding) => finding.severity === "error")).toEqual([]);
   });
+
+  it("accepts a grounded configuration path that the structural source index omits", () => {
+    const breakdown = bookingBreakdown();
+    const domain = leaf(breakdown, "domain");
+    breakdown.repositoryEvidence.push({
+      id: "config-package-json",
+      kind: "path",
+      reference: "package.json",
+      observation: "Repository package manifest defining scripts",
+      confidence: 1
+    });
+    domain.evidenceIds.push("config-package-json");
+
+    const compiled = compileGraphRevision({ breakdown, repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+
+    expect(compiled.contracts.find((bundle) => bundle.task.nodeId === "node-domain")?.scope.allowedPaths)
+      .toContain("package.json");
+    expect(compiled.review.findings.filter((finding) => finding.severity === "error")).toEqual([]);
+  });
 });
 
 function leaf(breakdown: WorkBreakdown, key: string) {

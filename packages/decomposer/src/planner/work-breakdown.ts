@@ -109,10 +109,13 @@ export class WorkBreakdownPlanner {
   async plan(input: WorkBreakdownPlannerInput, observer: WorkBreakdownPlanningObserver = {}): Promise<WorkBreakdown> {
     const cacheKey = planningCacheKey(input);
     const cached = this.cache?.get(cacheKey);
-    if (cached !== undefined) return WorkBreakdownSchema.parse(cached);
+    if (cached !== undefined) {
+      const parsedCached = WorkBreakdownSchema.parse(cached);
+      if (commandSurfaceIssues(parsedCached, input).length === 0) return parsedCached;
+    }
 
     const prompt = buildWorkBreakdownPrompt(input);
-    let repairIssues: string[] = [];
+    let repairIssues: string[] = cached === undefined ? [] : commandSurfaceIssues(WorkBreakdownSchema.parse(cached), input);
     for (let attempt = 1; attempt <= this.maxAttempts; attempt += 1) {
       await observer.onAttemptStarted?.({ attempt });
       const discovered = new Set<string>();
@@ -129,6 +132,11 @@ export class WorkBreakdownPlanner {
         for (const output of outputs) {
           const parsed = WorkBreakdownSchema.safeParse(output);
           if (parsed.success) {
+            const groundingIssues = commandSurfaceIssues(parsed.data, input);
+            if (groundingIssues.length > 0) {
+              failures.push(...groundingIssues);
+              continue;
+            }
             for (const unit of progressUnits(parsed.data.root)) await reportUnit(unit);
             this.cache?.set(cacheKey, parsed.data);
             return parsed.data;
@@ -148,6 +156,34 @@ export class WorkBreakdownPlanner {
     }
     throw new Error(`WorkBreakdown planning failed after ${this.maxAttempts} attempts: ${repairIssues.join("; ")}`);
   }
+}
+
+function commandSurfaceIssues(breakdown: WorkBreakdown, input: WorkBreakdownPlannerInput): string[] {
+  const stubScripts = input.repositorySnapshot.evidence.filter((item) =>
+    item.kind === "script" && /\b(?:console\.log|echo)\b/iu.test(item.observation)
+  );
+  if (stubScripts.length === 0) return [];
+
+  const units = flattenWorkUnits(breakdown.root);
+  const introducesImplementation = units.some((unit) =>
+    (unit.plannedPaths ?? []).some((candidate) => /\.(?:[cm]?[jt]sx?|css|html)$/iu.test(candidate))
+  );
+  if (!introducesImplementation) return [];
+
+  const manifestEvidenceIds = new Set(input.repositorySnapshot.evidence
+    .filter((item) => item.kind === "path" && /(^|\/)package\.json$/iu.test(item.reference.replaceAll("\\", "/")))
+    .map((item) => item.id));
+  const manifestGrounded = units.some((unit) => unit.evidenceIds.some((id) => manifestEvidenceIds.has(id)));
+  if (manifestGrounded) return [];
+
+  return [
+    `command surface: repository validation scripts are stubs (${stubScripts.map((item) => item.reference).join(", ")}); ` +
+    "the implementation unit must cite package.json path evidence so its scope can replace those stubs with real checks"
+  ];
+}
+
+function flattenWorkUnits(root: WorkBreakdown["root"]): WorkBreakdown["root"][] {
+  return root.kind === "leaf" ? [root] : [root, ...root.children.flatMap(flattenWorkUnits)];
 }
 
 export function parseWorkBreakdownProgressLine(line: string): WorkBreakdownProgressUnit | undefined {
