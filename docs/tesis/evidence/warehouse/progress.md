@@ -15,7 +15,7 @@
 
 | Checkpoint | Tasks | Estado | Commit | Verificación |
 |---|---:|---|---|---|
-| 1 — C2 core | 1–4 | **in progress** | pending | pending |
+| 1 — C2 core | 1–4 | **completed** | `74f001f`, `950dd18`, `e94b4b8`, `d9e5b41` | 45 tests PASS + 2 package typechecks |
 | 2 — Productive integration | 5–8 | pending | — | — |
 | 3 — Metrics and stability | 9–10 | pending | — | — |
 | 4 — Warehouse assets and drivers | 11–12 | pending | — | — |
@@ -33,3 +33,19 @@
 - Se fijó que Tasks 1–4 cierran juntas antes de integrar C2 al planning
   productivo.
 - Siguiente evidencia: regresión roja para métricas de tamaño del índice.
+
+### 2026-07-24 — Cierre del checkpoint 1
+
+- Task 1: ADR 0012, separación C1/C2 y estructura de evidencia creadas.
+- Task 2: `RepositoryFileIndex` incorpora `byteSize` y `lineCount`; el perfil de
+  caché rápida se elevó a `exports-only-v2-size-metrics` para no reutilizar
+  silenciosamente índices viejos sin medición.
+- Task 3: estimator `utf8-bytes-div-4/1.0.0` implementado como función pura; los
+  paths nuevos y snapshots históricos sin tamaño quedan explícitamente
+  inciertos.
+- Task 4: selector C2 bottom-up implementado con condiciones A/B/C2, selección
+  parcial de subtrees, hash determinista y prohibición de units sintéticas.
+- Verificación combinada: 45 tests PASS, 1 performance test omitido por su gate
+  de entorno, typecheck de `repository-index` y `decomposer` PASS.
+- Evidencia detallada: [`checkpoints/checkpoint-1.md`](checkpoints/checkpoint-1.md).
+- Siguiente bloque: Tasks 5–8; C2 aún no gobierna la ruta productiva.

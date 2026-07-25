@@ -289,3 +289,16 @@
     0 referencias/citas indefinidas, 0 cajas desbordadas, 0 advertencias.
     Presentación a **24 diapositivas**, 0 errores, con las slides del resultado
     falsado y del defecto de medición, más notas del orador.
+
+### 2026-07-24 — Programa C2 + Warehouse, checkpoint 1
+
+43. **Checkpoint 1 = PASS.** Se aceptó ADR 0012 y se implementó el núcleo puro
+    de C2 sin conectarlo todavía a producción: métricas exactas de bytes/líneas
+    en el índice, estimator de contexto versionado y selector bottom-up A/B/C2.
+    Verificación: 45 tests verdes y typechecks de `repository-index` y
+    `decomposer`. Evidencia en
+    `evidence/warehouse/checkpoints/checkpoint-1.md`.
+44. **Límite explícito:** CLAIM-111/112 sólo están implementados como
+    componentes. El siguiente checkpoint debe demostrar replan, criterios no
+    duplicados, eventos replayables y configuración productiva antes de que C2
+    pueda aparecer como resultado de tesis.
