@@ -1,0 +1,11 @@
+# Thesis study assets are addressed by content hash: the oracle refuses to run
+# unless the bytes on disk match the pin recorded in `assets-manifest.json` and
+# each `oracle.json`. With `core.autocrlf=true` a fresh clone rewrites their line
+# endings, every pin goes stale and the frozen instrument becomes unrunnable on
+# any machine but the one that produced it. Never convert them.
+/docs/tesis/evidence/warehouse/** -text
+/docs/tesis/evidence/scripts/** -text
+
+# Imported by `oracle-core.mjs` to spawn pnpm, so it is part of the pinned
+# instrument surface for the same reason.
+/scripts/manyhands-dev-command.mjs -text
