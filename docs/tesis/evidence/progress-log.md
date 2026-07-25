@@ -302,3 +302,19 @@
     componentes. El siguiente checkpoint debe demostrar replan, criterios no
     duplicados, eventos replayables y configuración productiva antes de que C2
     pueda aparecer como resultado de tesis.
+
+### 2026-07-24 — Programa C2 + Warehouse, checkpoint 2
+
+45. **Checkpoint 2 = PASS.** C2 gobierna la ruta productiva como default; C1
+    queda explícito para compatibilidad histórica. La política admite un único
+    replan semántico, persiste evidencia completa y se explica desde replay.
+46. **La contaminación de aceptación queda corregida en diseño.** Los mismos
+    cinco intents del usuario se compilan una vez bajo A, B y C2; cada nodo
+    conserva sólo una obligación técnica local cuando no es owner.
+47. **Candidate replay queda aislado como control experimental.** Sólo omite el
+    Planner cuando hash, snapshot, goal y aceptación coinciden; la construcción
+    longitudinal seguirá usando planificación viva.
+48. **Verificación:** 50 tests enfocados, typechecks de `decomposer`,
+    `run-coordinator` y web, y builds de ambos packages PASS. Evidencia en
+    `evidence/warehouse/checkpoints/checkpoint-2.md`. C2-G2 aún requiere Task 10
+    y dos runs reales de estabilidad.

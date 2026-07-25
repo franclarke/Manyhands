@@ -764,9 +764,9 @@ como registro del estado en G1.
 
 | ID | Claim candidato | Estado | Evidencia requerida |
 |---|---|---|---|
-| CLAIM-111 | C2 selecciona una frontera semántica por utilidad esperada sin fabricar particiones por paths | **implemented como componente; ruta productiva pendiente** | `strategy-selector.ts`; 8 regresiones en `granularity-utility-policy.test.ts`; falta prueba vertical y eventos |
+| CLAIM-111 | C2 selecciona una frontera semántica por utilidad esperada sin fabricar particiones por paths | **implemented; gate experimental pendiente** | selector puro, ruta productiva, replan acotado, evento replayable e inspector; 50 tests del checkpoint 2; faltan estabilidad y estudio final |
 | CLAIM-112 | La masa de contexto usada por C2 se deriva de bytes versionados del snapshot y declara incertidumbre para paths no medidos | **implemented como componente** | commits `950dd18` + `e94b4b8`; índice exacto y estimator determinista |
-| CLAIM-113 | Los criterios de aceptación del usuario no se multiplican por la topología seleccionada | **planned** | contratos A/B/C2 con ownership único |
+| CLAIM-113 | Los criterios de aceptación del usuario no se multiplican por la topología seleccionada | **implemented; evidencia final pendiente** | `acceptance-allocation.ts`; cinco intents únicos bajo A/B/C2 y ownership por deepest owner/LCA en `contract-acceptance-allocation.test.ts` |
 | CLAIM-114 | Warehouse Control Tower puede construirse incrementalmente con una única versión congelada de ManyHands | **planned** | W1–W8, oráculos externos y reconstrucción limpia |
 
 El G5 anterior conserva su interpretación: C1 no mostró ventaja sobre A en el

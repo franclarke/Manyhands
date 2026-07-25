@@ -19,7 +19,7 @@
 | Checkpoint | Tasks | Status | Evidence |
 |---|---:|---|---|
 | 1 — C2 core | 1–4 | **completed** | [`checkpoint-1.md`](../tesis/evidence/warehouse/checkpoints/checkpoint-1.md) |
-| 2 — Productive integration | 5–8 | pending | — |
+| 2 — Productive integration | 5–8 | **completed** | [`checkpoint-2.md`](../tesis/evidence/warehouse/checkpoints/checkpoint-2.md) |
 | 3 — Metrics and stability | 9–10 | pending | — |
 | 4 — Warehouse assets and drivers | 11–12 | pending | — |
 | 5 — Pilot construction | 13 | pending | — |

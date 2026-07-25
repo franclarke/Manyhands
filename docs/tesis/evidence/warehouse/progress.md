@@ -16,7 +16,7 @@
 | Checkpoint | Tasks | Estado | Commit | Verificación |
 |---|---:|---|---|---|
 | 1 — C2 core | 1–4 | **completed** | `74f001f`, `950dd18`, `e94b4b8`, `d9e5b41` | 45 tests PASS + 2 package typechecks |
-| 2 — Productive integration | 5–8 | pending | — | — |
+| 2 — Productive integration | 5–8 | **completed** | `bf0ee82`, `d96cc24`, `a424ade`, `7f7d9b4`, `18e6aab` | 50 tests PASS + 3 typechecks + 2 builds |
 | 3 — Metrics and stability | 9–10 | pending | — | — |
 | 4 — Warehouse assets and drivers | 11–12 | pending | — | — |
 | 5 — Pilot construction | 13 | pending | — | — |
@@ -49,3 +49,17 @@
   de entorno, typecheck de `repository-index` y `decomposer` PASS.
 - Evidencia detallada: [`checkpoints/checkpoint-1.md`](checkpoints/checkpoint-1.md).
 - Siguiente bloque: Tasks 5–8; C2 aún no gobierna la ruta productiva.
+
+### 2026-07-24 — Cierre del checkpoint 2
+
+- Task 5: el Planner acepta feedback estructurado y la ruta productiva permite
+  un único replan semántico cuando la hoja medida es inviable.
+- Task 6: cada criterio del usuario tiene un único owner; las obligaciones
+  técnicas locales preservan validabilidad sin inflar la vara entre condiciones.
+- Task 7: la selección C2 es un evento durable, replayable y visible con
+  beneficio, costo, features, límites, evidencia y rationale.
+- Task 8: A/B/C1/C2 son configuración explícita; C2 es el default y el replay
+  bloqueado valida hash, snapshot, goal y aceptación.
+- Verificación combinada: 50 tests, tres typechecks y dos builds PASS.
+- Evidencia detallada: [`checkpoints/checkpoint-2.md`](checkpoints/checkpoint-2.md).
+- Siguiente bloque: Tasks 9–10; métricas no censuradas y estabilidad real.
