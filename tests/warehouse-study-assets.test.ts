@@ -7,6 +7,14 @@ const root = path.resolve("docs/tesis/evidence/warehouse");
 const increments = Array.from({ length: 8 }, (_, index) => `W${index + 1}`);
 
 describe("Warehouse study assets", () => {
+  it("pins every prompt in the study asset manifest", async () => {
+    const manifest = JSON.parse(await readFile(path.join(root, "assets-manifest.json"), "utf8"));
+    for (const increment of increments) {
+      const prompt = await readFile(path.join(root, "protocol", "prompts", `${increment}.md`));
+      expect(createHash("sha256").update(prompt).digest("hex")).toBe(manifest.prompts[increment]);
+    }
+  });
+
   it.each(increments)("defines a complete, chained prompt for %s", async (increment) => {
     const prompt = await readFile(path.join(root, "protocol", "prompts", `${increment}.md`), "utf8");
 

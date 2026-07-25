@@ -24,7 +24,7 @@ for (const name of names) {
   const destination = join(outRoot, name.trim());
   if (await exists(destination)) fail(`destination already exists: ${destination}`);
   await run("git", ["clone", "--no-hardlinks", seed, destination]);
-  await git(destination, ["checkout", "--detach", manifest.commit]);
+  await git(destination, ["checkout", "-B", "main", manifest.commit]);
   process.stdout.write(`prepared ${destination} at ${manifest.commit}\n`);
 }
 

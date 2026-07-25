@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 import { resolve } from "node:path";
 
 const exec = promisify(execFile);
-const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const pnpm = "pnpm";
 
 export async function runExternalOracle(spec) {
   const target = resolve(argument("--target") ?? process.env.WAREHOUSE_TARGET ?? process.cwd());
