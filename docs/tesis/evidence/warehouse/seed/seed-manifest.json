@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "repository": "C:/Users/franc/Documents/Proyectos/warehouse-control-tower-seed",
+  "commit": "0f87e457ae154385cbb81bb6e3541a3533b78761",
+  "tree": "838c2a907e3aaa194041bb2d68a32934567dd5d8",
+  "lockfileSha256": "a6f710252619c77fecd608ed1717e46a550333e7a5e9bd14a7decddfcead69ba",
+  "packageManager": "pnpm@7.29.3",
+  "nodeRange": ">=22",
+  "domainSourceFiles": [],
+  "allowedSeedFiles": [
+    ".gitignore",
+    "README.md",
+    "apps/.gitkeep",
+    "package.json",
+    "packages/.gitkeep",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "tests/.gitkeep",
+    "tsconfig.base.json"
+  ],
+  "verification": [
+    "pnpm install --frozen-lockfile",
+    "pnpm test",
+    "pnpm typecheck",
+    "pnpm build"
+  ]
+}

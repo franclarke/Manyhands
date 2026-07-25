@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"warehouse-w3-v1","increment":"W3","command":["node","oracle.mjs"],"timeoutMs":600000,"scriptSha256":"8ffc7b3732b8ce314ddfd76055b204dca214021c335eb4aeed5fca76f26897df","coreSha256":"06750302e323bb151a877e6ff5343f04f3bacebf61643b0cb9dc2b90b7df88c1"}
