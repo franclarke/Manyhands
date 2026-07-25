@@ -15,7 +15,12 @@ simulación, persistencia y analítica?
 - Base Wn: commit entregado por W(n-1) y aprobado sólo después de su oráculo.
 - Planner: vivo en cada incremento; no se reutilizan candidate trees.
 - Condición: C2 durante Pilot y Warehouse Final longitudinal.
-- Modelo y esfuerzo: Codex `gpt-5.5`, `high`, en planning, ejecución y repair.
+- Executor y modelo: Claude Code CLI `sonnet`, en planning, ejecución y repair.
+  Los modelos Claude no exponen perilla de reasoning effort, así que la
+  selección no declara `effort`. Se eligió por sobre Codex `gpt-5.5` porque
+  Codex declara `usageSource: "unavailable"`: dejaría el costo permanentemente
+  sin medir y los tokens como cota inferior, y ambos son variables del estudio.
+  La selección declarada es única y vive en `lib/warehouse-longitudinal.mjs`.
 
 ## Separación de fases
 

@@ -116,3 +116,47 @@
 - Reanudación: después de 2026-07-30 00:37, nuevo clon seed y nueva serie con la
   misma versión conductual (`f5b99f2`), assets fijados y preflight completo; el
   HEAD exacto se registra al reiniciar.
+
+### 2026-07-25 — Endurecimiento del instrumento; se levanta el bloqueo de cuota
+
+Bloque de robustez sobre el instrumento, motivado por que los tres W1 fallaron
+por tres causas distintas y dos de ellas eran detectables sin gastar un run.
+
+- **Contradicción prompt/oráculo.** Los ocho prompts declaraban `layout` e
+  `inventory` junto a los campos de envoltura y, dos párrafos después, anidados
+  en `capabilities`. El oráculo verificaba lo segundo. La entrega del segundo W1
+  siguió lo primero. Se reclasifica una de sus dos causas como ambigüedad del
+  estímulo; el `stateHash` sin prefijo sigue siendo fallo productivo. Detalle en
+  [`pilot/defects/prompt-oracle-contradiction`](pilot/defects/prompt-oracle-contradiction/README.md).
+- **Fuente única de verdad.** `oracles/probe-specimen.mjs` define forma, mínimos
+  e invariantes. `pin-warehouse-assets.mjs` renderiza desde ahí la sección
+  `## Probe contract` de los ocho prompts antes de hashear, y `oracle-core.mjs`
+  deriva sus reglas del mismo módulo. Estímulo y regla ya no pueden discrepar.
+- **Reglas probadas por mutación**, no por inspección: 85 casos que incluyen la
+  deformación exacta que produjo el fallo, los límites de cada mínimo y cada
+  invariante booleano.
+- **Fallo rápido y completo.** `checkCommandSurface` rechaza desde
+  `package.json` una superficie de comandos ausente o con los stubs del seed
+  —que salen con código 0 y produjeron el `test:pass` falso del primer W1— y
+  `checkProbeOutput` reporta todas las violaciones juntas. Contra el seed el
+  oráculo ahora falla en 1,5 s nombrando las cuatro causas.
+- **Reproducibilidad del instrumento congelado.** Un clon limpio con
+  `core.autocrlf=true` invalidaba los nueve pins: el oráculo no corría fuera de
+  la máquina que lo produjo. Verificado clonando `HEAD` a scratch, 9/9
+  obsoletos antes y 0 después.
+- **Executor.** El estudio pasa a Claude Code CLI `sonnet`. Codex declara
+  `usageSource: "unavailable"`, lo que dejaría el costo sin medir y los tokens
+  como cota inferior, siendo ambos variables del estudio; el envelope de Claude
+  Code reporta tokens exactos y `total_cost_usd`, verificado contra el CLI real.
+  Esto además levanta el bloqueo de cuota: **no hay que esperar al 2026-07-30**.
+- **Matriz controlada reducida de 27 a 12 runs** (`S` y `L`, A/B/C2, 2
+  repeticiones) con regla de discrepancia preregistrada y sin repetición de
+  desempate. Justificación en §6.3 del plan rector.
+
+- Verificación: 180 tests focales PASS; `pin-warehouse-assets --check` PASS;
+  dry-run W1–W8 PASS con la nueva selección. Sin cambios en la ruta productiva
+  de ManyHands.
+- Estado científico sin cambios: **0/8 incrementos verificados**; ninguna
+  entrega fallida es base de W2. Task 13 sigue abierta.
+- Falla ajena preexistente: `tests/runs-list-performance.test.ts` (3 tests con
+  timeout). Ningún archivo de su grafo de imports fue tocado por este bloque.

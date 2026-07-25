@@ -30,6 +30,14 @@
 > Checkpoint 4 cerrado: seed `0f87e45`, prompts/oráculos W1–W8 y drivers
 > preflight/longitudinal verificados. El dry-run sobre `c0d4be8` imprimió ocho
 > celdas sin mutación. Continúa Warehouse Pilot.
+>
+> Task 13 en curso: tres W1 formativos, 0/8 verificados. Antes del cuarto
+> intento se endureció el instrumento —specimen único que renderiza los prompts
+> y alimenta al oráculo, reglas probadas por mutación, fallo rápido por
+> superficie de comandos, pins reproducibles— y el estudio pasó a Claude Code
+> `sonnet`, que reporta tokens y costo exactos. La matriz controlada baja de 27
+> a 12 runs (§6.3). Detalle en
+> [`warehouse/progress.md`](../tesis/evidence/warehouse/progress.md).
 
 ## 1. Decisión ejecutiva
 
@@ -282,15 +290,34 @@ La variación del Planner puede dominar la comparación de políticas. Por cada 
 
 ### 6.3 Matriz controlada
 
-- Tareas: `S` pequeña, `M` mediana, `L` grande.
+- Tareas: `S` pequeña y `L` grande.
 - Condiciones: A, B, C2.
-- Repeticiones/bloques: 3.
-- Total: `3 × 3 × 3 = 27` runs.
+- Repeticiones/bloques: 2.
+- Total: `2 × 3 × 2 = 12` runs controlados, más los 8 longitudinales.
 - Orden de condiciones: aleatorizado con seed preregistrado dentro de cada bloque.
-- Modelo, executor, reasoning effort, paralelismo y toolchain: constantes.
+- Executor, modelo, paralelismo y toolchain: constantes.
 - Base commit, prompt, restricciones y oráculo: idénticos dentro de cada tarea.
 
-No se harán tests de significancia con `n=3`. Se reportarán valores individuales, mediana, rango, tasas y patrones por tarea.
+**Por qué 12 y no 27.** El diseño anterior pedía 27 runs controlados. Con `n=3`
+el propio protocolo ya descartaba tests de significancia, así que la tercera
+repetición no compraba poder estadístico: sólo visibilidad de varianza, al
+precio de un tercio del presupuesto de ejecución y de un tercio más de
+superficie de fallo operativo. La tarea `M` era la menos decisiva de las tres:
+`S` es la que discrimina H1 y `L` la que discrimina H2, H3 y H4; `M` estaba
+definida justamente como el caso ambiguo, del que no se sigue ninguna
+conclusión clara en ninguna dirección. Se retira `M` y se baja a dos
+repeticiones.
+
+No se harán tests de significancia. Se reportarán valores individuales, rango y
+patrones por tarea.
+
+**Regla de discrepancia, preregistrada.** Si las dos repeticiones de una celda
+discrepan en entrega, **se reporta la discrepancia** y la celda queda descrita
+por sus dos valores. No hay repetición de desempate. G5 preregistró una tercera
+repetición obligatoria ante discrepancia, no la ejecutó, y justificó después que
+correrla habría sido post-hoc; la regla que no se piensa cumplir no se
+preregistra. Con `n=2` una celda 1/2 es un hecho reportable, no un empate que
+haya que romper.
 
 ### 6.4 Variables
 
@@ -313,9 +340,9 @@ Secundarias:
 ### 6.5 Hipótesis exploratorias preregistradas después del piloto
 
 - H1: C2 conserva una hoja en S salvo que la hoja sea inviable.
-- H2: C2 selecciona más de una hoja en al menos una de M/L cuando existe alivio de contexto y paralelismo con bajo solapamiento.
+- H2: C2 selecciona más de una hoja en L cuando existe alivio de contexto y paralelismo con bajo solapamiento.
 - H3: C2 reduce costo o tiempo respecto de B sin menor entrega verificada.
-- H4: C2 no es uniformemente peor que A en M/L; si lo es, la política no aporta valor en este entorno.
+- H4: C2 no es uniformemente peor que A en L; si lo es, la política no aporta valor en este entorno.
 
 El falsador se fija antes de iniciar Warehouse Final. No se reescribe después de ver los datos.
 
@@ -1282,7 +1309,7 @@ No conviene implementar Warehouse antes de Tasks 1-10. Si se usa Warehouse para 
 | Disco lleno parece fallo del sistema | falsos negativos | preflight >=25 GB y pools fuera del target |
 | `dist` stale | se ejecuta C1 creyendo C2 | build obligatorio + marker check |
 | Defecto descubierto tras freeze | mezcla de versiones | invalidar serie, volver a pilot y reiniciar desde W0 |
-| Costos altos: 8 + 27 runs finales | serie inconclusa | presupuestar antes del freeze; no reducir N después de mirar resultados |
+| Costos altos: 8 + 12 runs finales | serie inconclusa | presupuestar antes del freeze; no reducir N después de mirar resultados |
 | Una sola familia de sistema/modelo | validez externa limitada | declarar alcance; no extrapolar a todos los repos o modelos |
 | Warehouse se vuelve demasiado grande | tesis deriva a producto | mantener ocho capacidades cerradas y excluir cloud/auth/microservices |
 

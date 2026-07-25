@@ -42,6 +42,24 @@ Las causas y regresiones están en
 [`contract-fidelity`](defects/contract-fidelity/README.md). Resultado acumulado:
 **0/8 incrementos verificados**.
 
+## Endurecimiento del instrumento antes del cuarto intento
+
+Los tres W1 fallaron por tres causas distintas, y dos eran decidibles sin gastar
+un run. Antes de reanudar, el instrumento se hizo auto-verificable: el contrato
+de la sonda pasó de prosa duplicada en ocho prompts a un specimen único desde el
+que se renderizan los prompts y se derivan las reglas del oráculo, probado por
+mutación. El oráculo ahora rechaza en milisegundos una superficie de comandos
+ausente o stub, y reporta todas las violaciones juntas.
+
+Ese trabajo reclasificó una de las dos causas del segundo W1 como ambigüedad del
+estímulo, no como defecto de la entrega. Véase
+[`defects/prompt-oracle-contradiction`](defects/prompt-oracle-contradiction/README.md).
+El acumulado no cambia: **0/8 incrementos verificados**.
+
+El estudio también cambió de executor a Claude Code CLI `sonnet`, que reporta
+tokens y costo exactos donde Codex declaraba `unavailable`. El cuarto intento no
+espera a la recuperación de cuota del 2026-07-30.
+
 ## Tercer intento W1 — interrupción externa
 
 La serie `series-3` no llegó a producir un breakdown. Sus tres planning attempts
