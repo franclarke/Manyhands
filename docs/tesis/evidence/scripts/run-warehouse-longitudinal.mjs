@@ -64,7 +64,19 @@ for (const increment of INCREMENTS.slice(state.completed.length)) {
     promptSha256: assets.prompts[increment],
     goal: await readFile(promptPath, "utf8"),
     ...studyStageSelections(),
-    executionConfig: { maxParallel: 2, scopePolicy: "strict", leafTimeoutMs: 600000, integrationTimeoutMs: 900000, unexpectedCommitPolicy: "reject" },
+    // The 600s leaf timeout was inherited from the Codex-era stability runs,
+    // whose target was an existing 1000-line repository. Warehouse W1 builds an
+    // entire project out of an empty seed — toolchain, domain, scenario, the
+    // public probe and its tests — and series-8 was killed at exactly 10:04
+    // still working, not stuck: it never errored, it ran out of clock. A leaf
+    // ceiling below the 900s integration ceiling also had the build of a whole
+    // project on a tighter budget than the merge of its parts.
+    //
+    // 1800s is set from that shape, not tuned until a run passes: three times
+    // the inherited value, still well inside the 7200s per-run wall clock, and
+    // uniform across W1-W8 so no increment is privileged. Whatever the pilot
+    // settles on is frozen for the final series.
+    executionConfig: { maxParallel: 2, scopePolicy: "strict", leafTimeoutMs: 1800000, integrationTimeoutMs: 1800000, unexpectedCommitPolicy: "reject" },
     runsDir: resolve(".manyhands/runs"),
     pollIntervalMs: 10000,
     wallClockLimitMs: 7200000
