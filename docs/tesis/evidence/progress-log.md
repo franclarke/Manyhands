@@ -318,3 +318,13 @@
     `run-coordinator` y web, y builds de ambos packages PASS. Evidencia en
     `evidence/warehouse/checkpoints/checkpoint-2.md`. C2-G2 aún requiere Task 10
     y dos runs reales de estabilidad.
+
+### 2026-07-24 — C2-G1 y preflight de C2-G2
+
+49. **C2-G1 = PASS** sobre `cf6db65`: selector, señales, contratos y derivación
+    no censurada pasan sus regresiones; el G5 histórico rederiva 12 celdas.
+50. **Checks locales de C2-G2 = PASS:** 199 archivos/1153 tests, 12 typechecks
+    de packages, typecheck web, build de packages y build productivo web.
+51. **C2-G2 sigue INCOMPLETE.** El preflight midió 8,71 GB libres frente al
+    mínimo de 25 GB. No se iniciaron los dos runs reales y no se borró ni movió
+    evidencia o pools sin autorización.

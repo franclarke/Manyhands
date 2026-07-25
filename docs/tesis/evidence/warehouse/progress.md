@@ -24,6 +24,13 @@
 | 7 — Final construction and comparison | 15–16 | pending | — | — |
 | 8 — Results and thesis | 17–18 | pending | — | — |
 
+### Checkpoint 3 — estado interno
+
+| Task | Estado | Evidencia |
+|---|---|---|
+| 9 — métricas no censuradas | **completed** | `cf6db65`; fixtures de fallo/éxito y rederivación G5 |
+| 10 — gates y estabilidad | **in progress** | C2-G1 PASS; checks C2-G2 PASS; runs bloqueados por 8,71 GB libres |
+
 ## Registro cronológico
 
 ### 2026-07-24 — Inicio del checkpoint 1

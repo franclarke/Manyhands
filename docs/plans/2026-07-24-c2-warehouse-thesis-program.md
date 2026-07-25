@@ -27,6 +27,10 @@
 | 7 — Final construction and comparison | 15–16 | pending | — |
 | 8 — Results and thesis | 17–18 | pending | — |
 
+> Checkpoint 3 en curso: Task 9 completada en `cf6db65`. C2-G1 y todos los
+> checks locales de C2-G2 están verdes; los dos runs de estabilidad de Task 10
+> no se iniciaron porque el preflight dio 8,71 GB frente al mínimo de 25 GB.
+
 ## 1. Decisión ejecutiva
 
 Sí conviene construir Warehouse de manera incremental con ManyHands, pero no como una única construcción que mezcle versiones del orquestador.
