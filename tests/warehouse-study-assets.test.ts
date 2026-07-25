@@ -80,6 +80,26 @@ describe("Warehouse study assets", () => {
     ).resolves.toMatchObject({ stdout: expect.stringContaining("all Warehouse asset pins match") });
   });
 
+  it("exempts every pinned asset from end-of-line conversion", async () => {
+    const { execFile } = await import("node:child_process");
+    const { promisify } = await import("node:util");
+    const run = promisify(execFile);
+
+    // `-text` reports as "unset". Without it a clone under core.autocrlf=true
+    // rewrites these bytes and every content hash goes stale.
+    for (const asset of [
+      "docs/tesis/evidence/warehouse/assets-manifest.json",
+      "docs/tesis/evidence/warehouse/oracles/oracle-core.mjs",
+      "docs/tesis/evidence/warehouse/oracles/probe-specimen.mjs",
+      "docs/tesis/evidence/warehouse/oracles/W1/oracle.json",
+      "docs/tesis/evidence/warehouse/protocol/prompts/W1.md",
+      "scripts/manyhands-dev-command.mjs"
+    ]) {
+      const { stdout } = await run("git", ["check-attr", "text", "--", asset], { cwd: process.cwd(), windowsHide: true });
+      expect(stdout.trim(), asset).toMatch(/text: unset$/u);
+    }
+  });
+
   it("keeps pnpm lifecycle banners out of the JSON probe channel", async () => {
     const core = await readFile(path.join(root, "oracles", "oracle-core.mjs"), "utf8");
 
