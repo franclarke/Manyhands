@@ -15,6 +15,7 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { renderProbeContract } from "../warehouse/oracles/probe-specimen.mjs";
 
 const root = resolve("docs/tesis/evidence/warehouse");
 const increments = Array.from({ length: 8 }, (_, index) => `W${index + 1}`);
@@ -42,6 +43,18 @@ for (const increment of increments) {
     specimenSha256
   };
   await reconcile(path, `${JSON.stringify(pin)}\n`);
+}
+
+// Render the contract section into every prompt BEFORE hashing, so a rendered
+// change can never be published with a stale pin.
+for (const increment of increments) {
+  const promptPath = join(root, "protocol", "prompts", `${increment}.md`);
+  const prompt = await readFile(promptPath, "utf8");
+  const start = prompt.indexOf("## Probe contract");
+  if (start === -1) throw new Error(`${increment}.md has no "## Probe contract" section to render into`);
+  const next = prompt.indexOf("\n## ", start + 1);
+  const end = next === -1 ? prompt.length : next + 1;
+  await reconcile(promptPath, `${prompt.slice(0, start)}${renderProbeContract(increment)}\n\n${prompt.slice(end)}`);
 }
 
 const manifestPath = join(root, "assets-manifest.json");

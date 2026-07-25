@@ -103,3 +103,49 @@ export function referenceProbeOutput(increment) {
 export function referenceProbeJson(increment) {
   return JSON.stringify(referenceProbeOutput(increment), null, 2);
 }
+
+/** Human-readable statement of one field's rule, in the prompt's language. */
+function describeRule(capability, field, rule) {
+  if (rule.true === true) return `- \`${capability}.${field}\` es exactamente \`true\`.`;
+  if (rule.finite === true) return `- \`${capability}.${field}\` es un número finito.`;
+  return `- \`${capability}.${field}\` es un número >= ${rule.min}.`;
+}
+
+/**
+ * Render the `## Probe contract` section a prompt publishes.
+ *
+ * The prompts do not author this text: `pin-warehouse-assets.mjs` writes it from
+ * here, so the published stimulus and the enforced rules cannot disagree. The
+ * previous prose version opened with a flat "Campos exactos" list that placed
+ * the capabilities beside the envelope fields; the W1 series-2 delivery followed
+ * that list, hoisted them out of `capabilities`, and the oracle rejected it.
+ */
+export function renderProbeContract(increment) {
+  const capabilities = capabilitiesFor(increment);
+  const rules = capabilities.flatMap((capability) =>
+    Object.entries(CAPABILITY_RULES[capability]).map(([field, rule]) => describeRule(capability, field, rule))
+  );
+
+  return `## Probe contract
+
+El comando \`pnpm study:probe -- --increment ${increment} --scenario ${SCENARIO} --format json\`
+escribe en stdout un único objeto JSON y ninguna otra salida, con exactamente
+esta forma:
+
+\`\`\`json
+${referenceProbeJson(increment)}
+\`\`\`
+
+La envoltura fija \`schemaVersion\`, \`increment\` y \`scenario\`. Las capacidades
+requeridas en este incremento son ${capabilities.map((name) => `\`${name}\``).join(", ")}.
+Cada una vive anidada dentro de \`capabilities\`: ninguna se publica en el nivel
+superior ni se renombra.
+
+Los valores del ejemplo son ilustrativos. Derivalos del escenario respetando
+estos mínimos e invariantes, que el oráculo externo verifica:
+
+${rules.join("\n")}
+
+\`stateHash\` es la cadena \`sha256:\` seguida de 64 dígitos hexadecimales
+minúsculos. Dos invocaciones sobre el mismo commit emiten bytes idénticos.`;
+}
