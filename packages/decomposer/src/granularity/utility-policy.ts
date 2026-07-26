@@ -32,9 +32,9 @@ export const PILOT_UTILITY_POLICY: Readonly<UtilityPolicyConfig> = Object.freeze
   minimumAdvantage: 0.15,
   maxLeafContextTokens: 24_000,
   maxLeafScopePaths: 40,
-  // Provisional. Anchoring this on delivered increments is a pilot task: W1
-  // succeeded and W2 did not, so the bound belongs between their planned
-  // counts. It is declared here rather than tuned per run.
+  // Provisional. W1 delivered with 10 planned paths and W2 failed with 6, so
+  // these observations cannot anchor a discriminating value. Keep this fixed
+  // pilot ceiling rather than tuning it per run.
   maxLeafPlannedPaths: 12
 });
 
