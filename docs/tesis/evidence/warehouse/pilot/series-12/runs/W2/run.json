@@ -1,7 +1,7 @@
 {
   "version": 2,
   "run": {
-    "runId": "094e7811-b878-4cd1-a4c3-ff5d414773f1",
+    "runId": "69d2e719-150c-4dc3-a4bc-a65fac202e48",
     "workspaceId": "e131c7a7-ff4a-468a-83d2-3416a91f6270",
     "userPrompt": "# W2 — Primer control tower visual\n\n## Goal\n\nAgregá una aplicación web que represente el layout W1 como plano SVG y el stock\ncomo heatmap comprensible, con leyenda, etiquetas textuales y detalle de bin.\n\n## Acceptance\n\n- El plano renderiza zonas, pasillos y al menos una celda por bin del escenario.\n- Ocupación y stock crítico no dependen sólo del color; hay labels y leyenda.\n- La selección de un bin muestra SKU, cantidad, capacidad y estado.\n- La sonda W2 productiva agrega `visual` con conteos de SVG, heatmap y labels,\n  preservando capacidades W1; test, typecheck y build pasan.\n\n## Probe contract\n\nEl comando `pnpm study:probe -- --increment W2 --scenario thesis-seed-2026 --format json`\nescribe en stdout un único objeto JSON y ninguna otra salida, con exactamente\nesta forma:\n\n```json\n{\n  \"schemaVersion\": 1,\n  \"increment\": \"W2\",\n  \"scenario\": \"thesis-seed-2026\",\n  \"stateHash\": \"sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\",\n  \"capabilities\": {\n    \"layout\": {\n      \"zones\": 4,\n      \"bins\": 16\n    },\n    \"inventory\": {\n      \"skus\": 5,\n      \"totalUnits\": 240\n    },\n    \"visual\": {\n      \"svgElements\": 64,\n      \"heatmapCells\": 16,\n      \"textLabels\": 12\n    }\n  }\n}\n```\n\nLa envoltura fija `schemaVersion`, `increment` y `scenario`. Las capacidades\nrequeridas en este incremento son `layout`, `inventory`, `visual`.\nCada una vive anidada dentro de `capabilities`: ninguna se publica en el nivel\nsuperior ni se renombra.\n\nLos valores del ejemplo son ilustrativos. Derivalos del escenario respetando\nestos mínimos e invariantes, que el oráculo externo verifica:\n\n- `layout.zones` es un número >= 3.\n- `layout.bins` es un número >= 12.\n- `inventory.skus` es un número >= 3.\n- `inventory.totalUnits` es un número >= 1.\n- `visual.svgElements` es un número >= 1.\n- `visual.heatmapCells` es un número >= 12.\n- `visual.textLabels` es un número >= 3.\n\n`stateHash` es la cadena `sha256:` seguida de 64 dígitos hexadecimales\nminúsculos. Dos invocaciones sobre el mismo commit emiten bytes idénticos.\n\n## Constraints\n\n- Base: verified delivery of W1.\n- UI React/Vite accesible y responsive; SVG es parte del producto, no una\n  captura estática. No hardcodear el resultado de la sonda.\n\n## Oracle\n\nOracle id: `warehouse-w2-v1`. Verifica capacidades acumulativas y observables\nvisuales mínimos desde el camino productivo.",
     "title": "# W2 — Primer control tower visual\n\n## Goal\n\nAgregá una aplicación web que represente el layout W1 como plano SVG y el s",
@@ -44,21 +44,21 @@
       "sourceBaseCommit": "71f61c9efa222103ca2fb2f67692434ab493d75c",
       "remoteUrl": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-seed",
       "fingerprint": "b7ab3c45ac550ec3",
-      "capturedAt": "2026-07-26T15:16:06.410Z"
+      "capturedAt": "2026-07-26T16:08:56.694Z"
     },
     "projection": {
       "eventSequence": 29,
       "lifecycle": "waiting_for_input",
-      "graphId": "graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93",
+      "graphId": "graph-w2-primer-control-tower-visual-a5b7808d40",
       "graphRevision": 1,
       "approvedGraphRevision": 1,
       "repositorySnapshotId": "sha256:ac2a30e1d8a891f6a32782183b004741003f8aab7e3ff65448aa588b09661f88",
-      "updatedAt": "2026-07-26T15:49:39.304Z"
+      "updatedAt": "2026-07-26T16:10:51.989Z"
     },
-    "version": 499,
+    "version": 35,
     "mutationFence": 3,
-    "createdAt": "2026-07-26T15:16:06.410Z",
-    "updatedAt": "2026-07-26T15:49:39.320Z",
-    "heartbeatAt": "2026-07-26T15:49:36.706Z"
+    "createdAt": "2026-07-26T16:08:56.694Z",
+    "updatedAt": "2026-07-26T16:10:52.013Z",
+    "heartbeatAt": "2026-07-26T16:10:50.316Z"
   }
 }

@@ -1,49 +1,49 @@
 {
   "schemaVersion": 2,
-  "runId": "094e7811-b878-4cd1-a4c3-ff5d414773f1",
+  "runId": "69d2e719-150c-4dc3-a4bc-a65fac202e48",
   "eventSequence": 29,
-  "lastEventId": "094e7811-b878-4cd1-a4c3-ff5d414773f1:readiness.observed:29",
-  "operationId": "a8514d19-be34-42d5-a48e-363ed13880da",
+  "lastEventId": "69d2e719-150c-4dc3-a4bc-a65fac202e48:readiness.observed:29",
+  "operationId": "2ba2eea1-9934-420d-9a6d-0de4245ac3f3",
   "fencingToken": 3,
   "projection": {
-    "runId": "094e7811-b878-4cd1-a4c3-ff5d414773f1",
+    "runId": "69d2e719-150c-4dc3-a4bc-a65fac202e48",
     "goal": "# W2 — Primer control tower visual\n\n## Goal\n\nAgregá una aplicación web que represente el layout W1 como plano SVG y el stock\ncomo heatmap comprensible, con leyenda, etiquetas textuales y detalle de bin.\n\n## Acceptance\n\n- El plano renderiza zonas, pasillos y al menos una celda por bin del escenario.\n- Ocupación y stock crítico no dependen sólo del color; hay labels y leyenda.\n- La selección de un bin muestra SKU, cantidad, capacidad y estado.\n- La sonda W2 productiva agrega `visual` con conteos de SVG, heatmap y labels,\n  preservando capacidades W1; test, typecheck y build pasan.\n\n## Probe contract\n\nEl comando `pnpm study:probe -- --increment W2 --scenario thesis-seed-2026 --format json`\nescribe en stdout un único objeto JSON y ninguna otra salida, con exactamente\nesta forma:\n\n```json\n{\n  \"schemaVersion\": 1,\n  \"increment\": \"W2\",\n  \"scenario\": \"thesis-seed-2026\",\n  \"stateHash\": \"sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\",\n  \"capabilities\": {\n    \"layout\": {\n      \"zones\": 4,\n      \"bins\": 16\n    },\n    \"inventory\": {\n      \"skus\": 5,\n      \"totalUnits\": 240\n    },\n    \"visual\": {\n      \"svgElements\": 64,\n      \"heatmapCells\": 16,\n      \"textLabels\": 12\n    }\n  }\n}\n```\n\nLa envoltura fija `schemaVersion`, `increment` y `scenario`. Las capacidades\nrequeridas en este incremento son `layout`, `inventory`, `visual`.\nCada una vive anidada dentro de `capabilities`: ninguna se publica en el nivel\nsuperior ni se renombra.\n\nLos valores del ejemplo son ilustrativos. Derivalos del escenario respetando\nestos mínimos e invariantes, que el oráculo externo verifica:\n\n- `layout.zones` es un número >= 3.\n- `layout.bins` es un número >= 12.\n- `inventory.skus` es un número >= 3.\n- `inventory.totalUnits` es un número >= 1.\n- `visual.svgElements` es un número >= 1.\n- `visual.heatmapCells` es un número >= 12.\n- `visual.textLabels` es un número >= 3.\n\n`stateHash` es la cadena `sha256:` seguida de 64 dígitos hexadecimales\nminúsculos. Dos invocaciones sobre el mismo commit emiten bytes idénticos.\n\n## Constraints\n\n- Base: verified delivery of W1.\n- UI React/Vite accesible y responsive; SVG es parte del producto, no una\n  captura estática. No hardcodear el resultado de la sonda.\n\n## Oracle\n\nOracle id: `warehouse-w2-v1`. Verifica capacidades acumulativas y observables\nvisuales mínimos desde el camino productivo.",
     "lifecycle": "waiting_for_input",
     "sequence": 29,
     "appliedEventIds": [
-      "run:094e7811-b878-4cd1-a4c3-ff5d414773f1:created",
+      "run:69d2e719-150c-4dc3-a4bc-a65fac202e48:created",
       "repository:sha256:ac2a30e1d8a891f6a32782183b004741003f8aab7e3ff65448aa588b09661f88:inspection:2",
-      "planning:094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:1:started",
-      "planning:094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:1:node:w2-control-tower-visual",
-      "planning:094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:1:node:w2-visual-projection",
-      "planning:094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:1:node:w2-react-svg-app",
-      "planning:094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:1:node:w2-probe-visual-capability",
-      "planning:warehouse-w2-primer-control-tower-visual:completed:094e7811-b878-4cd1-a4c3-ff5d414773f1",
-      "planning:warehouse-w2-primer-control-tower-visual:strategy:094e7811-b878-4cd1-a4c3-ff5d414773f1",
-      "graph:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1:compiled",
-      "graph:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1:critic:completeness",
-      "graph:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1:critic:atomicity",
-      "graph:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1:critic:contract_compatibility",
-      "graph:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1:critic:dag_validity",
-      "graph:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1:critic:scope_isolation",
-      "graph:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1:critic:artifact_coverage",
-      "graph:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1:critic:risk_uncertainty",
-      "graph:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1:critic:validation_coverage",
-      "graph:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1:proposed",
-      "approve-plan:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1",
-      "approve-plan:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1:resolved",
-      "approve-plan:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1:graph-approved",
-      "094e7811-b878-4cd1-a4c3-ff5d414773f1:readiness.observed:23",
-      "094e7811-b878-4cd1-a4c3-ff5d414773f1:wave.selected:24",
-      "094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:node-w2-control-tower-visual-aa57971080:1:started",
-      "094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:node-w2-control-tower-visual-aa57971080:1:failure-classified",
-      "094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:node-w2-control-tower-visual-aa57971080:1:failed",
-      "094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:node-w2-control-tower-visual-aa57971080:1:decision:094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:node-w2-control-tower-visual-aa57971080:1:decision",
-      "094e7811-b878-4cd1-a4c3-ff5d414773f1:readiness.observed:29"
+      "planning:69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:1:started",
+      "planning:69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:1:node:w2-control-tower-visual",
+      "planning:69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:1:node:w2-visual-domain-metrics",
+      "planning:69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:1:node:w2-react-svg-app",
+      "planning:69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:1:node:w2-probe-and-tooling",
+      "planning:w2-primer-control-tower-visual:completed:69d2e719-150c-4dc3-a4bc-a65fac202e48",
+      "planning:w2-primer-control-tower-visual:strategy:69d2e719-150c-4dc3-a4bc-a65fac202e48",
+      "graph:graph-w2-primer-control-tower-visual-a5b7808d40:r1:compiled",
+      "graph:graph-w2-primer-control-tower-visual-a5b7808d40:r1:critic:completeness",
+      "graph:graph-w2-primer-control-tower-visual-a5b7808d40:r1:critic:atomicity",
+      "graph:graph-w2-primer-control-tower-visual-a5b7808d40:r1:critic:contract_compatibility",
+      "graph:graph-w2-primer-control-tower-visual-a5b7808d40:r1:critic:dag_validity",
+      "graph:graph-w2-primer-control-tower-visual-a5b7808d40:r1:critic:scope_isolation",
+      "graph:graph-w2-primer-control-tower-visual-a5b7808d40:r1:critic:artifact_coverage",
+      "graph:graph-w2-primer-control-tower-visual-a5b7808d40:r1:critic:risk_uncertainty",
+      "graph:graph-w2-primer-control-tower-visual-a5b7808d40:r1:critic:validation_coverage",
+      "graph:graph-w2-primer-control-tower-visual-a5b7808d40:r1:proposed",
+      "approve-plan:graph-w2-primer-control-tower-visual-a5b7808d40:r1",
+      "approve-plan:graph-w2-primer-control-tower-visual-a5b7808d40:r1:resolved",
+      "approve-plan:graph-w2-primer-control-tower-visual-a5b7808d40:r1:graph-approved",
+      "69d2e719-150c-4dc3-a4bc-a65fac202e48:readiness.observed:23",
+      "69d2e719-150c-4dc3-a4bc-a65fac202e48:wave.selected:24",
+      "69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:node-w2-control-tower-visual-aa57971080:1:started",
+      "69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:node-w2-control-tower-visual-aa57971080:1:failure-classified",
+      "69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:node-w2-control-tower-visual-aa57971080:1:failed",
+      "69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:node-w2-control-tower-visual-aa57971080:1:decision:69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:node-w2-control-tower-visual-aa57971080:1:decision",
+      "69d2e719-150c-4dc3-a4bc-a65fac202e48:readiness.observed:29"
     ],
     "decisions": {
-      "approve-plan:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1": {
-        "id": "approve-plan:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1",
+      "approve-plan:graph-w2-primer-control-tower-visual-a5b7808d40:r1": {
+        "id": "approve-plan:graph-w2-primer-control-tower-visual-a5b7808d40:r1",
         "kind": "approve_plan",
         "question": "Approve graph revision 1?",
         "options": [
@@ -60,7 +60,7 @@
           "node-w2-control-tower-visual-aa57971080"
         ],
         "evidenceRefs": [
-          "graph:graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93:r1"
+          "graph:graph-w2-primer-control-tower-visual-a5b7808d40:r1"
         ],
         "impact": "acceptance",
         "status": "resolved",
@@ -68,10 +68,10 @@
           "optionId": "approve"
         }
       },
-      "094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:node-w2-control-tower-visual-aa57971080:1:decision": {
-        "id": "094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:node-w2-control-tower-visual-aa57971080:1:decision",
+      "69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:node-w2-control-tower-visual-aa57971080:1:decision": {
+        "id": "69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:node-w2-control-tower-visual-aa57971080:1:decision",
         "kind": "resolve_conflict",
-        "question": "The work for Primer control tower visual needs guidance: timeout: The agent hit the hard timeout. Consider a longer per-task timeout or a faster executor for this node.:  VisualTextLabel {\n+  readonly id: string;\n+  readonly text: string;\n+  readonly x: number;\n+  readonly y: number;\n+}\n+\n+export interface ControlTowerVisual {\n+  readonly viewBox: string;\n+  readonly zones: readonly VisualZone[];\n+  readonly aisles: readonly VisualAisle[];\n+  readonly binCells: readonly VisualBinCell[];\n+  readonly labels: readonly VisualTextLabel[];\n+  readonly legend: readonly { status: BinStatus; label: string }[];\n+}\n+\n+export interface VisualCapability {\n+  readonly svgElements: number;\n+  readonly heatmapCells: number;\n+  readonly textLabels: number;\n+}\n+\n+const DEFAULT_BIN_CAPACITY = 40;\n+const ZONE_WIDTH = 214;\n+const ZONE_HEIGHT = 168;\n+const BIN_WIDTH = 84;\n+const BIN_HEIGHT = 46;\n+const ZONE_GAP = 28;\n+const ORIGIN_X = 28;\n+const ORIGIN_Y = 42;\n+\n+function binCapacity(bin: Bin): number {\n+  return bin.capacity ?? DEFAULT_BIN_CAPACITY;\n+}\n+\n+export function binStatus(occupancy: number): BinStatus {\n+  if (occupancy === 0) return \"empty\";\n+  if (occupancy >= 0.9) return \"critical\";\n+  if (occupancy >= 0.7) return \"watch\";\n+  return \"healthy\";\n+}\n+\n+export function buildControlTowerVisual(scenario: Scenario): ControlTowerVisual {\n+  const zones: VisualZone[] = scenario.layout.zones.map((zone, index) => ({\n+    id: zone.id,\n+    name: zone.name,\n+    x: ORIGIN_X + index * (ZONE_WIDTH + ZONE_GAP),\n+    y: ORIGIN_Y,\n+    width: ZONE_WIDTH,\n+    height: ZONE_HEIGHT,\n+  }));\n+\n+  const zoneById = new Map(zones.map((zone) => [zone.id, zone]));\n+  const binCounters = new Map<string, number>();\n+  const binCells = scenario.layout.bins.map((bin) => {\n+    const zone = zoneById.get(bin.zoneId);\n+    if (zone === undefined) {\n+      throw new Error(`bin ${bin.id} references unknown visual zone: ${bin.zoneId}`);\n+    }\n+\n+    const slot = binCounters.get(bin.zoneId) ?? 0;\n+    binCounters.set(bin.zoneId, slot + 1);\n+\n+    const quantity = totalUnitsForBin(scenario.inventory, bin.id);\n+    const capacity = binCapacity(bin);\n+    const occupancy = Math.min(quantity / capacity, 1);\n+    const status = binStatus(occupancy);\n+    const row = Math.floor(slot / 2);\n+    const column = slot % 2;\n+\n+    return {\n+      binId: bin.id,\n+      code: bin.code,\n+      zoneId: bin.zoneId,\n+      x: zone.x + 18 + column * (BIN_WIDTH + 16),\n+      y: zone.y + 46 + row * (BIN_HEIGHT + 14),\n+      width: BIN_WIDTH,\n+      height: BIN_HEIGHT,\n+      quantity,\n+      capacity,\n+      occupancy,\n+      status,\n+      label: `${bin.code} ${quantity}/${capacity}`,\n+    };\n+  });\n+\n+  const labels: VisualTextLabel[] = [\n+    ...zones.map((zone) => ({\n+      id: `zone-label-${zone.id}`,\n+      text: zone.name,\n+      x: zone.x + 16,\n+      y: zone.y + 25,\n+    })),\n+    ...binCells.map((cell) => ({\n+      id: `bin-label-${cell.binId}`,\n+      text: cell.label,\n+      x: cell.x + 8,\n+      y: cell.y + 28,\n+    })),\n+    { id: \"legend-label\", text: \"Stock heatmap: qty/capacity and status\", x: ORIGIN_X, y: 256 },\n+  ];\n+\n+  const aisles: VisualAisle[] = zones.slice(0, -1).map((zone, index) => ({\n+    id: `aisle-${index + 1}`,\n+    label: `Aisle ${index + 1}`,\n+    x1: zone.x + zone.width + ZONE_GAP / 2,\n+    y1: ORIGIN_Y + 20,\n+    x2: zone.x + zone.width + ZONE_GAP / 2,\n+    y2: ORIGIN_Y + ZONE_HEIGHT - 20,\n+  }));\n+\n+  return {\n+    viewBox: \"0 0 996 300\",\n+    zones,\n+    aisles,\n+    binCells,\n+    labels,\n+    legend: [\n+      { status: \"critical\", label: \"Critical >= 90%\" },\n+      { status: \"watch\", label: \"Watch >= 70%\" },\n+      { status: \"healthy\", label: \"Healthy < 70%\" },\n+      { status: \"empty\", label: \"Empty 0%\" },\n+    ],\n+  };\n+}\n+\n+export function visualCapability(visual: ControlTowerVisual): VisualCapability {\n+  return {\n+    svgElements:\n+      visual.zones.length +\n+      visual.aisles.length +\n+      visual.binCells.length +\n+      visual.labels.length +\n+      visual.legend.length * 2,\n+    heatmapCells: visual.binCells.length,\n+    textLabels: visual.labels.length + visual.legend.length,\n+  };\n+}\n\ntokens used\n248,883\n: Implementado.\n\nCambios principales:\n- App React/Vite en `index.html` y `src/app/` con SVG interactivo del layout W1.\n- Heatmap por bin con labels `cantidad/capacidad`, leyenda y patrón visual para crítico.\n- Panel de detalle seleccionable con SKU, cantidad, capacidad y estado.\n- Modelo visual productivo en `src/visual/` usado también por la sonda W2.\n- Probe W2 agrega `capabilities.visual` preservando `layout` e `inventory`.\n\nVerificación:\n- `pnpm test`: passed, 34 tests.\n- `pnpm typecheck`: passed.\n- `pnpm build`: passed.\n- Browser smoke test en `http://localhost:5173/`: 1 SVG, 4 zonas, 16 bins, 4 leyendas; click en bin actualiza detalle.\n- Probe W2 validado con JSON limpio usando `pnpm --silent study:probe -- --increment W2 --scenario thesis-seed-2026 --format json`.\n\nNota: en este pnpm 7 local, `pnpm study:probe ...` sin `--silent` antepone el banner del runner; el CLI en sí emite sólo el JSON esperado.",
+        "question": "The work for Primer control tower visual needs guidance: git worktree add --detach C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-12\\.manyhands\\worktree-pool\\1ef32c5c37a6\\slot-000 71f61c9efa222103ca2fb2f67692434ab493d75c failed in C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-12: Preparing worktree (detached HEAD 71f61c9)\nfatal: 'C:/Users/franc/Documents/Proyectos/warehouse-control-tower-pilot-12/.manyhands/worktree-pool/1ef32c5c37a6/slot-000' already exists",
         "options": [
           {
             "id": "retry",
@@ -86,7 +86,7 @@
           "node-w2-control-tower-visual-aa57971080"
         ],
         "evidenceRefs": [
-          "094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:node-w2-control-tower-visual-aa57971080:1"
+          "69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:node-w2-control-tower-visual-aa57971080:1"
         ],
         "impact": "behavior",
         "raisedAtGraphRevision": 1,
@@ -96,12 +96,12 @@
     "readiness": {
       "readyNodeIds": [],
       "pendingDecisionIds": [
-        "094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:node-w2-control-tower-visual-aa57971080:1:decision"
+        "69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:node-w2-control-tower-visual-aa57971080:1:decision"
       ]
     },
     "selectedWaves": [
       {
-        "waveId": "094e7811-b878-4cd1-a4c3-ff5d414773f1:wave:1",
+        "waveId": "69d2e719-150c-4dc3-a4bc-a65fac202e48:wave:1",
         "nodeIds": [
           "node-w2-control-tower-visual-aa57971080"
         ],
@@ -109,14 +109,14 @@
       }
     ],
     "attempts": {
-      "094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:node-w2-control-tower-visual-aa57971080:1": {
-        "attemptId": "094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:node-w2-control-tower-visual-aa57971080:1",
+      "69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:node-w2-control-tower-visual-aa57971080:1": {
+        "attemptId": "69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:node-w2-control-tower-visual-aa57971080:1",
         "nodeId": "node-w2-control-tower-visual-aa57971080",
-        "inputFingerprint": "sha256:42af982fc565b2b4b6d5cb871f3fbe4942f9c4f1316e43578b270825a1745131",
+        "inputFingerprint": "sha256:df01df3ad968d4b81b00d8a33b697d4fa862d8a02b79257520e66b9d6c2f4e6a",
         "kind": "execution",
         "status": "failed",
         "repairPasses": 0,
-        "failureReason": "timeout: The agent hit the hard timeout. Consider a longer per-task timeout or a faster executor for this node.:  VisualTextLabel {\n+  readonly id: string;\n+  readonly text: string;\n+  readonly x: number;\n+  readonly y: number;\n+}\n+\n+export interface ControlTowerVisual {\n+  readonly viewBox: string;\n+  readonly zones: readonly VisualZone[];\n+  readonly aisles: readonly VisualAisle[];\n+  readonly binCells: readonly VisualBinCell[];\n+  readonly labels: readonly VisualTextLabel[];\n+  readonly legend: readonly { status: BinStatus; label: string }[];\n+}\n+\n+export interface VisualCapability {\n+  readonly svgElements: number;\n+  readonly heatmapCells: number;\n+  readonly textLabels: number;\n+}\n+\n+const DEFAULT_BIN_CAPACITY = 40;\n+const ZONE_WIDTH = 214;\n+const ZONE_HEIGHT = 168;\n+const BIN_WIDTH = 84;\n+const BIN_HEIGHT = 46;\n+const ZONE_GAP = 28;\n+const ORIGIN_X = 28;\n+const ORIGIN_Y = 42;\n+\n+function binCapacity(bin: Bin): number {\n+  return bin.capacity ?? DEFAULT_BIN_CAPACITY;\n+}\n+\n+export function binStatus(occupancy: number): BinStatus {\n+  if (occupancy === 0) return \"empty\";\n+  if (occupancy >= 0.9) return \"critical\";\n+  if (occupancy >= 0.7) return \"watch\";\n+  return \"healthy\";\n+}\n+\n+export function buildControlTowerVisual(scenario: Scenario): ControlTowerVisual {\n+  const zones: VisualZone[] = scenario.layout.zones.map((zone, index) => ({\n+    id: zone.id,\n+    name: zone.name,\n+    x: ORIGIN_X + index * (ZONE_WIDTH + ZONE_GAP),\n+    y: ORIGIN_Y,\n+    width: ZONE_WIDTH,\n+    height: ZONE_HEIGHT,\n+  }));\n+\n+  const zoneById = new Map(zones.map((zone) => [zone.id, zone]));\n+  const binCounters = new Map<string, number>();\n+  const binCells = scenario.layout.bins.map((bin) => {\n+    const zone = zoneById.get(bin.zoneId);\n+    if (zone === undefined) {\n+      throw new Error(`bin ${bin.id} references unknown visual zone: ${bin.zoneId}`);\n+    }\n+\n+    const slot = binCounters.get(bin.zoneId) ?? 0;\n+    binCounters.set(bin.zoneId, slot + 1);\n+\n+    const quantity = totalUnitsForBin(scenario.inventory, bin.id);\n+    const capacity = binCapacity(bin);\n+    const occupancy = Math.min(quantity / capacity, 1);\n+    const status = binStatus(occupancy);\n+    const row = Math.floor(slot / 2);\n+    const column = slot % 2;\n+\n+    return {\n+      binId: bin.id,\n+      code: bin.code,\n+      zoneId: bin.zoneId,\n+      x: zone.x + 18 + column * (BIN_WIDTH + 16),\n+      y: zone.y + 46 + row * (BIN_HEIGHT + 14),\n+      width: BIN_WIDTH,\n+      height: BIN_HEIGHT,\n+      quantity,\n+      capacity,\n+      occupancy,\n+      status,\n+      label: `${bin.code} ${quantity}/${capacity}`,\n+    };\n+  });\n+\n+  const labels: VisualTextLabel[] = [\n+    ...zones.map((zone) => ({\n+      id: `zone-label-${zone.id}`,\n+      text: zone.name,\n+      x: zone.x + 16,\n+      y: zone.y + 25,\n+    })),\n+    ...binCells.map((cell) => ({\n+      id: `bin-label-${cell.binId}`,\n+      text: cell.label,\n+      x: cell.x + 8,\n+      y: cell.y + 28,\n+    })),\n+    { id: \"legend-label\", text: \"Stock heatmap: qty/capacity and status\", x: ORIGIN_X, y: 256 },\n+  ];\n+\n+  const aisles: VisualAisle[] = zones.slice(0, -1).map((zone, index) => ({\n+    id: `aisle-${index + 1}`,\n+    label: `Aisle ${index + 1}`,\n+    x1: zone.x + zone.width + ZONE_GAP / 2,\n+    y1: ORIGIN_Y + 20,\n+    x2: zone.x + zone.width + ZONE_GAP / 2,\n+    y2: ORIGIN_Y + ZONE_HEIGHT - 20,\n+  }));\n+\n+  return {\n+    viewBox: \"0 0 996 300\",\n+    zones,\n+    aisles,\n+    binCells,\n+    labels,\n+    legend: [\n+      { status: \"critical\", label: \"Critical >= 90%\" },\n+      { status: \"watch\", label: \"Watch >= 70%\" },\n+      { status: \"healthy\", label: \"Healthy < 70%\" },\n+      { status: \"empty\", label: \"Empty 0%\" },\n+    ],\n+  };\n+}\n+\n+export function visualCapability(visual: ControlTowerVisual): VisualCapability {\n+  return {\n+    svgElements:\n+      visual.zones.length +\n+      visual.aisles.length +\n+      visual.binCells.length +\n+      visual.labels.length +\n+      visual.legend.length * 2,\n+    heatmapCells: visual.binCells.length,\n+    textLabels: visual.labels.length + visual.legend.length,\n+  };\n+}\n\ntokens used\n248,883\n: Implementado.\n\nCambios principales:\n- App React/Vite en `index.html` y `src/app/` con SVG interactivo del layout W1.\n- Heatmap por bin con labels `cantidad/capacidad`, leyenda y patrón visual para crítico.\n- Panel de detalle seleccionable con SKU, cantidad, capacidad y estado.\n- Modelo visual productivo en `src/visual/` usado también por la sonda W2.\n- Probe W2 agrega `capabilities.visual` preservando `layout` e `inventory`.\n\nVerificación:\n- `pnpm test`: passed, 34 tests.\n- `pnpm typecheck`: passed.\n- `pnpm build`: passed.\n- Browser smoke test en `http://localhost:5173/`: 1 SVG, 4 zonas, 16 bins, 4 leyendas; click en bin actualiza detalle.\n- Probe W2 validado con JSON limpio usando `pnpm --silent study:probe -- --increment W2 --scenario thesis-seed-2026 --format json`.\n\nNota: en este pnpm 7 local, `pnpm study:probe ...` sin `--silent` antepone el banner del runner; el CLI en sí emite sólo el JSON esperado."
+        "failureReason": "git worktree add --detach C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-12\\.manyhands\\worktree-pool\\1ef32c5c37a6\\slot-000 71f61c9efa222103ca2fb2f67692434ab493d75c failed in C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-12: Preparing worktree (detached HEAD 71f61c9)\nfatal: 'C:/Users/franc/Documents/Proyectos/warehouse-control-tower-pilot-12/.manyhands/worktree-pool/1ef32c5c37a6/slot-000' already exists"
       }
     },
     "adoptedArtifacts": {},
@@ -124,7 +124,7 @@
     "integrations": {},
     "recoveryHistory": [
       {
-        "eventId": "094e7811-b878-4cd1-a4c3-ff5d414773f1:attempt:node-w2-control-tower-visual-aa57971080:1:failure-classified",
+        "eventId": "69d2e719-150c-4dc3-a4bc-a65fac202e48:attempt:node-w2-control-tower-visual-aa57971080:1:failure-classified",
         "nodeId": "node-w2-control-tower-visual-aa57971080",
         "kind": "failure"
       }
@@ -136,18 +136,18 @@
       "delivery": "not_started"
     },
     "granularityStrategy": {
-      "policyVersion": "adaptive-utility/2.0.0-pilot",
+      "policyVersion": "adaptive-utility/3.0.0-pilot",
       "condition": "C2",
-      "candidateTreeHash": "sha256:b45d7781d2dbd5467cfb3ceaf8c4798edafc2977968125d4faac670f0fba7cc3",
+      "candidateTreeHash": "sha256:f528d8fb9fdcb546c86d06182c23ea5c810ee45c14153d1d7b3fdcddf5ca12e5",
       "config": {
         "minimumAdvantage": 0.15,
         "maxLeafContextTokens": 24000,
         "maxLeafScopePaths": 40
       },
       "assessments": {
-        "node-w2-visual-projection-6752c70b04": {
-          "unitKey": "w2-visual-projection",
-          "nodeId": "node-w2-visual-projection-6752c70b04",
+        "node-w2-visual-domain-metrics-0b72f181e7": {
+          "unitKey": "w2-visual-domain-metrics",
+          "nodeId": "node-w2-visual-domain-metrics-0b72f181e7",
           "selected": "leaf",
           "leafFeasible": true,
           "splitViable": false,
@@ -203,9 +203,9 @@
           ],
           "rationale": "Semantic leaf remains one executable unit."
         },
-        "node-w2-probe-visual-capability-5731fa54d0": {
-          "unitKey": "w2-probe-visual-capability",
-          "nodeId": "node-w2-probe-visual-capability-5731fa54d0",
+        "node-w2-probe-and-tooling-961b2847be": {
+          "unitKey": "w2-probe-and-tooling",
+          "nodeId": "node-w2-probe-and-tooling-961b2847be",
           "selected": "leaf",
           "leafFeasible": true,
           "splitViable": false,
@@ -216,18 +216,17 @@
             "coordination": 0,
             "pathOverlap": 0,
             "validationDuplication": 0,
-            "uncertainty": 0.1429
+            "uncertainty": 0.1667
           },
           "benefit": 0,
-          "cost": 0.0357,
-          "splitAdvantage": -0.0357,
+          "cost": 0.0417,
+          "splitAdvantage": -0.0417,
           "minimumAdvantage": 0.15,
           "evidenceRefs": [
             "path-4",
             "path-5",
             "path-6",
             "path-7",
-            "path-8",
             "path-9",
             "config-package-json",
             "sha256:ac2a30e1d8a891f6a32782183b004741003f8aab7e3ff65448aa588b09661f88"
@@ -243,20 +242,21 @@
           "features": {
             "contextRelief": 0.363,
             "parallelism": 0,
-            "faultIsolation": 0.2222,
-            "coordination": 0.6667,
-            "pathOverlap": 0.1795,
-            "validationDuplication": 0.625,
-            "uncertainty": 0.3393
+            "faultIsolation": 0.7222,
+            "coordination": 1,
+            "pathOverlap": 0.1581,
+            "validationDuplication": 0.4286,
+            "uncertainty": 0.3472
           },
-          "benefit": 0.1951,
-          "cost": 0.4526,
-          "splitAdvantage": -0.2576,
+          "benefit": 0.3617,
+          "cost": 0.4835,
+          "splitAdvantage": -0.1217,
           "minimumAdvantage": 0.15,
           "evidenceRefs": [
             "path-1",
             "path-3",
             "path-5",
+            "path-7",
             "path-9",
             "config-package-json",
             "path-0",
@@ -264,10 +264,9 @@
             "path-8",
             "path-4",
             "path-6",
-            "path-7",
             "sha256:ac2a30e1d8a891f6a32782183b004741003f8aab7e3ff65448aa588b09661f88"
           ],
-          "rationale": "Split advantage -0.2576 is below minimum 0.1500."
+          "rationale": "Split advantage -0.1217 is below minimum 0.1500."
         }
       },
       "metrics": {
@@ -276,9 +275,9 @@
         "averageBranchingFactor": 0
       }
     },
-    "graphId": "graph-warehouse-w2-primer-control-tower-visual-82ca4d7c93",
+    "graphId": "graph-w2-primer-control-tower-visual-a5b7808d40",
     "graphRevision": 1,
     "approvedGraphRevision": 1
   },
-  "checksum": "ee0b751243586eae51e0f0a6add35dbb6fb5c286966fed93834183e319598459"
+  "checksum": "cea898c9f41cb341637b8c536dc5913b1a580211f87ba82838318d359affb7c8"
 }

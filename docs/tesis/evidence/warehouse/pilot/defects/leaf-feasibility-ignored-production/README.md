@@ -55,6 +55,18 @@ descomponer es tiempo de agente, no duplicación de entorno.
   conteos de W1 (entregó) y W2 (no) es tarea del piloto.
 - Verificación: suite completa 1350 PASS, 0 fallos; typecheck y build PASS.
 
+> **Corrección posterior.** El anclaje propuesto arriba es imposible: W1 entregó
+> con **10** planned paths y W2 falló con **6**. Ninguna cota separa los dos
+> casos. La cota sigue siendo un límite superior válido, pero no discrimina aquí
+> y su valor no está anclado empíricamente. Detalle en
+> [`cut-terms-measured-edges-not-structure`](../cut-terms-measured-edges-not-structure/README.md).
+
+> **Corrección posterior.** El reintento de W2 con esta cota no cambió la
+> decisión (la cota no llegó a activarse) y además **no terminó en timeout**:
+> murió a los 3 minutos porque `git worktree add` encontró
+> `worktree-pool/1ef32c5c37a6/slot-000` ya existente, dejado por el run abortado
+> anterior. La tabla de arriba describe las dos corridas previas, no ésta.
+
 ## Nota de nomenclatura
 
 La política se llama **C** en el lenguaje de la tesis. La etiqueta `C2` sobrevive

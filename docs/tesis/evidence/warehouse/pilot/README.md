@@ -77,3 +77,25 @@ C2 real, pero su agente agotó el límite de sesión del proveedor durante la
 ejecución; véase `interruptions/claude-session-limit-2026-07-25.md`.
 
 Resultado acumulado del piloto: **0/8 incrementos verificados**.
+
+## Series 8 a 12 — primer incremento verificado y dos defectos de la política
+
+`series-12` produjo el primer resultado positivo del piloto. **W1 entregó
+`71f61c9e` y su oráculo externo pasó los seis checks** (`command-surface`,
+`test`, `typecheck`, `build`, `layout`, `inventory`), con
+`stateHash sha256:1cad6e71fd75…`. Resultado acumulado: **1/8 incrementos
+verificados**.
+
+W2 no entregó, y sus dos intentos dejaron defectos distintos de la política C:
+
+- La factibilidad de hoja no medía volumen de producción:
+  [`leaf-feasibility-ignored-production`](defects/leaf-feasibility-ignored-production/README.md).
+  La cota agregada resultó **no discriminante** — W1 entregó con 10 planned
+  paths y W2 falló con 6.
+- Los dos términos que deciden un corte medían aristas y no estructura:
+  [`cut-terms-measured-edges-not-structure`](defects/cut-terms-measured-edges-not-structure/README.md).
+  Corregidos en `adaptive-utility/3.1.0-pilot`; no alcanzan para explicar el
+  colapso de W2 y así queda declarado.
+
+Ninguna de las dos correcciones divide W2. El colapso de ese incremento sigue
+**sin causa suficiente identificada**, y ése es el estado honesto del piloto.
