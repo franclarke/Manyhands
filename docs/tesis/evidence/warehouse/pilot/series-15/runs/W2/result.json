@@ -1,0 +1,23 @@
+{
+  "cellId": "warehouse-pilot-w2",
+  "condition": "C2",
+  "taskId": "W2",
+  "runId": "6bd9c507-3e61-45d9-b3ee-a284632688b8",
+  "started": "2026-07-26T18:42:20.840Z",
+  "finished": "2026-07-26T18:54:25.263Z",
+  "outcome": {
+    "lifecycle": "completed",
+    "finalSha": "38b511817b0ab0a8df1855d28f0e9455f5dac0fd",
+    "receipt": {
+      "receiptId": "delivery:6bd9c507-3e61-45d9-b3ee-a284632688b8:delivery",
+      "requestFingerprint": "d9e80b2cbd6c0c3a7819c6e90aa3c3f0db55ffeaae80ac181d9a8f97550aa32b",
+      "manifestId": "final-be481cea3952aaa3",
+      "finalSha": "38b511817b0ab0a8df1855d28f0e9455f5dac0fd",
+      "targetBranch": "main",
+      "targetHeadBefore": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+      "targetHeadAfter": "38b511817b0ab0a8df1855d28f0e9455f5dac0fd",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  }
+}
