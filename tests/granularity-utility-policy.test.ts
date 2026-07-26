@@ -47,6 +47,41 @@ describe("C utility strategy selection", () => {
     expect(result.assessments.root?.splitAdvantage).toBeGreaterThanOrEqual(0.15);
   });
 
+  it("propagates a required root-only intent to the selected leaves", () => {
+    const breakdown = WorkBreakdownSchema.parse({
+      schemaVersion: 2,
+      breakdownId: "root-only-intent",
+      objective: "Deliver independent modules",
+      repositorySnapshotId: "snapshot-1",
+      acceptanceIntents: [
+        { id: "intent-root-only", description: "Integrated constraints hold", required: true },
+        { id: "intent-a", description: "Module A works", required: true },
+        { id: "intent-b", description: "Module B works", required: true }
+      ],
+      repositoryEvidence: [
+        { id: "path-src-a-ts", kind: "path", reference: "src/a.ts", observation: "Module A", confidence: 1 },
+        { id: "path-src-b-ts", kind: "path", reference: "src/b.ts", observation: "Module B", confidence: 1 }
+      ],
+      root: attachEvidence(composite("root", [
+        leaf("a", ["src/a.ts"], ["intent-a"]),
+        leaf("b", ["src/b.ts"], ["intent-b"])
+      ], ["intent-root-only"]))
+    });
+
+    const result = selectGranularityStrategy({
+      condition: "C",
+      breakdown,
+      repositorySnapshot: snapshot({ "src/a.ts": 4_000, "src/b.ts": 4_000 }),
+      config: PILOT_UTILITY_POLICY
+    });
+
+    expect(result.selectedBreakdown.root.kind).toBe("composite");
+    if (result.selectedBreakdown.root.kind !== "composite") throw new Error("expected split root");
+    expect(result.selectedBreakdown.root.children.every((unit) =>
+      unit.acceptanceIntentIds.includes("intent-root-only")
+    )).toBe(true);
+  });
+
   it("keeps overlapping tightly coordinated siblings together", () => {
     const breakdown = candidate(
       composite("root", [
