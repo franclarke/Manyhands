@@ -22,5 +22,7 @@ describe("wide graph study plan", () => {
     expect(cell.goal).toContain("src/analytics/projection-04.ts");
     expect(cell.goal).toContain("must not import another projection module");
     expect(cell.goal).toContain("src/analytics/registry.ts");
+    expect(cell.goal).toContain("study:wide-graph");
+    expect(cell.goal).toContain("exactly one JSON object");
   });
 });

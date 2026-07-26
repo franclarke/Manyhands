@@ -25,6 +25,9 @@ function wideGraphGoal(moduleCount) {
     "A projection module must not import another projection module; it may import only the fixed contract and W1 Scenario or inventory exports.",
     "Create src/analytics/registry.ts as the sole consumer of every projection and return all projections ordered by id.",
     "Add focused tests for every module and the registry, preserving all W1 behavior and checks.",
-    "Do not hardcode scenario totals or duplicate the W1 inventory calculation."
+    "Do not hardcode scenario totals or duplicate the W1 inventory calculation.",
+    "Add a package script named study:wide-graph that writes exactly one JSON object and no other output.",
+    `Its JSON must include schemaVersion: 1, moduleCount: ${moduleCount}, scenario: thesis-seed-2026, and projections: an id-ordered array of exactly ${moduleCount} registry results.`,
+    "Two invocations from the same commit must emit byte-identical JSON."
   ].join(" ");
 }
