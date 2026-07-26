@@ -11,6 +11,7 @@ import {
   assertOraclePassed,
   buildLongitudinalPlan,
   evaluatePreflight,
+  forkVerifiedChainState,
   seedIdentityMatches,
   STUDY_SELECTION,
   studyStageSelections
@@ -59,6 +60,18 @@ describe("Warehouse longitudinal driver", () => {
   it("adopts the verified delivery as the next increment base", () => {
     expect(advanceVerifiedBase({ currentBase: "a".repeat(40), deliveredSha: "b".repeat(40), oracleOutcome: "pass" }))
       .toBe("b".repeat(40));
+  });
+
+  it("forks only the verified prefix of a prior longitudinal chain", () => {
+    const fork = forkVerifiedChainState({
+      schemaVersion: 1,
+      currentBase: "b".repeat(40),
+      completed: [{ increment: "W1", baseSha: "a".repeat(40), deliveredSha: "b".repeat(40), oracleId: "warehouse-w1-v1", stateHash: "sha256:state" }],
+      manyHandsCommits: ["c".repeat(40)]
+    });
+
+    expect(fork).toMatchObject({ currentBase: "b".repeat(40), completed: [{ increment: "W1" }] });
+    expect(fork).not.toBe(fork.completed);
   });
 
   it("verifies a cloned seed by Git objects instead of checkout line endings", () => {

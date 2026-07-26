@@ -94,6 +94,20 @@ export function advanceVerifiedBase({ deliveredSha, oracleOutcome }) {
   return deliveredSha;
 }
 
+/** Creates an independent series from the already externally verified prefix. */
+export function forkVerifiedChainState(state) {
+  if (!state || state.schemaVersion !== 1 || !Array.isArray(state.completed)) throw new Error("invalid source chain state");
+  const completed = state.completed.map((entry, index) => {
+    if (entry.increment !== INCREMENTS[index] || !/^[0-9a-f]{40}$/u.test(entry.baseSha) || !/^[0-9a-f]{40}$/u.test(entry.deliveredSha)) {
+      throw new Error("source chain state has an invalid verified prefix");
+    }
+    return { ...entry };
+  });
+  const currentBase = completed.length === 0 ? state.currentBase : completed.at(-1).deliveredSha;
+  if (!/^[0-9a-f]{40}$/u.test(currentBase)) throw new Error("source chain state has an invalid current base");
+  return { schemaVersion: 1, currentBase, completed, manyHandsCommits: [...new Set(state.manyHandsCommits ?? [])] };
+}
+
 export function seedIdentityMatches({ tree, expectedTree, lockfileGitBlob, expectedLockfileGitBlob }) {
   return tree === expectedTree && lockfileGitBlob === expectedLockfileGitBlob;
 }

@@ -10,6 +10,7 @@ import {
   assertOraclePassed,
   buildLongitudinalPlan,
   evaluatePreflight,
+  forkVerifiedChainState,
   INCREMENTS,
   MINIMUM_FREE_BYTES,
   seedIdentityMatches,
@@ -29,7 +30,10 @@ const targetRepo = resolve(argument("--target") ?? seed.repository);
 const outDir = resolve(argument("--out") ?? `docs/tesis/evidence/warehouse/${mode}`);
 const currentManyHandsCommit = (await git(root, ["rev-parse", "HEAD"])).trim();
 const declaredManyHandsCommit = argument("--manyhands-commit") ?? currentManyHandsCommit;
-const state = await readState(outDir, seed.commit);
+const resumeStatePath = argument("--resume-state");
+const state = resumeStatePath === undefined
+  ? await readState(outDir, seed.commit)
+  : forkVerifiedChainState(JSON.parse(await readFile(resolve(resumeStatePath), "utf8")));
 const observation = await observe({ root, targetRepo, expectedBase: state.currentBase, seed, assets, declaredManyHandsCommit });
 const failures = evaluatePreflight(observation);
 if (failures.length > 0) {
