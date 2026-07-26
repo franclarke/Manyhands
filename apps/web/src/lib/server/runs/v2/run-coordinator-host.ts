@@ -26,6 +26,23 @@ import { startHeartbeat } from "../runner-heartbeat";
  */
 const PROVIDER_CAPACITY_PATTERN = /(429|quota|rate.?limit|resource_exhausted|too many requests|overloaded|capacity|(?:session|usage|message|token)\s+limit)/i;
 
+/**
+ * The planner answers with a document; it must not be able to go and do the work.
+ *
+ * Given the full agentic toolset and a real 8KB planning prompt, the model
+ * treated the WorkBreakdown as an artefact to produce: it explored with
+ * Bash/Grep/Glob and wrote the JSON to disk with `Write`, then closed with "El
+ * WorkBreakdown está completo en el plan". The CLI exited 0 and the final
+ * message carried no JSON, which is the `No JSON object found in response` that
+ * cost Warehouse pilot series 5, 8, 9 and 11 their planning attempts.
+ *
+ * No tool is needed: the repository evidence already travels inside the prompt,
+ * built by `buildFastRepositorySnapshot`. Verified against the installed CLI by
+ * replaying the same prompt and args — with these disabled the document comes
+ * back as the response text.
+ */
+const CLAUDE_PLANNING_DISALLOWED_TOOLS = "Write,Edit,NotebookEdit,Bash,Glob,Grep,Read,Task,Agent,WebFetch,WebSearch,TodoWrite";
+
 export async function runPlanningV2Pipeline(runId: string): Promise<void> {
   const claimed = await claimRunOperation(runId, "planning", {
     expectedLifecycles: ["planning"],
@@ -124,7 +141,7 @@ async function invokeSelectedPlanningCli(
   const binary = resolveCliBinaryPath(isCodex ? (process.env.MANYHANDS_CODEX_BIN ?? "codex") : (process.env.MANYHANDS_CLAUDE_BIN ?? "claude"));
   const args = isCodex
     ? ["exec", "--model", stage.model, "--sandbox", "read-only", "--skip-git-repo-check", ...(stage.effort !== undefined ? ["-c", `model_reasoning_effort=\"${stage.effort}\"`] : []), "-"]
-    : ["-p", "-", "--model", stage.model, "--output-format", "stream-json", "--include-partial-messages", "--verbose", "--permission-mode", "plan"];
+    : ["-p", "-", "--model", stage.model, "--output-format", "stream-json", "--include-partial-messages", "--verbose", "--permission-mode", "plan", "--disallowed-tools", CLAUDE_PLANNING_DISALLOWED_TOOLS];
   const invocation = resolveCliProcessInvocation(binary, args);
   const spawn = supervisedSpawnFn({ runId, operationId, label: `planning-v2-attempt-${request.attempt}` });
   return new Promise((resolve, reject) => {
