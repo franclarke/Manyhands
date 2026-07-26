@@ -19,7 +19,22 @@ export const INCREMENTS = Array.from({ length: 8 }, (_, index) => `W${index + 1}
  * Claude models expose no reasoning-effort knob (`efforts: null` in the
  * registry), so this selection carries no `effort` field by design.
  */
-export const STUDY_SELECTION = { executorId: "claude-code-cli", model: "sonnet" };
+/**
+ * 2026-07-26: the study moves back to Codex `gpt-5.5` at `high`.
+ *
+ * The reason for Claude Code was telemetry — Codex declares
+ * `usageSource: "unavailable"`, so cost is unmeasurable and tokens are a lower
+ * bound. That cost is now paid deliberately, because capacity turned out to be
+ * the binding constraint: the Claude selection shares its quota with the
+ * interactive session driving the pilot and sustained roughly forty minutes of
+ * it, while a single increment can take thirty. Four series died on that.
+ *
+ * The consequence must be reported, not hidden: with this selection the study
+ * reports tokens as a floor and cost as `unavailable`, exactly as G5 did. If a
+ * measured cost is wanted later, it has to come from an executor that reports
+ * it, and the whole series has to be re-run under that executor.
+ */
+export const STUDY_SELECTION = { executorId: "codex-cli", model: "gpt-5.5", effort: "high" };
 
 /** The identical selection applied to every pipeline stage. */
 export function studyStageSelections() {

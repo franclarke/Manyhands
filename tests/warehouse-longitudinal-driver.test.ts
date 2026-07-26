@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   findExecutorModel,
@@ -81,8 +83,23 @@ describe("Warehouse study executor selection", () => {
     expect(findExecutorModel(STUDY_SELECTION)).toBeDefined();
   });
 
-  it("declares an executor that reports usage rather than leaving it unavailable", () => {
-    expect(usageSourceForSelection(STUDY_SELECTION)).toBe("reported");
+  /**
+   * The study first required a reporting executor so cost would be measurable.
+   * Capacity then turned out to bind harder than telemetry, and the selection
+   * moved back to Codex, which reports nothing. That trade is allowed — but it
+   * may never be silent: if the declared executor cannot report usage, the
+   * module that declares it has to say so, because the thesis then reports
+   * tokens as a floor and cost as unavailable.
+   */
+  it("states the telemetry consequence whenever the executor cannot report usage", async () => {
+    const usage = usageSourceForSelection(STUDY_SELECTION);
+    if (usage === "reported") return;
+
+    const source = await readFile(path.resolve("docs/tesis/evidence/scripts/lib/warehouse-longitudinal.mjs"), "utf8");
+    const declaration = source.slice(0, source.indexOf("export const STUDY_SELECTION"));
+
+    expect(declaration).toMatch(/unavailable/u);
+    expect(declaration).toMatch(/lower bound|floor/u);
   });
 
   it("carries a reasoning effort only when the model exposes one", () => {
