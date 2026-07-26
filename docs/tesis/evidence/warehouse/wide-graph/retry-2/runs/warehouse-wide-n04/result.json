@@ -1,0 +1,21 @@
+{
+  "cellId": "warehouse-wide-n04",
+  "runId": "c9b176d0-e46b-4883-92e8-3de4b7c2c96c",
+  "started": "2026-07-26T20:00:58.445Z",
+  "finished": "2026-07-26T20:28:50.622Z",
+  "outcome": {
+    "lifecycle": "completed",
+    "finalSha": "b7a8838b1db9fa136103e5024df38697072ad3c9",
+    "receipt": {
+      "receiptId": "delivery:c9b176d0-e46b-4883-92e8-3de4b7c2c96c:delivery",
+      "requestFingerprint": "10bdcfda56d1032159aed28283fabf0ea37dd655cd272f52a902271cb9f34220",
+      "manifestId": "final-d152f3e724e65b37",
+      "finalSha": "b7a8838b1db9fa136103e5024df38697072ad3c9",
+      "targetBranch": "main",
+      "targetHeadBefore": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+      "targetHeadAfter": "b7a8838b1db9fa136103e5024df38697072ad3c9",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  }
+}
