@@ -1,0 +1,10 @@
+{
+  "cellId": "warehouse-wide-n16",
+  "runId": "39557620-34c1-4de2-9ee7-a00928dfd9e0",
+  "started": "2026-07-26T21:18:19.129Z",
+  "finished": "2026-07-26T21:22:08.041Z",
+  "outcome": {
+    "lifecycle": "failed",
+    "receipt": null
+  }
+}

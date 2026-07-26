@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 2,
+  "runId": "39557620-34c1-4de2-9ee7-a00928dfd9e0",
+  "eventSequence": 25,
+  "lastEventId": "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:failed:25",
+  "operationId": "d3c4777b-87a9-4afb-aaa5-524bbae589b3",
+  "fencingToken": 1,
+  "projection": {
+    "runId": "39557620-34c1-4de2-9ee7-a00928dfd9e0",
+    "goal": "Add exactly 16 independent warehouse projection modules to the verified W1 codebase. Create these modules: src/analytics/projection-01.ts, src/analytics/projection-02.ts, src/analytics/projection-03.ts, src/analytics/projection-04.ts, src/analytics/projection-05.ts, src/analytics/projection-06.ts, src/analytics/projection-07.ts, src/analytics/projection-08.ts, src/analytics/projection-09.ts, src/analytics/projection-10.ts, src/analytics/projection-11.ts, src/analytics/projection-12.ts, src/analytics/projection-13.ts, src/analytics/projection-14.ts, src/analytics/projection-15.ts, src/analytics/projection-16.ts. Create src/analytics/contracts.ts exporting WarehouseProjection with id and project(scenario). Each projection must derive projectionId, totalUnits, and skuCount through the W1 Scenario and inventory functions. A projection module must not import another projection module; it may import only the fixed contract and W1 Scenario or inventory exports. Create src/analytics/registry.ts as the sole consumer of every projection and return all projections ordered by id. Add focused tests for every module and the registry, preserving all W1 behavior and checks. Do not hardcode scenario totals or duplicate the W1 inventory calculation. Add a package script named study:wide-graph that writes exactly one JSON object and no other output. Its JSON must include schemaVersion: 1, moduleCount: 16, scenario: thesis-seed-2026, and projections: an id-ordered array of exactly 16 registry results. Two invocations from the same commit must emit byte-identical JSON.",
+    "lifecycle": "failed",
+    "sequence": 25,
+    "appliedEventIds": [
+      "run:39557620-34c1-4de2-9ee7-a00928dfd9e0:created",
+      "repository:sha256:1139033340d5d863684663116856786cf7d3ace3f45603bf1b9083ae1f649bc2:inspection:2",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:started",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:warehouse-projections-root",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:analytics-contract",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-01",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-02",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-03",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-04",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-05",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-06",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-07",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-08",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-09",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-10",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-11",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-12",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-13",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-14",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-15",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:projection-16",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:analytics-registry",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:wide-graph-script",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:attempt:1:node:analytics-test-manifest",
+      "planning:39557620-34c1-4de2-9ee7-a00928dfd9e0:failed:25"
+    ],
+    "decisions": {},
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "failureReason": "Compiled plan review failed: unowned_acceptance: Required acceptance intent acceptance-constraints has no leaf owner."
+  },
+  "checksum": "9a0326f796486446dc3e8be29b01661ac420c9260ad111cd61ac99165330aebd"
+}
