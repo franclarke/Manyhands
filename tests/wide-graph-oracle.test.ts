@@ -11,6 +11,15 @@ describe("wide graph external oracle", () => {
     }, 4)).toEqual([]);
   });
 
+  it("accepts ordered registry result objects using the promised projectionId field", () => {
+    expect(checkWideGraphOutput({
+      schemaVersion: 1,
+      moduleCount: 2,
+      scenario: "thesis-seed-2026",
+      projections: [{ projectionId: "projection-01" }, { projectionId: "projection-02" }]
+    }, 2)).toEqual([]);
+  });
+
   it("rejects an incomplete or out-of-order registry report", () => {
     expect(checkWideGraphOutput({
       schemaVersion: 1,

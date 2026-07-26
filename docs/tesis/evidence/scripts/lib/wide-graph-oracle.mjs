@@ -1,7 +1,7 @@
 export function projectionIds(report) {
   if (!Array.isArray(report?.projections)) return [];
   return report.projections.map((projection) =>
-    typeof projection === "string" ? projection : projection?.id
+    typeof projection === "string" ? projection : projection?.projectionId ?? projection?.id
   );
 }
 
