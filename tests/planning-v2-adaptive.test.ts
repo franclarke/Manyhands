@@ -1,3 +1,4 @@
+import { ADAPTIVE_UTILITY_POLICY_VERSION } from "@manyhands/decomposer";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -137,6 +138,6 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     expect(plan.mock.calls[1]?.[0].granularityFeedback).toMatchObject({
       reason: "leaf_context_infeasible"
     });
-    expect(result.granularityStrategy?.policyVersion).toBe("adaptive-utility/2.0.0-pilot");
+    expect(result.granularityStrategy?.policyVersion).toBe(ADAPTIVE_UTILITY_POLICY_VERSION);
   });
 });

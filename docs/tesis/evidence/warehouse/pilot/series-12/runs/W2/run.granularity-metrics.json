@@ -1,8 +1,8 @@
 {
-  "runId": "84f7a5d1-deec-4125-b2b3-df1d4c689651",
+  "runId": "094e7811-b878-4cd1-a4c3-ff5d414773f1",
   "policyVersion": "adaptive-utility/2.0.0-pilot",
   "condition": "C2",
-  "candidateTreeHash": "sha256:dc980de5ed93cbc074eda1398830efadd6c51b4fa44b8c55d511ba76f95409e5",
+  "candidateTreeHash": "sha256:b45d7781d2dbd5467cfb3ceaf8c4798edafc2977968125d4faac670f0fba7cc3",
   "config": {
     "policyVersion": "adaptive-utility/2.0.0-pilot",
     "minimumAdvantage": 0.15,
@@ -10,9 +10,9 @@
     "maxLeafScopePaths": 40
   },
   "metrics": {
-    "maxGraphDepth": 1,
-    "totalLeafCount": 4,
-    "averageBranchingFactor": 4
+    "maxGraphDepth": 0,
+    "totalLeafCount": 1,
+    "averageBranchingFactor": 0
   },
-  "generatedAt": "2026-07-26T00:17:27.170Z"
+  "generatedAt": "2026-07-26T15:19:18.853Z"
 }

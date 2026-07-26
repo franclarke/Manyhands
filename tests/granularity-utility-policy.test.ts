@@ -100,6 +100,51 @@ describe("C2 utility strategy selection", () => {
     expect(keys(result.selectedBreakdown.root)).toEqual(["root", "only-child"]);
   });
 
+  /**
+   * Warehouse pilot W2 is the case this exists for. After W1 the repository was
+   * small, so the root read almost nothing and was judged a feasible leaf — but
+   * it had to CREATE an entire Vite/React application. The Architect had offered
+   * a three-way cut; the policy collapsed it on a -0.2576 advantage, and the
+   * merged leaf then burned a thirty-minute budget without delivering.
+   *
+   * Feasibility measured only what a unit must read. A unit is equally
+   * infeasible when it must produce more than one budgeted attempt can produce,
+   * and `plannedPathCount` already measures exactly that.
+   */
+  it("refuses a leaf that must create more than one attempt can produce", () => {
+    const created = Array.from({ length: 24 }, (_, index) => `src/app/created-${index}.ts`);
+    const breakdown = candidate(composite("root", [
+      leaf("app", created.slice(0, 12), ["intent-a"]),
+      leaf("probe", created.slice(12), ["intent-b"])
+    ], ["intent-a", "intent-b"]));
+
+    const result = selectGranularityStrategy({
+      condition: "C2",
+      breakdown,
+      // Nothing exists yet: reading is free, producing is not.
+      repositorySnapshot: snapshot({}),
+      config: { ...PILOT_UTILITY_POLICY, maxLeafPlannedPaths: 12 }
+    });
+
+    expect(result.assessments.root.leafFeasible).toBe(false);
+    expect(result.assessments.root.selected).not.toBe("leaf");
+  });
+
+  it("still allows a leaf whose production stays inside the budget", () => {
+    const breakdown = candidate(composite("root", [
+      leaf("only", ["src/a.ts", "src/b.ts"], ["intent-a"])
+    ], ["intent-a"]));
+
+    const result = selectGranularityStrategy({
+      condition: "C2",
+      breakdown,
+      repositorySnapshot: snapshot({}),
+      config: { ...PILOT_UTILITY_POLICY, maxLeafPlannedPaths: 12 }
+    });
+
+    expect(result.assessments.root.leafFeasible).toBe(true);
+  });
+
   it("can expand one branch while retaining another as a cohesive leaf", () => {
     const breakdown = candidate(composite("root", [
       composite("domain", [

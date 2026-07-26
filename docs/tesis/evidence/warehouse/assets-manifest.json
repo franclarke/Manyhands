@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "policyVersion": "adaptive-utility/2.0.0-pilot",
+  "policyVersion": "adaptive-utility/3.0.0-pilot",
   "seedManifestSha256": "a8f30033e8953a7082afeb9586e77c5bdadf8b3366097c7decf956f9fa56e804",
   "oracleCoreSha256": "79519f064f29356a0447f610ea63ba41bdb5eab273d26cd48124371dbb3c81bb",
   "probeSpecimenSha256": "409ea222fca7bb96bbd97bc212c3dd05ca00e134205b77952fcab4b59f03dc23",

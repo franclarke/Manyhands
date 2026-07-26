@@ -1,17 +1,33 @@
-export const ADAPTIVE_UTILITY_POLICY_VERSION = "adaptive-utility/2.0.0-pilot";
+/**
+ * Policy C, the adaptive granularity policy this thesis contributes.
+ *
+ * 3.0.0 adds a production bound to leaf feasibility. Until 2.x, feasibility
+ * asked only what a unit had to READ; Warehouse pilot W2 was judged a feasible
+ * leaf on a nearly empty repository and then failed to create a whole
+ * application inside one attempt. The condition label `C2` survives in the
+ * persisted journals of runs already executed and is not renamed there: those
+ * events are immutable evidence.
+ */
+export const ADAPTIVE_UTILITY_POLICY_VERSION = "adaptive-utility/3.0.0-pilot";
 
 export interface UtilityPolicyConfig {
   policyVersion: string;
   minimumAdvantage: number;
   maxLeafContextTokens: number;
   maxLeafScopePaths: number;
+  /** Upper bound on paths a single leaf may bring into existence. */
+  maxLeafPlannedPaths: number;
 }
 
 export const PILOT_UTILITY_POLICY: Readonly<UtilityPolicyConfig> = Object.freeze({
   policyVersion: ADAPTIVE_UTILITY_POLICY_VERSION,
   minimumAdvantage: 0.15,
   maxLeafContextTokens: 24_000,
-  maxLeafScopePaths: 40
+  maxLeafScopePaths: 40,
+  // Provisional. Anchoring this on delivered increments is a pilot task: W1
+  // succeeded and W2 did not, so the bound belongs between their planned
+  // counts. It is declared here rather than tuned per run.
+  maxLeafPlannedPaths: 12
 });
 
 export interface GranularityStrategyFeatures {
@@ -46,6 +62,7 @@ export function validateUtilityPolicyConfig(config: UtilityPolicyConfig): Utilit
   assertFinite(config.minimumAdvantage, "minimumAdvantage");
   assertNonNegative(config.maxLeafContextTokens, "maxLeafContextTokens");
   assertPositiveInteger(config.maxLeafScopePaths, "maxLeafScopePaths");
+  assertPositiveInteger(config.maxLeafPlannedPaths, "maxLeafPlannedPaths");
   return { ...config };
 }
 

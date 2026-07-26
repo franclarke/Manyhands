@@ -2,9 +2,9 @@
   "cellId": "warehouse-pilot-w2",
   "condition": "C2",
   "taskId": "W2",
-  "runId": "84f7a5d1-deec-4125-b2b3-df1d4c689651",
-  "started": "2026-07-26T00:14:56.793Z",
-  "finished": "2026-07-26T00:59:49.695Z",
+  "runId": "094e7811-b878-4cd1-a4c3-ff5d414773f1",
+  "started": "2026-07-26T15:15:35.220Z",
+  "finished": "2026-07-26T15:50:40.413Z",
   "outcome": {
     "lifecycle": "waiting_for_input",
     "receipt": null,

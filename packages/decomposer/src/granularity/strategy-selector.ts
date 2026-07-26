@@ -406,9 +406,21 @@ function rationaleFor(
     : "No valid multi-child semantic split is available; leaf remains cohesive.";
 }
 
+/**
+ * A leaf is one unit an agent completes inside one budgeted attempt.
+ *
+ * Reading and producing are separate limits. The first two bounds cover what a
+ * unit must hold in context; `maxLeafPlannedPaths` covers what it must bring
+ * into existence. Warehouse pilot W2 showed why the third is not optional: after
+ * W1 the repository was tiny, so the root read almost nothing and passed both
+ * context bounds, yet it had to create a whole Vite/React application. It was
+ * judged feasible, the Architect's three-way cut was collapsed, and the merged
+ * leaf spent a thirty-minute budget without delivering.
+ */
 function isLeafFeasible(profile: RepositoryContextProfile, config: UtilityPolicyConfig): boolean {
   return profile.measuredExistingTokens <= config.maxLeafContextTokens &&
-    profile.scopePaths.length <= config.maxLeafScopePaths;
+    profile.scopePaths.length <= config.maxLeafScopePaths &&
+    profile.plannedPathCount <= config.maxLeafPlannedPaths;
 }
 
 function requireProfile(
