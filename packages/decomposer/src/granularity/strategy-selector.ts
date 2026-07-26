@@ -50,6 +50,11 @@ interface RelationLike {
   consumerUnitKeys: string[];
 }
 
+interface ChildEdge {
+  from: string;
+  to: string;
+}
+
 export function selectGranularityStrategy(
   input: SelectGranularityStrategyInput
 ): GranularityStrategyResult {
@@ -222,13 +227,18 @@ function cutFeatures(
   const contextRelief = parent.measuredExistingTokens === 0
     ? 0
     : clamp01(1 - maxChildTokens / parent.measuredExistingTokens);
-  const artifactPairs = crossChildPairs(unit.children, breakdown.candidateArtifacts);
-  const relationPairs = crossChildPairs(unit.children, [
-    ...breakdown.candidateArtifacts,
-    ...breakdown.candidateSeams
-  ]);
-  const parallelism = clamp01(1 - artifactPairs.size / Math.max(1, unit.children.length - 1));
-  const coordination = clamp01(relationPairs.size / Math.max(1, unit.children.length));
+  const childKeys = unit.children.map((child) => child.key);
+  const parallelism = concurrency(
+    childKeys,
+    crossChildEdges(unit.children, breakdown.candidateArtifacts)
+  );
+  const coordination = coupling(
+    childKeys,
+    crossChildEdges(unit.children, [
+      ...breakdown.candidateArtifacts,
+      ...breakdown.candidateSeams
+    ])
+  );
   const pathOverlap = averagePairwise(
     childProfiles.map((profile) => new Set(profile.scopePaths)),
     jaccard
@@ -251,21 +261,133 @@ function cutFeatures(
   });
 }
 
-function crossChildPairs(children: WorkUnit[], relations: readonly RelationLike[]): Set<string> {
+/** Distinct producer→consumer dependencies between two different children. */
+function crossChildEdges(children: WorkUnit[], relations: readonly RelationLike[]): ChildEdge[] {
   const owner = new Map<string, string>();
   for (const child of children) {
     for (const descendant of flattenUnits(child)) owner.set(descendant.key, child.key);
   }
-  const pairs = new Set<string>();
+  const seen = new Set<string>();
+  const edges: ChildEdge[] = [];
   for (const relation of relations) {
-    const producer = owner.get(relation.producerUnitKey);
-    if (producer === undefined) continue;
+    const from = owner.get(relation.producerUnitKey);
+    if (from === undefined) continue;
     for (const consumerKey of relation.consumerUnitKeys) {
-      const consumer = owner.get(consumerKey);
-      if (consumer !== undefined && consumer !== producer) pairs.add(`${producer}->${consumer}`);
+      const to = owner.get(consumerKey);
+      if (to === undefined || to === from) continue;
+      const key = `${from}->${to}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      edges.push({ from, to });
     }
   }
-  return pairs;
+  return edges;
+}
+
+/**
+ * How much of a cut can proceed at the same time.
+ *
+ * Concurrency is a property of the DEPTH of the production order, not of the
+ * number of dependencies. Layering the children by longest path gives the number
+ * of rounds the cut needs; `n` units in `L` rounds is normalized so that fully
+ * independent children score 1 and a strict chain scores 0.
+ *
+ * Counting edges instead — `1 - edges / (children - 1)` — divided by the edge
+ * count of a spanning tree, which is the fewest edges a connected cut can have.
+ * Every connected cut therefore scored zero, and a fan-out, where every consumer
+ * proceeds at once behind one producer, was indistinguishable from a chain,
+ * where nothing does. Layered software is connected by construction, so the term
+ * contributed nothing to any decomposition it was meant to judge.
+ *
+ * Only artifacts order the work. A seam is an interface both sides agree on
+ * before either is written: it constrains WHAT they build, not WHEN.
+ */
+function concurrency(childKeys: readonly string[], edges: readonly ChildEdge[]): number {
+  if (childKeys.length < 2) return 0;
+  const levels = criticalPathLength(childKeys, edges);
+  // A cut its own dependencies cannot order offers no concurrency to schedule.
+  if (levels === undefined) return 0;
+  return clamp01((childKeys.length - levels) / (childKeys.length - 1));
+}
+
+/**
+ * How coupled a cut leaves its children, as the share of child pairs that must
+ * coordinate directly.
+ *
+ * Two corrections over counting edges per child. A dependency that another
+ * already implies is not a second handoff, so the count is taken on the
+ * transitive reduction. And it is expressed as a share of the pairs that COULD
+ * be coupled, so a clean decomposition does not become more expensive merely by
+ * being larger: under `edges / children`, an eight-way chain cost 0.875 and a
+ * four-way chain 0.75, which is backwards, and any connected cut was already
+ * charged at least `(n-1)/n`.
+ */
+function coupling(childKeys: readonly string[], edges: readonly ChildEdge[]): number {
+  if (childKeys.length < 2) return 0;
+  const reduced = independentDependencyCount(childKeys, edges);
+  // Children that depend on each other in a cycle are coupled to every other.
+  if (reduced === undefined) return 1;
+  return clamp01((2 * reduced) / (childKeys.length * (childKeys.length - 1)));
+}
+
+/** Rounds the cut needs when every unit starts as soon as its inputs exist, or `undefined` if cyclic. */
+function criticalPathLength(
+  nodes: readonly string[],
+  edges: readonly ChildEdge[]
+): number | undefined {
+  const remaining = new Map(nodes.map((key) => [key, 0]));
+  const outgoing = outgoingMap(nodes, edges);
+  for (const edge of edges) remaining.set(edge.to, (remaining.get(edge.to) ?? 0) + 1);
+
+  const level = new Map(nodes.map((key) => [key, 1]));
+  const ready = nodes.filter((key) => remaining.get(key) === 0);
+  let ordered = 0;
+  while (ready.length > 0) {
+    const key = ready.shift()!;
+    ordered += 1;
+    for (const next of outgoing.get(key) ?? []) {
+      level.set(next, Math.max(level.get(next)!, level.get(key)! + 1));
+      const pending = (remaining.get(next) ?? 0) - 1;
+      remaining.set(next, pending);
+      if (pending === 0) ready.push(next);
+    }
+  }
+  return ordered === nodes.length ? Math.max(...level.values()) : undefined;
+}
+
+/** Dependencies no other path already implies, or `undefined` if the graph is cyclic. */
+function independentDependencyCount(
+  nodes: readonly string[],
+  edges: readonly ChildEdge[]
+): number | undefined {
+  if (criticalPathLength(nodes, edges) === undefined) return undefined;
+  const outgoing = outgoingMap(nodes, edges);
+  const reachable = new Map<string, Set<string>>();
+  // Safe to memoize before filling: the graph is known acyclic, so no node is
+  // re-entered from its own descendants.
+  const reach = (key: string): Set<string> => {
+    const cached = reachable.get(key);
+    if (cached !== undefined) return cached;
+    const output = new Set<string>();
+    reachable.set(key, output);
+    for (const next of outgoing.get(key) ?? []) {
+      output.add(next);
+      for (const far of reach(next)) output.add(far);
+    }
+    return output;
+  };
+  return edges.filter((edge) => !(outgoing.get(edge.from) ?? []).some((next) =>
+    next !== edge.to && reach(next).has(edge.to)
+  )).length;
+}
+
+function outgoingMap(
+  nodes: readonly string[],
+  edges: readonly ChildEdge[]
+): Map<string, string[]> {
+  const outgoing = new Map(nodes.map((key) => [key, [] as string[]]));
+  for (const edge of edges) outgoing.get(edge.from)?.push(edge.to);
+  return outgoing;
 }
 
 function collapseToLeaf(unit: WorkUnit): WorkUnit {

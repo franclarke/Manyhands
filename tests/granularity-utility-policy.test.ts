@@ -237,7 +237,129 @@ describe("C2 utility strategy selection", () => {
   });
 });
 
-const INTENTS = ["intent-a", "intent-b", "intent-c"];
+/**
+ * Warehouse pilot W2 is why these two terms are measured, and measured this way.
+ *
+ * The Architect proposed a three-way cut of an entire Vite/React control tower.
+ * The policy collapsed it and the merged leaf burned a thirty-minute budget
+ * without delivering. The recorded root assessment reported `parallelism: 0` and
+ * `coordination: 1` — the two extremes at once — for a cut of three largely
+ * independent units.
+ *
+ * Neither number described the cut. Both were artifacts of how they were
+ * computed:
+ *
+ *  - `1 - edges / (children - 1)` divides by the edge count of a spanning tree,
+ *    which is the MINIMUM any connected cut can have. So every connected cut
+ *    scored zero, and a fan-out — where every consumer can proceed at once after
+ *    one producer — was indistinguishable from a strict chain, where nothing can.
+ *
+ *  - `edges / children` charged a connected cut at least `(n-1)/n` and rose
+ *    toward 1 as the cut grew. The cleaner and larger the decomposition, the more
+ *    coordination it was charged for.
+ *
+ * Together they gave a structural bias against exactly the shape layered
+ * software takes: domain, then interface, then instrumentation.
+ */
+describe("C policy — concurrency and coupling of a cut", () => {
+  it("credits the concurrency a cut has, not the edges it has", () => {
+    const chain = assessRoot(cutOf(4, [[0, 1], [1, 2], [2, 3]]));
+    const fanOut = assessRoot(cutOf(4, [[0, 1], [0, 2], [0, 3]]));
+    const independent = assessRoot(cutOf(4, []));
+
+    // Both cuts have three edges. Only one of them can run three units at once.
+    expect(chain.features.parallelism).toBe(0);
+    expect(fanOut.features.parallelism).toBe(0.6667);
+    expect(independent.features.parallelism).toBe(1);
+  });
+
+  it("measures concurrency on production order alone, since a seam is agreed before either side is written", () => {
+    const throughArtifacts = assessRoot(cutOf(3, [[0, 1], [1, 2]]));
+    const throughSeams = assessRoot(cutOf(3, [[0, 1], [1, 2]], { asSeams: true }));
+
+    expect(throughArtifacts.features.parallelism).toBe(0);
+    expect(throughSeams.features.parallelism).toBe(1);
+  });
+
+  it("does not charge coordination for a dependency another already implies", () => {
+    const chain = assessRoot(cutOf(4, [[0, 1], [1, 2], [2, 3]]));
+    // The same order, with every implied edge also declared.
+    const transitive = assessRoot(cutOf(4, [
+      [0, 1], [1, 2], [2, 3], [0, 2], [0, 3], [1, 3]
+    ]));
+
+    expect(transitive.features.coordination).toBe(chain.features.coordination);
+  });
+
+  it("charges coupling density, so a clean cut does not cost more for being larger", () => {
+    const four = assessRoot(cutOf(4, [[0, 1], [1, 2], [2, 3]]));
+    const eight = assessRoot(cutOf(8, [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7]]));
+    const coupled = assessRoot(cutOf(4, [[0, 2], [0, 3], [1, 2], [1, 3]]));
+
+    expect(four.features.coordination).toBe(0.5);
+    expect(eight.features.coordination).toBe(0.25);
+    expect(coupled.features.coordination).toBeGreaterThan(four.features.coordination);
+  });
+
+  it("treats a cut its own dependencies cannot schedule as unschedulable", () => {
+    const cyclic = assessRoot(cutOf(3, [[0, 1], [1, 2], [2, 0]]));
+
+    expect(cyclic.features.parallelism).toBe(0);
+    expect(cyclic.features.coordination).toBe(1);
+  });
+});
+
+function assessRoot(breakdown: WorkBreakdown) {
+  const result = selectGranularityStrategy({
+    condition: "C2",
+    breakdown,
+    repositorySnapshot: snapshot({}),
+    config: PILOT_UTILITY_POLICY
+  });
+  const assessment = result.assessments.root;
+  if (assessment === undefined) throw new Error("expected a root assessment");
+  return assessment;
+}
+
+/** A one-level cut of `childCount` units wired by the given producer→consumer edges. */
+function cutOf(
+  childCount: number,
+  edges: ReadonlyArray<readonly [number, number]>,
+  options: { asSeams?: boolean } = {}
+): WorkBreakdown {
+  const childKeys = Array.from({ length: childCount }, (_, index) => `child-${index}`);
+  const children = childKeys.map((key, index) =>
+    leaf(key, [`src/${key}.ts`], [INTENTS[index % INTENTS.length]!])
+  );
+  const relations = edges.map(([producer, consumer], index) => ({
+    id: `relation-${index}`,
+    producerUnitKey: childKeys[producer]!,
+    consumerUnitKeys: [childKeys[consumer]!],
+    evidenceIds: []
+  }));
+  return candidate(
+    composite("root", children, [...new Set(children.flatMap((child) => child.acceptanceIntentIds))]),
+    options.asSeams === true
+      ? {
+        candidateSeams: relations.map((relation) => ({
+          ...relation, kind: "api" as const, specification: "Agreed interface"
+        }))
+      }
+      : {
+        candidateArtifacts: relations.map((relation) => ({
+          ...relation,
+          artifactType: "module",
+          purpose: "Hand work to the consumer",
+          materializationHint: "files" as const
+        }))
+      }
+  );
+}
+
+const INTENTS = [
+  "intent-a", "intent-b", "intent-c", "intent-d",
+  "intent-e", "intent-f", "intent-g", "intent-h"
+];
 
 function candidate(
   root: WorkUnit,

@@ -7,8 +7,16 @@
  * application inside one attempt. The condition label `C2` survives in the
  * persisted journals of runs already executed and is not renamed there: those
  * events are immutable evidence.
+ *
+ * 3.1.0 rebuilds the two terms that decide a cut. Both counted edges, and both
+ * were extreme for any connected cut: `parallelism` divided by the edge count of
+ * a spanning tree, so a fan-out and a chain both scored zero, and `coordination`
+ * charged at least `(n-1)/n` and rose toward 1 as the cut grew. They now measure
+ * what they are named after — the depth of the production order and the share of
+ * child pairs that must coordinate directly, net of dependencies another already
+ * implies. See `strategy-selector.ts` for the derivation.
  */
-export const ADAPTIVE_UTILITY_POLICY_VERSION = "adaptive-utility/3.0.0-pilot";
+export const ADAPTIVE_UTILITY_POLICY_VERSION = "adaptive-utility/3.1.0-pilot";
 
 export interface UtilityPolicyConfig {
   policyVersion: string;
