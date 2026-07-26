@@ -41,6 +41,12 @@ describe("Warehouse longitudinal driver", () => {
     expect(plan.every((cell) => cell.dryRun === true)).toBe(true);
   });
 
+  it("plans only the remaining increments when resuming a verified chain", () => {
+    const plan = buildLongitudinalPlan({ mode: "pilot", baseSha: "b".repeat(40), targetRepo: "C:/target", startAt: 1 });
+    expect(plan.map((cell) => cell.increment)).toEqual(["W2", "W3", "W4", "W5", "W6", "W7", "W8"]);
+    expect(plan[0]).toMatchObject({ base: "b".repeat(40) });
+  });
+
   it.each([
     ["disk_insufficient", { freeBytes: 24 * 1024 ** 3 }],
     ["target_dirty", { targetDirty: true }],

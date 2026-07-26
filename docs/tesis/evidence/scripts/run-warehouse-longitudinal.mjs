@@ -42,7 +42,7 @@ if (failures.length > 0) {
 }
 
 if (dryRun) {
-  const plan = buildLongitudinalPlan({ mode, baseSha: state.currentBase, targetRepo, dryRun: true });
+  const plan = buildLongitudinalPlan({ mode, baseSha: state.currentBase, targetRepo, dryRun: true, startAt: state.completed.length });
   process.stdout.write(`${JSON.stringify({ mode, manyHandsCommit: declaredManyHandsCommit, targetRepo, outDir, cells: plan }, null, 2)}\n`);
   process.exit(0);
 }

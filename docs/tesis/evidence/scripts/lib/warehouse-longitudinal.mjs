@@ -70,14 +70,14 @@ export function evaluatePreflight(observation) {
   function check(condition, code, message) { if (!condition) failures.push({ code, message }); }
 }
 
-export function buildLongitudinalPlan({ mode, baseSha, targetRepo, dryRun = true }) {
+export function buildLongitudinalPlan({ mode, baseSha, targetRepo, dryRun = true, startAt = 0 }) {
   if (!['pilot', 'final'].includes(mode)) throw new Error(`invalid mode ${mode}`);
-  return INCREMENTS.map((increment, index) => ({
+  return INCREMENTS.slice(startAt).map((increment, index) => ({
     increment,
-    position: index + 1,
+    position: startAt + index + 1,
     mode,
     targetRepo,
-    base: index === 0 ? baseSha : `verified-delivery:W${index}`,
+    base: index === 0 ? baseSha : `verified-delivery:W${startAt + index}`,
     prompt: `protocol/prompts/${increment}.md`,
     oracleId: `warehouse-${increment.toLowerCase()}-v1`,
     dryRun
