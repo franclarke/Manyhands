@@ -1,0 +1,36 @@
+{
+  "cellId": "warehouse-wide-n08",
+  "position": 2,
+  "moduleCount": 8,
+  "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-14",
+  "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+  "goal": "Add exactly 8 independent warehouse projection modules to the verified W1 codebase. Create these modules: src/analytics/projection-01.ts, src/analytics/projection-02.ts, src/analytics/projection-03.ts, src/analytics/projection-04.ts, src/analytics/projection-05.ts, src/analytics/projection-06.ts, src/analytics/projection-07.ts, src/analytics/projection-08.ts. Create src/analytics/contracts.ts exporting WarehouseProjection with id and project(scenario). Each projection must derive projectionId, totalUnits, and skuCount through the W1 Scenario and inventory functions. A projection module must not import another projection module; it may import only the fixed contract and W1 Scenario or inventory exports. Create src/analytics/registry.ts as the sole consumer of every projection and return all projections ordered by id. Add focused tests for every module and the registry, preserving all W1 behavior and checks. Do not hardcode scenario totals or duplicate the W1 inventory calculation. Add a package script named study:wide-graph that writes exactly one JSON object and no other output. Its JSON must include schemaVersion: 1, moduleCount: 8, scenario: thesis-seed-2026, and projections: an id-ordered array of exactly 8 registry results. Two invocations from the same commit must emit byte-identical JSON.",
+  "baseUrl": "http://127.0.0.1:3000",
+  "workspaceName": "warehouse-wide-graph",
+  "planningSelection": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.5",
+    "effort": "high"
+  },
+  "executionSelection": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.5",
+    "effort": "high"
+  },
+  "repairSelection": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.5",
+    "effort": "high"
+  },
+  "executionConfig": {
+    "maxParallel": 2,
+    "scopePolicy": "strict",
+    "leafTimeoutMs": 1800000,
+    "integrationTimeoutMs": 1800000,
+    "unexpectedCommitPolicy": "reject"
+  },
+  "runsDir": "C:\\Users\\franc\\Documents\\Proyectos\\Manyhands\\.manyhands\\runs",
+  "pollIntervalMs": 10000,
+  "wallClockLimitMs": 7200000,
+  "goalSha256": "e5dc8fd01fd2860169b29df5a9b9df77c19ed9207a8c12af0008be2d36ea94a3"
+}
