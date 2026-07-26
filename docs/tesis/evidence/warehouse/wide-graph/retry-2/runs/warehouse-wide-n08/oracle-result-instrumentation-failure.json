@@ -1,0 +1,7 @@
+{
+  "oracleId": "warehouse-wide-graph-v1",
+  "target": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-14-oracle-n08",
+  "moduleCount": 8,
+  "outcome": "fail",
+  "error": "projection order must be projection-01, projection-02, projection-03, projection-04, projection-05, projection-06, projection-07, projection-08"
+}
