@@ -12,17 +12,25 @@ habían emitido candidato y validación aceptados.
 
 ## Ruta bajo examen
 
-`V2PhysicalNodeExecutor.executeComposite` invoca
-`IntegrationManifestExecutor.integrate(...)` sin propagar un timeout o una
-señal derivada de `input.config.integrationTimeoutMs`. El mismo valor sí se
-propaga a la reparación de integración. Esta diferencia es una hipótesis de
-causa que debe cubrirse con una regresión antes de modificar el código.
+La inspección física encontró un `cherry-pick` conflictivo en
+`pilot-14/.manyhands/worktree-pool/.../slot-000`: `projection-07.ts` y
+`projections.test.ts` quedaron en conflicto, mientras los otros cinco slots
+estaban limpios. La ruta V2 entregaba el timeout al ejecutor de reparación,
+pero no le entregaba una señal que representara el deadline completo de la
+integración ni comprobaba esa señal dentro de `IntegrationManifestExecutor`.
+
+La corrección crea una señal de deadline de integración, la combina con la
+cancelación del run, la pasa a la reparación y hace que el manifest la
+compruebe antes/después de operaciones asíncronas. La regresión de manifest
+prueba que una señal vencida impide materializar el primer artefacto.
 
 ## Evidencia primaria
 
 - `.manyhands/runs/bc859c1d-7165-4ddf-8472-835eef8788ac.json`
 - `.manyhands/runs/bc859c1d-7165-4ddf-8472-835eef8788ac.events.v2.jsonl`
 - `packages/execution-core/src/v2/node-executor.ts`
+- `packages/execution-core/src/integration/manifest.ts`
+- `tests/integration-manifest.test.ts`
 
 ## Qué no se concluye
 

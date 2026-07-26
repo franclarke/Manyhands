@@ -25,6 +25,20 @@ function request(availableArtifacts = [artifact("a", "node-a", "SHA_A"), artifac
 }
 
 describe("IntegrationManifestExecutor", () => {
+  it("stops before materializing artifacts when its integration signal has expired", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("integration timeout"));
+    const git = new FakeGitRunner({ heads: { "/wt": "BASE" }, cherryPickResultShas: ["PICK_A"] });
+
+    await expect(new IntegrationManifestExecutor({
+      git,
+      validate: async () => ({ matrixId: "matrix-1", outcome: "verified" }),
+      digestCandidate: async () => "digest-parent"
+    }).integrate({ request: request(), worktreePath: "/wt", signal: controller.signal })).rejects.toThrow("integration timeout");
+
+    expect(git.opsInvoked()).not.toContain("cherryPick");
+  });
+
   it("applies only fresh explicitly required adopted artifacts", async () => {
     const git = new FakeGitRunner({ heads: { "/wt": "BASE" }, cherryPickResultShas: ["PICK_A"] });
     const built = request();

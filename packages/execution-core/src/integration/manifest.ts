@@ -102,8 +102,9 @@ export interface IntegrationManifestExecutorDeps {
 export class IntegrationManifestExecutor {
   constructor(private readonly deps: IntegrationManifestExecutorDeps) {}
 
-  async integrate(input: { request: IntegrationRequestManifest; worktreePath: string }): Promise<IntegrationManifest> {
-    const { request, worktreePath } = input;
+  async integrate(input: { request: IntegrationRequestManifest; worktreePath: string; signal?: AbortSignal }): Promise<IntegrationManifest> {
+    const { request, worktreePath, signal } = input;
+    signal?.throwIfAborted();
     const base = manifestBase(request);
     if (request.missingRequiredArtifactIds.length > 0) {
       return { ...base, disposition: "failed", errors: request.missingRequiredArtifactIds.map((artifactId) => ({ code: "missing_required_artifact", artifactId, message: `Required artifact ${artifactId} was not adopted.` })) };
@@ -114,9 +115,11 @@ export class IntegrationManifestExecutor {
     const operations: IntegrationManifest["operations"] = [];
     let repairAttempt: IntegrationManifest["repairAttempt"];
     for (const artifact of request.childArtifacts) {
+      signal?.throwIfAborted();
       if (artifact.kind !== "commit") return { ...base, operations, disposition: "failed", errors: [{ code: "unsupported_artifact", artifactId: artifact.artifactId, message: `Artifact ${artifact.artifactId} requires a ${artifact.kind} materializer.` }] };
       const preSha = await this.deps.git.head(worktreePath);
       const outcome = await this.deps.git.cherryPick({ cwd: worktreePath, commitSha: artifact.location });
+      signal?.throwIfAborted();
       if (outcome.ok) {
         operations.push({ artifactId: artifact.artifactId, operation: "cherry_pick", preSha, resultSha: await this.deps.git.head(worktreePath), outcome: "applied" });
         continue;
@@ -127,6 +130,7 @@ export class IntegrationManifestExecutor {
         return { ...base, operations, disposition: "decision_required", errors: [{ code: "materialization_failed", artifactId: artifact.artifactId, message: outcome.output }] };
       }
       const repaired = await this.deps.repair({ requestManifestId: request.manifestId, artifactId: artifact.artifactId, parentGoal: request.parentGoal, seamRevisions: request.seamRevisions, childArtifacts: request.childArtifacts, conflictFiles: outcome.conflictFiles, conflictOutput: outcome.output, worktreePath, pass: 1 });
+      signal?.throwIfAborted();
       repairAttempt = { pass: 1, artifactId: artifact.artifactId, outcome: repaired.success ? "succeeded" : "failed", evidenceRefs: repaired.evidenceRefs };
       if (!repaired.success || repaired.candidateSha === undefined) {
         await this.deps.git.cherryPickAbort(worktreePath).catch(() => undefined);
@@ -137,8 +141,10 @@ export class IntegrationManifestExecutor {
 
     const candidateSha = await this.deps.git.head(worktreePath);
     const parentEvidence = await this.deps.validate({ request, candidateSha, worktreePath });
+    signal?.throwIfAborted();
     if (parentEvidence.outcome !== "verified") return { ...base, operations, ...(repairAttempt !== undefined ? { repairAttempt } : {}), candidateSha, parentEvidence, disposition: "failed", errors: [{ code: "parent_validation_failed", message: `Parent validation outcome is ${parentEvidence.outcome}.` }] };
     const digest = await this.deps.digestCandidate({ candidateSha, worktreePath });
+    signal?.throwIfAborted();
     return {
       ...base, operations, ...(repairAttempt !== undefined ? { repairAttempt } : {}), candidateSha, parentEvidence,
       outputArtifacts: [{ artifactId: `${request.compositeNode.id}:r${request.compositeNode.graphRevision}`, digest, contract: request.outputArtifactContract, kind: "commit", location: candidateSha }],

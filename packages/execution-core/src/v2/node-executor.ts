@@ -284,6 +284,10 @@ export class V2NodeExecutor {
 
     let candidateToAnchor: string | undefined;
     try {
+      const integrationTimeout = AbortSignal.timeout(input.config.integrationTimeoutMs);
+      const integrationSignal = input.signal === undefined
+        ? integrationTimeout
+        : AbortSignal.any([input.signal, integrationTimeout]);
       const childArtifacts = input.consumedArtifacts.map(integrationArtifact);
       const request = createIntegrationRequestManifest({
         runId: input.runId,
@@ -319,12 +323,12 @@ export class V2NodeExecutor {
           });
           return { matrixId: evidenceMatrix.matrixId, outcome: evidenceMatrix.outcome };
         },
-        repair: async (repair) => this.repairIntegration(input, base.worktree, repair),
+        repair: async (repair) => this.repairIntegration(input, base.worktree, repair, integrationSignal),
         digestCandidate: async ({ candidateSha }) => digest(candidateSha)
       });
       let manifest: IntegrationManifest;
       try {
-        manifest = await integrator.integrate({ request, worktreePath: base.worktree.path });
+        manifest = await integrator.integrate({ request, worktreePath: base.worktree.path, signal: integrationSignal });
         candidateToAnchor = manifest.candidateSha;
       } catch (error) {
         return {
@@ -427,7 +431,8 @@ export class V2NodeExecutor {
       conflictOutput: string;
       pass: 1;
       childArtifacts: IntegrationChildArtifact[];
-    }
+    },
+    signal: AbortSignal
   ): Promise<{ success: boolean; candidateSha?: string; evidenceRefs: string[] }> {
     const instructionPath = instructionFilePath(input, "repair");
     const expectedHead = await this.options.git.head(worktree.path);
@@ -443,7 +448,7 @@ export class V2NodeExecutor {
         processOwnerId: input.runId,
         attemptId: stableUuid(`${input.attemptId}:repair:${repair.pass}`),
         ...(input.repairSelection.effort !== undefined ? { reasoningEffort: input.repairSelection.effort } : {}),
-        ...(input.signal !== undefined ? { signal: input.signal } : {})
+        signal
       });
       const result = await this.recorder.record({
         worktree,
