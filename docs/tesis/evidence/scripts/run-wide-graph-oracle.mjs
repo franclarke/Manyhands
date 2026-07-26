@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import { checkWideGraphOutput } from "./lib/wide-graph-oracle.mjs";
+import { wideGraphOracleCommands } from "./lib/wide-graph-oracle-plan.mjs";
 import { runPnpm } from "../warehouse/oracles/oracle-core.mjs";
 
 const target = resolve(argument("--target") ?? fail("--target is required"));
@@ -9,9 +10,9 @@ const moduleCount = Number(argument("--module-count") ?? fail("--module-count is
 if (!Number.isInteger(moduleCount) || moduleCount < 1) fail("--module-count must be a positive integer");
 
 try {
-  await runPnpm(["test"], target, 180_000);
-  await runPnpm(["typecheck"], target, 180_000);
-  await runPnpm(["build"], target, 180_000);
+  for (const command of wideGraphOracleCommands) {
+    await runPnpm(command, target, command[0] === "install" ? 300_000 : 180_000);
+  }
   await verifyModuleBoundary(target, moduleCount);
   const first = await probe(target);
   const second = await probe(target);
@@ -20,15 +21,21 @@ try {
     failures.push("study:wide-graph output is not deterministic");
   }
   if (failures.length > 0) throw new Error(failures.join("\n"));
-  process.stdout.write(`${JSON.stringify({
+  await report({
     oracleId: "warehouse-wide-graph-v1",
     target,
     moduleCount,
     outcome: "pass",
-    checks: ["test", "typecheck", "build", "module-boundary", "deterministic-probe"]
-  }, null, 2)}\n`);
+    checks: ["install-frozen-lockfile", "test", "typecheck", "build", "module-boundary", "deterministic-probe"]
+  });
 } catch (error) {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  await report({
+    oracleId: "warehouse-wide-graph-v1",
+    target,
+    moduleCount,
+    outcome: "fail",
+    error: error instanceof Error ? error.message : String(error)
+  });
   process.exit(1);
 }
 
@@ -51,3 +58,14 @@ async function probe(root) {
 
 function argument(flag) { const index = process.argv.indexOf(flag); return index === -1 ? undefined : process.argv[index + 1]; }
 function fail(message) { throw new Error(message); }
+
+async function report(result) {
+  const serialized = `${JSON.stringify(result, null, 2)}\n`;
+  const output = argument("--out");
+  if (output !== undefined) {
+    const path = resolve(output);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, serialized, "utf8");
+  }
+  process.stdout.write(serialized);
+}
