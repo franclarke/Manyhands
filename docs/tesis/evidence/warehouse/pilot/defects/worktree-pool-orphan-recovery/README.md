@@ -46,6 +46,16 @@ hoja. También cubre un fallo al recrear un slot ya saneado.
 Verificación focal: 19 tests PASS en `worktree-recycling-pool` y
 `execution-failure-cause-classification`, más los tres typechecks afectados.
 
+## Reintento productivo
+
+`series-14`, run `1543736b-7644-4455-9a44-648e94acd03f`, alcanzó planning,
+aprobó el grafo y persistió la decisión de granularidad antes de intentar la
+hoja. El pool rechazó el mismo `slot-000` como
+`worktree_pool_unavailable`; el journal lo clasificó como
+`shared_infrastructure` con `automaticRetryBudget: 0`. Por lo tanto la
+reclasificación ya está observada en la ruta productiva, pero el slot físico no
+quedó saneado por el proceso automático.
+
 ## Qué no se concluye
 
 El journal de W2 no preservó el `errno` ni el proceso que impidió el borrado de

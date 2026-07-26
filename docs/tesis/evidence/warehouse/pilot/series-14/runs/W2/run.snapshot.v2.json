@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 2,
+  "runId": "1543736b-7644-4455-9a44-648e94acd03f",
+  "eventSequence": 29,
+  "lastEventId": "1543736b-7644-4455-9a44-648e94acd03f:readiness.observed:29",
+  "operationId": "2745d8be-7ded-4d23-be9c-a613a6b858e2",
+  "fencingToken": 3,
+  "projection": {
+    "runId": "1543736b-7644-4455-9a44-648e94acd03f",
+    "goal": "# W2 — Primer control tower visual\n\n## Goal\n\nAgregá una aplicación web que represente el layout W1 como plano SVG y el stock\ncomo heatmap comprensible, con leyenda, etiquetas textuales y detalle de bin.\n\n## Acceptance\n\n- El plano renderiza zonas, pasillos y al menos una celda por bin del escenario.\n- Ocupación y stock crítico no dependen sólo del color; hay labels y leyenda.\n- La selección de un bin muestra SKU, cantidad, capacidad y estado.\n- La sonda W2 productiva agrega `visual` con conteos de SVG, heatmap y labels,\n  preservando capacidades W1; test, typecheck y build pasan.\n\n## Probe contract\n\nEl comando `pnpm study:probe -- --increment W2 --scenario thesis-seed-2026 --format json`\nescribe en stdout un único objeto JSON y ninguna otra salida, con exactamente\nesta forma:\n\n```json\n{\n  \"schemaVersion\": 1,\n  \"increment\": \"W2\",\n  \"scenario\": \"thesis-seed-2026\",\n  \"stateHash\": \"sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\",\n  \"capabilities\": {\n    \"layout\": {\n      \"zones\": 4,\n      \"bins\": 16\n    },\n    \"inventory\": {\n      \"skus\": 5,\n      \"totalUnits\": 240\n    },\n    \"visual\": {\n      \"svgElements\": 64,\n      \"heatmapCells\": 16,\n      \"textLabels\": 12\n    }\n  }\n}\n```\n\nLa envoltura fija `schemaVersion`, `increment` y `scenario`. Las capacidades\nrequeridas en este incremento son `layout`, `inventory`, `visual`.\nCada una vive anidada dentro de `capabilities`: ninguna se publica en el nivel\nsuperior ni se renombra.\n\nLos valores del ejemplo son ilustrativos. Derivalos del escenario respetando\nestos mínimos e invariantes, que el oráculo externo verifica:\n\n- `layout.zones` es un número >= 3.\n- `layout.bins` es un número >= 12.\n- `inventory.skus` es un número >= 3.\n- `inventory.totalUnits` es un número >= 1.\n- `visual.svgElements` es un número >= 1.\n- `visual.heatmapCells` es un número >= 12.\n- `visual.textLabels` es un número >= 3.\n\n`stateHash` es la cadena `sha256:` seguida de 64 dígitos hexadecimales\nminúsculos. Dos invocaciones sobre el mismo commit emiten bytes idénticos.\n\n## Constraints\n\n- Base: verified delivery of W1.\n- UI React/Vite accesible y responsive; SVG es parte del producto, no una\n  captura estática. No hardcodear el resultado de la sonda.\n\n## Oracle\n\nOracle id: `warehouse-w2-v1`. Verifica capacidades acumulativas y observables\nvisuales mínimos desde el camino productivo.",
+    "lifecycle": "waiting_for_input",
+    "sequence": 29,
+    "appliedEventIds": [
+      "run:1543736b-7644-4455-9a44-648e94acd03f:created",
+      "repository:sha256:ac2a30e1d8a891f6a32782183b004741003f8aab7e3ff65448aa588b09661f88:inspection:2",
+      "planning:1543736b-7644-4455-9a44-648e94acd03f:attempt:1:started",
+      "planning:1543736b-7644-4455-9a44-648e94acd03f:attempt:1:node:w2-control-tower-visual",
+      "planning:1543736b-7644-4455-9a44-648e94acd03f:attempt:1:node:w2-visual-model",
+      "planning:1543736b-7644-4455-9a44-648e94acd03f:attempt:1:node:w2-react-svg-heatmap",
+      "planning:1543736b-7644-4455-9a44-648e94acd03f:attempt:1:node:w2-probe-contract",
+      "planning:w2-control-tower-visual:completed:1543736b-7644-4455-9a44-648e94acd03f",
+      "planning:w2-control-tower-visual:strategy:1543736b-7644-4455-9a44-648e94acd03f",
+      "graph:graph-w2-control-tower-visual-78e4546c1c:r1:compiled",
+      "graph:graph-w2-control-tower-visual-78e4546c1c:r1:critic:completeness",
+      "graph:graph-w2-control-tower-visual-78e4546c1c:r1:critic:atomicity",
+      "graph:graph-w2-control-tower-visual-78e4546c1c:r1:critic:contract_compatibility",
+      "graph:graph-w2-control-tower-visual-78e4546c1c:r1:critic:dag_validity",
+      "graph:graph-w2-control-tower-visual-78e4546c1c:r1:critic:scope_isolation",
+      "graph:graph-w2-control-tower-visual-78e4546c1c:r1:critic:artifact_coverage",
+      "graph:graph-w2-control-tower-visual-78e4546c1c:r1:critic:risk_uncertainty",
+      "graph:graph-w2-control-tower-visual-78e4546c1c:r1:critic:validation_coverage",
+      "graph:graph-w2-control-tower-visual-78e4546c1c:r1:proposed",
+      "approve-plan:graph-w2-control-tower-visual-78e4546c1c:r1",
+      "approve-plan:graph-w2-control-tower-visual-78e4546c1c:r1:resolved",
+      "approve-plan:graph-w2-control-tower-visual-78e4546c1c:r1:graph-approved",
+      "1543736b-7644-4455-9a44-648e94acd03f:readiness.observed:23",
+      "1543736b-7644-4455-9a44-648e94acd03f:wave.selected:24",
+      "1543736b-7644-4455-9a44-648e94acd03f:attempt:node-w2-control-tower-visual-aa57971080:1:started",
+      "1543736b-7644-4455-9a44-648e94acd03f:attempt:node-w2-control-tower-visual-aa57971080:1:failure-classified",
+      "1543736b-7644-4455-9a44-648e94acd03f:attempt:node-w2-control-tower-visual-aa57971080:1:failed",
+      "1543736b-7644-4455-9a44-648e94acd03f:attempt:node-w2-control-tower-visual-aa57971080:1:decision:1543736b-7644-4455-9a44-648e94acd03f:attempt:node-w2-control-tower-visual-aa57971080:1:decision",
+      "1543736b-7644-4455-9a44-648e94acd03f:readiness.observed:29"
+    ],
+    "decisions": {
+      "approve-plan:graph-w2-control-tower-visual-78e4546c1c:r1": {
+        "id": "approve-plan:graph-w2-control-tower-visual-78e4546c1c:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-w2-control-tower-visual-aa57971080"
+        ],
+        "evidenceRefs": [
+          "graph:graph-w2-control-tower-visual-78e4546c1c:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      },
+      "1543736b-7644-4455-9a44-648e94acd03f:attempt:node-w2-control-tower-visual-aa57971080:1:decision": {
+        "id": "1543736b-7644-4455-9a44-648e94acd03f:attempt:node-w2-control-tower-visual-aa57971080:1:decision",
+        "kind": "resolve_conflict",
+        "question": "The work for W2 control tower visual needs guidance: worktree_pool_unavailable: could not remove invalid slot slot-000",
+        "options": [
+          {
+            "id": "retry",
+            "label": "Retry with guidance"
+          },
+          {
+            "id": "stop",
+            "label": "Stop this branch"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-w2-control-tower-visual-aa57971080"
+        ],
+        "evidenceRefs": [
+          "1543736b-7644-4455-9a44-648e94acd03f:attempt:node-w2-control-tower-visual-aa57971080:1"
+        ],
+        "impact": "behavior",
+        "raisedAtGraphRevision": 1,
+        "status": "pending"
+      }
+    },
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": [
+        "1543736b-7644-4455-9a44-648e94acd03f:attempt:node-w2-control-tower-visual-aa57971080:1:decision"
+      ]
+    },
+    "selectedWaves": [
+      {
+        "waveId": "1543736b-7644-4455-9a44-648e94acd03f:wave:1",
+        "nodeIds": [
+          "node-w2-control-tower-visual-aa57971080"
+        ],
+        "maxParallel": 2
+      }
+    ],
+    "attempts": {
+      "1543736b-7644-4455-9a44-648e94acd03f:attempt:node-w2-control-tower-visual-aa57971080:1": {
+        "attemptId": "1543736b-7644-4455-9a44-648e94acd03f:attempt:node-w2-control-tower-visual-aa57971080:1",
+        "nodeId": "node-w2-control-tower-visual-aa57971080",
+        "inputFingerprint": "sha256:fc586fa98379956176550794a17bcb251cf25ce1758651fe799a25b9278901b8",
+        "kind": "execution",
+        "status": "failed",
+        "repairPasses": 0,
+        "failureReason": "worktree_pool_unavailable: could not remove invalid slot slot-000"
+      }
+    },
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [
+      {
+        "eventId": "1543736b-7644-4455-9a44-648e94acd03f:attempt:node-w2-control-tower-visual-aa57971080:1:failure-classified",
+        "nodeId": "node-w2-control-tower-visual-aa57971080",
+        "kind": "failure"
+      }
+    ],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "C2",
+      "candidateTreeHash": "sha256:9a65974120aa91ab84340e7fd5ad28db37056ece7fad33fccf4100af207ebd97",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40
+      },
+      "assessments": {
+        "node-w2-visual-model-9fc7078a75": {
+          "unitKey": "w2-visual-model",
+          "nodeId": "node-w2-visual-model-9fc7078a75",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.25
+          },
+          "benefit": 0,
+          "cost": 0.0625,
+          "splitAdvantage": -0.0625,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-0",
+            "path-1",
+            "path-2",
+            "path-3",
+            "path-8",
+            "path-9",
+            "sha256:ac2a30e1d8a891f6a32782183b004741003f8aab7e3ff65448aa588b09661f88"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-w2-react-svg-heatmap-3183b6a4b9": {
+          "unitKey": "w2-react-svg-heatmap",
+          "nodeId": "node-w2-react-svg-heatmap-3183b6a4b9",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.7
+          },
+          "benefit": 0,
+          "cost": 0.175,
+          "splitAdvantage": -0.175,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "config-package-json",
+            "sha256:ac2a30e1d8a891f6a32782183b004741003f8aab7e3ff65448aa588b09661f88"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-w2-probe-contract-9568257d29": {
+          "unitKey": "w2-probe-contract",
+          "nodeId": "node-w2-probe-contract-9568257d29",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.1429
+          },
+          "benefit": 0,
+          "cost": 0.0357,
+          "splitAdvantage": -0.0357,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-4",
+            "path-5",
+            "path-6",
+            "path-7",
+            "path-8",
+            "path-9",
+            "config-package-json",
+            "sha256:ac2a30e1d8a891f6a32782183b004741003f8aab7e3ff65448aa588b09661f88"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-w2-control-tower-visual-aa57971080": {
+          "unitKey": "w2-control-tower-visual",
+          "nodeId": "node-w2-control-tower-visual-aa57971080",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.363,
+            "parallelism": 0.5,
+            "faultIsolation": 0.3333,
+            "coordination": 0.6667,
+            "pathOverlap": 0.1624,
+            "validationDuplication": 0.6,
+            "uncertainty": 0.3643
+          },
+          "benefit": 0.3988,
+          "cost": 0.4484,
+          "splitAdvantage": -0.0496,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-5",
+            "path-9",
+            "config-package-json",
+            "path-0",
+            "path-2",
+            "path-8",
+            "path-4",
+            "path-6",
+            "path-7",
+            "sha256:ac2a30e1d8a891f6a32782183b004741003f8aab7e3ff65448aa588b09661f88"
+          ],
+          "rationale": "Split advantage -0.0496 is below minimum 0.1500."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 0,
+        "totalLeafCount": 1,
+        "averageBranchingFactor": 0
+      }
+    },
+    "graphId": "graph-w2-control-tower-visual-78e4546c1c",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1
+  },
+  "checksum": "91f79f5e6efb671e4cd8381439bef5ddc1e7e8ed1c0e63d21b4e6ac50f951698"
+}
