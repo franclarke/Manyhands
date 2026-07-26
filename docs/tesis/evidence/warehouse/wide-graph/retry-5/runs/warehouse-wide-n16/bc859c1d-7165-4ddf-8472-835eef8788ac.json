@@ -1,0 +1,63 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "bc859c1d-7165-4ddf-8472-835eef8788ac",
+    "workspaceId": "0b81fca1-f413-455e-96a8-28b9124a9e83",
+    "userPrompt": "Add exactly 16 independent warehouse projection modules to the verified W1 codebase. Create these modules: src/analytics/projection-01.ts, src/analytics/projection-02.ts, src/analytics/projection-03.ts, src/analytics/projection-04.ts, src/analytics/projection-05.ts, src/analytics/projection-06.ts, src/analytics/projection-07.ts, src/analytics/projection-08.ts, src/analytics/projection-09.ts, src/analytics/projection-10.ts, src/analytics/projection-11.ts, src/analytics/projection-12.ts, src/analytics/projection-13.ts, src/analytics/projection-14.ts, src/analytics/projection-15.ts, src/analytics/projection-16.ts. Create src/analytics/contracts.ts exporting WarehouseProjection with id and project(scenario). Each projection must derive projectionId, totalUnits, and skuCount through the W1 Scenario and inventory functions. A projection module must not import another projection module; it may import only the fixed contract and W1 Scenario or inventory exports. Create src/analytics/registry.ts as the sole consumer of every projection and return all projections ordered by id. Add focused tests for every module and the registry, preserving all W1 behavior and checks. Do not hardcode scenario totals or duplicate the W1 inventory calculation. Add a package script named study:wide-graph that writes exactly one JSON object and no other output. Its JSON must include schemaVersion: 1, moduleCount: 16, scenario: thesis-seed-2026, and projections: an id-ordered array of exactly 16 registry results. Two invocations from the same commit must emit byte-identical JSON.",
+    "title": "Add exactly 16 independent warehouse projection modules to the verified W1 codebase. Create these modules: src/analytics",
+    "planningSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "repairSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionConfig": {
+      "maxParallel": 6,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 300000,
+      "integrationTimeoutMs": 600000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed"
+    },
+    "targetContext": {
+      "sourceRealPath": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-14",
+      "gitCommonDir": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-14\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "25895697858793664"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+      "remoteUrl": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-13",
+      "fingerprint": "6b30d91f5233f7f6",
+      "capturedAt": "2026-07-26T22:26:04.823Z"
+    },
+    "projection": {
+      "eventSequence": 159,
+      "lifecycle": "interrupted",
+      "graphId": "graph-warehouse-projections-wide-graph-f567c9faaf",
+      "graphRevision": 1,
+      "approvedGraphRevision": 1,
+      "repositorySnapshotId": "sha256:1139033340d5d863684663116856786cf7d3ace3f45603bf1b9083ae1f649bc2",
+      "updatedAt": "2026-07-26T23:46:31.189Z"
+    },
+    "version": 1169,
+    "mutationFence": 4,
+    "createdAt": "2026-07-26T22:26:04.823Z",
+    "updatedAt": "2026-07-26T23:46:31.306Z",
+    "heartbeatAt": "2026-07-26T23:46:28.580Z"
+  }
+}
