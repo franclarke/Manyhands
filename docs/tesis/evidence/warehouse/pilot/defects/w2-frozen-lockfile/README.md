@@ -18,6 +18,15 @@ es `fail` en `../../series-15/runs/W2/oracle-result.json`. Esa primera captura
 no contiene texto de error: el lanzador prioriza `error.stderr` aun cuando es la
 cadena vacía del proceso hijo. Por eso la causa no se infiere de ese campo.
 
+## Corrección de la instrumentación
+
+Rojo primero: `warehouse-oracle-runner.test.ts` reprodujo un fallo de gestor de
+paquetes con `stderr` vacío y `stdout` no vacío; el formateador no existía, por
+lo que la regresión falló al cargarlo. Verde: el lanzador ahora conserva el
+primer diagnóstico no vacío en el orden `stderr`, `stdout`, `message`. Esto no
+altera el veredicto del oráculo ni convierte este W2 en PASS; sólo hace que una
+repetición preserve `ERR_PNPM_OUTDATED_LOCKFILE` en el artefacto crudo.
+
 La reproducción diagnóstica posterior, sobre el commit entregado y sin cambiar
 ningún archivo versionado, ejecutó exactamente la instalación que exige el
 oráculo:

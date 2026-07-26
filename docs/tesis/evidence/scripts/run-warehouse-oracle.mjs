@@ -4,6 +4,7 @@ import { execFile } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { dirname, join, resolve } from "node:path";
+import { formatOracleFailure } from "./lib/warehouse-oracle-result.mjs";
 
 const exec = promisify(execFile);
 const increment = argument("--increment") ?? fail("--increment is required");
@@ -29,7 +30,7 @@ try {
   });
   result = { ...JSON.parse(stdout), startedAt, finishedAt: new Date().toISOString() };
 } catch (error) {
-  result = { oracleId: manifest.id, increment, target, outcome: "fail", startedAt, finishedAt: new Date().toISOString(), error: String(error.stderr ?? error.message) };
+  result = { oracleId: manifest.id, increment, target, outcome: "fail", startedAt, finishedAt: new Date().toISOString(), error: formatOracleFailure(error) };
 }
 if (argument("--out") !== undefined) {
   const output = resolve(argument("--out"));
