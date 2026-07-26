@@ -154,7 +154,7 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       if (strategy.requiresSemanticReplan) throw new Error("C2 could not obtain a viable semantic cut after one bounded replan.");
     }
     const compiled = dependencies.compile({ breakdown: strategy.selectedBreakdown, repositorySnapshot });
-    const drafts = strategySuccessEvents(input.runId, strategy, compiled, nodeIdFor, dependencies.now, input.experimentalCandidate?.sourceHash);
+    const drafts = strategySuccessEvents(input.runId, strategy, breakdown, compiled, nodeIdFor, dependencies.now, input.experimentalCandidate?.sourceHash);
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
     state = foldRun(events);
     await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
@@ -238,6 +238,7 @@ function successEvents(
 function strategySuccessEvents(
   runId: string,
   strategy: GranularityStrategyResult,
+  candidateBreakdown: WorkBreakdown,
   compiled: CompiledGraphRevision,
   nodeIdFor: (key: string) => string,
   now: () => string,
@@ -254,6 +255,11 @@ function strategySuccessEvents(
         policyVersion: strategy.policyVersion,
         condition: strategy.condition,
         candidateTreeHash: strategy.candidateTreeHash,
+        candidateTree: {
+          root: asRecord(candidateBreakdown.root),
+          candidateArtifacts: candidateBreakdown.candidateArtifacts.map(asRecord),
+          candidateSeams: candidateBreakdown.candidateSeams.map(asRecord)
+        },
         ...(candidateSourceHash === undefined ? {} : { candidateSourceHash }),
         config: {
           minimumAdvantage: strategy.config.minimumAdvantage,

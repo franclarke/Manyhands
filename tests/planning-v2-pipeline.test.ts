@@ -53,6 +53,17 @@ describe("planning V2 vertical slice", () => {
       ...Array(8).fill("planning.critic_recorded"),
       "graph.revision.proposed", "decision.raised"
     ]);
+    const strategy = persisted.find((event) => event.type === "planning.granularity_strategy_selected");
+    expect(strategy).toMatchObject({
+      type: "planning.granularity_strategy_selected",
+      payload: {
+        candidateTree: {
+          root: bookingBreakdown().root,
+          candidateArtifacts: bookingBreakdown().candidateArtifacts,
+          candidateSeams: bookingBreakdown().candidateSeams
+        }
+      }
+    });
     expect(Object.values(result.decisions)).toEqual([expect.objectContaining({ kind: "approve_plan", status: "pending" })]);
   });
 
