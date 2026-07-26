@@ -67,6 +67,9 @@ descomponer es tiempo de agente, no duplicación de entorno.
 > `worktree-pool/1ef32c5c37a6/slot-000` ya existente, dejado por el run abortado
 > anterior. La tabla de arriba describe las dos corridas previas, no ésta.
 
+> El defecto de recuperación y su reclasificación como infraestructura están en
+> [`worktree-pool-orphan-recovery`](../worktree-pool-orphan-recovery/README.md).
+
 ## Nota de nomenclatura
 
 La política se llama **C** en el lenguaje de la tesis. La etiqueta `C2` sobrevive

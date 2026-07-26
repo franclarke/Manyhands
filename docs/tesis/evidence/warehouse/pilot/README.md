@@ -97,5 +97,11 @@ W2 no entregó, y sus dos intentos dejaron defectos distintos de la política C:
   Corregidos en `adaptive-utility/3.1.0-pilot`; no alcanzan para explicar el
   colapso de W2 y así queda declarado.
 
+El reintento posterior tampoco ejecutó la hoja: un slot huérfano del pool
+impidió crear el worktree y el sistema lo clasificó erróneamente como
+`code_test`. Es una falla de recuperación de infraestructura, no evidencia para
+ni contra la política C; véase
+[`worktree-pool-orphan-recovery`](defects/worktree-pool-orphan-recovery/README.md).
+
 Ninguna de las dos correcciones divide W2. El colapso de ese incremento sigue
 **sin causa suficiente identificada**, y ése es el estado honesto del piloto.

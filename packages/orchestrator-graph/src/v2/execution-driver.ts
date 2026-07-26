@@ -525,5 +525,8 @@ export function leafFailureObservation(outcome: { reason: string }): FailureObse
   if (code === "scope_violation" || code === "unexpected_commit") {
     return { source: "scope", code, message: outcome.reason };
   }
+  if (code === "worktree_pool_unavailable") {
+    return { source: "executor", code, message: outcome.reason };
+  }
   return { source: "executor", code: "execution_failed", message: outcome.reason };
 }

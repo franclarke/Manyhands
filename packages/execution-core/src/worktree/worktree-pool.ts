@@ -23,6 +23,7 @@ export interface WorktreePoolOptions {
   staleLeaseMs?: number;
   heartbeatMs?: number;
   ownerIsAlive?: (pid: number) => Promise<boolean>;
+  removePath?: (worktreePath: string) => Promise<void>;
 }
 
 export interface WorktreePoolGit {
@@ -83,6 +84,7 @@ export class WorktreePool {
   private readonly staleLeaseMs: number | undefined;
   private readonly heartbeatMs: number | undefined;
   private readonly ownerIsAlive: ((pid: number) => Promise<boolean>) | undefined;
+  private readonly removePath: (worktreePath: string) => Promise<void>;
   private readonly slots: PoolSlot[] = [];
   private readonly activeLeases = new Map<string, ActiveLease>();
   private readonly ownerId = `pool-${process.pid}-${randomUUID()}`;
@@ -117,6 +119,7 @@ export class WorktreePool {
     this.staleLeaseMs = options.staleLeaseMs;
     this.heartbeatMs = options.heartbeatMs;
     this.ownerIsAlive = options.ownerIsAlive;
+    this.removePath = options.removePath ?? removeWorktreePath;
   }
 
   async initialize(baseCommitOrInput: string | { baseCommit: string }): Promise<void> {
@@ -330,9 +333,7 @@ export class WorktreePool {
           worktreePath
         });
         if (!valid) {
-          await this.git.remove({ repoRoot: this.repoRoot, worktreePath }).catch(() => undefined);
-          await rm(worktreePath, { recursive: true, force: true }).catch(() => undefined);
-          await this.git.prune(this.repoRoot).catch(() => undefined);
+          await this.removeInvalidSlot(id, worktreePath);
           try {
             await this.git.add({
               repoRoot: this.repoRoot,
@@ -348,7 +349,7 @@ export class WorktreePool {
                   worktreePath: slot.path
                 }))
             );
-            throw error;
+            throw worktreePoolUnavailable(`could not create slot ${id}`, error);
           }
         }
         const slot = { id, path: worktreePath, useCount: valid ? 1 : 0, adopted: valid };
@@ -369,11 +370,12 @@ export class WorktreePool {
     const topologyLease = await this.acquireTopologyLease();
     try {
       await slotLease.assertCurrent();
-      await this.git.remove({ repoRoot: this.repoRoot, worktreePath: slot.path })
-        .catch(() => undefined);
-      await rm(slot.path, { recursive: true, force: true }).catch(() => undefined);
-      await this.git.prune(this.repoRoot).catch(() => undefined);
-      await this.git.add({ repoRoot: this.repoRoot, worktreePath: slot.path, baseCommit });
+      await this.removeInvalidSlot(slot.id, slot.path);
+      try {
+        await this.git.add({ repoRoot: this.repoRoot, worktreePath: slot.path, baseCommit });
+      } catch (error) {
+        throw worktreePoolUnavailable(`could not recreate slot ${slot.id}`, error);
+      }
       await slotLease.assertCurrent();
       slot.adopted = true;
     } finally {
@@ -402,6 +404,19 @@ export class WorktreePool {
     );
     await mkdir(this.controlRoot, { recursive: true });
     return this.controlRoot;
+  }
+
+  private async removeInvalidSlot(id: string, worktreePath: string): Promise<void> {
+    await this.git.remove({ repoRoot: this.repoRoot, worktreePath }).catch(() => undefined);
+    try {
+      await this.removePath(worktreePath);
+    } catch (error) {
+      throw worktreePoolUnavailable(`could not remove invalid slot ${id}`, error);
+    }
+    if (await pathExists(worktreePath)) {
+      throw worktreePoolUnavailable(`could not remove invalid slot ${id}`);
+    }
+    await this.git.prune(this.repoRoot).catch(() => undefined);
   }
 
   private async acquireTopologyLease(): Promise<FilesystemFencedLease> {
@@ -598,6 +613,19 @@ function runGitOutput(
 
 function candidateRef(runId: string, attemptId: string): string {
   return `refs/manyhands/runs/${safeWorktreeSegment(runId)}/attempts/${safeWorktreeSegment(attemptId)}/candidate`;
+}
+
+async function removeWorktreePath(worktreePath: string): Promise<void> {
+  await rm(worktreePath, {
+    recursive: true,
+    force: true,
+    maxRetries: 3,
+    retryDelay: 100
+  });
+}
+
+function worktreePoolUnavailable(action: string, cause?: unknown): Error {
+  return new Error(`worktree_pool_unavailable: ${action}`, cause === undefined ? undefined : { cause });
 }
 
 function assertCommit(commit: string): void {

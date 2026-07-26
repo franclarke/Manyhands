@@ -379,6 +379,37 @@ describe("WorktreePool", () => {
     await pool.release(recovered);
     await pool.dispose();
   });
+
+  it("refuses to create a slot when an invalid orphan cannot be removed", async () => {
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "manyhands-pool-orphan-"));
+    tempRoots.push(repoRoot);
+    const commonDir = path.join(repoRoot, ".git");
+    const poolRoot = path.join(repoRoot, ".manyhands", "pool");
+    await mkdir(path.join(poolRoot, "slot-000"), { recursive: true });
+
+    const git: WorktreePoolGit = {
+      add: async () => undefined,
+      resetAndClean: async () => undefined,
+      remove: async () => undefined,
+      prune: async () => undefined,
+      validate: async () => false,
+      resolveCommonDir: async () => commonDir,
+      updateRef: async () => undefined
+    };
+    const pool = new WorktreePool({
+      repoRoot,
+      poolRoot,
+      size: 1,
+      git,
+      removePath: async () => {
+        throw new Error("EPERM: stale process still owns the slot");
+      }
+    });
+
+    await expect(pool.initialize("a".repeat(40))).rejects.toThrow(
+      "worktree_pool_unavailable: could not remove invalid slot slot-000"
+    );
+  });
 });
 
 async function createRepository(): Promise<string> {

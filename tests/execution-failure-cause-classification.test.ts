@@ -37,6 +37,15 @@ describe("leafFailureObservation", () => {
     expect(classifyFailure(observation)).toBe("code_test");
   });
 
+  it("keeps an unavailable worktree pool in infrastructure recovery", () => {
+    const observation = leafFailureObservation({
+      reason: "worktree_pool_unavailable: could not remove invalid slot slot-000"
+    });
+
+    expect(observation.code).toBe("worktree_pool_unavailable");
+    expect(classifyFailure(observation)).toBe("shared_infrastructure");
+  });
+
   it("keeps the full reason as the message so evidence is not lost", () => {
     const reason = "scope_violation: touched tests/expense.test.ts";
 

@@ -23,7 +23,7 @@ export type FailureObservation = z.infer<typeof FailureObservationSchema>;
 
 const ENVIRONMENT_CODES = new Set(["auth", "quota", "binary_missing", "executor_unavailable", "model_not_found"]);
 const CONTRACT_CODES = new Set(["invalid_contract", "invalid_decomposition", "contract_mismatch"]);
-const SHARED_CODES = new Set(["shared_config_broken", "repository_unavailable", "package_manager_broken"]);
+const SHARED_CODES = new Set(["shared_config_broken", "repository_unavailable", "package_manager_broken", "worktree_pool_unavailable"]);
 
 export function classifyFailure(raw: FailureObservation): FailureClass {
   const observation = FailureObservationSchema.parse(raw);
