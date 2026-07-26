@@ -52,7 +52,7 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     const persisted = await events.load("run-adaptive");
     const types = persisted.map((event) => event.type);
     expect(types).toContain("planning.granularity_strategy_selected");
-    expect(types.indexOf("planning.granularity_strategy_selected")).toBeGreaterThan(types.indexOf("planning.completed"));
+    expect(types.indexOf("planning.granularity_strategy_selected")).toBeLessThan(types.indexOf("planning.completed"));
     expect(types.indexOf("planning.granularity_strategy_selected")).toBeLessThan(types.indexOf("graph.compiled"));
     const strategyEvent = persisted.find((event) => event.type === "planning.granularity_strategy_selected");
     expect(strategyEvent?.type === "planning.granularity_strategy_selected" ? strategyEvent.payload.candidateTree?.root : undefined).toBeDefined();

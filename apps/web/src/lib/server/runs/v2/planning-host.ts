@@ -142,8 +142,17 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       strategy = selectGranularityStrategy({ condition, breakdown, repositorySnapshot, config: PILOT_UTILITY_POLICY });
       if (strategy.requiresSemanticReplan) throw new Error("C could not obtain a viable semantic cut after one bounded replan.");
     }
+    const strategyEvent = strategySelectedEvent(
+      input.runId,
+      strategy,
+      breakdown,
+      nodeIdFor,
+      dependencies.now,
+      input.experimentalCandidate?.sourceHash
+    );
+    events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [strategyEvent])];
     const compiled = dependencies.compile({ breakdown: strategy.selectedBreakdown, repositorySnapshot });
-    const drafts = strategySuccessEvents(input.runId, strategy, breakdown, compiled, nodeIdFor, dependencies.now, input.experimentalCandidate?.sourceHash);
+    const drafts = strategySuccessEvents(input.runId, strategy, compiled, dependencies.now);
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
     state = foldRun(events);
     await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
@@ -209,54 +218,62 @@ export async function revisePlanningV2(
   return next;
 }
 
-function strategySuccessEvents(
+function strategySelectedEvent(
   runId: string,
   strategy: GranularityStrategyResult,
   candidateBreakdown: WorkBreakdown,
-  compiled: CompiledGraphRevision,
   nodeIdFor: (key: string) => string,
   now: () => string,
   candidateSourceHash?: string
+): RunEventInput {
+  const breakdown = strategy.selectedBreakdown;
+  return {
+    eventId: `planning:${breakdown.breakdownId}:strategy:${runId}`,
+    occurredAt: now(),
+    type: "planning.granularity_strategy_selected",
+    payload: {
+      policyVersion: strategy.policyVersion,
+      condition: strategy.condition,
+      candidateTreeHash: strategy.candidateTreeHash,
+      candidateTree: {
+        root: asRecord(candidateBreakdown.root),
+        candidateArtifacts: candidateBreakdown.candidateArtifacts.map(asRecord),
+        candidateSeams: candidateBreakdown.candidateSeams.map(asRecord)
+      },
+      ...(candidateSourceHash === undefined ? {} : { candidateSourceHash }),
+      config: {
+        minimumAdvantage: strategy.config.minimumAdvantage,
+        maxLeafContextTokens: strategy.config.maxLeafContextTokens,
+        maxLeafScopePaths: strategy.config.maxLeafScopePaths
+      },
+      assessments: Object.values(strategy.assessments).map((assessment) => ({
+        unitKey: assessment.unitKey,
+        nodeId: nodeIdFor(assessment.unitKey),
+        selected: assessment.selected,
+        leafFeasible: assessment.leafFeasible,
+        splitViable: assessment.splitViable,
+        features: assessment.features,
+        benefit: assessment.benefit,
+        cost: assessment.cost,
+        splitAdvantage: assessment.splitAdvantage,
+        minimumAdvantage: assessment.minimumAdvantage,
+        evidenceRefs: assessment.evidenceRefs,
+        rationale: assessment.rationale
+      })),
+      metrics: structuralMetrics(breakdown.root)
+    }
+  };
+}
+
+function strategySuccessEvents(
+  runId: string,
+  strategy: GranularityStrategyResult,
+  compiled: CompiledGraphRevision,
+  now: () => string
 ): RunEventInput[] {
   const breakdown = strategy.selectedBreakdown;
   return [
     { eventId: `planning:${breakdown.breakdownId}:completed:${runId}`, occurredAt: now(), type: "planning.completed", payload: { breakdownId: breakdown.breakdownId, breakdown: asRecord(breakdown) } },
-    {
-      eventId: `planning:${breakdown.breakdownId}:strategy:${runId}`,
-      occurredAt: now(),
-      type: "planning.granularity_strategy_selected",
-      payload: {
-        policyVersion: strategy.policyVersion,
-        condition: strategy.condition,
-        candidateTreeHash: strategy.candidateTreeHash,
-        candidateTree: {
-          root: asRecord(candidateBreakdown.root),
-          candidateArtifacts: candidateBreakdown.candidateArtifacts.map(asRecord),
-          candidateSeams: candidateBreakdown.candidateSeams.map(asRecord)
-        },
-        ...(candidateSourceHash === undefined ? {} : { candidateSourceHash }),
-        config: {
-          minimumAdvantage: strategy.config.minimumAdvantage,
-          maxLeafContextTokens: strategy.config.maxLeafContextTokens,
-          maxLeafScopePaths: strategy.config.maxLeafScopePaths
-        },
-        assessments: Object.values(strategy.assessments).map((assessment) => ({
-          unitKey: assessment.unitKey,
-          nodeId: nodeIdFor(assessment.unitKey),
-          selected: assessment.selected,
-          leafFeasible: assessment.leafFeasible,
-          splitViable: assessment.splitViable,
-          features: assessment.features,
-          benefit: assessment.benefit,
-          cost: assessment.cost,
-          splitAdvantage: assessment.splitAdvantage,
-          minimumAdvantage: assessment.minimumAdvantage,
-          evidenceRefs: assessment.evidenceRefs,
-          rationale: assessment.rationale
-        })),
-        metrics: structuralMetrics(breakdown.root)
-      }
-    },
     ...compiledEvents(compiled, now)
   ];
 }

@@ -34,14 +34,23 @@ el journal conserva nodos y el diagnóstico, pero no las relaciones candidatas
 rechazadas. Se debe capturar ese input rechazado antes de proponer una
 corrección de ciclos.
 
-## Próximo paso
+## Corrección acotada
 
-Rojo primero: una regresión para la ruta `selectGranularityStrategy` debe
-reproducir un intent requerido asignado sólo al compuesto raíz y exigir que la
-salida seleccionada lo cubra en hojas. Luego se aplicará la mínima propagación
-de cobertura heredada, sin cambiar umbrales ni métricas de la política C. La
-persistencia del candidato rechazado se evaluará por separado para que el
-diagnóstico de ciclos no dependa de una reconstrucción inferida.
+Rojo primero: la regresión `granularity-utility-policy.test.ts` construyó una
+raíz con `intent-root-only`, seleccionó el split C y falló porque ninguna hoja
+la cubría. Verde: `selectGranularityStrategy` propaga la cobertura heredada al
+árbol seleccionado antes de compilarlo. No cambia umbrales ni métricas de la
+política C.
+
+También se agregó una regresión de pipeline: si la revisión del compilador
+rechaza el plan, el evento `planning.granularity_strategy_selected` se persiste
+antes del compilador y conserva el árbol candidato y sus relaciones. Así el
+próximo rechazo de ciclos tendrá la entrada exacta en el journal, sin inferirla
+desde los nodos descubiertos.
+
+Los dos casos quedaron verdes en las pruebas focalizadas de estrategia y
+pipeline. La corrección aún requiere un nuevo run real para determinar si el
+modelo vuelve a producir ciclos o si aparece otro defecto del plan.
 
 ## Qué no se concluye
 

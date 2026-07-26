@@ -49,7 +49,7 @@ describe("planning V2 vertical slice", () => {
     expect(result.lifecycle).toBe("needs_approval");
     const persisted = await events.load("run-v2");
     expect(persisted.map((event) => event.type)).toEqual([
-      "run.created", "repository.inspected", "planning.completed", "planning.granularity_strategy_selected", "graph.compiled",
+      "run.created", "repository.inspected", "planning.granularity_strategy_selected", "planning.completed", "graph.compiled",
       ...Array(8).fill("planning.critic_recorded"),
       "graph.revision.proposed", "decision.raised"
     ]);
@@ -82,6 +82,31 @@ describe("planning V2 vertical slice", () => {
     expect(calls).toBe(1);
     expect(result).toMatchObject({ lifecycle: "failed", failureReason: "selected LLM unavailable" });
     expect((await events.load("run-failed")).map((event) => event.type)).toEqual(["run.created", "repository.inspected", "planning.failed"]);
+  });
+
+  it("persists the selected candidate when compiler review rejects it", async () => {
+    const events = new JsonlRunEventStore({ directory });
+    const snapshots = new RunSnapshotStore({ directory, events });
+
+    const result = await runPlanningV2({ runId: "run-compile-failed", goal: "Build booking", repoPath: "C:/repo/booking", targetFingerprint: "target-1", baseCommit: "1".repeat(40), authority }, {
+      events,
+      snapshots,
+      inspect: async () => bookingSnapshot(),
+      plan: async () => bookingBreakdown(),
+      compile: () => { throw new Error("Compiled plan review failed: artifact_cycle"); },
+      now: () => "2026-07-17T01:00:00.000Z"
+    });
+
+    expect(result).toMatchObject({ lifecycle: "failed", failureReason: "Compiled plan review failed: artifact_cycle" });
+    const persisted = await events.load("run-compile-failed");
+    expect(persisted.map((event) => event.type)).toEqual([
+      "run.created", "repository.inspected", "planning.granularity_strategy_selected", "planning.failed"
+    ]);
+    const strategy = persisted.find((event) => event.type === "planning.granularity_strategy_selected");
+    expect(strategy).toMatchObject({
+      type: "planning.granularity_strategy_selected",
+      payload: { candidateTree: { root: bookingBreakdown().root } }
+    });
   });
 
   it("persists planning nodes before the planner completes", async () => {
