@@ -48,6 +48,10 @@ function leaf(key: string, paths: string[], signals?: { scopeRadius: number; int
   };
 }
 
+function flatten(unit: WorkUnit): WorkUnit[] {
+  return unit.kind === "leaf" ? [unit] : [unit, ...unit.children.flatMap(flatten)];
+}
+
 describe("adaptive granularity in productive planning", () => {
   it("keeps a simple task as a single leaf (no artificial split)", () => {
     const breakdown = breakdownWith(leaf("fix-typo", ["src/service.ts"], {
@@ -123,6 +127,28 @@ describe("adaptive granularity in productive planning", () => {
     expect(api?.expectedOutcomes).toEqual(["outcome-api-surface"]);
     expect(api?.acceptanceIntentIds).toEqual(["intent-1"]);
     expect(result.assessments["root"]?.isLeaf).toBe(false);
+  });
+
+  it("propagates a root-only required intent to leaf references without changing its composite owner", () => {
+    const breakdown = breakdownWith({
+      key: "root", kind: "composite", title: "Wide feature", objective: "Deliver coordinated output",
+      concerns: ["coordination"], expectedOutcomes: ["integrated output"],
+      acceptanceIntentIds: ["intent-1", "root-only"], evidenceIds: [],
+      plannedPaths: ["src/a.ts", "src/b.ts", "tests/wide.test.ts"],
+      complexitySignals: { scopeRadius: 8, interfaceImpact: 8, validationSurface: 8, contextTokenMass: 8 },
+      cut: { criterion: "cohesion", rationale: "independent modules" },
+      children: [leaf("a", ["src/a.ts"]), leaf("b", ["src/b.ts", "tests/wide.test.ts"])]
+    }, {
+      acceptanceIntents: [
+        { id: "intent-1", description: "module behavior", required: true },
+        { id: "root-only", description: "cross-module constraint", required: true }
+      ]
+    });
+
+    const result = applyAdaptiveGranularity({ breakdown });
+    const leaves = flatten(result.breakdown.root).filter((unit) => unit.kind === "leaf");
+
+    expect(leaves.every((unit) => unit.acceptanceIntentIds.includes("root-only"))).toBe(true);
   });
 
   it("coalesces trivial dependency-free siblings that touch the same file", () => {

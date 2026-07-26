@@ -102,13 +102,13 @@ export function applyAdaptiveGranularity(input: AdaptivePlanningInput): Adaptive
     ...compiled.criticDecisions,
     ...collapseDecisions(assessments, breakdown.root)
   ];
-  const restoredRoot = restoreSemanticFields(
+  const restoredRoot = propagateAncestorAcceptance(restoreSemanticFields(
     compiled.root,
     preserved,
     compiled.mergedFrom,
     breakdown.root.acceptanceIntentIds,
     pathEvidenceById
-  );
+  ));
   // Reshaping can merge, collapse or re-split units, so relations authored
   // against the planner's original keys must be remapped onto the units that
   // absorbed them. A dangling producer/consumer would fail schema validation
@@ -327,6 +327,22 @@ function restoreSemanticFields(
     kind: "composite",
     cut: unit.cut,
     children: unit.children.map((child) => restoreSemanticFields(child, preserved, mergedFrom, rootAcceptanceIntentIds, pathEvidenceById))
+  };
+}
+
+/**
+ * A parent intent is inherited coverage for each of its semantic descendants.
+ * Keeping that reference on leaves lets completeness review prove executable
+ * coverage, while acceptance allocation still compiles the intent once at its
+ * lowest common ancestor.
+ */
+function propagateAncestorAcceptance(unit: WorkUnit, inherited: readonly string[] = []): WorkUnit {
+  const acceptanceIntentIds = uniqueValues([...inherited, ...unit.acceptanceIntentIds]);
+  if (unit.kind === "leaf") return { ...unit, acceptanceIntentIds };
+  return {
+    ...unit,
+    acceptanceIntentIds,
+    children: unit.children.map((child) => propagateAncestorAcceptance(child, acceptanceIntentIds))
   };
 }
 
