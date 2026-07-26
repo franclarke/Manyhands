@@ -56,6 +56,12 @@ hoja. El pool rechazó el mismo `slot-000` como
 reclasificación ya está observada en la ruta productiva, pero el slot físico no
 quedó saneado por el proceso automático.
 
+El driver aún materializa la decisión genérica `resolve_conflict` después de
+cualquier fallo de nodo. La celda longitudinal sólo tiene pre-registradas las
+decisiones de aprobar plan y entrega, por lo que no responde esa decisión ni
+inventa una intervención sobre la infraestructura. El run queda preservado
+como `waiting_for_input`, no como un resultado de la política C.
+
 ## Qué no se concluye
 
 El journal de W2 no preservó el `errno` ni el proceso que impidió el borrado de
@@ -63,4 +69,5 @@ El journal de W2 no preservó el `errno` ni el proceso que impidió el borrado d
 de Windows haya sido la causa material del residuo. Sí se concluye que la ruta
 productiva ocultaba cualquier fallo de saneamiento y lo reclasificaba como un
 defecto de código, que es suficiente para corregir la recuperación y la
-clasificación.
+clasificación. Tampoco se concluye que resolver la decisión genérica repare el
+slot: esa operación física sigue requiriendo autorización explícita.

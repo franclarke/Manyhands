@@ -51,8 +51,23 @@ la lectura es barata y el run no lo es.
 
 `candidate seam-probe-json-contract cannot consume its own output` reapareció en
 series-11 pese a la regla añadida en `635062e`/`62564ef` que pide omitir un
-candidato cuyo único consumidor sería su propio productor. La regla está en el
-prompt y el modelo la violó igual, así que enunciarla no alcanza. Queda como
-segundo frente, subordinado al anterior.
+candidato cuyo único consumidor sería su propio productor. El modelo puede
+violar esa instrucción: no es una barrera suficiente por sí sola.
+
+La entrada no llega a compilarse: `WorkBreakdownSchema` valida cada candidate
+artifact y candidate seam contra las unidades declaradas y rechaza que
+`consumerUnitKeys` incluya `producerUnitKey`. Esa validación determinista es la
+frontera que emitió el mensaje observado y devuelve el problema como
+`repairIssues` al siguiente intento del planner. Por lo tanto, no corresponde
+duplicar una regla de prompt ni afirmar que el seam autoconsumido haya entrado
+en la ruta de ejecución.
+
+## Qué no se concluye
+
+No se concluye que la validación haya evitado nuevas emisiones inválidas del
+modelo; sólo que las rechaza antes de compilar contratos o ejecutar hojas. La
+causa de que el modelo vuelva a proponer esa relación sigue sin evidencia
+directa y permanece subordinada a la investigación de la salida cruda de
+planning.
 
 Resultado acumulado del piloto: **0/8**.
