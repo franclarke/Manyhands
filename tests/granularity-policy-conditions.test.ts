@@ -133,12 +133,12 @@ describe("granularity policy as per-run configuration", () => {
     expect(result.breakdown.root.kind).toBe("leaf");
   });
 
-  it("exposes A/B/C1/C2 explicitly and defaults productive runs to C2", () => {
-    expect(GRANULARITY_CONDITIONS).toEqual(["A", "B", "C1", "C2"]);
-    expect(resolveGranularityCondition(undefined)).toBe("C2");
-    expect(resolveGranularityCondition("C")).toBe("C1");
-    expect(resolveGranularityCondition("C1")).toBe("C1");
-    expect(resolveGranularityCondition("C2")).toBe("C2");
+  it("exposes A/B/C and normalizes historical C1/C2 records to C", () => {
+    expect(GRANULARITY_CONDITIONS).toEqual(["A", "B", "C"]);
+    expect(resolveGranularityCondition(undefined)).toBe("C");
+    expect(resolveGranularityCondition("C")).toBe("C");
+    expect(resolveGranularityCondition("C1")).toBe("C");
+    expect(resolveGranularityCondition("C2")).toBe("C");
     expect(granularityPolicyFor("A")).toEqual(SINGLE_LEAF_POLICY);
     expect(granularityPolicyFor("B")).toEqual(FINE_SPLIT_POLICY);
     expect(granularityPolicyFor("C1")).toEqual(ADAPTIVE_GRANULARITY_POLICY);

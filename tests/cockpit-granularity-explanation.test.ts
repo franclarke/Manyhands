@@ -74,10 +74,10 @@ describe("granularityExplanation", () => {
 });
 
 describe("granularityStrategyExplanation", () => {
-  it("explains C2 from persisted utility, limits and evidence", () => {
+  it("explains C from persisted utility, limits and evidence", () => {
     const strategy: GranularityStrategyProjection = {
       policyVersion: "adaptive-utility/2.0.0-pilot",
-      condition: "C2",
+      condition: "C",
       candidateTreeHash: "sha256:candidate",
       config: { minimumAdvantage: 0.15, maxLeafContextTokens: 24_000, maxLeafScopePaths: 40 },
       assessments: {

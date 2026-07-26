@@ -17,7 +17,7 @@ import {
   validateUtilityPolicyConfig
 } from "./utility-policy.js";
 
-export type UtilityGranularityCondition = "A" | "B" | "C2";
+export type UtilityGranularityCondition = "A" | "B" | "C";
 
 export interface SelectGranularityStrategyInput {
   condition: UtilityGranularityCondition;
@@ -138,7 +138,7 @@ function selectUnit(input: {
   }
 
   if (input.unit.kind === "leaf") {
-    const selected = input.condition === "C2" && !leafFeasible
+    const selected = input.condition === "C" && !leafFeasible
       ? "semantic_replan"
       : "leaf";
     input.assessments[input.unit.key] = assessment({
@@ -518,7 +518,7 @@ function rationaleFor(
     return "Leaf is infeasible and the candidate contains no viable semantic split."
   }
   if (selected === "split" && !leafFeasible) {
-    return "Leaf is infeasible; C2 selected the available semantic split."
+    return "Leaf is infeasible; C selected the available semantic split."
   }
   if (selected === "split") {
     return `Split advantage ${splitAdvantage.toFixed(4)} meets minimum ${config.minimumAdvantage.toFixed(4)}.`;

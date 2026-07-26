@@ -4,7 +4,7 @@ Estado: **pre-registrado antes de W1 Pilot**.
 
 ## Pregunta
 
-¿Cómo cambia la frontera elegida por C2 a medida que un mismo producto crece
+¿Cómo cambia la frontera elegida por C a medida que un mismo producto crece
 desde un seed técnico hasta un control tower con dominio, interfaces,
 simulación, persistencia y analítica?
 
@@ -14,7 +14,7 @@ simulación, persistencia y analítica?
 - Base W1: commit exacto del seed registrado en `seed-manifest.json`.
 - Base Wn: commit entregado por W(n-1) y aprobado sólo después de su oráculo.
 - Planner: vivo en cada incremento; no se reutilizan candidate trees.
-- Condición: C2 durante Pilot y Warehouse Final longitudinal.
+- Condición: C durante Pilot y Warehouse Final longitudinal.
 - Executor y modelo: Claude Code CLI `sonnet`, en planning, ejecución y repair.
   Los modelos Claude no exponen perilla de reasoning effort, así que la
   selección no declara `effort`. Se eligió por sobre Codex `gpt-5.5` porque
@@ -24,7 +24,7 @@ simulación, persistencia y analítica?
 
 ## Separación de fases
 
-Pilot permite corregir ManyHands, C2, prompts y oráculos. Cada cambio queda en
+Pilot permite corregir ManyHands, C, prompts y oráculos. Cada cambio queda en
 el ledger y los resultados Pilot son formativos. Después del freeze no cambia
 ManyHands, la política, el modelo, los prompts, los oráculos ni el seed. Un
 defecto conductual de ManyHands durante Final invalida y reinicia toda la serie
@@ -61,7 +61,7 @@ cadena; no se adopta manualmente un diff parcial.
 
 Por incremento: commit base/final, lifecycle, reloj, tokens incluidos los runs
 fallidos, attempts, repairs, candidate tree hash, frontera, profundidad, hojas,
-features/beneficio/costo C2, criterios externos satisfechos, diff y defectos.
+features/beneficio/costo C, criterios externos satisfechos, diff y defectos.
 
 ## Falsadores
 

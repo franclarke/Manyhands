@@ -22,7 +22,7 @@ El resultado bruto y el journal se conservan en
 
 Rojo primero: `decomposer-adaptive-planning.test.ts` construyó un compuesto
 con un intent requerido sólo en el raíz y verificó que toda hoja restaurada lo
-referenciara; falló. Verde: la restauración C2 propaga los intents de ancestros
+referenciara; falló. Verde: la restauración C propaga los intents de ancestros
 como cobertura heredada a las hojas. El allocator conserva el único criterio
 compilado en el ancestro común más bajo, por lo que no duplica contratos ni
 altera umbrales de granularidad. Las pruebas de planificación adaptativa,

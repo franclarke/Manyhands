@@ -7,4 +7,4 @@ Este directorio separa el desarrollo del instrumento de su evaluación final.
 - [`final/`](final/): reservado para evidencia producida después del freeze.
 
 La evidencia histórica C1 permanece en `../experiment/`. No se copia ni mezcla
-con los resultados C2.
+con los resultados C.

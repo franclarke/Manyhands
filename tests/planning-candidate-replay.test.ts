@@ -29,7 +29,7 @@ describe("blocked planning candidate replay", () => {
       targetFingerprint: "target-1",
       baseCommit: "1".repeat(40),
       authority,
-      granularityCondition: "C2",
+      granularityCondition: "C",
       experimentalCandidate: {
         sourceHash: candidateBreakdownHash(breakdown),
         repositorySnapshotId: breakdown.repositorySnapshotId,

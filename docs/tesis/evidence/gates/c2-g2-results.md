@@ -1,4 +1,4 @@
-# C2-G2 — ruta productiva, replay y estabilidad
+# C-G2 — ruta productiva, replay y estabilidad
 
 > **Fecha:** 2026-07-24/25 · **Commit ejecutado:** `5584602` · **Resultado:** PASS.
 
@@ -12,13 +12,13 @@
 | typecheck web | PASS |
 | `pnpm build` | PASS |
 | `pnpm web:build` | PASS — Next.js production build |
-| marker C2 en `dist/index.js` | PASS |
+| marker C en `dist/index.js` | PASS |
 | `git diff --check` | PASS |
 
-Los skips no corresponden a C2: son gates condicionados por entorno ya
+Los skips no corresponden a C: son gates condicionados por entorno ya
 declarados por la suite. Entre el commit de código verificado `cf6db65` y el
 commit ejecutado `5584602` sólo se incorporaron documentación y resultados de
-preflight; el binario C2 no cambió.
+preflight; el binario C no cambió.
 
 ## Runs productivos
 
@@ -37,7 +37,7 @@ receipts y verificaciones externas están en `evidence/c2-stability/run-1` y
 ## Decisión de granularidad
 
 La planificación viva produjo candidate tree hashes diferentes, lo cual está
-permitido por el gate. C2 evaluó cuatro unidades en cada repetición y eligió la
+permitido por el gate. C evaluó cuatro unidades en cada repetición y eligió la
 misma frontera observable: una hoja. Para el composite raíz, la ventaja de
 dividir fue negativa (`-0.2005` y `-0.2271`) frente al mínimo `0.15`. La
 explicación persistida identifica beneficio, costo, rasgos, evidencia y razón de
@@ -45,6 +45,6 @@ descarte.
 
 ## Disposición
 
-C2-G2 es PASS: la ruta productiva entrega, valida, persiste y reproduce la
-decisión C2 en dos ejecuciones reales verificadas. El gate no se interpreta como
-ventaja comparativa; esa afirmación exige Warehouse Final y el protocolo A/B/C2.
+C-G2 es PASS: la ruta productiva entrega, valida, persiste y reproduce la
+decisión C en dos ejecuciones reales verificadas. El gate no se interpreta como
+ventaja comparativa; esa afirmación exige Warehouse Final y el protocolo A/B/C.

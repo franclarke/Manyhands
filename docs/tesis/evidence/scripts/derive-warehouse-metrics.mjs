@@ -54,7 +54,7 @@ assessments.sort(compareRows);
 await writeFile(join(outDir, "runs.csv"), toCsv(runs, RUN_COLUMNS), "utf8");
 await writeFile(join(outDir, "strategy-assessments.csv"), toCsv(assessments, ASSESSMENT_COLUMNS), "utf8");
 await writeFile(join(outDir, "longitudinal-results.md"), markdownFor(runs.filter((run) => run.series === "longitudinal"), "Longitudinal"), "utf8");
-await writeFile(join(outDir, "comparison-results.md"), markdownFor(runs.filter((run) => run.series === "comparison"), "Comparación A/B/C2"), "utf8");
+await writeFile(join(outDir, "comparison-results.md"), markdownFor(runs.filter((run) => run.series === "comparison"), "Comparación A/B/C"), "utf8");
 await writeFile(join(outDir, "wall-clock.svg"), figureFor(runs), "utf8");
 process.stdout.write(`derived ${runs.length} runs and ${assessments.length} assessments\n`);
 

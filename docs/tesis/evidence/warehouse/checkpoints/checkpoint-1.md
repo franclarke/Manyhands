@@ -1,4 +1,4 @@
-# Checkpoint 1 — C2 core
+# Checkpoint 1 — C core
 
 > **Fecha:** 2026-07-24 · **Tasks:** 1–4 · **Estado:** PASS.
 
@@ -6,10 +6,10 @@
 
 | Task | Commit | Resultado |
 |---|---|---|
-| 1 | `74f001f` | ADR 0012, target C2, ledger y separación pilot/final |
+| 1 | `74f001f` | ADR 0012, target C, ledger y separación pilot/final |
 | 2 | `950dd18` | bytes/líneas exactos en ambos indexadores y cache profile nuevo |
 | 3 | `e94b4b8` | perfiles de contexto medidos y estimator versionado |
-| 4 | `d9e5b41` | selector bottom-up A/B/C2 y remapeo de relaciones |
+| 4 | `d9e5b41` | selector bottom-up A/B/C y remapeo de relaciones |
 
 ## Evidencia TDD
 
@@ -46,7 +46,7 @@ Resultado:
 - overlap, seams y duplicación penalizan la división;
 - una propuesta unaria no cuenta como split;
 - una hoja inviable sin corte pide `semantic_replan`;
-- C2 puede expandir una rama y conservar otra;
+- C puede expandir una rama y conservar otra;
 - A conserva la raíz y B usa la frontera semántica más fina;
 - no se crean keys ni paths que el Planner no propuso;
 - input idéntico produce assessment y candidate hash idénticos;
@@ -54,6 +54,6 @@ Resultado:
 
 ## Límite del checkpoint
 
-C2 es todavía un componente puro. No se declara productivo ni se usa como
+C es todavía un componente puro. No se declara productivo ni se usa como
 evidencia de tesis hasta cerrar el siguiente bloque: replan, ownership de
 aceptación, eventos/replay y configuración por run.

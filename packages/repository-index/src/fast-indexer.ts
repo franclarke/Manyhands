@@ -34,7 +34,7 @@ import type {
 const FAST_INDEX_CACHE_SCHEMA_VERSION = 2 as const;
 // Profile bump invalidates caches produced before RepositoryFileIndex carried
 // byteSize/lineCount. Historical payloads remain schema-readable, but current
-// snapshots must not silently reuse entries without the C2 measurements.
+// snapshots must not silently reuse entries without the policy measurements.
 const INDEXER_PROFILE = "exports-only-v2-size-metrics" as const;
 const INDEXER_NAME = "ripgrep-native-v2";
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js"]);

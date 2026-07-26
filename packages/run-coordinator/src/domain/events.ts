@@ -104,7 +104,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   }).strict()),
   event("planning.granularity_strategy_selected", z.object({
     policyVersion: NonEmptyStringSchema,
-    condition: z.enum(["A", "B", "C2"]),
+    condition: z.enum(["A", "B", "C", "C2"]),
     candidateTreeHash: NonEmptyStringSchema,
     candidateTree: z.object({
       root: z.unknown(),

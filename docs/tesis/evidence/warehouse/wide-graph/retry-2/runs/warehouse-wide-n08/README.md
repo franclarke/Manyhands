@@ -5,7 +5,7 @@ El cell `warehouse-wide-n08` partió de W1
 `5507c3b7-7a29-4936-8981-6af76bfb8e7d` completó y publicó
 `73cc39db3a916effb73d2f1a34815d04cc1736ac`.
 
-`run.granularity-metrics.json` fija condición C2 y un árbol de profundidad 1
+`run.granularity-metrics.json` fija condición C y un árbol de profundidad 1
 con once hojas. `run.events.v2.jsonl` conserva sus validaciones, la reparación
 de integración, `final_candidate.verified` y `delivery.published`.
 

@@ -1,11 +1,11 @@
-# Estabilidad C2
+# Estabilidad C
 
 Estado: **PASS**.
 
 ## Configuración congelada para el gate
 
 - ManyHands: `55846028fac63fd523ee784448b899bed5ecfa51`;
-- política: `adaptive-utility/2.0.0-pilot`, condición `C2`;
+- política: `adaptive-utility/2.0.0-pilot`, condición `C`;
 - target base: `1da878de6edd38cefb1ea4d8ceecdceea0bb6acc`;
 - objetivo, modelo `gpt-5.5`, esfuerzo `high` y configuración de ejecución:
   idénticos en ambas repeticiones;
@@ -23,7 +23,7 @@ matrices de evidencia registran cinco criterios satisfechos y outcome
 `verified` sobre los commits entregados. Los receipts confirman que ambas
 entregas partieron de la misma base.
 
-C2 no forzó fan-out. El composite raíz fue divisible, pero eligió hoja porque
+C no forzó fan-out. El composite raíz fue divisible, pero eligió hoja porque
 `splitAdvantage` fue `-0.2005` y `-0.2271`, por debajo del margen mínimo `0.15`.
 Los candidate tree hashes difieren porque la planificación viva produjo nombres
 y evidencia de candidato no idénticos; la decisión observable de política fue
@@ -43,7 +43,7 @@ de cada run.
 
 ## Alcance de la conclusión
 
-Este gate demuestra repetibilidad de entrega y explicación C2 sobre una tarea
-mediana. No demuestra que C2 supere a una condición alternativa ni que el
+Este gate demuestra repetibilidad de entrega y explicación C sobre una tarea
+mediana. No demuestra que C supere a una condición alternativa ni que el
 Planner produzca topologías idénticas. Esa pregunta queda reservada al estudio
 Warehouse posterior al freeze.

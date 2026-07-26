@@ -6,7 +6,7 @@ Estado: **completed**.
 
 - seed técnico externo `0f87e457ae154385cbb81bb6e3541a3533b78761`,
   sin archivos de dominio y estable después de install congelado;
-- protocolos longitudinal y A/B/C2 escritos antes de W1 Pilot;
+- protocolos longitudinal y A/B/C escritos antes de W1 Pilot;
 - prompts acumulativos W1–W8 con goal, aceptación, constraints y oracle id;
 - ocho oráculos externos con scripts y core hasheados;
 - manifest de assets con hashes SHA-256 de los ocho prompts.

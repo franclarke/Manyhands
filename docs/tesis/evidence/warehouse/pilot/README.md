@@ -2,7 +2,7 @@
 
 Estado: **iniciado; primer W1 invalidado y no adoptado**.
 
-Esta construcción permite corregir C2, ManyHands, prompts y drivers. Sus runs se
+Esta construcción permite corregir C, ManyHands, prompts y drivers. Sus runs se
 conservan como evidencia formativa y no responden las preguntas finales de la
 tesis. El piloto sólo cierra cuando W1–W8 pasan sus oráculos externos.
 
@@ -64,7 +64,7 @@ espera a la recuperación de cuota del 2026-07-30.
 
 La serie `series-3` no llegó a producir un breakdown. Sus tres planning attempts
 recibieron del Codex CLI el mismo rechazo de cuota y cero bytes de stdout. No
-hubo selección C2, agente de código ni entrega. Se clasifica como interrupción
+hubo selección C, agente de código ni entrega. Se clasifica como interrupción
 de capacidad externa, no como resultado del sistema bajo estudio. Véase
 [`interruptions/codex-usage-limit-2026-07-25.md`](interruptions/codex-usage-limit-2026-07-25.md).
 
@@ -73,7 +73,7 @@ de capacidad externa, no como resultado del sistema bajo estudio. Véase
 Las series `4` a `7` corrieron sobre Claude Code `sonnet`. Produjeron tres
 defectos productivos de planning, todos corregidos con TDD y documentados en
 `defects/`. `series-7` superó planning por primera vez y persistió una decisión
-C2 real, pero su agente agotó el límite de sesión del proveedor durante la
+C real, pero su agente agotó el límite de sesión del proveedor durante la
 ejecución; véase `interruptions/claude-session-limit-2026-07-25.md`.
 
 Resultado acumulado del piloto: **0/8 incrementos verificados**.

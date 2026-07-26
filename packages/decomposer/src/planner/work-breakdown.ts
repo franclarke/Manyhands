@@ -23,7 +23,7 @@ export interface WorkBreakdownPlannerInput {
     evidence: PlannerRepositoryEvidence[];
   };
   questionAnswers?: Record<string, string>;
-  /** Deterministic C2 feedback requesting a better semantic alternative. */
+  /** Deterministic C feedback requesting a better semantic alternative. */
   granularityFeedback?: GranularityReplanFeedback;
 }
 

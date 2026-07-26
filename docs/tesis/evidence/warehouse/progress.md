@@ -1,4 +1,4 @@
-# Progreso — C2 + Warehouse
+# Progreso — C + Warehouse
 
 > **Plan rector:** [`../../../plans/2026-07-24-c2-warehouse-thesis-program.md`](../../../plans/2026-07-24-c2-warehouse-thesis-program.md)
 > · **Inicio:** 2026-07-24 · **Estado general:** en ejecución.
@@ -8,14 +8,14 @@
 - Un checkpoint requiere documentación, tests/comandos registrados y commit.
 - Los cambios conductuales siguen TDD rojo → verde → refactor.
 - `pilot` y `final` nunca comparten runs de versiones diferentes.
-- Ningún resultado C2 se incorpora a la tesis antes del freeze y los gates.
+- Ningún resultado C se incorpora a la tesis antes del freeze y los gates.
 - No se hace push.
 
 ## Checkpoints
 
 | Checkpoint | Tasks | Estado | Commit | Verificación |
 |---|---:|---|---|---|
-| 1 — C2 core | 1–4 | **completed** | `74f001f`, `950dd18`, `e94b4b8`, `d9e5b41` | 45 tests PASS + 2 package typechecks |
+| 1 — C core | 1–4 | **completed** | `74f001f`, `950dd18`, `e94b4b8`, `d9e5b41` | 45 tests PASS + 2 package typechecks |
 | 2 — Productive integration | 5–8 | **completed** | `bf0ee82`, `d96cc24`, `a424ade`, `7f7d9b4`, `18e6aab` | 50 tests PASS + 3 typechecks + 2 builds |
 | 3 — Metrics and stability | 9–10 | **completed** | `cf6db65`, `5584602`, commit de cierre | 2/2 entregas + clones limpios |
 | 4 — Warehouse assets and drivers | 11–12 | **completed** | `550f81c`, `c0d4be8` | 26 tests + seed verify + 8-cell dry-run |
@@ -29,7 +29,7 @@
 | Task | Estado | Evidencia |
 |---|---|---|
 | 9 — métricas no censuradas | **completed** | `cf6db65`; fixtures de fallo/éxito y rederivación G5 |
-| 10 — gates y estabilidad | **completed** | C2-G1/G2 PASS; 2/2 runs reales entregados y verificados |
+| 10 — gates y estabilidad | **completed** | C-G1/G2 PASS; 2/2 runs reales entregados y verificados |
 
 ## Registro cronológico
 
@@ -37,25 +37,25 @@
 
 - Se aceptó ADR 0012 como target de implementación piloto.
 - Se preservó C1 como ruta histórica y G5 como resultado formativo negativo.
-- Se fijó que Tasks 1–4 cierran juntas antes de integrar C2 al planning
+- Se fijó que Tasks 1–4 cierran juntas antes de integrar C al planning
   productivo.
 - Siguiente evidencia: regresión roja para métricas de tamaño del índice.
 
 ### 2026-07-24 — Cierre del checkpoint 1
 
-- Task 1: ADR 0012, separación C1/C2 y estructura de evidencia creadas.
+- Task 1: ADR 0012, separación C1/C y estructura de evidencia creadas.
 - Task 2: `RepositoryFileIndex` incorpora `byteSize` y `lineCount`; el perfil de
   caché rápida se elevó a `exports-only-v2-size-metrics` para no reutilizar
   silenciosamente índices viejos sin medición.
 - Task 3: estimator `utf8-bytes-div-4/1.0.0` implementado como función pura; los
   paths nuevos y snapshots históricos sin tamaño quedan explícitamente
   inciertos.
-- Task 4: selector C2 bottom-up implementado con condiciones A/B/C2, selección
+- Task 4: selector C bottom-up implementado con condiciones A/B/C, selección
   parcial de subtrees, hash determinista y prohibición de units sintéticas.
 - Verificación combinada: 45 tests PASS, 1 performance test omitido por su gate
   de entorno, typecheck de `repository-index` y `decomposer` PASS.
 - Evidencia detallada: [`checkpoints/checkpoint-1.md`](checkpoints/checkpoint-1.md).
-- Siguiente bloque: Tasks 5–8; C2 aún no gobierna la ruta productiva.
+- Siguiente bloque: Tasks 5–8; C aún no gobierna la ruta productiva.
 
 ### 2026-07-24 — Cierre del checkpoint 2
 
@@ -63,9 +63,9 @@
   un único replan semántico cuando la hoja medida es inviable.
 - Task 6: cada criterio del usuario tiene un único owner; las obligaciones
   técnicas locales preservan validabilidad sin inflar la vara entre condiciones.
-- Task 7: la selección C2 es un evento durable, replayable y visible con
+- Task 7: la selección C es un evento durable, replayable y visible con
   beneficio, costo, features, límites, evidencia y rationale.
-- Task 8: A/B/C1/C2 son configuración explícita; C2 es el default y el replay
+- Task 8: A/B/C1/C son configuración explícita; C es el default y el replay
   bloqueado valida hash, snapshot, goal y aceptación.
 - Verificación combinada: 50 tests, tres typechecks y dos builds PASS.
 - Evidencia detallada: [`checkpoints/checkpoint-2.md`](checkpoints/checkpoint-2.md).
@@ -75,11 +75,11 @@
 
 - Task 9: la derivación conserva métricas de runs fallidos y distingue cero,
   `unavailable` y `not_applicable`; G5 histórico rederiva sus doce celdas.
-- Task 10: dos ejecuciones C2 secuenciales sobre el mismo objetivo, commit y
+- Task 10: dos ejecuciones C secuenciales sobre el mismo objetivo, commit y
   base terminaron `completed`, sin reparaciones, con receipts confirmados.
 - Ambos commits entregados pasaron instalación, tests y typecheck en clones
   limpios independientes.
-- C2 eligió una hoja en ambas repeticiones por ventaja de split negativa. La
+- C eligió una hoja en ambas repeticiones por ventaja de split negativa. La
   planificación viva produjo hashes candidatos distintos; el gate no exige
   identidad textual de topología.
 - Evidencia detallada: [`checkpoints/checkpoint-3.md`](checkpoints/checkpoint-3.md).
@@ -109,7 +109,7 @@
   confirmó además nesting y prefijo hash incorrectos. Se agregó preservación
   verbatim de secciones contractuales; no se adoptó.
 - Tercer W1: no evaluable. Los tres attempts de planning fueron rechazados por
-  cuota del proveedor antes de emitir un candidate. No hubo decisión C2 ni
+  cuota del proveedor antes de emitir un candidate. No hubo decisión C ni
   ejecución.
 - Estado científico: 0/8 incrementos verificados; ninguna entrega fallida es
   base de W2. Task 13 sigue abierta.
@@ -149,7 +149,7 @@ por tres causas distintas y dos de ellas eran detectables sin gastar un run.
   como cota inferior, siendo ambos variables del estudio; el envelope de Claude
   Code reporta tokens exactos y `total_cost_usd`, verificado contra el CLI real.
   Esto además levanta el bloqueo de cuota: **no hay que esperar al 2026-07-30**.
-- **Matriz controlada reducida de 27 a 12 runs** (`S` y `L`, A/B/C2, 2
+- **Matriz controlada reducida de 27 a 12 runs** (`S` y `L`, A/B/C, 2
   repeticiones) con regla de discrepancia preregistrada y sin repetición de
   desempate. Justificación en §6.3 del plan rector.
 
@@ -176,7 +176,7 @@ por tres causas distintas y dos de ellas eran detectables sin gastar un run.
     renderizar el contrato desde el specimen —41 líneas y 1212 caracteres— y
     ahora exige verbatim sólo los bloques con fences.
 - `series-7` es el primer run del piloto que **supera planning**: plan aprobado,
-  ejecución iniciada y decisión C2 persistida sobre el instrumento endurecido
+  ejecución iniciada y decisión C persistida sobre el instrumento endurecido
   (`totalLeafCount=1`, `maxGraphDepth=0`, `minimumAdvantage=0.15`).
 - Se detuvo en `waiting_for_input` porque el agente de código agotó el límite de
   sesión de Claude Code. Interrupción externa, no defecto del sistema bajo

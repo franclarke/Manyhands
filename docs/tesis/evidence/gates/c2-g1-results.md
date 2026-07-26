@@ -1,13 +1,13 @@
-# C2-G1 — selector, señales y contratos
+# C-G1 — selector, señales y contratos
 
 > **Fecha:** 2026-07-24 · **Commit:** `cf6db65` · **Resultado:** PASS.
 
 ## Alcance
 
-C2-G1 verifica que el instrumento determinista existe antes de usarlo en runs:
+C-G1 verifica que el instrumento determinista existe antes de usarlo en runs:
 
 - contexto medido desde snapshots versionados;
-- selector bottom-up A/B/C2 sin cortes sintéticos;
+- selector bottom-up A/B/C sin cortes sintéticos;
 - replan semántico acotado;
 - ownership no duplicado de aceptación;
 - métricas que conservan fallos y distinguen cero, unavailable y not applicable.
@@ -18,10 +18,10 @@ C2-G1 verifica que el instrumento determinista existe antes de usarlo en runs:
 - `tests/thesis-study-metrics.test.ts`: 3 tests PASS.
 - Rederivación histórica: 12 celdas G5 regeneradas sin cambiar el lector de
   journals ni perder compatibilidad.
-- C2 compilado: `packages/decomposer/dist/index.js` contiene
+- C compilado: `packages/decomposer/dist/index.js` contiene
   `adaptive-utility/2.0.0-pilot`.
 
 ## Conclusión
 
-El componente y su medición satisfacen C2-G1. Este gate no afirma estabilidad
+El componente y su medición satisfacen C-G1. Este gate no afirma estabilidad
 de runs reales ni ventaja experimental.

@@ -10,12 +10,12 @@ import {
   type WorkUnit
 } from "@manyhands/decomposer";
 
-describe("C2 utility strategy selection", () => {
+describe("C utility strategy selection", () => {
   it("keeps a viable small task as one leaf", () => {
     const breakdown = candidate(leaf("small", ["src/small.ts"], ["intent-a"]));
 
     const result = selectGranularityStrategy({
-      condition: "C2",
+      condition: "C",
       breakdown,
       repositorySnapshot: snapshot({ "src/small.ts": 400 }),
       config: PILOT_UTILITY_POLICY
@@ -34,7 +34,7 @@ describe("C2 utility strategy selection", () => {
     ], ["intent-a", "intent-b"]));
 
     const result = selectGranularityStrategy({
-      condition: "C2",
+      condition: "C",
       breakdown,
       repositorySnapshot: snapshot({ "src/domain.ts": 4_000, "src/web.ts": 4_000 }),
       config: PILOT_UTILITY_POLICY
@@ -66,7 +66,7 @@ describe("C2 utility strategy selection", () => {
     );
 
     const result = selectGranularityStrategy({
-      condition: "C2",
+      condition: "C",
       breakdown,
       repositorySnapshot: snapshot({ "src/shared.ts": 4_000 }),
       config: PILOT_UTILITY_POLICY
@@ -85,7 +85,7 @@ describe("C2 utility strategy selection", () => {
     ], ["intent-a"]));
 
     const result = selectGranularityStrategy({
-      condition: "C2",
+      condition: "C",
       breakdown,
       repositorySnapshot: snapshot({ "src/large.ts": 20_000 }),
       config: { ...PILOT_UTILITY_POLICY, maxLeafContextTokens: 1_000 }
@@ -119,7 +119,7 @@ describe("C2 utility strategy selection", () => {
     ], ["intent-a", "intent-b"]));
 
     const result = selectGranularityStrategy({
-      condition: "C2",
+      condition: "C",
       breakdown,
       // Nothing exists yet: reading is free, producing is not.
       repositorySnapshot: snapshot({}),
@@ -136,7 +136,7 @@ describe("C2 utility strategy selection", () => {
     ], ["intent-a"]));
 
     const result = selectGranularityStrategy({
-      condition: "C2",
+      condition: "C",
       breakdown,
       repositorySnapshot: snapshot({}),
       config: { ...PILOT_UTILITY_POLICY, maxLeafPlannedPaths: 12 }
@@ -158,7 +158,7 @@ describe("C2 utility strategy selection", () => {
     ], ["intent-a", "intent-b", "intent-c"]));
 
     const result = selectGranularityStrategy({
-      condition: "C2",
+      condition: "C",
       breakdown,
       repositorySnapshot: snapshot({
         "src/domain-a.ts": 400,
@@ -209,7 +209,7 @@ describe("C2 utility strategy selection", () => {
       leaf("b", ["src/b.ts"], ["intent-b"])
     ], ["intent-a", "intent-b"]));
     const input = {
-      condition: "C2" as const,
+      condition: "C" as const,
       breakdown,
       repositorySnapshot: snapshot({ "src/a.ts": 4_000, "src/b.ts": 4_000 }),
       config: PILOT_UTILITY_POLICY
@@ -229,7 +229,7 @@ describe("C2 utility strategy selection", () => {
     const invalid = { ...PILOT_UTILITY_POLICY, minimumAdvantage: Number.NaN } as UtilityPolicyConfig;
 
     expect(() => selectGranularityStrategy({
-      condition: "C2",
+      condition: "C",
       breakdown,
       repositorySnapshot: snapshot({ "src/small.ts": 400 }),
       config: invalid
@@ -311,7 +311,7 @@ describe("C policy — concurrency and coupling of a cut", () => {
 
 function assessRoot(breakdown: WorkBreakdown) {
   const result = selectGranularityStrategy({
-    condition: "C2",
+    condition: "C",
     breakdown,
     repositorySnapshot: snapshot({}),
     config: PILOT_UTILITY_POLICY

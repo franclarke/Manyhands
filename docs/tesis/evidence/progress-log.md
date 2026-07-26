@@ -290,65 +290,65 @@
     Presentación a **24 diapositivas**, 0 errores, con las slides del resultado
     falsado y del defecto de medición, más notas del orador.
 
-### 2026-07-24 — Programa C2 + Warehouse, checkpoint 1
+### 2026-07-24 — Programa C + Warehouse, checkpoint 1
 
 43. **Checkpoint 1 = PASS.** Se aceptó ADR 0012 y se implementó el núcleo puro
-    de C2 sin conectarlo todavía a producción: métricas exactas de bytes/líneas
-    en el índice, estimator de contexto versionado y selector bottom-up A/B/C2.
+    de C sin conectarlo todavía a producción: métricas exactas de bytes/líneas
+    en el índice, estimator de contexto versionado y selector bottom-up A/B/C.
     Verificación: 45 tests verdes y typechecks de `repository-index` y
     `decomposer`. Evidencia en
     `evidence/warehouse/checkpoints/checkpoint-1.md`.
 44. **Límite explícito:** CLAIM-111/112 sólo están implementados como
     componentes. El siguiente checkpoint debe demostrar replan, criterios no
-    duplicados, eventos replayables y configuración productiva antes de que C2
+    duplicados, eventos replayables y configuración productiva antes de que C
     pueda aparecer como resultado de tesis.
 
-### 2026-07-24 — Programa C2 + Warehouse, checkpoint 2
+### 2026-07-24 — Programa C + Warehouse, checkpoint 2
 
-45. **Checkpoint 2 = PASS.** C2 gobierna la ruta productiva como default; C1
+45. **Checkpoint 2 = PASS.** C gobierna la ruta productiva como default; C1
     queda explícito para compatibilidad histórica. La política admite un único
     replan semántico, persiste evidencia completa y se explica desde replay.
 46. **La contaminación de aceptación queda corregida en diseño.** Los mismos
-    cinco intents del usuario se compilan una vez bajo A, B y C2; cada nodo
+    cinco intents del usuario se compilan una vez bajo A, B y C; cada nodo
     conserva sólo una obligación técnica local cuando no es owner.
 47. **Candidate replay queda aislado como control experimental.** Sólo omite el
     Planner cuando hash, snapshot, goal y aceptación coinciden; la construcción
     longitudinal seguirá usando planificación viva.
 48. **Verificación:** 50 tests enfocados, typechecks de `decomposer`,
     `run-coordinator` y web, y builds de ambos packages PASS. Evidencia en
-    `evidence/warehouse/checkpoints/checkpoint-2.md`. C2-G2 aún requiere Task 10
+    `evidence/warehouse/checkpoints/checkpoint-2.md`. C-G2 aún requiere Task 10
     y dos runs reales de estabilidad.
 
-### 2026-07-24 — C2-G1 y preflight de C2-G2
+### 2026-07-24 — C-G1 y preflight de C-G2
 
-49. **C2-G1 = PASS** sobre `cf6db65`: selector, señales, contratos y derivación
+49. **C-G1 = PASS** sobre `cf6db65`: selector, señales, contratos y derivación
     no censurada pasan sus regresiones; el G5 histórico rederiva 12 celdas.
-50. **Checks locales de C2-G2 = PASS:** 199 archivos/1153 tests, 12 typechecks
+50. **Checks locales de C-G2 = PASS:** 199 archivos/1153 tests, 12 typechecks
     de packages, typecheck web, build de packages y build productivo web.
-51. **C2-G2 sigue INCOMPLETE.** El preflight midió 8,71 GB libres frente al
+51. **C-G2 sigue INCOMPLETE.** El preflight midió 8,71 GB libres frente al
     mínimo de 25 GB. No se iniciaron los dos runs reales y no se borró ni movió
     evidencia o pools sin autorización.
 
-### 2026-07-25 — Cierre de C2-G2 y checkpoint 3
+### 2026-07-25 — Cierre de C-G2 y checkpoint 3
 
 52. **Capacidad operativa restablecida.** Francisco liberó espacio y el
     preflight superó el mínimo de 25 GB sin borrar automáticamente evidencia ni
     pools del usuario.
-53. **C2-G2 = PASS sobre ManyHands `5584602`.** Dos runs secuenciales con el
+53. **C-G2 = PASS sobre ManyHands `5584602`.** Dos runs secuenciales con el
     mismo objetivo, configuración y base `1da878d` terminaron `completed`; los
     journals pliegan correctamente, los receipts están confirmados y las dos
     matrices satisfacen 5/5 criterios.
 54. **Verificación externa real.** Los commits `f86c5c7` y `cf0810b` se
     instalaron y verificaron en clones limpios: 9/10 tests respectivamente y
     typecheck PASS. No hubo eventos de fallo ni reparación.
-55. **Decisión estable, no fan-out forzado.** C2 eligió una hoja en ambas
+55. **Decisión estable, no fan-out forzado.** C eligió una hoja en ambas
     repeticiones porque el split del composite raíz tuvo ventajas `-0.2005` y
     `-0.2271`, inferiores al mínimo `0.15`. Los hashes candidatos difieren por
     variación del Planner y se preservan como evidencia, no se normalizan.
 56. **Checkpoint 3 = completed.** CLAIM-111 queda implementado y con estabilidad
     productiva; su ventaja comparativa continúa pendiente de Warehouse Final.
 
-### 2026-07-25 — Programa C2 + Warehouse, checkpoint 4
+### 2026-07-25 — Programa C + Warehouse, checkpoint 4
 
 57. **Seed reproducible fijado.** El repositorio externo
     `warehouse-control-tower-seed` quedó en `0f87e45`, con cero código de dominio

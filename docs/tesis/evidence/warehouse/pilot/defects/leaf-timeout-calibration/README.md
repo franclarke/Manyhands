@@ -23,11 +23,11 @@ absorbió, pero conviene registrarlo como costo real del executor.
 
 ## Causa
 
-El valor 600000 ms venía de los runs de estabilidad C2, cuyo target era un
+El valor 600000 ms venía de los runs de estabilidad C, cuyo target era un
 repositorio existente de unas 1000 líneas donde cada hoja hacía un cambio
 acotado. W1 no es eso: construye un proyecto entero desde un seed vacío
 —toolchain, dominio, escenario, la sonda pública y sus tests— en una sola hoja,
-porque C2 evaluó que dividir no compensaba.
+porque C evaluó que dividir no compensaba.
 
 Además el techo de hoja (600 s) estaba por debajo del de integración (900 s), de
 modo que construir el proyecto completo tenía menos presupuesto que integrar sus
@@ -44,7 +44,7 @@ valor que el piloto deje asentado se congela para la serie final.
 
 ## Qué no se concluye
 
-Este run no dice que la hoja única de C2 fuera correcta ni incorrecta. Dice que
+Este run no dice que la hoja única de C fuera correcta ni incorrecta. Dice que
 la medición estaba truncada: con el techo anterior no era posible distinguir
 "la frontera elegida era demasiado grande" de "el reloj era demasiado corto".
 Recién con un techo que no trunca se puede leer esa señal.

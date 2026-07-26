@@ -10,7 +10,7 @@ W1 (`71f61c9efa222103ca2fb2f67692434ab493d75c`). El run
 - `run.events.v2.jsonl` registra siete candidatos de hoja, sus validaciones y
   adopciones, la reparación de integración, `final_candidate.verified` y
   `delivery.published`.
-- `run.granularity-metrics.json` fija política C2, hash del árbol candidato y
+- `run.granularity-metrics.json` fija política C, hash del árbol candidato y
   métricas: profundidad máxima 1, siete hojas y factor de ramificación medio 7.
 - `result.json` conserva el receipt de entrega y el SHA final.
 - `oracle-result.json` es el resultado del oráculo ejecutado desde un clon

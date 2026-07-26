@@ -34,14 +34,14 @@ esta sesión se ejercitaron y ninguna volvió a disparar:
 - `plannedPaths` no reincidió en `package.json`;
 - la regla de fidelidad aceptó el contrato renderizado.
 
-C2 emitió una decisión real y persistida sobre el instrumento endurecido:
+C emitió una decisión real y persistida sobre el instrumento endurecido:
 `totalLeafCount = 1`, `maxGraphDepth = 0`, `minimumAdvantage = 0.15`,
 `candidateTreeHash = sha256:94852cdc…`. Colapsó a hoja única, que es la
 decisión esperada para el primer incremento sobre un seed vacío.
 
 ## Interpretación
 
-La interrupción ocurrió en el agente de código, no en ManyHands ni en C2. No
+La interrupción ocurrió en el agente de código, no en ManyHands ni en C. No
 cuenta como fracaso de W1, no modifica el denominador experimental y no
 justifica cambios de código. La entrega no existe: **no hay commit y no se
 adoptó nada**.

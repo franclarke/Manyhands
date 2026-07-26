@@ -756,17 +756,17 @@ como registro del estado en G1.
 
 ---
 
-## Programa C2 + Warehouse (iniciado 2026-07-24)
+## Programa C + Warehouse (iniciado 2026-07-24)
 
 > Esta sección registra trabajo nuevo sin reescribir el resultado final de G5.
-> Hasta que cada gate cierre, los ítems C2 permanecen `planned` o `partial` y no
+> Hasta que cada gate cierre, los ítems C permanecen `planned` o `partial` y no
 > respaldan claims de la tesis.
 
 | ID | Claim candidato | Estado | Evidencia requerida |
 |---|---|---|---|
-| CLAIM-111 | C2 selecciona una frontera semántica por utilidad esperada sin fabricar particiones por paths | **implemented; estabilidad PASS; comparación pendiente** | selector puro, ruta productiva, replan acotado, evento replayable e inspector; 2/2 runs reales entregados y verificados; falta estudio final A/B/C2 |
-| CLAIM-112 | La masa de contexto usada por C2 se deriva de bytes versionados del snapshot y declara incertidumbre para paths no medidos | **implemented como componente** | commits `950dd18` + `e94b4b8`; índice exacto y estimator determinista |
-| CLAIM-113 | Los criterios de aceptación del usuario no se multiplican por la topología seleccionada | **implemented; evidencia final pendiente** | `acceptance-allocation.ts`; cinco intents únicos bajo A/B/C2 y ownership por deepest owner/LCA en `contract-acceptance-allocation.test.ts` |
+| CLAIM-111 | C selecciona una frontera semántica por utilidad esperada sin fabricar particiones por paths | **implemented; estabilidad PASS; comparación pendiente** | selector puro, ruta productiva, replan acotado, evento replayable e inspector; 2/2 runs reales entregados y verificados; falta estudio final A/B/C |
+| CLAIM-112 | La masa de contexto usada por C se deriva de bytes versionados del snapshot y declara incertidumbre para paths no medidos | **implemented como componente** | commits `950dd18` + `e94b4b8`; índice exacto y estimator determinista |
+| CLAIM-113 | Los criterios de aceptación del usuario no se multiplican por la topología seleccionada | **implemented; evidencia final pendiente** | `acceptance-allocation.ts`; cinco intents únicos bajo A/B/C y ownership por deepest owner/LCA en `contract-acceptance-allocation.test.ts` |
 | CLAIM-114 | Warehouse Control Tower puede construirse incrementalmente con una única versión congelada de ManyHands | **instrumento implementado; construcción pendiente** | seed y assets W1–W8 hasheados, driver y oráculos externos verificados; faltan Pilot, freeze y Final |
 
 El G5 anterior conserva su interpretación: C1 no mostró ventaja sobre A en el

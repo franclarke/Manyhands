@@ -57,8 +57,8 @@ for (const increment of INCREMENTS.slice(state.completed.length)) {
   const configPath = join(configDir, `${increment}.json`);
   const config = {
     cellId: `warehouse-${mode}-${increment.toLowerCase()}`,
-    condition: "C2",
-    granularityCondition: "C2",
+    condition: "C",
+    granularityCondition: "C",
     taskId: increment,
     workspaceName: `warehouse-${mode}`,
     baseUrl: argument("--base-url") ?? "http://127.0.0.1:3111",

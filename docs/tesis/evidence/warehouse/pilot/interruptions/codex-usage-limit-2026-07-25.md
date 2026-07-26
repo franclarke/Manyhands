@@ -15,7 +15,7 @@ Clasificación: **interrupción externa; run no evaluable**.
 ## Interpretación
 
 El run no ejercitó la nueva validación de fidelidad: el modelo no devolvió un
-candidate. Tampoco ejercitó C2 ni execution. Por eso no cuenta como fracaso W1,
+candidate. Tampoco ejercitó C ni execution. Por eso no cuenta como fracaso W1,
 no modifica el denominador experimental y no justifica cambios de código.
 
 ## Reanudación

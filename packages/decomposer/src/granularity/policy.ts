@@ -59,7 +59,7 @@ export const FINE_SPLIT_POLICY: GranularityPolicy = Object.freeze({
   versionSuffix: "+condB"
 });
 
-export const GRANULARITY_CONDITIONS = ["A", "B", "C1", "C2"] as const;
+export const GRANULARITY_CONDITIONS = ["A", "B", "C"] as const;
 export type GranularityCondition = (typeof GRANULARITY_CONDITIONS)[number];
 
 const LEGACY_POLICY_BY_CONDITION: Record<"A" | "B" | "C1", GranularityPolicy> = {
@@ -68,10 +68,9 @@ const LEGACY_POLICY_BY_CONDITION: Record<"A" | "B" | "C1", GranularityPolicy> = 
   C1: ADAPTIVE_GRANULARITY_POLICY
 };
 
-/** Maps historical C records and absent productive configuration explicitly. */
+/** Maps historical C1/C2 records onto the current productive C policy. */
 export function resolveGranularityCondition(condition: string | undefined): GranularityCondition {
-  if (condition === undefined) return "C2";
-  if (condition === "C") return "C1";
+  if (condition === undefined || condition === "C" || condition === "C1" || condition === "C2") return "C";
   if (GRANULARITY_CONDITIONS.includes(condition as GranularityCondition)) return condition as GranularityCondition;
   throw new Error(`Unknown granularity condition "${condition}"; expected one of ${GRANULARITY_CONDITIONS.join(", ")}.`);
 }

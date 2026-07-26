@@ -11,11 +11,11 @@ import {
 } from "@manyhands/decomposer";
 
 describe("acceptance intent allocation", () => {
-  it("compiles each user intent once across A, B and C2 while keeping every node validatable", () => {
+  it("compiles each user intent once across A, B and C while keeping every node validatable", () => {
     const breakdown = fiveIntentBreakdown();
     const repositorySnapshot = snapshot();
 
-    for (const condition of ["A", "B", "C2"] as const) {
+    for (const condition of ["A", "B", "C"] as const) {
       const selected = selectGranularityStrategy({
         condition,
         breakdown,

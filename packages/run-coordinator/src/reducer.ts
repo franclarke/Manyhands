@@ -74,7 +74,7 @@ export interface GranularityStrategyAssessmentProjection {
 
 export interface GranularityStrategyProjection {
   policyVersion: string;
-  condition: "A" | "B" | "C2";
+  condition: "A" | "B" | "C" | "C2";
   candidateTreeHash: string;
   candidateSourceHash?: string;
   config: { minimumAdvantage: number; maxLeafContextTokens: number; maxLeafScopePaths: number };
