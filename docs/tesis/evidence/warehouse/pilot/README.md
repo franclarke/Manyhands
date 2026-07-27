@@ -105,3 +105,28 @@ ni contra la política C; véase
 
 Ninguna de las dos correcciones divide W2. El colapso de ese incremento sigue
 **sin causa suficiente identificada**, y ése es el estado honesto del piloto.
+
+## Grafos anchos — resultados y dos defectos de validación
+
+El barrido ancho sobre la entrega verificada de W1 produjo evidencia real:
+**N=4 y N=8 entregaron y pasaron su oráculo externo**; N=16 verificó sus 19
+hojas y murió en la integración de la raíz.
+
+De ese N=16 salieron dos defectos de validación, ambos corregidos con TDD, y un
+resultado adverso sobre la política que **no** se corrigió:
+
+- [`seam-bindings-escape-cycle-detection`](defects/seam-bindings-escape-cycle-detection/README.md):
+  los seams nunca entraban al grafo de adyacencia, así que un ciclo cerrado por
+  un seam compilaba. El único término que lo detectó fue `coordination`.
+- [`contested-planned-output`](defects/contested-planned-output/README.md):
+  dieciséis hojas declararon el mismo archivo de test como output propio; el
+  compilador modeló los 120 pares en conflicto y la revisión los aceptó como
+  remedio suficiente.
+- [`policy-c-refuses-a-clean-wide-cut`](defects/policy-c-refuses-a-clean-wide-cut/README.md):
+  con el ciclo corregido, la política **sigue** sin aprobar por utilidad un
+  fan-out de 19 módulos independientes (`splitAdvantage −0.0347`). El término
+  que liga es `validationDuplication`. Queda abierto y sin tocar.
+
+El N=16 también es la primera validación productiva del rediseño `3.1.0-pilot`:
+ese fan-out medía **0** de paralelismo con la fórmula anterior y **0.8889** con
+la nueva.

@@ -69,6 +69,63 @@ describe("Graph critics V2", () => {
     expect(() => assertPlanReview(review)).toThrow(/validation|artifact/i);
   });
 
+  /**
+   * Wide-graph N=16 is why this exists. The planner gave all sixteen projection
+   * leaves the same planned output, `src/analytics/projections.test.ts`. The
+   * compiler saw the overlap and emitted a conflict constraint for each of the
+   * C(16,2)=120 pairs at `high` risk, and the critic treated those constraints
+   * as the remedy, so review passed. A constraint serializes access to a shared
+   * path; it cannot reconcile two units that each commit their own full version
+   * of one file. Nineteen leaves verified, then bottom-up integration had to
+   * cherry-pick sixteen incompatible versions of that file and the run died.
+   */
+  it("rejects a planned output claimed by more than one unit", () => {
+    const breakdown = bookingBreakdown();
+    const children = breakdown.root.kind === "composite" ? breakdown.root.children : [];
+    const api = children.find((unit) => unit.key === "api");
+    const ui = children.find((unit) => unit.key === "ui");
+    if (api === undefined || ui === undefined) throw new Error("Missing booking leaves");
+    api.plannedPaths = [...(api.plannedPaths ?? []), "src/booking/shared.test.ts"];
+    ui.plannedPaths = [...(ui.plannedPaths ?? []), "src/booking/shared.test.ts"];
+
+    expect(() => compileGraphRevision({ breakdown, repositorySnapshot: bookingSnapshot() }, compilerDependencies))
+      .toThrow(/contested_planned_output|declare src\/booking\/shared\.test\.ts/u);
+  });
+
+  /**
+   * The overlap was always modelled; treating the constraint as a remedy is what
+   * let it through. This pins that the constraint still gets emitted, so the
+   * rejection above comes from contested ownership and not from the compiler
+   * having stopped seeing the conflict.
+   */
+  it("still models the pairwise conflict it now refuses to accept as a remedy", () => {
+    const breakdown = bookingBreakdown();
+    const children = breakdown.root.kind === "composite" ? breakdown.root.children : [];
+    const api = children.find((unit) => unit.key === "api");
+    const ui = children.find((unit) => unit.key === "ui");
+    if (api === undefined || ui === undefined) throw new Error("Missing booking leaves");
+    api.plannedPaths = [...(api.plannedPaths ?? []), "src/booking/api-only.test.ts"];
+    ui.plannedPaths = [...(ui.plannedPaths ?? []), "src/booking/ui-only.test.ts"];
+
+    const compiled = compileGraphRevision({ breakdown, repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+
+    expect(compiled.review.findings.filter((item) => item.code === "contested_planned_output")).toEqual([]);
+  });
+
+  it("keeps a plan whose units each own their planned outputs", () => {
+    const breakdown = bookingBreakdown();
+    const compiled = compileGraphRevision({ breakdown, repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+
+    const review = reviewCompiledPlan({
+      breakdown,
+      repositorySnapshot: bookingSnapshot(),
+      graph: compiled.graph,
+      contracts: compiled.contracts
+    });
+
+    expect(review.findings.filter((item) => item.critic === "scope_isolation" && item.severity === "error")).toEqual([]);
+  });
+
   it("blocks unresolved consequential questions instead of compiling false certainty", () => {
     const breakdown = bookingBreakdown();
     breakdown.questions.push({

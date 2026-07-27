@@ -111,6 +111,27 @@ function reviewScopes(input: CompiledPlanReviewInput, findings: PlanFinding[]): 
   for (const bundle of input.contracts) {
     for (const path of bundle.scope.allowedPaths) if (!indexedPathsNormalized.has(normalizePath(path)) && !plannedPathsNormalized.has(normalizePath(path))) findings.push(finding("scope_isolation", "error", "scope_path_not_grounded", `Scope path ${path} for ${bundle.task.nodeId} is neither present in the repository snapshot nor declared as a planned output.`, "Ground the scope in repository evidence or declare a concrete planned output path.", [], bundle.task.nodeId, bundle.scope.id));
   }
+  /**
+   * A conflict constraint serializes access to a shared path. It cannot
+   * reconcile two units that each declare the same path as their own output:
+   * both commit a full version of that file from their own worktree, and
+   * bottom-up integration then has to cherry-pick versions that contradict each
+   * other. Wide-graph N=16 gave sixteen leaves one shared test file, the
+   * compiler modelled all 120 pairs at `high` risk, review accepted the
+   * constraints as the remedy, and the run died in integration with every leaf
+   * verified. A contested output is an error whether or not it is constrained.
+   */
+  const unitsPerPlannedPath = new Map<string, number>();
+  for (const unit of flattenUnits(input.breakdown.root)) {
+    for (const path of new Set((unit.plannedPaths ?? []).map(normalizePath))) {
+      unitsPerPlannedPath.set(path, (unitsPerPlannedPath.get(path) ?? 0) + 1);
+    }
+  }
+  for (const [path, units] of unitsPerPlannedPath) {
+    if (units < 2) continue;
+    findings.push(finding("scope_isolation", "error", "contested_planned_output", `${units} units declare ${path} as their own planned output.`, "Give each unit a distinct output path, or let one unit own the file and have the others consume it through an artifact.", []));
+  }
+
   for (let leftIndex = 0; leftIndex < input.contracts.length; leftIndex += 1) {
     for (let rightIndex = leftIndex + 1; rightIndex < input.contracts.length; rightIndex += 1) {
       const left = input.contracts[leftIndex]!;
