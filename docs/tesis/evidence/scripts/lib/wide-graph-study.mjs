@@ -31,3 +31,23 @@ function wideGraphGoal(moduleCount) {
     "Two invocations from the same commit must emit byte-identical JSON."
   ].join(" ");
 }
+
+/**
+ * Which executor produced a cell has to be declared by the cell, not compiled
+ * into the generator. Codex reports `usageSource: "unavailable"`, so under it
+ * the sweep reports tokens as a floor and cost as unavailable; Claude Code
+ * reports both. Claude models expose no reasoning-effort knob (`efforts: null`
+ * in the registry), so those selections carry no `effort` field by design.
+ */
+export const WIDE_GRAPH_SELECTIONS = Object.freeze({
+  codex: Object.freeze({ executorId: "codex-cli", model: "gpt-5.5", effort: "high" }),
+  claude: Object.freeze({ executorId: "claude-code-cli", model: "sonnet" })
+});
+
+export function wideGraphSelection(name) {
+  const selection = WIDE_GRAPH_SELECTIONS[name];
+  if (selection === undefined) {
+    throw new Error(`Unknown executor selection "${name}"; expected one of ${Object.keys(WIDE_GRAPH_SELECTIONS).join(", ")}.`);
+  }
+  return { ...selection };
+}

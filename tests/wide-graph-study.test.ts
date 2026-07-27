@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  findExecutorModel,
+  isExecutorSelection
+} from "../packages/shared/src/executor-registry";
+import {
   WIDE_GRAPH_BASE_SHA,
+  WIDE_GRAPH_SELECTIONS,
   WIDE_GRAPH_SIZES,
-  buildWideGraphPlan
+  buildWideGraphPlan,
+  wideGraphSelection
 } from "../docs/tesis/evidence/scripts/lib/wide-graph-study.mjs";
 
 describe("wide graph study plan", () => {
@@ -24,5 +30,37 @@ describe("wide graph study plan", () => {
     expect(cell.goal).toContain("src/analytics/registry.ts");
     expect(cell.goal).toContain("study:wide-graph");
     expect(cell.goal).toContain("exactly one JSON object");
+  });
+});
+
+/**
+ * The generator used to hardcode one executor, so running the sweep under a
+ * different model meant editing the instrument. A cell has to declare which
+ * executor produced it, and that declaration has to be one the registry knows —
+ * otherwise a frozen cell can name a model that cannot run.
+ */
+describe("wide graph executor selection", () => {
+  it("offers only selections the executor registry knows", () => {
+    for (const [name, selection] of Object.entries(WIDE_GRAPH_SELECTIONS)) {
+      expect(isExecutorSelection(selection), name).toBe(true);
+      expect(findExecutorModel(selection), name).toBeDefined();
+    }
+  });
+
+  it("carries a reasoning effort only when the model exposes one", () => {
+    for (const [name, selection] of Object.entries(WIDE_GRAPH_SELECTIONS)) {
+      const model = findExecutorModel(selection);
+      if (model?.efforts === null) {
+        expect(selection, name).not.toHaveProperty("effort");
+      } else {
+        expect(model?.efforts, name).toContain(selection.effort);
+      }
+    }
+  });
+
+  it("resolves a named selection and refuses an unknown one", () => {
+    expect(wideGraphSelection("claude")).toEqual({ executorId: "claude-code-cli", model: "sonnet" });
+    expect(wideGraphSelection("codex")).toEqual({ executorId: "codex-cli", model: "gpt-5.5", effort: "high" });
+    expect(() => wideGraphSelection("gemini")).toThrow(/unknown executor selection/iu);
   });
 });

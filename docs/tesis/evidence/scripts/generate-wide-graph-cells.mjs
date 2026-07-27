@@ -2,7 +2,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
-import { buildWideGraphPlan } from "./lib/wide-graph-study.mjs";
+import { buildWideGraphPlan, wideGraphSelection } from "./lib/wide-graph-study.mjs";
 
 const targetRepo = resolve(argument("--target") ?? fail("--target is required"));
 const outDir = resolve(argument("--out") ?? "docs/tesis/evidence/warehouse/wide-graph/cells");
@@ -10,7 +10,7 @@ const dryRun = process.argv.includes("--dry-run");
 const baseUrl = argument("--base-url") ?? "http://127.0.0.1:3111";
 const runsDir = resolve(argument("--runs-dir") ?? ".manyhands/runs");
 const plan = buildWideGraphPlan({ targetRepo });
-const selection = { executorId: "codex-cli", model: "gpt-5.5", effort: "high" };
+const selection = wideGraphSelection(argument("--executor") ?? "codex");
 const cells = plan.map((entry) => ({
   ...entry,
   baseUrl,
