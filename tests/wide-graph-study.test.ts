@@ -10,14 +10,15 @@ import {
   buildWideGraphPlan,
   wideGraphSelection
 } from "../docs/tesis/evidence/scripts/lib/wide-graph-study.mjs";
+import { metricsFor } from "../docs/tesis/evidence/scripts/lib/wide-graph-metrics.mjs";
 
 describe("wide graph study plan", () => {
-  it("freezes the four agreed graph widths against the verified W1 delivery", () => {
+  it("freezes the agreed graph widths against the verified W1 delivery", () => {
     const plan = buildWideGraphPlan({ targetRepo: "C:/target" });
 
-    expect(WIDE_GRAPH_SIZES).toEqual([4, 8, 16, 24]);
+    expect(WIDE_GRAPH_SIZES).toEqual([4, 8, 16]);
     expect(WIDE_GRAPH_BASE_SHA).toBe("71f61c9efa222103ca2fb2f67692434ab493d75c");
-    expect(plan.map((cell) => cell.moduleCount)).toEqual([4, 8, 16, 24]);
+    expect(plan.map((cell) => cell.moduleCount)).toEqual([4, 8, 16]);
     expect(plan.every((cell) => cell.baseSha === WIDE_GRAPH_BASE_SHA)).toBe(true);
   });
 
@@ -26,10 +27,40 @@ describe("wide graph study plan", () => {
 
     expect(cell.goal).toContain("src/analytics/projection-01.ts");
     expect(cell.goal).toContain("src/analytics/projection-04.ts");
-    expect(cell.goal).toContain("must not import another projection module");
+    expect(cell.goal).toContain("must not import another module");
     expect(cell.goal).toContain("src/analytics/registry.ts");
     expect(cell.goal).toContain("study:wide-graph");
     expect(cell.goal).toContain("exactly one JSON object");
+  });
+
+  /**
+   * Las tres propiedades que el estímulo anterior no tenía, y que son la razón
+   * de este rediseño.
+   */
+  it("gives each module its own question instead of a shared derivation", () => {
+    const [cell] = buildWideGraphPlan({ targetRepo: "C:/target" });
+
+    for (const metric of metricsFor(cell.moduleCount)) {
+      expect(cell.goal).toContain(metric.question);
+      expect(cell.goal).toContain(`"${metric.id}"`);
+    }
+  });
+
+  it("gives each module its own test file so no two leaves contest one output", () => {
+    const [cell] = buildWideGraphPlan({ targetRepo: "C:/target" });
+
+    expect(cell.goal).toContain("src/analytics/projection-01.test.ts");
+    expect(cell.goal).toContain("src/analytics/projection-04.test.ts");
+    expect(cell.goal).toContain("src/analytics/registry.test.ts");
+    expect(cell.goal).not.toContain("projections.test.ts");
+  });
+
+  it("never states an expected answer, so a module cannot hardcode one", () => {
+    for (const cell of buildWideGraphPlan({ targetRepo: "C:/target" })) {
+      for (const metric of metricsFor(cell.moduleCount)) {
+        expect(cell.goal, metric.id).not.toContain(JSON.stringify(metric.expected));
+      }
+    }
   });
 });
 
