@@ -43,7 +43,7 @@
 
 ### 2026-07-24 — Cierre del checkpoint 1
 
-- Task 1: ADR 0012, separación C1/C y estructura de evidencia creadas.
+- Task 1: ADR 0012, separación C1/C2 y estructura de evidencia creadas.
 - Task 2: `RepositoryFileIndex` incorpora `byteSize` y `lineCount`; el perfil de
   caché rápida se elevó a `exports-only-v2-size-metrics` para no reutilizar
   silenciosamente índices viejos sin medición.
@@ -65,7 +65,7 @@
   técnicas locales preservan validabilidad sin inflar la vara entre condiciones.
 - Task 7: la selección C es un evento durable, replayable y visible con
   beneficio, costo, features, límites, evidencia y rationale.
-- Task 8: A/B/C1/C son configuración explícita; C es el default y el replay
+- Task 8: A/B/C1/C2 son configuración explícita; C2 es el default y el replay
   bloqueado valida hash, snapshot, goal y aceptación.
 - Verificación combinada: 50 tests, tres typechecks y dos builds PASS.
 - Evidencia detallada: [`checkpoints/checkpoint-2.md`](checkpoints/checkpoint-2.md).
@@ -75,7 +75,7 @@
 
 - Task 9: la derivación conserva métricas de runs fallidos y distingue cero,
   `unavailable` y `not_applicable`; G5 histórico rederiva sus doce celdas.
-- Task 10: dos ejecuciones C secuenciales sobre el mismo objetivo, commit y
+- Task 10: dos ejecuciones C2 secuenciales sobre el mismo objetivo, commit y
   base terminaron `completed`, sin reparaciones, con receipts confirmados.
 - Ambos commits entregados pasaron instalación, tests y typecheck en clones
   limpios independientes.

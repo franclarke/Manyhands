@@ -1,5 +1,12 @@
 # N=8 — ejecución completada y validada externamente
 
+> **No comparable con la serie vigente.** Esta celda corrió bajo el estímulo
+> original, que pedía N módulos derivando los mismos tres valores y diferenciados
+> sólo por un id, con un único archivo de test compartido. Ese estímulo fue
+> retirado por degenerado. Este PASS es evidencia de **mecánica**, no de que la
+> arquitectura sirva para desarrollar software. Ver
+> [`protocol/wide-graph-scaling.md`](../../../protocol/wide-graph-scaling.md).
+
 El cell `warehouse-wide-n08` partió de W1
 (`71f61c9efa222103ca2fb2f67692434ab493d75c`). El run
 `5507c3b7-7a29-4936-8981-6af76bfb8e7d` completó y publicó

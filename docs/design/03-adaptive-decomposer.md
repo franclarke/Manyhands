@@ -7,6 +7,11 @@
 > Las secciones de `C_task` que siguen documentan C1 como antecedente histórico;
 > no describen todavía una implementación C2 verificada.
 
+> **Actualización (2026-07-27):** la política productiva se llama **C** y va por
+> `adaptive-utility/3.1.0-pilot`. Las etiquetas `C1` y `C2` de abajo se conservan
+> deliberadamente: describen el estado de transición de 2026-07-24 y son las que
+> figuran en los journals ya persistidos, que son evidencia inmutable.
+
 ## Target C2
 
 C2 mantiene la separación Planner / Graph Compiler: el Planner produce un

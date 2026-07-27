@@ -253,7 +253,7 @@ Todos con TDD y documentados en `pilot/defects/`:
 | `contested-planned-output` | 16 hojas declaraban el mismo archivo de test como output propio. El compilador emitió 120 conflict constraints y la revisión las aceptó como remedio. Ahora el plan **no compila**. |
 | `leaf-feasibility-ignored-production` | La factibilidad medía sólo lo que una hoja debía leer, no lo que debía producir. La cota agregada **no discrimina** W1 de W2. |
 | `worktree-pool-orphan-recovery` | Slot huérfano de un run abortado; además mal clasificado como `code_test`. |
-| `wide-graph-integration-timeout-not-enforced` | La integración no respetaba su deadline y colgaba indefinidamente. Corregido y **verificado**: el reintento terminó en 3 min. |
+| `wide-graph-integration-timeout-not-enforced` | La integración no respetaba su deadline y colgaba indefinidamente. Corregido, pero **el deadline nunca se ejerció**: el único reintento posterior terminó a los 178 s porque falló la reparación semántica, muy por debajo del límite. Sigue sin verificarse. |
 
 También: el rediseño de `parallelism` y `coordination` (`3.1.0-pilot`) quedó
 **validado sobre datos productivos** — un fan-out de 19 unidades medía **0** de

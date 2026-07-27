@@ -12,7 +12,7 @@
 | typecheck web | PASS |
 | `pnpm build` | PASS |
 | `pnpm web:build` | PASS — Next.js production build |
-| marker C en `dist/index.js` | PASS |
+| marker C2 en `dist/index.js` | PASS |
 | `git diff --check` | PASS |
 
 Los skips no corresponden a C: son gates condicionados por entorno ya

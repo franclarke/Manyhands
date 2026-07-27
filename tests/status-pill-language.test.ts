@@ -1,5 +1,5 @@
 /**
- * C — StatusPill status language: the dot speaks the same shape vocabulary as the
+ * C2 — StatusPill status language: the dot speaks the same shape vocabulary as the
  * DAG node "Glyph dial". A not-started state (idle / pending / skipped) renders as a
  * HOLLOW dot ("empty = no arrancado"); every other state is a filled dot. This is the
  * one shape distinction that survives at the pill's 4–6px dot size; failed/conflict

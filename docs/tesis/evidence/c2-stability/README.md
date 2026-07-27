@@ -5,7 +5,7 @@ Estado: **PASS**.
 ## Configuración congelada para el gate
 
 - ManyHands: `55846028fac63fd523ee784448b899bed5ecfa51`;
-- política: `adaptive-utility/2.0.0-pilot`, condición `C`;
+- política: `adaptive-utility/2.0.0-pilot`, condición `C2`;
 - target base: `1da878de6edd38cefb1ea4d8ceecdceea0bb6acc`;
 - objetivo, modelo `gpt-5.5`, esfuerzo `high` y configuración de ejecución:
   idénticos en ambas repeticiones;

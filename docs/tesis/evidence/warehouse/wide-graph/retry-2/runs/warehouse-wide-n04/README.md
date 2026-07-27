@@ -1,5 +1,12 @@
 # N=4 — ejecución completada y validada externamente
 
+> **No comparable con la serie vigente.** Esta celda corrió bajo el estímulo
+> original, que pedía N módulos derivando los mismos tres valores y diferenciados
+> sólo por un id, con un único archivo de test compartido. Ese estímulo fue
+> retirado por degenerado. Este PASS es evidencia de **mecánica**, no de que la
+> arquitectura sirva para desarrollar software. Ver
+> [`protocol/wide-graph-scaling.md`](../../../protocol/wide-graph-scaling.md).
+
 El cell `warehouse-wide-n04` se ejecutó sobre el piloto limpio 14, fijado en
 W1 (`71f61c9efa222103ca2fb2f67692434ab493d75c`). El run
 `c9b176d0-e46b-4883-92e8-3de4b7c2c96c` completó y publicó el commit

@@ -9,7 +9,7 @@
 | 5 | `bf0ee82`, `18e6aab` | feedback semántico y un replan acotado en la ruta productiva |
 | 6 | `d96cc24` | ownership único de acceptance intents por deepest owner/LCA |
 | 7 | `a424ade`, `7f7d9b4` | evento C replayable y explicación visible en el inspector |
-| 8 | `18e6aab` | A/B/C1/C por run, C default y replay bloqueado de candidato |
+| 8 | `18e6aab` | A/B/C1/C2 por run, C2 default y replay bloqueado de candidato |
 
 ## Evidencia TDD
 
@@ -48,7 +48,10 @@ Resultado:
 
 ## Invariantes demostrados
 
-- C es el default productivo; C1 y el alias histórico `C` siguen replayables;
+- C2 es el default productivo; C1 y el alias histórico `C` siguen replayables;
+  <!-- Corrección 2026-07-27: texto restaurado tras un reemplazo masivo C2->C.
+       La afirmación sobre C1 dejó de ser cierta cuando 6b1b4c7 retiró su ruta de
+       ejecución; ver ticket 02 de .scratch/code-review-remediation/. -->
 - A y B consumen el mismo árbol semántico que C y no requieren editar código;
 - una hoja inviable genera como máximo un replan semántico, nunca un split por
   carpetas o paths;
