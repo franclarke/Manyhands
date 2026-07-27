@@ -93,6 +93,47 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
     expect(issues.some(i => i.code === "schema_invalid" || i.code === "self_relation")).toBe(true);
   });
 
+  /**
+   * Wide-graph N=16 is why this exists. The planner emitted an artifact
+   * `projection-registry -> study-wide-graph-script` and a seam
+   * `study-wide-graph-script -> projection-registry`: one relation had its
+   * direction inverted, so the two together claim each node depends on the
+   * other. Validation only walked artifact and legacy edges, so the graph
+   * compiled, nineteen agents ran for roughly forty minutes, and the run died
+   * in integration. A seam carries a producer and a consumer exactly as an
+   * artifact does; leaving it out of the walk makes half the declared
+   * dependencies invisible to the only check that can catch a contradiction.
+   */
+  it("detects a cycle closed by a seam binding against an artifact", () => {
+    const graph = getBaseGraph();
+    graph.nodes["n3"] = { id: "n3", parentId: "root", kind: "leaf", title: "N3", goal: "n3" };
+    graph.artifactRequirements = [
+      { id: "r1", producerNodeId: "n2", consumerNodeId: "n3", requiredFor: "execution", artifactContract: { id: "a", revision: "1" } }
+    ];
+    graph.seamBindings = [
+      { id: "s1", producerNodeId: "n3", consumerNodeId: "n2", seamContract: { id: "b", revision: "1" }, producerRevision: "1", consumerRevision: "1" }
+    ];
+
+    const issues = validateGraphRevision(graph);
+
+    expect(issues).toContainEqual(expect.objectContaining({ code: "artifact_cycle" }));
+  });
+
+  it("accepts a seam that runs the same way as the artifact it accompanies", () => {
+    const graph = getBaseGraph();
+    graph.nodes["n3"] = { id: "n3", parentId: "root", kind: "leaf", title: "N3", goal: "n3" };
+    graph.artifactRequirements = [
+      { id: "r1", producerNodeId: "n2", consumerNodeId: "n3", requiredFor: "execution", artifactContract: { id: "a", revision: "1" } }
+    ];
+    graph.seamBindings = [
+      { id: "s1", producerNodeId: "n2", consumerNodeId: "n3", seamContract: { id: "b", revision: "1" }, producerRevision: "1", consumerRevision: "1" }
+    ];
+
+    const issues = validateGraphRevision(graph);
+
+    expect(issues.filter((issue) => issue.severity === "error")).toHaveLength(0);
+  });
+
   it("detects self relation on seam binding", () => {
     const graph = getBaseGraph();
     graph.seamBindings = [

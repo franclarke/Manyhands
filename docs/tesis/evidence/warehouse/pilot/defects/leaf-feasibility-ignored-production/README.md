@@ -72,9 +72,14 @@ descomponer es tiempo de agente, no duplicación de entorno.
 
 ## Nota de nomenclatura
 
-La política se llama **C** en el lenguaje de la tesis. La etiqueta `C` sobrevive
+La política se llama **C** en el lenguaje de la tesis. La etiqueta `C2` sobrevive
 en los journals ya persistidos y no se renombra ahí: esos eventos son evidencia
 inmutable.
+
+> Esta nota quedó corrompida por un reemplazo textual masivo `C2` → `C` aplicado
+> sobre `docs/tesis/**/*.md` al normalizar la nomenclatura (`6b1b4c7`). La frase
+> resultante se contradecía a sí misma. Restaurada al leerla contra el código,
+> que sí conservó la distinción en `utility-policy.ts`.
 
 ## Qué no se concluye
 
