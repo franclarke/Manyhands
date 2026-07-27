@@ -1,0 +1,11 @@
+{
+  "cellId": "warehouse-wide-n16",
+  "runId": "305a99c5-dfef-47e1-862d-b07d4a92501c",
+  "started": "2026-07-27T00:42:06.523Z",
+  "finished": "2026-07-27T00:48:00.166Z",
+  "outcome": {
+    "lifecycle": "planning",
+    "receipt": null,
+    "reason": "planner asked for clarification: Beyond a unique id, should the 16 projection modules differ in what they compute (e.g. filtered by zone, SKU threshold, or time window), or is structural parallelism with identical derivation logic (only id differs) sufficient?"
+  }
+}
