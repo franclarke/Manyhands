@@ -526,3 +526,18 @@ Diagnóstico de instalación posterior al checkpoint:
   `pnpm fetch`, preservar el log y repetir la instalación en modo offline. Esto
   corrige disponibilidad de dependencias; no cambia HEAD, lockfile, estímulo,
   instrumento ni oráculo.
+
+Resolución de la instalación:
+
+- `pnpm fetch` bajo Node `22.23.1` reprodujo una incompatibilidad del cliente
+  HTTP de pnpm `7.29.3` (`ERR_INVALID_THIS` en
+  `URLSearchParams.getAll`) y enumeró siete tarballs de Windows ausentes;
+- se descargaron esos siete tarballs exactos con `curl`, se verificó para cada
+  uno el SHA-512 declarado en `pnpm-lock.yaml` y pnpm `7.29.3`/Node `22.23.1`
+  los incorporó localmente al mismo store. No se cambió el lockfile;
+- la instalación final se ejecutó nuevamente en modo offline con Node
+  `22.23.1`, pnpm `7.29.3` y el store declarado: `629 reused`, `0 downloaded`,
+  exit `0`, `Done in 16s`. El log durable es `install-final.log` junto al clon;
+- próxima operación larga: avanzar el clon al commit documental de este
+  checkpoint y ejecutar Gate P0 completo, secuencial y sin otras cargas, sobre
+  un único HEAD limpio.
