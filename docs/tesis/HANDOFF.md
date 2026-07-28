@@ -84,21 +84,26 @@ N módulos independientes contra un contrato fijo, barriendo N.
 oráculo externo, N=16 falló en integración. **No usar estos números como
 evidencia de H2** sin la advertencia de la sección 5.
 
-**Estímulo NUEVO** congelado en `retry-7` para `{4, 8, 16}` — **nunca ejecutado**.
+**Estímulo NUEVO** congelado en `retry-7` para `{4, 8, 16}` — **nunca
+ejecutado**. Ese freeze declaró un executor que ya no está disponible y se
+preserva sin reescribir como intento histórico. La próxima medición debe
+congelar una serie sucesora con Codex.
 
 ---
 
 ## 4. Lo que hay que hacer, en orden
 
-### Paso 1 — Ejecutar `retry-7`, empezando por N=4
+### Paso 1 — Congelar la sucesora Codex y ejecutarla desde N=4
 
 Es lo primero y no es negociable: **el instrumento nuevo está verificado por
 tests pero ningún agente lo ejecutó todavía.** N=4 es la celda más barata y
 valida estímulo, contrato y oráculo antes de gastar N=8 y N=16.
 
-Celdas congeladas en
-`docs/tesis/evidence/warehouse/wide-graph/retry-7/cells/`, executor declarado
-`claude-code-cli / sonnet`, base W1 `71f61c9e`.
+Las celdas históricas en
+`docs/tesis/evidence/warehouse/wide-graph/retry-7/cells/` no se ejecutan ni se
+reescriben. Se genera una nueva versión de serie sobre la base W1 `71f61c9e`
+con `codex-cli / gpt-5.5 / high`, conservando el estímulo y el oráculo
+versionados.
 
 Si el oráculo rechaza algo, hay que descubrirlo con 4 módulos, no con 16.
 
@@ -141,7 +146,7 @@ Hay dos lecturas y **un solo caso no las separa**:
 El esquema actual no distingue las dos cosas: `acceptanceIntentIds` es una lista
 plana que mezcla lo que la unidad posee con lo que hereda.
 
-**Cómo resolverlo:** el N=16 de `retry-7` da la segunda medición. El estímulo
+**Cómo resolverlo:** el N=16 de la serie sucesora Codex da la segunda medición. El estímulo
 nuevo asigna a cada módulo una pregunta propia, así que los intents deberían
 quedar efectivamente particionados por hoja. Si con intents particionados
 `validationDuplication` cae y el advantage se vuelve positivo, la lectura (1) es
@@ -283,7 +288,7 @@ Mínimo defendible:
 1. **H1** — la medición del Paso 2, con veredicto explícito sobre
    `validationDuplication`. Sin eso, la afirmación "C toma buenas decisiones"
    queda contradicha por la única evidencia ancha que existe.
-2. **H2** — la serie `retry-7` completa `{4, 8, 16}` con oráculo externo PASS, y
+2. **H2** — la serie sucesora Codex completa `{4, 8, 16}` con oráculo externo PASS, y
    los N viejos re-etiquetados como evidencia de mecánica.
 3. **W2** desbloqueado, o la cadena longitudinal declarada como 1/8 **con las
    causas documentadas** — que ya lo están.

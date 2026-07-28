@@ -27,9 +27,14 @@ diverge.
 Dos células con distinto executor, modelo o effort **no son comparables entre
 sí**, aunque compartan base, estímulo y oráculo. Se preservan como series o
 intentos distintos; nunca se elige sólo el resultado favorable ni se atribuye
-su diferencia a la anchura. La serie vigente `retry-7` está congelada con
-`claude-code-cli`/`sonnet`, sin campo `effort` porque ese modelo no expone esa
-variable.
+su diferencia a la anchura.
+
+Desde el 2026-07-28, Codex es el único executor disponible en la máquina del
+estudio. Toda serie nueva debe congelarse con
+`codex-cli`/`gpt-5.5`/`high`; el generador rechaza selecciones no disponibles.
+`retry-7`, congelada pero nunca ejecutada con un executor hoy no disponible, se
+preserva como intento histórico no ejecutable. No se reescriben sus células:
+la próxima medición debe usar una nueva versión de serie y un nuevo manifest.
 
 Los manifests históricos se reconciliaron el 2026-07-28 desde las selecciones
 ya congeladas en sus propias células: pilot y retry-2 a retry-5 usaron

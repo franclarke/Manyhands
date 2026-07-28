@@ -79,31 +79,54 @@ describe("wide graph study plan", () => {
  * otherwise a frozen cell can name a model that cannot run.
  */
 describe("wide graph executor selection", () => {
+  it("rejects Claude for a new series when only Codex is available", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "manyhands-wide-graph-unavailable-executor-"));
+    try {
+      await expect(run(
+        process.execPath,
+        [
+          "docs/tesis/evidence/scripts/generate-wide-graph-cells.mjs",
+          "--target",
+          "C:/target",
+          "--executor",
+          "claude",
+          "--out",
+          outDir
+        ],
+        { cwd: process.cwd(), windowsHide: true }
+      )).rejects.toMatchObject({
+        stderr: expect.stringMatching(/Unknown executor selection "claude".+expected one of codex/iu)
+      });
+    } finally {
+      await rm(outDir, { recursive: true, force: true });
+    }
+  });
+
   it("rejects a heterogeneous frozen series in the productive driver preflight", async () => {
     const root = await mkdtemp(join(tmpdir(), "manyhands-wide-graph-driver-"));
     const cellsDir = join(root, "cells");
     const outDir = join(root, "runs");
-    const claude = wideGraphSelection("claude");
     const codex = wideGraphSelection("codex");
+    const otherExecutor = { executorId: "other-cli", model: "other-model" };
     try {
       await mkdir(cellsDir);
       await writeFile(join(cellsDir, "manifest.json"), JSON.stringify({
-        executorSelection: claude,
+        executorSelection: codex,
         cells: [{ cellId: "warehouse-wide-n04" }, { cellId: "warehouse-wide-n08" }]
       }));
       await writeFile(join(cellsDir, "warehouse-wide-n04.json"), JSON.stringify({
         cellId: "warehouse-wide-n04",
         position: 1,
-        planningSelection: claude,
-        executionSelection: claude,
-        repairSelection: claude
+        planningSelection: codex,
+        executionSelection: codex,
+        repairSelection: codex
       }));
       await writeFile(join(cellsDir, "warehouse-wide-n08.json"), JSON.stringify({
         cellId: "warehouse-wide-n08",
         position: 2,
-        planningSelection: claude,
-        executionSelection: codex,
-        repairSelection: claude
+        planningSelection: codex,
+        executionSelection: otherExecutor,
+        repairSelection: codex
       }));
 
       await expect(run(
@@ -153,24 +176,24 @@ describe("wide graph executor selection", () => {
   });
 
   it("rejects a series whose cells do not share the frozen executor selection", () => {
-    const claude = wideGraphSelection("claude");
     const codex = wideGraphSelection("codex");
+    const otherExecutor = { executorId: "other-cli", model: "other-model" };
     const cells = [
       {
         cellId: "warehouse-wide-n04",
-        planningSelection: claude,
-        executionSelection: claude,
-        repairSelection: claude
+        planningSelection: codex,
+        executionSelection: codex,
+        repairSelection: codex
       },
       {
         cellId: "warehouse-wide-n08",
-        planningSelection: claude,
-        executionSelection: codex,
-        repairSelection: claude
+        planningSelection: codex,
+        executionSelection: otherExecutor,
+        repairSelection: codex
       }
     ];
 
-    expect(() => assertWideGraphSeriesSelection(cells, claude))
+    expect(() => assertWideGraphSeriesSelection(cells, codex))
       .toThrow(/warehouse-wide-n08.+execution selection differs.+not comparable/iu);
   });
 
@@ -184,7 +207,7 @@ describe("wide graph executor selection", () => {
           "--target",
           "C:/target",
           "--executor",
-          "claude",
+          "codex",
           "--out",
           outDir
         ],
@@ -196,7 +219,7 @@ describe("wide graph executor selection", () => {
         ["warehouse-wide-n04.json", "warehouse-wide-n08.json", "warehouse-wide-n16.json"]
           .map(async (name) => JSON.parse(await readFile(join(outDir, name), "utf8")))
       );
-      const selection = { executorId: "claude-code-cli", model: "sonnet" };
+      const selection = { executorId: "codex-cli", model: "gpt-5.5", effort: "high" };
 
       expect(manifest.executorSelection).toEqual(selection);
       expect(cells.every((cell) =>
@@ -227,8 +250,8 @@ describe("wide graph executor selection", () => {
   });
 
   it("resolves a named selection and refuses an unknown one", () => {
-    expect(wideGraphSelection("claude")).toEqual({ executorId: "claude-code-cli", model: "sonnet" });
     expect(wideGraphSelection("codex")).toEqual({ executorId: "codex-cli", model: "gpt-5.5", effort: "high" });
+    expect(() => wideGraphSelection("claude")).toThrow(/unknown executor selection/iu);
     expect(() => wideGraphSelection("gemini")).toThrow(/unknown executor selection/iu);
   });
 });
