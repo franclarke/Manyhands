@@ -67,6 +67,16 @@ export function wideGraphSelection(name) {
   return { ...selection };
 }
 
+export function assertWideGraphSelectionAvailable(selection) {
+  const available = Object.values(WIDE_GRAPH_SELECTIONS)
+    .some((candidate) => isDeepStrictEqual(candidate, selection));
+  if (!available) {
+    throw new Error(
+      `Wide graph executor selection ${JSON.stringify(selection)} is not available for a new run.`
+    );
+  }
+}
+
 export function assertWideGraphSeriesSelection(cells, frozenSelection) {
   if (!Array.isArray(cells) || cells.length === 0) {
     throw new Error("Wide graph series has no cells to validate.");

@@ -20,7 +20,10 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { assertWideGraphSeriesSelection } from "./lib/wide-graph-study.mjs";
+import {
+  assertWideGraphSelectionAvailable,
+  assertWideGraphSeriesSelection
+} from "./lib/wide-graph-study.mjs";
 
 const exec = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));
@@ -37,6 +40,7 @@ for (const name of (await readdir(cellsDir)).filter((file) => file.endsWith(".js
 }
 cells.sort((left, right) => left.position - right.position);
 if (manifest.executorSelection !== undefined) {
+  assertWideGraphSelectionAvailable(manifest.executorSelection);
   assertWideGraphSeriesSelection(cells, manifest.executorSelection);
 }
 await mkdir(outRoot, { recursive: true });
