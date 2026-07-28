@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "title": "Warehouse wide graph pilot",
+  "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+  "granularityCondition": "C",
+  "executorSelection": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.5",
+    "effort": "high"
+  },
+  "moduleCounts": [
+    4,
+    8,
+    16
+  ],
+  "cells": [
+    {
+      "cellId": "warehouse-wide-n04",
+      "position": 1,
+      "moduleCount": 4,
+      "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+      "goalSha256": "d1798ad1caba8c72cfc82792b0eb1330240511764c59e2539ab3799446f6f546"
+    },
+    {
+      "cellId": "warehouse-wide-n08",
+      "position": 2,
+      "moduleCount": 8,
+      "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+      "goalSha256": "8da73f032bc2924bf70d46f63d739dc8c4d55a503b59e68f0bf862805f6ad1a8"
+    },
+    {
+      "cellId": "warehouse-wide-n16",
+      "position": 3,
+      "moduleCount": 16,
+      "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+      "goalSha256": "94b7cf6ac0f4e39ca8ffd944e9f5dbc04e02572b70e638cbabcce3f1db5e7b61"
+    }
+  ]
+}
