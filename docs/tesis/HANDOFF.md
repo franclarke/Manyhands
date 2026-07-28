@@ -107,13 +107,18 @@ congelar una serie sucesora con Codex.
 
 ---
 
-## 4. Lo que hay que hacer, en orden
+## 4. Secuencia científica después de cerrar el frente conductual
 
-### Paso 1 — Congelar la sucesora Codex y ejecutarla desde N=4
+Esta sección no describe el trabajo inmediato. Antes deben cerrar 07, 09 y 02,
+pasar el checkpoint `grilling`, repetir los gates aplicables y congelar un único
+commit limpio. Ticket 10 permanece diferido hasta entonces.
 
-Es lo primero y no es negociable: **el instrumento nuevo está verificado por
-tests pero ningún agente lo ejecutó todavía.** N=4 es la celda más barata y
-valida estímulo, contrato y oráculo antes de gastar N=8 y N=16.
+### Primera célula de la futura sucesora Codex — N=4
+
+Dentro del barrido futuro, N=4 debe correr antes que N=8 y N=16: **el
+instrumento nuevo está verificado por tests pero ningún agente lo ejecutó
+todavía.** N=4 es la celda más barata y valida estímulo, contrato y oráculo
+antes de gastar las células mayores.
 
 Las celdas históricas en
 `docs/tesis/evidence/warehouse/wide-graph/retry-7/cells/` no se ejecutan ni se

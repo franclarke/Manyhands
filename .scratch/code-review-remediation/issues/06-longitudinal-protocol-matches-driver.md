@@ -43,9 +43,11 @@
 - Build gate: `pnpm build` exited `0` and rebuilt all packages, including the
   decomposer policy marker needed by preflight.
 - Pilot dry-run:
-  `run-warehouse-longitudinal.mjs --mode pilot --target C:\Users\franc\Documents\Proyectos\warehouse-control-tower-seed --manyhands-commit <ticket-head> --dry-run`
-  exited `0`; W1–W8 used the registered seed/verified-chain bases and each
-  serialized `codex-cli/gpt-5.5/high` in planning, execution and repair.
+  `run-warehouse-longitudinal.mjs --mode pilot --target C:\Users\franc\Documents\Proyectos\warehouse-control-tower-seed --manyhands-commit 851e5f80db69ea6631dc3f103e4fc46125283afe --dry-run`
+  exited `0` in the isolated clone; that commit is content-equivalent to
+  `16a8104d47ff8aceec6bbef992c5aac3125ab7a2` on `main`. W1–W8 used the
+  registered seed/verified-chain bases and each serialized
+  `codex-cli/gpt-5.5/high` in planning, execution and repair.
 - Environment note: the seed repository has foreign Windows ownership. The
   dry-run used a process-local `safe.directory` environment entry; no global
   Git configuration was changed.
