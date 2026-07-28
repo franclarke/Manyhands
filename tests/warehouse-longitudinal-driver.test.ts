@@ -43,6 +43,10 @@ describe("Warehouse longitudinal driver", () => {
     expect(plan).toHaveLength(8);
     expect(plan.map((cell) => cell.increment)).toEqual(["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8"]);
     expect(plan.every((cell) => cell.dryRun === true)).toBe(true);
+    expect(plan.every((cell) =>
+      ["planningSelection", "executionSelection", "repairSelection"]
+        .every((field) => JSON.stringify(cell[field]) === JSON.stringify(STUDY_SELECTION))
+    )).toBe(true);
   });
 
   it("plans only the remaining increments when resuming a verified chain", () => {

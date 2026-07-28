@@ -65,6 +65,7 @@ export function buildLongitudinalPlan({ mode, baseSha, targetRepo, dryRun = true
     base: index === 0 ? baseSha : `verified-delivery:W${startAt + index}`,
     prompt: `protocol/prompts/${increment}.md`,
     oracleId: `warehouse-${increment.toLowerCase()}-v1`,
+    ...studyStageSelections(),
     dryRun
   }));
 }
