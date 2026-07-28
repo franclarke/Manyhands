@@ -65,20 +65,22 @@ Actualización operativa 2026-07-28:
   producir un veredicto defendible sobre la política C, no perfeccionar
   infraestructura intermedia. 07 y 09 quedan cerrados por retiro explícito del
   mínimo; 13 cierra la cadena longitudinal en 1/8 sin otro W2. La única
-  corrección previa al freeze que permanece es 02, porque evita reinterpretar
-  evidencia C1 bajo la política C actual.
-- Ruta activa: `02 -> 10 -> 11 -> 12 -> 14 -> 15`.
-- Checkpoint Git previo a `grilling`: root
+  corrección histórica pendiente es 02, porque evita reinterpretar evidencia C1
+  bajo la política C actual; debe cerrar antes de la síntesis, no antes del
+  freeze de células C nuevas.
+- Ruta activa: `10 -> 11 -> 12 -> 02 -> 14 -> 15`. Ticket 02 no bloquea
+  células nuevas C; protege la síntesis de journals C1 históricos.
+- Checkpoint Git del recorte de alcance: root
   `C:\Users\franc\Documents\Proyectos\Manyhands`, branch `main`, HEAD limpio
-  observado `9f9c8e98929788c000ecf9bc5820777fe4259732`, 148 commits adelante de
+  observado `0cb3fc33f08c6d91b17f1f64a37236ce201b918f`, 151 commits adelante de
   `origin/main`, con `origin/main` ancestro y sin push. El commit que contiene
   este snapshot sólo agrega evidencia documental, por lo que no altera código,
   protocolo ni resultados ya verificados.
 - Último gate: `git diff --check` → exit `0`.
 - Reanudación: leer completo
-  `.scratch/code-review-remediation/issues/02-c1-replay-honest.md`, implementar
-  el rechazo explícito mínimo con TDD y recalcular el frente. No ejecutar la
-  serie sucesora hasta cerrar 02 y repetir los gates de freeze.
+  `.scratch/code-review-remediation/issues/10-run-retry7-n04.md`, ejecutar el
+  gate de freeze y abrir primero N=4. Ticket 02 se resuelve antes de 14, sin
+  reconstruir una política legacy.
 
 Comandos de verificación (protocolo del proyecto):
 
@@ -100,9 +102,11 @@ Incrementos acumulativos sobre un repo objetivo; cada uno verificado por un
 oráculo externo antes de ser base del siguiente.
 
 **Estado: 1/8.** W1 entregó `71f61c9efa222103ca2fb2f67692434ab493d75c` y pasó sus
-seis checks. **W2 nunca entregó** pese a muchos intentos, por causas distintas
-cada vez (lockfile congelado, timeout de 30 min, slot de worktree huérfano). La
-cadena W3–W8 está bloqueada detrás de W2.
+seis checks. W2 no produjo una entrega **externamente verificada**. `series-15`
+sí publicó internamente el candidato `38b511817b0ab0a8df1855d28f0e9455f5dac0fd`,
+pero el oráculo externo falló por lockfile congelado; otros intentos terminaron
+en timeout o fallo de infraestructura sin entrega verificable. La cadena W3–W8
+no avanza.
 
 Esta línea alimenta H2, y hoy es su parte débil.
 
@@ -121,11 +125,13 @@ congelar una serie sucesora con Codex.
 
 ---
 
-## 4. Secuencia científica después de cerrar 02
+## 4. Secuencia científica inmediata
 
-Antes de la medición debe cerrar 02, repetirse los gates aplicables y congelarse
-un único commit limpio. 07 y 09 ya no forman parte del mínimo y no justifican
-demorar el experimento.
+Antes de la medición deben repetirse los gates aplicables y congelarse un único
+commit limpio. Ticket 02 no bloquea N=4/N=8/N=16 porque esas células nacen con
+la política C actual; sí debe cerrar antes de que ticket 14 sintetice journals
+C1 históricos. 07 y 09 ya no forman parte del mínimo y no justifican demorar
+el experimento.
 
 ### Primera célula de la futura sucesora Codex — N=4
 

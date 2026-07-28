@@ -22,3 +22,21 @@ cambiar el instrumento antes del freeze. Francisco autorizó retirar ese trabajo
 del mínimo el 2026-07-28. Las dos implementaciones existentes se preservan sin
 edición; ticket 12 medirá el comportamiento efectivo y declarará cualquier
 limitación observada.
+
+## Closure record
+
+- Fixed point: `eeb2f89b0657c160720e7212bc517075cab3ccaf`.
+- Scope decision commit: `0cb3fc33f08c6d91b17f1f64a37236ce201b918f`.
+- Files changed: este ticket, `docs/tesis/AUTONOMOUS_CLOSURE_PLAN.md` y
+  `docs/tesis/HANDOFF.md`; no cambió ninguna ruta productiva de aceptación.
+- Verification:
+  - no cambió ninguna decisión de granularidad ni asignación de intents;
+  - ticket 12 conserva la obligación de derivar `validationDuplication` de
+    journals reales;
+  - `git diff --check` PASS para el recorte documental.
+- Independent review at the scope decision:
+  - Spec: PASS.
+  - Standards: FAIL por trazabilidad transversal incompleta; sus hallazgos se
+    corrigen antes del cierre final de revisión.
+- Next unlocked frontier: tickets 02 y 10; se prioriza 10 porque produce la
+  evidencia discriminante y 02 sólo bloquea la síntesis histórica de ticket 14.

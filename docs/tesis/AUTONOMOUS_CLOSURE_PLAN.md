@@ -50,10 +50,11 @@ Se retiran del mínimo:
   preservados.
 
 Estas disposiciones no declaran correctos el fork ni la duplicación interna, no
-borran deuda y no convierten fallos W2 en PASS. La ruta activa queda:
+borran deuda y no convierten fallos W2 en PASS. La ruta prioriza producir
+evidencia real antes del saneamiento histórico que sólo bloquea la síntesis:
 
 ```text
-02 -> 10 -> 11 -> 12 -> 14 -> 15
+10 -> 11 -> 12 -> 02 -> 14 -> 15
 ```
 
 ---
@@ -351,7 +352,7 @@ Para todo ticket:
 
 ### Gate de freeze
 
-Antes de la serie sucesora Codex y nuevamente antes de W2:
+Antes de la serie sucesora Codex:
 
 - P0 PASS;
 - tickets de corrección requeridos cerrados;
@@ -394,19 +395,20 @@ Un PASS histórico no reemplaza este gate.
 
 ## 6. Orden maestro
 
-### Fase A — integridad mínima de la evidencia
+### Fase A — integridad mínima de la evidencia histórica
 
 P0, 05, 08 y 06 ya cerraron. Las disposiciones de scope cierran 07 y 09 sin
 cambio productivo. Resta 02 para impedir que un journal C1 sea reinterpretado
-silenciosamente bajo C:
+silenciosamente bajo C. No bloquea una celda nueva de condición C; debe cerrar
+antes de 14:
 
 ```text
-P0 -> 05 -> 08 -> 06 -> scope -> 02
+P0 -> 05 -> 08 -> 06 -> scope
+                              \-> 02 -> 14
 ```
 
 02 se resuelve con rechazo explícito mínimo; no se reconstruye una política
-legacy. Después se repiten gates y se congela un único commit para la serie
-sucesora Codex.
+legacy.
 
 ### Fase B — evidencia ancha
 
@@ -539,8 +541,9 @@ El goal está completo únicamente si se cumplen todas:
 ### Evidencia
 
 - N=4, N=8 y N=16 ejecutados bajo un freeze atribuible y comparable;
-- receipts externos PASS para las tres entregas, como exige el mínimo vigente
-  de `HANDOFF.md`;
+- resultado, receipt cuando exista y veredicto del oráculo externo atribuibles
+  para cada célula; un `FAIL` científico válido sostiene una conclusión negativa
+  o limitada y no se reintenta hasta obtener PASS;
 - veredicto explícito sobre `validationDuplication`;
 - W2 verificado o límite 1/8 defendible;
 - manifests, journals, diffs, commits y receipts enlazados;
@@ -548,10 +551,9 @@ El goal está completo únicamente si se cumplen todas:
 - parámetros no anclados declarados provisionales.
 
 Un resultado adverso con instrumento válido se conserva y no detiene N=8/N=16.
-Si impide obtener los tres PASS externos, el agente no reintenta hasta pasar ni
-marca el goal completo: termina el resto del trabajo independiente y solicita a
-Francisco una modificación explícita del mínimo científico, o queda bloqueado
-según la sección 4.2. Una interrupción externa tampoco satisface tickets 11/12.
+Después de ejecutar las tres células, puede cerrar la evaluación con un
+veredicto negativo o limitado. Sólo un instrumento inválido o una interrupción
+externa que impida observar el resultado deja tickets 11/12 incompletos.
 
 ### Tesis y defensa
 
@@ -592,4 +594,5 @@ artefacto o limitación.
    activo.
 4. Reclamar ticket 05 y ejecutar su ciclo completo.
 5. Continuar con ticket 08.
-6. No iniciar N=4 hasta cerrar y revisar la Fase A y crear el freeze manifest.
+6. No iniciar N=4 hasta revisar las disposiciones de alcance y crear el freeze
+   manifest. Ticket 02 puede cerrar después de 12, pero antes de 14.

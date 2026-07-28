@@ -26,3 +26,20 @@ por tanto, implementar y validar el fork ya no desbloquea evidencia requerida.
 La implementación existente no se declara correcta ni se modifica. Se conserva
 como deuda fuera del alcance de la tesis. La ruta científica activa usa una
 base W1 verificada y una serie ancha nueva sin `--resume-state`.
+
+## Closure record
+
+- Fixed point: `eeb2f89b0657c160720e7212bc517075cab3ccaf`.
+- Scope decision commit: `0cb3fc33f08c6d91b17f1f64a37236ce201b918f`.
+- Files changed: este ticket, `docs/tesis/AUTONOMOUS_CLOSURE_PLAN.md` y
+  `docs/tesis/HANDOFF.md`; no cambió código, protocolo ni evidencia científica.
+- Verification:
+  - el frente activo no ejecuta `--resume-state`;
+  - el plan y el handoff no presentan el fork como verificado;
+  - `git diff --check` PASS para el recorte documental.
+- Independent review at the scope decision:
+  - Spec: PASS.
+  - Standards: FAIL por trazabilidad transversal incompleta; sus hallazgos se
+    corrigen antes del cierre final de revisión.
+- Next unlocked frontier: tickets 02 y 10; se prioriza 10 porque produce la
+  evidencia discriminante y 02 sólo bloquea la síntesis histórica de ticket 14.

@@ -38,3 +38,29 @@ Francisco autorizó el 2026-07-28 retirar un nuevo W2 del mínimo científico. L
 evidencia discriminante restante se concentra en la sucesora Codex N=4/N=8/N=16,
 que ejecuta ManyHands real sobre la base Warehouse W1 y alimenta tanto H2 como
 el veredicto de H1. No se borró ni reinterpretó ningún intento longitudinal.
+
+## Closure record
+
+- Fixed point: `eeb2f89b0657c160720e7212bc517075cab3ccaf`.
+- Scope decision commit: `0cb3fc33f08c6d91b17f1f64a37236ce201b918f`.
+- Evidence preserved:
+  - `series-15/runs/W2/run.events.v2.jsonl` registra el candidato interno
+    `38b511817b0ab0a8df1855d28f0e9455f5dac0fd`;
+  - `series-15/runs/W2/oracle-result.json` registra el rechazo externo por
+    `ERR_PNPM_OUTDATED_LOCKFILE`;
+  - `series-16/runs/W2/run.events.v2.jsonl` y `result.json` registran el timeout
+    del run `86f88e35-b3c3-455e-8973-2f92e073e387`, sin candidato ni receipt.
+- Files changed: este ticket, `docs/tesis/AUTONOMOUS_CLOSURE_PLAN.md` y
+  `docs/tesis/HANDOFF.md`; no se reescribió ningún journal, resultado u oráculo.
+- Verification:
+  - los tres defect reports existen y conservan “Qué no se concluye”;
+  - el handoff distingue publicación interna de verificación externa;
+  - `git diff --check` PASS para el recorte documental.
+- Independent review at the scope decision:
+  - Spec: PARTIAL porque el handoff decía inicialmente que W2 nunca entregó,
+    sin distinguir el candidato publicado internamente; la redacción fue
+    corregida sin cambiar el veredicto externo.
+  - Standards: FAIL por trazabilidad transversal incompleta; sus hallazgos se
+    corrigen antes del cierre final de revisión.
+- Next unlocked frontier: tickets 02 y 10; se prioriza 10 porque produce la
+  evidencia discriminante y 02 sólo bloquea la síntesis histórica de ticket 14.
