@@ -579,3 +579,21 @@ Resolución y freeze sucesor:
   exacto `91d5ae3`, sin avanzar el clon a commits documentales posteriores.
   Después se fijarán `freeze.json`, marker/hash de `dist`, manifest, clean tree
   y mutación autenticada antes de abrir N=4.
+
+Reasignación del endpoint antes de ejecutar:
+
+- al verificar el freeze, el PID histórico `38392` volvió a escuchar en 3000 y
+  respondió como `manyhands-web` development. Windows continúa devolviendo ACL
+  denegada para su terminación y no expone owner/command line; `retry-9` no se
+  reanudó ni mutó;
+- se descartó usar ese servidor porque ejecuta bytes y token del freeze
+  histórico. El puerto 3001 está libre y el launcher admite URL/entorno de
+  puerto sin cambiar el producto;
+- los tres JSON de `retry-10` cambiaron únicamente `baseUrl` de 3000 a 3001.
+  Targets, W1, goals/hashes, condición, selección, timeouts, budgets, estímulo
+  y oráculo permanecen iguales. El draft 3000 queda preservado en `91d5ae3`;
+- el freeze ejecutable sucesor es
+  `643a32dada8e46af9edad1dcfc7ebbf6571aca78`. Próxima operación larga: Gate P0
+  completo y secuencial sobre ese SHA exacto; luego iniciar
+  `node scripts/manyhands-dev.mjs --plain --url http://127.0.0.1:3001` con
+  `PORT=3001` y comprobar una mutación autenticada antes de N=4.
