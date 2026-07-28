@@ -541,3 +541,21 @@ Resolución de la instalación:
 - próxima operación larga: avanzar el clon al commit documental de este
   checkpoint y ejecutar Gate P0 completo, secuencial y sin otras cargas, sobre
   un único HEAD limpio.
+
+Checkpoint durante Gate P0 del clon, que permanece en
+`d534dfc51c89981283a5f03b38eea1c5d75ab878`:
+
+- `pnpm test` PASS: 212 archivos, 1408 passed, 2 skipped; packages typecheck
+  PASS;
+- el primer web typecheck falló porque un clon fresco aún no tenía los `dist`
+  a los que apuntan los exports de paquetes. `pnpm build` PASS materializó esos
+  artefactos y el mismo web typecheck pasó sin cambios de fuente;
+- el primer `pnpm web:build` fue terminado por el timeout externo de 300 s.
+  Packages build había pasado, Next compiló en 63 s y quedó en `Linting and
+  checking validity of types`; no quedó ningún hijo activo. El log es
+  `gate-p0-web-build.log`;
+- próxima acción diagnóstica: ejecutar sólo `pnpm --filter @manyhands/web
+  build` con ventana de 600 s y cache preservada. Si termina, repetir el gate
+  original con timeout suficiente; si vuelve a colgar, instrumentar la fase de
+  Next antes de cualquier nuevo intento. El clon no avanzará al commit de este
+  checkpoint hasta cerrar P0.
