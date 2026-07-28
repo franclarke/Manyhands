@@ -4,14 +4,21 @@ import { z } from "zod";
 import { RunValidationError } from "@/lib/server/runs/errors";
 import { toCanonicalRunResponse } from "@/lib/server/runs/presenter";
 import { runErrorResponse } from "@/lib/server/runs/route-errors";
-import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
+import {
+  startRunBackgroundTask,
+  startRunBackgroundTaskAfterCurrent
+} from "@/lib/server/runs/runner-state";
 import {
   loadRunProjectionV2,
   resolveDecisionV2
 } from "@/lib/server/runs/v2/command-host";
 import { approvePlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
 import { runPlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
-import { startExecutionV2Pipeline } from "@/lib/server/runs/v2/execution-pipeline";
+import {
+  runDecisionContinuationV2Pipeline,
+  startDecisionContinuationV2Pipeline,
+  startExecutionV2Pipeline
+} from "@/lib/server/runs/v2/execution-pipeline";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,7 +77,18 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
     });
     let run = resolved.run;
     if (resolved.state.lifecycle !== "failed") {
-      run = await startExecutionV2Pipeline(id, "route:decision:resume-execution-v2");
+      if (resolved.run.activeOperation?.kind === "execution") {
+        startRunBackgroundTaskAfterCurrent(
+          id,
+          "route:decision:resume-execution-v2",
+          () => runDecisionContinuationV2Pipeline(id)
+        );
+      } else {
+        run = await startDecisionContinuationV2Pipeline(
+          id,
+          "route:decision:resume-execution-v2"
+        );
+      }
     }
     return NextResponse.json({ ...(await toCanonicalRunResponse(run)), decisionId, ...(optionId !== undefined ? { optionId } : {}), ...(parsed.data.answer !== undefined ? { answer: parsed.data.answer } : {}) });
   } catch (error) {

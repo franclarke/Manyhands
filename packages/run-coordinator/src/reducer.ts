@@ -339,6 +339,8 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
         ...(event.payload.optionId !== undefined ? { optionId: event.payload.optionId } : {}),
         ...(event.payload.answer !== undefined ? { answer: event.payload.answer } : {})
       };
+      next.readiness.pendingDecisionIds = next.readiness.pendingDecisionIds
+        .filter((decisionId) => decisionId !== decision.id);
       break;
     }
     case "decision.expired": {

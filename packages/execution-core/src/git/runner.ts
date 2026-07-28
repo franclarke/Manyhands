@@ -222,8 +222,22 @@ export class SimpleGitRunner implements GitRunner {
 
   async commit(params: { cwd: string; message: string }): Promise<string> {
     const git = this.client(params.cwd);
-    await git.commit(params.message);
-    const sha = await git.revparse(["HEAD"]);
+    const [configuredName, configuredEmail] = await Promise.all([
+      git.getConfig("user.name"),
+      git.getConfig("user.email")
+    ]);
+    const commitGit = configuredName.value?.trim() && configuredEmail.value?.trim()
+      ? git
+      : simpleGit({
+          baseDir: params.cwd,
+          config: [
+            `safe.directory=${gitPath(resolve(params.cwd))}`,
+            "user.name=ManyHands",
+            "user.email=manyhands@local"
+          ]
+        });
+    await commitGit.commit(params.message);
+    const sha = await commitGit.revparse(["HEAD"]);
     return sha.trim();
   }
 

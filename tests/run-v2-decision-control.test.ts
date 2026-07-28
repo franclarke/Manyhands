@@ -73,4 +73,72 @@ describe("V2 local decision control", () => {
     expect(resolved.run.activeOperation).toMatchObject({ operationId: lease.operationId, fencingToken: lease.fencingToken, kind: "execution" });
     expect((await store.load(runId)).at(-1)?.type).toBe("decision.resolved");
   });
+
+  it("keeps a resolved waiting run parked until the execution driver recomputes readiness", async () => {
+    const runId = "run-decision-waiting";
+    const lease = {
+      operationId: "88888888-8888-4888-8888-888888888888",
+      kind: "execution" as const,
+      fencingToken: 6,
+      acquiredAt: at,
+      heartbeatAt: at
+    };
+    const store = new JsonlRunEventStore({ directory });
+    await store.advanceFence(runId, lease);
+    await store.appendFenced(runId, 0, lease, [
+      { eventId: "created", occurredAt: at, type: "run.created", payload: { goal: "Build booking" } },
+      { eventId: "proposed", occurredAt: at, type: "graph.revision.proposed", payload: { graphId: "graph", revision: 1 } },
+      { eventId: "approved", occurredAt: at, type: "graph.revision.approved", payload: { graphId: "graph", revision: 1 } },
+      {
+        eventId: "decision",
+        occurredAt: at,
+        type: "decision.raised",
+        payload: {
+          decision: {
+            id: "decision-api",
+            kind: "resolve_conflict",
+            question: "Retry after correcting the environment?",
+            options: [{ id: "retry", label: "Retry" }, { id: "stop", label: "Stop" }],
+            affectedNodeIds: ["node-api"],
+            evidenceRefs: ["attempt-api"],
+            impact: "behavior"
+          }
+        }
+      },
+      {
+        eventId: "waiting",
+        occurredAt: at,
+        type: "readiness.observed",
+        payload: { readyNodeIds: [], pendingDecisionIds: ["decision-api"] }
+      }
+    ]);
+    await getRunRepository().save(makeRunRecordV2({
+      runId,
+      lifecycle: "waiting_for_input",
+      mutationFence: lease.fencingToken,
+      activeOperation: lease,
+      projection: {
+        eventSequence: 5,
+        lifecycle: "waiting_for_input",
+        graphId: "graph",
+        graphRevision: 1,
+        approvedGraphRevision: 1,
+        updatedAt: at
+      }
+    }));
+
+    const resolved = await resolveDecisionV2(runId, "decision-api", { optionId: "retry" });
+
+    expect(resolved.state.lifecycle).toBe("waiting_for_input");
+    expect(resolved.state.readiness.pendingDecisionIds).toEqual([]);
+    expect(resolved.state.decisions["decision-api"]).toMatchObject({
+      status: "resolved",
+      resolution: { optionId: "retry" }
+    });
+    expect(resolved.run.activeOperation).toMatchObject({
+      operationId: lease.operationId,
+      fencingToken: lease.fencingToken,
+      kind: "execution"
+    });
+  });
 });

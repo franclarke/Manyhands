@@ -18,7 +18,13 @@ import {
 } from "@manyhands/execution-core";
 import { V2ExecutionDriver, type V2NodeExecutionOutcome } from "@manyhands/orchestrator-graph";
 import { RepositorySnapshotSchema, type RepositorySnapshot } from "@manyhands/repository-index";
-import { RunCoordinator, foldRun, type RunEvent, type RunProjection } from "@manyhands/run-coordinator";
+import {
+  RunCoordinator,
+  foldRun,
+  type RunEvent,
+  type RunLifecycle,
+  type RunProjection
+} from "@manyhands/run-coordinator";
 import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 import { GraphRevisionSchema, type GraphRevision } from "@manyhands/task-graph";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
@@ -70,6 +76,11 @@ export async function runExecutionV2Pipeline(runId: string): Promise<void> {
   await driveClaimedExecutionV2(await claimExecutionV2(runId));
 }
 
+/** Re-enters the scheduler after a decision while canonical readiness is still parked. */
+export async function runDecisionContinuationV2Pipeline(runId: string): Promise<void> {
+  await driveClaimedExecutionV2(await claimExecutionV2(runId, ["running", "waiting_for_input"]));
+}
+
 /** Claims execution synchronously so duplicate HTTP starts receive a deterministic conflict. */
 export async function startExecutionV2Pipeline(runId: string, label = "execution-v2"): Promise<RunRecord> {
   const claimed = await claimExecutionV2(runId);
@@ -77,9 +88,21 @@ export async function startExecutionV2Pipeline(runId: string, label = "execution
   return claimed.run;
 }
 
-function claimExecutionV2(runId: string): Promise<{ run: RunRecord; lease: RunOperationLease }> {
+export async function startDecisionContinuationV2Pipeline(
+  runId: string,
+  label = "decision-continuation-v2"
+): Promise<RunRecord> {
+  const claimed = await claimExecutionV2(runId, ["running", "waiting_for_input"]);
+  startRunBackgroundTask(runId, label, () => driveClaimedExecutionV2(claimed));
+  return claimed.run;
+}
+
+function claimExecutionV2(
+  runId: string,
+  expectedLifecycles: readonly RunLifecycle[] = ["running"]
+): Promise<{ run: RunRecord; lease: RunOperationLease }> {
   return claimRunOperation(runId, "execution", {
-    expectedLifecycles: ["running"],
+    expectedLifecycles,
     allowTakeover: true,
     takeoverStaleAfterMs: DEFAULT_STALE_MS
   });

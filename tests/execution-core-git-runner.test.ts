@@ -80,6 +80,39 @@ describe("SimpleGitRunner ancestry", () => {
   });
 });
 
+describe("SimpleGitRunner commit identity", () => {
+  it("uses a command-scoped ManyHands identity when the repository has no usable author", async () => {
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "mh-git-identity-"));
+    tempDirectories.push(repoRoot);
+    await git(repoRoot, "init", "--initial-branch=main");
+
+    await writeFile(path.join(repoRoot, "base.txt"), "base\n", "utf8");
+    await git(repoRoot, "add", "base.txt");
+    await git(
+      repoRoot,
+      "-c",
+      "user.name=Bootstrap",
+      "-c",
+      "user.email=bootstrap@example.invalid",
+      "commit",
+      "-m",
+      "base"
+    );
+    await git(repoRoot, "config", "--local", "user.name", "");
+    await git(repoRoot, "config", "--local", "user.email", "");
+
+    await writeFile(path.join(repoRoot, "change.txt"), "change\n", "utf8");
+    await git(repoRoot, "add", "change.txt");
+
+    const commit = await new SimpleGitRunner().commit({ cwd: repoRoot, message: "candidate" });
+
+    expect(await git(repoRoot, "show", "-s", "--format=%an <%ae>", commit))
+      .toBe("ManyHands <manyhands@local>");
+    expect(await git(repoRoot, "config", "--local", "--get", "user.name")).toBe("");
+    expect(await git(repoRoot, "config", "--local", "--get", "user.email")).toBe("");
+  });
+});
+
 describe("safeGitArgs", () => {
   it("normalizes the repository-scoped safe.directory value to Git path syntax", () => {
     const args = safeGitArgs("C:\\Users\\owner\\repo", ["status", "--porcelain"]);

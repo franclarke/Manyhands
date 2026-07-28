@@ -55,6 +55,18 @@ export function startRunBackgroundTask(
   tasks.add(tracked);
 }
 
+export function startRunBackgroundTaskAfterCurrent(
+  runId: string,
+  label: string,
+  task: () => Promise<void>
+): void {
+  const predecessors = Array.from(backgroundTasks.get(runId) ?? []);
+  startRunBackgroundTask(runId, label, async () => {
+    await Promise.allSettled(predecessors);
+    await task();
+  });
+}
+
 export async function drainRunBackgroundTasks(runId: string): Promise<void> {
   while (true) {
     const tasks = backgroundTasks.get(runId);
