@@ -511,3 +511,18 @@ Checkpoint 2026-07-28 antes de la instalación y Gate P0:
   P0 completo secuencial. El bloqueo del puerto no impide instalación ni P0;
   debe resolverse o aislarse de forma atribuible antes de la mutación
   autenticada y del run.
+
+Diagnóstico de instalación posterior al checkpoint:
+
+- el primer comando offline fue interrumpido por el timeout de 10 s del host,
+  no por pnpm; `install.log` conserva la salida hasta 6 paquetes reutilizados;
+- la única repetición, con timeout suficiente, confirmó `Packages: +629` pero
+  terminó con `ERR_PNPM_NO_OFFLINE_TARBALL`: el store accesible del perfil
+  actual carece de `esbuild-0.27.7.tgz`. `install-resume.log` preserva la
+  salida; no quedó un proceso instalador activo;
+- el checkout principal sí contiene `esbuild@0.27.7`, pero copiar su
+  `node_modules` mezclaría el laboratorio con la instalación dañada por ACL.
+  Próxima acción: poblar únicamente el store declarado desde el lockfile con
+  `pnpm fetch`, preservar el log y repetir la instalación en modo offline. Esto
+  corrige disponibilidad de dependencias; no cambia HEAD, lockfile, estímulo,
+  instrumento ni oráculo.
