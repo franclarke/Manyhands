@@ -2,24 +2,6 @@ export const MINIMUM_FREE_BYTES = 25 * 1024 ** 3;
 export const INCREMENTS = Array.from({ length: 8 }, (_, index) => `W${index + 1}`);
 
 /**
- * The one executor selection the whole study runs on, for planning, execution
- * and repair alike.
- *
- * Claude Code reports token usage and an exact `total_cost_usd` per attempt;
- * the Codex CLI declares `usageSource: "unavailable"`, which would make cost —
- * a primary variable of this study — permanently unmeasurable and tokens a
- * lower bound. G5 already carries a cell whose token total is a floor because
- * an attempt reported nothing.
- *
- * `sonnet` is the declared model: strong enough for the increments and
- * sustainable across the full program's run count. If the pilot shows it is not
- * capable enough for the later increments, that is a pilot finding and the
- * model changes BEFORE the freeze — never during the Final series.
- *
- * Claude models expose no reasoning-effort knob (`efforts: null` in the
- * registry), so this selection carries no `effort` field by design.
- */
-/**
  * 2026-07-26: the study moves back to Codex `gpt-5.5` at `high`.
  *
  * The reason for Claude Code was telemetry — Codex declares
@@ -33,6 +15,9 @@ export const INCREMENTS = Array.from({ length: 8 }, (_, index) => `W${index + 1}
  * reports tokens as a floor and cost as `unavailable`, exactly as G5 did. If a
  * measured cost is wanted later, it has to come from an executor that reports
  * it, and the whole series has to be re-run under that executor.
+ *
+ * `protocol/longitudinal-protocol.md` mirrors this value in a machine-readable
+ * declaration; the focused contract test fails if they diverge.
  */
 export const STUDY_SELECTION = { executorId: "codex-cli", model: "gpt-5.5", effort: "high" };
 

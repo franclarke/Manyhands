@@ -15,12 +15,25 @@ simulación, persistencia y analítica?
 - Base Wn: commit entregado por W(n-1) y aprobado sólo después de su oráculo.
 - Planner: vivo en cada incremento; no se reutilizan candidate trees.
 - Condición: C durante Pilot y Warehouse Final longitudinal.
-- Executor y modelo: Claude Code CLI `sonnet`, en planning, ejecución y repair.
-  Los modelos Claude no exponen perilla de reasoning effort, así que la
-  selección no declara `effort`. Se eligió por sobre Codex `gpt-5.5` porque
-  Codex declara `usageSource: "unavailable"`: dejaría el costo permanentemente
-  sin medir y los tokens como cota inferior, y ambos son variables del estudio.
-  La selección declarada es única y vive en `lib/warehouse-longitudinal.mjs`.
+- Executor, modelo y effort: Codex CLI `gpt-5.5` con `high`, idéntico en
+  planning, ejecución y repair. La selección efectiva vive en
+  `lib/warehouse-longitudinal.mjs`.
+
+Executor selection (machine-readable): {"executorId":"codex-cli","model":"gpt-5.5","effort":"high"}
+
+### Reversión del executor antes del freeze
+
+El 2026-07-26 el protocolo revirtió su selección formativa anterior a Codex
+`gpt-5.5` con `high`. La capacidad resultó ser la restricción dominante: el
+executor anterior compartía cuota con la sesión interactiva y no podía sostener
+la duración de un incremento. Desde el 2026-07-28, además, Codex es el único
+executor instalado y autorizado en la máquina del estudio.
+
+La reversión tiene una consecuencia que se preserva como límite de la evidencia:
+Codex declara `usageSource: "unavailable"`, por lo que se informan los tokens
+como piso y el costo no medible. No se imputan valores faltantes. Obtener costo
+medido exigiría otro executor y repetir la serie completa bajo un freeze nuevo;
+nunca se mezclan sus células con esta serie.
 
 ## Separación de fases
 
