@@ -663,3 +663,15 @@ Resultado terminal de `retry-10` N=4:
 - la instrumentacion es valida y el resultado adverso es atribuible. Conforme
   al protocolo, la proxima operacion larga es N=8 sobre su target nuevo con el
   mismo freeze, servidor, seleccion y vigia unico detached.
+
+Resultado terminal de `retry-10` N=8:
+
+- run `d31b219b-4a92-4cef-a452-f58e3f27bda8`, vigia unico detached PID
+  `45568`, termino `failed` durante compiled plan review;
+- reprodujo independientemente el mismo ciclo de artefactos entre registry y
+  study script. No hubo execution, candidate, receipt ni cambio del target W1;
+- journal, snapshot, result y disposicion `not_run` quedan preservados. No se
+  cambia producto, freeze, formula, umbral, estimulo ni oraculo;
+- proxima operacion larga: N=16 secuencial sobre el tercer target nuevo. Su
+  assessment de granularidad se deriva del evento productivo aun si el plan es
+  rechazado antes de candidate.

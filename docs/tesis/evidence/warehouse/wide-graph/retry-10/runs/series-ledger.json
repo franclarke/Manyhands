@@ -1,11 +1,11 @@
 [
   {
-    "cellId": "warehouse-wide-n04",
-    "position": 1,
+    "cellId": "warehouse-wide-n08",
+    "position": 2,
     "condition": "C",
     "outcome": "not_delivered",
     "exitCode": 1,
-    "startedAt": "2026-07-28T23:51:18.220Z",
-    "finishedAt": "2026-07-28T23:53:39.420Z"
+    "startedAt": "2026-07-28T23:55:53.427Z",
+    "finishedAt": "2026-07-28T23:58:40.440Z"
   }
 ]
