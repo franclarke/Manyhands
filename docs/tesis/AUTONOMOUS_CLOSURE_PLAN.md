@@ -416,9 +416,12 @@ legacy.
 10 (N=4) -> revisión del instrumento -> 11 (N=8, N=16) -> 12 (veredicto H1)
 ```
 
-N=4 es un gate de instrumento y costo. N=8 y N=16 se ejecutan sólo si N=4
-demuestra que la celda, checkout, receipt y oráculo son atribuibles. Entre las
-tres celdas no se edita código ejecutable.
+N=4 es un gate de atribución y costo. N=8 y N=16 se ejecutan sólo si N=4 deja
+un resultado terminal atribuible y la revisión confirma que el freeze y el
+instrumento son válidos. Un fallo del producto antes de candidate no se
+reintenta ni exige fabricar receipt u oracle verdict: se registra la disposición
+`not_run` y se continúa para evitar sesgo de parada. Entre las tres celdas no se
+edita código ejecutable.
 
 ### Fase C — límite longitudinal
 
@@ -541,9 +544,10 @@ El goal está completo únicamente si se cumplen todas:
 ### Evidencia
 
 - N=4, N=8 y N=16 ejecutados bajo un freeze atribuible y comparable;
-- resultado, receipt cuando exista y veredicto del oráculo externo atribuibles
-  para cada célula; un `FAIL` científico válido sostiene una conclusión negativa
-  o limitada y no se reintenta hasta obtener PASS;
+- resultado atribuible para cada célula; receipt y veredicto del oráculo externo
+  cuando exista una entrega, o disposición explícita `not_run` cuando el sistema
+  no produzca candidate SHA; un `FAIL` científico válido sostiene una conclusión
+  negativa o limitada y no se reintenta hasta obtener PASS;
 - veredicto explícito sobre `validationDuplication`;
 - W2 verificado o límite 1/8 defendible;
 - manifests, journals, diffs, commits y receipts enlazados;

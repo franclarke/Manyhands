@@ -155,20 +155,22 @@ la política C actual; sí debe cerrar antes de que ticket 14 sintetice journals
 C1 históricos. 07 y 09 ya no forman parte del mínimo y no justifican demorar
 el experimento.
 
-### Primera célula de la futura sucesora Codex — N=4
+### Primera célula de la sucesora Codex — N=4
 
-Dentro del barrido futuro, N=4 debe correr antes que N=8 y N=16: **el
-instrumento nuevo está verificado por tests pero ningún agente lo ejecutó
-todavía.** N=4 es la celda más barata y valida estímulo, contrato y oráculo
-antes de gastar las células mayores.
+`retry-8` ya ejecutó N=4 una vez. El run
+`9bd2e8fc-0e7c-4342-b908-d6a25818382f` produjo un resultado terminal
+atribuible: ManyHands persistió el grafo y los assessments de C, pero el Graph
+Compiler rechazó outputs duplicados y ciclos antes de candidate. No hubo SHA,
+receipt ni entrada válida para el oráculo externo.
 
 Las celdas históricas en
 `docs/tesis/evidence/warehouse/wide-graph/retry-7/cells/` no se ejecutan ni se
-reescriben. Se genera una nueva versión de serie sobre la base W1 `71f61c9e`
-con `codex-cli / gpt-5.5 / high`, conservando el estímulo y el oráculo
-versionados.
+reescriben. `retry-8` usa la base W1 `71f61c9e` y
+`codex-cli / gpt-5.5 / high`, con estímulo y oráculo versionados.
 
-Si el oráculo rechaza algo, hay que descubrirlo con 4 módulos, no con 16.
+No reintentar N=4. Continuar N=8 y N=16 bajo el mismo freeze después del review
+de ticket 10; si producen candidate, ejecutar el oráculo. Si fallan antes,
+registrar la fase terminal y `not_run` sin inventar una entrega.
 
 ### Paso 2 — La medición que le falta a H1
 
@@ -353,8 +355,9 @@ Mínimo defendible:
 1. **H1** — la medición del Paso 2, con veredicto explícito sobre
    `validationDuplication`. Sin eso, la afirmación "C toma buenas decisiones"
    queda contradicha por la única evidencia ancha que existe.
-2. **H2** — la serie sucesora Codex completa `{4, 8, 16}` con veredictos de
-   oráculo externo atribuibles, aunque sean adversos, y los N viejos
+2. **H2** — la serie sucesora Codex completa `{4, 8, 16}` con resultados
+   terminales atribuibles; receipt/oráculo para toda entrega y disposición
+   `not_run` para fallos anteriores a candidate, más los N viejos
    re-etiquetados como evidencia de mecánica.
 3. La cadena longitudinal declarada como 1/8 **con las causas documentadas**.
 4. Los parámetros sin anclar (`maxLeafPlannedPaths`, `minimumAdvantage`)
