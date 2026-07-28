@@ -322,7 +322,7 @@ Para todo ticket:
 
 ### Gate de freeze
 
-Antes de `retry-7` y nuevamente antes de W2:
+Antes de la serie sucesora Codex y nuevamente antes de W2:
 
 - P0 PASS;
 - tickets de corrección requeridos cerrados;
@@ -378,7 +378,7 @@ El orden entre 06, 07, 09 y 02 puede cambiar si una causa descubierta lo exige,
 pero todos deben cerrar antes de la síntesis. Este es un orden operativo para
 reducir cambios entre mediciones, no agrega relaciones `Blocked by`: sólo los
 tickets determinan reachability. Para máxima comparabilidad, no comenzar
-`retry-7` hasta cerrar todos los cambios conductuales de esta fase y congelar un
+la serie sucesora Codex hasta cerrar todos los cambios conductuales de esta fase y congelar un
 único commit.
 
 ### Fase B — evidencia ancha
