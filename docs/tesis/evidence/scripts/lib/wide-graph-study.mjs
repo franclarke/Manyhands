@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import { WIDE_GRAPH_SIZES, metricsFor, moduleIdFor } from "./wide-graph-metrics.mjs";
 
 export const WIDE_GRAPH_BASE_SHA = "71f61c9efa222103ca2fb2f67692434ab493d75c";
@@ -66,4 +67,19 @@ export function wideGraphSelection(name) {
     throw new Error(`Unknown executor selection "${name}"; expected one of ${Object.keys(WIDE_GRAPH_SELECTIONS).join(", ")}.`);
   }
   return { ...selection };
+}
+
+export function assertWideGraphSeriesSelection(cells, frozenSelection) {
+  if (!Array.isArray(cells) || cells.length === 0) {
+    throw new Error("Wide graph series has no cells to validate.");
+  }
+  for (const cell of cells) {
+    for (const stage of ["planning", "execution", "repair"]) {
+      if (!isDeepStrictEqual(cell[`${stage}Selection`], frozenSelection)) {
+        throw new Error(
+          `${cell.cellId} ${stage} selection differs from the frozen executor selection; the series is not comparable.`
+        );
+      }
+    }
+  }
 }

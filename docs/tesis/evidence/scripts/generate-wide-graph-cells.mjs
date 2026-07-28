@@ -2,7 +2,11 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
-import { buildWideGraphPlan, wideGraphSelection } from "./lib/wide-graph-study.mjs";
+import {
+  assertWideGraphSeriesSelection,
+  buildWideGraphPlan,
+  wideGraphSelection
+} from "./lib/wide-graph-study.mjs";
 
 const targetRepo = resolve(argument("--target") ?? fail("--target is required"));
 const outDir = resolve(argument("--out") ?? "docs/tesis/evidence/warehouse/wide-graph/cells");
@@ -30,6 +34,7 @@ const cells = plan.map((entry) => ({
   wallClockLimitMs: 7_200_000,
   goalSha256: sha(entry.goal)
 }));
+assertWideGraphSeriesSelection(cells, selection);
 
 if (dryRun) {
   process.stdout.write(`${JSON.stringify({ targetRepo, outDir, cells }, null, 2)}\n`);
@@ -44,6 +49,7 @@ await writeFile(join(outDir, "manifest.json"), `${JSON.stringify({
   schemaVersion: 1,
   title: "Warehouse wide graph pilot",
   baseSha: plan[0]?.baseSha,
+  executorSelection: selection,
   moduleCounts: plan.map((entry) => entry.moduleCount),
   cells: cells.map(({ cellId, position, moduleCount, baseSha, goalSha256 }) => ({ cellId, position, moduleCount, baseSha, goalSha256 }))
 }, null, 2)}\n`, "utf8");
