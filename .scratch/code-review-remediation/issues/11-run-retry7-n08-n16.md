@@ -27,3 +27,9 @@
 - Pendiente antes de marcar aceptación: nuevo freeze limpio y serie sucesora
   completa `{4, 8, 16}` con targets nuevos. `retry-8` permanece inmutable como
   evidencia adversa.
+- `retry-9` quedó congelado en
+  `faead8546a9d447200a66b0167836536d558bba4`: Gate P0 exacto PASS, tres
+  targets nuevos limpios sobre W1, selección homogénea
+  `codex-cli/gpt-5.5/high` y células `{4, 8, 16}` con condición C.
+- Pendiente: ejecutar las tres células, preservar cada resultado, correr el
+  oráculo sólo ante una entrega y registrar la evaluación N=16.

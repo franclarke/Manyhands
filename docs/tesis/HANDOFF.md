@@ -129,6 +129,19 @@ Actualización operativa 2026-07-28:
     `manyhands-planned-path-fix-2`: 629 paquetes, lockfile frozen, modo offline,
     `Done in 30.4s`. El intento anterior se conserva porque entró en resolución
     intensiva sin materializar `node_modules`.
+- Serie sucesora `retry-9` congelada para ejecución:
+  - commit exacto `faead8546a9d447200a66b0167836536d558bba4`, clon aislado
+    `manyhands-thesis-freeze-3`, policy marker y hashes registrados en
+    `retry-9/freeze.json`;
+  - Gate P0 exacto PASS: 211 archivos, 1405 tests passed, 2 skipped; typechecks
+    de paquetes y web, build de paquetes y web build PASS;
+  - tres targets nuevos e independientes `warehouse-control-tower-wide-codex-r9-*`
+    están limpios sobre W1 `71f61c9e`; executor homogéneo
+    `codex-cli/gpt-5.5/high`, condición C, tamaños `{4, 8, 16}`;
+  - un web typecheck anterior al freeze final falló porque aún no existían los
+    `dist` de los paquetes. Se preservó la clasificación; después de `pnpm
+    build`, el mismo comando pasó. No fue un defecto de producto ni se cambió
+    código para obtener el PASS.
 
 Comandos de verificación (protocolo del proyecto):
 

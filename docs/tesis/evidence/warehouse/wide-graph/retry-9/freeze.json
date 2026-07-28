@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "frozenAt": "2026-07-28T21:51:01.2798779Z",
+  "manyHands": {
+    "commit": "faead8546a9d447200a66b0167836536d558bba4",
+    "tree": "0a9951a4018cb5452f1b42f99a15260d9a54b714",
+    "repository": "C:\\Users\\franc_rgy\\.codex\\tmp\\manyhands-thesis-freeze-3\\repo",
+    "workingTree": "clean",
+    "policyVersion": "adaptive-utility/3.1.0-pilot",
+    "distIndexSha256": "6ebbc2c7e5c5412fed43796f2f8d5cfcd616b21cdb0d0e472e35e10052a0d80c"
+  },
+  "toolchain": {
+    "node": "22.23.1",
+    "pnpm": "7.29.3",
+    "codexCli": "0.144.4",
+    "pnpmLockSha256": "ccfdec805178d04f07921c595206239eafe58236ac61300c6589b4953ecc9c40"
+  },
+  "gateP0": {
+    "commit": "faead8546a9d447200a66b0167836536d558bba4",
+    "workspace": "isolated",
+    "commands": [
+      {
+        "command": "pnpm test",
+        "outcome": "pass",
+        "summary": "211 files passed; 1405 tests passed; 2 skipped"
+      },
+      {
+        "command": "pnpm -r --filter ./packages/* typecheck",
+        "outcome": "pass"
+      },
+      {
+        "command": "pnpm build",
+        "outcome": "pass"
+      },
+      {
+        "command": "pnpm --filter @manyhands/web exec tsc --noEmit",
+        "outcome": "pass"
+      },
+      {
+        "command": "pnpm web:build",
+        "outcome": "pass"
+      }
+    ]
+  },
+  "series": {
+    "condition": "C",
+    "policyVersion": "adaptive-utility/3.1.0-pilot",
+    "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+    "baseTree": "f159213768587bc719854760e818c5a55d4601f0",
+    "executorSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "moduleCounts": [
+      4,
+      8,
+      16
+    ],
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1800000,
+      "integrationTimeoutMs": 1800000,
+      "unexpectedCommitPolicy": "reject",
+      "wallClockLimitMs": 7200000,
+      "pollIntervalMs": 10000
+    },
+    "humanDecisionProtocol": [
+      "approve_plan",
+      "approve_delivery"
+    ]
+  },
+  "cells": [
+    {
+      "cellId": "warehouse-wide-n04",
+      "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-r9-n04",
+      "cellSha256": "bb639aa58f494d177c0d25ddbe4d25bebaf410e4554bf3c8ccab91b37b0ec9d7",
+      "goalSha256": "d1798ad1caba8c72cfc82792b0eb1330240511764c59e2539ab3799446f6f546"
+    },
+    {
+      "cellId": "warehouse-wide-n08",
+      "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-r9-n08",
+      "cellSha256": "946785f4880625d92e0defe114ea0b6ff4fe169433ee1d90dda32fc9fa48f313",
+      "goalSha256": "8da73f032bc2924bf70d46f63d739dc8c4d55a503b59e68f0bf862805f6ad1a8"
+    },
+    {
+      "cellId": "warehouse-wide-n16",
+      "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-r9-n16",
+      "cellSha256": "75a95692e7df3e9f418de1428d8bad9d7b9c656c0d6888defda7d483454afe85",
+      "goalSha256": "94b7cf6ac0f4e39ca8ffd944e9f5dbc04e02572b70e638cbabcce3f1db5e7b61"
+    }
+  ],
+  "artifacts": {
+    "cellsManifestSha256": "7534258f6e71986a2126b3dab3ec1f8ba3caddb4fde92f98662cd9775750508a",
+    "generatorSha256": "da7718b81ef75fb4cc2c3e06516d322b2bad09013f8e45f30913498f10a6f243",
+    "driverSha256": "f509b85fd7c21f0d526d3e848ca3c4907b172095bf37621ac2e211b20ff57ef6",
+    "seriesDriverSha256": "1fab31a7883db76a62ca4c1ff2cf9b812d16d16bf156e34d17ef4b3df67cfc26",
+    "oracleId": "warehouse-wide-graph-v2",
+    "oracleContractVersion": 2,
+    "oracleRunnerSha256": "a8c0a968f27d2fe23ad0553974c636b8f8e9b906c909df1ca63aa9db3f4e891c",
+    "oracleEvaluatorSha256": "cb22b7e6ef4aebe948e8525404468a34c842de44820f2f14a4e5e52b0cee8c6a",
+    "specimenSha256": "45b8d976ff5b897fd8cad88ec0a156237f2e73b1dd07ed1d50b15b5a6c778e83"
+  },
+  "preparationNotes": [
+    "Retry-8 remains immutable and its three pre-candidate failures are preserved as adverse evidence.",
+    "The hierarchical planned-path ownership fix passed independent Standards and Spec review before this freeze.",
+    "The execution clone inherited core.autocrlf=true from the host configuration; it was changed locally to false before dependency installation, and the final tree remained clean.",
+    "An initial web typecheck on the parent commit was rejected because package dist outputs had not yet been built. After pnpm build produced the declared workspace package types, the same command passed; the exact frozen commit then passed the full gate in the correct order.",
+    "Each cell uses a new independent W1 target repository. No target reset, cleanup or deletion is part of this series."
+  ]
+}
