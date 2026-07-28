@@ -9,3 +9,18 @@
 - [ ] Ambas corren sobre la misma base y con el mismo executor declarado.
 - [ ] Cada resultado queda preservado, incluidos los fallos.
 - [ ] Queda registrada la evaluacion de granularidad de la celda mas ancha.
+
+## Progreso 2026-07-28
+
+- `retry-8` preservó resultados terminales atribuibles para N=4, N=8 y N=16,
+  todos `failed` antes de candidate; no hubo receipt/SHA y el oráculo quedó
+  `not_run`.
+- N=8 y N=16 expusieron el mismo defecto productivo: composites y descendientes
+  declaraban los mismos `plannedPaths`, y el crítico los trataba como owners
+  independientes.
+- TDD del fix en `28efda8`: RED `1 failed / 6 passed`; GREEN `38/38`; typecheck
+  y build de `@manyhands/decomposer` PASS. El cambio permite sólo el resumen
+  ancestro-descendiente y mantiene el rechazo entre ramas incomparables.
+- Pendiente antes de marcar aceptación: reviews Standards/Spec del fix, nuevo
+  freeze limpio y serie sucesora completa `{4, 8, 16}` con targets nuevos.
+  `retry-8` permanece inmutable como evidencia adversa.

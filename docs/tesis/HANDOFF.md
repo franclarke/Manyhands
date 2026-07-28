@@ -114,6 +114,20 @@ Actualización operativa 2026-07-28:
   - Francisco autorizó corregir defectos del sistema. Próximo paso: TDD sobre
     ownership de `plannedPaths`, fix productivo, gates/reviews y nueva serie
     completa desde N=4. Retry-8 no se borra ni se reinterpreta.
+- Fix productivo de ownership jerárquico en `28efda8`:
+  - la regresión no vacua falló primero con `1 failed / 6 passed` porque el
+    crítico trataba el resumen de outputs del composite como ownership
+    independiente de cada descendiente;
+  - el crítico ahora permite únicamente solapamiento ancestro-descendiente y
+    conserva el rechazo entre ramas incomparables; GREEN `38/38`, typecheck y
+    build de `@manyhands/decomposer` PASS;
+  - no se tocaron ciclos de artefactos, policy C, fórmulas, umbrales, estímulo
+    ni oráculo. Standards/Spec independientes están en curso antes de usar el
+    fix en una medición;
+  - los requirements se instalaron completos en el clon aislado
+    `manyhands-planned-path-fix-2`: 629 paquetes, lockfile frozen, modo offline,
+    `Done in 30.4s`. El intento anterior se conserva porque entró en resolución
+    intensiva sin materializar `node_modules`.
 
 Comandos de verificación (protocolo del proyecto):
 
@@ -179,9 +193,15 @@ Las celdas históricas en
 reescriben. `retry-8` usa la base W1 `71f61c9e` y
 `codex-cli / gpt-5.5 / high`, con estímulo y oráculo versionados.
 
-No reintentar N=4. Continuar N=8 y N=16 bajo el mismo freeze después del review
-de ticket 10; si producen candidate, ejecutar el oráculo. Si fallan antes,
-registrar la fase terminal y `not_run` sin inventar una entrega.
+N=8 y N=16 ya se observaron bajo el mismo freeze y fallaron antes de candidate
+por la misma clase de output duplicado. La serie `retry-8` queda cerrada como
+evidencia adversa y **no se reintenta ni reescribe**.
+
+El paso siguiente es una serie sucesora nueva `{4, 8, 16}` desde N=4, con nuevos
+targets independientes y un freeze que incluya el fix revisado. Esto no
+reinterpreta `retry-8`: verifica si la corrección causal elimina el bloqueo
+productivo. Cada celda sucesora debe conservar su resultado terminal; sólo una
+entrega recibe oráculo y un fallo pre-candidate conserva `not_run`.
 
 ### Paso 2 — La medición que le falta a H1
 
