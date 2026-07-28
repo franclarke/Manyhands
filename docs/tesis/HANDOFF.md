@@ -54,8 +54,17 @@ Actualización operativa 2026-07-28:
   `f366c2043ab7f9fd98e498ba6a95bb018b0119b0`. El manifest declara la selección,
   `run-g5.mjs` valida homogeneidad y disponibilidad antes del run, y las series
   nuevas quedan restringidas a `codex-cli/gpt-5.5/high`. Retry-7 se preserva
-  como freeze histórico no ejecutado. El siguiente ticket de la ruta crítica
-  es 06.
+  como freeze histórico no ejecutado.
+- Ticket 06 cerrado con Standards/Spec PASS. Implementación:
+  `2ecad62e96e3d670ed9dd5d59906508121e15b46` y
+  `16a8104d47ff8aceec6bbef992c5aac3125ab7a2`. Protocolo, driver y plan dry-run
+  coinciden en `codex-cli/gpt-5.5/high`; el protocolo conserva la reversión por
+  capacidad y declara tokens como piso y costo no medible. W1–W8 pasaron
+  preflight dry-run sin abrir células.
+- Trabajo pendiente inmediato: ejecutar el checkpoint `grilling` pedido por
+  Francisco para tensionar scope y secuencia. El frente `ready-for-agent` es
+  02, 07, 09 y 10; 10 queda deliberadamente diferido hasta cerrar todos los
+  tickets conductuales. La ruta recomendada después del checkpoint es 07.
 
 Comandos de verificación (protocolo del proyecto):
 
