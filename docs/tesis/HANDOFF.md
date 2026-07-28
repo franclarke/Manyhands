@@ -44,10 +44,11 @@ Actualización operativa 2026-07-28:
 - El `node_modules` del checkout activo no es un laboratorio válido: lecturas
   de `zod` y `next` fallan por ACL/`EPERM`. No se borró ni reparó; la
   verificación se trasladó a un clon y store aislados.
-- Ticket 05 implementado en `8ff4715030e9937f21f11112362d033010cf08b3`:
-  el specimen ancho se re-deriva desde el blob W1 `71f61c9e`, y sus 16 valores
-  coinciden automáticamente con el catálogo. El siguiente ticket de la ruta
-  crítica es 08.
+- Ticket 05 cerrado con Standards/Spec PASS. Implementación:
+  `8ff4715030e9937f21f11112362d033010cf08b3`; evidencia durable:
+  `0910b11`. El specimen ancho se re-deriva desde el blob W1 `71f61c9e`, y sus
+  16 valores coinciden automáticamente con el catálogo. El siguiente ticket
+  de la ruta crítica es 08.
 
 Comandos de verificación (protocolo del proyecto):
 

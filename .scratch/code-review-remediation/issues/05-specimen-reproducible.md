@@ -4,7 +4,7 @@
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** closed
 
 - [x] El script de derivacion queda commiteado y corre contra el blob del commit W1 verificado.
 - [x] Su salida coincide con el catalogo congelado, verificado automaticamente.
@@ -53,7 +53,8 @@
 - Independent review:
   - Standards: `PASS`, no P0/P1/P2/P3 findings.
   - Spec: initially `PARTIAL` with one P2 because this durable RED/GREEN record
-    was absent. Functional acceptance passed; re-review is pending.
+    was absent. Functional acceptance passed; after this record was committed,
+    the affected-surface re-review returned `PASS` with no new P0/P1/P2.
 - Product defects found: none.
 - Limit: the derivation parser intentionally targets the frozen W1 scenario
   source shape. It is an attributable specimen check, not a general TypeScript
