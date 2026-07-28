@@ -16,6 +16,9 @@
 - Implementation commits on `main`:
   - `2ecad62e96e3d670ed9dd5d59906508121e15b46`
   - `16a8104d47ff8aceec6bbef992c5aac3125ab7a2`
+- Closure record commits:
+  - `f2187db7a302d182c916a3eaf329887726f2d99f`
+  - `9f9c8e98929788c000ecf9bc5820777fe4259732`
 - Protocol contract:
   - declares `codex-cli/gpt-5.5/high` for planning, execution and repair;
   - contains a machine-readable JSON selection compared automatically with

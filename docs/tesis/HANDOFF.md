@@ -65,6 +65,16 @@ Actualización operativa 2026-07-28:
   Francisco para tensionar scope y secuencia. El frente `ready-for-agent` es
   02, 07, 09 y 10; 10 queda deliberadamente diferido hasta cerrar todos los
   tickets conductuales. La ruta recomendada después del checkpoint es 07.
+- Checkpoint Git previo a `grilling`: root
+  `C:\Users\franc\Documents\Proyectos\Manyhands`, branch `main`, HEAD limpio
+  observado `9f9c8e98929788c000ecf9bc5820777fe4259732`, 147 commits adelante de
+  `origin/main`, con `origin/main` ancestro y sin push. El commit que contiene
+  este snapshot sólo agrega evidencia documental, por lo que no altera código,
+  protocolo ni resultados ya verificados.
+- Último gate: `git diff --check` → exit `0`.
+- Reanudación: completar primero el diálogo `grilling`; después leer completo
+  `.scratch/code-review-remediation/issues/07-fork-declared-and-guarded.md` y
+  recalcular el frente antes de modificar archivos.
 
 Comandos de verificación (protocolo del proyecto):
 
