@@ -48,7 +48,14 @@ Actualización operativa 2026-07-28:
   `4ab5f9d6db7e0c528ca18be674a27a78d52caba8`; evidencia durable:
   `74156cf875b40781c95979ed4fb79d1df4cc8133`. El specimen ancho se re-deriva
   desde el blob W1 `71f61c9e`, y sus 16 valores coinciden automáticamente con
-  el catálogo. El siguiente ticket de la ruta crítica es 08.
+  el catálogo.
+- Ticket 08 cerrado con Standards/Spec PASS. Implementación en
+  `c9aab46fe15d7744a08ec2939307d30f2a2830e9` a
+  `f366c2043ab7f9fd98e498ba6a95bb018b0119b0`. El manifest declara la selección,
+  `run-g5.mjs` valida homogeneidad y disponibilidad antes del run, y las series
+  nuevas quedan restringidas a `codex-cli/gpt-5.5/high`. Retry-7 se preserva
+  como freeze histórico no ejecutado. El siguiente ticket de la ruta crítica
+  es 06.
 
 Comandos de verificación (protocolo del proyecto):
 
