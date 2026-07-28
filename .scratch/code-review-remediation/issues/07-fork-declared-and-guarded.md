@@ -31,6 +31,7 @@ base W1 verificada y una serie ancha nueva sin `--resume-state`.
 
 - Fixed point: `eeb2f89b0657c160720e7212bc517075cab3ccaf`.
 - Scope decision commit: `0cb3fc33f08c6d91b17f1f64a37236ce201b918f`.
+- Review remediation commit: `f8e615e65c2aad969d9a7ba7662f80f5611172c4`.
 - Files changed: este ticket, `docs/tesis/AUTONOMOUS_CLOSURE_PLAN.md` y
   `docs/tesis/HANDOFF.md`; no cambió código, protocolo ni evidencia científica.
 - Verification:
