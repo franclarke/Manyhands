@@ -17,6 +17,8 @@ const plan = buildWideGraphPlan({ targetRepo });
 const selection = wideGraphSelection(argument("--executor") ?? "codex");
 const cells = plan.map((entry) => ({
   ...entry,
+  condition: "C",
+  granularityCondition: "C",
   baseUrl,
   workspaceName: "warehouse-wide-graph",
   planningSelection: selection,
@@ -49,6 +51,7 @@ await writeFile(join(outDir, "manifest.json"), `${JSON.stringify({
   schemaVersion: 1,
   title: "Warehouse wide graph pilot",
   baseSha: plan[0]?.baseSha,
+  granularityCondition: "C",
   executorSelection: selection,
   moduleCounts: plan.map((entry) => entry.moduleCount),
   cells: cells.map(({ cellId, position, moduleCount, baseSha, goalSha256 }) => ({ cellId, position, moduleCount, baseSha, goalSha256 }))

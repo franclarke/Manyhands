@@ -261,9 +261,13 @@ describe("wide graph executor selection", () => {
       const selection = { executorId: "codex-cli", model: "gpt-5.5", effort: "high" };
 
       expect(manifest.executorSelection).toEqual(selection);
+      expect(manifest.granularityCondition).toBe("C");
       expect(cells.every((cell) =>
         ["planningSelection", "executionSelection", "repairSelection"]
           .every((field) => JSON.stringify(cell[field]) === JSON.stringify(selection))
+      )).toBe(true);
+      expect(cells.every((cell) =>
+        cell.condition === "C" && cell.granularityCondition === "C"
       )).toBe(true);
     } finally {
       await rm(outDir, { recursive: true, force: true });
