@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "frozenAt": "2026-07-28T20:48:11.6788783Z",
+  "manyHands": {
+    "commit": "c38a976712f5145002667f0b0f6686136b13b190",
+    "tree": "e25718fd7a822c96e390903b35a6cf69ce99bdc0",
+    "repository": "C:\\Users\\franc_rgy\\.codex\\tmp\\manyhands-thesis-freeze-2\\repo",
+    "workingTree": "clean",
+    "policyVersion": "adaptive-utility/3.1.0-pilot",
+    "distIndexSha256": "0c12855d6cb26240d481d808b0e6e24be282bbbaa8ab0d540b4b7dedd3b0a91d"
+  },
+  "toolchain": {
+    "node": "22.23.1",
+    "pnpm": "7.29.3",
+    "codexCli": "0.144.4",
+    "pnpmLockSha256": "ccfdec805178d04f07921c595206239eafe58236ac61300c6589b4953ecc9c40"
+  },
+  "gateP0": {
+    "commit": "c38a976712f5145002667f0b0f6686136b13b190",
+    "workspace": "isolated",
+    "commands": [
+      {
+        "command": "pnpm test",
+        "outcome": "pass"
+      },
+      {
+        "command": "pnpm -r --filter ./packages/* typecheck",
+        "outcome": "pass"
+      },
+      {
+        "command": "pnpm build",
+        "outcome": "pass"
+      },
+      {
+        "command": "pnpm --filter @manyhands/web exec tsc --noEmit",
+        "outcome": "pass"
+      },
+      {
+        "command": "pnpm web:build",
+        "outcome": "pass"
+      }
+    ]
+  },
+  "series": {
+    "condition": "C",
+    "policyVersion": "adaptive-utility/3.1.0-pilot",
+    "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+    "baseTree": "f159213768587bc719854760e818c5a55d4601f0",
+    "executorSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "moduleCounts": [
+      4,
+      8,
+      16
+    ],
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1800000,
+      "integrationTimeoutMs": 1800000,
+      "unexpectedCommitPolicy": "reject",
+      "wallClockLimitMs": 7200000,
+      "pollIntervalMs": 10000
+    },
+    "humanDecisionProtocol": [
+      "approve_plan",
+      "approve_delivery"
+    ]
+  },
+  "cells": [
+    {
+      "cellId": "warehouse-wide-n04",
+      "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-n04",
+      "cellSha256": "0986614581dacbcc5f1f56fb41e08ea880e7f441f59db469d51741bea1cad585",
+      "goalSha256": "d1798ad1caba8c72cfc82792b0eb1330240511764c59e2539ab3799446f6f546"
+    },
+    {
+      "cellId": "warehouse-wide-n08",
+      "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-n08",
+      "cellSha256": "2e8d2035a01d1496d6dfeed2ee56d555bfa89e613e13f623451d0e5531129e0a",
+      "goalSha256": "8da73f032bc2924bf70d46f63d739dc8c4d55a503b59e68f0bf862805f6ad1a8"
+    },
+    {
+      "cellId": "warehouse-wide-n16",
+      "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-n16",
+      "cellSha256": "0808bac9af1f033dc0bf85006f82529b022648867c9d4d4b6a92415c22c771e6",
+      "goalSha256": "94b7cf6ac0f4e39ca8ffd944e9f5dbc04e02572b70e638cbabcce3f1db5e7b61"
+    }
+  ],
+  "artifacts": {
+    "cellsManifestSha256": "7534258f6e71986a2126b3dab3ec1f8ba3caddb4fde92f98662cd9775750508a",
+    "generatorSha256": "da7718b81ef75fb4cc2c3e06516d322b2bad09013f8e45f30913498f10a6f243",
+    "driverSha256": "f509b85fd7c21f0d526d3e848ca3c4907b172095bf37621ac2e211b20ff57ef6",
+    "seriesDriverSha256": "1fab31a7883db76a62ca4c1ff2cf9b812d16d16bf156e34d17ef4b3df67cfc26",
+    "oracleId": "warehouse-wide-graph-v2",
+    "oracleContractVersion": 2,
+    "oracleRunnerSha256": "a8c0a968f27d2fe23ad0553974c636b8f8e9b906c909df1ca63aa9db3f4e891c",
+    "oracleEvaluatorSha256": "cb22b7e6ef4aebe948e8525404468a34c842de44820f2f14a4e5e52b0cee8c6a",
+    "specimenSha256": "45b8d976ff5b897fd8cad88ec0a156237f2e73b1dd07ed1d50b15b5a6c778e83"
+  },
+  "preparationNotes": [
+    "The active checkout was excluded because its node_modules has previously diagnosed ACL/EPERM damage.",
+    "A first isolated clone passed P0 but Git reported pnpm-lock.yaml modified even though its filtered blob and HEAD blob were identical. It was preserved and rejected as the execution workspace.",
+    "The execution clone was created with core.autocrlf=false before checkout; install, P0, build and final status all passed with a clean working tree.",
+    "Each cell uses an independent W1 target repository. No target reset, cleanup or deletion is part of this series."
+  ]
+}
