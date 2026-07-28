@@ -597,3 +597,16 @@ Reasignación del endpoint antes de ejecutar:
   completo y secuencial sobre ese SHA exacto; luego iniciar
   `node scripts/manyhands-dev.mjs --plain --url http://127.0.0.1:3001` con
   `PORT=3001` y comprobar una mutación autenticada antes de N=4.
+
+Diagnóstico durante el P0 exacto de `643a32d`:
+
+- la suite completa quedó roja por un solo caso:
+  `integration-real-git > rejects and removes a commit created unexpectedly by
+  the repair executor`; agotó 30 s y el cleanup informó `EBUSY` en dos
+  temporales. Los otros 1407 tests pasaron y los artefactos se preservaron;
+- no quedaron procesos Git/Node del test. El repro focalizado del mismo caso,
+  sin carga concurrente y sin cambios, pasó en 10.6 s (16.3 s total);
+- se clasifica provisoriamente como contención transitoria de filesystem, no
+  defecto productivo. Próxima acción: la única repetición limpia permitida de
+  la suite completa. Sólo un PASS completo permite continuar P0; una nueva
+  falla exige diagnóstico adicional y no se seleccionará el resultado verde.
