@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 2,
+  "runId": "9bd2e8fc-0e7c-4342-b908-d6a25818382f",
+  "eventSequence": 13,
+  "lastEventId": "planning:9bd2e8fc-0e7c-4342-b908-d6a25818382f:failed:13",
+  "operationId": "514766d2-3bd1-4f51-aa0c-a6fe164fe93d",
+  "fencingToken": 1,
+  "projection": {
+    "runId": "9bd2e8fc-0e7c-4342-b908-d6a25818382f",
+    "goal": "Add exactly 4 independent warehouse analytics modules to the verified W1 codebase.\nCreate src/analytics/contracts.ts exporting WarehouseProjection with a readonly id and project(scenario), where project returns the answer to that module's question.\nEach module answers one question, computed from the W1 Scenario, layout and inventory exports:\n- src/analytics/projection-01.ts exports the projection \"zone-unit-totals\": Total units stored in each zone, keyed by zone id. Its focused tests live in src/analytics/projection-01.test.ts.\n- src/analytics/projection-02.ts exports the projection \"sku-unit-totals\": Total units of each SKU across the whole warehouse, keyed by SKU id. Its focused tests live in src/analytics/projection-02.test.ts.\n- src/analytics/projection-03.ts exports the projection \"bin-occupancy\": How many bins hold stock, how many are empty, and how many exist. Its focused tests live in src/analytics/projection-03.test.ts.\n- src/analytics/projection-04.ts exports the projection \"sku-bin-spread\": Number of distinct bins each SKU occupies, keyed by SKU id. Its focused tests live in src/analytics/projection-04.test.ts.\nA module must not import another module; it may import only the fixed contract and W1 exports.\nEvery answer must be derived from the scenario at run time. Do not hardcode results, and do not duplicate the W1 inventory or layout calculations.\nCreate src/analytics/registry.ts as the sole consumer of every module, returning all projections in the order the modules are listed above, with its own tests in src/analytics/registry.test.ts.\nPreserve all existing W1 behaviour and checks.\nAdd a package script named study:wide-graph that writes exactly one JSON object to stdout and no other output.\nIts JSON must be { \"schemaVersion\": 1, \"moduleCount\": 4, \"scenario\": \"thesis-seed-2026\", \"projections\": [ { \"projectionId\": \"<the module's projection id>\", \"value\": <that module's answer> }, … ] } with exactly 4 entries in the order the modules are listed above.\nTwo invocations from the same commit must emit byte-identical JSON.",
+    "lifecycle": "failed",
+    "sequence": 13,
+    "appliedEventIds": [
+      "run:9bd2e8fc-0e7c-4342-b908-d6a25818382f:created",
+      "repository:sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd:inspection:2",
+      "planning:9bd2e8fc-0e7c-4342-b908-d6a25818382f:attempt:1:started",
+      "planning:9bd2e8fc-0e7c-4342-b908-d6a25818382f:attempt:1:node:analytics-root",
+      "planning:9bd2e8fc-0e7c-4342-b908-d6a25818382f:attempt:1:node:analytics-contract",
+      "planning:9bd2e8fc-0e7c-4342-b908-d6a25818382f:attempt:1:node:zone-unit-totals",
+      "planning:9bd2e8fc-0e7c-4342-b908-d6a25818382f:attempt:1:node:sku-unit-totals",
+      "planning:9bd2e8fc-0e7c-4342-b908-d6a25818382f:attempt:1:node:bin-occupancy",
+      "planning:9bd2e8fc-0e7c-4342-b908-d6a25818382f:attempt:1:node:sku-bin-spread",
+      "planning:9bd2e8fc-0e7c-4342-b908-d6a25818382f:attempt:1:node:analytics-registry",
+      "planning:9bd2e8fc-0e7c-4342-b908-d6a25818382f:attempt:1:node:study-wide-graph-script",
+      "planning:warehouse-analytics-wide-graph:strategy:9bd2e8fc-0e7c-4342-b908-d6a25818382f",
+      "planning:9bd2e8fc-0e7c-4342-b908-d6a25818382f:failed:13"
+    ],
+    "decisions": {},
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "C",
+      "candidateTreeHash": "sha256:2d63c5b5a6827356365d799371a2b9c29e470906e5de5db8a38e6d58302b5755",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40
+      },
+      "assessments": {
+        "node-analytics-contract-59f46b1442": {
+          "unitKey": "analytics-contract",
+          "nodeId": "node-analytics-contract-59f46b1442",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-9",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-zone-unit-totals-2fae32c8f8": {
+          "unitKey": "zone-unit-totals",
+          "nodeId": "node-zone-unit-totals-2fae32c8f8",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.25
+          },
+          "benefit": 0,
+          "cost": 0.0625,
+          "splitAdvantage": -0.0625,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-8",
+            "path-9",
+            "path-0",
+            "path-2",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-sku-unit-totals-1a25a4432d": {
+          "unitKey": "sku-unit-totals",
+          "nodeId": "node-sku-unit-totals-1a25a4432d",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.3333
+          },
+          "benefit": 0,
+          "cost": 0.0833,
+          "splitAdvantage": -0.0833,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-8",
+            "path-9",
+            "path-0",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-bin-occupancy-849d5e5f6a": {
+          "unitKey": "bin-occupancy",
+          "nodeId": "node-bin-occupancy-849d5e5f6a",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.25
+          },
+          "benefit": 0,
+          "cost": 0.0625,
+          "splitAdvantage": -0.0625,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-8",
+            "path-9",
+            "path-0",
+            "path-2",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-sku-bin-spread-54eb646fd6": {
+          "unitKey": "sku-bin-spread",
+          "nodeId": "node-sku-bin-spread-54eb646fd6",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.3333
+          },
+          "benefit": 0,
+          "cost": 0.0833,
+          "splitAdvantage": -0.0833,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-8",
+            "path-9",
+            "path-0",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-analytics-registry-90acc9b92b": {
+          "unitKey": "analytics-registry",
+          "nodeId": "node-analytics-registry-90acc9b92b",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-8",
+            "path-9",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-study-wide-graph-script-f534020c6f": {
+          "unitKey": "study-wide-graph-script",
+          "nodeId": "node-study-wide-graph-script-f534020c6f",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "config-package-json",
+            "path-5",
+            "path-8",
+            "path-9",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-analytics-root-4c32c36259": {
+          "unitKey": "analytics-root",
+          "nodeId": "node-analytics-root-4c32c36259",
+          "selected": "split",
+          "leafFeasible": false,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.1978,
+            "parallelism": 0.6667,
+            "faultIsolation": 0.4389,
+            "coordination": 1,
+            "pathOverlap": 0.2588,
+            "validationDuplication": 0.75,
+            "uncertainty": 0.3809
+          },
+          "benefit": 0.4345,
+          "cost": 0.5974,
+          "splitAdvantage": -0.163,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-8",
+            "path-9",
+            "config-package-json",
+            "path-0",
+            "path-2",
+            "path-5",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Leaf is infeasible; C selected the available semantic split."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 7,
+        "averageBranchingFactor": 7
+      }
+    },
+    "failureReason": "Compiled plan review failed: artifact_cycle: Cycle detected including node-analytics-registry-90acc9b92b.; artifact_cycle: Cycle detected including node-study-wide-graph-script-f534020c6f.; contested_planned_output: 2 units declare src/analytics/contracts.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-01.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-01.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-02.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-02.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-03.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-03.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-04.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-04.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/registry.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/registry.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/study-wide-graph.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/study-wide-graph.test.ts as their own planned output."
+  },
+  "checksum": "3613885c12e62c63327495377bb3ad93431bdf532b831f6e098436854b154f42"
+}

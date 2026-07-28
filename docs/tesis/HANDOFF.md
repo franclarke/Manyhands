@@ -91,6 +91,18 @@ Actualización operativa 2026-07-28:
   `.scratch/code-review-remediation/issues/10-run-retry7-n04.md`, ejecutar el
   gate de freeze y abrir primero N=4. Ticket 02 se resuelve antes de 14, sin
   reconstruir una política legacy.
+- Ticket 10 en revisión:
+  - `retry-8` quedó congelado con Codex en
+    `c38a976712f5145002667f0b0f6686136b13b190`, condición C explícita y tres
+    targets W1 independientes;
+  - Gate P0 completo, hashes, policy marker, clean tree y mutación autenticada
+    PASS en el clon aislado `manyhands-thesis-freeze-2`;
+  - N=4, run `9bd2e8fc-0e7c-4342-b908-d6a25818382f`, terminó `failed` en
+    compiled plan review por outputs duplicados y ciclos de artefactos;
+  - no hubo candidato, receipt ni SHA para el oráculo; se preservó
+    `oracle-disposition.json` con `not_run`;
+  - no se reintenta N=4. Después del review independiente se continúa N=8/N=16
+    bajo el mismo freeze para evitar sesgo de parada.
 
 Comandos de verificación (protocolo del proyecto):
 

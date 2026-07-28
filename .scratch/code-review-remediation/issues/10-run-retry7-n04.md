@@ -6,6 +6,31 @@
 
 **Status:** ready-for-agent
 
-- [ ] La celda corre sobre la base W1 verificada con el executor declarado.
-- [ ] El oráculo externo emite veredicto con SHA registrado.
-- [ ] Journal, resultado y recibo quedan preservados con sus límites de interpretación.
+- [x] La celda corre sobre la base W1 verificada con el executor declarado.
+- [x] Si existe candidate SHA, el oráculo externo emite su veredicto; si el run
+  falla antes, una disposición atribuible registra que el oráculo no puede
+  ejecutarse sin inventar una entrega.
+- [x] Journal, resultado y receipt cuando existe quedan preservados con sus
+  límites de interpretación.
+
+## Run evidence
+
+- Frozen ManyHands commit:
+  `c38a976712f5145002667f0b0f6686136b13b190`.
+- Run: `9bd2e8fc-0e7c-4342-b908-d6a25818382f`.
+- Base: `71f61c9efa222103ca2fb2f67692434ab493d75c`.
+- Selection: `codex-cli/gpt-5.5/high`, condition `C`,
+  `adaptive-utility/3.1.0-pilot`.
+- Outcome: `failed` during compiled plan review; no candidate, receipt or
+  delivered SHA.
+- Root cause: duplicate planned outputs between the composite and leaves, plus
+  artifact cycles around registry/study output.
+- External oracle: `not_run`; its v2 contract requires a delivered SHA.
+- No retry: the instrument remained valid and the planning failure is the
+  observed product result.
+- Evidence:
+  `docs/tesis/evidence/warehouse/wide-graph/retry-8/runs/warehouse-wide-n04/`.
+- Freeze gate: P0, package/web typechecks, package/web builds, policy marker,
+  target baselines, hashes, clean tree and authenticated mutation all PASS.
+- TDD prerequisite: generator condition attribution RED with 1 failure/13 pass,
+  then the affected five-file gate GREEN with 46/46.
