@@ -1,11 +1,19 @@
+import { execFile } from "node:child_process";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import {
   WIDE_GRAPH_METRICS,
+  WIDE_GRAPH_SCENARIO,
   WIDE_GRAPH_SIZES,
   WIDE_GRAPH_TOTAL_UNITS,
   metricsFor,
   moduleIdFor
 } from "../docs/tesis/evidence/scripts/lib/wide-graph-metrics.mjs";
+
+const run = promisify(execFile);
 
 /**
  * El catálogo es un specimen congelado: sus valores son el resultado correcto de
@@ -17,6 +25,59 @@ import {
  * internamente coherente, que es lo que un error de transcripción rompe.
  */
 describe("wide graph metric catalogue", () => {
+  it("re-derives all sixteen catalogue values from a Git scenario blob", async () => {
+    const repository = await mkdtemp(join(tmpdir(), "manyhands-wide-graph-specimen-"));
+    try {
+      const scenarioDirectory = join(repository, "src", "scenarios");
+      await mkdir(scenarioDirectory, { recursive: true });
+      await writeFile(
+        join(scenarioDirectory, "thesis-seed-2026.ts"),
+        `const ZONE_NAMES = ["Receiving", "Bulk Storage", "Pick Face", "Shipping"];
+const BINS_PER_ZONE = 4;
+const SKUS = ["SKU-1001", "SKU-1002", "SKU-1003", "SKU-1004", "SKU-1005"];
+const stockPlan: ReadonlyArray<readonly [binId: string, skuId: string, qty: number]> = [
+  ["bin-1-1", SKUS[0], 20],
+  ["bin-1-2", SKUS[1], 15],
+  ["bin-2-1", SKUS[2], 30],
+  ["bin-2-2", SKUS[0], 10],
+  ["bin-3-1", SKUS[3], 25],
+  ["bin-3-2", SKUS[4], 40],
+  ["bin-4-1", SKUS[2], 12],
+  ["bin-4-2", SKUS[3], 18],
+];
+`,
+        "utf8"
+      );
+      await run("git", ["init", "--quiet"], { cwd: repository, windowsHide: true });
+      await run("git", ["config", "user.email", "specimen@example.invalid"], { cwd: repository, windowsHide: true });
+      await run("git", ["config", "user.name", "Specimen Test"], { cwd: repository, windowsHide: true });
+      await run("git", ["add", "."], { cwd: repository, windowsHide: true });
+      await run("git", ["commit", "--quiet", "-m", "fixture"], { cwd: repository, windowsHide: true });
+
+      const { stdout } = await run(
+        process.execPath,
+        [
+          "docs/tesis/evidence/scripts/derive-wide-graph-specimen.mjs",
+          "--repository",
+          repository,
+          "--commit",
+          "HEAD"
+        ],
+        { cwd: process.cwd(), windowsHide: true }
+      );
+
+      expect(JSON.parse(stdout)).toEqual({
+        schemaVersion: 1,
+        scenario: WIDE_GRAPH_SCENARIO,
+        metrics: WIDE_GRAPH_METRICS.map(
+          ({ id, expected }: { id: string; expected: unknown }) => ({ id, value: expected })
+        )
+      });
+    } finally {
+      await rm(repository, { recursive: true, force: true });
+    }
+  });
+
   it("declares sixteen distinct questions with unique ids", () => {
     expect(WIDE_GRAPH_METRICS).toHaveLength(16);
     expect(new Set(WIDE_GRAPH_METRICS.map((metric) => metric.id)).size).toBe(16);
