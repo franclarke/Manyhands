@@ -21,6 +21,9 @@
 - TDD del fix en `28efda8`: RED `1 failed / 6 passed`; GREEN `38/38`; typecheck
   y build de `@manyhands/decomposer` PASS. El cambio permite sólo el resumen
   ancestro-descendiente y mantiene el rechazo entre ramas incomparables.
-- Pendiente antes de marcar aceptación: reviews Standards/Spec del fix, nuevo
-  freeze limpio y serie sucesora completa `{4, 8, 16}` con targets nuevos.
-  `retry-8` permanece inmutable como evidencia adversa.
+- Reviews Standards/Spec: PASS, sin P0/P1/P2/P3. Spec verificó en los journals
+  reales que N4 tenía `13/13`, N8 `20/20` y N16 `37/37` duplicados
+  ancestro-descendiente, sin ownership entre ramas independientes.
+- Pendiente antes de marcar aceptación: nuevo freeze limpio y serie sucesora
+  completa `{4, 8, 16}` con targets nuevos. `retry-8` permanece inmutable como
+  evidencia adversa.

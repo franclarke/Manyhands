@@ -122,8 +122,9 @@ Actualización operativa 2026-07-28:
     conserva el rechazo entre ramas incomparables; GREEN `38/38`, typecheck y
     build de `@manyhands/decomposer` PASS;
   - no se tocaron ciclos de artefactos, policy C, fórmulas, umbrales, estímulo
-    ni oráculo. Standards/Spec independientes están en curso antes de usar el
-    fix en una medición;
+    ni oráculo. Standards y Spec independientes dieron PASS, sin P0/P1/P2/P3;
+    Spec contrastó los journals reales: N4 `13/13`, N8 `20/20` y N16 `37/37`
+    duplicados eran pares ancestro-descendiente, sin pares independientes;
   - los requirements se instalaron completos en el clon aislado
     `manyhands-planned-path-fix-2`: 629 paquetes, lockfile frozen, modo offline,
     `Done in 30.4s`. El intento anterior se conserva porque entró en resolución
