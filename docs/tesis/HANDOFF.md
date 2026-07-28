@@ -72,7 +72,7 @@ Actualización operativa 2026-07-28:
   células nuevas C; protege la síntesis de journals C1 históricos.
 - Checkpoint Git del recorte de alcance: root
   `C:\Users\franc\Documents\Proyectos\Manyhands`, branch `main`, HEAD limpio
-  observado `bd84e99ef182ad00117181e44aef3fc8f0c13dc3`, 153 commits adelante de
+  observado `885c69fdf1675a82cc3b66b83a1d1c6185f94bc0`, 154 commits adelante de
   `origin/main`, con `origin/main` ancestro y sin push. El commit que contiene
   este snapshot sólo agrega evidencia documental, por lo que no altera código,
   protocolo ni resultados ya verificados.
@@ -84,7 +84,9 @@ Actualización operativa 2026-07-28:
   - Spec PASS para 07/09 y PARTIAL para 13 por no distinguir publicación
     interna de verificación externa.
   - Correcciones fijadas en
-    `f8e615eb9b822d5c98f4a58de96f8e08261dd3ab`; re-review pendiente.
+    `f8e615eb9b822d5c98f4a58de96f8e08261dd3ab` y
+    `885c69fdf1675a82cc3b66b83a1d1c6185f94bc0`.
+  - Re-review final: Standards PASS y Spec PASS, sin P0/P1/P2/P3.
 - Reanudación: leer completo
   `.scratch/code-review-remediation/issues/10-run-retry7-n04.md`, ejecutar el
   gate de freeze y abrir primero N=4. Ticket 02 se resuelve antes de 14, sin

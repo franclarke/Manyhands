@@ -42,5 +42,8 @@ base W1 verificada y una serie ancha nueva sin `--resume-state`.
   - Spec: PASS.
   - Standards: FAIL por trazabilidad transversal incompleta; sus hallazgos se
     corrigen antes del cierre final de revisión.
+- Final independent re-review at
+  `885c69fdf1675a82cc3b66b83a1d1c6185f94bc0`:
+  Standards PASS y Spec PASS, sin P0/P1/P2/P3.
 - Next unlocked frontier: tickets 02 y 10; se prioriza 10 porque produce la
   evidencia discriminante y 02 sólo bloquea la síntesis histórica de ticket 14.
