@@ -67,7 +67,7 @@ Actualización operativa 2026-07-28:
   tickets conductuales. La ruta recomendada después del checkpoint es 07.
 - Checkpoint Git previo a `grilling`: root
   `C:\Users\franc\Documents\Proyectos\Manyhands`, branch `main`, HEAD limpio
-  observado `9f9c8e98929788c000ecf9bc5820777fe4259732`, 147 commits adelante de
+  observado `9f9c8e98929788c000ecf9bc5820777fe4259732`, 148 commits adelante de
   `origin/main`, con `origin/main` ancestro y sin push. El commit que contiene
   este snapshot sólo agrega evidencia documental, por lo que no altera código,
   protocolo ni resultados ya verificados.
