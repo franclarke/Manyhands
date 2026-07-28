@@ -95,3 +95,20 @@ pnpm web:build
 
 Para cambios solo documentales, verificar links relativos, términos obsoletos y
 consistencia; no es necesario ejecutar builds del producto.
+
+## Agent skills
+
+### Issue tracker
+
+El trabajo se registra como Markdown local bajo `.scratch/`; no se publica
+remotamente sin autorización explícita. Ver `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Los tickets locales usan los roles canónicos de Pocock más `closed`. Ver
+`docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Este monorepo usa un mapa de contextos sobre sus documentos autoritativos
+existentes. Ver `CONTEXT-MAP.md` y `docs/agents/domain.md`.

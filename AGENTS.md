@@ -112,3 +112,20 @@ the final diff. Do not run expensive builds without a relevant code change.
 - `packages/orchestrator-graph/src/`
 - `packages/execution-core/src/`
 - `packages/run-store/src/`
+
+## Agent skills
+
+### Issue tracker
+
+Work is tracked as local Markdown under `.scratch/`; never publish it remotely
+without explicit authorization. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Local ticket states use the canonical Pocock roles plus `closed`. See
+`docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This monorepo uses a context map over its existing authoritative documents. See
+`CONTEXT-MAP.md` and `docs/agents/domain.md`.
