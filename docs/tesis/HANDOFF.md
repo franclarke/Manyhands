@@ -559,3 +559,23 @@ Checkpoint durante Gate P0 del clon, que permanece en
   original con timeout suficiente; si vuelve a colgar, instrumentar la fase de
   Next antes de cualquier nuevo intento. El clon no avanzará al commit de este
   checkpoint hasta cerrar P0.
+
+Resolución y freeze sucesor:
+
+- el build focalizado de web PASS en 57.8 s y el rerun exacto de `pnpm
+  web:build` PASS en 118.2 s; la causa fue el timeout externo insuficiente del
+  primer build frío, no un deadlock persistente;
+- Gate P0 quedó completo en `d534dfc`: 212 archivos, 1408 tests passed, 2
+  skipped; typechecks, packages build y web build PASS. Todos los logs se
+  preservan junto al clon;
+- se crearon tres targets nuevos e independientes `r10-n04`, `r10-n08` y
+  `r10-n16`, limpios sobre W1 `71f61c9e`, tree `f1592137`, sin reusar targets
+  de `retry-9`;
+- las células `retry-10` se congelaron en
+  `91d5ae3aa4b865fbc64fe0b325c14938727f5908`, condición C y selección homogénea
+  `codex-cli/gpt-5.5/high`. Entre el P0 anterior y ese SHA sólo cambiaron este
+  handoff y los JSON de la nueva serie; no cambió ningún byte ejecutable;
+- próxima operación larga: repetir Gate P0 completo y secuencial sobre el SHA
+  exacto `91d5ae3`, sin avanzar el clon a commits documentales posteriores.
+  Después se fijarán `freeze.json`, marker/hash de `dist`, manifest, clean tree
+  y mutación autenticada antes de abrir N=4.
