@@ -182,8 +182,9 @@ anchura tenía contenido semántico — evidencia en
 `wide-graph/retry-6/runs/warehouse-wide-n16/README.md`.
 
 **Los PASS de N=4 y N=8 son evidencia de mecánica, no de H2.** Si se citan en la
-tesis, tiene que ser con esa etiqueta. La serie `retry-7` es la que puede
-sostener H2, y **no es comparable** con las anteriores.
+tesis, tiene que ser con esa etiqueta. Sólo la serie sucesora Codex puede
+sostener H2; `retry-7` permanece como freeze histórico no ejecutado y **no es
+comparable** con las series anteriores ni con su sucesora.
 
 ---
 
