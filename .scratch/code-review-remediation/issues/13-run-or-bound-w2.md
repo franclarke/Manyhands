@@ -43,14 +43,18 @@ el veredicto de H1. No se borró ni reinterpretó ningún intento longitudinal.
 
 - Fixed point: `eeb2f89b0657c160720e7212bc517075cab3ccaf`.
 - Scope decision commit: `0cb3fc33f08c6d91b17f1f64a37236ce201b918f`.
-- Review remediation commit: `f8e615e65c2aad969d9a7ba7662f80f5611172c4`.
+- Review remediation commit: `f8e615eb9b822d5c98f4a58de96f8e08261dd3ab`.
 - Evidence preserved:
   - `series-15/runs/W2/run.events.v2.jsonl` registra el candidato interno
     `38b511817b0ab0a8df1855d28f0e9455f5dac0fd`;
-  - `series-15/runs/W2/oracle-result.json` registra el rechazo externo por
+  - `series-15/runs/W2/oracle-result.json` registra el rechazo externo, pero su
+    campo `error` quedó vacío; la reproducción diagnóstica posterior en
+    `defects/w2-frozen-lockfile/README.md` preserva
     `ERR_PNPM_OUTDATED_LOCKFILE`;
-  - `series-16/runs/W2/run.events.v2.jsonl` y `result.json` registran el timeout
-    del run `86f88e35-b3c3-455e-8973-2f92e073e387`, sin candidato ni receipt.
+  - `series-16/runs/W2/run.events.v2.jsonl` registra el hard timeout del intento
+    y la decisión `resolve_conflict`; `result.json` registra el estado terminal
+    observado por el driver (`waiting_for_input`, sin candidato ni receipt) del
+    run `86f88e35-b3c3-455e-8973-2f92e073e387`.
 - Files changed: este ticket, `docs/tesis/AUTONOMOUS_CLOSURE_PLAN.md` y
   `docs/tesis/HANDOFF.md`; no se reescribió ningún journal, resultado u oráculo.
 - Verification:

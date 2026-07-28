@@ -72,7 +72,7 @@ Actualización operativa 2026-07-28:
   células nuevas C; protege la síntesis de journals C1 históricos.
 - Checkpoint Git del recorte de alcance: root
   `C:\Users\franc\Documents\Proyectos\Manyhands`, branch `main`, HEAD limpio
-  observado `f8e615e65c2aad969d9a7ba7662f80f5611172c4`, 152 commits adelante de
+  observado `bd84e99ef182ad00117181e44aef3fc8f0c13dc3`, 153 commits adelante de
   `origin/main`, con `origin/main` ancestro y sin push. El commit que contiene
   este snapshot sólo agrega evidencia documental, por lo que no altera código,
   protocolo ni resultados ya verificados.
@@ -84,7 +84,7 @@ Actualización operativa 2026-07-28:
   - Spec PASS para 07/09 y PARTIAL para 13 por no distinguir publicación
     interna de verificación externa.
   - Correcciones fijadas en
-    `f8e615e65c2aad969d9a7ba7662f80f5611172c4`; re-review pendiente.
+    `f8e615eb9b822d5c98f4a58de96f8e08261dd3ab`; re-review pendiente.
 - Reanudación: leer completo
   `.scratch/code-review-remediation/issues/10-run-retry7-n04.md`, ejecutar el
   gate de freeze y abrir primero N=4. Ticket 02 se resuelve antes de 14, sin
@@ -339,8 +339,9 @@ Mínimo defendible:
 1. **H1** — la medición del Paso 2, con veredicto explícito sobre
    `validationDuplication`. Sin eso, la afirmación "C toma buenas decisiones"
    queda contradicha por la única evidencia ancha que existe.
-2. **H2** — la serie sucesora Codex completa `{4, 8, 16}` con oráculo externo PASS, y
-   los N viejos re-etiquetados como evidencia de mecánica.
+2. **H2** — la serie sucesora Codex completa `{4, 8, 16}` con veredictos de
+   oráculo externo atribuibles, aunque sean adversos, y los N viejos
+   re-etiquetados como evidencia de mecánica.
 3. La cadena longitudinal declarada como 1/8 **con las causas documentadas**.
 4. Los parámetros sin anclar (`maxLeafPlannedPaths`, `minimumAdvantage`)
    declarados como provisionales, no presentados como derivados.
