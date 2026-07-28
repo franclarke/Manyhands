@@ -610,3 +610,29 @@ Diagnóstico durante el P0 exacto de `643a32d`:
   defecto productivo. Próxima acción: la única repetición limpia permitida de
   la suite completa. Sólo un PASS completo permite continuar P0; una nueva
   falla exige diagnóstico adicional y no se seleccionará el resultado verde.
+
+Freeze ejecutable de `retry-10` listo para N=4:
+
+- La unica repeticion limpia de la suite completa paso sobre el mismo
+  `643a32d`: 212 archivos, 1408 tests passed y 2 skipped. El fallo inicial, el
+  repro focalizado verde y el repeat verde permanecen juntos en
+  `retry-10-final-p0-*.log`; no se descarto evidencia adversa.
+- En ese mismo commit pasaron secuencialmente packages typecheck, web
+  typecheck, `pnpm build` y `pnpm web:build`. El ultimo termino en 109.8 s.
+- `freeze.json` fija commit `643a32d`, tree `cc8a5274`, marker
+  `adaptive-utility/3.1.0-pilot`, hash de `dist/index.js` `6ebbc2c7`, lockfile,
+  manifest, las tres celdas y todos los instrumentos. El preflight de
+  seleccion homogenea paso con cero celdas ejecutadas.
+- Los tres targets continuan limpios sobre W1 `71f61c9`, tree `f1592137`. El
+  clon de ejecucion sigue limpio y fijado en `643a32d`; no avanzara con los
+  commits documentales posteriores.
+- El servidor aislado responde health en `127.0.0.1:3001`; el listener actual
+  es PID `24192`, perteneciente al runtime Node 22.23.1 del clon retry-10. Una
+  mutacion autenticada creo el workspace
+  `f38dff28-46be-4c9e-95cb-e5fcf711bc1` para el target N=4 y un GET posterior
+  verifico la identidad fisica persistida. El PID historico `38392` sigue
+  aislado en 3000.
+- Proxima operacion larga exacta: ejecutar solo `warehouse-wide-n04` con
+  `run-g5.mjs`, celdas del freeze y salida durable en
+  `docs/tesis/evidence/warehouse/wide-graph/retry-10/runs`. No cambiar codigo,
+  freeze, estimulo, seleccion, oraculo ni target antes de N=8/N=16.
