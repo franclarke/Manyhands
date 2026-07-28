@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -79,6 +79,53 @@ describe("wide graph study plan", () => {
  * otherwise a frozen cell can name a model that cannot run.
  */
 describe("wide graph executor selection", () => {
+  it("rejects a heterogeneous frozen series in the productive driver preflight", async () => {
+    const root = await mkdtemp(join(tmpdir(), "manyhands-wide-graph-driver-"));
+    const cellsDir = join(root, "cells");
+    const outDir = join(root, "runs");
+    const claude = wideGraphSelection("claude");
+    const codex = wideGraphSelection("codex");
+    try {
+      await mkdir(cellsDir);
+      await writeFile(join(cellsDir, "manifest.json"), JSON.stringify({
+        executorSelection: claude,
+        cells: [{ cellId: "warehouse-wide-n04" }, { cellId: "warehouse-wide-n08" }]
+      }));
+      await writeFile(join(cellsDir, "warehouse-wide-n04.json"), JSON.stringify({
+        cellId: "warehouse-wide-n04",
+        position: 1,
+        planningSelection: claude,
+        executionSelection: claude,
+        repairSelection: claude
+      }));
+      await writeFile(join(cellsDir, "warehouse-wide-n08.json"), JSON.stringify({
+        cellId: "warehouse-wide-n08",
+        position: 2,
+        planningSelection: claude,
+        executionSelection: codex,
+        repairSelection: claude
+      }));
+
+      await expect(run(
+        process.execPath,
+        [
+          "docs/tesis/evidence/scripts/run-g5.mjs",
+          "--cells",
+          cellsDir,
+          "--out",
+          outDir,
+          "--only",
+          "no-such-cell"
+        ],
+        { cwd: process.cwd(), windowsHide: true }
+      )).rejects.toMatchObject({
+        stderr: expect.stringMatching(/warehouse-wide-n08.+execution selection differs.+not comparable/iu)
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("records the homogeneous executor selection in every committed series manifest", async () => {
     const root = join(process.cwd(), "docs", "tesis", "evidence", "warehouse", "wide-graph");
     const seriesDirectories = (await readdir(root, { withFileTypes: true }))
