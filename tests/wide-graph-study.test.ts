@@ -149,6 +149,45 @@ describe("wide graph executor selection", () => {
     }
   });
 
+  it("rejects a homogeneous unavailable executor in the productive driver preflight", async () => {
+    const root = await mkdtemp(join(tmpdir(), "manyhands-wide-graph-driver-unavailable-"));
+    const cellsDir = join(root, "cells");
+    const outDir = join(root, "runs");
+    const unavailable = { executorId: "other-cli", model: "other-model" };
+    try {
+      await mkdir(cellsDir);
+      await writeFile(join(cellsDir, "manifest.json"), JSON.stringify({
+        executorSelection: unavailable,
+        cells: [{ cellId: "warehouse-wide-n04" }]
+      }));
+      await writeFile(join(cellsDir, "warehouse-wide-n04.json"), JSON.stringify({
+        cellId: "warehouse-wide-n04",
+        position: 1,
+        planningSelection: unavailable,
+        executionSelection: unavailable,
+        repairSelection: unavailable
+      }));
+
+      await expect(run(
+        process.execPath,
+        [
+          "docs/tesis/evidence/scripts/run-g5.mjs",
+          "--cells",
+          cellsDir,
+          "--out",
+          outDir,
+          "--only",
+          "no-such-cell"
+        ],
+        { cwd: process.cwd(), windowsHide: true }
+      )).rejects.toMatchObject({
+        stderr: expect.stringMatching(/executor selection.+is not available for a new run/iu)
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("records the homogeneous executor selection in every committed series manifest", async () => {
     const root = join(process.cwd(), "docs", "tesis", "evidence", "warehouse", "wide-graph");
     const seriesDirectories = (await readdir(root, { withFileTypes: true }))
