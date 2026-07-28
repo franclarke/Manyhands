@@ -1,0 +1,11 @@
+{
+  "cellId": "warehouse-wide-n16",
+  "condition": "C",
+  "runId": "b8e114ef-72a9-495f-82ae-6c92ca6906d2",
+  "started": "2026-07-28T21:06:58.532Z",
+  "finished": "2026-07-28T21:11:17.911Z",
+  "outcome": {
+    "lifecycle": "failed",
+    "receipt": null
+  }
+}

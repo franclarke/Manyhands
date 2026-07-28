@@ -1,0 +1,614 @@
+{
+  "schemaVersion": 2,
+  "runId": "b8e114ef-72a9-495f-82ae-6c92ca6906d2",
+  "eventSequence": 25,
+  "lastEventId": "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:failed:25",
+  "operationId": "e600f1c7-9084-4dff-b3cd-7cc3bb6a6292",
+  "fencingToken": 1,
+  "projection": {
+    "runId": "b8e114ef-72a9-495f-82ae-6c92ca6906d2",
+    "goal": "Add exactly 16 independent warehouse analytics modules to the verified W1 codebase.\nCreate src/analytics/contracts.ts exporting WarehouseProjection with a readonly id and project(scenario), where project returns the answer to that module's question.\nEach module answers one question, computed from the W1 Scenario, layout and inventory exports:\n- src/analytics/projection-01.ts exports the projection \"zone-unit-totals\": Total units stored in each zone, keyed by zone id. Its focused tests live in src/analytics/projection-01.test.ts.\n- src/analytics/projection-02.ts exports the projection \"sku-unit-totals\": Total units of each SKU across the whole warehouse, keyed by SKU id. Its focused tests live in src/analytics/projection-02.test.ts.\n- src/analytics/projection-03.ts exports the projection \"bin-occupancy\": How many bins hold stock, how many are empty, and how many exist. Its focused tests live in src/analytics/projection-03.test.ts.\n- src/analytics/projection-04.ts exports the projection \"sku-bin-spread\": Number of distinct bins each SKU occupies, keyed by SKU id. Its focused tests live in src/analytics/projection-04.test.ts.\n- src/analytics/projection-05.ts exports the projection \"zone-sku-mix\": Number of distinct SKUs present in each zone, keyed by zone id. Its focused tests live in src/analytics/projection-05.test.ts.\n- src/analytics/projection-06.ts exports the projection \"top-bin-by-units\": The single bin holding the most units, and how many. Ties break on the lowest bin id. Its focused tests live in src/analytics/projection-06.test.ts.\n- src/analytics/projection-07.ts exports the projection \"empty-bin-ids\": Ids of every bin holding no stock, sorted ascending. Its focused tests live in src/analytics/projection-07.test.ts.\n- src/analytics/projection-08.ts exports the projection \"median-occupied-bin-units\": Median unit count across bins that hold stock. Even counts average the two middle values. Its focused tests live in src/analytics/projection-08.test.ts.\n- src/analytics/projection-09.ts exports the projection \"single-bin-skus\": SKUs stored in exactly one bin, sorted ascending. Its focused tests live in src/analytics/projection-09.test.ts.\n- src/analytics/projection-10.ts exports the projection \"zone-share-of-units\": Each zone's share of total warehouse units, rounded to four decimals, keyed by zone id. Its focused tests live in src/analytics/projection-10.test.ts.\n- src/analytics/projection-11.ts exports the projection \"sku-zone-presence\": Zones each SKU appears in, sorted ascending, keyed by SKU id. Its focused tests live in src/analytics/projection-11.test.ts.\n- src/analytics/projection-12.ts exports the projection \"occupied-bins-per-zone\": Number of bins holding stock in each zone, keyed by zone id. Its focused tests live in src/analytics/projection-12.test.ts.\n- src/analytics/projection-13.ts exports the projection \"unit-quantity-extremes\": Smallest and largest unit count among bins that hold stock. Its focused tests live in src/analytics/projection-13.test.ts.\n- src/analytics/projection-14.ts exports the projection \"top-bin-concentration\": Share of total warehouse units held by the single largest bin, rounded to four decimals. Its focused tests live in src/analytics/projection-14.test.ts.\n- src/analytics/projection-15.ts exports the projection \"multi-bin-skus\": SKUs stored in more than one bin, mapped to their sorted bin ids. Its focused tests live in src/analytics/projection-15.test.ts.\n- src/analytics/projection-16.ts exports the projection \"zone-mean-units-per-occupied-bin\": Mean units per occupied bin in each zone, rounded to four decimals, keyed by zone id. Zones with no stock report 0. Its focused tests live in src/analytics/projection-16.test.ts.\nA module must not import another module; it may import only the fixed contract and W1 exports.\nEvery answer must be derived from the scenario at run time. Do not hardcode results, and do not duplicate the W1 inventory or layout calculations.\nCreate src/analytics/registry.ts as the sole consumer of every module, returning all projections in the order the modules are listed above, with its own tests in src/analytics/registry.test.ts.\nPreserve all existing W1 behaviour and checks.\nAdd a package script named study:wide-graph that writes exactly one JSON object to stdout and no other output.\nIts JSON must be { \"schemaVersion\": 1, \"moduleCount\": 16, \"scenario\": \"thesis-seed-2026\", \"projections\": [ { \"projectionId\": \"<the module's projection id>\", \"value\": <that module's answer> }, … ] } with exactly 16 entries in the order the modules are listed above.\nTwo invocations from the same commit must emit byte-identical JSON.",
+    "lifecycle": "failed",
+    "sequence": 25,
+    "appliedEventIds": [
+      "run:b8e114ef-72a9-495f-82ae-6c92ca6906d2:created",
+      "repository:sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640:inspection:2",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:started",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:warehouse-analytics-wide-16",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:analytics-projection-contract",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-01-zone-unit-totals",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-02-sku-unit-totals",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-03-bin-occupancy",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-04-sku-bin-spread",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-05-zone-sku-mix",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-06-top-bin-by-units",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-07-empty-bin-ids",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-08-median-occupied-bin-units",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-09-single-bin-skus",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-10-zone-share-of-units",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-11-sku-zone-presence",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-12-occupied-bins-per-zone",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-13-unit-quantity-extremes",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-14-top-bin-concentration",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-15-multi-bin-skus",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:projection-16-zone-mean-units-per-occupied-bin",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:analytics-registry",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:attempt:1:node:study-wide-graph-command-and-validation-wiring",
+      "planning:warehouse-analytics-wide-16:strategy:b8e114ef-72a9-495f-82ae-6c92ca6906d2",
+      "planning:b8e114ef-72a9-495f-82ae-6c92ca6906d2:failed:25"
+    ],
+    "decisions": {},
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "C",
+      "candidateTreeHash": "sha256:55ce9670c6c029d2b2ffb2fd3e4082b83aa93f474c358608c0967ccec5785ff4",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40
+      },
+      "assessments": {
+        "node-analytics-projection-contract-70011ef842": {
+          "unitKey": "analytics-projection-contract",
+          "nodeId": "node-analytics-projection-contract-70011ef842",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.25
+          },
+          "benefit": 0,
+          "cost": 0.0625,
+          "splitAdvantage": -0.0625,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-9",
+            "path-1",
+            "path-3",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-01-zone-unit-totals-3e46c3b4c1": {
+          "unitKey": "projection-01-zone-unit-totals",
+          "nodeId": "node-projection-01-zone-unit-totals-3e46c3b4c1",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.4
+          },
+          "benefit": 0,
+          "cost": 0.1,
+          "splitAdvantage": -0.1,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-02-sku-unit-totals-4ef9f806ef": {
+          "unitKey": "projection-02-sku-unit-totals",
+          "nodeId": "node-projection-02-sku-unit-totals-4ef9f806ef",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-03-bin-occupancy-0e7249a0e4": {
+          "unitKey": "projection-03-bin-occupancy",
+          "nodeId": "node-projection-03-bin-occupancy-0e7249a0e4",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.4
+          },
+          "benefit": 0,
+          "cost": 0.1,
+          "splitAdvantage": -0.1,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-04-sku-bin-spread-3e1c1e3e3e": {
+          "unitKey": "projection-04-sku-bin-spread",
+          "nodeId": "node-projection-04-sku-bin-spread-3e1c1e3e3e",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-05-zone-sku-mix-53b8a07f5c": {
+          "unitKey": "projection-05-zone-sku-mix",
+          "nodeId": "node-projection-05-zone-sku-mix-53b8a07f5c",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.4
+          },
+          "benefit": 0,
+          "cost": 0.1,
+          "splitAdvantage": -0.1,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-06-top-bin-by-units-80e932f58f": {
+          "unitKey": "projection-06-top-bin-by-units",
+          "nodeId": "node-projection-06-top-bin-by-units-80e932f58f",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.4
+          },
+          "benefit": 0,
+          "cost": 0.1,
+          "splitAdvantage": -0.1,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-07-empty-bin-ids-0632a2125b": {
+          "unitKey": "projection-07-empty-bin-ids",
+          "nodeId": "node-projection-07-empty-bin-ids-0632a2125b",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.4
+          },
+          "benefit": 0,
+          "cost": 0.1,
+          "splitAdvantage": -0.1,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-08-median-occupied-bin-units-79fda66d3e": {
+          "unitKey": "projection-08-median-occupied-bin-units",
+          "nodeId": "node-projection-08-median-occupied-bin-units-79fda66d3e",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-09-single-bin-skus-cb5d50de80": {
+          "unitKey": "projection-09-single-bin-skus",
+          "nodeId": "node-projection-09-single-bin-skus-cb5d50de80",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-10-zone-share-of-units-fed65f012f": {
+          "unitKey": "projection-10-zone-share-of-units",
+          "nodeId": "node-projection-10-zone-share-of-units-fed65f012f",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.4
+          },
+          "benefit": 0,
+          "cost": 0.1,
+          "splitAdvantage": -0.1,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-11-sku-zone-presence-0cd492a80c": {
+          "unitKey": "projection-11-sku-zone-presence",
+          "nodeId": "node-projection-11-sku-zone-presence-0cd492a80c",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.4
+          },
+          "benefit": 0,
+          "cost": 0.1,
+          "splitAdvantage": -0.1,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-12-occupied-bins-per-zone-408b905c56": {
+          "unitKey": "projection-12-occupied-bins-per-zone",
+          "nodeId": "node-projection-12-occupied-bins-per-zone-408b905c56",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.4
+          },
+          "benefit": 0,
+          "cost": 0.1,
+          "splitAdvantage": -0.1,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-13-unit-quantity-extremes-bab69e4e5d": {
+          "unitKey": "projection-13-unit-quantity-extremes",
+          "nodeId": "node-projection-13-unit-quantity-extremes-bab69e4e5d",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-14-top-bin-concentration-2a077be330": {
+          "unitKey": "projection-14-top-bin-concentration",
+          "nodeId": "node-projection-14-top-bin-concentration-2a077be330",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-15-multi-bin-skus-37fe745dac": {
+          "unitKey": "projection-15-multi-bin-skus",
+          "nodeId": "node-projection-15-multi-bin-skus-37fe745dac",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-projection-16-zone-mean-units-per-occupied-bin-52f752b6da": {
+          "unitKey": "projection-16-zone-mean-units-per-occupied-bin",
+          "nodeId": "node-projection-16-zone-mean-units-per-occupied-bin-52f752b6da",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.4
+          },
+          "benefit": 0,
+          "cost": 0.1,
+          "splitAdvantage": -0.1,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-analytics-registry-90acc9b92b": {
+          "unitKey": "analytics-registry",
+          "nodeId": "node-analytics-registry-90acc9b92b",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.6667
+          },
+          "benefit": 0,
+          "cost": 0.1667,
+          "splitAdvantage": -0.1667,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-study-wide-graph-command-and-validation-wiring-75750e2593": {
+          "unitKey": "study-wide-graph-command-and-validation-wiring",
+          "nodeId": "node-study-wide-graph-command-and-validation-wiring-75750e2593",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.4286
+          },
+          "benefit": 0,
+          "cost": 0.1072,
+          "splitAdvantage": -0.1072,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "config-package-json",
+            "path-4",
+            "path-5",
+            "path-8",
+            "path-9",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-warehouse-analytics-wide-16-2f9f90db8d": {
+          "unitKey": "warehouse-analytics-wide-16",
+          "nodeId": "node-warehouse-analytics-wide-16-2f9f90db8d",
+          "selected": "split",
+          "leafFeasible": false,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.3413,
+            "parallelism": 0.9444,
+            "faultIsolation": 0.2173,
+            "coordination": 0.1053,
+            "pathOverlap": 0.3018,
+            "validationDuplication": 0.8649,
+            "uncertainty": 0.4445
+          },
+          "benefit": 0.501,
+          "cost": 0.4291,
+          "splitAdvantage": 0.0719,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-8",
+            "path-9",
+            "config-package-json",
+            "path-4",
+            "path-5",
+            "sha256:d4920476a9a93f300caa1dff4fb72afff6646988ccfb7b35fdfa0dd6fa4e0640"
+          ],
+          "rationale": "Leaf is infeasible; C selected the available semantic split."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 19,
+        "averageBranchingFactor": 19
+      }
+    },
+    "failureReason": "Compiled plan review failed: contested_planned_output: 2 units declare src/analytics/contracts.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-01.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-01.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-02.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-02.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-03.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-03.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-04.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-04.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-05.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-05.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-06.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-06.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-07.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-07.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-08.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-08.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-09.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-09.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-10.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-10.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-11.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-11.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-12.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-12.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-13.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-13.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-14.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-14.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-15.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-15.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-16.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/projection-16.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/registry.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/registry.test.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/study-wide-graph.ts as their own planned output.; contested_planned_output: 2 units declare src/analytics/study-wide-graph.test.ts as their own planned output."
+  },
+  "checksum": "8c281377dd2fbffed6c440584da51373152f6f0ab35a23c457460a93b0d8cff4"
+}

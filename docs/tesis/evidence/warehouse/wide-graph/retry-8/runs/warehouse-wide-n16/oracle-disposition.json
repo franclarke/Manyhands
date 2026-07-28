@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "oracleId": "warehouse-wide-graph-v2",
+  "oracleContractVersion": 2,
+  "cellId": "warehouse-wide-n16",
+  "runId": "b8e114ef-72a9-495f-82ae-6c92ca6906d2",
+  "outcome": "not_run",
+  "deliveredSha": null,
+  "reason": "ManyHands failed during compiled plan review and produced no candidate commit. The external oracle requires a delivered SHA and therefore cannot run.",
+  "recordedAt": "2026-07-28T21:11:17.911Z"
+}

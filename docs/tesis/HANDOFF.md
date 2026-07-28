@@ -103,6 +103,17 @@ Actualización operativa 2026-07-28:
     `oracle-disposition.json` con `not_run`;
   - no se reintenta N=4. El siguiente frente es 02/11 y se prioriza N=8/N=16
     bajo el mismo freeze para evitar sesgo de parada.
+- Retry-8 completó también las observaciones N=8 y N=16:
+  - N=8 run `0b6b5781-42e4-49ad-b662-f5ab700df118`: FAIL pre-candidate por
+    planned outputs duplicados; el segundo intento interno persistió un grafo C
+    de 11 hojas y `splitAdvantage=0.1898`;
+  - N=16 run `b8e114ef-72a9-495f-82ae-6c92ca6906d2`: FAIL pre-candidate por la
+    misma clase; persistió 19 hojas y `splitAdvantage=0.0719`;
+  - los tres targets quedaron intactos en W1 y los tres oracle dispositions son
+    `not_run`;
+  - Francisco autorizó corregir defectos del sistema. Próximo paso: TDD sobre
+    ownership de `plannedPaths`, fix productivo, gates/reviews y nueva serie
+    completa desde N=4. Retry-8 no se borra ni se reinterpreta.
 
 Comandos de verificación (protocolo del proyecto):
 
