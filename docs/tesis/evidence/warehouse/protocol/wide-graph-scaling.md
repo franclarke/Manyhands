@@ -15,6 +15,28 @@ El barrido es `N ∈ {4, 8, 16}`. Cada valor es una célula distinta, ejecutada
 de a una y restaurando el target a W1 sólo bajo las mismas guardas de
 `run-g5.mjs`; una célula fallida también se preserva como resultado.
 
+## Variables controladas y comparabilidad
+
+La selección de executor es parte del freeze, no un parámetro libre del
+operador. Incluye `executorId`, `model` y, cuando el modelo lo expone, `effort`.
+El manifest de la serie conserva esa selección y cada célula debe repetirla sin
+cambios en `planningSelection`, `executionSelection` y `repairSelection`. El
+preflight aborta antes de escribir o ejecutar una serie si alguna selección
+diverge.
+
+Dos células con distinto executor, modelo o effort **no son comparables entre
+sí**, aunque compartan base, estímulo y oráculo. Se preservan como series o
+intentos distintos; nunca se elige sólo el resultado favorable ni se atribuye
+su diferencia a la anchura. La serie vigente `retry-7` está congelada con
+`claude-code-cli`/`sonnet`, sin campo `effort` porque ese modelo no expone esa
+variable.
+
+Los manifests históricos se reconciliaron el 2026-07-28 desde las selecciones
+ya congeladas en sus propias células: pilot y retry-2 a retry-5 usaron
+`codex-cli`/`gpt-5.5`/`high`; retry-6 y retry-7 declararon
+`claude-code-cli`/`sonnet`. Esta reconciliación añade atribución; no modifica
+celdas, journals ni resultados.
+
 > **Revisión del estímulo.** La primera versión pedía `N` módulos que derivaban
 > los mismos tres valores y sólo se diferenciaban por un id, y daba a las `N`
 > hojas un único `projections.test.ts` compartido. Eso medía la maquinaria del

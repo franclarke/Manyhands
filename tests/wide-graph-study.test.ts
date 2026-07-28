@@ -1,3 +1,8 @@
+import { execFile } from "node:child_process";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import {
   findExecutorModel,
@@ -7,10 +12,13 @@ import {
   WIDE_GRAPH_BASE_SHA,
   WIDE_GRAPH_SELECTIONS,
   WIDE_GRAPH_SIZES,
+  assertWideGraphSeriesSelection,
   buildWideGraphPlan,
   wideGraphSelection
 } from "../docs/tesis/evidence/scripts/lib/wide-graph-study.mjs";
 import { metricsFor } from "../docs/tesis/evidence/scripts/lib/wide-graph-metrics.mjs";
+
+const run = promisify(execFile);
 
 describe("wide graph study plan", () => {
   it("freezes the agreed graph widths against the verified W1 delivery", () => {
@@ -71,6 +79,88 @@ describe("wide graph study plan", () => {
  * otherwise a frozen cell can name a model that cannot run.
  */
 describe("wide graph executor selection", () => {
+  it("records the homogeneous executor selection in every committed series manifest", async () => {
+    const root = join(process.cwd(), "docs", "tesis", "evidence", "warehouse", "wide-graph");
+    const seriesDirectories = (await readdir(root, { withFileTypes: true }))
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+
+    for (const series of seriesDirectories) {
+      const cellsDirectory = join(root, series, "cells");
+      const names = await readdir(cellsDirectory).catch(() => []);
+      if (!names.includes("manifest.json")) continue;
+      const manifest = JSON.parse(await readFile(join(cellsDirectory, "manifest.json"), "utf8"));
+
+      expect(manifest.executorSelection, series).toEqual(expect.objectContaining({
+        executorId: expect.any(String),
+        model: expect.any(String)
+      }));
+      for (const { cellId } of manifest.cells) {
+        const cell = JSON.parse(await readFile(join(cellsDirectory, `${cellId}.json`), "utf8"));
+        for (const field of ["planningSelection", "executionSelection", "repairSelection"]) {
+          expect(cell[field], `${series}/${cellId}/${field}`).toEqual(manifest.executorSelection);
+        }
+      }
+    }
+  });
+
+  it("rejects a series whose cells do not share the frozen executor selection", () => {
+    const claude = wideGraphSelection("claude");
+    const codex = wideGraphSelection("codex");
+    const cells = [
+      {
+        cellId: "warehouse-wide-n04",
+        planningSelection: claude,
+        executionSelection: claude,
+        repairSelection: claude
+      },
+      {
+        cellId: "warehouse-wide-n08",
+        planningSelection: claude,
+        executionSelection: codex,
+        repairSelection: claude
+      }
+    ];
+
+    expect(() => assertWideGraphSeriesSelection(cells, claude))
+      .toThrow(/warehouse-wide-n08.+execution selection differs.+not comparable/iu);
+  });
+
+  it("freezes one executor selection in the manifest and every generated cell", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "manyhands-wide-graph-executor-"));
+    try {
+      await run(
+        process.execPath,
+        [
+          "docs/tesis/evidence/scripts/generate-wide-graph-cells.mjs",
+          "--target",
+          "C:/target",
+          "--executor",
+          "claude",
+          "--out",
+          outDir
+        ],
+        { cwd: process.cwd(), windowsHide: true }
+      );
+
+      const manifest = JSON.parse(await readFile(join(outDir, "manifest.json"), "utf8"));
+      const cells = await Promise.all(
+        ["warehouse-wide-n04.json", "warehouse-wide-n08.json", "warehouse-wide-n16.json"]
+          .map(async (name) => JSON.parse(await readFile(join(outDir, name), "utf8")))
+      );
+      const selection = { executorId: "claude-code-cli", model: "sonnet" };
+
+      expect(manifest.executorSelection).toEqual(selection);
+      expect(cells.every((cell) =>
+        ["planningSelection", "executionSelection", "repairSelection"]
+          .every((field) => JSON.stringify(cell[field]) === JSON.stringify(selection))
+      )).toBe(true);
+    } finally {
+      await rm(outDir, { recursive: true, force: true });
+    }
+  });
+
   it("offers only selections the executor registry knows", () => {
     for (const [name, selection] of Object.entries(WIDE_GRAPH_SELECTIONS)) {
       expect(isExecutorSelection(selection), name).toBe(true);

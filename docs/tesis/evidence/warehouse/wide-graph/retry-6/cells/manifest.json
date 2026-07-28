@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "title": "Warehouse wide graph pilot",
   "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+  "executorSelection": {
+    "executorId": "claude-code-cli",
+    "model": "sonnet"
+  },
   "moduleCounts": [
     4,
     8,
