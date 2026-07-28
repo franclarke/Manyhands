@@ -13,7 +13,7 @@
 ## Closure evidence
 
 - Base commit: `5623e6014858b038764320d3c9746d00c07ac3e3`.
-- Implementation commit: `8ff4715030e9937f21f11112362d033010cf08b3`.
+- Implementation commit: `4ab5f9d6db7e0c528ca18be674a27a78d52caba8`.
 - Changed files:
   - `docs/tesis/evidence/scripts/derive-wide-graph-specimen.mjs`
   - `tests/wide-graph-metric-catalogue.test.ts`

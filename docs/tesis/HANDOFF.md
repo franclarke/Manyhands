@@ -45,10 +45,10 @@ Actualización operativa 2026-07-28:
   de `zod` y `next` fallan por ACL/`EPERM`. No se borró ni reparó; la
   verificación se trasladó a un clon y store aislados.
 - Ticket 05 cerrado con Standards/Spec PASS. Implementación:
-  `8ff4715030e9937f21f11112362d033010cf08b3`; evidencia durable:
-  `0910b11`. El specimen ancho se re-deriva desde el blob W1 `71f61c9e`, y sus
-  16 valores coinciden automáticamente con el catálogo. El siguiente ticket
-  de la ruta crítica es 08.
+  `4ab5f9d6db7e0c528ca18be674a27a78d52caba8`; evidencia durable:
+  `74156cf875b40781c95979ed4fb79d1df4cc8133`. El specimen ancho se re-deriva
+  desde el blob W1 `71f61c9e`, y sus 16 valores coinciden automáticamente con
+  el catálogo. El siguiente ticket de la ruta crítica es 08.
 
 Comandos de verificación (protocolo del proyecto):
 
