@@ -143,6 +143,76 @@ Actualización operativa 2026-07-28:
     build`, el mismo comando pasó. No fue un defecto de producto ni se cambió
     código para obtener el PASS.
 
+- `retry-9` N=4 se ejecutó parcialmente y queda preservado como intento
+  descartado por defecto productivo:
+  - run `3340ab0b-b255-43b5-af33-870e8872b00e`, workspace
+    `510aeb2f-0e12-4cfe-9ae3-0972751983e3`, journal inmutable en
+    `C:\Users\franc_rgy\.codex\tmp\manyhands-thesis-freeze-3\repo\.manyhands\runs\3340ab0b-b255-43b5-af33-870e8872b00e.events.v2.jsonl`;
+  - el plan compiló y fue aprobado: el fix de `plannedPaths` sí alcanzó el
+    camino productivo. Se persistieron siete hojas y comenzó la primera,
+    `Projection Contract`;
+  - el intento 1 produjo trabajo, pero `SimpleGitRunner.commit()` falló con
+    `Author identity unknown`. El journal conserva
+    `failure.classified` 30, `attempt.failed` 31,
+    `decision.raised(resolve_conflict)` 32 y `readiness.observed` 33;
+  - se configuró identidad Git **sólo localmente** en los tres targets r9 para
+    corregir el entorno inmediato, sin cambiar HEAD ni dirty state;
+  - la respuesta `retry` quedó persistida como `decision.resolved` 34, pero la
+    route devolvió 409 al intentar reclamar una segunda ejecución antes de que
+    el runner anterior liberara su lease. Después de liberarlo, el lifecycle
+    quedó `waiting_for_input` sin decisión pendiente y `/run`/`/resume` no
+    ofrecían una transición válida;
+  - no hubo candidate, final SHA, receipt ni entrada para el oráculo. N=8 y
+    N=16 de `retry-9` **no se iniciaron**. No completar ni reinterpretar esta
+    serie: el cambio de código posterior obliga a congelar una sucesora desde
+    N=4.
+- Corrección causal fijada en `60eb12f` (`fix(execution): resume resolved
+  decisions safely`):
+  - `SimpleGitRunner.commit()` conserva una identidad efectiva existente y,
+    sólo cuando falta nombre o email, usa por comando
+    `ManyHands <manyhands@local>`; no escribe configuración local ni global;
+  - `decision.resolved` quita únicamente el ID resuelto de
+    `readiness.pendingDecisionIds` y no inventa un nuevo readiness;
+  - la continuación de una decisión puede reclamar `running` o
+    `waiting_for_input`; si todavía existe un runner activo, se agenda después
+    de todos los predecessors del run. El nuevo driver es quien recalcula y
+    persiste `readiness.observed`;
+  - TDD identidad: RED `1 failed / 3 passed` con el error exacto de autor;
+    GREEN incluido en `4/4`;
+  - TDD lifecycle/handoff: RED inicial `1 failed / 1 passed` por el dead-end,
+    RED de re-review por la transición optimista, GREEN final enfocado
+    `17/17`; suite afectada anterior `29/29`;
+  - typecheck `@manyhands/run-coordinator`, `@manyhands/execution-core` y web
+    PASS; packages build, web typecheck y `web:build` PASS en el clon aislado
+    `manyhands-decision-recovery-fix-2`. El `web:build` fue anterior al último
+    ajuste de lifecycle; después de ese ajuste los tres typechecks volvieron a
+    pasar. El próximo freeze debe ejecutar P0 completo fresco;
+  - primera review: Standards FAIL con P1 de carrera cache/lease y P2 de
+    readiness optimista; ambos fueron corregidos. Re-review final Standards
+    PASS y Spec PASS, sin P0/P1/P2/P3.
+- Estado operativo al relevo:
+  - rama `main`; commit productivo más reciente `60eb12f`; el commit documental
+    posterior se consulta con `git rev-parse HEAD`;
+  - el proceso Node histórico de `retry-9`, PID `38392`, todavía existía al
+    último control, pero ya no apareció un listener en el puerto 3000. Proviene
+    del freeze inmutable `manyhands-thesis-freeze-3`. Verificar ambos estados
+    antes de reutilizar el puerto; puede terminarse ese proceso, pero no borrar
+    el clon ni sus artefactos;
+  - no hay driver N=4 vivo. El run histórico permanece
+    `waiting_for_input`, sequence 34, y no debe mutarse;
+  - laboratorio válido para el fix:
+    `C:\Users\franc_rgy\.codex\tmp\manyhands-decision-recovery-fix-2\repo`,
+    con 629 paquetes instalados offline. El clon `...fix-1` quedó contaminado
+    por CRLF durante checkout; se conserva y no se usa;
+  - ticket activo: 11. Frente adicional desbloqueado: 02. Ruta prioritaria:
+    `11 -> 12 -> 02 -> 14 -> 15`;
+  - siguiente acción exacta: crear un freeze sucesor nuevo (recomendado
+    `retry-10`) desde un HEAD limpio que incluya `60eb12f` y este handoff;
+    instalar offline, ejecutar P0 completo secuencial, verificar policy marker,
+    hashes y mutación autenticada, crear **tres targets nuevos** sobre W1 y
+    ejecutar N=4/N=8/N=16 sin cambiar bytes entre celdas. No reutilizar las
+    celdas ni targets r9 como si fueran comparables.
+
 Comandos de verificación (protocolo del proyecto):
 
 ```bash

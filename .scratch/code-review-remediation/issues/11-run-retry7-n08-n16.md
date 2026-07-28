@@ -33,3 +33,17 @@
   `codex-cli/gpt-5.5/high` y células `{4, 8, 16}` con condición C.
 - Pendiente: ejecutar las tres células, preservar cada resultado, correr el
   oráculo sólo ante una entrega y registrar la evaluación N=16.
+- `retry-9` N=4 avanzó por planning y comenzó ejecución productiva, pero queda
+  descartado como serie comparable. Run
+  `3340ab0b-b255-43b5-af33-870e8872b00e`: el primer commit falló por identidad
+  Git ausente; la decisión `retry` quedó resuelta, pero una carrera entre el
+  runner activo y la route dejó el lifecycle en `waiting_for_input`. No hubo
+  candidate/receipt/oráculo; N=8 y N=16 no se iniciaron.
+- Corrección TDD en `60eb12f`: fallback Git command-scoped y continuación
+  decision-aware que espera el lease anterior y deja que el driver recalcule
+  readiness. REDs preservados, GREEN final `17/17`; suite afectada `29/29`;
+  typechecks afectados/web PASS; packages build y web build PASS en clon
+  aislado. Review inicial Standards encontró P1/P2, ambos corregidos; re-review
+  Standards/Spec PASS sin P0/P1/P2/P3.
+- Pendiente de aceptación: freeze sucesor nuevo desde N=4, recomendado
+  `retry-10`, con targets nuevos. Las tres casillas continúan abiertas.
