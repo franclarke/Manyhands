@@ -627,12 +627,25 @@ Freeze ejecutable de `retry-10` listo para N=4:
   clon de ejecucion sigue limpio y fijado en `643a32d`; no avanzara con los
   commits documentales posteriores.
 - El servidor aislado responde health en `127.0.0.1:3001`; el listener actual
-  es PID `24192`, perteneciente al runtime Node 22.23.1 del clon retry-10. Una
+  es PID `38908`, perteneciente al runtime Node 22.23.1 del clon retry-10. Una
   mutacion autenticada creo el workspace
-  `f38dff28-46be-4c9e-95cb-e5fcf711bc1` para el target N=4 y un GET posterior
+  `f38dff28-46be-4c9e-95cb-e5fcf711bc1c` para el target N=4 y un GET posterior
   verifico la identidad fisica persistida. El PID historico `38392` sigue
   aislado en 3000.
 - Proxima operacion larga exacta: ejecutar solo `warehouse-wide-n04` con
   `run-g5.mjs`, celdas del freeze y salida durable en
   `docs/tesis/evidence/warehouse/wide-graph/retry-10/runs`. No cambiar codigo,
   freeze, estimulo, seleccion, oraculo ni target antes de N=8/N=16.
+
+Preflight operativo inmediatamente anterior a N=4:
+
+- El primer launcher habia vencido por el timeout externo del host y dejo un
+  child de Next que luego dejo de responder. N=4 no se habia lanzado: el gate
+  aborto ante `/api/health`. Se termino solo ese arbol Node identificado por la
+  ruta del clon retry-10.
+- El launcher completo se reinicio con una ventana de ocho horas y token
+  conocido. Health y el workspace autenticado volvieron a responder; su id
+  durable correcto termina en `bc1c` y el listener nuevo es PID `38908`.
+- La proxima accion sigue siendo N=4 detached con un unico vigia detached. El
+  incidente de servidor queda fuera de la celda porque ocurrio antes de crear
+  el run y no modifico target, freeze ni instrumento.
