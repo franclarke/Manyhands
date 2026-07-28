@@ -481,3 +481,33 @@ Mínimo defendible:
 Los resultados **adversos son parte del aporte**. Que la política no apruebe un
 fan-out limpio, medido y explicado, vale más que un número cómodo sin respaldo.
 No maquillar nada.
+
+---
+
+## 11. Actualización operativa — preparación de `retry-10`
+
+Checkpoint 2026-07-28 antes de la instalación y Gate P0:
+
+- root `C:\Users\franc\Documents\Proyectos\Manyhands`, branch `main`, HEAD
+  limpio observado `8668fd1a563ebf1854985a6de72f556148885833`; `60eb12f` es
+  ancestro y el único commit posterior agrega ticket, handoff y evidencia
+  documental;
+- el frente canónico recalculado es `{11, 02}` y se mantiene la prioridad
+  `11 -> 12 -> 02 -> 14 -> 15`;
+- el servidor histórico de `retry-9`, PID `38392`, continúa como único listener
+  de `127.0.0.1:3000`. `Stop-Process -Force` y `taskkill /F` fueron rechazados
+  por ACL; no se tocó su proceso padre, clon ni artefactos y no se harán
+  reintentos ciegos;
+- se creó el clon aislado limpio
+  `C:\Users\franc\.codex\tmp\manyhands-thesis-freeze-4\repo` desde ese HEAD,
+  con `core.autocrlf=false`;
+- se instaló un runtime aislado Node `22.23.1`; el archivo oficial
+  `node-v22.23.1-win-x64.zip` verificó SHA-256
+  `7df0bc9375723f4a86b3aa1b7cc73342423d9677a8df4538aca31a049e309c29`.
+  Corepack resuelve pnpm `7.29.3` y el store offline documentado es
+  `C:\Users\franc\AppData\Local\pnpm\store\v3`;
+- próxima acción exacta: avanzar el clon a este checkpoint documental, ejecutar
+  `pnpm install --frozen-lockfile --offline` con ese runtime/store y luego Gate
+  P0 completo secuencial. El bloqueo del puerto no impide instalación ni P0;
+  debe resolverse o aislarse de forma atribuible antes de la mutación
+  autenticada y del run.
