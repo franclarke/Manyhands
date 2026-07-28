@@ -4,3 +4,14 @@ export const wideGraphOracleCommands = [
   ["typecheck"],
   ["build"]
 ];
+
+export function wideGraphCloneArgs(sourceRepository, destination) {
+  return [
+    "-c",
+    `safe.directory=${sourceRepository}`,
+    "clone",
+    "--no-hardlinks",
+    sourceRepository,
+    destination
+  ];
+}

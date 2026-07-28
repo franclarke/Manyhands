@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { checkWideGraphOutput } from "../docs/tesis/evidence/scripts/lib/wide-graph-oracle.mjs";
+import {
+  checkWideGraphOutput,
+  evaluateWideGraphOutput
+} from "../docs/tesis/evidence/scripts/lib/wide-graph-oracle.mjs";
 import { metricsFor } from "../docs/tesis/evidence/scripts/lib/wide-graph-metrics.mjs";
 
 function report(overrides: Record<string, unknown> = {}, moduleCount = 4) {
@@ -59,6 +62,11 @@ describe("wide graph external oracle", () => {
     shuffled.projections = [...shuffled.projections].reverse();
 
     expect(checkWideGraphOutput(shuffled, 4)).toEqual([expect.stringContaining("projection order must be")]);
+    expect(evaluateWideGraphOutput(shuffled, 4).valuesCompared).toBe(false);
+  });
+
+  it("records that specimen values were compared when catalogue order permits it", () => {
+    expect(evaluateWideGraphOutput(report(), 4).valuesCompared).toBe(true);
   });
 
   it("rejects a wrapper that does not match the frozen envelope", () => {

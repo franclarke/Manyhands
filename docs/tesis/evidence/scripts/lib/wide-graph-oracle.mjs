@@ -37,7 +37,7 @@ function sameAnswer(actual, expected) {
  * está congelado, cada pregunta tiene un único resultado correcto y se puede
  * exigir ese resultado.
  */
-export function checkWideGraphOutput(report, moduleCount) {
+export function evaluateWideGraphOutput(report, moduleCount) {
   const failures = [];
   if (report?.schemaVersion !== 1) failures.push("schemaVersion must be 1");
   if (report?.moduleCount !== moduleCount) {
@@ -55,7 +55,7 @@ export function checkWideGraphOutput(report, moduleCount) {
   const expectedIds = metrics.map((metric) => metric.id);
   if (JSON.stringify(ids) !== JSON.stringify(expectedIds)) {
     failures.push(`projection order must be ${expectedIds.join(", ")}`);
-    return failures;
+    return { failures, valuesCompared: false };
   }
 
   const projections = Array.isArray(report?.projections) ? report.projections : [];
@@ -67,5 +67,9 @@ export function checkWideGraphOutput(report, moduleCount) {
       failures.push(`${metric.id} answered ${JSON.stringify(actual)}; expected ${JSON.stringify(metric.expected)}`);
     }
   }
-  return failures;
+  return { failures, valuesCompared: true };
+}
+
+export function checkWideGraphOutput(report, moduleCount) {
+  return evaluateWideGraphOutput(report, moduleCount).failures;
 }

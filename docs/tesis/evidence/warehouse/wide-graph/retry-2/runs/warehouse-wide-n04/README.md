@@ -6,6 +6,18 @@
 > retirado por degenerado. Este PASS es evidencia de **mecánica**, no de que la
 > arquitectura sirva para desarrollar software. Ver
 > [`protocol/wide-graph-scaling.md`](../../../protocol/wide-graph-scaling.md).
+>
+> **Contrato de oráculo histórico.** El identificador
+> `warehouse-wide-graph-v1` de `oracle-result.json` corresponde al contrato
+> estructural anterior: comprobaba forma, límites y determinismo, pero no los
+> valores contra el specimen. El contrato value-aware vigente se identifica
+> como `warehouse-wide-graph-v2`; no se debe reinterpretar este recibo como si
+> hubiera ejecutado esos checks.
+>
+> `oracle-v2-recheck.json` conserva la reevaluación del mismo commit entregado
+> bajo v2. El checkout y todos los gates pasan, pero el contrato nuevo da FAIL
+> porque el estímulo histórico no usa el catálogo value-aware vigente. La
+> diferencia de veredicto queda atribuida por identificador, checks y SHA.
 
 El cell `warehouse-wide-n04` se ejecutó sobre el piloto limpio 14, fijado en
 W1 (`71f61c9efa222103ca2fb2f67692434ab493d75c`). El run

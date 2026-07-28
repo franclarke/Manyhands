@@ -66,6 +66,12 @@ correcto de uno que devuelve un valor plausible inventado: el determinismo por s
 solo no los separa, porque dos corridas de un stub son igual de idénticas entre
 sí que dos de una implementación real.
 
+El contrato value-aware vigente se identifica como
+`warehouse-wide-graph-v2`/`oracleContractVersion: 2`. Sus recibos registran el
+SHA verificado y los checks ejecutados, incluido `specimen-values`. Los recibos
+históricos `warehouse-wide-graph-v1` pertenecen al contrato estructural anterior
+y no se reinterpretan bajo v2.
+
 ## Mediciones requeridas
 
 Por célula se guardan el `cell.json` congelado, journal V2, snapshot, resultado,

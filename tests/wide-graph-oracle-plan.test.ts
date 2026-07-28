@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { wideGraphOracleCommands } from "../docs/tesis/evidence/scripts/lib/wide-graph-oracle-plan.mjs";
+import {
+  wideGraphCloneArgs,
+  wideGraphOracleCommands
+} from "../docs/tesis/evidence/scripts/lib/wide-graph-oracle-plan.mjs";
 
 describe("wide graph external oracle plan", () => {
   it("installs the frozen lockfile before running gates in a clean external clone", () => {
@@ -8,6 +11,17 @@ describe("wide graph external oracle plan", () => {
       ["test"],
       ["typecheck"],
       ["build"]
+    ]);
+  });
+
+  it("scopes the Git ownership exception to the source repository", () => {
+    expect(wideGraphCloneArgs("C:\\external\\warehouse", "C:\\temp\\verification")).toEqual([
+      "-c",
+      "safe.directory=C:\\external\\warehouse",
+      "clone",
+      "--no-hardlinks",
+      "C:\\external\\warehouse",
+      "C:\\temp\\verification"
     ]);
   });
 });

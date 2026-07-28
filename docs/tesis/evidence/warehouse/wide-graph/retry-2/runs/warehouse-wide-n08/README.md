@@ -6,6 +6,13 @@
 > retirado por degenerado. Este PASS es evidencia de **mecánica**, no de que la
 > arquitectura sirva para desarrollar software. Ver
 > [`protocol/wide-graph-scaling.md`](../../../protocol/wide-graph-scaling.md).
+>
+> **Contrato de oráculo histórico.** Los recibos
+> `oracle-result.json` y `oracle-result-instrumentation-failure.json` usan
+> `warehouse-wide-graph-v1`, el contrato estructural anterior: no comparaba los
+> valores contra el specimen. El contrato value-aware vigente se identifica
+> como `warehouse-wide-graph-v2`; estos recibos no se reinterpretan como si
+> hubieran ejecutado sus checks.
 
 El cell `warehouse-wide-n08` partió de W1
 (`71f61c9efa222103ca2fb2f67692434ab493d75c`). El run

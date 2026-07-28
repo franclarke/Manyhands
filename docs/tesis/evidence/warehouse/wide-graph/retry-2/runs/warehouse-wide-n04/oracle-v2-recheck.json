@@ -1,0 +1,19 @@
+{
+  "oracleId": "warehouse-wide-graph-v2",
+  "oracleContractVersion": 2,
+  "sourceRepository": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-14",
+  "verifiedSha": "b7a8838b1db9fa136103e5024df38697072ad3c9",
+  "deliveredSha": "b7a8838b1db9fa136103e5024df38697072ad3c9",
+  "moduleCount": 4,
+  "outcome": "fail",
+  "checks": [
+    "checkout-delivered-sha",
+    "install-frozen-lockfile",
+    "test",
+    "typecheck",
+    "build",
+    "module-boundary",
+    "deterministic-probe"
+  ],
+  "error": "projection order must be zone-unit-totals, sku-unit-totals, bin-occupancy, sku-bin-spread"
+}
