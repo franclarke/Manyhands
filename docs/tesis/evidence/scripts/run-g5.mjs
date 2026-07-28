@@ -20,6 +20,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertWideGraphSeriesSelection } from "./lib/wide-graph-study.mjs";
 
 const exec = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));
@@ -28,13 +29,17 @@ const cellsDir = resolve(argOf("--cells") ?? "docs/tesis/evidence/experiment/cel
 const outRoot = resolve(argOf("--out") ?? "docs/tesis/evidence/experiment/runs");
 const from = Number(argOf("--from") ?? 1);
 const only = argOf("--only");
-await mkdir(outRoot, { recursive: true });
 
+const manifest = JSON.parse(await readFile(join(cellsDir, "manifest.json"), "utf8"));
 const cells = [];
 for (const name of (await readdir(cellsDir)).filter((file) => file.endsWith(".json") && file !== "manifest.json")) {
   cells.push(JSON.parse(await readFile(join(cellsDir, name), "utf8")));
 }
 cells.sort((left, right) => left.position - right.position);
+if (manifest.executorSelection !== undefined) {
+  assertWideGraphSeriesSelection(cells, manifest.executorSelection);
+}
+await mkdir(outRoot, { recursive: true });
 
 const selected = cells.filter((cell) =>
   (only === undefined || cell.cellId === only) && cell.position >= from);
