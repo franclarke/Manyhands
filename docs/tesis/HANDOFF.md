@@ -35,6 +35,20 @@ Dos hipótesis:
 - Suite al último cierre: **210 archivos, 1392 passed, 2 skipped, 0 fallos.**
   Typecheck y build PASS.
 
+Actualización operativa 2026-07-28:
+
+- Gate P0 PASS sobre `5623e6014858b038764320d3c9746d00c07ac3e3`
+  en clon aislado con Node `22.23.1` y pnpm `7.29.3`: 211 archivos de test,
+  1395 passed, 2 skipped; typechecks de paquetes y web, build de paquetes y
+  web build PASS.
+- El `node_modules` del checkout activo no es un laboratorio válido: lecturas
+  de `zod` y `next` fallan por ACL/`EPERM`. No se borró ni reparó; la
+  verificación se trasladó a un clon y store aislados.
+- Ticket 05 implementado en `8ff4715030e9937f21f11112362d033010cf08b3`:
+  el specimen ancho se re-deriva desde el blob W1 `71f61c9e`, y sus 16 valores
+  coinciden automáticamente con el catálogo. El siguiente ticket de la ruta
+  crítica es 08.
+
 Comandos de verificación (protocolo del proyecto):
 
 ```bash
