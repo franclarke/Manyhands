@@ -51,14 +51,12 @@ function wideGraphGoal(moduleCount) {
 
 /**
  * Which executor produced a cell has to be declared by the cell, not compiled
- * into the generator. Codex reports `usageSource: "unavailable"`, so under it
- * the sweep reports tokens as a floor and cost as unavailable; Claude Code
- * reports both. Claude models expose no reasoning-effort knob (`efforts: null`
- * in the registry), so those selections carry no `effort` field by design.
+ * into the generator. Codex is the only executor available for new series on
+ * the study machine. It reports `usageSource: "unavailable"`, so the sweep
+ * reports tokens as a floor and cost as unavailable.
  */
 export const WIDE_GRAPH_SELECTIONS = Object.freeze({
-  codex: Object.freeze({ executorId: "codex-cli", model: "gpt-5.5", effort: "high" }),
-  claude: Object.freeze({ executorId: "claude-code-cli", model: "sonnet" })
+  codex: Object.freeze({ executorId: "codex-cli", model: "gpt-5.5", effort: "high" })
 });
 
 export function wideGraphSelection(name) {

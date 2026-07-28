@@ -236,6 +236,13 @@ N=4, N=8 y N=16 deben compartir:
 - timeouts y budgets;
 - protocolo de decisiones humanas.
 
+**Disponibilidad vigente del executor (2026-07-28):** Codex es el único
+executor instalado y autorizado para nuevas mediciones. `retry-7` se conserva
+como freeze histórico no ejecutado porque declaró un executor hoy no
+disponible; no se edita para hacerlo pasar por otro instrumento. Toda referencia
+posterior a ejecutar `retry-7` significa congelar primero una serie sucesora
+versionada con `codex-cli`/`gpt-5.5`/`high` y ejecutar esa serie desde N=4.
+
 Si después de la primera celda cambia código que afecte planner, política,
 executor, driver, estímulo u oráculo:
 
@@ -420,7 +427,7 @@ las casillas del ticket, además de los gates globales de este plan.
 | [05](../../.scratch/code-review-remediation/issues/05-specimen-reproducible.md) | `tdd`; derivar desde el blob W1 sin usar el catálogo como input oculto | `pnpm vitest run tests/wide-graph-metric-catalogue.test.ts tests/warehouse-study-assets.test.ts` y `node docs/tesis/evidence/scripts/pin-warehouse-assets.mjs --check` | una divergencia exige distinguir blob equivocado, derivador o catálogo; no transcribir el valor esperado |
 | [06](../../.scratch/code-review-remediation/issues/06-longitudinal-protocol-matches-driver.md) | `tdd`; tratar protocolo, driver y manifest como un único contrato | `pnpm vitest run tests/warehouse-longitudinal-driver.test.ts tests/warehouse-study-assets.test.ts` y dry-run pilot | divergencia declarada/efectiva es defecto del instrumento, no resultado científico |
 | [07](../../.scratch/code-review-remediation/issues/07-fork-declared-and-guarded.md) | `tdd`; probar versión, base y prefijo reales, no aislamiento vacuo | test enfocado del driver y dry-run final | un fork final inválido aborta antes de mutar el target |
-| [08](../../.scratch/code-review-remediation/issues/08-executor-declared-as-variable.md) | `tdd`; declarar executor/model/effort y validar homogeneidad preflight | tests wide-graph; luego `node docs/tesis/evidence/scripts/generate-wide-graph-cells.mjs --target <clon-W1-verificado> --executor claude --out <scratch> --dry-run` | una celda heterogénea invalida comparabilidad y debe fallar antes del run |
+| [08](../../.scratch/code-review-remediation/issues/08-executor-declared-as-variable.md) | `tdd`; declarar executor/model/effort y validar homogeneidad preflight | tests wide-graph; luego `node docs/tesis/evidence/scripts/generate-wide-graph-cells.mjs --target <clon-W1-verificado> --executor codex --out <scratch> --dry-run` | una celda heterogénea invalida comparabilidad y debe fallar antes del run |
 | [09](../../.scratch/code-review-remediation/issues/09-dedupe-ancestor-acceptance.md) | caracterización verde primero; refactor sin cambio conductual | `pnpm vitest run tests/contract-acceptance-allocation.test.ts tests/granularity-utility-policy.test.ts tests/planning-candidate-replay.test.ts` | cualquier cambio de assessment revierte el refactor y activa diagnóstico |
 | [10](../../.scratch/code-review-remediation/issues/10-run-retry7-n04.md) | freeze gate; ejecutar N=4, exportar artefactos y verificar SHA en clon externo | manifest/cell hashes, journal, snapshot, diff, result y receipt atribuibles | si el instrumento es inválido, corregir/versionar/reiniciar; si el resultado es adverso pero válido, preservarlo y continuar el barrido |
 | [11](../../.scratch/code-review-remediation/issues/11-run-retry7-n08-n16.md) | ejecutar N=8 y N=16 secuencialmente sin cambiar el freeze | compatibilidad byte a byte de variables controladas y assessment N=16 completo | ambos runs deben ejecutarse aunque N=4/N=8 sean adversos; sólo instrumento inválido reinicia la serie |
