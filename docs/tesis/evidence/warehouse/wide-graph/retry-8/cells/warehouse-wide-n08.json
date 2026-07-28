@@ -31,7 +31,7 @@
     "integrationTimeoutMs": 1800000,
     "unexpectedCommitPolicy": "reject"
   },
-  "runsDir": "C:\\Users\\franc_rgy\\.codex\\tmp\\manyhands-thesis-freeze\\repo\\.manyhands\\runs",
+  "runsDir": "C:\\Users\\franc_rgy\\.codex\\tmp\\manyhands-thesis-freeze-2\\repo\\.manyhands\\runs",
   "pollIntervalMs": 10000,
   "wallClockLimitMs": 7200000,
   "goalSha256": "8da73f032bc2924bf70d46f63d739dc8c4d55a503b59e68f0bf862805f6ad1a8"
