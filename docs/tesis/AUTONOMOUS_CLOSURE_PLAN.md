@@ -27,6 +27,35 @@ verificar código, tests, commits y evidencia persistida, registrar la transici�
 y corregir el documento que quedó desactualizado. Nunca debe adaptar la realidad
 para que coincida con el plan.
 
+### Afinación de scope aprobada el 2026-07-28
+
+Francisco reafirmó que el cierre debe responder dos preguntas, sin convertir la
+infraestructura intermedia en un fin:
+
+1. si ManyHands puede orquestar agentes sobre un DAG y entregar software real
+   verificado;
+2. si la política C puede tomar decisiones de granularidad cercanas a las
+   mejores que permite la evidencia observada, incluyendo un veredicto adverso.
+
+La evidencia mínima restante es la serie sucesora Codex N=4/N=8/N=16, el
+veredicto sobre `validationDuplication`, la síntesis de claims y los artefactos
+académicos. Se mantienen 02 porque evita reinterpretar evidencia histórica y
+10–12/14–15 porque producen o explican evidencia directa.
+
+Se retiran del mínimo:
+
+- 07, porque no se ejecutará otra serie longitudinal ni se usará un fork;
+- 09, porque es un refactor sin efecto observable y agrega riesgo pre-freeze;
+- un nuevo W2: 13 cierra la cadena honestamente en 1/8 usando los intentos ya
+  preservados.
+
+Estas disposiciones no declaran correctos el fork ni la duplicación interna, no
+borran deuda y no convierten fallos W2 en PASS. La ruta activa queda:
+
+```text
+02 -> 10 -> 11 -> 12 -> 14 -> 15
+```
+
 ---
 
 ## 1. Posición actual y fuentes canónicas
@@ -365,21 +394,19 @@ Un PASS histórico no reemplaza este gate.
 
 ## 6. Orden maestro
 
-### Fase A — sanear semántica e instrumento
+### Fase A — integridad mínima de la evidencia
 
-Ejecutar P0 y después cerrar 02, 05, 06, 07, 08 y 09. La prioridad de la ruta
-crítica es:
+P0, 05, 08 y 06 ya cerraron. Las disposiciones de scope cierran 07 y 09 sin
+cambio productivo. Resta 02 para impedir que un journal C1 sea reinterpretado
+silenciosamente bajo C:
 
 ```text
-P0 -> 05 -> 08 -> 06 -> 07 -> 09 -> 02
+P0 -> 05 -> 08 -> 06 -> scope -> 02
 ```
 
-El orden entre 06, 07, 09 y 02 puede cambiar si una causa descubierta lo exige,
-pero todos deben cerrar antes de la síntesis. Este es un orden operativo para
-reducir cambios entre mediciones, no agrega relaciones `Blocked by`: sólo los
-tickets determinan reachability. Para máxima comparabilidad, no comenzar
-la serie sucesora Codex hasta cerrar todos los cambios conductuales de esta fase y congelar un
-único commit.
+02 se resuelve con rechazo explícito mínimo; no se reconstruye una política
+legacy. Después se repiten gates y se congela un único commit para la serie
+sucesora Codex.
 
 ### Fase B — evidencia ancha
 
@@ -391,16 +418,17 @@ N=4 es un gate de instrumento y costo. N=8 y N=16 se ejecutan sólo si N=4
 demuestra que la celda, checkout, receipt y oráculo son atribuibles. Entre las
 tres celdas no se edita código ejecutable.
 
-### Fase C — evidencia longitudinal
+### Fase C — límite longitudinal
 
 ```text
-13 (W2 desde W1 verificado)
+13 (declarar 1/8 desde evidencia W2 ya preservada)
 ```
 
-No se requiere forzar W3–W8 para cerrar el mínimo defendible. Si W2 entrega y el
-protocolo vigente autoriza continuar sin romper el freeze, se puede avanzar la
-cadena mientras aporte evidencia proporcional al costo. Si W2 termina por una
-causa válida y no corregible dentro del alcance, se fija el límite 1/8.
+No se ejecuta otro W2 ni se fuerza W3–W8. W1 es la única entrega externamente
+verificada. Los intentos W2 existentes fijan el límite 1/8: candidato no
+instalable, timeout terminal y fallo de infraestructura, cada uno conservado
+con “Qué no se concluye”. Esta línea es una limitación secundaria; la evidencia
+principal de H2 proviene del run canónico, W1 y la nueva serie ancha.
 
 ### Fase D — síntesis y escritura
 
@@ -426,13 +454,13 @@ las casillas del ticket, además de los gates globales de este plan.
 | [02](../../.scratch/code-review-remediation/issues/02-c1-replay-honest.md) | `tdd`; inspeccionar schema, readers y consumers antes de escoger replay fiel o rechazo explícito | `pnpm vitest run tests/planning-candidate-replay.test.ts tests/run-events-replay.test.ts` más typecheck afectado | no admitir fallback silencioso; un journal no reconstruible debe fallar de forma observable |
 | [05](../../.scratch/code-review-remediation/issues/05-specimen-reproducible.md) | `tdd`; derivar desde el blob W1 sin usar el catálogo como input oculto | `pnpm vitest run tests/wide-graph-metric-catalogue.test.ts tests/warehouse-study-assets.test.ts` y `node docs/tesis/evidence/scripts/pin-warehouse-assets.mjs --check` | una divergencia exige distinguir blob equivocado, derivador o catálogo; no transcribir el valor esperado |
 | [06](../../.scratch/code-review-remediation/issues/06-longitudinal-protocol-matches-driver.md) | `tdd`; tratar protocolo, driver y manifest como un único contrato | `pnpm vitest run tests/warehouse-longitudinal-driver.test.ts tests/warehouse-study-assets.test.ts` y dry-run pilot | divergencia declarada/efectiva es defecto del instrumento, no resultado científico |
-| [07](../../.scratch/code-review-remediation/issues/07-fork-declared-and-guarded.md) | `tdd`; probar versión, base y prefijo reales, no aislamiento vacuo | test enfocado del driver y dry-run final | un fork final inválido aborta antes de mutar el target |
+| [07](../../.scratch/code-review-remediation/issues/07-fork-declared-and-guarded.md) | retirado del mínimo; no se usa `--resume-state` | verificar que ningún run nuevo dependa del fork | si se reabre una serie longitudinal, reabrir el ticket antes del run |
 | [08](../../.scratch/code-review-remediation/issues/08-executor-declared-as-variable.md) | `tdd`; declarar executor/model/effort y validar homogeneidad preflight | tests wide-graph; luego `node docs/tesis/evidence/scripts/generate-wide-graph-cells.mjs --target <clon-W1-verificado> --executor codex --out <scratch> --dry-run` | una celda heterogénea invalida comparabilidad y debe fallar antes del run |
-| [09](../../.scratch/code-review-remediation/issues/09-dedupe-ancestor-acceptance.md) | caracterización verde primero; refactor sin cambio conductual | `pnpm vitest run tests/contract-acceptance-allocation.test.ts tests/granularity-utility-policy.test.ts tests/planning-candidate-replay.test.ts` | cualquier cambio de assessment revierte el refactor y activa diagnóstico |
+| [09](../../.scratch/code-review-remediation/issues/09-dedupe-ancestor-acceptance.md) | retirado del mínimo; preservar comportamiento | sin cambio de código | no refactorizar el instrumento entre freeze y medición |
 | [10](../../.scratch/code-review-remediation/issues/10-run-retry7-n04.md) | freeze gate; ejecutar N=4, exportar artefactos y verificar SHA en clon externo | manifest/cell hashes, journal, snapshot, diff, result y receipt atribuibles | si el instrumento es inválido, corregir/versionar/reiniciar; si el resultado es adverso pero válido, preservarlo y continuar el barrido |
 | [11](../../.scratch/code-review-remediation/issues/11-run-retry7-n08-n16.md) | ejecutar N=8 y N=16 secuencialmente sin cambiar el freeze | compatibilidad byte a byte de variables controladas y assessment N=16 completo | ambos runs deben ejecutarse aunque N=4/N=8 sean adversos; sólo instrumento inválido reinicia la serie |
 | [12](../../.scratch/code-review-remediation/issues/12-settle-validation-duplication.md) | rederivar desde journals; comparar ownership/herencia e invertir términos para identificar cuál liga | script/comando reproducible y revisión del assessment N=16 | no tocar fórmula/umbral antes de medir; toda nueva versión exige serie confirmatoria nueva |
-| [13](../../.scratch/code-review-remediation/issues/13-run-or-bound-w2.md) | leer defectos W2, freeze gate y ejecutar desde el SHA W1 verificado | journal, result, diff y receipt; adoptar base sólo tras oracle PASS | defecto productivo vuelve a TDD; fallo válido fija el límite según el ticket, sin extrapolar W3–W8 |
+| [13](../../.scratch/code-review-remediation/issues/13-run-or-bound-w2.md) | cerrar en 1/8 desde intentos ya preservados | verificar journals, resultados, oráculo disponible y “Qué no se concluye” | no ejecutar otro W2 ni extrapolar W3–W8 |
 | [14](../../.scratch/code-review-remediation/issues/14-synthesize-thesis-evidence.md) | rederivar y enlazar claims a commits/runs/receipts | doble derivación con diff vacío, link check y búsqueda de contradicciones | nunca borrar adversos ni promover provisional a derivado |
 | [15](../../.scratch/code-review-remediation/issues/15-write-and-verify-thesis.md) | reescribir después de cerrar claims; alinear tesis, presentación y defensa | gate editorial y `rg -n "óptim|superior|demostr|significativ|siempre|robust|escalab" docs/tesis` | toda formulación fuerte sin sustento se elimina, acota o respalda |
 

@@ -61,10 +61,13 @@ Actualización operativa 2026-07-28:
   coinciden en `codex-cli/gpt-5.5/high`; el protocolo conserva la reversión por
   capacidad y declara tokens como piso y costo no medible. W1–W8 pasaron
   preflight dry-run sin abrir células.
-- Trabajo pendiente inmediato: ejecutar el checkpoint `grilling` pedido por
-  Francisco para tensionar scope y secuencia. El frente `ready-for-agent` es
-  02, 07, 09 y 10; 10 queda deliberadamente diferido hasta cerrar todos los
-  tickets conductuales. La ruta recomendada después del checkpoint es 07.
+- Scope refinado por Francisco: el objetivo operativo es probar ManyHands real y
+  producir un veredicto defendible sobre la política C, no perfeccionar
+  infraestructura intermedia. 07 y 09 quedan cerrados por retiro explícito del
+  mínimo; 13 cierra la cadena longitudinal en 1/8 sin otro W2. La única
+  corrección previa al freeze que permanece es 02, porque evita reinterpretar
+  evidencia C1 bajo la política C actual.
+- Ruta activa: `02 -> 10 -> 11 -> 12 -> 14 -> 15`.
 - Checkpoint Git previo a `grilling`: root
   `C:\Users\franc\Documents\Proyectos\Manyhands`, branch `main`, HEAD limpio
   observado `9f9c8e98929788c000ecf9bc5820777fe4259732`, 148 commits adelante de
@@ -72,9 +75,10 @@ Actualización operativa 2026-07-28:
   este snapshot sólo agrega evidencia documental, por lo que no altera código,
   protocolo ni resultados ya verificados.
 - Último gate: `git diff --check` → exit `0`.
-- Reanudación: completar primero el diálogo `grilling`; después leer completo
-  `.scratch/code-review-remediation/issues/07-fork-declared-and-guarded.md` y
-  recalcular el frente antes de modificar archivos.
+- Reanudación: leer completo
+  `.scratch/code-review-remediation/issues/02-c1-replay-honest.md`, implementar
+  el rechazo explícito mínimo con TDD y recalcular el frente. No ejecutar la
+  serie sucesora hasta cerrar 02 y repetir los gates de freeze.
 
 Comandos de verificación (protocolo del proyecto):
 
@@ -117,11 +121,11 @@ congelar una serie sucesora con Codex.
 
 ---
 
-## 4. Secuencia científica después de cerrar el frente conductual
+## 4. Secuencia científica después de cerrar 02
 
-Esta sección no describe el trabajo inmediato. Antes deben cerrar 07, 09 y 02,
-pasar el checkpoint `grilling`, repetir los gates aplicables y congelar un único
-commit limpio. Ticket 10 permanece diferido hasta entonces.
+Antes de la medición debe cerrar 02, repetirse los gates aplicables y congelarse
+un único commit limpio. 07 y 09 ya no forman parte del mínimo y no justifican
+demorar el experimento.
 
 ### Primera célula de la futura sucesora Codex — N=4
 
@@ -186,11 +190,12 @@ la correcta y C queda defendida. Si no cae, hay que rediseñar el término.
 > **No tocar el umbral ni la fórmula antes de esa medición.** Ajustar cualquiera
 > de los dos ahora es ajustar al resultado, y arruina el aporte.
 
-### Paso 3 — Desbloquear W2 (línea A)
+### Paso 3 — Declarar el límite longitudinal
 
-Sin W2 la cadena longitudinal queda en 1/8, que es poco para H2. Cada intento
-falló por una causa distinta ya documentada en `pilot/defects/`. Antes de
-reintentar, leer esos documentos: varias causas ya están corregidas.
+La cadena longitudinal queda en 1/8. W1 entregó; W2 produjo intentos distintos
+pero ninguna base verificable: candidato con lockfile inconsistente, hard
+timeout sin receipt y fallo de infraestructura. No se ejecuta otro W2. La tesis
+los presenta como límite y no atribuye esos fallos a la política C.
 
 ### Paso 4 — `maxLeafPlannedPaths`
 
@@ -322,8 +327,7 @@ Mínimo defendible:
    queda contradicha por la única evidencia ancha que existe.
 2. **H2** — la serie sucesora Codex completa `{4, 8, 16}` con oráculo externo PASS, y
    los N viejos re-etiquetados como evidencia de mecánica.
-3. **W2** desbloqueado, o la cadena longitudinal declarada como 1/8 **con las
-   causas documentadas** — que ya lo están.
+3. La cadena longitudinal declarada como 1/8 **con las causas documentadas**.
 4. Los parámetros sin anclar (`maxLeafPlannedPaths`, `minimumAdvantage`)
    declarados como provisionales, no presentados como derivados.
 
