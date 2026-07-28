@@ -649,3 +649,17 @@ Preflight operativo inmediatamente anterior a N=4:
 - La proxima accion sigue siendo N=4 detached con un unico vigia detached. El
   incidente de servidor queda fuera de la celda porque ocurrio antes de crear
   el run y no modifico target, freeze ni instrumento.
+
+Resultado terminal de `retry-10` N=4:
+
+- run `86ad7617-827e-401f-8215-13faf58933c0`, observado por el unico vigia
+  detached PID `37384`, termino `failed` durante compiled plan review;
+- el planner genero el artefacto registry en direccion
+  `analytics-registry -> study-wide-graph-script`, pero el seam del comando en
+  direccion inversa. El review detecto el ciclo de dos nodos y rechazo el plan;
+- no hubo execution, candidate, receipt ni mutacion del target W1. El oraculo
+  queda durablemente `not_run`; no se reintenta ni se corrige el producto entre
+  celdas;
+- la instrumentacion es valida y el resultado adverso es atribuible. Conforme
+  al protocolo, la proxima operacion larga es N=8 sobre su target nuevo con el
+  mismo freeze, servidor, seleccion y vigia unico detached.

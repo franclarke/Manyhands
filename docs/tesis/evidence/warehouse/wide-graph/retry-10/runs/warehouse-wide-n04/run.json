@@ -1,0 +1,62 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "86ad7617-827e-401f-8215-13faf58933c0",
+    "workspaceId": "f38dff28-46be-4c9e-95cb-e5fcf711bc1c",
+    "userPrompt": "Add exactly 4 independent warehouse analytics modules to the verified W1 codebase.\nCreate src/analytics/contracts.ts exporting WarehouseProjection with a readonly id and project(scenario), where project returns the answer to that module's question.\nEach module answers one question, computed from the W1 Scenario, layout and inventory exports:\n- src/analytics/projection-01.ts exports the projection \"zone-unit-totals\": Total units stored in each zone, keyed by zone id. Its focused tests live in src/analytics/projection-01.test.ts.\n- src/analytics/projection-02.ts exports the projection \"sku-unit-totals\": Total units of each SKU across the whole warehouse, keyed by SKU id. Its focused tests live in src/analytics/projection-02.test.ts.\n- src/analytics/projection-03.ts exports the projection \"bin-occupancy\": How many bins hold stock, how many are empty, and how many exist. Its focused tests live in src/analytics/projection-03.test.ts.\n- src/analytics/projection-04.ts exports the projection \"sku-bin-spread\": Number of distinct bins each SKU occupies, keyed by SKU id. Its focused tests live in src/analytics/projection-04.test.ts.\nA module must not import another module; it may import only the fixed contract and W1 exports.\nEvery answer must be derived from the scenario at run time. Do not hardcode results, and do not duplicate the W1 inventory or layout calculations.\nCreate src/analytics/registry.ts as the sole consumer of every module, returning all projections in the order the modules are listed above, with its own tests in src/analytics/registry.test.ts.\nPreserve all existing W1 behaviour and checks.\nAdd a package script named study:wide-graph that writes exactly one JSON object to stdout and no other output.\nIts JSON must be { \"schemaVersion\": 1, \"moduleCount\": 4, \"scenario\": \"thesis-seed-2026\", \"projections\": [ { \"projectionId\": \"<the module's projection id>\", \"value\": <that module's answer> }, … ] } with exactly 4 entries in the order the modules are listed above.\nTwo invocations from the same commit must emit byte-identical JSON.",
+    "title": "Add exactly 4 independent warehouse analytics modules to the verified W1 codebase.\nCreate src/analytics/contracts.ts exp",
+    "planningSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "repairSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1800000,
+      "integrationTimeoutMs": 1800000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed"
+    },
+    "granularityCondition": "C",
+    "targetContext": {
+      "sourceRealPath": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-r10-n04",
+      "gitCommonDir": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-r10-n04\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "71776119061403902"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+      "remoteUrl": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-13",
+      "fingerprint": "93e3ebd86ea73a35",
+      "capturedAt": "2026-07-28T23:51:19.450Z"
+    },
+    "projection": {
+      "eventSequence": 13,
+      "lifecycle": "failed",
+      "repositorySnapshotId": "sha256:da032bee12450e0e7ecab39561213186633d9235ec33995cd6027cdc6e1dcb66",
+      "failureReason": "Compiled plan review failed: artifact_cycle: Cycle detected including node-analytics-registry-90acc9b92b.; artifact_cycle: Cycle detected including node-study-wide-graph-script-f534020c6f.",
+      "updatedAt": "2026-07-28T23:53:31.761Z"
+    },
+    "version": 36,
+    "mutationFence": 1,
+    "createdAt": "2026-07-28T23:51:19.450Z",
+    "updatedAt": "2026-07-28T23:53:31.803Z",
+    "heartbeatAt": "2026-07-28T23:53:31.070Z"
+  }
+}
