@@ -7,7 +7,7 @@ limitación sin reintentar ni fabricar una entrega.
 
 **Blocked by:** 03, 04, 05, 08 — el run necesita un oráculo atribuible y una serie que declare el executor como variable controlada.
 
-**Status:** ready-for-agent
+**Status:** closed
 
 - [x] La celda corre sobre la base W1 verificada con el executor declarado.
 - [x] Si existe candidate SHA, el oráculo externo emite su veredicto; si el run
@@ -37,3 +37,14 @@ limitación sin reintentar ni fabricar una entrega.
   target baselines, hashes, clean tree and authenticated mutation all PASS.
 - TDD prerequisite: generator condition attribution RED with 1 failure/13 pass,
   then the affected five-file gate GREEN with 46/46.
+- Independent review:
+  - initial Standards FAIL because the ticket alone weakened the oracle
+    requirement post hoc; initial Spec PARTIAL because HANDOFF still instructed
+    a future N=4;
+  - plan, HANDOFF and ticket were aligned in
+    `c3f76ca62807a3175ac274657528511b47dbea5e`;
+  - final Standards PASS and Spec PASS, with no P0/P1/P2/P3.
+- Final files commit before closure:
+  `c3f76ca62807a3175ac274657528511b47dbea5e`.
+- Next unlocked frontier: tickets 02 and 11; priority is 11 under the unchanged
+  retry-8 freeze.
