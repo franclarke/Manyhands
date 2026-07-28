@@ -17,6 +17,10 @@ import {
   studyStageSelections
 } from "../docs/tesis/evidence/scripts/lib/warehouse-longitudinal.mjs";
 
+const longitudinalProtocolPath = path.resolve(
+  "docs/tesis/evidence/warehouse/protocol/longitudinal-protocol.md"
+);
+
 const valid = {
   freeBytes: 30 * 1024 ** 3,
   minimumFreeBytes: 25 * 1024 ** 3,
@@ -97,6 +101,14 @@ describe("Warehouse longitudinal driver", () => {
  * The declared study executor must be able to report what the study claims.
  */
 describe("Warehouse study executor selection", () => {
+  it("keeps the protocol selection equal to the effective driver selection", async () => {
+    const protocol = await readFile(longitudinalProtocolPath, "utf8");
+    const declaration = protocol.match(/^Executor selection \(machine-readable\): (\{.+\})$/mu);
+
+    expect(declaration, "machine-readable protocol selection").not.toBeNull();
+    expect(JSON.parse(declaration![1])).toEqual(STUDY_SELECTION);
+  });
+
   it("declares a selection the executor registry knows", () => {
     expect(isExecutorSelection(STUDY_SELECTION)).toBe(true);
     expect(findExecutorModel(STUDY_SELECTION)).toBeDefined();
@@ -114,11 +126,18 @@ describe("Warehouse study executor selection", () => {
     const usage = usageSourceForSelection(STUDY_SELECTION);
     if (usage === "reported") return;
 
-    const source = await readFile(path.resolve("docs/tesis/evidence/scripts/lib/warehouse-longitudinal.mjs"), "utf8");
-    const declaration = source.slice(0, source.indexOf("export const STUDY_SELECTION"));
+    const protocol = await readFile(longitudinalProtocolPath, "utf8");
 
-    expect(declaration).toMatch(/unavailable/u);
-    expect(declaration).toMatch(/lower bound|floor/u);
+    expect(protocol).toMatch(/tokens\s+como\s+piso/iu);
+    expect(protocol).toMatch(/costo\s+no\s+medible/iu);
+  });
+
+  it("records the executor reversion and its reason in the protocol", async () => {
+    const protocol = await readFile(longitudinalProtocolPath, "utf8");
+
+    expect(protocol).toMatch(/reversi[oó]n/iu);
+    expect(protocol).toMatch(/capacidad/iu);
+    expect(protocol).toMatch(/Codex\s+`gpt-5\.5`/u);
   });
 
   it("carries a reasoning effort only when the model exposes one", () => {
