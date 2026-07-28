@@ -92,6 +92,24 @@ describe("Graph critics V2", () => {
       .toThrow(/contested_planned_output|declare src\/booking\/shared\.test\.ts/u);
   });
 
+  it("allows a composite to summarize planned outputs owned by its descendants", () => {
+    const breakdown = bookingBreakdown();
+    if (breakdown.root.kind !== "composite") throw new Error("Expected composite booking root");
+    for (const child of breakdown.root.children) {
+      child.plannedPaths = [`src/booking/${child.key}.test.ts`];
+    }
+    breakdown.root.plannedPaths = [...new Set(
+      breakdown.root.children.flatMap((child) => child.plannedPaths ?? [])
+    )];
+
+    const compiled = compileGraphRevision({
+      breakdown,
+      repositorySnapshot: bookingSnapshot()
+    }, compilerDependencies);
+
+    expect(compiled.review.findings.filter((item) => item.code === "contested_planned_output")).toEqual([]);
+  });
+
   /**
    * The overlap was always modelled; treating the constraint as a remedy is what
    * let it through. This pins that the constraint still gets emitted, so the

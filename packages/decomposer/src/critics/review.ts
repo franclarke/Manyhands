@@ -120,16 +120,29 @@ function reviewScopes(input: CompiledPlanReviewInput, findings: PlanFinding[]): 
    * compiler modelled all 120 pairs at `high` risk, review accepted the
    * constraints as the remedy, and the run died in integration with every leaf
    * verified. A contested output is an error whether or not it is constrained.
+   * Composite declarations summarize descendant scope rather than claiming
+   * independent ownership, so only separate hierarchy branches can contest it.
    */
-  const unitsPerPlannedPath = new Map<string, number>();
+  const parentByUnitKey = buildParentByUnitKey(input.breakdown.root);
+  const unitsPerPlannedPath = new Map<string, string[]>();
   for (const unit of flattenUnits(input.breakdown.root)) {
     for (const path of new Set((unit.plannedPaths ?? []).map(normalizePath))) {
-      unitsPerPlannedPath.set(path, (unitsPerPlannedPath.get(path) ?? 0) + 1);
+      unitsPerPlannedPath.set(path, [...(unitsPerPlannedPath.get(path) ?? []), unit.key]);
     }
   }
   for (const [path, units] of unitsPerPlannedPath) {
-    if (units < 2) continue;
-    findings.push(finding("scope_isolation", "error", "contested_planned_output", `${units} units declare ${path} as their own planned output.`, "Give each unit a distinct output path, or let one unit own the file and have the others consume it through an artifact.", []));
+    const contestingUnitKeys = new Set<string>();
+    for (let leftIndex = 0; leftIndex < units.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < units.length; rightIndex += 1) {
+        const left = units[leftIndex]!;
+        const right = units[rightIndex]!;
+        if (isUnitAncestor(parentByUnitKey, left, right) || isUnitAncestor(parentByUnitKey, right, left)) continue;
+        contestingUnitKeys.add(left);
+        contestingUnitKeys.add(right);
+      }
+    }
+    if (contestingUnitKeys.size === 0) continue;
+    findings.push(finding("scope_isolation", "error", "contested_planned_output", `${contestingUnitKeys.size} independent units declare ${path} as their own planned output.`, "Give each unit a distinct output path, or let one unit own the file and have the others consume it through an artifact.", []));
   }
 
   for (let leftIndex = 0; leftIndex < input.contracts.length; leftIndex += 1) {
@@ -157,6 +170,31 @@ function isAncestor(input: CompiledPlanReviewInput, ancestorId: string, descenda
   while (current !== null) {
     if (current === ancestorId) return true;
     current = input.graph.nodes[current]?.parentId ?? null;
+  }
+  return false;
+}
+
+function buildParentByUnitKey(root: WorkUnit): Map<string, string | null> {
+  const parentByUnitKey = new Map<string, string | null>();
+  const visit = (unit: WorkUnit, parentKey: string | null): void => {
+    parentByUnitKey.set(unit.key, parentKey);
+    if (unit.kind === "composite") {
+      for (const child of unit.children) visit(child, unit.key);
+    }
+  };
+  visit(root, null);
+  return parentByUnitKey;
+}
+
+function isUnitAncestor(
+  parentByUnitKey: ReadonlyMap<string, string | null>,
+  ancestorKey: string,
+  descendantKey: string
+): boolean {
+  let current = parentByUnitKey.get(descendantKey) ?? null;
+  while (current !== null) {
+    if (current === ancestorKey) return true;
+    current = parentByUnitKey.get(current) ?? null;
   }
   return false;
 }
