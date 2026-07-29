@@ -2,7 +2,7 @@
 
 **What to build:** las dos celdas restantes, para tener tres puntos de escala comparables por construccion.
 
-**Blocked by:** 10.
+**Blocked by:** 10, 26.
 
 **Status:** ready-for-agent
 
@@ -53,8 +53,9 @@
 - `retry-10` ejecuto N=4, N=8 y N=16 secuencialmente sobre el mismo freeze
   `643a32d`, W1 exacto y `codex-cli/gpt-5.5/high`, con tres targets nuevos.
 - Los tres runs fallaron durante compiled plan review antes de candidate por el
-  mismo ciclo: artefacto `analytics-registry -> study-wide-graph-script` y seam
-  inverso `study-wide-graph-script -> analytics-registry`. Cada resultado y
+  mismo falso positivo: artefacto `analytics-registry -> study-wide-graph-script`
+  y seam no ordenante inverso `study-wide-graph-script -> analytics-registry`
+  fueron tratados incorrectamente como un ciclo. Cada resultado y
   journal queda preservado con oraculo `not_run`; N=16 conserva su assessment.
 - Reviews independientes del fixed point `67a16a1`: Standards FAIL P1 y Spec
   P1. La integridad del freeze pasa, pero falta reduccion, regresion, fix y
@@ -65,7 +66,6 @@
 - TDD en `cbb8cdb`: seams fuera de la adyacencia; ciclos materiales siguen
   rechazados; prompt producer -> consumer explicito. Suite afectada 69/69 y
   typechecks task-graph/decomposer PASS.
-- Ticket 11 permanece abierto y sus casillas no se marcan. Antes del freeze
-  sucesor se cierran los P0 de validacion criterion-aware, test integrity y UI
-  honesta registrados en el plan de correctness closure. `retry-10` permanece
-  inmutable.
+- Ticket 11 permanece abierto y sus casillas no se marcan. Los blockers
+  canónicos del cierre de correctness viven en tickets 16--26; el plan es sólo
+  un runbook. `retry-10` permanece inmutable.

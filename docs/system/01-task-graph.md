@@ -38,8 +38,9 @@ envían a coding agents. Root y composites se materializan por integración.
 ### Ownership
 
 El parent responde por integrar y validar sus hijos. Cada nodo, salvo root, tiene
-un único parent. Esto forma un árbol jerárquico aun cuando requirements y seams
-formen un DAG entre hojas.
+un único parent. Esto forma un árbol jerárquico. Los `ArtifactRequirement` y las
+restricciones legacy que todavía impongan orden deben ser acíclicos; los seams
+son contratos de compatibilidad y no forman parte del DAG de ejecución.
 
 ### ArtifactRequirement
 

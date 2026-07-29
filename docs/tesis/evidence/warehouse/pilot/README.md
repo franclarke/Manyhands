@@ -124,7 +124,8 @@ debio corregirse, y un resultado adverso sobre la politica:
   compilador modeló los 120 pares en conflicto y la revisión los aceptó como
   remedio suficiente.
 - [`policy-c-refuses-a-clean-wide-cut`](defects/policy-c-refuses-a-clean-wide-cut/README.md):
-  con el ciclo corregido, la política **sigue** sin aprobar por utilidad un
+  al excluir correctamente el seam no ordenante del DAG, la política **sigue**
+  sin aprobar por utilidad un
   fan-out de 19 módulos independientes (`splitAdvantage −0.0347`). El término
   que liga es `validationDuplication`. Queda abierto y sin tocar.
 

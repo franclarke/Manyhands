@@ -668,8 +668,9 @@ Resultado terminal de `retry-10` N=8:
 
 - run `d31b219b-4a92-4cef-a452-f58e3f27bda8`, vigia unico detached PID
   `45568`, termino `failed` durante compiled plan review;
-- reprodujo independientemente el mismo ciclo de artefactos entre registry y
-  study script. No hubo execution, candidate, receipt ni cambio del target W1;
+- reprodujo independientemente el mismo falso `artifact_cycle` entre el
+  artifact registry -> study script y el seam no ordenante inverso. No hubo
+  execution, candidate, receipt ni cambio del target W1;
 - journal, snapshot, result y disposicion `not_run` quedan preservados. No se
   cambia producto, freeze, formula, umbral, estimulo ni oraculo;
 - proxima operacion larga: N=16 secuencial sobre el tercer target nuevo. Su
@@ -679,7 +680,8 @@ Resultado terminal de `retry-10` N=8:
 Resultado terminal de `retry-10` N=16 y cierre de ejecucion de la serie:
 
 - run `ad5dd07a-4181-4baf-9b23-ff6215a89c2b`, vigia unico detached PID
-  `19028`, termino `failed` durante compiled plan review con el mismo ciclo;
+  `19028`, termino `failed` durante compiled plan review con el mismo falso
+  positivo artifact + seam;
 - las tres celdas se ejecutaron secuencialmente sobre el freeze y targets
   nuevos. Las tres quedaron pre-candidate, sin receipt; cada una tiene
   disposicion de oraculo `not_run`. Como no hubo entrega, se ejecutaron cero
@@ -702,7 +704,8 @@ Reapertura de remediacion despues de `retry-10`:
 - Causa raiz corregida tras la auditoria de implementacion: el validador habia
   agregado `SeamBinding` al DAG pese a que A5 y el contrato de task graph dicen
   que no impone readiness. Retry-10 reprodujo un falso `artifact_cycle`; el
-  critic no estaba rechazando correctamente una dependencia material ciclica.
+  crítico rechazó incorrectamente una relación material acíclica combinada con
+  un seam no ordenante inverso.
 - TDD en `cbb8cdb`: RED 2/2 para artifact mas seam inverso y loop solo de
   seams; GREEN 2/2 al quitar seams de la adyacencia y conservar self/participant
   validation. Suite afectada 69/69 y typechecks task-graph/decomposer PASS.
@@ -713,3 +716,15 @@ Reapertura de remediacion despues de `retry-10`:
   honesta. El plan ejecutable esta en
   `docs/plans/2026-07-28-manyhands-correctness-closure.md`; no se abre un nuevo
   freeze hasta cerrar esos P0 y sus reviews. Ticket 11 sigue abierto.
+
+Corrección de gobernanza después de la review Standards del fixed point
+`da81bc7`:
+
+- Standards FAIL por mantener blockers en el plan y por omitir P2 de la
+  aceptación final; Spec PASS para el fix de seams.
+- Los tickets locales 16--26 pasan a ser la única fuente canónica de estado,
+  blockers y aceptación. El plan queda como runbook no autoritativo.
+- Frente recalculado: ticket 16. Ticket 11 queda bloqueado transitivamente por
+  16--26; no se crea otro freeze ni se ejecuta otra serie antes de cerrarlos.
+- También se corrigen las frases históricas que llamaban ciclo material al
+  falso positivo artifact + seam; retry-10 y sus journals no se modifican.

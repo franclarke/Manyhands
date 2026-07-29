@@ -30,7 +30,7 @@ JSONL event store, Git worktrees, Codex CLI.
 - crash, takeover, retry and replay preserve single authority and freshness;
 - scheduler decisions are based on and persist real capabilities/budget/risk;
 - manifest, receipt and UI never overstate evidence;
-- no known P0/P1 remains open;
+- no known P0/P1/P2 remains open;
 - a frozen external oracle confirms the candidate before the thesis concludes
   that the system works correctly.
 
@@ -52,7 +52,7 @@ Preserve retry-9 and retry-10 unchanged.
 
 **Steps:**
 
-1. Add the four P0 and eight P1 findings as local issues with explicit blockers.
+1. Add every confirmed P0/P1/P2 finding as local issues with explicit blockers.
 2. Record that ticket 11 is blocked by Tasks 1-5, not accepted by retry-10.
 3. Mark claims about "verified means correct" and full recovery as unsupported.
 4. Run `git diff --check` and verify every new link.
@@ -494,7 +494,7 @@ pnpm web:build
 git diff --check
 ```
 
-9. Confirm no open P0/P1, no required artifact missing and no thesis claim
+9. Confirm no open P0/P1/P2, no required artifact missing and no thesis claim
    exceeds the evidence.
 10. Commit local closure artifacts; never push.
 
@@ -511,7 +511,7 @@ Before each task closes:
 
 ## Final acceptance
 
-- All P0/P1 in this plan are closed with productive tests.
+- All P0/P1/P2 in tickets 16--26 are closed with productive tests.
 - Existing Git isolation, checksum/fencing and delivery fast-forward invariants
   remain green.
 - Retry-9/retry-10 adverse evidence remains immutable.
