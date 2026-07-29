@@ -40,7 +40,7 @@ disponibilidad, nunca devolver autoridad doble. La pérdida del repository lease
 aborta los efectos supervisados que sigan en vuelo. Cada operación productiva
 registra un controller identificado por `operationId`, y un efecto supervisado
 no puede crear procesos nuevos después de que ese controller fue abortado.
-Como la señal in-process no cruza hosts, execution y delivery también usan la
+Como la señal in-process no cruza hosts, planning, execution y delivery usan la
 repository lease como barrera durable: el takeover no publica la nueva lease
 hasta adquirir/liberar esa exclusión y el receipt declara
 `repositoryQuiescent=true`. Todo dueño que la adquiera tarde revalida después

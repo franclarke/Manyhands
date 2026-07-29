@@ -291,6 +291,16 @@ export async function releaseRunOperationWithRetry(
   throw lastError;
 }
 
+export function isVerifiedRunTakeover(
+  run: RunRecord,
+  lease: Pick<RunOperationLease, "operationId" | "fencingToken">
+): boolean {
+  return run.lastTakeoverReceipt?.operationId === lease.operationId &&
+    run.lastTakeoverReceipt.fencingToken === lease.fencingToken &&
+    run.lastTakeoverReceipt.allDead &&
+    run.lastTakeoverReceipt.repositoryQuiescent === true;
+}
+
 function defaultAuthority(): RunOperationAuthority {
   const directory = resolveRunsDirectory();
   return new RunOperationAuthority({
@@ -314,7 +324,11 @@ async function reconcileRunProcesses(
 async function reconcileRunRepository(
   input: { run: RunRecord; superseded: RunOperationLease }
 ): Promise<boolean> {
-  if (input.superseded.kind !== "execution" && input.superseded.kind !== "delivery") {
+  if (
+    input.superseded.kind !== "planning" &&
+    input.superseded.kind !== "execution" &&
+    input.superseded.kind !== "delivery"
+  ) {
     return true;
   }
   const repoRoot = await resolveRunTargetPath(input.run).catch(() => undefined);

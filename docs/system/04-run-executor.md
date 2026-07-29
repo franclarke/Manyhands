@@ -31,24 +31,26 @@ reconciliar su evidencia de procesos y persistir un receipt con `allDead=true`.
 Un receipt no verificable deja el fence anterior invalidado y no publica la
 nueva lease. El registro in-process se identifica también por `operationId`,
 para que el cleanup tardío del dueño reemplazado no desregistre al sucesor.
-Para execution o delivery, `allDead` no basta: el takeover cruza además la
+Para planning, execution o delivery, `allDead` no basta: el takeover cruza además la
 repository lease durable y persiste `repositoryQuiescent=true`. Si otro host
 conserva esa lease, la nueva autoridad no se publica. Si el host viejo todavía
 no la había adquirido, debe revalidar el fence canónico inmediatamente después
 de adquirirla y antes de cualquier efecto.
-Ejecución y delivery registran además un controller por operación; después del
+Planning, ejecución y delivery registran además un controller por operación; después del
 aborto, la capa de supervisión rechaza un nuevo spawn antes de crearlo. El
 `verifiedAt` del receipt y el heartbeat de la lease publicada se toman después
 de verificar `allDead`, no al comenzar la reconciliación. La clave global del
 registry se versiona cuando cambia la forma de sus valores, para que HMR no
 interprete controllers legacy como entradas operation-aware.
+Receipts anteriores sin `repositoryQuiescent=true` siguen siendo legibles,
+pero son evidencia insuficiente para habilitar el handoff de un runner.
 
-El repository lease protege mutaciones sobre un target compartido. No se
-reemplaza con booleans in-process.
+El repository lease protege efectos y grounding consistente sobre un target
+compartido. No se reemplaza con booleans in-process.
 
-La pérdida del repository lease aborta su `AbortSignal`; ejecución y delivery
-propagan esa señal al Process Supervisor. Aunque el efecto intercepte el aborto,
-el wrapper vuelve a verificar la lease y falla cerrado.
+La pérdida del repository lease aborta su `AbortSignal`; planning, ejecución y
+delivery propagan esa señal al Process Supervisor. Aunque el efecto intercepte
+el aborto, el wrapper vuelve a verificar la lease y falla cerrado.
 
 ## Loop de coordinación
 

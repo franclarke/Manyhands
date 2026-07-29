@@ -34,7 +34,12 @@ import { DEFAULT_STALE_MS } from "../interrupted";
 import { runWithProcessSupervision, supervisedExecFile } from "../process-supervision";
 import { withRepositoryLease } from "../repo-lock";
 import { createRunAbort, disposeRunAbort } from "../run-abort-registry";
-import { claimRunOperation, releaseRunOperationWithRetry, updateRunForOperation } from "../run-operation-lease";
+import {
+  claimRunOperation,
+  isVerifiedRunTakeover,
+  releaseRunOperationWithRetry,
+  updateRunForOperation
+} from "../run-operation-lease";
 import { startHeartbeat } from "../runner-heartbeat";
 import { markRunnerInactive, startRunBackgroundTask, tryMarkRunnerActive } from "../runner-state";
 import { resolveRunsDirectory } from "../runs-directory";
@@ -111,10 +116,7 @@ function claimExecutionV2(
 async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOperationLease }): Promise<void> {
   const { run, lease } = claimed;
   const runId = run.runId;
-  const verifiedTakeover =
-    run.lastTakeoverReceipt?.operationId === lease.operationId &&
-    run.lastTakeoverReceipt.fencingToken === lease.fencingToken &&
-    run.lastTakeoverReceipt.allDead;
+  const verifiedTakeover = isVerifiedRunTakeover(run, lease);
   if (!tryMarkRunnerActive(runId, lease.operationId, verifiedTakeover)) {
     await releaseRunOperationWithRetry(runId, lease);
     throw new Error(`Run ${runId} already has an active runner.`);

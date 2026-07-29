@@ -9,6 +9,8 @@ import { killCliProcessTree, resolveCliBinaryPath, resolveCliProcessInvocation }
 import { planningSelection } from "../executor-selection";
 import type { RunRecord } from "../schema";
 import { supervisedSpawnFn } from "../process-supervision";
+import { withRepositoryLease } from "../repo-lock";
+import { createRunAbort, disposeRunAbort } from "../run-abort-registry";
 import { resolveRunsDirectory } from "../runs-directory";
 import { resolveRunTargetPath } from "../target-context";
 import { claimRunOperation, releaseRunOperationWithRetry, updateRunForOperation } from "../run-operation-lease";
@@ -51,45 +53,62 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
   });
   const { run, lease } = claimed;
   const stopHeartbeat = startHeartbeat(runId, lease);
+  const abort = createRunAbort(runId, lease.operationId);
   try {
     const repoPath = await resolveRunTargetPath(run);
     if (repoPath === undefined || run.targetContext === undefined) throw new Error("Planning V2 requires a captured local repository target.");
     const directory = resolveRunsDirectory();
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });
-    const existingEvents = await events.load(runId);
-    const questionAnswers = resolvedPlanningAnswers(existingEvents.length === 0 ? undefined : foldRun(existingEvents));
-    const stage = planningSelection(run);
-    const planner = new WorkBreakdownPlanner({
-      model: { generate: (request) => invokeSelectedPlanningCli(runId, repoPath, stage, lease.operationId, request) },
-      maxAttempts: 3
-    });
     const authority = { operationId: lease.operationId, fencingToken: lease.fencingToken };
-    const state = await runPlanningV2({
-      runId,
-      goal: run.userPrompt,
-      repoPath,
-      targetFingerprint: run.targetContext.fingerprint,
-      baseCommit: run.targetContext.sourceBaseCommit,
-      authority,
-      ...(Object.keys(questionAnswers).length > 0 ? { questionAnswers } : {}),
-      ...(run.granularityCondition !== undefined ? { granularityCondition: run.granularityCondition } : {}),
-      ...(run.experimentalCandidate !== undefined ? {
-        acceptanceCriteria: run.experimentalCandidate.acceptanceCriteria,
-        experimentalCandidate: run.experimentalCandidate
-      } : {})
-    }, {
-      events,
-      snapshots,
-      inspect: (input) => buildFastRepositorySnapshot({ rootPath: input.repoPath, targetFingerprint: input.targetFingerprint, baseCommit: input.baseCommit }),
-      plan: (input, observer) => planner.plan(input, observer),
-      compile: (input) => compileGraphRevision(input, { idFor: stableId, now: () => new Date().toISOString() }),
-      nodeIdFor: (key) => stableId("node", key),
-      now: () => new Date().toISOString()
+    const completed = await withRepositoryLease({ repoRoot: repoPath, runId }, async (_repositoryLease, repositorySignal) => {
+      await events.assertAuthority(runId, authority);
+      const planningSignal = AbortSignal.any([abort.signal, repositorySignal]);
+      const existingEvents = await events.load(runId);
+      const questionAnswers = resolvedPlanningAnswers(existingEvents.length === 0 ? undefined : foldRun(existingEvents));
+      const stage = planningSelection(run);
+      const planner = new WorkBreakdownPlanner({
+        model: {
+          generate: (request) => invokeSelectedPlanningCli(
+            runId,
+            repoPath,
+            stage,
+            lease.operationId,
+            planningSignal,
+            request
+          )
+        },
+        maxAttempts: 3
+      });
+      const state = await runPlanningV2({
+        runId,
+        goal: run.userPrompt,
+        repoPath,
+        targetFingerprint: run.targetContext.fingerprint,
+        baseCommit: run.targetContext.sourceBaseCommit,
+        authority,
+        ...(Object.keys(questionAnswers).length > 0 ? { questionAnswers } : {}),
+        ...(run.granularityCondition !== undefined ? { granularityCondition: run.granularityCondition } : {}),
+        ...(run.experimentalCandidate !== undefined ? {
+          acceptanceCriteria: run.experimentalCandidate.acceptanceCriteria,
+          experimentalCandidate: run.experimentalCandidate
+        } : {})
+      }, {
+        events,
+        snapshots,
+        inspect: (input) => buildFastRepositorySnapshot({ rootPath: input.repoPath, targetFingerprint: input.targetFingerprint, baseCommit: input.baseCommit }),
+        plan: (input, observer) => planner.plan(input, observer),
+        compile: (input) => compileGraphRevision(input, { idFor: stableId, now: () => new Date().toISOString() }),
+        nodeIdFor: (key) => stableId("node", key),
+        now: () => new Date().toISOString()
+      });
+      return { state, persistedEvents: await events.load(runId) };
     });
-    const persistedEvents = await events.load(runId);
-    await updateRunForOperation(runId, lease, (current) => projectV2RunRecordCache(current, state, persistedEvents));
+    await updateRunForOperation(runId, lease, (current) =>
+      projectV2RunRecordCache(current, completed.state, completed.persistedEvents)
+    );
   } finally {
+    disposeRunAbort(runId, lease.operationId);
     stopHeartbeat();
     await releaseRunOperationWithRetry(runId, lease);
   }
@@ -129,6 +148,7 @@ async function invokeSelectedPlanningCli(
   cwd: string,
   stage: { executorId: string; model: string; effort?: string },
   operationId: string,
+  signal: AbortSignal,
   request: WorkBreakdownModelRequest
 ): Promise<string> {
   const repair = request.repairIssues.length === 0
@@ -142,7 +162,10 @@ async function invokeSelectedPlanningCli(
     ? ["exec", "--model", stage.model, "--sandbox", "read-only", "--skip-git-repo-check", ...(stage.effort !== undefined ? ["-c", `model_reasoning_effort=\"${stage.effort}\"`] : []), "-"]
     : ["-p", "-", "--model", stage.model, "--output-format", "stream-json", "--include-partial-messages", "--verbose", "--permission-mode", "plan", "--disallowed-tools", CLAUDE_PLANNING_DISALLOWED_TOOLS];
   const invocation = resolveCliProcessInvocation(binary, args);
-  const spawn = supervisedSpawnFn({ runId, operationId, label: `planning-v2-attempt-${request.attempt}` });
+  const spawn = supervisedSpawnFn(
+    { runId, operationId, label: `planning-v2-attempt-${request.attempt}` },
+    signal
+  );
   return new Promise((resolve, reject) => {
     const child: ChildProcess = spawn(invocation.command, invocation.args, { cwd, env: buildAgentEnvironment() as NodeJS.ProcessEnv, stdio: ["pipe", "pipe", "pipe"], shell: false, detached: process.platform !== "win32", ...(invocation.windowsVerbatimArguments !== undefined ? { windowsVerbatimArguments: invocation.windowsVerbatimArguments } : {}) });
     let stdoutBytes = 0;

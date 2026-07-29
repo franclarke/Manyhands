@@ -31,3 +31,5 @@
   reconciliar procesos, cruzar la repository lease cuando hay efectos Git y
   obtener `allDead=true` más `repositoryQuiescent=true`; el receipt queda en
   `lastTakeoverReceipt`.
+- Receipts legacy de esta misma versión sin `repositoryQuiescent` permanecen
+  legibles, pero no cuentan como takeover verificado para dispatch.

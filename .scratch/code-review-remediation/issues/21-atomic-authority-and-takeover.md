@@ -53,6 +53,19 @@
   reemplazarlos por un repositorio Git real, la misma suite quedó en 216
   archivos, 1493 passed, 2 skipped y 0 failed. Build de los 12 packages y web
   build PASS.
+- La tercera review Standards encontró P1 durable: receipts de la iteración
+  anterior quedaban ilegibles. RED lo reprodujo desde un archivo v2; GREEN
+  mantiene el campo opcional al leer y exige `repositoryQuiescent=true` para
+  considerar verificado un handoff.
+- Spec encontró P1 cross-host en planning. RED demostró que su takeover no
+  esperaba la lease Git. GREEN incorpora planning a la barrera, registra su
+  controller, combina señales y revalida el fence tras adquirir la repository
+  lease; 7 archivos/30 tests y web typecheck PASS.
+- Gate final ampliado: 15 archivos/62 tests y ambos typechecks PASS. La suite
+  raíz paralela conservó un fallo adverso del microbenchmark de cache del
+  indexer (95–109 ms frente a 25 ms); el archivo aislado pasó 9 + 1 skipped.
+  La suite completa secuencial eliminó esa contención y pasó 216 archivos,
+  1495 tests y 2 skipped. Build de los 12 packages y web build PASS.
 - CLAIM-053 continúa `partial`: este ticket cierra autoridad/takeover, pero no
   anticipa recovery/scheduling, journal de integración ni stores/traces de
   tickets 23–25.

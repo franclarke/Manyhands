@@ -294,72 +294,75 @@ describe("atomic run authority", () => {
       .rejects.toBeInstanceOf(StaleFencingTokenError);
   });
 
-  it("crosses the durable repository lease before publishing a cross-host takeover", async () => {
-    const repoRoot = path.join(tempDir, "target");
-    await mkdir(repoRoot);
-    await execFileAsync("git", ["init"], { cwd: repoRoot, windowsHide: true });
-    await execFileAsync("git", ["config", "user.name", "ManyHands Test"], { cwd: repoRoot, windowsHide: true });
-    await execFileAsync("git", ["config", "user.email", "manyhands-test@local"], { cwd: repoRoot, windowsHide: true });
-    await execFileAsync("git", ["commit", "--allow-empty", "-m", "base"], { cwd: repoRoot, windowsHide: true });
-    const targetContext = await captureRunTargetContext(repoRoot);
-    expect(targetContext).toBeDefined();
+  it.each(["planning", "delivery"] as const)(
+    "crosses the durable repository lease before publishing a cross-host %s takeover",
+    async (kind) => {
+      const repoRoot = path.join(tempDir, "target");
+      await mkdir(repoRoot);
+      await execFileAsync("git", ["init"], { cwd: repoRoot, windowsHide: true });
+      await execFileAsync("git", ["config", "user.name", "ManyHands Test"], { cwd: repoRoot, windowsHide: true });
+      await execFileAsync("git", ["config", "user.email", "manyhands-test@local"], { cwd: repoRoot, windowsHide: true });
+      await execFileAsync("git", ["commit", "--allow-empty", "-m", "base"], { cwd: repoRoot, windowsHide: true });
+      const targetContext = await captureRunTargetContext(repoRoot);
+      expect(targetContext).toBeDefined();
 
-    const repository = new JsonRunRecordStore({ directory: runsDirectory });
-    const events = new JsonlRunEventStore({ directory: runsDirectory });
-    const runId = "run-cross-host-barrier";
-    await repository.save(makeRunRecordV2({
-      runId,
-      lifecycle: "running",
-      targetContext: targetContext!
-    }));
-    const first = await authority(repository, events, {
-      operationId: () => "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
-    }).claim(runId, "delivery", {
-      expectedLifecycles: ["running"],
-      now: "2026-07-29T12:00:00.000Z"
-    });
-    let repositoryHeld!: () => void;
-    const held = new Promise<void>((resolve) => {
-      repositoryHeld = resolve;
-    });
-    let releaseRepository!: () => void;
-    const release = new Promise<void>((resolve) => {
-      releaseRepository = resolve;
-    });
-    const oldHostEffect = withRepositoryLease({ repoRoot, runId }, async () => {
-      repositoryHeld();
-      await release;
-    });
-    await held;
+      const repository = new JsonRunRecordStore({ directory: runsDirectory });
+      const events = new JsonlRunEventStore({ directory: runsDirectory });
+      const runId = "run-cross-host-barrier";
+      await repository.save(makeRunRecordV2({
+        runId,
+        lifecycle: "running",
+        targetContext: targetContext!
+      }));
+      const first = await authority(repository, events, {
+        operationId: () => "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+      }).claim(runId, kind, {
+        expectedLifecycles: ["running"],
+        now: "2026-07-29T12:00:00.000Z"
+      });
+      let repositoryHeld!: () => void;
+      const held = new Promise<void>((resolve) => {
+        repositoryHeld = resolve;
+      });
+      let releaseRepository!: () => void;
+      const release = new Promise<void>((resolve) => {
+        releaseRepository = resolve;
+      });
+      const oldHostEffect = withRepositoryLease({ repoRoot, runId }, async () => {
+        repositoryHeld();
+        await release;
+      });
+      await held;
 
-    let takeoverSettled = false;
-    const takeover = new RunOperationAuthority({
-      repository,
-      events,
-      operationId: () => "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
-      reconcileTakeover: async () => ({
-        processReceiptId: "takeover-processes-cross-host",
-        allDead: true,
-        processCount: 0
-      })
-    }).claim(runId, "delivery", {
-      expectedLifecycles: ["running"],
-      allowTakeover: true,
-      takeoverStaleAfterMs: 1,
-      now: "2026-07-29T12:01:00.000Z"
-    }).finally(() => {
-      takeoverSettled = true;
-    });
+      let takeoverSettled = false;
+      const takeover = new RunOperationAuthority({
+        repository,
+        events,
+        operationId: () => "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        reconcileTakeover: async () => ({
+          processReceiptId: "takeover-processes-cross-host",
+          allDead: true,
+          processCount: 0
+        })
+      }).claim(runId, kind, {
+        expectedLifecycles: ["running"],
+        allowTakeover: true,
+        takeoverStaleAfterMs: 1,
+        now: "2026-07-29T12:01:00.000Z"
+      }).finally(() => {
+        takeoverSettled = true;
+      });
 
-    await new Promise<void>((resolve) => setTimeout(resolve, 100));
-    const settledWhileOldHostHeldLease = takeoverSettled;
-    releaseRepository();
-    await oldHostEffect;
-    const taken = await takeover;
+      await new Promise<void>((resolve) => setTimeout(resolve, 100));
+      const settledWhileOldHostHeldLease = takeoverSettled;
+      releaseRepository();
+      await oldHostEffect;
+      const taken = await takeover;
 
-    expect(settledWhileOldHostHeldLease).toBe(false);
-    expect(taken.run.lastTakeoverReceipt?.repositoryQuiescent).toBe(true);
-    await expect(events.assertAuthority(runId, first.lease))
-      .rejects.toBeInstanceOf(StaleFencingTokenError);
-  });
+      expect(settledWhileOldHostHeldLease).toBe(false);
+      expect(taken.run.lastTakeoverReceipt?.repositoryQuiescent).toBe(true);
+      await expect(events.assertAuthority(runId, first.lease))
+        .rejects.toBeInstanceOf(StaleFencingTokenError);
+    }
+  );
 });

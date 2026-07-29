@@ -1367,5 +1367,17 @@ del `1/8` histórico.
   adversa encontró tres tests de lease con el target ficticio histórico;
   reparado el fixture con Git real, la reejecución original pasó 216 archivos,
   1493 tests, 2 skipped y 0 failed. Los 12 packages y web build pasan;
+- tercera review: Standards halló que el receipt nuevo rompía lectura de
+  archivos v2 ya escritos. El campo queda tolerado como legacy, pero sólo
+  `repositoryQuiescent=true` habilita handoff;
+- Spec halló el mismo hueco cross-host en planning. Planning ahora mantiene la
+  repository lease durante inspección/modelo/compilación, registra controller,
+  combina señales y revalida el fence tras adquirirla; su update del record
+  ocurre después de liberar la lease para evitar inversión de locks;
+- gate ampliado final: 15 archivos/62 tests y ambos typechecks PASS. La suite
+  raíz paralela preserva un fallo adverso del microbenchmark del indexer bajo
+  contención (95–109 ms > 25 ms); el archivo aislado pasa 9 + 1 skipped y la
+  suite raíz secuencial pasa 216 archivos, 1495 tests, 2 skipped, 0 failed;
+  build de los 12 packages y web build PASS;
 - CLAIM-053 permanece `partial` por los gaps de tickets 23–25. Sólo quedan
   pendientes las re-reviews independientes Standards/Spec antes del cierre.

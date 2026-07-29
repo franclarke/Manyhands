@@ -17,6 +17,7 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 });
 
 import { RunNotFoundError, RunValidationError } from "@/lib/server/runs/errors";
+import { isVerifiedRunTakeover } from "@/lib/server/runs/run-operation-lease";
 import { JsonRunRecordStore, type RunRepository } from "@/lib/server/runs/repository";
 import type { RunRecord } from "@/lib/server/runs/schema";
 import { makeRunRecordV2 } from "./helpers/run-v2-record";
@@ -49,6 +50,42 @@ describe("JsonRunRecordStore V2 cache", () => {
     const saved = await repo.save(makeRun());
     expect(await repo.get(saved.runId)).toEqual(saved);
     await expect(repo.get("missing")).rejects.toBeInstanceOf(RunNotFoundError);
+  });
+
+  it("reads a same-version legacy takeover receipt as insufficient evidence", async () => {
+    const lease = {
+      operationId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      kind: "execution" as const,
+      fencingToken: 2,
+      acquiredAt: "2026-07-17T12:00:00.000Z",
+      heartbeatAt: "2026-07-17T12:00:01.000Z"
+    };
+    await repo.save(makeRun({
+      mutationFence: 2,
+      activeOperation: lease,
+      lastTakeoverReceipt: {
+        processReceiptId: "legacy-process-receipt",
+        supersededOperationId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        supersededFencingToken: 1,
+        operationId: lease.operationId,
+        fencingToken: lease.fencingToken,
+        allDead: true,
+        repositoryQuiescent: true,
+        processCount: 0,
+        verifiedAt: "2026-07-17T12:00:01.000Z"
+      }
+    }));
+    const fs = await import("node:fs/promises");
+    const filePath = path.join(directory, "run-1.json");
+    const envelope = JSON.parse(await fs.readFile(filePath, "utf8")) as {
+      run: { lastTakeoverReceipt: { repositoryQuiescent?: true } };
+    };
+    delete envelope.run.lastTakeoverReceipt.repositoryQuiescent;
+    await fs.writeFile(filePath, JSON.stringify(envelope), "utf8");
+
+    const loaded = await repo.get("run-1");
+    expect(loaded.lastTakeoverReceipt?.repositoryQuiescent).toBeUndefined();
+    expect(isVerifiedRunTakeover(loaded, lease)).toBe(false);
   });
 
   it("lists newest first and filters equivalent workspace ids", async () => {
