@@ -98,3 +98,6 @@
 - RED posterior: shorthand quoted, homónimo local filtrado y config base fuera
   del root fallaron. Fix `c9a10f7` parsea cada segmento pnpm y transporta scope
   de aplicación por extends. GREEN 37/37; ambos typechecks PASS.
+- Reviews posteriores aislaron múltiples filters, args tras `--` y exec/dlx.
+  RED 3; fix `9e4eda3` consume la gramática posicional y excluye subcomandos que
+  no ejecutan scripts. GREEN 39/39; ambos typechecks PASS.

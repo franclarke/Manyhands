@@ -994,3 +994,11 @@ Novena remediation de ticket 18:
   se conserva al leer un tsconfig base externo;
 - 37/37 y typechecks execution-core/run-coordinator PASS. Próximo paso reviews
   del punto fijo; CLAIM-040/041 continúan partial.
+
+Décima remediation de ticket 18:
+
+- reviews detectaron múltiples `--filter`, args tras `--` y falsos positivos de
+  `exec`/`dlx`; RED reprodujo los tres;
+- fix `9e4eda3` parsea opciones hasta el primer script, conserva todos los
+  filters y excluye subcomandos no-script. 39/39 y ambos typechecks PASS;
+- próximo paso reviews del punto fijo. CLAIM-040/041 siguen partial.
