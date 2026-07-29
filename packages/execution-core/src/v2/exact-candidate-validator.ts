@@ -672,7 +672,13 @@ function referencedPackageScriptTargets(command: string): PackageScriptTarget[] 
 function matchesWorkspaceTarget(target: PackageScriptTarget, manifest: string, packageName: string | undefined, sourceManifest: string): boolean {
   const manifestDirectory = path.posix.dirname(manifest);
   const sourceDirectory = path.posix.dirname(sourceManifest);
-  const directoryMatches = target.directory === undefined || manifestDirectory === path.posix.normalize(path.posix.join(sourceDirectory, target.directory.replaceAll("\\", "/")));
+  const targetDirectory = target.directory === undefined
+    ? undefined
+    : path.posix.normalize(path.posix.join(sourceDirectory, target.directory.replaceAll("\\", "/")));
+  const directoryMatches = targetDirectory === undefined
+    || (target.selectors.length > 0 || target.allWorkspaces
+      ? isPathWithinScope(manifestDirectory, targetDirectory)
+      : manifestDirectory === targetDirectory);
   if (!directoryMatches) return false;
   if (target.selectors.length === 0) return target.directory !== undefined || target.allWorkspaces || manifest === sourceManifest;
   const positives = target.selectors.filter((selector) => !selector.startsWith("!"));
