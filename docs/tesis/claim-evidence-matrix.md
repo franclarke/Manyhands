@@ -6,6 +6,7 @@
 > conserva el estado original de G1 para trazabilidad histórica.
 > **Fuente de autoridad:** `PRODUCT.md` → `docs/DECISIONS.md` → `docs/core-pillars/` + `docs/system/` → `docs/design/` → `docs/adr/` → código/tests/runs.
 > **Regla de clasificación:** un claim es `implemented` solo si se localizó ruta productiva **y** test de comportamiento; los claims end-to-end exigen además evidencia persistida. Ante duda se elige la clasificación más conservadora. Los runs persistidos actuales se declararon **no-evidencia** (decisión de Francisco, 2026-07-23); toda `Persisted evidence` end-to-end es `none` hasta el run canónico de la Etapa 4.
+> **ACTUALIZACIÓN correctness closure (2026-07-28):** la auditoría productiva degradó provisionalmente CLAIM-020/021/040/041/053 a `partial`. Los módulos o tests aislados no prueban que el host V2 aplique presupuesto/recursos, evidencia relevante por criterio, controles negativos o recuperación integral. Tickets locales 18, 19, 21, 23, 24 y 25 son la aceptación canónica para volver a evaluar esos estados.
 
 ## Leyenda
 
@@ -29,23 +30,23 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 | CLAIM-006 | 4 casos de estudio con comportamiento descrito como ocurrido | missing | downgrade | G4/G5 |
 | CLAIM-010 | `GraphRevision` inmutable con reducer CAS + `deepFreeze` | implemented | demonstrate | G4 |
 | CLAIM-011 | 4 relaciones tipadas canónicas | implemented | demonstrate | G4 |
-| CLAIM-020 | Scheduler continuo por readiness (`selectReadyWaveV2`) | implemented | demonstrate | G4 |
-| CLAIM-021 | Aplazamiento simétrico por `ConflictConstraint` (`blocksPair`) | implemented | demonstrate | G4 |
+| CLAIM-020 | Scheduler continuo por readiness (`selectReadyWaveV2`) | partial | implement + demonstrate | ticket 23 |
+| CLAIM-021 | Aplazamiento simétrico por `ConflictConstraint` (`blocksPair`) | partial | implement + demonstrate | ticket 23 |
 | CLAIM-022 | Cola atómica `recordQueue` en `V2ExecutionDriver` | implemented | demonstrate | G4 |
 | CLAIM-030 | Worktree Recycling Pool con leases/fencing | implemented | demonstrate | G4 |
 | CLAIM-031 | `ScopeChecker` OS-aware (path traversal + symlink + deny-wins) | implemented | demonstrate | G4 |
 | CLAIM-032 | `LiveProcessRegistry` + `killProcessTreeVerified` (Signal-0) | implemented | demonstrate | G4 |
 | CLAIM-033 | `buildAgentEnvironment` allowlist / filtrado de secretos | implemented | demonstrate | G4 |
 | CLAIM-034 | `safeGitArgs` (`-c safe.directory`) | implemented | demonstrate | G4 |
-| CLAIM-040 | Matriz de Evidencias sobre commit exacto | implemented | demonstrate | G4 |
-| CLAIM-041 | `ValidationContract` de obligaciones | implemented | demonstrate | G4 |
+| CLAIM-040 | Matriz de Evidencias sobre commit exacto | partial | implement + demonstrate | tickets 18–19 |
+| CLAIM-041 | `ValidationContract` de obligaciones | partial | implement + demonstrate | tickets 18–19 |
 | CLAIM-042 | Integración bottom-up | partial | demonstrate | G4 |
 | CLAIM-043 | Delivery Engine (`FinalArtifactManifest`, publish, receipt) | partial | demonstrate | G4 |
 | CLAIM-044 | Run real Codex hasta `completed` con commit no vacío | missing | demonstrate | G4 |
 | CLAIM-050 | Event store JSONL append-only con escritura atómica `fsync` | implemented | clarify | G2 |
 | CLAIM-051 | SQLite WAL como índice secundario durable | missing | remove | G6 |
 | CLAIM-052 | Compactación por generaciones | partial | downgrade | G3/G6 |
-| CLAIM-053 | Recuperación durable ante crash | implemented | demonstrate | G4 |
+| CLAIM-053 | Recuperación durable ante crash | partial | implement + demonstrate | tickets 21, 23–25 |
 | CLAIM-060 | Indexación nativa por ripgrep | implemented | demonstrate | G4 |
 | CLAIM-061 | Inicialización de índice < 150 ms | partial | downgrade | G5 |
 | CLAIM-062 | `RepositorySnapshot` cacheado por commit; dirty aislado | implemented | demonstrate | G4 |
@@ -58,7 +59,7 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 | CLAIM-082 | Monorepo TS con dirección de dependencias unidireccional | implemented | demonstrate | G6 |
 | CLAIM-090 | Nomenclatura "V3 / Decomposer V3 / GraphRevision V3" | incompatible | clarify | G1/G6 |
 
-**Conteo:** implemented 16 · partial 11 · missing 4 · incompatible 1 · deferred 0 (las capacidades diferidas se inventarían en `deferred-capabilities.md`).
+**Conteo vigente:** implemented 11 · partial 16 · missing 4 · incompatible 1 · deferred 0.
 
 ---
 
@@ -200,14 +201,14 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 
 - **Source:** `docs/tesis/main.tex` §3 Pilar 2; `docs/core-pillars/02` §1.
 - **Target contract:** `docs/DECISIONS.md` A10 (readiness, presupuesto, riesgo); `docs/system/12-scheduler.md`.
-- **Status:** `implemented`.
+- **Status:** `partial`.
 - **Productive code:** `packages/scheduler/src/wave-selector-v2.ts`, `packages/scheduler/src/readiness-v2.ts`; consumido vía `V2ExecutionDriver` en `execution-pipeline.ts`. **[hecho]**
 - **Tests:** `tests/scheduler-readiness-v2.test.ts`, `tests/scheduler-scope-aware-wave.test.ts`, `tests/repository-aware-scheduling.test.ts`.
 - **Persisted evidence:** `wave.selected`/`readiness.observed` en runs V2 (descartados).
-- **Gap:** ninguno material.
-- **Decision:** `demonstrate`.
-- **Thesis impact:** ninguno.
-- **Next gate:** G4.
+- **Gap:** el host V2 entrega `activeResourceNodeIds: []` y `budgetAvailable: true`; no consume todavía presupuesto, recursos exclusivos ni circuit breakers reales.
+- **Decision:** `implement + demonstrate`.
+- **Thesis impact:** no afirmar scheduling adaptado a recursos/presupuesto hasta cerrar ticket 23.
+- **Next gate:** ticket 23.
 
 ---
 
@@ -215,14 +216,14 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 
 - **Source:** `docs/tesis/main.tex` §3 Pilar 2, ec. (3); `docs/core-pillars/02` §2.
 - **Target contract:** `docs/DECISIONS.md` A5 (`ConflictConstraint` como scheduling), A10.
-- **Status:** `implemented`.
+- **Status:** `partial`.
 - **Productive code:** `packages/scheduler/src/wave-selector-v2.ts` (`blocksPair`, `activeResourceNodeIds`). **[hecho]**
 - **Tests:** `tests/scheduler-conflict-constraints.test.ts`, `tests/scheduler-scope-aware-wave.test.ts`.
 - **Persisted evidence:** `none` (formal).
-- **Gap:** ninguno material; el escenario end-to-end de conflicto se demostrará en el run canónico (Etapa 4, ligado al "Caso 3").
-- **Decision:** `demonstrate`.
-- **Thesis impact:** valida §5.2 Caso 3 una vez producido el run.
-- **Next gate:** G4.
+- **Gap:** `blocksPair` está testeado, pero la ruta productiva no aporta estado real de recursos y no valida freshness de la evidencia de conflicto.
+- **Decision:** `implement + demonstrate`.
+- **Thesis impact:** valida §5.2 Caso 3 sólo después de cerrar ticket 23 y producir evidencia.
+- **Next gate:** ticket 23.
 
 ---
 
@@ -328,14 +329,14 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 
 - **Source:** `docs/tesis/main.tex` §3 Pilar 3, Conclusión 3; `docs/core-pillars/03` §1.
 - **Target contract:** `docs/DECISIONS.md` A15; `docs/system/08-result-pipeline.md`.
-- **Status:** `implemented`.
+- **Status:** `partial`.
 - **Productive code:** `packages/execution-core/src/validation/evidence-matrix.ts`, `v2/exact-candidate-validator.ts`, `validation/candidate-validator.ts`; instanciado en `execution-pipeline.ts` (`ExactCandidateValidatorV2`). **[hecho]**
 - **Tests:** `tests/evidence-matrix.test.ts`, `tests/exact-candidate-validation.test.ts`, `tests/execution-core-validation-runner.test.ts`.
 - **Persisted evidence:** `validation.completed` presente en run V2 `613040c9` (descartado como evidencia formal).
-- **Gap:** demostrar el ciclo completo (verified→adopted) en el run canónico.
-- **Decision:** `demonstrate`.
-- **Thesis impact:** valida Conclusión 3 con run.
-- **Next gate:** G4.
+- **Gap:** exact-commit validation existe, pero una receta genérica puede acreditar criterios heterogéneos y el caller V2 no conecta test-integrity/negative controls.
+- **Decision:** `implement + demonstrate`.
+- **Thesis impact:** Conclusión 3 queda no soportada hasta cerrar tickets 18–19 y obtener evidencia externa.
+- **Next gate:** tickets 18–19.
 
 ---
 
@@ -343,14 +344,14 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 
 - **Source:** `docs/core-pillars/03` §1; `docs/DECISIONS.md` A7, A15.
 - **Target contract:** `docs/system/08-result-pipeline.md`, `docs/system/02-contracts.md`.
-- **Status:** `implemented`.
+- **Status:** `partial`.
 - **Productive code:** `packages/contracts/src/validation-contract.ts`, `packages/decomposer/src/compiler/validation-obligations.ts`. **[hecho]**
 - **Tests:** `tests/validation-recipe.test.ts`, `tests/contract-boundary-validation.test.ts`.
 - **Persisted evidence:** `none` (formal).
-- **Gap:** el roadmap distingue `ValidationContract` (congela qué probar) de `ValidationRecipe` (compilada tardíamente); confirmar que ambos existen y no se congelan comandos prematuramente en G3.
-- **Decision:** `demonstrate`.
-- **Thesis impact:** ninguno.
-- **Next gate:** G4.
+- **Gap:** el schema declara baseline/control negativo, pero la ruta V2 no los ejecuta productivamente y la compilación no garantiza evidencia pertinente por criterio.
+- **Decision:** `implement + demonstrate`.
+- **Thesis impact:** no equiparar contrato declarado con validación efectiva hasta cerrar tickets 18–19.
+- **Next gate:** tickets 18–19.
 
 ---
 
@@ -452,14 +453,14 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 
 - **Source:** `docs/tesis/main.tex` §3 (Resiliencia); `docs/DECISIONS.md` A12, A16.
 - **Target contract:** `docs/DECISIONS.md` A16; `docs/system/02-persistence-and-durability.md`.
-- **Status:** `implemented`.
+- **Status:** `partial`.
 - **Productive code:** `packages/run-store/src/recovery.ts`, `durable-lock.ts`, `projection-fold.ts`, `snapshot-store.ts`; `apps/web/.../run-operation-lease.ts`, `repo-lock.ts`. **[hecho]**
 - **Tests:** `tests/integration-operation-recovery.test.ts`, `tests/run-store-lock-ownership-fencing.test.ts`, `tests/run-store-fencing.test.ts`, `tests/run-v2-cancellation.test.ts`.
 - **Persisted evidence:** `none` (formal).
-- **Gap:** ninguno material; demostrar recuperación real en G4 es opcional.
-- **Decision:** `demonstrate`.
-- **Thesis impact:** ninguno (si se remueve la parte SQLite del párrafo).
-- **Next gate:** G4.
+- **Gap:** claim/fence no es atómico; takeover no reconcilia procesos; integration journal, snapshot recovery/compaction y trazas durables no están conectados al host V2.
+- **Decision:** `implement + demonstrate`.
+- **Thesis impact:** toda afirmación de recuperación integral queda no soportada hasta cerrar tickets 21, 23, 24 y 25.
+- **Next gate:** tickets 21, 23–25.
 
 ---
 

@@ -10,3 +10,4 @@
 - [ ] RED impide dispatch con presupuesto agotado o recurso exclusivo ocupado.
 - [ ] Evidence de conflicto expirada no se consume como vigente.
 - [ ] Scheduler persiste inputs/decisión reproducibles y reviews pasan.
+- [ ] CLAIM-020/021 sólo se elevan con caller productivo probado; CLAIM-053 sigue `partial` hasta tickets 24–25.

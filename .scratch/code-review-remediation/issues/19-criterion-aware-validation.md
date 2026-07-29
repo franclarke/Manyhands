@@ -9,4 +9,5 @@
 - [ ] RED demuestra que el mismo `pnpm test` genérico no satisface criterios no trazados.
 - [ ] Obligaciones compilan evidencia criterion-aware con referencias exactas.
 - [ ] La matriz queda unverified ante criterio sin prueba relevante.
+- [ ] La matriz claim–evidencia enlaza la nueva prueba antes de elevar CLAIM-040/041.
 - [ ] Mutación autenticada, suites y reviews Standards/Spec pasan.

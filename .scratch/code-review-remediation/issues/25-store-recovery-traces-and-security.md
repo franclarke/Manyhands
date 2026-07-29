@@ -10,4 +10,5 @@
 - [ ] Trazas JSONL sobreviven restart con checksum y redacción.
 - [ ] Grounding grande degrada explícitamente y no inventa cobertura.
 - [ ] Forbidden paths, secretos y symlinks tienen regresiones productivas.
+- [ ] CLAIM-053 se reevalúa conservadoramente con evidencia de los tickets 21, 23, 24 y 25.
 - [ ] Gates y reviews Standards/Spec pasan.

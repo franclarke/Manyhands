@@ -9,4 +9,5 @@
 - [ ] RED cubre test borrado, skip, only y assertion de carga removida.
 - [ ] `ExactCandidateValidatorV2` ejecuta detección productiva y negative control.
 - [ ] Findings y referencias quedan en la Evidence Matrix durable.
+- [ ] CLAIM-040/041 sólo se reevalúan después de evidencia productiva; mientras tanto permanecen `partial`.
 - [ ] Suites, typecheck y reviews Standards/Spec pasan.

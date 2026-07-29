@@ -729,3 +729,12 @@ Corrección de gobernanza después de la review Standards del fixed point
   16--26; no se crea otro freeze ni se ejecuta otra serie antes de cerrarlos.
 - También se corrigen las frases históricas que llamaban ciclo material al
   falso positivo artifact + seam; retry-10 y sus journals no se modifican.
+
+Corrección Spec del fixed point `da802ba`:
+
+- Spec FAIL P1 porque CLAIM-040/041/053 seguían `implemented` pese a que la
+  auditoría demostró controles de validación y recovery no cableados.
+- CLAIM-020/021/040/041/053 quedan provisionalmente `partial`; tickets 18, 19,
+  21, 23, 24 y 25 contienen la aceptación canónica para reevaluarlos.
+- No se eleva ningún claim por existencia de módulos o tests aislados. Frente
+  vigente permanece ticket 16 hasta obtener re-reviews Standards/Spec PASS.
