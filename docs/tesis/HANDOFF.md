@@ -1324,4 +1324,7 @@ del `1/8` histórico.
   y test de freeze 7/7 PASS;
 - evidencia completa fuera del repo en
   `C:\Users\franc_rgy\.codex\tmp\manyhands-ticket19-20260729-115928\runtime-logs`.
-  Pendiente: commit documental y reviews Standards/Spec finales independientes.
+  Las reviews finales independientes sobre `6355ffd` dieron Standards PASS y
+  Spec PASS, ambas con 0 P0/P1/P2/P3 y sin modificaciones;
+- ticket 20 queda `closed`. La frontera recalculada habilita ticket 21
+  (`ready-for-agent`); ticket 26 continúa bloqueado por 25.

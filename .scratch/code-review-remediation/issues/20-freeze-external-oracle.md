@@ -4,12 +4,12 @@
 
 **Blocked by:** 19.
 
-**Status:** agent-working
+**Status:** closed
 
 - [x] Tests RED/GREEN cubren el falso positivo histórico y un control correcto.
 - [x] Policy marker, dist hash, manifest y receta quedan congelados en commit limpio.
 - [x] Gate P0 y mutación autenticada pasan sobre el mismo commit.
-- [ ] Reviews Standards/Spec pasan y HANDOFF registra el freeze.
+- [x] Reviews Standards/Spec pasan y HANDOFF registra el freeze.
 
 ## Hipótesis operativa
 
@@ -97,5 +97,6 @@
   la reconciliación del freeze volvió a pasar 7/7.
 - Logs y resultados se preservan fuera del repositorio bajo
   `C:\Users\franc_rgy\.codex\tmp\manyhands-ticket19-20260729-115928\runtime-logs`.
-  Pendiente únicamente la revisión final independiente Standards/Spec del
-  ticket completo.
+  Las revisiones finales independientes sobre `6355ffd` dieron Standards PASS
+  y Spec PASS, ambas con 0 P0/P1/P2/P3 y sin modificar archivos. Ticket cerrado;
+  la frontera siguiente es ticket 21.
