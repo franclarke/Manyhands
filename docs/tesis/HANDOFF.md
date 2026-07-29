@@ -1404,3 +1404,19 @@ del `1/8` histórico.
   amendments y contención PASS; fencing/exact-candidate: 6 archivos/39 tests
   PASS; typechecks de `run-coordinator`, `orchestrator-graph` y web PASS.
   Pendientes: gate raíz, commit y reviews independientes Standards/Spec.
+
+### Primera review y remediación de ticket 22
+
+- Spec PASS, 0 P0/P1/P2/P3;
+- Standards FAIL aisló P1: el primer stale detenía el runner `running` sin
+  trigger y los stale históricos detenían invocaciones futuras; y P2: una
+  respuesta perdida después de un append durable podía recalcular timestamps y
+  chocar con los mismos event IDs;
+- RED reprodujo ambos casos. GREEN recarga los inputs vigentes y reencola sólo
+  ante un stale nuevo; el intento viejo conserva `stale`, el nuevo adopta y
+  produce el resultado. Los stale históricos ya no frenan waves;
+- `recordDerived` reconoce primero su lote durable exacto después de una
+  respuesta ambigua y sólo vuelve a derivar cuando avanzó el journal por hechos
+  ajenos;
+- gate posterior: 14 archivos/67 tests afectados, fencing y exact-candidate
+  PASS. Pendientes: typechecks/builds, commit y re-review Standards.

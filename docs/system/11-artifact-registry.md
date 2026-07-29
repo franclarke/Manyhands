@@ -45,7 +45,9 @@ de una derivación protegida por el append optimista del journal: si otro writer
 cambia la autoridad canónica antes del append, la derivación se repite contra
 la nueva proyección. Sólo `adoptAttemptResult` puede producir la adopción; un
 mismatch conserva candidato y evidencia, emite `attempt.stale` y no registra
-artifacts ni candidato final.
+artifacts ni candidato final para ese intento. El driver recarga esos inputs y
+reencola el nodo con un `InputFingerprint` nuevo; los stale históricos no
+detienen waves posteriores.
 
 ## Consumo
 

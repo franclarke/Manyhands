@@ -9,6 +9,51 @@ import {
 const at = "2026-07-29T12:00:00.000Z";
 
 describe("RunCoordinator.recordDerived", () => {
+  it("recognizes a durably committed batch after an ambiguous append error", async () => {
+    let events: RunEvent[] = [
+      event(1, "created", "run.created", { goal: "Test ambiguous append" }),
+      event(2, "proposed-r1", "graph.revision.proposed", { graphId: "graph", revision: 1 }),
+      event(3, "approved-r1", "graph.revision.approved", { graphId: "graph", revision: 1 })
+    ];
+    let throwAfterCommit = true;
+    const coordinator = new RunCoordinator({
+      events: {
+        load: async () => structuredClone(events),
+        append: async (runId, expectedSequence, inputs) => {
+          const appended = inputs.map((input, index) => RunEventSchema.parse({
+            ...input,
+            runId,
+            sequence: expectedSequence + index + 1
+          }));
+          events.push(...appended);
+          if (throwAfterCommit) {
+            throwAfterCommit = false;
+            throw new Error("response lost after durable append");
+          }
+          return appended;
+        }
+      },
+      delivery: { publish: async () => { throw new Error("unused"); } },
+      clock: () => at,
+      eventId: (type, sequence) => `${type}:${sequence}`
+    });
+    let derivations = 0;
+
+    const state = await coordinator.recordDerived("run-derived", () => {
+      derivations += 1;
+      return [{
+        eventId: "derived-readiness",
+        occurredAt: new Date(Date.parse(at) + derivations * 1_000).toISOString(),
+        type: "readiness.observed",
+        payload: { readyNodeIds: ["node-r1"], pendingDecisionIds: [] }
+      }];
+    });
+
+    expect(derivations).toBe(1);
+    expect(state.readiness.readyNodeIds).toEqual(["node-r1"]);
+    expect(events.filter((item) => item.eventId === "derived-readiness")).toHaveLength(1);
+  });
+
   it("re-derives facts after optimistic contention changes the current revision", async () => {
     let events: RunEvent[] = [
       event(1, "created", "run.created", { goal: "Test derived recording" }),

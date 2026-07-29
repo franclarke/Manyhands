@@ -81,7 +81,17 @@ export class RunCoordinator {
         await this.ports.events.append(runId, current.length, inputs);
         return foldRun(await this.ports.events.load(runId));
       } catch (error) {
-        if ((await this.ports.events.load(runId)).length === current.length) throw error;
+        const latest = await this.ports.events.load(runId);
+        const latestById = new Map(latest.map((event) => [event.eventId, event]));
+        const persisted = inputs.map((input) => latestById.get(input.eventId));
+        if (persisted.every((event) => event !== undefined)) {
+          persisted.forEach((event, index) => assertSameInput(event!, inputs[index]!));
+          return foldRun(latest);
+        }
+        if (persisted.some((event) => event !== undefined)) {
+          throw new Error("A fact batch cannot be partially persisted.");
+        }
+        if (latest.length === current.length) throw error;
       }
     }
     throw new Error(`Run ${runId} event journal remained contended after 8 retries.`);
@@ -113,7 +123,17 @@ export class RunCoordinator {
         await this.ports.events.append(runId, current.length, inputs);
         return foldRun(await this.ports.events.load(runId));
       } catch (error) {
-        if ((await this.ports.events.load(runId)).length === current.length) throw error;
+        const latest = await this.ports.events.load(runId);
+        const latestById = new Map(latest.map((event) => [event.eventId, event]));
+        const persisted = inputs.map((input) => latestById.get(input.eventId));
+        if (persisted.every((event) => event !== undefined)) {
+          persisted.forEach((event, index) => assertSameInput(event!, inputs[index]!));
+          return foldRun(latest);
+        }
+        if (persisted.some((event) => event !== undefined)) {
+          throw new Error("A derived fact batch cannot be partially persisted.");
+        }
+        if (latest.length === current.length) throw error;
       }
     }
     throw new Error(`Run ${runId} event journal remained contended after 8 derived-fact retries.`);

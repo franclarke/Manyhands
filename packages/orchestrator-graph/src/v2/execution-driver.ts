@@ -110,10 +110,15 @@ export class V2ExecutionDriver {
   constructor(private readonly options: V2ExecutionDriverOptions) {}
 
   async run(input: V2ExecutionRunInput): Promise<RunProjection> {
-    const prepared = prepare(input);
+    let prepared = prepare(input);
     const maxWaves = input.maxWaves ?? Object.keys(prepared.graph.nodes).length * 3;
     for (let wave = 0; wave < maxWaves; wave += 1) {
       const current = await this.options.coordinator.load(input.runId);
+      const staleAttemptIds = new Set(
+        Object.values(current.attempts)
+          .filter((attempt) => attempt.status === "stale")
+          .map((attempt) => attempt.attemptId)
+      );
       if (current.lifecycle !== "running" && current.lifecycle !== "waiting_for_input") return current;
       if (
         current.graphId !== prepared.graph.graphId ||
@@ -127,7 +132,19 @@ export class V2ExecutionDriver {
       const advanced = await this.advance(prepared, current);
       if (!advanced.dispatched) return advanced.state;
       if (advanced.state.lifecycle !== "running" && advanced.state.lifecycle !== "waiting_for_input") return advanced.state;
-      if (Object.values(advanced.state.attempts).some((attempt) => attempt.status === "stale")) return advanced.state;
+      const becameStale = Object.values(advanced.state.attempts).some(
+        (attempt) => attempt.status === "stale" && !staleAttemptIds.has(attempt.attemptId)
+      );
+      if (becameStale) {
+        const loaded = await this.options.loadCurrentInputs();
+        prepared = prepare({
+          ...input,
+          graph: loaded.graph,
+          contracts: loaded.contracts,
+          repositoryContextDigest: loaded.repositoryContextDigest,
+          executorProfile: loaded.executorProfile
+        });
+      }
     }
     throw new Error(`Execution exceeded ${maxWaves} waves without reaching a stable state.`);
   }

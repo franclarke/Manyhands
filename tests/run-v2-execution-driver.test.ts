@@ -37,6 +37,7 @@ describe("V2ExecutionDriver", () => {
     revisedContracts[0]!.validation.revision = "validation-r2";
     revisedContracts[0]!.task.validation.revision = "validation-r2";
     let currentContracts = atomic.contracts;
+    let executions = 0;
     const driver = new V2ExecutionDriver({
       coordinator: harness.coordinator,
       now: () => at,
@@ -47,10 +48,11 @@ describe("V2ExecutionDriver", () => {
         executorProfile: { id: "claude-code-cli", revision: "sonnet" }
       }),
       execute: async (input) => {
-        currentContracts = revisedContracts;
+        executions += 1;
+        if (executions === 1) currentContracts = revisedContracts;
         return {
           ...(success(input) as Extract<V2NodeExecutionOutcome, { kind: "success" }>),
-          finalManifestId: "must-not-be-adopted"
+          finalManifestId: "fresh-final"
         };
       }
     });
@@ -65,17 +67,22 @@ describe("V2ExecutionDriver", () => {
       materializableNodeIds: [atomic.graph.rootId],
       availableExecutorNodeIds: [atomic.graph.rootId],
       conflictConstraints: [],
-      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" },
-      maxWaves: 1
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
     });
 
-    expect(Object.values(state.attempts)).toEqual([
-      expect.objectContaining({ status: "stale" })
+    const attempts = Object.values(state.attempts);
+    expect(attempts).toEqual([
+      expect.objectContaining({ status: "stale" }),
+      expect.objectContaining({ status: "adopted" })
     ]);
-    expect(Object.values(state.adoptedArtifacts)).toEqual([]);
+    expect(Object.values(state.adoptedArtifacts)).toEqual([
+      expect.objectContaining({ producerAttemptId: attempts[1]!.attemptId })
+    ]);
+    expect(Object.values(state.adoptedArtifacts).some(
+      (artifact) => artifact.producerAttemptId === attempts[0]!.attemptId
+    )).toBe(false);
     expect(harness.events().some((event) => event.type === "attempt.stale")).toBe(true);
-    expect(harness.events().some((event) => event.type === "artifact.adopted")).toBe(false);
-    expect(harness.events().some((event) => event.type === "final_candidate.verified")).toBe(false);
+    expect(state.finalCandidate).toMatchObject({ manifestId: "fresh-final" });
   });
 
   it("executes seam siblings together, adopts exact artifacts and integrates the root bottom-up", async () => {
