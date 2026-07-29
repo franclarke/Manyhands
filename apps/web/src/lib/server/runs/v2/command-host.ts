@@ -31,7 +31,12 @@ import {
   updateRunForOperation
 } from "../run-operation-lease";
 import { resolveRunsDirectory } from "../runs-directory";
-import type { RunOperationKind, RunOperationLease, RunRecord } from "../schema";
+import {
+  RUN_STATUS_VALUES,
+  type RunOperationKind,
+  type RunOperationLease,
+  type RunRecord
+} from "../schema";
 import { resolveRunTargetPath } from "../target-context";
 import { projectV2RunRecordCache } from "./run-record-cache";
 
@@ -96,7 +101,6 @@ export async function pauseRunV2(runId: string, reason: string): Promise<{ run: 
   let allProcessesDead = true;
   try {
     const store = eventStore();
-    await store.advanceFence(runId, authority(lease));
     abortRun(runId);
     const killed = await killRunProcessesVerified(runId);
     allProcessesDead = killed.allDead;
@@ -126,7 +130,6 @@ export async function cancelRunV2(
   let allProcessesDead = false;
   try {
     const store = eventStore();
-    await store.advanceFence(runId, authority(lease));
     const coordinator = new RunCoordinator({
       events: store.bind(authority(lease)),
       delivery: unavailableDelivery,
@@ -178,7 +181,6 @@ export async function deliverRunV2(runId: string, approval: DeliveryApproval): P
     takeoverStaleAfterMs: DEFAULT_STALE_MS
   });
   try {
-    await store.advanceFence(runId, authority(lease));
     const coordinator = new RunCoordinator({
       events: store.bind(authority(lease)),
       delivery: { publish: ({ approval: request }) => publishDelivery(run, request, store) },
@@ -201,7 +203,6 @@ async function executeCommand(
   const { run, lease } = await claimRunOperation(runId, kind, { expectedLifecycles });
   try {
     const store = eventStore();
-    await store.advanceFence(runId, authority(lease));
     const state = await coordinatorFor(run, lease, store).execute(runId, command);
     return { run: await cacheProjection(runId, lease, state, store), state };
   } finally {
@@ -211,19 +212,10 @@ async function executeCommand(
 
 /** User control deliberately supersedes an active runner and mints a newer fence. */
 async function claimControlOperation(runId: string, _supersededKind: RunOperationKind): Promise<{ run: RunRecord; lease: RunOperationLease }> {
-  let lease: RunOperationLease | undefined;
-  const run = await getRunRepository().update(runId, (current) => {
-    const now = new Date().toISOString();
-    lease = {
-      operationId: randomUUID(),
-      kind: "control",
-      fencingToken: Math.max(current.mutationFence ?? 0, current.activeOperation?.fencingToken ?? 0) + 1,
-      acquiredAt: now,
-      heartbeatAt: now
-    };
-    return { ...current, mutationFence: lease.fencingToken, activeOperation: lease, heartbeatAt: now };
+  return claimRunOperation(runId, "control", {
+    expectedLifecycles: RUN_STATUS_VALUES,
+    allowTakeover: true
   });
-  return { run, lease: lease! };
 }
 
 function coordinatorFor(run: RunRecord, lease: RunOperationLease, store: JsonlRunEventStore): RunCoordinator {
@@ -260,8 +252,8 @@ async function publishDelivery(
   if (run.targetContext === undefined) throw new Error("Delivery requires the captured run target.");
   const repoRoot = await resolveRunTargetPath(run);
   if (repoRoot === undefined) throw new Error("Delivery requires a local Git target.");
-  return withRepositoryLease({ repoRoot, runId: run.runId }, () => runWithProcessSupervision(
-    { runId: run.runId, label: "delivery-v2" },
+  return withRepositoryLease({ repoRoot, runId: run.runId }, (_repositoryLease, repositorySignal) => runWithProcessSupervision(
+    { runId: run.runId, label: "delivery-v2", signal: repositorySignal },
     async () => {
       const publisher = new TransactionalDeliveryPublisher({
         journal: {

@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   drainRunBackgroundTasks,
+  isRunnerActive,
+  markRunnerInactive,
   startRunBackgroundTask,
-  startRunBackgroundTaskAfterCurrent
+  startRunBackgroundTaskAfterCurrent,
+  tryMarkRunnerActive
 } from "@/lib/server/runs/runner-state";
 
 describe("run background task handoff", () => {
@@ -38,5 +41,17 @@ describe("run background task handoff", () => {
     await drainRunBackgroundTasks(runId);
 
     expect(ordering).toEqual(["current:start", "current:end", "successor:start"]);
+  });
+
+  it("does not let superseded cleanup clear a verified takeover runner", () => {
+    const runId = "run-operation-aware-active";
+    expect(tryMarkRunnerActive(runId, "operation-old")).toBe(true);
+    expect(tryMarkRunnerActive(runId, "operation-new", true)).toBe(true);
+
+    markRunnerInactive(runId, "operation-old");
+    expect(isRunnerActive(runId)).toBe(true);
+
+    markRunnerInactive(runId, "operation-new");
+    expect(isRunnerActive(runId)).toBe(false);
   });
 });

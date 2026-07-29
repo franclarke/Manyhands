@@ -6,26 +6,35 @@ import { globalSingleton } from "../global-singleton";
  * On globalThis: runners are marked active from one Next route bundle and
  * checked from others (sweep, mutation guard, repo lock).
  */
-const active = globalSingleton("runner-state:active", () => new Set<string>());
+const active = globalSingleton(
+  "runner-state:active-v2",
+  () => new Map<string, string>()
+);
 const backgroundTasks = globalSingleton(
   "runner-state:background-tasks",
   () => new Map<string, Set<Promise<void>>>()
 );
 
-export function markRunnerActive(runId: string): void {
-  active.add(runId);
+export function markRunnerActive(runId: string, operationId = "legacy"): void {
+  active.set(runId, operationId);
 }
 
-export function tryMarkRunnerActive(runId: string): boolean {
-  if (active.has(runId)) {
+export function tryMarkRunnerActive(
+  runId: string,
+  operationId = "legacy",
+  allowVerifiedTakeover = false
+): boolean {
+  if (active.has(runId) && !allowVerifiedTakeover) {
     return false;
   }
-  active.add(runId);
+  active.set(runId, operationId);
   return true;
 }
 
-export function markRunnerInactive(runId: string): void {
-  active.delete(runId);
+export function markRunnerInactive(runId: string, operationId?: string): void {
+  if (operationId === undefined || active.get(runId) === operationId) {
+    active.delete(runId);
+  }
 }
 
 export function isRunnerActive(runId: string): boolean {

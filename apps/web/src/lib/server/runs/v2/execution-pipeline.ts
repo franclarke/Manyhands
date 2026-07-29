@@ -111,7 +111,11 @@ function claimExecutionV2(
 async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOperationLease }): Promise<void> {
   const { run, lease } = claimed;
   const runId = run.runId;
-  if (!tryMarkRunnerActive(runId)) {
+  const verifiedTakeover =
+    run.lastTakeoverReceipt?.operationId === lease.operationId &&
+    run.lastTakeoverReceipt.fencingToken === lease.fencingToken &&
+    run.lastTakeoverReceipt.allDead;
+  if (!tryMarkRunnerActive(runId, lease.operationId, verifiedTakeover)) {
     await releaseRunOperationWithRetry(runId, lease);
     throw new Error(`Run ${runId} already has an active runner.`);
   }
@@ -126,7 +130,6 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });
     const authority = { operationId: lease.operationId, fencingToken: lease.fencingToken };
-    await events.advanceFence(runId, authority);
     const loaded = await events.load(runId);
     const prepared = loadApprovedExecutionPlanV2(loaded);
     const execution = executionSelection(run);
@@ -166,6 +169,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
       clock: () => new Date().toISOString(),
       eventId: (type, sequence) => `${runId}:${type}:${sequence}`
     });
+    let executionSignal = abort.signal;
     const driver = new V2ExecutionDriver({
       coordinator,
       now: () => new Date().toISOString(),
@@ -179,30 +183,33 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
           targetBranch: run.targetContext!.sourceBranch,
           targetHead: run.targetContext!.sourceBaseCommit
         },
-        signal: abort.signal
+        signal: executionSignal
       })
     });
-    const state = await runWithProcessSupervision({
-      runId,
-      operationId: lease.operationId,
-      label: "execution-v2",
-      signal: abort.signal
-    }, () => withRepositoryLease({ repoRoot, runId }, () => driver.run({
-      runId,
-      graph: prepared.graph,
-      contracts: prepared.contracts,
-      repositoryContextDigest: prepared.repositorySnapshot.snapshotId,
-      executorProfile: { id: execution.executorId, revision: executorProfileRevision(execution) },
-      effectiveConfig: { maxParallel: config.maxParallel },
-      materializableNodeIds: Object.keys(prepared.graph.nodes),
-      availableExecutorNodeIds: Object.keys(prepared.graph.nodes),
-      conflictConstraints: conflictEvidence(prepared.graph),
-      target: {
-        sourceTargetFingerprint: run.targetContext!.fingerprint,
-        targetBranch: run.targetContext!.sourceBranch,
-        targetHead: run.targetContext!.sourceBaseCommit
-      }
-    })));
+    const state = await withRepositoryLease({ repoRoot, runId }, (_repositoryLease, repositorySignal) => {
+      executionSignal = AbortSignal.any([abort.signal, repositorySignal]);
+      return runWithProcessSupervision({
+        runId,
+        operationId: lease.operationId,
+        label: "execution-v2",
+        signal: executionSignal
+      }, () => driver.run({
+          runId,
+          graph: prepared.graph,
+          contracts: prepared.contracts,
+          repositoryContextDigest: prepared.repositorySnapshot.snapshotId,
+          executorProfile: { id: execution.executorId, revision: executorProfileRevision(execution) },
+          effectiveConfig: { maxParallel: config.maxParallel },
+          materializableNodeIds: Object.keys(prepared.graph.nodes),
+          availableExecutorNodeIds: Object.keys(prepared.graph.nodes),
+          conflictConstraints: conflictEvidence(prepared.graph),
+          target: {
+            sourceTargetFingerprint: run.targetContext!.fingerprint,
+            targetBranch: run.targetContext!.sourceBranch,
+            targetHead: run.targetContext!.sourceBaseCommit
+          }
+        }));
+    });
     const persistedEvents = await events.load(runId);
     await snapshots.write(runId, authority, state, state.sequence, persistedEvents.at(-1)!.eventId);
     await updateRunForOperation(runId, lease, (current) => projectV2RunRecordCache(current, state, persistedEvents));
@@ -211,7 +218,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     throw error;
   } finally {
     disposeRunAbort(runId);
-    markRunnerInactive(runId);
+    markRunnerInactive(runId, lease.operationId);
     stopHeartbeat();
     await releaseRunOperationWithRetry(runId, lease);
   }

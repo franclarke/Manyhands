@@ -66,6 +66,19 @@ export const RunOperationLeaseSchema = z.object({
 export type RunOperationKind = z.infer<typeof RunOperationKindSchema>;
 export type RunOperationLease = z.infer<typeof RunOperationLeaseSchema>;
 
+export const RunTakeoverReceiptSchema = z.object({
+  processReceiptId: z.string().min(1),
+  supersededOperationId: z.string().uuid(),
+  supersededFencingToken: z.number().int().positive(),
+  operationId: z.string().uuid(),
+  fencingToken: z.number().int().positive(),
+  allDead: z.literal(true),
+  processCount: z.number().int().nonnegative(),
+  verifiedAt: z.string().datetime()
+}).strict();
+
+export type RunTakeoverReceipt = z.infer<typeof RunTakeoverReceiptSchema>;
+
 /** Disposable materialized cursor. The V2 journal remains the authority. */
 export const RunProjectionCacheSchema = z.object({
   eventSequence: z.number().int().nonnegative(),
@@ -103,6 +116,7 @@ export const RunRecordSchema = z.object({
   version: z.number().int().nonnegative().default(0),
   mutationFence: z.number().int().nonnegative().optional(),
   activeOperation: RunOperationLeaseSchema.optional(),
+  lastTakeoverReceipt: RunTakeoverReceiptSchema.optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   archivedAt: z.string().datetime().optional(),

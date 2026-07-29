@@ -19,8 +19,25 @@ efectos. Conflictos devuelven estado actual y siguiente acción posible.
 Una operación mutante adquiere lease con fencing token. Cada persistencia,
 evento y adopción verifica el token. El takeover invalida autoridad anterior.
 
+`RunOperationAuthority` es la única interfaz productiva para reclamar esa
+autoridad. Bajo el mutex durable del `RunRecord`, el event store acuña primero
+el siguiente fence canónico y sólo después se publica la lease en el record.
+Si el proceso cae entre ambos pasos queda un fence huérfano y recuperable, pero
+el dueño anterior ya no puede escribir. Los writers del record validan el mismo
+fence mientras conservan ese mutex.
+
+Un takeover no devuelve autoridad despachable hasta abortar al dueño anterior,
+reconciliar su evidencia de procesos y persistir un receipt con `allDead=true`.
+Un receipt no verificable deja el fence anterior invalidado y no publica la
+nueva lease. El registro in-process se identifica también por `operationId`,
+para que el cleanup tardío del dueño reemplazado no desregistre al sucesor.
+
 El repository lease protege mutaciones sobre un target compartido. No se
 reemplaza con booleans in-process.
+
+La pérdida del repository lease aborta su `AbortSignal`; ejecución y delivery
+propagan esa señal al Process Supervisor. Aunque el efecto intercepte el aborto,
+el wrapper vuelve a verificar la lease y falla cerrado.
 
 ## Loop de coordinación
 

@@ -32,6 +32,13 @@ Worktree por intento, paths resueltos, ScopeContract deny-wins, inspección de
 Operation lease y repository lease con fencing tokens. Todo write/event/adoption
 verifica token. Las leases son durables y tienen owner, expiry y takeover.
 
+El claim de operación y el fence canónico forman una sola transacción de
+autoridad: el fence se publica antes que la lease visible y ambos se serializan
+bajo el mutex durable del run. Un takeover sólo habilita dispatch después de un
+receipt durable `allDead=true`; un crash intermedio puede reducir
+disponibilidad, nunca devolver autoridad doble. La pérdida del repository lease
+aborta los efectos supervisados que sigan en vuelo.
+
 ### Procesos
 
 Process Supervisor registra árbol, timeout y abort. Cancelación requiere

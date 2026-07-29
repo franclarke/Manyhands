@@ -103,7 +103,6 @@ export async function approvePlanningV2Pipeline(runId: string, revision: number)
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });
     const authority = { operationId: lease.operationId, fencingToken: lease.fencingToken };
-    await events.advanceFence(runId, authority);
     const current = await events.load(runId);
     const state = await approvePlanningV2(runId, authority, revision, current.length, {
       events,

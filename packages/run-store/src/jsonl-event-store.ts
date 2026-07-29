@@ -121,6 +121,31 @@ export class JsonlRunEventStore implements FencedRunEventStore {
     };
   }
 
+  async claimAuthority(
+    runId: string,
+    operationId: string,
+    minimumToken = 0
+  ): Promise<FencingAuthority> {
+    if (operationId.trim().length === 0) {
+      throw new Error("An authority claim requires an operationId.");
+    }
+    if (!Number.isInteger(minimumToken) || minimumToken < 0) {
+      throw new Error("minimumToken must be a non-negative integer.");
+    }
+    return this.withLock(runId, async () => {
+      const current = await this.readFence(runId);
+      const authority = {
+        operationId,
+        fencingToken: Math.max(current?.fencingToken ?? 0, minimumToken) + 1
+      };
+      await atomicWriteJson(
+        this.fencePath(runId),
+        { schemaVersion: 1, ...authority } satisfies FenceRecord
+      );
+      return authority;
+    });
+  }
+
   async advanceFence(runId: string, authority: FencingAuthority): Promise<void> {
     validateAuthority(authority);
     await this.withLock(runId, async () => {

@@ -39,4 +39,25 @@ describe("run mutation fencing", () => {
     await expect(store.advanceFence("run-1", { operationId: "owner-b", fencingToken: 4 }))
       .rejects.toBeInstanceOf(StaleFencingTokenError);
   });
+
+  it("atomically mints one monotonic authority across independent store instances", async () => {
+    const claims = await Promise.all(
+      Array.from({ length: 12 }, (_, index) =>
+        new JsonlRunEventStore({ directory }).claimAuthority(
+          "run-concurrent-claim",
+          `owner-${index}`,
+          20
+        )
+      )
+    );
+    const tokens = claims.map((claim) => claim.fencingToken).sort((left, right) => left - right);
+    expect(tokens).toEqual(Array.from({ length: 12 }, (_, index) => 21 + index));
+
+    const winner = claims.find((claim) => claim.fencingToken === 32)!;
+    const loser = claims.find((claim) => claim.fencingToken !== 32)!;
+    const store = new JsonlRunEventStore({ directory });
+    await expect(store.assertAuthority("run-concurrent-claim", winner)).resolves.toBeUndefined();
+    await expect(store.assertAuthority("run-concurrent-claim", loser))
+      .rejects.toBeInstanceOf(StaleFencingTokenError);
+  });
 });

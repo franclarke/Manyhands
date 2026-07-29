@@ -29,6 +29,7 @@ import {
   releaseRepoLease,
   renewRepoLease,
   startRepoLeaseHeartbeat,
+  withRepositoryLease,
   type RepoLease,
   type RepoLockOwner
 } from "@/lib/server/runs/repo-lock";
@@ -208,6 +209,27 @@ describe("B-004 repo lock: heartbeat", () => {
     expect(beats.length).toBe(settled);
     await releaseRepoLease(lease);
   });
+
+  it("aborts an in-flight effect when repository authority is lost", async () => {
+    let started!: () => void;
+    const operationStarted = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const inFlight = withRepositoryLease(
+      { repoRoot, runId: "run-a" },
+      async (_lease, signal) => {
+        started();
+        await new Promise<never>((_resolve, reject) => {
+          signal.addEventListener("abort", () => reject(new Error("effect observed abort")), { once: true });
+        });
+      }
+    );
+    await operationStarted;
+
+    const replacement = await acquireOrFail(repoRoot, "run-b", { ownerIsLive: deadOwner });
+    await expect(inFlight).rejects.toBeInstanceOf(RepoLeaseLostError);
+    await releaseRepoLease(replacement);
+  }, 10_000);
 
   it("default liveness trusts a fresh lock heartbeat over a dead PID, and steals once the heartbeat is stale", async () => {
     const deadPid = await spawnDeadPid();

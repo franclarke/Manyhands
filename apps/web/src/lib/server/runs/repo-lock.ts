@@ -81,7 +81,7 @@ export interface RepoLease {
  */
 export async function withRepositoryLease<T>(
   input: { repoRoot: string; runId: string },
-  operation: (lease: RepoLease) => Promise<T>
+  operation: (lease: RepoLease, signal: AbortSignal) => Promise<T>
 ): Promise<T> {
   const claimed = await acquireRepoLock(input.repoRoot, input.runId);
   if (!claimed.acquired) {
@@ -98,10 +98,24 @@ export async function withRepositoryLease<T>(
       `repository is owned by run ${claimed.owner.runId}`
     );
   }
-  const stopHeartbeat = startRepoLeaseHeartbeat(claimed.lease);
+  const controller = new AbortController();
+  let leaseLoss: RepoLeaseLostError | undefined;
+  const stopHeartbeat = startRepoLeaseHeartbeat(claimed.lease, {
+    onLost: (reason) => {
+      leaseLoss = new RepoLeaseLostError(claimed.lease, reason);
+      controller.abort(leaseLoss);
+    }
+  });
   try {
     await assertRepoLeaseCurrent(claimed.lease);
-    const result = await operation(claimed.lease);
+    let result: T;
+    try {
+      result = await operation(claimed.lease, controller.signal);
+    } catch (error) {
+      if (leaseLoss !== undefined) throw leaseLoss;
+      throw error;
+    }
+    if (leaseLoss !== undefined) throw leaseLoss;
     await assertRepoLeaseCurrent(claimed.lease);
     return result;
   } finally {

@@ -14,6 +14,11 @@ export interface RunEventLogInspection {
 export interface FencedRunEventStore {
   load(runId: string): Promise<RunEvent[]>;
   inspect(runId: string): Promise<RunEventLogInspection>;
+  /**
+   * Atomically mint and publish the next canonical authority. `minimumToken`
+   * accounts for legacy/cache state; the durable fence remains authoritative.
+   */
+  claimAuthority(runId: string, operationId: string, minimumToken?: number): Promise<FencingAuthority>;
   advanceFence(runId: string, authority: FencingAuthority): Promise<void>;
   assertAuthority(runId: string, authority: FencingAuthority): Promise<void>;
   appendFenced(

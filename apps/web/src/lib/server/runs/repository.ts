@@ -37,7 +37,10 @@ export interface RunRepository {
    * `planning` written by the planning save). A plain `save` re-reads OUTSIDE the
    * lock and is therefore subject to lost updates.
    */
-  update(runId: string, mutator: (current: RunRecord) => RunRecord): Promise<RunRecord>;
+  update(
+    runId: string,
+    mutator: (current: RunRecord) => RunRecord | Promise<RunRecord>
+  ): Promise<RunRecord>;
   delete(runId: string): Promise<void>;
 }
 
@@ -205,12 +208,15 @@ export class JsonRunRecordStore implements RunRepository {
     });
   }
 
-  async update(runId: string, mutator: (current: RunRecord) => RunRecord): Promise<RunRecord> {
+  async update(
+    runId: string,
+    mutator: (current: RunRecord) => RunRecord | Promise<RunRecord>
+  ): Promise<RunRecord> {
     return this.withLock(runId, async () => {
       // get() reads without taking the lock, so re-reading here is safe (no
       // re-entrancy) and yields the record left by whichever write ran before us.
       const current = await this.get(runId);
-      const mutated = mutator(current);
+      const mutated = await mutator(current);
       const parsed = RunRecordSchema.parse({
         ...mutated,
         version: current.version + 1,
@@ -658,8 +664,7 @@ async function tryQuarantineStaleMutationLock(lockPath: string): Promise<boolean
     stale =
       typeof owner.pid !== "number" ||
       !isProcessAlive(owner.pid) ||
-      typeof owner.acquiredAtMs !== "number" ||
-      Date.now() - owner.acquiredAtMs > MUTATION_LOCK_STALE_MS;
+      typeof owner.acquiredAtMs !== "number";
   } catch {
     const info = await stat(lockPath).catch(() => null);
     stale = info !== null && Date.now() - info.mtimeMs > MUTATION_LOCK_STALE_MS;
