@@ -11,6 +11,7 @@ import { eventPresentation, granularityExplanation, granularityStrategyExplanati
 import type { RunEvent, RunSeed } from "@/lib/run-model/types";
 import { runUiStatus, statusMeta } from "@/lib/status";
 import { CockpitRunGraph } from "./cockpit-run-graph";
+import { isFinalCandidateDeliverable } from "./cockpit-state";
 import { DecisionQueueDrawer } from "./DecisionQueueDrawer";
 
 export function RunModelView({
@@ -39,6 +40,11 @@ export function RunModelView({
     : Object.values(model.projection.decisions).filter((decision) => decision.status === "pending");
   const activeDecision = pendingDecisions.find((decision) => decision.id === decisionId) ?? null;
   const uiStatus = runUiStatus(model.run.lifecycle);
+  const canDeliver = isFinalCandidateDeliverable({
+    lifecycle: model.run.lifecycle,
+    finalCandidate: model.projection?.finalCandidate,
+    evidenceMatrices: model.evidenceMatrices
+  });
 
   const selectedContract = useMemo(
     () => model.contracts.find((bundle) => bundle.task.nodeId === selectedNodeId) ?? null,
@@ -91,7 +97,7 @@ export function RunModelView({
 
   async function deliver(): Promise<void> {
     const candidate = model.projection?.finalCandidate;
-    if (candidate === undefined) return;
+    if (candidate === undefined || !canDeliver) return;
     await command("deliver", {
       manifestId: candidate.manifestId,
       finalSha: candidate.commit,
@@ -120,7 +126,7 @@ export function RunModelView({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <StatusPill status={uiStatus} label={statusMeta(uiStatus).label} />
-          {!fixture ? <RunActions lifecycle={model.run.lifecycle} busy={busyAction} onCommand={command} onDeliver={() => void deliver()} /> : null}
+          {!fixture ? <RunActions lifecycle={model.run.lifecycle} busy={busyAction} canDeliver={canDeliver} onCommand={command} onDeliver={() => void deliver()} /> : null}
         </div>
       </header>
 
@@ -169,7 +175,7 @@ export function RunModelView({
               {activeDecision !== null ? (
                 <DecisionDetails decision={activeDecision} nodes={model.nodes} busy={busyAction !== null} onResolve={(optionId) => void resolveDecision(optionId)} onDismiss={() => setDecisionId(null)} />
               ) : selectedNode === null ? (
-                <RunSummary model={model} />
+                <RunSummary model={model} canDeliver={canDeliver} />
               ) : (
                 <NodeDetails node={selectedNode} contract={selectedContract} granularity={selectedGranularity} onClose={() => setSelectedNodeId(null)} />
               )}
@@ -183,19 +189,19 @@ export function RunModelView({
   );
 }
 
-function RunActions({ lifecycle, busy, onCommand, onDeliver }: { lifecycle: RunSeed["lifecycle"]; busy: string | null; onCommand: (path: string, body?: unknown) => Promise<void>; onDeliver: () => void }): React.ReactElement {
+function RunActions({ lifecycle, busy, canDeliver, onCommand, onDeliver }: { lifecycle: RunSeed["lifecycle"]; busy: string | null; canDeliver: boolean; onCommand: (path: string, body?: unknown) => Promise<void>; onDeliver: () => void }): React.ReactElement {
   return (
     <div className="flex items-center gap-1">
       {lifecycle === "running" || lifecycle === "waiting_for_input" ? <Button size="sm" busy={busy === "pause"} onClick={() => void onCommand("pause", { reason: "Pausado por el operador" })}><Pause className="h-3.5 w-3.5" />Pausar</Button> : null}
       {lifecycle === "paused" ? <Button size="sm" busy={busy === "resume"} onClick={() => void onCommand("resume", { reason: "Reanudado por el operador" })}><Play className="h-3.5 w-3.5" />Continuar</Button> : null}
       {lifecycle === "interrupted" ? <Button size="sm" busy={busy === "restart"} onClick={() => void onCommand("restart")}><RotateCcw className="h-3.5 w-3.5" />Reintentar</Button> : null}
-      {lifecycle === "result_ready" ? <Button variant="primary" size="sm" busy={busy === "deliver"} onClick={onDeliver}><Send className="h-3.5 w-3.5" />Publicar resultado</Button> : null}
+      {lifecycle === "result_ready" ? <Button variant="primary" size="sm" busy={busy === "deliver"} disabled={!canDeliver} title={canDeliver ? undefined : "La matriz final exacta todavía no está verificada."} onClick={onDeliver}><Send className="h-3.5 w-3.5" />Publicar resultado</Button> : null}
       {["planning", "needs_approval", "running", "waiting_for_input", "paused", "result_ready"].includes(lifecycle) ? <Button variant="danger" size="icon" busy={busy === "cancel"} onClick={() => void onCommand("cancel")} aria-label="Cancelar run"><CircleStop className="h-4 w-4" /></Button> : null}
     </div>
   );
 }
 
-function RunSummary({ model }: { model: ReturnType<typeof useLiveRunModel>["model"] }): React.ReactElement {
+function RunSummary({ model, canDeliver }: { model: ReturnType<typeof useLiveRunModel>["model"]; canDeliver: boolean }): React.ReactElement {
   const summary = summarizeRunNodes(model.nodes);
   const resultLabel = summary.executableCount === 0
     ? "Sin trabajo ejecutable todavía"
@@ -212,8 +218,42 @@ function RunSummary({ model }: { model: ReturnType<typeof useLiveRunModel>["mode
       <p className="mt-3 text-pretty text-micro text-[var(--color-text-subtle)]">
         {summary.coordinatingNodes > 0 ? `${summary.coordinatingNodes} nodo coordinando · ` : ""}{model.contracts.length} contrato{model.contracts.length === 1 ? "" : "s"} vigente{model.contracts.length === 1 ? "" : "s"}
       </p>
-      {model.projection?.finalCandidate !== undefined ? <div className="mt-4 rounded-lg border border-[var(--status-completed-border)] bg-[var(--status-completed-bg)] p-3 text-xs text-[var(--status-completed-fg)]"><CheckCircle2 className="mr-2 inline h-4 w-4" />Resultado verificado listo para publicar.</div> : null}
+      {canDeliver ? <div className="mt-4 rounded-lg border border-[var(--status-completed-border)] bg-[var(--status-completed-bg)] p-3 text-xs text-[var(--status-completed-fg)]"><CheckCircle2 className="mr-2 inline h-4 w-4" />Resultado verificado listo para publicar.</div> : null}
+      {model.projection?.finalCandidate !== undefined && !canDeliver ? <div className="mt-4 rounded-lg border border-[var(--status-review-border)] bg-[var(--status-review-bg)] p-3 text-xs text-[var(--status-review-fg)]">La entrega está bloqueada hasta verificar la matriz exacta del candidato.</div> : null}
+      <EvidenceDetails matrices={model.evidenceMatrices} candidateCommit={model.projection?.finalCandidate?.commit} />
       {model.projection?.failureReason !== undefined ? <div className="mt-4 rounded-lg border border-[var(--status-failed-border)] bg-[var(--status-failed-bg)] p-3 text-xs text-[var(--status-failed-fg)]">{model.projection.failureReason}</div> : null}
+    </section>
+  );
+}
+
+function EvidenceDetails({ matrices, candidateCommit }: { matrices: readonly Record<string, unknown>[]; candidateCommit?: string | undefined }): React.ReactElement | null {
+  const matrix = [...matrices].reverse().find((entry) => candidateCommit === undefined || entry.candidateCommit === candidateCommit);
+  if (matrix === undefined) return null;
+  const criteria = Array.isArray(matrix.criteria) ? matrix.criteria.filter(isRecord) : [];
+  const outcome = typeof matrix.outcome === "string" ? matrix.outcome : "pending";
+  return (
+    <section className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3 text-xs">
+      <div className="flex items-baseline justify-between gap-3">
+        <strong>Matriz de evidencia</strong>
+        <span className="mh-mono uppercase text-[var(--color-text-muted)]">{outcome}</span>
+      </div>
+      <ul className="mt-3 space-y-2">
+        {criteria.map((criterion, index) => {
+          const evidenceRefs = Array.isArray(criterion.evidenceRefs)
+            ? criterion.evidenceRefs.filter((ref): ref is string => typeof ref === "string")
+            : [];
+          return (
+            <li key={typeof criterion.criterionId === "string" ? criterion.criterionId : index} className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <span>{typeof criterion.criterionId === "string" ? criterion.criterionId : `Criterio ${index + 1}`}</span>
+                <strong>{typeof criterion.status === "string" ? criterion.status : "pending"}</strong>
+              </div>
+              {typeof criterion.justification === "string" ? <p className="mt-1 text-[var(--color-text-muted)]">{criterion.justification}</p> : null}
+              {evidenceRefs.length > 0 ? <p className="mt-1 break-all text-[var(--color-text-subtle)]">Evidencia: {evidenceRefs.join(", ")}</p> : null}
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }
@@ -335,4 +375,8 @@ function ActivityEvent({ event, presentation, muted = false }: {
       </span>
     </li>
   );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

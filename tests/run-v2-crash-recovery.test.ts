@@ -85,6 +85,26 @@ function resultReadyEvents(approval: DeliveryApproval): RunEvent[] {
     { eventId: "proposed", occurredAt: at, type: "graph.revision.proposed", payload: { graphId: "graph", revision: 1 } },
     { eventId: "approved", occurredAt: at, type: "graph.revision.approved", payload: { graphId: "graph", revision: 1 } },
     {
+      eventId: "matrix",
+      occurredAt: at,
+      type: "evidence.matrix_recorded",
+      payload: {
+        matrix: {
+          matrixId: "matrix-final",
+          candidateCommit: approval.finalSha,
+          validationContract: { id: "validation-final", revision: "revision-1" },
+          criteria: [{
+            criterionId: "criterion-final",
+            obligationId: "obligation-final",
+            status: "satisfied",
+            justification: "The exact candidate passed.",
+            evidenceRefs: ["evidence-final"]
+          }],
+          outcome: "verified"
+        }
+      }
+    },
+    {
       eventId: "final",
       occurredAt: at,
       type: "final_candidate.verified",

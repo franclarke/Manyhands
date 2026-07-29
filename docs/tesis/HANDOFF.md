@@ -748,3 +748,16 @@ Cierre ticket 16:
   Standards PASS y Spec PASS, cero P0/P1/P2; Spec cero P3.
 - Retry-9/retry-10 permanecen adversos e inmutables. No hay freeze nuevo.
 - Frente recalculado desde tickets locales: 17 (`ui-evidence-honesty`).
+
+Checkpoint ticket 17 antes del gate amplio:
+
+- TDD RED: 2 fallos válidos por fallback `Verified [evidence recorded]` y por
+  aceptar final candidate sin matriz verificada exacta.
+- GREEN focal 23/23; regresiones delivery/crash/driver/model 18/18;
+  typechecks run-coordinator y web PASS con Node 22.23.1/pnpm 7.29.3.
+- El reducer conserva outcome + candidate commit por matrix id y rechaza
+  `final_candidate.verified` ausente, no verificado o de otro commit.
+- UI muestra estados verified/incomplete/failed/pending, criterios y refs;
+  publicación queda deshabilitada salvo matrix-id y commit exactos verificados.
+- Próxima operación larga: `pnpm test` completo sobre este working tree; si
+  falla, aplicar `diagnosing-bugs` y no reintentar a ciegas.

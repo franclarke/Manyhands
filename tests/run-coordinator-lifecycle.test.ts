@@ -28,9 +28,10 @@ describe("RunCoordinator lifecycle", () => {
       event(1, "run.created", { goal: "Build booking app" }),
       event(2, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
       event(3, "graph.revision.approved", { graphId: "graph-1", revision: 1 }),
-      event(4, "final_candidate.verified", candidatePayload()),
-      event(5, "delivery.started", { approval: deliveryApproval() }),
-      event(6, "delivery.published", { receipt: { receiptId: "delivery-1", manifestId: "manifest-1", destination: "main", confirmed: true } })
+      event(4, "evidence.matrix_recorded", { matrix: evidenceMatrix("verified") }),
+      event(5, "final_candidate.verified", candidatePayload()),
+      event(6, "delivery.started", { approval: deliveryApproval() }),
+      event(7, "delivery.published", { receipt: { receiptId: "delivery-1", manifestId: "manifest-1", destination: "main", confirmed: true } })
     ]);
 
     expect(state.lifecycle).toBe("completed");
@@ -50,10 +51,30 @@ describe("RunCoordinator lifecycle", () => {
       event(1, "run.created", { goal: "Build it" }),
       event(2, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
       event(3, "graph.revision.approved", { graphId: "graph-1", revision: 1 }),
-      event(4, "final_candidate.verified", candidatePayload()),
-      event(5, "delivery.started", { approval: deliveryApproval() }),
-      event(6, "delivery.published", { receipt: { receiptId: "delivery-1", manifestId: "manifest-1", destination: "main", confirmed: false } })
+      event(4, "evidence.matrix_recorded", { matrix: evidenceMatrix("verified") }),
+      event(5, "final_candidate.verified", candidatePayload()),
+      event(6, "delivery.started", { approval: deliveryApproval() }),
+      event(7, "delivery.published", { receipt: { receiptId: "delivery-1", manifestId: "manifest-1", destination: "main", confirmed: false } })
     ])).toThrow(/confirmed/i);
+  });
+
+  it("rejects a final candidate whose recorded matrix is absent or not verified", () => {
+    const prefix = [
+      event(1, "run.created", { goal: "Build it" }),
+      event(2, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
+      event(3, "graph.revision.approved", { graphId: "graph-1", revision: 1 })
+    ] as RunEvent[];
+
+    expect(() => foldRun([
+      ...prefix,
+      event(4, "evidence.matrix_recorded", { matrix: evidenceMatrix("unverified") }),
+      event(5, "final_candidate.verified", candidatePayload())
+    ])).toThrow(/verified evidence matrix/i);
+
+    expect(() => foldRun([
+      ...prefix,
+      event(4, "final_candidate.verified", candidatePayload())
+    ])).toThrow(/verified evidence matrix/i);
   });
 
   it("waits for input only when no independent work remains ready", () => {
@@ -83,7 +104,8 @@ describe("RunCoordinator lifecycle", () => {
       event(1, "run.created", { goal: "Build it" }),
       event(2, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
       event(3, "graph.revision.approved", { graphId: "graph-1", revision: 1 }),
-      event(4, "final_candidate.verified", candidatePayload())
+      event(4, "evidence.matrix_recorded", { matrix: evidenceMatrix("verified") }),
+      event(5, "final_candidate.verified", candidatePayload())
     ];
     const publish = vi.fn().mockResolvedValue({ receiptId: "delivery-1", manifestId: "manifest-1", destination: "main", confirmed: true });
     const coordinator = new RunCoordinator({
@@ -186,6 +208,22 @@ function event<T extends RunEvent["type"]>(sequence: number, type: T, payload: E
 
 function candidatePayload() {
   return { manifestId: "manifest-1", commit: "abc123", evidenceMatrixId: "matrix-1", evidenceEligible: true, executionSucceeded: true, sourceTargetFingerprint: "repo@base", targetBranch: "main", targetHead: "base-sha" } as const;
+}
+
+function evidenceMatrix(outcome: "verified" | "unverified" | "failed") {
+  return {
+    matrixId: "matrix-1",
+    candidateCommit: "abc123",
+    validationContract: { id: "validation-1", revision: "revision-1" },
+    criteria: [{
+      criterionId: "criterion-1",
+      obligationId: "obligation-1",
+      status: outcome === "verified" ? "satisfied" as const : outcome === "failed" ? "failed" as const : "uncovered" as const,
+      justification: "Observed validation outcome.",
+      evidenceRefs: ["evidence-1"]
+    }],
+    outcome
+  };
 }
 
 function deliveryApproval() {

@@ -102,6 +102,7 @@ export interface RunProjection {
   integrations: Record<string, IntegrationProjection>;
   recoveryHistory: Array<{ eventId: string; nodeId?: string; kind: "failure" | "amendment" }>;
   evidenceMatrices: string[];
+  evidenceMatrixSummaries: Record<string, { candidateCommit: string; outcome: "verified" | "unverified" | "failed" }>;
   outcomes: RunOutcomes;
   finalCandidate?: FinalCandidate;
   deliveryReceipt?: DeliveryReceipt;
@@ -135,7 +136,8 @@ export function foldRun(rawEvents: readonly RunEvent[]): RunProjection {
         integrations: {},
         recoveryHistory: [],
         evidenceMatrices: [],
-        outcomes: { ...INITIAL_RUN_OUTCOMES }
+        outcomes: { ...INITIAL_RUN_OUTCOMES },
+        evidenceMatrixSummaries: {}
       };
       continue;
     }
@@ -257,6 +259,10 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       attempt.status = "validated";
       next.nodeEvidenceMatrixIds[event.payload.nodeId] = event.payload.matrix.matrixId;
       if (!next.evidenceMatrices.includes(event.payload.matrix.matrixId)) next.evidenceMatrices.push(event.payload.matrix.matrixId);
+      next.evidenceMatrixSummaries[event.payload.matrix.matrixId] = {
+        candidateCommit: event.payload.matrix.candidateCommit,
+        outcome: event.payload.matrix.outcome
+      };
       break;
     }
     case "artifact.adopted": {
@@ -290,6 +296,10 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       attempt.candidateCommit = event.payload.candidateCommit;
       next.nodeEvidenceMatrixIds[event.payload.nodeId] = event.payload.matrix.matrixId;
       if (!next.evidenceMatrices.includes(event.payload.matrix.matrixId)) next.evidenceMatrices.push(event.payload.matrix.matrixId);
+      next.evidenceMatrixSummaries[event.payload.matrix.matrixId] = {
+        candidateCommit: event.payload.matrix.candidateCommit,
+        outcome: event.payload.matrix.outcome
+      };
       break;
     }
     case "integration.failed": {
@@ -314,6 +324,10 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot record validation evidence while ${next.lifecycle}.`);
       if (next.evidenceMatrices.includes(event.payload.matrix.matrixId)) throw new Error(`Evidence matrix ${event.payload.matrix.matrixId} already exists.`);
       next.evidenceMatrices.push(event.payload.matrix.matrixId);
+      next.evidenceMatrixSummaries[event.payload.matrix.matrixId] = {
+        candidateCommit: event.payload.matrix.candidateCommit,
+        outcome: event.payload.matrix.outcome
+      };
       break;
     case "graph.revision.proposed":
       if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot propose a graph while ${next.lifecycle}.`);
@@ -393,6 +407,10 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
     case "final_candidate.verified":
       if (!event.payload.executionSucceeded) throw new Error("A final candidate cannot be verified before execution succeeds.");
       if (!event.payload.evidenceEligible) throw new Error("A final candidate requires eligible evidence.");
+      if (next.evidenceMatrixSummaries[event.payload.evidenceMatrixId]?.outcome !== "verified"
+        || next.evidenceMatrixSummaries[event.payload.evidenceMatrixId]?.candidateCommit !== event.payload.commit) {
+        throw new Error("A final candidate requires a verified evidence matrix for the exact candidate commit.");
+      }
       if (Object.values(next.decisions).some((decision) => decision.status === "pending")) throw new Error("A final candidate cannot become ready with pending decisions.");
       next.finalCandidate = { manifestId: event.payload.manifestId, commit: event.payload.commit, evidenceMatrixId: event.payload.evidenceMatrixId, sourceTargetFingerprint: event.payload.sourceTargetFingerprint, targetBranch: event.payload.targetBranch, targetHead: event.payload.targetHead, evidenceEligible: true };
       next.outcomes = { execution: "succeeded", artifact: "verified", delivery: "ready" };

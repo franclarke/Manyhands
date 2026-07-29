@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   AUTO_FIT_ON_RUN_EVENT,
   affectedSubgraphNodeIds,
+  isFinalCandidateDeliverable,
   lifecycleMedalForNode,
   relationDisplayName
 } from "@/app/runs/[runId]/_components/cockpit-state";
@@ -57,6 +58,47 @@ describe("cockpit lifecycle medals", () => {
     });
   });
 
+  it("never labels incomplete or failed evidence as verified", () => {
+    const attempt = {
+      attemptId: "attempt-api",
+      nodeId: "api",
+      status: "validated" as const,
+      candidateCommit: "abc123def456"
+    };
+
+    expect(lifecycleMedalForNode({
+      nodeId: "api",
+      attempts: [attempt],
+      integrations: [],
+      evidenceMatrices: [{ candidateCommit: attempt.candidateCommit, outcome: "unverified", criteria: [] }],
+      delivered: false
+    })).toMatchObject({ state: "evidence_incomplete", badge: "Evidence incomplete" });
+
+    expect(lifecycleMedalForNode({
+      nodeId: "api",
+      attempts: [attempt],
+      integrations: [],
+      evidenceMatrices: [{ candidateCommit: attempt.candidateCommit, outcome: "failed", criteria: [] }],
+      delivered: false
+    })).toMatchObject({ state: "failed", badge: "Failed", detail: "Validation failed." });
+
+    expect(lifecycleMedalForNode({
+      nodeId: "api",
+      attempts: [attempt],
+      integrations: [],
+      evidenceMatrices: [],
+      delivered: false
+    })).toMatchObject({ state: "evidence_pending", badge: "Evidence pending" });
+
+    expect(lifecycleMedalForNode({
+      nodeId: "root",
+      attempts: [],
+      integrations: [{ nodeId: "root", status: "completed", candidateCommit: "root123" }],
+      evidenceMatrices: [{ candidateCommit: "root123", outcome: "unverified", criteria: [] }],
+      delivered: false
+    })).toMatchObject({ state: "evidence_incomplete", badge: "Evidence incomplete" });
+  });
+
   it("surfaces failure evidence, stale attempts, and final delivery", () => {
     expect(lifecycleMedalForNode({
       nodeId: "api",
@@ -105,6 +147,29 @@ describe("non-blocking decision scope", () => {
 
     expect(blocked.has("web")).toBe(false);
     expect(blocked.has("frontend")).toBe(false);
+  });
+});
+
+describe("delivery evidence guard", () => {
+  const candidate = { commit: "abc123", evidenceMatrixId: "matrix-1", evidenceEligible: true };
+  const verified = { matrixId: "matrix-1", candidateCommit: "abc123", outcome: "verified" };
+
+  it("allows only the exact verified matrix for a result-ready candidate", () => {
+    expect(isFinalCandidateDeliverable({
+      lifecycle: "result_ready",
+      finalCandidate: candidate,
+      evidenceMatrices: [verified]
+    })).toBe(true);
+
+    for (const evidenceMatrices of [
+      [],
+      [{ ...verified, outcome: "unverified" }],
+      [{ ...verified, outcome: "failed" }],
+      [{ ...verified, candidateCommit: "different" }],
+      [{ ...verified, matrixId: "different" }]
+    ]) {
+      expect(isFinalCandidateDeliverable({ lifecycle: "result_ready", finalCandidate: candidate, evidenceMatrices })).toBe(false);
+    }
   });
 });
 

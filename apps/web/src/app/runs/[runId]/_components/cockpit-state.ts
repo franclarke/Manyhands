@@ -18,6 +18,7 @@ type IntegrationLike = {
 };
 
 type EvidenceMatrixLike = {
+  matrixId?: unknown;
   candidateCommit?: unknown;
   outcome?: unknown;
   criteria?: unknown;
@@ -26,6 +27,8 @@ type EvidenceMatrixLike = {
 export type LifecycleMedal =
   | { state: "candidate"; badge: string; commit: string; detail?: undefined }
   | { state: "verified"; badge: string; commit?: string | undefined; detail?: undefined }
+  | { state: "evidence_incomplete"; badge: "Evidence incomplete"; commit?: string | undefined; detail?: undefined }
+  | { state: "evidence_pending"; badge: "Evidence pending"; commit?: string | undefined; detail?: undefined }
   | { state: "failed"; badge: "Failed"; detail: string; commit?: undefined }
   | { state: "stale"; badge: "Stale"; detail?: undefined; commit?: undefined }
   | { state: "delivered"; badge: "Delivered"; detail?: undefined; commit?: string | undefined }
@@ -69,9 +72,19 @@ export function lifecycleMedalForNode(input: {
     };
   }
   if (attempt?.status === "validated" || attempt?.status === "adopted" || integration?.status === "completed") {
+    if (matrix?.outcome === "failed") {
+      return { state: "failed", badge: "Failed", detail: "Validation failed." };
+    }
+    if (matrix?.outcome === "unverified") {
+      return {
+        state: "evidence_incomplete",
+        badge: "Evidence incomplete",
+        ...(commit === undefined ? {} : { commit })
+      };
+    }
     return {
-      state: "verified",
-      badge: "Verified [evidence recorded]",
+      state: "evidence_pending",
+      badge: "Evidence pending",
       ...(commit === undefined ? {} : { commit })
     };
   }
@@ -80,6 +93,20 @@ export function lifecycleMedalForNode(input: {
     return { state: "candidate", badge: `Candidate [${shortSha}]`, commit: attempt.candidateCommit };
   }
   return { state: "none", badge: "" };
+}
+
+export function isFinalCandidateDeliverable(input: {
+  lifecycle: string;
+  finalCandidate?: { commit: string; evidenceMatrixId: string; evidenceEligible: boolean } | undefined;
+  evidenceMatrices: readonly EvidenceMatrixLike[];
+}): boolean {
+  const candidate = input.finalCandidate;
+  if (input.lifecycle !== "result_ready" || candidate?.evidenceEligible !== true) return false;
+  return input.evidenceMatrices.some((matrix) => (
+    matrix.matrixId === candidate.evidenceMatrixId
+    && matrix.candidateCommit === candidate.commit
+    && matrix.outcome === "verified"
+  ));
 }
 
 export function affectedSubgraphNodeIds(

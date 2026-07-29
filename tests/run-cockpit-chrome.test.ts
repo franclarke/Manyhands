@@ -37,4 +37,14 @@ describe("run cockpit chrome", () => {
     expect(fixture).not.toContain("flex flex-wrap items-center");
     expect(fixture).not.toContain('className="mt-2 flex items-center gap-3"');
   });
+
+  it("guards delivery with the exact verified matrix and renders criterion evidence", () => {
+    const cockpit = source("apps/web/src/app/runs/[runId]/_components/run-model-view.client.tsx");
+
+    expect(cockpit).toContain("const canDeliver = isFinalCandidateDeliverable({");
+    expect(cockpit).toContain("disabled={!canDeliver}");
+    expect(cockpit).toContain("<EvidenceDetails matrices={model.evidenceMatrices}");
+    expect(cockpit).toContain("Matriz de evidencia");
+    expect(cockpit).toContain("evidenceRefs");
+  });
 });

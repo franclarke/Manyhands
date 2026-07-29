@@ -81,6 +81,7 @@ function MedalIcon({ state }: { state: LifecycleMedal["state"] }): React.ReactEl
   if (state === "verified") return <Check aria-hidden className="h-3 w-3" />;
   if (state === "delivered") return <PackageCheck aria-hidden className="h-3 w-3" />;
   if (state === "failed") return <AlertTriangle aria-hidden className="h-3 w-3" />;
+  if (state === "evidence_incomplete" || state === "evidence_pending") return <AlertTriangle aria-hidden className="h-3 w-3" />;
   return null;
 }
 
@@ -99,6 +100,16 @@ function medalVisual(state: LifecycleMedal["state"]): { border: string; badge: s
     case "failed": return {
       border: "border-red-500",
       badge: "bg-red-100 text-red-950 dark:bg-red-950/60 dark:text-red-200",
+      animation: ""
+    };
+    case "evidence_incomplete": return {
+      border: "border-amber-500",
+      badge: "bg-amber-100 text-amber-950 dark:bg-amber-950/60 dark:text-amber-200",
+      animation: ""
+    };
+    case "evidence_pending": return {
+      border: "border-dashed border-slate-400",
+      badge: "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100",
       animation: ""
     };
     case "stale": return {
