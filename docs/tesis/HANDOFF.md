@@ -859,3 +859,12 @@ Reapertura de ticket 18 por reviews del fixed point `6ab9bde`:
 - GREEN 38/38; typechecks execution-core/run-store/run-coordinator PASS.
   CLAIM-040/041 permanecen `partial`. Próxima operación larga: repetir gate
   afectado amplio antes de re-review.
+
+Gate afectado ampliado de ticket 18 después de remediation:
+
+- 66/66 PASS en 16 archivos, agregando event upcast, event source, fencing,
+  lock ownership y snapshot rebuild al conjunto de validation/V2/coordinator;
+- typechecks execution-core, run-store, run-coordinator, orchestrator-graph y
+  web PASS con Node 22.23.1/pnpm 7.29.3;
+- working tree limpio en el punto fijo documentado. Próximo paso: re-reviews
+  Standards/Spec con “No implementes correcciones”.

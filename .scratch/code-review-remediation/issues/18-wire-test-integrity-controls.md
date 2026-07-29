@@ -38,3 +38,7 @@
   cuenta `assert(...)` y siempre intenta ambos cleanups.
 - Typechecks execution-core/run-store/run-coordinator PASS. Pendiente repetir
   gate afectado amplio y re-reviews.
+- Gate afectado ampliado tras remediation: 66/66 PASS en 16 archivos, incluidos
+  run-store fencing/event-source/snapshot/upcast. Typechecks execution-core,
+  run-store, run-coordinator, orchestrator-graph y web PASS. Pendiente
+  re-reviews independientes.
