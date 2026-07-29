@@ -979,3 +979,10 @@ Octava remediation de ticket 18:
   respeta filtros, y resuelve aliases configurados por scope y especificidad;
 - 36/36 focales y typechecks execution-core/run-coordinator PASS. Próximo paso:
   reviews independientes del punto fijo; claims continúan `partial`.
+
+Reviews `656423e` de ticket 18:
+
+- ambos roles FAIL por shorthand/múltiples filtros/comillas de pnpm; Standards
+  agregó preexpansión local homónima y scope heredado desde config externo;
+- el próximo delta queda limitado a parser segmentado, evitar local expansion
+  filtrada y transportar scope del proyecto por `extends`. Claims siguen partial.

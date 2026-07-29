@@ -92,3 +92,6 @@
   específico y falsos positivos de filter/alias privado). Fix `c3cb30e`
   conserva manifest/package scope, interpreta `--filter`, prioriza patterns y
   scope de config. GREEN 36/36; typechecks execution-core/run-coordinator PASS.
+- Reviews `656423e`: ambos FAIL por shorthand/filtros múltiples o quoted de
+  pnpm. Standards agregó homónimo preexpandido localmente y scope de tsconfig
+  base externo aplicado al directorio equivocado. Ticket permanece abierto.
