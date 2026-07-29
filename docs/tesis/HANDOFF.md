@@ -1284,3 +1284,12 @@ del `1/8` histórico.
   receipt `completed` contra el SHA aprobado por el oráculo;
 - 10 archivos/80 tests afectados PASS. Ningún reviewer modificó archivos.
   Próximo paso: commit, re-reviews y freeze material sobre el punto aceptado.
+
+### Segunda re-review de ticket 20
+
+- Spec de código PASS, 0 P0/P1/P2/P3;
+- Standards confirmó los fixes previos pero aisló 1 P1: el receipt no fijaba
+  `moduleCount`, permitiendo reutilización cruzada N=4/N=8 con igual SHA/outDir;
+- RED/GREEN ahora atribuye por contrato, evaluator, SHA, `moduleCount`, outcome
+  y checks tanto antes de delivery como en `completed`; 2 archivos/7 tests
+  focales PASS. Pendiente gate afectado, commit y nuevas re-reviews.

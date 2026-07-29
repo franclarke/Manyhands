@@ -58,3 +58,13 @@
   cubre el drift.
 - 10 archivos/80 tests afectados vuelven a pasar. Pendientes: commit, re-reviews
   y luego el freeze P0/mutación señalado como P2.
+
+## Re-reviews sobre `fdcf0f1`
+
+- Spec de código PASS, 0 P0/P1/P2/P3; el P2 operativo de freeze/P0 seguía
+  correctamente pendiente.
+- Standards confirmó resueltos los tres P1 anteriores y encontró 1 P1 nuevo:
+  la atribución no comparaba `moduleCount`, por lo que un receipt N=4 podía
+  reutilizarse para N=8 con igual SHA/outDir.
+- RED/GREEN añade `moduleCount` al conjunto exacto de atribución tanto antes de
+  delivery como al reconciliar `completed`. Focal 2 archivos/7 tests PASS.

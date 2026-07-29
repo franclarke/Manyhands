@@ -95,20 +95,22 @@ describe("frozen wide graph oracle contract", () => {
       oracleContractSha256: contract.contractSha256,
       oracleEvaluatorSha256: contract.evaluator.sha256,
       verifiedSha: candidateSha,
+      moduleCount: 4,
       outcome: "pass",
       checks: contract.criterionMappings.flatMap((mapping: { checks: string[] }) => mapping.checks)
     };
 
-    expect(() => assertWideGraphOracleAttribution(contract, receipt, candidateSha)).not.toThrow();
+    expect(() => assertWideGraphOracleAttribution(contract, receipt, { candidateSha, moduleCount: 4 })).not.toThrow();
     for (const drifted of [
       { ...receipt, oracleId: "warehouse-wide-graph-v3" },
       { ...receipt, oracleContractVersion: 3 },
       { ...receipt, oracleContractSha256: "b".repeat(64) },
       { ...receipt, oracleEvaluatorSha256: "c".repeat(64) },
       { ...receipt, verifiedSha: "d".repeat(40) },
+      { ...receipt, moduleCount: 8 },
       { ...receipt, checks: receipt.checks.filter((check: string) => check !== "specimen-values") }
     ]) {
-      expect(() => assertWideGraphOracleAttribution(contract, drifted, candidateSha))
+      expect(() => assertWideGraphOracleAttribution(contract, drifted, { candidateSha, moduleCount: 4 }))
         .toThrow(/oracle attribution mismatch/iu);
     }
   });

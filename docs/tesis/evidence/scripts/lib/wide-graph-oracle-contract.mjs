@@ -112,13 +112,14 @@ export async function assertWideGraphOracleConfiguration(config, root = REPOSITO
   return assertFrozenWideGraphOracleContract(config.oracleContract, root);
 }
 
-export function assertWideGraphOracleAttribution(contract, receipt, candidateSha) {
+export function assertWideGraphOracleAttribution(contract, receipt, expectedCandidate) {
   const expected = {
     oracleId: contract.oracleId,
     oracleContractVersion: contract.oracleContractVersion,
     oracleContractSha256: contract.contractSha256,
     oracleEvaluatorSha256: contract.evaluator.sha256,
-    verifiedSha: candidateSha,
+    verifiedSha: expectedCandidate.candidateSha,
+    moduleCount: expectedCandidate.moduleCount,
     outcome: "pass"
   };
   const mismatches = Object.entries(expected)

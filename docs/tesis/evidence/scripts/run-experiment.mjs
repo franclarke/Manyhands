@@ -135,7 +135,10 @@ async function drive(runId) {
         oracleAttempted = true;
         const oracle = await verifyExternalOracle(candidate.commit);
         try {
-          assertWideGraphOracleAttribution(oracleContract, oracle, candidate.commit);
+          assertWideGraphOracleAttribution(oracleContract, oracle, {
+            candidateSha: candidate.commit,
+            moduleCount: config.moduleCount
+          });
         } catch (error) {
           return terminal(runId, lifecycle, view, error instanceof Error ? error.message : String(error));
         }
@@ -234,7 +237,10 @@ async function assertCompletedDelivery(view) {
   }
   const output = join(outDir, "oracle-result.json");
   const receipt = JSON.parse(await readFile(output, "utf8"));
-  assertWideGraphOracleAttribution(oracleContract, receipt, finalSha);
+  assertWideGraphOracleAttribution(oracleContract, receipt, {
+    candidateSha: finalSha,
+    moduleCount: config.moduleCount
+  });
 }
 
 /** Pending decisions come from the durable journal, the same source the UI reads. */

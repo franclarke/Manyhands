@@ -106,10 +106,11 @@ contrato y mapeo explícito de criterios a checks. El preflight rechaza ausencia
 drift de assets o divergencia manifest–celda antes de crear un run, sin depender
 del nombre de la celda. Cuando hay un candidato exacto en `result_ready`, el
 driver ejecuta el oráculo una sola vez y sólo envía la aprobación de delivery si
-el recibo PASS coincide en id/versión/hashes/SHA y contiene todos los checks
-mapeados. Al observar `completed`, vuelve a exigir que el delivery receipt nombre
-ese mismo SHA. Tras un restart se reutiliza el recibo preservado; nunca se
-reejecuta para buscar otro resultado.
+el recibo PASS coincide en id/versión/hashes/SHA/`moduleCount` y contiene todos
+los checks mapeados. Al observar `completed`, vuelve a exigir que el delivery
+receipt nombre ese mismo SHA y que el receipt externo corresponda al ancho de la
+celda. Tras un restart se reutiliza el recibo preservado; nunca se reejecuta para
+buscar otro resultado.
 
 ## Mediciones requeridas
 
