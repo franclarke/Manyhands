@@ -1092,3 +1092,90 @@ nueva usando `docs/tesis/NEXT_AGENT_GOAL_PROMPT.md`.
 - branch `main`, sin push. El siguiente agente debe exigir árbol limpio y
   verificar que `d593b53` sea ancestro de HEAD, leer ticket 19 completo y sólo
   entonces iniciar la próxima fase.
+
+## Decisión de alcance: cierre Warehouse compacto — 2026-07-29
+
+La tesis debe terminar con un demostrador Warehouse completo y, a la vez, usar
+su construcción para descubrir fallas que sólo aparecen durante ejecuciones
+end-to-end. No se retomará, sin embargo, la cadena original como ocho
+incrementos: ese fraccionamiento agrega costo de preparación, ejecución y
+oráculo sin aportar ocho fronteras técnicas realmente independientes.
+
+### Evidencia histórica que no cambia
+
+- W1 continúa siendo la única entrega externamente verificada de la serie
+  longitudinal original, sobre el commit exacto
+  `71f61c9efa222103ca2fb2f67692434ab493d75c`;
+- el resultado original permanece en `1/8`. Los intentos W2 y la ausencia de
+  W3–W8 no se reescriben, reanudan ni reinterpretan como éxito;
+- los prompts, oráculos, receipts y artefactos W1–W8 existentes son evidencia
+  histórica inmutable;
+- el trabajo compacto será una serie sucesora nueva para completar y validar el
+  producto. No eleva retrospectivamente el resultado del experimento original.
+
+### Serie sucesora recomendada: W1 + tres incrementos
+
+W1 se conserva como fundación verificada. Quedan sólo tres incrementos
+acumulativos nuevos, cada uno con base exacta en la entrega verificada anterior:
+
+1. **WC1 — Operación visible** — absorbe las capacidades previstas en W2–W4:
+   pedidos y reservas atómicas, transiciones de estado validadas, torre de
+   control SVG con heatmap y detalle textual, API versionada, SSE monotónico y
+   controles deterministas de simulación (`play`, `pause`, `step`, `reset`).
+2. **WC2 — Planificación de fulfillment** — absorbe W5–W6: rutas de picking
+   conectadas y reproducibles, overlay visual y textual, olas con capacidad de
+   pickers, pedidos no asignados explicados y costo sensible a congestión.
+3. **WC3 — Durabilidad y cierre operativo** — absorbe W7–W8: journal append-only,
+   snapshots y replay con hash exacto, timeline y errores de corrupción
+   accionables, analytics derivados de eventos, alertas, estados
+   loading/empty/error/connected, navegación completa por teclado, reduced
+   motion y comunicación no dependiente sólo del color.
+
+Esta es la granularidad mínima útil: WC1 prueba el plano transaccional y de
+control, WC2 el plano de decisión operativa y WC3 el plano de persistencia,
+observabilidad y calidad de producto. Reducirlo a uno o dos incrementos haría
+los fallos demasiado difíciles de localizar; conservar siete incrementos
+restantes multiplicaría el costo sin mejorar proporcionalmente el diagnóstico.
+
+### Reglas de costo, diagnóstico y aceptación
+
+- antes de ejecutar WC1 debe existir un ticket local sucesor y una enmienda
+  explícita al plan/protocolo. La fuente de estado y aceptación continúa siendo
+  exclusivamente `.scratch/code-review-remediation/issues/`;
+- los tres prompts, probes y oráculos compactos deben congelarse antes de la
+  primera ejecución. No se reutilizan ni se editan W2–W8 para acomodar esta
+  serie;
+- una sola candidate execution y una sola entrega/oráculo por incremento. No
+  hay reintentos ciegos ni ajuste de fórmula, threshold, estímulo u oráculo para
+  favorecer el resultado;
+- todo fallo se preserva y se diagnostica como hallazgo de producto. La
+  corrección se realiza con TDD y `diagnosing-bugs`, seguida por un nuevo
+  protocolo sucesor explícito si hace falta otra medición;
+- cada incremento debe tener presupuesto máximo de tiempo/tokens documentado,
+  regla de corte y receipt completo. Un fallo pre-candidate recibe `not_run` en
+  el oráculo;
+- sólo se avanza desde el commit exacto externamente verificado del incremento
+  anterior. Código, configuración y modelo permanecen fijos dentro de cada
+  celda;
+- Codex es el único ejecutor permitido. La condición continúa siendo C y la
+  configuración de modelo/esfuerzo debe congelarse de manera uniforme antes de
+  iniciar la serie;
+- WC3 sólo pasa con tests, typechecks, builds, probe determinista, oráculo
+  externo y revisión visual/accesible del recorrido completo.
+
+### Integración con el cierre pendiente
+
+La serie compacta debe ejecutarse con ManyHands ya endurecido por los tickets
+19–26 y antes de rederivar claims o cerrar los artefactos académicos. La ruta de
+alto nivel pasa a ser:
+
+`19 -> 20 -> 21 -> 22 -> 23 -> 24 -> 25 -> 26 -> 11 -> 12 -> 02 -> serie
+Warehouse compacta (WC1 -> WC2 -> WC3) -> 14 -> 15`.
+
+El próximo agente **no debe iniciar WC1 desde este HANDOFF**. Primero debe
+terminar la ruta técnica previa y, al llegar a esta frontera, crear/reclamar el
+ticket local sucesor, reconciliar `AUTONOMOUS_CLOSURE_PLAN.md`, registrar los
+claims nuevos o modificados y congelar el protocolo compacto. La definición de
+terminado del demostrador exige las capacidades acumuladas de W1, WC1, WC2 y
+WC3; la conclusión académica deberá distinguir claramente ese resultado final
+del `1/8` histórico.
