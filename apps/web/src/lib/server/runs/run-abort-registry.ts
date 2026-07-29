@@ -8,7 +8,7 @@ import { globalSingleton } from "../global-singleton";
  * runner and the aborting route live in different Next route bundles.
  */
 const controllers = globalSingleton(
-  "run-abort-registry",
+  "run-abort-registry:v2",
   () => new Map<string, { operationId: string; controller: AbortController }>()
 );
 

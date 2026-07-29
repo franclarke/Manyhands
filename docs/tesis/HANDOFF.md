@@ -1354,5 +1354,9 @@ del `1/8` histórico.
 - gate ampliado 8 archivos/35 tests PASS; typechecks de `@manyhands/run-store`
   y web PASS. Suite raíz exacta: 215 archivos, 1490 tests passed, 2 skipped;
   build de los 12 packages y web build PASS con Node `v22.23.1` y pnpm `7.29.3`;
+- la re-review Standards halló P2 de compatibilidad HMR: la nueva forma del
+  abort registry reutilizaba su clave legacy. RED reprodujo el TypeError;
+  GREEN versiona la clave `run-abort-registry:v2`, con 3 archivos/7 tests y
+  web typecheck PASS;
 - CLAIM-053 permanece `partial` por los gaps de tickets 23–25. Sólo quedan
   pendientes las re-reviews independientes Standards/Spec antes del cierre.

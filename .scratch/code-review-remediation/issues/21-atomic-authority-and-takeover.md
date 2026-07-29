@@ -38,6 +38,9 @@
   8 archivos/35 tests PASS; typechecks de `@manyhands/run-store` y web PASS.
 - Suite raíz final PASS: 215 archivos, 1490 tests passed y 2 skipped. Build de
   los 12 packages y web build PASS con Node `v22.23.1` y pnpm `7.29.3`.
+- La re-review Standards detectó P2 por reutilizar la clave global legacy tras
+  cambiar la forma del registry. RED reprodujo el TypeError bajo HMR; GREEN
+  versiona `run-abort-registry:v2`: 3 archivos/7 tests y web typecheck PASS.
 - CLAIM-053 continúa `partial`: este ticket cierra autoridad/takeover, pero no
   anticipa recovery/scheduling, journal de integración ni stores/traces de
   tickets 23–25.

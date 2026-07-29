@@ -34,7 +34,9 @@ para que el cleanup tardío del dueño reemplazado no desregistre al sucesor.
 Ejecución y delivery registran además un controller por operación; después del
 aborto, la capa de supervisión rechaza un nuevo spawn antes de crearlo. El
 `verifiedAt` del receipt y el heartbeat de la lease publicada se toman después
-de verificar `allDead`, no al comenzar la reconciliación.
+de verificar `allDead`, no al comenzar la reconciliación. La clave global del
+registry se versiona cuando cambia la forma de sus valores, para que HMR no
+interprete controllers legacy como entradas operation-aware.
 
 El repository lease protege mutaciones sobre un target compartido. No se
 reemplaza con booleans in-process.
