@@ -88,3 +88,7 @@
   identidad: `--filter` enlaza scripts homónimos ajenos, nombres con punto no se
   tokenizan, wildcard tsconfig no usa el más específico y aliases privados se
   fusionan globalmente. Los controles previos permanecen PASS.
+- RED de identidad: cuatro fallos válidos (script con punto, wildcard más
+  específico y falsos positivos de filter/alias privado). Fix `c3cb30e`
+  conserva manifest/package scope, interpreta `--filter`, prioriza patterns y
+  scope de config. GREEN 36/36; typechecks execution-core/run-coordinator PASS.

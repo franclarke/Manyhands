@@ -970,3 +970,12 @@ Reviews `8ce8955` de ticket 18:
   wildcard tsconfig y mezcla aliases privados homónimos;
 - imports/JSONC/extends y presupuesto compartido permanecen resueltos. Próximo
   delta conserva identidad y scope declarados. CLAIM-040/041 siguen `partial`.
+
+Octava remediation de ticket 18:
+
+- RED: script `unit.test`, precedencia de wildcard y falsos positivos por
+  `--filter`/alias privado homónimo;
+- fix `c3cb30e` conserva manifest origen y package name al expandir scripts,
+  respeta filtros, y resuelve aliases configurados por scope y especificidad;
+- 36/36 focales y typechecks execution-core/run-coordinator PASS. Próximo paso:
+  reviews independientes del punto fijo; claims continúan `partial`.
