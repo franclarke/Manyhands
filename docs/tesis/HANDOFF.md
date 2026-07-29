@@ -761,3 +761,13 @@ Checkpoint ticket 17 antes del gate amplio:
   publicación queda deshabilitada salvo matrix-id y commit exactos verificados.
 - Próxima operación larga: `pnpm test` completo sobre este working tree; si
   falla, aplicar `diagnosing-bugs` y no reintentar a ciegas.
+
+Diagnóstico del primer gate amplio de ticket 17:
+
+- el wrapper cortó `pnpm test` a los 124 s con exit 124, sin resumen terminal;
+  no es PASS ni fallo de test;
+- inspección de procesos confirmó que no quedó Vitest activo; el único Node
+  coincidente es el servidor preservado retry-10 en 3001;
+- working tree limpio en `07b789d`; no hubo mutación ni reintento ciego;
+- próxima operación larga: una ejecución única de `pnpm test` con timeout 300 s
+  usando el mismo Node 22.23.1/pnpm 7.29.3.
