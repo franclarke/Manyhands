@@ -559,7 +559,7 @@ function testScriptsFromManifest(contents: string | null, manifestPath: string):
       const command = commands[pending.shift()!];
       if (command === undefined) continue;
       const localTargets = referencedPackageScriptTargets(command)
-        .filter((target) => target.filter === undefined && !target.allWorkspaces)
+        .filter((target) => target.selectors.length === 0 && target.directory === undefined && !target.allWorkspaces)
         .map((target) => target.name);
       for (const referenced of localTargets) {
         if (commands[referenced] !== undefined && !relevant.has(referenced)) {
@@ -596,9 +596,7 @@ function expandReferencedScripts(
     for (const [identity, candidateCommand] of Object.entries(available)) {
       const manifest = identity.slice(0, identity.indexOf("#scripts."));
       const name = identity.slice(identity.indexOf("#scripts.") + 9);
-      const matches = targets.some((target) => target.name === name && (target.filter !== undefined
-        ? packageNames[manifest] === target.filter
-        : target.allWorkspaces || manifest === sourceManifest));
+      const matches = targets.some((target) => target.name === name && matchesWorkspaceTarget(target, manifest, packageNames[manifest], sourceManifest));
       if (!matches || selectedNames.has(identity)) continue;
       selectedNames.add(identity);
       selected[identity] = candidateCommand;
@@ -607,13 +605,21 @@ function expandReferencedScripts(
   }
 }
 
-function referencedPackageScriptTargets(command: string): Array<{ name: string; filter?: string; allWorkspaces: boolean }> {
+interface PackageScriptTarget {
+  name: string;
+  selectors: string[];
+  directory?: string;
+  allWorkspaces: boolean;
+}
+
+function referencedPackageScriptTargets(command: string): PackageScriptTarget[] {
   return command.split(/&&|\|\||;/u).flatMap((segment) => {
     if (!/\b(?:npm|pnpm|yarn|bun)\b/u.test(segment)) return [];
     const tokens = segment.match(/"[^"]+"|'[^']+'|[^\s]+/gu)?.map((token) => token.replace(/^['"]|['"]$/gu, "")) ?? [];
     const managerIndex = tokens.findIndex((token) => ["npm", "pnpm", "yarn", "bun"].includes(token));
     if (managerIndex < 0) return [];
     const filters: string[] = [];
+    let directory: string | undefined;
     let allWorkspaces = false;
     let name: string | undefined;
     for (let index = managerIndex + 1; index < tokens.length; index += 1) {
@@ -626,6 +632,23 @@ function referencedPackageScriptTargets(command: string): Array<{ name: string; 
       }
       if (token.startsWith("--filter=")) {
         filters.push(token.slice("--filter=".length));
+        continue;
+      }
+      if (token === "-C" || token === "--dir" || token === "--workspace") {
+        const value = tokens[index + 1];
+        if (value !== undefined) {
+          if (token === "--workspace") filters.push(value);
+          else directory = value;
+        }
+        index += 1;
+        continue;
+      }
+      if (token.startsWith("--dir=")) {
+        directory = token.slice("--dir=".length);
+        continue;
+      }
+      if (token.startsWith("--workspace=")) {
+        filters.push(token.slice("--workspace=".length));
         continue;
       }
       if (token === "-r" || token === "--recursive") {
@@ -642,10 +665,26 @@ function referencedPackageScriptTargets(command: string): Array<{ name: string; 
       break;
     }
     if (name === undefined) return [];
-    return filters.length === 0
-      ? [{ name, allWorkspaces }]
-      : filters.map((filter) => ({ name, filter, allWorkspaces }));
+    return [{ name, selectors: filters, ...(directory !== undefined ? { directory } : {}), allWorkspaces }];
   });
+}
+
+function matchesWorkspaceTarget(target: PackageScriptTarget, manifest: string, packageName: string | undefined, sourceManifest: string): boolean {
+  const manifestDirectory = path.posix.dirname(manifest);
+  if (target.directory !== undefined) return manifestDirectory === path.posix.normalize(target.directory.replaceAll("\\", "/"));
+  if (target.selectors.length === 0) return target.allWorkspaces || manifest === sourceManifest;
+  const positives = target.selectors.filter((selector) => !selector.startsWith("!"));
+  const exclusions = target.selectors.filter((selector) => selector.startsWith("!")).map((selector) => selector.slice(1));
+  const selected = positives.length === 0 || positives.some((selector) => matchesWorkspaceSelector(selector, manifestDirectory, packageName));
+  return selected && !exclusions.some((selector) => matchesWorkspaceSelector(selector, manifestDirectory, packageName));
+}
+
+function matchesWorkspaceSelector(selector: string, manifestDirectory: string, packageName: string | undefined): boolean {
+  if (selector.startsWith("./") || selector.includes("*")) {
+    const expression = `^${selector.replace(/^\.\//u, "").replace(/[.+?^${}()|[\]\\]/gu, "\\$&").replaceAll("*", ".*")}$`;
+    return new RegExp(expression, "u").test(manifestDirectory);
+  }
+  return packageName === selector;
 }
 
 function packageNameFromManifest(contents: string | null): string | undefined {
