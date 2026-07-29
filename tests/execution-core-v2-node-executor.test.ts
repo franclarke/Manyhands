@@ -478,6 +478,26 @@ describe("ExactCandidateValidatorV2", () => {
       baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'import "./select-tests.mjs";', "scripts/select-tests.mjs": "runAll();" },
       candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'import "./select-tests.mjs";', "scripts/select-tests.mjs": "process.exit(0);" },
       expectedPath: "scripts/select-tests.mjs"
+    }],
+    ["workspace package alias", ["packages/test-selector/src/index.ts"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'import "@repo/test-selector";', "packages/test-selector/package.json": JSON.stringify({ name: "@repo/test-selector", exports: "./src/index.ts" }), "packages/test-selector/src/index.ts": "runAll();" },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'import "@repo/test-selector";', "packages/test-selector/package.json": JSON.stringify({ name: "@repo/test-selector", exports: "./src/index.ts" }), "packages/test-selector/src/index.ts": "process.exit(0);" },
+      expectedPath: "packages/test-selector/src/index.ts"
+    }],
+    ["NodeNext source mapping", ["scripts/select-tests.ts"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'import "./select-tests.js";', "scripts/select-tests.ts": "runAll();" },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'import "./select-tests.js";', "scripts/select-tests.ts": "process.exit(0);" },
+      expectedPath: "scripts/select-tests.ts"
+    }],
+    ["literal selector data", ["scripts/test-selection.json"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'readFileSync("./test-selection.json");', "scripts/test-selection.json": "all" },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'readFileSync("./test-selection.json");', "scripts/test-selection.json": "smoke" },
+      expectedPath: "scripts/test-selection.json"
+    }],
+    ["opaque dynamic selector", ["scripts/select-tests.mjs"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": "const selector = process.env.TEST_SELECTOR; await import(selector);", "scripts/select-tests.mjs": "runAll();" },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": "const selector = process.env.TEST_SELECTOR; await import(selector);", "scripts/select-tests.mjs": "process.exit(0);" },
+      expectedPath: "scripts/run-tests.mjs"
     }]
   ] as const)("rejects coverage narrowed through %s", async (_label, changedFiles, fixture) => {
     const snapshot = bookingSnapshot();
@@ -491,6 +511,24 @@ describe("ExactCandidateValidatorV2", () => {
     const evidence = await validator.validate({ runId: "run-input", attemptId: "attempt-input", contract: compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!, candidateCommit: candidate, baselineCommit: compiled.graph.baseCommit });
     expect(evidence.outcome).toBe("failed");
     expect(evidence.integrityFindings).toContainEqual(expect.objectContaining({ code: "test_configuration_changed", path: fixture.expectedPath }));
+  });
+
+  it("does not treat a production-only script dependency as test configuration", async () => {
+    const snapshot = bookingSnapshot();
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: snapshot }, compilerDependencies);
+    const candidate = "4".repeat(40);
+    const baseline = compiled.graph.baseCommit;
+    const git = new FakeGitRunner({
+      diffRangeNameOnly: ["scripts/dev-renderer.mjs"],
+      showFileByRef: {
+        [baseline]: { "package.json": JSON.stringify({ scripts: { test: "vitest run", dev: "node scripts/dev.mjs" } }), "scripts/dev.mjs": 'import "./dev-renderer.mjs";', "scripts/dev-renderer.mjs": "render();" },
+        [candidate]: { "package.json": JSON.stringify({ scripts: { test: "vitest run", dev: "node scripts/dev.mjs" } }), "scripts/dev.mjs": 'import "./dev-renderer.mjs";', "scripts/dev-renderer.mjs": "renderSafely();" }
+      }
+    });
+    const validator = new ExactCandidateValidatorV2({ git, worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) } });
+    const evidence = await validator.validate({ runId: "run-dev", attemptId: "attempt-dev", contract: compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!, candidateCommit: candidate, baselineCommit: baseline });
+    expect(evidence.outcome).toBe("verified");
+    expect(evidence.integrityFindings).toEqual([]);
   });
 
   it("persists and rejects a feasible negative control that stays green on the baseline", async () => {

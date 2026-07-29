@@ -56,7 +56,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       ...(this.options.operationId !== undefined ? { operationId: this.options.operationId } : {}),
       ...(input.signal !== undefined ? { signal: input.signal } : {})
     };
-    const integrity = await this.inspectTestIntegrity(input.baselineCommit, input.candidateCommit);
+    const integrity = await this.inspectTestIntegrity(input.baselineCommit, input.candidateCommit, input.signal);
     const validated = await validateExactCandidate({
       recipe,
       obligations: input.contract.validation.obligations,
@@ -112,7 +112,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     };
   }
 
-  private async inspectTestIntegrity(baselineCommit: string, candidateCommit: string): Promise<{
+  private async inspectTestIntegrity(baselineCommit: string, candidateCommit: string, signal?: AbortSignal): Promise<{
     findings: ReturnType<typeof detectTestIntegrityFindings>;
     candidateTestContents: Record<string, string>;
   }> {
@@ -148,6 +148,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     const configurationPaths = new Set(changedFiles.filter(isTestDiscoveryConfigurationPath));
     const manifestPaths = manifestAncestors(changedFiles);
     const validationCommands: Array<{ directory: string; command: string }> = [];
+    const workspacePackages = new Map<string, string[]>();
     for (const manifestPath of [...manifestPaths].sort()) {
       const [baselineManifest, candidateManifest] = await Promise.all([
         this.options.git.showFile({ cwd: this.options.repoRoot, ref: baselineCommit, path: manifestPath }),
@@ -159,9 +160,13 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       Object.assign(candidateScripts, candidateManifestScripts);
       const directory = path.posix.dirname(manifestPath);
       validationCommands.push(...[...Object.values(baselineManifestScripts), ...Object.values(candidateManifestScripts)].map((command) => ({ directory, command })));
+      for (const manifest of [baselineManifest, candidateManifest]) {
+        const workspacePackage = workspacePackageFromManifest(manifest, manifestPath);
+        if (workspacePackage !== undefined) workspacePackages.set(workspacePackage.name, workspacePackage.entries);
+      }
       if (changedFiles.includes(manifestPath) && embeddedTestConfigChanged(baselineManifest, candidateManifest)) configurationPaths.add(manifestPath);
     }
-    for (const referenced of await this.changedValidationDependencies(validationCommands, changedFiles, baselineCommit, candidateCommit)) configurationPaths.add(referenced);
+    for (const referenced of await this.changedValidationDependencies(validationCommands, changedFiles, baselineCommit, candidateCommit, workspacePackages, signal)) configurationPaths.add(referenced);
     return {
       findings: detectTestIntegrityFindings({
         baselineTestFiles: [...baselineFiles].sort(),
@@ -180,15 +185,23 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     commands: readonly { directory: string; command: string }[],
     changedFiles: readonly string[],
     baselineCommit: string,
-    candidateCommit: string
+    candidateCommit: string,
+    workspacePackages: ReadonlyMap<string, readonly string[]>,
+    signal?: AbortSignal
   ): Promise<string[]> {
     const changed = new Set(changedFiles.map((file) => file.replaceAll("\\", "/")));
     const found = new Set<string>();
-    const pending = commands.flatMap(({ directory, command }) => commandFileReferences(directory, command));
+    const pending = commands.flatMap(({ directory, command }) => commandFileReferences(directory, command)).map((file) => ({ file, depth: 0 }));
     const visited = new Set<string>();
+    let inspectedBytes = 0;
     while (pending.length > 0) {
-      const file = pending.shift()!;
+      signal?.throwIfAborted();
+      const { file, depth } = pending.shift()!;
       if (visited.has(file)) continue;
+      if (visited.size >= 256 || depth > 16 || inspectedBytes > 1_048_576) {
+        found.add("validation-dependency-budget");
+        break;
+      }
       visited.add(file);
       if (changed.has(file)) found.add(file);
       const [baseline, candidate] = await Promise.all([
@@ -197,7 +210,16 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       ]);
       for (const contents of [baseline, candidate]) {
         if (contents === null) continue;
-        for (const reference of moduleReferences(contents)) pending.push(...resolvedReferenceCandidates(path.posix.dirname(file), reference));
+        inspectedBytes += Buffer.byteLength(contents, "utf8");
+        if (inspectedBytes > 1_048_576) {
+          found.add("validation-dependency-budget");
+          pending.length = 0;
+          break;
+        }
+        if (hasOpaqueValidationDependency(contents)) found.add(file);
+        for (const reference of moduleReferences(contents)) {
+          pending.push(...resolvedModuleReferenceCandidates(path.posix.dirname(file), reference, workspacePackages).map((candidatePath) => ({ file: candidatePath, depth: depth + 1 })));
+        }
       }
     }
     return [...found].sort();
@@ -258,8 +280,12 @@ function commandFileReferences(directory: string, command: string): string[] {
 
 function moduleReferences(contents: string): string[] {
   const references: string[] = [];
-  for (const match of contents.matchAll(/(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire\s*\()\s*["']([^"']+)["']/gu)) references.push(match[1]!);
-  return references.filter((reference) => reference.startsWith("."));
+  for (const match of contents.matchAll(/(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire(?:\.resolve)?\s*\(|\b(?:readFileSync|spawn|execFile)\s*\()\s*["']([^"']+)["']/gu)) references.push(match[1]!);
+  return references;
+}
+
+function hasOpaqueValidationDependency(contents: string): boolean {
+  return /\b(?:import|require(?:\.resolve)?|readFileSync|spawn|execFile)\s*\(\s*[^"'\s]/u.test(contents);
 }
 
 function looksLikeFileReference(value: string): boolean {
@@ -271,8 +297,47 @@ function resolvedReferenceCandidates(directory: string, reference: string): stri
   if (path.posix.isAbsolute(normalized)) return [];
   const resolved = path.posix.normalize(path.posix.join(directory === "." ? "" : directory, normalized)).replace(/^\.\//u, "");
   if (resolved === ".." || resolved.startsWith("../")) return [];
-  if (path.posix.extname(resolved) !== "") return [resolved];
+  const extension = path.posix.extname(resolved);
+  if (extension !== "") {
+    const nodeNextSources = extension === ".js"
+      ? [resolved.slice(0, -3) + ".ts", resolved.slice(0, -3) + ".tsx"]
+      : extension === ".mjs"
+        ? [resolved.slice(0, -4) + ".mts", resolved.slice(0, -4) + ".ts"]
+        : extension === ".cjs"
+          ? [resolved.slice(0, -4) + ".cts", resolved.slice(0, -4) + ".ts"]
+          : [];
+    return [resolved, ...nodeNextSources];
+  }
   return [resolved, ...[".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json"].map((extension) => `${resolved}${extension}`), ...[".ts", ".js", ".mjs", ".cjs"].map((extension) => `${resolved}/index${extension}`)];
+}
+
+function resolvedModuleReferenceCandidates(
+  directory: string,
+  reference: string,
+  workspacePackages: ReadonlyMap<string, readonly string[]>
+): string[] {
+  if (reference.startsWith(".")) return resolvedReferenceCandidates(directory, reference);
+  const packageName = reference.startsWith("@") ? reference.split("/").slice(0, 2).join("/") : reference.split("/")[0]!;
+  const entries = workspacePackages.get(packageName);
+  if (entries === undefined) return [];
+  const subpath = reference.slice(packageName.length).replace(/^\//u, "");
+  return subpath.length === 0 ? [...entries] : resolvedReferenceCandidates(path.posix.dirname(entries[0]!), `./${subpath}`);
+}
+
+function workspacePackageFromManifest(contents: string | null, manifestPath: string): { name: string; entries: string[] } | undefined {
+  const manifest = parseManifest(contents);
+  if (typeof manifest.name !== "string" || manifest.name.length === 0) return undefined;
+  const directory = path.posix.dirname(manifestPath);
+  const declaredEntries = [manifest.exports, manifest.module, manifest.main, manifest.types].flatMap(manifestEntryStrings);
+  const entries = (declaredEntries.length > 0 ? declaredEntries : ["./src/index.ts", "./index.ts", "./index.js"])
+    .flatMap((entry) => resolvedReferenceCandidates(directory, entry));
+  return { name: manifest.name, entries: [...new Set(entries)] };
+}
+
+function manifestEntryStrings(value: unknown): string[] {
+  if (typeof value === "string") return [value];
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return [];
+  return Object.values(value as Record<string, unknown>).flatMap(manifestEntryStrings);
 }
 
 function embeddedTestConfigChanged(baseline: string | null, candidate: string | null): boolean {
@@ -298,13 +363,28 @@ function testScriptsFromManifest(contents: string | null, manifestPath: string):
     if (scripts === null || typeof scripts !== "object" || Array.isArray(scripts)) return {};
     const commands = Object.fromEntries(Object.entries(scripts as Record<string, unknown>)
       .filter((entry): entry is [string, string] => typeof entry[1] === "string"));
-    // Workspace filters, task runners and custom wrappers can invoke scripts
-    // indirectly. Treat every script change in a changed manifest as relevant
-    // instead of blessing an unproven subset as coverage-neutral.
-    return Object.fromEntries(Object.keys(commands).sort().map((name) => [`${manifestPath}#scripts.${name}`, commands[name]!]));
+    const relevant = new Set(Object.keys(commands).filter((name) => name === "test" || name === "pretest" || name === "posttest" || name.startsWith("test:")));
+    const pending = [...relevant];
+    while (pending.length > 0) {
+      const command = commands[pending.shift()!];
+      if (command === undefined) continue;
+      for (const referenced of referencedPackageScripts(command, Object.keys(commands))) {
+        if (commands[referenced] !== undefined && !relevant.has(referenced)) {
+          relevant.add(referenced);
+          pending.push(referenced);
+        }
+      }
+    }
+    return Object.fromEntries([...relevant].sort().map((name) => [`${manifestPath}#scripts.${name}`, commands[name]!]));
   } catch {
     return {};
   }
+}
+
+function referencedPackageScripts(command: string, scriptNames: readonly string[]): string[] {
+  if (!/\b(?:npm|pnpm|yarn|bun)\b/u.test(command)) return [];
+  const tokens = new Set(command.match(/[A-Za-z0-9:_-]+/gu) ?? []);
+  return scriptNames.filter((name) => tokens.has(name));
 }
 
 function safeSandboxPath(root: string, relativePath: string): string {
