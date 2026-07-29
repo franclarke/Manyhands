@@ -207,24 +207,28 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       signal?.throwIfAborted();
       const { file, depth } = pending.shift()!;
       if (visited.has(file)) continue;
-      if (visited.size >= 256 || depth > 16 || inspectedBytes > 1_048_576) {
+      if (visited.size >= 256 || depth > 16 || inspectedBytes >= 1_048_576) {
         found.add("validation-dependency-budget");
         break;
       }
       visited.add(file);
       if (changed.has(file)) found.add(file);
-      const [baseline, candidate] = await Promise.all([
-        this.options.git.showFile({ cwd: this.options.repoRoot, ref: baselineCommit, path: file }),
-        this.options.git.showFile({ cwd: this.options.repoRoot, ref: candidateCommit, path: file })
-      ]);
+      const baseline = await this.options.git.showFile(
+        { cwd: this.options.repoRoot, ref: baselineCommit, path: file },
+        { ...(signal !== undefined ? { signal } : {}), maxBytes: 1_048_576 - inspectedBytes }
+      );
+      inspectedBytes += baseline === null ? 0 : Buffer.byteLength(baseline, "utf8");
+      if (inspectedBytes >= 1_048_576) {
+        found.add("validation-dependency-budget");
+        break;
+      }
+      const candidate = await this.options.git.showFile(
+        { cwd: this.options.repoRoot, ref: candidateCommit, path: file },
+        { ...(signal !== undefined ? { signal } : {}), maxBytes: 1_048_576 - inspectedBytes }
+      );
+      inspectedBytes += candidate === null ? 0 : Buffer.byteLength(candidate, "utf8");
       for (const contents of [baseline, candidate]) {
         if (contents === null) continue;
-        inspectedBytes += Buffer.byteLength(contents, "utf8");
-        if (inspectedBytes > 1_048_576) {
-          found.add("validation-dependency-budget");
-          pending.length = 0;
-          break;
-        }
         if (hasOpaqueValidationDependency(contents) && (changed.has(file) || [...changed].some((changedFile) => path.posix.dirname(changedFile) === path.posix.dirname(file)))) found.add(file);
         for (const reference of moduleReferences(contents)) {
           pending.push(...resolvedModuleReferenceCandidates(path.posix.dirname(file), reference, moduleAliases).map((candidatePath) => ({ file: candidatePath, depth: depth + 1 })));
