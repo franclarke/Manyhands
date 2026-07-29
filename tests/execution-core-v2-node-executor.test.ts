@@ -1,3 +1,6 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { compileGraphRevision } from "@manyhands/decomposer";
 import {
@@ -335,6 +338,130 @@ describe("ExactCandidateValidatorV2", () => {
     expect(evidence.criteria.every((criterion) => criterion.status === "satisfied")).toBe(true);
     expect(git.opsInvoked().filter((operation) => operation === "worktreeAdd")).toHaveLength(2);
     expect(git.opsInvoked().filter((operation) => operation === "worktreeRemove")).toHaveLength(2);
+  });
+
+  it.each([
+    ["deleted test", null, "test_removed"],
+    ["skipped test", 'it.skip("works", () => { expect(run()).toBe(true); });', "test_skipped"],
+    ["focused test", 'it.only("works", () => { expect(run()).toBe(true); });', "test_only"],
+    ["removed assertion", 'it("works", () => { run(); });', "assertion_removed"]
+  ] as const)("rejects a green candidate with a %s", async (_label, candidateTest, expectedCode) => {
+    const snapshot = bookingSnapshot();
+    snapshot.index!.files.push({
+      path: "tests/api.test.ts",
+      kind: "test",
+      contentHash: "b".repeat(64),
+      exportedSymbols: [],
+      importedSymbols: [],
+      declaredSymbols: []
+    });
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: snapshot }, compilerDependencies);
+    const original = compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!;
+    const contract = {
+      ...original,
+      validation: {
+        ...original.validation,
+        obligations: original.validation.obligations.map((obligation) => ({ ...obligation, negativeControl: "not_required" as const }))
+      }
+    };
+    const candidate = "9".repeat(40);
+    const baseline = compiled.graph.baseCommit;
+    const baselineTest = 'it("works", () => { expect(run()).toBe(true); });';
+    const git = new FakeGitRunner({
+      diffRangeNameOnly: ["tests/api.test.ts"],
+      showFileByRef: {
+        [baseline]: { "tests/api.test.ts": baselineTest },
+        [candidate]: candidateTest === null ? {} : { "tests/api.test.ts": candidateTest }
+      }
+    });
+    const validator = new ExactCandidateValidatorV2({
+      git,
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      repoRoot: "C:/repo/booking",
+      repositorySnapshot: snapshot,
+      runner: { run: async () => ({ passed: true, output: "remaining suite passed", exitCode: 0 }) }
+    });
+
+    const evidence = await validator.validate({
+      runId: "run-v2-integrity",
+      attemptId: `attempt-${expectedCode}`,
+      contract,
+      candidateCommit: candidate,
+      baselineCommit: baseline
+    });
+
+    expect(evidence.outcome).toBe("failed");
+    expect(evidence.integrityFindings).toEqual([
+      expect.objectContaining({ code: expectedCode, path: "tests/api.test.ts", findingId: expect.any(String) })
+    ]);
+    expect(evidence.criteria.some((criterion) => criterion.evidenceRefs.some((ref) => ref.startsWith("test-integrity:")))).toBe(true);
+  });
+
+  it("persists and rejects a feasible negative control that stays green on the baseline", async () => {
+    const tempRoot = await mkdtemp(path.join(tmpdir(), "manyhands-nc-"));
+    try {
+      const snapshot = bookingSnapshot();
+      const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: snapshot }, compilerDependencies);
+      const original = compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!;
+      const contract = {
+        ...original,
+        validation: {
+          ...original.validation,
+          obligations: original.validation.obligations.map((obligation) => ({
+            ...obligation,
+            baselinePolicy: "not_required" as const,
+            negativeControl: "required" as const
+          }))
+        }
+      };
+      const candidate = "8".repeat(40);
+      const addedTest = "tests/new-behavior.test.ts";
+      const candidateSource = 'it("claims coverage", () => { expect(true).toBe(true); });';
+      const git = new FakeGitRunner({
+        diffRangeNameOnly: [addedTest],
+        showFileByRef: { [candidate]: { [addedTest]: candidateSource } }
+      });
+      const worktrees = new WorktreeManager({
+        git,
+        repoRoot: tempRoot,
+        worktreesRoot: path.join(tempRoot, "worktrees"),
+        now: () => at
+      });
+      const validator = new ExactCandidateValidatorV2({
+        git,
+        worktrees,
+        repoRoot: tempRoot,
+        repositorySnapshot: snapshot,
+        runner: {
+          run: async (_commands, context) => {
+            if (context.worktreePath.includes("-negative-")) {
+              expect(await readFile(path.join(context.worktreePath, addedTest), "utf8")).toBe(candidateSource);
+              return { passed: true, output: "candidate test also passed on baseline", exitCode: 0 };
+            }
+            return { passed: true, output: "candidate passed", exitCode: 0 };
+          }
+        }
+      });
+
+      const evidence = await validator.validate({
+        runId: "run-v2-control",
+        attemptId: "attempt-api-control",
+        contract,
+        candidateCommit: candidate,
+        baselineCommit: compiled.graph.baseCommit
+      });
+
+      expect(evidence.outcome).toBe("failed");
+      expect(evidence.negativeControls).toEqual(contract.validation.obligations.map((obligation) => expect.objectContaining({
+        obligationId: obligation.id,
+        detectedFailure: false,
+        evidenceId: `${obligation.id}:negative-control`,
+        outputDigest: expect.stringMatching(/^[a-f0-9]{64}$/u)
+      })));
+      expect(evidence.criteria.every((criterion) => criterion.evidenceRefs.includes(`${criterion.obligationId}:negative-control`))).toBe(true);
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
   });
 });
 

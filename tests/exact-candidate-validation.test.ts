@@ -28,4 +28,29 @@ describe("validateExactCandidate", () => {
       run: async () => ({ passed: true, exitCode: 0, output: "ok" })
     })).rejects.toThrow(/exact candidate/i);
   });
+
+  it.each([[false, "failed"], [true, "verified"]] as const)(
+    "persists negative-control discrimination=%s as %s",
+    async (detectedFailure, outcome) => {
+      const controlledRecipe: ValidationRecipe = {
+        ...recipe,
+        recipeId: `recipe-control-${detectedFailure}`,
+        steps: recipe.steps.map((step) => ({ ...step, negativeControl: "required" }))
+      };
+      const result = await validateExactCandidate({
+        recipe: controlledRecipe,
+        obligations: [{ id: "obligation-1", criterionId: "criterion-1", layer: "unit", severity: "required", acceptableEvidence: ["test_result"], baselinePolicy: "optional", negativeControl: "required", flakyPolicy: "forbid" }]
+      }, {
+        sandbox: { create: async () => ({ worktreePath: "C:/sandbox", headCommit: "candidate-sha", clean: true, dispose: async () => undefined }) },
+        run: async () => ({ passed: true, exitCode: 0, output: "candidate passed" }),
+        runNegativeControl: async () => ({ detectedFailure, output: `negative control ${detectedFailure}` })
+      });
+
+      expect(result.matrix.outcome).toBe(outcome);
+      expect(result.matrix.negativeControls).toEqual([
+        expect.objectContaining({ evidenceId: "obligation-1:negative-control", detectedFailure, outputDigest: expect.stringMatching(/^[a-f0-9]{64}$/u) })
+      ]);
+      expect(result.matrix.criteria[0]?.evidenceRefs).toContain("obligation-1:negative-control");
+    }
+  );
 });

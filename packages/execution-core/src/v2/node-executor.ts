@@ -47,6 +47,18 @@ export interface V2ExecutionEvidenceMatrix {
     evidenceRefs: string[];
   }>;
   outcome: "verified" | "unverified" | "failed";
+  integrityFindings?: Array<{
+    findingId: string;
+    code: "test_removed" | "test_script_weakened" | "test_skipped" | "test_only" | "assertion_removed";
+    path: string;
+    message: string;
+  }>;
+  negativeControls?: Array<{
+    evidenceId: string;
+    obligationId: string;
+    detectedFailure: boolean;
+    outputDigest: string;
+  }>;
 }
 
 export interface V2NodeValidationPort {

@@ -30,6 +30,8 @@ export interface FakeGitRunnerConfig {
   missingRefs?: string[];
   /** path -> file contents returned by showFile(); absent paths resolve to null. */
   showFile?: Record<string, string>;
+  /** ref -> path -> contents, for comparisons where the same path differs by commit. */
+  showFileByRef?: Record<string, Record<string, string>>;
   /** Commits that should be considered ancestors of HEAD. */
   ancestors?: string[];
   cherryPickHead?: string;
@@ -256,6 +258,6 @@ export class FakeGitRunner implements GitRunner {
 
   async showFile(params: { cwd: string; ref: string; path: string }): Promise<string | null> {
     this.record("showFile", { ...params });
-    return this.config.showFile?.[params.path] ?? null;
+    return this.config.showFileByRef?.[params.ref]?.[params.path] ?? this.config.showFile?.[params.path] ?? null;
   }
 }

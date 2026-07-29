@@ -1,9 +1,11 @@
+import { createHash } from "node:crypto";
 import type { ValidationObligation } from "@manyhands/contracts";
 import { buildEvidenceMatrix, type EvidenceMatrix, type ValidationEvidenceObservation } from "./evidence-matrix";
 import type { ValidationRecipe, ValidationRecipeStep } from "./recipe-compiler";
 import { compareBaselineResult } from "./baseline";
 import type { GitRunner } from "../git/runner";
 import type { WorktreeManager } from "../worktree/manager";
+import type { TestIntegrityFinding } from "./test-integrity";
 
 export interface CandidateSandbox {
   worktreePath: string;
@@ -73,7 +75,7 @@ export class GitCandidateSandboxFactory {
 }
 
 export async function validateExactCandidate(
-  input: { recipe: ValidationRecipe; obligations: ValidationObligation[]; notApplicableObligationIds?: string[]; integrityFindingRefs?: string[] },
+  input: { recipe: ValidationRecipe; obligations: ValidationObligation[]; notApplicableObligationIds?: string[]; integrityFindings?: TestIntegrityFinding[] },
   dependencies: CandidateValidatorDependencies
 ): Promise<ExactCandidateValidationResult> {
   const cached = await dependencies.cache?.get(input.recipe.recipeId);
@@ -102,13 +104,19 @@ export async function validateExactCandidate(
         final.baselineDisposition = compareBaselineResult({ baselinePassed: baseline.passed && baseline.exitCode === 0, candidatePassed: final.passed });
       }
       if (final.passed && step.negativeControl !== "not_required" && dependencies.runNegativeControl !== undefined) {
-        final.negativeControlPassed = (await dependencies.runNegativeControl(step, sandbox)).detectedFailure;
+        const control = await dependencies.runNegativeControl(step, sandbox);
+        final.negativeControl = {
+          evidenceId: `${step.obligationId}:negative-control`,
+          obligationId: step.obligationId,
+          detectedFailure: control.detectedFailure,
+          outputDigest: createHash("sha256").update(control.output).digest("hex")
+        };
       }
     }
     const result: ExactCandidateValidationResult = {
       candidateCommit: input.recipe.candidateCommit,
       evidence,
-      matrix: buildEvidenceMatrix({ obligations: input.obligations, evidence, ...(input.notApplicableObligationIds !== undefined ? { notApplicableObligationIds: input.notApplicableObligationIds } : {}), ...(input.integrityFindingRefs !== undefined ? { integrityFindingRefs: input.integrityFindingRefs } : {}) })
+      matrix: buildEvidenceMatrix({ obligations: input.obligations, evidence, ...(input.notApplicableObligationIds !== undefined ? { notApplicableObligationIds: input.notApplicableObligationIds } : {}), ...(input.integrityFindings !== undefined ? { integrityFindings: input.integrityFindings } : {}) })
     };
     await dependencies.cache?.set(input.recipe.recipeId, result);
     return result;

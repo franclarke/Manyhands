@@ -37,6 +37,24 @@ describe("buildEvidenceMatrix", () => {
     }).success).toBe(false);
   });
 
+  it("rejects persisted verified outcomes with integrity findings or ineffective negative controls", () => {
+    const base = {
+      matrixId: "matrix-1",
+      candidateCommit: "candidate",
+      validationContract: { id: "validation-1", revision: "rev-1" },
+      criteria: [{ criterionId: "criterion-a", obligationId: "obligation-a", status: "satisfied", justification: "Passed", evidenceRefs: ["evidence-1"] }],
+      outcome: "verified"
+    } as const;
+    expect(EvidenceMatrixRecordSchema.safeParse({
+      ...base,
+      integrityFindings: [{ findingId: "finding-1", code: "test_only", path: "tests/a.test.ts", message: "Focused test" }]
+    }).success).toBe(false);
+    expect(EvidenceMatrixRecordSchema.safeParse({
+      ...base,
+      negativeControls: [{ evidenceId: "negative-1", obligationId: "obligation-a", detectedFailure: false, outputDigest: "a".repeat(64) }]
+    }).success).toBe(false);
+  });
+
   it("keeps a passed command uncovered when its required baseline was not run", () => {
     const matrix = buildEvidenceMatrix({ obligations, evidence: [
       { evidenceId: "e-static", obligationId: "obligation-b", kind: "static_analysis", passed: true, attempt: 1 }
