@@ -4,13 +4,13 @@
 
 **Blocked by:** 20.
 
-**Status:** agent-working
+**Status:** closed
 
 - [x] RED reproduce crash entre claim y advanceFence y rechaza writes del dueño anterior.
 - [x] RED reproduce takeover con child vivo y exige receipt `allDead` antes del nuevo dispatch.
 - [x] La pérdida de repository lease aborta efectos en vuelo.
 - [x] CLAIM-053 permanece `partial` hasta cerrar también recovery, journal y stores productivos.
-- [ ] Tests de concurrencia, gates afectados y reviews Standards/Spec pasan.
+- [x] Tests de concurrencia, gates afectados y reviews Standards/Spec pasan.
 
 ## Evidencia de trabajo
 
@@ -69,3 +69,5 @@
 - CLAIM-053 continúa `partial`: este ticket cierra autoridad/takeover, pero no
   anticipa recovery/scheduling, journal de integración ni stores/traces de
   tickets 23–25.
+- Reviews finales independientes sobre `184eeac`: Standards PASS y Spec PASS,
+  ambas con 0 P0/P1/P2/P3 y sin modificaciones.

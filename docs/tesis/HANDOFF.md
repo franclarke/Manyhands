@@ -1379,5 +1379,8 @@ del `1/8` histórico.
   contención (95–109 ms > 25 ms); el archivo aislado pasa 9 + 1 skipped y la
   suite raíz secuencial pasa 216 archivos, 1495 tests, 2 skipped, 0 failed;
   build de los 12 packages y web build PASS;
-- CLAIM-053 permanece `partial` por los gaps de tickets 23–25. Sólo quedan
-  pendientes las re-reviews independientes Standards/Spec antes del cierre.
+- CLAIM-053 permanece `partial` por los gaps de tickets 23–25;
+- reviews finales independientes sobre `184eeac`: Standards PASS y Spec PASS,
+  ambas con 0 P0/P1/P2/P3 y sin modificaciones;
+- ticket 21 queda `closed`. La frontera recalculada habilita ticket 22
+  (`ready-for-agent`); ticket 26 continúa bloqueado por 25.
