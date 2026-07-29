@@ -32,6 +32,12 @@ export const ValidationEvidenceBindingSchema = z.discriminatedUnion("kind", [
   }).strict()
 ]);
 
+export type ValidationEvidenceBinding = z.infer<typeof ValidationEvidenceBindingSchema>;
+
+export function evidenceKindForBinding(binding: ValidationEvidenceBinding): "static_analysis" | "test_result" {
+  return binding.kind === "static_proof" ? "static_analysis" : "test_result";
+}
+
 export const ValidationObligationSchema = z.object({
   id: EntityIdSchema,
   criterionId: EntityIdSchema,
@@ -42,7 +48,28 @@ export const ValidationObligationSchema = z.object({
   negativeControl: z.enum(["required", "when_feasible", "not_required"]),
   flakyPolicy: z.enum(["forbid", "allow_with_warning"]),
   evidence: ValidationEvidenceBindingSchema.optional()
-}).strict();
+}).strict().superRefine((obligation, context) => {
+  const binding = obligation.evidence;
+  if (binding === undefined) return;
+  const compatibleLayer = binding.kind === "static_proof"
+    ? obligation.layer === "static"
+    : !["static", "manual"].includes(obligation.layer);
+  if (!compatibleLayer) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["evidence", "kind"],
+      message: `${binding.kind} cannot materialize evidence for the ${obligation.layer} layer`
+    });
+  }
+  const producedKind = evidenceKindForBinding(binding);
+  if (!obligation.acceptableEvidence.includes(producedKind)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["acceptableEvidence"],
+      message: `${binding.kind} produces ${producedKind}, which is not accepted by this obligation`
+    });
+  }
+});
 
 export type ValidationObligation = z.infer<typeof ValidationObligationSchema>;
 

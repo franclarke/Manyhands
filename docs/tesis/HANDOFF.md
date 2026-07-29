@@ -1234,3 +1234,18 @@ del `1/8` histórico.
   `shared`, `contracts`, `decomposer`, `execution-core`, `run-coordinator`,
   `orchestrator-graph` y web PASS; build de los 12 packages PASS.
   Próximo paso: commit y re-reviews independientes Standards/Spec.
+
+### Re-reviews de ticket 19 sobre `7b020e3`
+
+- Standards PASS, 0 P0/P1/P2/P3, y confirmó resueltos los findings previos;
+- Spec FAIL, 0 P0/P1, 1 P2, 0 P3: la frontera admitía bindings incompatibles
+  con su capa o tipo aceptable, y el recipe podía etiquetar un comando con un
+  tipo que no produjo;
+- RED/GREEN posterior: contratos incoherentes ahora fallan en la frontera y el
+  recipe deriva `static_analysis` o `test_result` del binding ejecutado, no de
+  la primera alternativa en `acceptableEvidence`;
+- gates posteriores: 14 archivos/132 tests afectados PASS; suite raíz 212
+  archivos/1474 tests PASS con 2 skips preexistentes; seis typechecks de
+  paquetes, web typecheck y build de los 12 packages PASS;
+- ambos reviewers fueron sólo lectura. Próximo paso: commit y nuevas re-reviews
+  independientes.

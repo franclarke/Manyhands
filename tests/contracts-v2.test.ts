@@ -129,6 +129,41 @@ describe("versioned V2 contracts", () => {
     expect(TaskContractBundleSchema.safeParse(invalid).success).toBe(false);
   });
 
+  it("rejects evidence bindings that cannot produce an acceptable kind for their layer", () => {
+    const validation = validBundle().validation;
+    const obligation = validation.obligations[0]!;
+    const parseObligation = (overrides: Record<string, unknown>) => ValidationContractSchema.safeParse({
+      ...validation,
+      obligations: [{ ...obligation, ...overrides }]
+    });
+
+    expect(parseObligation({
+      layer: "static",
+      evidence: { kind: "static_proof", references: ["tsconfig.json"] }
+    }).success).toBe(false);
+    expect(parseObligation({
+      acceptableEvidence: ["static_analysis"],
+      evidence: { kind: "static_proof", references: ["tsconfig.json"] }
+    }).success).toBe(false);
+    expect(parseObligation({
+      acceptableEvidence: ["manual_attestation"],
+      evidence: {
+        kind: "focused_command",
+        selectors: ["tests/appointments/booking.test.ts"],
+        references: ["tests/appointments/booking.test.ts"]
+      }
+    }).success).toBe(false);
+    expect(parseObligation({
+      layer: "static",
+      evidence: {
+        kind: "shared_command",
+        criterionIds: [obligation.criterionId],
+        references: ["tests/appointments/booking.test.ts"],
+        rationale: "The exact test is explicitly shared."
+      }
+    }).success).toBe(false);
+  });
+
   it("uses one canonical schema for observable criterion evidence", () => {
     expect(CriterionEvidenceObservationSchema.parse({
       evidenceId: "evidence-1",

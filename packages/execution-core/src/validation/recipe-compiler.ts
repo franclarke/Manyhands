@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
-import type { ExecutionValidationCommand, ValidationContract, ValidationObligation } from "@manyhands/contracts";
+import {
+  evidenceKindForBinding,
+  type ExecutionValidationCommand,
+  type ValidationContract,
+  type ValidationObligation
+} from "@manyhands/contracts";
 import type { RepositoryCapabilities } from "@manyhands/repository-index";
 
 export interface ValidationRecipeStep {
@@ -62,10 +67,11 @@ export function compileValidationRecipe(input: {
         : [];
     const command = { command: capability.command, args: [...capability.args, ...selectors], timeoutMs: 60_000, cwd: "worktree" as const };
     const commandDigest = createHash("sha256").update(JSON.stringify(command)).digest("hex");
+    const evidenceKind = evidenceKindForBinding(obligation.evidence);
     const attribution: ValidationRecipeAttribution = {
       obligationId: obligation.id,
       criterionId: obligation.criterionId,
-      evidenceKind: obligation.acceptableEvidence[0]!,
+      evidenceKind,
       baselinePolicy: obligation.baselinePolicy,
       negativeControl: obligation.negativeControl,
       flakyPolicy: obligation.flakyPolicy,

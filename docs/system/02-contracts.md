@@ -70,6 +70,12 @@ Cada obligación puede enlazar evidencia verificable de una de estas formas:
   idénticamente en todas sus obligaciones; esas referencias se pasan al runner
   como selectors, no se copian sobre el resultado de un comando genérico.
 
+En la implementación vigente, `static_proof` sólo materializa
+`static_analysis` para la capa `static`; `focused_command` y `shared_command`
+materializan `test_result` para capas ejecutables distintas de `static` y
+`manual`. El tipo producido debe estar entre `acceptableEvidence`; declarar
+otros tipos como alternativas no cambia el tipo observado de ese binding.
+
 La ausencia de un enlace pertinente no autoriza a inferir evidencia desde un
 comando genérico: la obligación queda sin materializar y el criterio permanece
 `unverified`. `ValidationRecipeCompiler` resuelve comandos y entornos con el

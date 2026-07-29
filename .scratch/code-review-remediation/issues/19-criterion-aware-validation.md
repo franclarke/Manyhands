@@ -70,3 +70,19 @@
   `orchestrator-graph` y web PASS; build de los 12 packages PASS.
 - Pendiente obligatorio: fijar el commit y obtener re-reviews independientes
   Standards/Spec sin P0/P1/P2/P3.
+
+## Re-reviews sobre `7b020e3`
+
+- Standards PASS: 0 P0/P1/P2/P3; confirmó resueltos los tres findings previos.
+- Spec FAIL: 0 P0/P1, 1 P2, 0 P3. La frontera permitía bindings incompatibles
+  con su capa o `acceptableEvidence`, y el recipe etiquetaba la ejecución con
+  el primer tipo aceptable en vez del tipo realmente producido.
+- RED: contratos con `static_proof` en capa ejecutable, comandos en capa
+  `static` o evidencia producida no aceptada eran válidos; un
+  `focused_command` se registraba como `runtime_observation`.
+- GREEN: el contrato valida capa, binding y tipo producido; el compiler deriva
+  `static_analysis` o `test_result` del binding observable.
+- Gates posteriores: 14 archivos/132 tests afectados PASS; suite raíz 212
+  archivos/1474 tests PASS con 2 skips preexistentes; seis typechecks de
+  paquetes, web typecheck y build de los 12 packages PASS.
+- Pendiente: commit y re-reviews. Ningún reviewer implementó correcciones.

@@ -34,6 +34,7 @@ describe("compileValidationRecipe", () => {
   it("uses observed repository capabilities and preserves obligation identities", () => {
     const recipe = compileValidationRecipe({ contract, capabilities, repositorySnapshotId: "snapshot-1", candidateCommit: "abc", baselineCommit: "base" });
     expect(recipe.steps.map((step) => step.obligationId)).toEqual(["obligation-static", "obligation-unit"]);
+    expect(recipe.steps.map((step) => step.evidenceKind)).toEqual(["static_analysis", "test_result"]);
     expect(recipe.steps.map((step) => step.command)).toEqual([
       { command: "pnpm", args: ["typecheck"], timeoutMs: 60_000, cwd: "worktree" },
       { command: "pnpm", args: ["test", "tests/booking.test.ts"], timeoutMs: 60_000, cwd: "worktree" }
@@ -60,6 +61,26 @@ describe("compileValidationRecipe", () => {
 
     expect(recipe.steps).toEqual([]);
     expect(recipe.unmaterializedObligationIds).toEqual(["obligation-order", "obligation-values"]);
+  });
+
+  it("labels a command with the evidence kind its binding produces", () => {
+    const alternativeContract = {
+      ...contract,
+      obligations: [{
+        ...contract.obligations[1],
+        acceptableEvidence: ["runtime_observation", "test_result"]
+      }]
+    } as ValidationContract;
+
+    const recipe = compileValidationRecipe({
+      contract: alternativeContract,
+      capabilities,
+      repositorySnapshotId: "snapshot-1",
+      candidateCommit: "abc"
+    });
+
+    expect(recipe.steps[0]?.evidenceKind).toBe("test_result");
+    expect(recipe.steps[0]?.attributions?.[0]?.evidenceKind).toBe("test_result");
   });
 
 });
