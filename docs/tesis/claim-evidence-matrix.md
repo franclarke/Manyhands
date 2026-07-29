@@ -457,10 +457,12 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 - **Productive code:** `packages/run-store/src/recovery.ts`, `durable-lock.ts`, `projection-fold.ts`, `snapshot-store.ts`; `apps/web/.../run-operation-lease.ts`, `repo-lock.ts`. **[hecho]**
 - **Tests:** `tests/integration-operation-recovery.test.ts`, `tests/run-store-lock-ownership-fencing.test.ts`, `tests/run-store-fencing.test.ts`, `tests/run-v2-cancellation.test.ts`.
 - **Persisted evidence:** `none` (formal).
-- **Gap:** claim/fence no es atómico; takeover no reconcilia procesos; integration journal, snapshot recovery/compaction y trazas durables no están conectados al host V2.
+- **Gap:** claim/fence y takeover de procesos ya están conectados de forma
+  fail-closed al host V2; todavía faltan recovery/scheduling, integration
+  journal, snapshot recovery/compaction y trazas/stores durables productivos.
 - **Decision:** `implement + demonstrate`.
 - **Thesis impact:** toda afirmación de recuperación integral queda no soportada hasta cerrar tickets 21, 23, 24 y 25.
-- **Next gate:** tickets 21, 23–25.
+- **Next gate:** tickets 23–25.
 
 ---
 

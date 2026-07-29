@@ -1328,3 +1328,28 @@ del `1/8` histórico.
   Spec PASS, ambas con 0 P0/P1/P2/P3 y sin modificaciones;
 - ticket 20 queda `closed`. La frontera recalculada habilita ticket 21
   (`ready-for-agent`); ticket 26 continúa bloqueado por 25.
+
+## Ticket 21 en curso — autoridad atómica y takeover — 2026-07-29
+
+- ticket 21 pasó a `agent-working` en el mismo clon aislado; el `main` original
+  fue adelantado por fast-forward a `663c756` y conserva exactamente sus seis
+  cambios ajenos;
+- RED produjo 3 fallos: no existía una interfaz unificada de claim/fence y la
+  repository lease no podía abortar el efecto protegido;
+- GREEN introduce el módulo profundo `RunOperationAuthority`: bajo el mutex
+  durable del record, el event store acuña primero el fence canónico; sólo tras
+  reconciliar procesos y obtener `allDead=true` se publica una lease de
+  takeover con receipt durable;
+- un crash simulado entre fence y publicación rechaza al dueño viejo y el
+  claim siguiente salta el fence huérfano. Un child real fue terminado y
+  verificado antes de devolver autoridad; `allDead=false` bloquea el takeover;
+- la pérdida de repository lease aborta ejecución/delivery supervisadas y el
+  runner registry usa `operationId`, evitando que cleanup viejo borre al nuevo;
+- 5 archivos/24 tests focales PASS; 15 archivos/50 tests afectados PASS,
+  incluida contención de 12 stores independientes; typechecks de
+  `@manyhands/run-store` y web PASS;
+- suite raíz PASS: 214 archivos, 1487 tests passed, 2 skipped; build fresco de
+  `@manyhands/run-store`, build de los 12 packages y web build PASS con Node
+  `v22.23.1` y pnpm `7.29.3`;
+- CLAIM-053 permanece `partial` por los gaps de tickets 23–25. Sólo quedan
+  pendientes las reviews independientes Standards/Spec antes del cierre.
