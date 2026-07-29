@@ -468,6 +468,16 @@ describe("ExactCandidateValidatorV2", () => {
       baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": "runAll();" },
       candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": "process.exit(0);" },
       expectedPath: "scripts/run-tests.mjs"
+    }],
+    ["nested workspace wrapper", ["packages/api/scripts/run-tests.mjs"], {
+      baseline: { "packages/api/package.json": JSON.stringify({ scripts: { test: "node scripts\\run-tests.mjs" } }), "packages/api/scripts/run-tests.mjs": "runAll();" },
+      candidate: { "packages/api/package.json": JSON.stringify({ scripts: { test: "node scripts\\run-tests.mjs" } }), "packages/api/scripts/run-tests.mjs": "process.exit(0);" },
+      expectedPath: "packages/api/scripts/run-tests.mjs"
+    }],
+    ["transitive wrapper import", ["scripts/select-tests.mjs"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'import "./select-tests.mjs";', "scripts/select-tests.mjs": "runAll();" },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'import "./select-tests.mjs";', "scripts/select-tests.mjs": "process.exit(0);" },
+      expectedPath: "scripts/select-tests.mjs"
     }]
   ] as const)("rejects coverage narrowed through %s", async (_label, changedFiles, fixture) => {
     const snapshot = bookingSnapshot();

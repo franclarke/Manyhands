@@ -147,7 +147,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     const candidateScripts: Record<string, string> = {};
     const configurationPaths = new Set(changedFiles.filter(isTestDiscoveryConfigurationPath));
     const manifestPaths = manifestAncestors(changedFiles);
-    const validationCommands: string[] = [];
+    const validationCommands: Array<{ directory: string; command: string }> = [];
     for (const manifestPath of [...manifestPaths].sort()) {
       const [baselineManifest, candidateManifest] = await Promise.all([
         this.options.git.showFile({ cwd: this.options.repoRoot, ref: baselineCommit, path: manifestPath }),
@@ -157,15 +157,11 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       const candidateManifestScripts = testScriptsFromManifest(candidateManifest, manifestPath);
       Object.assign(baselineScripts, baselineManifestScripts);
       Object.assign(candidateScripts, candidateManifestScripts);
-      validationCommands.push(...Object.values(baselineManifestScripts), ...Object.values(candidateManifestScripts));
+      const directory = path.posix.dirname(manifestPath);
+      validationCommands.push(...[...Object.values(baselineManifestScripts), ...Object.values(candidateManifestScripts)].map((command) => ({ directory, command })));
       if (changedFiles.includes(manifestPath) && embeddedTestConfigChanged(baselineManifest, candidateManifest)) configurationPaths.add(manifestPath);
     }
-    for (const changedFile of changedFiles) {
-      const normalized = changedFile.replaceAll("\\", "/");
-      if (validationCommands.some((command) => command.includes(normalized) || command.includes(`./${normalized}`))) {
-        configurationPaths.add(changedFile);
-      }
-    }
+    for (const referenced of await this.changedValidationDependencies(validationCommands, changedFiles, baselineCommit, candidateCommit)) configurationPaths.add(referenced);
     return {
       findings: detectTestIntegrityFindings({
         baselineTestFiles: [...baselineFiles].sort(),
@@ -178,6 +174,33 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       }),
       candidateTestContents
     };
+  }
+
+  private async changedValidationDependencies(
+    commands: readonly { directory: string; command: string }[],
+    changedFiles: readonly string[],
+    baselineCommit: string,
+    candidateCommit: string
+  ): Promise<string[]> {
+    const changed = new Set(changedFiles.map((file) => file.replaceAll("\\", "/")));
+    const found = new Set<string>();
+    const pending = commands.flatMap(({ directory, command }) => commandFileReferences(directory, command));
+    const visited = new Set<string>();
+    while (pending.length > 0) {
+      const file = pending.shift()!;
+      if (visited.has(file)) continue;
+      visited.add(file);
+      if (changed.has(file)) found.add(file);
+      const [baseline, candidate] = await Promise.all([
+        this.options.git.showFile({ cwd: this.options.repoRoot, ref: baselineCommit, path: file }),
+        this.options.git.showFile({ cwd: this.options.repoRoot, ref: candidateCommit, path: file })
+      ]);
+      for (const contents of [baseline, candidate]) {
+        if (contents === null) continue;
+        for (const reference of moduleReferences(contents)) pending.push(...resolvedReferenceCandidates(path.posix.dirname(file), reference));
+      }
+    }
+    return [...found].sort();
   }
 
   private async runNegativeControl(input: {
@@ -222,6 +245,34 @@ function manifestAncestors(changedFiles: readonly string[]): Set<string> {
     if (path.posix.basename(normalized) === "package.json") manifests.add(normalized);
   }
   return manifests;
+}
+
+function commandFileReferences(directory: string, command: string): string[] {
+  const tokens = command.match(/"[^"]+"|'[^']+'|[^\s;&|]+/gu) ?? [];
+  return tokens.flatMap((raw) => {
+    const unquoted = raw.replace(/^["']|["']$/gu, "");
+    const value = (unquoted.includes("=") ? unquoted.slice(unquoted.indexOf("=") + 1) : unquoted).replaceAll("\\", "/");
+    return looksLikeFileReference(value) ? resolvedReferenceCandidates(directory, value) : [];
+  });
+}
+
+function moduleReferences(contents: string): string[] {
+  const references: string[] = [];
+  for (const match of contents.matchAll(/(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire\s*\()\s*["']([^"']+)["']/gu)) references.push(match[1]!);
+  return references.filter((reference) => reference.startsWith("."));
+}
+
+function looksLikeFileReference(value: string): boolean {
+  return value.startsWith("./") || value.startsWith("../") || value.includes("/") || /\.[A-Za-z0-9]+$/u.test(value);
+}
+
+function resolvedReferenceCandidates(directory: string, reference: string): string[] {
+  const normalized = reference.replaceAll("\\", "/");
+  if (path.posix.isAbsolute(normalized)) return [];
+  const resolved = path.posix.normalize(path.posix.join(directory === "." ? "" : directory, normalized)).replace(/^\.\//u, "");
+  if (resolved === ".." || resolved.startsWith("../")) return [];
+  if (path.posix.extname(resolved) !== "") return [resolved];
+  return [resolved, ...[".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json"].map((extension) => `${resolved}${extension}`), ...[".ts", ".js", ".mjs", ".cjs"].map((extension) => `${resolved}/index${extension}`)];
 }
 
 function embeddedTestConfigChanged(baseline: string | null, candidate: string | null): boolean {
