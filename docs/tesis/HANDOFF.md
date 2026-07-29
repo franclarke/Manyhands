@@ -675,3 +675,21 @@ Resultado terminal de `retry-10` N=8:
 - proxima operacion larga: N=16 secuencial sobre el tercer target nuevo. Su
   assessment de granularidad se deriva del evento productivo aun si el plan es
   rechazado antes de candidate.
+
+Resultado terminal de `retry-10` N=16 y cierre de ejecucion de la serie:
+
+- run `ad5dd07a-4181-4baf-9b23-ff6215a89c2b`, vigia unico detached PID
+  `19028`, termino `failed` durante compiled plan review con el mismo ciclo;
+- las tres celdas se ejecutaron secuencialmente sobre el freeze y targets
+  nuevos. Las tres quedaron pre-candidate, sin receipt; cada una tiene
+  disposicion de oraculo `not_run`. Como no hubo entrega, se ejecutaron cero
+  oraculos y no se asigno el oraculo a un resultado inexistente;
+- N=16 preservo el evento de granularidad checksum `b60fe54c`, 19 hojas y 20
+  assessments. La raiz selecciono split por `leafFeasible=false`, aunque
+  `splitAdvantage=-0.4604` quedo bajo el umbral inmutable `0.15`;
+- features raiz N=16: contextRelief `0.6359`, parallelism `0`, faultIsolation
+  `0`, coordination `1`, pathOverlap `0.2806`, validationDuplication `0.9474`,
+  uncertainty `0.4614`; benefit `0.212`, cost `0.6724`;
+- proximo paso: validar integridad/hashes de los tres resultados y someter el
+  cierre del ticket 11 a reviews independientes Standards y Spec con la orden
+  `No implementes correcciones` antes de marcar sus tres casillas.

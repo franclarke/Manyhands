@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "cellId": "warehouse-wide-n16",
+  "runId": "ad5dd07a-4181-4baf-9b23-ff6215a89c2b",
+  "source": {
+    "file": "run.events.v2.jsonl",
+    "sequence": 24,
+    "eventId": "planning:warehouse-analytics-wide-16-projections:strategy:ad5dd07a-4181-4baf-9b23-ff6215a89c2b",
+    "eventChecksum": "b60fe54cc3ff7ccbe0b5d7f5a0c6073323d153c8b8b15e5871e36f37fcb6b169"
+  },
+  "policyVersion": "adaptive-utility/3.1.0-pilot",
+  "condition": "C",
+  "candidateTreeHash": "sha256:0b27299a6f009779cb29f99cd98141033b751da6087d9a1de76c491ee81e65d8",
+  "graphMetrics": {
+    "maxGraphDepth": 1,
+    "totalLeafCount": 19,
+    "averageBranchingFactor": 19
+  },
+  "assessmentCount": 20,
+  "rootAssessment": {
+    "unitKey": "warehouse-analytics-wide",
+    "nodeId": "node-warehouse-analytics-wide-87433b1241",
+    "selected": "split",
+    "leafFeasible": false,
+    "splitViable": true,
+    "features": {
+      "contextRelief": 0.6359,
+      "parallelism": 0,
+      "faultIsolation": 0,
+      "coordination": 1,
+      "pathOverlap": 0.2806,
+      "validationDuplication": 0.9474,
+      "uncertainty": 0.4614
+    },
+    "benefit": 0.212,
+    "cost": 0.6724,
+    "splitAdvantage": -0.4604,
+    "minimumAdvantage": 0.15,
+    "rationale": "Leaf is infeasible; C selected the available semantic split."
+  },
+  "interpretation": {
+    "decisionBasis": "The split was selected because the root leaf was infeasible, not because splitAdvantage exceeded minimumAdvantage.",
+    "terminalBoundary": "The later compiled-plan rejection does not erase the checksummed productive assessment event, but no execution or delivery evidence exists.",
+    "oracle": "not_run"
+  }
+}

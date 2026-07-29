@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "oracleId": "warehouse-wide-graph-v2",
+  "oracleContractVersion": 2,
+  "cellId": "warehouse-wide-n16",
+  "runId": "ad5dd07a-4181-4baf-9b23-ff6215a89c2b",
+  "outcome": "not_run",
+  "deliveredSha": null,
+  "reason": "ManyHands failed during compiled plan review after detecting the analytics-registry and study-wide-graph-script artifact cycle. No candidate commit or receipt exists, so the external oracle cannot run.",
+  "recordedAt": "2026-07-29T00:05:13.1322037Z"
+}
