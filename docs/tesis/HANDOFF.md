@@ -901,3 +901,14 @@ Cuarta remediation de ticket 18:
 - focal 28/28 y typechecks execution-core/run-coordinator PASS. CLAIM-040/041
   permanecen `partial`. Próxima operación larga: reviews independientes finales
   Standards/Spec con "No implementes correcciones".
+
+Reviews finales `7b19895` de ticket 18:
+
+- Spec FAIL P1: imports bare/alias de paquetes workspace no entran al cierre;
+- Standards FAIL con dos P1 y un P2: partir de todos los scripts produce falsos
+  positivos sobre `dev`/`build`, el parser deja inputs dinámicos y NodeNext sin
+  cerrar, y el recorrido carece de presupuesto/cancelación;
+- ambos conservaron el punto fijo sin cambios. Decisión tras `grilling`: no
+  enumerar más bypasses con regex. Próxima operación: RED para raíces de test,
+  resolución workspace/fail-closed y límites explícitos. CLAIM-040/041 siguen
+  `partial`.

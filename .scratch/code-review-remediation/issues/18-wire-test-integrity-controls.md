@@ -55,3 +55,8 @@
   ambos casos. Fix `acb1b1b` resuelve comandos desde el directorio del manifest
   y recorre imports/requires relativos en ambos commits. Focal 28/28 y
   typechecks execution-core/run-coordinator PASS; pendiente reviews finales.
+- Reviews `7b19895`: Spec FAIL P1 por imports de paquetes workspace; Standards
+  FAIL con dos P1 y un P2 porque el recorrido desde todos los scripts bloquea
+  código productivo, la regex conserva inputs opacos/NodeNext y no tiene
+  presupuesto. Se descarta continuar enumerando sintaxis: la siguiente RED
+  exige raíces de test reales, resolución workspace/fail-closed y límites.
