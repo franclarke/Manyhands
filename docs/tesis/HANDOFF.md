@@ -771,3 +771,14 @@ Diagnóstico del primer gate amplio de ticket 17:
 - working tree limpio en `07b789d`; no hubo mutación ni reintento ciego;
 - próxima operación larga: una ejecución única de `pnpm test` con timeout 300 s
   usando el mismo Node 22.23.1/pnpm 7.29.3.
+
+Diagnóstico terminal del gate amplio de ticket 17:
+
+- el suite completo terminó en 217.5 s con 2 timeouts de 30 s sólo en
+  `integration-real-git`, más cleanup `ENOTEMPTY/EBUSY` de `%TEMP%`;
+- ambos casos pasaron focalmente y secuencialmente sin cambios de código:
+  redundant patch 1/1 en 12.12 s; unexpected repair commit 1/1 en 12.35 s;
+- clasificación: contención Windows bajo paralelismo del suite, patrón ya
+  preservado en retry-10; no hay evidencia de regresión del ticket 17;
+- próxima operación larga autorizada por el diagnóstico: una única repetición
+  limpia del suite completo. No habrá más reintentos ciegos.
