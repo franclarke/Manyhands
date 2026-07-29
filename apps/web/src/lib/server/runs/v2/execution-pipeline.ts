@@ -120,7 +120,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     throw new Error(`Run ${runId} already has an active runner.`);
   }
   const stopHeartbeat = startHeartbeat(runId, lease);
-  const abort = createRunAbort(runId);
+  const abort = createRunAbort(runId, lease.operationId);
   try {
     const repoRoot = await resolveRunTargetPath(run);
     if (repoRoot === undefined || run.targetContext === undefined) {
@@ -217,7 +217,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     await recordExecutionFailure(runId, lease, error).catch(() => undefined);
     throw error;
   } finally {
-    disposeRunAbort(runId);
+    disposeRunAbort(runId, lease.operationId);
     markRunnerInactive(runId, lease.operationId);
     stopHeartbeat();
     await releaseRunOperationWithRetry(runId, lease);

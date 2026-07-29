@@ -29,12 +29,15 @@
   tardío del dueño anterior no borra al sucesor verificado.
 - `withRepositoryLease` entrega un `AbortSignal`, lo propaga a ejecución y
   delivery supervisadas y normaliza la causa a `RepoLeaseLostError`.
-- GREEN focal: 5 archivos/24 tests PASS. Gate afectado final:
-  15 archivos/50 tests PASS, incluida contención de 12 stores independientes.
-  Typechecks de `@manyhands/run-store` y web PASS.
-- Suite raíz PASS: 214 archivos, 1487 tests passed y 2 skipped. Build fresco de
-  `@manyhands/run-store`, build de los 12 packages y web build PASS con Node
-  `v22.23.1` y pnpm `7.29.3`.
+- La primera review encontró P2 en la fecha del receipt y P1 en delivery:
+  ambos produjeron 3 RED focales. El receipt/heartbeat ahora se fecha después
+  de `allDead`; execution y delivery registran controllers por `operationId`,
+  cleanup viejo no borra al sucesor y todo spawn supervisado consulta la señal
+  antes de crear el proceso.
+- GREEN focal de remediación: 2 archivos/6 tests PASS. Gate ampliado:
+  8 archivos/35 tests PASS; typechecks de `@manyhands/run-store` y web PASS.
+- Suite raíz final PASS: 215 archivos, 1490 tests passed y 2 skipped. Build de
+  los 12 packages y web build PASS con Node `v22.23.1` y pnpm `7.29.3`.
 - CLAIM-053 continúa `partial`: este ticket cierra autoridad/takeover, pero no
   anticipa recovery/scheduling, journal de integración ni stores/traces de
   tickets 23–25.

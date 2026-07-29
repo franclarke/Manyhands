@@ -192,4 +192,41 @@ describe("atomic run authority", () => {
     await expect(events.assertAuthority("run-blocked-takeover", first.lease))
       .rejects.toBeInstanceOf(StaleFencingTokenError);
   });
+
+  it("timestamps the takeover receipt and published heartbeat after process verification", async () => {
+    const repository = new JsonRunRecordStore({ directory: runsDirectory });
+    const events = new JsonlRunEventStore({ directory: runsDirectory });
+    await repository.save(makeRunRecordV2({ runId: "run-takeover-time", lifecycle: "running" }));
+    const first = await authority(repository, events, {
+      operationId: () => "88888888-8888-4888-8888-888888888888"
+    }).claim("run-takeover-time", "execution", {
+      expectedLifecycles: ["running"],
+      now: "2026-07-29T12:00:00.000Z"
+    });
+    let verificationCompletedAt = 0;
+
+    const taken = await authority(repository, events, {
+      operationId: () => "99999999-9999-4999-8999-999999999999",
+      reconcileTakeover: async () => {
+        verificationCompletedAt = Date.now();
+        return {
+          processReceiptId: "takeover-processes-timed",
+          allDead: true,
+          processCount: 0
+        };
+      }
+    }).claim("run-takeover-time", "execution", {
+      expectedLifecycles: ["running"],
+      allowTakeover: true,
+      takeoverStaleAfterMs: 1,
+      now: "2026-07-29T12:01:00.000Z"
+    });
+
+    expect(first.lease.heartbeatAt).toBe("2026-07-29T12:00:00.000Z");
+    expect(Date.parse(taken.run.lastTakeoverReceipt!.verifiedAt)).toBeGreaterThanOrEqual(
+      verificationCompletedAt
+    );
+    expect(Date.parse(taken.lease.heartbeatAt)).toBeGreaterThanOrEqual(verificationCompletedAt);
+    expect(taken.run.heartbeatAt).toBe(taken.lease.heartbeatAt);
+  });
 });

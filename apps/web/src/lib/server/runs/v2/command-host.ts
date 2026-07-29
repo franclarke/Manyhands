@@ -23,7 +23,7 @@ import { getRunRepository } from "../store";
 import { DEFAULT_STALE_MS } from "../interrupted";
 import { runWithProcessSupervision, supervisedExecFile } from "../process-supervision";
 import { withRepositoryLease } from "../repo-lock";
-import { abortRun } from "../run-abort-registry";
+import { abortRun, createRunAbort, disposeRunAbort } from "../run-abort-registry";
 import { killRunProcessesVerified, type KillRunProcessesDeps } from "../process-evidence";
 import {
   claimRunOperation,
@@ -180,16 +180,18 @@ export async function deliverRunV2(runId: string, approval: DeliveryApproval): P
     allowTakeover: true,
     takeoverStaleAfterMs: DEFAULT_STALE_MS
   });
+  const abort = createRunAbort(runId, lease.operationId);
   try {
     const coordinator = new RunCoordinator({
       events: store.bind(authority(lease)),
-      delivery: { publish: ({ approval: request }) => publishDelivery(run, request, store) },
+      delivery: { publish: ({ approval: request }) => publishDelivery(run, request, store, abort.signal, lease.operationId) },
       clock: () => new Date().toISOString(),
       eventId: eventIdFor(runId)
     });
     const state = await coordinator.execute(runId, { type: "publish_delivery", approval });
     return { run: await cacheProjection(runId, lease, state, store), state };
   } finally {
+    disposeRunAbort(runId, lease.operationId);
     await releaseRunOperationWithRetry(runId, lease);
   }
 }
@@ -247,13 +249,20 @@ async function cacheProjection(
 async function publishDelivery(
   run: RunRecord,
   approval: DeliveryApproval,
-  store: JsonlRunEventStore
+  store: JsonlRunEventStore,
+  operationSignal: AbortSignal,
+  operationId: string
 ): Promise<DeliveryReceipt> {
   if (run.targetContext === undefined) throw new Error("Delivery requires the captured run target.");
   const repoRoot = await resolveRunTargetPath(run);
   if (repoRoot === undefined) throw new Error("Delivery requires a local Git target.");
   return withRepositoryLease({ repoRoot, runId: run.runId }, (_repositoryLease, repositorySignal) => runWithProcessSupervision(
-    { runId: run.runId, label: "delivery-v2", signal: repositorySignal },
+    {
+      runId: run.runId,
+      operationId,
+      label: "delivery-v2",
+      signal: AbortSignal.any([operationSignal, repositorySignal])
+    },
     async () => {
       const publisher = new TransactionalDeliveryPublisher({
         journal: {

@@ -37,7 +37,9 @@ autoridad: el fence se publica antes que la lease visible y ambos se serializan
 bajo el mutex durable del run. Un takeover sólo habilita dispatch después de un
 receipt durable `allDead=true`; un crash intermedio puede reducir
 disponibilidad, nunca devolver autoridad doble. La pérdida del repository lease
-aborta los efectos supervisados que sigan en vuelo.
+aborta los efectos supervisados que sigan en vuelo. Cada operación productiva
+registra un controller identificado por `operationId`, y un efecto supervisado
+no puede crear procesos nuevos después de que ese controller fue abortado.
 
 ### Procesos
 

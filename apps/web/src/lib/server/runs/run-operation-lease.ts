@@ -104,6 +104,7 @@ export class RunOperationAuthority {
       };
 
       let takeoverReceipt: RunTakeoverReceipt | undefined;
+      let publishedAt = now;
       if (superseded !== undefined) {
         const processReceipt = await this.reconcileTakeover({ runId, superseded });
         if (!processReceipt.allDead) {
@@ -113,6 +114,8 @@ export class RunOperationAuthority {
             `takeover of ${superseded.operationId}/${superseded.fencingToken} did not verify allDead`
           );
         }
+        publishedAt = new Date().toISOString();
+        lease = { ...lease, heartbeatAt: publishedAt };
         takeoverReceipt = {
           processReceiptId: processReceipt.processReceiptId,
           supersededOperationId: superseded.operationId,
@@ -121,7 +124,7 @@ export class RunOperationAuthority {
           fencingToken: lease.fencingToken,
           allDead: true,
           processCount: processReceipt.processCount,
-          verifiedAt: now
+          verifiedAt: publishedAt
         };
       }
 
@@ -129,7 +132,7 @@ export class RunOperationAuthority {
         ...current,
         mutationFence: lease.fencingToken,
         activeOperation: lease,
-        heartbeatAt: now,
+        heartbeatAt: publishedAt,
         ...(takeoverReceipt === undefined ? {} : { lastTakeoverReceipt: takeoverReceipt })
       };
     });

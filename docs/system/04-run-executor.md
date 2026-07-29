@@ -31,6 +31,10 @@ reconciliar su evidencia de procesos y persistir un receipt con `allDead=true`.
 Un receipt no verificable deja el fence anterior invalidado y no publica la
 nueva lease. El registro in-process se identifica también por `operationId`,
 para que el cleanup tardío del dueño reemplazado no desregistre al sucesor.
+Ejecución y delivery registran además un controller por operación; después del
+aborto, la capa de supervisión rechaza un nuevo spawn antes de crearlo. El
+`verifiedAt` del receipt y el heartbeat de la lease publicada se toman después
+de verificar `allDead`, no al comenzar la reconciliación.
 
 El repository lease protege mutaciones sobre un target compartido. No se
 reemplaza con booleans in-process.

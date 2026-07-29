@@ -35,6 +35,7 @@ export type SupervisedSpawn = (
 
 export function supervisedSpawnFn(meta: SupervisedProcessMeta, signal?: AbortSignal): SupervisedSpawn {
   return (command, args, options) => {
+    signal?.throwIfAborted();
     const child = nodeSpawn(command, args, options);
     superviseChildProcess(meta, child, signal !== undefined ? { signal } : {});
     return child;
@@ -85,6 +86,7 @@ export function supervisedExecFile(
   args: readonly string[],
   options: { cwd?: string; maxBuffer?: number; windowsHide?: boolean } = {}
 ): Promise<{ stdout: string; stderr: string }> {
+  supervisionStorage.getStore()?.signal?.throwIfAborted();
   const promise = execFileRaw(command, args, options);
   const child = (promise as unknown as { child?: ChildProcess }).child;
   if (child !== undefined) {

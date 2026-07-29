@@ -9,29 +9,31 @@ import { globalSingleton } from "../global-singleton";
  */
 const controllers = globalSingleton(
   "run-abort-registry",
-  () => new Map<string, AbortController>()
+  () => new Map<string, { operationId: string; controller: AbortController }>()
 );
 
-export function createRunAbort(runId: string): AbortController {
+export function createRunAbort(runId: string, operationId: string): AbortController {
   const controller = new AbortController();
-  controllers.set(runId, controller);
+  controllers.set(runId, { operationId, controller });
   return controller;
 }
 
 export function getRunAbort(runId: string): AbortController | undefined {
-  return controllers.get(runId);
+  return controllers.get(runId)?.controller;
 }
 
 /** Aborts the run's in-flight execution if a controller is registered. */
 export function abortRun(runId: string): boolean {
-  const controller = controllers.get(runId);
-  if (controller === undefined) {
+  const entry = controllers.get(runId);
+  if (entry === undefined) {
     return false;
   }
-  controller.abort();
+  entry.controller.abort();
   return true;
 }
 
-export function disposeRunAbort(runId: string): void {
-  controllers.delete(runId);
+export function disposeRunAbort(runId: string, operationId: string): void {
+  if (controllers.get(runId)?.operationId === operationId) {
+    controllers.delete(runId);
+  }
 }

@@ -1345,11 +1345,14 @@ del `1/8` histórico.
   verificado antes de devolver autoridad; `allDead=false` bloquea el takeover;
 - la pérdida de repository lease aborta ejecución/delivery supervisadas y el
   runner registry usa `operationId`, evitando que cleanup viejo borre al nuevo;
-- 5 archivos/24 tests focales PASS; 15 archivos/50 tests afectados PASS,
-  incluida contención de 12 stores independientes; typechecks de
-  `@manyhands/run-store` y web PASS;
-- suite raíz PASS: 214 archivos, 1487 tests passed, 2 skipped; build fresco de
-  `@manyhands/run-store`, build de los 12 packages y web build PASS con Node
-  `v22.23.1` y pnpm `7.29.3`;
+- la primera review independiente halló P2: el receipt se fechaba antes de la
+  verificación, y P1: delivery no registraba un controller de operación. Tres
+  RED focales reprodujeron ambos huecos;
+- remediación GREEN: receipt/heartbeat posterior a `allDead`, controllers de
+  execution/delivery identificados por `operationId` y rechazo de todo spawn
+  supervisado antes de crearlo si la operación ya fue abortada;
+- gate ampliado 8 archivos/35 tests PASS; typechecks de `@manyhands/run-store`
+  y web PASS. Suite raíz exacta: 215 archivos, 1490 tests passed, 2 skipped;
+  build de los 12 packages y web build PASS con Node `v22.23.1` y pnpm `7.29.3`;
 - CLAIM-053 permanece `partial` por los gaps de tickets 23–25. Sólo quedan
-  pendientes las reviews independientes Standards/Spec antes del cierre.
+  pendientes las re-reviews independientes Standards/Spec antes del cierre.
