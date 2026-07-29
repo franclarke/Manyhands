@@ -1303,3 +1303,25 @@ del `1/8` histórico.
   mapeos y receta exacta;
 - test de reconciliación del freeze PASS (7/7). Próximo paso: commit del freeze
   y ejecutar sobre ese SHA exacto P0 secuencial más mutación autenticada.
+
+### Gate y mutación de ticket 20 sobre `9d1c7d7`
+
+- el freeze material quedó en
+  `9d1c7d72f29782a7aafcf69958d0fc9785b7a14a`, con árbol limpio;
+- Gate P0 secuencial exacto PASS: 213 archivos, 1481 tests passed, 2 skipped;
+  seis typechecks de paquetes, web typecheck, build de los 12 packages y web
+  build PASS con Node `v22.23.1` y pnpm `7.29.3`;
+- el servidor oficial del mismo commit aceptó una mutación autenticada:
+  landing/read 200, `POST /api/workspaces` 201 y read-after-write 200. El
+  workspace `6c77f06e-80ca-4c93-a9b6-0138b289186e` conserva la identidad del
+  clon físico distinto fijado a `9d1c7d7`;
+- el intento previo contra el clon ya registrado por ticket 19 devolvió 500 por
+  conflicto de identidad; se preservó como evidencia adversa y se corrigió la
+  fixture, sin borrar ni mutar el workspace previo;
+- shutdown verificado: siete procesos del servidor detenidos y puerto 3020
+  libre. Checkout aún limpio, dist SHA-256
+  `f95b81959faf0a23b9f3a0c8814dd90cf894db8907ef17f8430419499bed16bc`
+  y test de freeze 7/7 PASS;
+- evidencia completa fuera del repo en
+  `C:\Users\franc_rgy\.codex\tmp\manyhands-ticket19-20260729-115928\runtime-logs`.
+  Pendiente: commit documental y reviews Standards/Spec finales independientes.
