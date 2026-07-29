@@ -520,8 +520,8 @@ describe("ExactCandidateValidatorV2", () => {
       expectedPath: "packages/api/package.json#scripts.verify"
     }],
     ["multiple workspace filters", ["packages/web/package.json"], {
-      baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter \"./packages/*\" --filter \"!@repo/api\" verify" } }), "packages/web/package.json": JSON.stringify({ name: "@repo/web", scripts: { verify: "vitest run" } }) },
-      candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter \"./packages/*\" --filter \"!@repo/api\" verify" } }), "packages/web/package.json": JSON.stringify({ name: "@repo/web", scripts: { verify: "vitest run tests/smoke.test.ts" } }) },
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter \"@repo/*\" --filter \"!@repo/api\" verify" } }), "packages/web/package.json": JSON.stringify({ name: "@repo/web", scripts: { verify: "vitest run" } }) },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter \"@repo/*\" --filter \"!@repo/api\" verify" } }), "packages/web/package.json": JSON.stringify({ name: "@repo/web", scripts: { verify: "vitest run tests/smoke.test.ts" } }) },
       expectedPath: "packages/web/package.json#scripts.verify"
     }],
     ["dotted package script", ["package.json"], {

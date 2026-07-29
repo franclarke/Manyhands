@@ -671,8 +671,10 @@ function referencedPackageScriptTargets(command: string): PackageScriptTarget[] 
 
 function matchesWorkspaceTarget(target: PackageScriptTarget, manifest: string, packageName: string | undefined, sourceManifest: string): boolean {
   const manifestDirectory = path.posix.dirname(manifest);
-  if (target.directory !== undefined) return manifestDirectory === path.posix.normalize(target.directory.replaceAll("\\", "/"));
-  if (target.selectors.length === 0) return target.allWorkspaces || manifest === sourceManifest;
+  const sourceDirectory = path.posix.dirname(sourceManifest);
+  const directoryMatches = target.directory === undefined || manifestDirectory === path.posix.normalize(path.posix.join(sourceDirectory, target.directory.replaceAll("\\", "/")));
+  if (!directoryMatches) return false;
+  if (target.selectors.length === 0) return target.directory !== undefined || target.allWorkspaces || manifest === sourceManifest;
   const positives = target.selectors.filter((selector) => !selector.startsWith("!"));
   const exclusions = target.selectors.filter((selector) => selector.startsWith("!")).map((selector) => selector.slice(1));
   const selected = positives.length === 0 || positives.some((selector) => matchesWorkspaceSelector(selector, manifestDirectory, packageName));
@@ -680,11 +682,15 @@ function matchesWorkspaceTarget(target: PackageScriptTarget, manifest: string, p
 }
 
 function matchesWorkspaceSelector(selector: string, manifestDirectory: string, packageName: string | undefined): boolean {
-  if (selector.startsWith("./") || selector.includes("*")) {
-    const expression = `^${selector.replace(/^\.\//u, "").replace(/[.+?^${}()|[\]\\]/gu, "\\$&").replaceAll("*", ".*")}$`;
-    return new RegExp(expression, "u").test(manifestDirectory);
-  }
-  return packageName === selector;
+  const pathSelector = selector.startsWith("./");
+  const candidate = pathSelector ? manifestDirectory : packageName;
+  if (candidate !== undefined && workspaceSelectorRegex(pathSelector ? selector.replace(/^\.\//u, "") : selector).test(candidate)) return true;
+  return !pathSelector && manifestDirectory === path.posix.normalize(selector.replaceAll("\\", "/"));
+}
+
+function workspaceSelectorRegex(selector: string): RegExp {
+  const escaped = selector.replace(/[.+?^${}()|[\]\\]/gu, "\\$&").replaceAll("*", ".*");
+  return new RegExp(`^${escaped}$`, "u");
 }
 
 function packageNameFromManifest(contents: string | null): string | undefined {
