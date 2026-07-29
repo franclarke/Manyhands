@@ -952,3 +952,13 @@ Reviews `3746182` de ticket 18:
   aún no cubre lecturas iniciales;
 - el ticket permanece abierto. Próximo delta se limita a esos tres puntos;
   CLAIM-040/041 permanecen `partial`.
+
+Séptima remediation de ticket 18:
+
+- RED reprodujo cuatro fallos: script workspace entre manifests, imports sin
+  name, tsconfig JSONC/extends y lectura inicial fuera del budget;
+- fix `1c99171` expande scripts referenciados globalmente, interpreta JSONC y
+  extends relativos, conserva imports privados y usa un único presupuesto
+  cancelable para tests/manifests/config/dependencias;
+- 50/50 focales y typechecks execution-core/run-coordinator PASS. Próximo paso:
+  re-review Standards y Spec del mismo punto fijo. Claims siguen `partial`.

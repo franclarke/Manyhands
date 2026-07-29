@@ -79,3 +79,8 @@
   scripts workspace entre manifests, `imports` sin name/JSONC/extends y porque
   el presupuesto no incluye lecturas iniciales. Se preserva el PASS/FAIL
   dividido; el ticket no cierra hasta resolver Standards.
+- RED final: cuatro fallos (script cross-manifest, imports sin name,
+  tsconfig JSONC/extends y blob inicial fuera del presupuesto). Fix `1c99171`
+  modela la clausura global de scripts, sigue configuración heredada y comparte
+  1 MiB/cancelación entre todas las lecturas. GREEN 50/50; typechecks
+  execution-core/run-coordinator PASS. Pendiente re-review de ambos roles.
