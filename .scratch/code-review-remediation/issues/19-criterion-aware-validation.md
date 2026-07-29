@@ -36,3 +36,37 @@
   /api/workspaces` `201` y lectura persistida con el path físico exacto del clon
   aislado.
 - CLAIM-040/041 permanecen `partial` hasta evidencia externa formal.
+
+## Reviews sobre `8eaf3fb`
+
+- Standards: FAIL — P1 porque la pertinencia compartida se autoatribuye; P2
+  por tres representaciones paralelas de observación y por incluir duración
+  no determinista en `matrixId`.
+- Spec: FAIL — el mismo P1 de atribución no observada; P2 porque la fixture
+  retry-2 sólo comparaba JSON y no ejercitaba el oráculo value-aware.
+- No se implementaron correcciones durante las reviews. El ticket permanece
+  `agent-working`; próximos pasos: RED por cada finding, fix sistémico, gates y
+  re-reviews independientes.
+
+## Remediación posterior a reviews
+
+- P1: el compiler ya no infiere shared evidence desde co-localización; unidades
+  con varios criterios quedan sin binding hasta una declaración explícita.
+  `shared_command` ejecuta sus referencias exactas como selectors.
+- P2 Spec: `tests/fixtures/validation/wide-graph-order/tests/projections.test.mjs`
+  ejecuta un oracle Node real sobre el candidato retry-2 adverso; el validator
+  lo reintenta una vez y conserva resultado `failed`.
+- P2 Standards: `CriterionEvidenceObservationSchema` es una única definición en
+  `@manyhands/shared`, consumida por contratos, execution-core y
+  run-coordinator; incluye pass/fail, intento y digest de salida.
+- P2 identidad: `matrixId` excluye la duración observada, pero conserva todos
+  los campos deterministas de resultado y atribución.
+- Primer gate raíz posterior: 211/212 archivos pasaron; el único fallo fue la
+  frontera que prohíbe `run-coordinator -> contracts`. La definición canónica se
+  movió a `shared`; el test de frontera y 24 pruebas relacionadas pasan.
+- Gates finales de la remediación: 13 archivos/104 tests afectados PASS; suite
+  raíz 212 archivos/1472 tests PASS con 2 skips preexistentes; typechecks de
+  `shared`, `contracts`, `decomposer`, `execution-core`, `run-coordinator`,
+  `orchestrator-graph` y web PASS; build de los 12 packages PASS.
+- Pendiente obligatorio: fijar el commit y obtener re-reviews independientes
+  Standards/Spec sin P0/P1/P2/P3.

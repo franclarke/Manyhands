@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import type { ValidationObligation } from "@manyhands/contracts";
+import type { CriterionEvidenceObservation } from "@manyhands/shared";
 import type { TestIntegrityFinding } from "./test-integrity";
 
 export type CriterionEvidenceStatus = "satisfied" | "failed" | "uncovered" | "flaky" | "not_applicable";
@@ -36,19 +38,9 @@ export interface CriterionEvidence {
 export interface EvidenceMatrix {
   criteria: CriterionEvidence[];
   outcome: "verified" | "unverified" | "failed";
-  observations: CriterionAwareObservation[];
+  observations: CriterionEvidenceObservation[];
   integrityFindings: TestIntegrityFinding[];
   negativeControls: NegativeControlEvidence[];
-}
-
-export interface CriterionAwareObservation {
-  evidenceId: string;
-  kind: ValidationObligation["acceptableEvidence"][number];
-  commandDigest: string;
-  durationMs: number;
-  criterionIds: string[];
-  obligationIds: string[];
-  references: string[];
 }
 
 export function buildEvidenceMatrix(input: {
@@ -101,8 +93,8 @@ function isRelevantEvidence(obligation: ValidationObligation, evidence: Validati
   return binding.references.every((reference) => observedReferences.has(reference));
 }
 
-function criterionAwareObservations(evidence: readonly ValidationEvidenceObservation[]): CriterionAwareObservation[] {
-  const observations = new Map<string, CriterionAwareObservation>();
+function criterionAwareObservations(evidence: readonly ValidationEvidenceObservation[]): CriterionEvidenceObservation[] {
+  const observations = new Map<string, CriterionEvidenceObservation>();
   for (const item of evidence) {
     if (item.commandDigest === undefined || item.durationMs === undefined) continue;
     const key = `${item.evidenceId}:${item.commandDigest}`;
@@ -111,6 +103,9 @@ function criterionAwareObservations(evidence: readonly ValidationEvidenceObserva
       kind: item.kind,
       commandDigest: item.commandDigest,
       durationMs: item.durationMs,
+      passed: item.passed,
+      attempt: item.attempt,
+      outputDigest: createHash("sha256").update(item.output ?? "").digest("hex"),
       criterionIds: [],
       obligationIds: [],
       references: []

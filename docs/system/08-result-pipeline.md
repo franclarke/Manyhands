@@ -14,10 +14,10 @@ de riesgo. Cada step materializado conserva una atribución explícita a
 la obligación no recibe un comando genérico por defecto y queda sin materializar.
 
 Un enlace `shared_command` debe enumerar sus criterios y explicar por qué una
-ejecución es relevante para cada uno. El recipe deduplica comandos físicos
-idénticos por digest, ejecuta una sola vez y proyecta observaciones lógicas
-separadas para todas las atribuciones explícitas sin inventar ejecuciones
-adicionales.
+ejecución es relevante para cada uno; sus referencias exactas se ejecutan como
+selectors. El recipe deduplica comandos físicos idénticos por digest, ejecuta
+una sola vez y proyecta observaciones lógicas separadas para todas las
+atribuciones explícitas sin inventar ejecuciones adicionales.
 
 ```ts
 type EvidenceItem = {
@@ -29,10 +29,13 @@ type EvidenceItem = {
   rationale?: string;
 };
 
-type CriterionAwareObservation = {
-  id: string;
+type CriterionEvidenceObservation = {
+  evidenceId: string;
   commandDigest: string;
   durationMs: number;
+  passed: boolean;
+  attempt: number;
+  outputDigest: string;
   criterionIds: string[];
   obligationIds: string[];
   references: string[];
@@ -66,6 +69,11 @@ recuperación o un retry que reprodujo el mismo candidato— sin reabrir sandbox
 re-ejecutar checks; nunca convierte un resultado negativo en positivo. El sandbox
 de baseline se abre una vez por candidato y se reutiliza entre obligaciones, no
 uno por obligación.
+
+La duración se persiste como medición de la ejecución, pero no forma parte de
+`matrixId`: dos ejecuciones equivalentes de la misma recipe conservan identidad
+estable aunque el reloj observado difiera. Resultado, intento, digest de salida,
+digest de comando y atribuciones sí forman parte de la identidad.
 
 ## Capas
 

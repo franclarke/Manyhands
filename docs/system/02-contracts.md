@@ -67,7 +67,8 @@ Cada obligación puede enlazar evidencia verificable de una de estas formas:
 - `static_proof`: referencias explícitas a la prueba estática;
 - `shared_command`: una única ejecución física se atribuye a varios criterios
   enumerados, con las mismas referencias y justificación declaradas
-  idénticamente en todas sus obligaciones.
+  idénticamente en todas sus obligaciones; esas referencias se pasan al runner
+  como selectors, no se copian sobre el resultado de un comando genérico.
 
 La ausencia de un enlace pertinente no autoriza a inferir evidencia desde un
 comando genérico: la obligación queda sin materializar y el criterio permanece

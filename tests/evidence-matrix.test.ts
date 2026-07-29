@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { readFile } from "node:fs/promises";
 import { buildEvidenceMatrix } from "@manyhands/execution-core";
 import { EvidenceMatrixRecordSchema } from "@manyhands/run-coordinator";
 
@@ -37,13 +36,26 @@ describe("buildEvidenceMatrix", () => {
   });
 
   it("rejects a persisted verified outcome when any criterion is uncovered", () => {
-    expect(EvidenceMatrixRecordSchema.safeParse({
+    const parsed = EvidenceMatrixRecordSchema.safeParse({
       matrixId: "matrix-1",
       candidateCommit: "candidate",
       validationContract: { id: "validation-1", revision: "rev-1" },
       criteria: [{ criterionId: "criterion-a", obligationId: "obligation-a", status: "uncovered", justification: "No evidence", evidenceRefs: [] }],
       outcome: "verified"
-    }).success).toBe(false);
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("upgrades historical matrices to the canonical empty observation list", () => {
+    const parsed = EvidenceMatrixRecordSchema.parse({
+      matrixId: "matrix-1",
+      candidateCommit: "candidate",
+      validationContract: { id: "validation-1", revision: "rev-1" },
+      criteria: [{ criterionId: "criterion-a", obligationId: "obligation-a", status: "satisfied", justification: "Passed", evidenceRefs: ["evidence-1"] }],
+      outcome: "verified"
+    });
+
+    expect(parsed.observations).toEqual([]);
   });
 
   it("rejects persisted verified outcomes with integrity findings or ineffective negative controls", () => {
@@ -71,11 +83,7 @@ describe("buildEvidenceMatrix", () => {
     expect(matrix.criteria[1]).toMatchObject({ status: "uncovered", justification: expect.stringMatching(/baseline/i) });
   });
 
-  it("does not let the generic retry-2 command hide a wrong projection order without the exact focused proof", async () => {
-    const fixtureRoot = new URL("./fixtures/validation/wide-graph-order/", import.meta.url);
-    const expected = JSON.parse(await readFile(new URL("expected.json", fixtureRoot), "utf8")) as { projectionIds: string[] };
-    const candidate = JSON.parse(await readFile(new URL("retry-2-candidate.json", fixtureRoot), "utf8")) as { projectionIds: string[] };
-    expect(candidate.projectionIds).not.toEqual(expected.projectionIds);
+  it("does not let a generic passing command substitute for an exact focused proof", () => {
     const orderObligation = {
       id: "obligation-order",
       criterionId: "criterion-order",
@@ -87,8 +95,8 @@ describe("buildEvidenceMatrix", () => {
       flakyPolicy: "forbid" as const,
       evidence: {
         kind: "focused_command" as const,
-        selectors: ["tests/projections.test.ts"],
-        references: ["tests/projections.test.ts"]
+        selectors: ["tests/projections.test.mjs"],
+        references: ["tests/projections.test.mjs"]
       }
     };
     const matrix = buildEvidenceMatrix({

@@ -1203,3 +1203,34 @@ del `1/8` histórico.
   identidad física exacta del clon;
 - CLAIM-040/041 siguen `partial`. Próxima operación: fijar el commit y pedir
   reviews independientes Standards/Spec con “No implementes correcciones”.
+
+### Reviews de ticket 19 sobre `8eaf3fb`
+
+- Standards FAIL: P1 por autoatribuir un test de unidad a todos sus criterios;
+  P2 por representaciones paralelas de observación y por incluir duración de
+  reloj en la identidad determinista de la matriz;
+- Spec FAIL: el mismo P1 y P2 porque la fixture retry-2 no ejercitaba un oráculo
+  value-aware real;
+- ambas reviews fueron sólo lectura y no implementaron correcciones. Ticket 19
+  continúa abierto. Próximo paso: regresiones RED y corrección causal antes de
+  nuevos gates/re-reviews.
+
+### Remediación de findings de ticket 19
+
+- shared relevance dejó de inferirse por co-localización: múltiples criterios
+  permanecen sin binding hasta una declaración explícita, cuyas referencias se
+  ejecutan como selectors;
+- la fixture retry-2 ahora contiene y ejecuta un oracle Node value-aware real;
+- la observación durable tiene un único schema canónico en `shared`, con
+  resultado, intento, digests, duración y atribuciones; registros históricos
+  migran a `observations: []`;
+- `matrixId` ignora únicamente duración de reloj y conserva los campos
+  deterministas;
+- un primer gate raíz pasó 211/212 archivos; detectó como único fallo que
+  `run-coordinator` no puede depender de `contracts`. El schema se reubicó en
+  `shared` y el test de frontera ya pasa;
+- gates finales de la remediación: 13 archivos/104 tests afectados PASS; suite
+  raíz 212 archivos/1472 tests PASS con 2 skips preexistentes; typechecks de
+  `shared`, `contracts`, `decomposer`, `execution-core`, `run-coordinator`,
+  `orchestrator-graph` y web PASS; build de los 12 packages PASS.
+  Próximo paso: commit y re-reviews independientes Standards/Spec.

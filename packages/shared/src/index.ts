@@ -17,6 +17,30 @@ export const EntityIdSchema = NonEmptyStringSchema.regex(
 
 export type EntityId = z.infer<typeof EntityIdSchema>;
 
+export const ValidationEvidenceKindSchema = z.enum([
+  "static_analysis",
+  "test_result",
+  "runtime_observation",
+  "artifact_inspection",
+  "manual_attestation"
+]);
+
+/** One physical validation execution attributed to its explicitly linked criteria. */
+export const CriterionEvidenceObservationSchema = z.object({
+  evidenceId: EntityIdSchema,
+  kind: ValidationEvidenceKindSchema,
+  commandDigest: NonEmptyStringSchema.regex(/^[a-f0-9]{64}$/u),
+  durationMs: z.number().nonnegative(),
+  passed: z.boolean(),
+  attempt: z.number().int().positive(),
+  outputDigest: NonEmptyStringSchema.regex(/^[a-f0-9]{64}$/u),
+  criterionIds: z.array(EntityIdSchema).min(1),
+  obligationIds: z.array(EntityIdSchema).min(1),
+  references: z.array(NonEmptyStringSchema).min(1)
+}).strict();
+
+export type CriterionEvidenceObservation = z.infer<typeof CriterionEvidenceObservationSchema>;
+
 export const IsoTimestampSchema = NonEmptyStringSchema;
 
 export type IsoTimestamp = z.infer<typeof IsoTimestampSchema>;

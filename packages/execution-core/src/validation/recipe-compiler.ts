@@ -57,7 +57,9 @@ export function compileValidationRecipe(input: {
     }
     const selectors = obligation.evidence.kind === "focused_command"
       ? obligation.evidence.selectors
-      : [];
+      : obligation.evidence.kind === "shared_command"
+        ? obligation.evidence.references
+        : [];
     const command = { command: capability.command, args: [...capability.args, ...selectors], timeoutMs: 60_000, cwd: "worktree" as const };
     const commandDigest = createHash("sha256").update(JSON.stringify(command)).digest("hex");
     const attribution: ValidationRecipeAttribution = {

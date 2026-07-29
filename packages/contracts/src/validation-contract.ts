@@ -1,4 +1,4 @@
-import { EntityIdSchema, NonEmptyStringSchema } from "@manyhands/shared";
+import { EntityIdSchema, NonEmptyStringSchema, ValidationEvidenceKindSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { ContractIdentityShape, addDuplicateIssues } from "./contract-identity.js";
 
@@ -12,13 +12,7 @@ export const ValidationLayerSchema = z.enum([
   "manual"
 ]);
 
-export const AcceptableEvidenceKindSchema = z.enum([
-  "static_analysis",
-  "test_result",
-  "runtime_observation",
-  "artifact_inspection",
-  "manual_attestation"
-]);
+export const AcceptableEvidenceKindSchema = ValidationEvidenceKindSchema;
 
 export const ValidationEvidenceBindingSchema = z.discriminatedUnion("kind", [
   z.object({

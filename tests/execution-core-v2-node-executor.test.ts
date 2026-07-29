@@ -742,7 +742,8 @@ function matrix(contract: V2PhysicalNodeExecutionInput["contract"], candidateCom
       justification: "Exact candidate evidence passed.",
       evidenceRefs: [`evidence-${obligation.id}`]
     })),
-    outcome: "verified"
+    outcome: "verified",
+    observations: []
   };
 }
 

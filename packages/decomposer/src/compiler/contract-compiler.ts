@@ -192,6 +192,10 @@ function criterionEvidence(
   criteria: readonly TaskAcceptanceCriterion[],
   repositoryEvidence: WorkBreakdown["repositoryEvidence"]
 ): ValidationObligation["evidence"] {
+  // A unit-level evidence reference says nothing about which of several
+  // criteria it proves. Shared relevance must be authored explicitly in the
+  // ValidationContract instead of inferred from co-location.
+  if (criteria.length !== 1) return undefined;
   const evidenceById = new Map(repositoryEvidence.map((evidence) => [evidence.id, evidence]));
   const references = [...new Set([
     ...(unit.plannedPaths ?? []),
@@ -201,20 +205,12 @@ function criterionEvidence(
     })
   ].filter(isTestReference))].sort();
   if (references.length === 0) return undefined;
-  if (criteria.length === 1) {
-    return { kind: "focused_command", selectors: references, references };
-  }
-  return {
-    kind: "shared_command",
-    criterionIds: criteria.map((criterion) => criterion.id),
-    references,
-    rationale: "The exact focused test references are allocated to every listed criterion owned by this unit."
-  };
+  return { kind: "focused_command", selectors: references, references };
 }
 
 function isTestReference(reference: string): boolean {
   const normalized = reference.replaceAll("\\", "/");
-  return /(?:^|\/)(?:tests?|__tests__)(?:\/|$)|(?:^|\/)[^/]+\.(?:test|spec)\.[cm]?[jt]sx?$/iu.test(normalized);
+  return /(?:^|\/)[^/]+\.(?:test|spec)\.[cm]?[jt]sx?$/iu.test(normalized);
 }
 
 function hasPackageManifest(snapshot: RepositorySnapshot): boolean {

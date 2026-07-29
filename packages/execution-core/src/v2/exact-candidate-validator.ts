@@ -7,6 +7,7 @@ import type { RepositorySnapshot } from "@manyhands/repository-index";
 
 import type { GitRunner } from "../git/runner";
 import { GitCandidateSandboxFactory, validateExactCandidate, type EvidenceValidationCache } from "../validation/candidate-validator";
+import type { EvidenceMatrix } from "../validation/evidence-matrix";
 import { compileValidationRecipe } from "../validation/recipe-compiler";
 import { ChildProcessValidationRunner, type ValidationRunner } from "../validation/runner";
 import { detectTestIntegrityFindings, isTestDiscoveryConfigurationPath, isTestFilePath } from "../validation/test-integrity";
@@ -21,6 +22,24 @@ export interface ExactCandidateValidatorV2Options {
   runner?: ValidationRunner;
   operationId?: string;
   evidenceCache?: EvidenceValidationCache;
+}
+
+export function computeEvidenceMatrixId(input: {
+  candidateCommit: string;
+  validationContract: { id: string; revision: string };
+  matrix: EvidenceMatrix;
+}): string {
+  const stableObservations = input.matrix.observations.map(({ durationMs: _durationMs, ...observation }) => observation);
+  const identity = JSON.stringify({
+    candidateCommit: input.candidateCommit,
+    validationContract: input.validationContract,
+    criteria: input.matrix.criteria,
+    outcome: input.matrix.outcome,
+    observations: stableObservations,
+    integrityFindings: input.matrix.integrityFindings,
+    negativeControls: input.matrix.negativeControls
+  });
+  return `matrix-${createHash("sha256").update(identity).digest("hex").slice(0, 16)}`;
 }
 
 /** Runs the compiled obligations in isolated worktrees at the exact candidate and baseline SHAs. */
@@ -93,17 +112,12 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
         })
       })
     });
-    const identity = JSON.stringify({
-      candidateCommit: validated.candidateCommit,
-      validationContract: input.contract.task.validation,
-      criteria: validated.matrix.criteria,
-      outcome: validated.matrix.outcome,
-      observations: validated.matrix.observations,
-      integrityFindings: validated.matrix.integrityFindings,
-      negativeControls: validated.matrix.negativeControls
-    });
     return {
-      matrixId: `matrix-${createHash("sha256").update(identity).digest("hex").slice(0, 16)}`,
+      matrixId: computeEvidenceMatrixId({
+        candidateCommit: validated.candidateCommit,
+        validationContract: input.contract.task.validation,
+        matrix: validated.matrix
+      }),
       candidateCommit: validated.candidateCommit,
       validationContract: { ...input.contract.task.validation },
       criteria: validated.matrix.criteria.map((criterion) => ({ ...criterion, evidenceRefs: [...criterion.evidenceRefs] })),

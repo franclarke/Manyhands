@@ -7,6 +7,7 @@ import {
   TaskContractSchema,
   ValidationContractSchema
 } from "@manyhands/contracts";
+import { CriterionEvidenceObservationSchema } from "@manyhands/shared";
 
 describe("versioned V2 contracts", () => {
   it("parses a complete task contract bundle", () => {
@@ -126,6 +127,21 @@ describe("versioned V2 contracts", () => {
     };
 
     expect(TaskContractBundleSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it("uses one canonical schema for observable criterion evidence", () => {
+    expect(CriterionEvidenceObservationSchema.parse({
+      evidenceId: "evidence-1",
+      kind: "test_result",
+      commandDigest: "a".repeat(64),
+      durationMs: 12.5,
+      passed: true,
+      attempt: 1,
+      outputDigest: "b".repeat(64),
+      criterionIds: ["criterion:booking-api"],
+      obligationIds: ["obligation:booking-api"],
+      references: ["tests/appointments/booking.test.ts"]
+    })).toMatchObject({ passed: true, attempt: 1 });
   });
 });
 

@@ -52,7 +52,7 @@ describe("acceptance intent allocation", () => {
     });
   });
 
-  it("compiles exact test references as explicit shared evidence for heterogeneous criteria", () => {
+  it("does not synthesize shared relevance from a unit-level test reference", () => {
     const breakdown = fiveIntentBreakdown();
     breakdown.repositoryEvidence.push({
       id: "test-inventory",
@@ -72,16 +72,63 @@ describe("acceptance intent allocation", () => {
       nodeIdByUnitKey: nodeIds(breakdown.root)
     }, dependencies);
     const bundle = compiled.bundles.find((candidate) => candidate.task.nodeId === "node-inventory")!;
-    const criterionIds = bundle.task.acceptanceCriteria.map((criterion) => criterion.id);
+    expect(bundle.task.acceptanceCriteria).toHaveLength(2);
+    expect(bundle.validation.obligations.map((obligation) => obligation.evidence)).toEqual([
+      undefined,
+      undefined
+    ]);
+  });
 
-    expect(bundle.validation.obligations.map((obligation) => obligation.evidence)).toEqual(
-      criterionIds.map(() => ({
-        kind: "shared_command",
-        criterionIds,
-        references: ["tests/inventory.test.ts"],
-        rationale: "The exact focused test references are allocated to every listed criterion owned by this unit."
-      }))
-    );
+  it("compiles an exact focused test reference for a unit with one criterion", () => {
+    const breakdown = fiveIntentBreakdown();
+    breakdown.repositoryEvidence.push({
+      id: "test-web",
+      kind: "path",
+      reference: "tests/web.test.ts",
+      observation: "Web criterion test",
+      confidence: 1
+    });
+    const web = breakdown.root.kind === "composite"
+      ? breakdown.root.children.find((unit) => unit.key === "web")
+      : undefined;
+    web?.evidenceIds.push("test-web");
+
+    const compiled = compileContractBundles({
+      breakdown,
+      repositorySnapshot: snapshot(),
+      nodeIdByUnitKey: nodeIds(breakdown.root)
+    }, dependencies);
+    const bundle = compiled.bundles.find((candidate) => candidate.task.nodeId === "node-web")!;
+
+    expect(bundle.validation.obligations[0]?.evidence).toEqual({
+      kind: "focused_command",
+      selectors: ["tests/web.test.ts"],
+      references: ["tests/web.test.ts"]
+    });
+  });
+
+  it("does not treat a test directory glob as an exact focused reference", () => {
+    const breakdown = fiveIntentBreakdown();
+    breakdown.repositoryEvidence.push({
+      id: "test-web-glob",
+      kind: "path",
+      reference: "tests/**",
+      observation: "Broad test directory",
+      confidence: 1
+    });
+    const web = breakdown.root.kind === "composite"
+      ? breakdown.root.children.find((unit) => unit.key === "web")
+      : undefined;
+    web?.evidenceIds.push("test-web-glob");
+
+    const compiled = compileContractBundles({
+      breakdown,
+      repositorySnapshot: snapshot(),
+      nodeIdByUnitKey: nodeIds(breakdown.root)
+    }, dependencies);
+    const bundle = compiled.bundles.find((candidate) => candidate.task.nodeId === "node-web")!;
+
+    expect(bundle.validation.obligations[0]?.evidence).toBeUndefined();
   });
 });
 

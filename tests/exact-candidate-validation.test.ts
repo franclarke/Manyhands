@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import { compileValidationRecipe, validateExactCandidate, type ValidationRecipe } from "@manyhands/execution-core";
+import { execFile } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+import {
+  compileValidationRecipe,
+  computeEvidenceMatrixId,
+  validateExactCandidate,
+  type ValidationRecipe
+} from "@manyhands/execution-core";
 import type { ValidationContract } from "@manyhands/contracts";
 import type { RepositoryCapabilities } from "@manyhands/repository-index";
 
@@ -21,6 +29,8 @@ const recipe: ValidationRecipe = {
   }],
   unmaterializedObligationIds: []
 };
+
+const execFileAsync = promisify(execFile);
 
 describe("validateExactCandidate", () => {
   it("runs in a clean sandbox pinned to the exact candidate and cleans it", async () => {
@@ -111,6 +121,7 @@ describe("validateExactCandidate", () => {
     });
 
     expect(sharedRecipe.steps).toHaveLength(1);
+    expect(sharedRecipe.steps[0]?.command.args).toEqual(["test", "tests/projections.test.ts"]);
     expect(run).toHaveBeenCalledTimes(1);
     expect(result.matrix.outcome).toBe("verified");
     expect(result.matrix.criteria.map((criterion) => criterion.status)).toEqual(["satisfied", "satisfied"]);
@@ -119,10 +130,126 @@ describe("validateExactCandidate", () => {
       expect.objectContaining({
         commandDigest: expect.stringMatching(/^[a-f0-9]{64}$/u),
         durationMs: expect.any(Number),
+        passed: true,
+        attempt: 1,
+        outputDigest: expect.stringMatching(/^[a-f0-9]{64}$/u),
         criterionIds: ["criterion-order", "criterion-values"],
         obligationIds: ["obligation-order", "obligation-values"],
         references: ["tests/projections.test.ts"]
       })
     ]);
+  });
+
+  it("executes the frozen value-aware order oracle and rejects the retry-2 candidate", async () => {
+    const fixtureRoot = fileURLToPath(new URL("./fixtures/validation/wide-graph-order/", import.meta.url));
+    const orderContract = {
+      schemaVersion: 2,
+      id: "validation-order",
+      revision: "rev-order",
+      provenance: "compiled",
+      nodeId: "node-order",
+      obligations: [{
+        id: "obligation-order",
+        criterionId: "criterion-order",
+        layer: "unit",
+        severity: "required",
+        acceptableEvidence: ["test_result"],
+        baselinePolicy: "not_required",
+        negativeControl: "not_required",
+        flakyPolicy: "forbid",
+        evidence: {
+          kind: "focused_command",
+          selectors: ["tests/projections.test.mjs"],
+          references: ["tests/projections.test.mjs"]
+        }
+      }]
+    } as ValidationContract;
+    const orderRecipe = compileValidationRecipe({
+      contract: orderContract,
+      capabilities: {
+        scripts: { test: "node --test" },
+        baselineCommands: [{ kind: "test", command: "node", args: ["--test"], sourceScript: "test" }],
+        languages: [],
+        stack: []
+      },
+      repositorySnapshotId: "snapshot-order",
+      candidateCommit: "retry-2-candidate"
+    });
+    const run = vi.fn(async (step: ValidationRecipe["steps"][number]) => {
+      try {
+        const result = await execFileAsync(step.command.command, step.command.args, { cwd: fixtureRoot });
+        return { passed: true, exitCode: 0, output: `${result.stdout}${result.stderr}` };
+      } catch (error) {
+        const failure = error as Error & { code?: number; stdout?: string; stderr?: string };
+        return {
+          passed: false,
+          exitCode: typeof failure.code === "number" ? failure.code : 1,
+          output: `${failure.stdout ?? ""}${failure.stderr ?? ""}${failure.message}`
+        };
+      }
+    });
+
+    const result = await validateExactCandidate({
+      recipe: orderRecipe,
+      obligations: orderContract.obligations
+    }, {
+      sandbox: {
+        create: async () => ({
+          worktreePath: fixtureRoot,
+          headCommit: "retry-2-candidate",
+          clean: true,
+          dispose: async () => undefined
+        })
+      },
+      run
+    });
+
+    expect(orderRecipe.steps[0]?.command.args).toEqual(["--test", "tests/projections.test.mjs"]);
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(result.matrix.criteria[0]).toMatchObject({ status: "failed" });
+    expect(result.matrix.outcome).toBe("failed");
+  });
+
+  it("keeps matrix identity stable when only observed execution duration changes", () => {
+    const matrix = {
+      criteria: [{
+        criterionId: "criterion-order",
+        obligationId: "obligation-order",
+        status: "satisfied" as const,
+        justification: "Exact order proof passed.",
+        evidenceRefs: ["evidence-order"]
+      }],
+      outcome: "verified" as const,
+      observations: [{
+        evidenceId: "evidence-order",
+        kind: "test_result" as const,
+        commandDigest: "a".repeat(64),
+        durationMs: 5,
+        passed: true,
+        attempt: 1,
+        outputDigest: "b".repeat(64),
+        criterionIds: ["criterion-order"],
+        obligationIds: ["obligation-order"],
+        references: ["tests/projections.test.mjs"]
+      }],
+      integrityFindings: [],
+      negativeControls: []
+    };
+    const input = {
+      candidateCommit: "candidate-sha",
+      validationContract: { id: "validation-order", revision: "rev-order" },
+      matrix
+    };
+
+    expect(computeEvidenceMatrixId(input)).toBe(computeEvidenceMatrixId({
+      ...input,
+      matrix: {
+        ...matrix,
+        observations: matrix.observations.map((observation) => ({
+          ...observation,
+          durationMs: 987.5
+        }))
+      }
+    }));
   });
 });

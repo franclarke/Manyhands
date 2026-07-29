@@ -331,7 +331,7 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 - **Target contract:** `docs/DECISIONS.md` A15; `docs/system/08-result-pipeline.md`.
 - **Status:** `partial`.
 - **Productive code:** `packages/execution-core/src/validation/evidence-matrix.ts`, `v2/exact-candidate-validator.ts`, `validation/candidate-validator.ts`; instanciado en `execution-pipeline.ts` (`ExactCandidateValidatorV2`). **[hecho]**
-- **Tests:** `tests/evidence-matrix.test.ts`, `tests/exact-candidate-validation.test.ts`, `tests/exact-candidate-cache.test.ts`, `tests/execution-core-validation-runner.test.ts`; ticket 19 agrega la regresión de orden Wide Graph y prueba que dos criterios pueden compartir una sola ejecución física sin duplicar evidencia.
+- **Tests:** `tests/evidence-matrix.test.ts`, `tests/exact-candidate-validation.test.ts`, `tests/exact-candidate-cache.test.ts`, `tests/execution-core-validation-runner.test.ts`; ticket 19 ejecuta el oráculo Node value-aware de `tests/fixtures/validation/wide-graph-order/tests/projections.test.mjs` contra el candidato adverso retry-2 y prueba que criterios con atribución explícita pueden compartir una sola ejecución física sin duplicar evidencia.
 - **Persisted evidence:** `validation.completed` presente en run V2 `613040c9` (descartado como evidencia formal).
 - **Gap:** la ruta productiva ya exige referencias exactas, digest, duración y atribución criterio-obligación; sigue faltando evidencia externa válida sobre un run nuevo, por lo que el claim permanece conservadoramente `partial`.
 - **Decision:** `implement + demonstrate`.
