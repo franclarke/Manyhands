@@ -1071,3 +1071,24 @@ Trabajo restante para tesis y proyecto:
 
 No se alcanzó la definición de terminado. El goal debe continuar en una tarea
 nueva usando `docs/tesis/NEXT_AGENT_GOAL_PROMPT.md`.
+
+### Cierre final de ticket 18 — 2026-07-28
+
+- después del handoff anterior, Standards y Spec revisaron `448b295` y ambos
+  dieron FAIL P1 por la composición `-C/--dir` + `--filter`/`-r`;
+- RED focal confirmó el bypass. Fix productivo `d593b53` interpreta el
+  directorio como scope para paquetes descendientes cuando hay selectors o
+  recursive, y como target exacto cuando no los hay;
+- verificación posterior: 39/39 en
+  `tests/execution-core-v2-node-executor.test.ts`; typechecks
+  `@manyhands/execution-core` y `@manyhands/run-coordinator` PASS;
+- las re-reviews Standards/Spec sobre `d593b53` se reanudaron y ambas dieron
+  PASS con cero P0/P1/P2/P3, sin implementar correcciones;
+- ticket 18 quedó `closed` con sus cinco casillas completas. CLAIM-040/041
+  permanecen `partial`, como exige su aceptación;
+- frente recalculado: ticket 19 es el siguiente `ready-for-agent`, pero no fue
+  reclamado ni iniciado por límite de cuota. Ruta restante: `19 -> 20 -> 21 ->
+  22 -> 23 -> 24 -> 25 -> 26 -> 11 -> 12 -> 02 -> 14 -> 15`;
+- branch `main`, sin push. El siguiente agente debe exigir árbol limpio y
+  verificar que `d593b53` sea ancestro de HEAD, leer ticket 19 completo y sólo
+  entonces iniciar la próxima fase.

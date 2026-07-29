@@ -14,26 +14,24 @@ Antes de modificar cualquier archivo, lee completos y en este orden:
 5. docs/README.md
 6. AGENTS.md y las instrucciones aplicables
 7. docs/agents/issue-tracker.md
-8. .scratch/code-review-remediation/issues/18-wire-test-integrity-controls.md
+8. .scratch/code-review-remediation/issues/19-criterion-aware-validation.md
 
 Usa exclusivamente `.scratch/code-review-remediation/issues/` como fuente de estado, blockers y aceptación. Recalcula el frente después de cada cierre. No confíes en este prompt si contradice el estado durable al final de HANDOFF o los tickets locales.
 
 Situación de arranque esperada:
 - branch `main`, sin push;
-- tickets 16 y 17 cerrados; ticket activo 18 todavía `ready-for-agent`;
-- ruta crítica `18 -> 19 -> 20 -> 21 -> 22 -> 23 -> 24 -> 25 -> 26 -> 11 -> 12 -> 02 -> 14 -> 15`;
-- último fix productivo de ticket 18: `448b295`, posterior a los reviews FAIL de `b4226b7`;
-- 39/39 tests focales y typechecks execution-core/run-coordinator PASS después del fix;
-- faltan reviews independientes Standards y Spec sobre el fixed point actual. No cierres ticket 18 sin ambos PASS y cero P0-P3;
+- tickets 16, 17 y 18 cerrados; ticket 19 es el siguiente `ready-for-agent` y todavía no fue iniciado;
+- ruta crítica `19 -> 20 -> 21 -> 22 -> 23 -> 24 -> 25 -> 26 -> 11 -> 12 -> 02 -> 14 -> 15`;
+- ticket 18 cerró sobre fix `d593b53`, con 39/39, typechecks execution-core/run-coordinator y reviews Standards/Spec PASS, cero P0-P3;
 - CLAIM-040/041 siguen `partial`;
 - retry-9 y retry-10 son evidencia adversa inmutable: no reanudes, reescribas ni borres runs, targets, clones, pools, journals o artefactos.
 
 Primera acción:
 1. verifica root, branch, HEAD, ancestry, `git status --short` y `git diff HEAD`; exige árbol limpio;
-2. verifica que `448b295` sea ancestro de HEAD;
-3. solicita en paralelo reviews independientes Standards y Spec del delta `b4226b7..HEAD`, ambas con “No implementes correcciones”;
-4. si ambas pasan, cierra ticket 18, actualiza HANDOFF y commit local pequeño; si fallan, preserva findings y remedia con TDD/diagnosing-bugs;
-5. recalcula el frente y lee ticket 19 completo antes de tocarlo.
+2. verifica que `d593b53` sea ancestro de HEAD y que ticket 18 esté `closed` con cinco casillas completas;
+3. lee completo `.scratch/code-review-remediation/issues/19-criterion-aware-validation.md` antes de modificar archivos;
+4. reclama sólo ticket 19, define RED y ejecuta su aceptación con TDD;
+5. antes de cerrarlo, solicita reviews Standards y Spec con “No implementes correcciones”, actualiza HANDOFF y recalcula el frente.
 
 Después:
 - ejecuta en orden tickets 19–26 con TDD, gates afectados y doble review independiente antes de cada cierre;

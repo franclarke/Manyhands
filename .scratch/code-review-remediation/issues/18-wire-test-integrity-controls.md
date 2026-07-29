@@ -4,13 +4,13 @@
 
 **Blocked by:** 17.
 
-**Status:** ready-for-agent
+**Status:** closed
 
-- [ ] RED cubre test borrado, skip, only y assertion de carga removida.
-- [ ] `ExactCandidateValidatorV2` ejecuta detección productiva y negative control.
-- [ ] Findings y referencias quedan en la Evidence Matrix durable.
-- [ ] CLAIM-040/041 sólo se reevalúan después de evidencia productiva; mientras tanto permanecen `partial`.
-- [ ] Suites, typecheck y reviews Standards/Spec pasan.
+- [x] RED cubre test borrado, skip, only y assertion de carga removida.
+- [x] `ExactCandidateValidatorV2` ejecuta detección productiva y negative control.
+- [x] Findings y referencias quedan en la Evidence Matrix durable.
+- [x] CLAIM-040/041 sólo se reevalúan después de evidencia productiva; mientras tanto permanecen `partial`.
+- [x] Suites, typecheck y reviews Standards/Spec pasan.
 
 ## Progreso TDD
 
@@ -110,3 +110,13 @@
   desde el manifest origen. 39/39 y typechecks execution-core/run-coordinator
   PASS. **Pendiente obligatorio:** reviews Standards y Spec del fixed point
   actual; no cerrar el ticket sin ambos PASS y cero P0-P3.
+- Reviews sobre `0c0c08d`/producto `448b295`: ambos FAIL P1 porque `-C/--dir`
+  combinado con selectors o `-r` exigía el manifest exacto del cwd. RED
+  reproducido; fix `d593b53` usa el directorio como scope descendiente cuando
+  hay selectors/recursive y conserva target exacto sin ellos. 39/39 y
+  typechecks execution-core/run-coordinator PASS. Las re-reviews finales fueron
+  interrumpidas por límite de cuota: siguen pendientes, ticket abierto.
+- Re-reviews reanudadas sobre `d593b53`: Standards PASS y Spec PASS, ambas con
+  cero P0/P1/P2/P3 y “No implementes correcciones”. Fixed point limpio; 39/39
+  focales y typechecks execution-core/run-coordinator PASS. Ticket cerrado;
+  CLAIM-040/041 permanecen `partial` hasta evidencia productiva/rederivación.
