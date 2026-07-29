@@ -261,6 +261,7 @@ describe("wide graph executor selection", () => {
       const selection = { executorId: "codex-cli", model: "gpt-5.5", effort: "high" };
 
       expect(manifest.schemaVersion).toBe(2);
+      expect(manifest.protocol).toEqual({ id: "warehouse-wide-graph", version: 2 });
       expect(manifest.executorSelection).toEqual(selection);
       expect(manifest.granularityCondition).toBe("C");
       expect(manifest.oracleContract).toMatchObject({
@@ -280,6 +281,9 @@ describe("wide graph executor selection", () => {
         JSON.stringify(cell.oracleContract) === JSON.stringify(manifest.oracleContract)
       )).toBe(true);
       expect(cells.every((cell) => cell.schemaVersion === 2)).toBe(true);
+      expect(cells.every((cell) =>
+        JSON.stringify(cell.protocol) === JSON.stringify(manifest.protocol)
+      )).toBe(true);
       expect(cells.every((cell) =>
         cell.condition === "C" && cell.granularityCondition === "C"
       )).toBe(true);

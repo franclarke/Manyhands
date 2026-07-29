@@ -100,13 +100,16 @@ históricos `warehouse-wide-graph-v1` pertenecen al contrato estructural anterio
 y no se reinterpretan bajo v2.
 
 Las series nuevas usan manifest y celdas `schemaVersion: 2`. Ambos congelan el
-mismo contrato externo: id, versión, SHA-256 del evaluator y runner, digest del
+mismo protocolo tipado `warehouse-wide-graph` v2 y contrato externo: id,
+versión, SHA-256 del evaluator, runner y cierre transitivo ejecutable, digest del
 contrato y mapeo explícito de criterios a checks. El preflight rechaza ausencia,
-drift de assets o divergencia manifest–celda antes de crear un run. Cuando hay
-un candidato exacto en `result_ready`, el driver ejecuta el oráculo una sola vez
-y sólo envía la aprobación de delivery si el recibo PASS coincide en
-id/versión/hashes/SHA y contiene todos los checks mapeados. Tras un restart se
-reutiliza el recibo preservado; nunca se reejecuta para buscar otro resultado.
+drift de assets o divergencia manifest–celda antes de crear un run, sin depender
+del nombre de la celda. Cuando hay un candidato exacto en `result_ready`, el
+driver ejecuta el oráculo una sola vez y sólo envía la aprobación de delivery si
+el recibo PASS coincide en id/versión/hashes/SHA y contiene todos los checks
+mapeados. Al observar `completed`, vuelve a exigir que el delivery receipt nombre
+ese mismo SHA. Tras un restart se reutiliza el recibo preservado; nunca se
+reejecuta para buscar otro resultado.
 
 ## Mediciones requeridas
 

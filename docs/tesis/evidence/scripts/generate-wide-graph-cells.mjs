@@ -7,7 +7,10 @@ import {
   buildWideGraphPlan,
   wideGraphSelection
 } from "./lib/wide-graph-study.mjs";
-import { loadWideGraphOracleContract } from "./lib/wide-graph-oracle-contract.mjs";
+import {
+  loadWideGraphOracleContract,
+  WIDE_GRAPH_PROTOCOL
+} from "./lib/wide-graph-oracle-contract.mjs";
 
 const targetRepo = resolve(argument("--target") ?? fail("--target is required"));
 const outDir = resolve(argument("--out") ?? "docs/tesis/evidence/warehouse/wide-graph/cells");
@@ -19,6 +22,7 @@ const selection = wideGraphSelection(argument("--executor") ?? "codex");
 const oracleContract = await loadWideGraphOracleContract();
 const cells = plan.map((entry) => ({
   schemaVersion: 2,
+  protocol: WIDE_GRAPH_PROTOCOL,
   ...entry,
   condition: "C",
   granularityCondition: "C",
@@ -53,6 +57,7 @@ for (const cell of cells) {
 }
 await writeFile(join(outDir, "manifest.json"), `${JSON.stringify({
   schemaVersion: 2,
+  protocol: WIDE_GRAPH_PROTOCOL,
   title: "Warehouse wide graph pilot",
   baseSha: plan[0]?.baseSha,
   granularityCondition: "C",

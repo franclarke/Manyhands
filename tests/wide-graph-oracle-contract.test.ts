@@ -37,6 +37,16 @@ describe("frozen wide graph oracle contract", () => {
         path: "docs/tesis/evidence/scripts/run-wide-graph-oracle.mjs",
         sha256: expect.stringMatching(/^[a-f0-9]{64}$/u)
       },
+      dependencies: expect.arrayContaining([
+        expect.objectContaining({
+          path: "docs/tesis/evidence/scripts/lib/wide-graph-metrics.mjs",
+          sha256: expect.stringMatching(/^[a-f0-9]{64}$/u)
+        }),
+        expect.objectContaining({
+          path: "docs/tesis/evidence/warehouse/oracles/oracle-core.mjs",
+          sha256: expect.stringMatching(/^[a-f0-9]{64}$/u)
+        })
+      ]),
       criterionMappings: expect.arrayContaining([
         expect.objectContaining({ criterionId: "projection-values", checks: ["specimen-values"] }),
         expect.objectContaining({ criterionId: "projection-order", checks: ["projection-order"] })
@@ -59,6 +69,12 @@ describe("frozen wide graph oracle contract", () => {
       evaluator: { ...contract.evaluator, sha256: "0".repeat(64) }
     };
     const unversionedExtension = { ...contract, strongerCheck: true };
+    const changedDependency = {
+      ...contract,
+      dependencies: contract.dependencies.map((dependency: { path: string; sha256: string }, index: number) =>
+        index === 0 ? { ...dependency, sha256: "1".repeat(64) } : dependency
+      )
+    };
 
     await expect(assertFrozenWideGraphOracleContract(withoutOrder, process.cwd()))
       .rejects.toThrow(/projection-order/iu);
@@ -66,6 +82,8 @@ describe("frozen wide graph oracle contract", () => {
       .rejects.toThrow(/evaluator hash mismatch/iu);
     await expect(assertFrozenWideGraphOracleContract(unversionedExtension, process.cwd()))
       .rejects.toThrow(/unversioned fields/iu);
+    await expect(assertFrozenWideGraphOracleContract(changedDependency, process.cwd()))
+      .rejects.toThrow(/dependency hash mismatch/iu);
   });
 
   it("invalidates attribution when identity, contract hash or candidate SHA changes", async () => {
@@ -99,8 +117,11 @@ describe("frozen wide graph oracle contract", () => {
     const contract = await loadWideGraphOracleContract(process.cwd());
     await expect(assertWideGraphOracleSeriesContract({
       schemaVersion: 2,
+      protocol: { id: "warehouse-wide-graph", version: 2 },
       oracleContract: contract
     }, [{
+      schemaVersion: 2,
+      protocol: { id: "warehouse-wide-graph", version: 2 },
       cellId: "warehouse-wide-n04",
       oracleContract: { ...contract, oracleContractVersion: 3 }
     }], process.cwd())).rejects.toThrow(/warehouse-wide-n04.+differs/iu);
@@ -111,7 +132,9 @@ describe("frozen wide graph oracle contract", () => {
     temporaryRoots.push(root);
     const configPath = join(root, "cell.json");
     await writeFile(configPath, JSON.stringify({
-      cellId: "warehouse-wide-n04",
+      schemaVersion: 2,
+      protocol: { id: "warehouse-wide-graph", version: 2 },
+      cellId: "renamed-wide-cell",
       condition: "C",
       taskId: "wide-graph-n04",
       baseUrl: "http://127.0.0.1:1"
@@ -143,6 +166,7 @@ describe("frozen wide graph oracle contract", () => {
     const candidateSha = await git(repository, ["rev-parse", "HEAD"]);
     const oracleContract = await loadWideGraphOracleContract(process.cwd());
     let delivered = false;
+    let completedSha = candidateSha;
     let oracleExistedAtDelivery = false;
     const server = createServer(async (request, response) => {
       const url = request.url ?? "";
@@ -155,7 +179,7 @@ describe("frozen wide graph oracle contract", () => {
       if (request.method === "GET" && url === "/api/runs/run-1/deliver") {
         return json(response, delivered ? {
           lifecycle: "completed",
-          receipt: { finalSha: candidateSha }
+          receipt: { finalSha: completedSha }
         } : {
           lifecycle: "result_ready",
           candidate: {
@@ -180,7 +204,9 @@ describe("frozen wide graph oracle contract", () => {
       const address = server.address();
       if (address === null || typeof address === "string") throw new Error("test server did not bind a TCP port");
       await writeFile(configPath, JSON.stringify({
-        cellId: "warehouse-wide-n04",
+        schemaVersion: 2,
+        protocol: { id: "warehouse-wide-graph", version: 2 },
+        cellId: "renamed-wide-cell",
         condition: "C",
         moduleCount: 4,
         baseUrl: `http://127.0.0.1:${address.port}`,
@@ -207,6 +233,7 @@ describe("frozen wide graph oracle contract", () => {
       await runDriver();
       expect(oracleExistedAtDelivery).toBe(true);
       const firstModified = (await stat(join(output, "oracle-result.json"))).mtimeMs;
+      const originalReceipt = await readFile(join(output, "oracle-result.json"), "utf8");
 
       delivered = false;
       oracleExistedAtDelivery = false;
@@ -223,6 +250,14 @@ describe("frozen wide graph oracle contract", () => {
 
       await expect(runDriver(["--attach", "run-1"])).rejects.toMatchObject({ code: 1 });
       expect(oracleExistedAtDelivery).toBe(false);
+
+      await writeFile(join(output, "oracle-result.json"), originalReceipt, "utf8");
+      delivered = false;
+      completedSha = "b".repeat(40);
+      oracleExistedAtDelivery = false;
+
+      await expect(runDriver(["--attach", "run-1"])).rejects.toMatchObject({ code: 1 });
+      expect(oracleExistedAtDelivery).toBe(true);
     } finally {
       await new Promise<void>((resolve, reject) => server.close((error) => error === undefined ? resolve() : reject(error)));
     }

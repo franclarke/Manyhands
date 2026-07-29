@@ -25,7 +25,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { dirname, join, resolve } from "node:path";
 import {
-  assertFrozenWideGraphOracleContract,
+  assertWideGraphOracleConfiguration,
   assertWideGraphOracleAttribution
 } from "./lib/wide-graph-oracle-contract.mjs";
 
@@ -33,9 +33,11 @@ const exec = promisify(execFile);
 
 const args = parseArgs(process.argv.slice(2));
 const config = JSON.parse(await readFile(args.config, "utf8"));
-const isWideGraphCell = typeof config.cellId === "string" && config.cellId.startsWith("warehouse-wide-");
-const oracleContract = isWideGraphCell
-  ? await assertFrozenWideGraphOracleContract(config.oracleContract)
+const hasVersionedProtocol = config.schemaVersion !== undefined
+  || config.protocol !== undefined
+  || config.oracleContract !== undefined;
+const oracleContract = hasVersionedProtocol
+  ? await assertWideGraphOracleConfiguration(config)
   : undefined;
 const outDir = resolve(args.out);
 await mkdir(outDir, { recursive: true });
@@ -153,6 +155,18 @@ async function drive(runId) {
     }
 
     if (["completed", "failed", "cancelled"].includes(lifecycle)) {
+      if (lifecycle === "completed" && oracleContract !== undefined) {
+        try {
+          await assertCompletedDelivery(view);
+        } catch (error) {
+          return terminal(
+            runId,
+            "failed",
+            { ...view, receipt: null },
+            error instanceof Error ? error.message : String(error)
+          );
+        }
+      }
       return terminal(runId, lifecycle, view);
     }
     // A parked run with a decision the pre-registered cell does not authorize is
@@ -211,6 +225,16 @@ async function verifyExternalOracle(candidateSha) {
   };
   await writeFile(output, `${JSON.stringify(failure, null, 2)}\n`, "utf8");
   return failure;
+}
+
+async function assertCompletedDelivery(view) {
+  const finalSha = view.receipt?.finalSha;
+  if (typeof finalSha !== "string") {
+    throw new Error("completed delivery has no finalSha to reconcile with the external oracle");
+  }
+  const output = join(outDir, "oracle-result.json");
+  const receipt = JSON.parse(await readFile(output, "utf8"));
+  assertWideGraphOracleAttribution(oracleContract, receipt, finalSha);
 }
 
 /** Pending decisions come from the durable journal, the same source the UI reads. */

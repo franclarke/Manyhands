@@ -121,6 +121,7 @@ type FinalArtifactManifest = {
 
 El protocolo experimental Wide Graph añade un gate externo entre ambos estados:
 su driver sólo autoriza delivery tras un PASS del contrato de oráculo congelado
-atribuible al commit candidato exacto. Este gate no reescribe retrospectivamente
-la Evidence Matrix ni los eventos `final_candidate.verified`; un contrato más
-fuerte crea una nueva versión y una nueva serie.
+atribuible al commit candidato exacto y reconcilia el receipt final contra el
+mismo SHA. Este gate no reescribe retrospectivamente la Evidence Matrix ni los
+eventos `final_candidate.verified`; un contrato más fuerte crea una nueva versión
+y una nueva serie.

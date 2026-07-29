@@ -36,3 +36,25 @@
   oracle-before-delivery, reuso sin retry y rechazo de receipt drift.
 - `node --check` pasa para los cinco scripts tocados; generación material de
   tres celdas v2 y preflight `run-g5 --only no-such-cell` pasan fuera del repo.
+
+## Reviews sobre `8c445ec`
+
+- Standards FAIL: 3 P1. El freeze omitía dependencias transitivas; el gate se
+  decidía por prefijo de `cellId`; y `completed` no reconciliaba el delivery
+  receipt contra el SHA aprobado por el oráculo.
+- Spec FAIL: 1 P1 por el bypass de `cellId` y 1 P2 porque freeze P0/mutación
+  seguían pendientes. Ningún reviewer implementó correcciones.
+
+## Remediación posterior
+
+- RED/GREEN congela el cierre transitivo ejecutable: catálogo de métricas, plan,
+  core, specimen, resolver de pnpm y el propio módulo contractual, además de
+  evaluator y runner.
+- Manifest y celdas llevan el discriminante contractual
+  `{ id: "warehouse-wide-graph", version: 2 }`; un cambio de `cellId` ya no
+  omite el preflight ni el oráculo.
+- Al observar `completed`, el driver vuelve a atribuir el receipt preservado al
+  `finalSha`; un SHA distinto devuelve resultado fallido. La regresión integrada
+  cubre el drift.
+- 10 archivos/80 tests afectados vuelven a pasar. Pendientes: commit, re-reviews
+  y luego el freeze P0/mutación señalado como P2.

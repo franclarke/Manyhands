@@ -1273,3 +1273,14 @@ del `1/8` histórico.
   atribuible al SHA exacto y un restart reutiliza el receipt preservado;
 - 10 archivos/80 tests afectados pasan. Pendientes: gate amplio, commit, freeze
   material con P0/mutación autenticada y reviews Standards/Spec.
+
+### Reviews y remediación de ticket 20
+
+- reviews sobre `8c445ec`: Standards FAIL con 3 P1 (hashes transitivos,
+  discriminante basado en `cellId`, receipt final no reconciliado); Spec FAIL
+  con el P1 de discriminante y P2 por freeze/P0/mutación aún pendientes;
+- RED/GREEN posterior congela las dependencias transitivas ejecutables, usa
+  protocolo tipado v2 independiente del nombre de celda y valida otra vez el
+  receipt `completed` contra el SHA aprobado por el oráculo;
+- 10 archivos/80 tests afectados PASS. Ningún reviewer modificó archivos.
+  Próximo paso: commit, re-reviews y freeze material sobre el punto aceptado.
