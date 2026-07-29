@@ -51,6 +51,38 @@ describe("acceptance intent allocation", () => {
       shared: "root"
     });
   });
+
+  it("compiles exact test references as explicit shared evidence for heterogeneous criteria", () => {
+    const breakdown = fiveIntentBreakdown();
+    breakdown.repositoryEvidence.push({
+      id: "test-inventory",
+      kind: "path",
+      reference: "tests/inventory.test.ts",
+      observation: "Inventory criterion tests",
+      confidence: 1
+    });
+    const inventory = breakdown.root.kind === "composite"
+      ? breakdown.root.children.find((unit) => unit.key === "inventory")
+      : undefined;
+    inventory?.evidenceIds.push("test-inventory");
+
+    const compiled = compileContractBundles({
+      breakdown,
+      repositorySnapshot: snapshot(),
+      nodeIdByUnitKey: nodeIds(breakdown.root)
+    }, dependencies);
+    const bundle = compiled.bundles.find((candidate) => candidate.task.nodeId === "node-inventory")!;
+    const criterionIds = bundle.task.acceptanceCriteria.map((criterion) => criterion.id);
+
+    expect(bundle.validation.obligations.map((obligation) => obligation.evidence)).toEqual(
+      criterionIds.map(() => ({
+        kind: "shared_command",
+        criterionIds,
+        references: ["tests/inventory.test.ts"],
+        rationale: "The exact focused test references are allocated to every listed criterion owned by this unit."
+      }))
+    );
+  });
 });
 
 const dependencies = {

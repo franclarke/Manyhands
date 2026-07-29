@@ -36,7 +36,8 @@ export function compileLocalAcceptanceCriterion(
 export function compileValidationObligation(
   unit: WorkUnit,
   criterion: TaskAcceptanceCriterion,
-  dependencies: ValidationCompilationDependencies
+  dependencies: ValidationCompilationDependencies,
+  evidence?: ValidationObligation["evidence"]
 ): ValidationObligation {
   const layer = validationLayerFor(unit);
   return {
@@ -47,7 +48,8 @@ export function compileValidationObligation(
     acceptableEvidence: layer === "manual" ? ["manual_attestation"] : ["test_result"],
     baselinePolicy: "required",
     negativeControl: layer === "static" ? "not_required" : "when_feasible",
-    flakyPolicy: "forbid"
+    flakyPolicy: "forbid",
+    ...(evidence !== undefined ? { evidence } : {})
   };
 }
 

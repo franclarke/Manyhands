@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
+import { performance } from "node:perf_hooks";
 import type { ValidationObligation } from "@manyhands/contracts";
 import { buildEvidenceMatrix, type EvidenceMatrix, type ValidationEvidenceObservation } from "./evidence-matrix";
-import type { ValidationRecipe, ValidationRecipeStep } from "./recipe-compiler";
+import type { ValidationRecipe, ValidationRecipeAttribution, ValidationRecipeStep } from "./recipe-compiler";
 import { compareBaselineResult } from "./baseline";
 import type { GitRunner } from "../git/runner";
 import type { WorktreeManager } from "../worktree/manager";
@@ -93,25 +94,34 @@ export async function validateExactCandidate(
     if (sandbox.headCommit !== input.recipe.candidateCommit || !sandbox.clean) throw new Error(`Validation sandbox is not the clean exact candidate ${input.recipe.candidateCommit}.`);
     const evidence: ValidationEvidenceObservation[] = [];
     for (const step of input.recipe.steps) {
-      const first = await dependencies.run(step, sandbox);
-      evidence.push(observation(step, first, 1));
+      const attributions = attributionsOf(step);
+      const first = await timedRun(() => dependencies.run(step, sandbox));
+      evidence.push(...attributions.map((attribution) => observation(step, attribution, first, 1)));
       if (!first.passed) {
-        const retry = await dependencies.run(step, sandbox);
-        evidence.push(observation(step, retry, 2));
+        const retry = await timedRun(() => dependencies.run(step, sandbox));
+        evidence.push(...attributions.map((attribution) => observation(step, attribution, retry, 2)));
       }
-      const final = evidence.filter((item) => item.obligationId === step.obligationId).at(-1)!;
-      if (step.baselinePolicy !== "not_required" && input.recipe.baselineCommit !== undefined && dependencies.runBaseline !== undefined && dependencies.createBaselineSandbox !== undefined) {
+      const finals = attributions.map((attribution) => evidence.filter((item) => item.obligationId === attribution.obligationId).at(-1)!);
+      if (attributions.some((attribution) => attribution.baselinePolicy !== "not_required") && input.recipe.baselineCommit !== undefined && dependencies.runBaseline !== undefined && dependencies.createBaselineSandbox !== undefined) {
         const baseline = await dependencies.runBaseline(step, await ensureBaselineSandbox(input.recipe.baselineCommit));
-        final.baselineDisposition = compareBaselineResult({ baselinePassed: baseline.passed && baseline.exitCode === 0, candidatePassed: final.passed });
+        for (const [index, attribution] of attributions.entries()) {
+          if (attribution.baselinePolicy === "not_required") continue;
+          finals[index]!.baselineDisposition = compareBaselineResult({ baselinePassed: baseline.passed && baseline.exitCode === 0, candidatePassed: finals[index]!.passed });
+        }
       }
-      if (final.passed && step.negativeControl !== "not_required" && dependencies.runNegativeControl !== undefined) {
+      const controlled = attributions
+        .map((attribution, index) => ({ attribution, final: finals[index]! }))
+        .filter(({ attribution, final }) => final.passed && attribution.negativeControl !== "not_required");
+      if (controlled.length > 0 && dependencies.runNegativeControl !== undefined) {
         const control = await dependencies.runNegativeControl(step, sandbox);
-        final.negativeControl = {
-          evidenceId: `${step.obligationId}:negative-control`,
-          obligationId: step.obligationId,
-          detectedFailure: control.detectedFailure,
-          outputDigest: createHash("sha256").update(control.output).digest("hex")
-        };
+        for (const { attribution, final } of controlled) {
+          final.negativeControl = {
+            evidenceId: `${attribution.obligationId}:negative-control`,
+            obligationId: attribution.obligationId,
+            detectedFailure: control.detectedFailure,
+            outputDigest: createHash("sha256").update(control.output).digest("hex")
+          };
+        }
       }
     }
     const result: ExactCandidateValidationResult = {
@@ -134,7 +144,7 @@ export async function validateExactCandidate(
   }
 }
 
-const EVIDENCE_VALIDATION_POLICY_VERSION = 2;
+const EVIDENCE_VALIDATION_POLICY_VERSION = 3;
 
 function evidenceCacheKey(recipeId: string, integrityFindings: readonly TestIntegrityFinding[]): string {
   const identity = JSON.stringify({
@@ -146,13 +156,51 @@ function evidenceCacheKey(recipeId: string, integrityFindings: readonly TestInte
   return `evidence-${createHash("sha256").update(identity).digest("hex")}`;
 }
 
-function observation(step: ValidationRecipeStep, run: { passed: boolean; exitCode: number; output: string }, attempt: number): ValidationEvidenceObservation {
+function observation(
+  step: ValidationRecipeStep,
+  attribution: ValidationRecipeAttribution,
+  run: { passed: boolean; exitCode: number; output: string; durationMs: number },
+  attempt: number
+): ValidationEvidenceObservation {
   return {
-    evidenceId: `${step.obligationId}:attempt:${attempt}`,
-    obligationId: step.obligationId,
-    kind: step.evidenceKind,
+    evidenceId: `${stepIdentity(step)}:attempt:${attempt}`,
+    obligationId: attribution.obligationId,
+    criterionId: attribution.criterionId,
+    kind: attribution.evidenceKind,
     passed: run.passed && run.exitCode === 0,
     attempt,
+    commandDigest: commandDigest(step),
+    durationMs: run.durationMs,
+    references: [...attribution.references],
     output: run.output
   };
+}
+
+function attributionsOf(step: ValidationRecipeStep): ValidationRecipeAttribution[] {
+  return step.attributions ?? [{
+    obligationId: step.obligationId,
+    criterionId: step.criterionId,
+    evidenceKind: step.evidenceKind,
+    baselinePolicy: step.baselinePolicy,
+    negativeControl: step.negativeControl,
+    flakyPolicy: step.flakyPolicy,
+    references: [],
+    rationale: "Legacy recipe attribution."
+  }];
+}
+
+function commandDigest(step: ValidationRecipeStep): string {
+  return step.commandDigest ?? createHash("sha256").update(JSON.stringify(step.command)).digest("hex");
+}
+
+function stepIdentity(step: ValidationRecipeStep): string {
+  return `command-${commandDigest(step)}`;
+}
+
+async function timedRun(
+  run: () => Promise<{ passed: boolean; exitCode: number; output: string }>
+): Promise<{ passed: boolean; exitCode: number; output: string; durationMs: number }> {
+  const startedAt = performance.now();
+  const result = await run();
+  return { ...result, durationMs: Math.max(0, performance.now() - startedAt) };
 }

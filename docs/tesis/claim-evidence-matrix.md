@@ -331,9 +331,9 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 - **Target contract:** `docs/DECISIONS.md` A15; `docs/system/08-result-pipeline.md`.
 - **Status:** `partial`.
 - **Productive code:** `packages/execution-core/src/validation/evidence-matrix.ts`, `v2/exact-candidate-validator.ts`, `validation/candidate-validator.ts`; instanciado en `execution-pipeline.ts` (`ExactCandidateValidatorV2`). **[hecho]**
-- **Tests:** `tests/evidence-matrix.test.ts`, `tests/exact-candidate-validation.test.ts`, `tests/execution-core-validation-runner.test.ts`.
+- **Tests:** `tests/evidence-matrix.test.ts`, `tests/exact-candidate-validation.test.ts`, `tests/exact-candidate-cache.test.ts`, `tests/execution-core-validation-runner.test.ts`; ticket 19 agrega la regresión de orden Wide Graph y prueba que dos criterios pueden compartir una sola ejecución física sin duplicar evidencia.
 - **Persisted evidence:** `validation.completed` presente en run V2 `613040c9` (descartado como evidencia formal).
-- **Gap:** exact-commit validation existe, pero una receta genérica puede acreditar criterios heterogéneos y el caller V2 no conecta test-integrity/negative controls.
+- **Gap:** la ruta productiva ya exige referencias exactas, digest, duración y atribución criterio-obligación; sigue faltando evidencia externa válida sobre un run nuevo, por lo que el claim permanece conservadoramente `partial`.
 - **Decision:** `implement + demonstrate`.
 - **Thesis impact:** Conclusión 3 queda no soportada hasta cerrar tickets 18–19 y obtener evidencia externa.
 - **Next gate:** tickets 18–19.
@@ -346,9 +346,9 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 - **Target contract:** `docs/system/08-result-pipeline.md`, `docs/system/02-contracts.md`.
 - **Status:** `partial`.
 - **Productive code:** `packages/contracts/src/validation-contract.ts`, `packages/decomposer/src/compiler/validation-obligations.ts`. **[hecho]**
-- **Tests:** `tests/validation-recipe.test.ts`, `tests/contract-boundary-validation.test.ts`.
+- **Tests:** `tests/validation-recipe.test.ts`, `tests/contracts-v2.test.ts`, `tests/contract-acceptance-allocation.test.ts`, `tests/contract-boundary-validation.test.ts`; ticket 19 cubre fail-closed sin binding, selectors focales exactos y declaración consistente de evidencia compartida.
 - **Persisted evidence:** `none` (formal).
-- **Gap:** el schema declara baseline/control negativo, pero la ruta V2 no los ejecuta productivamente y la compilación no garantiza evidencia pertinente por criterio.
+- **Gap:** el schema y el compiler ya garantizan evidencia pertinente por criterio y la ruta V2 ejecuta baseline/control negativo; aún no existe evidencia externa formal de un run nuevo, por lo que el claim permanece `partial`.
 - **Decision:** `implement + demonstrate`.
 - **Thesis impact:** no equiparar contrato declarado con validación efectiva hasta cerrar tickets 18–19.
 - **Next gate:** tickets 18–19.

@@ -47,6 +47,15 @@ export interface V2ExecutionEvidenceMatrix {
     evidenceRefs: string[];
   }>;
   outcome: "verified" | "unverified" | "failed";
+  observations?: Array<{
+    evidenceId: string;
+    kind: "static_analysis" | "test_result" | "runtime_observation" | "artifact_inspection" | "manual_attestation";
+    commandDigest: string;
+    durationMs: number;
+    criterionIds: string[];
+    obligationIds: string[];
+    references: string[];
+  }>;
   integrityFindings?: Array<{
     findingId: string;
     code: "test_removed" | "test_script_weakened" | "test_configuration_changed" | "test_skipped" | "test_only" | "assertion_removed";

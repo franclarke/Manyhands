@@ -16,6 +16,15 @@ export const EvidenceMatrixRecordSchema = z.object({
   validationContract: z.object({ id: EntityIdSchema, revision: NonEmptyStringSchema }).strict(),
   criteria: z.array(CriterionEvidenceSchema).min(1),
   outcome: z.enum(["verified", "unverified", "failed"]),
+  observations: z.array(z.object({
+    evidenceId: EntityIdSchema,
+    kind: z.enum(["static_analysis", "test_result", "runtime_observation", "artifact_inspection", "manual_attestation"]),
+    commandDigest: NonEmptyStringSchema.regex(/^[a-f0-9]{64}$/u),
+    durationMs: z.number().nonnegative(),
+    criterionIds: z.array(EntityIdSchema).min(1),
+    obligationIds: z.array(EntityIdSchema).min(1),
+    references: z.array(NonEmptyStringSchema).min(1)
+  }).strict()).optional(),
   integrityFindings: z.array(z.object({
     findingId: EntityIdSchema,
     code: z.enum(["test_removed", "test_script_weakened", "test_configuration_changed", "test_skipped", "test_only", "assertion_removed"]),

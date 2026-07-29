@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
+import { readFile } from "node:fs/promises";
 import { buildEvidenceMatrix } from "@manyhands/execution-core";
 import { EvidenceMatrixRecordSchema } from "@manyhands/run-coordinator";
 
 const obligations = [
-  { id: "obligation-a", criterionId: "criterion-a", layer: "unit" as const, severity: "required" as const, acceptableEvidence: ["test_result" as const], baselinePolicy: "optional" as const, negativeControl: "not_required" as const, flakyPolicy: "allow_with_warning" as const },
-  { id: "obligation-b", criterionId: "criterion-b", layer: "static" as const, severity: "required" as const, acceptableEvidence: ["static_analysis" as const], baselinePolicy: "required" as const, negativeControl: "not_required" as const, flakyPolicy: "forbid" as const }
+  {
+    id: "obligation-a", criterionId: "criterion-a", layer: "unit" as const, severity: "required" as const,
+    acceptableEvidence: ["test_result" as const], baselinePolicy: "optional" as const, negativeControl: "not_required" as const, flakyPolicy: "allow_with_warning" as const,
+    evidence: { kind: "focused_command" as const, selectors: ["tests/a.test.ts"], references: ["tests/a.test.ts"] }
+  },
+  {
+    id: "obligation-b", criterionId: "criterion-b", layer: "static" as const, severity: "required" as const,
+    acceptableEvidence: ["static_analysis" as const], baselinePolicy: "required" as const, negativeControl: "not_required" as const, flakyPolicy: "forbid" as const,
+    evidence: { kind: "static_proof" as const, references: ["tsconfig.json"] }
+  }
 ];
 
 describe("buildEvidenceMatrix", () => {
@@ -19,8 +28,8 @@ describe("buildEvidenceMatrix", () => {
 
   it("marks pass-after-failure as flaky and keeps uncovered required criteria unverified", () => {
     const matrix = buildEvidenceMatrix({ obligations, evidence: [
-      { evidenceId: "e-a-1", obligationId: "obligation-a", kind: "test_result", passed: false, attempt: 1 },
-      { evidenceId: "e-a-2", obligationId: "obligation-a", kind: "test_result", passed: true, attempt: 2 }
+      { evidenceId: "e-a-1", obligationId: "obligation-a", criterionId: "criterion-a", kind: "test_result", passed: false, attempt: 1, commandDigest: "a".repeat(64), durationMs: 5, references: ["tests/a.test.ts"] },
+      { evidenceId: "e-a-2", obligationId: "obligation-a", criterionId: "criterion-a", kind: "test_result", passed: true, attempt: 2, commandDigest: "a".repeat(64), durationMs: 5, references: ["tests/a.test.ts"] }
     ] });
     expect(matrix.criteria[0]).toMatchObject({ status: "flaky", evidenceRefs: ["e-a-1", "e-a-2"] });
     expect(matrix.criteria[1]).toMatchObject({ status: "uncovered" });
@@ -57,8 +66,47 @@ describe("buildEvidenceMatrix", () => {
 
   it("keeps a passed command uncovered when its required baseline was not run", () => {
     const matrix = buildEvidenceMatrix({ obligations, evidence: [
-      { evidenceId: "e-static", obligationId: "obligation-b", kind: "static_analysis", passed: true, attempt: 1 }
+      { evidenceId: "e-static", obligationId: "obligation-b", criterionId: "criterion-b", kind: "static_analysis", passed: true, attempt: 1, commandDigest: "b".repeat(64), durationMs: 5, references: ["tsconfig.json"] }
     ] });
     expect(matrix.criteria[1]).toMatchObject({ status: "uncovered", justification: expect.stringMatching(/baseline/i) });
+  });
+
+  it("does not let the generic retry-2 command hide a wrong projection order without the exact focused proof", async () => {
+    const fixtureRoot = new URL("./fixtures/validation/wide-graph-order/", import.meta.url);
+    const expected = JSON.parse(await readFile(new URL("expected.json", fixtureRoot), "utf8")) as { projectionIds: string[] };
+    const candidate = JSON.parse(await readFile(new URL("retry-2-candidate.json", fixtureRoot), "utf8")) as { projectionIds: string[] };
+    expect(candidate.projectionIds).not.toEqual(expected.projectionIds);
+    const orderObligation = {
+      id: "obligation-order",
+      criterionId: "criterion-order",
+      layer: "unit" as const,
+      severity: "required" as const,
+      acceptableEvidence: ["test_result" as const],
+      baselinePolicy: "optional" as const,
+      negativeControl: "not_required" as const,
+      flakyPolicy: "forbid" as const,
+      evidence: {
+        kind: "focused_command" as const,
+        selectors: ["tests/projections.test.ts"],
+        references: ["tests/projections.test.ts"]
+      }
+    };
+    const matrix = buildEvidenceMatrix({
+      obligations: [orderObligation],
+      evidence: [{
+        evidenceId: "generic-pnpm-test",
+        obligationId: "obligation-order",
+        criterionId: "criterion-order",
+        kind: "test_result",
+        passed: true,
+        attempt: 1,
+        commandDigest: "a".repeat(64),
+        durationMs: 10,
+        references: ["package.json"]
+      }]
+    });
+
+    expect(matrix.criteria[0]).toMatchObject({ status: "uncovered" });
+    expect(matrix.outcome).toBe("unverified");
   });
 });

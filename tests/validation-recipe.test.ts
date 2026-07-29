@@ -3,13 +3,21 @@ import { compileValidationRecipe } from "@manyhands/execution-core";
 import type { RepositoryCapabilities } from "@manyhands/repository-index";
 import type { ValidationContract } from "@manyhands/contracts";
 
-const contract: ValidationContract = {
+const contract = {
   schemaVersion: 2, id: "validation-1", revision: "rev-1", provenance: "compiled", nodeId: "node-1",
   obligations: [
-    { id: "obligation-static", criterionId: "criterion-static", layer: "static", severity: "required", acceptableEvidence: ["static_analysis"], baselinePolicy: "required", negativeControl: "not_required", flakyPolicy: "forbid" },
-    { id: "obligation-unit", criterionId: "criterion-unit", layer: "unit", severity: "required", acceptableEvidence: ["test_result"], baselinePolicy: "optional", negativeControl: "when_feasible", flakyPolicy: "allow_with_warning" }
+    {
+      id: "obligation-static", criterionId: "criterion-static", layer: "static", severity: "required",
+      acceptableEvidence: ["static_analysis"], baselinePolicy: "required", negativeControl: "not_required", flakyPolicy: "forbid",
+      evidence: { kind: "static_proof", references: ["tsconfig.json"] }
+    },
+    {
+      id: "obligation-unit", criterionId: "criterion-unit", layer: "unit", severity: "required",
+      acceptableEvidence: ["test_result"], baselinePolicy: "optional", negativeControl: "when_feasible", flakyPolicy: "allow_with_warning",
+      evidence: { kind: "focused_command", selectors: ["tests/booking.test.ts"], references: ["tests/booking.test.ts"] }
+    }
   ]
-};
+} as ValidationContract;
 
 const capabilities: RepositoryCapabilities = {
   packageManager: { name: "pnpm", evidence: "pnpm-lock.yaml" },
@@ -28,9 +36,30 @@ describe("compileValidationRecipe", () => {
     expect(recipe.steps.map((step) => step.obligationId)).toEqual(["obligation-static", "obligation-unit"]);
     expect(recipe.steps.map((step) => step.command)).toEqual([
       { command: "pnpm", args: ["typecheck"], timeoutMs: 60_000, cwd: "worktree" },
-      { command: "pnpm", args: ["test"], timeoutMs: 60_000, cwd: "worktree" }
+      { command: "pnpm", args: ["test", "tests/booking.test.ts"], timeoutMs: 60_000, cwd: "worktree" }
     ]);
     expect(recipe.unmaterializedObligationIds).toEqual([]);
     expect(recipe.baselineCommit).toBe("base");
   });
+
+  it("does not assign one generic passing test command to heterogeneous criteria without explicit relevance", () => {
+    const genericContract = {
+      ...contract,
+      obligations: [
+        { id: "obligation-order", criterionId: "criterion-order", layer: "unit", severity: "required", acceptableEvidence: ["test_result"], baselinePolicy: "optional", negativeControl: "not_required", flakyPolicy: "forbid" },
+        { id: "obligation-values", criterionId: "criterion-values", layer: "unit", severity: "required", acceptableEvidence: ["test_result"], baselinePolicy: "optional", negativeControl: "not_required", flakyPolicy: "forbid" }
+      ]
+    } as ValidationContract;
+
+    const recipe = compileValidationRecipe({
+      contract: genericContract,
+      capabilities,
+      repositorySnapshotId: "snapshot-1",
+      candidateCommit: "abc"
+    });
+
+    expect(recipe.steps).toEqual([]);
+    expect(recipe.unmaterializedObligationIds).toEqual(["obligation-order", "obligation-values"]);
+  });
+
 });

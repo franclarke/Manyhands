@@ -24,7 +24,7 @@ export function bookingBreakdown(): WorkBreakdown {
       cut: { criterion: "cohesion", rationale: "Separate cohesive increments around an explicit shared contract." },
       children: [
         leaf("domain", "Booking domain", "Represent booking rules", "domain", "domain-ready", "domain-path"),
-        leaf("api", "Booking API", "Create bookings", "api", "api-ready", "api-path"),
+        leaf("api", "Booking API", "Create bookings", "api", "api-ready", ["api-path", "api-test-path"]),
         leaf("ui", "Booking form", "Submit bookings", "ui", "ui-ready", "ui-path")
       ]
     },
@@ -40,6 +40,7 @@ export function bookingBreakdown(): WorkBreakdown {
     repositoryEvidence: [
       evidence("domain-path", "src/domain/booking.ts", "Existing domain module"),
       evidence("api-path", "src/api/bookings.ts", "Existing API route"),
+      evidence("api-test-path", "tests/api.test.ts", "Focused API acceptance tests"),
       evidence("ui-path", "src/ui/BookingForm.tsx", "Existing booking UI")
     ],
     uncertainties: [],
@@ -76,9 +77,9 @@ export function bookingSnapshot(): RepositorySnapshot {
       repositoryId: "booking-repo",
       rootPath,
       indexedAt: capturedAt,
-      files: ["src/domain/booking.ts", "src/api/bookings.ts", "src/ui/BookingForm.tsx"].map((filePath) => ({
+      files: ["src/domain/booking.ts", "src/api/bookings.ts", "src/ui/BookingForm.tsx", "tests/api.test.ts"].map((filePath) => ({
         path: filePath,
-        kind: "source",
+        kind: filePath.includes(".test.") ? "test" : "source",
         contentHash: "a".repeat(64),
         exportedSymbols: [],
         importedSymbols: [],
@@ -91,7 +92,7 @@ export function bookingSnapshot(): RepositorySnapshot {
       metadata: {
         indexer: "test-indexer",
         deterministic: true,
-        fileCount: 3,
+        fileCount: 4,
         symbolCount: 0,
         importCount: 0,
         exportCount: 0
@@ -105,7 +106,7 @@ export const compilerDependencies = {
   now: () => "2026-07-17T01:00:00.000Z"
 };
 
-function leaf(key: string, title: string, objective: string, concern: string, intentId: string, evidenceId: string) {
+function leaf(key: string, title: string, objective: string, concern: string, intentId: string, evidenceId: string | string[]) {
   return {
     key,
     kind: "leaf" as const,
@@ -114,7 +115,7 @@ function leaf(key: string, title: string, objective: string, concern: string, in
     concerns: [concern, "tests"],
     expectedOutcomes: [`${title} works and is verified`],
     acceptanceIntentIds: [intentId],
-    evidenceIds: [evidenceId]
+    evidenceIds: Array.isArray(evidenceId) ? evidenceId : [evidenceId]
   };
 }
 

@@ -1,4 +1,4 @@
-import { EntityIdSchema } from "@manyhands/shared";
+import { EntityIdSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { ContractIdentityShape, addDuplicateIssues } from "./contract-identity.js";
 
@@ -20,6 +20,24 @@ export const AcceptableEvidenceKindSchema = z.enum([
   "manual_attestation"
 ]);
 
+export const ValidationEvidenceBindingSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("focused_command"),
+    selectors: z.array(NonEmptyStringSchema).min(1),
+    references: z.array(NonEmptyStringSchema).min(1)
+  }).strict(),
+  z.object({
+    kind: z.literal("static_proof"),
+    references: z.array(NonEmptyStringSchema).min(1)
+  }).strict(),
+  z.object({
+    kind: z.literal("shared_command"),
+    criterionIds: z.array(EntityIdSchema).min(1),
+    references: z.array(NonEmptyStringSchema).min(1),
+    rationale: NonEmptyStringSchema
+  }).strict()
+]);
+
 export const ValidationObligationSchema = z.object({
   id: EntityIdSchema,
   criterionId: EntityIdSchema,
@@ -28,7 +46,8 @@ export const ValidationObligationSchema = z.object({
   acceptableEvidence: z.array(AcceptableEvidenceKindSchema).min(1),
   baselinePolicy: z.enum(["required", "optional", "not_required"]),
   negativeControl: z.enum(["required", "when_feasible", "not_required"]),
-  flakyPolicy: z.enum(["forbid", "allow_with_warning"])
+  flakyPolicy: z.enum(["forbid", "allow_with_warning"]),
+  evidence: ValidationEvidenceBindingSchema.optional()
 }).strict();
 
 export type ValidationObligation = z.infer<typeof ValidationObligationSchema>;

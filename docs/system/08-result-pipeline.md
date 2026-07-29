@@ -9,7 +9,15 @@ quedaron demostrados sobre este commit exacto?”.
 
 El contrato define obligaciones. El compiler de recipes resuelve checks
 ejecutables desde package scripts, config, tests, tipos de artifact y políticas
-de riesgo.
+de riesgo. Cada step materializado conserva una atribución explícita a
+`criterionId`, `obligationId` y referencias exactas. Si esa atribución no existe,
+la obligación no recibe un comando genérico por defecto y queda sin materializar.
+
+Un enlace `shared_command` debe enumerar sus criterios y explicar por qué una
+ejecución es relevante para cada uno. El recipe deduplica comandos físicos
+idénticos por digest, ejecuta una sola vez y proyecta observaciones lógicas
+separadas para todas las atribuciones explícitas sin inventar ejecuciones
+adicionales.
 
 ```ts
 type EvidenceItem = {
@@ -20,7 +28,22 @@ type EvidenceItem = {
   observedOnCommit: string;
   rationale?: string;
 };
+
+type CriterionAwareObservation = {
+  id: string;
+  commandDigest: string;
+  durationMs: number;
+  criterionIds: string[];
+  obligationIds: string[];
+  references: string[];
+};
 ```
+
+La Evidence Matrix sólo considera pertinente una observación cuando coincide
+el criterio, la obligación, el digest del comando, la duración observable y
+todas las referencias enlazadas. El resultado durable agrupa una ejecución
+física compartida en una observación con todos sus criterios y obligaciones.
+Un exit code verde sin ese enlace deja el criterio `unverified`.
 
 ## Pipeline por candidato
 

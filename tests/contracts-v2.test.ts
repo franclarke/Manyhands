@@ -84,6 +84,49 @@ describe("versioned V2 contracts", () => {
     expect(TaskContractBundleSchema.safeParse(badScopeRef).success).toBe(false);
     expect(TaskContractBundleSchema.safeParse(badCriterion).success).toBe(false);
   });
+
+  it("rejects shared evidence that names criteria outside the bundle", () => {
+    const bundle = validBundle();
+    const obligation = bundle.validation.obligations[0]!;
+    const invalid = {
+      ...bundle,
+      validation: {
+        ...bundle.validation,
+        obligations: [{
+          ...obligation,
+          evidence: {
+            kind: "shared_command",
+            criterionIds: [obligation.criterionId, "criterion:missing"],
+            references: ["tests/appointments/booking.test.ts"],
+            rationale: "One focused integration test proves both criteria."
+          }
+        }]
+      }
+    };
+
+    expect(TaskContractBundleSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it("rejects focused evidence whose declared references differ from its selectors", () => {
+    const bundle = validBundle();
+    const obligation = bundle.validation.obligations[0]!;
+    const invalid = {
+      ...bundle,
+      validation: {
+        ...bundle.validation,
+        obligations: [{
+          ...obligation,
+          evidence: {
+            kind: "focused_command",
+            selectors: ["tests/appointments/booking.test.ts"],
+            references: ["tests/appointments/unrelated.test.ts"]
+          }
+        }]
+      }
+    };
+
+    expect(TaskContractBundleSchema.safeParse(invalid).success).toBe(false);
+  });
 });
 
 function validBundle() {

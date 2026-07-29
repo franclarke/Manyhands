@@ -6,9 +6,13 @@ export type CriterionEvidenceStatus = "satisfied" | "failed" | "uncovered" | "fl
 export interface ValidationEvidenceObservation {
   evidenceId: string;
   obligationId: string;
+  criterionId?: string;
   kind: ValidationObligation["acceptableEvidence"][number];
   passed: boolean;
   attempt: number;
+  commandDigest?: string;
+  durationMs?: number;
+  references?: string[];
   output?: string;
   negativeControl?: NegativeControlEvidence;
   baselineDisposition?: "not_run" | "baseline_passed" | "preexisting_failure" | "regression";
@@ -32,8 +36,19 @@ export interface CriterionEvidence {
 export interface EvidenceMatrix {
   criteria: CriterionEvidence[];
   outcome: "verified" | "unverified" | "failed";
+  observations: CriterionAwareObservation[];
   integrityFindings: TestIntegrityFinding[];
   negativeControls: NegativeControlEvidence[];
+}
+
+export interface CriterionAwareObservation {
+  evidenceId: string;
+  kind: ValidationObligation["acceptableEvidence"][number];
+  commandDigest: string;
+  durationMs: number;
+  criterionIds: string[];
+  obligationIds: string[];
+  references: string[];
 }
 
 export function buildEvidenceMatrix(input: {
@@ -47,7 +62,11 @@ export function buildEvidenceMatrix(input: {
   const criteria = input.obligations.map((obligation): CriterionEvidence => {
     if (notApplicable.has(obligation.id)) return result(obligation, "not_applicable", "Obligation explicitly does not apply to this candidate.", []);
     const evidence = input.evidence
-      .filter((item) => item.obligationId === obligation.id && obligation.acceptableEvidence.includes(item.kind))
+      .filter((item) =>
+        item.obligationId === obligation.id
+        && obligation.acceptableEvidence.includes(item.kind)
+        && isRelevantEvidence(obligation, item)
+      )
       .sort((left, right) => left.attempt - right.attempt);
     if (evidence.length === 0) return result(obligation, "uncovered", "No acceptable evidence is linked to this obligation.", []);
     const refs = evidence.flatMap((item) => [item.evidenceId, ...(item.negativeControl === undefined ? [] : [item.negativeControl.evidenceId])]);
@@ -67,9 +86,41 @@ export function buildEvidenceMatrix(input: {
   return {
     criteria,
     outcome: hardFailure || integrityFailed ? "failed" : uncovered ? "unverified" : "verified",
+    observations: criterionAwareObservations(input.evidence),
     integrityFindings: integrityFindings.map((finding) => ({ ...finding })),
     negativeControls: input.evidence.flatMap((item) => item.negativeControl === undefined ? [] : [{ ...item.negativeControl }])
   };
+}
+
+function isRelevantEvidence(obligation: ValidationObligation, evidence: ValidationEvidenceObservation): boolean {
+  const binding = obligation.evidence;
+  if (binding === undefined) return false;
+  if (evidence.criterionId !== obligation.criterionId || evidence.commandDigest === undefined || evidence.durationMs === undefined) return false;
+  if (binding.kind === "shared_command" && !binding.criterionIds.includes(obligation.criterionId)) return false;
+  const observedReferences = new Set(evidence.references ?? []);
+  return binding.references.every((reference) => observedReferences.has(reference));
+}
+
+function criterionAwareObservations(evidence: readonly ValidationEvidenceObservation[]): CriterionAwareObservation[] {
+  const observations = new Map<string, CriterionAwareObservation>();
+  for (const item of evidence) {
+    if (item.commandDigest === undefined || item.durationMs === undefined) continue;
+    const key = `${item.evidenceId}:${item.commandDigest}`;
+    const current = observations.get(key) ?? {
+      evidenceId: item.evidenceId,
+      kind: item.kind,
+      commandDigest: item.commandDigest,
+      durationMs: item.durationMs,
+      criterionIds: [],
+      obligationIds: [],
+      references: []
+    };
+    if (item.criterionId !== undefined && !current.criterionIds.includes(item.criterionId)) current.criterionIds.push(item.criterionId);
+    if (!current.obligationIds.includes(item.obligationId)) current.obligationIds.push(item.obligationId);
+    for (const reference of item.references ?? []) if (!current.references.includes(reference)) current.references.push(reference);
+    observations.set(key, current);
+  }
+  return [...observations.values()];
 }
 
 function result(obligation: ValidationObligation, status: CriterionEvidenceStatus, justification: string, evidenceRefs: string[]): CriterionEvidence {

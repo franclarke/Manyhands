@@ -5,8 +5,10 @@ import {
   type ContractReference,
   type ScopeContract,
   type SeamContract,
+  type TaskAcceptanceCriterion,
   type TaskContractBundle,
-  type ValidationContract
+  type ValidationContract,
+  type ValidationObligation
 } from "@manyhands/contracts";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
 import type { WorkBreakdown, WorkUnit } from "../planner/schema.js";
@@ -142,7 +144,12 @@ export function compileContractBundles(input: {
       id: dependencies.idFor("validation-contract", unit.key),
       provenance: "compiled" as const,
       nodeId,
-      obligations: criteria.map((criterion) => compileValidationObligation(unit, criterion, dependencies))
+      obligations: criteria.map((criterion) => compileValidationObligation(
+        unit,
+        criterion,
+        dependencies,
+        criterionEvidence(unit, criteria, input.breakdown.repositoryEvidence)
+      ))
     }) satisfies ValidationContract;
     const relevantArtifacts = allArtifactContracts.filter((contract) => contract.producerNodeId === nodeId || contract.consumerNodeIds.includes(nodeId));
     const relevantSeams = seamContracts.filter((contract) => contract.producerNodeId === nodeId || contract.consumerNodeIds.includes(nodeId));
@@ -178,6 +185,36 @@ export function compileContractBundles(input: {
     scopePathsByNodeId,
     acceptanceOwnerByIntentId
   };
+}
+
+function criterionEvidence(
+  unit: WorkUnit,
+  criteria: readonly TaskAcceptanceCriterion[],
+  repositoryEvidence: WorkBreakdown["repositoryEvidence"]
+): ValidationObligation["evidence"] {
+  const evidenceById = new Map(repositoryEvidence.map((evidence) => [evidence.id, evidence]));
+  const references = [...new Set([
+    ...(unit.plannedPaths ?? []),
+    ...unit.evidenceIds.flatMap((evidenceId) => {
+      const evidence = evidenceById.get(evidenceId);
+      return evidence?.kind === "path" ? [evidence.reference] : [];
+    })
+  ].filter(isTestReference))].sort();
+  if (references.length === 0) return undefined;
+  if (criteria.length === 1) {
+    return { kind: "focused_command", selectors: references, references };
+  }
+  return {
+    kind: "shared_command",
+    criterionIds: criteria.map((criterion) => criterion.id),
+    references,
+    rationale: "The exact focused test references are allocated to every listed criterion owned by this unit."
+  };
+}
+
+function isTestReference(reference: string): boolean {
+  const normalized = reference.replaceAll("\\", "/");
+  return /(?:^|\/)(?:tests?|__tests__)(?:\/|$)|(?:^|\/)[^/]+\.(?:test|spec)\.[cm]?[jt]sx?$/iu.test(normalized);
 }
 
 function hasPackageManifest(snapshot: RepositorySnapshot): boolean {

@@ -60,8 +60,20 @@ Congela obligaciones:
 - condiciones para `not_applicable`;
 - tolerancia a flaky, normalmente cero para criterios obligatorios.
 
-No congela necesariamente comandos exactos. `ValidationRecipeCompiler` resuelve
-comandos y entornos con el repositorio vigente.
+Cada obligación puede enlazar evidencia verificable de una de estas formas:
+
+- `focused_command`: los `selectors` ejecutados coinciden exactamente con las
+  referencias que se atribuyen al criterio;
+- `static_proof`: referencias explícitas a la prueba estática;
+- `shared_command`: una única ejecución física se atribuye a varios criterios
+  enumerados, con las mismas referencias y justificación declaradas
+  idénticamente en todas sus obligaciones.
+
+La ausencia de un enlace pertinente no autoriza a inferir evidencia desde un
+comando genérico: la obligación queda sin materializar y el criterio permanece
+`unverified`. `ValidationRecipeCompiler` resuelve comandos y entornos con el
+repositorio vigente, pero no puede ampliar las referencias declaradas por el
+contrato.
 
 ## Versionado y compatibilidad
 
@@ -90,4 +102,6 @@ Se rechaza antes de ejecutar:
 - seam sin semántica suficiente para paralelizar;
 - artifact requerido sin forma de materialización;
 - commands no permitidos o entorno no declarado;
+- selectors focales diferentes de sus referencias declaradas;
+- evidencia compartida incompleta, divergente o referida a criterios ajenos;
 - revisiones inconsistentes.

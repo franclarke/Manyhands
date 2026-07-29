@@ -1179,3 +1179,27 @@ claims nuevos o modificados y congelar el protocolo compacto. La definición de
 terminado del demostrador exige las capacidades acumuladas de W1, WC1, WC2 y
 WC3; la conclusión académica deberá distinguir claramente ese resultado final
 del `1/8` histórico.
+
+## Ticket 19 en curso — validación relevante por criterio — 2026-07-29
+
+- trabajo aislado desde `bb9d102` en
+  `C:\Users\franc_rgy\.codex\tmp\manyhands-ticket19-20260729-115928\repo`; el
+  checkout principal y sus seis cambios ajenos permanecen intactos;
+- RED confirmó que la receta asignaba el mismo `pnpm test` a obligaciones
+  heterogéneas y luego sintetizaba evidencia distinta por obligación;
+- GREEN introduce enlaces `focused_command`, `static_proof` y
+  `shared_command`, compila referencias exactas desde tests planificados y falla
+  cerrado cuando una obligación carece de evidencia pertinente;
+- el validator deduplica comandos físicos compartidos y persiste observaciones
+  con digest, duración, criterios, obligaciones y referencias; la matriz exige
+  coincidencia exacta antes de marcar un criterio satisfecho;
+- la fixture adversa `wide-graph-order` prueba que un comando verde no acredita
+  orden de proyecciones si no ejecutó su prueba relevante;
+- gates actuales: 12 archivos/89 tests afectados PASS; suite raíz 212
+  archivos/1466 tests PASS con 2 skips preexistentes; typechecks de los cuatro
+  packages afectados y web PASS; build de los 12 packages PASS;
+- mutación autenticada productiva verificada sobre el servidor oficial local:
+  GET con cookie `200`, POST de workspace `201` y lectura persistida con
+  identidad física exacta del clon;
+- CLAIM-040/041 siguen `partial`. Próxima operación: fijar el commit y pedir
+  reviews independientes Standards/Spec con “No implementes correcciones”.

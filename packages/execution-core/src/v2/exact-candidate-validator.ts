@@ -98,6 +98,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       validationContract: input.contract.task.validation,
       criteria: validated.matrix.criteria,
       outcome: validated.matrix.outcome,
+      observations: validated.matrix.observations,
       integrityFindings: validated.matrix.integrityFindings,
       negativeControls: validated.matrix.negativeControls
     });
@@ -107,6 +108,12 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       validationContract: { ...input.contract.task.validation },
       criteria: validated.matrix.criteria.map((criterion) => ({ ...criterion, evidenceRefs: [...criterion.evidenceRefs] })),
       outcome: validated.matrix.outcome,
+      observations: validated.matrix.observations.map((observation) => ({
+        ...observation,
+        criterionIds: [...observation.criterionIds],
+        obligationIds: [...observation.obligationIds],
+        references: [...observation.references]
+      })),
       integrityFindings: validated.matrix.integrityFindings.map((finding) => ({ ...finding })),
       negativeControls: validated.matrix.negativeControls.map((control) => ({ ...control }))
     };

@@ -59,7 +59,49 @@ export const TaskContractBundleSchema = z.object({
     if (!criterionIds.has(obligation.criterionId)) {
       issue(context, ["validation", "obligations", index, "criterionId"], "validation obligation references an unknown criterion");
     }
+    if (
+      obligation.evidence?.kind === "focused_command"
+      && (
+        obligation.evidence.selectors.length !== obligation.evidence.references.length
+        || obligation.evidence.selectors.some(
+          (selector, selectorIndex) => selector !== obligation.evidence?.references[selectorIndex]
+        )
+      )
+    ) {
+      issue(
+        context,
+        ["validation", "obligations", index, "evidence", "references"],
+        "focused evidence references must exactly match the executed selectors"
+      );
+    }
+    if (obligation.evidence?.kind === "shared_command") {
+      const sharedIds = obligation.evidence.criterionIds;
+      if (!sharedIds.includes(obligation.criterionId)) {
+        issue(context, ["validation", "obligations", index, "evidence", "criterionIds"], "shared evidence must include its obligation criterion");
+      }
+      if (new Set(sharedIds).size !== sharedIds.length) {
+        issue(context, ["validation", "obligations", index, "evidence", "criterionIds"], "shared evidence repeats a criterion");
+      }
+      for (const [criterionIndex, sharedCriterionId] of sharedIds.entries()) {
+        if (!criterionIds.has(sharedCriterionId)) {
+          issue(context, ["validation", "obligations", index, "evidence", "criterionIds", criterionIndex], "shared evidence references an unknown criterion");
+        }
+      }
+    }
     coveredCriteria.add(obligation.criterionId);
+  }
+  for (const [index, obligation] of bundle.validation.obligations.entries()) {
+    if (obligation.evidence?.kind !== "shared_command") continue;
+    for (const sharedCriterionId of obligation.evidence.criterionIds) {
+      const matching = bundle.validation.obligations.find((candidate) => candidate.criterionId === sharedCriterionId);
+      if (
+        matching === undefined
+        || matching.evidence?.kind !== "shared_command"
+        || JSON.stringify(matching.evidence) !== JSON.stringify(obligation.evidence)
+      ) {
+        issue(context, ["validation", "obligations", index, "evidence"], `shared evidence is not declared identically by criterion ${sharedCriterionId}`);
+      }
+    }
   }
   for (const [index, criterion] of bundle.task.acceptanceCriteria.entries()) {
     if (criterion.required && !coveredCriteria.has(criterion.id)) {

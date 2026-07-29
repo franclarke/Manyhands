@@ -102,7 +102,7 @@ describe("compiled output roots", () => {
     expect(domain?.scope.outputRoots).toEqual(["src/domain"]);
 
     const root = compiled.contracts.find((bundle) => bundle.task.nodeId === compiled.graph.rootId);
-    expect(root?.scope.outputRoots).toEqual(["src/api", "src/domain", "src/ui"]);
+    expect(root?.scope.outputRoots).toEqual(["src/api", "src/domain", "src/ui", "tests"]);
     expect(root?.scope.outputRoots).not.toContain(".");
   });
 });

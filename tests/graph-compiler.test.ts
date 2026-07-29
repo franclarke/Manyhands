@@ -72,7 +72,8 @@ describe("Graph Compiler V2", () => {
     expect(root?.scope.allowedPaths).toEqual([
       "src/api/bookings.ts",
       "src/domain/booking.ts",
-      "src/ui/BookingForm.tsx"
+      "src/ui/BookingForm.tsx",
+      "tests/api.test.ts"
     ]);
     expect(root?.task.consumes).toHaveLength(3);
     expect(root?.task.produces).toEqual([
