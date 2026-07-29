@@ -656,7 +656,8 @@ Resultado terminal de `retry-10` N=4:
   detached PID `37384`, termino `failed` durante compiled plan review;
 - el planner genero el artefacto registry en direccion
   `analytics-registry -> study-wide-graph-script`, pero el seam del comando en
-  direccion inversa. El review detecto el ciclo de dos nodos y rechazo el plan;
+  direccion inversa. El review trató incorrectamente el artifact acíclico más
+  el seam no ordenante como un ciclo de dos nodos y rechazo el plan;
 - no hubo execution, candidate, receipt ni mutacion del target W1. El oraculo
   queda durablemente `not_run`; no se reintenta ni se corrige el producto entre
   celdas;
