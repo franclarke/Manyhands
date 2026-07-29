@@ -8,7 +8,7 @@
  * forward before it reaches the domain schema. A record from a NEWER version than
  * this build understands fails closed — a future journal is never read blindly.
  */
-export const CURRENT_EVENT_SCHEMA_VERSION = 3;
+export const CURRENT_EVENT_SCHEMA_VERSION = 4;
 
 /** Migrates a durable event payload from version N to version N+1. */
 type EventUpcaster = (event: unknown) => unknown;
@@ -21,7 +21,9 @@ type EventUpcaster = (event: unknown) => unknown;
 const upcasters: Record<number, EventUpcaster> = {
   // v3 extends strict evidence matrices with integrity findings and negative
   // controls. Both fields are optional so historical v2 events remain valid.
-  2: (event) => event
+  2: (event) => event,
+  // v4 adds the test_configuration_changed integrity code to the strict enum.
+  3: (event) => event
 };
 
 /** Apply successive upcasters to bring a stored event up to the current version. */

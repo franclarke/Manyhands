@@ -17,8 +17,8 @@ beforeEach(async () => { directory = await mkdtemp(path.join(os.tmpdir(), "mh-up
 afterEach(async () => { await rm(directory, { recursive: true, force: true }); });
 
 describe("event schema upcasting", () => {
-  it("writes the integrity-evidence event shape as schema v3", () => {
-    expect(CURRENT_EVENT_SCHEMA_VERSION).toBe(3);
+  it("writes the integrity-evidence event shape as schema v4", () => {
+    expect(CURRENT_EVENT_SCHEMA_VERSION).toBe(4);
   });
   it("is an identity at the current schema version", () => {
     const event = { eventId: "e", runId: "r", sequence: 1, occurredAt: at, type: "run.created", payload: { goal: "x" } };
@@ -50,7 +50,7 @@ describe("event schema upcasting", () => {
     await store.appendFenced("run-up", 0, authority, [{ eventId: "created", occurredAt: at, type: "run.created", payload: { goal: "Build" } }]);
     // The current-version record round-trips exactly.
     expect((await store.load("run-up")).map((event) => event.sequence)).toEqual([1]);
-    expect(JSON.parse((await readFile(store.eventLogPath("run-up"), "utf8")).trim()).schemaVersion).toBe(3);
+    expect(JSON.parse((await readFile(store.eventLogPath("run-up"), "utf8")).trim()).schemaVersion).toBe(4);
 
     const existing = (await readFile(store.eventLogPath("run-up"), "utf8")).trimEnd();
     const futureEnvelope = JSON.stringify({ schemaVersion: CURRENT_EVENT_SCHEMA_VERSION + 1, event: { eventId: "future", runId: "run-up", sequence: 2, occurredAt: at, type: "run.created", payload: { goal: "Build" } }, checksum: "deadbeef" });

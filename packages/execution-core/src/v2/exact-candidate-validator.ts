@@ -145,13 +145,26 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     }
     const baselineScripts: Record<string, string> = {};
     const candidateScripts: Record<string, string> = {};
-    for (const manifestPath of changedFiles.filter((file) => path.posix.basename(file.replaceAll("\\", "/")) === "package.json").sort()) {
+    const configurationPaths = new Set(changedFiles.filter(isTestDiscoveryConfigurationPath));
+    const manifestPaths = manifestAncestors(changedFiles);
+    const validationCommands: string[] = [];
+    for (const manifestPath of [...manifestPaths].sort()) {
       const [baselineManifest, candidateManifest] = await Promise.all([
         this.options.git.showFile({ cwd: this.options.repoRoot, ref: baselineCommit, path: manifestPath }),
         this.options.git.showFile({ cwd: this.options.repoRoot, ref: candidateCommit, path: manifestPath })
       ]);
-      Object.assign(baselineScripts, testScriptsFromManifest(baselineManifest, manifestPath));
-      Object.assign(candidateScripts, testScriptsFromManifest(candidateManifest, manifestPath));
+      const baselineManifestScripts = testScriptsFromManifest(baselineManifest, manifestPath);
+      const candidateManifestScripts = testScriptsFromManifest(candidateManifest, manifestPath);
+      Object.assign(baselineScripts, baselineManifestScripts);
+      Object.assign(candidateScripts, candidateManifestScripts);
+      validationCommands.push(...Object.values(baselineManifestScripts), ...Object.values(candidateManifestScripts));
+      if (changedFiles.includes(manifestPath) && embeddedTestConfigChanged(baselineManifest, candidateManifest)) configurationPaths.add(manifestPath);
+    }
+    for (const changedFile of changedFiles) {
+      const normalized = changedFile.replaceAll("\\", "/");
+      if (validationCommands.some((command) => command.includes(normalized) || command.includes(`./${normalized}`))) {
+        configurationPaths.add(changedFile);
+      }
     }
     return {
       findings: detectTestIntegrityFindings({
@@ -161,7 +174,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
         candidateScripts,
         baselineTestContents,
         candidateTestContents,
-        changedTestConfigurationPaths: changedFiles.filter(isTestDiscoveryConfigurationPath)
+        changedTestConfigurationPaths: [...configurationPaths]
       }),
       candidateTestContents
     };
@@ -197,10 +210,40 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
   }
 }
 
-function testScriptsFromManifest(contents: string | null, manifestPath: string): Record<string, string> {
+function manifestAncestors(changedFiles: readonly string[]): Set<string> {
+  const manifests = new Set<string>(["package.json"]);
+  for (const file of changedFiles) {
+    const normalized = file.replaceAll("\\", "/");
+    let directory = path.posix.dirname(normalized);
+    while (directory !== ".") {
+      manifests.add(`${directory}/package.json`);
+      directory = path.posix.dirname(directory);
+    }
+    if (path.posix.basename(normalized) === "package.json") manifests.add(normalized);
+  }
+  return manifests;
+}
+
+function embeddedTestConfigChanged(baseline: string | null, candidate: string | null): boolean {
+  const before = parseManifest(baseline);
+  const after = parseManifest(candidate);
+  return ["jest", "vitest", "ava", "mocha", "nyc", "cypress", "playwright"]
+    .some((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]));
+}
+
+function parseManifest(contents: string | null): Record<string, unknown> {
   if (contents === null) return {};
   try {
-    const scripts = (JSON.parse(contents) as { scripts?: unknown }).scripts;
+    const parsed = JSON.parse(contents) as unknown;
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
+}
+
+function testScriptsFromManifest(contents: string | null, manifestPath: string): Record<string, string> {
+  try {
+    const scripts = parseManifest(contents).scripts;
     if (scripts === null || typeof scripts !== "object" || Array.isArray(scripts)) return {};
     const commands = Object.fromEntries(Object.entries(scripts as Record<string, unknown>)
       .filter((entry): entry is [string, string] => typeof entry[1] === "string"));

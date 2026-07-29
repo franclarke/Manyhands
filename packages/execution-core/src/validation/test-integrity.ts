@@ -110,7 +110,7 @@ export function isTestFilePath(path: string): boolean {
 
 export function isTestDiscoveryConfigurationPath(filePath: string): boolean {
   const base = filePath.replaceAll("\\", "/").split("/").at(-1)?.toLowerCase() ?? "";
-  return /^(?:vitest|vite|jest|playwright|cypress|karma|ava)\.config\./u.test(base)
-    || /^(?:\.mocharc|pytest\.ini|pyproject\.toml)$/u.test(base)
+  return /^(?:vitest|vite|jest|playwright|cypress|karma|ava)\.(?:config|workspace)\./u.test(base)
+    || /^(?:\.mocharc(?:\.(?:js|cjs|mjs|json|ya?ml))?|pytest\.ini|pyproject\.toml)$/u.test(base)
     || /(?:^|[._-])test(?:s)?[._-]config/u.test(base);
 }

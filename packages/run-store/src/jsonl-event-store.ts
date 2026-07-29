@@ -24,7 +24,7 @@ import { acquireDurableLock } from "./durable-lock.js";
 import { foldRunEvents, reduceRunEvents } from "./projection-fold.js";
 
 interface DurableEventEnvelope {
-  schemaVersion: 3;
+  schemaVersion: 4;
   event: RunEvent;
   checksum: string;
 }

@@ -458,6 +458,31 @@ describe("ExactCandidateValidatorV2", () => {
     expect(evidence.integrityFindings).toContainEqual(expect.objectContaining({ code: "test_configuration_changed", path: "vitest.config.ts" }));
   });
 
+  it.each([
+    ["embedded Jest config", ["package.json"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "jest" }, jest: { testMatch: ["**/*.test.ts"] } }) },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "jest" }, jest: { testMatch: ["**/smoke.test.ts"] } }) },
+      expectedPath: "package.json"
+    }],
+    ["external wrapper", ["scripts/run-tests.mjs"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": "runAll();" },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": "process.exit(0);" },
+      expectedPath: "scripts/run-tests.mjs"
+    }]
+  ] as const)("rejects coverage narrowed through %s", async (_label, changedFiles, fixture) => {
+    const snapshot = bookingSnapshot();
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: snapshot }, compilerDependencies);
+    const candidate = "5".repeat(40);
+    const git = new FakeGitRunner({ diffRangeNameOnly: [...changedFiles], showFileByRef: {
+      [compiled.graph.baseCommit]: fixture.baseline,
+      [candidate]: fixture.candidate
+    } });
+    const validator = new ExactCandidateValidatorV2({ git, worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "narrow passed", exitCode: 0 }) } });
+    const evidence = await validator.validate({ runId: "run-input", attemptId: "attempt-input", contract: compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!, candidateCommit: candidate, baselineCommit: compiled.graph.baseCommit });
+    expect(evidence.outcome).toBe("failed");
+    expect(evidence.integrityFindings).toContainEqual(expect.objectContaining({ code: "test_configuration_changed", path: fixture.expectedPath }));
+  });
+
   it("persists and rejects a feasible negative control that stays green on the baseline", async () => {
     const tempRoot = await mkdtemp(path.join(tmpdir(), "manyhands-nc-"));
     try {
