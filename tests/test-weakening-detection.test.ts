@@ -1,5 +1,8 @@
+import { mkdtemp, mkdir, rm, symlink } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { compareBaselineResult, detectTestIntegrityFindings } from "@manyhands/execution-core";
+import { compareBaselineResult, detectTestIntegrityFindings, materializeNegativeControlTests } from "@manyhands/execution-core";
 
 describe("test integrity and baseline", () => {
   it("distinguishes a pre-existing baseline failure from a new regression", () => {
@@ -49,5 +52,43 @@ describe("test integrity and baseline", () => {
       candidateScripts: { test: "vitest run" },
       candidateTestContents: { "tests/new.test.ts": 'it.only("new", () => { expect(true).toBe(true); });' }
     })).toEqual([expect.objectContaining({ code: "test_only", path: "tests/new.test.ts" })]);
+
+    expect(detectTestIntegrityFindings({
+      baselineTestFiles: ["tests/assert.test.ts"],
+      candidateTestFiles: ["tests/assert.test.ts"],
+      baselineScripts: { test: "vitest run" },
+      candidateScripts: { test: "vitest run" },
+      baselineTestContents: { "tests/assert.test.ts": 'it("works", () => { assert(run()); });' },
+      candidateTestContents: { "tests/assert.test.ts": 'it("works", () => { run(); });' }
+    })).toEqual([expect.objectContaining({ code: "assertion_removed", path: "tests/assert.test.ts" })]);
+  });
+
+  it("fails closed when an established test script changes coverage", () => {
+    for (const candidate of ["vitest run tests/smoke.test.ts", "echo ok"] as const) {
+      expect(detectTestIntegrityFindings({
+        baselineTestFiles: [],
+        candidateTestFiles: [],
+        baselineScripts: { "package.json#scripts.test": "vitest run" },
+        candidateScripts: { "package.json#scripts.test": candidate }
+      })).toEqual([expect.objectContaining({
+        code: "test_script_weakened",
+        path: "package.json#scripts.test"
+      })]);
+    }
+  });
+
+  it("rejects symlinked parents before materializing a negative control", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mh-nc-root-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "mh-nc-outside-"));
+    try {
+      await mkdir(path.join(outside, "target"));
+      await symlink(path.join(outside, "target"), path.join(root, "tests"), process.platform === "win32" ? "junction" : "dir");
+      await expect(materializeNegativeControlTests(root, {
+        "tests/escape.test.ts": "expect(true).toBe(true);"
+      })).rejects.toThrow(/symbolic link/i);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(outside, { recursive: true, force: true });
+    }
   });
 });

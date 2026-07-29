@@ -8,17 +8,21 @@
  * forward before it reaches the domain schema. A record from a NEWER version than
  * this build understands fails closed — a future journal is never read blindly.
  */
-export const CURRENT_EVENT_SCHEMA_VERSION = 2;
+export const CURRENT_EVENT_SCHEMA_VERSION = 3;
 
 /** Migrates a durable event payload from version N to version N+1. */
 type EventUpcaster = (event: unknown) => unknown;
 
 /**
- * Registry keyed by source version. Empty today: v2 is the first and current
- * shape, so nothing needs migrating yet. Add `1: (event) => ...` here the day a
- * v1 record shape is superseded.
+ * Registry keyed by source version. Version 2 is the first durable shape;
+ * version 3 adds optional evidence-integrity fields, so its upcast is an
+ * identity transformation while still making new records rejectable by v2.
  */
-const upcasters: Record<number, EventUpcaster> = {};
+const upcasters: Record<number, EventUpcaster> = {
+  // v3 extends strict evidence matrices with integrity findings and negative
+  // controls. Both fields are optional so historical v2 events remain valid.
+  2: (event) => event
+};
 
 /** Apply successive upcasters to bring a stored event up to the current version. */
 export function upcastEventToCurrent(schemaVersion: number, event: unknown): unknown {

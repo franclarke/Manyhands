@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import ts from "typescript";
 
+export const TEST_INTEGRITY_DETECTOR_VERSION = 1 as const;
+
 export interface TestIntegrityFinding {
   findingId: string;
   code: "test_removed" | "test_script_weakened" | "test_skipped" | "test_only" | "assertion_removed";
@@ -24,7 +26,7 @@ export function detectTestIntegrityFindings(input: {
   for (const [name, baseline] of Object.entries(input.baselineScripts).sort(([left], [right]) => left.localeCompare(right))) {
     const candidate = input.candidateScripts[name];
     if (candidate === undefined || isWeaker(candidate, baseline)) {
-      const path = `package.json#scripts.${name}`;
+      const path = name.includes("#scripts.") ? name : `package.json#scripts.${name}`;
       findings.push(finding("test_script_weakened", path, `Candidate script ${name} is missing or weaker than the baseline.`));
     }
   }
@@ -48,8 +50,7 @@ export function detectTestIntegrityFindings(input: {
 }
 
 function isWeaker(candidate: string, baseline: string): boolean {
-  if (candidate.trim() === baseline.trim()) return false;
-  return /--passWithNoTests|--allowNoTests|\|\|\s*(?:true|exit\s+0)/u.test(candidate);
+  return candidate.trim() !== baseline.trim();
 }
 
 function finding(code: TestIntegrityFinding["code"], path: string, message: string): TestIntegrityFinding {
@@ -62,6 +63,7 @@ function testStrength(source: string, path: string): { skipped: number; only: nu
   const result = { skipped: 0, only: 0, assertions: 0 };
   const visit = (node: ts.Node): void => {
     if (ts.isCallExpression(node)) {
+      if (ts.isIdentifier(node.expression) && node.expression.text === "assert") result.assertions += 1;
       if (ts.isPropertyAccessExpression(node.expression)) {
         const modifier = node.expression.name.text;
         const root = callRootIdentifier(node.expression.expression);

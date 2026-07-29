@@ -397,6 +397,49 @@ describe("ExactCandidateValidatorV2", () => {
     expect(evidence.criteria.some((criterion) => criterion.evidenceRefs.some((ref) => ref.startsWith("test-integrity:")))).toBe(true);
   });
 
+  it("rejects a green candidate that narrows a nested package test script", async () => {
+    const snapshot = bookingSnapshot();
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: snapshot }, compilerDependencies);
+    const original = compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!;
+    const contract = {
+      ...original,
+      validation: {
+        ...original.validation,
+        obligations: original.validation.obligations.map((obligation) => ({ ...obligation, negativeControl: "not_required" as const }))
+      }
+    };
+    const candidate = "7".repeat(40);
+    const baseline = compiled.graph.baseCommit;
+    const manifest = "packages/api/package.json";
+    const git = new FakeGitRunner({
+      diffRangeNameOnly: [manifest],
+      showFileByRef: {
+        [baseline]: { [manifest]: JSON.stringify({ scripts: { test: "vitest run" } }) },
+        [candidate]: { [manifest]: JSON.stringify({ scripts: { test: "vitest run tests/smoke.test.ts" } }) }
+      }
+    });
+    const validator = new ExactCandidateValidatorV2({
+      git,
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      repoRoot: "C:/repo/booking",
+      repositorySnapshot: snapshot,
+      runner: { run: async () => ({ passed: true, output: "narrow suite passed", exitCode: 0 }) }
+    });
+
+    const evidence = await validator.validate({
+      runId: "run-v2-script-integrity",
+      attemptId: "attempt-script",
+      contract,
+      candidateCommit: candidate,
+      baselineCommit: baseline
+    });
+
+    expect(evidence.outcome).toBe("failed");
+    expect(evidence.integrityFindings).toEqual([
+      expect.objectContaining({ code: "test_script_weakened", path: `${manifest}#scripts.test` })
+    ]);
+  });
+
   it("persists and rejects a feasible negative control that stays green on the baseline", async () => {
     const tempRoot = await mkdtemp(path.join(tmpdir(), "manyhands-nc-"));
     try {

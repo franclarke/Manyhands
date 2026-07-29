@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { lstat, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { TaskContractBundle } from "@manyhands/contracts";
@@ -116,10 +116,11 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     findings: ReturnType<typeof detectTestIntegrityFindings>;
     candidateTestContents: Record<string, string>;
   }> {
-    const baselineFiles = new Set((this.options.repositorySnapshot.index?.files ?? [])
-      .filter((file) => file.kind === "test")
-      .map((file) => file.path));
-    const candidateFiles = new Set(baselineFiles);
+    // Only paths changed between the exact baseline and candidate can weaken
+    // integrity. Deriving both sides from Git avoids stale planning-snapshot
+    // membership after intermediate integration commits.
+    const baselineFiles = new Set<string>();
+    const candidateFiles = new Set<string>();
     const baselineTestContents: Record<string, string> = {};
     const candidateTestContents: Record<string, string> = {};
     const changedFiles = await this.options.git.diffRangeNameOnly({
@@ -142,12 +143,16 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
         candidateTestContents[file] = candidate;
       }
     }
-    const baselineScripts = this.options.repositorySnapshot.capabilities.scripts;
-    const packageChanged = changedFiles.includes("package.json");
-    const candidateManifest = packageChanged
-      ? await this.options.git.showFile({ cwd: this.options.repoRoot, ref: candidateCommit, path: "package.json" })
-      : null;
-    const candidateScripts = packageChanged ? scriptsFromManifest(candidateManifest) : baselineScripts;
+    const baselineScripts: Record<string, string> = {};
+    const candidateScripts: Record<string, string> = {};
+    for (const manifestPath of changedFiles.filter((file) => path.posix.basename(file.replaceAll("\\", "/")) === "package.json").sort()) {
+      const [baselineManifest, candidateManifest] = await Promise.all([
+        this.options.git.showFile({ cwd: this.options.repoRoot, ref: baselineCommit, path: manifestPath }),
+        this.options.git.showFile({ cwd: this.options.repoRoot, ref: candidateCommit, path: manifestPath })
+      ]);
+      Object.assign(baselineScripts, testScriptsFromManifest(baselineManifest, manifestPath));
+      Object.assign(candidateScripts, testScriptsFromManifest(candidateManifest, manifestPath));
+    }
     return {
       findings: detectTestIntegrityFindings({
         baselineTestFiles: [...baselineFiles].sort(),
@@ -177,9 +182,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     ).create({ candidateCommit: input.baselineCommit });
     try {
       for (const [file, contents] of Object.entries(input.candidateTestContents).sort(([left], [right]) => left.localeCompare(right))) {
-        const target = safeSandboxPath(sandbox.worktreePath, file);
-        await mkdir(path.dirname(target), { recursive: true });
-        await writeFile(target, contents, "utf8");
+        await materializeNegativeControlTests(sandbox.worktreePath, { [file]: contents });
       }
       const result = await this.runner.run([input.command], {
         worktreePath: sandbox.worktreePath,
@@ -193,15 +196,21 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
   }
 }
 
-function scriptsFromManifest(contents: string | null): Record<string, string> {
+function testScriptsFromManifest(contents: string | null, manifestPath: string): Record<string, string> {
   if (contents === null) return {};
   try {
     const scripts = (JSON.parse(contents) as { scripts?: unknown }).scripts;
     if (scripts === null || typeof scripts !== "object" || Array.isArray(scripts)) return {};
-    return Object.fromEntries(Object.entries(scripts as Record<string, unknown>).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+    return Object.fromEntries(Object.entries(scripts as Record<string, unknown>)
+      .filter((entry): entry is [string, string] => typeof entry[1] === "string" && isTestScriptName(entry[0]))
+      .map(([name, command]) => [`${manifestPath}#scripts.${name}`, command]));
   } catch {
     return {};
   }
+}
+
+function isTestScriptName(name: string): boolean {
+  return /(?:^|:)test(?::|$)/u.test(name);
 }
 
 function safeSandboxPath(root: string, relativePath: string): string {
@@ -210,4 +219,37 @@ function safeSandboxPath(root: string, relativePath: string): string {
   const relative = path.relative(resolvedRoot, target);
   if (relative.startsWith("..") || path.isAbsolute(relative)) throw new Error(`Negative-control test path escapes sandbox: ${relativePath}`);
   return target;
+}
+
+export async function materializeNegativeControlTests(root: string, contentsByPath: Record<string, string>): Promise<void> {
+  await mkdir(root, { recursive: true });
+  await assertNoSymbolicLinks(root, ".");
+  for (const [relativePath, contents] of Object.entries(contentsByPath).sort(([left], [right]) => left.localeCompare(right))) {
+    const target = safeSandboxPath(root, relativePath);
+    const parent = path.dirname(target);
+    await assertNoSymbolicLinks(root, path.relative(root, parent));
+    await mkdir(parent, { recursive: true });
+    await assertNoSymbolicLinks(root, path.relative(root, target));
+    await writeFile(target, contents, "utf8");
+  }
+}
+
+async function assertNoSymbolicLinks(root: string, relativePath: string): Promise<void> {
+  const relative = relativePath === "." ? "" : relativePath;
+  const segments = relative.split(path.sep).filter((segment) => segment.length > 0);
+  let current = path.resolve(root);
+  for (const segment of ["", ...segments]) {
+    if (segment !== "") current = path.join(current, segment);
+    try {
+      const stats = await lstat(current);
+      if (stats.isSymbolicLink()) throw new Error(`Negative-control path contains a symbolic link: ${current}`);
+    } catch (error) {
+      if (isNotFound(error)) return;
+      throw error;
+    }
+  }
+}
+
+function isNotFound(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
 }

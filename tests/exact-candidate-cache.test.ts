@@ -46,6 +46,19 @@ describe("validateExactCandidate evidence cache", () => {
     expect(create).toHaveBeenCalledTimes(2);
     expect(run).toHaveBeenCalledTimes(2);
   });
+
+  it("does not reuse verified evidence when integrity findings change", async () => {
+    const cache = new InMemoryEvidenceValidationCache();
+    const { create, run } = fakes();
+    await validateExactCandidate({ recipe, obligations }, { sandbox: { create }, run, cache });
+    const second = await validateExactCandidate({
+      recipe,
+      obligations,
+      integrityFindings: [{ findingId: "finding-1", code: "test_only", path: "tests/a.test.ts", message: "Focused test" }]
+    }, { sandbox: { create }, run, cache });
+    expect(second.matrix.outcome).toBe("failed");
+    expect(create).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("validateExactCandidate baseline sandbox reuse", () => {
@@ -63,6 +76,19 @@ describe("validateExactCandidate baseline sandbox reuse", () => {
 
     expect(createBaselineSandbox).toHaveBeenCalledTimes(1);
     expect(runBaseline).toHaveBeenCalledTimes(2);
+    expect(baselineDispose).toHaveBeenCalledTimes(1);
+  });
+
+  it("attempts baseline cleanup even when candidate cleanup fails", async () => {
+    const candidateDispose = vi.fn(async () => { throw new Error("candidate cleanup failed"); });
+    const baselineDispose = vi.fn(async () => undefined);
+    await expect(validateExactCandidate({ recipe: baselineRecipe, obligations: twoObligations }, {
+      sandbox: { create: async () => ({ worktreePath: "C:/candidate", headCommit: "candidate-sha", clean: true, dispose: candidateDispose }) },
+      run: async () => ({ passed: true, exitCode: 0, output: "ok" }),
+      createBaselineSandbox: async () => ({ worktreePath: "C:/baseline", headCommit: "baseline-sha", clean: true, dispose: baselineDispose }),
+      runBaseline: async () => ({ passed: true, exitCode: 0, output: "ok" })
+    })).rejects.toThrow(/candidate cleanup failed/i);
+    expect(candidateDispose).toHaveBeenCalledTimes(1);
     expect(baselineDispose).toHaveBeenCalledTimes(1);
   });
 });

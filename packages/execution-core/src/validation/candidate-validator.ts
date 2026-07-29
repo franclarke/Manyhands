@@ -5,7 +5,7 @@ import type { ValidationRecipe, ValidationRecipeStep } from "./recipe-compiler";
 import { compareBaselineResult } from "./baseline";
 import type { GitRunner } from "../git/runner";
 import type { WorktreeManager } from "../worktree/manager";
-import type { TestIntegrityFinding } from "./test-integrity";
+import { TEST_INTEGRITY_DETECTOR_VERSION, type TestIntegrityFinding } from "./test-integrity";
 
 export interface CandidateSandbox {
   worktreePath: string;
@@ -78,7 +78,8 @@ export async function validateExactCandidate(
   input: { recipe: ValidationRecipe; obligations: ValidationObligation[]; notApplicableObligationIds?: string[]; integrityFindings?: TestIntegrityFinding[] },
   dependencies: CandidateValidatorDependencies
 ): Promise<ExactCandidateValidationResult> {
-  const cached = await dependencies.cache?.get(input.recipe.recipeId);
+  const cacheKey = evidenceCacheKey(input.recipe.recipeId, input.integrityFindings ?? []);
+  const cached = await dependencies.cache?.get(cacheKey);
   if (cached !== undefined) return cached;
   const sandbox = await dependencies.sandbox.create({ candidateCommit: input.recipe.candidateCommit });
   // Opened lazily on the first baseline obligation and reused for the rest, then
@@ -118,12 +119,31 @@ export async function validateExactCandidate(
       evidence,
       matrix: buildEvidenceMatrix({ obligations: input.obligations, evidence, ...(input.notApplicableObligationIds !== undefined ? { notApplicableObligationIds: input.notApplicableObligationIds } : {}), ...(input.integrityFindings !== undefined ? { integrityFindings: input.integrityFindings } : {}) })
     };
-    await dependencies.cache?.set(input.recipe.recipeId, result);
+    await dependencies.cache?.set(cacheKey, result);
     return result;
   } finally {
-    await sandbox.dispose();
-    if (baselineSandbox !== undefined) await baselineSandbox.dispose();
+    const cleanups: Array<() => Promise<void>> = [() => sandbox.dispose()];
+    if (baselineSandbox !== undefined) {
+      const baselineToDispose = baselineSandbox;
+      cleanups.push(() => baselineToDispose.dispose());
+    }
+    const results = await Promise.allSettled(cleanups.map(async (cleanup) => cleanup()));
+    const failures = results.filter((result): result is PromiseRejectedResult => result.status === "rejected").map((result) => result.reason);
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1) throw new AggregateError(failures, "Multiple validation sandboxes failed cleanup.");
   }
+}
+
+const EVIDENCE_VALIDATION_POLICY_VERSION = 2;
+
+function evidenceCacheKey(recipeId: string, integrityFindings: readonly TestIntegrityFinding[]): string {
+  const identity = JSON.stringify({
+    recipeId,
+    evidenceValidationPolicyVersion: EVIDENCE_VALIDATION_POLICY_VERSION,
+    testIntegrityDetectorVersion: TEST_INTEGRITY_DETECTOR_VERSION,
+    integrityFindings
+  });
+  return `evidence-${createHash("sha256").update(identity).digest("hex")}`;
 }
 
 function observation(step: ValidationRecipeStep, run: { passed: boolean; exitCode: number; output: string }, attempt: number): ValidationEvidenceObservation {
