@@ -17,8 +17,9 @@ Root `warehouse-projections`, run `bc859c1d`, 19 hijos, política
 available semantic split."` **La utilidad no aprobó el corte.** Sólo dividió
 porque `leafFeasible: false` lo forzó.
 
-`coordination: 1` no era ruido: el corte tenía un ciclo real, un seam con la
-dirección invertida (ver
+`coordination: 1` reflejaba un loop en la topologia combinada de artifacts y
+seams. No era un ciclo del DAG de ejecucion: A5 define seams como compatibilidad
+no ordenante. La direccion del seam seguia siendo semanticamente dudosa (ver
 [`seam-bindings-escape-cycle-detection`](../seam-bindings-escape-cycle-detection/README.md)).
 
 ## Contrafáctico
@@ -31,12 +32,12 @@ sobre la topología corregida es confiable.
 
 | Escenario | coordination | splitAdvantage | decisión |
 |---|---:|---:|---|
-| Como se planificó (con ciclo) | 1 | −0.2584 | leaf |
-| Seam corregido | 0.1053 | −0.0347 | leaf |
-| Seam corregido y `validationDuplication` = 0 | 0.1053 | +0.1889 | **split** |
+| Como se planifico (loop de compatibilidad) | 1 | −0.2584 | leaf |
+| Seam alineado contrafactualmente | 0.1053 | −0.0347 | leaf |
+| Seam alineado y `validationDuplication` = 0 | 0.1053 | +0.1889 | **split** |
 
-Corregir el ciclo baja el costo de coordinación casi un orden de magnitud y aun
-así **no alcanza**: la política sigue diciendo "no dividas" un fan-out de 19
+Alinear el seam baja el costo de coordinacion casi un orden de magnitud y aun
+asi **no alcanza**: la politica sigue diciendo "no dividas" un fan-out de 19
 módulos independientes cuyo paralelismo ella misma mide en 0.8889.
 
 El término que liga es `validationDuplication = 0.8947`.

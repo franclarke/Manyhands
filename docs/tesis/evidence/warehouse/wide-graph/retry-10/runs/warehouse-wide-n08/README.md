@@ -5,10 +5,10 @@
 - Candidate/receipt/oracle: none / none / `not_run`.
 - Frozen target remained at W1 `71f61c9efa222103ca2fb2f67692434ab493d75c`.
 
-The planner reproduced the two-node artifact cycle seen at N=4: the registry
-artifact points from `analytics-registry` to `study-wide-graph-script`, while
-the command seam points back from the study script to the registry. Plan review
-rejected the graph before execution.
+The planner reproduced the artifact/seam pair seen at N=4. The validator then
+classified the non-ordering seam as an execution edge and rejected a false
+`artifact_cycle`. The later architecture correction does not rewrite the
+historical journal.
 
 This is an independent adverse productive result at N=8. It does not establish
 semantic correctness or incorrectness of an implementation because no attempt

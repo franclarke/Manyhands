@@ -1,80 +1,71 @@
-# Los seams no participaban en la detección de ciclos
+# Los seams fueron tratados incorrectamente como dependencias de ejecucion
 
-Clasificación: **defecto de validación del grafo**. Es el primer caso del piloto
-donde un término de la política C detecta una contradicción que el compilador
-deja pasar.
+Clasificacion corregida: **defecto de validacion del grafo**. El diagnostico
+original de este documento decia que los seams debian entrar al DAG para cerrar
+ciclos. Eso contradice `docs/DECISIONS.md` A5 y
+`docs/system/01-task-graph.md`: un `SeamBinding` congela compatibilidad entre
+participantes, pero no materializa outputs ni impone readiness u orden.
 
-## Observación
+## Observacion historica
 
-`warehouse-wide-n16`, run `bc859c1d`, política `adaptive-utility/3.1.0-pilot`.
-El árbol candidato persistido declara sobre 19 hijos:
+El run ancho N=16 `bc859c1d` declaro:
 
-    artifact-projection-registry    projection-registry    -> [study-wide-graph-script]
-    seam-study-wide-graph-command   study-wide-graph-script -> [projection-registry]
+    artifact-projection-registry     projection-registry     -> [study-wide-graph-script]
+    seam-study-wide-graph-command    study-wide-graph-script -> [projection-registry]
 
-Las dos relaciones son inversas entre sí: el artifact dice que el script consume
-el registry, y el seam dice que el registry consume el script. Es un ciclo de
-dos nodos.
+La primera relacion si es una dependencia material: el script necesita el
+registry. La segunda describe un seam de comando en direccion semantica dudosa,
+pero no crea por si sola la dependencia inversa. El run compilo, ejecuto 19
+hojas y fallo durante integracion por el output de test disputado documentado
+por separado.
 
-El grafo **compiló igual**, se aprobó, y 19 agentes trabajaron unos cuarenta
-minutos. Las 19 hojas quedaron `Verified [1/1 passed]`. El run murió recién en
-la integración de la raíz:
+## Primera correccion equivocada
 
-    failure.classified  integration:conflict  "Integration required semantic repair."
-    integration.failed  "The single semantic repair attempt failed."
+Se agregaron los `seamBindings` al mapa de adyacencia de
+`validateGraphRevision`. Esto hizo que un artifact `A -> B` mas un seam `B -> A`
+se reportara como `artifact_cycle`. Retry-8, retry-9 y retry-10 heredaron ese
+falso positivo; retry-10 lo reprodujo en N=4, N=8 y N=16 antes de candidate.
 
-## Causa
+La implementacion entro ademas en contradiccion interna: el readiness V2 ya
+ignoraba seams y conflicts como metadata no ordenante, mientras el validador
+los trataba como aristas dirigidas del DAG.
 
-`validateGraphRevision` construye su mapa de adyacencia con
-`artifactRequirements` y `legacyOrderingConstraints`. Los `seamBindings` sólo se
-revisaban por auto-relación:
+## Causa raiz
 
-```ts
-for (const binding of graph.seamBindings) {
-  if (binding.producerNodeId === binding.consumerNodeId) { /* self_relation */ }
-}
-```
+Se confundieron dos relaciones tipadas distintas:
 
-Nunca se agregaban como arista. Un seam nombra un productor y un consumidor
-exactamente igual que un artifact, así que la mitad de las dependencias
-declaradas era invisible para el único chequeo capaz de detectar una
-contradicción. Un ciclo cerrado por un seam pasaba entero.
+- `ArtifactRequirement`: disponibilidad material; si impone readiness y forma
+  parte del DAG ejecutable.
+- `SeamBinding`: compatibilidad contractual; puede ser bidireccional y no
+  impone orden.
 
-## Qué sí lo detectó
+La presencia de campos `producerNodeId` y `consumerNodeId` en ambas relaciones
+no las vuelve equivalentes para scheduling o deteccion de ciclos.
 
-El término `coordination` de la política C, que en `3.1.0-pilot` recorre
-artifacts ∪ seams y devuelve 1 cuando el grafo no es ordenable:
+## Correccion TDD
 
-    parallelism   0.8889     <- sólo artifacts; el fan-out real
-    coordination  1          <- artifacts ∪ seams; el ciclo
+- RED: artifact `n2 -> n3` mas seam `n3 -> n2` devolvia dos errores
+  `artifact_cycle`; un loop compuesto solo por seams tambien devolvia dos.
+- GREEN: `validateGraphRevision` conserva la validacion de self-relations y de
+  participantes de seams, pero excluye seams de la adyacencia del DAG.
+- Controles: ciclos de artifacts, legacy ordering y mezclas con hierarchy
+  siguen rechazados; readiness continua dependiendo solo de artifacts.
+- El prompt del planner ahora define explicitamente producer/consumer y ordena
+  omitir un seam command/API sin consumidor interno, para reducir direcciones
+  semanticas espurias sin convertirlas en falsas dependencias.
 
-Fue la única señal en todo el sistema que marcó el problema antes de la
-integración. No sirvió para frenar el run porque `coordination` es un costo de
-la función de utilidad, no una barrera de validación.
+Verificacion focalizada: 69/69 tests PASS en task graph, compiler, critics y
+WorkBreakdown; typecheck de `@manyhands/task-graph` y
+`@manyhands/decomposer` PASS.
 
-Nota sobre `parallelism`: con la fórmula anterior (`1 - aristas/(hijos-1)`) este
-corte daba **0** — 18 aristas de artifact sobre 18 — pese a ser un fan-out de 19
-unidades casi enteramente paralelo. Con `3.1.0-pilot` da **0.8889**. Es la
-primera validación del rediseño sobre datos productivos reales.
+## Que no se concluye
 
-## Corrección TDD
+No se concluye que cualquier direccion de seam sea semanticamente correcta.
+Una direccion incoherente debe ser cuestionada por grounding/contract critics o
+reparada por el planner, no modelada como orden de ejecucion. Tampoco se
+concluye que quitar el falso ciclo baste para entregar la serie ancha: retry-10
+no llego a ejecucion y el sucesor debe volver a correr desde N=4.
 
-- Rojo: un grafo con artifact `n2 -> n3` y seam `n3 -> n2` devolvía `[]`, sin
-  ninguna incidencia.
-- Control negativo: un seam en la **misma** dirección que su artifact no debe
-  producir error.
-- Verde: los `seamBindings` se agregan a la adyacencia con tipo de arista
-  propio. La clasificación existente los reporta como `artifact_cycle`, igual
-  que cualquier ciclo que no sea puramente jerárquico.
-
-Consecuencia declarada: la dirección de un seam pasa a ser vinculante para la
-validación. Si más adelante aparece un caso legítimo de interfaz mutua entre dos
-unidades, ése es el momento de separar el código de incidencia, no antes.
-
-## Qué no se concluye
-
-No se concluye que el ciclo sea la causa del fallo de integración. La reparación
-semántica falló sobre `src/analytics/projections.test.ts`, un archivo de test
-compartido que las 19 hojas escribieron; eso es un defecto distinto y todavía
-sin corregir. Lo que sí queda establecido es que el grafo nunca debió compilar,
-y que ahora no compila.
+No se reinterpretan los resultados historicos: los journals y fallos
+`artifact_cycle` permanecen inmutables como evidencia de la implementacion que
+los produjo.

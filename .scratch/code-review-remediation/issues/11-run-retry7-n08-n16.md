@@ -59,8 +59,13 @@
 - Reviews independientes del fixed point `67a16a1`: Standards FAIL P1 y Spec
   P1. La integridad del freeze pasa, pero falta reduccion, regresion, fix y
   rerun del camino productivo.
-- Ticket 11 permanece abierto y sus casillas no se marcan. Proximo frente
-  obligatorio: TDD para rechazar ciclos de relaciones dentro del
-  WorkBreakdown y devolverlos como repair feedback al planner; prompt explicito
-  producer -> consumer; gates y re-reviews; nuevo freeze sucesor completo desde
-  N=4. `retry-10` permanece inmutable.
+- Diagnostico corregido por auditoria: `SeamBinding` no impone readiness segun
+  A5. La implementacion lo habia agregado erroneamente al DAG y retry-10
+  reprodujo un falso `artifact_cycle`.
+- TDD en `cbb8cdb`: seams fuera de la adyacencia; ciclos materiales siguen
+  rechazados; prompt producer -> consumer explicito. Suite afectada 69/69 y
+  typechecks task-graph/decomposer PASS.
+- Ticket 11 permanece abierto y sus casillas no se marcan. Antes del freeze
+  sucesor se cierran los P0 de validacion criterion-aware, test integrity y UI
+  honesta registrados en el plan de correctness closure. `retry-10` permanece
+  inmutable.

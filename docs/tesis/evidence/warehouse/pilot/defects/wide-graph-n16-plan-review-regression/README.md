@@ -60,3 +60,11 @@ fallen ejecución, integración u oráculo: ninguna de esas etapas comenzó.
 Tampoco este intento cuenta como evidencia de escalamiento; sólo demuestra que
 la ruta productiva del selector no preservó la cobertura de aceptación exigida
 por la revisión.
+
+## Correccion posterior del diagnostico de ciclos
+
+Los rechazos `artifact_cycle` posteriores se atribuyeron a seams que cerraban
+el DAG. Esa atribucion era incorrecta respecto del contrato objetivo: un seam
+no impone readiness. La correccion TDD posterior saco `SeamBinding` de la
+adyacencia ejecutable y dejo artifacts/legacy/hierarchy como relaciones
+ordenantes. Los journals historicos conservan el falso positivo original.

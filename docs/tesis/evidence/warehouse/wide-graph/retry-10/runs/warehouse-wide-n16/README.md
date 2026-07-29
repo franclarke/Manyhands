@@ -5,9 +5,10 @@
 - Candidate/receipt/oracle: none / none / `not_run`.
 - Frozen target remained at W1 `71f61c9efa222103ca2fb2f67692434ab493d75c`.
 
-The planner reproduced the registry/study-script artifact cycle independently
-at N=16. Plan review rejected the graph before execution. The productive,
-checksummed granularity event is preserved at sequence 24 and summarized in
+The planner reproduced the registry/study-script artifact/seam pair
+independently at N=16. The validator treated the seam as ordering and rejected
+a false `artifact_cycle` before execution. The productive, checksummed
+granularity event is preserved at sequence 24 and summarized in
 `granularity-assessment.json`; the full 20 assessments remain in the journal.
 
 The root was selected as a split because a leaf was infeasible even though its

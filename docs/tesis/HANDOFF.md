@@ -306,8 +306,8 @@ la topología original, así que es confiable):
 
 | Escenario | coordination | splitAdvantage | decisión |
 |---|---:|---:|---|
-| Como se planificó (con un ciclo real) | 1 | −0.2584 | leaf |
-| Con el ciclo corregido | 0.1053 | **−0.0347** | leaf |
+| Como se planifico (loop de compatibilidad) | 1 | −0.2584 | leaf |
+| Con el seam alineado contrafactualmente | 0.1053 | **−0.0347** | leaf |
 | …y `validationDuplication` = 0 | 0.1053 | +0.1889 | split |
 
 **C sigue sin aprobar por utilidad un fan-out de 19 módulos independientes cuyo
@@ -451,7 +451,7 @@ Todos con TDD y documentados en `pilot/defects/`:
 
 | Defecto | Qué era |
 |---|---|
-| `seam-bindings-escape-cycle-detection` | Los seams nunca entraban al grafo de adyacencia: un ciclo cerrado por un seam compilaba. Lo detectó **sólo** el término `coordination` de la política. |
+| `seam-bindings-escape-cycle-detection` | Diagnostico corregido: agregar seams al DAG contradijo A5 y produjo falsos `artifact_cycle`. Los seams vuelven a ser compatibilidad no ordenante; artifacts/legacy/hierarchy gobiernan ciclos. |
 | `contested-planned-output` | 16 hojas declaraban el mismo archivo de test como output propio. El compilador emitió 120 conflict constraints y la revisión las aceptó como remedio. Ahora el plan **no compila**. |
 | `leaf-feasibility-ignored-production` | La factibilidad medía sólo lo que una hoja debía leer, no lo que debía producir. La cota agregada **no discrimina** W1 de W2. |
 | `worktree-pool-orphan-recovery` | Slot huérfano de un run abortado; además mal clasificado como `code_test`. |
@@ -699,13 +699,17 @@ Reapertura de remediacion despues de `retry-10`:
 - Reviews independientes del fixed point `67a16a1`: Standards FAIL P1 y Spec
   P1. La integridad/comparabilidad de retry-10 pasa, pero no se puede cerrar
   ticket 11 con el defecto productivo reproducido 3/3.
-- Causa de frontera identificada: WorkBreakdown reintenta schema y grounding,
-  pero no valida ciclos dirigidos entre artifacts/seams. El ciclo llega al
-  Graph Compiler, que lo rechaza correctamente cuando ya no existe reparacion
-  acotada del planner.
-- Proxima accion TDD: test rojo con artifact A -> B y seam B -> A; hacer que el
-  WorkBreakdown invalido vuelva como `repairIssues` al siguiente intento;
-  aclarar direccion producer -> consumer y omision de comandos sin consumidor
-  interno. No tocar critic, formula, umbral, estimulo ni evidencia retry-10.
-- Tras el fix: gates afectados, reviews Standards/Spec independientes y freeze
-  sucesor nuevo desde N=4 con targets nuevos. Ticket 11 sigue abierto.
+- Causa raiz corregida tras la auditoria de implementacion: el validador habia
+  agregado `SeamBinding` al DAG pese a que A5 y el contrato de task graph dicen
+  que no impone readiness. Retry-10 reprodujo un falso `artifact_cycle`; el
+  critic no estaba rechazando correctamente una dependencia material ciclica.
+- TDD en `cbb8cdb`: RED 2/2 para artifact mas seam inverso y loop solo de
+  seams; GREEN 2/2 al quitar seams de la adyacencia y conservar self/participant
+  validation. Suite afectada 69/69 y typechecks task-graph/decomposer PASS.
+- El prompt aclara producer -> consumer y omite comandos/API sin consumidor
+  interno para reducir seams semanticamente espurios, sin convertir callbacks
+  legitimos en dependencias de ejecucion.
+- La auditoria integral agrego P0 de verdad de validacion, test integrity y UI
+  honesta. El plan ejecutable esta en
+  `docs/plans/2026-07-28-manyhands-correctness-closure.md`; no se abre un nuevo
+  freeze hasta cerrar esos P0 y sus reviews. Ticket 11 sigue abierto.
