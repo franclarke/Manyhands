@@ -14,6 +14,7 @@ type IntegrationLike = {
   nodeId: string;
   status: "running" | "completed" | "failed" | "decision_required";
   candidateCommit?: string | undefined;
+  evidenceMatrixId?: string | undefined;
   failureReason?: string | undefined;
 };
 
@@ -38,12 +39,14 @@ export function lifecycleMedalForNode(input: {
   nodeId: string;
   attempts: readonly AttemptLike[];
   integrations: readonly IntegrationLike[];
+  evidenceMatrixId?: string | undefined;
   evidenceMatrices: readonly EvidenceMatrixLike[];
   delivered: boolean;
 }): LifecycleMedal {
   const attempt = [...input.attempts].reverse().find((entry) => entry.nodeId === input.nodeId);
   const integration = [...input.integrations].reverse().find((entry) => entry.nodeId === input.nodeId);
   const commit = integration?.candidateCommit ?? attempt?.candidateCommit;
+  const matrixId = integration?.evidenceMatrixId ?? input.evidenceMatrixId;
 
   if (input.delivered) {
     return { state: "delivered", badge: "Delivered", ...(commit === undefined ? {} : { commit }) };
@@ -57,9 +60,7 @@ export function lifecycleMedalForNode(input: {
   }
   if (attempt?.status === "stale") return { state: "stale", badge: "Stale" };
 
-  const matrix = commit === undefined
-    ? undefined
-    : [...input.evidenceMatrices].reverse().find((candidate) => candidate.candidateCommit === commit);
+  const matrix = evidenceMatrixForIdentity(input.evidenceMatrices, { matrixId, candidateCommit: commit });
   if ((attempt?.status === "validated" || attempt?.status === "adopted" || integration?.status === "completed") && matrix?.outcome === "verified") {
     const criteria = Array.isArray(matrix.criteria) ? matrix.criteria : [];
     const passed = criteria.filter((criterion) => (
@@ -93,6 +94,16 @@ export function lifecycleMedalForNode(input: {
     return { state: "candidate", badge: `Candidate [${shortSha}]`, commit: attempt.candidateCommit };
   }
   return { state: "none", badge: "" };
+}
+
+export function evidenceMatrixForIdentity(
+  matrices: readonly EvidenceMatrixLike[],
+  identity: { matrixId?: string | undefined; candidateCommit?: string | undefined }
+): EvidenceMatrixLike | undefined {
+  if (identity.matrixId === undefined || identity.candidateCommit === undefined) return undefined;
+  return matrices.find((matrix) => (
+    matrix.matrixId === identity.matrixId && matrix.candidateCommit === identity.candidateCommit
+  ));
 }
 
 export function isFinalCandidateDeliverable(input: {

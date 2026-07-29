@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   AUTO_FIT_ON_RUN_EVENT,
   affectedSubgraphNodeIds,
+  evidenceMatrixForIdentity,
   isFinalCandidateDeliverable,
   lifecycleMedalForNode,
   relationDisplayName
@@ -41,6 +42,7 @@ describe("cockpit lifecycle medals", () => {
       }],
       integrations: [],
       evidenceMatrices: [{
+        matrixId: "matrix-api",
         candidateCommit: "abc123def456",
         outcome: "verified",
         criteria: [
@@ -49,6 +51,7 @@ describe("cockpit lifecycle medals", () => {
           { status: "satisfied" }
         ]
       }],
+      evidenceMatrixId: "matrix-api",
       delivered: false
     });
 
@@ -70,7 +73,8 @@ describe("cockpit lifecycle medals", () => {
       nodeId: "api",
       attempts: [attempt],
       integrations: [],
-      evidenceMatrices: [{ candidateCommit: attempt.candidateCommit, outcome: "unverified", criteria: [] }],
+      evidenceMatrixId: "matrix-api",
+      evidenceMatrices: [{ matrixId: "matrix-api", candidateCommit: attempt.candidateCommit, outcome: "unverified", criteria: [] }],
       delivered: false
     })).toMatchObject({ state: "evidence_incomplete", badge: "Evidence incomplete" });
 
@@ -78,7 +82,8 @@ describe("cockpit lifecycle medals", () => {
       nodeId: "api",
       attempts: [attempt],
       integrations: [],
-      evidenceMatrices: [{ candidateCommit: attempt.candidateCommit, outcome: "failed", criteria: [] }],
+      evidenceMatrixId: "matrix-api",
+      evidenceMatrices: [{ matrixId: "matrix-api", candidateCommit: attempt.candidateCommit, outcome: "failed", criteria: [] }],
       delivered: false
     })).toMatchObject({ state: "failed", badge: "Failed", detail: "Validation failed." });
 
@@ -93,10 +98,33 @@ describe("cockpit lifecycle medals", () => {
     expect(lifecycleMedalForNode({
       nodeId: "root",
       attempts: [],
-      integrations: [{ nodeId: "root", status: "completed", candidateCommit: "root123" }],
-      evidenceMatrices: [{ candidateCommit: "root123", outcome: "unverified", criteria: [] }],
+      integrations: [{ nodeId: "root", status: "completed", candidateCommit: "root123", evidenceMatrixId: "matrix-root" }],
+      evidenceMatrices: [{ matrixId: "matrix-root", candidateCommit: "root123", outcome: "unverified", criteria: [] }],
       delivered: false
     })).toMatchObject({ state: "evidence_incomplete", badge: "Evidence incomplete" });
+  });
+
+  it("uses the canonical matrix id when the same commit has multiple outcomes", () => {
+    const commit = "abc123def456";
+    expect(lifecycleMedalForNode({
+      nodeId: "api",
+      attempts: [{ attemptId: "attempt-api", nodeId: "api", status: "validated", candidateCommit: commit }],
+      integrations: [],
+      evidenceMatrixId: "matrix-unverified",
+      evidenceMatrices: [
+        { matrixId: "matrix-unverified", candidateCommit: commit, outcome: "unverified", criteria: [] },
+        { matrixId: "matrix-other", candidateCommit: commit, outcome: "verified", criteria: [{ status: "satisfied" }] }
+      ],
+      delivered: false
+    })).toMatchObject({ state: "evidence_incomplete", badge: "Evidence incomplete" });
+
+    expect(evidenceMatrixForIdentity([
+      { matrixId: "matrix-final", candidateCommit: commit, outcome: "unverified" },
+      { matrixId: "matrix-other", candidateCommit: commit, outcome: "verified" }
+    ], { matrixId: "matrix-final", candidateCommit: commit })).toMatchObject({
+      matrixId: "matrix-final",
+      outcome: "unverified"
+    });
   });
 
   it("surfaces failure evidence, stale attempts, and final delivery", () => {

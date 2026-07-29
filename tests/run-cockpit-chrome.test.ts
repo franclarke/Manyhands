@@ -44,6 +44,7 @@ describe("run cockpit chrome", () => {
     expect(cockpit).toContain("const canDeliver = isFinalCandidateDeliverable({");
     expect(cockpit).toContain("disabled={!canDeliver}");
     expect(cockpit).toContain("<EvidenceDetails matrices={model.evidenceMatrices}");
+    expect(cockpit).toContain("matrixId={model.projection?.finalCandidate?.evidenceMatrixId}");
     expect(cockpit).toContain("Matriz de evidencia");
     expect(cockpit).toContain("evidenceRefs");
   });

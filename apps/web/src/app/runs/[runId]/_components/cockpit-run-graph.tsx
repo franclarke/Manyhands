@@ -140,6 +140,7 @@ function graphElements(
           nodeId: node.id,
           attempts,
           integrations,
+          evidenceMatrixId: model.projection?.nodeEvidenceMatrixIds[node.id],
           evidenceMatrices: model.evidenceMatrices,
           delivered: model.run.lifecycle === "completed"
         }),
