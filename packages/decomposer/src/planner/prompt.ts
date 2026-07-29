@@ -28,6 +28,8 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       "Do not target a fixed depth, child count, or layer template.",
       "Do not emit worktrees, exact commands, executor profiles, or generic dependency edges.",
       "Propose artifact and seam candidates only when their producer, consumers, purpose, and evidence are explicit.",
+      "The producer owns or provides the named contract or output; a consumer imports, calls, or uses it. Do not reverse this direction just because the producer consumes a different artifact from the same unit.",
+      "Do not name one of a command unit's own dependencies as a consumer of that command. If no unit inside the breakdown consumes a command or API, omit that seam.",
       "Every candidate artifact and seam must name at least one consumer unit key. A candidate whose only consumer would be its own producer, or which has no consumer yet, is not a relation: omit it entirely rather than emitting an empty consumerUnitKeys array.",
       "Raise a human question only when the answer changes behavior, architecture, scope, risk, or acceptance.",
       "Existing repository paths must be cited through path evidence. Files that a unit will create must be declared in plannedPaths and are not repository evidence.",

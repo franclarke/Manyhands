@@ -77,7 +77,7 @@ export function getExecutableReadinessV2(graph: GraphRevision, options: { availa
     });
 }
 
-type EdgeType = "hierarchy" | "artifact" | "seam" | "legacy";
+type EdgeType = "hierarchy" | "artifact" | "legacy";
 interface Edge {
   to: string;
   type: EdgeType;
@@ -109,18 +109,13 @@ function checkCyclesAndSelfRelations(graph: GraphRevision, issues: GraphRevision
     }
   }
 
-  // A seam names a producer and a consumer exactly as an artifact does. Walking
-  // only artifact and legacy edges left half the declared dependencies invisible
-  // to the sole check that can catch a contradiction: wide-graph N=16 declared an
-  // artifact registry -> script alongside a seam script -> registry, and the
-  // inverted pair compiled cleanly because the seam was never an edge here.
+  // A seam freezes contract compatibility between participants. It does not
+  // materialize an output or impose readiness, so it must not become an edge in
+  // the execution DAG. Bidirectional API/callback seams are valid even when an
+  // artifact requirement between the same nodes points only one way.
   for (const binding of graph.seamBindings) {
     if (binding.producerNodeId === binding.consumerNodeId) {
       issues.push({ code: "self_relation", severity: "error", relationId: binding.id, message: `Self relation in seam binding ${binding.id}.` });
-    } else {
-      let edges = adjacency.get(binding.producerNodeId);
-      if (!edges) { edges = []; adjacency.set(binding.producerNodeId, edges); }
-      edges.push({ to: binding.consumerNodeId, type: "seam" });
     }
   }
 

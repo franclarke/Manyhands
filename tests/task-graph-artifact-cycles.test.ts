@@ -94,17 +94,11 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
   });
 
   /**
-   * Wide-graph N=16 is why this exists. The planner emitted an artifact
-   * `projection-registry -> study-wide-graph-script` and a seam
-   * `study-wide-graph-script -> projection-registry`: one relation had its
-   * direction inverted, so the two together claim each node depends on the
-   * other. Validation only walked artifact and legacy edges, so the graph
-   * compiled, nineteen agents ran for roughly forty minutes, and the run died
-   * in integration. A seam carries a producer and a consumer exactly as an
-   * artifact does; leaving it out of the walk makes half the declared
-   * dependencies invisible to the only check that can catch a contradiction.
+   * A seam freezes compatibility; it is not an availability dependency. The
+   * artifact controls readiness even when a command or callback seam points in
+   * the opposite direction between the same units.
    */
-  it("detects a cycle closed by a seam binding against an artifact", () => {
+  it("does not create an artifact cycle from a non-ordering seam binding", () => {
     const graph = getBaseGraph();
     graph.nodes["n3"] = { id: "n3", parentId: "root", kind: "leaf", title: "N3", goal: "n3" };
     graph.artifactRequirements = [
@@ -116,7 +110,20 @@ describe("Task Graph Artifact Cycles (MH-REM-001)", () => {
 
     const issues = validateGraphRevision(graph);
 
-    expect(issues).toContainEqual(expect.objectContaining({ code: "artifact_cycle" }));
+    expect(issues.filter((issue) => issue.severity === "error")).toHaveLength(0);
+  });
+
+  it("does not treat a seam-only loop as an execution cycle", () => {
+    const graph = getBaseGraph();
+    graph.nodes["n3"] = { id: "n3", parentId: "root", kind: "leaf", title: "N3", goal: "n3" };
+    graph.seamBindings = [
+      { id: "s1", producerNodeId: "n2", consumerNodeId: "n3", seamContract: { id: "a", revision: "1" }, producerRevision: "1", consumerRevision: "1" },
+      { id: "s2", producerNodeId: "n3", consumerNodeId: "n2", seamContract: { id: "b", revision: "1" }, producerRevision: "1", consumerRevision: "1" }
+    ];
+
+    const issues = validateGraphRevision(graph);
+
+    expect(issues.filter((issue) => issue.severity === "error")).toHaveLength(0);
   });
 
   it("accepts a seam that runs the same way as the artifact it accompanies", () => {
