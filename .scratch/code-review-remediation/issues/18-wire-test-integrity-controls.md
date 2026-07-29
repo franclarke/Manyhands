@@ -104,3 +104,9 @@
 - Reviews siguientes: FAIL por targets `-C/--dir/--workspace` y selectors glob
   o negativos. RED 2; fix `2b6da37` modela directory y conjunto positivos menos
   exclusiones. 39/39 y ambos typechecks PASS.
+- Reviews de `b4226b7` aún FAIL por confundir globs de package name con paths y
+  por resolución incompleta de targets relativos. Fix productivo `448b295`
+  separa ambos dominios, compone directory+selectors y resuelve directorios
+  desde el manifest origen. 39/39 y typechecks execution-core/run-coordinator
+  PASS. **Pendiente obligatorio:** reviews Standards y Spec del fixed point
+  actual; no cerrar el ticket sin ambos PASS y cero P0-P3.

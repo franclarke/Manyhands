@@ -1010,3 +1010,64 @@ Undécima remediation de ticket 18:
   positivos menos exclusiones sobre package name o manifest path;
 - 39/39 y typechecks execution-core/run-coordinator PASS. Próximo paso reviews;
   claims siguen partial.
+
+## Handoff por límite de cuota — 2026-07-28
+
+Estado canónico:
+
+- branch `main`; no hubo push, reset, clean ni borrado de artefactos;
+- tickets 16 y 17 están `closed`; ticket activo 18 permanece
+  `ready-for-agent`; 19–26, 11, 12, 02, 14 y 15 siguen abiertos según sus
+  archivos locales;
+- ruta crítica recalculada: `18 -> 19 -> 20 -> 21 -> 22 -> 23 -> 24 -> 25 ->
+  26 -> 11 -> 12 -> 02 -> 14 -> 15`;
+- `retry-9` y `retry-10` son evidencia adversa inmutable. No reanudar, borrar ni
+  reescribir sus runs, targets, clones, pools, journals o artefactos;
+- CLAIM-040/041 continúan `partial`; no promover ningún claim antes de evidencia
+  productiva y rederivación en ticket 14.
+
+Último estado de ticket 18:
+
+- los últimos reviews completos fueron sobre `b4226b7` y dieron FAIL por dos
+  brechas concretas de selector/target workspace;
+- fix productivo posterior `448b295` distingue glob de package name vs manifest
+  path, compone directory con selectors y resuelve `-C/--dir` desde el manifest
+  que origina el comando;
+- verificación posterior: 39/39 en
+  `tests/execution-core-v2-node-executor.test.ts`; typechecks
+  `@manyhands/execution-core` y `@manyhands/run-coordinator` PASS;
+- todavía **no existen** reviews independientes Standards/Spec sobre `448b295`.
+  Por eso ticket 18 sigue abierto y ninguna casilla debe marcarse todavía.
+
+Primera operación de la próxima fase:
+
+1. leer los documentos obligatorios y ticket 18 completos;
+2. verificar root, branch, HEAD, ancestry, `git status --short` y
+   `git diff HEAD`; exigir árbol limpio;
+3. pedir en paralelo reviews independientes Standards y Spec del delta
+   `b4226b7..HEAD`, ambas con “No implementes correcciones”;
+4. si ambas dan PASS y cero P0-P3, marcar las cinco casillas de ticket 18,
+   cambiarlo a `closed`, actualizar este HANDOFF y hacer commit local pequeño;
+5. si aparece un finding, conservarlo, usar TDD/diagnosing-bugs y no iniciar
+   ticket 19 hasta lograr el doble PASS;
+6. recalcular el frente y leer ticket 19 completo antes de modificar archivos.
+
+Trabajo restante para tesis y proyecto:
+
+- 19: validación consciente de criterios;
+- 20: congelar el oráculo externo;
+- 21–26: autoridad/takeover, freshness, recovery/scheduling, integración y
+  manifest durables, stores/traces/security y seams de policy/config;
+- 11: generar un freeze sucesor nuevo desde evidencia limpia y ejecutar
+  N=4/N=8/N=16 secuencialmente sobre un único commit, preservando resultados;
+- 12: medir `validationDuplication` con fórmula/threshold intactos y emitir el
+  veredicto honesto;
+- 02: cerrar el límite C1 con rechazo mínimo explícito si no es reconstruible;
+- 14: rederivar la matriz completa de claims desde evidencia cerrada;
+- 15: terminar tesis, presentación, defensa y PDFs, ejecutar gate editorial y
+  revisar visualmente cada página;
+- finalmente ejecutar el gate completo sobre un único commit limpio y emitir el
+  informe exigido por `AUTONOMOUS_CLOSURE_PLAN.md`.
+
+No se alcanzó la definición de terminado. El goal debe continuar en una tarea
+nueva usando `docs/tesis/NEXT_AGENT_GOAL_PROMPT.md`.
