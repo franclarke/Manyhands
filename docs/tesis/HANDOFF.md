@@ -782,3 +782,16 @@ Diagnóstico terminal del gate amplio de ticket 17:
   preservado en retry-10; no hay evidencia de regresión del ticket 17;
 - próxima operación larga autorizada por el diagnóstico: una única repetición
   limpia del suite completo. No habrá más reintentos ciegos.
+
+Resultado de la repetición limpia del gate amplio de ticket 17:
+
+- el suite completo terminó en 200 s con un solo fallo: timeout de 30 s y
+  cleanup `EBUSY` en el caso `rejects and removes a commit created
+  unexpectedly by repair executor` de `integration-real-git`;
+- el otro caso que había fallado en la corrida anterior pasó dentro de este
+  suite. El caso remanente ya había pasado focalmente 1/1 en 12.35 s, sin
+  cambios de código entre las ejecuciones;
+- el resultado amplio no se declara PASS. Se preserva como evidencia de
+  contención Windows y no se ejecuta un tercer reintento;
+- `git diff --check` y working tree están limpios en `b076da1`. Próximo paso:
+  reviews independientes Standards y Spec con “No implementes correcciones”.
