@@ -912,3 +912,13 @@ Reviews finales `7b19895` de ticket 18:
   enumerar más bypasses con regex. Próxima operación: RED para raíces de test,
   resolución workspace/fail-closed y límites explícitos. CLAIM-040/041 siguen
   `partial`.
+
+Quinta remediation de ticket 18:
+
+- RED: alias workspace, source NodeNext y loader dinámico opaco escapaban; el
+  recorrido desde `dev` producía un rechazo falso;
+- fix `85079da` parte sólo de scripts de test y su clausura, resuelve exports de
+  paquetes workspace y equivalencias NodeNext, y falla cerrado si el loader no
+  es analizable. El recorrido tiene cancelación y límites 256/16/1 MiB;
+- focal 33/33 y typecheck execution-core PASS. CLAIM-040/041 continúan
+  `partial`; próximo paso: reviews independientes del nuevo punto fijo.

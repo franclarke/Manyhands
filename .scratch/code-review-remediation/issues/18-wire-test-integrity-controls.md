@@ -60,3 +60,8 @@
   código productivo, la regex conserva inputs opacos/NodeNext y no tiene
   presupuesto. Se descarta continuar enumerando sintaxis: la siguiente RED
   exige raíces de test reales, resolución workspace/fail-closed y límites.
+- RED posterior: cuatro fallos válidos (alias workspace, NodeNext, loader opaco
+  y falso positivo sobre `dev`). Fix `85079da`: sólo sigue la clausura de
+  scripts de test, resuelve paquetes workspace y sources NodeNext, rechaza
+  loaders opacos y acota el recorrido a 256 archivos/16 niveles/1 MiB con
+  cancelación. GREEN focal 33/33; typecheck execution-core PASS.
