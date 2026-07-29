@@ -519,6 +519,11 @@ describe("ExactCandidateValidatorV2", () => {
       candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter @repo/api run verify" } }), "packages/api/package.json": JSON.stringify({ name: "@repo/api", scripts: { verify: "vitest run tests/smoke.test.ts" } }) },
       expectedPath: "packages/api/package.json#scripts.verify"
     }],
+    ["dotted package script", ["package.json"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm run unit.test", "unit.test": "vitest run" } }) },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm run unit.test", "unit.test": "vitest run tests/smoke.test.ts" } }) },
+      expectedPath: "package.json#scripts.unit.test"
+    }],
     ["package imports without name", ["scripts/select-tests.ts"], {
       baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" }, imports: { "#selector": "./scripts/select-tests.ts" } }), "scripts/run-tests.mjs": 'import "#selector";', "scripts/select-tests.ts": "runAll();" },
       candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" }, imports: { "#selector": "./scripts/select-tests.ts" } }), "scripts/run-tests.mjs": 'import "#selector";', "scripts/select-tests.ts": "process.exit(0);" },
@@ -528,6 +533,11 @@ describe("ExactCandidateValidatorV2", () => {
       baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "tsconfig.json": '{ "extends": "./tsconfig.base.json", // shared\n}', "tsconfig.base.json": '{ "compilerOptions": { "baseUrl": ".", "paths": { "@selector": ["scripts/select-tests.ts",], }, }, }', "scripts/run-tests.mjs": 'import "@selector";', "scripts/select-tests.ts": "runAll();" },
       candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "tsconfig.json": '{ "extends": "./tsconfig.base.json", // shared\n}', "tsconfig.base.json": '{ "compilerOptions": { "baseUrl": ".", "paths": { "@selector": ["scripts/select-tests.ts",], }, }, }', "scripts/run-tests.mjs": 'import "@selector";', "scripts/select-tests.ts": "process.exit(0);" },
       expectedPath: "scripts/select-tests.ts"
+    }],
+    ["most specific tsconfig path", ["packages/selector/config.ts"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "tsconfig.json": JSON.stringify({ compilerOptions: { paths: { "@tests/*": ["fallback/*"], "@tests/selector/*": ["packages/selector/*"] } } }), "scripts/run-tests.mjs": 'import "@tests/selector/config";', "packages/selector/config.ts": "runAll();" },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "tsconfig.json": JSON.stringify({ compilerOptions: { paths: { "@tests/*": ["fallback/*"], "@tests/selector/*": ["packages/selector/*"] } } }), "scripts/run-tests.mjs": 'import "@tests/selector/config";', "packages/selector/config.ts": "process.exit(0);" },
+      expectedPath: "packages/selector/config.ts"
     }],
     ["opaque dynamic selector", ["scripts/select-tests.mjs"], {
       baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": "const selector = process.env.TEST_SELECTOR; await import(selector);", "scripts/select-tests.mjs": "runAll();" },
@@ -576,6 +586,25 @@ describe("ExactCandidateValidatorV2", () => {
     const git = new FakeGitRunner({ diffRangeNameOnly: ["src/feature.ts"], showFileByRef: { [baseline]: { "package.json": manifest, "scripts/run-tests.mjs": wrapper, "src/feature.ts": "old();" }, [candidate]: { "package.json": manifest, "scripts/run-tests.mjs": wrapper, "src/feature.ts": "fixed();" } } });
     const validator = new ExactCandidateValidatorV2({ git, worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) } });
     const evidence = await validator.validate({ runId: "run-opaque-product", attemptId: "attempt-opaque-product", contract: compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!, candidateCommit: candidate, baselineCommit: baseline });
+    expect(evidence.outcome).toBe("verified");
+  });
+
+  it.each([
+    ["filtered workspace script", ["packages/web/package.json"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter @repo/api run verify" } }), "packages/web/package.json": JSON.stringify({ name: "@repo/web", scripts: { verify: "vitest run" } }) },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter @repo/api run verify" } }), "packages/web/package.json": JSON.stringify({ name: "@repo/web", scripts: { verify: "vitest run tests/web-smoke.test.ts" } }) }
+    }],
+    ["private alias in another package", ["packages/web/scripts/select.ts"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" }, imports: { "#selector": "./scripts/root-select.ts" } }), "scripts/run-tests.mjs": 'import "#selector";', "scripts/root-select.ts": "runAll();", "packages/web/package.json": JSON.stringify({ imports: { "#selector": "./scripts/select.ts" } }), "packages/web/scripts/select.ts": "webAll();" },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" }, imports: { "#selector": "./scripts/root-select.ts" } }), "scripts/run-tests.mjs": 'import "#selector";', "scripts/root-select.ts": "runAll();", "packages/web/package.json": JSON.stringify({ imports: { "#selector": "./scripts/select.ts" } }), "packages/web/scripts/select.ts": "webSmoke();" }
+    }]
+  ] as const)("does not reject an unrelated %s", async (_label, changedFiles, fixture) => {
+    const snapshot = bookingSnapshot();
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: snapshot }, compilerDependencies);
+    const candidate = "a".repeat(40);
+    const git = new FakeGitRunner({ diffRangeNameOnly: [...changedFiles], showFileByRef: { [compiled.graph.baseCommit]: fixture.baseline, [candidate]: fixture.candidate } });
+    const validator = new ExactCandidateValidatorV2({ git, worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) } });
+    const evidence = await validator.validate({ runId: "run-scope", attemptId: "attempt-scope", contract: compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!, candidateCommit: candidate, baselineCommit: compiled.graph.baseCommit });
     expect(evidence.outcome).toBe("verified");
   });
 

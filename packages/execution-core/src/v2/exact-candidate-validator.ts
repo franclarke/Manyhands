@@ -165,6 +165,8 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     const candidateScripts: Record<string, string> = {};
     const baselineAllScripts: Record<string, string> = {};
     const candidateAllScripts: Record<string, string> = {};
+    const baselinePackageNames: Record<string, string> = {};
+    const candidatePackageNames: Record<string, string> = {};
     const configurationPaths = new Set(changedFiles.filter(isTestDiscoveryConfigurationPath));
     const manifestPaths = manifestAncestors(changedFiles);
     const validationCommands: Array<{ directory: string; command: string }> = [];
@@ -178,14 +180,18 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       Object.assign(candidateScripts, candidateManifestScripts);
       Object.assign(baselineAllScripts, allScriptsFromManifest(baselineManifest, manifestPath));
       Object.assign(candidateAllScripts, allScriptsFromManifest(candidateManifest, manifestPath));
+      const baselinePackageName = packageNameFromManifest(baselineManifest);
+      const candidatePackageName = packageNameFromManifest(candidateManifest);
+      if (baselinePackageName !== undefined) baselinePackageNames[manifestPath] = baselinePackageName;
+      if (candidatePackageName !== undefined) candidatePackageNames[manifestPath] = candidatePackageName;
       for (const manifest of [baselineManifest, candidateManifest]) {
         mergeModuleAliases(moduleAliases, moduleAliasesFromManifest(manifest, manifestPath));
       }
       if (changedFiles.includes(manifestPath) && embeddedTestConfigChanged(baselineManifest, candidateManifest)) configurationPaths.add(manifestPath);
       if (changedFiles.includes(manifestPath) && moduleResolutionManifestChanged(baselineManifest, candidateManifest)) configurationPaths.add(manifestPath);
     }
-    expandReferencedScripts(baselineScripts, baselineAllScripts);
-    expandReferencedScripts(candidateScripts, candidateAllScripts);
+    expandReferencedScripts(baselineScripts, baselineAllScripts, baselinePackageNames);
+    expandReferencedScripts(candidateScripts, candidateAllScripts, candidatePackageNames);
     for (const scripts of [baselineScripts, candidateScripts]) {
       for (const [identity, command] of Object.entries(scripts)) {
         validationCommands.push({ directory: path.posix.dirname(identity.slice(0, identity.indexOf("#scripts."))), command });
@@ -362,16 +368,27 @@ function resolvedModuleReferenceCandidates(
   moduleAliases: ReadonlyMap<string, readonly string[]>
 ): string[] {
   if (reference.startsWith(".")) return resolvedReferenceCandidates(directory, reference);
-  const exact = moduleAliases.get(reference);
-  if (exact !== undefined) return [...exact];
-  for (const [alias, entries] of moduleAliases) {
-    if (!alias.includes("*")) continue;
+  const matches: Array<{ score: number; entries: readonly string[]; wildcard: string }> = [];
+  for (const [storedAlias, entries] of moduleAliases) {
+    const separator = storedAlias.indexOf("::");
+    const scope = separator >= 0 ? storedAlias.slice(0, separator) : undefined;
+    const alias = separator >= 0 ? storedAlias.slice(separator + 2) : storedAlias;
+    if (scope !== undefined && !isPathWithinScope(directory, scope)) continue;
     const [prefix, suffix = ""] = alias.split("*");
     if (!reference.startsWith(prefix!) || !reference.endsWith(suffix)) continue;
-    const wildcard = reference.slice(prefix!.length, reference.length - suffix.length);
-    return entries.map((entry) => entry.replaceAll("*", wildcard));
+    if (!alias.includes("*") && reference !== alias) continue;
+    matches.push({
+      score: (scope !== undefined ? 1_000_000 + scope.length : 0) + alias.replace("*", "").length,
+      entries,
+      wildcard: alias.includes("*") ? reference.slice(prefix!.length, reference.length - suffix.length) : ""
+    });
   }
-  return [];
+  const best = matches.sort((left, right) => right.score - left.score)[0];
+  return best === undefined ? [] : best.entries.map((entry) => entry.replaceAll("*", best.wildcard));
+}
+
+function isPathWithinScope(fileDirectory: string, scope: string): boolean {
+  return scope === "." || fileDirectory === scope || fileDirectory.startsWith(`${scope}/`);
 }
 
 function moduleAliasesFromManifest(contents: string | null, manifestPath: string): Map<string, string[]> {
@@ -379,7 +396,7 @@ function moduleAliasesFromManifest(contents: string | null, manifestPath: string
   const manifest = parseManifest(contents);
   const directory = path.posix.dirname(manifestPath);
   if (isRecord(manifest.imports)) {
-    for (const [key, value] of Object.entries(manifest.imports)) aliases.set(key, resolveDeclaredEntries(directory, manifestEntryStrings(value)));
+    for (const [key, value] of Object.entries(manifest.imports)) aliases.set(`${directory}::${key}`, resolveDeclaredEntries(directory, manifestEntryStrings(value)));
   }
   if (typeof manifest.name !== "string" || manifest.name.length === 0) return aliases;
   const exports = manifest.exports;
@@ -404,7 +421,7 @@ function moduleAliasesFromTsconfig(contents: string | null, configPath: string):
   const baseDirectory = path.posix.normalize(path.posix.join(directory === "." ? "" : directory, baseUrl));
   for (const [alias, targets] of Object.entries(compilerOptions.paths)) {
     if (!Array.isArray(targets)) continue;
-    aliases.set(alias, targets.filter((target): target is string => typeof target === "string").flatMap((target) => resolvedReferenceCandidates(baseDirectory, `./${target}`)));
+    aliases.set(`${directory}::${alias}`, targets.filter((target): target is string => typeof target === "string").flatMap((target) => resolvedReferenceCandidates(baseDirectory, `./${target}`)));
   }
   return aliases;
 }
@@ -557,26 +574,47 @@ function allScriptsFromManifest(contents: string | null, manifestPath: string): 
     .map(([name, command]) => [`${manifestPath}#scripts.${name}`, command]));
 }
 
-function expandReferencedScripts(selected: Record<string, string>, available: Readonly<Record<string, string>>): void {
-  const pending = Object.values(selected);
+function expandReferencedScripts(
+  selected: Record<string, string>,
+  available: Readonly<Record<string, string>>,
+  packageNames: Readonly<Record<string, string>>
+): void {
+  const pending = Object.entries(selected);
   const selectedNames = new Set(Object.keys(selected));
   while (pending.length > 0) {
-    const command = pending.shift()!;
-    const referencedNames = referencedPackageScripts(command, Object.keys(available).map((identity) => identity.slice(identity.indexOf("#scripts.") + 9)));
+    const [sourceIdentity, command] = pending.shift()!;
+    const sourceManifest = sourceIdentity.slice(0, sourceIdentity.indexOf("#scripts."));
+    const targets = referencedPackageScriptTargets(command);
     for (const [identity, candidateCommand] of Object.entries(available)) {
+      const manifest = identity.slice(0, identity.indexOf("#scripts."));
       const name = identity.slice(identity.indexOf("#scripts.") + 9);
-      if (!referencedNames.includes(name) || selectedNames.has(identity)) continue;
+      const matches = targets.some((target) => target.name === name && (target.filter !== undefined
+        ? packageNames[manifest] === target.filter
+        : target.allWorkspaces || manifest === sourceManifest));
+      if (!matches || selectedNames.has(identity)) continue;
       selectedNames.add(identity);
       selected[identity] = candidateCommand;
-      pending.push(candidateCommand);
+      pending.push([identity, candidateCommand]);
     }
   }
 }
 
 function referencedPackageScripts(command: string, scriptNames: readonly string[]): string[] {
   if (!/\b(?:npm|pnpm|yarn|bun)\b/u.test(command)) return [];
-  const tokens = new Set(command.match(/[A-Za-z0-9:_-]+/gu) ?? []);
+  const tokens = new Set(command.match(/[A-Za-z0-9:._-]+/gu) ?? []);
   return scriptNames.filter((name) => tokens.has(name));
+}
+
+function referencedPackageScriptTargets(command: string): Array<{ name: string; filter?: string; allWorkspaces: boolean }> {
+  const filter = /--filter(?:=|\s+)([^\s;&|]+)/u.exec(command)?.[1];
+  const allWorkspaces = /(?:^|\s)(?:-r|--recursive)(?:\s|$)/u.test(command);
+  return [...command.matchAll(/\b(?:npm|pnpm|yarn|bun)\b[^;&|]*?\brun\s+([A-Za-z0-9:._-]+)/gu)]
+    .map((match) => ({ name: match[1]!, ...(filter !== undefined ? { filter } : {}), allWorkspaces }));
+}
+
+function packageNameFromManifest(contents: string | null): string | undefined {
+  const name = parseManifest(contents).name;
+  return typeof name === "string" && name.length > 0 ? name : undefined;
 }
 
 function safeSandboxPath(root: string, relativePath: string): string {
