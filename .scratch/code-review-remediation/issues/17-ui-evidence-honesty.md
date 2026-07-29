@@ -4,12 +4,12 @@
 
 **Blocked by:** 16.
 
-**Status:** ready-for-agent
+**Status:** closed
 
-- [ ] Tests RED prueban que matrices unverified/failed nunca muestran Verified ni habilitan entrega.
-- [ ] El reducer conserva el outcome como autoridad visible.
-- [ ] La UI presenta filas de criterio y referencias de evidencia sin sobreafirmar.
-- [ ] Tests web, typecheck y reviews Standards/Spec pasan.
+- [x] Tests RED prueban que matrices unverified/failed nunca muestran Verified ni habilitan entrega.
+- [x] El reducer conserva el outcome como autoridad visible.
+- [x] La UI presenta filas de criterio y referencias de evidencia sin sobreafirmar.
+- [x] Tests web, typecheck y reviews Standards/Spec pasan.
 
 ## Progreso TDD
 
@@ -29,3 +29,6 @@
   identidad exacta; GREEN 15/15 focal y 28/28 del conjunto afectado. La medalla
   usa el ID de nodo/integración y el detalle final usa `matrixId + commit`.
   Typecheck web PASS. Pendiente: re-reviews Standards/Spec.
+- Re-reviews independientes del fixed point `e9b1dd9`: Standards PASS y Spec
+  PASS, cero P0/P1/P2/P3. El gate amplio permanece honestamente NO PASS por la
+  contención Windows documentada; no se usó como evidencia favorable.

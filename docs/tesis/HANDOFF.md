@@ -809,3 +809,13 @@ Reapertura de ticket 17 por reviews del fixed point `d5bf07f`:
   detalle final exige la identidad exacta `matrixId + candidateCommit`;
 - GREEN 15/15 focal; conjunto afectado 28/28; typecheck web PASS con Node
   22.23.1/pnpm 7.29.3. Próximo paso: re-reviews independientes Standards/Spec.
+
+Cierre ticket 17:
+
+- estado canónico `closed`; fixed point revisado `e9b1dd9`;
+- re-reviews independientes con “No implementes correcciones”: Standards PASS
+  y Spec PASS, cero P0/P1/P2/P3;
+- RED/GREEN, 28/28 afectados y typecheck web PASS. El suite global conserva su
+  resultado NO PASS por un timeout `EBUSY` focalmente verde; no se reintentó ni
+  se presentó como validación exitosa;
+- frente recalculado desde tickets locales: 18 (`validation-test-integrity`).
