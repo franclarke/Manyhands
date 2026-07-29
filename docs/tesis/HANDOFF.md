@@ -819,3 +819,17 @@ Cierre ticket 17:
   resultado NO PASS por un timeout `EBUSY` focalmente verde; no se reintentó ni
   se presentó como validación exitosa;
 - frente recalculado desde tickets locales: 18 (`validation-test-integrity`).
+
+Checkpoint ticket 18 antes del gate afectado amplio:
+
+- TDD RED: 5 fallos válidos; candidato verde con test borrado, `skip`, `only`
+  o assertion removida quedaba `verified`, y el detector no cubría contenido;
+- fix productivo `5819af6`: V2 deriva archivos/scripts de baseline y candidato
+  exactos, detecta los cuatro debilitamientos y materializa tests candidatos
+  sobre la base previa para el negative control;
+- un control que también queda verde en baseline falla la matriz. Findings y
+  controles quedan durables con IDs y output digests; el schema rechaza una
+  matriz `verified` contradictoria;
+- GREEN focal 24/24; typechecks execution-core/run-coordinator PASS con Node
+  22.23.1/pnpm 7.29.3. CLAIM-040/041 siguen `partial` hasta evidencia productiva
+  y rederivación posterior. Próxima operación larga: gate afectado amplio.
