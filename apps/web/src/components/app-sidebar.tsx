@@ -6,6 +6,12 @@ import { usePathname, useRouter } from "next/navigation";
 import type { Workspace, RunPreview } from "@/lib/api-types";
 import { FIXTURE_CATALOG } from "@/lib/run-model/fixtures";
 import { sidebarInitiallyCollapsedForRoute, type SidebarStoredPreference } from "@/lib/cockpit-layout";
+import {
+  RUNS_INITIAL_REVEAL,
+  WORKSPACES_INITIAL_REVEAL,
+  nextRevealCount,
+  revealState
+} from "@/lib/sidebar-reveal";
 import { runUiStatus, STATUS_META } from "@/lib/status";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -23,6 +29,7 @@ import {
   Trash2,
   Check,
   X,
+  ChevronDown,
   AlertTriangle
 } from "lucide-react";
 
@@ -31,10 +38,9 @@ const COLLAPSE_STORAGE_KEY = "mh-sidebar-collapsed";
 interface AppSidebarProps {
   workspaces: Workspace[];
   recentRuns: RunPreview[];
-  degradedRuns: Array<{ runId: string; reason: string }>;
 }
 
-export function AppSidebar({ workspaces, recentRuns, degradedRuns }: AppSidebarProps): React.ReactElement {
+export function AppSidebar({ workspaces, recentRuns }: AppSidebarProps): React.ReactElement {
   const pathname = usePathname();
   const router = useRouter();
   const isProtoRoute = pathname === "/runs/proto" || pathname.startsWith("/runs/proto/");
@@ -46,6 +52,11 @@ export function AppSidebar({ workspaces, recentRuns, degradedRuns }: AppSidebarP
   const [deleteTarget, setDeleteTarget] = useState<RunPreview | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [revealedWorkspaces, setRevealedWorkspaces] = useState(WORKSPACES_INITIAL_REVEAL);
+  const [revealedRuns, setRevealedRuns] = useState(RUNS_INITIAL_REVEAL);
+
+  const workspaceReveal = revealState(workspaces.length, revealedWorkspaces);
+  const runReveal = revealState(runs.length, revealedRuns);
 
   // Keep the local list in sync with fresh server data on navigation/refresh.
   useEffect(() => {
@@ -159,14 +170,18 @@ export function AppSidebar({ workspaces, recentRuns, degradedRuns }: AppSidebarP
         </Link>
       </div>
 
+      {/* Scroll region — workspaces + run history share the leftover height so a
+          long history stays reachable instead of being pushed off-screen. */}
+      <div className="-mr-1 flex min-h-0 flex-1 flex-col overflow-y-auto pb-3 pr-1">
+
       {/* Workspaces */}
-      <section className="px-3 pt-4" aria-label="Workspaces">
+      <section className="shrink-0 px-3 pt-4" aria-label="Workspaces">
         <h3 className="flex items-center gap-1.5 px-1.5 pb-2 text-meta font-medium text-[var(--color-text-subtle)]">
           <Folder aria-hidden className="h-3 w-3" />
           Workspaces
         </h3>
-        <ul className="m-0 flex list-none flex-col p-0">
-          {workspaces.map((workspace) => (
+        <ul id="mh-workspace-list" className="m-0 flex list-none flex-col p-0">
+          {workspaces.slice(0, workspaceReveal.visibleCount).map((workspace) => (
             <li
               key={workspace.id}
               className="flex items-center gap-2 rounded-[var(--r-md)] px-1.5 py-1.5 text-label text-[var(--color-text-muted)]"
@@ -187,17 +202,27 @@ export function AppSidebar({ workspaces, recentRuns, degradedRuns }: AppSidebarP
               Sin workspaces todavía
             </li>
           ) : null}
+          {workspaceReveal.canRevealMore ? (
+            <li>
+              <RevealMoreButton
+                hiddenCount={workspaceReveal.hiddenCount}
+                controls="mh-workspace-list"
+                label={`Ver más workspaces (${workspaceReveal.hiddenCount} ocultos)`}
+                onClick={() => setRevealedWorkspaces((prev) => nextRevealCount(workspaces.length, prev))}
+              />
+            </li>
+          ) : null}
         </ul>
       </section>
 
       {/* Recent runs */}
-      <section className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-4" aria-label="Runs recientes">
+      <section className="flex shrink-0 flex-col px-3 pt-4" aria-label="Runs recientes">
         <h3 className="flex items-center gap-1.5 px-1.5 pb-2 text-meta font-medium text-[var(--color-text-subtle)]">
           <History aria-hidden className="h-3 w-3" />
           Runs recientes
         </h3>
-        <nav className="-mr-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pr-1">
-          {runs.map((run) => (
+        <nav id="mh-run-list" className="flex flex-col gap-0.5">
+          {runs.slice(0, runReveal.visibleCount).map((run) => (
             <RunRow
               key={run.id}
               run={run}
@@ -217,31 +242,18 @@ export function AppSidebar({ workspaces, recentRuns, degradedRuns }: AppSidebarP
               Sin ejecuciones previas
             </span>
           ) : null}
+          {runReveal.canRevealMore ? (
+            <RevealMoreButton
+              hiddenCount={runReveal.hiddenCount}
+              controls="mh-run-list"
+              label={`Ver más runs (${runReveal.hiddenCount} ocultos)`}
+              onClick={() => setRevealedRuns((prev) => nextRevealCount(runs.length, prev))}
+            />
+          ) : null}
         </nav>
       </section>
 
-      {degradedRuns.length > 0 ? (
-        <section className="mx-3 mb-3 rounded-[var(--r-md)] border border-[var(--status-blocked-border)] bg-[var(--status-blocked-bg)] p-3" aria-label="Registros dañados">
-          <div className="flex items-start gap-2 text-meta text-[var(--status-blocked-fg)]">
-            <AlertTriangle aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <div className="min-w-0">
-              <p className="font-semibold">{degradedRuns.length} run{degradedRuns.length === 1 ? "" : "s"} con datos dañados</p>
-              {degradedRuns.slice(0, 3).map((record) => (
-                <a
-                  key={record.runId}
-                  href={`/api/runs/${encodeURIComponent(record.runId)}/diagnostics`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-1 block truncate underline decoration-[var(--status-blocked-border)] underline-offset-2"
-                  title={record.reason}
-                >
-                  Diagnóstico: {record.runId}
-                </a>
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
+      </div>
 
       <div className="border-t border-[var(--color-border-soft)] p-3">
         <Link
@@ -272,6 +284,37 @@ export function AppSidebar({ workspaces, recentRuns, degradedRuns }: AppSidebarP
         />
       ) : null}
     </>
+  );
+}
+
+/**
+ * "Ver más" — reveals the next slice of a truncated sidebar list. It stays
+ * rendered while items remain hidden, so repeated clicks walk the list to its
+ * end; the remaining count keeps the depth of the list legible.
+ */
+function RevealMoreButton({
+  hiddenCount,
+  controls,
+  label,
+  onClick
+}: {
+  hiddenCount: number;
+  controls: string;
+  label: string;
+  onClick: () => void;
+}): React.ReactElement {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-controls={controls}
+      className="mt-0.5 flex w-full items-center gap-1.5 rounded-[var(--r-md)] border border-transparent px-1.5 py-1.5 text-left text-meta font-medium text-[var(--color-text-subtle)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--color-text)_4.5%,transparent)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+    >
+      <ChevronDown aria-hidden className="h-3 w-3" />
+      Ver más
+      <span className="mh-mono ml-auto text-eyebrow tabular-nums">{hiddenCount}</span>
+    </button>
   );
 }
 

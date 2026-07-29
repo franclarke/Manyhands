@@ -9,6 +9,13 @@
       "autoPort": true
     },
     {
+      "name": "web-prod",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@manyhands/web", "start"],
+      "port": 3100,
+      "autoPort": true
+    },
+    {
       "name": "presentation-preview",
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "4173", "--directory", "docs/presentation"],

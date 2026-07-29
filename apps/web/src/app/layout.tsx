@@ -3,7 +3,7 @@ import { Geist, JetBrains_Mono, Newsreader } from "next/font/google";
 import "./globals.css";
 import { AppSidebar } from "@/components/app-sidebar";
 import { getWorkspaceRepository } from "@/lib/server/workspaces";
-import { getRunRepository, listCorruptRunRecords } from "@/lib/server/runs";
+import { getRunRepository } from "@/lib/server/runs";
 import { toRunPreview } from "@/lib/server/runs/presenter";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swap" });
@@ -24,12 +24,9 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>): Promise<React.ReactElement> {
   const workspaceRepository = getWorkspaceRepository();
-  const [workspaces, runs, corruptRecords] = await Promise.all([
+  const [workspaces, runs] = await Promise.all([
     workspaceRepository.list(),
-    getRunRepository().list({ includeArchived: false, limit: 10 }),
-    // Advance corruption discovery incrementally on real navigations. Stable
-    // records come from the durable metadata index and are not reparsed.
-    listCorruptRunRecords({ inspectionBudget: 8 })
+    getRunRepository().list({ includeArchived: false, limit: 10 })
   ]);
   
   const wsById = new Map(workspaces.map((entry) => [entry.id, entry]));
@@ -55,14 +52,7 @@ export default async function RootLayout({
       </head>
       <body className={`${geist.variable} ${jetbrainsMono.variable} ${newsreader.variable}`}>
         <div className="flex h-screen w-screen bg-[var(--color-bg)] text-[var(--color-text)] overflow-hidden">
-          <AppSidebar
-            workspaces={workspaces}
-            recentRuns={previews}
-            degradedRuns={corruptRecords.map((record) => ({
-              runId: record.runId,
-              reason: record.reason ?? "invalid run record"
-            }))}
-          />
+          <AppSidebar workspaces={workspaces} recentRuns={previews} />
           <main className="flex-1 overflow-y-auto min-w-0 flex flex-col relative">
             {children}
           </main>

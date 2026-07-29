@@ -96,6 +96,15 @@ pnpm web:build
 Para cambios solo documentales, verificar links relativos, términos obsoletos y
 consistencia; no es necesario ejecutar builds del producto.
 
+### Verificar UI en el navegador
+
+La ruta `/` tarda minutos en responder (dev y producción) con datos reales, así
+que el preview pane se cuelga y no sirve para verificar. Para inspeccionar
+componentes globales como la barra lateral: `pnpm web:build`, arrancar el
+preview `web-prod` de `.claude/launch.json` y abrir `/runs/<runId>` (~10 s).
+Ahí la barra lateral monta colapsada: expandirla con el botón
+`aria-label="Expandir barra lateral"` antes de leer el DOM.
+
 ## Agent skills
 
 ### Issue tracker
