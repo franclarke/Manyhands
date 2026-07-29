@@ -738,3 +738,13 @@ Corrección Spec del fixed point `da802ba`:
   21, 23, 24 y 25 contienen la aceptación canónica para reevaluarlos.
 - No se eleva ningún claim por existencia de módulos o tests aislados. Frente
   vigente permanece ticket 16 hasta obtener re-reviews Standards/Spec PASS.
+
+Cierre ticket 16:
+
+- Estado canónico: `closed`; fixed point `1745c0c`.
+- TDD y gates: RED 2 fallos; GREEN 69/69; typechecks task-graph/decomposer PASS
+  con Node 22.23.1 y pnpm 7.29.3.
+- Reviews finales independientes con “No implementes correcciones”:
+  Standards PASS y Spec PASS, cero P0/P1/P2; Spec cero P3.
+- Retry-9/retry-10 permanecen adversos e inmutables. No hay freeze nuevo.
+- Frente recalculado desde tickets locales: 17 (`ui-evidence-honesty`).
