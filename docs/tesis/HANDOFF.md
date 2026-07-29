@@ -868,3 +868,14 @@ Gate afectado ampliado de ticket 18 después de remediation:
   web PASS con Node 22.23.1/pnpm 7.29.3;
 - working tree limpio en el punto fijo documentado. Próximo paso: re-reviews
   Standards/Spec con “No implementes correcciones”.
+
+Segunda reapertura de ticket 18:
+
+- Standards/Spec confirmaron resueltos los siete findings previos, pero ambos
+  FAIL P1 por cobertura estrechable desde `vitest/jest` config o scripts
+  indirectos sin nombre `test`;
+- fix `6c1989d`: configs de discovery cambiadas producen finding durable y se
+  comparan fail-closed todos los scripts de cada manifest cambiado, porque
+  wrappers/workspaces impiden probar localmente que un script sea irrelevante;
+- focal 24/24 y typechecks execution-core/run-coordinator PASS. CLAIM-040/041
+  siguen `partial`. Próximo paso: re-review final del ticket 18.

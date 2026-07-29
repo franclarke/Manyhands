@@ -42,3 +42,7 @@
   run-store fencing/event-source/snapshot/upcast. Typechecks execution-core,
   run-store, run-coordinator, orchestrator-graph y web PASS. Pendiente
   re-reviews independientes.
+- Re-reviews `37ed94d`: ambos FAIL P1 por discovery config y scripts indirectos.
+  Fix `6c1989d` agrega finding durable para configs de runner y compara
+  fail-closed todos los scripts de cada manifest cambiado. Focal 24/24 y
+  typechecks execution-core/run-coordinator PASS; pendiente re-review final.
