@@ -75,6 +75,15 @@ describe("test integrity and baseline", () => {
         path: "package.json#scripts.test"
       })]);
     }
+    expect(detectTestIntegrityFindings({
+      baselineTestFiles: [], candidateTestFiles: [],
+      baselineScripts: { "package.json#scripts.test": "pnpm run unit", "package.json#scripts.unit": "vitest run" },
+      candidateScripts: { "package.json#scripts.test": "pnpm run unit", "package.json#scripts.unit": "vitest run tests/smoke.test.ts" }
+    })).toContainEqual(expect.objectContaining({ code: "test_script_weakened", path: "package.json#scripts.unit" }));
+    expect(detectTestIntegrityFindings({
+      baselineTestFiles: [], candidateTestFiles: [], baselineScripts: {}, candidateScripts: {},
+      changedTestConfigurationPaths: ["vitest.config.ts"]
+    })).toEqual([expect.objectContaining({ code: "test_configuration_changed", path: "vitest.config.ts" })]);
   });
 
   it("rejects symlinked parents before materializing a negative control", async () => {

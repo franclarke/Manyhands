@@ -49,7 +49,7 @@ export interface V2ExecutionEvidenceMatrix {
   outcome: "verified" | "unverified" | "failed";
   integrityFindings?: Array<{
     findingId: string;
-    code: "test_removed" | "test_script_weakened" | "test_skipped" | "test_only" | "assertion_removed";
+    code: "test_removed" | "test_script_weakened" | "test_configuration_changed" | "test_skipped" | "test_only" | "assertion_removed";
     path: string;
     message: string;
   }>;

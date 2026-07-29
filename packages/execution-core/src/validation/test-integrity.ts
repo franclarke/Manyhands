@@ -5,7 +5,7 @@ export const TEST_INTEGRITY_DETECTOR_VERSION = 1 as const;
 
 export interface TestIntegrityFinding {
   findingId: string;
-  code: "test_removed" | "test_script_weakened" | "test_skipped" | "test_only" | "assertion_removed";
+  code: "test_removed" | "test_script_weakened" | "test_configuration_changed" | "test_skipped" | "test_only" | "assertion_removed";
   path: string;
   message: string;
 }
@@ -17,12 +17,16 @@ export function detectTestIntegrityFindings(input: {
   candidateScripts: Record<string, string>;
   baselineTestContents?: Record<string, string>;
   candidateTestContents?: Record<string, string>;
+  changedTestConfigurationPaths?: string[];
 }): TestIntegrityFinding[] {
   const candidateFiles = new Set(input.candidateTestFiles);
   const findings: TestIntegrityFinding[] = input.baselineTestFiles
     .filter((path) => !candidateFiles.has(path))
     .sort()
     .map((path) => finding("test_removed", path, `Baseline test ${path} is missing from the candidate.`));
+  for (const path of [...(input.changedTestConfigurationPaths ?? [])].sort()) {
+    findings.push(finding("test_configuration_changed", path, `Candidate changes test discovery configuration ${path}; prior coverage equivalence is no longer established.`));
+  }
   for (const [name, baseline] of Object.entries(input.baselineScripts).sort(([left], [right]) => left.localeCompare(right))) {
     const candidate = input.candidateScripts[name];
     if (candidate === undefined || isWeaker(candidate, baseline)) {
@@ -102,4 +106,11 @@ function scriptKind(path: string): ts.ScriptKind {
 export function isTestFilePath(path: string): boolean {
   const normalized = path.replaceAll("\\", "/");
   return normalized.startsWith("tests/") || normalized.includes("/tests/") || /\.(?:test|spec)\.[cm]?[jt]sx?$/u.test(normalized);
+}
+
+export function isTestDiscoveryConfigurationPath(filePath: string): boolean {
+  const base = filePath.replaceAll("\\", "/").split("/").at(-1)?.toLowerCase() ?? "";
+  return /^(?:vitest|vite|jest|playwright|cypress|karma|ava)\.config\./u.test(base)
+    || /^(?:\.mocharc|pytest\.ini|pyproject\.toml)$/u.test(base)
+    || /(?:^|[._-])test(?:s)?[._-]config/u.test(base);
 }

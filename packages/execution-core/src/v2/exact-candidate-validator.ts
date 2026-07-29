@@ -9,7 +9,7 @@ import type { GitRunner } from "../git/runner";
 import { GitCandidateSandboxFactory, validateExactCandidate, type EvidenceValidationCache } from "../validation/candidate-validator";
 import { compileValidationRecipe } from "../validation/recipe-compiler";
 import { ChildProcessValidationRunner, type ValidationRunner } from "../validation/runner";
-import { detectTestIntegrityFindings, isTestFilePath } from "../validation/test-integrity";
+import { detectTestIntegrityFindings, isTestDiscoveryConfigurationPath, isTestFilePath } from "../validation/test-integrity";
 import type { WorktreeManager } from "../worktree/manager";
 import type { V2ExecutionEvidenceMatrix, V2NodeValidationPort } from "./node-executor";
 
@@ -160,7 +160,8 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
         baselineScripts,
         candidateScripts,
         baselineTestContents,
-        candidateTestContents
+        candidateTestContents,
+        changedTestConfigurationPaths: changedFiles.filter(isTestDiscoveryConfigurationPath)
       }),
       candidateTestContents
     };
@@ -201,16 +202,15 @@ function testScriptsFromManifest(contents: string | null, manifestPath: string):
   try {
     const scripts = (JSON.parse(contents) as { scripts?: unknown }).scripts;
     if (scripts === null || typeof scripts !== "object" || Array.isArray(scripts)) return {};
-    return Object.fromEntries(Object.entries(scripts as Record<string, unknown>)
-      .filter((entry): entry is [string, string] => typeof entry[1] === "string" && isTestScriptName(entry[0]))
-      .map(([name, command]) => [`${manifestPath}#scripts.${name}`, command]));
+    const commands = Object.fromEntries(Object.entries(scripts as Record<string, unknown>)
+      .filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+    // Workspace filters, task runners and custom wrappers can invoke scripts
+    // indirectly. Treat every script change in a changed manifest as relevant
+    // instead of blessing an unproven subset as coverage-neutral.
+    return Object.fromEntries(Object.keys(commands).sort().map((name) => [`${manifestPath}#scripts.${name}`, commands[name]!]));
   } catch {
     return {};
   }
-}
-
-function isTestScriptName(name: string): boolean {
-  return /(?:^|:)test(?::|$)/u.test(name);
 }
 
 function safeSandboxPath(root: string, relativePath: string): string {

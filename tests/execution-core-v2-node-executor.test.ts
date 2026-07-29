@@ -414,8 +414,8 @@ describe("ExactCandidateValidatorV2", () => {
     const git = new FakeGitRunner({
       diffRangeNameOnly: [manifest],
       showFileByRef: {
-        [baseline]: { [manifest]: JSON.stringify({ scripts: { test: "vitest run" } }) },
-        [candidate]: { [manifest]: JSON.stringify({ scripts: { test: "vitest run tests/smoke.test.ts" } }) }
+        [baseline]: { [manifest]: JSON.stringify({ scripts: { test: "pnpm run unit", unit: "vitest run" } }) },
+        [candidate]: { [manifest]: JSON.stringify({ scripts: { test: "pnpm run unit", unit: "vitest run tests/smoke.test.ts" } }) }
       }
     });
     const validator = new ExactCandidateValidatorV2({
@@ -436,8 +436,26 @@ describe("ExactCandidateValidatorV2", () => {
 
     expect(evidence.outcome).toBe("failed");
     expect(evidence.integrityFindings).toEqual([
-      expect.objectContaining({ code: "test_script_weakened", path: `${manifest}#scripts.test` })
+      expect.objectContaining({ code: "test_script_weakened", path: `${manifest}#scripts.unit` })
     ]);
+  });
+
+  it("rejects a green candidate that narrows test discovery configuration", async () => {
+    const snapshot = bookingSnapshot();
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: snapshot }, compilerDependencies);
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!;
+    const candidate = "6".repeat(40);
+    const git = new FakeGitRunner({ diffRangeNameOnly: ["vitest.config.ts"] });
+    const validator = new ExactCandidateValidatorV2({
+      git,
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      repoRoot: "C:/repo/booking",
+      repositorySnapshot: snapshot,
+      runner: { run: async () => ({ passed: true, output: "smoke-only suite passed", exitCode: 0 }) }
+    });
+    const evidence = await validator.validate({ runId: "run-config", attemptId: "attempt-config", contract, candidateCommit: candidate, baselineCommit: compiled.graph.baseCommit });
+    expect(evidence.outcome).toBe("failed");
+    expect(evidence.integrityFindings).toContainEqual(expect.objectContaining({ code: "test_configuration_changed", path: "vitest.config.ts" }));
   });
 
   it("persists and rejects a feasible negative control that stays green on the baseline", async () => {

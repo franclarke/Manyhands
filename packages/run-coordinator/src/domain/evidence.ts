@@ -18,7 +18,7 @@ export const EvidenceMatrixRecordSchema = z.object({
   outcome: z.enum(["verified", "unverified", "failed"]),
   integrityFindings: z.array(z.object({
     findingId: EntityIdSchema,
-    code: z.enum(["test_removed", "test_script_weakened", "test_skipped", "test_only", "assertion_removed"]),
+    code: z.enum(["test_removed", "test_script_weakened", "test_configuration_changed", "test_skipped", "test_only", "assertion_removed"]),
     path: NonEmptyStringSchema,
     message: NonEmptyStringSchema
   }).strict()).optional(),
