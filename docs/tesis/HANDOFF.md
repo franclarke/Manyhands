@@ -1002,3 +1002,11 @@ Décima remediation de ticket 18:
 - fix `9e4eda3` parsea opciones hasta el primer script, conserva todos los
   filters y excluye subcomandos no-script. 39/39 y ambos typechecks PASS;
 - próximo paso reviews del punto fijo. CLAIM-040/041 siguen partial.
+
+Undécima remediation de ticket 18:
+
+- reviews aislaron targets por directorio/workspace y selector glob/negativo;
+- fix `2b6da37` conserva `-C`/`--dir`/`--workspace` y evalúa filtros como
+  positivos menos exclusiones sobre package name o manifest path;
+- 39/39 y typechecks execution-core/run-coordinator PASS. Próximo paso reviews;
+  claims siguen partial.

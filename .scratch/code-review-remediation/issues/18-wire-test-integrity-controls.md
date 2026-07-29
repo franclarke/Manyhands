@@ -101,3 +101,6 @@
 - Reviews posteriores aislaron múltiples filters, args tras `--` y exec/dlx.
   RED 3; fix `9e4eda3` consume la gramática posicional y excluye subcomandos que
   no ejecutan scripts. GREEN 39/39; ambos typechecks PASS.
+- Reviews siguientes: FAIL por targets `-C/--dir/--workspace` y selectors glob
+  o negativos. RED 2; fix `2b6da37` modela directory y conjunto positivos menos
+  exclusiones. 39/39 y ambos typechecks PASS.
