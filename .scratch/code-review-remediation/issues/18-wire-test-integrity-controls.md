@@ -28,3 +28,13 @@
 - Gate afectado amplio: 44/44 PASS. Typechecks execution-core,
   run-coordinator, orchestrator-graph y web PASS. Working tree limpio en el
   punto fijo documentado; pendiente reviews independientes Standards/Spec.
+- Reviews del fixed point `6ab9bde`: Spec FAIL P1 y Standards FAIL con 3 P1 +
+  4 P2. Confirmaron bypass por script estrechado, symlink de materialización,
+  schema durable sin bump, cache incompleto, baseline no exacto, `assert(...)`
+  omitido y cleanup secuencial. No implementaron correcciones.
+- Reapertura TDD: 6 fallos observables; GREEN 38/38. El fix `4fec620` compara
+  scripts de test fail-closed en manifests cambiados de ambos commits, rechaza
+  symlinks, versiona eventos v3 con upcast v2, versiona la cache con findings,
+  cuenta `assert(...)` y siempre intenta ambos cleanups.
+- Typechecks execution-core/run-store/run-coordinator PASS. Pendiente repetir
+  gate afectado amplio y re-reviews.

@@ -843,3 +843,19 @@ Gate afectado amplio de ticket 18:
 - no se ejecutó el suite global como sustituto del gate focal: su contención
   Windows previa sigue preservada. Próximo paso: reviews independientes
   Standards/Spec del punto fijo, sin implementar correcciones.
+
+Reapertura de ticket 18 por reviews del fixed point `6ab9bde`:
+
+- Spec FAIL P1 por scripts test estrechados/reemplazados; Standards agregó P1
+  de symlink y versionado durable, más P2 de cache, baseline exacto, bare
+  `assert(...)` y cleanup. Ningún reviewer modificó archivos;
+- TDD RED preservó 6 fallos observables en esas rutas. Fix `4fec620`: compara
+  fail-closed scripts de test de cada manifest cambiado en baseline/candidate
+  exactos, materializa sin atravesar symlinks, incluye policy+detector+findings
+  en cache, cuenta bare assert y ejecuta cleanups con `allSettled`;
+- el envelope durable pasa a schema v3; v2 tiene upcaster identidad porque los
+  campos nuevos son opcionales. Tests prueban lectura checksummed v2, escritura
+  v3 y rechazo de versión futura;
+- GREEN 38/38; typechecks execution-core/run-store/run-coordinator PASS.
+  CLAIM-040/041 permanecen `partial`. Próxima operación larga: repetir gate
+  afectado amplio antes de re-review.
