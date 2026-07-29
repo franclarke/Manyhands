@@ -69,3 +69,9 @@
   mapa candidate pisa baseline y faltan exports/tsconfig); Standards FAIL 2 P1
   + P2 (spawn/make, subpaths/imports y límite aplicado después de cargar blobs).
   El punto fijo y los resultados adversos se preservan sin reinterpretación.
+- Remediation estructural: `ee9b78b` separa y une resolución exacta
+  baseline/candidate para exports/imports/tsconfig, cubre spawn/Makefile y sólo
+  falla opaco al intersectar el cambio. `5e71d9f` agrega `showFile` acotado y
+  cancelable; `18c0b5d` lo cablea antes de materializar blobs. 46/46 PASS. El
+  primer typecheck falló por optional exacto; ajuste mínimo y ambos typechecks
+  execution-core/run-coordinator PASS.

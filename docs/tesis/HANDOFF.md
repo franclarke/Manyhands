@@ -932,3 +932,14 @@ Reviews `65e48f8` de ticket 18:
 - decisión: última remediation estructural sobre mapas declarativos separados,
   intersección real del cambio y lectura Git acotada/cancelable. No se cambia la
   política ni los claims, que siguen `partial`.
+
+Sexta remediation de ticket 18:
+
+- `ee9b78b`: mapas baseline/candidate se unen sin pisarse; exports, imports y
+  tsconfig paths son inputs declarativos exactos; spawn/Makefile quedan ligados
+  y un loader opaco estable no bloquea cambios productivos ajenos;
+- `5e71d9f`/`18c0b5d`: `git show` recibe abort y maxBuffer antes de leer cada
+  blob; presupuesto total, profundidad y cantidad permanecen fail-closed;
+- 46/46 focales PASS. El primer typecheck falló por `signal: undefined` bajo
+  exact optional types; corregido sin reintentar tests. Typechecks execution-core
+  y run-coordinator PASS. CLAIM-040/041 siguen `partial`; próximo paso reviews.
