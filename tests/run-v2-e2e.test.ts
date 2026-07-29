@@ -18,6 +18,12 @@ describe("V2 productive run", () => {
     const driver = new V2ExecutionDriver({
       coordinator: journal.coordinator,
       now: () => at,
+      loadCurrentInputs: async () => ({
+        graph: compiled.graph,
+        contracts: compiled.contracts,
+        repositoryContextDigest: "sha256:repository",
+        executorProfile: { id: "claude-code-cli", revision: "sonnet" }
+      }),
       execute: async (input) => {
         executed.push(input);
         return success(input, input.node.id === compiled.graph.rootId);

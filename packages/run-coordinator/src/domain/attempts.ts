@@ -31,12 +31,21 @@ export function decideAttemptAdoption(input: {
   return { eligible: true, artifact, event: { type: "artifact.adopted", payload: { artifact } } };
 }
 
+export interface AttemptAdoptionTransaction {
+  /**
+   * Stages the decision in the caller's durable transaction. Event journals
+   * can batch it with candidate evidence; standalone registries can persist
+   * the eligible artifact directly.
+   */
+  stage(decision: AttemptAdoptionDecision): Promise<void>;
+}
+
 /** The only productive artifact-adoption gate: stale results never reach the registry. */
 export async function adoptAttemptResult(
   input: Parameters<typeof decideAttemptAdoption>[0],
-  artifacts: { adopt(artifact: AdoptedArtifact): Promise<AdoptedArtifact> }
+  transaction: AttemptAdoptionTransaction
 ): Promise<AttemptAdoptionDecision> {
   const decision = decideAttemptAdoption(input);
-  if (decision.eligible) await artifacts.adopt(decision.artifact);
+  await transaction.stage(decision);
   return decision;
 }

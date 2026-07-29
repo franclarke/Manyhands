@@ -57,6 +57,12 @@ describe("artifact adoption for every contract a node produces", () => {
     const driver = new V2ExecutionDriver({
       coordinator: harness(compiled.graph.graphId).coordinator,
       now: () => at,
+      loadCurrentInputs: async () => ({
+        graph: compiled.graph,
+        contracts: compiled.contracts,
+        repositoryContextDigest: "sha256:repository",
+        executorProfile: { id: "codex-cli", revision: "gpt-5.5" }
+      }),
       execute: async (input) => {
         executed.push(input.node.id);
         return successOutcome(input, compiled.graph.rootId);

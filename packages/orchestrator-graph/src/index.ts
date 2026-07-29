@@ -2,6 +2,7 @@
 export { V2ExecutionDriver, leafFailureObservation } from "./v2/execution-driver.js";
 export type {
   V2ExecutionDriverOptions,
+  V2ExecutionFreshnessInputs,
   V2ExecutionRunInput,
   V2ExecutionTarget,
   V2ExecutorProfile,

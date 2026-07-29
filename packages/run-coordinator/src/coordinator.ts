@@ -87,6 +87,38 @@ export class RunCoordinator {
     throw new Error(`Run ${runId} event journal remained contended after 8 retries.`);
   }
 
+  /**
+   * Derives external facts from the projection protected by the journal's
+   * optimistic append. Contention reruns the derivation, so an adoption cannot
+   * be committed from a freshness decision made against an older revision.
+   */
+  async recordDerived(
+    runId: string,
+    derive: (state: RunProjection) => Promise<RunEventInput[]> | RunEventInput[]
+  ): Promise<RunProjection> {
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const current = await this.ports.events.load(runId);
+      const inputs = await derive(foldRun(current));
+      if (inputs.length === 0) return foldRun(current);
+      const existing = new Map(current.map((event) => [event.eventId, event]));
+      const duplicates = inputs.map((input) => existing.get(input.eventId));
+      if (duplicates.every((event) => event !== undefined)) {
+        duplicates.forEach((event, index) => assertSameInput(event!, inputs[index]!));
+        return foldRun(current);
+      }
+      if (duplicates.some((event) => event !== undefined)) {
+        throw new Error("A derived fact batch cannot mix persisted and new event ids.");
+      }
+      try {
+        await this.ports.events.append(runId, current.length, inputs);
+        return foldRun(await this.ports.events.load(runId));
+      } catch (error) {
+        if ((await this.ports.events.load(runId)).length === current.length) throw error;
+      }
+    }
+    throw new Error(`Run ${runId} event journal remained contended after 8 derived-fact retries.`);
+  }
+
   private async append(runId: string, existing: RunEvent[], drafts: RunEventDraft[]): Promise<RunEvent[]> {
     let current = existing;
     for (let attempt = 0; attempt < 8; attempt += 1) {

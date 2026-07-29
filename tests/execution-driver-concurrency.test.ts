@@ -175,7 +175,12 @@ describe("V2ExecutionDriver - Concurrency", () => {
       });
     });
 
-    const driver = new V2ExecutionDriver({ coordinator, execute, now: () => "2026-07-22T00:00:00Z" } as any);
+    const driver = new V2ExecutionDriver({
+      coordinator: withDerivedRecording(coordinator),
+      execute,
+      loadCurrentInputs: async () => freshness(input),
+      now: () => "2026-07-22T00:00:00Z"
+    } as any);
     const input: V2ExecutionRunInput = {
       runId: "run1",
       graph: localGraph,
@@ -220,7 +225,7 @@ describe("V2ExecutionDriver - Concurrency", () => {
       reason: "syntax error"
     });
 
-    const driver = new V2ExecutionDriver({ coordinator, execute, now: () => "now" } as any);
+    const driver = new V2ExecutionDriver({ coordinator: withDerivedRecording(coordinator), execute, loadCurrentInputs: async () => freshness(input), now: () => "now" } as any);
     const input = mockRunInput(["node1"]);
 
     const result = await driver.run(input);
@@ -233,7 +238,7 @@ describe("V2ExecutionDriver - Concurrency", () => {
       load: vi.fn().mockResolvedValue(mockState({ lifecycle: "cancelled" }))
     };
     const execute = vi.fn();
-    const driver = new V2ExecutionDriver({ coordinator } as any);
+    const driver = new V2ExecutionDriver({ coordinator: withDerivedRecording(coordinator) } as any);
 
     const result = await driver.run(mockRunInput(["node1"]));
     expect(result.lifecycle).toBe("cancelled");
@@ -261,7 +266,7 @@ describe("V2ExecutionDriver - Concurrency", () => {
       artifactLocation: "loc"
     }));
 
-    const driver = new V2ExecutionDriver({ coordinator, execute, now: () => "now" } as any);
+    const driver = new V2ExecutionDriver({ coordinator: withDerivedRecording(coordinator), execute, loadCurrentInputs: async () => freshness(input), now: () => "now" } as any);
     const input = mockRunInput(["node1"]);
 
     const res = await driver.run(input);
@@ -289,7 +294,7 @@ describe("V2ExecutionDriver - Concurrency", () => {
       artifactLocation: "loc"
     }));
 
-    const driver = new V2ExecutionDriver({ coordinator, execute, now: () => "now" } as any);
+    const driver = new V2ExecutionDriver({ coordinator: withDerivedRecording(coordinator), execute, loadCurrentInputs: async () => freshness(input), now: () => "now" } as any);
     const input = mockRunInput(["node1"]);
 
     await expect(driver.run(input)).rejects.toThrow("Database recording error");
@@ -299,7 +304,7 @@ describe("V2ExecutionDriver - Concurrency", () => {
     const coordinator = {
       load: vi.fn().mockResolvedValue(mockState({ graphRevision: 2, approvedGraphRevision: 2 }))
     };
-    const driver = new V2ExecutionDriver({ coordinator } as any);
+    const driver = new V2ExecutionDriver({ coordinator: withDerivedRecording(coordinator) } as any);
     await expect(driver.run(mockRunInput(["node1"]))).rejects.toThrow(/not the exact approved revision/);
   });
 
@@ -307,7 +312,7 @@ describe("V2ExecutionDriver - Concurrency", () => {
     const coordinator = {
       load: vi.fn().mockResolvedValue(mockState({ lifecycle: "completed" }))
     };
-    const driver = new V2ExecutionDriver({ coordinator } as any);
+    const driver = new V2ExecutionDriver({ coordinator: withDerivedRecording(coordinator) } as any);
     const res = await driver.run(mockRunInput(["node1"]));
     expect(res.lifecycle).toBe("completed");
   });
@@ -317,7 +322,7 @@ describe("V2ExecutionDriver - Concurrency", () => {
       load: vi.fn().mockResolvedValue(mockState()),
       execute: vi.fn().mockResolvedValue(mockState({ selectedWaves: [] }))
     };
-    const driver = new V2ExecutionDriver({ coordinator } as any);
+    const driver = new V2ExecutionDriver({ coordinator: withDerivedRecording(coordinator) } as any);
     const input = mockRunInput([]);
     const res = await driver.run(input);
     expect(res.lifecycle).toBe("running");
@@ -335,7 +340,7 @@ describe("V2ExecutionDriver - Concurrency", () => {
       })
     };
     const execute = vi.fn().mockImplementation((inp) => Promise.resolve({ kind: "success", candidateCommit: "c1", outputDigest: "d1", changedFiles: [], evidenceMatrix: { outcome: "verified", matrixId: "m", candidateCommit: "c1", validationContract: { id: `validation:${inp.node.id}`, revision: "validation-r1" } }, artifactLocation: "loc" }));
-    const driver = new V2ExecutionDriver({ coordinator, execute, now: () => "now" } as any);
+    const driver = new V2ExecutionDriver({ coordinator: withDerivedRecording(coordinator), execute, loadCurrentInputs: async () => freshness(input), now: () => "now" } as any);
     const input = mockRunInput(["node1"]);
     await expect(driver.run(input)).rejects.toThrow("db failure");
   });
@@ -361,7 +366,7 @@ describe("V2ExecutionDriver - Concurrency", () => {
       })
     };
     const execute = vi.fn().mockImplementation((inp) => Promise.resolve({ kind: "success", candidateCommit: "c1", outputDigest: "d1", changedFiles: [], evidenceMatrix: { outcome: "verified", matrixId: "m", candidateCommit: "c1", validationContract: { id: `validation:${inp.node.id}`, revision: "validation-r1" } }, artifactLocation: "loc" }));
-    const driver = new V2ExecutionDriver({ coordinator, execute, now: () => "now" } as any);
+    const driver = new V2ExecutionDriver({ coordinator: withDerivedRecording(coordinator), execute, loadCurrentInputs: async () => freshness(input), now: () => "now" } as any);
 
     const input = mockRunInput(["node1"]);
 
@@ -369,3 +374,25 @@ describe("V2ExecutionDriver - Concurrency", () => {
     expect((res as any).version).toBe(2);
   });
 });
+
+function withDerivedRecording<T extends {
+  load(...args: any[]): Promise<any>;
+  record?: (...args: any[]) => Promise<any>;
+}>(coordinator: T): T & { recordDerived(runId: string, derive: (state: any) => Promise<any[]> | any[]): Promise<any> } {
+  return Object.assign(coordinator, {
+    async recordDerived(runId: string, derive: (state: any) => Promise<any[]> | any[]) {
+      const facts = await derive(await coordinator.load(runId));
+      if (coordinator.record === undefined) return coordinator.load(runId);
+      return coordinator.record(runId, facts);
+    }
+  });
+}
+
+function freshness(input: V2ExecutionRunInput) {
+  return {
+    graph: input.graph,
+    contracts: input.contracts,
+    repositoryContextDigest: input.repositoryContextDigest,
+    executorProfile: input.executorProfile
+  };
+}

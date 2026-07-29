@@ -20,6 +20,64 @@ import {
 const at = "2026-07-17T12:00:00.000Z";
 
 describe("V2ExecutionDriver", () => {
+  it("marks a result stale when a material contract changes while its attempt is running", async () => {
+    const breakdown = bookingBreakdown();
+    if (breakdown.root.kind !== "composite") throw new Error("Fixture must start composite.");
+    const domain = breakdown.root.children.find((unit) => unit.key === "domain");
+    if (domain?.kind !== "leaf") throw new Error("Missing atomic domain leaf.");
+    breakdown.root = domain;
+    breakdown.acceptanceIntents = breakdown.acceptanceIntents.filter((intent) => intent.id === "domain-ready");
+    breakdown.candidateSeams = [];
+    const atomic = compileGraphRevision(
+      { breakdown, repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const harness = coordinatorHarness(atomic.graph.graphId);
+    const revisedContracts = structuredClone(atomic.contracts);
+    revisedContracts[0]!.validation.revision = "validation-r2";
+    revisedContracts[0]!.task.validation.revision = "validation-r2";
+    let currentContracts = atomic.contracts;
+    const driver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      loadCurrentInputs: async () => ({
+        graph: atomic.graph,
+        contracts: currentContracts,
+        repositoryContextDigest: "sha256:repository",
+        executorProfile: { id: "claude-code-cli", revision: "sonnet" }
+      }),
+      execute: async (input) => {
+        currentContracts = revisedContracts;
+        return {
+          ...(success(input) as Extract<V2NodeExecutionOutcome, { kind: "success" }>),
+          finalManifestId: "must-not-be-adopted"
+        };
+      }
+    });
+
+    const state = await driver.run({
+      runId: "run-v2",
+      graph: atomic.graph,
+      contracts: atomic.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 1 },
+      materializableNodeIds: [atomic.graph.rootId],
+      availableExecutorNodeIds: [atomic.graph.rootId],
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" },
+      maxWaves: 1
+    });
+
+    expect(Object.values(state.attempts)).toEqual([
+      expect.objectContaining({ status: "stale" })
+    ]);
+    expect(Object.values(state.adoptedArtifacts)).toEqual([]);
+    expect(harness.events().some((event) => event.type === "attempt.stale")).toBe(true);
+    expect(harness.events().some((event) => event.type === "artifact.adopted")).toBe(false);
+    expect(harness.events().some((event) => event.type === "final_candidate.verified")).toBe(false);
+  });
+
   it("executes seam siblings together, adopts exact artifacts and integrates the root bottom-up", async () => {
     const compiled = compileGraphRevision(
       { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },
@@ -34,6 +92,7 @@ describe("V2ExecutionDriver", () => {
     const driver = new V2ExecutionDriver({
       coordinator: harness.coordinator,
       now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
       execute: async (input): Promise<V2NodeExecutionOutcome> => {
         ordering.push(`execute:${input.node.id}`);
         dispatches.push(input);
@@ -112,6 +171,7 @@ describe("V2ExecutionDriver", () => {
     const driver = new V2ExecutionDriver({
       coordinator: harness.coordinator,
       now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
       execute: async (input) => input.node.id === "node-api"
         ? { kind: "failure", reason: "API needs a product decision." }
         : success(input)
@@ -156,6 +216,7 @@ describe("V2ExecutionDriver", () => {
     const driver = new V2ExecutionDriver({
       coordinator: harness.coordinator,
       now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
       execute: async (input) => {
         if (input.node.id === "node-api") return { kind: "failure", reason: "Choose the public API shape." };
         await siblingsReleased;
@@ -206,6 +267,7 @@ describe("V2ExecutionDriver", () => {
     const driver = new V2ExecutionDriver({
       coordinator: harness.coordinator,
       now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
       execute: async (input) => ({
         ...(success(input) as Extract<V2NodeExecutionOutcome, { kind: "success" }>),
         finalManifestId: "final-atomic"
@@ -247,6 +309,15 @@ function success(input: V2NodeExecutionInput): V2NodeExecutionOutcome {
     },
     artifactLocation: `commit-${input.node.id}`
   };
+}
+
+function staticInputs(compiled: ReturnType<typeof compileGraphRevision>) {
+  return async () => ({
+    graph: compiled.graph,
+    contracts: compiled.contracts,
+    repositoryContextDigest: "sha256:repository",
+    executorProfile: { id: "claude-code-cli", revision: "sonnet" }
+  });
 }
 
 function coordinatorHarness(graphId: string) {

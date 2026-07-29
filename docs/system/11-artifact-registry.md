@@ -39,6 +39,14 @@ Un artifact se registra candidate tras crear commit. Se vuelve verified solo si:
 
 Adoption produce evento. Nunca se deriva de exit code.
 
+La ruta V2 vuelve a cargar grafo, contratos, snapshot de repositorio y perfil
+vigentes al terminar cada intento. Calcula otra vez el `InputFingerprint` dentro
+de una derivación protegida por el append optimista del journal: si otro writer
+cambia la autoridad canónica antes del append, la derivación se repite contra
+la nueva proyección. Sólo `adoptAttemptResult` puede producir la adopción; un
+mismatch conserva candidato y evidencia, emite `attempt.stale` y no registra
+artifacts ni candidato final.
+
 ## Consumo
 
 `ExecutionBaseBuilder` resuelve requirements por artifact type, producer y

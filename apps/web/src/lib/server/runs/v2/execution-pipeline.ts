@@ -175,6 +175,15 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     const driver = new V2ExecutionDriver({
       coordinator,
       now: () => new Date().toISOString(),
+      loadCurrentInputs: async () => {
+        const current = loadApprovedExecutionPlanV2(await events.load(runId));
+        return {
+          graph: current.graph,
+          contracts: current.contracts,
+          repositoryContextDigest: current.repositorySnapshot.snapshotId,
+          executorProfile: { id: execution.executorId, revision: executorProfileRevision(execution) }
+        };
+      },
       execute: async (input): Promise<V2NodeExecutionOutcome> => nodeExecutor.execute({
         ...input,
         selection: execution,

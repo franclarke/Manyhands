@@ -16,7 +16,7 @@ describe("attempt adoption eligibility", () => {
     const attempts = new JsonlAttemptStore({ directory });
     const artifacts = new JsonlArtifactStore({ directory });
     const attempt = await attempts.create({ attemptId: "attempt-1", runId: "run-1", nodeId: "node", inputFingerprint: computeInputFingerprint(fingerprintSource), createdAt: "2026-07-17T00:00:00.000Z" });
-    const decision = await adoptAttemptResult({ attempt: { ...attempt, status: "finished", outputDigest: "sha256:result" }, currentFingerprint: computeInputFingerprint({ ...fingerprintSource, contractRevisions: [{ id: "task", revision: "r2" }] }), artifact: { artifactId: "artifact-1", contract: { id: "artifact-contract", revision: "r1" }, kind: "commit", location: "abc" } }, artifacts);
+    const decision = await adoptAttemptResult({ attempt: { ...attempt, status: "finished", outputDigest: "sha256:result" }, currentFingerprint: computeInputFingerprint({ ...fingerprintSource, contractRevisions: [{ id: "task", revision: "r2" }] }), artifact: { artifactId: "artifact-1", contract: { id: "artifact-contract", revision: "r1" }, kind: "commit", location: "abc" } }, artifactTransaction(artifacts));
     expect(decision).toMatchObject({ eligible: false, event: { type: "attempt.stale" } });
     expect(await artifacts.list("run-1")).toEqual([]);
   });
@@ -36,8 +36,16 @@ describe("attempt adoption eligibility", () => {
       currentFingerprint: fingerprint,
       artifact: { artifactId: "artifact-ok", contract: { id: "artifact-contract", revision: "r3" }, kind: "commit", location: "abc" },
       adoptedAt: "2026-07-17T00:02:00.000Z"
-    }, artifacts);
+    }, artifactTransaction(artifacts));
     expect(decision).toMatchObject({ eligible: true, event: { type: "artifact.adopted" } });
     expect(await artifacts.list("run-1")).toEqual([expect.objectContaining({ artifactId: "artifact-ok", digest: "sha256:result", producerAttemptId: "attempt-ok", contract: { id: "artifact-contract", revision: "r3" } })]);
   });
 });
+
+function artifactTransaction(artifacts: JsonlArtifactStore) {
+  return {
+    stage: async (decision: Awaited<ReturnType<typeof adoptAttemptResult>>) => {
+      if (decision.eligible) await artifacts.adopt(decision.artifact);
+    }
+  };
+}

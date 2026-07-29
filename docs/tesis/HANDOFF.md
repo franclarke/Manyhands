@@ -1384,3 +1384,23 @@ del `1/8` histórico.
   ambas con 0 P0/P1/P2/P3 y sin modificaciones;
 - ticket 21 queda `closed`. La frontera recalculada habilita ticket 22
   (`ready-for-agent`); ticket 26 continúa bloqueado por 25.
+
+## Ticket 22 en curso — adopción con freshness vigente — 2026-07-29
+
+- ticket 22 pasó a `agent-working` en el mismo clon aislado;
+- RED demostró que el driver V2 adoptaba y producía candidato final aunque la
+  revisión material del contrato cambiara durante el intento;
+- GREEN hace obligatorio el puerto de inputs actuales, recarga en el host
+  productivo el plan aprobado y recalcula el fingerprint dentro de
+  `RunCoordinator.recordDerived`;
+- el append optimista vuelve a ejecutar la derivación tras contención, por lo
+  que un cambio canónico entre chequeo y persistencia no puede adoptar con una
+  decisión vieja;
+- `adoptAttemptResult` es el único gate: su transacción produce
+  `artifact.adopted` o `attempt.stale`; el driver ya no construye adopciones
+  directamente. Un stale conserva candidato y evidencia, pero no registra
+  artifacts ni `final_candidate.verified`;
+- gates focales: 8 archivos/27 tests de driver, fingerprints, adopción,
+  amendments y contención PASS; fencing/exact-candidate: 6 archivos/39 tests
+  PASS; typechecks de `run-coordinator`, `orchestrator-graph` y web PASS.
+  Pendientes: gate raíz, commit y reviews independientes Standards/Spec.

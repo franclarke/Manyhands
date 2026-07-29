@@ -4,7 +4,7 @@
 
 **Blocked by:** 21.
 
-**Status:** ready-for-agent
+**Status:** agent-working
 
 - [ ] RED cambia un input durante el intento y obtiene `attempt.stale` sin artifact adoption.
 - [ ] Driver V2 no construye adopciones por fuera del gate canónico.

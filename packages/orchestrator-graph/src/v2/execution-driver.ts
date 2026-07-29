@@ -6,6 +6,7 @@ import {
 import type { ConflictConstraintEvidence } from "@manyhands/conflict-risk";
 import {
   computeInputFingerprint,
+  adoptAttemptResult,
   classifyFailure,
   recoveryPolicyFor,
   type AdoptedArtifact,
@@ -75,7 +76,15 @@ export type V2NodeExecutionOutcome =
 export interface V2ExecutionDriverOptions {
   coordinator: RunCoordinator;
   execute(input: V2NodeExecutionInput): Promise<V2NodeExecutionOutcome>;
+  loadCurrentInputs(): Promise<V2ExecutionFreshnessInputs>;
   now(): string;
+}
+
+export interface V2ExecutionFreshnessInputs {
+  graph: GraphRevision;
+  contracts: TaskContractBundle[];
+  repositoryContextDigest: string;
+  executorProfile: V2ExecutorProfile;
 }
 
 export interface V2ExecutionRunInput {
@@ -118,6 +127,7 @@ export class V2ExecutionDriver {
       const advanced = await this.advance(prepared, current);
       if (!advanced.dispatched) return advanced.state;
       if (advanced.state.lifecycle !== "running" && advanced.state.lifecycle !== "waiting_for_input") return advanced.state;
+      if (Object.values(advanced.state.attempts).some((attempt) => attempt.status === "stale")) return advanced.state;
     }
     throw new Error(`Execution exceeded ${maxWaves} waves without reaching a stable state.`);
   }
@@ -164,7 +174,6 @@ export class V2ExecutionDriver {
     let recordQueue = Promise.resolve();
     await Promise.all(attempts.map(async (attempt) => {
       const outcome = await this.options.execute(attempt.executionInput);
-      const facts = this.factsForOutcome(input, attempt, outcome);
 
       let resolveEnqueued!: () => void;
       let rejectEnqueued!: (err: unknown) => void;
@@ -176,7 +185,12 @@ export class V2ExecutionDriver {
       const previousQueue = recordQueue;
       recordQueue = previousQueue.catch(() => {}).then(async () => {
         try {
-          latestState = await this.options.coordinator.record(input.runId, facts);
+          latestState = await this.options.coordinator.recordDerived(input.runId, async (current) => {
+            const currentFingerprint = outcome.kind === "success"
+              ? await this.currentFingerprint(input, attempt, current)
+              : attempt.executionInput.inputFingerprint;
+            return this.factsForOutcome(input, attempt, outcome, currentFingerprint);
+          });
           resolveEnqueued();
         } catch (err) {
           rejectEnqueued(err);
@@ -192,8 +206,9 @@ export class V2ExecutionDriver {
   private factsForOutcome(
     run: PreparedExecutionRunInput,
     attempt: PreparedAttempt,
-    outcome: V2NodeExecutionOutcome
-  ): RunEventInput[] {
+    outcome: V2NodeExecutionOutcome,
+    currentFingerprint: string
+  ): Promise<RunEventInput[]> {
     const at = this.options.now();
     const facts: RunEventInput[] = [];
     const isComposite = attempt.startedEvent.type === "integration.started";
@@ -255,7 +270,7 @@ export class V2ExecutionDriver {
           }));
       const decision = { ...(outcome.decision ?? defaultFailureDecision(attempt, outcome.reason)), raisedAtGraphRevision: run.graph.revision };
       facts.push(fact(`${attempt.attemptId}:decision:${decision.id}`, at, "decision.raised", { decision }));
-      return facts;
+      return Promise.resolve(facts);
     }
 
     assertSuccessfulOutcome(attempt, outcome);
@@ -288,7 +303,7 @@ export class V2ExecutionDriver {
     if (outcome.evidenceMatrix.outcome !== "verified") {
       const decision = { ...defaultFailureDecision(attempt, `Validation outcome is ${outcome.evidenceMatrix.outcome}.`), raisedAtGraphRevision: run.graph.revision };
       facts.push(fact(`${attempt.attemptId}:decision:${decision.id}`, at, "decision.raised", { decision }));
-      return facts;
+      return Promise.resolve(facts);
     }
 
     // Adopt EVERY artifact contract this node produces, not just its node-result.
@@ -299,26 +314,53 @@ export class V2ExecutionDriver {
     // reports nothing is worse than a failure -- it looks like work in progress.
     // The verified candidate is the evidence for all of them, so they share its
     // digest and location.
+    return this.adoptionFacts(run, attempt, outcome, currentFingerprint, at, facts);
+  }
+
+  private async adoptionFacts(
+    run: PreparedExecutionRunInput,
+    attempt: PreparedAttempt,
+    outcome: Extract<V2NodeExecutionOutcome, { kind: "success" }>,
+    currentFingerprint: string,
+    at: string,
+    facts: RunEventInput[]
+  ): Promise<RunEventInput[]> {
     const produced = producedArtifactContracts(attempt);
     for (const [index, contract] of produced.entries()) {
-      const artifact: AdoptedArtifact = {
-        schemaVersion: 1,
-        artifactId: `${contract.id}:${attempt.attemptId}`,
-        runId: run.runId,
-        nodeId: attempt.nodeId,
-        digest: outcome.outputDigest,
-        producerAttemptId: attempt.attemptId,
-        contract: { id: contract.id, revision: contract.revision },
-        kind: "commit",
-        location: outcome.artifactLocation,
+      let eligible = false;
+      await adoptAttemptResult({
+        attempt: {
+          schemaVersion: 1,
+          attemptId: attempt.attemptId,
+          runId: run.runId,
+          nodeId: attempt.nodeId,
+          inputFingerprint: attempt.executionInput.inputFingerprint,
+          createdAt: attempt.startedEvent.occurredAt,
+          status: "finished",
+          outputDigest: outcome.outputDigest
+        },
+        currentFingerprint,
+        artifact: {
+          artifactId: `${contract.id}:${attempt.attemptId}`,
+          contract: { id: contract.id, revision: contract.revision },
+          kind: "commit",
+          location: outcome.artifactLocation
+        },
         adoptedAt: at
-      };
-      facts.push(fact(
-        index === 0 ? `${attempt.attemptId}:artifact-adopted` : `${attempt.attemptId}:artifact-adopted:${index}`,
-        at,
-        "artifact.adopted",
-        { artifact }
-      ));
+      }, {
+        stage: async (decision) => {
+          eligible = decision.eligible;
+          facts.push(fact(
+            decision.eligible
+              ? (index === 0 ? `${attempt.attemptId}:artifact-adopted` : `${attempt.attemptId}:artifact-adopted:${index}`)
+              : `${attempt.attemptId}:stale`,
+            at,
+            decision.event.type,
+            decision.event.payload
+          ));
+        }
+      });
+      if (!eligible) return facts;
     }
     if (attempt.nodeId === run.graph.rootId) {
       if (outcome.finalManifestId === undefined) throw new Error("The root execution outcome requires a final manifest id.");
@@ -334,6 +376,25 @@ export class V2ExecutionDriver {
       }));
     }
     return facts;
+  }
+
+  private async currentFingerprint(
+    initial: PreparedExecutionRunInput,
+    attempt: PreparedAttempt,
+    current: RunProjection
+  ): Promise<string> {
+    const loaded = await this.options.loadCurrentInputs();
+    const prepared = prepare({
+      ...initial,
+      graph: loaded.graph,
+      contracts: loaded.contracts,
+      repositoryContextDigest: loaded.repositoryContextDigest,
+      executorProfile: loaded.executorProfile
+    });
+    if (prepared.graph.nodes[attempt.nodeId] === undefined || !prepared.contractsByNodeId.has(attempt.nodeId)) {
+      return `sha256:absent:${prepared.graph.graphId}:${prepared.graph.revision}:${attempt.nodeId}`;
+    }
+    return fingerprintForNode(prepared, current, attempt.nodeId);
   }
 }
 
@@ -419,18 +480,7 @@ function createAttempt(
     (artifact.artifactType === "node-result" || artifact.artifactType === "final-candidate")
   );
   if (outputArtifactContract === undefined) throw new Error(`Node ${nodeId} has no compiled output artifact contract.`);
-  const contractRevisions = [contract.task, contract.scope, contract.validation, ...contract.seams, ...contract.artifacts]
-    .map(({ id, revision }) => ({ id, revision }));
-  const inputFingerprint = computeInputFingerprint({
-    graphId: run.graph.graphId,
-    nodeId,
-    contractRevisions,
-    baseCommit: run.graph.baseCommit,
-    consumedArtifacts: consumedArtifacts.map((artifact) => ({ id: artifact.artifactId, digest: artifact.digest })),
-    repositoryContextDigest: run.repositoryContextDigest,
-    executorProfile: run.executorProfile,
-    validationContract: { id: contract.validation.id, revision: contract.validation.revision }
-  });
+  const inputFingerprint = fingerprintForNode(run, state, nodeId);
   const ordinal = Object.values(state.attempts).filter((attempt) => attempt.nodeId === nodeId).length + 1;
   const attemptId = `${run.runId}:attempt:${nodeId}:${ordinal}`;
   const common = { attemptId, nodeId, inputFingerprint, executorProfile: run.executorProfile };
@@ -460,6 +510,38 @@ function createAttempt(
       executorProfile: run.executorProfile
     }
   };
+}
+
+function fingerprintForNode(run: PreparedExecutionRunInput, state: RunProjection, nodeId: string): string {
+  const node = run.graph.nodes[nodeId]!;
+  const contract = run.contractsByNodeId.get(nodeId)!;
+  const phases = node.kind === "root" || node.kind === "composite"
+    ? new Set(["execution", "integration"])
+    : new Set(["execution"]);
+  const requirements = run.graph.artifactRequirements.filter(
+    (requirement) => requirement.consumerNodeId === nodeId && phases.has(requirement.requiredFor)
+  );
+  const artifacts = Object.values(state.adoptedArtifacts);
+  const consumedArtifacts = requirements.map((requirement) => {
+    const artifact = artifacts.find((candidate) =>
+      candidate.contract.id === requirement.artifactContract.id &&
+      candidate.contract.revision === requirement.artifactContract.revision
+    );
+    if (artifact === undefined) throw new Error(`Ready node ${nodeId} is missing artifact ${requirement.artifactContract.id}.`);
+    return artifact;
+  });
+  const contractRevisions = [contract.task, contract.scope, contract.validation, ...contract.seams, ...contract.artifacts]
+    .map(({ id, revision }) => ({ id, revision }));
+  return computeInputFingerprint({
+    graphId: run.graph.graphId,
+    nodeId,
+    contractRevisions,
+    baseCommit: run.graph.baseCommit,
+    consumedArtifacts: consumedArtifacts.map((artifact) => ({ id: artifact.artifactId, digest: artifact.digest })),
+    repositoryContextDigest: run.repositoryContextDigest,
+    executorProfile: run.executorProfile,
+    validationContract: { id: contract.validation.id, revision: contract.validation.revision }
+  });
 }
 
 /**
