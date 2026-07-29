@@ -47,3 +47,20 @@
   Standards/Spec PASS sin P0/P1/P2/P3.
 - Pendiente de aceptación: freeze sucesor nuevo desde N=4, recomendado
   `retry-10`, con targets nuevos. Las tres casillas continúan abiertas.
+
+## Progreso retry-10 y remediacion requerida
+
+- `retry-10` ejecuto N=4, N=8 y N=16 secuencialmente sobre el mismo freeze
+  `643a32d`, W1 exacto y `codex-cli/gpt-5.5/high`, con tres targets nuevos.
+- Los tres runs fallaron durante compiled plan review antes de candidate por el
+  mismo ciclo: artefacto `analytics-registry -> study-wide-graph-script` y seam
+  inverso `study-wide-graph-script -> analytics-registry`. Cada resultado y
+  journal queda preservado con oraculo `not_run`; N=16 conserva su assessment.
+- Reviews independientes del fixed point `67a16a1`: Standards FAIL P1 y Spec
+  P1. La integridad del freeze pasa, pero falta reduccion, regresion, fix y
+  rerun del camino productivo.
+- Ticket 11 permanece abierto y sus casillas no se marcan. Proximo frente
+  obligatorio: TDD para rechazar ciclos de relaciones dentro del
+  WorkBreakdown y devolverlos como repair feedback al planner; prompt explicito
+  producer -> consumer; gates y re-reviews; nuevo freeze sucesor completo desde
+  N=4. `retry-10` permanece inmutable.
