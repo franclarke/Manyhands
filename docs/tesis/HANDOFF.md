@@ -962,3 +962,11 @@ Séptima remediation de ticket 18:
   cancelable para tests/manifests/config/dependencias;
 - 50/50 focales y typechecks execution-core/run-coordinator PASS. Próximo paso:
   re-review Standards y Spec del mismo punto fijo. Claims siguen `partial`.
+
+Reviews `8ce8955` de ticket 18:
+
+- Spec FAIL P1; Standards FAIL 2 P1 + P2. La expansión global pierde scope de
+  `--filter`/manifest, omite puntos en script names, no aplica precedencia del
+  wildcard tsconfig y mezcla aliases privados homónimos;
+- imports/JSONC/extends y presupuesto compartido permanecen resueltos. Próximo
+  delta conserva identidad y scope declarados. CLAIM-040/041 siguen `partial`.

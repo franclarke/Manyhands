@@ -84,3 +84,7 @@
   modela la clausura global de scripts, sigue configuración heredada y comparte
   1 MiB/cancelación entre todas las lecturas. GREEN 50/50; typechecks
   execution-core/run-coordinator PASS. Pendiente re-review de ambos roles.
+- Reviews `8ce8955`: ambos FAIL. Spec P1 y Standards 2 P1 + P2 por pérdida de
+  identidad: `--filter` enlaza scripts homónimos ajenos, nombres con punto no se
+  tokenizan, wildcard tsconfig no usa el más específico y aliases privados se
+  fusionan globalmente. Los controles previos permanecen PASS.
