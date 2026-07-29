@@ -22,3 +22,10 @@
   tercer reintento ni se clasifica el suite completo como PASS.
 - Working tree y `git diff --check` limpios en `b076da1`; pendiente: reviews
   independientes Standards/Spec sobre el punto fijo documentado.
+- Reviews Standards/Spec del fixed point `d5bf07f`: ambas FAIL P1 porque las
+  vistas seleccionaban por commit y podían mezclar matrices distintas del
+  mismo SHA. No implementaron correcciones.
+- Reapertura TDD: RED 2 fallos reprodujo medalla `Verified` y detalle sin
+  identidad exacta; GREEN 15/15 focal y 28/28 del conjunto afectado. La medalla
+  usa el ID de nodo/integración y el detalle final usa `matrixId + commit`.
+  Typecheck web PASS. Pendiente: re-reviews Standards/Spec.

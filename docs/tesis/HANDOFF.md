@@ -795,3 +795,17 @@ Resultado de la repetición limpia del gate amplio de ticket 17:
   contención Windows y no se ejecuta un tercer reintento;
 - `git diff --check` y working tree están limpios en `b076da1`. Próximo paso:
   reviews independientes Standards y Spec con “No implementes correcciones”.
+
+Reapertura de ticket 17 por reviews del fixed point `d5bf07f`:
+
+- Standards y Spec coincidieron en un P1: la entrega estaba correctamente
+  ligada a `matrixId + commit`, pero medalla y detalle elegían sólo por commit;
+  dos matrices distintas del mismo SHA podían sobreafirmar `Verified` o mostrar
+  criterios ajenos. Ningún reviewer implementó correcciones;
+- TDD RED reprodujo 2 fallos: una matriz `unverified` canónica seguida por otra
+  `verified` para el mismo commit mostraba `Verified [1/1 passed]`, y el detalle
+  final no recibía el ID exacto;
+- fix `6ee3026`: la medalla resuelve el ID durable de nodo/integración y el
+  detalle final exige la identidad exacta `matrixId + candidateCommit`;
+- GREEN 15/15 focal; conjunto afectado 28/28; typecheck web PASS con Node
+  22.23.1/pnpm 7.29.3. Próximo paso: re-reviews independientes Standards/Spec.
