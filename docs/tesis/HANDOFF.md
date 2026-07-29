@@ -889,3 +889,15 @@ Tercera remediation de ticket 18:
   nombres de config y escribe schema v4 con upcast v3;
 - delta 32/32; typechecks execution-core/run-store/run-coordinator PASS.
   CLAIM-040/041 siguen `partial`; próximo paso: reviews finales.
+
+Cuarta remediation de ticket 18:
+
+- reviews `d2e6add` confirmaron resueltos los hallazgos anteriores y aislaron
+  un P1: wrappers relativos a manifests anidados y selección transitiva aún
+  podían estrechar cobertura;
+- RED reprodujo el wrapper de workspace y el import transitivo. Fix `acb1b1b`
+  resuelve referencias desde el directorio de cada manifest y recorre el cierre
+  de imports/requires relativos en baseline y candidato exactos;
+- focal 28/28 y typechecks execution-core/run-coordinator PASS. CLAIM-040/041
+  permanecen `partial`. Próxima operación larga: reviews independientes finales
+  Standards/Spec con "No implementes correcciones".

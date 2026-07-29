@@ -50,3 +50,8 @@
   bajo v3. Fix `a33cf84` congela config embebida, manifests ancestros e inputs
   referenciados por comandos; schema durable v4 con upcast v3. Delta 32/32 y
   tres typechecks PASS; pendiente reviews finales.
+- Re-review `d2e6add`: los hallazgos previos quedaron resueltos; FAIL P1 único
+  por wrappers relativos a workspaces y dependencias transitivas. TDD reprodujo
+  ambos casos. Fix `acb1b1b` resuelve comandos desde el directorio del manifest
+  y recorre imports/requires relativos en ambos commits. Focal 28/28 y
+  typechecks execution-core/run-coordinator PASS; pendiente reviews finales.
