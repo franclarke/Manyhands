@@ -879,3 +879,13 @@ Segunda reapertura de ticket 18:
   wrappers/workspaces impiden probar localmente que un script sea irrelevante;
 - focal 24/24 y typechecks execution-core/run-coordinator PASS. CLAIM-040/041
   siguen `partial`. Próximo paso: re-review final del ticket 18.
+
+Tercera remediation de ticket 18:
+
+- re-review `40d2d2a` FAIL por Jest embebido/Mocha, wrapper externo y nuevo enum
+  durable aún escrito como v3;
+- fix `a33cf84` carga manifests exactos ancestros, congela config embebida e
+  inputs referenciados por comandos (`node scripts/run-tests.mjs`), amplía
+  nombres de config y escribe schema v4 con upcast v3;
+- delta 32/32; typechecks execution-core/run-store/run-coordinator PASS.
+  CLAIM-040/041 siguen `partial`; próximo paso: reviews finales.
