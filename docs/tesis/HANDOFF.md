@@ -922,3 +922,13 @@ Quinta remediation de ticket 18:
   es analizable. El recorrido tiene cancelación y límites 256/16/1 MiB;
 - focal 33/33 y typecheck execution-core PASS. CLAIM-040/041 continúan
   `partial`; próximo paso: reviews independientes del nuevo punto fijo.
+
+Reviews `65e48f8` de ticket 18:
+
+- Spec FAIL 2 P1: un loader opaco estable bloquea cambios productivos ajenos y
+  el mapa workspace candidate pisa baseline, omitiendo redirects/tsconfig;
+- Standards FAIL 2 P1 + P2: `spawn`/`make`, subpaths `exports`/`imports` y el
+  límite de bytes antes del `git show` siguen incompletos;
+- decisión: última remediation estructural sobre mapas declarativos separados,
+  intersección real del cambio y lectura Git acotada/cancelable. No se cambia la
+  política ni los claims, que siguen `partial`.

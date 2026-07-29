@@ -65,3 +65,7 @@
   scripts de test, resuelve paquetes workspace y sources NodeNext, rechaza
   loaders opacos y acota el recorrido a 256 archivos/16 niveles/1 MiB con
   cancelación. GREEN focal 33/33; typecheck execution-core PASS.
+- Reviews `65e48f8`: Spec FAIL 2 P1 (loader opaco estable bloquea cambios ajenos;
+  mapa candidate pisa baseline y faltan exports/tsconfig); Standards FAIL 2 P1
+  + P2 (spawn/make, subpaths/imports y límite aplicado después de cargar blobs).
+  El punto fijo y los resultados adversos se preservan sin reinterpretación.
