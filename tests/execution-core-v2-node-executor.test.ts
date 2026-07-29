@@ -515,8 +515,8 @@ describe("ExactCandidateValidatorV2", () => {
       expectedPath: "packages/test-selector/src/index.ts"
     }],
     ["cross-workspace script", ["packages/api/package.json"], {
-      baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter @repo/api run verify" } }), "packages/api/package.json": JSON.stringify({ name: "@repo/api", scripts: { verify: "vitest run" } }) },
-      candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter @repo/api run verify" } }), "packages/api/package.json": JSON.stringify({ name: "@repo/api", scripts: { verify: "vitest run tests/smoke.test.ts" } }) },
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter \"@repo/api\" verify" } }), "packages/api/package.json": JSON.stringify({ name: "@repo/api", scripts: { verify: "vitest run" } }) },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter \"@repo/api\" verify" } }), "packages/api/package.json": JSON.stringify({ name: "@repo/api", scripts: { verify: "vitest run tests/smoke.test.ts" } }) },
       expectedPath: "packages/api/package.json#scripts.verify"
     }],
     ["dotted package script", ["package.json"], {
@@ -530,8 +530,8 @@ describe("ExactCandidateValidatorV2", () => {
       expectedPath: "scripts/select-tests.ts"
     }],
     ["extended JSONC tsconfig alias", ["scripts/select-tests.ts"], {
-      baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "tsconfig.json": '{ "extends": "./tsconfig.base.json", // shared\n}', "tsconfig.base.json": '{ "compilerOptions": { "baseUrl": ".", "paths": { "@selector": ["scripts/select-tests.ts",], }, }, }', "scripts/run-tests.mjs": 'import "@selector";', "scripts/select-tests.ts": "runAll();" },
-      candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "tsconfig.json": '{ "extends": "./tsconfig.base.json", // shared\n}', "tsconfig.base.json": '{ "compilerOptions": { "baseUrl": ".", "paths": { "@selector": ["scripts/select-tests.ts",], }, }, }', "scripts/run-tests.mjs": 'import "@selector";', "scripts/select-tests.ts": "process.exit(0);" },
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "tsconfig.json": '{ "extends": "./configs/tsconfig.base.json", // shared\n}', "configs/tsconfig.base.json": '{ "compilerOptions": { "baseUrl": "..", "paths": { "@selector": ["scripts/select-tests.ts",], }, }, }', "scripts/run-tests.mjs": 'import "@selector";', "scripts/select-tests.ts": "runAll();" },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "tsconfig.json": '{ "extends": "./configs/tsconfig.base.json", // shared\n}', "configs/tsconfig.base.json": '{ "compilerOptions": { "baseUrl": "..", "paths": { "@selector": ["scripts/select-tests.ts",], }, }, }', "scripts/run-tests.mjs": 'import "@selector";', "scripts/select-tests.ts": "process.exit(0);" },
       expectedPath: "scripts/select-tests.ts"
     }],
     ["most specific tsconfig path", ["packages/selector/config.ts"], {
@@ -593,6 +593,10 @@ describe("ExactCandidateValidatorV2", () => {
     ["filtered workspace script", ["packages/web/package.json"], {
       baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter @repo/api run verify" } }), "packages/web/package.json": JSON.stringify({ name: "@repo/web", scripts: { verify: "vitest run" } }) },
       candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter @repo/api run verify" } }), "packages/web/package.json": JSON.stringify({ name: "@repo/web", scripts: { verify: "vitest run tests/web-smoke.test.ts" } }) }
+    }],
+    ["filtered homonym in source manifest", ["package.json"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter @repo/api verify", verify: "vitest run" } }) },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter @repo/api verify", verify: "vitest run tests/root-smoke.test.ts" } }) }
     }],
     ["private alias in another package", ["packages/web/scripts/select.ts"], {
       baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" }, imports: { "#selector": "./scripts/root-select.ts" } }), "scripts/run-tests.mjs": 'import "#selector";', "scripts/root-select.ts": "runAll();", "packages/web/package.json": JSON.stringify({ imports: { "#selector": "./scripts/select.ts" } }), "packages/web/scripts/select.ts": "webAll();" },

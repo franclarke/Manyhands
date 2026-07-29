@@ -197,15 +197,20 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
         validationCommands.push({ directory: path.posix.dirname(identity.slice(0, identity.indexOf("#scripts."))), command });
       }
     }
-    const tsconfigPaths = configurationAncestors(changedFiles);
-    for (const tsconfigPath of tsconfigPaths) {
+    const pendingConfigs = [...configurationAncestors(changedFiles)].map((configPath) => ({ configPath, scope: path.posix.dirname(configPath) }));
+    const visitedConfigs = new Set<string>();
+    while (pendingConfigs.length > 0) {
+      const { configPath: tsconfigPath, scope } = pendingConfigs.shift()!;
+      const identity = `${scope}::${tsconfigPath}`;
+      if (visitedConfigs.has(identity)) continue;
+      visitedConfigs.add(identity);
       const baselineConfig = await read(baselineCommit, tsconfigPath);
       const candidateConfig = await read(candidateCommit, tsconfigPath);
-      mergeModuleAliases(moduleAliases, moduleAliasesFromTsconfig(baselineConfig, tsconfigPath));
-      mergeModuleAliases(moduleAliases, moduleAliasesFromTsconfig(candidateConfig, tsconfigPath));
+      mergeModuleAliases(moduleAliases, moduleAliasesFromTsconfig(baselineConfig, tsconfigPath, scope));
+      mergeModuleAliases(moduleAliases, moduleAliasesFromTsconfig(candidateConfig, tsconfigPath, scope));
       for (const config of [baselineConfig, candidateConfig]) {
         const extended = extendedTsconfigPath(config, tsconfigPath);
-        if (extended !== undefined) tsconfigPaths.add(extended);
+        if (extended !== undefined) pendingConfigs.push({ configPath: extended, scope });
       }
       if (changedFiles.includes(tsconfigPath) && baselineConfig !== candidateConfig) configurationPaths.add(tsconfigPath);
     }
@@ -412,7 +417,7 @@ function moduleAliasesFromManifest(contents: string | null, manifestPath: string
   return aliases;
 }
 
-function moduleAliasesFromTsconfig(contents: string | null, configPath: string): Map<string, string[]> {
+function moduleAliasesFromTsconfig(contents: string | null, configPath: string, applicationScope: string): Map<string, string[]> {
   const aliases = new Map<string, string[]>();
   const compilerOptions = parseManifest(contents).compilerOptions;
   if (!isRecord(compilerOptions) || !isRecord(compilerOptions.paths)) return aliases;
@@ -421,7 +426,7 @@ function moduleAliasesFromTsconfig(contents: string | null, configPath: string):
   const baseDirectory = path.posix.normalize(path.posix.join(directory === "." ? "" : directory, baseUrl));
   for (const [alias, targets] of Object.entries(compilerOptions.paths)) {
     if (!Array.isArray(targets)) continue;
-    aliases.set(`${directory}::${alias}`, targets.filter((target): target is string => typeof target === "string").flatMap((target) => resolvedReferenceCandidates(baseDirectory, `./${target}`)));
+    aliases.set(`${applicationScope}::${alias}`, targets.filter((target): target is string => typeof target === "string").flatMap((target) => resolvedReferenceCandidates(baseDirectory, `./${target}`)));
   }
   return aliases;
 }
@@ -553,7 +558,10 @@ function testScriptsFromManifest(contents: string | null, manifestPath: string):
     while (pending.length > 0) {
       const command = commands[pending.shift()!];
       if (command === undefined) continue;
-      for (const referenced of referencedPackageScripts(command, Object.keys(commands))) {
+      const localTargets = referencedPackageScriptTargets(command)
+        .filter((target) => target.filter === undefined && !target.allWorkspaces)
+        .map((target) => target.name);
+      for (const referenced of localTargets) {
         if (commands[referenced] !== undefined && !relevant.has(referenced)) {
           relevant.add(referenced);
           pending.push(referenced);
@@ -599,17 +607,18 @@ function expandReferencedScripts(
   }
 }
 
-function referencedPackageScripts(command: string, scriptNames: readonly string[]): string[] {
-  if (!/\b(?:npm|pnpm|yarn|bun)\b/u.test(command)) return [];
-  const tokens = new Set(command.match(/[A-Za-z0-9:._-]+/gu) ?? []);
-  return scriptNames.filter((name) => tokens.has(name));
-}
-
 function referencedPackageScriptTargets(command: string): Array<{ name: string; filter?: string; allWorkspaces: boolean }> {
-  const filter = /--filter(?:=|\s+)([^\s;&|]+)/u.exec(command)?.[1];
-  const allWorkspaces = /(?:^|\s)(?:-r|--recursive)(?:\s|$)/u.test(command);
-  return [...command.matchAll(/\b(?:npm|pnpm|yarn|bun)\b[^;&|]*?\brun\s+([A-Za-z0-9:._-]+)/gu)]
-    .map((match) => ({ name: match[1]!, ...(filter !== undefined ? { filter } : {}), allWorkspaces }));
+  return command.split(/&&|\|\||;/u).flatMap((segment) => {
+    if (!/\b(?:npm|pnpm|yarn|bun)\b/u.test(segment)) return [];
+    const filterMatch = /--filter(?:=|\s+)(?:"([^"]+)"|'([^']+)'|([^\s]+))/u.exec(segment);
+    const filter = filterMatch?.[1] ?? filterMatch?.[2] ?? filterMatch?.[3];
+    const allWorkspaces = /(?:^|\s)(?:-r|--recursive)(?:\s|$)/u.test(segment);
+    const explicit = /\brun\s+([A-Za-z0-9:._-]+)/u.exec(segment)?.[1];
+    const tokens = segment.match(/"[^"]+"|'[^']+'|[^\s]+/gu)?.map((token) => token.replace(/^['"]|['"]$/gu, "")) ?? [];
+    const shorthand = tokens.filter((token) => !token.startsWith("-") && !["npm", "pnpm", "yarn", "bun", "run", filter].includes(token)).at(-1);
+    const name = explicit ?? shorthand;
+    return name === undefined ? [] : [{ name, ...(filter !== undefined ? { filter } : {}), allWorkspaces }];
+  });
 }
 
 function packageNameFromManifest(contents: string | null): string | undefined {
