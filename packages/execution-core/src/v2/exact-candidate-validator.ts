@@ -116,6 +116,26 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     findings: ReturnType<typeof detectTestIntegrityFindings>;
     candidateTestContents: Record<string, string>;
   }> {
+    const readBudget = { remainingBytes: 1_048_576, exceededPaths: new Set<string>() };
+    const read = async (ref: string, file: string): Promise<string | null> => {
+      if (readBudget.remainingBytes <= 0) {
+        readBudget.exceededPaths.add(file);
+        return null;
+      }
+      try {
+        const contents = await this.options.git.showFile(
+          { cwd: this.options.repoRoot, ref, path: file },
+          { ...(signal !== undefined ? { signal } : {}), maxBytes: readBudget.remainingBytes }
+        );
+        readBudget.remainingBytes -= contents === null ? 0 : Buffer.byteLength(contents, "utf8");
+        return contents;
+      } catch (error) {
+        if (!isGitReadLimitError(error)) throw error;
+        readBudget.remainingBytes = 0;
+        readBudget.exceededPaths.add(file);
+        return null;
+      }
+    };
     // Only paths changed between the exact baseline and candidate can weaken
     // integrity. Deriving both sides from Git avoids stale planning-snapshot
     // membership after intermediate integration commits.
@@ -129,10 +149,8 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       to: candidateCommit
     });
     for (const file of changedFiles.filter(isTestFilePath).sort()) {
-      const [baseline, candidate] = await Promise.all([
-        this.options.git.showFile({ cwd: this.options.repoRoot, ref: baselineCommit, path: file }),
-        this.options.git.showFile({ cwd: this.options.repoRoot, ref: candidateCommit, path: file })
-      ]);
+      const baseline = await read(baselineCommit, file);
+      const candidate = await read(candidateCommit, file);
       if (baseline !== null) {
         baselineFiles.add(file);
         baselineTestContents[file] = baseline;
@@ -145,37 +163,48 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     }
     const baselineScripts: Record<string, string> = {};
     const candidateScripts: Record<string, string> = {};
+    const baselineAllScripts: Record<string, string> = {};
+    const candidateAllScripts: Record<string, string> = {};
     const configurationPaths = new Set(changedFiles.filter(isTestDiscoveryConfigurationPath));
     const manifestPaths = manifestAncestors(changedFiles);
     const validationCommands: Array<{ directory: string; command: string }> = [];
     const moduleAliases = new Map<string, string[]>();
     for (const manifestPath of [...manifestPaths].sort()) {
-      const [baselineManifest, candidateManifest] = await Promise.all([
-        this.options.git.showFile({ cwd: this.options.repoRoot, ref: baselineCommit, path: manifestPath }),
-        this.options.git.showFile({ cwd: this.options.repoRoot, ref: candidateCommit, path: manifestPath })
-      ]);
+      const baselineManifest = await read(baselineCommit, manifestPath);
+      const candidateManifest = await read(candidateCommit, manifestPath);
       const baselineManifestScripts = testScriptsFromManifest(baselineManifest, manifestPath);
       const candidateManifestScripts = testScriptsFromManifest(candidateManifest, manifestPath);
       Object.assign(baselineScripts, baselineManifestScripts);
       Object.assign(candidateScripts, candidateManifestScripts);
-      const directory = path.posix.dirname(manifestPath);
-      validationCommands.push(...[...Object.values(baselineManifestScripts), ...Object.values(candidateManifestScripts)].map((command) => ({ directory, command })));
+      Object.assign(baselineAllScripts, allScriptsFromManifest(baselineManifest, manifestPath));
+      Object.assign(candidateAllScripts, allScriptsFromManifest(candidateManifest, manifestPath));
       for (const manifest of [baselineManifest, candidateManifest]) {
         mergeModuleAliases(moduleAliases, moduleAliasesFromManifest(manifest, manifestPath));
       }
       if (changedFiles.includes(manifestPath) && embeddedTestConfigChanged(baselineManifest, candidateManifest)) configurationPaths.add(manifestPath);
       if (changedFiles.includes(manifestPath) && moduleResolutionManifestChanged(baselineManifest, candidateManifest)) configurationPaths.add(manifestPath);
     }
-    for (const tsconfigPath of configurationAncestors(changedFiles)) {
-      const [baselineConfig, candidateConfig] = await Promise.all([
-        this.options.git.showFile({ cwd: this.options.repoRoot, ref: baselineCommit, path: tsconfigPath }),
-        this.options.git.showFile({ cwd: this.options.repoRoot, ref: candidateCommit, path: tsconfigPath })
-      ]);
+    expandReferencedScripts(baselineScripts, baselineAllScripts);
+    expandReferencedScripts(candidateScripts, candidateAllScripts);
+    for (const scripts of [baselineScripts, candidateScripts]) {
+      for (const [identity, command] of Object.entries(scripts)) {
+        validationCommands.push({ directory: path.posix.dirname(identity.slice(0, identity.indexOf("#scripts."))), command });
+      }
+    }
+    const tsconfigPaths = configurationAncestors(changedFiles);
+    for (const tsconfigPath of tsconfigPaths) {
+      const baselineConfig = await read(baselineCommit, tsconfigPath);
+      const candidateConfig = await read(candidateCommit, tsconfigPath);
       mergeModuleAliases(moduleAliases, moduleAliasesFromTsconfig(baselineConfig, tsconfigPath));
       mergeModuleAliases(moduleAliases, moduleAliasesFromTsconfig(candidateConfig, tsconfigPath));
+      for (const config of [baselineConfig, candidateConfig]) {
+        const extended = extendedTsconfigPath(config, tsconfigPath);
+        if (extended !== undefined) tsconfigPaths.add(extended);
+      }
       if (changedFiles.includes(tsconfigPath) && baselineConfig !== candidateConfig) configurationPaths.add(tsconfigPath);
     }
-    for (const referenced of await this.changedValidationDependencies(validationCommands, changedFiles, baselineCommit, candidateCommit, moduleAliases, signal)) configurationPaths.add(referenced);
+    for (const referenced of await this.changedValidationDependencies(validationCommands, changedFiles, baselineCommit, candidateCommit, moduleAliases, read, signal)) configurationPaths.add(referenced);
+    for (const exceeded of readBudget.exceededPaths) configurationPaths.add(exceeded);
     return {
       findings: detectTestIntegrityFindings({
         baselineTestFiles: [...baselineFiles].sort(),
@@ -196,37 +225,25 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     baselineCommit: string,
     candidateCommit: string,
     moduleAliases: ReadonlyMap<string, readonly string[]>,
+    read: (ref: string, file: string) => Promise<string | null>,
     signal?: AbortSignal
   ): Promise<string[]> {
     const changed = new Set(changedFiles.map((file) => file.replaceAll("\\", "/")));
     const found = new Set<string>();
     const pending = commands.flatMap(({ directory, command }) => commandFileReferences(directory, command)).map((file) => ({ file, depth: 0 }));
     const visited = new Set<string>();
-    let inspectedBytes = 0;
     while (pending.length > 0) {
       signal?.throwIfAborted();
       const { file, depth } = pending.shift()!;
       if (visited.has(file)) continue;
-      if (visited.size >= 256 || depth > 16 || inspectedBytes >= 1_048_576) {
+      if (visited.size >= 256 || depth > 16) {
         found.add("validation-dependency-budget");
         break;
       }
       visited.add(file);
       if (changed.has(file)) found.add(file);
-      const baseline = await this.options.git.showFile(
-        { cwd: this.options.repoRoot, ref: baselineCommit, path: file },
-        { ...(signal !== undefined ? { signal } : {}), maxBytes: 1_048_576 - inspectedBytes }
-      );
-      inspectedBytes += baseline === null ? 0 : Buffer.byteLength(baseline, "utf8");
-      if (inspectedBytes >= 1_048_576) {
-        found.add("validation-dependency-budget");
-        break;
-      }
-      const candidate = await this.options.git.showFile(
-        { cwd: this.options.repoRoot, ref: candidateCommit, path: file },
-        { ...(signal !== undefined ? { signal } : {}), maxBytes: 1_048_576 - inspectedBytes }
-      );
-      inspectedBytes += candidate === null ? 0 : Buffer.byteLength(candidate, "utf8");
+      const baseline = await read(baselineCommit, file);
+      const candidate = await read(candidateCommit, file);
       for (const contents of [baseline, candidate]) {
         if (contents === null) continue;
         if (hasOpaqueValidationDependency(contents) && (changed.has(file) || [...changed].some((changedFile) => path.posix.dirname(changedFile) === path.posix.dirname(file)))) found.add(file);
@@ -360,8 +377,11 @@ function resolvedModuleReferenceCandidates(
 function moduleAliasesFromManifest(contents: string | null, manifestPath: string): Map<string, string[]> {
   const aliases = new Map<string, string[]>();
   const manifest = parseManifest(contents);
-  if (typeof manifest.name !== "string" || manifest.name.length === 0) return aliases;
   const directory = path.posix.dirname(manifestPath);
+  if (isRecord(manifest.imports)) {
+    for (const [key, value] of Object.entries(manifest.imports)) aliases.set(key, resolveDeclaredEntries(directory, manifestEntryStrings(value)));
+  }
+  if (typeof manifest.name !== "string" || manifest.name.length === 0) return aliases;
   const exports = manifest.exports;
   const rootEntries = typeof exports === "string" || !isRecord(exports)
     ? [exports, manifest.module, manifest.main, manifest.types].flatMap(manifestEntryStrings)
@@ -371,9 +391,6 @@ function moduleAliasesFromManifest(contents: string | null, manifestPath: string
     for (const [key, value] of Object.entries(exports)) {
       if (key.startsWith("./") && key !== ".") aliases.set(`${manifest.name}/${key.slice(2)}`, resolveDeclaredEntries(directory, manifestEntryStrings(value)));
     }
-  }
-  if (isRecord(manifest.imports)) {
-    for (const [key, value] of Object.entries(manifest.imports)) aliases.set(key, resolveDeclaredEntries(directory, manifestEntryStrings(value)));
   }
   return aliases;
 }
@@ -427,19 +444,93 @@ function embeddedTestConfigChanged(baseline: string | null, candidate: string | 
 function parseManifest(contents: string | null): Record<string, unknown> {
   if (contents === null) return {};
   try {
-    const parsed = JSON.parse(contents) as unknown;
+    const parsed = JSON.parse(normalizeJsonc(contents)) as unknown;
     return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
   } catch {
     return {};
   }
 }
 
+function extendedTsconfigPath(contents: string | null, configPath: string): string | undefined {
+  const extension = parseManifest(contents).extends;
+  if (typeof extension !== "string" || !extension.startsWith(".")) return undefined;
+  const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(configPath), extension));
+  return path.posix.extname(resolved) === "" ? `${resolved}.json` : resolved;
+}
+
+function normalizeJsonc(contents: string): string {
+  let output = "";
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < contents.length; index += 1) {
+    const current = contents[index]!;
+    const next = contents[index + 1];
+    if (inString) {
+      output += current;
+      if (escaped) escaped = false;
+      else if (current === "\\") escaped = true;
+      else if (current === '"') inString = false;
+      continue;
+    }
+    if (current === '"') {
+      inString = true;
+      output += current;
+      continue;
+    }
+    if (current === "/" && next === "/") {
+      while (index < contents.length && contents[index] !== "\n") index += 1;
+      output += "\n";
+      continue;
+    }
+    if (current === "/" && next === "*") {
+      index += 2;
+      while (index < contents.length && !(contents[index] === "*" && contents[index + 1] === "/")) index += 1;
+      index += 1;
+      continue;
+    }
+    if (current === ",") {
+      let lookahead = index + 1;
+      while (/\s/u.test(contents[lookahead] ?? "")) lookahead += 1;
+      if (contents[lookahead] === "}" || contents[lookahead] === "]") continue;
+    }
+    output += current;
+  }
+  return removeTrailingJsoncCommas(output);
+}
+
+function removeTrailingJsoncCommas(contents: string): string {
+  let output = "";
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < contents.length; index += 1) {
+    const current = contents[index]!;
+    if (inString) {
+      output += current;
+      if (escaped) escaped = false;
+      else if (current === "\\") escaped = true;
+      else if (current === '"') inString = false;
+      continue;
+    }
+    if (current === '"') inString = true;
+    if (current === ",") {
+      let lookahead = index + 1;
+      while (/\s/u.test(contents[lookahead] ?? "")) lookahead += 1;
+      if (contents[lookahead] === "}" || contents[lookahead] === "]") continue;
+    }
+    output += current;
+  }
+  return output;
+}
+
+function isGitReadLimitError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error
+    && (error as { code?: unknown }).code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER";
+}
+
 function testScriptsFromManifest(contents: string | null, manifestPath: string): Record<string, string> {
   try {
-    const scripts = parseManifest(contents).scripts;
-    if (scripts === null || typeof scripts !== "object" || Array.isArray(scripts)) return {};
-    const commands = Object.fromEntries(Object.entries(scripts as Record<string, unknown>)
-      .filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+    const allScripts = allScriptsFromManifest(contents, manifestPath);
+    const commands = Object.fromEntries(Object.entries(allScripts).map(([identity, command]) => [identity.slice(identity.indexOf("#scripts.") + 9), command]));
     const relevant = new Set(Object.keys(commands).filter((name) => name === "test" || name === "pretest" || name === "posttest" || name.startsWith("test:")));
     const pending = [...relevant];
     while (pending.length > 0) {
@@ -455,6 +546,30 @@ function testScriptsFromManifest(contents: string | null, manifestPath: string):
     return Object.fromEntries([...relevant].sort().map((name) => [`${manifestPath}#scripts.${name}`, commands[name]!]));
   } catch {
     return {};
+  }
+}
+
+function allScriptsFromManifest(contents: string | null, manifestPath: string): Record<string, string> {
+  const scripts = parseManifest(contents).scripts;
+  if (!isRecord(scripts)) return {};
+  return Object.fromEntries(Object.entries(scripts)
+    .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+    .map(([name, command]) => [`${manifestPath}#scripts.${name}`, command]));
+}
+
+function expandReferencedScripts(selected: Record<string, string>, available: Readonly<Record<string, string>>): void {
+  const pending = Object.values(selected);
+  const selectedNames = new Set(Object.keys(selected));
+  while (pending.length > 0) {
+    const command = pending.shift()!;
+    const referencedNames = referencedPackageScripts(command, Object.keys(available).map((identity) => identity.slice(identity.indexOf("#scripts.") + 9)));
+    for (const [identity, candidateCommand] of Object.entries(available)) {
+      const name = identity.slice(identity.indexOf("#scripts.") + 9);
+      if (!referencedNames.includes(name) || selectedNames.has(identity)) continue;
+      selectedNames.add(identity);
+      selected[identity] = candidateCommand;
+      pending.push(candidateCommand);
+    }
   }
 }
 
