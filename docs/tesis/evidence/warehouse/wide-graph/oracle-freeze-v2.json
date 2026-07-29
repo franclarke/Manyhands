@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "frozenAt": "2026-07-29T16:53:22.8786424Z",
+  "source": {
+    "commit": "4fe854425fa04341f123b13c93a3bc08b9223702",
+    "tree": "3012b86802b06f8782390171ebb36f09fa1f40cb",
+    "workingTree": "clean"
+  },
+  "policy": {
+    "version": "adaptive-utility/3.1.0-pilot",
+    "distPath": "packages/decomposer/dist/index.js",
+    "distSha256": "f95b81959faf0a23b9f3a0c8814dd90cf894db8907ef17f8430419499bed16bc"
+  },
+  "toolchain": {
+    "node": "22.23.1",
+    "pnpm": "7.29.3",
+    "pnpmLockSha256": "ccfdec805178d04f07921c595206239eafe58236ac61300c6589b4953ecc9c40"
+  },
+  "protocol": {
+    "id": "warehouse-wide-graph",
+    "version": 2
+  },
+  "oracleContract": {
+    "schemaVersion": 1,
+    "oracleId": "warehouse-wide-graph-v2",
+    "oracleContractVersion": 2,
+    "evaluator": {
+      "path": "docs/tesis/evidence/scripts/lib/wide-graph-oracle.mjs",
+      "sha256": "cb22b7e6ef4aebe948e8525404468a34c842de44820f2f14a4e5e52b0cee8c6a"
+    },
+    "runner": {
+      "path": "docs/tesis/evidence/scripts/run-wide-graph-oracle.mjs",
+      "sha256": "4a595700c52ea43a022e3862e9967b4c8aa390760d6ba3340bc9459a651c59e1"
+    },
+    "dependencies": [
+      {
+        "path": "docs/tesis/evidence/scripts/lib/wide-graph-metrics.mjs",
+        "sha256": "45b8d976ff5b897fd8cad88ec0a156237f2e73b1dd07ed1d50b15b5a6c778e83"
+      },
+      {
+        "path": "docs/tesis/evidence/scripts/lib/wide-graph-oracle-plan.mjs",
+        "sha256": "bd8978172727f389d8ca66a22afe22a5bc9f696284a18c367c1ec72a5eb44c60"
+      },
+      {
+        "path": "docs/tesis/evidence/warehouse/oracles/oracle-core.mjs",
+        "sha256": "79519f064f29356a0447f610ea63ba41bdb5eab273d26cd48124371dbb3c81bb"
+      },
+      {
+        "path": "docs/tesis/evidence/warehouse/oracles/probe-specimen.mjs",
+        "sha256": "409ea222fca7bb96bbd97bc212c3dd05ca00e134205b77952fcab4b59f03dc23"
+      },
+      {
+        "path": "scripts/manyhands-dev-command.mjs",
+        "sha256": "a86bf8b019665d8443ea1ea868f5c7a7ff21d5c235e315fb452b2d25c8c29fae"
+      },
+      {
+        "path": "docs/tesis/evidence/scripts/lib/wide-graph-oracle-contract.mjs",
+        "sha256": "6043ff04f900d1b5b0c86c6cccb11463857cf10347b0219d7c29c2c6e8f2bd77"
+      }
+    ],
+    "criterionMappings": [
+      {
+        "criterionId": "repository-gates",
+        "checks": [
+          "install-frozen-lockfile",
+          "test",
+          "typecheck",
+          "build"
+        ]
+      },
+      {
+        "criterionId": "module-boundary",
+        "checks": [
+          "module-boundary"
+        ]
+      },
+      {
+        "criterionId": "deterministic-probe",
+        "checks": [
+          "deterministic-probe"
+        ]
+      },
+      {
+        "criterionId": "projection-order",
+        "checks": [
+          "projection-order"
+        ]
+      },
+      {
+        "criterionId": "projection-values",
+        "checks": [
+          "specimen-values"
+        ]
+      }
+    ],
+    "contractSha256": "5b90202b557db44889790a42899d9b9180db5c03f18ca5ec8b9ddd4c0b76c8da"
+  },
+  "recipe": {
+    "gatePosition": "result_ready_before_delivery",
+    "candidate": "exact_sha_external_clone",
+    "executionLimit": "one_preserved_result_per_cell",
+    "command": [
+      "node",
+      "docs/tesis/evidence/scripts/run-wide-graph-oracle.mjs",
+      "--repository",
+      "<targetRepo>",
+      "--delivered-sha",
+      "<candidateSha>",
+      "--module-count",
+      "<moduleCount>",
+      "--oracle-contract",
+      "<preservedContractPath>",
+      "--out",
+      "<oracleResultPath>"
+    ],
+    "requiredAttribution": [
+      "oracleId",
+      "oracleContractVersion",
+      "oracleContractSha256",
+      "oracleEvaluatorSha256",
+      "verifiedSha",
+      "moduleCount",
+      "outcome",
+      "checks"
+    ]
+  },
+  "historyPolicy": "A stronger oracle requires a new contract version and a new series; historical receipts are never reinterpreted."
+}

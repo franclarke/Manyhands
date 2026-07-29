@@ -68,3 +68,9 @@
   reutilizarse para N=8 con igual SHA/outDir.
 - RED/GREEN añade `moduleCount` al conjunto exacto de atribución tanto antes de
   delivery como al reconciliar `completed`. Focal 2 archivos/7 tests PASS.
+- Commit `4fe8544`; re-reviews de código finales Standards y Spec PASS, ambas
+  con 0 P0/P1/P2/P3.
+- Freeze material `docs/tesis/evidence/warehouse/wide-graph/oracle-freeze-v2.json`
+  fija source/tree, policy marker, dist/lock hashes, contrato transitivo y
+  receta. Su test de reconciliación pasa 7/7. Pendiente ejecutar P0 completo y
+  mutación autenticada sobre el commit que contiene este freeze.

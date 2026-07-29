@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -127,6 +128,30 @@ describe("frozen wide graph oracle contract", () => {
       cellId: "warehouse-wide-n04",
       oracleContract: { ...contract, oracleContractVersion: 3 }
     }], process.cwd())).rejects.toThrow(/warehouse-wide-n04.+differs/iu);
+  });
+
+  it("keeps the material freeze reconciled with source, dist, policy and recipe", async () => {
+    const freeze = JSON.parse(await readFile(
+      "docs/tesis/evidence/warehouse/wide-graph/oracle-freeze-v2.json",
+      "utf8"
+    ));
+    const contract = await loadWideGraphOracleContract(process.cwd());
+    const dist = await readFile(freeze.policy.distPath);
+    const lockfile = await readFile("pnpm-lock.yaml");
+
+    expect(freeze.oracleContract).toEqual(contract);
+    expect(createHash("sha256").update(dist).digest("hex")).toBe(freeze.policy.distSha256);
+    expect(dist.toString("utf8")).toContain(freeze.policy.version);
+    expect(createHash("sha256").update(lockfile).digest("hex")).toBe(freeze.toolchain.pnpmLockSha256);
+    expect(await git(process.cwd(), ["rev-parse", `${freeze.source.commit}^{tree}`])).toBe(freeze.source.tree);
+    await expect(git(process.cwd(), ["merge-base", "--is-ancestor", freeze.source.commit, "HEAD"]))
+      .resolves.toBe("");
+    expect(freeze.recipe).toMatchObject({
+      gatePosition: "result_ready_before_delivery",
+      candidate: "exact_sha_external_clone",
+      executionLimit: "one_preserved_result_per_cell",
+      requiredAttribution: expect.arrayContaining(["verifiedSha", "moduleCount", "checks"])
+    });
   });
 
   it("rejects a cell without the frozen contract before contacting the server", async () => {

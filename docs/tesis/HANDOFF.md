@@ -1293,3 +1293,13 @@ del `1/8` histórico.
 - RED/GREEN ahora atribuye por contrato, evaluator, SHA, `moduleCount`, outcome
   y checks tanto antes de delivery como en `completed`; 2 archivos/7 tests
   focales PASS. Pendiente gate afectado, commit y nuevas re-reviews.
+
+### Freeze material de ticket 20
+
+- commit de código aceptado `4fe8544`; re-reviews Standards y Spec PASS, ambas
+  con 0 P0/P1/P2/P3;
+- `docs/tesis/evidence/warehouse/wide-graph/oracle-freeze-v2.json` fija el
+  source/tree aceptado, marker y hash de dist, lockfile, contrato transitivo,
+  mapeos y receta exacta;
+- test de reconciliación del freeze PASS (7/7). Próximo paso: commit del freeze
+  y ejecutar sobre ese SHA exacto P0 secuencial más mutación autenticada.
