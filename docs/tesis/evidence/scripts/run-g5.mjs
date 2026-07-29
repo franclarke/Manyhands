@@ -24,6 +24,7 @@ import {
   assertWideGraphSelectionAvailable,
   assertWideGraphSeriesSelection
 } from "./lib/wide-graph-study.mjs";
+import { assertWideGraphOracleSeriesContract } from "./lib/wide-graph-oracle-contract.mjs";
 
 const exec = promisify(execFile);
 const here = dirname(fileURLToPath(import.meta.url));
@@ -39,6 +40,9 @@ for (const name of (await readdir(cellsDir)).filter((file) => file.endsWith(".js
   cells.push(JSON.parse(await readFile(join(cellsDir, name), "utf8")));
 }
 cells.sort((left, right) => left.position - right.position);
+if (manifest.schemaVersion === 2 || manifest.oracleContract !== undefined) {
+  await assertWideGraphOracleSeriesContract(manifest, cells);
+}
 if (manifest.executorSelection !== undefined) {
   assertWideGraphSelectionAvailable(manifest.executorSelection);
   assertWideGraphSeriesSelection(cells, manifest.executorSelection);

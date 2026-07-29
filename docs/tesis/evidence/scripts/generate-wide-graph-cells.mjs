@@ -7,6 +7,7 @@ import {
   buildWideGraphPlan,
   wideGraphSelection
 } from "./lib/wide-graph-study.mjs";
+import { loadWideGraphOracleContract } from "./lib/wide-graph-oracle-contract.mjs";
 
 const targetRepo = resolve(argument("--target") ?? fail("--target is required"));
 const outDir = resolve(argument("--out") ?? "docs/tesis/evidence/warehouse/wide-graph/cells");
@@ -15,7 +16,9 @@ const baseUrl = argument("--base-url") ?? "http://127.0.0.1:3111";
 const runsDir = resolve(argument("--runs-dir") ?? ".manyhands/runs");
 const plan = buildWideGraphPlan({ targetRepo });
 const selection = wideGraphSelection(argument("--executor") ?? "codex");
+const oracleContract = await loadWideGraphOracleContract();
 const cells = plan.map((entry) => ({
+  schemaVersion: 2,
   ...entry,
   condition: "C",
   granularityCondition: "C",
@@ -34,6 +37,7 @@ const cells = plan.map((entry) => ({
   runsDir,
   pollIntervalMs: 10_000,
   wallClockLimitMs: 7_200_000,
+  oracleContract,
   goalSha256: sha(entry.goal)
 }));
 assertWideGraphSeriesSelection(cells, selection);
@@ -48,11 +52,12 @@ for (const cell of cells) {
   await writeFile(join(outDir, `${cell.cellId}.json`), `${JSON.stringify(cell, null, 2)}\n`, "utf8");
 }
 await writeFile(join(outDir, "manifest.json"), `${JSON.stringify({
-  schemaVersion: 1,
+  schemaVersion: 2,
   title: "Warehouse wide graph pilot",
   baseSha: plan[0]?.baseSha,
   granularityCondition: "C",
   executorSelection: selection,
+  oracleContract,
   moduleCounts: plan.map((entry) => entry.moduleCount),
   cells: cells.map(({ cellId, position, moduleCount, baseSha, goalSha256 }) => ({ cellId, position, moduleCount, baseSha, goalSha256 }))
 }, null, 2)}\n`, "utf8");

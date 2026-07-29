@@ -118,3 +118,9 @@ type FinalArtifactManifest = {
 
 `result_ready` requiere manifest candidato y Evidence Matrix elegible.
 `completed` requiere delivery receipt correspondiente al mismo tree/commit.
+
+El protocolo experimental Wide Graph añade un gate externo entre ambos estados:
+su driver sólo autoriza delivery tras un PASS del contrato de oráculo congelado
+atribuible al commit candidato exacto. Este gate no reescribe retrospectivamente
+la Evidence Matrix ni los eventos `final_candidate.verified`; un contrato más
+fuerte crea una nueva versión y una nueva serie.

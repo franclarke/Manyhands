@@ -24,13 +24,25 @@ import { readFile, writeFile, mkdir, copyFile, readdir } from "node:fs/promises"
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { dirname, join, resolve } from "node:path";
+import {
+  assertFrozenWideGraphOracleContract,
+  assertWideGraphOracleAttribution
+} from "./lib/wide-graph-oracle-contract.mjs";
 
 const exec = promisify(execFile);
 
 const args = parseArgs(process.argv.slice(2));
 const config = JSON.parse(await readFile(args.config, "utf8"));
+const isWideGraphCell = typeof config.cellId === "string" && config.cellId.startsWith("warehouse-wide-");
+const oracleContract = isWideGraphCell
+  ? await assertFrozenWideGraphOracleContract(config.oracleContract)
+  : undefined;
 const outDir = resolve(args.out);
 await mkdir(outDir, { recursive: true });
+const oracleContractPath = oracleContract === undefined ? undefined : join(outDir, "oracle-contract.json");
+if (oracleContractPath !== undefined) {
+  await writeFile(oracleContractPath, `${JSON.stringify(oracleContract, null, 2)}\n`, "utf8");
+}
 
 const BASE = config.baseUrl ?? "http://127.0.0.1:3000";
 const TOKEN = process.env.MANYHANDS_SESSION_TOKEN;
@@ -83,6 +95,7 @@ async function drive(runId) {
   const deadline = Date.now() + (config.wallClockLimitMs ?? 90 * 60 * 1000);
   let approvedPlan = false;
   let delivered = false;
+  let oracleAttempted = false;
   let lastLifecycle = "";
   let idleSince = Date.now();
   while (Date.now() < deadline) {
@@ -113,6 +126,18 @@ async function drive(runId) {
 
     if (lifecycle === "result_ready" && !delivered && view.candidate != null) {
       const candidate = view.candidate;
+      if (oracleContract !== undefined) {
+        if (oracleAttempted) {
+          return terminal(runId, lifecycle, view, "external oracle was already attempted for this candidate");
+        }
+        oracleAttempted = true;
+        const oracle = await verifyExternalOracle(candidate.commit);
+        try {
+          assertWideGraphOracleAttribution(oracleContract, oracle, candidate.commit);
+        } catch (error) {
+          return terminal(runId, lifecycle, view, error instanceof Error ? error.message : String(error));
+        }
+      }
       log(`  approving delivery of ${candidate.commit}`);
       await post(`/api/runs/${runId}/deliver`, {
         manifestId: candidate.manifestId,
@@ -140,6 +165,52 @@ async function drive(runId) {
     await sleep(config.pollIntervalMs ?? 10_000);
   }
   return { lifecycle: "timeout", reason: "wall clock limit reached" };
+}
+
+async function verifyExternalOracle(candidateSha) {
+  const output = join(outDir, "oracle-result.json");
+  const existing = await readFile(output, "utf8").catch(() => undefined);
+  if (existing !== undefined) {
+    log("  reusing the single preserved external oracle result");
+    return JSON.parse(existing);
+  }
+  let executionError;
+  try {
+    await exec(process.execPath, [
+      resolve("docs/tesis/evidence/scripts/run-wide-graph-oracle.mjs"),
+      "--repository",
+      config.targetRepo,
+      "--delivered-sha",
+      candidateSha,
+      "--module-count",
+      String(config.moduleCount),
+      "--oracle-contract",
+      oracleContractPath,
+      "--out",
+      output
+    ], {
+      cwd: process.cwd(),
+      timeout: config.externalOracleTimeoutMs ?? 900_000,
+      windowsHide: true,
+      maxBuffer: 64 * 1024 * 1024
+    });
+  } catch (error) {
+    executionError = error;
+  }
+  const preserved = await readFile(output, "utf8").catch(() => undefined);
+  if (preserved !== undefined) return JSON.parse(preserved);
+  const failure = {
+    oracleId: oracleContract.oracleId,
+    oracleContractVersion: oracleContract.oracleContractVersion,
+    oracleContractSha256: oracleContract.contractSha256,
+    oracleEvaluatorSha256: oracleContract.evaluator.sha256,
+    deliveredSha: candidateSha,
+    outcome: "fail",
+    checks: [],
+    error: executionError instanceof Error ? executionError.message : String(executionError)
+  };
+  await writeFile(output, `${JSON.stringify(failure, null, 2)}\n`, "utf8");
+  return failure;
 }
 
 /** Pending decisions come from the durable journal, the same source the UI reads. */

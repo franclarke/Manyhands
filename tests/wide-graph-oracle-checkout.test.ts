@@ -5,6 +5,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 import { metricsFor } from "../docs/tesis/evidence/scripts/lib/wide-graph-metrics.mjs";
+import { loadWideGraphOracleContract } from "../docs/tesis/evidence/scripts/lib/wide-graph-oracle-contract.mjs";
 
 const execFileAsync = promisify(execFile);
 const temporaryRoots: string[] = [];
@@ -19,8 +20,11 @@ describe("wide graph oracle checkout", () => {
     temporaryRoots.push(root);
     const repository = path.join(root, "source");
     const receipt = path.join(root, "oracle-result.json");
+    const contractPath = path.join(root, "oracle-contract.json");
     await createPassingRepository(repository);
     const deliveredSha = await git(repository, ["rev-parse", "HEAD"]);
+    const oracleContract = await loadWideGraphOracleContract(process.cwd());
+    await writeFile(contractPath, `${JSON.stringify(oracleContract, null, 2)}\n`, "utf8");
 
     await writeFile(
       path.join(repository, "study.mjs"),
@@ -40,6 +44,8 @@ describe("wide graph oracle checkout", () => {
         deliveredSha,
         "--module-count",
         "4",
+        "--oracle-contract",
+        contractPath,
         "--out",
         receipt
       ],
@@ -50,6 +56,8 @@ describe("wide graph oracle checkout", () => {
     expect(result).toMatchObject({
       oracleId: "warehouse-wide-graph-v2",
       oracleContractVersion: 2,
+      oracleContractSha256: oracleContract.contractSha256,
+      oracleEvaluatorSha256: oracleContract.evaluator.sha256,
       sourceRepository: path.resolve(repository),
       verifiedSha: deliveredSha,
       outcome: "pass",
@@ -61,6 +69,7 @@ describe("wide graph oracle checkout", () => {
         "build",
         "module-boundary",
         "deterministic-probe",
+        "projection-order",
         "specimen-values"
       ]
     });

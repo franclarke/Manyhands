@@ -1261,3 +1261,15 @@ del `1/8` histórico.
   permanecen PASS;
 - ticket 19 queda `closed`; CLAIM-040/041 siguen `partial` hasta evidencia
   externa formal. La frontera lista siguiente es ticket 20.
+
+## Ticket 20 en curso — freeze del oráculo externo — 2026-07-29
+
+- ticket 19 está integrado y `closed`; ticket 20 pasó a `agent-working` en el
+  mismo clon aislado, sin tocar los seis cambios ajenos del checkout principal;
+- RED mostró que las celdas no congelaban identidad/hash/mapeo del oráculo y el
+  driver no podía invalidar atribución por drift;
+- GREEN agrega contrato externo hashable, manifest/celdas v2 y preflight
+  fail-closed antes del run; delivery sólo se aprueba después de un único PASS
+  atribuible al SHA exacto y un restart reutiliza el receipt preservado;
+- 10 archivos/80 tests afectados pasan. Pendientes: gate amplio, commit, freeze
+  material con P0/mutación autenticada y reviews Standards/Spec.

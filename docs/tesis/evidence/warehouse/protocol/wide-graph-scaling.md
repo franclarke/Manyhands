@@ -99,6 +99,15 @@ SHA verificado y los checks ejecutados, incluido `specimen-values`. Los recibos
 históricos `warehouse-wide-graph-v1` pertenecen al contrato estructural anterior
 y no se reinterpretan bajo v2.
 
+Las series nuevas usan manifest y celdas `schemaVersion: 2`. Ambos congelan el
+mismo contrato externo: id, versión, SHA-256 del evaluator y runner, digest del
+contrato y mapeo explícito de criterios a checks. El preflight rechaza ausencia,
+drift de assets o divergencia manifest–celda antes de crear un run. Cuando hay
+un candidato exacto en `result_ready`, el driver ejecuta el oráculo una sola vez
+y sólo envía la aprobación de delivery si el recibo PASS coincide en
+id/versión/hashes/SHA y contiene todos los checks mapeados. Tras un restart se
+reutiliza el recibo preservado; nunca se reejecuta para buscar otro resultado.
+
 ## Mediciones requeridas
 
 Por célula se guardan el `cell.json` congelado, journal V2, snapshot, resultado,

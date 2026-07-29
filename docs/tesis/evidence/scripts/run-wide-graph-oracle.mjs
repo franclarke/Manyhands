@@ -10,15 +10,22 @@ import {
   wideGraphOracleCommands
 } from "./lib/wide-graph-oracle-plan.mjs";
 import { runPnpm } from "../warehouse/oracles/oracle-core.mjs";
+import {
+  assertFrozenWideGraphOracleContract,
+  WIDE_GRAPH_ORACLE_CONTRACT_VERSION,
+  WIDE_GRAPH_ORACLE_ID
+} from "./lib/wide-graph-oracle-contract.mjs";
 
 const exec = promisify(execFile);
-const ORACLE_ID = "warehouse-wide-graph-v2";
-const ORACLE_CONTRACT_VERSION = 2;
 const sourceRepository = resolve(argument("--repository") ?? fail("--repository is required"));
 const deliveredSha = argument("--delivered-sha") ?? fail("--delivered-sha is required");
 if (!/^[0-9a-f]{40}$/u.test(deliveredSha)) fail("--delivered-sha must be a full lowercase Git SHA");
 const moduleCount = Number(argument("--module-count") ?? fail("--module-count is required"));
 if (!Number.isInteger(moduleCount) || moduleCount < 1) fail("--module-count must be a positive integer");
+const oracleContractPath = resolve(argument("--oracle-contract") ?? fail("--oracle-contract is required"));
+const oracleContract = await assertFrozenWideGraphOracleContract(
+  JSON.parse(await readFile(oracleContractPath, "utf8"))
+);
 const target = await mkdtemp(join(tmpdir(), "manyhands-wide-oracle-"));
 let verifiedSha;
 const checks = [];
@@ -45,11 +52,13 @@ try {
     failures.push("study:wide-graph output is not deterministic");
   }
   checks.push("deterministic-probe");
-  if (evaluation.valuesCompared) checks.push("specimen-values");
+  if (evaluation.valuesCompared) checks.push("projection-order", "specimen-values");
   if (failures.length > 0) throw new Error(failures.join("\n"));
   await report({
-    oracleId: ORACLE_ID,
-    oracleContractVersion: ORACLE_CONTRACT_VERSION,
+    oracleId: WIDE_GRAPH_ORACLE_ID,
+    oracleContractVersion: WIDE_GRAPH_ORACLE_CONTRACT_VERSION,
+    oracleContractSha256: oracleContract.contractSha256,
+    oracleEvaluatorSha256: oracleContract.evaluator.sha256,
     sourceRepository,
     verifiedSha,
     moduleCount,
@@ -58,8 +67,10 @@ try {
   });
 } catch (error) {
   await report({
-    oracleId: ORACLE_ID,
-    oracleContractVersion: ORACLE_CONTRACT_VERSION,
+    oracleId: WIDE_GRAPH_ORACLE_ID,
+    oracleContractVersion: WIDE_GRAPH_ORACLE_CONTRACT_VERSION,
+    oracleContractSha256: oracleContract.contractSha256,
+    oracleEvaluatorSha256: oracleContract.evaluator.sha256,
     sourceRepository,
     verifiedSha,
     deliveredSha,
