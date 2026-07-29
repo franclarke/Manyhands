@@ -1249,3 +1249,15 @@ del `1/8` histórico.
   paquetes, web typecheck y build de los 12 packages PASS;
 - ambos reviewers fueron sólo lectura. Próximo paso: commit y nuevas re-reviews
   independientes.
+
+### Cierre de ticket 19
+
+- commits productivos locales: `8eaf3fb`, `7b020e3` y `2cf5814`, todos
+  descendientes de `bb9d102`;
+- re-reviews finales independientes sobre `2cf5814`: Standards PASS y Spec
+  PASS, ambas con 0 P0/P1/P2/P3 y sin modificaciones de reviewers;
+- mutación autenticada, 14 archivos/132 tests afectados, suite raíz
+  212/1474 con 2 skips, seis typechecks, web typecheck y build de 12 packages
+  permanecen PASS;
+- ticket 19 queda `closed`; CLAIM-040/041 siguen `partial` hasta evidencia
+  externa formal. La frontera lista siguiente es ticket 20.

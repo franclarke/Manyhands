@@ -4,13 +4,13 @@
 
 **Blocked by:** 18.
 
-**Status:** agent-working
+**Status:** closed
 
-- [ ] RED demuestra que el mismo `pnpm test` genérico no satisface criterios no trazados.
-- [ ] Obligaciones compilan evidencia criterion-aware con referencias exactas.
-- [ ] La matriz queda unverified ante criterio sin prueba relevante.
-- [ ] La matriz claim–evidencia enlaza la nueva prueba antes de elevar CLAIM-040/041.
-- [ ] Mutación autenticada, suites y reviews Standards/Spec pasan.
+- [x] RED demuestra que el mismo `pnpm test` genérico no satisface criterios no trazados.
+- [x] Obligaciones compilan evidencia criterion-aware con referencias exactas.
+- [x] La matriz queda unverified ante criterio sin prueba relevante.
+- [x] La matriz claim–evidencia enlaza la nueva prueba antes de elevar CLAIM-040/041.
+- [x] Mutación autenticada, suites y reviews Standards/Spec pasan.
 
 ## Evidencia de trabajo
 
@@ -85,4 +85,8 @@
 - Gates posteriores: 14 archivos/132 tests afectados PASS; suite raíz 212
   archivos/1474 tests PASS con 2 skips preexistentes; seis typechecks de
   paquetes, web typecheck y build de los 12 packages PASS.
-- Pendiente: commit y re-reviews. Ningún reviewer implementó correcciones.
+- Commit de remediación: `2cf5814`.
+- Re-reviews finales sobre `2cf5814`: Standards PASS y Spec PASS, ambas con
+  0 P0/P1/P2/P3. Ningún reviewer implementó correcciones.
+- Ticket cerrado el 2026-07-29. CLAIM-040/041 permanecen `partial`; ticket 20
+  es la próxima frontera.
