@@ -610,14 +610,41 @@ function expandReferencedScripts(
 function referencedPackageScriptTargets(command: string): Array<{ name: string; filter?: string; allWorkspaces: boolean }> {
   return command.split(/&&|\|\||;/u).flatMap((segment) => {
     if (!/\b(?:npm|pnpm|yarn|bun)\b/u.test(segment)) return [];
-    const filterMatch = /--filter(?:=|\s+)(?:"([^"]+)"|'([^']+)'|([^\s]+))/u.exec(segment);
-    const filter = filterMatch?.[1] ?? filterMatch?.[2] ?? filterMatch?.[3];
-    const allWorkspaces = /(?:^|\s)(?:-r|--recursive)(?:\s|$)/u.test(segment);
-    const explicit = /\brun\s+([A-Za-z0-9:._-]+)/u.exec(segment)?.[1];
     const tokens = segment.match(/"[^"]+"|'[^']+'|[^\s]+/gu)?.map((token) => token.replace(/^['"]|['"]$/gu, "")) ?? [];
-    const shorthand = tokens.filter((token) => !token.startsWith("-") && !["npm", "pnpm", "yarn", "bun", "run", filter].includes(token)).at(-1);
-    const name = explicit ?? shorthand;
-    return name === undefined ? [] : [{ name, ...(filter !== undefined ? { filter } : {}), allWorkspaces }];
+    const managerIndex = tokens.findIndex((token) => ["npm", "pnpm", "yarn", "bun"].includes(token));
+    if (managerIndex < 0) return [];
+    const filters: string[] = [];
+    let allWorkspaces = false;
+    let name: string | undefined;
+    for (let index = managerIndex + 1; index < tokens.length; index += 1) {
+      const token = tokens[index]!;
+      if (token === "--") break;
+      if (token === "--filter") {
+        if (tokens[index + 1] !== undefined) filters.push(tokens[index + 1]!);
+        index += 1;
+        continue;
+      }
+      if (token.startsWith("--filter=")) {
+        filters.push(token.slice("--filter=".length));
+        continue;
+      }
+      if (token === "-r" || token === "--recursive") {
+        allWorkspaces = true;
+        continue;
+      }
+      if (token.startsWith("-")) continue;
+      if (["exec", "dlx", "add", "install", "remove", "update"].includes(token)) return [];
+      if (token === "run") {
+        name = tokens[index + 1];
+        break;
+      }
+      name = token;
+      break;
+    }
+    if (name === undefined) return [];
+    return filters.length === 0
+      ? [{ name, allWorkspaces }]
+      : filters.map((filter) => ({ name, filter, allWorkspaces }));
   });
 }
 

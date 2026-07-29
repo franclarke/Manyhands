@@ -515,9 +515,14 @@ describe("ExactCandidateValidatorV2", () => {
       expectedPath: "packages/test-selector/src/index.ts"
     }],
     ["cross-workspace script", ["packages/api/package.json"], {
-      baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter \"@repo/api\" verify" } }), "packages/api/package.json": JSON.stringify({ name: "@repo/api", scripts: { verify: "vitest run" } }) },
-      candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter \"@repo/api\" verify" } }), "packages/api/package.json": JSON.stringify({ name: "@repo/api", scripts: { verify: "vitest run tests/smoke.test.ts" } }) },
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter \"@repo/api\" verify -- tests/all.test.ts" } }), "packages/api/package.json": JSON.stringify({ name: "@repo/api", scripts: { verify: "vitest run" } }) },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter \"@repo/api\" verify -- tests/all.test.ts" } }), "packages/api/package.json": JSON.stringify({ name: "@repo/api", scripts: { verify: "vitest run tests/smoke.test.ts" } }) },
       expectedPath: "packages/api/package.json#scripts.verify"
+    }],
+    ["multiple workspace filters", ["packages/web/package.json"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter @repo/api --filter @repo/web verify" } }), "packages/web/package.json": JSON.stringify({ name: "@repo/web", scripts: { verify: "vitest run" } }) },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter @repo/api --filter @repo/web verify" } }), "packages/web/package.json": JSON.stringify({ name: "@repo/web", scripts: { verify: "vitest run tests/smoke.test.ts" } }) },
+      expectedPath: "packages/web/package.json#scripts.verify"
     }],
     ["dotted package script", ["package.json"], {
       baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm run unit.test", "unit.test": "vitest run" } }) },
@@ -597,6 +602,10 @@ describe("ExactCandidateValidatorV2", () => {
     ["filtered homonym in source manifest", ["package.json"], {
       baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter @repo/api verify", verify: "vitest run" } }) },
       candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm --filter @repo/api verify", verify: "vitest run tests/root-smoke.test.ts" } }) }
+    }],
+    ["pnpm exec homonym", ["package.json"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "pnpm exec vitest", vitest: "node scripts/dev.mjs" } }) },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "pnpm exec vitest", vitest: "node scripts/dev-smoke.mjs" } }) }
     }],
     ["private alias in another package", ["packages/web/scripts/select.ts"], {
       baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" }, imports: { "#selector": "./scripts/root-select.ts" } }), "scripts/run-tests.mjs": 'import "#selector";', "scripts/root-select.ts": "runAll();", "packages/web/package.json": JSON.stringify({ imports: { "#selector": "./scripts/select.ts" } }), "packages/web/scripts/select.ts": "webAll();" },
