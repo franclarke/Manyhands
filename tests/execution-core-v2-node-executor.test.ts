@@ -494,6 +494,26 @@ describe("ExactCandidateValidatorV2", () => {
       candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'readFileSync("./test-selection.json");', "scripts/test-selection.json": "smoke" },
       expectedPath: "scripts/test-selection.json"
     }],
+    ["spawned selector", ["scripts/select-tests.mjs"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'spawn("node", ["./select-tests.mjs"]);', "scripts/select-tests.mjs": "runAll();" },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'spawn("node", ["./select-tests.mjs"]);', "scripts/select-tests.mjs": "process.exit(0);" },
+      expectedPath: "scripts/select-tests.mjs"
+    }],
+    ["Makefile test recipe", ["Makefile"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "make test" } }), "Makefile": "test:\n\tvitest run" },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "make test" } }), "Makefile": "test:\n\tvitest run tests/smoke.test.ts" },
+      expectedPath: "Makefile"
+    }],
+    ["workspace exports redirect", ["packages/test-selector/package.json"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'import "@repo/test-selector";', "packages/test-selector/package.json": JSON.stringify({ name: "@repo/test-selector", exports: "./src/all.ts" }), "packages/test-selector/src/all.ts": "runAll();", "packages/test-selector/src/smoke.ts": "runSmoke();" },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": 'import "@repo/test-selector";', "packages/test-selector/package.json": JSON.stringify({ name: "@repo/test-selector", exports: "./src/smoke.ts" }), "packages/test-selector/src/all.ts": "runAll();", "packages/test-selector/src/smoke.ts": "runSmoke();" },
+      expectedPath: "packages/test-selector/package.json"
+    }],
+    ["tsconfig path alias", ["packages/test-selector/src/index.ts"], {
+      baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "tsconfig.json": JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@tests/selector": ["packages/test-selector/src/index.ts"] } } }), "scripts/run-tests.mjs": 'import "@tests/selector";', "packages/test-selector/src/index.ts": "runAll();" },
+      candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "tsconfig.json": JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@tests/selector": ["packages/test-selector/src/index.ts"] } } }), "scripts/run-tests.mjs": 'import "@tests/selector";', "packages/test-selector/src/index.ts": "process.exit(0);" },
+      expectedPath: "packages/test-selector/src/index.ts"
+    }],
     ["opaque dynamic selector", ["scripts/select-tests.mjs"], {
       baseline: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": "const selector = process.env.TEST_SELECTOR; await import(selector);", "scripts/select-tests.mjs": "runAll();" },
       candidate: { "package.json": JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } }), "scripts/run-tests.mjs": "const selector = process.env.TEST_SELECTOR; await import(selector);", "scripts/select-tests.mjs": "process.exit(0);" },
@@ -529,6 +549,19 @@ describe("ExactCandidateValidatorV2", () => {
     const evidence = await validator.validate({ runId: "run-dev", attemptId: "attempt-dev", contract: compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!, candidateCommit: candidate, baselineCommit: baseline });
     expect(evidence.outcome).toBe("verified");
     expect(evidence.integrityFindings).toEqual([]);
+  });
+
+  it("does not reject an unrelated product change because the stable test wrapper is opaque", async () => {
+    const snapshot = bookingSnapshot();
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: snapshot }, compilerDependencies);
+    const candidate = "3".repeat(40);
+    const baseline = compiled.graph.baseCommit;
+    const manifest = JSON.stringify({ scripts: { test: "node scripts/run-tests.mjs" } });
+    const wrapper = "const selector = process.env.TEST_SELECTOR; await import(selector);";
+    const git = new FakeGitRunner({ diffRangeNameOnly: ["src/feature.ts"], showFileByRef: { [baseline]: { "package.json": manifest, "scripts/run-tests.mjs": wrapper, "src/feature.ts": "old();" }, [candidate]: { "package.json": manifest, "scripts/run-tests.mjs": wrapper, "src/feature.ts": "fixed();" } } });
+    const validator = new ExactCandidateValidatorV2({ git, worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }), repoRoot: "C:/repo/booking", repositorySnapshot: snapshot, runner: { run: async () => ({ passed: true, output: "passed", exitCode: 0 }) } });
+    const evidence = await validator.validate({ runId: "run-opaque-product", attemptId: "attempt-opaque-product", contract: compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")!, candidateCommit: candidate, baselineCommit: baseline });
+    expect(evidence.outcome).toBe("verified");
   });
 
   it("persists and rejects a feasible negative control that stays green on the baseline", async () => {

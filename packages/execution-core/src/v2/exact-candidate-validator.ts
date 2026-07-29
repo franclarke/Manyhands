@@ -148,7 +148,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     const configurationPaths = new Set(changedFiles.filter(isTestDiscoveryConfigurationPath));
     const manifestPaths = manifestAncestors(changedFiles);
     const validationCommands: Array<{ directory: string; command: string }> = [];
-    const workspacePackages = new Map<string, string[]>();
+    const moduleAliases = new Map<string, string[]>();
     for (const manifestPath of [...manifestPaths].sort()) {
       const [baselineManifest, candidateManifest] = await Promise.all([
         this.options.git.showFile({ cwd: this.options.repoRoot, ref: baselineCommit, path: manifestPath }),
@@ -161,12 +161,21 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       const directory = path.posix.dirname(manifestPath);
       validationCommands.push(...[...Object.values(baselineManifestScripts), ...Object.values(candidateManifestScripts)].map((command) => ({ directory, command })));
       for (const manifest of [baselineManifest, candidateManifest]) {
-        const workspacePackage = workspacePackageFromManifest(manifest, manifestPath);
-        if (workspacePackage !== undefined) workspacePackages.set(workspacePackage.name, workspacePackage.entries);
+        mergeModuleAliases(moduleAliases, moduleAliasesFromManifest(manifest, manifestPath));
       }
       if (changedFiles.includes(manifestPath) && embeddedTestConfigChanged(baselineManifest, candidateManifest)) configurationPaths.add(manifestPath);
+      if (changedFiles.includes(manifestPath) && moduleResolutionManifestChanged(baselineManifest, candidateManifest)) configurationPaths.add(manifestPath);
     }
-    for (const referenced of await this.changedValidationDependencies(validationCommands, changedFiles, baselineCommit, candidateCommit, workspacePackages, signal)) configurationPaths.add(referenced);
+    for (const tsconfigPath of configurationAncestors(changedFiles)) {
+      const [baselineConfig, candidateConfig] = await Promise.all([
+        this.options.git.showFile({ cwd: this.options.repoRoot, ref: baselineCommit, path: tsconfigPath }),
+        this.options.git.showFile({ cwd: this.options.repoRoot, ref: candidateCommit, path: tsconfigPath })
+      ]);
+      mergeModuleAliases(moduleAliases, moduleAliasesFromTsconfig(baselineConfig, tsconfigPath));
+      mergeModuleAliases(moduleAliases, moduleAliasesFromTsconfig(candidateConfig, tsconfigPath));
+      if (changedFiles.includes(tsconfigPath) && baselineConfig !== candidateConfig) configurationPaths.add(tsconfigPath);
+    }
+    for (const referenced of await this.changedValidationDependencies(validationCommands, changedFiles, baselineCommit, candidateCommit, moduleAliases, signal)) configurationPaths.add(referenced);
     return {
       findings: detectTestIntegrityFindings({
         baselineTestFiles: [...baselineFiles].sort(),
@@ -186,7 +195,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
     changedFiles: readonly string[],
     baselineCommit: string,
     candidateCommit: string,
-    workspacePackages: ReadonlyMap<string, readonly string[]>,
+    moduleAliases: ReadonlyMap<string, readonly string[]>,
     signal?: AbortSignal
   ): Promise<string[]> {
     const changed = new Set(changedFiles.map((file) => file.replaceAll("\\", "/")));
@@ -216,9 +225,9 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
           pending.length = 0;
           break;
         }
-        if (hasOpaqueValidationDependency(contents)) found.add(file);
+        if (hasOpaqueValidationDependency(contents) && (changed.has(file) || [...changed].some((changedFile) => path.posix.dirname(changedFile) === path.posix.dirname(file)))) found.add(file);
         for (const reference of moduleReferences(contents)) {
-          pending.push(...resolvedModuleReferenceCandidates(path.posix.dirname(file), reference, workspacePackages).map((candidatePath) => ({ file: candidatePath, depth: depth + 1 })));
+          pending.push(...resolvedModuleReferenceCandidates(path.posix.dirname(file), reference, moduleAliases).map((candidatePath) => ({ file: candidatePath, depth: depth + 1 })));
         }
       }
     }
@@ -269,18 +278,33 @@ function manifestAncestors(changedFiles: readonly string[]): Set<string> {
   return manifests;
 }
 
+function configurationAncestors(changedFiles: readonly string[]): Set<string> {
+  const configs = new Set<string>(["tsconfig.json"]);
+  for (const file of changedFiles) {
+    let directory = path.posix.dirname(file.replaceAll("\\", "/"));
+    while (directory !== ".") {
+      configs.add(`${directory}/tsconfig.json`);
+      directory = path.posix.dirname(directory);
+    }
+  }
+  return configs;
+}
+
 function commandFileReferences(directory: string, command: string): string[] {
   const tokens = command.match(/"[^"]+"|'[^']+'|[^\s;&|]+/gu) ?? [];
-  return tokens.flatMap((raw) => {
+  const references = tokens.flatMap((raw) => {
     const unquoted = raw.replace(/^["']|["']$/gu, "");
     const value = (unquoted.includes("=") ? unquoted.slice(unquoted.indexOf("=") + 1) : unquoted).replaceAll("\\", "/");
     return looksLikeFileReference(value) ? resolvedReferenceCandidates(directory, value) : [];
   });
+  if (tokens[0]?.replace(/^['"]|['"]$/gu, "") === "make") references.push(...resolvedReferenceCandidates(directory, "./Makefile"));
+  return references;
 }
 
 function moduleReferences(contents: string): string[] {
   const references: string[] = [];
   for (const match of contents.matchAll(/(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire(?:\.resolve)?\s*\(|\b(?:readFileSync|spawn|execFile)\s*\()\s*["']([^"']+)["']/gu)) references.push(match[1]!);
+  for (const match of contents.matchAll(/["'](\.\.?\/[^"']+)["']/gu)) references.push(match[1]!);
   return references;
 }
 
@@ -314,30 +338,79 @@ function resolvedReferenceCandidates(directory: string, reference: string): stri
 function resolvedModuleReferenceCandidates(
   directory: string,
   reference: string,
-  workspacePackages: ReadonlyMap<string, readonly string[]>
+  moduleAliases: ReadonlyMap<string, readonly string[]>
 ): string[] {
   if (reference.startsWith(".")) return resolvedReferenceCandidates(directory, reference);
-  const packageName = reference.startsWith("@") ? reference.split("/").slice(0, 2).join("/") : reference.split("/")[0]!;
-  const entries = workspacePackages.get(packageName);
-  if (entries === undefined) return [];
-  const subpath = reference.slice(packageName.length).replace(/^\//u, "");
-  return subpath.length === 0 ? [...entries] : resolvedReferenceCandidates(path.posix.dirname(entries[0]!), `./${subpath}`);
+  const exact = moduleAliases.get(reference);
+  if (exact !== undefined) return [...exact];
+  for (const [alias, entries] of moduleAliases) {
+    if (!alias.includes("*")) continue;
+    const [prefix, suffix = ""] = alias.split("*");
+    if (!reference.startsWith(prefix!) || !reference.endsWith(suffix)) continue;
+    const wildcard = reference.slice(prefix!.length, reference.length - suffix.length);
+    return entries.map((entry) => entry.replaceAll("*", wildcard));
+  }
+  return [];
 }
 
-function workspacePackageFromManifest(contents: string | null, manifestPath: string): { name: string; entries: string[] } | undefined {
+function moduleAliasesFromManifest(contents: string | null, manifestPath: string): Map<string, string[]> {
+  const aliases = new Map<string, string[]>();
   const manifest = parseManifest(contents);
-  if (typeof manifest.name !== "string" || manifest.name.length === 0) return undefined;
+  if (typeof manifest.name !== "string" || manifest.name.length === 0) return aliases;
   const directory = path.posix.dirname(manifestPath);
-  const declaredEntries = [manifest.exports, manifest.module, manifest.main, manifest.types].flatMap(manifestEntryStrings);
-  const entries = (declaredEntries.length > 0 ? declaredEntries : ["./src/index.ts", "./index.ts", "./index.js"])
-    .flatMap((entry) => resolvedReferenceCandidates(directory, entry));
-  return { name: manifest.name, entries: [...new Set(entries)] };
+  const exports = manifest.exports;
+  const rootEntries = typeof exports === "string" || !isRecord(exports)
+    ? [exports, manifest.module, manifest.main, manifest.types].flatMap(manifestEntryStrings)
+    : manifestEntryStrings(exports["."]);
+  aliases.set(manifest.name, resolveDeclaredEntries(directory, rootEntries.length > 0 ? rootEntries : ["./src/index.ts", "./index.ts", "./index.js"]));
+  if (isRecord(exports)) {
+    for (const [key, value] of Object.entries(exports)) {
+      if (key.startsWith("./") && key !== ".") aliases.set(`${manifest.name}/${key.slice(2)}`, resolveDeclaredEntries(directory, manifestEntryStrings(value)));
+    }
+  }
+  if (isRecord(manifest.imports)) {
+    for (const [key, value] of Object.entries(manifest.imports)) aliases.set(key, resolveDeclaredEntries(directory, manifestEntryStrings(value)));
+  }
+  return aliases;
+}
+
+function moduleAliasesFromTsconfig(contents: string | null, configPath: string): Map<string, string[]> {
+  const aliases = new Map<string, string[]>();
+  const compilerOptions = parseManifest(contents).compilerOptions;
+  if (!isRecord(compilerOptions) || !isRecord(compilerOptions.paths)) return aliases;
+  const directory = path.posix.dirname(configPath);
+  const baseUrl = typeof compilerOptions.baseUrl === "string" ? compilerOptions.baseUrl : ".";
+  const baseDirectory = path.posix.normalize(path.posix.join(directory === "." ? "" : directory, baseUrl));
+  for (const [alias, targets] of Object.entries(compilerOptions.paths)) {
+    if (!Array.isArray(targets)) continue;
+    aliases.set(alias, targets.filter((target): target is string => typeof target === "string").flatMap((target) => resolvedReferenceCandidates(baseDirectory, `./${target}`)));
+  }
+  return aliases;
+}
+
+function mergeModuleAliases(target: Map<string, string[]>, source: ReadonlyMap<string, readonly string[]>): void {
+  for (const [alias, entries] of source) target.set(alias, [...new Set([...(target.get(alias) ?? []), ...entries])]);
+}
+
+function resolveDeclaredEntries(directory: string, entries: readonly string[]): string[] {
+  return [...new Set(entries.flatMap((entry) => resolvedReferenceCandidates(directory, entry)))];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function manifestEntryStrings(value: unknown): string[] {
   if (typeof value === "string") return [value];
   if (value === null || typeof value !== "object" || Array.isArray(value)) return [];
   return Object.values(value as Record<string, unknown>).flatMap(manifestEntryStrings);
+}
+
+function moduleResolutionManifestChanged(baseline: string | null, candidate: string | null): boolean {
+  const before = parseManifest(baseline);
+  const after = parseManifest(candidate);
+  return ["name", "exports", "imports", "main", "module", "types"]
+    .some((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]));
 }
 
 function embeddedTestConfigChanged(baseline: string | null, candidate: string | null): boolean {
