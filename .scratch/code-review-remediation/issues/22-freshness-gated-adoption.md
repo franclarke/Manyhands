@@ -4,9 +4,9 @@
 
 **Blocked by:** 21.
 
-**Status:** agent-working
+**Status:** closed
 
-- [ ] RED cambia un input durante el intento y obtiene `attempt.stale` sin artifact adoption.
-- [ ] Driver V2 no construye adopciones por fuera del gate canónico.
-- [ ] Fencing y exact-commit validation permanecen verdes.
-- [ ] Reviews Standards/Spec pasan.
+- [x] RED cambia un input durante el intento y obtiene `attempt.stale` sin artifact adoption.
+- [x] Driver V2 no construye adopciones por fuera del gate canónico.
+- [x] Fencing y exact-commit validation permanecen verdes.
+- [x] Reviews Standards/Spec pasan.

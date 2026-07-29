@@ -1435,3 +1435,21 @@ del `1/8` histórico.
 - una regresión habilita inicialmente sólo `node-api`, vuelve stale su primer
   intento, refresca todas las capacidades y prueba que el run ejecuta los cuatro
   nodos y alcanza `result_ready`. Pendientes: gates, commit y re-reviews finales.
+
+### Cierre de ticket 22
+
+- commits locales: `390b7bd`, `b7250ec` y `6e0bec3`, descendientes de
+  `a48bb3a`;
+- reviews finales independientes sobre `6e0bec3`: Standards PASS y Spec PASS,
+  ambas con 0 P0/P1/P2/P3 y sin modificaciones;
+- gate afectado final: 14 archivos/68 tests PASS; typechecks de
+  `run-coordinator`, `orchestrator-graph` y web PASS;
+- suite raíz secuencial final: 544 suites, 1499 tests passed, 2 skipped,
+  0 failed. El run adverso anterior conservó 1497 PASS y el único fallo del
+  append ambiguo antes de su remediación;
+- build de los 12 packages y web production build PASS con Node `v22.23.1` y
+  pnpm `7.29.3`;
+- evidencia JSON adversa y final preservada fuera del repo en
+  `C:\Users\franc_rgy\.codex\tmp\manyhands-ticket19-20260729-115928\runtime-logs`;
+- ticket 22 queda `closed`. La frontera recalculada habilita ticket 23;
+  ticket 26 continúa bloqueado por 25.
