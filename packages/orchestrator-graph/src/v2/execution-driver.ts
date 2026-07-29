@@ -85,6 +85,9 @@ export interface V2ExecutionFreshnessInputs {
   contracts: TaskContractBundle[];
   repositoryContextDigest: string;
   executorProfile: V2ExecutorProfile;
+  materializableNodeIds: string[];
+  availableExecutorNodeIds: string[];
+  conflictConstraints: ConflictConstraintEvidence[];
 }
 
 export interface V2ExecutionRunInput {
@@ -111,7 +114,7 @@ export class V2ExecutionDriver {
 
   async run(input: V2ExecutionRunInput): Promise<RunProjection> {
     let prepared = prepare(input);
-    const maxWaves = input.maxWaves ?? Object.keys(prepared.graph.nodes).length * 3;
+    let maxWaves = input.maxWaves ?? Object.keys(prepared.graph.nodes).length * 3;
     for (let wave = 0; wave < maxWaves; wave += 1) {
       const current = await this.options.coordinator.load(input.runId);
       const staleAttemptIds = new Set(
@@ -142,8 +145,14 @@ export class V2ExecutionDriver {
           graph: loaded.graph,
           contracts: loaded.contracts,
           repositoryContextDigest: loaded.repositoryContextDigest,
-          executorProfile: loaded.executorProfile
+          executorProfile: loaded.executorProfile,
+          materializableNodeIds: loaded.materializableNodeIds,
+          availableExecutorNodeIds: loaded.availableExecutorNodeIds,
+          conflictConstraints: loaded.conflictConstraints
         });
+        if (input.maxWaves === undefined) {
+          maxWaves = Math.max(maxWaves, wave + 1 + Object.keys(prepared.graph.nodes).length * 3);
+        }
       }
     }
     throw new Error(`Execution exceeded ${maxWaves} waves without reaching a stable state.`);

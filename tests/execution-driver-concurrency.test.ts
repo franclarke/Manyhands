@@ -393,6 +393,9 @@ function freshness(input: V2ExecutionRunInput) {
     graph: input.graph,
     contracts: input.contracts,
     repositoryContextDigest: input.repositoryContextDigest,
-    executorProfile: input.executorProfile
+    executorProfile: input.executorProfile,
+    materializableNodeIds: input.materializableNodeIds,
+    availableExecutorNodeIds: input.availableExecutorNodeIds,
+    conflictConstraints: input.conflictConstraints
   };
 }

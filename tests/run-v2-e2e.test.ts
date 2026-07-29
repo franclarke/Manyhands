@@ -22,7 +22,10 @@ describe("V2 productive run", () => {
         graph: compiled.graph,
         contracts: compiled.contracts,
         repositoryContextDigest: "sha256:repository",
-        executorProfile: { id: "claude-code-cli", revision: "sonnet" }
+        executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+        materializableNodeIds: Object.keys(compiled.graph.nodes),
+        availableExecutorNodeIds: Object.keys(compiled.graph.nodes),
+        conflictConstraints: []
       }),
       execute: async (input) => {
         executed.push(input);

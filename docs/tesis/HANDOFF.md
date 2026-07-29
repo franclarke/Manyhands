@@ -1420,3 +1420,18 @@ del `1/8` histórico.
   ajenos;
 - gate posterior: 14 archivos/67 tests afectados, fencing y exact-candidate
   PASS. Pendientes: typechecks/builds, commit y re-review Standards.
+
+### Segunda review y remediación de ticket 22
+
+- Spec volvió a pasar con 0 P0/P1/P2/P3;
+- Standards confirmó resueltos los dos findings anteriores, pero halló P1:
+  refresh actualizaba grafo/contratos/fingerprint y conservaba capacidades y
+  constraints del scheduler inicial, pudiendo dejar nodos nuevos sin executor
+  ni base materializable;
+- el puerto de freshness ahora reemplaza como una unidad grafo, contratos,
+  snapshot, perfil, nodos materializables, executors disponibles y constraints.
+  El presupuesto default de waves también crece si la revisión vigente amplía
+  el grafo;
+- una regresión habilita inicialmente sólo `node-api`, vuelve stale su primer
+  intento, refresca todas las capacidades y prueba que el run ejecuta los cuatro
+  nodos y alcanza `result_ready`. Pendientes: gates, commit y re-reviews finales.

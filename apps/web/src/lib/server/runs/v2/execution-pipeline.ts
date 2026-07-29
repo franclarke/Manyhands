@@ -181,7 +181,10 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
           graph: current.graph,
           contracts: current.contracts,
           repositoryContextDigest: current.repositorySnapshot.snapshotId,
-          executorProfile: { id: execution.executorId, revision: executorProfileRevision(execution) }
+          executorProfile: { id: execution.executorId, revision: executorProfileRevision(execution) },
+          materializableNodeIds: Object.keys(current.graph.nodes),
+          availableExecutorNodeIds: Object.keys(current.graph.nodes),
+          conflictConstraints: conflictEvidence(current.graph)
         };
       },
       execute: async (input): Promise<V2NodeExecutionOutcome> => nodeExecutor.execute({

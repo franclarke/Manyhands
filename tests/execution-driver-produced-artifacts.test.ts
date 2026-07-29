@@ -61,7 +61,10 @@ describe("artifact adoption for every contract a node produces", () => {
         graph: compiled.graph,
         contracts: compiled.contracts,
         repositoryContextDigest: "sha256:repository",
-        executorProfile: { id: "codex-cli", revision: "gpt-5.5" }
+        executorProfile: { id: "codex-cli", revision: "gpt-5.5" },
+        materializableNodeIds: Object.keys(compiled.graph.nodes),
+        availableExecutorNodeIds: Object.keys(compiled.graph.nodes),
+        conflictConstraints: []
       }),
       execute: async (input) => {
         executed.push(input.node.id);

@@ -20,6 +20,64 @@ import {
 const at = "2026-07-17T12:00:00.000Z";
 
 describe("V2ExecutionDriver", () => {
+  it("refreshes scheduler capabilities with the inputs that replace a stale attempt", async () => {
+    const compiled = compileGraphRevision(
+      { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const revisedContracts = structuredClone(compiled.contracts);
+    const revisedApi = revisedContracts.find((bundle) => bundle.task.nodeId === "node-api")!;
+    revisedApi.validation.revision = "validation-r2";
+    revisedApi.task.validation.revision = "validation-r2";
+    let currentContracts = compiled.contracts;
+    let availableExecutorNodeIds = ["node-api"];
+    const executed: string[] = [];
+    const harness = coordinatorHarness(compiled.graph.graphId);
+    const driver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      loadCurrentInputs: async () => ({
+        graph: compiled.graph,
+        contracts: currentContracts,
+        repositoryContextDigest: "sha256:repository",
+        executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+        materializableNodeIds: Object.keys(compiled.graph.nodes),
+        availableExecutorNodeIds,
+        conflictConstraints: []
+      }),
+      execute: async (input) => {
+        executed.push(input.node.id);
+        if (executed.length === 1) {
+          currentContracts = revisedContracts;
+          availableExecutorNodeIds = Object.keys(compiled.graph.nodes);
+        }
+        return {
+          ...(success(input) as Extract<V2NodeExecutionOutcome, { kind: "success" }>),
+          ...(input.node.id === compiled.graph.rootId
+            ? { integrationManifestId: "integration-root", finalManifestId: "fresh-capabilities-final" }
+            : {})
+        };
+      }
+    });
+
+    const state = await driver.run({
+      runId: "run-v2",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 1 },
+      materializableNodeIds: Object.keys(compiled.graph.nodes),
+      availableExecutorNodeIds: ["node-api"],
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+
+    expect(executed.filter((nodeId) => nodeId === "node-api")).toHaveLength(2);
+    expect(new Set(executed)).toEqual(new Set(Object.keys(compiled.graph.nodes)));
+    expect(state.lifecycle).toBe("result_ready");
+  });
+
   it("marks a result stale when a material contract changes while its attempt is running", async () => {
     const breakdown = bookingBreakdown();
     if (breakdown.root.kind !== "composite") throw new Error("Fixture must start composite.");
@@ -45,7 +103,10 @@ describe("V2ExecutionDriver", () => {
         graph: atomic.graph,
         contracts: currentContracts,
         repositoryContextDigest: "sha256:repository",
-        executorProfile: { id: "claude-code-cli", revision: "sonnet" }
+        executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+        materializableNodeIds: Object.keys(atomic.graph.nodes),
+        availableExecutorNodeIds: Object.keys(atomic.graph.nodes),
+        conflictConstraints: []
       }),
       execute: async (input) => {
         executions += 1;
@@ -323,7 +384,10 @@ function staticInputs(compiled: ReturnType<typeof compileGraphRevision>) {
     graph: compiled.graph,
     contracts: compiled.contracts,
     repositoryContextDigest: "sha256:repository",
-    executorProfile: { id: "claude-code-cli", revision: "sonnet" }
+    executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+    materializableNodeIds: Object.keys(compiled.graph.nodes),
+    availableExecutorNodeIds: Object.keys(compiled.graph.nodes),
+    conflictConstraints: []
   });
 }
 
