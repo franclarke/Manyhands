@@ -37,6 +37,18 @@ describe("JsonIntegrationOperationJournal", () => {
       journal.open(operationInput({ operationId: "operation-new", fencingToken: 8 }))
     ).rejects.toBeInstanceOf(IntegrationOperationLeaseError);
   });
+
+  it("allows an explicitly authorized run takeover to resume an incomplete journal", async () => {
+    const journal = await createJournal();
+    const operation = await journal.open(operationInput());
+    await journal.update(operation, { state: "child_pending" });
+
+    const takeover = await journal.open(operationInput({ operationId: "operation-new", fencingToken: 8, allowTakeover: true }));
+
+    expect(takeover.operationId).toBe("operation-new");
+    expect(takeover.fencingToken).toBe(8);
+    expect(takeover.state).toBe("child_pending");
+  });
 });
 
 async function createJournal(): Promise<JsonIntegrationOperationJournal> {
@@ -45,13 +57,14 @@ async function createJournal(): Promise<JsonIntegrationOperationJournal> {
   return new JsonIntegrationOperationJournal(directory, () => "2026-07-15T00:00:00.000Z");
 }
 
-function operationInput(overrides: { operationId?: string; fencingToken?: number } = {}) {
+function operationInput(overrides: { operationId?: string; fencingToken?: number; allowTakeover?: boolean } = {}) {
   return {
     runId: "run-1",
     parentNodeId: "parent",
     attemptId: "attempt-1",
     operationId: overrides.operationId ?? "operation-1",
     fencingToken: overrides.fencingToken ?? 7,
+    ...(overrides.allowTakeover === true ? { allowTakeover: true } : {}),
     worktreePath: "C:/repo/.manyhands/worktrees/run-1/parent",
     baseSha: "BASE",
     children: [{ taskId: "child", commitSha: "CHILD", state: "pending" as const }]

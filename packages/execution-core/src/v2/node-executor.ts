@@ -9,6 +9,7 @@ import type { GraphRevision, TaskNodeV2 } from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
 
 import { ExecutionBaseBuilder, type BuiltExecutionBase } from "../base/execution-base-builder";
+import type { FinalArtifactManifest } from "../delivery/candidate-preparer";
 import { AGENT_STATUS_PROTOCOL_INSTRUCTIONS } from "../executor/status-channel";
 import type { AgentExecutorFactory } from "../executor/factory";
 import type { StageSelection } from "../executor/registry";
@@ -20,6 +21,7 @@ import {
   type IntegrationChildArtifact,
   type IntegrationManifest
 } from "../integration/manifest";
+import type { IntegrationOperationJournal } from "../integration/operation-journal";
 import { ResultRecorder } from "../result/recorder";
 import type { ExecutionConfig, WorktreeRecord } from "../types";
 import { WorktreeManager } from "../worktree/manager";
@@ -48,6 +50,7 @@ export interface V2ExecutionEvidenceMatrix {
     evidenceRefs: string[];
   }>;
   outcome: "verified" | "unverified" | "failed";
+  validationRecipeDigest?: string;
   observations: CriterionEvidenceObservation[];
   integrityFindings?: Array<{
     findingId: string;
@@ -83,7 +86,10 @@ export interface V2FinalCandidatePort {
     sourceTargetFingerprint: string;
     targetBranch: string;
     targetHead: string;
-  }): Promise<{ manifestId: string }>;
+    graphRevision: number;
+    artifactIds: string[];
+    validationRecipeDigest: string;
+  }): Promise<{ manifestId: string; finalManifest: FinalArtifactManifest }>;
 }
 
 export interface V2PhysicalNodeExecutionInput {
@@ -124,6 +130,7 @@ export type V2PhysicalNodeExecutionOutcome =
       integrationManifestId?: string;
       repairObservations?: Array<{ kind: "code" | "integration"; pass: number; evidenceRefs: string[] }>;
       finalManifestId?: string;
+      finalManifest?: FinalArtifactManifest;
     }
   | {
       kind: "failure";
@@ -145,6 +152,13 @@ export interface V2NodeExecutorOptions {
   recorder?: ResultRecorder;
   writeInstructions?(path: string, content: string): Promise<void>;
   now?(): string;
+  integrationOperation?: {
+    journal: IntegrationOperationJournal;
+    runId: string;
+    operationId?: string;
+    fencingToken?: number;
+    allowTakeover?: boolean;
+  };
 }
 
 /** Executes one V2 node without translating its bundle back to AgentTaskContract. */
@@ -265,14 +279,21 @@ export class V2NodeExecutor {
       if (this.options.finalCandidate === undefined) {
         return { kind: "failure", reason: "Root execution has no final-candidate preparer." };
       }
-      const finalManifestId = (await this.options.finalCandidate.prepare({
+      const finalManifest = await this.options.finalCandidate.prepare({
         runId: input.runId,
         attemptId: input.attemptId,
         candidateCommit: success.candidateCommit,
         evidenceMatrix: success.evidenceMatrix,
-        ...input.target
-      })).manifestId;
-      return { ...success, finalManifestId };
+        ...input.target,
+        graphRevision: input.graph.revision,
+        artifactIds: input.contract.task.produces.map(({ id }) => id),
+        validationRecipeDigest: requiredValidationRecipeDigest(success.evidenceMatrix)
+      });
+      return {
+        ...success,
+        finalManifestId: finalManifest.manifestId,
+        finalManifest: finalManifest.finalManifest
+      };
     } catch (error) {
       return { kind: "failure", reason: describe(error) };
     } finally {
@@ -342,7 +363,12 @@ export class V2NodeExecutor {
       });
       let manifest: IntegrationManifest;
       try {
-        manifest = await integrator.integrate({ request, worktreePath: base.worktree.path, signal: integrationSignal });
+        manifest = await integrator.integrate({
+          request,
+          worktreePath: base.worktree.path,
+          signal: integrationSignal,
+          ...(this.options.integrationOperation !== undefined ? { integrationOperation: this.options.integrationOperation } : {})
+        });
         candidateToAnchor = manifest.candidateSha;
       } catch (error) {
         return {
@@ -378,6 +404,7 @@ export class V2NodeExecutor {
         to: manifest.candidateSha
       });
       let finalManifestId: string | undefined;
+      let finalManifest: FinalArtifactManifest | undefined;
       if (input.node.kind === "root") {
         if (this.options.finalCandidate === undefined) {
           return {
@@ -386,19 +413,25 @@ export class V2NodeExecutor {
             reason: "Root execution has no final-candidate preparer."
           };
         }
-        finalManifestId = (await this.options.finalCandidate.prepare({
+        const preparedFinal = await this.options.finalCandidate.prepare({
           runId: input.runId,
           attemptId: input.attemptId,
           candidateCommit: manifest.candidateSha,
           evidenceMatrix,
-          ...input.target
-        })).manifestId;
+          ...input.target,
+          graphRevision: input.graph.revision,
+          artifactIds: input.contract.task.produces.map(({ id }) => id),
+          validationRecipeDigest: requiredValidationRecipeDigest(evidenceMatrix)
+        });
+        finalManifestId = preparedFinal.manifestId;
+        finalManifest = preparedFinal.finalManifest;
       }
       return {
         ...successOutcome(manifest.candidateSha, changedFiles, evidenceMatrix),
         integrationManifestId: manifest.manifestId,
         ...(repairObservations !== undefined ? { repairObservations } : {}),
-        ...(finalManifestId !== undefined ? { finalManifestId } : {})
+        ...(finalManifestId !== undefined ? { finalManifestId } : {}),
+        ...(finalManifest !== undefined ? { finalManifest } : {})
       };
     } finally {
       await this.releaseExecutionBase(base, input, candidateToAnchor);
@@ -683,6 +716,7 @@ export const executionFailureReasonForTest = executionFailureReason;
 
 function executionFailureReason(result: {
   status: string;
+  failureKind?: string | undefined;
   stderrTail?: string | undefined;
   stdoutTail?: string | undefined;
   failureHint?: string | undefined;
@@ -698,9 +732,16 @@ function executionFailureReason(result: {
       : "the agent changed files outside the declared scope";
     return `${result.status}: ${detail}`;
   }
-  return [result.status, result.failureHint, result.stderrTail, result.stdoutTail].filter((value) => value !== undefined && value.length > 0).join(": ");
+  return [result.failureKind, result.status, result.failureHint, result.stderrTail, result.stdoutTail]
+    .filter((value) => value !== undefined && value.length > 0)
+    .join(": ");
 }
 
 function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function requiredValidationRecipeDigest(matrix: Pick<V2ExecutionEvidenceMatrix, "validationRecipeDigest">): string {
+  if (matrix.validationRecipeDigest === undefined) throw new Error("Verified root evidence has no validation recipe digest.");
+  return matrix.validationRecipeDigest;
 }

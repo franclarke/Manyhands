@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import type { GitRunner } from "../git/runner";
+import type { IntegrationOperationJournal } from "./operation-journal";
 
 const ContractRefSchema = z.object({ id: EntityIdSchema, revision: NonEmptyStringSchema }).strict();
 const FingerprintSchema = z.string().regex(/^sha256:[0-9a-f]{64}$/u);
@@ -102,15 +103,81 @@ export interface IntegrationManifestExecutorDeps {
 export class IntegrationManifestExecutor {
   constructor(private readonly deps: IntegrationManifestExecutorDeps) {}
 
-  async integrate(input: { request: IntegrationRequestManifest; worktreePath: string; signal?: AbortSignal }): Promise<IntegrationManifest> {
+  async integrate(input: {
+    request: IntegrationRequestManifest;
+    worktreePath: string;
+    signal?: AbortSignal;
+    integrationOperation?: {
+      journal: IntegrationOperationJournal;
+      runId: string;
+      operationId?: string;
+      fencingToken?: number;
+      allowTakeover?: boolean;
+    };
+  }): Promise<IntegrationManifest> {
     const { request, worktreePath, signal } = input;
     signal?.throwIfAborted();
     const base = manifestBase(request);
     if (request.missingRequiredArtifactIds.length > 0) {
       return { ...base, disposition: "failed", errors: request.missingRequiredArtifactIds.map((artifactId) => ({ code: "missing_required_artifact", artifactId, message: `Required artifact ${artifactId} was not adopted.` })) };
     }
+    let journalOperation = input.integrationOperation === undefined
+      ? undefined
+      : await input.integrationOperation.journal.open({
+          runId: input.integrationOperation.runId,
+          parentNodeId: request.compositeNode.id,
+          attemptId: request.integrationAttemptId,
+          requestManifestId: request.manifestId,
+          worktreePath,
+          baseSha: request.base.resultingCommit,
+          children: request.childArtifacts.map((artifact) => ({
+            taskId: artifact.artifactId,
+            commitSha: artifact.location,
+            state: "pending" as const
+          })),
+          ...(input.integrationOperation.operationId !== undefined ? { operationId: input.integrationOperation.operationId } : {}),
+          ...(input.integrationOperation.fencingToken !== undefined ? { fencingToken: input.integrationOperation.fencingToken } : {}),
+          ...(input.integrationOperation.allowTakeover === true ? { allowTakeover: true } : {})
+        });
+    if (journalOperation?.state === "completed" && journalOperation.resultManifest !== undefined) return journalOperation.resultManifest;
+
     const initialHead = await this.deps.git.head(worktreePath);
-    if (initialHead !== request.base.resultingCommit) return { ...base, disposition: "failed", errors: [{ code: "base_mismatch", message: `Integration base is ${initialHead}, expected ${request.base.resultingCommit}.` }] };
+    if (initialHead !== request.base.resultingCommit && journalOperation !== undefined) {
+      const startedChild = journalOperation.children.find((child) => child.state === "started" && child.startedFromSha !== undefined);
+      const startedFromSha = startedChild?.startedFromSha;
+      if (startedChild !== undefined && startedFromSha !== undefined && startedFromSha !== initialHead) {
+        const sourceParent = await this.deps.git.revParse(worktreePath, `${startedChild.commitSha}^1`);
+        const clean = (await this.deps.git.statusPorcelain(worktreePath)).length === 0
+          && (await this.deps.git.unmergedFiles(worktreePath)).length === 0
+          && (await this.deps.git.cherryPickHead(worktreePath)) === undefined;
+        const sourceDiff = await this.deps.git.diffRange({ cwd: worktreePath, from: sourceParent, to: startedChild.commitSha });
+        const appliedDiff = await this.deps.git.diffRange({ cwd: worktreePath, from: startedFromSha, to: initialHead });
+        const currentParent = await this.deps.git.revParse(worktreePath, `${initialHead}^1`);
+        const sourceMessage = await this.deps.git.commitMessage(worktreePath, startedChild.commitSha);
+        const currentMessage = await this.deps.git.commitMessage(worktreePath, initialHead);
+        const hasCherryPickProvenance = currentMessage.includes(`cherry picked from commit ${startedChild.commitSha}`)
+          && sourceMessage.length > 0;
+        if (clean
+          && currentParent === startedFromSha
+          && hasCherryPickProvenance
+          && await this.deps.git.isAncestor({ cwd: worktreePath, ancestor: startedFromSha, descendant: initialHead })
+          && sourceDiff === appliedDiff) {
+          journalOperation = await input.integrationOperation!.journal.update(journalOperation, {
+            state: "child_applied",
+            currentChildId: startedChild.taskId,
+            children: journalOperation.children.map((child) => child.taskId === startedChild.taskId
+              ? { ...child, state: "applied" as const, resultSha: initialHead, application: "cherry_picked" as const }
+              : child)
+          });
+        }
+      }
+    }
+    const lastAppliedSha = [...(journalOperation?.children ?? [])]
+      .filter((child) => child.state === "applied" && child.resultSha !== undefined)
+      .at(-1)?.resultSha;
+    if (initialHead !== request.base.resultingCommit && initialHead !== lastAppliedSha) {
+      return { ...base, disposition: "failed", errors: [{ code: "base_mismatch", message: `Integration base is ${initialHead}, expected ${request.base.resultingCommit}.` }] };
+    }
 
     const operations: IntegrationManifest["operations"] = [];
     let repairAttempt: IntegrationManifest["repairAttempt"];
@@ -118,10 +185,43 @@ export class IntegrationManifestExecutor {
       signal?.throwIfAborted();
       if (artifact.kind !== "commit") return { ...base, operations, disposition: "failed", errors: [{ code: "unsupported_artifact", artifactId: artifact.artifactId, message: `Artifact ${artifact.artifactId} requires a ${artifact.kind} materializer.` }] };
       const preSha = await this.deps.git.head(worktreePath);
+      const recordedChild = journalOperation?.children.find((child) => child.taskId === artifact.artifactId);
+      if (recordedChild?.state === "applied" && recordedChild.resultSha !== undefined) {
+        if (preSha !== recordedChild.resultSha) {
+          return { ...base, operations, disposition: "failed", errors: [{ code: "base_mismatch", artifactId: artifact.artifactId, message: `Recovered child ${artifact.artifactId} expected HEAD ${recordedChild.resultSha}, found ${preSha}.` }] };
+        }
+        operations.push({
+          artifactId: artifact.artifactId,
+          operation: "cherry_pick",
+          preSha: recordedChild.startedFromSha ?? request.base.resultingCommit,
+          resultSha: recordedChild.resultSha,
+          outcome: "applied"
+        });
+        continue;
+      }
+      if (journalOperation !== undefined) {
+        journalOperation = await input.integrationOperation!.journal.update(journalOperation, {
+          state: "cherry_pick_started",
+          currentChildId: artifact.artifactId,
+          children: journalOperation.children.map((child) => child.taskId === artifact.artifactId
+            ? { ...child, state: "started" as const, startedFromSha: preSha }
+            : child)
+        });
+      }
       const outcome = await this.deps.git.cherryPick({ cwd: worktreePath, commitSha: artifact.location });
       signal?.throwIfAborted();
       if (outcome.ok) {
-        operations.push({ artifactId: artifact.artifactId, operation: "cherry_pick", preSha, resultSha: await this.deps.git.head(worktreePath), outcome: "applied" });
+        const resultSha = await this.deps.git.head(worktreePath);
+        operations.push({ artifactId: artifact.artifactId, operation: "cherry_pick", preSha, resultSha, outcome: "applied" });
+        if (journalOperation !== undefined) {
+          journalOperation = await input.integrationOperation!.journal.update(journalOperation, {
+            state: "child_applied",
+            currentChildId: artifact.artifactId,
+            children: journalOperation.children.map((child) => child.taskId === artifact.artifactId
+              ? { ...child, state: "applied" as const, startedFromSha: preSha, resultSha, application: "cherry_picked" as const }
+              : child)
+          });
+        }
         continue;
       }
       operations.push({ artifactId: artifact.artifactId, operation: "cherry_pick", preSha, outcome: "conflict" });
@@ -140,16 +240,36 @@ export class IntegrationManifestExecutor {
     }
 
     const candidateSha = await this.deps.git.head(worktreePath);
+    if (journalOperation !== undefined) {
+      journalOperation = await input.integrationOperation!.journal.update(journalOperation, { state: "validation_started" });
+    }
     const parentEvidence = await this.deps.validate({ request, candidateSha, worktreePath });
     signal?.throwIfAborted();
-    if (parentEvidence.outcome !== "verified") return { ...base, operations, ...(repairAttempt !== undefined ? { repairAttempt } : {}), candidateSha, parentEvidence, disposition: "failed", errors: [{ code: "parent_validation_failed", message: `Parent validation outcome is ${parentEvidence.outcome}.` }] };
+    if (parentEvidence.outcome !== "verified") {
+      const failed = { ...base, operations, ...(repairAttempt !== undefined ? { repairAttempt } : {}), candidateSha, parentEvidence, disposition: "failed" as const, errors: [{ code: "parent_validation_failed" as const, message: `Parent validation outcome is ${parentEvidence.outcome}.` }] };
+      if (journalOperation !== undefined) await input.integrationOperation!.journal.update(journalOperation, { state: "failed", finalSha: candidateSha });
+      return failed;
+    }
+    if (journalOperation !== undefined) {
+      journalOperation = await input.integrationOperation!.journal.update(journalOperation, { state: "validation_finished" });
+    }
     const digest = await this.deps.digestCandidate({ candidateSha, worktreePath });
     signal?.throwIfAborted();
-    return {
+    const result: IntegrationManifest = {
       ...base, operations, ...(repairAttempt !== undefined ? { repairAttempt } : {}), candidateSha, parentEvidence,
-      outputArtifacts: [{ artifactId: `${request.compositeNode.id}:r${request.compositeNode.graphRevision}`, digest, contract: request.outputArtifactContract, kind: "commit", location: candidateSha }],
+      outputArtifacts: [{ artifactId: `${request.compositeNode.id}:r${request.compositeNode.graphRevision}`, digest, contract: request.outputArtifactContract, kind: "commit" as const, location: candidateSha }],
       disposition: "success", errors: []
     };
+    if (journalOperation !== undefined) {
+      journalOperation = await input.integrationOperation!.journal.update(journalOperation, {
+        state: "result_persisted",
+        resultManifestId: result.manifestId,
+        finalSha: candidateSha,
+        resultManifest: result
+      });
+      await input.integrationOperation!.journal.update(journalOperation, { state: "completed" });
+    }
+    return result;
   }
 }
 

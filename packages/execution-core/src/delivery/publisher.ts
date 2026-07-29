@@ -35,6 +35,7 @@ export interface DeliveryClaim {
 }
 
 export interface TransactionalPublisherOptions {
+  validate?(approval: TransactionalDeliveryApproval): Promise<void>;
   journal: {
     claim(idempotencyKey: string, requestFingerprint: string): Promise<DeliveryClaim>;
     complete(idempotencyKey: string, receipt: TransactionalDeliveryReceipt): Promise<void>;
@@ -58,6 +59,7 @@ export class TransactionalDeliveryPublisher {
   constructor(private readonly options: TransactionalPublisherOptions) {}
 
   async publish(approval: TransactionalDeliveryApproval): Promise<TransactionalDeliveryReceipt> {
+    await this.options.validate?.(approval);
     const fingerprint = deliveryRequestFingerprint(approval);
     const claim = await this.options.journal.claim(approval.idempotencyKey, fingerprint);
     if (claim.requestFingerprint !== fingerprint) {
@@ -72,6 +74,7 @@ export class TransactionalDeliveryPublisher {
       return recovered;
     }
 
+    await this.options.validate?.(approval);
     const target = await this.options.repository.inspect();
     if (target.branch !== approval.targetBranch || target.head !== approval.targetHead || target.fingerprint !== approval.targetFingerprint) {
       throw new Error("The delivery target changed after approval; nothing was published.");

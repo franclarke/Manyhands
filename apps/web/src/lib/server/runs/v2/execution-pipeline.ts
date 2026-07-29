@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 import { TaskContractBundleSchema, type TaskContractBundle } from "@manyhands/contracts";
 import { createConflictConstraintEvidence, type ConflictConstraintEvidence } from "@manyhands/conflict-risk";
@@ -14,6 +16,9 @@ import {
   WorktreeManager,
   WorktreePool,
   safeGitArgs,
+  getExecutorDescriptor,
+  resolveCliBinaryPath,
+  JsonIntegrationOperationJournal,
   type V2FinalCandidatePort
 } from "@manyhands/execution-core";
 import { V2ExecutionDriver, type V2NodeExecutionOutcome } from "@manyhands/orchestrator-graph";
@@ -129,6 +134,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
       throw new Error("Execution V2 requires the captured local Git target.");
     }
     const directory = resolveRunsDirectory();
+    const integrationJournal = new JsonIntegrationOperationJournal(join(directory, "integration-operations"));
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });
     const authority = { operationId: lease.operationId, fencingToken: lease.fencingToken };
@@ -137,6 +143,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     const execution = executionSelection(run);
     const repair = repairSelection(run);
     const config = ExecutionConfigSchema.parse(run.executionConfig ?? {});
+    const executorReady = await executorAvailability(execution.executorId);
     const git = new SimpleGitRunner();
     await git.revParse(repoRoot, `${prepared.graph.baseCommit}^{commit}`);
     const worktrees = new WorktreeManager({ git, repoRoot });
@@ -163,7 +170,14 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
         repositorySnapshot: prepared.repositorySnapshot,
         operationId: lease.operationId
       }),
-      finalCandidate: finalCandidatePort({ git, repoRoot, baseCommit: prepared.graph.baseCommit })
+      finalCandidate: finalCandidatePort({ git, repoRoot, baseCommit: prepared.graph.baseCommit }),
+      integrationOperation: {
+        journal: integrationJournal,
+        runId,
+        operationId: lease.operationId,
+        fencingToken: lease.fencingToken,
+        allowTakeover: verifiedTakeover
+      }
     });
     const coordinator = new RunCoordinator({
       events: events.bind(authority),
@@ -182,8 +196,9 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
           contracts: current.contracts,
           repositoryContextDigest: current.repositorySnapshot.snapshotId,
           executorProfile: { id: execution.executorId, revision: executorProfileRevision(execution) },
-          materializableNodeIds: Object.keys(current.graph.nodes),
-          availableExecutorNodeIds: Object.keys(current.graph.nodes),
+          materializableNodeIds: materializableNodeIds(current.graph, current.contracts),
+          availableExecutorNodeIds: executorReady ? Object.keys(current.graph.nodes) : [],
+          evaluatedAt: new Date().toISOString(),
           conflictConstraints: conflictEvidence(current.graph)
         };
       },
@@ -214,9 +229,14 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
           contracts: prepared.contracts,
           repositoryContextDigest: prepared.repositorySnapshot.snapshotId,
           executorProfile: { id: execution.executorId, revision: executorProfileRevision(execution) },
-          effectiveConfig: { maxParallel: config.maxParallel },
-          materializableNodeIds: Object.keys(prepared.graph.nodes),
-          availableExecutorNodeIds: Object.keys(prepared.graph.nodes),
+          effectiveConfig: {
+            maxParallel: config.maxParallel,
+            ...(config.maxTokensTotal !== undefined ? { maxTokensTotal: config.maxTokensTotal } : {}),
+            ...(config.maxCostUsd !== undefined ? { maxCostUsd: config.maxCostUsd } : {})
+          },
+          materializableNodeIds: materializableNodeIds(prepared.graph, prepared.contracts),
+          availableExecutorNodeIds: executorReady ? Object.keys(prepared.graph.nodes) : [],
+          evaluatedAt: new Date().toISOString(),
           conflictConstraints: conflictEvidence(prepared.graph),
           target: {
             sourceTargetFingerprint: run.targetContext!.fingerprint,
@@ -246,10 +266,27 @@ function conflictEvidence(graph: GraphRevision): ConflictConstraintEvidence[] {
     rightNodeId: constraint.rightNodeId,
     reason: constraint.reason,
     risk: constraint.risk,
+    ...(constraint.mode !== undefined ? { mode: constraint.mode } : {}),
+    ...(constraint.resourceId !== undefined ? { resourceId: constraint.resourceId } : {}),
     signals: [{ type: "compiled_scope_overlap", detail: constraint.reason, sourceRef: constraint.id }],
     confidence: 1,
     observedAt: graph.createdAt
   }));
+}
+
+function materializableNodeIds(graph: GraphRevision, contracts: TaskContractBundle[]): string[] {
+  const contractByNodeId = new Map(contracts.map((bundle) => [bundle.task.nodeId, bundle]));
+  return Object.values(graph.nodes)
+    .filter((node) => contractByNodeId.get(node.id)?.artifacts.some((artifact) => artifact.producerNodeId === node.id) === true)
+    .map((node) => node.id);
+}
+
+async function executorAvailability(executorId: string): Promise<boolean> {
+  const descriptor = getExecutorDescriptor(executorId as Parameters<typeof getExecutorDescriptor>[0]);
+  if (!descriptor.enabled) return false;
+  const configured = process.env[descriptor.binaryEnvVar] ?? descriptor.defaultBinary;
+  const resolved = resolveCliBinaryPath(configured);
+  return existsSync(resolved);
 }
 
 function finalCandidatePort(input: { git: SimpleGitRunner; repoRoot: string; baseCommit: string }): V2FinalCandidatePort {
@@ -259,7 +296,10 @@ function finalCandidatePort(input: { git: SimpleGitRunner; repoRoot: string; bas
         runId: request.runId,
         candidateCommit: request.candidateCommit,
         evidenceMatrixId: request.evidenceMatrix.matrixId,
-        target: request.targetHead
+        target: request.targetHead,
+        graphRevision: request.graphRevision,
+        artifactIds: request.artifactIds,
+        validationRecipeDigest: request.validationRecipeDigest
       })).digest("hex").slice(0, 16)}`;
       const preparer = new FinalCandidatePreparer({
         clock: () => new Date().toISOString(),
@@ -282,7 +322,7 @@ function finalCandidatePort(input: { git: SimpleGitRunner; repoRoot: string; bas
           };
         }
       });
-      await preparer.prepare({
+      const prepared = await preparer.prepare({
         manifestId,
         runId: request.runId,
         integratedCommit: request.candidateCommit,
@@ -290,7 +330,17 @@ function finalCandidatePort(input: { git: SimpleGitRunner; repoRoot: string; bas
         targetBranch: request.targetBranch,
         targetHead: request.targetHead
       });
-      return { manifestId };
+      const treeSha = await input.git.revParse(input.repoRoot, `${prepared.candidateCommit}^{tree}`);
+      const finalManifest = {
+        commitSha: prepared.candidateCommit,
+        treeSha,
+        graphRevision: request.graphRevision,
+        artifactIds: [...request.artifactIds].sort(),
+        evidenceMatrixId: prepared.evidenceMatrixId,
+        validationRecipeDigest: request.validationRecipeDigest,
+        deliveryTarget: request.targetBranch
+      };
+      return { manifestId, finalManifest };
     }
   };
 }

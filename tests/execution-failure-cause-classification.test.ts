@@ -46,6 +46,11 @@ describe("leafFailureObservation", () => {
     expect(classifyFailure(observation)).toBe("shared_infrastructure");
   });
 
+  it("recognizes provider auth and binary causes when they are embedded in a repair reason", () => {
+    expect(classifyFailure(leafFailureObservation({ reason: "Code repair failed: auth: expired login" }))).toBe("environment_auth_executor");
+    expect(classifyFailure(leafFailureObservation({ reason: "executor_error: binary_missing: CLI not found" }))).toBe("environment_auth_executor");
+  });
+
   it("keeps the full reason as the message so evidence is not lost", () => {
     const reason = "scope_violation: touched tests/expense.test.ts";
 

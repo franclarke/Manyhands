@@ -206,6 +206,9 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 - **Tests:** `tests/scheduler-readiness-v2.test.ts`, `tests/scheduler-scope-aware-wave.test.ts`, `tests/repository-aware-scheduling.test.ts`.
 - **Persisted evidence:** `wave.selected`/`readiness.observed` en runs V2 (descartados).
 - **Gap:** el host V2 entrega `activeResourceNodeIds: []` y `budgetAvailable: true`; no consume todavía presupuesto, recursos exclusivos ni circuit breakers reales.
+- **Ticket 24 note:** el integration journal V2 ya recupera un crash entre
+  children y reconstruye el manifest desde replay; CLAIM-053 permanece
+  `partial` hasta cerrar ticket 25.
 - **Decision:** `implement + demonstrate`.
 - **Thesis impact:** no afirmar scheduling adaptado a recursos/presupuesto hasta cerrar ticket 23.
 - **Next gate:** ticket 23.
@@ -219,7 +222,10 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 - **Status:** `partial`.
 - **Productive code:** `packages/scheduler/src/wave-selector-v2.ts` (`blocksPair`, `activeResourceNodeIds`). **[hecho]**
 - **Tests:** `tests/scheduler-conflict-constraints.test.ts`, `tests/scheduler-scope-aware-wave.test.ts`.
-- **Persisted evidence:** `none` (formal).
+- **Persisted evidence:** `tests/integration-manifest.test.ts` demuestra
+  recovery de un crash entre children sin repetir el primer efecto y
+  reconstrucciÃ³n del `IntegrationManifest` desde el journal; permanece
+  evidencia de test, no una corrida acadÃ©mica. **[hecho, ticket 24]**
 - **Gap:** `blocksPair` está testeado, pero la ruta productiva no aporta estado real de recursos y no valida freshness de la evidencia de conflicto.
 - **Decision:** `implement + demonstrate`.
 - **Thesis impact:** valida §5.2 Caso 3 sólo después de cerrar ticket 23 y producir evidencia.

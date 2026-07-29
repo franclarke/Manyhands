@@ -4,6 +4,7 @@ import {
   type TaskContractBundle
 } from "@manyhands/contracts";
 import type { ConflictConstraintEvidence } from "@manyhands/conflict-risk";
+import type { FinalArtifactManifest } from "@manyhands/shared";
 import {
   computeInputFingerprint,
   adoptAttemptResult,
@@ -14,11 +15,15 @@ import {
   type DecisionInput,
   type EvidenceMatrixRecord,
   type FailureObservation,
+  type ConflictEvidenceEvent,
+  type SchedulerConfigEvent,
+  type SchedulerExplanationEvent,
+  type SchedulerStateEvent,
   type RunCoordinator,
   type RunEventInput,
   type RunProjection
 } from "@manyhands/run-coordinator";
-import { selectReadyWaveV2, type ReadinessStateV2 } from "@manyhands/scheduler";
+import { selectReadyWaveV2, type ReadinessExplanationV2, type ReadinessStateV2 } from "@manyhands/scheduler";
 import { GraphRevisionSchema, type GraphRevision, type TaskNodeV2 } from "@manyhands/task-graph";
 
 export interface V2ExecutorProfile {
@@ -63,6 +68,7 @@ export type V2NodeExecutionOutcome =
       integrationManifestId?: string;
       repairObservations?: V2RepairObservation[];
       finalManifestId?: string;
+      finalManifest?: FinalArtifactManifest;
     }
   | {
       kind: "failure";
@@ -87,6 +93,10 @@ export interface V2ExecutionFreshnessInputs {
   executorProfile: V2ExecutorProfile;
   materializableNodeIds: string[];
   availableExecutorNodeIds: string[];
+  activeResourceNodeIds?: string[];
+  openCircuitBreakerNodeIds?: string[];
+  budgetAvailable?: boolean;
+  evaluatedAt?: string;
   conflictConstraints: ConflictConstraintEvidence[];
 }
 
@@ -96,9 +106,13 @@ export interface V2ExecutionRunInput {
   contracts: TaskContractBundle[];
   repositoryContextDigest: string;
   executorProfile: V2ExecutorProfile;
-  effectiveConfig: { maxParallel: number };
+  effectiveConfig: { maxParallel: number; maxTokensTotal?: number; maxCostUsd?: number };
   materializableNodeIds: string[];
   availableExecutorNodeIds: string[];
+  activeResourceNodeIds?: string[];
+  openCircuitBreakerNodeIds?: string[];
+  budgetAvailable?: boolean;
+  evaluatedAt?: string;
   conflictConstraints: ConflictConstraintEvidence[];
   target: V2ExecutionTarget;
   maxWaves?: number;
@@ -114,6 +128,7 @@ export class V2ExecutionDriver {
 
   async run(input: V2ExecutionRunInput): Promise<RunProjection> {
     let prepared = prepare(input);
+    const runtime = createRuntimeState();
     let maxWaves = input.maxWaves ?? Object.keys(prepared.graph.nodes).length * 3;
     for (let wave = 0; wave < maxWaves; wave += 1) {
       const current = await this.options.coordinator.load(input.runId);
@@ -132,7 +147,7 @@ export class V2ExecutionDriver {
           `Execution graph ${prepared.graph.graphId}@${prepared.graph.revision} is not the exact approved revision.`
         );
       }
-      const advanced = await this.advance(prepared, current);
+      const advanced = await this.advance(prepared, current, runtime);
       if (!advanced.dispatched) return advanced.state;
       if (advanced.state.lifecycle !== "running" && advanced.state.lifecycle !== "waiting_for_input") return advanced.state;
       const becameStale = Object.values(advanced.state.attempts).some(
@@ -148,6 +163,10 @@ export class V2ExecutionDriver {
           executorProfile: loaded.executorProfile,
           materializableNodeIds: loaded.materializableNodeIds,
           availableExecutorNodeIds: loaded.availableExecutorNodeIds,
+          ...(loaded.activeResourceNodeIds !== undefined ? { activeResourceNodeIds: loaded.activeResourceNodeIds } : {}),
+          ...(loaded.openCircuitBreakerNodeIds !== undefined ? { openCircuitBreakerNodeIds: loaded.openCircuitBreakerNodeIds } : {}),
+          ...(loaded.budgetAvailable !== undefined ? { budgetAvailable: loaded.budgetAvailable } : {}),
+          ...(loaded.evaluatedAt !== undefined ? { evaluatedAt: loaded.evaluatedAt } : {}),
           conflictConstraints: loaded.conflictConstraints
         });
         if (input.maxWaves === undefined) {
@@ -160,15 +179,18 @@ export class V2ExecutionDriver {
 
   private async advance(
     input: PreparedExecutionRunInput,
-    current: RunProjection
+    current: RunProjection,
+    runtime: RuntimeReadinessState
   ): Promise<{ dispatched: boolean; state: RunProjection }> {
-    const readinessState = buildReadinessState(input, current);
+    const readinessState = buildReadinessState(input, current, runtime);
+    const effectiveConfig = schedulerConfigFor(input.effectiveConfig);
     const selection = selectReadyWaveV2({
       graph: input.graph,
       nodeIds: Object.keys(input.graph.nodes).sort(),
       state: readinessState,
-      effectiveConfig: input.effectiveConfig,
-      conflictConstraints: input.conflictConstraints
+      effectiveConfig,
+      conflictConstraints: input.conflictConstraints,
+      now: input.evaluatedAt ?? this.options.now()
     });
     const pendingDecisionIds = Object.values(current.decisions)
       .filter((decision) => decision.status === "pending")
@@ -177,16 +199,53 @@ export class V2ExecutionDriver {
     let state = await this.options.coordinator.execute(input.runId, {
       type: "observe_readiness",
       readyNodeIds: selection.nodeIds,
-      pendingDecisionIds
+      pendingDecisionIds,
+      explanations: selection.explanations as unknown as SchedulerExplanationEvent[],
+      effectiveConfig: effectiveConfig as SchedulerConfigEvent,
+      schedulerState: {
+        materializableNodeIds: readinessState.materializableNodeIds,
+        activeResourceNodeIds: readinessState.activeResourceNodeIds,
+        openCircuitBreakerNodeIds: readinessState.openCircuitBreakerNodeIds ?? [],
+        availableExecutorNodeIds: readinessState.availableExecutorNodeIds,
+        stoppedNodeIds: readinessState.stoppedNodeIds ?? [],
+        budgetAvailable: readinessState.budgetAvailable
+      } as SchedulerStateEvent,
+      budgetAvailable: readinessState.budgetAvailable,
+      conflictEvidence: selection.effectiveConflictConstraints as unknown as ConflictEvidenceEvent[],
+      evaluatedAt: input.evaluatedAt ?? this.options.now()
     });
-    if (state.lifecycle !== "running" || selection.nodeIds.length === 0) return { dispatched: false, state };
+    if (state.lifecycle !== "running" || selection.nodeIds.length === 0) {
+      if (state.lifecycle === "running" && selection.nodeIds.length === 0 && pendingSchedulerDecision(selection.explanations)) {
+        state = await this.options.coordinator.execute(input.runId, {
+          type: "raise_decision",
+          decision: {
+            id: `${input.runId}:scheduler:${state.selectedWaves.length + 1}`,
+            kind: "resolve_conflict",
+            question: "Scheduling is blocked by an unavailable executor, exhausted budget, or open circuit breaker.",
+            options: [
+              { id: "fix_environment", label: "Fix the blocked resource" },
+              { id: "stop", label: "Stop affected work" }
+            ],
+            affectedNodeIds: selection.explanations.filter((explanation) => !explanation.ready).map((explanation) => explanation.nodeId),
+            evidenceRefs: selection.explanations.flatMap((explanation) => explanation.reasons.map((reason) => reason.code)),
+            impact: "risk",
+            raisedAtGraphRevision: input.graph.revision
+          }
+        });
+      }
+      return { dispatched: false, state };
+    }
 
     const waveId = `${input.runId}:wave:${state.selectedWaves.length + 1}`;
     state = await this.options.coordinator.execute(input.runId, {
       type: "select_wave",
       waveId,
       nodeIds: selection.nodeIds,
-      maxParallel: input.effectiveConfig.maxParallel
+      maxParallel: effectiveConfig.maxParallel,
+      blocked: selection.explanations.filter((explanation) => !selection.nodeIds.includes(explanation.nodeId)) as unknown as SchedulerExplanationEvent[],
+      effectiveConfig: effectiveConfig as SchedulerConfigEvent,
+      conflictEvidence: selection.effectiveConflictConstraints as unknown as ConflictEvidenceEvent[],
+      evaluatedAt: input.evaluatedAt ?? this.options.now()
     });
 
     const startedAt = this.options.now();
@@ -211,11 +270,12 @@ export class V2ExecutionDriver {
       const previousQueue = recordQueue;
       recordQueue = previousQueue.catch(() => {}).then(async () => {
         try {
+          applyRuntimeRecovery(runtime, input, attempt, outcome);
           latestState = await this.options.coordinator.recordDerived(input.runId, async (current) => {
             const currentFingerprint = outcome.kind === "success"
               ? await this.currentFingerprint(input, attempt, current)
               : attempt.executionInput.inputFingerprint;
-            return this.factsForOutcome(input, attempt, outcome, currentFingerprint);
+            return this.factsForOutcome(input, attempt, outcome, currentFingerprint, current);
           });
           resolveEnqueued();
         } catch (err) {
@@ -233,7 +293,8 @@ export class V2ExecutionDriver {
     run: PreparedExecutionRunInput,
     attempt: PreparedAttempt,
     outcome: V2NodeExecutionOutcome,
-    currentFingerprint: string
+    currentFingerprint: string,
+    current: RunProjection
   ): Promise<RunEventInput[]> {
     const at = this.options.now();
     const facts: RunEventInput[] = [];
@@ -245,6 +306,7 @@ export class V2ExecutionDriver {
       const failureClass = classifyFailure(observation);
       const policy = recoveryPolicyFor(failureClass);
       facts.push(fact(`${attempt.attemptId}:${repair.kind}-failure:${repair.pass}`, at, "failure.classified", {
+        attemptId: attempt.attemptId,
         nodeId: attempt.nodeId,
         failureClass,
         observation,
@@ -270,6 +332,7 @@ export class V2ExecutionDriver {
         const failureClass = classifyFailure(observation);
         const policy = recoveryPolicyFor(failureClass);
         facts.push(fact(`${attempt.attemptId}:failure-classified`, at, "failure.classified", {
+          attemptId: attempt.attemptId,
           nodeId: attempt.nodeId,
           failureClass,
           observation,
@@ -294,8 +357,27 @@ export class V2ExecutionDriver {
             // cost the comparative study needs to see.
             ...(outcome.usage !== undefined ? { usage: outcome.usage } : {})
           }));
-      const decision = { ...(outcome.decision ?? defaultFailureDecision(attempt, outcome.reason)), raisedAtGraphRevision: run.graph.revision };
-      facts.push(fact(`${attempt.attemptId}:decision:${decision.id}`, at, "decision.raised", { decision }));
+      const observation = isComposite
+        ? { source: "integration" as const, code: "integration_failed", message: outcome.reason }
+        : leafFailureObservation(outcome);
+      const failureClass = classifyFailure(observation);
+      const policy = recoveryPolicyFor(failureClass);
+      if (!isComposite && policy.discardCandidate && failureClass === "scope_unexpected_commit") {
+        facts.push(fact(`${attempt.attemptId}:discarded`, at, "attempt.discarded", {
+          attemptId: attempt.attemptId,
+          nodeId: attempt.nodeId,
+          reason: `Candidate discarded after ${failureClass}: ${outcome.reason}`
+        }));
+      }
+      const retryBudget = policy.automaticRetryBudget;
+      const priorFailures = Object.values(current.attempts).filter((candidate) =>
+        candidate.nodeId === attempt.nodeId && candidate.status === "failed"
+      ).length;
+      const retryAllowed = !isComposite && failureClass === "transient" && priorFailures < retryBudget;
+      if (!retryAllowed) {
+        const decision = { ...(outcome.decision ?? defaultFailureDecision(attempt, outcome.reason)), raisedAtGraphRevision: run.graph.revision };
+        facts.push(fact(`${attempt.attemptId}:decision:${decision.id}`, at, "decision.raised", { decision }));
+      }
       return Promise.resolve(facts);
     }
 
@@ -390,6 +472,7 @@ export class V2ExecutionDriver {
     }
     if (attempt.nodeId === run.graph.rootId) {
       if (outcome.finalManifestId === undefined) throw new Error("The root execution outcome requires a final manifest id.");
+      if (outcome.finalManifest === undefined) throw new Error("The root execution outcome requires the complete final artifact manifest.");
       facts.push(fact(`${attempt.attemptId}:final-candidate`, at, "final_candidate.verified", {
         manifestId: outcome.finalManifestId,
         commit: outcome.candidateCommit,
@@ -398,7 +481,8 @@ export class V2ExecutionDriver {
         executionSucceeded: true,
         sourceTargetFingerprint: run.target.sourceTargetFingerprint,
         targetBranch: run.target.targetBranch,
-        targetHead: run.target.targetHead
+        targetHead: run.target.targetHead,
+        ...(outcome.finalManifest !== undefined ? { finalManifest: outcome.finalManifest } : {})
       }));
     }
     return facts;
@@ -436,6 +520,15 @@ interface PreparedAttempt {
   executionInput: V2NodeExecutionInput;
 }
 
+interface RuntimeReadinessState {
+  suspendedNodeIds: Set<string>;
+  openCircuitBreakerNodeIds: Set<string>;
+}
+
+function createRuntimeState(): RuntimeReadinessState {
+  return { suspendedNodeIds: new Set(), openCircuitBreakerNodeIds: new Set() };
+}
+
 function prepare(input: V2ExecutionRunInput): PreparedExecutionRunInput {
   const graph = GraphRevisionSchema.parse(input.graph);
   if (!Number.isInteger(input.effectiveConfig.maxParallel) || input.effectiveConfig.maxParallel < 1) {
@@ -449,7 +542,7 @@ function prepare(input: V2ExecutionRunInput): PreparedExecutionRunInput {
   return { ...input, graph, contracts, contractsByNodeId };
 }
 
-function buildReadinessState(input: PreparedExecutionRunInput, state: RunProjection): ReadinessStateV2 {
+function buildReadinessState(input: PreparedExecutionRunInput, state: RunProjection, runtime: RuntimeReadinessState): ReadinessStateV2 {
   const bundles = [...input.contractsByNodeId.values()];
   const currentContractRevisions: Record<string, string> = {};
   const requiredContractRevisions: Record<string, Array<{ id: string; revision: string }>> = {};
@@ -468,13 +561,77 @@ function buildReadinessState(input: PreparedExecutionRunInput, state: RunProject
       .filter((decision) => decision.status === "pending")
       .map((decision) => ({ decisionId: decision.id, affectedNodeIds: [...decision.affectedNodeIds] })),
     materializableNodeIds: [...input.materializableNodeIds],
-    activeResourceNodeIds: [],
-    budgetAvailable: true,
-    availableExecutorNodeIds: [...input.availableExecutorNodeIds],
+    activeResourceNodeIds: [...new Set([
+      ...(input.activeResourceNodeIds ?? []),
+      ...Object.values(state.attempts).filter((attempt) => attempt.status === "running").map((attempt) => attempt.nodeId)
+    ])],
+    budgetAvailable: input.budgetAvailable !== false && budgetAvailableFor(input, state),
+    openCircuitBreakerNodeIds: [...new Set([
+      ...(input.openCircuitBreakerNodeIds ?? []),
+      ...runtime.openCircuitBreakerNodeIds,
+      ...(hasUnresolvedRecovery(state, "shared_infrastructure") ? Object.keys(input.graph.nodes) : [])
+    ])],
+    stoppedNodeIds: state.stoppedNodeIds ?? [],
+    availableExecutorNodeIds: input.availableExecutorNodeIds.filter((nodeId) =>
+      !suspendedByRecovery(state).has(nodeId) && !runtime.suspendedNodeIds.has(nodeId)
+    ),
     adoptedNodeIds: [...new Set(Object.values(state.adoptedArtifacts).map((artifact) => artifact.nodeId))],
     currentContractRevisions,
     requiredContractRevisions
   };
+}
+
+function hasUnresolvedRecovery(state: RunProjection, failureClass: "shared_infrastructure"): boolean {
+  const affectedNodeIds = new Set(
+    state.recoveryHistory
+      .filter((entry) => entry.kind === "failure" && entry.failureClass === failureClass && entry.nodeId !== undefined)
+      .map((entry) => entry.nodeId!)
+  );
+  return affectedNodeIds.size > 0 && Object.values(state.decisions).some((decision) =>
+    decision.status === "pending" && decision.affectedNodeIds.some((nodeId) => affectedNodeIds.has(nodeId))
+  );
+}
+
+function suspendedByRecovery(state: RunProjection): Set<string> {
+  const pendingNodeIds = new Set(
+    Object.values(state.decisions)
+      .filter((decision) => decision.status === "pending")
+      .flatMap((decision) => decision.affectedNodeIds)
+  );
+  return new Set(
+    state.recoveryHistory
+      .filter((entry) => entry.kind === "failure" && entry.failureClass === "environment_auth_executor" && entry.nodeId !== undefined)
+      .filter((entry) => pendingNodeIds.has(entry.nodeId!))
+      .map((entry) => entry.nodeId!)
+  );
+}
+
+function budgetAvailableFor(input: PreparedExecutionRunInput, state: RunProjection): boolean {
+  const budgetConfigured = input.effectiveConfig.maxTokensTotal !== undefined || input.effectiveConfig.maxCostUsd !== undefined;
+  if (budgetConfigured && Object.values(state.attempts).some((attempt) => {
+    const usage = attempt.usage;
+    return usage === undefined || usage.source === "unavailable" ||
+      (input.effectiveConfig.maxTokensTotal !== undefined && usage.tokensTotal === undefined) ||
+      (input.effectiveConfig.maxCostUsd !== undefined && usage.costUsd === undefined);
+  })) return false;
+  const usage = Object.values(state.attempts).reduce((total, attempt) => ({
+    tokensTotal: total.tokensTotal + (attempt.usage?.tokensTotal ?? 0),
+    costUsd: total.costUsd + (attempt.usage?.costUsd ?? 0)
+  }), { tokensTotal: 0, costUsd: 0 });
+  return (input.effectiveConfig.maxTokensTotal === undefined || usage.tokensTotal < input.effectiveConfig.maxTokensTotal) &&
+    (input.effectiveConfig.maxCostUsd === undefined || usage.costUsd < input.effectiveConfig.maxCostUsd);
+}
+
+function schedulerConfigFor(config: PreparedExecutionRunInput["effectiveConfig"]): PreparedExecutionRunInput["effectiveConfig"] {
+  return config.maxTokensTotal !== undefined || config.maxCostUsd !== undefined
+    ? { ...config, maxParallel: 1 }
+    : config;
+}
+
+function pendingSchedulerDecision(explanations: ReadinessExplanationV2[]): boolean {
+  return explanations.some((explanation) => explanation.reasons.some((reason) =>
+    reason.code === "executor_unavailable" || reason.code === "budget_exhausted" || reason.code === "circuit_breaker_open" || reason.code === "active_resource_constraint"
+  ));
 }
 
 function createAttempt(
@@ -507,9 +664,12 @@ function createAttempt(
   );
   if (outputArtifactContract === undefined) throw new Error(`Node ${nodeId} has no compiled output artifact contract.`);
   const inputFingerprint = fingerprintForNode(run, state, nodeId);
+  const previousAttempt = Object.values(state.attempts)
+    .filter((attempt) => attempt.nodeId === nodeId && ["failed", "discarded", "stale"].includes(attempt.status))
+    .at(-1);
   const ordinal = Object.values(state.attempts).filter((attempt) => attempt.nodeId === nodeId).length + 1;
   const attemptId = `${run.runId}:attempt:${nodeId}:${ordinal}`;
-  const common = { attemptId, nodeId, inputFingerprint, executorProfile: run.executorProfile };
+  const common = { attemptId, nodeId, inputFingerprint, ...(previousAttempt !== undefined ? { retryOfAttemptId: previousAttempt.attemptId } : {}), executorProfile: run.executorProfile };
   const isComposite = requirements.length > 0 && (node.kind === "root" || node.kind === "composite");
   const startedEvent = fact(
     `${attemptId}:started`,
@@ -629,12 +789,40 @@ function fact<T extends RunEventInput["type"]>(
  * (DECISIONS.md A11).
  */
 export function leafFailureObservation(outcome: { reason: string }): FailureObservation {
-  const code = outcome.reason.split(":", 1)[0]?.trim();
+  const knownCodes = ["scope_violation", "unexpected_commit", "worktree_pool_unavailable", "transient", "network", "timeout", "auth", "binary_missing", "quota", "executor_unavailable", "model_not_found"];
+  const code = knownCodes.find((candidate) =>
+    outcome.reason.trimStart().startsWith(`${candidate}:`) || outcome.reason.includes(`: ${candidate}:`)
+  ) ?? outcome.reason.split(":", 1)[0]?.trim();
   if (code === "scope_violation" || code === "unexpected_commit") {
     return { source: "scope", code, message: outcome.reason };
   }
   if (code === "worktree_pool_unavailable") {
     return { source: "executor", code, message: outcome.reason };
   }
+  if (["transient", "network", "timeout"].includes(code ?? "")) {
+    return { source: "executor", code: code === "timeout" ? "transient" : code, timedOut: code === "timeout", message: outcome.reason };
+  }
+  if (["auth", "binary_missing", "quota", "executor_unavailable", "model_not_found"].includes(code ?? "")) {
+    return { source: "executor", code, message: outcome.reason };
+  }
   return { source: "executor", code: "execution_failed", message: outcome.reason };
+}
+
+function applyRuntimeRecovery(
+  runtime: RuntimeReadinessState,
+  input: PreparedExecutionRunInput,
+  attempt: PreparedAttempt,
+  outcome: V2NodeExecutionOutcome
+): void {
+  if (outcome.kind !== "failure") return;
+  const observation = attempt.startedEvent.type === "integration.started"
+    ? { source: "integration" as const, code: "integration_failed", message: outcome.reason }
+    : leafFailureObservation(outcome);
+  const failureClass = classifyFailure(observation);
+  if (failureClass === "environment_auth_executor") {
+    runtime.suspendedNodeIds.add(attempt.nodeId);
+  }
+  if (failureClass === "shared_infrastructure") {
+    for (const nodeId of Object.keys(input.graph.nodes)) runtime.openCircuitBreakerNodeIds.add(nodeId);
+  }
 }

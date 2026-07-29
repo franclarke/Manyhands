@@ -3,17 +3,21 @@ import { RunEventSchema, type RunEvent } from "./domain/events.js";
 import { assertLifecycleTransition, type RunLifecycle } from "./domain/lifecycle.js";
 import { INITIAL_RUN_OUTCOMES, type DeliveryApproval, type DeliveryReceipt, type FinalCandidate, type RunOutcomes } from "./domain/outcomes.js";
 import type { AdoptedArtifact } from "./domain/artifacts.js";
+import type { AttemptUsage } from "./domain/events.js";
+import type { FailureClass } from "./domain/failures.js";
 
 export interface AttemptProjection {
   attemptId: string;
   nodeId: string;
   inputFingerprint: string;
+  retryOfAttemptId?: string;
   kind: "execution" | "integration";
   status: "running" | "candidate" | "validated" | "adopted" | "failed" | "discarded" | "stale";
   candidateCommit?: string;
   outputDigest?: string;
   repairPasses: number;
   failureReason?: string;
+  usage?: AttemptUsage;
 }
 
 export interface IntegrationProjection {
@@ -77,7 +81,7 @@ export interface GranularityStrategyProjection {
   condition: "A" | "B" | "C" | "C2";
   candidateTreeHash: string;
   candidateSourceHash?: string;
-  config: { minimumAdvantage: number; maxLeafContextTokens: number; maxLeafScopePaths: number };
+  config: { minimumAdvantage: number; maxLeafContextTokens: number; maxLeafScopePaths: number; maxLeafPlannedPaths?: number | undefined };
   assessments: Record<string, GranularityStrategyAssessmentProjection>;
   metrics: { maxGraphDepth: number; totalLeafCount: number; averageBranchingFactor: number };
 }
@@ -94,15 +98,16 @@ export interface RunProjection {
   granularity?: GranularityProjection;
   granularityStrategy?: GranularityStrategyProjection;
   decisions: Record<string, Decision>;
-  readiness: { readyNodeIds: string[]; pendingDecisionIds: string[] };
-  selectedWaves: Array<{ waveId: string; nodeIds: string[]; maxParallel: number }>;
+  stoppedNodeIds?: string[];
+  readiness: { readyNodeIds: string[]; pendingDecisionIds: string[]; explanations?: Array<Record<string, unknown>>; effectiveConfig?: Record<string, unknown>; schedulerState?: Record<string, unknown>; budgetAvailable?: boolean; conflictEvidence?: Array<Record<string, unknown>>; evaluatedAt?: string };
+  selectedWaves: Array<{ waveId: string; nodeIds: string[]; maxParallel: number; blocked?: Array<Record<string, unknown>>; effectiveConfig?: Record<string, unknown>; conflictEvidence?: Array<Record<string, unknown>>; evaluatedAt?: string }>;
   attempts: Record<string, AttemptProjection>;
   adoptedArtifacts: Record<string, AdoptedArtifact>;
   nodeEvidenceMatrixIds: Record<string, string>;
   integrations: Record<string, IntegrationProjection>;
-  recoveryHistory: Array<{ eventId: string; nodeId?: string; kind: "failure" | "amendment" }>;
+  recoveryHistory: Array<{ eventId: string; attemptId?: string; nodeId?: string; kind: "failure" | "amendment"; failureClass?: FailureClass }>;
   evidenceMatrices: string[];
-  evidenceMatrixSummaries: Record<string, { candidateCommit: string; outcome: "verified" | "unverified" | "failed" }>;
+  evidenceMatrixSummaries: Record<string, { candidateCommit: string; outcome: "verified" | "unverified" | "failed"; validationRecipeDigest?: string }>;
   outcomes: RunOutcomes;
   finalCandidate?: FinalCandidate;
   deliveryReceipt?: DeliveryReceipt;
@@ -128,6 +133,7 @@ export function foldRun(rawEvents: readonly RunEvent[]): RunProjection {
         sequence: 1,
         appliedEventIds: [event.eventId],
         decisions: {},
+        stoppedNodeIds: [],
         readiness: { readyNodeIds: [], pendingDecisionIds: [] },
         selectedWaves: [],
         attempts: {},
@@ -214,6 +220,7 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
         attemptId: event.payload.attemptId,
         nodeId: event.payload.nodeId,
         inputFingerprint: event.payload.inputFingerprint,
+        ...(event.payload.retryOfAttemptId !== undefined ? { retryOfAttemptId: event.payload.retryOfAttemptId } : {}),
         kind: "execution",
         status: "running",
         repairPasses: 0
@@ -230,12 +237,14 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       attempt.status = "candidate";
       attempt.candidateCommit = event.payload.candidateCommit;
       attempt.outputDigest = event.payload.outputDigest;
+      if (event.payload.usage !== undefined) attempt.usage = { ...event.payload.usage };
       break;
     }
     case "attempt.failed": {
       const attempt = requireAttempt(next, event.payload.attemptId, event.payload.nodeId);
       attempt.status = "failed";
       attempt.failureReason = event.payload.reason;
+      if (event.payload.usage !== undefined) attempt.usage = { ...event.payload.usage };
       break;
     }
     case "attempt.discarded": {
@@ -261,7 +270,8 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       if (!next.evidenceMatrices.includes(event.payload.matrix.matrixId)) next.evidenceMatrices.push(event.payload.matrix.matrixId);
       next.evidenceMatrixSummaries[event.payload.matrix.matrixId] = {
         candidateCommit: event.payload.matrix.candidateCommit,
-        outcome: event.payload.matrix.outcome
+        outcome: event.payload.matrix.outcome,
+        ...(event.payload.matrix.validationRecipeDigest !== undefined ? { validationRecipeDigest: event.payload.matrix.validationRecipeDigest } : {})
       };
       break;
     }
@@ -277,7 +287,7 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
     case "integration.started":
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot integrate while ${next.lifecycle}.`);
       if (next.attempts[event.payload.attemptId] !== undefined) throw new Error(`Attempt ${event.payload.attemptId} already exists.`);
-      next.attempts[event.payload.attemptId] = { attemptId: event.payload.attemptId, nodeId: event.payload.nodeId, inputFingerprint: event.payload.inputFingerprint, kind: "integration", status: "running", repairPasses: 0 };
+      next.attempts[event.payload.attemptId] = { attemptId: event.payload.attemptId, nodeId: event.payload.nodeId, inputFingerprint: event.payload.inputFingerprint, ...(event.payload.retryOfAttemptId !== undefined ? { retryOfAttemptId: event.payload.retryOfAttemptId } : {}), kind: "integration", status: "running", repairPasses: 0 };
       next.integrations[event.payload.nodeId] = { attemptId: event.payload.attemptId, nodeId: event.payload.nodeId, requiredArtifactIds: [...event.payload.requiredArtifactIds], status: "running", repairPasses: 0 };
       break;
     case "integration.repair_attempted": {
@@ -298,7 +308,8 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       if (!next.evidenceMatrices.includes(event.payload.matrix.matrixId)) next.evidenceMatrices.push(event.payload.matrix.matrixId);
       next.evidenceMatrixSummaries[event.payload.matrix.matrixId] = {
         candidateCommit: event.payload.matrix.candidateCommit,
-        outcome: event.payload.matrix.outcome
+        outcome: event.payload.matrix.outcome,
+        ...(event.payload.matrix.validationRecipeDigest !== undefined ? { validationRecipeDigest: event.payload.matrix.validationRecipeDigest } : {})
       };
       break;
     }
@@ -314,7 +325,7 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
     }
     case "failure.classified":
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot classify execution failure while ${next.lifecycle}.`);
-      next.recoveryHistory.push({ eventId: event.eventId, nodeId: event.payload.nodeId, kind: "failure" });
+      next.recoveryHistory.push({ eventId: event.eventId, ...(event.payload.attemptId !== undefined ? { attemptId: event.payload.attemptId } : {}), nodeId: event.payload.nodeId, kind: "failure", failureClass: event.payload.failureClass });
       break;
     case "graph.amendment.proposed":
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot propose an amendment while ${next.lifecycle}.`);
@@ -326,7 +337,8 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       next.evidenceMatrices.push(event.payload.matrix.matrixId);
       next.evidenceMatrixSummaries[event.payload.matrix.matrixId] = {
         candidateCommit: event.payload.matrix.candidateCommit,
-        outcome: event.payload.matrix.outcome
+        outcome: event.payload.matrix.outcome,
+        ...(event.payload.matrix.validationRecipeDigest !== undefined ? { validationRecipeDigest: event.payload.matrix.validationRecipeDigest } : {})
       };
       break;
     case "graph.revision.proposed":
@@ -343,6 +355,7 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
     case "decision.raised":
       if (next.decisions[event.payload.decision.id] !== undefined) throw new Error(`Decision ${event.payload.decision.id} already exists.`);
       next.decisions[event.payload.decision.id] = DecisionSchema.parse({ ...event.payload.decision, status: "pending" });
+      if (next.lifecycle === "running") transition(next, "waiting_for_input");
       break;
     case "decision.resolved": {
       const decision = next.decisions[event.payload.decisionId];
@@ -355,6 +368,9 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       };
       next.readiness.pendingDecisionIds = next.readiness.pendingDecisionIds
         .filter((decisionId) => decisionId !== decision.id);
+      if (event.payload.optionId === "stop") {
+        next.stoppedNodeIds = [...new Set([...(next.stoppedNodeIds ?? []), ...decision.affectedNodeIds])].sort();
+      }
       break;
     }
     case "decision.expired": {
@@ -368,7 +384,16 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       for (const decisionId of event.payload.pendingDecisionIds) {
         if (next.decisions[decisionId]?.status !== "pending") throw new Error(`Readiness references non-pending decision ${decisionId}.`);
       }
-      next.readiness = { readyNodeIds: [...new Set(event.payload.readyNodeIds)].sort(), pendingDecisionIds: [...new Set(event.payload.pendingDecisionIds)].sort() };
+      next.readiness = {
+        readyNodeIds: [...new Set(event.payload.readyNodeIds)].sort(),
+        pendingDecisionIds: [...new Set(event.payload.pendingDecisionIds)].sort(),
+        ...(event.payload.explanations !== undefined ? { explanations: structuredClone(event.payload.explanations) } : {}),
+        ...(event.payload.effectiveConfig !== undefined ? { effectiveConfig: structuredClone(event.payload.effectiveConfig) } : {}),
+        ...(event.payload.schedulerState !== undefined ? { schedulerState: structuredClone(event.payload.schedulerState) } : {}),
+        ...(event.payload.budgetAvailable !== undefined ? { budgetAvailable: event.payload.budgetAvailable } : {}),
+        ...(event.payload.conflictEvidence !== undefined ? { conflictEvidence: structuredClone(event.payload.conflictEvidence) } : {}),
+        ...(event.payload.evaluatedAt !== undefined ? { evaluatedAt: event.payload.evaluatedAt } : {})
+      };
       if (next.lifecycle === "running" || next.lifecycle === "waiting_for_input") {
         transition(next, next.readiness.readyNodeIds.length === 0 && next.readiness.pendingDecisionIds.length > 0 ? "waiting_for_input" : "running");
       }
@@ -379,7 +404,16 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       if (event.payload.nodeIds.length > event.payload.maxParallel) throw new Error(`Wave ${event.payload.waveId} exceeds maxParallel.`);
       if (event.payload.nodeIds.some((nodeId) => !next.readiness.readyNodeIds.includes(nodeId))) throw new Error(`Wave ${event.payload.waveId} contains a node not present in observed readiness.`);
       if (next.selectedWaves.some((wave) => wave.waveId === event.payload.waveId)) throw new Error(`Wave ${event.payload.waveId} already exists.`);
-      next.selectedWaves.push({ ...event.payload, nodeIds: [...event.payload.nodeIds] });
+      const selectedWave = {
+        waveId: event.payload.waveId,
+        nodeIds: [...event.payload.nodeIds],
+        maxParallel: event.payload.maxParallel,
+        ...(event.payload.blocked !== undefined ? { blocked: structuredClone(event.payload.blocked) } : {}),
+        ...(event.payload.effectiveConfig !== undefined ? { effectiveConfig: structuredClone(event.payload.effectiveConfig) } : {}),
+        ...(event.payload.conflictEvidence !== undefined ? { conflictEvidence: structuredClone(event.payload.conflictEvidence) } : {}),
+        ...(event.payload.evaluatedAt !== undefined ? { evaluatedAt: event.payload.evaluatedAt } : {})
+      };
+      next.selectedWaves.push(selectedWave);
       break;
     case "run.pause_requested":
       if (next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot pause while ${next.lifecycle}.`);
@@ -411,8 +445,18 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
         || next.evidenceMatrixSummaries[event.payload.evidenceMatrixId]?.candidateCommit !== event.payload.commit) {
         throw new Error("A final candidate requires a verified evidence matrix for the exact candidate commit.");
       }
+      if (event.payload.finalManifest !== undefined) {
+        const matrix = next.evidenceMatrixSummaries[event.payload.evidenceMatrixId];
+        if (event.payload.finalManifest.commitSha !== event.payload.commit
+          || event.payload.finalManifest.evidenceMatrixId !== event.payload.evidenceMatrixId
+          || event.payload.finalManifest.deliveryTarget !== event.payload.targetBranch
+          || event.payload.finalManifest.graphRevision !== next.graphRevision
+          || matrix?.validationRecipeDigest !== event.payload.finalManifest.validationRecipeDigest) {
+          throw new Error("The final artifact manifest does not match the approved graph, evidence, candidate, or delivery target.");
+        }
+      }
       if (Object.values(next.decisions).some((decision) => decision.status === "pending")) throw new Error("A final candidate cannot become ready with pending decisions.");
-      next.finalCandidate = { manifestId: event.payload.manifestId, commit: event.payload.commit, evidenceMatrixId: event.payload.evidenceMatrixId, sourceTargetFingerprint: event.payload.sourceTargetFingerprint, targetBranch: event.payload.targetBranch, targetHead: event.payload.targetHead, evidenceEligible: true };
+      next.finalCandidate = { manifestId: event.payload.manifestId, commit: event.payload.commit, evidenceMatrixId: event.payload.evidenceMatrixId, sourceTargetFingerprint: event.payload.sourceTargetFingerprint, targetBranch: event.payload.targetBranch, targetHead: event.payload.targetHead, evidenceEligible: true, ...(event.payload.finalManifest !== undefined ? { finalManifest: event.payload.finalManifest } : {}) };
       next.outcomes = { execution: "succeeded", artifact: "verified", delivery: "ready" };
       transition(next, "result_ready");
       break;

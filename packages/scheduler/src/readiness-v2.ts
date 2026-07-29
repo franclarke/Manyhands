@@ -20,6 +20,19 @@ export function explainReadiness(input: ReadinessInputV2): ReadinessExplanationV
   if (input.activeResourceNodeIds.includes(input.nodeId)) reasons.push({ code: "active_resource_constraint" });
   if (!input.budgetAvailable) reasons.push({ code: "budget_exhausted" });
   if (!input.availableExecutorNodeIds.includes(input.nodeId)) reasons.push({ code: "executor_unavailable" });
+  if (input.openCircuitBreakerNodeIds?.includes(input.nodeId)) reasons.push({ code: "circuit_breaker_open" });
+  if (hasStoppedAncestor(input.graph, input.nodeId, input.stoppedNodeIds ?? [])) reasons.push({ code: "branch_stopped" });
   if (input.adoptedNodeIds.includes(input.nodeId)) reasons.push({ code: "already_adopted" });
   return { nodeId: input.nodeId, ready: reasons.length === 0, reasons };
+}
+
+function hasStoppedAncestor(graph: ReadinessInputV2["graph"], nodeId: string, stoppedNodeIds: string[]): boolean {
+  const stopped = new Set(stoppedNodeIds);
+  let current = graph.nodes[nodeId];
+  while (current !== undefined) {
+    if (stopped.has(current.id)) return true;
+    if (current.parentId === null) return false;
+    current = graph.nodes[current.parentId];
+  }
+  return false;
 }

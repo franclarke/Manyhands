@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { FinalArtifactManifest } from "@manyhands/shared";
 
 export const RunOutcomesSchema = z.object({
   execution: z.enum(["pending", "succeeded", "failed", "interrupted"]),
@@ -37,6 +38,7 @@ export interface FinalCandidate {
   targetBranch: string;
   targetHead: string;
   evidenceEligible: true;
+  finalManifest?: FinalArtifactManifest;
 }
 
 export const DeliveryApprovalSchema = z.object({

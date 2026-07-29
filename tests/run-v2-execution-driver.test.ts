@@ -20,6 +20,246 @@ import {
 const at = "2026-07-17T12:00:00.000Z";
 
 describe("V2ExecutionDriver", () => {
+  it("retries a transient leaf failure within the declared recovery budget", async () => {
+    const breakdown = bookingBreakdown();
+    if (breakdown.root.kind !== "composite") throw new Error("Fixture must start composite.");
+    const domain = breakdown.root.children.find((unit) => unit.key === "domain");
+    if (domain?.kind !== "leaf") throw new Error("Missing atomic domain leaf.");
+    breakdown.root = domain;
+    breakdown.acceptanceIntents = breakdown.acceptanceIntents.filter((intent) => intent.id === "domain-ready");
+    breakdown.candidateSeams = [];
+    const compiled = compileGraphRevision(
+      { breakdown, repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const harness = coordinatorHarness(compiled.graph.graphId);
+    let attempts = 0;
+    const driver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
+      execute: async (input) => {
+        attempts += 1;
+        if (attempts === 1) return { kind: "failure", reason: "transient: provider disconnected" };
+        return { ...(success(input) as Extract<V2NodeExecutionOutcome, { kind: "success" }>), finalManifestId: "retry-final" };
+      }
+    });
+
+    const state = await driver.run({
+      runId: "run-v2",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 1 },
+      materializableNodeIds: [compiled.graph.rootId],
+      availableExecutorNodeIds: [compiled.graph.rootId],
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+
+    expect(attempts).toBe(2);
+    expect(state.decisions).toEqual({});
+    expect(state.lifecycle).toBe("result_ready");
+    const retried = Object.values(state.attempts).find((attempt) => attempt.retryOfAttemptId !== undefined);
+    expect(retried?.retryOfAttemptId).toBeDefined();
+  });
+
+  it("does not dispatch a second wave when bounded usage cannot prove the remaining budget", async () => {
+    const compiled = compileGraphRevision(
+      { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const harness = coordinatorHarness(compiled.graph.graphId);
+    let executions = 0;
+    const driver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
+      execute: async (input) => {
+        executions += 1;
+        return { ...(success(input) as Extract<V2NodeExecutionOutcome, { kind: "success" }>), usage: { tokensTotal: 1, source: "unavailable" } };
+      }
+    });
+
+    const state = await driver.run({
+      runId: "run-v2",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 3, maxTokensTotal: 100 },
+      materializableNodeIds: Object.keys(compiled.graph.nodes),
+      availableExecutorNodeIds: Object.keys(compiled.graph.nodes),
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+
+    expect(executions).toBe(1);
+    expect(state.lifecycle).toBe("waiting_for_input");
+    expect(Object.values(state.decisions)).toEqual([
+      expect.objectContaining({ status: "pending", impact: "risk" })
+    ]);
+  });
+
+  it("suspends an executor after an auth failure while preserving the causal decision", async () => {
+    const breakdown = bookingBreakdown();
+    if (breakdown.root.kind !== "composite") throw new Error("Fixture must start composite.");
+    const domain = breakdown.root.children.find((unit) => unit.key === "domain");
+    if (domain?.kind !== "leaf") throw new Error("Missing atomic domain leaf.");
+    breakdown.root = domain;
+    breakdown.acceptanceIntents = breakdown.acceptanceIntents.filter((intent) => intent.id === "domain-ready");
+    breakdown.candidateSeams = [];
+    const compiled = compileGraphRevision(
+      { breakdown, repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const harness = coordinatorHarness(compiled.graph.graphId);
+    const driver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
+      execute: async () => ({ kind: "failure", reason: "auth: expired credentials" })
+    });
+
+    const state = await driver.run({
+      runId: "run-v2",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 1 },
+      materializableNodeIds: [compiled.graph.rootId],
+      availableExecutorNodeIds: [compiled.graph.rootId],
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+
+    expect(state.lifecycle).toBe("waiting_for_input");
+    const readiness = harness.events().filter((event) => event.type === "readiness.observed").at(-1);
+    expect(readiness?.type === "readiness.observed" ? readiness.payload.readyNodeIds : []).toEqual([]);
+    expect(state.recoveryHistory).toEqual(expect.arrayContaining([
+      expect.objectContaining({ failureClass: "environment_auth_executor" })
+    ]));
+
+    const restartedDriver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
+      execute: async () => { throw new Error("A persisted executor suspension must prevent dispatch."); }
+    });
+    await restartedDriver.run({
+      runId: "run-v2",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 1 },
+      materializableNodeIds: [compiled.graph.rootId],
+      availableExecutorNodeIds: [compiled.graph.rootId],
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+    const replayedReadiness = harness.events().filter((event) => event.type === "readiness.observed").at(-1);
+    expect(replayedReadiness?.type === "readiness.observed" ? replayedReadiness.payload.readyNodeIds : []).toEqual([]);
+
+    const decisionId = Object.keys((await harness.coordinator.load("run-v2")).decisions)[0];
+    if (decisionId === undefined) throw new Error("Auth failure must raise a decision.");
+    await harness.coordinator.execute("run-v2", { type: "resolve_decision", decisionId, optionId: "retry" });
+    let recoveredExecutions = 0;
+    const recoveredDriver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
+      execute: async (input) => {
+        recoveredExecutions += 1;
+        return { ...(success(input) as Extract<V2NodeExecutionOutcome, { kind: "success" }>), finalManifestId: "auth-recovered-final" };
+      }
+    });
+    const recovered = await recoveredDriver.run({
+      runId: "run-v2",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 1 },
+      materializableNodeIds: [compiled.graph.rootId],
+      availableExecutorNodeIds: [compiled.graph.rootId],
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+    expect(recoveredExecutions).toBe(1);
+    expect(recovered.lifecycle).toBe("result_ready");
+  });
+
+  it("discards a candidate rejected for leaving its declared scope", async () => {
+    const breakdown = bookingBreakdown();
+    if (breakdown.root.kind !== "composite") throw new Error("Fixture must start composite.");
+    const domain = breakdown.root.children.find((unit) => unit.key === "domain");
+    if (domain?.kind !== "leaf") throw new Error("Missing atomic domain leaf.");
+    breakdown.root = domain;
+    breakdown.acceptanceIntents = breakdown.acceptanceIntents.filter((intent) => intent.id === "domain-ready");
+    breakdown.candidateSeams = [];
+    const compiled = compileGraphRevision(
+      { breakdown, repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const harness = coordinatorHarness(compiled.graph.graphId);
+    const driver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
+      execute: async () => ({ kind: "failure", reason: "unexpected_commit: wrote outside allowed paths" })
+    });
+
+    const state = await driver.run({
+      runId: "run-v2",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 1 },
+      materializableNodeIds: [compiled.graph.rootId],
+      availableExecutorNodeIds: [compiled.graph.rootId],
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+
+    expect(Object.values(state.attempts)).toEqual([
+      expect.objectContaining({ status: "discarded", failureReason: expect.stringContaining("scope_unexpected_commit") })
+    ]);
+    expect(state.recoveryHistory).toEqual(expect.arrayContaining([
+      expect.objectContaining({ failureClass: "scope_unexpected_commit" })
+    ]));
+
+    const decisionId = Object.keys(state.decisions)[0];
+    if (decisionId === undefined) throw new Error("Scope failure must raise a decision.");
+    await harness.coordinator.execute("run-v2", { type: "resolve_decision", decisionId, optionId: "stop" });
+    let stoppedExecutions = 0;
+    const stoppedDriver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
+      execute: async () => {
+        stoppedExecutions += 1;
+        throw new Error("A stopped branch must not dispatch.");
+      }
+    });
+    await stoppedDriver.run({
+      runId: "run-v2",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 1 },
+      materializableNodeIds: [compiled.graph.rootId],
+      availableExecutorNodeIds: [compiled.graph.rootId],
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+    expect(stoppedExecutions).toBe(0);
+  });
+
   it("refreshes scheduler capabilities with the inputs that replace a stale attempt", async () => {
     const compiled = compileGraphRevision(
       { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },
@@ -184,11 +424,24 @@ describe("V2ExecutionDriver", () => {
               justification: "Exact candidate evidence passed.",
               evidenceRefs: [`evidence-${input.node.id}`]
             }],
-            outcome: "verified"
+            outcome: "verified",
+            validationRecipeDigest: "sha256:recipe-v2"
           },
           artifactLocation: `commit-${input.node.id}`,
           ...(input.node.id === compiled.graph.rootId
-            ? { integrationManifestId: "integration-root", finalManifestId: "final-root" }
+            ? {
+                integrationManifestId: "integration-root",
+                finalManifestId: "final-root",
+                finalManifest: {
+                  commitSha: `commit-${input.node.id}`,
+                  treeSha: `tree-${input.node.id}`,
+                  graphRevision: input.graph.revision,
+                  artifactIds: input.contract.task.produces.map(({ id }) => id),
+                  evidenceMatrixId: `matrix-${input.node.id}`,
+                  validationRecipeDigest: "sha256:recipe-v2",
+                  deliveryTarget: "main"
+                }
+              }
             : {})
         };
       }
@@ -373,7 +626,17 @@ function success(input: V2NodeExecutionInput): V2NodeExecutionOutcome {
       candidateCommit: `commit-${input.node.id}`,
       validationContract: { id: input.contract.validation.id, revision: input.contract.validation.revision },
       criteria: [{ criterionId: obligation.criterionId, obligationId: obligation.id, status: "satisfied", justification: "Passed.", evidenceRefs: [`evidence-${input.node.id}`] }],
-      outcome: "verified"
+      outcome: "verified",
+      validationRecipeDigest: "sha256:recipe-v2"
+    },
+    finalManifest: {
+      commitSha: `commit-${input.node.id}`,
+      treeSha: `tree-${input.node.id}`,
+      graphRevision: input.graph.revision,
+      artifactIds: input.contract.task.produces.map(({ id }) => id),
+      evidenceMatrixId: `matrix-${input.node.id}`,
+      validationRecipeDigest: "sha256:recipe-v2",
+      deliveryTarget: "main"
     },
     artifactLocation: `commit-${input.node.id}`
   };

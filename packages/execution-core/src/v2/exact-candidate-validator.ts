@@ -120,6 +120,7 @@ export class ExactCandidateValidatorV2 implements V2NodeValidationPort {
       }),
       candidateCommit: validated.candidateCommit,
       validationContract: { ...input.contract.task.validation },
+      validationRecipeDigest: `sha256:${createHash("sha256").update(JSON.stringify(recipe)).digest("hex")}`,
       criteria: validated.matrix.criteria.map((criterion) => ({ ...criterion, evidenceRefs: [...criterion.evidenceRefs] })),
       outcome: validated.matrix.outcome,
       observations: validated.matrix.observations.map((observation) => ({

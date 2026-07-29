@@ -267,6 +267,23 @@ async function publishDelivery(
       },
       async () => {
         const publisher = new TransactionalDeliveryPublisher({
+          validate: async (request) => {
+            const state = foldRun(await store.load(run.runId));
+            const finalCandidate = state.finalCandidate;
+            const manifest = finalCandidate?.finalManifest;
+            if (finalCandidate === undefined || manifest === undefined) throw new Error("Delivery requires the complete final artifact manifest.");
+            if (manifest.commitSha !== request.finalSha || manifest.deliveryTarget !== request.targetBranch) {
+              throw new Error("Delivery approval does not match the durable final artifact manifest.");
+            }
+            if (manifest.graphRevision !== state.approvedGraphRevision
+              || manifest.evidenceMatrixId !== finalCandidate.evidenceMatrixId
+              || state.evidenceMatrixSummaries[manifest.evidenceMatrixId]?.validationRecipeDigest !== manifest.validationRecipeDigest
+              || manifest.artifactIds.some((artifactId) => !Object.values(state.adoptedArtifacts).some((artifact) => artifact.contract.id === artifactId))) {
+              throw new Error("Delivery metadata does not match the canonical graph, evidence, or adopted artifacts.");
+            }
+            const treeSha = await git(repoRoot, ["rev-parse", `${request.finalSha}^{tree}`]);
+            if (treeSha !== manifest.treeSha) throw new Error("The final artifact manifest tree no longer matches the candidate commit.");
+          },
           journal: {
             claim: async (_idempotencyKey, requestFingerprint) => {
               const state = foldRun(await store.load(run.runId));
@@ -297,6 +314,12 @@ async function publishDelivery(
               return deliveryReceipt(request, repoRoot, head);
             },
             publish: async (request) => {
+              const branch = await git(repoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]);
+              const head = await git(repoRoot, ["rev-parse", "HEAD"]);
+              const clean = targetWorkingTreeIsClean(await git(repoRoot, ["status", "--porcelain"]));
+              if (branch !== request.targetBranch || head !== request.targetHead || !clean || request.targetFingerprint !== run.targetContext!.fingerprint) {
+                throw new Error("The delivery target changed immediately before publication; nothing was published.");
+              }
               await git(repoRoot, ["merge", "--ff-only", request.finalSha]);
               const deliveredHead = await git(repoRoot, ["rev-parse", "HEAD"]);
               if (deliveredHead !== request.finalSha) throw new Error("Delivery did not publish the approved final SHA.");

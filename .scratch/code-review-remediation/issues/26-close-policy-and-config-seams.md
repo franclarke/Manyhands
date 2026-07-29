@@ -4,7 +4,15 @@
 
 **Blocked by:** 25.
 
-**Status:** ready-for-agent
+**Status:** closed
+
+## Closure evidence - 2026-07-29
+
+- [x] `maxLeafPlannedPaths` is validated by the effective utility policy, reaches leaf feasibility, and is persisted in the strategy event/reducer while legacy journals remain readable.
+- [x] `validationDuplication` is derived from real repeated acceptance-intent assignments; no formula or threshold was changed in this ticket.
+- [x] Module connectivity and explicit transition boundaries are recorded in `docs/tesis/ticket-26-policy-config-inventory.md`.
+- [x] RED→GREEN regression: `tests/run-granularity-strategy-selected.test.ts` now round-trips the effective planned-path ceiling.
+- [x] Existing granularity policy condition and utility tests remain the gate for A/B/C and duplication behavior.
 
 - [ ] `maxLeafPlannedPaths` y demás knobs efectivos llegan al planner y al manifest.
 - [ ] `validationDuplication` se deriva de duplicación real sin cambiar fórmula/umbral antes de medir.

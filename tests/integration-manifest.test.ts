@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   IntegrationManifestExecutor,
+  JsonIntegrationOperationJournal,
   createIntegrationRequestManifest
 } from "@manyhands/execution-core";
 import { FakeGitRunner } from "./helpers/fake-git-runner";
@@ -25,6 +29,62 @@ function request(availableArtifacts = [artifact("a", "node-a", "SHA_A"), artifac
 }
 
 describe("IntegrationManifestExecutor", () => {
+  it("recovers after a crash following the first child without repeating its side effect", async () => {
+    const journalDirectory = await mkdtemp(join(tmpdir(), "mh-integration-journal-"));
+    try {
+      const git = new CrashAfterFirstCherryPickGit({
+        heads: { "/wt": "BASE" },
+        cherryPickResultShas: ["PICK_A", "PICK_B"],
+        commitMessages: {
+          SHA_A: "feature A",
+          SHA_B: "feature B",
+          PICK_A: "feature A\n\n(cherry picked from commit SHA_A)",
+          PICK_B: "feature B\n\n(cherry picked from commit SHA_B)"
+        }
+      });
+      const journal = new JsonIntegrationOperationJournal(journalDirectory);
+      const built = request(undefined, ["a", "b"]);
+      const deps = {
+        git,
+        validate: async () => ({ matrixId: "matrix-1", outcome: "verified" as const }),
+        digestCandidate: async () => "digest-parent"
+      };
+      const operation = { journal, runId: "run-1", operationId: "op-1", fencingToken: 1 };
+      const takeover = { journal, runId: "run-1", operationId: "op-2", fencingToken: 2 };
+
+      await expect(new IntegrationManifestExecutor(deps).integrate({
+        request: built,
+        worktreePath: "/wt",
+        integrationOperation: operation
+      })).rejects.toThrow("simulated crash");
+
+      const recovered = await new IntegrationManifestExecutor(deps).integrate({
+        request: built,
+        worktreePath: "/wt",
+        integrationOperation: { ...takeover, allowTakeover: true }
+      });
+
+      expect(recovered.disposition).toBe("success");
+      expect(git.calls.filter((call) => call.op === "cherryPick").map((call) => call.args.commitSha)).toEqual(["SHA_A", "SHA_B"]);
+      const persisted = await journal.open({
+        runId: "run-1",
+        parentNodeId: built.compositeNode.id,
+        attemptId: built.integrationAttemptId,
+        requestManifestId: built.manifestId,
+        worktreePath: "/wt",
+        baseSha: built.base.resultingCommit,
+        children: built.childArtifacts.map((child) => ({ taskId: child.artifactId, commitSha: child.location, state: "pending" as const })),
+        operationId: "op-2",
+        fencingToken: 2,
+        allowTakeover: true
+      });
+      expect(persisted.state).toBe("completed");
+      expect(persisted.resultManifest).toMatchObject({ candidateSha: "PICK_B", disposition: "success" });
+    } finally {
+      await rm(journalDirectory, { recursive: true, force: true });
+    }
+  });
+
   it("stops before materializing artifacts when its integration signal has expired", async () => {
     const controller = new AbortController();
     controller.abort(new Error("integration timeout"));
@@ -69,3 +129,13 @@ describe("IntegrationManifestExecutor", () => {
     expect(git.opsInvoked()).not.toContain("cherryPick");
   });
 });
+
+class CrashAfterFirstCherryPickGit extends FakeGitRunner {
+  private cherryPicks = 0;
+
+  override async cherryPick(params: Parameters<FakeGitRunner["cherryPick"]>[0]): ReturnType<FakeGitRunner["cherryPick"]> {
+    const outcome = await super.cherryPick(params);
+    if (this.cherryPicks++ === 0) throw new Error("simulated crash");
+    return outcome;
+  }
+}

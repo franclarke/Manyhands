@@ -19,6 +19,12 @@ describe("delivery state machine V2", () => {
     expect(publish).toHaveBeenCalledWith({ runId: "run-1", approval });
     expect(state.lifecycle).toBe("completed");
     expect(state.deliveryApproval).toEqual(approval);
+    expect(state.finalCandidate?.finalManifest).toMatchObject({
+      commitSha: "candidate-sha",
+      treeSha: "tree-sha",
+      graphRevision: 1,
+      validationRecipeDigest: "sha256:recipe"
+    });
   });
 
   it("records a resolvable failure and returns to result_ready when the target changed", async () => {
@@ -58,11 +64,11 @@ function readyEvents(): RunEvent[] {
     event(2, "graph.revision.proposed", { graphId: "graph-1", revision: 1 }),
     event(3, "graph.revision.approved", { graphId: "graph-1", revision: 1 }),
     event(4, "evidence.matrix_recorded", { matrix: verifiedMatrix("matrix-1", "candidate-sha") }),
-    event(5, "final_candidate.verified", { manifestId: "manifest-1", commit: "candidate-sha", evidenceMatrixId: "matrix-1", evidenceEligible: true, executionSucceeded: true, sourceTargetFingerprint: "repo@base", targetBranch: "main", targetHead: "base-sha" })
+    event(5, "final_candidate.verified", { manifestId: "manifest-1", commit: "candidate-sha", evidenceMatrixId: "matrix-1", evidenceEligible: true, executionSucceeded: true, sourceTargetFingerprint: "repo@base", targetBranch: "main", targetHead: "base-sha", finalManifest: { commitSha: "candidate-sha", treeSha: "tree-sha", graphRevision: 1, artifactIds: ["artifact-final"], evidenceMatrixId: "matrix-1", validationRecipeDigest: "sha256:recipe", deliveryTarget: "main" } })
   ];
 }
 function verifiedMatrix(matrixId: string, candidateCommit: string) {
-  return { matrixId, candidateCommit, validationContract: { id: "validation-final", revision: "revision-1" }, criteria: [{ criterionId: "criterion-final", obligationId: "obligation-final", status: "satisfied" as const, justification: "The exact candidate passed.", evidenceRefs: ["evidence-final"] }], outcome: "verified" as const };
+  return { matrixId, candidateCommit, validationContract: { id: "validation-final", revision: "revision-1" }, criteria: [{ criterionId: "criterion-final", obligationId: "obligation-final", status: "satisfied" as const, justification: "The exact candidate passed.", evidenceRefs: ["evidence-final"] }], outcome: "verified" as const, validationRecipeDigest: "sha256:recipe" };
 }
 function coordinatorFor(events: RunEvent[], publish: ReturnType<typeof vi.fn>): RunCoordinator {
   return new RunCoordinator({ events: { load: async () => [...events], append: async (_id, expected, inputs) => { const added = inputs.map((input, index) => event(expected + index + 1, input.type, input.payload)); events.push(...added); return added; } }, delivery: { publish }, clock: () => "2026-07-17T00:00:00.000Z", eventId: (type, sequence) => `${type}-${sequence}` });

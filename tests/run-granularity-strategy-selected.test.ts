@@ -18,7 +18,8 @@ function events(): RunEvent[] {
         config: {
           minimumAdvantage: 0.15,
           maxLeafContextTokens: 24_000,
-          maxLeafScopePaths: 40
+          maxLeafScopePaths: 40,
+          maxLeafPlannedPaths: 12
         },
         assessments: [{
           unitKey: "warehouse-web",
@@ -55,6 +56,7 @@ describe("planning.granularity_strategy_selected", () => {
     expect(state.granularityStrategy?.policyVersion).toBe("adaptive-utility/2.0.0-pilot");
     expect(state.granularityStrategy?.condition).toBe("C2");
     expect(state.granularityStrategy?.candidateTreeHash).toBe("sha256:candidate");
+    expect(state.granularityStrategy?.config.maxLeafPlannedPaths).toBe(12);
     expect(state.granularityStrategy?.assessments["node-warehouse-web"]?.selected).toBe("split");
     expect(state.granularityStrategy?.assessments["node-warehouse-web"]?.splitAdvantage).toBe(0.6);
   });

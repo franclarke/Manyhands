@@ -1,4 +1,4 @@
-import { EntityIdSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
+import { EntityIdSchema, FinalArtifactManifestSchema, IsoTimestampSchema, NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { DecisionInputSchema, DecisionResolutionShape, requireDecisionResolution } from "./decisions.js";
 import { DeliveryApprovalSchema, DeliveryReceiptSchema } from "./outcomes.js";
@@ -22,6 +22,40 @@ export const AttemptUsageSchema = z.object({
 }).strict();
 
 export type AttemptUsage = z.infer<typeof AttemptUsageSchema>;
+
+const SchedulerReasonSchema = z.object({ code: NonEmptyStringSchema }).passthrough();
+const SchedulerExplanationSchema = z.object({
+  nodeId: EntityIdSchema,
+  ready: z.boolean(),
+  reasons: z.array(SchedulerReasonSchema),
+  deferred: z.boolean().optional()
+}).strict();
+export type SchedulerExplanationEvent = z.infer<typeof SchedulerExplanationSchema>;
+const SchedulerConfigSchema = z.object({
+  maxParallel: z.number().int().positive().optional(),
+  maxTokensTotal: z.number().int().positive().optional(),
+  maxCostUsd: z.number().nonnegative().optional()
+}).passthrough();
+export type SchedulerConfigEvent = z.infer<typeof SchedulerConfigSchema>;
+const SchedulerStateSchema = z.object({
+  materializableNodeIds: z.array(EntityIdSchema),
+  activeResourceNodeIds: z.array(EntityIdSchema),
+  openCircuitBreakerNodeIds: z.array(EntityIdSchema),
+  availableExecutorNodeIds: z.array(EntityIdSchema),
+  stoppedNodeIds: z.array(EntityIdSchema),
+  budgetAvailable: z.boolean()
+}).strict();
+export type SchedulerStateEvent = z.infer<typeof SchedulerStateSchema>;
+const ConflictEvidenceSchema = z.object({
+  id: EntityIdSchema,
+  leftNodeId: EntityIdSchema,
+  rightNodeId: EntityIdSchema,
+  reason: NonEmptyStringSchema,
+  risk: z.string().min(1),
+  mode: z.string().min(1).optional(),
+  resourceId: NonEmptyStringSchema.optional()
+}).passthrough();
+export type ConflictEvidenceEvent = z.infer<typeof ConflictEvidenceSchema>;
 
 const BaseEventShape = {
   eventId: EntityIdSchema,
@@ -115,7 +149,10 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     config: z.object({
       minimumAdvantage: z.number().min(-1).max(1),
       maxLeafContextTokens: z.number().int().positive(),
-      maxLeafScopePaths: z.number().int().positive()
+      maxLeafScopePaths: z.number().int().positive(),
+      // Added after the first pilot; optional keeps historical strategy
+      // events replayable while new runs persist the effective ceiling.
+      maxLeafPlannedPaths: z.number().int().positive().optional()
     }).strict(),
     assessments: z.array(z.object({
       unitKey: EntityIdSchema,
@@ -168,7 +205,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   event("attempt.failed", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, reason: NonEmptyStringSchema, usage: AttemptUsageSchema.optional() }).strict()),
   event("attempt.discarded", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, reason: NonEmptyStringSchema }).strict()),
   event("attempt.stale", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, attemptedFingerprint: NonEmptyStringSchema, currentFingerprint: NonEmptyStringSchema, reason: NonEmptyStringSchema }).strict()),
-  event("failure.classified", z.object({ nodeId: EntityIdSchema, failureClass: FailureClassSchema, observation: FailureObservationSchema, allowedActions: z.array(NonEmptyStringSchema), automaticRetryBudget: z.number().int().nonnegative(), discardCandidate: z.boolean() }).strict()),
+  event("failure.classified", z.object({ attemptId: EntityIdSchema.optional(), nodeId: EntityIdSchema, failureClass: FailureClassSchema, observation: FailureObservationSchema, allowedActions: z.array(NonEmptyStringSchema), automaticRetryBudget: z.number().int().nonnegative(), discardCandidate: z.boolean() }).strict()),
   event("graph.amendment.proposed", z.object({ proposalId: EntityIdSchema, graphId: EntityIdSchema, sourceRevision: z.number().int().positive(), kind: z.enum(["artifact_requirement", "graph_revision"]), rationale: NonEmptyStringSchema, evidenceRefs: z.array(NonEmptyStringSchema).min(1), operations: z.array(z.record(z.unknown())).min(1) }).strict()),
   event("evidence.matrix_recorded", z.object({ matrix: EvidenceMatrixRecordSchema }).strict()),
   event("validation.started", z.object({ attemptId: EntityIdSchema, nodeId: EntityIdSchema, validationContract: z.object({ id: EntityIdSchema, revision: NonEmptyStringSchema }).strict(), candidateCommit: NonEmptyStringSchema }).strict()),
@@ -179,6 +216,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
     attemptId: EntityIdSchema,
     nodeId: EntityIdSchema,
     inputFingerprint: NonEmptyStringSchema,
+    retryOfAttemptId: EntityIdSchema.optional(),
     executorProfile: z.object({ id: EntityIdSchema, revision: NonEmptyStringSchema }).strict(),
     requiredArtifactIds: z.array(EntityIdSchema).min(1)
   }).strict()),
@@ -190,18 +228,41 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   event("decision.raised", z.object({ decision: DecisionInputSchema }).strict()),
   event("decision.resolved", z.object({ decisionId: EntityIdSchema, ...DecisionResolutionShape }).strict().superRefine(requireDecisionResolution)),
   event("decision.expired", z.object({ decisionId: EntityIdSchema, supersededByRevision: z.number().int().positive(), reason: NonEmptyStringSchema }).strict()),
-  event("readiness.observed", z.object({ readyNodeIds: z.array(EntityIdSchema), pendingDecisionIds: z.array(EntityIdSchema) }).strict()),
+  event("readiness.observed", z.object({
+    readyNodeIds: z.array(EntityIdSchema),
+    pendingDecisionIds: z.array(EntityIdSchema),
+    explanations: z.array(SchedulerExplanationSchema).optional(),
+    effectiveConfig: SchedulerConfigSchema.optional(),
+    schedulerState: SchedulerStateSchema.optional(),
+    budgetAvailable: z.boolean().optional(),
+    conflictEvidence: z.array(ConflictEvidenceSchema).optional(),
+    evaluatedAt: IsoTimestampSchema.optional()
+  }).strict()),
   event("wave.selected", z.object({
     waveId: EntityIdSchema,
     nodeIds: z.array(EntityIdSchema).min(1),
-    maxParallel: z.number().int().positive()
+    maxParallel: z.number().int().positive(),
+    blocked: z.array(SchedulerExplanationSchema).optional(),
+    effectiveConfig: SchedulerConfigSchema.optional(),
+    conflictEvidence: z.array(ConflictEvidenceSchema).optional(),
+    evaluatedAt: IsoTimestampSchema.optional()
   }).strict()),
   event("run.pause_requested", z.object({ reason: NonEmptyStringSchema }).strict()),
   event("run.resume_requested", z.object({ reason: NonEmptyStringSchema }).strict()),
   event("run.restart_requested", z.object({ reason: NonEmptyStringSchema }).strict()),
   event("operation.cancel_requested", z.object({ invalidationReceiptId: EntityIdSchema, reason: NonEmptyStringSchema }).strict()),
   event("operation.interrupted", z.object({ processReceiptId: EntityIdSchema, allDead: z.literal(true) }).strict()),
-  event("final_candidate.verified", z.object({ manifestId: EntityIdSchema, commit: NonEmptyStringSchema, evidenceMatrixId: EntityIdSchema, evidenceEligible: z.boolean(), executionSucceeded: z.boolean(), sourceTargetFingerprint: NonEmptyStringSchema, targetBranch: NonEmptyStringSchema, targetHead: NonEmptyStringSchema }).strict()),
+  event("final_candidate.verified", z.object({
+    manifestId: EntityIdSchema,
+    commit: NonEmptyStringSchema,
+    evidenceMatrixId: EntityIdSchema,
+    evidenceEligible: z.boolean(),
+    executionSucceeded: z.boolean(),
+    sourceTargetFingerprint: NonEmptyStringSchema,
+    targetBranch: NonEmptyStringSchema,
+    targetHead: NonEmptyStringSchema,
+    finalManifest: FinalArtifactManifestSchema.optional()
+  }).strict()),
   event("delivery.started", z.object({ approval: DeliveryApprovalSchema }).strict()),
   event("delivery.published", z.object({ receipt: DeliveryReceiptSchema }).strict()),
   event("delivery.failed", z.object({ manifestId: EntityIdSchema, reason: NonEmptyStringSchema, retryable: z.boolean() }).strict()),

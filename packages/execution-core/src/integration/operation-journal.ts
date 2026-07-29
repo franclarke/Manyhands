@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { IntegrationResult } from "../types";
+import type { IntegrationManifest } from "./manifest";
 
 export type IntegrationOperationState =
   | "prepared"
@@ -52,13 +53,15 @@ export interface IntegrationOperation {
   disposition?: string;
   /** Exact validated result receipt for idempotent recovery. */
   result?: IntegrationResult;
+  /** Complete V2 integration manifest persisted before the operation is closed. */
+  resultManifest?: IntegrationManifest;
   error?: { code: string; message: string };
   createdAt: string;
   updatedAt: string;
 }
 
 export interface IntegrationOperationJournal {
-  open(input: Omit<IntegrationOperation, "schemaVersion" | "version" | "integrationOperationId" | "state" | "createdAt" | "updatedAt">): Promise<IntegrationOperation>;
+  open(input: Omit<IntegrationOperation, "schemaVersion" | "version" | "integrationOperationId" | "state" | "createdAt" | "updatedAt"> & { allowTakeover?: boolean }): Promise<IntegrationOperation>;
   update(operation: IntegrationOperation, patch: Partial<IntegrationOperation>): Promise<IntegrationOperation>;
 }
 
@@ -82,13 +85,30 @@ export class JsonIntegrationOperationJournal implements IntegrationOperationJour
 
   constructor(private readonly directory: string, private readonly now: () => string = () => new Date().toISOString()) {}
 
-  async open(input: Omit<IntegrationOperation, "schemaVersion" | "version" | "integrationOperationId" | "state" | "createdAt" | "updatedAt">): Promise<IntegrationOperation> {
-    const path = this.pathFor(input.runId, input.parentNodeId, input.attemptId);
+  async open(input: Omit<IntegrationOperation, "schemaVersion" | "version" | "integrationOperationId" | "state" | "createdAt" | "updatedAt"> & { allowTakeover?: boolean }): Promise<IntegrationOperation> {
+    const { allowTakeover = false, ...operationInput } = input;
+    const path = this.pathFor(operationInput.runId, operationInput.parentNodeId, operationInput.attemptId);
     return this.withMutationLock(path, async () => {
       await mkdir(this.directory, { recursive: true });
       const existing = await this.read(path);
       if (existing !== undefined) {
-        assertSameOperation(existing, input);
+        assertSameOperation(existing, operationInput);
+        if (existing.operationId !== operationInput.operationId || existing.fencingToken !== operationInput.fencingToken) {
+          if (!allowTakeover) {
+            throw new IntegrationOperationLeaseError(`Integration journal is fenced by operation ${existing.operationId ?? "legacy"}/${existing.fencingToken ?? 0}.`);
+          }
+          if (existing.state !== "completed") {
+            const takenOver: IntegrationOperation = {
+              ...existing,
+              ...(operationInput.operationId !== undefined ? { operationId: operationInput.operationId } : {}),
+              ...(operationInput.fencingToken !== undefined ? { fencingToken: operationInput.fencingToken } : {}),
+              version: (existing.version ?? 0) + 1,
+              updatedAt: this.now()
+            };
+            await this.write(path, takenOver);
+            return takenOver;
+          }
+        }
         if (
           existing.schemaVersion === 1 &&
           existing.state === "prepared" &&
@@ -108,7 +128,7 @@ export class JsonIntegrationOperationJournal implements IntegrationOperationJour
       }
       const timestamp = this.now();
       const operation: IntegrationOperation = {
-        ...input,
+        ...operationInput,
         schemaVersion: 2,
         version: 1,
         integrationOperationId: randomUUID(),
@@ -153,7 +173,7 @@ export class JsonIntegrationOperationJournal implements IntegrationOperationJour
   }
 
   private pathFor(runId: string, parentNodeId: string, attemptId?: string): string {
-    return join(this.directory, `${runId}-${parentNodeId}-${attemptId ?? "legacy"}.json`);
+    return join(this.directory, `${safeLockName(runId)}-${safeLockName(parentNodeId)}-${safeLockName(attemptId ?? "legacy")}.json`);
   }
   private async read(path: string): Promise<IntegrationOperation | undefined> {
     try { return JSON.parse(await readFile(path, "utf8")) as IntegrationOperation; } catch (error) {
@@ -222,7 +242,6 @@ function assertSameOperation(
   ) {
     throw new IntegrationOperationConflictError("Integration operation inputs changed during resume.");
   }
-  assertSameLease(existing, input);
 }
 
 function assertSameLease(

@@ -39,7 +39,9 @@ export const ConflictConstraintSchema = z.object({
   leftNodeId: EntityIdSchema,
   rightNodeId: EntityIdSchema,
   reason: NonEmptyStringSchema,
-  risk: z.enum(["low", "medium", "high"])
+  risk: z.enum(["low", "medium", "high"]),
+  mode: z.enum(["advisory", "serialize", "resource_lock"]).optional(),
+  resourceId: NonEmptyStringSchema.optional()
 }).strict().superRefine((constraint, context) => {
   if (constraint.leftNodeId === constraint.rightNodeId) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["rightNodeId"], message: "a conflict constraint requires two different nodes" });

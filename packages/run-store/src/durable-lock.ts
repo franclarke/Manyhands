@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, stat, utimes, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const DEFAULT_STALE_AFTER_MS = 30_000;
@@ -10,10 +10,15 @@ export interface DurableLockOptions {
   timeoutMs?: number;
 }
 
+export interface DurableLockRelease {
+  (): Promise<void>;
+  renew(): Promise<void>;
+}
+
 export async function acquireDurableLock(
   lockPath: string,
   options: DurableLockOptions = {}
-): Promise<() => Promise<void>> {
+): Promise<DurableLockRelease> {
   await mkdir(path.dirname(lockPath), { recursive: true });
   const startedAt = Date.now();
   const staleAfterMs = options.staleAfterMs ?? DEFAULT_STALE_AFTER_MS;
@@ -35,7 +40,20 @@ export async function acquireDurableLock(
         }),
         { encoding: "utf8", mode: 0o600 }
       );
-      return async () => {
+      let released = false;
+      const renew = async (): Promise<void> => {
+        if (released) return;
+        const owner = JSON.parse(
+          await readFile(path.join(lockPath, "owner.json"), "utf8")
+        ) as { lockToken?: string; token?: string };
+        if ((owner.lockToken ?? owner.token) !== lockToken) {
+          throw new Error(`Cannot renew durable lock ${lockPath}: ownership was lost.`);
+        }
+        const now = new Date();
+        await utimes(lockPath, now, now);
+      };
+      const release = async () => {
+        released = true;
         try {
           const owner = JSON.parse(
             await readFile(path.join(lockPath, "owner.json"), "utf8")
@@ -47,6 +65,8 @@ export async function acquireDurableLock(
           if (!isNotFound(error) && !isInvalidJson(error)) throw error;
         }
       };
+      release.renew = renew;
+      return release;
     } catch (error) {
       if (!isAlreadyExists(error)) throw error;
       try {

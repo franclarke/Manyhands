@@ -215,7 +215,18 @@ describe("V2NodeExecutor", () => {
       finalCandidate: {
         prepare: async (input) => {
           prepared.push(input.candidateCommit);
-          return { manifestId: "manifest-repaired-root" };
+          return {
+            manifestId: "manifest-repaired-root",
+            finalManifest: {
+              commitSha: input.candidateCommit,
+              treeSha: "tree-repaired",
+              graphRevision: input.graphRevision,
+              artifactIds: [...input.artifactIds],
+              evidenceMatrixId: input.evidenceMatrix.matrixId,
+              validationRecipeDigest: input.validationRecipeDigest,
+              deliveryTarget: input.targetBranch
+            }
+          };
         }
       },
       worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
@@ -260,7 +271,18 @@ describe("V2NodeExecutor", () => {
         prepare: async (input) => {
           expect(input.evidenceMatrix.outcome).toBe("verified");
           prepared.push(input.candidateCommit);
-          return { manifestId: "final-manifest" };
+          return {
+            manifestId: "final-manifest",
+            finalManifest: {
+              commitSha: input.candidateCommit,
+              treeSha: "tree-final",
+              graphRevision: input.graphRevision,
+              artifactIds: [...input.artifactIds],
+              evidenceMatrixId: input.evidenceMatrix.matrixId,
+              validationRecipeDigest: input.validationRecipeDigest,
+              deliveryTarget: input.targetBranch
+            }
+          };
         }
       },
       worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
@@ -743,6 +765,7 @@ function matrix(contract: V2PhysicalNodeExecutionInput["contract"], candidateCom
       evidenceRefs: [`evidence-${obligation.id}`]
     })),
     outcome: "verified",
+    validationRecipeDigest: "sha256:recipe-v2",
     observations: []
   };
 }

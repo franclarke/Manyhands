@@ -19,6 +19,8 @@ export interface CandidateValidationResult {
   eligible: boolean;
 }
 
+export type { FinalArtifactManifest } from "@manyhands/shared";
+
 export interface FinalCandidateManifest extends FinalCandidatePreparationRequest, PreparedCandidate {
   evidenceMatrixId: string;
   evidenceEligible: true;

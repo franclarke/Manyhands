@@ -8,6 +8,8 @@ export type ReadinessReason =
   | { code: "active_resource_constraint" }
   | { code: "budget_exhausted" }
   | { code: "executor_unavailable" }
+  | { code: "circuit_breaker_open" }
+  | { code: "branch_stopped" }
   | { code: "already_adopted" };
 
 export interface ReadinessStateV2 {
@@ -16,6 +18,8 @@ export interface ReadinessStateV2 {
   materializableNodeIds: string[];
   activeResourceNodeIds: string[];
   budgetAvailable: boolean;
+  openCircuitBreakerNodeIds?: string[];
+  stoppedNodeIds?: string[];
   availableExecutorNodeIds: string[];
   adoptedNodeIds: string[];
   currentContractRevisions: Record<string, string>;

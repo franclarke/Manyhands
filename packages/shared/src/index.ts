@@ -17,6 +17,18 @@ export const EntityIdSchema = NonEmptyStringSchema.regex(
 
 export type EntityId = z.infer<typeof EntityIdSchema>;
 
+export const FinalArtifactManifestSchema = z.object({
+  commitSha: NonEmptyStringSchema,
+  treeSha: NonEmptyStringSchema,
+  graphRevision: z.number().int().nonnegative(),
+  artifactIds: z.array(EntityIdSchema),
+  evidenceMatrixId: EntityIdSchema,
+  validationRecipeDigest: NonEmptyStringSchema,
+  deliveryTarget: NonEmptyStringSchema
+}).strict();
+
+export type FinalArtifactManifest = z.infer<typeof FinalArtifactManifestSchema>;
+
 export const ValidationEvidenceKindSchema = z.enum([
   "static_analysis",
   "test_result",
