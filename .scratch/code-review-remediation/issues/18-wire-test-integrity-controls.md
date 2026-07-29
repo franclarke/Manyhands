@@ -95,3 +95,6 @@
 - Reviews `656423e`: ambos FAIL por shorthand/filtros múltiples o quoted de
   pnpm. Standards agregó homónimo preexpandido localmente y scope de tsconfig
   base externo aplicado al directorio equivocado. Ticket permanece abierto.
+- RED posterior: shorthand quoted, homónimo local filtrado y config base fuera
+  del root fallaron. Fix `c9a10f7` parsea cada segmento pnpm y transporta scope
+  de aplicación por extends. GREEN 37/37; ambos typechecks PASS.

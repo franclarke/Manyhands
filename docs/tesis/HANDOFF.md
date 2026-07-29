@@ -986,3 +986,11 @@ Reviews `656423e` de ticket 18:
   agregó preexpansión local homónima y scope heredado desde config externo;
 - el próximo delta queda limitado a parser segmentado, evitar local expansion
   filtrada y transportar scope del proyecto por `extends`. Claims siguen partial.
+
+Novena remediation de ticket 18:
+
+- fix `c9a10f7` interpreta shorthand, filtros quoted y cadenas por segmento;
+  una invocación filtrada no preexpande homónimos locales. El scope del proyecto
+  se conserva al leer un tsconfig base externo;
+- 37/37 y typechecks execution-core/run-coordinator PASS. Próximo paso reviews
+  del punto fijo; CLAIM-040/041 continúan partial.
