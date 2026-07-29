@@ -17,6 +17,12 @@ export interface CherryPickOutcome {
   output: string;
 }
 
+export interface GitShowOptions {
+  signal?: AbortSignal;
+  /** Maximum stdout bytes accepted from Git before the subprocess is terminated. */
+  maxBytes?: number;
+}
+
 /**
  * Thin git abstraction the execution pipeline depends on. Implemented by
  * SimpleGitRunner (real) and a FakeGitRunner in tests, so worktree/result/
@@ -90,7 +96,10 @@ export interface GitRunner {
    * file without staging — e.g. to tell a no-op leaf (baseline already satisfies
    * the contract) from one that left an unimplemented stub behind.
    */
-  showFile(params: { cwd: string; ref: string; path: string }): Promise<string | null>;
+  showFile(
+    params: { cwd: string; ref: string; path: string },
+    options?: GitShowOptions
+  ): Promise<string | null>;
 }
 
 /** GitRunner backed by simple-git. Each operation runs against the given cwd. */
@@ -287,12 +296,26 @@ export class SimpleGitRunner implements GitRunner {
     );
   }
 
-  async showFile(params: { cwd: string; ref: string; path: string }): Promise<string | null> {
+  async showFile(
+    params: { cwd: string; ref: string; path: string },
+    options?: GitShowOptions
+  ): Promise<string | null> {
     try {
-      return await this.client(params.cwd).show([`${params.ref}:${params.path}`]);
-    } catch {
-      // Missing file at that ref (or unreadable) — treat as absent.
-      return null;
+      const { stdout } = await execFileAsync(
+        "git",
+        safeGitArgs(params.cwd, ["show", `${params.ref}:${params.path}`]),
+        {
+          cwd: params.cwd,
+          windowsHide: true,
+          encoding: "buffer",
+          ...(options?.signal !== undefined ? { signal: options.signal } : {}),
+          ...(options?.maxBytes !== undefined ? { maxBuffer: options.maxBytes } : {})
+        }
+      );
+      return stdout.toString("utf8");
+    } catch (error) {
+      if (isMissingGitObjectOrPath(error)) return null;
+      throw error;
     }
   }
 
@@ -440,6 +463,23 @@ function gitPath(value: string): string {
 function gitExitCode(error: unknown): number | undefined {
   if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
   return typeof error.code === "number" ? error.code : undefined;
+}
+
+function isMissingGitObjectOrPath(error: unknown): boolean {
+  if (gitExitCode(error) !== 128 || typeof error !== "object" || error === null || !("stderr" in error)) {
+    return false;
+  }
+  const stderr = Buffer.isBuffer(error.stderr)
+    ? error.stderr.toString("utf8")
+    : String(error.stderr);
+  return [
+    /fatal: path .* does not exist in /u,
+    /fatal: invalid object name /u,
+    /fatal: bad object /u,
+    /fatal: bad revision /u,
+    /fatal: Not a valid object name /u,
+    /fatal: ambiguous argument .*unknown revision or path not in the working tree/u
+  ].some((pattern) => pattern.test(stderr));
 }
 
 async function assertExactFirstParentLineage(

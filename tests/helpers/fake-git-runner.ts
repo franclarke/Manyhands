@@ -1,4 +1,4 @@
-import type { CherryPickOutcome, GitRunner } from "@manyhands/execution-core";
+import type { CherryPickOutcome, GitRunner, GitShowOptions } from "@manyhands/execution-core";
 
 export interface FakeGitCall {
   op: string;
@@ -256,8 +256,18 @@ export class FakeGitRunner implements GitRunner {
     return this.heads[params.cwd] ?? params.baseCommit;
   }
 
-  async showFile(params: { cwd: string; ref: string; path: string }): Promise<string | null> {
+  async showFile(
+    params: { cwd: string; ref: string; path: string },
+    options?: GitShowOptions
+  ): Promise<string | null> {
+    options?.signal?.throwIfAborted();
     this.record("showFile", { ...params });
-    return this.config.showFileByRef?.[params.ref]?.[params.path] ?? this.config.showFile?.[params.path] ?? null;
+    const content = this.config.showFileByRef?.[params.ref]?.[params.path] ?? this.config.showFile?.[params.path] ?? null;
+    if (content !== null && options?.maxBytes !== undefined && Buffer.byteLength(content, "utf8") > options.maxBytes) {
+      throw Object.assign(new RangeError("stdout maxBuffer length exceeded"), {
+        code: "ERR_CHILD_PROCESS_STDIO_MAXBUFFER"
+      });
+    }
+    return content;
   }
 }
