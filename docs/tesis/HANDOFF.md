@@ -833,3 +833,13 @@ Checkpoint ticket 18 antes del gate afectado amplio:
 - GREEN focal 24/24; typechecks execution-core/run-coordinator PASS con Node
   22.23.1/pnpm 7.29.3. CLAIM-040/041 siguen `partial` hasta evidencia productiva
   y rederivación posterior. Próxima operación larga: gate afectado amplio.
+
+Gate afectado amplio de ticket 18:
+
+- 44/44 PASS en 11 archivos: weakening, exact validation/cache, evidence
+  matrix, recipe, V2 node executor, coordinator facts/lifecycle, V2 e2e/crash y
+  delivery;
+- typechecks execution-core, run-coordinator, orchestrator-graph y web PASS;
+- no se ejecutó el suite global como sustituto del gate focal: su contención
+  Windows previa sigue preservada. Próximo paso: reviews independientes
+  Standards/Spec del punto fijo, sin implementar correcciones.

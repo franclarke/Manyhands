@@ -25,3 +25,6 @@
   o controles ineficaces.
 - Typechecks execution-core/run-coordinator PASS. CLAIM-040/041 permanecen
   `partial`; pendiente gate afectado amplio y reviews Standards/Spec.
+- Gate afectado amplio: 44/44 PASS. Typechecks execution-core,
+  run-coordinator, orchestrator-graph y web PASS. Working tree limpio en el
+  punto fijo documentado; pendiente reviews independientes Standards/Spec.
