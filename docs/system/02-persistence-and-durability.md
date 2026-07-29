@@ -28,5 +28,6 @@
   después de instalar el fence. Un crash conserva el fence huérfano; el próximo
   claim salta ese token y el dueño anterior permanece rechazado.
 - **Takeover verificable**: la nueva lease sólo se publica después de
-  reconciliar procesos y obtener `allDead=true`; el receipt queda en
+  reconciliar procesos, cruzar la repository lease cuando hay efectos Git y
+  obtener `allDead=true` más `repositoryQuiescent=true`; el receipt queda en
   `lastTakeoverReceipt`.

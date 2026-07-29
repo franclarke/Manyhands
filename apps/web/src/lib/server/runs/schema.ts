@@ -73,6 +73,7 @@ export const RunTakeoverReceiptSchema = z.object({
   operationId: z.string().uuid(),
   fencingToken: z.number().int().positive(),
   allDead: z.literal(true),
+  repositoryQuiescent: z.literal(true),
   processCount: z.number().int().nonnegative(),
   verifiedAt: z.string().datetime()
 }).strict();

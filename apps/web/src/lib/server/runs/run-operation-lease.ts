@@ -9,6 +9,7 @@ import {
 import { RunMutationConflictError } from "./errors";
 import { abortRun } from "./run-abort-registry";
 import { killRunProcessesVerified } from "./process-evidence";
+import { RepoLeaseLostError, withRepositoryLease } from "./repo-lock";
 import type { RunRepository } from "./repository";
 import type {
   RunOperationKind,
@@ -18,6 +19,7 @@ import type {
 } from "./schema";
 import { getRunRepository } from "./store";
 import { resolveRunsDirectory } from "./runs-directory";
+import { resolveRunTargetPath } from "./target-context";
 
 export interface ClaimRunOperationOptions {
   expectedLifecycles: readonly RunLifecycle[];
@@ -42,6 +44,10 @@ export interface RunOperationAuthorityDependencies {
     runId: string;
     superseded: RunOperationLease;
   }) => Promise<TakeoverProcessReceipt>;
+  reconcileRepository?: (input: {
+    run: RunRecord;
+    superseded: RunOperationLease;
+  }) => Promise<boolean>;
 }
 
 /**
@@ -56,10 +62,12 @@ export interface RunOperationAuthorityDependencies {
 export class RunOperationAuthority {
   private readonly operationId: () => string;
   private readonly reconcileTakeover: NonNullable<RunOperationAuthorityDependencies["reconcileTakeover"]>;
+  private readonly reconcileRepository: NonNullable<RunOperationAuthorityDependencies["reconcileRepository"]>;
 
   constructor(private readonly dependencies: RunOperationAuthorityDependencies) {
     this.operationId = dependencies.operationId ?? randomUUID;
     this.reconcileTakeover = dependencies.reconcileTakeover ?? reconcileRunProcesses;
+    this.reconcileRepository = dependencies.reconcileRepository ?? reconcileRunRepository;
   }
 
   async claim(
@@ -114,6 +122,13 @@ export class RunOperationAuthority {
             `takeover of ${superseded.operationId}/${superseded.fencingToken} did not verify allDead`
           );
         }
+        if (!await this.reconcileRepository({ run: current, superseded })) {
+          throw conflict(
+            runId,
+            current,
+            `takeover of ${superseded.operationId}/${superseded.fencingToken} did not quiesce repository effects`
+          );
+        }
         publishedAt = new Date().toISOString();
         lease = { ...lease, heartbeatAt: publishedAt };
         takeoverReceipt = {
@@ -123,6 +138,7 @@ export class RunOperationAuthority {
           operationId: lease.operationId,
           fencingToken: lease.fencingToken,
           allDead: true,
+          repositoryQuiescent: true,
           processCount: processReceipt.processCount,
           verifiedAt: publishedAt
         };
@@ -293,6 +309,32 @@ async function reconcileRunProcesses(
     allDead: report.allDead,
     processCount: report.verifications.length
   };
+}
+
+async function reconcileRunRepository(
+  input: { run: RunRecord; superseded: RunOperationLease }
+): Promise<boolean> {
+  if (input.superseded.kind !== "execution" && input.superseded.kind !== "delivery") {
+    return true;
+  }
+  const repoRoot = await resolveRunTargetPath(input.run).catch(() => undefined);
+  if (repoRoot === undefined) return false;
+
+  const deadline = Date.now() + 5_000;
+  while (true) {
+    try {
+      await withRepositoryLease(
+        { repoRoot, runId: input.run.runId },
+        async () => undefined
+      );
+      return true;
+    } catch (error) {
+      if (!(error instanceof RepoLeaseLostError) || Date.now() >= deadline) {
+        return false;
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, 25));
+    }
+  }
 }
 
 function assertLease(

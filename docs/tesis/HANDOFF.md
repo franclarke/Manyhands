@@ -1358,5 +1358,14 @@ del `1/8` histórico.
   abort registry reutilizaba su clave legacy. RED reprodujo el TypeError;
   GREEN versiona la clave `run-abort-registry:v2`, con 3 archivos/7 tests y
   web typecheck PASS;
+- la re-review Spec halló P1 cross-host: `allDead` no impedía que un host viejo
+  sin child actual despachara luego. La remediación usa la repository lease
+  durable como barrera para execution/delivery, persiste
+  `repositoryQuiescent=true` y exige revalidar el fence tras adquirirla. Una
+  prueba Git real retiene la lease vieja y confirma que el takeover espera;
+- gate final: 9 archivos/38 tests y ambos typechecks PASS. Una suite raíz
+  adversa encontró tres tests de lease con el target ficticio histórico;
+  reparado el fixture con Git real, la reejecución original pasó 216 archivos,
+  1493 tests, 2 skipped y 0 failed. Los 12 packages y web build pasan;
 - CLAIM-053 permanece `partial` por los gaps de tickets 23–25. Sólo quedan
   pendientes las re-reviews independientes Standards/Spec antes del cierre.

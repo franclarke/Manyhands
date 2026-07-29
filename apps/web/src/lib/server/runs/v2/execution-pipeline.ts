@@ -186,7 +186,8 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
         signal: executionSignal
       })
     });
-    const state = await withRepositoryLease({ repoRoot, runId }, (_repositoryLease, repositorySignal) => {
+    const state = await withRepositoryLease({ repoRoot, runId }, async (_repositoryLease, repositorySignal) => {
+      await events.assertAuthority(runId, authority);
       executionSignal = AbortSignal.any([abort.signal, repositorySignal]);
       return runWithProcessSupervision({
         runId,

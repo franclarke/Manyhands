@@ -184,7 +184,7 @@ export async function deliverRunV2(runId: string, approval: DeliveryApproval): P
   try {
     const coordinator = new RunCoordinator({
       events: store.bind(authority(lease)),
-      delivery: { publish: ({ approval: request }) => publishDelivery(run, request, store, abort.signal, lease.operationId) },
+      delivery: { publish: ({ approval: request }) => publishDelivery(run, request, store, abort.signal, lease) },
       clock: () => new Date().toISOString(),
       eventId: eventIdFor(runId)
     });
@@ -251,60 +251,63 @@ async function publishDelivery(
   approval: DeliveryApproval,
   store: JsonlRunEventStore,
   operationSignal: AbortSignal,
-  operationId: string
+  lease: RunOperationLease
 ): Promise<DeliveryReceipt> {
   if (run.targetContext === undefined) throw new Error("Delivery requires the captured run target.");
   const repoRoot = await resolveRunTargetPath(run);
   if (repoRoot === undefined) throw new Error("Delivery requires a local Git target.");
-  return withRepositoryLease({ repoRoot, runId: run.runId }, (_repositoryLease, repositorySignal) => runWithProcessSupervision(
-    {
-      runId: run.runId,
-      operationId,
-      label: "delivery-v2",
-      signal: AbortSignal.any([operationSignal, repositorySignal])
-    },
-    async () => {
-      const publisher = new TransactionalDeliveryPublisher({
-        journal: {
-          claim: async (_idempotencyKey, requestFingerprint) => {
-            const state = foldRun(await store.load(run.runId));
-            if (!sameApproval(state.deliveryApproval, approval)) {
-              throw new Error("The canonical delivery journal belongs to a different approval.");
-            }
-            const receipt = state.deliveryReceipt === undefined
-              ? undefined
-              : transactionalReceipt(state.deliveryReceipt);
-            return { requestFingerprint, ...(receipt !== undefined ? { receipt } : {}) };
+  return withRepositoryLease({ repoRoot, runId: run.runId }, async (_repositoryLease, repositorySignal) => {
+    await store.assertAuthority(run.runId, authority(lease));
+    return runWithProcessSupervision(
+      {
+        runId: run.runId,
+        operationId: lease.operationId,
+        label: "delivery-v2",
+        signal: AbortSignal.any([operationSignal, repositorySignal])
+      },
+      async () => {
+        const publisher = new TransactionalDeliveryPublisher({
+          journal: {
+            claim: async (_idempotencyKey, requestFingerprint) => {
+              const state = foldRun(await store.load(run.runId));
+              if (!sameApproval(state.deliveryApproval, approval)) {
+                throw new Error("The canonical delivery journal belongs to a different approval.");
+              }
+              const receipt = state.deliveryReceipt === undefined
+                ? undefined
+                : transactionalReceipt(state.deliveryReceipt);
+              return { requestFingerprint, ...(receipt !== undefined ? { receipt } : {}) };
+            },
+            complete: async () => undefined
           },
-          complete: async () => undefined
-        },
-        repository: {
-          inspect: async () => ({
-            branch: await git(repoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]),
-            head: await git(repoRoot, ["rev-parse", "HEAD"]),
-            fingerprint: run.targetContext!.fingerprint,
-            clean: targetWorkingTreeIsClean(await git(repoRoot, ["status", "--porcelain"]))
-          }),
-          recover: async (request) => {
-            const branch = await git(repoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]);
-            const head = await git(repoRoot, ["rev-parse", "HEAD"]);
-            const clean = targetWorkingTreeIsClean(await git(repoRoot, ["status", "--porcelain"]));
-            if (branch !== request.targetBranch || head !== request.finalSha || !clean || request.targetFingerprint !== run.targetContext!.fingerprint) {
-              return undefined;
+          repository: {
+            inspect: async () => ({
+              branch: await git(repoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]),
+              head: await git(repoRoot, ["rev-parse", "HEAD"]),
+              fingerprint: run.targetContext!.fingerprint,
+              clean: targetWorkingTreeIsClean(await git(repoRoot, ["status", "--porcelain"]))
+            }),
+            recover: async (request) => {
+              const branch = await git(repoRoot, ["rev-parse", "--abbrev-ref", "HEAD"]);
+              const head = await git(repoRoot, ["rev-parse", "HEAD"]);
+              const clean = targetWorkingTreeIsClean(await git(repoRoot, ["status", "--porcelain"]));
+              if (branch !== request.targetBranch || head !== request.finalSha || !clean || request.targetFingerprint !== run.targetContext!.fingerprint) {
+                return undefined;
+              }
+              return deliveryReceipt(request, repoRoot, head);
+            },
+            publish: async (request) => {
+              await git(repoRoot, ["merge", "--ff-only", request.finalSha]);
+              const deliveredHead = await git(repoRoot, ["rev-parse", "HEAD"]);
+              if (deliveredHead !== request.finalSha) throw new Error("Delivery did not publish the approved final SHA.");
+              return deliveryReceipt(request, repoRoot, deliveredHead);
             }
-            return deliveryReceipt(request, repoRoot, head);
-          },
-          publish: async (request) => {
-            await git(repoRoot, ["merge", "--ff-only", request.finalSha]);
-            const deliveredHead = await git(repoRoot, ["rev-parse", "HEAD"]);
-            if (deliveredHead !== request.finalSha) throw new Error("Delivery did not publish the approved final SHA.");
-            return deliveryReceipt(request, repoRoot, deliveredHead);
           }
-        }
-      });
-      return publisher.publish(approval);
-    }
-  ));
+        });
+        return publisher.publish(approval);
+      }
+    );
+  });
 }
 
 async function git(repoRoot: string, args: string[]): Promise<string> {

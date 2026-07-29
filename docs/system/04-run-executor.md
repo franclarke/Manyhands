@@ -31,6 +31,11 @@ reconciliar su evidencia de procesos y persistir un receipt con `allDead=true`.
 Un receipt no verificable deja el fence anterior invalidado y no publica la
 nueva lease. El registro in-process se identifica también por `operationId`,
 para que el cleanup tardío del dueño reemplazado no desregistre al sucesor.
+Para execution o delivery, `allDead` no basta: el takeover cruza además la
+repository lease durable y persiste `repositoryQuiescent=true`. Si otro host
+conserva esa lease, la nueva autoridad no se publica. Si el host viejo todavía
+no la había adquirido, debe revalidar el fence canónico inmediatamente después
+de adquirirla y antes de cualquier efecto.
 Ejecución y delivery registran además un controller por operación; después del
 aborto, la capa de supervisión rechaza un nuevo spawn antes de crearlo. El
 `verifiedAt` del receipt y el heartbeat de la lease publicada se toman después

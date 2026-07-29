@@ -1,7 +1,8 @@
-import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { execFile, spawn } from "node:child_process";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { isProcessAlive, registerLiveProcess } from "@manyhands/execution-core";
@@ -10,7 +11,10 @@ import { POST as POST_CANCEL } from "@/app/api/runs/[id]/cancel/route";
 import { RunMutationConflictError } from "@/lib/server/runs/errors";
 import { updateRunForOperation } from "@/lib/server/runs/run-operation-lease";
 import { resetRunRepositoryForTests, getRunRepository } from "@/lib/server/runs/store";
+import { captureRunTargetContext } from "@/lib/server/runs/target-context";
 import { makeRunRecordV2 } from "./helpers/run-v2-record";
+
+const execFileAsync = promisify(execFile);
 
 let tempDir: string;
 let previousRunsDir: string | undefined;
@@ -32,6 +36,14 @@ afterEach(async () => {
 describe("V2 cancellation", () => {
   it("invalidates the runner, kills its live process and rejects a late result", async () => {
     const runId = `run-cancel-${Date.now()}`;
+    const repoRoot = path.join(tempDir, "target");
+    await mkdir(repoRoot);
+    await execFileAsync("git", ["init"], { cwd: repoRoot, windowsHide: true });
+    await execFileAsync("git", ["config", "user.name", "ManyHands Test"], { cwd: repoRoot, windowsHide: true });
+    await execFileAsync("git", ["config", "user.email", "manyhands-test@local"], { cwd: repoRoot, windowsHide: true });
+    await execFileAsync("git", ["commit", "--allow-empty", "-m", "base"], { cwd: repoRoot, windowsHide: true });
+    const targetContext = await captureRunTargetContext(repoRoot);
+    expect(targetContext).toBeDefined();
     const oldLease = {
       operationId: "11111111-1111-4111-8111-111111111111",
       kind: "execution" as const,
@@ -42,6 +54,7 @@ describe("V2 cancellation", () => {
     await getRunRepository().save(makeRunRecordV2({
       runId,
       lifecycle: "running",
+      targetContext: targetContext!,
       mutationFence: 1,
       activeOperation: oldLease,
       projection: { eventSequence: 3, lifecycle: "running", graphId: "graph-1", graphRevision: 1, approvedGraphRevision: 1, updatedAt: "2026-07-17T12:00:00.000Z" }

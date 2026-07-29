@@ -1,7 +1,8 @@
-import { spawn } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { execFile, spawn } from "node:child_process";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { isProcessAlive, registerLiveProcess } from "@manyhands/execution-core";
@@ -14,7 +15,11 @@ import {
   JsonRunRecordStore,
   type RunRepository
 } from "@/lib/server/runs/repository";
+import { withRepositoryLease } from "@/lib/server/runs/repo-lock";
+import { captureRunTargetContext } from "@/lib/server/runs/target-context";
 import { makeRunRecordV2 } from "./helpers/run-v2-record";
+
+const execFileAsync = promisify(execFile);
 
 let tempDir: string;
 let runsDirectory: string;
@@ -36,6 +41,7 @@ function authority(
   return new RunOperationAuthority({
     repository,
     events,
+    reconcileRepository: async () => true,
     ...overrides
   });
 }
@@ -228,5 +234,132 @@ describe("atomic run authority", () => {
     );
     expect(Date.parse(taken.lease.heartbeatAt)).toBeGreaterThanOrEqual(verificationCompletedAt);
     expect(taken.run.heartbeatAt).toBe(taken.lease.heartbeatAt);
+  });
+
+  it("does not publish takeover authority until repository effects are quiescent", async () => {
+    const repository = new JsonRunRecordStore({ directory: runsDirectory });
+    const events = new JsonlRunEventStore({ directory: runsDirectory });
+    await repository.save(makeRunRecordV2({ runId: "run-repository-barrier", lifecycle: "running" }));
+    const first = await authority(repository, events, {
+      operationId: () => "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    }).claim("run-repository-barrier", "delivery", {
+      expectedLifecycles: ["running"],
+      now: "2026-07-29T12:00:00.000Z"
+    });
+    let processReconciled!: () => void;
+    const processesDone = new Promise<void>((resolve) => {
+      processReconciled = resolve;
+    });
+    let releaseRepository!: () => void;
+    const repositoryCanQuiesce = new Promise<void>((resolve) => {
+      releaseRepository = resolve;
+    });
+    let claimSettled = false;
+
+    const takeover = authority(repository, events, {
+      operationId: () => "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      reconcileTakeover: async () => {
+        processReconciled();
+        return {
+          processReceiptId: "takeover-processes-repository-barrier",
+          allDead: true,
+          processCount: 0
+        };
+      },
+      reconcileRepository: async () => {
+        await repositoryCanQuiesce;
+        return true;
+      }
+    }).claim("run-repository-barrier", "delivery", {
+      expectedLifecycles: ["running"],
+      allowTakeover: true,
+      takeoverStaleAfterMs: 1,
+      now: "2026-07-29T12:01:00.000Z"
+    }).finally(() => {
+      claimSettled = true;
+    });
+
+    await processesDone;
+    await Promise.resolve();
+    const settledBeforeRepositoryBarrier = claimSettled;
+    releaseRepository();
+    const taken = await takeover;
+
+    expect(settledBeforeRepositoryBarrier).toBe(false);
+    expect(taken.run.lastTakeoverReceipt).toMatchObject({
+      allDead: true,
+      repositoryQuiescent: true
+    });
+    await expect(events.assertAuthority("run-repository-barrier", first.lease))
+      .rejects.toBeInstanceOf(StaleFencingTokenError);
+  });
+
+  it("crosses the durable repository lease before publishing a cross-host takeover", async () => {
+    const repoRoot = path.join(tempDir, "target");
+    await mkdir(repoRoot);
+    await execFileAsync("git", ["init"], { cwd: repoRoot, windowsHide: true });
+    await execFileAsync("git", ["config", "user.name", "ManyHands Test"], { cwd: repoRoot, windowsHide: true });
+    await execFileAsync("git", ["config", "user.email", "manyhands-test@local"], { cwd: repoRoot, windowsHide: true });
+    await execFileAsync("git", ["commit", "--allow-empty", "-m", "base"], { cwd: repoRoot, windowsHide: true });
+    const targetContext = await captureRunTargetContext(repoRoot);
+    expect(targetContext).toBeDefined();
+
+    const repository = new JsonRunRecordStore({ directory: runsDirectory });
+    const events = new JsonlRunEventStore({ directory: runsDirectory });
+    const runId = "run-cross-host-barrier";
+    await repository.save(makeRunRecordV2({
+      runId,
+      lifecycle: "running",
+      targetContext: targetContext!
+    }));
+    const first = await authority(repository, events, {
+      operationId: () => "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    }).claim(runId, "delivery", {
+      expectedLifecycles: ["running"],
+      now: "2026-07-29T12:00:00.000Z"
+    });
+    let repositoryHeld!: () => void;
+    const held = new Promise<void>((resolve) => {
+      repositoryHeld = resolve;
+    });
+    let releaseRepository!: () => void;
+    const release = new Promise<void>((resolve) => {
+      releaseRepository = resolve;
+    });
+    const oldHostEffect = withRepositoryLease({ repoRoot, runId }, async () => {
+      repositoryHeld();
+      await release;
+    });
+    await held;
+
+    let takeoverSettled = false;
+    const takeover = new RunOperationAuthority({
+      repository,
+      events,
+      operationId: () => "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      reconcileTakeover: async () => ({
+        processReceiptId: "takeover-processes-cross-host",
+        allDead: true,
+        processCount: 0
+      })
+    }).claim(runId, "delivery", {
+      expectedLifecycles: ["running"],
+      allowTakeover: true,
+      takeoverStaleAfterMs: 1,
+      now: "2026-07-29T12:01:00.000Z"
+    }).finally(() => {
+      takeoverSettled = true;
+    });
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    const settledWhileOldHostHeldLease = takeoverSettled;
+    releaseRepository();
+    await oldHostEffect;
+    const taken = await takeover;
+
+    expect(settledWhileOldHostHeldLease).toBe(false);
+    expect(taken.run.lastTakeoverReceipt?.repositoryQuiescent).toBe(true);
+    await expect(events.assertAuthority(runId, first.lease))
+      .rejects.toBeInstanceOf(StaleFencingTokenError);
   });
 });

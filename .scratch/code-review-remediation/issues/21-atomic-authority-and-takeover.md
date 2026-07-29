@@ -41,6 +41,18 @@
 - La re-review Standards detectó P2 por reutilizar la clave global legacy tras
   cambiar la forma del registry. RED reprodujo el TypeError bajo HMR; GREEN
   versiona `run-abort-registry:v2`: 3 archivos/7 tests y web typecheck PASS.
+- La re-review Spec detectó P1 cross-host: `allDead` era sólo una foto de
+  children y el controller no cruza procesos. RED demostró que el claim podía
+  asentarse sin esperar una barrera repository. GREEN exige para
+  execution/delivery cruzar la repository lease durable antes de publicar,
+  persiste `repositoryQuiescent=true` y revalida el fence tras toda adquisición
+  tardía. La prueba real mantiene una lease Git desde un “host viejo” y prueba
+  que el takeover espera; la cancelación productiva vuelve a PASS.
+- Gate final después de la barrera: 9 archivos/38 tests y ambos typechecks
+  PASS. La primera suite raíz expuso tres fixtures con target ficticio; tras
+  reemplazarlos por un repositorio Git real, la misma suite quedó en 216
+  archivos, 1493 passed, 2 skipped y 0 failed. Build de los 12 packages y web
+  build PASS.
 - CLAIM-053 continúa `partial`: este ticket cierra autoridad/takeover, pero no
   anticipa recovery/scheduling, journal de integración ni stores/traces de
   tickets 23–25.
