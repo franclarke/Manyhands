@@ -693,3 +693,19 @@ Resultado terminal de `retry-10` N=16 y cierre de ejecucion de la serie:
 - proximo paso: validar integridad/hashes de los tres resultados y someter el
   cierre del ticket 11 a reviews independientes Standards y Spec con la orden
   `No implementes correcciones` antes de marcar sus tres casillas.
+
+Reapertura de remediacion despues de `retry-10`:
+
+- Reviews independientes del fixed point `67a16a1`: Standards FAIL P1 y Spec
+  P1. La integridad/comparabilidad de retry-10 pasa, pero no se puede cerrar
+  ticket 11 con el defecto productivo reproducido 3/3.
+- Causa de frontera identificada: WorkBreakdown reintenta schema y grounding,
+  pero no valida ciclos dirigidos entre artifacts/seams. El ciclo llega al
+  Graph Compiler, que lo rechaza correctamente cuando ya no existe reparacion
+  acotada del planner.
+- Proxima accion TDD: test rojo con artifact A -> B y seam B -> A; hacer que el
+  WorkBreakdown invalido vuelva como `repairIssues` al siguiente intento;
+  aclarar direccion producer -> consumer y omision de comandos sin consumidor
+  interno. No tocar critic, formula, umbral, estimulo ni evidencia retry-10.
+- Tras el fix: gates afectados, reviews Standards/Spec independientes y freeze
+  sucesor nuevo desde N=4 con targets nuevos. Ticket 11 sigue abierto.
