@@ -75,3 +75,7 @@
   cancelable; `18c0b5d` lo cablea antes de materializar blobs. 46/46 PASS. El
   primer typecheck falló por optional exacto; ajuste mínimo y ambos typechecks
   execution-core/run-coordinator PASS.
+- Reviews `3746182`: Spec PASS, cero P0-P3. Standards FAIL 2 P1 + P2 por
+  scripts workspace entre manifests, `imports` sin name/JSONC/extends y porque
+  el presupuesto no incluye lecturas iniciales. Se preserva el PASS/FAIL
+  dividido; el ticket no cierra hasta resolver Standards.

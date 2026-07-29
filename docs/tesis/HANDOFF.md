@@ -943,3 +943,12 @@ Sexta remediation de ticket 18:
 - 46/46 focales PASS. El primer typecheck falló por `signal: undefined` bajo
   exact optional types; corregido sin reintentar tests. Typechecks execution-core
   y run-coordinator PASS. CLAIM-040/041 siguen `partial`; próximo paso reviews.
+
+Reviews `3746182` de ticket 18:
+
+- Spec PASS, cero P0-P3, con 41/41 y ambos typechecks revalidados;
+- Standards FAIL 2 P1 + P2: el grafo de scripts no cruza manifests, faltan
+  imports sin package name y tsconfig JSONC/extends, y el presupuesto compartido
+  aún no cubre lecturas iniciales;
+- el ticket permanece abierto. Próximo delta se limita a esos tres puntos;
+  CLAIM-040/041 permanecen `partial`.
