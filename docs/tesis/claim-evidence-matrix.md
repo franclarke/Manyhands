@@ -1,9 +1,9 @@
 # Matriz Claim–Evidencia (Gate G1)
 
 > **Gate:** G1 — Congelar alcance · **Commit auditado:** `5355d4b` · **Fecha:** 2026-07-23 (UTC)
-> **ACTUALIZACIÓN (2026-07-24, tras Etapas 2–4):** varias filas cambiaron de estado con evidencia nueva.
-> Ver la sección «Actualización tras el run canónico» al final del documento; la tabla resumen de abajo
-> conserva el estado original de G1 para trazabilidad histórica.
+> **ACTUALIZACIÓN (2026-07-28):** la tabla resumen y las fichas representan el
+> estado conservador vigente. Las transiciones anteriores permanecen en las
+> secciones de actualización y en la historia Git para trazabilidad.
 > **Fuente de autoridad:** `PRODUCT.md` → `docs/DECISIONS.md` → `docs/core-pillars/` + `docs/system/` → `docs/design/` → `docs/adr/` → código/tests/runs.
 > **Regla de clasificación:** un claim es `implemented` solo si se localizó ruta productiva **y** test de comportamiento; los claims end-to-end exigen además evidencia persistida. Ante duda se elige la clasificación más conservadora. Los runs persistidos actuales se declararon **no-evidencia** (decisión de Francisco, 2026-07-23); toda `Persisted evidence` end-to-end es `none` hasta el run canónico de la Etapa 4.
 > **ACTUALIZACIÓN correctness closure (2026-07-28):** la auditoría productiva degradó provisionalmente CLAIM-020/021/040/041/053 a `partial`. Los módulos o tests aislados no prueban que el host V2 aplique presupuesto/recursos, evidencia relevante por criterio, controles negativos o recuperación integral. Tickets locales 18, 19, 21, 23, 24 y 25 son la aceptación canónica para volver a evaluar esos estados.
