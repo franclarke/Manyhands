@@ -655,7 +655,8 @@ function buildV2CodeRepairInstructions(
   input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract">,
   failedMatrix: V2ExecutionEvidenceMatrix
 ): string {
-  return [
+  const { scope } = input.contract;
+  const lines = [
     `Repair the failed candidate for ${input.node.title}.`,
     "",
     `Objective: ${input.contract.task.goal}`,
@@ -665,8 +666,26 @@ function buildV2CodeRepairInstructions(
       .map((criterion) => `- ${criterion.criterionId}: ${criterion.justification}`),
     "",
     "Preserve the declared scope and shared contracts. Change only what is required to satisfy the failed evidence.",
-    "Do not commit; the orchestrator will revalidate and commit the repair."
-  ].join("\n");
+    "",
+    "Change only these declared paths:",
+    ...scope.allowedPaths.map((path) => `- ${path}`)
+  ];
+  if (scope.outputRoots.length > 0) {
+    lines.push(
+      "",
+      "You may also CREATE new files, but only directly under these directories:",
+      ...scope.outputRoots.map((root) => `- ${root}/`),
+      "Creating a file anywhere else, or editing an existing file not listed above, fails this repair."
+    );
+  }
+  if (scope.forbiddenPaths.length > 0) {
+    lines.push("", "Never modify these paths:", ...scope.forbiddenPaths.map((path) => `- ${path}`));
+  }
+  lines.push(
+    "",
+    "Do not broaden the implementation to fix unrelated failures. Do not commit; the orchestrator will revalidate and commit the repair."
+  );
+  return lines.join("\n");
 }
 
 function executionArtifactInput(artifact: V2ExecutionArtifact) {
@@ -737,9 +756,12 @@ function executionFailureReason(result: {
   // persisted failure reason and made the journal unreadable.
   if (result.status === "scope_violation") {
     const violations = result.scopeCheck?.violations ?? [];
+    const outOfScope = result.scopeCheck?.outOfScope ?? [];
     const detail = violations.length > 0
       ? `changed files outside the declared scope: ${violations.join(", ")}`
-      : "the agent changed files outside the declared scope";
+      : outOfScope.length > 0
+        ? `changed files outside the declared scope: ${outOfScope.join(", ")}`
+        : "the agent changed files outside the declared scope";
     return `${result.status}: ${detail}`;
   }
   return [result.failureKind, result.status, result.failureHint, result.stderrTail, result.stdoutTail]

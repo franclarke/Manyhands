@@ -116,3 +116,14 @@ con typecheck web y `git diff --check` PASS.
 
 La acceptance no se cierra: todavia falta la candidate integrada, verificar
 heartbeat/restart/orphan/pool en el host real y completar las reviews finales.
+
+## Checkpoint candidate WC1 v2 - 2026-07-30
+
+La candidate WC1 v2 confirma que el executor pudo terminar y producir el
+commit `a8486539c5769430705ce06ef2de202b5a906964`; el journal de procesos no
+mostro un descendiente huerfano en este run. La validacion exacta, sin embargo,
+pidio code repair y la reparacion fallo por `scope_violation`, dejando el run
+en `waiting_for_input` sin receipt ni entrega. Esto no cierra el ticket: la
+convergencia terminal/productiva y las reviews Standards/Spec aun requieren
+un run sucesor valido. El defecto especifico del prompt y la evidencia de
+rutas de repair se sigue en ticket 32.

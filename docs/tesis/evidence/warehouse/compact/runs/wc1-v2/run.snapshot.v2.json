@@ -1,0 +1,392 @@
+{
+  "schemaVersion": 2,
+  "runId": "d190b07d-d31e-454a-b9ea-7b36ff96ec1b",
+  "eventSequence": 41,
+  "lastEventId": "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:readiness.observed:41",
+  "operationId": "73e5a9b4-0a8f-4df0-84c1-c7eb85d581aa",
+  "fencingToken": 3,
+  "projection": {
+    "runId": "d190b07d-d31e-454a-b9ea-7b36ff96ec1b",
+    "goal": "Starting from the verified W1 Warehouse codebase, implement WC1 as a complete vertical slice. Add atomic orders and reservations with valid order status transitions. Add a versioned HTTP API under /api/v1 for state, order creation, reservation, status transitions and deterministic simulation actions play, pause, step and reset. Add a monotonic Server-Sent Events stream at /api/v1/events. Add a static accessible browser UI served by the start script: an SVG warehouse tower with heatmap plus exact textual bin detail including empty bins, simulation controls operable by keyboard, explicit loading/empty/error/connected states, reduced-motion support and status communication not based on color alone. Add src/probe/wc1.ts and a package script study:wc1-probe that emits one deterministic JSON object with schemaVersion 1, increment WC1, scenario thesis-seed-2026, bins, occupiedBins, emptyBins and simulationControls. Preserve all W1 behavior. Keep the implementation dependency-free and add public behavior tests for atomicity, invalid transitions, API/SSE, simulation, tower accessibility and probe determinism. Do not implement WC2 or WC3 in this cell.",
+    "lifecycle": "waiting_for_input",
+    "sequence": 41,
+    "appliedEventIds": [
+      "run:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:created",
+      "repository:sha256:05a39772a471281a87c42bce7d3c3510f092d327322ded5ed70fc5e9c793e8de:inspection:2",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:1:started",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:1:node:wc1-vertical-slice",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:1:node:wc1-domain-orders-reservations",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:1:node:wc1-api-simulation-events",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:1:node:wc1-accessible-browser-ui",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:1:node:wc1-deterministic-probe",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:1:node:wc1-public-behavior-tests",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:1:failed",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:2:started",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:2:node:wc1-root",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:2:node:wc1-domain-orders",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:2:node:wc1-simulation-core",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:2:node:wc1-api-sse-server",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:2:node:wc1-accessible-tower-ui",
+      "planning:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:2:node:wc1-probe",
+      "planning:wc1-warehouse-vertical-slice:strategy:d190b07d-d31e-454a-b9ea-7b36ff96ec1b",
+      "planning:wc1-warehouse-vertical-slice:completed:d190b07d-d31e-454a-b9ea-7b36ff96ec1b",
+      "graph:graph-wc1-warehouse-vertical-slice-392e411698:r1:compiled",
+      "graph:graph-wc1-warehouse-vertical-slice-392e411698:r1:critic:completeness",
+      "graph:graph-wc1-warehouse-vertical-slice-392e411698:r1:critic:atomicity",
+      "graph:graph-wc1-warehouse-vertical-slice-392e411698:r1:critic:contract_compatibility",
+      "graph:graph-wc1-warehouse-vertical-slice-392e411698:r1:critic:dag_validity",
+      "graph:graph-wc1-warehouse-vertical-slice-392e411698:r1:critic:scope_isolation",
+      "graph:graph-wc1-warehouse-vertical-slice-392e411698:r1:critic:artifact_coverage",
+      "graph:graph-wc1-warehouse-vertical-slice-392e411698:r1:critic:risk_uncertainty",
+      "graph:graph-wc1-warehouse-vertical-slice-392e411698:r1:critic:validation_coverage",
+      "graph:graph-wc1-warehouse-vertical-slice-392e411698:r1:proposed",
+      "approve-plan:graph-wc1-warehouse-vertical-slice-392e411698:r1",
+      "approve-plan:graph-wc1-warehouse-vertical-slice-392e411698:r1:resolved",
+      "approve-plan:graph-wc1-warehouse-vertical-slice-392e411698:r1:graph-approved",
+      "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:readiness.observed:33",
+      "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:wave.selected:34",
+      "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1:started",
+      "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1:code-failure:1",
+      "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1:code-repair:1",
+      "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1:failed",
+      "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1:discarded",
+      "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1:decision:d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1:decision",
+      "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:readiness.observed:41"
+    ],
+    "decisions": {
+      "approve-plan:graph-wc1-warehouse-vertical-slice-392e411698:r1": {
+        "id": "approve-plan:graph-wc1-warehouse-vertical-slice-392e411698:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-wc1-root-409a795ae4"
+        ],
+        "evidenceRefs": [
+          "graph:graph-wc1-warehouse-vertical-slice-392e411698:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      },
+      "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1:decision": {
+        "id": "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1:decision",
+        "kind": "resolve_conflict",
+        "question": "The work for WC1 Warehouse vertical slice needs guidance: Code repair failed: scope_violation: the agent changed files outside the declared scope",
+        "options": [
+          {
+            "id": "retry",
+            "label": "Retry with guidance"
+          },
+          {
+            "id": "stop",
+            "label": "Stop this branch"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-wc1-root-409a795ae4"
+        ],
+        "evidenceRefs": [
+          "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1"
+        ],
+        "impact": "behavior",
+        "raisedAtGraphRevision": 1,
+        "status": "pending"
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": [
+        "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1:decision"
+      ],
+      "explanations": [
+        {
+          "nodeId": "node-wc1-root-409a795ae4",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "unresolved_decision",
+              "decisionId": "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1:decision"
+            }
+          ]
+        }
+      ],
+      "effectiveConfig": {
+        "maxParallel": 1
+      },
+      "schedulerState": {
+        "materializableNodeIds": [
+          "node-wc1-root-409a795ae4"
+        ],
+        "activeResourceNodeIds": [],
+        "openCircuitBreakerNodeIds": [],
+        "availableExecutorNodeIds": [
+          "node-wc1-root-409a795ae4"
+        ],
+        "stoppedNodeIds": [],
+        "budgetAvailable": true
+      },
+      "budgetAvailable": true,
+      "conflictEvidence": [],
+      "evaluatedAt": "2026-07-30T10:34:50.551Z"
+    },
+    "selectedWaves": [
+      {
+        "waveId": "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:wave:1",
+        "nodeIds": [
+          "node-wc1-root-409a795ae4"
+        ],
+        "maxParallel": 1,
+        "blocked": [],
+        "effectiveConfig": {
+          "maxParallel": 1
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-07-30T10:34:50.551Z"
+      }
+    ],
+    "attempts": {
+      "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1": {
+        "attemptId": "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1",
+        "nodeId": "node-wc1-root-409a795ae4",
+        "inputFingerprint": "sha256:791c9075d168436d53388788c8f8b86c56ab55db724e1d17bdd69ca1fe029bb9",
+        "kind": "execution",
+        "status": "discarded",
+        "repairPasses": 1,
+        "failureReason": "Candidate discarded after scope_unexpected_commit: Code repair failed: scope_violation: the agent changed files outside the declared scope",
+        "usage": {
+          "tokensTotal": 112551,
+          "source": "reported"
+        }
+      }
+    },
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [
+      {
+        "eventId": "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1:code-failure:1",
+        "attemptId": "d190b07d-d31e-454a-b9ea-7b36ff96ec1b:attempt:node-wc1-root-409a795ae4:1",
+        "nodeId": "node-wc1-root-409a795ae4",
+        "kind": "failure",
+        "failureClass": "code_test"
+      }
+    ],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "C",
+      "candidateTreeHash": "sha256:ac1f5321d5b092751a3e2a1f1df58f5081c345d2cade12fe9ba16fca22b0c09e",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-wc1-domain-orders-2a865949ff": {
+          "unitKey": "wc1-domain-orders",
+          "nodeId": "node-wc1-domain-orders-2a865949ff",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.25
+          },
+          "benefit": 0,
+          "cost": 0.0625,
+          "splitAdvantage": -0.0625,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-0",
+            "path-1",
+            "path-2",
+            "path-3",
+            "path-8",
+            "path-9",
+            "sha256:05a39772a471281a87c42bce7d3c3510f092d327322ded5ed70fc5e9c793e8de"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-wc1-simulation-core-c15a9f3b3a": {
+          "unitKey": "wc1-simulation-core",
+          "nodeId": "node-wc1-simulation-core-c15a9f3b3a",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.3333
+          },
+          "benefit": 0,
+          "cost": 0.0833,
+          "splitAdvantage": -0.0833,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-8",
+            "path-9",
+            "sha256:05a39772a471281a87c42bce7d3c3510f092d327322ded5ed70fc5e9c793e8de"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-wc1-api-sse-server-72e81bfcbc": {
+          "unitKey": "wc1-api-sse-server",
+          "nodeId": "node-wc1-api-sse-server-72e81bfcbc",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "config-package-json",
+            "sha256:05a39772a471281a87c42bce7d3c3510f092d327322ded5ed70fc5e9c793e8de"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-wc1-accessible-tower-ui-ce6ff87690": {
+          "unitKey": "wc1-accessible-tower-ui",
+          "nodeId": "node-wc1-accessible-tower-ui-ce6ff87690",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 1
+          },
+          "benefit": 0,
+          "cost": 0.25,
+          "splitAdvantage": -0.25,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "config-package-json",
+            "sha256:05a39772a471281a87c42bce7d3c3510f092d327322ded5ed70fc5e9c793e8de"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-wc1-probe-5758ad0fbb": {
+          "unitKey": "wc1-probe",
+          "nodeId": "node-wc1-probe-5758ad0fbb",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.375
+          },
+          "benefit": 0,
+          "cost": 0.0938,
+          "splitAdvantage": -0.0938,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-4",
+            "path-5",
+            "path-7",
+            "path-8",
+            "path-9",
+            "config-package-json",
+            "sha256:05a39772a471281a87c42bce7d3c3510f092d327322ded5ed70fc5e9c793e8de"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-wc1-root-409a795ae4": {
+          "unitKey": "wc1-root",
+          "nodeId": "node-wc1-root-409a795ae4",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.3287,
+            "parallelism": 0,
+            "faultIsolation": 0.5717,
+            "coordination": 1,
+            "pathOverlap": 0.1666,
+            "validationDuplication": 0.6316,
+            "uncertainty": 0.4917
+          },
+          "benefit": 0.3001,
+          "cost": 0.5725,
+          "splitAdvantage": -0.2723,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-0",
+            "path-1",
+            "path-2",
+            "path-3",
+            "path-4",
+            "path-5",
+            "path-7",
+            "path-8",
+            "path-9",
+            "config-package-json",
+            "sha256:05a39772a471281a87c42bce7d3c3510f092d327322ded5ed70fc5e9c793e8de"
+          ],
+          "rationale": "Split advantage -0.2723 is below minimum 0.1500."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 0,
+        "totalLeafCount": 1,
+        "averageBranchingFactor": 0
+      }
+    },
+    "graphId": "graph-wc1-warehouse-vertical-slice-392e411698",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1
+  },
+  "checksum": "75d53c28faadee3f10e2d4b2394879853c2b3e033c67a6c2fc8322df5201c0c2"
+}

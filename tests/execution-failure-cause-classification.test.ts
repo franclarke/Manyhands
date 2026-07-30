@@ -73,4 +73,14 @@ describe("scope violation reasons name the offending paths", () => {
     expect(reason).not.toContain("diff hunk");
     expect(leafFailureObservation({ reason }).code).toBe("scope_violation");
   });
+
+  it("names strict-policy out-of-scope paths even when no forbidden path matched", async () => {
+    const { executionFailureReasonForTest } = await import("@manyhands/execution-core");
+    const reason = executionFailureReasonForTest({
+      status: "scope_violation",
+      scopeCheck: { violations: [], outOfScope: ["tests/repair-regression.test.ts"] }
+    });
+
+    expect(reason).toBe("scope_violation: changed files outside the declared scope: tests/repair-regression.test.ts");
+  });
 });

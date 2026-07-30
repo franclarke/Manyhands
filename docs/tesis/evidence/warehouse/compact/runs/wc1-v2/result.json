@@ -1,0 +1,12 @@
+{
+  "cellId": "warehouse-compact-wc1-v2",
+  "condition": "C",
+  "runId": "d190b07d-d31e-454a-b9ea-7b36ff96ec1b",
+  "started": "2026-07-30T10:29:41.733Z",
+  "finished": "2026-07-30T10:51:43.072Z",
+  "outcome": {
+    "lifecycle": "waiting_for_input",
+    "receipt": null,
+    "reason": "run parked on resolve_conflict"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "increment": "WC1",
+  "cellId": "warehouse-compact-wc1-v2",
+  "runId": "d190b07d-d31e-454a-b9ea-7b36ff96ec1b",
+  "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+  "candidateSha": "a8486539c5769430705ce06ef2de202b5a906964",
+  "candidateRef": "refs/manyhands/runs/d190b07d-d31e-454a-b9ea-7b36ff96ec1b/attempts/d190b07d-d31e-454a-b9ea-7b36ff96ec1b_attempt_node-wc1-r-eb983395/candidate",
+  "executorOutcome": "succeeded",
+  "validationOutcome": "failed",
+  "failureClass": "code_test",
+  "failureCode": "validation_failed",
+  "repairOutcome": "failed",
+  "repairFailure": "scope_violation",
+  "lifecycle": "waiting_for_input",
+  "receipt": null,
+  "delivered": false,
+  "oracleOutcome": "not_run",
+  "changedFiles": 14,
+  "insertions": 1571,
+  "deletions": 2,
+  "notes": [
+    "The first planning attempt was rejected by schema validation; the second attempt was approved and produced the candidate.",
+    "The candidate executor exited cleanly and the orchestrator committed a8486539c5769430705ce06ef2de202b5a906964.",
+    "Exact-candidate validation required a code repair; the repair agent changed files outside the declared scope and was rejected.",
+    "The run remains parked on resolve_conflict. No delivery receipt or final delivered SHA exists.",
+    "The external oracle is not_run because the candidate was not delivered. This is preserved adverse instrument evidence, not a WC1 PASS."
+  ]
+}

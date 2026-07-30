@@ -292,6 +292,11 @@ describe("V2NodeExecutor", () => {
     expect(agent.calls).toHaveLength(2);
     expect(prepared).toEqual([repairedCommit]);
     expect(prompts[1]).toContain("The API response violates the declared seam.");
+    expect(prompts[1]).toContain("Change only these declared paths:");
+    expect(prompts[1]).toContain(contract.scope.allowedPaths[0]!);
+    for (const forbiddenPath of contract.scope.forbiddenPaths) {
+      expect(prompts[1]).toContain(forbiddenPath);
+    }
     expect(git.calls.filter((call) => call.op === "commit")).toHaveLength(2);
   });
 

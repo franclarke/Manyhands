@@ -1,0 +1,64 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "d190b07d-d31e-454a-b9ea-7b36ff96ec1b",
+    "workspaceId": "07993a3f-a71c-4434-aa4f-77b2509ed80e",
+    "userPrompt": "Starting from the verified W1 Warehouse codebase, implement WC1 as a complete vertical slice. Add atomic orders and reservations with valid order status transitions. Add a versioned HTTP API under /api/v1 for state, order creation, reservation, status transitions and deterministic simulation actions play, pause, step and reset. Add a monotonic Server-Sent Events stream at /api/v1/events. Add a static accessible browser UI served by the start script: an SVG warehouse tower with heatmap plus exact textual bin detail including empty bins, simulation controls operable by keyboard, explicit loading/empty/error/connected states, reduced-motion support and status communication not based on color alone. Add src/probe/wc1.ts and a package script study:wc1-probe that emits one deterministic JSON object with schemaVersion 1, increment WC1, scenario thesis-seed-2026, bins, occupiedBins, emptyBins and simulationControls. Preserve all W1 behavior. Keep the implementation dependency-free and add public behavior tests for atomicity, invalid transitions, API/SSE, simulation, tower accessibility and probe determinism. Do not implement WC2 or WC3 in this cell.",
+    "title": "Starting from the verified W1 Warehouse codebase, implement WC1 as a complete vertical slice. Add atomic orders and rese",
+    "planningSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "repairSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionConfig": {
+      "maxParallel": 1,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1800000,
+      "integrationTimeoutMs": 1800000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed"
+    },
+    "granularityCondition": "C",
+    "targetContext": {
+      "sourceRealPath": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wc1-candidate",
+      "gitCommonDir": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-14\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "25895697858793664"
+      },
+      "sourceBranch": "wc/candidate-wc1",
+      "sourceBaseCommit": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+      "remoteUrl": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-pilot-13",
+      "fingerprint": "6b30d91f5233f7f6",
+      "capturedAt": "2026-07-30T10:29:44.978Z"
+    },
+    "projection": {
+      "eventSequence": 41,
+      "lifecycle": "waiting_for_input",
+      "graphId": "graph-wc1-warehouse-vertical-slice-392e411698",
+      "graphRevision": 1,
+      "approvedGraphRevision": 1,
+      "repositorySnapshotId": "sha256:05a39772a471281a87c42bce7d3c3510f092d327322ded5ed70fc5e9c793e8de",
+      "updatedAt": "2026-07-30T10:50:42.253Z"
+    },
+    "version": 318,
+    "mutationFence": 3,
+    "createdAt": "2026-07-30T10:29:44.978Z",
+    "updatedAt": "2026-07-30T10:50:42.269Z",
+    "heartbeatAt": "2026-07-30T10:50:42.210Z"
+  }
+}

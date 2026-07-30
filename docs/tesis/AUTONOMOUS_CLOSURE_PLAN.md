@@ -673,3 +673,20 @@ completo: falta probar y cerrar teardown/evidencia durable de smoke y
 descendientes, operaciones Git cancelables durante la ventana de cancelaciÃ³n y
 recovery de huÃ©rfanos/restart. WC1 y N=4/N=8/N=16 continÃºan detenidos hasta
 resolver esas aceptaciones.
+
+### Checkpoint code repair posterior a WC1 v2 - 2026-07-30
+
+La candidate WC1 v2 (`d190b07d-d31e-454a-b9ea-7b36ff96ec1b`) produjo una
+candidate inicial, pero su code repair fallo por `scope_violation` y dejo el
+run en `waiting_for_input`; no hay entrega ni oraculo. La causa de instrumento
+identificada es que el prompt de reparacion no enumeraba el scope canonico.
+El fix V2 agrega allowed paths, output roots y forbidden paths, y conserva los
+paths `outOfScope` en el motivo de rechazo. Las suites focales y el typecheck de
+execution-core pasan.
+
+Se abre el sucesor local 32. La secuencia operativa queda:
+
+`31 + 32 -> gate raiz -> WC1 freeze-v3/candidate -> WC2 -> WC3 -> 11 -> 12 -> 02 -> 14 -> 15`
+
+La candidate WC1 v2 y su oraculo `not_run` permanecen intactos. No se responde
+la decision ni se hace retry silencioso.

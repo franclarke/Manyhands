@@ -527,3 +527,20 @@
     y build; el probe WC1 queda reservado a la candidate porque no pertenece
     al baseline. Ticket 31 sigue abierto por la candidate real; WC2 y
     N=4/N=8/N=16 esperan el veredicto WC1.
+88. **Candidate WC1 v2 preservada como evidencia adversa.** El run
+    `d190b07d-d31e-454a-b9ea-7b36ff96ec1b` produjo la candidate
+    `a8486539c5769430705ce06ef2de202b5a906964` despues de una planificacion
+    valida, pero la validacion exacta requirio repair y esa reparacion fallo
+    por `scope_violation`. El run quedo `waiting_for_input` en
+    `resolve_conflict`; no hay receipt, entrega ni SHA final. El oraculo se
+    registra `not_run` en `oracle-result.json`. No se reintenta silenciosamente
+    y no se inician WC2/WC3 ni N=4/N=8/N=16 hasta corregir y revisar la ruta de
+    code repair.
+89. **Scope de code repair explicitado.** La regresion RED reprodujo que el
+    prompt de reparacion V2 no enumeraba el contrato canonico y podia inducir
+    cambios fuera del scope. La correccion agrega allowed paths, output roots y
+    forbidden paths al prompt, y nombra tambien los paths `outOfScope` en el
+    motivo durable de rechazo strict. Suites focales de V2/recorder/run/
+    integration/scope/classification: 149/149 PASS; typecheck de
+    `@manyhands/execution-core` y diff check PASS. Se abre ticket 32 para la
+    regresion integrada y reviews; WC1 v2 no se reintenta.

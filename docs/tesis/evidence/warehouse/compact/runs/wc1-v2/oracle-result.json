@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "cellId": "warehouse-compact-wc1-v2",
+  "runId": "d190b07d-d31e-454a-b9ea-7b36ff96ec1b",
+  "candidateSha": null,
+  "outcome": "not_run",
+  "reason": "No delivered candidate SHA exists: exact-candidate validation failed and the repair attempt was rejected for scope_violation.",
+  "preservedEvidence": [
+    "candidate.json",
+    "result.json",
+    "run.json",
+    "run.events.v2.jsonl",
+    "run.snapshot.v2.json",
+    "run.granularity-metrics.json",
+    "cell.json"
+  ]
+}

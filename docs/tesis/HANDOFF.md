@@ -1898,3 +1898,46 @@ WC1.
 Estado de reanudacion: iniciar el servidor ManyHands en `127.0.0.1:3112`,
 ejecutar `wc1-cell-v2` una sola vez y preservar su resultado completo bajo
 `docs/tesis/evidence/warehouse/compact/runs/wc1-v2/`.
+
+## Checkpoint candidate WC1 v2 preservada - 2026-07-30
+
+La candidate WC1 v2 se ejecuto una sola vez con el freeze vigente y queda
+preservada bajo `docs/tesis/evidence/warehouse/compact/runs/wc1-v2/`.
+El run es `d190b07d-d31e-454a-b9ea-7b36ff96ec1b`. La primera planificacion fue
+rechazada por una validacion de schema; la segunda fue aprobada. El executor
+termino correctamente y el orquestador produjo la candidate
+`a8486539c5769430705ce06ef2de202b5a906964`, con 14 archivos dentro del scope
+declarado.
+
+La validacion exacta de esa candidate exigio una reparacion. La reparacion
+fallo por `scope_violation` al modificar archivos fuera del scope declarado;
+la candidate fue descartada y el run quedo en `waiting_for_input` sobre
+`resolve_conflict`. No existe delivery receipt, SHA final entregado ni oraculo
+ejecutado. `candidate.json` y `oracle-result.json` registran esta evidencia
+adversa; el oraculo queda explicitamente `not_run`, no PASS.
+
+Esto revela un defecto nuevo del instrumento en la ruta de code repair, no una
+falla atribuible del producto Warehouse. No se responde la decision, no se
+reintenta WC1 v2, y no se inicia WC2/WC3 ni N=4/N=8/N=16. El siguiente paso es
+inspeccionar la enforcement de scope de la reparacion, reproducirla con TDD,
+corregir la causa real y ejecutar las revisiones independientes antes de crear
+un freeze WC1 sucesor.
+
+## Checkpoint code repair con scope explicito - 2026-07-30
+
+La regresion RED en `tests/execution-core-v2-node-executor.test.ts` reprodujo
+que el prompt de code repair no enumeraba los paths del contrato canonico. La
+correccion en `packages/execution-core/src/v2/node-executor.ts` ahora incluye
+allowed paths, `outputRoots` y forbidden paths en el prompt de reparacion; la
+razon de `scope_violation` tambien incluye `outOfScope` cuando la politica
+strict rechaza un archivo no prohibido.
+
+Verificacion: las suites focales de V2, recorder, run executor, integracion,
+scope y clasificacion quedan en 149/149 PASS; `@manyhands/execution-core`
+typecheck PASS y `git diff --check` PASS. Se creo el ticket 32 para completar
+la regresion integrada y las reviews Standards/Spec. Ticket 31 sigue abierto.
+
+Estado de reanudacion: revisar la enforcement productiva de repair con una
+regresion integrada, cerrar tickets 31/32 y repetir el gate raiz. Solo despues
+crear `wc1-freeze-v3` y ejecutar una nueva candidate WC1; no responder la
+decision preservada ni iniciar WC2/WC3 o N=4/N=8/N=16.
