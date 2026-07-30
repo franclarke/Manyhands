@@ -522,3 +522,8 @@
     se reemplazo por polling acotado observable. La suite focal queda 7/7
     PASS. Falta repetir el gate completo serial y, si queda verde, ejecutar
     una sola candidate WC1 v2.
+87. **Preflight WC1 v2 verde.** El gate raiz serial queda en 221 archivos
+    PASS, 1546 tests PASS y 2 skipped. La base W1 externa pasa 25/25, typecheck
+    y build; el probe WC1 queda reservado a la candidate porque no pertenece
+    al baseline. Ticket 31 sigue abierto por la candidate real; WC2 y
+    N=4/N=8/N=16 esperan el veredicto WC1.

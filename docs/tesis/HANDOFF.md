@@ -1882,3 +1882,19 @@ PASS y `git diff --check` PASS.
 Estado de reanudacion: repetir `pnpm test` una sola vez, serialmente, para
 confirmar el gate completo estable. Si queda verde, mantener el freeze WC1
 v2, arrancar el servidor en 3112 y ejecutar la candidate una sola vez.
+
+## Checkpoint preflight completo WC1 - 2026-07-30
+
+El gate raiz serial queda verde despues de estabilizar la regresion: 221
+archivos PASS, 1546 tests PASS y 2 skipped. El target W1 limpio pasa 25/25
+tests, typecheck y build con su lockfile instalado. El probe WC1 no se exige
+en W1 porque es parte del incremento que debe producir la candidate.
+
+El freeze WC1 v2 sigue valido sobre `e6d21b5` y la celda conserva una sola
+ejecucion secuencial. Ticket 31 sigue abierto hasta observar teardown y
+recovery en el host real; no se inicia WC2 ni N=4/N=8/N=16 antes del veredicto
+WC1.
+
+Estado de reanudacion: iniciar el servidor ManyHands en `127.0.0.1:3112`,
+ejecutar `wc1-cell-v2` una sola vez y preservar su resultado completo bajo
+`docs/tesis/evidence/warehouse/compact/runs/wc1-v2/`.
