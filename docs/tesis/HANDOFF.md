@@ -1622,3 +1622,18 @@ Estado exacto para reanudar: resolver las aceptaciones restantes del ticket 31
 desde `6c71214`, cerrar con reviews nuevas, crear un freeze sucesor WC1 y
 ejecutar solo WC1. La secuencia posterior sigue siendo
 `31 -> WC1 sucesor -> WC2 -> WC3 -> 14 -> 15`.
+
+## Checkpoint gate raiz y compatibilidad de proyecciones - 2026-07-30
+
+La suite `tests/execution-driver-concurrency.test.ts` revelo que algunas
+proyecciones legacy de pruebas no traian `recoveryHistory` y algunos drivers no
+pasaban `now`. El commit `6251751` agrega defaults compatibles; la suite queda
+en 10/10 PASS y `@manyhands/orchestrator-graph` typecheck PASS.
+
+La corrida completa `pnpm test` sigue detenida con 6 fallos no atribuibles al
+fix de teardown: hash del freeze historico de wide-graph, adopcion de
+`finalManifest`, lifecycle esperado en una decision de integracion y expiracion
+de decisiones sobre nuevas revisiones. No se modifican freezes historicos ni se
+declaran esos resultados positivos. El siguiente trabajo debe aislar y resolver
+esos fallos antes del gate final; ticket 31 y la candidate WC1 sucesora siguen
+sin cerrar.

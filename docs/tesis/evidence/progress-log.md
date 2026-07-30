@@ -437,3 +437,9 @@
     Standards/Spec dejaron abiertas evidencia durable/teardown smoke,
     operaciones Git cancelables y recovery de huÃ©rfanos. No se repite WC1 ni se
     consume N=4/N=8/N=16 hasta cerrar esas aceptaciones.
+74. **Compatibilidad del driver y gate raiz parcial.** `6251751` agrega
+    defaults para `recoveryHistory` y `now`; la suite de concurrencia queda
+    10/10 PASS y el typecheck de orchestrator-graph PASS. `pnpm test` aun
+    conserva 6 fallos no atribuibles al teardown: freeze hash historico,
+    finalManifest, lifecycle de decision de integracion y expiracion de
+    decisiones. No se modifican freezes ni se inicia una candidate sucesora.
