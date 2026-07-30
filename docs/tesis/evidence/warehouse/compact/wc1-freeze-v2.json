@@ -1,0 +1,22 @@
+{
+  "freezeId": "warehouse-compact-v2",
+  "frozenAt": "2026-07-30T07:08:00-03:00",
+  "status": "frozen-before-candidate-execution",
+  "manyhandsCommit": "d442ff54786346e1fd2b92245bdc0196a82774b9",
+  "manyhandsTree": "730ec61fc5edf3baa7b51dde6984f160a6c4d433",
+  "baseW1": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+  "executor": { "id": "codex-cli", "model": "gpt-5.5", "effort": "high" },
+  "condition": "C",
+  "increment": "WC1",
+  "cell": "docs/tesis/evidence/warehouse/compact/wc1-cell-v2.json",
+  "cellSha256": "5e556d661d7df2bda82de195ee5de32c423885ab162a48ce9f4252013aff8879",
+  "goalSha256": "2632d03bd27aea212e76962784315900b136c55422f8d3ae9c631d6d7dca72ff",
+  "oracle": {
+    "path": "docs/tesis/evidence/scripts/run-compact-wc-oracle.mjs",
+    "sha256": "ad90230344838c985befa517e654965803f797200838f63007b72e0474520e2a"
+  },
+  "budget": { "maxParallel": 1, "leafTimeoutMs": 1800000, "integrationTimeoutMs": 1800000, "wallClockLimitMs": 7200000 },
+  "cutRules": ["one candidate execution", "one delivery/oracle attempt", "preserve failures", "no ad hoc decisions", "no silent retry"],
+  "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wc1-candidate",
+  "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c"
+}

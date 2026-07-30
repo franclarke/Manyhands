@@ -1852,3 +1852,21 @@ host real, recovery de orphan/restart/heartbeat/pool y reviews finales.
 Estado de reanudacion: ejecutar las suites focales de supervision/takeover,
 versionar esta regresion y despues congelar WC1 sobre el HEAD corregido. El
 orden vigente queda WC1 -> WC2 -> WC3 antes de N=4/N=8/N=16.
+
+## Checkpoint freeze sucesor WC1 - 2026-07-30
+
+Se creo el freeze `warehouse-compact-v2` sobre ManyHands commit
+`d442ff54786346e1fd2b92245bdc0196a82774b9`, con el contrato de descendientes
+corregido, Codex CLI/gpt-5.5/high, condicion C, `maxParallel=1`, una sola
+candidate, una sola entrega/oraculo y reglas de corte explicitas. La celda y
+el freeze quedan en `docs/tesis/evidence/warehouse/compact/wc1-cell-v2.json`
+y `wc1-freeze-v2.json`; el hash de la celda queda registrado en el freeze.
+
+La base externa esta limpia en W1 `71f61c9` bajo
+`warehouse-control-tower-wc1-candidate`. No se ejecuto todavia la candidate.
+Ticket 31 permanece abierto hasta que esta ejecucion demuestre teardown,
+evidencia durable y recovery integrado.
+
+Estado de reanudacion: ejecutar el preflight de la celda WC1 v2 y luego una
+sola candidate. Preservar todos los journals, incluso si no hay candidate SHA;
+no iniciar WC2 hasta emitir el veredicto de WC1.
