@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "processes": [
+    {
+      "pid": 17256,
+      "label": "planning-v2-attempt-1",
+      "command": "C:\\Users\\franc\\AppData\\Local\\Programs\\OpenAI\\Codex\\bin\\codex.exe",
+      "operationId": "8ccc089c-d182-4bbe-8332-d15bd0712c28",
+      "registeredAt": "2026-07-30T00:45:03.640Z",
+      "exitedAt": "2026-07-30T00:47:16.025Z"
+    },
+    {
+      "pid": 35208,
+      "label": "codex",
+      "command": "C:\\Users\\franc\\AppData\\Local\\Programs\\OpenAI\\Codex\\bin\\codex.exe",
+      "attemptId": "9ddafc39-1c82-5b48-a675-06896851ab67",
+      "registeredAt": "2026-07-30T00:47:29.567Z",
+      "exitedAt": "2026-07-30T00:54:13.352Z"
+    }
+  ],
+  "updatedAt": "2026-07-30T00:54:13.397Z"
+}

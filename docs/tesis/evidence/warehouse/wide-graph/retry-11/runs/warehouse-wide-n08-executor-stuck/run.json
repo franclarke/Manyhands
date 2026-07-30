@@ -1,0 +1,71 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "4e853223-1fff-47d5-a0f3-e59fdbfb3c76",
+    "workspaceId": "e581d627-ecf4-46e5-93c0-c45442a2c703",
+    "userPrompt": "Add exactly 8 independent warehouse analytics modules to the verified W1 codebase.\nCreate src/analytics/contracts.ts exporting WarehouseProjection with a readonly id and project(scenario), where project returns the answer to that module's question.\nEach module answers one question, computed from the W1 Scenario, layout and inventory exports:\n- src/analytics/projection-01.ts exports the projection \"zone-unit-totals\": Total units stored in each zone, keyed by zone id. Its focused tests live in src/analytics/projection-01.test.ts.\n- src/analytics/projection-02.ts exports the projection \"sku-unit-totals\": Total units of each SKU across the whole warehouse, keyed by SKU id. Its focused tests live in src/analytics/projection-02.test.ts.\n- src/analytics/projection-03.ts exports the projection \"bin-occupancy\": How many bins hold stock, how many are empty, and how many exist. Its focused tests live in src/analytics/projection-03.test.ts.\n- src/analytics/projection-04.ts exports the projection \"sku-bin-spread\": Number of distinct bins each SKU occupies, keyed by SKU id. Its focused tests live in src/analytics/projection-04.test.ts.\n- src/analytics/projection-05.ts exports the projection \"zone-sku-mix\": Number of distinct SKUs present in each zone, keyed by zone id. Its focused tests live in src/analytics/projection-05.test.ts.\n- src/analytics/projection-06.ts exports the projection \"top-bin-by-units\": The single bin holding the most units, and how many. Ties break on the lowest bin id. Its focused tests live in src/analytics/projection-06.test.ts.\n- src/analytics/projection-07.ts exports the projection \"empty-bin-ids\": Ids of every bin holding no stock, sorted ascending. Its focused tests live in src/analytics/projection-07.test.ts.\n- src/analytics/projection-08.ts exports the projection \"median-occupied-bin-units\": Median unit count across bins that hold stock. Even counts average the two middle values. Its focused tests live in src/analytics/projection-08.test.ts.\nA module must not import another module; it may import only the fixed contract and W1 exports.\nEvery answer must be derived from the scenario at run time. Do not hardcode results, and do not duplicate the W1 inventory or layout calculations.\nCreate src/analytics/registry.ts as the sole consumer of every module, returning all projections in the order the modules are listed above, with its own tests in src/analytics/registry.test.ts.\nPreserve all existing W1 behaviour and checks.\nAdd a package script named study:wide-graph that writes exactly one JSON object to stdout and no other output.\nIts JSON must be { \"schemaVersion\": 1, \"moduleCount\": 8, \"scenario\": \"thesis-seed-2026\", \"projections\": [ { \"projectionId\": \"<the module's projection id>\", \"value\": <that module's answer> }, … ] } with exactly 8 entries in the order the modules are listed above.\nTwo invocations from the same commit must emit byte-identical JSON.",
+    "title": "Add exactly 8 independent warehouse analytics modules to the verified W1 codebase.\nCreate src/analytics/contracts.ts exp",
+    "planningSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "repairSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1800000,
+      "integrationTimeoutMs": 1800000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed"
+    },
+    "granularityCondition": "C",
+    "targetContext": {
+      "sourceRealPath": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-r11-n08",
+      "gitCommonDir": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-r11-n08\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "125819314590082243"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+      "remoteUrl": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-r10-n04",
+      "fingerprint": "e5f92373cf19c1aa",
+      "capturedAt": "2026-07-30T00:59:09.860Z"
+    },
+    "projection": {
+      "eventSequence": 30,
+      "lifecycle": "running",
+      "graphId": "graph-warehouse-analytics-wide-8-ed6328eada",
+      "graphRevision": 1,
+      "approvedGraphRevision": 1,
+      "repositorySnapshotId": "sha256:dacae664c59a262cbc285dfb93c00343b148386ff4832e75ff455218170eb21e",
+      "updatedAt": "2026-07-30T01:02:03.678Z"
+    },
+    "version": 62,
+    "mutationFence": 3,
+    "activeOperation": {
+      "operationId": "74d0eea2-0f8e-43c3-a2a6-a59a51a5e9f9",
+      "kind": "execution",
+      "fencingToken": 3,
+      "acquiredAt": "2026-07-30T01:02:03.842Z",
+      "heartbeatAt": "2026-07-30T01:02:59.417Z"
+    },
+    "createdAt": "2026-07-30T00:59:09.860Z",
+    "updatedAt": "2026-07-30T01:02:59.481Z",
+    "heartbeatAt": "2026-07-30T01:02:59.417Z"
+  }
+}

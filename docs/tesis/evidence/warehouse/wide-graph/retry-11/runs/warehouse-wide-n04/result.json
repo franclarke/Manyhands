@@ -1,0 +1,18 @@
+{
+  "cellId": "warehouse-wide-n04",
+  "condition": "C",
+  "outcome": "not_delivered",
+  "reason": "executor_stuck_after_process_exit_without_terminal_transition",
+  "runId": "67b52f91-d4d4-4d1f-a1de-4f09cdf80363",
+  "lifecycleAtPreservation": "running",
+  "eventSequenceAtPreservation": 26,
+  "preservedEvidence": [
+    "../warehouse-wide-n04-executor-stuck/run.json",
+    "../warehouse-wide-n04-executor-stuck/run.events.v2.jsonl",
+    "../warehouse-wide-n04-executor-stuck/run.snapshot.v2.json"
+  ],
+  "notes": [
+    "The first attempt with the server's default runs directory is preserved under ../warehouse-wide-n04-runtime-dir-mismatch.",
+    "The target remained at the frozen baseline; no candidate commit or delivery was produced."
+  ]
+}

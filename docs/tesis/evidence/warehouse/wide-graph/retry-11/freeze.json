@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "frozenAt": "2026-07-30T00:24:59.5901465Z",
+  "manyHands": {
+    "commit": "4f64258597fae8434df2700f1c08049ef67e7a50",
+    "tree": "37e90ed591bbe351b8c44ec0be4845e27d453a43",
+    "repository": "C:\\Users\\franc\\Documents\\Proyectos\\Manyhands",
+    "workingTree": "clean-at-preparation",
+    "policyVersion": "adaptive-utility/3.1.0-pilot"
+  },
+  "toolchain": {
+    "node": "v24.16.0",
+    "pnpm": "7.29.3",
+    "pnpmLockSha256": "ccfdec805178d04f07921c595206239eafe58236ac61300c6589b4953ecc9c40"
+  },
+  "gateP0": {
+    "commit": "4f64258597fae8434df2700f1c08049ef67e7a50",
+    "workspace": "Manyhands checkout",
+    "commands": [
+      {
+        "command": "pnpm exec vitest run tests/store-recovery-traces-security.test.ts tests/run-v2-e2e.test.ts tests/run-granularity-strategy-selected.test.ts tests/granularity-utility-policy.test.ts tests/granularity-policy-conditions.test.ts",
+        "outcome": "pass",
+        "summary": "5 files; 35 tests passed"
+      },
+      {
+        "command": "pnpm -r --filter ./packages/* typecheck",
+        "outcome": "pass"
+      },
+      {
+        "command": "pnpm --filter @manyhands/web exec tsc --noEmit",
+        "outcome": "pass"
+      },
+      {
+        "command": "pnpm build",
+        "outcome": "pass"
+      },
+      {
+        "command": "pnpm web:build",
+        "outcome": "pass"
+      }
+    ],
+    "limitations": [
+      "The full pnpm test run was not completed in the available verification window and is not claimed as a pass."
+    ]
+  },
+  "series": {
+    "condition": "C",
+    "policyVersion": "adaptive-utility/3.1.0-pilot",
+    "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+    "baseTree": "f159213768587bc719854760e818c5a55d4601f0",
+    "baseUrl": "http://127.0.0.1:3111",
+    "executorSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "moduleCounts": [4, 8, 16],
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1800000,
+      "integrationTimeoutMs": 1800000,
+      "unexpectedCommitPolicy": "reject",
+      "wallClockLimitMs": 7200000,
+      "pollIntervalMs": 10000
+    },
+    "humanDecisionProtocol": ["approve_plan", "approve_delivery"]
+  },
+  "cells": [
+    {
+      "cellId": "warehouse-wide-n04",
+      "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-r11-n04",
+      "cellSha256": "d20fbe110f9e708b1320920fe447467f2a8d1188a2ab8fa4c4317f08ddfe006e",
+      "goalSha256": "d1798ad1caba8c72cfc82792b0eb1330240511764c59e2539ab3799446f6f546"
+    },
+    {
+      "cellId": "warehouse-wide-n08",
+      "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-r11-n08",
+      "cellSha256": "4523a90e26b4af8cb7f600c164b9ec63ef859bc80ba444de8c0f540c1193f20c",
+      "goalSha256": "8da73f032bc2924bf70d46f63d739dc8c4d55a503b59e68f0bf862805f6ad1a8"
+    },
+    {
+      "cellId": "warehouse-wide-n16",
+      "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-r11-n16",
+      "cellSha256": "aea74b1f105e5ebc7db5d1abd30739ae1c4b49051aa11999a1b5198805cf889b",
+      "goalSha256": "94b7cf6ac0f4e39ca8ffd944e9f5dbc04e02572b70e638cbabcce3f1db5e7b61"
+    }
+  ],
+  "artifacts": {
+    "cellsManifestSha256": "dbaacfa1acd639167bed86ffdf5660f982658863bf871b1b6b93928db7c02d49",
+    "seriesDriverSha256": "898a7b20664839615d04e0208dd7d708a45008fe6ed6b3f9d45621e6a8dc8fbc",
+    "driverSha256": "7c1fbda966566f30589acd1c59340a7a2f9b8a87d0e31338f90aabf6162e932f",
+    "oracleId": "warehouse-wide-graph-v2",
+    "oracleContractVersion": 2,
+    "oracleRunnerSha256": "4a595700c52ea43a022e3862e9967b4c8aa390760d6ba3340bc9459a651c59e1",
+    "oracleEvaluatorSha256": "cb22b7e6ef4aebe948e8525404468a34c842de44820f2f14a4e5e52b0cee8c6a"
+  },
+  "preparationNotes": [
+    "Retry-9 and retry-10 remain immutable; their adverse outcomes are retained.",
+    "Retry-11 uses the pre-registered C condition and the corrected productive route.",
+    "Each cell uses its own clean baseline clone; the series driver runs cells sequentially.",
+    "This freeze records only completed focused gates; no uncompleted full-suite run is treated as passing."
+  ]
+}

@@ -1,0 +1,29 @@
+[
+  {
+    "cellId": "warehouse-wide-n04",
+    "position": 1,
+    "taskId": "warehouse-wide-graph",
+    "condition": "C",
+    "outcome": "not_delivered",
+    "runId": "67b52f91-d4d4-4d1f-a1de-4f09cdf80363",
+    "reason": "executor_stuck_after_process_exit_without_terminal_transition"
+  },
+  {
+    "cellId": "warehouse-wide-n08",
+    "position": 2,
+    "taskId": "warehouse-wide-graph",
+    "condition": "C",
+    "outcome": "not_delivered",
+    "runId": "4e853223-1fff-47d5-a0f3-e59fdbfb3c76",
+    "reason": "executor_stuck_after_process_exit_without_terminal_transition"
+  },
+  {
+    "cellId": "warehouse-wide-n16",
+    "position": 3,
+    "taskId": "warehouse-wide-graph",
+    "condition": "C",
+    "outcome": "not_delivered",
+    "runId": "2ac013d5-4433-4cd2-9e27-9594fb0dda18",
+    "reason": "executor_stuck_after_process_exit_without_terminal_transition"
+  }
+]

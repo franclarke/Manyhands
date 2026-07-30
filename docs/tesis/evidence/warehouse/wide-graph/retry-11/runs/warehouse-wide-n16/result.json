@@ -1,0 +1,16 @@
+{
+  "cellId": "warehouse-wide-n16",
+  "condition": "C",
+  "outcome": "not_delivered",
+  "reason": "executor_stuck_after_process_exit_without_terminal_transition",
+  "runId": "2ac013d5-4433-4cd2-9e27-9594fb0dda18",
+  "lifecycleAtPreservation": "planning",
+  "eventSequenceAtPreservation": 0,
+  "preservedEvidence": [
+    "../warehouse-wide-n16-executor-stuck/run.json",
+    "../warehouse-wide-n16-executor-stuck/run.events.v2.jsonl"
+  ],
+  "notes": [
+    "The target remained at the frozen baseline; no candidate commit or delivery was produced."
+  ]
+}
