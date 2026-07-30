@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "freezeId": "warehouse-compact-v3",
+  "cellId": "warehouse-compact-wc1-v3",
+  "outcome": "not_run",
+  "reason": "The driver refused to start because MANYHANDS_SESSION_TOKEN was not exported with the same value as the server token.",
+  "runId": null,
+  "candidateSha": null,
+  "receipt": null,
+  "delivery": null,
+  "oracle": "not_run",
+  "preservedAt": "2026-07-30T08:34:00-03:00"
+}

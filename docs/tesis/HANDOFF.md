@@ -1993,3 +1993,31 @@ hacer preflight del servidor 3114 y verificar el freeze; si queda verde, se
 ejecuta una sola candidate y se preserva cualquier decision/fallo. WC1 v2,
 retry-9/10/11 y su oraculo `not_run` permanecen intactos. WC2/WC3 y N=4/N=8/
 N=16 siguen bloqueados.
+
+## Checkpoint preflight WC1 v3 invalido - 2026-07-30
+
+El preflight del freeze v3 levanto correctamente el servidor en `3114` y
+confirmo el target W1 limpio, pero el driver se detuvo antes de crear un run:
+`MANYHANDS_SESSION_TOKEN` no estaba exportado con el mismo valor que el token
+del servidor. El directorio `runs/wc1-v3/` queda preservado con
+`instrument-preflight.json`; no existe runId, candidate, receipt, delivery ni
+oraculo. Esto es `not_run`, no evidencia WC1.
+
+La causa esta en el arranque del protocolo, no en Warehouse. No se reintenta
+v3 silenciosamente. El siguiente paso es crear un freeze sucesor que fije la
+propagacion del token en el servidor y driver, pasar nuevamente el preflight y
+recién entonces consumir la unica candidate.
+
+## Checkpoint freeze WC1 v4 preparado - 2026-07-30
+
+Se preserva intacto el preflight invalido de v3 y se creo el sucesor
+`warehouse-compact-v4`. La celda fija explicitamente `MANYHANDS_SESSION_TOKEN`
+como variable compartida entre el proceso Next y el driver; conserva la base W1
+`71f61c9`, el commit ManyHands `8a0daac`, puerto `3114`, `maxParallel=1` y las
+reglas de una sola candidate, un solo oraculo y cero retry silencioso. La celda
+esta hashada como `32aec38bd49f9a428c51fce7f0ea0e21f00988000f5e33eeff4dfdefcb7c00d1`.
+
+Estado de reanudacion: committear este freeze y ejecutar el preflight v4 con
+el mismo token exportado en servidor y driver. Si pasa, consumir una sola
+candidate WC1 v4 y preservar cualquier fallo o decision; no iniciar WC2/WC3
+hasta emitir el veredicto de WC1.

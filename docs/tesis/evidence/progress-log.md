@@ -568,3 +568,16 @@
     `outputRoots` recursivos, `maxParallel=1`, hashes de celda/oraculo y corte
     sin retry silencioso. La candidate aun no se ejecuta; WC1 v2 permanece
     intacto como evidencia adversa.
+94. **Preflight WC1 v3 detenido por token de sesión.** El servidor 3114 y el
+    target W1 pasaron, pero `run-experiment.mjs` rechazó el arranque porque
+    `MANYHANDS_SESSION_TOKEN` no coincidía con el token del servidor. No hubo
+    runId ni candidate; `instrument-preflight.json` conserva el resultado
+    `not_run`. No se repite v3 silenciosamente: se requiere freeze sucesor con
+    token compartido explícitamente.
+95. **Freeze WC1 v4 preparado.** Se preserva v3 como preflight `not_run` y se
+    congela el sucesor `warehouse-compact-v4` con el token de sesión compartido
+    explícitamente entre servidor y driver. La base sigue siendo W1 `71f61c9`,
+    ManyHands `8a0daac`, puerto `3114`, `maxParallel=1`, y la celda queda
+    registrada con hash `32aec38bd49f9a428c51fce7f0ea0e21f00988000f5e33eeff4dfdefcb7c00d1`.
+    Todavía no hay candidate: el próximo paso es preflight y, si pasa, una sola
+    ejecución WC1 v4.
