@@ -493,3 +493,9 @@
     regresiones en lifecycle, leases, takeover, supervisor o pool. Ticket 31
     sigue abierto por candidate integrada y reviews; WC1 sucesor y N=4/N=8/N=16
     continÃºan detenidos.
+82. **Freeze historico materializado de forma reproducible.** El `dist` exacto
+    de `4fe8544` se reconstruyo y su hash `f95b...` coincide; la copia durable
+    se versiona bajo `evidence/warehouse/wide-graph/frozen-dist/` y el freeze
+    apunta a ella. `wide-graph-oracle-contract` queda en 7/7 PASS sin cambiar
+    la semantica historica. Falta repetir el gate raiz y cerrar ticket 31;
+    WC1 sucesor y N=4/N=8/N=16 siguen detenidos.

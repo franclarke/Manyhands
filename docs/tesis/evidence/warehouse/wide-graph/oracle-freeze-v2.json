@@ -8,7 +8,7 @@
   },
   "policy": {
     "version": "adaptive-utility/3.1.0-pilot",
-    "distPath": "packages/decomposer/dist/index.js",
+    "distPath": "docs/tesis/evidence/warehouse/wide-graph/frozen-dist/packages/decomposer/dist/index.js",
     "distSha256": "f95b81959faf0a23b9f3a0c8814dd90cf894db8907ef17f8430419499bed16bc"
   },
   "toolchain": {

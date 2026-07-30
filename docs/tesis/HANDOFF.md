@@ -1799,3 +1799,21 @@ no se ejecutan.
 Estado de reanudacion: resolver o materializar de forma reproducible el
 artefacto `dist` historico sin alterar su semantica, completar la review
 independiente de 31 y luego crear el freeze sucesor WC1.
+## Checkpoint freeze historico reproducible - 2026-07-30
+
+El fallo restante de `wide-graph-oracle-contract` no era una deriva del
+oraculo sino un `dist` generado e ignorado que no estaba versionado. Se
+reconstruyo el paquete desde el commit exacto del freeze
+`4fe854425fa04341f123b13c93a3bc08b9223702`; el hash coincide con
+`f95b81959faf0a23b9f3a0c8814dd90cf894db8907ef17f8430419499bed16bc`.
+
+La copia durable queda en
+`docs/tesis/evidence/warehouse/wide-graph/frozen-dist/packages/decomposer/dist/index.js`
+y `oracle-freeze-v2.json` apunta explicitamente a ella. La prueba contractual
+queda en 7/7 PASS. Esto conserva la evidencia historica sin cambiar su
+semantica ni reinterpretar recibos.
+
+Estado de reanudacion: ejecutar nuevamente el gate raiz para confirmar cero
+fallos contractuales, luego completar la review independiente de ticket 31 y
+crear el freeze sucesor de WC1. Todavia no se repite WC1 ni se inicia
+N=4/N=8/N=16.
