@@ -91,7 +91,10 @@ const finished = new Date().toISOString();
 //    separate, re-runnable step over these files.
 await preserve(runId, { started, finished, outcome });
 log(`lifecycle=${outcome.lifecycle} finalSha=${outcome.finalSha ?? "none"}`);
-process.exit(outcome.lifecycle === "completed" ? 0 : 1);
+// Let outstanding HTTP/IPC handles close normally on Windows. Calling
+// process.exit() here can abort libuv while a fetch socket is closing and
+// surface a platform crash instead of the driver's intended exit status.
+process.exitCode = outcome.lifecycle === "completed" ? 0 : 1;
 
 async function drive(runId) {
   const deadline = Date.now() + (config.wallClockLimitMs ?? 90 * 60 * 1000);
