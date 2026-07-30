@@ -1473,3 +1473,23 @@ de este HANDOFF cuando haya conflicto:
   W1 conserva históricamente el resultado `1/8`.
 - WC1, WC2 y WC3 requieren tickets sucesores, claims y freeze de
   prompts/probes/oráculos antes de ejecutar el primer incremento.
+
+## Estado posterior a retry-12 N=4 - 2026-07-30
+
+El freeze sucesor `retry-12` quedó registrado sobre `e1a411d`, con base W1
+`71f61c9`, condición C, Codex `gpt-5.5/high` y celdas N=4/N=8/N=16. La celda
+N=4 se ejecutó una sola vez y produjo candidate
+`7a08eebdf5a3c929097b57a617f9d1fe9f45893b`, pero la validación fue
+`unverified` y el run levantó una decisión real `resolve_conflict`.
+
+El driver pre-registrado solo autoriza aprobar el plan y la entrega; no
+autoriza contestar decisiones de conflicto ad hoc. Por eso preservó la celda
+con lifecycle `waiting_for_input`, `finalSha: null`, `receipt: null` y sin
+delivery en `evidence/warehouse/wide-graph/retry-12/runs/warehouse-wide-n04/`.
+No es PASS ni resultado terminal entregado. N=8 y N=16 no se inician, y ticket
+11 permanece abierto hasta definir un protocolo sucesor explícito para esta
+clase de decisión, sin reutilizar ni repetir silenciosamente N=4.
+
+La tesis no puede presentar retry-12 como evidencia positiva: solo demuestra
+que el ciclo llega a una decisión durable y conserva la evidencia de una
+validación no verificada. W1 continúa siendo `1/8` histórico.

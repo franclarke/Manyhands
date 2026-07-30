@@ -618,3 +618,13 @@ El sucesor local 27 debe cerrarse antes de consumir cuota en una nueva serie:
 W1 sigue siendo el resultado histórico `1/8`. WC1, WC2 y WC3 son incrementos
 sucesores compactos, cada uno con su ticket, claim, freeze, candidate execution
 y oráculo; una ausencia de candidate SHA conserva el resultado como `not_run`.
+
+### Actualización retry-12 N=4
+
+La nueva serie fue congelada sobre `e1a411d` y se ejecutó N=4 una sola vez.
+El candidato `7a08eebdf5a3c929097b57a617f9d1fe9f45893b` quedó asociado a una
+validación `unverified` y a una decisión `resolve_conflict`; el driver expiró
+su margen en `waiting_for_input`, sin `finalSha`, receipt ni entrega. La celda
+se conserva como evidencia no entregada. N=8/N=16 quedan detenidas hasta un
+protocolo sucesor explícito que defina la política de esa decisión. No se
+repite la celda ni se transforma la ausencia de entrega en PASS.
