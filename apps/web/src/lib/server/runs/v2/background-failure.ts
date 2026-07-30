@@ -37,7 +37,10 @@ export async function markRunFailedAfterBackgroundTask(
   if (error instanceof RunMutationConflictError) return;
   const events = new JsonlRunEventStore({ directory: resolveRunsDirectory() });
   const initial = foldRun(await events.load(runId));
-  if (!ACTIVE_LIFECYCLES.includes(initial.lifecycle) || hasPendingDecision(initial)) return;
+  if (
+    !ACTIVE_LIFECYCLES.includes(initial.lifecycle) ||
+    (area !== "execution" && hasPendingDecision(initial))
+  ) return;
 
   const currentRun = await getRunRepository().get(runId);
   const currentOperation = currentRun.activeOperation;
@@ -74,7 +77,10 @@ export async function markRunFailedAfterBackgroundTask(
   try {
     const currentEvents = await events.load(runId);
     const current = foldRun(currentEvents);
-    if (!ACTIVE_LIFECYCLES.includes(current.lifecycle) || hasPendingDecision(current)) return;
+    if (
+      !ACTIVE_LIFECYCLES.includes(current.lifecycle) ||
+      (area !== "execution" && hasPendingDecision(current))
+    ) return;
 
     const authority = { operationId: lease.operationId, fencingToken: lease.fencingToken };
     const reason = error instanceof Error ? error.message : String(error);

@@ -43,6 +43,51 @@ async function seedPlanningRun(runId: string): Promise<void> {
   }]);
 }
 
+async function seedWaitingRun(runId: string): Promise<void> {
+  await seedPlanningRun(runId);
+  const events = new JsonlRunEventStore({ directory: process.env.MANYHANDS_RUNS_DIR });
+  const authority = await events.claimAuthority(runId, `${runId}:waiting`, 1);
+  await events.appendFenced(runId, 1, authority, [
+    {
+      eventId: `${runId}:graph-proposed`,
+      occurredAt: "2026-07-30T00:00:01.000Z",
+      type: "graph.revision.proposed",
+      payload: { graphId: "graph-independent-failure", revision: 1 }
+    },
+    {
+      eventId: `${runId}:graph-approved`,
+      occurredAt: "2026-07-30T00:00:02.000Z",
+      type: "graph.revision.approved",
+      payload: { graphId: "graph-independent-failure", revision: 1 }
+    },
+    {
+      eventId: `${runId}:decision`,
+      occurredAt: "2026-07-30T00:00:03.000Z",
+      type: "decision.raised",
+      payload: {
+        decision: {
+          id: "decision-unrelated-planner-input",
+          kind: "clarify_goal",
+          question: "Which planner policy should be used?",
+          options: [
+            { id: "conservative", label: "Conservative" },
+            { id: "aggressive", label: "Aggressive" }
+          ],
+          affectedNodeIds: ["unrelated-planner-node"],
+          evidenceRefs: ["work-question:planner-policy"],
+          impact: "architecture"
+        }
+      }
+    },
+    {
+      eventId: `${runId}:readiness`,
+      occurredAt: "2026-07-30T00:00:04.000Z",
+      type: "readiness.observed",
+      payload: { readyNodeIds: [], pendingDecisionIds: ["decision-unrelated-planner-input"] }
+    }
+  ]);
+}
+
 describe("background task terminal lifecycle", () => {
   it("persists a terminal failure when an executor task exits without a result", async () => {
     const runId = "run-executor-exit";
@@ -100,6 +145,23 @@ describe("background task terminal lifecycle", () => {
     expect(state.lifecycle).toBe("planning");
     expect(state.decisions["decision-operator-input"]?.status).toBe("pending");
     expect((await events.load(runId)).some((event) => event.type === "run.failed")).toBe(false);
+  });
+
+  it("fails an execution task even when an unrelated decision is pending", async () => {
+    const runId = "run-execution-failure-with-unrelated-decision";
+    await seedWaitingRun(runId);
+    const events = new JsonlRunEventStore({ directory: process.env.MANYHANDS_RUNS_DIR });
+
+    await markRunFailedAfterBackgroundTask(
+      runId,
+      new Error("executor failed while another node awaited input"),
+      "execution"
+    );
+
+    const state = foldRun(await events.load(runId));
+    expect(state.lifecycle).toBe("failed");
+    expect(state.failureReason).toContain("executor failed while another node awaited input");
+    expect(state.decisions["decision-unrelated-planner-input"]?.status).toBe("pending");
   });
 
   it("does not take over a fresh operation when a stale handler reports failure", async () => {
