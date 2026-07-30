@@ -1978,3 +1978,18 @@ las aceptaciones de candidate real, evidencia durable de procesos,
 orphan/restart/heartbeat/takeover y el gate final. Ticket 32 tiene el camino
 productivo y regresiones focales verdes, pero no se declara cerrado hasta una
 review final exitosa sobre este commit.
+
+## Checkpoint freeze WC1 v3 preparado - 2026-07-30
+
+El gate raiz serial sobre `8a0daac` queda verde. El target externo esta limpio
+en W1 `71f61c9`, y se preparo el freeze sucesor
+`warehouse-compact-v3` sobre ese punto fijo, con celda en puerto `3114`, scope
+de repair corregido, `outputRoots` recursivos, presupuesto `maxParallel=1` y
+las mismas reglas de corte sin retry silencioso. Los hashes de celda y oraculo
+quedan registrados en `wc1-freeze-v3.json`.
+
+Todavia no se ejecuto la candidate v3. Antes de consumir esa corrida se debe
+hacer preflight del servidor 3114 y verificar el freeze; si queda verde, se
+ejecuta una sola candidate y se preserva cualquier decision/fallo. WC1 v2,
+retry-9/10/11 y su oraculo `not_run` permanecen intactos. WC2/WC3 y N=4/N=8/
+N=16 siguen bloqueados.

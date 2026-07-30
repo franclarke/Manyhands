@@ -562,3 +562,9 @@
     PASS. Las reviews mantienen 31 BLOCKED/PARTIAL por lifecycle/productive
     evidence restante y 32 pendiente de review final; no se crea freeze-v3 ni
     se repite WC1 v2.
+93. **Freeze WC1 v3 preparado.** El gate raiz serial sobre `8a0daac` queda
+    verde y el target W1 externo sigue limpio en `71f61c9`. Se congela la celda
+    `warehouse-compact-wc1-v3` en puerto 3114, con scope de repair corregido,
+    `outputRoots` recursivos, `maxParallel=1`, hashes de celda/oraculo y corte
+    sin retry silencioso. La candidate aun no se ejecuta; WC1 v2 permanece
+    intacto como evidencia adversa.
