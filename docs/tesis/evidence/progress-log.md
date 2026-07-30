@@ -512,7 +512,7 @@
     Ticket 31 sigue abierto por candidate integrada y recovery real. WC1 sera
     el siguiente incremento y N=4/N=8/N=16 quedan para despues de WC3.
 85. **Freeze sucesor WC1 v2 preparado.** La celda congela ManyHands
-    `d442ff5`, W1 `71f61c9`, Codex/gpt-5.5/high, condicion C, ejecucion
+    `e6d21b5`, W1 `71f61c9`, Codex/gpt-5.5/high, condicion C, ejecucion
     secuencial y reglas de corte sin retry silencioso. La base externa esta
     limpia y lista, pero la candidate aun no se ejecuta. Ticket 31 sigue
     abierto hasta validar el host real; WC2 y N=4/N=8/N=16 esperan el

@@ -1856,7 +1856,7 @@ orden vigente queda WC1 -> WC2 -> WC3 antes de N=4/N=8/N=16.
 ## Checkpoint freeze sucesor WC1 - 2026-07-30
 
 Se creo el freeze `warehouse-compact-v2` sobre ManyHands commit
-`d442ff54786346e1fd2b92245bdc0196a82774b9`, con el contrato de descendientes
+`e6d21b53fa5fc5c5f22422ef128c2d11d2a2505a`, con el contrato de descendientes
 corregido, Codex CLI/gpt-5.5/high, condicion C, `maxParallel=1`, una sola
 candidate, una sola entrega/oraculo y reglas de corte explicitas. La celda y
 el freeze quedan en `docs/tesis/evidence/warehouse/compact/wc1-cell-v2.json`
