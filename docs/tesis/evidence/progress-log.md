@@ -544,3 +544,15 @@
     integration/scope/classification: 149/149 PASS; typecheck de
     `@manyhands/execution-core` y diff check PASS. Se abre ticket 32 para la
     regresion integrada y reviews; WC1 v2 no se reintenta.
+90. **Regresion integrada de code repair.** El camino productivo
+    `V2NodeExecutor -> ResultRecorder` ahora verifica que una reparacion que
+    toca `docs/repair-regression.md` se rechaza con el path exacto y no crea un
+    segundo commit. La suite V2 queda 41/41 PASS. Ticket 32 conserva pendientes
+    las reviews Standards/Spec; ticket 31 sigue abierto y WC1 v2 no se repite.
+91. **Rollback de Git add parcial.** La review Standards y la regresion RED
+    mostraron que un worktree creado parcialmente podia escapar del rollback
+    porque `createdPaths` se llenaba despues de `git.add()`. El fix registra la
+    ruta antes de invocar Git. La regresion aislada pasa 1/1 y WorktreePool
+    pasa 19/19; ticket 31 sigue abierto por las aceptaciones de candidate,
+    procesos y recovery. El prompt V2 aclara ademas que `outputRoots` son
+    subarboles recursivos; WC1 v2 permanece sin retry.

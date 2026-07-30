@@ -81,6 +81,41 @@ describe("WorktreePool", () => {
     expect(removedPaths).toContain(addedPaths[0]);
   });
 
+  it("quarantines a worktree when Git add fails after creating it", async () => {
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "manyhands-pool-partial-add-"));
+    tempRoots.push(repoRoot);
+    const addedPaths: string[] = [];
+    const removedPaths: string[] = [];
+    let addCreatedWorktree = false;
+    const gitAdapter: WorktreePoolGit = {
+      add: async ({ worktreePath }) => {
+        addedPaths.push(worktreePath);
+        await mkdir(worktreePath, { recursive: true });
+        addCreatedWorktree = true;
+        throw new Error("git add failed after creating the worktree");
+      },
+      resetAndClean: async () => undefined,
+      remove: async ({ worktreePath }) => {
+        if (addCreatedWorktree) removedPaths.push(worktreePath);
+      },
+      prune: async () => undefined,
+      validate: async () => false,
+      resolveCommonDir: async () => path.join(repoRoot, ".git"),
+      updateRef: async () => undefined
+    };
+    const pool = new WorktreePool({
+      repoRoot,
+      poolRoot: path.join(repoRoot, "pool"),
+      size: 1,
+      git: gitAdapter,
+      removePath: async () => undefined
+    });
+
+    await expect(pool.acquire({ baseCommit: "a".repeat(40) })).rejects.toThrow();
+    expect(addedPaths).toHaveLength(1);
+    expect(removedPaths).toContain(addedPaths[0]);
+  });
+
   it("aborts an in-flight Git sanitation instead of waiting for the child process", async () => {
     const repoRoot = await mkdtemp(path.join(os.tmpdir(), "manyhands-pool-git-abort-"));
     tempRoots.push(repoRoot);

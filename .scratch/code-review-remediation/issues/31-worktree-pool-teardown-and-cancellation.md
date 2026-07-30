@@ -117,6 +117,20 @@ con typecheck web y `git diff --check` PASS.
 La acceptance no se cierra: todavia falta la candidate integrada, verificar
 heartbeat/restart/orphan/pool en el host real y completar las reviews finales.
 
+## Checkpoint rollback de Git add parcial - 2026-07-30
+
+La review Standards detecto una ventana en la inicializacion del pool: un
+`git worktree add` puede crear parcialmente la ruta y luego fallar antes de que
+la implementacion la agregue a `createdPaths`. La regresion RED en
+`tests/worktree-recycling-pool.test.ts` reprodujo que esa ruta no se removia.
+El fix registra la ruta antes de invocar Git, por lo que el rollback de
+inicializacion la cuarentena tambien ante fallos parciales.
+
+Verificacion: regresion aislada 1/1 PASS y suite WorktreePool 19/19 PASS.
+Esto cubre una aceptacion de cleanup, pero no cierra 31: siguen pendientes la
+candidate real, evidencia durable de procesos, recovery de orphan/restart/
+heartbeat, takeover y reviews Standards/Spec sobre el punto fijo final.
+
 ## Checkpoint candidate WC1 v2 - 2026-07-30
 
 La candidate WC1 v2 confirma que el executor pudo terminar y producir el

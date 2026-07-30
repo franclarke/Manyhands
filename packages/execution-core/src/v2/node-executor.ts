@@ -606,7 +606,7 @@ export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput
   if (scope.outputRoots.length > 0) {
     lines.push(
       "",
-      "You may also CREATE new files, but only directly under these directories:",
+      "You may also CREATE new files, but only under these directories:",
       ...scope.outputRoots.map((root) => `- ${root}/`),
       "Creating a file anywhere else, or editing an existing file not listed above, fails this task."
     );
@@ -675,7 +675,8 @@ function buildV2CodeRepairInstructions(
       "",
       "You may also CREATE new files, but only directly under these directories:",
       ...scope.outputRoots.map((root) => `- ${root}/`),
-      "Creating a file anywhere else, or editing an existing file not listed above, fails this repair."
+      "You may create files anywhere under these directories, but editing an existing file still requires an allowed path.",
+      "Creating a file elsewhere, or editing an existing file not listed above, fails this repair."
     );
   }
   if (scope.forbiddenPaths.length > 0) {

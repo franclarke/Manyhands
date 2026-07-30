@@ -1941,3 +1941,34 @@ Estado de reanudacion: revisar la enforcement productiva de repair con una
 regresion integrada, cerrar tickets 31/32 y repetir el gate raiz. Solo despues
 crear `wc1-freeze-v3` y ejecutar una nueva candidate WC1; no responder la
 decision preservada ni iniciar WC2/WC3 o N=4/N=8/N=16.
+
+## Checkpoint regresion integrada de code repair - 2026-07-30
+
+La regresion productiva en `tests/execution-core-v2-node-executor.test.ts`
+recorre `V2NodeExecutor -> ResultRecorder`: el primer candidato se registra,
+la validacion falla, la reparacion intenta tocar
+`docs/repair-regression.md`, y strict scope la rechaza con ese path exacto.
+No se crea un segundo commit. La suite V2 queda 41/41 PASS y ticket 32 marca
+cerrada esta aceptacion; aun faltan las reviews Standards/Spec y el gate raiz.
+
+Estado de reanudacion: ejecutar las revisiones independientes sobre el punto
+fijo de tickets 31/32, repetir el gate raiz serial y, si ambas revisiones y el
+gate quedan verdes, crear `wc1-freeze-v3`. La candidate WC1 v2 sigue intacta,
+sin decision resuelta, delivery ni oraculo.
+
+## Checkpoint rollback de pool ante Git add parcial - 2026-07-30
+
+La review Standards encontro y la regresion RED reprodujo otra ventana real de
+lifecycle: `WorktreePool.initializeUnderTopologyLease()` agregaba la ruta a
+`createdPaths` despues de `git.add()`. Si Git creaba parcialmente el worktree y
+fallaba, el rollback no podia removerlo. La correccion registra la ruta antes
+de invocar Git; el test productivo verifica la cuarentena de esa ruta.
+
+Verificacion: regresion aislada 1/1 PASS, suite WorktreePool 19/19 PASS y
+`git diff --check` queda pendiente de confirmar al consolidar el commit. Esto
+avanza ticket 31, pero no lo cierra: aun faltan candidate real, evidencia
+durable integrada, orphan/restart/heartbeat/takeover y reviews finales.
+
+El prompt de code repair tambien fue ajustado para describir `outputRoots`
+como subarboles recursivos, coherente con `ScopeChecker`; la suite V2 queda
+41/41 PASS. No se crea `wc1-freeze-v3` hasta cerrar estas aceptaciones.

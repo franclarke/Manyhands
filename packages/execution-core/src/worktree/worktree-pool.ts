@@ -359,13 +359,16 @@ export class WorktreePool {
           await this.removeInvalidSlot(id, worktreePath, signal);
           throwIfAborted(signal);
           try {
+            // Register the intended path before invoking Git: `worktree add`
+            // can create files and then fail, leaving a partial worktree that
+            // must still be quarantined by the initialization rollback.
+            createdPaths.push(worktreePath);
             await this.git.add({
               repoRoot: this.repoRoot,
               worktreePath,
               baseCommit,
               ...(signal === undefined ? {} : { signal })
             });
-            createdPaths.push(worktreePath);
             throwIfAborted(signal);
           } catch (error) {
             throw worktreePoolUnavailable(`could not create slot ${id}`, error);

@@ -279,6 +279,10 @@ describe("V2NodeExecutor", () => {
 
     const input = request(compiled, node.id);
     input.graph = { ...input.graph, rootId: node.id };
+    input.contract = {
+      ...input.contract,
+      scope: { ...input.contract.scope, outputRoots: ["src"] }
+    };
     const outcome = await executor.execute(input);
 
     expect(outcome).toMatchObject({
@@ -294,10 +298,73 @@ describe("V2NodeExecutor", () => {
     expect(prompts[1]).toContain("The API response violates the declared seam.");
     expect(prompts[1]).toContain("Change only these declared paths:");
     expect(prompts[1]).toContain(contract.scope.allowedPaths[0]!);
+    if (contract.scope.outputRoots.length > 0) {
+      expect(prompts[1]).toContain("anywhere under these directories");
+    }
     for (const forbiddenPath of contract.scope.forbiddenPaths) {
       expect(prompts[1]).toContain(forbiddenPath);
     }
     expect(git.calls.filter((call) => call.op === "commit")).toHaveLength(2);
+  });
+
+  it("rejects an out-of-scope code repair through the productive recorder path", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const node = compiled.graph.nodes["node-api"]!;
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === node.id)!;
+    const firstCommit = "4".repeat(40);
+    const outOfScopePath = "docs/repair-regression.md";
+    let stagedInspection = 0;
+    const git = new (class extends FakeGitRunner {
+      constructor() {
+        super({ commitShas: [firstCommit], diffCached: "diff" });
+      }
+
+      override async diffCachedNameOnly(cwd: string): Promise<string[]> {
+        const changedFiles = stagedInspection++ === 0
+          ? [contract.scope.allowedPaths[0]!]
+          : [outOfScopePath];
+        this.calls.push({ op: "diffCachedNameOnly", args: { cwd } });
+        return changedFiles;
+      }
+    })();
+    const validator = {
+      validate: async (input: V2PhysicalNodeExecutionInput) => {
+        const evidence = matrix(input.contract, input.candidateCommit);
+        return input.candidateCommit === firstCommit
+          ? {
+              ...evidence,
+              outcome: "failed" as const,
+              criteria: evidence.criteria.map((criterion) => ({
+                ...criterion,
+                status: "failed" as const,
+                justification: "The candidate still violates the API contract."
+              }))
+            }
+          : evidence;
+      }
+    };
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(successfulAgent()),
+      validator,
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+
+    const input = request(compiled, node.id);
+    input.graph = { ...input.graph, rootId: node.id };
+    const outcome = await executor.execute(input);
+
+    expect(outcome).toEqual({
+      kind: "failure",
+      reason: `Code repair failed: scope_violation: changed files outside the declared scope: ${outOfScopePath}`,
+      usage: expect.any(Object),
+      repairObservations: [{ pass: 1, kind: "code", evidenceRefs: expect.any(Array) }]
+    });
+    expect(git.calls.filter((call) => call.op === "commit")).toHaveLength(1);
   });
 
   it("integrates adopted child artifacts bottom-up and prepares only a verified root candidate", async () => {

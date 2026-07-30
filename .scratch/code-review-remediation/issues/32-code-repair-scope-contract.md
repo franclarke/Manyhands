@@ -26,7 +26,7 @@ the run on `resolve_conflict`.
       repair prompt.
 - [x] Strict-policy out-of-scope failures name the rejected paths in their
       durable reason.
-- [ ] Add or verify an integrated regression using the productive validation
+- [x] Add or verify an integrated regression using the productive validation
       and repair route with an out-of-scope repair edit.
 - [ ] Independent Standards and Spec reviews pass at the fixed point.
 - [ ] A new WC1 freeze is created only after this ticket and ticket 31 meet
@@ -34,6 +34,9 @@ the run on `resolve_conflict`.
 
 ## Current verification
 
-- `tests/execution-core-v2-node-executor.test.ts`: 40/40 PASS.
+- `tests/execution-core-v2-node-executor.test.ts`: 41/41 PASS, including the
+  productive out-of-scope repair regression.
+- The repair prompt describes `outputRoots` as recursive subtrees, matching the
+  canonical scope checker semantics.
 - `tests/execution-failure-cause-classification.test.ts`: 8/8 PASS.
 - The WC1 v2 run remains preserved and is not retried or reinterpreted.
