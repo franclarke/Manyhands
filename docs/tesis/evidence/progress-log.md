@@ -306,8 +306,9 @@
 ### 2026-07-24 — Programa C + Warehouse, checkpoint 2
 
 45. **Checkpoint 2 = PASS.** C gobierna la ruta productiva como default; C1
-    queda explícito para compatibilidad histórica. La política admite un único
-    replan semántico, persiste evidencia completa y se explica desde replay.
+    queda documentado como histórico no replayable bajo la política actual.
+    La política admite un único replan semántico, persiste evidencia completa y
+    se explica desde replay sólo para runs C actuales.
 46. **La contaminación de aceptación queda corregida en diseño.** Los mismos
     cinco intents del usuario se compilan una vez bajo A, B y C; cada nodo
     conserva sólo una obligación técnica local cuando no es owner.
@@ -375,3 +376,13 @@
 63. La primera regresión productiva de ticket 27 cubre salida sin candidate,
     decisión pendiente, operación fresca y retry transitorio del handler. La
     suite focal queda en 27 tests PASS; no se inicia una nueva serie N=4/N=8/N=16.
+64. **Ticket 02 cerrado.** La regresión RED mostró que `C1`/`C2` se
+    normalizaban silenciosamente a `C`; GREEN ahora rechaza explícitamente el
+    replay histórico y elimina el resolver de policy legacy. Suites de política,
+    replay de candidate y adaptive planning: 11 tests PASS; typecheck de
+    `@manyhands/decomposer` PASS.
+65. **Ticket 12 cerrado como limitación.** Los journals contienen valores
+    observados de `validationDuplication` y la fórmula sigue midiendo
+    asignaciones repetidas de acceptance intents. No existe validación externa
+    de que el proxy represente costo semántico ni umbral de calidad; no se
+    cambia fórmula, threshold ni estímulo.

@@ -7,7 +7,6 @@ import {
   SINGLE_LEAF_POLICY,
   applyAdaptiveGranularity,
   GRANULARITY_CONDITIONS,
-  granularityPolicyFor,
   resolveGranularityCondition,
   WorkBreakdownSchema,
   type WorkBreakdown,
@@ -133,17 +132,12 @@ describe("granularity policy as per-run configuration", () => {
     expect(result.breakdown.root.kind).toBe("leaf");
   });
 
-  it("exposes A/B/C and normalizes historical C1/C2 records to C", () => {
+  it("exposes A/B/C and rejects historical C1/C2 replay explicitly", () => {
     expect(GRANULARITY_CONDITIONS).toEqual(["A", "B", "C"]);
     expect(resolveGranularityCondition(undefined)).toBe("C");
     expect(resolveGranularityCondition("C")).toBe("C");
-    expect(resolveGranularityCondition("C1")).toBe("C");
-    expect(resolveGranularityCondition("C2")).toBe("C");
-    expect(granularityPolicyFor("A")).toEqual(SINGLE_LEAF_POLICY);
-    expect(granularityPolicyFor("B")).toEqual(FINE_SPLIT_POLICY);
-    expect(granularityPolicyFor("C1")).toEqual(ADAPTIVE_GRANULARITY_POLICY);
-    expect(granularityPolicyFor("C")).toEqual(ADAPTIVE_GRANULARITY_POLICY);
-    expect(() => granularityPolicyFor("Z")).toThrow();
+    expect(() => resolveGranularityCondition("C1")).toThrow(/historical C1/i);
+    expect(() => resolveGranularityCondition("C2")).toThrow(/historical C2/i);
   });
 
   it("keeps every threshold finite so a persisted assessment survives JSON", () => {

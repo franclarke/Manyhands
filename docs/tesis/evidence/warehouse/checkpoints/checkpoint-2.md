@@ -48,10 +48,8 @@ Resultado:
 
 ## Invariantes demostrados
 
-- C2 es el default productivo; C1 y el alias histórico `C` siguen replayables;
-  <!-- Corrección 2026-07-27: texto restaurado tras un reemplazo masivo C2->C.
-       La afirmación sobre C1 dejó de ser cierta cuando 6b1b4c7 retiró su ruta de
-       ejecución; ver ticket 02 de .scratch/code-review-remediation/. -->
+- C2 es el default productivo; C1 histórico no es replayable bajo la política
+  actual y ahora se rechaza explícitamente; `C` es la condición productiva.
 - A y B consumen el mismo árbol semántico que C y no requieren editar código;
 - una hoja inviable genera como máximo un replan semántico, nunca un split por
   carpetas o paths;
@@ -61,7 +59,8 @@ Resultado:
   siblings;
 - la selección persiste configuración, hash, features, beneficio, costo,
   evidencia, razón y métricas estructurales;
-- la UI explica C1 y C exclusivamente desde hechos replayados.
+- la UI no interpreta un journal C1 como condición C; cualquier replay histórico
+  C1 requiere rechazo explícito y queda fuera de los claims productivos.
 
 ## Límite del checkpoint
 
