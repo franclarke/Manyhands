@@ -19,6 +19,36 @@ afterEach(async () => {
 });
 
 describe("WorktreePool", () => {
+  it("rejects a cancelled acquisition before pool initialization starts", async () => {
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "manyhands-pool-cancel-before-init-"));
+    tempRoots.push(repoRoot);
+    let validateCalls = 0;
+    const gitAdapter: WorktreePoolGit = {
+      add: async () => undefined,
+      resetAndClean: async () => undefined,
+      remove: async () => undefined,
+      prune: async () => undefined,
+      validate: async () => {
+        validateCalls += 1;
+        return false;
+      },
+      resolveCommonDir: async () => path.join(repoRoot, ".git"),
+      updateRef: async () => undefined
+    };
+    const pool = new WorktreePool({
+      repoRoot,
+      poolRoot: path.join(repoRoot, "pool"),
+      size: 1,
+      git: gitAdapter
+    });
+    const controller = new AbortController();
+    controller.abort(new Error("cancelled before initialization"));
+
+    await expect(pool.acquire({ baseCommit: "a".repeat(40), signal: controller.signal }))
+      .rejects.toThrow("cancelled before initialization");
+    expect(validateCalls).toBe(0);
+  });
+
   it("reuses a pre-created worktree after reset --hard and clean -fd", async () => {
     const repoRoot = await createRepository();
     const firstCommit = await commitFile(repoRoot, "version.txt", "one\n", "first");

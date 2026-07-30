@@ -361,7 +361,7 @@ export class V2NodeExecutor {
             contract: input.contract,
             candidateCommit: candidateSha,
             baselineCommit: input.graph.baseCommit,
-            ...(input.signal !== undefined ? { signal: input.signal } : {})
+            signal: integrationSignal
           });
           return { matrixId: evidenceMatrix.matrixId, outcome: evidenceMatrix.outcome };
         },

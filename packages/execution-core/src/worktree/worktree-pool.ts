@@ -122,20 +122,22 @@ export class WorktreePool {
     this.removePath = options.removePath ?? removeWorktreePath;
   }
 
-  async initialize(baseCommitOrInput: string | { baseCommit: string }): Promise<void> {
+  async initialize(baseCommitOrInput: string | { baseCommit: string; signal?: AbortSignal }): Promise<void> {
     this.assertUsable();
     const baseCommit = typeof baseCommitOrInput === "string"
       ? baseCommitOrInput
       : baseCommitOrInput.baseCommit;
+    const signal = typeof baseCommitOrInput === "string" ? undefined : baseCommitOrInput.signal;
     assertCommit(baseCommit);
+    throwIfAborted(signal);
     if (this.slots.length > 0) return;
-    if (this.initialization !== undefined) return this.initialization;
-    this.initialization = this.initializeUnderTopologyLease(baseCommit);
-    try {
-      await this.initialization;
-    } finally {
-      this.initialization = undefined;
-    }
+    if (this.initialization !== undefined) return await withAbort(this.initialization, signal);
+    const initialization = this.initializeUnderTopologyLease(baseCommit, signal);
+    this.initialization = initialization;
+    initialization.finally(() => {
+      if (this.initialization === initialization) this.initialization = undefined;
+    }).catch(() => undefined);
+    await withAbort(initialization, signal);
   }
 
   async acquire(input: {
@@ -145,7 +147,7 @@ export class WorktreePool {
   }): Promise<WorktreeLease> {
     this.assertUsable();
     assertCommit(input.baseCommit);
-    await this.initialize(input.baseCommit);
+    await this.initialize({ baseCommit: input.baseCommit, ...(input.signal === undefined ? {} : { signal: input.signal }) });
     const operationId = input.operationId ?? `operation-${randomUUID()}`;
 
     for (;;) {
@@ -326,27 +328,33 @@ export class WorktreePool {
     return this.size;
   }
 
-  private async initializeUnderTopologyLease(baseCommit: string): Promise<void> {
+  private async initializeUnderTopologyLease(baseCommit: string, signal?: AbortSignal): Promise<void> {
+    throwIfAborted(signal);
     await mkdir(this.poolRoot, { recursive: true });
+    throwIfAborted(signal);
     await this.resolveControlRoot();
-    const topologyLease = await this.acquireTopologyLease();
+    const topologyLease = await this.acquireTopologyLease(signal);
     try {
       const created: PoolSlot[] = [];
       for (let index = 0; index < this.size; index += 1) {
+        throwIfAborted(signal);
         const id = `slot-${String(index).padStart(3, "0")}`;
         const worktreePath = path.join(this.poolRoot, id);
         const valid = await this.git.validate({
           repoRoot: this.repoRoot,
           worktreePath
         });
+        throwIfAborted(signal);
         if (!valid) {
-          await this.removeInvalidSlot(id, worktreePath);
+          await this.removeInvalidSlot(id, worktreePath, signal);
+          throwIfAborted(signal);
           try {
             await this.git.add({
               repoRoot: this.repoRoot,
               worktreePath,
               baseCommit
             });
+            throwIfAborted(signal);
           } catch (error) {
             await Promise.allSettled(
               created
@@ -413,8 +421,10 @@ export class WorktreePool {
     return this.controlRoot;
   }
 
-  private async removeInvalidSlot(id: string, worktreePath: string): Promise<void> {
+  private async removeInvalidSlot(id: string, worktreePath: string, signal?: AbortSignal): Promise<void> {
+    throwIfAborted(signal);
     await this.git.remove({ repoRoot: this.repoRoot, worktreePath }).catch(() => undefined);
+    throwIfAborted(signal);
     try {
       await this.removePath(worktreePath);
     } catch (error) {
@@ -423,23 +433,25 @@ export class WorktreePool {
     if (await pathExists(worktreePath)) {
       throw worktreePoolUnavailable(`could not remove invalid slot ${id}`);
     }
+    throwIfAborted(signal);
     await this.git.prune(this.repoRoot).catch(() => undefined);
   }
 
-  private async acquireTopologyLease(): Promise<FilesystemFencedLease> {
+  private async acquireTopologyLease(signal?: AbortSignal): Promise<FilesystemFencedLease> {
     await this.resolveControlRoot();
     if (this.topologyLeasePath === undefined) {
       throw new Error("Worktree topology lease path is not initialized.");
     }
     for (;;) {
       this.assertUsable();
+      throwIfAborted(signal);
       const lease = await tryAcquireFilesystemFencedLease(
         this.topologyLeasePath,
         `${this.ownerId}:topology`,
         this.leaseOptions()
       );
       if (lease !== undefined) return lease;
-      await waitForPoll();
+      await waitForPoll(signal);
     }
   }
 
@@ -669,6 +681,27 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
       ? signal.reason
       : new Error("Worktree pool acquisition aborted.");
   }
+}
+
+function withAbort<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (signal === undefined) return promise;
+  throwIfAborted(signal);
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = (): void => reject(signal.reason instanceof Error
+      ? signal.reason
+      : new Error("Worktree pool acquisition aborted."));
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(
+      (value) => {
+        signal.removeEventListener("abort", onAbort);
+        resolve(value);
+      },
+      (error) => {
+        signal.removeEventListener("abort", onAbort);
+        reject(error);
+      }
+    );
+  });
 }
 
 function waitForPoll(signal?: AbortSignal): Promise<void> {

@@ -78,6 +78,7 @@ export class WorktreeManager {
   }
 
   async create(params: CreateWorktreeParams): Promise<WorktreeRecord> {
+    throwIfAborted(params.signal);
     const path = worktreePathFor({ ...this.rootParamsFor(params.runId), taskId: params.taskId });
     const branch = worktreeBranchFor({ runId: params.runId, taskId: params.taskId });
 
@@ -88,12 +89,15 @@ export class WorktreeManager {
         branch,
         baseCommit: params.baseCommit
       });
+      throwIfAborted(params.signal);
     } catch (error) {
+      throwIfAborted(params.signal);
       // A previous attempt may have left this worktree/branch behind (e.g. a
       // failed integration the human chose to retry at the conflict gate).
       // Tear the leftovers down and try exactly once more; any other cause
       // fails the same way twice and surfaces below.
       const recreated = await this.recreateAfterStaleLeftovers(path, branch, params);
+      throwIfAborted(params.signal);
       if (!recreated) {
         // Surface git's real stderr (invalid ref, path exists, locked index…) — the
         // WorktreeError wrapper only carries a generic message.
@@ -145,14 +149,19 @@ export class WorktreeManager {
     branch: string,
     params: CreateWorktreeParams
   ): Promise<boolean> {
+    throwIfAborted(params.signal);
     await this.git
       .worktreeRemove({ repoRoot: this.repoRoot, worktreePath: path, force: true })
       .catch(() => undefined);
+    throwIfAborted(params.signal);
     await this.git.worktreePrune(this.repoRoot).catch(() => undefined);
+    throwIfAborted(params.signal);
     await rm(path, { recursive: true, force: true }).catch(() => undefined);
+    throwIfAborted(params.signal);
     await this.git
       .branchDelete({ repoRoot: this.repoRoot, branch, force: true })
       .catch(() => undefined);
+    throwIfAborted(params.signal);
     try {
       await this.git.worktreeAdd({
         repoRoot: this.repoRoot,
@@ -160,6 +169,7 @@ export class WorktreeManager {
         branch,
         baseCommit: params.baseCommit
       });
+      throwIfAborted(params.signal);
       return true;
     } catch {
       return false;
@@ -309,4 +319,11 @@ export class WorktreeManager {
     }
     return { committed: true, sha: head };
   }
+}
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted !== true) return;
+  throw signal.reason instanceof Error
+    ? signal.reason
+    : new Error("Worktree creation aborted.");
 }
