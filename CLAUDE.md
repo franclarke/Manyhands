@@ -51,6 +51,12 @@ unknown.
 - No introducir duplicados de estado o relaciones como puente sin retiro
   explícito.
 - Preferir slices verticales y diffs pequeños a una reescritura total.
+- El índice usa LF y `core.autocrlf=false`. Las herramientas de edición escriben
+  CRLF, lo que produce diffs de archivo entero. Normalizar a LF los archivos
+  modificados antes de cada commit y verificar con `git diff --numstat`.
+- No marcar un ticket `closed` sin haber corrido `pnpm test` **completo sobre su
+  commit exacto**. Cerrar 23–26 con gates focales dejó 12 tests rojos que nadie
+  vio hasta el freeze siguiente, incluidos tres defectos productivos reales.
 
 ## Monorepo actual
 
