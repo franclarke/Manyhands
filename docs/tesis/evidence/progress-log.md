@@ -450,3 +450,9 @@
     `pnpm test` queda en 220 files y 1537 tests PASS, con 2 fallos restantes en
     `wide-graph-oracle-contract` (freeze historico y codigo de salida del
     proceso oracle). No se alteran freezes ni se inicia WC1 sucesor.
+76. **Runner externo estable en Windows.** La regresion integrada reprodujo un
+    abort de Node `3221226505` causado por `process.exit(1)` durante el cierre
+    de handles HTTP/IPC. `2421e10` usa `process.exitCode`; la prueba aislada del
+    contrato queda en 6/7 PASS y el escenario delivery/restart pasa. Resta
+    solamente el hash del `dist` historico no versionado; no se modifica el
+    freeze ni se inicia WC1 sucesor.

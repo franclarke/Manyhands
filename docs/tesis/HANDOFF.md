@@ -1661,3 +1661,22 @@ Estado de reanudacion: inspeccionar esos dos fallos, documentar si son un
 desfase historico o un defecto productivo, y volver a revisar las aceptaciones
 pendientes de ticket 31. Si se completa un avance, agregar otro checkpoint aqui
 antes de continuar con WC1 sucesor.
+
+## Checkpoint runner externo en Windows - 2026-07-30
+
+La prueba aislada de `wide-graph-oracle-contract` reprodujo que el segundo
+fallo no era del oracle: `run-experiment.mjs` llamaba `process.exit(1)` mientras
+handles HTTP/IPC de Node aun se estaban cerrando. Windows abortaba libuv con
+`Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` y codigo
+`3221226505`, ocultando el estado fallido esperado.
+
+El commit `2421e10` cambia el cierre a `process.exitCode`, dejando que el event
+loop cierre sus handles normalmente. Verificacion aislada: 6/7 tests PASS; el
+test de delivery/restart vuelve a PASS. El unico fallo restante es la
+reconciliacion del `dist` historico no versionado (`expected f95b...`, actual
+`cce468...`). El freeze historico no se reescribe ni se cuenta como PASS.
+
+Estado de reanudacion: decidir una materializacion reproducible del artefacto
+historico o mantenerlo como bloqueo documentado; despues continuar con las
+aceptaciones restantes de ticket 31. Todavia no se repite WC1 y no se ejecuta
+N=4/N=8/N=16.
