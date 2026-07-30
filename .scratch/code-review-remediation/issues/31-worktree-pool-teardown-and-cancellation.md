@@ -93,3 +93,15 @@ leases 4/4, typecheck web y `git diff --check` PASS.
 La acceptance de candidate real y la review no se declaran cerradas con esta
 prueba aislada: todavia falta ejecutar el escenario productivo una sola vez,
 verificar heartbeat/restart/huerfano y completar Standards/Spec.
+## Checkpoint de release cancelable - 2026-07-30
+
+El commit `cf13028` corrige la perdida de `AbortSignal` al liberar un
+worktree. La senal viaja desde V2 hasta `resetAndClean`, `updateRef`,
+recreacion de slot, topology lease y operaciones Git asociadas. La regresion
+comprueba que una sanitizacion bloqueada se cancela y que la lease se libera
+para una adquisicion posterior.
+
+Verificacion: WorktreePool 18/18, execution-core-worktree 13/13,
+execution-driver-produced-artifacts 1/1, typechecks de execution-core/web y
+`git diff --check` PASS. El ticket sigue abierto por la candidate real,
+heartbeat/restart/huerfano y reviews Standards/Spec.

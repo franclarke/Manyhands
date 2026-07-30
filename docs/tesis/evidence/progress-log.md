@@ -479,3 +479,10 @@
     suite focal queda verde junto con typechecks y leases/takeover. Ticket 31
     sigue abierto hasta candidate integrada y reviews nuevas; no se repite WC1
     ni se ejecuta N=4/N=8/N=16.
+80. **Release del pool cancelable.** `cf13028` propaga `AbortSignal` desde el
+    executor hasta la sanitizacion/recreacion de slots durante `release()`;
+    una cancelacion libera la lease activa sin dejar el pool bloqueado. La
+    regresion RED/GREEN y las suites WorktreePool 18/18, execution-core-worktree
+    13/13 y artifacts 1/1 pasan, junto con typechecks. Ticket 31 sigue abierto
+    por la candidate integrada y las reviews; no se repite WC1 ni se ejecuta
+    N=4/N=8/N=16.

@@ -1758,3 +1758,27 @@ no se ejecuta N=4/N=8/N=16.
 Estado de reanudacion: revisar este watchdog contra los contratos de
 supervision, cerrar las aceptaciones restantes de ticket 31 y actualizar este
 documento antes de crear el freeze sucesor WC1.
+## Checkpoint release del pool cancelable - 2026-07-30
+
+La regresion RED del pool mostro que el `AbortSignal` se propagaba durante
+`acquire()` pero se perdia al devolver un worktree. En consecuencia, una
+sanitizacion Git bloqueada durante `release()` podia conservar una operacion
+activa mientras el run intentaba avanzar.
+
+El commit `cf13028` propaga la senal desde `V2NodeExecutor` y
+`ExecutionBaseBuilder` hasta `PooledExecutionWorkspaceProvider` y todas las
+operaciones Git de release/recreate. Si el release se cancela, el fence se
+libera, la lease activa se elimina y el slot queda disponible para una nueva
+adquisicion controlada.
+
+Verificacion: WorktreePool 18/18, execution-core-worktree 13/13,
+execution-driver-produced-artifacts 1/1, typecheck de execution-core y web,
+`git diff --check` PASS.
+
+Ticket 31 todavia no se cierra: queda ejecutar una candidate WC1 integrada,
+verificar heartbeat/restart/huerfano y completar reviews Standards/Spec. No se
+repite WC1 ni se inicia N=4/N=8/N=16.
+
+Estado de reanudacion: hacer la revision independiente del punto fijo de
+lifecycle/worktree y, si no quedan defectos de instrumento, crear el freeze
+sucesor y ejecutar solamente WC1.
