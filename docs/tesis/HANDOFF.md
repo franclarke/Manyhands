@@ -1712,3 +1712,25 @@ ni se inicia N=4/N=8/N=16.
 Estado de reanudacion: integrar el escenario de teardown con la ruta V2 real,
 cerrar la revisión de lifecycle 27/31 y sólo entonces crear el freeze sucesor
 WC1.
+## Checkpoint fallo de ejecucion independiente con decision pendiente - 2026-07-30
+
+La regresion RED de `tests/run-background-terminal-failure.test.ts` mostro que
+`markRunFailedAfterBackgroundTask` ignoraba cualquier fallo si existia una
+decision pendiente, aunque esa decision afectara a otro nodo. El run podia
+quedar en `waiting_for_input` despues de que un ejecutor hubiera terminado con
+error.
+
+El commit `4a0be8d` separa ambos casos: los fallos de ejecucion ahora registran
+el `run.failed` causal aun cuando exista una decision no relacionada; los
+fallos de planner/dominio, artifact o delivery conservan la espera legitima.
+La decision pendiente no se elimina. La regresion queda en 6/6 PASS, el
+typecheck de `@manyhands/web` y `git diff --check` pasan.
+
+Esto corrige una causa real de lifecycle, pero no cierra ticket 31: aun falta
+demostrar teardown smoke->pool en una candidate real, convergencia completa de
+huerfano/restart/heartbeat y review Standards/Spec final. No se repite WC1
+todavia y no se inicia N=4/N=8/N=16.
+
+Estado de reanudacion: ejecutar las aceptaciones restantes de ticket 31,
+actualizar HANDOFF despues de cada checkpoint, y solo con ese ticket cerrado
+crear el freeze sucesor y la candidate WC1.

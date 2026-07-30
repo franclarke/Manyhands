@@ -66,3 +66,15 @@ typecheck de execution-core pasan.
 El ticket sigue abierto: falta la evidencia durable integrada con una candidate
 real y el pool, ademas de la convergencia completa de huérfano/restart/heartbeat
 y las reviews Standards/Spec finales.
+## Checkpoint de decision independiente - 2026-07-30
+
+El commit `4a0be8d` corrige una causa real de lifecycle relacionada: la ruta de
+fallo de background ya no descarta un error de ejecucion solo porque exista
+una decision pendiente para otro nodo. La nueva regresion comprueba que el run
+converge a `failed`, conserva el `failureReason` y deja la decision en
+`pending`; los fallos de dominio/planner mantienen la espera normal. Suite
+focal 6/6 PASS y typecheck web PASS.
+
+Este checkpoint no cierra 31. Sigue faltando la candidate real con evidencia
+durable smoke->pool, la convergencia de huerfano/restart/heartbeat y las
+reviews Standards/Spec finales.

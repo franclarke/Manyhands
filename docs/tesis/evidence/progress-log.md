@@ -464,3 +464,10 @@
     validation runner 18/18 y typecheck de execution-core PASS. Ticket 31
     sigue abierto hasta la candidate real, lifecycle huerfano/restart y
     reviews nuevas; no se repite WC1 ni se ejecuta N=4/N=8/N=16.
+78. **Fallo de ejecucion independiente con decision pendiente corregido.** La
+    regresion RED reprodujo que una decision ajena podia suprimir cualquier
+    fallo de background y dejar el run en `waiting_for_input`. `4a0be8d`
+    restringe esa supresion a fallos no ejecutivos: un executor que termina con
+    error registra `run.failed` sin eliminar la decision pendiente. La suite
+    focal queda en 6/6 PASS y el typecheck web pasa. Ticket 31 sigue abierto;
+    no se repite WC1 ni se ejecuta N=4/N=8/N=16.
