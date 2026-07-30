@@ -1,0 +1,20 @@
+{
+  "freezeId": "warehouse-compact-v1",
+  "cellId": "warehouse-compact-wc1",
+  "increment": "WC1",
+  "condition": "C",
+  "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+  "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wc1-candidate",
+  "baseUrl": "http://127.0.0.1:3112",
+  "goal": "Starting from the verified W1 Warehouse codebase, implement WC1 as a complete vertical slice. Add atomic orders and reservations with valid order status transitions. Add a versioned HTTP API under /api/v1 for state, order creation, reservation, status transitions and deterministic simulation actions play, pause, step and reset. Add a monotonic Server-Sent Events stream at /api/v1/events. Add a static accessible browser UI served by the start script: an SVG warehouse tower with heatmap plus exact textual bin detail including empty bins, simulation controls operable by keyboard, explicit loading/empty/error/connected states, reduced-motion support and status communication not based on color alone. Add src/probe/wc1.ts and a package script study:wc1-probe that emits one deterministic JSON object with schemaVersion 1, increment WC1, scenario thesis-seed-2026, bins, occupiedBins, emptyBins and simulationControls. Preserve all W1 behavior. Keep the implementation dependency-free and add public behavior tests for atomicity, invalid transitions, API/SSE, simulation, tower accessibility and probe determinism. Do not implement WC2 or WC3 in this cell.",
+  "planningSelection": { "executorId": "codex-cli", "model": "gpt-5.5", "effort": "high" },
+  "executionSelection": { "executorId": "codex-cli", "model": "gpt-5.5", "effort": "high" },
+  "repairSelection": { "executorId": "codex-cli", "model": "gpt-5.5", "effort": "high" },
+  "granularityCondition": "C",
+  "executionConfig": { "maxParallel": 1, "scopePolicy": "strict", "leafTimeoutMs": 1800000, "integrationTimeoutMs": 1800000, "unexpectedCommitPolicy": "reject" },
+  "pollIntervalMs": 10000,
+  "parkedGraceMs": 60000,
+  "wallClockLimitMs": 7200000,
+  "oracle": { "path": "docs/tesis/evidence/scripts/run-compact-wc-oracle.mjs", "command": "node docs/tesis/evidence/scripts/run-compact-wc-oracle.mjs --increment WC1 --repository <target> --delivered-sha <sha> --out <out>" },
+  "cutRules": ["one candidate execution", "one delivery/oracle attempt", "preserve failures", "no ad hoc decision answers", "no silent retry" ]
+}

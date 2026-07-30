@@ -1543,3 +1543,17 @@ faltan freeze, candidate execution, receipt, delivery y oráculo externo para
 WC1, WC2 y WC3. Próximo paso: congelar el protocolo compacto sobre `5da6019`,
 ejecutar las tres celdas atribuibles en secuencia y actualizar claims sólo con
 esa evidencia.
+
+## Freeze compacto WC1 - 2026-07-30
+
+Antes de consumir cuota quedó congelado el protocolo en
+`docs/tesis/evidence/warehouse/compact/wc1-freeze.json` sobre ManyHands
+`3625434`/tree `0171657`, base W1 `71f61c9`, Codex `gpt-5.5/high`, condición C,
+un ejecutor en serie, budget de 30 minutos por operación y corte de 2 horas.
+El prompt, la celda y el oráculo tienen hashes registrados. El target limpio
+es `warehouse-control-tower-wc1-candidate`.
+
+La candidate execution WC1 es el próximo paso. Sólo se aprobarán el plan y la
+entrega; cualquier otra decisión real deja la celda preservada sin respuesta
+ad hoc. Tras un candidate SHA se ejecutará una única evaluación del oráculo
+compacto; sin candidate SHA el resultado será `not_run`.

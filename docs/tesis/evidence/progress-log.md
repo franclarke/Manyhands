@@ -416,3 +416,8 @@
     revisión Playwright PASS. La implementación está completa; tickets 28–30
     siguen abiertos hasta freeze, candidate execution, receipt, delivery y
     oráculos externos atribuibles.
+71. **Freeze atribuible WC1 creado.** Quedaron congelados ManyHands
+    `3625434`, base W1 `71f61c9`, Codex `gpt-5.5/high`, condición C, target
+    limpio, prompt, budgets, reglas de corte y oráculo compacto hasheado en
+    `evidence/warehouse/compact/wc1-freeze.json`. No comenzó todavía la
+    candidate execution.
