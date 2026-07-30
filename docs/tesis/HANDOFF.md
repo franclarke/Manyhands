@@ -1453,3 +1453,97 @@ del `1/8` histórico.
   `C:\Users\franc_rgy\.codex\tmp\manyhands-ticket19-20260729-115928\runtime-logs`;
 - ticket 22 queda `closed`. La frontera recalculada habilita ticket 23;
   ticket 26 continúa bloqueado por 25.
+
+## Cierre de tickets 23--26 y serie `retry-11` — 2026-07-30
+
+Este bloque cierra el hueco entre el último registro (ticket 22) y el estado
+real del repositorio.
+
+### Tickets 23--26
+
+Los cuatro quedaron `closed` el 2026-07-29 con TDD, gates afectados y reviews
+Standards/Spec independientes; sus evidencias de cierre viven en cada archivo de
+`.scratch/code-review-remediation/issues/`. Commits productivos: `eab5b76`
+(ejecución y seams de policy) y `4f64258` (recovery durable y seams de policy).
+
+- **23** — el camino V2 codifica causas reales del executor (`timeout`, `auth`,
+  `binary_missing`, `quota`), aplica retry transitorio acotado, suspensión del
+  recurso, circuit breaker y descarte por scope; el scheduler consume
+  disponibilidad, uso persistido y límites efectivos, y serializa fail-closed
+  cuando el presupuesto no es demostrable.
+- **24** — `IntegrationManifest` durable, replay del manifest canónico y
+  revalidación de exactitud/freshness inmediatamente antes de `merge --ff-only`.
+  Dos casillas quedaron sin marcar por decisión explícita: la recovery alimenta
+  CLAIM-053 sin declararlo completo.
+- **25** — host V2 carga/reconstruye desde snapshot + journal con lock renovable,
+  trazas JSONL con checksum y redacción de secretos, y regresiones productivas
+  de forbidden paths, secretos y symlinks. Su primer cierre fue reabierto por
+  review independiente y esa evidencia adversa se conserva.
+- **26** — `maxLeafPlannedPaths` llega a la política efectiva, al evento de
+  planning y al manifest final; `validationDuplication` se deriva de
+  asignaciones repetidas reales de acceptance intents **sin cambiar fórmula ni
+  umbral**. Inventario en `docs/tesis/ticket-26-policy-config-inventory.md`.
+
+**Frente resultante:** abiertos sólo 02, 11, 12, 14 y 15. El endurecimiento del
+producto terminó.
+
+### Serie `retry-11`
+
+Ejecutada sobre el freeze `4f64258` y preservada verbatim en `9e42b72`. Las tres
+celdas terminaron `not_delivered`, sin candidate, receipt ni entrada de oráculo;
+las tres disposiciones son `not_run`.
+
+- **N=4** `67b52f91-d4d4-4d1f-a1de-4f09cdf80363` y **N=8**
+  `4e853223-1fff-47d5-a0f3-e59fdbfb3c76`: planning completó, el plan compiló y
+  fue aprobado, y el primer intento arrancó. **El falso `artifact_cycle` de
+  `retry-10` no reapareció** — el fix de seams del ticket 16 alcanzó el camino
+  productivo. Ambos runs quedaron atascados en `lifecycle: running`, con el
+  proceso del executor ausente, `activeOperation` vigente, heartbeat congelado y
+  **ninguna transición terminal**.
+- **N=16** `2ac013d5-4433-4cd2-9e27-9594fb0dda18`: sin assessment. Los dos
+  intentos de planning fallaron por el entorno y no por ManyHands:
+  `windows sandbox: orchestrator_helper_launch_failed … Acceso denegado
+  (os error 5)` del sandbox de Codex.
+- Assessments de raíz preservados (condición C, `adaptive-utility/3.1.0-pilot`):
+
+  | Celda | selected | leafFeasible | splitAdvantage | validationDuplication | parallelism | coordination |
+  |---|---|---|---:|---:|---:|---:|
+  | N=4 | leaf | true | +0.0448 | 0.7333 | 0.6667 | 0.2857 |
+  | N=8 | split | false | +0.0444 | 0.8500 | 0.8000 | 0.1818 |
+
+  Contraste con lo ya registrado: piloto N=16 `−0.2584 / 0.8947` y `retry-10`
+  N=16 `−0.4604 / 0.9474`.
+- Observación que el árbol candidato hace explícita: pese a que el estímulo
+  nuevo da a cada módulo su pregunta y su archivo de test propios, el Architect
+  asignó a las ocho hojas hermanas de N=8 los **mismos** acceptance intents
+  (`analytics-modules-contract-and-independence`, `projection-questions-and-tests`).
+  Los intents **no** quedaron particionados por hoja, que era la premisa del
+  Paso 2 de este handoff. No se concluye todavía cuál de las dos lecturas
+  sostiene la evidencia: eso es el ticket 12.
+- Limitaciones declaradas por su propio `freeze.json`: el `pnpm test` completo no
+  se ejecutó y el toolchain fue Node `v24.16.0` en vez del `22.23.1` documentado.
+  Por eso `retry-11` **no se usa como medición canónica de H1**.
+
+### Decisión de alcance de Francisco — 2026-07-30
+
+- **Cierre mínimo defendible.** No se persigue otra entrega ancha verificada.
+- **La serie compacta WC1--WC3 sale del mínimo.** La decisión del 2026-07-29
+  queda registrada como alcance histórico; ningún agente debe reiniciar esa rama
+  sin una decisión explícita nueva de Francisco.
+- **Se re-congela y repite sólo la medición de H1**, con los modelos Claude más
+  baratos disponibles. Cambiar el ejecutor rompe la comparabilidad: la serie
+  nueva se declara serie de medición separada, `planning-only`, y **no eleva
+  retroactivamente** ningún resultado de `retry-8/9/10/11` ni del piloto.
+- Si esa medición también falla, el ticket 12 se cierra como **limitación
+  declarada** y el manuscrito deja de prometer un veredicto sobre
+  `validationDuplication`. La evidencia persistida no se borra ni se reescribe.
+- Entorno: todo corre bajo el perfil `franc`, sin tocar clones ni artefactos de
+  `franc_rgy` ni los listeners históricos de 3000/3001.
+
+### Hallazgo que abarata la medición
+
+`planning.granularity_strategy_selected` se emite **antes** de
+`decision.raised(approve_plan)` — secuencias 12 y 24 del journal N=4. El
+veredicto de H1 sólo necesita planning: no necesita ejecución, candidate,
+entrega ni oráculo. La serie de medición se detiene sin responder la aprobación
+del plan y registra `not_delivered` con razón `measurement_only_planning`.

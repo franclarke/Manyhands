@@ -69,3 +69,42 @@
 - Ticket 11 permanece abierto y sus casillas no se marcan. Los blockers
   canónicos del cierre de correctness viven en tickets 16--26; el plan es sólo
   un runbook. `retry-10` permanece inmutable.
+
+## Resultado `retry-11` — 2026-07-30
+
+Serie ejecutada después de cerrar 16--26, congelada en `4f64258` y preservada
+verbatim en `9e42b72`. Las tres celdas terminaron `not_delivered`; ninguna
+produjo candidate, receipt ni entrada de oráculo, y las tres conservan
+disposición `not_run`.
+
+- **N=4** (`67b52f91-d4d4-4d1f-a1de-4f09cdf80363`) y **N=8**
+  (`4e853223-1fff-47d5-a0f3-e59fdbfb3c76`): planning completó, el plan compiló y
+  fue aprobado, y el primer intento arrancó. **El falso `artifact_cycle` de
+  `retry-10` no reapareció**: el fix de seams del ticket 16 alcanzó el camino
+  productivo. Ambos runs quedaron después atascados en `lifecycle: running` con
+  el proceso del executor ausente y sin transición terminal
+  (`executor_stuck_after_process_exit_without_terminal_transition`).
+- **N=16** (`2ac013d5-4433-4cd2-9e27-9594fb0dda18`): sin assessment. Los dos
+  intentos de planning fallaron por el entorno, no por ManyHands —
+  `windows sandbox: orchestrator_helper_launch_failed … Acceso denegado
+  (os error 5)` del sandbox de Codex.
+- Assessments de raíz preservados, condición C, `adaptive-utility/3.1.0-pilot`:
+  - N=4: `leaf`, `leafFeasible=true`, `splitAdvantage` **+0.0448**
+    (`contextRelief` 0.316, `parallelism` 0.6667, `faultIsolation` 0.4048,
+    `coordination` 0.2857, `pathOverlap` 0.2586, **`validationDuplication`
+    0.7333**, `uncertainty` 0.3932), rechazado por quedar bajo el mínimo 0.15;
+  - N=8: `split` por `leafFeasible=false`, `splitAdvantage` **+0.0444**
+    (`parallelism` 0.8, `coordination` 0.1818, **`validationDuplication` 0.85**).
+- Limitaciones declaradas por su propio `freeze.json`: el `pnpm test` completo
+  no se ejecutó, y el toolchain fue Node `v24.16.0` en vez del `22.23.1`
+  documentado. Por eso la serie **no se usa como medición canónica de H1**.
+- Las tres casillas siguen sin marcar: la celda más ancha no dejó evaluación de
+  granularidad. `retry-11` es inmutable, igual que `retry-8/9/10`.
+
+## Decisión de alcance — 2026-07-30
+
+Francisco fijó **cierre mínimo defendible**: no se persigue otra entrega ancha
+verificada y la serie compacta WC1--WC3 sale del mínimo. La medición que falta
+para H1 se obtiene con una serie **planning-only** barata bajo
+`claude-code-cli`, declarada como serie de medición separada y **no comparable**
+con `retry-8/9/10/11` ni con el piloto.

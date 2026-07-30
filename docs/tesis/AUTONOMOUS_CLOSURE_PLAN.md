@@ -57,6 +57,34 @@ evidencia real antes del saneamiento histórico que sólo bloquea la síntesis:
 10 -> 11 -> 12 -> 02 -> 14 -> 15
 ```
 
+### Afinación de scope aprobada el 2026-07-30
+
+Con los tickets 16--26 cerrados y `retry-11` preservado como evidencia adversa,
+Francisco fijó **cierre mínimo defendible**:
+
+- **la serie compacta WC1--WC3 sale del mínimo.** La decisión del 2026-07-29 que
+  la introdujo queda registrada como alcance histórico en `HANDOFF.md`. Ningún
+  agente la reinicia sin una decisión explícita nueva;
+- **no se persigue otra entrega ancha externamente verificada.** H2 se cierra con
+  el resultado que la evidencia sostenga, incluido un veredicto negativo o
+  limitado con causas documentadas;
+- la única medición que falta es la de H1, y se obtiene con una serie
+  **`planning-only`** barata bajo `claude-code-cli`. El evento
+  `planning.granularity_strategy_selected` precede a la aprobación del plan, así
+  que la medición no requiere ejecución, candidate, entrega ni oráculo;
+- cambiar el ejecutor rompe la comparabilidad. Esa serie se declara **serie de
+  medición separada**, no comparable con `retry-8/9/10/11` ni con el piloto, y no
+  eleva retroactivamente ningún resultado;
+- si la medición vuelve a fallar, el ticket 12 cierra como **limitación
+  declarada** y el manuscrito deja de prometer un veredicto sobre
+  `validationDuplication`. La evidencia persistida no se borra ni se reescribe.
+
+La ruta restante es:
+
+```text
+11 -> 12 -> 02 -> 14 -> 15
+```
+
 ---
 
 ## 1. Posición actual y fuentes canónicas
