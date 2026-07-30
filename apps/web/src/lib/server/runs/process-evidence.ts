@@ -228,9 +228,103 @@ const pendingEvidenceWrites = globalSingleton(
   () => new Set<Promise<unknown>>()
 );
 
+interface ProcessEvidenceWatchRoot {
+  label: string;
+  exitedAt?: number;
+}
+
+interface ProcessEvidenceWatchState {
+  journal: JsonRunProcessJournal;
+  roots: Map<number, ProcessEvidenceWatchRoot>;
+  descendants: Map<number, RunProcessRecord>;
+  timer?: ReturnType<typeof setInterval>;
+  running: boolean;
+}
+
+const processEvidenceWatchStates = globalSingleton(
+  "process-evidence:watch-states",
+  () => new Map<string, ProcessEvidenceWatchState>()
+);
+let processEvidenceSnapshot = snapshotProcessTable;
+let processEvidenceWatchIntervalMs = 500;
+
 function trackEvidenceWrite(write: Promise<unknown>): void {
   const tracked = write.catch(() => undefined).finally(() => pendingEvidenceWrites.delete(tracked));
   pendingEvidenceWrites.add(tracked);
+}
+
+function watchProcess(
+  runId: string,
+  input: { pid?: number; label: string },
+  journal: JsonRunProcessJournal
+): void {
+  if (input.pid === undefined) return;
+  const state = processEvidenceWatchStates.get(runId) ?? {
+    journal,
+    roots: new Map<number, ProcessEvidenceWatchRoot>(),
+    descendants: new Map<number, RunProcessRecord>(),
+    running: false
+  } satisfies ProcessEvidenceWatchState;
+  state.roots.set(input.pid, { label: input.label });
+  processEvidenceWatchStates.set(runId, state);
+  if (state.timer === undefined) {
+    state.timer = setInterval(() => { void tickProcessEvidenceWatch(runId, state); }, processEvidenceWatchIntervalMs);
+  }
+}
+
+function markProcessExitedForWatch(runId: string, pid: number): void {
+  const state = processEvidenceWatchStates.get(runId);
+  const root = state?.roots.get(pid);
+  if (root !== undefined) root.exitedAt = Date.now();
+}
+
+async function tickProcessEvidenceWatch(runId: string, state: ProcessEvidenceWatchState): Promise<void> {
+  if (state.running) return;
+  state.running = true;
+  try {
+    const snapshot = await processEvidenceSnapshot();
+    const now = Date.now();
+    for (const [rootPid, root] of state.roots) {
+      if (!snapshot.has(rootPid)) continue;
+      for (const descendantPid of descendantsOf(snapshot, rootPid)) {
+        if (state.descendants.has(descendantPid)) continue;
+        const entry = snapshot.get(descendantPid)!;
+        const record = await state.journal.recordStart(runId, {
+          pid: descendantPid,
+          label: `${root.label}:descendant`,
+          ...(entry.command !== undefined ? { command: entry.command } : {}),
+          registeredAt: new Date(now).toISOString()
+        });
+        state.descendants.set(descendantPid, record);
+      }
+    }
+
+    for (const [pid, record] of state.descendants) {
+      const entry = snapshot.get(pid);
+      if (entry === undefined) {
+        await state.journal.close(runId, pid, record.registeredAt, "not_running");
+        state.descendants.delete(pid);
+        continue;
+      }
+      const registeredAtMs = Date.parse(record.registeredAt);
+      if (entry.createdAtMs !== undefined && Number.isFinite(registeredAtMs) && entry.createdAtMs > registeredAtMs + 5_000) {
+        await state.journal.close(runId, pid, record.registeredAt, "pid_recycled");
+        state.descendants.delete(pid);
+      }
+    }
+
+    for (const [pid, root] of state.roots) {
+      if (root.exitedAt !== undefined && now - root.exitedAt > 2_000) state.roots.delete(pid);
+    }
+    if (state.roots.size === 0 && state.descendants.size === 0) {
+      if (state.timer !== undefined) clearInterval(state.timer);
+      processEvidenceWatchStates.delete(runId);
+    }
+  } catch {
+    // Process inspection is diagnostic and must never block the productive path.
+  } finally {
+    state.running = false;
+  }
 }
 
 /**
@@ -243,19 +337,24 @@ export function installProcessEvidenceSink(): void {
     const journal = new JsonRunProcessJournal();
     setProcessEvidenceSink({
       processRegistered: (event) => {
-        trackEvidenceWrite(
-          journal.recordStart(event.ownerId, {
+        const write = journal.recordStart(event.ownerId, {
             ...(event.pid !== undefined ? { pid: event.pid } : {}),
             label: event.label,
             ...(event.command !== undefined ? { command: event.command } : {}),
             ...(event.attemptId !== undefined ? { attemptId: event.attemptId } : {}),
             ...(event.operationId !== undefined ? { operationId: event.operationId } : {}),
             registeredAt: event.at
-          })
+          });
+        watchProcess(
+          event.ownerId,
+          { label: event.label, ...(event.pid === undefined ? {} : { pid: event.pid }) },
+          journal
         );
+        trackEvidenceWrite(write);
       },
       processExited: (event) => {
         if (event.pid === undefined) return;
+        markProcessExitedForWatch(event.ownerId, event.pid);
         trackEvidenceWrite(journal.recordExit(event.ownerId, event.pid, event.at));
       }
     });
@@ -264,8 +363,22 @@ export function installProcessEvidenceSink(): void {
 }
 
 export function uninstallProcessEvidenceSinkForTests(): void {
+  for (const state of processEvidenceWatchStates.values()) {
+    if (state.timer !== undefined) clearInterval(state.timer);
+  }
+  processEvidenceWatchStates.clear();
+  processEvidenceSnapshot = snapshotProcessTable;
+  processEvidenceWatchIntervalMs = 500;
   resetGlobalSingleton("process-evidence:sink-installed");
   setProcessEvidenceSink(undefined);
+}
+
+export function configureProcessEvidenceWatchForTests(options: {
+  snapshot: () => Promise<ProcessSnapshot>;
+  intervalMs?: number;
+}): void {
+  processEvidenceSnapshot = options.snapshot;
+  processEvidenceWatchIntervalMs = options.intervalMs ?? 10;
 }
 
 export async function drainProcessEvidenceForTests(): Promise<void> {

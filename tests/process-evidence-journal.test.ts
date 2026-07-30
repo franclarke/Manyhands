@@ -8,10 +8,12 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { setProcessEvidenceSink, registerLiveProcess, unregisterLiveProcess } from "@manyhands/execution-core";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setProcessEvidenceSink, registerLiveProcess, unregisterLiveProcess, type ProcessSnapshot } from "@manyhands/execution-core";
 import {
+  configureProcessEvidenceWatchForTests,
   JsonRunProcessJournal,
+  killRunProcessesVerified,
   installProcessEvidenceSink,
   uninstallProcessEvidenceSinkForTests,
   drainProcessEvidenceForTests
@@ -92,5 +94,50 @@ describe("evidence sink wiring (registry → journal)", () => {
     unregisterLiveProcess("run-sink", fakeChild);
     await drainProcessEvidenceForTests();
     expect(await journal.listOpen("run-sink")).toHaveLength(0);
+  });
+
+  it("records a live descendant before the executor exits", async () => {
+    const snapshots: ProcessSnapshot[] = [
+      new Map([
+        [5152, { pid: 5152, ppid: 1, createdAtMs: Date.now() - 1000, command: "node" }],
+        [5153, { pid: 5153, ppid: 5152, createdAtMs: Date.now() - 500, command: "smoke-server" }]
+      ]),
+      new Map([[5153, { pid: 5153, ppid: 1, createdAtMs: Date.now() - 500, command: "smoke-server" }]])
+    ];
+    configureProcessEvidenceWatchForTests({
+      intervalMs: 5,
+      snapshot: async () => snapshots.shift() ?? new Map([
+        [5153, { pid: 5153, ppid: 1, createdAtMs: Date.now() - 500, command: "smoke-server" }]
+      ])
+    });
+    installProcessEvidenceSink();
+    const fakeChild = { pid: 5152, kill: () => true, spawnfile: "node" };
+    registerLiveProcess("run-descendant", fakeChild, { runId: "run-descendant", label: "executor" });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    unregisterLiveProcess("run-descendant", fakeChild);
+    await drainProcessEvidenceForTests();
+
+    const journal = new JsonRunProcessJournal();
+    expect(await journal.listOpen("run-descendant")).toEqual(expect.arrayContaining([
+      expect.objectContaining({ pid: 5153, label: "executor:descendant", command: "smoke-server" })
+    ]));
+
+    const killTree = vi.fn().mockResolvedValue(true);
+    const report = await killRunProcessesVerified("run-descendant", {
+      journal,
+      inspector: {
+        snapshot: async () => new Map([
+          [5153, { pid: 5153, ppid: 1, createdAtMs: Date.now() - 500, command: "smoke-server" }]
+        ])
+      },
+      killOwned: async () => ({ ownerId: "run-descendant", verifications: [], allDead: true }),
+      killPidTree: killTree,
+      isAlive: () => false,
+      killTimeoutMs: 1
+    });
+    expect(report.allDead).toBe(true);
+    expect(killTree).toHaveBeenCalledWith(5153);
+    expect(await journal.listOpen("run-descendant")).toHaveLength(0);
   });
 });
