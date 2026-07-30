@@ -84,7 +84,7 @@ export interface V2ExecutionDriverOptions {
   coordinator: RunCoordinator;
   execute(input: V2NodeExecutionInput): Promise<V2NodeExecutionOutcome>;
   loadCurrentInputs(): Promise<V2ExecutionFreshnessInputs>;
-  now(): string;
+  now?(): string;
 }
 
 export interface V2ExecutionFreshnessInputs {
@@ -126,7 +126,11 @@ export interface V2ExecutionRunInput {
  * exact candidate, evidence and adopted artifact as one deterministic batch.
  */
 export class V2ExecutionDriver {
-  constructor(private readonly options: V2ExecutionDriverOptions) {}
+  private readonly options: V2ExecutionDriverOptions & { now: () => string };
+
+  constructor(options: V2ExecutionDriverOptions) {
+    this.options = { ...options, now: options.now ?? (() => new Date().toISOString()) };
+  }
 
   async run(input: V2ExecutionRunInput): Promise<RunProjection> {
     let prepared = prepare(input);
@@ -585,7 +589,7 @@ function buildReadinessState(input: PreparedExecutionRunInput, state: RunProject
 
 function hasUnresolvedRecovery(state: RunProjection, failureClass: "shared_infrastructure"): boolean {
   const affectedNodeIds = new Set(
-    state.recoveryHistory
+    (state.recoveryHistory ?? [])
       .filter((entry) => entry.kind === "failure" && entry.failureClass === failureClass && entry.nodeId !== undefined)
       .map((entry) => entry.nodeId!)
   );
@@ -601,7 +605,7 @@ function suspendedByRecovery(state: RunProjection): Set<string> {
       .flatMap((decision) => decision.affectedNodeIds)
   );
   return new Set(
-    state.recoveryHistory
+    (state.recoveryHistory ?? [])
       .filter((entry) => entry.kind === "failure" && entry.failureClass === "environment_auth_executor" && entry.nodeId !== undefined)
       .filter((entry) => pendingNodeIds.has(entry.nodeId!))
       .map((entry) => entry.nodeId!)
