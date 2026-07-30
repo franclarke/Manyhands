@@ -443,3 +443,10 @@
     conserva 6 fallos no atribuibles al teardown: freeze hash historico,
     finalManifest, lifecycle de decision de integracion y expiracion de
     decisiones. No se modifican freezes ni se inicia una candidate sucesora.
+75. **Proyecciones de decision y manifest reconciliadas.** `5b398e9` permite
+    la propuesta de una nueva revision desde `waiting_for_input`, completa el
+    `finalManifest` de la regresion V2 y alinea la expectativa de una decision
+    de integracion con el lifecycle canonico. Las regresiones focales pasan;
+    `pnpm test` queda en 220 files y 1537 tests PASS, con 2 fallos restantes en
+    `wide-graph-oracle-contract` (freeze historico y codigo de salida del
+    proceso oracle). No se alteran freezes ni se inicia WC1 sucesor.

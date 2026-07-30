@@ -1630,10 +1630,34 @@ proyecciones legacy de pruebas no traian `recoveryHistory` y algunos drivers no
 pasaban `now`. El commit `6251751` agrega defaults compatibles; la suite queda
 en 10/10 PASS y `@manyhands/orchestrator-graph` typecheck PASS.
 
-La corrida completa `pnpm test` sigue detenida con 6 fallos no atribuibles al
-fix de teardown: hash del freeze historico de wide-graph, adopcion de
-`finalManifest`, lifecycle esperado en una decision de integracion y expiracion
-de decisiones sobre nuevas revisiones. No se modifican freezes historicos ni se
-declaran esos resultados positivos. El siguiente trabajo debe aislar y resolver
-esos fallos antes del gate final; ticket 31 y la candidate WC1 sucesora siguen
-sin cerrar.
+En ese momento la corrida completa `pnpm test` quedaba detenida con 6 fallos.
+Los problemas de `finalManifest`, lifecycle de decision y expiracion de
+decisiones fueron resueltos posteriormente y quedan detallados en el
+checkpoint siguiente. No se modifican freezes historicos ni se declaran
+resultados positivos mientras reste cualquier fallo del gate; ticket 31 y la
+candidate WC1 sucesora siguen sin cerrar.
+
+## Checkpoint compatibilidad de decisiones y manifest - 2026-07-30
+
+El commit `5b398e9` corrige dos incompatibilidades reales descubiertas al
+reducir y ejecutar las regresiones del gate:
+
+- una propuesta de revision puede llegar desde `waiting_for_input` y vuelve a
+  `needs_approval`; la transicion ahora esta explicitamente permitida;
+- las pruebas del driver V2 ahora construyen una `finalManifest` completa y
+  coherente con `validationRecipeDigest`, y una integracion fallida con
+  decision pendiente verifica correctamente `waiting_for_input`.
+
+Verificacion: las regresiones de artefactos y facts de ejecucion pasan (2 files,
+3 tests); `pnpm test` queda en 220 files PASS, 1537 tests PASS y 2 tests FAIL.
+Los dos fallos restantes pertenecen a `wide-graph-oracle-contract`: el hash de
+un freeze historico no coincide con el `dist` actual y el smoke del oracle
+externo termina con codigo Windows `3221226505` en vez del codigo esperado.
+No se modifica el freeze historico ni se interpreta el fallo externo como
+evidencia positiva. Ticket 31, candidate WC1 sucesora y N=4/N=8/N=16 siguen
+detenidos.
+
+Estado de reanudacion: inspeccionar esos dos fallos, documentar si son un
+desfase historico o un defecto productivo, y volver a revisar las aceptaciones
+pendientes de ticket 31. Si se completa un avance, agregar otro checkpoint aqui
+antes de continuar con WC1 sucesor.
