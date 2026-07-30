@@ -86,12 +86,21 @@
 
 \begin{frame}{Preguntas de investigación}
   \begin{description}
-    \item[RQ1] ¿Cómo varía la tasa de entrega verificada entre hoja única
-      forzada, división fina fija y una política adaptativa?
-    \item[RQ2] ¿Qué trade-off existe entre éxito, duración, costo y overhead de
-      coordinación?
-    \item[RQ3] ¿Qué modos de falla aparecen en cada configuración?
+    \item[PI-1] ¿Puede construirse un orquestador que descomponga un objetivo en
+      un DAG, lo ejecute aislado y concurrente, y llegue a una entrega
+      \textbf{verificada}?
+    \item[PI-2] ¿Puede una política decidir \textbf{si} dividir una unidad y
+      \textbf{seleccionar} entre los cortes que el planificador propone, hasta
+      llegar a hojas implementables por un agente?
+    \item[PI-3] ¿Qué modos de falla aparecen cuando la granularidad no coincide
+      con la forma real del trabajo?
   \end{description}
+
+  \bigskip
+  \pause
+  \small
+  PI-2 dice \emph{seleccionar}, no \emph{encontrar}: que la política no puede
+  inventar el corte es un resultado de esta tesis, no un supuesto.
 
   \bigskip
   \begin{center}
@@ -451,6 +460,10 @@
       quedó cerrado es la pregunta abierta sobre la política: el término que la
       hacía rechazar cortes anchos medía bien, y se demostró midiendo, sin mover
       el umbral.
+    \item \textbf{La política sabe cuándo dividir mejor que cuándo parar.} Sobre
+      84 intentos de hoja preservados, ningún proxy de tamaño separa entrega de
+      fallo, y el único fallo atribuible a la granularidad ocurrió en la hoja
+      \emph{más chica} del corpus.
     \item Los defectos que importaron no se encontraron leyendo código, sino
       \textbf{ejecutando runs reales} contra un repositorio de verdad.
   \end{itemize}

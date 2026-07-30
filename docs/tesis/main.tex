@@ -108,14 +108,25 @@ con manifiesto y comprobante. El estado del sistema se persiste como una
 secuencia append-only de eventos de dominio, de la que toda proyección se
 deriva.
 
-La evaluación tuvo dos partes, ambas sobre un repositorio TypeScript controlado y
-con Codex como ejecutor de planificación y de implementación. Primero, un caso
-canónico ejecutado de extremo a extremo ---planificación adaptativa, ejecución
-concurrente aislada, validación, integración y entrega--- que alcanzó el estado
-\texttt{completed} con un commit final verificado y no vacío en dos ejecuciones
-válidas consecutivas. Segundo, un estudio comparativo exploratorio de doce
-ejecuciones entre tres configuraciones de granularidad, con diseño registrado
-antes de observar resultados.
+La evaluación tuvo tres partes. Primero, un caso canónico ejecutado de extremo a
+extremo ---planificación adaptativa, ejecución concurrente aislada, validación,
+integración y entrega--- que alcanzó el estado \texttt{completed} con un commit
+final verificado y no vacío en dos ejecuciones válidas consecutivas. Segundo, un
+estudio comparativo exploratorio de doce ejecuciones entre tres configuraciones
+de granularidad, con diseño registrado antes de observar resultados. Tercero, una
+línea de grafos anchos sobre un repositorio objetivo mayor, diseñada para poner a
+prueba el régimen que las dos primeras no alcanzan.
+
+\textbf{La tercera parte no entregó.} Nueve celdas de grafo ancho terminaron sin
+commit candidato, y la cadena de incrementos acumulativos se detuvo en el primero
+de ocho. Cada causa terminal quedó atribuida ---dos defectos del compilador de
+grafos, la muerte no explicada del proceso que gobernaba un run y un fallo del
+entorno del proveedor--- y ninguna es una decisión de granularidad; pero esta
+tesis, en consecuencia, \textbf{no afirma que el sistema entregue software
+verificado a las anchuras que se propuso medir}. Sí resolvió, midiendo y sin
+mover umbral alguno, la pregunta abierta sobre el término de la política que
+rechazaba esos cortes anchos: medía correctamente, y lo que fallaba era el
+planificador adhiriendo criterios de objetivo completo a cada hoja.
 
 El estudio comparativo \textbf{falsó su propia hipótesis}: sobre la tarea
 multi-capa, no descomponer entregó ambas repeticiones mientras las dos
@@ -246,17 +257,32 @@ sobre el commit exacto que lo produjo.
 
 \section{Preguntas de investigación}
 
+Este trabajo persigue dos preguntas. La primera es sobre el sistema; la segunda,
+sobre la política que lo gobierna. La tercera es instrumental a ambas.
+
 \begin{description}[leftmargin=2.2cm,style=nextline]
-  \item[\textbf{PI-1}] ¿Puede una política determinista, alimentada por señales
-  semánticas de un modelo de lenguaje, decidir la granularidad de la
-  descomposición de forma que el recorrido completo ---planificación, ejecución,
-  validación, integración y entrega--- se complete con un resultado verificado?
-  \item[\textbf{PI-2}] ¿Qué evidencia debe persistirse para que la decisión de
-  granularidad de cada nodo sea explicable y reconstruible después del hecho?
+  \item[\textbf{PI-1}] ¿Puede construirse un orquestador de agentes de lenguaje
+  que descomponga un objetivo de software en un grafo dirigido acíclico de
+  unidades, las ejecute de forma aislada y concurrente, y lleve el resultado
+  hasta una entrega \emph{verificada} ---integrada, validada sobre el commit
+  exacto y publicada con manifiesto y comprobante---?
+  \item[\textbf{PI-2}] ¿Puede diseñarse una política que decida \emph{si} una
+  unidad debe dividirse y, cuando debe, \emph{seleccione} entre los cortes que el
+  planificador semántico propone, hasta alcanzar hojas lo bastante acotadas y
+  concretas como para que un agente las implemente dentro de su contrato?
   \item[\textbf{PI-3}] ¿Qué modos de falla aparecen cuando la granularidad
   elegida no coincide con la forma real del trabajo, y cómo los detecta el
   sistema?
 \end{description}
+
+La formulación de PI-2 es deliberada y merece una aclaración temprana, porque
+distingue este trabajo de la expectativa natural. \textbf{No se pregunta si la
+política puede encontrar los hijos óptimos de un nodo.} Una versión anterior del
+sistema lo intentaba, fabricando sub-unidades por partición mecánica del alcance,
+y la sección~\ref{sec:resultado-negativo} reporta el run real que lo refutó: los
+tres candidatos así producidos violaron su propio contrato. La política decide
+\emph{si} y \emph{cuál de los propuestos}; sólo el juicio semántico puede decir
+\emph{cómo}. Esa frontera es el aporte central, y se obtuvo por refutación.
 
 \section{Alcance y limitaciones}
 
@@ -276,8 +302,16 @@ multiusuario, despliegue en la nube, escalabilidad a miles de nodos y
 certificación externa de accesibilidad.
 
 La evaluación es \textbf{exploratoria}. Consiste en un caso canónico ejecutado de
-extremo a extremo, no en un estudio comparativo con potencia estadística. El
-capítulo~\ref{cap:evaluacion} declara con precisión qué se midió y qué no.
+extremo a extremo, un estudio comparativo sin potencia estadística y una línea de
+grafos anchos que no produjo entregas. El capítulo~\ref{cap:evaluacion} declara
+con precisión qué se midió y qué no, y la sección~\ref{sec:warehouse} reporta la
+tercera línea con sus fallos incluidos.
+
+Queda también fuera del alcance una afirmación que el enunciado de PI-2 podría
+sugerir: este trabajo \textbf{no} sostiene que la política determine los hijos
+óptimos de una unidad. Decide si dividir y selecciona entre cortes propuestos;
+generar el corte es juicio semántico, y la sección~\ref{sec:resultado-negativo}
+explica por qué la distinción no es una comodidad de diseño sino un resultado.
 
 \section{Organización del documento}
 
@@ -1279,6 +1313,69 @@ maquinaria del grafo sobre un abanico sintético y hacía la integración
 imposible. Se citan sólo con esa etiqueta y no son comparables con ninguna serie
 posterior.
 
+\subsection{Qué hace implementable a una hoja}
+\label{sec:hojas}
+
+PI-2 termina en un criterio de detención: la política divide hasta alcanzar
+hojas «lo bastante acotadas y concretas» para que un agente las implemente dentro
+de su contrato. El sistema instrumenta ese criterio con dos proxies ---las rutas
+planificadas de la unidad y el tamaño de su contrato de alcance--- y ninguno de
+los dos estaba anclado contra resultados reales.
+
+Se derivaron de los journals preservados todos los intentos de hoja con su
+tamaño declarado y su resultado terminal: \textbf{84 intentos en 37 journals},
+de los cuales 70 produjeron candidato, 10 fallaron y 4 quedaron sin hecho
+terminal. Esos cuatro se conservan en la tabla en lugar de descartarse: son
+exactamente la clase que dejó celdas sin resultado atribuible.
+
+\begin{table}[ht]
+  \centering
+  \caption{Rutas permitidas en el contrato de alcance, por resultado del intento.}
+  \label{tab:leaf-size}
+  \small
+  \begin{tabular}{@{}l r r r r@{}}
+    \toprule
+    \textbf{Resultado} & \textbf{n} & \textbf{mín} & \textbf{mediana} & \textbf{máx} \\
+    \midrule
+    Candidato producido & 70 & 2 & 5 & 17 \\
+    Fallo clasificado & 10 & 1 & 15 & 19 \\
+    Sin hecho terminal & 4 & 3 & 20 & 20 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+A primera vista el tamaño separa. \textbf{No lo hace}, y la razón está en las
+causas de los fallos. De los diez, tres fueron del pool de worktrees o de
+\texttt{git worktree add}, dos fueron ejecutores que salieron sin causa
+reconocible y uno fue un defecto de producto: \textbf{seis de diez le habrían
+ocurrido a una hoja de cualquier tamaño}. Contarlos junto al resto es lo que
+produce la separación aparente, porque las hojas de alcance grande provienen del
+repositorio Warehouse y las chicas del repositorio del caso canónico: la
+diferencia de medianas mide de qué serie viene la hoja, no cuán implementable
+era.
+
+Los cuatro fallos restantes sí admiten una lectura por tamaño, y tampoco
+separan. Los tres vencimientos de tiempo ocurrieron con alcances de 3, 15 y 18
+rutas ---cubren casi todo el rango observado--- y la única violación de alcance
+ocurrió con un alcance de \textbf{una sola ruta}: la hoja más chica del corpus,
+en la condición de división fina forzada que había dedicado una hoja entera a
+pruebas.
+
+\textbf{Ningún proxy de tamaño separa entrega de fallo en el corpus preservado},
+y el único fallo genuinamente atribuible a la granularidad ocurrió en la unidad
+más chica y no en la más grande. Es coherente con el resultado negativo central:
+una división más fina no produce unidades más fáciles, produce unidades
+incoherentes cuando el corte no es semántico.
+
+\paragraph{Qué no se concluye.} No se concluye que el tamaño sea irrelevante,
+sino que estos datos no lo separan. Las 84 filas provienen de series con
+estímulos, ejecutores, repositorios y versiones distintas: el corpus no controla
+ninguna de esas variables y no admite contraste estadístico. Los 70 candidatos
+fueron todos validados, de modo que la tabla distingue producir un candidato de
+no producirlo, no la calidad entre candidatos. Y no se propone un valor nuevo
+para el tope de rutas planificadas: elegirlo con estos datos sería ajustar un
+umbral a una observación.
+
 \subsection{La duplicación de validación: el término que decidía}
 \label{sec:validation-duplication}
 
@@ -1438,6 +1535,10 @@ distintas, y al menos una de ellas no completó.
   (sección~\ref{sec:validation-duplication}) \textbf{no re-midió el caso
   motivador a su propia anchura}, y la serie que lo resolvió usó un ejecutor
   distinto, por lo que no es comparable con las anteriores.
+  \item \textbf{El criterio de detención de la descomposición no está anclado.}
+  Sobre 84 intentos de hoja preservados, ningún proxy de tamaño separa entrega de
+  fallo (sección~\ref{sec:hojas}). La política sabe cuándo dividir mejor de lo que
+  sabe cuándo dejar de hacerlo.
   \item La conformidad con WCAG 2.2 AA es de diseño; no hay auditoría externa.
 \end{itemize}
 
@@ -1455,15 +1556,30 @@ semántico y decisión determinista.
 Respecto de las preguntas de investigación:
 
 \begin{description}[leftmargin=1.6cm,style=nextline]
-  \item[PI-1] Sí. El caso canónico completó el recorrido de extremo a extremo con
-  ejecutores reales y produjo un commit final verificado, no vacío, con
-  manifiesto y comprobante, y cuya suite de pruebas pasa en un clon limpio. Esto
-  demuestra viabilidad, no superioridad.
-  \item[PI-2] La evidencia necesaria resultó ser: las cuatro dimensiones
-  aceptadas, su origen, los pesos, el umbral, la versión de la fórmula, el valor
-  resultante, la decisión y las acciones de los críticos, persistidos como evento
-  de dominio. Con ese conjunto, la decisión de cada nodo se reconstruye por
-  reproducción de la historia.
+  \item[PI-1] \textbf{Sí, y con un límite preciso.} El caso canónico completó el
+  recorrido de extremo a extremo con ejecutores reales y produjo un commit final
+  verificado, no vacío, con manifiesto y comprobante, y cuya suite de pruebas pasa
+  en un clon limpio; lo hizo en dos ejecuciones válidas consecutivas, y la línea
+  Warehouse aportó una entrega adicional verificada por un oráculo externo. El
+  orquestador existe, funciona y es auditable. El límite es de escala y no de
+  viabilidad: ninguna de las nueve celdas de grafo ancho entregó, de modo que la
+  respuesta afirmativa vale para los tamaños efectivamente ejecutados y no para
+  las anchuras que la tercera línea intentó medir.
+  \item[PI-2] \textbf{Sí para la decisión, no para el corte, y sin criterio de
+  detención anclado.} La política decide si dividir sobre señales normalizadas y
+  acotadas contra el repositorio, selecciona entre los cortes que el planificador
+  propone, y persiste su decisión con las cuatro dimensiones, su origen, los
+  pesos, el umbral, la versión de la fórmula, el valor resultante y las acciones
+  de los críticos: la decisión de cada nodo se reconstruye por reproducción de la
+  historia. Se midió además que el término que la hacía rechazar cortes anchos
+  ---la duplicación de validación--- mide lo que declara medir, y que el rechazo
+  provenía del planificador adhiriendo criterios de objetivo completo a cada hoja
+  (sección~\ref{sec:validation-duplication}). Lo que la política \textbf{no}
+  puede es generar el corte: intentarlo produjo unidades que violaron su propio
+  contrato. Y el criterio de detención queda sin anclar: sobre 84 intentos de
+  hoja preservados, ningún proxy de tamaño separa entrega de fallo, y el único
+  fallo atribuible a la granularidad ocurrió en la unidad más chica del corpus
+  (sección~\ref{sec:hojas}).
   \item[PI-3] Aparecieron cuatro modos de falla distinguibles: la violación de
   alcance cuando la unidad no puede completarse dentro de su contrato; el
   conflicto de recurso cuando dos unidades compiten por los mismos archivos ---que

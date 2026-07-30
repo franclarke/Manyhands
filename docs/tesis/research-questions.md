@@ -222,3 +222,26 @@ alcance congelado que habilita la Etapa 2.
 - Matriz claim–evidencia: [`claim-evidence-matrix.md`](claim-evidence-matrix.md)
 - Capacidades diferidas y nomenclatura: [`deferred-capabilities.md`](deferred-capabilities.md)
 - Baseline: [`evidence/baselines/stage-1-baseline.md`](evidence/baselines/stage-1-baseline.md)
+
+---
+
+## Enmienda — 2026-07-30: las preguntas del trabajo
+
+Las RQ1–RQ3 de arriba son las preguntas del **estudio comparativo**, y se
+conservan como registro histórico del diseño pre-registrado. Las preguntas del
+**trabajo** quedaron fijadas así, y son las que responde `main.tex`:
+
+- **PI-1** — ¿Puede construirse un orquestador que descomponga un objetivo en un
+  DAG de unidades, las ejecute aisladas y concurrentes, y llegue a una entrega
+  verificada con manifiesto y comprobante?
+- **PI-2** — ¿Puede una política decidir **si** una unidad debe dividirse y
+  **seleccionar** entre los cortes que el planificador semántico propone, hasta
+  alcanzar hojas implementables por un agente dentro de su contrato?
+- **PI-3** — ¿Qué modos de falla aparecen cuando la granularidad elegida no
+  coincide con la forma real del trabajo?
+
+**PI-2 dice «seleccionar», no «encontrar», deliberadamente.** Que una política
+determinista no puede inventar el corte semántico es un resultado de este
+trabajo, obtenido por refutación en un run real, no un supuesto de diseño.
+Sostener la formulación fuerte —«la política encuentra los hijos óptimos»— haría
+que la tesis se contradijera con su propio capítulo de metodología.
