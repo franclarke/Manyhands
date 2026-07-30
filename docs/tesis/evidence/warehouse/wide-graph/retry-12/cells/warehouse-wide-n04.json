@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 2,
+  "protocol": {
+    "id": "warehouse-wide-graph",
+    "version": 2
+  },
+  "cellId": "warehouse-wide-n04",
+  "position": 1,
+  "moduleCount": 4,
+  "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-n04",
+  "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+  "goal": "Add exactly 4 independent warehouse analytics modules to the verified W1 codebase.\nCreate src/analytics/contracts.ts exporting WarehouseProjection with a readonly id and project(scenario), where project returns the answer to that module's question.\nEach module answers one question, computed from the W1 Scenario, layout and inventory exports:\n- src/analytics/projection-01.ts exports the projection \"zone-unit-totals\": Total units stored in each zone, keyed by zone id. Its focused tests live in src/analytics/projection-01.test.ts.\n- src/analytics/projection-02.ts exports the projection \"sku-unit-totals\": Total units of each SKU across the whole warehouse, keyed by SKU id. Its focused tests live in src/analytics/projection-02.test.ts.\n- src/analytics/projection-03.ts exports the projection \"bin-occupancy\": How many bins hold stock, how many are empty, and how many exist. Its focused tests live in src/analytics/projection-03.test.ts.\n- src/analytics/projection-04.ts exports the projection \"sku-bin-spread\": Number of distinct bins each SKU occupies, keyed by SKU id. Its focused tests live in src/analytics/projection-04.test.ts.\nA module must not import another module; it may import only the fixed contract and W1 exports.\nEvery answer must be derived from the scenario at run time. Do not hardcode results, and do not duplicate the W1 inventory or layout calculations.\nCreate src/analytics/registry.ts as the sole consumer of every module, returning all projections in the order the modules are listed above, with its own tests in src/analytics/registry.test.ts.\nPreserve all existing W1 behaviour and checks.\nAdd a package script named study:wide-graph that writes exactly one JSON object to stdout and no other output.\nIts JSON must be { \"schemaVersion\": 1, \"moduleCount\": 4, \"scenario\": \"thesis-seed-2026\", \"projections\": [ { \"projectionId\": \"<the module's projection id>\", \"value\": <that module's answer> }, … ] } with exactly 4 entries in the order the modules are listed above.\nTwo invocations from the same commit must emit byte-identical JSON.",
+  "condition": "C",
+  "granularityCondition": "C",
+  "baseUrl": "http://127.0.0.1:3111",
+  "workspaceName": "warehouse-wide-graph",
+  "planningSelection": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.5",
+    "effort": "high"
+  },
+  "executionSelection": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.5",
+    "effort": "high"
+  },
+  "repairSelection": {
+    "executorId": "codex-cli",
+    "model": "gpt-5.5",
+    "effort": "high"
+  },
+  "executionConfig": {
+    "maxParallel": 2,
+    "scopePolicy": "strict",
+    "leafTimeoutMs": 1800000,
+    "integrationTimeoutMs": 1800000,
+    "unexpectedCommitPolicy": "reject"
+  },
+  "runsDir": "C:\\Users\\franc\\Documents\\Proyectos\\Manyhands-closure\\.manyhands\\runs",
+  "pollIntervalMs": 10000,
+  "wallClockLimitMs": 7200000,
+  "oracleContract": {
+    "schemaVersion": 1,
+    "oracleId": "warehouse-wide-graph-v2",
+    "oracleContractVersion": 2,
+    "evaluator": {
+      "path": "docs/tesis/evidence/scripts/lib/wide-graph-oracle.mjs",
+      "sha256": "cb22b7e6ef4aebe948e8525404468a34c842de44820f2f14a4e5e52b0cee8c6a"
+    },
+    "runner": {
+      "path": "docs/tesis/evidence/scripts/run-wide-graph-oracle.mjs",
+      "sha256": "4a595700c52ea43a022e3862e9967b4c8aa390760d6ba3340bc9459a651c59e1"
+    },
+    "dependencies": [
+      {
+        "path": "docs/tesis/evidence/scripts/lib/wide-graph-metrics.mjs",
+        "sha256": "45b8d976ff5b897fd8cad88ec0a156237f2e73b1dd07ed1d50b15b5a6c778e83"
+      },
+      {
+        "path": "docs/tesis/evidence/scripts/lib/wide-graph-oracle-plan.mjs",
+        "sha256": "bd8978172727f389d8ca66a22afe22a5bc9f696284a18c367c1ec72a5eb44c60"
+      },
+      {
+        "path": "docs/tesis/evidence/warehouse/oracles/oracle-core.mjs",
+        "sha256": "79519f064f29356a0447f610ea63ba41bdb5eab273d26cd48124371dbb3c81bb"
+      },
+      {
+        "path": "docs/tesis/evidence/warehouse/oracles/probe-specimen.mjs",
+        "sha256": "409ea222fca7bb96bbd97bc212c3dd05ca00e134205b77952fcab4b59f03dc23"
+      },
+      {
+        "path": "scripts/manyhands-dev-command.mjs",
+        "sha256": "a86bf8b019665d8443ea1ea868f5c7a7ff21d5c235e315fb452b2d25c8c29fae"
+      },
+      {
+        "path": "docs/tesis/evidence/scripts/lib/wide-graph-oracle-contract.mjs",
+        "sha256": "6043ff04f900d1b5b0c86c6cccb11463857cf10347b0219d7c29c2c6e8f2bd77"
+      }
+    ],
+    "criterionMappings": [
+      {
+        "criterionId": "repository-gates",
+        "checks": [
+          "install-frozen-lockfile",
+          "test",
+          "typecheck",
+          "build"
+        ]
+      },
+      {
+        "criterionId": "module-boundary",
+        "checks": [
+          "module-boundary"
+        ]
+      },
+      {
+        "criterionId": "deterministic-probe",
+        "checks": [
+          "deterministic-probe"
+        ]
+      },
+      {
+        "criterionId": "projection-order",
+        "checks": [
+          "projection-order"
+        ]
+      },
+      {
+        "criterionId": "projection-values",
+        "checks": [
+          "specimen-values"
+        ]
+      }
+    ],
+    "contractSha256": "5b90202b557db44889790a42899d9b9180db5c03f18ca5ec8b9ddd4c0b76c8da"
+  },
+  "goalSha256": "d1798ad1caba8c72cfc82792b0eb1330240511764c59e2539ab3799446f6f546"
+}

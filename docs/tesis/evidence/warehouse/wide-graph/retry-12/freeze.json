@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "frozenAt": "2026-07-30T03:12:00Z",
+  "status": "frozen-before-execution",
+  "manyHands": {
+    "commit": "e1a411df5929699359aca2be331bec5005616488",
+    "tree": "ecd8ec59b2d518fa772ae0744e01b1716e4b8d96",
+    "workingTree": "clean-at-freeze",
+    "policyVersion": "adaptive-utility/3.1.0-pilot"
+  },
+  "series": {
+    "condition": "C",
+    "baseSha": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+    "executorSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.5",
+      "effort": "high"
+    },
+    "moduleCounts": [4, 8, 16],
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1800000,
+      "integrationTimeoutMs": 1800000,
+      "unexpectedCommitPolicy": "reject",
+      "wallClockLimitMs": 7200000,
+      "pollIntervalMs": 10000
+    },
+    "decisionProtocol": ["approve_plan", "approve_delivery"],
+    "cutRules": "one cell at a time; preserve failures; no retry for a desired outcome; no oracle without candidate SHA"
+  },
+  "cells": [
+    {
+      "cellId": "warehouse-wide-n04",
+      "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-n04",
+      "cellSha256": "6ddea390f7510680cd22f93d41f678fa24f06b071cc7bca639488ed7e24d6bff",
+      "goalSha256": "d1798ad1caba8c72cfc82792b0eb1330240511764c59e2539ab3799446f6f546"
+    },
+    {
+      "cellId": "warehouse-wide-n08",
+      "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-n08",
+      "cellSha256": "9721f99eb6d637227b64f5b6b406bc0d73bc7f2e7cf54544f89aa2f4aae7f4d2",
+      "goalSha256": "8da73f032bc2924bf70d46f63d739dc8c4d55a503b59e68f0bf862805f6ad1a8"
+    },
+    {
+      "cellId": "warehouse-wide-n16",
+      "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wide-codex-n16",
+      "cellSha256": "21a5e2cb5a68627498194c04b53de815cd19a39c04034309d22295fce0f168cd",
+      "goalSha256": "94b7cf6ac0f4e39ca8ffd944e9f5dbc04e02572b70e638cbabcce3f1db5e7b61"
+    }
+  ],
+  "gates": {
+    "focusedTests": "pass",
+    "packagesTypecheck": "pass",
+    "webTypecheck": "pass",
+    "packagesBuild": "pass",
+    "webBuild": "pass",
+    "fullSuite": "not_run"
+  },
+  "artifacts": {
+    "cellsManifestSha256": "dbaacfa1acd639167bed86ffdf5660f982658863bf871b1b6b93928db7c02d49",
+    "oracleId": "warehouse-wide-graph-v2",
+    "oracleContractVersion": 2
+  },
+  "notes": [
+    "retry-9, retry-10 and retry-11 remain immutable and are not reused.",
+    "retry-11 was invalid/not delivered because Codex processes exited without terminal transitions.",
+    "No candidate execution has started for retry-12; no result is claimed."
+  ]
+}

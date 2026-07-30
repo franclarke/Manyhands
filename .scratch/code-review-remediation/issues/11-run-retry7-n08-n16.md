@@ -66,6 +66,31 @@
 - TDD en `cbb8cdb`: seams fuera de la adyacencia; ciclos materiales siguen
   rechazados; prompt producer -> consumer explicito. Suite afectada 69/69 y
   typechecks task-graph/decomposer PASS.
+## Progreso 2026-07-30
+
+- Ticket 27 cerró la convergencia terminal del ejecutor con RED/GREEN,
+  regresiones de fencing/decisiones/restart y gates afectados PASS.
+- `retry-12` quedó congelado en
+  `docs/tesis/evidence/warehouse/wide-graph/retry-12/freeze.json`, con commit
+  ManyHands `e1a411d`, base W1 `71f61c9`, Codex `gpt-5.5/high`, condición C y
+  celdas N=4/N=8/N=16 sobre tres targets limpios.
+- La serie aún no se ejecutó: no hay candidate SHA, receipt ni delivery; por
+  tanto no se agrega ningún PASS y N=16 sigue sin evaluación.
+
 - Ticket 11 permanece abierto y sus casillas no se marcan. Los blockers
   canónicos del cierre de correctness viven en tickets 16--26; el plan es sólo
   un runbook. `retry-10` permanece inmutable.
+
+## Resultado retry-12 N=4
+
+- La celda `warehouse-wide-n04` fue ejecutada una sola vez desde el freeze
+  `e1a411d`, sobre la base W1 `71f61c9` y el target congelado.
+- El run produjo candidate SHA `7a08eebdf5a3c929097b57a617f9d1fe9f45893b`,
+  pero la validacion fue `unverified` y se levanto una decision real
+  `resolve_conflict` (`retry`/`stop`).
+- El driver pre-registrado no esta autorizado a contestar esa decision;
+  despues del margen de espera preservo lifecycle `waiting_for_input`,
+  `finalSha: null`, `receipt: null` y sin delivery.
+- La celda queda preservada como no entregada, no es PASS y no habilita N=8 ni
+  N=16. Ticket 11 permanece abierto; no se repite N=4 ni se fuerza una
+  resolucion posterior.

@@ -386,3 +386,14 @@
     asignaciones repetidas de acceptance intents. No existe validación externa
     de que el proxy represente costo semántico ni umbral de calidad; no se
     cambia fórmula, threshold ni estímulo.
+66. **Freeze sucesor retry-12 creado sin ejecución.** El commit `e1a411d`, la
+    base W1 `71f61c9`, la selección Codex `gpt-5.5/high`, condición C, probes,
+    oráculo y targets N=4/N=8/N=16 quedaron registrados antes de consumir cuota.
+    La evidencia permanece `not_run` hasta que exista una transición terminal,
+    candidate SHA y receipt observables.
+67. **retry-12 N=4 preservado sin entrega.** La celda produjo candidate
+    `7a08eebdf5a3c929097b57a617f9d1fe9f45893b`, pero su validacion quedo
+    `unverified` y el run levanto una decision real `resolve_conflict`. El
+    driver pre-registrado expiro su margen en `waiting_for_input`, con
+    `finalSha: null`, `receipt: null` y sin delivery. No se inicia N=8/N=16,
+    no se marca PASS y no se repite la celda.

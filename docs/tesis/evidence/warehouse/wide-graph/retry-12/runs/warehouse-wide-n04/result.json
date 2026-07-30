@@ -1,0 +1,12 @@
+{
+  "cellId": "warehouse-wide-n04",
+  "condition": "C",
+  "runId": "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe",
+  "started": "2026-07-30T06:14:10.153Z",
+  "finished": "2026-07-30T06:21:41.048Z",
+  "outcome": {
+    "lifecycle": "waiting_for_input",
+    "receipt": null,
+    "reason": "run parked on resolve_conflict"
+  }
+}

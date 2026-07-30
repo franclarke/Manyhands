@@ -1,0 +1,1771 @@
+{
+  "schemaVersion": 2,
+  "runId": "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe",
+  "eventSequence": 33,
+  "lastEventId": "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:readiness.observed:33",
+  "operationId": "fdebf522-dc0e-406d-8885-1bf370c499f6",
+  "fencingToken": 3,
+  "projection": {
+    "runId": "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe",
+    "goal": "Add exactly 4 independent warehouse analytics modules to the verified W1 codebase.\nCreate src/analytics/contracts.ts exporting WarehouseProjection with a readonly id and project(scenario), where project returns the answer to that module's question.\nEach module answers one question, computed from the W1 Scenario, layout and inventory exports:\n- src/analytics/projection-01.ts exports the projection \"zone-unit-totals\": Total units stored in each zone, keyed by zone id. Its focused tests live in src/analytics/projection-01.test.ts.\n- src/analytics/projection-02.ts exports the projection \"sku-unit-totals\": Total units of each SKU across the whole warehouse, keyed by SKU id. Its focused tests live in src/analytics/projection-02.test.ts.\n- src/analytics/projection-03.ts exports the projection \"bin-occupancy\": How many bins hold stock, how many are empty, and how many exist. Its focused tests live in src/analytics/projection-03.test.ts.\n- src/analytics/projection-04.ts exports the projection \"sku-bin-spread\": Number of distinct bins each SKU occupies, keyed by SKU id. Its focused tests live in src/analytics/projection-04.test.ts.\nA module must not import another module; it may import only the fixed contract and W1 exports.\nEvery answer must be derived from the scenario at run time. Do not hardcode results, and do not duplicate the W1 inventory or layout calculations.\nCreate src/analytics/registry.ts as the sole consumer of every module, returning all projections in the order the modules are listed above, with its own tests in src/analytics/registry.test.ts.\nPreserve all existing W1 behaviour and checks.\nAdd a package script named study:wide-graph that writes exactly one JSON object to stdout and no other output.\nIts JSON must be { \"schemaVersion\": 1, \"moduleCount\": 4, \"scenario\": \"thesis-seed-2026\", \"projections\": [ { \"projectionId\": \"<the module's projection id>\", \"value\": <that module's answer> }, … ] } with exactly 4 entries in the order the modules are listed above.\nTwo invocations from the same commit must emit byte-identical JSON.",
+    "lifecycle": "waiting_for_input",
+    "sequence": 33,
+    "appliedEventIds": [
+      "run:07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:created",
+      "repository:sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd:inspection:2",
+      "planning:07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:1:started",
+      "planning:07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:1:node:warehouse-analytics",
+      "planning:07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:1:node:analytics-contract",
+      "planning:07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:1:node:zone-unit-totals",
+      "planning:07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:1:node:sku-unit-totals",
+      "planning:07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:1:node:bin-occupancy",
+      "planning:07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:1:node:sku-bin-spread",
+      "planning:07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:1:node:analytics-registry",
+      "planning:07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:1:node:study-wide-graph-command",
+      "planning:warehouse-analytics-wide-graph:strategy:07e2c839-ec3e-4d57-ad8a-cc6a98389bbe",
+      "planning:warehouse-analytics-wide-graph:completed:07e2c839-ec3e-4d57-ad8a-cc6a98389bbe",
+      "graph:graph-warehouse-analytics-wide-graph-a94245901f:r1:compiled",
+      "graph:graph-warehouse-analytics-wide-graph-a94245901f:r1:critic:completeness",
+      "graph:graph-warehouse-analytics-wide-graph-a94245901f:r1:critic:atomicity",
+      "graph:graph-warehouse-analytics-wide-graph-a94245901f:r1:critic:contract_compatibility",
+      "graph:graph-warehouse-analytics-wide-graph-a94245901f:r1:critic:dag_validity",
+      "graph:graph-warehouse-analytics-wide-graph-a94245901f:r1:critic:scope_isolation",
+      "graph:graph-warehouse-analytics-wide-graph-a94245901f:r1:critic:artifact_coverage",
+      "graph:graph-warehouse-analytics-wide-graph-a94245901f:r1:critic:risk_uncertainty",
+      "graph:graph-warehouse-analytics-wide-graph-a94245901f:r1:critic:validation_coverage",
+      "graph:graph-warehouse-analytics-wide-graph-a94245901f:r1:proposed",
+      "approve-plan:graph-warehouse-analytics-wide-graph-a94245901f:r1",
+      "approve-plan:graph-warehouse-analytics-wide-graph-a94245901f:r1:resolved",
+      "approve-plan:graph-warehouse-analytics-wide-graph-a94245901f:r1:graph-approved",
+      "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:readiness.observed:27",
+      "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:wave.selected:28",
+      "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:node-analytics-contract-59f46b1442:1:started",
+      "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:node-analytics-contract-59f46b1442:1:candidate",
+      "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:node-analytics-contract-59f46b1442:1:validation-completed",
+      "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:node-analytics-contract-59f46b1442:1:decision:07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:node-analytics-contract-59f46b1442:1:decision",
+      "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:readiness.observed:33"
+    ],
+    "decisions": {
+      "approve-plan:graph-warehouse-analytics-wide-graph-a94245901f:r1": {
+        "id": "approve-plan:graph-warehouse-analytics-wide-graph-a94245901f:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-warehouse-analytics-ccd5ca3c4a"
+        ],
+        "evidenceRefs": [
+          "graph:graph-warehouse-analytics-wide-graph-a94245901f:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      },
+      "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:node-analytics-contract-59f46b1442:1:decision": {
+        "id": "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:node-analytics-contract-59f46b1442:1:decision",
+        "kind": "resolve_conflict",
+        "question": "The work for Projection contract needs guidance: Validation outcome is unverified.",
+        "options": [
+          {
+            "id": "retry",
+            "label": "Retry with guidance"
+          },
+          {
+            "id": "stop",
+            "label": "Stop this branch"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-analytics-contract-59f46b1442"
+        ],
+        "evidenceRefs": [
+          "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:node-analytics-contract-59f46b1442:1"
+        ],
+        "impact": "behavior",
+        "raisedAtGraphRevision": 1,
+        "status": "pending"
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": [
+        "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:node-analytics-contract-59f46b1442:1:decision"
+      ],
+      "explanations": [
+        {
+          "nodeId": "node-analytics-contract-59f46b1442",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "unresolved_decision",
+              "decisionId": "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:node-analytics-contract-59f46b1442:1:decision"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-analytics-registry-90acc9b92b",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-warehouse-projection-contract-artifact-a27afa6204",
+              "requiredRevision": "sha256:7bc05e9b14349ec19ad13eccc64c0d8a6a51bd14a67bae4edd88c5227f30e66f"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-projection-01-artifact-886ca7f320",
+              "requiredRevision": "sha256:f3ab586d86c9656a81ff726993473b90941f06457b5d4a533102363870b17e02"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-projection-02-artifact-d92e9a3820",
+              "requiredRevision": "sha256:8070d23d4a9f14a6aa7526409a0596849006a1ff4c0de5b62613fbc380d1e139"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-projection-03-artifact-7caa5c2442",
+              "requiredRevision": "sha256:56cfef0179d017282476f302828b8da09ce92cd8d8626f5580153e04d437735b"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-projection-04-artifact-575721b6c0",
+              "requiredRevision": "sha256:01505ea2f2dc810c4e848b0ebe58e5a0ae5e7efa109576f0426f712bc1878669"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-bin-occupancy-849d5e5f6a",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-warehouse-projection-contract-artifact-a27afa6204",
+              "requiredRevision": "sha256:7bc05e9b14349ec19ad13eccc64c0d8a6a51bd14a67bae4edd88c5227f30e66f"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-sku-bin-spread-54eb646fd6",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-warehouse-projection-contract-artifact-a27afa6204",
+              "requiredRevision": "sha256:7bc05e9b14349ec19ad13eccc64c0d8a6a51bd14a67bae4edd88c5227f30e66f"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-sku-unit-totals-1a25a4432d",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-warehouse-projection-contract-artifact-a27afa6204",
+              "requiredRevision": "sha256:7bc05e9b14349ec19ad13eccc64c0d8a6a51bd14a67bae4edd88c5227f30e66f"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-study-wide-graph-command-29e4effdb4",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-analytics-registry-artifact-48a557b26d",
+              "requiredRevision": "sha256:4be4b1642320d455ed387edcf70602541c1f85ab9e03a6a8bbcff3b6858be725"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-warehouse-analytics-ccd5ca3c4a",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-analytics-contract-output-a3effd06b1",
+              "requiredRevision": "sha256:fc07432916937d86bd7069e579a8d88eb8a4c9404797c883408a017dce33edc8"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-zone-unit-totals-output-a994df1a11",
+              "requiredRevision": "sha256:ec2c59288b93311bb5bd6906e8f4fe4ecba702294a75af42bb34e84988b22611"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-sku-unit-totals-output-4d36469b26",
+              "requiredRevision": "sha256:0337081832a9debb1ba949e73025e3a420f84d3ea60dfb117946a0e1879cd7da"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-bin-occupancy-output-670cca5f37",
+              "requiredRevision": "sha256:fb5ed2d6197bb01c15e76031bdcaac98c3b051b9e7134d85c26facdf1b63651e"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-sku-bin-spread-output-4b81e441bf",
+              "requiredRevision": "sha256:af68ea28faa86b5c330cdf999a1e520e2b0aba01890fdb4cb18963f9a2e6de67"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-analytics-registry-output-133dd1b6b9",
+              "requiredRevision": "sha256:8af94b687e04dfda6061990955e4da25381d0f65d632298f62f1d0776a063e00"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-study-wide-graph-command-output-dd3f2dba3e",
+              "requiredRevision": "sha256:3dbfe651f8a40a5bb6d6e982a75e36fbc2895008a7beb0281f9ad77918e112cd"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-zone-unit-totals-2fae32c8f8",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-warehouse-projection-contract-artifact-a27afa6204",
+              "requiredRevision": "sha256:7bc05e9b14349ec19ad13eccc64c0d8a6a51bd14a67bae4edd88c5227f30e66f"
+            }
+          ]
+        }
+      ],
+      "effectiveConfig": {
+        "maxParallel": 2
+      },
+      "schedulerState": {
+        "materializableNodeIds": [
+          "node-warehouse-analytics-ccd5ca3c4a",
+          "node-analytics-contract-59f46b1442",
+          "node-zone-unit-totals-2fae32c8f8",
+          "node-sku-unit-totals-1a25a4432d",
+          "node-bin-occupancy-849d5e5f6a",
+          "node-sku-bin-spread-54eb646fd6",
+          "node-analytics-registry-90acc9b92b",
+          "node-study-wide-graph-command-29e4effdb4"
+        ],
+        "activeResourceNodeIds": [],
+        "openCircuitBreakerNodeIds": [],
+        "availableExecutorNodeIds": [
+          "node-warehouse-analytics-ccd5ca3c4a",
+          "node-analytics-contract-59f46b1442",
+          "node-zone-unit-totals-2fae32c8f8",
+          "node-sku-unit-totals-1a25a4432d",
+          "node-bin-occupancy-849d5e5f6a",
+          "node-sku-bin-spread-54eb646fd6",
+          "node-analytics-registry-90acc9b92b",
+          "node-study-wide-graph-command-29e4effdb4"
+        ],
+        "stoppedNodeIds": [],
+        "budgetAvailable": true
+      },
+      "budgetAvailable": true,
+      "conflictEvidence": [
+        {
+          "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-analytic-aa09ccbc9d",
+          "leftNodeId": "node-analytics-contract-59f46b1442",
+          "rightNodeId": "node-analytics-registry-90acc9b92b",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-bin-occu-cce71f849d",
+          "leftNodeId": "node-analytics-contract-59f46b1442",
+          "rightNodeId": "node-bin-occupancy-849d5e5f6a",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-sku-bin--79abd68205",
+          "leftNodeId": "node-analytics-contract-59f46b1442",
+          "rightNodeId": "node-sku-bin-spread-54eb646fd6",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-sku-unit-d1852798f9",
+          "leftNodeId": "node-analytics-contract-59f46b1442",
+          "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-study-wi-da1231c392",
+          "leftNodeId": "node-analytics-contract-59f46b1442",
+          "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-zone-uni-bc48bb841d",
+          "leftNodeId": "node-analytics-contract-59f46b1442",
+          "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-bin-occu-14eda7660e",
+          "leftNodeId": "node-analytics-registry-90acc9b92b",
+          "rightNodeId": "node-bin-occupancy-849d5e5f6a",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-sku-bin--b458385ffa",
+          "leftNodeId": "node-analytics-registry-90acc9b92b",
+          "rightNodeId": "node-sku-bin-spread-54eb646fd6",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-sku-unit-3d8ab03bb9",
+          "leftNodeId": "node-analytics-registry-90acc9b92b",
+          "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-study-wi-c1495efa79",
+          "leftNodeId": "node-analytics-registry-90acc9b92b",
+          "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-zone-uni-c08fefc305",
+          "leftNodeId": "node-analytics-registry-90acc9b92b",
+          "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-sku-bin-sprea-ab08f7bd12",
+          "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+          "rightNodeId": "node-sku-bin-spread-54eb646fd6",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-sku-unit-tota-41839a39d4",
+          "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+          "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-study-wide-gr-7343c80f98",
+          "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+          "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-zone-unit-tot-a86f0926c0",
+          "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+          "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-sku-unit-tot-8320c1363a",
+          "leftNodeId": "node-sku-bin-spread-54eb646fd6",
+          "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-study-wide-g-67143505ac",
+          "leftNodeId": "node-sku-bin-spread-54eb646fd6",
+          "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-zone-unit-to-333bcc3c01",
+          "leftNodeId": "node-sku-bin-spread-54eb646fd6",
+          "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-sku-unit-totals-1a25a4432d-node-study-wide--907704a5e2",
+          "leftNodeId": "node-sku-unit-totals-1a25a4432d",
+          "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-sku-unit-totals-1a25a4432d-node-zone-unit-t-f001166264",
+          "leftNodeId": "node-sku-unit-totals-1a25a4432d",
+          "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-study-wide-graph-command-29e4effdb4-node-zo-5a277ad1b6",
+          "leftNodeId": "node-study-wide-graph-command-29e4effdb4",
+          "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-analytic-aa09ccbc9d",
+          "leftNodeId": "node-analytics-contract-59f46b1442",
+          "rightNodeId": "node-analytics-registry-90acc9b92b",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-analytics-contract-59f46b1442-node-analytic-aa09ccbc9d"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-bin-occu-cce71f849d",
+          "leftNodeId": "node-analytics-contract-59f46b1442",
+          "rightNodeId": "node-bin-occupancy-849d5e5f6a",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-analytics-contract-59f46b1442-node-bin-occu-cce71f849d"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-sku-bin--79abd68205",
+          "leftNodeId": "node-analytics-contract-59f46b1442",
+          "rightNodeId": "node-sku-bin-spread-54eb646fd6",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-analytics-contract-59f46b1442-node-sku-bin--79abd68205"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-sku-unit-d1852798f9",
+          "leftNodeId": "node-analytics-contract-59f46b1442",
+          "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-analytics-contract-59f46b1442-node-sku-unit-d1852798f9"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-study-wi-da1231c392",
+          "leftNodeId": "node-analytics-contract-59f46b1442",
+          "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-analytics-contract-59f46b1442-node-study-wi-da1231c392"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-zone-uni-bc48bb841d",
+          "leftNodeId": "node-analytics-contract-59f46b1442",
+          "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-analytics-contract-59f46b1442-node-zone-uni-bc48bb841d"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-bin-occu-14eda7660e",
+          "leftNodeId": "node-analytics-registry-90acc9b92b",
+          "rightNodeId": "node-bin-occupancy-849d5e5f6a",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-analytics-registry-90acc9b92b-node-bin-occu-14eda7660e"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-sku-bin--b458385ffa",
+          "leftNodeId": "node-analytics-registry-90acc9b92b",
+          "rightNodeId": "node-sku-bin-spread-54eb646fd6",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-analytics-registry-90acc9b92b-node-sku-bin--b458385ffa"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-sku-unit-3d8ab03bb9",
+          "leftNodeId": "node-analytics-registry-90acc9b92b",
+          "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-analytics-registry-90acc9b92b-node-sku-unit-3d8ab03bb9"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-study-wi-c1495efa79",
+          "leftNodeId": "node-analytics-registry-90acc9b92b",
+          "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-analytics-registry-90acc9b92b-node-study-wi-c1495efa79"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-zone-uni-c08fefc305",
+          "leftNodeId": "node-analytics-registry-90acc9b92b",
+          "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+          "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-analytics-registry-90acc9b92b-node-zone-uni-c08fefc305"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-sku-bin-sprea-ab08f7bd12",
+          "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+          "rightNodeId": "node-sku-bin-spread-54eb646fd6",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-sku-bin-sprea-ab08f7bd12"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-sku-unit-tota-41839a39d4",
+          "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+          "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-sku-unit-tota-41839a39d4"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-study-wide-gr-7343c80f98",
+          "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+          "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-study-wide-gr-7343c80f98"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-zone-unit-tot-a86f0926c0",
+          "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+          "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-zone-unit-tot-a86f0926c0"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-sku-unit-tot-8320c1363a",
+          "leftNodeId": "node-sku-bin-spread-54eb646fd6",
+          "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-sku-unit-tot-8320c1363a"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-study-wide-g-67143505ac",
+          "leftNodeId": "node-sku-bin-spread-54eb646fd6",
+          "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-study-wide-g-67143505ac"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-zone-unit-to-333bcc3c01",
+          "leftNodeId": "node-sku-bin-spread-54eb646fd6",
+          "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-zone-unit-to-333bcc3c01"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-sku-unit-totals-1a25a4432d-node-study-wide--907704a5e2",
+          "leftNodeId": "node-sku-unit-totals-1a25a4432d",
+          "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-sku-unit-totals-1a25a4432d-node-study-wide--907704a5e2"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-sku-unit-totals-1a25a4432d-node-zone-unit-t-f001166264",
+          "leftNodeId": "node-sku-unit-totals-1a25a4432d",
+          "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-sku-unit-totals-1a25a4432d-node-zone-unit-t-f001166264"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        },
+        {
+          "id": "conflict-constraint-node-study-wide-graph-command-29e4effdb4-node-zo-5a277ad1b6",
+          "leftNodeId": "node-study-wide-graph-command-29e4effdb4",
+          "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+          "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+              "sourceRef": "conflict-constraint-node-study-wide-graph-command-29e4effdb4-node-zo-5a277ad1b6"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-07-30T06:17:30.605Z",
+          "expiresAt": "2026-07-31T06:17:30.605Z"
+        }
+      ],
+      "evaluatedAt": "2026-07-30T06:17:38.348Z"
+    },
+    "selectedWaves": [
+      {
+        "waveId": "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:wave:1",
+        "nodeIds": [
+          "node-analytics-contract-59f46b1442"
+        ],
+        "maxParallel": 2,
+        "blocked": [
+          {
+            "nodeId": "node-analytics-registry-90acc9b92b",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-warehouse-projection-contract-artifact-a27afa6204",
+                "requiredRevision": "sha256:7bc05e9b14349ec19ad13eccc64c0d8a6a51bd14a67bae4edd88c5227f30e66f"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-projection-01-artifact-886ca7f320",
+                "requiredRevision": "sha256:f3ab586d86c9656a81ff726993473b90941f06457b5d4a533102363870b17e02"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-projection-02-artifact-d92e9a3820",
+                "requiredRevision": "sha256:8070d23d4a9f14a6aa7526409a0596849006a1ff4c0de5b62613fbc380d1e139"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-projection-03-artifact-7caa5c2442",
+                "requiredRevision": "sha256:56cfef0179d017282476f302828b8da09ce92cd8d8626f5580153e04d437735b"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-projection-04-artifact-575721b6c0",
+                "requiredRevision": "sha256:01505ea2f2dc810c4e848b0ebe58e5a0ae5e7efa109576f0426f712bc1878669"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-bin-occupancy-849d5e5f6a",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-warehouse-projection-contract-artifact-a27afa6204",
+                "requiredRevision": "sha256:7bc05e9b14349ec19ad13eccc64c0d8a6a51bd14a67bae4edd88c5227f30e66f"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-sku-bin-spread-54eb646fd6",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-warehouse-projection-contract-artifact-a27afa6204",
+                "requiredRevision": "sha256:7bc05e9b14349ec19ad13eccc64c0d8a6a51bd14a67bae4edd88c5227f30e66f"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-sku-unit-totals-1a25a4432d",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-warehouse-projection-contract-artifact-a27afa6204",
+                "requiredRevision": "sha256:7bc05e9b14349ec19ad13eccc64c0d8a6a51bd14a67bae4edd88c5227f30e66f"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-study-wide-graph-command-29e4effdb4",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-analytics-registry-artifact-48a557b26d",
+                "requiredRevision": "sha256:4be4b1642320d455ed387edcf70602541c1f85ab9e03a6a8bbcff3b6858be725"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-warehouse-analytics-ccd5ca3c4a",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-analytics-contract-output-a3effd06b1",
+                "requiredRevision": "sha256:fc07432916937d86bd7069e579a8d88eb8a4c9404797c883408a017dce33edc8"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-zone-unit-totals-output-a994df1a11",
+                "requiredRevision": "sha256:ec2c59288b93311bb5bd6906e8f4fe4ecba702294a75af42bb34e84988b22611"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-sku-unit-totals-output-4d36469b26",
+                "requiredRevision": "sha256:0337081832a9debb1ba949e73025e3a420f84d3ea60dfb117946a0e1879cd7da"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-bin-occupancy-output-670cca5f37",
+                "requiredRevision": "sha256:fb5ed2d6197bb01c15e76031bdcaac98c3b051b9e7134d85c26facdf1b63651e"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-sku-bin-spread-output-4b81e441bf",
+                "requiredRevision": "sha256:af68ea28faa86b5c330cdf999a1e520e2b0aba01890fdb4cb18963f9a2e6de67"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-analytics-registry-output-133dd1b6b9",
+                "requiredRevision": "sha256:8af94b687e04dfda6061990955e4da25381d0f65d632298f62f1d0776a063e00"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-study-wide-graph-command-output-dd3f2dba3e",
+                "requiredRevision": "sha256:3dbfe651f8a40a5bb6d6e982a75e36fbc2895008a7beb0281f9ad77918e112cd"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-zone-unit-totals-2fae32c8f8",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-warehouse-projection-contract-artifact-a27afa6204",
+                "requiredRevision": "sha256:7bc05e9b14349ec19ad13eccc64c0d8a6a51bd14a67bae4edd88c5227f30e66f"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 2
+        },
+        "conflictEvidence": [
+          {
+            "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-analytic-aa09ccbc9d",
+            "leftNodeId": "node-analytics-contract-59f46b1442",
+            "rightNodeId": "node-analytics-registry-90acc9b92b",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-bin-occu-cce71f849d",
+            "leftNodeId": "node-analytics-contract-59f46b1442",
+            "rightNodeId": "node-bin-occupancy-849d5e5f6a",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-sku-bin--79abd68205",
+            "leftNodeId": "node-analytics-contract-59f46b1442",
+            "rightNodeId": "node-sku-bin-spread-54eb646fd6",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-sku-unit-d1852798f9",
+            "leftNodeId": "node-analytics-contract-59f46b1442",
+            "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-study-wi-da1231c392",
+            "leftNodeId": "node-analytics-contract-59f46b1442",
+            "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-zone-uni-bc48bb841d",
+            "leftNodeId": "node-analytics-contract-59f46b1442",
+            "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-bin-occu-14eda7660e",
+            "leftNodeId": "node-analytics-registry-90acc9b92b",
+            "rightNodeId": "node-bin-occupancy-849d5e5f6a",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-sku-bin--b458385ffa",
+            "leftNodeId": "node-analytics-registry-90acc9b92b",
+            "rightNodeId": "node-sku-bin-spread-54eb646fd6",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-sku-unit-3d8ab03bb9",
+            "leftNodeId": "node-analytics-registry-90acc9b92b",
+            "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-study-wi-c1495efa79",
+            "leftNodeId": "node-analytics-registry-90acc9b92b",
+            "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-zone-uni-c08fefc305",
+            "leftNodeId": "node-analytics-registry-90acc9b92b",
+            "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-sku-bin-sprea-ab08f7bd12",
+            "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+            "rightNodeId": "node-sku-bin-spread-54eb646fd6",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-sku-unit-tota-41839a39d4",
+            "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+            "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-study-wide-gr-7343c80f98",
+            "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+            "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-zone-unit-tot-a86f0926c0",
+            "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+            "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-sku-unit-tot-8320c1363a",
+            "leftNodeId": "node-sku-bin-spread-54eb646fd6",
+            "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-study-wide-g-67143505ac",
+            "leftNodeId": "node-sku-bin-spread-54eb646fd6",
+            "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-zone-unit-to-333bcc3c01",
+            "leftNodeId": "node-sku-bin-spread-54eb646fd6",
+            "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-sku-unit-totals-1a25a4432d-node-study-wide--907704a5e2",
+            "leftNodeId": "node-sku-unit-totals-1a25a4432d",
+            "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-sku-unit-totals-1a25a4432d-node-zone-unit-t-f001166264",
+            "leftNodeId": "node-sku-unit-totals-1a25a4432d",
+            "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-study-wide-graph-command-29e4effdb4-node-zo-5a277ad1b6",
+            "leftNodeId": "node-study-wide-graph-command-29e4effdb4",
+            "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-analytic-aa09ccbc9d",
+            "leftNodeId": "node-analytics-contract-59f46b1442",
+            "rightNodeId": "node-analytics-registry-90acc9b92b",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-analytics-contract-59f46b1442-node-analytic-aa09ccbc9d"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-bin-occu-cce71f849d",
+            "leftNodeId": "node-analytics-contract-59f46b1442",
+            "rightNodeId": "node-bin-occupancy-849d5e5f6a",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-analytics-contract-59f46b1442-node-bin-occu-cce71f849d"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-sku-bin--79abd68205",
+            "leftNodeId": "node-analytics-contract-59f46b1442",
+            "rightNodeId": "node-sku-bin-spread-54eb646fd6",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-analytics-contract-59f46b1442-node-sku-bin--79abd68205"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-sku-unit-d1852798f9",
+            "leftNodeId": "node-analytics-contract-59f46b1442",
+            "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-analytics-contract-59f46b1442-node-sku-unit-d1852798f9"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-study-wi-da1231c392",
+            "leftNodeId": "node-analytics-contract-59f46b1442",
+            "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-analytics-contract-59f46b1442-node-study-wi-da1231c392"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-contract-59f46b1442-node-zone-uni-bc48bb841d",
+            "leftNodeId": "node-analytics-contract-59f46b1442",
+            "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-analytics-contract-59f46b1442-node-zone-uni-bc48bb841d"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-bin-occu-14eda7660e",
+            "leftNodeId": "node-analytics-registry-90acc9b92b",
+            "rightNodeId": "node-bin-occupancy-849d5e5f6a",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-analytics-registry-90acc9b92b-node-bin-occu-14eda7660e"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-sku-bin--b458385ffa",
+            "leftNodeId": "node-analytics-registry-90acc9b92b",
+            "rightNodeId": "node-sku-bin-spread-54eb646fd6",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-analytics-registry-90acc9b92b-node-sku-bin--b458385ffa"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-sku-unit-3d8ab03bb9",
+            "leftNodeId": "node-analytics-registry-90acc9b92b",
+            "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-analytics-registry-90acc9b92b-node-sku-unit-3d8ab03bb9"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-study-wi-c1495efa79",
+            "leftNodeId": "node-analytics-registry-90acc9b92b",
+            "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-analytics-registry-90acc9b92b-node-study-wi-c1495efa79"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-analytics-registry-90acc9b92b-node-zone-uni-c08fefc305",
+            "leftNodeId": "node-analytics-registry-90acc9b92b",
+            "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+            "reason": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-analytics-registry-90acc9b92b-node-zone-uni-c08fefc305"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-sku-bin-sprea-ab08f7bd12",
+            "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+            "rightNodeId": "node-sku-bin-spread-54eb646fd6",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-sku-bin-sprea-ab08f7bd12"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-sku-unit-tota-41839a39d4",
+            "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+            "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-sku-unit-tota-41839a39d4"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-study-wide-gr-7343c80f98",
+            "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+            "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-study-wide-gr-7343c80f98"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-zone-unit-tot-a86f0926c0",
+            "leftNodeId": "node-bin-occupancy-849d5e5f6a",
+            "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-bin-occupancy-849d5e5f6a-node-zone-unit-tot-a86f0926c0"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-sku-unit-tot-8320c1363a",
+            "leftNodeId": "node-sku-bin-spread-54eb646fd6",
+            "rightNodeId": "node-sku-unit-totals-1a25a4432d",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-sku-unit-tot-8320c1363a"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-study-wide-g-67143505ac",
+            "leftNodeId": "node-sku-bin-spread-54eb646fd6",
+            "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-study-wide-g-67143505ac"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-zone-unit-to-333bcc3c01",
+            "leftNodeId": "node-sku-bin-spread-54eb646fd6",
+            "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-sku-bin-spread-54eb646fd6-node-zone-unit-to-333bcc3c01"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-sku-unit-totals-1a25a4432d-node-study-wide--907704a5e2",
+            "leftNodeId": "node-sku-unit-totals-1a25a4432d",
+            "rightNodeId": "node-study-wide-graph-command-29e4effdb4",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-sku-unit-totals-1a25a4432d-node-study-wide--907704a5e2"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-sku-unit-totals-1a25a4432d-node-zone-unit-t-f001166264",
+            "leftNodeId": "node-sku-unit-totals-1a25a4432d",
+            "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/inventory.ts, src/domain/layout.test.ts, src/domain/layout.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-sku-unit-totals-1a25a4432d-node-zone-unit-t-f001166264"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          },
+          {
+            "id": "conflict-constraint-node-study-wide-graph-command-29e4effdb4-node-zo-5a277ad1b6",
+            "leftNodeId": "node-study-wide-graph-command-29e4effdb4",
+            "rightNodeId": "node-zone-unit-totals-2fae32c8f8",
+            "reason": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/inventory.test.ts, src/domain/layout.test.ts, src/scenarios/thesis-seed-2026.test.ts, src/scenarios/thesis-seed-2026.ts.",
+                "sourceRef": "conflict-constraint-node-study-wide-graph-command-29e4effdb4-node-zo-5a277ad1b6"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-07-30T06:17:30.605Z",
+            "expiresAt": "2026-07-31T06:17:30.605Z"
+          }
+        ],
+        "evaluatedAt": "2026-07-30T06:17:38.348Z"
+      }
+    ],
+    "attempts": {
+      "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:node-analytics-contract-59f46b1442:1": {
+        "attemptId": "07e2c839-ec3e-4d57-ad8a-cc6a98389bbe:attempt:node-analytics-contract-59f46b1442:1",
+        "nodeId": "node-analytics-contract-59f46b1442",
+        "inputFingerprint": "sha256:3afdca1a3057b5d50bf4564b12305eddb6c42f6b3cedc82474cbef7915bdaf29",
+        "kind": "execution",
+        "status": "validated",
+        "repairPasses": 0,
+        "candidateCommit": "7a08eebdf5a3c929097b57a617f9d1fe9f45893b",
+        "outputDigest": "sha256:9083a20a9b9358fdf57bc3b32de16ade96d76c35ce85a9f883428ff92e4517d0",
+        "usage": {
+          "tokensTotal": 44065,
+          "source": "reported"
+        }
+      }
+    },
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {
+      "node-analytics-contract-59f46b1442": "matrix-2faad00a661f39f4"
+    },
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [
+      "matrix-2faad00a661f39f4"
+    ],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {
+      "matrix-2faad00a661f39f4": {
+        "candidateCommit": "7a08eebdf5a3c929097b57a617f9d1fe9f45893b",
+        "outcome": "unverified",
+        "validationRecipeDigest": "sha256:307dcd90c8f82903b8641294b221f71d8ec6858d066a48842d6b0783e095088c"
+      }
+    },
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "C",
+      "candidateTreeHash": "sha256:6c879331da42cc382e0d1edb971c3afdb0c8dcec91cc32c7437a719b3abc5842",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-analytics-contract-59f46b1442": {
+          "unitKey": "analytics-contract",
+          "nodeId": "node-analytics-contract-59f46b1442",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.5
+          },
+          "benefit": 0,
+          "cost": 0.125,
+          "splitAdvantage": -0.125,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-9",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-zone-unit-totals-2fae32c8f8": {
+          "unitKey": "zone-unit-totals",
+          "nodeId": "node-zone-unit-totals-2fae32c8f8",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.25
+          },
+          "benefit": 0,
+          "cost": 0.0625,
+          "splitAdvantage": -0.0625,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "path-0",
+            "path-2",
+            "path-8",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-sku-unit-totals-1a25a4432d": {
+          "unitKey": "sku-unit-totals",
+          "nodeId": "node-sku-unit-totals-1a25a4432d",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.25
+          },
+          "benefit": 0,
+          "cost": 0.0625,
+          "splitAdvantage": -0.0625,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "path-0",
+            "path-2",
+            "path-8",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-bin-occupancy-849d5e5f6a": {
+          "unitKey": "bin-occupancy",
+          "nodeId": "node-bin-occupancy-849d5e5f6a",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.25
+          },
+          "benefit": 0,
+          "cost": 0.0625,
+          "splitAdvantage": -0.0625,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "path-0",
+            "path-2",
+            "path-8",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-sku-bin-spread-54eb646fd6": {
+          "unitKey": "sku-bin-spread",
+          "nodeId": "node-sku-bin-spread-54eb646fd6",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.25
+          },
+          "benefit": 0,
+          "cost": 0.0625,
+          "splitAdvantage": -0.0625,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "path-0",
+            "path-2",
+            "path-8",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-analytics-registry-90acc9b92b": {
+          "unitKey": "analytics-registry",
+          "nodeId": "node-analytics-registry-90acc9b92b",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.6667
+          },
+          "benefit": 0,
+          "cost": 0.1667,
+          "splitAdvantage": -0.1667,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-9",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-study-wide-graph-command-29e4effdb4": {
+          "unitKey": "study-wide-graph-command",
+          "nodeId": "node-study-wide-graph-command-29e4effdb4",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.2727
+          },
+          "benefit": 0,
+          "cost": 0.0682,
+          "splitAdvantage": -0.0682,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "config-package-json",
+            "path-5",
+            "path-6",
+            "path-7",
+            "path-9",
+            "path-8",
+            "path-0",
+            "path-2",
+            "path-4",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-warehouse-analytics-ccd5ca3c4a": {
+          "unitKey": "warehouse-analytics",
+          "nodeId": "node-warehouse-analytics-ccd5ca3c4a",
+          "selected": "split",
+          "leafFeasible": false,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.2211,
+            "parallelism": 0.5,
+            "faultIsolation": 0.5119,
+            "coordination": 0.4286,
+            "pathOverlap": 0.282,
+            "validationDuplication": 0.7,
+            "uncertainty": 0.3485
+          },
+          "benefit": 0.411,
+          "cost": 0.4398,
+          "splitAdvantage": -0.0288,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-3",
+            "path-9",
+            "config-package-json",
+            "path-0",
+            "path-2",
+            "path-8",
+            "path-5",
+            "path-6",
+            "path-7",
+            "path-4",
+            "sha256:35aa42793e7f7fb27cefc38463ef21a671a11aaf4fee8df300e8dae089407ccd"
+          ],
+          "rationale": "Leaf is infeasible; C selected the available semantic split."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 7,
+        "averageBranchingFactor": 7
+      }
+    },
+    "graphId": "graph-warehouse-analytics-wide-graph-a94245901f",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1
+  },
+  "checksum": "0f1b3ee9e2c145511fdc5034fdc4e9d7d57f3d49ffc4b1333546e42259665a61"
+}
