@@ -27,19 +27,21 @@ export interface WorktreePoolOptions {
 }
 
 export interface WorktreePoolGit {
-  add(params: { repoRoot: string; worktreePath: string; baseCommit: string }): Promise<void>;
+  add(params: { repoRoot: string; worktreePath: string; baseCommit: string; signal?: AbortSignal }): Promise<void>;
   resetAndClean(params: {
     worktreePath: string;
     baseCommit: string;
+    signal?: AbortSignal;
   }): Promise<void>;
-  remove(params: { repoRoot: string; worktreePath: string }): Promise<void>;
-  prune(repoRoot: string): Promise<void>;
-  validate(params: { repoRoot: string; worktreePath: string }): Promise<boolean>;
-  resolveCommonDir(repoRoot: string): Promise<string>;
+  remove(params: { repoRoot: string; worktreePath: string; signal?: AbortSignal }): Promise<void>;
+  prune(repoRoot: string, signal?: AbortSignal): Promise<void>;
+  validate(params: { repoRoot: string; worktreePath: string; signal?: AbortSignal }): Promise<boolean>;
+  resolveCommonDir(repoRoot: string, signal?: AbortSignal): Promise<string>;
   updateRef(params: {
     repoRoot: string;
     ref: string;
     candidateCommit: string;
+    signal?: AbortSignal;
   }): Promise<void>;
 }
 
@@ -165,7 +167,8 @@ export class WorktreePool {
           await fencedLease.assertCurrent();
           await this.git.resetAndClean({
             worktreePath: slot.path,
-            baseCommit: input.baseCommit
+            baseCommit: input.baseCommit,
+            ...(input.signal === undefined ? {} : { signal: input.signal })
           });
           throwIfAborted(input.signal);
           await fencedLease.assertCurrent();
@@ -334,7 +337,7 @@ export class WorktreePool {
     throwIfAborted(signal);
     await mkdir(this.poolRoot, { recursive: true });
     throwIfAborted(signal);
-    await this.resolveControlRoot();
+    await this.resolveControlRoot(signal);
     const topologyLease = await this.acquireTopologyLease(signal);
     const createdPaths: string[] = [];
     try {
@@ -345,7 +348,8 @@ export class WorktreePool {
         const worktreePath = path.join(this.poolRoot, id);
         const valid = await this.git.validate({
           repoRoot: this.repoRoot,
-          worktreePath
+          worktreePath,
+          ...(signal === undefined ? {} : { signal })
         });
         throwIfAborted(signal);
         if (!valid) {
@@ -355,7 +359,8 @@ export class WorktreePool {
             await this.git.add({
               repoRoot: this.repoRoot,
               worktreePath,
-              baseCommit
+              baseCommit,
+              ...(signal === undefined ? {} : { signal })
             });
             createdPaths.push(worktreePath);
             throwIfAborted(signal);
@@ -403,9 +408,9 @@ export class WorktreePool {
     }
   }
 
-  private async resolveControlRoot(): Promise<string> {
+  private async resolveControlRoot(signal?: AbortSignal): Promise<string> {
     if (this.controlRoot !== undefined) return this.controlRoot;
-    const commonDir = await this.git.resolveCommonDir(this.repoRoot);
+    const commonDir = await this.git.resolveCommonDir(this.repoRoot, signal);
     const poolIdentity = createHash("sha256")
       .update(this.poolRoot.toLowerCase())
       .digest("hex")
@@ -428,7 +433,7 @@ export class WorktreePool {
 
   private async removeInvalidSlot(id: string, worktreePath: string, signal?: AbortSignal): Promise<void> {
     throwIfAborted(signal);
-    await this.git.remove({ repoRoot: this.repoRoot, worktreePath }).catch(() => undefined);
+    await this.git.remove({ repoRoot: this.repoRoot, worktreePath, ...(signal === undefined ? {} : { signal }) }).catch(() => undefined);
     throwIfAborted(signal);
     try {
       await this.removePath(worktreePath);
@@ -439,11 +444,11 @@ export class WorktreePool {
       throw worktreePoolUnavailable(`could not remove invalid slot ${id}`);
     }
     throwIfAborted(signal);
-    await this.git.prune(this.repoRoot).catch(() => undefined);
+    await this.git.prune(this.repoRoot, signal).catch(() => undefined);
   }
 
   private async acquireTopologyLease(signal?: AbortSignal): Promise<FilesystemFencedLease> {
-    await this.resolveControlRoot();
+    await this.resolveControlRoot(signal);
     if (this.topologyLeasePath === undefined) {
       throw new Error("Worktree topology lease path is not initialized.");
     }
@@ -497,6 +502,7 @@ class NativeWorktreePoolGit implements WorktreePoolGit {
     repoRoot: string;
     worktreePath: string;
     baseCommit: string;
+    signal?: AbortSignal;
   }): Promise<void> {
     await mkdir(path.dirname(params.worktreePath), { recursive: true });
     await runGit(this.gitPath, params.repoRoot, [
@@ -505,17 +511,18 @@ class NativeWorktreePoolGit implements WorktreePoolGit {
       "--detach",
       params.worktreePath,
       params.baseCommit
-    ]);
+    ], params.signal);
   }
 
   async resetAndClean(params: {
     worktreePath: string;
     baseCommit: string;
+    signal?: AbortSignal;
   }): Promise<void> {
-    await runGit(this.gitPath, params.worktreePath, ["reset", "--hard", params.baseCommit]);
-    await runGit(this.gitPath, params.worktreePath, ["clean", "-fd"]);
-    await runGit(this.gitPath, params.worktreePath, ["clean", "-fdx"]);
-    const head = await runGitOutput(this.gitPath, params.worktreePath, ["rev-parse", "HEAD"]);
+    await runGit(this.gitPath, params.worktreePath, ["reset", "--hard", params.baseCommit], params.signal);
+    await runGit(this.gitPath, params.worktreePath, ["clean", "-fd"], params.signal);
+    await runGit(this.gitPath, params.worktreePath, ["clean", "-fdx"], params.signal);
+    const head = await runGitOutput(this.gitPath, params.worktreePath, ["rev-parse", "HEAD"], params.signal);
     if (head !== params.baseCommit) {
       throw new Error(`Recycled worktree resolved ${head}, expected ${params.baseCommit}.`);
     }
@@ -523,42 +530,44 @@ class NativeWorktreePoolGit implements WorktreePoolGit {
       "status",
       "--porcelain=v1",
       "--untracked-files=all"
-    ]);
+    ], params.signal);
     if (status !== "") {
       throw new Error(`Recycled worktree is not clean: ${status}`);
     }
   }
 
-  async remove(params: { repoRoot: string; worktreePath: string }): Promise<void> {
+  async remove(params: { repoRoot: string; worktreePath: string; signal?: AbortSignal }): Promise<void> {
     if (!(await pathExists(params.worktreePath))) return;
     await runGit(this.gitPath, params.repoRoot, [
       "worktree",
       "remove",
       "--force",
       params.worktreePath
-    ]);
+    ], params.signal);
   }
 
-  async prune(repoRoot: string): Promise<void> {
-    await runGit(this.gitPath, repoRoot, ["worktree", "prune"]);
+  async prune(repoRoot: string, signal?: AbortSignal): Promise<void> {
+    await runGit(this.gitPath, repoRoot, ["worktree", "prune"], signal);
   }
 
   async validate(params: {
     repoRoot: string;
     worktreePath: string;
+    signal?: AbortSignal;
   }): Promise<boolean> {
     if (!(await pathExists(params.worktreePath))) return false;
     try {
       const inside = await runGitOutput(
         this.gitPath,
         params.worktreePath,
-        ["rev-parse", "--is-inside-work-tree"]
+        ["rev-parse", "--is-inside-work-tree"],
+        params.signal
       );
       if (inside !== "true") return false;
       const [repositoryCommonDir, worktreeCommonDir, porcelain] = await Promise.all([
-        this.resolveCommonDir(params.repoRoot),
-        this.resolveCommonDir(params.worktreePath),
-        runGitOutput(this.gitPath, params.repoRoot, ["worktree", "list", "--porcelain", "-z"])
+        this.resolveCommonDir(params.repoRoot, params.signal),
+        this.resolveCommonDir(params.worktreePath, params.signal),
+        runGitOutput(this.gitPath, params.repoRoot, ["worktree", "list", "--porcelain", "-z"], params.signal)
       ]);
       if (!sameFilesystemPath(repositoryCommonDir, worktreeCommonDir)) return false;
       const registeredPaths = porcelain
@@ -573,11 +582,11 @@ class NativeWorktreePoolGit implements WorktreePoolGit {
     }
   }
 
-  async resolveCommonDir(repoRoot: string): Promise<string> {
+  async resolveCommonDir(repoRoot: string, signal?: AbortSignal): Promise<string> {
     const raw = await runGitOutput(this.gitPath, repoRoot, [
       "rev-parse",
       "--git-common-dir"
-    ]);
+    ], signal);
     return path.resolve(repoRoot, raw);
   }
 
@@ -585,6 +594,7 @@ class NativeWorktreePoolGit implements WorktreePoolGit {
     repoRoot: string;
     ref: string;
     candidateCommit: string;
+    signal?: AbortSignal;
   }): Promise<void> {
     const zeroCommit = "0".repeat(params.candidateCommit.length);
     try {
@@ -593,7 +603,7 @@ class NativeWorktreePoolGit implements WorktreePoolGit {
         params.ref,
         params.candidateCommit,
         zeroCommit
-      ]);
+      ], params.signal);
     } catch (error) {
       const existing = await runGitOutput(
         this.gitPath,
@@ -606,21 +616,22 @@ class NativeWorktreePoolGit implements WorktreePoolGit {
   }
 }
 
-function runGit(gitPath: string, cwd: string, args: readonly string[]): Promise<void> {
-  return runGitOutput(gitPath, cwd, args).then(() => undefined);
+function runGit(gitPath: string, cwd: string, args: readonly string[], signal?: AbortSignal): Promise<void> {
+  return runGitOutput(gitPath, cwd, args, signal).then(() => undefined);
 }
 
 function runGitOutput(
   gitPath: string,
   cwd: string,
-  args: readonly string[]
+  args: readonly string[],
+  signal?: AbortSignal
 ): Promise<string> {
   const safeDirectory = path.resolve(cwd).replaceAll("\\", "/");
   return new Promise((resolve, reject) => {
     execFile(
       gitPath,
       ["-c", `safe.directory=${safeDirectory}`, ...args],
-      { cwd, encoding: "utf8", windowsHide: true },
+      { cwd, encoding: "utf8", windowsHide: true, ...(signal === undefined ? {} : { signal }) },
       (error, stdout, stderr) => {
         if (error !== null) {
           reject(new Error(

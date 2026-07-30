@@ -217,6 +217,55 @@ describe("ChildProcessValidationRunner — failure normalization", () => {
 });
 
 describe("ChildProcessValidationRunner — timeout", () => {
+  it("tears down a validation descendant before returning a successful smoke command", async () => {
+    const killed: number[] = [];
+    const alive = new Set([4243]);
+    const runner = new ChildProcessValidationRunner({
+      spawn: () => fakeChild({ exitCode: 0 }),
+      platform: "linux",
+      snapshotProcesses: async () => new Map([
+        [4242, { pid: 4242 }],
+        [4243, { pid: 4243, ppid: 4242 }]
+      ]),
+      killDescendant: async (pid) => {
+        killed.push(pid);
+        alive.delete(pid);
+      },
+      isProcessAlive: (pid) => alive.has(pid)
+    });
+
+    const result = await runner.run(
+      [command({ timeoutMs: 1_000 })],
+      { ...ctx, supervision: { runId: "run-smoke" } }
+    );
+
+    expect(result.passed).toBe(true);
+    expect(killed).toEqual([4243]);
+  });
+
+  it("fails closed when a validation descendant survives teardown", async () => {
+    const runner = new ChildProcessValidationRunner({
+      spawn: () => fakeChild({ exitCode: 0 }),
+      platform: "linux",
+      snapshotProcesses: async () => new Map([
+        [4242, { pid: 4242 }],
+        [4243, { pid: 4243, ppid: 4242 }]
+      ]),
+      killDescendant: async () => undefined,
+      isProcessAlive: () => true,
+      descendantTeardownTimeoutMs: 1
+    });
+
+    const result = await runner.run(
+      [command({ timeoutMs: 1_000 })],
+      { ...ctx, supervision: { runId: "run-smoke-survivor" } }
+    );
+
+    expect(result.passed).toBe(false);
+    expect(result.exitCode).toBe(125);
+    expect(result.output).toContain("survived teardown");
+  });
+
   it("kills the process tree on timeout and reports exit 124", async () => {
     vi.useFakeTimers();
     try {

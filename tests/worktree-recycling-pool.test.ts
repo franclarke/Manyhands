@@ -81,6 +81,45 @@ describe("WorktreePool", () => {
     expect(removedPaths).toContain(addedPaths[0]);
   });
 
+  it("aborts an in-flight Git sanitation instead of waiting for the child process", async () => {
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "manyhands-pool-git-abort-"));
+    tempRoots.push(repoRoot);
+    const commonDir = path.join(repoRoot, ".git");
+    const controller = new AbortController();
+    let observedSignal: AbortSignal | undefined;
+    const gitAdapter: WorktreePoolGit = {
+      add: async () => undefined,
+      resetAndClean: async ({ signal }) => {
+        observedSignal = signal;
+        await new Promise<void>((resolve, reject) => {
+          if (signal === undefined) return;
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        });
+      },
+      remove: async () => undefined,
+      prune: async () => undefined,
+      validate: async () => false,
+      resolveCommonDir: async () => commonDir,
+      updateRef: async () => undefined
+    };
+    const pool = new WorktreePool({
+      repoRoot,
+      poolRoot: path.join(repoRoot, "pool"),
+      size: 1,
+      git: gitAdapter
+    });
+
+    await pool.initialize("a".repeat(40));
+    const acquisition = pool.acquire({ baseCommit: "a".repeat(40), signal: controller.signal });
+    for (let attempt = 0; observedSignal === undefined && attempt < 100; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    expect(observedSignal).toBe(controller.signal);
+    controller.abort(new Error("Git sanitation cancelled"));
+
+    await expect(acquisition).rejects.toThrow("Git sanitation cancelled");
+  });
+
   it("reuses a pre-created worktree after reset --hard and clean -fd", async () => {
     const repoRoot = await createRepository();
     const firstCommit = await commitFile(repoRoot, "version.txt", "one\n", "first");

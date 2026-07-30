@@ -2,9 +2,10 @@ import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process"
 
 import { validationCommandSafetyIssues, type ExecutionValidationCommand } from "@manyhands/contracts";
 
+import { descendantsOf, killPidTree, snapshotProcessTable, type ProcessSnapshot } from "../executor/process-inspector";
 import { killProcessTree } from "../executor/kill";
 import { resolveCliBinaryPath, resolveCliProcessInvocation } from "../executor/binary";
-import { superviseChildProcess } from "../executor/live-process-registry";
+import { isProcessAlive, superviseChildProcess } from "../executor/live-process-registry";
 import { BoundedOutput } from "../executor/bounded-output";
 import { ValidationRunResultSchema, type ValidationRunResult } from "../types";
 
@@ -49,12 +50,17 @@ export interface ChildProcessValidationRunnerDeps {
   /** Injectable platform for Windows shim tests. Defaults to process.platform. */
   platform?: NodeJS.Platform;
   hostEnv?: NodeJS.ProcessEnv;
+  snapshotProcesses?: () => Promise<ProcessSnapshot>;
+  killDescendant?: (pid: number) => void | Promise<void>;
+  isProcessAlive?: (pid: number) => boolean;
+  descendantTeardownTimeoutMs?: number;
 }
 
 const TIMEOUT_EXIT_CODE = 124;
 const UNSAFE_COMMAND_EXIT_CODE = 126;
 const SPAWN_FAILURE_EXIT_CODE = 127;
 const ABORTED_EXIT_CODE = 130;
+const TEARDOWN_FAILURE_EXIT_CODE = 125;
 
 // Under a shell a missing binary no longer surfaces as a spawn `error` event:
 // the shell itself exits non-zero with a "not found" message. Normalize that
@@ -73,11 +79,19 @@ export class ChildProcessValidationRunner implements ValidationRunner {
   private readonly spawnFn: SpawnFn;
   private readonly platform: NodeJS.Platform;
   private readonly hostEnv: NodeJS.ProcessEnv;
+  private readonly snapshotProcesses: () => Promise<ProcessSnapshot>;
+  private readonly killDescendant: (pid: number) => void | Promise<void>;
+  private readonly isProcessAlive: (pid: number) => boolean;
+  private readonly descendantTeardownTimeoutMs: number;
 
   constructor(deps: ChildProcessValidationRunnerDeps = {}) {
     this.spawnFn = deps.spawn ?? spawn;
     this.platform = deps.platform ?? process.platform;
     this.hostEnv = deps.hostEnv ?? process.env;
+    this.snapshotProcesses = deps.snapshotProcesses ?? (() => snapshotProcessTable());
+    this.killDescendant = deps.killDescendant ?? (async (pid) => { await killPidTree(pid); });
+    this.isProcessAlive = deps.isProcessAlive ?? isProcessAlive;
+    this.descendantTeardownTimeoutMs = deps.descendantTeardownTimeoutMs ?? 3_000;
   }
 
   async run(
@@ -212,14 +226,54 @@ export class ChildProcessValidationRunner implements ValidationRunner {
       child.on("close", (code) => {
         if (terminating) return;
         const exitCode = code ?? SPAWN_FAILURE_EXIT_CODE;
-        const captured = output.text();
-        if (exitCode !== 0 && BINARY_NOT_FOUND_PATTERN.test(captured)) {
-          finish({ exitCode: SPAWN_FAILURE_EXIT_CODE, output: captured });
-          return;
-        }
-        finish({ exitCode, output: captured });
+        const teardown = supervision === undefined
+          ? Promise.resolve(undefined)
+          : this.teardownDescendants(child.pid);
+        void teardown.then((teardownError) => {
+          const captured = output.text();
+          if (teardownError !== undefined) {
+            finish({
+              exitCode: TEARDOWN_FAILURE_EXIT_CODE,
+              output: `${captured ? `${captured}\n` : ""}${teardownError}`
+            });
+            return;
+          }
+          if (exitCode !== 0 && BINARY_NOT_FOUND_PATTERN.test(captured)) {
+            finish({ exitCode: SPAWN_FAILURE_EXIT_CODE, output: captured });
+            return;
+          }
+          finish({ exitCode, output: captured });
+        });
       });
     });
+  }
+
+  private async teardownDescendants(pid: number | undefined): Promise<string | undefined> {
+    if (pid === undefined) return undefined;
+    let snapshot: ProcessSnapshot;
+    try {
+      snapshot = await this.snapshotProcesses();
+    } catch (error) {
+      return `validation process teardown could not inspect descendants: ${describe(error)}`;
+    }
+    const descendants = descendantsOf(snapshot, pid);
+    for (const descendant of [...descendants].sort((left, right) => right - left)) {
+      try {
+        await this.killDescendant(descendant);
+      } catch (error) {
+        return `validation process teardown could not kill descendant ${descendant}: ${describe(error)}`;
+      }
+    }
+    for (const descendant of descendants) {
+      const deadline = Date.now() + this.descendantTeardownTimeoutMs;
+      while (this.isProcessAlive(descendant) && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      if (this.isProcessAlive(descendant)) {
+        return `validation process descendant ${descendant} survived teardown`;
+      }
+    }
+    return undefined;
   }
 
   private buildSpawnCommand(command: ExecutionValidationCommand): {
@@ -236,4 +290,8 @@ export class ChildProcessValidationRunner implements ValidationRunner {
       env: this.hostEnv
     });
   }
+}
+
+function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
