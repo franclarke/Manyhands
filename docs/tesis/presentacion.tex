@@ -264,6 +264,24 @@
 }
 \end{frame}
 
+\begin{frame}{Demostrador compacto: qué sí y qué no demuestra}
+  \small
+  \textbf{Implementación externa verificada:}
+  \begin{itemize}
+    \item WC1: pedidos, reservas atómicas, API/SSE, torre SVG y simulación.
+    \item WC2: picking reproducible, capacidad limitada y congestión.
+    \item WC3: journal, replay/hash, timeline, analytics, alertas y accesibilidad.
+    \item W1 $\rightarrow$ WC1 $\rightarrow$ WC2 $\rightarrow$ WC3: 41/41 tests,
+      typecheck, build, probes y smoke HTTP PASS.
+  \end{itemize}
+
+  \medskip
+  \textbf{Frontera honesta:} los commits son evidencia de producto externo.
+  La candidate WC1 de ManyHands agotó la cuota durante planning y no produjo
+  SHA, receipt ni delivery. N=4/8/16 no se presenta como resultado; la hipótesis
+  de escala queda fuera de las conclusiones.
+\end{frame}
+
 \begin{frame}{El resultado: la hipótesis quedó falsada}
   \small
   \begin{center}
@@ -384,6 +402,8 @@
       estudio falsó su hipótesis y el documento lo reporta como tal.
     \item Los defectos que importaron no se encontraron leyendo código, sino
       \textbf{ejecutando runs reales} contra un repositorio de verdad.
+    \item El demostrador Warehouse queda verificado como software, pero no como
+      entrega atribuible de ManyHands; W1 conserva el resultado histórico 1/8.
   \end{itemize}
 \note{%
   Cerrar por el resultado negativo, no por la plataforma. La plataforma es el
@@ -402,6 +422,8 @@
     \item Ampliar el estudio a repositorios de dominios y tamaños distintos.
     \item Reducir la dependencia de la variabilidad del proveedor en
       planificación.
+    \item Si se recupera capacidad experimental, evaluar grafos anchos N=4/8/16
+      con candidate, receipt y oráculo; no es un resultado de esta tesis.
   \end{itemize}
 
   \vfill

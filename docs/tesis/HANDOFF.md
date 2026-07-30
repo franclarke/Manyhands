@@ -2092,3 +2092,30 @@ Estado de reanudacion: terminar las reviews Standards/Spec del fix `b8dea56`,
 actualizar matriz de claims y tickets 28-30 con esta frontera, y preparar la
 tesis/presentacion conservadoras. N=4/N=8/N=16 queda al final y no se inicia
 mientras el instrumento o la cuota no permitan una ejecucion terminal valida.
+
+## Checkpoint tesis y presentacion conservadoras compiladas - 2026-07-30
+
+Se reorganizaron `docs/tesis/main.tex` y `docs/tesis/presentacion.tex` para
+separar explicitamente la implementacion externa Warehouse de la evidencia
+atribuible de ManyHands. La tesis ahora describe WC1/WC2/WC3 como software
+verificado, conserva W1 como resultado historico `1/8`, registra retry-11/WC1
+v4 como evidencia no entregada y retira H2/N=4/N=8/N=16 de las conclusiones,
+dejandola como limitacion y trabajo futuro si alguna vez existe capacidad para
+una serie terminal.
+
+Se repararon tambien comandos LaTeX corruptos por caracteres de control en la
+seccion de limitaciones. `main.tex` compilo con BibTeX y dos pasadas finales en
+cero errores y sin referencias indefinidas; `presentacion.tex` compilo en cero
+errores. Se revisaron visualmente las paginas de la nueva seccion, las
+limitaciones, el frame Warehouse, las conclusiones y el trabajo futuro. El
+warning restante de `hyperref` en la presentacion y el identificador duplicado
+de portada en la tesis son warnings historicos no introducidos por este cierre.
+Los PDFs recompilados quedan en `docs/tesis/main.pdf` (ignorado por Git) y
+`docs/tesis/presentacion.pdf` (actualizado).
+
+Estado de reanudacion: falta ejecutar las reviews independientes disponibles,
+actualizar/validar el frente final de claims y tickets sin convertir evidencia
+pendiente en PASS, ejecutar el gate completo del repositorio y cerrar el
+working tree. N=4/N=8/N=16 solo puede intentarse antes del cierre si hay cuota
+y mediante un freeze sucesor; si no, la tesis ya queda preparada para cerrar
+sin esa hipotesis.

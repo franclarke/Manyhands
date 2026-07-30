@@ -607,3 +607,11 @@
     no obtuvo candidate por cuota y WC2/WC3 no tienen runs/receipts/oraculos.
     H2 queda sin confirmar; si no hay serie terminal, ticket 14 debe eliminarla
     de las conclusiones y dejarla como trabajo futuro.
+100. **Tesis y presentacion conservadoras compiladas.** `main.tex` compilo con
+     BibTeX y dos pasadas finales en cero errores y sin referencias indefinidas;
+     `presentacion.tex` compilo en cero errores. La nueva seccion Warehouse,
+     limitaciones, frame de frontera honesta, conclusiones y trabajo futuro se
+     revisaron visualmente. Se repararon comandos LaTeX corruptos por
+     caracteres de control y se regeneraron `docs/tesis/main.pdf` y
+     `docs/tesis/presentacion.pdf`. H2/N=4/N=8/N=16 queda fuera de las
+     conclusiones, no como resultado experimental.

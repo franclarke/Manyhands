@@ -1217,12 +1217,12 @@ se haya completado no valida la fórmula: valida que el recorrido completo
 funciona con ella.
 
 \paragraph{Validez de constructo de la métrica primaria.} Es la amenaza más
-severa que la ejecución expuso. Los criterios de aceptación son 	extbf{endógenos
+severa que la ejecución expuso. Los criterios de aceptación son \textbf{endógenos
 a la condición}: se compilan por unidad, de modo que descomponer multiplica las
 obligaciones que luego se verifican. Cualquier métrica de éxito construida sobre
 ellos compara a cada condición contra su propia vara, no contra una común
-(sección~ef{sec:defecto-medicion}). Un diseño futuro debe fijar un conjunto de
-criterios 	extbf{externo e idéntico} para las tres condiciones y evaluarlo
+(sección~\ref{sec:defecto-medicion}). Un diseño futuro debe fijar un conjunto de
+criterios \textbf{externo e idéntico} para las tres condiciones y evaluarlo
 contra el árbol entregado.
 
 \paragraph{Poder del diseño.} El estudio comparativo se dimensionó para
@@ -1238,14 +1238,38 @@ hipótesis en el régimen que le es favorable.
 determinista. Ejecuciones del mismo objetivo producen descomposiciones
 distintas, y al menos una de ellas no completó.
 
+\subsection{Demostrador Warehouse compacto y frontera de evidencia}
+
+Como complemento de la evaluación del orquestador se construyó un demostrador
+externo de control de depósito en tres incrementos. WC1 incorpora pedidos,
+reservas atómicas, transiciones válidas, API versionada, SSE monotónico y una
+torre SVG con simulación determinista. WC2 agrega rutas de picking, olas con
+capacidad limitada y costo sensible a congestión. WC3 agrega journal
+append-only, snapshots, replay con hash exacto, timeline, analytics, alertas y
+estados operativos accesibles.
+
+La secuencia W1 \texttt{71f61c9} -> WC1 \texttt{8ce6e98} -> WC2 \texttt{4da4a45} -> WC3 \texttt{5da6019}
+pasó 41/41 pruebas, typecheck, build, probes deterministas y smoke HTTP. Estos
+resultados demuestran la implementación del demostrador como software; no
+demuestran que ManyHands haya producido esos commits. La única candidate
+sucesora WC1 se detuvo durante planning por agotamiento de cuota de `codex-cli`
+y no produjo candidate SHA, receipt ni delivery. Por eso el demostrador se
+presenta como evidencia de producto y no como experimento atribuible.
+
+El barrido complementario de grafos anchos N=4/8/16 tampoco se incluye como
+resultado: no hubo celdas terminales atribuibles con entrega y oráculo. La
+hipótesis de que la arquitectura escala a esos tamaños queda retirada de las
+conclusiones y se conserva como trabajo futuro, junto con la limitación de cuota
+y atribución.
+
 \section{Limitaciones}
 
 \begin{itemize}
-  \item El estudio comparativo se ejecutó y 	extbf{falsó su hipótesis
+  \item El estudio comparativo se ejecutó y \textbf{falsó su hipótesis
   pre-registrada}: sobre la tarea multi-capa, no descomponer entregó las dos
   repeticiones mientras las dos condiciones que descomponen entregaron una cada
   una, con aproximadamente un tercio del tiempo y un cuarto de los tokens para la
-  misma superficie funcional. 	extbf{No puede afirmarse que la política
+  misma superficie funcional. \textbf{No puede afirmarse que la política
   adaptativa sea superior a no descomponer}; solo que es viable, explicable y
   que sobre una tarea cohesiva se comporta como la alternativa mínima, que era la
   mitad de la hipótesis que sí se sostuvo.
@@ -1254,6 +1278,10 @@ distintas, y al menos una de ellas no completó.
   no es completamente autónomo.
   \item Los pesos y el umbral no fueron calibrados.
   \item La conformidad con WCAG 2.2 AA es de diseño; no hay auditoría externa.
+  \item El demostrador Warehouse compacto está verificado como implementación
+  externa, pero no cuenta con una candidate ManyHands entregada. La falta de
+  cuota impidió observar una ejecución terminal y un oráculo; no se presenta
+  esa ausencia como resultado positivo.
 \end{itemize}
 
 % ==============================================================================
@@ -1286,7 +1314,7 @@ Respecto de las preguntas de investigación:
   fallo---; el agotamiento del presupuesto de tiempo de un agente; y el
   estancamiento silencioso ante un requisito de artefacto insatisfacible. El
   sistema detectó los tres primeros; el cuarto es una limitación abierta.
-  	extbf{Los conflictos aparecieron únicamente cuando se descompuso}, y su
+  \textbf{Los conflictos aparecieron únicamente cuando se descompuso}, y su
   costo quedó medido.
 \end{description}
 
@@ -1308,6 +1336,14 @@ inejecutables, en línea con el criterio de modularidad de Parnas
 Architect no propone un corte, ninguna configuración de umbral puede forzarlo
 ---ni siquiera una diseñada para dividir siempre---, de modo que la frontera no
 es un parámetro ajustable sino una propiedad estructural del problema.
+
+El demostrador Warehouse aporta una segunda pieza, de alcance deliberadamente
+modesto: muestra una implementación rica y verificable de operaciones visibles,
+fulfillment y durabilidad. No permite concluir que ManyHands pueda construirla
+de extremo a extremo bajo la política C, porque la candidate se agotó antes de
+producir un artefacto entregable. La hipótesis de escala en grafos anchos se
+excluye de esta conclusión y no cambia el resultado histórico de W1, que sigue
+siendo 1/8.
 
 \paragraph{Un aporte metodológico no previsto.} La ejecución expuso que los
 criterios de aceptación son \emph{endógenos a la condición} comparada: al
