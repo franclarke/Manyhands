@@ -253,10 +253,17 @@ export class WorktreePool {
       }
       try {
         await this.recreateOwnedSlot(active.slot, active.fencedLease, lease.baseCommit);
-      } catch {
-        // Keep the fenced lease active. A later release retry can recover the
-        // slot; it must never become available while sanitation is uncertain.
-        throw error;
+      } catch (recreateError) {
+        try {
+          await active.fencedLease.release();
+        } finally {
+          this.activeLeases.delete(lease.id);
+        }
+        const detail = recreateError instanceof Error ? recreateError.message : String(recreateError);
+        throw new Error(
+          `Could not sanitize worktree slot ${active.slot.id}: ${detail}`,
+          { cause: new AggregateError([error, recreateError]) }
+        );
       }
     }
 

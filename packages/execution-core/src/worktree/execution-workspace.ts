@@ -33,7 +33,8 @@ export class PooledExecutionWorkspaceProvider implements ExecutionWorkspaceProvi
   async acquire(params: CreateWorktreeParams): Promise<ExecutionWorkspaceHandle> {
     const lease = await this.pool.acquire({
       baseCommit: params.baseCommit,
-      operationId: `${params.runId}:${params.taskId}`
+      operationId: `${params.runId}:${params.taskId}`,
+      ...(params.signal === undefined ? {} : { signal: params.signal })
     });
     const worktree = WorktreeRecordSchema.parse({
       taskId: params.taskId,

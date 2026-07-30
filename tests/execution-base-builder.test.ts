@@ -107,4 +107,29 @@ describe("ExecutionBaseBuilder", () => {
       { artifactId: "artifact-b", digest: "digest-b" }
     ]);
   });
+
+  it("propagates the execution cancellation signal into pooled workspace acquisition", async () => {
+    const controller = new AbortController();
+    let receivedSignal: AbortSignal | undefined;
+    const builder = new ExecutionBaseBuilder({
+      git: new FakeGitRunner(),
+      workspaceProvider: {
+        acquire: async (params) => {
+          receivedSignal = params.signal;
+          throw new Error("workspace acquisition cancelled");
+        }
+      }
+    });
+
+    await expect(builder.build({
+      runId: "run-cancel",
+      nodeId: "consumer",
+      baseCommit: BASE,
+      contractBaseline: { id: "consumer-contract", revision: "rev-1" },
+      artifacts: [],
+      inputFingerprint: FINGERPRINT
+    }, controller.signal)).rejects.toThrow("workspace acquisition cancelled");
+
+    expect(receivedSignal).toBe(controller.signal);
+  });
 });

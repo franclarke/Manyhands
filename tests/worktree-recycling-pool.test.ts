@@ -380,6 +380,41 @@ describe("WorktreePool", () => {
     await pool.dispose();
   });
 
+  it("does not retain an active lease when release cannot sanitize the slot", async () => {
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "manyhands-pool-release-failure-"));
+    tempRoots.push(repoRoot);
+    const commonDir = path.join(repoRoot, ".git");
+    const commit = "c".repeat(40);
+    let valid = true;
+    let resetCount = 0;
+    const gitAdapter: WorktreePoolGit = {
+      add: async () => { valid = true; },
+      resetAndClean: async () => {
+        resetCount += 1;
+        if (resetCount >= 2) throw new Error("smoke process still owns the slot");
+      },
+      remove: async () => { valid = false; },
+      prune: async () => undefined,
+      validate: async () => valid,
+      resolveCommonDir: async () => commonDir,
+      updateRef: async () => undefined
+    };
+    const pool = new WorktreePool({
+      repoRoot,
+      poolRoot: path.join(repoRoot, "pool"),
+      size: 1,
+      git: gitAdapter,
+      removePath: async () => { throw new Error("smoke process still owns the slot"); }
+    });
+
+    const lease = await pool.acquire({ baseCommit: commit, operationId: "failed-release" });
+    await expect(pool.release(lease)).rejects.toThrow("Could not sanitize worktree slot slot-000");
+
+    await expect(
+      pool.acquire({ baseCommit: commit, operationId: "after-failed-release" })
+    ).rejects.toThrow("smoke process still owns the slot");
+  });
+
   it("refuses to create a slot when an invalid orphan cannot be removed", async () => {
     const repoRoot = await mkdtemp(path.join(os.tmpdir(), "manyhands-pool-orphan-"));
     tempRoots.push(repoRoot);

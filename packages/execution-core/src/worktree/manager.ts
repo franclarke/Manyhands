@@ -38,6 +38,7 @@ export interface CreateWorktreeParams {
   runId: string;
   kind: WorktreeKind;
   baseCommit: string;
+  signal?: AbortSignal;
 }
 
 /** Result of checking whether an agent moved HEAD outside the protocol. */

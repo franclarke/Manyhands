@@ -122,6 +122,49 @@ describe("V2NodeExecutor", () => {
     }]);
   });
 
+  it("applies the leaf timeout while acquiring the execution base", async () => {
+    const compiled = compileGraphRevision(
+      { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const node = compiled.graph.nodes["node-api"]!;
+    const git = new FakeGitRunner({ commitSha: "4".repeat(40) });
+    let receivedSignal: AbortSignal | undefined;
+    const baseBuilder = new ExecutionBaseBuilder({
+      git,
+      workspaceProvider: {
+        acquire: async (params) => {
+          receivedSignal = params.signal;
+          await new Promise<void>((_resolve, reject) => {
+            params.signal?.addEventListener("abort", () => reject(params.signal?.reason), { once: true });
+          });
+          throw new Error("workspace acquisition cancelled");
+        }
+      },
+      now: () => at
+    });
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      baseBuilder,
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(successfulAgent()),
+      validator: { validate: async (input) => matrix(input.contract, input.candidateCommit) },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+
+    const outcome = await executor.execute({
+      ...request(compiled, node.id),
+      config: ExecutionConfigSchema.parse({ maxParallel: 3, leafTimeoutMs: 10 })
+    });
+
+    expect(outcome).toMatchObject({ kind: "failure" });
+    expect(receivedSignal).toBeDefined();
+    expect(receivedSignal?.aborted).toBe(true);
+  });
+
   it("does not report success when a pooled candidate cannot be anchored", async () => {
     const compiled = compileGraphRevision(
       { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },

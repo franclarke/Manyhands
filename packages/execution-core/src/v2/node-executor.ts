@@ -193,6 +193,10 @@ export class V2NodeExecutor {
   }
 
   private async executeLeaf(input: V2PhysicalNodeExecutionInput): Promise<V2PhysicalNodeExecutionOutcome> {
+    const timeoutSignal = AbortSignal.timeout(input.config.leafTimeoutMs);
+    const executionSignal = input.signal === undefined
+      ? timeoutSignal
+      : AbortSignal.any([input.signal, timeoutSignal]);
     let base: BuiltExecutionBase;
     try {
       base = await this.baseBuilder.build({
@@ -202,7 +206,7 @@ export class V2NodeExecutor {
         contractBaseline: { id: input.contract.task.id, revision: input.contract.task.revision },
         artifacts: input.consumedArtifacts.map(executionArtifactInput),
         inputFingerprint: input.inputFingerprint
-      });
+      }, executionSignal);
     } catch (error) {
       return { kind: "failure", reason: describe(error) };
     }
@@ -220,7 +224,7 @@ export class V2NodeExecutor {
         processOwnerId: input.runId,
         attemptId: stableUuid(input.attemptId),
         ...(input.selection.effort !== undefined ? { reasoningEffort: input.selection.effort } : {}),
-        ...(input.signal !== undefined ? { signal: input.signal } : {}),
+        signal: executionSignal,
         onOutput: (chunk) => this.options.traceStore.append({ type: "executor_output", actor: "agent", taskId: input.node.id, payload: chunk }),
         onAgentStatus: (status) => this.options.traceStore.append({ type: "agent_status", actor: "agent", taskId: input.node.id, payload: { ...status } })
       });
@@ -248,7 +252,7 @@ export class V2NodeExecutor {
             contract: input.contract,
             candidateCommit: result.currentHead,
             baselineCommit: input.graph.baseCommit,
-            ...(input.signal !== undefined ? { signal: input.signal } : {})
+            signal: executionSignal
           });
           if (baselineMatrix.outcome === "verified") {
             return {
@@ -267,12 +271,12 @@ export class V2NodeExecutor {
         contract: input.contract,
         candidateCommit,
         baselineCommit: input.graph.baseCommit,
-        ...(input.signal !== undefined ? { signal: input.signal } : {})
+        signal: executionSignal
       });
       let success: Extract<V2PhysicalNodeExecutionOutcome, { kind: "success" }> =
         { ...successOutcome(candidateCommit, result.changedFiles, evidenceMatrix), usage: usageOf(result) };
       if (evidenceMatrix.outcome === "failed") {
-        const repaired = await this.repairLeaf(input, base.worktree, candidateCommit, evidenceMatrix);
+        const repaired = await this.repairLeaf(input, base.worktree, candidateCommit, evidenceMatrix, executionSignal);
         if (repaired.kind === "failure") return repaired;
         success = repaired;
         candidateToAnchor = repaired.candidateCommit;
@@ -306,6 +310,10 @@ export class V2NodeExecutor {
   }
 
   private async executeComposite(input: V2PhysicalNodeExecutionInput): Promise<V2PhysicalNodeExecutionOutcome> {
+    const integrationTimeout = AbortSignal.timeout(input.config.integrationTimeoutMs);
+    const integrationSignal = input.signal === undefined
+      ? integrationTimeout
+      : AbortSignal.any([input.signal, integrationTimeout]);
     let base: BuiltExecutionBase;
     try {
       base = await this.baseBuilder.build({
@@ -315,17 +323,13 @@ export class V2NodeExecutor {
         contractBaseline: { id: input.contract.task.id, revision: input.contract.task.revision },
         artifacts: [],
         inputFingerprint: input.inputFingerprint
-      });
+      }, integrationSignal);
     } catch (error) {
       return { kind: "failure", reason: describe(error) };
     }
 
     let candidateToAnchor: string | undefined;
     try {
-      const integrationTimeout = AbortSignal.timeout(input.config.integrationTimeoutMs);
-      const integrationSignal = input.signal === undefined
-        ? integrationTimeout
-        : AbortSignal.any([input.signal, integrationTimeout]);
       const childArtifacts = input.consumedArtifacts.map(integrationArtifact);
       const request = createIntegrationRequestManifest({
         runId: input.runId,
@@ -526,7 +530,8 @@ export class V2NodeExecutor {
     input: V2PhysicalNodeExecutionInput,
     worktree: WorktreeRecord,
     candidateCommit: string,
-    failedMatrix: V2ExecutionEvidenceMatrix
+    failedMatrix: V2ExecutionEvidenceMatrix,
+    signal: AbortSignal
   ): Promise<Extract<V2PhysicalNodeExecutionOutcome, { kind: "success" | "failure" }>> {
     const pass = 1;
     const evidenceRefs = [failedMatrix.matrixId, ...failedMatrix.criteria.flatMap((criterion) => criterion.evidenceRefs)];
@@ -544,7 +549,7 @@ export class V2NodeExecutor {
         processOwnerId: input.runId,
         attemptId: stableUuid(`${input.attemptId}:code-repair:${pass}`),
         ...(input.repairSelection.effort !== undefined ? { reasoningEffort: input.repairSelection.effort } : {}),
-        ...(input.signal !== undefined ? { signal: input.signal } : {})
+        signal
       });
       const result = await this.recorder.record({
         worktree,
@@ -566,7 +571,7 @@ export class V2NodeExecutor {
         contract: input.contract,
         candidateCommit: repairedCommit,
         baselineCommit: input.graph.baseCommit,
-        ...(input.signal !== undefined ? { signal: input.signal } : {})
+        signal
       });
       return {
         ...successOutcome(repairedCommit, result.changedFiles, evidenceMatrix),

@@ -66,13 +66,14 @@ export class ExecutionBaseBuilder {
     this.now = deps.now ?? (() => new Date().toISOString());
   }
 
-  async build(raw: ExecutionBaseRequest): Promise<BuiltExecutionBase> {
+  async build(raw: ExecutionBaseRequest, signal?: AbortSignal): Promise<BuiltExecutionBase> {
     const request = ExecutionBaseRequestSchema.parse(raw);
     const createParams = {
       taskId: request.nodeId,
       runId: request.runId,
       kind: "leaf",
-      baseCommit: request.baseCommit
+      baseCommit: request.baseCommit,
+      ...(signal === undefined ? {} : { signal })
     } as const;
     let workspace: ExecutionWorkspaceHandle | undefined;
     const worktree = this.workspaceProvider !== undefined
