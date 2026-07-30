@@ -409,3 +409,10 @@
     explicaciones de no asignación, costo sensible a congestión y overlay
     visual/textual. Verificación: 37 tests, typecheck, build y probe WC2
     determinista PASS. Ticket 29 sigue abierto hasta evidencia atribuible.
+70. **WC3 implementado y revisado visualmente.** El sucesor cerró en `5da6019`
+    con journal append-only, snapshots/replay con hash exacto, timeline,
+    analytics, alertas, corrupción accionable y estados operativos/accesibles.
+    Verificación: 41 tests, typecheck, build, probes WC1/WC2/WC3, smoke HTTP y
+    revisión Playwright PASS. La implementación está completa; tickets 28–30
+    siguen abiertos hasta freeze, candidate execution, receipt, delivery y
+    oráculos externos atribuibles.

@@ -1526,3 +1526,20 @@ Verificación acumulada: 37 tests PASS, typecheck PASS, build PASS y probe
 atribuible ni cierra ticket 29: falta freeze, receipt, delivery y oráculo
 externo. Próximo paso: implementar WC3 sobre `4da4a45`, luego congelar y
 ejecutar la serie compacta de forma atribuible.
+
+## Avance compacto Warehouse - WC3 implementado - 2026-07-30
+
+WC3 cerró la implementación acumulativa en el commit externo `5da6019` sobre
+`4da4a45`. Incluye journal append-only, snapshots con hash canónico, replay,
+timeline, analytics derivados de eventos, alertas y errores accionables ante
+corrupción. La interfaz expone estados loading/empty/error/connected, soporte
+de teclado, reduced motion y estados textuales que no dependen sólo del color.
+
+Verificación final del sucesor: 41 tests PASS, typecheck PASS, build PASS,
+probes WC1/WC2/WC3 deterministas PASS, smoke HTTP PASS y revisión visual
+Playwright PASS en `output/playwright/wc3-home.png`. La implementación del
+demostrador compacto está completa; no se cierra aún la evidencia de tesis:
+faltan freeze, candidate execution, receipt, delivery y oráculo externo para
+WC1, WC2 y WC3. Próximo paso: congelar el protocolo compacto sobre `5da6019`,
+ejecutar las tres celdas atribuibles en secuencia y actualizar claims sólo con
+esa evidencia.

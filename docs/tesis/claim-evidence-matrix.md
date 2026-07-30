@@ -779,6 +779,7 @@ como registro del estado en G1.
 | CLAIM-114 | Warehouse Control Tower puede construirse incrementalmente con una única versión congelada de ManyHands | **instrumento implementado; construcción pendiente** | seed y assets W1–W8 hasheados, driver y oráculos externos verificados; faltan Pilot, freeze y Final |
 | CLAIM-115 | El sucesor compacto Warehouse ofrece una operación visible verificable en WC1 | **implementación verificada; atribución pendiente** | sucesor W1 `71f61c9` → commit `8ce6e98`; 33 tests, typecheck, build, probe determinista y smoke HTTP PASS; faltan candidate execution, receipt, delivery y oráculo externo |
 | CLAIM-116 | El sucesor compacto Warehouse planifica fulfillment reproducible bajo capacidad y congestión | **implementación verificada; atribución pendiente** | commit `4da4a45` sobre WC1; 37 tests acumulados, typecheck, build y probe WC2 PASS; faltan candidate execution, receipt, delivery y oráculo externo |
+| CLAIM-117 | El sucesor compacto Warehouse conserva evidencia durable y operable en WC3 | **implementación verificada; atribución pendiente** | commit `5da6019` sobre WC2; 41 tests acumulados, typecheck, build, probes, smoke HTTP y revisión Playwright PASS; faltan candidate execution, receipt, delivery y oráculo externo |
 
 El G5 anterior conserva su interpretación: C1 no mostró ventaja sobre A en el
 target pequeño y la métrica de aceptación fue endógena. Es evidencia formativa

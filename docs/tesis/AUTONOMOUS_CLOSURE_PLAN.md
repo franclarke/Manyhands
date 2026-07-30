@@ -638,3 +638,12 @@ Este avance no sustituye la candidate execution atribuible: antes de WC2 deben
 congelarse el protocolo, budget, probe y oráculo, y persistirse candidate SHA,
 receipt y delivery de WC1. La expansión a W2–W8 individuales queda descartada
 salvo que un gap funcional concreto lo vuelva necesario.
+
+### Implementación compacta completada
+
+El sucesor Warehouse compacto quedó implementado en la secuencia
+`8ce6e98` (WC1), `4da4a45` (WC2) y `5da6019` (WC3), derivada de W1
+`71f61c9`. La verificación de producto es positiva: 41 tests, typecheck,
+build, probes deterministas, smoke HTTP y revisión visual. Esto no equivale a
+evidencia atribuible de ManyHands: la serie todavía requiere freeze, candidate
+execution, receipts, delivery y oráculos externos para cada incremento.
