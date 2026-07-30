@@ -30,8 +30,8 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 | CLAIM-006 | 4 casos de estudio con comportamiento descrito como ocurrido | missing | downgrade | G4/G5 |
 | CLAIM-010 | `GraphRevision` inmutable con reducer CAS + `deepFreeze` | implemented | demonstrate | G4 |
 | CLAIM-011 | 4 relaciones tipadas canónicas | implemented | demonstrate | G4 |
-| CLAIM-020 | Scheduler continuo por readiness (`selectReadyWaveV2`) | partial | implement + demonstrate | ticket 23 |
-| CLAIM-021 | Aplazamiento simétrico por `ConflictConstraint` (`blocksPair`) | partial | implement + demonstrate | ticket 23 |
+| CLAIM-020 | Scheduler continuo por readiness (`selectReadyWaveV2`) | implemented | demonstrate | ticket 14 (rederivado) |
+| CLAIM-021 | Aplazamiento simétrico por `ConflictConstraint` (`blocksPair`) | implemented | demonstrate | ticket 14 (rederivado) |
 | CLAIM-022 | Cola atómica `recordQueue` en `V2ExecutionDriver` | implemented | demonstrate | G4 |
 | CLAIM-030 | Worktree Recycling Pool con leases/fencing | implemented | demonstrate | G4 |
 | CLAIM-031 | `ScopeChecker` OS-aware (path traversal + symlink + deny-wins) | implemented | demonstrate | G4 |
@@ -781,3 +781,97 @@ como registro del estado en G1.
 El G5 anterior conserva su interpretación: C1 no mostró ventaja sobre A en el
 target pequeño y la métrica de aceptación fue endógena. Es evidencia formativa
 que motiva CLAIM-111..114, no evidencia a favor de ellos.
+
+---
+
+## Rederivación final — ticket 14 — 2026-07-30
+
+Esta sección rederiva los claims desde la evidencia cerrada. Mantiene la regla de
+clasificación del documento: `implemented` sólo con ruta productiva **y** test de
+comportamiento; los claims end-to-end exigen además evidencia persistida de un
+run. Ningún claim sube por existencia de módulos o por el texto de un ticket.
+
+### Veredicto H1 — calidad de la política C
+
+**Sostenido, con límite declarado.** La pregunta abierta era si
+`validationDuplication` medía mal o si el planner asignaba criterios de objetivo
+completo a las hojas.
+
+- Evidencia: `docs/tesis/evidence/warehouse/wide-graph/retry-12-measure/`
+  (freeze `5c48aba`, celdas, journals, `series-result.json`).
+- Con intents particionados por hoja, y **sin cambiar término, fórmula ni
+  umbral**, `validationDuplication` cae de 0.7333 a 0.3750 (N=4) y de 0.85 a
+  0.4828 (N=8), y `splitAdvantage` pasa a +0.1710 y +0.3275.
+- `retry-12` N=4 es el único caso de las 18 evaluaciones de raíz preservadas cuya
+  razón registrada es la utilidad: `"Split advantage 0.1710 meets minimum
+  0.1500."` Journal:
+  `retry-12-measure/runs/warehouse-wide-n04/run.events.v2.jsonl`.
+- **Límite:** el caso motivador (19 hijos, N=16) no fue re-medido a su anchura;
+  la celda N=16 falló en planning sin dejar evaluación
+  (`pilot/defects/planning-failure-discards-cli-output/`). La serie tampoco es
+  comparable con las series Codex: el ejecutor es el Architect.
+
+### Veredicto H2 — arquitectura de grafos a escala
+
+**No sostenido por la evidencia disponible. Resultado negativo, con causas
+documentadas y atribuibles.**
+
+- **Ninguna celda ancha bajo el estímulo nuevo entregó.** `retry-8`, `retry-10` y
+  `retry-11` ejecutaron `{4, 8, 16}` sobre freezes exactos con executor
+  homogéneo; las nueve celdas terminaron sin candidate, sin receipt y con
+  disposición de oráculo `not_run`.
+- Causas terminales, cada una documentada por separado y **no atribuidas a la
+  política C**: `plannedPaths` compartidos entre composite y descendientes
+  (`contested-planned-output`, corregido); falso `artifact_cycle` por tratar un
+  seam no ordenante como arista
+  (`seam-bindings-escape-cycle-detection`, corregido en ticket 16); muerte no
+  atribuible del proceso dueño
+  (`run-owner-death-leaves-cell-unattributable`); y fallo del sandbox de Codex
+  del host (`retry-11` N=16).
+- **La única entrega externamente verificada del programa sigue siendo W1**,
+  commit `71f61c9efa222103ca2fb2f67692434ab493d75c`, con sus seis checks.
+- La cadena longitudinal queda en **1/8**. W2 produjo intentos distintos sin base
+  verificable: candidato con lockfile inconsistente, hard timeout sin receipt y
+  fallo de infraestructura. No se ejecuta otro W2.
+
+### Los N viejos son evidencia mecánica
+
+Los PASS de N=4 y N=8 con el **estímulo original** miden la maquinaria del grafo,
+no H2: ese estímulo pedía N módulos que derivaban los mismos tres valores y
+compartían un único archivo de test, lo que hacía la integración imposible. Se
+citan sólo con esa etiqueta y **no son comparables** con ninguna serie posterior.
+`retry-7` permanece como freeze histórico nunca ejecutado y tampoco es
+comparable.
+
+### Parámetros sin anclar
+
+- **`maxLeafPlannedPaths = 12`** — provisional. W1 entregó con 10 planned paths y
+  W2 falló con 6: ninguna cota separa los dos casos.
+- **`minimumAdvantage = 0.15`** — provisional. Nada en la evidencia lo deriva; se
+  mantuvo inmutable durante todas las mediciones precisamente para no ajustarlo
+  al resultado.
+
+Ninguno de los dos se presenta como derivado en la tesis.
+
+### Reevaluación de claims
+
+| Claim | Antes | Ahora | Razón |
+|---|---|---|---|
+| CLAIM-020 | partial | **implemented** | La brecha nombrada era que el host V2 entregaba `activeResourceNodeIds: []` y `budgetAvailable: true` fijos. `buildReadinessState` (`packages/orchestrator-graph/src/v2/execution-driver.ts`) ahora deriva recursos activos de los intentos `running`, presupuesto de `budgetAvailableFor`, circuit breakers del runtime y de recovery sin resolver, y executors disponibles descontando suspensiones. Tests: `tests/causal-recovery-scheduling-v2.test.ts`, `tests/scheduler-readiness-v2.test.ts`. |
+| CLAIM-021 | partial | **implemented** | Misma ruta: `blocksPair` recibe estado real de recursos y constraints con modo/`resourceId`. Tests: `tests/scheduler-conflict-constraints.test.ts`, `tests/scheduler-scope-aware-wave.test.ts`. |
+| CLAIM-040 | partial | **partial** | El mecanismo está cableado y probado (tickets 18–19, controles negativos y evidencia relevante por criterio), pero el claim es end-to-end y **sigue sin evidencia persistida de un run nuevo**: ninguna celda ancha entregó. No sube. |
+| CLAIM-041 | partial | **partial** | Igual que 040: contrato y compiler garantizan obligaciones y evidencia pertinente, sin run que lo demuestre. |
+| CLAIM-042 | partial | **partial** | Ningún run V2 nuevo alcanzó integración. |
+| CLAIM-043 | partial | **partial** | Sin `final_candidate.verified` ni receipt en ningún run nuevo. |
+| CLAIM-044 | missing | **missing** | Ningún run Codex nuevo alcanzó `completed` con commit no vacío. `retry-11` N=4 produjo un commit del agente (`469c9391`) que **nunca fue validado ni entregado**, y no cuenta. |
+| CLAIM-052 | partial | **partial** | La compactación está cableada al host V2 con lock renovable (ticket 25), pero su demostración sobre un run real no existe. |
+| CLAIM-053 | partial | **partial** | Autoridad atómica, takeover fenced, recovery causal y manifest durable están cableados y probados (tickets 21, 23–25). La demostración externa sigue pendiente, y `retry-11` mostró justamente un caso donde nadie reclamó la lease vencida. |
+
+### Resultados adversos que se conservan sin reinterpretación
+
+- Las nueve celdas anchas fallidas y sus journals.
+- El fallo del microbenchmark del indexer bajo contención paralela (30.11 ms
+  contra una cota de 25 ms) en el gate del freeze `5c48aba`: la cota **no se
+  movió** y el resultado no se declara PASS.
+- Los 12 tests rojos que los tickets 23–26 dejaron y que nadie había visto, con
+  sus tres defectos de producto, corregidos y documentados en el HANDOFF.
