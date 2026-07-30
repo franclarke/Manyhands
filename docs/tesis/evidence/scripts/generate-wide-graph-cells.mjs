@@ -5,7 +5,8 @@ import { resolve, join } from "node:path";
 import {
   assertWideGraphSeriesSelection,
   buildWideGraphPlan,
-  wideGraphSelection
+  wideGraphSelection,
+  WIDE_GRAPH_DELIVERY_SELECTION_NAME
 } from "./lib/wide-graph-study.mjs";
 import {
   loadWideGraphOracleContract,
@@ -18,7 +19,26 @@ const dryRun = process.argv.includes("--dry-run");
 const baseUrl = argument("--base-url") ?? "http://127.0.0.1:3111";
 const runsDir = resolve(argument("--runs-dir") ?? ".manyhands/runs");
 const plan = buildWideGraphPlan({ targetRepo });
-const selection = wideGraphSelection(argument("--executor") ?? "codex");
+const executorName = argument("--executor") ?? WIDE_GRAPH_DELIVERY_SELECTION_NAME;
+const selection = wideGraphSelection(executorName);
+const seriesKind = argument("--kind") ?? "delivery";
+if (seriesKind !== "delivery" && seriesKind !== "measurement") {
+  fail(`--kind must be delivery or measurement, received "${seriesKind}"`);
+}
+/**
+ * The executor is the Architect, so a series that changes it produces different
+ * candidate trees and is not comparable with the frozen delivery series. It may
+ * still answer a policy question, but only as a measurement that stops at the
+ * compiled plan — and it has to say so in its own manifest, because a later
+ * synthesis reads the manifest, not this argument list.
+ */
+if (executorName !== WIDE_GRAPH_DELIVERY_SELECTION_NAME && seriesKind !== "measurement") {
+  fail(
+    `executor "${executorName}" is not comparable with the frozen `
+    + `"${WIDE_GRAPH_DELIVERY_SELECTION_NAME}" delivery series; generate it with --kind measurement`
+  );
+}
+const stopAfter = seriesKind === "measurement" ? "planning" : undefined;
 const oracleContract = await loadWideGraphOracleContract();
 const cells = plan.map((entry) => ({
   schemaVersion: 2,
@@ -26,6 +46,8 @@ const cells = plan.map((entry) => ({
   ...entry,
   condition: "C",
   granularityCondition: "C",
+  seriesKind,
+  ...(stopAfter === undefined ? {} : { stopAfter }),
   baseUrl,
   workspaceName: "warehouse-wide-graph",
   planningSelection: selection,
@@ -61,6 +83,9 @@ await writeFile(join(outDir, "manifest.json"), `${JSON.stringify({
   title: "Warehouse wide graph pilot",
   baseSha: plan[0]?.baseSha,
   granularityCondition: "C",
+  seriesKind,
+  ...(stopAfter === undefined ? {} : { stopAfter }),
+  comparableWith: seriesKind === "measurement" ? [] : [WIDE_GRAPH_DELIVERY_SELECTION_NAME],
   executorSelection: selection,
   oracleContract,
   moduleCounts: plan.map((entry) => entry.moduleCount),

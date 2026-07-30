@@ -51,13 +51,26 @@ function wideGraphGoal(moduleCount) {
 
 /**
  * Which executor produced a cell has to be declared by the cell, not compiled
- * into the generator. Codex is the only executor available for new series on
- * the study machine. It reports `usageSource: "unavailable"`, so the sweep
- * reports tokens as a floor and cost as unavailable.
+ * into the generator.
+ *
+ * `codex` is the selection every frozen delivery series used; it reports
+ * `usageSource: "unavailable"`, so the sweep reports tokens as a floor and cost
+ * as unavailable. `claude` was added afterwards, when the Codex sandbox stopped
+ * launching on the study machine and the only measurement still missing was the
+ * granularity assessment. Claude models expose no reasoning-effort knob, so the
+ * selection carries no `effort`.
+ *
+ * The two are NOT interchangeable: the executor is the Architect, so changing it
+ * changes the candidate tree. A series that does not use `codex` is a
+ * measurement series and must declare itself as such.
  */
 export const WIDE_GRAPH_SELECTIONS = Object.freeze({
-  codex: Object.freeze({ executorId: "codex-cli", model: "gpt-5.5", effort: "high" })
+  codex: Object.freeze({ executorId: "codex-cli", model: "gpt-5.5", effort: "high" }),
+  claude: Object.freeze({ executorId: "claude-code-cli", model: "haiku" })
 });
+
+/** The one selection whose cells are comparable with the frozen delivery series. */
+export const WIDE_GRAPH_DELIVERY_SELECTION_NAME = "codex";
 
 export function wideGraphSelection(name) {
   const selection = WIDE_GRAPH_SELECTIONS[name];

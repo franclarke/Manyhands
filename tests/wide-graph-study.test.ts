@@ -1,4 +1,6 @@
 import { execFile } from "node:child_process";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -79,8 +81,16 @@ describe("wide graph study plan", () => {
  * otherwise a frozen cell can name a model that cannot run.
  */
 describe("wide graph executor selection", () => {
-  it("rejects Claude for a new series when only Codex is available", async () => {
-    const outDir = await mkdtemp(join(tmpdir(), "manyhands-wide-graph-unavailable-executor-"));
+  /**
+   * Claude was added for the H1 measurement after Codex became unusable on the
+   * study machine. A different executor produces a different candidate tree, so
+   * its cells are NOT comparable with the frozen Codex series. The generator has
+   * to refuse to emit them as an ordinary delivery series: a series that changes
+   * the controlled variable must say so durably, or a later synthesis will read
+   * both as one sweep.
+   */
+  it("refuses a non-Codex series that does not declare itself a measurement", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "manyhands-wide-graph-undeclared-measurement-"));
     try {
       await expect(run(
         process.execPath,
@@ -95,8 +105,102 @@ describe("wide graph executor selection", () => {
         ],
         { cwd: process.cwd(), windowsHide: true }
       )).rejects.toMatchObject({
-        stderr: expect.stringMatching(/Unknown executor selection "claude".+expected one of codex/iu)
+        stderr: expect.stringMatching(/claude.+not comparable.+--kind measurement/iu)
       });
+    } finally {
+      await rm(outDir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects an executor the registry does not know", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "manyhands-wide-graph-unavailable-executor-"));
+    try {
+      await expect(run(
+        process.execPath,
+        [
+          "docs/tesis/evidence/scripts/generate-wide-graph-cells.mjs",
+          "--target",
+          "C:/target",
+          "--executor",
+          "gemini",
+          "--out",
+          outDir
+        ],
+        { cwd: process.cwd(), windowsHide: true }
+      )).rejects.toMatchObject({
+        stderr: expect.stringMatching(/Unknown executor selection "gemini".+expected one of codex, claude/iu)
+      });
+    } finally {
+      await rm(outDir, { recursive: true, force: true });
+    }
+  });
+
+  /**
+   * A measurement series stops at the compiled plan, so it can never produce a
+   * candidate. Declaring that in the manifest is what keeps `not_run` honest:
+   * the oracle was not skipped, it had nothing to grade.
+   */
+  it("freezes a measurement series as planning-only and not comparable", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "manyhands-wide-graph-measurement-"));
+    try {
+      await run(
+        process.execPath,
+        [
+          "docs/tesis/evidence/scripts/generate-wide-graph-cells.mjs",
+          "--target",
+          "C:/target",
+          "--executor",
+          "claude",
+          "--kind",
+          "measurement",
+          "--out",
+          outDir
+        ],
+        { cwd: process.cwd(), windowsHide: true }
+      );
+
+      const manifest = JSON.parse(await readFile(join(outDir, "manifest.json"), "utf8"));
+      const selection = { executorId: "claude-code-cli", model: "haiku" };
+
+      expect(manifest.seriesKind).toBe("measurement");
+      expect(manifest.stopAfter).toBe("planning");
+      expect(manifest.comparableWith).toEqual([]);
+      expect(manifest.executorSelection).toEqual(selection);
+
+      for (const { cellId } of manifest.cells) {
+        const cell = JSON.parse(await readFile(join(outDir, `${cellId}.json`), "utf8"));
+        expect(cell.seriesKind, cellId).toBe("measurement");
+        expect(cell.stopAfter, cellId).toBe("planning");
+        expect(cell.planningSelection, cellId).toEqual(selection);
+        expect(cell.executionSelection, cellId).toEqual(selection);
+        expect(cell.repairSelection, cellId).toEqual(selection);
+      }
+    } finally {
+      await rm(outDir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a delivery series comparable and free of a stop point", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "manyhands-wide-graph-delivery-kind-"));
+    try {
+      await run(
+        process.execPath,
+        [
+          "docs/tesis/evidence/scripts/generate-wide-graph-cells.mjs",
+          "--target",
+          "C:/target",
+          "--executor",
+          "codex",
+          "--out",
+          outDir
+        ],
+        { cwd: process.cwd(), windowsHide: true }
+      );
+
+      const manifest = JSON.parse(await readFile(join(outDir, "manifest.json"), "utf8"));
+
+      expect(manifest.seriesKind).toBe("delivery");
+      expect(manifest.stopAfter).toBeUndefined();
     } finally {
       await rm(outDir, { recursive: true, force: true });
     }
@@ -312,7 +416,174 @@ describe("wide graph executor selection", () => {
 
   it("resolves a named selection and refuses an unknown one", () => {
     expect(wideGraphSelection("codex")).toEqual({ executorId: "codex-cli", model: "gpt-5.5", effort: "high" });
-    expect(() => wideGraphSelection("claude")).toThrow(/unknown executor selection/iu);
+    expect(wideGraphSelection("claude")).toEqual({ executorId: "claude-code-cli", model: "haiku" });
     expect(() => wideGraphSelection("gemini")).toThrow(/unknown executor selection/iu);
+  });
+});
+
+/**
+ * The measurement the thesis still needs is produced by planning alone: the
+ * granularity assessment is journalled before the approval decision is raised.
+ * Driving past that point would spend a full execution to learn nothing new,
+ * so the cell stops at the compiled plan — and it must stop by *not answering*,
+ * because answering `approve` is what starts execution.
+ */
+describe("planning-only measurement cell", () => {
+  it("stops at the compiled plan without approving it", async () => {
+    const root = await mkdtemp(join(tmpdir(), "manyhands-wide-graph-planning-only-"));
+    const runsDir = join(root, "runs");
+    const outDir = join(root, "out");
+    const runId = "11111111-2222-3333-4444-555555555555";
+    const posts: string[] = [];
+    await mkdir(runsDir, { recursive: true });
+    await writeFile(
+      join(runsDir, `${runId}.events.v2.jsonl`),
+      `${JSON.stringify({
+        schemaVersion: 4,
+        event: {
+          eventId: `${runId}:decision:1`,
+          runId,
+          sequence: 1,
+          occurredAt: "2026-07-30T00:00:00.000Z",
+          type: "decision.raised",
+          payload: {
+            decision: {
+              id: "approve-plan:graph-measurement:r1",
+              kind: "approve_plan",
+              question: "Approve graph revision 1?",
+              options: [{ id: "approve", label: "Approve plan" }]
+            }
+          }
+        }
+      })}\n`,
+      "utf8"
+    );
+
+    const server = createServer((request, response) => {
+      if (request.method === "POST") posts.push(request.url ?? "");
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ lifecycle: "needs_approval" }));
+    });
+    await new Promise<void>((ready) => server.listen(0, "127.0.0.1", ready));
+    const port = (server.address() as AddressInfo).port;
+
+    const configPath = join(root, "cell.json");
+    await writeFile(configPath, JSON.stringify({
+      cellId: "warehouse-wide-n04",
+      condition: "C",
+      taskId: "warehouse-wide-graph",
+      moduleCount: 4,
+      seriesKind: "measurement",
+      stopAfter: "planning",
+      baseUrl: `http://127.0.0.1:${port}`,
+      runsDir,
+      pollIntervalMs: 50
+    }), "utf8");
+
+    try {
+      const outcome = await run(
+        process.execPath,
+        [
+          "docs/tesis/evidence/scripts/run-experiment.mjs",
+          "--config",
+          configPath,
+          "--out",
+          outDir,
+          "--attach",
+          runId
+        ],
+        { cwd: process.cwd(), windowsHide: true, env: { ...process.env, MANYHANDS_SESSION_TOKEN: "test-token" } }
+      ).catch((error: unknown) => error as { code?: number });
+
+      expect((outcome as { code?: number }).code).toBe(1);
+      expect(posts).toEqual([]);
+
+      const result = JSON.parse(await readFile(join(outDir, "result.json"), "utf8"));
+      expect(result.outcome.reason).toBe("measurement_only_planning");
+      expect(result.outcome.finalSha).toBeUndefined();
+      expect(result.outcome.lifecycle).toBe("needs_approval");
+    } finally {
+      await new Promise<void>((closed) => server.close(() => closed()));
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * `retry-11` lost three cells to an owner process that died mid-attempt: the
+ * run stayed `running` with a frozen heartbeat and the driver kept polling until
+ * someone labelled the cell by hand. An unattributable cell is worse than a
+ * failed one, so the driver has to notice the dead owner and record a terminal
+ * result itself. The heartbeat cadence is 4 s, so a minute of silence is not a
+ * slow step.
+ */
+describe("stalled run owner", () => {
+  it("records an attributable terminal result instead of polling a dead owner", async () => {
+    const root = await mkdtemp(join(tmpdir(), "manyhands-wide-graph-stalled-owner-"));
+    const runsDir = join(root, "runs");
+    const outDir = join(root, "out");
+    const runId = "99999999-8888-7777-6666-555555555555";
+    await mkdir(runsDir, { recursive: true });
+    await writeFile(join(runsDir, `${runId}.events.v2.jsonl`), "", "utf8");
+    await writeFile(join(runsDir, `${runId}.json`), JSON.stringify({
+      version: 2,
+      run: {
+        runId,
+        projection: { lifecycle: "running", eventSequence: 29 },
+        activeOperation: {
+          operationId: "dead-owner",
+          kind: "execution",
+          fencingToken: 3,
+          acquiredAt: "2026-07-30T00:47:21.514Z",
+          heartbeatAt: "2026-07-30T00:54:22.432Z"
+        },
+        heartbeatAt: "2026-07-30T00:54:22.432Z"
+      }
+    }), "utf8");
+
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify({ lifecycle: "running" }));
+    });
+    await new Promise<void>((ready) => server.listen(0, "127.0.0.1", ready));
+    const port = (server.address() as AddressInfo).port;
+
+    const configPath = join(root, "cell.json");
+    await writeFile(configPath, JSON.stringify({
+      cellId: "warehouse-wide-n04",
+      condition: "C",
+      taskId: "warehouse-wide-graph",
+      moduleCount: 4,
+      baseUrl: `http://127.0.0.1:${port}`,
+      runsDir,
+      pollIntervalMs: 50,
+      ownerHeartbeatStaleMs: 60_000
+    }), "utf8");
+
+    try {
+      const outcome = await run(
+        process.execPath,
+        [
+          "docs/tesis/evidence/scripts/run-experiment.mjs",
+          "--config",
+          configPath,
+          "--out",
+          outDir,
+          "--attach",
+          runId
+        ],
+        { cwd: process.cwd(), windowsHide: true, env: { ...process.env, MANYHANDS_SESSION_TOKEN: "test-token" } }
+      ).catch((error: unknown) => error as { code?: number });
+
+      expect((outcome as { code?: number }).code).toBe(1);
+
+      const result = JSON.parse(await readFile(join(outDir, "result.json"), "utf8"));
+      expect(result.outcome.reason).toMatch(/owner.+heartbeat/iu);
+      expect(result.outcome.reason).toContain("2026-07-30T00:54:22.432Z");
+      expect(result.outcome.lifecycle).toBe("running");
+    } finally {
+      await new Promise<void>((closed) => server.close(() => closed()));
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

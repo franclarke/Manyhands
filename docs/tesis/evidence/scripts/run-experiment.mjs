@@ -46,6 +46,19 @@ if (oracleContractPath !== undefined) {
   await writeFile(oracleContractPath, `${JSON.stringify(oracleContract, null, 2)}\n`, "utf8");
 }
 
+// A measurement cell stops at the compiled plan. The stop point is a property of
+// the frozen cell, not of the invocation; `--stop-after` only exists so a cell
+// can be driven that way without editing it, and a measurement cell that lost
+// its stop point fails closed rather than silently executing.
+const stopAfter = args["stop-after"] ?? config.stopAfter;
+if (stopAfter !== undefined && stopAfter !== "planning") {
+  fail(`--stop-after only accepts "planning", received "${stopAfter}"`);
+}
+const stopAfterPlanning = stopAfter === "planning";
+if (config.seriesKind === "measurement" && !stopAfterPlanning) {
+  fail(`cell ${config.cellId} is a measurement cell but declares no planning stop point`);
+}
+
 const BASE = config.baseUrl ?? "http://127.0.0.1:3000";
 const TOKEN = process.env.MANYHANDS_SESSION_TOKEN;
 if (TOKEN === undefined || TOKEN.length === 0) {
@@ -91,7 +104,11 @@ const finished = new Date().toISOString();
 //    separate, re-runnable step over these files.
 await preserve(runId, { started, finished, outcome });
 log(`lifecycle=${outcome.lifecycle} finalSha=${outcome.finalSha ?? "none"}`);
-process.exit(outcome.lifecycle === "completed" ? 0 : 1);
+// Exiting while the HTTP sockets are still closing aborts libuv on Windows
+// (`Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)`), and the abort code
+// replaces the cell's real exit code. The series driver classifies a cell by that
+// code, so it is set here and Node is allowed to drain on its own.
+process.exitCode = outcome.lifecycle === "completed" ? 0 : 1;
 
 async function drive(runId) {
   const deadline = Date.now() + (config.wallClockLimitMs ?? 90 * 60 * 1000);
@@ -108,9 +125,26 @@ async function drive(runId) {
       lastLifecycle = lifecycle;
       idleSince = Date.now();
     }
+    // An owner that stopped renewing its lease is dead, not slow: the runner
+    // renews every 4 s. Polling it to the wall-clock limit is what turned three
+    // `retry-11` cells into results nobody could attribute, so the cell ends here
+    // with the exact instant the owner went silent.
+    const stalled = await stalledOwner(runId, lifecycle);
+    if (stalled !== undefined) {
+      return terminal(runId, lifecycle, view, stalled);
+    }
+
     const pending = await pendingDecisions(runId);
 
     const plan = pending.find((decision) => decision.kind === "approve_plan");
+    // A measurement cell exists to observe the granularity assessment, which the
+    // journal already holds by the time this decision is raised. It stops by NOT
+    // answering: `approve` is exactly what would start an execution the cell does
+    // not need, and answering anything else would invent stimulus.
+    if (plan !== undefined && stopAfterPlanning) {
+      log(`  planning-only cell: leaving ${plan.id} unanswered`);
+      return terminal(runId, lifecycle, view, "measurement_only_planning");
+    }
     if (plan !== undefined && !approvedPlan) {
       log(`  approving plan (${plan.id})`);
       await post(`/api/runs/${runId}/decisions/${plan.id}`, { optionId: "approve" });
@@ -241,6 +275,30 @@ async function assertCompletedDelivery(view) {
     candidateSha: finalSha,
     moduleCount: config.moduleCount
   });
+}
+
+/**
+ * Reports the stale lease of a dead run owner, or `undefined` while the run is
+ * still owned. Only an active operation can go stale: a parked run legitimately
+ * holds none.
+ */
+async function stalledOwner(runId, lifecycle) {
+  if (lifecycle !== "running") return undefined;
+  const runsDir = config.runsDir ?? join(process.cwd(), ".manyhands", "runs");
+  let record;
+  try {
+    record = JSON.parse(await readFile(join(runsDir, `${runId}.json`), "utf8"));
+  } catch {
+    return undefined;
+  }
+  const run = record.run ?? record;
+  const heartbeatAt = run.activeOperation?.heartbeatAt;
+  if (typeof heartbeatAt !== "string") return undefined;
+  const silentMs = Date.now() - Date.parse(heartbeatAt);
+  if (!Number.isFinite(silentMs) || silentMs < (config.ownerHeartbeatStaleMs ?? 120_000)) {
+    return undefined;
+  }
+  return `run owner ${run.activeOperation.operationId} stopped renewing its heartbeat at ${heartbeatAt}`;
 }
 
 /** Pending decisions come from the durable journal, the same source the UI reads. */
