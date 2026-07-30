@@ -78,3 +78,18 @@ focal 6/6 PASS y typecheck web PASS.
 Este checkpoint no cierra 31. Sigue faltando la candidate real con evidencia
 durable smoke->pool, la convergencia de huerfano/restart/heartbeat y las
 reviews Standards/Spec finales.
+## Checkpoint de evidencia durable de descendientes - 2026-07-30
+
+El commit `63ce478` agrega un watchdog de tabla de procesos al journal de
+supervision. Mientras un executor esta vivo, los descendientes observados se
+registran con PID, comando y label; si el padre termina, la evidencia del
+descendiente permanece abierta para el camino de restart/takeover. La
+regresion simula el smoke server, comprueba que queda en el journal y verifica
+que `killRunProcessesVerified` lo termina con `allDead=true`.
+
+Verificacion: journal 6/6, process supervisor 6/6, takeover atomico 7/7,
+leases 4/4, typecheck web y `git diff --check` PASS.
+
+La acceptance de candidate real y la review no se declaran cerradas con esta
+prueba aislada: todavia falta ejecutar el escenario productivo una sola vez,
+verificar heartbeat/restart/huerfano y completar Standards/Spec.

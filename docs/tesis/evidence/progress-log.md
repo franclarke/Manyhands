@@ -471,3 +471,11 @@
     error registra `run.failed` sin eliminar la decision pendiente. La suite
     focal queda en 6/6 PASS y el typecheck web pasa. Ticket 31 sigue abierto;
     no se repite WC1 ni se ejecuta N=4/N=8/N=16.
+79. **Descendientes del ejecutor registrados antes del teardown.** `63ce478`
+    agrega un watchdog durable de tabla de procesos: si un smoke server nace
+    mientras el executor sigue activo, se registra con PID/comando/label y
+    queda disponible para un takeover posterior aunque el padre ya haya
+    terminado. La regresion de journal y teardown verifica `allDead=true`; la
+    suite focal queda verde junto con typechecks y leases/takeover. Ticket 31
+    sigue abierto hasta candidate integrada y reviews nuevas; no se repite WC1
+    ni se ejecuta N=4/N=8/N=16.

@@ -1734,3 +1734,27 @@ todavia y no se inicia N=4/N=8/N=16.
 Estado de reanudacion: ejecutar las aceptaciones restantes de ticket 31,
 actualizar HANDOFF despues de cada checkpoint, y solo con ese ticket cerrado
 crear el freeze sucesor y la candidate WC1.
+## Checkpoint evidencia durable de descendientes - 2026-07-30
+
+La regresion de ticket 31 cubre ahora el caso que produjo el bloqueo WC1:
+un ejecutor padre sigue vivo mientras aparece un smoke server descendiente,
+el padre termina y el descendiente debe continuar siendo recuperable desde un
+host nuevo. El commit `63ce478` agrega un watchdog de tabla de procesos al
+journal durable: registra descendientes con PID, comando y label antes del
+exit del padre, conserva la evidencia abierta y permite que
+`killRunProcessesVerified` los mate y verifique antes del teardown.
+
+Verificacion: la regresion de evidencia queda en 6/6 PASS; process supervisor,
+takeover atomico y leases pasan (17 tests); typecheck de web y
+`git diff --check` PASS. La implementacion es conservadora: la inspeccion de
+procesos es best-effort y nunca bloquea el camino productivo; si no puede
+observar o verificar un proceso, el takeover sigue sin declararse seguro.
+
+Ticket 31 sigue abierto hasta ejecutar el escenario integrado con una
+candidate real, demostrar la convergencia durable de huÃ©rfano/restart/
+heartbeat y completar las reviews Standards/Spec. No se repite WC1 todavia y
+no se ejecuta N=4/N=8/N=16.
+
+Estado de reanudacion: revisar este watchdog contra los contratos de
+supervision, cerrar las aceptaciones restantes de ticket 31 y actualizar este
+documento antes de crear el freeze sucesor WC1.
