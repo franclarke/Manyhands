@@ -613,7 +613,7 @@ receipt ni delivery.
 
 El sucesor local 27 debe cerrarse antes de consumir cuota en una nueva serie:
 
-`27 → 11 → 12 → 02 → WC1 → WC2 → WC3 → 14 → 15`
+`27 → WC1 → WC2 → WC3 → 11 → 12 → 02 → 14 → 15`
 
 W1 sigue siendo el resultado histórico `1/8`. WC1, WC2 y WC3 son incrementos
 sucesores compactos, cada uno con su ticket, claim, freeze, candidate execution

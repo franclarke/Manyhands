@@ -140,4 +140,24 @@ describe("evidence sink wiring (registry → journal)", () => {
     expect(killTree).toHaveBeenCalledWith(5153);
     expect(await journal.listOpen("run-descendant")).toHaveLength(0);
   });
+
+  it("records a descendant observed after the executor root exits", async () => {
+    configureProcessEvidenceWatchForTests({
+      intervalMs: 5,
+      snapshot: async () => new Map([
+        [5155, { pid: 5155, ppid: 5154, createdAtMs: Date.now() - 500, command: "smoke-server" }]
+      ])
+    });
+    installProcessEvidenceSink();
+    const fakeChild = { pid: 5154, kill: () => true, spawnfile: "node" };
+    registerLiveProcess("run-root-exited", fakeChild, { runId: "run-root-exited", label: "executor" });
+    unregisterLiveProcess("run-root-exited", fakeChild);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    await drainProcessEvidenceForTests();
+
+    const journal = new JsonRunProcessJournal();
+    expect(await journal.listOpen("run-root-exited")).toEqual(expect.arrayContaining([
+      expect.objectContaining({ pid: 5155, label: "executor:descendant", command: "smoke-server" })
+    ]));
+  });
 });

@@ -285,7 +285,6 @@ async function tickProcessEvidenceWatch(runId: string, state: ProcessEvidenceWat
     const snapshot = await processEvidenceSnapshot();
     const now = Date.now();
     for (const [rootPid, root] of state.roots) {
-      if (!snapshot.has(rootPid)) continue;
       for (const descendantPid of descendantsOf(snapshot, rootPid)) {
         if (state.descendants.has(descendantPid)) continue;
         const entry = snapshot.get(descendantPid)!;

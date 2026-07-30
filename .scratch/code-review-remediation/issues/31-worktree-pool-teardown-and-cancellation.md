@@ -105,3 +105,14 @@ Verificacion: WorktreePool 18/18, execution-core-worktree 13/13,
 execution-driver-produced-artifacts 1/1, typechecks de execution-core/web y
 `git diff --check` PASS. El ticket sigue abierto por la candidate real,
 heartbeat/restart/huerfano y reviews Standards/Spec.
+
+## Checkpoint race del watchdog - 2026-07-30
+
+La review independiente detecto que el watchdog solo enumeraba descendientes
+cuando el PID root seguia en la tabla. La regresion RED reprodujo el caso de
+un smoke server vivo despues del exit del executor; GREEN elimina esa
+precondicion y busca la cadena por `ppid`. La suite de journal queda en 7/7,
+con typecheck web y `git diff --check` PASS.
+
+La acceptance no se cierra: todavia falta la candidate integrada, verificar
+heartbeat/restart/orphan/pool en el host real y completar las reviews finales.

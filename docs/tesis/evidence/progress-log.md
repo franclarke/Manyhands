@@ -505,3 +505,9 @@
     commit documental es `a42ebaf`; ticket 31 sigue abierto por la candidate
     integrada y las reviews Standards/Spec. WC1 sucesor y N=4/N=8/N=16
     continuan detenidos.
+84. **Watchdog cubre executor root ya terminado.** Una regresion RED demostro
+    que un descendiente vivo podia no registrarse si el root desaparecia entre
+    muestras. La correccion busca la descendencia por `ppid` aunque el root ya
+    no este en la tabla; evidencia 7/7, typecheck web y diff check pasan.
+    Ticket 31 sigue abierto por candidate integrada y recovery real. WC1 sera
+    el siguiente incremento y N=4/N=8/N=16 quedan para despues de WC3.

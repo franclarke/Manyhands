@@ -1834,3 +1834,21 @@ pool. WC1 sucesor y N=4/N=8/N=16 siguen detenidos.
 Estado de reanudacion: revisar ticket 31 contra los contratos de supervision,
 ejecutar una candidate WC1 nueva solamente si el preflight queda verde y
 preservar cualquier fallo sin reinterpretarlo como resultado positivo.
+
+## Checkpoint watchdog tras exit del root - 2026-07-30
+
+La review independiente encontro una ventana real: el watchdog exigia que el
+PID root siguiera presente para buscar descendientes. Si el executor terminaba
+entre dos muestras, un smoke server vivo podia quedar fuera del journal
+durable. La regresion nueva reprodujo el caso en RED y el commit siguiente la
+corrige buscando descendientes por `ppid` aunque el root ya no figure en la
+tabla.
+
+Verificacion: `tests/process-evidence-journal.test.ts` queda en 7/7 PASS,
+`@manyhands/web` typecheck PASS y `git diff --check` PASS. Ticket 31 sigue
+abierto: falta candidate integrada para verificar el comportamiento en el
+host real, recovery de orphan/restart/heartbeat/pool y reviews finales.
+
+Estado de reanudacion: ejecutar las suites focales de supervision/takeover,
+versionar esta regresion y despues congelar WC1 sobre el HEAD corregido. El
+orden vigente queda WC1 -> WC2 -> WC3 antes de N=4/N=8/N=16.
