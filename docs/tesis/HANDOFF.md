@@ -1620,3 +1620,20 @@ objetivo completo a las hojas. No se cambió término, fórmula ni umbral.
   `retry-10` y `retry-11`, ninguna de las cuales entregó. No sostiene H2.
 - **12 `closed`** con el veredicto de arriba.
 - Frente restante: **02 -> 14 -> 15**.
+
+## Cierre del programa — 2026-07-30
+
+Los 26 tickets locales están `closed`. El informe final exigido por
+`AUTONOMOUS_CLOSURE_PLAN.md` §9 vive en `docs/tesis/CLOSURE-REPORT.md`.
+
+- **Gate final PASS** sobre `a430a57` con Node `22.23.1` / pnpm `7.29.3`:
+  `pnpm test` 220 archivos, **1534 passed, 2 skipped, 0 failed**; ambos
+  typechecks, `pnpm build` y `pnpm web:build` PASS; `git diff --check` exit 0.
+- **H1 sostenido con límite declarado**; **H2 no sostenido**, con cada causa
+  terminal atribuida y ninguna imputada a la política C.
+- `main.pdf` (47 páginas) y `presentacion.pdf` (30 páginas) compilan desde limpio
+  sin referencias ni citas rotas.
+- Once commits locales; **sin push**. `origin/main` sigue en `c501c7e`.
+- Trabajo que queda fuera de este cierre, por decisión explícita de alcance: la
+  serie compacta WC1–WC3, una entrega ancha verificada, y el anclaje de
+  `minimumAdvantage` y `maxLeafPlannedPaths`.
