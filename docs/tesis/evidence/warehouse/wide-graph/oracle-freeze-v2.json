@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "frozenAt": "2026-07-29T16:53:22.8786424Z",
   "source": {
-    "commit": "4fe854425fa04341f123b13c93a3bc08b9223702",
-    "tree": "3012b86802b06f8782390171ebb36f09fa1f40cb",
+    "commit": "1a68d48221de0ac9ca8f284b5d84cbdfbfb31134",
+    "tree": "e6daeefe05393591b7cd1c1a5bcd1fe0f2b487c1",
     "workingTree": "clean"
   },
   "policy": {
     "version": "adaptive-utility/3.1.0-pilot",
     "distPath": "packages/decomposer/dist/index.js",
-    "distSha256": "f95b81959faf0a23b9f3a0c8814dd90cf894db8907ef17f8430419499bed16bc"
+    "distSha256": "a2f0b1e676ef4006c3fecc837b9a48cc50b0136bfdda2bf616ce638924c67600"
   },
   "toolchain": {
     "node": "22.23.1",
@@ -124,5 +124,17 @@
       "checks"
     ]
   },
-  "historyPolicy": "A stronger oracle requires a new contract version and a new series; historical receipts are never reinterpreted."
+  "historyPolicy": "A stronger oracle requires a new contract version and a new series; historical receipts are never reinterpreted.",
+  "supersedes": {
+    "reason": "Ticket 02 changed packages/decomposer to refuse historical C1/C2 replay, so the pinned dist no longer exists in the build. No oracle ever ran under the superseded point: no wide cell produced a candidate.",
+    "supersededAt": "2026-07-30",
+    "source": {
+      "commit": "4fe854425fa04341f123b13c93a3bc08b9223702",
+      "tree": "3012b86802b06f8782390171ebb36f09fa1f40cb"
+    },
+    "policy": {
+      "distSha256": "f95b81959faf0a23b9f3a0c8814dd90cf894db8907ef17f8430419499bed16bc"
+    }
+  },
+  "reissuedAt": "2026-07-30"
 }

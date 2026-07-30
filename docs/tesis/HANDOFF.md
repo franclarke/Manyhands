@@ -1637,3 +1637,37 @@ Los 26 tickets locales están `closed`. El informe final exigido por
 - Trabajo que queda fuera de este cierre, por decisión explícita de alcance: la
   serie compacta WC1–WC3, una entrega ancha verificada, y el anclaje de
   `minimumAdvantage` y `maxLeafPlannedPaths`.
+
+## Ajuste de alcance y re-encuadre — 2026-07-30 (posterior al cierre)
+
+Francisco revisó el cierre y ajustó el encuadre. El trabajo responde **dos
+preguntas**, y el manuscrito no las enunciaba así:
+
+- **PI-1** — ¿puede construirse un orquestador que descomponga en un DAG y llegue
+  a una entrega verificada?
+- **PI-2** — ¿puede una política decidir **si** dividir y **seleccionar** entre
+  los cortes propuestos, hasta llegar a hojas implementables?
+
+**PI-2 dice «seleccionar», no «encontrar», por decisión explícita.** Que una
+política determinista no puede inventar el corte es un resultado de este trabajo,
+obtenido por refutación en un run real. Sostener la formulación fuerte haría que
+la tesis se contradijera con su propio capítulo de metodología.
+
+No se amplió el alcance: no hubo runs nuevos. Lo que se hizo fue:
+
+1. **Re-encuadre** de preguntas, resumen, alcance y conclusiones.
+2. **Análisis de calidad de hoja sobre journals ya preservados**, con un
+   derivador versionado (`scripts/derive-leaf-outcomes.mjs`): 84 intentos de hoja
+   en 37 journals, 70 candidatos, 10 fallos, 4 sin hecho terminal.
+
+Resultado del análisis, que responde la cola de PI-2: **ningún proxy de tamaño
+separa entrega de fallo.** El tamaño de alcance parece separar (mediana 5 contra
+15) hasta que se leen las causas: seis de los diez fallos —pool de worktrees,
+`git worktree add`, ejecutores sin causa reconocible, un defecto de producto— le
+habrían ocurrido a una hoja de cualquier tamaño, y la diferencia de medianas mide
+de qué repositorio viene la hoja. De los cuatro que sí admiten lectura por
+tamaño, los vencimientos cubren casi todo el rango y **la única violación de
+alcance ocurrió en la hoja más chica del corpus**.
+
+La política sabe cuándo dividir mejor que cuándo parar, y ahora eso está dicho
+con datos en vez de por afirmación. No se propuso ningún valor nuevo para el tope.

@@ -64,10 +64,30 @@ a430a57 docs(thesis): report the Warehouse line in the manuscript
 
 ## 4. Comandos y resultados del gate final
 
-Sobre `a430a57`, árbol limpio, Node `v22.23.1` y pnpm `7.29.3`:
+### Corrección al primer gate reportado
+
+El gate que este informe reportó primero sobre `a430a57` corrió `pnpm test`
+**antes** de `pnpm build`, de modo que la suite se ejecutó contra un `dist`
+anterior al fix del ticket 02 — exactamente la trampa que el propio HANDOFF
+documenta. Al reconstruir, el test de reconciliación del freeze del oráculo
+falló: el hash de `dist` pinneado ya no existía en el build.
+
+Eso no se resolvió reescribiendo el resultado. Se hizo lo siguiente:
+
+- **El freeze del oráculo v2 se reemitió** sobre el punto vigente, con un bloque
+  `supersedes` que conserva el commit y el hash superados y la razón. Ningún
+  oráculo corrió bajo el punto anterior: ninguna celda ancha produjo candidato,
+  así que la reemisión no reinterpreta ninguna medición.
+- **El gate se repitió en el orden correcto**, `pnpm build` antes de `pnpm test`.
+
+### Gate vigente
+
+Sobre `1a68d48`, árbol limpio, Node `v22.23.1` y pnpm `7.29.3`, con `pnpm build`
+ejecutado antes de la suite:
 
 | Comando | Resultado |
 |---|---|
+| `pnpm build` (primero) | PASS |
 | `pnpm test` | **PASS** — 220 archivos, 1534 passed, 2 skipped, 0 failed |
 | `pnpm -r --filter "./packages/*" typecheck` | PASS |
 | `pnpm --filter @manyhands/web exec tsc --noEmit` | PASS |
