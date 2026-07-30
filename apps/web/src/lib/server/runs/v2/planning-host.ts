@@ -61,8 +61,9 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
     const planningObserverFor = (attemptOffset: number): WorkBreakdownPlanningObserver => ({
       onAttemptStarted: async ({ attempt }) => {
         const globalAttempt = attemptOffset + attempt;
+        const eventSequence = events.length + 1;
         events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
-          eventId: `planning:${input.runId}:attempt:${globalAttempt}:started`,
+          eventId: `planning:${input.runId}:attempt:${globalAttempt}:started:${eventSequence}`,
           occurredAt: dependencies.now(),
           type: "planning.attempt_started",
           payload: { attempt: globalAttempt }
@@ -70,8 +71,9 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       },
       onUnitDiscovered: async ({ attempt, unit }) => {
         const globalAttempt = attemptOffset + attempt;
+        const eventSequence = events.length + 1;
         events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
-          eventId: `planning:${input.runId}:attempt:${globalAttempt}:node:${unit.key}`,
+          eventId: `planning:${input.runId}:attempt:${globalAttempt}:node:${unit.key}:${eventSequence}`,
           occurredAt: dependencies.now(),
           type: "planning.node_discovered",
           payload: {
@@ -86,8 +88,9 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       },
       onAttemptFailed: async ({ attempt, reason }) => {
         const globalAttempt = attemptOffset + attempt;
+        const eventSequence = events.length + 1;
         events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
-          eventId: `planning:${input.runId}:attempt:${globalAttempt}:failed`,
+          eventId: `planning:${input.runId}:attempt:${globalAttempt}:failed:${eventSequence}`,
           occurredAt: dependencies.now(),
           type: "planning.attempt_failed",
           payload: { attempt: globalAttempt, reason }

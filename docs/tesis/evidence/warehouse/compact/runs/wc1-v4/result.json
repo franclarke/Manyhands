@@ -1,0 +1,11 @@
+{
+  "cellId": "warehouse-compact-wc1-v4",
+  "condition": "C",
+  "runId": "bf9926e4-0edf-4e94-949d-8ac27b183cef",
+  "started": "2026-07-30T11:35:45.725Z",
+  "finished": "2026-07-30T11:37:16.913Z",
+  "outcome": {
+    "lifecycle": "failed",
+    "receipt": null
+  }
+}

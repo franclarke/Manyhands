@@ -587,6 +587,14 @@
     `docs/tesis/evidence/scripts/start-wc1-server.ps1`, que fija el token de
     sesion y arranca Next en el puerto congelado. Se puede repetir el preflight;
     todavia no se consume la candidate.
+98. **Candidate WC1 v4 adversa y defecto de lifecycle.** La unica corrida
+    autorizada creo el run `bf9926e4-0edf-4e94-949d-8ac27b183cef` y termino en
+    `failed` durante planning porque `codex-cli` informo agotamiento de cuota.
+    No hubo candidate SHA, receipt, delivery ni oraculo; se preserva
+    `oracle-result.json` como `not_run`. El retry de capacidad tambien expuso
+    un `eventId` duplicado para `planning.attempt_started`; la regresion y la
+    correccion basada en secuencia durable quedan en el working tree para
+    commit. Tests focales 34/34 y typechecks web/decomposer PASS.
 97. **Preflight WC1 v4 verde.** El lanzador persistente paso `/api/workspaces`
     con estado `200` usando el token compartido en `3114`, y el target externo
     permanece limpio en W1 `71f61c9`. Se preservo

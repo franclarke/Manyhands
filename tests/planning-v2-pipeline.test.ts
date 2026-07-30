@@ -84,6 +84,31 @@ describe("planning V2 vertical slice", () => {
     expect((await events.load("run-failed")).map((event) => event.type)).toEqual(["run.created", "repository.inspected", "planning.failed"]);
   });
 
+  it("keeps planning event ids unique when a capacity retry reuses the logical attempt", async () => {
+    const events = new JsonlRunEventStore({ directory });
+    const snapshots = new RunSnapshotStore({ directory, events });
+    const result = await runPlanningV2({ runId: "run-capacity-retry", goal: "Build booking", repoPath: "C:/repo/booking", targetFingerprint: "target-1", baseCommit: "1".repeat(40), authority }, {
+      events,
+      snapshots,
+      inspect: async () => bookingSnapshot(),
+      plan: async (_input, observer) => {
+        await observer.onAttemptStarted?.({ attempt: 1 });
+        await observer.onAttemptFailed?.({ attempt: 1, reason: "provider capacity: throttled (attempt not consumed)" });
+        await observer.onAttemptStarted?.({ attempt: 1 });
+        return bookingBreakdown();
+      },
+      compile: (input) => compileGraphRevision(input, compilerDependencies),
+      now: () => "2026-07-17T01:00:00.000Z"
+    });
+
+    expect(result.lifecycle).toBe("needs_approval");
+    const persisted = await events.load("run-capacity-retry");
+    const planningAttemptEvents = persisted.filter((event) => event.type === "planning.attempt_started" || event.type === "planning.attempt_failed");
+    expect(planningAttemptEvents).toHaveLength(3);
+    expect(new Set(planningAttemptEvents.map((event) => event.eventId)).size).toBe(3);
+    expect(planningAttemptEvents.map((event) => event.payload.attempt)).toEqual([1, 1, 1]);
+  });
+
   it("persists the selected candidate when compiler review rejects it", async () => {
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });

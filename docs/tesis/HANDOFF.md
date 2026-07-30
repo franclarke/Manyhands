@@ -2035,6 +2035,29 @@ Estado de reanudacion: committear el instrumento y repetir el preflight v4
 con el proceso persistente; si `/api/workspaces` y el target W1 limpio pasan,
 ejecutar una sola candidate con el mismo token en el driver.
 
+## Checkpoint candidate WC1 v4 adversa y regresion de lifecycle - 2026-07-30
+
+La unica candidate autorizada del freeze v4 creo el run
+`bf9926e4-0edf-4e94-949d-8ac27b183cef` y termino en `failed` durante planning.
+El proveedor informo agotamiento de cuota para `codex-cli`; no hubo stdout del
+executor, candidate SHA, receipt, delivery ni oraculo. El resultado queda
+preservado como `not_run` en `runs/wc1-v4/oracle-result.json`; esto no es
+evidencia positiva de WC1 y no se repite la corrida.
+
+La misma evidencia revelo un defecto real de lifecycle: el retry de capacidad
+reutilizo el intento logico 1 y `planning-host` genero el mismo `eventId` para
+un nuevo `planning.attempt_started`, provocando el error durable
+`already used with different content`. Se agrego una regresion productiva y se
+corrigio el ID para que incluya la secuencia durable del evento, manteniendo el
+payload `attempt=1`. Verificacion: 34/34 tests focales y typechecks web /
+decomposer PASS; el servidor 3114 fue detenido y no quedan procesos de esta
+candidate.
+
+Estado de reanudacion: committear esta correccion y ejecutar las reviews
+independientes. WC1 queda sin candidate por falta de cuota; no iniciar WC2/WC3
+ni N=4/N=8/N=16 hasta decidir si el instrumento puede volver a usarse con
+cuota disponible y un freeze sucesor explicito.
+
 ## Checkpoint preflight WC1 v4 verde - 2026-07-30
 
 El lanzador persistente paso el preflight: `/api/workspaces` respondio `200`

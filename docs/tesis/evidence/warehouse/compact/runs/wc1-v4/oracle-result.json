@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "freezeId": "warehouse-compact-v4",
+  "cellId": "warehouse-compact-wc1-v4",
+  "runId": "bf9926e4-0edf-4e94-949d-8ac27b183cef",
+  "outcome": "not_run",
+  "reason": "The sole candidate execution failed during planning because codex-cli reported provider usage exhaustion; no candidate SHA, receipt or delivery existed. The persisted lifecycle also exposed a duplicate planning attempt event id when the capacity retry reused logical attempt 1.",
+  "candidateSha": null,
+  "receipt": null,
+  "delivery": null,
+  "preservedAt": "2026-07-30T08:41:12-03:00"
+}

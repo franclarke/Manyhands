@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 2,
+  "runId": "bf9926e4-0edf-4e94-949d-8ac27b183cef",
+  "eventSequence": 5,
+  "lastEventId": "planning:bf9926e4-0edf-4e94-949d-8ac27b183cef:failed:5",
+  "operationId": "1f70d364-ad46-40cc-b98e-e347937f917e",
+  "fencingToken": 1,
+  "projection": {
+    "runId": "bf9926e4-0edf-4e94-949d-8ac27b183cef",
+    "goal": "Starting from the verified W1 Warehouse codebase, implement WC1 as a complete vertical slice. Add atomic orders and reservations with valid order status transitions. Add a versioned HTTP API under /api/v1 for state, order creation, reservation, status transitions and deterministic simulation actions play, pause, step and reset. Add a monotonic Server-Sent Events stream at /api/v1/events. Add a static accessible browser UI served by the start script: an SVG warehouse tower with heatmap plus exact textual bin detail including empty bins, simulation controls operable by keyboard, explicit loading/empty/error/connected states, reduced-motion support and status communication not based on color alone. Add src/probe/wc1.ts and a package script study:wc1-probe that emits one deterministic JSON object with schemaVersion 1, increment WC1, scenario thesis-seed-2026, bins, occupiedBins, emptyBins and simulationControls. Preserve all W1 behavior. Keep the implementation dependency-free and add public behavior tests for atomicity, invalid transitions, API/SSE, simulation, tower accessibility and probe determinism. Do not implement WC2 or WC3 in this cell.",
+    "lifecycle": "failed",
+    "sequence": 5,
+    "appliedEventIds": [
+      "run:bf9926e4-0edf-4e94-949d-8ac27b183cef:created",
+      "repository:sha256:05a39772a471281a87c42bce7d3c3510f092d327322ded5ed70fc5e9c793e8de:inspection:2",
+      "planning:bf9926e4-0edf-4e94-949d-8ac27b183cef:attempt:1:started",
+      "planning:bf9926e4-0edf-4e94-949d-8ac27b183cef:attempt:1:failed",
+      "planning:bf9926e4-0edf-4e94-949d-8ac27b183cef:failed:5"
+    ],
+    "decisions": {},
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "failureReason": "Event id planning:bf9926e4-0edf-4e94-949d-8ac27b183cef:attempt:1:started was already used with different content."
+  },
+  "checksum": "fd95954d87dce01d57006b4c47644fca2ee3a7d8e9a8d53f78ac4dee833798e5"
+}
