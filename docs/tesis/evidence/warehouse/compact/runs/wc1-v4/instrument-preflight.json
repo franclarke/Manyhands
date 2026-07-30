@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "freezeId": "warehouse-compact-v4",
+  "cellId": "warehouse-compact-wc1-v4",
+  "outcome": "pass",
+  "server": {
+    "baseUrl": "http://127.0.0.1:3114",
+    "endpoint": "/api/workspaces",
+    "status": 200,
+    "sessionTokenEnv": "MANYHANDS_SESSION_TOKEN"
+  },
+  "target": {
+    "repository": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-wc1-candidate",
+    "head": "71f61c9efa222103ca2fb2f67692434ab493d75c",
+    "clean": true
+  },
+  "runId": null,
+  "candidateSha": null,
+  "receipt": null,
+  "delivery": null,
+  "oracle": "not_run",
+  "preservedAt": "2026-07-30T09:00:00-03:00"
+}

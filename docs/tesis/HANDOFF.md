@@ -2034,3 +2034,15 @@ el lanzador, no cambia el freeze ni consume la candidate.
 Estado de reanudacion: committear el instrumento y repetir el preflight v4
 con el proceso persistente; si `/api/workspaces` y el target W1 limpio pasan,
 ejecutar una sola candidate con el mismo token en el driver.
+
+## Checkpoint preflight WC1 v4 verde - 2026-07-30
+
+El lanzador persistente paso el preflight: `/api/workspaces` respondio `200`
+en `http://127.0.0.1:3114` con `MANYHANDS_SESSION_TOKEN`, y el repositorio
+externo permanece limpio en W1 `71f61c9`. Se registro el resultado en
+`runs/wc1-v4/instrument-preflight.json`; todavia no existe runId, candidate,
+receipt, delivery ni oraculo. Esto habilita consumir la unica candidate WC1 v4.
+
+Estado de reanudacion: iniciar el driver con el mismo token exportado. Si la
+candidate termina sin SHA o queda en decision, preservar el estado y detener
+la serie; no resolver decisiones ni hacer retry silencioso.

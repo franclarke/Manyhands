@@ -587,3 +587,8 @@
     `docs/tesis/evidence/scripts/start-wc1-server.ps1`, que fija el token de
     sesion y arranca Next en el puerto congelado. Se puede repetir el preflight;
     todavia no se consume la candidate.
+97. **Preflight WC1 v4 verde.** El lanzador persistente paso `/api/workspaces`
+    con estado `200` usando el token compartido en `3114`, y el target externo
+    permanece limpio en W1 `71f61c9`. Se preservo
+    `runs/wc1-v4/instrument-preflight.json`; aun no existe runId ni candidate.
+    La unica candidate WC1 v4 queda habilitada.
