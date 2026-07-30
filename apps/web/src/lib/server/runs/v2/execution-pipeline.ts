@@ -30,9 +30,10 @@ import {
   type RunLifecycle,
   type RunProjection
 } from "@manyhands/run-coordinator";
-import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
+import { EventStoreCompactor, JsonlRunEventStore, RunSnapshotStore, verifyAndRecoverRunStore } from "@manyhands/run-store";
 import { GraphRevisionSchema, type GraphRevision } from "@manyhands/task-graph";
-import { InMemoryTraceStore } from "@manyhands/trace-store";
+import type { GranularityPolicyManifest } from "@manyhands/shared";
+import { JsonlTraceStore } from "@manyhands/trace-store";
 
 import { executionSelection, repairSelection } from "../executor-selection";
 import { DEFAULT_STALE_MS } from "../interrupted";
@@ -138,8 +139,21 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });
     const authority = { operationId: lease.operationId, fencingToken: lease.fencingToken };
+    const recovery = await verifyAndRecoverRunStore(runId, { store: events });
+    if (recovery.status === "corrupt") throw new Error(`Run ${runId} has a corrupt durable event store.`);
     const loaded = await events.load(runId);
     const prepared = loadApprovedExecutionPlanV2(loaded);
+    const policyConfig = prepared.state.granularityStrategy?.config;
+    const granularityPolicy: GranularityPolicyManifest | undefined =
+      policyConfig?.maxLeafPlannedPaths === undefined
+        ? undefined
+        : {
+            policyVersion: prepared.state.granularityStrategy!.policyVersion,
+            minimumAdvantage: policyConfig.minimumAdvantage,
+            maxLeafContextTokens: policyConfig.maxLeafContextTokens,
+            maxLeafScopePaths: policyConfig.maxLeafScopePaths,
+            maxLeafPlannedPaths: policyConfig.maxLeafPlannedPaths
+          };
     const execution = executionSelection(run);
     const repair = repairSelection(run);
     const config = ExecutionConfigSchema.parse(run.executionConfig ?? {});
@@ -155,7 +169,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
       git,
       workspaceProvider: new PooledExecutionWorkspaceProvider({ pool: worktreePool })
     });
-    const traceStore = new InMemoryTraceStore();
+    const traceStore = new JsonlTraceStore({ runId, directory });
     const nodeExecutor = new V2NodeExecutor({
       git,
       repoRoot,
@@ -238,6 +252,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
           availableExecutorNodeIds: executorReady ? Object.keys(prepared.graph.nodes) : [],
           evaluatedAt: new Date().toISOString(),
           conflictConstraints: conflictEvidence(prepared.graph),
+          ...(granularityPolicy === undefined ? {} : { granularityPolicy }),
           target: {
             sourceTargetFingerprint: run.targetContext!.fingerprint,
             targetBranch: run.targetContext!.sourceBranch,
@@ -247,6 +262,7 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     });
     const persistedEvents = await events.load(runId);
     await snapshots.write(runId, authority, state, state.sequence, persistedEvents.at(-1)!.eventId);
+    await new EventStoreCompactor(events).compactIfNeeded(runId, authority);
     await updateRunForOperation(runId, lease, (current) => projectV2RunRecordCache(current, state, persistedEvents));
   } catch (error) {
     await recordExecutionFailure(runId, lease, error).catch(() => undefined);
@@ -338,7 +354,8 @@ function finalCandidatePort(input: { git: SimpleGitRunner; repoRoot: string; bas
         artifactIds: [...request.artifactIds].sort(),
         evidenceMatrixId: prepared.evidenceMatrixId,
         validationRecipeDigest: request.validationRecipeDigest,
-        deliveryTarget: request.targetBranch
+        deliveryTarget: request.targetBranch,
+        ...(request.granularityPolicy === undefined ? {} : { granularityPolicy: request.granularityPolicy })
       };
       return { manifestId, finalManifest };
     }

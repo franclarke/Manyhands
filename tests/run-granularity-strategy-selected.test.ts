@@ -61,6 +61,18 @@ describe("planning.granularity_strategy_selected", () => {
     expect(state.granularityStrategy?.assessments["node-warehouse-web"]?.splitAdvantage).toBe(0.6);
   });
 
+  it("keeps historical journals readable when the planned-path ceiling is absent", () => {
+    const selected = events()[1] as Extract<RunEvent, { type: "planning.granularity_strategy_selected" }>;
+    const { maxLeafPlannedPaths: _omitted, ...legacyConfig } = selected.payload.config;
+    const legacy = [
+      events()[0]!,
+      { ...selected, payload: { ...selected.payload, config: legacyConfig } }
+    ] as RunEvent[];
+
+    expect(() => foldRun(legacy)).not.toThrow();
+    expect(foldRun(legacy).granularityStrategy?.config.maxLeafPlannedPaths).toBeUndefined();
+  });
+
   it("is rejected after planning has failed", () => {
     const selected = events()[1]!;
     const sequence = [

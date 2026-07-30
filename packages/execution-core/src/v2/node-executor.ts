@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { ArtifactContract, TaskContractBundle } from "@manyhands/contracts";
-import type { CriterionEvidenceObservation } from "@manyhands/shared";
+import type { CriterionEvidenceObservation, GranularityPolicyManifest } from "@manyhands/shared";
 import type { GraphRevision, TaskNodeV2 } from "@manyhands/task-graph";
 import type { TraceStore } from "@manyhands/trace-store";
 
@@ -89,6 +89,7 @@ export interface V2FinalCandidatePort {
     graphRevision: number;
     artifactIds: string[];
     validationRecipeDigest: string;
+    granularityPolicy?: GranularityPolicyManifest;
   }): Promise<{ manifestId: string; finalManifest: FinalArtifactManifest }>;
 }
 
@@ -105,6 +106,7 @@ export interface V2PhysicalNodeExecutionInput {
   repairSelection: StageSelection;
   config: ExecutionConfig;
   target: { sourceTargetFingerprint: string; targetBranch: string; targetHead: string };
+  granularityPolicy?: GranularityPolicyManifest;
   signal?: AbortSignal;
 }
 
@@ -287,7 +289,8 @@ export class V2NodeExecutor {
         ...input.target,
         graphRevision: input.graph.revision,
         artifactIds: input.contract.task.produces.map(({ id }) => id),
-        validationRecipeDigest: requiredValidationRecipeDigest(success.evidenceMatrix)
+        validationRecipeDigest: requiredValidationRecipeDigest(success.evidenceMatrix),
+        ...(input.granularityPolicy === undefined ? {} : { granularityPolicy: input.granularityPolicy })
       });
       return {
         ...success,
@@ -421,7 +424,8 @@ export class V2NodeExecutor {
           ...input.target,
           graphRevision: input.graph.revision,
           artifactIds: input.contract.task.produces.map(({ id }) => id),
-          validationRecipeDigest: requiredValidationRecipeDigest(evidenceMatrix)
+          validationRecipeDigest: requiredValidationRecipeDigest(evidenceMatrix),
+          ...(input.granularityPolicy === undefined ? {} : { granularityPolicy: input.granularityPolicy })
         });
         finalManifestId = preparedFinal.manifestId;
         finalManifest = preparedFinal.finalManifest;

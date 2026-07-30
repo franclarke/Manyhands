@@ -17,7 +17,7 @@ import {
   type RunLifecycle,
   type RunProjection
 } from "@manyhands/run-coordinator";
-import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
+import { EventStoreCompactor, JsonlRunEventStore, RunSnapshotStore, verifyAndRecoverRunStore } from "@manyhands/run-store";
 
 import { getRunRepository } from "../store";
 import { DEFAULT_STALE_MS } from "../interrupted";
@@ -48,7 +48,10 @@ export interface CancellationResultV2 {
 }
 
 export async function loadRunProjectionV2(runId: string): Promise<RunProjection> {
-  return foldRun(await eventStore().load(runId));
+  const store = eventStore();
+  const recovery = await verifyAndRecoverRunStore(runId, { store });
+  if (recovery.status === "corrupt") throw new Error(`Run ${runId} has a corrupt durable event store.`);
+  return foldRun(await store.load(runId));
 }
 
 export async function resolveDecisionV2(
@@ -243,6 +246,7 @@ async function cacheProjection(
     state.sequence,
     events.at(-1)!.eventId
   );
+  await new EventStoreCompactor(store).compactIfNeeded(runId, authority(lease));
   return updateRunForOperation(runId, lease, (current) => projectV2RunRecordCache(current, state, events));
 }
 

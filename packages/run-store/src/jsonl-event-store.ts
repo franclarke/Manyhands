@@ -255,7 +255,11 @@ export class JsonlRunEventStore implements FencedRunEventStore {
     const current = previous.catch(() => undefined).then(async () => {
       const release = await acquireDurableLock(`${this.eventLogPath(runId)}.lock`);
       try {
-        return await operation();
+        const result = await operation();
+        // The heartbeat records ownership loss; renew once at the write
+        // boundary so callers cannot report success after a lease takeover.
+        await release.renew();
+        return result;
       } finally {
         await release();
       }

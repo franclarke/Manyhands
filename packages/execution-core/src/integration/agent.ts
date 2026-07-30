@@ -1341,7 +1341,8 @@ export class IntegrationAgent {
         const scopeCheck = this.scopeChecker.check({
           changedFiles: committedFiles,
           executionScope: params.executionScope,
-          forbiddenPaths: params.forbiddenPaths
+          forbiddenPaths: params.forbiddenPaths,
+          worktreeRoot: worktree.path
         });
         await this.git.restoreManagedWorktree(worktree.path, baseHead);
         execError("integrate", "repair agent committed unexpectedly", {
@@ -1432,7 +1433,8 @@ export class IntegrationAgent {
       const scopeCheck = this.scopeChecker.check({
         changedFiles,
         executionScope: params.executionScope,
-        forbiddenPaths: params.forbiddenPaths
+        forbiddenPaths: params.forbiddenPaths,
+        worktreeRoot: worktree.path
       });
       if (!scopeCheck.passed) {
         execWarn("integrate", "repair scope violation", {

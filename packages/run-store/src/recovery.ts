@@ -47,13 +47,17 @@ export async function verifyAndRecoverRunStore(
 
   const release = await acquireDurableLock(`${store.eventLogPath(runId)}.lock`);
   try {
+    const returnAfterOwnershipCheck = async <T>(value: T): Promise<T> => {
+      await release.renew();
+      return value;
+    };
     try {
       await readCompactedGeneration(directory, runId);
     } catch (error) {
       issues.push(`Compaction manifest was invalid: ${errorMessage(error)}`);
       const generation = await findLatestValidGeneration(directory, runId);
       if (generation === null) {
-        return corruptReport(runId, issues);
+        return await returnAfterOwnershipCheck(corruptReport(runId, issues));
       }
       await restoreCompactionManifest(directory, runId, generation);
       recoveredGeneration = generation.generation;
@@ -67,11 +71,11 @@ export async function verifyAndRecoverRunStore(
     const inspection = await store.inspect(runId);
     if (inspection.status === "corrupt") {
       issues.push(inspection.reason ?? "Event log integrity verification failed.");
-      return corruptReport(runId, issues, repairedTrailingBytes, recoveredGeneration);
+      return await returnAfterOwnershipCheck(corruptReport(runId, issues, repairedTrailingBytes, recoveredGeneration));
     }
     if (inspection.status === "degraded") {
       issues.push(inspection.reason ?? "Event log remains degraded after repair.");
-      return corruptReport(runId, issues, repairedTrailingBytes, recoveredGeneration);
+      return await returnAfterOwnershipCheck(corruptReport(runId, issues, repairedTrailingBytes, recoveredGeneration));
     }
 
     const projection = inspection.events.length === 0 ? null : foldRunEvents(inspection.events);
@@ -89,7 +93,7 @@ export async function verifyAndRecoverRunStore(
       projection,
       recoverySnapshotPath
     };
-    return report;
+    return await returnAfterOwnershipCheck(report);
   } finally {
     await release();
   }

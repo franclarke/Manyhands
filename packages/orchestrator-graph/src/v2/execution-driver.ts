@@ -4,7 +4,7 @@ import {
   type TaskContractBundle
 } from "@manyhands/contracts";
 import type { ConflictConstraintEvidence } from "@manyhands/conflict-risk";
-import type { FinalArtifactManifest } from "@manyhands/shared";
+import type { FinalArtifactManifest, GranularityPolicyManifest } from "@manyhands/shared";
 import {
   computeInputFingerprint,
   adoptAttemptResult,
@@ -48,6 +48,7 @@ export interface V2NodeExecutionInput {
   consumedArtifacts: AdoptedArtifact[];
   outputArtifactContract: ArtifactContract;
   executorProfile: V2ExecutorProfile;
+  granularityPolicy?: GranularityPolicyManifest;
 }
 
 export interface V2RepairObservation {
@@ -106,6 +107,7 @@ export interface V2ExecutionRunInput {
   contracts: TaskContractBundle[];
   repositoryContextDigest: string;
   executorProfile: V2ExecutorProfile;
+  granularityPolicy?: GranularityPolicyManifest;
   effectiveConfig: { maxParallel: number; maxTokensTotal?: number; maxCostUsd?: number };
   materializableNodeIds: string[];
   availableExecutorNodeIds: string[];
@@ -693,7 +695,8 @@ function createAttempt(
       contract,
       consumedArtifacts,
       outputArtifactContract,
-      executorProfile: run.executorProfile
+      executorProfile: run.executorProfile,
+      ...(run.granularityPolicy === undefined ? {} : { granularityPolicy: run.granularityPolicy })
     }
   };
 }

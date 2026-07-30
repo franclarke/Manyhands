@@ -4,7 +4,7 @@ import { buildAgentEnvironment } from "@manyhands/execution-core";
 import { NonRetryablePlanningError, PlanningCapacityError, WorkBreakdownPlanner, compileGraphRevision, parseWorkBreakdownProgressLine, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
 import { foldRun } from "@manyhands/run-coordinator";
 import { buildFastRepositorySnapshot } from "@manyhands/repository-index";
-import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
+import { EventStoreCompactor, JsonlRunEventStore, RunSnapshotStore, verifyAndRecoverRunStore } from "@manyhands/run-store";
 import { killCliProcessTree, resolveCliBinaryPath, resolveCliProcessInvocation } from "@manyhands/shared/node-cli-process";
 import { planningSelection } from "../executor-selection";
 import type { RunRecord } from "../schema";
@@ -61,6 +61,8 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });
     const authority = { operationId: lease.operationId, fencingToken: lease.fencingToken };
+    const recovery = await verifyAndRecoverRunStore(runId, { store: events });
+    if (recovery.status === "corrupt") throw new Error(`Run ${runId} has a corrupt durable event store.`);
     const completed = await withRepositoryLease({ repoRoot: repoPath, runId }, async (_repositoryLease, repositorySignal) => {
       await events.assertAuthority(runId, authority);
       const planningSignal = AbortSignal.any([abort.signal, repositorySignal]);
@@ -102,7 +104,9 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
         nodeIdFor: (key) => stableId("node", key),
         now: () => new Date().toISOString()
       });
-      return { state, persistedEvents: await events.load(runId) };
+      const persistedEvents = await events.load(runId);
+      await new EventStoreCompactor(events).compactIfNeeded(runId, authority);
+      return { state, persistedEvents };
     });
     await updateRunForOperation(runId, lease, (current) =>
       projectV2RunRecordCache(current, completed.state, completed.persistedEvents)

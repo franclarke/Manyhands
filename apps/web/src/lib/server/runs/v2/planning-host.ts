@@ -244,7 +244,8 @@ function strategySelectedEvent(
       config: {
         minimumAdvantage: strategy.config.minimumAdvantage,
         maxLeafContextTokens: strategy.config.maxLeafContextTokens,
-        maxLeafScopePaths: strategy.config.maxLeafScopePaths
+        maxLeafScopePaths: strategy.config.maxLeafScopePaths,
+        maxLeafPlannedPaths: strategy.config.maxLeafPlannedPaths
       },
       assessments: Object.values(strategy.assessments).map((assessment) => ({
         unitKey: assessment.unitKey,

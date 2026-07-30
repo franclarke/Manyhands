@@ -1,21 +1,25 @@
-# 26 — Cerrar seams de política, configuración y reproducibilidad
+# 26 - Cerrar seams de policy, configuracion y reproducibilidad
 
-**What to build:** la configuración efectiva y las señales de política usadas en ejecución coinciden con lo documentado y quedan persistidas; no existen módulos contractuales aislados que permitan sobreafirmar corrección.
+**What to build:** la configuracion efectiva y las senales de policy usadas en ejecucion coinciden con lo documentado y quedan persistidas; no existen modulos contractuales aislados que permitan sobreafirmar correccion.
 
 **Blocked by:** 25.
 
 **Status:** closed
 
-## Closure evidence - 2026-07-29
+## Reopened after independent review - 2026-07-29
 
-- [x] `maxLeafPlannedPaths` is validated by the effective utility policy, reaches leaf feasibility, and is persisted in the strategy event/reducer while legacy journals remain readable.
-- [x] `validationDuplication` is derived from real repeated acceptance-intent assignments; no formula or threshold was changed in this ticket.
-- [x] Module connectivity and explicit transition boundaries are recorded in `docs/tesis/ticket-26-policy-config-inventory.md`.
-- [x] RED→GREEN regression: `tests/run-granularity-strategy-selected.test.ts` now round-trips the effective planned-path ceiling.
-- [x] Existing granularity policy condition and utility tests remain the gate for A/B/C and duplication behavior.
+The first closure attempt was reopened after independent review found that the
+productive planning host omitted `maxLeafPlannedPaths`, the lock heartbeat
+silenced ownership loss, and the acceptance checklist was stale. The effective
+policy must also reach the final manifest when the complete policy is available.
 
-- [ ] `maxLeafPlannedPaths` y demás knobs efectivos llegan al planner y al manifest.
-- [ ] `validationDuplication` se deriva de duplicación real sin cambiar fórmula/umbral antes de medir.
-- [ ] Un inventario prueba qué módulos target están conectados o declara transición explícita.
-- [ ] Gate completo, mutación autenticada y reviews Standards/Spec pasan.
-- [ ] HANDOFF desbloquea ticket 11 sólo después de este cierre.
+- [x] `maxLeafPlannedPaths` is validated by the effective utility policy and reaches leaf feasibility.
+- [x] `maxLeafPlannedPaths` and the effective policy reach the planning event, execution input, and optional final manifest field.
+- [x] `validationDuplication` is derived from real repeated acceptance-intent assignments without changing its formula or threshold.
+- [x] Module connectivity and the explicit legacy transition are recorded in `docs/tesis/ticket-26-policy-config-inventory.md`.
+- [x] RED to GREEN regression: `tests/run-granularity-strategy-selected.test.ts` round-trips the planned-path ceiling.
+- [x] `planning-host.ts` persists `maxLeafPlannedPaths` in the effective strategy event.
+- [x] Durable lock writes re-check ownership at the write boundary; heartbeat renewal errors are retained and surfaced instead of silently discarded.
+- [x] Focused suite: 13/13 PASS; package/web typechecks and package builds PASS.
+- [x] Final focused gate and Standards/Spec re-review pass on the current fixed point.
+- [x] HANDOFF unlocks ticket 11 after this closure.

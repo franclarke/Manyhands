@@ -45,8 +45,8 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 | CLAIM-044 | Run real Codex hasta `completed` con commit no vacío | missing | demonstrate | G4 |
 | CLAIM-050 | Event store JSONL append-only con escritura atómica `fsync` | implemented | clarify | G2 |
 | CLAIM-051 | SQLite WAL como índice secundario durable | missing | remove | G6 |
-| CLAIM-052 | Compactación por generaciones | partial | downgrade | G3/G6 |
-| CLAIM-053 | Recuperación durable ante crash | partial | implement + demonstrate | tickets 21, 23–25 |
+| CLAIM-052 | Compactación por generaciones | partial | implement + demonstrate | tickets 25, 14 |
+| CLAIM-053 | Recuperación durable ante crash | partial | implement + demonstrate | tickets 21, 23–25, 14 |
 | CLAIM-060 | Indexación nativa por ripgrep | implemented | demonstrate | G4 |
 | CLAIM-061 | Inicialización de índice < 150 ms | partial | downgrade | G5 |
 | CLAIM-062 | `RepositorySnapshot` cacheado por commit; dirty aislado | implemented | demonstrate | G4 |
@@ -445,10 +445,10 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 - **Source:** `docs/tesis/main.tex` Resumen, Obj. Específico 5, §3 (Persistencia).
 - **Target contract:** `docs/DECISIONS.md` A12; roadmap §4.2 (diferible).
 - **Status:** `partial`.
-- **Productive code:** `packages/run-store/src/compactor.ts` existe y se exporta. **[hecho]** No se confirmó que la ruta productiva la invoque como parte del lifecycle.
-- **Tests:** cobertura específica no confirmada en el inventario inspeccionado.
-- **Persisted evidence:** `none`.
-- **Gap:** existe el módulo, falta confirmar integración productiva y prueba.
+- **Productive code:** `packages/run-store/src/compactor.ts` se invoca desde los hosts V2 después de escrituras durables, con lock/fencing. **[hecho]**
+- **Tests:** `tests/store-recovery-traces-security.test.ts` cubre generación publicada, journal duplicado tras crash y recuperación. **[hecho]**
+- **Persisted evidence:** la suite focal es evidencia de mecanismo; falta aún una demostración externa de tesis. **[hecho]**
+- **Gap:** la evidencia científica de una serie productiva todavía no se debe inferir desde este test.
 - **Decision:** `downgrade` a "mecanismo disponible" o `defer` según lo requiera el recorrido de tesis.
 - **Thesis impact:** Resumen, Obj. Específico 5.
 - **Next gate:** G3/G6.
@@ -463,9 +463,9 @@ Distinción usada en todo el documento: **[hecho]** = observado en código/tests
 - **Productive code:** `packages/run-store/src/recovery.ts`, `durable-lock.ts`, `projection-fold.ts`, `snapshot-store.ts`; `apps/web/.../run-operation-lease.ts`, `repo-lock.ts`. **[hecho]**
 - **Tests:** `tests/integration-operation-recovery.test.ts`, `tests/run-store-lock-ownership-fencing.test.ts`, `tests/run-store-fencing.test.ts`, `tests/run-v2-cancellation.test.ts`.
 - **Persisted evidence:** `none` (formal).
-- **Gap:** claim/fence y takeover de procesos ya están conectados de forma
-  fail-closed al host V2; todavía faltan recovery/scheduling, integration
-  journal, snapshot recovery/compaction y trazas/stores durables productivos.
+- **Gap:** recovery, compaction y trazas durables ya están conectados al host V2
+  y tienen regresiones focales; el claim integral permanece `partial` hasta
+  completar la evidencia externa y la matriz final sin sobreafirmar cobertura.
 - **Decision:** `implement + demonstrate`.
 - **Thesis impact:** toda afirmación de recuperación integral queda no soportada hasta cerrar tickets 21, 23, 24 y 25.
 - **Next gate:** tickets 23–25.

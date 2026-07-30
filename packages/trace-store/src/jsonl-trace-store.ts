@@ -7,6 +7,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  truncateSync,
   writeSync
 } from "node:fs";
 import path from "node:path";
@@ -75,10 +76,14 @@ export class JsonlTraceStore implements TraceStore {
 
   list(): TraceEvent[] {
     if (!existsSync(this.tracePath())) return [];
-    const contents = readFileSync(this.tracePath(), "utf8");
+    let contents = readFileSync(this.tracePath(), "utf8");
     if (contents.length === 0) return [];
     if (!contents.endsWith("\n")) {
-      throw new Error(`Trace log ${this.tracePath()} contains an incomplete trailing record.`);
+      const lastNewline = contents.lastIndexOf("\n");
+      const validLength = lastNewline < 0 ? 0 : lastNewline + 1;
+      truncateSync(this.tracePath(), validLength);
+      contents = contents.slice(0, validLength);
+      if (contents.length === 0) return [];
     }
     return contents
       .split(/\r?\n/u)
@@ -165,7 +170,7 @@ function redactString(value: string): string {
     .replace(/\bgh[pousr]_[A-Za-z0-9]{8,}\b/gu, "[REDACTED]")
     .replace(/\bAKIA[A-Z0-9]{16}\b/gu, "[REDACTED]")
     .replace(/(https?:\/\/[^:/@\s]+:)[^@\s/]+@/giu, "$1[REDACTED]@")
-    .replace(/\b(API_KEY|ACCESS_TOKEN|CLIENT_SECRET|PASSWORD|PRIVATE_KEY)=([^\s]+)/giu, "$1=[REDACTED]");
+    .replace(/\b(API[_-]?KEY|ACCESS[_-]?TOKEN|CLIENT[_-]?SECRET|PASSWORD|PRIVATE[_-]?KEY|TOKEN|SECRET|AUTHORIZATION)\s*[:=]\s*([^\s,;]+)/giu, "$1=[REDACTED]");
 }
 
 function appendDurably(filePath: string, line: string): void {

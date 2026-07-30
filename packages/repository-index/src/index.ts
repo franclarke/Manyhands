@@ -200,21 +200,24 @@ export class TypeScriptRepositoryIndexer implements RepositoryIndexer {
       parsedFiles.push(await parseRepositoryFile(rootPath, filePath));
     }
     const files = parsedFiles.map((item) => item.file).sort((left, right) => left.path.localeCompare(right.path));
-    const symbols = parsedFiles
-      .flatMap((item) => item.symbols)
+    const allSymbols = parsedFiles.flatMap((item) => item.symbols);
+    const allImports = parsedFiles.flatMap((item) => item.imports);
+    const allExports = parsedFiles.flatMap((item) => item.exports);
+    const symbols = allSymbols
       .slice(0, limits.maxSymbols)
       .sort((left, right) => compareByPathThenName(left.filePath, left.name, right.filePath, right.name));
-    const imports = parsedFiles
-      .flatMap((item) => item.imports)
+    const imports = allImports
       .slice(0, limits.maxImports)
       .sort((left, right) => compareByPathThenName(left.filePath, left.moduleSpecifier, right.filePath, right.moduleSpecifier));
-    const exports = parsedFiles
-      .flatMap((item) => item.exports)
+    const exports = allExports
       .slice(0, limits.maxExports)
       .sort((left, right) => compareByPathThenName(left.filePath, left.moduleSpecifier ?? "", right.filePath, right.moduleSpecifier ?? ""));
     const diagnostics = parsedFiles
       .flatMap((item) => item.diagnostics)
       .concat(listed.diagnostics)
+      .concat(allSymbols.length > limits.maxSymbols ? [{ severity: "warning" as const, message: "repository index symbol budget reached" }] : [])
+      .concat(allImports.length > limits.maxImports ? [{ severity: "warning" as const, message: "repository index import budget reached" }] : [])
+      .concat(allExports.length > limits.maxExports ? [{ severity: "warning" as const, message: "repository index export budget reached" }] : [])
       .sort((left, right) => (left.filePath ?? "").localeCompare(right.filePath ?? "") || left.message.localeCompare(right.message));
 
     return RepositoryIndexSchema.parse({

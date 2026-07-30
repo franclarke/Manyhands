@@ -379,15 +379,16 @@ async function buildCanonicalIndex(input: {
     importedSymbols: [],
     declaredSymbols: [...file.exportedSymbols]
   }));
-  const symbols = parsedFiles
+  const allSymbols = parsedFiles
     .flatMap((parsed) => parsed.symbols)
-    .filter((symbol) => symbol.exported)
+    .filter((symbol) => symbol.exported);
+  const allExports = parsedFiles.flatMap((parsed) => parsed.exports);
+  const symbols = allSymbols
     .slice(0, input.limits.maxSymbols)
     .sort((left, right) =>
       left.filePath.localeCompare(right.filePath) || left.name.localeCompare(right.name)
     );
-  const exports = parsedFiles
-    .flatMap((parsed) => parsed.exports)
+  const exports = allExports
     .slice(0, input.limits.maxExports)
     .sort((left, right) =>
       left.filePath.localeCompare(right.filePath) ||
@@ -402,7 +403,14 @@ async function buildCanonicalIndex(input: {
     symbols,
     imports: [],
     exports,
-    diagnostics,
+    diagnostics: diagnostics.concat(
+      allSymbols.length > input.limits.maxSymbols
+        ? [{ severity: "warning" as const, message: "repository index symbol budget reached" }]
+        : [],
+      allExports.length > input.limits.maxExports
+        ? [{ severity: "warning" as const, message: "repository index export budget reached" }]
+        : []
+    ),
     metadata: {
       indexer: INDEXER_NAME,
       deterministic: true,

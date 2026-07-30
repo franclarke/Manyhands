@@ -168,7 +168,8 @@ export class ResultRecorder {
         createdFiles: await this.git.diffRangeAddedFiles({ cwd: worktree.path, from: baseHead, to: head }),
         executionScope: params.executionScope,
         scopeContract: params.scopeContract,
-        forbiddenPaths: params.forbiddenPaths
+        forbiddenPaths: params.forbiddenPaths,
+        worktreeRoot: worktree.path
       });
       if (!scopeCheck.passed) {
         this.appendScopeFailure(taskId, scopeCheck.violations);
@@ -228,7 +229,8 @@ export class ResultRecorder {
       createdFiles: await this.git.diffCachedAddedFiles(worktree.path),
       executionScope: params.executionScope,
       scopeContract: params.scopeContract,
-      forbiddenPaths: params.forbiddenPaths
+      forbiddenPaths: params.forbiddenPaths,
+      worktreeRoot: worktree.path
     });
     const diff = await this.git.diffCached(worktree.path);
 

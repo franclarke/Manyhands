@@ -8,6 +8,7 @@ const DEFAULT_TIMEOUT_MS = 5_000;
 export interface DurableLockOptions {
   staleAfterMs?: number;
   timeoutMs?: number;
+  renewIntervalMs?: number;
 }
 
 export interface DurableLockRelease {
@@ -41,8 +42,11 @@ export async function acquireDurableLock(
         { encoding: "utf8", mode: 0o600 }
       );
       let released = false;
+      let renewalError: unknown;
+      let renewTimer: ReturnType<typeof setInterval> | undefined;
       const renew = async (): Promise<void> => {
         if (released) return;
+        if (renewalError !== undefined) throw renewalError;
         const owner = JSON.parse(
           await readFile(path.join(lockPath, "owner.json"), "utf8")
         ) as { lockToken?: string; token?: string };
@@ -54,6 +58,7 @@ export async function acquireDurableLock(
       };
       const release = async () => {
         released = true;
+        if (renewTimer !== undefined) clearInterval(renewTimer);
         try {
           const owner = JSON.parse(
             await readFile(path.join(lockPath, "owner.json"), "utf8")
@@ -66,6 +71,15 @@ export async function acquireDurableLock(
         }
       };
       release.renew = renew;
+      const renewIntervalMs = options.renewIntervalMs ?? Math.max(1, Math.floor(staleAfterMs / 3));
+      if (renewIntervalMs > 0) {
+        renewTimer = setInterval(() => {
+          void renew().catch((error: unknown) => {
+            renewalError ??= error;
+          });
+        }, renewIntervalMs);
+        renewTimer.unref?.();
+      }
       return release;
     } catch (error) {
       if (!isAlreadyExists(error)) throw error;

@@ -17,6 +17,16 @@ export const EntityIdSchema = NonEmptyStringSchema.regex(
 
 export type EntityId = z.infer<typeof EntityIdSchema>;
 
+export const GranularityPolicyManifestSchema = z.object({
+  policyVersion: NonEmptyStringSchema,
+  minimumAdvantage: z.number().finite(),
+  maxLeafContextTokens: z.number().int().nonnegative(),
+  maxLeafScopePaths: z.number().int().positive(),
+  maxLeafPlannedPaths: z.number().int().positive()
+}).strict();
+
+export type GranularityPolicyManifest = z.infer<typeof GranularityPolicyManifestSchema>;
+
 export const FinalArtifactManifestSchema = z.object({
   commitSha: NonEmptyStringSchema,
   treeSha: NonEmptyStringSchema,
@@ -24,7 +34,8 @@ export const FinalArtifactManifestSchema = z.object({
   artifactIds: z.array(EntityIdSchema),
   evidenceMatrixId: EntityIdSchema,
   validationRecipeDigest: NonEmptyStringSchema,
-  deliveryTarget: NonEmptyStringSchema
+  deliveryTarget: NonEmptyStringSchema,
+  granularityPolicy: GranularityPolicyManifestSchema.optional()
 }).strict();
 
 export type FinalArtifactManifest = z.infer<typeof FinalArtifactManifestSchema>;

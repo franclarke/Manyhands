@@ -31,7 +31,11 @@ describe("durable recovery, traces and bounded grounding", () => {
       type: "run.created",
       payload: { goal: "recover" }
     }]);
+    const preCompactionJournal = await readFile(store.eventLogPath("run-recovery"), "utf8");
     await new EventStoreCompactor(store, { threshold: 1 }).compact("run-recovery", authority);
+    // Simulate a crash after publishing the generation manifest but before the
+    // active journal was cleared. Recovery must accept the duplicate prefix.
+    await writeFile(store.eventLogPath("run-recovery"), preCompactionJournal, "utf8");
     await store.appendFenced("run-recovery", 1, authority, [{
       eventId: "started",
       occurredAt: at,
@@ -67,6 +71,25 @@ describe("durable recovery, traces and bounded grounding", () => {
     }
   });
 
+  it("automatically renews a durable lock during a long operation", async () => {
+    const directory = await tempRoot("mh-lock-heartbeat-");
+    const lockPath = path.join(directory, "run.lock");
+    const lock = await acquireDurableLock(lockPath, {
+      staleAfterMs: 25,
+      timeoutMs: 15,
+      renewIntervalMs: 5
+    });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 60));
+      await expect(acquireDurableLock(lockPath, {
+        staleAfterMs: 25,
+        timeoutMs: 5
+      })).rejects.toThrow(/Timed out/iu);
+    } finally {
+      await lock();
+    }
+  });
+
   it("persists redacted traces across a new store instance", async () => {
     const directory = await tempRoot("mh-traces-");
     const first = new JsonlTraceStore({ runId: "run-traces", directory });
@@ -76,7 +99,7 @@ describe("durable recovery, traces and bounded grounding", () => {
       payload: {
         authorization: "Bearer super-secret-token",
         nested: { password: "do-not-persist" },
-        message: "token=visible-only-as-redacted"
+        message: "token=visible-only-as-redacted secret=embedded-secret"
       }
     });
 
@@ -86,7 +109,19 @@ describe("durable recovery, traces and bounded grounding", () => {
     expect(traces).toHaveLength(1);
     expect(serialized).not.toContain("super-secret-token");
     expect(serialized).not.toContain("do-not-persist");
+    expect(serialized).not.toContain("embedded-secret");
     expect(serialized).toContain("[REDACTED]");
+  });
+
+  it("repairs an incomplete trailing trace record on read", async () => {
+    const directory = await tempRoot("mh-traces-tail-");
+    const store = new JsonlTraceStore({ runId: "run-traces-tail", directory });
+    store.append({ type: "executor_output", actor: "agent", payload: { message: "complete" } });
+    const tracePath = store.tracePath();
+    await writeFile(tracePath, `${await readFile(tracePath, "utf8")}incomplete`, "utf8");
+
+    expect(store.list()).toHaveLength(1);
+    expect(await readFile(tracePath, "utf8")).toMatch(/\n$/u);
   });
 
   it("marks bounded grounding partial and does not claim omitted files", async () => {
@@ -113,6 +148,37 @@ describe("durable recovery, traces and bounded grounding", () => {
     ]));
     expect(snapshot.index?.files.map((file) => file.path)).not.toContain("b.ts");
     expect(createHash("sha256").update(JSON.stringify(snapshot.index)).digest("hex")).toHaveLength(64);
+  });
+
+  it("diagnoses symbol truncation instead of presenting a complete index", async () => {
+    const directory = await tempRoot("mh-grounding-symbols-");
+    await writeFile(path.join(directory, "a.ts"), "export const a = true;\nexport const aa = true;\n", "utf8");
+
+    const index = await new TypeScriptRepositoryIndexer().index({
+      rootPath: directory,
+      repositoryId: "bounded-symbols",
+      indexedAt: at,
+      limits: { maxSymbols: 1 }
+    });
+
+    expect(index.symbols).toHaveLength(1);
+    expect(index.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ message: "repository index symbol budget reached", severity: "warning" })
+    ]));
+  });
+
+  it("keeps recovery and durable traces on the productive V2 route", async () => {
+    const pipeline = await readFile(path.resolve("apps/web/src/lib/server/runs/v2/execution-pipeline.ts"), "utf8");
+    const commandHost = await readFile(path.resolve("apps/web/src/lib/server/runs/v2/command-host.ts"), "utf8");
+
+    expect(pipeline).toContain("verifyAndRecoverRunStore");
+    expect(pipeline).toContain("new JsonlTraceStore");
+    expect(pipeline).toContain("compactIfNeeded");
+    expect(pipeline).toContain("granularityPolicy");
+    expect(commandHost).toContain("verifyAndRecoverRunStore");
+    expect(commandHost).toContain("compactIfNeeded");
+    const planningHost = await readFile(path.resolve("apps/web/src/lib/server/runs/v2/planning-host.ts"), "utf8");
+    expect(planningHost).toContain("maxLeafPlannedPaths: strategy.config.maxLeafPlannedPaths");
   });
 });
 
