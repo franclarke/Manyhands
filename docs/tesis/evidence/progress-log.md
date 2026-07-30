@@ -581,3 +581,9 @@
     registrada con hash `32aec38bd49f9a428c51fce7f0ea0e21f00988000f5e33eeff4dfdefcb7c00d1`.
     Todavía no hay candidate: el próximo paso es preflight y, si pasa, una sola
     ejecución WC1 v4.
+96. **Instrumento de preflight WC1 v4 corregido.** El intento con `Start-Job`
+    no sobrevivio al cierre de la shell y no alcanzo `/api/workspaces`; no se
+    creo run ni candidate. Se agrego
+    `docs/tesis/evidence/scripts/start-wc1-server.ps1`, que fija el token de
+    sesion y arranca Next en el puerto congelado. Se puede repetir el preflight;
+    todavia no se consume la candidate.

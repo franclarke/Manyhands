@@ -2021,3 +2021,16 @@ Estado de reanudacion: committear este freeze y ejecutar el preflight v4 con
 el mismo token exportado en servidor y driver. Si pasa, consumir una sola
 candidate WC1 v4 y preservar cualquier fallo o decision; no iniciar WC2/WC3
 hasta emitir el veredicto de WC1.
+
+## Checkpoint instrumento de preflight WC1 v4 - 2026-07-30
+
+El primer intento de levantar el servidor v4 con `Start-Job` no sobrevivio al
+cierre de la shell y no alcanzo `/api/workspaces`; no se creo run ni candidate.
+Para que el preflight sea reproducible, se agrego
+`docs/tesis/evidence/scripts/start-wc1-server.ps1`, que fija
+`MANYHANDS_SESSION_TOKEN` y arranca Next en el puerto congelado. Esto corrige
+el lanzador, no cambia el freeze ni consume la candidate.
+
+Estado de reanudacion: committear el instrumento y repetir el preflight v4
+con el proceso persistente; si `/api/workspaces` y el target W1 limpio pasan,
+ejecutar una sola candidate con el mismo token en el driver.
