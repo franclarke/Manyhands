@@ -365,6 +365,70 @@
 }
 \end{frame}
 
+
+\begin{frame}{Segunda línea de evidencia: grafos anchos}
+  La objeción al estudio comparativo es justa: el repositorio era chico y el
+  agente único nunca saturó su contexto. La línea Warehouse ataca ese régimen con
+  $N$ módulos independientes sobre una base verificada externamente.
+
+  \bigskip
+  \pause
+  \textbf{Resultado: no entregó.} Nueve celdas de grafo ancho, tres series
+  congeladas, cero commits candidatos. La cadena longitudinal se detuvo en
+  \textbf{1/8}.
+
+  \bigskip
+  \pause
+  Cada causa terminal quedó atribuida y \textbf{ninguna es una decisión de
+  granularidad}: dos defectos del compilador de grafos, la muerte no explicada
+  del proceso dueño de un run, y un fallo del entorno del proveedor.
+\note{%
+  No maquillar esto. La respuesta honesta si preguntan si el sistema escala:
+  no lo sabemos, y esta tesis no lo afirma. Lo que si tenemos es que los fallos
+  fueron atribuibles y ninguno fue de la politica.%
+}
+\end{frame}
+
+\begin{frame}{El término que decidía}
+  Sobre el único grafo ancho grande medido, la política midió paralelismo
+  $0{,}8889$ y \textbf{aun así no aprobó dividir por utilidad}. Invirtiendo la
+  salida registrada, el término que ligaba era la duplicación de validación:
+  $0{,}8947$.
+
+  \bigskip
+  \pause
+  \small
+  \begin{center}
+  \begin{tabular}{lrrl}
+    \toprule
+    \textbf{Caso} & \textbf{dup.} & \textbf{ventaja} & \textbf{razón} \\
+    \midrule
+    19 hijos, intenciones compartidas & 0,8947 & $-0{,}2584$ & hoja infactible \\
+    11 hojas, intenciones compartidas & 0,8500 & $+0{,}0444$ & bajo el mínimo \\
+    7 hojas, intenciones propias & \textbf{0,3750} & $\mathbf{+0{,}1710}$ & \textbf{utilidad} \\
+    11 hojas, intenciones propias & \textbf{0,4828} & $\mathbf{+0{,}3275}$ & hoja infactible \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \bigskip
+  \normalsize
+  \pause
+  El término medía bien: lo que fallaba era el planificador adhiriendo criterios
+  de objetivo completo a cada hoja. \textbf{Sin tocar término, fórmula ni
+  umbral.}
+\note{%
+  El punto de honestidad metodologica: se midio en vez de ajustar el umbral.
+  Si preguntan por que no se toco el umbral, esa es la respuesta: mover un
+  umbral hasta que el caso motivador de el resultado buscado es ajustar al
+  resultado, y habria arruinado el aporte.
+
+  Limite que hay que decir sin que lo pregunten: el caso motivador de 19 hijos
+  no se re-midio a su propia anchura, y la serie que resolvio la pregunta uso
+  otro ejecutor, asi que no es comparable con las anteriores.%
+}
+\end{frame}
+
 % -----------------------------------------------------------------------------
 \section{Cierre}
 
@@ -382,6 +446,11 @@
       construida sobre ellos evalúa a cada una contra su propia vara.
     \item \textbf{No se afirma superioridad de la política adaptativa.} El
       estudio falsó su hipótesis y el documento lo reporta como tal.
+    \item \textbf{Tampoco se afirma que la arquitectura escale.} Ninguna serie
+      de grafo ancho entregó y la cadena longitudinal quedó en 1/8. Lo que sí
+      quedó cerrado es la pregunta abierta sobre la política: el término que la
+      hacía rechazar cortes anchos medía bien, y se demostró midiendo, sin mover
+      el umbral.
     \item Los defectos que importaron no se encontraron leyendo código, sino
       \textbf{ejecutando runs reales} contra un repositorio de verdad.
   \end{itemize}

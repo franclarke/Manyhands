@@ -1180,6 +1180,173 @@ La regla de escalamiento ---una tercera repetición ante discrepancia interna---
 es, y agregar repeticiones después de observar datos desfavorables sería el
 ajuste posterior que el diseño pre-registrado prohíbe.
 
+
+% ==============================================================================
+\section{Tercera parte: la línea Warehouse}
+\label{sec:warehouse}
+
+Las dos partes anteriores evalúan objetivos pequeños sobre un repositorio de
+cinco pruebas. La objeción evidente es que la descomposición debería ganar
+justamente donde un agente único satura su contexto, y ese régimen no se puso a
+prueba. La línea Warehouse existe para atacar esa objeción con un repositorio
+objetivo mayor y con grafos deliberadamente anchos.
+
+Se reporta completa, incluidos sus fracasos, porque su resultado agregado es
+negativo y la única forma deshonesta de presentarla sería omitirla.
+
+\subsection{Instrumento}
+
+El estímulo pide $N$ módulos analíticos independientes sobre una base verificada.
+Cada módulo responde \emph{una} pregunta distinta derivada del escenario
+congelado \texttt{thesis-seed-2026} y escribe \emph{su propio} archivo de
+pruebas. Un catálogo versionado es la fuente única del estímulo y del oráculo:
+ninguno deriva por su cuenta, que era la contradicción que invalidó los primeros
+intentos. El estímulo nunca enuncia la respuesta esperada ---hay una prueba que
+lo impide--- y el oráculo externo compara valores, no sólo forma: dos corridas de
+un módulo simulado son tan idénticas entre sí como dos de una implementación
+real. Los tamaños $\{4, 8, 16\}$ son prefijos exactos del catálogo, de modo que
+entre dos puntos cambia la anchura del grafo y nada más.
+
+\subsection{La cadena longitudinal se detiene en 1/8}
+
+El diseño original preveía ocho incrementos acumulativos, cada uno verificado por
+un oráculo externo antes de ser base del siguiente. \textbf{Se completó uno.}
+
+W1 entregó el commit \texttt{71f61c9} y pasó sus seis verificaciones; es la única
+entrega externamente verificada de todo el programa. W2 produjo intentos
+distintos y ninguna base verificable: un candidato publicado internamente cuyo
+oráculo falló por un archivo de bloqueo de dependencias inconsistente, un
+vencimiento duro de tiempo sin comprobante, y un fallo de infraestructura. La
+cadena W3--W8 no avanzó.
+
+Este límite se reporta como límite. \textbf{No se atribuye a la política de
+granularidad}: ninguno de los tres fallos es una decisión de división.
+
+\subsection{El barrido de grafos anchos no entregó}
+
+Con la base W1 verificada se ejecutaron tres series completas de
+$\{4, 8, 16\}$ módulos, cada una sobre un único commit congelado, con ejecutor
+homogéneo declarado y objetivos independientes.
+
+\begin{table}[ht]
+  \centering
+  \caption{Series de grafo ancho sobre la base W1 verificada. Ninguna produjo
+  entrega, de modo que ninguna recibió oráculo externo.}
+  \label{tab:wide-series}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l l X@{}}
+    \toprule
+    \textbf{Serie} & \textbf{Celdas} & \textbf{Resultado terminal} \\
+    \midrule
+    retry-8 & 4, 8, 16 & Rechazo del plan compilado: composite y descendientes
+    declaraban las mismas rutas planificadas y el crítico los trataba como
+    propietarios independientes. Corregido después. \\
+    retry-10 & 4, 8, 16 & Rechazo del plan compilado por un ciclo inexistente:
+    el validador agregaba al grafo un \emph{seam}, que por contrato no ordena
+    ejecución. Corregido después. \\
+    retry-11 & 4, 8, 16 & Sin rechazo de plan: la corrección anterior alcanzó la
+    ruta productiva. Dos celdas quedaron sin transición terminal al morir el
+    proceso dueño; la tercera no llegó a planificar por un fallo del entorno de
+    ejecución del proveedor. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\textbf{Ninguna de las nueve celdas produjo commit candidato, comprobante ni
+entrada para el oráculo externo.} Las nueve conservan su disposición de oráculo
+como «no ejecutado», que es distinto de «fallado»: no había entrega que
+calificar.
+
+Dos observaciones importan más que el conteo. La primera es que \textbf{cada
+causa terminal es atribuible y ninguna es una decisión de granularidad}: dos
+fueron defectos del compilador de grafos, uno la muerte no explicada del proceso
+que gobernaba el run, y otro un fallo del entorno del proveedor. La segunda es
+que los defectos se descubrieron \emph{ejecutando}, no leyendo: es el argumento
+metodológico de este trabajo y también su costo.
+
+De la tercera serie no puede decirse por qué murió el proceso dueño. La evidencia
+preservada fecha el instante ---el latido de la operación se detiene un intervalo
+después del último--- y descarta un cuelgue, pero las entradas que determinarían
+la causa no fueron registradas. Se declara así en vez de conjeturar.
+
+\subsection{Los resultados anchos antiguos son evidencia mecánica}
+
+Existen resultados previos con $N=4$ y $N=8$ marcados como aprobados. \textbf{No
+son evidencia sobre la escala.} El estímulo original pedía $N$ módulos que
+derivaban los mismos tres valores y sólo se distinguían por un identificador, y
+entregaba a las $N$ hojas un único archivo de pruebas compartido: eso medía la
+maquinaria del grafo sobre un abanico sintético y hacía la integración
+imposible. Se citan sólo con esa etiqueta y no son comparables con ninguna serie
+posterior.
+
+\subsection{La duplicación de validación: el término que decidía}
+\label{sec:validation-duplication}
+
+Sobre el único grafo ancho grande medido con el instrumento antiguo ---19 hijos
+independientes--- la política computó un paralelismo de $0{,}8889$ y aun así
+\textbf{no aprobó la división por utilidad}: la razón registrada fue que la hoja
+era infactible. Invirtiendo la salida registrada, el término que ligaba era
+\texttt{validationDuplication} $= 0{,}8947$.
+
+Ese valor no era un error de cálculo. Los 19 hijos declaraban dos intenciones de
+aceptación cada uno y había cuatro únicas en total; la fórmula da exactamente
+$(38-4)/38$. Las intenciones eran criterios de objetivo completo, del tipo
+«crear exactamente 16 módulos», que ninguna hoja individual puede satisfacer.
+
+Quedaban dos lecturas, y un solo caso no las separa:
+
+\begin{enumerate}
+  \item el término mide bien, y lo que está mal es que el planificador asigne
+  criterios de objetivo completo a las hojas;
+  \item el término mide mal, y debería medir duplicación de verificación
+  \emph{propia} de cada hoja y no cobertura heredada.
+\end{enumerate}
+
+Para separarlas se ejecutó una \textbf{serie de medición} sobre el mismo
+estímulo, la misma fórmula y el mismo umbral, con un planificador que sí
+particionó las intenciones por hoja. La serie se detiene en el plan compilado: la
+evaluación de granularidad se registra antes de que se levante la decisión de
+aprobación, de modo que la medición no requiere ejecutar nada.
+
+\begin{table}[ht]
+  \centering
+  \caption{Evaluación de la raíz con intenciones compartidas frente a
+  particionadas. Ni el término, ni la fórmula, ni el umbral cambiaron entre
+  filas.}
+  \label{tab:validation-duplication}
+  \small
+  \begin{tabular}{@{}l r r l@{}}
+    \toprule
+    \textbf{Caso} & \textbf{\texttt{validationDuplication}} & \textbf{Ventaja} & \textbf{Razón registrada} \\
+    \midrule
+    19 hijos, intenciones compartidas & 0,8947 & $-0{,}2584$ & hoja infactible \\
+    11 hojas, intenciones compartidas & 0,8500 & $+0{,}0444$ & bajo el mínimo \\
+    7 hojas, intenciones propias & \textbf{0,3750} & $\mathbf{+0{,}1710}$ & \textbf{utilidad} \\
+    11 hojas, intenciones propias & \textbf{0,4828} & $\mathbf{+0{,}3275}$ & hoja infactible \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Con las intenciones particionadas el término cae a la mitad y la ventaja cruza el
+mínimo de $0{,}15$. El tercer caso de la tabla es \textbf{el único de las
+dieciocho evaluaciones de raíz preservadas en todo el programa cuya razón
+registrada es la utilidad} y no la infactibilidad de la hoja.
+
+\textbf{La evidencia sostiene la lectura (1).} El término mide lo que declara
+medir; lo que producía el rechazo era la asignación de criterios de objetivo
+completo a las hojas. No se modificó el término, la fórmula ni el umbral, y la
+lectura (2) queda descartada por medición y no por conveniencia.
+
+\paragraph{Qué no se concluye.} El caso motivador no fue re-medido a su propia
+anchura: el rechazo original ocurrió sobre 19 hijos y la resolución se apoya en
+árboles de 7 y 11 hojas, porque la celda de 16 módulos de la serie de medición
+falló al planificar y no dejó evaluación. La serie de medición usó un ejecutor
+distinto y \textbf{no es comparable} con las series anteriores: el ejecutor es el
+planificador, de modo que cambiarlo cambia el árbol propuesto. Y nada obliga a un
+planificador a particionar las intenciones: dos ejecutores produjeron
+reparticiones distintas sobre el mismo estímulo, y esa variabilidad sigue sin
+control.
+
 % ==============================================================================
 \chapter{Discusión}
 \label{cap:discusion}
@@ -1217,12 +1384,12 @@ se haya completado no valida la fórmula: valida que el recorrido completo
 funciona con ella.
 
 \paragraph{Validez de constructo de la métrica primaria.} Es la amenaza más
-severa que la ejecución expuso. Los criterios de aceptación son 	extbf{endógenos
+severa que la ejecución expuso. Los criterios de aceptación son \textbf{endógenos
 a la condición}: se compilan por unidad, de modo que descomponer multiplica las
 obligaciones que luego se verifican. Cualquier métrica de éxito construida sobre
 ellos compara a cada condición contra su propia vara, no contra una común
-(sección~ef{sec:defecto-medicion}). Un diseño futuro debe fijar un conjunto de
-criterios 	extbf{externo e idéntico} para las tres condiciones y evaluarlo
+(sección~\ref{sec:defecto-medicion}). Un diseño futuro debe fijar un conjunto de
+criterios \textbf{externo e idéntico} para las tres condiciones y evaluarlo
 contra el árbol entregado.
 
 \paragraph{Poder del diseño.} El estudio comparativo se dimensionó para
@@ -1241,18 +1408,36 @@ distintas, y al menos una de ellas no completó.
 \section{Limitaciones}
 
 \begin{itemize}
-  \item El estudio comparativo se ejecutó y 	extbf{falsó su hipótesis
+  \item El estudio comparativo se ejecutó y \textbf{falsó su hipótesis
   pre-registrada}: sobre la tarea multi-capa, no descomponer entregó las dos
   repeticiones mientras las dos condiciones que descomponen entregaron una cada
   una, con aproximadamente un tercio del tiempo y un cuarto de los tokens para la
-  misma superficie funcional. 	extbf{No puede afirmarse que la política
+  misma superficie funcional. \textbf{No puede afirmarse que la política
   adaptativa sea superior a no descomponer}; solo que es viable, explicable y
   que sobre una tarea cohesiva se comporta como la alternativa mínima, que era la
   mitad de la hipótesis que sí se sostuvo.
   \item Las intervenciones humanas del caso canónico ---aprobación del plan y
   aprobación de entrega--- son parte del diseño, pero implican que el recorrido
   no es completamente autónomo.
-  \item Los pesos y el umbral no fueron calibrados.
+  \item Los pesos y el umbral no fueron calibrados. En particular,
+  \texttt{minimumAdvantage} $= 0{,}15$ y el tope de rutas planificadas por hoja
+  $= 12$ se declaran \textbf{provisionales}: ninguna evidencia de este trabajo
+  los deriva. El segundo se midió y no discrimina ---la entrega verificada tenía
+  diez rutas planificadas y el intento fallido seis---, de modo que ninguna cota
+  separa los dos casos. Se mantuvieron inmutables durante todas las mediciones
+  precisamente para no ajustarlos al resultado.
+  \item \textbf{Ninguna serie de grafo ancho entregó.} Las nueve celdas
+  ejecutadas sobre la base verificada terminaron sin commit candidato ni
+  comprobante, de modo que la hipótesis de escala no está sostenida por evidencia
+  positiva. Sus causas terminales están documentadas y ninguna es una decisión de
+  granularidad, pero eso limita el resultado, no lo salva.
+  \item \textbf{La cadena longitudinal quedó en 1/8}, y sus tres modos de fallo
+  ---oráculo con dependencias inconsistentes, vencimiento duro sin comprobante y
+  fallo de infraestructura--- no se atribuyen a la política.
+  \item El veredicto sobre la duplicación de validación
+  (sección~\ref{sec:validation-duplication}) \textbf{no re-midió el caso
+  motivador a su propia anchura}, y la serie que lo resolvió usó un ejecutor
+  distinto, por lo que no es comparable con las anteriores.
   \item La conformidad con WCAG 2.2 AA es de diseño; no hay auditoría externa.
 \end{itemize}
 
@@ -1286,7 +1471,7 @@ Respecto de las preguntas de investigación:
   fallo---; el agotamiento del presupuesto de tiempo de un agente; y el
   estancamiento silencioso ante un requisito de artefacto insatisfacible. El
   sistema detectó los tres primeros; el cuarto es una limitación abierta.
-  	extbf{Los conflictos aparecieron únicamente cuando se descompuso}, y su
+  \textbf{Los conflictos aparecieron únicamente cuando se descompuso}, y su
   costo quedó medido.
 \end{description}
 
@@ -1308,6 +1493,27 @@ inejecutables, en línea con el criterio de modularidad de Parnas
 Architect no propone un corte, ninguna configuración de umbral puede forzarlo
 ---ni siquiera una diseñada para dividir siempre---, de modo que la frontera no
 es un parámetro ajustable sino una propiedad estructural del problema.
+
+\paragraph{La línea Warehouse: un resultado negativo sobre la escala y uno
+positivo sobre el término que decidía.} La segunda línea de evidencia
+(sección~\ref{sec:warehouse}) se diseñó para poner a prueba el régimen que el
+estudio comparativo no alcanzó: grafos deliberadamente anchos sobre una base
+verificada. \textbf{No entregó.} Las nueve celdas de grafo ancho terminaron sin
+commit candidato ni comprobante, y la cadena longitudinal se detuvo en 1/8. Cada
+causa terminal quedó atribuida ---dos defectos del compilador de grafos, la
+muerte no explicada del proceso que gobernaba un run y un fallo del entorno del
+proveedor--- y ninguna es una decisión de granularidad; pero eso acota la
+conclusión, no la revierte: \textbf{este trabajo no aporta evidencia positiva de
+que la arquitectura entregue software real a las anchuras que se propuso medir}.
+
+Sí resolvió, en cambio, la pregunta abierta más importante sobre el aporte.
+Cuando la política se negaba a dividir un abanico de módulos independientes, el
+término que ligaba era la duplicación de validación, y la medición mostró que
+medía correctamente: lo que estaba mal era que el planificador adhiriera
+criterios de objetivo completo a cada hoja. Con las intenciones particionadas, y
+\emph{sin tocar el término, la fórmula ni el umbral}, la política aprueba el
+corte ancho por utilidad. Es el único caso de dieciocho evaluaciones preservadas
+en que eso ocurre, y llegó midiendo en vez de ajustando.
 
 \paragraph{Un aporte metodológico no previsto.} La ejecución expuso que los
 criterios de aceptación son \emph{endógenos a la condición} comparada: al
