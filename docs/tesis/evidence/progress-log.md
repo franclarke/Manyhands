@@ -499,3 +499,9 @@
     apunta a ella. `wide-graph-oracle-contract` queda en 7/7 PASS sin cambiar
     la semantica historica. Falta repetir el gate raiz y cerrar ticket 31;
     WC1 sucesor y N=4/N=8/N=16 siguen detenidos.
+83. **Gate raiz verde con freeze versionado.** `pnpm test` queda en 221
+    archivos PASS, 1545 tests PASS y 2 skipped. El contrato del freeze pasa
+    7/7 y desaparece el unico fallo de hash sin reinterpretar evidencia. El
+    commit documental es `a42ebaf`; ticket 31 sigue abierto por la candidate
+    integrada y las reviews Standards/Spec. WC1 sucesor y N=4/N=8/N=16
+    continuan detenidos.

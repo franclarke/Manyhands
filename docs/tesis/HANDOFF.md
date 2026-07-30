@@ -1817,3 +1817,20 @@ Estado de reanudacion: ejecutar nuevamente el gate raiz para confirmar cero
 fallos contractuales, luego completar la review independiente de ticket 31 y
 crear el freeze sucesor de WC1. Todavia no se repite WC1 ni se inicia
 N=4/N=8/N=16.
+
+## Checkpoint gate raiz verde y freeze historico cerrado - 2026-07-30
+
+El gate raiz se repitio despues de versionar el `dist` historico. Resultado:
+221 archivos pasan, 1545 tests pasan y 2 quedan skipped. El contrato del
+freeze historico pasa 7/7 y ya no hay fallos de hash. Los mensajes de stderr
+son los errores esperados de regresiones que verifican estados terminales y
+no reducen el resultado del gate.
+
+El commit durable es `a42ebaf`. Ticket 31 sigue abierto: falta la review
+independiente Standards/Spec y la candidate integrada que demuestre la
+convergencia del ejecutor, del huerfano, del restart, del heartbeat y del
+pool. WC1 sucesor y N=4/N=8/N=16 siguen detenidos.
+
+Estado de reanudacion: revisar ticket 31 contra los contratos de supervision,
+ejecutar una candidate WC1 nueva solamente si el preflight queda verde y
+preservar cualquier fallo sin reinterpretarlo como resultado positivo.
