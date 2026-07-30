@@ -167,9 +167,25 @@ export class RunCoordinator {
   }
 }
 
+/**
+ * Compares a re-derived fact against the one already in the journal.
+ *
+ * Both sides are normalised through the event schema first. The journal stores
+ * the parsed event, so any field the schema fills in by default is present there
+ * and absent from a freshly derived input; comparing raw input against parsed
+ * output made an identical re-derivation look like a conflicting one and failed
+ * a run that had merely hit contention.
+ */
 function assertSameInput(event: RunEvent, input: RunEventInput): void {
   const persisted = { eventId: event.eventId, occurredAt: event.occurredAt, type: event.type, payload: event.payload };
-  if (JSON.stringify(persisted) !== JSON.stringify(input)) {
+  const normalized = RunEventSchema.parse({ ...input, runId: event.runId, sequence: event.sequence });
+  const derived = {
+    eventId: normalized.eventId,
+    occurredAt: normalized.occurredAt,
+    type: normalized.type,
+    payload: normalized.payload
+  };
+  if (JSON.stringify(persisted) !== JSON.stringify(derived)) {
     throw new Error(`Event id ${input.eventId} was already persisted with different content.`);
   }
 }

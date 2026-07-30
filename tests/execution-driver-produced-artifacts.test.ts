@@ -118,11 +118,26 @@ function successOutcome(input: V2NodeExecutionInput, rootId: string): V2NodeExec
         justification: "Exact candidate evidence passed.",
         evidenceRefs: [`evidence-${input.node.id}`]
       }],
-      outcome: "verified"
+      outcome: "verified",
+      validationRecipeDigest: "sha256:recipe-v2"
     },
     artifactLocation: `commit-${input.node.id}`,
     ...(input.node.id === rootId
-      ? { integrationManifestId: "integration-root", finalManifestId: "final-root" }
+      ? {
+          integrationManifestId: "integration-root",
+          finalManifestId: "final-root",
+          // A root outcome carries the complete manifest, not only its id: the
+          // driver refuses to publish a final candidate it cannot describe.
+          finalManifest: {
+            commitSha: `commit-${input.node.id}`,
+            treeSha: `tree-${input.node.id}`,
+            graphRevision: input.graph.revision,
+            artifactIds: input.contract.task.produces.map(({ id }) => id),
+            evidenceMatrixId: `matrix-${input.node.id}`,
+            validationRecipeDigest: "sha256:recipe-v2",
+            deliveryTarget: "main"
+          }
+        }
       : {})
   };
 }

@@ -108,6 +108,74 @@ describe("RunCoordinator.recordDerived", () => {
     expect(state.graphRevision).toBe(2);
     expect(state.readiness.readyNodeIds).toEqual(["node-r2"]);
   });
+
+  /**
+   * A derived batch that is already durable has to be recognised as the same
+   * batch. The journal stores the schema-normalised event, so a field the schema
+   * fills in by default — `matrix.observations`, for instance — is present on the
+   * persisted side and absent from the freshly derived input. Comparing raw input
+   * against normalised output made an identical re-derivation look like a
+   * conflicting one, and a run that hit contention aborted instead of settling.
+   */
+  it("recognizes a persisted batch whose schema filled in a default", async () => {
+    const matrix = {
+      matrixId: "matrix-1",
+      candidateCommit: "commit-1",
+      validationContract: { id: "validation-1", revision: "sha256:validation" },
+      criteria: [{
+        criterionId: "criterion-1",
+        obligationId: "obligation-1",
+        status: "satisfied",
+        justification: "Exact candidate evidence passed.",
+        evidenceRefs: ["evidence-1"]
+      }],
+      outcome: "verified"
+    };
+    const events: RunEvent[] = [
+      event(1, "created", "run.created", { goal: "Test schema defaults" }),
+      event(2, "proposed-r1", "graph.revision.proposed", { graphId: "graph", revision: 1 }),
+      event(3, "approved-r1", "graph.revision.approved", { graphId: "graph", revision: 1 }),
+      event(4, "attempt-started", "attempt.started", {
+        attemptId: "run-derived:attempt:node-a:1",
+        nodeId: "node-a",
+        inputFingerprint: "sha256:inputs",
+        executorProfile: { id: "codex-cli", revision: "sha256:profile" }
+      }),
+      event(5, "attempt-candidate", "attempt.candidate_created", {
+        attemptId: "run-derived:attempt:node-a:1",
+        nodeId: "node-a",
+        candidateCommit: "commit-1",
+        outputDigest: "sha256:output",
+        changedFiles: ["src/a.ts"]
+      }),
+      event(6, "derived-validation", "validation.completed", {
+        attemptId: "run-derived:attempt:node-a:1",
+        nodeId: "node-a",
+        matrix
+      })
+    ];
+    const coordinator = new RunCoordinator({
+      events: {
+        load: async () => structuredClone(events),
+        append: async () => { throw new Error("an already durable batch must not be appended again"); }
+      },
+      delivery: { publish: async () => { throw new Error("unused"); } },
+      clock: () => at,
+      eventId: (type, sequence) => `${type}:${sequence}`
+    });
+
+    // Precondition: the persisted event carries the default this input omits.
+    expect((events[5]!.payload as { matrix: { observations?: unknown } }).matrix.observations).toEqual([]);
+
+    const state = await coordinator.recordDerived("run-derived", () => [{
+      eventId: "derived-validation",
+      occurredAt: at,
+      type: "validation.completed",
+      payload: { attemptId: "run-derived:attempt:node-a:1", nodeId: "node-a", matrix }
+    }]);
+
+    expect(state.evidenceMatrices).toEqual(["matrix-1"]);
+  });
 });
 
 function event(

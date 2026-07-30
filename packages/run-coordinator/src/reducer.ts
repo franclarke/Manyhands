@@ -355,7 +355,9 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
     case "decision.raised":
       if (next.decisions[event.payload.decision.id] !== undefined) throw new Error(`Decision ${event.payload.decision.id} already exists.`);
       next.decisions[event.payload.decision.id] = DecisionSchema.parse({ ...event.payload.decision, status: "pending" });
-      if (next.lifecycle === "running") transition(next, "waiting_for_input");
+      // A decision blocks the nodes it names, not the run: independent work keeps
+      // moving while an operator answers. Only `readiness.observed` parks the run,
+      // and only when nothing is ready and a decision is pending.
       break;
     case "decision.resolved": {
       const decision = next.decisions[event.payload.decisionId];

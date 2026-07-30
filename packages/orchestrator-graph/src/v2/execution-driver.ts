@@ -198,30 +198,33 @@ export class V2ExecutionDriver {
       .filter((decision) => decision.status === "pending")
       .map((decision) => decision.id)
       .sort();
-    let state = await this.options.coordinator.execute(input.runId, {
-      type: "observe_readiness",
-      readyNodeIds: selection.nodeIds,
-      pendingDecisionIds,
-      explanations: selection.explanations as unknown as SchedulerExplanationEvent[],
-      effectiveConfig: effectiveConfig as SchedulerConfigEvent,
-      schedulerState: {
-        materializableNodeIds: readinessState.materializableNodeIds,
-        activeResourceNodeIds: readinessState.activeResourceNodeIds,
-        openCircuitBreakerNodeIds: readinessState.openCircuitBreakerNodeIds ?? [],
-        availableExecutorNodeIds: readinessState.availableExecutorNodeIds,
-        stoppedNodeIds: readinessState.stoppedNodeIds ?? [],
-        budgetAvailable: readinessState.budgetAvailable
-      } as SchedulerStateEvent,
-      budgetAvailable: readinessState.budgetAvailable,
-      conflictEvidence: selection.effectiveConflictConstraints as unknown as ConflictEvidenceEvent[],
-      evaluatedAt: input.evaluatedAt ?? this.options.now()
-    });
+    const observeReadiness = (decisionIds: string[]): Promise<RunProjection> =>
+      this.options.coordinator.execute(input.runId, {
+        type: "observe_readiness",
+        readyNodeIds: selection.nodeIds,
+        pendingDecisionIds: decisionIds,
+        explanations: selection.explanations as unknown as SchedulerExplanationEvent[],
+        effectiveConfig: effectiveConfig as SchedulerConfigEvent,
+        schedulerState: {
+          materializableNodeIds: readinessState.materializableNodeIds,
+          activeResourceNodeIds: readinessState.activeResourceNodeIds,
+          openCircuitBreakerNodeIds: readinessState.openCircuitBreakerNodeIds ?? [],
+          availableExecutorNodeIds: readinessState.availableExecutorNodeIds,
+          stoppedNodeIds: readinessState.stoppedNodeIds ?? [],
+          budgetAvailable: readinessState.budgetAvailable
+        } as SchedulerStateEvent,
+        budgetAvailable: readinessState.budgetAvailable,
+        conflictEvidence: selection.effectiveConflictConstraints as unknown as ConflictEvidenceEvent[],
+        evaluatedAt: input.evaluatedAt ?? this.options.now()
+      });
+    let state = await observeReadiness(pendingDecisionIds);
     if (state.lifecycle !== "running" || selection.nodeIds.length === 0) {
       if (state.lifecycle === "running" && selection.nodeIds.length === 0 && pendingSchedulerDecision(selection.explanations)) {
+        const decisionId = `${input.runId}:scheduler:${state.selectedWaves.length + 1}`;
         state = await this.options.coordinator.execute(input.runId, {
           type: "raise_decision",
           decision: {
-            id: `${input.runId}:scheduler:${state.selectedWaves.length + 1}`,
+            id: decisionId,
             kind: "resolve_conflict",
             question: "Scheduling is blocked by an unavailable executor, exhausted budget, or open circuit breaker.",
             options: [
@@ -234,6 +237,11 @@ export class V2ExecutionDriver {
             raisedAtGraphRevision: input.graph.revision
           }
         });
+        // Raising the decision does not park the run by itself — a decision blocks
+        // the nodes it names, not the run. Readiness is observed again with the new
+        // decision so the canonical rule sees "nothing ready, something pending"
+        // and parks it, instead of returning a `running` run with no way forward.
+        state = await observeReadiness([...pendingDecisionIds, decisionId].sort());
       }
       return { dispatched: false, state };
     }

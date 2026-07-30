@@ -120,6 +120,9 @@ function mockState(overrides: any = {}) {
     adoptedArtifacts: {},
     decisions: {},
     attempts: {},
+    // `foldRun` always seeds this, so a double without it is a projection the
+    // reducer could never produce — and readiness reads it on every advance.
+    recoveryHistory: [],
     ...overrides
   };
 }
@@ -322,7 +325,8 @@ describe("V2ExecutionDriver - Concurrency", () => {
       load: vi.fn().mockResolvedValue(mockState()),
       execute: vi.fn().mockResolvedValue(mockState({ selectedWaves: [] }))
     };
-    const driver = new V2ExecutionDriver({ coordinator: withDerivedRecording(coordinator) } as any);
+    // `now` is a required option: scheduling stamps every readiness observation.
+    const driver = new V2ExecutionDriver({ coordinator: withDerivedRecording(coordinator), now: () => "now" } as any);
     const input = mockRunInput([]);
     const res = await driver.run(input);
     expect(res.lifecycle).toBe("running");
