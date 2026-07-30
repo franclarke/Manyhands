@@ -112,6 +112,6 @@ describe("canonical V2 execution facts", () => {
 
     expect(state.integrations["composite-a"]).toMatchObject({ status: "decision_required" });
     expect(state.decisions[decision.id]?.status).toBe("pending");
-    expect(state.lifecycle).toBe("running");
+    expect(state.lifecycle).toBe("waiting_for_input");
   });
 });

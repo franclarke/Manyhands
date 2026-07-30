@@ -342,7 +342,7 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       };
       break;
     case "graph.revision.proposed":
-      if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot propose a graph while ${next.lifecycle}.`);
+      if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running" && next.lifecycle !== "waiting_for_input") throw new Error(`Cannot propose a graph while ${next.lifecycle}.`);
       next.graphId = event.payload.graphId;
       next.graphRevision = event.payload.revision;
       transition(next, "needs_approval");

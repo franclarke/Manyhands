@@ -118,11 +118,24 @@ function successOutcome(input: V2NodeExecutionInput, rootId: string): V2NodeExec
         justification: "Exact candidate evidence passed.",
         evidenceRefs: [`evidence-${input.node.id}`]
       }],
-      outcome: "verified"
+      outcome: "verified",
+      validationRecipeDigest: "sha256:recipe"
     },
     artifactLocation: `commit-${input.node.id}`,
     ...(input.node.id === rootId
-      ? { integrationManifestId: "integration-root", finalManifestId: "final-root" }
+      ? {
+          integrationManifestId: "integration-root",
+          finalManifestId: "final-root",
+          finalManifest: {
+            commitSha: `commit-${input.node.id}`,
+            treeSha: `tree-${input.node.id}`,
+            graphRevision: input.graph.revision,
+            artifactIds: input.contract.task.produces.map((artifact) => artifact.id),
+            evidenceMatrixId: `matrix-${input.node.id}`,
+            validationRecipeDigest: "sha256:recipe",
+            deliveryTarget: "main"
+          }
+        }
       : {})
   };
 }
