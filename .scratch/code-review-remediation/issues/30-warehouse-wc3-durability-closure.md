@@ -29,3 +29,11 @@ operable interface.
 Replay/hash probes, corruption probes, accessibility checks, one candidate
 execution and one delivery/oracle record. Update claims only from the exact
 commit and durable evidence.
+
+## Verification checkpoint - 2026-07-30
+
+Implementation verified in external successor commit `5da6019` over WC2:
+41/41 cumulative tests, typecheck, build, WC1/WC2/WC3 probes and HTTP smoke
+pass, including append-only journal, exact replay hash, corruption failure,
+timeline, analytics and alerts. No ManyHands candidate execution, receipt,
+delivery or oracle exists for WC3; the ticket remains open for that acceptance.

@@ -28,3 +28,11 @@ keeping the data path observable and deterministic.
 Deterministic probes for route connectivity, capacity, unassigned explanations
 and congestion sensitivity, plus one candidate execution and delivery/oracle
 record. Any defect gets a regression and a documented successor protocol.
+
+## Verification checkpoint - 2026-07-30
+
+Implementation verified in external successor commit `4da4a45` over WC1:
+the cumulative repository remains green, and the WC2 probe confirms connected
+routes, bounded picker capacity, unassigned explanations and congestion-aware
+cost. No ManyHands candidate execution, receipt, delivery or oracle exists for
+WC2; the ticket remains open for that acceptance.

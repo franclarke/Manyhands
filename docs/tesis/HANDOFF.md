@@ -2035,6 +2035,14 @@ Estado de reanudacion: committear el instrumento y repetir el preflight v4
 con el proceso persistente; si `/api/workspaces` y el target W1 limpio pasan,
 ejecutar una sola candidate con el mismo token en el driver.
 
+## Checkpoint preflight WC1 v4 verde - 2026-07-30
+
+El lanzador persistente paso el preflight: `/api/workspaces` respondio `200`
+en `http://127.0.0.1:3114` con `MANYHANDS_SESSION_TOKEN`, y el repositorio
+externo permanece limpio en W1 `71f61c9`. Se registro el resultado en
+`runs/wc1-v4/instrument-preflight.json`; todavia no existe runId, candidate,
+receipt, delivery ni oraculo. Esto habilito consumir la unica candidate WC1 v4.
+
 ## Checkpoint candidate WC1 v4 adversa y regresion de lifecycle - 2026-07-30
 
 La unica candidate autorizada del freeze v4 creo el run
@@ -2053,19 +2061,34 @@ payload `attempt=1`. Verificacion: 34/34 tests focales y typechecks web /
 decomposer PASS; el servidor 3114 fue detenido y no quedan procesos de esta
 candidate.
 
-Estado de reanudacion: committear esta correccion y ejecutar las reviews
-independientes. WC1 queda sin candidate por falta de cuota; no iniciar WC2/WC3
+Estado de reanudacion: la correccion esta committeada en `b8dea56`; ejecutar las
+reviews independientes. WC1 queda sin candidate por falta de cuota; no iniciar WC2/WC3
 ni N=4/N=8/N=16 hasta decidir si el instrumento puede volver a usarse con
 cuota disponible y un freeze sucesor explicito.
 
-## Checkpoint preflight WC1 v4 verde - 2026-07-30
+## Checkpoint demostrador Warehouse compacto verificado - 2026-07-30
 
-El lanzador persistente paso el preflight: `/api/workspaces` respondio `200`
-en `http://127.0.0.1:3114` con `MANYHANDS_SESSION_TOKEN`, y el repositorio
-externo permanece limpio en W1 `71f61c9`. Se registro el resultado en
-`runs/wc1-v4/instrument-preflight.json`; todavia no existe runId, candidate,
-receipt, delivery ni oraculo. Esto habilita consumir la unica candidate WC1 v4.
+La implementacion externa acumulativa `8ce6e98` (WC1), `4da4a45` (WC2) y
+`5da6019` (WC3), sobre W1 `71f61c9`, queda verificada como software: `pnpm test`
+41/41 PASS, `pnpm typecheck` PASS, `pnpm build` PASS, probes WC1/WC2/WC3
+deterministas PASS y smoke HTTP PASS. WC1 cubre operacion visible y SSE; WC2
+fulfillment con capacidad/congestion; WC3 journal, replay/hash, timeline,
+analytics y alerts.
 
-Estado de reanudacion: iniciar el driver con el mismo token exportado. Si la
-candidate termina sin SHA o queda en decision, preservar el estado y detener
-la serie; no resolver decisiones ni hacer retry silencioso.
+Esta verificacion no se atribuye automaticamente a ManyHands. WC1 v4 es la
+unica candidate sucesora consumida y quedo `not_run` por falta de cuota antes de
+obtener candidate SHA; WC2/WC3 no tienen candidate execution, receipt, delivery
+ni oraculo. Los tickets 28-30 permanecen abiertos hasta satisfacer esa
+aceptacion, aunque la implementacion funcional esta completa.
+
+La hipotesis H2 sobre arquitectura/grafos anchos no se declara confirmada. Si
+la cuota impide una serie terminal N=4/N=8/N=16, ticket 14 debe retirar esa
+hipotesis de las conclusiones y conservar solamente: implementacion del sistema,
+resultado historico W1 `1/8`, demostrador compacto como evidencia de producto y
+limitacion de atribucion/escala como trabajo futuro. No transformar commits
+externos ni tests locales en evidencia experimental de ManyHands.
+
+Estado de reanudacion: terminar las reviews Standards/Spec del fix `b8dea56`,
+actualizar matriz de claims y tickets 28-30 con esta frontera, y preparar la
+tesis/presentacion conservadoras. N=4/N=8/N=16 queda al final y no se inicia
+mientras el instrumento o la cuota no permitan una ejecucion terminal valida.

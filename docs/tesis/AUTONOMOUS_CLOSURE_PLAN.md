@@ -696,3 +696,30 @@ parcial: la ruta se registra antes de invocar Git y una regresion confirma la
 cuarentena. Esto avanza ticket 31, pero no satisface aun la evidencia real de
 descendientes, orphan/restart/heartbeat/takeover ni el gate de candidate; la
 siguiente ejecucion WC1 sigue bloqueada.
+
+### Checkpoint lifecycle retry y WC1 v4 - 2026-07-30
+
+El gate raiz posterior quedo verde sobre `8a0daac`. El freeze v4 paso preflight
+con token compartido, pero la unica candidate WC1 autorizada
+(`bf9926e4-0edf-4e94-949d-8ac27b183cef`) termino en planning por agotamiento de
+cuota de `codex-cli`, sin candidate SHA, receipt, delivery u oraculo; se
+preserva como `not_run`. La misma corrida expuso una colision de `eventId` al
+reintentar el intento logico 1. La correccion `b8dea56` agrega la secuencia
+durable al ID, conserva el payload y pasa 34/34 tests focales, web typecheck y
+decomposer typecheck.
+
+El demostrador externo ya esta completo y verificado: W1 `71f61c9`, WC1
+`8ce6e98`, WC2 `4da4a45`, WC3 `5da6019`; 41/41 tests, typecheck, build, probes
+y smoke HTTP PASS. Esto no es atribucion ManyHands. WC1-WC3 siguen abiertos en
+el tracker por falta de candidate/receipt/oracle; los claims se mantienen como
+implementacion verificada con atribucion pendiente.
+
+La secuencia real de cierre queda:
+
+`reviews b8dea56 -> claims conservadores -> tesis/presentacion -> gate final`
+
+La serie H2 N=4/N=8/N=16 queda al final y solo se ejecuta si la cuota vuelve a
+permitir una corrida terminal valida. Si no, ticket 14 elimina H2 de las
+conclusiones y la convierte en limitacion/trabajo futuro; conserva W1 historico
+`1/8`, el demostrador compacto como evidencia de producto y todos los fallos
+como evidencia adversa.

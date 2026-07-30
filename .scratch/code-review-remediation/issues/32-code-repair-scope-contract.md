@@ -40,3 +40,14 @@ the run on `resolve_conflict`.
   canonical scope checker semantics.
 - `tests/execution-failure-cause-classification.test.ts`: 8/8 PASS.
 - The WC1 v2 run remains preserved and is not retried or reinterpreted.
+
+## Checkpoint retry event-id repair - 2026-07-30
+
+The WC1 v4 run exposed a separate planning lifecycle defect when provider
+capacity retry reused logical attempt `1`: `planning-host` attempted to persist
+the same event id with a new timestamp. Commit `b8dea56` fixes this by adding
+the durable event sequence to planning attempt/node ids while preserving the
+payload attempt number. The productive regression passes as part of 34/34
+focal tests, and web/decomposer typechecks pass. The two independent review
+acceptances remain open because the delegated review threads terminated with
+system errors; ticket 32 is not closed.

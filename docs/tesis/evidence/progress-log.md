@@ -587,16 +587,23 @@
     `docs/tesis/evidence/scripts/start-wc1-server.ps1`, que fija el token de
     sesion y arranca Next en el puerto congelado. Se puede repetir el preflight;
     todavia no se consume la candidate.
+97. **Preflight WC1 v4 verde.** El lanzador persistente paso `/api/workspaces`
+    con estado `200` usando el token compartido en `3114`, y el target externo
+    permanece limpio en W1 `71f61c9`. Se preservo
+    `runs/wc1-v4/instrument-preflight.json`; aun no existe runId ni candidate.
+    La unica candidate WC1 v4 queda habilitada.
 98. **Candidate WC1 v4 adversa y defecto de lifecycle.** La unica corrida
     autorizada creo el run `bf9926e4-0edf-4e94-949d-8ac27b183cef` y termino en
     `failed` durante planning porque `codex-cli` informo agotamiento de cuota.
     No hubo candidate SHA, receipt, delivery ni oraculo; se preserva
     `oracle-result.json` como `not_run`. El retry de capacidad tambien expuso
     un `eventId` duplicado para `planning.attempt_started`; la regresion y la
-    correccion basada en secuencia durable quedan en el working tree para
-    commit. Tests focales 34/34 y typechecks web/decomposer PASS.
-97. **Preflight WC1 v4 verde.** El lanzador persistente paso `/api/workspaces`
-    con estado `200` usando el token compartido en `3114`, y el target externo
-    permanece limpio en W1 `71f61c9`. Se preservo
-    `runs/wc1-v4/instrument-preflight.json`; aun no existe runId ni candidate.
-    La unica candidate WC1 v4 queda habilitada.
+    correccion basada en secuencia durable quedaron committeadas en `b8dea56`.
+    Tests focales 34/34 y typechecks web/decomposer PASS.
+99. **Demostrador Warehouse compacto verificado.** La secuencia externa W1
+    `71f61c9` -> WC1 `8ce6e98` -> WC2 `4da4a45` -> WC3 `5da6019` pasa 41/41
+    tests, typecheck, build, probes WC1/WC2/WC3 y smoke HTTP. Es evidencia de
+    implementacion del demostrador, no entrega atribuible de ManyHands: WC1 v4
+    no obtuvo candidate por cuota y WC2/WC3 no tienen runs/receipts/oraculos.
+    H2 queda sin confirmar; si no hay serie terminal, ticket 14 debe eliminarla
+    de las conclusiones y dejarla como trabajo futuro.

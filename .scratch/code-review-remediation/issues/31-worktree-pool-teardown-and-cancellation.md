@@ -141,3 +141,13 @@ en `waiting_for_input` sin receipt ni entrega. Esto no cierra el ticket: la
 convergencia terminal/productiva y las reviews Standards/Spec aun requieren
 un run sucesor valido. El defecto especifico del prompt y la evidencia de
 rutas de repair se sigue en ticket 32.
+
+## Checkpoint WC1 v4 y lifecycle de capacity retry - 2026-07-30
+
+El freeze v4 paso preflight, pero la unica candidate autorizada
+(`bf9926e4-0edf-4e94-949d-8ac27b183cef`) termino en planning por agotamiento de
+cuota de `codex-cli`, sin candidate SHA, receipt ni delivery. La evidencia
+tambien reprodujo una colision durable de `planning.attempt_started` cuando el
+retry de capacidad reutilizo el intento logico 1. `b8dea56` agrega la secuencia
+durable a los IDs y su regresion pasa; esto corrige un defecto de lifecycle,
+pero no satisface la acceptance de candidate integrada ni cierra el ticket.
