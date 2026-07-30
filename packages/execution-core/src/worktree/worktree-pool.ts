@@ -197,7 +197,8 @@ export class WorktreePool {
 
   async release(
     lease: WorktreeLease,
-    outcome: WorktreeReleaseOutcome = { kind: "discard" }
+    outcome: WorktreeReleaseOutcome = { kind: "discard" },
+    signal?: AbortSignal
   ): Promise<void> {
     this.assertUsable();
     const active = this.activeLeases.get(lease.id);
@@ -225,13 +226,14 @@ export class WorktreePool {
     if (outcome.kind === "candidate") {
       try {
         assertCommit(outcome.candidateCommit);
-        const topologyLease = await this.acquireTopologyLease();
+        const topologyLease = await this.acquireTopologyLease(signal);
         try {
           await active.fencedLease.assertCurrent();
           await this.git.updateRef({
             repoRoot: this.repoRoot,
             ref: candidateRef(outcome.runId, outcome.attemptId),
-            candidateCommit: outcome.candidateCommit
+            candidateCommit: outcome.candidateCommit,
+            ...(signal === undefined ? {} : { signal })
           });
           await active.fencedLease.assertCurrent();
         } finally {
@@ -244,7 +246,8 @@ export class WorktreePool {
     try {
       await this.git.resetAndClean({
         worktreePath: active.slot.path,
-        baseCommit: lease.baseCommit
+        baseCommit: lease.baseCommit,
+        ...(signal === undefined ? {} : { signal })
       });
       await active.fencedLease.assertCurrent();
     } catch (error) {
@@ -259,7 +262,7 @@ export class WorktreePool {
         throw error;
       }
       try {
-        await this.recreateOwnedSlot(active.slot, active.fencedLease, lease.baseCommit);
+        await this.recreateOwnedSlot(active.slot, active.fencedLease, lease.baseCommit, signal);
       } catch (recreateError) {
         try {
           await active.fencedLease.release();
@@ -389,15 +392,21 @@ export class WorktreePool {
   private async recreateOwnedSlot(
     slot: PoolSlot,
     slotLease: FilesystemFencedLease,
-    baseCommit: string
+    baseCommit: string,
+    signal?: AbortSignal
   ): Promise<void> {
     await slotLease.assertCurrent();
-    const topologyLease = await this.acquireTopologyLease();
+    const topologyLease = await this.acquireTopologyLease(signal);
     try {
       await slotLease.assertCurrent();
-      await this.removeInvalidSlot(slot.id, slot.path);
+      await this.removeInvalidSlot(slot.id, slot.path, signal);
       try {
-        await this.git.add({ repoRoot: this.repoRoot, worktreePath: slot.path, baseCommit });
+        await this.git.add({
+          repoRoot: this.repoRoot,
+          worktreePath: slot.path,
+          baseCommit,
+          ...(signal === undefined ? {} : { signal })
+        });
       } catch (error) {
         throw worktreePoolUnavailable(`could not recreate slot ${slot.id}`, error);
       }

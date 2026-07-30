@@ -36,7 +36,7 @@ export type ExecutionBaseRequest = z.infer<typeof ExecutionBaseRequestSchema>;
 export interface BuiltExecutionBase {
   worktree: WorktreeRecord;
   manifest: ExecutionBaseManifest;
-  release?: (outcome?: WorktreeReleaseOutcome) => Promise<void>;
+  release?: (outcome?: WorktreeReleaseOutcome, signal?: AbortSignal) => Promise<void>;
 }
 
 export interface ExecutionBaseBuilderDeps {
@@ -109,7 +109,7 @@ export class ExecutionBaseBuilder {
       };
     } catch (error) {
       if (workspace !== undefined) {
-        await workspace.release({ kind: "discard" }).catch(() => undefined);
+        await workspace.release({ kind: "discard" }, signal).catch(() => undefined);
       } else {
         await this.worktreeManager!.clean(worktree).catch(() => undefined);
       }

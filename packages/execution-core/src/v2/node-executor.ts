@@ -460,7 +460,8 @@ export class V2NodeExecutor {
               runId: input.runId,
               attemptId: input.attemptId,
               candidateCommit
-            }
+            },
+        input.signal
       );
     } catch (error) {
       try {

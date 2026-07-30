@@ -120,6 +120,50 @@ describe("WorktreePool", () => {
     await expect(acquisition).rejects.toThrow("Git sanitation cancelled");
   });
 
+  it("propagates cancellation into release sanitation and frees the lease", async () => {
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "manyhands-pool-release-abort-"));
+    tempRoots.push(repoRoot);
+    const controller = new AbortController();
+    let releasing = false;
+    let observedSignal: AbortSignal | undefined;
+    const gitAdapter: WorktreePoolGit = {
+      add: async () => undefined,
+      resetAndClean: async ({ signal }) => {
+        if (!releasing) return;
+        observedSignal = signal;
+        await new Promise<void>((resolve, reject) => {
+          if (signal === undefined) return;
+          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        });
+      },
+      remove: async () => undefined,
+      prune: async () => undefined,
+      validate: async () => false,
+      resolveCommonDir: async () => path.join(repoRoot, ".git"),
+      updateRef: async () => undefined
+    };
+    const pool = new WorktreePool({
+      repoRoot,
+      poolRoot: path.join(repoRoot, "pool"),
+      size: 1,
+      git: gitAdapter
+    });
+    const lease = await pool.acquire({ baseCommit: "a".repeat(40) });
+    releasing = true;
+    const release = pool.release(lease, { kind: "discard" }, controller.signal);
+    for (let attempt = 0; observedSignal === undefined && attempt < 100; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    expect(observedSignal).toBe(controller.signal);
+    controller.abort(new Error("release sanitation cancelled"));
+
+    await expect(release).rejects.toThrow("release sanitation cancelled");
+    releasing = false;
+    const next = await pool.acquire({ baseCommit: "a".repeat(40) });
+    await pool.release(next);
+    await pool.dispose();
+  });
+
   it("reuses a pre-created worktree after reset --hard and clean -fd", async () => {
     const repoRoot = await createRepository();
     const firstCommit = await commitFile(repoRoot, "version.txt", "one\n", "first");

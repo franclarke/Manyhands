@@ -9,7 +9,7 @@ import {
 
 export interface ExecutionWorkspaceHandle {
   worktree: WorktreeRecord;
-  release(outcome?: WorktreeReleaseOutcome): Promise<void>;
+  release(outcome?: WorktreeReleaseOutcome, signal?: AbortSignal): Promise<void>;
 }
 
 export interface ExecutionWorkspaceProvider {
@@ -49,9 +49,9 @@ export class PooledExecutionWorkspaceProvider implements ExecutionWorkspaceProvi
     let released = false;
     return {
       worktree,
-      release: async (outcome = { kind: "discard" }) => {
+      release: async (outcome = { kind: "discard" }, signal) => {
         if (released) return;
-        await this.pool.release(lease, outcome);
+        await this.pool.release(lease, outcome, signal);
         released = true;
       }
     };
