@@ -81,6 +81,14 @@ ancestor. Las validaciones técnicas locales permanecen separadas.
   hash, rasgos, alternativas y rationale.
 - C1 se conserva para replay histórico; C2 se vuelve productiva sólo cuando
   cierre sus gates.
+  **Corregido el 2026-07-30 (ticket 02):** C1 **no** quedó replayable. La
+  política `C_task` que lo producía no está implementada en el build actual, y
+  la reachability que fingía conservarla (`granularityPolicyFor`) era código
+  muerto: ningún camino productivo la alcanzaba. Hoy
+  `resolveGranularityCondition` **rechaza ruidosamente** `C1` y `C2` en vez de
+  resolverlos en silencio a `C`. Los journals que llevan esas etiquetas siguen
+  siendo legibles como evidencia inmutable; lo que se rechaza es planificar bajo
+  ellas.
 - Un piloto puede cambiar la configuración C2. Una serie final queda inválida
   si C2, prompts, seed, oráculos, modelo o drivers cambian después del freeze.
 - La tesis reportará el G5 de C1 como resultado formativo negativo y separará su

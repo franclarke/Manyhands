@@ -7,7 +7,6 @@ import {
   SINGLE_LEAF_POLICY,
   applyAdaptiveGranularity,
   GRANULARITY_CONDITIONS,
-  granularityPolicyFor,
   resolveGranularityCondition,
   WorkBreakdownSchema,
   type WorkBreakdown,
@@ -133,17 +132,25 @@ describe("granularity policy as per-run configuration", () => {
     expect(result.breakdown.root.kind).toBe("leaf");
   });
 
-  it("exposes A/B/C and normalizes historical C1/C2 records to C", () => {
+  /**
+   * A journal that names C1 or C2 was produced by a policy this build no longer
+   * implements. Resolving it to C silently would replay historical evidence under
+   * today's semantics and let a thesis claim rest on numbers no run ever produced.
+   * The honest options were faithful replay or a loud refusal; the legacy policy is
+   * not reconstructible, so it refuses.
+   */
+  it("refuses to replay a historical C1 or C2 record under the current policy", () => {
     expect(GRANULARITY_CONDITIONS).toEqual(["A", "B", "C"]);
     expect(resolveGranularityCondition(undefined)).toBe("C");
     expect(resolveGranularityCondition("C")).toBe("C");
-    expect(resolveGranularityCondition("C1")).toBe("C");
-    expect(resolveGranularityCondition("C2")).toBe("C");
-    expect(granularityPolicyFor("A")).toEqual(SINGLE_LEAF_POLICY);
-    expect(granularityPolicyFor("B")).toEqual(FINE_SPLIT_POLICY);
-    expect(granularityPolicyFor("C1")).toEqual(ADAPTIVE_GRANULARITY_POLICY);
-    expect(granularityPolicyFor("C")).toEqual(ADAPTIVE_GRANULARITY_POLICY);
-    expect(() => granularityPolicyFor("Z")).toThrow();
+    expect(resolveGranularityCondition("A")).toBe("A");
+    expect(resolveGranularityCondition("B")).toBe("B");
+
+    for (const historical of ["C1", "C2"]) {
+      expect(() => resolveGranularityCondition(historical), historical)
+        .toThrow(/"C1" and "C2".+not replayable.+adaptive-utility/iu);
+    }
+    expect(() => resolveGranularityCondition("Z")).toThrow(/unknown granularity condition/iu);
   });
 
   it("keeps every threshold finite so a persisted assessment survives JSON", () => {

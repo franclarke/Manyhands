@@ -3,6 +3,7 @@ import {
   LEAF_COMPLEXITY_THRESHOLD,
   type ComplexityWeights
 } from "./complexity-evaluator.js";
+import { ADAPTIVE_UTILITY_POLICY_VERSION } from "./utility-policy.js";
 
 /**
  * The granularity policy as effective, per-run configuration.
@@ -62,25 +63,25 @@ export const FINE_SPLIT_POLICY: GranularityPolicy = Object.freeze({
 export const GRANULARITY_CONDITIONS = ["A", "B", "C"] as const;
 export type GranularityCondition = (typeof GRANULARITY_CONDITIONS)[number];
 
-const LEGACY_POLICY_BY_CONDITION: Record<"A" | "B" | "C1", GranularityPolicy> = {
-  A: SINGLE_LEAF_POLICY,
-  B: FINE_SPLIT_POLICY,
-  C1: ADAPTIVE_GRANULARITY_POLICY
-};
-
-/** Maps historical C1/C2 records onto the current productive C policy. */
+/**
+ * Resolves the condition a run plans under.
+ *
+ * `C1` and `C2` are labels of policies this build no longer implements: `C1` was
+ * the `C_task` complexity index and `C2` its utility successor, now productive as
+ * plain `C` under `adaptive-utility`. Journals that carry those labels are
+ * immutable evidence and stay readable, but planning under them is refused rather
+ * than silently resolved to `C` — replaying historical evidence under today's
+ * semantics would attribute to an old run numbers it never produced.
+ */
 export function resolveGranularityCondition(condition: string | undefined): GranularityCondition {
-  if (condition === undefined || condition === "C" || condition === "C1" || condition === "C2") return "C";
+  if (condition === undefined || condition === "C") return "C";
+  if (condition === "C1" || condition === "C2") {
+    throw new Error(
+      `Granularity conditions "C1" and "C2" are historical labels and are not replayable: `
+      + `this build implements ${ADAPTIVE_UTILITY_POLICY_VERSION}, not the policy that produced them. `
+      + `Read the journal as recorded, or plan a new run under "C".`
+    );
+  }
   if (GRANULARITY_CONDITIONS.includes(condition as GranularityCondition)) return condition as GranularityCondition;
   throw new Error(`Unknown granularity condition "${condition}"; expected one of ${GRANULARITY_CONDITIONS.join(", ")}.`);
-}
-
-/** Resolves only the historical C_task policies kept for C1 replay. */
-export function granularityPolicyFor(condition: string | undefined): GranularityPolicy {
-  const normalized = condition === "C" || condition === undefined ? "C1" : condition;
-  const policy = LEGACY_POLICY_BY_CONDITION[normalized as keyof typeof LEGACY_POLICY_BY_CONDITION];
-  if (policy === undefined) {
-    throw new Error(`Condition "${condition}" does not use the historical C_task policy.`);
-  }
-  return policy;
 }
