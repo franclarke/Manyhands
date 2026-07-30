@@ -600,3 +600,21 @@ artefacto o limitación.
 5. Continuar con ticket 08.
 6. No iniciar N=4 hasta revisar las disposiciones de alcance y crear el freeze
    manifest. Ticket 02 puede cerrar después de 12, pero antes de 14.
+
+---
+
+## Estado de cierre reconciliado — 2026-07-30
+
+El estado durable de los issues 19–26 es `closed`; las secciones históricas que
+los describen como pendientes no se reabren. `retry-9`, `retry-10` y `retry-11`
+se conservan sin modificación, y retry-11 se clasifica como instrumento
+inválido/no entregado porque no produjo transición terminal, candidate SHA,
+receipt ni delivery.
+
+El sucesor local 27 debe cerrarse antes de consumir cuota en una nueva serie:
+
+`27 → 11 → 12 → 02 → WC1 → WC2 → WC3 → 14 → 15`
+
+W1 sigue siendo el resultado histórico `1/8`. WC1, WC2 y WC3 son incrementos
+sucesores compactos, cada uno con su ticket, claim, freeze, candidate execution
+y oráculo; una ausencia de candidate SHA conserva el resultado como `not_run`.

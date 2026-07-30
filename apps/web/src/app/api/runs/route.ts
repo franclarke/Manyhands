@@ -10,6 +10,7 @@ import { RUN_STATUS_VALUES, RunCreateRequestSchema, type RunRecord, type RunStat
 import { getRunRepository } from "@/lib/server/runs/store";
 import { captureRunTargetContext } from "@/lib/server/runs/target-context";
 import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
+import { markRunFailedAfterBackgroundTask } from "@/lib/server/runs/v2/background-failure";
 import { runPlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
 import {
   WorkspaceConflictError,
@@ -96,7 +97,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       };
       return getRunRepository().save(record);
     });
-    startRunBackgroundTask(saved.runId, "route:create:planning-v2", () => runPlanningV2Pipeline(saved.runId));
+    startRunBackgroundTask(
+      saved.runId,
+      "route:create:planning-v2",
+      () => runPlanningV2Pipeline(saved.runId),
+      (error) => markRunFailedAfterBackgroundTask(saved.runId, error, "domain")
+    );
     return NextResponse.json(await toCanonicalRunResponse(saved), { status: 201 });
   } catch (error) {
     return errorResponse(error);

@@ -14,6 +14,7 @@ import {
 } from "@/lib/server/runs/v2/command-host";
 import { approvePlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
 import { runPlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
+import { markRunFailedAfterBackgroundTask } from "@/lib/server/runs/v2/background-failure";
 import {
   runDecisionContinuationV2Pipeline,
   startDecisionContinuationV2Pipeline,
@@ -61,7 +62,12 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
       const hasPendingClarification = Object.values(resolved.state.decisions)
         .some((candidate) => candidate.kind === "clarify_goal" && candidate.status === "pending");
       if (!hasPendingClarification) {
-        startRunBackgroundTask(id, "route:decision:replan-v2", () => runPlanningV2Pipeline(id));
+        startRunBackgroundTask(
+          id,
+          "route:decision:replan-v2",
+          () => runPlanningV2Pipeline(id),
+          (error) => markRunFailedAfterBackgroundTask(id, error, "domain")
+        );
       }
       return NextResponse.json({
         ...(await toCanonicalRunResponse(resolved.run)),
@@ -81,7 +87,8 @@ export async function POST(request: Request, context: RouteContext): Promise<Nex
         startRunBackgroundTaskAfterCurrent(
           id,
           "route:decision:resume-execution-v2",
-          () => runDecisionContinuationV2Pipeline(id)
+          () => runDecisionContinuationV2Pipeline(id),
+          (error) => markRunFailedAfterBackgroundTask(id, error, "execution")
         );
       } else {
         run = await startDecisionContinuationV2Pipeline(

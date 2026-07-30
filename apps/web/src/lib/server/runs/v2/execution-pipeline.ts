@@ -52,6 +52,7 @@ import { resolveRunsDirectory } from "../runs-directory";
 import type { RunOperationLease, RunRecord } from "../schema";
 import { resolveRunTargetPath } from "../target-context";
 import { projectV2RunRecordCache } from "./run-record-cache";
+import { markRunFailedAfterBackgroundTask } from "./background-failure";
 
 export interface ApprovedExecutionPlanV2 {
   graph: GraphRevision;
@@ -95,7 +96,12 @@ export async function runDecisionContinuationV2Pipeline(runId: string): Promise<
 /** Claims execution synchronously so duplicate HTTP starts receive a deterministic conflict. */
 export async function startExecutionV2Pipeline(runId: string, label = "execution-v2"): Promise<RunRecord> {
   const claimed = await claimExecutionV2(runId);
-  startRunBackgroundTask(runId, label, () => driveClaimedExecutionV2(claimed));
+  startRunBackgroundTask(
+    runId,
+    label,
+    () => driveClaimedExecutionV2(claimed),
+    (error) => markRunFailedAfterBackgroundTask(runId, error, "execution", claimed.lease)
+  );
   return claimed.run;
 }
 
@@ -104,7 +110,12 @@ export async function startDecisionContinuationV2Pipeline(
   label = "decision-continuation-v2"
 ): Promise<RunRecord> {
   const claimed = await claimExecutionV2(runId, ["running", "waiting_for_input"]);
-  startRunBackgroundTask(runId, label, () => driveClaimedExecutionV2(claimed));
+  startRunBackgroundTask(
+    runId,
+    label,
+    () => driveClaimedExecutionV2(claimed),
+    (error) => markRunFailedAfterBackgroundTask(runId, error, "execution", claimed.lease)
+  );
   return claimed.run;
 }
 

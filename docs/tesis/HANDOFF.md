@@ -1453,3 +1453,23 @@ del `1/8` histórico.
   `C:\Users\franc_rgy\.codex\tmp\manyhands-ticket19-20260729-115928\runtime-logs`;
 - ticket 22 queda `closed`. La frontera recalculada habilita ticket 23;
   ticket 26 continúa bloqueado por 25.
+
+## Reconciliación de cierre autónomo - 2026-07-30
+
+Los estados durables actuales reemplazan los checkpoints históricos anteriores
+de este HANDOFF cuando haya conflicto:
+
+- Los tickets 19, 20, 21, 22, 23, 24, 25 y 26 están `closed` en
+  `.scratch/code-review-remediation/issues/`.
+- `retry-9`, `retry-10` y `retry-11` permanecen inmutables. `retry-11` es
+  instrumento inválido/no entregado: sus procesos Codex terminaron sin evento
+  terminal, candidate SHA, receipt ni delivery. Sus journals, snapshots,
+  runtime-runs y ledger se conservan bajo
+  `evidence/warehouse/wide-graph/retry-11/` y no se reutilizan.
+- El ticket sucesor local 27 cubre la convergencia terminal cuando el ejecutor
+  termina inesperadamente. No se inicia una nueva corrida N=4/N=8/N=16 antes
+  de cerrar ese ticket con RED, GREEN y revisiones Standards/Spec.
+- La ruta vigente es `27 -> 11 -> 12 -> 02 -> WC1 -> WC2 -> WC3 -> 14 -> 15`.
+  W1 conserva históricamente el resultado `1/8`.
+- WC1, WC2 y WC3 requieren tickets sucesores, claims y freeze de
+  prompts/probes/oráculos antes de ejecutar el primer incremento.

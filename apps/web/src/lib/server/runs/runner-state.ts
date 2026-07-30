@@ -15,6 +15,8 @@ const backgroundTasks = globalSingleton(
   () => new Map<string, Set<Promise<void>>>()
 );
 
+export type BackgroundTaskErrorHandler = (error: unknown) => void | Promise<void>;
+
 export function markRunnerActive(runId: string, operationId = "legacy"): void {
   active.set(runId, operationId);
 }
@@ -44,14 +46,29 @@ export function isRunnerActive(runId: string): boolean {
 export function startRunBackgroundTask(
   runId: string,
   label: string,
-  task: () => Promise<void>
+  task: () => Promise<void>,
+  onError?: BackgroundTaskErrorHandler
 ): void {
   const tasks = backgroundTasks.get(runId) ?? new Set<Promise<void>>();
   backgroundTasks.set(runId, tasks);
 
   const tracked = Promise.resolve()
     .then(task)
-    .catch((error) => {
+    .catch(async (error) => {
+      let handlerError: unknown;
+      for (let attempt = 1; attempt <= 2; attempt += 1) {
+        try {
+          await onError?.(error);
+          handlerError = undefined;
+          break;
+        } catch (candidateError) {
+          handlerError = candidateError;
+          if (attempt < 2) await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        }
+      }
+      if (handlerError !== undefined) {
+        console.error(`[Runner] FATAL: background task failure could not be persisted after retry for "${label}" in run ${runId}:`, handlerError);
+      }
       console.error(`[Runner] Background task "${label}" failed for run ${runId}:`, error);
     })
     .finally(() => {
@@ -67,13 +84,14 @@ export function startRunBackgroundTask(
 export function startRunBackgroundTaskAfterCurrent(
   runId: string,
   label: string,
-  task: () => Promise<void>
+  task: () => Promise<void>,
+  onError?: BackgroundTaskErrorHandler
 ): void {
   const predecessors = Array.from(backgroundTasks.get(runId) ?? []);
   startRunBackgroundTask(runId, label, async () => {
     await Promise.allSettled(predecessors);
     await task();
-  });
+  }, onError);
 }
 
 export async function drainRunBackgroundTasks(runId: string): Promise<void> {

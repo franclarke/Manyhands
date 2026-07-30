@@ -362,3 +362,16 @@
     sobre `c0d4be8` imprimió ocho celdas sin mutar target ni crear worktrees.
 60. **Checkpoint 4 = completed.** CLAIM-114 sólo tiene instrumento; ninguna
     construcción Warehouse se afirma todavía. Sigue Task 13 Pilot.
+
+### 2026-07-30 — Reconciliación y lifecycle terminal
+
+61. Los tickets 19–26 se reconcilian como `closed` según sus estados durables.
+    `retry-9`, `retry-10` y `retry-11` permanecen inmutables; retry-11 queda
+    registrado como instrumento inválido/no entregado por ausencia de evento
+    terminal, candidate SHA, receipt y delivery.
+62. Se crea el ticket sucesor local 27 para converger desde salida inesperada
+    del ejecutor a un estado terminal durable, preservando decisiones pendientes
+    y respetando heartbeat, fencing y takeover stale.
+63. La primera regresión productiva de ticket 27 cubre salida sin candidate,
+    decisión pendiente, operación fresca y retry transitorio del handler. La
+    suite focal queda en 27 tests PASS; no se inicia una nueva serie N=4/N=8/N=16.
