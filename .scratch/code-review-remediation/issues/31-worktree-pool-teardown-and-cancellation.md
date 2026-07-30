@@ -33,3 +33,24 @@ el run quedó `running` y el takeover normal informó `repository quiescent=fals
 Run `3f5cf275-85c7-49ce-9fef-12744e1846d8`, eventos 34-39, y checkpoint WC1
 en `docs/tesis/HANDOFF.md`. No modificar retry-9/10/11 ni usar este run como
 resultado positivo; WC1 sucesor requiere freeze y candidate execution nueva.
+
+## Checkpoint de implementacion - 2026-07-30
+
+Los commits locales `8f8dca1`, `dedf0ff` y `6c71214` cubren la propagacion de
+cancelacion y timeout desde V2NodeExecutor hasta la adquisicion pooled y
+directa, incluyendo inicializacion/topology, repair de leaf, integracion
+composite y validacion. Un abort posterior a `worktreeAdd` limpia worktree,
+prune y branch; una inicializacion cancelada elimina los slots creados y no
+conserva una capacidad parcial como pool valido.
+
+La verificacion focal acumulada esta verde: suites de WorktreeManager,
+WorktreePool, V2NodeExecutor y ExecutionBaseBuilder; typecheck de
+`@manyhands/execution-core`; suites de proceso/cancelacion existentes; y
+`git diff --check`.
+
+La review Standards/Spec posterior todavia no permite cerrar este ticket.
+Quedan por cubrir el teardown y la evidencia durable especificos de
+smoke/descendientes, un timeout real dentro de operaciones Git y la
+convergencia durable de recovery bajo proceso huerfano. No se reutiliza la
+candidate execution WC1 ni se inicia N=4/N=8/N=16 mientras estas aceptaciones
+sigan abiertas.

@@ -430,3 +430,10 @@
     receipt, delivery ni oráculo; la decisión real queda sin responder.
     Se crea el sucesor 31 para corregir teardown, release y cancelación antes
     de repetir WC1.
+73. **Ticket 31 implementado parcialmente y detenido por review.** Los commits
+    `8f8dca1`, `dedf0ff` y `6c71214` propagaron cancelaciÃ³n/timeout hasta pool,
+    WorktreeManager, repair y composite; limpiaron worktrees abortados y
+    eliminaron slots parciales. Las suites focales y typecheck pasaron, pero
+    Standards/Spec dejaron abiertas evidencia durable/teardown smoke,
+    operaciones Git cancelables y recovery de huÃ©rfanos. No se repite WC1 ni se
+    consume N=4/N=8/N=16 hasta cerrar esas aceptaciones.

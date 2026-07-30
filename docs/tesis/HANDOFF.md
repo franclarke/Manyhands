@@ -1591,3 +1591,34 @@ aprox. 08:28 UTC y no debe eliminarse a mano; esperar la política de stale o
 usar el camino normal de takeover. El worktree ManyHands está en
 `f87f089` antes de la corrección del ticket 31. La secuencia vigente pasa a
 `31 -> WC1 candidate sucesor -> WC2 -> WC3 -> 14 -> 15`.
+
+## Checkpoint ticket 31: correccion parcial revisada - 2026-07-30
+
+Se implementaron y probaron los commits `8f8dca1`, `dedf0ff` y `6c71214`:
+
+- el timeout de leaf cubre adquisicion de base, executor, validacion y repair;
+- el timeout de integracion cubre adquisicion de base, manifest, validacion y
+  repair del composite;
+- `WorktreePool.acquire()` recibe y respeta cancelacion durante init, topology,
+  polling y antes de publicar el lease;
+- un release que no puede sanear/recrear el slot libera el fence y elimina el
+  lease activo, y un abort posterior a `worktreeAdd` limpia worktree, prune y
+  branch;
+- una inicializacion cancelada elimina los slots creados y no conserva una
+  capacidad parcial como pool valido.
+
+Verificacion acumulada: `@manyhands/execution-core` typecheck PASS;
+WorktreeManager, WorktreePool, V2NodeExecutor y ExecutionBaseBuilder focales
+PASS; suites de proceso/cancelacion existentes PASS; `git diff --check` PASS.
+
+La review Standards/Spec no permitio cerrar 31 todavia: faltan una regresion
+con timeout real dentro de operaciones Git, la integracion especifica entre
+smoke/descendientes, evidencia durable y teardown verificado antes de limpiar
+el worktree, y la convergencia completa de procesos huerfanos/restart. La
+candidate WC1 adversa queda intacta y no se reejecuta; tampoco se inicia
+N=4/N=8/N=16.
+
+Estado exacto para reanudar: resolver las aceptaciones restantes del ticket 31
+desde `6c71214`, cerrar con reviews nuevas, crear un freeze sucesor WC1 y
+ejecutar solo WC1. La secuencia posterior sigue siendo
+`31 -> WC1 sucesor -> WC2 -> WC3 -> 14 -> 15`.

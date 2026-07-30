@@ -661,4 +661,15 @@ real y no tiene candidate final, receipt, delivery ni oráculo.
 
 Esto abre el ticket sucesor 31. No se reinicia WC1 ni se consume cuota de
 N=4/N=8/N=16 hasta cerrar 31 con TDD, liberar correctamente el pool, y dejar
-que cancelación/restart/takeover converjan sin borrar locks manualmente.
+
+que cancelaciÃ³n/restart/takeover converjan sin borrar locks manualmente.
+
+### Checkpoint ticket 31 posterior a review - 2026-07-30
+
+La implementaciÃ³n `8f8dca1`/`dedf0ff`/`6c71214` cubre propagaciÃ³n de seÃ±ales,
+cleanup directo y quarantine de inicializaciÃ³n parcial, con suites focales
+verdes. La review Standards/Spec detectÃ³ que no alcanza todavÃ­a el criterio
+completo: falta probar y cerrar teardown/evidencia durable de smoke y
+descendientes, operaciones Git cancelables durante la ventana de cancelaciÃ³n y
+recovery de huÃ©rfanos/restart. WC1 y N=4/N=8/N=16 continÃºan detenidos hasta
+resolver esas aceptaciones.
