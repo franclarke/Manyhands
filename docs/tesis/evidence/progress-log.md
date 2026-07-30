@@ -397,3 +397,10 @@
     driver pre-registrado expiro su margen en `waiting_for_input`, con
     `finalSha: null`, `receipt: null` y sin delivery. No se inicia N=8/N=16,
     no se marca PASS y no se repite la celda.
+68. **WC1 implementado en sucesor limpio.** Desde W1 `71f61c9` se construyó el
+    repositorio `warehouse-control-tower-compact`, commit `8ce6e98`, con
+    pedidos/reservas atómicas, API versionada, SSE monotónico, simulación
+    determinista, torre SVG con heatmap y detalle textual, y probe propio.
+    Verificación: 33 tests, typecheck, build, probe byte-identical y smoke HTTP
+    PASS. Ticket 28 sigue abierto hasta candidate execution, receipt, delivery
+    y oráculo externo atribuibles.

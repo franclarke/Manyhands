@@ -1493,3 +1493,22 @@ clase de decisión, sin reutilizar ni repetir silenciosamente N=4.
 La tesis no puede presentar retry-12 como evidencia positiva: solo demuestra
 que el ciclo llega a una decisión durable y conserva la evidencia de una
 validación no verificada. W1 continúa siendo `1/8` histórico.
+
+## Avance compacto Warehouse - WC1 implementado - 2026-07-30
+
+Se creó el sucesor limpio `C:\Users\franc\Documents\Proyectos\warehouse-control-tower-compact`
+desde W1 `71f61c9efa222103ca2fb2f67692434ab493d75c`, con `core.autocrlf=false`.
+WC1 quedó implementado en el commit externo `8ce6e98`:
+
+- dominio de pedidos y reservas atómicas con transiciones válidas;
+- API versionada `/api/v1`, stream SSE monotónico y simulación determinista;
+- torre SVG con heatmap, bins vacíos y detalle textual equivalente;
+- controles `play`, `pause`, `step`, `reset`, teclado y estados explícitos;
+- probe determinista `study:wc1-probe` y smoke HTTP reproducible.
+
+Verificación del sucesor: 33 tests PASS, typecheck PASS, build PASS, probe
+byte-identical PASS y `scripts/wc1-http-smoke.ps1` PASS. Este commit demuestra
+la implementación funcional del demostrador, pero todavía no es una candidate
+execution de ManyHands ni cierra ticket 28: faltan freeze, receipt, delivery y
+oráculo externo. Próximo paso: congelar protocolo WC1 y ejecutar el flujo
+atribuible antes de iniciar WC2.

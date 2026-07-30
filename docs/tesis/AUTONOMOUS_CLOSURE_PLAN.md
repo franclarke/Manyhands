@@ -628,3 +628,13 @@ su margen en `waiting_for_input`, sin `finalSha`, receipt ni entrega. La celda
 se conserva como evidencia no entregada. N=8/N=16 quedan detenidas hasta un
 protocolo sucesor explícito que defina la política de esa decisión. No se
 repite la celda ni se transforma la ausencia de entrega en PASS.
+
+### Avance WC1
+
+WC1 ya cuenta con una implementación funcional en el sucesor limpio
+`warehouse-control-tower-compact`, commit `8ce6e98`, derivado de W1
+`71f61c9`. Sus tests, typecheck, build, probe determinista y smoke HTTP pasan.
+Este avance no sustituye la candidate execution atribuible: antes de WC2 deben
+congelarse el protocolo, budget, probe y oráculo, y persistirse candidate SHA,
+receipt y delivery de WC1. La expansión a W2–W8 individuales queda descartada
+salvo que un gap funcional concreto lo vuelva necesario.

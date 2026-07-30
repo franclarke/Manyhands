@@ -777,6 +777,7 @@ como registro del estado en G1.
 | CLAIM-112 | La masa de contexto usada por C se deriva de bytes versionados del snapshot y declara incertidumbre para paths no medidos | **implemented como componente** | commits `950dd18` + `e94b4b8`; índice exacto y estimator determinista |
 | CLAIM-113 | Los criterios de aceptación del usuario no se multiplican por la topología seleccionada | **implemented; evidencia final pendiente** | `acceptance-allocation.ts`; cinco intents únicos bajo A/B/C y ownership por deepest owner/LCA en `contract-acceptance-allocation.test.ts` |
 | CLAIM-114 | Warehouse Control Tower puede construirse incrementalmente con una única versión congelada de ManyHands | **instrumento implementado; construcción pendiente** | seed y assets W1–W8 hasheados, driver y oráculos externos verificados; faltan Pilot, freeze y Final |
+| CLAIM-115 | El sucesor compacto Warehouse ofrece una operación visible verificable en WC1 | **implementación verificada; atribución pendiente** | sucesor W1 `71f61c9` → commit `8ce6e98`; 33 tests, typecheck, build, probe determinista y smoke HTTP PASS; faltan candidate execution, receipt, delivery y oráculo externo |
 
 El G5 anterior conserva su interpretación: C1 no mostró ventaja sobre A en el
 target pequeño y la métrica de aceptación fue endógena. Es evidencia formativa
