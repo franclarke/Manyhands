@@ -404,3 +404,8 @@
     Verificación: 33 tests, typecheck, build, probe byte-identical y smoke HTTP
     PASS. Ticket 28 sigue abierto hasta candidate execution, receipt, delivery
     y oráculo externo atribuibles.
+69. **WC2 implementado acumulativamente.** El sucesor avanzó de `8ce6e98` a
+    `4da4a45` con rutas de picking conectadas, waves con capacidad limitada,
+    explicaciones de no asignación, costo sensible a congestión y overlay
+    visual/textual. Verificación: 37 tests, typecheck, build y probe WC2
+    determinista PASS. Ticket 29 sigue abierto hasta evidencia atribuible.

@@ -1512,3 +1512,17 @@ la implementación funcional del demostrador, pero todavía no es una candidate
 execution de ManyHands ni cierra ticket 28: faltan freeze, receipt, delivery y
 oráculo externo. Próximo paso: congelar protocolo WC1 y ejecutar el flujo
 atribuible antes de iniciar WC2.
+
+## Avance compacto Warehouse - WC2 implementado - 2026-07-30
+
+WC2 quedó implementado acumulativamente sobre WC1 en el commit externo
+`4da4a45`. Incluye planificación de fulfillment con rutas conectadas y
+reproducibles, waves limitadas por capacidad de pickers, explicaciones
+accionables para pedidos no asignados, costo sensible a congestión y overlays
+visuales/textuales integrados en la API y la interfaz.
+
+Verificación acumulada: 37 tests PASS, typecheck PASS, build PASS y probe
+`study:wc2-probe` determinista PASS. WC2 todavía no es una candidate execution
+atribuible ni cierra ticket 29: falta freeze, receipt, delivery y oráculo
+externo. Próximo paso: implementar WC3 sobre `4da4a45`, luego congelar y
+ejecutar la serie compacta de forma atribuible.
