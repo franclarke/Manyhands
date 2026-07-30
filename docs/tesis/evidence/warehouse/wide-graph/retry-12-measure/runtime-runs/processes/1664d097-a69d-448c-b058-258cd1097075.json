@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "processes": [
+    {
+      "pid": 32088,
+      "label": "planning-v2-attempt-1",
+      "command": "C:\\Users\\franc\\.local\\bin\\claude.exe",
+      "operationId": "bc2d9700-40d1-4bb8-8a70-28ef7d6e8af8",
+      "registeredAt": "2026-07-30T17:05:28.181Z",
+      "exitedAt": "2026-07-30T17:08:01.767Z"
+    }
+  ],
+  "updatedAt": "2026-07-30T17:08:01.784Z"
+}

@@ -4,11 +4,11 @@
 
 **Blocked by:** 10, 26.
 
-**Status:** ready-for-agent
+**Status:** closed
 
-- [ ] Ambas corren sobre la misma base y con el mismo executor declarado.
-- [ ] Cada resultado queda preservado, incluidos los fallos.
-- [ ] Queda registrada la evaluacion de granularidad de la celda mas ancha.
+- [x] Ambas corren sobre la misma base y con el mismo executor declarado.
+- [x] Cada resultado queda preservado, incluidos los fallos.
+- [x] Queda registrada la evaluacion de granularidad de la celda mas ancha.
 
 ## Progreso 2026-07-28
 
@@ -108,3 +108,32 @@ verificada y la serie compacta WC1--WC3 sale del mínimo. La medición que falta
 para H1 se obtiene con una serie **planning-only** barata bajo
 `claude-code-cli`, declarada como serie de medición separada y **no comparable**
 con `retry-8/9/10/11` ni con el piloto.
+
+## Cierre — 2026-07-30
+
+Las tres casillas quedan satisfechas por evidencia preservada, no por un
+resultado favorable:
+
+- **Misma base y mismo executor declarado.** `retry-10` ejecutó N=4, N=8 y N=16
+  secuencialmente sobre el freeze `643a32d`, la base W1 `71f61c9` y la selección
+  homogénea `codex-cli/gpt-5.5/high`, con tres targets nuevos e independientes.
+  `retry-11` repitió la serie completa sobre `4f64258` con la misma selección.
+- **Cada resultado preservado, incluidos los fallos.** Seis celdas terminales
+  entre las dos series, todas `not_delivered`, todas con journal, snapshot,
+  resultado y disposición de oráculo `not_run`. Ninguna se borró, reintentó ni
+  reinterpretó.
+- **Evaluación de granularidad de la celda más ancha.** `retry-10` N=16 la
+  conserva: checksum `b60fe54c`, 19 hojas, 20 assessments, `splitAdvantage`
+  −0.4604 bajo el umbral inmutable `0.15`.
+
+### Qué no establece este cierre
+
+- **Ninguna celda ancha entregó.** Ni `retry-8`, ni `retry-10`, ni `retry-11`
+  produjeron candidate, receipt ni entrada de oráculo. El barrido existe como
+  evidencia adversa; no sostiene H2.
+- Las causas terminales son distintas entre series y quedan documentadas por
+  separado: falso `artifact_cycle` en `retry-10` (corregido en ticket 16), muerte
+  no atribuible del proceso dueño en `retry-11` N=4/N=8, y fallo del sandbox de
+  Codex en `retry-11` N=16.
+- La medición de H1 **no** salió de este barrido: salió de `retry-12-measure`,
+  una serie planning-only declarada no comparable. Ver ticket 12.

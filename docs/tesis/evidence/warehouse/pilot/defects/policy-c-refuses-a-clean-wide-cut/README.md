@@ -83,3 +83,44 @@ distingan, cualquier ajuste al umbral o a la fórmula sería ajustar al resultad
 
 **No se tocó ni el umbral ni el término.** Se necesita una segunda medición con
 intents efectivamente particionados por hoja antes de decidir.
+
+---
+
+## Resolución — 2026-07-30
+
+La segunda medición existe:
+[`retry-12-measure`](../../../wide-graph/retry-12-measure/README.md), una serie
+planning-only sobre el **mismo estímulo, la misma fórmula y el mismo umbral**,
+con un Architect que sí particionó los intents por hoja.
+
+| | piloto N=16 (19 hijos) | retry-11 N=8 (Codex) | retry-12 N=4 | retry-12 N=8 |
+|---|---:|---:|---:|---:|
+| intents por hoja | compartidos | compartidos | **propios** | **propios** |
+| `validationDuplication` | 0.8947 | 0.8500 | **0.3750** | **0.4828** |
+| `splitAdvantage` | −0.2584 | +0.0444 | **+0.1710** | **+0.3275** |
+| razón registrada | infactibilidad | bajo el mínimo | **utilidad** | infactibilidad |
+
+Con intents particionados, `validationDuplication` cae a la mitad y el advantage
+cruza el mínimo. En `retry-12` N=4 la razón registrada es
+`"Split advantage 0.1710 meets minimum 0.1500."` — **la primera vez en todo el
+corpus que la utilidad, y no la infactibilidad de la hoja, aprueba un corte
+ancho.**
+
+**Veredicto: sostiene la lectura (1).** El término mide lo que dice medir —
+obligaciones de verificación duplicadas entre hermanas— y lo que producía el
+rechazo era la asignación de criterios de objetivo completo a las hojas, no un
+error de la fórmula. No se cambió el término, la fórmula ni el umbral, y la
+lectura (2) queda descartada por evidencia, no por conveniencia.
+
+### Qué no se concluye de la resolución
+
+- **El caso motivador no fue re-medido a su propia anchura.** El rechazo original
+  ocurrió sobre 19 hijos; la resolución se apoya en árboles de 7 y 11 hojas. La
+  celda N=16 de `retry-12` falló en planning y no dejó evaluación.
+- No se concluye que el planner esté arreglado. Nada obliga a un Architect a
+  particionar los intents: dos ejecutores distintos produjeron reparticiones
+  distintas sobre el mismo estímulo, y esa variabilidad sigue sin control.
+- No se concluye que la política sea correcta en general, ni que
+  `minimumAdvantage = 0.15` esté anclado. Sigue siendo provisional.
+- `retry-12` no es comparable con ninguna serie Codex y no modifica sus
+  resultados, que siguen siendo evidencia adversa inmutable.

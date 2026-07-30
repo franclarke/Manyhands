@@ -1547,3 +1547,76 @@ las tres disposiciones son `not_run`.
 veredicto de H1 sólo necesita planning: no necesita ejecución, candidate,
 entrega ni oráculo. La serie de medición se detiene sin responder la aprobación
 del plan y registra `not_delivered` con razón `measurement_only_planning`.
+
+## Medición H1 cerrada — `retry-12-measure` — 2026-07-30
+
+### Defectos de producto encontrados antes de medir
+
+El Gate P0 completo sobre el HEAD heredado dio **12 tests rojos**. Los tickets
+23--26 se cerraron sin correr nunca la suite entera en su commit. Tres defectos
+reales estaban detrás, corregidos con TDD en `5c48aba`:
+
+1. **Una decisión levantada parkeaba el run entero.** `eab5b76` agregó
+   `decision.raised -> waiting_for_input`, que contradice el modelo que el resto
+   del sistema implementa: una decisión bloquea los nodos que nombra, y sólo
+   `readiness.observed` parkea el run cuando no hay nada listo.
+2. **Un dead-end de scheduling que ese parkeo tapaba.** Al quitar la transición,
+   un run bloqueado por presupuesto quedaba `running` sin salida. El driver ahora
+   vuelve a observar readiness después de levantar la decisión.
+3. **El chequeo de idempotencia de hechos derivados comparaba input crudo contra
+   evento normalizado por schema.** Un default (`matrix.observations: []`) hacía
+   ver una re-derivación idéntica como conflictiva y abortaba un run que sólo
+   había tenido contención. Ahora se normalizan ambos lados.
+
+Los demás rojos eran dobles de test desactualizados respecto de contratos que
+23 y 24 endurecieron.
+
+Suite final: **1533 passed, 2 skipped, 1 failed**. El único fallo es el
+microbenchmark de caché del indexer bajo contención paralela (30.11 ms contra una
+cota de 25 ms), que pasa con el archivo aislado. **No se movió la cota** y el
+resultado adverso se conserva. Typechecks, `pnpm build` y `pnpm web:build` PASS
+con Node `22.23.1` / pnpm `7.29.3`.
+
+### La medición
+
+Serie `retry-12-measure`, congelada en `5c48aba`, planning-only, ejecutor
+`claude-code-cli/haiku`, base W1 `71f61c9`, condición C, umbral y fórmula
+intactos. Un solo target: una celda planning-only nunca lo muta.
+
+| Celda | resultado | hojas | selected | splitAdvantage | validationDuplication |
+|---|---|---:|---|---:|---:|
+| N=4 `1664d097` | medida | 7 | split | **+0.1710** | **0.3750** |
+| N=8 `4ba80bca` | medida | 11 | split | **+0.3275** | **0.4828** |
+| N=16 `6e1e5ed3` | sin medición | — | — | — | — |
+
+`retry-12` N=4 es el **primer caso de las 18 evaluaciones de raíz preservadas
+donde la razón registrada de un corte ancho es la utilidad**:
+`"Split advantage 0.1710 meets minimum 0.1500."`
+
+La diferencia observable está en el árbol candidato, no en la fórmula: Haiku dio
+a cada módulo su intent propio (`ai-proj-01`…`ai-proj-04`), mientras Codex, sobre
+el mismo estímulo, dio a las ocho hojas hermanas los mismos dos intents.
+
+**Veredicto del ticket 12: sostiene la lectura (1).** El término mide lo que
+declara medir; lo que producía el rechazo era la asignación de criterios de
+objetivo completo a las hojas. No se cambió término, fórmula ni umbral.
+
+### Limitaciones declaradas
+
+- **El caso motivador no fue re-medido a su propia anchura.** El rechazo original
+  fue sobre 19 hijos; el veredicto se apoya en 7 y 11 hojas. La celda N=16 falló
+  en planning y su causa no es atribuible: el host registra tipos de envelope y
+  bytes, no la salida del CLI. Documentado en
+  `pilot/defects/planning-failure-discards-cli-output/`. No se reintenta.
+- `retry-12` **no es comparable** con ninguna serie Codex y no modifica sus
+  resultados.
+- Nada obliga a un Architect a particionar los intents. Esa variabilidad entre
+  ejecutores sigue sin control.
+- `minimumAdvantage` y `maxLeafPlannedPaths` continúan provisionales.
+
+### Estado de tickets
+
+- **11 `closed`**: las tres casillas se satisfacen con evidencia preservada de
+  `retry-10` y `retry-11`, ninguna de las cuales entregó. No sostiene H2.
+- **12 `closed`** con el veredicto de arriba.
+- Frente restante: **02 -> 14 -> 15**.
