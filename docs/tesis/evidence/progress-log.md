@@ -517,3 +517,8 @@
     limpia y lista, pero la candidate aun no se ejecuta. Ticket 31 sigue
     abierto hasta validar el host real; WC2 y N=4/N=8/N=16 esperan el
     veredicto WC1.
+86. **Regresion de watchdog estabilizada bajo carga.** El gate completo habia
+    expuesto una espera fija demasiado corta en el test del root ya terminado;
+    se reemplazo por polling acotado observable. La suite focal queda 7/7
+    PASS. Falta repetir el gate completo serial y, si queda verde, ejecutar
+    una sola candidate WC1 v2.

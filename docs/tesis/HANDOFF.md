@@ -1870,3 +1870,15 @@ evidencia durable y recovery integrado.
 Estado de reanudacion: ejecutar el preflight de la celda WC1 v2 y luego una
 sola candidate. Preservar todos los journals, incluso si no hay candidate SHA;
 no iniciar WC2 hasta emitir el veredicto de WC1.
+
+## Checkpoint estabilidad de regresion - 2026-07-30
+
+El gate completo bajo carga revelo que la nueva regresion del watchdog usaba
+una espera fija de 30 ms. El producto no fallo: el test podia afirmar antes
+de que el timer muestreara cuando Vitest ejecutaba 221 archivos. Se cambio la
+regresion a una espera observable y acotada de 1 s; la suite focal queda 7/7
+PASS y `git diff --check` PASS.
+
+Estado de reanudacion: repetir `pnpm test` una sola vez, serialmente, para
+confirmar el gate completo estable. Si queda verde, mantener el freeze WC1
+v2, arrancar el servidor en 3112 y ejecutar la candidate una sola vez.
