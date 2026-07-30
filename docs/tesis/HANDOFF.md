@@ -1680,3 +1680,35 @@ Estado de reanudacion: decidir una materializacion reproducible del artefacto
 historico o mantenerlo como bloqueo documentado; despues continuar con las
 aceptaciones restantes de ticket 31. Todavia no se repite WC1 y no se ejecuta
 N=4/N=8/N=16.
+
+## Checkpoint teardown de validacion y Git cancelable - 2026-07-30
+
+El commit `1df4548` avanza dos aceptaciones de ticket 31:
+
+- `WorktreePoolGit` acepta `AbortSignal` en add, validate, reset/clean, remove,
+  prune, common-dir y update-ref; el pool propaga la señal durante la
+  inicializacion y adquisicion, y el runner nativo la entrega a `execFile(git)`.
+  Una regresion reproduce un sanitation Git bloqueado y confirma que acquire
+  rechaza por cancelacion en vez de esperar indefinidamente;
+- una validacion supervisada enumera descendientes al cerrar el proceso,
+  termina cada descendiente y verifica su salida antes de devolver el resultado.
+  Si la inspeccion, terminacion o verificacion falla, la validacion devuelve
+  exit `125` y no PASS. Las regresiones cubren smoke exitoso y descendiente
+  sobreviviente.
+
+Verificacion de este checkpoint: `tests/worktree-recycling-pool.test.ts` y
+`tests/execution-core-worktree.test.ts` pasan 30/30; la suite de validation
+runner pasa 18/18; typecheck de `@manyhands/execution-core` PASS;
+`git diff --check` PASS. El proceso root ya queda registrado por el journal
+durable existente bajo supervision; el teardown de descendientes ocurre antes
+de que V2NodeExecutor entre en la limpieza del worktree.
+
+Queda abierto para ticket 31: demostrar en una candidate real la evidencia
+durable smoke->pool, completar convergencia de huérfano/restart/heartbeat y
+obtener nuevas reviews Standards/Spec. El freeze `dist` histórico sigue siendo
+el único fallo del test contractual aislado; no se reescribe. No se repite WC1
+ni se inicia N=4/N=8/N=16.
+
+Estado de reanudacion: integrar el escenario de teardown con la ruta V2 real,
+cerrar la revisión de lifecycle 27/31 y sólo entonces crear el freeze sucesor
+WC1.

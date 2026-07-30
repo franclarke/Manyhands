@@ -54,3 +54,15 @@ smoke/descendientes, un timeout real dentro de operaciones Git y la
 convergencia durable de recovery bajo proceso huerfano. No se reutiliza la
 candidate execution WC1 ni se inicia N=4/N=8/N=16 mientras estas aceptaciones
 sigan abiertas.
+
+## Checkpoint de teardown supervisado - 2026-07-30
+
+El commit `1df4548` agrega cancelacion real a las operaciones Git del pool
+durante init/acquire y verifica descendientes de validaciones supervisadas
+antes de devolver un resultado. La validacion falla cerrado con exit `125` si
+no puede inspeccionar, matar o verificar un descendiente. Regresiones y
+typecheck de execution-core pasan.
+
+El ticket sigue abierto: falta la evidencia durable integrada con una candidate
+real y el pool, ademas de la convergencia completa de huérfano/restart/heartbeat
+y las reviews Standards/Spec finales.

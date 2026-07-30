@@ -456,3 +456,11 @@
     contrato queda en 6/7 PASS y el escenario delivery/restart pasa. Resta
     solamente el hash del `dist` historico no versionado; no se modifica el
     freeze ni se inicia WC1 sucesor.
+77. **Teardown supervisado y Git cancelable.** `1df4548` propaga `AbortSignal`
+    a las operaciones Git del pool durante init/acquire y agrega la regresion
+    de sanitation cancelable. Las validaciones supervisadas enumeran y
+    verifican descendientes antes de devolver un resultado; un sobreviviente
+    produce exit 125 y no PASS. Suites focales: pool/worktree 30/30,
+    validation runner 18/18 y typecheck de execution-core PASS. Ticket 31
+    sigue abierto hasta la candidate real, lifecycle huerfano/restart y
+    reviews nuevas; no se repite WC1 ni se ejecuta N=4/N=8/N=16.
