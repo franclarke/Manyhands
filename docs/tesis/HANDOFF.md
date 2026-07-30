@@ -1557,3 +1557,37 @@ La candidate execution WC1 es el próximo paso. Sólo se aprobarán el plan y la
 entrega; cualquier otra decisión real deja la celda preservada sin respuesta
 ad hoc. Tras un candidate SHA se ejecutará una única evaluación del oráculo
 compacto; sin candidate SHA el resultado será `not_run`.
+
+## Checkpoint WC1 candidate execution y defecto de teardown - 2026-07-30
+
+La primera candidate execution atribuible WC1 quedó preservada en
+`evidence/warehouse/compact/runs/wc1/` con run
+`3f5cf275-85c7-49ce-9fef-12744e1846d8`. La primera hoja produjo candidate
+`68a06db4b8c9640aa15d603c80795c98df42100a`, validación `verified` y dos
+artefactos adoptados. La segunda hoja no produjo candidate: su Codex quedó
+inactivo hasta el timeout, que sí emitió `failure.classified` y
+`attempt.failed` a las 08:21:22 UTC.
+
+La causa observada fue productiva y no se interpreta como PASS: el smoke test
+dejó vivo `node src/server/start.ts --port 43117`, manteniendo abiertos
+`start-smoke.out.log` y `start-smoke.err.log`; el reciclado del pool falló con
+`git clean -fdx ... Invalid argument`. El siguiente `WorktreePool.acquire()`
+no recibe `AbortSignal` ni timeout y espera indefinidamente por el slot,
+manteniendo el lease del repositorio y dejando el run en `running`. El control
+normal tampoco pudo hacer takeover porque `repository quiescent` era falso.
+El proceso smoke fue terminado con sus PIDs exactos y el servidor de prueba
+fue apagado; no se borraron locks ni artefactos manualmente.
+
+La ejecución no tiene candidate final, receipt ni delivery y no se ejecutó el
+oráculo WC1. Quedó una decisión real de conflicto por el `git clean` fallido;
+no se respondió ad hoc. El nuevo trabajo pendiente es el ticket sucesor 31:
+TDD para teardown supervisado, release seguro del pool, propagación de
+cancelación/timeout a `acquire()` y takeover después de un executor o smoke
+huérfano. Después de cerrar 31 se debe repetir WC1 una sola vez con un freeze
+sucesor explícito; no reutilizar este run como medición positiva.
+
+Estado de reanudación: el lease stale del target quedó sin renovación desde
+aprox. 08:28 UTC y no debe eliminarse a mano; esperar la política de stale o
+usar el camino normal de takeover. El worktree ManyHands está en
+`f87f089` antes de la corrección del ticket 31. La secuencia vigente pasa a
+`31 -> WC1 candidate sucesor -> WC2 -> WC3 -> 14 -> 15`.

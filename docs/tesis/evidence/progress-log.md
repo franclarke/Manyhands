@@ -421,3 +421,12 @@
     limpio, prompt, budgets, reglas de corte y oráculo compacto hasheado en
     `evidence/warehouse/compact/wc1-freeze.json`. No comenzó todavía la
     candidate execution.
+72. **WC1 candidate execution preservada como evidencia adversa.** La primera
+    hoja produjo candidate `68a06db4b8c9640aa15d603c80795c98df42100a` y dos
+    artefactos adoptados. La segunda expiró con `git clean -fdx` fallando al
+    remover `start-smoke.out.log`/`.err.log` porque el smoke server quedó vivo;
+    el retry siguiente bloqueó `WorktreePool.acquire()` sin señal ni timeout.
+    El run `3f5cf275-85c7-49ce-9fef-12744e1846d8` no tiene candidate final,
+    receipt, delivery ni oráculo; la decisión real queda sin responder.
+    Se crea el sucesor 31 para corregir teardown, release y cancelación antes
+    de repetir WC1.

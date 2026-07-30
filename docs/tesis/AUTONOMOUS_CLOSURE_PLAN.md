@@ -647,3 +647,18 @@ El sucesor Warehouse compacto quedó implementado en la secuencia
 build, probes deterministas, smoke HTTP y revisión visual. Esto no equivale a
 evidencia atribuible de ManyHands: la serie todavía requiere freeze, candidate
 execution, receipts, delivery y oráculos externos para cada incremento.
+
+### Checkpoint posterior a la primera candidate execution WC1 - 2026-07-30
+
+La implementación compacta WC1 sigue verificada en el sucesor, pero la primera
+ejecución atribuible ManyHands no cerró. La hoja inicial produjo el candidate
+`68a06db4b8c9640aa15d603c80795c98df42100a`; la hoja siguiente expiró porque un
+smoke server mantuvo abiertos dos logs y `git clean -fdx` falló. La siguiente
+adquisición del pool quedó esperando indefinidamente: `WorktreePool.acquire()`
+no acepta señal/timeout y el release no devuelve el slot después de un cleanup
+incierto. El run `3f5cf275-85c7-49ce-9fef-12744e1846d8` conserva la decisión
+real y no tiene candidate final, receipt, delivery ni oráculo.
+
+Esto abre el ticket sucesor 31. No se reinicia WC1 ni se consume cuota de
+N=4/N=8/N=16 hasta cerrar 31 con TDD, liberar correctamente el pool, y dejar
+que cancelación/restart/takeover converjan sin borrar locks manualmente.
