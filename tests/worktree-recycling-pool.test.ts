@@ -49,6 +49,38 @@ describe("WorktreePool", () => {
     expect(validateCalls).toBe(0);
   });
 
+  it("quarantines worktrees created before initialization is cancelled", async () => {
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "manyhands-pool-init-cancel-"));
+    tempRoots.push(repoRoot);
+    const addedPaths: string[] = [];
+    const removedPaths: string[] = [];
+    const controller = new AbortController();
+    const gitAdapter: WorktreePoolGit = {
+      add: async ({ worktreePath }) => {
+        addedPaths.push(worktreePath);
+        controller.abort(new Error("initialization cancelled"));
+      },
+      resetAndClean: async () => undefined,
+      remove: async ({ worktreePath }) => { removedPaths.push(worktreePath); },
+      prune: async () => undefined,
+      validate: async () => false,
+      resolveCommonDir: async () => path.join(repoRoot, ".git"),
+      updateRef: async () => undefined
+    };
+    const pool = new WorktreePool({
+      repoRoot,
+      poolRoot: path.join(repoRoot, "pool"),
+      size: 2,
+      git: gitAdapter,
+      removePath: async () => undefined
+    });
+
+    await expect(pool.acquire({ baseCommit: "a".repeat(40), signal: controller.signal }))
+      .rejects.toThrow();
+    expect(addedPaths).toHaveLength(1);
+    expect(removedPaths).toContain(addedPaths[0]);
+  });
+
   it("reuses a pre-created worktree after reset --hard and clean -fd", async () => {
     const repoRoot = await createRepository();
     const firstCommit = await commitFile(repoRoot, "version.txt", "one\n", "first");

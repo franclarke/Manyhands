@@ -161,11 +161,13 @@ export class WorktreePool {
         );
         if (fencedLease === undefined) continue;
         try {
+          throwIfAborted(input.signal);
           await fencedLease.assertCurrent();
           await this.git.resetAndClean({
             worktreePath: slot.path,
             baseCommit: input.baseCommit
           });
+          throwIfAborted(input.signal);
           await fencedLease.assertCurrent();
           const publicLease: WorktreeLease = {
             id: randomUUID(),
@@ -334,6 +336,7 @@ export class WorktreePool {
     throwIfAborted(signal);
     await this.resolveControlRoot();
     const topologyLease = await this.acquireTopologyLease(signal);
+    const createdPaths: string[] = [];
     try {
       const created: PoolSlot[] = [];
       for (let index = 0; index < this.size; index += 1) {
@@ -354,16 +357,9 @@ export class WorktreePool {
               worktreePath,
               baseCommit
             });
+            createdPaths.push(worktreePath);
             throwIfAborted(signal);
           } catch (error) {
-            await Promise.allSettled(
-              created
-                .filter((slot) => !slot.adopted)
-                .map((slot) => this.git.remove({
-                  repoRoot: this.repoRoot,
-                  worktreePath: slot.path
-                }))
-            );
             throw worktreePoolUnavailable(`could not create slot ${id}`, error);
           }
         }
@@ -371,6 +367,15 @@ export class WorktreePool {
         this.slots.push(slot);
         created.push(slot);
       }
+    } catch (error) {
+      await Promise.allSettled(
+        createdPaths.map((createdPath) => this.git.remove({
+          repoRoot: this.repoRoot,
+          worktreePath: createdPath
+        }))
+      );
+      this.slots.splice(0);
+      throw error;
     } finally {
       await topologyLease.release();
     }

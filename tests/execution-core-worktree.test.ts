@@ -93,6 +93,32 @@ describe("WorktreeManager.create", () => {
       manager.create({ taskId: "task-1", runId: "run-1", kind: "leaf", baseCommit: "BASE_SHA" })
     ).rejects.toSatisfy((err) => WorktreeError.is(err) && err.operation === "create");
   });
+
+  it("removes a worktree when cancellation arrives immediately after creation", async () => {
+    const controller = new AbortController();
+    class AbortAfterAddGit extends FakeGitRunner {
+      override async worktreeAdd(params: Parameters<FakeGitRunner["worktreeAdd"]>[0]): Promise<void> {
+        await super.worktreeAdd(params);
+        controller.abort(new Error("creation cancelled"));
+      }
+    }
+    const git = new AbortAfterAddGit();
+    const manager = makeManager(git);
+
+    await expect(manager.create({
+      taskId: "task-cancel",
+      runId: "run-cancel",
+      kind: "leaf",
+      baseCommit: "BASE_SHA",
+      signal: controller.signal
+    })).rejects.toThrow("creation cancelled");
+    expect(git.opsInvoked()).toEqual([
+      "worktreeAdd",
+      "worktreeRemove",
+      "worktreePrune",
+      "branchDelete"
+    ]);
+  });
 });
 
 describe("WorktreeManager.clean", () => {

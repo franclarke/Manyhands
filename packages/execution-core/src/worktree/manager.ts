@@ -91,7 +91,10 @@ export class WorktreeManager {
       });
       throwIfAborted(params.signal);
     } catch (error) {
-      throwIfAborted(params.signal);
+      if (params.signal?.aborted === true) {
+        await this.removeCreatedWorktree(path, branch);
+        throw error;
+      }
       // A previous attempt may have left this worktree/branch behind (e.g. a
       // failed integration the human chose to retry at the conflict gate).
       // Tear the leftovers down and try exactly once more; any other cause
@@ -174,6 +177,13 @@ export class WorktreeManager {
     } catch {
       return false;
     }
+  }
+
+  private async removeCreatedWorktree(path: string, branch: string): Promise<void> {
+    await this.git.worktreeRemove({ repoRoot: this.repoRoot, worktreePath: path, force: true }).catch(() => undefined);
+    await this.git.worktreePrune(this.repoRoot).catch(() => undefined);
+    await rm(path, { recursive: true, force: true }).catch(() => undefined);
+    await this.git.branchDelete({ repoRoot: this.repoRoot, branch, force: true }).catch(() => undefined);
   }
 
   /**
