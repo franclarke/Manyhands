@@ -486,3 +486,10 @@
     13/13 y artifacts 1/1 pasan, junto con typechecks. Ticket 31 sigue abierto
     por la candidate integrada y las reviews; no se repite WC1 ni se ejecuta
     N=4/N=8/N=16.
+81. **Gate raiz tras las correcciones de lifecycle/worktree.** `pnpm test`
+    queda en 220 archivos PASS, 1544 tests PASS y 2 skipped. El unico fallo es
+    el hash del `dist` historico de `wide-graph-oracle-contract`; no se altera
+    el freeze ni se interpreta como evidencia positiva. No aparecieron
+    regresiones en lifecycle, leases, takeover, supervisor o pool. Ticket 31
+    sigue abierto por candidate integrada y reviews; WC1 sucesor y N=4/N=8/N=16
+    continÃºan detenidos.

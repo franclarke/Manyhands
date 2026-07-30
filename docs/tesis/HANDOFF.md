@@ -1782,3 +1782,20 @@ repite WC1 ni se inicia N=4/N=8/N=16.
 Estado de reanudacion: hacer la revision independiente del punto fijo de
 lifecycle/worktree y, si no quedan defectos de instrumento, crear el freeze
 sucesor y ejecutar solamente WC1.
+## Checkpoint gate raiz tras lifecycle/worktree fixes - 2026-07-30
+
+`pnpm test` se ejecuto despues de `cf13028`: 220 archivos pasan, 1544 tests
+pass y 2 skipped. El unico fallo restante es el hash del `dist` historico de
+`wide-graph-oracle-contract` (`expected f95b...`, actual `cce468...`), que ya
+existia por el cambio de ticket 02 y no se reinterpreta como PASS ni se
+reescribe silenciosamente.
+
+Las regresiones nuevas de fallo terminal, evidencia de descendientes y release
+cancelable pasan dentro del gate. No aparecieron regresiones de lifecycle,
+leases, takeover, supervisor ni worktree. Ticket 31 sigue abierto por la
+candidate integrada y reviews Standards/Spec; WC1 sucesor y N=4/N=8/N=16 aun
+no se ejecutan.
+
+Estado de reanudacion: resolver o materializar de forma reproducible el
+artefacto `dist` historico sin alterar su semantica, completar la review
+independiente de 31 y luego crear el freeze sucesor WC1.
