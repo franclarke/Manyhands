@@ -556,3 +556,9 @@
     pasa 19/19; ticket 31 sigue abierto por las aceptaciones de candidate,
     procesos y recovery. El prompt V2 aclara ademas que `outputRoots` son
     subarboles recursivos; WC1 v2 permanece sin retry.
+92. **Punto fijo e31ef88 revisado y preservado.** La regresion integrada de
+    code repair y el rollback de `git.add()` parcial quedaron committeados;
+    V2 queda 41/41, WorktreePool 19/19, execution-core typecheck y diff check
+    PASS. Las reviews mantienen 31 BLOCKED/PARTIAL por lifecycle/productive
+    evidence restante y 32 pendiente de review final; no se crea freeze-v3 ni
+    se repite WC1 v2.

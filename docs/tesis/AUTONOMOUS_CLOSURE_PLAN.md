@@ -690,3 +690,9 @@ Se abre el sucesor local 32. La secuencia operativa queda:
 
 La candidate WC1 v2 y su oraculo `not_run` permanecen intactos. No se responde
 la decision ni se hace retry silencioso.
+
+El punto fijo `e31ef88` tambien corrige el rollback de un `git worktree add`
+parcial: la ruta se registra antes de invocar Git y una regresion confirma la
+cuarentena. Esto avanza ticket 31, pero no satisface aun la evidencia real de
+descendientes, orphan/restart/heartbeat/takeover ni el gate de candidate; la
+siguiente ejecucion WC1 sigue bloqueada.

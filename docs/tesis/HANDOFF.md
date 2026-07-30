@@ -1965,10 +1965,16 @@ fallaba, el rollback no podia removerlo. La correccion registra la ruta antes
 de invocar Git; el test productivo verifica la cuarentena de esa ruta.
 
 Verificacion: regresion aislada 1/1 PASS, suite WorktreePool 19/19 PASS y
-`git diff --check` queda pendiente de confirmar al consolidar el commit. Esto
+`git diff --check` PASS en el commit `e31ef88`. Esto
 avanza ticket 31, pero no lo cierra: aun faltan candidate real, evidencia
 durable integrada, orphan/restart/heartbeat/takeover y reviews finales.
 
 El prompt de code repair tambien fue ajustado para describir `outputRoots`
 como subarboles recursivos, coherente con `ScopeChecker`; la suite V2 queda
 41/41 PASS. No se crea `wc1-freeze-v3` hasta cerrar estas aceptaciones.
+
+Las revisiones independientes actuales dejan ticket 31 en BLOCKED/PARTIAL por
+las aceptaciones de candidate real, evidencia durable de procesos,
+orphan/restart/heartbeat/takeover y el gate final. Ticket 32 tiene el camino
+productivo y regresiones focales verdes, pero no se declara cerrado hasta una
+review final exitosa sobre este commit.
