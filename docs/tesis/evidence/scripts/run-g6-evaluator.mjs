@@ -20,7 +20,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
-import { evaluateG6Criteria, G6_CRITERION_IDS } from "./lib/g6-criteria.mjs";
+import { evaluateG6Criteria, G6_CRITERION_IDS, G6_PROBE_COMMAND } from "./lib/g6-criteria.mjs";
 import { wideGraphCloneArgs } from "./lib/wide-graph-oracle-plan.mjs";
 import { runPnpm } from "../warehouse/oracles/oracle-core.mjs";
 
@@ -66,7 +66,7 @@ try {
     },
     runProbe: async () => {
       try {
-        const result = await runPnpm(["study:g6-probe"], target, 120_000);
+        const result = await runPnpm(G6_PROBE_COMMAND, target, 120_000);
         return { exitCode: 0, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
       } catch (error) {
         return { exitCode: 1, stdout: "", stderr: String(error.message ?? error) };

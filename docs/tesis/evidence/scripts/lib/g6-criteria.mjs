@@ -31,6 +31,14 @@ export const G6_CRITERION_IDS = [
   "probe-deterministic"
 ];
 
+/**
+ * `--silent` no es cosmético: sin él pnpm escribe el eco del comando en la
+ * salida capturada y el criterio de "un único objeto JSON" falla por culpa del
+ * arnés y no del código entregado. El oráculo de grafo ancho ya lo invoca así;
+ * esta constante existe para que la razón no se pierda y para poder probarla.
+ */
+export const G6_PROBE_COMMAND = ["--silent", "study:g6-probe"];
+
 const GATE_COMMANDS = {
   "gate-install": ["install", "--frozen-lockfile"],
   "gate-test": ["test"],

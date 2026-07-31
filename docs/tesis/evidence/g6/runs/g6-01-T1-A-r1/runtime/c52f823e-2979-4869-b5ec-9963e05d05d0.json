@@ -1,0 +1,61 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "c52f823e-2979-4869-b5ec-9963e05d05d0",
+    "workspaceId": "f57f9c2f-efcd-4921-834e-a0a8040caa54",
+    "userPrompt": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain  - src/domain/orders.ts:\n- Export type OrderPriority = \"standard\" | \"express\".\n- Order gains a readonly priority field of that type.\n- placeOrder throws OrderError when priority is any other value.\n- Export interface Backorder with readonly orderId, skuId and missing fields, where missing is a positive integer.\n- WarehouseState gains a readonly backorders field keyed by order id.\n- reserveOrder records a Backorder for every line whose quantity exceeds the available units, instead of throwing, and leaves the order in a status from which it can still be cancelled.\n- Export listBackorders(state) returning every recorded Backorder.\n\nApplication  - src/application/warehouse-service.ts:\n- The service exposes the new operations and emits a warehouse event for a recorded backorder.\n\nFulfillment  - src/fulfillment/planner.ts:\n- Within one wave, planFulfillment lists express orders before standard ones. Its existing signature does not change.\n\nDurability  - src/durability/journal.ts:\n- HistoryAnalytics gains a backorders count derived from the events.\n\nAPI  - src/api/server.ts:\n- The server exposes the backorders of the current state.\n\nPresentation  - src/presentation/tower.ts:\n- The rendered SVG distinguishes express orders from standard ones.\n\nProbe  - src/probe/g6.ts and a package script named study:g6-probe:\n- Follow the shape of the existing probes: export main() returning a JSON string, and write exactly one JSON object to stdout when invoked directly, with no other output.\n- Two invocations from the same commit must emit byte-identical output.\n\nPreserve all existing behaviour and keep every existing test passing. Put new tests next to the code they cover, inside the directories the test script already scans.",
+    "title": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain  - src/dom",
+    "planningSelection": {
+      "executorId": "claude-code-cli",
+      "model": "sonnet"
+    },
+    "executionSelection": {
+      "executorId": "claude-code-cli",
+      "model": "sonnet"
+    },
+    "repairSelection": {
+      "executorId": "claude-code-cli",
+      "model": "sonnet"
+    },
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1800000,
+      "integrationTimeoutMs": 1800000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed"
+    },
+    "granularityCondition": "A",
+    "targetContext": {
+      "sourceRealPath": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-01",
+      "gitCommonDir": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-01\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "56576470318888684"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+      "remoteUrl": "C:/Users/franc/Documents/Proyectos/warehouse-control-tower-compact",
+      "fingerprint": "db7409a367ac2487",
+      "capturedAt": "2026-07-31T18:11:09.206Z"
+    },
+    "projection": {
+      "eventSequence": 44,
+      "lifecycle": "waiting_for_input",
+      "graphId": "graph-order-priority-and-backorders-736c06cea0",
+      "graphRevision": 1,
+      "approvedGraphRevision": 1,
+      "repositorySnapshotId": "sha256:4cb49120381731c548e51115afdea3f189c98175ac94add40e2f43a91b17524a",
+      "updatedAt": "2026-07-31T18:52:24.946Z"
+    },
+    "version": 216,
+    "mutationFence": 3,
+    "createdAt": "2026-07-31T18:11:09.206Z",
+    "updatedAt": "2026-07-31T18:52:24.962Z",
+    "heartbeatAt": "2026-07-31T18:52:23.234Z"
+  }
+}

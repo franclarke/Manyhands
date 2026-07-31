@@ -20,7 +20,9 @@
   },
   "target": {
     "repository": "warehouse-control-tower-compact",
-    "baseSha": "5da60192cc788032c59c7e7be27696ca0e0a30d7"
+    "baseSha": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+    "clone": "warehouse-g6-01",
+    "sourceBranch": "wc/compact"
   },
   "task": {
     "path": "docs/tesis/evidence/g6/task-t1.md",
@@ -59,7 +61,7 @@
       "cellId": "g6-01-T1-A-r1",
       "condition": "A",
       "repetition": 1,
-      "sha256": "d8247d50a4c9b57ec46ecaf3dc8b4b439656a7b97a5f612f46d077057ce54eb0"
+      "sha256": "6f827c1b2d425f3fb096b43d2e46ecbda427e720a49eca3fd554144c6d5161f3"
     }
   ],
   "baselineVerdict": {

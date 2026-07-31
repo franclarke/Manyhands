@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   evaluateG6Criteria,
-  G6_CRITERION_IDS
+  G6_CRITERION_IDS,
+  G6_PROBE_COMMAND
 } from "../docs/tesis/evidence/scripts/lib/g6-criteria.mjs";
 
 /**
@@ -38,6 +39,16 @@ describe("G6 external criteria", () => {
       "probe-single-json",
       "probe-deterministic"
     ]);
+  });
+
+  /**
+   * La primera celda real lo expuso: sin `--silent`, pnpm escribe el eco del
+   * comando en la salida capturada y el criterio de "un unico objeto JSON"
+   * falla por culpa del arnes, no del codigo entregado.
+   */
+  it("invokes the probe silently so pnpm's echo cannot fail the criterion", () => {
+    expect(G6_PROBE_COMMAND[0]).toBe("--silent");
+    expect(G6_PROBE_COMMAND).toContain("study:g6-probe");
   });
 
   it("satisfies every criterion on a conforming tree", async () => {
