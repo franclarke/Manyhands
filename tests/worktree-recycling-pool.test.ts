@@ -410,6 +410,44 @@ describe("WorktreePool", () => {
       "worktree_pool_unavailable: could not remove invalid slot slot-000"
     );
   });
+
+  /**
+   * Dos intentos de hoja se perdieron con este error y no se pudo decir por qué:
+   * el mensaje nombraba el slot y nada más, y el `cause` no viajaba al journal.
+   * Sin la causa, la próxima vez tampoco se va a poder atribuir. Dos hipótesis
+   * mecánicas ---archivo de sólo lectura y archivo con handle abierto--- se
+   * probaron contra esta plataforma y ninguna reproduce el fallo, así que lo que
+   * se corrige es la atribución y no un mecanismo que no está demostrado.
+   */
+  it("says why an invalid slot could not be removed, and where", async () => {
+    const repoRoot = await createRepository();
+    await commitFile(repoRoot, "seed.txt", "seed");
+    const poolRoot = path.join(repoRoot, "pool");
+    const commonDir = path.join(repoRoot, ".git");
+    const git: WorktreePoolGit = {
+      add: async () => undefined,
+      resetAndClean: async () => undefined,
+      remove: async () => undefined,
+      prune: async () => undefined,
+      validate: async () => false,
+      resolveCommonDir: async () => commonDir,
+      updateRef: async () => undefined
+    };
+    const failure = Object.assign(new Error("EBUSY: resource busy or locked"), {
+      code: "EBUSY",
+      path: path.join(poolRoot, "slot-000", "node_modules", ".bin")
+    });
+    const pool = new WorktreePool({
+      repoRoot,
+      poolRoot,
+      size: 1,
+      git,
+      removePath: async () => { throw failure; }
+    });
+
+    await expect(pool.initialize("a".repeat(40))).rejects.toThrow(/EBUSY/u);
+    await expect(pool.initialize("a".repeat(40))).rejects.toThrow(/node_modules/u);
+  });
 });
 
 async function createRepository(): Promise<string> {

@@ -186,7 +186,7 @@ async function invokeSelectedPlanningCli(
     const configuredTimeout = Number(process.env.MANYHANDS_PLANNING_STEP_TIMEOUT_MS ?? 300_000);
     const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout > 0 ? configuredTimeout : 300_000;
     const timer = setTimeout(() => {
-      void killCliProcessTree(child, spawn).finally(() => finish(() => reject(new Error(`${stage.executorId} planning timed out after ${timeoutMs}ms (${formatPlanningCliDiagnostics({ observedEnvelopeTypes, stdoutBytes, stderrTail })}).`))));
+      void killCliProcessTree(child, spawn).finally(() => finish(() => reject(new Error(`${stage.executorId} planning timed out after ${timeoutMs}ms (${formatPlanningCliDiagnostics({ observedEnvelopeTypes, stdoutBytes, stderrTail, outputTail: resultText ?? assistantText })}).`))));
     }, timeoutMs);
     const finish = (complete: () => void) => {
       if (settled) return;
@@ -238,7 +238,12 @@ async function invokeSelectedPlanningCli(
       void progressQueue.then(
         () => finish(() => {
           if (code !== 0) {
-            const diagnostics = formatPlanningCliDiagnostics({ observedEnvelopeTypes, stdoutBytes, stderrTail });
+            const diagnostics = formatPlanningCliDiagnostics({
+              observedEnvelopeTypes,
+              stdoutBytes,
+              stderrTail,
+              outputTail: resultText ?? assistantText
+            });
             // Capacity is decided by what the CLI SAID, not by which envelopes
             // it emitted: a direct probe showed `rate_limit_event` present in
             // successful calls too, so keying on the envelope type would have
@@ -256,7 +261,14 @@ async function invokeSelectedPlanningCli(
             return;
           }
           try {
-            resolve(completeClaudePlanningStream({ resultText, terminalError, observedEnvelopeTypes, stdoutBytes, stderrTail }));
+            resolve(completeClaudePlanningStream({
+              resultText,
+              terminalError,
+              observedEnvelopeTypes,
+              stdoutBytes,
+              stderrTail,
+              outputTail: assistantText
+            }));
           } catch (error) {
             reject(error);
           }
@@ -324,6 +336,7 @@ export function completeClaudePlanningStream(input: {
   observedEnvelopeTypes: Iterable<string>;
   stdoutBytes: number;
   stderrTail?: string;
+  outputTail?: string;
 }): string {
   const diagnostics = formatPlanningCliDiagnostics(input);
   if (input.terminalError !== undefined) throw new Error(`Claude planning stream ended with terminal error ${input.terminalError} (${diagnostics}).`);
@@ -352,14 +365,26 @@ function appendPlanningCliDiagnosticTail(current: string, chunk: string): string
   return `${current}${chunk}`.slice(-600);
 }
 
-function formatPlanningCliDiagnostics(input: {
+/**
+ * Diagnóstico de un fallo del CLI de planning.
+ *
+ * `outputTail` existe porque sin él un fallo no es atribuible: una celda perdió
+ * su medición cuando el planner salió con código distinto de cero después de
+ * emitir catorce mil bytes, y lo único que quedó fue el conteo. Los tipos de
+ * envelope y la cantidad de bytes dicen que el modelo habló, no qué dijo.
+ */
+export function formatPlanningCliDiagnostics(input: {
   observedEnvelopeTypes: Iterable<string>;
   stdoutBytes: number;
   stderrTail?: string;
+  outputTail?: string;
 }): string {
   const envelopes = [...new Set(input.observedEnvelopeTypes)].sort().join(",") || "none";
   const stderr = redactPlanningCliDiagnostic(input.stderrTail);
-  return `envelopes=${envelopes}; stdoutBytes=${input.stdoutBytes}${stderr === undefined ? "" : `; stderr=${JSON.stringify(stderr)}`}`;
+  const output = redactPlanningCliDiagnostic(input.outputTail);
+  return `envelopes=${envelopes}; stdoutBytes=${input.stdoutBytes}`
+    + `${stderr === undefined ? "" : `; stderr=${JSON.stringify(stderr)}`}`
+    + `${output === undefined ? "" : `; output=${JSON.stringify(output)}`}`;
 }
 
 function redactPlanningCliDiagnostic(value: string | undefined): string | undefined {

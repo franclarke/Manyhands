@@ -541,7 +541,9 @@ describe("stalled run owner", () => {
       }
     }), "utf8");
 
-    const server = createServer((_request, response) => {
+    const posts: string[] = [];
+    const server = createServer((request, response) => {
+      if (request.method === "POST") posts.push(request.url ?? "");
       response.writeHead(200, { "content-type": "application/json" });
       response.end(JSON.stringify({ lifecycle: "running" }));
     });
@@ -581,6 +583,12 @@ describe("stalled run owner", () => {
       expect(result.outcome.reason).toMatch(/owner.+heartbeat/iu);
       expect(result.outcome.reason).toContain("2026-07-30T00:54:22.432Z");
       expect(result.outcome.lifecycle).toBe("running");
+
+      // Detectarlo no alcanza: si nadie reclama la operación vencida, el run
+      // queda `running` para siempre y la celda no es atribuible del lado del
+      // producto. El driver lo lleva a un estado terminal antes de irse.
+      expect(posts).toContain(`/api/runs/${runId}/cancel`);
+      expect(result.outcome.abandonedRunCancelled).toBe(true);
     } finally {
       await new Promise<void>((closed) => server.close(() => closed()));
       await rm(root, { recursive: true, force: true });

@@ -411,10 +411,10 @@ export class WorktreePool {
     try {
       await this.removePath(worktreePath);
     } catch (error) {
-      throw worktreePoolUnavailable(`could not remove invalid slot ${id}`, error);
+      throw worktreePoolUnavailable(`could not remove invalid slot ${id}: ${describeRemovalFailure(error)}`, error);
     }
     if (await pathExists(worktreePath)) {
-      throw worktreePoolUnavailable(`could not remove invalid slot ${id}`);
+      throw worktreePoolUnavailable(`could not remove invalid slot ${id}: the path still exists at ${worktreePath}`);
     }
     await this.git.prune(this.repoRoot).catch(() => undefined);
   }
@@ -626,6 +626,22 @@ async function removeWorktreePath(worktreePath: string): Promise<void> {
 
 function worktreePoolUnavailable(action: string, cause?: unknown): Error {
   return new Error(`worktree_pool_unavailable: ${action}`, cause === undefined ? undefined : { cause });
+}
+
+/**
+ * El `cause` de un error no viaja al journal: sólo el mensaje. Un slot que no se
+ * puede borrar dejó dos intentos de hoja sin explicación por eso mismo, así que
+ * el código de sistema y la ruta exacta viajan en el texto.
+ */
+function describeRemovalFailure(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const code = (error as NodeJS.ErrnoException).code;
+  const failedPath = (error as NodeJS.ErrnoException).path;
+  return [
+    code === undefined ? undefined : `code=${code}`,
+    failedPath === undefined ? undefined : `path=${failedPath}`,
+    error.message
+  ].filter((part) => part !== undefined).join(" ");
 }
 
 function assertCommit(commit: string): void {

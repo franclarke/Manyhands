@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { completeClaudePlanningStream, decodeClaudePlanningStreamLine } from "@/lib/server/runs/v2/run-coordinator-host";
+import { completeClaudePlanningStream, decodeClaudePlanningStreamLine, formatPlanningCliDiagnostics } from "@/lib/server/runs/v2/run-coordinator-host";
 
 describe("planning CLI stream", () => {
   it("extracts Claude text deltas without confusing other stream events with model output", () => {
@@ -47,5 +47,38 @@ describe("planning CLI stream", () => {
       observedEnvelopeTypes: ["assistant", "system"],
       stdoutBytes: 912
     })).toThrow(/without a successful terminal result.*assistant.*stdoutBytes=912/i);
+  });
+
+  /**
+   * La celda N=16 de `retry-12-measure` perdió su medición acá: el planner salió
+   * con código distinto de cero después de emitir 14.685 bytes, y el diagnóstico
+   * conservó los tipos de envelope y el conteo de bytes pero no una sola palabra
+   * de lo que el CLI dijo. Con stderr vacío, el fallo quedó inatribuible.
+   */
+  it("keeps what the CLI said, so a planner failure can be attributed", () => {
+    const diagnostics = formatPlanningCliDiagnostics({
+      observedEnvelopeTypes: ["assistant", "result", "system"],
+      stdoutBytes: 14685,
+      outputTail: "I cannot produce 16 modules without exceeding the response budget."
+    });
+
+    expect(diagnostics).toContain("stdoutBytes=14685");
+    expect(diagnostics).toMatch(/output=.*exceeding the response budget/iu);
+  });
+
+  it("redacts a secret that reached the preserved output", () => {
+    const diagnostics = formatPlanningCliDiagnostics({
+      observedEnvelopeTypes: ["result"],
+      stdoutBytes: 40,
+      outputTail: "failed: api_key=sk-not-a-real-secret while planning"
+    });
+
+    expect(diagnostics).not.toContain("sk-not-a-real-secret");
+    expect(diagnostics).toContain("[redacted]");
+  });
+
+  it("omits the output field when the CLI said nothing", () => {
+    expect(formatPlanningCliDiagnostics({ observedEnvelopeTypes: ["system"], stdoutBytes: 0 }))
+      .not.toContain("output=");
   });
 });

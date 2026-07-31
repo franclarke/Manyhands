@@ -131,7 +131,14 @@ async function drive(runId) {
     // with the exact instant the owner went silent.
     const stalled = await stalledOwner(runId, lifecycle);
     if (stalled !== undefined) {
-      return terminal(runId, lifecycle, view, stalled);
+      // Detectarlo no alcanza. Una operación vencida que nadie reclama deja el
+      // run `running` para siempre: la celda queda sin resultado atribuible del
+      // lado del producto, que es exactamente lo que pasó en `retry-11`. El
+      // cancel reclama la lease vencida, verifica que los procesos estén muertos
+      // y lleva el run a un estado terminal antes de cerrar la celda.
+      log(`  ${stalled}`);
+      const cancelled = await cancelAbandonedRun(runId);
+      return { ...terminal(runId, lifecycle, view, stalled), abandonedRunCancelled: cancelled };
     }
 
     const pending = await pendingDecisions(runId);
@@ -275,6 +282,29 @@ async function assertCompletedDelivery(view) {
     candidateSha: finalSha,
     moduleCount: config.moduleCount
   });
+}
+
+/**
+ * Lleva un run abandonado a un estado terminal. Devuelve `false` sin abortar la
+ * celda si el servidor lo rechaza: el resultado del intento ya está decidido, y
+ * perder el cancel no debe borrar la observación.
+ */
+async function cancelAbandonedRun(runId) {
+  try {
+    const response = await fetch(`${BASE}/api/runs/${runId}/cancel`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-manyhands-session": TOKEN },
+      body: JSON.stringify({ reason: "abandoned run: the owning process stopped renewing its heartbeat" })
+    });
+    if (!response.ok) {
+      log(`  cancel of the abandoned run returned ${response.status}`);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    log(`  cancel of the abandoned run failed: ${error instanceof Error ? error.message : String(error)}`);
+    return false;
+  }
 }
 
 /**
