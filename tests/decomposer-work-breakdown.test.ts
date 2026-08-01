@@ -328,6 +328,8 @@ describe("WorkBreakdown", () => {
     expect(prompt.system).toContain("at least one consumer unit key");
     expect(prompt.system).toContain("omit it entirely rather than emitting an empty consumerUnitKeys array");
     expect(prompt.system).toContain("The producer owns or provides the named contract or output; a consumer imports, calls, or uses it");
+    expect(prompt.system).toContain("When a type or state contract crosses executable leaves, pair it with a materialized files or commit artifact");
+    expect(prompt.system).toContain("A logical artifact must not be the only relation ordering a consumer that compiles against producer code");
     expect(prompt.system).toContain("Do not name one of a command unit's own dependencies as a consumer of that command");
     expect(prompt.system).toContain("If no unit inside the breakdown consumes a command or API, omit that seam");
     expect(prompt.system).toContain("at least two cohesive children");
