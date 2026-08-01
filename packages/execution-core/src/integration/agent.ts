@@ -763,6 +763,9 @@ export class IntegrationAgent {
       integrationCommitSha = await this.createAndVerifyHandoff(params, appliedCommits);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      const findingCode = message.startsWith("handoff_intent_not_retained:")
+        ? "handoff_intent_not_retained"
+        : "applied_commit_not_ancestor";
       execError("integrate", "integration physical-evidence check failed", {
         task: compositeTaskId,
         error: message
@@ -780,7 +783,7 @@ export class IntegrationAgent {
           ...preMergeFindings,
           {
             severity: "warning",
-            code: "applied_commit_not_ancestor",
+            code: findingCode,
             message,
             files: []
           }
@@ -1104,6 +1107,7 @@ export class IntegrationAgent {
       );
     }
     await this.assertAppliedCommitsReachable(params.worktree.path, handoffSha, appliedCommits);
+    await this.assertAppliedChildIntentRetained(params, handoffSha);
     return handoffSha;
   }
 
@@ -1152,6 +1156,42 @@ export class IntegrationAgent {
           `which is not an ancestor of integration result ${finalSha}.`
         );
       }
+    }
+  }
+
+  /**
+   * A semantic conflict repair may create a valid commit and preserve Git
+   * ancestry while silently dropping an incoming child change. The parent
+   * validation commands cannot detect that when the child tests were also
+   * rewritten during the repair. Keep the handoff conservative: every
+   * concrete added line from a physical child patch must still be present in
+   * the final base-to-handoff patch.
+   */
+  private async assertAppliedChildIntentRetained(
+    params: IntegrationParams,
+    handoffSha: string
+  ): Promise<void> {
+    const finalDiff = await this.git.diffRange({
+      cwd: params.worktree.path,
+      from: params.worktree.baseCommit,
+      to: handoffSha
+    });
+    const finalAddedLines = new Set(patchAddedLines(finalDiff));
+    const missing: Array<{ taskId: string; line: string }> = [];
+
+    for (const applied of params.childResults) {
+      if (applied.noOp === true || applied.diff.startsWith("diff --git ") === false) continue;
+      for (const line of patchAddedLines(applied.diff)) {
+        if (!finalAddedLines.has(line)) missing.push({ taskId: applied.taskId, line });
+      }
+    }
+
+    if (missing.length > 0) {
+      const details = missing
+        .slice(0, 12)
+        .map(({ taskId, line }) => `${taskId}: +${line}`)
+        .join(" | ");
+      throw new Error(`handoff_intent_not_retained: final handoff dropped child additions (${details})`);
     }
   }
 
@@ -1881,6 +1921,14 @@ function markOperationChild(
   return (operation?.children ?? []).map((child) =>
     child.taskId === taskId ? { ...child, state, ...evidence } : child
   );
+}
+
+function patchAddedLines(diff: string): string[] {
+  return diff
+    .split(/\r?\n/u)
+    .filter((line) => line.startsWith("+") && !line.startsWith("+++"))
+    .map((line) => line.slice(1))
+    .filter((line) => line.trim().length > 0);
 }
 
 function truncate(text: string, max: number): string {

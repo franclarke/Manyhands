@@ -1,4 +1,4 @@
-﻿import type { ExecutionValidationCommand } from "@manyhands/contracts";
+import type { ExecutionValidationCommand } from "@manyhands/contracts";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { describe, expect, it } from "vitest";
 import {
@@ -145,6 +145,37 @@ describe("IntegrationAgent", () => {
         })
       })
     ]);
+  });
+
+  it("rejects a handoff that drops an added line from a child patch", async () => {
+    const git = new FakeGitRunner({
+      heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
+      diffRange: "diff --git a/src/a.ts b/src/a.ts\n+export const unrelated = true;"
+    });
+    const agent = new IntegrationAgent({
+      git,
+      executor: new MockAgentExecutor(),
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: "/repo"
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [{
+        ...child("a", "SHA_A"),
+        diff: "diff --git a/src/a.ts b/src/a.ts\n+export const required = true;",
+        changedFiles: ["src/a.ts"]
+      }],
+      repair
+    });
+
+    expect(result.status).toBe("internal_error");
+    expect(result.failureCode).toBe("internal_error");
+    expect(result.integrationCommitSha).toBeUndefined();
+    expect(result.preMergeFindings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "handoff_intent_not_retained" })
+    ]));
   });
 
   it("skips a no-op child (deliverable already in the base) and integrates the rest", async () => {
