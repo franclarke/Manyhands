@@ -192,20 +192,36 @@ function criterionEvidence(
   criteria: readonly TaskAcceptanceCriterion[],
   repositoryEvidence: WorkBreakdown["repositoryEvidence"]
 ): ValidationObligation["evidence"] {
-  // A unit-level evidence reference says nothing about which of several
-  // criteria it proves. Shared relevance must be authored explicitly in the
-  // ValidationContract instead of inferred from co-location.
-  if (criteria.length !== 1) return undefined;
   const evidenceById = new Map(repositoryEvidence.map((evidence) => [evidence.id, evidence]));
-  const references = [...new Set([
-    ...(unit.plannedPaths ?? []),
-    ...unit.evidenceIds.flatMap((evidenceId) => {
-      const evidence = evidenceById.get(evidenceId);
-      return evidence?.kind === "path" ? [evidence.reference] : [];
-    })
-  ].filter(isTestReference))].sort();
-  if (references.length === 0) return undefined;
-  return { kind: "focused_command", selectors: references, references };
+  const citedReferences = unit.evidenceIds.flatMap((evidenceId) => {
+    const evidence = evidenceById.get(evidenceId);
+    return evidence?.kind === "path" ? [evidence.reference] : [];
+  });
+  const plannedReferences = [...new Set((unit.plannedPaths ?? []).filter(isTestReference))].sort();
+
+  if (criteria.length === 1) {
+    const references = [...new Set([...plannedReferences, ...citedReferences.filter(isTestReference)])].sort();
+    if (references.length === 0) return undefined;
+    return { kind: "focused_command", selectors: references, references };
+  }
+
+  // Con varios criterios, una referencia que la unidad sólo *citó* sigue sin
+  // decir cuál de ellos prueba: eso es co-localización, y permanece sin binding.
+  //
+  // Un test que la unidad **declara que va a escribir** es distinto. Es autoría
+  // suya y cubre criterios que también son suyos, así que puede sostenerlos
+  // siempre que el carácter compartido quede registrado en el binding en vez de
+  // disimularse como si cada criterio tuviera su prueba propia. Sin esta
+  // distinción, una unidad gruesa ---toda la condición A del estudio
+  // comparativo--- no podía vincular evidencia y por lo tanto no podía entregar
+  // nunca, perdiendo por construcción y no por granularidad.
+  if (plannedReferences.length === 0) return undefined;
+  return {
+    kind: "shared_command",
+    criterionIds: criteria.map((criterion) => criterion.id),
+    references: plannedReferences,
+    rationale: `The unit authors these tests and owns all ${criteria.length} criteria; the evidence is shared across them rather than specific to one.`
+  };
 }
 
 function isTestReference(reference: string): boolean {

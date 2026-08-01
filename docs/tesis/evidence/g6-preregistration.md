@@ -74,8 +74,32 @@ condición compiló.
 
 ## Métricas
 
-**Primaria:** proporción de criterios externos satisfechos sobre el árbol
-entregado, por celda.
+**Primaria:** proporción de criterios externos satisfechos sobre el **árbol
+candidato que la celda produjo**, haya sido entregado o no.
+
+### Enmienda del 2026-07-31, antes de cualquier dato comparativo
+
+La versión original medía sobre el árbol **entregado**. La primera celda expuso
+por qué eso sesga la comparación, y la enmienda se hace ahora, cuando la única
+celda ejecutada quedó `not_attributable` y **no existe todavía ningún dato
+comparativo** que pudiera haber motivado el cambio.
+
+El compilador de contratos sólo vincula evidencia a una obligación cuando la
+unidad tiene **exactamente un criterio de aceptación**
+(`contract-compiler.ts`: `if (criteria.length !== 1) return undefined`). La
+condición A colapsa el objetivo entero en una hoja, esa hoja acumula todos los
+criterios, y por lo tanto **nunca puede vincular evidencia ni entregar**.
+
+Medir sobre el árbol entregado le habría dado a C una victoria automática sobre
+A por un artefacto del instrumento, no por granularidad. El estudio compara
+condiciones de granularidad, no la maquinaria de validación de ManyHands.
+
+La enmienda **no toca** la hipótesis, el falsador, la regla de inconclusión, los
+diez criterios, el umbral ni las condiciones. Cambia qué árbol se evalúa, y sólo
+eso.
+
+El defecto de producto se corrige por separado, con TDD, y su corrección se
+declara en el freeze de la serie.
 
 **Secundarias**, derivadas del journal por script versionado: entrega verificada
 sí/no, tiempo de reloj, tokens, cantidad de hojas, conflictos de integración y

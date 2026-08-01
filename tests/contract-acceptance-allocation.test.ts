@@ -79,6 +79,41 @@ describe("acceptance intent allocation", () => {
     ]);
   });
 
+  /**
+   * La condicion A colapsa el objetivo entero en una hoja, de modo que esa hoja
+   * acumula todos los criterios. Con el compilador exigiendo exactamente un
+   * criterio para vincular evidencia, A no podia vincular nada y por lo tanto no
+   * podia entregar nunca: perdia por construccion, no por granularidad.
+   *
+   * Un test que la unidad **declara que va a escribir** es autoria suya, no una
+   * co-localizacion inferida, y puede sostener sus propios criterios siempre que
+   * el caracter compartido quede registrado en vez de disimulado.
+   */
+  it("binds a unit's own planned tests as shared evidence across its criteria", () => {
+    const breakdown = fiveIntentBreakdown();
+    const inventory = breakdown.root.kind === "composite"
+      ? breakdown.root.children.find((unit) => unit.key === "inventory")
+      : undefined;
+    inventory!.plannedPaths = ["src/inventory.ts", "src/inventory.test.ts"];
+
+    const compiled = compileContractBundles({
+      breakdown,
+      repositorySnapshot: snapshot(),
+      nodeIdByUnitKey: nodeIds(breakdown.root)
+    }, dependencies);
+    const bundle = compiled.bundles.find((candidate) => candidate.task.nodeId === "node-inventory")!;
+
+    expect(bundle.task.acceptanceCriteria).toHaveLength(2);
+    for (const obligation of bundle.validation.obligations) {
+      expect(obligation.evidence?.kind).toBe("shared_command");
+      expect(obligation.evidence).toMatchObject({
+        references: ["src/inventory.test.ts"],
+        criterionIds: bundle.task.acceptanceCriteria.map((criterion) => criterion.id)
+      });
+      expect((obligation.evidence as { rationale: string }).rationale).toMatch(/shared/iu);
+    }
+  });
+
   it("compiles an exact focused test reference for a unit with one criterion", () => {
     const breakdown = fiveIntentBreakdown();
     breakdown.repositoryEvidence.push({
