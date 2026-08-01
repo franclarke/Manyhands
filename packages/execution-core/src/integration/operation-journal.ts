@@ -1,6 +1,6 @@
 import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { IntegrationResult } from "../types";
 import type { IntegrationManifest } from "./manifest";
 
@@ -281,7 +281,9 @@ function assertPatchDoesNotRewriteIdentity(
 }
 
 function safeLockName(value: string): string {
-  return value.replace(/[^a-zA-Z0-9._-]+/gu, "_");
+  const normalized = value.replace(/[^a-zA-Z0-9._-]+/gu, "_");
+  if (normalized.length <= 120) return normalized;
+  return `${normalized.slice(0, 80)}-${createHash("sha256").update(value).digest("hex").slice(0, 24)}`;
 }
 
 function isErrno(error: unknown): error is NodeJS.ErrnoException {

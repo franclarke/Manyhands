@@ -49,6 +49,17 @@ describe("JsonIntegrationOperationJournal", () => {
     expect(takeover.fencingToken).toBe(8);
     expect(takeover.state).toBe("child_pending");
   });
+
+  it("supports long external run directories on Windows", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "mh-integration-journal-long-"));
+    tempDirectories.push(root);
+    const journal = new JsonIntegrationOperationJournal(
+      path.join(root, "a".repeat(180)),
+      () => "2026-07-15T00:00:00.000Z"
+    );
+
+    await expect(journal.open(operationInput())).resolves.toMatchObject({ state: "prepared" });
+  });
 });
 
 async function createJournal(): Promise<JsonIntegrationOperationJournal> {
