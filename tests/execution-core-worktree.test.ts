@@ -93,6 +93,30 @@ describe("WorktreeManager.create", () => {
       manager.create({ taskId: "task-1", runId: "run-1", kind: "leaf", baseCommit: "BASE_SHA" })
     ).rejects.toSatisfy((err) => WorktreeError.is(err) && err.operation === "create");
   });
+
+  it("serializes topology changes across managers for the same repository", async () => {
+    const git = new FakeGitRunner();
+    let activeAdds = 0;
+    let maxConcurrentAdds = 0;
+    const add = git.worktreeAdd.bind(git);
+    git.worktreeAdd = async (params) => {
+      activeAdds += 1;
+      maxConcurrentAdds = Math.max(maxConcurrentAdds, activeAdds);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      try {
+        await add(params);
+      } finally {
+        activeAdds -= 1;
+      }
+    };
+
+    await Promise.all([
+      makeManager(git).create({ taskId: "task-a", runId: "run-a", kind: "leaf", baseCommit: "BASE_SHA" }),
+      makeManager(git).create({ taskId: "task-b", runId: "run-b", kind: "leaf", baseCommit: "BASE_SHA" })
+    ]);
+
+    expect(maxConcurrentAdds).toBe(1);
+  });
 });
 
 describe("WorktreeManager.clean", () => {
@@ -117,7 +141,13 @@ describe("WorktreeManager.clean", () => {
     const git = new FakeGitRunner({
       failOperations: { worktreeRemove: new Error("fatal: locked") }
     });
-    const manager = makeManager(git);
+    const manager = new WorktreeManager({
+      git,
+      repoRoot: REPO_ROOT,
+      worktreesRoot: WORKTREES_ROOT,
+      removePath: async () => { throw new Error("physical directory still locked"); },
+      now: () => "2026-05-28T00:00:00.000Z"
+    });
     const record: WorktreeRecord = {
       taskId: "task-1",
       runId: "run-1",
@@ -132,6 +162,26 @@ describe("WorktreeManager.clean", () => {
     await expect(manager.clean(record)).rejects.toSatisfy(
       (err) => WorktreeError.is(err) && err.operation === "clean"
     );
+  });
+
+  it("still deletes the branch when worktree removal fails", async () => {
+    const git = new FakeGitRunner({
+      failOperations: { worktreeRemove: new Error("fatal: locked") }
+    });
+    const manager = makeManager(git);
+    const record: WorktreeRecord = {
+      taskId: "task-1",
+      runId: "run-1",
+      kind: "leaf",
+      path: "/repo/.manyhands/worktrees/run-1/task-1",
+      branch: "mh/run-1/task-1",
+      baseCommit: "BASE_SHA",
+      status: "active",
+      createdAt: "2026-05-28T00:00:00.000Z"
+    };
+
+    await expect(manager.clean(record)).resolves.toMatchObject({ status: "cleaned" });
+    expect(git.opsInvoked()).toContain("branchDelete");
   });
 });
 

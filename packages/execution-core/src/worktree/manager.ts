@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -14,6 +15,7 @@ import {
   worktreePathFor,
   type WorktreeRootParams
 } from "./layout";
+import { acquireWorktreeTopologyLease } from "./topology-lease.js";
 
 export * from "./worktree-pool";
 export * from "./layout";
@@ -31,6 +33,8 @@ export interface WorktreeManagerDeps {
   platform?: NodeJS.Platform;
   /** Injectable short-path base for relocated worktrees in tests. Default: os.tmpdir. */
   tmpdir?: () => string;
+  /** Injectable physical fallback used when Git cannot remove a locked directory. */
+  removePath?: (worktreePath: string) => Promise<void>;
 }
 
 export interface CreateWorktreeParams {
@@ -57,6 +61,8 @@ export class WorktreeManager {
   private readonly now: () => string;
   private readonly platform: NodeJS.Platform | undefined;
   private readonly tmpdir: (() => string) | undefined;
+  private readonly removePath: (worktreePath: string) => Promise<void>;
+  private readonly topologyOwnerId = `worktree-manager-${process.pid}-${randomUUID()}`;
 
   constructor(deps: WorktreeManagerDeps) {
     this.git = deps.git;
@@ -65,6 +71,12 @@ export class WorktreeManager {
     this.now = deps.now ?? nowIso;
     this.platform = deps.platform;
     this.tmpdir = deps.tmpdir;
+    this.removePath = deps.removePath ?? ((worktreePath) => rm(worktreePath, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 50
+    }));
   }
 
   private rootParamsFor(runId: string): WorktreeRootParams {
@@ -77,6 +89,10 @@ export class WorktreeManager {
   }
 
   async create(params: CreateWorktreeParams): Promise<WorktreeRecord> {
+    return this.withTopologyLease(() => this.createUnlocked(params));
+  }
+
+  private async createUnlocked(params: CreateWorktreeParams): Promise<WorktreeRecord> {
     const path = worktreePathFor({ ...this.rootParamsFor(params.runId), taskId: params.taskId });
     const branch = worktreeBranchFor({ runId: params.runId, taskId: params.taskId });
 
@@ -184,26 +200,44 @@ export class WorktreeManager {
   }
 
   async clean(record: WorktreeRecord): Promise<WorktreeRecord> {
+    return this.withTopologyLease(() => this.cleanUnlocked(record));
+  }
+
+  private async cleanUnlocked(record: WorktreeRecord): Promise<WorktreeRecord> {
+    const failures: unknown[] = [];
     try {
       await this.git.worktreeRemove({
         repoRoot: this.repoRoot,
         worktreePath: record.path,
         force: true
       });
+    } catch (error) {
+      try {
+        await this.removePath(record.path);
+        await this.git.worktreePrune(this.repoRoot);
+      } catch (fallbackError) {
+        failures.push(error, fallbackError);
+      }
+    }
+    try {
       await this.git.branchDelete({ repoRoot: this.repoRoot, branch: record.branch, force: true });
     } catch (error) {
+      failures.push(error);
+    }
+    if (failures.length > 0) {
+      const cause = failures.length === 1 ? failures[0] : new AggregateError(failures, "Multiple worktree cleanup operations failed.");
       execError("worktree", "git worktree remove/branch delete failed", {
         task: record.taskId,
         path: record.path,
         branch: record.branch,
-        cause: error instanceof Error ? error.message : String(error)
+        cause: cause instanceof Error ? cause.message : String(cause)
       });
       throw new WorktreeError(
         `Failed to clean worktree for task ${record.taskId}`,
         record.taskId,
         "clean",
         record.path,
-        error
+        cause
       );
     }
 
@@ -226,6 +260,13 @@ export class WorktreeManager {
    * `git gc` would destroy the only copy of that leaf's work).
    */
   async gcRun(
+    runId: string,
+    options: { preserveBranchesFor?: ReadonlySet<string> } = {}
+  ): Promise<{ removed: string[]; failed: string[] }> {
+    return this.withTopologyLease(() => this.gcRunUnlocked(runId, options));
+  }
+
+  private async gcRunUnlocked(
     runId: string,
     options: { preserveBranchesFor?: ReadonlySet<string> } = {}
   ): Promise<{ removed: string[]; failed: string[] }> {
@@ -278,6 +319,19 @@ export class WorktreeManager {
 
     execLog("worktree", "gc completed", { runId, removed: removed.length, failed: failed.length });
     return { removed, failed };
+  }
+
+  private async withTopologyLease<T>(operation: () => Promise<T>): Promise<T> {
+    const lease = await acquireWorktreeTopologyLease(
+      this.repoRoot,
+      this.topologyOwnerId,
+      this.tmpdir === undefined ? {} : { tmpdir: this.tmpdir }
+    );
+    try {
+      return await operation();
+    } finally {
+      await lease.release();
+    }
   }
 
   /**

@@ -15,6 +15,7 @@ import {
   V2NodeExecutor,
   WorktreeManager,
   WorktreePool,
+  execWarn,
   safeGitArgs,
   getExecutorDescriptor,
   resolveCliBinaryPath,
@@ -129,6 +130,8 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
   }
   const stopHeartbeat = startHeartbeat(runId, lease);
   const abort = createRunAbort(runId, lease.operationId);
+  let worktrees: WorktreeManager | undefined;
+  let worktreePool: WorktreePool | undefined;
   try {
     const repoRoot = await resolveRunTargetPath(run);
     if (repoRoot === undefined || run.targetContext === undefined) {
@@ -160,8 +163,8 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     const executorReady = await executorAvailability(execution.executorId);
     const git = new SimpleGitRunner();
     await git.revParse(repoRoot, `${prepared.graph.baseCommit}^{commit}`);
-    const worktrees = new WorktreeManager({ git, repoRoot });
-    const worktreePool = new WorktreePool({
+    worktrees = new WorktreeManager({ git, repoRoot });
+    worktreePool = new WorktreePool({
       repoRoot,
       size: config.maxParallel
     });
@@ -268,6 +271,22 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     await recordExecutionFailure(runId, lease, error).catch(() => undefined);
     throw error;
   } finally {
+    if (worktreePool !== undefined) {
+      await worktreePool.dispose().catch((error) => {
+        execWarn("execution-v2", "worktree pool disposal failed", {
+          runId,
+          cause: error instanceof Error ? error.message : String(error)
+        });
+      });
+    }
+    if (worktrees !== undefined) {
+      await worktrees.gcRun(runId).catch((error) => {
+        execWarn("execution-v2", "run worktree garbage collection failed", {
+          runId,
+          cause: error instanceof Error ? error.message : String(error)
+        });
+      });
+    }
     disposeRunAbort(runId, lease.operationId);
     markRunnerInactive(runId, lease.operationId);
     stopHeartbeat();

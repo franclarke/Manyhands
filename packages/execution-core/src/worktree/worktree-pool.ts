@@ -8,6 +8,7 @@ import {
   type FilesystemFencedLease
 } from "./fenced-lease.js";
 import { runWorktreesRootFor, safeWorktreeSegment } from "./layout.js";
+import { acquireWorktreeTopologyLease, worktreeTopologyLeasePath } from "./topology-lease.js";
 
 const DEFAULT_POOL_SIZE = 4;
 const ACQUIRE_POLL_MS = 15;
@@ -85,6 +86,7 @@ export class WorktreePool {
   private readonly heartbeatMs: number | undefined;
   private readonly ownerIsAlive: ((pid: number) => Promise<boolean>) | undefined;
   private readonly removePath: (worktreePath: string) => Promise<void>;
+  private readonly tmpdir: (() => string) | undefined;
   private readonly slots: PoolSlot[] = [];
   private readonly activeLeases = new Map<string, ActiveLease>();
   private readonly ownerId = `pool-${process.pid}-${randomUUID()}`;
@@ -120,6 +122,7 @@ export class WorktreePool {
     this.heartbeatMs = options.heartbeatMs;
     this.ownerIsAlive = options.ownerIsAlive;
     this.removePath = options.removePath ?? removeWorktreePath;
+    this.tmpdir = options.tmpdir;
   }
 
   async initialize(baseCommitOrInput: string | { baseCommit: string }): Promise<void> {
@@ -396,12 +399,7 @@ export class WorktreePool {
       "worktree-pools",
       poolIdentity
     );
-    this.topologyLeasePath = path.join(
-      commonDir,
-      "manyhands",
-      "worktree-topology",
-      "lease"
-    );
+    this.topologyLeasePath = worktreeTopologyLeasePath(this.repoRoot, this.tmpdir);
     await mkdir(this.controlRoot, { recursive: true });
     return this.controlRoot;
   }
@@ -426,10 +424,13 @@ export class WorktreePool {
     }
     for (;;) {
       this.assertUsable();
-      const lease = await tryAcquireFilesystemFencedLease(
-        this.topologyLeasePath,
+      const lease = await acquireWorktreeTopologyLease(
+        this.repoRoot,
         `${this.ownerId}:topology`,
-        this.leaseOptions()
+        {
+          ...this.leaseOptions(),
+          ...(this.tmpdir === undefined ? {} : { tmpdir: this.tmpdir })
+        }
       );
       if (lease !== undefined) return lease;
       await waitForPoll();
