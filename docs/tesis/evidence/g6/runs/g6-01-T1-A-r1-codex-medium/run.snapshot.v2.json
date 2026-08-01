@@ -1,0 +1,288 @@
+{
+  "schemaVersion": 2,
+  "runId": "ce677946-dee3-494d-af62-20baecbd267f",
+  "eventSequence": 35,
+  "lastEventId": "ce677946-dee3-494d-af62-20baecbd267f:delivery.published:35",
+  "operationId": "e3aed863-568e-4a36-82c5-93c146997556",
+  "fencingToken": 4,
+  "projection": {
+    "runId": "ce677946-dee3-494d-af62-20baecbd267f",
+    "goal": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain  - src/domain/orders.ts:\n- Export type OrderPriority = \"standard\" | \"express\".\n- Order gains a readonly priority field of that type. It is optional at the call site: an order placed without a priority is treated as \"standard\", so existing callers keep working unchanged.\n- placeOrder throws OrderError when a priority is supplied and is neither \"standard\" nor \"express\".\n- Export interface Backorder with readonly orderId, skuId and missing fields, where missing is a positive integer.\n- WarehouseState gains a readonly backorders field keyed by order id.\n- reserveOrder records a Backorder for every line whose quantity exceeds the available units, instead of throwing, and leaves the order in a status from which it can still be cancelled.\n- Export listBackorders(state) returning every recorded Backorder.\n\nApplication  - src/application/warehouse-service.ts:\n- The service exposes the new operations and emits a warehouse event for a recorded backorder.\n\nFulfillment  - src/fulfillment/planner.ts:\n- Within one wave, planFulfillment lists express orders before standard ones. Its existing signature does not change.\n\nDurability  - src/durability/journal.ts:\n- HistoryAnalytics gains a backorders count derived from the events.\n\nAPI  - src/api/server.ts:\n- The server exposes the backorders of the current state.\n\nPresentation  - src/presentation/tower.ts:\n- The rendered SVG distinguishes express orders from standard ones.\n\nProbe  - src/probe/g6.ts and a package script named study:g6-probe:\n- Follow the shape of the existing probes: export main() returning a JSON string, and write exactly one JSON object to stdout when invoked directly, with no other output.\n- Two invocations from the same commit must emit byte-identical output.\n\nPreserve all existing behaviour and keep every existing test passing. Put new tests next to the code they cover, inside the directories the test script already scans.",
+    "lifecycle": "completed",
+    "sequence": 35,
+    "appliedEventIds": [
+      "run:ce677946-dee3-494d-af62-20baecbd267f:created",
+      "repository:sha256:ebd49ef9b04e4760834446aca3a6f469412e21b9c756bfda68c8a5448791f7f7:inspection:2",
+      "planning:ce677946-dee3-494d-af62-20baecbd267f:attempt:1:started",
+      "planning:ce677946-dee3-494d-af62-20baecbd267f:attempt:1:node:warehouse-orders-backorders",
+      "planning:ce677946-dee3-494d-af62-20baecbd267f:attempt:1:node:domain-order-priority-backorders",
+      "planning:ce677946-dee3-494d-af62-20baecbd267f:attempt:1:node:application-backorder-event-plumbing",
+      "planning:ce677946-dee3-494d-af62-20baecbd267f:attempt:1:node:fulfillment-express-wave-ordering",
+      "planning:ce677946-dee3-494d-af62-20baecbd267f:attempt:1:node:durability-api-backorder-exposure",
+      "planning:ce677946-dee3-494d-af62-20baecbd267f:attempt:1:node:presentation-priority-rendering",
+      "planning:ce677946-dee3-494d-af62-20baecbd267f:attempt:1:node:probe-g6-implementation",
+      "planning:ce677946-dee3-494d-af62-20baecbd267f:attempt:1:node:probe-g6-determinism-test",
+      "planning:warehouse-orders-backorders-priority-probe:strategy:ce677946-dee3-494d-af62-20baecbd267f",
+      "planning:warehouse-orders-backorders-priority-probe:completed:ce677946-dee3-494d-af62-20baecbd267f",
+      "graph:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1:compiled",
+      "graph:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1:critic:completeness",
+      "graph:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1:critic:atomicity",
+      "graph:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1:critic:contract_compatibility",
+      "graph:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1:critic:dag_validity",
+      "graph:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1:critic:scope_isolation",
+      "graph:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1:critic:artifact_coverage",
+      "graph:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1:critic:risk_uncertainty",
+      "graph:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1:critic:validation_coverage",
+      "graph:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1:proposed",
+      "approve-plan:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1",
+      "approve-plan:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1:resolved",
+      "approve-plan:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1:graph-approved",
+      "ce677946-dee3-494d-af62-20baecbd267f:readiness.observed:27",
+      "ce677946-dee3-494d-af62-20baecbd267f:wave.selected:28",
+      "ce677946-dee3-494d-af62-20baecbd267f:attempt:node-warehouse-orders-backorders-35c0209b84:1:started",
+      "ce677946-dee3-494d-af62-20baecbd267f:attempt:node-warehouse-orders-backorders-35c0209b84:1:candidate",
+      "ce677946-dee3-494d-af62-20baecbd267f:attempt:node-warehouse-orders-backorders-35c0209b84:1:validation-completed",
+      "ce677946-dee3-494d-af62-20baecbd267f:attempt:node-warehouse-orders-backorders-35c0209b84:1:artifact-adopted",
+      "ce677946-dee3-494d-af62-20baecbd267f:attempt:node-warehouse-orders-backorders-35c0209b84:1:final-candidate",
+      "ce677946-dee3-494d-af62-20baecbd267f:delivery.started:34",
+      "ce677946-dee3-494d-af62-20baecbd267f:delivery.published:35"
+    ],
+    "decisions": {
+      "approve-plan:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1": {
+        "id": "approve-plan:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-warehouse-orders-backorders-35c0209b84"
+        ],
+        "evidenceRefs": [
+          "graph:graph-warehouse-orders-backorders-priority-probe-6008e76174:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [
+        "node-warehouse-orders-backorders-35c0209b84"
+      ],
+      "pendingDecisionIds": [],
+      "explanations": [
+        {
+          "nodeId": "node-warehouse-orders-backorders-35c0209b84",
+          "ready": true,
+          "reasons": []
+        }
+      ],
+      "effectiveConfig": {
+        "maxParallel": 2
+      },
+      "schedulerState": {
+        "materializableNodeIds": [
+          "node-warehouse-orders-backorders-35c0209b84"
+        ],
+        "activeResourceNodeIds": [],
+        "openCircuitBreakerNodeIds": [],
+        "availableExecutorNodeIds": [
+          "node-warehouse-orders-backorders-35c0209b84"
+        ],
+        "stoppedNodeIds": [],
+        "budgetAvailable": true
+      },
+      "budgetAvailable": true,
+      "conflictEvidence": [],
+      "evaluatedAt": "2026-08-01T05:24:01.844Z"
+    },
+    "selectedWaves": [
+      {
+        "waveId": "ce677946-dee3-494d-af62-20baecbd267f:wave:1",
+        "nodeIds": [
+          "node-warehouse-orders-backorders-35c0209b84"
+        ],
+        "maxParallel": 2,
+        "blocked": [],
+        "effectiveConfig": {
+          "maxParallel": 2
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-01T05:24:01.844Z"
+      }
+    ],
+    "attempts": {
+      "ce677946-dee3-494d-af62-20baecbd267f:attempt:node-warehouse-orders-backorders-35c0209b84:1": {
+        "attemptId": "ce677946-dee3-494d-af62-20baecbd267f:attempt:node-warehouse-orders-backorders-35c0209b84:1",
+        "nodeId": "node-warehouse-orders-backorders-35c0209b84",
+        "inputFingerprint": "sha256:ce9712ec3cf9cdece2610a91e827c922042dbd3f99e366f0d1c893839e439859",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "3d6cdb15964891ee512817217d7cdabf254a6933",
+        "outputDigest": "sha256:eab4bb5506afa5a85120a51fb747372978fca907019096950ce9ff1b8a1f3174",
+        "usage": {
+          "tokensTotal": 146202,
+          "source": "reported"
+        }
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-warehouse-orders-backorders-output-f2568cb789:ce677946-dee3-494d-af62-20baecbd267f:attempt:node-warehouse-orders-backorders-35c0209b84:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-warehouse-orders-backorders-output-f2568cb789:ce677946-dee3-494d-af62-20baecbd267f:attempt:node-warehouse-orders-backorders-35c0209b84:1",
+        "runId": "ce677946-dee3-494d-af62-20baecbd267f",
+        "nodeId": "node-warehouse-orders-backorders-35c0209b84",
+        "digest": "sha256:eab4bb5506afa5a85120a51fb747372978fca907019096950ce9ff1b8a1f3174",
+        "producerAttemptId": "ce677946-dee3-494d-af62-20baecbd267f:attempt:node-warehouse-orders-backorders-35c0209b84:1",
+        "contract": {
+          "id": "artifact-contract-warehouse-orders-backorders-output-f2568cb789",
+          "revision": "sha256:dbc2c57ff22d385a4972d158ef16d1936bdd2aa837e99ee5139ca2cb9763397b"
+        },
+        "kind": "commit",
+        "location": "3d6cdb15964891ee512817217d7cdabf254a6933",
+        "adoptedAt": "2026-08-01T05:37:25.301Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-warehouse-orders-backorders-35c0209b84": "matrix-b46c86198da0f9fc"
+    },
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [
+      "matrix-b46c86198da0f9fc"
+    ],
+    "outcomes": {
+      "execution": "succeeded",
+      "artifact": "verified",
+      "delivery": "published"
+    },
+    "evidenceMatrixSummaries": {
+      "matrix-b46c86198da0f9fc": {
+        "candidateCommit": "3d6cdb15964891ee512817217d7cdabf254a6933",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:e08a9a53ff6e27bc512321a1b11a5eececc0e299da4da7fd18f61733a3b0c7b6"
+      }
+    },
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "A",
+      "candidateTreeHash": "sha256:dcfe30e82d81af4a16c520e94a5413d4059c186536666b17e9d0cc56a0072ddb",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-warehouse-orders-backorders-35c0209b84": {
+          "unitKey": "warehouse-orders-backorders",
+          "nodeId": "node-warehouse-orders-backorders-35c0209b84",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.1667
+          },
+          "benefit": 0,
+          "cost": 0.0417,
+          "splitAdvantage": -0.0417,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-12",
+            "path-11",
+            "path-6",
+            "path-5",
+            "path-16",
+            "path-15",
+            "path-14",
+            "path-13",
+            "path-2",
+            "path-1",
+            "path-18",
+            "path-17",
+            "path-20",
+            "path-19",
+            "path-22",
+            "config-package-json",
+            "sha256:ebd49ef9b04e4760834446aca3a6f469412e21b9c756bfda68c8a5448791f7f7"
+          ],
+          "rationale": "Condition A keeps the complete goal as one leaf."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 0,
+        "totalLeafCount": 1,
+        "averageBranchingFactor": 0
+      }
+    },
+    "graphId": "graph-warehouse-orders-backorders-priority-probe-6008e76174",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1,
+    "finalCandidate": {
+      "manifestId": "final-bf9124e1f6f23b62",
+      "commit": "3d6cdb15964891ee512817217d7cdabf254a6933",
+      "evidenceMatrixId": "matrix-b46c86198da0f9fc",
+      "sourceTargetFingerprint": "9cf6dec3ef882145",
+      "targetBranch": "main",
+      "targetHead": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+      "evidenceEligible": true,
+      "finalManifest": {
+        "commitSha": "3d6cdb15964891ee512817217d7cdabf254a6933",
+        "treeSha": "3280b6aed6dc6924e666247bc9af4c9575a6d0a3",
+        "graphRevision": 1,
+        "artifactIds": [
+          "artifact-contract-warehouse-orders-backorders-output-f2568cb789"
+        ],
+        "evidenceMatrixId": "matrix-b46c86198da0f9fc",
+        "validationRecipeDigest": "sha256:e08a9a53ff6e27bc512321a1b11a5eececc0e299da4da7fd18f61733a3b0c7b6",
+        "deliveryTarget": "main",
+        "granularityPolicy": {
+          "policyVersion": "adaptive-utility/3.1.0-pilot",
+          "minimumAdvantage": 0.15,
+          "maxLeafContextTokens": 24000,
+          "maxLeafScopePaths": 40,
+          "maxLeafPlannedPaths": 12
+        }
+      }
+    },
+    "deliveryApproval": {
+      "manifestId": "final-bf9124e1f6f23b62",
+      "finalSha": "3d6cdb15964891ee512817217d7cdabf254a6933",
+      "targetBranch": "main",
+      "targetHead": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+      "targetFingerprint": "9cf6dec3ef882145",
+      "actor": "thesis-operator",
+      "idempotencyKey": "ce677946-dee3-494d-af62-20baecbd267f:delivery"
+    },
+    "deliveryReceipt": {
+      "receiptId": "delivery:ce677946-dee3-494d-af62-20baecbd267f:delivery",
+      "requestFingerprint": "7c433eb5f8c22a08c44608fe0ec693bdb1407f927dd9946984e5d8b87d5f8b96",
+      "manifestId": "final-bf9124e1f6f23b62",
+      "finalSha": "3d6cdb15964891ee512817217d7cdabf254a6933",
+      "targetBranch": "main",
+      "targetHeadBefore": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+      "targetHeadAfter": "3d6cdb15964891ee512817217d7cdabf254a6933",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  },
+  "checksum": "829f7e0376755680c1a962b3a8261816108659e7f9a393f86ee3a334d5fd0f8f"
+}
