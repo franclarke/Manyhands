@@ -623,7 +623,15 @@ export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput
     lines.push("", "Declared upstream artifacts already materialized in this worktree:", ...input.consumedArtifacts.map((artifact) => `- ${artifact.contract.id}@${artifact.contract.revision} (${artifact.digest})`));
   }
   if (task.constraints.length > 0) lines.push("", "Constraints:", ...task.constraints.map((constraint) => `- ${constraint}`));
-  lines.push("", AGENT_STATUS_PROTOCOL_INSTRUCTIONS, "", "Do not commit. The orchestrator will inspect and commit the exact diff.");
+  lines.push(
+    "",
+    "Do not redefine shared domain types or invent a competing shape in a consumer leaf. Import the existing symbols and follow the shared contracts exactly; only the contract-owning leaf may define their implementation.",
+    "Verify the repository before finishing: run `pnpm build` first, fix every build/type error, and only then run `pnpm test`.",
+    "",
+    AGENT_STATUS_PROTOCOL_INSTRUCTIONS,
+    "",
+    "Do not commit. The orchestrator will inspect and commit the exact diff."
+  );
   return lines.join("\n");
 }
 
@@ -649,6 +657,7 @@ function buildV2RepairInstructions(
     "Start by inspecting the current files and the incoming commit with git show. Apply the incoming commit's intended changes while retaining the already-integrated sibling behavior.",
     "Do not use a blanket checkout of only ours or only theirs: that would discard one child's behavior.",
     "Before finishing, run git diff --check and verify that no <<<<<<<, =======, or >>>>>>> conflict markers remain.",
+    "Then run `pnpm build` before `pnpm test`; fix any type or build error before reporting the repair complete.",
     "",
     "Git conflict output:",
     repair.conflictOutput,

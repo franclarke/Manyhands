@@ -62,6 +62,8 @@ describe("V2NodeExecutor", () => {
     expect(prompts[0]).toContain(contract.task.goal);
     expect(prompts[0]).toContain(contract.scope.allowedPaths[0]);
     expect(prompts[0]).toContain("Shared contracts with sibling work");
+    expect(prompts[0]).toContain("Do not redefine shared domain types");
+    expect(prompts[0]).toContain("pnpm build");
     expect(prompts[0]).toContain("Do not commit");
   });
 
