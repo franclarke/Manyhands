@@ -198,9 +198,17 @@ function criterionEvidence(
     return evidence?.kind === "path" ? [evidence.reference] : [];
   });
   const plannedReferences = [...new Set((unit.plannedPaths ?? []).filter(isTestReference))].sort();
+  const focusedReferences = [...new Set([...plannedReferences, ...citedReferences.filter(isTestReference)])].sort();
+  // A composite owns an integration criterion, so existing test paths that it
+  // cites are the repository-grounded evidence for the assembled tree. Leaf
+  // units keep the stricter authorship rule below: a leaf-level citation alone
+  // does not prove that the leaf owns or changes that test.
+  const compositeReferences = unit.kind === "composite"
+    ? [...new Set([...plannedReferences, ...citedReferences.filter(isTestReference)])].sort()
+    : plannedReferences;
 
   if (criteria.length === 1) {
-    const references = [...new Set([...plannedReferences, ...citedReferences.filter(isTestReference)])].sort();
+    const references = focusedReferences;
     if (references.length === 0) return undefined;
     return { kind: "focused_command", selectors: references, references };
   }
@@ -215,11 +223,11 @@ function criterionEvidence(
   // distinción, una unidad gruesa ---toda la condición A del estudio
   // comparativo--- no podía vincular evidencia y por lo tanto no podía entregar
   // nunca, perdiendo por construcción y no por granularidad.
-  if (plannedReferences.length === 0) return undefined;
+  if (compositeReferences.length === 0) return undefined;
   return {
     kind: "shared_command",
     criterionIds: criteria.map((criterion) => criterion.id),
-    references: plannedReferences,
+    references: compositeReferences,
     rationale: `The unit authors these tests and owns all ${criteria.length} criteria; the evidence is shared across them rather than specific to one.`
   };
 }

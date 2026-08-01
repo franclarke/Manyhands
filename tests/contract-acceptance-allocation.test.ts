@@ -79,6 +79,36 @@ describe("acceptance intent allocation", () => {
     ]);
   });
 
+  it("binds existing test evidence cited by a composite across its owned criteria", () => {
+    const breakdown = fiveIntentBreakdown();
+    if (breakdown.root.kind !== "composite") throw new Error("Expected a composite fixture root.");
+    for (const child of breakdown.root.children) child.acceptanceIntentIds = [];
+    breakdown.repositoryEvidence.push({
+      id: "test-root-inventory",
+      kind: "path",
+      reference: "tests/inventory.test.ts",
+      observation: "Existing integration test inventory for the composite goal",
+      confidence: 1
+    });
+    breakdown.root.evidenceIds.push("test-root-inventory");
+
+    const compiled = compileContractBundles({
+      breakdown,
+      repositorySnapshot: snapshot(),
+      nodeIdByUnitKey: nodeIds(breakdown.root)
+    }, dependencies);
+    const root = compiled.bundles.find((candidate) => candidate.task.nodeId === "node-root")!;
+
+    expect(root.task.acceptanceCriteria).toHaveLength(5);
+    for (const obligation of root.validation.obligations) {
+      expect(obligation.evidence).toMatchObject({
+        kind: "shared_command",
+        references: ["tests/inventory.test.ts"],
+        criterionIds: root.task.acceptanceCriteria.map((criterion) => criterion.id)
+      });
+    }
+  });
+
   /**
    * La condicion A colapsa el objetivo entero en una hoja, de modo que esa hoja
    * acumula todos los criterios. Con el compilador exigiendo exactamente un
