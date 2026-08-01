@@ -181,6 +181,19 @@ describe("Graph Compiler V2", () => {
       .toContain("package.json");
     expect(compiled.review.findings.filter((finding) => finding.severity === "error")).toEqual([]);
   });
+
+  it("matches grounded evidence when Windows index paths use backslashes", () => {
+    const breakdown = bookingBreakdown();
+    const snapshot = bookingSnapshot();
+    const indexedDomain = snapshot.index?.files.find((file) => file.path === "src/domain/booking.ts");
+    if (indexedDomain === undefined || snapshot.index === undefined) throw new Error("Missing domain fixture path.");
+    indexedDomain.path = "src\\domain\\booking.ts";
+
+    const compiled = compileGraphRevision({ breakdown, repositorySnapshot: snapshot }, compilerDependencies);
+
+    expect(compiled.contracts.find((bundle) => bundle.task.nodeId === "node-domain")?.scope.allowedPaths)
+      .toContain("src/domain/booking.ts");
+  });
 });
 
 function leaf(breakdown: WorkBreakdown, key: string) {

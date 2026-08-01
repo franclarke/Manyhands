@@ -38,15 +38,15 @@ export function compileContractBundles(input: {
 }, dependencies: ContractCompilerDependencies): ContractCompilationResult {
   const units = flattenUnits(input.breakdown.root);
   const evidence = new Map(input.breakdown.repositoryEvidence.map((item) => [item.id, item]));
-  const indexedPaths = new Set(input.repositorySnapshot.index?.files.map((file) => file.path) ?? []);
+  const indexedPaths = new Set(input.repositorySnapshot.index?.files.map((file) => normalizeRepositoryPath(file.path)) ?? []);
   if (hasPackageManifest(input.repositorySnapshot)) indexedPaths.add("package.json");
   const scopePathsByNodeId: Record<string, string[]> = {};
   const directPaths = new Map(units.map((unit) => [unit.key, unit.evidenceIds
       .map((id) => evidence.get(id))
       .filter((item): item is NonNullable<typeof item> => item?.kind === "path")
-      .map((item) => item.reference)
+      .map((item) => normalizeRepositoryPath(item.reference))
       .filter((path) => indexedPaths.has(path))
-      .concat(unit.plannedPaths ?? [])]));
+      .concat((unit.plannedPaths ?? []).map(normalizeRepositoryPath))]));
   populateScopePaths(input.breakdown.root, input.nodeIdByUnitKey, directPaths, scopePathsByNodeId);
 
   const artifactContracts = input.breakdown.candidateArtifacts.map((candidate) => {
@@ -59,9 +59,9 @@ export function compileContractBundles(input: {
       .filter((id) => producerEvidenceIds.has(id))
       .map((id) => evidence.get(id))
       .filter((item): item is NonNullable<typeof item> => item?.kind === "path")
-      .map((item) => item.reference)
+      .map((item) => normalizeRepositoryPath(item.reference))
       .filter((path) => indexedPaths.has(path))
-      .concat(producerUnit.plannedPaths ?? []);
+      .concat((producerUnit.plannedPaths ?? []).map(normalizeRepositoryPath));
     const base = {
       schemaVersion: 2 as const,
       id: dependencies.idFor("artifact-contract", candidate.id),
@@ -241,6 +241,10 @@ function hasPackageManifest(snapshot: RepositorySnapshot): boolean {
   return snapshot.capabilities.packageManager !== undefined ||
     Object.keys(snapshot.capabilities.scripts).length > 0 ||
     snapshot.capabilities.stack.some((item) => item.evidence.some((entry) => entry.includes("package.json")));
+}
+
+function normalizeRepositoryPath(path: string): string {
+  return path.replaceAll("\\", "/").replace(/^\.\//u, "");
 }
 
 function populateScopePaths(
