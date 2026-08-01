@@ -9,6 +9,7 @@ Una fila por etapa completada. La escribe el agente al terminar cada etapa,
 | 0 | 2026-08-01 | PASS: Codex CLI 0.146.0 funciona headless con `gpt-5.4-mini` y esfuerzo `low`; el servidor aceptó una creación de workspace autenticada HTTP 201 con estado fuera del repo. Se elige Codex y la celda Claude queda como piloto. | `00df9ee` | `stage-0-executor-preflight.md` |
 | 1 | 2026-08-01 | PASS: G6 re-congelado con Codex `gpt-5.4-mini/low`, seis celdas, seis clones independientes en la base exacta, hashes verificados; `pnpm build` y `pnpm test` PASS. | `e8afb71` | `stage-1-refreeze.md` |
 | 2 | 2026-08-01 | PASS: `low` terminó pre-candidate sin candidato y se preservó; la única escalada declarada a `gpt-5.4-mini/medium` produjo un candidato evaluado 9/10, con cuatro de cinco criterios de tarea satisfechos. Continúa la serie. | `b476900` | `stage-2-capability-floor.md` |
+| 3 | 2026-08-01 | DETENIDA: el planning-only de C compiló 7 hojas, pero la ejecución completa terminó pre-candidate por fallo de limpieza de worktree en validación. Se cerró la rama con `stop`, sin retry; no hubo candidato final ni evaluador externo. No se avanza a etapas 4–12. | `9c61f3b` | `stage-3-cell-g6-02-T1-C-r1.md` |
 
 ## Cómo llenarlo
 
