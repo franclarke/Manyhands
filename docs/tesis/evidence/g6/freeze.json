@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "frozenAt": "2026-08-01 (Codex refreeze)",
+  "frozenAt": "2026-08-01 (Codex medium escalation refreeze)",
   "study": "G6",
   "preregistration": {
     "path": "docs/tesis/evidence/g6-preregistration.md",
-    "sha256": "33f80cbbb4f1e2e2ee28a3da5f8edc81366f6cb216402a77d9141c46daf881a5"
+    "sha256": "3a0a281a21939c50a8164098c71c5a99f57eed6bf2c03c4580f089b1be69ce20"
   },
   "manyHands": {
-    "commit": "9194307b929c570466be42d1c76345738e0af7b0",
-    "tree": "4d27d2390613ded82a0e1d6230c920ea286a1947",
+    "commit": "41284b7b4e6b04f2c305acff01fd1b4dc96aa6a0",
+    "tree": "98c918bcb2fd34c5e493bcd7f2ce1022a969a54c",
     "policyVersion": "adaptive-utility/3.1.0-pilot",
     "policyMarkerInDist": true,
     "decomposerDistSha256": "82fa6291977b1244f4851e5263be383bf46a3aeaddc1b0224cd126c80d9f56f8"
@@ -46,7 +46,7 @@
   "executorSelection": {
     "executorId": "codex-cli",
     "model": "gpt-5.4-mini",
-    "effort": "low"
+    "effort": "medium"
   },
   "cellOrder": [
     "g6-01-T1-A-r1",
@@ -61,37 +61,37 @@
       "cellId": "g6-01-T1-A-r1",
       "condition": "A",
       "repetition": 1,
-      "sha256": "fab1ff0f2bed7c75a055d15ec93096313f89824472bb561612cdea58c18392bb"
+      "sha256": "19f5fbe5e15422c6cde5718cb8e8c57c751d9ddd0a91d7f307363c66100dd12f"
     },
     {
       "cellId": "g6-02-T1-C-r1",
       "condition": "C",
       "repetition": 1,
-      "sha256": "e79e084f2613f6213c63df0c937eff0e0f0d5c5a725c04b30c6cb9a7ead79ab2"
+      "sha256": "ab8a259aa30ebaeacf724387480e668f2b6f378145501c5640a2fd4562e36a7f"
     },
     {
       "cellId": "g6-03-T1-B-r1",
       "condition": "B",
       "repetition": 1,
-      "sha256": "46666531ba6cb295df47c8bcbb32b2faefb964e5e9c41354ce351f691ae5a0ed"
+      "sha256": "6c3467a209a2dd3716f467bbce875c2fc68b273ea2d0bbf5f238d03b9cd8097f"
     },
     {
       "cellId": "g6-04-T1-C-r2",
       "condition": "C",
       "repetition": 2,
-      "sha256": "a03396930cff1f3c245aa0d2c39f1166e1a4203d6422ee99879998c1b6ca5344"
+      "sha256": "713cfa9eabbb9df7adf6029a8de99bc14df17b4f64876095d11b3d9d8d5dc0a5"
     },
     {
       "cellId": "g6-05-T1-A-r2",
       "condition": "A",
       "repetition": 2,
-      "sha256": "f86e8878c339d2b0b21569dd8b2f7ce5a258bce6cda5f961a1ebd2a0e8857aba"
+      "sha256": "3ede924623c7b838ce8ead14626cdd1f0d0cd03ba2f9614b0fdeb9a38ff62e44"
     },
     {
       "cellId": "g6-06-T1-B-r2",
       "condition": "B",
       "repetition": 2,
-      "sha256": "ed5490a37c3ab869124c724b4156da86d2e8c1c1b3158f4fc9aa7ea400cd58c7"
+      "sha256": "d77ba2eeed4245928987ab3dccbfb71271a64bd90f1f7090cd64527494558c5a"
     }
   ],
   "baselineVerdict": {
@@ -111,7 +111,7 @@
   ],
   "supersedes": {
     "freeze": "freeze.json@2026-07-31 (Claude Code sonnet)",
-    "reason": "La serie comparativa cambia a Codex gpt-5.4-mini con esfuerzo low por presupuesto; la corrida Claude se conserva como piloto. El defecto del compilador ya estaba corregido en el freeze anterior.",
+    "reason": "La primera celda Codex con esfuerzo low terminó pre-candidate por fallos variables del planner, sin criterio medible. Se aplica la única escalada de piso declarada: mismo modelo con esfuerzo medium; la corrida low se conserva intacta y no se reintentará.",
     "discardedRun": "c52f823e-2979-4869-b5ec-9963e05d05d0",
     "discardedClone": "warehouse-g6-01"
   },
@@ -126,6 +126,11 @@
       "date": "2026-08-01",
       "reason": "El preflight headless verificó Codex 0.146.0; se elige gpt-5.4-mini con esfuerzo low y la celda Claude pasa a piloto antes de datos comparativos.",
       "evidence": "docs/tesis/evidence/g6/stage-0-executor-preflight.md"
+    },
+    {
+      "date": "2026-08-01",
+      "reason": "La primera celda Codex low terminó pre-candidate sin criterios; se ejecuta una única escalada a medium del mismo modelo, sin reintentar low.",
+      "evidence": "docs/tesis/evidence/g6/runs/g6-01-T1-A-r1-codex-low/"
     }
   ]
 }
