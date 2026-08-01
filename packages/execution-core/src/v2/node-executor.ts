@@ -491,7 +491,16 @@ export class V2NodeExecutor {
     }
     const expectedHead = await this.options.git.head(worktree.path);
     try {
-      await this.writeInstructions(instructionPath, buildV2RepairInstructions(input, repair));
+      const childPatches = await Promise.all(repair.childArtifacts.map(async (artifact) => {
+        try {
+          const sourceParent = await this.options.git.revParse(worktree.path, `${artifact.location}^1`);
+          const diff = await this.options.git.diffRange({ cwd: worktree.path, from: sourceParent, to: artifact.location });
+          return { nodeId: artifact.nodeId, artifactId: artifact.artifactId, location: artifact.location, diff };
+        } catch {
+          return { nodeId: artifact.nodeId, artifactId: artifact.artifactId, location: artifact.location, diff: "(unable to materialize source diff; inspect the commit directly)" };
+        }
+      }));
+      await this.writeInstructions(instructionPath, buildV2RepairInstructions(input, { ...repair, childPatches }));
       const executor = this.options.executorFactory.create(input.repairSelection);
       const outcome = await executor.execute({
         cwd: worktree.path,
@@ -643,7 +652,13 @@ export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput
 
 function buildV2RepairInstructions(
   input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract">,
-  repair: { artifactId: string; conflictFiles: string[]; conflictOutput: string; childArtifacts: IntegrationChildArtifact[] }
+  repair: {
+    artifactId: string;
+    conflictFiles: string[];
+    conflictOutput: string;
+    childArtifacts: IntegrationChildArtifact[];
+    childPatches: Array<{ nodeId: string; artifactId: string; location: string; diff: string }>;
+  }
 ): string {
   const incomingCommit = repair.childArtifacts.find((artifact) => artifact.artifactId === repair.artifactId)?.location;
   return [
@@ -657,6 +672,13 @@ function buildV2RepairInstructions(
     "Preserve every child intent and the shared contracts below:",
     ...input.contract.seams.map((seam) => `- ${seam.id}@${seam.revision}: ${seam.specification}`),
     ...repair.childArtifacts.map((artifact) => `- child ${artifact.nodeId}: ${artifact.contract.id}@${artifact.contract.revision} (${artifact.digest})`),
+    "",
+    "Physical child patches (source of truth for every concrete addition):",
+    ...repair.childPatches.flatMap((patch) => [
+      `--- child ${patch.nodeId} (${patch.artifactId}, ${patch.location}) ---`,
+      patch.diff
+    ]),
+    "Preserve every child addition from these patches; if two changes overlap, reconcile them semantically without dropping either child intent.",
     "",
     "The orchestrator has aborted the active cherry-pick before this repair, so the worktree is clean at the already-integrated parent state.",
     ...(incomingCommit === undefined ? [] : [`Incoming commit to apply semantically: ${incomingCommit}`]),
