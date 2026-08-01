@@ -1,5 +1,29 @@
 # G6 · Etapa 1 — consumo medido
 
+> **Actualizado el 2026-08-01.** La celda se repitió después de corregir el
+> compilador de contratos. Las cifras de la corrida entregada están primero; las
+> de la corrida descartada se conservan más abajo porque también costaron.
+
+## Corrida entregada (`5a5cb4e7`)
+
+| | |
+|---|---:|
+| Duración | 03:01:07 -> 03:14:52 = **13,7 min** |
+| Intentos de planning | 1 |
+| Hojas ejecutadas | 1 |
+| Reparaciones | 0 |
+| `tokensIn` | **6.337.911** |
+| `tokensOut` | 37.825 |
+| Total | **6.375.736** |
+| Costo reportado | **USD 3,01** |
+| Criterios externos | **10/10** |
+
+Proyección de las seis celdas, con esta única observación y sin contar el
+planning que no se registra: **~USD 18**. Es una proyección desde un punto, no
+una medición de la serie.
+
+## Corrida descartada (`c52f823e`)
+
 Celda `g6-01-T1-A-r1`, run `c52f823e-2979-4869-b5ec-9963e05d05d0`, ejecutor
 `claude-code-cli/sonnet`. Todas las cifras salen del journal preservado; ninguna
 es una estimación.

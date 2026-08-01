@@ -3,68 +3,55 @@
 Primera celda de G6, condición **A** (hoja única forzada), repetición 1. Es
 además el chequeo de piso de capacidad declarado en el pre-registro.
 
-## Resultado terminal
+## Resultado
 
-**Sin entrega.** El run quedó parkeado en `waiting_for_input` con una decisión
-`resolve_conflict` sin responder, y el driver cerró la celda conforme al
-protocolo: una celda pre-registrada sólo responde la aprobación del plan y la de
-entrega.
+**Entregada y verificada.**
 
-- run `c52f823e-2979-4869-b5ec-9963e05d05d0`
-- razón registrada: `run parked on resolve_conflict`
-- SHA final: ninguno
-- **Cobertura de criterios externos sobre el árbol entregado: `null`** — no hubo
-  árbol entregado que evaluar.
+| | |
+|---|---|
+| run | `5a5cb4e7-398d-4981-86db-391d68a524fe` |
+| lifecycle | `completed` |
+| SHA final | `cba28d817b3753ac8dea7d6975cbda8f093a5c6f` |
+| receipt | `delivery:5a5cb4e7…:delivery`, manifest `final-cefedb76b1912a1c` |
+| **criterios externos** | **10/10** |
+| duración | 03:01:07 → 03:14:52 = **13,7 min** |
+| intentos de planning | 1 |
+| hojas ejecutadas | 1 |
+| reparaciones | 0 |
+| consumo | 6.375.736 tokens · **USD 3,01** |
 
-## Qué pasó, en orden
+El veredicto externo está en `external-verdict.json`, producido por
+`run-g6-evaluator.mjs` sobre un clon limpio del SHA exacto: los cuatro gates del
+repositorio, la integridad de los tests del baseline, las tres capacidades
+ejercitadas **importando** los módulos entregados, y los dos criterios del probe.
 
-1. Tres intentos de planning; los dos primeros fallaron, el segundo por un corte
-   del proveedor a mitad de stream. El tercero compiló.
-2. La condición A colapsó a **una sola hoja** un árbol candidato que el Architect
-   había propuesto con **siete hijos, uno por capa**. Razón registrada:
-   `Condition A keeps the complete goal as one leaf`.
-3. El agente ejecutó esa hoja única en **8 minutos** y produjo el candidato
-   `9ee89688cb1a079499220ae8b368f252fc9b0bdf`.
-4. La validación terminó `unverified` y se levantó la decisión. La celda parkeó.
+## Chequeo de piso de capacidad: superado
 
-## Por qué la validación no verificó
+El pre-registro declaró que si esta celda no satisfacía **ningún** criterio
+externo, G6 se declararía no informativo sobre granularidad. Satisfizo los diez.
+El ejecutor alcanza el objetivo, así que la serie mide lo que se propuso medir.
 
-El contrato de validación compilado tiene **ocho obligaciones, todas con
-`evidenceBinding: null`** y `acceptableEvidence: ["test_result"]`. Cada una quedó
-`uncovered` con la justificación *"No acceptable evidence is linked to this
-obligation"*.
+## Qué no se concluye
 
-La validación falla cerrada ante una obligación sin evidencia pertinente, que es
-el comportamiento que el ticket 19 introdujo a propósito. Lo que falta es el otro
-lado: **el compilador no produjo ni un solo binding**, de modo que ninguna
-obligación podía cubrirse.
+- **Una celda no es una comparación.** Esto no dice nada todavía sobre la
+  política de granularidad: es el punto de partida contra el que se van a leer
+  las condiciones B y C.
+- No se concluye que la condición A sea mejor. Se concluye que **es viable** en
+  este régimen, que es distinto y es lo que el chequeo de piso preguntaba.
+- La validación interna aceptó nueve criterios respaldados por **un solo archivo
+  de test**, porque es el único path de test que el planner declaró. El binding
+  lo registra como evidencia compartida en vez de disimularlo, pero es evidencia
+  débil y conviene no leerla como nueve pruebas independientes. Los criterios
+  externos, que son los que miden el estudio, no dependen de eso.
 
-Esto **no es un fallo de la condición A**. Es anterior a la condición y le
-ocurriría igual a B y a C: ninguna celda de G6 puede entregar mientras esté
-presente. Por eso la celda se clasifica `not_attributable` según la regla ya
-pre-registrada, y la serie se detiene en vez de gastar cinco celdas más en
-reproducir el mismo bloqueo.
+## Historia previa preservada
 
-## Diagnóstico: qué hizo el agente
+`runs/discarded-c52f823e/` conserva la primera corrida de esta misma celda, que
+quedó `not_attributable`: el compilador de contratos no vinculaba evidencia a una
+unidad con varios criterios, de modo que la condición A no podía entregar nunca.
+Su candidato ya satisfacía los diez criterios externos, y esa medición se
+conserva ahí como diagnóstico.
 
-`candidate-verdict-diagnostic.json` evalúa el commit candidato con el evaluador
-externo. **Satisface los diez criterios**: los cuatro gates del repositorio, la
-integridad de los tests del baseline, las tres capacidades ejercitadas por
-importación —orden express, faltante registrado, prioridad inválida rechazada— y
-los dos del probe.
-
-> **Este número no es el resultado de la celda.** La métrica pre-registrada se
-> mide sobre el árbol **entregado**, y acá no hubo entrega. Se registra como
-> diagnóstico, y separa dos cosas que conviene no confundir: el agente hizo el
-> trabajo; el sistema no pudo acreditarlo.
-
-## Un defecto del propio evaluador, encontrado acá
-
-La primera corrida del diagnóstico dio 8/10: los dos criterios del probe fallaban
-porque el evaluador invocaba `pnpm` sin `--silent`, y el eco del comando
-contaminaba la salida capturada. El script entregado era correcto
-(`node src/probe/g6.ts`).
-
-Corregido, con una regresión que fija la razón. La primera corrida se conserva en
-la historia de Git: **el instrumento tenía un defecto que sólo una celda real
-podía exponer**, y por eso se midió una antes de comprometer las seis.
+`runs/clarify-check/` conserva el chequeo planning-only que expuso una ambigüedad
+del enunciado, y `runs/binding-check/` el que confirmó el arreglo del compilador
+antes de gastar una celda entera.

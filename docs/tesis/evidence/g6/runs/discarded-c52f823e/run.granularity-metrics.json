@@ -1,8 +1,8 @@
 {
-  "runId": "5a5cb4e7-398d-4981-86db-391d68a524fe",
+  "runId": "c52f823e-2979-4869-b5ec-9963e05d05d0",
   "policyVersion": "adaptive-utility/3.1.0-pilot",
   "condition": "A",
-  "candidateTreeHash": "sha256:b0d2bdcbdb6b6e86d09b2abae97ca7110caeb1327493ca0184cace0afbfc3499",
+  "candidateTreeHash": "sha256:4c38bf4ce61d97984866de20d6fa5a4c9edac072084690edcc13eab015dc6fe0",
   "config": {
     "policyVersion": "adaptive-utility/3.1.0-pilot",
     "minimumAdvantage": 0.15,
@@ -15,5 +15,5 @@
     "totalLeafCount": 1,
     "averageBranchingFactor": 0
   },
-  "generatedAt": "2026-08-01T03:03:41.983Z"
+  "generatedAt": "2026-07-31T18:44:12.275Z"
 }

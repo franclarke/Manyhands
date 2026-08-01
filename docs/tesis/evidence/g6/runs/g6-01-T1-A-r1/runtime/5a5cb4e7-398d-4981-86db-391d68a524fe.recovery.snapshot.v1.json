@@ -1,10 +1,7 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 1,
   "runId": "5a5cb4e7-398d-4981-86db-391d68a524fe",
   "eventSequence": 35,
-  "lastEventId": "5a5cb4e7-398d-4981-86db-391d68a524fe:delivery.published:35",
-  "operationId": "7d2983d8-1801-4f9c-983a-3bba1b4cce86",
-  "fencingToken": 4,
   "projection": {
     "runId": "5a5cb4e7-398d-4981-86db-391d68a524fe",
     "goal": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain  - src/domain/orders.ts:\n- Export type OrderPriority = \"standard\" | \"express\".\n- Order gains a readonly priority field of that type. It is optional at the call site: an order placed without a priority is treated as \"standard\", so existing callers keep working unchanged.\n- placeOrder throws OrderError when a priority is supplied and is neither \"standard\" nor \"express\".\n- Export interface Backorder with readonly orderId, skuId and missing fields, where missing is a positive integer.\n- WarehouseState gains a readonly backorders field keyed by order id.\n- reserveOrder records a Backorder for every line whose quantity exceeds the available units, instead of throwing, and leaves the order in a status from which it can still be cancelled.\n- Export listBackorders(state) returning every recorded Backorder.\n\nApplication  - src/application/warehouse-service.ts:\n- The service exposes the new operations and emits a warehouse event for a recorded backorder.\n\nFulfillment  - src/fulfillment/planner.ts:\n- Within one wave, planFulfillment lists express orders before standard ones. Its existing signature does not change.\n\nDurability  - src/durability/journal.ts:\n- HistoryAnalytics gains a backorders count derived from the events.\n\nAPI  - src/api/server.ts:\n- The server exposes the backorders of the current state.\n\nPresentation  - src/presentation/tower.ts:\n- The rendered SVG distinguishes express orders from standard ones.\n\nProbe  - src/probe/g6.ts and a package script named study:g6-probe:\n- Follow the shape of the existing probes: export main() returning a JSON string, and write exactly one JSON object to stdout when invoked directly, with no other output.\n- Two invocations from the same commit must emit byte-identical output.\n\nPreserve all existing behaviour and keep every existing test passing. Put new tests next to the code they cover, inside the directories the test script already scans.",
@@ -288,5 +285,5 @@
       "confirmed": true
     }
   },
-  "checksum": "91cef3006d7ca9c3dcd7b8813042df90dc02be06d12f36d2fb3b67ab2339d895"
+  "checksum": "929bc8640da67874743fa0fa2b99cae026fe504e1de7b837481ed698a914a46d"
 }
