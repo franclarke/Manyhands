@@ -9,7 +9,7 @@
   "policy": {
     "version": "adaptive-utility/3.1.0-pilot",
     "distPath": "packages/decomposer/dist/index.js",
-    "distSha256": "a2f0b1e676ef4006c3fecc837b9a48cc50b0136bfdda2bf616ce638924c67600"
+    "distSha256": "82fa6291977b1244f4851e5263be383bf46a3aeaddc1b0224cd126c80d9f56f8"
   },
   "toolchain": {
     "node": "22.23.1",
