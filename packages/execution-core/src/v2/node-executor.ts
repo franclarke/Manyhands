@@ -629,6 +629,8 @@ export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput
     "Treat every named interface or type schema in the objective as exact: preserve the listed field names, types, optionality, and return shape; do not rename fields or substitute a richer local shape.",
     "Update every existing constructor, fixture, probe, and snapshot when the requested change adds a required field; the repository must compile from the canonical shared types before tests run.",
     "Import canonical symbols across layers instead of declaring a second local shape for a domain, application, API, presentation, or probe contract.",
+    "Before implementing a consumer leaf, inspect the current canonical producer implementation and its tests; do not reimplement behavior already supplied by that producer.",
+    "Use the canonical producer's returned state and exported operations as the only source for shared state; never add a consumer-side exception fallback or duplicate map or store.",
     "Verify the repository before finishing: run `pnpm build` first, fix every build/type error, and only then run `pnpm test`.",
     "",
     AGENT_STATUS_PROTOCOL_INSTRUCTIONS,
