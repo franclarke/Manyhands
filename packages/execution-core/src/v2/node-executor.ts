@@ -659,6 +659,8 @@ function buildV2RepairInstructions(
     ...(incomingCommit === undefined ? [] : [`Incoming commit to apply semantically: ${incomingCommit}`]),
     "Start by inspecting the current files and the incoming commit with git show. Apply the incoming commit's intended changes while retaining the already-integrated sibling behavior.",
     "Do not use a blanket checkout of only ours or only theirs: that would discard one child's behavior.",
+    "The only accepted repair is a non-empty working-tree diff that applies the incoming intent while preserving the current sibling behavior.",
+    "Do not report the conflict resolved from the final summary alone: inspect `git status --short` and `git diff --stat`, and keep editing until the actual diff is present.",
     "Before finishing, run git diff --check and verify that no <<<<<<<, =======, or >>>>>>> conflict markers remain.",
     "Then run `pnpm build` before `pnpm test`; fix any type or build error before reporting the repair complete.",
     "",
