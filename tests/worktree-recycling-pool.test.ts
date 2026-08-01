@@ -411,6 +411,36 @@ describe("WorktreePool", () => {
     );
   });
 
+  it("reuses an empty orphan when Windows reports a transient removal lock", async () => {
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "manyhands-pool-empty-orphan-"));
+    tempRoots.push(repoRoot);
+    const commonDir = path.join(repoRoot, ".git");
+    const poolRoot = path.join(repoRoot, ".manyhands", "pool");
+    await mkdir(path.join(poolRoot, "slot-000"), { recursive: true });
+    let addCount = 0;
+    const git: WorktreePoolGit = {
+      add: async () => { addCount += 1; },
+      resetAndClean: async () => undefined,
+      remove: async () => undefined,
+      prune: async () => undefined,
+      validate: async () => false,
+      resolveCommonDir: async () => commonDir,
+      updateRef: async () => undefined
+    };
+    const pool = new WorktreePool({
+      repoRoot,
+      poolRoot,
+      size: 1,
+      git,
+      removePath: async () => { throw Object.assign(new Error("resource busy"), { code: "EBUSY" }); }
+    });
+
+    await pool.initialize("a".repeat(40));
+
+    expect(addCount).toBe(1);
+    await pool.dispose();
+  });
+
   /**
    * Dos intentos de hoja se perdieron con este error y no se pudo decir por qué:
    * el mensaje nombraba el slot y nada más, y el `cause` no viajaba al journal.

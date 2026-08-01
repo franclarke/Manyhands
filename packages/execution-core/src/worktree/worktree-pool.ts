@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, rm, stat } from "node:fs/promises";
+import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -409,9 +409,16 @@ export class WorktreePool {
     try {
       await this.removePath(worktreePath);
     } catch (error) {
-      throw worktreePoolUnavailable(`could not remove invalid slot ${id}: ${describeRemovalFailure(error)}`, error);
+      // Windows can briefly report EBUSY for an already-empty orphan after a
+      // worktree process exits. An empty directory is safe for `git worktree
+      // add` to reuse; a non-empty directory remains a hard infrastructure
+      // failure because reusing it could hide stale files.
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "EBUSY" || !(await isEmptyDirectory(worktreePath))) {
+        throw worktreePoolUnavailable(`could not remove invalid slot ${id}: ${describeRemovalFailure(error)}`, error);
+      }
     }
-    if (await pathExists(worktreePath)) {
+    if (await pathExists(worktreePath) && !(await isEmptyDirectory(worktreePath))) {
       throw worktreePoolUnavailable(`could not remove invalid slot ${id}: the path still exists at ${worktreePath}`);
     }
     await this.git.prune(this.repoRoot).catch(() => undefined);
@@ -668,6 +675,14 @@ async function pathExists(candidate: string): Promise<boolean> {
   try {
     await stat(candidate);
     return true;
+  } catch {
+    return false;
+  }
+}
+
+async function isEmptyDirectory(candidate: string): Promise<boolean> {
+  try {
+    return (await readdir(candidate)).length === 0;
   } catch {
     return false;
   }
