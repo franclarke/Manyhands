@@ -378,6 +378,8 @@ describe("V2NodeExecutor", () => {
     expect(prompts[0]).toContain("Apply the incoming commit");
     expect(prompts[0]).toContain("The only accepted repair is a non-empty working-tree diff");
     expect(prompts[0]).toContain("Do not report the conflict resolved from the final summary alone");
+    expect(prompts[0]).toContain("Treat the already-integrated canonical producer behavior as authoritative");
+    expect(prompts[0]).toContain("Do not add an exception-based fallback or duplicate state");
     const abortIndex = git.calls.findIndex((call) => call.op === "cherryPickAbort");
     const repairStageIndex = git.calls.findIndex((call) => call.op === "addAllExcluding");
     expect(abortIndex).toBeGreaterThanOrEqual(0);
