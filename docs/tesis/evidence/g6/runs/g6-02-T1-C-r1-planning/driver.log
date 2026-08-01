@@ -1,0 +1,7 @@
+[2026-08-01T05:42:30.693Z] cell g6-02-T1-C-r1 | condition C | task T1
+[2026-08-01T05:42:34.406Z] workspace 3d6b8fd6-6685-4348-95ed-3f1939e917b1
+[2026-08-01T05:42:37.328Z] run 95d9a069-0bd1-4b48-b915-6f4d69a38f5d
+[2026-08-01T05:42:38.336Z]   -> planning
+[2026-08-01T05:46:24.653Z]   -> needs_approval
+[2026-08-01T05:46:24.657Z]   planning-only cell: leaving approve-plan:graph-semantic-warehouse-order-backorders-3a220c7bf4:r1 unanswered
+[2026-08-01T05:46:24.668Z] lifecycle=needs_approval finalSha=none
