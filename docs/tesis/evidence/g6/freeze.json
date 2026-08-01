@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "frozenAt": "2026-07-31",
+  "frozenAt": "2026-07-31 (refreeze)",
   "study": "G6",
   "preregistration": {
     "path": "docs/tesis/evidence/g6-preregistration.md",
-    "sha256": "9d8747a6e450d416618038c8cda3f83d447217dd40bbbd2355bf683a317279c0"
+    "sha256": "4780bdedd3db1c095b0cd52a6aae4428f4a868abe6fc9c846e88ace72802cf97"
   },
   "manyHands": {
-    "commit": "9fba8726fbab1bf4d1396c05ca7117a1f480909f",
-    "tree": "40eec946199a3e2f47706b77b30be178a93b9bca",
+    "commit": "5adb92e473a3a6b549976cf6bf8565ca2a7d7265",
+    "tree": "41c3637debac3fe15511ad8f424938b7cbdaae79",
     "policyVersion": "adaptive-utility/3.1.0-pilot",
     "policyMarkerInDist": true,
-    "decomposerDistSha256": "a2f0b1e676ef4006c3fecc837b9a48cc50b0136bfdda2bf616ce638924c67600"
+    "decomposerDistSha256": "82fa6291977b1244f4851e5263be383bf46a3aeaddc1b0224cd126c80d9f56f8"
   },
   "toolchain": {
     "node": "v22.23.1",
@@ -21,13 +21,13 @@
   "target": {
     "repository": "warehouse-control-tower-compact",
     "baseSha": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
-    "clone": "warehouse-g6-01",
+    "clone": "warehouse-g6-01b",
     "sourceBranch": "wc/compact"
   },
   "task": {
     "path": "docs/tesis/evidence/g6/task-t1.md",
-    "sha256": "b69c379e6b18fbacdea3a837a7891b2d6f95c7e401949e75a46879d635fa2c3e",
-    "goalSha256": "8bb888673456c1ceb48bd1c006489cd53ea03689f93af265846d178d50c95ed4"
+    "sha256": "54612e6c6a39ef1c8e7bb9a1f1f8272dd2b7d5d87d8344e8ed9fd01eda77d41c",
+    "goalSha256": "cc51d9c79e833f1898a09f41e5314ba3417fd730bfaec53cdb66a944e7613bcd"
   },
   "criteria": {
     "path": "docs/tesis/evidence/g6/criteria-t1.json",
@@ -35,9 +35,9 @@
   },
   "evaluator": {
     "path": "docs/tesis/evidence/scripts/run-g6-evaluator.mjs",
-    "sha256": "706b67116f86ac3cdb35293cee2b21fe164d5100f3064e007fcefcf24ece5473",
+    "sha256": "ebe729bfd25aa9a50c577c181a843babaf6e7d68b983a1b60196f03a291f2738",
     "libPath": "docs/tesis/evidence/scripts/lib/g6-criteria.mjs",
-    "libSha256": "e5791c938526a7379212b14f03e909f8cc3de58d74d7d27641e8665796584b9f"
+    "libSha256": "ea2f2d22493845c66deeb8f8fe9d20a7ee9fe18782da157b6817cff44b8adcb4"
   },
   "driver": {
     "path": "docs/tesis/evidence/scripts/run-experiment.mjs",
@@ -61,7 +61,7 @@
       "cellId": "g6-01-T1-A-r1",
       "condition": "A",
       "repetition": 1,
-      "sha256": "6f827c1b2d425f3fb096b43d2e46ecbda427e720a49eca3fd554144c6d5161f3"
+      "sha256": "23beb51a7aadb9f27d8d64dc892078967340b4de0e77335aae215a9908268432"
     }
   ],
   "baselineVerdict": {
@@ -78,5 +78,18 @@
     "Etapa 1 ejecuta unicamente g6-01-T1-A-r1.",
     "La primera celda A es ademas el chequeo de piso de capacidad del pre-registro.",
     "El umbral minimumAdvantage = 0.15 permanece inmutable durante todo G6."
+  ],
+  "supersedes": {
+    "reason": "La primera corrida quedo not_attributable: el compilador de contratos no vinculaba evidencia a una unidad con varios criterios, de modo que la condicion A no podia entregar nunca. Corregido en el commit de este freeze.",
+    "discardedRun": "c52f823e-2979-4869-b5ec-9963e05d05d0",
+    "discardedClone": "warehouse-g6-01"
+  },
+  "metric": "criterios externos satisfechos sobre el candidato producido (enmienda del 2026-07-31)",
+  "taskAmendments": [
+    {
+      "date": "2026-08-01",
+      "reason": "El planner pidio aclaracion sobre si priority es obligatoria; el enunciado la resuelve como opcional con default standard.",
+      "evidence": "docs/tesis/evidence/g6/runs/clarify-check/"
+    }
   ]
 }
