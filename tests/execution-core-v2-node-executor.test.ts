@@ -68,6 +68,8 @@ describe("V2NodeExecutor", () => {
     expect(prompts[0]).toContain("Import canonical symbols across layers instead of declaring a second local shape");
     expect(prompts[0]).toContain("Before implementing a consumer leaf, inspect the current canonical producer implementation and its tests");
     expect(prompts[0]).toContain("Use the canonical producer's returned state and exported operations as the only source for shared state");
+    expect(prompts[0]).toContain("Literal-contract audit");
+    expect(prompts[0]).toContain("do not invent a semantically similar name");
     expect(prompts[0]).toContain("pnpm build");
     expect(prompts[0]).toContain("Do not commit");
   });

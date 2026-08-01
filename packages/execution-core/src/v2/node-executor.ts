@@ -627,6 +627,7 @@ export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput
     "",
     "Do not redefine shared domain types or invent a competing shape in a consumer leaf. Import the existing symbols and follow the shared contracts exactly; only the contract-owning leaf may define their implementation.",
     "Treat every named interface or type schema in the objective as exact: preserve the listed field names, types, optionality, and return shape; do not rename fields or substitute a richer local shape.",
+    "Literal-contract audit: copy every quoted identifier, enum literal, field name, and command from the objective and acceptance criteria verbatim; do not invent a semantically similar name or alias. Before finishing, search the changed tree for the exact literals and correct any synonym substitution.",
     "Update every existing constructor, fixture, probe, and snapshot when the requested change adds a required field; the repository must compile from the canonical shared types before tests run.",
     "Import canonical symbols across layers instead of declaring a second local shape for a domain, application, API, presentation, or probe contract.",
     "Before implementing a consumer leaf, inspect the current canonical producer implementation and its tests; do not reimplement behavior already supplied by that producer.",
@@ -662,6 +663,7 @@ function buildV2RepairInstructions(
     "Start by inspecting the current files and the incoming commit with git show. Apply the incoming commit's intended changes while retaining the already-integrated sibling behavior.",
     "Do not use a blanket checkout of only ours or only theirs: that would discard one child's behavior.",
     "Treat the already-integrated canonical producer behavior as authoritative when reconciling a consumer leaf.",
+    "Run a literal-contract audit against the parent objective and child acceptance criteria: preserve every quoted identifier, enum literal, field name, and return shape verbatim; do not resolve a mismatch by inventing a semantically similar name or alias.",
     "Do not add an exception-based fallback or duplicate state to compensate for a changed canonical API; consume its returned state and exported operations instead.",
     "The only accepted repair is a non-empty working-tree diff that applies the incoming intent while preserving the current sibling behavior.",
     "Do not report the conflict resolved from the final summary alone: inspect `git status --short` and `git diff --stat`, and keep editing until the actual diff is present.",
@@ -689,6 +691,7 @@ function buildV2CodeRepairInstructions(
       .map((criterion) => `- ${criterion.criterionId}: ${criterion.justification}`),
     "",
     "Preserve the declared scope and shared contracts. Change only what is required to satisfy the failed evidence.",
+    "Re-check every quoted identifier, enum literal, field name, and return shape from the objective before editing; preserve them verbatim and do not replace them with a semantically similar name or alias.",
     "Do not commit; the orchestrator will revalidate and commit the repair."
   ].join("\n");
 }
