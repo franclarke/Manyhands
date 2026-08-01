@@ -593,7 +593,8 @@ export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput
     ...task.acceptanceCriteria.map((criterion) => `- [${criterion.required ? "required" : "advisory"}] ${criterion.description}`),
     "",
     "Change only these existing paths:",
-    ...scope.allowedPaths.map((path) => `- ${path}`)
+    ...scope.allowedPaths.map((path) => `- ${path}`),
+    "Do not modify sibling work or dependency files outside this scope, even when the implementation appears to need them."
   ];
   // Without this the agent has no way to know that a new test file is even
   // permitted, and a correct candidate gets rejected for leaving its scope.
