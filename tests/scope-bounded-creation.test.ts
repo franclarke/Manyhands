@@ -192,5 +192,6 @@ describe("what the agent is told", () => {
     expect(instructions).toContain("- tests/");
     expect(instructions).toContain("Change only these existing paths:");
     expect(instructions).toContain("Do not modify sibling work or dependency files outside this scope");
+    expect(instructions).toContain("Do not remove, weaken, skip, or reduce assertions in existing tests");
   });
 });

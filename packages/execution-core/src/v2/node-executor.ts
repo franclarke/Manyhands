@@ -594,7 +594,8 @@ export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput
     "",
     "Change only these existing paths:",
     ...scope.allowedPaths.map((path) => `- ${path}`),
-    "Do not modify sibling work or dependency files outside this scope, even when the implementation appears to need them."
+    "Do not modify sibling work or dependency files outside this scope, even when the implementation appears to need them.",
+    "Do not remove, weaken, skip, or reduce assertions in existing tests. Preserve their coverage; add or update tests only when the requested behavior requires it."
   ];
   // Without this the agent has no way to know that a new test file is even
   // permitted, and a correct candidate gets rejected for leaving its scope.
