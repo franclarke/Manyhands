@@ -21,6 +21,7 @@ import { z } from "zod";
 export * from "./planner/prompt.js";
 export * from "./planner/schema.js";
 export * from "./planner/work-breakdown.js";
+export * from "./planner/repository-snapshot-id.js";
 export * from "./compiler/contract-compiler.js";
 export * from "./compiler/acceptance-allocation.js";
 export * from "./compiler/graph-compiler.js";

@@ -4,6 +4,7 @@ import {
   type WorkBreakdown,
   type WorkUnit
 } from "../planner/schema.js";
+import { repositorySnapshotIdsMatch } from "../planner/repository-snapshot-id.js";
 
 export const CONTEXT_ESTIMATOR_VERSION = "utf8-bytes-div-4/1.0.0";
 
@@ -45,7 +46,7 @@ export function buildRepositoryContextProfiles(
   input: BuildRepositoryContextProfilesInput
 ): Record<string, RepositoryContextProfile> {
   const breakdown = WorkBreakdownSchema.parse(input.breakdown);
-  if (breakdown.repositorySnapshotId !== input.repositorySnapshot.snapshotId) {
+  if (!repositorySnapshotIdsMatch(breakdown.repositorySnapshotId, input.repositorySnapshot.snapshotId)) {
     throw new Error(
       `WorkBreakdown references repository snapshot ${breakdown.repositorySnapshotId}, received ${input.repositorySnapshot.snapshotId}.`
     );

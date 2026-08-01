@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { CompiledGraphRevision, GranularityStrategyResult, GraphCompilerInput, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
-import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, candidateBreakdownHash, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
+import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, canonicalRepositorySnapshotId, candidateBreakdownHash, repositorySnapshotIdsMatch, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
 import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 
@@ -108,6 +108,7 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
     let breakdown = input.experimentalCandidate === undefined
       ? await dependencies.plan(plannerInput, planningObserverFor(latestPlanningAttempt(events)))
       : validateExperimentalCandidate(input, repositorySnapshot);
+    breakdown = canonicalizeRepositorySnapshotReference(breakdown, repositorySnapshot.snapshotId);
     if (requiresClarification(breakdown)) {
       const drafts = clarificationEvents(breakdown, nodeIdFor, dependencies.now, events.length);
       events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
@@ -132,6 +133,7 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
           evidence: [rootAssessment.rationale, ...rootAssessment.evidenceRefs]
         }
       }, planningObserverFor(latestPlanningAttempt(events)));
+      breakdown = canonicalizeRepositorySnapshotReference(breakdown, repositorySnapshot.snapshotId);
       if (requiresClarification(breakdown)) {
         const drafts = clarificationEvents(breakdown, nodeIdFor, dependencies.now, events.length);
         events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
@@ -285,7 +287,8 @@ function validateExperimentalCandidate(
 ): WorkBreakdown {
   const candidate = input.experimentalCandidate;
   if (candidate === undefined) throw new Error("Missing experimental planning candidate.");
-  if (candidate.repositorySnapshotId !== repositorySnapshot.snapshotId || candidate.breakdown.repositorySnapshotId !== repositorySnapshot.snapshotId) {
+  if (!repositorySnapshotIdsMatch(candidate.repositorySnapshotId, repositorySnapshot.snapshotId)
+    || !repositorySnapshotIdsMatch(candidate.breakdown.repositorySnapshotId, repositorySnapshot.snapshotId)) {
     throw new Error("Experimental candidate snapshot does not match the inspected repository snapshot.");
   }
   if (candidate.goal !== input.goal) throw new Error("Experimental candidate goal does not match the run goal.");
@@ -294,7 +297,14 @@ function validateExperimentalCandidate(
   }
   const actualHash = candidateBreakdownHash(candidate.breakdown);
   if (candidate.sourceHash !== actualHash) throw new Error(`Experimental candidate source hash mismatch: expected ${candidate.sourceHash}, measured ${actualHash}.`);
-  return candidate.breakdown;
+  return canonicalizeRepositorySnapshotReference(candidate.breakdown, repositorySnapshot.snapshotId);
+}
+
+function canonicalizeRepositorySnapshotReference(breakdown: WorkBreakdown, canonicalSnapshotId: string): WorkBreakdown {
+  const repositorySnapshotId = canonicalRepositorySnapshotId(breakdown.repositorySnapshotId, canonicalSnapshotId);
+  return repositorySnapshotId === breakdown.repositorySnapshotId
+    ? breakdown
+    : { ...breakdown, repositorySnapshotId };
 }
 
 function structuralMetrics(root: WorkUnit): {

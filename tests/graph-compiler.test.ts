@@ -24,6 +24,16 @@ describe("Graph Compiler V2", () => {
     expect(first.review.findings.filter((finding) => finding.severity === "error")).toEqual([]);
   });
 
+  it("accepts the planner's bare sha256 digest when the repository uses the canonical prefix", () => {
+    const snapshot = bookingSnapshot();
+    const breakdown = bookingBreakdown();
+    breakdown.repositorySnapshotId = snapshot.snapshotId.replace(/^sha256:/u, "");
+
+    const compiled = compileGraphRevision({ breakdown, repositorySnapshot: snapshot }, compilerDependencies);
+
+    expect(compiled.graph.repositorySnapshotId).toBe(snapshot.snapshotId);
+  });
+
   it("compiles a seam across three siblings without turning it into artifact readiness", () => {
     const compiled = compileGraphRevision(
       { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },

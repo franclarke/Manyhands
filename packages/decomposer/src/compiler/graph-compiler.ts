@@ -11,6 +11,7 @@ import {
 import { assertPlanReview, reviewCompiledPlan, type PlanReview } from "../critics/review.js";
 import { WorkBreakdownSchema, type WorkBreakdown, type WorkUnit } from "../planner/schema.js";
 import { compileContractBundles } from "./contract-compiler.js";
+import { repositorySnapshotIdsMatch } from "../planner/repository-snapshot-id.js";
 
 export interface GraphCompilerInput {
   breakdown: WorkBreakdown;
@@ -46,7 +47,7 @@ export function compileGraphRevision(
   const breakdown = WorkBreakdownSchema.parse(rawInput.breakdown);
   RepositorySnapshotSchema.parse(rawInput.repositorySnapshot);
   const repositorySnapshot = rawInput.repositorySnapshot;
-  if (breakdown.repositorySnapshotId !== repositorySnapshot.snapshotId) {
+  if (!repositorySnapshotIdsMatch(breakdown.repositorySnapshotId, repositorySnapshot.snapshotId)) {
     throw new Error(`WorkBreakdown references repository snapshot ${breakdown.repositorySnapshotId}, received ${repositorySnapshot.snapshotId}.`);
   }
   if (repositorySnapshot.inspectionDisposition === "unavailable" || repositorySnapshot.index === undefined) {
