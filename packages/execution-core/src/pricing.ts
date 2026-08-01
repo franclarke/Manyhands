@@ -20,7 +20,9 @@ export const MODEL_PRICING: Readonly<Record<string, ModelPrice>> = {
   sonnet: { inputPerMillionUsd: 3, outputPerMillionUsd: 15 },
   opus: { inputPerMillionUsd: 15, outputPerMillionUsd: 75 },
   // Codex / GPT-5 family (execution-only today).
-  "gpt-5-codex": { inputPerMillionUsd: 1.25, outputPerMillionUsd: 10 }
+  "gpt-5-codex": { inputPerMillionUsd: 1.25, outputPerMillionUsd: 10 },
+  // OpenAI standard API pricing, refreshed for the G6 Codex CLI cell.
+  "gpt-5.4-mini": { inputPerMillionUsd: 0.75, outputPerMillionUsd: 4.5 }
 };
 
 /** Looks up a price, tolerating provider-prefixed ids like "models/claude-sonnet". */
@@ -46,4 +48,21 @@ export function costForModel(
     (tokensIn / 1_000_000) * price.inputPerMillionUsd +
     (tokensOut / 1_000_000) * price.outputPerMillionUsd
   );
+}
+
+/**
+ * Conservative cost for a provider that reports only a total token count.
+ * The total may mix input and output, so charge every token at the higher
+ * model rate instead of inventing an input/output split. This is an upper
+ * bound suitable for enforcing a hard budget, not a claim about the exact
+ * invoice amount.
+ */
+export function conservativeCostForTotalTokens(
+  model: string,
+  tokensTotal: number
+): number | undefined {
+  const price = priceForModel(model);
+  if (price === undefined) return undefined;
+  if (!Number.isInteger(tokensTotal) || tokensTotal < 0) return undefined;
+  return (tokensTotal / 1_000_000) * Math.max(price.inputPerMillionUsd, price.outputPerMillionUsd);
 }

@@ -26,7 +26,7 @@ export interface CliExecutorProfile {
    * and surface structured provider errors on stderr. Must be total — return
    * the outcome untouched when the output is not in the expected shape.
    */
-  parseOutcome?(outcome: ExecutorRunOutcome): ExecutorRunOutcome;
+  parseOutcome?(outcome: ExecutorRunOutcome, options: AgentExecutorOptions): ExecutorRunOutcome;
 }
 
 export interface CliExecutorDeps {
@@ -112,6 +112,6 @@ export class CliAgentExecutor implements AgentExecutor {
     });
     statusScanner?.flush();
 
-    return this.profile.parseOutcome?.(outcome) ?? outcome;
+    return this.profile.parseOutcome?.(outcome, options) ?? outcome;
   }
 }

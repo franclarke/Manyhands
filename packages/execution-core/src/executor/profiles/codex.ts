@@ -2,6 +2,7 @@ import type { AgentExecutorOptions } from "../../types";
 import type { ExecutorRunOutcome } from "../types";
 import type { CliExecutorProfile } from "../cli-executor";
 import { CODEX_EXECUTOR_ID } from "../registry";
+import { conservativeCostForTotalTokens } from "../../pricing";
 
 /**
  * Codex CLI headless mode. Global permission flags must appear before `exec`;
@@ -36,11 +37,19 @@ export function buildCodexArgs(options: AgentExecutorOptions): string[] {
  * missing or malformed report leaves the outcome untouched, because a
  * fabricated zero and a measured zero must stay distinguishable.
  */
-export function parseCodexOutcome(outcome: ExecutorRunOutcome): ExecutorRunOutcome {
+export function parseCodexOutcome(outcome: ExecutorRunOutcome, model?: string): ExecutorRunOutcome {
   // Both streams are searched: which one carries the report is the CLI's
   // choice, and a real run lost its measurement because only stdout was read.
   const total = lastReportedTokenTotal(outcome.stdout) ?? lastReportedTokenTotal(outcome.stderr);
-  return total === undefined ? outcome : { ...outcome, tokensTotal: total };
+  if (total === undefined) return outcome;
+  const costUsd = outcome.costUsd ?? (model === undefined
+    ? undefined
+    : conservativeCostForTotalTokens(model, total));
+  return {
+    ...outcome,
+    tokensTotal: total,
+    ...(costUsd !== undefined ? { costUsd } : {})
+  };
 }
 
 /** The CLI prints a running total; the last report is the run's consumption. */
@@ -60,5 +69,5 @@ export const CODEX_PROFILE: CliExecutorProfile = {
   id: CODEX_EXECUTOR_ID,
   logScope: "codex",
   buildArgs: buildCodexArgs,
-  parseOutcome: parseCodexOutcome
+  parseOutcome: (outcome, options) => parseCodexOutcome(outcome, options.model)
 };

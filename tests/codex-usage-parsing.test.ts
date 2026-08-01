@@ -67,4 +67,24 @@ describe("Codex usage parsing", () => {
 
     expect(parsed.tokensTotal).toBe(8192);
   });
+
+  it("derives a conservative cost estimate for a known Codex model", () => {
+    const parsed = parseCodexOutcome(
+      { ...base, stdout: "tokens used: 105,313\n" },
+      "gpt-5.4-mini"
+    );
+
+    expect(parsed.tokensTotal).toBe(105313);
+    expect(parsed.costUsd).toBeCloseTo(105313 / 1_000_000 * 4.5, 10);
+  });
+
+  it("does not fabricate a cost for an unknown model", () => {
+    const parsed = parseCodexOutcome(
+      { ...base, stdout: "tokens used: 105,313\n" },
+      "gpt-unknown"
+    );
+
+    expect(parsed.tokensTotal).toBe(105313);
+    expect(parsed.costUsd).toBeUndefined();
+  });
 });
