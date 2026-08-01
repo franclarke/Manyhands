@@ -194,6 +194,19 @@ describe("Graph Compiler V2", () => {
     expect(compiled.contracts.find((bundle) => bundle.task.nodeId === "node-domain")?.scope.allowedPaths)
       .toContain("src/domain/booking.ts");
   });
+
+  it("normalizes absolute path evidence against the inspected repository root", () => {
+    const breakdown = bookingBreakdown();
+    const domainEvidence = breakdown.repositoryEvidence.find((item) => item.id === "domain-path");
+    if (domainEvidence === undefined) throw new Error("Expected domain path evidence.");
+    domainEvidence.reference = "C:\\repo\\booking\\src\\domain\\booking.ts";
+
+    const compiled = compileGraphRevision({ breakdown, repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+
+    expect(compiled.contracts.find((bundle) => bundle.task.nodeId === "node-domain")?.scope.allowedPaths).toEqual([
+      "src/domain/booking.ts"
+    ]);
+  });
 });
 
 function leaf(breakdown: WorkBreakdown, key: string) {

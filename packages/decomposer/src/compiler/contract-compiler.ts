@@ -38,15 +38,16 @@ export function compileContractBundles(input: {
 }, dependencies: ContractCompilerDependencies): ContractCompilationResult {
   const units = flattenUnits(input.breakdown.root);
   const evidence = new Map(input.breakdown.repositoryEvidence.map((item) => [item.id, item]));
-  const indexedPaths = new Set(input.repositorySnapshot.index?.files.map((file) => normalizeRepositoryPath(file.path)) ?? []);
+  const repositoryRoot = input.repositorySnapshot.rootPath;
+  const indexedPaths = new Set(input.repositorySnapshot.index?.files.map((file) => normalizeRepositoryPath(file.path, repositoryRoot)) ?? []);
   if (hasPackageManifest(input.repositorySnapshot)) indexedPaths.add("package.json");
   const scopePathsByNodeId: Record<string, string[]> = {};
   const directPaths = new Map(units.map((unit) => [unit.key, unit.evidenceIds
       .map((id) => evidence.get(id))
       .filter((item): item is NonNullable<typeof item> => item?.kind === "path")
-      .map((item) => normalizeRepositoryPath(item.reference))
+      .map((item) => normalizeRepositoryPath(item.reference, repositoryRoot))
       .filter((path) => indexedPaths.has(path))
-      .concat((unit.plannedPaths ?? []).map(normalizeRepositoryPath))]));
+      .concat((unit.plannedPaths ?? []).map((path) => normalizeRepositoryPath(path, repositoryRoot)))]));
   populateScopePaths(input.breakdown.root, input.nodeIdByUnitKey, directPaths, scopePathsByNodeId);
 
   const artifactContracts = input.breakdown.candidateArtifacts.map((candidate) => {
@@ -59,9 +60,9 @@ export function compileContractBundles(input: {
       .filter((id) => producerEvidenceIds.has(id))
       .map((id) => evidence.get(id))
       .filter((item): item is NonNullable<typeof item> => item?.kind === "path")
-      .map((item) => normalizeRepositoryPath(item.reference))
+      .map((item) => normalizeRepositoryPath(item.reference, repositoryRoot))
       .filter((path) => indexedPaths.has(path))
-      .concat((producerUnit.plannedPaths ?? []).map(normalizeRepositoryPath));
+      .concat((producerUnit.plannedPaths ?? []).map((path) => normalizeRepositoryPath(path, repositoryRoot)));
     const base = {
       schemaVersion: 2 as const,
       id: dependencies.idFor("artifact-contract", candidate.id),
@@ -243,8 +244,14 @@ function hasPackageManifest(snapshot: RepositorySnapshot): boolean {
     snapshot.capabilities.stack.some((item) => item.evidence.some((entry) => entry.includes("package.json")));
 }
 
-function normalizeRepositoryPath(path: string): string {
-  return path.replaceAll("\\", "/").replace(/^\.\//u, "");
+function normalizeRepositoryPath(value: string, repositoryRoot: string): string {
+  const normalized = value.replaceAll("\\", "/").replace(/^\.\//u, "");
+  const root = repositoryRoot.replaceAll("\\", "/").replace(/\/+$/u, "");
+  const normalizedLower = normalized.toLowerCase();
+  const rootLower = root.toLowerCase();
+  if (normalizedLower === rootLower) return "";
+  if (normalizedLower.startsWith(`${rootLower}/`)) return normalized.slice(root.length + 1);
+  return normalized;
 }
 
 function populateScopePaths(
