@@ -161,6 +161,19 @@ El ejecutor es constante dentro de la serie que se analiza. El preflight de
 admite `low`, `medium`, `high` y `xhigh`; G6 fija `low` para las tres etapas del
 pipeline y no lo cambia durante la serie.
 
+### Enmienda de escalada del 2026-08-01, antes de la nueva celda A
+
+La primera celda bajo el freeze Codex `gpt-5.4-mini / low` terminó sin candidato:
+el planning agotó sus tres intentos internos por errores de compilación del plan y
+no se alcanzó ningún criterio externo. El run y sus artefactos se conservan como
+fallo pre-candidate del chequeo de piso, fuera de la serie comparativa que se
+analizará.
+
+Aplicando la regla declarada en el plan para un piso con cero criterios, se hace la
+única escalada permitida: se conserva el modelo `gpt-5.4-mini` y se eleva el
+esfuerzo a `medium`. La serie se re-congela con esa selección homogénea antes de
+la nueva celda A. No se harán más escaladas ni se reintentará el run `low`.
+
 ### Chequeo de piso de capacidad (declarado de antemano)
 
 Un ejecutor demasiado débil para el objetivo haría fallar a las tres condiciones
