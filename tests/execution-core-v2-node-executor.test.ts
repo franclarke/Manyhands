@@ -63,6 +63,9 @@ describe("V2NodeExecutor", () => {
     expect(prompts[0]).toContain(contract.scope.allowedPaths[0]);
     expect(prompts[0]).toContain("Shared contracts with sibling work");
     expect(prompts[0]).toContain("Do not redefine shared domain types");
+    expect(prompts[0]).toContain("Treat every named interface or type schema in the objective as exact");
+    expect(prompts[0]).toContain("Update every existing constructor, fixture, probe, and snapshot");
+    expect(prompts[0]).toContain("Import canonical symbols across layers instead of declaring a second local shape");
     expect(prompts[0]).toContain("pnpm build");
     expect(prompts[0]).toContain("Do not commit");
   });

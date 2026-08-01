@@ -626,6 +626,9 @@ export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput
   lines.push(
     "",
     "Do not redefine shared domain types or invent a competing shape in a consumer leaf. Import the existing symbols and follow the shared contracts exactly; only the contract-owning leaf may define their implementation.",
+    "Treat every named interface or type schema in the objective as exact: preserve the listed field names, types, optionality, and return shape; do not rename fields or substitute a richer local shape.",
+    "Update every existing constructor, fixture, probe, and snapshot when the requested change adds a required field; the repository must compile from the canonical shared types before tests run.",
+    "Import canonical symbols across layers instead of declaring a second local shape for a domain, application, API, presentation, or probe contract.",
     "Verify the repository before finishing: run `pnpm build` first, fix every build/type error, and only then run `pnpm test`.",
     "",
     AGENT_STATUS_PROTOCOL_INSTRUCTIONS,
