@@ -141,6 +141,26 @@ Codex no se usa: su sandbox no arranca en esta máquina y ese fallo ya costó un
 celda entera. El ejecutor es **constante del experimento**, no variable, así que
 G6 **no es comparable con G5**.
 
+### Enmienda del 2026-08-01, antes de cualquier dato comparativo
+
+El bloque anterior describe el estado previo a la decisión de la etapa 0 y queda
+sustituido para la serie comparativa por esta enmienda. G6 se ejecutará con la
+selección homogénea `codex-cli / gpt-5.4-mini / low` en planning, ejecución y
+reparación. Se elige el escalón Codex más bajo que el registro conoce y que el
+preflight verificó funcional en esta máquina, por razón de presupuesto.
+
+La única corrida previa de G6, `g6-01-T1-A-r1`, usó
+`claude-code-cli / sonnet`; se conserva íntegra como piloto y no integra la serie
+comparativa. La enmienda se registra antes de cualquier dato comparativo: sólo
+existía la corrida piloto, que cambia de clasificación pero no se descarta.
+
+El ejecutor es constante dentro de la serie que se analiza. El preflight de
+`codex-cli 0.146.0` produjo salida headless con `gpt-5.4-mini` y
+`reasoning effort: low`; la evidencia está en
+`docs/tesis/evidence/g6/stage-0-executor-preflight.md`. El modelo seleccionado
+admite `low`, `medium`, `high` y `xhigh`; G6 fija `low` para las tres etapas del
+pipeline y no lo cambia durante la serie.
+
 ### Chequeo de piso de capacidad (declarado de antemano)
 
 Un ejecutor demasiado débil para el objetivo haría fallar a las tres condiciones
