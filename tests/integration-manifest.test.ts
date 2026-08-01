@@ -117,6 +117,27 @@ describe("IntegrationManifestExecutor", () => {
     );
   });
 
+  it("rejects a candidate that drops an added line from an adopted child patch", async () => {
+    const git = new IntentDiffGit({
+      heads: { "/wt": "BASE" },
+      cherryPickResultShas: ["PICK_A"]
+    });
+    const built = request([artifact("a", "node-a", "SHA_A")], ["a"]);
+    let validated = false;
+    const result = await new IntegrationManifestExecutor({
+      git,
+      validate: async () => {
+        validated = true;
+        return { matrixId: "matrix-1", outcome: "verified" as const };
+      },
+      digestCandidate: async () => "digest-parent"
+    }).integrate({ request: built, worktreePath: "/wt" });
+
+    expect(result.disposition).toBe("failed");
+    expect(result.errors).toEqual([expect.objectContaining({ code: "child_intent_not_retained" })]);
+    expect(validated).toBe(false);
+  });
+
   it("fails before Git mutation when a required artifact is omitted", async () => {
     const git = new FakeGitRunner();
     const result = await new IntegrationManifestExecutor({
@@ -137,5 +158,13 @@ class CrashAfterFirstCherryPickGit extends FakeGitRunner {
     const outcome = await super.cherryPick(params);
     if (this.cherryPicks++ === 0) throw new Error("simulated crash");
     return outcome;
+  }
+}
+
+class IntentDiffGit extends FakeGitRunner {
+  override async diffRange(params: Parameters<FakeGitRunner["diffRange"]>[0]): ReturnType<FakeGitRunner["diffRange"]> {
+    if (params.to === "SHA_A") return "diff --git a/src/a.ts b/src/a.ts\n+export const required = true;";
+    if (params.to === "PICK_A") return "diff --git a/src/a.ts b/src/a.ts\n+export const unrelated = true;";
+    return super.diffRange(params);
   }
 }

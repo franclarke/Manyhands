@@ -90,7 +90,7 @@ export interface IntegrationManifest {
   parentEvidence?: { matrixId: string; outcome: "verified" | "unverified" | "failed" };
   outputArtifacts: Array<{ artifactId: string; digest: string; contract: { id: string; revision: string }; kind: "commit"; location: string }>;
   disposition: "success" | "failed" | "decision_required";
-  errors: Array<{ code: "missing_required_artifact" | "unsupported_artifact" | "base_mismatch" | "materialization_failed" | "parent_validation_failed"; artifactId?: string; message: string }>;
+  errors: Array<{ code: "missing_required_artifact" | "unsupported_artifact" | "base_mismatch" | "materialization_failed" | "child_intent_not_retained" | "parent_validation_failed"; artifactId?: string; message: string }>;
 }
 
 export interface IntegrationManifestExecutorDeps {
@@ -240,6 +240,21 @@ export class IntegrationManifestExecutor {
     }
 
     const candidateSha = await this.deps.git.head(worktreePath);
+    const droppedIntent = await this.findDroppedChildIntent(request, candidateSha, worktreePath);
+    if (droppedIntent.length > 0) {
+      const message = `Final integration dropped child additions: ${droppedIntent.join(" | ")}`;
+      if (journalOperation !== undefined) {
+        await input.integrationOperation!.journal.update(journalOperation, { state: "failed", finalSha: candidateSha });
+      }
+      return {
+        ...base,
+        operations,
+        ...(repairAttempt !== undefined ? { repairAttempt } : {}),
+        candidateSha,
+        disposition: "failed",
+        errors: [{ code: "child_intent_not_retained", message }]
+      };
+    }
     if (journalOperation !== undefined) {
       journalOperation = await input.integrationOperation!.journal.update(journalOperation, { state: "validation_started" });
     }
@@ -271,6 +286,28 @@ export class IntegrationManifestExecutor {
     }
     return result;
   }
+
+  private async findDroppedChildIntent(
+    request: IntegrationRequestManifest,
+    candidateSha: string,
+    worktreePath: string
+  ): Promise<string[]> {
+    const finalDiff = await this.deps.git.diffRange({
+      cwd: worktreePath,
+      from: request.base.resultingCommit,
+      to: candidateSha
+    });
+    const finalAddedLines = new Set(patchAddedLines(finalDiff));
+    const dropped: string[] = [];
+    for (const artifact of request.childArtifacts) {
+      const sourceParent = await this.deps.git.revParse(worktreePath, `${artifact.location}^1`);
+      const sourceDiff = await this.deps.git.diffRange({ cwd: worktreePath, from: sourceParent, to: artifact.location });
+      for (const line of patchAddedLines(sourceDiff)) {
+        if (!finalAddedLines.has(line)) dropped.push(`${artifact.nodeId}: +${line}`);
+      }
+    }
+    return dropped.slice(0, 12);
+  }
 }
 
 function manifestBase(request: IntegrationRequestManifest): Omit<IntegrationManifest, "operations" | "disposition" | "errors"> & { operations: []; outputArtifacts: [] } {
@@ -285,4 +322,12 @@ function manifestBase(request: IntegrationRequestManifest): Omit<IntegrationMani
     operations: [],
     outputArtifacts: []
   };
+}
+
+function patchAddedLines(diff: string): string[] {
+  return diff
+    .split(/\r?\n/u)
+    .filter((line) => line.startsWith("+") && !line.startsWith("+++"))
+    .map((line) => line.slice(1))
+    .filter((line) => line.trim().length > 0);
 }
