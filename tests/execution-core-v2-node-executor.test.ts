@@ -317,6 +317,65 @@ describe("V2NodeExecutor", () => {
       input.consumedArtifacts.map((artifact) => artifact.location)
     );
   });
+
+  it("aborts an active cherry-pick before launching semantic integration repair", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const root = compiled.graph.nodes[compiled.graph.rootId]!;
+    const repairCommit = "a".repeat(40);
+    const git = new FakeGitRunner({
+      cherryPickOutcomes: [{ ok: false, kind: "conflict", conflictFiles: ["src/domain/booking.ts"], output: "CONFLICT" }],
+      diffCachedNameOnly: ["src/domain/booking.ts"],
+      diffCached: "resolved diff",
+      commitSha: repairCommit
+    });
+    const prompts: string[] = [];
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(successfulAgent()),
+      validator: { validate: async (input) => matrix(input.contract, input.candidateCommit) },
+      finalCandidate: {
+        prepare: async (input) => ({
+          manifestId: "final-repair-manifest",
+          finalManifest: {
+            commitSha: input.candidateCommit,
+            treeSha: "tree-repaired",
+            graphRevision: input.graphRevision,
+            artifactIds: [...input.artifactIds],
+            evidenceMatrixId: input.evidenceMatrix.matrixId,
+            validationRecipeDigest: input.validationRecipeDigest,
+            deliveryTarget: input.targetBranch
+          }
+        })
+      },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async (_path, content) => { prompts.push(content); },
+      now: () => at
+    });
+
+    const input = request(compiled, root.id);
+    input.consumedArtifacts = [{
+      artifactId: "adopted-child",
+      runId: input.runId,
+      nodeId: "node-api",
+      digest: "sha256:child",
+      producerAttemptId: "attempt-child",
+      contract: { id: "contract-child", revision: "r1" },
+      kind: "commit",
+      location: "b".repeat(40),
+      adoptedAt: at
+    }];
+
+    const outcome = await executor.execute(input);
+
+    expect(outcome).toMatchObject({ kind: "success", candidateCommit: repairCommit });
+    expect(prompts[0]).toContain("Apply the incoming commit");
+    const abortIndex = git.calls.findIndex((call) => call.op === "cherryPickAbort");
+    const repairStageIndex = git.calls.findIndex((call) => call.op === "addAllExcluding");
+    expect(abortIndex).toBeGreaterThanOrEqual(0);
+    expect(abortIndex).toBeLessThan(repairStageIndex);
+  });
 });
 
 describe("ScopeChecker V2", () => {

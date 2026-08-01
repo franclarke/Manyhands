@@ -486,6 +486,9 @@ export class V2NodeExecutor {
     signal: AbortSignal
   ): Promise<{ success: boolean; candidateSha?: string; evidenceRefs: string[] }> {
     const instructionPath = instructionFilePath(input, "repair");
+    if (await this.options.git.cherryPickHead(worktree.path) !== undefined) {
+      await this.options.git.cherryPickAbort(worktree.path);
+    }
     const expectedHead = await this.options.git.head(worktree.path);
     try {
       await this.writeInstructions(instructionPath, buildV2RepairInstructions(input, repair));
@@ -628,6 +631,7 @@ function buildV2RepairInstructions(
   input: Pick<V2PhysicalNodeExecutionInput, "node" | "contract">,
   repair: { artifactId: string; conflictFiles: string[]; conflictOutput: string; childArtifacts: IntegrationChildArtifact[] }
 ): string {
+  const incomingCommit = repair.childArtifacts.find((artifact) => artifact.artifactId === repair.artifactId)?.location;
   return [
     `Resolve the integration conflict for ${input.node.title}.`,
     "",
@@ -639,6 +643,12 @@ function buildV2RepairInstructions(
     "Preserve every child intent and the shared contracts below:",
     ...input.contract.seams.map((seam) => `- ${seam.id}@${seam.revision}: ${seam.specification}`),
     ...repair.childArtifacts.map((artifact) => `- child ${artifact.nodeId}: ${artifact.contract.id}@${artifact.contract.revision} (${artifact.digest})`),
+    "",
+    "The orchestrator has aborted the active cherry-pick before this repair, so the worktree is clean at the already-integrated parent state.",
+    ...(incomingCommit === undefined ? [] : [`Incoming commit to apply semantically: ${incomingCommit}`]),
+    "Start by inspecting the current files and the incoming commit with git show. Apply the incoming commit's intended changes while retaining the already-integrated sibling behavior.",
+    "Do not use a blanket checkout of only ours or only theirs: that would discard one child's behavior.",
+    "Before finishing, run git diff --check and verify that no <<<<<<<, =======, or >>>>>>> conflict markers remain.",
     "",
     "Git conflict output:",
     repair.conflictOutput,
