@@ -6,6 +6,7 @@
   "condition": "B",
   "repetition": 1,
   "seriesKind": "comparative",
+  "g6Protocol": { "version": 1, "maxPlanningAttempts": 1, "maxAutomaticRetryBudget": 0, "maxCellCostUsd": 8, "maxSeriesCostUsd": 40, "maxSeriesTokens": 2000000 },
   "workspaceName": "g6-warehouse-compact",
   "baseUrl": "http://127.0.0.1:3141",
   "targetRepo": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-04",
@@ -20,6 +21,9 @@
     "scopePolicy": "strict",
     "leafTimeoutMs": 1800000,
     "integrationTimeoutMs": 1800000,
+    "maxPlanningAttempts": 1,
+    "automaticRetryBudget": 0,
+    "maxCostUsd": 8,
     "unexpectedCommitPolicy": "reject"
   },
   "runsDir": "C:\\Users\\franc\\Documents\\Proyectos\\manyhands-g6-runtime\\runs",

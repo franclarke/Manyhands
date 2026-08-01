@@ -65,6 +65,49 @@ describe("V2ExecutionDriver", () => {
     expect(retried?.retryOfAttemptId).toBeDefined();
   });
 
+  it("does not retry a transient leaf when the run declares a zero retry budget", async () => {
+    const breakdown = bookingBreakdown();
+    if (breakdown.root.kind !== "composite") throw new Error("Fixture must start composite.");
+    const domain = breakdown.root.children.find((unit) => unit.key === "domain");
+    if (domain?.kind !== "leaf") throw new Error("Missing atomic domain leaf.");
+    breakdown.root = domain;
+    breakdown.acceptanceIntents = breakdown.acceptanceIntents.filter((intent) => intent.id === "domain-ready");
+    breakdown.candidateSeams = [];
+    const compiled = compileGraphRevision(
+      { breakdown, repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+    const harness = coordinatorHarness(compiled.graph.graphId, "run-v2-single-attempt");
+    let attempts = 0;
+    const driver = new V2ExecutionDriver({
+      coordinator: harness.coordinator,
+      now: () => at,
+      loadCurrentInputs: staticInputs(compiled),
+      execute: async () => {
+        attempts += 1;
+        return { kind: "failure", reason: "transient: provider disconnected" };
+      }
+    });
+
+    const state = await driver.run({
+      runId: "run-v2-single-attempt",
+      graph: compiled.graph,
+      contracts: compiled.contracts,
+      repositoryContextDigest: "sha256:repository",
+      executorProfile: { id: "claude-code-cli", revision: "sonnet" },
+      effectiveConfig: { maxParallel: 1, automaticRetryBudget: 0 },
+      materializableNodeIds: [compiled.graph.rootId],
+      availableExecutorNodeIds: [compiled.graph.rootId],
+      conflictConstraints: [],
+      target: { sourceTargetFingerprint: "sha256:target", targetBranch: "main", targetHead: "base-head" }
+    });
+
+    expect(attempts).toBe(1);
+    expect(state.lifecycle).toBe("waiting_for_input");
+    expect(Object.values(state.attempts)).toHaveLength(1);
+    expect(Object.values(state.decisions)).toHaveLength(1);
+  });
+
   it("does not dispatch a second wave when bounded usage cannot prove the remaining budget", async () => {
     const compiled = compileGraphRevision(
       { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },
@@ -654,11 +697,11 @@ function staticInputs(compiled: ReturnType<typeof compileGraphRevision>) {
   });
 }
 
-function coordinatorHarness(graphId: string) {
+function coordinatorHarness(graphId: string, runId = "run-v2") {
   let events: RunEvent[] = [
-    RunEventSchema.parse({ eventId: "created", runId: "run-v2", sequence: 1, occurredAt: at, type: "run.created", payload: { goal: "Build booking" } }),
-    RunEventSchema.parse({ eventId: "proposed", runId: "run-v2", sequence: 2, occurredAt: at, type: "graph.revision.proposed", payload: { graphId, revision: 1 } }),
-    RunEventSchema.parse({ eventId: "approved", runId: "run-v2", sequence: 3, occurredAt: at, type: "graph.revision.approved", payload: { graphId, revision: 1 } })
+    RunEventSchema.parse({ eventId: "created", runId, sequence: 1, occurredAt: at, type: "run.created", payload: { goal: "Build booking" } }),
+    RunEventSchema.parse({ eventId: "proposed", runId, sequence: 2, occurredAt: at, type: "graph.revision.proposed", payload: { graphId, revision: 1 } }),
+    RunEventSchema.parse({ eventId: "approved", runId, sequence: 3, occurredAt: at, type: "graph.revision.approved", payload: { graphId, revision: 1 } })
   ];
   let listener: (events: RunEvent[]) => void = () => undefined;
   const coordinator = new RunCoordinator({

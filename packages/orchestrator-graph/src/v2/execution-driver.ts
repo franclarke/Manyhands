@@ -108,7 +108,7 @@ export interface V2ExecutionRunInput {
   repositoryContextDigest: string;
   executorProfile: V2ExecutorProfile;
   granularityPolicy?: GranularityPolicyManifest;
-  effectiveConfig: { maxParallel: number; maxTokensTotal?: number; maxCostUsd?: number };
+  effectiveConfig: { maxParallel: number; maxTokensTotal?: number; maxCostUsd?: number; automaticRetryBudget?: number };
   materializableNodeIds: string[];
   availableExecutorNodeIds: string[];
   activeResourceNodeIds?: string[];
@@ -321,7 +321,7 @@ export class V2ExecutionDriver {
         failureClass,
         observation,
         allowedActions: policy.actions,
-        automaticRetryBudget: policy.automaticRetryBudget,
+        automaticRetryBudget: retryBudgetFor(run, policy.automaticRetryBudget),
         discardCandidate: policy.discardCandidate
       }));
       const payload = {
@@ -347,7 +347,7 @@ export class V2ExecutionDriver {
           failureClass,
           observation,
           allowedActions: policy.actions,
-          automaticRetryBudget: policy.automaticRetryBudget,
+          automaticRetryBudget: retryBudgetFor(run, policy.automaticRetryBudget),
           discardCandidate: policy.discardCandidate
         }));
       }
@@ -379,7 +379,7 @@ export class V2ExecutionDriver {
           reason: `Candidate discarded after ${failureClass}: ${outcome.reason}`
         }));
       }
-      const retryBudget = policy.automaticRetryBudget;
+      const retryBudget = retryBudgetFor(run, policy.automaticRetryBudget);
       const priorFailures = Object.values(current.attempts).filter((candidate) =>
         candidate.nodeId === attempt.nodeId && candidate.status === "failed"
       ).length;
@@ -544,6 +544,10 @@ function prepare(input: V2ExecutionRunInput): PreparedExecutionRunInput {
   if (!Number.isInteger(input.effectiveConfig.maxParallel) || input.effectiveConfig.maxParallel < 1) {
     throw new Error("V2 execution requires a persisted positive maxParallel.");
   }
+  if (input.effectiveConfig.automaticRetryBudget !== undefined &&
+      (!Number.isInteger(input.effectiveConfig.automaticRetryBudget) || input.effectiveConfig.automaticRetryBudget < 0)) {
+    throw new Error("V2 execution requires a non-negative integer automaticRetryBudget when configured.");
+  }
   const contracts = input.contracts.map((bundle) => TaskContractBundleSchema.parse(bundle));
   const contractsByNodeId = new Map(contracts.map((bundle) => [bundle.task.nodeId, bundle]));
   for (const nodeId of Object.keys(graph.nodes)) {
@@ -636,6 +640,10 @@ function schedulerConfigFor(config: PreparedExecutionRunInput["effectiveConfig"]
   return config.maxTokensTotal !== undefined || config.maxCostUsd !== undefined
     ? { ...config, maxParallel: 1 }
     : config;
+}
+
+function retryBudgetFor(input: PreparedExecutionRunInput, policyDefault: number): number {
+  return input.effectiveConfig.automaticRetryBudget ?? policyDefault;
 }
 
 function pendingSchedulerDecision(explanations: ReadinessExplanationV2[]): boolean {

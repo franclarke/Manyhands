@@ -249,7 +249,8 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
           effectiveConfig: {
             maxParallel: config.maxParallel,
             ...(config.maxTokensTotal !== undefined ? { maxTokensTotal: config.maxTokensTotal } : {}),
-            ...(config.maxCostUsd !== undefined ? { maxCostUsd: config.maxCostUsd } : {})
+            ...(config.maxCostUsd !== undefined ? { maxCostUsd: config.maxCostUsd } : {}),
+            ...(config.automaticRetryBudget !== undefined ? { automaticRetryBudget: config.automaticRetryBudget } : {})
           },
           materializableNodeIds: materializableNodeIds(prepared.graph, prepared.contracts),
           availableExecutorNodeIds: executorReady ? Object.keys(prepared.graph.nodes) : [],

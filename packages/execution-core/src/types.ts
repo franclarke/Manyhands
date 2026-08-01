@@ -357,6 +357,8 @@ export const ExecutionConfigSchema = z.object({
   maxValidationCommands: z.number().int().positive().default(20),
   /** Dependency-install deadline, kept explicit alongside executor/validation timeouts. */
   installTimeoutMs: z.number().int().positive().default(300_000),
+  /** Maximum planner calls for a run; comparative cells set this to one. */
+  maxPlanningAttempts: z.number().int().positive().optional(),
   reasoningEffort: ReasoningEffortSchema.optional(),
   unexpectedCommitPolicy: UnexpectedCommitPolicySchema.default("reject"),
   /**
@@ -372,6 +374,8 @@ export const ExecutionConfigSchema = z.object({
   maxTokensTotal: z.number().int().positive().optional(),
   /** Cost budget in USD; same between-waves semantics as maxTokensTotal. */
   maxCostUsd: z.number().positive().optional(),
+  /** Optional per-run cap for automatic recovery retries; absent preserves class-specific policy defaults. */
+  automaticRetryBudget: z.number().int().nonnegative().optional(),
   /** Optional wall-clock ceiling for the whole run; the orchestrator interrupts past it. */
   maxWallClockMs: z.number().int().positive().optional()
 });

@@ -29,11 +29,13 @@ import {
   assertWideGraphOracleAttribution
 } from "./lib/wide-graph-oracle-contract.mjs";
 import { resolveRunsDir } from "./run-experiment-paths.mjs";
+import { executionConfigForG6Cell } from "./lib/g6-cell-protocol.mjs";
 
 const exec = promisify(execFile);
 
 const args = parseArgs(process.argv.slice(2));
 const config = JSON.parse(await readFile(args.config, "utf8"));
+const executionConfig = executionConfigForG6Cell(config);
 const hasVersionedProtocol = config.schemaVersion !== undefined
   || config.protocol !== undefined
   || config.oracleContract !== undefined;
@@ -90,7 +92,7 @@ if (runId === undefined) {
     ...(config.granularityCondition !== undefined
       ? { granularityCondition: config.granularityCondition }
       : {}),
-    executionConfig: config.executionConfig ?? {}
+    executionConfig
   });
   runId = run.runId ?? run.run?.runId ?? run.id;
   log(`run ${runId}`);

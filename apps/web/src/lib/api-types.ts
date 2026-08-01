@@ -146,6 +146,9 @@ export interface RunCreateRequest {
   repairSelection?: StageSelection;
   executionConfig?: {
     maxParallel?: number;
+    maxPlanningAttempts?: number;
+    automaticRetryBudget?: number;
+    maxCostUsd?: number;
     reasoningEffort?: EffortLevel;
   };
 }

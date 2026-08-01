@@ -80,7 +80,9 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
             request
           )
         },
-        maxAttempts: 3
+        ...(run.executionConfig.maxPlanningAttempts !== undefined
+          ? { maxAttempts: run.executionConfig.maxPlanningAttempts }
+          : { maxAttempts: 3 })
       });
       const state = await runPlanningV2({
         runId,
