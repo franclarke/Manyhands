@@ -71,6 +71,39 @@ describe("Graph Compiler V2", () => {
     expect(compiled.contracts.find((bundle) => bundle.task.nodeId === "node-api")?.task.consumes).toHaveLength(1);
   });
 
+  it("propagates materialized producer inputs to downstream consumers", () => {
+    const breakdown = bookingBreakdown();
+    breakdown.candidateArtifacts.push(
+      {
+        id: "domain-files-for-api",
+        artifactType: "source-module",
+        producerUnitKey: "domain",
+        consumerUnitKeys: ["api"],
+        purpose: "The API compiles against the domain module",
+        materializationHint: "files",
+        evidenceIds: ["domain-path", "api-path"]
+      },
+      {
+        id: "api-files-for-ui",
+        artifactType: "source-module",
+        producerUnitKey: "api",
+        consumerUnitKeys: ["ui"],
+        purpose: "The UI consumes the API module",
+        materializationHint: "files",
+        evidenceIds: ["api-path", "ui-path"]
+      }
+    );
+
+    const compiled = compileGraphRevision({ breakdown, repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const executionRequirements = compiled.graph.artifactRequirements.filter((requirement) => requirement.requiredFor === "execution");
+
+    expect(executionRequirements).toEqual(expect.arrayContaining([
+      expect.objectContaining({ producerNodeId: "node-domain", consumerNodeId: "node-api" }),
+      expect.objectContaining({ producerNodeId: "node-api", consumerNodeId: "node-ui" }),
+      expect.objectContaining({ producerNodeId: "node-domain", consumerNodeId: "node-ui" })
+    ]));
+  });
+
   it("compiles executable contracts and explicit bottom-up artifacts for composites", () => {
     const compiled = compileGraphRevision(
       { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() },

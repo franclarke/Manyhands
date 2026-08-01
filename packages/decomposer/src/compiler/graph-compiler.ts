@@ -81,6 +81,7 @@ export function compileGraphRevision(
     }
     trace.push({ sourceType: "candidate_artifact", sourceId: candidate.id, compiledRelationIds: relationIds, evidenceIds: [...candidate.evidenceIds] });
   }
+  propagateMaterializedArtifactRequirements(artifactRequirements, dependencies);
   for (const contract of contractResult.nodeOutputArtifactContracts) {
     for (const consumerNodeId of contract.consumerNodeIds) {
       artifactRequirements.push({
@@ -136,6 +137,38 @@ export function compileGraphRevision(
     review,
     trace: { unitNodeIds: nodeIdByUnitKey, relations: trace }
   };
+}
+
+function propagateMaterializedArtifactRequirements(
+  requirements: ArtifactRequirement[],
+  dependencies: GraphCompilerDependencies
+): void {
+  const directExecutionRequirements = (): ArtifactRequirement[] => requirements.filter((requirement) => requirement.requiredFor === "execution");
+  const known = new Set(requirements
+    .filter((requirement) => requirement.requiredFor === "execution")
+    .map((requirement) => `${requirement.artifactContract.id}|${requirement.consumerNodeId}`));
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const executionRequirements = directExecutionRequirements();
+    for (const downstream of executionRequirements) {
+      for (const upstream of executionRequirements.filter((requirement) => requirement.consumerNodeId === downstream.producerNodeId)) {
+        if (upstream.producerNodeId === downstream.consumerNodeId) continue;
+        const key = `${upstream.artifactContract.id}|${downstream.consumerNodeId}`;
+        if (known.has(key)) continue;
+        requirements.push({
+          id: dependencies.idFor("artifact-requirement", `${upstream.artifactContract.id}-${downstream.consumerNodeId}-transitive`),
+          artifactContract: upstream.artifactContract,
+          producerNodeId: upstream.producerNodeId,
+          consumerNodeId: downstream.consumerNodeId,
+          requiredFor: "execution"
+        });
+        known.add(key);
+        changed = true;
+      }
+    }
+  }
 }
 
 function compileNodes(root: WorkUnit, nodeIdByUnitKey: Record<string, string>): Record<string, TaskNodeV2> {
