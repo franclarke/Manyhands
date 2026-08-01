@@ -28,6 +28,7 @@ import {
   assertWideGraphOracleConfiguration,
   assertWideGraphOracleAttribution
 } from "./lib/wide-graph-oracle-contract.mjs";
+import { resolveRunsDir } from "./run-experiment-paths.mjs";
 
 const exec = promisify(execFile);
 
@@ -40,6 +41,7 @@ const oracleContract = hasVersionedProtocol
   ? await assertWideGraphOracleConfiguration(config)
   : undefined;
 const outDir = resolve(args.out);
+const runsDir = resolveRunsDir(config, process.env.MANYHANDS_RUNS_DIR);
 await mkdir(outDir, { recursive: true });
 const oracleContractPath = oracleContract === undefined ? undefined : join(outDir, "oracle-contract.json");
 if (oracleContractPath !== undefined) {
@@ -314,7 +316,6 @@ async function cancelAbandonedRun(runId) {
  */
 async function stalledOwner(runId, lifecycle) {
   if (lifecycle !== "running") return undefined;
-  const runsDir = config.runsDir ?? join(process.cwd(), ".manyhands", "runs");
   let record;
   try {
     record = JSON.parse(await readFile(join(runsDir, `${runId}.json`), "utf8"));
@@ -333,7 +334,6 @@ async function stalledOwner(runId, lifecycle) {
 
 /** Pending decisions come from the durable journal, the same source the UI reads. */
 async function pendingDecisions(runId) {
-  const runsDir = config.runsDir ?? join(process.cwd(), ".manyhands", "runs");
   let raw;
   try {
     raw = await readFile(join(runsDir, `${runId}.events.v2.jsonl`), "utf8");
@@ -362,7 +362,6 @@ function terminal(runId, lifecycle, view, reason) {
 }
 
 async function preserve(runId, meta) {
-  const runsDir = config.runsDir ?? join(process.cwd(), ".manyhands", "runs");
   await copyFile(args.config, join(outDir, "cell.json"));
   for (const suffix of [".events.v2.jsonl", ".snapshot.v2.json", ".json", ".granularity-metrics.json"]) {
     await copyFile(join(runsDir, `${runId}${suffix}`), join(outDir, `run${suffix}`)).catch(() => {

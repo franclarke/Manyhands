@@ -1,4 +1,4 @@
-﻿import { AgentTaskContractSchema, type AgentTaskContract } from "@manyhands/contracts";
+import { AgentTaskContractSchema, type AgentTaskContract } from "@manyhands/contracts";
 import type { TaskGraph } from "@manyhands/task-graph";
 import { InMemoryTraceStore } from "@manyhands/trace-store";
 import { describe, expect, it } from "vitest";
@@ -1144,7 +1144,10 @@ describe("RunExecutor", () => {
       diffCached: "diff --git a/x b/x\n+added",
       diffCachedNameOnly: ["src/x.ts"],
       commitShas: ["LEAF_A_SHA", "LEAF_B_SHA"],
-      failOperations: { worktreeRemove: new Error("rm failed") }
+      failOperations: {
+        worktreeRemove: new Error("rm failed"),
+        worktreePrune: new Error("prune failed")
+      }
     });
     const traceStore = new InMemoryTraceStore();
     const executor = makeExecutor(git, traceStore);

@@ -1,0 +1,2330 @@
+{
+  "schemaVersion": 2,
+  "runId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1",
+  "eventSequence": 71,
+  "lastEventId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:readiness.observed:71",
+  "operationId": "20c05f64-59ce-429b-b363-690a3a1843e8",
+  "fencingToken": 3,
+  "projection": {
+    "runId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1",
+    "goal": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain  - src/domain/orders.ts:\n- Export type OrderPriority = \"standard\" | \"express\".\n- Order gains a readonly priority field of that type. It is optional at the call site: an order placed without a priority is treated as \"standard\", so existing callers keep working unchanged.\n- placeOrder throws OrderError when a priority is supplied and is neither \"standard\" nor \"express\".\n- Export interface Backorder with readonly orderId, skuId and missing fields, where missing is a positive integer.\n- WarehouseState gains a readonly backorders field keyed by order id.\n- reserveOrder records a Backorder for every line whose quantity exceeds the available units, instead of throwing, and leaves the order in a status from which it can still be cancelled.\n- Export listBackorders(state) returning every recorded Backorder.\n\nApplication  - src/application/warehouse-service.ts:\n- The service exposes the new operations and emits a warehouse event for a recorded backorder.\n\nFulfillment  - src/fulfillment/planner.ts:\n- Within one wave, planFulfillment lists express orders before standard ones. Its existing signature does not change.\n\nDurability  - src/durability/journal.ts:\n- HistoryAnalytics gains a backorders count derived from the events.\n\nAPI  - src/api/server.ts:\n- The server exposes the backorders of the current state.\n\nPresentation  - src/presentation/tower.ts:\n- The rendered SVG distinguishes express orders from standard ones.\n\nProbe  - src/probe/g6.ts and a package script named study:g6-probe:\n- Follow the shape of the existing probes: export main() returning a JSON string, and write exactly one JSON object to stdout when invoked directly, with no other output.\n- Two invocations from the same commit must emit byte-identical output.\n\nPreserve all existing behaviour and keep every existing test passing. Put new tests next to the code they cover, inside the directories the test script already scans.",
+    "lifecycle": "waiting_for_input",
+    "sequence": 71,
+    "appliedEventIds": [
+      "run:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:created",
+      "repository:sha256:5f590e1759af0fd52ae65c78f9fad61b6c1c54bef8a72022b66b881ff6d7334a:inspection:2",
+      "planning:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:1:started",
+      "planning:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:1:node:warehouse-priority-backorders",
+      "planning:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:1:node:domain-order-priority-backorders",
+      "planning:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:1:node:application-backorder-emission",
+      "planning:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:1:node:fulfillment-express-first-wave",
+      "planning:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:1:node:durability-backorder-analytics",
+      "planning:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:1:node:api-backorders-exposure",
+      "planning:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:1:node:presentation-order-priority-svg",
+      "planning:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:1:node:probe-g6-deterministic-output",
+      "planning:warehouse-priority-backorders:strategy:352f78c4-6cf2-4ae8-8cbc-44473440e1e1",
+      "planning:warehouse-priority-backorders:completed:352f78c4-6cf2-4ae8-8cbc-44473440e1e1",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:compiled",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:completeness",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:atomicity",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:contract_compatibility",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:dag_validity",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:scope_isolation",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:artifact_coverage",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:risk_uncertainty",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:validation_coverage",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:proposed",
+      "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1",
+      "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1:resolved",
+      "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1:graph-approved",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:readiness.observed:27",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:wave.selected:28",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-api-backorders-exposure-29bfae7f4e:1:started",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-durability-backorder-analytics-e5dfa83369:1:started",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-durability-backorder-analytics-e5dfa83369:1:candidate",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-durability-backorder-analytics-e5dfa83369:1:validation-completed",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-durability-backorder-analytics-e5dfa83369:1:artifact-adopted",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-api-backorders-exposure-29bfae7f4e:1:candidate",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-api-backorders-exposure-29bfae7f4e:1:validation-completed",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-api-backorders-exposure-29bfae7f4e:1:artifact-adopted",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:readiness.observed:37",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:wave.selected:38",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1:started",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-fulfillment-express-first-wave-83ddba0e1f:1:started",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-fulfillment-express-first-wave-83ddba0e1f:1:candidate",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-fulfillment-express-first-wave-83ddba0e1f:1:validation-completed",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-fulfillment-express-first-wave-83ddba0e1f:1:artifact-adopted",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1:candidate",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1:validation-completed",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1:artifact-adopted",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1:artifact-adopted:1",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:readiness.observed:48",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:wave.selected:49",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1:started",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-probe-g6-deterministic-output-9a035e2662:1:started",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1:candidate",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1:validation-completed",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1:artifact-adopted",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1:artifact-adopted:1",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-probe-g6-deterministic-output-9a035e2662:1:candidate",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-probe-g6-deterministic-output-9a035e2662:1:validation-completed",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-probe-g6-deterministic-output-9a035e2662:1:artifact-adopted",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:readiness.observed:59",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:wave.selected:60",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-presentation-order-priority-svg-81b4d1ad2f:1:started",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-presentation-order-priority-svg-81b4d1ad2f:1:candidate",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-presentation-order-priority-svg-81b4d1ad2f:1:validation-completed",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-presentation-order-priority-svg-81b4d1ad2f:1:artifact-adopted",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:readiness.observed:65",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:wave.selected:66",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:started",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:failure-classified",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:integration-failed",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:decision:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:decision",
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:readiness.observed:71"
+    ],
+    "decisions": {
+      "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1": {
+        "id": "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-warehouse-priority-backorders-51e9b2bc38"
+        ],
+        "evidenceRefs": [
+          "graph:graph-warehouse-priority-backorders-2226f21526:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      },
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:decision": {
+        "id": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:decision",
+        "kind": "resolve_conflict",
+        "question": "The work for Add order priority and backorders across the warehouse stack needs guidance: EINVAL: invalid argument, mkdir 'C:\\Users\\franc\\Documents\\Proyectos\\manyhands-g6-runtime\\runs\\integration-operations\\.mutation-locks\\C_Users_franc_Documents_Proyectos_manyhands-g6-runtime_runs_integration-operations_352f78c4-6cf2-4ae8-8cbc-44473440e1e1-node-warehouse-priority-backorders-51e9b2bc38-352f78c4-6cf2-4ae8-8cbc-44473440e1e1_attempt_node-warehouse-priority-backorders-51e9b2bc38_1.json'",
+        "options": [
+          {
+            "id": "retry",
+            "label": "Retry with guidance"
+          },
+          {
+            "id": "stop",
+            "label": "Stop this branch"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-warehouse-priority-backorders-51e9b2bc38"
+        ],
+        "evidenceRefs": [
+          "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1"
+        ],
+        "impact": "behavior",
+        "raisedAtGraphRevision": 1,
+        "status": "pending"
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": [
+        "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:decision"
+      ],
+      "explanations": [
+        {
+          "nodeId": "node-api-backorders-exposure-29bfae7f4e",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-application-backorder-emission-d748c34989",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-durability-backorder-analytics-e5dfa83369",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-fulfillment-express-first-wave-83ddba0e1f",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-probe-g6-deterministic-output-9a035e2662",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "unresolved_decision",
+              "decisionId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:decision"
+            }
+          ]
+        }
+      ],
+      "effectiveConfig": {
+        "maxParallel": 2
+      },
+      "schedulerState": {
+        "materializableNodeIds": [
+          "node-warehouse-priority-backorders-51e9b2bc38",
+          "node-domain-order-priority-backorders-8cecf5b8b9",
+          "node-application-backorder-emission-d748c34989",
+          "node-fulfillment-express-first-wave-83ddba0e1f",
+          "node-durability-backorder-analytics-e5dfa83369",
+          "node-api-backorders-exposure-29bfae7f4e",
+          "node-presentation-order-priority-svg-81b4d1ad2f",
+          "node-probe-g6-deterministic-output-9a035e2662"
+        ],
+        "activeResourceNodeIds": [],
+        "openCircuitBreakerNodeIds": [],
+        "availableExecutorNodeIds": [
+          "node-warehouse-priority-backorders-51e9b2bc38",
+          "node-domain-order-priority-backorders-8cecf5b8b9",
+          "node-application-backorder-emission-d748c34989",
+          "node-fulfillment-express-first-wave-83ddba0e1f",
+          "node-durability-backorder-analytics-e5dfa83369",
+          "node-api-backorders-exposure-29bfae7f4e",
+          "node-presentation-order-priority-svg-81b4d1ad2f",
+          "node-probe-g6-deterministic-output-9a035e2662"
+        ],
+        "stoppedNodeIds": [],
+        "budgetAvailable": true
+      },
+      "budgetAvailable": true,
+      "conflictEvidence": [
+        {
+          "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b",
+          "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+          "rightNodeId": "node-application-backorder-emission-d748c34989",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc",
+          "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+          "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10",
+          "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+          "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a",
+          "leftNodeId": "node-application-backorder-emission-d748c34989",
+          "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958",
+          "leftNodeId": "node-application-backorder-emission-d748c34989",
+          "rightNodeId": "node-durability-backorder-analytics-e5dfa83369",
+          "reason": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf",
+          "leftNodeId": "node-application-backorder-emission-d748c34989",
+          "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1",
+          "leftNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+          "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b",
+          "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+          "rightNodeId": "node-application-backorder-emission-d748c34989",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T06:34:21.879Z",
+          "expiresAt": "2026-08-02T06:34:21.879Z"
+        },
+        {
+          "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc",
+          "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+          "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T06:34:21.879Z",
+          "expiresAt": "2026-08-02T06:34:21.879Z"
+        },
+        {
+          "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10",
+          "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+          "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T06:34:21.879Z",
+          "expiresAt": "2026-08-02T06:34:21.879Z"
+        },
+        {
+          "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a",
+          "leftNodeId": "node-application-backorder-emission-d748c34989",
+          "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T06:34:21.879Z",
+          "expiresAt": "2026-08-02T06:34:21.879Z"
+        },
+        {
+          "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958",
+          "leftNodeId": "node-application-backorder-emission-d748c34989",
+          "rightNodeId": "node-durability-backorder-analytics-e5dfa83369",
+          "reason": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+              "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T06:34:21.879Z",
+          "expiresAt": "2026-08-02T06:34:21.879Z"
+        },
+        {
+          "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf",
+          "leftNodeId": "node-application-backorder-emission-d748c34989",
+          "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T06:34:21.879Z",
+          "expiresAt": "2026-08-02T06:34:21.879Z"
+        },
+        {
+          "id": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1",
+          "leftNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+          "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T06:34:21.879Z",
+          "expiresAt": "2026-08-02T06:34:21.879Z"
+        }
+      ],
+      "evaluatedAt": "2026-08-01T06:34:33.503Z"
+    },
+    "selectedWaves": [
+      {
+        "waveId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:wave:1",
+        "nodeIds": [
+          "node-api-backorders-exposure-29bfae7f4e",
+          "node-durability-backorder-analytics-e5dfa83369"
+        ],
+        "maxParallel": 2,
+        "blocked": [
+          {
+            "nodeId": "node-application-backorder-emission-d748c34989",
+            "ready": true,
+            "reasons": [
+              {
+                "code": "active_resource_constraint"
+              }
+            ],
+            "deferred": true
+          },
+          {
+            "nodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "ready": true,
+            "reasons": [
+              {
+                "code": "active_resource_constraint"
+              }
+            ],
+            "deferred": true
+          },
+          {
+            "nodeId": "node-fulfillment-express-first-wave-83ddba0e1f",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "ready": true,
+            "reasons": [
+              {
+                "code": "active_resource_constraint"
+              }
+            ],
+            "deferred": true
+          },
+          {
+            "nodeId": "node-probe-g6-deterministic-output-9a035e2662",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-domain-order-priority-backorders-output-00985ab90a",
+                "requiredRevision": "sha256:0adee1b37ea797ae7a96522b2b6b64639f6d2de8516e9e561a9eeb0a5ed95ada"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-application-backorder-emission-output-f6241c3145",
+                "requiredRevision": "sha256:52353cc796570edeb4d53643ab2554e79e314a5330119664d934a01e0517db27"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-fulfillment-express-first-wave-output-cf51f77b6b",
+                "requiredRevision": "sha256:75499452e0a8c2c05769536c458136fd666132e3abb84e01d42214741368be83"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-durability-backorder-analytics-output-7e59ea3e76",
+                "requiredRevision": "sha256:4cc570a040fd5c210ba411e55e2ddc85941a3f5b4752ebb5b23dc785f8a213ca"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-api-backorders-exposure-output-a8b0dac95c",
+                "requiredRevision": "sha256:4fe2eddacef0d44d147c5ef8f7dd50c8b676dcedc311861ed65e456cbd0aac7d"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-presentation-order-priority-svg-output-229ee42936",
+                "requiredRevision": "sha256:a502d4cb9ba483f3cbd78c669f2be30a934322387cbfeef98c72a415c379c97c"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-probe-g6-deterministic-output-output-721f62678d",
+                "requiredRevision": "sha256:7f86f34a0d539531bd99332f6cc7b63bbd6d433f5930bbb5229cc91ca53da0ae"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 2
+        },
+        "conflictEvidence": [
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-application-backorder-emission-d748c34989",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "reason": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1",
+            "leftNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-application-backorder-emission-d748c34989",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "reason": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1",
+            "leftNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          }
+        ],
+        "evaluatedAt": "2026-08-01T06:34:33.503Z"
+      },
+      {
+        "waveId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:wave:2",
+        "nodeIds": [
+          "node-application-backorder-emission-d748c34989",
+          "node-fulfillment-express-first-wave-83ddba0e1f"
+        ],
+        "maxParallel": 2,
+        "blocked": [
+          {
+            "nodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "ready": true,
+            "reasons": [
+              {
+                "code": "active_resource_constraint"
+              }
+            ],
+            "deferred": true
+          },
+          {
+            "nodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "ready": true,
+            "reasons": [
+              {
+                "code": "active_resource_constraint"
+              }
+            ],
+            "deferred": true
+          },
+          {
+            "nodeId": "node-probe-g6-deterministic-output-9a035e2662",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-domain-order-priority-backorders-output-00985ab90a",
+                "requiredRevision": "sha256:0adee1b37ea797ae7a96522b2b6b64639f6d2de8516e9e561a9eeb0a5ed95ada"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-application-backorder-emission-output-f6241c3145",
+                "requiredRevision": "sha256:52353cc796570edeb4d53643ab2554e79e314a5330119664d934a01e0517db27"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-fulfillment-express-first-wave-output-cf51f77b6b",
+                "requiredRevision": "sha256:75499452e0a8c2c05769536c458136fd666132e3abb84e01d42214741368be83"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-presentation-order-priority-svg-output-229ee42936",
+                "requiredRevision": "sha256:a502d4cb9ba483f3cbd78c669f2be30a934322387cbfeef98c72a415c379c97c"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-probe-g6-deterministic-output-output-721f62678d",
+                "requiredRevision": "sha256:7f86f34a0d539531bd99332f6cc7b63bbd6d433f5930bbb5229cc91ca53da0ae"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 2
+        },
+        "conflictEvidence": [
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-application-backorder-emission-d748c34989",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "reason": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1",
+            "leftNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-application-backorder-emission-d748c34989",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "reason": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1",
+            "leftNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          }
+        ],
+        "evaluatedAt": "2026-08-01T06:34:33.503Z"
+      },
+      {
+        "waveId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:wave:3",
+        "nodeIds": [
+          "node-domain-order-priority-backorders-8cecf5b8b9",
+          "node-probe-g6-deterministic-output-9a035e2662"
+        ],
+        "maxParallel": 2,
+        "blocked": [
+          {
+            "nodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-application-backorder-emission-d748c34989",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-fulfillment-express-first-wave-83ddba0e1f",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "ready": true,
+            "reasons": [
+              {
+                "code": "active_resource_constraint"
+              }
+            ],
+            "deferred": true
+          },
+          {
+            "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-domain-order-priority-backorders-output-00985ab90a",
+                "requiredRevision": "sha256:0adee1b37ea797ae7a96522b2b6b64639f6d2de8516e9e561a9eeb0a5ed95ada"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-presentation-order-priority-svg-output-229ee42936",
+                "requiredRevision": "sha256:a502d4cb9ba483f3cbd78c669f2be30a934322387cbfeef98c72a415c379c97c"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-probe-g6-deterministic-output-output-721f62678d",
+                "requiredRevision": "sha256:7f86f34a0d539531bd99332f6cc7b63bbd6d433f5930bbb5229cc91ca53da0ae"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 2
+        },
+        "conflictEvidence": [
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-application-backorder-emission-d748c34989",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "reason": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1",
+            "leftNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-application-backorder-emission-d748c34989",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "reason": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1",
+            "leftNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          }
+        ],
+        "evaluatedAt": "2026-08-01T06:34:33.503Z"
+      },
+      {
+        "waveId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:wave:4",
+        "nodeIds": [
+          "node-presentation-order-priority-svg-81b4d1ad2f"
+        ],
+        "maxParallel": 2,
+        "blocked": [
+          {
+            "nodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-application-backorder-emission-d748c34989",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-fulfillment-express-first-wave-83ddba0e1f",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-probe-g6-deterministic-output-9a035e2662",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-presentation-order-priority-svg-output-229ee42936",
+                "requiredRevision": "sha256:a502d4cb9ba483f3cbd78c669f2be30a934322387cbfeef98c72a415c379c97c"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 2
+        },
+        "conflictEvidence": [
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-application-backorder-emission-d748c34989",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "reason": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1",
+            "leftNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-application-backorder-emission-d748c34989",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "reason": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1",
+            "leftNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          }
+        ],
+        "evaluatedAt": "2026-08-01T06:34:33.503Z"
+      },
+      {
+        "waveId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:wave:5",
+        "nodeIds": [
+          "node-warehouse-priority-backorders-51e9b2bc38"
+        ],
+        "maxParallel": 2,
+        "blocked": [
+          {
+            "nodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-application-backorder-emission-d748c34989",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-fulfillment-express-first-wave-83ddba0e1f",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-probe-g6-deterministic-output-9a035e2662",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 2
+        },
+        "conflictEvidence": [
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-application-backorder-emission-d748c34989",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "reason": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1",
+            "leftNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-application-backorder-emission-d748c34989",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-app-689f989b1b"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-dom-c7bddd3ebc"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10",
+            "leftNodeId": "node-api-backorders-exposure-29bfae7f4e",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-backorders-exposure-29bfae7f4e-node-pre-c65d94cc10"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-079abe036a"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-durability-backorder-analytics-e5dfa83369",
+            "reason": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/application/warehouse-service.test.ts, src/application/warehouse-service.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-43273bf958"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf",
+            "leftNodeId": "node-application-backorder-emission-d748c34989",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-application-backorder-emission-d748c34989-n-ef4f67b2bf"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          },
+          {
+            "id": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1",
+            "leftNodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+            "rightNodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-domain-order-priority-backorders-8cecf5b8b9-66ce8d84c1"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T06:34:21.879Z",
+            "expiresAt": "2026-08-02T06:34:21.879Z"
+          }
+        ],
+        "evaluatedAt": "2026-08-01T06:34:33.503Z"
+      }
+    ],
+    "attempts": {
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-api-backorders-exposure-29bfae7f4e:1": {
+        "attemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-api-backorders-exposure-29bfae7f4e:1",
+        "nodeId": "node-api-backorders-exposure-29bfae7f4e",
+        "inputFingerprint": "sha256:cf021ba4d401873c551b7d58fc1a9a2356008dac6fed209855eda15125eeb7b6",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "8d65bbd6b8f4992d360ad382bc566629014a1cf6",
+        "outputDigest": "sha256:64c0a1f3b795a4266c7ebcfb227bed434e1e08255edeca50df333b8fdb902d37",
+        "usage": {
+          "tokensTotal": 70575,
+          "source": "reported"
+        }
+      },
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-durability-backorder-analytics-e5dfa83369:1": {
+        "attemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-durability-backorder-analytics-e5dfa83369:1",
+        "nodeId": "node-durability-backorder-analytics-e5dfa83369",
+        "inputFingerprint": "sha256:7b475d7c72af46bd6481d5dfce0aa39e1f02b8ed06d0ab2b57c5763a5efb1aec",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "5a804d9a494fc5e71d67553c2e5fbbf9627906eb",
+        "outputDigest": "sha256:06649def952d0bbd27447a115966dc0a769701bf3b838188cb111d1611d09ede",
+        "usage": {
+          "tokensTotal": 55933,
+          "source": "reported"
+        }
+      },
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1": {
+        "attemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1",
+        "nodeId": "node-application-backorder-emission-d748c34989",
+        "inputFingerprint": "sha256:6a83b144ec185cb95a66afb3888e5310e48562a82bb477f5e82be7ca47d009cf",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "90fefe0f206c72024d52233e3cbe3dd84a6d4b28",
+        "outputDigest": "sha256:9ce458040a2ef5c8ae73f9a0ef39d76f4e9ef8eb49c04b6f0469604562e85236",
+        "usage": {
+          "tokensTotal": 93958,
+          "source": "reported"
+        }
+      },
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-fulfillment-express-first-wave-83ddba0e1f:1": {
+        "attemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-fulfillment-express-first-wave-83ddba0e1f:1",
+        "nodeId": "node-fulfillment-express-first-wave-83ddba0e1f",
+        "inputFingerprint": "sha256:b7bf6307c38b2878a91a51f669d1ef4983c808a72f9f6b16d2100af19fcd5e75",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "d007acd68816fce9583794a59f10dc634f39cea7",
+        "outputDigest": "sha256:6df384959650e652624ffd591bbd8aa7739e2ea67877255e58ac25c995e9a42a",
+        "usage": {
+          "tokensTotal": 42687,
+          "source": "reported"
+        }
+      },
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1": {
+        "attemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1",
+        "nodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+        "inputFingerprint": "sha256:8e90a27f0e865519c74fa4c1a1079250c465cd760e5156134acb018bc44d8bc2",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "443721da178b4a5797970712f6e55f8b006479ad",
+        "outputDigest": "sha256:9d66912391bd6eca0244b75f2aeb82d4dd246f4eee19a7c64110d1bb1c0b06c5",
+        "usage": {
+          "tokensTotal": 63249,
+          "source": "reported"
+        }
+      },
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-probe-g6-deterministic-output-9a035e2662:1": {
+        "attemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-probe-g6-deterministic-output-9a035e2662:1",
+        "nodeId": "node-probe-g6-deterministic-output-9a035e2662",
+        "inputFingerprint": "sha256:d0b9017c0ac1c9d93ff46ca02cc166cf503189848d37aa7bbd799972c027f08a",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "3db586ce8f28d6c13882e6a71f867623f766f45d",
+        "outputDigest": "sha256:1c2866667f5a3f5c656c92b506ed3efa4838358ad3ff1060159617a1123445be",
+        "usage": {
+          "tokensTotal": 56366,
+          "source": "reported"
+        }
+      },
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-presentation-order-priority-svg-81b4d1ad2f:1": {
+        "attemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-presentation-order-priority-svg-81b4d1ad2f:1",
+        "nodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+        "inputFingerprint": "sha256:92655b975c75ab29706fe50b249cdfc0a1cbe2ce3b3d9b6a6c79b4426f05e585",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "24f8b928da57e0259a4b8d8b7777d3da8a2b1619",
+        "outputDigest": "sha256:736bead93c46bf074b5ef0911d1cd57e67a2ce4cfffc35982c4d3d1db69a5a41",
+        "usage": {
+          "tokensTotal": 36063,
+          "source": "reported"
+        }
+      },
+      "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1": {
+        "attemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1",
+        "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+        "inputFingerprint": "sha256:9fe60b5194ab7fd0232ebf47686f8e7178615a4bab337c544ccd623d3f1ccd87",
+        "kind": "integration",
+        "status": "failed",
+        "repairPasses": 0,
+        "failureReason": "EINVAL: invalid argument, mkdir 'C:\\Users\\franc\\Documents\\Proyectos\\manyhands-g6-runtime\\runs\\integration-operations\\.mutation-locks\\C_Users_franc_Documents_Proyectos_manyhands-g6-runtime_runs_integration-operations_352f78c4-6cf2-4ae8-8cbc-44473440e1e1-node-warehouse-priority-backorders-51e9b2bc38-352f78c4-6cf2-4ae8-8cbc-44473440e1e1_attempt_node-warehouse-priority-backorders-51e9b2bc38_1.json'"
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-durability-backorder-analytics-output-7e59ea3e76:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-durability-backorder-analytics-e5dfa83369:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-durability-backorder-analytics-output-7e59ea3e76:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-durability-backorder-analytics-e5dfa83369:1",
+        "runId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1",
+        "nodeId": "node-durability-backorder-analytics-e5dfa83369",
+        "digest": "sha256:06649def952d0bbd27447a115966dc0a769701bf3b838188cb111d1611d09ede",
+        "producerAttemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-durability-backorder-analytics-e5dfa83369:1",
+        "contract": {
+          "id": "artifact-contract-durability-backorder-analytics-output-7e59ea3e76",
+          "revision": "sha256:4cc570a040fd5c210ba411e55e2ddc85941a3f5b4752ebb5b23dc785f8a213ca"
+        },
+        "kind": "commit",
+        "location": "5a804d9a494fc5e71d67553c2e5fbbf9627906eb",
+        "adoptedAt": "2026-08-01T06:38:00.928Z"
+      },
+      "artifact-contract-api-backorders-exposure-output-a8b0dac95c:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-api-backorders-exposure-29bfae7f4e:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-api-backorders-exposure-output-a8b0dac95c:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-api-backorders-exposure-29bfae7f4e:1",
+        "runId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1",
+        "nodeId": "node-api-backorders-exposure-29bfae7f4e",
+        "digest": "sha256:64c0a1f3b795a4266c7ebcfb227bed434e1e08255edeca50df333b8fdb902d37",
+        "producerAttemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-api-backorders-exposure-29bfae7f4e:1",
+        "contract": {
+          "id": "artifact-contract-api-backorders-exposure-output-a8b0dac95c",
+          "revision": "sha256:4fe2eddacef0d44d147c5ef8f7dd50c8b676dcedc311861ed65e456cbd0aac7d"
+        },
+        "kind": "commit",
+        "location": "8d65bbd6b8f4992d360ad382bc566629014a1cf6",
+        "adoptedAt": "2026-08-01T06:39:55.899Z"
+      },
+      "artifact-contract-fulfillment-express-first-wave-output-cf51f77b6b:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-fulfillment-express-first-wave-83ddba0e1f:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-fulfillment-express-first-wave-output-cf51f77b6b:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-fulfillment-express-first-wave-83ddba0e1f:1",
+        "runId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1",
+        "nodeId": "node-fulfillment-express-first-wave-83ddba0e1f",
+        "digest": "sha256:6df384959650e652624ffd591bbd8aa7739e2ea67877255e58ac25c995e9a42a",
+        "producerAttemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-fulfillment-express-first-wave-83ddba0e1f:1",
+        "contract": {
+          "id": "artifact-contract-fulfillment-express-first-wave-output-cf51f77b6b",
+          "revision": "sha256:75499452e0a8c2c05769536c458136fd666132e3abb84e01d42214741368be83"
+        },
+        "kind": "commit",
+        "location": "d007acd68816fce9583794a59f10dc634f39cea7",
+        "adoptedAt": "2026-08-01T06:42:31.212Z"
+      },
+      "artifact-contract-application-backorder-emission-output-f6241c3145:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-application-backorder-emission-output-f6241c3145:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1",
+        "runId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1",
+        "nodeId": "node-application-backorder-emission-d748c34989",
+        "digest": "sha256:9ce458040a2ef5c8ae73f9a0ef39d76f4e9ef8eb49c04b6f0469604562e85236",
+        "producerAttemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1",
+        "contract": {
+          "id": "artifact-contract-application-backorder-emission-output-f6241c3145",
+          "revision": "sha256:52353cc796570edeb4d53643ab2554e79e314a5330119664d934a01e0517db27"
+        },
+        "kind": "commit",
+        "location": "90fefe0f206c72024d52233e3cbe3dd84a6d4b28",
+        "adoptedAt": "2026-08-01T06:46:34.828Z"
+      },
+      "artifact-contract-artifact-backorder-event-stream-e2062dfba9:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-artifact-backorder-event-stream-e2062dfba9:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1",
+        "runId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1",
+        "nodeId": "node-application-backorder-emission-d748c34989",
+        "digest": "sha256:9ce458040a2ef5c8ae73f9a0ef39d76f4e9ef8eb49c04b6f0469604562e85236",
+        "producerAttemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1",
+        "contract": {
+          "id": "artifact-contract-artifact-backorder-event-stream-e2062dfba9",
+          "revision": "sha256:08ce203ffe2a516b573be72064fa368b4639ffa8ec1faf7ccce5e450c2c7860b"
+        },
+        "kind": "commit",
+        "location": "90fefe0f206c72024d52233e3cbe3dd84a6d4b28",
+        "adoptedAt": "2026-08-01T06:46:34.828Z"
+      },
+      "artifact-contract-domain-order-priority-backorders-output-00985ab90a:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-domain-order-priority-backorders-output-00985ab90a:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1",
+        "runId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1",
+        "nodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+        "digest": "sha256:9d66912391bd6eca0244b75f2aeb82d4dd246f4eee19a7c64110d1bb1c0b06c5",
+        "producerAttemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1",
+        "contract": {
+          "id": "artifact-contract-domain-order-priority-backorders-output-00985ab90a",
+          "revision": "sha256:0adee1b37ea797ae7a96522b2b6b64639f6d2de8516e9e561a9eeb0a5ed95ada"
+        },
+        "kind": "commit",
+        "location": "443721da178b4a5797970712f6e55f8b006479ad",
+        "adoptedAt": "2026-08-01T06:51:04.853Z"
+      },
+      "artifact-contract-artifact-shared-order-state-4ba438797e:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-artifact-shared-order-state-4ba438797e:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1",
+        "runId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1",
+        "nodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+        "digest": "sha256:9d66912391bd6eca0244b75f2aeb82d4dd246f4eee19a7c64110d1bb1c0b06c5",
+        "producerAttemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1",
+        "contract": {
+          "id": "artifact-contract-artifact-shared-order-state-4ba438797e",
+          "revision": "sha256:ac41183470b1521c1ca175b5d2fb51088c61305e4d9cf8c9c97f318ac207a95c"
+        },
+        "kind": "commit",
+        "location": "443721da178b4a5797970712f6e55f8b006479ad",
+        "adoptedAt": "2026-08-01T06:51:04.853Z"
+      },
+      "artifact-contract-probe-g6-deterministic-output-output-721f62678d:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-probe-g6-deterministic-output-9a035e2662:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-probe-g6-deterministic-output-output-721f62678d:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-probe-g6-deterministic-output-9a035e2662:1",
+        "runId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1",
+        "nodeId": "node-probe-g6-deterministic-output-9a035e2662",
+        "digest": "sha256:1c2866667f5a3f5c656c92b506ed3efa4838358ad3ff1060159617a1123445be",
+        "producerAttemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-probe-g6-deterministic-output-9a035e2662:1",
+        "contract": {
+          "id": "artifact-contract-probe-g6-deterministic-output-output-721f62678d",
+          "revision": "sha256:7f86f34a0d539531bd99332f6cc7b63bbd6d433f5930bbb5229cc91ca53da0ae"
+        },
+        "kind": "commit",
+        "location": "3db586ce8f28d6c13882e6a71f867623f766f45d",
+        "adoptedAt": "2026-08-01T06:51:17.560Z"
+      },
+      "artifact-contract-presentation-order-priority-svg-output-229ee42936:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-presentation-order-priority-svg-81b4d1ad2f:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-presentation-order-priority-svg-output-229ee42936:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-presentation-order-priority-svg-81b4d1ad2f:1",
+        "runId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1",
+        "nodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+        "digest": "sha256:736bead93c46bf074b5ef0911d1cd57e67a2ce4cfffc35982c4d3d1db69a5a41",
+        "producerAttemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-presentation-order-priority-svg-81b4d1ad2f:1",
+        "contract": {
+          "id": "artifact-contract-presentation-order-priority-svg-output-229ee42936",
+          "revision": "sha256:a502d4cb9ba483f3cbd78c669f2be30a934322387cbfeef98c72a415c379c97c"
+        },
+        "kind": "commit",
+        "location": "24f8b928da57e0259a4b8d8b7777d3da8a2b1619",
+        "adoptedAt": "2026-08-01T06:54:16.502Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-durability-backorder-analytics-e5dfa83369": "matrix-56fcd547f0133df4",
+      "node-api-backorders-exposure-29bfae7f4e": "matrix-7367fc5e991b0f41",
+      "node-fulfillment-express-first-wave-83ddba0e1f": "matrix-efce7b084fa2660c",
+      "node-application-backorder-emission-d748c34989": "matrix-b193a49c427523b9",
+      "node-domain-order-priority-backorders-8cecf5b8b9": "matrix-e28ab71ff9a058de",
+      "node-probe-g6-deterministic-output-9a035e2662": "matrix-06adf58dc82a0704",
+      "node-presentation-order-priority-svg-81b4d1ad2f": "matrix-ff08d2b1362a9efd"
+    },
+    "integrations": {
+      "node-warehouse-priority-backorders-51e9b2bc38": {
+        "attemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1",
+        "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+        "requiredArtifactIds": [
+          "artifact-contract-domain-order-priority-backorders-output-00985ab90a:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-domain-order-priority-backorders-8cecf5b8b9:1",
+          "artifact-contract-application-backorder-emission-output-f6241c3145:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-application-backorder-emission-d748c34989:1",
+          "artifact-contract-fulfillment-express-first-wave-output-cf51f77b6b:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-fulfillment-express-first-wave-83ddba0e1f:1",
+          "artifact-contract-durability-backorder-analytics-output-7e59ea3e76:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-durability-backorder-analytics-e5dfa83369:1",
+          "artifact-contract-api-backorders-exposure-output-a8b0dac95c:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-api-backorders-exposure-29bfae7f4e:1",
+          "artifact-contract-presentation-order-priority-svg-output-229ee42936:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-presentation-order-priority-svg-81b4d1ad2f:1",
+          "artifact-contract-probe-g6-deterministic-output-output-721f62678d:352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-probe-g6-deterministic-output-9a035e2662:1"
+        ],
+        "status": "failed",
+        "repairPasses": 0,
+        "manifestId": "integration-result-integration-request-cbc8d6c414716427",
+        "failureReason": "EINVAL: invalid argument, mkdir 'C:\\Users\\franc\\Documents\\Proyectos\\manyhands-g6-runtime\\runs\\integration-operations\\.mutation-locks\\C_Users_franc_Documents_Proyectos_manyhands-g6-runtime_runs_integration-operations_352f78c4-6cf2-4ae8-8cbc-44473440e1e1-node-warehouse-priority-backorders-51e9b2bc38-352f78c4-6cf2-4ae8-8cbc-44473440e1e1_attempt_node-warehouse-priority-backorders-51e9b2bc38_1.json'"
+      }
+    },
+    "recoveryHistory": [
+      {
+        "eventId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:failure-classified",
+        "attemptId": "352f78c4-6cf2-4ae8-8cbc-44473440e1e1:attempt:node-warehouse-priority-backorders-51e9b2bc38:1",
+        "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+        "kind": "failure",
+        "failureClass": "integration"
+      }
+    ],
+    "evidenceMatrices": [
+      "matrix-56fcd547f0133df4",
+      "matrix-7367fc5e991b0f41",
+      "matrix-efce7b084fa2660c",
+      "matrix-b193a49c427523b9",
+      "matrix-e28ab71ff9a058de",
+      "matrix-06adf58dc82a0704",
+      "matrix-ff08d2b1362a9efd"
+    ],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {
+      "matrix-56fcd547f0133df4": {
+        "candidateCommit": "5a804d9a494fc5e71d67553c2e5fbbf9627906eb",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:62a4e5a0868da9b6f38e6ba39a1082bc15af7923e33454d0903f89da01df3699"
+      },
+      "matrix-7367fc5e991b0f41": {
+        "candidateCommit": "8d65bbd6b8f4992d360ad382bc566629014a1cf6",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:6e7a638512824596d456689d896d2bbb36b6532ac01dcd46e66529fb8544a13b"
+      },
+      "matrix-efce7b084fa2660c": {
+        "candidateCommit": "d007acd68816fce9583794a59f10dc634f39cea7",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:0dc9fc378654807311ca6a83d74ace2fbe0958f048eb5d7dbf54cb22064cb9f3"
+      },
+      "matrix-b193a49c427523b9": {
+        "candidateCommit": "90fefe0f206c72024d52233e3cbe3dd84a6d4b28",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:ab9383941b451d77c508e3a6ab891d100f0fc25c6bef677ad93f8572137186ee"
+      },
+      "matrix-e28ab71ff9a058de": {
+        "candidateCommit": "443721da178b4a5797970712f6e55f8b006479ad",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:82fe93a9481246f156d8d1d0ea61c112a7cef21047391d1c298f3725eb9c035d"
+      },
+      "matrix-06adf58dc82a0704": {
+        "candidateCommit": "3db586ce8f28d6c13882e6a71f867623f766f45d",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:ee798a6a85d817d10c40075bef921566ce58f0e0b9442cbc6ae19d4250ba9e30"
+      },
+      "matrix-ff08d2b1362a9efd": {
+        "candidateCommit": "24f8b928da57e0259a4b8d8b7777d3da8a2b1619",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:74ebcc9ca1ab9adde60ee4a9254c1b2b596792a96e820ffa9ba4196e1318c805"
+      }
+    },
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "C",
+      "candidateTreeHash": "sha256:7a50b1ad28d551fb27e647df8916ef6d2dcb18239b46b0c437098e4ac931ba41",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-domain-order-priority-backorders-8cecf5b8b9": {
+          "unitKey": "domain-order-priority-backorders",
+          "nodeId": "node-domain-order-priority-backorders-8cecf5b8b9",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "repo-domain-orders",
+            "repo-domain-orders-test",
+            "sha256:5f590e1759af0fd52ae65c78f9fad61b6c1c54bef8a72022b66b881ff6d7334a"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-application-backorder-emission-d748c34989": {
+          "unitKey": "application-backorder-emission",
+          "nodeId": "node-application-backorder-emission-d748c34989",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "repo-application-service",
+            "repo-application-service-test",
+            "repo-domain-orders",
+            "repo-domain-orders-test",
+            "sha256:5f590e1759af0fd52ae65c78f9fad61b6c1c54bef8a72022b66b881ff6d7334a"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-fulfillment-express-first-wave-83ddba0e1f": {
+          "unitKey": "fulfillment-express-first-wave",
+          "nodeId": "node-fulfillment-express-first-wave-83ddba0e1f",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "repo-fulfillment-planner",
+            "repo-fulfillment-planner-test",
+            "sha256:5f590e1759af0fd52ae65c78f9fad61b6c1c54bef8a72022b66b881ff6d7334a"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-durability-backorder-analytics-e5dfa83369": {
+          "unitKey": "durability-backorder-analytics",
+          "nodeId": "node-durability-backorder-analytics-e5dfa83369",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "repo-durability-journal",
+            "repo-durability-journal-test",
+            "repo-application-service",
+            "repo-application-service-test",
+            "sha256:5f590e1759af0fd52ae65c78f9fad61b6c1c54bef8a72022b66b881ff6d7334a"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-api-backorders-exposure-29bfae7f4e": {
+          "unitKey": "api-backorders-exposure",
+          "nodeId": "node-api-backorders-exposure-29bfae7f4e",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "repo-api-server",
+            "repo-api-server-test",
+            "repo-domain-orders",
+            "repo-domain-orders-test",
+            "sha256:5f590e1759af0fd52ae65c78f9fad61b6c1c54bef8a72022b66b881ff6d7334a"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-presentation-order-priority-svg-81b4d1ad2f": {
+          "unitKey": "presentation-order-priority-svg",
+          "nodeId": "node-presentation-order-priority-svg-81b4d1ad2f",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "repo-presentation-tower",
+            "repo-presentation-tower-test",
+            "repo-domain-orders",
+            "repo-domain-orders-test",
+            "sha256:5f590e1759af0fd52ae65c78f9fad61b6c1c54bef8a72022b66b881ff6d7334a"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-probe-g6-deterministic-output-9a035e2662": {
+          "unitKey": "probe-g6-deterministic-output",
+          "nodeId": "node-probe-g6-deterministic-output-9a035e2662",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.3
+          },
+          "benefit": 0,
+          "cost": 0.075,
+          "splitAdvantage": -0.075,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "repo-probe-cli",
+            "repo-probe-cli-test",
+            "repo-probe-wc1",
+            "repo-probe-wc2",
+            "repo-probe-wc3",
+            "repo-probe-state-hash",
+            "repo-probe-node-builtins",
+            "repo-package-json",
+            "sha256:5f590e1759af0fd52ae65c78f9fad61b6c1c54bef8a72022b66b881ff6d7334a"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-warehouse-priority-backorders-51e9b2bc38": {
+          "unitKey": "warehouse-priority-backorders",
+          "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+          "selected": "split",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.7274,
+            "parallelism": 0.6667,
+            "faultIsolation": 1,
+            "coordination": 0.2381,
+            "pathOverlap": 0.1349,
+            "validationDuplication": 0,
+            "uncertainty": 0.0429
+          },
+          "benefit": 0.798,
+          "cost": 0.104,
+          "splitAdvantage": 0.6941,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "repo-domain-orders",
+            "repo-domain-orders-test",
+            "repo-application-service",
+            "repo-application-service-test",
+            "repo-fulfillment-planner",
+            "repo-fulfillment-planner-test",
+            "repo-durability-journal",
+            "repo-durability-journal-test",
+            "repo-api-server",
+            "repo-api-server-test",
+            "repo-presentation-tower",
+            "repo-presentation-tower-test",
+            "repo-probe-cli",
+            "repo-probe-cli-test",
+            "repo-probe-wc1",
+            "repo-probe-wc2",
+            "repo-probe-wc3",
+            "repo-probe-state-hash",
+            "repo-probe-node-builtins",
+            "repo-package-json",
+            "sha256:5f590e1759af0fd52ae65c78f9fad61b6c1c54bef8a72022b66b881ff6d7334a"
+          ],
+          "rationale": "Split advantage 0.6941 meets minimum 0.1500."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 7,
+        "averageBranchingFactor": 7
+      }
+    },
+    "graphId": "graph-warehouse-priority-backorders-2226f21526",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1
+  },
+  "checksum": "32eec391316df4a36a5ac5494a931399fa8b181fbb3e020cb35aed365baba3bb"
+}

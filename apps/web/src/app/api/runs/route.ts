@@ -11,6 +11,8 @@ import { getRunRepository } from "@/lib/server/runs/store";
 import { captureRunTargetContext } from "@/lib/server/runs/target-context";
 import { startRunBackgroundTask } from "@/lib/server/runs/runner-state";
 import { runPlanningV2Pipeline } from "@/lib/server/runs/v2/run-coordinator-host";
+import { initializeRunCanonicalEvents } from "@/lib/server/runs/v2/initialize-run";
+import { resolveRunsDirectory } from "@/lib/server/runs/runs-directory";
 import {
   WorkspaceConflictError,
   WorkspaceNotFoundError,
@@ -95,6 +97,12 @@ export async function POST(request: Request): Promise<NextResponse> {
         updatedAt: now
       };
       return getRunRepository().save(record);
+    });
+    await initializeRunCanonicalEvents({
+      directory: resolveRunsDirectory(),
+      runId: saved.runId,
+      goal: saved.userPrompt,
+      occurredAt: saved.createdAt
     });
     startRunBackgroundTask(saved.runId, "route:create:planning-v2", () => runPlanningV2Pipeline(saved.runId));
     return NextResponse.json(await toCanonicalRunResponse(saved), { status: 201 });
