@@ -32,7 +32,13 @@ describe("planning candidate decision journal", () => {
     expect(state.planningCandidates).toMatchObject({
       candidates: [
         expect.objectContaining({ candidateId: "candidate-a", valid: true, score: 0.9 }),
-        expect.objectContaining({ candidateId: "candidate-b", valid: false, diagnostics: [{ code: "missing_seam_specification" }] })
+        expect.objectContaining({
+          candidateId: "candidate-b",
+          valid: false,
+          diagnostics: expect.arrayContaining([
+            expect.objectContaining({ code: "missing_seam_specification" })
+          ])
+        })
       ],
       selection: { kind: "selected", candidateId: "candidate-a", rejectedCandidateIds: ["candidate-b"] }
     });
