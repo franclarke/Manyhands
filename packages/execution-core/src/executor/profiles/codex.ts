@@ -20,6 +20,7 @@ export function buildCodexArgs(options: AgentExecutorOptions): string[] {
     "--color",
     "never",
     "--ephemeral",
+    "--ignore-user-config",
     ...(options.reasoningEffort ? ["-c", `model_reasoning_effort="${options.reasoningEffort}"`] : []),
     "--skip-git-repo-check",
     "-"

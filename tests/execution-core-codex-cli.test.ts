@@ -58,6 +58,7 @@ describe("buildCodexArgs", () => {
       "--color",
       "never",
       "--ephemeral",
+      "--ignore-user-config",
       "--skip-git-repo-check",
       "-"
     ]);
@@ -75,6 +76,7 @@ describe("buildCodexArgs", () => {
       "--color",
       "never",
       "--ephemeral",
+      "--ignore-user-config",
       "--skip-git-repo-check",
       "-"
     ]);

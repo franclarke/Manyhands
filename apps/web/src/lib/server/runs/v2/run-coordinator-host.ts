@@ -290,6 +290,7 @@ export function buildCodexPlanningArgs(stage: { model: string; effort?: string }
     "--sandbox",
     "read-only",
     "--ephemeral",
+    "--ignore-user-config",
     "--skip-git-repo-check",
     ...(stage.effort !== undefined ? ["-c", `model_reasoning_effort=\"${stage.effort}\"`] : []),
     "-"

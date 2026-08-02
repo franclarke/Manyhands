@@ -10,6 +10,7 @@ describe("planning Codex CLI invocation", () => {
       "--sandbox",
       "read-only",
       "--ephemeral",
+      "--ignore-user-config",
       "--skip-git-repo-check",
       "-c",
       'model_reasoning_effort="low"',
