@@ -210,6 +210,16 @@ La persistencia de esa decisión se formaliza en el evento versionado
 completo, hash, validez, score, diagnósticos y selección/replan para replay y
 diagnóstico sin volver a invocar el planner.
 
+Estado de migración (2026-08-02, continuación): el flujo productivo genera
+`CandidatePlan` tipados mediante una exploración máxima de tres alternativas,
+deduplica por hash del breakdown, valida scope/ownership/seams/obligaciones y
+selecciona de forma determinista. El journal registra el conjunto completo
+antes del Graph Compiler. La frontera de compilación recibe envelope y candidato
+juntos, revalida la identidad y rechaza cualquier breakdown distinto; los
+contratos resultantes toman scopes, owners, compatibilidad y evidencia de
+validación de esa intención inmutable. El replay `frozenCandidates` permite
+comparar condiciones sobre hashes idénticos sin una llamada al modelo.
+
 Alternativas descartadas: inventar particiones por rutas (contradice la evidencia
 preservada); propagar todos los criterios a todas las hojas (duplica validación
 incompatible); ajustar `minimumAdvantage` (parámetro experimental congelado y no

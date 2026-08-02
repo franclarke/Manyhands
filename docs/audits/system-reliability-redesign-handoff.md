@@ -378,8 +378,8 @@ No considerar terminado hasta demostrar con tests deterministas que:
 - No está demostrado que la política adaptativa sea superior, inferior o igual
   a A/B en términos experimentales.
 - No está demostrado que el planner produzca consistentemente candidatos válidos.
-- No está conectado el conjunto de candidatos tipados al flujo productivo
-  completo.
+- El conjunto tipado ya está conectado al host y al Graph Compiler; falta sólo
+  conservar evidencia de los gates globales finales antes de declarar cierre.
 - No está aprobada la suite global de esta rama.
 - No hay autorización para lanzar runs pagos.
 - Los resultados adversos de G6 siguen siendo evidencia histórica preservada y
@@ -387,7 +387,11 @@ No considerar terminado hasta demostrar con tests deterministas que:
 
 ## 9. Entrega de esta sesión
 
-Esta sesión actualiza el documento operativo existente y deja dos commits
-locales en `codex/system-reliability-redesign`: `59c71a7` y `4d19171`. No se hizo
-push ni integración en `main`; el host productivo sigue bloqueado hasta acordar
-la salida tipada con el trabajo paralelo.
+La continuación cerró la frontera acordada con el trabajo paralelo. El planner
+emite drafts tipados y acotados; el host valida, puntúa, persiste y selecciona;
+el Graph Compiler recibe la intención congelada y falla si se la sustituye. Se
+agregó replay A/B/C sobre candidatos idénticos, sin runs pagos ni cambios en
+fórmulas, pesos, umbrales u oráculos G6. Los commits nuevos quedan registrados
+en el log local de `codex/system-reliability-redesign`. No se hizo push. La
+integración en `main` sólo procede después de la revisión Standards/Spec y de
+todos los gates globales.

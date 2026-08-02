@@ -79,13 +79,20 @@ desconocidos sólo para rechazarlos de forma fail-closed; nunca convierte un
 
 La decisión se registra en `planning.candidates_evaluated`, que permite al
 reducer reconstruir candidatos, diagnósticos, scores, ganador o razón de
-`replan_required`. La conexión del host sigue pendiente hasta que el planner
-paralelo entregue ese artefacto completo y la política exponga selección sobre
-el conjunto congelado.
+`replan_required`. El host productivo solicita el máximo acotado del envelope
+mediante `planCandidates()`, valida fail-closed el conjunto, aplica la política
+sólo a candidatos válidos y registra la evaluación antes de compilar. El
+candidato seleccionado y su envelope cruzan juntos la frontera del Graph
+Compiler; el compiler rechaza un árbol diferente y compila scopes, ownership,
+compatibilidad de seams, obligaciones y evidencia de validación desde la
+intención congelada.
+
+`frozenCandidates` permite volver a evaluar A/B/C sobre hashes idénticos sin
+invocar al LLM. Esta capacidad es replay determinista, no evidencia nueva ni
+una afirmación de superioridad experimental.
 
 ## Riesgos y seguimiento
 
-La actual captura de fallos de ejecución puede perder el hecho terminal si falla
-la propia escritura de `run.failed`; esa resiliencia de persistencia requiere un
-receipt durable y reconciliación separados. No se debe fabricar un éxito ni un
-terminal no persistido para ocultar ese fallo.
+Los fallos terminales de planning y ejecución usan receipts durables separados
+del journal y reconciliación idempotente. Si falla también el receipt, el caller
+recibe el error original y el de persistencia; nunca se fabrica un éxito.
