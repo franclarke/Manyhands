@@ -432,8 +432,9 @@ function candidateGateResults(
 
 function candidateTieBreak(evaluation: PlannerCandidateEvaluation): { kind: "candidate_id"; applied: boolean; contenders: string[] } {
   if (evaluation.selection.kind !== "selected") return { kind: "candidate_id", applied: false, contenders: [] };
+  const selectedScore = evaluation.selection.score;
   const contenders = [...evaluation.scores.entries()]
-    .filter(([candidateId, score]) => score === evaluation.selection.score && evaluation.strategies.get(candidateId)?.requiresSemanticReplan === false)
+    .filter(([candidateId, score]) => score === selectedScore && evaluation.strategies.get(candidateId)?.requiresSemanticReplan === false)
     .map(([candidateId]) => candidateId)
     .sort();
   return { kind: "candidate_id", applied: contenders.length > 1, contenders };
