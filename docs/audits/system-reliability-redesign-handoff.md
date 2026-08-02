@@ -173,6 +173,7 @@ Todos son commits locales de esta rama. No se hizo push.
 | `e181acc` | Receipts genéricos para fallas de planning y ejecución. |
 | `59c71a7` | Contrato tipado fail-closed de `CandidatePlan` y regresiones de selección. |
 | `4d19171` | Evento/reducer para reconstruir evaluación, selección y replan de candidatos. |
+| `74d6b67` | Ajuste de fixtures de regresión para ownership tipado. |
 
 ## 4. Pruebas y estado real de verificación
 
