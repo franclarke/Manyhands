@@ -5,6 +5,7 @@ Una fila por etapa completada. La escribe el agente al terminar cada etapa,
 
 | Etapa | Fecha | Resultado | Commit | Evidencia |
 |---|---|---|---|---|
+| 6 | 2026-08-02 | PASS operacional / candidate A-r2 entregado y evaluado 9/10; fallo genuino `listBackorders` ausente, preservado sin corregir el candidate después de medir. | `a57eae5` | `stage-6-cell-g6-05-T1-A-r2.md` |
 | 5 | 2026-08-02 | PASS operacional / candidate C-r2 entregado y evaluado 9/10; vuelve a fallar genuinamente `behaviour-backorder-recorded` (`quantity` en lugar de `missing`), preservado sin relajar el diseño. | `bcebb02` | `stage-5-cell-g6-04-T1-C-r2.md` |
 | 4 | 2026-08-02 | PASS operacional / candidate entregado y evaluado 9/10; fallo genuino preservado en `behaviour-backorder-recorded`, sin relajar criterios ni reescribir el resultado. | `d7f9fd1` | `stage-4-cell-g6-03-T1-B-r1.md` |
 | 3 (remediada) | 2026-08-01 | PASS operacional / resultado adverso preservado: tras fixes profundos de worktree, locks, runtime del driver y creacion canonica, C completo entrego un candidato y evaluador externo 7/10. Fallo genuino en typecheck, build y backorder-recorded; se avanza a etapa 4 sin reintentar C. | `8410219` | `stage-3-remediation.md` |
