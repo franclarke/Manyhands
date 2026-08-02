@@ -205,6 +205,48 @@ describe("planning envelope and candidate plans", () => {
       diagnosis: { code: "acceptance_ownership_incomplete", rejectedCandidateIds: ["candidate-unowned"] }
     });
   });
+
+  it("rejects a scope path that is neither grounded evidence nor explicitly planned", () => {
+    const breakdown = bookingBreakdown();
+    const envelope = createPlanningEnvelope({ policyVersion: "reliability/1.0.0", goal: breakdown.objective, repositorySnapshot: bookingSnapshot() });
+    const candidate = candidateFor(envelope, breakdown, "candidate-ungrounded-scope");
+    candidate.scopes[0]!.paths.push("src/invented.ts");
+
+    const validation = validateCandidatePlanSet({ envelope, candidates: [candidate] });
+
+    expect(validation.validCandidates).toEqual([]);
+    expect(validation.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "scope_outside_grounding", candidateId: candidate.candidateId })
+    ]));
+  });
+
+  it("rejects a criterion kind whose explicit ownership role is incompatible", () => {
+    const breakdown = bookingBreakdown();
+    const envelope = createPlanningEnvelope({ policyVersion: "reliability/1.0.0", goal: breakdown.objective, repositorySnapshot: bookingSnapshot() });
+    const candidate = candidateFor(envelope, breakdown, "candidate-role-mismatch");
+    candidate.acceptanceCriteria[0]!.kind = "globalAcceptance";
+
+    const validation = validateCandidatePlanSet({ envelope, candidates: [candidate] });
+
+    expect(validation.validCandidates).toEqual([]);
+    expect(validation.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "acceptance_role_mismatch", candidateId: candidate.candidateId })
+    ]));
+  });
+
+  it("rejects a cross-layer seam without a matching contract obligation", () => {
+    const breakdown = bookingBreakdown();
+    const envelope = createPlanningEnvelope({ policyVersion: "reliability/1.0.0", goal: breakdown.objective, repositorySnapshot: bookingSnapshot() });
+    const candidate = candidateFor(envelope, breakdown, "candidate-missing-contract");
+    candidate.contractObligations = [];
+
+    const validation = validateCandidatePlanSet({ envelope, candidates: [candidate] });
+
+    expect(validation.validCandidates).toEqual([]);
+    expect(validation.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "contract_obligation_incomplete", candidateId: candidate.candidateId })
+    ]));
+  });
 });
 
 function candidateFor(
