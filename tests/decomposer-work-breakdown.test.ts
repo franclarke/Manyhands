@@ -5,6 +5,8 @@ import {
   WorkBreakdownPlanner,
   WorkBreakdownSchema,
   buildWorkBreakdownPrompt,
+  createPlanningEnvelope,
+  type CandidatePlanDraft,
   type WorkBreakdown
 } from "@manyhands/decomposer";
 
@@ -71,18 +73,23 @@ describe("WorkBreakdown", () => {
     second.breakdownId = "booking-breakdown-alternative";
     second.root.objective = "Deliver booking creation through a contract-first semantic cut";
     const generate = vi.fn()
-      .mockResolvedValueOnce(first)
-      .mockResolvedValueOnce(second)
-      .mockResolvedValueOnce(first);
+      .mockResolvedValueOnce(candidateDraft(first, "candidate-1"))
+      .mockResolvedValueOnce(candidateDraft(second, "candidate-2"))
+      .mockResolvedValueOnce(candidateDraft(first, "candidate-3"));
     const planner = new WorkBreakdownPlanner({
       model: { generate },
       maxAttempts: 1,
       retryDelayMs: 0
     });
 
-    const candidates = await planner.planCandidates(plannerInput(), 3);
+    const envelope = createPlanningEnvelope({
+      policyVersion: "test-policy",
+      goal: plannerInput().goal,
+      repositorySnapshot: { snapshotId: plannerInput().repositorySnapshot.snapshotId }
+    });
+    const candidates = await planner.planCandidates(plannerInput(), envelope, 3);
 
-    expect(candidates.map((candidate) => candidate.breakdownId)).toEqual([
+    expect(candidates.map((candidate) => candidate.breakdown.breakdownId)).toEqual([
       "booking-breakdown",
       "booking-breakdown-alternative"
     ]);
@@ -541,6 +548,47 @@ function plannerInput() {
       inspectionDisposition: "complete" as const,
       evidence: [{ id: "route-evidence", kind: "path" as const, reference: "src/routes/bookings.ts", observation: "Existing booking route", confidence: 1 }]
     }
+  };
+}
+
+function candidateDraft(breakdown: WorkBreakdown, candidateId: string): CandidatePlanDraft {
+  const leaves = breakdown.root.kind === "leaf" ? [breakdown.root] : breakdown.root.children;
+  return {
+    candidateId,
+    breakdown,
+    scopes: leaves.map((unit) => ({ unitKey: unit.key, paths: ["src/routes/bookings.ts"] })),
+    acceptanceCriteria: breakdown.acceptanceIntents.map((intent) => ({
+      intentId: intent.id,
+      kind: "leafAcceptance",
+      description: intent.description
+    })),
+    acceptanceOwnership: breakdown.acceptanceIntents.map((intent) => ({
+      intentId: intent.id,
+      ownerUnitKey: leaves[0]!.key,
+      role: "local",
+      rationale: "The primary vertical slice proves the observable outcome."
+    })),
+    seamSpecifications: breakdown.candidateSeams.map((seam) => ({
+      seamId: seam.id,
+      producerUnitKey: seam.producerUnitKey,
+      consumerUnitKeys: seam.consumerUnitKeys,
+      compatibility: seam.specification,
+      materialization: "files",
+      validation: "Focused integration validation proves compatibility."
+    })),
+    contractObligations: breakdown.candidateSeams.map((seam) => ({
+      obligationId: `${seam.id}-contract`,
+      kind: "cross_layer_contract",
+      ownerUnitKey: seam.producerUnitKey,
+      producerUnitKey: seam.producerUnitKey,
+      consumerUnitKeys: seam.consumerUnitKeys,
+      validation: "Focused integration validation proves compatibility."
+    })),
+    leafValidations: leaves.map((unit) => ({
+      unitKey: unit.key,
+      command: "pnpm test",
+      evidenceRefs: ["route-evidence"]
+    }))
   };
 }
 

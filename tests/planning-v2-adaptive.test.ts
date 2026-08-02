@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { compileGraphRevision, type GraphCompilerInput } from "@manyhands/decomposer";
 import { foldRun } from "@manyhands/run-coordinator";
 import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
-import { bookingBreakdown, bookingSnapshot, compilerDependencies } from "./helpers/target-planning-fixtures";
+import { bookingBreakdown, bookingCandidate, bookingSnapshot, compilerDependencies } from "./helpers/target-planning-fixtures";
 import { runPlanningV2 } from "@/lib/server/runs/v2/planning-host";
 
 /**
@@ -40,6 +40,7 @@ describe("adaptive granularity in the productive planning pipeline", () => {
       snapshots,
       inspect: async () => bookingSnapshot(),
       plan: async () => bookingBreakdown(),
+      planCandidates: async (_input, envelope) => [1, 2, 3].map((index) => bookingCandidate(envelope, `candidate-${index}`)),
       compile,
       nodeIdFor: (key) => compilerDependencies.idFor("node", key),
       now: () => "2026-07-23T01:00:00.000Z"
@@ -82,7 +83,7 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     expect((metrics.metrics as Record<string, unknown>).totalLeafCount).toBe(3);
   });
 
-  it("performs one semantic replan when a C leaf exceeds the measured context budget", async () => {
+  it("records bounded replan without calling the LLM again when every candidate exceeds the measured context budget", async () => {
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });
     const semanticSplit = bookingBreakdown();
@@ -106,9 +107,10 @@ describe("adaptive granularity in the productive planning pipeline", () => {
       file.byteSize = 40_000;
       file.lineCount = 1_000;
     }
-    const plan = vi.fn()
-      .mockResolvedValueOnce(firstCandidate)
-      .mockResolvedValueOnce(semanticSplit);
+    const plan = vi.fn(async () => semanticSplit);
+    const planCandidates = vi.fn(async (_input, envelope) => [1, 2, 3].map((index) =>
+      bookingCandidate(envelope, `oversized-${index}`, structuredClone(firstCandidate))
+    ));
 
     const result = await runPlanningV2({
       runId: "run-c2-replan",
@@ -122,17 +124,19 @@ describe("adaptive granularity in the productive planning pipeline", () => {
       snapshots,
       inspect: async () => measuredSnapshot,
       plan,
+      planCandidates,
       compile: (input) => compileGraphRevision(input, compilerDependencies),
       nodeIdFor: (key) => compilerDependencies.idFor("node", key),
       now: () => "2026-07-24T01:00:00.000Z"
     });
 
     expect(result.failureReason).toBeUndefined();
-    expect(result.lifecycle).toBe("needs_approval");
-    expect(plan).toHaveBeenCalledTimes(2);
-    expect(plan.mock.calls[1]?.[0].granularityFeedback).toMatchObject({
-      reason: "leaf_context_infeasible"
+    expect(result.lifecycle).toBe("planning");
+    expect(plan).not.toHaveBeenCalled();
+    expect(planCandidates).toHaveBeenCalledOnce();
+    expect(result.planningCandidates?.selection).toMatchObject({
+      kind: "replan_required",
+      reason: expect.stringContaining("did not contain enough")
     });
-    expect(result.granularityStrategy?.policyVersion).toBe(ADAPTIVE_UTILITY_POLICY_VERSION);
   });
 });

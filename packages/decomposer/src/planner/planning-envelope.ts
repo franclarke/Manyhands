@@ -125,10 +125,8 @@ export const LeafValidationSchema = z.object({
 
 export type LeafValidation = z.infer<typeof LeafValidationSchema>;
 
-const CandidatePlanContentSchema = z.object({
+export const CandidatePlanDraftSchema = z.object({
   candidateId: NonEmptyStringSchema,
-  repositorySnapshotId: NonEmptyStringSchema,
-  goalDigest: HashSchema,
   breakdown: WorkBreakdownSchema,
   scopes: z.array(CandidateScopeSchema).min(1),
   acceptanceCriteria: z.array(AcceptanceCriterionSchema).min(1),
@@ -136,6 +134,14 @@ const CandidatePlanContentSchema = z.object({
   seamSpecifications: z.array(CandidateSeamSpecificationSchema),
   contractObligations: z.array(ContractObligationSchema),
   leafValidations: z.array(LeafValidationSchema)
+}).strict();
+
+export type CandidatePlanDraft = z.infer<typeof CandidatePlanDraftSchema>;
+
+const CandidatePlanContentSchema = z.object({
+  ...CandidatePlanDraftSchema.shape,
+  repositorySnapshotId: NonEmptyStringSchema,
+  goalDigest: HashSchema
 }).strict();
 
 export const CandidatePlanSchema = z.object({
@@ -155,6 +161,10 @@ export interface CreateCandidatePlanInput {
   seamSpecifications: CandidateSeamSpecification[];
   contractObligations: ContractObligation[];
   leafValidations: LeafValidation[];
+}
+
+export function createCandidatePlanFromDraft(envelope: PlanningEnvelope, draft: CandidatePlanDraft): CandidatePlan {
+  return createCandidatePlan({ envelope, ...CandidatePlanDraftSchema.parse(draft) });
 }
 
 export function createCandidatePlan(input: CreateCandidatePlanInput): CandidatePlan {

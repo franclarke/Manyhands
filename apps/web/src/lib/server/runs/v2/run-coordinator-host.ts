@@ -102,6 +102,7 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
         snapshots,
         inspect: (input) => buildFastRepositorySnapshot({ rootPath: input.repoPath, targetFingerprint: input.targetFingerprint, baseCommit: input.baseCommit }),
         plan: (input, observer) => planner.plan(input, observer),
+        planCandidates: (input, envelope, count, observer) => planner.planCandidates(input, envelope, count, observer),
         compile: (input) => compileGraphRevision(input, { idFor: stableId, now: () => new Date().toISOString() }),
         nodeIdFor: (key) => stableId("node", key),
         now: () => new Date().toISOString()
@@ -134,6 +135,7 @@ export async function approvePlanningV2Pipeline(runId: string, revision: number)
       snapshots,
       inspect: async () => { throw new Error("Inspection is not part of approval."); },
       plan: async () => { throw new Error("Planning is not part of approval."); },
+      planCandidates: async () => { throw new Error("Candidate planning is not part of approval."); },
       compile: () => { throw new Error("Compilation is not part of approval."); },
       now: () => new Date().toISOString()
     });

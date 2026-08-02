@@ -1,5 +1,11 @@
 import { RepositorySnapshotSchema, type RepositorySnapshot } from "@manyhands/repository-index";
-import type { WorkBreakdown } from "@manyhands/decomposer";
+import {
+  createCandidatePlan,
+  createPlanningEnvelope,
+  type CandidatePlan,
+  type PlanningEnvelope,
+  type WorkBreakdown
+} from "@manyhands/decomposer";
 
 export function bookingBreakdown(): WorkBreakdown {
   return {
@@ -101,6 +107,60 @@ export function bookingSnapshot(): RepositorySnapshot {
   }) as RepositorySnapshot;
 }
 
+export function bookingCandidate(
+  envelope: PlanningEnvelope = createPlanningEnvelope({
+    policyVersion: "adaptive-utility-v1",
+    goal: "Build booking",
+    repositorySnapshot: bookingSnapshot()
+  }),
+  candidateId = "booking-candidate",
+  breakdown = bookingBreakdown()
+): CandidatePlan {
+  const units = flatten(breakdown.root);
+  const leaves = units.filter((unit) => unit.kind === "leaf");
+  const evidenceById = new Map(breakdown.repositoryEvidence.map((item) => [item.id, item.reference]));
+  return createCandidatePlan({
+    envelope,
+    candidateId,
+    breakdown,
+    scopes: leaves.map((unit) => ({
+      unitKey: unit.key,
+      paths: [...unit.evidenceIds.map((id) => evidenceById.get(id)).filter((item): item is string => item !== undefined), ...(unit.plannedPaths ?? [])]
+    })),
+    acceptanceCriteria: breakdown.acceptanceIntents.map((intent) => ({
+      intentId: intent.id,
+      kind: "leafAcceptance" as const,
+      description: intent.description
+    })),
+    acceptanceOwnership: breakdown.acceptanceIntents.map((intent) => {
+      const owner = leaves.find((unit) => unit.acceptanceIntentIds.includes(intent.id));
+      if (owner === undefined) throw new Error(`Fixture acceptance intent ${intent.id} has no leaf owner.`);
+      return { intentId: intent.id, ownerUnitKey: owner.key, role: "local" as const, rationale: "The leaf proves this observable outcome." };
+    }),
+    seamSpecifications: breakdown.candidateSeams.map((seam) => ({
+      seamId: seam.id,
+      producerUnitKey: seam.producerUnitKey,
+      consumerUnitKeys: seam.consumerUnitKeys,
+      compatibility: seam.specification,
+      materialization: "files" as const,
+      validation: "Focused integration validation exercises every producer-consumer pair."
+    })),
+    contractObligations: breakdown.candidateSeams.map((seam) => ({
+      obligationId: `${seam.id}-contract`,
+      kind: "cross_layer_contract" as const,
+      ownerUnitKey: seam.producerUnitKey,
+      producerUnitKey: seam.producerUnitKey,
+      consumerUnitKeys: seam.consumerUnitKeys,
+      validation: "Focused integration validation proves compatibility."
+    })),
+    leafValidations: leaves.map((unit) => ({
+      unitKey: unit.key,
+      command: `pnpm test --filter ${unit.key}`,
+      evidenceRefs: unit.evidenceIds
+    }))
+  });
+}
+
 export const compilerDependencies = {
   idFor: (kind: string, key: string) => `${kind}-${key}`.replace(/[^A-Za-z0-9._:-]/gu, "-"),
   now: () => "2026-07-17T01:00:00.000Z"
@@ -121,4 +181,8 @@ function leaf(key: string, title: string, objective: string, concern: string, in
 
 function evidence(id: string, reference: string, observation: string) {
   return { id, kind: "path" as const, reference, observation, confidence: 1 };
+}
+
+function flatten(root: WorkBreakdown["root"]): WorkBreakdown["root"][] {
+  return root.kind === "leaf" ? [root] : [root, ...root.children.flatMap(flatten)];
 }
