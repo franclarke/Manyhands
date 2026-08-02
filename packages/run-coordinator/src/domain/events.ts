@@ -182,6 +182,30 @@ export const RunEventSchema = z.discriminatedUnion("type", [
       averageBranchingFactor: z.number().nonnegative()
     }).strict()
   }).strict()),
+  event("planning.envelope_created", z.object({
+    schemaVersion: z.literal(1),
+    policyVersion: NonEmptyStringSchema,
+    repositorySnapshotId: NonEmptyStringSchema,
+    goalDigest: NonEmptyStringSchema,
+    candidateBudget: z.object({
+      minimum: z.number().int().positive(),
+      maximum: z.number().int().positive().max(8)
+    }).strict(),
+    executionBudget: z.object({
+      maxLeafContextTokens: z.number().int().positive(),
+      maxLeafScopePaths: z.number().int().positive(),
+      maxParallelism: z.number().int().positive()
+    }).strict(),
+    requirements: z.object({
+      requireExplicitAcceptanceOwnership: z.literal(true),
+      requireCompleteSeamSpecifications: z.literal(true),
+      requireObservableLeafValidation: z.literal(true)
+    }).strict()
+  }).strict().superRefine((envelope, context) => {
+    if (envelope.candidateBudget.minimum > envelope.candidateBudget.maximum) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "candidateBudget.minimum must not exceed candidateBudget.maximum" });
+    }
+  })),
   event("planning.completed", z.object({ breakdownId: EntityIdSchema, breakdown: z.record(z.unknown()) }).strict()),
   event("graph.compiled", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive(), graph: z.record(z.unknown()), contracts: z.array(z.record(z.unknown())), review: z.record(z.unknown()), trace: z.record(z.unknown()) }).strict()),
   event("planning.critic_recorded", z.object({ critic: NonEmptyStringSchema, findings: z.array(z.record(z.unknown())) }).strict()),

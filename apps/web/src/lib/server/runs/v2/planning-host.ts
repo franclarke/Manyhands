@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { CompiledGraphRevision, GranularityStrategyResult, GraphCompilerInput, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
-import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, canonicalRepositorySnapshotId, candidateBreakdownHash, repositorySnapshotIdsMatch, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
+import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, buildGranularityPlanningBrief, canonicalRepositorySnapshotId, candidateBreakdownHash, createPlanningEnvelope, repositorySnapshotIdsMatch, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
 import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 
@@ -103,8 +103,25 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
         inspectionDisposition: repositorySnapshot.inspectionDisposition,
         evidence: repositoryEvidence(repositorySnapshot)
       },
+      granularityBrief: buildGranularityPlanningBrief({
+        repositorySnapshot,
+        config: PILOT_UTILITY_POLICY
+      }),
       ...(input.questionAnswers !== undefined ? { questionAnswers: input.questionAnswers } : {})
     };
+    const envelope = createPlanningEnvelope({
+      policyVersion: PILOT_UTILITY_POLICY.policyVersion,
+      goal: input.goal,
+      repositorySnapshot,
+      maxLeafContextTokens: PILOT_UTILITY_POLICY.maxLeafContextTokens,
+      maxLeafScopePaths: PILOT_UTILITY_POLICY.maxLeafScopePaths
+    });
+    events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
+      eventId: `planning:${input.runId}:envelope:${events.length + 1}`,
+      occurredAt: dependencies.now(),
+      type: "planning.envelope_created",
+      payload: envelope
+    }])];
     let breakdown = input.experimentalCandidate === undefined
       ? await dependencies.plan(plannerInput, planningObserverFor(latestPlanningAttempt(events)))
       : validateExperimentalCandidate(input, repositorySnapshot);

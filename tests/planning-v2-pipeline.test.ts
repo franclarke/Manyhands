@@ -33,6 +33,11 @@ describe("planning V2 vertical slice", () => {
 
     expect(plan).toHaveBeenCalledOnce();
     expect(evidence).toContainEqual(expect.objectContaining({ kind: "path", reference: "package.json" }));
+    expect(plan.mock.calls[0]?.[0].granularityBrief).toMatchObject({
+      candidateCount: 3,
+      hardGates: ["acceptance_owner", "cross_leaf_materialization", "local_validation", "compiler_approvable"],
+      repositorySignals: { snapshotId: bookingSnapshot().snapshotId }
+    });
   });
 
   it("persists inspection, semantic planning, compilation, critics and approval decision", async () => {
@@ -49,7 +54,7 @@ describe("planning V2 vertical slice", () => {
     expect(result.lifecycle).toBe("needs_approval");
     const persisted = await events.load("run-v2");
     expect(persisted.map((event) => event.type)).toEqual([
-      "run.created", "repository.inspected", "planning.granularity_strategy_selected", "planning.completed", "graph.compiled",
+      "run.created", "repository.inspected", "planning.envelope_created", "planning.granularity_strategy_selected", "planning.completed", "graph.compiled",
       ...Array(8).fill("planning.critic_recorded"),
       "graph.revision.proposed", "decision.raised"
     ]);
@@ -61,6 +66,20 @@ describe("planning V2 vertical slice", () => {
           root: bookingBreakdown().root,
           candidateArtifacts: bookingBreakdown().candidateArtifacts,
           candidateSeams: bookingBreakdown().candidateSeams
+        }
+      }
+    });
+    const envelope = persisted.find((event) => event.type === "planning.envelope_created");
+    expect(envelope).toMatchObject({
+      type: "planning.envelope_created",
+      payload: {
+        policyVersion: expect.any(String),
+        repositorySnapshotId: bookingSnapshot().snapshotId,
+        candidateBudget: { minimum: 2, maximum: 3 },
+        requirements: {
+          requireExplicitAcceptanceOwnership: true,
+          requireCompleteSeamSpecifications: true,
+          requireObservableLeafValidation: true
         }
       }
     });
@@ -81,7 +100,7 @@ describe("planning V2 vertical slice", () => {
 
     expect(calls).toBe(1);
     expect(result).toMatchObject({ lifecycle: "failed", failureReason: "selected LLM unavailable" });
-    expect((await events.load("run-failed")).map((event) => event.type)).toEqual(["run.created", "repository.inspected", "planning.failed"]);
+    expect((await events.load("run-failed")).map((event) => event.type)).toEqual(["run.created", "repository.inspected", "planning.envelope_created", "planning.failed"]);
   });
 
   it("persists the selected candidate when compiler review rejects it", async () => {
@@ -100,7 +119,7 @@ describe("planning V2 vertical slice", () => {
     expect(result).toMatchObject({ lifecycle: "failed", failureReason: "Compiled plan review failed: artifact_cycle" });
     const persisted = await events.load("run-compile-failed");
     expect(persisted.map((event) => event.type)).toEqual([
-      "run.created", "repository.inspected", "planning.granularity_strategy_selected", "planning.failed"
+      "run.created", "repository.inspected", "planning.envelope_created", "planning.granularity_strategy_selected", "planning.failed"
     ]);
     const strategy = persisted.find((event) => event.type === "planning.granularity_strategy_selected");
     expect(strategy).toMatchObject({
@@ -150,6 +169,7 @@ describe("planning V2 vertical slice", () => {
     expect((await events.load("run-progress")).map((event) => event.type)).toEqual([
       "run.created",
       "repository.inspected",
+      "planning.envelope_created",
       "planning.attempt_started",
       "planning.node_discovered"
     ]);
@@ -197,6 +217,7 @@ describe("planning V2 vertical slice", () => {
     expect((await events.load("run-clarification")).map((event) => event.type)).toEqual([
       "run.created",
       "repository.inspected",
+      "planning.envelope_created",
       "planning.completed",
       "decision.raised"
     ]);

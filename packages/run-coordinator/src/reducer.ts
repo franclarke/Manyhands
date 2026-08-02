@@ -86,6 +86,20 @@ export interface GranularityStrategyProjection {
   metrics: { maxGraphDepth: number; totalLeafCount: number; averageBranchingFactor: number };
 }
 
+export interface PlanningEnvelopeProjection {
+  schemaVersion: 1;
+  policyVersion: string;
+  repositorySnapshotId: string;
+  goalDigest: string;
+  candidateBudget: { minimum: number; maximum: number };
+  executionBudget: { maxLeafContextTokens: number; maxLeafScopePaths: number; maxParallelism: number };
+  requirements: {
+    requireExplicitAcceptanceOwnership: true;
+    requireCompleteSeamSpecifications: true;
+    requireObservableLeafValidation: true;
+  };
+}
+
 export interface RunProjection {
   runId: string;
   goal: string;
@@ -97,6 +111,7 @@ export interface RunProjection {
   approvedGraphRevision?: number;
   granularity?: GranularityProjection;
   granularityStrategy?: GranularityStrategyProjection;
+  planningEnvelope?: PlanningEnvelopeProjection;
   decisions: Record<string, Decision>;
   stoppedNodeIds?: string[];
   readiness: { readyNodeIds: string[]; pendingDecisionIds: string[]; explanations?: Array<Record<string, unknown>>; effectiveConfig?: Record<string, unknown>; schedulerState?: Record<string, unknown>; budgetAvailable?: boolean; conflictEvidence?: Array<Record<string, unknown>>; evaluatedAt?: string };
@@ -207,6 +222,18 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
           evidenceRefs: [...assessment.evidenceRefs]
         }])),
         metrics: { ...event.payload.metrics }
+      };
+      break;
+    case "planning.envelope_created":
+      if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot record planning facts while ${next.lifecycle}.`);
+      next.planningEnvelope = {
+        schemaVersion: event.payload.schemaVersion,
+        policyVersion: event.payload.policyVersion,
+        repositorySnapshotId: event.payload.repositorySnapshotId,
+        goalDigest: event.payload.goalDigest,
+        candidateBudget: { ...event.payload.candidateBudget },
+        executionBudget: { ...event.payload.executionBudget },
+        requirements: { ...event.payload.requirements }
       };
       break;
     case "planning.failed":
