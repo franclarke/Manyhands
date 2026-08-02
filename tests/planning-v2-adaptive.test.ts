@@ -1,4 +1,4 @@
-import { ADAPTIVE_UTILITY_POLICY_VERSION } from "@manyhands/decomposer";
+import { ADAPTIVE_UTILITY_POLICY_VERSION, PILOT_UTILITY_POLICY, createPlanningEnvelope } from "@manyhands/decomposer";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -148,5 +148,50 @@ describe("adaptive granularity in the productive planning pipeline", () => {
       kind: "replan_required",
       reason: expect.stringContaining("did not contain enough")
     });
+  });
+
+  it("replays A, B and C over identical frozen typed candidates without invoking the planner", async () => {
+    const goal = "Build booking";
+    const frozenEnvelope = createPlanningEnvelope({
+      policyVersion: PILOT_UTILITY_POLICY.policyVersion,
+      goal,
+      repositorySnapshot: bookingSnapshot(),
+      maxLeafContextTokens: PILOT_UTILITY_POLICY.maxLeafContextTokens,
+      maxLeafScopePaths: PILOT_UTILITY_POLICY.maxLeafScopePaths
+    });
+    const frozenCandidates = [1, 2, 3].map((index) => bookingCandidate(frozenEnvelope, `frozen-${index}`));
+    const planCandidates = vi.fn(async () => { throw new Error("Frozen replay must not invoke the planner."); });
+    const hashesByCondition: string[][] = [];
+
+    for (const condition of ["A", "B", "C"] as const) {
+      const events = new JsonlRunEventStore({ directory });
+      const snapshots = new RunSnapshotStore({ directory, events });
+      const runId = `frozen-${condition}`;
+      const result = await runPlanningV2({
+        runId,
+        goal,
+        repoPath: "C:/repo/booking",
+        targetFingerprint: "target-1",
+        baseCommit: "1".repeat(40),
+        authority,
+        granularityCondition: condition,
+        frozenCandidates
+      }, {
+        events,
+        snapshots,
+        inspect: async () => bookingSnapshot(),
+        plan: async () => bookingBreakdown(),
+        planCandidates,
+        compile: (input) => compileGraphRevision(input, compilerDependencies),
+        now: () => "2026-07-24T01:00:00.000Z"
+      });
+      expect(result.lifecycle).toBe("needs_approval");
+      expect(result.granularityStrategy?.condition).toBe(condition);
+      hashesByCondition.push(result.planningCandidates!.candidates.map((candidate) => candidate.candidateHash));
+    }
+
+    expect(planCandidates).not.toHaveBeenCalled();
+    expect(hashesByCondition[1]).toEqual(hashesByCondition[0]);
+    expect(hashesByCondition[2]).toEqual(hashesByCondition[0]);
   });
 });
