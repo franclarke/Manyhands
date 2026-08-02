@@ -23,6 +23,8 @@ export interface PlanningV2Input {
   questionAnswers?: Record<string, string>;
   /** G5 condition label; absent means the productive adaptive policy. */
   granularityCondition?: string;
+  /** Frozen typed alternatives for deterministic policy replay without an LLM call. */
+  frozenCandidates?: CandidatePlan[];
   experimentalCandidate?: {
     sourceHash: string;
     repositorySnapshotId: string;
@@ -149,12 +151,12 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
         throw new Error("The blocked candidate requires semantic replan and cannot be changed during experimental replay.");
       }
     } else {
-      const plannerCandidates = await dependencies.planCandidates(
-        plannerInput,
-        envelope,
-        envelope.candidateBudget.maximum,
-        planningObserverFor(latestPlanningAttempt(events))
-      );
+      const plannerCandidates = input.frozenCandidates ?? await dependencies.planCandidates(
+          plannerInput,
+          envelope,
+          envelope.candidateBudget.maximum,
+          planningObserverFor(latestPlanningAttempt(events))
+        );
       const evaluation = evaluatePlannerCandidates({ envelope, candidates: plannerCandidates, condition, repositorySnapshot });
       events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [
         candidatesEvaluatedEvent(input.runId, envelope, plannerCandidates, evaluation, dependencies.now)
