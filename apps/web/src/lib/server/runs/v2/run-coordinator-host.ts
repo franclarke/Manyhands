@@ -165,7 +165,7 @@ async function invokeSelectedPlanningCli(
   if (!isCodex && stage.executorId !== "claude-code-cli") throw new Error(`Planning V2 does not support executor ${stage.executorId}.`);
   const binary = resolveCliBinaryPath(isCodex ? (process.env.MANYHANDS_CODEX_BIN ?? "codex") : (process.env.MANYHANDS_CLAUDE_BIN ?? "claude"));
   const args = isCodex
-    ? ["exec", "--model", stage.model, "--sandbox", "read-only", "--skip-git-repo-check", ...(stage.effort !== undefined ? ["-c", `model_reasoning_effort=\"${stage.effort}\"`] : []), "-"]
+    ? buildCodexPlanningArgs(stage)
     : ["-p", "-", "--model", stage.model, "--output-format", "stream-json", "--include-partial-messages", "--verbose", "--permission-mode", "plan", "--disallowed-tools", CLAUDE_PLANNING_DISALLOWED_TOOLS];
   const invocation = resolveCliProcessInvocation(binary, args);
   const spawn = supervisedSpawnFn(
@@ -280,6 +280,20 @@ async function invokeSelectedPlanningCli(
     });
     child.stdin?.end(prompt);
   });
+}
+
+export function buildCodexPlanningArgs(stage: { model: string; effort?: string }): string[] {
+  return [
+    "exec",
+    "--model",
+    stage.model,
+    "--sandbox",
+    "read-only",
+    "--ephemeral",
+    "--skip-git-repo-check",
+    ...(stage.effort !== undefined ? ["-c", `model_reasoning_effort=\"${stage.effort}\"`] : []),
+    "-"
+  ];
 }
 
 function resolvedPlanningAnswers(state: ReturnType<typeof foldRun> | undefined): Record<string, string> {
