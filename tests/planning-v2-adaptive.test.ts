@@ -63,6 +63,16 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     expect(compile).toHaveBeenCalledTimes(1);
     const compiledBreakdown = compile.mock.calls[0]![0].breakdown;
     expect(compiledBreakdown.root.key).toBe("booking");
+    expect(compile.mock.calls[0]![0]).toMatchObject({
+      planningEnvelope: expect.objectContaining({ repositorySnapshotId: bookingSnapshot().snapshotId }),
+      candidatePlan: expect.objectContaining({
+        candidateId: expect.any(String),
+        acceptanceOwnership: expect.any(Array),
+        seamSpecifications: expect.any(Array),
+        contractObligations: expect.any(Array),
+        leafValidations: expect.any(Array)
+      })
+    });
 
     // 3. Replay from the journal reconstructs the strategy and candidate tree.
     const replayed = foldRun(persisted);
