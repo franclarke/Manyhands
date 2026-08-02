@@ -378,9 +378,8 @@ No considerar terminado hasta demostrar con tests deterministas que:
 - No está demostrado que la política adaptativa sea superior, inferior o igual
   a A/B en términos experimentales.
 - No está demostrado que el planner produzca consistentemente candidatos válidos.
-- El conjunto tipado ya está conectado al host y al Graph Compiler; falta sólo
-  conservar evidencia de los gates globales finales antes de declarar cierre.
-- No está aprobada la suite global de esta rama.
+- El conjunto tipado está conectado al host y al Graph Compiler y los gates
+  globales de la rama quedaron aprobados sobre `7db0be6`.
 - No hay autorización para lanzar runs pagos.
 - Los resultados adversos de G6 siguen siendo evidencia histórica preservada y
   no deben reformularse para validar el rediseño.
@@ -391,7 +390,32 @@ La continuación cerró la frontera acordada con el trabajo paralelo. El planner
 emite drafts tipados y acotados; el host valida, puntúa, persiste y selecciona;
 el Graph Compiler recibe la intención congelada y falla si se la sustituye. Se
 agregó replay A/B/C sobre candidatos idénticos, sin runs pagos ni cambios en
-fórmulas, pesos, umbrales u oráculos G6. Los commits nuevos quedan registrados
-en el log local de `codex/system-reliability-redesign`. No se hizo push. La
-integración en `main` sólo procede después de la revisión Standards/Spec y de
-todos los gates globales.
+fórmulas, pesos, umbrales, freezes, resultados u oráculos G6.
+
+La revisión independiente Standards/Spec quedó sin hallazgos bloqueantes luego
+de corregir el evento de selección, el replan entre invocaciones, la dependencia
+semántica representada sólo por paths y la persistencia de gates/desempate. Los
+gates finales de la rama sobre `7db0be6` dieron:
+
+- `pnpm build`: PASS, 12 packages;
+- tests focalizados: PASS, 8 archivos/73 tests y post-review 2 archivos/5 tests;
+- `pnpm test`: PASS, 228 archivos, 1601 passed, 2 skipped;
+- `pnpm -r --filter "./packages/*" typecheck`: PASS, 12 packages;
+- `pnpm --filter @manyhands/web exec tsc --noEmit`: PASS;
+- `pnpm web:build`: PASS, build productivo de Next.js;
+- `git diff --check`: PASS.
+
+El test del freeze Warehouse se ejecutó con su artefacto material reproducido
+desde el commit fuente `f12e4b6`: SHA-256 de `dist/index.js`
+`d2ad49e372f3971f5c6210c09ee38bc0323f0704b96949655ef2db381d26b91c` y
+lockfile `ccfdec805178d04f07921c595206239eafe58236ac61300c6589b4953ecc9c40`.
+No se refreezó ni modificó evidencia histórica. Una
+primera suite post-fix tuvo un timeout `EBUSY` en un test Git real bajo
+contención de Windows; el test aislado pasó 3/3 y la repetición exacta de la
+suite completa pasó. La binding opcional Windows de Tailwind faltaba en la
+instalación aislada; se restauró con `pnpm install --frozen-lockfile --force`
+contra el store aislado, sin cambiar manifests ni el checkout activo.
+
+Los commits quedan registrados en el log local de
+`codex/system-reliability-redesign`. No se hizo push. El siguiente paso seguro
+es integrar localmente en `main` y repetir los gates sobre el merge exacto.
