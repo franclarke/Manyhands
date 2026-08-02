@@ -102,7 +102,8 @@ export class RunOperationAuthority {
       let publishedAt = now;
       if (superseded !== undefined) {
         const processReceipt = await this.reconcileTakeover({ runId, superseded });
-        if (!processReceipt.allDead) {
+        const allDead = processReceipt.allDead;
+        if (!allDead) {
           throw conflict(
             runId,
             current,
@@ -145,7 +146,7 @@ export class RunOperationAuthority {
             supersededFencingToken: superseded.fencingToken,
             operationId: lease.operationId,
             fencingToken: lease.fencingToken,
-            allDead: takeoverProcessReceipt.allDead,
+            allDead: true,
             repositoryQuiescent: true,
             processCount: takeoverProcessReceipt.processCount,
             verifiedAt: publishedAt
