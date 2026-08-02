@@ -96,6 +96,13 @@ el índice de `@manyhands/decomposer`. El módulo contiene:
 - resultado explícito `replan_required` cuando ningún candidato válido puede
   seleccionarse.
 
+La frontera se endureció con `createCandidatePlan()` y
+`selectPlannerCandidate()`: el registro conserva hash estable, snapshot, digest
+del objetivo, scopes, criterios explícitos, ownership, seams con participantes,
+materialización y validación, obligaciones cross-layer y validación observable
+por hoja. Un `WorkBreakdown[]` crudo se rechaza antes del score y no se usa para
+inferir ownership o seams.
+
 Este módulo todavía no está conectado como flujo productivo completo. Es un
 contrato y un gate disponible; no debe presentarse como prueba de que la
 política ya compara candidatos reales en producción.
@@ -125,9 +132,11 @@ Las piezas afectadas son:
 - `packages/run-coordinator/src/domain/events.ts`;
 - `packages/run-coordinator/src/reducer.ts`.
 
-El evento es estricto y permite reconstruir la configuración inicial de
-planning. Todavía falta persistir el conjunto completo de candidatos, hashes,
-diagnósticos, scores, ganador y eventual replan.
+Los eventos estrictos permiten reconstruir la configuración inicial de planning
+y, mediante `planning.candidates_evaluated`, el conjunto completo de
+candidatos, hashes, diagnósticos, scores, ganador y eventual replan. El evento y
+su reducer ya están implementados, pero aún no son emitidos por el host
+productivo.
 
 ### 2.5 Receipts de fallas terminales
 
@@ -162,6 +171,8 @@ Todos son commits locales de esta rama. No se hizo push.
 | `3634200` | Auditoría actualizada con la brecha de migración productiva. |
 | `f8c8c8c` | Primer handoff operativo. |
 | `e181acc` | Receipts genéricos para fallas de planning y ejecución. |
+| `59c71a7` | Contrato tipado fail-closed de `CandidatePlan` y regresiones de selección. |
+| `4d19171` | Evento/reducer para reconstruir evaluación, selección y replan de candidatos. |
 
 ## 4. Pruebas y estado real de verificación
 
@@ -213,6 +224,12 @@ git diff --check
 
 El siguiente agente debe reanudar desde `pnpm build`, con el árbol limpio, y
 corregir únicamente regresiones atribuibles a esta rama.
+
+En esta sesión `pnpm build` falló antes de compilar por instalación local
+inconsistente (`tsup` no pudo cargar `tinyglobby`); intentos de reparación
+frozen/offline fallaron porque falta el tarball de `node-pty`. Por eso las
+regresiones nuevas y los gates globales de esta sesión quedaron sin ejecución y
+no se declaran verdes.
 
 ## 5. Bloqueo actual: integración con el trabajo paralelo
 
@@ -369,5 +386,7 @@ No considerar terminado hasta demostrar con tests deterministas que:
 
 ## 9. Entrega de esta sesión
 
-Esta sesión actualiza el documento operativo existente. El cambio debe quedar
-en un commit local separado y no requiere modificar código de producción.
+Esta sesión actualiza el documento operativo existente y deja dos commits
+locales en `codex/system-reliability-redesign`: `59c71a7` y `4d19171`. No se hizo
+push ni integración en `main`; el host productivo sigue bloqueado hasta acordar
+la salida tipada con el trabajo paralelo.
