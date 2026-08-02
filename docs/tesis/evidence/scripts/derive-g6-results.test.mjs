@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { deriveG6Results } from "./derive-g6-results.mjs";
+import { deriveG6Results, DEFAULT_G6_CELLS_ROOT, DEFAULT_G6_RUNS_ROOT } from "./derive-g6-results.mjs";
 
 test("derives canonical cells, prefers the latest attributable remediation, and is reproducible", async () => {
   const root = await mkdtemp(join(tmpdir(), "g6-results-fixture-"));
@@ -61,6 +61,28 @@ test("derives canonical cells, prefers the latest attributable remediation, and 
     assert.deepEqual(await readOutputs(outputRoot), first);
   } finally {
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("derives the six canonical cells from the committed snapshot", async () => {
+  const outputRoot = await mkdtemp(join(tmpdir(), "g6-canonical-output-"));
+  try {
+    const { rows } = await deriveG6Results({
+      cellsRoot: DEFAULT_G6_CELLS_ROOT,
+      runsRoot: DEFAULT_G6_RUNS_ROOT,
+      outputRoot
+    });
+    assert.deepEqual(rows.map((row) => row.sourceRun), [
+      "g6-01-T1-A-r1-codex-medium",
+      "g6-02-T1-C-r1-remediation-6",
+      "g6-03-T1-B-r1-remediation-26-full",
+      "g6-04-T1-C-r2-full",
+      "g6-05-T1-A-r2-full",
+      "g6-06-T1-B-r2-remediation-39-full"
+    ]);
+    assert.deepEqual(rows.map((row) => row.coverage), [0.9, 0.7, 0.9, 0.9, 0.9, 0.8]);
+  } finally {
+    await rm(outputRoot, { recursive: true, force: true });
   }
 });
 

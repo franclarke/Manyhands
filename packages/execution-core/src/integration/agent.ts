@@ -671,7 +671,29 @@ export class IntegrationAgent {
         maxRepairs
       });
       operation = await this.updateOperation(operation, { state: "repair_started" });
-      const repairChild = await this.withPhysicalChildDiff(child, worktree.path);
+      let repairChild: AgentExecutionResult;
+      try {
+        repairChild = await this.withPhysicalChildDiff(child, worktree.path);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (await this.git.cherryPickHead(worktree.path) !== undefined) {
+          await this.git.cherryPickAbort(worktree.path);
+        }
+        operation = await this.updateOperation(operation, {
+          state: "failed",
+          error: { code: "child_physical_diff_unavailable", message }
+        });
+        return this.finalize(params, "internal_error", {
+          repairAttempted: true,
+          failureCode: "internal_error",
+          appliedCommits,
+          preMergeFindings: [
+            ...preMergeFindings,
+            { severity: "warning", code: "child_physical_diff_unavailable", message, files: [] }
+          ],
+          repairAttempts
+        });
+      }
       const repair = await this.attemptRepair(params, repairChild, outcome, preMergeFindings, repairAttempts);
       repairResult = repair.result;
       if (!repair.ok) {
@@ -1138,8 +1160,11 @@ export class IntegrationAgent {
         this.git.diffRangeNameOnly({ cwd, from: firstParent, to: child.commitSha })
       ]);
       return { ...child, diff, changedFiles };
-    } catch {
-      return child;
+    } catch (error) {
+      throw new Error(
+        `child_physical_diff_unavailable: unable to materialize ${child.taskId} (${child.commitSha}): ` +
+          (error instanceof Error ? error.message : String(error))
+      );
     }
   }
 
@@ -1164,8 +1189,9 @@ export class IntegrationAgent {
    * ancestry while silently dropping an incoming child change. The parent
    * validation commands cannot detect that when the child tests were also
    * rewritten during the repair. Keep the handoff conservative: every
-   * concrete added line from a physical child patch must still be present in
-   * the final base-to-handoff patch.
+   * concrete changed line from a physical child patch must still be present in
+   * the final base-to-handoff patch. This covers both additions and deletions
+   * so a repair cannot silently discard one side of a child's intent.
    */
   private async assertAppliedChildIntentRetained(
     params: IntegrationParams,
@@ -1176,13 +1202,13 @@ export class IntegrationAgent {
       from: params.worktree.baseCommit,
       to: handoffSha
     });
-    const finalAddedLines = new Set(patchAddedLines(finalDiff));
+    const finalChangedLines = new Set(patchChangedLines(finalDiff));
     const missing: Array<{ taskId: string; line: string }> = [];
 
     for (const applied of params.childResults) {
       if (applied.noOp === true || applied.diff.startsWith("diff --git ") === false) continue;
-      for (const line of patchAddedLines(applied.diff)) {
-        if (!finalAddedLines.has(line)) missing.push({ taskId: applied.taskId, line });
+      for (const line of patchChangedLines(applied.diff)) {
+        if (!finalChangedLines.has(line)) missing.push({ taskId: applied.taskId, line });
       }
     }
 
@@ -1191,7 +1217,7 @@ export class IntegrationAgent {
         .slice(0, 12)
         .map(({ taskId, line }) => `${taskId}: +${line}`)
         .join(" | ");
-      throw new Error(`handoff_intent_not_retained: final handoff dropped child additions (${details})`);
+      throw new Error(`handoff_intent_not_retained: final handoff dropped child changes (${details})`);
     }
   }
 
@@ -1923,10 +1949,13 @@ function markOperationChild(
   );
 }
 
-function patchAddedLines(diff: string): string[] {
+function patchChangedLines(diff: string): string[] {
   return diff
     .split(/\r?\n/u)
-    .filter((line) => line.startsWith("+") && !line.startsWith("+++"))
+    .filter((line) =>
+      (line.startsWith("+") && !line.startsWith("+++")) ||
+      (line.startsWith("-") && !line.startsWith("---"))
+    )
     .map((line) => line.slice(1))
     .filter((line) => line.trim().length > 0);
 }

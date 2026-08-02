@@ -94,6 +94,13 @@
       "sha256": "d77ba2eeed4245928987ab3dccbfb71271a64bd90f1f7090cd64527494558c5a"
     }
   ],
+  "cellHashSemantics": {
+    "algorithm": "SHA-256",
+    "scope": "raw bytes of the frozen cell descriptor at refreeze time",
+    "notRunManifestHashes": true,
+    "canonicalRunSnapshot": "docs/tesis/evidence/g6/canonical-runs/manifest.json",
+    "note": "Remediation run cell.json files are later execution records and may carry additional runtime provenance; they are hashed separately in the canonical run snapshot."
+  },
   "baselineVerdict": {
     "path": "docs/tesis/evidence/g6/baseline-verdict.json",
     "sha256": "a3c8031fbb3dfce085f086c3a531a419190a54b18af589998ed5f023c83f62b9",

@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "hashAlgorithm": "SHA-256",
+  "hashScope": "raw bytes",
+  "source": "docs/tesis/evidence/g6/runs",
+  "runs": [
+    {
+      "cellId": "g6-01-T1-A-r1",
+      "sourceRun": "g6-01-T1-A-r1-codex-medium",
+      "files": {
+        "cell.json": "19f5fbe5e15422c6cde5718cb8e8c57c751d9ddd0a91d7f307363c66100dd12f",
+        "external-verdict.json": "6e7926c915c8b7884a2a57cd5003176bed54454ed61e19c397ce200a39b2cbaa",
+        "result.json": "8636dd85f293a344ad871406a1faf4ea8b9b2b6ce881879b057700c4e81e7db2",
+        "run.events.v2.jsonl": "27a7040c2aab1910a0759da7db13c5373ca758c1839e4ab35157323adbcd88f1",
+        "run.granularity-metrics.json": "6ee16e16ba66d8caa9874834c431a26ce9d934e5c51b1dbdcf97faaacc75f58b",
+        "run.json": "f69b19c8ac1219130d8b0caf727af9719d2d85e1359b10e2e6b71446f0993912"
+      }
+    },
+    {
+      "cellId": "g6-02-T1-C-r1",
+      "sourceRun": "g6-02-T1-C-r1-remediation-6",
+      "files": {
+        "cell.json": "ab8a259aa30ebaeacf724387480e668f2b6f378145501c5640a2fd4562e36a7f",
+        "oracle-result.json": "78522b996a6be89046c1f927fe32f5c7ae5207f591c898d85f9382d51ed5c8af",
+        "result.json": "e4b7c35798a1966ee1bc9e1d948f5419c526d2e62e18aefcae25b0ba48b98fb5",
+        "run.events.v2.jsonl": "8f96ed39e15f2c43875e6c1a396fa23f220847b7746dc959ea53e595314c2eae",
+        "run.granularity-metrics.json": "7dae570c622950c23e98c202583927de461cab30f1c81321bd433ab17d5bb824",
+        "run.json": "750b0664693fa5ebc3301b7097524394808821cc4b07279b2bf6f2311354fae9"
+      }
+    },
+    {
+      "cellId": "g6-03-T1-B-r1",
+      "sourceRun": "g6-03-T1-B-r1-remediation-26-full",
+      "files": {
+        "cell.json": "6ea4723cc173338f7cedea6951f277a430d0290685ab336408c4a457c7711720",
+        "external-verdict.json": "a305ab83b48cc2045d267c9f2e78b9ac7ccf566cc23f2d85552c181943d57c90",
+        "result.json": "595f96059840904606b3011facf257f1030cef7114b83e3b7540fe73fc5e9acf",
+        "run.events.v2.jsonl": "407cd30ffdf1a46e96ac66e0437c550744a4517a0cef130827f3061307d21bde",
+        "run.granularity-metrics.json": "d974d7d4d9d9d21b385d67f2f0fa60bc80da30ba1b7efd5618930af8a096b60f",
+        "run.json": "f786af90964ceb7d6dddabd78fa8f01b042a942c420762e6003ea09a83ac0361"
+      }
+    },
+    {
+      "cellId": "g6-04-T1-C-r2",
+      "sourceRun": "g6-04-T1-C-r2-full",
+      "files": {
+        "cell.json": "0fdc8028d1efeaebcff1e40557f0f09964fd291f17d1bf46770708d4d8cbe8cc",
+        "external-verdict.json": "9df9c88690070c234664bede8a955273a4c9ce2d0bcd733624e201f3c655a56f",
+        "result.json": "2c8b4e4e315011dfd1ed9438e3984349c99d053bed19936c230cd928920e953a",
+        "run.events.v2.jsonl": "8c40aea666c664af51b95f6f69161c1ce821144f891bdb89780c1687e7b12d5d",
+        "run.granularity-metrics.json": "5da534b0705de562352e8e387ecc23b77ab4c6f3c24c09e05b7336cc5cb48aa1",
+        "run.json": "1c36fa7dbb947103d131ad403edf7f0c25285f058b5955871a5a596890c6da10"
+      }
+    },
+    {
+      "cellId": "g6-05-T1-A-r2",
+      "sourceRun": "g6-05-T1-A-r2-full",
+      "files": {
+        "cell.json": "9cd3211bdffd904cd51fbd217183ae0dc3d0d340d2bb1b27faf7aa7565df3c7a",
+        "external-verdict.json": "4cb06db8917a46778f44def9057b3fbb90fbdbcdb8181cb580e555109a06d182",
+        "result.json": "15ab2c7a38cc731463650f8b0f33d773078024f70d371512c5e77f8df9063bf7",
+        "run.events.v2.jsonl": "37755cc60e31e06e8950058da900a86ab5b48291e6471f4b4fb057cc3ee10d28",
+        "run.granularity-metrics.json": "d03f356e5be9c88b91aba7e4d880f283d6f9da06ad8993b928e2cb19b7689484",
+        "run.json": "58d622f73d03d1f9e109d9129f03b80592ee63b5a22fe2d2d63b331ed51944dd"
+      }
+    },
+    {
+      "cellId": "g6-06-T1-B-r2",
+      "sourceRun": "g6-06-T1-B-r2-remediation-39-full",
+      "files": {
+        "cell.json": "74f39912c4e912b271f9f8a3d2988c00cc85662a78b1d63d96c831803c3a56fa",
+        "external-verdict.json": "84ef75de2634960e16d22d5722592f9c502e1dfa41ded19a8d9b489fcf35d653",
+        "result.json": "b47eaee869d21234095df33cc6c5e020e4262f2ede4b434bacbd1551905b3804",
+        "run.events.v2.jsonl": "8edc75c56ced40e94174f438301f54537b5f12b3bb5e3daeb33aa6aaf785aee8",
+        "run.granularity-metrics.json": "bad01f5ed225dcad36dabb7525fdc3841b4c53c323658b1a5c4b217044721c6d",
+        "run.json": "6f6ea3382e27dfe281190c7a42954210c23b853763d02ec4ab780e6964c79e08"
+      }
+    }
+  ]
+}

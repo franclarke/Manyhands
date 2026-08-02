@@ -10,6 +10,10 @@ const CSV_COLUMNS = [
   "sourceRun"
 ];
 
+export const DEFAULT_G6_CELLS_ROOT = "docs/tesis/evidence/g6/cells";
+export const DEFAULT_G6_RUNS_ROOT = "docs/tesis/evidence/g6/canonical-runs";
+export const DEFAULT_G6_OUTPUT_ROOT = "docs/tesis/evidence/g6";
+
 export async function deriveG6Results({ cellsRoot, runsRoot, outputRoot }) {
   const manifests = await readManifests(resolve(cellsRoot));
   const runs = await readRuns(resolve(runsRoot));
@@ -245,9 +249,9 @@ function byName(left, right) {
 }
 
 if (process.argv[1] && process.argv[1].endsWith("derive-g6-results.mjs")) {
-  const cellsRoot = argument("--cells") ?? "docs/tesis/evidence/g6/cells";
-  const runsRoot = argument("--runs") ?? "docs/tesis/evidence/g6/runs";
-  const outputRoot = argument("--out") ?? "docs/tesis/evidence/g6";
+  const cellsRoot = argument("--cells") ?? DEFAULT_G6_CELLS_ROOT;
+  const runsRoot = argument("--runs") ?? DEFAULT_G6_RUNS_ROOT;
+  const outputRoot = argument("--out") ?? DEFAULT_G6_OUTPUT_ROOT;
   const { rows } = await deriveG6Results({ cellsRoot, runsRoot, outputRoot });
   process.stdout.write(`derived ${rows.length} canonical G6 cells\n`);
 }

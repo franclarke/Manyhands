@@ -477,6 +477,119 @@ describe("V2NodeExecutor", () => {
     expect(prompts[1]).toContain("export const required = true;");
     expect(git.opsInvoked().filter((operation) => operation === "restoreManagedWorktree")).toHaveLength(1);
   });
+
+  it("fails closed when a consumed child patch cannot be materialized", async () => {
+    const incomingCommit = "b".repeat(40);
+    const git = new FakeGitRunner({
+      missingRefs: [`${incomingCommit}^1`],
+      cherryPickOutcomes: [{ ok: false, kind: "conflict", conflictFiles: ["src/domain/booking.ts"], output: "CONFLICT" }],
+      diffCachedNameOnly: ["src/domain/booking.ts"]
+    });
+    const agent = successfulAgent();
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(agent),
+      validator: { validate: async (input) => matrix(input.contract, input.candidateCommit) },
+      finalCandidate: {
+        prepare: async (input) => ({
+          manifestId: "final-deletion-audit",
+          finalManifest: {
+            commitSha: input.candidateCommit,
+            treeSha: "tree-deletion-audit",
+            graphRevision: input.graphRevision,
+            artifactIds: [...input.artifactIds],
+            evidenceMatrixId: input.evidenceMatrix.matrixId,
+            validationRecipeDigest: input.validationRecipeDigest,
+            deliveryTarget: input.targetBranch
+          }
+        })
+      },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const root = compiled.graph.nodes[compiled.graph.rootId]!;
+    const input = request(compiled, root.id);
+    input.consumedArtifacts = [{
+      artifactId: "adopted-child",
+      runId: input.runId,
+      nodeId: "node-api",
+      digest: "sha256:child",
+      producerAttemptId: "attempt-child",
+      contract: { id: "contract-child", revision: "r1" },
+      kind: "commit",
+      location: incomingCommit,
+      adoptedAt: at
+    }];
+
+    const outcome = await executor.execute(input);
+
+    expect(outcome.kind).toBe("failure");
+    expect(agent.calls).toHaveLength(0);
+  });
+
+  it("rejects a repair that drops a physical child deletion", async () => {
+    const incomingCommit = "b".repeat(40);
+    const firstRepairCommit = "a".repeat(40);
+    const secondRepairCommit = "c".repeat(40);
+    const git = new RepairIntentGit({
+      incomingCommit,
+      firstRepairCommit,
+      secondRepairCommit,
+      dropDeletion: true,
+      cherryPickOutcomes: [{ ok: false, kind: "conflict", conflictFiles: ["src/domain/booking.ts"], output: "CONFLICT" }],
+      diffCachedNameOnly: ["src/domain/booking.ts"]
+    });
+    const agent = successfulAgent();
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(agent),
+      validator: { validate: async (input) => matrix(input.contract, input.candidateCommit) },
+      finalCandidate: {
+        prepare: async (input) => ({
+          manifestId: "final-deletion-audit",
+          finalManifest: {
+            commitSha: input.candidateCommit,
+            treeSha: "tree-deletion-audit",
+            graphRevision: input.graphRevision,
+            artifactIds: [...input.artifactIds],
+            evidenceMatrixId: input.evidenceMatrix.matrixId,
+            validationRecipeDigest: input.validationRecipeDigest,
+            deliveryTarget: input.targetBranch
+          }
+        })
+      },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async () => undefined,
+      now: () => at
+    });
+
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const root = compiled.graph.nodes[compiled.graph.rootId]!;
+    const input = request(compiled, root.id);
+    input.consumedArtifacts = [{
+      artifactId: "adopted-child",
+      runId: input.runId,
+      nodeId: "node-api",
+      digest: "sha256:child",
+      producerAttemptId: "attempt-child",
+      contract: { id: "contract-child", revision: "r1" },
+      kind: "commit",
+      location: incomingCommit,
+      adoptedAt: at
+    }];
+
+    const outcome = await executor.execute(input);
+
+    expect(outcome.kind).toBe("failure");
+    expect(agent.calls).toHaveLength(2);
+  });
 });
 
 class RepairIntentGit extends FakeGitRunner {
@@ -486,14 +599,21 @@ class RepairIntentGit extends FakeGitRunner {
     incomingCommit: string;
     firstRepairCommit: string;
     secondRepairCommit: string;
+    dropDeletion?: boolean;
   } & ConstructorParameters<typeof FakeGitRunner>[0]) {
     super({ ...intent, commitShas: [intent.firstRepairCommit, intent.secondRepairCommit] });
   }
 
   override async diffRange(params: Parameters<FakeGitRunner["diffRange"]>[0]): ReturnType<FakeGitRunner["diffRange"]> {
-    if (params.to === this.intent.incomingCommit) return "diff --git a/src/domain/booking.ts b/src/domain/booking.ts\n+export const required = true;";
+    if (params.to === this.intent.incomingCommit) {
+      return "diff --git a/src/domain/booking.ts b/src/domain/booking.ts\n+export const required = true;" +
+        (this.intent.dropDeletion === true ? "\n-export const legacy = true;" : "");
+    }
     if (params.to === this.intent.firstRepairCommit) return "diff --git a/src/domain/booking.ts b/src/domain/booking.ts\n+export const unrelated = true;";
-    if (params.to === this.intent.secondRepairCommit) return "diff --git a/src/domain/booking.ts b/src/domain/booking.ts\n+export const required = true;";
+    if (params.to === this.intent.secondRepairCommit) {
+      return "diff --git a/src/domain/booking.ts b/src/domain/booking.ts\n+export const required = true;" +
+        (this.intent.dropDeletion === true ? "" : "\n-export const legacy = true;");
+    }
     return super.diffRange(params);
   }
 

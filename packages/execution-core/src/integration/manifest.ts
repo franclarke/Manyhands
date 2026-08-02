@@ -242,7 +242,7 @@ export class IntegrationManifestExecutor {
     const candidateSha = await this.deps.git.head(worktreePath);
     const droppedIntent = await this.findDroppedChildIntent(request, candidateSha, worktreePath);
     if (droppedIntent.length > 0) {
-      const message = `Final integration dropped child additions: ${droppedIntent.join(" | ")}`;
+      const message = `Final integration dropped child changes: ${droppedIntent.join(" | ")}`;
       if (journalOperation !== undefined) {
         await input.integrationOperation!.journal.update(journalOperation, { state: "failed", finalSha: candidateSha });
       }
@@ -297,13 +297,13 @@ export class IntegrationManifestExecutor {
       from: request.base.resultingCommit,
       to: candidateSha
     });
-    const finalAddedLines = new Set(patchAddedLines(finalDiff));
+    const finalChangedLines = new Set(patchChangedLines(finalDiff));
     const dropped: string[] = [];
     for (const artifact of request.childArtifacts) {
       const sourceParent = await this.deps.git.revParse(worktreePath, `${artifact.location}^1`);
       const sourceDiff = await this.deps.git.diffRange({ cwd: worktreePath, from: sourceParent, to: artifact.location });
-      for (const line of patchAddedLines(sourceDiff)) {
-        if (!finalAddedLines.has(line)) dropped.push(`${artifact.nodeId}: +${line}`);
+      for (const line of patchChangedLines(sourceDiff)) {
+        if (!finalChangedLines.has(line)) dropped.push(`${artifact.nodeId}: ${line}`);
       }
     }
     return dropped.slice(0, 12);
@@ -324,10 +324,13 @@ function manifestBase(request: IntegrationRequestManifest): Omit<IntegrationMani
   };
 }
 
-function patchAddedLines(diff: string): string[] {
+function patchChangedLines(diff: string): string[] {
   return diff
     .split(/\r?\n/u)
-    .filter((line) => line.startsWith("+") && !line.startsWith("+++"))
+    .filter((line) =>
+      (line.startsWith("+") && !line.startsWith("+++")) ||
+      (line.startsWith("-") && !line.startsWith("---"))
+    )
     .map((line) => line.slice(1))
     .filter((line) => line.trim().length > 0);
 }

@@ -492,13 +492,9 @@ export class V2NodeExecutor {
     const expectedHead = await this.options.git.head(worktree.path);
     try {
       const childPatches = await Promise.all(repair.childArtifacts.map(async (artifact) => {
-        try {
-          const sourceParent = await this.options.git.revParse(worktree.path, `${artifact.location}^1`);
-          const diff = await this.options.git.diffRange({ cwd: worktree.path, from: sourceParent, to: artifact.location });
-          return { nodeId: artifact.nodeId, artifactId: artifact.artifactId, location: artifact.location, diff };
-        } catch {
-          return { nodeId: artifact.nodeId, artifactId: artifact.artifactId, location: artifact.location, diff: "(unable to materialize source diff; inspect the commit directly)" };
-        }
+        const sourceParent = await this.options.git.revParse(worktree.path, `${artifact.location}^1`);
+        const diff = await this.options.git.diffRange({ cwd: worktree.path, from: sourceParent, to: artifact.location });
+        return { nodeId: artifact.nodeId, artifactId: artifact.artifactId, location: artifact.location, diff };
       }));
       let repairFeedback: string | undefined;
       for (let pass = 1; pass <= 2; pass++) {
@@ -542,7 +538,7 @@ export class V2NodeExecutor {
 
         repairFeedback = [
           "Automated physical-intent audit from the previous repair pass:",
-          "The committed repair still omitted these exact child additions from the base-to-repair diff:",
+          "The committed repair still omitted these exact child changes (additions or deletions) from the base-to-repair diff:",
           ...missingAdditions.map((addition) => `- ${addition}`),
           "Restore every listed line verbatim while retaining the existing sibling behavior before staging the next pass."
         ].join("\n");
@@ -550,7 +546,13 @@ export class V2NodeExecutor {
       }
       return { success: false, evidenceRefs: [`repair:${input.attemptId}:${repair.pass}`, ...repair.conflictFiles.map((file) => `file:${file}`)] };
     } catch {
-      return { success: false, evidenceRefs: [`repair:${input.attemptId}:${repair.pass}`] };
+      return {
+        success: false,
+        evidenceRefs: [
+          `repair:${input.attemptId}:${repair.pass}`,
+          "physical-intent:source-diff-unavailable"
+        ]
+      };
     } finally {
       await rm(instructionPath, { force: true }).catch(() => undefined);
     }
@@ -766,17 +768,20 @@ function missingChildPatchAdditions(
   childPatches: readonly { nodeId: string; diff: string }[],
   finalDiff: string
 ): string[] {
-  const finalAddedLines = new Set(patchAddedLines(finalDiff));
+  const finalChangedLines = new Set(patchChangedLines(finalDiff));
   return childPatches
-    .flatMap((patch) => patchAddedLines(patch.diff).map((line) => `${patch.nodeId}: +${line}`))
-    .filter((entry) => !finalAddedLines.has(entry.slice(entry.indexOf("+") + 1)))
+    .flatMap((patch) => patchChangedLines(patch.diff).map((line) => `${patch.nodeId}: ${line}`))
+    .filter((entry) => !finalChangedLines.has(entry.slice(entry.indexOf(": ") + 2)))
     .slice(0, 24);
 }
 
-function patchAddedLines(diff: string): string[] {
+function patchChangedLines(diff: string): string[] {
   return diff
     .split(/\r?\n/u)
-    .filter((line) => line.startsWith("+") && !line.startsWith("+++"))
+    .filter((line) =>
+      (line.startsWith("+") && !line.startsWith("+++")) ||
+      (line.startsWith("-") && !line.startsWith("---"))
+    )
     .map((line) => line.slice(1))
     .filter((line) => line.trim().length > 0);
 }

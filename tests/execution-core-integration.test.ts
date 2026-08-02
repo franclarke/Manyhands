@@ -105,6 +105,13 @@ class SequentialExecutor implements AgentExecutor {
   }
 }
 
+class PhysicalDiffFailureGit extends FakeGitRunner {
+  override async diffRange(params: Parameters<FakeGitRunner["diffRange"]>[0]): ReturnType<FakeGitRunner["diffRange"]> {
+    if (params.to === "SHA_HANDOFF") throw new Error("physical diff unavailable");
+    return super.diffRange(params);
+  }
+}
+
 describe("IntegrationAgent", () => {
   it("cherry-picks all children cleanly and reports success", async () => {
     const git = new FakeGitRunner({ heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" } });
@@ -464,6 +471,41 @@ describe("IntegrationAgent", () => {
     expect(prompts[0]).toContain("Incoming child patch (Git source of truth):");
     expect(prompts[0]).toContain("Changed files: src/composed.ts");
     expect(prompts[0]).toContain("+export const composed = true;");
+  });
+
+  it("fails closed when a synthetic child diff cannot be materialized", async () => {
+    const git = new PhysicalDiffFailureGit({
+      heads: { [INTEGRATION_WORKTREE.path]: "INT_HEAD" },
+      mergeParents: { SHA_HANDOFF: ["PARENT_BASE", "LINEAGE"] },
+      cherryPickOutcomes: [{ ok: false, conflictFiles: ["src/composed.ts"], output: "CONFLICT" }],
+      diffCachedNameOnly: ["src/composed.ts"],
+      diffCached: "resolved patch",
+      commitSha: "REPAIR_SHA"
+    });
+    const executor = new MockAgentExecutor();
+    const synthetic = {
+      ...child("nested-composite", "SHA_HANDOFF"),
+      diff: "",
+      changedFiles: [],
+      cherryPickMainline: 1 as const
+    };
+    const agent = new IntegrationAgent({
+      git,
+      executor,
+      traceStore: new InMemoryTraceStore(),
+      repoRoot: "/repo"
+    });
+
+    const result = await agent.integrate({
+      compositeTaskId: "composite-1",
+      worktree: INTEGRATION_WORKTREE,
+      childResults: [synthetic],
+      repair
+    });
+
+    expect(result.status).toBe("internal_error");
+    expect(result.failureCode).toBe("internal_error");
+    expect(executor.calls).toHaveLength(0);
   });
 
   it("repair prompt surfaces predicted conflicts that overlap the colliding files (Pieza 2)", async () => {
