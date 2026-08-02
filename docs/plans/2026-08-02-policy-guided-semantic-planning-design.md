@@ -27,7 +27,7 @@ executable.
 
 Planning becomes a bounded four-step decision:
 
-1. A deterministic `GranularityPlanningBrief` is built from the inspected
+1. A deterministic `PlanningEnvelope` is built from the inspected
    repository and the versioned utility-policy limits. It tells the semantic
    planner the leaf budgets, acceptance-ownership rules, relation rules, hard
    gates, and requested candidate count before the model proposes a tree.
@@ -82,4 +82,3 @@ The gates can verify declared dependencies and repository/compiler facts. They
 cannot prove that the model disclosed every latent semantic dependency. That
 remaining uncertainty is explicit and is not reported as proof that planning
 quality is solved.
-

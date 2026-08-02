@@ -448,7 +448,7 @@ describe("WorkBreakdown", () => {
       }
     });
 
-    expect(prompt.system).toContain("Follow the Granularity Planning Brief before proposing units");
+    expect(prompt.system).toContain("Follow the PlanningEnvelope before proposing units");
     expect(prompt.user).toContain("Policy adaptive-utility/test");
     expect(prompt.user).toContain("contextTokens<=24000, scopePaths<=40, plannedPaths<=12, parallelism<=4");
     expect(prompt.user).toContain("Hard gates: acceptance_owner, cross_leaf_materialization, local_validation, compiler_approvable");

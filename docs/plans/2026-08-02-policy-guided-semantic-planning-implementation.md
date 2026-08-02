@@ -4,7 +4,7 @@
 
 **Goal:** Make the adaptive policy constrain semantic planning before generation and choose only among compiler-valid candidate plans.
 
-**Architecture:** Add a deterministic planning brief and bounded candidate generation ahead of the existing selector. Preserve one canonical `WorkBreakdown`, derive acceptance ownership without propagating IDs, reject semantic gate failures, compile each selected candidate, and rank only viable results.
+**Architecture:** Add a deterministic `PlanningEnvelope` and bounded candidate generation ahead of the existing selector. Preserve one canonical `WorkBreakdown`, derive acceptance ownership without propagating IDs, reject semantic gate failures, compile each selected candidate, and rank only viable results.
 
 **Tech Stack:** TypeScript, Zod, Vitest, pnpm monorepo, V2 append-only run events.
 
@@ -35,19 +35,19 @@
 ### Task 2: Put policy constraints before the model
 
 **Files:**
-- Create: `packages/decomposer/src/granularity/planning-brief.ts`
+- Modify: `packages/decomposer/src/planner/planning-envelope.ts`
 - Modify: `packages/decomposer/src/planner/work-breakdown.ts`
 - Modify: `packages/decomposer/src/planner/prompt.ts`
 - Modify: `packages/decomposer/src/index.ts`
 - Test: `tests/decomposer-work-breakdown.test.ts`
-- Test: `tests/granularity-planning-brief.test.ts`
+- Test: `tests/planning-envelope.test.ts`
 
 **Steps:**
 
 1. Add a failing prompt test that expects policy version, exact leaf budgets,
    candidate identity, acceptance rules, and hard gates before generation.
 2. Run the focused tests and verify the prompt omits that brief.
-3. Implement `buildGranularityPlanningBrief` and typed candidate request input.
+3. Implement `createPlanningEnvelope` and typed candidate request input.
 4. Add `WorkBreakdownPlanner.planCandidates`, using candidate-specific cache
    keys, prior hashes, deterministic deduplication, and bounded request count.
 5. Build, rerun the focused suites, and commit.
@@ -112,4 +112,3 @@
    `pnpm web:build`.
 4. Normalize changed text files to LF, run `git diff --check`, inspect
    `git diff --numstat`, and commit locally without pushing.
-

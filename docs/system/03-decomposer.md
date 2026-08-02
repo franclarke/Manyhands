@@ -5,9 +5,10 @@
 ```text
 Goal + RunTargetContext
   -> Repository Inspector
-  -> Planning Brief
+  -> PlanningEnvelope
   -> Planner
-  -> WorkBreakdown
+  -> WorkBreakdown candidate set
+  -> selected frontier
   -> Graph Compiler
   -> GraphRevision
   -> Critics
@@ -28,7 +29,22 @@ Lee el commit objetivo sin modificarlo. Produce:
 Los datos desconocidos se marcan como unknown. No se fabrican paths o comandos
 para completar el schema.
 
-## Planning Brief
+## PlanningEnvelope y candidatos semánticos
+
+`PlanningEnvelope` es el contrato previo a la generación. Fija la versión de
+política, el presupuesto acotado de candidatos, los límites de ejecución de las
+hojas y los gates de ownership, materialización, validación local y compilación.
+No contiene nodos ni sustituye al `WorkBreakdown`: describe las condiciones bajo
+las cuales se generan y comparan cortes semánticos contra el mismo snapshot.
+
+El Planner puede producir un conjunto acotado de candidatos (hasta tres en el
+piloto). Todos deben estar grounded en el snapshot y conservar el objetivo y
+los criterios de aceptación. Un pedido de aclaración detiene el planning; no se
+responde automáticamente. Los candidatos se canonizan por hash, se evalúan con
+la estrategia determinista de granularidad y se compilan de forma independiente.
+Los fallos de estructura, estrategia o compiler dejan evidencia diagnóstica y
+excluyen sólo ese candidato. Sólo la frontera del candidato seleccionado llega
+al `Graph Compiler` y se persisten las evaluaciones de todos los candidatos.
 
 Resume objetivo, constraints del usuario, repository model, baseline, riesgos y
 preguntas ya respondidas. Es la entrada común para el planner y los critics.
@@ -41,6 +57,9 @@ cohesión, integración, riesgo o verificabilidad.
 
 Una pregunta se eleva solo si la respuesta cambia comportamiento, arquitectura,
 scope, riesgo o aceptación. Preferencias locales reversibles se dejan al agente.
+
+Este flujo es el sucesor productivo del trabajo de G6; no modifica G6, sus
+fórmulas, oráculos, estímulos, preregistro ni evidencia histórica.
 
 ## Graph Compiler
 
@@ -77,3 +96,10 @@ impacto; no se esconden en logs.
 
 La aprobación refiere una revisión exacta. Editar goal, node boundaries,
 contratos o criterios crea una nueva revisión e invalida la aprobación anterior.
+
+## Que no se concluye
+
+La validación puede comprobar que las dependencias declaradas por un
+`WorkBreakdown` son coherentes con la evidencia disponible, los contratos y los
+gates del compiler. No puede demostrar que un LLM haya revelado cada
+dependencia semántica latente del objetivo o del repositorio.

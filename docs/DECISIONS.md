@@ -275,6 +275,31 @@ un replan semántico explícito. La selección, configuración efectiva y eviden
 se persisten como hechos del planning; sólo la frontera elegida llega al Graph
 Compiler. Véase [ADR 0012](adr/0012-utility-based-granularity-selection.md).
 
+### Contrato productivo de candidatos
+
+El planning productivo recibe un `PlanningEnvelope` que fija la versión de
+política, un presupuesto acotado de candidatos (hasta tres en el piloto), los
+límites de las hojas y los gates de ownership, materialización, validación local
+y compilación. El envelope no contiene nodos: `WorkBreakdown` sigue siendo la
+representación canónica de cada alternativa semántica.
+
+Los candidatos se grounded contra el mismo snapshot, se canonizan por hash y se
+evalúan con la estrategia determinista antes de compilarse de forma
+independiente. Una aclaración pendiente detiene el planning; los fallos de un
+candidato conservan findings y excluyen sólo ese candidato. Las evaluaciones de
+candidatos, la configuración efectiva y la frontera seleccionada se persisten;
+sólo la frontera elegida llega al Graph Compiler.
+
+Esta decisión es el sucesor productivo de G6 y no modifica G6, sus fórmulas,
+oráculos, estímulos, preregistro ni evidencia histórica.
+
+### Que no se concluye
+
+La validación comprueba que las dependencias declaradas por un `WorkBreakdown`
+pueden ser contrastadas con la evidencia disponible, los contratos y los gates
+del compiler. No puede demostrar que un LLM haya revelado cada dependencia
+semántica latente del objetivo o del repositorio.
+
 ## Decisiones retiradas
 
 Quedan retiradas como arquitectura vigente:

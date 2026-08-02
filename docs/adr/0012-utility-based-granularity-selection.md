@@ -21,6 +21,20 @@ topologías no estaba usando la misma vara de validación.
 
 ## Decisión
 
+El flujo productivo de C2 usa un `PlanningEnvelope` para fijar la versión de
+política, el presupuesto acotado de candidatos, los límites de las hojas y los
+gates de ownership, materialización, validación local y compilación. El envelope
+es pre-generación: no contiene nodos ni crea una representación paralela al
+`WorkBreakdown`.
+
+Puede compararse un conjunto de hasta tres candidatos grounded contra el mismo
+snapshot. Una aclaración pendiente detiene el planning; un fallo estructural,
+de estrategia o de compilación excluye ese candidato y conserva sus
+diagnósticos. Las evaluaciones de candidatos (hash, elegibilidad, score cuando
+existe y findings) se persisten junto con el evento de estrategia seleccionada
+y el diagnóstico del run. G6 queda congelado: esta decisión es su sucesora y no
+altera sus fórmulas, oráculos, estímulos, preregistro ni evidencia.
+
 El Planner conserva la responsabilidad de producir un `WorkBreakdown`
 semántico con composites, hojas y relaciones justificadas. C2 no inventa
 unidades ni divide listas de paths: selecciona una frontera ejecutable del mismo
@@ -59,6 +73,13 @@ Las condiciones comparativas se definen sobre el mismo árbol candidato:
 Los criterios de aceptación del usuario se asignan una sola vez a la frontera
 seleccionada. Si varios siblings los requieren, su owner es el lowest common
 ancestor. Las validaciones técnicas locales permanecen separadas.
+
+## Que no se concluye
+
+La validación demuestra que las dependencias declaradas por un `WorkBreakdown`
+pueden contrastarse contra evidencia del repositorio, contratos y gates del
+compiler. No demuestra ni puede probar que un LLM haya revelado cada
+dependencia semántica latente del objetivo o del repositorio.
 
 ## Alternativas descartadas
 

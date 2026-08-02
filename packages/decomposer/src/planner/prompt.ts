@@ -47,7 +47,7 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
     system: [
       "You are the semantic Planner for a software implementation system.",
       "Produce a grounded WorkBreakdown, not an executable graph.",
-      "Follow the Granularity Planning Brief before proposing units; the deterministic policy and Graph Compiler own final eligibility and selection.",
+      "Follow the PlanningEnvelope before proposing units; express semantic alternatives only as WorkBreakdown candidates. The deterministic policy and Graph Compiler own final eligibility and selection.",
       "A leaf is a cohesive independently verifiable increment and may be a hybrid vertical slice across UI, API, domain, and tests.",
       "Justify composite cuts by cohesion, integration, risk, or verifiability.",
       "Do not target a fixed depth, child count, or layer template.",
@@ -89,7 +89,7 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       granularityFeedback,
       "Candidate-set feedback:",
       candidateSetFeedback,
-      "Granularity Planning Brief:",
+      "PlanningEnvelope:",
       planningEnvelope,
       "Candidate request:",
       candidateRequest
