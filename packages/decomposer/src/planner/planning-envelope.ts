@@ -132,10 +132,10 @@ export function validateCandidatePlanSet(input: CandidatePlanSetInput): Candidat
   const envelope = PlanningEnvelopeSchema.parse(input.envelope);
   const candidates = input.candidates.map((candidate) => CandidatePlanSchema.parse(candidate));
   const diagnostics: CandidatePlanDiagnostic[] = [];
-  if (candidates.length > envelope.candidateBudget.maximum) {
+  if (candidates.length < envelope.candidateBudget.minimum || candidates.length > envelope.candidateBudget.maximum) {
     diagnostics.push({
       code: "candidate_budget_not_met",
-      message: `Candidate set has ${candidates.length} plans but the envelope permits at most ${envelope.candidateBudget.maximum}.`,
+      message: `Candidate set has ${candidates.length} plans but the envelope requires ${envelope.candidateBudget.minimum}..${envelope.candidateBudget.maximum}.`,
       refs: []
     });
   }

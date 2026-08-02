@@ -50,6 +50,7 @@ describe("planning envelope and candidate plans", () => {
 
     expect(validation.validCandidates).toEqual([]);
     expect(validation.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "candidate_budget_not_met" }),
       expect.objectContaining({ code: "global_owner_must_integrate", candidateId: "candidate-invalid-global-owner" })
     ]));
   });
