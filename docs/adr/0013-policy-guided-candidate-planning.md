@@ -73,4 +73,3 @@ La actual captura de fallos de ejecución puede perder el hecho terminal si fall
 la propia escritura de `run.failed`; esa resiliencia de persistencia requiere un
 receipt durable y reconciliación separados. No se debe fabricar un éxito ni un
 terminal no persistido para ocultar ese fallo.
-
