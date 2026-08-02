@@ -35,6 +35,7 @@ export * from "./granularity/policy.js";
 export * from "./granularity/repository-context-profile.js";
 export * from "./granularity/utility-policy.js";
 export * from "./granularity/strategy-selector.js";
+export * from "./granularity/planning-brief.js";
 export * from "./context-compressor.js";
 export * from "./llm/architect-pass.js";
 export * from "./compiler/graph-compiler-v3.js";
@@ -1541,6 +1542,28 @@ export type {
   GraphGenerationErrorKind
 } from "./llm/errors";
 export { executionScopeFromAllowed } from "./scope";
+export {
+  PLANNING_ENVELOPE_SCHEMA_VERSION,
+  PlanningEnvelopeSchema,
+  AcceptanceOwnershipSchema,
+  CandidateSeamSpecificationSchema,
+  CandidatePlanSchema,
+  createPlanningEnvelope,
+  validateCandidatePlanSet,
+  selectCandidatePlan
+} from "./planner/planning-envelope.js";
+export type {
+  PlanningEnvelope,
+  CreatePlanningEnvelopeInput,
+  AcceptanceOwnership,
+  CandidateSeamSpecification,
+  CandidatePlan,
+  CandidatePlanDiagnostic,
+  CandidatePlanSetInput,
+  CandidatePlanSetValidation,
+  CandidatePlanSelection,
+  SelectCandidatePlanInput
+} from "./planner/planning-envelope.js";
 
 // ── Recursive interface-aware decomposer ──────
 export { RecursiveDecomposer } from "./llm/recursive/recursive-decomposer";
