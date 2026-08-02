@@ -421,31 +421,24 @@ describe("WorkBreakdown", () => {
   it("places the policy brief and candidate identity in the model prompt", () => {
     const prompt = buildWorkBreakdownPrompt({
       ...plannerInput(),
-      granularityBrief: {
+      planningEnvelope: {
         schemaVersion: 1,
         policyVersion: "adaptive-utility/test",
-        candidateCount: 3,
-        leafBudget: {
-          maxContextTokens: 24_000,
-          maxScopePaths: 40,
-          maxPlannedPaths: 12
+        repositorySnapshotId: "snapshot-1",
+        goalDigest: `sha256:${"a".repeat(64)}`,
+        candidateBudget: { minimum: 2, maximum: 3 },
+        executionBudget: {
+          maxLeafContextTokens: 24_000,
+          maxLeafScopePaths: 40,
+          maxLeafPlannedPaths: 12,
+          maxParallelism: 4
         },
-        acceptanceOwnership: {
-          leaf: "Reference a local intent only from the leaf that can prove it.",
-          seam: "Reference a seam intent from exactly its producer and consumers.",
-          global: "Reference an integration intent only from its owning composite."
-        },
-        hardGates: [
-          "acceptance_owner",
-          "cross_leaf_materialization",
-          "local_validation",
-          "compiler_approvable"
-        ],
-        repositorySignals: {
-          snapshotId: "snapshot-1",
-          inspectionDisposition: "complete",
-          indexedPathCount: 1,
-          baselineValidationKinds: ["test", "typecheck"]
+        requirements: {
+          requireExplicitAcceptanceOwnership: true,
+          requireCompleteSeamSpecifications: true,
+          requireObservableLeafValidation: true,
+          requireCrossLeafMaterialization: true,
+          requireCompilerApproval: true
         }
       },
       candidateRequest: {
@@ -457,10 +450,13 @@ describe("WorkBreakdown", () => {
 
     expect(prompt.system).toContain("Follow the Granularity Planning Brief before proposing units");
     expect(prompt.user).toContain("Policy adaptive-utility/test");
-    expect(prompt.user).toContain("contextTokens<=24000, scopePaths<=40, plannedPaths<=12");
+    expect(prompt.user).toContain("contextTokens<=24000, scopePaths<=40, plannedPaths<=12, parallelism<=4");
     expect(prompt.user).toContain("Hard gates: acceptance_owner, cross_leaf_materialization, local_validation, compiler_approvable");
     expect(prompt.user).toContain("Candidate 2 of 3");
     expect(prompt.user).toContain("Do not reproduce prior candidate hashes: hash-a");
+    expect(prompt.system).toContain('"acceptanceOwnership"');
+    expect(prompt.system).toContain('"seamSpecifications"');
+    expect(prompt.system).toContain('"delivery": "contract_only|producer_files"');
   });
 
   it("does not mistake streamed planning-node envelopes for complete WorkBreakdown documents", async () => {

@@ -133,6 +133,32 @@ export const WorkQuestionSchema = z.object({
   evidenceIds: z.array(EntityIdSchema).default([])
 }).strict();
 
+export const AcceptanceOwnershipSchema = z.object({
+  intentId: NonEmptyStringSchema,
+  ownerUnitKey: NonEmptyStringSchema,
+  role: z.enum(["local", "seam", "global"]),
+  seamId: NonEmptyStringSchema.optional(),
+  rationale: NonEmptyStringSchema
+}).strict().superRefine((ownership, context) => {
+  if (ownership.role === "seam" && ownership.seamId === undefined) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "seam ownership requires seamId" });
+  }
+  if (ownership.role !== "seam" && ownership.seamId !== undefined) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: `${ownership.role} ownership cannot reference seamId` });
+  }
+});
+
+export type AcceptanceOwnership = z.infer<typeof AcceptanceOwnershipSchema>;
+
+export const CandidateSeamSpecificationSchema = z.object({
+  seamId: NonEmptyStringSchema,
+  delivery: z.enum(["contract_only", "producer_files"]),
+  compatibility: NonEmptyStringSchema,
+  validation: NonEmptyStringSchema
+}).strict();
+
+export type CandidateSeamSpecification = z.infer<typeof CandidateSeamSpecificationSchema>;
+
 export const WorkBreakdownSchema = z.object({
   schemaVersion: z.literal(2),
   breakdownId: EntityIdSchema,
@@ -142,6 +168,8 @@ export const WorkBreakdownSchema = z.object({
   root: WorkUnitSchema,
   candidateArtifacts: z.array(CandidateArtifactSchema).default([]),
   candidateSeams: z.array(CandidateSeamSchema).default([]),
+  acceptanceOwnership: z.array(AcceptanceOwnershipSchema).optional(),
+  seamSpecifications: z.array(CandidateSeamSpecificationSchema).optional(),
   repositoryEvidence: z.array(RepositoryEvidenceSchema).default([]),
   uncertainties: z.array(WorkUncertaintySchema).default([]),
   questions: z.array(WorkQuestionSchema).default([])

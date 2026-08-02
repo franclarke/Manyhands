@@ -2,9 +2,9 @@ import { createHash } from "node:crypto";
 import { NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { parseJsonObjectCandidates } from "../llm/recursive/json.js";
-import type { GranularityPlanningBrief } from "../granularity/planning-brief.js";
 import { WorkBreakdownSchema, type WorkBreakdown } from "./schema.js";
 import { buildWorkBreakdownPrompt } from "./prompt.js";
+import type { PlanningEnvelope } from "./planning-envelope.js";
 
 export interface PlannerRepositoryEvidence {
   id: string;
@@ -24,7 +24,7 @@ export interface WorkBreakdownPlannerInput {
     evidence: PlannerRepositoryEvidence[];
   };
   questionAnswers?: Record<string, string>;
-  granularityBrief?: GranularityPlanningBrief;
+  planningEnvelope?: PlanningEnvelope;
   candidateRequest?: GranularityCandidateRequest;
   /** Deterministic C feedback requesting a better semantic alternative. */
   granularityFeedback?: GranularityReplanFeedback;

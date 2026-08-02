@@ -19,14 +19,13 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
         `- reason: ${input.granularityFeedback.reason}`,
         ...input.granularityFeedback.evidence.map((item) => `- evidence: ${item}`)
       ].join("\n");
-  const granularityBrief = input.granularityBrief === undefined
+  const planningEnvelope = input.planningEnvelope === undefined
     ? "- none"
     : [
-        `Policy ${input.granularityBrief.policyVersion} requests ${input.granularityBrief.candidateCount} semantic candidates.`,
-        `Leaf budgets: contextTokens<=${input.granularityBrief.leafBudget.maxContextTokens}, scopePaths<=${input.granularityBrief.leafBudget.maxScopePaths}, plannedPaths<=${input.granularityBrief.leafBudget.maxPlannedPaths}.`,
-        `Acceptance ownership: leaf=${input.granularityBrief.acceptanceOwnership.leaf} seam=${input.granularityBrief.acceptanceOwnership.seam} global=${input.granularityBrief.acceptanceOwnership.global}`,
-        `Hard gates: ${input.granularityBrief.hardGates.join(", ")}.`,
-        `Repository signals: disposition=${input.granularityBrief.repositorySignals.inspectionDisposition}, indexedPaths=${input.granularityBrief.repositorySignals.indexedPathCount}, baselineValidation=${input.granularityBrief.repositorySignals.baselineValidationKinds.join(",") || "none"}.`
+        `Policy ${input.planningEnvelope.policyVersion} requests ${input.planningEnvelope.candidateBudget.minimum}-${input.planningEnvelope.candidateBudget.maximum} semantic candidates.`,
+        `Leaf budgets: contextTokens<=${input.planningEnvelope.executionBudget.maxLeafContextTokens}, scopePaths<=${input.planningEnvelope.executionBudget.maxLeafScopePaths}, plannedPaths<=${input.planningEnvelope.executionBudget.maxLeafPlannedPaths}, parallelism<=${input.planningEnvelope.executionBudget.maxParallelism}.`,
+        "Acceptance ownership: local intents belong to one proving leaf; seam intents name the seam and its integration owner; global intents remain only on their integration composite.",
+        "Hard gates: acceptance_owner, cross_leaf_materialization, local_validation, compiler_approvable."
       ].join("\n");
   const candidateRequest = input.candidateRequest === undefined
     ? "- single candidate"
@@ -59,6 +58,8 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       "When a leaf declares tests and an expected outcome says tests or test coverage, it must cite an exact existing test path or declare the new test file in plannedPaths; a source file is not test evidence.",
       "If an outcome adds or changes a package script, dependency, build, test, typecheck, lint, or workspace command, cite the relevant package manifest path evidence in the implementing unit so that configuration is inside its executable scope.",
       "Acceptance intents are a fidelity boundary. Preserve declared Contract, Protocol, or Schema sections verbatim in an acceptance intent; never flatten nested fields, rename literals, or weaken exact formats and thresholds.",
+      "Assign every acceptance intent exactly once in acceptanceOwnership as local, seam, or global. A global intent stays on its integration composite and must not be copied into leaves. A seam intent names seamId and its integration owner.",
+      "Specify every candidate seam once in seamSpecifications. Use delivery=contract_only only when consumers can implement against the frozen contract; use producer_files when they compile, import, or call producer implementation, and then declare a materialized artifact for every consumer.",
       "For every unit, estimate complexitySignals as 0-10 magnitudes: scopeRadius (breadth of affected files/modules), interfaceImpact (exported contracts or public APIs touched), validationSurface (validation obligations and suites needed), contextTokenMass (code context an agent must hold). Signals are evidence, not decisions: a deterministic policy owns the final leaf/composite boundary and will clamp signals inconsistent with the unit's declared paths.",
       "As soon as you decide each unit, emit one compact JSON line before the final document: {\"type\":\"planning.node\",\"unit\":{\"key\":\"...\",\"parentKey\":null,\"kind\":\"composite|leaf\",\"title\":\"...\",\"objective\":\"...\",\"siblingIndex\":0,\"siblingCount\":1}}.",
       "Emit planning.node lines in parent-first order. Then emit the complete schema-valid WorkBreakdown JSON. Never invent repository evidence.",
@@ -80,7 +81,7 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       "Granularity feedback:",
       granularityFeedback,
       "Granularity Planning Brief:",
-      granularityBrief,
+      planningEnvelope,
       "Candidate request:",
       candidateRequest
     ].join("\n")
@@ -93,6 +94,7 @@ const WORK_BREAKDOWN_OUTPUT_SHAPE = `{
   "objective": "observable outcome",
   "repositorySnapshotId": "the supplied snapshot id",
   "acceptanceIntents": [{ "id": "intent-id", "description": "...", "required": true }],
+  "acceptanceOwnership": [{ "intentId": "intent-id", "ownerUnitKey": "leaf-or-composite-key", "role": "local|seam|global", "seamId": "required-only-for-seam-role", "rationale": "..." }],
   "root": {
     "key": "semantic-unit-key", "kind": "composite", "title": "...", "objective": "...",
     "concerns": ["cohesive concern"], "expectedOutcomes": ["..."], "acceptanceIntentIds": ["intent-id"], "evidenceIds": ["repository-evidence-id"], "plannedPaths": ["src/new-file.ts"],
@@ -104,6 +106,7 @@ const WORK_BREAKDOWN_OUTPUT_SHAPE = `{
   },
   "candidateArtifacts": [{ "id": "...", "artifactType": "...", "producerUnitKey": "...", "consumerUnitKeys": ["..."], "purpose": "...", "materializationHint": "logical|files|manifest|commit", "evidenceIds": ["..."] }],
   "candidateSeams": [{ "id": "...", "kind": "api|type|event|data|ui|command", "specification": "...", "producerUnitKey": "...", "consumerUnitKeys": ["..."], "evidenceIds": ["..."] }],
+  "seamSpecifications": [{ "seamId": "...", "delivery": "contract_only|producer_files", "compatibility": "...", "validation": "..." }],
   "repositoryEvidence": [{ "id": "...", "kind": "path|symbol|script|stack|diagnostic", "reference": "...", "observation": "...", "confidence": 0.0 }],
   "uncertainties": [{ "id": "...", "description": "...", "impact": "...", "requiresHumanDecision": true, "evidenceIds": ["..."] }],
   "questions": [{ "id": "...", "question": "...", "reason": "...", "impact": "behavior|architecture|scope|risk|acceptance", "options": ["...", "..."], "evidenceIds": ["..."] }]
