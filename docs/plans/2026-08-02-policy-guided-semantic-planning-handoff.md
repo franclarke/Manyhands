@@ -11,10 +11,36 @@ Continue in the preserved worktree:
 - worktree: `C:\Users\franc\.codex\tmp\manyhands-policy-guided-planning`
 - branch: `codex/policy-guided-planning`
 - current green implementation commit: `5dadc9e`
+- current checkpoint commit: `e55e6d8`
 - original checkout is currently on `codex/system-reliability-redesign`; do not
   switch, reset, clean, delete, or reuse that checkout for this work
 
 The branch is intentionally not integrated into `main` and must not be pushed.
+
+## How the next agent must resume
+
+Use the existing worktree; do not create a second clone and do not run from the
+original checkout:
+
+```powershell
+Set-Location 'C:\Users\franc\.codex\tmp\manyhands-policy-guided-planning'
+git switch codex/policy-guided-planning
+git status --short
+git log --oneline --decorate -8
+Get-Content docs/plans/2026-08-02-policy-guided-semantic-planning-handoff.md
+```
+
+The expected initial status is clean. The branch is deliberately stopped at a
+red TDD checkpoint: first make the test in
+`tests/planning-v2-adaptive.test.ts` pass, then continue in the numbered order
+below. Do not launch a ManyHands run while this handoff is incomplete. Do not
+answer planner clarification questions automatically. Preserve all adverse
+compiler, planner, and run evidence.
+
+Before changing source, read the repository `AGENTS.md` and the applicable
+planning docs. Before each test command after a source change, run
+`pnpm build`. Keep each fix in a small local commit and leave this handoff
+updated if the order or blocker changes.
 
 ## Completed
 
@@ -197,3 +223,48 @@ not push. Do not delete the worktree, pools, journals, clones, or run artifacts.
 Only integrate after every gate is green. Re-inspect the real `main` pointer at
 that time because another task is actively changing the original checkout; do
 not assume `main` or the original working tree is unchanged.
+
+## Required final integration into `main`
+
+Integration is part of completion, not optional cleanup. Only do it after all
+implementation and final verification commands above pass:
+
+1. From the preserved worktree, record the final branch and status:
+
+   ```powershell
+   Set-Location 'C:\Users\franc\.codex\tmp\manyhands-policy-guided-planning'
+   git status --short
+   git log --oneline --decorate -8
+   git diff --check
+   ```
+
+2. Inspect the real checkout. It must be clean before switching it to `main`:
+
+   ```powershell
+   git -C 'C:\Users\franc\Documents\Proyectos\Manyhands' status --short
+   git -C 'C:\Users\franc\Documents\Proyectos\Manyhands' branch --show-current
+   git -C 'C:\Users\franc\Documents\Proyectos\Manyhands' log main -1 --oneline
+   ```
+
+   If it is dirty, or if another agent is actively using that checkout, stop
+   and report the condition. Do not reset, clean, stash globally, or overwrite
+   another agent's changes.
+
+3. Once the checkout is confirmed clean and available, fast-forward `main` to
+   the completed branch without pushing:
+
+   ```powershell
+   git -C 'C:\Users\franc\Documents\Proyectos\Manyhands' switch main
+   git -C 'C:\Users\franc\Documents\Proyectos\Manyhands' merge --ff-only codex/policy-guided-planning
+   git -C 'C:\Users\franc\Documents\Proyectos\Manyhands' status --short
+   git -C 'C:\Users\franc\Documents\Proyectos\Manyhands' log -3 --oneline --decorate
+   ```
+
+   If `--ff-only` refuses because `main` advanced, do not force the merge and
+   do not rebase destructively. Preserve the branch, report the exact diverging
+   commits, and let the user choose the integration strategy.
+
+4. In the final report, include the integrated commit, all verification results,
+   the fact that no push occurred, and any remaining limitation. Do not delete
+   the feature worktree or its artifacts unless the user explicitly requests
+   cleanup.
