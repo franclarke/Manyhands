@@ -19,6 +19,13 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
         `- reason: ${input.granularityFeedback.reason}`,
         ...input.granularityFeedback.evidence.map((item) => `- evidence: ${item}`)
       ].join("\n");
+  const candidateSetFeedback = input.candidateSetFeedback === undefined
+    ? "- none"
+    : [
+        "The previous candidate set was rejected. Address these concrete findings in every new candidate:",
+        ...input.candidateSetFeedback.rejectedCandidateIds.map((id) => `- rejected candidate: ${id}`),
+        ...input.candidateSetFeedback.diagnostics.map((diagnostic) => `- finding: ${diagnostic}`)
+      ].join("\n");
   const planningEnvelope = input.planningEnvelope === undefined
     ? "- none"
     : [
@@ -80,6 +87,8 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       resolvedDecisions || "- none",
       "Granularity feedback:",
       granularityFeedback,
+      "Candidate-set feedback:",
+      candidateSetFeedback,
       "Granularity Planning Brief:",
       planningEnvelope,
       "Candidate request:",

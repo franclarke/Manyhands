@@ -26,6 +26,8 @@ export interface WorkBreakdownPlannerInput {
   questionAnswers?: Record<string, string>;
   planningEnvelope?: PlanningEnvelope;
   candidateRequest?: GranularityCandidateRequest;
+  /** Findings from a rejected candidate set that the next semantic set must address. */
+  candidateSetFeedback?: CandidateSetReplanFeedback;
   /** Deterministic C feedback requesting a better semantic alternative. */
   granularityFeedback?: GranularityReplanFeedback;
 }
@@ -40,6 +42,11 @@ export interface GranularityReplanFeedback {
   unitKey: string;
   reason: "leaf_context_infeasible" | "missing_semantic_cut";
   evidence: string[];
+}
+
+export interface CandidateSetReplanFeedback {
+  rejectedCandidateIds: string[];
+  diagnostics: string[];
 }
 
 export interface WorkBreakdownModelRequest {

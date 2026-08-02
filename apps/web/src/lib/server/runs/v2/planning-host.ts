@@ -1,8 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { CompiledGraphRevision, GranularityStrategyResult, GraphCompilerInput, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
+import type { CandidatePlan, CandidatePlanDiagnostic, CompiledGraphRevision, GranularityStrategyResult, GraphCompilerInput, PlanningEnvelope, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
-import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, canonicalRepositorySnapshotId, candidateBreakdownHash, repositorySnapshotIdsMatch, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
+import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, canonicalRepositorySnapshotId, candidateBreakdownHash, createPlanningEnvelope, repositorySnapshotIdsMatch, resolveGranularityCondition, selectCandidatePlan, selectGranularityStrategy, validateCandidatePlanSet } from "@manyhands/decomposer";
 import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 
@@ -32,9 +32,154 @@ export interface PlanningV2Dependencies {
   snapshots: RunSnapshotStore;
   inspect(input: Pick<PlanningV2Input, "repoPath" | "targetFingerprint" | "baseCommit">): Promise<RepositorySnapshot>;
   plan(input: WorkBreakdownPlannerInput, observer: WorkBreakdownPlanningObserver): Promise<WorkBreakdown>;
+  planCandidates?(input: WorkBreakdownPlannerInput, count: number, observer: WorkBreakdownPlanningObserver): Promise<WorkBreakdown[]>;
   compile(input: GraphCompilerInput): CompiledGraphRevision;
   nodeIdFor?(key: string): string;
   now(): string;
+}
+
+type CandidateSetEvaluation =
+  | { kind: "selected"; candidate: CandidatePlan; strategy: GranularityStrategyResult; compiled: CompiledGraphRevision; diagnostics: CandidatePlanDiagnostic[] }
+  | { kind: "clarification"; breakdown: WorkBreakdown }
+  | { kind: "replan_required"; rejectedCandidateIds: string[]; diagnostics: CandidatePlanDiagnostic[] };
+
+interface CandidateSetEvaluationInput {
+  plannerInput: WorkBreakdownPlannerInput;
+  envelope: PlanningEnvelope;
+  repositorySnapshot: RepositorySnapshot;
+  condition: "A" | "B" | "C";
+  observer: WorkBreakdownPlanningObserver;
+  dependencies: PlanningV2Dependencies;
+  sourceContract: GraphCompilerInput["sourceContract"];
+}
+
+async function evaluateCandidateSet(input: CandidateSetEvaluationInput): Promise<CandidateSetEvaluation> {
+  if (input.dependencies.planCandidates === undefined) throw new Error("Candidate evaluation requires planCandidates.");
+  const generated = await input.dependencies.planCandidates(
+    input.plannerInput,
+    input.envelope.candidateBudget.maximum,
+    input.observer
+  );
+  const candidates = canonicalCandidatePlans(generated, input.repositorySnapshot.snapshotId);
+  const clarification = candidates.find((candidate) => requiresClarification(candidate.breakdown));
+  if (clarification !== undefined) return { kind: "clarification", breakdown: clarification.breakdown };
+
+  const validation = validateCandidatePlanSet({ envelope: input.envelope, candidates });
+  const strategies = new Map<string, GranularityStrategyResult>();
+  const compiled = new Map<string, CompiledGraphRevision>();
+  const compilerResults: Record<string, { approvable: boolean; diagnostics: string[] }> = {};
+  for (const candidate of validation.validCandidates) {
+    let strategy: GranularityStrategyResult;
+    try {
+      strategy = selectGranularityStrategy({
+        condition: input.condition,
+        breakdown: candidate.breakdown,
+        repositorySnapshot: input.repositorySnapshot,
+        config: PILOT_UTILITY_POLICY
+      });
+    } catch (error) {
+      compilerResults[candidate.candidateId] = {
+        approvable: false,
+        diagnostics: [`Granularity strategy rejected candidate: ${errorMessage(error)}`]
+      };
+      continue;
+    }
+    strategies.set(candidate.candidateId, strategy);
+    if (strategy.requiresSemanticReplan) {
+      const assessment = strategy.assessments[candidate.breakdown.root.key];
+      compilerResults[candidate.candidateId] = {
+        approvable: false,
+        diagnostics: [assessment?.rationale ?? "Candidate has no viable semantic frontier."]
+      };
+      continue;
+    }
+    try {
+      const result = input.dependencies.compile({
+        breakdown: strategy.selectedBreakdown,
+        repositorySnapshot: input.repositorySnapshot,
+        ...(input.sourceContract === undefined ? {} : { sourceContract: input.sourceContract })
+      });
+      compiled.set(candidate.candidateId, result);
+      const diagnostics = result.review.findings
+        .filter((finding) => finding.severity === "error")
+        .map((finding) => `${finding.code}: ${finding.message}`);
+      compilerResults[candidate.candidateId] = {
+        approvable: result.review.approvable,
+        diagnostics: diagnostics.length === 0 && !result.review.approvable
+          ? ["Graph Compiler review is not approvable."]
+          : diagnostics
+      };
+    } catch (error) {
+      compilerResults[candidate.candidateId] = {
+        approvable: false,
+        diagnostics: [errorMessage(error)]
+      };
+    }
+  }
+
+  const selection = selectCandidatePlan({
+    envelope: input.envelope,
+    candidates,
+    compilerResults,
+    score: (candidate) => {
+      const strategy = strategies.get(candidate.candidateId);
+      const assessment = strategy?.assessments[candidate.breakdown.root.key];
+      if (assessment === undefined) throw new Error(`Candidate ${candidate.candidateId} has no root utility assessment.`);
+      return assessment.splitAdvantage;
+    }
+  });
+  if (selection.kind === "replan_required") {
+    return {
+      kind: "replan_required",
+      rejectedCandidateIds: selection.diagnosis.rejectedCandidateIds,
+      diagnostics: selection.diagnosis.diagnostics
+    };
+  }
+  const strategy = strategies.get(selection.candidate.candidateId);
+  const compiledGraph = compiled.get(selection.candidate.candidateId);
+  if (strategy === undefined || compiledGraph === undefined) {
+    throw new Error(`Selected candidate ${selection.candidate.candidateId} has no compiled frontier.`);
+  }
+  return {
+    kind: "selected",
+    candidate: selection.candidate,
+    strategy,
+    compiled: compiledGraph,
+    diagnostics: selection.diagnostics
+  };
+}
+
+function canonicalCandidatePlans(breakdowns: readonly WorkBreakdown[], snapshotId: string): CandidatePlan[] {
+  const seenHashes = new Set<string>();
+  const usedIds = new Set<string>();
+  const candidates: CandidatePlan[] = [];
+  for (const original of breakdowns) {
+    const breakdown = canonicalizeRepositorySnapshotReference(original, snapshotId);
+    const hash = candidateBreakdownHash(breakdown);
+    if (seenHashes.has(hash)) continue;
+    seenHashes.add(hash);
+    const baseId = breakdown.breakdownId;
+    const candidateId = usedIds.has(baseId) ? `${baseId}-${hash.slice(-12)}` : baseId;
+    usedIds.add(candidateId);
+    candidates.push({ candidateId, breakdown });
+  }
+  return candidates;
+}
+
+function candidateSetFeedback(evaluation: Extract<CandidateSetEvaluation, { kind: "replan_required" }>): {
+  rejectedCandidateIds: string[];
+  diagnostics: string[];
+} {
+  return {
+    rejectedCandidateIds: [...evaluation.rejectedCandidateIds],
+    diagnostics: evaluation.diagnostics.map((diagnostic) =>
+      `${diagnostic.candidateId ?? "candidate-set"} [${diagnostic.code}]: ${diagnostic.message}`
+    )
+  };
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 export async function runPlanningV2(input: PlanningV2Input, dependencies: PlanningV2Dependencies): Promise<RunProjection> {
@@ -94,6 +239,15 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
         }])];
       }
     });
+    const planningEnvelope = createPlanningEnvelope({
+      policyVersion: PILOT_UTILITY_POLICY.policyVersion,
+      goal: input.goal,
+      repositorySnapshot,
+      maxCandidatePlans: 3,
+      maxLeafContextTokens: PILOT_UTILITY_POLICY.maxLeafContextTokens,
+      maxLeafScopePaths: PILOT_UTILITY_POLICY.maxLeafScopePaths,
+      maxLeafPlannedPaths: PILOT_UTILITY_POLICY.maxLeafPlannedPaths
+    });
     const plannerInput: WorkBreakdownPlannerInput = {
       goal: input.goal,
       acceptanceCriteria: input.acceptanceCriteria ?? [],
@@ -103,36 +257,60 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
         inspectionDisposition: repositorySnapshot.inspectionDisposition,
         evidence: repositoryEvidence(repositorySnapshot)
       },
+      planningEnvelope,
       ...(input.questionAnswers !== undefined ? { questionAnswers: input.questionAnswers } : {})
     };
-    let breakdown = input.experimentalCandidate === undefined
-      ? await dependencies.plan(plannerInput, planningObserverFor(latestPlanningAttempt(events)))
-      : validateExperimentalCandidate(input, repositorySnapshot);
-    breakdown = canonicalizeRepositorySnapshotReference(breakdown, repositorySnapshot.snapshotId);
-    if (requiresClarification(breakdown)) {
-      const drafts = clarificationEvents(breakdown, nodeIdFor, dependencies.now, events.length);
-      events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
-      state = foldRun(events);
-      await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
-      return state;
-    }
-    // The productive path uses policy C; the semantic planner selects a
-    // frontier before the Graph Compiler materializes it.
-    // The planner tree remains the single canonical model.
     const condition = resolveGranularityCondition(input.granularityCondition);
-    let strategy = selectGranularityStrategy({ condition, breakdown, repositorySnapshot, config: PILOT_UTILITY_POLICY });
-    if (strategy.requiresSemanticReplan) {
-      if (input.experimentalCandidate !== undefined) throw new Error("The blocked candidate requires semantic replan and cannot be changed during experimental replay.");
-      const rootAssessment = strategy.assessments[breakdown.root.key];
-      if (rootAssessment === undefined) throw new Error("C requested semantic replan without a root assessment.");
-      breakdown = await dependencies.plan({
-        ...plannerInput,
-        granularityFeedback: {
-          unitKey: rootAssessment.unitKey,
-          reason: rootAssessment.leafFeasible ? "missing_semantic_cut" : "leaf_context_infeasible",
-          evidence: [rootAssessment.rationale, ...rootAssessment.evidenceRefs]
+    let breakdown: WorkBreakdown;
+    let strategy: GranularityStrategyResult;
+    let compiled: CompiledGraphRevision;
+    if (input.experimentalCandidate === undefined && dependencies.planCandidates !== undefined) {
+      let evaluation = await evaluateCandidateSet({
+        plannerInput,
+        envelope: planningEnvelope,
+        repositorySnapshot,
+        condition,
+        observer: planningObserverFor(latestPlanningAttempt(events)),
+        dependencies,
+        sourceContract: {
+          goal: input.goal,
+          acceptanceCriteria: input.acceptanceCriteria ?? [],
+          constraints: input.constraints ?? []
         }
-      }, planningObserverFor(latestPlanningAttempt(events)));
+      });
+      if (evaluation.kind === "replan_required") {
+        evaluation = await evaluateCandidateSet({
+          plannerInput: { ...plannerInput, candidateSetFeedback: candidateSetFeedback(evaluation) },
+          envelope: planningEnvelope,
+          repositorySnapshot,
+          condition,
+          observer: planningObserverFor(latestPlanningAttempt(events)),
+          dependencies,
+          sourceContract: {
+            goal: input.goal,
+            acceptanceCriteria: input.acceptanceCriteria ?? [],
+            constraints: input.constraints ?? []
+          }
+        });
+      }
+      if (evaluation.kind === "clarification") {
+        const drafts = clarificationEvents(evaluation.breakdown, nodeIdFor, dependencies.now, events.length);
+        events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
+        state = foldRun(events);
+        await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
+        return state;
+      }
+      if (evaluation.kind === "replan_required") {
+        const feedback = candidateSetFeedback(evaluation);
+        throw new Error(`No candidate survived the bounded semantic candidate replan. Rejected candidates: ${feedback.rejectedCandidateIds.join(", ") || "none"}. Findings: ${feedback.diagnostics.join(" | ") || "none"}.`);
+      }
+      breakdown = evaluation.candidate.breakdown;
+      strategy = evaluation.strategy;
+      compiled = evaluation.compiled;
+    } else {
+      breakdown = input.experimentalCandidate === undefined
+        ? await dependencies.plan(plannerInput, planningObserverFor(latestPlanningAttempt(events)))
+        : validateExperimentalCandidate(input, repositorySnapshot);
       breakdown = canonicalizeRepositorySnapshotReference(breakdown, repositorySnapshot.snapshotId);
       if (requiresClarification(breakdown)) {
         const drafts = clarificationEvents(breakdown, nodeIdFor, dependencies.now, events.length);
@@ -141,8 +319,42 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
         await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
         return state;
       }
+      // The productive path uses policy C; the semantic planner selects a
+      // frontier before the Graph Compiler materializes it.
+      // The planner tree remains the single canonical model.
       strategy = selectGranularityStrategy({ condition, breakdown, repositorySnapshot, config: PILOT_UTILITY_POLICY });
-      if (strategy.requiresSemanticReplan) throw new Error("C could not obtain a viable semantic cut after one bounded replan.");
+      if (strategy.requiresSemanticReplan) {
+        if (input.experimentalCandidate !== undefined) throw new Error("The blocked candidate requires semantic replan and cannot be changed during experimental replay.");
+        const rootAssessment = strategy.assessments[breakdown.root.key];
+        if (rootAssessment === undefined) throw new Error("C requested semantic replan without a root assessment.");
+        breakdown = await dependencies.plan({
+          ...plannerInput,
+          granularityFeedback: {
+            unitKey: rootAssessment.unitKey,
+            reason: rootAssessment.leafFeasible ? "missing_semantic_cut" : "leaf_context_infeasible",
+            evidence: [rootAssessment.rationale, ...rootAssessment.evidenceRefs]
+          }
+        }, planningObserverFor(latestPlanningAttempt(events)));
+        breakdown = canonicalizeRepositorySnapshotReference(breakdown, repositorySnapshot.snapshotId);
+        if (requiresClarification(breakdown)) {
+          const drafts = clarificationEvents(breakdown, nodeIdFor, dependencies.now, events.length);
+          events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
+          state = foldRun(events);
+          await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
+          return state;
+        }
+        strategy = selectGranularityStrategy({ condition, breakdown, repositorySnapshot, config: PILOT_UTILITY_POLICY });
+        if (strategy.requiresSemanticReplan) throw new Error("C could not obtain a viable semantic cut after one bounded replan.");
+      }
+      compiled = dependencies.compile({
+        breakdown: strategy.selectedBreakdown,
+        repositorySnapshot,
+        sourceContract: {
+          goal: input.goal,
+          acceptanceCriteria: input.acceptanceCriteria ?? [],
+          constraints: input.constraints ?? []
+        }
+      });
     }
     const strategyEvent = strategySelectedEvent(
       input.runId,
@@ -153,15 +365,6 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       input.experimentalCandidate?.sourceHash
     );
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [strategyEvent])];
-    const compiled = dependencies.compile({
-      breakdown: strategy.selectedBreakdown,
-      repositorySnapshot,
-      sourceContract: {
-        goal: input.goal,
-        acceptanceCriteria: input.acceptanceCriteria ?? [],
-        constraints: input.constraints ?? []
-      }
-    });
     const drafts = strategySuccessEvents(input.runId, strategy, compiled, dependencies.now);
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
     state = foldRun(events);

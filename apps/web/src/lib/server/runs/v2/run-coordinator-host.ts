@@ -102,6 +102,7 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
         snapshots,
         inspect: (input) => buildFastRepositorySnapshot({ rootPath: input.repoPath, targetFingerprint: input.targetFingerprint, baseCommit: input.baseCommit }),
         plan: (input, observer) => planner.plan(input, observer),
+        planCandidates: (input, count, observer) => planner.planCandidates(input, count, observer),
         compile: (input) => compileGraphRevision(input, { idFor: stableId, now: () => new Date().toISOString() }),
         nodeIdFor: (key) => stableId("node", key),
         now: () => new Date().toISOString()
