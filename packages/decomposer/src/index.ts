@@ -1557,6 +1557,7 @@ export {
   createCandidatePlanFromDraft,
   createPlanningEnvelope,
   validateCandidatePlanSet,
+  validateCandidatePlan,
   validatePlannerCandidateSet,
   selectPlannerCandidate,
   selectCandidatePlan

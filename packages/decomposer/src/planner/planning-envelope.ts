@@ -225,6 +225,10 @@ export interface CandidatePlanSetInput {
   candidates: CandidatePlan[];
 }
 
+export function validateCandidatePlan(input: { envelope: PlanningEnvelope; candidate: CandidatePlan }): CandidatePlanDiagnostic[] {
+  return sortDiagnostics(validateCandidate(PlanningEnvelopeSchema.parse(input.envelope), CandidatePlanSchema.parse(input.candidate)));
+}
+
 export interface PlannerCandidateSetInput {
   envelope: PlanningEnvelope;
   candidates: readonly unknown[];

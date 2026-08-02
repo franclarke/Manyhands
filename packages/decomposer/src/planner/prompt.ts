@@ -123,7 +123,7 @@ const WORK_BREAKDOWN_OUTPUT_SHAPE = `{
 
 const CANDIDATE_PLAN_DRAFT_OUTPUT_SHAPE = `{
   "candidateId": "stable semantic candidate id",
-  "breakdown": "the complete WorkBreakdown object described below",
+  "breakdown": { "schemaVersion": 2, "...": "the complete WorkBreakdown object described below" },
   "scopes": [{ "unitKey": "leaf-key", "paths": ["grounded/or/planned/path"] }],
   "acceptanceCriteria": [{ "intentId": "intent-id", "kind": "leafAcceptance|seamAcceptance|globalAcceptance", "description": "observable criterion" }],
   "acceptanceOwnership": [{ "intentId": "intent-id", "ownerUnitKey": "unit-key", "role": "local|seam|global", "rationale": "why this unit proves it" }],

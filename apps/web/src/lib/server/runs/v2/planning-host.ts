@@ -141,6 +141,7 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
     const condition = resolveGranularityCondition(input.granularityCondition);
     let breakdown: WorkBreakdown;
     let strategy: GranularityStrategyResult;
+    let selectedCandidate: CandidatePlan | undefined;
     if (input.experimentalCandidate !== undefined) {
       breakdown = validateExperimentalCandidate(input, repositorySnapshot);
       strategy = selectGranularityStrategy({ condition, breakdown, repositorySnapshot, config: PILOT_UTILITY_POLICY });
@@ -164,6 +165,7 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
         return state;
       }
       breakdown = evaluation.selection.candidate.breakdown;
+      selectedCandidate = evaluation.selection.candidate;
       strategy = evaluation.strategies.get(evaluation.selection.candidate.candidateId)!;
       if (strategy.requiresSemanticReplan) {
         state = foldRun(events);
@@ -191,6 +193,10 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
     const compiled = dependencies.compile({
       breakdown: strategy.selectedBreakdown,
       repositorySnapshot,
+      ...(input.experimentalCandidate === undefined ? {
+        planningEnvelope: envelope,
+        candidatePlan: selectedCandidate!
+      } : {}),
       sourceContract: {
         goal: input.goal,
         acceptanceCriteria: input.acceptanceCriteria ?? [],
@@ -302,7 +308,8 @@ function evaluatePlannerCandidates(input: {
     strategies.set(candidate.candidateId, strategy);
     const root = strategy.assessments[candidate.breakdown.root.key];
     if (root === undefined) throw new Error(`Candidate ${candidate.candidateId} has no root policy assessment.`);
-    scores.set(candidate.candidateId, root.splitAdvantage);
+    scores.set(candidate.candidateId, root.selected === "leaf" ? -root.splitAdvantage : root.splitAdvantage);
+    strategy.selectedBreakdown = candidate.breakdown;
   }
   const viable = validation.validCandidates.filter((candidate) => !strategies.get(candidate.candidateId)!.requiresSemanticReplan);
   const selection = viable.length < input.envelope.candidateBudget.minimum

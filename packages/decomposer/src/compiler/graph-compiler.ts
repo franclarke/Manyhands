@@ -10,6 +10,7 @@ import {
 } from "@manyhands/task-graph";
 import { assertPlanReview, reviewCompiledPlan, type PlanReview } from "../critics/review.js";
 import { WorkBreakdownSchema, type WorkBreakdown, type WorkUnit } from "../planner/schema.js";
+import { CandidatePlanSchema, PlanningEnvelopeSchema, validateCandidatePlan, type CandidatePlan, type PlanningEnvelope } from "../planner/planning-envelope.js";
 import { compileContractBundles } from "./contract-compiler.js";
 import { repositorySnapshotIdsMatch } from "../planner/repository-snapshot-id.js";
 
@@ -17,6 +18,8 @@ export interface GraphCompilerInput {
   breakdown: WorkBreakdown;
   repositorySnapshot: RepositorySnapshot;
   sourceContract?: SourceContract;
+  planningEnvelope?: PlanningEnvelope;
+  candidatePlan?: CandidatePlan;
 }
 
 export interface GraphCompilerDependencies {
@@ -46,6 +49,20 @@ export function compileGraphRevision(
   dependencies: GraphCompilerDependencies
 ): CompiledGraphRevision {
   const breakdown = WorkBreakdownSchema.parse(rawInput.breakdown);
+  const hasEnvelope = rawInput.planningEnvelope !== undefined;
+  const hasCandidate = rawInput.candidatePlan !== undefined;
+  if (hasEnvelope !== hasCandidate) throw new Error("Graph compilation requires planningEnvelope and candidatePlan together.");
+  if (hasEnvelope && hasCandidate) {
+    const planningEnvelope = PlanningEnvelopeSchema.parse(rawInput.planningEnvelope);
+    const candidatePlan = CandidatePlanSchema.parse(rawInput.candidatePlan);
+    const diagnostics = validateCandidatePlan({ envelope: planningEnvelope, candidate: candidatePlan });
+    if (diagnostics.length > 0) {
+      throw new Error(`Selected CandidatePlan failed compiler validation: ${diagnostics.map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`).join("; ")}`);
+    }
+    if (JSON.stringify(candidatePlan.breakdown) !== JSON.stringify(breakdown)) {
+      throw new Error("Graph Compiler received a breakdown that differs from the selected immutable CandidatePlan.");
+    }
+  }
   RepositorySnapshotSchema.parse(rawInput.repositorySnapshot);
   const repositorySnapshot = rawInput.repositorySnapshot;
   if (!repositorySnapshotIdsMatch(breakdown.repositorySnapshotId, repositorySnapshot.snapshotId)) {
@@ -62,6 +79,7 @@ export function compileGraphRevision(
     breakdown,
     repositorySnapshot,
     nodeIdByUnitKey,
+    ...(rawInput.candidatePlan === undefined ? {} : { candidatePlan: rawInput.candidatePlan }),
     ...(rawInput.sourceContract === undefined ? {} : { sourceContract: rawInput.sourceContract })
   }, dependencies);
   const trace: CompilationRelationTrace[] = [];
