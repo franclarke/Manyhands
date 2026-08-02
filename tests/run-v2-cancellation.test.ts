@@ -96,5 +96,8 @@ describe("V2 cancellation", () => {
       ...current,
       projection: { ...current.projection, lifecycle: "result_ready" }
     }))).rejects.toBeInstanceOf(RunMutationConflictError);
-  }, 30_000);
+  // This test uses real git and process-tree verification. Under the full
+  // repository suite, worker contention can delay those OS operations beyond
+  // the old 30-second harness limit without changing the cancellation result.
+  }, 60_000);
 });

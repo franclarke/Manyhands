@@ -204,7 +204,11 @@ export class FakeGitRunner implements GitRunner {
 
   async diffRange(params: { cwd: string; from: string; to: string }): Promise<string> {
     this.record("diffRange", { ...params });
-    return this.config.diffRange ?? "";
+    // Most legacy fixtures describe one successful patch through diffCached.
+    // The integration handoff now verifies the physical base-to-head diff as
+    // well; preserve that patch by default while allowing explicit divergence
+    // tests to provide diffRange.
+    return this.config.diffRange ?? this.config.diffCached ?? "";
   }
 
   async diffRangeNameOnly(params: { cwd: string; from: string; to: string }): Promise<string[]> {
