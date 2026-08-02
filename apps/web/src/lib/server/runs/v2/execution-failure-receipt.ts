@@ -11,6 +11,7 @@ const ExecutionFailureReceiptSchema = z.object({
   operationId: z.string().min(1),
   fencingToken: z.number().int().nonnegative(),
   failedAt: z.string().datetime(),
+  area: z.enum(["planning", "execution"]),
   reason: z.string().min(1),
   status: z.enum(["pending", "reconciled"]),
   recordingFailure: z.string().min(1).optional(),
@@ -52,6 +53,7 @@ export class ExecutionFailureReceiptStore {
     runId: string;
     operationId: string;
     fencingToken: number;
+    area: ExecutionFailureReceipt["area"];
     error: unknown;
   }): Promise<ExecutionFailureReceipt> {
     const receiptId = createHash("sha256")
@@ -64,6 +66,7 @@ export class ExecutionFailureReceiptStore {
       operationId: input.operationId,
       fencingToken: input.fencingToken,
       failedAt: this.clock(),
+      area: input.area,
       reason: messageOf(input.error),
       status: "pending"
     });
@@ -71,7 +74,7 @@ export class ExecutionFailureReceiptStore {
     return receipt;
   }
 
-  async listPending(runId: string): Promise<ExecutionFailureReceipt[]> {
+  async listPending(runId: string, area?: ExecutionFailureReceipt["area"]): Promise<ExecutionFailureReceipt[]> {
     const files = await readdir(this.directory, { withFileTypes: true }).catch((error: unknown) => {
       if (isNotFound(error)) return [];
       throw error;
@@ -80,7 +83,7 @@ export class ExecutionFailureReceiptStore {
       .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
       .map(async (entry) => ExecutionFailureReceiptSchema.parse(JSON.parse(await readFile(path.join(this.directory, entry.name), "utf8")))));
     return receipts
-      .filter((receipt) => receipt.runId === runId && receipt.status === "pending")
+      .filter((receipt) => receipt.runId === runId && receipt.status === "pending" && (area === undefined || receipt.area === area))
       .sort((left, right) => left.failedAt.localeCompare(right.failedAt) || left.receiptId.localeCompare(right.receiptId));
   }
 
@@ -113,6 +116,18 @@ export async function persistExecutionFailure(input: {
   error: unknown;
   recordTerminalFailure: TerminalFailureRecorder;
 }): Promise<ExecutionFailureReceipt> {
+  return persistRunFailure({ ...input, area: "execution" });
+}
+
+export async function persistRunFailure(input: {
+  store: ExecutionFailureReceiptStore;
+  area: ExecutionFailureReceipt["area"];
+  runId: string;
+  operationId: string;
+  fencingToken: number;
+  error: unknown;
+  recordTerminalFailure: TerminalFailureRecorder;
+}): Promise<ExecutionFailureReceipt> {
   const receipt = await input.store.create(input);
   try {
     await input.recordTerminalFailure(receipt);
@@ -129,7 +144,16 @@ export async function reconcilePendingExecutionFailures(input: {
   runId: string;
   recordTerminalFailure: TerminalFailureRecorder;
 }): Promise<{ reconciledReceiptIds: string[] }> {
-  const pending = await input.store.listPending(input.runId);
+  return reconcilePendingRunFailures({ ...input, area: "execution" });
+}
+
+export async function reconcilePendingRunFailures(input: {
+  store: ExecutionFailureReceiptStore;
+  area: ExecutionFailureReceipt["area"];
+  runId: string;
+  recordTerminalFailure: TerminalFailureRecorder;
+}): Promise<{ reconciledReceiptIds: string[] }> {
+  const pending = await input.store.listPending(input.runId, input.area);
   const reconciledReceiptIds: string[] = [];
   for (const receipt of pending) {
     try {

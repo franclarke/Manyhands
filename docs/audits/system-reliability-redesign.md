@@ -163,6 +163,11 @@ pendiente con la causa original. Un lease posterior lo reconcilia de modo
 idempotente antes de ejecutar. Si incluso el receipt no puede persistirse, el
 caller recibe ambos errores agregados y el run nunca se declara exitoso.
 
+La misma infraestructura ahora cubre `planning.failed`: un fallo al registrar
+el cierre de planning conserva un receipt separado por área y se reconcilia
+antes de intentar un nuevo planning. El primer error no se reemplaza por un
+estado de éxito ni por un reintento semántico.
+
 ## Arquitectura objetivo y decisiones
 
 ```text

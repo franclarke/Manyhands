@@ -6,6 +6,7 @@ import {
   ExecutionFailureReceiptPersistenceError,
   ExecutionFailureReceiptStore,
   persistExecutionFailure,
+  persistRunFailure,
   reconcilePendingExecutionFailures
 } from "@/lib/server/runs/v2/execution-failure-receipt";
 
@@ -64,6 +65,30 @@ describe("execution failure receipts", () => {
     await expect(reconcilePendingExecutionFailures({ store, runId: "run-reconcile-failure", recordTerminalFailure }))
       .resolves.toEqual({ reconciledReceiptIds: [] });
     expect(recordTerminalFailure).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps planning failure receipts separate from execution reconciliation", async () => {
+    const directory = await temporaryDirectory();
+    const store = new ExecutionFailureReceiptStore({ directory, clock: () => "2026-08-02T00:00:00.000Z" });
+
+    await expect(persistRunFailure({
+      store,
+      area: "planning",
+      runId: "run-planning-failed",
+      operationId: "planning-operation-1",
+      fencingToken: 5,
+      error: new Error("planner unavailable"),
+      recordTerminalFailure: async () => { throw new Error("event store unavailable"); }
+    })).rejects.toBeInstanceOf(ExecutionFailureReceiptPersistenceError);
+
+    await expect(store.listPending("run-planning-failed")).resolves.toEqual([
+      expect.objectContaining({ area: "planning", reason: "planner unavailable", status: "pending" })
+    ]);
+    await expect(reconcilePendingExecutionFailures({
+      store,
+      runId: "run-planning-failed",
+      recordTerminalFailure: async () => undefined
+    })).resolves.toEqual({ reconciledReceiptIds: [] });
   });
 });
 

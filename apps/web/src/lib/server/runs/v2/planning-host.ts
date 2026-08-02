@@ -5,6 +5,11 @@ import type { RepositorySnapshot } from "@manyhands/repository-index";
 import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, buildGranularityPlanningBrief, canonicalRepositorySnapshotId, candidateBreakdownHash, createPlanningEnvelope, repositorySnapshotIdsMatch, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
 import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
+import {
+  ExecutionFailureReceiptStore,
+  persistRunFailure,
+  reconcilePendingRunFailures
+} from "./execution-failure-receipt";
 
 export interface PlanningV2Input {
   runId: string;
@@ -47,6 +52,16 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
   }
   let state = foldRun(events);
   if (state.lifecycle !== "planning") return state;
+  let reconciledState: RunProjection | undefined;
+  const reconciliation = await reconcilePendingRunFailures({
+    store: new ExecutionFailureReceiptStore({ directory: dependencies.events.directory }),
+    area: "planning",
+    runId: input.runId,
+    recordTerminalFailure: async (receipt) => {
+      reconciledState = await recordPlanningFailure(input, dependencies, receipt.reason);
+    }
+  });
+  if (reconciliation.reconciledReceiptIds.length > 0) return reconciledState!;
   if (Object.values(state.decisions).some((decision) => decision.kind === "clarify_goal" && decision.status === "pending")) {
     return state;
   }
@@ -187,13 +202,26 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
     return state;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    const failed = await append(dependencies, input.runId, input.authority, events.length, [{
-      eventId: `planning:${input.runId}:failed:${events.length + 1}`, occurredAt: dependencies.now(), type: "planning.failed", payload: { reason }
-    }]);
-    events = [...events, ...failed];
-    state = foldRun(events);
-    await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
-    return state;
+    let recordedState: RunProjection | undefined;
+    try {
+      await persistRunFailure({
+        store: new ExecutionFailureReceiptStore({ directory: dependencies.events.directory }),
+        area: "planning",
+        runId: input.runId,
+        operationId: input.authority.operationId,
+        fencingToken: input.authority.fencingToken,
+        error,
+        recordTerminalFailure: async (receipt) => {
+          recordedState = await recordPlanningFailure(input, dependencies, receipt.reason);
+        }
+      });
+    } catch (receiptFailure) {
+      throw new AggregateError(
+        [error, receiptFailure],
+        "Planning failed and its terminal state could not be fully persisted."
+      );
+    }
+    return recordedState!;
   }
 }
 
@@ -460,6 +488,26 @@ function approvalDecisionId(graphId: string, revision: number): string { return 
 
 async function append(dependencies: PlanningV2Dependencies, runId: string, authority: FencingAuthority, expected: number, events: RunEventInput[]) {
   return dependencies.events.appendFenced(runId, expected, authority, events);
+}
+
+async function recordPlanningFailure(
+  input: Pick<PlanningV2Input, "runId" | "authority">,
+  dependencies: PlanningV2Dependencies,
+  reason: string
+): Promise<RunProjection> {
+  const current = await dependencies.events.load(input.runId);
+  const alreadyRecorded = current.some((event) => event.type === "planning.failed");
+  const persisted = alreadyRecorded
+    ? current
+    : [...current, ...await append(dependencies, input.runId, input.authority, current.length, [{
+      eventId: `planning:${input.runId}:failed:${current.length + 1}`,
+      occurredAt: dependencies.now(),
+      type: "planning.failed",
+      payload: { reason }
+    }])];
+  const state = foldRun(persisted);
+  await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, persisted.at(-1)!.eventId);
+  return state;
 }
 
 function repositoryEvidence(snapshot: RepositorySnapshot) {
