@@ -155,7 +155,9 @@ export class WorkBreakdownPlanner {
         const outputs = normalizeModelOutputs(await this.model.generate({ ...prompt, attempt, repairIssues, onProgress: reportUnit }));
         const failures: string[] = [];
         for (const output of outputs) {
-          const parsed = WorkBreakdownSchema.safeParse(output);
+          const parsed = WorkBreakdownSchema.safeParse(
+            restoreCanonicalEvidenceDefinitions(output, input.repositorySnapshot.evidence)
+          );
           if (parsed.success) {
             const groundingIssues = planningIssues(parsed.data, input);
             if (groundingIssues.length > 0) {
@@ -200,6 +202,50 @@ export class WorkBreakdownPlanner {
 
 function planningIssues(breakdown: WorkBreakdown, input: WorkBreakdownPlannerInput): string[] {
   return [...commandSurfaceIssues(breakdown, input), ...contractFidelityIssues(breakdown, input.goal)];
+}
+
+function restoreCanonicalEvidenceDefinitions(
+  output: unknown,
+  canonicalEvidence: readonly PlannerRepositoryEvidence[]
+): unknown {
+  if (!isRecord(output) || !Array.isArray(output.repositoryEvidence)) return output;
+
+  const declaredIds = new Set(
+    output.repositoryEvidence
+      .filter(isRecord)
+      .map((item) => item.id)
+      .filter((id): id is string => typeof id === "string")
+  );
+  const referencedIds = new Set<string>();
+  collectEvidenceIds(output, referencedIds);
+  const canonicalById = new Map(canonicalEvidence.map((item) => [item.id, item]));
+  const additions = [...referencedIds]
+    .filter((id) => !declaredIds.has(id))
+    .map((id) => canonicalById.get(id))
+    .filter((item): item is PlannerRepositoryEvidence => item !== undefined);
+
+  return additions.length === 0
+    ? output
+    : { ...output, repositoryEvidence: [...output.repositoryEvidence, ...additions] };
+}
+
+function collectEvidenceIds(value: unknown, output: Set<string>): void {
+  if (Array.isArray(value)) {
+    for (const item of value) collectEvidenceIds(item, output);
+    return;
+  }
+  if (!isRecord(value)) return;
+  for (const [key, child] of Object.entries(value)) {
+    if (key === "evidenceIds" && Array.isArray(child)) {
+      for (const id of child) if (typeof id === "string") output.add(id);
+      continue;
+    }
+    collectEvidenceIds(child, output);
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function contractFidelityIssues(breakdown: WorkBreakdown, goal: string): string[] {

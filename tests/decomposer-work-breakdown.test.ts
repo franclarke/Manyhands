@@ -65,6 +65,22 @@ describe("WorkBreakdown", () => {
     await expect(failing.plan(input)).rejects.toThrow(/after 2 attempts/i);
   });
 
+  it("restores model-omitted evidence definitions from the canonical snapshot", async () => {
+    const candidate = fixture();
+    candidate.repositoryEvidence = [];
+    const planner = new WorkBreakdownPlanner({
+      model: { generate: vi.fn().mockResolvedValue(candidate) },
+      maxAttempts: 1,
+      retryDelayMs: 0
+    });
+
+    const planned = await planner.plan(plannerInput());
+
+    expect(planned.repositoryEvidence).toEqual([
+      expect.objectContaining({ id: "route-evidence", reference: "src/routes/bookings.ts" })
+    ]);
+  });
+
   it("does not retry a planning protocol failure that cannot be repaired by another model attempt", async () => {
     const generate = vi.fn().mockRejectedValue(new NonRetryablePlanningError("Claude stream closed without a successful terminal result."));
     const attempts: string[] = [];
