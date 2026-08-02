@@ -215,7 +215,6 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
     await writeStrategyDiagnostics(dependencies, input.runId, strategy, breakdown, input.experimentalCandidate?.sourceHash);
     return state;
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
     let recordedState: RunProjection | undefined;
     try {
       await persistRunFailure({
