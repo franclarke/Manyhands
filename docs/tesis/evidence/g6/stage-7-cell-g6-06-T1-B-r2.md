@@ -45,7 +45,7 @@ El costo acumulado informado por los journals hasta esta remediacion es USD
 para la celda. El resultado 8/10 es adverso y queda preservado: no se corrige
 el candidate despues de medirlo y no se relajan los criterios externos.
 
-## Que no se concluye
+## Qué no se concluye
 
 - No se concluye PASS completo de B: la cobertura observada es 8/10 y build/typecheck fallan.
 - No se concluye confirmacion ni falsacion de H-G6 a partir de esta celda.

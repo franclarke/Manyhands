@@ -83,3 +83,13 @@ exactamente lo que dejó sin medición a la celda N=16 de la serie anterior.
 
 Un corte del proveedor a mitad de stream **no cuenta como fallo de la
 condición**, según la regla ya pre-registrada.
+
+## Qué no se concluye
+
+- No se concluye un costo total exacto de la serie a partir de estos intentos de
+  planning: los journals no registraron `usage` de forma completa.
+- No se concluye que un corte del proveedor sea un efecto de granularidad ni de
+  una condición experimental.
+- No se concluye que la celda de planning descartada deba reintentarse: se
+  conserva como intento único y se pasa a la corrida ya entregada documentada
+  en la etapa 1.

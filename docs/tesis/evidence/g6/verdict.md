@@ -32,7 +32,7 @@ las seis tienen candidate entregado y veredicto externo u oracle atribuible.
 Los intentos pre-candidate, de lanzamiento o de aclaracion preservados en
 `runs/` siguen fuera de la metrica primaria y no se convierten en cero.
 
-## Que no se concluye
+## Qué no se concluye
 
 - Con dos observaciones por condicion no se hace inferencia estadistica ni se obtiene un p-valor.
 - No se concluye que la granularidad cause la diferencia observada: G6 describe direccion, viabilidad y modos de falla.
