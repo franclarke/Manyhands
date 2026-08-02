@@ -5,6 +5,7 @@ Una fila por etapa completada. La escribe el agente al terminar cada etapa,
 
 | Etapa | Fecha | Resultado | Commit | Evidencia |
 |---|---|---|---|---|
+| 8 | 2026-08-02 | PASS: derivador reproducible produjo las 6 filas canónicas; A media 0.9, B media 0.85, C media 0.8. Se preservan costos no reportados como `null` y se corrigieron el freeze de dist y el harness de integración/cancelación para que el gate completo pase. | `d1d9089` | `results.md` |
 | 7 | 2026-08-02 | PASS operacional / candidate B-r2-remediation-39 entregado y evaluado 8/10; ahora pasan los tres comportamientos y los probes, pero fallan typecheck y build. Fallo adverso preservado. | `538ffc1` | `stage-7-cell-g6-06-T1-B-r2.md` |
 | 6 | 2026-08-02 | PASS operacional / candidate A-r2 entregado y evaluado 9/10; fallo genuino `listBackorders` ausente, preservado sin corregir el candidate después de medir. | `a57eae5` | `stage-6-cell-g6-05-T1-A-r2.md` |
 | 5 | 2026-08-02 | PASS operacional / candidate C-r2 entregado y evaluado 9/10; vuelve a fallar genuinamente `behaviour-backorder-recorded` (`quantity` en lugar de `missing`), preservado sin relajar el diseño. | `bcebb02` | `stage-5-cell-g6-04-T1-C-r2.md` |
