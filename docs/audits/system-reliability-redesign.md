@@ -81,6 +81,13 @@ manifests y Evidence Matrix son la autoridad de adopción.
 - Clasificación: defecto de producto. El límite del modelo sólo explica la
   calidad de un candidato, no la ausencia de guardrails deterministas.
 
+Estado de migración (2026-08-02): el host ahora construye y persiste un
+`PlanningEnvelope`, y entrega `GranularityPlanningBrief` al planner antes de la
+propuesta. Sin embargo, el adaptador productivo aún llama `plan()` una vez en
+vez de transportar un `CandidatePlanSet` tipado desde `planCandidates()`. Esta
+parte sigue abierta; no se la sustituye por inferir ownership desde el árbol ni
+por comparar candidatos no validados.
+
 ### SRR-03 — ownership se deriva después de duplicar intención (alta)
 
 - Código: `packages/decomposer/src/granularity/adaptive-planning.ts:238-248`,
@@ -148,6 +155,13 @@ manifests y Evidence Matrix son la autoridad de adopción.
 - Clasificación: defecto de producto y brecha de recuperación. No autoriza a
   sintetizar un resultado terminal: requiere receipt durable independiente y
   reconciliación verificable.
+
+Estado de migración (2026-08-02): mitigado por
+`execution-failure-receipt.ts`. Antes de registrar `run.failed` se preserva un
+receipt fsync/rename; si el journal o la proyección fallan, el receipt queda
+pendiente con la causa original. Un lease posterior lo reconcilia de modo
+idempotente antes de ejecutar. Si incluso el receipt no puede persistirse, el
+caller recibe ambos errores agregados y el run nunca se declara exitoso.
 
 ## Arquitectura objetivo y decisiones
 
