@@ -53,6 +53,11 @@ import { resolveRunsDirectory } from "../runs-directory";
 import type { RunOperationLease, RunRecord } from "../schema";
 import { resolveRunTargetPath } from "../target-context";
 import { projectV2RunRecordCache } from "./run-record-cache";
+import {
+  ExecutionFailureReceiptStore,
+  persistExecutionFailure,
+  reconcilePendingExecutionFailures
+} from "./execution-failure-receipt";
 
 export interface ApprovedExecutionPlanV2 {
   graph: GraphRevision;
@@ -141,7 +146,14 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     const integrationJournal = new JsonIntegrationOperationJournal(join(directory, "integration-operations"));
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });
+    const failureReceipts = new ExecutionFailureReceiptStore({ directory });
     const authority = { operationId: lease.operationId, fencingToken: lease.fencingToken };
+    const reconciliation = await reconcilePendingExecutionFailures({
+      store: failureReceipts,
+      runId,
+      recordTerminalFailure: async (receipt) => recordExecutionFailure(runId, lease, new Error(receipt.reason))
+    });
+    if (reconciliation.reconciledReceiptIds.length > 0) return;
     const recovery = await verifyAndRecoverRunStore(runId, { store: events });
     if (recovery.status === "corrupt") throw new Error(`Run ${runId} has a corrupt durable event store.`);
     const loaded = await events.load(runId);
@@ -269,7 +281,21 @@ async function driveClaimedExecutionV2(claimed: { run: RunRecord; lease: RunOper
     await new EventStoreCompactor(events).compactIfNeeded(runId, authority);
     await updateRunForOperation(runId, lease, (current) => projectV2RunRecordCache(current, state, persistedEvents));
   } catch (error) {
-    await recordExecutionFailure(runId, lease, error).catch(() => undefined);
+    try {
+      await persistExecutionFailure({
+        store: new ExecutionFailureReceiptStore({ directory: resolveRunsDirectory() }),
+        runId,
+        operationId: lease.operationId,
+        fencingToken: lease.fencingToken,
+        error,
+        recordTerminalFailure: async (receipt) => recordExecutionFailure(runId, lease, new Error(receipt.reason))
+      });
+    } catch (receiptFailure) {
+      throw new AggregateError(
+        [error, receiptFailure],
+        "Execution failed and its terminal state could not be fully persisted."
+      );
+    }
     throw error;
   } finally {
     if (worktreePool !== undefined) {
@@ -388,13 +414,16 @@ async function recordExecutionFailure(runId: string, lease: RunOperationLease, e
   await events.advanceFence(runId, authority);
   const current = await events.load(runId);
   const reason = error instanceof Error ? error.message : String(error);
-  await events.appendFenced(runId, current.length, authority, [{
-    eventId: `execution:${runId}:failed:${current.length + 1}`,
-    occurredAt: new Date().toISOString(),
-    type: "run.failed",
-    payload: { reason, area: "execution" }
-  }]);
-  const persisted = await events.load(runId);
+  const alreadyRecorded = current.some((event) => event.type === "run.failed" && event.payload.area === "execution");
+  if (!alreadyRecorded) {
+    await events.appendFenced(runId, current.length, authority, [{
+      eventId: `execution:${runId}:failed:${current.length + 1}`,
+      occurredAt: new Date().toISOString(),
+      type: "run.failed",
+      payload: { reason, area: "execution" }
+    }]);
+  }
+  const persisted = alreadyRecorded ? current : await events.load(runId);
   const state = foldRun(persisted);
   await updateRunForOperation(runId, lease, (run) => projectV2RunRecordCache(run, state, persisted));
 }
