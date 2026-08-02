@@ -98,20 +98,7 @@ export class RunOperationAuthority {
 
       const now = options.now ?? new Date().toISOString();
       const operationId = options.operationId ?? this.operationId();
-      const canonical = await this.dependencies.events.claimAuthority(
-        runId,
-        operationId,
-        Math.max(current.mutationFence ?? 0, superseded?.fencingToken ?? 0)
-      );
-      lease = {
-        operationId: canonical.operationId,
-        kind,
-        fencingToken: canonical.fencingToken,
-        acquiredAt: now,
-        heartbeatAt: now
-      };
-
-      let takeoverReceipt: RunTakeoverReceipt | undefined;
+      let takeoverProcessReceipt: TakeoverProcessReceipt | undefined;
       let publishedAt = now;
       if (superseded !== undefined) {
         const processReceipt = await this.reconcileTakeover({ runId, superseded });
@@ -129,20 +116,40 @@ export class RunOperationAuthority {
             `takeover of ${superseded.operationId}/${superseded.fencingToken} did not quiesce repository effects`
           );
         }
+        takeoverProcessReceipt = processReceipt;
         publishedAt = new Date().toISOString();
-        lease = { ...lease, heartbeatAt: publishedAt };
-        takeoverReceipt = {
-          processReceiptId: processReceipt.processReceiptId,
-          supersededOperationId: superseded.operationId,
-          supersededFencingToken: superseded.fencingToken,
-          operationId: lease.operationId,
-          fencingToken: lease.fencingToken,
-          allDead: true,
-          repositoryQuiescent: true,
-          processCount: processReceipt.processCount,
-          verifiedAt: publishedAt
-        };
       }
+
+      // Do not fence the current owner until process and repository takeover
+      // checks have both succeeded. A failed takeover must leave the original
+      // authority usable; otherwise the old runner becomes stale while the
+      // new control operation is rejected, leaving the run permanently stuck.
+      const canonical = await this.dependencies.events.claimAuthority(
+        runId,
+        operationId,
+        Math.max(current.mutationFence ?? 0, superseded?.fencingToken ?? 0)
+      );
+      lease = {
+        operationId: canonical.operationId,
+        kind,
+        fencingToken: canonical.fencingToken,
+        acquiredAt: now,
+        heartbeatAt: publishedAt
+      };
+
+      const takeoverReceipt: RunTakeoverReceipt | undefined = takeoverProcessReceipt === undefined || superseded === undefined
+        ? undefined
+        : {
+            processReceiptId: takeoverProcessReceipt.processReceiptId,
+            supersededOperationId: superseded.operationId,
+            supersededFencingToken: superseded.fencingToken,
+            operationId: lease.operationId,
+            fencingToken: lease.fencingToken,
+            allDead: takeoverProcessReceipt.allDead,
+            repositoryQuiescent: true,
+            processCount: takeoverProcessReceipt.processCount,
+            verifiedAt: publishedAt
+          };
 
       return {
         ...current,

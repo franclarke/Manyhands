@@ -195,8 +195,10 @@ describe("atomic run authority", () => {
     })).rejects.toThrow("did not verify allDead");
 
     expect((await repository.get("run-blocked-takeover")).activeOperation).toEqual(first.lease);
+    // A failed takeover must not fence the owner that is still responsible
+    // for quiescing the run.
     await expect(events.assertAuthority("run-blocked-takeover", first.lease))
-      .rejects.toBeInstanceOf(StaleFencingTokenError);
+      .resolves.toBeUndefined();
   });
 
   it("timestamps the takeover receipt and published heartbeat after process verification", async () => {
@@ -292,6 +294,37 @@ describe("atomic run authority", () => {
     });
     await expect(events.assertAuthority("run-repository-barrier", first.lease))
       .rejects.toBeInstanceOf(StaleFencingTokenError);
+  });
+
+  it("leaves the previous authority intact when takeover quiescence fails", async () => {
+    const repository = new JsonRunRecordStore({ directory: runsDirectory });
+    const events = new JsonlRunEventStore({ directory: runsDirectory });
+    await repository.save(makeRunRecordV2({ runId: "run-repository-barrier-failed", lifecycle: "running" }));
+    const first = await authority(repository, events, {
+      operationId: () => "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"
+    }).claim("run-repository-barrier-failed", "execution", {
+      expectedLifecycles: ["running"],
+      now: "2026-07-29T12:00:00.000Z"
+    });
+
+    const takeover = authority(repository, events, {
+      operationId: () => "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      reconcileTakeover: async () => ({
+        processReceiptId: "takeover-processes-failed-barrier",
+        allDead: true,
+        processCount: 0
+      }),
+      reconcileRepository: async () => false
+    });
+
+    await expect(takeover.claim("run-repository-barrier-failed", "execution", {
+      expectedLifecycles: ["running"],
+      allowTakeover: true,
+      takeoverStaleAfterMs: 1,
+      now: "2026-07-29T12:01:00.000Z"
+    })).rejects.toThrow(/repository effects/i);
+
+    await expect(events.assertAuthority("run-repository-barrier-failed", first.lease)).resolves.toBeUndefined();
   });
 
   it.each(["planning", "delivery"] as const)(
