@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { parseJsonObjectCandidates } from "../llm/recursive/json.js";
+import type { GranularityPlanningBrief } from "../granularity/planning-brief.js";
 import { WorkBreakdownSchema, type WorkBreakdown } from "./schema.js";
 import { buildWorkBreakdownPrompt } from "./prompt.js";
 
@@ -23,8 +24,16 @@ export interface WorkBreakdownPlannerInput {
     evidence: PlannerRepositoryEvidence[];
   };
   questionAnswers?: Record<string, string>;
+  granularityBrief?: GranularityPlanningBrief;
+  candidateRequest?: GranularityCandidateRequest;
   /** Deterministic C feedback requesting a better semantic alternative. */
   granularityFeedback?: GranularityReplanFeedback;
+}
+
+export interface GranularityCandidateRequest {
+  index: number;
+  total: number;
+  priorCandidateHashes: string[];
 }
 
 export interface GranularityReplanFeedback {
@@ -128,6 +137,31 @@ export class WorkBreakdownPlanner {
     this.capacityBackoffMs = nonNegativeInteger(options.capacityBackoffMs ?? 60_000, "capacityBackoffMs");
     this.maxCapacityRetries = nonNegativeInteger(options.maxCapacityRetries ?? 3, "maxCapacityRetries");
     this.cache = options.cache;
+  }
+
+  async planCandidates(
+    input: WorkBreakdownPlannerInput,
+    count: number,
+    observer: WorkBreakdownPlanningObserver = {}
+  ): Promise<WorkBreakdown[]> {
+    if (!Number.isSafeInteger(count) || count < 2 || count > 3) {
+      throw new RangeError("candidate count must be an integer between 2 and 3.");
+    }
+    const candidates = new Map<string, WorkBreakdown>();
+    for (let index = 1; index <= count; index += 1) {
+      const attemptOffset = (index - 1) * this.maxAttempts;
+      const candidate = await this.plan({
+        ...input,
+        candidateRequest: {
+          index,
+          total: count,
+          priorCandidateHashes: [...candidates.keys()]
+        }
+      }, offsetObserver(observer, attemptOffset));
+      const hash = workBreakdownHash(candidate);
+      if (!candidates.has(hash)) candidates.set(hash, candidate);
+    }
+    return [...candidates.values()];
   }
 
   async plan(input: WorkBreakdownPlannerInput, observer: WorkBreakdownPlanningObserver = {}): Promise<WorkBreakdown> {
@@ -417,6 +451,30 @@ function isProgressEnvelope(candidate: unknown): boolean {
 
 function planningCacheKey(input: WorkBreakdownPlannerInput): string {
   return `work-breakdown-v2:${createHash("sha256").update(JSON.stringify(canonicalize(input))).digest("hex")}`;
+}
+
+function workBreakdownHash(breakdown: WorkBreakdown): string {
+  return createHash("sha256").update(JSON.stringify(canonicalize(WorkBreakdownSchema.parse(breakdown)))).digest("hex");
+}
+
+function offsetObserver(
+  observer: WorkBreakdownPlanningObserver,
+  attemptOffset: number
+): WorkBreakdownPlanningObserver {
+  const onAttemptStarted = observer.onAttemptStarted;
+  const onUnitDiscovered = observer.onUnitDiscovered;
+  const onAttemptFailed = observer.onAttemptFailed;
+  return {
+    ...(onAttemptStarted === undefined
+      ? {}
+      : { onAttemptStarted: ({ attempt }) => onAttemptStarted({ attempt: attemptOffset + attempt }) }),
+    ...(onUnitDiscovered === undefined
+      ? {}
+      : { onUnitDiscovered: ({ attempt, unit }) => onUnitDiscovered({ attempt: attemptOffset + attempt, unit }) }),
+    ...(onAttemptFailed === undefined
+      ? {}
+      : { onAttemptFailed: ({ attempt, reason }) => onAttemptFailed({ attempt: attemptOffset + attempt, reason }) })
+  };
 }
 
 function canonicalize(value: unknown): unknown {

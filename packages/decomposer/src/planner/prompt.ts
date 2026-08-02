@@ -19,10 +19,29 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
         `- reason: ${input.granularityFeedback.reason}`,
         ...input.granularityFeedback.evidence.map((item) => `- evidence: ${item}`)
       ].join("\n");
+  const granularityBrief = input.granularityBrief === undefined
+    ? "- none"
+    : [
+        `Policy ${input.granularityBrief.policyVersion} requests ${input.granularityBrief.candidateCount} semantic candidates.`,
+        `Leaf budgets: contextTokens<=${input.granularityBrief.leafBudget.maxContextTokens}, scopePaths<=${input.granularityBrief.leafBudget.maxScopePaths}, plannedPaths<=${input.granularityBrief.leafBudget.maxPlannedPaths}.`,
+        `Acceptance ownership: leaf=${input.granularityBrief.acceptanceOwnership.leaf} seam=${input.granularityBrief.acceptanceOwnership.seam} global=${input.granularityBrief.acceptanceOwnership.global}`,
+        `Hard gates: ${input.granularityBrief.hardGates.join(", ")}.`,
+        `Repository signals: disposition=${input.granularityBrief.repositorySignals.inspectionDisposition}, indexedPaths=${input.granularityBrief.repositorySignals.indexedPathCount}, baselineValidation=${input.granularityBrief.repositorySignals.baselineValidationKinds.join(",") || "none"}.`
+      ].join("\n");
+  const candidateRequest = input.candidateRequest === undefined
+    ? "- single candidate"
+    : [
+        `Candidate ${input.candidateRequest.index} of ${input.candidateRequest.total}.`,
+        input.candidateRequest.priorCandidateHashes.length === 0
+          ? "No prior candidate exists."
+          : `Do not reproduce prior candidate hashes: ${input.candidateRequest.priorCandidateHashes.join(", ")}.`,
+        "Propose a genuinely different semantic cut or return the best cohesive single leaf; do not reshuffle paths to appear different."
+      ].join("\n");
   return {
     system: [
       "You are the semantic Planner for a software implementation system.",
       "Produce a grounded WorkBreakdown, not an executable graph.",
+      "Follow the Granularity Planning Brief before proposing units; the deterministic policy and Graph Compiler own final eligibility and selection.",
       "A leaf is a cohesive independently verifiable increment and may be a hybrid vertical slice across UI, API, domain, and tests.",
       "Justify composite cuts by cohesion, integration, risk, or verifiability.",
       "Do not target a fixed depth, child count, or layer template.",
@@ -59,7 +78,11 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       "Resolved human decisions:",
       resolvedDecisions || "- none",
       "Granularity feedback:",
-      granularityFeedback
+      granularityFeedback,
+      "Granularity Planning Brief:",
+      granularityBrief,
+      "Candidate request:",
+      candidateRequest
     ].join("\n")
   };
 }
