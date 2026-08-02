@@ -134,6 +134,21 @@ manifests y Evidence Matrix son la autoridad de adopción.
 - Clasificación: brecha de diseño; la preservación de attempts no equivale a
   preservación completa de la decisión de planning.
 
+### SRR-07 — la falla de ejecución puede perder su hecho terminal durable (alta)
+
+- Código: `apps/web/src/lib/server/runs/v2/execution-pipeline.ts:271-273`
+  (`driveClaimedExecutionV2`) y `:385-398` (`recordExecutionFailure`).
+- Mecanismo: ante un error productivo, el pipeline intenta escribir `run.failed`,
+  pero descarta con `.catch(() => undefined)` cualquier fallo del journal o de la
+  proyección `RunRecord`. El error externo se relanza, mientras el run puede
+  quedar sin hecho terminal durable ni cache coherente. La captura no distingue
+  fallo de la ejecución de fallo al registrar esa ejecución.
+- Pruebas existentes: no existe una regresión que fuerce la falla de
+  `recordExecutionFailure` ni una reconciliación posterior que repare el estado.
+- Clasificación: defecto de producto y brecha de recuperación. No autoriza a
+  sintetizar un resultado terminal: requiere receipt durable independiente y
+  reconciliación verificable.
+
 ## Arquitectura objetivo y decisiones
 
 ```text
@@ -178,6 +193,8 @@ causa raíz); reintentos ilimitados del planner (destruye comparabilidad y costo
   diagnósticos y selección.
 - Un replan contiene razón estructurada y conserva la revisión/candidatos que lo
   motivaron; una reparación no elimina intención ni evidencia previa.
+- Si falla el journal terminal de ejecución, queda un receipt durable de la
+  falla y la reconciliación posterior termina o expone el run sin falsearlo.
 
 ## Qué no se concluye
 
