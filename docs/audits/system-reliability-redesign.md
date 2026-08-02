@@ -81,14 +81,15 @@ manifests y Evidence Matrix son la autoridad de adopción.
 - Clasificación: defecto de producto. El límite del modelo sólo explica la
   calidad de un candidato, no la ausencia de guardrails deterministas.
 
-Estado de migración (2026-08-02): el host ahora construye y persiste un
+Estado histórico de migración (2026-08-02, antes de la continuación): el host
+construía y persistía un
 `PlanningEnvelope`, y entrega `GranularityPlanningBrief` al planner antes de la
 propuesta. Sin embargo, el adaptador productivo aún llama `plan()` una vez en
 vez de transportar un `CandidatePlanSet` tipado desde `planCandidates()`. Esta
 parte sigue abierta; no se la sustituye por inferir ownership desde el árbol ni
 por comparar candidatos no validados.
 
-Estado de migración posterior (2026-08-02): el contrato tipado ahora exige que
+Estado histórico posterior (2026-08-02, antes del cierre productivo): el contrato tipado exigía que
 cada `CandidatePlan` conserve hash estable, snapshot, digest del objetivo,
 scopes por unidad, criterios explícitos, ownership, participantes y
 materialización de seams, obligaciones cross-layer y validación observable por
@@ -97,7 +98,8 @@ con diagnóstico estructurado antes de invocar el score. La salida todavía no
 está conectada al host productivo porque `WorkBreakdownPlanner.planCandidates()`
 sigue retornando `WorkBreakdown[]` y la política paralela aún no expone una
 selección sobre el conjunto tipado; ese trabajo debe aportar los metadatos
-explícitos sin inferirlos desde `acceptanceIntentIds` o paths.
+explícitos sin inferirlos desde `acceptanceIntentIds` o paths. Esta brecha quedó
+cerrada por el estado de migración de continuación registrado más abajo.
 
 ### SRR-03 — ownership se deriva después de duplicar intención (alta)
 

@@ -37,6 +37,11 @@ export const PlanningCandidateEvaluationSchema = z.object({
   candidate: z.record(z.unknown()),
   valid: z.boolean(),
   score: z.number().finite().optional(),
+  gates: z.array(z.object({
+    gate: NonEmptyStringSchema,
+    passed: z.boolean(),
+    diagnosticCodes: z.array(NonEmptyStringSchema)
+  }).strict()).default([]),
   diagnostics: z.array(PlanningCandidateDiagnosticSchema)
 }).strict();
 
@@ -47,7 +52,12 @@ const PlanningCandidateSelectionSchema = z.discriminatedUnion("kind", [
     kind: z.literal("selected"),
     candidateId: EntityIdSchema,
     score: z.number().finite(),
-    rejectedCandidateIds: z.array(EntityIdSchema)
+    rejectedCandidateIds: z.array(EntityIdSchema),
+    tieBreak: z.object({
+      kind: z.literal("candidate_id"),
+      applied: z.boolean(),
+      contenders: z.array(EntityIdSchema)
+    }).strict().optional()
   }).strict(),
   z.object({
     kind: z.literal("replan_required"),
@@ -245,6 +255,11 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   event("planning.candidates_evaluated", z.object({
     schemaVersion: z.literal(1),
     envelope: z.record(z.unknown()),
+    policy: z.object({
+      version: NonEmptyStringSchema,
+      condition: z.enum(["A", "B", "C"]),
+      scoreBasis: NonEmptyStringSchema
+    }).strict().optional(),
     candidates: z.array(PlanningCandidateEvaluationSchema).min(1),
     selection: PlanningCandidateSelectionSchema
   }).strict()),

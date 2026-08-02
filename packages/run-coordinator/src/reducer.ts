@@ -103,6 +103,7 @@ export interface PlanningEnvelopeProjection {
 export interface PlanningCandidatesProjection {
   schemaVersion: 1;
   envelope: Record<string, unknown>;
+  policy?: { version: string; condition: "A" | "B" | "C"; scoreBasis: string };
   candidates: PlanningCandidateEvaluation[];
   selection: PlanningCandidateSelection;
 }
@@ -249,9 +250,11 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
       next.planningCandidates = {
         schemaVersion: event.payload.schemaVersion,
         envelope: structuredClone(event.payload.envelope),
+        ...(event.payload.policy === undefined ? {} : { policy: { ...event.payload.policy } }),
         candidates: event.payload.candidates.map((candidate) => ({
           ...candidate,
           candidate: structuredClone(candidate.candidate),
+          gates: candidate.gates.map((gate) => ({ ...gate, diagnosticCodes: [...gate.diagnosticCodes] })),
           diagnostics: candidate.diagnostics.map((diagnostic) => ({ ...diagnostic, refs: [...diagnostic.refs] }))
         })),
         selection: structuredClone(event.payload.selection)

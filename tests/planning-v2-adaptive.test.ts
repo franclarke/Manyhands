@@ -52,11 +52,9 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     // 1. The event is persisted in the canonical journal.
     const persisted = await events.load("run-adaptive");
     const types = persisted.map((event) => event.type);
-    expect(types).toContain("planning.granularity_strategy_selected");
-    expect(types.indexOf("planning.granularity_strategy_selected")).toBeLessThan(types.indexOf("planning.completed"));
-    expect(types.indexOf("planning.granularity_strategy_selected")).toBeLessThan(types.indexOf("graph.compiled"));
-    const strategyEvent = persisted.find((event) => event.type === "planning.granularity_strategy_selected");
-    expect(strategyEvent?.type === "planning.granularity_strategy_selected" ? strategyEvent.payload.candidateTree?.root : undefined).toBeDefined();
+    expect(types).toContain("planning.candidates_evaluated");
+    expect(types.indexOf("planning.candidates_evaluated")).toBeLessThan(types.indexOf("planning.completed"));
+    expect(types.indexOf("planning.candidates_evaluated")).toBeLessThan(types.indexOf("graph.compiled"));
 
     // 2. The Graph Compiler consumed the selected breakdown (same canonical
     //    WorkUnit tree type — no parallel model).
@@ -76,12 +74,12 @@ describe("adaptive granularity in the productive planning pipeline", () => {
 
     // 3. Replay from the journal reconstructs the strategy and candidate tree.
     const replayed = foldRun(persisted);
-    expect(replayed.granularityStrategy?.policyVersion).toBe(ADAPTIVE_UTILITY_POLICY_VERSION);
-    expect(replayed.granularityStrategy?.condition).toBe("C");
+    expect(replayed.planningCandidates?.policy?.version).toBe(ADAPTIVE_UTILITY_POLICY_VERSION);
+    expect(replayed.planningCandidates?.policy?.condition).toBe("C");
 
     // 4. The snapshot projection carries the same explanation (UI surface).
     const snapshotState = await snapshots.loadOrRebuild("run-adaptive", authority);
-    expect(snapshotState.granularityStrategy?.condition).toBe("C");
+    expect(snapshotState.planningCandidates?.policy?.condition).toBe("C");
 
     // 5. The structural thesis metrics are persisted as a diagnostic artifact
     //    keyed by run, without governing lifecycle.
@@ -148,6 +146,23 @@ describe("adaptive granularity in the productive planning pipeline", () => {
       kind: "replan_required",
       reason: expect.stringContaining("did not contain enough")
     });
+    await runPlanningV2({
+      runId: "run-c2-replan",
+      goal: "Build booking",
+      repoPath: "C:/repo/booking",
+      targetFingerprint: "target-1",
+      baseCommit: "1".repeat(40),
+      authority
+    }, {
+      events,
+      snapshots,
+      inspect: async () => measuredSnapshot,
+      plan,
+      planCandidates,
+      compile: (input) => compileGraphRevision(input, compilerDependencies),
+      now: () => "2026-07-24T01:00:00.000Z"
+    });
+    expect(planCandidates).toHaveBeenCalledOnce();
   });
 
   it("replays A, B and C over identical frozen typed candidates without invoking the planner", async () => {
@@ -186,7 +201,7 @@ describe("adaptive granularity in the productive planning pipeline", () => {
         now: () => "2026-07-24T01:00:00.000Z"
       });
       expect(result.lifecycle).toBe("needs_approval");
-      expect(result.granularityStrategy?.condition).toBe(condition);
+      expect(result.planningCandidates?.policy?.condition).toBe(condition);
       hashesByCondition.push(result.planningCandidates!.candidates.map((candidate) => candidate.candidateHash));
     }
 

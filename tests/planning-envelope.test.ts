@@ -247,6 +247,29 @@ describe("planning envelope and candidate plans", () => {
       expect.objectContaining({ code: "contract_obligation_incomplete", candidateId: candidate.candidateId })
     ]));
   });
+
+  it("rejects a semantic dependency represented only by shared scope paths", () => {
+    const breakdown = bookingBreakdown();
+    if (breakdown.root.kind !== "composite") throw new Error("Expected composite booking fixture.");
+    breakdown.root.children.find((unit) => unit.key === "api")!.evidenceIds.push("domain-path");
+    const envelope = createPlanningEnvelope({ policyVersion: "reliability/1.0.0", goal: breakdown.objective, repositorySnapshot: bookingSnapshot() });
+    const candidate = candidateFor(envelope, breakdown, "candidate-path-dependency");
+    candidate.contractObligations.push({
+      obligationId: "domain-before-api",
+      kind: "artifact_requirement",
+      ownerUnitKey: "domain",
+      producerUnitKey: "domain",
+      consumerUnitKeys: ["api"],
+      validation: "API validation consumes the domain output."
+    });
+
+    const validation = validateCandidatePlanSet({ envelope, candidates: [candidate] });
+
+    expect(validation.validCandidates).toEqual([]);
+    expect(validation.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "semantic_dependency_without_seam", candidateId: candidate.candidateId })
+    ]));
+  });
 });
 
 function candidateFor(

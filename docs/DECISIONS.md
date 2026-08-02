@@ -263,17 +263,21 @@ cualquier resultado ambiguo. Un commit candidato se ancla antes del reset. Véas
 
 ## A21. La granularidad se selecciona entre cortes semánticos por utilidad esperada
 
-El Planner propone un `WorkBreakdown` semántico; no decide por sí solo qué
-frontera se ejecuta. La política adaptativa compara ejecutar un composite como
-hoja con expandir sus hijos, usando señales disponibles antes de ejecutar:
+El Planner propone alternativas semánticas; no decide por sí solo qué frontera
+se ejecuta. En el flujo tipado, cada `CandidatePlan` es una frontera completa
+con scope, ownership, seams y validación inmutables, y la política compara esas
+fronteras. El flujo histórico de candidato único comparaba ejecutar un composite
+como hoja con expandir sus hijos. Ambos usan señales disponibles antes de ejecutar:
 alivio de contexto, paralelismo, aislamiento de fallos, coordinación, overlap
 de paths, duplicación de validación e incertidumbre.
 
 La política nunca fabrica unidades partiendo rutas. Si una hoja es inviable y
 el Planner no ofreció al menos dos hijos coherentes, el resultado correcto es
 un replan semántico explícito. La selección, configuración efectiva y evidencia
-se persisten como hechos del planning; sólo la frontera elegida llega al Graph
-Compiler. Véase [ADR 0012](adr/0012-utility-based-granularity-selection.md).
+se persisten como hechos del planning; sólo el `CandidatePlan` elegido llega al
+Graph Compiler. Una assessment interna no puede podar después los contratos del
+candidato seleccionado. Véanse [ADR 0012](adr/0012-utility-based-granularity-selection.md)
+y [ADR 0013](adr/0013-policy-guided-candidate-planning.md).
 
 ## Decisiones retiradas
 

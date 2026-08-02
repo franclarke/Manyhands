@@ -64,19 +64,19 @@ describe("planning V2 vertical slice", () => {
     expect(result.lifecycle).toBe("needs_approval");
     const persisted = await events.load("run-v2");
     expect(persisted.map((event) => event.type)).toEqual([
-      "run.created", "repository.inspected", "planning.envelope_created", "planning.candidates_evaluated", "planning.granularity_strategy_selected", "planning.completed", "graph.compiled",
+      "run.created", "repository.inspected", "planning.envelope_created", "planning.candidates_evaluated", "planning.completed", "graph.compiled",
       ...Array(8).fill("planning.critic_recorded"),
       "graph.revision.proposed", "decision.raised"
     ]);
-    const strategy = persisted.find((event) => event.type === "planning.granularity_strategy_selected");
-    expect(strategy).toMatchObject({
-      type: "planning.granularity_strategy_selected",
+    const candidates = persisted.find((event) => event.type === "planning.candidates_evaluated");
+    expect(candidates).toMatchObject({
+      type: "planning.candidates_evaluated",
       payload: {
-        candidateTree: {
-          root: bookingBreakdown().root,
-          candidateArtifacts: bookingBreakdown().candidateArtifacts,
-          candidateSeams: bookingBreakdown().candidateSeams
-        }
+        policy: { condition: "C", scoreBasis: "root_split_advantage" },
+        candidates: expect.arrayContaining([expect.objectContaining({
+          gates: expect.arrayContaining([expect.objectContaining({ gate: "identity", passed: true })])
+        })]),
+        selection: expect.objectContaining({ kind: "selected", tieBreak: expect.objectContaining({ kind: "candidate_id" }) })
       }
     });
     const envelope = persisted.find((event) => event.type === "planning.envelope_created");
@@ -131,13 +131,9 @@ describe("planning V2 vertical slice", () => {
     expect(result).toMatchObject({ lifecycle: "failed", failureReason: "Compiled plan review failed: artifact_cycle" });
     const persisted = await events.load("run-compile-failed");
     expect(persisted.map((event) => event.type)).toEqual([
-      "run.created", "repository.inspected", "planning.envelope_created", "planning.candidates_evaluated", "planning.granularity_strategy_selected", "planning.failed"
+      "run.created", "repository.inspected", "planning.envelope_created", "planning.candidates_evaluated", "planning.failed"
     ]);
-    const strategy = persisted.find((event) => event.type === "planning.granularity_strategy_selected");
-    expect(strategy).toMatchObject({
-      type: "planning.granularity_strategy_selected",
-      payload: { candidateTree: { root: bookingBreakdown().root } }
-    });
+    expect(persisted.find((event) => event.type === "planning.candidates_evaluated")).toBeDefined();
   });
 
   it("persists planning nodes before the planner completes", async () => {

@@ -210,6 +210,7 @@ export interface CandidatePlanDiagnostic {
     | "missing_seam_specification"
     | "orphan_seam_specification"
     | "contract_obligation_incomplete"
+    | "semantic_dependency_without_seam"
     | "leaf_without_local_acceptance";
   message: string;
   refs: string[];
@@ -518,6 +519,20 @@ function validateCandidate(envelope: PlanningEnvelope, candidate: CandidatePlan)
     const consumersExist = obligation.consumerUnitKeys.every((unitKey) => unitByKey.has(unitKey));
     if (!ownerExists || !producerExists || !consumersExist) {
       diagnostics.push(issue(candidate, "contract_obligation_incomplete", `Contract obligation ${obligation.obligationId} references an unknown owner, producer, or consumer.`, [obligation.obligationId]));
+    }
+    if (obligation.kind === "artifact_requirement") {
+      const matchingArtifact = candidate.breakdown.candidateArtifacts.some((artifact) =>
+        artifact.producerUnitKey === obligation.producerUnitKey &&
+        sameMembers(artifact.consumerUnitKeys, obligation.consumerUnitKeys)
+      );
+      if (!matchingArtifact) {
+        diagnostics.push(issue(
+          candidate,
+          "semantic_dependency_without_seam",
+          `Semantic dependency ${obligation.obligationId} is represented by scope/paths but has no typed artifact or seam relation.`,
+          [obligation.obligationId]
+        ));
+      }
     }
   }
   for (const specification of candidate.seamSpecifications) {
