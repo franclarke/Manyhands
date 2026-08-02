@@ -4,7 +4,8 @@ import {
   createPlanningEnvelope,
   selectCandidatePlan,
   selectPlannerCandidate,
-  validateCandidatePlanSet
+  validateCandidatePlanSet,
+  type AcceptanceOwnership
 } from "@manyhands/decomposer";
 import { bookingBreakdown, bookingSnapshot } from "./helpers/target-planning-fixtures";
 
@@ -210,7 +211,7 @@ function candidateFor(
   envelope: ReturnType<typeof createPlanningEnvelope>,
   breakdown: ReturnType<typeof bookingBreakdown>,
   candidateId: string,
-  acceptanceOwnership = breakdown.acceptanceIntents.map((intent) => ({
+  acceptanceOwnership: AcceptanceOwnership[] = breakdown.acceptanceIntents.map((intent) => ({
     intentId: intent.id,
     ownerUnitKey: intent.id === "domain-ready" ? "domain" : intent.id === "api-ready" ? "api" : "ui",
     role: "local" as const,
