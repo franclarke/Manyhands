@@ -153,7 +153,15 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       input.experimentalCandidate?.sourceHash
     );
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [strategyEvent])];
-    const compiled = dependencies.compile({ breakdown: strategy.selectedBreakdown, repositorySnapshot });
+    const compiled = dependencies.compile({
+      breakdown: strategy.selectedBreakdown,
+      repositorySnapshot,
+      sourceContract: {
+        goal: input.goal,
+        acceptanceCriteria: input.acceptanceCriteria ?? [],
+        constraints: input.constraints ?? []
+      }
+    });
     const drafts = strategySuccessEvents(input.runId, strategy, compiled, dependencies.now);
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
     state = foldRun(events);

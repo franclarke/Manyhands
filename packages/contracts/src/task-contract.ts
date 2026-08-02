@@ -5,6 +5,7 @@ import {
   ContractReferenceSchema,
   addDuplicateIssues
 } from "./contract-identity.js";
+import { SourceContractSchema } from "./source-contract.js";
 
 export const TaskAcceptanceCriterionKindSchema = z.enum([
   "static",
@@ -30,6 +31,7 @@ export const TaskContractSchema = z.object({
   ...ContractIdentityShape,
   nodeId: EntityIdSchema,
   goal: NonEmptyStringSchema,
+  sourceContract: SourceContractSchema.optional(),
   acceptanceCriteria: z.array(TaskAcceptanceCriterionSchema).min(1),
   scope: ContractReferenceSchema,
   consumes: z.array(ContractReferenceSchema).default([]),

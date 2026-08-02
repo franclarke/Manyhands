@@ -12,6 +12,7 @@ export * from "./legacy-adapter.js";
 export * from "./relations.js";
 export * from "./scope-contract.js";
 export * from "./seam-contract.js";
+export * from "./source-contract.js";
 export * from "./task-contract.js";
 export * from "./validation-contract.js";
 

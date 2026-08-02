@@ -1,4 +1,4 @@
-import type { TaskContractBundle } from "@manyhands/contracts";
+import type { SourceContract, TaskContractBundle } from "@manyhands/contracts";
 import { RepositorySnapshotSchema, type RepositorySnapshot } from "@manyhands/repository-index";
 import {
   GraphRevisionSchema,
@@ -16,6 +16,7 @@ import { repositorySnapshotIdsMatch } from "../planner/repository-snapshot-id.js
 export interface GraphCompilerInput {
   breakdown: WorkBreakdown;
   repositorySnapshot: RepositorySnapshot;
+  sourceContract?: SourceContract;
 }
 
 export interface GraphCompilerDependencies {
@@ -57,7 +58,12 @@ export function compileGraphRevision(
   const units = flattenUnits(breakdown.root);
   const nodeIdByUnitKey = Object.fromEntries(units.map((unit) => [unit.key, dependencies.idFor("node", unit.key)]));
   const nodes = compileNodes(breakdown.root, nodeIdByUnitKey);
-  const contractResult = compileContractBundles({ breakdown, repositorySnapshot, nodeIdByUnitKey }, dependencies);
+  const contractResult = compileContractBundles({
+    breakdown,
+    repositorySnapshot,
+    nodeIdByUnitKey,
+    ...(rawInput.sourceContract === undefined ? {} : { sourceContract: rawInput.sourceContract })
+  }, dependencies);
   const trace: CompilationRelationTrace[] = [];
 
   const artifactRequirements: ArtifactRequirement[] = [];

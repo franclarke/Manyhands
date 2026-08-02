@@ -11,6 +11,24 @@ import {
 } from "./helpers/target-planning-fixtures";
 
 describe("Graph Compiler V2", () => {
+  it("preserves the exact source contract in every compiled bundle", () => {
+    const sourceContract = {
+      goal: 'OrderPriority = "standard" | "express"; Backorder has orderId, skuId and missing; listBackorders(state) returns every recorded Backorder.',
+      acceptanceCriteria: ["The exact source contract reaches every executable leaf."],
+      constraints: ["Do not rename the quoted literals or fields."]
+    };
+    const compiled = compileGraphRevision({
+      breakdown: bookingBreakdown(),
+      repositorySnapshot: bookingSnapshot(),
+      sourceContract
+    }, compilerDependencies);
+
+    expect(compiled.contracts.every((bundle) => bundle.task.sourceContract !== undefined)).toBe(true);
+    expect(compiled.contracts.map((bundle) => bundle.task.sourceContract)).toEqual(
+      compiled.contracts.map(() => sourceContract)
+    );
+  });
+
   it("compiles identical semantic input deterministically with injected identity and clock", () => {
     const input = { breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() };
     const first = compileGraphRevision(input, compilerDependencies);

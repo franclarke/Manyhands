@@ -10,6 +10,7 @@ import {
   FixedAgentExecutorFactory,
   ScopeChecker,
   V2NodeExecutor,
+  buildV2NodeInstructions,
   WorktreeManager,
   type AgentExecutor,
   type ExecutorRunOutcome,
@@ -24,6 +25,29 @@ import { FakeGitRunner } from "./helpers/fake-git-runner";
 const at = "2026-07-17T12:00:00.000Z";
 
 describe("V2NodeExecutor", () => {
+  it("includes the exact inherited source contract in leaf instructions", () => {
+    const sourceContract = {
+      goal: 'OrderPriority = "standard" | "express"; Backorder has orderId, skuId and missing; listBackorders(state) returns every recorded Backorder.',
+      acceptanceCriteria: ["The exact source contract reaches every executable leaf."],
+      constraints: ["Do not rename the quoted literals or fields."]
+    };
+    const compiled = compileGraphRevision({
+      breakdown: bookingBreakdown(),
+      repositorySnapshot: bookingSnapshot(),
+      sourceContract
+    }, compilerDependencies);
+    const node = compiled.graph.nodes["node-api"]!;
+    const contract = compiled.contracts.find((bundle) => bundle.task.nodeId === node.id)!;
+
+    const instructions = buildV2NodeInstructions({ node, contract, consumedArtifacts: [] });
+
+    expect(instructions).toContain(sourceContract.goal);
+    expect(instructions).toContain('Inherited source contract (exact; do not paraphrase):');
+    expect(instructions).toContain('OrderPriority = "standard" | "express"');
+    expect(instructions).toContain("orderId, skuId and missing");
+    expect(instructions).toContain("listBackorders(state)");
+  });
+
   it("executes a leaf directly from its V2 bundle and validates the exact orchestrator commit", async () => {
     const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
     const node = compiled.graph.nodes["node-api"]!;

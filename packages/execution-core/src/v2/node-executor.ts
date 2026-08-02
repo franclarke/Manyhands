@@ -609,6 +609,17 @@ export function buildV2NodeInstructions(input: Pick<V2PhysicalNodeExecutionInput
     "Do not modify sibling work or dependency files outside this scope, even when the implementation appears to need them.",
     "Do not remove, weaken, skip, or reduce assertions in existing tests. Preserve their coverage; add or update tests only when the requested behavior requires it."
   ];
+  if (task.sourceContract !== undefined) {
+    lines.push(
+      "",
+      "Inherited source contract (exact; do not paraphrase):",
+      `- Goal: ${task.sourceContract.goal}`,
+      "- Acceptance criteria:",
+      ...task.sourceContract.acceptanceCriteria.map((criterion) => `  - ${criterion}`),
+      "- Constraints:",
+      ...task.sourceContract.constraints.map((constraint) => `  - ${constraint}`)
+    );
+  }
   // Without this the agent has no way to know that a new test file is even
   // permitted, and a correct candidate gets rejected for leaving its scope.
   if (scope.outputRoots.length > 0) {

@@ -5,6 +5,7 @@ import {
   type ContractReference,
   type ScopeContract,
   type SeamContract,
+  type SourceContract,
   type TaskAcceptanceCriterion,
   type TaskContractBundle,
   type ValidationContract,
@@ -35,6 +36,7 @@ export function compileContractBundles(input: {
   breakdown: WorkBreakdown;
   repositorySnapshot: RepositorySnapshot;
   nodeIdByUnitKey: Record<string, string>;
+  sourceContract?: SourceContract;
 }, dependencies: ContractCompilerDependencies): ContractCompilationResult {
   const units = flattenUnits(input.breakdown.root);
   const evidence = new Map(input.breakdown.repositoryEvidence.map((item) => [item.id, item]));
@@ -160,6 +162,7 @@ export function compileContractBundles(input: {
       provenance: "compiled" as const,
       nodeId,
       goal: unit.objective,
+      ...(input.sourceContract === undefined ? {} : { sourceContract: structuredClone(input.sourceContract) }),
       acceptanceCriteria: criteria,
       scope: reference(scope),
       consumes: relevantArtifacts.filter((contract) => contract.consumerNodeIds.includes(nodeId)).map(reference),
