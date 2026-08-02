@@ -1,6 +1,7 @@
 import { TaskContractBundleSchema, type TaskContractBundle } from "@manyhands/contracts";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
 import { validateGraphRevision, type GraphRevision } from "@manyhands/task-graph";
+import { allocateAcceptanceIntents } from "../compiler/acceptance-allocation.js";
 import type { WorkBreakdown, WorkUnit } from "../planner/schema.js";
 
 export const PLAN_CRITIC_KINDS = [
@@ -65,9 +66,9 @@ export function assertPlanReview(review: PlanReview): void {
 }
 
 function reviewCompleteness(input: CompiledPlanReviewInput, findings: PlanFinding[]): void {
-  const leafIntentIds = new Set(flattenUnits(input.breakdown.root).filter((unit) => unit.kind === "leaf").flatMap((unit) => unit.acceptanceIntentIds));
+  const acceptanceOwners = allocateAcceptanceIntents(input.breakdown.root);
   for (const intent of input.breakdown.acceptanceIntents) {
-    if (intent.required && !leafIntentIds.has(intent.id)) findings.push(finding("completeness", "error", "unowned_acceptance", `Required acceptance intent ${intent.id} has no leaf owner.`, "Assign the intent to a cohesive leaf.", [intent.id]));
+    if (intent.required && acceptanceOwners[intent.id] === undefined) findings.push(finding("completeness", "error", "unowned_acceptance", `Required acceptance intent ${intent.id} has no semantic owner.`, "Assign the intent to one leaf, one declared seam, or an integration composite.", [intent.id]));
   }
   const expectedNodeCount = flattenUnits(input.breakdown.root).length;
   if (input.contracts.length !== expectedNodeCount) findings.push(finding("completeness", "error", "missing_task_contract", `Expected ${expectedNodeCount} node contract bundles, found ${input.contracts.length}.`, "Compile one contract bundle for every graph node.", []));
