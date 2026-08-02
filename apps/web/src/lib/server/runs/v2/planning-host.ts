@@ -293,7 +293,7 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
     const condition = resolveGranularityCondition(input.granularityCondition);
     let breakdown: WorkBreakdown;
     let strategy: GranularityStrategyResult;
-    let compiled: CompiledGraphRevision;
+    let compiled: CompiledGraphRevision | undefined;
     let candidateEvaluations: CandidateEvaluationRecord[] | undefined;
     if (input.experimentalCandidate === undefined && dependencies.planCandidates !== undefined) {
       let evaluation = await evaluateCandidateSet({
@@ -378,15 +378,6 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
         strategy = selectGranularityStrategy({ condition, breakdown, repositorySnapshot, config: PILOT_UTILITY_POLICY });
         if (strategy.requiresSemanticReplan) throw new Error("C could not obtain a viable semantic cut after one bounded replan.");
       }
-      compiled = dependencies.compile({
-        breakdown: strategy.selectedBreakdown,
-        repositorySnapshot,
-        sourceContract: {
-          goal: input.goal,
-          acceptanceCriteria: input.acceptanceCriteria ?? [],
-          constraints: input.constraints ?? []
-        }
-      });
     }
     const strategyEvent = strategySelectedEvent(
       input.runId,
@@ -398,6 +389,17 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       candidateEvaluations
     );
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [strategyEvent])];
+    if (compiled === undefined) {
+      compiled = dependencies.compile({
+        breakdown: strategy.selectedBreakdown,
+        repositorySnapshot,
+        sourceContract: {
+          goal: input.goal,
+          acceptanceCriteria: input.acceptanceCriteria ?? [],
+          constraints: input.constraints ?? []
+        }
+      });
+    }
     const drafts = strategySuccessEvents(input.runId, strategy, compiled, dependencies.now);
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
     state = foldRun(events);
