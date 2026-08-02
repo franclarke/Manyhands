@@ -347,7 +347,7 @@ function candidatesEvaluatedEvent(
   const validIds = new Set(evaluation.validation.validCandidates.map((candidate) => candidate.candidateId));
   const evaluations = candidates.map((candidate) => {
     const strategy = evaluation.strategies.get(candidate.candidateId);
-    const diagnostics = evaluation.validation.diagnostics
+    const diagnostics: Array<{ code: string; message: string; refs: string[] }> = evaluation.validation.diagnostics
       .filter((diagnostic) => diagnostic.candidateId === undefined || diagnostic.candidateId === candidate.candidateId)
       .map(({ code, message, refs }) => ({ code, message, refs }));
     if (strategy?.requiresSemanticReplan === true) {
