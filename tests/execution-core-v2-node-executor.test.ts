@@ -415,7 +415,95 @@ describe("V2NodeExecutor", () => {
     expect(abortIndex).toBeGreaterThanOrEqual(0);
     expect(abortIndex).toBeLessThan(repairStageIndex);
   });
+
+  it("feeds missing physical child additions back into one bounded repair", async () => {
+    const compiled = compileGraphRevision({ breakdown: bookingBreakdown(), repositorySnapshot: bookingSnapshot() }, compilerDependencies);
+    const root = compiled.graph.nodes[compiled.graph.rootId]!;
+    const firstRepairCommit = "a".repeat(40);
+    const secondRepairCommit = "c".repeat(40);
+    const incomingCommit = "b".repeat(40);
+    const git = new RepairIntentGit({
+      incomingCommit,
+      firstRepairCommit,
+      secondRepairCommit,
+      cherryPickOutcomes: [{ ok: false, kind: "conflict", conflictFiles: ["src/domain/booking.ts"], output: "CONFLICT" }],
+      diffCachedNameOnly: ["src/domain/booking.ts"]
+    });
+    const prompts: string[] = [];
+    const agent = successfulAgent();
+    const executor = new V2NodeExecutor({
+      git,
+      repoRoot: "C:/repo/booking",
+      traceStore: new InMemoryTraceStore(),
+      executorFactory: new FixedAgentExecutorFactory(agent),
+      validator: { validate: async (input) => matrix(input.contract, input.candidateCommit) },
+      finalCandidate: {
+        prepare: async (input) => ({
+          manifestId: "final-repair-intent",
+          finalManifest: {
+            commitSha: input.candidateCommit,
+            treeSha: "tree-repair-intent",
+            graphRevision: input.graphRevision,
+            artifactIds: [...input.artifactIds],
+            evidenceMatrixId: input.evidenceMatrix.matrixId,
+            validationRecipeDigest: input.validationRecipeDigest,
+            deliveryTarget: input.targetBranch
+          }
+        })
+      },
+      worktrees: new WorktreeManager({ git, repoRoot: "C:/repo/booking", now: () => at }),
+      writeInstructions: async (_path, content) => { prompts.push(content); },
+      now: () => at
+    });
+
+    const input = request(compiled, root.id);
+    input.consumedArtifacts = [{
+      artifactId: "adopted-child",
+      runId: input.runId,
+      nodeId: "node-api",
+      digest: "sha256:child",
+      producerAttemptId: "attempt-child",
+      contract: { id: "contract-child", revision: "r1" },
+      kind: "commit",
+      location: incomingCommit,
+      adoptedAt: at
+    }];
+
+    const outcome = await executor.execute(input);
+
+    expect(outcome).toMatchObject({ kind: "success", candidateCommit: secondRepairCommit });
+    expect(agent.calls).toHaveLength(2);
+    expect(prompts[1]).toContain("Automated physical-intent audit from the previous repair pass");
+    expect(prompts[1]).toContain("export const required = true;");
+    expect(git.opsInvoked().filter((operation) => operation === "restoreManagedWorktree")).toHaveLength(1);
+  });
 });
+
+class RepairIntentGit extends FakeGitRunner {
+  private stagedDiffReads = 0;
+
+  constructor(private readonly intent: {
+    incomingCommit: string;
+    firstRepairCommit: string;
+    secondRepairCommit: string;
+  } & ConstructorParameters<typeof FakeGitRunner>[0]) {
+    super({ ...intent, commitShas: [intent.firstRepairCommit, intent.secondRepairCommit] });
+  }
+
+  override async diffRange(params: Parameters<FakeGitRunner["diffRange"]>[0]): ReturnType<FakeGitRunner["diffRange"]> {
+    if (params.to === this.intent.incomingCommit) return "diff --git a/src/domain/booking.ts b/src/domain/booking.ts\n+export const required = true;";
+    if (params.to === this.intent.firstRepairCommit) return "diff --git a/src/domain/booking.ts b/src/domain/booking.ts\n+export const unrelated = true;";
+    if (params.to === this.intent.secondRepairCommit) return "diff --git a/src/domain/booking.ts b/src/domain/booking.ts\n+export const required = true;";
+    return super.diffRange(params);
+  }
+
+  override async diffCached(cwd: string): ReturnType<FakeGitRunner["diffCached"]> {
+    this.stagedDiffReads += 1;
+    return this.stagedDiffReads === 1
+      ? "diff --git a/src/domain/booking.ts b/src/domain/booking.ts\n+export const unrelated = true;"
+      : "diff --git a/src/domain/booking.ts b/src/domain/booking.ts\n+export const required = true;";
+  }
+}
 
 describe("ScopeChecker V2", () => {
   it("uses the canonical allowed and forbidden paths without a legacy ExecutionScope", () => {

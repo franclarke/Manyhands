@@ -500,33 +500,55 @@ export class V2NodeExecutor {
           return { nodeId: artifact.nodeId, artifactId: artifact.artifactId, location: artifact.location, diff: "(unable to materialize source diff; inspect the commit directly)" };
         }
       }));
-      await this.writeInstructions(instructionPath, buildV2RepairInstructions(input, { ...repair, childPatches }));
-      const executor = this.options.executorFactory.create(input.repairSelection);
-      const outcome = await executor.execute({
-        cwd: worktree.path,
-        instructionFilePath: instructionPath,
-        model: input.repairSelection.model,
-        timeoutMs: input.config.integrationTimeoutMs,
-        bypassApprovals: true,
-        processOwnerId: input.runId,
-        attemptId: stableUuid(`${input.attemptId}:repair:${repair.pass}`),
-        ...(input.repairSelection.effort !== undefined ? { reasoningEffort: input.repairSelection.effort } : {}),
-        signal
-      });
-      const result = await this.recorder.record({
-        worktree,
-        executorOutcome: outcome,
-        expectedHead,
-        scopeContract: input.contract.scope,
-        scopePolicy: input.config.scopePolicy,
-        unexpectedCommitPolicy: input.config.unexpectedCommitPolicy,
-        commitMessage: `mh-v2-repair: ${input.node.id}`,
-        usageSource: usageSourceForSelection(input.repairSelection)
-      });
-      const evidenceRefs = [`repair:${input.attemptId}:${repair.pass}`, ...repair.conflictFiles.map((file) => `file:${file}`)];
-      return result.status === "success" && result.commitSha !== undefined
-        ? { success: true, candidateSha: result.commitSha, evidenceRefs }
-        : { success: false, evidenceRefs };
+      let repairFeedback: string | undefined;
+      for (let pass = 1; pass <= 2; pass++) {
+        await this.writeInstructions(instructionPath, buildV2RepairInstructions(input, { ...repair, childPatches }, repairFeedback));
+        const executor = this.options.executorFactory.create(input.repairSelection);
+        const outcome = await executor.execute({
+          cwd: worktree.path,
+          instructionFilePath: instructionPath,
+          model: input.repairSelection.model,
+          timeoutMs: input.config.integrationTimeoutMs,
+          bypassApprovals: true,
+          processOwnerId: input.runId,
+          attemptId: stableUuid(`${input.attemptId}:repair:${repair.pass}:pass-${pass}`),
+          ...(input.repairSelection.effort !== undefined ? { reasoningEffort: input.repairSelection.effort } : {}),
+          signal
+        });
+        const result = await this.recorder.record({
+          worktree,
+          executorOutcome: outcome,
+          expectedHead,
+          scopeContract: input.contract.scope,
+          scopePolicy: input.config.scopePolicy,
+          unexpectedCommitPolicy: input.config.unexpectedCommitPolicy,
+          commitMessage: `mh-v2-repair: ${input.node.id}`,
+          usageSource: usageSourceForSelection(input.repairSelection)
+        });
+        const evidenceRefs = [`repair:${input.attemptId}:${repair.pass}`, ...repair.conflictFiles.map((file) => `file:${file}`)];
+        if (result.status !== "success" || result.commitSha === undefined) return { success: false, evidenceRefs };
+
+        const repairedDiff = await this.options.git.diffRange({
+          cwd: worktree.path,
+          from: input.graph.baseCommit,
+          to: result.commitSha
+        });
+        const missingAdditions = missingChildPatchAdditions(childPatches, repairedDiff);
+        if (missingAdditions.length === 0) return { success: true, candidateSha: result.commitSha, evidenceRefs };
+        if (pass === 2) {
+          await this.options.git.restoreManagedWorktree(worktree.path, expectedHead);
+          return { success: false, evidenceRefs };
+        }
+
+        repairFeedback = [
+          "Automated physical-intent audit from the previous repair pass:",
+          "The committed repair still omitted these exact child additions from the base-to-repair diff:",
+          ...missingAdditions.map((addition) => `- ${addition}`),
+          "Restore every listed line verbatim while retaining the existing sibling behavior before staging the next pass."
+        ].join("\n");
+        await this.options.git.restoreManagedWorktree(worktree.path, expectedHead);
+      }
+      return { success: false, evidenceRefs: [`repair:${input.attemptId}:${repair.pass}`, ...repair.conflictFiles.map((file) => `file:${file}`)] };
     } catch {
       return { success: false, evidenceRefs: [`repair:${input.attemptId}:${repair.pass}`] };
     } finally {
@@ -669,7 +691,8 @@ function buildV2RepairInstructions(
     conflictOutput: string;
     childArtifacts: IntegrationChildArtifact[];
     childPatches: Array<{ nodeId: string; artifactId: string; location: string; diff: string }>;
-  }
+  },
+  repairFeedback?: string
 ): string {
   const incomingCommit = repair.childArtifacts.find((artifact) => artifact.artifactId === repair.artifactId)?.location;
   return [
@@ -700,6 +723,8 @@ function buildV2RepairInstructions(
     "Do not add an exception-based fallback or duplicate state to compensate for a changed canonical API; consume its returned state and exported operations instead.",
     "The only accepted repair is a non-empty working-tree diff that applies the incoming intent while preserving the current sibling behavior.",
     "Do not report the conflict resolved from the final summary alone: inspect `git status --short` and `git diff --stat`, and keep editing until the actual diff is present.",
+    "Before staging, compare the final base-to-worktree diff with every physical child patch above. Each non-empty child addition must appear verbatim; do not replace it with a synonym or omit it because the surrounding implementation was reconciled.",
+    ...(repairFeedback === undefined ? [] : ["", repairFeedback]),
     "Before finishing, run git diff --check and verify that no <<<<<<<, =======, or >>>>>>> conflict markers remain.",
     "Then run `pnpm build` before `pnpm test`; fix any type or build error before reporting the repair complete.",
     "",
@@ -735,6 +760,25 @@ function executionArtifactInput(artifact: V2ExecutionArtifact) {
 
 function integrationArtifact(artifact: V2ExecutionArtifact): IntegrationChildArtifact {
   return { schemaVersion: 1, ...artifact, contract: { ...artifact.contract } };
+}
+
+function missingChildPatchAdditions(
+  childPatches: readonly { nodeId: string; diff: string }[],
+  finalDiff: string
+): string[] {
+  const finalAddedLines = new Set(patchAddedLines(finalDiff));
+  return childPatches
+    .flatMap((patch) => patchAddedLines(patch.diff).map((line) => `${patch.nodeId}: +${line}`))
+    .filter((entry) => !finalAddedLines.has(entry.slice(entry.indexOf("+") + 1)))
+    .slice(0, 24);
+}
+
+function patchAddedLines(diff: string): string[] {
+  return diff
+    .split(/\r?\n/u)
+    .filter((line) => line.startsWith("+") && !line.startsWith("+++"))
+    .map((line) => line.slice(1))
+    .filter((line) => line.trim().length > 0);
 }
 
 /**
