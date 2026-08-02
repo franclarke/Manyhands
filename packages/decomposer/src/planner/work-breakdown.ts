@@ -156,7 +156,9 @@ export class WorkBreakdownPlanner {
         const failures: string[] = [];
         for (const output of outputs) {
           const parsed = WorkBreakdownSchema.safeParse(
-            restoreCanonicalEvidenceDefinitions(output, input.repositorySnapshot.evidence)
+            restoreAcceptanceIntentRequiredDefaults(
+              restoreCanonicalEvidenceDefinitions(output, input.repositorySnapshot.evidence)
+            )
           );
           if (parsed.success) {
             const groundingIssues = planningIssues(parsed.data, input);
@@ -227,6 +229,17 @@ function restoreCanonicalEvidenceDefinitions(
   return additions.length === 0
     ? output
     : { ...output, repositoryEvidence: [...output.repositoryEvidence, ...additions] };
+}
+
+function restoreAcceptanceIntentRequiredDefaults(output: unknown): unknown {
+  if (!isRecord(output) || !Array.isArray(output.acceptanceIntents)) return output;
+
+  const acceptanceIntents = output.acceptanceIntents.map((intent) => {
+    if (!isRecord(intent) || Object.hasOwn(intent, "required")) return intent;
+    return { ...intent, required: true };
+  });
+
+  return { ...output, acceptanceIntents };
 }
 
 function collectEvidenceIds(value: unknown, output: Set<string>): void {

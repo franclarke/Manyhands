@@ -81,6 +81,20 @@ describe("WorkBreakdown", () => {
     ]);
   });
 
+  it("restores omitted acceptance intent required flags as required", async () => {
+    const candidate = fixture();
+    Reflect.deleteProperty(candidate.acceptanceIntents[0]!, "required");
+    const planner = new WorkBreakdownPlanner({
+      model: { generate: vi.fn().mockResolvedValue(candidate) },
+      maxAttempts: 1,
+      retryDelayMs: 0
+    });
+
+    const planned = await planner.plan(plannerInput());
+
+    expect(planned.acceptanceIntents[0]?.required).toBe(true);
+  });
+
   it("does not retry a planning protocol failure that cannot be repaired by another model attempt", async () => {
     const generate = vi.fn().mockRejectedValue(new NonRetryablePlanningError("Claude stream closed without a successful terminal result."));
     const attempts: string[] = [];
