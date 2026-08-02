@@ -82,6 +82,56 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     expect((metrics.metrics as Record<string, unknown>).totalLeafCount).toBe(3);
   });
 
+  it("selects a compiler-valid semantic candidate instead of failing on the first proposal", async () => {
+    const events = new JsonlRunEventStore({ directory });
+    const snapshots = new RunSnapshotStore({ directory, events });
+    const rejected = planningCandidate("candidate-rejected");
+    const viable = planningCandidate("candidate-viable");
+    const plan = vi.fn(async () => {
+      throw new Error("single-candidate planning should not run when planCandidates is available");
+    });
+    const planCandidates = vi.fn(async () => [rejected, viable]);
+    const compile = vi.fn((input: GraphCompilerInput) => {
+      if (input.breakdown.breakdownId === "candidate-rejected") {
+        throw new Error("Compiled plan review failed: contested_planned_output");
+      }
+      return compileGraphRevision(input, compilerDependencies);
+    });
+
+    const result = await runPlanningV2({
+      runId: "run-candidate-selection",
+      goal: "Build booking",
+      repoPath: "C:/repo/booking",
+      targetFingerprint: "target-1",
+      baseCommit: "1".repeat(40),
+      authority
+    }, {
+      events,
+      snapshots,
+      inspect: async () => bookingSnapshot(),
+      plan,
+      planCandidates,
+      compile,
+      nodeIdFor: (key) => compilerDependencies.idFor("node", key),
+      now: () => "2026-08-02T16:00:00.000Z"
+    });
+
+    expect(result.failureReason).toBeUndefined();
+    expect(result.lifecycle).toBe("needs_approval");
+    expect(plan).not.toHaveBeenCalled();
+    expect(planCandidates).toHaveBeenCalledTimes(1);
+    expect(planCandidates.mock.calls[0]?.[0].planningEnvelope).toMatchObject({
+      candidateBudget: { minimum: 2, maximum: 3 },
+      requirements: { requireCompilerApproval: true }
+    });
+    expect(compile).toHaveBeenCalledTimes(2);
+    const completed = (await events.load("run-candidate-selection"))
+      .find((event) => event.type === "planning.completed");
+    expect(completed?.type === "planning.completed"
+      ? (completed.payload.breakdown as { breakdownId?: string }).breakdownId
+      : undefined).toBe("candidate-viable");
+  });
+
   it("performs one semantic replan when a C leaf exceeds the measured context budget", async () => {
     const events = new JsonlRunEventStore({ directory });
     const snapshots = new RunSnapshotStore({ directory, events });
@@ -136,3 +186,21 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     expect(result.granularityStrategy?.policyVersion).toBe(ADAPTIVE_UTILITY_POLICY_VERSION);
   });
 });
+
+function planningCandidate(breakdownId: string) {
+  const breakdown = bookingBreakdown();
+  breakdown.breakdownId = breakdownId;
+  breakdown.acceptanceOwnership = breakdown.acceptanceIntents.map((intent) => ({
+    intentId: intent.id,
+    ownerUnitKey: intent.id === "domain-ready" ? "domain" : intent.id === "api-ready" ? "api" : "ui",
+    role: "local",
+    rationale: "The leaf owns the observable behavior."
+  }));
+  breakdown.seamSpecifications = [{
+    seamId: "booking-shape",
+    delivery: "contract_only",
+    compatibility: "All participants bind the same exact contract revision.",
+    validation: "Integration tests exercise producer and both consumers."
+  }];
+  return breakdown;
+}
