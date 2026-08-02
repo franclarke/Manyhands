@@ -196,10 +196,12 @@ export interface CandidatePlanDiagnostic {
     | "snapshot_mismatch"
     | "goal_digest_mismatch"
     | "scope_declaration_incomplete"
+    | "scope_outside_grounding"
     | "unknown_scope_unit"
     | "acceptance_criteria_incomplete"
     | "leaf_validation_incomplete"
     | "acceptance_ownership_incomplete"
+    | "acceptance_role_mismatch"
     | "unknown_acceptance_intent"
     | "unknown_acceptance_owner"
     | "duplicate_acceptance_owner"
@@ -207,6 +209,7 @@ export interface CandidatePlanDiagnostic {
     | "local_owner_must_be_leaf"
     | "missing_seam_specification"
     | "orphan_seam_specification"
+    | "contract_obligation_incomplete"
     | "leaf_without_local_acceptance";
   message: string;
   refs: string[];
@@ -391,6 +394,7 @@ function validateCandidate(envelope: PlanningEnvelope, candidate: CandidatePlan)
   }
   const units = flattenUnits(candidate.breakdown.root);
   const unitByKey = new Map(units.map((unit) => [unit.key, unit]));
+  const evidenceById = new Map(candidate.breakdown.repositoryEvidence.map((evidence) => [evidence.id, evidence]));
   const leafKeys = new Set(units.filter((unit) => unit.kind === "leaf").map((unit) => unit.key));
   const scopeKeys = new Set<string>();
   for (const scope of candidate.scopes) {
@@ -399,6 +403,19 @@ function validateCandidate(envelope: PlanningEnvelope, candidate: CandidatePlan)
       continue;
     }
     scopeKeys.add(scope.unitKey);
+    const unit = unitByKey.get(scope.unitKey)!;
+    const groundedPaths = new Set([
+      ...unit.evidenceIds.flatMap((evidenceId) => {
+        const evidence = evidenceById.get(evidenceId);
+        return evidence?.kind === "path" ? [normalizePath(evidence.reference)] : [];
+      }),
+      ...(unit.plannedPaths ?? []).map(normalizePath)
+    ]);
+    for (const path of scope.paths) {
+      if (!groundedPaths.has(normalizePath(path))) {
+        diagnostics.push(issue(candidate, "scope_outside_grounding", `Scope for ${scope.unitKey} includes ungrounded path ${path}.`, [scope.unitKey, path]));
+      }
+    }
   }
   for (const leafKey of leafKeys) {
     if (!scopeKeys.has(leafKey)) diagnostics.push(issue(candidate, "scope_declaration_incomplete", `Leaf ${leafKey} has no declared scope.`, [leafKey]));
@@ -447,6 +464,22 @@ function validateCandidate(envelope: PlanningEnvelope, candidate: CandidatePlan)
     owners.push(ownership);
     ownershipByIntent.set(ownership.intentId, owners);
   }
+  const requiredRole = {
+    leafAcceptance: "local",
+    seamAcceptance: "seam",
+    globalAcceptance: "global"
+  } as const;
+  for (const criterion of candidate.acceptanceCriteria) {
+    const owners = ownershipByIntent.get(criterion.intentId) ?? [];
+    if (owners.length > 0 && owners.some((owner) => owner.role !== requiredRole[criterion.kind])) {
+      diagnostics.push(issue(
+        candidate,
+        "acceptance_role_mismatch",
+        `Acceptance criterion ${criterion.intentId} is ${criterion.kind} but its owner role is not ${requiredRole[criterion.kind]}.`,
+        [criterion.intentId]
+      ));
+    }
+  }
   for (const intent of candidate.breakdown.acceptanceIntents) {
     const owners = ownershipByIntent.get(intent.id) ?? [];
     if (owners.length === 0) {
@@ -475,7 +508,34 @@ function validateCandidate(envelope: PlanningEnvelope, candidate: CandidatePlan)
     }
   }
   for (const seamId of specifications.keys()) if (!seams.has(seamId)) diagnostics.push(issue(candidate, "orphan_seam_specification", `Seam specification ${seamId} has no candidate seam.`, [seamId]));
+  for (const obligation of candidate.contractObligations) {
+    const ownerExists = unitByKey.has(obligation.ownerUnitKey);
+    const producerExists = unitByKey.has(obligation.producerUnitKey);
+    const consumersExist = obligation.consumerUnitKeys.every((unitKey) => unitByKey.has(unitKey));
+    if (!ownerExists || !producerExists || !consumersExist) {
+      diagnostics.push(issue(candidate, "contract_obligation_incomplete", `Contract obligation ${obligation.obligationId} references an unknown owner, producer, or consumer.`, [obligation.obligationId]));
+    }
+  }
+  for (const specification of candidate.seamSpecifications) {
+    const matchingObligation = candidate.contractObligations.some((obligation) =>
+      obligation.kind === "cross_layer_contract" &&
+      obligation.producerUnitKey === specification.producerUnitKey &&
+      sameMembers(obligation.consumerUnitKeys, specification.consumerUnitKeys) &&
+      [obligation.producerUnitKey, ...obligation.consumerUnitKeys].includes(obligation.ownerUnitKey)
+    );
+    if (!matchingObligation) {
+      diagnostics.push(issue(candidate, "contract_obligation_incomplete", `Seam ${specification.seamId} has no matching cross-layer contract obligation.`, [specification.seamId]));
+    }
+  }
   return diagnostics;
+}
+
+function sameMembers(left: readonly string[], right: readonly string[]): boolean {
+  return [...left].sort().join("\u0000") === [...right].sort().join("\u0000");
+}
+
+function normalizePath(value: string): string {
+  return value.replaceAll("\\", "/").replace(/^\.\//u, "");
 }
 
 function issue(candidate: CandidatePlan, code: CandidatePlanDiagnostic["code"], message: string, refs: string[]): CandidatePlanDiagnostic {
