@@ -130,6 +130,19 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     expect(completed?.type === "planning.completed"
       ? (completed.payload.breakdown as { breakdownId?: string }).breakdownId
       : undefined).toBe("candidate-viable");
+    const strategy = (await events.load("run-candidate-selection"))
+      .find((event) => event.type === "planning.granularity_strategy_selected");
+    expect(strategy?.type === "planning.granularity_strategy_selected"
+      ? strategy.payload.candidateEvaluations
+      : undefined).toEqual(expect.arrayContaining([
+      expect.objectContaining({ candidateId: "candidate-rejected", eligible: false, score: expect.any(Number) }),
+      expect.objectContaining({ candidateId: "candidate-viable", eligible: true, score: expect.any(Number) })
+    ]));
+    const metrics = JSON.parse(await readFile(path.join(directory, "run-candidate-selection.granularity-metrics.json"), "utf8")) as Record<string, unknown>;
+    expect(metrics.candidateEvaluations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ candidateId: "candidate-rejected", eligible: false }),
+      expect.objectContaining({ candidateId: "candidate-viable", eligible: true })
+    ]));
   });
 
   it("performs one semantic replan when a C leaf exceeds the measured context budget", async () => {

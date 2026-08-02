@@ -146,6 +146,13 @@ export const RunEventSchema = z.discriminatedUnion("type", [
       candidateSeams: z.array(z.unknown())
     }).strict().optional(),
     candidateSourceHash: NonEmptyStringSchema.optional(),
+    candidateEvaluations: z.array(z.object({
+      candidateId: NonEmptyStringSchema,
+      candidateHash: NonEmptyStringSchema,
+      eligible: z.boolean(),
+      score: z.number().min(-1).max(1).optional(),
+      diagnostics: z.array(NonEmptyStringSchema)
+    }).strict()).optional(),
     config: z.object({
       minimumAdvantage: z.number().min(-1).max(1),
       maxLeafContextTokens: z.number().int().positive(),

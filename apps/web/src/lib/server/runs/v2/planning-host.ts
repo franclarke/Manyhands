@@ -39,9 +39,17 @@ export interface PlanningV2Dependencies {
 }
 
 type CandidateSetEvaluation =
-  | { kind: "selected"; candidate: CandidatePlan; strategy: GranularityStrategyResult; compiled: CompiledGraphRevision; diagnostics: CandidatePlanDiagnostic[] }
+  | { kind: "selected"; candidate: CandidatePlan; strategy: GranularityStrategyResult; compiled: CompiledGraphRevision; diagnostics: CandidatePlanDiagnostic[]; candidateEvaluations: CandidateEvaluationRecord[] }
   | { kind: "clarification"; breakdown: WorkBreakdown }
-  | { kind: "replan_required"; rejectedCandidateIds: string[]; diagnostics: CandidatePlanDiagnostic[] };
+  | { kind: "replan_required"; rejectedCandidateIds: string[]; diagnostics: CandidatePlanDiagnostic[]; candidateEvaluations: CandidateEvaluationRecord[] };
+
+interface CandidateEvaluationRecord {
+  candidateId: string;
+  candidateHash: string;
+  eligible: boolean;
+  score?: number;
+  diagnostics: string[];
+}
 
 interface CandidateSetEvaluationInput {
   plannerInput: WorkBreakdownPlannerInput;
@@ -117,6 +125,26 @@ async function evaluateCandidateSet(input: CandidateSetEvaluationInput): Promise
     }
   }
 
+  const candidateEvaluations = candidates.map((candidate): CandidateEvaluationRecord => {
+    const strategy = strategies.get(candidate.candidateId);
+    const assessment = strategy?.assessments[candidate.breakdown.root.key];
+    const compilerResult = compilerResults[candidate.candidateId];
+    const diagnostics = [
+      ...validation.diagnostics
+        .filter((diagnostic) => diagnostic.candidateId === candidate.candidateId)
+        .map((diagnostic) => `${diagnostic.code}: ${diagnostic.message}`),
+      ...(compilerResult?.diagnostics ?? [])
+    ];
+    return {
+      candidateId: candidate.candidateId,
+      candidateHash: candidateBreakdownHash(candidate.breakdown),
+      eligible: validation.validCandidates.some((valid) => valid.candidateId === candidate.candidateId)
+        && compilerResult?.approvable === true,
+      ...(assessment === undefined ? {} : { score: assessment.splitAdvantage }),
+      diagnostics: [...new Set(diagnostics)]
+    };
+  });
+
   const selection = selectCandidatePlan({
     envelope: input.envelope,
     candidates,
@@ -132,7 +160,8 @@ async function evaluateCandidateSet(input: CandidateSetEvaluationInput): Promise
     return {
       kind: "replan_required",
       rejectedCandidateIds: selection.diagnosis.rejectedCandidateIds,
-      diagnostics: selection.diagnosis.diagnostics
+      diagnostics: selection.diagnosis.diagnostics,
+      candidateEvaluations
     };
   }
   const strategy = strategies.get(selection.candidate.candidateId);
@@ -145,7 +174,8 @@ async function evaluateCandidateSet(input: CandidateSetEvaluationInput): Promise
     candidate: selection.candidate,
     strategy,
     compiled: compiledGraph,
-    diagnostics: selection.diagnostics
+    diagnostics: selection.diagnostics,
+    candidateEvaluations
   };
 }
 
@@ -264,6 +294,7 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
     let breakdown: WorkBreakdown;
     let strategy: GranularityStrategyResult;
     let compiled: CompiledGraphRevision;
+    let candidateEvaluations: CandidateEvaluationRecord[] | undefined;
     if (input.experimentalCandidate === undefined && dependencies.planCandidates !== undefined) {
       let evaluation = await evaluateCandidateSet({
         plannerInput,
@@ -307,6 +338,7 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       breakdown = evaluation.candidate.breakdown;
       strategy = evaluation.strategy;
       compiled = evaluation.compiled;
+      candidateEvaluations = evaluation.candidateEvaluations;
     } else {
       breakdown = input.experimentalCandidate === undefined
         ? await dependencies.plan(plannerInput, planningObserverFor(latestPlanningAttempt(events)))
@@ -362,14 +394,15 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       breakdown,
       nodeIdFor,
       dependencies.now,
-      input.experimentalCandidate?.sourceHash
+      input.experimentalCandidate?.sourceHash,
+      candidateEvaluations
     );
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [strategyEvent])];
     const drafts = strategySuccessEvents(input.runId, strategy, compiled, dependencies.now);
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
     state = foldRun(events);
     await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
-    await writeStrategyDiagnostics(dependencies, input.runId, strategy, input.experimentalCandidate?.sourceHash);
+    await writeStrategyDiagnostics(dependencies, input.runId, strategy, input.experimentalCandidate?.sourceHash, candidateEvaluations);
     return state;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
@@ -437,7 +470,8 @@ function strategySelectedEvent(
   candidateBreakdown: WorkBreakdown,
   nodeIdFor: (key: string) => string,
   now: () => string,
-  candidateSourceHash?: string
+  candidateSourceHash?: string,
+  candidateEvaluations?: readonly CandidateEvaluationRecord[]
 ): RunEventInput {
   const breakdown = strategy.selectedBreakdown;
   return {
@@ -454,6 +488,7 @@ function strategySelectedEvent(
         candidateSeams: candidateBreakdown.candidateSeams.map(asRecord)
       },
       ...(candidateSourceHash === undefined ? {} : { candidateSourceHash }),
+      ...(candidateEvaluations === undefined ? {} : { candidateEvaluations: candidateEvaluations.map((evaluation) => ({ ...evaluation })) }),
       config: {
         minimumAdvantage: strategy.config.minimumAdvantage,
         maxLeafContextTokens: strategy.config.maxLeafContextTokens,
@@ -539,7 +574,8 @@ async function writeStrategyDiagnostics(
   dependencies: PlanningV2Dependencies,
   runId: string,
   strategy: GranularityStrategyResult,
-  candidateSourceHash?: string
+  candidateSourceHash?: string,
+  candidateEvaluations?: readonly CandidateEvaluationRecord[]
 ): Promise<void> {
   const artifact = {
     runId,
@@ -547,6 +583,7 @@ async function writeStrategyDiagnostics(
     condition: strategy.condition,
     candidateTreeHash: strategy.candidateTreeHash,
     ...(candidateSourceHash === undefined ? {} : { candidateSourceHash }),
+    ...(candidateEvaluations === undefined ? {} : { candidateEvaluations: candidateEvaluations.map((evaluation) => ({ ...evaluation })) }),
     config: strategy.config,
     metrics: structuralMetrics(strategy.selectedBreakdown.root),
     generatedAt: new Date().toISOString()

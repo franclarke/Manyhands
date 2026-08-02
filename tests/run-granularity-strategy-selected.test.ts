@@ -15,6 +15,10 @@ function events(): RunEvent[] {
         policyVersion: "adaptive-utility/2.0.0-pilot",
         condition: "C2",
         candidateTreeHash: "sha256:candidate",
+        candidateEvaluations: [
+          { candidateId: "candidate-a", candidateHash: "sha256:a", eligible: true, score: 0.6, diagnostics: [] },
+          { candidateId: "candidate-b", candidateHash: "sha256:b", eligible: false, score: -0.2, diagnostics: ["compiler_rejected"] }
+        ],
         config: {
           minimumAdvantage: 0.15,
           maxLeafContextTokens: 24_000,
@@ -59,6 +63,10 @@ describe("planning.granularity_strategy_selected", () => {
     expect(state.granularityStrategy?.config.maxLeafPlannedPaths).toBe(12);
     expect(state.granularityStrategy?.assessments["node-warehouse-web"]?.selected).toBe("split");
     expect(state.granularityStrategy?.assessments["node-warehouse-web"]?.splitAdvantage).toBe(0.6);
+    expect(state.granularityStrategy?.candidateEvaluations).toEqual([
+      { candidateId: "candidate-a", candidateHash: "sha256:a", eligible: true, score: 0.6, diagnostics: [] },
+      { candidateId: "candidate-b", candidateHash: "sha256:b", eligible: false, score: -0.2, diagnostics: ["compiler_rejected"] }
+    ]);
   });
 
   it("keeps historical journals readable when the planned-path ceiling is absent", () => {
