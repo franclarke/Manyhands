@@ -203,7 +203,36 @@ export class WorkBreakdownPlanner {
 }
 
 function planningIssues(breakdown: WorkBreakdown, input: WorkBreakdownPlannerInput): string[] {
-  return [...commandSurfaceIssues(breakdown, input), ...contractFidelityIssues(breakdown, input.goal)];
+  return [
+    ...commandSurfaceIssues(breakdown, input),
+    ...testEvidenceIssues(breakdown),
+    ...contractFidelityIssues(breakdown, input.goal)
+  ];
+}
+
+function testEvidenceIssues(breakdown: WorkBreakdown): string[] {
+  const evidenceById = new Map(breakdown.repositoryEvidence.map((evidence) => [evidence.id, evidence]));
+  const issues: string[] = [];
+  for (const unit of flattenWorkUnits(breakdown.root)) {
+    if (unit.kind !== "leaf") continue;
+    const declaresTests = unit.concerns.some((concern) => /\btests?\b/iu.test(concern)) &&
+      [unit.objective, ...unit.expectedOutcomes].some((text) => /\btests?\b|\btest coverage\b/iu.test(text));
+    if (!declaresTests) continue;
+    const hasExactTestEvidence = unit.evidenceIds
+      .map((evidenceId) => evidenceById.get(evidenceId))
+      .some((evidence) => evidence?.kind === "path" && isTestReference(evidence.reference));
+    const hasPlannedTest = (unit.plannedPaths ?? []).some(isTestReference);
+    if (hasExactTestEvidence || hasPlannedTest) continue;
+    issues.push(
+      `validation evidence: leaf ${unit.key} declares test coverage but has no exact test evidence; cite an existing test path or declare the new test path in plannedPaths`
+    );
+  }
+  return issues;
+}
+
+function isTestReference(reference: string): boolean {
+  const normalized = reference.replaceAll("\\", "/");
+  return /(?:^|\/)[^/]+\.(?:test|spec)\.[cm]?[jt]sx?$/iu.test(normalized);
 }
 
 function restoreCanonicalEvidenceDefinitions(

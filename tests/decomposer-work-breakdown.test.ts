@@ -229,6 +229,30 @@ describe("WorkBreakdown", () => {
     expect(result).toEqual(repaired);
   });
 
+  it("retries a test-bearing leaf that has no exact test evidence", async () => {
+    const incomplete = fixture();
+    const repaired = fixture();
+    for (const breakdown of [incomplete, repaired]) {
+      if (breakdown.root.kind !== "composite") throw new Error("Expected composite fixture.");
+      const leaf = breakdown.root.children[0]!;
+      leaf.concerns = ["fulfillment", "ordering", "tests"];
+      leaf.expectedOutcomes = ["Planner tests verify express orders are listed first."];
+    }
+    if (repaired.root.kind !== "composite") throw new Error("Expected composite fixture.");
+    repaired.root.children[0]!.plannedPaths = ["src/fulfillment/planner-priority.test.ts"];
+
+    const generate = vi.fn().mockResolvedValueOnce(incomplete).mockResolvedValueOnce(repaired);
+    const planner = new WorkBreakdownPlanner({ model: { generate }, maxAttempts: 2, retryDelayMs: 0 });
+
+    const result = await planner.plan(plannerInput());
+
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(generate.mock.calls[1]?.[0].repairIssues).toEqual(expect.arrayContaining([
+      expect.stringContaining("exact test evidence")
+    ]));
+    expect(result).toEqual(repaired);
+  });
+
   it("retries when a declared contract section is flattened instead of preserved verbatim", async () => {
     const contract = [
       "## Probe contract",
