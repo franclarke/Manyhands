@@ -84,6 +84,42 @@ describe("C utility strategy selection", () => {
     ]);
   });
 
+  it("remaps explicit owners to the selected frontier and normalizes a collapsed seam", () => {
+    const breakdown = candidate(composite("root", [
+      leaf("producer", ["src/producer.ts"], ["intent-a"]),
+      leaf("consumer", ["src/consumer.ts"], ["intent-b"])
+    ], ["intent-c", "intent-a", "intent-b"]), {
+      candidateSeams: [{
+        id: "producer-consumer",
+        kind: "api",
+        specification: "Consumer binds the producer API.",
+        producerUnitKey: "producer",
+        consumerUnitKeys: ["consumer"],
+        evidenceIds: []
+      }]
+    });
+    breakdown.acceptanceOwnership = [
+      { intentId: "intent-a", ownerUnitKey: "producer", role: "local", rationale: "Producer proves its local behavior." },
+      { intentId: "intent-b", ownerUnitKey: "root", role: "seam", seamId: "producer-consumer", rationale: "The root validates the seam." },
+      { intentId: "intent-c", ownerUnitKey: "root", role: "global", rationale: "The root proves the integrated result." }
+    ];
+
+    const selected = selectGranularityStrategy({
+      condition: "A",
+      breakdown,
+      repositorySnapshot: snapshot({ "src/producer.ts": 400, "src/consumer.ts": 400 }),
+      config: PILOT_UTILITY_POLICY
+    }).selectedBreakdown;
+
+    expect(selected.root.kind).toBe("leaf");
+    expect(selected.candidateSeams).toEqual([]);
+    expect(selected.acceptanceOwnership).toEqual([
+      { intentId: "intent-a", ownerUnitKey: "root", role: "local", rationale: "Producer proves its local behavior." },
+      { intentId: "intent-b", ownerUnitKey: "root", role: "local", rationale: "The root validates the seam." },
+      { intentId: "intent-c", ownerUnitKey: "root", role: "local", rationale: "The root proves the integrated result." }
+    ]);
+  });
+
   it("keeps overlapping tightly coordinated siblings together", () => {
     const breakdown = candidate(
       composite("root", [

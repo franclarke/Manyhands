@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
 import {
   WorkBreakdownSchema,
+  type AcceptanceOwnership,
   type WorkBreakdown,
   type WorkUnit
 } from "../planner/schema.js";
@@ -82,19 +83,30 @@ export function selectGranularityStrategy(
   });
   const selectedKeys = new Set(flattenUnits(selected.unit).map((unit) => unit.key));
   const parentByKey = parentMap(breakdown.root);
+  const candidateArtifacts = remapRelations(
+    breakdown.candidateArtifacts,
+    selectedKeys,
+    parentByKey
+  );
+  const candidateSeams = remapRelations(
+    breakdown.candidateSeams,
+    selectedKeys,
+    parentByKey
+  );
   const remapped = WorkBreakdownSchema.parse({
     ...breakdown,
     root: selected.unit,
-    candidateArtifacts: remapRelations(
-      breakdown.candidateArtifacts,
-      selectedKeys,
-      parentByKey
-    ),
-    candidateSeams: remapRelations(
-      breakdown.candidateSeams,
-      selectedKeys,
-      parentByKey
-    )
+    candidateArtifacts,
+    candidateSeams,
+    ...(breakdown.acceptanceOwnership === undefined ? {} : {
+      acceptanceOwnership: remapAcceptanceOwnership(
+        breakdown.acceptanceOwnership,
+        selected.unit,
+        selectedKeys,
+        parentByKey,
+        new Set(candidateSeams.map((seam) => seam.id))
+      )
+    })
   });
 
   return {
@@ -419,6 +431,34 @@ function remapRelations<T extends RelationLike>(
     return consumers.length === 0
       ? []
       : [{ ...relation, producerUnitKey: producer, consumerUnitKeys: consumers }];
+  });
+}
+
+function remapAcceptanceOwnership(
+  ownership: readonly AcceptanceOwnership[],
+  selectedRoot: WorkUnit,
+  selectedKeys: ReadonlySet<string>,
+  parentByKey: ReadonlyMap<string, string>,
+  survivingSeamIds: ReadonlySet<string>
+): AcceptanceOwnership[] {
+  const selectedUnits = new Map(flattenUnits(selectedRoot).map((unit) => [unit.key, unit]));
+  return ownership.map((item) => {
+    const ownerUnitKey = nearestSelected(item.ownerUnitKey, selectedKeys, parentByKey);
+    const owner = selectedUnits.get(ownerUnitKey);
+    if (owner === undefined) throw new Error(`No selected owner exists for acceptance intent ${item.intentId}.`);
+    const seamSurvives = item.role !== "seam" || (item.seamId !== undefined && survivingSeamIds.has(item.seamId));
+    let role = seamSurvives ? item.role : owner.kind === "leaf" ? "local" : "global";
+    if (role === "global" && owner.kind === "leaf") role = "local";
+    if (role === "local" && owner.kind === "composite") role = "global";
+    const base = {
+      intentId: item.intentId,
+      ownerUnitKey,
+      role,
+      rationale: item.rationale
+    } as const;
+    return role === "seam"
+      ? { ...base, role, seamId: item.seamId! }
+      : base;
   });
 }
 

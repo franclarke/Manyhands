@@ -79,6 +79,36 @@ describe("acceptance intent allocation", () => {
     ]);
   });
 
+  it("uses explicit acceptance ownership instead of deriving a deeper owner", () => {
+    const breakdown = fiveIntentBreakdown();
+    breakdown.acceptanceOwnership = [
+      { intentId: "intent-1", ownerUnitKey: "root", role: "global", rationale: "The root owns the integrated criterion." },
+      { intentId: "intent-2", ownerUnitKey: "inventory", role: "local", rationale: "Inventory proves its local criterion." },
+      { intentId: "intent-3", ownerUnitKey: "orders", role: "local", rationale: "Orders proves its local criterion." },
+      { intentId: "intent-4", ownerUnitKey: "orders", role: "local", rationale: "Orders proves its local criterion." },
+      { intentId: "intent-5", ownerUnitKey: "web", role: "local", rationale: "Web proves its local criterion." }
+    ];
+
+    const compiled = compileContractBundles({
+      breakdown,
+      repositorySnapshot: snapshot(),
+      nodeIdByUnitKey: nodeIds(breakdown.root)
+    }, dependencies);
+
+    expect(compiled.acceptanceOwnerByIntentId["intent-1"]).toBe("root");
+    const userCriteria = compiled.bundles.flatMap((bundle) =>
+      bundle.task.acceptanceCriteria.filter((criterion) => criterion.description.startsWith("User criterion "))
+    );
+    expect(userCriteria.map((criterion) => criterion.description).sort()).toEqual([
+      "User criterion 1",
+      "User criterion 2",
+      "User criterion 3",
+      "User criterion 4",
+      "User criterion 5"
+    ]);
+    expect(compiled.bundles.find((bundle) => bundle.task.nodeId === "node-root")?.task.acceptanceCriteria.map((criterion) => criterion.description)).toContain("User criterion 1");
+  });
+
   it("binds existing test evidence cited by a composite across its owned criteria", () => {
     const breakdown = fiveIntentBreakdown();
     if (breakdown.root.kind !== "composite") throw new Error("Expected a composite fixture root.");

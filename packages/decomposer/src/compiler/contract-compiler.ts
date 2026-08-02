@@ -116,7 +116,9 @@ export function compileContractBundles(input: {
   });
 
   const intents = new Map(input.breakdown.acceptanceIntents.map((intent) => [intent.id, intent]));
-  const acceptanceOwnerByIntentId = allocateAcceptanceIntents(input.breakdown.root);
+  const acceptanceOwnerByIntentId = input.breakdown.acceptanceOwnership === undefined
+    ? allocateAcceptanceIntents(input.breakdown.root)
+    : Object.fromEntries(input.breakdown.acceptanceOwnership.map((ownership) => [ownership.intentId, ownership.ownerUnitKey]));
   for (const intent of input.breakdown.acceptanceIntents) {
     acceptanceOwnerByIntentId[intent.id] ??= input.breakdown.root.key;
   }
