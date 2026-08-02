@@ -652,6 +652,31 @@ function pendingSchedulerDecision(explanations: ReadinessExplanationV2[]): boole
   ));
 }
 
+export function orderArtifactRequirementsForMaterialization<T extends GraphRevision["artifactRequirements"][number]>(
+  requirements: readonly T[],
+  allRequirements: readonly T[]
+): T[] {
+  const dependencies = new Map<string, Set<string>>();
+  for (const requirement of allRequirements) {
+    if (requirement.requiredFor !== "execution") continue;
+    const producerDependencies = dependencies.get(requirement.consumerNodeId) ?? new Set<string>();
+    producerDependencies.add(requirement.producerNodeId);
+    dependencies.set(requirement.consumerNodeId, producerDependencies);
+  }
+
+  const remaining = [...requirements];
+  const ordered: T[] = [];
+  while (remaining.length > 0) {
+    const nextIndex = remaining.findIndex((requirement) => {
+      const producerDependencies = dependencies.get(requirement.producerNodeId) ?? new Set<string>();
+      return !remaining.some((candidate) => candidate !== requirement && producerDependencies.has(candidate.producerNodeId));
+    });
+    if (nextIndex < 0) return [...ordered, ...remaining];
+    ordered.push(remaining.splice(nextIndex, 1)[0]!);
+  }
+  return ordered;
+}
+
 function createAttempt(
   run: PreparedExecutionRunInput,
   state: RunProjection,
@@ -664,8 +689,11 @@ function createAttempt(
   const phases = node.kind === "root" || node.kind === "composite"
     ? new Set(["execution", "integration"])
     : new Set(["execution"]);
-  const requirements = run.graph.artifactRequirements.filter(
-    (requirement) => requirement.consumerNodeId === nodeId && phases.has(requirement.requiredFor)
+  const requirements = orderArtifactRequirementsForMaterialization(
+    run.graph.artifactRequirements.filter(
+      (requirement) => requirement.consumerNodeId === nodeId && phases.has(requirement.requiredFor)
+    ),
+    run.graph.artifactRequirements
   );
   const artifacts = Object.values(state.adoptedArtifacts);
   const consumedArtifacts = requirements.map((requirement) => {
@@ -723,8 +751,11 @@ function fingerprintForNode(run: PreparedExecutionRunInput, state: RunProjection
   const phases = node.kind === "root" || node.kind === "composite"
     ? new Set(["execution", "integration"])
     : new Set(["execution"]);
-  const requirements = run.graph.artifactRequirements.filter(
-    (requirement) => requirement.consumerNodeId === nodeId && phases.has(requirement.requiredFor)
+  const requirements = orderArtifactRequirementsForMaterialization(
+    run.graph.artifactRequirements.filter(
+      (requirement) => requirement.consumerNodeId === nodeId && phases.has(requirement.requiredFor)
+    ),
+    run.graph.artifactRequirements
   );
   const artifacts = Object.values(state.adoptedArtifacts);
   const consumedArtifacts = requirements.map((requirement) => {

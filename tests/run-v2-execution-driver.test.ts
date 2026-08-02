@@ -8,9 +8,11 @@ import {
 } from "@manyhands/run-coordinator";
 import {
   V2ExecutionDriver,
+  orderArtifactRequirementsForMaterialization,
   type V2NodeExecutionInput,
   type V2NodeExecutionOutcome
 } from "@manyhands/orchestrator-graph";
+import type { GraphRevision } from "@manyhands/task-graph";
 import {
   bookingBreakdown,
   bookingSnapshot,
@@ -20,6 +22,39 @@ import {
 const at = "2026-07-17T12:00:00.000Z";
 
 describe("V2ExecutionDriver", () => {
+  it("materializes upstream artifact dependencies before descendant artifacts", () => {
+    type Requirement = GraphRevision["artifactRequirements"][number];
+    const requirements: Requirement[] = [
+      {
+        id: "requirement-event",
+        artifactContract: { id: "event-contract", revision: "r1" },
+        producerNodeId: "application",
+        consumerNodeId: "durability",
+        requiredFor: "execution"
+      },
+      {
+        id: "requirement-domain",
+        artifactContract: { id: "domain-contract", revision: "r1" },
+        producerNodeId: "domain",
+        consumerNodeId: "durability",
+        requiredFor: "execution"
+      }
+    ];
+    const allRequirements: Requirement[] = [
+      ...requirements,
+      {
+        id: "requirement-domain-to-application",
+        artifactContract: { id: "domain-contract", revision: "r1" },
+        producerNodeId: "domain",
+        consumerNodeId: "application",
+        requiredFor: "execution"
+      }
+    ];
+
+    expect(orderArtifactRequirementsForMaterialization(requirements, allRequirements).map((requirement) => requirement.id))
+      .toEqual(["requirement-domain", "requirement-event"]);
+  });
+
   it("retries a transient leaf failure within the declared recovery budget", async () => {
     const breakdown = bookingBreakdown();
     if (breakdown.root.kind !== "composite") throw new Error("Fixture must start composite.");
