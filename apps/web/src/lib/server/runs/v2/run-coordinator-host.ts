@@ -185,8 +185,7 @@ async function invokeSelectedPlanningCli(
     let progressBuffer = "";
     let progressQueue = Promise.resolve();
     let settled = false;
-    const configuredTimeout = Number(process.env.MANYHANDS_PLANNING_STEP_TIMEOUT_MS ?? 300_000);
-    const timeoutMs = Number.isFinite(configuredTimeout) && configuredTimeout > 0 ? configuredTimeout : 300_000;
+    const timeoutMs = resolvePlanningStepTimeoutMs(process.env.MANYHANDS_PLANNING_STEP_TIMEOUT_MS);
     const timer = setTimeout(() => {
       void killCliProcessTree(child, spawn).finally(() => finish(() => reject(new Error(`${stage.executorId} planning timed out after ${timeoutMs}ms (${formatPlanningCliDiagnostics({ observedEnvelopeTypes, stdoutBytes, stderrTail, outputTail: resultText ?? assistantText })}).`))));
     }, timeoutMs);
@@ -280,6 +279,12 @@ async function invokeSelectedPlanningCli(
     });
     child.stdin?.end(prompt);
   });
+}
+
+export function resolvePlanningStepTimeoutMs(raw: string | undefined): number {
+  const fallback = 600_000;
+  const configured = Number(raw ?? fallback);
+  return Number.isFinite(configured) && configured > 0 ? configured : fallback;
 }
 
 export function buildCodexPlanningArgs(stage: { model: string; effort?: string }): string[] {

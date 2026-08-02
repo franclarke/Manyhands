@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCodexPlanningArgs } from "@/lib/server/runs/v2/run-coordinator-host";
+import { buildCodexPlanningArgs, resolvePlanningStepTimeoutMs } from "@/lib/server/runs/v2/run-coordinator-host";
 
 describe("planning Codex CLI invocation", () => {
   it("starts every planning attempt in an ephemeral session", () => {
@@ -16,5 +16,11 @@ describe("planning Codex CLI invocation", () => {
       'model_reasoning_effort="low"',
       "-"
     ]);
+  });
+
+  it("allows a slow but live Codex planning turn to finish before timing out", () => {
+    expect(resolvePlanningStepTimeoutMs(undefined)).toBe(600_000);
+    expect(resolvePlanningStepTimeoutMs("450000")).toBe(450_000);
+    expect(resolvePlanningStepTimeoutMs("invalid")).toBe(600_000);
   });
 });
