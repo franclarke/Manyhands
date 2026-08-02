@@ -5,7 +5,7 @@ Una fila por etapa completada. La escribe el agente al terminar cada etapa,
 
 | Etapa | Fecha | Resultado | Commit | Evidencia |
 |---|---|---|---|---|
-| 12 | 2026-08-02 | PASS final: build, suite completa, typechecks y web build verificados; se documentó y corrigió el único error real del gate web, se preservaron límites y no se ejecutaron runs nuevos. | `2c53c0f` | `../FINAL-REPORT.md` |
+| 12 | 2026-08-02 | PASS final corregido: gates, informe en la ruta exigida, raw runs preservados en Git y secciones finales de evidencia completadas; no se ejecutaron runs nuevos. | `2b779b3` | `FINAL-REPORT.md` |
 | 11 | 2026-08-02 | PASS: dossier trazable de evidencia para PI-1, PI-2 y PI-3; separa entregas, fallos, parámetros provisionales y limitaciones, con índice de archivos y sección final `Qué no se concluye`. | `31f0589` | `../THESIS-EVIDENCE-DOSSIER.md` |
 | 10 | 2026-08-02 | PASS técnico tras reviews independientes: se cerraron los hallazgos fail-open de intención física, reproducibilidad local y auditoría de cambios eliminados; queda declarada la violación histórica de no tocar main.tex/presentacion.tex. | `ac9e6a3` | `stage-10-reviews.md` |
 | 9 | 2026-08-02 | PASS: veredicto pre-registrado inconcluso; A supera a C en r1 pero empata en r2, por lo que no se cumple el falsador en la misma dirección y no se sostiene H-G6. | `225ba26` | `verdict.md` |
