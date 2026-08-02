@@ -88,6 +88,17 @@ vez de transportar un `CandidatePlanSet` tipado desde `planCandidates()`. Esta
 parte sigue abierta; no se la sustituye por inferir ownership desde el árbol ni
 por comparar candidatos no validados.
 
+Estado de migración posterior (2026-08-02): el contrato tipado ahora exige que
+cada `CandidatePlan` conserve hash estable, snapshot, digest del objetivo,
+scopes por unidad, criterios explícitos, ownership, participantes y
+materialización de seams, obligaciones cross-layer y validación observable por
+hoja. La frontera `selectPlannerCandidate()` rechaza un `WorkBreakdown[]` crudo
+con diagnóstico estructurado antes de invocar el score. La salida todavía no
+está conectada al host productivo porque `WorkBreakdownPlanner.planCandidates()`
+sigue retornando `WorkBreakdown[]` y la política paralela aún no expone una
+selección sobre el conjunto tipado; ese trabajo debe aportar los metadatos
+explícitos sin inferirlos desde `acceptanceIntentIds` o paths.
+
 ### SRR-03 — ownership se deriva después de duplicar intención (alta)
 
 - Código: `packages/decomposer/src/granularity/adaptive-planning.ts:238-248`,
@@ -193,6 +204,11 @@ snapshot + goal
    explicables. Un candidato inválido no compite por score.
 6. `PlanningSelection` persiste envelope, hashes de candidatos, diagnósticos de
    rechazo, evaluación y ganador; es reproducible sin LLM.
+
+La persistencia de esa decisión se formaliza en el evento versionado
+`planning.candidates_evaluated`. Su reducer conserva envelope, candidato
+completo, hash, validez, score, diagnósticos y selección/replan para replay y
+diagnóstico sin volver a invocar el planner.
 
 Alternativas descartadas: inventar particiones por rutas (contradice la evidencia
 preservada); propagar todos los criterios a todas las hojas (duplica validación

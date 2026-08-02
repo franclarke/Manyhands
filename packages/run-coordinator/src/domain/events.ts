@@ -23,6 +23,42 @@ export const AttemptUsageSchema = z.object({
 
 export type AttemptUsage = z.infer<typeof AttemptUsageSchema>;
 
+export const PlanningCandidateDiagnosticSchema = z.object({
+  code: NonEmptyStringSchema,
+  message: NonEmptyStringSchema,
+  refs: z.array(NonEmptyStringSchema)
+}).strict();
+
+export type PlanningCandidateDiagnostic = z.infer<typeof PlanningCandidateDiagnosticSchema>;
+
+export const PlanningCandidateEvaluationSchema = z.object({
+  candidateId: EntityIdSchema,
+  candidateHash: NonEmptyStringSchema,
+  candidate: z.record(z.unknown()),
+  valid: z.boolean(),
+  score: z.number().finite().optional(),
+  diagnostics: z.array(PlanningCandidateDiagnosticSchema)
+}).strict();
+
+export type PlanningCandidateEvaluation = z.infer<typeof PlanningCandidateEvaluationSchema>;
+
+const PlanningCandidateSelectionSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("selected"),
+    candidateId: EntityIdSchema,
+    score: z.number().finite(),
+    rejectedCandidateIds: z.array(EntityIdSchema)
+  }).strict(),
+  z.object({
+    kind: z.literal("replan_required"),
+    reason: NonEmptyStringSchema,
+    rejectedCandidateIds: z.array(EntityIdSchema),
+    diagnostics: z.array(PlanningCandidateDiagnosticSchema)
+  }).strict()
+]);
+
+export type PlanningCandidateSelection = z.infer<typeof PlanningCandidateSelectionSchema>;
+
 const SchedulerReasonSchema = z.object({ code: NonEmptyStringSchema }).passthrough();
 const SchedulerExplanationSchema = z.object({
   nodeId: EntityIdSchema,
@@ -206,6 +242,12 @@ export const RunEventSchema = z.discriminatedUnion("type", [
       context.addIssue({ code: z.ZodIssueCode.custom, message: "candidateBudget.minimum must not exceed candidateBudget.maximum" });
     }
   })),
+  event("planning.candidates_evaluated", z.object({
+    schemaVersion: z.literal(1),
+    envelope: z.record(z.unknown()),
+    candidates: z.array(PlanningCandidateEvaluationSchema).min(1),
+    selection: PlanningCandidateSelectionSchema
+  }).strict()),
   event("planning.completed", z.object({ breakdownId: EntityIdSchema, breakdown: z.record(z.unknown()) }).strict()),
   event("graph.compiled", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive(), graph: z.record(z.unknown()), contracts: z.array(z.record(z.unknown())), review: z.record(z.unknown()), trace: z.record(z.unknown()) }).strict()),
   event("planning.critic_recorded", z.object({ critic: NonEmptyStringSchema, findings: z.array(z.record(z.unknown())) }).strict()),

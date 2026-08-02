@@ -67,6 +67,22 @@ Esta decisión no afirma que un candidato estructuralmente válido sea correcto
 para el producto: la validación de ejecución y la evaluación experimental
 siguen siendo necesarias.
 
+## Actualización 2026-08-02
+
+La frontera tipada se concretó en `CandidatePlan`: además del `WorkBreakdown`,
+requiere identidad/hash estable, snapshot y digest del objetivo, scopes,
+criterios explícitos, ownership, seams con productor/consumidores,
+compatibilidad, materialización y validación, obligaciones cross-layer y una
+validación observable para cada hoja. `selectPlannerCandidate()` acepta valores
+desconocidos sólo para rechazarlos de forma fail-closed; nunca convierte un
+`WorkBreakdown[]` en candidatos por inferencia.
+
+La decisión se registra en `planning.candidates_evaluated`, que permite al
+reducer reconstruir candidatos, diagnósticos, scores, ganador o razón de
+`replan_required`. La conexión del host sigue pendiente hasta que el planner
+paralelo entregue ese artefacto completo y la política exponga selección sobre
+el conjunto congelado.
+
 ## Riesgos y seguimiento
 
 La actual captura de fallos de ejecución puede perder el hecho terminal si falla

@@ -3,7 +3,7 @@ import { RunEventSchema, type RunEvent } from "./domain/events.js";
 import { assertLifecycleTransition, type RunLifecycle } from "./domain/lifecycle.js";
 import { INITIAL_RUN_OUTCOMES, type DeliveryApproval, type DeliveryReceipt, type FinalCandidate, type RunOutcomes } from "./domain/outcomes.js";
 import type { AdoptedArtifact } from "./domain/artifacts.js";
-import type { AttemptUsage } from "./domain/events.js";
+import type { AttemptUsage, PlanningCandidateEvaluation, PlanningCandidateSelection } from "./domain/events.js";
 import type { FailureClass } from "./domain/failures.js";
 
 export interface AttemptProjection {
@@ -100,6 +100,13 @@ export interface PlanningEnvelopeProjection {
   };
 }
 
+export interface PlanningCandidatesProjection {
+  schemaVersion: 1;
+  envelope: Record<string, unknown>;
+  candidates: PlanningCandidateEvaluation[];
+  selection: PlanningCandidateSelection;
+}
+
 export interface RunProjection {
   runId: string;
   goal: string;
@@ -112,6 +119,7 @@ export interface RunProjection {
   granularity?: GranularityProjection;
   granularityStrategy?: GranularityStrategyProjection;
   planningEnvelope?: PlanningEnvelopeProjection;
+  planningCandidates?: PlanningCandidatesProjection;
   decisions: Record<string, Decision>;
   stoppedNodeIds?: string[];
   readiness: { readyNodeIds: string[]; pendingDecisionIds: string[]; explanations?: Array<Record<string, unknown>>; effectiveConfig?: Record<string, unknown>; schedulerState?: Record<string, unknown>; budgetAvailable?: boolean; conflictEvidence?: Array<Record<string, unknown>>; evaluatedAt?: string };
@@ -234,6 +242,19 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
         candidateBudget: { ...event.payload.candidateBudget },
         executionBudget: { ...event.payload.executionBudget },
         requirements: { ...event.payload.requirements }
+      };
+      break;
+    case "planning.candidates_evaluated":
+      if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot record planning facts while ${next.lifecycle}.`);
+      next.planningCandidates = {
+        schemaVersion: event.payload.schemaVersion,
+        envelope: structuredClone(event.payload.envelope),
+        candidates: event.payload.candidates.map((candidate) => ({
+          ...candidate,
+          candidate: structuredClone(candidate.candidate),
+          diagnostics: candidate.diagnostics.map((diagnostic) => ({ ...diagnostic, refs: [...diagnostic.refs] }))
+        })),
+        selection: structuredClone(event.payload.selection)
       };
       break;
     case "planning.failed":
