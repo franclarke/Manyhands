@@ -82,10 +82,9 @@ export function selectGranularityStrategy(
   });
   const selectedKeys = new Set(flattenUnits(selected.unit).map((unit) => unit.key));
   const parentByKey = parentMap(breakdown.root);
-  const selectedRoot = propagateAncestorAcceptance(selected.unit);
   const remapped = WorkBreakdownSchema.parse({
     ...breakdown,
-    root: selectedRoot,
+    root: selected.unit,
     candidateArtifacts: remapRelations(
       breakdown.candidateArtifacts,
       selectedKeys,
@@ -106,22 +105,6 @@ export function selectGranularityStrategy(
     selectedBreakdown: remapped,
     assessments,
     requiresSemanticReplan: selected.decision === "semantic_replan"
-  };
-}
-
-/**
- * A required intent owned by a composite remains coverage for its executable
- * descendants. The selector can retain a planner-proposed split without
- * reshaping units, so it must preserve this invariant independently from the
- * adaptive reshaper.
- */
-function propagateAncestorAcceptance(unit: WorkUnit, inherited: readonly string[] = []): WorkUnit {
-  const acceptanceIntentIds = unique([...inherited, ...unit.acceptanceIntentIds]);
-  if (unit.kind === "leaf") return { ...unit, acceptanceIntentIds };
-  return {
-    ...unit,
-    acceptanceIntentIds,
-    children: unit.children.map((child) => propagateAncestorAcceptance(child, acceptanceIntentIds))
   };
 }
 

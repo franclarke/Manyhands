@@ -42,6 +42,29 @@ describe("Graph Compiler V2", () => {
     expect(first.review.findings.filter((finding) => finding.severity === "error")).toEqual([]);
   });
 
+  it("keeps global acceptance at the integration owner without duplicating it into leaves", () => {
+    const breakdown = bookingBreakdown();
+    breakdown.acceptanceIntents.push({
+      id: "booking-integrated",
+      description: "The assembled booking flow preserves the end-to-end invariant",
+      required: true
+    });
+    breakdown.root.acceptanceIntentIds.push("booking-integrated");
+
+    const compiled = compileGraphRevision(
+      { breakdown, repositorySnapshot: bookingSnapshot() },
+      compilerDependencies
+    );
+
+    const owners = compiled.contracts.filter((bundle) =>
+      bundle.task.acceptanceCriteria.some((criterion) =>
+        criterion.description === "The assembled booking flow preserves the end-to-end invariant"
+      )
+    );
+    expect(owners).toHaveLength(1);
+    expect(owners[0]?.task.nodeId).toBe(compiled.graph.rootId);
+  });
+
   it("accepts the planner's bare sha256 digest when the repository uses the canonical prefix", () => {
     const snapshot = bookingSnapshot();
     const breakdown = bookingBreakdown();

@@ -47,7 +47,7 @@ describe("C utility strategy selection", () => {
     expect(result.assessments.root?.splitAdvantage).toBeGreaterThanOrEqual(0.15);
   });
 
-  it("propagates a required root-only intent to the selected leaves", () => {
+  it("preserves a required root-only intent at the integration composite", () => {
     const breakdown = WorkBreakdownSchema.parse({
       schemaVersion: 2,
       breakdownId: "root-only-intent",
@@ -77,9 +77,11 @@ describe("C utility strategy selection", () => {
 
     expect(result.selectedBreakdown.root.kind).toBe("composite");
     if (result.selectedBreakdown.root.kind !== "composite") throw new Error("expected split root");
-    expect(result.selectedBreakdown.root.children.every((unit) =>
-      unit.acceptanceIntentIds.includes("intent-root-only")
-    )).toBe(true);
+    expect(result.selectedBreakdown.root.acceptanceIntentIds).toEqual(["intent-root-only"]);
+    expect(result.selectedBreakdown.root.children.map((unit) => unit.acceptanceIntentIds)).toEqual([
+      ["intent-a"],
+      ["intent-b"]
+    ]);
   });
 
   it("keeps overlapping tightly coordinated siblings together", () => {
