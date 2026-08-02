@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 2,
+  "runId": "7093c7f6-33fd-47db-a13c-cd8870b237ae",
+  "eventSequence": 5,
+  "lastEventId": "planning:7093c7f6-33fd-47db-a13c-cd8870b237ae:failed:5",
+  "operationId": "58c953ff-2219-4d71-adf3-d215c426fd6e",
+  "fencingToken": 2,
+  "projection": {
+    "runId": "7093c7f6-33fd-47db-a13c-cd8870b237ae",
+    "goal": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain  - src/domain/orders.ts:\n- Export type OrderPriority = \"standard\" | \"express\".\n- Order gains a readonly priority field of that type. It is optional at the call site: an order placed without a priority is treated as \"standard\", so existing callers keep working unchanged.\n- placeOrder throws OrderError when a priority is supplied and is neither \"standard\" nor \"express\".\n- Export interface Backorder with readonly orderId, skuId and missing fields, where missing is a positive integer.\n- WarehouseState gains a readonly backorders field keyed by order id.\n- reserveOrder records a Backorder for every line whose quantity exceeds the available units, instead of throwing, and leaves the order in a status from which it can still be cancelled.\n- Export listBackorders(state) returning every recorded Backorder.\n\nApplication  - src/application/warehouse-service.ts:\n- The service exposes the new operations and emits a warehouse event for a recorded backorder.\n\nFulfillment  - src/fulfillment/planner.ts:\n- Within one wave, planFulfillment lists express orders before standard ones. Its existing signature does not change.\n\nDurability  - src/durability/journal.ts:\n- HistoryAnalytics gains a backorders count derived from the events.\n\nAPI  - src/api/server.ts:\n- The server exposes the backorders of the current state.\n\nPresentation  - src/presentation/tower.ts:\n- The rendered SVG distinguishes express orders from standard ones.\n\nProbe  - src/probe/g6.ts and a package script named study:g6-probe:\n- Follow the shape of the existing probes: export main() returning a JSON string, and write exactly one JSON object to stdout when invoked directly, with no other output.\n- Two invocations from the same commit must emit byte-identical output.\n\nPreserve all existing behaviour and keep every existing test passing. Put new tests next to the code they cover, inside the directories the test script already scans.",
+    "lifecycle": "failed",
+    "sequence": 5,
+    "appliedEventIds": [
+      "run:7093c7f6-33fd-47db-a13c-cd8870b237ae:created",
+      "repository:sha256:5a822d1aa5e9b75da7c85ab0b39e46358812c38b4c9b7028788b2f2b1792198a:inspection:2",
+      "planning:7093c7f6-33fd-47db-a13c-cd8870b237ae:attempt:1:started",
+      "planning:7093c7f6-33fd-47db-a13c-cd8870b237ae:attempt:1:failed",
+      "planning:7093c7f6-33fd-47db-a13c-cd8870b237ae:failed:5"
+    ],
+    "decisions": {},
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "failureReason": "WorkBreakdown planning failed after 1 attempts: codex-cli planning failed with exit code 1 (envelopes=none; stdoutBytes=0; stderr=\"4-remediation-22, log=C:\\\\\\\\Users\\\\\\\\franc\\\\\\\\.codex\\\\\\\\.sandbox\\\\\\\\sandbox.2026-08-02.log, error=Acceso denegado. (os error 5)\\\" }) exited -1 in 0ms: execution error: Io(Custom { kind: Other, error: \\\"windows sandbox: orchestrator_helper_launch_failed: setup refresh failed to launch helper: helper=codex-windows-sandbox-setup.exe, cwd=C:\\\\\\\\Users\\\\\\\\franc\\\\\\\\Documents\\\\\\\\Proyectos\\\\\\\\warehouse-g6-04-remediation-22, log=C:\\\\\\\\Users\\\\\\\\franc\\\\\\\\.codex\\\\\\\\.sandbox\\\\\\\\sandbox.2026-08-02.log, error=Acceso denegado. (os error 5)\\\" })\")."
+  },
+  "checksum": "8ca3b0d701ca1fca80ab35cb95d3f690855e1a13c4144f6187b79ee37cad82bf"
+}

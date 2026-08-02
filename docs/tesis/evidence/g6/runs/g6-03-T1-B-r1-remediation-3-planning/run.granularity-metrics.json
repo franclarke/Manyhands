@@ -1,0 +1,19 @@
+{
+  "runId": "f8617131-9841-4985-8505-d12e0408467b",
+  "policyVersion": "adaptive-utility/3.1.0-pilot",
+  "condition": "B",
+  "candidateTreeHash": "sha256:ed6ea51ddd2c4a6b3a458957a0d4486e2aa0374aa72cc6fd99829e212afb5b74",
+  "config": {
+    "policyVersion": "adaptive-utility/3.1.0-pilot",
+    "minimumAdvantage": 0.15,
+    "maxLeafContextTokens": 24000,
+    "maxLeafScopePaths": 40,
+    "maxLeafPlannedPaths": 12
+  },
+  "metrics": {
+    "maxGraphDepth": 1,
+    "totalLeafCount": 7,
+    "averageBranchingFactor": 7
+  },
+  "generatedAt": "2026-08-01T09:51:08.443Z"
+}

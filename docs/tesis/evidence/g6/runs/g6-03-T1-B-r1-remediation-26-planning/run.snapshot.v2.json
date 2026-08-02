@@ -1,0 +1,276 @@
+{
+  "schemaVersion": 2,
+  "runId": "12fd7eb7-a958-451c-a308-ca16ee8a750e",
+  "eventSequence": 22,
+  "lastEventId": "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1",
+  "operationId": "0e7379d3-ae0e-45e0-ae68-977e675e1220",
+  "fencingToken": 2,
+  "projection": {
+    "runId": "12fd7eb7-a958-451c-a308-ca16ee8a750e",
+    "goal": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain  - src/domain/orders.ts:\n- Export type OrderPriority = \"standard\" | \"express\".\n- Order gains a readonly priority field of that type. It is optional at the call site: an order placed without a priority is treated as \"standard\", so existing callers keep working unchanged.\n- placeOrder throws OrderError when a priority is supplied and is neither \"standard\" nor \"express\".\n- Export interface Backorder with readonly orderId, skuId and missing fields, where missing is a positive integer.\n- WarehouseState gains a readonly backorders field keyed by order id.\n- reserveOrder records a Backorder for every line whose quantity exceeds the available units, instead of throwing, and leaves the order in a status from which it can still be cancelled.\n- Export listBackorders(state) returning every recorded Backorder.\n\nApplication  - src/application/warehouse-service.ts:\n- The service exposes the new operations and emits a warehouse event for a recorded backorder.\n\nFulfillment  - src/fulfillment/planner.ts:\n- Within one wave, planFulfillment lists express orders before standard ones. Its existing signature does not change.\n\nDurability  - src/durability/journal.ts:\n- HistoryAnalytics gains a backorders count derived from the events.\n\nAPI  - src/api/server.ts:\n- The server exposes the backorders of the current state.\n\nPresentation  - src/presentation/tower.ts:\n- The rendered SVG distinguishes express orders from standard ones.\n\nProbe  - src/probe/g6.ts and a package script named study:g6-probe:\n- Follow the shape of the existing probes: export main() returning a JSON string, and write exactly one JSON object to stdout when invoked directly, with no other output.\n- Two invocations from the same commit must emit byte-identical output.\n\nPreserve all existing behaviour and keep every existing test passing. Put new tests next to the code they cover, inside the directories the test script already scans.",
+    "lifecycle": "needs_approval",
+    "sequence": 22,
+    "appliedEventIds": [
+      "run:12fd7eb7-a958-451c-a308-ca16ee8a750e:created",
+      "repository:sha256:25e593cd2d2a5678ba4cb9bcb9bc0694c186b5bbd09b7dc43fd07e655c8c9ed9:inspection:2",
+      "planning:12fd7eb7-a958-451c-a308-ca16ee8a750e:attempt:1:started",
+      "planning:12fd7eb7-a958-451c-a308-ca16ee8a750e:attempt:1:node:warehouse-priority-backorders",
+      "planning:12fd7eb7-a958-451c-a308-ca16ee8a750e:attempt:1:node:domain-priority-backorders",
+      "planning:12fd7eb7-a958-451c-a308-ca16ee8a750e:attempt:1:node:service-analytics-backorders",
+      "planning:12fd7eb7-a958-451c-a308-ca16ee8a750e:attempt:1:node:fulfillment-wave-priority",
+      "planning:12fd7eb7-a958-451c-a308-ca16ee8a750e:attempt:1:node:surface-backorders-and-priority",
+      "planning:12fd7eb7-a958-451c-a308-ca16ee8a750e:attempt:1:node:g6-probe-determinism",
+      "planning:warehouse-priority-backorders:strategy:12fd7eb7-a958-451c-a308-ca16ee8a750e",
+      "planning:warehouse-priority-backorders:completed:12fd7eb7-a958-451c-a308-ca16ee8a750e",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:compiled",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:completeness",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:atomicity",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:contract_compatibility",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:dag_validity",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:scope_isolation",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:artifact_coverage",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:risk_uncertainty",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:validation_coverage",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:proposed",
+      "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1"
+    ],
+    "decisions": {
+      "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1": {
+        "id": "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-warehouse-priority-backorders-51e9b2bc38"
+        ],
+        "evidenceRefs": [
+          "graph:graph-warehouse-priority-backorders-2226f21526:r1"
+        ],
+        "impact": "acceptance",
+        "status": "pending"
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "B",
+      "candidateTreeHash": "sha256:e34af86b53505cdfa5e3a8b8c5c0d7f07f96df9470a1f47fc9a4bf459705f6a7",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-domain-priority-backorders-1e40eb152c": {
+          "unitKey": "domain-priority-backorders",
+          "nodeId": "node-domain-priority-backorders-1e40eb152c",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-11",
+            "path-12",
+            "sha256:25e593cd2d2a5678ba4cb9bcb9bc0694c186b5bbd09b7dc43fd07e655c8c9ed9"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-service-analytics-backorders-26dc8775c3": {
+          "unitKey": "service-analytics-backorders",
+          "nodeId": "node-service-analytics-backorders-26dc8775c3",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-5",
+            "path-6",
+            "path-13",
+            "path-14",
+            "sha256:25e593cd2d2a5678ba4cb9bcb9bc0694c186b5bbd09b7dc43fd07e655c8c9ed9"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-fulfillment-wave-priority-bbf56e39d8": {
+          "unitKey": "fulfillment-wave-priority",
+          "nodeId": "node-fulfillment-wave-priority-bbf56e39d8",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-15",
+            "path-16",
+            "sha256:25e593cd2d2a5678ba4cb9bcb9bc0694c186b5bbd09b7dc43fd07e655c8c9ed9"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-surface-backorders-and-priority-d2f099484d": {
+          "unitKey": "surface-backorders-and-priority",
+          "nodeId": "node-surface-backorders-and-priority-d2f099484d",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-2",
+            "path-17",
+            "path-18",
+            "sha256:25e593cd2d2a5678ba4cb9bcb9bc0694c186b5bbd09b7dc43fd07e655c8c9ed9"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-g6-probe-determinism-7f65126b62": {
+          "unitKey": "g6-probe-determinism",
+          "nodeId": "node-g6-probe-determinism-7f65126b62",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.6
+          },
+          "benefit": 0,
+          "cost": 0.15,
+          "splitAdvantage": -0.15,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-19",
+            "path-20",
+            "config-package-json",
+            "sha256:25e593cd2d2a5678ba4cb9bcb9bc0694c186b5bbd09b7dc43fd07e655c8c9ed9"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-warehouse-priority-backorders-51e9b2bc38": {
+          "unitKey": "warehouse-priority-backorders",
+          "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+          "selected": "split",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.7229,
+            "parallelism": 0.75,
+            "faultIsolation": 0.8,
+            "coordination": 0.3,
+            "pathOverlap": 0,
+            "validationDuplication": 0.4,
+            "uncertainty": 0.12
+          },
+          "benefit": 0.7576,
+          "cost": 0.205,
+          "splitAdvantage": 0.5526,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-11",
+            "path-12",
+            "path-5",
+            "path-6",
+            "path-13",
+            "path-14",
+            "path-15",
+            "path-16",
+            "path-1",
+            "path-2",
+            "path-17",
+            "path-18",
+            "path-19",
+            "path-20",
+            "config-package-json",
+            "sha256:25e593cd2d2a5678ba4cb9bcb9bc0694c186b5bbd09b7dc43fd07e655c8c9ed9"
+          ],
+          "rationale": "Condition B expands the finest valid semantic frontier."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 5,
+        "averageBranchingFactor": 5
+      }
+    },
+    "graphId": "graph-warehouse-priority-backorders-2226f21526",
+    "graphRevision": 1
+  },
+  "checksum": "2b478963269eedd78068a51ab6238adf32f80caa1445a0c5f8c56b839183d666"
+}

@@ -1,0 +1,644 @@
+diff --git a/package.json b/package.json
+index 5d12cd1..bd3e109 100644
+--- a/package.json
++++ b/package.json
+@@ -13,6 +13,7 @@
+     "test": "node --test src/domain/*.test.ts src/probe/*.test.ts src/scenarios/*.test.ts src/application/*.test.ts src/presentation/*.test.ts src/api/*.test.ts src/fulfillment/*.test.ts src/durability/*.test.ts",
+     "typecheck": "tsc -p tsconfig.json",
+     "study:probe": "node src/probe/cli.ts",
++    "study:g6-probe": "node src/probe/g6.ts",
+     "study:wc1-probe": "node src/probe/wc1.ts",
+     "study:wc2-probe": "node src/probe/wc2.ts",
+     "study:wc3-probe": "node src/probe/wc3.ts",
+diff --git a/src/api/server.test.ts b/src/api/server.test.ts
+index 9fb41f8..32e879f 100644
+--- a/src/api/server.test.ts
++++ b/src/api/server.test.ts
+@@ -8,12 +8,16 @@ test("versioned API exposes state and atomic order operations", async () => {
+   const address = server.address();
+   assert.equal(typeof address, "object");
+   const base = `http://127.0.0.1:${(address as { port: number }).port}`;
+-  const created = await fetch(`${base}/api/v1/orders`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: "api-order", lines: [{ skuId: "SKU-1001", quantity: 1 }] }) });
++  const created = await fetch(`${base}/api/v1/orders`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: "api-order", lines: [{ skuId: "SKU-1001", quantity: 1 }, { skuId: "SKU-1002", quantity: 9999 }] }) });
+   assert.equal(created.status, 201);
+   const reserved = await fetch(`${base}/api/v1/orders/api-order/reserve`, { method: "POST" });
+   assert.equal(reserved.status, 200);
+   const state = await fetch(`${base}/api/v1/state`);
+-  assert.equal((await state.json() as { state: { orders: { status: string }[] } }).state.orders[0]?.status, "reserved");
++  const current = await state.json() as { state: { orders: { status: string }[]; backorders: { orderId: string; skuId: string; quantity: number }[] } };
++  assert.equal(current.state.orders[0]?.status, "reserved");
++  assert.deepEqual(current.state.backorders, [
++    { orderId: "api-order", skuId: "SKU-1002", quantity: 9984 },
++  ]);
+   const plan = await fetch(`${base}/api/v1/fulfillment/plan?pickerCapacity=2`);
+   assert.equal(plan.status, 200);
+   assert.match((await plan.text()), /"pickerCapacity":2/);
+diff --git a/src/api/server.ts b/src/api/server.ts
+index 13a2f9d..c3f064d 100644
+--- a/src/api/server.ts
++++ b/src/api/server.ts
+@@ -3,7 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
+ import { extname, join, normalize } from "node:path";
+ import { fileURLToPath } from "node:url";
+ import { SimulationController } from "../application/simulation.ts";
+-import { type Order, type OrderStatus } from "../domain/orders.ts";
++import { listBackorders, type Order, type OrderStatus, type WarehouseState } from "../domain/orders.ts";
+ import { WarehouseService, type WarehouseEvent } from "../application/warehouse-service.ts";
+ import { DurableHistory, EventJournal } from "../durability/journal.ts";
+ 
+@@ -35,7 +35,10 @@ export function createWarehouseServer(service = new WarehouseService(), options:
+   return createServer(async (request, response) => {
+     try {
+       const url = new URL(request.url ?? "/", "http://localhost");
+-      if (url.pathname === "/api/v1/state" && request.method === "GET") return json(response, 200, { state: service.snapshot(), simulation: simulation.snapshot() });
++      if (url.pathname === "/api/v1/state" && request.method === "GET") {
++        const state = (service as unknown as { state: WarehouseState }).state;
++        return json(response, 200, { state: { ...service.snapshot(), backorders: listBackorders(state) }, simulation: simulation.snapshot() });
++      }
+       if (url.pathname === "/api/v1/fulfillment/plan" && request.method === "GET") {
+         const pickerCapacity = Number(url.searchParams.get("pickerCapacity") ?? "2");
+         return json(response, 200, { plan: service.fulfillmentPlan(pickerCapacity), overlay: service.fulfillmentOverlay(pickerCapacity) });
+diff --git a/src/application/simulation.test.ts b/src/application/simulation.test.ts
+index 7f3cd8a..1d66e10 100644
+--- a/src/application/simulation.test.ts
++++ b/src/application/simulation.test.ts
+@@ -7,10 +7,13 @@ test("simulation controls are deterministic and replayable", () => {
+   const events = new WarehouseEventStream();
+   const simulation = new SimulationController(events);
+   assert.deepEqual(simulation.play(), { tick: 0, status: "playing" });
++  events.emit("backorder.recorded", {
++    backorder: { orderId: "order-sim", skuId: "SKU-1002", quantity: 3 },
++  });
+   assert.deepEqual(simulation.step(), { tick: 1, status: "playing" });
+   assert.deepEqual(simulation.pause(), { tick: 1, status: "paused" });
+   assert.deepEqual(simulation.reset(), { tick: 0, status: "paused" });
+   assert.deepEqual(events.history().map((event) => event.type), [
+-    "simulation.play", "simulation.step", "simulation.pause", "simulation.reset",
++    "simulation.play", "backorder.recorded", "simulation.step", "simulation.pause", "simulation.reset",
+   ]);
+ });
+diff --git a/src/application/warehouse-service.test.ts b/src/application/warehouse-service.test.ts
+index 223ed89..8baac72 100644
+--- a/src/application/warehouse-service.test.ts
++++ b/src/application/warehouse-service.test.ts
+@@ -11,3 +11,21 @@ test("service emits monotonic events for the public order flow", () => {
+   assert.deepEqual(service.events.history().map((event) => event.sequence), [1, 2, 3]);
+   assert.equal(service.snapshot().orders[0]?.status, "picking");
+ });
++
++test("service records backorders and emits a warehouse event for each one", () => {
++  const service = new WarehouseService();
++  service.createOrder({ id: "order-backorder", status: "pending", lines: [{ skuId: "SKU-1001", quantity: 35 }] });
++  service.reserve("order-backorder");
++
++  assert.deepEqual(service.listBackorders(), [
++    { orderId: "order-backorder", skuId: "SKU-1001", quantity: 5 },
++  ]);
++  assert.deepEqual(service.events.history().map((event) => event.type), [
++    "order.created",
++    "order.reserved",
++    "backorder.recorded",
++  ]);
++  assert.deepEqual(service.events.history()[2]?.payload, {
++    backorder: { orderId: "order-backorder", skuId: "SKU-1001", quantity: 5 },
++  });
++});
+diff --git a/src/application/warehouse-service.ts b/src/application/warehouse-service.ts
+index a98ed8c..3563a1e 100644
+--- a/src/application/warehouse-service.ts
++++ b/src/application/warehouse-service.ts
+@@ -1,15 +1,20 @@
+ import { buildThesisSeed2026 } from "../scenarios/thesis-seed-2026.ts";
+ import { planFulfillment, renderRouteOverlaySvg, type FulfillmentPlan } from "../fulfillment/planner.ts";
+ import {
++  type Backorder,
+   type Order,
++  type OrderPriority,
+   type OrderStatus,
+   type WarehouseState,
+   createWarehouseState,
+   placeOrder,
+   reserveOrder,
++  listBackorders as listWarehouseBackorders,
+   transitionOrder,
+ } from "../domain/orders.ts";
+ 
++export type { Backorder, Order, OrderPriority, OrderStatus, WarehouseState } from "../domain/orders.ts";
++
+ export interface WarehouseEvent {
+   readonly sequence: number;
+   readonly type: string;
+@@ -19,6 +24,10 @@ export interface WarehouseEvent {
+ 
+ export type EventListener = (event: WarehouseEvent) => void;
+ 
++function backorderKey(backorder: Backorder): string {
++  return `${backorder.orderId}::${backorder.skuId}`;
++}
++
+ export class WarehouseEventStream {
+   private sequence = 0;
+   private readonly events: WarehouseEvent[] = [];
+@@ -83,9 +92,15 @@ export class WarehouseService {
+   }
+ 
+   reserve(orderId: string): Order {
++    const previousBackorders = new Set(listWarehouseBackorders(this.state).map(backorderKey));
+     this.state = reserveOrder(this.state, orderId);
+     const order = this.state.orders.get(orderId)!;
+     this.events.emit("order.reserved", { order });
++    for (const backorder of listWarehouseBackorders(this.state)) {
++      if (!previousBackorders.has(backorderKey(backorder))) {
++        this.events.emit("backorder.recorded", { backorder });
++      }
++    }
+     return order;
+   }
+ 
+@@ -103,4 +118,8 @@ export class WarehouseService {
+   fulfillmentOverlay(pickerCapacity: number): string {
+     return renderRouteOverlaySvg(this.fulfillmentPlan(pickerCapacity));
+   }
++
++  listBackorders(): readonly Backorder[] {
++    return listWarehouseBackorders(this.state);
++  }
+ }
+diff --git a/src/domain/orders.test.ts b/src/domain/orders.test.ts
+index 4dbc7e0..d8a894a 100644
+--- a/src/domain/orders.test.ts
++++ b/src/domain/orders.test.ts
+@@ -2,8 +2,10 @@ import { test } from "node:test";
+ import assert from "node:assert/strict";
+ import { buildThesisSeed2026 } from "../scenarios/thesis-seed-2026.ts";
+ import {
++  type OrderPriority,
+   OrderError,
+   createWarehouseState,
++  listBackorders,
+   placeOrder,
+   reserveOrder,
+   transitionOrder,
+@@ -22,12 +24,34 @@ test("reservation atomically consumes a multi-line order", () => {
+       { skuId: "SKU-1002", quantity: 5 },
+     ],
+   });
++  assert.equal(current.orders.get("order-1")?.priority, "standard");
+   current = reserveOrder(current, "order-1");
+   assert.equal(current.orders.get("order-1")?.status, "reserved");
+   assert.equal(current.reservations.has("order-1"), true);
+ });
+ 
+-test("failed multi-line reservation leaves the state unchanged", () => {
++test("placeOrder accepts explicit priority and rejects invalid priority values", () => {
++  const expressPriority: OrderPriority = "express";
++  const current = placeOrder(state(), {
++    id: "order-2",
++    status: "pending",
++    priority: expressPriority,
++    lines: [{ skuId: "SKU-1001", quantity: 1 }],
++  });
++  assert.equal(current.orders.get("order-2")?.priority, "express");
++  assert.throws(
++    () =>
++      placeOrder(state(), {
++        id: "order-invalid",
++        status: "pending",
++        priority: "rush" as never,
++        lines: [{ skuId: "SKU-1001", quantity: 1 }],
++      }),
++    OrderError,
++  );
++});
++
++test("short multi-line reservation records backorders for the unfilled line", () => {
+   const before = placeOrder(state(), {
+     id: "order-2",
+     status: "pending",
+@@ -36,9 +60,32 @@ test("failed multi-line reservation leaves the state unchanged", () => {
+       { skuId: "SKU-1002", quantity: 9999 },
+     ],
+   });
+-  assert.throws(() => reserveOrder(before, "order-2"), /insufficient stock/);
++  const after = reserveOrder(before, "order-2");
+   assert.equal(before.orders.get("order-2")?.status, "pending");
+   assert.equal(before.reservations.size, 0);
++  assert.equal(after.orders.get("order-2")?.status, "reserved");
++  assert.deepEqual(after.reservations.get("order-2")?.lines, [
++    { skuId: "SKU-1001", quantity: 5 },
++    { skuId: "SKU-1002", quantity: 15 },
++  ]);
++  assert.deepEqual(listBackorders(after), [
++    { orderId: "order-2", skuId: "SKU-1002", quantity: 9984 },
++  ]);
++});
++
++test("reserveOrder records backorders for short lines and leaves orders cancellable", () => {
++  let current = placeOrder(state(), {
++    id: "order-4",
++    status: "pending",
++    lines: [{ skuId: "SKU-1001", quantity: 35 }],
++  });
++  current = reserveOrder(current, "order-4");
++  assert.equal(current.orders.get("order-4")?.status, "reserved");
++  assert.deepEqual(listBackorders(current), [
++    { orderId: "order-4", skuId: "SKU-1001", quantity: 5 },
++  ]);
++  current = transitionOrder(current, "order-4", "cancelled");
++  assert.equal(current.orders.get("order-4")?.status, "cancelled");
+ });
+ 
+ test("invalid order transitions are rejected", () => {
+diff --git a/src/domain/orders.ts b/src/domain/orders.ts
+index 4b6d9f8..23ee0ad 100644
+--- a/src/domain/orders.ts
++++ b/src/domain/orders.ts
+@@ -5,16 +5,24 @@ import {
+ } from "./inventory.ts";
+ 
+ export type OrderStatus = "pending" | "reserved" | "picking" | "packed" | "shipped" | "cancelled";
++export type OrderPriority = "standard" | "express";
+ 
+ export interface OrderLine {
+   readonly skuId: string;
+   readonly quantity: number;
+ }
+ 
++export interface Backorder {
++  readonly orderId: string;
++  readonly skuId: string;
++  readonly quantity: number;
++}
++
+ export interface Order {
+   readonly id: string;
+   readonly lines: readonly OrderLine[];
+   readonly status: OrderStatus;
++  readonly priority?: OrderPriority;
+ }
+ 
+ export interface Reservation {
+@@ -26,6 +34,7 @@ export interface WarehouseState {
+   readonly inventory: InventoryState;
+   readonly orders: ReadonlyMap<string, Order>;
+   readonly reservations: ReadonlyMap<string, Reservation>;
++  readonly backorders: ReadonlyMap<string, Backorder>;
+ }
+ 
+ export class OrderError extends Error {}
+@@ -52,8 +61,20 @@ function copyOrders(state: WarehouseState): Map<string, Order> {
+   return new Map(state.orders);
+ }
+ 
++function copyBackorders(state: WarehouseState): Map<string, Backorder> {
++  return new Map(state.backorders);
++}
++
++function isOrderPriority(priority: unknown): priority is OrderPriority {
++  return priority === "standard" || priority === "express";
++}
++
++function backorderKey(orderId: string, skuId: string): string {
++  return `${orderId}::${skuId}`;
++}
++
+ export function createWarehouseState(inventory: InventoryState): WarehouseState {
+-  return { inventory, orders: new Map(), reservations: new Map() };
++  return { inventory, orders: new Map(), reservations: new Map(), backorders: new Map() };
+ }
+ 
+ export function placeOrder(state: WarehouseState, order: Order): WarehouseState {
+@@ -63,6 +84,9 @@ export function placeOrder(state: WarehouseState, order: Order): WarehouseState
+   if (order.id.length === 0 || order.lines.length === 0) {
+     throw new OrderError("order requires an id and at least one line");
+   }
++  if (order.priority !== undefined && !isOrderPriority(order.priority)) {
++    throw new OrderError(`invalid order priority: ${String(order.priority)}`);
++  }
+   const seenSkus = new Set<string>();
+   for (const line of order.lines) {
+     assertPositiveQuantity(line);
+@@ -72,7 +96,12 @@ export function placeOrder(state: WarehouseState, order: Order): WarehouseState
+     seenSkus.add(line.skuId);
+   }
+   const orders = copyOrders(state);
+-  orders.set(order.id, { ...order, status: "pending", lines: [...order.lines] });
++  orders.set(order.id, {
++    ...order,
++    priority: order.priority ?? "standard",
++    status: "pending",
++    lines: [...order.lines],
++  });
+   return { ...state, orders };
+ }
+ 
+@@ -86,14 +115,15 @@ export function reserveOrder(state: WarehouseState, orderId: string): WarehouseS
+   // Work against a local immutable chain. If any line fails, the original state
+   // is never returned or mutated, so a multi-line reservation is atomic.
+   let inventory = state.inventory;
++  const reservations: OrderLine[] = [];
++  const backorders = copyBackorders(state);
+   for (const line of order.lines) {
+     const available = inventory.quantities;
+     const current = [...available.entries()]
+       .filter(([key]) => key.endsWith(`::${line.skuId}`))
+       .reduce((total, [, quantity]) => total + quantity, 0);
+-    if (current < line.quantity) {
+-      throw new OrderError(`insufficient stock for ${line.skuId}: need ${line.quantity}, have ${current}`);
+-    }
++    const reservedQuantity = Math.min(current, line.quantity);
++    const backorderedQuantity = line.quantity - reservedQuantity;
+     let remaining = line.quantity;
+     for (const [key, quantity] of available) {
+       if (!key.endsWith(`::${line.skuId}`) || remaining === 0) continue;
+@@ -102,13 +132,23 @@ export function reserveOrder(state: WarehouseState, orderId: string): WarehouseS
+       inventory = retiro(inventory, binId, line.skuId, taken);
+       remaining -= taken;
+     }
++    if (reservedQuantity > 0) {
++      reservations.push({ skuId: line.skuId, quantity: reservedQuantity });
++    }
++    if (backorderedQuantity > 0) {
++      backorders.set(backorderKey(orderId, line.skuId), {
++        orderId,
++        skuId: line.skuId,
++        quantity: backorderedQuantity,
++      });
++    }
+   }
+ 
+   const orders = copyOrders(state);
+   orders.set(orderId, { ...order, status: "reserved" });
+-  const reservations = new Map(state.reservations);
+-  reservations.set(orderId, { orderId, lines: [...order.lines] });
+-  return { inventory, orders, reservations };
++  const nextReservations = new Map(state.reservations);
++  nextReservations.set(orderId, { orderId, lines: reservations });
++  return { inventory, orders, reservations: nextReservations, backorders };
+ }
+ 
+ export function transitionOrder(
+@@ -131,3 +171,7 @@ export function availableUnits(state: WarehouseState, skuId: string): number {
+     .filter(([key]) => key.endsWith(`::${skuId}`))
+     .reduce((total, [, quantity]) => total + quantity, 0);
+ }
++
++export function listBackorders(state: WarehouseState): readonly Backorder[] {
++  return [...state.backorders.values()];
++}
+diff --git a/src/durability/journal.test.ts b/src/durability/journal.test.ts
+index 31f8332..29c86e0 100644
+--- a/src/durability/journal.test.ts
++++ b/src/durability/journal.test.ts
+@@ -32,10 +32,16 @@ test("corruption fails closed with an actionable message", () => {
+ });
+ 
+ test("analytics and alerts derive from the event timeline", () => {
+-  const events = [event(1, "order.created"), event(2, "order.reserved"), { ...event(3, "order.status_changed"), payload: { order: { status: "cancelled" } } }];
++  const events = [
++    event(1, "order.created"),
++    event(2, "order.reserved"),
++    event(3, "backorder.recorded"),
++    { ...event(4, "order.status_changed"), payload: { order: { status: "cancelled" } } },
++  ];
+   const analytics = deriveAnalytics(events);
+   assert.equal(analytics.orderCreations, 1);
+   assert.equal(analytics.reservations, 1);
+-  assert.deepEqual(analytics.alerts, ["Order cancelled at event 3"]);
++  assert.equal(analytics.backorders, 1);
++  assert.deepEqual(analytics.alerts, ["Order cancelled at event 4"]);
+   assert.equal(new DurableHistory().timeline().length, 0);
+ });
+diff --git a/src/durability/journal.ts b/src/durability/journal.ts
+index 1b83911..151bb16 100644
+--- a/src/durability/journal.ts
++++ b/src/durability/journal.ts
+@@ -93,6 +93,7 @@ export interface HistoryAnalytics {
+   readonly eventCounts: Readonly<Record<string, number>>;
+   readonly orderCreations: number;
+   readonly reservations: number;
++  readonly backorders: number;
+   readonly alerts: readonly string[];
+ }
+ 
+@@ -104,6 +105,7 @@ export function deriveAnalytics(events: readonly WarehouseEvent[]): HistoryAnaly
+     eventCounts,
+     orderCreations: eventCounts["order.created"] ?? 0,
+     reservations: eventCounts["order.reserved"] ?? 0,
++    backorders: eventCounts["backorder.recorded"] ?? 0,
+     alerts,
+   };
+ }
+diff --git a/src/fulfillment/planner.test.ts b/src/fulfillment/planner.test.ts
+index 513fb99..928402e 100644
+--- a/src/fulfillment/planner.test.ts
++++ b/src/fulfillment/planner.test.ts
+@@ -6,7 +6,7 @@ import { planFulfillment, computeFulfillmentCost, renderRouteOverlaySvg } from "
+ function orders() {
+   return [
+     { id: "order-a", status: "reserved" as const, lines: [{ skuId: "SKU-1001", quantity: 2 }] },
+-    { id: "order-b", status: "reserved" as const, lines: [{ skuId: "SKU-1003", quantity: 2 }] },
++    { id: "order-b", status: "reserved" as const, priority: "express" as const, lines: [{ skuId: "SKU-1003", quantity: 2 }] },
+     { id: "order-c", status: "reserved" as const, lines: [{ skuId: "SKU-1005", quantity: 2 }] },
+   ];
+ }
+@@ -34,6 +34,12 @@ test("capacity is bounded and unassigned orders explain why", () => {
+   assert.match(plan.unassigned[0]!.explanation, /SKU-9999/);
+ });
+ 
++test("express orders are listed before standard orders within one wave", () => {
++  const scenario = buildThesisSeed2026();
++  const plan = planFulfillment(scenario.layout, scenario.inventory, orders(), 3);
++  assert.deepEqual(plan.waves[0]!.orderIds, ["order-b", "order-a", "order-c"]);
++});
++
+ test("cost changes when congestion load changes", () => {
+   assert.equal(computeFulfillmentCost(10, 0, 2, 0), 10);
+   assert.equal(computeFulfillmentCost(10, 2, 2, 0), 20);
+diff --git a/src/fulfillment/planner.ts b/src/fulfillment/planner.ts
+index 5be00d9..adf455e 100644
+--- a/src/fulfillment/planner.ts
++++ b/src/fulfillment/planner.ts
+@@ -93,9 +93,9 @@ export function planFulfillment(
+   if (!Number.isInteger(pickerCapacity) || pickerCapacity <= 0) throw new FulfillmentError("picker capacity must be positive");
+   const tasks: PickTask[] = [];
+   const unassigned: UnassignedOrder[] = [];
+-  const assignedOrders: { readonly order: Order; readonly tasks: readonly PickTask[] }[] = [];
++  const assignedOrders: { readonly order: Order; readonly tasks: readonly PickTask[]; readonly inputIndex: number }[] = [];
+ 
+-  for (const order of orders) {
++  for (const [inputIndex, order] of orders.entries()) {
+     if (!(["reserved", "picking", "packed"] as readonly string[]).includes(order.status)) {
+       unassigned.push({ orderId: order.id, reasonCode: "invalid_status", explanation: `order is ${order.status}; it must be reserved before picking` });
+       continue;
+@@ -113,13 +113,19 @@ export function planFulfillment(
+     }
+     if (valid) {
+       tasks.push(...orderTasks);
+-      assignedOrders.push({ order, tasks: orderTasks });
++      assignedOrders.push({ order, tasks: orderTasks, inputIndex });
+     }
+   }
+ 
++  const prioritizedOrders = [...assignedOrders].sort((left, right) => {
++    const leftPriority = left.order.priority === "express" ? 0 : 1;
++    const rightPriority = right.order.priority === "express" ? 0 : 1;
++    return leftPriority - rightPriority || left.inputIndex - right.inputIndex;
++  });
++
+   const waves: FulfillmentWave[] = [];
+-  for (let offset = 0; offset < assignedOrders.length; offset += pickerCapacity) {
+-    const batch = assignedOrders.slice(offset, offset + pickerCapacity);
++  for (let offset = 0; offset < prioritizedOrders.length; offset += pickerCapacity) {
++    const batch = prioritizedOrders.slice(offset, offset + pickerCapacity);
+     waves.push({
+       waveId: `wave-${waves.length + 1}`,
+       orderIds: batch.map(({ order }) => order.id),
+diff --git a/src/presentation/tower.test.ts b/src/presentation/tower.test.ts
+index dc24835..3d1889c 100644
+--- a/src/presentation/tower.test.ts
++++ b/src/presentation/tower.test.ts
+@@ -17,3 +17,26 @@ test("tower exposes heatmap and equivalent textual detail", () => {
+   assert.doesNotMatch(html, /createWarehouseState/);
+   void createWarehouseState(buildThesisSeed2026().inventory);
+ });
++
++test("tower distinguishes express and standard orders in the svg", () => {
++  const service = new WarehouseService();
++  service.createOrder({
++    id: "order-express",
++    status: "pending",
++    priority: "express",
++    lines: [{ skuId: "SKU-1001", quantity: 1 }],
++  });
++  service.createOrder({
++    id: "order-standard",
++    status: "pending",
++    lines: [{ skuId: "SKU-1002", quantity: 1 }],
++  });
++
++  const html = renderTowerSvg(service.snapshot());
++  assert.match(html, /data-order-id="order-express"/);
++  assert.match(html, /data-order-priority="express"/);
++  assert.match(html, /data-order-id="order-standard"/);
++  assert.match(html, /data-order-priority="standard"/);
++  assert.match(html, /fill="#d97706"/);
++  assert.match(html, /fill="#2563eb"/);
++});
+diff --git a/src/presentation/tower.ts b/src/presentation/tower.ts
+index 22b86d2..fda097f 100644
+--- a/src/presentation/tower.ts
++++ b/src/presentation/tower.ts
+@@ -1,4 +1,5 @@
+ import type { WarehouseSnapshot } from "../application/warehouse-service.ts";
++import type { OrderPriority } from "../domain/orders.ts";
+ 
+ function escape(value: string): string {
+   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+@@ -9,6 +10,10 @@ export function renderTowerSvg(snapshot: WarehouseSnapshot): string {
+   for (const row of snapshot.inventory) quantities.set(row.binId, (quantities.get(row.binId) ?? 0) + row.quantity);
+   const max = Math.max(1, ...quantities.values());
+   const bins = [...quantities.entries()].sort(([left], [right]) => left.localeCompare(right));
++  const orderStyles: Record<OrderPriority, { readonly fill: string; readonly stroke: string }> = {
++    express: { fill: "#d97706", stroke: "#92400e" },
++    standard: { fill: "#2563eb", stroke: "#1d4ed8" },
++  };
+   const cells = bins.map(([binId, quantity], index) => {
+     const x = 20 + (index % 8) * 82;
+     const y = 28 + Math.floor(index / 8) * 68;
+@@ -16,6 +21,13 @@ export function renderTowerSvg(snapshot: WarehouseSnapshot): string {
+     const fill = `hsl(${200 - intensity}, 78%, 42%)`;
+     return `<g data-bin-id="${escape(binId)}"><rect x="${x}" y="${y}" width="68" height="48" rx="6" fill="${fill}" stroke="#d7e3ed"/><text x="${x + 34}" y="${y + 21}" text-anchor="middle" fill="white" font-size="10">${escape(binId)}</text><text x="${x + 34}" y="${y + 37}" text-anchor="middle" fill="white" font-size="12" font-weight="700">${quantity} units</text></g>`;
+   }).join("");
++  const orders = snapshot.orders.map((order, index) => {
++    const priority = order.priority ?? "standard";
++    const style = orderStyles[priority];
++    const x = 20 + (index % 6) * 108;
++    const y = 108 + Math.floor(index / 6) * 28;
++    return `<g data-order-id="${escape(order.id)}" data-order-priority="${priority}"><rect x="${x}" y="${y}" width="100" height="20" rx="10" fill="${style.fill}" stroke="${style.stroke}"/><circle cx="${x + 10}" cy="${y + 10}" r="3.5" fill="white" opacity="0.9"/><text x="${x + 20}" y="${y + 14}" fill="white" font-size="10" font-weight="700">${escape(order.id)}</text></g>`;
++  }).join("");
+   const details = bins.map(([binId, quantity]) => `<li><span class="status-dot" aria-hidden="true"></span><strong>${escape(binId)}</strong>: ${quantity} units</li>`).join("");
+-  return `<section aria-labelledby="tower-title"><h2 id="tower-title">Warehouse tower</h2><p>Heatmap intensity is supplemental; exact quantities are listed below.</p><svg viewBox="0 0 680 180" role="img" aria-labelledby="tower-title tower-description"><desc id="tower-description">Warehouse bins colored by unit quantity, with text labels for every bin.</desc>${cells}</svg><ul aria-label="Bin details">${details}</ul></section>`;
++  return `<section aria-labelledby="tower-title"><h2 id="tower-title">Warehouse tower</h2><p>Heatmap intensity is supplemental; exact quantities are listed below.</p><svg viewBox="0 0 680 180" role="img" aria-labelledby="tower-title tower-description"><desc id="tower-description">Warehouse bins colored by unit quantity, with text labels for every bin. Express orders use amber badges and standard orders use blue badges.</desc>${cells}${orders}</svg><ul aria-label="Bin details">${details}</ul></section>`;
+ }
+diff --git a/src/probe/cli.test.ts b/src/probe/cli.test.ts
+index 1e3d31b..11b699c 100644
+--- a/src/probe/cli.test.ts
++++ b/src/probe/cli.test.ts
+@@ -47,4 +47,5 @@ test("main produces identical bytes across repeated invocations", () => {
+   const second = main(ARGV);
+   assert.equal(first, second);
+   assert.deepEqual(JSON.parse(first), JSON.parse(second));
++  assert.equal(first, JSON.stringify(JSON.parse(first)));
+ });
+diff --git a/src/probe/cli.ts b/src/probe/cli.ts
+index a02524f..ada466a 100644
+--- a/src/probe/cli.ts
++++ b/src/probe/cli.ts
+@@ -92,12 +92,12 @@ export function buildProbeReport(args: ProbeArgs): ProbeReport {
+ export function main(argv: readonly string[]): string {
+   const args = parseArgs(argv);
+   const report = buildProbeReport(args);
+-  return JSON.stringify(report, null, 2);
++  return JSON.stringify(report);
+ }
+ 
+ const isMainModule = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
+ 
+ if (isMainModule) {
+   const cliArgs = process.argv.slice(2).filter((arg) => arg !== "--");
+-  process.stdout.write(`${main(cliArgs)}\n`);
++  process.stdout.write(main(cliArgs));
+ }
+diff --git a/src/probe/g6.test.ts b/src/probe/g6.test.ts
+new file mode 100644
+index 0000000..3b06015
+--- /dev/null
++++ b/src/probe/g6.test.ts
+@@ -0,0 +1,20 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { buildG6ProbeReport, main } from "./g6.ts";
++
++test("G6 probe is deterministic and emits a stable JSON object", () => {
++  const first = main();
++  const second = main();
++
++  assert.equal(first, second);
++  assert.equal(first, JSON.stringify(buildG6ProbeReport()));
++  assert.deepEqual(JSON.parse(first), JSON.parse(second));
++  assert.deepEqual(Object.keys(JSON.parse(first)), [
++    "schemaVersion",
++    "increment",
++    "scenario",
++    "stateHash",
++    "capabilities",
++  ]);
++  assert.equal(JSON.parse(first).increment, "G6");
++});
+diff --git a/src/probe/g6.ts b/src/probe/g6.ts
+new file mode 100644
+index 0000000..a865699
+--- /dev/null
++++ b/src/probe/g6.ts
+@@ -0,0 +1,20 @@
++import { pathToFileURL } from "node:url";
++import { buildProbeReport } from "./cli.ts";
++
++const G6_ARGS = {
++  increment: "G6",
++  scenario: "thesis-seed-2026",
++  format: "json",
++} as const;
++
++export function buildG6ProbeReport() {
++  return buildProbeReport(G6_ARGS);
++}
++
++export function main(): string {
++  return JSON.stringify(buildG6ProbeReport());
++}
++
++if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
++  process.stdout.write(main());
++}

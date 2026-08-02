@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 2,
+  "runId": "fa6b0e73-de95-4e35-9f63-5429e743b59f",
+  "eventSequence": 13,
+  "lastEventId": "planning:fa6b0e73-de95-4e35-9f63-5429e743b59f:failed:13",
+  "operationId": "f0557851-a7aa-4273-9ad1-1307e2ff26d0",
+  "fencingToken": 2,
+  "projection": {
+    "runId": "fa6b0e73-de95-4e35-9f63-5429e743b59f",
+    "goal": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain  - src/domain/orders.ts:\n- Export type OrderPriority = \"standard\" | \"express\".\n- Order gains a readonly priority field of that type. It is optional at the call site: an order placed without a priority is treated as \"standard\", so existing callers keep working unchanged.\n- placeOrder throws OrderError when a priority is supplied and is neither \"standard\" nor \"express\".\n- Export interface Backorder with readonly orderId, skuId and missing fields, where missing is a positive integer.\n- WarehouseState gains a readonly backorders field keyed by order id.\n- reserveOrder records a Backorder for every line whose quantity exceeds the available units, instead of throwing, and leaves the order in a status from which it can still be cancelled.\n- Export listBackorders(state) returning every recorded Backorder.\n\nApplication  - src/application/warehouse-service.ts:\n- The service exposes the new operations and emits a warehouse event for a recorded backorder.\n\nFulfillment  - src/fulfillment/planner.ts:\n- Within one wave, planFulfillment lists express orders before standard ones. Its existing signature does not change.\n\nDurability  - src/durability/journal.ts:\n- HistoryAnalytics gains a backorders count derived from the events.\n\nAPI  - src/api/server.ts:\n- The server exposes the backorders of the current state.\n\nPresentation  - src/presentation/tower.ts:\n- The rendered SVG distinguishes express orders from standard ones.\n\nProbe  - src/probe/g6.ts and a package script named study:g6-probe:\n- Follow the shape of the existing probes: export main() returning a JSON string, and write exactly one JSON object to stdout when invoked directly, with no other output.\n- Two invocations from the same commit must emit byte-identical output.\n\nPreserve all existing behaviour and keep every existing test passing. Put new tests next to the code they cover, inside the directories the test script already scans.",
+    "lifecycle": "failed",
+    "sequence": 13,
+    "appliedEventIds": [
+      "run:fa6b0e73-de95-4e35-9f63-5429e743b59f:created",
+      "repository:sha256:849629d65191cf89ee40d3ea2be8a62754a21078b345738e0fddabead4be8599:inspection:2",
+      "planning:fa6b0e73-de95-4e35-9f63-5429e743b59f:attempt:1:started",
+      "planning:fa6b0e73-de95-4e35-9f63-5429e743b59f:attempt:1:node:orders-priority-backorders-rollout",
+      "planning:fa6b0e73-de95-4e35-9f63-5429e743b59f:attempt:1:node:domain-order-priority-backorders",
+      "planning:fa6b0e73-de95-4e35-9f63-5429e743b59f:attempt:1:node:application-warehouse-service-backorders",
+      "planning:fa6b0e73-de95-4e35-9f63-5429e743b59f:attempt:1:node:fulfillment-express-wave-ordering",
+      "planning:fa6b0e73-de95-4e35-9f63-5429e743b59f:attempt:1:node:durability-backorder-analytics",
+      "planning:fa6b0e73-de95-4e35-9f63-5429e743b59f:attempt:1:node:api-backorders-exposure",
+      "planning:fa6b0e73-de95-4e35-9f63-5429e743b59f:attempt:1:node:presentation-order-priority-rendering",
+      "planning:fa6b0e73-de95-4e35-9f63-5429e743b59f:attempt:1:node:probe-g6-determinism-script",
+      "planning:fa6b0e73-de95-4e35-9f63-5429e743b59f:attempt:1:failed",
+      "planning:fa6b0e73-de95-4e35-9f63-5429e743b59f:failed:13"
+    ],
+    "decisions": {},
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "failureReason": "WorkBreakdown planning failed after 1 attempts: root: unit domain-order-priority-backorders references unknown evidence path-8"
+  },
+  "checksum": "856b60e078db9ad5050aedfae2878449f7f5c5353e958d3ba318bacd112faff7"
+}

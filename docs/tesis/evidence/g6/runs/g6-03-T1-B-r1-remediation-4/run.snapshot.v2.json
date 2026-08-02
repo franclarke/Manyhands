@@ -1,0 +1,1322 @@
+{
+  "schemaVersion": 2,
+  "runId": "396d8534-10f7-4b93-bcee-274fc3196113",
+  "eventSequence": 39,
+  "lastEventId": "396d8534-10f7-4b93-bcee-274fc3196113:readiness.observed:39",
+  "operationId": "374da4b0-1e9d-4eae-9f9e-a5fd94ca926d",
+  "fencingToken": 4,
+  "projection": {
+    "runId": "396d8534-10f7-4b93-bcee-274fc3196113",
+    "goal": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain  - src/domain/orders.ts:\n- Export type OrderPriority = \"standard\" | \"express\".\n- Order gains a readonly priority field of that type. It is optional at the call site: an order placed without a priority is treated as \"standard\", so existing callers keep working unchanged.\n- placeOrder throws OrderError when a priority is supplied and is neither \"standard\" nor \"express\".\n- Export interface Backorder with readonly orderId, skuId and missing fields, where missing is a positive integer.\n- WarehouseState gains a readonly backorders field keyed by order id.\n- reserveOrder records a Backorder for every line whose quantity exceeds the available units, instead of throwing, and leaves the order in a status from which it can still be cancelled.\n- Export listBackorders(state) returning every recorded Backorder.\n\nApplication  - src/application/warehouse-service.ts:\n- The service exposes the new operations and emits a warehouse event for a recorded backorder.\n\nFulfillment  - src/fulfillment/planner.ts:\n- Within one wave, planFulfillment lists express orders before standard ones. Its existing signature does not change.\n\nDurability  - src/durability/journal.ts:\n- HistoryAnalytics gains a backorders count derived from the events.\n\nAPI  - src/api/server.ts:\n- The server exposes the backorders of the current state.\n\nPresentation  - src/presentation/tower.ts:\n- The rendered SVG distinguishes express orders from standard ones.\n\nProbe  - src/probe/g6.ts and a package script named study:g6-probe:\n- Follow the shape of the existing probes: export main() returning a JSON string, and write exactly one JSON object to stdout when invoked directly, with no other output.\n- Two invocations from the same commit must emit byte-identical output.\n\nPreserve all existing behaviour and keep every existing test passing. Put new tests next to the code they cover, inside the directories the test script already scans.",
+    "lifecycle": "waiting_for_input",
+    "sequence": 39,
+    "appliedEventIds": [
+      "run:396d8534-10f7-4b93-bcee-274fc3196113:created",
+      "repository:sha256:ebcf2bbecca85ccc1846a5e232c252424a7dc5b3680b4374ef311d6e69d8cea5:inspection:2",
+      "planning:396d8534-10f7-4b93-bcee-274fc3196113:attempt:1:started",
+      "planning:396d8534-10f7-4b93-bcee-274fc3196113:attempt:1:failed",
+      "planning:396d8534-10f7-4b93-bcee-274fc3196113:attempt:2:started",
+      "planning:396d8534-10f7-4b93-bcee-274fc3196113:attempt:2:node:warehouse-orders-priority-backorders",
+      "planning:396d8534-10f7-4b93-bcee-274fc3196113:attempt:2:node:domain-orders",
+      "planning:396d8534-10f7-4b93-bcee-274fc3196113:attempt:2:node:application-warehouse-service",
+      "planning:396d8534-10f7-4b93-bcee-274fc3196113:attempt:2:node:fulfillment-planner",
+      "planning:396d8534-10f7-4b93-bcee-274fc3196113:attempt:2:node:durability-journal",
+      "planning:396d8534-10f7-4b93-bcee-274fc3196113:attempt:2:node:api-server",
+      "planning:396d8534-10f7-4b93-bcee-274fc3196113:attempt:2:node:presentation-tower",
+      "planning:396d8534-10f7-4b93-bcee-274fc3196113:attempt:2:node:probe-g6",
+      "planning:warehouse-orders-priority-backorders:strategy:396d8534-10f7-4b93-bcee-274fc3196113",
+      "planning:warehouse-orders-priority-backorders:completed:396d8534-10f7-4b93-bcee-274fc3196113",
+      "graph:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1:compiled",
+      "graph:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1:critic:completeness",
+      "graph:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1:critic:atomicity",
+      "graph:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1:critic:contract_compatibility",
+      "graph:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1:critic:dag_validity",
+      "graph:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1:critic:scope_isolation",
+      "graph:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1:critic:artifact_coverage",
+      "graph:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1:critic:risk_uncertainty",
+      "graph:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1:critic:validation_coverage",
+      "graph:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1:proposed",
+      "approve-plan:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1",
+      "approve-plan:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1:resolved",
+      "approve-plan:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1:graph-approved",
+      "396d8534-10f7-4b93-bcee-274fc3196113:readiness.observed:29",
+      "396d8534-10f7-4b93-bcee-274fc3196113:wave.selected:30",
+      "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1:started",
+      "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1:started",
+      "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1:failure-classified",
+      "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1:failed",
+      "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1:decision:396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1:decision",
+      "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1:failure-classified",
+      "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1:failed",
+      "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1:decision:396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1:decision",
+      "396d8534-10f7-4b93-bcee-274fc3196113:readiness.observed:39"
+    ],
+    "decisions": {
+      "approve-plan:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1": {
+        "id": "approve-plan:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-warehouse-orders-priority-backorders-d0826b2b0c"
+        ],
+        "evidenceRefs": [
+          "graph:graph-warehouse-orders-priority-backorders-a9aaaf8e7c:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      },
+      "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1:decision": {
+        "id": "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1:decision",
+        "kind": "resolve_conflict",
+        "question": "The work for Expose current backorders in the API needs guidance: worktree_pool_unavailable: could not remove invalid slot slot-001: code=EBUSY path=C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-04\\.manyhands\\worktree-pool\\42e3d2136562\\slot-001 EBUSY: resource busy or locked, rmdir 'C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-04\\.manyhands\\worktree-pool\\42e3d2136562\\slot-001'",
+        "options": [
+          {
+            "id": "retry",
+            "label": "Retry with guidance"
+          },
+          {
+            "id": "stop",
+            "label": "Stop this branch"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-api-server-9c02438b4b"
+        ],
+        "evidenceRefs": [
+          "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1"
+        ],
+        "impact": "behavior",
+        "raisedAtGraphRevision": 1,
+        "status": "pending"
+      },
+      "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1:decision": {
+        "id": "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1:decision",
+        "kind": "resolve_conflict",
+        "question": "The work for Add the deterministic g6 study probe needs guidance: worktree_pool_unavailable: could not remove invalid slot slot-001: code=EBUSY path=C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-04\\.manyhands\\worktree-pool\\42e3d2136562\\slot-001 EBUSY: resource busy or locked, rmdir 'C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-04\\.manyhands\\worktree-pool\\42e3d2136562\\slot-001'",
+        "options": [
+          {
+            "id": "retry",
+            "label": "Retry with guidance"
+          },
+          {
+            "id": "stop",
+            "label": "Stop this branch"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-probe-g6-d230bc118f"
+        ],
+        "evidenceRefs": [
+          "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1"
+        ],
+        "impact": "behavior",
+        "raisedAtGraphRevision": 1,
+        "status": "pending"
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": [
+        "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1:decision",
+        "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1:decision"
+      ],
+      "explanations": [
+        {
+          "nodeId": "node-api-server-9c02438b4b",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "unresolved_decision",
+              "decisionId": "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1:decision"
+            },
+            {
+              "code": "circuit_breaker_open"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-application-warehouse-service-611c10ea93",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "circuit_breaker_open"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-domain-orders-2b03a8499d",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "circuit_breaker_open"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-durability-journal-b776033656",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "circuit_breaker_open"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-fulfillment-planner-781d7f953f",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "circuit_breaker_open"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-presentation-tower-e9db30f17e",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "circuit_breaker_open"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-probe-g6-d230bc118f",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "unresolved_decision",
+              "decisionId": "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1:decision"
+            },
+            {
+              "code": "circuit_breaker_open"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-warehouse-orders-priority-backorders-d0826b2b0c",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-domain-orders-output-b888df5aa8",
+              "requiredRevision": "sha256:4063cec2f9951f788a2e87694241bbd5b1e5c003fa7d3b6098d2e2be9207c5f0"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-application-warehouse-service-output-4c5c7f5797",
+              "requiredRevision": "sha256:c95ffc0a9ca802623e789c9bdda03f7e5fbe710f81748f5565501cd6d7f2dcb5"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-fulfillment-planner-output-553747fb2e",
+              "requiredRevision": "sha256:dadfb46fbf937af1ab3ed54b244a6e9323b2590eed3af8f6e026ce5f6c9d5dbf"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-durability-journal-output-bd8db890bd",
+              "requiredRevision": "sha256:f0fbc20e651702cea9584554e52fbbfede9a9ff3eac6c7664805e739c0020c5d"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-api-server-output-d617a4f749",
+              "requiredRevision": "sha256:930addf915017b303933e3affba434fe3ea13f888792b601748410ec430f10a6"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-presentation-tower-output-79bdc7a74a",
+              "requiredRevision": "sha256:903d15f5c080e614adc0927623abdaf95556aa52fe017ecae760384d78355276"
+            },
+            {
+              "code": "missing_artifact",
+              "artifactId": "artifact-contract-probe-g6-output-3bb14cc84e",
+              "requiredRevision": "sha256:87fc74eca6bc271326854b6bf05e3795ba95f85ef9e270788305163b29195cc7"
+            },
+            {
+              "code": "circuit_breaker_open"
+            }
+          ]
+        }
+      ],
+      "effectiveConfig": {
+        "maxParallel": 2
+      },
+      "schedulerState": {
+        "materializableNodeIds": [
+          "node-warehouse-orders-priority-backorders-d0826b2b0c",
+          "node-domain-orders-2b03a8499d",
+          "node-application-warehouse-service-611c10ea93",
+          "node-fulfillment-planner-781d7f953f",
+          "node-durability-journal-b776033656",
+          "node-api-server-9c02438b4b",
+          "node-presentation-tower-e9db30f17e",
+          "node-probe-g6-d230bc118f"
+        ],
+        "activeResourceNodeIds": [],
+        "openCircuitBreakerNodeIds": [
+          "node-warehouse-orders-priority-backorders-d0826b2b0c",
+          "node-domain-orders-2b03a8499d",
+          "node-application-warehouse-service-611c10ea93",
+          "node-fulfillment-planner-781d7f953f",
+          "node-durability-journal-b776033656",
+          "node-api-server-9c02438b4b",
+          "node-presentation-tower-e9db30f17e",
+          "node-probe-g6-d230bc118f"
+        ],
+        "availableExecutorNodeIds": [
+          "node-warehouse-orders-priority-backorders-d0826b2b0c",
+          "node-domain-orders-2b03a8499d",
+          "node-application-warehouse-service-611c10ea93",
+          "node-fulfillment-planner-781d7f953f",
+          "node-durability-journal-b776033656",
+          "node-api-server-9c02438b4b",
+          "node-presentation-tower-e9db30f17e",
+          "node-probe-g6-d230bc118f"
+        ],
+        "stoppedNodeIds": [],
+        "budgetAvailable": true
+      },
+      "budgetAvailable": true,
+      "conflictEvidence": [
+        {
+          "id": "conflict-constraint-node-api-server-9c02438b4b-node-application-ware-6f206130b0",
+          "leftNodeId": "node-api-server-9c02438b4b",
+          "rightNodeId": "node-application-warehouse-service-611c10ea93",
+          "reason": "Scopes overlap on src/application/warehouse-service.ts, src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-api-server-9c02438b4b-node-domain-orders-2b-bc6b759fff",
+          "leftNodeId": "node-api-server-9c02438b4b",
+          "rightNodeId": "node-domain-orders-2b03a8499d",
+          "reason": "Scopes overlap on src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-api-server-9c02438b4b-node-durability-journ-52d0845b9d",
+          "leftNodeId": "node-api-server-9c02438b4b",
+          "rightNodeId": "node-durability-journal-b776033656",
+          "reason": "Scopes overlap on src/application/warehouse-service.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-api-server-9c02438b4b-node-fulfillment-plan-0df8808f6b",
+          "leftNodeId": "node-api-server-9c02438b4b",
+          "rightNodeId": "node-fulfillment-planner-781d7f953f",
+          "reason": "Scopes overlap on src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-api-server-9c02438b4b-node-presentation-tow-f6fa5c44fa",
+          "leftNodeId": "node-api-server-9c02438b4b",
+          "rightNodeId": "node-presentation-tower-e9db30f17e",
+          "reason": "Scopes overlap on src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-0d7cc1e63e",
+          "leftNodeId": "node-application-warehouse-service-611c10ea93",
+          "rightNodeId": "node-domain-orders-2b03a8499d",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-453027cc64",
+          "leftNodeId": "node-application-warehouse-service-611c10ea93",
+          "rightNodeId": "node-durability-journal-b776033656",
+          "reason": "Scopes overlap on src/application/warehouse-service.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-4bcd2522f8",
+          "leftNodeId": "node-application-warehouse-service-611c10ea93",
+          "rightNodeId": "node-fulfillment-planner-781d7f953f",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-df4a7d107a",
+          "leftNodeId": "node-application-warehouse-service-611c10ea93",
+          "rightNodeId": "node-presentation-tower-e9db30f17e",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-domain-orders-2b03a8499d-node-fulfillment-p-9e27535d62",
+          "leftNodeId": "node-domain-orders-2b03a8499d",
+          "rightNodeId": "node-fulfillment-planner-781d7f953f",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-domain-orders-2b03a8499d-node-presentation--495ebb19fe",
+          "leftNodeId": "node-domain-orders-2b03a8499d",
+          "rightNodeId": "node-presentation-tower-e9db30f17e",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-fulfillment-planner-781d7f953f-node-present-ef8545138c",
+          "leftNodeId": "node-fulfillment-planner-781d7f953f",
+          "rightNodeId": "node-presentation-tower-e9db30f17e",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high"
+        },
+        {
+          "id": "conflict-constraint-node-api-server-9c02438b4b-node-application-ware-6f206130b0",
+          "leftNodeId": "node-api-server-9c02438b4b",
+          "rightNodeId": "node-application-warehouse-service-611c10ea93",
+          "reason": "Scopes overlap on src/application/warehouse-service.ts, src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/application/warehouse-service.ts, src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-api-server-9c02438b4b-node-application-ware-6f206130b0"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T11:02:50.137Z",
+          "expiresAt": "2026-08-02T11:02:50.137Z"
+        },
+        {
+          "id": "conflict-constraint-node-api-server-9c02438b4b-node-domain-orders-2b-bc6b759fff",
+          "leftNodeId": "node-api-server-9c02438b4b",
+          "rightNodeId": "node-domain-orders-2b03a8499d",
+          "reason": "Scopes overlap on src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-api-server-9c02438b4b-node-domain-orders-2b-bc6b759fff"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T11:02:50.137Z",
+          "expiresAt": "2026-08-02T11:02:50.137Z"
+        },
+        {
+          "id": "conflict-constraint-node-api-server-9c02438b4b-node-durability-journ-52d0845b9d",
+          "leftNodeId": "node-api-server-9c02438b4b",
+          "rightNodeId": "node-durability-journal-b776033656",
+          "reason": "Scopes overlap on src/application/warehouse-service.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/application/warehouse-service.ts.",
+              "sourceRef": "conflict-constraint-node-api-server-9c02438b4b-node-durability-journ-52d0845b9d"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T11:02:50.137Z",
+          "expiresAt": "2026-08-02T11:02:50.137Z"
+        },
+        {
+          "id": "conflict-constraint-node-api-server-9c02438b4b-node-fulfillment-plan-0df8808f6b",
+          "leftNodeId": "node-api-server-9c02438b4b",
+          "rightNodeId": "node-fulfillment-planner-781d7f953f",
+          "reason": "Scopes overlap on src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-api-server-9c02438b4b-node-fulfillment-plan-0df8808f6b"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T11:02:50.137Z",
+          "expiresAt": "2026-08-02T11:02:50.137Z"
+        },
+        {
+          "id": "conflict-constraint-node-api-server-9c02438b4b-node-presentation-tow-f6fa5c44fa",
+          "leftNodeId": "node-api-server-9c02438b4b",
+          "rightNodeId": "node-presentation-tower-e9db30f17e",
+          "reason": "Scopes overlap on src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-api-server-9c02438b4b-node-presentation-tow-f6fa5c44fa"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T11:02:50.137Z",
+          "expiresAt": "2026-08-02T11:02:50.137Z"
+        },
+        {
+          "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-0d7cc1e63e",
+          "leftNodeId": "node-application-warehouse-service-611c10ea93",
+          "rightNodeId": "node-domain-orders-2b03a8499d",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-0d7cc1e63e"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T11:02:50.137Z",
+          "expiresAt": "2026-08-02T11:02:50.137Z"
+        },
+        {
+          "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-453027cc64",
+          "leftNodeId": "node-application-warehouse-service-611c10ea93",
+          "rightNodeId": "node-durability-journal-b776033656",
+          "reason": "Scopes overlap on src/application/warehouse-service.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/application/warehouse-service.ts.",
+              "sourceRef": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-453027cc64"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T11:02:50.137Z",
+          "expiresAt": "2026-08-02T11:02:50.137Z"
+        },
+        {
+          "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-4bcd2522f8",
+          "leftNodeId": "node-application-warehouse-service-611c10ea93",
+          "rightNodeId": "node-fulfillment-planner-781d7f953f",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-4bcd2522f8"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T11:02:50.137Z",
+          "expiresAt": "2026-08-02T11:02:50.137Z"
+        },
+        {
+          "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-df4a7d107a",
+          "leftNodeId": "node-application-warehouse-service-611c10ea93",
+          "rightNodeId": "node-presentation-tower-e9db30f17e",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-df4a7d107a"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T11:02:50.137Z",
+          "expiresAt": "2026-08-02T11:02:50.137Z"
+        },
+        {
+          "id": "conflict-constraint-node-domain-orders-2b03a8499d-node-fulfillment-p-9e27535d62",
+          "leftNodeId": "node-domain-orders-2b03a8499d",
+          "rightNodeId": "node-fulfillment-planner-781d7f953f",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-domain-orders-2b03a8499d-node-fulfillment-p-9e27535d62"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T11:02:50.137Z",
+          "expiresAt": "2026-08-02T11:02:50.137Z"
+        },
+        {
+          "id": "conflict-constraint-node-domain-orders-2b03a8499d-node-presentation--495ebb19fe",
+          "leftNodeId": "node-domain-orders-2b03a8499d",
+          "rightNodeId": "node-presentation-tower-e9db30f17e",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-domain-orders-2b03a8499d-node-presentation--495ebb19fe"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T11:02:50.137Z",
+          "expiresAt": "2026-08-02T11:02:50.137Z"
+        },
+        {
+          "id": "conflict-constraint-node-fulfillment-planner-781d7f953f-node-present-ef8545138c",
+          "leftNodeId": "node-fulfillment-planner-781d7f953f",
+          "rightNodeId": "node-presentation-tower-e9db30f17e",
+          "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+          "risk": "high",
+          "mode": "serialize",
+          "signals": [
+            {
+              "type": "compiled_scope_overlap",
+              "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+              "sourceRef": "conflict-constraint-node-fulfillment-planner-781d7f953f-node-present-ef8545138c"
+            }
+          ],
+          "confidence": 1,
+          "observedAt": "2026-08-01T11:02:50.137Z",
+          "expiresAt": "2026-08-02T11:02:50.137Z"
+        }
+      ],
+      "evaluatedAt": "2026-08-01T11:03:07.435Z"
+    },
+    "selectedWaves": [
+      {
+        "waveId": "396d8534-10f7-4b93-bcee-274fc3196113:wave:1",
+        "nodeIds": [
+          "node-api-server-9c02438b4b",
+          "node-probe-g6-d230bc118f"
+        ],
+        "maxParallel": 2,
+        "blocked": [
+          {
+            "nodeId": "node-application-warehouse-service-611c10ea93",
+            "ready": true,
+            "reasons": [
+              {
+                "code": "active_resource_constraint"
+              }
+            ],
+            "deferred": true
+          },
+          {
+            "nodeId": "node-domain-orders-2b03a8499d",
+            "ready": true,
+            "reasons": [
+              {
+                "code": "active_resource_constraint"
+              }
+            ],
+            "deferred": true
+          },
+          {
+            "nodeId": "node-durability-journal-b776033656",
+            "ready": true,
+            "reasons": [
+              {
+                "code": "active_resource_constraint"
+              }
+            ],
+            "deferred": true
+          },
+          {
+            "nodeId": "node-fulfillment-planner-781d7f953f",
+            "ready": true,
+            "reasons": [
+              {
+                "code": "active_resource_constraint"
+              }
+            ],
+            "deferred": true
+          },
+          {
+            "nodeId": "node-presentation-tower-e9db30f17e",
+            "ready": true,
+            "reasons": [
+              {
+                "code": "active_resource_constraint"
+              }
+            ],
+            "deferred": true
+          },
+          {
+            "nodeId": "node-warehouse-orders-priority-backorders-d0826b2b0c",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-domain-orders-output-b888df5aa8",
+                "requiredRevision": "sha256:4063cec2f9951f788a2e87694241bbd5b1e5c003fa7d3b6098d2e2be9207c5f0"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-application-warehouse-service-output-4c5c7f5797",
+                "requiredRevision": "sha256:c95ffc0a9ca802623e789c9bdda03f7e5fbe710f81748f5565501cd6d7f2dcb5"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-fulfillment-planner-output-553747fb2e",
+                "requiredRevision": "sha256:dadfb46fbf937af1ab3ed54b244a6e9323b2590eed3af8f6e026ce5f6c9d5dbf"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-durability-journal-output-bd8db890bd",
+                "requiredRevision": "sha256:f0fbc20e651702cea9584554e52fbbfede9a9ff3eac6c7664805e739c0020c5d"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-api-server-output-d617a4f749",
+                "requiredRevision": "sha256:930addf915017b303933e3affba434fe3ea13f888792b601748410ec430f10a6"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-presentation-tower-output-79bdc7a74a",
+                "requiredRevision": "sha256:903d15f5c080e614adc0927623abdaf95556aa52fe017ecae760384d78355276"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-probe-g6-output-3bb14cc84e",
+                "requiredRevision": "sha256:87fc74eca6bc271326854b6bf05e3795ba95f85ef9e270788305163b29195cc7"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 2
+        },
+        "conflictEvidence": [
+          {
+            "id": "conflict-constraint-node-api-server-9c02438b4b-node-application-ware-6f206130b0",
+            "leftNodeId": "node-api-server-9c02438b4b",
+            "rightNodeId": "node-application-warehouse-service-611c10ea93",
+            "reason": "Scopes overlap on src/application/warehouse-service.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-server-9c02438b4b-node-domain-orders-2b-bc6b759fff",
+            "leftNodeId": "node-api-server-9c02438b4b",
+            "rightNodeId": "node-domain-orders-2b03a8499d",
+            "reason": "Scopes overlap on src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-server-9c02438b4b-node-durability-journ-52d0845b9d",
+            "leftNodeId": "node-api-server-9c02438b4b",
+            "rightNodeId": "node-durability-journal-b776033656",
+            "reason": "Scopes overlap on src/application/warehouse-service.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-server-9c02438b4b-node-fulfillment-plan-0df8808f6b",
+            "leftNodeId": "node-api-server-9c02438b4b",
+            "rightNodeId": "node-fulfillment-planner-781d7f953f",
+            "reason": "Scopes overlap on src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-server-9c02438b4b-node-presentation-tow-f6fa5c44fa",
+            "leftNodeId": "node-api-server-9c02438b4b",
+            "rightNodeId": "node-presentation-tower-e9db30f17e",
+            "reason": "Scopes overlap on src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-0d7cc1e63e",
+            "leftNodeId": "node-application-warehouse-service-611c10ea93",
+            "rightNodeId": "node-domain-orders-2b03a8499d",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-453027cc64",
+            "leftNodeId": "node-application-warehouse-service-611c10ea93",
+            "rightNodeId": "node-durability-journal-b776033656",
+            "reason": "Scopes overlap on src/application/warehouse-service.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-4bcd2522f8",
+            "leftNodeId": "node-application-warehouse-service-611c10ea93",
+            "rightNodeId": "node-fulfillment-planner-781d7f953f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-df4a7d107a",
+            "leftNodeId": "node-application-warehouse-service-611c10ea93",
+            "rightNodeId": "node-presentation-tower-e9db30f17e",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-domain-orders-2b03a8499d-node-fulfillment-p-9e27535d62",
+            "leftNodeId": "node-domain-orders-2b03a8499d",
+            "rightNodeId": "node-fulfillment-planner-781d7f953f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-domain-orders-2b03a8499d-node-presentation--495ebb19fe",
+            "leftNodeId": "node-domain-orders-2b03a8499d",
+            "rightNodeId": "node-presentation-tower-e9db30f17e",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-fulfillment-planner-781d7f953f-node-present-ef8545138c",
+            "leftNodeId": "node-fulfillment-planner-781d7f953f",
+            "rightNodeId": "node-presentation-tower-e9db30f17e",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high"
+          },
+          {
+            "id": "conflict-constraint-node-api-server-9c02438b4b-node-application-ware-6f206130b0",
+            "leftNodeId": "node-api-server-9c02438b4b",
+            "rightNodeId": "node-application-warehouse-service-611c10ea93",
+            "reason": "Scopes overlap on src/application/warehouse-service.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/application/warehouse-service.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-server-9c02438b4b-node-application-ware-6f206130b0"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T11:02:50.137Z",
+            "expiresAt": "2026-08-02T11:02:50.137Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-server-9c02438b4b-node-domain-orders-2b-bc6b759fff",
+            "leftNodeId": "node-api-server-9c02438b4b",
+            "rightNodeId": "node-domain-orders-2b03a8499d",
+            "reason": "Scopes overlap on src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-server-9c02438b4b-node-domain-orders-2b-bc6b759fff"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T11:02:50.137Z",
+            "expiresAt": "2026-08-02T11:02:50.137Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-server-9c02438b4b-node-durability-journ-52d0845b9d",
+            "leftNodeId": "node-api-server-9c02438b4b",
+            "rightNodeId": "node-durability-journal-b776033656",
+            "reason": "Scopes overlap on src/application/warehouse-service.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/application/warehouse-service.ts.",
+                "sourceRef": "conflict-constraint-node-api-server-9c02438b4b-node-durability-journ-52d0845b9d"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T11:02:50.137Z",
+            "expiresAt": "2026-08-02T11:02:50.137Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-server-9c02438b4b-node-fulfillment-plan-0df8808f6b",
+            "leftNodeId": "node-api-server-9c02438b4b",
+            "rightNodeId": "node-fulfillment-planner-781d7f953f",
+            "reason": "Scopes overlap on src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-server-9c02438b4b-node-fulfillment-plan-0df8808f6b"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T11:02:50.137Z",
+            "expiresAt": "2026-08-02T11:02:50.137Z"
+          },
+          {
+            "id": "conflict-constraint-node-api-server-9c02438b4b-node-presentation-tow-f6fa5c44fa",
+            "leftNodeId": "node-api-server-9c02438b4b",
+            "rightNodeId": "node-presentation-tower-e9db30f17e",
+            "reason": "Scopes overlap on src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-api-server-9c02438b4b-node-presentation-tow-f6fa5c44fa"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T11:02:50.137Z",
+            "expiresAt": "2026-08-02T11:02:50.137Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-0d7cc1e63e",
+            "leftNodeId": "node-application-warehouse-service-611c10ea93",
+            "rightNodeId": "node-domain-orders-2b03a8499d",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-0d7cc1e63e"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T11:02:50.137Z",
+            "expiresAt": "2026-08-02T11:02:50.137Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-453027cc64",
+            "leftNodeId": "node-application-warehouse-service-611c10ea93",
+            "rightNodeId": "node-durability-journal-b776033656",
+            "reason": "Scopes overlap on src/application/warehouse-service.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/application/warehouse-service.ts.",
+                "sourceRef": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-453027cc64"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T11:02:50.137Z",
+            "expiresAt": "2026-08-02T11:02:50.137Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-4bcd2522f8",
+            "leftNodeId": "node-application-warehouse-service-611c10ea93",
+            "rightNodeId": "node-fulfillment-planner-781d7f953f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-4bcd2522f8"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T11:02:50.137Z",
+            "expiresAt": "2026-08-02T11:02:50.137Z"
+          },
+          {
+            "id": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-df4a7d107a",
+            "leftNodeId": "node-application-warehouse-service-611c10ea93",
+            "rightNodeId": "node-presentation-tower-e9db30f17e",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-application-warehouse-service-611c10ea93-no-df4a7d107a"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T11:02:50.137Z",
+            "expiresAt": "2026-08-02T11:02:50.137Z"
+          },
+          {
+            "id": "conflict-constraint-node-domain-orders-2b03a8499d-node-fulfillment-p-9e27535d62",
+            "leftNodeId": "node-domain-orders-2b03a8499d",
+            "rightNodeId": "node-fulfillment-planner-781d7f953f",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-domain-orders-2b03a8499d-node-fulfillment-p-9e27535d62"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T11:02:50.137Z",
+            "expiresAt": "2026-08-02T11:02:50.137Z"
+          },
+          {
+            "id": "conflict-constraint-node-domain-orders-2b03a8499d-node-presentation--495ebb19fe",
+            "leftNodeId": "node-domain-orders-2b03a8499d",
+            "rightNodeId": "node-presentation-tower-e9db30f17e",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-domain-orders-2b03a8499d-node-presentation--495ebb19fe"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T11:02:50.137Z",
+            "expiresAt": "2026-08-02T11:02:50.137Z"
+          },
+          {
+            "id": "conflict-constraint-node-fulfillment-planner-781d7f953f-node-present-ef8545138c",
+            "leftNodeId": "node-fulfillment-planner-781d7f953f",
+            "rightNodeId": "node-presentation-tower-e9db30f17e",
+            "reason": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+            "risk": "high",
+            "mode": "serialize",
+            "signals": [
+              {
+                "type": "compiled_scope_overlap",
+                "detail": "Scopes overlap on src/domain/orders.test.ts, src/domain/orders.ts.",
+                "sourceRef": "conflict-constraint-node-fulfillment-planner-781d7f953f-node-present-ef8545138c"
+              }
+            ],
+            "confidence": 1,
+            "observedAt": "2026-08-01T11:02:50.137Z",
+            "expiresAt": "2026-08-02T11:02:50.137Z"
+          }
+        ],
+        "evaluatedAt": "2026-08-01T11:03:07.435Z"
+      }
+    ],
+    "attempts": {
+      "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1": {
+        "attemptId": "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1",
+        "nodeId": "node-api-server-9c02438b4b",
+        "inputFingerprint": "sha256:aa29b508a0711197a3ab2684cda98141c3386aca78b92456964f109eb1e2d96b",
+        "kind": "execution",
+        "status": "failed",
+        "repairPasses": 0,
+        "failureReason": "worktree_pool_unavailable: could not remove invalid slot slot-001: code=EBUSY path=C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-04\\.manyhands\\worktree-pool\\42e3d2136562\\slot-001 EBUSY: resource busy or locked, rmdir 'C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-04\\.manyhands\\worktree-pool\\42e3d2136562\\slot-001'"
+      },
+      "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1": {
+        "attemptId": "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1",
+        "nodeId": "node-probe-g6-d230bc118f",
+        "inputFingerprint": "sha256:f1123e4ef0373364fddb415e36fd0b44622068975c6b5934810d9637804f566b",
+        "kind": "execution",
+        "status": "failed",
+        "repairPasses": 0,
+        "failureReason": "worktree_pool_unavailable: could not remove invalid slot slot-001: code=EBUSY path=C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-04\\.manyhands\\worktree-pool\\42e3d2136562\\slot-001 EBUSY: resource busy or locked, rmdir 'C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-04\\.manyhands\\worktree-pool\\42e3d2136562\\slot-001'"
+      }
+    },
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [
+      {
+        "eventId": "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1:failure-classified",
+        "attemptId": "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-api-server-9c02438b4b:1",
+        "nodeId": "node-api-server-9c02438b4b",
+        "kind": "failure",
+        "failureClass": "shared_infrastructure"
+      },
+      {
+        "eventId": "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1:failure-classified",
+        "attemptId": "396d8534-10f7-4b93-bcee-274fc3196113:attempt:node-probe-g6-d230bc118f:1",
+        "nodeId": "node-probe-g6-d230bc118f",
+        "kind": "failure",
+        "failureClass": "shared_infrastructure"
+      }
+    ],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "B",
+      "candidateTreeHash": "sha256:bdbc5f803ff2635c1d9c13e6a79331181ec1bd748c607bc39940edb28727972f",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-domain-orders-2b03a8499d": {
+          "unitKey": "domain-orders",
+          "nodeId": "node-domain-orders-2b03a8499d",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-11",
+            "path-12",
+            "sha256:ebcf2bbecca85ccc1846a5e232c252424a7dc5b3680b4374ef311d6e69d8cea5"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-application-warehouse-service-611c10ea93": {
+          "unitKey": "application-warehouse-service",
+          "nodeId": "node-application-warehouse-service-611c10ea93",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-5",
+            "path-6",
+            "path-11",
+            "path-12",
+            "sha256:ebcf2bbecca85ccc1846a5e232c252424a7dc5b3680b4374ef311d6e69d8cea5"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-fulfillment-planner-781d7f953f": {
+          "unitKey": "fulfillment-planner",
+          "nodeId": "node-fulfillment-planner-781d7f953f",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-15",
+            "path-16",
+            "path-11",
+            "path-12",
+            "sha256:ebcf2bbecca85ccc1846a5e232c252424a7dc5b3680b4374ef311d6e69d8cea5"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-durability-journal-b776033656": {
+          "unitKey": "durability-journal",
+          "nodeId": "node-durability-journal-b776033656",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-13",
+            "path-14",
+            "path-6",
+            "sha256:ebcf2bbecca85ccc1846a5e232c252424a7dc5b3680b4374ef311d6e69d8cea5"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-api-server-9c02438b4b": {
+          "unitKey": "api-server",
+          "nodeId": "node-api-server-9c02438b4b",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-1",
+            "path-2",
+            "path-6",
+            "path-12",
+            "sha256:ebcf2bbecca85ccc1846a5e232c252424a7dc5b3680b4374ef311d6e69d8cea5"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-presentation-tower-e9db30f17e": {
+          "unitKey": "presentation-tower",
+          "nodeId": "node-presentation-tower-e9db30f17e",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-17",
+            "path-18",
+            "path-11",
+            "path-12",
+            "sha256:ebcf2bbecca85ccc1846a5e232c252424a7dc5b3680b4374ef311d6e69d8cea5"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-probe-g6-d230bc118f": {
+          "unitKey": "probe-g6",
+          "nodeId": "node-probe-g6-d230bc118f",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.2308
+          },
+          "benefit": 0,
+          "cost": 0.0577,
+          "splitAdvantage": -0.0577,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-19",
+            "path-20",
+            "path-21",
+            "path-22",
+            "path-23",
+            "path-24",
+            "path-25",
+            "path-26",
+            "path-27",
+            "path-28",
+            "config-package-json",
+            "sha256:ebcf2bbecca85ccc1846a5e232c252424a7dc5b3680b4374ef311d6e69d8cea5"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-warehouse-orders-priority-backorders-d0826b2b0c": {
+          "unitKey": "warehouse-orders-priority-backorders",
+          "nodeId": "node-warehouse-orders-priority-backorders-d0826b2b0c",
+          "selected": "split",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.6941,
+            "parallelism": 0.6667,
+            "faultIsolation": 0.8333,
+            "coordination": 0.2381,
+            "pathOverlap": 0.1739,
+            "validationDuplication": 0.4545,
+            "uncertainty": 0.033
+          },
+          "benefit": 0.7314,
+          "cost": 0.2249,
+          "splitAdvantage": 0.5065,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-11",
+            "path-12",
+            "path-5",
+            "path-6",
+            "path-15",
+            "path-16",
+            "path-13",
+            "path-14",
+            "path-1",
+            "path-2",
+            "path-17",
+            "path-18",
+            "path-19",
+            "path-20",
+            "path-21",
+            "path-22",
+            "path-23",
+            "path-24",
+            "path-25",
+            "path-26",
+            "path-27",
+            "path-28",
+            "config-package-json",
+            "sha256:ebcf2bbecca85ccc1846a5e232c252424a7dc5b3680b4374ef311d6e69d8cea5"
+          ],
+          "rationale": "Condition B expands the finest valid semantic frontier."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 7,
+        "averageBranchingFactor": 7
+      }
+    },
+    "graphId": "graph-warehouse-orders-priority-backorders-a9aaaf8e7c",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1
+  },
+  "checksum": "9a9af0ada97016b664f2ac86ddcae543bfc598d1295905586e248d4cad9c0c1f"
+}

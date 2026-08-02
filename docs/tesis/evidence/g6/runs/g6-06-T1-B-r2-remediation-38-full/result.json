@@ -1,0 +1,13 @@
+{
+  "cellId": "g6-06-T1-B-r2-remediation-38",
+  "condition": "B",
+  "taskId": "T1",
+  "runId": "d9628c00-33ea-4bb4-b3e1-688ab30f77d7",
+  "started": "2026-08-02T09:02:23.648Z",
+  "finished": "2026-08-02T09:27:28.774Z",
+  "outcome": {
+    "lifecycle": "waiting_for_input",
+    "receipt": null,
+    "reason": "run parked on resolve_conflict"
+  }
+}

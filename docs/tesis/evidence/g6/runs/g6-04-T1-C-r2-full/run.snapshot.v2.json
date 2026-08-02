@@ -1,0 +1,1608 @@
+{
+  "schemaVersion": 2,
+  "runId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+  "eventSequence": 78,
+  "lastEventId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:delivery.published:78",
+  "operationId": "33a3d925-0771-46d6-a304-95ec4d3f756c",
+  "fencingToken": 5,
+  "projection": {
+    "runId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+    "goal": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain  - src/domain/orders.ts:\n- Export type OrderPriority = \"standard\" | \"express\".\n- Order gains a readonly priority field of that type. It is optional at the call site: an order placed without a priority is treated as \"standard\", so existing callers keep working unchanged.\n- placeOrder throws OrderError when a priority is supplied and is neither \"standard\" nor \"express\".\n- Export interface Backorder with readonly orderId, skuId and missing fields, where missing is a positive integer.\n- WarehouseState gains a readonly backorders field keyed by order id.\n- reserveOrder records a Backorder for every line whose quantity exceeds the available units, instead of throwing, and leaves the order in a status from which it can still be cancelled.\n- Export listBackorders(state) returning every recorded Backorder.\n\nApplication  - src/application/warehouse-service.ts:\n- The service exposes the new operations and emits a warehouse event for a recorded backorder.\n\nFulfillment  - src/fulfillment/planner.ts:\n- Within one wave, planFulfillment lists express orders before standard ones. Its existing signature does not change.\n\nDurability  - src/durability/journal.ts:\n- HistoryAnalytics gains a backorders count derived from the events.\n\nAPI  - src/api/server.ts:\n- The server exposes the backorders of the current state.\n\nPresentation  - src/presentation/tower.ts:\n- The rendered SVG distinguishes express orders from standard ones.\n\nProbe  - src/probe/g6.ts and a package script named study:g6-probe:\n- Follow the shape of the existing probes: export main() returning a JSON string, and write exactly one JSON object to stdout when invoked directly, with no other output.\n- Two invocations from the same commit must emit byte-identical output.\n\nPreserve all existing behaviour and keep every existing test passing. Put new tests next to the code they cover, inside the directories the test script already scans.",
+    "lifecycle": "completed",
+    "sequence": 78,
+    "appliedEventIds": [
+      "run:a0f0edba-94e7-4fd7-9405-df62f9be7eda:created",
+      "repository:sha256:6f586032f53fe7af80789e48061766157d8bffe9bf297f60f36e427541c47d3d:inspection:2",
+      "planning:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:1:started",
+      "planning:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:1:node:warehouse-priority-backorders",
+      "planning:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:1:node:domain-order-contracts",
+      "planning:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:1:node:application-warehouse-service",
+      "planning:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:1:node:fulfillment-plan-priority",
+      "planning:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:1:node:durability-journal-backorders",
+      "planning:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:1:node:api-server-backorders",
+      "planning:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:1:node:presentation-tower-priority",
+      "planning:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:1:node:probe-g6-study",
+      "planning:warehouse-priority-backorders:strategy:a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+      "planning:warehouse-priority-backorders:completed:a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:compiled",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:completeness",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:atomicity",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:contract_compatibility",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:dag_validity",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:scope_isolation",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:artifact_coverage",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:risk_uncertainty",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:critic:validation_coverage",
+      "graph:graph-warehouse-priority-backorders-2226f21526:r1:proposed",
+      "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1",
+      "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1:resolved",
+      "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1:graph-approved",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:readiness.observed:27",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave.selected:28",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1:started",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1:candidate",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1:validation-completed",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1:artifact-adopted",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1:artifact-adopted:1",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:readiness.observed:34",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave.selected:35",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-api-server-backorders-73d85e6fcb:1:started",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-api-server-backorders-73d85e6fcb:1:candidate",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-api-server-backorders-73d85e6fcb:1:validation-completed",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-api-server-backorders-73d85e6fcb:1:artifact-adopted",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:readiness.observed:40",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave.selected:41",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1:started",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1:candidate",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1:validation-completed",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1:artifact-adopted",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1:artifact-adopted:1",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:readiness.observed:47",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave.selected:48",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-durability-journal-backorders-a01496e7e1:1:started",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-durability-journal-backorders-a01496e7e1:1:candidate",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-durability-journal-backorders-a01496e7e1:1:validation-completed",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-durability-journal-backorders-a01496e7e1:1:artifact-adopted",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:readiness.observed:53",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave.selected:54",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-fulfillment-plan-priority-5685218f2c:1:started",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-fulfillment-plan-priority-5685218f2c:1:candidate",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-fulfillment-plan-priority-5685218f2c:1:validation-completed",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-fulfillment-plan-priority-5685218f2c:1:artifact-adopted",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:readiness.observed:59",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave.selected:60",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-presentation-tower-priority-110548389c:1:started",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-presentation-tower-priority-110548389c:1:candidate",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-presentation-tower-priority-110548389c:1:validation-completed",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-presentation-tower-priority-110548389c:1:artifact-adopted",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:readiness.observed:65",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave.selected:66",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-probe-g6-study-5e2a5d9434:1:started",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-probe-g6-study-5e2a5d9434:1:candidate",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-probe-g6-study-5e2a5d9434:1:validation-completed",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-probe-g6-study-5e2a5d9434:1:artifact-adopted",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:readiness.observed:71",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave.selected:72",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:started",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:integration-completed",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:artifact-adopted",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-warehouse-priority-backorders-51e9b2bc38:1:final-candidate",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:delivery.started:77",
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:delivery.published:78"
+    ],
+    "decisions": {
+      "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1": {
+        "id": "approve-plan:graph-warehouse-priority-backorders-2226f21526:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-warehouse-priority-backorders-51e9b2bc38"
+        ],
+        "evidenceRefs": [
+          "graph:graph-warehouse-priority-backorders-2226f21526:r1"
+        ],
+        "impact": "acceptance",
+        "status": "resolved",
+        "resolution": {
+          "optionId": "approve"
+        }
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [
+        "node-warehouse-priority-backorders-51e9b2bc38"
+      ],
+      "pendingDecisionIds": [],
+      "explanations": [
+        {
+          "nodeId": "node-api-server-backorders-73d85e6fcb",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-application-warehouse-service-611c10ea93",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-domain-order-contracts-e8bdd5dc64",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-durability-journal-backorders-a01496e7e1",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-fulfillment-plan-priority-5685218f2c",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-presentation-tower-priority-110548389c",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-probe-g6-study-5e2a5d9434",
+          "ready": false,
+          "reasons": [
+            {
+              "code": "already_adopted"
+            }
+          ]
+        },
+        {
+          "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+          "ready": true,
+          "reasons": []
+        }
+      ],
+      "effectiveConfig": {
+        "maxParallel": 1,
+        "maxCostUsd": 8,
+        "automaticRetryBudget": 0
+      },
+      "schedulerState": {
+        "materializableNodeIds": [
+          "node-warehouse-priority-backorders-51e9b2bc38",
+          "node-domain-order-contracts-e8bdd5dc64",
+          "node-application-warehouse-service-611c10ea93",
+          "node-fulfillment-plan-priority-5685218f2c",
+          "node-durability-journal-backorders-a01496e7e1",
+          "node-api-server-backorders-73d85e6fcb",
+          "node-presentation-tower-priority-110548389c",
+          "node-probe-g6-study-5e2a5d9434"
+        ],
+        "activeResourceNodeIds": [],
+        "openCircuitBreakerNodeIds": [],
+        "availableExecutorNodeIds": [
+          "node-warehouse-priority-backorders-51e9b2bc38",
+          "node-domain-order-contracts-e8bdd5dc64",
+          "node-application-warehouse-service-611c10ea93",
+          "node-fulfillment-plan-priority-5685218f2c",
+          "node-durability-journal-backorders-a01496e7e1",
+          "node-api-server-backorders-73d85e6fcb",
+          "node-presentation-tower-priority-110548389c",
+          "node-probe-g6-study-5e2a5d9434"
+        ],
+        "stoppedNodeIds": [],
+        "budgetAvailable": true
+      },
+      "budgetAvailable": true,
+      "conflictEvidence": [],
+      "evaluatedAt": "2026-08-02T05:17:23.434Z"
+    },
+    "selectedWaves": [
+      {
+        "waveId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave:1",
+        "nodeIds": [
+          "node-domain-order-contracts-e8bdd5dc64"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-api-server-backorders-73d85e6fcb",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-artifact-order-contract-7e32499487",
+                "requiredRevision": "sha256:7f495180946e83004ad82f6c12fd8b69cfd82c335b4e85f0bde291d626db875b"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-application-warehouse-service-611c10ea93",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-artifact-order-contract-7e32499487",
+                "requiredRevision": "sha256:7f495180946e83004ad82f6c12fd8b69cfd82c335b4e85f0bde291d626db875b"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-durability-journal-backorders-a01496e7e1",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-artifact-order-contract-7e32499487",
+                "requiredRevision": "sha256:7f495180946e83004ad82f6c12fd8b69cfd82c335b4e85f0bde291d626db875b"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-artifact-backorder-event-3d9eb473f1",
+                "requiredRevision": "sha256:bfebbf70d5a2f848b847c9486bebc086aae19a02eece90eba4c16c67b1a3e1e3"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-fulfillment-plan-priority-5685218f2c",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-artifact-order-contract-7e32499487",
+                "requiredRevision": "sha256:7f495180946e83004ad82f6c12fd8b69cfd82c335b4e85f0bde291d626db875b"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-presentation-tower-priority-110548389c",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-artifact-order-contract-7e32499487",
+                "requiredRevision": "sha256:7f495180946e83004ad82f6c12fd8b69cfd82c335b4e85f0bde291d626db875b"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-probe-g6-study-5e2a5d9434",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-domain-order-contracts-output-ecc0987e73",
+                "requiredRevision": "sha256:4e6d57b836993c0e8c9899fe1b1f0442ca2c958c1a66ea6362720af8491cfae9"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-application-warehouse-service-output-4c5c7f5797",
+                "requiredRevision": "sha256:066b1972a4bb36ebdb6457fab52442ca7616ab47cccfbe4c527097d6681faa1f"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-fulfillment-plan-priority-output-4292652f79",
+                "requiredRevision": "sha256:3d88b7fce96a22894a81f87be5cb5a033deffb7ce4f49436daa51e3594bc59b1"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-durability-journal-backorders-output-d43bf74af9",
+                "requiredRevision": "sha256:9dd55c3d98ba4942e1474cbc98e6068ecafaf4f2f864b149e06dba20fa1283fd"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-api-server-backorders-output-4a02568709",
+                "requiredRevision": "sha256:35fd380c3d35becce56cea0841336a5a6eb90c67cbdf0eb8b8f1a8de79d39706"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-presentation-tower-priority-output-43c380d98f",
+                "requiredRevision": "sha256:7a29073c74771ed0f76300e5933c4c962010d45dd90201e39dea202c1a9ff8a1"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-probe-g6-study-output-fb466b6ff5",
+                "requiredRevision": "sha256:b8388c1bd97ce0be62b18c99d7ddaa3a1782a0832ffd4486d7969ab5f0aba49d"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-02T05:17:23.434Z"
+      },
+      {
+        "waveId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave:2",
+        "nodeIds": [
+          "node-api-server-backorders-73d85e6fcb"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-application-warehouse-service-611c10ea93",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-domain-order-contracts-e8bdd5dc64",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-durability-journal-backorders-a01496e7e1",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-artifact-backorder-event-3d9eb473f1",
+                "requiredRevision": "sha256:bfebbf70d5a2f848b847c9486bebc086aae19a02eece90eba4c16c67b1a3e1e3"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-fulfillment-plan-priority-5685218f2c",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-presentation-tower-priority-110548389c",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-probe-g6-study-5e2a5d9434",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-application-warehouse-service-output-4c5c7f5797",
+                "requiredRevision": "sha256:066b1972a4bb36ebdb6457fab52442ca7616ab47cccfbe4c527097d6681faa1f"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-fulfillment-plan-priority-output-4292652f79",
+                "requiredRevision": "sha256:3d88b7fce96a22894a81f87be5cb5a033deffb7ce4f49436daa51e3594bc59b1"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-durability-journal-backorders-output-d43bf74af9",
+                "requiredRevision": "sha256:9dd55c3d98ba4942e1474cbc98e6068ecafaf4f2f864b149e06dba20fa1283fd"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-api-server-backorders-output-4a02568709",
+                "requiredRevision": "sha256:35fd380c3d35becce56cea0841336a5a6eb90c67cbdf0eb8b8f1a8de79d39706"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-presentation-tower-priority-output-43c380d98f",
+                "requiredRevision": "sha256:7a29073c74771ed0f76300e5933c4c962010d45dd90201e39dea202c1a9ff8a1"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-probe-g6-study-output-fb466b6ff5",
+                "requiredRevision": "sha256:b8388c1bd97ce0be62b18c99d7ddaa3a1782a0832ffd4486d7969ab5f0aba49d"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-02T05:17:23.434Z"
+      },
+      {
+        "waveId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave:3",
+        "nodeIds": [
+          "node-application-warehouse-service-611c10ea93"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-api-server-backorders-73d85e6fcb",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-order-contracts-e8bdd5dc64",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-durability-journal-backorders-a01496e7e1",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-artifact-backorder-event-3d9eb473f1",
+                "requiredRevision": "sha256:bfebbf70d5a2f848b847c9486bebc086aae19a02eece90eba4c16c67b1a3e1e3"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-fulfillment-plan-priority-5685218f2c",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-presentation-tower-priority-110548389c",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-probe-g6-study-5e2a5d9434",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-application-warehouse-service-output-4c5c7f5797",
+                "requiredRevision": "sha256:066b1972a4bb36ebdb6457fab52442ca7616ab47cccfbe4c527097d6681faa1f"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-fulfillment-plan-priority-output-4292652f79",
+                "requiredRevision": "sha256:3d88b7fce96a22894a81f87be5cb5a033deffb7ce4f49436daa51e3594bc59b1"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-durability-journal-backorders-output-d43bf74af9",
+                "requiredRevision": "sha256:9dd55c3d98ba4942e1474cbc98e6068ecafaf4f2f864b149e06dba20fa1283fd"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-presentation-tower-priority-output-43c380d98f",
+                "requiredRevision": "sha256:7a29073c74771ed0f76300e5933c4c962010d45dd90201e39dea202c1a9ff8a1"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-probe-g6-study-output-fb466b6ff5",
+                "requiredRevision": "sha256:b8388c1bd97ce0be62b18c99d7ddaa3a1782a0832ffd4486d7969ab5f0aba49d"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-02T05:17:23.434Z"
+      },
+      {
+        "waveId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave:4",
+        "nodeIds": [
+          "node-durability-journal-backorders-a01496e7e1"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-api-server-backorders-73d85e6fcb",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-application-warehouse-service-611c10ea93",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-order-contracts-e8bdd5dc64",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-fulfillment-plan-priority-5685218f2c",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-presentation-tower-priority-110548389c",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-probe-g6-study-5e2a5d9434",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-fulfillment-plan-priority-output-4292652f79",
+                "requiredRevision": "sha256:3d88b7fce96a22894a81f87be5cb5a033deffb7ce4f49436daa51e3594bc59b1"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-durability-journal-backorders-output-d43bf74af9",
+                "requiredRevision": "sha256:9dd55c3d98ba4942e1474cbc98e6068ecafaf4f2f864b149e06dba20fa1283fd"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-presentation-tower-priority-output-43c380d98f",
+                "requiredRevision": "sha256:7a29073c74771ed0f76300e5933c4c962010d45dd90201e39dea202c1a9ff8a1"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-probe-g6-study-output-fb466b6ff5",
+                "requiredRevision": "sha256:b8388c1bd97ce0be62b18c99d7ddaa3a1782a0832ffd4486d7969ab5f0aba49d"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-02T05:17:23.434Z"
+      },
+      {
+        "waveId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave:5",
+        "nodeIds": [
+          "node-fulfillment-plan-priority-5685218f2c"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-api-server-backorders-73d85e6fcb",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-application-warehouse-service-611c10ea93",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-order-contracts-e8bdd5dc64",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-durability-journal-backorders-a01496e7e1",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-presentation-tower-priority-110548389c",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-probe-g6-study-5e2a5d9434",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-fulfillment-plan-priority-output-4292652f79",
+                "requiredRevision": "sha256:3d88b7fce96a22894a81f87be5cb5a033deffb7ce4f49436daa51e3594bc59b1"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-presentation-tower-priority-output-43c380d98f",
+                "requiredRevision": "sha256:7a29073c74771ed0f76300e5933c4c962010d45dd90201e39dea202c1a9ff8a1"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-probe-g6-study-output-fb466b6ff5",
+                "requiredRevision": "sha256:b8388c1bd97ce0be62b18c99d7ddaa3a1782a0832ffd4486d7969ab5f0aba49d"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-02T05:17:23.434Z"
+      },
+      {
+        "waveId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave:6",
+        "nodeIds": [
+          "node-presentation-tower-priority-110548389c"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-api-server-backorders-73d85e6fcb",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-application-warehouse-service-611c10ea93",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-order-contracts-e8bdd5dc64",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-durability-journal-backorders-a01496e7e1",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-fulfillment-plan-priority-5685218f2c",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-probe-g6-study-5e2a5d9434",
+            "ready": true,
+            "reasons": []
+          },
+          {
+            "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-presentation-tower-priority-output-43c380d98f",
+                "requiredRevision": "sha256:7a29073c74771ed0f76300e5933c4c962010d45dd90201e39dea202c1a9ff8a1"
+              },
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-probe-g6-study-output-fb466b6ff5",
+                "requiredRevision": "sha256:b8388c1bd97ce0be62b18c99d7ddaa3a1782a0832ffd4486d7969ab5f0aba49d"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-02T05:17:23.434Z"
+      },
+      {
+        "waveId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave:7",
+        "nodeIds": [
+          "node-probe-g6-study-5e2a5d9434"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-api-server-backorders-73d85e6fcb",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-application-warehouse-service-611c10ea93",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-order-contracts-e8bdd5dc64",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-durability-journal-backorders-a01496e7e1",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-fulfillment-plan-priority-5685218f2c",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-presentation-tower-priority-110548389c",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "missing_artifact",
+                "artifactId": "artifact-contract-probe-g6-study-output-fb466b6ff5",
+                "requiredRevision": "sha256:b8388c1bd97ce0be62b18c99d7ddaa3a1782a0832ffd4486d7969ab5f0aba49d"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-02T05:17:23.434Z"
+      },
+      {
+        "waveId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:wave:8",
+        "nodeIds": [
+          "node-warehouse-priority-backorders-51e9b2bc38"
+        ],
+        "maxParallel": 1,
+        "blocked": [
+          {
+            "nodeId": "node-api-server-backorders-73d85e6fcb",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-application-warehouse-service-611c10ea93",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-domain-order-contracts-e8bdd5dc64",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-durability-journal-backorders-a01496e7e1",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-fulfillment-plan-priority-5685218f2c",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-presentation-tower-priority-110548389c",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          },
+          {
+            "nodeId": "node-probe-g6-study-5e2a5d9434",
+            "ready": false,
+            "reasons": [
+              {
+                "code": "already_adopted"
+              }
+            ]
+          }
+        ],
+        "effectiveConfig": {
+          "maxParallel": 1,
+          "maxCostUsd": 8,
+          "automaticRetryBudget": 0
+        },
+        "conflictEvidence": [],
+        "evaluatedAt": "2026-08-02T05:17:23.434Z"
+      }
+    ],
+    "attempts": {
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1": {
+        "attemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1",
+        "nodeId": "node-domain-order-contracts-e8bdd5dc64",
+        "inputFingerprint": "sha256:03db838bc66da1b2546720396be1ebe1251c7e000804a1973a308e8729143565",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "a4c9837414f62140fc52752f779943bd4123a395",
+        "outputDigest": "sha256:821423470960b14f2de3abf786cc5ba518c1cc299f957cc554c8d309341d7af6",
+        "usage": {
+          "tokensTotal": 47622,
+          "costUsd": 0.214299,
+          "source": "reported"
+        }
+      },
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-api-server-backorders-73d85e6fcb:1": {
+        "attemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-api-server-backorders-73d85e6fcb:1",
+        "nodeId": "node-api-server-backorders-73d85e6fcb",
+        "inputFingerprint": "sha256:ee7f3a8b30f1d78f24647c5eb62bd5e8579f0e5682283c25c0ce88c7b663e086",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "f34c973b30a1ad1b147fc9ccbc9e9e3177946288",
+        "outputDigest": "sha256:fb34d16d1def1f04bcf02fd22bc55b8d67adffe0db5809da02c03b8f2d184e55",
+        "usage": {
+          "tokensTotal": 42196,
+          "costUsd": 0.189882,
+          "source": "reported"
+        }
+      },
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1": {
+        "attemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1",
+        "nodeId": "node-application-warehouse-service-611c10ea93",
+        "inputFingerprint": "sha256:47e4fe9724b83a0c416195863a44536aaa14c038d8fa3440e426fa4b00cdfc5c",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "02932fa95884307e15c90ad8b6de65aac085ccf4",
+        "outputDigest": "sha256:39a96ff6547012c561a36197ee6052580cd6403f0cfadd82a7f362ea9832c4ad",
+        "usage": {
+          "tokensTotal": 65799,
+          "costUsd": 0.29609549999999996,
+          "source": "reported"
+        }
+      },
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-durability-journal-backorders-a01496e7e1:1": {
+        "attemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-durability-journal-backorders-a01496e7e1:1",
+        "nodeId": "node-durability-journal-backorders-a01496e7e1",
+        "inputFingerprint": "sha256:14168b9de10bd7cc393517bfeb4ec563617d7c852e8fea320af13995e98e1b57",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "0d9f59f576ad9cb88ff5a05a8ed3f958069b45cd",
+        "outputDigest": "sha256:8d4a2c6e662ea7c4d6b1755d15d28d191980a01a37c18685a6211ddc053becaf",
+        "usage": {
+          "tokensTotal": 30757,
+          "costUsd": 0.1384065,
+          "source": "reported"
+        }
+      },
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-fulfillment-plan-priority-5685218f2c:1": {
+        "attemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-fulfillment-plan-priority-5685218f2c:1",
+        "nodeId": "node-fulfillment-plan-priority-5685218f2c",
+        "inputFingerprint": "sha256:e28527589935acffb41a15dbfeabd7d8f8cd020cbfd4cddf03157997219222a2",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "d5abc340fb861b6b4f3e15144e141b1f81e090cd",
+        "outputDigest": "sha256:02000a0c1023c61bf73f92e11833579e2567e73f06660ea1a063c676c6c04d43",
+        "usage": {
+          "tokensTotal": 20128,
+          "costUsd": 0.090576,
+          "source": "reported"
+        }
+      },
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-presentation-tower-priority-110548389c:1": {
+        "attemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-presentation-tower-priority-110548389c:1",
+        "nodeId": "node-presentation-tower-priority-110548389c",
+        "inputFingerprint": "sha256:7a74db34224150419af53c7a07d91addf189bf11b3cb172956bbf79b6c5ef4ab",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "356770375532aa228c83980042bd6b85759b741a",
+        "outputDigest": "sha256:af28b372eebff6a6aeb78395ae965f596806917894f41ed50f66b975ff6acffe",
+        "usage": {
+          "tokensTotal": 39831,
+          "costUsd": 0.1792395,
+          "source": "reported"
+        }
+      },
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-probe-g6-study-5e2a5d9434:1": {
+        "attemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-probe-g6-study-5e2a5d9434:1",
+        "nodeId": "node-probe-g6-study-5e2a5d9434",
+        "inputFingerprint": "sha256:8a6c1042ffd5c62a294dd99ad0f3bfe9028ba5cf4d8505c986c5910fa0da5b34",
+        "kind": "execution",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "a4f0e9fc9c090aa7727423a47b7f289ece920c9f",
+        "outputDigest": "sha256:e0437211e4a52bad420041da71642cbd43f44bae62d937127614d8a02d413f3c",
+        "usage": {
+          "tokensTotal": 59535,
+          "costUsd": 0.26790749999999997,
+          "source": "reported"
+        }
+      },
+      "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-warehouse-priority-backorders-51e9b2bc38:1": {
+        "attemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-warehouse-priority-backorders-51e9b2bc38:1",
+        "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+        "inputFingerprint": "sha256:1a1daad1a4ed3990dad0ceb44d5f7b283f8c2e05117dc6870b92dcbebe7b770b",
+        "kind": "integration",
+        "status": "adopted",
+        "repairPasses": 0,
+        "candidateCommit": "a41b4babfaef5d45073ed577af1b27860eb6b615"
+      }
+    },
+    "adoptedArtifacts": {
+      "artifact-contract-domain-order-contracts-output-ecc0987e73:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-domain-order-contracts-output-ecc0987e73:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1",
+        "runId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+        "nodeId": "node-domain-order-contracts-e8bdd5dc64",
+        "digest": "sha256:821423470960b14f2de3abf786cc5ba518c1cc299f957cc554c8d309341d7af6",
+        "producerAttemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1",
+        "contract": {
+          "id": "artifact-contract-domain-order-contracts-output-ecc0987e73",
+          "revision": "sha256:4e6d57b836993c0e8c9899fe1b1f0442ca2c958c1a66ea6362720af8491cfae9"
+        },
+        "kind": "commit",
+        "location": "a4c9837414f62140fc52752f779943bd4123a395",
+        "adoptedAt": "2026-08-02T05:20:32.258Z"
+      },
+      "artifact-contract-artifact-order-contract-7e32499487:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-artifact-order-contract-7e32499487:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1",
+        "runId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+        "nodeId": "node-domain-order-contracts-e8bdd5dc64",
+        "digest": "sha256:821423470960b14f2de3abf786cc5ba518c1cc299f957cc554c8d309341d7af6",
+        "producerAttemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1",
+        "contract": {
+          "id": "artifact-contract-artifact-order-contract-7e32499487",
+          "revision": "sha256:7f495180946e83004ad82f6c12fd8b69cfd82c335b4e85f0bde291d626db875b"
+        },
+        "kind": "commit",
+        "location": "a4c9837414f62140fc52752f779943bd4123a395",
+        "adoptedAt": "2026-08-02T05:20:32.258Z"
+      },
+      "artifact-contract-api-server-backorders-output-4a02568709:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-api-server-backorders-73d85e6fcb:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-api-server-backorders-output-4a02568709:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-api-server-backorders-73d85e6fcb:1",
+        "runId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+        "nodeId": "node-api-server-backorders-73d85e6fcb",
+        "digest": "sha256:fb34d16d1def1f04bcf02fd22bc55b8d67adffe0db5809da02c03b8f2d184e55",
+        "producerAttemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-api-server-backorders-73d85e6fcb:1",
+        "contract": {
+          "id": "artifact-contract-api-server-backorders-output-4a02568709",
+          "revision": "sha256:35fd380c3d35becce56cea0841336a5a6eb90c67cbdf0eb8b8f1a8de79d39706"
+        },
+        "kind": "commit",
+        "location": "f34c973b30a1ad1b147fc9ccbc9e9e3177946288",
+        "adoptedAt": "2026-08-02T05:23:43.385Z"
+      },
+      "artifact-contract-application-warehouse-service-output-4c5c7f5797:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-application-warehouse-service-output-4c5c7f5797:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1",
+        "runId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+        "nodeId": "node-application-warehouse-service-611c10ea93",
+        "digest": "sha256:39a96ff6547012c561a36197ee6052580cd6403f0cfadd82a7f362ea9832c4ad",
+        "producerAttemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1",
+        "contract": {
+          "id": "artifact-contract-application-warehouse-service-output-4c5c7f5797",
+          "revision": "sha256:066b1972a4bb36ebdb6457fab52442ca7616ab47cccfbe4c527097d6681faa1f"
+        },
+        "kind": "commit",
+        "location": "02932fa95884307e15c90ad8b6de65aac085ccf4",
+        "adoptedAt": "2026-08-02T05:28:06.275Z"
+      },
+      "artifact-contract-artifact-backorder-event-3d9eb473f1:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-artifact-backorder-event-3d9eb473f1:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1",
+        "runId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+        "nodeId": "node-application-warehouse-service-611c10ea93",
+        "digest": "sha256:39a96ff6547012c561a36197ee6052580cd6403f0cfadd82a7f362ea9832c4ad",
+        "producerAttemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1",
+        "contract": {
+          "id": "artifact-contract-artifact-backorder-event-3d9eb473f1",
+          "revision": "sha256:bfebbf70d5a2f848b847c9486bebc086aae19a02eece90eba4c16c67b1a3e1e3"
+        },
+        "kind": "commit",
+        "location": "02932fa95884307e15c90ad8b6de65aac085ccf4",
+        "adoptedAt": "2026-08-02T05:28:06.275Z"
+      },
+      "artifact-contract-durability-journal-backorders-output-d43bf74af9:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-durability-journal-backorders-a01496e7e1:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-durability-journal-backorders-output-d43bf74af9:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-durability-journal-backorders-a01496e7e1:1",
+        "runId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+        "nodeId": "node-durability-journal-backorders-a01496e7e1",
+        "digest": "sha256:8d4a2c6e662ea7c4d6b1755d15d28d191980a01a37c18685a6211ddc053becaf",
+        "producerAttemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-durability-journal-backorders-a01496e7e1:1",
+        "contract": {
+          "id": "artifact-contract-durability-journal-backorders-output-d43bf74af9",
+          "revision": "sha256:9dd55c3d98ba4942e1474cbc98e6068ecafaf4f2f864b149e06dba20fa1283fd"
+        },
+        "kind": "commit",
+        "location": "0d9f59f576ad9cb88ff5a05a8ed3f958069b45cd",
+        "adoptedAt": "2026-08-02T05:29:32.508Z"
+      },
+      "artifact-contract-fulfillment-plan-priority-output-4292652f79:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-fulfillment-plan-priority-5685218f2c:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-fulfillment-plan-priority-output-4292652f79:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-fulfillment-plan-priority-5685218f2c:1",
+        "runId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+        "nodeId": "node-fulfillment-plan-priority-5685218f2c",
+        "digest": "sha256:02000a0c1023c61bf73f92e11833579e2567e73f06660ea1a063c676c6c04d43",
+        "producerAttemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-fulfillment-plan-priority-5685218f2c:1",
+        "contract": {
+          "id": "artifact-contract-fulfillment-plan-priority-output-4292652f79",
+          "revision": "sha256:3d88b7fce96a22894a81f87be5cb5a033deffb7ce4f49436daa51e3594bc59b1"
+        },
+        "kind": "commit",
+        "location": "d5abc340fb861b6b4f3e15144e141b1f81e090cd",
+        "adoptedAt": "2026-08-02T05:31:03.133Z"
+      },
+      "artifact-contract-presentation-tower-priority-output-43c380d98f:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-presentation-tower-priority-110548389c:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-presentation-tower-priority-output-43c380d98f:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-presentation-tower-priority-110548389c:1",
+        "runId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+        "nodeId": "node-presentation-tower-priority-110548389c",
+        "digest": "sha256:af28b372eebff6a6aeb78395ae965f596806917894f41ed50f66b975ff6acffe",
+        "producerAttemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-presentation-tower-priority-110548389c:1",
+        "contract": {
+          "id": "artifact-contract-presentation-tower-priority-output-43c380d98f",
+          "revision": "sha256:7a29073c74771ed0f76300e5933c4c962010d45dd90201e39dea202c1a9ff8a1"
+        },
+        "kind": "commit",
+        "location": "356770375532aa228c83980042bd6b85759b741a",
+        "adoptedAt": "2026-08-02T05:33:50.075Z"
+      },
+      "artifact-contract-probe-g6-study-output-fb466b6ff5:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-probe-g6-study-5e2a5d9434:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-probe-g6-study-output-fb466b6ff5:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-probe-g6-study-5e2a5d9434:1",
+        "runId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+        "nodeId": "node-probe-g6-study-5e2a5d9434",
+        "digest": "sha256:e0437211e4a52bad420041da71642cbd43f44bae62d937127614d8a02d413f3c",
+        "producerAttemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-probe-g6-study-5e2a5d9434:1",
+        "contract": {
+          "id": "artifact-contract-probe-g6-study-output-fb466b6ff5",
+          "revision": "sha256:b8388c1bd97ce0be62b18c99d7ddaa3a1782a0832ffd4486d7969ab5f0aba49d"
+        },
+        "kind": "commit",
+        "location": "a4f0e9fc9c090aa7727423a47b7f289ece920c9f",
+        "adoptedAt": "2026-08-02T05:38:36.471Z"
+      },
+      "artifact-contract-warehouse-priority-backorders-output-5803f17118:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-warehouse-priority-backorders-51e9b2bc38:1": {
+        "schemaVersion": 1,
+        "artifactId": "artifact-contract-warehouse-priority-backorders-output-5803f17118:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-warehouse-priority-backorders-51e9b2bc38:1",
+        "runId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda",
+        "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+        "digest": "sha256:1f5253eddeb7da5e213e521f1fd1d5281668958d9d5aed72b29ff0dd3d2b72e4",
+        "producerAttemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-warehouse-priority-backorders-51e9b2bc38:1",
+        "contract": {
+          "id": "artifact-contract-warehouse-priority-backorders-output-5803f17118",
+          "revision": "sha256:524e14dac3236b19e63f4d4cac2849063a62764e955c98f723ddd0d71bc5b7f7"
+        },
+        "kind": "commit",
+        "location": "a41b4babfaef5d45073ed577af1b27860eb6b615",
+        "adoptedAt": "2026-08-02T05:40:06.040Z"
+      }
+    },
+    "nodeEvidenceMatrixIds": {
+      "node-domain-order-contracts-e8bdd5dc64": "matrix-d65b45c5768efe9b",
+      "node-api-server-backorders-73d85e6fcb": "matrix-61ecc5a77a75cfe5",
+      "node-application-warehouse-service-611c10ea93": "matrix-706091c9b3dd79ba",
+      "node-durability-journal-backorders-a01496e7e1": "matrix-272800922abab446",
+      "node-fulfillment-plan-priority-5685218f2c": "matrix-30a0aa081e94628b",
+      "node-presentation-tower-priority-110548389c": "matrix-600b396129b457bd",
+      "node-probe-g6-study-5e2a5d9434": "matrix-e92c863c0f786455",
+      "node-warehouse-priority-backorders-51e9b2bc38": "matrix-ca7795c723bc8696"
+    },
+    "integrations": {
+      "node-warehouse-priority-backorders-51e9b2bc38": {
+        "attemptId": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-warehouse-priority-backorders-51e9b2bc38:1",
+        "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+        "requiredArtifactIds": [
+          "artifact-contract-domain-order-contracts-output-ecc0987e73:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-domain-order-contracts-e8bdd5dc64:1",
+          "artifact-contract-application-warehouse-service-output-4c5c7f5797:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-application-warehouse-service-611c10ea93:1",
+          "artifact-contract-fulfillment-plan-priority-output-4292652f79:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-fulfillment-plan-priority-5685218f2c:1",
+          "artifact-contract-durability-journal-backorders-output-d43bf74af9:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-durability-journal-backorders-a01496e7e1:1",
+          "artifact-contract-api-server-backorders-output-4a02568709:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-api-server-backorders-73d85e6fcb:1",
+          "artifact-contract-presentation-tower-priority-output-43c380d98f:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-presentation-tower-priority-110548389c:1",
+          "artifact-contract-probe-g6-study-output-fb466b6ff5:a0f0edba-94e7-4fd7-9405-df62f9be7eda:attempt:node-probe-g6-study-5e2a5d9434:1"
+        ],
+        "status": "completed",
+        "repairPasses": 0,
+        "manifestId": "integration-result-integration-request-78c90c5ac953d60b",
+        "candidateCommit": "a41b4babfaef5d45073ed577af1b27860eb6b615",
+        "evidenceMatrixId": "matrix-ca7795c723bc8696"
+      }
+    },
+    "recoveryHistory": [],
+    "evidenceMatrices": [
+      "matrix-d65b45c5768efe9b",
+      "matrix-61ecc5a77a75cfe5",
+      "matrix-706091c9b3dd79ba",
+      "matrix-272800922abab446",
+      "matrix-30a0aa081e94628b",
+      "matrix-600b396129b457bd",
+      "matrix-e92c863c0f786455",
+      "matrix-ca7795c723bc8696"
+    ],
+    "outcomes": {
+      "execution": "succeeded",
+      "artifact": "verified",
+      "delivery": "published"
+    },
+    "evidenceMatrixSummaries": {
+      "matrix-d65b45c5768efe9b": {
+        "candidateCommit": "a4c9837414f62140fc52752f779943bd4123a395",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:a23a2337a2c0b8f0b64548f8e627fefb5104c864cdf9e87c11a4f56e8316d065"
+      },
+      "matrix-61ecc5a77a75cfe5": {
+        "candidateCommit": "f34c973b30a1ad1b147fc9ccbc9e9e3177946288",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:9815ce1bf99c7a0f01c54327bc1b40d393c35c6488cc6900e9b758169b6bd267"
+      },
+      "matrix-706091c9b3dd79ba": {
+        "candidateCommit": "02932fa95884307e15c90ad8b6de65aac085ccf4",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:23e639738f05e84beaf19636322be285f12d9a160b08b6a3d204635167e10a0e"
+      },
+      "matrix-272800922abab446": {
+        "candidateCommit": "0d9f59f576ad9cb88ff5a05a8ed3f958069b45cd",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:a0f63b9363d86c17cfda16b3e207f925547a17ddcac77e1893fe5bafb9da145e"
+      },
+      "matrix-30a0aa081e94628b": {
+        "candidateCommit": "d5abc340fb861b6b4f3e15144e141b1f81e090cd",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:d744decdaa57be4160b201e861393be7144cf1e3c0e5dcebae7fa09d574bc8c4"
+      },
+      "matrix-600b396129b457bd": {
+        "candidateCommit": "356770375532aa228c83980042bd6b85759b741a",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:7292ee044eb8cd7f368c8bf26de24cf3567737fe843bd91cdb23567d46bdff09"
+      },
+      "matrix-e92c863c0f786455": {
+        "candidateCommit": "a4f0e9fc9c090aa7727423a47b7f289ece920c9f",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:82984149614d0a37187dfaf2339087fcccadd1755a6d5c2d1c9724d28aa1371d"
+      },
+      "matrix-ca7795c723bc8696": {
+        "candidateCommit": "a41b4babfaef5d45073ed577af1b27860eb6b615",
+        "outcome": "verified",
+        "validationRecipeDigest": "sha256:397c3ca8fe39b4efe180e85193029ccad1d71fffe4e525635c22641cef7de0c1"
+      }
+    },
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "C",
+      "candidateTreeHash": "sha256:699de0fc3fe6aceb7b16de3a489a3a199d6a835688f80122394054fa5a422339",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-domain-order-contracts-e8bdd5dc64": {
+          "unitKey": "domain-order-contracts",
+          "nodeId": "node-domain-order-contracts-e8bdd5dc64",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-12",
+            "path-11",
+            "sha256:6f586032f53fe7af80789e48061766157d8bffe9bf297f60f36e427541c47d3d"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-application-warehouse-service-611c10ea93": {
+          "unitKey": "application-warehouse-service",
+          "nodeId": "node-application-warehouse-service-611c10ea93",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-6",
+            "path-5",
+            "path-4",
+            "path-3",
+            "sha256:6f586032f53fe7af80789e48061766157d8bffe9bf297f60f36e427541c47d3d"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-fulfillment-plan-priority-5685218f2c": {
+          "unitKey": "fulfillment-plan-priority",
+          "nodeId": "node-fulfillment-plan-priority-5685218f2c",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-16",
+            "path-15",
+            "sha256:6f586032f53fe7af80789e48061766157d8bffe9bf297f60f36e427541c47d3d"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-durability-journal-backorders-a01496e7e1": {
+          "unitKey": "durability-journal-backorders",
+          "nodeId": "node-durability-journal-backorders-a01496e7e1",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-14",
+            "path-13",
+            "sha256:6f586032f53fe7af80789e48061766157d8bffe9bf297f60f36e427541c47d3d"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-api-server-backorders-73d85e6fcb": {
+          "unitKey": "api-server-backorders",
+          "nodeId": "node-api-server-backorders-73d85e6fcb",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-2",
+            "path-1",
+            "sha256:6f586032f53fe7af80789e48061766157d8bffe9bf297f60f36e427541c47d3d"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-presentation-tower-priority-110548389c": {
+          "unitKey": "presentation-tower-priority",
+          "nodeId": "node-presentation-tower-priority-110548389c",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-18",
+            "path-17",
+            "sha256:6f586032f53fe7af80789e48061766157d8bffe9bf297f60f36e427541c47d3d"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-probe-g6-study-5e2a5d9434": {
+          "unitKey": "probe-g6-study",
+          "nodeId": "node-probe-g6-study-5e2a5d9434",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.3333
+          },
+          "benefit": 0,
+          "cost": 0.0833,
+          "splitAdvantage": -0.0833,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-20",
+            "path-19",
+            "path-22",
+            "path-23",
+            "path-25",
+            "path-27",
+            "config-package-json",
+            "sha256:6f586032f53fe7af80789e48061766157d8bffe9bf297f60f36e427541c47d3d"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-warehouse-priority-backorders-51e9b2bc38": {
+          "unitKey": "warehouse-priority-backorders",
+          "nodeId": "node-warehouse-priority-backorders-51e9b2bc38",
+          "selected": "split",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.8139,
+            "parallelism": 0.6667,
+            "faultIsolation": 0.5238,
+            "coordination": 0.2381,
+            "pathOverlap": 0,
+            "validationDuplication": 0.5714,
+            "uncertainty": 0.0476
+          },
+          "benefit": 0.6681,
+          "cost": 0.2143,
+          "splitAdvantage": 0.4539,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "path-12",
+            "path-11",
+            "path-6",
+            "path-5",
+            "path-4",
+            "path-3",
+            "path-16",
+            "path-15",
+            "path-14",
+            "path-13",
+            "path-2",
+            "path-1",
+            "path-18",
+            "path-17",
+            "path-20",
+            "path-19",
+            "path-22",
+            "path-23",
+            "path-25",
+            "path-27",
+            "config-package-json",
+            "sha256:6f586032f53fe7af80789e48061766157d8bffe9bf297f60f36e427541c47d3d"
+          ],
+          "rationale": "Split advantage 0.4539 meets minimum 0.1500."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 7,
+        "averageBranchingFactor": 7
+      }
+    },
+    "graphId": "graph-warehouse-priority-backorders-2226f21526",
+    "graphRevision": 1,
+    "approvedGraphRevision": 1,
+    "finalCandidate": {
+      "manifestId": "final-f95edf9a8b80ac8e",
+      "commit": "a41b4babfaef5d45073ed577af1b27860eb6b615",
+      "evidenceMatrixId": "matrix-ca7795c723bc8696",
+      "sourceTargetFingerprint": "42d1b4ab71d6df12",
+      "targetBranch": "main",
+      "targetHead": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+      "evidenceEligible": true,
+      "finalManifest": {
+        "commitSha": "a41b4babfaef5d45073ed577af1b27860eb6b615",
+        "treeSha": "b665f4c978b7c42503727248b5d8e4ec822c4928",
+        "graphRevision": 1,
+        "artifactIds": [
+          "artifact-contract-warehouse-priority-backorders-output-5803f17118"
+        ],
+        "evidenceMatrixId": "matrix-ca7795c723bc8696",
+        "validationRecipeDigest": "sha256:397c3ca8fe39b4efe180e85193029ccad1d71fffe4e525635c22641cef7de0c1",
+        "deliveryTarget": "main",
+        "granularityPolicy": {
+          "policyVersion": "adaptive-utility/3.1.0-pilot",
+          "minimumAdvantage": 0.15,
+          "maxLeafContextTokens": 24000,
+          "maxLeafScopePaths": 40,
+          "maxLeafPlannedPaths": 12
+        }
+      }
+    },
+    "deliveryApproval": {
+      "manifestId": "final-f95edf9a8b80ac8e",
+      "finalSha": "a41b4babfaef5d45073ed577af1b27860eb6b615",
+      "targetBranch": "main",
+      "targetHead": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+      "targetFingerprint": "42d1b4ab71d6df12",
+      "actor": "thesis-operator",
+      "idempotencyKey": "a0f0edba-94e7-4fd7-9405-df62f9be7eda:delivery"
+    },
+    "deliveryReceipt": {
+      "receiptId": "delivery:a0f0edba-94e7-4fd7-9405-df62f9be7eda:delivery",
+      "requestFingerprint": "3e0194c426963d3fc895628a12cac8bb3b0583353328f306a8f4d3682f871bd2",
+      "manifestId": "final-f95edf9a8b80ac8e",
+      "finalSha": "a41b4babfaef5d45073ed577af1b27860eb6b615",
+      "targetBranch": "main",
+      "targetHeadBefore": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+      "targetHeadAfter": "a41b4babfaef5d45073ed577af1b27860eb6b615",
+      "disposition": "delivered",
+      "confirmed": true
+    }
+  },
+  "checksum": "7357d230063b602ba7c5847fe88ea6302a8cf7c774095797570d1ca99f20006e"
+}

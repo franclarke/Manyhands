@@ -1,0 +1,14 @@
+{
+  "cellId": "g6-03-T1-B-r1",
+  "condition": "B",
+  "taskId": "T1",
+  "runId": "fa5d45fb-ef62-4b1b-a4bd-8b9958eef788",
+  "started": "2026-08-02T00:40:04.093Z",
+  "finished": "2026-08-02T00:40:56.541Z",
+  "outcome": {
+    "lifecycle": "running",
+    "receipt": null,
+    "reason": "run owner 35ac4f6b-f26d-4e26-b650-d58bfaf57f85 stopped renewing its heartbeat at 2026-08-02T00:38:45.526Z",
+    "abandonedRunCancelled": false
+  }
+}

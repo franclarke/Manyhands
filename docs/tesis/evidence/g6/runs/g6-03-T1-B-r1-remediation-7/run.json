@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "run": {
+    "runId": "3d4e5de0-31ea-4173-8f1d-4c5d062ab723",
+    "workspaceId": "3b9b4b4d-340f-4f1e-b841-2a765db41b79",
+    "userPrompt": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain  - src/domain/orders.ts:\n- Export type OrderPriority = \"standard\" | \"express\".\n- Order gains a readonly priority field of that type. It is optional at the call site: an order placed without a priority is treated as \"standard\", so existing callers keep working unchanged.\n- placeOrder throws OrderError when a priority is supplied and is neither \"standard\" nor \"express\".\n- Export interface Backorder with readonly orderId, skuId and missing fields, where missing is a positive integer.\n- WarehouseState gains a readonly backorders field keyed by order id.\n- reserveOrder records a Backorder for every line whose quantity exceeds the available units, instead of throwing, and leaves the order in a status from which it can still be cancelled.\n- Export listBackorders(state) returning every recorded Backorder.\n\nApplication  - src/application/warehouse-service.ts:\n- The service exposes the new operations and emits a warehouse event for a recorded backorder.\n\nFulfillment  - src/fulfillment/planner.ts:\n- Within one wave, planFulfillment lists express orders before standard ones. Its existing signature does not change.\n\nDurability  - src/durability/journal.ts:\n- HistoryAnalytics gains a backorders count derived from the events.\n\nAPI  - src/api/server.ts:\n- The server exposes the backorders of the current state.\n\nPresentation  - src/presentation/tower.ts:\n- The rendered SVG distinguishes express orders from standard ones.\n\nProbe  - src/probe/g6.ts and a package script named study:g6-probe:\n- Follow the shape of the existing probes: export main() returning a JSON string, and write exactly one JSON object to stdout when invoked directly, with no other output.\n- Two invocations from the same commit must emit byte-identical output.\n\nPreserve all existing behaviour and keep every existing test passing. Put new tests next to the code they cover, inside the directories the test script already scans.",
+    "title": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain  - src/dom",
+    "planningSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "executionSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "repairSelection": {
+      "executorId": "codex-cli",
+      "model": "gpt-5.4-mini",
+      "effort": "medium"
+    },
+    "executionConfig": {
+      "maxParallel": 2,
+      "scopePolicy": "strict",
+      "leafTimeoutMs": 1800000,
+      "integrationTimeoutMs": 1800000,
+      "maxOutputBytes": 65536,
+      "maxValidationCommands": 20,
+      "installTimeoutMs": 300000,
+      "unexpectedCommitPolicy": "reject",
+      "routing": "fixed"
+    },
+    "granularityCondition": "B",
+    "targetContext": {
+      "sourceRealPath": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-04",
+      "gitCommonDir": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-04\\.git",
+      "physicalIdentity": {
+        "version": 1,
+        "device": "3156479238",
+        "file": "19703248369959045"
+      },
+      "sourceBranch": "main",
+      "sourceBaseCommit": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+      "remoteUrl": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-control-tower-compact",
+      "fingerprint": "789c2fcf17c4182e",
+      "capturedAt": "2026-08-01T12:45:40.125Z"
+    },
+    "projection": {
+      "eventSequence": 72,
+      "lifecycle": "completed",
+      "graphId": "graph-warehouse-order-priority-backorders-7effcffade",
+      "graphRevision": 1,
+      "approvedGraphRevision": 1,
+      "repositorySnapshotId": "sha256:ebcf2bbecca85ccc1846a5e232c252424a7dc5b3680b4374ef311d6e69d8cea5",
+      "finalManifestId": "final-0e910e0495be4053",
+      "finalCommit": "52ccf7d35f102b2c086b65203e574f59389c07fc",
+      "updatedAt": "2026-08-01T13:07:22.967Z"
+    },
+    "version": 330,
+    "mutationFence": 5,
+    "createdAt": "2026-08-01T12:45:40.125Z",
+    "updatedAt": "2026-08-01T13:07:22.978Z",
+    "heartbeatAt": "2026-08-01T13:07:21.127Z"
+  }
+}

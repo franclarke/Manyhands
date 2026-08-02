@@ -1,0 +1,12 @@
+{
+  "cellId": "g6-06-T1-B-r2",
+  "condition": "B",
+  "taskId": "T1",
+  "runId": "3388e8d7-3464-4c5a-b9e6-2c61d0dbcecc",
+  "started": "2026-08-02T06:14:58.748Z",
+  "finished": "2026-08-02T06:20:09.212Z",
+  "outcome": {
+    "lifecycle": "failed",
+    "receipt": null
+  }
+}

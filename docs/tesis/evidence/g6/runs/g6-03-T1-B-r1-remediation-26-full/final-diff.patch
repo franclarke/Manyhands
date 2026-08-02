@@ -1,0 +1,685 @@
+diff --git a/package.json b/package.json
+index 5d12cd1..bd3e109 100644
+--- a/package.json
++++ b/package.json
+@@ -13,6 +13,7 @@
+     "test": "node --test src/domain/*.test.ts src/probe/*.test.ts src/scenarios/*.test.ts src/application/*.test.ts src/presentation/*.test.ts src/api/*.test.ts src/fulfillment/*.test.ts src/durability/*.test.ts",
+     "typecheck": "tsc -p tsconfig.json",
+     "study:probe": "node src/probe/cli.ts",
++    "study:g6-probe": "node src/probe/g6.ts",
+     "study:wc1-probe": "node src/probe/wc1.ts",
+     "study:wc2-probe": "node src/probe/wc2.ts",
+     "study:wc3-probe": "node src/probe/wc3.ts",
+diff --git a/src/api/server.test.ts b/src/api/server.test.ts
+index 9fb41f8..5a06f25 100644
+--- a/src/api/server.test.ts
++++ b/src/api/server.test.ts
+@@ -10,10 +10,19 @@ test("versioned API exposes state and atomic order operations", async () => {
+   const base = `http://127.0.0.1:${(address as { port: number }).port}`;
+   const created = await fetch(`${base}/api/v1/orders`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: "api-order", lines: [{ skuId: "SKU-1001", quantity: 1 }] }) });
+   assert.equal(created.status, 201);
++  const backordered = await fetch(`${base}/api/v1/orders`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: "api-backorder", lines: [{ skuId: "SKU-1002", quantity: 1 }] }) });
++  assert.equal(backordered.status, 201);
+   const reserved = await fetch(`${base}/api/v1/orders/api-order/reserve`, { method: "POST" });
+   assert.equal(reserved.status, 200);
+   const state = await fetch(`${base}/api/v1/state`);
+-  assert.equal((await state.json() as { state: { orders: { status: string }[] } }).state.orders[0]?.status, "reserved");
++  const stateBody = await state.json() as {
++    state: {
++      orders: { id: string; status: string }[];
++      backorders: { id: string; status: string }[];
++    };
++  };
++  assert.equal(stateBody.state.orders.find((order) => order.id === "api-order")?.status, "reserved");
++  assert.equal(stateBody.state.backorders.some((order) => order.id === "api-backorder"), true);
+   const plan = await fetch(`${base}/api/v1/fulfillment/plan?pickerCapacity=2`);
+   assert.equal(plan.status, 200);
+   assert.match((await plan.text()), /"pickerCapacity":2/);
+diff --git a/src/api/server.ts b/src/api/server.ts
+index 13a2f9d..0ef3569 100644
+--- a/src/api/server.ts
++++ b/src/api/server.ts
+@@ -52,7 +52,12 @@ export function createWarehouseServer(service = new WarehouseService(), options:
+       }
+       if (url.pathname === "/api/v1/orders" && request.method === "POST") {
+         const input = await body(request);
+-        const order = service.createOrder({ id: String(input.id), status: "pending", lines: input.lines as Order["lines"] });
++        const order = service.createOrder({
++          id: String(input.id),
++          status: "pending",
++          lines: input.lines as Order["lines"],
++          ...(typeof input.priority === "string" ? { priority: input.priority } : {}),
++        } as Order);
+         return json(response, 201, { order });
+       }
+       const orderMatch = url.pathname.match(/^\/api\/v1\/orders\/([^/]+)\/(reserve|status)$/);
+diff --git a/src/application/warehouse-service.test.ts b/src/application/warehouse-service.test.ts
+index 223ed89..dbca163 100644
+--- a/src/application/warehouse-service.test.ts
++++ b/src/application/warehouse-service.test.ts
+@@ -11,3 +11,27 @@ test("service emits monotonic events for the public order flow", () => {
+   assert.deepEqual(service.events.history().map((event) => event.sequence), [1, 2, 3]);
+   assert.equal(service.snapshot().orders[0]?.status, "picking");
+ });
++
++test("service surfaces backorders and emits a backorder event on shortage", () => {
++  const service = new WarehouseService();
++  service.createOrder({ id: "order-shortage", status: "pending", lines: [{ skuId: "SKU-1002", quantity: 20 }] });
++  service.reserve("order-shortage");
++
++  assert.deepEqual(service.listBackorders(), [{
++    orderId: "order-shortage",
++    lines: [{ skuId: "SKU-1002", quantity: 5 }],
++    priority: "standard",
++  }]);
++  assert.deepEqual(service.events.history().map((event) => event.type), [
++    "order.created",
++    "order.reserved",
++    "warehouse.backorder.recorded",
++  ]);
++  assert.deepEqual(service.events.history()[2]?.payload, {
++    backorder: {
++      orderId: "order-shortage",
++      lines: [{ skuId: "SKU-1002", quantity: 5 }],
++      priority: "standard",
++    },
++  });
++});
+diff --git a/src/application/warehouse-service.ts b/src/application/warehouse-service.ts
+index a98ed8c..c01a12f 100644
+--- a/src/application/warehouse-service.ts
++++ b/src/application/warehouse-service.ts
+@@ -1,10 +1,12 @@
+ import { buildThesisSeed2026 } from "../scenarios/thesis-seed-2026.ts";
+ import { planFulfillment, renderRouteOverlaySvg, type FulfillmentPlan } from "../fulfillment/planner.ts";
+ import {
++  type Backorder,
+   type Order,
+   type OrderStatus,
+   type WarehouseState,
+   createWarehouseState,
++  listBackorders,
+   placeOrder,
+   reserveOrder,
+   transitionOrder,
+@@ -50,6 +52,7 @@ export interface WarehouseSnapshot {
+   readonly scenario: string;
+   readonly bins: readonly { readonly id: string; readonly zoneId: string; readonly code: string }[];
+   readonly orders: readonly Order[];
++  readonly backorders: readonly Order[];
+   readonly inventory: readonly { readonly binId: string; readonly skuId: string; readonly quantity: number }[];
+ }
+ 
+@@ -63,6 +66,7 @@ export class WarehouseService {
+   }
+ 
+   snapshot(): WarehouseSnapshot {
++    const orders = [...this.state.orders.values()];
+     const inventory = [...this.state.inventory.quantities.entries()].map(([key, quantity]) => {
+       const separator = key.indexOf("::");
+       return { binId: key.slice(0, separator), skuId: key.slice(separator + 2), quantity };
+@@ -70,7 +74,8 @@ export class WarehouseService {
+     return {
+       scenario: "thesis-seed-2026",
+       bins: this.scenario.layout.bins,
+-      orders: [...this.state.orders.values()],
++      orders,
++      backorders: orders.filter((order) => order.status === "pending"),
+       inventory,
+     };
+   }
+@@ -86,6 +91,10 @@ export class WarehouseService {
+     this.state = reserveOrder(this.state, orderId);
+     const order = this.state.orders.get(orderId)!;
+     this.events.emit("order.reserved", { order });
++    const backorder = this.state.backorders.get(orderId);
++    if (backorder !== undefined) {
++      this.emitBackorder(backorder);
++    }
+     return order;
+   }
+ 
+@@ -103,4 +112,16 @@ export class WarehouseService {
+   fulfillmentOverlay(pickerCapacity: number): string {
+     return renderRouteOverlaySvg(this.fulfillmentPlan(pickerCapacity));
+   }
++
++  listBackorders(): readonly Backorder[] {
++    return listBackorders(this.state);
++  }
++
++  backorders(): readonly Backorder[] {
++    return this.listBackorders();
++  }
++
++  private emitBackorder(backorder: Backorder): void {
++    this.events.emit("warehouse.backorder.recorded", { backorder });
++  }
+ }
+diff --git a/src/domain/orders.test.ts b/src/domain/orders.test.ts
+index 4dbc7e0..212f1c4 100644
+--- a/src/domain/orders.test.ts
++++ b/src/domain/orders.test.ts
+@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
+ import { buildThesisSeed2026 } from "../scenarios/thesis-seed-2026.ts";
+ import {
+   OrderError,
++  availableUnits,
+   createWarehouseState,
+   placeOrder,
++  listBackorders,
+   reserveOrder,
+   transitionOrder,
+ } from "./orders.ts";
+@@ -27,21 +29,43 @@ test("reservation atomically consumes a multi-line order", () => {
+   assert.equal(current.reservations.has("order-1"), true);
+ });
+ 
+-test("failed multi-line reservation leaves the state unchanged", () => {
+-  const before = placeOrder(state(), {
++test("order priority defaults to standard when omitted", () => {
++  const current = placeOrder(state(), {
+     id: "order-2",
+     status: "pending",
+-    lines: [
+-      { skuId: "SKU-1001", quantity: 5 },
+-      { skuId: "SKU-1002", quantity: 9999 },
+-    ],
++    lines: [{ skuId: "SKU-1001", quantity: 1 }],
++  });
++  assert.equal(current.orders.get("order-2")?.priority, "standard");
++});
++
++test("invalid order priorities are rejected", () => {
++  assert.throws(() => placeOrder(state(), {
++    id: "order-3",
++    status: "pending",
++    priority: "rush" as never,
++    lines: [{ skuId: "SKU-1001", quantity: 1 }],
++  }), OrderError);
++});
++
++test("short reservations create backorders without throwing", () => {
++  const before = placeOrder(state(), {
++    id: "order-4",
++    status: "pending",
++    lines: [{ skuId: "SKU-1002", quantity: 20 }],
++  });
++  const current = reserveOrder(before, "order-4");
++  assert.equal(current.orders.get("order-4")?.status, "reserved");
++  assert.deepEqual(current.reservations.get("order-4")?.lines, [{ skuId: "SKU-1002", quantity: 15 }]);
++  assert.deepEqual(current.backorders.get("order-4"), {
++    orderId: "order-4",
++    lines: [{ skuId: "SKU-1002", quantity: 5 }],
++    priority: "standard",
+   });
+-  assert.throws(() => reserveOrder(before, "order-2"), /insufficient stock/);
+-  assert.equal(before.orders.get("order-2")?.status, "pending");
+-  assert.equal(before.reservations.size, 0);
++  assert.deepEqual(listBackorders(current), [current.backorders.get("order-4")]);
++  assert.equal(availableUnits(current, "SKU-1002"), 0);
+ });
+ 
+ test("invalid order transitions are rejected", () => {
+-  const current = placeOrder(state(), { id: "order-3", status: "pending", lines: [{ skuId: "SKU-1001", quantity: 1 }] });
+-  assert.throws(() => transitionOrder(current, "order-3", "shipped"), OrderError);
++  const current = placeOrder(state(), { id: "order-5", status: "pending", lines: [{ skuId: "SKU-1001", quantity: 1 }] });
++  assert.throws(() => transitionOrder(current, "order-5", "shipped"), OrderError);
+ });
+diff --git a/src/domain/orders.ts b/src/domain/orders.ts
+index 4b6d9f8..e0cfb4c 100644
+--- a/src/domain/orders.ts
++++ b/src/domain/orders.ts
+@@ -1,10 +1,10 @@
+ import {
+   type InventoryState,
+-  getQuantity,
+   retiro,
+ } from "./inventory.ts";
+ 
+ export type OrderStatus = "pending" | "reserved" | "picking" | "packed" | "shipped" | "cancelled";
++export type OrderPriority = "standard" | "express";
+ 
+ export interface OrderLine {
+   readonly skuId: string;
+@@ -15,6 +15,13 @@ export interface Order {
+   readonly id: string;
+   readonly lines: readonly OrderLine[];
+   readonly status: OrderStatus;
++  readonly priority?: OrderPriority;
++}
++
++export interface Backorder {
++  readonly orderId: string;
++  readonly lines: readonly OrderLine[];
++  readonly priority: OrderPriority;
+ }
+ 
+ export interface Reservation {
+@@ -26,6 +33,7 @@ export interface WarehouseState {
+   readonly inventory: InventoryState;
+   readonly orders: ReadonlyMap<string, Order>;
+   readonly reservations: ReadonlyMap<string, Reservation>;
++  readonly backorders: ReadonlyMap<string, Backorder>;
+ }
+ 
+ export class OrderError extends Error {}
+@@ -48,12 +56,49 @@ function assertPositiveQuantity(line: OrderLine): void {
+   }
+ }
+ 
++function isOrderPriority(value: unknown): value is OrderPriority {
++  return value === "standard" || value === "express";
++}
++
++function normalizePriority(priority: Order["priority"]): OrderPriority {
++  if (priority === undefined) return "standard";
++  if (!isOrderPriority(priority)) {
++    throw new OrderError(`invalid order priority: ${String(priority)}`);
++  }
++  return priority;
++}
++
+ function copyOrders(state: WarehouseState): Map<string, Order> {
+   return new Map(state.orders);
+ }
+ 
++function copyBackorders(state: WarehouseState): Map<string, Backorder> {
++  return new Map(state.backorders);
++}
++
++function reserveLine(
++  inventory: InventoryState,
++  skuId: string,
++  quantity: number,
++): { readonly inventory: InventoryState; readonly fulfilled: number } {
++  let remaining = quantity;
++  let nextInventory = inventory;
++  for (const [key, available] of inventory.quantities) {
++    if (remaining === 0 || !key.endsWith(`::${skuId}`)) continue;
++    const binId = key.slice(0, key.length - skuId.length - 2);
++    const taken = Math.min(available, remaining);
++    nextInventory = retiro(nextInventory, binId, skuId, taken);
++    remaining -= taken;
++  }
++  return { inventory: nextInventory, fulfilled: quantity - remaining };
++}
++
++function copyLines(lines: readonly OrderLine[]): OrderLine[] {
++  return lines.map((line) => ({ ...line }));
++}
++
+ export function createWarehouseState(inventory: InventoryState): WarehouseState {
+-  return { inventory, orders: new Map(), reservations: new Map() };
++  return { inventory, orders: new Map(), reservations: new Map(), backorders: new Map() };
+ }
+ 
+ export function placeOrder(state: WarehouseState, order: Order): WarehouseState {
+@@ -71,8 +116,9 @@ export function placeOrder(state: WarehouseState, order: Order): WarehouseState
+     }
+     seenSkus.add(line.skuId);
+   }
++  const priority = normalizePriority(order.priority);
+   const orders = copyOrders(state);
+-  orders.set(order.id, { ...order, status: "pending", lines: [...order.lines] });
++  orders.set(order.id, { ...order, status: "pending", priority, lines: copyLines(order.lines) });
+   return { ...state, orders };
+ }
+ 
+@@ -83,32 +129,44 @@ export function reserveOrder(state: WarehouseState, orderId: string): WarehouseS
+     throw new OrderError(`order ${orderId} cannot be reserved from ${order.status}`);
+   }
+ 
+-  // Work against a local immutable chain. If any line fails, the original state
+-  // is never returned or mutated, so a multi-line reservation is atomic.
+   let inventory = state.inventory;
++  const fulfilledLines: OrderLine[] = [];
++  const shortageLines: OrderLine[] = [];
+   for (const line of order.lines) {
+-    const available = inventory.quantities;
+-    const current = [...available.entries()]
++    const current = [...inventory.quantities.entries()]
+       .filter(([key]) => key.endsWith(`::${line.skuId}`))
+       .reduce((total, [, quantity]) => total + quantity, 0);
+-    if (current < line.quantity) {
+-      throw new OrderError(`insufficient stock for ${line.skuId}: need ${line.quantity}, have ${current}`);
++    const desired = line.quantity;
++    const target = Math.min(current, desired);
++    if (target > 0) {
++      const result = reserveLine(inventory, line.skuId, target);
++      inventory = result.inventory;
++      fulfilledLines.push({ skuId: line.skuId, quantity: result.fulfilled });
+     }
+-    let remaining = line.quantity;
+-    for (const [key, quantity] of available) {
+-      if (!key.endsWith(`::${line.skuId}`) || remaining === 0) continue;
+-      const binId = key.slice(0, key.length - line.skuId.length - 2);
+-      const taken = Math.min(quantity, remaining);
+-      inventory = retiro(inventory, binId, line.skuId, taken);
+-      remaining -= taken;
++    if (current < desired) {
++      shortageLines.push({ skuId: line.skuId, quantity: desired - current });
+     }
+   }
+ 
+   const orders = copyOrders(state);
+   orders.set(orderId, { ...order, status: "reserved" });
+   const reservations = new Map(state.reservations);
+-  reservations.set(orderId, { orderId, lines: [...order.lines] });
+-  return { inventory, orders, reservations };
++  if (fulfilledLines.length > 0) {
++    reservations.set(orderId, { orderId, lines: copyLines(fulfilledLines) });
++  } else {
++    reservations.delete(orderId);
++  }
++  const backorders = copyBackorders(state);
++  if (shortageLines.length > 0) {
++    backorders.set(orderId, {
++      orderId,
++      lines: copyLines(shortageLines),
++      priority: order.priority ?? "standard",
++    });
++  } else {
++    backorders.delete(orderId);
++  }
++  return { inventory, orders, reservations, backorders };
+ }
+ 
+ export function transitionOrder(
+@@ -131,3 +189,7 @@ export function availableUnits(state: WarehouseState, skuId: string): number {
+     .filter(([key]) => key.endsWith(`::${skuId}`))
+     .reduce((total, [, quantity]) => total + quantity, 0);
+ }
++
++export function listBackorders(state: WarehouseState): readonly Backorder[] {
++  return [...state.backorders.values()];
++}
+diff --git a/src/durability/journal.test.ts b/src/durability/journal.test.ts
+index 31f8332..e428283 100644
+--- a/src/durability/journal.test.ts
++++ b/src/durability/journal.test.ts
+@@ -32,10 +32,16 @@ test("corruption fails closed with an actionable message", () => {
+ });
+ 
+ test("analytics and alerts derive from the event timeline", () => {
+-  const events = [event(1, "order.created"), event(2, "order.reserved"), { ...event(3, "order.status_changed"), payload: { order: { status: "cancelled" } } }];
++  const events = [
++    event(1, "order.created"),
++    event(2, "order.reserved"),
++    event(3, "warehouse.backorder.recorded"),
++    { ...event(4, "order.status_changed"), payload: { order: { status: "cancelled" } } },
++  ];
+   const analytics = deriveAnalytics(events);
+   assert.equal(analytics.orderCreations, 1);
+   assert.equal(analytics.reservations, 1);
+-  assert.deepEqual(analytics.alerts, ["Order cancelled at event 3"]);
++  assert.equal(analytics.backorders, 1);
++  assert.deepEqual(analytics.alerts, ["Order cancelled at event 4"]);
+   assert.equal(new DurableHistory().timeline().length, 0);
+ });
+diff --git a/src/durability/journal.ts b/src/durability/journal.ts
+index 1b83911..3a7fe66 100644
+--- a/src/durability/journal.ts
++++ b/src/durability/journal.ts
+@@ -93,6 +93,7 @@ export interface HistoryAnalytics {
+   readonly eventCounts: Readonly<Record<string, number>>;
+   readonly orderCreations: number;
+   readonly reservations: number;
++  readonly backorders: number;
+   readonly alerts: readonly string[];
+ }
+ 
+@@ -104,6 +105,7 @@ export function deriveAnalytics(events: readonly WarehouseEvent[]): HistoryAnaly
+     eventCounts,
+     orderCreations: eventCounts["order.created"] ?? 0,
+     reservations: eventCounts["order.reserved"] ?? 0,
++    backorders: eventCounts["warehouse.backorder.recorded"] ?? 0,
+     alerts,
+   };
+ }
+diff --git a/src/fulfillment/planner.test.ts b/src/fulfillment/planner.test.ts
+index 513fb99..5c40936 100644
+--- a/src/fulfillment/planner.test.ts
++++ b/src/fulfillment/planner.test.ts
+@@ -5,9 +5,9 @@ import { planFulfillment, computeFulfillmentCost, renderRouteOverlaySvg } from "
+ 
+ function orders() {
+   return [
+-    { id: "order-a", status: "reserved" as const, lines: [{ skuId: "SKU-1001", quantity: 2 }] },
+-    { id: "order-b", status: "reserved" as const, lines: [{ skuId: "SKU-1003", quantity: 2 }] },
+-    { id: "order-c", status: "reserved" as const, lines: [{ skuId: "SKU-1005", quantity: 2 }] },
++    { id: "order-a", status: "reserved" as const, priority: "standard" as const, lines: [{ skuId: "SKU-1001", quantity: 2 }] },
++    { id: "order-b", status: "reserved" as const, priority: "express" as const, lines: [{ skuId: "SKU-1003", quantity: 2 }] },
++    { id: "order-c", status: "reserved" as const, priority: "standard" as const, lines: [{ skuId: "SKU-1005", quantity: 2 }] },
+   ];
+ }
+ 
+@@ -17,6 +17,7 @@ test("routes are connected, reproducible and have textual overlays", () => {
+   const second = planFulfillment(scenario.layout, scenario.inventory, orders(), 2);
+   assert.deepEqual(first, second);
+   assert.equal(first.waves.length, 2);
++  assert.deepEqual(first.waves[0]!.orderIds, ["order-b", "order-a"]);
+   assert.equal(first.waves.flatMap((wave) => wave.routes).every((route) => route.connected), true);
+   assert.match(renderRouteOverlaySvg(first), /Picking route overlay/);
+   assert.match(first.waves[0]!.routes[0]!.textualOverlay, /receiving ->/);
+diff --git a/src/fulfillment/planner.ts b/src/fulfillment/planner.ts
+index 5be00d9..c7ffdaf 100644
+--- a/src/fulfillment/planner.ts
++++ b/src/fulfillment/planner.ts
+@@ -1,7 +1,7 @@
+ import type { InventoryState } from "../domain/inventory.ts";
+ import { getQuantity } from "../domain/inventory.ts";
+ import type { Bin, Layout } from "../domain/layout.ts";
+-import type { Order } from "../domain/orders.ts";
++import type { Order, OrderPriority } from "../domain/orders.ts";
+ 
+ export interface PickTask {
+   readonly orderId: string;
+@@ -47,6 +47,10 @@ export interface FulfillmentPlan {
+ 
+ export class FulfillmentError extends Error {}
+ 
++function priorityRank(priority: OrderPriority | undefined): number {
++  return priority === "express" ? 0 : 1;
++}
++
+ function binIndex(layout: Layout, binId: string): number {
+   const index = layout.bins.findIndex((bin) => bin.id === binId);
+   if (index < 0) throw new FulfillmentError(`unknown route bin: ${binId}`);
+@@ -93,7 +97,7 @@ export function planFulfillment(
+   if (!Number.isInteger(pickerCapacity) || pickerCapacity <= 0) throw new FulfillmentError("picker capacity must be positive");
+   const tasks: PickTask[] = [];
+   const unassigned: UnassignedOrder[] = [];
+-  const assignedOrders: { readonly order: Order; readonly tasks: readonly PickTask[] }[] = [];
++  const assignedOrders: { readonly order: Order; readonly tasks: readonly PickTask[]; readonly index: number }[] = [];
+ 
+   for (const order of orders) {
+     if (!(["reserved", "picking", "packed"] as readonly string[]).includes(order.status)) {
+@@ -112,11 +116,15 @@ export function planFulfillment(
+       orderTasks.push({ orderId: order.id, skuId: line.skuId, quantity: line.quantity, binId: bin.id });
+     }
+     if (valid) {
+-      tasks.push(...orderTasks);
+-      assignedOrders.push({ order, tasks: orderTasks });
++      assignedOrders.push({ order, tasks: orderTasks, index: assignedOrders.length });
+     }
+   }
+ 
++  assignedOrders.sort((left, right) =>
++    priorityRank(left.order.priority) - priorityRank(right.order.priority) || left.index - right.index,
++  );
++  tasks.push(...assignedOrders.flatMap(({ tasks: orderTasks }) => orderTasks));
++
+   const waves: FulfillmentWave[] = [];
+   for (let offset = 0; offset < assignedOrders.length; offset += pickerCapacity) {
+     const batch = assignedOrders.slice(offset, offset + pickerCapacity);
+diff --git a/src/presentation/tower.test.ts b/src/presentation/tower.test.ts
+index dc24835..6e74809 100644
+--- a/src/presentation/tower.test.ts
++++ b/src/presentation/tower.test.ts
+@@ -1,7 +1,7 @@
+ import { test } from "node:test";
+ import assert from "node:assert/strict";
+ import { buildThesisSeed2026 } from "../scenarios/thesis-seed-2026.ts";
+-import { createWarehouseState } from "../domain/orders.ts";
++import { createWarehouseState, type Order } from "../domain/orders.ts";
+ import { WarehouseService } from "../application/warehouse-service.ts";
+ import { renderTowerSvg } from "./tower.ts";
+ 
+@@ -17,3 +17,29 @@ test("tower exposes heatmap and equivalent textual detail", () => {
+   assert.doesNotMatch(html, /createWarehouseState/);
+   void createWarehouseState(buildThesisSeed2026().inventory);
+ });
++
++test("tower renders express and standard backorders distinctly in the svg", () => {
++  const service = new WarehouseService();
++  service.createOrder({
++    id: "express-order",
++    status: "pending",
++    lines: [{ skuId: "SKU-1001", quantity: 1 }],
++    priority: "express",
++  } as Order);
++  service.createOrder({
++    id: "standard-order",
++    status: "pending",
++    lines: [{ skuId: "SKU-1002", quantity: 1 }],
++    priority: "standard",
++  } as Order);
++
++  const html = renderTowerSvg(service.snapshot());
++  assert.match(html, /data-order-priority="express"/);
++  assert.match(html, /data-order-priority="standard"/);
++  assert.match(html, /Express/);
++  assert.match(html, /Standard/);
++  assert.match(html, /fill="#fb923c"/);
++  assert.match(html, /fill="#60a5fa"/);
++  assert.match(html, /bin-1-1/);
++  assert.match(html, /bin-1-3/);
++});
+diff --git a/src/presentation/tower.ts b/src/presentation/tower.ts
+index 22b86d2..136d870 100644
+--- a/src/presentation/tower.ts
++++ b/src/presentation/tower.ts
+@@ -4,11 +4,18 @@ function escape(value: string): string {
+   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+ }
+ 
++function orderPriority(order: WarehouseSnapshot["backorders"][number]): "express" | "standard" {
++  return (order as { readonly priority?: unknown }).priority === "express" ? "express" : "standard";
++}
++
+ export function renderTowerSvg(snapshot: WarehouseSnapshot): string {
+   const quantities = new Map<string, number>(snapshot.bins.map((bin) => [bin.id, 0]));
+   for (const row of snapshot.inventory) quantities.set(row.binId, (quantities.get(row.binId) ?? 0) + row.quantity);
+   const max = Math.max(1, ...quantities.values());
+   const bins = [...quantities.entries()].sort(([left], [right]) => left.localeCompare(right));
++  const orders = snapshot.backorders;
++  const rows = orders.length === 0 ? 0 : Math.ceil(orders.length / 4);
++  const svgHeight = 180 + (rows === 0 ? 0 : 80 + (rows - 1) * 54);
+   const cells = bins.map(([binId, quantity], index) => {
+     const x = 20 + (index % 8) * 82;
+     const y = 28 + Math.floor(index / 8) * 68;
+@@ -16,6 +23,16 @@ export function renderTowerSvg(snapshot: WarehouseSnapshot): string {
+     const fill = `hsl(${200 - intensity}, 78%, 42%)`;
+     return `<g data-bin-id="${escape(binId)}"><rect x="${x}" y="${y}" width="68" height="48" rx="6" fill="${fill}" stroke="#d7e3ed"/><text x="${x + 34}" y="${y + 21}" text-anchor="middle" fill="white" font-size="10">${escape(binId)}</text><text x="${x + 34}" y="${y + 37}" text-anchor="middle" fill="white" font-size="12" font-weight="700">${quantity} units</text></g>`;
+   }).join("");
++  const legend = `<g aria-label="Order priority legend" transform="translate(20 142)"><text x="0" y="0" fill="#334155" font-size="12" font-weight="700">Backorder priority</text><g transform="translate(0 14)"><rect x="0" y="0" width="86" height="22" rx="11" fill="#fed7aa" stroke="#fb923c"/><text x="43" y="15" text-anchor="middle" fill="#9a3412" font-size="11" font-weight="700">Express</text></g><g transform="translate(96 14)"><rect x="0" y="0" width="86" height="22" rx="11" fill="#dbeafe" stroke="#60a5fa"/><text x="43" y="15" text-anchor="middle" fill="#1d4ed8" font-size="11" font-weight="700">Standard</text></g></g>`;
++  const backorders = orders.map((order, index) => {
++    const priority = orderPriority(order);
++    const x = 20 + (index % 4) * 160;
++    const y = 184 + Math.floor(index / 4) * 54;
++    const fill = priority === "express" ? "#fb923c" : "#60a5fa";
++    const stroke = priority === "express" ? "#c2410c" : "#1d4ed8";
++    const label = priority === "express" ? "Express" : "Standard";
++    return `<g data-order-id="${escape(order.id)}" data-order-priority="${priority}" transform="translate(${x} ${y})"><rect width="144" height="38" rx="9" fill="${fill}" stroke="${stroke}"/><text x="14" y="16" fill="white" font-size="10" font-weight="700">${label}</text><text x="14" y="29" fill="white" font-size="12">${escape(order.id)}</text></g>`;
++  }).join("");
+   const details = bins.map(([binId, quantity]) => `<li><span class="status-dot" aria-hidden="true"></span><strong>${escape(binId)}</strong>: ${quantity} units</li>`).join("");
+-  return `<section aria-labelledby="tower-title"><h2 id="tower-title">Warehouse tower</h2><p>Heatmap intensity is supplemental; exact quantities are listed below.</p><svg viewBox="0 0 680 180" role="img" aria-labelledby="tower-title tower-description"><desc id="tower-description">Warehouse bins colored by unit quantity, with text labels for every bin.</desc>${cells}</svg><ul aria-label="Bin details">${details}</ul></section>`;
++  return `<section aria-labelledby="tower-title"><h2 id="tower-title">Warehouse tower</h2><p>Heatmap intensity is supplemental; exact quantities are listed below.</p><svg viewBox="0 0 680 ${svgHeight}" role="img" aria-labelledby="tower-title tower-description"><desc id="tower-description">Warehouse bins colored by unit quantity, with backorder cards that distinguish express and standard orders.</desc>${cells}${orders.length > 0 ? legend + backorders : ""}</svg><ul aria-label="Bin details">${details}</ul></section>`;
+ }
+diff --git a/src/probe/g6.test.ts b/src/probe/g6.test.ts
+new file mode 100644
+index 0000000..65b20ab
+--- /dev/null
++++ b/src/probe/g6.test.ts
+@@ -0,0 +1,35 @@
++import { spawnSync } from "node:child_process";
++import assert from "node:assert/strict";
++import { test } from "node:test";
++import { buildProbeReport } from "./cli.ts";
++import { main } from "./g6.ts";
++
++const EXPECTED_REPORT = buildProbeReport({
++  increment: "G6",
++  scenario: "thesis-seed-2026",
++  format: "json",
++});
++
++test("G6 probe is deterministic and matches the shared probe shape", () => {
++  const first = main();
++  const second = main();
++  assert.equal(first, second);
++  assert.equal(first, JSON.stringify(EXPECTED_REPORT));
++
++  const parsed = JSON.parse(first) as typeof EXPECTED_REPORT;
++  assert.deepEqual(parsed, EXPECTED_REPORT);
++  assert.deepEqual(Object.keys(parsed), [
++    "schemaVersion",
++    "increment",
++    "scenario",
++    "stateHash",
++    "capabilities",
++  ]);
++});
++
++test("G6 probe direct execution writes exactly one JSON object and nothing else", () => {
++  const result = spawnSync("node", ["src/probe/g6.ts"], { encoding: "utf8" });
++  assert.equal(result.status, 0);
++  assert.equal(result.stderr, "");
++  assert.equal(result.stdout, `${main()}\n`);
++});
+diff --git a/src/probe/g6.ts b/src/probe/g6.ts
+new file mode 100644
+index 0000000..259d48b
+--- /dev/null
++++ b/src/probe/g6.ts
+@@ -0,0 +1,16 @@
++import { pathToFileURL } from "node:url";
++import { buildProbeReport } from "./cli.ts";
++
++const G6_ARGS = {
++  increment: "G6",
++  scenario: "thesis-seed-2026",
++  format: "json",
++} as const;
++
++export function main(): string {
++  return JSON.stringify(buildProbeReport(G6_ARGS));
++}
++
++if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
++  process.stdout.write(`${main()}\n`);
++}
+diff --git a/src/probe/node-builtins.d.ts b/src/probe/node-builtins.d.ts
+index 925c4c2..f4c3b6d 100644
+--- a/src/probe/node-builtins.d.ts
++++ b/src/probe/node-builtins.d.ts
+@@ -23,6 +23,18 @@ declare module "node:crypto" {
+   export function createHash(algorithm: string): Hash;
+ }
+ 
++declare module "node:child_process" {
++  export interface SpawnSyncOptions {
++    readonly encoding?: "utf8";
++  }
++  export interface SpawnSyncResult {
++    readonly status: number | null;
++    readonly stdout: string;
++    readonly stderr: string;
++  }
++  export function spawnSync(command: string, args?: readonly string[], options?: SpawnSyncOptions): SpawnSyncResult;
++}
++
+ declare module "node:url" {
+   export function pathToFileURL(path: string): { href: string };
+   export function fileURLToPath(url: string | URL): string;

@@ -1,0 +1,13 @@
+{
+  "cellId": "g6-03-T1-B-r1",
+  "condition": "B",
+  "taskId": "T1",
+  "runId": "727fbdc1-e52a-4d21-9f98-ee41bea7d6a3",
+  "started": "2026-08-01T13:48:43.591Z",
+  "finished": "2026-08-01T13:58:54.082Z",
+  "outcome": {
+    "lifecycle": "needs_approval",
+    "receipt": null,
+    "reason": "measurement_only_planning"
+  }
+}

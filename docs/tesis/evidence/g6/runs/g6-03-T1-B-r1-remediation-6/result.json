@@ -1,0 +1,13 @@
+{
+  "cellId": "g6-03-T1-B-r1",
+  "condition": "B",
+  "taskId": "T1",
+  "runId": "386b162c-3a6f-40c1-82b8-1314242e71fb",
+  "started": "2026-08-01T11:29:48.133Z",
+  "finished": "2026-08-01T12:34:49.194Z",
+  "outcome": {
+    "lifecycle": "waiting_for_input",
+    "receipt": null,
+    "reason": "run parked on resolve_conflict"
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "taskId": "T1",
+  "repository": "C:\\Users\\franc\\Documents\\Proyectos\\warehouse-g6-04-remediation-11",
+  "baseSha": "5da60192cc788032c59c7e7be27696ca0e0a30d7",
+  "deliveredSha": "cb2455b228e1aa3ccef290801b5280bc61a2bfa5",
+  "verifiedSha": "cb2455b228e1aa3ccef290801b5280bc61a2bfa5",
+  "baselineTestFileCount": 14,
+  "total": 10,
+  "satisfied": 8,
+  "criteria": [
+    {
+      "id": "gate-install",
+      "satisfied": true,
+      "detail": "install --frozen-lockfile exit 0"
+    },
+    {
+      "id": "gate-test",
+      "satisfied": true,
+      "detail": "test exit 0"
+    },
+    {
+      "id": "gate-typecheck",
+      "satisfied": true,
+      "detail": "typecheck exit 0"
+    },
+    {
+      "id": "gate-build",
+      "satisfied": true,
+      "detail": "build exit 0"
+    },
+    {
+      "id": "integrity-baseline-tests",
+      "satisfied": true,
+      "detail": "14 archivos de test del baseline presentes y no vacíos"
+    },
+    {
+      "id": "behaviour-express-first",
+      "satisfied": false,
+      "detail": "orden de la ola: g6-standard, g6-express"
+    },
+    {
+      "id": "behaviour-backorder-recorded",
+      "satisfied": false,
+      "detail": "lanzó en vez de registrar: Error: insufficient stock for SKU-1001: need 1000000, have 30"
+    },
+    {
+      "id": "behaviour-invalid-priority-rejected",
+      "satisfied": true,
+      "detail": "rechazado con OrderError"
+    },
+    {
+      "id": "probe-single-json",
+      "satisfied": true,
+      "detail": "un único objeto JSON en stdout"
+    },
+    {
+      "id": "probe-deterministic",
+      "satisfied": true,
+      "detail": "dos invocaciones byte-idénticas"
+    }
+  ]
+}

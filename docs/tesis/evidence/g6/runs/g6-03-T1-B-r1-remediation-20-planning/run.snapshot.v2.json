@@ -1,0 +1,326 @@
+{
+  "schemaVersion": 2,
+  "runId": "68e915ac-a6fb-434e-9ef7-b7532c39d5f6",
+  "eventSequence": 24,
+  "lastEventId": "approve-plan:graph-warehouse-order-priority-backorders-7effcffade:r1",
+  "operationId": "73145673-4e68-47ec-9762-cec89a4235f4",
+  "fencingToken": 2,
+  "projection": {
+    "runId": "68e915ac-a6fb-434e-9ef7-b7532c39d5f6",
+    "goal": "Add order priority and backorders to this warehouse codebase, across every layer that already exists.\n\nDomain  - src/domain/orders.ts:\n- Export type OrderPriority = \"standard\" | \"express\".\n- Order gains a readonly priority field of that type. It is optional at the call site: an order placed without a priority is treated as \"standard\", so existing callers keep working unchanged.\n- placeOrder throws OrderError when a priority is supplied and is neither \"standard\" nor \"express\".\n- Export interface Backorder with readonly orderId, skuId and missing fields, where missing is a positive integer.\n- WarehouseState gains a readonly backorders field keyed by order id.\n- reserveOrder records a Backorder for every line whose quantity exceeds the available units, instead of throwing, and leaves the order in a status from which it can still be cancelled.\n- Export listBackorders(state) returning every recorded Backorder.\n\nApplication  - src/application/warehouse-service.ts:\n- The service exposes the new operations and emits a warehouse event for a recorded backorder.\n\nFulfillment  - src/fulfillment/planner.ts:\n- Within one wave, planFulfillment lists express orders before standard ones. Its existing signature does not change.\n\nDurability  - src/durability/journal.ts:\n- HistoryAnalytics gains a backorders count derived from the events.\n\nAPI  - src/api/server.ts:\n- The server exposes the backorders of the current state.\n\nPresentation  - src/presentation/tower.ts:\n- The rendered SVG distinguishes express orders from standard ones.\n\nProbe  - src/probe/g6.ts and a package script named study:g6-probe:\n- Follow the shape of the existing probes: export main() returning a JSON string, and write exactly one JSON object to stdout when invoked directly, with no other output.\n- Two invocations from the same commit must emit byte-identical output.\n\nPreserve all existing behaviour and keep every existing test passing. Put new tests next to the code they cover, inside the directories the test script already scans.",
+    "lifecycle": "needs_approval",
+    "sequence": 24,
+    "appliedEventIds": [
+      "run:68e915ac-a6fb-434e-9ef7-b7532c39d5f6:created",
+      "repository:sha256:d1703c6310120e26982b3b8d043229cd539a75b0b6678820b00fd189d5a1a54e:inspection:2",
+      "planning:68e915ac-a6fb-434e-9ef7-b7532c39d5f6:attempt:1:started",
+      "planning:68e915ac-a6fb-434e-9ef7-b7532c39d5f6:attempt:1:node:warehouse-order-priority-backorders",
+      "planning:68e915ac-a6fb-434e-9ef7-b7532c39d5f6:attempt:1:node:domain-orders-backorders",
+      "planning:68e915ac-a6fb-434e-9ef7-b7532c39d5f6:attempt:1:node:application-warehouse-backorders",
+      "planning:68e915ac-a6fb-434e-9ef7-b7532c39d5f6:attempt:1:node:fulfillment-priority-wave",
+      "planning:68e915ac-a6fb-434e-9ef7-b7532c39d5f6:attempt:1:node:durability-history-backorders",
+      "planning:68e915ac-a6fb-434e-9ef7-b7532c39d5f6:attempt:1:node:api-server-backorders",
+      "planning:68e915ac-a6fb-434e-9ef7-b7532c39d5f6:attempt:1:node:presentation-tower-priority",
+      "planning:68e915ac-a6fb-434e-9ef7-b7532c39d5f6:attempt:1:node:probe-g6-determinism",
+      "planning:warehouse-order-priority-backorders:strategy:68e915ac-a6fb-434e-9ef7-b7532c39d5f6",
+      "planning:warehouse-order-priority-backorders:completed:68e915ac-a6fb-434e-9ef7-b7532c39d5f6",
+      "graph:graph-warehouse-order-priority-backorders-7effcffade:r1:compiled",
+      "graph:graph-warehouse-order-priority-backorders-7effcffade:r1:critic:completeness",
+      "graph:graph-warehouse-order-priority-backorders-7effcffade:r1:critic:atomicity",
+      "graph:graph-warehouse-order-priority-backorders-7effcffade:r1:critic:contract_compatibility",
+      "graph:graph-warehouse-order-priority-backorders-7effcffade:r1:critic:dag_validity",
+      "graph:graph-warehouse-order-priority-backorders-7effcffade:r1:critic:scope_isolation",
+      "graph:graph-warehouse-order-priority-backorders-7effcffade:r1:critic:artifact_coverage",
+      "graph:graph-warehouse-order-priority-backorders-7effcffade:r1:critic:risk_uncertainty",
+      "graph:graph-warehouse-order-priority-backorders-7effcffade:r1:critic:validation_coverage",
+      "graph:graph-warehouse-order-priority-backorders-7effcffade:r1:proposed",
+      "approve-plan:graph-warehouse-order-priority-backorders-7effcffade:r1"
+    ],
+    "decisions": {
+      "approve-plan:graph-warehouse-order-priority-backorders-7effcffade:r1": {
+        "id": "approve-plan:graph-warehouse-order-priority-backorders-7effcffade:r1",
+        "kind": "approve_plan",
+        "question": "Approve graph revision 1?",
+        "options": [
+          {
+            "id": "approve",
+            "label": "Approve plan"
+          },
+          {
+            "id": "request_changes",
+            "label": "Request changes"
+          }
+        ],
+        "affectedNodeIds": [
+          "node-warehouse-order-priority-backorders-890b69f821"
+        ],
+        "evidenceRefs": [
+          "graph:graph-warehouse-order-priority-backorders-7effcffade:r1"
+        ],
+        "impact": "acceptance",
+        "status": "pending"
+      }
+    },
+    "stoppedNodeIds": [],
+    "readiness": {
+      "readyNodeIds": [],
+      "pendingDecisionIds": []
+    },
+    "selectedWaves": [],
+    "attempts": {},
+    "adoptedArtifacts": {},
+    "nodeEvidenceMatrixIds": {},
+    "integrations": {},
+    "recoveryHistory": [],
+    "evidenceMatrices": [],
+    "outcomes": {
+      "execution": "pending",
+      "artifact": "missing",
+      "delivery": "not_started"
+    },
+    "evidenceMatrixSummaries": {},
+    "granularityStrategy": {
+      "policyVersion": "adaptive-utility/3.1.0-pilot",
+      "condition": "B",
+      "candidateTreeHash": "sha256:52c7a17dfc3ef1f969b8e12af726e8f6c073d60be2bbe086a59b0184a4c9df96",
+      "config": {
+        "minimumAdvantage": 0.15,
+        "maxLeafContextTokens": 24000,
+        "maxLeafScopePaths": 40,
+        "maxLeafPlannedPaths": 12
+      },
+      "assessments": {
+        "node-domain-orders-backorders-b044842d25": {
+          "unitKey": "domain-orders-backorders",
+          "nodeId": "node-domain-orders-backorders-b044842d25",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "e-path-orders",
+            "e-path-orders-test",
+            "sha256:d1703c6310120e26982b3b8d043229cd539a75b0b6678820b00fd189d5a1a54e"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-application-warehouse-backorders-3925ae9042": {
+          "unitKey": "application-warehouse-backorders",
+          "nodeId": "node-application-warehouse-backorders-3925ae9042",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "e-path-service",
+            "e-path-service-test",
+            "sha256:d1703c6310120e26982b3b8d043229cd539a75b0b6678820b00fd189d5a1a54e"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-fulfillment-priority-wave-39573985e0": {
+          "unitKey": "fulfillment-priority-wave",
+          "nodeId": "node-fulfillment-priority-wave-39573985e0",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "e-path-planner",
+            "e-path-planner-test",
+            "sha256:d1703c6310120e26982b3b8d043229cd539a75b0b6678820b00fd189d5a1a54e"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-durability-history-backorders-46ff75f981": {
+          "unitKey": "durability-history-backorders",
+          "nodeId": "node-durability-history-backorders-46ff75f981",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "e-path-journal",
+            "e-path-journal-test",
+            "sha256:d1703c6310120e26982b3b8d043229cd539a75b0b6678820b00fd189d5a1a54e"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-api-server-backorders-73d85e6fcb": {
+          "unitKey": "api-server-backorders",
+          "nodeId": "node-api-server-backorders-73d85e6fcb",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "e-path-server",
+            "e-path-server-test",
+            "sha256:d1703c6310120e26982b3b8d043229cd539a75b0b6678820b00fd189d5a1a54e"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-presentation-tower-priority-110548389c": {
+          "unitKey": "presentation-tower-priority",
+          "nodeId": "node-presentation-tower-priority-110548389c",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0
+          },
+          "benefit": 0,
+          "cost": 0,
+          "splitAdvantage": 0,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "e-path-tower",
+            "e-path-tower-test",
+            "sha256:d1703c6310120e26982b3b8d043229cd539a75b0b6678820b00fd189d5a1a54e"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-probe-g6-determinism-f986910a8a": {
+          "unitKey": "probe-g6-determinism",
+          "nodeId": "node-probe-g6-determinism-f986910a8a",
+          "selected": "leaf",
+          "leafFeasible": true,
+          "splitViable": false,
+          "features": {
+            "contextRelief": 0,
+            "parallelism": 0,
+            "faultIsolation": 0,
+            "coordination": 0,
+            "pathOverlap": 0,
+            "validationDuplication": 0,
+            "uncertainty": 0.6
+          },
+          "benefit": 0,
+          "cost": 0.15,
+          "splitAdvantage": -0.15,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "e-path-probe-cli",
+            "e-path-probe-cli-test",
+            "e-package-json",
+            "sha256:d1703c6310120e26982b3b8d043229cd539a75b0b6678820b00fd189d5a1a54e"
+          ],
+          "rationale": "Semantic leaf remains one executable unit."
+        },
+        "node-warehouse-order-priority-backorders-890b69f821": {
+          "unitKey": "warehouse-order-priority-backorders",
+          "nodeId": "node-warehouse-order-priority-backorders-890b69f821",
+          "selected": "split",
+          "leafFeasible": true,
+          "splitViable": true,
+          "features": {
+            "contextRelief": 0.7951,
+            "parallelism": 0.6667,
+            "faultIsolation": 0.746,
+            "coordination": 0.2381,
+            "pathOverlap": 0,
+            "validationDuplication": 0.5556,
+            "uncertainty": 0.0857
+          },
+          "benefit": 0.7359,
+          "cost": 0.2199,
+          "splitAdvantage": 0.5161,
+          "minimumAdvantage": 0.15,
+          "evidenceRefs": [
+            "e-path-orders",
+            "e-path-service",
+            "e-path-planner",
+            "e-path-journal",
+            "e-path-server",
+            "e-path-tower",
+            "e-path-probe-cli",
+            "e-package-json",
+            "e-path-orders-test",
+            "e-path-service-test",
+            "e-path-planner-test",
+            "e-path-journal-test",
+            "e-path-server-test",
+            "e-path-tower-test",
+            "e-path-probe-cli-test",
+            "sha256:d1703c6310120e26982b3b8d043229cd539a75b0b6678820b00fd189d5a1a54e"
+          ],
+          "rationale": "Condition B expands the finest valid semantic frontier."
+        }
+      },
+      "metrics": {
+        "maxGraphDepth": 1,
+        "totalLeafCount": 7,
+        "averageBranchingFactor": 7
+      }
+    },
+    "graphId": "graph-warehouse-order-priority-backorders-7effcffade",
+    "graphRevision": 1
+  },
+  "checksum": "cde12532bab584e56ee4e7ca81d2ae5b2db44b87f758e2a6ccce1f6950007289"
+}
