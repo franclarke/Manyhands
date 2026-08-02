@@ -5,6 +5,7 @@ Una fila por etapa completada. La escribe el agente al terminar cada etapa,
 
 | Etapa | Fecha | Resultado | Commit | Evidencia |
 |---|---|---|---|---|
+| 11 | 2026-08-02 | PASS: dossier trazable de evidencia para PI-1, PI-2 y PI-3; separa entregas, fallos, parámetros provisionales y limitaciones, con índice de archivos y sección final `Qué no se concluye`. | `31f0589` | `../THESIS-EVIDENCE-DOSSIER.md` |
 | 10 | 2026-08-02 | PASS técnico tras reviews independientes: se cerraron los hallazgos fail-open de intención física, reproducibilidad local y auditoría de cambios eliminados; queda declarada la violación histórica de no tocar main.tex/presentacion.tex. | `ac9e6a3` | `stage-10-reviews.md` |
 | 9 | 2026-08-02 | PASS: veredicto pre-registrado inconcluso; A supera a C en r1 pero empata en r2, por lo que no se cumple el falsador en la misma dirección y no se sostiene H-G6. | `225ba26` | `verdict.md` |
 | 8 | 2026-08-02 | PASS: derivador reproducible produjo las 6 filas canónicas; A media 0.9, B media 0.85, C media 0.8. Se preservan costos no reportados como `null` y se corrigieron el freeze de dist y el harness de integración/cancelación para que el gate completo pase. | `d1d9089` | `results.md` |
