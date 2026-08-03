@@ -198,6 +198,145 @@ describe("adaptive granularity in the productive planning pipeline", () => {
     });
     expect(result.granularityStrategy?.policyVersion).toBe(ADAPTIVE_UTILITY_POLICY_VERSION);
   });
+
+  it("preserves candidate evaluations from every exhausted semantic replan attempt", async () => {
+    const events = new JsonlRunEventStore({ directory });
+    const snapshots = new RunSnapshotStore({ directory, events });
+    const firstAttempt = [planningCandidate("candidate-first-a"), planningCandidate("candidate-first-b")];
+    const secondAttempt = [planningCandidate("candidate-second-a"), planningCandidate("candidate-second-b")];
+    const plan = vi.fn(async () => {
+      throw new Error("single-candidate planning should not run when planCandidates is available");
+    });
+    const planCandidates = vi.fn()
+      .mockResolvedValueOnce(firstAttempt)
+      .mockResolvedValueOnce(secondAttempt);
+    const compile = vi.fn(() => {
+      throw new Error("Compiled plan review failed: contested_planned_output");
+    });
+
+    const result = await runPlanningV2({
+      runId: "run-exhausted-replan",
+      goal: "Build booking",
+      repoPath: "C:/repo/booking",
+      targetFingerprint: "target-1",
+      baseCommit: "1".repeat(40),
+      authority
+    }, {
+      events,
+      snapshots,
+      inspect: async () => bookingSnapshot(),
+      plan,
+      planCandidates,
+      compile,
+      nodeIdFor: (key) => compilerDependencies.idFor("node", key),
+      now: () => "2026-08-02T16:30:00.000Z"
+    });
+
+    expect(result.lifecycle).toBe("failed");
+    expect(planCandidates).toHaveBeenCalledTimes(2);
+    const failed = (await events.load("run-exhausted-replan"))
+      .find((event) => event.type === "planning.failed");
+    expect(failed?.type === "planning.failed" ? failed.payload.candidateEvaluations : undefined).toEqual([
+      expect.objectContaining({ candidateId: "candidate-first-a", eligible: false }),
+      expect.objectContaining({ candidateId: "candidate-first-b", eligible: false }),
+      expect.objectContaining({ candidateId: "candidate-second-a", eligible: false }),
+      expect.objectContaining({ candidateId: "candidate-second-b", eligible: false })
+    ]);
+  });
+
+  it("preserves the first candidate evaluation when the bounded replan throws", async () => {
+    const events = new JsonlRunEventStore({ directory });
+    const snapshots = new RunSnapshotStore({ directory, events });
+    const firstAttempt = [planningCandidate("candidate-throw-a"), planningCandidate("candidate-throw-b")];
+    const plan = vi.fn(async () => {
+      throw new Error("single-candidate planning should not run when planCandidates is available");
+    });
+    const planCandidates = vi.fn()
+      .mockResolvedValueOnce(firstAttempt)
+      .mockRejectedValueOnce(new Error("semantic planner unavailable"));
+    const compile = vi.fn(() => {
+      throw new Error("Compiled plan review failed: contested_planned_output");
+    });
+
+    const result = await runPlanningV2({
+      runId: "run-replan-throw",
+      goal: "Build booking",
+      repoPath: "C:/repo/booking",
+      targetFingerprint: "target-1",
+      baseCommit: "1".repeat(40),
+      authority
+    }, {
+      events,
+      snapshots,
+      inspect: async () => bookingSnapshot(),
+      plan,
+      planCandidates,
+      compile,
+      nodeIdFor: (key) => compilerDependencies.idFor("node", key),
+      now: () => "2026-08-02T16:45:00.000Z"
+    });
+
+    expect(result.lifecycle).toBe("failed");
+    const failed = (await events.load("run-replan-throw"))
+      .find((event) => event.type === "planning.failed");
+    expect(failed?.type === "planning.failed" ? failed.payload.candidateEvaluations : undefined).toEqual([
+      expect.objectContaining({ candidateId: "candidate-throw-a", eligible: false }),
+      expect.objectContaining({ candidateId: "candidate-throw-b", eligible: false })
+    ]);
+  });
+
+  it("persists first candidate evaluations when the bounded replan requests clarification", async () => {
+    const events = new JsonlRunEventStore({ directory });
+    const snapshots = new RunSnapshotStore({ directory, events });
+    const firstAttempt = [planningCandidate("candidate-clarify-a"), planningCandidate("candidate-clarify-b")];
+    const clarification = planningCandidate("candidate-clarification");
+    clarification.questions = [{
+      id: "clarify-booking-policy",
+      question: "Which booking policy applies?",
+      reason: "The candidate needs a product decision.",
+      impact: "acceptance",
+      options: ["Policy A", "Policy B"],
+      evidenceIds: []
+    }];
+    const plan = vi.fn(async () => {
+      throw new Error("single-candidate planning should not run when planCandidates is available");
+    });
+    const planCandidates = vi.fn()
+      .mockResolvedValueOnce(firstAttempt)
+      .mockResolvedValueOnce([clarification]);
+    const compile = vi.fn(() => {
+      throw new Error("Compiled plan review failed: contested_planned_output");
+    });
+
+    const result = await runPlanningV2({
+      runId: "run-replan-clarification",
+      goal: "Build booking",
+      repoPath: "C:/repo/booking",
+      targetFingerprint: "target-1",
+      baseCommit: "1".repeat(40),
+      authority
+    }, {
+      events,
+      snapshots,
+      inspect: async () => bookingSnapshot(),
+      plan,
+      planCandidates,
+      compile,
+      nodeIdFor: (key) => compilerDependencies.idFor("node", key),
+      now: () => "2026-08-02T16:50:00.000Z"
+    });
+
+    expect(result.lifecycle).toBe("planning");
+    expect(Object.values(result.decisions)).toEqual([
+      expect.objectContaining({ kind: "clarify_goal", status: "pending" })
+    ]);
+    const completed = (await events.load("run-replan-clarification"))
+      .find((event) => event.type === "planning.completed");
+    expect(completed?.type === "planning.completed" ? completed.payload.candidateEvaluations : undefined).toEqual([
+      expect.objectContaining({ candidateId: "candidate-clarify-a", eligible: false }),
+      expect.objectContaining({ candidateId: "candidate-clarify-b", eligible: false })
+    ]);
+  });
 });
 
 function planningCandidate(breakdownId: string) {

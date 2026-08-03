@@ -23,6 +23,16 @@ export const AttemptUsageSchema = z.object({
 
 export type AttemptUsage = z.infer<typeof AttemptUsageSchema>;
 
+const CandidateEvaluationSchema = z.object({
+  candidateId: NonEmptyStringSchema,
+  candidateHash: NonEmptyStringSchema,
+  eligible: z.boolean(),
+  score: z.number().min(-1).max(1).optional(),
+  diagnostics: z.array(NonEmptyStringSchema)
+}).strict();
+
+export type CandidateEvaluation = z.infer<typeof CandidateEvaluationSchema>;
+
 const SchedulerReasonSchema = z.object({ code: NonEmptyStringSchema }).passthrough();
 const SchedulerExplanationSchema = z.object({
   nodeId: EntityIdSchema,
@@ -146,13 +156,7 @@ export const RunEventSchema = z.discriminatedUnion("type", [
       candidateSeams: z.array(z.unknown())
     }).strict().optional(),
     candidateSourceHash: NonEmptyStringSchema.optional(),
-    candidateEvaluations: z.array(z.object({
-      candidateId: NonEmptyStringSchema,
-      candidateHash: NonEmptyStringSchema,
-      eligible: z.boolean(),
-      score: z.number().min(-1).max(1).optional(),
-      diagnostics: z.array(NonEmptyStringSchema)
-    }).strict()).optional(),
+    candidateEvaluations: z.array(CandidateEvaluationSchema).optional(),
     config: z.object({
       minimumAdvantage: z.number().min(-1).max(1),
       maxLeafContextTokens: z.number().int().positive(),
@@ -189,10 +193,17 @@ export const RunEventSchema = z.discriminatedUnion("type", [
       averageBranchingFactor: z.number().nonnegative()
     }).strict()
   }).strict()),
-  event("planning.completed", z.object({ breakdownId: EntityIdSchema, breakdown: z.record(z.unknown()) }).strict()),
+  event("planning.completed", z.object({
+    breakdownId: EntityIdSchema,
+    breakdown: z.record(z.unknown()),
+    candidateEvaluations: z.array(CandidateEvaluationSchema).optional()
+  }).strict()),
   event("graph.compiled", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive(), graph: z.record(z.unknown()), contracts: z.array(z.record(z.unknown())), review: z.record(z.unknown()), trace: z.record(z.unknown()) }).strict()),
   event("planning.critic_recorded", z.object({ critic: NonEmptyStringSchema, findings: z.array(z.record(z.unknown())) }).strict()),
-  event("planning.failed", z.object({ reason: NonEmptyStringSchema }).strict()),
+  event("planning.failed", z.object({
+    reason: NonEmptyStringSchema,
+    candidateEvaluations: z.array(CandidateEvaluationSchema).optional()
+  }).strict()),
   event("attempt.started", z.object({
     attemptId: EntityIdSchema,
     nodeId: EntityIdSchema,

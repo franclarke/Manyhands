@@ -3,7 +3,7 @@ import path from "node:path";
 import type { CandidatePlan, CandidatePlanDiagnostic, CompiledGraphRevision, GranularityStrategyResult, GraphCompilerInput, PlanningEnvelope, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
 import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, canonicalRepositorySnapshotId, candidateBreakdownHash, createPlanningEnvelope, repositorySnapshotIdsMatch, resolveGranularityCondition, selectCandidatePlan, selectGranularityStrategy, validateCandidatePlanSet } from "@manyhands/decomposer";
-import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
+import { foldRun, supersededDecisionIds, type CandidateEvaluation, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 
 export interface PlanningV2Input {
@@ -39,17 +39,9 @@ export interface PlanningV2Dependencies {
 }
 
 type CandidateSetEvaluation =
-  | { kind: "selected"; candidate: CandidatePlan; strategy: GranularityStrategyResult; compiled: CompiledGraphRevision; diagnostics: CandidatePlanDiagnostic[]; candidateEvaluations: CandidateEvaluationRecord[] }
+  | { kind: "selected"; candidate: CandidatePlan; strategy: GranularityStrategyResult; compiled: CompiledGraphRevision; diagnostics: CandidatePlanDiagnostic[]; candidateEvaluations: CandidateEvaluation[] }
   | { kind: "clarification"; breakdown: WorkBreakdown }
-  | { kind: "replan_required"; rejectedCandidateIds: string[]; diagnostics: CandidatePlanDiagnostic[]; candidateEvaluations: CandidateEvaluationRecord[] };
-
-interface CandidateEvaluationRecord {
-  candidateId: string;
-  candidateHash: string;
-  eligible: boolean;
-  score?: number;
-  diagnostics: string[];
-}
+  | { kind: "replan_required"; rejectedCandidateIds: string[]; diagnostics: CandidatePlanDiagnostic[]; candidateEvaluations: CandidateEvaluation[] };
 
 interface CandidateSetEvaluationInput {
   plannerInput: WorkBreakdownPlannerInput;
@@ -125,7 +117,7 @@ async function evaluateCandidateSet(input: CandidateSetEvaluationInput): Promise
     }
   }
 
-  const candidateEvaluations = candidates.map((candidate): CandidateEvaluationRecord => {
+  const candidateEvaluations = candidates.map((candidate): CandidateEvaluation => {
     const strategy = strategies.get(candidate.candidateId);
     const assessment = strategy?.assessments[candidate.breakdown.root.key];
     const compilerResult = compilerResults[candidate.candidateId];
@@ -226,6 +218,7 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
     return state;
   }
 
+  let candidateEvaluations: CandidateEvaluation[] | undefined;
   try {
     const repositorySnapshot = await dependencies.inspect(input);
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
@@ -294,7 +287,6 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
     let breakdown: WorkBreakdown;
     let strategy: GranularityStrategyResult;
     let compiled: CompiledGraphRevision | undefined;
-    let candidateEvaluations: CandidateEvaluationRecord[] | undefined;
     if (input.experimentalCandidate === undefined && dependencies.planCandidates !== undefined) {
       let evaluation = await evaluateCandidateSet({
         plannerInput,
@@ -310,6 +302,8 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
         }
       });
       if (evaluation.kind === "replan_required") {
+        const firstAttemptEvaluations = evaluation.candidateEvaluations;
+        candidateEvaluations = firstAttemptEvaluations;
         evaluation = await evaluateCandidateSet({
           plannerInput: { ...plannerInput, candidateSetFeedback: candidateSetFeedback(evaluation) },
           envelope: planningEnvelope,
@@ -323,9 +317,12 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
             constraints: input.constraints ?? []
           }
         });
+        if (evaluation.kind === "selected" || evaluation.kind === "replan_required") {
+          candidateEvaluations = [...firstAttemptEvaluations, ...evaluation.candidateEvaluations];
+        }
       }
       if (evaluation.kind === "clarification") {
-        const drafts = clarificationEvents(evaluation.breakdown, nodeIdFor, dependencies.now, events.length);
+        const drafts = clarificationEvents(evaluation.breakdown, nodeIdFor, dependencies.now, events.length, candidateEvaluations);
         events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
         state = foldRun(events);
         await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
@@ -338,7 +335,7 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       breakdown = evaluation.candidate.breakdown;
       strategy = evaluation.strategy;
       compiled = evaluation.compiled;
-      candidateEvaluations = evaluation.candidateEvaluations;
+      if (candidateEvaluations === undefined) candidateEvaluations = evaluation.candidateEvaluations;
     } else {
       breakdown = input.experimentalCandidate === undefined
         ? await dependencies.plan(plannerInput, planningObserverFor(latestPlanningAttempt(events)))
@@ -409,7 +406,13 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     const failed = await append(dependencies, input.runId, input.authority, events.length, [{
-      eventId: `planning:${input.runId}:failed:${events.length + 1}`, occurredAt: dependencies.now(), type: "planning.failed", payload: { reason }
+      eventId: `planning:${input.runId}:failed:${events.length + 1}`,
+      occurredAt: dependencies.now(),
+      type: "planning.failed",
+      payload: {
+        reason,
+        ...(candidateEvaluations === undefined ? {} : { candidateEvaluations })
+      }
     }]);
     events = [...events, ...failed];
     state = foldRun(events);
@@ -473,7 +476,7 @@ function strategySelectedEvent(
   nodeIdFor: (key: string) => string,
   now: () => string,
   candidateSourceHash?: string,
-  candidateEvaluations?: readonly CandidateEvaluationRecord[]
+  candidateEvaluations?: readonly CandidateEvaluation[]
 ): RunEventInput {
   const breakdown = strategy.selectedBreakdown;
   return {
@@ -577,7 +580,7 @@ async function writeStrategyDiagnostics(
   runId: string,
   strategy: GranularityStrategyResult,
   candidateSourceHash?: string,
-  candidateEvaluations?: readonly CandidateEvaluationRecord[]
+  candidateEvaluations?: readonly CandidateEvaluation[]
 ): Promise<void> {
   const artifact = {
     runId,
@@ -602,13 +605,23 @@ function clarificationEvents(
   breakdown: WorkBreakdown,
   nodeIdFor: (key: string) => string,
   now: () => string,
-  sequenceOffset: number
+  sequenceOffset: number,
+  candidateEvaluations?: readonly CandidateEvaluation[]
 ): RunEventInput[] {
   const completion: RunEventInput = {
     eventId: `planning:${breakdown.breakdownId}:clarification:${sequenceOffset + 1}`,
     occurredAt: now(),
     type: "planning.completed",
-    payload: { breakdownId: breakdown.breakdownId, breakdown: asRecord(breakdown) }
+    payload: {
+      breakdownId: breakdown.breakdownId,
+      breakdown: asRecord(breakdown),
+      ...(candidateEvaluations === undefined ? {} : {
+        candidateEvaluations: candidateEvaluations.map((evaluation) => ({
+          ...evaluation,
+          diagnostics: [...evaluation.diagnostics]
+        }))
+      })
+    }
   };
   const questions = breakdown.questions.length > 0
     ? breakdown.questions.map((question) => ({

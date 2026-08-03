@@ -3,7 +3,7 @@ import { RunEventSchema, type RunEvent } from "./domain/events.js";
 import { assertLifecycleTransition, type RunLifecycle } from "./domain/lifecycle.js";
 import { INITIAL_RUN_OUTCOMES, type DeliveryApproval, type DeliveryReceipt, type FinalCandidate, type RunOutcomes } from "./domain/outcomes.js";
 import type { AdoptedArtifact } from "./domain/artifacts.js";
-import type { AttemptUsage } from "./domain/events.js";
+import type { AttemptUsage, CandidateEvaluation } from "./domain/events.js";
 import type { FailureClass } from "./domain/failures.js";
 
 export interface AttemptProjection {
@@ -81,13 +81,7 @@ export interface GranularityStrategyProjection {
   condition: "A" | "B" | "C" | "C2";
   candidateTreeHash: string;
   candidateSourceHash?: string;
-  candidateEvaluations?: Array<{
-    candidateId: string;
-    candidateHash: string;
-    eligible: boolean;
-    score?: number | undefined;
-    diagnostics: string[];
-  }>;
+  candidateEvaluations?: CandidateEvaluation[];
   config: { minimumAdvantage: number; maxLeafContextTokens: number; maxLeafScopePaths: number; maxLeafPlannedPaths?: number | undefined };
   assessments: Record<string, GranularityStrategyAssessmentProjection>;
   metrics: { maxGraphDepth: number; totalLeafCount: number; averageBranchingFactor: number };
