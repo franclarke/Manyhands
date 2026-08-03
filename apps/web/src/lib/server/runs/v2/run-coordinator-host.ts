@@ -1,6 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 import { buildAgentEnvironment } from "@manyhands/execution-core";
-import { buildSemanticPlanningPrompt, NonRetryablePlanningError, parseSemanticPlanningModelOutput, PlanningCapacityError, parseWorkBreakdownProgressLine, type WorkBreakdownModelRequest } from "@manyhands/decomposer";
+import { buildSemanticPlanningPrompt, NonRetryablePlanningError, parseSemanticPlanningModelOutput, PlanningCapacityError, PlanningTimeoutError } from "@manyhands/decomposer";
 import { foldRun } from "@manyhands/run-coordinator";
 import { buildFastRepositorySnapshot } from "@manyhands/repository-index";
 import { EventStoreCompactor, JsonlRunEventStore, RunSnapshotStore, verifyAndRecoverRunStore } from "@manyhands/run-store";
@@ -31,9 +31,9 @@ const PROVIDER_CAPACITY_PATTERN = /(429|quota|rate.?limit|resource_exhausted|too
  * The planner answers with a document; it must not be able to go and do the work.
  *
  * Given the full agentic toolset and a real 8KB planning prompt, the model
- * treated the WorkBreakdown as an artefact to produce: it explored with
+ * treated the semantic plan as an artefact to produce: it explored with
  * Bash/Grep/Glob and wrote the JSON to disk with `Write`, then closed with "El
- * WorkBreakdown está completo en el plan". The CLI exited 0 and the final
+ * semantic plan está completo". The CLI exited 0 and the final
  * message carried no JSON, which is the `No JSON object found in response` that
  * cost Warehouse pilot series 5, 8, 9 and 11 their planning attempts.
  *
@@ -95,8 +95,7 @@ export async function runPlanningV2Pipeline(runId: string): Promise<void> {
               system: prompt.system,
               user: prompt.user,
               attempt: request.slot + 1,
-              repairIssues: [],
-              onProgress: async () => undefined
+              repairIssues: []
             }
           );
           return parseSemanticPlanningModelOutput(output);
@@ -148,7 +147,7 @@ async function invokeSelectedPlanningCli(
   stage: { executorId: string; model: string; effort?: string },
   operationId: string,
   signal: AbortSignal,
-  request: WorkBreakdownModelRequest
+  request: SemanticPlanningCliRequest
 ): Promise<string> {
   const repair = request.repairIssues.length === 0
     ? ""
@@ -175,12 +174,10 @@ async function invokeSelectedPlanningCli(
     let terminalError: string | undefined;
     let receivedClaudeDelta = false;
     const observedEnvelopeTypes = new Set<string>();
-    let progressBuffer = "";
-    let progressQueue = Promise.resolve();
     let settled = false;
     const timeoutMs = resolvePlanningStepTimeoutMs(process.env.MANYHANDS_PLANNING_STEP_TIMEOUT_MS);
     const timer = setTimeout(() => {
-      void killCliProcessTree(child, spawn).finally(() => finish(() => reject(new Error(`${stage.executorId} planning timed out after ${timeoutMs}ms (${formatPlanningCliDiagnostics({ observedEnvelopeTypes, stdoutBytes, stderrTail, outputTail: resultText ?? assistantText })}).`))));
+      void killCliProcessTree(child, spawn).finally(() => finish(() => reject(new PlanningTimeoutError(`${stage.executorId} planning timed out after ${timeoutMs}ms (${formatPlanningCliDiagnostics({ observedEnvelopeTypes, stdoutBytes, stderrTail, outputTail: resultText ?? assistantText })}).`))));
     }, timeoutMs);
     const finish = (complete: () => void) => {
       if (settled) return;
@@ -188,16 +185,8 @@ async function invokeSelectedPlanningCli(
       clearTimeout(timer);
       complete();
     };
-    const enqueueProgress = (line: string) => {
-      const unit = parseWorkBreakdownProgressLine(line.trim());
-      if (unit !== undefined) progressQueue = progressQueue.then(() => request.onProgress(unit));
-    };
     const consumeAssistantText = (text: string) => {
       assistantText += text;
-      progressBuffer += text;
-      const lines = progressBuffer.split(/\r?\n/u);
-      progressBuffer = lines.pop() ?? "";
-      for (const line of lines) enqueueProgress(line);
     };
     const consumeClaudeLine = (line: string) => {
       const decoded = decodeClaudePlanningStreamLine(line);
@@ -228,9 +217,7 @@ async function invokeSelectedPlanningCli(
     child.once("error", (error) => finish(() => reject(error)));
     child.once("close", (code) => {
       if (!isCodex) consumeClaudeLine(cliBuffer);
-      enqueueProgress(progressBuffer);
-      void progressQueue.then(
-        () => finish(() => {
+      finish(() => {
           if (code !== 0) {
             const diagnostics = formatPlanningCliDiagnostics({
               observedEnvelopeTypes,
@@ -266,12 +253,17 @@ async function invokeSelectedPlanningCli(
           } catch (error) {
             reject(error);
           }
-        }),
-        (error) => finish(() => reject(error))
-      );
+      });
     });
     child.stdin?.end(prompt);
   });
+}
+
+interface SemanticPlanningCliRequest {
+  system: string;
+  user: string;
+  attempt: number;
+  repairIssues: string[];
 }
 
 export function resolvePlanningStepTimeoutMs(raw: string | undefined): number {

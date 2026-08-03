@@ -265,15 +265,18 @@ export const RunEventSchema = z.discriminatedUnion("type", [
   }).strict()),
   event("planning.semantic_attempt_started", z.object({
     attemptId: EntityIdSchema,
-    attempt: z.record(z.unknown())
+    recordJson: NonEmptyStringSchema,
+    recordSha256: z.string().regex(/^sha256:[a-f0-9]{64}$/u)
   }).strict()),
   event("planning.semantic_proposal_recorded", z.object({
     attemptId: EntityIdSchema,
-    proposal: z.record(z.unknown())
+    recordJson: NonEmptyStringSchema,
+    recordSha256: z.string().regex(/^sha256:[a-f0-9]{64}$/u)
   }).strict()),
   event("planning.semantic_terminal_committed", z.object({
     attemptId: EntityIdSchema,
-    outcome: z.record(z.unknown())
+    recordJson: NonEmptyStringSchema,
+    recordSha256: z.string().regex(/^sha256:[a-f0-9]{64}$/u)
   }).strict()),
   event("planning.completed", z.object({ breakdownId: EntityIdSchema, breakdown: z.record(z.unknown()) }).strict()),
   event("graph.compiled", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive(), graph: z.record(z.unknown()), contracts: z.array(z.record(z.unknown())), review: z.record(z.unknown()), trace: z.record(z.unknown()) }).strict()),

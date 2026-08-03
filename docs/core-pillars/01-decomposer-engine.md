@@ -1,5 +1,10 @@
 # PILAR 1 — MOTOR DE DESCOMPOSICIÓN ADAPTATIVA DE GRANULARIDAD (DECOMPOSER V3)
 
+> **Estado: superseded / referencia histórica.** La ruta productiva vigente ya
+> no usa `C_task`, umbrales numéricos ni Architect Pass como autoridad de
+> granularidad. Consulte [`../system/03-decomposer.md`](../system/03-decomposer.md)
+> para `SemanticPlanDraft -> SemanticPlan -> ExecutionCut -> GraphRevision`.
+
 > **Ubicación del código**: `packages/decomposer`  
 > **Responsabilidad**: Transformar objetivos de software en un DAG jerárquico inmutable resolviendo dinámicamente el nivel de granularidad óptima.
 

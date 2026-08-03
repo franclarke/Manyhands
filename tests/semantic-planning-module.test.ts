@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createPlanningModule,
+  InvalidSemanticProposalError,
   SemanticPlanDraftSchema,
   type PlanningAttemptRecord,
   type PlanningRecordPort,
@@ -26,7 +27,8 @@ describe("PlanningModule", () => {
             ]
           },
           repositorySnapshot: snapshot,
-          resolvedDecisions: []
+          resolvedDecisions: [],
+          constraints: ["Do not edit database migrations."]
         })
       },
       protocols: {
@@ -62,6 +64,7 @@ describe("PlanningModule", () => {
     expect(outcome.compiled.graph.repositorySnapshotId).toBe(snapshot.snapshotId);
     expect(Object.values(outcome.compiled.graph.nodes).map((node) => node.kind)).toEqual(["root", "leaf"]);
     expect(outcome.compiled.contracts).toHaveLength(1);
+    expect(outcome.compiled.contracts[0]?.task.constraints).toEqual(["Do not edit database migrations."]);
     expect(propose).toHaveBeenCalledTimes(2);
 
     expect(records.attempts).toHaveLength(1);
@@ -115,10 +118,18 @@ describe("PlanningModule", () => {
 
   it("does not count rhetorical variants as comparable experiment candidates", async () => {
     const records = new InMemoryPlanningRecordPort();
-    const drafts = [
-      bookingDraft({ rationale: "Prefer a cohesive domain slice." }),
-      bookingDraft({ rationale: "This is the smallest sensible implementation." })
-    ];
+    const first = bookingDraft({ rationale: "Prefer a cohesive domain slice." });
+    const second = bookingDraft({ rationale: "This is the smallest sensible implementation." });
+    second.root.title = "Deliver the booking capability";
+    second.root.objective = "Enable clients to create a booking.";
+    if (second.root.kind !== "composite" || second.root.children[0]?.kind !== "leaf") {
+      throw new Error("Expected the booking fixture to contain one leaf.");
+    }
+    second.root.children[0].handle = "booking-domain-reworded";
+    second.root.children[0].title = "Persist booking records";
+    second.root.children[0].objective = "Store a valid booking from client input.";
+    second.root.children[0].outcomes[0]!.statement = "Valid input results in a stored booking.";
+    const drafts = [first, second];
     const module = createPlanningModule({
       contexts: {
         load: async () => ({
@@ -158,6 +169,52 @@ describe("PlanningModule", () => {
     expect(outcome.reason).toBe("insufficient_comparable_candidates");
     expect(outcome.comparison).toEqual({ status: "degraded", safeCandidates: 2, comparableCandidates: 0 });
     expect(records.attempts[0]?.terminal).toEqual(outcome);
+  });
+
+  it("records duplicate safe product proposals as a degraded comparison", async () => {
+    const module = createPlanningModule({
+      contexts: { load: async () => standardContext() },
+      protocols: { load: async () => productProtocol() },
+      proposals: { propose: async () => bookingDraft() },
+      records: new InMemoryPlanningRecordPort(),
+      now: () => "2026-08-03T12:00:00.000Z"
+    });
+
+    const outcome = await module.start({
+      lease: { runId: "run-product-duplicates", holderId: "coordinator-1", fenceToken: "fence-8c" },
+      protocol: { id: "product-default", revision: "1" }
+    });
+
+    expect(outcome.kind).toBe("ready");
+    expect(outcome.comparison).toEqual({ status: "degraded", safeCandidates: 2, comparableCandidates: 0 });
+  });
+
+  it("rejects one malformed model document without discarding a safe product proposal", async () => {
+    const records = new InMemoryPlanningRecordPort();
+    const module = createPlanningModule({
+      contexts: { load: async () => standardContext() },
+      protocols: { load: async () => productProtocol() },
+      proposals: {
+        propose: async ({ slot }) => {
+          if (slot === 1) throw new InvalidSemanticProposalError("response contained no JSON document");
+          return bookingDraft();
+        }
+      },
+      records,
+      now: () => "2026-08-03T12:00:00.000Z"
+    });
+
+    const outcome = await module.start({
+      lease: { runId: "run-product-malformed", holderId: "coordinator-1", fenceToken: "fence-8d" },
+      protocol: { id: "product-default", revision: "1" }
+    });
+
+    expect(outcome.kind).toBe("ready");
+    expect(outcome.comparison).toEqual({ status: "degraded", safeCandidates: 1, comparableCandidates: 0 });
+    expect(outcome.rejections).toContainEqual({
+      slot: 1,
+      issues: [{ code: "invalid_model_document", message: "response contained no JSON document" }]
+    });
   });
 
   it("cannot return ready when the fenced terminal commit fails", async () => {

@@ -48,6 +48,7 @@ export function canonicalizeSemanticPlan(
     root: draft.root,
     seams: draft.seams
   });
+  const strategyHash = digest(strategyShape(draft));
   const planId = `semantic-plan:${planHash}`;
   const moduleIdsByHandle = new Map<string, string>();
   const root = canonicalModule(draft.root, "root", planHash, moduleIdsByHandle);
@@ -65,6 +66,7 @@ export function canonicalizeSemanticPlan(
       schemaVersion: 1,
       planId,
       planHash,
+      strategyHash,
       repositorySnapshotId: context.repositorySnapshot.snapshotId,
       goalDigest,
       protocolDigest,
@@ -74,6 +76,46 @@ export function canonicalizeSemanticPlan(
       seams
     }
   };
+}
+
+function strategyShape(draft: SemanticPlanDraft): unknown {
+  const roles = new Map<string, string>();
+  const moduleShape = (module: SemanticWorkDraft): unknown => {
+    if (module.kind === "leaf") {
+      const shape = {
+        kind: module.kind,
+        surface: module.surface,
+        outcomes: module.outcomes
+          .map((outcome) => ({ covers: outcome.covers, verification: outcome.verification }))
+          .sort((left, right) => stableSerialize(left).localeCompare(stableSerialize(right)))
+      };
+      roles.set(module.handle, digest(shape));
+      return shape;
+    }
+    const children = module.children
+      .map(moduleShape)
+      .sort((left, right) => stableSerialize(left).localeCompare(stableSerialize(right)));
+    const shape = { kind: module.kind, children };
+    roles.set(module.handle, digest(shape));
+    return shape;
+  };
+  const root = moduleShape(draft.root);
+  const seams = draft.seams
+    .map((seam) => ({
+      producer: requireHandle(roles, seam.producer),
+      consumers: seam.consumers.map((handle) => requireHandle(roles, handle)).sort(),
+      interface: {
+        kind: seam.interface.kind,
+        specification: seam.interface.specification,
+        compatibility: seam.interface.compatibility,
+        materialization: seam.interface.materialization,
+        artifactPaths: seam.interface.artifactPaths,
+        verification: seam.interface.verification
+      },
+      evidencePaths: seam.evidencePaths
+    }))
+    .sort((left, right) => stableSerialize(left).localeCompare(stableSerialize(right)));
+  return { root, seams };
 }
 
 export function digest(value: unknown): string {

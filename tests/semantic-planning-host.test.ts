@@ -2,7 +2,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { SemanticPlanDraft } from "@manyhands/decomposer";
+import { PlanningCapacityError, type SemanticPlanDraft } from "@manyhands/decomposer";
+import { RunEventSchema } from "@manyhands/run-coordinator";
 import { JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
 import { runSemanticPlanningV2 } from "@/lib/server/runs/v2/semantic-planning-host";
 import { bookingSnapshot } from "./helpers/target-planning-fixtures.js";
@@ -59,9 +60,52 @@ describe("semantic planning productive host", () => {
       "planning.completed"
     ].includes(event.type))).toBe(false);
     const terminal = persisted.find((event) => event.type === "planning.semantic_terminal_committed");
-    expect(terminal?.payload.outcome).toMatchObject({ kind: "ready", comparison: { status: "degraded" } });
+    expect(terminal?.type === "planning.semantic_terminal_committed"
+      ? JSON.parse(terminal.payload.recordJson)
+      : undefined).toMatchObject({ kind: "ready", comparison: { status: "degraded" } });
     expect(JSON.stringify(persisted)).not.toContain("CandidatePlan");
     expect(JSON.stringify(persisted)).not.toContain("WorkBreakdown");
+  });
+
+  it("leaves a capacity-interrupted attempt resumable instead of terminally failing the run", async () => {
+    const events = new JsonlRunEventStore({ directory });
+    const snapshots = new RunSnapshotStore({ directory, events });
+
+    await expect(runSemanticPlanningV2({
+      runId: "semantic-run-capacity",
+      goal: "Implement booking creation",
+      acceptanceCriteria: ["A valid booking can be created."],
+      constraints: [],
+      repoPath: "C:/repo/booking",
+      targetFingerprint: "target-1",
+      baseCommit: "1".repeat(40),
+      authority,
+      protocol: "product"
+    }, {
+      events,
+      snapshots,
+      inspect: async () => bookingSnapshot(),
+      propose: async () => { throw new PlanningCapacityError("provider capacity exhausted"); },
+      now: () => "2026-08-03T12:00:00.000Z"
+    })).rejects.toThrow(PlanningCapacityError);
+
+    const persisted = await events.load("semantic-run-capacity");
+    expect(persisted.map((event) => event.type)).toContain("planning.semantic_attempt_started");
+    expect(persisted.map((event) => event.type)).not.toContain("planning.failed");
+    expect(persisted.map((event) => event.type)).not.toContain("planning.semantic_terminal_committed");
+  });
+
+  it("rejects malformed semantic planning journal payloads at the event boundary", () => {
+    const result = RunEventSchema.safeParse({
+      eventId: "semantic-attempt:invalid",
+      runId: "semantic-run-invalid",
+      sequence: 1,
+      occurredAt: "2026-08-03T12:00:00.000Z",
+      type: "planning.semantic_attempt_started",
+      payload: { attemptId: "semantic-attempt:invalid", attempt: {} }
+    });
+
+    expect(result.success).toBe(false);
   });
 });
 

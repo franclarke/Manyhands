@@ -10,7 +10,7 @@ Muchos componentes del sistema existen para dar soporte a la arquitectura, pero 
 
 | Pilar | Documento de Arquitectura | Descripción |
 |---|---|---|
-| 🧠 **Pilar 1: El Decomposer** | 📄 **[01-decomposer-engine.md](core-pillars/01-decomposer-engine.md)** | Motor de granularidad adaptativa (V3). Evalúa el índice de complejidad intrínseca ($C_{task}$), ejecuta la división en 2 fases (*Architect Pass + Compiler*) y optimiza sub-tareas mediante critics de coalescencia. |
+| 🧠 **Pilar 1: Planning semántico** | 📄 **[03-decomposer.md](system/03-decomposer.md)** | `PlanningModule` durable: propuestas semánticas no confiables, canonicalización determinista, comparación por estrategia, selección de `ExecutionCut` y compilación de contratos/grafo. El documento V3 anterior queda como referencia histórica. |
 | ⚡ **Pilar 2: La Ejecución** | 📄 **[02-execution-and-orchestration.md](core-pillars/02-execution-and-orchestration.md)** | Despacho continuo por eventos, scheduler determinista, `V2ExecutionDriver` con `recordQueue` atómico, pool de reciclaje de worktrees y sandboxing de seguridad. |
 | 🛡️ **Pilar 3: La Integración** | 📄 **[03-integration-and-evidence.md](core-pillars/03-integration-and-evidence.md)** | Construcción de la Matriz de Evidencias sobre commits exactos, materialización bottom-up del árbol e integración final verificada en la rama entregada. |
 

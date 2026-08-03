@@ -1,6 +1,6 @@
-import type { TaskContractBundle } from "@manyhands/contracts";
-import type { RepositorySnapshot } from "@manyhands/repository-index";
-import type { GraphRevision } from "@manyhands/task-graph";
+import { TaskContractBundleSchema, type TaskContractBundle } from "@manyhands/contracts";
+import { RepositorySnapshotSchema, type RepositorySnapshot } from "@manyhands/repository-index";
+import { GraphRevisionSchema, type GraphRevision } from "@manyhands/task-graph";
 import { NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 
@@ -188,6 +188,7 @@ export interface SemanticPlan {
   schemaVersion: 1;
   planId: string;
   planHash: string;
+  strategyHash: string;
   repositorySnapshotId: string;
   goalDigest: string;
   protocolDigest: string;
@@ -225,14 +226,14 @@ export interface SemanticCompilation {
 export interface PlanningIssue {
   code: string;
   message: string;
-  path?: string;
+  path?: string | undefined;
 }
 
 export interface ProposalReceipt {
   slot: number;
   receivedAt: string;
   draft: unknown;
-  plan?: SemanticPlan;
+  plan?: SemanticPlan | undefined;
   issues: PlanningIssue[];
 }
 
@@ -280,5 +281,183 @@ export interface PlanningAttemptRecord {
   context: PlanningContext;
   startedAt: string;
   proposals: ProposalReceipt[];
-  terminal?: PlanningOutcome;
+  terminal?: PlanningOutcome | undefined;
 }
+
+const GoalCriterionSchema = z.object({
+  id: NonEmptyStringSchema,
+  statement: NonEmptyStringSchema
+}).strict();
+
+const PlanningGoalSchema = z.object({
+  id: NonEmptyStringSchema,
+  statement: NonEmptyStringSchema,
+  requiredCriteria: z.array(GoalCriterionSchema).min(1)
+}).strict();
+
+export const PlanningProtocolSchema = z.object({
+  id: NonEmptyStringSchema,
+  revision: NonEmptyStringSchema,
+  proposalTarget: z.number().int().positive(),
+  minSafeCandidates: z.number().int().nonnegative(),
+  minComparableCandidates: z.number().int().nonnegative(),
+  allowDegradedComparison: z.boolean()
+}).strict();
+
+const PlanningLeaseSchema = z.object({
+  runId: NonEmptyStringSchema,
+  holderId: NonEmptyStringSchema,
+  fenceToken: NonEmptyStringSchema
+}).strict();
+
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
+const JsonValueSchema: z.ZodType<JsonValue> = z.lazy(() => z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.null(),
+  z.array(JsonValueSchema),
+  z.record(JsonValueSchema)
+]));
+
+export const PlanningContextSchema = z.object({
+  goal: PlanningGoalSchema,
+  repositorySnapshot: RepositorySnapshotSchema,
+  resolvedDecisions: z.array(JsonValueSchema),
+  constraints: z.array(NonEmptyStringSchema).optional()
+}).strict();
+
+const CanonicalOutcomeSchema = z.object({
+  outcomeId: NonEmptyStringSchema,
+  statement: NonEmptyStringSchema,
+  covers: z.array(NonEmptyStringSchema).min(1),
+  verification: OutcomeDraftSchema.shape.verification
+}).strict();
+
+const CanonicalModuleSchema: z.ZodType<CanonicalModule> = z.lazy(() => z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("leaf"),
+    moduleId: NonEmptyStringSchema,
+    title: NonEmptyStringSchema,
+    objective: NonEmptyStringSchema,
+    surface: SurfaceDraftSchema,
+    outcomes: z.array(CanonicalOutcomeSchema).min(1)
+  }).strict(),
+  z.object({
+    kind: z.literal("composite"),
+    moduleId: NonEmptyStringSchema,
+    title: NonEmptyStringSchema,
+    objective: NonEmptyStringSchema,
+    children: z.array(CanonicalModuleSchema).min(1)
+  }).strict()
+]));
+
+const CanonicalSeamSchema = z.object({
+  seamId: NonEmptyStringSchema,
+  producerModuleId: NonEmptyStringSchema,
+  consumerModuleIds: z.array(NonEmptyStringSchema).min(1),
+  interface: SeamDraftSchema.shape.interface,
+  evidencePaths: z.array(NonEmptyStringSchema)
+}).strict();
+
+export const SemanticPlanSchema = z.object({
+  schemaVersion: z.literal(1),
+  planId: NonEmptyStringSchema,
+  planHash: NonEmptyStringSchema,
+  strategyHash: NonEmptyStringSchema,
+  repositorySnapshotId: NonEmptyStringSchema,
+  goalDigest: NonEmptyStringSchema,
+  protocolDigest: NonEmptyStringSchema,
+  decisionSetDigest: NonEmptyStringSchema,
+  constraintSetDigest: NonEmptyStringSchema,
+  root: CanonicalModuleSchema,
+  seams: z.array(CanonicalSeamSchema)
+}).strict();
+
+const ExecutionCutAssessmentSchema = z.object({
+  moduleId: NonEmptyStringSchema,
+  decision: z.enum(["execute_leaf", "execute_composite", "expand"]),
+  reasons: z.array(NonEmptyStringSchema),
+  metrics: z.object({
+    leafCount: z.number().int().nonnegative(),
+    scopePathCount: z.number().int().nonnegative(),
+    outcomeCount: z.number().int().nonnegative()
+  }).strict()
+}).strict();
+
+export const ExecutionCutSchema = z.object({
+  cutId: NonEmptyStringSchema,
+  planId: NonEmptyStringSchema,
+  executableModuleIds: z.array(NonEmptyStringSchema).min(1),
+  policy: z.literal("bounded-cohesion-v1"),
+  assessments: z.array(ExecutionCutAssessmentSchema)
+}).strict();
+
+const PlanningIssueSchema = z.object({
+  code: NonEmptyStringSchema,
+  message: NonEmptyStringSchema,
+  path: NonEmptyStringSchema.optional()
+}).strict();
+
+export const ProposalReceiptSchema = z.object({
+  slot: z.number().int().nonnegative(),
+  receivedAt: NonEmptyStringSchema,
+  draft: JsonValueSchema,
+  plan: SemanticPlanSchema.optional(),
+  issues: z.array(PlanningIssueSchema)
+}).strict();
+
+const PlanningComparisonSchema = z.object({
+  status: z.enum(["complete", "degraded"]),
+  safeCandidates: z.number().int().nonnegative(),
+  comparableCandidates: z.number().int().nonnegative()
+}).strict();
+
+const PlanningRejectionSchema = z.object({
+  slot: z.number().int().nonnegative(),
+  issues: z.array(PlanningIssueSchema)
+}).strict();
+
+const ReadyPlanningOutcomeSchema = z.object({
+  kind: z.literal("ready"),
+  attemptId: NonEmptyStringSchema,
+  comparison: PlanningComparisonSchema,
+  rejections: z.array(PlanningRejectionSchema),
+  selected: z.object({ plan: SemanticPlanSchema, executionCut: ExecutionCutSchema }).strict(),
+  compiled: z.object({
+    graph: GraphRevisionSchema,
+    contracts: z.array(TaskContractBundleSchema),
+    compilationHash: NonEmptyStringSchema
+  }).strict()
+}).strict();
+
+const NotReadyPlanningOutcomeSchema = z.object({
+  kind: z.literal("not_ready"),
+  attemptId: NonEmptyStringSchema,
+  reason: z.enum(["no_safe_candidate", "insufficient_safe_candidates", "insufficient_comparable_candidates"]),
+  comparison: PlanningComparisonSchema,
+  rejections: z.array(PlanningRejectionSchema)
+}).strict();
+
+export const PlanningOutcomeSchema = z.discriminatedUnion("kind", [ReadyPlanningOutcomeSchema, NotReadyPlanningOutcomeSchema]);
+
+export const PlanningAttemptRecordSchema = z.object({
+  schemaVersion: z.literal(1),
+  attemptId: NonEmptyStringSchema,
+  lease: PlanningLeaseSchema,
+  protocol: PlanningProtocolSchema,
+  context: PlanningContextSchema,
+  startedAt: NonEmptyStringSchema,
+  proposals: z.array(ProposalReceiptSchema),
+  terminal: PlanningOutcomeSchema.optional()
+}).strict();
+
+export const PlanningAttemptRecordEventSchema = PlanningAttemptRecordSchema
+  .transform((value): PlanningAttemptRecord => value as PlanningAttemptRecord);
+
+export const ProposalReceiptEventSchema = ProposalReceiptSchema
+  .transform((value): ProposalReceipt => value as ProposalReceipt);
+
+export const PlanningOutcomeEventSchema = PlanningOutcomeSchema
+  .transform((value): PlanningOutcome => value as PlanningOutcome);

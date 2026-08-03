@@ -1,5 +1,6 @@
 import { canonicalizeSemanticPlan, digest } from "./canonicalize.js";
 import { compileSemanticPlan, executionCutIssues, selectExecutionCut } from "./compiler.js";
+import { InvalidSemanticProposalError } from "./prompt.js";
 import type {
   NotReadyPlanningOutcome,
   PlanningAttemptRecord,
@@ -55,6 +56,13 @@ export interface PlanningModuleDependencies {
   now(): string;
 }
 
+export class PlanningTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PlanningTimeoutError";
+  }
+}
+
 export function createPlanningModule(dependencies: PlanningModuleDependencies): PlanningModule {
   return {
     async start(command): Promise<PlanningOutcome> {
@@ -76,29 +84,7 @@ export function createPlanningModule(dependencies: PlanningModuleDependencies): 
 
       const receipts: ProposalReceipt[] = [];
       for (let slot = 0; slot < protocol.proposalTarget; slot += 1) {
-        let draft: unknown;
-        try {
-          draft = await dependencies.proposals.propose({
-            attemptId,
-            slot,
-            goal: context.goal,
-            repositorySnapshot: context.repositorySnapshot,
-            resolvedDecisions: context.resolvedDecisions,
-            constraints: context.constraints ?? []
-          });
-        } catch (error) {
-          const issues = [{ code: "proposal_failed", message: error instanceof Error ? error.message : String(error) }];
-          const receipt: ProposalReceipt = { slot, receivedAt: dependencies.now(), draft: null, issues };
-          await dependencies.records.recordProposal(attemptId, command.lease, receipt);
-          receipts.push(receipt);
-          continue;
-        }
-        const canonical = canonicalizeSemanticPlan(draft, context, protocol);
-        const policyIssues = canonical.ok ? executionCutIssues(canonical.plan) : [];
-        const receipt: ProposalReceipt = canonical.ok
-          ? { slot, receivedAt: dependencies.now(), draft, plan: canonical.plan, issues: policyIssues }
-          : { slot, receivedAt: dependencies.now(), draft, issues: canonical.issues };
-        await dependencies.records.recordProposal(attemptId, command.lease, receipt);
+        const receipt = await proposeAndRecord(dependencies, attempt, command.lease, slot);
         receipts.push(receipt);
       }
       const outcome = evaluateAttempt({ ...attempt, proposals: receipts });
@@ -124,30 +110,7 @@ export function createPlanningModule(dependencies: PlanningModuleDependencies): 
       }
       for (let slot = 0; slot < attempt.protocol.proposalTarget; slot += 1) {
         if (recordedSlots.has(slot)) continue;
-        let receipt: ProposalReceipt;
-        try {
-          const draft = await dependencies.proposals.propose({
-            attemptId: attempt.attemptId,
-            slot,
-            goal: attempt.context.goal,
-            repositorySnapshot: attempt.context.repositorySnapshot,
-            resolvedDecisions: attempt.context.resolvedDecisions,
-            constraints: attempt.context.constraints ?? []
-          });
-          const canonical = canonicalizeSemanticPlan(draft, attempt.context, attempt.protocol);
-          const policyIssues = canonical.ok ? executionCutIssues(canonical.plan) : [];
-          receipt = canonical.ok
-            ? { slot, receivedAt: dependencies.now(), draft, plan: canonical.plan, issues: policyIssues }
-            : { slot, receivedAt: dependencies.now(), draft, issues: canonical.issues };
-        } catch (error) {
-          receipt = {
-            slot,
-            receivedAt: dependencies.now(),
-            draft: null,
-            issues: [{ code: "proposal_failed", message: error instanceof Error ? error.message : String(error) }]
-          };
-        }
-        await dependencies.records.recordProposal(attempt.attemptId, command.lease, receipt);
+        const receipt = await proposeAndRecord(dependencies, attempt, command.lease, slot);
         receipts.push(receipt);
       }
       const outcome = evaluateAttempt({ ...attempt, proposals: receipts });
@@ -168,6 +131,42 @@ export function createPlanningModule(dependencies: PlanningModuleDependencies): 
   };
 }
 
+async function proposeAndRecord(
+  dependencies: PlanningModuleDependencies,
+  attempt: PlanningAttemptRecord,
+  lease: PlanningLease,
+  slot: number
+): Promise<ProposalReceipt> {
+  let draft: unknown;
+  try {
+    draft = await dependencies.proposals.propose({
+      attemptId: attempt.attemptId,
+      slot,
+      goal: attempt.context.goal,
+      repositorySnapshot: attempt.context.repositorySnapshot,
+      resolvedDecisions: attempt.context.resolvedDecisions,
+      constraints: attempt.context.constraints ?? []
+    });
+  } catch (error) {
+    if (!(error instanceof InvalidSemanticProposalError)) throw error;
+    const receipt: ProposalReceipt = {
+      slot,
+      receivedAt: dependencies.now(),
+      draft: null,
+      issues: [{ code: "invalid_model_document", message: error.message }]
+    };
+    await dependencies.records.recordProposal(attempt.attemptId, lease, receipt);
+    return receipt;
+  }
+  const canonical = canonicalizeSemanticPlan(draft, attempt.context, attempt.protocol);
+  const policyIssues = canonical.ok ? executionCutIssues(canonical.plan) : [];
+  const receipt: ProposalReceipt = canonical.ok
+    ? { slot, receivedAt: dependencies.now(), draft, plan: canonical.plan, issues: policyIssues }
+    : { slot, receivedAt: dependencies.now(), draft, issues: canonical.issues };
+  await dependencies.records.recordProposal(attempt.attemptId, lease, receipt);
+  return receipt;
+}
+
 function evaluateAttempt(attempt: PlanningAttemptRecord): PlanningOutcome {
   const safePlans: Array<{ slot: number; plan: NonNullable<ProposalReceipt["plan"]> }> = [];
   const rejections: NotReadyPlanningOutcome["rejections"] = [];
@@ -184,10 +183,10 @@ function evaluateAttempt(attempt: PlanningAttemptRecord): PlanningOutcome {
     } else rejections.push({ slot: receipt.slot, issues: canonical.issues });
   }
 
-  const distinctPlans = new Map(safePlans.map((candidate) => [candidate.plan.planId, candidate]));
-  const comparableCandidates = distinctPlans.size >= 2 ? distinctPlans.size : 0;
+  const distinctStrategies = new Map(safePlans.map((candidate) => [candidate.plan.strategyHash, candidate]));
+  const comparableCandidates = distinctStrategies.size >= 2 ? distinctStrategies.size : 0;
   const comparison = {
-    status: safePlans.length >= attempt.protocol.proposalTarget && comparableCandidates >= attempt.protocol.minComparableCandidates
+    status: distinctStrategies.size >= attempt.protocol.proposalTarget && comparableCandidates >= attempt.protocol.minComparableCandidates
       ? "complete" as const
       : "degraded" as const,
     safeCandidates: safePlans.length,
@@ -207,7 +206,7 @@ function evaluateAttempt(attempt: PlanningAttemptRecord): PlanningOutcome {
     return { kind: "not_ready", ...base, reason: "insufficient_comparable_candidates" };
   }
 
-  const selectedPlan = [...distinctPlans.values()]
+  const selectedPlan = [...distinctStrategies.values()]
     .sort((left, right) => left.plan.planId.localeCompare(right.plan.planId))[0]!.plan;
   const executionCut = selectExecutionCut(selectedPlan);
   const compiled = compileSemanticPlan(selectedPlan, executionCut, attempt.context, attempt.startedAt);

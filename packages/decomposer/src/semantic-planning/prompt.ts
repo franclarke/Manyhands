@@ -94,13 +94,20 @@ export function buildSemanticPlanningPrompt(input: SemanticPlanningPromptInput):
   };
 }
 
+export class InvalidSemanticProposalError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidSemanticProposalError";
+  }
+}
+
 export function parseSemanticPlanningModelOutput(output: string): unknown {
   const parsed = parseJsonObjectCandidates(output);
-  if (!parsed.ok) throw new Error(parsed.message);
+  if (!parsed.ok) throw new InvalidSemanticProposalError(parsed.message);
   const documents = parsed.candidates
     .map((candidate) => candidate.value)
     .filter((candidate) => !isProgressEnvelope(candidate));
-  if (documents.length === 0) throw new Error("Model emitted no SemanticPlanDraft JSON object.");
+  if (documents.length === 0) throw new InvalidSemanticProposalError("Model emitted no SemanticPlanDraft JSON object.");
   return documents[0];
 }
 

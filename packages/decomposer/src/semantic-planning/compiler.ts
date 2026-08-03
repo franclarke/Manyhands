@@ -127,7 +127,8 @@ export function compileSemanticPlan(
   const contracts = executableModules.map((module) => compileLeafContract(
     module,
     seamContracts.filter((seam) => seam.producerNodeId === module.moduleId || seam.consumerNodeIds.includes(module.moduleId)),
-    artifactContracts.filter((artifact) => artifact.producerNodeId === module.moduleId || artifact.consumerNodeIds.includes(module.moduleId))
+    artifactContracts.filter((artifact) => artifact.producerNodeId === module.moduleId || artifact.consumerNodeIds.includes(module.moduleId)),
+    context.constraints ?? []
   ));
   return { graph, contracts, compilationHash: digest({ graph, contracts }) };
 }
@@ -193,7 +194,12 @@ function projectSeams(seams: readonly CanonicalSeam[], owners: ReadonlyMap<strin
   });
 }
 
-function compileLeafContract(module: CanonicalLeafModule, seams: SeamContract[], artifacts: ArtifactContract[]): TaskContractBundle {
+function compileLeafContract(
+  module: CanonicalLeafModule,
+  seams: SeamContract[],
+  artifacts: ArtifactContract[],
+  constraints: string[]
+): TaskContractBundle {
   const allowedPaths = unique([...module.surface.existingPaths, ...module.surface.plannedPaths]);
   const criteria = module.outcomes.flatMap((outcome) => outcome.covers.map((criterionId) => ({
     id: criterionId,
@@ -228,7 +234,7 @@ function compileLeafContract(module: CanonicalLeafModule, seams: SeamContract[],
   const produces = artifacts
     .filter((artifact) => artifact.producerNodeId === module.moduleId)
     .map(({ id, revision }) => ({ id, revision }));
-  const taskRevision = digest({ moduleId: module.moduleId, criteria: uniqueCriteria, scopeRevision, validationRevision, consumes, produces, seams });
+  const taskRevision = digest({ moduleId: module.moduleId, criteria: uniqueCriteria, scopeRevision, validationRevision, consumes, produces, seams, constraints });
   return TaskContractBundleSchema.parse({
     schemaVersion: 2,
     task: {
@@ -244,7 +250,7 @@ function compileLeafContract(module: CanonicalLeafModule, seams: SeamContract[],
       produces,
       seams: seams.map(({ id, revision }) => ({ id, revision })),
       validation: { id: `validation-contract:${digest(module.moduleId)}`, revision: validationRevision },
-      constraints: []
+      constraints
     },
     scope: {
       schemaVersion: 2,

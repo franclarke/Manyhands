@@ -1,5 +1,11 @@
 import {
   createPlanningModule,
+  digest,
+  PlanningAttemptRecordEventSchema,
+  PlanningCapacityError,
+  PlanningOutcomeEventSchema,
+  PlanningTimeoutError,
+  ProposalReceiptEventSchema,
   type PlanningAttemptRecord,
   type PlanningContext,
   type PlanningLease,
@@ -12,6 +18,7 @@ import {
 import { RepositorySnapshotSchema, type RepositorySnapshot } from "@manyhands/repository-index";
 import { foldRun, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
+import type { ZodType, ZodTypeDef } from "zod";
 
 export interface SemanticPlanningV2Input {
   runId: string;
@@ -165,6 +172,7 @@ export async function runSemanticPlanningV2(
     await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
     return state;
   } catch (error) {
+    if (error instanceof PlanningCapacityError || error instanceof PlanningTimeoutError) throw error;
     events = await dependencies.events.load(input.runId);
     const persisted = await appendFailureUnlessPresent(
       input,
@@ -192,7 +200,7 @@ class EventPlanningRecordPort implements PlanningRecordPort {
       eventId: `${record.attemptId}:started`,
       occurredAt: this.now(),
       type: "planning.semantic_attempt_started",
-      payload: { attemptId: record.attemptId, attempt: asRecord(record) }
+      payload: { attemptId: record.attemptId, ...encodeRecord(record) }
     });
   }
 
@@ -202,7 +210,7 @@ class EventPlanningRecordPort implements PlanningRecordPort {
       eventId: `${attemptId}:proposal:${proposal.slot}`,
       occurredAt: this.now(),
       type: "planning.semantic_proposal_recorded",
-      payload: { attemptId, proposal: asRecord(proposal) }
+      payload: { attemptId, ...encodeRecord(proposal) }
     });
   }
 
@@ -212,7 +220,7 @@ class EventPlanningRecordPort implements PlanningRecordPort {
       eventId: `${attemptId}:terminal`,
       occurredAt: this.now(),
       type: "planning.semantic_terminal_committed",
-      payload: { attemptId, outcome: asRecord(terminal) }
+      payload: { attemptId, ...encodeRecord(terminal) }
     });
   }
 
@@ -220,15 +228,15 @@ class EventPlanningRecordPort implements PlanningRecordPort {
     const events = await this.events.load(this.runId);
     const started = events.find((event) => event.type === "planning.semantic_attempt_started" && event.payload.attemptId === attemptId);
     if (started === undefined || started.type !== "planning.semantic_attempt_started") return undefined;
-    const attempt = structuredClone(started.payload.attempt) as unknown as PlanningAttemptRecord;
+    const attempt = decodeRecord(started.payload, PlanningAttemptRecordEventSchema);
     attempt.proposals = events
       .flatMap((event) => event.type === "planning.semantic_proposal_recorded" && event.payload.attemptId === attemptId
-        ? [structuredClone(event.payload.proposal) as unknown as ProposalReceipt]
+        ? [decodeRecord(event.payload, ProposalReceiptEventSchema)]
         : [])
       .sort((left, right) => left.slot - right.slot);
     const terminal = events.find((event) => event.type === "planning.semantic_terminal_committed" && event.payload.attemptId === attemptId);
     if (terminal !== undefined && terminal.type === "planning.semantic_terminal_committed") {
-      attempt.terminal = structuredClone(terminal.payload.outcome) as unknown as PlanningOutcome;
+      attempt.terminal = decodeRecord(terminal.payload, PlanningOutcomeEventSchema);
     }
     return attempt;
   }
@@ -316,4 +324,17 @@ function approvalDecisionId(graphId: string, revision: number): string {
 
 function asRecord<T>(value: T): Record<string, unknown> {
   return value as unknown as Record<string, unknown>;
+}
+
+function encodeRecord(value: unknown): { recordJson: string; recordSha256: string } {
+  return { recordJson: JSON.stringify(value), recordSha256: digest(value) };
+}
+
+function decodeRecord<T>(
+  envelope: { recordJson: string; recordSha256: string },
+  schema: ZodType<T, ZodTypeDef, unknown>
+): T {
+  const parsed: unknown = JSON.parse(envelope.recordJson);
+  if (digest(parsed) !== envelope.recordSha256) throw new Error("Semantic planning record digest mismatch.");
+  return schema.parse(parsed);
 }
