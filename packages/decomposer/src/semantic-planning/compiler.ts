@@ -107,7 +107,10 @@ export function compileSemanticPlan(
   });
   const ownerByModuleId = executionOwners(plan.root, selected);
   const projectedSeams = projectSeams(plan.seams, ownerByModuleId);
-  const artifactContracts = compileArtifactContracts(projectedSeams);
+  const artifactContracts = [
+    ...compileArtifactContracts(projectedSeams),
+    ...compileNodeOutputArtifactContracts(plan.root, selected)
+  ];
   const seamContracts = compileSeamContracts(projectedSeams);
   const nodes = compileNodes(plan.root, selected);
   const graph = GraphRevisionSchema.parse({
@@ -124,13 +127,47 @@ export function compileSemanticPlan(
     legacyOrderingConstraints: [],
     createdAt
   });
-  const contracts = executableModules.map((module) => compileLeafContract(
-    module,
-    seamContracts.filter((seam) => seam.producerNodeId === module.moduleId || seam.consumerNodeIds.includes(module.moduleId)),
-    artifactContracts.filter((artifact) => artifact.producerNodeId === module.moduleId || artifact.consumerNodeIds.includes(module.moduleId)),
-    context.constraints ?? []
-  ));
+  const contracts = Object.keys(nodes).sort().map((nodeId) => {
+    const module = moduleById.get(nodeId);
+    if (module === undefined) throw new Error(`Graph node ${nodeId} has no semantic module.`);
+    const contractModule = module.kind === "leaf" ? module : executableModule(module);
+    return compileLeafContract(
+      contractModule,
+      seamContracts.filter((seam) => seam.producerNodeId === nodeId || seam.consumerNodeIds.includes(nodeId)),
+      artifactContracts.filter((artifact) => artifact.producerNodeId === nodeId || artifact.consumerNodeIds.includes(nodeId)),
+      context.constraints ?? []
+    );
+  });
   return { graph, contracts, compilationHash: digest({ graph, contracts }) };
+}
+
+function compileNodeOutputArtifactContracts(
+  root: CanonicalModule,
+  selected: ReadonlySet<string>
+): ArtifactContract[] {
+  const nodes: Array<{ module: CanonicalModule; parentId: string | null }> = [];
+  const visit = (module: CanonicalModule, parentId: string | null): void => {
+    nodes.push({ module, parentId });
+    if (module.kind === "composite" && !selected.has(module.moduleId)) {
+      for (const child of module.children) visit(child, module.moduleId);
+    }
+  };
+  visit(root, null);
+  return nodes.map(({ module, parentId }) => {
+    const producerNodeId = module.moduleId;
+    const base = {
+      schemaVersion: 2 as const,
+      id: `artifact-contract:${digest(`${module.moduleId}-output`)}`,
+      provenance: "compiled" as const,
+      producerNodeId,
+      consumerNodeIds: parentId === null ? [] : [parentId],
+      artifactType: parentId === null ? "final-candidate" : "node-result",
+      mediaType: "application/vnd.manyhands.git-commit",
+      materialization: "commit" as const,
+      expectedPaths: unique(descendantLeaves(module).flatMap(modulePaths))
+    };
+    return { ...base, revision: digest(base) };
+  });
 }
 
 function compileNodes(root: CanonicalModule, selected: ReadonlySet<string>): Record<string, TaskNodeV2> {

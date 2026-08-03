@@ -63,8 +63,11 @@ describe("PlanningModule", () => {
     expect(outcome.selected.executionCut.planId).toBe(outcome.selected.plan.planId);
     expect(outcome.compiled.graph.repositorySnapshotId).toBe(snapshot.snapshotId);
     expect(Object.values(outcome.compiled.graph.nodes).map((node) => node.kind)).toEqual(["root", "leaf"]);
-    expect(outcome.compiled.contracts).toHaveLength(1);
-    expect(outcome.compiled.contracts[0]?.task.constraints).toEqual(["Do not edit database migrations."]);
+    expect(outcome.compiled.contracts).toHaveLength(Object.keys(outcome.compiled.graph.nodes).length);
+    expect(outcome.compiled.contracts.map((bundle) => bundle.task.nodeId).sort()).toEqual(Object.keys(outcome.compiled.graph.nodes).sort());
+    expect(outcome.compiled.contracts.find((bundle) => bundle.task.nodeId === outcome.compiled.graph.rootId)?.artifacts).toContainEqual(expect.objectContaining({ artifactType: "final-candidate" }));
+    expect(outcome.compiled.contracts.find((bundle) => bundle.task.nodeId !== outcome.compiled.graph.rootId)?.artifacts).toContainEqual(expect.objectContaining({ artifactType: "node-result" }));
+    expect(outcome.compiled.contracts.find((bundle) => bundle.task.nodeId === outcome.compiled.graph.rootId)?.task.constraints).toEqual(["Do not edit database migrations."]);
     expect(propose).toHaveBeenCalledTimes(2);
 
     expect(records.attempts).toHaveLength(1);
@@ -342,9 +345,11 @@ describe("PlanningModule", () => {
     expect(outcome.compiled.graph.seamBindings).toHaveLength(1);
     const binding = outcome.compiled.graph.seamBindings[0]!;
     expect(binding.producerNodeId).not.toBe(binding.consumerNodeId);
-    expect(outcome.compiled.contracts).toHaveLength(2);
-    expect(outcome.compiled.contracts.every((bundle) => bundle.seams.some((seam) => seam.id === binding.seamContract.id))).toBe(true);
-    expect(outcome.compiled.contracts.every((bundle) => bundle.task.seams.some((seam) => seam.id === binding.seamContract.id))).toBe(true);
+    expect(outcome.compiled.contracts).toHaveLength(Object.keys(outcome.compiled.graph.nodes).length);
+    const participants = outcome.compiled.contracts.filter((bundle) => [binding.producerNodeId, binding.consumerNodeId].includes(bundle.task.nodeId));
+    expect(participants).toHaveLength(2);
+    expect(participants.every((bundle) => bundle.seams.some((seam) => seam.id === binding.seamContract.id))).toBe(true);
+    expect(participants.every((bundle) => bundle.task.seams.some((seam) => seam.id === binding.seamContract.id))).toBe(true);
   });
 
   it("materializes a file seam as an artifact required by its consumer", async () => {
@@ -437,7 +442,7 @@ describe("PlanningModule", () => {
       reasons: expect.arrayContaining(["descendants_are_connected", "within_hard_limits"])
     }));
     expect(Object.values(outcome.compiled.graph.nodes).map((node) => node.kind)).toEqual(["root", "leaf", "leaf"]);
-    expect(outcome.compiled.contracts).toHaveLength(2);
+    expect(outcome.compiled.contracts).toHaveLength(Object.keys(outcome.compiled.graph.nodes).length);
     expect(backend.kind === "composite" ? backend.children : []).toHaveLength(2);
   });
 
