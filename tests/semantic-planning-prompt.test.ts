@@ -27,6 +27,9 @@ describe("semantic planning prompt", () => {
     expect(prompt.system).toContain("at most 6 total paths");
     expect(prompt.system).toContain("Do not report an uncertainty for an implementation choice already resolved by the goal");
     expect(prompt.system).toContain("a missing study:<name> script requires a new planned implementation path");
+    expect(prompt.system).toContain("A capability is available only when its script name is in the supplied repository scripts");
+    expect(prompt.system).toContain("Never use a missing study:<name> script as a repository_capability");
+    expect(prompt.system).toContain("The supplied repository files are authoritative; do not invent conventional files such as public/index.html");
   });
 
   it("unwraps the strict Codex CLI response envelope", () => {
