@@ -4,11 +4,13 @@ import { promisify } from "node:util";
 import {
   CLAUDE_CODE_EXECUTOR_ID,
   EXECUTOR_DESCRIPTORS,
-  resolveCliProcessInvocation,
-  resolveCliBinaryPath,
-  safeGitArgs,
   type ExecutorDescriptor,
   type ExecutorId
+} from "@manyhands/shared";
+import {
+  resolveCliProcessInvocation,
+  resolveCliBinaryPath,
+  safeGitArgs
 } from "@manyhands/execution-core";
 import type { Workspace } from "@/lib/api-types";
 import {
@@ -54,7 +56,7 @@ export async function inspectProvidersReadiness(
 ): Promise<ProviderReadiness[]> {
   const workspaceChecks = await inspectWorkspace(workspace, deps);
   return Promise.all(
-    EXECUTOR_DESCRIPTORS.map((descriptor) => inspectExecutor(descriptor, workspaceChecks, deps))
+    EXECUTOR_DESCRIPTORS.map((descriptor: ExecutorDescriptor) => inspectExecutor(descriptor, workspaceChecks, deps))
   );
 }
 

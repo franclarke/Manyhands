@@ -1,6 +1,7 @@
-import { EXECUTOR_IDS, ExecutionConfigSchema, ReasoningEffortSchema } from "@manyhands/execution-core";
+import { ExecutionConfigSchema } from "@manyhands/execution-core";
 import { GRANULARITY_CONDITIONS, WorkBreakdownSchema } from "@manyhands/decomposer";
 import { RunLifecycleSchema } from "@manyhands/run-coordinator";
+import { EXECUTOR_IDS, ReasoningEffortSchema } from "@manyhands/shared";
 import { z } from "zod";
 
 import { RUN_USER_PROMPT_MAX_LENGTH } from "@/lib/run-limits";

@@ -282,7 +282,7 @@ async function publishDelivery(
             if (manifest.graphRevision !== state.approvedGraphRevision
               || manifest.evidenceMatrixId !== finalCandidate.evidenceMatrixId
               || state.evidenceMatrixSummaries[manifest.evidenceMatrixId]?.validationRecipeDigest !== manifest.validationRecipeDigest
-              || manifest.artifactIds.some((artifactId) => !Object.values(state.adoptedArtifacts).some((artifact) => artifact.contract.id === artifactId))) {
+              || manifest.artifactIds.some((artifactId: string) => !Object.values(state.adoptedArtifacts).some((artifact) => artifact.contract.id === artifactId))) {
               throw new Error("Delivery metadata does not match the canonical graph, evidence, or adopted artifacts.");
             }
             const treeSha = await git(repoRoot, ["rev-parse", `${request.finalSha}^{tree}`]);
