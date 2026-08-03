@@ -369,7 +369,7 @@ function compileArtifactRequirements(
   seams: readonly ProjectedSeam[],
   artifacts: readonly ArtifactContract[]
 ): GraphRevision["artifactRequirements"] {
-  return seams.flatMap((seam) => {
+  const seamRequirements = seams.flatMap((seam) => {
     if (seam.interface.materialization === "logical") return [];
     const artifact = artifacts.find((candidate) => candidate.id === artifactContractId(seam));
     if (artifact === undefined) throw new Error(`Missing artifact contract for materialized seam ${seam.seamId}.`);
@@ -381,6 +381,21 @@ function compileArtifactRequirements(
       requiredFor: "execution" as const
     }));
   });
+
+  // Every non-root node produces a node-result consumed by its structural
+  // parent. Keep that dependency explicit so integration is strictly
+  // bottom-up and composites cannot run against an empty baseline.
+  const integrationRequirements = artifacts
+    .filter((artifact) => artifact.artifactType === "node-result")
+    .flatMap((artifact) => artifact.consumerNodeIds.map((consumerNodeId) => ({
+      id: `artifact-requirement:${digest({ artifactId: artifact.id, consumerNodeId, requiredFor: "integration" })}`,
+      artifactContract: { id: artifact.id, revision: artifact.revision },
+      producerNodeId: artifact.producerNodeId,
+      consumerNodeId,
+      requiredFor: "integration" as const
+    })));
+
+  return [...seamRequirements, ...integrationRequirements];
 }
 
 function compileSeamBindings(

@@ -433,13 +433,43 @@ describe("PlanningModule", () => {
 
     expect(outcome.kind).toBe("ready");
     if (outcome.kind !== "ready") throw new Error(`Expected materialized seam to compile, received ${outcome.reason}.`);
-    expect(outcome.compiled.graph.artifactRequirements).toHaveLength(1);
-    const requirement = outcome.compiled.graph.artifactRequirements[0]!;
+    const executionRequirements = outcome.compiled.graph.artifactRequirements.filter(
+      (candidate) => candidate.requiredFor === "execution"
+    );
+    expect(executionRequirements).toHaveLength(1);
+    const requirement = executionRequirements[0]!;
     const producer = outcome.compiled.contracts.find((bundle) => bundle.task.nodeId === requirement.producerNodeId)!;
     const consumer = outcome.compiled.contracts.find((bundle) => bundle.task.nodeId === requirement.consumerNodeId)!;
     expect(producer.task.produces).toContainEqual(requirement.artifactContract);
     expect(consumer.task.consumes).toContainEqual(requirement.artifactContract);
     expect(producer.artifacts[0]).toMatchObject({ materialization: "files", expectedPaths: ["src/domain/booking-contract.json"] });
+  });
+
+  it("compiles bottom-up integration requirements for every semantic child output", async () => {
+    const draft = bookingDraft();
+    const module = createPlanningModule({
+      contexts: { load: async () => standardContext() },
+      protocols: { load: async () => ({ ...productProtocol(), proposalTarget: 1 }) },
+      proposals: { propose: async () => draft },
+      records: new InMemoryPlanningRecordPort(),
+      now: () => "2026-08-03T12:00:00.000Z"
+    });
+
+    const outcome = await module.start({
+      lease: { runId: "run-bottom-up-1", holderId: "coordinator-1", fenceToken: "fence-bottom-up" },
+      protocol: { id: "product-default", revision: "1" }
+    });
+
+    expect(outcome.kind).toBe("ready");
+    if (outcome.kind !== "ready") throw new Error(`Expected ready, received ${outcome.reason}.`);
+    const integrationRequirements = outcome.compiled.graph.artifactRequirements.filter(
+      (requirement) => requirement.requiredFor === "integration"
+    );
+    expect(integrationRequirements).toHaveLength(1);
+    expect(integrationRequirements[0]).toMatchObject({
+      producerNodeId: expect.not.stringMatching(new RegExp(`^${outcome.compiled.graph.rootId}$`)),
+      consumerNodeId: outcome.compiled.graph.rootId
+    });
   });
 
   it("coalesces a bounded cohesive composite without rewriting the semantic plan", async () => {
