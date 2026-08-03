@@ -32,6 +32,13 @@ export class ArtifactMaterializer {
       });
     }
 
+    // A pooled or resumed execution base may already contain the source commit
+    // on its physical lineage. Cherry-picking it again is a safe no-op in Git,
+    // but Git reports that no-op as an empty cherry-pick; ancestry is the only
+    // evidence strong enough to accept that case without masking a real clash.
+    const currentHead = await this.git.head(worktreePath);
+    if (await this.git.isAncestor({ cwd: worktreePath, ancestor: artifact.location, descendant: currentHead })) return;
+
     const outcome = await this.git.cherryPick({ cwd: worktreePath, commitSha: artifact.location });
     if (outcome.ok) return;
 

@@ -47,6 +47,29 @@ describe("ExecutionBaseBuilder", () => {
     ]);
   });
 
+  it("treats an already-ancestral artifact commit as materialized", async () => {
+    const git = new FakeGitRunner({
+      ancestors: [ARTIFACT_A_COMMIT],
+      cherryPickOutcomes: [{ ok: false, kind: "empty", conflictFiles: [], output: "the previous cherry-pick is empty" }]
+    });
+    const manager = new WorktreeManager({ git, repoRoot: "C:/repo" });
+    const builder = new ExecutionBaseBuilder({ git, worktreeManager: manager });
+
+    const built = await builder.build({
+      runId: "run-ancestral-artifact",
+      nodeId: "consumer",
+      baseCommit: BASE,
+      contractBaseline: { id: "consumer-contract", revision: "rev-1" },
+      artifacts: [artifact("artifact-a", ARTIFACT_A_COMMIT, "digest-a")],
+      inputFingerprint: FINGERPRINT
+    });
+
+    expect(git.calls.filter((call) => call.op === "cherryPick")).toHaveLength(0);
+    expect(built.manifest.materializedArtifacts).toEqual([
+      expect.objectContaining({ artifactId: "artifact-a", beforeCommit: BASE, resultingCommit: BASE })
+    ]);
+  });
+
   it("fails with structured evidence and cleans the worktree before an executor can be invoked", async () => {
     const git = new FakeGitRunner({
       cherryPickOutcomes: [{ ok: false, kind: "conflict", conflictFiles: ["src/shared.ts"], output: "CONFLICT" }]
