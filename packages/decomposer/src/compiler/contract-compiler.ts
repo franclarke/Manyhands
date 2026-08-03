@@ -13,6 +13,7 @@ import {
 } from "@manyhands/contracts";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
 import type { WorkBreakdown, WorkUnit } from "../planner/schema.js";
+import type { CandidatePlan } from "../planner/planning-envelope.js";
 import { allocateAcceptanceIntents } from "./acceptance-allocation.js";
 import {
   compileAcceptanceCriterion,
@@ -37,6 +38,7 @@ export function compileContractBundles(input: {
   repositorySnapshot: RepositorySnapshot;
   nodeIdByUnitKey: Record<string, string>;
   sourceContract?: SourceContract;
+  candidatePlan?: CandidatePlan;
 }, dependencies: ContractCompilerDependencies): ContractCompilationResult {
   const units = flattenUnits(input.breakdown.root);
   const evidence = new Map(input.breakdown.repositoryEvidence.map((item) => [item.id, item]));
@@ -44,12 +46,15 @@ export function compileContractBundles(input: {
   const indexedPaths = new Set(input.repositorySnapshot.index?.files.map((file) => normalizeRepositoryPath(file.path, repositoryRoot)) ?? []);
   if (hasPackageManifest(input.repositorySnapshot)) indexedPaths.add("package.json");
   const scopePathsByNodeId: Record<string, string[]> = {};
-  const directPaths = new Map(units.map((unit) => [unit.key, unit.evidenceIds
-      .map((id) => evidence.get(id))
-      .filter((item): item is NonNullable<typeof item> => item?.kind === "path")
-      .map((item) => normalizeRepositoryPath(item.reference, repositoryRoot))
-      .filter((path) => indexedPaths.has(path))
-      .concat((unit.plannedPaths ?? []).map((path) => normalizeRepositoryPath(path, repositoryRoot)))]));
+  const explicitScopes = new Map(input.candidatePlan?.scopes.map((scope) => [scope.unitKey, scope.paths]) ?? []);
+  const directPaths = new Map(units.map((unit) => [unit.key, input.candidatePlan === undefined
+    ? unit.evidenceIds
+        .map((id) => evidence.get(id))
+        .filter((item): item is NonNullable<typeof item> => item?.kind === "path")
+        .map((item) => normalizeRepositoryPath(item.reference, repositoryRoot))
+        .filter((path) => indexedPaths.has(path))
+        .concat((unit.plannedPaths ?? []).map((path) => normalizeRepositoryPath(path, repositoryRoot)))
+    : (explicitScopes.get(unit.key) ?? []).map((path) => normalizeRepositoryPath(path, repositoryRoot))]));
   populateScopePaths(input.breakdown.root, input.nodeIdByUnitKey, directPaths, scopePathsByNodeId);
 
   const artifactContracts = input.breakdown.candidateArtifacts.map((candidate) => {
@@ -101,6 +106,11 @@ export function compileContractBundles(input: {
   const allArtifactContracts = [...artifactContracts, ...nodeOutputArtifactContracts];
 
   const seamContracts = input.breakdown.candidateSeams.map((candidate) => {
+    const explicit = input.candidatePlan?.seamSpecifications.find((seam) => seam.seamId === candidate.id);
+    const obligations = input.candidatePlan?.contractObligations.filter((obligation) =>
+      obligation.producerUnitKey === candidate.producerUnitKey &&
+      obligation.consumerUnitKeys.every((consumer) => candidate.consumerUnitKeys.includes(consumer))
+    ) ?? [];
     const base = {
       schemaVersion: 2 as const,
       id: dependencies.idFor("seam-contract", candidate.id),
@@ -109,16 +119,24 @@ export function compileContractBundles(input: {
       specification: candidate.specification,
       producerNodeId: requireNodeId(input.nodeIdByUnitKey, candidate.producerUnitKey),
       consumerNodeIds: candidate.consumerUnitKeys.map((key) => requireNodeId(input.nodeIdByUnitKey, key)),
-      semanticFacts: Object.fromEntries(candidate.evidenceIds.map((id, index) => [`evidence.${index}`, id])),
-      compatibility: { mode: "exact" as const, rules: ["All participants bind the same compiled revision."] }
+      semanticFacts: Object.fromEntries([
+        ...candidate.evidenceIds.map((id, index) => [`evidence.${index}`, id] as const),
+        ...obligations.map((obligation, index) => [`obligation.${index}`, `${obligation.obligationId}: ${obligation.validation}`] as const)
+      ]),
+      compatibility: { mode: "exact" as const, rules: [explicit?.compatibility ?? "All participants bind the same compiled revision."] }
     };
     return { ...base, revision: revisionFor(base) } satisfies SeamContract;
   });
 
   const intents = new Map(input.breakdown.acceptanceIntents.map((intent) => [intent.id, intent]));
-  const acceptanceOwnerByIntentId = allocateAcceptanceIntents(input.breakdown.root);
-  for (const intent of input.breakdown.acceptanceIntents) {
-    acceptanceOwnerByIntentId[intent.id] ??= input.breakdown.root.key;
+  const acceptanceOwnerByIntentId = input.candidatePlan === undefined
+    ? allocateAcceptanceIntents(input.breakdown.root)
+    : Object.fromEntries(input.candidatePlan.acceptanceOwnership
+        .slice()
+        .sort((left, right) => left.intentId.localeCompare(right.intentId) || left.ownerUnitKey.localeCompare(right.ownerUnitKey))
+        .map((ownership) => [ownership.intentId, ownership.ownerUnitKey]));
+  if (input.candidatePlan === undefined) {
+    for (const intent of input.breakdown.acceptanceIntents) acceptanceOwnerByIntentId[intent.id] ??= input.breakdown.root.key;
   }
   const bundles = units.map((unit) => {
     const nodeId = requireNodeId(input.nodeIdByUnitKey, unit.key);
@@ -151,7 +169,7 @@ export function compileContractBundles(input: {
         unit,
         criterion,
         dependencies,
-        criterionEvidence(unit, criteria, input.breakdown.repositoryEvidence)
+        criterionEvidence(unit, criteria, input.breakdown.repositoryEvidence, input.candidatePlan)
       ))
     }) satisfies ValidationContract;
     const relevantArtifacts = allArtifactContracts.filter((contract) => contract.producerNodeId === nodeId || contract.consumerNodeIds.includes(nodeId));
@@ -194,8 +212,20 @@ export function compileContractBundles(input: {
 function criterionEvidence(
   unit: WorkUnit,
   criteria: readonly TaskAcceptanceCriterion[],
-  repositoryEvidence: WorkBreakdown["repositoryEvidence"]
+  repositoryEvidence: WorkBreakdown["repositoryEvidence"],
+  candidatePlan?: CandidatePlan
 ): ValidationObligation["evidence"] {
+  const explicit = candidatePlan?.leafValidations.find((validation) => validation.unitKey === unit.key);
+  if (explicit !== undefined) {
+    return criteria.length === 1
+      ? { kind: "focused_command", selectors: explicit.evidenceRefs, references: explicit.evidenceRefs }
+      : {
+          kind: "shared_command",
+          criterionIds: criteria.map((criterion) => criterion.id),
+          references: explicit.evidenceRefs,
+          rationale: `The immutable candidate validation command ${explicit.command} proves this unit's owned criteria.`
+        };
+  }
   const evidenceById = new Map(repositoryEvidence.map((evidence) => [evidence.id, evidence]));
   const citedReferences = unit.evidenceIds.flatMap((evidenceId) => {
     const evidence = evidenceById.get(evidenceId);

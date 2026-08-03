@@ -1,10 +1,15 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { CompiledGraphRevision, GranularityStrategyResult, GraphCompilerInput, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
+import type { CandidatePlan, CandidatePlanDiagnostic, CandidatePlanSelection, CompiledGraphRevision, GranularityStrategyResult, GraphCompilerInput, PlanningEnvelope, WorkBreakdown, WorkBreakdownPlannerInput, WorkBreakdownPlanningObserver, WorkUnit } from "@manyhands/decomposer";
 import type { RepositorySnapshot } from "@manyhands/repository-index";
-import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, canonicalRepositorySnapshotId, candidateBreakdownHash, repositorySnapshotIdsMatch, resolveGranularityCondition, selectGranularityStrategy } from "@manyhands/decomposer";
+import { PLAN_CRITIC_KINDS, PILOT_UTILITY_POLICY, buildGranularityPlanningBrief, canonicalRepositorySnapshotId, candidateBreakdownHash, createPlanningEnvelope, repositorySnapshotIdsMatch, resolveGranularityCondition, selectGranularityStrategy, selectPlannerCandidate, validatePlannerCandidateSet } from "@manyhands/decomposer";
 import { foldRun, supersededDecisionIds, type RunEventInput, type RunProjection } from "@manyhands/run-coordinator";
 import type { FencingAuthority, JsonlRunEventStore, RunSnapshotStore } from "@manyhands/run-store";
+import {
+  ExecutionFailureReceiptStore,
+  persistRunFailure,
+  reconcilePendingRunFailures
+} from "./execution-failure-receipt";
 
 export interface PlanningV2Input {
   runId: string;
@@ -18,6 +23,8 @@ export interface PlanningV2Input {
   questionAnswers?: Record<string, string>;
   /** G5 condition label; absent means the productive adaptive policy. */
   granularityCondition?: string;
+  /** Frozen typed alternatives for deterministic policy replay without an LLM call. */
+  frozenCandidates?: CandidatePlan[];
   experimentalCandidate?: {
     sourceHash: string;
     repositorySnapshotId: string;
@@ -32,6 +39,7 @@ export interface PlanningV2Dependencies {
   snapshots: RunSnapshotStore;
   inspect(input: Pick<PlanningV2Input, "repoPath" | "targetFingerprint" | "baseCommit">): Promise<RepositorySnapshot>;
   plan(input: WorkBreakdownPlannerInput, observer: WorkBreakdownPlanningObserver): Promise<WorkBreakdown>;
+  planCandidates(input: WorkBreakdownPlannerInput, envelope: PlanningEnvelope, count: number, observer: WorkBreakdownPlanningObserver): Promise<CandidatePlan[]>;
   compile(input: GraphCompilerInput): CompiledGraphRevision;
   nodeIdFor?(key: string): string;
   now(): string;
@@ -47,6 +55,17 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
   }
   let state = foldRun(events);
   if (state.lifecycle !== "planning") return state;
+  if (state.planningCandidates?.selection.kind === "replan_required") return state;
+  let reconciledState: RunProjection | undefined;
+  const reconciliation = await reconcilePendingRunFailures({
+    store: new ExecutionFailureReceiptStore({ directory: dependencies.events.directory }),
+    area: "planning",
+    runId: input.runId,
+    recordTerminalFailure: async (receipt) => {
+      reconciledState = await recordPlanningFailure(input, dependencies, receipt.reason);
+    }
+  });
+  if (reconciliation.reconciledReceiptIds.length > 0) return reconciledState!;
   if (Object.values(state.decisions).some((decision) => decision.kind === "clarify_goal" && decision.status === "pending")) {
     return state;
   }
@@ -103,11 +122,60 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
         inspectionDisposition: repositorySnapshot.inspectionDisposition,
         evidence: repositoryEvidence(repositorySnapshot)
       },
+      granularityBrief: buildGranularityPlanningBrief({
+        repositorySnapshot,
+        config: PILOT_UTILITY_POLICY
+      }),
       ...(input.questionAnswers !== undefined ? { questionAnswers: input.questionAnswers } : {})
     };
-    let breakdown = input.experimentalCandidate === undefined
-      ? await dependencies.plan(plannerInput, planningObserverFor(latestPlanningAttempt(events)))
-      : validateExperimentalCandidate(input, repositorySnapshot);
+    const envelope = createPlanningEnvelope({
+      policyVersion: PILOT_UTILITY_POLICY.policyVersion,
+      goal: input.goal,
+      repositorySnapshot,
+      maxLeafContextTokens: PILOT_UTILITY_POLICY.maxLeafContextTokens,
+      maxLeafScopePaths: PILOT_UTILITY_POLICY.maxLeafScopePaths
+    });
+    events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [{
+      eventId: `planning:${input.runId}:envelope:${events.length + 1}`,
+      occurredAt: dependencies.now(),
+      type: "planning.envelope_created",
+      payload: envelope
+    }])];
+    const condition = resolveGranularityCondition(input.granularityCondition);
+    let breakdown: WorkBreakdown;
+    let strategy: GranularityStrategyResult;
+    let selectedCandidate: CandidatePlan | undefined;
+    if (input.experimentalCandidate !== undefined) {
+      breakdown = validateExperimentalCandidate(input, repositorySnapshot);
+      strategy = selectGranularityStrategy({ condition, breakdown, repositorySnapshot, config: PILOT_UTILITY_POLICY });
+      if (strategy.requiresSemanticReplan) {
+        throw new Error("The blocked candidate requires semantic replan and cannot be changed during experimental replay.");
+      }
+    } else {
+      const plannerCandidates = input.frozenCandidates ?? await dependencies.planCandidates(
+          plannerInput,
+          envelope,
+          envelope.candidateBudget.maximum,
+          planningObserverFor(latestPlanningAttempt(events))
+        );
+      const evaluation = evaluatePlannerCandidates({ envelope, candidates: plannerCandidates, condition, repositorySnapshot });
+      events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [
+        candidatesEvaluatedEvent(input.runId, envelope, plannerCandidates, evaluation, condition, dependencies.now)
+      ])];
+      if (evaluation.selection.kind === "replan_required") {
+        state = foldRun(events);
+        await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
+        return state;
+      }
+      breakdown = evaluation.selection.candidate.breakdown;
+      selectedCandidate = evaluation.selection.candidate;
+      strategy = evaluation.strategies.get(evaluation.selection.candidate.candidateId)!;
+      if (strategy.requiresSemanticReplan) {
+        state = foldRun(events);
+        await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
+        return state;
+      }
+    }
     breakdown = canonicalizeRepositorySnapshotReference(breakdown, repositorySnapshot.snapshotId);
     if (requiresClarification(breakdown)) {
       const drafts = clarificationEvents(breakdown, nodeIdFor, dependencies.now, events.length);
@@ -116,67 +184,57 @@ export async function runPlanningV2(input: PlanningV2Input, dependencies: Planni
       await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
       return state;
     }
-    // The productive path uses policy C; the semantic planner selects a
-    // frontier before the Graph Compiler materializes it.
-    // The planner tree remains the single canonical model.
-    const condition = resolveGranularityCondition(input.granularityCondition);
-    let strategy = selectGranularityStrategy({ condition, breakdown, repositorySnapshot, config: PILOT_UTILITY_POLICY });
-    if (strategy.requiresSemanticReplan) {
-      if (input.experimentalCandidate !== undefined) throw new Error("The blocked candidate requires semantic replan and cannot be changed during experimental replay.");
-      const rootAssessment = strategy.assessments[breakdown.root.key];
-      if (rootAssessment === undefined) throw new Error("C requested semantic replan without a root assessment.");
-      breakdown = await dependencies.plan({
-        ...plannerInput,
-        granularityFeedback: {
-          unitKey: rootAssessment.unitKey,
-          reason: rootAssessment.leafFeasible ? "missing_semantic_cut" : "leaf_context_infeasible",
-          evidence: [rootAssessment.rationale, ...rootAssessment.evidenceRefs]
-        }
-      }, planningObserverFor(latestPlanningAttempt(events)));
-      breakdown = canonicalizeRepositorySnapshotReference(breakdown, repositorySnapshot.snapshotId);
-      if (requiresClarification(breakdown)) {
-        const drafts = clarificationEvents(breakdown, nodeIdFor, dependencies.now, events.length);
-        events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
-        state = foldRun(events);
-        await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
-        return state;
-      }
-      strategy = selectGranularityStrategy({ condition, breakdown, repositorySnapshot, config: PILOT_UTILITY_POLICY });
-      if (strategy.requiresSemanticReplan) throw new Error("C could not obtain a viable semantic cut after one bounded replan.");
+    if (input.experimentalCandidate !== undefined) {
+      const strategyEvent = strategySelectedEvent(
+        input.runId,
+        strategy,
+        breakdown,
+        nodeIdFor,
+        dependencies.now,
+        input.experimentalCandidate.sourceHash
+      );
+      events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [strategyEvent])];
     }
-    const strategyEvent = strategySelectedEvent(
-      input.runId,
-      strategy,
-      breakdown,
-      nodeIdFor,
-      dependencies.now,
-      input.experimentalCandidate?.sourceHash
-    );
-    events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, [strategyEvent])];
     const compiled = dependencies.compile({
-      breakdown: strategy.selectedBreakdown,
+      breakdown,
       repositorySnapshot,
+      ...(input.experimentalCandidate === undefined ? {
+        planningEnvelope: envelope,
+        candidatePlan: selectedCandidate!
+      } : {}),
       sourceContract: {
         goal: input.goal,
         acceptanceCriteria: input.acceptanceCriteria ?? [],
         constraints: input.constraints ?? []
       }
     });
-    const drafts = strategySuccessEvents(input.runId, strategy, compiled, dependencies.now);
+    const drafts = strategySuccessEvents(input.runId, breakdown, compiled, dependencies.now);
     events = [...events, ...await append(dependencies, input.runId, input.authority, events.length, drafts)];
     state = foldRun(events);
     await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
-    await writeStrategyDiagnostics(dependencies, input.runId, strategy, input.experimentalCandidate?.sourceHash);
+    await writeStrategyDiagnostics(dependencies, input.runId, strategy, breakdown, input.experimentalCandidate?.sourceHash);
     return state;
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    const failed = await append(dependencies, input.runId, input.authority, events.length, [{
-      eventId: `planning:${input.runId}:failed:${events.length + 1}`, occurredAt: dependencies.now(), type: "planning.failed", payload: { reason }
-    }]);
-    events = [...events, ...failed];
-    state = foldRun(events);
-    await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, events.at(-1)!.eventId);
-    return state;
+    let recordedState: RunProjection | undefined;
+    try {
+      await persistRunFailure({
+        store: new ExecutionFailureReceiptStore({ directory: dependencies.events.directory }),
+        area: "planning",
+        runId: input.runId,
+        operationId: input.authority.operationId,
+        fencingToken: input.authority.fencingToken,
+        error,
+        recordTerminalFailure: async (receipt) => {
+          recordedState = await recordPlanningFailure(input, dependencies, receipt.reason);
+        }
+      });
+    } catch (receiptFailure) {
+      throw new AggregateError(
+        [error, receiptFailure],
+        "Planning failed and its terminal state could not be fully persisted."
+      );
+    }
+    return recordedState!;
   }
 }
 
@@ -226,6 +284,159 @@ export async function revisePlanningV2(
   const next = foldRun([...current, ...appended]);
   await dependencies.snapshots.write(runId, authority, next, next.sequence, appended.at(-1)!.eventId);
   return next;
+}
+
+interface PlannerCandidateEvaluation {
+  validation: ReturnType<typeof validatePlannerCandidateSet>;
+  strategies: Map<string, GranularityStrategyResult>;
+  scores: Map<string, number>;
+  selection: CandidatePlanSelection;
+}
+
+function evaluatePlannerCandidates(input: {
+  envelope: PlanningEnvelope;
+  candidates: readonly CandidatePlan[];
+  condition: ReturnType<typeof resolveGranularityCondition>;
+  repositorySnapshot: RepositorySnapshot;
+}): PlannerCandidateEvaluation {
+  const validation = validatePlannerCandidateSet({ envelope: input.envelope, candidates: input.candidates });
+  const strategies = new Map<string, GranularityStrategyResult>();
+  const scores = new Map<string, number>();
+  for (const candidate of validation.validCandidates) {
+    const strategy = selectGranularityStrategy({
+      condition: input.condition,
+      breakdown: candidate.breakdown,
+      repositorySnapshot: input.repositorySnapshot,
+      config: PILOT_UTILITY_POLICY
+    });
+    strategies.set(candidate.candidateId, strategy);
+    const root = strategy.assessments[candidate.breakdown.root.key];
+    if (root === undefined) throw new Error(`Candidate ${candidate.candidateId} has no root policy assessment.`);
+    scores.set(candidate.candidateId, root.selected === "leaf" ? -root.splitAdvantage : root.splitAdvantage);
+  }
+  const viable = validation.validCandidates.filter((candidate) => !strategies.get(candidate.candidateId)!.requiresSemanticReplan);
+  const selection = viable.length < input.envelope.candidateBudget.minimum
+    ? replanForInsufficientCandidates(input.envelope, input.candidates, validation.diagnostics, viable.length)
+    : selectPlannerCandidate({
+        envelope: input.envelope,
+        candidates: viable,
+        score: (candidate) => scores.get(candidate.candidateId)!
+      });
+  return { validation, strategies, scores, selection };
+}
+
+function replanForInsufficientCandidates(
+  envelope: PlanningEnvelope,
+  candidates: readonly CandidatePlan[],
+  diagnostics: CandidatePlanDiagnostic[],
+  viableCount: number
+): CandidatePlanSelection {
+  const budgetDiagnostic: CandidatePlanDiagnostic = {
+    code: "candidate_budget_not_met",
+    message: `Candidate set has ${viableCount} viable plans but the envelope requires ${envelope.candidateBudget.minimum}..${envelope.candidateBudget.maximum}.`,
+    refs: []
+  };
+  return {
+    kind: "replan_required",
+    diagnosis: {
+      code: "no_structurally_valid_candidate",
+      message: "The bounded candidate set did not contain enough structurally valid, policy-viable alternatives.",
+      rejectedCandidateIds: candidates.map((candidate) => candidate.candidateId).sort(),
+      diagnostics: [...diagnostics, budgetDiagnostic]
+    }
+  };
+}
+
+function candidatesEvaluatedEvent(
+  runId: string,
+  envelope: PlanningEnvelope,
+  candidates: readonly CandidatePlan[],
+  evaluation: PlannerCandidateEvaluation,
+  condition: ReturnType<typeof resolveGranularityCondition>,
+  now: () => string
+): RunEventInput {
+  const validIds = new Set(evaluation.validation.validCandidates.map((candidate) => candidate.candidateId));
+  const evaluations = candidates.map((candidate) => {
+    const strategy = evaluation.strategies.get(candidate.candidateId);
+    const diagnostics: Array<{ code: string; message: string; refs: string[] }> = evaluation.validation.diagnostics
+      .filter((diagnostic) => diagnostic.candidateId === undefined || diagnostic.candidateId === candidate.candidateId)
+      .map(({ code, message, refs }) => ({ code, message, refs }));
+    if (strategy?.requiresSemanticReplan === true) {
+      const root = strategy.assessments[candidate.breakdown.root.key];
+      diagnostics.push({
+        code: "semantic_replan_required",
+        message: root?.rationale ?? "The policy could not identify a viable semantic cut.",
+        refs: root?.evidenceRefs ?? []
+      });
+    }
+    return {
+      candidateId: candidate.candidateId,
+      candidateHash: candidate.candidateHash,
+      candidate: asRecord(candidate),
+      valid: validIds.has(candidate.candidateId) && strategy?.requiresSemanticReplan === false,
+      ...(evaluation.scores.has(candidate.candidateId) ? { score: evaluation.scores.get(candidate.candidateId)! } : {}),
+      gates: candidateGateResults(diagnostics, strategy),
+      diagnostics
+    };
+  });
+  const selection = evaluation.selection.kind === "selected"
+    ? {
+        kind: "selected" as const,
+        candidateId: evaluation.selection.candidate.candidateId,
+        score: evaluation.selection.score,
+        rejectedCandidateIds: evaluation.selection.rejectedCandidateIds,
+        tieBreak: candidateTieBreak(evaluation)
+      }
+    : {
+        kind: "replan_required" as const,
+        reason: evaluation.selection.diagnosis.message,
+        rejectedCandidateIds: evaluation.selection.diagnosis.rejectedCandidateIds,
+        diagnostics: evaluation.selection.diagnosis.diagnostics.map(({ code, message, refs }) => ({ code, message, refs }))
+      };
+  return {
+    eventId: `planning:${runId}:candidates:${evaluations.map((item) => item.candidateHash).sort().join(":")}`,
+    occurredAt: now(),
+    type: "planning.candidates_evaluated",
+    payload: {
+      schemaVersion: 1,
+      envelope: asRecord(envelope),
+      policy: { version: envelope.policyVersion, condition, scoreBasis: "root_split_advantage" },
+      candidates: evaluations,
+      selection
+    }
+  };
+}
+
+function candidateGateResults(
+  diagnostics: Array<{ code: string; message: string; refs: string[] }>,
+  strategy: GranularityStrategyResult | undefined
+): Array<{ gate: string; passed: boolean; diagnosticCodes: string[] }> {
+  const gateCodes: Record<string, string[]> = {
+    identity: ["candidate_not_typed", "candidate_hash_mismatch", "snapshot_mismatch", "goal_digest_mismatch"],
+    scope: ["scope_declaration_incomplete", "scope_outside_grounding", "unknown_scope_unit"],
+    acceptance: ["acceptance_criteria_incomplete", "acceptance_ownership_incomplete", "acceptance_role_mismatch", "unknown_acceptance_intent", "unknown_acceptance_owner", "duplicate_acceptance_owner", "global_owner_must_integrate", "local_owner_must_be_leaf", "leaf_without_local_acceptance"],
+    seams: ["missing_seam_specification", "orphan_seam_specification", "semantic_dependency_without_seam"],
+    obligations: ["contract_obligation_incomplete"],
+    validation: ["leaf_validation_incomplete"],
+    policy_viability: ["semantic_replan_required"]
+  };
+  return Object.entries(gateCodes).map(([gate, codes]) => {
+    const diagnosticCodes = diagnostics.map((diagnostic) => diagnostic.code).filter((code) => codes.includes(code));
+    if (gate === "policy_viability" && strategy?.requiresSemanticReplan === true && !diagnosticCodes.includes("semantic_replan_required")) {
+      diagnosticCodes.push("semantic_replan_required");
+    }
+    return { gate, passed: diagnosticCodes.length === 0, diagnosticCodes };
+  });
+}
+
+function candidateTieBreak(evaluation: PlannerCandidateEvaluation): { kind: "candidate_id"; applied: boolean; contenders: string[] } {
+  if (evaluation.selection.kind !== "selected") return { kind: "candidate_id", applied: false, contenders: [] };
+  const selectedScore = evaluation.selection.score;
+  const contenders = [...evaluation.scores.entries()]
+    .filter(([candidateId, score]) => score === selectedScore && evaluation.strategies.get(candidateId)?.requiresSemanticReplan === false)
+    .map(([candidateId]) => candidateId)
+    .sort();
+  return { kind: "candidate_id", applied: contenders.length > 1, contenders };
 }
 
 function strategySelectedEvent(
@@ -278,11 +489,10 @@ function strategySelectedEvent(
 
 function strategySuccessEvents(
   runId: string,
-  strategy: GranularityStrategyResult,
+  breakdown: WorkBreakdown,
   compiled: CompiledGraphRevision,
   now: () => string
 ): RunEventInput[] {
-  const breakdown = strategy.selectedBreakdown;
   return [
     { eventId: `planning:${breakdown.breakdownId}:completed:${runId}`, occurredAt: now(), type: "planning.completed", payload: { breakdownId: breakdown.breakdownId, breakdown: asRecord(breakdown) } },
     ...compiledEvents(compiled, now)
@@ -336,6 +546,7 @@ async function writeStrategyDiagnostics(
   dependencies: PlanningV2Dependencies,
   runId: string,
   strategy: GranularityStrategyResult,
+  selectedCandidateBreakdown: WorkBreakdown,
   candidateSourceHash?: string
 ): Promise<void> {
   const artifact = {
@@ -345,7 +556,7 @@ async function writeStrategyDiagnostics(
     candidateTreeHash: strategy.candidateTreeHash,
     ...(candidateSourceHash === undefined ? {} : { candidateSourceHash }),
     config: strategy.config,
-    metrics: structuralMetrics(strategy.selectedBreakdown.root),
+    metrics: structuralMetrics(selectedCandidateBreakdown.root),
     generatedAt: new Date().toISOString()
   };
   const target = path.join(dependencies.events.directory, `${runId.replace(/[^A-Za-z0-9._-]/gu, "_")}.granularity-metrics.json`);
@@ -443,6 +654,26 @@ function approvalDecisionId(graphId: string, revision: number): string { return 
 
 async function append(dependencies: PlanningV2Dependencies, runId: string, authority: FencingAuthority, expected: number, events: RunEventInput[]) {
   return dependencies.events.appendFenced(runId, expected, authority, events);
+}
+
+async function recordPlanningFailure(
+  input: Pick<PlanningV2Input, "runId" | "authority">,
+  dependencies: PlanningV2Dependencies,
+  reason: string
+): Promise<RunProjection> {
+  const current = await dependencies.events.load(input.runId);
+  const alreadyRecorded = current.some((event) => event.type === "planning.failed");
+  const persisted = alreadyRecorded
+    ? current
+    : [...current, ...await append(dependencies, input.runId, input.authority, current.length, [{
+      eventId: `planning:${input.runId}:failed:${current.length + 1}`,
+      occurredAt: dependencies.now(),
+      type: "planning.failed",
+      payload: { reason }
+    }])];
+  const state = foldRun(persisted);
+  await dependencies.snapshots.write(input.runId, input.authority, state, state.sequence, persisted.at(-1)!.eventId);
+  return state;
 }
 
 function repositoryEvidence(snapshot: RepositorySnapshot) {

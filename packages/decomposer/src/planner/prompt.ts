@@ -6,6 +6,7 @@ export interface WorkBreakdownPrompt {
 }
 
 export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): WorkBreakdownPrompt {
+  const requestsTypedCandidate = input.candidateRequest !== undefined;
   const evidence = input.repositorySnapshot.evidence
     .map((item) => `- ${item.id} [${item.kind}] ${item.reference}: ${item.observation} (confidence ${item.confidence})`)
     .join("\n");
@@ -19,10 +20,31 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
         `- reason: ${input.granularityFeedback.reason}`,
         ...input.granularityFeedback.evidence.map((item) => `- evidence: ${item}`)
       ].join("\n");
+  const granularityBrief = input.granularityBrief === undefined
+    ? "- none"
+    : [
+        `Policy ${input.granularityBrief.policyVersion} requests ${input.granularityBrief.candidateCount} semantic candidates.`,
+        `Leaf budgets: contextTokens<=${input.granularityBrief.leafBudget.maxContextTokens}, scopePaths<=${input.granularityBrief.leafBudget.maxScopePaths}, plannedPaths<=${input.granularityBrief.leafBudget.maxPlannedPaths}.`,
+        `Acceptance ownership: leaf=${input.granularityBrief.acceptanceOwnership.leaf} seam=${input.granularityBrief.acceptanceOwnership.seam} global=${input.granularityBrief.acceptanceOwnership.global}`,
+        `Hard gates: ${input.granularityBrief.hardGates.join(", ")}.`,
+        `Repository signals: disposition=${input.granularityBrief.repositorySignals.inspectionDisposition}, indexedPaths=${input.granularityBrief.repositorySignals.indexedPathCount}, baselineValidation=${input.granularityBrief.repositorySignals.baselineValidationKinds.join(",") || "none"}.`
+      ].join("\n");
+  const candidateRequest = input.candidateRequest === undefined
+    ? "- single candidate"
+    : [
+        `Candidate ${input.candidateRequest.index} of ${input.candidateRequest.total}.`,
+        input.candidateRequest.priorCandidateHashes.length === 0
+          ? "No prior candidate exists."
+          : `Do not reproduce prior candidate hashes: ${input.candidateRequest.priorCandidateHashes.join(", ")}.`,
+        "Propose a genuinely different semantic cut or return the best cohesive single leaf; do not reshuffle paths to appear different."
+      ].join("\n");
   return {
     system: [
       "You are the semantic Planner for a software implementation system.",
-      "Produce a grounded WorkBreakdown, not an executable graph.",
+      requestsTypedCandidate
+        ? "Produce a grounded CandidatePlan draft with a complete WorkBreakdown and explicit immutable intent contracts, not an executable graph."
+        : "Produce a grounded WorkBreakdown, not an executable graph.",
+      "Follow the Granularity Planning Brief before proposing units; the deterministic policy and Graph Compiler own final eligibility and selection.",
       "A leaf is a cohesive independently verifiable increment and may be a hybrid vertical slice across UI, API, domain, and tests.",
       "Justify composite cuts by cohesion, integration, risk, or verifiability.",
       "Do not target a fixed depth, child count, or layer template.",
@@ -42,7 +64,16 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       "Acceptance intents are a fidelity boundary. Preserve declared Contract, Protocol, or Schema sections verbatim in an acceptance intent; never flatten nested fields, rename literals, or weaken exact formats and thresholds.",
       "For every unit, estimate complexitySignals as 0-10 magnitudes: scopeRadius (breadth of affected files/modules), interfaceImpact (exported contracts or public APIs touched), validationSurface (validation obligations and suites needed), contextTokenMass (code context an agent must hold). Signals are evidence, not decisions: a deterministic policy owns the final leaf/composite boundary and will clamp signals inconsistent with the unit's declared paths.",
       "As soon as you decide each unit, emit one compact JSON line before the final document: {\"type\":\"planning.node\",\"unit\":{\"key\":\"...\",\"parentKey\":null,\"kind\":\"composite|leaf\",\"title\":\"...\",\"objective\":\"...\",\"siblingIndex\":0,\"siblingCount\":1}}.",
-      "Emit planning.node lines in parent-first order. Then emit the complete schema-valid WorkBreakdown JSON. Never invent repository evidence.",
+      requestsTypedCandidate
+        ? "Emit planning.node lines in parent-first order. Then emit one complete schema-valid CandidatePlan draft JSON. Never invent repository evidence."
+        : "Emit planning.node lines in parent-first order. Then emit the complete schema-valid WorkBreakdown JSON. Never invent repository evidence.",
+      ...(requestsTypedCandidate ? [
+        "Candidate metadata is an explicit correctness boundary. Do not infer or omit ownership, seam compatibility, contract consumers, or leaf validation.",
+        "Every acceptance criterion has exactly one compatible owner. Local owners are leaves; global owners are integration composites; seam owners name the units that prove the seam.",
+        "Every cross-leaf seam and contract obligation names its producer, every consumer, materialization, compatibility rule, and observable validation.",
+        "CandidatePlan draft JSON shape:",
+        CANDIDATE_PLAN_DRAFT_OUTPUT_SHAPE
+      ] : []),
       "Resolved human decisions are authoritative requirements. Incorporate them into the WorkBreakdown and do not ask the same question again.",
       "Revise the semantic cut when granularity feedback is supplied. Preserve the objective and acceptance intents, and propose at least two cohesive children only when the evidence supports a real boundary.",
       "Never partition a task by mechanically distributing paths. A path list is evidence of scope, not a semantic decomposition.",
@@ -59,7 +90,11 @@ export function buildWorkBreakdownPrompt(input: WorkBreakdownPlannerInput): Work
       "Resolved human decisions:",
       resolvedDecisions || "- none",
       "Granularity feedback:",
-      granularityFeedback
+      granularityFeedback,
+      "Granularity Planning Brief:",
+      granularityBrief,
+      "Candidate request:",
+      candidateRequest
     ].join("\n")
   };
 }
@@ -84,4 +119,15 @@ const WORK_BREAKDOWN_OUTPUT_SHAPE = `{
   "repositoryEvidence": [{ "id": "...", "kind": "path|symbol|script|stack|diagnostic", "reference": "...", "observation": "...", "confidence": 0.0 }],
   "uncertainties": [{ "id": "...", "description": "...", "impact": "...", "requiresHumanDecision": true, "evidenceIds": ["..."] }],
   "questions": [{ "id": "...", "question": "...", "reason": "...", "impact": "behavior|architecture|scope|risk|acceptance", "options": ["...", "..."], "evidenceIds": ["..."] }]
+}`;
+
+const CANDIDATE_PLAN_DRAFT_OUTPUT_SHAPE = `{
+  "candidateId": "stable semantic candidate id",
+  "breakdown": { "schemaVersion": 2, "...": "the complete WorkBreakdown object described below" },
+  "scopes": [{ "unitKey": "leaf-key", "paths": ["grounded/or/planned/path"] }],
+  "acceptanceCriteria": [{ "intentId": "intent-id", "kind": "leafAcceptance|seamAcceptance|globalAcceptance", "description": "observable criterion" }],
+  "acceptanceOwnership": [{ "intentId": "intent-id", "ownerUnitKey": "unit-key", "role": "local|seam|global", "rationale": "why this unit proves it" }],
+  "seamSpecifications": [{ "seamId": "candidateSeam id", "producerUnitKey": "unit-key", "consumerUnitKeys": ["unit-key"], "compatibility": "exact compatibility rule", "materialization": "logical|files|manifest|commit", "validation": "observable compatibility check" }],
+  "contractObligations": [{ "obligationId": "stable id", "kind": "cross_layer_contract|artifact_requirement|validation", "ownerUnitKey": "unit-key", "producerUnitKey": "unit-key", "consumerUnitKeys": ["unit-key"], "validation": "observable contract check" }],
+  "leafValidations": [{ "unitKey": "leaf-key", "command": "existing grounded validation command", "evidenceRefs": ["repository evidence id"] }]
 }`;

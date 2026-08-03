@@ -3,7 +3,7 @@ import { RunEventSchema, type RunEvent } from "./domain/events.js";
 import { assertLifecycleTransition, type RunLifecycle } from "./domain/lifecycle.js";
 import { INITIAL_RUN_OUTCOMES, type DeliveryApproval, type DeliveryReceipt, type FinalCandidate, type RunOutcomes } from "./domain/outcomes.js";
 import type { AdoptedArtifact } from "./domain/artifacts.js";
-import type { AttemptUsage } from "./domain/events.js";
+import type { AttemptUsage, PlanningCandidateEvaluation, PlanningCandidateSelection } from "./domain/events.js";
 import type { FailureClass } from "./domain/failures.js";
 
 export interface AttemptProjection {
@@ -86,6 +86,28 @@ export interface GranularityStrategyProjection {
   metrics: { maxGraphDepth: number; totalLeafCount: number; averageBranchingFactor: number };
 }
 
+export interface PlanningEnvelopeProjection {
+  schemaVersion: 1;
+  policyVersion: string;
+  repositorySnapshotId: string;
+  goalDigest: string;
+  candidateBudget: { minimum: number; maximum: number };
+  executionBudget: { maxLeafContextTokens: number; maxLeafScopePaths: number; maxParallelism: number };
+  requirements: {
+    requireExplicitAcceptanceOwnership: true;
+    requireCompleteSeamSpecifications: true;
+    requireObservableLeafValidation: true;
+  };
+}
+
+export interface PlanningCandidatesProjection {
+  schemaVersion: 1;
+  envelope: Record<string, unknown>;
+  policy?: { version: string; condition: "A" | "B" | "C"; scoreBasis: string };
+  candidates: PlanningCandidateEvaluation[];
+  selection: PlanningCandidateSelection;
+}
+
 export interface RunProjection {
   runId: string;
   goal: string;
@@ -97,6 +119,8 @@ export interface RunProjection {
   approvedGraphRevision?: number;
   granularity?: GranularityProjection;
   granularityStrategy?: GranularityStrategyProjection;
+  planningEnvelope?: PlanningEnvelopeProjection;
+  planningCandidates?: PlanningCandidatesProjection;
   decisions: Record<string, Decision>;
   stoppedNodeIds?: string[];
   readiness: { readyNodeIds: string[]; pendingDecisionIds: string[]; explanations?: Array<Record<string, unknown>>; effectiveConfig?: Record<string, unknown>; schedulerState?: Record<string, unknown>; budgetAvailable?: boolean; conflictEvidence?: Array<Record<string, unknown>>; evaluatedAt?: string };
@@ -207,6 +231,33 @@ export function reduceRun(state: RunProjection, event: RunEvent): RunProjection 
           evidenceRefs: [...assessment.evidenceRefs]
         }])),
         metrics: { ...event.payload.metrics }
+      };
+      break;
+    case "planning.envelope_created":
+      if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot record planning facts while ${next.lifecycle}.`);
+      next.planningEnvelope = {
+        schemaVersion: event.payload.schemaVersion,
+        policyVersion: event.payload.policyVersion,
+        repositorySnapshotId: event.payload.repositorySnapshotId,
+        goalDigest: event.payload.goalDigest,
+        candidateBudget: { ...event.payload.candidateBudget },
+        executionBudget: { ...event.payload.executionBudget },
+        requirements: { ...event.payload.requirements }
+      };
+      break;
+    case "planning.candidates_evaluated":
+      if (next.lifecycle !== "planning" && next.lifecycle !== "needs_approval" && next.lifecycle !== "running") throw new Error(`Cannot record planning facts while ${next.lifecycle}.`);
+      next.planningCandidates = {
+        schemaVersion: event.payload.schemaVersion,
+        envelope: structuredClone(event.payload.envelope),
+        ...(event.payload.policy === undefined ? {} : { policy: { ...event.payload.policy } }),
+        candidates: event.payload.candidates.map((candidate) => ({
+          ...candidate,
+          candidate: structuredClone(candidate.candidate),
+          gates: candidate.gates.map((gate) => ({ ...gate, diagnosticCodes: [...gate.diagnosticCodes] })),
+          diagnostics: candidate.diagnostics.map((diagnostic) => ({ ...diagnostic, refs: [...diagnostic.refs] }))
+        })),
+        selection: structuredClone(event.payload.selection)
       };
       break;
     case "planning.failed":

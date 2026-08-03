@@ -1546,10 +1546,20 @@ export {
   PLANNING_ENVELOPE_SCHEMA_VERSION,
   PlanningEnvelopeSchema,
   AcceptanceOwnershipSchema,
+  AcceptanceCriterionSchema,
+  CandidateScopeSchema,
   CandidateSeamSpecificationSchema,
+  ContractObligationSchema,
+  LeafValidationSchema,
+  CandidatePlanDraftSchema,
   CandidatePlanSchema,
+  createCandidatePlan,
+  createCandidatePlanFromDraft,
   createPlanningEnvelope,
   validateCandidatePlanSet,
+  validateCandidatePlan,
+  validatePlannerCandidateSet,
+  selectPlannerCandidate,
   selectCandidatePlan
 } from "./planner/planning-envelope.js";
 export type {
@@ -1558,10 +1568,19 @@ export type {
   AcceptanceOwnership,
   CandidateSeamSpecification,
   CandidatePlan,
+  CandidatePlanDraft,
+  CreateCandidatePlanInput,
+  AcceptanceCriterion,
+  CandidateScope,
+  ContractObligation,
+  LeafValidation,
   CandidatePlanDiagnostic,
   CandidatePlanSetInput,
+  PlannerCandidateSetInput,
   CandidatePlanSetValidation,
+  PlannerCandidateSetValidation,
   CandidatePlanSelection,
+  SelectPlannerCandidateInput,
   SelectCandidatePlanInput
 } from "./planner/planning-envelope.js";
 

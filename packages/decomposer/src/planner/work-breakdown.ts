@@ -2,8 +2,15 @@ import { createHash } from "node:crypto";
 import { NonEmptyStringSchema } from "@manyhands/shared";
 import { z } from "zod";
 import { parseJsonObjectCandidates } from "../llm/recursive/json.js";
+import type { GranularityPlanningBrief } from "../granularity/planning-brief.js";
 import { WorkBreakdownSchema, type WorkBreakdown } from "./schema.js";
 import { buildWorkBreakdownPrompt } from "./prompt.js";
+import {
+  CandidatePlanDraftSchema,
+  createCandidatePlanFromDraft,
+  type CandidatePlan,
+  type PlanningEnvelope
+} from "./planning-envelope.js";
 
 export interface PlannerRepositoryEvidence {
   id: string;
@@ -23,8 +30,16 @@ export interface WorkBreakdownPlannerInput {
     evidence: PlannerRepositoryEvidence[];
   };
   questionAnswers?: Record<string, string>;
+  granularityBrief?: GranularityPlanningBrief;
+  candidateRequest?: GranularityCandidateRequest;
   /** Deterministic C feedback requesting a better semantic alternative. */
   granularityFeedback?: GranularityReplanFeedback;
+}
+
+export interface GranularityCandidateRequest {
+  index: number;
+  total: number;
+  priorCandidateHashes: string[];
 }
 
 export interface GranularityReplanFeedback {
@@ -128,6 +143,93 @@ export class WorkBreakdownPlanner {
     this.capacityBackoffMs = nonNegativeInteger(options.capacityBackoffMs ?? 60_000, "capacityBackoffMs");
     this.maxCapacityRetries = nonNegativeInteger(options.maxCapacityRetries ?? 3, "maxCapacityRetries");
     this.cache = options.cache;
+  }
+
+  async planCandidates(
+    input: WorkBreakdownPlannerInput,
+    envelope: PlanningEnvelope,
+    count: number,
+    observer: WorkBreakdownPlanningObserver = {}
+  ): Promise<CandidatePlan[]> {
+    if (!Number.isSafeInteger(count) || count < 2 || count > 3) {
+      throw new RangeError("candidate count must be an integer between 2 and 3.");
+    }
+    const candidates = new Map<string, CandidatePlan>();
+    for (let index = 1; index <= count; index += 1) {
+      const attemptOffset = (index - 1) * this.maxAttempts;
+      const candidate = await this.planCandidate({
+        ...input,
+        candidateRequest: {
+          index,
+          total: count,
+          priorCandidateHashes: [...candidates.keys()]
+        }
+      }, envelope, offsetObserver(observer, attemptOffset));
+      const hash = workBreakdownHash(candidate.breakdown);
+      if (!candidates.has(hash)) candidates.set(hash, candidate);
+    }
+    return [...candidates.values()];
+  }
+
+  private async planCandidate(
+    input: WorkBreakdownPlannerInput,
+    envelope: PlanningEnvelope,
+    observer: WorkBreakdownPlanningObserver
+  ): Promise<CandidatePlan> {
+    const prompt = buildWorkBreakdownPrompt(input);
+    let repairIssues: string[] = [];
+    let capacityRetries = 0;
+    for (let attempt = 1; attempt <= this.maxAttempts; attempt += 1) {
+      await observer.onAttemptStarted?.({ attempt });
+      const discovered = new Set<string>();
+      const reportUnit = async (candidate: WorkBreakdownProgressUnit): Promise<void> => {
+        const unit = WorkBreakdownProgressUnitSchema.parse(candidate);
+        if (discovered.has(unit.key)) return;
+        discovered.add(unit.key);
+        await observer.onUnitDiscovered?.({ attempt, unit });
+      };
+      let nonRetryable = false;
+      try {
+        const outputs = normalizeModelOutputs(await this.model.generate({ ...prompt, attempt, repairIssues, onProgress: reportUnit }));
+        const failures: string[] = [];
+        for (const output of outputs) {
+          const parsed = CandidatePlanDraftSchema.safeParse(restoreCandidateDraft(output, input.repositorySnapshot.evidence));
+          if (parsed.success) {
+            const groundingIssues = planningIssues(parsed.data.breakdown, input);
+            if (groundingIssues.length > 0) {
+              failures.push(...groundingIssues);
+              continue;
+            }
+            for (const unit of progressUnits(parsed.data.breakdown.root)) await reportUnit(unit);
+            return createCandidatePlanFromDraft(envelope, parsed.data);
+          }
+          failures.push(...parsed.error.issues.map((issue) => `${issue.path.join(".") || "root"}: ${issue.message}`));
+        }
+        repairIssues = failures;
+      } catch (error) {
+        if (error instanceof PlanningCapacityError) {
+          capacityRetries += 1;
+          if (capacityRetries > this.maxCapacityRetries) {
+            throw new Error(`Candidate planning ran out of provider capacity after ${this.maxCapacityRetries} throttled retries: ${error.message}`);
+          }
+          await observer.onAttemptFailed?.({
+            attempt,
+            reason: `provider capacity: ${error.message} (throttle ${capacityRetries}/${this.maxCapacityRetries}; attempt not consumed)`
+          });
+          if (this.capacityBackoffMs > 0) await delay(this.capacityBackoffMs * capacityRetries);
+          attempt -= 1;
+          continue;
+        }
+        repairIssues = [error instanceof Error ? error.message : String(error)];
+        nonRetryable = error instanceof NonRetryablePlanningError;
+      }
+      await observer.onAttemptFailed?.({ attempt, reason: repairIssues.join("; ") });
+      if (nonRetryable) {
+        throw new Error(`Candidate planning stopped after ${attempt} attempt${attempt === 1 ? "" : "s"}: ${repairIssues.join("; ")}`);
+      }
+      if (attempt < this.maxAttempts && this.retryDelayMs > 0) await delay(this.retryDelayMs);
+    }
+    throw new Error(`Candidate planning failed after ${this.maxAttempts} attempts: ${repairIssues.join("; ")}`);
   }
 
   async plan(input: WorkBreakdownPlannerInput, observer: WorkBreakdownPlanningObserver = {}): Promise<WorkBreakdown> {
@@ -258,6 +360,19 @@ function restoreCanonicalEvidenceDefinitions(
   return additions.length === 0
     ? output
     : { ...output, repositoryEvidence: [...output.repositoryEvidence, ...additions] };
+}
+
+function restoreCandidateDraft(
+  output: unknown,
+  canonicalEvidence: readonly PlannerRepositoryEvidence[]
+): unknown {
+  if (!isRecord(output) || !Object.hasOwn(output, "breakdown")) return output;
+  return {
+    ...output,
+    breakdown: restoreAcceptanceIntentRequiredDefaults(
+      restoreCanonicalEvidenceDefinitions(output.breakdown, canonicalEvidence)
+    )
+  };
 }
 
 function restoreAcceptanceIntentRequiredDefaults(output: unknown): unknown {
@@ -417,6 +532,30 @@ function isProgressEnvelope(candidate: unknown): boolean {
 
 function planningCacheKey(input: WorkBreakdownPlannerInput): string {
   return `work-breakdown-v2:${createHash("sha256").update(JSON.stringify(canonicalize(input))).digest("hex")}`;
+}
+
+function workBreakdownHash(breakdown: WorkBreakdown): string {
+  return createHash("sha256").update(JSON.stringify(canonicalize(WorkBreakdownSchema.parse(breakdown)))).digest("hex");
+}
+
+function offsetObserver(
+  observer: WorkBreakdownPlanningObserver,
+  attemptOffset: number
+): WorkBreakdownPlanningObserver {
+  const onAttemptStarted = observer.onAttemptStarted;
+  const onUnitDiscovered = observer.onUnitDiscovered;
+  const onAttemptFailed = observer.onAttemptFailed;
+  return {
+    ...(onAttemptStarted === undefined
+      ? {}
+      : { onAttemptStarted: ({ attempt }) => onAttemptStarted({ attempt: attemptOffset + attempt }) }),
+    ...(onUnitDiscovered === undefined
+      ? {}
+      : { onUnitDiscovered: ({ attempt, unit }) => onUnitDiscovered({ attempt: attemptOffset + attempt, unit }) }),
+    ...(onAttemptFailed === undefined
+      ? {}
+      : { onAttemptFailed: ({ attempt, reason }) => onAttemptFailed({ attempt: attemptOffset + attempt, reason }) })
+  };
 }
 
 function canonicalize(value: unknown): unknown {

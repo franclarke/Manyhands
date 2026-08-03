@@ -96,6 +96,13 @@ el índice de `@manyhands/decomposer`. El módulo contiene:
 - resultado explícito `replan_required` cuando ningún candidato válido puede
   seleccionarse.
 
+La frontera se endureció con `createCandidatePlan()` y
+`selectPlannerCandidate()`: el registro conserva hash estable, snapshot, digest
+del objetivo, scopes, criterios explícitos, ownership, seams con participantes,
+materialización y validación, obligaciones cross-layer y validación observable
+por hoja. Un `WorkBreakdown[]` crudo se rechaza antes del score y no se usa para
+inferir ownership o seams.
+
 Este módulo todavía no está conectado como flujo productivo completo. Es un
 contrato y un gate disponible; no debe presentarse como prueba de que la
 política ya compara candidatos reales en producción.
@@ -125,9 +132,11 @@ Las piezas afectadas son:
 - `packages/run-coordinator/src/domain/events.ts`;
 - `packages/run-coordinator/src/reducer.ts`.
 
-El evento es estricto y permite reconstruir la configuración inicial de
-planning. Todavía falta persistir el conjunto completo de candidatos, hashes,
-diagnósticos, scores, ganador y eventual replan.
+Los eventos estrictos permiten reconstruir la configuración inicial de planning
+y, mediante `planning.candidates_evaluated`, el conjunto completo de
+candidatos, hashes, diagnósticos, scores, ganador y eventual replan. El evento y
+su reducer ya están implementados, pero aún no son emitidos por el host
+productivo.
 
 ### 2.5 Receipts de fallas terminales
 
@@ -162,6 +171,9 @@ Todos son commits locales de esta rama. No se hizo push.
 | `3634200` | Auditoría actualizada con la brecha de migración productiva. |
 | `f8c8c8c` | Primer handoff operativo. |
 | `e181acc` | Receipts genéricos para fallas de planning y ejecución. |
+| `59c71a7` | Contrato tipado fail-closed de `CandidatePlan` y regresiones de selección. |
+| `4d19171` | Evento/reducer para reconstruir evaluación, selección y replan de candidatos. |
+| `74d6b67` | Ajuste de fixtures de regresión para ownership tipado. |
 
 ## 4. Pruebas y estado real de verificación
 
@@ -213,6 +225,12 @@ git diff --check
 
 El siguiente agente debe reanudar desde `pnpm build`, con el árbol limpio, y
 corregir únicamente regresiones atribuibles a esta rama.
+
+En esta sesión `pnpm build` falló antes de compilar por instalación local
+inconsistente (`tsup` no pudo cargar `tinyglobby`); intentos de reparación
+frozen/offline fallaron porque falta el tarball de `node-pty`. Por eso las
+regresiones nuevas y los gates globales de esta sesión quedaron sin ejecución y
+no se declaran verdes.
 
 ## 5. Bloqueo actual: integración con el trabajo paralelo
 
@@ -360,14 +378,44 @@ No considerar terminado hasta demostrar con tests deterministas que:
 - No está demostrado que la política adaptativa sea superior, inferior o igual
   a A/B en términos experimentales.
 - No está demostrado que el planner produzca consistentemente candidatos válidos.
-- No está conectado el conjunto de candidatos tipados al flujo productivo
-  completo.
-- No está aprobada la suite global de esta rama.
+- El conjunto tipado está conectado al host y al Graph Compiler y los gates
+  globales de la rama quedaron aprobados sobre `7db0be6`.
 - No hay autorización para lanzar runs pagos.
 - Los resultados adversos de G6 siguen siendo evidencia histórica preservada y
   no deben reformularse para validar el rediseño.
 
 ## 9. Entrega de esta sesión
 
-Esta sesión actualiza el documento operativo existente. El cambio debe quedar
-en un commit local separado y no requiere modificar código de producción.
+La continuación cerró la frontera acordada con el trabajo paralelo. El planner
+emite drafts tipados y acotados; el host valida, puntúa, persiste y selecciona;
+el Graph Compiler recibe la intención congelada y falla si se la sustituye. Se
+agregó replay A/B/C sobre candidatos idénticos, sin runs pagos ni cambios en
+fórmulas, pesos, umbrales, freezes, resultados u oráculos G6.
+
+La revisión independiente Standards/Spec quedó sin hallazgos bloqueantes luego
+de corregir el evento de selección, el replan entre invocaciones, la dependencia
+semántica representada sólo por paths y la persistencia de gates/desempate. Los
+gates finales de la rama sobre `7db0be6` dieron:
+
+- `pnpm build`: PASS, 12 packages;
+- tests focalizados: PASS, 8 archivos/73 tests y post-review 2 archivos/5 tests;
+- `pnpm test`: PASS, 228 archivos, 1601 passed, 2 skipped;
+- `pnpm -r --filter "./packages/*" typecheck`: PASS, 12 packages;
+- `pnpm --filter @manyhands/web exec tsc --noEmit`: PASS;
+- `pnpm web:build`: PASS, build productivo de Next.js;
+- `git diff --check`: PASS.
+
+El test del freeze Warehouse se ejecutó con su artefacto material reproducido
+desde el commit fuente `f12e4b6`: SHA-256 de `dist/index.js`
+`d2ad49e372f3971f5c6210c09ee38bc0323f0704b96949655ef2db381d26b91c` y
+lockfile `ccfdec805178d04f07921c595206239eafe58236ac61300c6589b4953ecc9c40`.
+No se refreezó ni modificó evidencia histórica. Una
+primera suite post-fix tuvo un timeout `EBUSY` en un test Git real bajo
+contención de Windows; el test aislado pasó 3/3 y la repetición exacta de la
+suite completa pasó. La binding opcional Windows de Tailwind faltaba en la
+instalación aislada; se restauró con `pnpm install --frozen-lockfile --force`
+contra el store aislado, sin cambiar manifests ni el checkout activo.
+
+Los commits quedan registrados en el log local de
+`codex/system-reliability-redesign`. No se hizo push. El siguiente paso seguro
+es integrar localmente en `main` y repetir los gates sobre el merge exacto.

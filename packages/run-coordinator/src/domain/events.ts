@@ -23,6 +23,52 @@ export const AttemptUsageSchema = z.object({
 
 export type AttemptUsage = z.infer<typeof AttemptUsageSchema>;
 
+export const PlanningCandidateDiagnosticSchema = z.object({
+  code: NonEmptyStringSchema,
+  message: NonEmptyStringSchema,
+  refs: z.array(NonEmptyStringSchema)
+}).strict();
+
+export type PlanningCandidateDiagnostic = z.infer<typeof PlanningCandidateDiagnosticSchema>;
+
+export const PlanningCandidateEvaluationSchema = z.object({
+  candidateId: EntityIdSchema,
+  candidateHash: NonEmptyStringSchema,
+  candidate: z.record(z.unknown()),
+  valid: z.boolean(),
+  score: z.number().finite().optional(),
+  gates: z.array(z.object({
+    gate: NonEmptyStringSchema,
+    passed: z.boolean(),
+    diagnosticCodes: z.array(NonEmptyStringSchema)
+  }).strict()).default([]),
+  diagnostics: z.array(PlanningCandidateDiagnosticSchema)
+}).strict();
+
+export type PlanningCandidateEvaluation = z.infer<typeof PlanningCandidateEvaluationSchema>;
+
+const PlanningCandidateSelectionSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("selected"),
+    candidateId: EntityIdSchema,
+    score: z.number().finite(),
+    rejectedCandidateIds: z.array(EntityIdSchema),
+    tieBreak: z.object({
+      kind: z.literal("candidate_id"),
+      applied: z.boolean(),
+      contenders: z.array(EntityIdSchema)
+    }).strict().optional()
+  }).strict(),
+  z.object({
+    kind: z.literal("replan_required"),
+    reason: NonEmptyStringSchema,
+    rejectedCandidateIds: z.array(EntityIdSchema),
+    diagnostics: z.array(PlanningCandidateDiagnosticSchema)
+  }).strict()
+]);
+
+export type PlanningCandidateSelection = z.infer<typeof PlanningCandidateSelectionSchema>;
+
 const SchedulerReasonSchema = z.object({ code: NonEmptyStringSchema }).passthrough();
 const SchedulerExplanationSchema = z.object({
   nodeId: EntityIdSchema,
@@ -181,6 +227,41 @@ export const RunEventSchema = z.discriminatedUnion("type", [
       totalLeafCount: z.number().int().positive(),
       averageBranchingFactor: z.number().nonnegative()
     }).strict()
+  }).strict()),
+  event("planning.envelope_created", z.object({
+    schemaVersion: z.literal(1),
+    policyVersion: NonEmptyStringSchema,
+    repositorySnapshotId: NonEmptyStringSchema,
+    goalDigest: NonEmptyStringSchema,
+    candidateBudget: z.object({
+      minimum: z.number().int().positive(),
+      maximum: z.number().int().positive().max(8)
+    }).strict(),
+    executionBudget: z.object({
+      maxLeafContextTokens: z.number().int().positive(),
+      maxLeafScopePaths: z.number().int().positive(),
+      maxParallelism: z.number().int().positive()
+    }).strict(),
+    requirements: z.object({
+      requireExplicitAcceptanceOwnership: z.literal(true),
+      requireCompleteSeamSpecifications: z.literal(true),
+      requireObservableLeafValidation: z.literal(true)
+    }).strict()
+  }).strict().superRefine((envelope, context) => {
+    if (envelope.candidateBudget.minimum > envelope.candidateBudget.maximum) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "candidateBudget.minimum must not exceed candidateBudget.maximum" });
+    }
+  })),
+  event("planning.candidates_evaluated", z.object({
+    schemaVersion: z.literal(1),
+    envelope: z.record(z.unknown()),
+    policy: z.object({
+      version: NonEmptyStringSchema,
+      condition: z.enum(["A", "B", "C"]),
+      scoreBasis: NonEmptyStringSchema
+    }).strict().optional(),
+    candidates: z.array(PlanningCandidateEvaluationSchema).min(1),
+    selection: PlanningCandidateSelectionSchema
   }).strict()),
   event("planning.completed", z.object({ breakdownId: EntityIdSchema, breakdown: z.record(z.unknown()) }).strict()),
   event("graph.compiled", z.object({ graphId: EntityIdSchema, revision: z.number().int().positive(), graph: z.record(z.unknown()), contracts: z.array(z.record(z.unknown())), review: z.record(z.unknown()), trace: z.record(z.unknown()) }).strict()),

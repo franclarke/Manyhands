@@ -41,6 +41,7 @@ describe("blocked planning candidate replay", () => {
       events, snapshots,
       inspect: async () => bookingSnapshot(),
       plan,
+      planCandidates: async () => { throw new Error("Candidate planning must not run during replay."); },
       compile: (input) => compileGraphRevision(input, compilerDependencies),
       nodeIdFor: (key) => compilerDependencies.idFor("node", key),
       now: () => "2026-07-24T01:00:00.000Z"
@@ -76,6 +77,7 @@ describe("blocked planning candidate replay", () => {
       events, snapshots,
       inspect: async () => bookingSnapshot(),
       plan: async () => breakdown,
+      planCandidates: async () => { throw new Error("Candidate planning must not run during replay."); },
       compile: (input) => compileGraphRevision(input, compilerDependencies),
       now: () => "2026-07-24T01:00:00.000Z"
     });

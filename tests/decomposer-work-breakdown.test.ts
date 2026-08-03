@@ -5,6 +5,8 @@ import {
   WorkBreakdownPlanner,
   WorkBreakdownSchema,
   buildWorkBreakdownPrompt,
+  createPlanningEnvelope,
+  type CandidatePlanDraft,
   type WorkBreakdown
 } from "@manyhands/decomposer";
 
@@ -63,6 +65,40 @@ describe("WorkBreakdown", () => {
       retryDelayMs: 0
     });
     await expect(failing.plan(input)).rejects.toThrow(/after 2 attempts/i);
+  });
+
+  it("requests bounded semantic alternatives and deduplicates repeated candidates", async () => {
+    const first = fixture();
+    const second = structuredClone(first);
+    second.breakdownId = "booking-breakdown-alternative";
+    second.root.objective = "Deliver booking creation through a contract-first semantic cut";
+    const generate = vi.fn()
+      .mockResolvedValueOnce(candidateDraft(first, "candidate-1"))
+      .mockResolvedValueOnce(candidateDraft(second, "candidate-2"))
+      .mockResolvedValueOnce(candidateDraft(first, "candidate-3"));
+    const planner = new WorkBreakdownPlanner({
+      model: { generate },
+      maxAttempts: 1,
+      retryDelayMs: 0
+    });
+
+    const envelope = createPlanningEnvelope({
+      policyVersion: "test-policy",
+      goal: plannerInput().goal,
+      repositorySnapshot: { snapshotId: plannerInput().repositorySnapshot.snapshotId }
+    });
+    const candidates = await planner.planCandidates(plannerInput(), envelope, 3);
+
+    expect(candidates.map((candidate) => candidate.breakdown.breakdownId)).toEqual([
+      "booking-breakdown",
+      "booking-breakdown-alternative"
+    ]);
+    expect(generate).toHaveBeenCalledTimes(3);
+    expect(generate.mock.calls.map((call) => call[0].user)).toEqual([
+      expect.stringContaining("Candidate 1 of 3"),
+      expect.stringMatching(/Candidate 2 of 3[\s\S]*Do not reproduce prior candidate hashes:/u),
+      expect.stringMatching(/Candidate 3 of 3[\s\S]*Do not reproduce prior candidate hashes:/u)
+    ]);
   });
 
   it("restores model-omitted evidence definitions from the canonical snapshot", async () => {
@@ -389,6 +425,51 @@ describe("WorkBreakdown", () => {
     expect(prompt.system).toContain("at least two cohesive children");
   });
 
+  it("places the policy brief and candidate identity in the model prompt", () => {
+    const prompt = buildWorkBreakdownPrompt({
+      ...plannerInput(),
+      granularityBrief: {
+        schemaVersion: 1,
+        policyVersion: "adaptive-utility/test",
+        candidateCount: 3,
+        leafBudget: {
+          maxContextTokens: 24_000,
+          maxScopePaths: 40,
+          maxPlannedPaths: 12
+        },
+        acceptanceOwnership: {
+          leaf: "Reference a local intent only from the leaf that can prove it.",
+          seam: "Reference a seam intent from exactly its producer and consumers.",
+          global: "Reference an integration intent only from its owning composite."
+        },
+        hardGates: [
+          "acceptance_owner",
+          "cross_leaf_materialization",
+          "local_validation",
+          "compiler_approvable"
+        ],
+        repositorySignals: {
+          snapshotId: "snapshot-1",
+          inspectionDisposition: "complete",
+          indexedPathCount: 1,
+          baselineValidationKinds: ["test", "typecheck"]
+        }
+      },
+      candidateRequest: {
+        index: 2,
+        total: 3,
+        priorCandidateHashes: ["hash-a"]
+      }
+    });
+
+    expect(prompt.system).toContain("Follow the Granularity Planning Brief before proposing units");
+    expect(prompt.user).toContain("Policy adaptive-utility/test");
+    expect(prompt.user).toContain("contextTokens<=24000, scopePaths<=40, plannedPaths<=12");
+    expect(prompt.user).toContain("Hard gates: acceptance_owner, cross_leaf_materialization, local_validation, compiler_approvable");
+    expect(prompt.user).toContain("Candidate 2 of 3");
+    expect(prompt.user).toContain("Do not reproduce prior candidate hashes: hash-a");
+  });
+
   it("does not mistake streamed planning-node envelopes for complete WorkBreakdown documents", async () => {
     const planner = new WorkBreakdownPlanner({
       model: {
@@ -467,6 +548,47 @@ function plannerInput() {
       inspectionDisposition: "complete" as const,
       evidence: [{ id: "route-evidence", kind: "path" as const, reference: "src/routes/bookings.ts", observation: "Existing booking route", confidence: 1 }]
     }
+  };
+}
+
+function candidateDraft(breakdown: WorkBreakdown, candidateId: string): CandidatePlanDraft {
+  const leaves = breakdown.root.kind === "leaf" ? [breakdown.root] : breakdown.root.children;
+  return {
+    candidateId,
+    breakdown,
+    scopes: leaves.map((unit) => ({ unitKey: unit.key, paths: ["src/routes/bookings.ts"] })),
+    acceptanceCriteria: breakdown.acceptanceIntents.map((intent) => ({
+      intentId: intent.id,
+      kind: "leafAcceptance",
+      description: intent.description
+    })),
+    acceptanceOwnership: breakdown.acceptanceIntents.map((intent) => ({
+      intentId: intent.id,
+      ownerUnitKey: leaves[0]!.key,
+      role: "local",
+      rationale: "The primary vertical slice proves the observable outcome."
+    })),
+    seamSpecifications: breakdown.candidateSeams.map((seam) => ({
+      seamId: seam.id,
+      producerUnitKey: seam.producerUnitKey,
+      consumerUnitKeys: seam.consumerUnitKeys,
+      compatibility: seam.specification,
+      materialization: "files",
+      validation: "Focused integration validation proves compatibility."
+    })),
+    contractObligations: breakdown.candidateSeams.map((seam) => ({
+      obligationId: `${seam.id}-contract`,
+      kind: "cross_layer_contract",
+      ownerUnitKey: seam.producerUnitKey,
+      producerUnitKey: seam.producerUnitKey,
+      consumerUnitKeys: seam.consumerUnitKeys,
+      validation: "Focused integration validation proves compatibility."
+    })),
+    leafValidations: leaves.map((unit) => ({
+      unitKey: unit.key,
+      command: "pnpm test",
+      evidenceRefs: ["route-evidence"]
+    }))
   };
 }
 
