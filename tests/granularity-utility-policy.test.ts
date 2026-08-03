@@ -103,6 +103,12 @@ describe("C utility strategy selection", () => {
       { intentId: "intent-b", ownerUnitKey: "root", role: "seam", seamId: "producer-consumer", rationale: "The root validates the seam." },
       { intentId: "intent-c", ownerUnitKey: "root", role: "global", rationale: "The root proves the integrated result." }
     ];
+    breakdown.seamSpecifications = [{
+      seamId: "producer-consumer",
+      delivery: "contract_only",
+      compatibility: "Consumer binds the producer API.",
+      validation: "The contract is validated at the integration boundary."
+    }];
 
     const selected = selectGranularityStrategy({
       condition: "A",
@@ -113,6 +119,7 @@ describe("C utility strategy selection", () => {
 
     expect(selected.root.kind).toBe("leaf");
     expect(selected.candidateSeams).toEqual([]);
+    expect(selected.seamSpecifications).toEqual([]);
     expect(selected.acceptanceOwnership).toEqual([
       { intentId: "intent-a", ownerUnitKey: "root", role: "local", rationale: "Producer proves its local behavior." },
       { intentId: "intent-b", ownerUnitKey: "root", role: "local", rationale: "The root validates the seam." },

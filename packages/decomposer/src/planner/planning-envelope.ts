@@ -108,6 +108,7 @@ export interface CandidatePlanDiagnostic {
     | "acceptance_ownership_incomplete"
     | "unknown_acceptance_intent"
     | "unknown_acceptance_owner"
+    | "acceptance_owner_missing_intent"
     | "duplicate_acceptance_owner"
     | "global_owner_must_integrate"
     | "global_acceptance_leaked_to_leaf"
@@ -115,6 +116,8 @@ export interface CandidatePlanDiagnostic {
     | "missing_seam_specification"
     | "orphan_seam_specification"
     | "missing_materialized_seam_artifact"
+    | "unknown_acceptance_seam"
+    | "seam_owner_must_be_lca"
     | "compiler_rejected"
     | "leaf_without_local_acceptance";
   message: string;
@@ -246,6 +249,10 @@ function validateCandidate(envelope: PlanningEnvelope, candidate: CandidatePlan)
   const unitByKey = new Map(units.map((unit) => [unit.key, unit]));
   const parentByKey = parentMap(candidate.breakdown.root);
   const intents = new Set(candidate.breakdown.acceptanceIntents.map((intent) => intent.id));
+  const seamsById = new Map(candidate.breakdown.candidateSeams.map((seam) => [seam.id, seam]));
+  const specificationBySeamId = new Map(
+    (candidate.breakdown.seamSpecifications ?? []).map((specification) => [specification.seamId, specification])
+  );
   const ownershipByIntent = new Map<string, AcceptanceOwnership[]>();
   const acceptanceOwnership = candidate.breakdown.acceptanceOwnership ?? [];
   for (const ownership of acceptanceOwnership) {
@@ -257,6 +264,39 @@ function validateCandidate(envelope: PlanningEnvelope, candidate: CandidatePlan)
     if (owner === undefined) {
       diagnostics.push(issue(candidate, "unknown_acceptance_owner", `Ownership references unknown unit ${ownership.ownerUnitKey}.`, [ownership.ownerUnitKey]));
       continue;
+    }
+    if (!owner.acceptanceIntentIds.includes(ownership.intentId)) {
+      diagnostics.push(issue(
+        candidate,
+        "acceptance_owner_missing_intent",
+        `Acceptance owner ${ownership.ownerUnitKey} does not declare intent ${ownership.intentId}.`,
+        [ownership.intentId, ownership.ownerUnitKey]
+      ));
+    }
+    if (ownership.role === "seam") {
+      const seam = ownership.seamId === undefined ? undefined : seamsById.get(ownership.seamId);
+      if (seam === undefined) {
+        diagnostics.push(issue(
+          candidate,
+          "unknown_acceptance_seam",
+          `Seam ownership for ${ownership.intentId} references unknown seam ${ownership.seamId ?? "unknown"}.`,
+          [ownership.intentId, ownership.seamId ?? "unknown"]
+        ));
+      } else {
+        const expectedOwner = lowestCommonAncestor(
+          [seam.producerUnitKey, ...seam.consumerUnitKeys],
+          parentByKey,
+          candidate.breakdown.root.key
+        );
+        if (ownership.ownerUnitKey !== expectedOwner) {
+          diagnostics.push(issue(
+            candidate,
+            "seam_owner_must_be_lca",
+            `Seam ${seam.id} must be owned by lowest common ancestor ${expectedOwner}, not ${ownership.ownerUnitKey}.`,
+            [seam.id, expectedOwner]
+          ));
+        }
+      }
     }
     if (ownership.role === "global" && owner.kind !== "composite") {
       diagnostics.push(issue(candidate, "global_owner_must_integrate", `Global acceptance ${ownership.intentId} must be owned by an integration composite, not ${ownership.ownerUnitKey}.`, [ownership.intentId, ownership.ownerUnitKey]));
@@ -289,18 +329,15 @@ function validateCandidate(envelope: PlanningEnvelope, candidate: CandidatePlan)
       diagnostics.push(issue(candidate, "acceptance_ownership_incomplete", `Acceptance intent ${intent.id} has no explicit owner.`, [intent.id]));
       continue;
     }
-    if (owners.filter((owner) => owner.role === "local").length > 1 || owners.filter((owner) => owner.role === "global").length > 1) {
-      diagnostics.push(issue(candidate, "duplicate_acceptance_owner", `Acceptance intent ${intent.id} has incompatible owners for the same role.`, [intent.id]));
+    if (owners.length > 1) {
+      diagnostics.push(issue(candidate, "duplicate_acceptance_owner", `Acceptance intent ${intent.id} must have exactly one explicit owner.`, [intent.id]));
     }
   }
   for (const unit of units.filter((unit) => unit.kind === "leaf")) {
     const hasLocalAcceptance = acceptanceOwnership.some((ownership) => ownership.ownerUnitKey === unit.key && ownership.role === "local");
     if (!hasLocalAcceptance) diagnostics.push(issue(candidate, "leaf_without_local_acceptance", `Leaf ${unit.key} has no local acceptance ownership.`, [unit.key]));
   }
-  const seams = new Set(candidate.breakdown.candidateSeams.map((seam) => seam.id));
-  const specificationBySeamId = new Map(
-    (candidate.breakdown.seamSpecifications ?? []).map((specification) => [specification.seamId, specification])
-  );
+  const seams = new Set(seamsById.keys());
   const specifications = new Set(specificationBySeamId.keys());
   for (const seamId of seams) if (!specifications.has(seamId)) diagnostics.push(issue(candidate, "missing_seam_specification", `Seam ${seamId} has no compatibility and validation specification.`, [seamId]));
   for (const seamId of specifications) if (!seams.has(seamId)) diagnostics.push(issue(candidate, "orphan_seam_specification", `Seam specification ${seamId} has no candidate seam.`, [seamId]));
@@ -344,6 +381,26 @@ function parentMap(root: WorkUnit): Map<string, string> {
   };
   visit(root);
   return output;
+}
+
+function lowestCommonAncestor(
+  unitKeys: readonly string[],
+  parentByKey: ReadonlyMap<string, string>,
+  rootKey: string
+): string {
+  const firstChain = ancestorChain(unitKeys[0] ?? rootKey, parentByKey);
+  const chains = unitKeys.map((key) => new Set(ancestorChain(key, parentByKey)));
+  return firstChain.find((candidate) => chains.every((chain) => chain.has(candidate))) ?? rootKey;
+}
+
+function ancestorChain(unitKey: string, parentByKey: ReadonlyMap<string, string>): string[] {
+  const chain: string[] = [];
+  let current: string | undefined = unitKey;
+  while (current !== undefined) {
+    chain.push(current);
+    current = parentByKey.get(current);
+  }
+  return chain;
 }
 
 function isAncestor(

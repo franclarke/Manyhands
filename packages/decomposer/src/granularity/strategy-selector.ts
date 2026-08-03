@@ -93,18 +93,22 @@ export function selectGranularityStrategy(
     selectedKeys,
     parentByKey
   );
+  const survivingSeamIds = new Set(candidateSeams.map((seam) => seam.id));
   const remapped = WorkBreakdownSchema.parse({
     ...breakdown,
     root: selected.unit,
     candidateArtifacts,
     candidateSeams,
+    ...(breakdown.seamSpecifications === undefined ? {} : {
+      seamSpecifications: breakdown.seamSpecifications.filter((specification) => survivingSeamIds.has(specification.seamId))
+    }),
     ...(breakdown.acceptanceOwnership === undefined ? {} : {
       acceptanceOwnership: remapAcceptanceOwnership(
         breakdown.acceptanceOwnership,
         selected.unit,
         selectedKeys,
         parentByKey,
-        new Set(candidateSeams.map((seam) => seam.id))
+        survivingSeamIds
       )
     })
   });

@@ -128,6 +128,105 @@ describe("planning envelope and candidate plans", () => {
     ]));
   });
 
+  it("rejects an acceptance intent with owners in more than one role", () => {
+    const breakdown = bookingBreakdown();
+    const candidate = validCandidate("candidate-duplicate-owner", breakdown);
+    candidate.breakdown.acceptanceOwnership!.push({
+      intentId: "domain-ready",
+      ownerUnitKey: "booking",
+      role: "global",
+      rationale: "The integration root also claims the same intent."
+    });
+    const envelope = createPlanningEnvelope({
+      policyVersion: "reliability/1.0.0",
+      goal: breakdown.objective,
+      repositorySnapshot: bookingSnapshot(),
+      maxCandidatePlans: 1
+    });
+
+    const validation = validateCandidatePlanSet({ envelope, candidates: [candidate] });
+
+    expect(validation.validCandidates).toEqual([]);
+    expect(validation.diagnostics).toContainEqual(expect.objectContaining({
+      candidateId: "candidate-duplicate-owner",
+      code: "duplicate_acceptance_owner",
+      refs: ["domain-ready"]
+    }));
+  });
+
+  it("rejects explicit ownership when the owner unit does not declare the intent", () => {
+    const breakdown = bookingBreakdown();
+    const candidate = validCandidate("candidate-owner-mismatch", breakdown);
+    const ownership = candidate.breakdown.acceptanceOwnership!.find((item) => item.intentId === "domain-ready");
+    if (ownership === undefined) throw new Error("expected domain ownership fixture");
+    ownership.ownerUnitKey = "api";
+    const envelope = createPlanningEnvelope({
+      policyVersion: "reliability/1.0.0",
+      goal: breakdown.objective,
+      repositorySnapshot: bookingSnapshot(),
+      maxCandidatePlans: 1
+    });
+
+    const validation = validateCandidatePlanSet({ envelope, candidates: [candidate] });
+
+    expect(validation.validCandidates).toEqual([]);
+    expect(validation.diagnostics).toContainEqual(expect.objectContaining({
+      candidateId: "candidate-owner-mismatch",
+      code: "acceptance_owner_missing_intent",
+      refs: ["domain-ready", "api"]
+    }));
+  });
+
+  it("rejects seam ownership that references an unknown seam", () => {
+    const breakdown = bookingBreakdown();
+    const candidate = validCandidate("candidate-unknown-seam", breakdown);
+    const ownership = candidate.breakdown.acceptanceOwnership!.find((item) => item.intentId === "domain-ready");
+    if (ownership === undefined) throw new Error("expected domain ownership fixture");
+    ownership.ownerUnitKey = "booking";
+    ownership.role = "seam";
+    ownership.seamId = "missing-seam";
+    const envelope = createPlanningEnvelope({
+      policyVersion: "reliability/1.0.0",
+      goal: breakdown.objective,
+      repositorySnapshot: bookingSnapshot(),
+      maxCandidatePlans: 1
+    });
+
+    const validation = validateCandidatePlanSet({ envelope, candidates: [candidate] });
+
+    expect(validation.validCandidates).toEqual([]);
+    expect(validation.diagnostics).toContainEqual(expect.objectContaining({
+      candidateId: "candidate-unknown-seam",
+      code: "unknown_acceptance_seam",
+      refs: ["domain-ready", "missing-seam"]
+    }));
+  });
+
+  it("rejects seam ownership outside the seam's lowest common ancestor", () => {
+    const breakdown = bookingBreakdown();
+    const candidate = validCandidate("candidate-wrong-seam-owner", breakdown);
+    const ownership = candidate.breakdown.acceptanceOwnership!.find((item) => item.intentId === "domain-ready");
+    if (ownership === undefined) throw new Error("expected domain ownership fixture");
+    ownership.ownerUnitKey = "domain";
+    ownership.role = "seam";
+    ownership.seamId = "booking-shape";
+    const envelope = createPlanningEnvelope({
+      policyVersion: "reliability/1.0.0",
+      goal: breakdown.objective,
+      repositorySnapshot: bookingSnapshot(),
+      maxCandidatePlans: 1
+    });
+
+    const validation = validateCandidatePlanSet({ envelope, candidates: [candidate] });
+
+    expect(validation.validCandidates).toEqual([]);
+    expect(validation.diagnostics).toContainEqual(expect.objectContaining({
+      candidateId: "candidate-wrong-seam-owner",
+      code: "seam_owner_must_be_lca",
+      refs: ["booking-shape", "booking"]
+    }));
+  });
+
   it("rejects a global integration criterion copied into a descendant leaf", () => {
     const breakdown = bookingBreakdown();
     breakdown.acceptanceIntents.push({

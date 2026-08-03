@@ -116,15 +116,28 @@ export function compileContractBundles(input: {
   });
 
   const intents = new Map(input.breakdown.acceptanceIntents.map((intent) => [intent.id, intent]));
+  const explicitIntentIdsByOwner = new Map<string, string[]>();
   const acceptanceOwnerByIntentId = input.breakdown.acceptanceOwnership === undefined
     ? allocateAcceptanceIntents(input.breakdown.root)
-    : Object.fromEntries(input.breakdown.acceptanceOwnership.map((ownership) => [ownership.intentId, ownership.ownerUnitKey]));
+    : input.breakdown.acceptanceOwnership.reduce<Record<string, string>>((owners, ownership) => {
+      if (owners[ownership.intentId] !== undefined) {
+        throw new Error(`Acceptance intent ${ownership.intentId} has more than one explicit owner.`);
+      }
+      owners[ownership.intentId] = ownership.ownerUnitKey;
+      const intentIds = explicitIntentIdsByOwner.get(ownership.ownerUnitKey) ?? [];
+      intentIds.push(ownership.intentId);
+      explicitIntentIdsByOwner.set(ownership.ownerUnitKey, intentIds);
+      return owners;
+    }, {});
   for (const intent of input.breakdown.acceptanceIntents) {
     acceptanceOwnerByIntentId[intent.id] ??= input.breakdown.root.key;
   }
   const bundles = units.map((unit) => {
     const nodeId = requireNodeId(input.nodeIdByUnitKey, unit.key);
-    const userCriteria = unit.acceptanceIntentIds
+    const ownedIntentIds = input.breakdown.acceptanceOwnership === undefined
+      ? unit.acceptanceIntentIds
+      : explicitIntentIdsByOwner.get(unit.key) ?? [];
+    const userCriteria = ownedIntentIds
       .filter((intentId) => acceptanceOwnerByIntentId[intentId] === unit.key)
       .map((intentId) => {
       const intent = intents.get(intentId);
