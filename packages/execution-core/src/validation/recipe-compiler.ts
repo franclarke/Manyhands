@@ -60,12 +60,7 @@ export function compileValidationRecipe(input: {
       unmaterializedObligationIds.push(obligation.id);
       continue;
     }
-    const selectors = obligation.evidence.kind === "focused_command"
-      ? obligation.evidence.selectors
-      : obligation.evidence.kind === "shared_command"
-        ? obligation.evidence.references
-        : [];
-    const command = { command: capability.command, args: [...capability.args, ...selectors], timeoutMs: 60_000, cwd: "worktree" as const };
+    const command = commandForObligation({ capability, capabilities: input.capabilities, obligation });
     const commandDigest = createHash("sha256").update(JSON.stringify(command)).digest("hex");
     const evidenceKind = evidenceKindForBinding(obligation.evidence);
     const attribution: ValidationRecipeAttribution = {
@@ -110,6 +105,54 @@ export function compileValidationRecipe(input: {
     steps,
     unmaterializedObligationIds
   };
+}
+
+function commandForObligation(input: {
+  capability: RepositoryCapabilities["baselineCommands"][number];
+  capabilities: RepositoryCapabilities;
+  obligation: ValidationObligation;
+}): ExecutionValidationCommand {
+  const binding = input.obligation.evidence;
+  const selectors = binding?.kind === "focused_command"
+    ? binding.selectors
+    : binding?.kind === "shared_command"
+      ? binding.references
+      : [];
+  if (selectors.length === 0) {
+    return { command: input.capability.command, args: [...input.capability.args], timeoutMs: 60_000, cwd: "worktree" };
+  }
+
+  const runner = focusedRunnerTokens(input.capabilities.scripts[input.capability.sourceScript]);
+  if (runner === undefined) {
+    return { command: input.capability.command, args: [...input.capability.args, ...selectors], timeoutMs: 60_000, cwd: "worktree" };
+  }
+
+  return {
+    command: input.capability.command,
+    args: [
+      ...packageExecPrefix(input.capability.command),
+      ...(input.capability.command === runner[0] ? runner.slice(1) : runner),
+      ...selectors
+    ],
+    timeoutMs: 60_000,
+    cwd: "worktree"
+  };
+}
+
+function focusedRunnerTokens(script: string | undefined): string[] | undefined {
+  if (script === undefined) return undefined;
+  const tokens = script.match(/"[^"]*"|'[^']*'|[^\s]+/gu)?.map((token) => token.replace(/^['"]|['"]$/gu, "")) ?? [];
+  if (tokens[0] === "node" && tokens[1] === "--test") return tokens.slice(0, 2);
+  if (["vitest", "jest", "mocha", "ava"].includes(tokens[0] ?? "")) return tokens.slice(0, 2);
+  if (tokens[0] === "bun" && tokens[1] === "test") return tokens.slice(0, 2);
+  return undefined;
+}
+
+function packageExecPrefix(command: string): string[] {
+  if (command === "npm") return ["exec", "--"];
+  if (command === "bun") return ["x"];
+  if (command === "pnpm" || command === "yarn") return ["exec"];
+  return [];
 }
 
 function validSharedEvidence(obligation: ValidationObligation, obligations: readonly ValidationObligation[]): boolean {

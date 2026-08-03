@@ -37,7 +37,7 @@ describe("compileValidationRecipe", () => {
     expect(recipe.steps.map((step) => step.evidenceKind)).toEqual(["static_analysis", "test_result"]);
     expect(recipe.steps.map((step) => step.command)).toEqual([
       { command: "pnpm", args: ["typecheck"], timeoutMs: 60_000, cwd: "worktree" },
-      { command: "pnpm", args: ["test", "tests/booking.test.ts"], timeoutMs: 60_000, cwd: "worktree" }
+      { command: "pnpm", args: ["exec", "vitest", "run", "tests/booking.test.ts"], timeoutMs: 60_000, cwd: "worktree" }
     ]);
     expect(recipe.unmaterializedObligationIds).toEqual([]);
     expect(recipe.baselineCommit).toBe("base");
@@ -81,6 +81,28 @@ describe("compileValidationRecipe", () => {
 
     expect(recipe.steps[0]?.evidenceKind).toBe("test_result");
     expect(recipe.steps[0]?.attributions?.[0]?.evidenceKind).toBe("test_result");
+  });
+
+  it("runs focused selectors through a node test script instead of appending them to its glob arguments", () => {
+    const nodeTestCapabilities: RepositoryCapabilities = {
+      ...capabilities,
+      scripts: { test: "node --test src/**/*.test.ts" },
+      baselineCommands: [{ kind: "test", command: "pnpm", args: ["test"], sourceScript: "test" }]
+    };
+
+    const recipe = compileValidationRecipe({
+      contract: { ...contract, obligations: [contract.obligations[1]!] },
+      capabilities: nodeTestCapabilities,
+      repositorySnapshotId: "snapshot-1",
+      candidateCommit: "abc"
+    });
+
+    expect(recipe.steps[0]?.command).toEqual({
+      command: "pnpm",
+      args: ["exec", "node", "--test", "tests/booking.test.ts"],
+      timeoutMs: 60_000,
+      cwd: "worktree"
+    });
   });
 
 });

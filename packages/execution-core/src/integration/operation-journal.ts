@@ -173,7 +173,8 @@ export class JsonIntegrationOperationJournal implements IntegrationOperationJour
   }
 
   private pathFor(runId: string, parentNodeId: string, attemptId?: string): string {
-    return join(this.directory, `${safeLockName(runId)}-${safeLockName(parentNodeId)}-${safeLockName(attemptId ?? "legacy")}.json`);
+    const identity = `${safeLockName(runId)}-${safeLockName(parentNodeId)}-${safeLockName(attemptId ?? "legacy")}`;
+    return join(this.directory, `${safeLockName(identity)}.json`);
   }
   private async read(path: string): Promise<IntegrationOperation | undefined> {
     try { return JSON.parse(await readFile(path, "utf8")) as IntegrationOperation; } catch (error) {

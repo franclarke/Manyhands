@@ -60,6 +60,23 @@ describe("JsonIntegrationOperationJournal", () => {
 
     await expect(journal.open(operationInput())).resolves.toMatchObject({ state: "prepared" });
   });
+
+  it("bounds operation filenames when all identity components are long", async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "mh-integration-journal-bounded-"));
+    tempDirectories.push(directory);
+    const journal = new JsonIntegrationOperationJournal(directory);
+    const longPart = "x".repeat(120);
+
+    await expect(
+      journal.open(
+        operationInput({
+          runId: `run-${longPart}`,
+          parentNodeId: `parent-${longPart}`,
+          attemptId: `attempt-${longPart}`
+        })
+      )
+    ).resolves.toMatchObject({ state: "prepared" });
+  });
 });
 
 async function createJournal(): Promise<JsonIntegrationOperationJournal> {
@@ -68,11 +85,20 @@ async function createJournal(): Promise<JsonIntegrationOperationJournal> {
   return new JsonIntegrationOperationJournal(directory, () => "2026-07-15T00:00:00.000Z");
 }
 
-function operationInput(overrides: { operationId?: string; fencingToken?: number; allowTakeover?: boolean } = {}) {
+function operationInput(
+  overrides: {
+    runId?: string;
+    parentNodeId?: string;
+    attemptId?: string;
+    operationId?: string;
+    fencingToken?: number;
+    allowTakeover?: boolean;
+  } = {}
+) {
   return {
-    runId: "run-1",
-    parentNodeId: "parent",
-    attemptId: "attempt-1",
+    runId: overrides.runId ?? "run-1",
+    parentNodeId: overrides.parentNodeId ?? "parent",
+    attemptId: overrides.attemptId ?? "attempt-1",
     operationId: overrides.operationId ?? "operation-1",
     fencingToken: overrides.fencingToken ?? 7,
     ...(overrides.allowTakeover === true ? { allowTakeover: true } : {}),

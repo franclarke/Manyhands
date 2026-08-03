@@ -86,6 +86,27 @@ describe("PlanningModule", () => {
     expect(result.success).toBe(false);
   });
 
+  it("allows a planned artifact to be the verification reference for its owning leaf", async () => {
+    const draft = bookingDraft();
+    if (draft.root.kind !== "composite" || draft.root.children[0]?.kind !== "leaf") throw new Error("Expected booking leaf fixture.");
+    draft.root.children[0].surface.plannedPaths = ["src/probe/g6.ts"];
+    draft.root.children[0].outcomes[0]!.verification.references = ["src/probe/g6.ts"];
+    const module = createPlanningModule({
+      contexts: { load: async () => standardContext() },
+      protocols: { load: async () => ({ ...productProtocol(), proposalTarget: 1 }) },
+      proposals: { propose: async () => draft },
+      records: new InMemoryPlanningRecordPort(),
+      now: () => "2026-08-03T12:00:00.000Z"
+    });
+
+    const outcome = await module.start({
+      lease: { runId: "run-planned-reference-1", holderId: "coordinator-1", fenceToken: "fence-planned-reference" },
+      protocol: { id: "product-default", revision: "1" }
+    });
+
+    expect(outcome.kind).toBe("ready");
+  });
+
   it("commits a complete experiment comparison for two safe distinct plans", async () => {
     const alternative = bookingDraft();
     if (alternative.root.kind !== "composite" || alternative.root.children[0]?.kind !== "leaf") {

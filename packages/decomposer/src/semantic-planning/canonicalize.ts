@@ -197,7 +197,9 @@ function semanticIssues(draft: SemanticPlanDraft, context: PlanningContext): Pla
         issues.push({ code: "unknown_repository_capability", message: `Repository capability ${outcome.verification.capability} is unavailable.` });
       }
       for (const reference of outcome.verification.references) {
-        if (!indexedPaths.has(normalizePath(reference))) {
+        const normalizedReference = normalizePath(reference);
+        const plannedPaths = new Set(module.surface.plannedPaths.map(normalizePath));
+        if (!indexedPaths.has(normalizedReference) && !plannedPaths.has(normalizedReference)) {
           issues.push({ code: "ungrounded_verification_reference", message: `Verification reference ${reference} is absent from the frozen repository snapshot.`, path: reference });
         }
       }

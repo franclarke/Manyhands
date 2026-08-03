@@ -121,7 +121,7 @@ describe("validateExactCandidate", () => {
     });
 
     expect(sharedRecipe.steps).toHaveLength(1);
-    expect(sharedRecipe.steps[0]?.command.args).toEqual(["test", "tests/projections.test.ts"]);
+    expect(sharedRecipe.steps[0]?.command.args).toEqual(["exec", "vitest", "run", "tests/projections.test.ts"]);
     expect(run).toHaveBeenCalledTimes(1);
     expect(result.matrix.outcome).toBe("verified");
     expect(result.matrix.criteria.map((criterion) => criterion.status)).toEqual(["satisfied", "satisfied"]);
